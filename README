@@ -1,0 +1,17 @@
+This directory contains an update to tochnog version of 11.06.2011.
+The update changes signatures of function expecting string arguments
+from "char []" to "const char *", thus silencing gcc warnings about
+obsolete way of passing string constants. The resulting code is also
+a bit safer.
+
+Affected files:
+
+src/area.cc
+src/check.cc
+src/database.cc
+src/force.cc
+src/math.cc
+src/miscel.cc
+src/pri.cc
+src/time.cc
+src/tochnog.h 

@@ -1,0 +1,3 @@
+void hypo_dum( )
+{
+}

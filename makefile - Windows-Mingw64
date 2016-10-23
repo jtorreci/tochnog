@@ -1,0 +1,488 @@
+#
+# Modified by Fernando Lorenzo on 1-3-14 to build windows version
+#***********  fortran 2 c *******************
+# Set F2C (for unix -lf2c and for MS windows to f2c.lib)
+#LIBDIRECTORIES="C:\Windows\System32\;C:\MinGW64\bin\;C:\MinGW64\x86_64-w64-mingw32\lib\
+#F2C=-lf2c
+LIBM= 
+#-L\Windows\SysWOW64\msvcrt.dll
+#  ***********  hypoplasticity ****************
+# For hypoplasticity:
+#    install f2c on your computer (also see F2C above)
+#    set HYPO_USE to 1 in tnhypo.h
+#    set HYPO_SRC to hypo.c below
+#    set HYPO_OBJ to hypo.o below
+HYPO_SRC=hypo.c
+HYPO_OBJ=hypo.o
+
+#  ***********  profiler ***********************
+# for the gnu profiler, use as follows:
+# set PROFILE to -pg
+# compile and link
+# tochnog
+# gprof tochnog > gprof.sum
+# vi gprof.sum
+#PROFILE= #-pg
+
+#  ***********  default environment *******************
+SRC_CPP=cc
+SRC_C=c
+SYS_FILE=sysother
+BCPP=-P
+VCPP=
+COMPILER_C=bcc32
+COMPILER_CPP=bcc32
+COMPILER_FLAGS= -c -O2 -w-
+OBJ=obj
+LINK_FLAGS_BEFORE= -l$(F2C)
+LINK_FLAGS_AFTER=
+
+# Activate the two lines below to use the LAPACK Solver.
+
+# For other systems the blas library is at /usr/lib/-lblas or /usr/local/lib/-lblas, and 
+# the lapack library normally installs at  /usr/lib/-llapack or /usr/local/lib/-liblapack
+# For OSX use both BLAS_LIB and LAPACK_LIB equal to -framework Accelerate
+				
+
+LAPACK_LIB= -lclapack -lblas -lf2c
+#LAPACK_LIB= -LC:\Windows\System32\ -lclapack 
+#
+#  ***********  All libraries *******************
+
+ALL_INCLUDE= $(LAPACK_INCLUDE)
+ALL_LIB= $(F2C) $(LIBM) $(LAPACK_LIB) 
+
+#  ***********  default platform  *******************
+default: MinGW64
+
+# multi processor windows; visual c++ compiler
+visual_cpp_parallel:
+	nmake tochnog \
+	"SYS_FILE=sysother" \
+	"OBJ=obj" \
+	"BCPP=" \
+	"VCPP=/Tp" \
+	"COMPILER_C=cl" \
+	"COMPILER_CPP=cl" \
+	"COMPILER_FLAGS= /MT /c /O2 $(PROFILE)" \
+	"LINK_FLAGS_BEFORE=" \
+	"LINK_FLAGS_AFTER= /link $(F2C) $(PROFILE) /OUT:tochnog.exe"
+
+# Mac OSX; gnu gcc compiler
+# x86_64-w64-mingw32-c++
+# Use this option to build tochnog with code optimized for darwin-intel64bit:
+MinGW64: 
+	mingw32-make tochnog \
+	"SYS_FILE=sysother" \
+	"OBJ=o" \
+	"BCPP=" \
+	"VCPP=" \
+	"COMPILER_C=x86_64-w64-mingw32-gcc" \
+	"COMPILER_CPP=x86_64-w64-mingw32-g++" \
+	"COMPILER_FLAGS= -O2 -ansi -c -m64 -Wall $(ALL_INCLUDE) $(PROFILE) " \
+	"LINK_FLAGS_BEFORE=-m64" \
+	"LINK_FLAGS_AFTER=$(ALL_LIB)"
+OFILES= adjust.o area.o \
+	beam.o bounda.o calcul.o \
+	change.o check.o \
+	condif.o \
+	contact.o conspr.o \
+	crack.o create.o \
+	damage.o data.o date.o \
+	database.o delete.o distri.o \
+	dof.o elasti.o elem.o \
+	error.o extrude.o failure.o \
+	filter.o force.o general.o \
+	geometry.o generate.o \
+	groundda.o groundfl.o group.o \
+        hyperela.o $(HYPO_OBJ) \
+	hypoplas.o initia.o \
+	input.o integra.o intersec.o \
+	inverse.o locate.o \
+	macro.o map.o mat_diff.o \
+	materi.o math.o maxwell.o \
+	membrane.o merge.o mesh.o \
+	miscel.o new_mesh.o \
+	node.o nonloc.o order.o \
+	plasti.o plasti_i.o  \
+	point_el.o \
+	polynom.o post.o \
+	pri.o print_db.o \
+	print_da.o print_dx.o print_el.o \
+	print_gi.o print_g5.o print_g6.o\
+	print_gm.o print_hi.o \
+	print_pl.o print_ma.o print_rs.o \
+	print_te.o print_un.o print_vt.o \
+	project.o range.o \
+	refine_g.o refine_l.o remesh.o \
+	renumber.o repeat.o restart.o \
+	slide.o so.o so_bicg.o split.o \
+	spring.o stress.o \
+	$(SYS_FILE).o tendon.o time.o tn.o \
+	top.o truss.o umat.o unknown.o user.o \
+	viscoela.o viscosit.o visconon.o \
+	volume.o wave.o\
+
+tochnog: adjust.$(OBJ) area.$(OBJ) \
+	beam.$(OBJ) bounda.$(OBJ) calcul.$(OBJ) \
+	change.$(OBJ) check.$(OBJ) \
+	condif.$(OBJ) \
+	contact.$(OBJ) conspr.$(OBJ) \
+	crack.$(OBJ) create.$(OBJ) \
+	damage.$(OBJ) data.$(OBJ) date.$(OBJ) \
+	database.$(OBJ) delete.$(OBJ) distri.$(OBJ) \
+	dof.$(OBJ) elasti.$(OBJ) elem.$(OBJ) \
+	error.$(OBJ) extrude.$(OBJ) failure.$(OBJ) \
+	filter.$(OBJ) force.$(OBJ) general.$(OBJ) \
+	geometry.$(OBJ) generate.$(OBJ) \
+	groundda.$(OBJ) groundfl.$(OBJ) group.$(OBJ) \
+        hyperela.$(OBJ) $(HYPO_OBJ) \
+	hypoplas.$(OBJ) initia.$(OBJ) \
+	input.$(OBJ) integra.$(OBJ) intersec.$(OBJ) \
+	inverse.$(OBJ) locate.$(OBJ) \
+	macro.$(OBJ) map.$(OBJ) mat_diff.$(OBJ) \
+	materi.$(OBJ) math.$(OBJ) maxwell.$(OBJ) \
+	membrane.$(OBJ) merge.$(OBJ) mesh.$(OBJ) \
+	miscel.$(OBJ) new_mesh.$(OBJ) \
+	node.$(OBJ) nonloc.$(OBJ) order.$(OBJ) \
+	plasti.$(OBJ) plasti_i.$(OBJ)  \
+	point_el.$(OBJ) \
+	polynom.$(OBJ) post.$(OBJ) \
+	pri.$(OBJ) print_db.$(OBJ) \
+	print_da.$(OBJ) print_dx.$(OBJ) print_el.$(OBJ) \
+	print_gi.$(OBJ) print_g5.$(OBJ) print_g6.$(OBJ)\
+	print_gm.$(OBJ) print_hi.$(OBJ) \
+	print_pl.$(OBJ) print_ma.$(OBJ) print_rs.$(OBJ) \
+	print_te.$(OBJ) print_un.$(OBJ) print_vt.$(OBJ) \
+	project.$(OBJ) range.$(OBJ) \
+	refine_g.$(OBJ) refine_l.$(OBJ) remesh.$(OBJ) \
+	renumber.$(OBJ) repeat.$(OBJ) restart.$(OBJ) \
+	slide.$(OBJ) \
+	so.$(OBJ) so_bicg.$(OBJ) \
+	 split.$(OBJ) \
+	spring.$(OBJ) stress.$(OBJ) \
+	$(SYS_FILE).$(OBJ) tendon.$(OBJ) time.$(OBJ) tn.$(OBJ) \
+	top.$(OBJ) truss.$(OBJ) \
+	umat.$(OBJ) unknown.$(OBJ) user.$(OBJ) \
+	viscoela.$(OBJ) viscosit.$(OBJ) visconon.$(OBJ) \
+	volume.$(OBJ) wave.$(OBJ)
+
+# Program building
+	$(COMPILER_CPP) $(OFILES) $(LINK_FLAGS_AFTER)
+# Program building
+
+
+adjust.$(OBJ): adjust.$(SRC_CPP) tochnog.h
+	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)adjust.$(SRC_CPP)
+
+area.$(OBJ): area.$(SRC_CPP) tochnog.h
+	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)area.$(SRC_CPP)
+
+beam.$(OBJ): beam.$(SRC_CPP) tochnog.h
+	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)beam.$(SRC_CPP)
+
+bounda.$(OBJ): bounda.$(SRC_CPP) tochnog.h
+	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)bounda.$(SRC_CPP)
+
+calcul.$(OBJ): calcul.$(SRC_CPP) tochnog.h
+	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)calcul.$(SRC_CPP)
+
+change.$(OBJ): change.$(SRC_CPP) tochnog.h
+	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)change.$(SRC_CPP)
+
+check.$(OBJ): check.$(SRC_CPP) tochnog.h
+	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)check.$(SRC_CPP)
+
+condif.$(OBJ): condif.$(SRC_CPP) tochnog.h
+	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)condif.$(SRC_CPP)
+
+contact.$(OBJ): contact.$(SRC_CPP) tochnog.h
+	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)contact.$(SRC_CPP)
+
+conspr.$(OBJ): conspr.$(SRC_CPP) tochnog.h
+	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)conspr.$(SRC_CPP)
+
+crack.$(OBJ): crack.$(SRC_CPP) tochnog.h
+	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)crack.$(SRC_CPP)
+
+create.$(OBJ): create.$(SRC_CPP) tochnog.h
+	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)create.$(SRC_CPP)
+
+damage.$(OBJ): damage.$(SRC_CPP) tochnog.h
+	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)damage.$(SRC_CPP)
+
+data.$(OBJ): data.$(SRC_CPP) tochnog.h
+	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)data.$(SRC_CPP)
+
+date.$(OBJ): date.$(SRC_CPP) tochnog.h
+	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)date.$(SRC_CPP)
+
+database.$(OBJ): database.$(SRC_CPP) tochnog.h
+	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)database.$(SRC_CPP)
+
+delete.$(OBJ): delete.$(SRC_CPP) tochnog.h
+	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)delete.$(SRC_CPP)
+
+distri.$(OBJ): distri.$(SRC_CPP) tochnog.h
+	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)distri.$(SRC_CPP)
+
+dof.$(OBJ): dof.$(SRC_CPP) tochnog.h
+	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)dof.$(SRC_CPP)
+
+elasti.$(OBJ): elasti.$(SRC_CPP) tochnog.h
+	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)elasti.$(SRC_CPP)
+
+elem.$(OBJ): elem.$(SRC_CPP) tochnog.h
+	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)elem.$(SRC_CPP)
+
+error.$(OBJ): error.$(SRC_CPP) tochnog.h
+	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)error.$(SRC_CPP)
+
+extrude.$(OBJ): extrude.$(SRC_CPP) tochnog.h
+	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)extrude.$(SRC_CPP)
+
+failure.$(OBJ): failure.$(SRC_CPP) tochnog.h
+	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)failure.$(SRC_CPP)
+
+filter.$(OBJ): filter.$(SRC_CPP) tochnog.h
+	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)filter.$(SRC_CPP)
+
+force.$(OBJ): force.$(SRC_CPP) tochnog.h
+	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)force.$(SRC_CPP)
+
+general.$(OBJ): general.$(SRC_CPP) tochnog.h
+	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)general.$(SRC_CPP)
+
+generate.$(OBJ): generate.$(SRC_CPP) tochnog.h
+	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)generate.$(SRC_CPP)
+
+geometry.$(OBJ): geometry.$(SRC_CPP) tochnog.h
+	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)geometry.$(SRC_CPP)
+
+groundda.$(OBJ): groundda.$(SRC_CPP) tochnog.h
+	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)groundda.$(SRC_CPP)
+
+groundfl.$(OBJ): groundfl.$(SRC_CPP) tochnog.h
+	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)groundfl.$(SRC_CPP)
+
+group.$(OBJ): group.$(SRC_CPP) tochnog.h
+	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)group.$(SRC_CPP)
+
+hyperela.$(OBJ): hyperela.$(SRC_CPP) tochnog.h
+	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)hyperela.$(SRC_CPP)
+
+$(HYPO_OBJ): $(HYPO_SRC)
+	$(COMPILER_C) $(COMPILER_FLAGS) $(HYPO_SRC)
+
+hypoplas.$(OBJ): hypoplas.$(SRC_CPP) tochnog.h
+	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)hypoplas.$(SRC_CPP)
+
+initia.$(OBJ): initia.$(SRC_CPP) tochnog.h
+	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)initia.$(SRC_CPP)
+
+input.$(OBJ): input.$(SRC_CPP) tochnog.h
+	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)input.$(SRC_CPP)
+
+integra.$(OBJ): integra.$(SRC_CPP) tochnog.h
+	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)integra.$(SRC_CPP)
+
+intersec.$(OBJ): intersec.$(SRC_CPP) tochnog.h
+	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)intersec.$(SRC_CPP)
+
+inverse.$(OBJ): inverse.$(SRC_CPP) tochnog.h
+	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)inverse.$(SRC_CPP)
+
+locate.$(OBJ): locate.$(SRC_CPP) tochnog.h
+	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)locate.$(SRC_CPP)
+
+macro.$(OBJ): macro.$(SRC_CPP) tochnog.h
+	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)macro.$(SRC_CPP)
+
+map.$(OBJ): map.$(SRC_CPP) tochnog.h
+	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)map.$(SRC_CPP)
+
+mat_diff.$(OBJ): mat_diff.$(SRC_CPP) tochnog.h
+	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)mat_diff.$(SRC_CPP)
+
+materi.$(OBJ): materi.$(SRC_CPP) tochnog.h
+	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)materi.$(SRC_CPP)
+
+math.$(OBJ): math.$(SRC_CPP) tochnog.h
+	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)math.$(SRC_CPP)
+
+maxwell.$(OBJ): maxwell.$(SRC_CPP) tochnog.h
+	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)maxwell.$(SRC_CPP)
+
+membrane.$(OBJ): membrane.$(SRC_CPP) tochnog.h
+	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)membrane.$(SRC_CPP)
+
+merge.$(OBJ): merge.$(SRC_CPP) tochnog.h
+	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)merge.$(SRC_CPP)
+
+mesh.$(OBJ): mesh.$(SRC_CPP) tochnog.h
+	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)mesh.$(SRC_CPP)
+
+miscel.$(OBJ): miscel.$(SRC_CPP) tochnog.h
+	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)miscel.$(SRC_CPP)
+
+new_mesh.$(OBJ): new_mesh.$(SRC_CPP) tochnog.h
+	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)new_mesh.$(SRC_CPP)
+
+node.$(OBJ): node.$(SRC_CPP) tochnog.h
+	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)node.$(SRC_CPP)
+
+nonloc.$(OBJ): nonloc.$(SRC_CPP) tochnog.h
+	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)nonloc.$(SRC_CPP)
+
+order.$(OBJ): order.$(SRC_CPP) tochnog.h
+	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)order.$(SRC_CPP)
+
+plasti.$(OBJ): plasti.$(SRC_CPP) tochnog.h
+	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)plasti.$(SRC_CPP)
+
+plasti_i.$(OBJ): plasti_i.$(SRC_CPP) tochnog.h
+	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)plasti_i.$(SRC_CPP)
+
+point_el.$(OBJ): point_el.$(SRC_CPP) tochnog.h
+	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)point_el.$(SRC_CPP)
+
+polynom.$(OBJ): polynom.$(SRC_CPP) tochnog.h
+	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)polynom.$(SRC_CPP)
+
+post.$(OBJ): post.$(SRC_CPP) tochnog.h
+	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)post.$(SRC_CPP)
+
+pri.$(OBJ): pri.$(SRC_CPP) tochnog.h
+	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)pri.$(SRC_CPP)
+
+print_db.$(OBJ): print_db.$(SRC_CPP) tochnog.h
+	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)print_db.$(SRC_CPP)
+
+print_da.$(OBJ): print_da.$(SRC_CPP) tochnog.h
+	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)print_da.$(SRC_CPP)
+
+print_dx.$(OBJ): print_dx.$(SRC_CPP) tochnog.h
+	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)print_dx.$(SRC_CPP)
+
+print_el.$(OBJ): print_el.$(SRC_CPP) tochnog.h
+	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)print_el.$(SRC_CPP)
+
+print_gi.$(OBJ): print_gi.$(SRC_CPP) tochnog.h
+	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)print_gi.$(SRC_CPP)
+
+print_g5.$(OBJ): print_g5.$(SRC_CPP) tochnog.h
+	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)print_g5.$(SRC_CPP)
+
+print_g6.$(OBJ): print_g6.$(SRC_CPP) tochnog.h
+	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)print_g6.$(SRC_CPP)
+
+print_gm.$(OBJ): print_gm.$(SRC_CPP) tochnog.h
+	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)print_gm.$(SRC_CPP)
+
+print_hi.$(OBJ): print_hi.$(SRC_CPP) tochnog.h
+	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)print_hi.$(SRC_CPP)
+
+print_ma.$(OBJ): print_ma.$(SRC_CPP) tochnog.h
+	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)print_ma.$(SRC_CPP)
+
+print_pl.$(OBJ): print_pl.$(SRC_CPP) tochnog.h
+	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)print_pl.$(SRC_CPP)
+
+print_rs.$(OBJ): print_rs.$(SRC_CPP) tochnog.h
+	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)print_rs.$(SRC_CPP)
+
+print_te.$(OBJ): print_te.$(SRC_CPP) tochnog.h
+	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)print_te.$(SRC_CPP)
+
+print_un.$(OBJ): print_un.$(SRC_CPP) tochnog.h
+	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)print_un.$(SRC_CPP)
+
+print_vt.$(OBJ): print_vt.$(SRC_CPP) tochnog.h
+	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)print_vt.$(SRC_CPP)
+
+project.$(OBJ): project.$(SRC_CPP) tochnog.h
+	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)project.$(SRC_CPP)
+
+range.$(OBJ): range.$(SRC_CPP) tochnog.h
+	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)range.$(SRC_CPP)
+
+refine_g.$(OBJ): refine_g.$(SRC_CPP) tochnog.h
+	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)refine_g.$(SRC_CPP)
+
+refine_l.$(OBJ): refine_l.$(SRC_CPP) tochnog.h
+	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)refine_l.$(SRC_CPP)
+
+remesh.$(OBJ): remesh.$(SRC_CPP) tochnog.h
+	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)remesh.$(SRC_CPP)
+
+renumber.$(OBJ): renumber.$(SRC_CPP) tochnog.h
+	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)renumber.$(SRC_CPP)
+
+repeat.$(OBJ): repeat.$(SRC_CPP) tochnog.h
+	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)repeat.$(SRC_CPP)
+
+restart.$(OBJ): restart.$(SRC_CPP) tochnog.h
+	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)restart.$(SRC_CPP)
+
+slide.$(OBJ): slide.$(SRC_CPP) tochnog.h
+	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)slide.$(SRC_CPP)
+
+so.$(OBJ): so.$(SRC_CPP) tochnog.h
+	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)so.$(SRC_CPP)
+
+so_bicg.$(OBJ): so_bicg.$(SRC_CPP) tochnog.h
+	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)so_bicg.$(SRC_CPP)
+
+split.$(OBJ): split.$(SRC_CPP) tochnog.h
+	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)split.$(SRC_CPP)
+
+spring.$(OBJ): spring.$(SRC_CPP) tochnog.h
+	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)spring.$(SRC_CPP)
+
+stress.$(OBJ): stress.$(SRC_CPP) tochnog.h
+	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)stress.$(SRC_CPP)
+
+$(SYS_FILE).$(OBJ): $(SYS_FILE).$(SRC_CPP) tochnog.h
+	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)$(SYS_FILE).$(SRC_CPP)
+
+tendon.$(OBJ): tendon.$(SRC_CPP) tochnog.h
+	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)tendon.$(SRC_CPP)
+
+time.$(OBJ): time.$(SRC_CPP) tochnog.h
+	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)time.$(SRC_CPP)
+
+tn.$(OBJ): tn.$(SRC_CPP) tochnog.h
+	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)tn.$(SRC_CPP)
+
+top.$(OBJ): top.$(SRC_CPP) tochnog.h
+	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)top.$(SRC_CPP)
+
+truss.$(OBJ): truss.$(SRC_CPP) tochnog.h
+	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)truss.$(SRC_CPP)
+
+umat.$(OBJ): umat.c
+	$(COMPILER_C) $(COMPILER_FLAGS) umat.c
+
+unknown.$(OBJ): unknown.$(SRC_CPP) tochnog.h
+	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)unknown.$(SRC_CPP)
+
+user.$(OBJ): user.$(SRC_CPP) tochnog.h
+	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)user.$(SRC_CPP)
+
+viscoela.$(OBJ): viscoela.$(SRC_CPP) tochnog.h
+	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)viscoela.$(SRC_CPP)
+
+visconon.$(OBJ): visconon.$(SRC_CPP) tochnog.h
+	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)visconon.$(SRC_CPP)
+
+viscosit.$(OBJ): viscosit.$(SRC_CPP) tochnog.h
+	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)viscosit.$(SRC_CPP)
+
+volume.$(OBJ): volume.$(SRC_CPP) tochnog.h
+	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)volume.$(SRC_CPP)
+
+wave.$(OBJ): wave.$(SRC_CPP) tochnog.h
+	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)wave.$(SRC_CPP)
+
+clean:
+	rm -f hip hop tmp.* *.log *.dbs *.aux *.his *.inp *.ps *tngid* *flavia* batch* *.phy *.bon *.cmd *.inp *.dx *.tmp *.inp *.rgb *.jpg *.attr *.plt *.scr *.out *.dvd *.vtk vtn* *.o *.0
