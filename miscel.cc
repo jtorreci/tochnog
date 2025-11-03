@@ -18,6 +18,7 @@
 */
 
 #include "tochnog.h"
+#include "tochnog_exceptions.h"
 
 void element_middle_radius_set( )
 
@@ -156,7 +157,11 @@ char *get_new_char( long int n )
   if ( n<=0 ) n = 1;
   if ( !(ptr = new char[n] ) ) {
     pri( "Error: cannot allocate enough memory." );
+#ifdef USE_EXCEPTIONS
+    throw OutOfMemoryException();
+#else
     exit(TN_EXIT_STATUS);
+#endif
   }
   return ptr;
 }
@@ -169,7 +174,11 @@ double *get_new_dbl( long int n )
   if ( n<=0 ) n = 1;
   if ( !(ptr = new double[n] ) ) {
     pri( "Error: cannot allocate enough memory." );
+#ifdef USE_EXCEPTIONS
+    throw OutOfMemoryException();
+#else
     exit(TN_EXIT_STATUS);
+#endif
   }
   return ptr;
 }
@@ -182,7 +191,11 @@ long int *get_new_int( long int n )
   if ( n<=0 ) n = 1;
   if ( !(ptr = new long int[n] ) ) {
     pri( "Error: cannot allocate enough memory." );
+#ifdef USE_EXCEPTIONS
+    throw OutOfMemoryException();
+#else
     exit(TN_EXIT_STATUS);
+#endif
   }
   return ptr;
 }

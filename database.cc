@@ -23,6 +23,7 @@
 */
 
 #include "tochnog.h" 
+#include "tochnog_exceptions.h"
 
 double   *dbl_data[MDAT][MVERSION]; // pointer to actual double data
 long int *int_data[MDAT][MVERSION]; // pointers to actual integer data
@@ -4437,7 +4438,11 @@ void db_error( long int idat, long int index )
   if ( index>=0 && !db_no_index(idat) )
     pri( "Error detected for record ", index );
 
+#ifdef USE_EXCEPTIONS
+  throw DatabaseException("Database error for item " + std::to_string(idat) + " and index " + std::to_string(index));
+#else
   exit(TN_EXIT_STATUS);
+#endif
 }
 
 
