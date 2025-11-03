@@ -19,6 +19,7 @@
 
 #include "tochnog.h"
 #include "tochnog_exceptions.h"
+#include "string_utils.h"
 
 void element_middle_radius_set( )
 
@@ -362,6 +363,11 @@ char *long_to_a( long int n, char s[] )
   ptr = s;
   return ptr;
   
+}
+
+// Modern C++ version of long_to_a using std::string
+std::string long_to_string_modern(long int n) {
+    return std::to_string(n);
 }
 
 void exit_tn( long int print_database_type )

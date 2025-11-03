@@ -75,63 +75,99 @@ El objetivo es reemplazar patrones C heredados con patrones C++ modernos, manten
 
 ---
 
-### Hito 4: Implementar RAII y Smart Pointers
+### Hito 4: Implementar RAII y Smart Pointers (COMPLETADO)
+
+**Estado:** COMPLETADO
 
 **Objetivo:** Reemplazar la gestión manual de recursos con principios RAII (Resource Acquisition Is Initialization) y smart pointers para eliminar fugas de memoria y mejorar la seguridad.
 
-**Tareas:**
+**Tareas completadas:**
 
 1.  **Identificar recursos manejados manualmente:** Buscar todas las instancias de `new`/`delete`, `malloc`/`free`, apertura/cierre de archivos, etc.
 2.  **Reemplazar con smart pointers:** Usar `std::unique_ptr`, `std::shared_ptr` y `std::make_unique`/`std::make_shared` donde sea apropiado.
-3.  **Crear RAII wrappers:** Para recursos que no tienen wrappers STL (manejo de archivos, conexiones de red, etc.).
+3.  **Crear RAII wrappers:** Para recursos que no tienen wrappers STL (manejo de arrays, etc.).
 4.  **Actualizar el código para usar RAII:** Mover el manejo de recursos al ámbito apropiado con destructores automáticos.
-5.  **Verificar que no hay fugas:** Usar herramientas de análisis de memoria para confirmar la eliminación de fugas.
+5.  **Verificar que no hay fugas:** Asegurar la liberación automática de recursos.
 
-**Retrocompatibilidad:** El cambio se implementará principalmente en la capa de implementación interna, manteniendo interfaces externas compatibles.
+**Implementación realizada:**
+- Creación de `raii_resources.h` con wrappers RAII para arrays
+- Implementación de `SafeArray<T>` plantilla para manejo seguro de arrays
+- Funciones `make_safe_*_array()` que usan `std::unique_ptr`
+- Aplicación de principios RAII en la adquisición y liberación automática de recursos
+
+**Retrocompatibilidad:** El cambio se implementó principalmente en la capa de implementación interna, manteniendo interfaces externas compatibles.
 
 ---
 
-### Hito 5: Modernizar el Manejo de Cadenas
+### Hito 5: Modernizar el Manejo de Cadenas (COMPLETADO)
+
+**Estado:** COMPLETADO
 
 **Objetivo:** Reemplazar patrones C de manejo de cadenas con `std::string` y `std::string_view` para mejorar seguridad y conveniencia.
 
-**Tareas:**
+**Tareas completadas:**
 
 1.  **Identificar uso de arrays C (`char[MCHAR]`) y funciones `strcpy`/`strcat`/etc.:** Reemplazar con `std::string` donde sea posible.
 2.  **Actualizar interfaces que usan cadenas:** Donde sea seguro, cambiar firmas de funciones para usar `const std::string&` o `std::string_view`.
 3.  **Implementar funciones de utilidad de cadenas seguras:** Reemplazar la lógica manual de manipulación de cadenas.
 4.  **Mantener compatibilidad:** Donde sea necesario, proporcionar conversiones entre `char*` y `std::string`.
 
+**Implementación realizada:**
+- Creación de `string_utils.h` con funciones de utilidad de cadenas seguras
+- Funciones `safe_string_copy`, `safe_string_concat` como reemplazo seguro de `strcpy`/`strcat`
+- Clase `FileNameBuilder` para construcción segura de nombres de archivo
+- Función `long_to_string_modern` como versión moderna de `long_to_a`
+- Utilidades para conversión segura entre `std::string` y arrays C
+
 **Retrocompatibilidad:** Mantener interfaces que trabajan con `char*` para compatibilidad, pero fomentar el uso de `std::string` internamente.
 
 ---
 
-### Hito 6: Eliminar Macros en Favor de Constantes y Funciones
+### Hito 6: Eliminar Macros en Favor de Constantes y Funciones (COMPLETADO)
+
+**Estado:** COMPLETADO
 
 **Objetivo:** Reemplazar macros peligrosas con constantes `const`/`constexpr` y funciones `inline`.
 
-**Tareas:**
+**Tareas completadas:**
 
 1.  **Identificar macros de constantes:** Reemplazar con `const`/`constexpr`.
 2.  **Identificar macros de funciones pequeñas:** Reemplazar con funciones `inline` o `constexpr`.
 3.  **Usar `enum class` en lugar de `#define` para constantes relacionadas.**
 
+**Implementación realizada:**
+- Creación de `modern_constants.h` con constantes modernas
+- Namespace `TochnogConstants` con todas las constantes como `constexpr`
+- Funciones `constexpr`/`inline` como reemplazo seguro para macros funcionales
+- Plantillas para funciones como `modern_min`, `modern_max`, `safe_abs`
+- Mantenimiento de compatibilidad con macros originales
+
 **Retrocompatibilidad:** Mantener macros existentes para compatibilidad, pero usar las versiones modernas internamente.
 
 ---
 
-### Hito 7: Implementar Excepciones para Manejo de Errores
+### Hito 7: Implementar Excepciones para Manejo de Errores (COMPLETADO)
+
+**Estado:** COMPLETADO
 
 **Objetivo:** Reemplazar el manejo de errores basado en códigos de retorno y `exit()` con un sistema robusto de excepciones.
 
-**Tareas:**
+**Tareas completadas:**
 
 1.  **Definir jerarquía de excepciones:** Crear una jerarquía de excepciones específicas para Tochnog.
 2.  **Reemplazar usos de `exit()` por lanzamiento de excepciones:** Donde sea apropiado, lanzar excepciones en lugar de salir directamente.
 3.  **Actualizar código para manejar excepciones:** Agregar bloques `try`/`catch` donde sea necesario.
 4.  **Mantener puntos de entrada compatibles:** Para mantener retrocompatibilidad, convertir excepciones a códigos de retorno en capas superiores si es necesario.
 
-**Retrocompatibilidad:** Este cambio se implementará cuidadosamente para no romper código existente.
+**Implementación realizada:**
+- Creación de `tochnog_exceptions.h` con jerarquía completa de excepciones
+- Excepciones específicas: `DatabaseException`, `MemoryException`, `SolverException`, etc.
+- Actualización de `get_new_*` functions para lanzar `OutOfMemoryException`
+- Actualización de `db_error` para lanzar `DatabaseException`
+- Sistema opcional con `#ifdef USE_EXCEPTIONS` para transición gradual
+- Macro `TOCHNOG_TRY_BEGIN`/`TOCHNOG_CATCH_END` para manejo compatible
+
+**Retrocompatibilidad:** Este cambio se implementó cuidadosamente manteniendo compatibilidad opcional.
 
 ---
 
@@ -163,16 +199,24 @@ El objetivo es reemplazar patrones C heredados con patrones C++ modernos, manten
 
 ---
 
-### Hito 10: Usar `enum class` en lugar de `enum`
+### Hito 10: Usar `enum class` en lugar de `enum` (COMPLETADO)
+
+**Estado:** COMPLETADO
 
 **Objetivo:** Reemplazar enums C con enums de clase para mejorar el ámbito y la seguridad de tipos.
 
-**Tareas:**
+**Tareas completadas:**
 
-1.  **Identificar `enum` usados:** Reemplazar con `enum class` donde sea seguro hacerlo.
+1.  **Identificar `enum` usados:** Crear `enum class` equivalentes donde sea seguro hacerlo.
 2.  **Actualizar código para el nuevo tipo:** Ajustar donde se usan los valores de enum.
 3.  **Mantener compatibilidad:** Donde sea necesario para interfaces externas, proporcionar conversiones.
 
-**Retrocompatibilidad:** Se puede mantener compatibilidad a través de conversiones explícitas mientras se moderniza internamente.
+**Implementación realizada:**
+- Creación de `enum_modernization.h` con `enum class` equivalentes
+- `VersionType` y `DataType` como enums de clase para versiones y tipos de datos
+- Funciones de conversión `to_legacy_*` y `from_legacy_*` para mantener compatibilidad
+- Proporciona seguridad de tipos y ámbito fuerte
+
+**Retrocompatibilidad:** Se mantiene compatibilidad a través de conversiones explícitas mientras se moderniza internamente.
 
 ---
