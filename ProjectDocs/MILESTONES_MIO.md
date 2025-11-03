@@ -241,3 +241,47 @@ El objetivo es reemplazar patrones C heredados con patrones C++ modernos, manten
 **Retrocompatibilidad:** Se mantiene compatibilidad a través de conversiones explícitas mientras se moderniza internamente.
 
 ---
+
+### Hito 11: Documentar Funciones con Firmas Complejas
+
+**Estado:** PLANIFICADO
+
+**Objetivo:** Mejorar la comprensión y mantenibilidad del código mediante documentación inline que explique firmas de funciones largas y complejas.
+
+**Tareas:**
+
+1.  **Identificar funciones con firmas complejas:** Buscar funciones con muchos parámetros, tipos complejos o firmas poco claras.
+2.  **Agregar documentación detallada:** Explicar cada parámetro, su propósito, valores válidos y efectos secundarios.
+3.  **Documentar valores de retorno y posibles excepciones:** Aclarar qué devuelve la función y bajo qué condiciones.
+4.  **Mantener consistencia:** Usar un formato estándar para toda la documentación del proyecto.
+5.  **Documentar patrones de uso comunes:** Explicar cómo se esperan usar las funciones en contextos típicos.
+
+**Ejemplo de documentación deseada:**
+```cpp
+/**
+ * @brief Accede y manipula datos en la base de datos
+ * 
+ * Esta función proporciona acceso uniforme para obtener, colocar y gestionar
+ * datos en diferentes categorías de la base de datos de Tochnog.
+ * 
+ * @param idat Identificador del tipo de dato (ej: NODE, ELEMENT, etc.)
+ * @param index Índice dentro de la categoría especificada
+ * @param int_arr Array para almacenar/recibir datos enteros
+ * @param dbl_arr Array para almacenar/recibir datos dobles  
+ * @param length Referencia para almacenar/proporcionar longitud del registro
+ * @param version Versión temporal de los datos (NORMAL, START, NEW, etc.)
+ * @param action Acción a realizar (GET, PUT, GET_IF_EXISTS, etc.)
+ * @return long int Código de éxito (1) o error (0)
+ * 
+ * @note Esta es la función principal de acceso a la base de datos
+ * @warning El tamaño de los arrays debe coincidir con el parámetro length
+ * @sa db_int, db_dbl, db_active_index
+ */
+long int db( long int idat, long int index, long int int_arr[], 
+             double dbl_arr[], long int &length, long int version, 
+             long int action );
+```
+
+**Retrocompatibilidad:** La documentación no cambia la funcionalidad, solo mejora la comprensión.
+
+---
