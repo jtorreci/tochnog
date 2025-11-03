@@ -242,13 +242,13 @@ El objetivo es reemplazar patrones C heredados con patrones C++ modernos, manten
 
 ---
 
-### Hito 11: Documentar Funciones con Firmas Complejas
+### Hito 11: Documentar Funciones con Firmas Complejas (COMPLETADO)
 
-**Estado:** PLANIFICADO
+**Estado:** COMPLETADO
 
 **Objetivo:** Mejorar la comprensión y mantenibilidad del código mediante documentación inline que explique firmas de funciones largas y complejas.
 
-**Tareas:**
+**Tareas completadas:**
 
 1.  **Identificar funciones con firmas complejas:** Buscar funciones con muchos parámetros, tipos complejos o firmas poco claras.
 2.  **Agregar documentación detallada:** Explicar cada parámetro, su propósito, valores válidos y efectos secundarios.
@@ -256,31 +256,20 @@ El objetivo es reemplazar patrones C heredados con patrones C++ modernos, manten
 4.  **Mantener consistencia:** Usar un formato estándar para toda la documentación del proyecto.
 5.  **Documentar patrones de uso comunes:** Explicar cómo se esperan usar las funciones en contextos típicos.
 
-**Ejemplo de documentación deseada:**
-```cpp
-/**
- * @brief Accede y manipula datos en la base de datos
- * 
- * Esta función proporciona acceso uniforme para obtener, colocar y gestionar
- * datos en diferentes categorías de la base de datos de Tochnog.
- * 
- * @param idat Identificador del tipo de dato (ej: NODE, ELEMENT, etc.)
- * @param index Índice dentro de la categoría especificada
- * @param int_arr Array para almacenar/recibir datos enteros
- * @param dbl_arr Array para almacenar/recibir datos dobles  
- * @param length Referencia para almacenar/proporcionar longitud del registro
- * @param version Versión temporal de los datos (NORMAL, START, NEW, etc.)
- * @param action Acción a realizar (GET, PUT, GET_IF_EXISTS, etc.)
- * @return long int Código de éxito (1) o error (0)
- * 
- * @note Esta es la función principal de acceso a la base de datos
- * @warning El tamaño de los arrays debe coincidir con el parámetro length
- * @sa db_int, db_dbl, db_active_index
- */
-long int db( long int idat, long int index, long int int_arr[], 
-             double dbl_arr[], long int &length, long int version, 
-             long int action );
-```
+**Implementación realizada:**
+- Creado `tochnog_documentation.h` con documentación detallada de las funciones más complejas
+- Documentada la función `db()` con 7 parámetros y lógica compleja
+- Documentadas las funciones `get_new_*` para la creación segura de arrays
+- Documentadas funciones de utilidad como `db_active_index()` y `db_max_index()`
+- Formato Doxygen con ejemplos de uso, descripciones de parámetros y advertencias de seguridad
+- Archivo `documentation_coverage_report.md` con análisis de la complejidad del código
+- Test de validación para confirmar la mejora en la comprensión
+
+**Funciones documentadas incluyen:**
+- `db( idat, index, int_arr, dbl_arr, length, version, action )` - Función principal de base de datos con 7 parámetros complejos
+- `get_new_char(n)`, `get_new_dbl(n)`, `get_new_int(n)` - Funciones de asignación de memoria segura
+- `db_active_index(idat, index, version)` - Verificación de índices activos
+- `db_max_index(idat, &max, version, task)` - Gestión de índices máximos
 
 **Retrocompatibilidad:** La documentación no cambia la funcionalidad, solo mejora la comprensión.
 
