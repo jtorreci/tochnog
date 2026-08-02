@@ -16,6 +16,9 @@
     along with this program; if not, write to the Free Software
     Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 */
+#ifndef TOCHNOG_H
+#define TOCHNOG_H
+
 #include <iostream>
 #include <cassert>
 #include <cctype>
@@ -38,6 +41,11 @@
 #include "matrix.h"
 #include "time.h"
 #include "f2c.h"
+
+// f2c.h defines min/max as function-like macros which break standard C++
+// headers (e.g. <algorithm>, <random>) that get included afterwards.
+#undef min
+#undef max
 
 using namespace std;
  
@@ -1511,3 +1519,5 @@ void      wave( long int element, long int gr, long int nnol,
             double h[], double d[], double volume, double new_unknowns[], 
             double grad_new_unknowns[], double element_lhside[], double element_matrix[],
             double element_rhside[], double element_residue[] );
+
+#endif // TOCHNOG_H

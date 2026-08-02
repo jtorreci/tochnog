@@ -1,0 +1,18 @@
+# Build artifacts
+*.o
+build/
+tochnog
+
+# Editor/OS
+.DS_Store
+__MACOSX/
+
+# Downloads y suites de terceros (no se versionan)
+external-downloads/
+validation-suite/
+
+# Temporal
+*.tmp
+tn.tmp
+tn.log
+tn.dvd

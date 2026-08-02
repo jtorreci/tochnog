@@ -1,0 +1,15 @@
+# Normalizar todos los archivos de texto a LF
+* text=auto
+
+# Código fuente
+*.c text eol=lf
+*.cc text eol=lf
+*.h text eol=lf
+
+# Documentación y config
+*.md text eol=lf
+*.txt text eol=lf
+README text eol=lf
+makefile text eol=lf
+.gitignore text eol=lf
+.gitattributes text eol=lf

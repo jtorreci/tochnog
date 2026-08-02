@@ -9,7 +9,9 @@
 #include "tochnog.h"
 #include <string>
 #include <vector>
+#include <memory>
 #include <cstdarg>
+#include <algorithm>
 
 // Safe string operations to replace strcpy/strcat/strlen etc.
 inline std::string safe_string_copy(const std::string& source, size_t max_len = MCHAR-1) {
@@ -95,7 +97,7 @@ public:
 // Utility function to safely copy std::string to char array
 inline void safe_string_copy_to_array(const std::string& src, char* dest, size_t dest_size) {
     if (!dest) return;
-    size_t copy_len = std::min(src.length(), dest_size - 1);
+    size_t copy_len = src.length() < dest_size - 1 ? src.length() : dest_size - 1;
     src.copy(dest, copy_len);
     dest[copy_len] = '\0';  // Ensure null termination
 }
