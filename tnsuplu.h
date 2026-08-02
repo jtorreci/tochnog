@@ -1,5 +1,5 @@
 /*  activate only one   */
-#define SUPERLU_USE 0
+#define SUPERLU_USE 1
 #define SUPERLU_MT_USE 0
 #define SUPERLU_DIST_USE 0
 /* don't change the next lines */

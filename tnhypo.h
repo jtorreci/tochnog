@@ -1,1 +1,1 @@
-#define HYPO_USE 0
+#define HYPO_USE 1

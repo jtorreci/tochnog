@@ -2,16 +2,12 @@
 # Modified by Fernando Lorenzo on 9-25-2010 to use Lapack Solver
 # Modified by Fernando Lorenzo on  April 1st 2011 to add Von Mises Stresses
 
-#***********  fortran 2 c *******************
-# Set F2C (for unix -lf2c and for MS windows if using Visual C++ to f2c.lib)
-
-F2C= -lf2c 
 #  ***********  hypoplasticity ****************
 # For hypoplasticity:
-#    install f2c on your computer (also see F2C above)
 #    set HYPO_USE to 1 in tnhypo.h
 #    set HYPO_SRC to hypo.c below
 #    set HYPO_OBJ to hypo.o below
+#    hypo.c is a pure-C port (no libf2c needed)
 HYPO_SRC=hypo.c
 HYPO_OBJ=hypo.o
 
@@ -34,7 +30,7 @@ COMPILER_C=bcc32
 COMPILER_CPP=bcc32
 COMPILER_FLAGS= -c -O2 -w-
 OBJ=obj
-LINK_FLAGS_BEFORE= -l$(F2C)
+LINK_FLAGS_BEFORE= 
 LINK_FLAGS_AFTER=
 
 #  ***********  SUPERLU library *******************
@@ -77,7 +73,7 @@ LAPACK_LIB=
 #  ***********  All libraries *******************
 
 ALL_INCLUDE= $(PETSC_INCLUDE) $(SUPERLU_INCLUDE) $(LAPACK_INCLUDE)
-ALL_LIB=  $(LAPACK_LIB)  $(BLAS_LIB) $(F2C) -lm $(PETSC_LIB) $(SUPERLU_LIB)
+ALL_LIB=  $(LAPACK_LIB)  $(BLAS_LIB) -lm $(PETSC_LIB) $(SUPERLU_LIB)
 
 #  ***********  default platform  *******************
 default: darwin-intel
@@ -100,7 +96,7 @@ visual_cpp:
 	"COMPILER_CPP=cl" \
 	"COMPILER_FLAGS= /c /O2 $(PROFILE)" \
 	"LINK_FLAGS_BEFORE=" \
-	"LINK_FLAGS_AFTER= /link $(F2C) $(PROFILE) /OUT:tochnog.exe"
+	"LINK_FLAGS_AFTER= /link $(PROFILE) /OUT:tochnog.exe"
 
 # multi processor windows; visual c++ compiler
 visual_cpp_parallel:
@@ -113,7 +109,7 @@ visual_cpp_parallel:
 	"COMPILER_CPP=cl" \
 	"COMPILER_FLAGS= /MT /c /O2 $(PROFILE)" \
 	"LINK_FLAGS_BEFORE=" \
-	"LINK_FLAGS_AFTER= /link $(F2C) $(PROFILE) /OUT:tochnog.exe"
+	"LINK_FLAGS_AFTER= /link $(PROFILE) /OUT:tochnog.exe"
 
 # Mac OSX; gnu gcc compiler -undefined dynamic_lookup
 # Use this option to build tochnog with code optimized for darwin-intel64bit:
@@ -248,7 +244,7 @@ alpha_parallel:
 	"LINK_FLAGS_AFTER= $(PROFILE) $(ALL_LIB) -lm -o tochnog"
 
 # NOTICE THAT SINCE WE ARE USING THE LAPACK LIBRARY BUILT WITH YOUR SYSTEM, WE DO NOT 
-# BUILD THE clapack.c É However, you need to have it to do eigenvalues or if you want 
+# BUILD THE clapack.c ï¿½ However, you need to have it to do eigenvalues or if you want 
 # a fast solver. Most Linux applications allow you to install Lapack and Blas 
 
 # In lines below I removed ---clapack.$(OBJ) 

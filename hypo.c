@@ -1,8 +1,9 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <math.h>
-/* hypo.f -- translated by f2c (version 19980831).
-   You must link the resulting object file with the libraries:
-	-lf2c -lm   (in that order)
+/* hypo.f -- translated by f2c (version 19980831), then ported to pure C.
+   The original required linking with -lf2c; the f2c runtime I/O (s_wsle,
+   do_lio, e_wsle, s_stop) and pow_dd have been replaced with C equivalents.
 */
 
 #include "f2c.h"
@@ -10,11 +11,8 @@
 /* Table of constant values */
 
 static integer c__9 = 9;
-static integer c__1 = 1;
 static doublereal c_b45 = 1.5;
 static integer c__81 = 81;
-static integer c__5 = 5;
-static integer c__3 = 3;
 
 /* ------------------------------------------------------------------------------ */
 /* Subroutine */ int hypo_(stress, mmat, his, inc_ept__, time, dtime, nhis, 
@@ -36,8 +34,6 @@ integer *iusepres, *iuseepi, *ihypotype;
     doublereal d__1;
 
     /* Builtin functions */
-    integer s_wsle(), do_lio(), e_wsle();
-    /* Subroutine */ int s_stop();
     double exp();
 
     /* Local variables */
@@ -67,10 +63,6 @@ integer *iusepres, *iuseepi, *ihypotype;
     extern /* Subroutine */ int extract_();
     static integer iter_strain__;
     static doublereal stress_save__[9]	/* was [3][3] */;
-
-    /* Fortran I/O blocks */
-    static cilist io___1 = { 0, 6, 0, 0, 0 };
-    static cilist io___2 = { 0, 6, 0, 0, 0 };
 
     int counter=0;
     double dnorm_nonloc[1]={0};
@@ -115,15 +107,9 @@ integer *iusepres, *iuseepi, *ihypotype;
 
     /* Function Body */
     if (his[1] <= 0.) {
-	s_wsle(&io___1);
-	do_lio(&c__9, &c__1, "Illegal porosity detected in hypoplasticity.", (
-		ftnlen)44);
-	e_wsle();
-	s_wsle(&io___2);
-	do_lio(&c__9, &c__1, "Remember to initialise node_dof records.", (
-		ftnlen)40);
-	e_wsle();
-	s_stop("", (ftnlen)0);
+	printf("Illegal porosity detected in hypoplasticity.\n");
+	printf("Remember to initialise node_dof records.\n");
+	exit(1);
     }
 
 /* ****************** initialise pressure dependent void ratio **** */
@@ -276,6 +262,7 @@ L210:
 	privec_("stress", &stress[4], &c__9, (ftnlen)6);
     }
 
+    return 0;
 } /* hypo_ */
 
 
@@ -307,7 +294,7 @@ integer *iuseepi, *ihypotype;
     /* Local variables */
     static doublereal alfa, beta;
     extern /* Subroutine */ int abdyadic_();
-    static doublereal effective_stiffness__, eold, phic, edot, lmat[81]	/* 
+    static doublereal eold, phic, edot, lmat[81]	/* 
 	    was [3][3][3][3] */, nmat[9]	/* was [3][3] */, nval, rval, that[
 	    9]	/* was [3][3] */, tmin, tmax;
     extern /* Subroutine */ int copy_(), zero_();
@@ -355,6 +342,12 @@ integer *iuseepi, *ihypotype;
     --his;
     --data;
     direction_epi__ -= 4;
+
+    /* unused parameters (kept for ABI compatibility with f2c signature) */
+    (void)nhis;
+    (void)ndata;
+    (void)epi_betar__;
+    (void)softvar_nonloc;
 
     /* Function Body */
     eold = his[1];
@@ -652,14 +645,13 @@ integer *iuseepi, *ihypotype;
     }
     his[3] = phimob;
 
-/*       effective stiffness */
-    effective_stiffness__ = normvec_(&mmat[40], &c__81);
+    /*       effective stiffness */
     /*his[4] = effective_stiffness__;*/
     his[4] = re;
 
 L1000:
 
-    ;
+    return 0;
 } /* sigma_ */
 
 
@@ -691,6 +683,7 @@ doublereal *a, *b, *c__;
 /* L30: */
     }
 
+    return 0;
 } /* abc_ */
 
 
@@ -726,6 +719,7 @@ doublereal *a, *b, *c__;
 /* L40: */
     }
 
+    return 0;
 } /* a4bc_ */
 
 
@@ -755,6 +749,7 @@ integer *n;
 /* L10: */
     }
 
+    return 0;
 } /* add_ */
 
 
@@ -783,6 +778,7 @@ integer *n;
 /* L10: */
     }
 
+    return 0;
 } /* addfac_ */
 
 
@@ -811,6 +807,7 @@ integer *n;
 /* L10: */
     }
 
+    return 0;
 } /* copy_ */
 
 
@@ -820,7 +817,6 @@ doublereal *a, *adev;
 {
     static integer idi, jdi;
     extern doublereal tra_();
-    static doublereal tmp;
 
 /* ------------------------------------------------------------------------------ */
 
@@ -831,7 +827,6 @@ doublereal *a, *adev;
     a -= 4;
 
     /* Function Body */
-    tmp = tra_(&a[4]);
     for (idi = 1; idi <= 3; ++idi) {
 	for (jdi = 1; jdi <= 3; ++jdi) {
 	    adev[idi + jdi * 3] = a[idi + jdi * 3];
@@ -841,6 +836,7 @@ doublereal *a, *adev;
 /* L20: */
     }
 
+    return 0;
 } /* dev_ */
 
 
@@ -867,6 +863,7 @@ doublereal *dstr, *dt, *d__;
     d__1 = (double)1. / *dt;
     mul_(&d__[4], &d__1, &c__9);
 
+    return 0;
 } /* extract_ */
 
 
@@ -896,6 +893,7 @@ integer *n;
 /* L10: */
     }
 
+    return 0;
 } /* minus_ */
 
 
@@ -923,6 +921,7 @@ integer *n;
 /* L10: */
     }
 
+    return 0;
 } /* mul_ */
 
 
@@ -1037,13 +1036,10 @@ doublereal *x, *y;
     /* System generated locals */
     doublereal ret_val;
 
-    /* Builtin functions */
-    double pow_dd();
-
 /* ------------------------------------------------------------------------------ */
 
 
-    ret_val = pow_dd(x, y);
+    ret_val = pow(*x, *y);
 
     return ret_val;
 } /* power_ */
@@ -1055,21 +1051,14 @@ char *label;
 doublereal *a;
 ftnlen label_len;
 {
-    /* Builtin functions */
-    integer s_wsle(), do_lio(), e_wsle();
-
-    /* Fortran I/O blocks */
-    static cilist io___94 = { 0, 6, 0, 0, 0 };
 
 
 /* ------------------------------------------------------------------------------ */
 
 
-    s_wsle(&io___94);
-    do_lio(&c__9, &c__1, label, (ftnlen)6);
-    do_lio(&c__5, &c__1, (char *)&(*a), (ftnlen)sizeof(doublereal));
-    e_wsle();
+    printf(" %.*s %.12g\n", (int)label_len, label, *a);
 
+    return 0;
 } /* pridbl_ */
 
 
@@ -1078,21 +1067,14 @@ char *label;
 integer *a;
 ftnlen label_len;
 {
-    /* Builtin functions */
-    integer s_wsle(), do_lio(), e_wsle();
-
-    /* Fortran I/O blocks */
-    static cilist io___95 = { 0, 6, 0, 0, 0 };
 
 
 /* ------------------------------------------------------------------------------ */
 
 
-    s_wsle(&io___95);
-    do_lio(&c__9, &c__1, label, (ftnlen)6);
-    do_lio(&c__3, &c__1, (char *)&(*a), (ftnlen)sizeof(integer));
-    e_wsle();
+    printf(" %.*s %ld\n", (int)label_len, label, (long)*a);
 
+    return 0;
 } /* priint_ */
 
 
@@ -1101,20 +1083,14 @@ ftnlen label_len;
 char *label;
 ftnlen label_len;
 {
-    /* Builtin functions */
-    integer s_wsle(), do_lio(), e_wsle();
-
-    /* Fortran I/O blocks */
-    static cilist io___96 = { 0, 6, 0, 0, 0 };
 
 
 /* ------------------------------------------------------------------------------ */
 
 
-    s_wsle(&io___96);
-    do_lio(&c__9, &c__1, label, (ftnlen)6);
-    e_wsle();
+    printf(" %.*s\n", (int)label_len, label);
 
+    return 0;
 } /* pritxt_ */
 
 
@@ -1128,15 +1104,8 @@ ftnlen label_len;
     /* System generated locals */
     integer i__1;
 
-    /* Builtin functions */
-    integer s_wsle(), do_lio(), e_wsle();
-
     /* Local variables */
     static integer i__;
-
-    /* Fortran I/O blocks */
-    static cilist io___97 = { 0, 6, 0, 0, 0 };
-    static cilist io___99 = { 0, 6, 0, 0, 0 };
 
 
 /* ------------------------------------------------------------------------------ */
@@ -1146,17 +1115,14 @@ ftnlen label_len;
     --a;
 
     /* Function Body */
-    s_wsle(&io___97);
-    do_lio(&c__9, &c__1, label, (ftnlen)6);
-    e_wsle();
+    printf(" %.*s:", (int)label_len, label);
     i__1 = *n;
     for (i__ = 1; i__ <= i__1; ++i__) {
-	s_wsle(&io___99);
-	do_lio(&c__5, &c__1, (char *)&a[i__], (ftnlen)sizeof(doublereal));
-	e_wsle();
-/* L10: */
+	printf(" %.12g", a[i__]);
     }
+    printf("\n");
 
+    return 0;
 } /* privec_ */
 
 
@@ -1205,6 +1171,7 @@ integer *n;
 /* L10: */
     }
 
+    return 0;
 } /* zero_ */
 
 
@@ -1264,6 +1231,7 @@ doublereal *sigmat, *eigval;
     eigval[2] = y1 - r__ / 3.;
     eigval[3] = y2 - r__ / 3.;
 
+    return 0;
 } /* eigen_ */
 
 
@@ -1288,6 +1256,7 @@ doublereal *sigmat, *inv;
 	    sigmat[6] * sigmat[10];
     determ_(&sigmat[4], &inv[3]);
 
+    return 0;
 } /* invar_ */
 
 
@@ -1306,6 +1275,7 @@ doublereal *a, *det;
     *det = a[4] * (a[8] * a[12] - a[9] * a[11]) - a[7] * (a[5] * a[12] - a[6] 
 	    * a[11]) + a[10] * (a[5] * a[9] - a[6] * a[8]);
 
+    return 0;
 } /* determ_ */
 
 /* ----------------------------------------------------------------------------- */
@@ -1340,6 +1310,7 @@ doublereal *a;
 /* L100: */
     }
 
+    return 0;
 } /* unity4_ */
 
 
@@ -1374,6 +1345,7 @@ doublereal *a, *b, *c__;
 /* L100: */
     }
 
+    return 0;
 } /* abdyadic_ */
 
 /* ----------------------------------------------------------------------------- */

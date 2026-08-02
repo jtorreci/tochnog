@@ -11,6 +11,9 @@ __MACOSX/
 external-downloads/
 validation-suite/
 
+# Estado local de herramientas (opencode)
+.atl/
+
 # Temporal
 *.tmp
 tn.tmp
