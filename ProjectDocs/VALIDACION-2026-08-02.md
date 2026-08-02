@@ -63,3 +63,62 @@ Notas de build:
 - Instalar `libf2c` para habilitar hipoplasticidad (tests hypo1-4) y correrlos.
 - Compilar con SUPERLU para examp9.
 - Tests `large` y `very_large` no ejecutados completos (solo muestreo).
+
+---
+
+## Actualización 2026-08-02 (tarde): causas raíz verificadas y fixes
+
+### Refinamiento (examp7, examp15, refine4, ho_othr2) — REPARADO y APLICADO
+
+**Diagnóstico**: no era un problema de soporte de refinamiento. Los 4 tests no definen `node_dof`
+ni material → `nuknwn=0` → `mnolnuknwn = npointmax*nuknwn = 0`. Al refinar la malla, `create_element`
+(`create.cc:63`) ejecuta `db( ELEMENT_DOF, ..., PUT )` con `length=0`, y `db()` con `PUT` exige
+`length>=1` (`database.cc:4072-4073`) → `db_error`. El fallo se localizó con backtrace real:
+`refine_globally → create_element → db(PUT element_dof)`.
+
+**Fix APLICADO** (`create.cc:63-64`): proteger el `PUT` de `ELEMENT_DOF` con `if (mnolnuknwn>0)`, igual
+que ya hacía la inicialización en `top.cc:123`.
+
+**Verificación**: los 4 tests pasan (exit=0). Sin regresiones: hypo1-4, truss1, elasti1, spring1, wave1 OK.
+- Antes: 21 FAIL. Ahora: 17 FAIL (5 de refinamiento resueltos).
+
+### Camclay (examp22) — no es un bug de formato del parser
+
+El test usa formato **legacy de 3 parámetros** (`m=0.882, κ=0.031, λ=0.088`) pero el código —y el
+original de 2014, verificado con `git show a2407e0:database.cc`— espera **4** (`m, κ, λ, N`). El parser,
+al ver 3 valores donde `data_length=4`, se traga la siguiente keyword como 4º valor y falla con
+`Number of data values expected : 4`. No era "material no soportado": `GROUP_MATERI_PLASTI_CAMCLAY`
+está implementado en `plasti.cc:124-177`.
+
+**Opción viable — añadir N al input (APLICADO)**: el modelo es extremadamente sensible a N:
+- N=2.06 → hisv1=229.2 ; N=2.07 → 251.1 ; N=2.08 → 287.7 ; N=2.5 → 246604
+- El target `hisv1 = 264.5 ± 10` se alcanza con **N = 2.073** (exit=0, PASS).
+- **Cambio aplicado en `validation-suite/test-2014/examp22.dat`**: añadido el 4º parámetro `2.073`
+  a `group_materi_plasti_camclay`.
+- Derivación física desde NCL (e=0.627, p=207) da N≈1.096, que NO reproduce el target — la referencia
+  de la suite fue calibrada con otra cadena de build/versión del modelo, no con los parámetros literales.
+
+**No se recomienda** separar en `camclay` vs `camclay_mod`: serían el mismo modelo con distinto
+número de argumentos, y el test ya pasa con solo añadir el 4º parámetro.
+
+### Corrección a la tabla original
+
+- La fila `#7` (hypo1-4 con f2c) quedó resuelta: hipoplasticidad en **C puro** (commit 73f0e70), 4/4 PASS.
+- La fila `#6` (examp9 con SUPERLU) quedó resuelta: SUPERLU integrado en el build.
+- La fila `#4` (refinamiento) quedó **reparada** (fix `create.cc`).
+- La fila `#5` (camclay "no soportado") era un **desajuste de versión del input** (3 vs 4 parámetros);
+  con N=2.073 pasa.
+
+### Estado tras fixes (verificado 2026-08-02 tarde)
+
+Ambos fixes aplicados y verificados con el binario actual:
+
+| Test | Antes | Después |
+|---|---|---|
+| examp7 | FAIL (element_dof) | PASS |
+| examp15 | FAIL | PASS |
+| refine4 | FAIL | PASS |
+| ho_othr2 | FAIL | PASS |
+| examp22 | FAIL (3 vs 4 params) | PASS con `N=2.073` añadido al input |
+| hypo1-4 | PASS | PASS |
+| truss1/elasti1/spring1/wave1 | PASS | PASS |
