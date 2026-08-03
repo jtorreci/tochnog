@@ -284,7 +284,7 @@ tochnog: adjust.$(OBJ) area.$(OBJ) \
 	refine_g.$(OBJ) refine_l.$(OBJ) remesh.$(OBJ) \
 	renumber.$(OBJ) repeat.$(OBJ) restart.$(OBJ) \
 	slide.$(OBJ) \
-	so.$(OBJ) so_bicg.$(OBJ) \
+	so.$(OBJ) so_bicg.$(OBJ) so_suplu.$(OBJ) \
 	   split.$(OBJ) \
 	spring.$(OBJ) stress.$(OBJ) \
 	$(SYS_FILE).$(OBJ) tendon.$(OBJ) time.$(OBJ) tn.$(OBJ) \
@@ -557,6 +557,9 @@ so.$(OBJ): so.$(SRC_CPP) tochnog.h
 
 so_bicg.$(OBJ): so_bicg.$(SRC_CPP) tochnog.h
 	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)so_bicg.$(SRC_CPP)
+
+so_suplu.$(OBJ): so_suplu.c tochnog.h tnsuplu.h
+	$(COMPILER_C) $(COMPILER_FLAGS) so_suplu.c
 
 #so_petsc.$(OBJ): so_petsc.$(SRC_C) tochnog.h
 #	$(COMPILER_C) $(COMPILER_FLAGS) so_petsc.$(SRC_C)

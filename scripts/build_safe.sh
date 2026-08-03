@@ -18,12 +18,32 @@ set -uo pipefail
 REPO_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$REPO_DIR"
 
-SUPERLU_A="$REPO_DIR/external-downloads/superlu-4.3/lib/libsuperlu_4.3.a"
-[ -f "$SUPERLU_A" ] || { echo "!! No existe $SUPERLU_A (compila SuperLU primero)"; exit 1; }
+# Seleccion de SuperLU: se prefiere la version mas moderna disponible.
+# Orden: (1) SuperLU del sistema (apt, ej. libsuperlu-dev 6.0.1),
+#        (2) SuperLU 6.0.1 local compilado, (3) SuperLU 4.3 local.
+SUPERLU_A=""
+SUPERLU_INC=""
+if [ -f /usr/lib/x86_64-linux-gnu/libsuperlu.so ] || [ -f /usr/lib/x86_64-linux-gnu/libsuperlu.a ]; then
+  SUPERLU_A="-lsuperlu"
+  SUPERLU_INC="-I/usr/include/superlu"
+  echo "==> Usando SuperLU del sistema (apt): /usr/lib/x86_64-linux-gnu/libsuperlu"
+elif [ -f "$REPO_DIR/external-downloads/superlu-6.0.1/lib/libsuperlu.a" ]; then
+  SUPERLU_A="$REPO_DIR/external-downloads/superlu-6.0.1/lib/libsuperlu.a"
+  SUPERLU_INC="-I$REPO_DIR/external-downloads/superlu-6.0.1/SRC"
+  echo "==> Usando SuperLU 6.0.1 local: external-downloads/superlu-6.0.1"
+elif [ -f "$REPO_DIR/external-downloads/superlu-4.3/lib/libsuperlu_4.3.a" ]; then
+  SUPERLU_A="$REPO_DIR/external-downloads/superlu-4.3/lib/libsuperlu_4.3.a"
+  SUPERLU_INC="-I$REPO_DIR/external-downloads/superlu-4.3/SRC"
+  echo "==> Usando SuperLU 4.3 local: external-downloads/superlu-4.3"
+else
+  echo "!! No se encontro SuperLU. Instala libsuperlu-dev (sudo ./scripts/install_solvers.sh)"
+  echo "   o compila uno local en external-downloads/superlu-4.3/ o superlu-6.0.1/."
+  exit 1
+fi
 
 MAKE_FLAGS=( "SYS_FILE=sysposix" "OBJ=o" "BCPP=" "VCPP="
   "COMPILER_C=gcc" "COMPILER_CPP=g++"
-  "COMPILER_FLAGS=-c -O1 -Wall -D_REENTRANT"
+  "COMPILER_FLAGS=-c -O1 -Wall -D_REENTRANT $SUPERLU_INC"
   "LINK_FLAGS_BEFORE=" )
 
 LINK_FLAGS_AFTER="-l:liblapack.so.3 -l:libblas.so.3 $SUPERLU_A -lm -lpthread -o build/tochnog"
