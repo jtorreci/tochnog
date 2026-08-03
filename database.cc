@@ -2776,6 +2776,44 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   external[INITIALIZATION_VALUES] = 0;
   fixed_length[INITIALIZATION_VALUES] = 0;
 
+  strcpy(name[INPUT_ABAQUS],"input_abaqus");
+  type[INPUT_ABAQUS] = INTEGER;
+  data_length[INPUT_ABAQUS] = 1;
+  no_index[INPUT_ABAQUS] = 1;
+  external[INPUT_ABAQUS] = 0;
+
+  strcpy(name[INPUT_ABAQUS_CONTINUE],"input_abaqus_continue");
+  type[INPUT_ABAQUS_CONTINUE] = INTEGER;
+  data_length[INPUT_ABAQUS_CONTINUE] = 1;
+  no_index[INPUT_ABAQUS_CONTINUE] = 1;
+  external[INPUT_ABAQUS_CONTINUE] = 0;
+
+  strcpy(name[INPUT_ABAQUS_GROUP],"input_abaqus_group");
+  type[INPUT_ABAQUS_GROUP] = INTEGER;
+  data_length[INPUT_ABAQUS_GROUP] = 1;
+  no_index[INPUT_ABAQUS_GROUP] = 1;
+  external[INPUT_ABAQUS_GROUP] = 0;
+
+  strcpy(name[INPUT_ABAQUS_MESH],"input_abaqus_mesh");
+  type[INPUT_ABAQUS_MESH] = INTEGER;
+  data_length[INPUT_ABAQUS_MESH] = 1;
+  no_index[INPUT_ABAQUS_MESH] = 1;
+  external[INPUT_ABAQUS_MESH] = 0;
+
+  strcpy(name[INPUT_ABAQUS_NAME],"input_abaqus_name");
+  type[INPUT_ABAQUS_NAME] = INTEGER;
+  data_length[INPUT_ABAQUS_NAME] = DATA_ITEM_SIZE;
+  no_index[INPUT_ABAQUS_NAME] = 1;
+  external[INPUT_ABAQUS_NAME] = 0;
+  fixed_length[INPUT_ABAQUS_NAME] = 0;
+
+  strcpy(name[INPUT_ABAQUS_SET],"input_abaqus_set");
+  type[INPUT_ABAQUS_SET] = INTEGER;
+  data_length[INPUT_ABAQUS_SET] = DATA_ITEM_SIZE;
+  no_index[INPUT_ABAQUS_SET] = 1;
+  external[INPUT_ABAQUS_SET] = 0;
+  fixed_length[INPUT_ABAQUS_SET] = 0;
+
   strcpy(name[INPUT_GMSH],"input_gmsh");
   type[INPUT_GMSH] = INTEGER;
   data_length[INPUT_GMSH] = 1;

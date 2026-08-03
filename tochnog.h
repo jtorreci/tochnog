@@ -611,6 +611,12 @@ enum {
   INCLUDE,
   INITIALIZE,
   INITIALIZATION_VALUES,
+  INPUT_ABAQUS,
+  INPUT_ABAQUS_CONTINUE,
+  INPUT_ABAQUS_GROUP,
+  INPUT_ABAQUS_MESH,
+  INPUT_ABAQUS_NAME,
+  INPUT_ABAQUS_SET,
   INPUT_GMSH,
   INTEGER,
   INVERSE,
@@ -1217,6 +1223,7 @@ long int  hyper_stress( long int gr, long int element, long int memory, double u
             double epe[], double stress[] );
 void      initialize( void );
 void      input();
+void      input_abaqus_read( void );
 void      input_gmsh_read( void );
 void      input_check_required();
 void      input_convert_to_lower_case( char str[] );

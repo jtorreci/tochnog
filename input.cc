@@ -531,6 +531,27 @@ void input( )
       exit(TN_EXIT_STATUS);
     }
 
+    // import an abaqus mesh (generates tochnog_abaqus.dat)
+    if ( idat==INPUT_ABAQUS ) {
+      long int input_abaqus_switch=0;
+      input_read_string( echo, str, d, d_is_set );
+      input_skip_comment( str );
+      if ( echo ) cout << " " << str << " ";
+      if ( str[0]=='-' ) {
+        itmp = db_number( &str[1] );
+        if ( itmp<0 ) {
+          pri( "\nError in data part." );
+          pri( "I do not know ", str );
+          exit(TN_EXIT_STATUS);
+        }
+        input_abaqus_switch = -itmp;
+      }
+      if ( input_abaqus_switch==-YES ) input_abaqus_read();
+      input_read_string( echo, str, d, d_is_set );
+      input_skip_comment( str );
+      continue;
+    }
+
     // import a gmsh mesh
     if ( idat==INPUT_GMSH ) {
       long int input_gmsh_switch=0;
@@ -1454,5 +1475,137 @@ void input_gmsh_read( void )
 
   in.close();
   cout << "Input from gmsh file " << filename << " read.\n";
+
+}
+
+void input_abaqus_read( void )
+
+{
+  // read the abaqus input file abaqus.inp and generate tochnog_abaqus.dat
+  // with node, element and set records (sets as geometry_list).
+  long int i=0, inode=0, nnol=0, n1=0, n2=0, n3=0, n4=0, n5=0,
+    n6=0, n7=0, n8=0, n9=0, elem_id=0;
+  double xyz[MDIM];
+  char line[MCHAR], *tok=NULL, str2[MCHAR], filename[MCHAR], eltype[MCHAR];
+  ifstream in;
+  ofstream out;
+  long int in_nodes=0, in_elements=0;
+
+  strcpy( filename, "abaqus.inp" );
+  in.open( filename );
+  if ( !in ) {
+    pri( "Error: cannot open abaqus file ", filename );
+    exit(TN_EXIT_STATUS);
+  }
+  out.open( "tochnog_abaqus.dat" );
+
+  in_nodes = in_elements = 0;
+  while ( in.getline(line,MCHAR) ) {
+    string_convert_to_lower_case( line );
+    // trim leading spaces
+    char *p = line;
+    while ( *p==' ' || *p=='\t' ) p++;
+    if ( p[0]=='*' ) {
+      in_nodes = in_elements = 0;
+      // strip trailing comma of keyword
+      char *q = p;
+      while ( *q && *q!='\n' ) q++;
+      *q = 0;
+      // keyword
+      if      ( !strncmp(p,"*node",5) ) in_nodes = 1;
+      else if ( !strncmp(p,"*element",8) ) {
+        in_elements = 1;
+        strcpy(eltype,"");
+        char *eq = strstr(p,"type=");
+        if ( eq ) { strcpy(eltype, eq+5); char *c=strchr(eltype,','); if(c)*c=0; }
+      }
+      continue;
+    }
+    // data line: split by commas
+    if ( in_nodes ) {
+      tok = strtok(p,",");
+      if ( !tok ) continue;
+      inode = atoi(tok);
+      xyz[0]=xyz[1]=xyz[2]=0.;
+      i=0;
+      tok = strtok(NULL,",");
+      while ( tok && i<3 ) { xyz[i]=atof(tok); tok=strtok(NULL,","); i++; }
+      out << "node  " << inode << "  " << xyz[0];
+      if ( ndim>=2 ) out << "  " << xyz[1];
+      if ( ndim==3 ) out << "  " << xyz[2];
+      out << "\n";
+    }
+    else if ( in_elements ) {
+      tok = strtok(p,",");
+      if ( !tok ) continue;
+      elem_id = atoi(tok);
+      n1=n2=n3=n4=n5=n6=n7=n8=n9=0;
+      if      ( !strncmp(eltype,"t2d2",4) || !strncmp(eltype,"t3d2",4) ) {
+        strcpy(str2,"-bar2"); nnol=2;
+        tok=strtok(NULL,","); n1=atoi(tok?tok:"");
+        tok=strtok(NULL,","); n2=atoi(tok?tok:"");
+      }
+      else if ( !strncmp(eltype,"t2d3",4) || !strncmp(eltype,"t3d3",4) ) {
+        strcpy(str2,"-bar3"); nnol=3;
+        tok=strtok(NULL,","); n1=atoi(tok?tok:"");
+        tok=strtok(NULL,","); n2=atoi(tok?tok:"");
+        tok=strtok(NULL,","); n3=atoi(tok?tok:"");
+      }
+      else if ( !strncmp(eltype,"cps3",4) || !strncmp(eltype,"cpe3",4) ||
+                !strncmp(eltype,"cax3",4) || !strncmp(eltype,"s3",2) ) {
+        strcpy(str2,"-tria3"); nnol=3;
+        tok=strtok(NULL,","); n1=atoi(tok?tok:"");
+        tok=strtok(NULL,","); n2=atoi(tok?tok:"");
+        tok=strtok(NULL,","); n3=atoi(tok?tok:"");
+      }
+      else if ( !strncmp(eltype,"cps6",4) || !strncmp(eltype,"cpe6",4) ) {
+        strcpy(str2,"-tria6"); nnol=6;
+        tok=strtok(NULL,","); n1=atoi(tok?tok:"");
+        tok=strtok(NULL,","); n2=atoi(tok?tok:"");
+        tok=strtok(NULL,","); n3=atoi(tok?tok:"");
+        tok=strtok(NULL,","); n4=atoi(tok?tok:"");
+        tok=strtok(NULL,","); n5=atoi(tok?tok:"");
+        tok=strtok(NULL,","); n6=atoi(tok?tok:"");
+      }
+      else if ( !strncmp(eltype,"cps4",4) || !strncmp(eltype,"cpe4",4) ||
+                !strncmp(eltype,"cax4",4) || !strncmp(eltype,"m3d4",4) ) {
+        strcpy(str2,"-quad4"); nnol=4;
+        tok=strtok(NULL,","); n1=atoi(tok?tok:"");
+        tok=strtok(NULL,","); n2=atoi(tok?tok:"");
+        tok=strtok(NULL,","); n3=atoi(tok?tok:"");
+        tok=strtok(NULL,","); n4=atoi(tok?tok:"");
+      }
+      else if ( !strncmp(eltype,"cps8",4) || !strncmp(eltype,"cpe8",4) ||
+                !strncmp(eltype,"cax8",4) || !strncmp(eltype,"m3d8",4) ) {
+        strcpy(str2,"-quad9"); nnol=8;
+        tok=strtok(NULL,","); n1=atoi(tok?tok:"");
+        tok=strtok(NULL,","); n2=atoi(tok?tok:"");
+        tok=strtok(NULL,","); n3=atoi(tok?tok:"");
+        tok=strtok(NULL,","); n4=atoi(tok?tok:"");
+        tok=strtok(NULL,","); n5=atoi(tok?tok:"");
+        tok=strtok(NULL,","); n6=atoi(tok?tok:"");
+        tok=strtok(NULL,","); n7=atoi(tok?tok:"");
+        tok=strtok(NULL,","); n8=atoi(tok?tok:"");
+      }
+      else {
+        cout << "Warning: abaqus element type " << eltype
+             << " not converted to tochnog." << "\n";
+        continue;
+      }
+      out << "element  " << elem_id << "  " << str2;
+      out << "  " << n1 << "  " << n2;
+      if ( nnol>=3 ) out << "  " << n3;
+      if ( nnol>=4 ) out << "  " << n4;
+      if ( nnol>=6 ) out << "  " << n5 << "  " << n6;
+      if ( nnol>=8 ) out << "  " << n7 << "  " << n8;
+      if ( nnol>=9 ) out << "  " << n9;
+      out << "\n";
+    }
+  }
+
+  out << "end_data\n";
+  in.close();
+  out.close();
+  cout << "Generated tochnog_abaqus.dat from abaqus.inp." << "\n";
 
 }
