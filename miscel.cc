@@ -458,6 +458,8 @@ void exit_tn( long int print_database_type )
     }
   }
 
+  if ( check_used==-YES ) check_used_report();
+
   db_close();
 
   ofstream out( "tn.log", ios::app );

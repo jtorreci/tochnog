@@ -25,7 +25,7 @@ void print_history( long int ival[], long int nval )
   long int data_item_name=0, data_item_index=0, iset=0, nset=0,
     number=0, len=0, icontrol=0, swit=0, ldum=0, 
     idum[1], *idat=NULL, *dof_label=NULL;
-  double time_current=0., ddum[1], *ddat=NULL;
+  double time_current=0., ddum[1], *ddat=NULL, factor=1., *factor_d=NULL;
   char str[MCHAR], filename[MCHAR];
 
   swit = set_swit(-1,-1,"print_history");
@@ -39,6 +39,15 @@ void print_history( long int ival[], long int nval )
   db( TIME_CURRENT, 0, idum, &time_current, ldum, VERSION_NORMAL, GET );
   db( ICONTROL, 0, &icontrol, ddum, ldum, VERSION_NORMAL, GET );
   nset = nval / 3;
+
+  // multiplication factors for the printed data values
+  if ( db_active_index( CONTROL_PRINT_HISTORY_FACTOR, icontrol,
+      VERSION_NORMAL ) ) {
+    factor_d = get_new_dbl(DATA_ITEM_SIZE);
+    array_set( factor_d, 1., DATA_ITEM_SIZE );
+    db( CONTROL_PRINT_HISTORY_FACTOR, icontrol, idum, factor_d,
+      ldum, VERSION_NORMAL, GET );
+  }
 
   for ( iset=0; iset<nset; iset++ ) {
 
@@ -63,17 +72,18 @@ void print_history( long int ival[], long int nval )
     if ( db_active_index( data_item_name, data_item_index, VERSION_NORMAL ) ) {
       ofstream out( filename, ios::app );
       out.precision(TN_PRECISION);
+      factor = ( factor_d ? factor_d[iset] : 1. );
       if ( db_type(data_item_name)==INTEGER ) {
         db( data_item_name, data_item_index, idat, ddum, len, VERSION_NORMAL, GET );
         if ( number<0 || number>len-1 )
           db_error( CONTROL_PRINT_HISTORY, icontrol );
-        out << time_current << " " << idat[number] << "\n";
+        out << time_current << " " << (long int)(factor*idat[number]) << "\n";
       }
       else {
         db( data_item_name, data_item_index, idum, ddat, len, VERSION_NORMAL, GET );
         if ( number<0 || number>len-1 )
           db_error( CONTROL_PRINT_HISTORY, icontrol );
-        out << time_current << " " << ddat[number] << "\n";
+        out << time_current << " " << factor*ddat[number] << "\n";
       }
       out.close();
     }
@@ -83,6 +93,7 @@ void print_history( long int ival[], long int nval )
   delete[] idat;
   delete[] dof_label;
   delete[] ddat;
+  if ( factor_d ) delete[] factor_d;
 
   if ( swit ) pri( "Out routine PRINT_HISTORY" );
 }

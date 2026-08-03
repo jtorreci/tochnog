@@ -87,6 +87,7 @@ char
 	// added for options_element_dof
 long int options_element_dof=-YES;
 double options_nonlocal_softvar=0;
+long int check_used=-NO;
 
 
 void initialize( void )

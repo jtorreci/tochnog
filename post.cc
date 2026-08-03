@@ -29,9 +29,10 @@ void post( long int task )
 
 {
   long int i=0, j=0, n=0, ipost=0, max_post=0,
-    post_line_moment=0, post_line_operat=0, ldum=0, idum[1];
+    post_line_moment=0, post_line_operat=0, ldum=0, idum[1],
+    post_point_move=0;
   double h0=0., h1=0., h2=0., h3=0., total_weight=0.,
-    segment_size=0., line_size=0., tmp=0.,
+    segment_size=0., line_size=0., tmp=0., dtime=0.,
     ddum[1], *xi=NULL, *eta=NULL, *weight_xi=NULL, *weight_eta=NULL, 
     vec0[MDIM], vec1[MDIM], vec2[MDIM], vec3[MDIM], 
     post_line[2*MDIM], post_quadrilateral[4*MDIM],
@@ -40,6 +41,9 @@ void post( long int task )
 
   if ( nuknwn>0 ) {
 
+    db( POST_POINT_MOVE, 0, &post_point_move, ddum, ldum, 
+      VERSION_NORMAL, GET_IF_EXISTS );
+
     db_max_index( POST_POINT, max_post, VERSION_NORMAL, GET );
     for( ipost=0; ipost<=max_post; ipost++ ) {
       if ( db_active_index( POST_POINT, ipost, VERSION_NORMAL ) ) {
@@ -47,8 +51,20 @@ void post( long int task )
         array_set( post_point_dof, 0., nuknwn );
         post_found = 0;
         parallel_sys_routine( &parallel_post_point );
-        if ( post_found ) db( POST_POINT_DOF, ipost, idum, post_point_dof, 
-          nuknwn, VERSION_NORMAL, PUT );
+        if ( post_found ) {
+          db( POST_POINT_DOF, ipost, idum, post_point_dof, 
+            nuknwn, VERSION_NORMAL, PUT );
+          // let the post point follow the material particle,
+          // using the interpolated velocity field
+          if ( post_point_move==-YES && materi_velocity ) {
+            if ( db( DTIME, 0, idum, &dtime, ldum, VERSION_NEW, GET_IF_EXISTS ) ||
+                 db( DTIME, 0, idum, &dtime, ldum, VERSION_NORMAL, GET_IF_EXISTS ) ) {
+              for ( i=0; i<ndim; i++ )
+                post_point[i] += post_point_dof[vel_indx+i*nder]*dtime;
+              db( POST_POINT, ipost, idum, post_point, ndim, VERSION_NORMAL, PUT );
+            }
+          }
+        }
       }
     }
 

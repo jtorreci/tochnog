@@ -225,3 +225,56 @@ void force_gravity_calculate( double force_gravity[] )
   }
 
 }
+
+void force_point_calculate( void )
+
+{
+  // distribute point forces (force_point) to the nodes of the element
+  // that contains the specified coordinate. A point force can be anywhere
+  // in space, also not on a node.
+  long int iforce=0, max_force=0, length=0, inol=0, nnol=0, inod=0, 
+    element=0, max_element=0, ldum=0, idum[1], el[1+MNOL], nodes[MNOL], 
+    ipuknwn=0;
+  double ddum[1], coords[MNOL*MDIM], weight[MNOL], *force_point=NULL, 
+    *node_rhside=NULL;
+
+  db_max_index( FORCE_POINT, max_force, VERSION_NORMAL, GET );
+  if ( max_force<0 ) return;
+
+  db_max_index( ELEMENT, max_element, VERSION_NORMAL, GET );
+  if ( max_element<0 ) return;
+
+  for ( iforce=0; iforce<=max_force; iforce++ ) {
+    if ( db_active_index( FORCE_POINT, iforce, VERSION_NORMAL ) ) {
+      force_point = db_dbl( FORCE_POINT, iforce, VERSION_NORMAL );
+      // locate element containing the point
+      element = -1;
+      for ( element=0; element<=max_element; element++ ) {
+        if ( db_active_index( ELEMENT, element, VERSION_NORMAL ) ) {
+          db( ELEMENT, element, el, ddum, length, VERSION_NORMAL, GET );
+          nnol = length - 1; array_move( &el[1], nodes, nnol );
+          for ( inol=0; inol<nnol; inol++ ) {
+            inod = nodes[inol];
+            db( NODE_START_REFINED, inod, idum, &coords[inol*ndim], ldum, 
+              VERSION_NORMAL, GET );
+          }
+          if ( point_el( force_point, coords, weight, el[0], nnol ) ) break;
+        }
+      }
+      if ( element>max_element ) {
+        pri( "Error: force_point not in any element." );
+        exit(TN_EXIT_STATUS);
+      }
+      // distribute the force to the nodes of the found element
+      for ( inol=0; inol<nnol; inol++ ) {
+        inod = nodes[inol];
+        node_rhside = db_dbl( NODE_RHSIDE, inod, VERSION_NORMAL );
+        for ( ipuknwn=0; ipuknwn<nuknwn/nder; ipuknwn++ ) {
+          if ( force_point[ndim+ipuknwn]!=0. )
+            node_rhside[ipuknwn] -= weight[inol]*force_point[ndim+ipuknwn];
+        }
+      }
+    }
+  }
+
+}

@@ -25,7 +25,7 @@ void print_data_versus_data( long int ival[], long int length )
   long int data_item_name=0, data_item_index=0, number=0,
     len=0, icontrol=0, swit=0, idata=0, ndata=0, ldum=0, idum[1], 
     *idat=NULL, *dof_label=NULL;
-  double ddum[1], *ddat=NULL;
+  double ddum[1], *ddat=NULL, factor=1., *factor_d=NULL;
   char filename[MCHAR];
 
   swit = set_swit(-1,-1,"print_data_versus_data");
@@ -37,6 +37,15 @@ void print_data_versus_data( long int ival[], long int length )
 
   db( DOF_LABEL, 0, dof_label, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
   db( ICONTROL, 0, &icontrol, ddum, ldum, VERSION_NORMAL, GET );
+
+  // multiplication factors for the printed data values
+  if ( db_active_index( CONTROL_PRINT_DATA_VERSUS_DATA_FACTOR, icontrol,
+      VERSION_NORMAL ) ) {
+    factor_d = get_new_dbl(DATA_ITEM_SIZE);
+    array_set( factor_d, 1., DATA_ITEM_SIZE );
+    db( CONTROL_PRINT_DATA_VERSUS_DATA_FACTOR, icontrol, idum, factor_d,
+      ldum, VERSION_NORMAL, GET );
+  }
 
   if ( length%3!=0 ) db_error( CONTROL_PRINT_DATA_VERSUS_DATA, icontrol );
   ndata = length / 3;
@@ -58,17 +67,18 @@ void print_data_versus_data( long int ival[], long int length )
       number = ival[idata*3+2];
 
     if ( db_active_index( data_item_name, data_item_index, VERSION_NORMAL ) ) {
+      factor = ( factor_d ? factor_d[idata] : 1. );
       if ( db_type(data_item_name)==INTEGER ) {
         db( data_item_name, data_item_index, idat, ddum, len, VERSION_NORMAL, GET );
         if ( number<0 || number>len-1 )
           db_error( CONTROL_PRINT_DATA_VERSUS_DATA, icontrol );
-        out << idat[number] << "  ";
+        out << (long int)(factor*idat[number]) << "  ";
       }
       else {
         db( data_item_name, data_item_index, idum, ddat, len, VERSION_NORMAL, GET );
         if ( number<0 || number>len-1 )
           db_error( CONTROL_PRINT_DATA_VERSUS_DATA, icontrol );
-        out << ddat[number] << "  ";
+        out << factor*ddat[number] << "  ";
       }
     }
 
@@ -77,6 +87,8 @@ void print_data_versus_data( long int ival[], long int length )
   out << "\n";
 
   out.close();
+
+  if ( factor_d ) delete[] factor_d;
 
   delete[] idat;
   delete[] dof_label;

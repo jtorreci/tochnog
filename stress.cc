@@ -464,6 +464,20 @@ void set_stress( long int element, long int gr,
   else
     max_plasti_iter = MAX_ITER;
 
+  // user-specified maximum number of plastic iterations on
+  // integration point level (materi_plasti_maximum_iterations)
+  {
+    long int max_plasti_iter_user=0, length_it=0;
+    if ( db( GROUP_MATERI_PLASTI_MAXIMUM_ITERATIONS, gr, &max_plasti_iter_user,
+        ddum, length_it, VERSION_NORMAL, GET_IF_EXISTS ) ) {
+      if ( max_plasti_iter_user<1 ) {
+        pri( "Error: group_materi_plasti_maximum_iterations must be at least 1." );
+        exit(1);
+      }
+      max_plasti_iter = max_plasti_iter_user;
+    }
+  }
+
   /*********added for explicit time integration*******************************************/
 
   array_move(old_epi, new_epi, MDIM*MDIM);

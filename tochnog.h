@@ -158,6 +158,7 @@ enum {
   CHECK_NUMBER,
   CHECK_USAGE,
   CHECK_USAGE_AND_ERROR,
+  CHECK_USED,
   CIRCLE,
   CIRCLE_HOLLOW,
   CLOSE,
@@ -250,6 +251,7 @@ enum {
   CONTROL_PRINT,
   CONTROL_PRINT_DATABASE,
   CONTROL_PRINT_DATA_VERSUS_DATA,
+  CONTROL_PRINT_DATA_VERSUS_DATA_FACTOR,
   CONTROL_PRINT_DX,
   CONTROL_PRINT_DX_TIME,
   CONTROL_PRINT_ELEMENT,
@@ -261,6 +263,7 @@ enum {
   CONTROL_PRINT_GMV,
   CONTROL_PRINT_GMV_MESH,
   CONTROL_PRINT_HISTORY,
+  CONTROL_PRINT_HISTORY_FACTOR,
   CONTROL_PRINT_MATLAB,
   CONTROL_PRINT_PLOTMTV,
   CONTROL_PRINT_PLOTMTV_MESH,
@@ -380,6 +383,7 @@ enum {
   FORCE_ELEMENT_VOLUME_TIME,
   FORCE_GRAVITY,
   FORCE_GRAVITY_TIME,
+  FORCE_POINT,
   FROM,
   FRONT,
   GAUSS,
@@ -540,6 +544,7 @@ enum {
   GROUP_MATERI_PLASTI_MATSUOKANAKAI,
   GROUP_MATERI_PLASTI_MATSUOKANAKAI_APEX,
   GROUP_MATERI_PLASTI_MATSUOKANAKAI_TENSIONCUTOFF,
+  GROUP_MATERI_PLASTI_MAXIMUM_ITERATIONS,
   GROUP_MATERI_PLASTI_MOHRCOUL,
   GROUP_MATERI_PLASTI_MOHRCOUL_01,
   GROUP_MATERI_PLASTI_MOHRCOUL_12,
@@ -781,6 +786,7 @@ enum {
   POST_POINT,
   POST_POINT_DOF,
   POST_POINT_DOF_CALCUL,
+  POST_POINT_MOVE,
   POST_QUADRILATERAL,
   POST_QUADRILATERAL_DOF,
   POST_QUADRILATERAL_DOF_CALCUL,
@@ -989,6 +995,7 @@ extern char swit_routine_stack[MSTACK][MCHAR]; // routines called
   // added for options_element_dof
 extern long int options_element_dof; 	   //in initia.cc
 extern double options_nonlocal_softvar;  //in initia.cc
+extern long int check_used;              //in initia.cc
 
   // routines
 void      adjust_geom( long int geometry_entity[], long int geometry_entity_edge[] );
@@ -1036,6 +1043,7 @@ long int  check_unknown( const char* str, long int initialization_needs_to_exist
 long int  check_unknown_atleastone( const char* str1, const char* str2, long int task );
 long int  check_unknown_minimum( char str[], long int min, long int task );
 long int  check_unknowns_are_specified( long int task );
+void      check_used_report( void );
 void      crack( void );
 void      step_close( long int task, long int ipar, long int npar, long int ipar_i,
             long int ipar_n );
@@ -1143,6 +1151,7 @@ void      force_element_volume_set( long int element, long int nnol, long int no
             double coord[], double force_element_volume[] );
 void      force_time_file_apply( long int iforce, long int table_name, double &load );
 void      force_gravity_calculate( double force_gravity[] );
+void      force_point_calculate( void );
 long int  force_time( double time_table[], const char* table_name,
             long int length, double &load );
 void      force_factor( long int factor_name, long int iforce, 

@@ -120,6 +120,8 @@ void top( void )
     // initialize element_dof, if not specified
   db( OPTIONS_ELEMENT_DOF, 0, &options_element_dof, ddum, ldum, 
     VERSION_NORMAL, GET_IF_EXISTS );
+
+  db( CHECK_USED, 0, &check_used, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
   if ( nuknwn>0 ) {
     array_set( dworkmnol, 0., mnolnuknwn );
     db_max_index( ELEMENT, max_elem, VERSION_NORMAL, GET );

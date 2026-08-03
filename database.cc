@@ -38,6 +38,7 @@ long int data_class[MDAT];     // ELEMENT or NODE or so
 long int data_required[MDAT];  // data required for this data (for the same index)
 long int print_only[MDAT];     // 0: for reading and printing; 1: for printing only
 long int version_all[MDAT];    // 1: with versions, 0: without versions
+long int db_read[MDAT];        // set to 1 when item is read (GET/GET_IF_EXISTS)
 
 void db_initialize( long int dof_type[], long int dof_label[] )
 
@@ -52,6 +53,7 @@ void db_initialize( long int dof_type[], long int dof_label[] )
       max_index[idat][iversion] = -1;
   }
   array_set( version_all, 0, MDAT );
+  array_set( db_read, 0, MDAT );
   array_set( data_class, -1, MDAT );
   array_set( data_required, -1, MDAT );
   array_set( data_length, 0, MDAT );
@@ -239,6 +241,11 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   strcpy(name[CHECK_INDEX],"check_index" );
 
   strcpy(name[CHECK_NUMBER],"check_number" );
+
+  strcpy(name[CHECK_USED],"check_used");
+  type[CHECK_USED] = INTEGER;
+  data_length[CHECK_USED] = 1;
+  no_index[CHECK_USED] = 1;
 
   strcpy(name[CIRCLE],"circle" );
 
@@ -731,6 +738,13 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   fixed_length[CONTROL_PRINT_DATA_VERSUS_DATA] = 0;
   data_class[CONTROL_PRINT_DATA_VERSUS_DATA] = CONTROL;
 
+  strcpy(name[CONTROL_PRINT_DATA_VERSUS_DATA_FACTOR],"control_print_data_versus_data_factor");
+  type[CONTROL_PRINT_DATA_VERSUS_DATA_FACTOR] = DOUBLE_PRECISION;
+  data_length[CONTROL_PRINT_DATA_VERSUS_DATA_FACTOR] = DATA_ITEM_SIZE;
+  fixed_length[CONTROL_PRINT_DATA_VERSUS_DATA_FACTOR] = 0;
+  data_class[CONTROL_PRINT_DATA_VERSUS_DATA_FACTOR] = CONTROL;
+  data_required[CONTROL_PRINT_DATA_VERSUS_DATA_FACTOR] = CONTROL_PRINT_DATA_VERSUS_DATA;
+
   strcpy(name[CONTROL_PRINT_DX],"control_print_dx");
   type[CONTROL_PRINT_DX] = INTEGER;
   data_length[CONTROL_PRINT_DX] = 1;
@@ -790,6 +804,13 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   data_length[CONTROL_PRINT_HISTORY] = DATA_ITEM_SIZE;
   fixed_length[CONTROL_PRINT_HISTORY] = 0;
   data_class[CONTROL_PRINT_HISTORY] = CONTROL;
+
+  strcpy(name[CONTROL_PRINT_HISTORY_FACTOR],"control_print_history_factor");
+  type[CONTROL_PRINT_HISTORY_FACTOR] = DOUBLE_PRECISION;
+  data_length[CONTROL_PRINT_HISTORY_FACTOR] = DATA_ITEM_SIZE;
+  fixed_length[CONTROL_PRINT_HISTORY_FACTOR] = 0;
+  data_class[CONTROL_PRINT_HISTORY_FACTOR] = CONTROL;
+  data_required[CONTROL_PRINT_HISTORY_FACTOR] = CONTROL_PRINT_HISTORY;
 
   strcpy(name[CONTROL_PRINT_PLOTMTV],"control_print_plotmtv");
   type[CONTROL_PRINT_PLOTMTV] = INTEGER;
@@ -1530,6 +1551,12 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   data_length[FORCE_GRAVITY_TIME] = DATA_ITEM_SIZE;
   fixed_length[FORCE_GRAVITY_TIME] = 0;
   data_class[FORCE_GRAVITY_TIME] = FORCE_GRAVITY;
+
+  strcpy(name[FORCE_POINT],"force_point");
+  type[FORCE_POINT] = DOUBLE_PRECISION;
+  data_length[FORCE_POINT] = ndim + MUKNWN;
+  fixed_length[FORCE_POINT] = 0;
+  data_class[FORCE_POINT] = FORCE_POINT;
   data_required[FORCE_GRAVITY_TIME] = FORCE_GRAVITY;
 
   strcpy(name[FROM],"from");
@@ -2398,6 +2425,12 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   data_length[GROUP_MATERI_PLASTI_MATSUOKANAKAI_TENSIONCUTOFF] = 1;
   data_class[GROUP_MATERI_PLASTI_MATSUOKANAKAI_TENSIONCUTOFF] = MATERI;
   data_required[GROUP_MATERI_PLASTI_MATSUOKANAKAI_TENSIONCUTOFF] = GROUP_TYPE;
+
+  strcpy(name[GROUP_MATERI_PLASTI_MAXIMUM_ITERATIONS],"group_materi_plasti_maximum_iterations");
+  type[GROUP_MATERI_PLASTI_MAXIMUM_ITERATIONS] = INTEGER;
+  data_length[GROUP_MATERI_PLASTI_MAXIMUM_ITERATIONS] = 1;
+  data_class[GROUP_MATERI_PLASTI_MAXIMUM_ITERATIONS] = MATERI;
+  data_required[GROUP_MATERI_PLASTI_MAXIMUM_ITERATIONS] = GROUP_TYPE;
 
   strcpy(name[GROUP_MATERI_PLASTI_MOHRCOUL],"group_materi_plasti_mohrcoul");
   type[GROUP_MATERI_PLASTI_MOHRCOUL] = DOUBLE_PRECISION;
@@ -3495,6 +3528,12 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   fixed_length[POST_POINT_DOF_CALCUL] = 0;
   data_class[POST_POINT_DOF_CALCUL] = POST;
 
+  strcpy(name[POST_POINT_MOVE],"post_point_move");
+  type[POST_POINT_MOVE] = INTEGER;
+  data_length[POST_POINT_MOVE] = 1;
+  no_index[POST_POINT_MOVE] = 1;
+  data_class[POST_POINT_MOVE] = POST;
+
   strcpy(name[POST_QUADRILATERAL],"post_quadrilateral");
   type[POST_QUADRILATERAL] = DOUBLE_PRECISION;
   data_length[POST_QUADRILATERAL] = 4*ndim;
@@ -4049,6 +4088,7 @@ long int db( long int idat, long int index, long int *ival,
 
   if      ( task==GET ) {
     if ( !db_active_index(data_number,index,version) ) db_error( idat, index );
+    db_read[data_number] = 1;
     length = db_len( data_number, index, version );
   }
   else if ( task==GET_IF_EXISTS ) {
@@ -4056,6 +4096,7 @@ long int db( long int idat, long int index, long int *ival,
       length = 0;
       return 0;
     }
+    db_read[data_number] = 1;
     length = db_len( data_number, index, version );
   }
   else if ( task==GET_AND_CHECK ) {
@@ -4358,6 +4399,7 @@ double *db_dbl( long int idat, long int version )
 
   if ( db_max_index(data_number,ldum,version,GET)<0 ) db_error( idat, -1 );
   if ( db_type(data_number)!=DOUBLE_PRECISION ) db_error( idat, -1 );
+  db_read[data_number] = 1;
 
   ptr = &dbl_data[data_number][version][0];
 
@@ -4380,6 +4422,7 @@ double *db_dbl( long int idat, long int index, long int version )
 
   if ( !db_active_index(data_number,index,version) ) db_error( idat, index );
   if ( db_type(data_number)!=DOUBLE_PRECISION ) db_error( idat, index );
+  db_read[data_number] = 1;
 
   data_ptr = data_length[data_number] * index;
   ptr = &dbl_data[data_number][version][data_ptr];
@@ -4502,6 +4545,7 @@ long int *db_int( long int idat, long int version )
 
   if ( db_max_index(data_number,ldum,version,GET)<0 ) db_error( idat, -1 );
   if ( db_type(data_number)!=INTEGER ) db_error( idat, -1 );
+  db_read[data_number] = 1;
 
   ptr = &int_data[data_number][version][0];
 
@@ -4523,6 +4567,7 @@ long int *db_int( long int idat, long int index, long int version )
 
   if ( !db_active_index(data_number,index,version) ) db_error( idat, index );
   if ( db_type(data_number)!=INTEGER ) db_error( idat, index );
+  db_read[data_number] = 1;
 
   data_ptr = data_length[data_number] * index;
   ptr = &int_data[data_number][version][data_ptr];
@@ -4802,5 +4847,27 @@ void db_version_delete( long int version )
     if ( db_version(idat,version) ) db_delete( idat, version );
   }
 
+}
+
+void check_used_report( void )
+
+{
+  long int idat=0, nused=0;
+
+  // report data items that were defined in the data file
+  // but never read during the calculation
+  for ( idat=0; idat<MDAT; idat++ ) {
+    if ( external[idat] && max_index[idat][VERSION_NORMAL]>=0 &&
+         !db_read[idat] ) {
+      if ( nused==0 )
+        cout << "\nCheck_used: data items defined in data file but not used:\n";
+      cout << "  " << db_name(idat) << "\n";
+      nused++;
+    }
+  }
+  if ( nused==0 )
+    cout << "\nCheck_used: all data items from data file were used.\n";
+  else
+    cout << "Check_used: " << nused << " data items not used.\n";
 }
 
