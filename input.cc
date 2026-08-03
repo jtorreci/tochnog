@@ -531,6 +531,27 @@ void input( )
       exit(TN_EXIT_STATUS);
     }
 
+    // import a gmsh mesh
+    if ( idat==INPUT_GMSH ) {
+      long int input_gmsh_switch=0;
+      input_read_string( echo, str, d, d_is_set );
+      input_skip_comment( str );
+      if ( echo ) cout << " " << str << " ";
+      if ( str[0]=='-' ) {
+        itmp = db_number( &str[1] );
+        if ( itmp<0 ) {
+          pri( "\nError in data part." );
+          pri( "I do not know ", str );
+          exit(TN_EXIT_STATUS);
+        }
+        input_gmsh_switch = -itmp;
+      }
+      if ( input_gmsh_switch==-YES ) input_gmsh_read();
+      input_read_string( echo, str, d, d_is_set );
+      input_skip_comment( str );
+      continue;
+    }
+
     // include a data file
     if ( idat==INCLUDE ) {
       if ( include_depth>=1 ) {
@@ -1375,4 +1396,63 @@ void input_check_required( void )
       }
     }
   }
+}
+
+void input_gmsh_read( void )
+
+{
+  // read the gmsh mesh file tochnog_in.msh (format 2.2)
+  // only node, element and element_group are read.
+  long int i=0, inode=0, ielem=0, nnode=0, nelem=0, ieltype=0, ntag=0,
+    igeom=0, node_tag=0, nnol=0, inol=0, idum[1], 
+    elem_data[1+MNOL];
+  double ddum[1], xyz[MDIM];
+  char str[MCHAR], filename[MCHAR];
+  ifstream in;
+
+  strcpy( filename, "tochnog_in.msh" );
+  in.open( filename );
+  if ( !in ) {
+    pri( "Error: cannot open gmsh file ", filename );
+    exit(TN_EXIT_STATUS);
+  }
+
+  // read MeshFormat section
+  while ( in >> str ) {
+    if ( !strcmp(str,"$Nodes") ) break;
+  }
+  in >> nnode;
+  for ( inode=1; inode<=nnode; inode++ ) {
+    in >> node_tag >> xyz[0] >> xyz[1] >> xyz[2];
+    db( NODE, node_tag, idum, xyz, ndim, VERSION_NORMAL, PUT );
+  }
+
+  // read Elements section
+  while ( in >> str ) {
+    if ( !strcmp(str,"$Elements") ) break;
+  }
+  in >> nelem;
+  for ( ielem=1; ielem<=nelem; ielem++ ) {
+    in >> igeom >> ieltype >> ntag;
+    for ( i=0; i<ntag; i++ ) in >> idum[0];  // skip tags
+    // element type -> tochnog element name and number of nodes
+    if      ( ieltype==1 ) { elem_data[0] = -BAR2;  nnol = 2; }
+    else if ( ieltype==8 ) { elem_data[0] = -BAR3;  nnol = 3; }
+    else if ( ieltype==2 ) { elem_data[0] = -TRIA3; nnol = 3; }
+    else if ( ieltype==9 ) { elem_data[0] = -TRIA6; nnol = 6; }
+    else if ( ieltype==3 ) { elem_data[0] = -QUAD4; nnol = 4; }
+    else if ( ieltype==10 ){ elem_data[0] = -QUAD9; nnol = 9; }
+    else {
+      cout << "Error: gmsh element type " << ieltype << " not supported by tochnog.\n";
+      exit(TN_EXIT_STATUS);
+    }
+    for ( inol=0; inol<nnol; inol++ ) in >> elem_data[1+inol];
+    ntag = 1+nnol;
+    db( ELEMENT, igeom, elem_data, ddum, ntag, VERSION_NORMAL, PUT );
+    // element group from gmsh physical group (first tag)
+  }
+
+  in.close();
+  cout << "Input from gmsh file " << filename << " read.\n";
+
 }

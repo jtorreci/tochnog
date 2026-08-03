@@ -2776,6 +2776,12 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   external[INITIALIZATION_VALUES] = 0;
   fixed_length[INITIALIZATION_VALUES] = 0;
 
+  strcpy(name[INPUT_GMSH],"input_gmsh");
+  type[INPUT_GMSH] = INTEGER;
+  data_length[INPUT_GMSH] = 1;
+  no_index[INPUT_GMSH] = 1;
+  external[INPUT_GMSH] = 0;
+
   strcpy(name[INVERSE],"inverse");
 
   strcpy(name[INVERSE_HISTORY],"inverse_history");

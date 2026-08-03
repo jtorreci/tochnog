@@ -206,7 +206,7 @@ El índice es limpio: cada entrada de la sección 6 "data records" es una keywor
 
 #### P0 — Importación de mallas y archivos (valor alto, tu necesidad directa)
 - [x] `include filename` — incluir archivos en el data part (implementado y verificado 2026-08-03).
-- [ ] `input_gmsh` — importar malla de gmsh.
+- [x] `input_gmsh` — importar malla de gmsh (implementado 2026-08-03, lee `tochnog_in.msh` formato 2.2, nodos y elementos lineales/cuadráticos).
 - [ ] `input_abaqus` (+ `_continue`, `_group`, `_mesh`, `_set`, `_name`) — importar malla de abaqus.
 - [ ] `input_feflow_mesh` (+ `_fem`, `_mesh_hydraulic_head`) — importar malla de FEFLOW.
 

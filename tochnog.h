@@ -611,6 +611,7 @@ enum {
   INCLUDE,
   INITIALIZE,
   INITIALIZATION_VALUES,
+  INPUT_GMSH,
   INTEGER,
   INVERSE,
   INVERSE_DETERMINE_NEW_ESTIMATES,
@@ -1216,6 +1217,7 @@ long int  hyper_stress( long int gr, long int element, long int memory, double u
             double epe[], double stress[] );
 void      initialize( void );
 void      input();
+void      input_gmsh_read( void );
 void      input_check_required();
 void      input_convert_to_lower_case( char str[] );
 void      input_read_string( long int echo, char str[], double &d, long int &d_is_set );
