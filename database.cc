@@ -2814,6 +2814,24 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   external[INPUT_ABAQUS_SET] = 0;
   fixed_length[INPUT_ABAQUS_SET] = 0;
 
+  strcpy(name[INPUT_FEFLOW_FEM],"input_feflow_fem");
+  type[INPUT_FEFLOW_FEM] = INTEGER;
+  data_length[INPUT_FEFLOW_FEM] = 1;
+  no_index[INPUT_FEFLOW_FEM] = 1;
+  external[INPUT_FEFLOW_FEM] = 0;
+
+  strcpy(name[INPUT_FEFLOW_MESH],"input_feflow_mesh");
+  type[INPUT_FEFLOW_MESH] = INTEGER;
+  data_length[INPUT_FEFLOW_MESH] = 1;
+  no_index[INPUT_FEFLOW_MESH] = 1;
+  external[INPUT_FEFLOW_MESH] = 0;
+
+  strcpy(name[INPUT_FEFLOW_MESH_HYDRAULIC_HEAD],"input_feflow_mesh_hydraulic_head");
+  type[INPUT_FEFLOW_MESH_HYDRAULIC_HEAD] = INTEGER;
+  data_length[INPUT_FEFLOW_MESH_HYDRAULIC_HEAD] = 1;
+  no_index[INPUT_FEFLOW_MESH_HYDRAULIC_HEAD] = 1;
+  external[INPUT_FEFLOW_MESH_HYDRAULIC_HEAD] = 0;
+
   strcpy(name[INPUT_GMSH],"input_gmsh");
   type[INPUT_GMSH] = INTEGER;
   data_length[INPUT_GMSH] = 1;

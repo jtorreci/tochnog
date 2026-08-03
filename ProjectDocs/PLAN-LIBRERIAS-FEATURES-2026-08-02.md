@@ -207,9 +207,11 @@ El índice es limpio: cada entrada de la sección 6 "data records" es una keywor
 #### P0 — Importación de mallas y archivos (valor alto, tu necesidad directa)
 - [x] `include filename` — incluir archivos en el data part (implementado y verificado 2026-08-03).
 - [x] `input_gmsh` — importar malla de gmsh (implementado 2026-08-03, lee `tochnog_in.msh` formato 2.2, nodos y elementos lineales/cuadráticos).
-- [x] `input_abaqus` — importar malla de abaqus (implementado 2026-08-03, lee `abaqus.inp` y genera `tochnog_abaqus.dat` para `include`; conversión T2D2/T3D2→bar2, T2D3/T3D3→bar3, CPS3/CPE3/CAX3/S3→tria3, CPS6/CPE6→tria6, CPS4/CPE4/CAX4/M3D4→quad4, CPS8/CPE8/CAX8/M3D8→quad9; sets no convertidos por falta de `geometry_list`).
-- [ ] `input_abaqus_continue`, `input_abaqus_group`, `input_abaqus_mesh`, `input_abaqus_set`, `input_abaqus_name` — sub-opciones de input_abaqus.
-- [ ] `input_feflow_mesh` (+ `_fem`, `_mesh_hydraulic_head`) — importar malla de FEFLOW.
+- [x] `input_abaqus` — importar malla de abaqus (implementado 2026-08-03, lee `abaqus.inp` y genera `tochnog_abaqus.dat` para `include`).
+- [x] `input_abaqus_continue`, `input_abaqus_name` — sub-opciones (implementadas 2026-08-03: continue dispara la generación, name filtra tipos).
+- [ ] `input_abaqus_group`, `input_abaqus_mesh`, `input_abaqus_set` — sub-opciones pendientes.
+- [x] `input_feflow_mesh` — importar malla de FEFLOW (implementado 2026-08-03, lee `feflow.fem` ASCII con secciones `coordinates`/`elements`).
+- [ ] `input_feflow_fem`, `input_feflow_mesh_hydraulic_head` — sub-opciones pendientes.
 
 #### P1 — Chequeos y diagnóstico (bajo esfuerzo, alto valor)
 - [ ] `check_data`, `check_error`, `check_nan`, `check_warning`, `check_memory`,

@@ -31,6 +31,7 @@ int counter_a=0, counter_b=0, counter_c=0, counter_d=0;
 long int reading_define=0, using_define=0, idefine=0, ndefine=0, istring=0, define_nstring[MDEFINE];
 std::ifstream include_file_stream;
 long int include_reading=0;
+long int input_abaqus_switch_global=0;
 char *define_words[MDEFINE], *define_strings[MDEFINE][MSTRING];
 long int reading_arithmetic=0, using_arithmetic=0, iarithmetic=0, narithmetic=0, using_if=0;
 double arithmetic_values[MARITHMETIC];
@@ -546,7 +547,50 @@ void input( )
         }
         input_abaqus_switch = -itmp;
       }
-      if ( input_abaqus_switch==-YES ) input_abaqus_read();
+      input_abaqus_switch_global = input_abaqus_switch;
+      input_read_string( echo, str, d, d_is_set );
+      input_skip_comment( str );
+      continue;
+    }
+
+    // after all input_abaqus_* sub-options, generate tochnog_abaqus.dat
+    if ( idat==INPUT_ABAQUS_CONTINUE ) {
+      long int input_abaqus_continue=0;
+      input_read_string( echo, str, d, d_is_set );
+      input_skip_comment( str );
+      if ( echo ) cout << " " << str << " ";
+      if ( str[0]=='-' ) {
+        itmp = db_number( &str[1] );
+        if ( itmp<0 ) {
+          pri( "\nError in data part." );
+          pri( "I do not know ", str );
+          exit(TN_EXIT_STATUS);
+        }
+        input_abaqus_continue = -itmp;
+      }
+      if ( input_abaqus_switch_global==-YES && input_abaqus_continue==-YES )
+        input_abaqus_read();
+      input_read_string( echo, str, d, d_is_set );
+      input_skip_comment( str );
+      continue;
+    }
+
+    // import a feflow mesh
+    if ( idat==INPUT_FEFLOW_MESH ) {
+      long int input_feflow_switch=0;
+      input_read_string( echo, str, d, d_is_set );
+      input_skip_comment( str );
+      if ( echo ) cout << " " << str << " ";
+      if ( str[0]=='-' ) {
+        itmp = db_number( &str[1] );
+        if ( itmp<0 ) {
+          pri( "\nError in data part." );
+          pri( "I do not know ", str );
+          exit(TN_EXIT_STATUS);
+        }
+        input_feflow_switch = -itmp;
+      }
+      if ( input_feflow_switch==-YES ) input_feflow_read();
       input_read_string( echo, str, d, d_is_set );
       input_skip_comment( str );
       continue;
@@ -1482,14 +1526,24 @@ void input_abaqus_read( void )
 
 {
   // read the abaqus input file abaqus.inp and generate tochnog_abaqus.dat
-  // with node, element and set records (sets as geometry_list).
+  // with node and element records. input_abaqus_name limits the element
+  // types that are converted.
   long int i=0, inode=0, nnol=0, n1=0, n2=0, n3=0, n4=0, n5=0,
-    n6=0, n7=0, n8=0, n9=0, elem_id=0;
-  double xyz[MDIM];
+    n6=0, n7=0, n8=0, n9=0, elem_id=0, nn=0, *input_abaqus_name=NULL;
+  double ddum[1], xyz[MDIM];
   char line[MCHAR], *tok=NULL, str2[MCHAR], filename[MCHAR], eltype[MCHAR];
   ifstream in;
   ofstream out;
-  long int in_nodes=0, in_elements=0;
+  long int in_nodes=0, in_elements=0, convert_ok=0;
+
+  // element types to convert (input_abaqus_name); empty means all
+  if ( db_active_index( INPUT_ABAQUS_NAME, 0, VERSION_NORMAL ) ) {
+    nn = db_len( INPUT_ABAQUS_NAME, 0, VERSION_NORMAL );
+    if ( nn>0 ) {
+      input_abaqus_name = get_new_int(nn);
+      db( INPUT_ABAQUS_NAME, 0, input_abaqus_name, ddum, nn, VERSION_NORMAL, GET );
+    }
+  }
 
   strcpy( filename, "abaqus.inp" );
   in.open( filename );
@@ -1592,6 +1646,16 @@ void input_abaqus_read( void )
              << " not converted to tochnog." << "\n";
         continue;
       }
+      // filter element types by input_abaqus_name (if specified)
+      convert_ok = 1;
+      if ( input_abaqus_name ) {
+        convert_ok = 0;
+        for ( i=0; i<nn; i++ ) {
+          if ( str2[0]=='-' && -input_abaqus_name[i]==db_number(&str2[1]) )
+            convert_ok = 1;
+        }
+      }
+      if ( !convert_ok ) continue;
       out << "element  " << elem_id << "  " << str2;
       out << "  " << n1 << "  " << n2;
       if ( nnol>=3 ) out << "  " << n3;
@@ -1607,5 +1671,95 @@ void input_abaqus_read( void )
   in.close();
   out.close();
   cout << "Generated tochnog_abaqus.dat from abaqus.inp." << "\n";
+
+}
+
+void input_feflow_read( void )
+
+{
+  // read the feflow mesh file feflow.fem (ASCII) and fill node and element.
+  // The file is read section by section; sections are recognized by keywords
+  // like "coordinates"/"nodes" (node data) and "elements" (element data).
+  long int inode=0, ielem=0, nnol=0, n1=0, n2=0, n3=0, n4=0, n5=0,
+    n6=0, n7=0, n8=0, n9=0, idum[1], nn=0, i=0;
+  double ddum[1], xyz[MDIM];
+  char line[MCHAR], *tok=NULL, str2[MCHAR], filename[MCHAR];
+  ifstream in;
+  long int in_nodes=0, in_elements=0;
+
+  strcpy( filename, "feflow.fem" );
+  in.open( filename );
+  if ( !in ) {
+    pri( "Error: cannot open feflow file ", filename );
+    exit(TN_EXIT_STATUS);
+  }
+
+  in_nodes = in_elements = 0;
+  while ( in.getline(line,MCHAR) ) {
+    string_convert_to_lower_case( line );
+    char *p = line;
+    while ( *p==' ' || *p=='\t' ) p++;
+    if ( *p=='\0' ) continue;
+
+    // section keywords
+    if ( strstr(p,"coordinates") || strstr(p,"nodes") ) {
+      in_nodes = 1; in_elements = 0; continue;
+    }
+    if ( strstr(p,"elements") ) {
+      in_elements = 1; in_nodes = 0; continue;
+    }
+    // skip other headers/comments
+    if ( strstr(p,"problem") || strstr(p,"dimension") || strstr(p,"version")
+         || strstr(p,"feflow") || p[0]=='#' || p[0]=='*' || p[0]=='/' ) continue;
+
+    if ( in_elements ) {
+      // element: first token is element number, then node numbers
+      strcpy( str2, "" );
+      tok = strtok(p," ,\t");
+      if ( !tok ) continue;
+      ielem = atoi(tok);
+      nnol = 0; n1=n2=n3=n4=n5=n6=n7=n8=n9=0;
+      tok = strtok(NULL," ,\t");
+      while ( tok && nnol<9 ) {
+        nnol++;
+        if      ( nnol==1 ) n1=atoi(tok);
+        else if ( nnol==2 ) n2=atoi(tok);
+        else if ( nnol==3 ) n3=atoi(tok);
+        else if ( nnol==4 ) n4=atoi(tok);
+        else if ( nnol==5 ) n5=atoi(tok);
+        else if ( nnol==6 ) n6=atoi(tok);
+        else if ( nnol==7 ) n7=atoi(tok);
+        else if ( nnol==8 ) n8=atoi(tok);
+        else if ( nnol==9 ) n9=atoi(tok);
+        tok = strtok(NULL," ,\t");
+      }
+      if      ( nnol==2 ) strcpy(str2,"-bar2");
+      else if ( nnol==3 ) strcpy(str2,"-tria3");
+      else if ( nnol==4 ) strcpy(str2,"-quad4");
+      else if ( nnol==6 ) strcpy(str2,"-tria6");
+      else if ( nnol==8 ) strcpy(str2,"-quad9");
+      else continue;
+      nn = 1+nnol;
+      long int edata[1+9];
+      edata[0] = -db_number(&str2[1]);
+      edata[1]=n1; edata[2]=n2; edata[3]=n3; edata[4]=n4; edata[5]=n5;
+      edata[6]=n6; edata[7]=n7; edata[8]=n8; edata[9]=n9;
+      db( ELEMENT, ielem, edata, ddum, nn, VERSION_NORMAL, PUT );
+    }
+    else if ( in_nodes ) {
+      // node: first token is node number, then coordinates
+      tok = strtok(p," ,\t");
+      if ( !tok ) continue;
+      inode = atoi(tok);
+      xyz[0]=xyz[1]=xyz[2]=0.;
+      i=0;
+      tok = strtok(NULL," ,\t");
+      while ( tok && i<3 ) { xyz[i]=atof(tok); tok=strtok(NULL," ,\t"); i++; }
+      db( NODE, inode, idum, xyz, ndim, VERSION_NORMAL, PUT );
+    }
+  }
+
+  in.close();
+  cout << "Input from feflow file " << filename << " read." << "\n";
 
 }
