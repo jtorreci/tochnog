@@ -2763,6 +2763,12 @@ void db_initialize( long int dof_type[], long int dof_label[] )
 
   strcpy(name[INITIALIZE],"initialize");
 
+  strcpy(name[INCLUDE],"include");
+  type[INCLUDE] = INTEGER;
+  data_length[INCLUDE] = 1;
+  no_index[INCLUDE] = 1;
+  external[INCLUDE] = 0;
+
   strcpy(name[INITIALIZATION_VALUES],"initialization_values");
   type[INITIALIZATION_VALUES] = INTEGER;
   data_length[INITIALIZATION_VALUES] = DATA_ITEM_SIZE;

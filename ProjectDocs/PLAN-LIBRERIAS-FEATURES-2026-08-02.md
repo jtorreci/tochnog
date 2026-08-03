@@ -104,6 +104,48 @@ Fuente: changelog oficial de tochnogprofessional.nl (captura web.archive.org 202
 
 ---
 
+## 5. Estado de implementación (actualizado 2026-08-02 tarde)
+
+### Implementadas y verificadas (9)
+Fase 1: `check_used`, `materi_plasti_maximum_iterations`,
+`control_print_history_factor`, `control_print_data_versus_data_factor`,
+`force_point`, `post_point_move`.
+Fase 2: `control_mesh_switch`, `bounda_time_on_off`, `bounda_time_until_force`.
+
+### Falta implementar (20, del changelog profesional)
+
+**Materiales / mecánica de suelos:**
+- `group_materi_plasti_hypo_masin` (+ OCR) — Fase 3
+- `group_materi_plasti_tension_direct_normal` (+ `_automatic`)
+- `group_materi_plasti_mohr_coul_direct_normal` (+ `_automatic`)
+- `group_interface_materi_plasti_tension_direct` (re-introducida)
+- `group_groundflow_permeability_vertical_stress`
+- `groundflow_pressure_factor`
+- `materi_displacement_relative`
+
+**Controles / malla:**
+- `control_mesh_move`
+- `control_mesh_generate_interface_geometry` (2d/3d)
+- `control_reset_value_dof`
+- `control_print_history_smooth`
+- `change_dataitem_apply`
+
+**Post-proceso / utilidades:**
+- `strain_settlement_diagram*`
+- `force_edge_multi_linear_factor_x`
+- `bounda_factor_parabolic_x`
+- `slide_axisymmetric`
+- `print_group_data`
+- `bounda_dof ... -geometry_list ... -veln`
+
+### Nota sobre "input"
+No existe una keyword `input` como data record en el changelog profesional ni en el
+manual 2011. "input" se refiere al **archivo de entrada** (`tn.dat`) y al mecanismo
+`input_runtime` (leer registros en cada paso), que **ya está implementado** en
+`input.cc:1221`. No hay feature "input" pendiente.
+
+---
+
 ## 3. Priorización propuesta
 
 ### Fase 1 (rápido, alto valor, ~cada una 0.5-2 días)
@@ -134,3 +176,92 @@ La comparación "manual vs implementación" por extracción de texto del docx pr
 de tochnogprofessional.nl** (archivado en `external-downloads/professional/changes-site-archive.txt`),
 que lista features concretas introducidas tras la versión 2014. El plan de la sección 3 se basa en esa
 lista, no en el docx.
+
+---
+
+## 6. PLAN DE TRABAJO COMPLETO (2026-08-03)
+
+### Fuente definitiva
+El **índice (outline) del manual profesional 2024** (419 págs, descargado de archive.org:
+`tochnogprofessional.nl/manuals/user/user.pdf`, texto en `external-downloads/professional/UserManual-professional.txt`).
+El índice es limpio: cada entrada de la sección 6 "data records" es una keyword real.
+
+### Dimensionamiento
+- **~719 keywords de data records del manual 2024 que no están en `database.cc`**.
+- Inventario completo: `ProjectDocs/inventario-features-faltantes-2024.txt`.
+- Las features se implementan 1 a 1: (1) leer del manual 2024 qué hace, (2) implementar en el
+  código, (3) crear un test que la verifique.
+- Estimación: ~1-3 features/día según complejidad → **varios meses de trabajo** en total.
+  Se prioriza por valor práctico.
+
+### Metodología (por feature)
+1. Leer la sección del manual 2024 (`/tmp/user_manual.txt` o `UserManual-professional.txt`).
+2. Añadir la keyword al enum (`tochnog.h` + `tochnog-mod.h`), registrarla en `database.cc`.
+3. Implementar la lógica en el archivo correspondiente.
+4. Crear un test `.dat` mínimo en `validation-suite/test-2014/` que ejercite la feature.
+5. Verificar: build limpio (`./scripts/build_safe.sh --clean`), test nuevo PASS,
+   y regresión (hypo1-4 + tests de referencia).
+
+### Prioridades
+
+#### P0 — Importación de mallas y archivos (valor alto, tu necesidad directa)
+- [x] `include filename` — incluir archivos en el data part (implementado y verificado 2026-08-03).
+- [ ] `input_gmsh` — importar malla de gmsh.
+- [ ] `input_abaqus` (+ `_continue`, `_group`, `_mesh`, `_set`, `_name`) — importar malla de abaqus.
+- [ ] `input_feflow_mesh` (+ `_fem`, `_mesh_hydraulic_head`) — importar malla de FEFLOW.
+
+#### P1 — Chequeos y diagnóstico (bajo esfuerzo, alto valor)
+- [ ] `check_data`, `check_error`, `check_nan`, `check_warning`, `check_memory`,
+      `check_memory_usage`, `check_solver`, `check_target`, `check_element_node`,
+      `check_element_shape`.
+- [ ] `control_check_data`.
+
+#### P2 — Control de malla (medio)
+- [ ] `control_mesh_move`, `control_mesh_mirror`, `control_mesh_copy`,
+      `control_mesh_rotate` (+`_angle`), `control_mesh_remove` (+sub-items),
+      `control_mesh_keep_element`/`keep_element_group`/`keep_geometry`/`keep_node`,
+      `control_mesh_change_element_group`, `control_mesh_duplicate_element_group`,
+      `control_mesh_convert*`, `control_mesh_cut_geometry`, `control_mesh_delete_element`.
+
+#### P3 — Condiciones de contorno (medio)
+- [ ] `bounda_dof` (+ `_cylindrical`, `_radial`, `_geometry_list`), `bounda_factor`,
+      `bounda_time_units`, `bounda_time_offset`, `bounda_time_increment`,
+      `bounda_water`, `bounda_alternate`, `bounda_constant`, `bounda_normal`,
+      `bounda_found`, `bounda_geometry_method`, `bounda_factor_parabolic_x`,
+      `bounda_baseline_correction` (+`_parameters`).
+
+#### P4 — Materiales geotécnicos (alto esfuerzo)
+- [ ] `group_materi_plasti_hypo_masin` (+ `_clay`, `_clay_advanced_parameters`,
+      `_clay_ocr`, `_ocr`, `_structure`), `control_materi_plasti_hypo_masin_ocr_apply`.
+- [ ] `group_materi_plasti_tension_direct_normal` (+ `_automatic`),
+      `group_materi_plasti_mohr_coul_direct_normal` (+ `_automatic`).
+- [ ] `group_groundflow_permeability_vertical_stress`, `groundflow_pressure_factor`.
+- [ ] `group_materi_damage_mazars`, `group_materi_expansion_linear`,
+      `group_materi_expansion_volume`.
+- [ ] Modelos hiperelásticos: `group_materi_hyper_besseling`, `_blatz_ko`,
+      `_mooney_rivlin`, `_neohookean`, `_reduced_polynomial`, `_volumetric_*`.
+- [ ] Viscoelástico/viscoplástico: `group_materi_maxwell_chain`,
+      `group_materi_plasti_visco_exponential*`, `_visco_power*`.
+
+#### P5 — Post-proceso y salida (medio)
+- [ ] `control_print_history_smooth`, `control_print_gid_*` (varios),
+      `control_print_vtk_*`, `control_print_gmsh_*`, `control_print_frd_*`,
+      `control_print_materi_stress_force`, `control_print_interface_stress*`.
+- [ ] `print_group_data`, `strain_settlement_diagram*`, `post_point_move` (hecho).
+- [ ] `force_edge_multi_linear_factor_x`, `force_edge_projected*`, `force_volume*`,
+      `force_gravity_geometry`.
+
+#### P6 — Groundflow, contacto, miscelánea
+- [ ] `groundflow_pressure_factor`, `groundflow_seepage_*`, `groundflow_phreatic_*`,
+      `groundflow_flux_edge_normal*`, `groundflow_total_pressure_limit`.
+- [ ] Contacto: `contact_apply`, `contact_heat_generation`, `contact_penalty_*`,
+      `contact_plasti_friction`, `contact_target_*`.
+- [ ] `control_reset_dof*`, `control_reset_value_*`, `change_dataitem_apply`,
+      `change_dataitem_geometry`, `control_data_*`, `control_distribute*`.
+- [ ] `control_mesh_generate_interface_geometry`, `slide_axisymmetric`,
+      `materi_displacement_relative`, `group_interface_materi_plasti_tension_direct`.
+
+### Fichero de control
+- Inventario completo: `ProjectDocs/inventario-features-faltantes-2024.txt` (718 líneas).
+- Marcar con `[x]` cada feature al implementarla y verificar su test.
+- Al final de cada sesión: guardar el progreso en memoria (Engram) con el plan actualizado.

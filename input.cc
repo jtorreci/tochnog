@@ -19,6 +19,7 @@
 */
 
 #include "tochnog.h"
+#include <fstream>
 
 #define MCHAR_WORDS 60
 #define MSTRING 800
@@ -28,6 +29,8 @@
 
 int counter_a=0, counter_b=0, counter_c=0, counter_d=0;
 long int reading_define=0, using_define=0, idefine=0, ndefine=0, istring=0, define_nstring[MDEFINE];
+std::ifstream include_file_stream;
+long int include_reading=0;
 char *define_words[MDEFINE], *define_strings[MDEFINE][MSTRING];
 long int reading_arithmetic=0, using_arithmetic=0, iarithmetic=0, narithmetic=0, using_if=0;
 double arithmetic_values[MARITHMETIC];
@@ -46,6 +49,7 @@ void input( )
     *dof_amount=NULL, *initialization_values=NULL;
   double d=0., ddum[1], *dval=NULL;
   char str_total[MCHAR], str[MCHAR], str_tmp[MCHAR];
+  long int include_depth = 0;
 
   integer_range = get_new_int(MRANGE);
   range = get_new_int(MRANGE);
@@ -506,6 +510,17 @@ void input( )
   input_skip_comment( str );
   while ( strcmp(str,"end_data") ) {
 
+      // if the end_data of an included file is reached, restore the
+      // main input stream and continue with the remaining records
+    if ( !strcmp(str,"end_data") && include_reading ) {
+      include_file_stream.close();
+      include_reading = 0;
+      include_depth = 0;
+      input_read_string( echo, str, d, d_is_set );
+      input_skip_comment( str );
+      continue;
+    }
+
       // data item name
     input_skip_comment( str );
     if ( echo ) cout << str << " ";
@@ -515,6 +530,31 @@ void input( )
       pri( "I do not know ", str );
       exit(TN_EXIT_STATUS);
     }
+
+    // include a data file
+    if ( idat==INCLUDE ) {
+      if ( include_depth>=1 ) {
+        pri( "\nError in data part." );
+        pri( "include files cannot contain an include." );
+        exit(TN_EXIT_STATUS);
+      }
+      // read the file name
+      input_read_string( echo, str, d, d_is_set );
+      input_skip_comment( str );
+      if ( echo ) cout << " " << str << " ";
+      include_file_stream.open( str );
+      if ( !include_file_stream ) {
+        pri( "\nError in data part." );
+        pri( "Cannot open include file ", str );
+        exit(TN_EXIT_STATUS);
+      }
+      include_reading = 1;
+      include_depth = 1;
+      input_read_string( echo, str, d, d_is_set );
+      input_skip_comment( str );
+      continue;
+    }
+
     check( idat, CHECK_USAGE_AND_ERROR );
 
       // index
@@ -729,7 +769,14 @@ void input_read_string( long int echo, char str[], double &d, long int &d_is_set
   d_is_set = 0;
 
   if ( !using_define ) {
-    if ( !(cin >> str) ) {
+    if ( include_reading ) {
+      if ( !(include_file_stream >> str) ) {
+        pri( "\nError in data part." );
+        pri( "Unexpected end of include file detected." );
+        exit(TN_EXIT_STATUS);
+      }
+    }
+    else if ( !(cin >> str) ) {
       pri( "\nError in data part." );
       pri( "Unexpected end of input detected (internal location a)." );
       pri( "Last word read ", str );
