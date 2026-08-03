@@ -127,3 +127,55 @@ void mesh_add( long int version_from, long int version_to )
 
   if ( swit ) pri( "Out routine MESH_ADD" );
 }
+
+void mesh_switch( long int control_mesh_switch[], long int length )
+
+{
+  // Switch x, y, z coordinates of all nodes, e.g. for easy rotating the mesh.
+  // The control specifies the new order of the axes:
+  //   control_mesh_switch 0  -y -x -z   (interchange x and y)
+  // The number of axes given must equal ndim.
+  long int inod=0, max_node=0, idim=0, order[MDIM],
+    has[MDIM], idum[1];
+  double coords[MDIM], new_coords[MDIM];
+
+  array_set( order, -1, MDIM );
+  array_set( has, 0, MDIM );
+  for ( idim=0; idim<ndim && idim<length; idim++ ) {
+    if ( control_mesh_switch[idim]==-X ) order[idim] = 0;
+    else if ( control_mesh_switch[idim]==-Y ) order[idim] = 1;
+    else if ( control_mesh_switch[idim]==-Z ) order[idim] = 2;
+    else {
+      pri( "Error: control_mesh_switch axes must be -x, -y or -z." );
+      exit(TN_EXIT_STATUS);
+    }
+  }
+  for ( idim=0; idim<ndim; idim++ ) {
+    if ( order[idim]<0 ) {
+      pri( "Error: control_mesh_switch must specify all axes." );
+      exit(TN_EXIT_STATUS);
+    }
+    if ( has[order[idim]] ) {
+      pri( "Error: control_mesh_switch axes must be a permutation." );
+      exit(TN_EXIT_STATUS);
+    }
+    has[order[idim]] = 1;
+  }
+
+  db_max_index( NODE, max_node, VERSION_NORMAL, GET );
+  if ( max_node>=0 ) {
+    for ( inod=0; inod<=max_node; inod++ ) {
+      if ( db_active_index( NODE, inod, VERSION_NORMAL ) ) {
+        db( NODE, inod, idum, coords, ndim, VERSION_NORMAL, GET );
+        for ( idim=0; idim<ndim; idim++ ) new_coords[idim] = coords[order[idim]];
+        db( NODE, inod, idum, new_coords, ndim, VERSION_NORMAL, PUT );
+        if ( db_active_index( NODE_START_REFINED, inod, VERSION_NORMAL ) ) {
+          db( NODE_START_REFINED, inod, idum, coords, ndim, VERSION_NORMAL, GET );
+          for ( idim=0; idim<ndim; idim++ ) new_coords[idim] = coords[order[idim]];
+          db( NODE_START_REFINED, inod, idum, new_coords, ndim, VERSION_NORMAL, PUT );
+        }
+      }
+    }
+  }
+  mesh_has_changed( VERSION_NORMAL );
+}

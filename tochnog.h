@@ -138,6 +138,8 @@ enum {
   BOUNDA_SINE,
   BOUNDA_TIME,
   BOUNDA_TIME_FILE,
+  BOUNDA_TIME_ON_OFF,
+  BOUNDA_TIME_UNTIL_FORCE,
   BOUNDA_TIME_USER,
   BOUNDA_UNKNOWN,
   BRICK,
@@ -235,6 +237,7 @@ enum {
   CONTROL_MESH_RENUMBER,
   CONTROL_MESH_SPLIT,
   CONTROL_MESH_SPLIT_ONLY,
+  CONTROL_MESH_SWITCH,
   CONTROL_OPTIONS_CONVECTION,
   CONTROL_OPTIONS_INERTIA,
   CONTROL_OPTIONS_RELAXATION,
@@ -723,6 +726,7 @@ enum {
   NODE_REMESH_ALLOWED,
   NODE_REMESH_VELOCITY,
   NODE_RHSIDE,
+  NODE_RHSIDE_PREVIOUS,
   NODE_RHSIDE_PRINT,
   NODE_SET,
   NODE_START_REFINED,
@@ -1304,6 +1308,7 @@ void      mesh_add( long int version_from, long int version_to );
 void      mesh_delete_small( long int version );
 void      mesh_has_changed( long int version );
 void      mesh_split( long int version );
+void      mesh_switch( long int control_mesh_switch[], long int length );
 void      new_mesh( void );
 void      new_mesh_version( long int version, double delta );
 void      nod_nod( long int version );

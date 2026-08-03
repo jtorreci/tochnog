@@ -478,6 +478,13 @@ void step_start( long int task, long int options_solver[], double dtime, double 
     adjust_geom( &control_adjust_geometry[0], &control_adjust_geometry[2] ); 
   }
 
+  if ( db_active_index( CONTROL_MESH_SWITCH, icontrol, VERSION_NORMAL ) ) {
+    long int control_switch[DATA_ITEM_SIZE], switch_length=0;
+    db( CONTROL_MESH_SWITCH, icontrol, control_switch, ddum, 
+      switch_length, VERSION_NORMAL, GET );
+    mesh_switch( control_switch, switch_length );
+  }
+
   change_geometry( task, dtime, time_current );
 
   data( task, dtime, time_current ); 
@@ -774,6 +781,21 @@ void step_close( long int task, long int ipar, long int npar, long int ipar_i, l
     }
   }
   cout << flush;
+
+  // remember the reaction forces of this step for bounda_time_until_force
+  if ( db_active_index( NODE_RHSIDE, 0, VERSION_NORMAL ) ||
+       db_max_index( NODE_RHSIDE, ldum, VERSION_NORMAL, GET )>=0 ) {
+    long int max_node_prev=0, inod_prev=0, idum_p[1];
+    double *rhs_p=NULL;
+    db_max_index( NODE, max_node_prev, VERSION_NORMAL, GET );
+    for ( inod_prev=0; inod_prev<=max_node_prev; inod_prev++ ) {
+      if ( db_active_index( NODE_RHSIDE, inod_prev, VERSION_NORMAL ) ) {
+        rhs_p = db_dbl( NODE_RHSIDE, inod_prev, VERSION_NORMAL );
+        db( NODE_RHSIDE_PREVIOUS, inod_prev, idum_p, rhs_p, npuknwn,
+          VERSION_NORMAL, PUT );
+      }
+    }
+  }
 
   delete[] ival;
 

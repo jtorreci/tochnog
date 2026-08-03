@@ -37,10 +37,12 @@ void bounda( )
     *dof_label=NULL, *dof_type=NULL, *node_bounded=NULL;
   double load=0., time0=0., time1=0., load0=0., load1=0., factor=0.,
     time_current=0., time_total=0., dtime=0., amplitude=0., frequency=0.,
-    time_start=0., radius=0., angle_start=0.,
+    time_start=0., radius=0., angle_start=0., on_time=0., off_time=0.,
+    until_force=0., until_factor=1., reaction=0.,
     angle_total=0., rdum=0., ddum[MDIM], coord_start[MDIM], coord_total[MDIM],
     *bounda_time=NULL, *new_node_dof=NULL, 
     *node_dof=NULL, *bounda_sine=NULL, *node_rhside=NULL;
+  long int bounda_on_off=0, bounda_until_force=0;
 
   swit = set_swit(-1,-1,"bounda");
   if ( swit ) pri( "In routine BOUNDA" );
@@ -79,6 +81,7 @@ void bounda( )
     force   = db_active_index( BOUNDA_FORCE, iboun, VERSION_NORMAL );
     bounda_time_user = -NO; db( BOUNDA_TIME_USER, iboun, &bounda_time_user, ddum, 
       ldum, VERSION_NORMAL, GET_IF_EXISTS );
+    bounda_on_off = 0;
     if ( unknown || force ) {
       if ( swit ) pri( "iboun", iboun );
       time =  sine = user = 0; ninc = 2;
@@ -118,6 +121,27 @@ void bounda( )
         ninc = 2;
         time = 1;
         length_bounda_time = 0;
+      }
+      // only periodically use the bounda_time values
+      if ( db_active_index( BOUNDA_TIME_ON_OFF, iboun, VERSION_NORMAL ) ) {
+        double on_off_tmp[2];
+        db( BOUNDA_TIME_ON_OFF, iboun, idum, on_off_tmp, ldum, 
+          VERSION_NORMAL, GET );
+        on_time = on_off_tmp[0];
+        off_time = on_off_tmp[1];
+        if ( on_time<=0. || off_time<0. ) db_error( BOUNDA_TIME_ON_OFF, iboun );
+        bounda_on_off = 1;
+      }
+      // limit the force response by reducing the prescribed velocity
+      if ( db_active_index( BOUNDA_TIME_UNTIL_FORCE, iboun, VERSION_NORMAL ) ) {
+        double until_tmp[2];
+        db( BOUNDA_TIME_UNTIL_FORCE, iboun, idum, until_tmp, ldum, 
+          VERSION_NORMAL, GET );
+        until_force = until_tmp[0];
+        until_factor = until_tmp[1];
+        if ( until_factor<=0. || until_factor>1. )
+          db_error( BOUNDA_TIME_UNTIL_FORCE, iboun );
+        bounda_until_force = 1;
       }
 
       if ( unknown ) {
@@ -185,6 +209,11 @@ void bounda( )
               found = 1;
               if ( time0==time1 ) load = load0;
               else load = load0 + (load1-load0)*(time_total-time0)/(time1-time0);
+            }
+            // only periodically use the bounda_time values
+            if ( found && bounda_on_off ) {
+              double phase = fmod( time_total, on_time+off_time );
+              if ( phase>=on_time ) { load = 0.; found = 0; }
             }
           }
         }
@@ -384,6 +413,19 @@ void bounda( )
                       new_node_dof[iuknwn] = factor * load;
                       if ( derivatives ) new_node_dof[ind1] = 
                         ( new_node_dof[iuknwn] - node_dof[iuknwn] ) / dtime;
+                      // limit the force response by reducing the velocity
+                      if ( bounda_until_force && force==0 ) {
+                        long int ireac = ( iuknwn - vel_indx ) / nder;
+                        if ( db_active_index( NODE_RHSIDE_PREVIOUS, inod,
+                            VERSION_NORMAL ) ) {
+                          node_rhside = db_dbl( NODE_RHSIDE_PREVIOUS, inod,
+                            VERSION_NORMAL );
+                          reaction = scalar_dabs( node_rhside[ireac] );
+                          if ( reaction>until_force )
+                            new_node_dof[iuknwn] *= 
+                              until_factor*(until_force/reaction);
+                        }
+                      }
                     }
                     if ( dof_type[iuknwn]==-MATERI_DISPLACEMENT ) {
                       indx = vel_indx + ( iuknwn - dis_indx );

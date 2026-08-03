@@ -180,6 +180,18 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   data_length[BOUNDA_TIME_FILE] = 1;
   data_class[BOUNDA_TIME_FILE] = BOUNDA;
 
+  strcpy(name[BOUNDA_TIME_ON_OFF],"bounda_time_on_off");
+  type[BOUNDA_TIME_ON_OFF] = DOUBLE_PRECISION;
+  data_length[BOUNDA_TIME_ON_OFF] = 2;
+  data_class[BOUNDA_TIME_ON_OFF] = BOUNDA;
+  data_required[BOUNDA_TIME_ON_OFF] = BOUNDA_TIME;
+
+  strcpy(name[BOUNDA_TIME_UNTIL_FORCE],"bounda_time_until_force");
+  type[BOUNDA_TIME_UNTIL_FORCE] = DOUBLE_PRECISION;
+  data_length[BOUNDA_TIME_UNTIL_FORCE] = 2;
+  data_class[BOUNDA_TIME_UNTIL_FORCE] = BOUNDA;
+  data_required[BOUNDA_TIME_UNTIL_FORCE] = BOUNDA_TIME;
+
   strcpy(name[BOUNDA_TIME_USER],"bounda_time_user");
   type[BOUNDA_TIME_USER] = INTEGER;
   data_length[BOUNDA_TIME_USER] = 1;
@@ -647,6 +659,12 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   type[CONTROL_MESH_SPLIT_ONLY] = INTEGER;
   data_length[CONTROL_MESH_SPLIT_ONLY] = 2;
   data_class[CONTROL_MESH_SPLIT_ONLY] = CONTROL;
+
+  strcpy(name[CONTROL_MESH_SWITCH],"control_mesh_switch");
+  type[CONTROL_MESH_SWITCH] = INTEGER;
+  data_length[CONTROL_MESH_SWITCH] = DATA_ITEM_SIZE;
+  fixed_length[CONTROL_MESH_SWITCH] = 0;
+  data_class[CONTROL_MESH_SWITCH] = CONTROL;
 
   strcpy(name[CONTROL_OPTIONS_CONVECTION],"control_options_convection");
   type[CONTROL_OPTIONS_CONVECTION] = INTEGER;
@@ -3218,6 +3236,11 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   data_length[NODE_RHSIDE] = npuknwn;
   data_class[NODE_RHSIDE] = NODE;
   data_required[NODE_RHSIDE] = NODE;
+
+  strcpy(name[NODE_RHSIDE_PREVIOUS],"node_rhside_previous");
+  type[NODE_RHSIDE_PREVIOUS] = DOUBLE_PRECISION;
+  data_length[NODE_RHSIDE_PREVIOUS] = npuknwn;
+  data_class[NODE_RHSIDE_PREVIOUS] = NODE;
 
   strcpy(name[NODE_RHSIDE_PRINT],"node_rhside_print");
   type[NODE_RHSIDE_PRINT] = DOUBLE_PRECISION;
