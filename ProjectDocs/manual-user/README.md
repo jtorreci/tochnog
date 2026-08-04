@@ -18,6 +18,10 @@ input parameters it accepts.
 - [check_target](check_target.md) — neglect target records (run without target errors).
 - [check_element_node](check_element_node.md) — check for duplicate element nodes.
 - [check_nan](check_nan.md) — check results for NAN values.
+- [check_solver](check_solver.md) — warn about small matrix diagonal terms.
+- [check_element_shape](check_element_shape.md) — warn about distorted elements.
+- [check_memory](check_memory.md) — report peak memory usage.
+- [check_memory_usage](check_memory_usage.md) — record peak memory usage result.
 
 ## Phase 1 features
 

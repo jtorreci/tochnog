@@ -219,8 +219,10 @@ El índice es limpio: cada entrada de la sección 6 "data records" es una keywor
 - [x] `check_element_node` — detecta elementos con nodos duplicados (implementado 2026-08-03).
 - [x] `check_nan` — chequea NaN en node_dof al final de cada paso (implementado 2026-08-03).
 - [x] `check_solver eps` — avisa si términos de la diagonal del solver son < eps (implementado 2026-08-03, en `so.cc` band solver).
-- [ ] `check_data`, `check_error`, `check_warning`, `check_memory`,
-      `check_memory_usage`, `check_element_shape` (keywords registradas, lógica pendiente).
+- [x] `check_element_shape factor` — avisa si elementos muy distorsionados (implementado 2026-08-03, en `polynom.cc`).
+- [x] `check_memory` — reporta pico de uso de RAM (implementado 2026-08-03, en `miscel.cc` exit_tn).
+- [x] `check_memory_usage` — guarda pico de memoria en `check_memory_usage_result` (implementado 2026-08-03).
+- [ ] `check_data`, `check_error`, `check_warning` (keywords registradas, lógica pendiente).
 - [ ] `control_check_data`.
 
 #### P2 — Control de malla (medio)

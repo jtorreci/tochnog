@@ -20,6 +20,7 @@
 #include "tochnog.h"
 #include "tochnog_exceptions.h"
 #include "string_utils.h"
+#include <sys/resource.h>
 
 void element_middle_radius_set( )
 
@@ -470,6 +471,20 @@ void exit_tn( long int print_database_type )
   }
 
   if ( check_used==-YES ) check_used_report();
+
+  // check_memory / check_memory_usage: report peak memory usage (GB)
+  if ( check_memory==-YES || check_memory_usage==-YES ) {
+    struct rusage ru;
+    long int idum_m[1];
+    if ( getrusage( RUSAGE_SELF, &ru )==0 ) {
+      check_memory_usage_result = (double) ru.ru_maxrss / 1048576.;
+      cout << "Peak memory usage: " << check_memory_usage_result << " GB.\n";
+      cout << flush;
+      long int mem_len=1;
+      db( CHECK_MEMORY_USAGE_RESULT, 0, idum_m, &check_memory_usage_result,
+        mem_len, VERSION_NORMAL, PUT );
+    }
+  }
 
   db_close();
 

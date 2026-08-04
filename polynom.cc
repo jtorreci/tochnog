@@ -440,6 +440,23 @@ void pol( long int element, long int element_group,
     }
   }
 
+  // check_element_shape: warn if element is too distorted
+  if ( check_element_shape_factor>0. ) {
+    double vol_avg=0., distortion=0.;
+    long int ip2=0;
+    for ( ip2=0; ip2<npoint; ip2++ ) vol_avg += scalar_dabs(volume[ip2]);
+    vol_avg /= npoint;
+    if ( vol_avg>0. ) {
+      for ( ip2=0; ip2<npoint; ip2++ )
+        distortion += scalar_dabs(volume[ip2]-vol_avg)/vol_avg;
+      distortion /= npoint;
+      if ( distortion>check_element_shape_factor ) {
+        cout << "Warning: element with distorted shape, distortion="
+             << distortion << " > factor=" << check_element_shape_factor << ".\n";
+      }
+    }
+  }
+
   if ( materi_velocity ) {
     array_set( new_b, 0., npoint*MSTRAIN*nnol*ndim );
     for ( ipoint=0; ipoint<npoint; ipoint++ ) {

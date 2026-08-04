@@ -1027,7 +1027,11 @@ extern double options_nonlocal_softvar;  //in initia.cc
  extern long int check_warning;           //in initia.cc
  extern long int check_nan;               //in initia.cc
  extern long int check_data;              //in initia.cc
+ extern long int check_memory;            //in initia.cc
+ extern long int check_memory_usage;      //in initia.cc
+ extern double check_memory_usage_result; //in initia.cc
  extern double check_solver_eps;          //in initia.cc
+ extern double check_element_shape_factor;//in initia.cc
 
   // routines
 void      adjust_geom( long int geometry_entity[], long int geometry_entity_edge[] );

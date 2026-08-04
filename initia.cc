@@ -93,7 +93,11 @@ long int check_error=-YES;
 long int check_warning=-YES;
 long int check_nan=-NO;
 long int check_data=-NO;
+long int check_memory=-NO;
+long int check_memory_usage=-NO;
+double check_memory_usage_result=0.;
 double check_solver_eps=0.;
+double check_element_shape_factor=0.;
 
 
 void initialize( void )
