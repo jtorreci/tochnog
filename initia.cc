@@ -88,6 +88,11 @@ char
 long int options_element_dof=-YES;
 double options_nonlocal_softvar=0;
 long int check_used=-NO;
+long int check_target=-YES;
+long int check_error=-YES;
+long int check_warning=-YES;
+long int check_nan=-NO;
+long int check_data=-NO;
 
 
 void initialize( void )

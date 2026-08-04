@@ -156,11 +156,22 @@ enum {
   CHEBYCHEV,
   CHECK,
   CHECK_COMBINATION,
+  CHECK_DATA,
+  CHECK_ELEMENT_NODE,
+  CHECK_ELEMENT_SHAPE,
+  CHECK_ERROR,
   CHECK_INDEX,
+  CHECK_MEMORY,
+  CHECK_MEMORY_USAGE,
+  CHECK_MEMORY_USAGE_RESULT,
+  CHECK_NAN,
   CHECK_NUMBER,
+  CHECK_SOLVER,
+  CHECK_TARGET,
   CHECK_USAGE,
   CHECK_USAGE_AND_ERROR,
   CHECK_USED,
+  CHECK_WARNING,
   CIRCLE,
   CIRCLE_HOLLOW,
   CLOSE,
@@ -1010,7 +1021,12 @@ extern char swit_routine_stack[MSTACK][MCHAR]; // routines called
   // added for options_element_dof
 extern long int options_element_dof; 	   //in initia.cc
 extern double options_nonlocal_softvar;  //in initia.cc
-extern long int check_used;              //in initia.cc
+ extern long int check_used;              //in initia.cc
+ extern long int check_target;            //in initia.cc
+ extern long int check_error;             //in initia.cc
+ extern long int check_warning;           //in initia.cc
+ extern long int check_nan;               //in initia.cc
+ extern long int check_data;              //in initia.cc
 
   // routines
 void      adjust_geom( long int geometry_entity[], long int geometry_entity_edge[] );
@@ -1059,6 +1075,8 @@ long int  check_unknown_atleastone( const char* str1, const char* str2, long int
 long int  check_unknown_minimum( char str[], long int min, long int task );
 long int  check_unknowns_are_specified( long int task );
 void      check_used_report( void );
+void      check_element_node( long int check_element_node_switch );
+void      check_nan_results( long int check_nan_switch );
 void      crack( void );
 void      step_close( long int task, long int ipar, long int npar, long int ipar_i,
             long int ipar_n );

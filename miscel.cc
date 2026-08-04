@@ -434,24 +434,35 @@ void exit_tn( long int print_database_type )
                  dbl_data[number]>(value+tolerance) ) correct = 0;
           }
           if ( !correct ) {
-            ofstream out( "tn.log", ios::app );
-            out << "\nError in calculation with data file " << data_file << ".";
-            out << "\nTarget value for: ";
-            out << "data item " << db_name(data_item_name) << " ";
-            out << "with index " << data_item_index << " ";
-            if ( target_item[2]<0 ) {
-              out << "for " << db_name(target_item[2]) << " ";
+            if ( check_target==-YES ) {
+              ofstream out( "tn.log", ios::app );
+              out << "\nError in calculation with data file " << data_file << ".";
+              out << "\nTarget value for: ";
+              out << "data item " << db_name(data_item_name) << " ";
+              out << "with index " << data_item_index << " ";
+              if ( target_item[2]<0 ) {
+                out << "for " << db_name(target_item[2]) << " ";
+              }
+              else
+                out << "and value number " << number << " ";
+              out << "is " << value << ".";
+              if ( db_type(data_item_name)==INTEGER )
+                out << "\nThe actual value is " << int_data[number] << ".";
+              else
+                out << "\nThe actual value is " << dbl_data[number] << ".";
+              out << "\n";
+              out.close();
+              exit(TN_EXIT_STATUS);
             }
-            else
-              out << "and value number " << number << " ";
-            out << "is " << value << ".";
-            if ( db_type(data_item_name)==INTEGER )
-              out << "\nThe actual value is " << int_data[number] << ".";
-            else
-              out << "\nThe actual value is " << dbl_data[number] << ".";
-            out << "\n";
-            out.close();
-            exit(TN_EXIT_STATUS);
+            else {
+              ofstream out( "tn.log", ios::app );
+              out << "\nNote in calculation with data file " << data_file << ".";
+              out << "\nTarget value (check_target -no) not met for: ";
+              out << db_name(data_item_name) << " index " << data_item_index;
+              out << " (wanted " << value << ").";
+              out << "\n";
+              out.close();
+            }
           }
         }
       }

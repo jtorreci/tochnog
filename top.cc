@@ -122,6 +122,11 @@ void top( void )
     VERSION_NORMAL, GET_IF_EXISTS );
 
   db( CHECK_USED, 0, &check_used, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+  db( CHECK_TARGET, 0, &check_target, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+  db( CHECK_ERROR, 0, &check_error, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+  db( CHECK_WARNING, 0, &check_warning, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+  db( CHECK_NAN, 0, &check_nan, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+  db( CHECK_DATA, 0, &check_data, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
   if ( nuknwn>0 ) {
     array_set( dworkmnol, 0., mnolnuknwn );
     db_max_index( ELEMENT, max_elem, VERSION_NORMAL, GET );
@@ -796,6 +801,9 @@ void step_close( long int task, long int ipar, long int npar, long int ipar_i, l
       }
     }
   }
+
+  // check node_dof for NAN values (check_nan)
+  if ( check_nan==-YES ) check_nan_results( check_nan );
 
   delete[] ival;
 

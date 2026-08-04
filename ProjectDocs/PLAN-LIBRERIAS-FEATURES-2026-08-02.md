@@ -215,9 +215,11 @@ El índice es limpio: cada entrada de la sección 6 "data records" es una keywor
 - [ ] `input_feflow_mesh_hydraulic_head` — sub-opción pendiente (requiere leer resultados de presión).
 
 #### P1 — Chequeos y diagnóstico (bajo esfuerzo, alto valor)
-- [ ] `check_data`, `check_error`, `check_nan`, `check_warning`, `check_memory`,
-      `check_memory_usage`, `check_solver`, `check_target`, `check_element_node`,
-      `check_element_shape`.
+- [x] `check_target` — suprime el fallo de target (registra nota en tn.log) (implementado 2026-08-03).
+- [x] `check_element_node` — detecta elementos con nodos duplicados (implementado 2026-08-03).
+- [x] `check_nan` — chequea NaN en node_dof al final de cada paso (implementado 2026-08-03).
+- [ ] `check_data`, `check_error`, `check_warning`, `check_memory`,
+      `check_memory_usage`, `check_solver`, `check_element_shape` (keywords registradas, lógica pendiente).
 - [ ] `control_check_data`.
 
 #### P2 — Control de malla (medio)

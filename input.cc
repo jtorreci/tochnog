@@ -770,6 +770,14 @@ void input( )
   }
   if ( echo ) cout << "end_data" << "\n\n";
 
+  // check that elements do not have duplicate nodes (check_element_node)
+  {
+    long int check_element_node_switch=-YES;
+    db( CHECK_ELEMENT_NODE, 0, &check_element_node_switch, ddum, ldum,
+      VERSION_NORMAL, GET_IF_EXISTS );
+    check_element_node( check_element_node_switch );
+  }
+
   if ( using_define ) {
     pri( "\n\nError: start_define not closed." );
     exit(TN_EXIT_STATUS);

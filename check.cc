@@ -1064,3 +1064,61 @@ long int check_unknowns_are_specified( long int task )
 
   return ok;
 }
+
+void check_element_node( long int check_element_node_switch )
+
+{
+  // check that elements do not have duplicate nodes
+  long int ielem=0, max_elem=0, inol=0, jnol=0, nnol=0, length=0,
+    *el=NULL;
+  double ddum[1];
+
+  if ( check_element_node_switch==-NO ) return;
+
+  db_max_index( ELEMENT, max_elem, VERSION_NORMAL, GET );
+  if ( max_elem<0 ) return;
+
+  el = get_new_int(1+MNOL);
+  for ( ielem=0; ielem<=max_elem; ielem++ ) {
+    if ( db_active_index( ELEMENT, ielem, VERSION_NORMAL ) ) {
+      db( ELEMENT, ielem, el, ddum, length, VERSION_NORMAL, GET );
+      nnol = length - 1;
+      for ( inol=0; inol<nnol; inol++ ) {
+        for ( jnol=inol+1; jnol<nnol; jnol++ ) {
+          if ( el[1+inol]==el[1+jnol] ) {
+            cout << "Error: element " << ielem << " has duplicate nodes.\n";
+            exit(TN_EXIT_STATUS);
+          }
+        }
+      }
+    }
+  }
+  delete[] el;
+}
+
+void check_nan_results( long int check_nan_switch )
+
+{
+  // check node_dof for NAN values
+  long int inod=0, max_node=0, iuknwn=0;
+  double *node_dof=NULL;
+
+  if ( check_nan_switch==-NO ) return;
+
+  db_max_index( NODE, max_node, VERSION_NORMAL, GET );
+  if ( max_node<0 ) return;
+
+  for ( inod=0; inod<=max_node; inod++ ) {
+    if ( db_active_index( NODE_DOF, inod, VERSION_NORMAL ) ) {
+      node_dof = db_dbl( NODE_DOF, inod, VERSION_NORMAL );
+      for ( iuknwn=0; iuknwn<nuknwn; iuknwn++ ) {
+        if ( node_dof[iuknwn]!=node_dof[iuknwn] ) {
+          cout << "Error: NAN detected in node_dof of node " << inod
+               << " dof " << iuknwn << ".\n";
+          cout << "The solution may have diverged.\n";
+          exit(TN_EXIT_STATUS);
+        }
+      }
+    }
+  }
+}

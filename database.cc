@@ -252,7 +252,62 @@ void db_initialize( long int dof_type[], long int dof_label[] )
 
   strcpy(name[CHECK_INDEX],"check_index" );
 
+  strcpy(name[CHECK_DATA],"check_data");
+  type[CHECK_DATA] = INTEGER;
+  data_length[CHECK_DATA] = 1;
+  no_index[CHECK_DATA] = 1;
+
+  strcpy(name[CHECK_ELEMENT_NODE],"check_element_node");
+  type[CHECK_ELEMENT_NODE] = INTEGER;
+  data_length[CHECK_ELEMENT_NODE] = 1;
+  no_index[CHECK_ELEMENT_NODE] = 1;
+
+  strcpy(name[CHECK_ELEMENT_SHAPE],"check_element_shape");
+  type[CHECK_ELEMENT_SHAPE] = DOUBLE_PRECISION;
+  data_length[CHECK_ELEMENT_SHAPE] = 1;
+  no_index[CHECK_ELEMENT_SHAPE] = 1;
+
+  strcpy(name[CHECK_ERROR],"check_error");
+  type[CHECK_ERROR] = INTEGER;
+  data_length[CHECK_ERROR] = 1;
+  no_index[CHECK_ERROR] = 1;
+
+  strcpy(name[CHECK_MEMORY],"check_memory");
+  type[CHECK_MEMORY] = INTEGER;
+  data_length[CHECK_MEMORY] = 1;
+  no_index[CHECK_MEMORY] = 1;
+
+  strcpy(name[CHECK_MEMORY_USAGE],"check_memory_usage");
+  type[CHECK_MEMORY_USAGE] = INTEGER;
+  data_length[CHECK_MEMORY_USAGE] = 1;
+  no_index[CHECK_MEMORY_USAGE] = 1;
+
+  strcpy(name[CHECK_MEMORY_USAGE_RESULT],"check_memory_usage_result");
+  type[CHECK_MEMORY_USAGE_RESULT] = DOUBLE_PRECISION;
+  data_length[CHECK_MEMORY_USAGE_RESULT] = 1;
+  no_index[CHECK_MEMORY_USAGE_RESULT] = 1;
+
+  strcpy(name[CHECK_NAN],"check_nan");
+  type[CHECK_NAN] = INTEGER;
+  data_length[CHECK_NAN] = 1;
+  no_index[CHECK_NAN] = 1;
+
   strcpy(name[CHECK_NUMBER],"check_number" );
+
+  strcpy(name[CHECK_SOLVER],"check_solver");
+  type[CHECK_SOLVER] = DOUBLE_PRECISION;
+  data_length[CHECK_SOLVER] = 1;
+  no_index[CHECK_SOLVER] = 1;
+
+  strcpy(name[CHECK_TARGET],"check_target");
+  type[CHECK_TARGET] = INTEGER;
+  data_length[CHECK_TARGET] = 1;
+  no_index[CHECK_TARGET] = 1;
+
+  strcpy(name[CHECK_WARNING],"check_warning");
+  type[CHECK_WARNING] = INTEGER;
+  data_length[CHECK_WARNING] = 1;
+  no_index[CHECK_WARNING] = 1;
 
   strcpy(name[CHECK_USED],"check_used");
   type[CHECK_USED] = INTEGER;
