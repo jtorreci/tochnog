@@ -208,10 +208,11 @@ El índice es limpio: cada entrada de la sección 6 "data records" es una keywor
 - [x] `include filename` — incluir archivos en el data part (implementado y verificado 2026-08-03).
 - [x] `input_gmsh` — importar malla de gmsh (implementado 2026-08-03, lee `tochnog_in.msh` formato 2.2, nodos y elementos lineales/cuadráticos).
 - [x] `input_abaqus` — importar malla de abaqus (implementado 2026-08-03, lee `abaqus.inp` y genera `tochnog_abaqus.dat` para `include`).
-- [x] `input_abaqus_continue`, `input_abaqus_name` — sub-opciones (implementadas 2026-08-03: continue dispara la generación, name filtra tipos).
-- [ ] `input_abaqus_group`, `input_abaqus_mesh`, `input_abaqus_set` — sub-opciones pendientes.
+- [x] `input_abaqus_continue`, `input_abaqus_name`, `input_abaqus_group`, `input_abaqus_set` — sub-opciones (implementadas 2026-08-03: continue dispara la generación, name filtra tipos, group escribe material→group_*, set filtra elementos).
+- [ ] `input_abaqus_mesh` — sub-opción pendiente (controla si se escriben timesteps/prints).
 - [x] `input_feflow_mesh` — importar malla de FEFLOW (implementado 2026-08-03, lee `feflow.fem` ASCII con secciones `coordinates`/`elements`).
-- [ ] `input_feflow_fem`, `input_feflow_mesh_hydraulic_head` — sub-opciones pendientes.
+- [x] `input_feflow_fem` — sub-opción (implementado 2026-08-03: -yes usa `.fem`, -no usa `.dac`).
+- [ ] `input_feflow_mesh_hydraulic_head` — sub-opción pendiente (requiere leer resultados de presión).
 
 #### P1 — Chequeos y diagnóstico (bajo esfuerzo, alto valor)
 - [ ] `check_data`, `check_error`, `check_nan`, `check_warning`, `check_memory`,

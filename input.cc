@@ -1527,14 +1527,18 @@ void input_abaqus_read( void )
 {
   // read the abaqus input file abaqus.inp and generate tochnog_abaqus.dat
   // with node and element records. input_abaqus_name limits the element
-  // types that are converted.
+  // types that are converted. input_abaqus_set limits the element numbers.
+  // input_abaqus_group decides whether group_* records are written.
   long int i=0, inode=0, nnol=0, n1=0, n2=0, n3=0, n4=0, n5=0,
-    n6=0, n7=0, n8=0, n9=0, elem_id=0, nn=0, *input_abaqus_name=NULL;
+    n6=0, n7=0, n8=0, n9=0, elem_id=0, nn=0, *input_abaqus_name=NULL,
+    *input_abaqus_set=NULL, nset_=0, in_set=0, j=0,
+    input_abaqus_group=-YES, ldum=0;
   double ddum[1], xyz[MDIM];
   char line[MCHAR], *tok=NULL, str2[MCHAR], filename[MCHAR], eltype[MCHAR];
   ifstream in;
   ofstream out;
-  long int in_nodes=0, in_elements=0, convert_ok=0;
+  long int in_nodes=0, in_elements=0, convert_ok=0, in_elastic=0;
+  double young=0., poisson=0.;
 
   // element types to convert (input_abaqus_name); empty means all
   if ( db_active_index( INPUT_ABAQUS_NAME, 0, VERSION_NORMAL ) ) {
@@ -1544,6 +1548,19 @@ void input_abaqus_read( void )
       db( INPUT_ABAQUS_NAME, 0, input_abaqus_name, ddum, nn, VERSION_NORMAL, GET );
     }
   }
+
+  // element numbers to write (input_abaqus_set); empty means all
+  if ( db_active_index( INPUT_ABAQUS_SET, 0, VERSION_NORMAL ) ) {
+    nset_ = db_len( INPUT_ABAQUS_SET, 0, VERSION_NORMAL );
+    if ( nset_>0 ) {
+      input_abaqus_set = get_new_int(nset_);
+      db( INPUT_ABAQUS_SET, 0, input_abaqus_set, ddum, nset_, VERSION_NORMAL, GET );
+    }
+  }
+
+  // whether group_* records are written
+  db( INPUT_ABAQUS_GROUP, 0, &input_abaqus_group, ddum, ldum,
+    VERSION_NORMAL, GET_IF_EXISTS );
 
   strcpy( filename, "abaqus.inp" );
   in.open( filename );
@@ -1560,7 +1577,7 @@ void input_abaqus_read( void )
     char *p = line;
     while ( *p==' ' || *p=='\t' ) p++;
     if ( p[0]=='*' ) {
-      in_nodes = in_elements = 0;
+      in_nodes = in_elements = in_elastic = 0;
       // strip trailing comma of keyword
       char *q = p;
       while ( *q && *q!='\n' ) q++;
@@ -1573,10 +1590,17 @@ void input_abaqus_read( void )
         char *eq = strstr(p,"type=");
         if ( eq ) { strcpy(eltype, eq+5); char *c=strchr(eltype,','); if(c)*c=0; }
       }
+      else if ( !strncmp(p,"*elastic",8) ) in_elastic = 1;
       continue;
     }
     // data line: split by commas
-    if ( in_nodes ) {
+    if ( in_elastic ) {
+      tok = strtok(p,",");
+      if ( tok ) young = atof(tok);
+      tok = strtok(NULL,",");
+      if ( tok ) poisson = atof(tok);
+    }
+    else if ( in_nodes ) {
       tok = strtok(p,",");
       if ( !tok ) continue;
       inode = atoi(tok);
@@ -1655,6 +1679,14 @@ void input_abaqus_read( void )
             convert_ok = 1;
         }
       }
+      // filter element numbers by input_abaqus_set (if specified)
+      if ( convert_ok && input_abaqus_set ) {
+        in_set = 0;
+        for ( j=0; j<nset_; j++ ) {
+          if ( input_abaqus_set[j]==elem_id ) in_set = 1;
+        }
+        if ( !in_set ) convert_ok = 0;
+      }
       if ( !convert_ok ) continue;
       out << "element  " << elem_id << "  " << str2;
       out << "  " << n1 << "  " << n2;
@@ -1665,6 +1697,15 @@ void input_abaqus_read( void )
       if ( nnol>=9 ) out << "  " << n9;
       out << "\n";
     }
+  }
+
+  // write group_* records from the abaqus material (if requested)
+  if ( input_abaqus_group==-YES && young>0. ) {
+    out << "group_type 0  -materi\n";
+    out << "group_materi_elasti_young 0  " << young << "\n";
+    if ( poisson>0. )
+      out << "group_materi_elasti_poisson 0  " << poisson << "\n";
+    out << "group_materi_memory 0  -updated_without_rotation\n";
   }
 
   out << "end_data\n";
@@ -1678,16 +1719,21 @@ void input_feflow_read( void )
 
 {
   // read the feflow mesh file feflow.fem (ASCII) and fill node and element.
-  // The file is read section by section; sections are recognized by keywords
-  // like "coordinates"/"nodes" (node data) and "elements" (element data).
+  // If input_feflow_fem is set to -no, the mesh is read from feflow.dac.
   long int inode=0, ielem=0, nnol=0, n1=0, n2=0, n3=0, n4=0, n5=0,
-    n6=0, n7=0, n8=0, n9=0, idum[1], nn=0, i=0;
+    n6=0, n7=0, n8=0, n9=0, idum[1], nn=0, i=0, input_feflow_fem=-YES,
+    ldum=0;
   double ddum[1], xyz[MDIM];
   char line[MCHAR], *tok=NULL, str2[MCHAR], filename[MCHAR];
   ifstream in;
   long int in_nodes=0, in_elements=0;
 
-  strcpy( filename, "feflow.fem" );
+  db( INPUT_FEFLOW_FEM, 0, &input_feflow_fem, ddum, ldum,
+    VERSION_NORMAL, GET_IF_EXISTS );
+  if ( input_feflow_fem==-NO )
+    strcpy( filename, "feflow.dac" );
+  else
+    strcpy( filename, "feflow.fem" );
   in.open( filename );
   if ( !in ) {
     pri( "Error: cannot open feflow file ", filename );
