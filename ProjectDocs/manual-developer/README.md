@@ -41,6 +41,10 @@ Each file corresponds to the same feature in the [User Manual](../manual-user/).
 - [control_mesh_move](control_mesh_move.md) — move all nodes by a linear transformation.
 - [control_mesh_mirror](control_mesh_mirror.md) — mirror the mesh.
 - [control_mesh_copy](control_mesh_copy.md) — copy the mesh displaced.
+- [control_mesh_delete_element](control_mesh_delete_element.md) — delete specific elements.
+- [control_mesh_keep_element](control_mesh_keep_element.md) — keep only the listed elements.
+- [control_mesh_keep_element_group](control_mesh_keep_element_group.md) — keep only the elements of the listed groups.
+- [control_mesh_change_element_group](control_mesh_change_element_group.md) — change the element group.
 - [bounda_time_on_off](bounda_time_on_off.md) — periodic bounda_time.
 - [bounda_time_until_force](bounda_time_until_force.md) — limit reaction force.
 

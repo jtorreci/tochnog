@@ -162,7 +162,8 @@ manual 2011. "input" se refiere al **archivo de entrada** (`tn.dat`) y al mecani
 9. `control_mesh_mirror` — refleja la malla. [x]
 10. `control_mesh_copy` — copia la malla desplazada. [x]
 11. `control_mesh_rotate` — rota 2D→3D. [BLOQUEADO: requiere elementos 3D prism6/hex8]
-12. `groundflow_pressure_factor`.
+12. `control_mesh_delete_element`, `control_mesh_keep_element`, `control_mesh_keep_element_group`, `control_mesh_change_element_group`. [x]
+13. `groundflow_pressure_factor`.
 
 ### Fase 3 (alto esfuerzo, ~1-2 semanas c/u)
 11. `group_materi_plasti_hypo_masin` — modelo hipoplástico de Masin con OCR (reusar estructura de hypo_wolfersdorff).

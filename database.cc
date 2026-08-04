@@ -489,6 +489,11 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   data_length[CONTROL_MESH_ADJUST_GEOMETRY] = 4;
   data_class[CONTROL_MESH_ADJUST_GEOMETRY] = CONTROL;
 
+  strcpy(name[CONTROL_MESH_CHANGE_ELEMENT_GROUP],"control_mesh_change_element_group");
+  type[CONTROL_MESH_CHANGE_ELEMENT_GROUP] = INTEGER;
+  data_length[CONTROL_MESH_CHANGE_ELEMENT_GROUP] = 2;
+  data_class[CONTROL_MESH_CHANGE_ELEMENT_GROUP] = CONTROL;
+
   strcpy(name[CONTROL_MESH_DELETE_GEOMETRY],"control_mesh_delete_geometry");
   type[CONTROL_MESH_DELETE_GEOMETRY] = INTEGER;
   data_length[CONTROL_MESH_DELETE_GEOMETRY] = 2;
@@ -520,6 +525,12 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   data_length[CONTROL_MESH_DELETE_GEOMETRY_MOVENODES] = 1;
   data_class[CONTROL_MESH_DELETE_GEOMETRY_MOVENODES] = CONTROL;     
   data_required[CONTROL_MESH_DELETE_GEOMETRY_MOVENODES] = CONTROL_MESH_DELETE_GEOMETRY;     
+
+  strcpy(name[CONTROL_MESH_DELETE_ELEMENT],"control_mesh_delete_element");
+  type[CONTROL_MESH_DELETE_ELEMENT] = INTEGER;
+  data_length[CONTROL_MESH_DELETE_ELEMENT] = DATA_ITEM_SIZE;
+  fixed_length[CONTROL_MESH_DELETE_ELEMENT] = 0;
+  data_class[CONTROL_MESH_DELETE_ELEMENT] = CONTROL;
 
   strcpy(name[CONTROL_MESH_DELETE_SMALL],"control_mesh_delete_small");
   type[CONTROL_MESH_DELETE_SMALL] = DOUBLE_PRECISION;
@@ -590,6 +601,30 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   data_length[CONTROL_MESH_GENERATE_TRUSS_BEAM_MACRO] = DATA_ITEM_SIZE;
   fixed_length[CONTROL_MESH_GENERATE_TRUSS_BEAM_MACRO] = 0;
   data_class[CONTROL_MESH_GENERATE_TRUSS_BEAM_MACRO] = CONTROL;
+
+  strcpy(name[CONTROL_MESH_KEEP_ELEMENT],"control_mesh_keep_element");
+  type[CONTROL_MESH_KEEP_ELEMENT] = INTEGER;
+  data_length[CONTROL_MESH_KEEP_ELEMENT] = DATA_ITEM_SIZE;
+  fixed_length[CONTROL_MESH_KEEP_ELEMENT] = 0;
+  data_class[CONTROL_MESH_KEEP_ELEMENT] = CONTROL;
+
+  strcpy(name[CONTROL_MESH_KEEP_ELEMENT_GROUP],"control_mesh_keep_element_group");
+  type[CONTROL_MESH_KEEP_ELEMENT_GROUP] = INTEGER;
+  data_length[CONTROL_MESH_KEEP_ELEMENT_GROUP] = DATA_ITEM_SIZE;
+  fixed_length[CONTROL_MESH_KEEP_ELEMENT_GROUP] = 0;
+  data_class[CONTROL_MESH_KEEP_ELEMENT_GROUP] = CONTROL;
+
+  strcpy(name[CONTROL_MESH_KEEP_GEOMETRY],"control_mesh_keep_geometry");
+  type[CONTROL_MESH_KEEP_GEOMETRY] = INTEGER;
+  data_length[CONTROL_MESH_KEEP_GEOMETRY] = DATA_ITEM_SIZE;
+  fixed_length[CONTROL_MESH_KEEP_GEOMETRY] = 0;
+  data_class[CONTROL_MESH_KEEP_GEOMETRY] = CONTROL;
+
+  strcpy(name[CONTROL_MESH_KEEP_NODE],"control_mesh_keep_node");
+  type[CONTROL_MESH_KEEP_NODE] = INTEGER;
+  data_length[CONTROL_MESH_KEEP_NODE] = DATA_ITEM_SIZE;
+  fixed_length[CONTROL_MESH_KEEP_NODE] = 0;
+  data_class[CONTROL_MESH_KEEP_NODE] = CONTROL;
 
   strcpy(name[CONTROL_MESH_MACRO],"control_mesh_macro");
   type[CONTROL_MESH_MACRO] = INTEGER;

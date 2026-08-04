@@ -208,11 +208,13 @@ enum {
   CONTROL_EIGEN_VALUES,
   CONTROL_MATERI_DIFFUSION,
   CONTROL_MESH_ADJUST_GEOMETRY,
+  CONTROL_MESH_CHANGE_ELEMENT_GROUP,
   CONTROL_MESH_DELETE_GEOMETRY,
   CONTROL_MESH_DELETE_GEOMETRY_ELEMENT,
   CONTROL_MESH_DELETE_GEOMETRY_ELEMENTGROUP,
   CONTROL_MESH_DELETE_GEOMETRY_FACTOR,
   CONTROL_MESH_DELETE_GEOMETRY_MOVENODES,
+  CONTROL_MESH_DELETE_ELEMENT,
   CONTROL_MESH_DELETE_SMALL,
   CONTROL_MESH_COPY,
   CONTROL_MESH_EXTRUDE,
@@ -226,6 +228,10 @@ enum {
   CONTROL_MESH_GENERATE_TRUSSBEAM,
   CONTROL_MESH_GENERATE_TRUSS_BEAM_LOOSE,
   CONTROL_MESH_GENERATE_TRUSS_BEAM_MACRO,
+  CONTROL_MESH_KEEP_ELEMENT,
+  CONTROL_MESH_KEEP_ELEMENT_GROUP,
+  CONTROL_MESH_KEEP_GEOMETRY,
+  CONTROL_MESH_KEEP_NODE,
   CONTROL_MESH_MACRO,
   CONTROL_MESH_MACRO_ELEMENT,
   CONTROL_MESH_MACRO_PARAMETERS,
@@ -1356,6 +1362,7 @@ void      mesh_switch( long int control_mesh_switch[], long int length );
 void      mesh_move( double control_mesh_move[], long int length );
 void      mesh_mirror( long int axis );
 void      mesh_copy( double move_coords[] );
+void      mesh_delete_keep( long int icontrol );
 void      new_mesh( void );
 void      new_mesh_version( long int version, double delta );
 void      nod_nod( long int version );

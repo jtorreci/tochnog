@@ -521,6 +521,14 @@ void step_start( long int task, long int options_solver[], double dtime, double 
     mesh_copy( control_copy );
   }
 
+  // delete/keep elements, change element group
+  if ( db_active_index( CONTROL_MESH_DELETE_ELEMENT, icontrol, VERSION_NORMAL ) ||
+       db_active_index( CONTROL_MESH_KEEP_ELEMENT, icontrol, VERSION_NORMAL ) ||
+       db_active_index( CONTROL_MESH_KEEP_ELEMENT_GROUP, icontrol, VERSION_NORMAL ) ||
+       db_active_index( CONTROL_MESH_CHANGE_ELEMENT_GROUP, icontrol, VERSION_NORMAL ) ) {
+    mesh_delete_keep( icontrol );
+  }
+
   change_geometry( task, dtime, time_current );
 
   data( task, dtime, time_current ); 

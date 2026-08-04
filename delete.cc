@@ -260,3 +260,77 @@ void mesh_delete_small( long int version )
 
   if ( swit ) pri( "Out routine MESH_DELETE_SMALL" );
 }
+
+void mesh_delete_keep( long int icontrol )
+
+{
+  // handle control_mesh_delete_element, control_mesh_keep_element,
+  // control_mesh_keep_element_group and control_mesh_change_element_group.
+  long int ielem=0, max_elem=0, length=0, ldum=0, i=0, inlist=0,
+    eg_from=0, eg_to=0, eg=0, list[DATA_ITEM_SIZE], nlist=0;
+  double ddum[1];
+
+  // control_mesh_change_element_group: change group from eg_from to eg_to
+  if ( db_active_index( CONTROL_MESH_CHANGE_ELEMENT_GROUP, icontrol,
+      VERSION_NORMAL ) ) {
+    long int ceg[2];
+    db( CONTROL_MESH_CHANGE_ELEMENT_GROUP, icontrol, ceg, ddum, length,
+      VERSION_NORMAL, GET );
+    eg_from = ceg[0]; eg_to = ceg[1];
+    db_max_index( ELEMENT, max_elem, VERSION_NORMAL, GET );
+    for ( ielem=0; ielem<=max_elem; ielem++ ) {
+      if ( db_active_index( ELEMENT, ielem, VERSION_NORMAL ) ) {
+        eg = 0;
+        db( ELEMENT_GROUP, ielem, &eg, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+        if ( eg==eg_from )
+          db( ELEMENT_GROUP, ielem, &eg_to, ddum, ldum, VERSION_NORMAL, PUT );
+      }
+    }
+  }
+
+  // control_mesh_delete_element: delete the given element numbers
+  if ( db_active_index( CONTROL_MESH_DELETE_ELEMENT, icontrol,
+      VERSION_NORMAL ) ) {
+    nlist = 0;
+    db( CONTROL_MESH_DELETE_ELEMENT, icontrol, list, ddum, nlist,
+      VERSION_NORMAL, GET );
+    for ( i=0; i<nlist; i++ ) {
+      if ( db_active_index( ELEMENT, list[i], VERSION_NORMAL ) )
+        delete_element( list[i], VERSION_NORMAL );
+    }
+  }
+
+  // control_mesh_keep_element: delete all elements except the listed ones
+  if ( db_active_index( CONTROL_MESH_KEEP_ELEMENT, icontrol,
+      VERSION_NORMAL ) ) {
+    nlist = 0;
+    db( CONTROL_MESH_KEEP_ELEMENT, icontrol, list, ddum, nlist,
+      VERSION_NORMAL, GET );
+    db_max_index( ELEMENT, max_elem, VERSION_NORMAL, GET );
+    for ( ielem=0; ielem<=max_elem; ielem++ ) {
+      if ( db_active_index( ELEMENT, ielem, VERSION_NORMAL ) ) {
+        inlist = array_member( list, ielem, nlist, ldum );
+        if ( !inlist ) delete_element( ielem, VERSION_NORMAL );
+      }
+    }
+  }
+
+  // control_mesh_keep_element_group: delete all elements not in the groups
+  if ( db_active_index( CONTROL_MESH_KEEP_ELEMENT_GROUP, icontrol,
+      VERSION_NORMAL ) ) {
+    nlist = 0;
+    db( CONTROL_MESH_KEEP_ELEMENT_GROUP, icontrol, list, ddum, nlist,
+      VERSION_NORMAL, GET );
+    db_max_index( ELEMENT, max_elem, VERSION_NORMAL, GET );
+    for ( ielem=0; ielem<=max_elem; ielem++ ) {
+      if ( db_active_index( ELEMENT, ielem, VERSION_NORMAL ) ) {
+        eg = 0;
+        db( ELEMENT_GROUP, ielem, &eg, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+        inlist = array_member( list, eg, nlist, ldum );
+        if ( !inlist ) delete_element( ielem, VERSION_NORMAL );
+      }
+    }
+  }
+
+  mesh_has_changed( VERSION_NORMAL );
+}
