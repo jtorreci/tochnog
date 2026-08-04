@@ -214,6 +214,7 @@ enum {
   CONTROL_MESH_DELETE_GEOMETRY_FACTOR,
   CONTROL_MESH_DELETE_GEOMETRY_MOVENODES,
   CONTROL_MESH_DELETE_SMALL,
+  CONTROL_MESH_COPY,
   CONTROL_MESH_EXTRUDE,
   CONTROL_MESH_EXTRUDE_N,
   CONTROL_MESH_GENERATE_BEAM,
@@ -233,9 +234,12 @@ enum {
   CONTROL_MESH_MERGE_EPSCOORD,
   CONTROL_MESH_MERGE_MACRO_GENERATE,
   CONTROL_MESH_MERGE_NOT,
+  CONTROL_MESH_MIRROR,
   CONTROL_MESH_NEW_MESH,
   CONTROL_MESH_NEW_MESH_ELEMENT,
   CONTROL_MESH_NEW_MESH_REGION,
+  CONTROL_MESH_MOVE,
+  CONTROL_MESH_MULTIPLY,
   CONTROL_MESH_REFINE_GLOBALLY,
   CONTROL_MESH_REFINE_GLOBALLY_GEOMETRY,
   CONTROL_MESH_REFINE_LOCALLY,
@@ -246,6 +250,8 @@ enum {
   CONTROL_MESH_REMESH,
   CONTROL_MESH_REMESH_FACTOR,
   CONTROL_MESH_RENUMBER,
+  CONTROL_MESH_ROTATE,
+  CONTROL_MESH_ROTATE_ANGLE,
   CONTROL_MESH_SPLIT,
   CONTROL_MESH_SPLIT_ONLY,
   CONTROL_MESH_SWITCH,
@@ -1081,6 +1087,7 @@ long int  check_unknown_minimum( char str[], long int min, long int task );
 long int  check_unknowns_are_specified( long int task );
 void      check_used_report( void );
 void      check_element_node( long int check_element_node_switch );
+void      check_data_integrity( void );
 void      check_nan_results( long int check_nan_switch );
 void      crack( void );
 void      step_close( long int task, long int ipar, long int npar, long int ipar_i,
@@ -1346,6 +1353,9 @@ void      mesh_delete_small( long int version );
 void      mesh_has_changed( long int version );
 void      mesh_split( long int version );
 void      mesh_switch( long int control_mesh_switch[], long int length );
+void      mesh_move( double control_mesh_move[], long int length );
+void      mesh_mirror( long int axis );
+void      mesh_copy( double move_coords[] );
 void      new_mesh( void );
 void      new_mesh_version( long int version, double delta );
 void      nod_nod( long int version );

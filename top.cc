@@ -23,8 +23,8 @@
 #define EPS_DTIME 1.e-4
 
 void top( void )
-
 {
+
   long int inod=0, ielem=0, max=0, max_node=0, max_control=0, 
     start_control=0, length=0, iinc=0, ninc=0, 
     timestep_iterations=1, swit=0, swit_timestep=0, idat=0, 
@@ -496,6 +496,29 @@ void step_start( long int task, long int options_solver[], double dtime, double 
     db( CONTROL_MESH_SWITCH, icontrol, control_switch, ddum, 
       switch_length, VERSION_NORMAL, GET );
     mesh_switch( control_switch, switch_length );
+  }
+
+  if ( db_active_index( CONTROL_MESH_MOVE, icontrol, VERSION_NORMAL ) ) {
+    long int move_length=0, idum_m=0;
+    double control_move[DATA_ITEM_SIZE];
+    db( CONTROL_MESH_MOVE, icontrol, &idum_m, control_move, move_length,
+      VERSION_NORMAL, GET );
+    mesh_move( control_move, move_length );
+  }
+
+  if ( db_active_index( CONTROL_MESH_MIRROR, icontrol, VERSION_NORMAL ) ) {
+    long int mirror_axis=0;
+    db( CONTROL_MESH_MIRROR, icontrol, &mirror_axis, ddum, ldum,
+      VERSION_NORMAL, GET );
+    mesh_mirror( mirror_axis );
+  }
+
+  if ( db_active_index( CONTROL_MESH_COPY, icontrol, VERSION_NORMAL ) ) {
+    long int copy_length=0, idum_c=0;
+    double control_copy[MDIM];
+    db( CONTROL_MESH_COPY, icontrol, &idum_c, control_copy, copy_length,
+      VERSION_NORMAL, GET );
+    mesh_copy( control_copy );
   }
 
   change_geometry( task, dtime, time_current );

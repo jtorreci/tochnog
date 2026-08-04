@@ -38,6 +38,9 @@ Each file corresponds to the same feature in the [User Manual](../manual-user/).
 ## Phase 2 features
 
 - [control_mesh_switch](control_mesh_switch.md) — switch coordinate axes.
+- [control_mesh_move](control_mesh_move.md) — move all nodes by a linear transformation.
+- [control_mesh_mirror](control_mesh_mirror.md) — mirror the mesh.
+- [control_mesh_copy](control_mesh_copy.md) — copy the mesh displaced.
 - [bounda_time_on_off](bounda_time_on_off.md) — periodic bounda_time.
 - [bounda_time_until_force](bounda_time_until_force.md) — limit reaction force.
 

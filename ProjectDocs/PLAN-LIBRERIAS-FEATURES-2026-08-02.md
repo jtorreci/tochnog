@@ -156,11 +156,13 @@ manual 2011. "input" se refiere al **archivo de entrada** (`tn.dat`) y al mecani
 5. `post_point_move` — seguimiento de partícula.
 
 ### Fase 2 (medio, ~2-5 días c/u)
-6. `control_mesh_switch` — rotación de ejes para mallar.
-7. `control_mesh_move` — mallas oblicuas.
-8. `bounda_time_on_off` / `bounda_time_until_*` — control temporal de condiciones de contorno.
-9. `group_materi_plasti_tension_direct_normal` + `mohr_coul_direct_normal` (con/auto).
-10. `groundflow_pressure_factor`.
+6. `control_mesh_switch` — rotación de ejes para mallar. [x]
+7. `control_mesh_move` — mueve la malla con desplazamiento lineal. [x]
+8. `bounda_time_on_off` / `bounda_time_until_*` — control temporal de condiciones de contorno. [x]
+9. `control_mesh_mirror` — refleja la malla. [x]
+10. `control_mesh_copy` — copia la malla desplazada. [x]
+11. `control_mesh_rotate` — rota 2D→3D. [BLOQUEADO: requiere elementos 3D prism6/hex8]
+12. `groundflow_pressure_factor`.
 
 ### Fase 3 (alto esfuerzo, ~1-2 semanas c/u)
 11. `group_materi_plasti_hypo_masin` — modelo hipoplástico de Masin con OCR (reusar estructura de hypo_wolfersdorff).

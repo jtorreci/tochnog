@@ -526,6 +526,12 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   data_length[CONTROL_MESH_DELETE_SMALL] = 1;
   data_class[CONTROL_MESH_DELETE_SMALL] = CONTROL;
 
+  strcpy(name[CONTROL_MESH_COPY],"control_mesh_copy");
+  type[CONTROL_MESH_COPY] = DOUBLE_PRECISION;
+  data_length[CONTROL_MESH_COPY] = DATA_ITEM_SIZE;
+  fixed_length[CONTROL_MESH_COPY] = 0;
+  data_class[CONTROL_MESH_COPY] = CONTROL;
+
   strcpy(name[CONTROL_MESH_EXTRUDE],"control_mesh_extrude");
   type[CONTROL_MESH_EXTRUDE] = DOUBLE_PRECISION;
   data_length[CONTROL_MESH_EXTRUDE] = DATA_ITEM_SIZE;
@@ -630,6 +636,11 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   data_length[CONTROL_MESH_MERGE_NOT] = 2;
   data_class[CONTROL_MESH_MERGE_NOT] = CONTROL;
 
+  strcpy(name[CONTROL_MESH_MIRROR],"control_mesh_mirror");
+  type[CONTROL_MESH_MIRROR] = INTEGER;
+  data_length[CONTROL_MESH_MIRROR] = 1;
+  data_class[CONTROL_MESH_MIRROR] = CONTROL;
+
   strcpy(name[CONTROL_MESH_NEW_MESH],"control_mesh_new_mesh");
   type[CONTROL_MESH_NEW_MESH] = DOUBLE_PRECISION;
   data_length[CONTROL_MESH_NEW_MESH] = 1;
@@ -647,6 +658,17 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   fixed_length[CONTROL_MESH_NEW_MESH_REGION] = 0;
   data_class[CONTROL_MESH_NEW_MESH_REGION] = CONTROL;
   data_required[CONTROL_MESH_NEW_MESH_REGION] = CONTROL_MESH_NEW_MESH;
+
+  strcpy(name[CONTROL_MESH_MOVE],"control_mesh_move");
+  type[CONTROL_MESH_MOVE] = DOUBLE_PRECISION;
+  data_length[CONTROL_MESH_MOVE] = DATA_ITEM_SIZE;
+  fixed_length[CONTROL_MESH_MOVE] = 0;
+  data_class[CONTROL_MESH_MOVE] = CONTROL;
+
+  strcpy(name[CONTROL_MESH_MULTIPLY],"control_mesh_multiply");
+  type[CONTROL_MESH_MULTIPLY] = INTEGER;
+  data_length[CONTROL_MESH_MULTIPLY] = 1;
+  data_class[CONTROL_MESH_MULTIPLY] = CONTROL;
 
   strcpy(name[CONTROL_MESH_REFINE_GLOBALLY],"control_mesh_refine_globally");
   type[CONTROL_MESH_REFINE_GLOBALLY] = INTEGER;
@@ -704,6 +726,18 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   type[CONTROL_MESH_RENUMBER] = INTEGER;
   data_length[CONTROL_MESH_RENUMBER] = 2;
   data_class[CONTROL_MESH_RENUMBER] = CONTROL;
+
+  strcpy(name[CONTROL_MESH_ROTATE],"control_mesh_rotate");
+  type[CONTROL_MESH_ROTATE] = INTEGER;
+  data_length[CONTROL_MESH_ROTATE] = 1;
+  data_class[CONTROL_MESH_ROTATE] = CONTROL;
+  data_required[CONTROL_MESH_ROTATE] = CONTROL_MESH_ROTATE;
+
+  strcpy(name[CONTROL_MESH_ROTATE_ANGLE],"control_mesh_rotate_angle");
+  type[CONTROL_MESH_ROTATE_ANGLE] = DOUBLE_PRECISION;
+  data_length[CONTROL_MESH_ROTATE_ANGLE] = 1;
+  data_class[CONTROL_MESH_ROTATE_ANGLE] = CONTROL;
+  data_required[CONTROL_MESH_ROTATE_ANGLE] = CONTROL_MESH_ROTATE;
 
   strcpy(name[CONTROL_MESH_SPLIT],"control_mesh_split");
   type[CONTROL_MESH_SPLIT] = INTEGER;
