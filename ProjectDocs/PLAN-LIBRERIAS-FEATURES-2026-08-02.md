@@ -214,15 +214,17 @@ El índice es limpio: cada entrada de la sección 6 "data records" es una keywor
 - [x] `input_feflow_fem` — sub-opción (implementado 2026-08-03: -yes usa `.fem`, -no usa `.dac`).
 - [ ] `input_feflow_mesh_hydraulic_head` — sub-opción pendiente (requiere leer resultados de presión).
 
-#### P1 — Chequeos y diagnóstico (bajo esfuerzo, alto valor)
-- [x] `check_target` — suprime el fallo de target (registra nota en tn.log) (implementado 2026-08-03).
-- [x] `check_element_node` — detecta elementos con nodos duplicados (implementado 2026-08-03).
-- [x] `check_nan` — chequea NaN en node_dof al final de cada paso (implementado 2026-08-03).
-- [x] `check_solver eps` — avisa si términos de la diagonal del solver son < eps (implementado 2026-08-03, en `so.cc` band solver).
-- [x] `check_element_shape factor` — avisa si elementos muy distorsionados (implementado 2026-08-03, en `polynom.cc`).
-- [x] `check_memory` — reporta pico de uso de RAM (implementado 2026-08-03, en `miscel.cc` exit_tn).
-- [x] `check_memory_usage` — guarda pico de memoria en `check_memory_usage_result` (implementado 2026-08-03).
-- [ ] `check_data`, `check_error`, `check_warning` (keywords registradas, lógica pendiente).
+#### P1 — Chequeos y diagnóstico (COMPLETA 2026-08-04)
+- [x] `check_target` — suprime el fallo de target (registra nota en tn.log).
+- [x] `check_element_node` — detecta elementos con nodos duplicados.
+- [x] `check_nan` — chequea NaN en node_dof al final de cada paso.
+- [x] `check_solver eps` — avisa si términos de la diagonal del solver son < eps.
+- [x] `check_element_shape factor` — avisa si elementos muy distorsionados.
+- [x] `check_memory` — reporta pico de uso de RAM.
+- [x] `check_memory_usage` — guarda pico de memoria en `check_memory_usage_result`.
+- [x] `check_data` — verifica integridad de la base de datos (items requeridos presentes).
+- [x] `check_error` — suprime mensajes de error (via `pri`).
+- [x] `check_warning` — suprime mensajes de warning (via `pri`).
 - [ ] `control_check_data`.
 
 #### P2 — Control de malla (medio)

@@ -131,6 +131,10 @@ void top( void )
   db( CHECK_ELEMENT_SHAPE, 0, idum, &check_element_shape_factor, ldum, VERSION_NORMAL, GET_IF_EXISTS );
   db( CHECK_MEMORY, 0, &check_memory, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
   db( CHECK_MEMORY_USAGE, 0, &check_memory_usage, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+
+  // check_data -yes: verify data base integrity (required items present)
+  if ( check_data==-YES ) check_data_integrity();
+
   if ( nuknwn>0 ) {
     array_set( dworkmnol, 0., mnolnuknwn );
     db_max_index( ELEMENT, max_elem, VERSION_NORMAL, GET );

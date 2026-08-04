@@ -22,6 +22,9 @@ Each file corresponds to the same feature in the [User Manual](../manual-user/).
 - [check_element_shape](check_element_shape.md) — warn about distorted elements.
 - [check_memory](check_memory.md) — report peak memory usage.
 - [check_memory_usage](check_memory_usage.md) — record peak memory usage result.
+- [check_data](check_data.md) — verify the database integrity (missing required items).
+- [check_error](check_error.md) — suppress "Error" messages.
+- [check_warning](check_warning.md) — suppress "Warning" messages.
 
 ## Phase 1 features
 

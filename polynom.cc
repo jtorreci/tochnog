@@ -451,8 +451,11 @@ void pol( long int element, long int element_group,
         distortion += scalar_dabs(volume[ip2]-vol_avg)/vol_avg;
       distortion /= npoint;
       if ( distortion>check_element_shape_factor ) {
-        cout << "Warning: element with distorted shape, distortion="
-             << distortion << " > factor=" << check_element_shape_factor << ".\n";
+        char warn_str[MCHAR];
+        snprintf( warn_str, MCHAR,
+          "Warning: element with distorted shape, distortion=%g > factor=%g",
+          distortion, check_element_shape_factor );
+        pri( warn_str );
       }
     }
   }

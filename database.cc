@@ -5017,3 +5017,33 @@ void check_used_report( void )
     cout << "Check_used: " << nused << " data items not used.\n";
 }
 
+
+void check_data_integrity( void )
+
+{
+  // check_data -yes: verify that data items required by active items exist
+  // (data_required refers to another data item that must be active).
+  long int idat=0, ireq=0, max=0, index=0;
+  long int nmissing=0;
+
+  for ( idat=0; idat<MDAT; idat++ ) {
+    if ( data_required[idat]>0 && external[idat] ) {
+      ireq = data_required[idat];
+      db_max_index( idat, max, VERSION_NORMAL, GET );
+      for ( index=0; index<=max; index++ ) {
+        if ( db_active_index( idat, index, VERSION_NORMAL ) &&
+             !db_active_index( ireq, index, VERSION_NORMAL ) ) {
+          cout << "Warning: data item " << db_name(idat) << " (index "
+               << index << ") requires " << db_name(ireq)
+               << " which is not specified.\n";
+          nmissing++;
+        }
+      }
+    }
+  }
+  if ( nmissing>0 )
+    cout << "check_data: " << nmissing
+         << " data item(s) have a missing required item.\n";
+  else
+    cout << "check_data: no missing required data items.\n";
+}

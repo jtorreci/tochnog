@@ -21,6 +21,9 @@
 
 void pri( const char *s )
 {
+  // suppress error/warning messages if requested (check_error / check_warning)
+  if ( check_error==-NO && strstr( s, "Error" ) ) return;
+  if ( check_warning==-NO && strstr( s, "Warning" ) ) return;
   cout << s;
   cout << "\n";
   cout << flush;
