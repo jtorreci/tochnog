@@ -161,9 +161,10 @@ manual 2011. "input" se refiere al **archivo de entrada** (`tn.dat`) y al mecani
 8. `bounda_time_on_off` / `bounda_time_until_*` — control temporal de condiciones de contorno. [x]
 9. `control_mesh_mirror` — refleja la malla. [x]
 10. `control_mesh_copy` — copia la malla desplazada. [x]
-11. `control_mesh_rotate` — rota 2D→3D. [BLOQUEADO: requiere elementos 3D prism6/hex8]
+11. `control_mesh_rotate` — rota 2D→3D. [BLOQUEADO: requiere elementos 3D prism6/hex8. Alternativa implementada: `control_mesh_rotate_angle` rota la malla 2D plana alrededor del eje z.]
 12. `control_mesh_delete_element`, `control_mesh_keep_element`, `control_mesh_keep_element_group`, `control_mesh_change_element_group`. [x]
-13. `groundflow_pressure_factor`.
+13. `control_mesh_keep_node`, `control_mesh_rotate_angle` (rotación 2D plana). [x]
+14. `groundflow_pressure_factor`.
 
 ### Fase 3 (alto esfuerzo, ~1-2 semanas c/u)
 11. `group_materi_plasti_hypo_masin` — modelo hipoplástico de Masin con OCR (reusar estructura de hypo_wolfersdorff).
@@ -279,3 +280,32 @@ El índice es limpio: cada entrada de la sección 6 "data records" es una keywor
 - Inventario completo: `ProjectDocs/inventario-features-faltantes-2024.txt` (718 líneas).
 - Marcar con `[x]` cada feature al implementarla y verificar su test.
 - Al final de cada sesión: guardar el progreso en memoria (Engram) con el plan actualizado.
+
+---
+
+## 7. Ideas a explorar (proyectos futuros, no planificadas)
+
+### 7.1 Exportación a Paraview
+- Via `control_print_vtk_*` (features del manual profesional P5).
+- Alto valor para post-proceso: visualización de resultados en Paraview.
+
+### 7.2 Librería pytochnog (wrapper Python)
+Objetivos:
+- **Preproceso**: generar mallados y archivos `.dat` desde Python.
+- **Lanzar cálculos**: ejecutar tochnog desde Python, incluso en bucle
+  (parametrización) o en paralelo (multiples cálculos simultáneos).
+- **Explotación de resultados**: leer las bases de datos de resultados
+  (tn.dvd, tn.log, .his), para gráficas, extremos, combinaciones de carga,
+  etc.
+- Arquitectura sugerida: subprocess para lanzar tochnog + parsing de los
+  archivos de salida (o bindings C++ si se decide integrar la librería).
+- Relacionado: la feature `include` (ya implementada) permite parametrizar
+  inputs desde Python generando archivos incluidos.
+
+### 7.3 Desbloqueo de features bloqueadas de P2
+- `control_mesh_rotate`: requiere elementos 3D (prism6/hex8). Desbloqueable
+  implementando elementos 3D en tochnog (gran trabajo). ALTERNATIVA IMPLEMENTADA:
+  `control_mesh_rotate_angle` rota la malla 2D plana alrededor del eje z
+  (mueve nodos, no genera volumen).
+- `control_mesh_keep_node`: DESBLOQUEADO (2026-08-04) usando `delete_node()` +
+  `db_delete_index()` que ya existían en delete.cc.

@@ -335,3 +335,35 @@ void mesh_copy( double move_coords[] )
   }
   mesh_has_changed( VERSION_NORMAL );
 }
+
+void mesh_rotate_2d( double angle_deg )
+
+{
+  // rotate the 2D mesh around the z-axis by angle_deg (degrees).
+  // Only the nodes are moved; element connectivity is unchanged.
+  long int inod=0, max_node=0, idum[1];
+  double coords[MDIM], new_coords[MDIM];
+  double a = angle_deg * PIRAD / 180.;
+  double ca = cos(a), sa = sin(a);
+
+  db_max_index( NODE, max_node, VERSION_NORMAL, GET );
+  if ( max_node>=0 ) {
+    for ( inod=0; inod<=max_node; inod++ ) {
+      if ( db_active_index( NODE, inod, VERSION_NORMAL ) ) {
+        db( NODE, inod, idum, coords, ndim, VERSION_NORMAL, GET );
+        new_coords[0] = ca*coords[0] - sa*coords[1];
+        new_coords[1] = sa*coords[0] + ca*coords[1];
+        if ( ndim==3 ) new_coords[2] = coords[2];
+        db( NODE, inod, idum, new_coords, ndim, VERSION_NORMAL, PUT );
+        if ( db_active_index( NODE_START_REFINED, inod, VERSION_NORMAL ) ) {
+          db( NODE_START_REFINED, inod, idum, coords, ndim, VERSION_NORMAL, GET );
+          new_coords[0] = ca*coords[0] - sa*coords[1];
+          new_coords[1] = sa*coords[0] + ca*coords[1];
+          if ( ndim==3 ) new_coords[2] = coords[2];
+          db( NODE_START_REFINED, inod, idum, new_coords, ndim, VERSION_NORMAL, PUT );
+        }
+      }
+    }
+  }
+  mesh_has_changed( VERSION_NORMAL );
+}

@@ -45,6 +45,8 @@ Each file corresponds to the same feature in the [User Manual](../manual-user/).
 - [control_mesh_keep_element](control_mesh_keep_element.md) — keep only the listed elements.
 - [control_mesh_keep_element_group](control_mesh_keep_element_group.md) — keep only the elements of the listed groups.
 - [control_mesh_change_element_group](control_mesh_change_element_group.md) — change the element group.
+- [control_mesh_keep_node](control_mesh_keep_node.md) — keep only the listed nodes.
+- [control_mesh_rotate_angle](control_mesh_rotate_angle.md) — rotate the 2D mesh around the z-axis.
 - [bounda_time_on_off](bounda_time_on_off.md) — periodic bounda_time.
 - [bounda_time_until_force](bounda_time_until_force.md) — limit reaction force.
 

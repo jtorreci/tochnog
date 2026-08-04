@@ -772,7 +772,6 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   type[CONTROL_MESH_ROTATE_ANGLE] = DOUBLE_PRECISION;
   data_length[CONTROL_MESH_ROTATE_ANGLE] = 1;
   data_class[CONTROL_MESH_ROTATE_ANGLE] = CONTROL;
-  data_required[CONTROL_MESH_ROTATE_ANGLE] = CONTROL_MESH_ROTATE;
 
   strcpy(name[CONTROL_MESH_SPLIT],"control_mesh_split");
   type[CONTROL_MESH_SPLIT] = INTEGER;

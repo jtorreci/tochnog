@@ -217,7 +217,8 @@ void delete_geom( double time_current )
           }
         }
       }
-      mesh_has_changed( VERSION_NORMAL );
+
+  mesh_has_changed( VERSION_NORMAL );
     }
     db_version_delete( VERSION_TMP );
 
@@ -266,8 +267,8 @@ void mesh_delete_keep( long int icontrol )
 {
   // handle control_mesh_delete_element, control_mesh_keep_element,
   // control_mesh_keep_element_group and control_mesh_change_element_group.
-  long int ielem=0, max_elem=0, length=0, ldum=0, i=0, inlist=0,
-    eg_from=0, eg_to=0, eg=0, list[DATA_ITEM_SIZE], nlist=0;
+  long int ielem=0, max_elem=0, inod=0, max_node=0, length=0, ldum=0, i=0,
+    inlist=0, eg_from=0, eg_to=0, eg=0, list[DATA_ITEM_SIZE], nlist=0;
   double ddum[1];
 
   // control_mesh_change_element_group: change group from eg_from to eg_to
@@ -328,6 +329,21 @@ void mesh_delete_keep( long int icontrol )
         db( ELEMENT_GROUP, ielem, &eg, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
         inlist = array_member( list, eg, nlist, ldum );
         if ( !inlist ) delete_element( ielem, VERSION_NORMAL );
+      }
+    }
+  }
+
+  // control_mesh_keep_node: delete all nodes except the listed ones
+  if ( db_active_index( CONTROL_MESH_KEEP_NODE, icontrol,
+      VERSION_NORMAL ) ) {
+    nlist = 0;
+    db( CONTROL_MESH_KEEP_NODE, icontrol, list, ddum, nlist,
+      VERSION_NORMAL, GET );
+    db_max_index( NODE, max_node, VERSION_NORMAL, GET );
+    for ( inod=0; inod<=max_node; inod++ ) {
+      if ( db_active_index( NODE, inod, VERSION_NORMAL ) ) {
+        inlist = array_member( list, inod, nlist, ldum );
+        if ( !inlist ) delete_node( inod, VERSION_NORMAL );
       }
     }
   }

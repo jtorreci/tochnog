@@ -521,10 +521,20 @@ void step_start( long int task, long int options_solver[], double dtime, double 
     mesh_copy( control_copy );
   }
 
-  // delete/keep elements, change element group
+  // control_mesh_rotate_angle: rotate the 2D mesh around z-axis
+  if ( db_active_index( CONTROL_MESH_ROTATE_ANGLE, icontrol, VERSION_NORMAL ) ) {
+    long int rot_length=0, idum_r=0;
+    double rot_angle=0.;
+    db( CONTROL_MESH_ROTATE_ANGLE, icontrol, &idum_r, &rot_angle, rot_length,
+      VERSION_NORMAL, GET );
+    mesh_rotate_2d( rot_angle );
+  }
+
+  // delete/keep elements, keep nodes, change element group
   if ( db_active_index( CONTROL_MESH_DELETE_ELEMENT, icontrol, VERSION_NORMAL ) ||
        db_active_index( CONTROL_MESH_KEEP_ELEMENT, icontrol, VERSION_NORMAL ) ||
        db_active_index( CONTROL_MESH_KEEP_ELEMENT_GROUP, icontrol, VERSION_NORMAL ) ||
+       db_active_index( CONTROL_MESH_KEEP_NODE, icontrol, VERSION_NORMAL ) ||
        db_active_index( CONTROL_MESH_CHANGE_ELEMENT_GROUP, icontrol, VERSION_NORMAL ) ) {
     mesh_delete_keep( icontrol );
   }
