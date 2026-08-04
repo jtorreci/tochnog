@@ -127,6 +127,7 @@ void top( void )
   db( CHECK_WARNING, 0, &check_warning, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
   db( CHECK_NAN, 0, &check_nan, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
   db( CHECK_DATA, 0, &check_data, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+  db( CHECK_SOLVER, 0, idum, &check_solver_eps, ldum, VERSION_NORMAL, GET_IF_EXISTS );
   if ( nuknwn>0 ) {
     array_set( dworkmnol, 0., mnolnuknwn );
     db_max_index( ELEMENT, max_elem, VERSION_NORMAL, GET );

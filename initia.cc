@@ -93,6 +93,7 @@ long int check_error=-YES;
 long int check_warning=-YES;
 long int check_nan=-NO;
 long int check_data=-NO;
+double check_solver_eps=0.;
 
 
 void initialize( void )

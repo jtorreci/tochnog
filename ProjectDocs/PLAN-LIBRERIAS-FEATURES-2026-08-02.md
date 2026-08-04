@@ -218,8 +218,9 @@ El índice es limpio: cada entrada de la sección 6 "data records" es una keywor
 - [x] `check_target` — suprime el fallo de target (registra nota en tn.log) (implementado 2026-08-03).
 - [x] `check_element_node` — detecta elementos con nodos duplicados (implementado 2026-08-03).
 - [x] `check_nan` — chequea NaN en node_dof al final de cada paso (implementado 2026-08-03).
+- [x] `check_solver eps` — avisa si términos de la diagonal del solver son < eps (implementado 2026-08-03, en `so.cc` band solver).
 - [ ] `check_data`, `check_error`, `check_warning`, `check_memory`,
-      `check_memory_usage`, `check_solver`, `check_element_shape` (keywords registradas, lógica pendiente).
+      `check_memory_usage`, `check_element_shape` (keywords registradas, lógica pendiente).
 - [ ] `control_check_data`.
 
 #### P2 — Control de malla (medio)

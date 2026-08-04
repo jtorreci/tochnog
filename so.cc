@@ -641,6 +641,18 @@ if (band_solver)
 	n = solve_nlocal;
 	cout << "number of equations/size of matrix= "<<n<<endl;
 	nrhs= 1;
+	// check_solver: warn if diagonal terms are smaller than eps
+	if ( check_solver_eps>0. ) {
+	  long int idiag=0;
+	  for ( idiag=0; idiag<n; idiag++ ) {
+	    if ( scalar_dabs( mat[kl+ku + idiag*ldmat] )<check_solver_eps ) {
+	      cout << "Warning: small diagonal term in equation " << idiag+1
+	           << " (" << mat[kl+ku+idiag*ldmat] << " < eps="
+	           << check_solver_eps << ").\n";
+	      cout << "This normally indicates a problem in the input file.\n";
+	    }
+	  }
+	}
 	dgbsv_( &n, &kl, &ku, &nrhs, mat, &ldmat, ipiv, solve_b, &n, &info );
 	
 	if ( info !=0 ) 
