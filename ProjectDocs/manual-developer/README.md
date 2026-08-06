@@ -46,7 +46,9 @@ Each file corresponds to the same feature in the [User Manual](../manual-user/).
 - [control_mesh_keep_element_group](control_mesh_keep_element_group.md) — keep only the elements of the listed groups.
 - [control_mesh_change_element_group](control_mesh_change_element_group.md) — change the element group.
 - [control_mesh_keep_node](control_mesh_keep_node.md) — keep only the listed nodes.
+- [control_mesh_rotate](control_mesh_rotate.md) — sweep a 2D mesh to 3D (mesh_rotate_3d).
 - [control_mesh_rotate_angle](control_mesh_rotate_angle.md) — rotate the 2D mesh around the z-axis.
+- [element_3d](element_3d.md) — 3D solid elements (tet4, tet10, hex8, prism6).
 - [bounda_time_on_off](bounda_time_on_off.md) — periodic bounda_time.
 - [bounda_time_until_force](bounda_time_until_force.md) — limit reaction force.
 

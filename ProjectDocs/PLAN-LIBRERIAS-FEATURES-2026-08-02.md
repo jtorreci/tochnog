@@ -161,10 +161,11 @@ manual 2011. "input" se refiere al **archivo de entrada** (`tn.dat`) y al mecani
 8. `bounda_time_on_off` / `bounda_time_until_*` — control temporal de condiciones de contorno. [x]
 9. `control_mesh_mirror` — refleja la malla. [x]
 10. `control_mesh_copy` — copia la malla desplazada. [x]
-11. `control_mesh_rotate` — rota 2D→3D. [BLOQUEADO: requiere elementos 3D prism6/hex8. Alternativa implementada: `control_mesh_rotate_angle` rota la malla 2D plana alrededor del eje z.]
+11. `control_mesh_rotate` — rota 2D→3D. [x] DESBLOQUEADO (2026-08-04): implementados los elementos 3D. quad4→hex8, tria3→prism6. Con `number_of_integration_points` en initia.
 12. `control_mesh_delete_element`, `control_mesh_keep_element`, `control_mesh_keep_element_group`, `control_mesh_change_element_group`. [x]
 13. `control_mesh_keep_node`, `control_mesh_rotate_angle` (rotación 2D plana). [x]
-14. `groundflow_pressure_factor`.
+14. **Elementos 3D**: TET4/TET10 (ya estaban), HEX8 (fórmula general polynom.cc), PRISM6 (implementado 2026-08-04). `control_mesh_rotate` usa estos.
+15. `groundflow_pressure_factor`.
 
 ### Fase 3 (alto esfuerzo, ~1-2 semanas c/u)
 11. `group_materi_plasti_hypo_masin` — modelo hipoplástico de Masin con OCR (reusar estructura de hypo_wolfersdorff).
@@ -303,9 +304,11 @@ Objetivos:
   inputs desde Python generando archivos incluidos.
 
 ### 7.3 Desbloqueo de features bloqueadas de P2
-- `control_mesh_rotate`: requiere elementos 3D (prism6/hex8). Desbloqueable
-  implementando elementos 3D en tochnog (gran trabajo). ALTERNATIVA IMPLEMENTADA:
-  `control_mesh_rotate_angle` rota la malla 2D plana alrededor del eje z
-  (mueve nodos, no genera volumen).
+- `control_mesh_rotate`: DESBLOQUEADO (2026-08-04). Implementados los elementos
+  3D: HEX8 (vía la fórmula general tensorial en polynom.cc, `npol=2`) y PRISM6
+  (shape functions de prisma triangular explícitas en polynom.cc). `mesh_rotate_3d`
+  en mesh.cc convierte quad4→hex8 y tria3→prism6 (rota alrededor del eje y).
+  Requiere `number_of_integration_points` (≥8 para hex8, ≥6 para prism6) en la
+  inicialización. Pendiente: n>1 segmentos rotacionales (multi-capa).
 - `control_mesh_keep_node`: DESBLOQUEADO (2026-08-04) usando `delete_node()` +
   `db_delete_index()` que ya existían en delete.cc.
