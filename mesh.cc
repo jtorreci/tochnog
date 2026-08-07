@@ -466,3 +466,110 @@ void mesh_rotate_3d( long int nrot )
   delete[] node_rot;
   mesh_has_changed( VERSION_NORMAL );
 }
+
+void mesh_extrude( double z_layer[], long int n_layer )
+
+{
+  // extrude a 2D mesh (z=0) to 3D along the z-axis.
+  // z_layer[] gives the z-coordinate of each layer boundary;
+  // one 3D element is generated per 2D element per layer.
+  // -tria3 -> -prism6, -quad4 -> -hex8.
+  long int inod=0, max_node=0, ielem=0, max_elem=0, inol=0, nnol=0,
+    length=0, layer=0, len3=3, idum[1], el[1+MNOL], nodes[MNOL],
+    new_nodes[1+MNOL];
+  double ddum[1], coords[MDIM];
+
+  if ( n_layer<1 ) return;
+
+  // map from a 2D node index to its extruded copies: base index scheme
+  // node_copy(inod, layer) = max_node+1 + layer*(max_node+1) + inod
+  long int nbase = max_node + 1;
+
+  db_max_index( NODE, max_node, VERSION_NORMAL, GET );
+  db_max_index( ELEMENT, max_elem, VERSION_NORMAL, GET );
+  if ( max_node<0 || max_elem<0 ) return;
+  nbase = max_node + 1;
+
+  // create extruded node copies for each layer boundary
+  for ( layer=0; layer<n_layer; layer++ ) {
+    for ( inod=0; inod<=max_node; inod++ ) {
+      if ( db_active_index( NODE, inod, VERSION_NORMAL ) ) {
+        long int new_node = nbase + layer*nbase + inod;
+        db( NODE, inod, idum, coords, ndim, VERSION_NORMAL, GET );
+        coords[2] = z_layer[layer];
+        db( NODE, new_node, idum, coords, len3, VERSION_NORMAL, PUT );
+        // copy all other node-class data items from the source node
+        for ( int idat=0; idat<MDAT; idat++ ) {
+          if ( idat!=NODE && db_data_class(idat)==NODE &&
+               db_active_index( idat, inod, VERSION_NORMAL ) ) {
+            long int ndata_len = db_len( idat, inod, VERSION_NORMAL );
+            if ( db_type(idat)==DOUBLE_PRECISION ) {
+              double *dold = db_dbl( idat, inod, VERSION_NORMAL );
+              db( idat, new_node, idum, dold, ndata_len, VERSION_NORMAL, PUT );
+            }
+            else {
+              long int *iold = db_int( idat, inod, VERSION_NORMAL );
+              db( idat, new_node, iold, ddum, ndata_len, VERSION_NORMAL, PUT );
+            }
+          }
+        }
+        // the extruded coordinate also applies to node_start_refined
+        if ( db_active_index( NODE_START_REFINED, inod, VERSION_NORMAL ) ) {
+          db( NODE_START_REFINED, inod, idum, coords, ndim, VERSION_NORMAL, GET );
+          coords[2] = z_layer[layer];
+          db( NODE_START_REFINED, new_node, idum, coords, len3, VERSION_NORMAL, PUT );
+        }
+      }
+    }
+  }
+
+  // create 3D elements: one per 2D element per layer
+  long int new_elem = max_elem;
+  for ( ielem=0; ielem<=max_elem; ielem++ ) {
+    if ( db_active_index( ELEMENT, ielem, VERSION_NORMAL ) ) {
+      db( ELEMENT, ielem, el, ddum, length, VERSION_NORMAL, GET );
+      nnol = length - 1;
+      for ( inol=0; inol<nnol; inol++ ) nodes[inol] = el[1+inol];
+      if ( el[0]==-TRIA3 && nnol==3 ) {
+        for ( layer=0; layer<n_layer; layer++ ) {
+          new_elem++;
+          new_nodes[0] = -PRISM6;
+          new_nodes[1] = nodes[0]+layer*nbase;
+          new_nodes[2] = nodes[1]+layer*nbase;
+          new_nodes[3] = nodes[2]+layer*nbase;
+          new_nodes[4] = nodes[0]+(layer+1)*nbase;
+          new_nodes[5] = nodes[1]+(layer+1)*nbase;
+          new_nodes[6] = nodes[2]+(layer+1)*nbase;
+          create_element( ielem, new_elem, new_nodes, 7, VERSION_NORMAL,
+            VERSION_NORMAL );
+        }
+      }
+      else if ( el[0]==-QUAD4 && nnol==4 ) {
+        for ( layer=0; layer<n_layer; layer++ ) {
+          new_elem++;
+          new_nodes[0] = -HEX8;
+          new_nodes[1] = nodes[0]+layer*nbase;
+          new_nodes[2] = nodes[1]+layer*nbase;
+          new_nodes[3] = nodes[2]+layer*nbase;
+          new_nodes[4] = nodes[3]+layer*nbase;
+          new_nodes[5] = nodes[0]+(layer+1)*nbase;
+          new_nodes[6] = nodes[1]+(layer+1)*nbase;
+          new_nodes[7] = nodes[2]+(layer+1)*nbase;
+          new_nodes[8] = nodes[3]+(layer+1)*nbase;
+          create_element( ielem, new_elem, new_nodes, 9, VERSION_NORMAL,
+            VERSION_NORMAL );
+        }
+      }
+    }
+  }
+
+  // delete the 2D source elements
+  for ( ielem=0; ielem<=max_elem; ielem++ ) {
+    if ( db_active_index( ELEMENT, ielem, VERSION_NORMAL ) ) {
+      db( ELEMENT, ielem, el, ddum, length, VERSION_NORMAL, GET );
+      if ( el[0]==-TRIA3 || el[0]==-QUAD4 )
+        delete_element( ielem, VERSION_NORMAL );
+    }
+  }
+  mesh_has_changed( VERSION_NORMAL );
+}

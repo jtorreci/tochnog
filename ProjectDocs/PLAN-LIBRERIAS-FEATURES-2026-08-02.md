@@ -165,7 +165,8 @@ manual 2011. "input" se refiere al **archivo de entrada** (`tn.dat`) y al mecani
 12. `control_mesh_delete_element`, `control_mesh_keep_element`, `control_mesh_keep_element_group`, `control_mesh_change_element_group`. [x]
 13. `control_mesh_keep_node`, `control_mesh_rotate_angle` (rotación 2D plana). [x]
 14. **Elementos 3D**: TET4/TET10 (ya estaban), HEX8 (fórmula general polynom.cc), PRISM6 (implementado 2026-08-04). `control_mesh_rotate` usa estos.
-15. `groundflow_pressure_factor`.
+15. `control_mesh_extrude` — extruye 2D→3D por capas (tria3→prism6, quad4→hex8). [x] Implementado 2026-08-04 en `mesh.cc` (mesh_extrude) + `extrude.cc`.
+16. `groundflow_pressure_factor`.
 
 ### Fase 3 (alto esfuerzo, ~1-2 semanas c/u)
 11. `group_materi_plasti_hypo_masin` — modelo hipoplástico de Masin con OCR (reusar estructura de hypo_wolfersdorff).
@@ -312,3 +313,53 @@ Objetivos:
   inicialización. Pendiente: n>1 segmentos rotacionales (multi-capa).
 - `control_mesh_keep_node`: DESBLOQUEADO (2026-08-04) usando `delete_node()` +
   `db_delete_index()` que ya existían en delete.cc.
+
+---
+
+## 8. Elementos de Tochnog Professional (inventario y estado)
+
+### 8.1 Estado actual (2026-08-04)
+
+| Elemento | Estado | Notas |
+|---|---|---|
+| `-bar2/3/4` | ✓ | Truss/barras |
+| `-tria3/6` | ✓ | 2D |
+| `-quad4/9/16` | ✓ | 2D |
+| `-tet4/10` | ✓ | 3D (shape functions explícitas) |
+| `-prism6` | ✓ | 3D (nuevo, 2026-08-04) |
+| `-hex8` | ✓ | 3D (fórmula general tensorial) |
+| `-hex27`, `-hex64` | enum+name | Referenciados por la fórmula general (npol=3/4) pero no verificados |
+| `-quad6/8` | **FALTA** | 2D cuadrático/transición |
+| `-prism12/15/18` | **FALTA** | 3D prismas de orden superior |
+| `-hex18/20` | **FALTA** | 3D hexaedros de orden superior |
+
+### 8.2 Elementos de orden superior que faltan
+
+- **`-quad6`** (6 nodos: quad con 2 lados de 3 nodos, para transiciones
+  tria6/quad9) — shape functions de transición.
+- **`-quad8`** (8 nodos, serendipity) — fórmula tensorial mixta.
+- **`-prism12/15/18`** — prismas con lados cuadráticos (extensión de PRISM6).
+- **`-hex18/20`** — hexaedros serendipity/transición (extensión de HEX8).
+
+Implementación: añadir shape functions + puntos de integración en `polynom.cc`
+(mismo patrón que PRISM6/la fórmula general). La infraestructura (enum,
+database.cc, elem.cc genérico) ya está lista.
+
+### 8.3 Membrane y plate (proyecto futuro — anotado)
+
+- **`membrane`**: elementos 2D SIN rigidez a flexión (solo tensión en el plano).
+  Factible: se apoya en QUAD4/TRIA3 existentes. Requiere formulación de membrana
+  (estado plano de tensiones, sin dofs rotacionales).
+- **`plate`**: elementos 2D CON rigidez a flexión (desplazamientos transversales
+  + rotaciones). MÁS COMPLEJO: añade grados de libertad rotacionales (Reissner-
+  Mindlin o Kirchhoff), lo que toca el ensamblaje y el solver.
+- Recomendación: membrane primero (apoyado en elementos planos), plate después.
+- El usuario NO plantea shell por ahora (complejidad de definición y acoplamiento).
+
+### 8.4 Beam
+
+- **`-beam`**: existe en el enum (`BEAM`) y hay `beam.cc` (beam 2D con 3
+  dofs/nodo: NDOF=3, NNOL=2, NDIM=2, más `beam_3d`). PERO no está registrado
+  como elemento de malla en database.cc con data_length. El manual 2024 lista
+  solo `-bar2/3/4` en 1D — beam es una feature de la versión GNU original.
+  Verificar cómo se activa (si es por otro mecanismo) antes de decidir.

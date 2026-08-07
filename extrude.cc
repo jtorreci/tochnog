@@ -9,12 +9,14 @@
 void extrude( void )
 
 {
-  long int icontrol=0, ldum=0;
-  double ddum[1];
+  long int icontrol=0, ldum=0, ext_length=0, n_layer=0, idum_e[1];
+  double ddum[1], ext_z[DATA_ITEM_SIZE];
 
   db( ICONTROL, 0, &icontrol, ddum, ldum, VERSION_NORMAL, GET );
   if ( db_active_index( CONTROL_MESH_EXTRUDE, icontrol, VERSION_NORMAL ) ) {
-    pri( "Error: extrude is not available." );
-    exit(TN_EXIT_STATUS);
+    db( CONTROL_MESH_EXTRUDE, icontrol, idum_e, ext_z, ext_length,
+      VERSION_NORMAL, GET );
+    n_layer = ext_length;
+    if ( n_layer>0 ) mesh_extrude( ext_z, n_layer );
   }
 }

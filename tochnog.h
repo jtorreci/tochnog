@@ -1365,6 +1365,7 @@ void      mesh_mirror( long int axis );
 void      mesh_copy( double move_coords[] );
 void      mesh_rotate_2d( double angle_deg );
 void      mesh_rotate_3d( long int nrot );
+void      mesh_extrude( double z_layer[], long int n_layer );
 void      mesh_delete_keep( long int icontrol );
 void      new_mesh( void );
 void      new_mesh_version( long int version, double delta );

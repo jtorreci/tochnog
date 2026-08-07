@@ -47,6 +47,7 @@ input parameters it accepts.
 - [control_mesh_change_element_group](control_mesh_change_element_group.md) — change the element group.
 - [control_mesh_keep_node](control_mesh_keep_node.md) — keep only the listed nodes.
 - [control_mesh_rotate](control_mesh_rotate.md) — sweep a 2D mesh to 3D (quad4→hex8, tria3→prism6).
+- [control_mesh_extrude](control_mesh_extrude.md) — extrude a 2D mesh along the z-axis (quad4→hex8, tria3→prism6).
 - [control_mesh_rotate_angle](control_mesh_rotate_angle.md) — rotate the 2D mesh around the z-axis.
 - [element_3d](element_3d.md) — 3D solid elements (tet4, tet10, hex8, prism6).
 - [bounda_time_on_off](bounda_time_on_off.md) — apply bounda_time periodically.
