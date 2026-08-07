@@ -367,3 +367,102 @@ void mesh_rotate_2d( double angle_deg )
   }
   mesh_has_changed( VERSION_NORMAL );
 }
+
+void mesh_rotate_3d( long int nrot )
+
+{
+  // rotate a 2D mesh to 3D: each -tria3 becomes a -prism6 and each -quad4
+  // becomes a -hex8, by rotating around the y-axis. nrot is the number of
+  // elements in the rotational direction over 360 degrees.
+  long int inod=0, max_node=0, ielem=0, max_elem=0, inol=0, nnol=0,
+    length=0, new_node=0, new_elem=0, idum[1], len3=3, el[1+MNOL],
+    nodes[MNOL], new_nodes[1+MNOL];
+  double ddum[1], coords[MDIM], new_coords[MDIM];
+  long int *node_rot=NULL;
+
+  if ( nrot<1 ) nrot = 1;
+
+  db_max_index( NODE, max_node, VERSION_NORMAL, GET );
+  db_max_index( ELEMENT, max_elem, VERSION_NORMAL, GET );
+  if ( max_node<0 || max_elem<0 ) return;
+
+  // duplicate nodes rotated around y-axis
+  node_rot = get_new_int(1+max_node);
+  for ( inod=0; inod<=max_node; inod++ ) node_rot[inod] = -1;
+  new_node = max_node;
+  for ( inod=0; inod<=max_node; inod++ ) {
+    if ( db_active_index( NODE, inod, VERSION_NORMAL ) ) {
+      new_node++;
+      node_rot[inod] = new_node;
+      db( NODE, inod, idum, coords, ndim, VERSION_NORMAL, GET );
+      new_coords[0] = coords[2];
+      new_coords[1] = coords[1];
+      new_coords[2] = -coords[0];
+      db( NODE, new_node, idum, new_coords, len3, VERSION_NORMAL, PUT );
+      // copy all other node-class data items from the source node
+      for ( int idat=0; idat<MDAT; idat++ ) {
+        if ( idat!=NODE && db_data_class(idat)==NODE &&
+             db_active_index( idat, inod, VERSION_NORMAL ) ) {
+          long int ndata_len = db_len( idat, inod, VERSION_NORMAL );
+          if ( db_type(idat)==DOUBLE_PRECISION ) {
+            double *dold = db_dbl( idat, inod, VERSION_NORMAL );
+            db( idat, new_node, idum, dold, ndata_len, VERSION_NORMAL, PUT );
+          }
+          else {
+            long int *iold = db_int( idat, inod, VERSION_NORMAL );
+            db( idat, new_node, iold, ddum, ndata_len, VERSION_NORMAL, PUT );
+          }
+        }
+      }
+      // the rotated coordinate also applies to node_start_refined
+      if ( db_active_index( NODE_START_REFINED, inod, VERSION_NORMAL ) ) {
+        db( NODE_START_REFINED, inod, idum, coords, ndim, VERSION_NORMAL, GET );
+        new_coords[0] = coords[2];
+        new_coords[1] = coords[1];
+        new_coords[2] = -coords[0];
+        db( NODE_START_REFINED, new_node, idum, new_coords, len3, VERSION_NORMAL, PUT );
+      }
+    }
+  }
+
+  // duplicate elements: 2D element + rotated copy = 3D element
+  new_elem = max_elem;
+  for ( ielem=0; ielem<=max_elem; ielem++ ) {
+    if ( db_active_index( ELEMENT, ielem, VERSION_NORMAL ) ) {
+      db( ELEMENT, ielem, el, ddum, length, VERSION_NORMAL, GET );
+      nnol = length - 1;
+      for ( inol=0; inol<nnol; inol++ ) nodes[inol] = el[1+inol];
+      if ( el[0]==-TRIA3 && nnol==3 ) {
+        new_elem++;
+        new_nodes[0] = -PRISM6;
+        new_nodes[1] = nodes[0]; new_nodes[2] = nodes[1]; new_nodes[3] = nodes[2];
+        new_nodes[4] = node_rot[nodes[0]]; new_nodes[5] = node_rot[nodes[1]];
+        new_nodes[6] = node_rot[nodes[2]];
+        create_element( ielem, new_elem, new_nodes, 7, VERSION_NORMAL,
+          VERSION_NORMAL );
+      }
+      else if ( el[0]==-QUAD4 && nnol==4 ) {
+        new_elem++;
+        new_nodes[0] = -HEX8;
+        new_nodes[1] = nodes[0]; new_nodes[2] = nodes[1]; new_nodes[3] = nodes[2];
+        new_nodes[4] = nodes[3]; new_nodes[5] = node_rot[nodes[0]];
+        new_nodes[6] = node_rot[nodes[1]]; new_nodes[7] = node_rot[nodes[2]];
+        new_nodes[8] = node_rot[nodes[3]];
+        create_element( ielem, new_elem, new_nodes, 9, VERSION_NORMAL,
+          VERSION_NORMAL );
+      }
+    }
+  }
+
+  // delete the 2D source elements (not valid in 3D)
+  for ( ielem=0; ielem<=max_elem; ielem++ ) {
+    if ( db_active_index( ELEMENT, ielem, VERSION_NORMAL ) ) {
+      db( ELEMENT, ielem, el, ddum, length, VERSION_NORMAL, GET );
+      if ( el[0]==-TRIA3 || el[0]==-QUAD4 )
+        delete_element( ielem, VERSION_NORMAL );
+    }
+  }
+
+  delete[] node_rot;
+  mesh_has_changed( VERSION_NORMAL );
+}

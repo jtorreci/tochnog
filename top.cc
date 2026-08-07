@@ -530,6 +530,14 @@ void step_start( long int task, long int options_solver[], double dtime, double 
     mesh_rotate_2d( rot_angle );
   }
 
+  // control_mesh_rotate: rotate 2D mesh to 3D (tria3->prism6, quad4->hex8)
+  if ( db_active_index( CONTROL_MESH_ROTATE, icontrol, VERSION_NORMAL ) ) {
+    long int nrot=1;
+    db( CONTROL_MESH_ROTATE, icontrol, &nrot, ddum, ldum,
+      VERSION_NORMAL, GET );
+    mesh_rotate_3d( nrot );
+  }
+
   // delete/keep elements, keep nodes, change element group
   if ( db_active_index( CONTROL_MESH_DELETE_ELEMENT, icontrol, VERSION_NORMAL ) ||
        db_active_index( CONTROL_MESH_KEEP_ELEMENT, icontrol, VERSION_NORMAL ) ||

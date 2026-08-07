@@ -144,8 +144,84 @@ void pol( long int element, long int element_group,
     }
   }
   else if ( name==-PRISM6 ) {
-    pri( "Error: PRISM6 is not available yet." );
-    exit_tn_on_error();
+    // 6-noded prism (wedge): triangular base (nodes 1-3) at z=0 and
+    // triangular top (nodes 4-6) at z=1.
+    // shape functions: N_i = (1-z)*L_i for base, z*L_i for top,
+    // with L1,L2,L3 area coordinates of the triangle.
+    db( GROUP_INTEGRATION_POINTS, element_group, &integration_points, ddum, 
+      ldum, VERSION_NORMAL, GET_IF_EXISTS );
+    nnol = 6;
+    npoint = 6;   // 2 z-levels x 3 area points
+    for ( ipoint=0; ipoint<npoint; ipoint++ ) {
+      if      ( ipoint<3 ) { double zc = 0.25;
+        if ( ipoint==0 ) { L1 = 2./3.; L2 = 1./6.; }
+        else if ( ipoint==1 ) { L1 = 1./6.; L2 = 2./3.; }
+        else { L1 = 1./6.; L2 = 1./6.; }
+        L3 = 1. - L1 - L2;
+        weight[ipoint] = zc;
+        // base: h = (1-z)*L
+        h[ipoint*nnol+0] = (1.-0.5)*L1;
+        h[ipoint*nnol+1] = (1.-0.5)*L2;
+        h[ipoint*nnol+2] = (1.-0.5)*L3;
+        h[ipoint*nnol+3] = 0.5*L1;
+        h[ipoint*nnol+4] = 0.5*L2;
+        h[ipoint*nnol+5] = 0.5*L3;
+        // derivatives: d/dxi (area coord), d/dz
+        // x-direction (xi): dL/dL1
+        p[ipoint*ndim*nnol+0*nnol+0] = (1.-0.5)*1.;
+        p[ipoint*ndim*nnol+0*nnol+1] = (1.-0.5)*0.;
+        p[ipoint*ndim*nnol+0*nnol+2] = (1.-0.5)*(-1.);
+        p[ipoint*ndim*nnol+0*nnol+3] = 0.5*1.;
+        p[ipoint*ndim*nnol+0*nnol+4] = 0.5*0.;
+        p[ipoint*ndim*nnol+0*nnol+5] = 0.5*(-1.);
+        // y-direction (eta)
+        p[ipoint*ndim*nnol+1*nnol+0] = (1.-0.5)*0.;
+        p[ipoint*ndim*nnol+1*nnol+1] = (1.-0.5)*1.;
+        p[ipoint*ndim*nnol+1*nnol+2] = (1.-0.5)*(-1.);
+        p[ipoint*ndim*nnol+1*nnol+3] = 0.5*0.;
+        p[ipoint*ndim*nnol+1*nnol+4] = 0.5*1.;
+        p[ipoint*ndim*nnol+1*nnol+5] = 0.5*(-1.);
+        // z-direction: d/dz of (1-z)*L = -L (base), z*L = +L (top)
+        p[ipoint*ndim*nnol+2*nnol+0] = -L1;
+        p[ipoint*ndim*nnol+2*nnol+1] = -L2;
+        p[ipoint*ndim*nnol+2*nnol+2] = -L3;
+        p[ipoint*ndim*nnol+2*nnol+3] =  L1;
+        p[ipoint*ndim*nnol+2*nnol+4] =  L2;
+        p[ipoint*ndim*nnol+2*nnol+5] =  L3;
+      }
+      else {
+        if ( ipoint==3 ) { L1 = 2./3.; L2 = 1./6.; }
+        else if ( ipoint==4 ) { L1 = 1./6.; L2 = 2./3.; }
+        else { L1 = 1./6.; L2 = 1./6.; }
+        L3 = 1. - L1 - L2;
+        weight[ipoint] = 0.25;
+        // z=0.75 level
+        h[ipoint*nnol+0] = 0.25*L1;
+        h[ipoint*nnol+1] = 0.25*L2;
+        h[ipoint*nnol+2] = 0.25*L3;
+        h[ipoint*nnol+3] = 0.75*L1;
+        h[ipoint*nnol+4] = 0.75*L2;
+        h[ipoint*nnol+5] = 0.75*L3;
+        p[ipoint*ndim*nnol+0*nnol+0] = 0.25*1.;
+        p[ipoint*ndim*nnol+0*nnol+1] = 0.25*0.;
+        p[ipoint*ndim*nnol+0*nnol+2] = 0.25*(-1.);
+        p[ipoint*ndim*nnol+0*nnol+3] = 0.75*1.;
+        p[ipoint*ndim*nnol+0*nnol+4] = 0.75*0.;
+        p[ipoint*ndim*nnol+0*nnol+5] = 0.75*(-1.);
+        p[ipoint*ndim*nnol+1*nnol+0] = 0.25*0.;
+        p[ipoint*ndim*nnol+1*nnol+1] = 0.25*1.;
+        p[ipoint*ndim*nnol+1*nnol+2] = 0.25*(-1.);
+        p[ipoint*ndim*nnol+1*nnol+3] = 0.75*0.;
+        p[ipoint*ndim*nnol+1*nnol+4] = 0.75*1.;
+        p[ipoint*ndim*nnol+1*nnol+5] = 0.75*(-1.);
+        p[ipoint*ndim*nnol+2*nnol+0] = -L1;
+        p[ipoint*ndim*nnol+2*nnol+1] = -L2;
+        p[ipoint*ndim*nnol+2*nnol+2] = -L3;
+        p[ipoint*ndim*nnol+2*nnol+3] =  L1;
+        p[ipoint*ndim*nnol+2*nnol+4] =  L2;
+        p[ipoint*ndim*nnol+2*nnol+5] =  L3;
+      }
+    }
   }
   else if ( name==-TET4 ) {
     db( GROUP_INTEGRATION_POINTS, element_group, &integration_points, ddum, 
