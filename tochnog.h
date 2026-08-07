@@ -255,6 +255,7 @@ enum {
   CONTROL_MESH_REFINE_LOCALLY_UNKNOWN,
   CONTROL_MESH_REMESH,
   CONTROL_MESH_REMESH_FACTOR,
+  CONTROL_MESH_REMOVE,
   CONTROL_MESH_RENUMBER,
   CONTROL_MESH_ROTATE,
   CONTROL_MESH_ROTATE_ANGLE,
@@ -1367,6 +1368,7 @@ void      mesh_rotate_2d( double angle_deg );
 void      mesh_rotate_3d( long int nrot );
 void      mesh_extrude( double z_layer[], long int n_layer );
 void      mesh_delete_keep( long int icontrol );
+void      mesh_remove( long int icontrol );
 void      new_mesh( void );
 void      new_mesh_version( long int version, double delta );
 void      nod_nod( long int version );

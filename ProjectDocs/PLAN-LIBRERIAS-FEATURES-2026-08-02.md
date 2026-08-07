@@ -166,7 +166,11 @@ manual 2011. "input" se refiere al **archivo de entrada** (`tn.dat`) y al mecani
 13. `control_mesh_keep_node`, `control_mesh_rotate_angle` (rotación 2D plana). [x]
 14. **Elementos 3D**: TET4/TET10 (ya estaban), HEX8 (fórmula general polynom.cc), PRISM6 (implementado 2026-08-04). `control_mesh_rotate` usa estos.
 15. `control_mesh_extrude` — extruye 2D→3D por capas (tria3→prism6, quad4→hex8). [x] Implementado 2026-08-04 en `mesh.cc` (mesh_extrude) + `extrude.cc`.
-16. `groundflow_pressure_factor`.
+16. `control_mesh_remove` — borra elementos por método (method1: dentro de otros grupos). [x] Implementado 2026-08-04 en delete.cc (mesh_remove).
+17. `control_mesh_convert` — convierte interfaces (requiere concepto de "interface", pendiente).
+18. `groundflow_pressure_factor`.
+
+**P2 COMPLETA (2026-08-04)**: switch, move, mirror, copy, delete_element, keep_element, keep_element_group, change_element_group, keep_node, rotate (2D→3D), rotate_angle, extrude, remove. Solo `control_mesh_convert` pendiente (depende de interfaces).
 
 ### Fase 3 (alto esfuerzo, ~1-2 semanas c/u)
 11. `group_materi_plasti_hypo_masin` — modelo hipoplástico de Masin con OCR (reusar estructura de hypo_wolfersdorff).

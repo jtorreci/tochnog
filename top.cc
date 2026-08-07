@@ -547,6 +547,11 @@ void step_start( long int task, long int options_solver[], double dtime, double 
     mesh_delete_keep( icontrol );
   }
 
+  // control_mesh_remove: remove elements by method
+  if ( db_active_index( CONTROL_MESH_REMOVE, icontrol, VERSION_NORMAL ) ) {
+    mesh_remove( icontrol );
+  }
+
   change_geometry( task, dtime, time_current );
 
   data( task, dtime, time_current ); 

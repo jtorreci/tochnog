@@ -757,6 +757,12 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   data_class[CONTROL_MESH_REMESH_FACTOR] = CONTROL;
   data_required[CONTROL_MESH_REMESH_FACTOR] = CONTROL_MESH_REMESH;
 
+  strcpy(name[CONTROL_MESH_REMOVE],"control_mesh_remove");
+  type[CONTROL_MESH_REMOVE] = INTEGER;
+  data_length[CONTROL_MESH_REMOVE] = DATA_ITEM_SIZE;
+  fixed_length[CONTROL_MESH_REMOVE] = 0;
+  data_class[CONTROL_MESH_REMOVE] = CONTROL;
+
   strcpy(name[CONTROL_MESH_RENUMBER],"control_mesh_renumber");
   type[CONTROL_MESH_RENUMBER] = INTEGER;
   data_length[CONTROL_MESH_RENUMBER] = 2;

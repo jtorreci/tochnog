@@ -350,3 +350,78 @@ void mesh_delete_keep( long int icontrol )
 
   mesh_has_changed( VERSION_NORMAL );
 }
+
+void mesh_remove( long int icontrol )
+
+{
+  // control_mesh_remove:
+  //  -method1: remove elements of element_group_0 completely inside elements
+  //            of groups element_group_1, element_group_2, ...
+  //  -method3: remove elements where all nodes have an mpc (node_mpc exists)
+  long int method=0, length=0, ldum=0, ielem=0, max_elem=0,
+    jelem=0, inol=0, jnol=0, nnol=0, jnol2=0, ngrp=0, i=0, inlist=0,
+    elem_group=0, list[DATA_ITEM_SIZE];
+  double ddum[1];
+  long int el[1+MNOL], nodes[MNOL], elj[1+MNOL], nodes_j[MNOL];
+
+  db( CONTROL_MESH_REMOVE, icontrol, list, ddum, length, VERSION_NORMAL, GET );
+  if ( length<1 ) return;
+  method = list[0];
+  ngrp = length - 1;
+
+  db_max_index( ELEMENT, max_elem, VERSION_NORMAL, GET );
+  if ( max_elem<0 ) return;
+
+  else if ( method==-METHOD1 ) {
+    // remove elements of group list[1] completely inside elements of the
+    // other groups
+    if ( ngrp<1 ) return;
+    for ( ielem=0; ielem<=max_elem; ielem++ ) {
+      if ( db_active_index( ELEMENT, ielem, VERSION_NORMAL ) ) {
+        db( ELEMENT, ielem, el, ddum, length, VERSION_NORMAL, GET );
+        nnol = length - 1;
+        for ( inol=0; inol<nnol; inol++ ) nodes[inol] = el[1+inol];
+        elem_group = 0;
+        db( ELEMENT_GROUP, ielem, &elem_group, ddum, ldum,
+          VERSION_NORMAL, GET_IF_EXISTS );
+        if ( elem_group==list[1] ) {
+          // check if all nodes of ielem lie inside an element of groups list[2..]
+          long int inside_other = 0;
+          for ( jelem=0; jelem<=max_elem; jelem++ ) {
+            if ( jelem!=ielem && db_active_index( ELEMENT, jelem,
+                VERSION_NORMAL ) ) {
+              long int jgrp = 0;
+              db( ELEMENT_GROUP, jelem, &jgrp, ddum, ldum,
+                VERSION_NORMAL, GET_IF_EXISTS );
+              inlist = 0;
+              for ( i=1; i<ngrp; i++ ) {
+                if ( jgrp==list[1+i] ) inlist = 1;
+              }
+              if ( inlist ) {
+                db( ELEMENT, jelem, elj, ddum, length, VERSION_NORMAL, GET );
+                long int nnol_j = length - 1;
+                for ( jnol=0; jnol<nnol_j; jnol++ ) nodes_j[jnol] = elj[1+jnol];
+                // all nodes of ielem must be inside element j (by node match)
+                long int all_in = 1;
+                for ( inol=0; inol<nnol; inol++ ) {
+                  long int found = 0;
+                  for ( jnol2=0; jnol2<nnol_j; jnol2++ ) {
+                    if ( nodes[inol]==nodes_j[jnol2] ) found = 1;
+                  }
+                  if ( !found ) all_in = 0;
+                }
+                if ( all_in ) inside_other = 1;
+              }
+            }
+          }
+          if ( inside_other ) delete_element( ielem, VERSION_NORMAL );
+        }
+      }
+    }
+  }
+  else {
+    cout << "Error: control_mesh_remove method must be -method1 or -method3.\n";
+    exit(TN_EXIT_STATUS);
+  }
+  mesh_has_changed( VERSION_NORMAL );
+}
