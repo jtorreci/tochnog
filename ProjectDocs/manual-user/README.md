@@ -62,3 +62,5 @@ input parameters it accepts.
 - [bounda_factor](bounda_factor.md) — coordinate-dependent linear load factor.
 - [bounda_factor_parabolic_x](bounda_factor_parabolic_x.md) — coordinate-dependent parabolic (x^2) load factor.
 - [bounda_found](bounda_found.md) — diagnostic flag reporting whether a bounda_* record was applied.
+- [bounda_time_units](bounda_time_units.md) — convert time/length units in bounda_time.
+- [bounda_geometry_method](bounda_geometry_method.md) — node type used for geometry checks.

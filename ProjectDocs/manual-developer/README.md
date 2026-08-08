@@ -62,6 +62,8 @@ Each file corresponds to the same feature in the [User Manual](../manual-user/).
 - [bounda_factor](bounda_factor.md) — linear coordinate-dependent load factor.
 - [bounda_factor_parabolic_x](bounda_factor_parabolic_x.md) — parabolic x^2 load factor.
 - [bounda_found](bounda_found.md) — diagnostic flag: was a bounda_* record applied.
+- [bounda_time_units](bounda_time_units.md) — scale time/load units in bounda_time.
+- [bounda_geometry_method](bounda_geometry_method.md) — node type for geometry checks.
 
 ## Cross-cutting notes
 

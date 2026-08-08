@@ -42,9 +42,10 @@ void bounda( )
     angle_total=0., rdum=0., ddum[MDIM], coord_start[MDIM], coord_total[MDIM],
     *bounda_time=NULL, *new_node_dof=NULL, 
     *node_dof=NULL, *bounda_sine=NULL, *node_rhside=NULL;
-  long int bounda_on_off=0, bounda_until_force=0, bounda_constant=0;
+  long int bounda_on_off=0, bounda_until_force=0, bounda_constant=0,
+    bounda_geometry_method=0;
   double bounda_time_increment=0., bounda_time_offset=0.;
-  double bounda_factor[4], bounda_factor_px[3];
+  double bounda_factor[4], bounda_factor_px[3], bounda_time_units[2];
 
   swit = set_swit(-1,-1,"bounda");
   if ( swit ) pri( "In routine BOUNDA" );
@@ -112,6 +113,17 @@ void bounda( )
         db( BOUNDA_TIME, iboun, idum, bounda_time, length_bounda_time, 
           VERSION_NORMAL, GET );
         time = 1;
+        // bounda_time_units: convert time and length units in bounda_time
+        bounda_time_units[0] = 1.; bounda_time_units[1] = 1.;
+        db( BOUNDA_TIME_UNITS, iboun, idum, bounda_time_units, ldum,
+          VERSION_NORMAL, GET_IF_EXISTS );
+        if ( bounda_time_units[0]!=1. || bounda_time_units[1]!=1. ) {
+          long int iu=0;
+          for ( iu=0; iu<length_bounda_time; iu++ ) {
+            if ( iu%2==0 ) bounda_time[iu] *= bounda_time_units[0];
+            else bounda_time[iu] *= bounda_time_units[1];
+          }
+        }
         db( BOUNDA_TIME_INCREMENT, iboun, idum, &bounda_time_increment, ldum,
           VERSION_NORMAL, GET_IF_EXISTS );
         if ( bounda_time_increment>0. )
@@ -159,6 +171,8 @@ void bounda( )
         VERSION_NORMAL, GET_IF_EXISTS );
       array_set( bounda_factor_px, 0., 3 );
       db( BOUNDA_FACTOR_PARABOLIC_X, iboun, idum, bounda_factor_px, ldum,
+        VERSION_NORMAL, GET_IF_EXISTS );
+      db( BOUNDA_GEOMETRY_METHOD, iboun, &bounda_geometry_method, ddum, ldum,
         VERSION_NORMAL, GET_IF_EXISTS );
 
       if ( unknown ) {
@@ -302,8 +316,11 @@ void bounda( )
               if ( nodes_in_geometry[in] ) {
                 found = 1;
                 inod = in;
+                long int node_type = NODE_START_REFINED;
+                if ( bounda_geometry_method!=0 )
+                  node_type = bounda_geometry_method;
                 geometry( in, ddum, val, found, factor, ddum, rdum,
-                  ddum, NODE_START_REFINED, PROJECT_EXACT, VERSION_NORMAL );
+                  ddum, node_type, PROJECT_EXACT, VERSION_NORMAL );
               }
             }
             else if ( use_node_set  ) {

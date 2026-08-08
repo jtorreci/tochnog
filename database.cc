@@ -180,6 +180,11 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   data_length[BOUNDA_FOUND] = 1;
   data_class[BOUNDA_FOUND] = BOUNDA;
 
+  strcpy(name[BOUNDA_GEOMETRY_METHOD],"bounda_geometry_method");
+  type[BOUNDA_GEOMETRY_METHOD] = INTEGER;
+  data_length[BOUNDA_GEOMETRY_METHOD] = 1;
+  data_class[BOUNDA_GEOMETRY_METHOD] = BOUNDA;
+
   strcpy(name[BOUNDA_SINE],"bounda_sine");
   type[BOUNDA_SINE] = DOUBLE_PRECISION;
   data_length[BOUNDA_SINE] = DATA_ITEM_SIZE;
@@ -232,6 +237,12 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   data_length[BOUNDA_TIME_UNTIL_FORCE] = 2;
   data_class[BOUNDA_TIME_UNTIL_FORCE] = BOUNDA;
   data_required[BOUNDA_TIME_UNTIL_FORCE] = BOUNDA_TIME;
+
+  strcpy(name[BOUNDA_TIME_UNITS],"bounda_time_units");
+  type[BOUNDA_TIME_UNITS] = DOUBLE_PRECISION;
+  data_length[BOUNDA_TIME_UNITS] = 2;
+  data_class[BOUNDA_TIME_UNITS] = BOUNDA;
+  data_required[BOUNDA_TIME_UNITS] = BOUNDA_TIME;
 
   strcpy(name[BOUNDA_TIME_USER],"bounda_time_user");
   type[BOUNDA_TIME_USER] = INTEGER;
