@@ -61,3 +61,4 @@ input parameters it accepts.
 - [bounda_time_offset](bounda_time_offset.md) — initial time offset for bounda_time_increment.
 - [bounda_factor](bounda_factor.md) — coordinate-dependent linear load factor.
 - [bounda_factor_parabolic_x](bounda_factor_parabolic_x.md) — coordinate-dependent parabolic (x^2) load factor.
+- [bounda_found](bounda_found.md) — diagnostic flag reporting whether a bounda_* record was applied.

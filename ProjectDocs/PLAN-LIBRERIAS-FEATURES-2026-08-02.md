@@ -250,9 +250,10 @@ El índice es limpio: cada entrada de la sección 6 "data records" es una keywor
 - [x] `bounda_time_offset` — offset de tiempo para bounda_time_increment. (2026-08-04)
 - [x] `bounda_factor` — factor lineal por coordenada (a0+a1x+...). (2026-08-04)
 - [x] `bounda_factor_parabolic_x` — factor cuadrático en x (a0+a1x+a2x²). (2026-08-04)
-- [ ] `bounda_dof` (+ `_cylindrical`, `_radial`, `_geometry_list`), `bounda_time_units`,
-      `bounda_water`, `bounda_alternate`, `bounda_normal`,
-      `bounda_found`, `bounda_geometry_method`,
+- [x] `bounda_found` — flag de impresión (indica si el bounda se usó). (2026-08-04, registro)
+- [ ] `bounda_normal` (registrado, lógica pendiente: proyección vectorial de velocidad), `bounda_dof` (+ `_cylindrical`, `_radial`, `_geometry_list`), `bounda_time_units`,
+      `bounda_water`, `bounda_alternate`,
+      `bounda_geometry_method`,
       `bounda_baseline_correction` (+`_parameters`).
 
 #### P4 — Materiales geotécnicos (alto esfuerzo)

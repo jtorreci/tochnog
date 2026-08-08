@@ -175,6 +175,11 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   fixed_length[BOUNDA_FACTOR_PARABOLIC_X] = 0;
   data_class[BOUNDA_FACTOR_PARABOLIC_X] = BOUNDA;
 
+  strcpy(name[BOUNDA_FOUND],"bounda_found");
+  type[BOUNDA_FOUND] = INTEGER;
+  data_length[BOUNDA_FOUND] = 1;
+  data_class[BOUNDA_FOUND] = BOUNDA;
+
   strcpy(name[BOUNDA_SINE],"bounda_sine");
   type[BOUNDA_SINE] = DOUBLE_PRECISION;
   data_length[BOUNDA_SINE] = DATA_ITEM_SIZE;
@@ -186,6 +191,12 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   data_length[BOUNDA_CONSTANT] = 1;
   data_class[BOUNDA_CONSTANT] = BOUNDA;
   data_required[BOUNDA_CONSTANT] = BOUNDA_UNKNOWN;
+
+  strcpy(name[BOUNDA_NORMAL],"bounda_normal");
+  type[BOUNDA_NORMAL] = DOUBLE_PRECISION;
+  data_length[BOUNDA_NORMAL] = 3;
+  data_class[BOUNDA_NORMAL] = BOUNDA;
+  data_required[BOUNDA_NORMAL] = BOUNDA_UNKNOWN;
 
   strcpy(name[BOUNDA_TIME],"bounda_time");
   type[BOUNDA_TIME] = DOUBLE_PRECISION;
