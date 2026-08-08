@@ -42,7 +42,9 @@ void bounda( )
     angle_total=0., rdum=0., ddum[MDIM], coord_start[MDIM], coord_total[MDIM],
     *bounda_time=NULL, *new_node_dof=NULL, 
     *node_dof=NULL, *bounda_sine=NULL, *node_rhside=NULL;
-  long int bounda_on_off=0, bounda_until_force=0;
+  long int bounda_on_off=0, bounda_until_force=0, bounda_constant=0;
+  double bounda_time_increment=0., bounda_time_offset=0.;
+  double bounda_factor[4], bounda_factor_px[3];
 
   swit = set_swit(-1,-1,"bounda");
   if ( swit ) pri( "In routine BOUNDA" );
@@ -110,7 +112,11 @@ void bounda( )
         db( BOUNDA_TIME, iboun, idum, bounda_time, length_bounda_time, 
           VERSION_NORMAL, GET );
         time = 1;
-        if ( length_bounda_time==1 )
+        db( BOUNDA_TIME_INCREMENT, iboun, idum, &bounda_time_increment, ldum,
+          VERSION_NORMAL, GET_IF_EXISTS );
+        if ( bounda_time_increment>0. )
+          ninc = length_bounda_time;
+        else if ( length_bounda_time==1 )
           ninc = 2;
         else {
           if ( length_bounda_time<4 ) db_error( BOUNDA_TIME, iboun );
@@ -143,6 +149,17 @@ void bounda( )
           db_error( BOUNDA_TIME_UNTIL_FORCE, iboun );
         bounda_until_force = 1;
       }
+      // keep the prescribed dofs constant (bounda_constant)
+      db( BOUNDA_CONSTANT, iboun, &bounda_constant, ddum, ldum,
+        VERSION_NORMAL, GET_IF_EXISTS );
+      db( BOUNDA_TIME_OFFSET, iboun, idum, &bounda_time_offset, ldum,
+        VERSION_NORMAL, GET_IF_EXISTS );
+      array_set( bounda_factor, 0., 4 );
+      db( BOUNDA_FACTOR, iboun, idum, bounda_factor, ldum,
+        VERSION_NORMAL, GET_IF_EXISTS );
+      array_set( bounda_factor_px, 0., 3 );
+      db( BOUNDA_FACTOR_PARABOLIC_X, iboun, idum, bounda_factor_px, ldum,
+        VERSION_NORMAL, GET_IF_EXISTS );
 
       if ( unknown ) {
         db( BOUNDA_UNKNOWN, iboun, val, ddum, bounda_length, 
@@ -193,22 +210,36 @@ void bounda( )
             found = 1;
           }
           else {
-            time0 = bounda_time[inc*2+0];
-            load0 = bounda_time[inc*2+1];
-            time1 = bounda_time[inc*2+2];
-            load1 = bounda_time[inc*2+3];
-            if ( time0>=time1 ) db_error( BOUNDA_TIME, iboun );
-            if ( swit ) {
-              pri( "time_total", time_total );
-              pri( "time0", time0 );
-              pri( "time1", time1 );
-              pri( "load0", load0 );
-              pri( "load1", load1 );
+            if ( bounda_time_increment>0. ) {
+              // bounda_time holds load-only values; times are offset + k*increment
+              long int nload = length_bounda_time;
+              if ( time_total>=bounda_time_offset ) {
+                long int k = (long int) floor( (time_total-bounda_time_offset)
+                  / bounda_time_increment + 1.e-9 );
+                if ( k<0 ) k = 0;
+                if ( k>nload-1 ) k = nload-1;
+                load = bounda_time[k];
+                found = 1;
+              }
             }
-            if ( time_total>=(time0-1.e-10) && time_total<=time1 ) {
-              found = 1;
-              if ( time0==time1 ) load = load0;
-              else load = load0 + (load1-load0)*(time_total-time0)/(time1-time0);
+            else {
+              time0 = bounda_time[inc*2+0];
+              load0 = bounda_time[inc*2+1];
+              time1 = bounda_time[inc*2+2];
+              load1 = bounda_time[inc*2+3];
+              if ( time0>=time1 ) db_error( BOUNDA_TIME, iboun );
+              if ( swit ) {
+                pri( "time_total", time_total );
+                pri( "time0", time0 );
+                pri( "time1", time1 );
+                pri( "load0", load0 );
+                pri( "load1", load1 );
+              }
+              if ( time_total>=(time0-1.e-10) && time_total<=time1 ) {
+                found = 1;
+                if ( time0==time1 ) load = load0;
+                else load = load0 + (load1-load0)*(time_total-time0)/(time1-time0);
+              }
             }
             // only periodically use the bounda_time values
             if ( found && bounda_on_off ) {
@@ -410,7 +441,32 @@ void bounda( )
                         ( new_node_dof[iuknwn] - node_dof[iuknwn] ) / dtime;
                     }
                     else {
-                      new_node_dof[iuknwn] = factor * load;
+                      if ( bounda_constant==-YES && iuknwn>=vel_indx &&
+                           node_dof!=NULL && !force &&
+                           node_dof[iuknwn]!=0. )
+                        new_node_dof[iuknwn] = node_dof[iuknwn];
+                      else {
+                        // coordinate-dependent factor on the load
+                        double load_factor = 1.;
+                        if ( bounda_factor[0]!=0. || bounda_factor[1]!=0. ||
+                             bounda_factor[2]!=0. || bounda_factor[3]!=0. ) {
+                          db( NODE, inod, idum, coord_start, ldum,
+                            VERSION_NORMAL, GET );
+                          load_factor = bounda_factor[0];
+                          if ( ndim>=1 ) load_factor += bounda_factor[1]*coord_start[0];
+                          if ( ndim>=2 ) load_factor += bounda_factor[2]*coord_start[1];
+                          if ( ndim==3 ) load_factor += bounda_factor[3]*coord_start[2];
+                        }
+                        if ( bounda_factor_px[0]!=0. || bounda_factor_px[1]!=0. ||
+                             bounda_factor_px[2]!=0. ) {
+                          db( NODE, inod, idum, coord_start, ldum,
+                            VERSION_NORMAL, GET );
+                          load_factor = bounda_factor_px[0]
+                            + bounda_factor_px[1]*coord_start[0]
+                            + bounda_factor_px[2]*coord_start[0]*coord_start[0];
+                        }
+                        new_node_dof[iuknwn] = factor * load * load_factor;
+                      }
                       if ( derivatives ) new_node_dof[ind1] = 
                         ( new_node_dof[iuknwn] - node_dof[iuknwn] ) / dtime;
                       // limit the force response by reducing the velocity

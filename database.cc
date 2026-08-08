@@ -163,11 +163,29 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   fixed_length[BOUNDA_FORCE] = 0;
   data_class[BOUNDA_FORCE] = BOUNDA;
 
+  strcpy(name[BOUNDA_FACTOR],"bounda_factor");
+  type[BOUNDA_FACTOR] = DOUBLE_PRECISION;
+  data_length[BOUNDA_FACTOR] = DATA_ITEM_SIZE;
+  fixed_length[BOUNDA_FACTOR] = 0;
+  data_class[BOUNDA_FACTOR] = BOUNDA;
+
+  strcpy(name[BOUNDA_FACTOR_PARABOLIC_X],"bounda_factor_parabolic_x");
+  type[BOUNDA_FACTOR_PARABOLIC_X] = DOUBLE_PRECISION;
+  data_length[BOUNDA_FACTOR_PARABOLIC_X] = DATA_ITEM_SIZE;
+  fixed_length[BOUNDA_FACTOR_PARABOLIC_X] = 0;
+  data_class[BOUNDA_FACTOR_PARABOLIC_X] = BOUNDA;
+
   strcpy(name[BOUNDA_SINE],"bounda_sine");
   type[BOUNDA_SINE] = DOUBLE_PRECISION;
   data_length[BOUNDA_SINE] = DATA_ITEM_SIZE;
   fixed_length[BOUNDA_SINE] = 0;
   data_class[BOUNDA_SINE] = BOUNDA;
+
+  strcpy(name[BOUNDA_CONSTANT],"bounda_constant");
+  type[BOUNDA_CONSTANT] = INTEGER;
+  data_length[BOUNDA_CONSTANT] = 1;
+  data_class[BOUNDA_CONSTANT] = BOUNDA;
+  data_required[BOUNDA_CONSTANT] = BOUNDA_UNKNOWN;
 
   strcpy(name[BOUNDA_TIME],"bounda_time");
   type[BOUNDA_TIME] = DOUBLE_PRECISION;
@@ -179,6 +197,18 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   type[BOUNDA_TIME_FILE] = INTEGER;
   data_length[BOUNDA_TIME_FILE] = 1;
   data_class[BOUNDA_TIME_FILE] = BOUNDA;
+
+  strcpy(name[BOUNDA_TIME_INCREMENT],"bounda_time_increment");
+  type[BOUNDA_TIME_INCREMENT] = DOUBLE_PRECISION;
+  data_length[BOUNDA_TIME_INCREMENT] = 1;
+  data_class[BOUNDA_TIME_INCREMENT] = BOUNDA;
+  data_required[BOUNDA_TIME_INCREMENT] = BOUNDA_TIME;
+
+  strcpy(name[BOUNDA_TIME_OFFSET],"bounda_time_offset");
+  type[BOUNDA_TIME_OFFSET] = DOUBLE_PRECISION;
+  data_length[BOUNDA_TIME_OFFSET] = 1;
+  data_class[BOUNDA_TIME_OFFSET] = BOUNDA;
+  data_required[BOUNDA_TIME_OFFSET] = BOUNDA_TIME;
 
   strcpy(name[BOUNDA_TIME_ON_OFF],"bounda_time_on_off");
   type[BOUNDA_TIME_ON_OFF] = DOUBLE_PRECISION;

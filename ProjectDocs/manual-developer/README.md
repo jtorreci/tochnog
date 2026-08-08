@@ -54,6 +54,14 @@ Each file corresponds to the same feature in the [User Manual](../manual-user/).
 - [bounda_time_on_off](bounda_time_on_off.md) — periodic bounda_time.
 - [bounda_time_until_force](bounda_time_until_force.md) — limit reaction force.
 
+## Phase 3 features
+
+- [bounda_constant](bounda_constant.md) — keep prescribed dofs constant.
+- [bounda_time_increment](bounda_time_increment.md) — load-only bounda_time with fixed increment.
+- [bounda_time_offset](bounda_time_offset.md) — time offset for bounda_time_increment.
+- [bounda_factor](bounda_factor.md) — linear coordinate-dependent load factor.
+- [bounda_factor_parabolic_x](bounda_factor_parabolic_x.md) — parabolic x^2 load factor.
+
 ## Cross-cutting notes
 
 - Enum consistency: `tochnog.h` and `tochnog-mod.h` must stay in sync.

@@ -53,3 +53,11 @@ input parameters it accepts.
 - [element_3d](element_3d.md) — 3D solid elements (tet4, tet10, hex8, prism6).
 - [bounda_time_on_off](bounda_time_on_off.md) — apply bounda_time periodically.
 - [bounda_time_until_force](bounda_time_until_force.md) — limit reaction force by reducing prescribed velocity.
+
+## Phase 3 features
+
+- [bounda_constant](bounda_constant.md) — keep prescribed dofs constant after the first step.
+- [bounda_time_increment](bounda_time_increment.md) — load-only bounda_time with fixed time increment.
+- [bounda_time_offset](bounda_time_offset.md) — initial time offset for bounda_time_increment.
+- [bounda_factor](bounda_factor.md) — coordinate-dependent linear load factor.
+- [bounda_factor_parabolic_x](bounda_factor_parabolic_x.md) — coordinate-dependent parabolic (x^2) load factor.

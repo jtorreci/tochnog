@@ -245,10 +245,14 @@ El índice es limpio: cada entrada de la sección 6 "data records" es una keywor
       `control_mesh_convert*`, `control_mesh_cut_geometry`, `control_mesh_delete_element`.
 
 #### P3 — Condiciones de contorno (medio)
-- [ ] `bounda_dof` (+ `_cylindrical`, `_radial`, `_geometry_list`), `bounda_factor`,
-      `bounda_time_units`, `bounda_time_offset`, `bounda_time_increment`,
-      `bounda_water`, `bounda_alternate`, `bounda_constant`, `bounda_normal`,
-      `bounda_found`, `bounda_geometry_method`, `bounda_factor_parabolic_x`,
+- [x] `bounda_constant` — mantiene dofs prescritos constantes. (2026-08-04)
+- [x] `bounda_time_increment` — bounda_time con solo cargas e incremento fijo. (2026-08-04)
+- [x] `bounda_time_offset` — offset de tiempo para bounda_time_increment. (2026-08-04)
+- [x] `bounda_factor` — factor lineal por coordenada (a0+a1x+...). (2026-08-04)
+- [x] `bounda_factor_parabolic_x` — factor cuadrático en x (a0+a1x+a2x²). (2026-08-04)
+- [ ] `bounda_dof` (+ `_cylindrical`, `_radial`, `_geometry_list`), `bounda_time_units`,
+      `bounda_water`, `bounda_alternate`, `bounda_normal`,
+      `bounda_found`, `bounda_geometry_method`,
       `bounda_baseline_correction` (+`_parameters`).
 
 #### P4 — Materiales geotécnicos (alto esfuerzo)
