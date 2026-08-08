@@ -64,3 +64,4 @@ input parameters it accepts.
 - [bounda_found](bounda_found.md) — diagnostic flag reporting whether a bounda_* record was applied.
 - [bounda_time_units](bounda_time_units.md) — convert time/length units in bounda_time.
 - [bounda_geometry_method](bounda_geometry_method.md) — node type used for geometry checks.
+- [bounda_dof](bounda_dof.md) — prescribe dof values (Dirichlet), alias of bounda_unknown.

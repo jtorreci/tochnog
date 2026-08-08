@@ -185,6 +185,12 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   data_length[BOUNDA_GEOMETRY_METHOD] = 1;
   data_class[BOUNDA_GEOMETRY_METHOD] = BOUNDA;
 
+  strcpy(name[BOUNDA_DOF],"bounda_dof");
+  type[BOUNDA_DOF] = INTEGER;
+  data_length[BOUNDA_DOF] = MBOUNDA;
+  fixed_length[BOUNDA_DOF] = 0;
+  data_class[BOUNDA_DOF] = BOUNDA;
+
   strcpy(name[BOUNDA_SINE],"bounda_sine");
   type[BOUNDA_SINE] = DOUBLE_PRECISION;
   data_length[BOUNDA_SINE] = DATA_ITEM_SIZE;

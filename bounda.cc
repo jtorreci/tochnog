@@ -26,7 +26,7 @@ void bounda( )
 
 {
   long int in=0, ready=0, iuknwn=0, inod=0, iboun=0, found=0,
-    max_bounda=0, max_bounda_unknown=0, max_bounda_force=0,
+    max_bounda=0, max_bounda_unknown=0, max_bounda_dof=0, max_bounda_force=0,
     bounda_time_user=0, ind1=0, ipuknwn=0, iu=0, iu_start=0, iu_end=0,
     inc=0, ninc=0, length=0, range_length=0, unknown=0, force=0,
     idim=0, time=0, sine=0, user=0, rotate=0, rotate_axis=0,
@@ -61,8 +61,10 @@ void bounda( )
   groundflow_phreatic_apply();
 
   db_max_index( BOUNDA_UNKNOWN, max_bounda_unknown, VERSION_NORMAL, GET );
+  db_max_index( BOUNDA_DOF, max_bounda_dof, VERSION_NORMAL, GET );
   db_max_index( BOUNDA_FORCE, max_bounda_force, VERSION_NORMAL, GET );
-  if ( max_bounda_unknown<0 && max_bounda_force<0 ) goto end_of_bounda;
+  if ( max_bounda_unknown<0 && max_bounda_dof<0 && max_bounda_force<0 )
+    goto end_of_bounda;
 
   db_max_index( NODE, max_node, VERSION_NORMAL, GET );
   if ( max_node<0 ) goto end_of_bounda;
@@ -78,9 +80,11 @@ void bounda( )
   if ( swit ) pri( "time_total", time_total );
 
   if ( max_bounda_unknown>max_bounda ) max_bounda = max_bounda_unknown;
+  if ( max_bounda_dof>max_bounda ) max_bounda = max_bounda_dof;
   if ( max_bounda_force>max_bounda ) max_bounda = max_bounda_force;
   for ( iboun=0; iboun<=max_bounda; iboun++ ) {
-    unknown = db_active_index( BOUNDA_UNKNOWN, iboun, VERSION_NORMAL );
+    unknown = db_active_index( BOUNDA_UNKNOWN, iboun, VERSION_NORMAL ) ||
+              db_active_index( BOUNDA_DOF, iboun, VERSION_NORMAL );
     force   = db_active_index( BOUNDA_FORCE, iboun, VERSION_NORMAL );
     bounda_time_user = -NO; db( BOUNDA_TIME_USER, iboun, &bounda_time_user, ddum, 
       ldum, VERSION_NORMAL, GET_IF_EXISTS );
@@ -176,8 +180,12 @@ void bounda( )
         VERSION_NORMAL, GET_IF_EXISTS );
 
       if ( unknown ) {
-        db( BOUNDA_UNKNOWN, iboun, val, ddum, bounda_length, 
-          VERSION_NORMAL, GET );
+        if ( db_active_index( BOUNDA_DOF, iboun, VERSION_NORMAL ) )
+          db( BOUNDA_DOF, iboun, val, ddum, bounda_length, 
+            VERSION_NORMAL, GET );
+        else
+          db( BOUNDA_UNKNOWN, iboun, val, ddum, bounda_length, 
+            VERSION_NORMAL, GET );
         if ( bounda_length<2 ) db_error( BOUNDA_UNKNOWN, iboun );
         rotate = 0; rotate_axis = val[bounda_length-1];
         if      ( rotate_axis==-ROTATION_X_AXIS ) {
