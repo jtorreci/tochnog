@@ -56,6 +56,7 @@ Each file corresponds to the same feature in the [User Manual](../manual-user/).
 
 ## Phase 3 features
 
+- [bounda_alternate](bounda_alternate.md) — rotate which bounda_dof is omitted per iteration.
 - [bounda_constant](bounda_constant.md) — keep prescribed dofs constant.
 - [bounda_time_increment](bounda_time_increment.md) — load-only bounda_time with fixed increment.
 - [bounda_time_offset](bounda_time_offset.md) — time offset for bounda_time_increment.

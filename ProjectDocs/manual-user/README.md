@@ -56,6 +56,7 @@ input parameters it accepts.
 
 ## Phase 3 features
 
+- [bounda_alternate](bounda_alternate.md) — omit one bounda_dof per iteration, rotating.
 - [bounda_constant](bounda_constant.md) — keep prescribed dofs constant after the first step.
 - [bounda_time_increment](bounda_time_increment.md) — load-only bounda_time with fixed time increment.
 - [bounda_time_offset](bounda_time_offset.md) — initial time offset for bounda_time_increment.

@@ -254,7 +254,8 @@ El índice es limpio: cada entrada de la sección 6 "data records" es una keywor
 - [x] `bounda_time_units` — conversión de unidades de tiempo/longitud en bounda_time. (2026-08-04)
 - [x] `bounda_geometry_method` — tipo de nodo (NODE/NODE_START_REFINED) para geometría. (2026-08-04)
 - [x] `bounda_dof` — prescribe dofs (Dirichlet) por rango o geometría. Alias de `bounda_unknown`. (2026-08-04)
-- [ ] `bounda_normal` (registrado, lógica pendiente: proyección vectorial de velocidad), `bounda_water`, `bounda_alternate`,
+- [x] `bounda_alternate` — omite un bounda_dof rotativo entre iteraciones. (2026-08-04)
+- [ ] `bounda_normal` (registrado, lógica pendiente: proyección vectorial de velocidad), `bounda_water`,
       `bounda_baseline_correction` (+`_parameters`).
 
 #### P4 — Materiales geotécnicos (alto esfuerzo)

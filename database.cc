@@ -157,6 +157,12 @@ void db_initialize( long int dof_type[], long int dof_label[] )
 
   strcpy(name[BOUNDA],"bounda");
 
+  strcpy(name[BOUNDA_ALTERNATE],"bounda_alternate");
+  type[BOUNDA_ALTERNATE] = INTEGER;
+  data_length[BOUNDA_ALTERNATE] = DATA_ITEM_SIZE;
+  fixed_length[BOUNDA_ALTERNATE] = 0;
+  data_class[BOUNDA_ALTERNATE] = BOUNDA;
+
   strcpy(name[BOUNDA_FORCE],"bounda_force");
   type[BOUNDA_FORCE] = INTEGER;
   data_length[BOUNDA_FORCE] = MBOUNDA;

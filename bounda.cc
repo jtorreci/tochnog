@@ -43,7 +43,8 @@ void bounda( )
     *bounda_time=NULL, *new_node_dof=NULL, 
     *node_dof=NULL, *bounda_sine=NULL, *node_rhside=NULL;
   long int bounda_on_off=0, bounda_until_force=0, bounda_constant=0,
-    bounda_geometry_method=0;
+    bounda_geometry_method=0, bounda_alternate_list[DATA_ITEM_SIZE],
+    bounda_alternate_n=0, iteration=0;
   double bounda_time_increment=0., bounda_time_offset=0.;
   double bounda_factor[4], bounda_factor_px[3], bounda_time_units[2];
 
@@ -78,6 +79,7 @@ void bounda( )
     VERSION_NORMAL, GET_IF_EXISTS );
   time_total = time_current + dtime;
   if ( swit ) pri( "time_total", time_total );
+  db( NUMBER_ITERATIONS, 0, &iteration, ddum, ldum, VERSION_NEW, GET_IF_EXISTS );
 
   if ( max_bounda_unknown>max_bounda ) max_bounda = max_bounda_unknown;
   if ( max_bounda_dof>max_bounda ) max_bounda = max_bounda_dof;
@@ -91,6 +93,22 @@ void bounda( )
     bounda_on_off = 0;
     if ( unknown || force ) {
       if ( swit ) pri( "iboun", iboun );
+      // bounda_alternate: in successive iterations, omit one of the
+      // listed bounda_dof indices (rotating). Useful for very large runs.
+      bounda_alternate_n = 0;
+      db( BOUNDA_ALTERNATE, 0, bounda_alternate_list, ddum,
+        bounda_alternate_n, VERSION_NORMAL, GET_IF_EXISTS );
+      if ( bounda_alternate_n>0 ) {
+        long int jalt=0, skip_bounda=0;
+        for ( jalt=0; jalt<bounda_alternate_n; jalt++ ) {
+          if ( bounda_alternate_list[jalt]==iboun &&
+               (iteration % bounda_alternate_n)==jalt ) {
+            skip_bounda = 1;
+            break;
+          }
+        }
+        if ( skip_bounda ) continue;
+      }
       time =  sine = user = 0; ninc = 2;
       if      ( db_active_index( BOUNDA_SINE, iboun, VERSION_NORMAL ) ) {
         bounda_sine = db_dbl( BOUNDA_SINE, iboun, VERSION_NORMAL );
