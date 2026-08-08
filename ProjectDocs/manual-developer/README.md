@@ -66,6 +66,7 @@ Each file corresponds to the same feature in the [User Manual](../manual-user/).
 - [bounda_time_units](bounda_time_units.md) — scale time/load units in bounda_time.
 - [bounda_geometry_method](bounda_geometry_method.md) — node type for geometry checks.
 - [bounda_dof](bounda_dof.md) — prescribe dof values (Dirichlet), alias of bounda_unknown.
+- [bounda_normal](bounda_normal.md) — slide nodes on a plane by projecting the velocity vector.
 
 ## Cross-cutting notes
 

@@ -45,6 +45,7 @@ void bounda( )
   long int bounda_on_off=0, bounda_until_force=0, bounda_constant=0,
     bounda_geometry_method=0, bounda_alternate_list[DATA_ITEM_SIZE],
     bounda_alternate_n=0, iteration=0;
+  double bounda_normal_vec[3];
   double bounda_time_increment=0., bounda_time_offset=0.;
   double bounda_factor[4], bounda_factor_px[3], bounda_time_units[2];
 
@@ -195,6 +196,9 @@ void bounda( )
       db( BOUNDA_FACTOR_PARABOLIC_X, iboun, idum, bounda_factor_px, ldum,
         VERSION_NORMAL, GET_IF_EXISTS );
       db( BOUNDA_GEOMETRY_METHOD, iboun, &bounda_geometry_method, ddum, ldum,
+        VERSION_NORMAL, GET_IF_EXISTS );
+      array_set( bounda_normal_vec, 0., 3 );
+      db( BOUNDA_NORMAL, iboun, idum, bounda_normal_vec, ldum,
         VERSION_NORMAL, GET_IF_EXISTS );
 
       if ( unknown ) {
@@ -552,6 +556,26 @@ void bounda( )
                     if ( swit ) {
                       pri( "node_bounded", node_bounded, npuknwn );
                       pri( "new_node_dof", new_node_dof, nuknwn );
+                    }
+                    // bounda_normal: restrict the node to slide on a plane
+                    // (velocity component normal to the plane is set to zero)
+                    if ( (bounda_normal_vec[0]!=0. || bounda_normal_vec[1]!=0. ||
+                          bounda_normal_vec[2]!=0.) && materi_velocity ) {
+                      double nn = bounda_normal_vec[0]*bounda_normal_vec[0]
+                        + bounda_normal_vec[1]*bounda_normal_vec[1]
+                        + bounda_normal_vec[2]*bounda_normal_vec[2];
+                      if ( nn>0. ) {
+                        double vn=0.;
+                        long int idim_n=0;
+                        for ( idim_n=0; idim_n<ndim; idim_n++ ) {
+                          long int iv = vel_indx + idim_n*nder;
+                          vn += new_node_dof[iv]*bounda_normal_vec[idim_n];
+                        }
+                        for ( idim_n=0; idim_n<ndim; idim_n++ ) {
+                          long int iv = vel_indx + idim_n*nder;
+                          new_node_dof[iv] -= vn*bounda_normal_vec[idim_n]/nn;
+                        }
+                      }
                     }
                   }
                   else if ( force ) {
