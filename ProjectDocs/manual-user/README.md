@@ -67,3 +67,4 @@ input parameters it accepts.
 - [bounda_geometry_method](bounda_geometry_method.md) — node type used for geometry checks.
 - [bounda_dof](bounda_dof.md) — prescribe dof values (Dirichlet), alias of bounda_unknown.
 - [bounda_normal](bounda_normal.md) — nodes slide on a plane (velocity normal to the plane set to zero).
+- [bounda_water](bounda_water.md) — hydrostatic pore-water pressure from the phreatic level.

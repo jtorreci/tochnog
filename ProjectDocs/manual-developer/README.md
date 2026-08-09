@@ -67,6 +67,7 @@ Each file corresponds to the same feature in the [User Manual](../manual-user/).
 - [bounda_geometry_method](bounda_geometry_method.md) — node type for geometry checks.
 - [bounda_dof](bounda_dof.md) — prescribe dof values (Dirichlet), alias of bounda_unknown.
 - [bounda_normal](bounda_normal.md) — slide nodes on a plane by projecting the velocity vector.
+- [bounda_water](bounda_water.md) — prescribe hydrostatic pore pressure from the phreatic level.
 
 ## Cross-cutting notes
 

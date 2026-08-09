@@ -44,7 +44,7 @@ void bounda( )
     *node_dof=NULL, *bounda_sine=NULL, *node_rhside=NULL;
   long int bounda_on_off=0, bounda_until_force=0, bounda_constant=0,
     bounda_geometry_method=0, bounda_alternate_list[DATA_ITEM_SIZE],
-    bounda_alternate_n=0, iteration=0;
+    bounda_alternate_n=0, iteration=0, bounda_water=0;
   double bounda_normal_vec[3];
   double bounda_time_increment=0., bounda_time_offset=0.;
   double bounda_factor[4], bounda_factor_px[3], bounda_time_units[2];
@@ -199,6 +199,9 @@ void bounda( )
         VERSION_NORMAL, GET_IF_EXISTS );
       array_set( bounda_normal_vec, 0., 3 );
       db( BOUNDA_NORMAL, iboun, idum, bounda_normal_vec, ldum,
+        VERSION_NORMAL, GET_IF_EXISTS );
+      bounda_water = 0;
+      db( BOUNDA_WATER, iboun, &bounda_water, ddum, ldum,
         VERSION_NORMAL, GET_IF_EXISTS );
 
       if ( unknown ) {
@@ -512,7 +515,34 @@ void bounda( )
                             + bounda_factor_px[1]*coord_start[0]
                             + bounda_factor_px[2]*coord_start[0]*coord_start[0];
                         }
-                        new_node_dof[iuknwn] = factor * load * load_factor;
+                        if ( bounda_water==-YES && iuknwn==pres_indx ) {
+                          // pore pressure from the water column height:
+                          // density_water * g * (water_level - y)
+                          double coords_w[MDIM], sp=0., wl=0., dens=0.,
+                            fg[MDIM];
+                          db( NODE, inod, idum, coords_w, ndim,
+                            VERSION_NORMAL, GET );
+                          force_gravity_calculate( fg );
+                          if ( db_active_index( GROUNDFLOW_DENSITY, 0,
+                              VERSION_NORMAL ) )
+                            dens = db_dbl( GROUNDFLOW_DENSITY, 0,
+                              VERSION_NORMAL )[0];
+                          if ( db_active_index( GROUNDFLOW_PHREATICLEVEL, 0,
+                              VERSION_NORMAL ) ) {
+                            long int plen=0, idum2[1];
+                            db( GROUNDFLOW_PHREATICLEVEL, 0, idum2, &wl, plen,
+                              VERSION_NORMAL, GET );
+                            if ( plen>=1 ) {
+                              double *gpv = db_dbl(
+                                GROUNDFLOW_PHREATICLEVEL, 0, VERSION_NORMAL );
+                              wl = gpv[0];
+                            }
+                          }
+                          sp = fg[ndim-1] * dens * ( wl - coords_w[ndim-1] );
+                          new_node_dof[iuknwn] = factor * sp;
+                        }
+                        else
+                          new_node_dof[iuknwn] = factor * load * load_factor;
                       }
                       if ( derivatives ) new_node_dof[ind1] = 
                         ( new_node_dof[iuknwn] - node_dof[iuknwn] ) / dtime;

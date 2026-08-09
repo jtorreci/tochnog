@@ -261,6 +261,12 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   data_length[BOUNDA_TIME_USER] = 1;
   data_class[BOUNDA_TIME_USER] = BOUNDA;
 
+  strcpy(name[BOUNDA_WATER],"bounda_water");
+  type[BOUNDA_WATER] = INTEGER;
+  data_length[BOUNDA_WATER] = 1;
+  data_class[BOUNDA_WATER] = BOUNDA;
+  data_required[BOUNDA_WATER] = BOUNDA_UNKNOWN;
+
   strcpy(name[BOUNDA_UNKNOWN],"bounda_unknown");
   type[BOUNDA_UNKNOWN] = INTEGER;
   data_length[BOUNDA_UNKNOWN] = MBOUNDA;
