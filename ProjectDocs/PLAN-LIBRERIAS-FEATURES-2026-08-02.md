@@ -283,6 +283,9 @@ El índice es limpio: cada entrada de la sección 6 "data records" es una keywor
 #### P6 — Groundflow, contacto, miscelánea
 - [ ] `groundflow_pressure_factor`, `groundflow_seepage_*`, `groundflow_phreatic_*`,
       `groundflow_flux_edge_normal*`, `groundflow_total_pressure_limit`.
+- [ ] `groundflow_pressure_atmospheric` — relacionado con `bounda_water`: el
+      clamp de `groundflow_phreatic_coord()` limita la presión estática a este
+      umbral (default 0 → solo succión). Documentado en manual-developer/bounda_water.md.
 - [ ] Contacto: `contact_apply`, `contact_heat_generation`, `contact_penalty_*`,
       `contact_plasti_friction`, `contact_target_*`.
 - [ ] `control_reset_dof*`, `control_reset_value_*`, `change_dataitem_apply`,

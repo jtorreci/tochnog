@@ -53,3 +53,37 @@
   density is used.
 - Keyword is an INTEGER flag (`-yes`/`-no`) stored per iboun; could be merged
   with `bounda_unknown` handling instead of being a separate record.
+
+## Known limitation: the `pressure_atmospheric` clamp in `groundflow_phreatic_coord()`
+
+`groundfl.cc:173-174` applies an upper clamp:
+
+```c
+if ( static_pressure>=pressure_atmospheric ) static_pressure = pressure_atmospheric;
+if ( total_pressure>=pressure_atmospheric ) total_pressure = pressure_atmospheric;
+```
+
+Semantics:
+- This is a **cap/clamp**, not a gauge conversion: the code never subtracts the
+  atmospheric pressure from the total; it simply truncates any value at the
+  `groundflow_pressure_atmospheric` threshold (`database.cc:2040`,
+  `no_index=1`, default **0** if unspecified).
+- Because the default threshold is 0, and the static pressure
+  `dens*g*(water_level - y)` is **positive below the phreatic level**
+  (compression) and **negative above it** (suction), the clamp forces every
+  positive (compression) value to 0. In practice, with the default setting,
+  `groundflow_phreatic_coord()` only returns meaningful values for **suction**
+  (negative pressures, i.e. nodes above the phreatic level).
+- It is NOT "relative/gauge pressure": no atmospheric term is subtracted. If the
+  user defines `groundflow_pressure_atmospheric` (e.g. 101.325 kPa), positive
+  pressures up to that threshold are kept, but this is a "do not exceed
+  atmospheric" behaviour, not an absolute-to-gauge conversion.
+- `bounda_water` bypasses this clamp entirely and uses the direct formula, so it
+  returns the full static pressure (including positive/compression values below
+  the phreatic level). This is intentional but means `bounda_water` and
+  `groundflow_phreatic_coord()` will give different numbers unless
+  `groundflow_pressure_atmospheric` is configured consistently.
+
+Pending: document `groundflow_pressure_atmospheric` as a related feature and
+clarify whether the clamp should also apply to `bounda_water` for consistency
+with the unsaturated-soil model.

@@ -54,3 +54,17 @@ bounda_water 0 -yes
 
 Nodes below the phreatic level (`y < 5.`) get the pore pressure
 `1000. * 9.81 * (5. - y)`, scaled by `bounda_time`.
+
+## Note on the pressure value
+
+`bounda_water` applies the **full computed static pressure** (including
+positive/compression values below the phreatic level). It does NOT cap the
+pressure at `groundflow_pressure_atmospheric`.
+
+This is intentional, but note that the internal function
+`groundflow_phreatic_coord()` (used elsewhere by the groundflow solver) caps the
+static pressure at `groundflow_pressure_atmospheric`, which defaults to **0**.
+With that default, that function only returns meaningful pressures for
+**suction** (negative pressures, nodes above the phreatic level). If your model
+expects the capped behaviour, define `groundflow_pressure_atmospheric`
+explicitly so both paths agree.
