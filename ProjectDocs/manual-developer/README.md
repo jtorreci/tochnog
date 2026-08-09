@@ -74,6 +74,12 @@ Each file corresponds to the same feature in the [User Manual](../manual-user/).
 ## Phase 4 features
 
 - [groundflow_pressure_factor](groundflow_pressure_factor.md) — scale the pore-pressure contribution to the total stress.
+- [group_materi_hyper_besseling](group_materi_hyper_besseling.md) — hyperelastic family (hyperela.cc: hyperelasticity/hyper_Cmat/hyper_stress/hyper_law).
+- [group_materi_maxwell_chain](group_materi_maxwell_chain.md) — Maxwell chains (viscoela.cc); nonlinear chain is a stub.
+- [group_materi_viscosity](group_materi_viscosity.md) — viscosity (viscosit.cc viscous_stress; user.cc stub).
+- [group_materi_damage_mazars](group_materi_damage_mazars.md) — Mazars damage (damage.cc; note latent bug at damage.cc:92).
+- [group_materi_expansion_linear](group_materi_expansion_linear.md) — thermal expansion (stress.cc:437, materi.cc:166).
+- [group_materi_plasti_visco_exponential](group_materi_plasti_visco_exponential.md) — viscoplasticity (stress.cc:100-115, 737-755; EPS_VISCO hardcoded).
 
 ## Cross-cutting notes
 

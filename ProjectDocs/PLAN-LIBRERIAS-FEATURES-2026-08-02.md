@@ -120,7 +120,6 @@ Fase 2: `control_mesh_switch`, `bounda_time_on_off`, `bounda_time_until_force`.
 - `group_materi_plasti_mohr_coul_direct_normal` (+ `_automatic`)
 - `group_interface_materi_plasti_tension_direct` (re-introducida)
 - `group_groundflow_permeability_vertical_stress`
-- `groundflow_pressure_factor`
 - `materi_displacement_relative`
 
 **Controles / malla:**
@@ -265,17 +264,32 @@ El índice es limpio: cada entrada de la sección 6 "data records" es una keywor
 
 #### P4 — Materiales geotécnicos (alto esfuerzo)
 - [x] `groundflow_pressure_factor` — multiplicador de la presión de poro al calcular el esfuerzo total. (2026-08-04)
+- [x] **Familias de modelos YA IMPLEMENTADAS (verificadas y documentadas 2026-08-10, P4-A)**:
+  - Hiperelásticos: `group_materi_hyper_besseling`, `_blatz_ko`, `_mooney_rivlin`,
+    `_neohookean`, `_reduced_polynomial`, `_volumetric_linear`, `_volumetric_murnaghan`,
+    `_volumetric_ogden`, `_volumetric_polynomial`, `_volumetric_simotaylor`,
+    `_hyper_stiffness` — hyperela.cc, todos funcionales (tests blatz1, ho_mech1).
+  - Viscoelástico: `group_materi_maxwell_chain` (viscoela.cc, test viscel1).
+    `group_materi_maxwell_chain_nonlinear` REGISTRADO pero `visco_elastiticity_nonlinear()`
+    (visconon.cc) es un STUB vacío — no funcional.
+  - Viscosidad: `group_materi_viscosity`, `_viscosity_heatgeneration`,
+    `_viscosity_user` (viscosit.cc, test viscos1; `user_viscosity()` es stub).
+  - Daño: `group_materi_damage_mazars` + `materi_damage` (damage.cc, test damage1).
+    **Bug latente detectado en damage.cc:92** (`epseq += epseq + ...`).
+  - Expansión: `group_materi_expansion_linear` (stress.cc:437) y
+    `group_materi_expansion_volume` (materi.cc:166, solo densidad) — tests expans1/2.
+  - Viscoplástico: `group_materi_plasti_visco_exponential`, `_visco_power`,
+    `_visco_always` (stress.cc:100-115,737-755). Falta
+    `..._visco_exponential_limit` (hardcode `EPS_VISCO=3`) y variantes
+    `_name`/`_values`.
 - [ ] `group_materi_plasti_hypo_masin` (+ `_clay`, `_clay_advanced_parameters`,
       `_clay_ocr`, `_ocr`, `_structure`), `control_materi_plasti_hypo_masin_ocr_apply`.
 - [ ] `group_materi_plasti_tension_direct_normal` (+ `_automatic`) — requiere `group_materi_plasti_tension_direct` (no existe).
       `group_materi_plasti_mohr_coul_direct_normal` (+ `_automatic`) — requiere `group_interface_materi_plasti_mohr_coul_direct`.
-- [ ] `group_groundflow_permeability_vertical_stress`, `groundflow_pressure_factor`.
-- [ ] `group_materi_damage_mazars`, `group_materi_expansion_linear`,
-      `group_materi_expansion_volume`.
-- [ ] Modelos hiperelásticos: `group_materi_hyper_besseling`, `_blatz_ko`,
-      `_mooney_rivlin`, `_neohookean`, `_reduced_polynomial`, `_volumetric_*`.
-- [ ] Viscoelástico/viscoplástico: `group_materi_maxwell_chain`,
-      `group_materi_plasti_visco_exponential*`, `_visco_power*`.
+- [ ] `group_groundflow_permeability_vertical_stress`.
+- [ ] `materi_plasti_hypo_*` variantes del kernel hipoplástico (lowangles, cohesion,
+      intergranularstrain, pressuredependentvoidratio, wolfersdorff) — registradas,
+      verificar lógica y tests (P4-B).
 
 #### P5 — Post-proceso y salida (medio)
 - [ ] `control_print_history_smooth`, `control_print_gid_*` (varios),
@@ -286,7 +300,7 @@ El índice es limpio: cada entrada de la sección 6 "data records" es una keywor
       `force_gravity_geometry`.
 
 #### P6 — Groundflow, contacto, miscelánea
-- [ ] `groundflow_pressure_factor`, `groundflow_seepage_*`, `groundflow_phreatic_*`,
+- [ ] `groundflow_seepage_*`, `groundflow_phreatic_*`,
       `groundflow_flux_edge_normal*`, `groundflow_total_pressure_limit`.
 - [ ] `groundflow_pressure_atmospheric` — relacionado con `bounda_water`: el
       clamp de `groundflow_phreatic_coord()` limita la presión estática a este
