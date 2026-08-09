@@ -569,6 +569,47 @@ void bounda( )
                             new_node_dof[iuknwn] *= dr / r;
                           }
                         }
+                        // bounda_dof_cylindrical: prescribe velocity cylindrical
+                        // to a line defined by two points (radial to the line)
+                        if ( (bounda_dof_cylindrical[0]!=0. ||
+                              bounda_dof_cylindrical[1]!=0. ||
+                              bounda_dof_cylindrical[2]!=0.) &&
+                             iuknwn>=vel_indx && iuknwn<vel_indx+ndim*nder ) {
+                          long int idim_c = ( iuknwn - vel_indx ) / nder;
+                          double coords_c[MDIM], p1[MDIM], p2[MDIM],
+                            axis[MDIM], rc[MDIM], r=0.;
+                          for ( long int k=0; k<MDIM; k++ ) {
+                            p1[k] = bounda_dof_cylindrical[k];
+                            p2[k] = bounda_dof_cylindrical[k+3];
+                            axis[k] = p2[k] - p1[k];
+                          }
+                          db( NODE, inod, idum, coords_c, ndim,
+                            VERSION_NORMAL, GET );
+                          // project the node onto the line: rc = coord - p1
+                          for ( long int k=0; k<ndim; k++ )
+                            rc[k] = coords_c[k] - p1[k];
+                          // distance from the node to the line
+                          double t=0., aa=0.;
+                          for ( long int k=0; k<ndim; k++ ) {
+                            t   += rc[k]*axis[k];
+                            aa  += axis[k]*axis[k];
+                          }
+                          if ( aa>0. ) {
+                            t /= aa;
+                            double proj[MDIM];
+                            for ( long int k=0; k<ndim; k++ ) {
+                              proj[k] = p1[k] + t*axis[k];
+                              double dk = coords_c[k] - proj[k];
+                              r += dk*dk;
+                            }
+                            r = sqrt(r);
+                            if ( r>0. && idim_c<ndim ) {
+                              double dr = coords_c[idim_c]
+                                - proj[idim_c];
+                              new_node_dof[iuknwn] *= dr / r;
+                            }
+                          }
+                        }
                       }
                       if ( derivatives ) new_node_dof[ind1] = 
                         ( new_node_dof[iuknwn] - node_dof[iuknwn] ) / dtime;

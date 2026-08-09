@@ -69,3 +69,4 @@ input parameters it accepts.
 - [bounda_normal](bounda_normal.md) — nodes slide on a plane (velocity normal to the plane set to zero).
 - [bounda_water](bounda_water.md) — hydrostatic pore-water pressure from the phreatic level.
 - [bounda_dof_radial](bounda_dof_radial.md) — prescribe velocity radial to a point.
+- [bounda_dof_cylindrical](bounda_dof_cylindrical.md) — prescribe velocity radial to a line defined by two points.

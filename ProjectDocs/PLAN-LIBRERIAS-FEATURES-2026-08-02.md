@@ -258,7 +258,10 @@ El índice es limpio: cada entrada de la sección 6 "data records" es una keywor
 - [x] `bounda_normal` — nodos deslizan en un plano (velocidad normal anulada por proyección). (2026-08-04)
 - [x] `bounda_water` — presión de poro desde la columna de agua (dens*g*Δz al nivel freático). (2026-08-04)
 - [x] `bounda_dof_radial` — velocidad prescrita radial a un punto. (2026-08-04)
-- [ ] `bounda_dof_cylindrical` (registrado, lógica pendiente), `bounda_baseline_correction` (+`_parameters`, requiere `bounda_time_smc` — señales sísmicas SMC, de nicho).
+- [x] `bounda_dof_cylindrical` — velocidad prescrita cilíndrica a una línea. (2026-08-04)
+- [ ] `bounda_baseline_correction` (+`_parameters`, requiere `bounda_time_smc` — señales sísmicas SMC, de nicho).
+
+**P3 COMPLETA en lo implementable (2026-08-04)**: 14 features (constant, time_increment, time_offset, factor, factor_parabolic_x, found, time_units, geometry_method, dof, alternate, normal, water, dof_radial, dof_cylindrical). Solo `bounda_baseline_correction` pendiente (de nicho, requiere SMC).
 
 #### P4 — Materiales geotécnicos (alto esfuerzo)
 - [ ] `group_materi_plasti_hypo_masin` (+ `_clay`, `_clay_advanced_parameters`,

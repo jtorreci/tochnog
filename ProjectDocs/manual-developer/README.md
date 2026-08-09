@@ -69,6 +69,7 @@ Each file corresponds to the same feature in the [User Manual](../manual-user/).
 - [bounda_normal](bounda_normal.md) — slide nodes on a plane by projecting the velocity vector.
 - [bounda_water](bounda_water.md) — prescribe hydrostatic pore pressure from the phreatic level.
 - [bounda_dof_radial](bounda_dof_radial.md) — prescribe velocity radial to a point.
+- [bounda_dof_cylindrical](bounda_dof_cylindrical.md) — prescribe velocity radial to a line defined by two points.
 
 ## Cross-cutting notes
 
