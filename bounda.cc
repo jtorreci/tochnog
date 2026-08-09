@@ -45,7 +45,8 @@ void bounda( )
   long int bounda_on_off=0, bounda_until_force=0, bounda_constant=0,
     bounda_geometry_method=0, bounda_alternate_list[DATA_ITEM_SIZE],
     bounda_alternate_n=0, iteration=0, bounda_water=0;
-  double bounda_normal_vec[3];
+  double bounda_normal_vec[3], bounda_dof_radial[3],
+    bounda_dof_cylindrical[6];
   double bounda_time_increment=0., bounda_time_offset=0.;
   double bounda_factor[4], bounda_factor_px[3], bounda_time_units[2];
 
@@ -199,6 +200,12 @@ void bounda( )
         VERSION_NORMAL, GET_IF_EXISTS );
       array_set( bounda_normal_vec, 0., 3 );
       db( BOUNDA_NORMAL, iboun, idum, bounda_normal_vec, ldum,
+        VERSION_NORMAL, GET_IF_EXISTS );
+      array_set( bounda_dof_radial, 0., 3 );
+      db( BOUNDA_DOF_RADIAL, iboun, idum, bounda_dof_radial, ldum,
+        VERSION_NORMAL, GET_IF_EXISTS );
+      array_set( bounda_dof_cylindrical, 0., 6 );
+      db( BOUNDA_DOF_CYLINDRICAL, iboun, idum, bounda_dof_cylindrical, ldum,
         VERSION_NORMAL, GET_IF_EXISTS );
       bounda_water = 0;
       db( BOUNDA_WATER, iboun, &bounda_water, ddum, ldum,
@@ -543,6 +550,25 @@ void bounda( )
                         }
                         else
                           new_node_dof[iuknwn] = factor * load * load_factor;
+                        // bounda_dof_radial: prescribe velocity radial to a point
+                        if ( (bounda_dof_radial[0]!=0. || bounda_dof_radial[1]!=0.
+                              || bounda_dof_radial[2]!=0.) &&
+                             iuknwn>=vel_indx && iuknwn<vel_indx+ndim*nder ) {
+                          long int idim_r = ( iuknwn - vel_indx ) / nder;
+                          double coords_r[MDIM], r=0.;
+                          db( NODE, inod, idum, coords_r, ndim,
+                            VERSION_NORMAL, GET );
+                          for ( long int k=0; k<ndim; k++ ) {
+                            double dk = coords_r[k] - bounda_dof_radial[k];
+                            r += dk*dk;
+                          }
+                          r = sqrt(r);
+                          if ( r>0. && idim_r<ndim ) {
+                            double dr = coords_r[idim_r]
+                              - bounda_dof_radial[idim_r];
+                            new_node_dof[iuknwn] *= dr / r;
+                          }
+                        }
                       }
                       if ( derivatives ) new_node_dof[ind1] = 
                         ( new_node_dof[iuknwn] - node_dof[iuknwn] ) / dtime;

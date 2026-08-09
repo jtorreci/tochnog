@@ -68,6 +68,7 @@ Each file corresponds to the same feature in the [User Manual](../manual-user/).
 - [bounda_dof](bounda_dof.md) — prescribe dof values (Dirichlet), alias of bounda_unknown.
 - [bounda_normal](bounda_normal.md) — slide nodes on a plane by projecting the velocity vector.
 - [bounda_water](bounda_water.md) — prescribe hydrostatic pore pressure from the phreatic level.
+- [bounda_dof_radial](bounda_dof_radial.md) — prescribe velocity radial to a point.
 
 ## Cross-cutting notes
 

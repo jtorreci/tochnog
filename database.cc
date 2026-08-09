@@ -197,6 +197,18 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   fixed_length[BOUNDA_DOF] = 0;
   data_class[BOUNDA_DOF] = BOUNDA;
 
+  strcpy(name[BOUNDA_DOF_CYLINDRICAL],"bounda_dof_cylindrical");
+  type[BOUNDA_DOF_CYLINDRICAL] = DOUBLE_PRECISION;
+  data_length[BOUNDA_DOF_CYLINDRICAL] = 6;
+  data_class[BOUNDA_DOF_CYLINDRICAL] = BOUNDA;
+  data_required[BOUNDA_DOF_CYLINDRICAL] = BOUNDA_DOF;
+
+  strcpy(name[BOUNDA_DOF_RADIAL],"bounda_dof_radial");
+  type[BOUNDA_DOF_RADIAL] = DOUBLE_PRECISION;
+  data_length[BOUNDA_DOF_RADIAL] = 3;
+  data_class[BOUNDA_DOF_RADIAL] = BOUNDA;
+  data_required[BOUNDA_DOF_RADIAL] = BOUNDA_DOF;
+
   strcpy(name[BOUNDA_SINE],"bounda_sine");
   type[BOUNDA_SINE] = DOUBLE_PRECISION;
   data_length[BOUNDA_SINE] = DATA_ITEM_SIZE;
