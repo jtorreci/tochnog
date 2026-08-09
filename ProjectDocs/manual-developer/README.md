@@ -71,6 +71,10 @@ Each file corresponds to the same feature in the [User Manual](../manual-user/).
 - [bounda_dof_radial](bounda_dof_radial.md) — prescribe velocity radial to a point.
 - [bounda_dof_cylindrical](bounda_dof_cylindrical.md) — prescribe velocity radial to a line defined by two points.
 
+## Phase 4 features
+
+- [groundflow_pressure_factor](groundflow_pressure_factor.md) — scale the pore-pressure contribution to the total stress.
+
 ## Cross-cutting notes
 
 - Enum consistency: `tochnog.h` and `tochnog-mod.h` must stay in sync.

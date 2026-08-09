@@ -2055,6 +2055,12 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   no_index[GROUNDFLOW_PRESSURE_ATMOSPHERIC] = 1;
   data_class[GROUNDFLOW_PRESSURE_ATMOSPHERIC] = GROUNDFLOW;
 
+  strcpy(name[GROUNDFLOW_PRESSURE_FACTOR],"groundflow_pressure_factor");
+  type[GROUNDFLOW_PRESSURE_FACTOR] = DOUBLE_PRECISION;
+  data_length[GROUNDFLOW_PRESSURE_FACTOR] = 1;
+  no_index[GROUNDFLOW_PRESSURE_FACTOR] = 1;
+  data_class[GROUNDFLOW_PRESSURE_FACTOR] = GROUNDFLOW;
+
   strcpy(name[GROUNDFLOW_VELOCITY],"groundflow_velocity");
 
   strcpy(name[GROUP_AXISYMMETRIC],"group_axisymmetric");

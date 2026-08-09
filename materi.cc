@@ -369,9 +369,13 @@ void materi( long int element, long int gr, long int nnol,
   if ( materi_stress ) {
     array_move( new_sig, total_new_sig, MDIM*MDIM );
     if ( groundflow_pressure ) {
+      double gpf = 1.;
+      db( GROUNDFLOW_PRESSURE_FACTOR, 0, idum, &gpf, ldum,
+        VERSION_NORMAL, GET_IF_EXISTS );
       new_pres = new_unknowns[pres_indx];
       if ( groundflow_phreatic_coord( -1, coord_ip, new_unknowns, 
         total_pressure, static_pressure, location ) ) new_pres = total_pressure;
+      new_pres *= gpf;
       for ( idim=0; idim<MDIM; idim++ ) total_new_sig[idim*MDIM+idim] += new_pres;
     }
     for ( idim=0; idim<MDIM; idim++ ) {

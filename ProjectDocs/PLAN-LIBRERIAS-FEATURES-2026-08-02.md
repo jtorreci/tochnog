@@ -264,10 +264,11 @@ El índice es limpio: cada entrada de la sección 6 "data records" es una keywor
 **P3 COMPLETA en lo implementable (2026-08-04)**: 14 features (constant, time_increment, time_offset, factor, factor_parabolic_x, found, time_units, geometry_method, dof, alternate, normal, water, dof_radial, dof_cylindrical). Solo `bounda_baseline_correction` pendiente (de nicho, requiere SMC).
 
 #### P4 — Materiales geotécnicos (alto esfuerzo)
+- [x] `groundflow_pressure_factor` — multiplicador de la presión de poro al calcular el esfuerzo total. (2026-08-04)
 - [ ] `group_materi_plasti_hypo_masin` (+ `_clay`, `_clay_advanced_parameters`,
       `_clay_ocr`, `_ocr`, `_structure`), `control_materi_plasti_hypo_masin_ocr_apply`.
-- [ ] `group_materi_plasti_tension_direct_normal` (+ `_automatic`),
-      `group_materi_plasti_mohr_coul_direct_normal` (+ `_automatic`).
+- [ ] `group_materi_plasti_tension_direct_normal` (+ `_automatic`) — requiere `group_materi_plasti_tension_direct` (no existe).
+      `group_materi_plasti_mohr_coul_direct_normal` (+ `_automatic`) — requiere `group_interface_materi_plasti_mohr_coul_direct`.
 - [ ] `group_groundflow_permeability_vertical_stress`, `groundflow_pressure_factor`.
 - [ ] `group_materi_damage_mazars`, `group_materi_expansion_linear`,
       `group_materi_expansion_volume`.
