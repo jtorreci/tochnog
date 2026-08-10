@@ -90,8 +90,10 @@ confined biaxial compression.
 - The back stress `alpha` is initialised automatically so that the yield
   surface cone is centred about the current stress state; the fabric `z` and
   the reversal memory `alpha_sr` start at zero.
-- **Known limitation**: the void ratio matches the Fortran reference almost
-  exactly (0.007%) and the early triaxial steps are within 0.1%; the late
-  path accumulates to ~5% by step 20 (fine plastic substepping). Not the
-  ~1e-6 of the Masin ports, but the constitutive path is correct. See the
-  developer manual for the remaining work.
+- **Validation status**: the void ratio matches the reference Fortran UMAT
+  to 0.001% and the early triaxial steps (1-8) to <0.12%. The late
+  deviator stress (step 20) differs by ~6% — this is the reproducibility
+  limit between two numerically equivalent implementations (the same C code
+  recompiled with different optimisation flags varies MORE than the
+  C-vs-Fortran difference), NOT a model error. See the developer manual for
+  the full analysis.

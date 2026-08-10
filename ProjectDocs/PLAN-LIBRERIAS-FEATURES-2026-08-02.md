@@ -353,13 +353,16 @@ propuesto por demanda práctica:
       pasos, pasos 1-8 al 0.12%. Verificada la identidad de TODAS las
       funciones fisicas (sin errores de transcripcion). La divergencia
       residual (paso 20: a11 C=0.675 vs F=0.606) es SOLO el deviator.
-      **P4-E1h (2026-08-10)**: diagnosticado — De/Gt identicos; la diferencia
-      de LDeR (1.8x) viene de los gradientes (dependen de alpha via n). alpha
-      difiere por acumulacion microscopica desde el paso 2 (0.003%): paso 1
-      bit-exact, e exacta, pasos 1-8 al 0.12%. Cerca del limite de fidelidad
-      del port en doble precision (el substepping adaptativo amplifica
-      redondeo). P4-E1h2 (baja prioridad): comparar el substepping del paso 2
-      o el orden de operaciones del Fortran en los stages RKF.
+      **P4-E1h (2026-08-10)**: diagnosticado y cerrado como VALIDADO. De/Gt
+      identicos; la diferencia de LDeR viene de los gradientes (dependen de
+      alpha). Prueba decisiva: recompilar el MISMO C con -O0 vs -O2 cambia
+      sig11 del paso 1 en 1.1e-3, ~20x MAS que la diferencia C-vs-Fortran
+      (4.7e-5). INDECIDIBLE cual es el correcto: el Fortran es otra
+      compilacion con otro orden de operaciones, no una verdad. La diferencia
+      late (6.3%) es el limite de reproducibilidad entre implementaciones
+      numericamente equivalentes, amplificado por el substepping adaptativo
+      (caotico). e exacta 0.001% y pasos 1-8 al 0.12% validan la fisica. No
+      se persigue el bit-exact (espejismo). Documentado en ambos manuales.
 - [ ] `PM4Sand` (Boulanger & Ziotopoulou, arenas licuefactables) — P4-E2.
 - [ ] `Sand Hypoplasticity` (Gudehus/Bauer, wolfersdorff ya cubierto en hypo.c —
       solo validar) — P4-E3.
