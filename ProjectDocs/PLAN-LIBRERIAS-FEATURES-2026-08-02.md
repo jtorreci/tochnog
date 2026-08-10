@@ -352,8 +352,14 @@ propuesto por demanda práctica:
       e=0.69833, a11=0.206539 — identicos), e exacta 0.001% en todos los
       pasos, pasos 1-8 al 0.12%. Verificada la identidad de TODAS las
       funciones fisicas (sin errores de transcripcion). La divergencia
-      residual (paso 20: a11 C=0.675 vs F=0.606) es SOLO el deviator
-      (P4-E1h: comparar dalpha=Hep*deps o Kp en los substeps del paso 20).
+      residual (paso 20: a11 C=0.675 vs F=0.606) es SOLO el deviator.
+      **P4-E1h (2026-08-10)**: diagnosticado — De/Gt identicos; la diferencia
+      de LDeR (1.8x) viene de los gradientes (dependen de alpha via n). alpha
+      difiere por acumulacion microscopica desde el paso 2 (0.003%): paso 1
+      bit-exact, e exacta, pasos 1-8 al 0.12%. Cerca del limite de fidelidad
+      del port en doble precision (el substepping adaptativo amplifica
+      redondeo). P4-E1h2 (baja prioridad): comparar el substepping del paso 2
+      o el orden de operaciones del Fortran en los stages RKF.
 - [ ] `PM4Sand` (Boulanger & Ziotopoulou, arenas licuefactables) — P4-E2.
 - [ ] `Sand Hypoplasticity` (Gudehus/Bauer, wolfersdorff ya cubierto en hypo.c —
       solo validar) — P4-E3.

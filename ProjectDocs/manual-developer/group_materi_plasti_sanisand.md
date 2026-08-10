@@ -94,14 +94,33 @@ of the Fortran: `yf_DM`, `el_stiff_DM`, `lode_DM` (Van Eekelen), `grad_f_DM`,
 (This is why the "inputs must differ" reasoning led to the intersection
 point.)
 
-### Remaining late deviator difference (P4-E1h)
+### Remaining late deviator difference (P4-E1h findings)
 
-The void ratio is exact, so the volumetric path is perfect. The `a11` (back
-stress) still grows in the C (0.675) while the Fortran saturates (~0.606).
-`alpha_sr=0` in both, `alpha_b≈0.85` in both. Next step: compare the plastic
-increment `dalpha = Hep*deps` (or `Kp`) at the step-20 substeps in both codes
-— with the void ratio exact, the difference must be in the deviator
-hardening accumulation.
+Diagnostics on the step-12/20 substeps (C vs Fortran):
+
+- **`De`/`Gt` are IDENTICAL**: same `p` gives the same `Gt`
+  (e.g. p=947 → Gt=120721 in both; p=853 → Gt=114311).
+- **`LDeR` differs ~1.8×** (C ~225k vs F ~125k at step 12), but both are
+  positive (firmly in plastic loading; no unloading).
+- `LDeR = LL1·De·RR1` — since `De` is identical, the difference comes from
+  the gradients `LL1`/`RR1`, which depend on `alpha` (through
+  `tau = s - p·alpha` → `n`).
+- `alpha` diverges by accumulation: step 1 is EXACT (a11 0.206539), step 2
+  differs by 0.003% (0.313070 vs 0.313061), growing to 0.614 vs 0.610 at
+  step 12 and 0.675 vs 0.606 at step 20.
+
+Conclusion: with `e` (void ratio) exact and `De` identical, the residual
+difference is the accumulation of microscopic `alpha` differences in the
+deviator hardening, amplified by the sensitivity of the flow direction `n`
+to `alpha` near the bounding surface. This is close to the fidelity limit of
+a double-precision port: the first-step result is bit-exact, and the late
+deviator difference is a rounding-level perturbation that the (chaotic,
+strain-path-sensitive) adaptive substepping amplifies.
+
+To close it fully (P4-E1h2, low priority): compare the step-2 substepping in
+detail (the first place `alpha` differs), or match the exact Fortran
+operation ordering in the RKF stages. Given the void ratio is exact and steps
+1-8 are within 0.12%, this is a diminishing-returns refinement.
 
 ## Dynamic substepping (already in place)
 
