@@ -51,6 +51,11 @@ extern "C"
     double *ddsdde, double *dstran, double dtime, double *props, int nprops,
     int testing, int *error );
 
+extern "C" 
+  void sanisand_umat( double *stress, double *statev, double *ddsdde,
+    double *dstran, double dtime, double *props, int nprops, int testing,
+    int *error );
+
 void hypoplasticity( long int element, long int gr,
   long int formulation, double old_hisv[], double new_hisv[], 
   double old_unknowns[], double new_unknowns[], 
@@ -428,6 +433,97 @@ void hypoplasticity( long int element, long int gr,
     (void)mhis;
 
     (void)mhis;
+  }
+
+  if ( db_active_index( GROUP_MATERI_PLASTI_SANISAND, gr, VERSION_NORMAL ) ) {
+
+      // SANISAND (Dafalias & Manzari 2004), port of the reference UMAT.
+      // ------------------------------------------------------------------
+      // Conventions: SANISAND uses SOIL mechanics (compression positive),
+      // tochnog uses Abaqus-like (tension positive). The kernel does its own
+      // sign conversion (move_sig/move_eps negate), so we pass the raw
+      // tensors. History: statev[0..35] is stored in hisv (36 slots).
+      //   hisv[0..5]  = back stress alpha
+      //   hisv[6]     = void ratio e
+      //   hisv[7..12] = fabric tensor z
+      //   hisv[14..19]= alpha at stress reversal
+      //   hisv[28..33]= pore, p', q, cos3t, dtsub, nfev
+      //   (the kernel reads/writes all 36 through the statev array)
+      // ------------------------------------------------------------------
+    double sstress[6], sstatev[36], sddsdde[36], sdstran[6], sprops[19];
+    double mdt2=0.;
+    int serror=0, stesting=0, i2b, j2b;
+
+    if ( materi_history_variables<36 ) {
+      pri( "Error: materi_history_variables should be at least 36 for GROUP_MATERI_PLASTI_SANISAND." );
+      pri( "   hisv[0..5]=alpha, hisv[6]=e, hisv[7..12]=z, hisv[14..19]=alpha_sr." );
+      exit(TN_EXIT_STATUS);
+    }
+    if ( formulation==TOTAL ) {
+      pri( "Error: hypoplasticity not available for this group_materi_memory.");
+      exit(TN_EXIT_STATUS);
+    }
+
+      // material parameters (19)
+    for ( i=0; i<19; i++ ) sprops[i] = 0.;
+    length_wolfersdorff = 19;
+    db( GROUP_MATERI_PLASTI_SANISAND, gr, idum, sprops, length_wolfersdorff,
+      VERSION_NORMAL, GET_AND_CHECK );
+
+      // state: hisv -> statev (36)
+    for ( i=0; i<36; i++ ) sstatev[i] = new_hisv[i];
+
+      // stress/strain: pass raw tensors (kernel converts sign)
+    sstress[0] = rotated_old_sig[0*MDIM+0];
+    sstress[1] = rotated_old_sig[1*MDIM+1];
+    sstress[2] = rotated_old_sig[2*MDIM+2];
+    sstress[3] = rotated_old_sig[0*MDIM+1];
+    sstress[4] = rotated_old_sig[0*MDIM+2];
+    sstress[5] = rotated_old_sig[1*MDIM+2];
+    sdstran[0] = inc_ept[0*MDIM+0];
+    sdstran[1] = inc_ept[1*MDIM+1];
+    sdstran[2] = inc_ept[2*MDIM+2];
+    sdstran[3] = inc_ept[0*MDIM+1];
+    sdstran[4] = inc_ept[0*MDIM+2];
+    sdstran[5] = inc_ept[1*MDIM+2];
+
+    db( DTIME, 0, idum, &mdt2, ldum, VERSION_NEW, GET );
+
+    sanisand_umat( sstress, sstatev, sddsdde, sdstran, mdt2, sprops, 19,
+      stesting, &serror );
+    if ( serror==10 ) {
+      pri( "Error: severe error in SANISAND." );
+      exit(TN_EXIT_STATUS);
+    }
+
+      // statev -> hisv
+    for ( i=0; i<36; i++ ) new_hisv[i] = sstatev[i];
+
+      // stress: kernel returns Abaqus-convention (tension positive) stress
+    stress[0*MDIM+0] = sstress[0];
+    stress[1*MDIM+1] = sstress[1];
+    stress[2*MDIM+2] = sstress[2];
+    stress[0*MDIM+1] = sstress[3];  stress[1*MDIM+0] = sstress[3];
+    stress[0*MDIM+2] = sstress[4];  stress[2*MDIM+0] = sstress[4];
+    stress[1*MDIM+2] = sstress[5];  stress[2*MDIM+1] = sstress[5];
+
+      // tangent: Voigt6 -> Chypo
+    {
+      int vi[3][3];
+      vi[0][0]=0; vi[1][1]=1; vi[2][2]=2;
+      vi[0][1]=3; vi[1][0]=3; vi[0][2]=4; vi[2][0]=4; vi[1][2]=5; vi[2][1]=5;
+      for ( i=0; i<MDIM; i++ )
+        for ( j=0; j<MDIM; j++ )
+          for ( k=0; k<MDIM; k++ )
+            for ( l=0; l<MDIM; l++ )
+              Chypo[i*MDIM*MDIM*MDIM + j*MDIM*MDIM + k*MDIM + l] =
+                sddsdde[ vi[i][j]*6 + vi[k][l] ];
+    }
+
+    array_add( new_sig, stress, new_sig, MDIM*MDIM );
+    array_subtract( new_sig, rotated_old_sig, new_sig, MDIM*MDIM );
+
+    (void)i2b; (void)j2b;
   }
 
 }

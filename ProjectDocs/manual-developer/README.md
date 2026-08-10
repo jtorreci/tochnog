@@ -81,6 +81,7 @@ Each file corresponds to the same feature in the [User Manual](../manual-user/).
 - [group_materi_expansion_linear](group_materi_expansion_linear.md) — thermal expansion (stress.cc:437, materi.cc:166).
 - [group_materi_plasti_visco_exponential](group_materi_plasti_visco_exponential.md) — viscoplasticity (stress.cc:100-115, 737-755; EPS_VISCO hardcoded).
 - [group_materi_plasti_hypo_masin](group_materi_plasti_hypo_masin.md) — Masin clay hypoplasticity (masin.c pure-C port of umat_hcea.for, validated to 5e-7; hypoplas.cc dispatch).
+- [group_materi_plasti_sanisand](group_materi_plasti_sanisand.md) — SANISAND (sanisand.c port of the Dafalias-Manzari UMAT; functional ~8% vs Fortran, integrator tightening pending in P4-E1b).
 
 ## Cross-cutting notes
 

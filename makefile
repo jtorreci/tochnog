@@ -20,6 +20,10 @@ MASIN_OBJ=masin.o
 MASIN_VISCO_SRC=masin_visco.c
 MASIN_VISCO_OBJ=masin_visco.o
 
+#  ***********  SANISAND (Dafalias & Manzari 2004) ******************
+SANISAND_SRC=sanisand.c
+SANISAND_OBJ=sanisand.o
+
 #  ***********  profiler ***********************
 # for the gnu profiler, use as follows:
 # set PROFILE to -pg
@@ -271,7 +275,7 @@ tochnog: adjust.$(OBJ) area.$(OBJ) \
 	filter.$(OBJ) force.$(OBJ) general.$(OBJ) \
 	geometry.$(OBJ) generate.$(OBJ) \
 	groundda.$(OBJ) groundfl.$(OBJ) group.$(OBJ) \
-        hyperela.$(OBJ) $(HYPO_OBJ) $(MASIN_OBJ) $(MASIN_VISCO_OBJ) \
+        hyperela.$(OBJ) $(HYPO_OBJ) $(MASIN_OBJ) $(MASIN_VISCO_OBJ) $(SANISAND_OBJ) \
 	hypoplas.$(OBJ) initia.$(OBJ) \
 	input.$(OBJ) integra.$(OBJ) intersec.$(OBJ) \
 	inverse.$(OBJ) locate.$(OBJ) \
@@ -413,6 +417,9 @@ $(MASIN_OBJ): $(MASIN_SRC)
 
 $(MASIN_VISCO_OBJ): $(MASIN_VISCO_SRC)
 	$(COMPILER_C) $(COMPILER_FLAGS) $(MASIN_VISCO_SRC)
+
+$(SANISAND_OBJ): $(SANISAND_SRC)
+	$(COMPILER_C) $(COMPILER_FLAGS) $(SANISAND_SRC)
 
 hypoplas.$(OBJ): hypoplas.$(SRC_CPP) tochnog.h
 	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)hypoplas.$(SRC_CPP)

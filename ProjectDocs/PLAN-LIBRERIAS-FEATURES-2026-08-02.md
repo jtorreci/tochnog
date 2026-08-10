@@ -328,7 +328,20 @@ dispatch, drivers de validación en validation-suite/reference-masin/.
 
 El usuario descarga el UMAT de SoilModels a petición (login gratuito). Orden
 propuesto por demanda práctica:
-- [ ] `SANISAND` (Dafalias & Manzari, arena no-cohesiva, UMAT disponible) — P4-E1.
+- [x] `SANISAND` (Dafalias & Manzari, arena no-cohesiva, UMAT disponible) — P4-E1.
+      **PORT FUNCIONAL (2026-08-10)**: `sanisand.c` (~1600 líneas C) integrado en
+      tochnog (keyword `group_materi_plasti_sanisand`, 19 params,
+      `materi_history_variables 36`). Test hyposanisand1.dat end-to-end pasa.
+      **LIMITACIÓN**: valida ~8% vs el Fortran (no 1e-6 como Masin) por el
+      substepping adaptativo elasto-plástico simplificado (branches
+      attempt==2/3 con tolerancia relajada no activados). Constitutivamente
+      correcto (endurecimiento de arena densa). El camino recomendado para
+      cerrar la brecha está documentado en
+      manual-developer/group_materi_plasti_sanisand.md (P4-E1b): (1) replicar
+      la máquina de estados attempt/maxnint_1/err_tol_1/switch3 del Fortran;
+      (2) propagar el flag `plastic` por referencia (common block); (3)
+      re-validar contra ref_triaxial.txt apuntando a ~1e-3; (4) re-chequear
+      el FE end-to-end.
 - [ ] `PM4Sand` (Boulanger & Ziotopoulou, arenas licuefactables) — P4-E2.
 - [ ] `Sand Hypoplasticity` (Gudehus/Bauer, wolfersdorff ya cubierto en hypo.c —
       solo validar) — P4-E3.
