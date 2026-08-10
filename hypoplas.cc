@@ -36,6 +36,11 @@ extern "C"
     double *softvar_nonloc, double *softvar_loc,
     int *find_local_sv, int *options_nonlocal );
 
+extern "C" 
+  void masin_umat( double *stress, double *statev, double *ddsdde,
+    double *dstran, double dtime, double *props, int nprops, int testing,
+    int *error );
+
 void hypoplasticity( long int element, long int gr,
   long int formulation, double old_hisv[], double new_hisv[], 
   double old_unknowns[], double new_unknowns[], 
@@ -62,7 +67,8 @@ void hypoplasticity( long int element, long int gr,
     if(db_active_index( GROUP_MATERI_PLASTI_HYPO_WOLFERSDORFF, gr, VERSION_NORMAL )) hypo_wolfersdorff=1; 
     else if(db_active_index( GROUP_MATERI_PLASTI_HYPO_LOWANGLES, gr, VERSION_NORMAL )) hypo_lowangles=1;
 
-  if ( hypo_wolfersdorff || hypo_lowangles ) {
+  if ( hypo_wolfersdorff || hypo_lowangles || 
+       db_active_index( GROUP_MATERI_PLASTI_HYPO_MASIN, gr, VERSION_NORMAL ) ) {
 
 #if !HYPO_USE
     pri( "Error: HYPO_USE is not set to 1 in tnhypo.h" );
@@ -74,6 +80,8 @@ void hypoplasticity( long int element, long int gr,
       pri( "Error: hypoplasticity not available for this group_materi_memory.");
       exit(TN_EXIT_STATUS);
     }
+
+    if ( hypo_wolfersdorff || hypo_lowangles ) {
 
     length_lowangles = LENGTH_LOWANGLES;
     length_wolfersdorff = LENGTH_WOLFERSDORFF;
@@ -175,6 +183,146 @@ void hypoplasticity( long int element, long int gr,
     array_add( new_sig, stress, new_sig, MDIM*MDIM );
     array_subtract( new_sig, rotated_old_sig, new_sig, MDIM*MDIM );
 
+    }   /* end wolfersdorff / lowangles block */
+
+  }   /* end hypoplasticity dispatch */
+
+  if ( db_active_index( GROUP_MATERI_PLASTI_HYPO_MASIN, gr, VERSION_NORMAL ) ) {
+
+      // Masin clay hypoplasticity (masin.c, port of umat_hcea.for)
+      // ------------------------------------------------------------------
+      // Conventions:
+      //   tochnog stores 3x3 tensors row-major (sig[i*MDIM+j]); masin uses
+      //   Voigt6 [11,22,33,12,13,23]. Compression negative in both.
+      //   tochnog history hisv[] (materi_history_variables, >= 8):
+      //     hisv[0..5] = intergranular strain delta (continuum -> Voigt)
+      //     hisv[6]    = void ratio e
+      //     hisv[7]    = sensitivity s
+      //   masin statev[16] maps: [0..5]=delta, 6=e, 12=dtsub, 13=sensitivity.
+      // ------------------------------------------------------------------
+    long int mhis[8];
+    double mstress[6], mdstran[6], mstatev[16], mddsdde[36], mprops[29];
+    double ocr=0., e0=0., mdt=0.;
+    int merror=0, mtesting=0, i2, j2;
+    long int ocr_apply=-NO;
+
+    if ( materi_history_variables<8 ) {
+      pri( "Error: materi_history_variables should be at least 8 for GROUP_MATERI_PLASTI_HYPO_MASIN." );
+      pri( "   hisv[0..5] = intergranular strain, hisv[6] = void ratio e, hisv[7] = sensitivity." );
+      exit(TN_EXIT_STATUS);
+    }
+
+    if ( formulation==TOTAL ) {
+      pri( "Error: hypoplasticity not available for this group_materi_memory.");
+      exit(TN_EXIT_STATUS);
+    }
+
+      // material parameters (29 props, raw layout of umat_hcea.for)
+      // group_materi_plasti_hypo_masin = phi_c lambda* kappa* N r
+      //   -> props[0]=phi_c, props[2]=lambda*, props[3]=kappa*,
+      //      props[4]=N, props[5]=r(nu_pp)
+      //   props[1]=p_t is kept 0 (no cohesion shift)
+    for ( i=0; i<29; i++ ) mprops[i] = 0.;
+    length_wolfersdorff = 5;
+    {
+      double mpar[5];
+      db( GROUP_MATERI_PLASTI_HYPO_MASIN, gr, idum, mpar, length_wolfersdorff, VERSION_NORMAL, GET_AND_CHECK );
+      mprops[0] = mpar[0];   // phi_c [deg]
+      mprops[2] = mpar[1];   // lambda*
+      mprops[3] = mpar[2];   // kappa*
+      mprops[4] = mpar[3];   // N
+      mprops[5] = mpar[4];   // r / nu_pp
+    }
+    mprops[1] = 0.;                       // p_t (shift due to cohesion)
+    mprops[6] = 1.;                       // alpha_G (isotropic by default)
+    mprops[9] = 1.;                       // s_f (1 => no structure effect)
+    mprops[13] = 0.;                      // A_g (0 => intergranular strain off)
+    mprops[17] = 3.;                      // vertical direction (z in 3D)
+    if ( db_active_index( GROUP_MATERI_PLASTI_HYPO_MASIN_STRUCTURE, gr, VERSION_NORMAL ) ) {
+      length_intergranularstrain = 3;
+      db( GROUP_MATERI_PLASTI_HYPO_MASIN_STRUCTURE, gr, idum, &mprops[7], length_intergranularstrain, VERSION_NORMAL, GET_AND_CHECK );
+        // mprops[7,8,9] = k, A, s_f
+    }
+      // initial void ratio / OCR: props[21] = e0, or OCR+10 if > 10
+    e0 = new_hisv[6];
+    if ( e0>0.001 ) mprops[21] = e0;
+    db( GROUP_MATERI_PLASTI_HYPO_MASIN_OCR, gr, idum, &ocr, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+    db( CONTROL_MATERI_PLASTI_HYPO_MASIN_OCR_APPLY, gr, &ocr_apply, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+    if ( ocr_apply==-YES && ocr>0. ) mprops[21] = ocr + 10.;
+
+      // strain increment: 3x3 (row-major) -> Voigt6
+    mdstran[0] = inc_ept[0*MDIM+0];
+    mdstran[1] = inc_ept[1*MDIM+1];
+    mdstran[2] = inc_ept[2*MDIM+2];
+    mdstran[3] = inc_ept[0*MDIM+1];
+    mdstran[4] = inc_ept[0*MDIM+2];
+    mdstran[5] = inc_ept[1*MDIM+2];
+
+      // stress: 3x3 (row-major) -> Voigt6
+    mstress[0] = rotated_old_sig[0*MDIM+0];
+    mstress[1] = rotated_old_sig[1*MDIM+1];
+    mstress[2] = rotated_old_sig[2*MDIM+2];
+    mstress[3] = rotated_old_sig[0*MDIM+1];
+    mstress[4] = rotated_old_sig[0*MDIM+2];
+    mstress[5] = rotated_old_sig[1*MDIM+2];
+
+      // history: hisv -> statev (layout of umat_hcea.for)
+      // NOTE: the Fortran reference defines move_asv_hcea (which negates the
+      // intergranular strain) but NEVER calls it in the integration path:
+      // iniy_hcea copies asv -> y(6+i) directly. So no sign flip here.
+    for ( i=0; i<16; i++ ) mstatev[i] = 0.;
+    for ( i=0; i<6; i++ ) mstatev[i] = new_hisv[i];   // intergranular strain
+    mstatev[6]  = new_hisv[6];   // void ratio
+    mstatev[7]  = 0.;            // excess pore pressure
+    mstatev[12] = 0.;            // dtsub (suggested substep, recomputed)
+    mstatev[13] = new_hisv[7];   // sensitivity
+    mstatev[15] = 0.;
+
+    db( DTIME, 0, idum, &mdt, ldum, VERSION_NEW, GET );
+
+      // stress contribution by Masin hypoplasticity
+    masin_umat( mstress, mstatev, mddsdde, mdstran, mdt, mprops, 29,
+      mtesting, &merror );
+    if ( merror==10 ) {
+      pri( "Error: severe error in Masin hypoplasticity." );
+      exit(TN_EXIT_STATUS);
+    }
+
+      // statev -> hisv
+    for ( i=0; i<6; i++ ) new_hisv[i] = mstatev[i];
+    new_hisv[6] = mstatev[6];
+    new_hisv[7] = mstatev[13];
+
+      // Voigt6 -> 3x3 (row-major), symmetric
+    for ( i2=0; i2<3; i2++ )
+      for ( j2=0; j2<3; j2++ ) {
+        if      ( i2==0 && j2==0 ) stress[0] = mstress[0];
+        else if ( i2==1 && j2==1 ) stress[4] = mstress[1];
+        else if ( i2==2 && j2==2 ) stress[8] = mstress[2];
+        else if ( (i2==0&&j2==1)||(i2==1&&j2==0) ) stress[i2*MDIM+j2] = mstress[3];
+        else if ( (i2==0&&j2==2)||(i2==2&&j2==0) ) stress[i2*MDIM+j2] = mstress[4];
+        else if ( (i2==1&&j2==2)||(i2==2&&j2==1) ) stress[i2*MDIM+j2] = mstress[5];
+      }
+
+      // tangent ddsdde (Voigt6) -> Chypo (3x3x3x3, row-major)
+    {
+      int vi[3][3];
+      vi[0][0]=0; vi[1][1]=1; vi[2][2]=2;
+      vi[0][1]=3; vi[1][0]=3; vi[0][2]=4; vi[2][0]=4; vi[1][2]=5; vi[2][1]=5;
+      for ( i=0; i<MDIM; i++ )
+        for ( j=0; j<MDIM; j++ )
+          for ( k=0; k<MDIM; k++ )
+            for ( l=0; l<MDIM; l++ )
+              Chypo[i*MDIM*MDIM*MDIM + j*MDIM*MDIM + k*MDIM + l] =
+                mddsdde[ vi[i][j]*6 + vi[k][l] ];
+    }
+
+    array_add( new_sig, stress, new_sig, MDIM*MDIM );
+    array_subtract( new_sig, rotated_old_sig, new_sig, MDIM*MDIM );
+
+    (void)mhis;
+
+    (void)mhis;
   }
-  
+
 }

@@ -287,6 +287,13 @@ El índice es limpio: cada entrada de la sección 6 "data records" es una keywor
     `_name`/`_values`.
 - [ ] `group_materi_plasti_hypo_masin` (+ `_clay`, `_clay_advanced_parameters`,
       `_clay_ocr`, `_ocr`, `_structure`), `control_materi_plasti_hypo_masin_ocr_apply`.
+      **P4-B1 PARCIAL (2026-08-10)**: `group_materi_plasti_hypo_masin` (ley básica,
+      5 params), `_structure`, `_ocr`, `control_*_ocr_apply` IMPLEMENTADOS via
+      `masin.c` (port C del UMAT Fortran autorizado, validado a 5e-7) + dispatch
+      en hypoplas.cc. Test hypomasin1.dat end-to-end (sigxx -340.7 vs -334.8,
+      e 0.6333 vs 0.6663). Pendiente P4-B2: variante clay anisotrópica
+      (alpha_G/alpha_E/alpha_nu/dirección), intergranular strain masin, visco,
+      y las variantes strength-reduction/visco del UMAT (paquetes descargados).
 - [ ] `group_materi_plasti_tension_direct_normal` (+ `_automatic`) — requiere `group_materi_plasti_tension_direct` (no existe).
       `group_materi_plasti_mohr_coul_direct_normal` (+ `_automatic`) — requiere `group_interface_materi_plasti_mohr_coul_direct`.
 - [ ] `group_groundflow_permeability_vertical_stress`.

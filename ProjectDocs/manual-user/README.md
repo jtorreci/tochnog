@@ -80,3 +80,4 @@ input parameters it accepts.
 - [group_materi_damage_mazars](group_materi_damage_mazars.md) — Mazars isotropic damage for quasi-brittle materials.
 - [group_materi_expansion_linear](group_materi_expansion_linear.md) — linear and volumetric thermal expansion.
 - [group_materi_plasti_visco_exponential](group_materi_plasti_visco_exponential.md) — viscoplasticity (exponential / power / always).
+- [group_materi_plasti_hypo_masin](group_materi_plasti_hypo_masin.md) — Masin clay hypoplasticity (critical state model for fine-grained soils).
