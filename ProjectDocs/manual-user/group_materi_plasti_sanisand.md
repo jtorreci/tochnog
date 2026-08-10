@@ -90,9 +90,8 @@ confined biaxial compression.
 - The back stress `alpha` is initialised automatically so that the yield
   surface cone is centred about the current stress state; the fabric `z` and
   the reversal memory `alpha_sr` start at zero.
-- **Known limitation**: the adaptive elasto-plastic substepping of this port
-  reproduces the Fortran reference to about **3.5%** on the triaxial path
-  (not the ~1e-6 of the Masin ports). The constitutive equations are correct;
-  the difference comes from the fine adaptive substepping (entry-point
-  intersection and stage rounding). See the developer manual for the
-  future-work plan.
+- **Known limitation**: the void ratio matches the Fortran reference almost
+  exactly (0.007%) and the early triaxial steps are within 0.1%; the late
+  path accumulates to ~5% by step 20 (fine plastic substepping). Not the
+  ~1e-6 of the Masin ports, but the constitutive path is correct. See the
+  developer manual for the remaining work.

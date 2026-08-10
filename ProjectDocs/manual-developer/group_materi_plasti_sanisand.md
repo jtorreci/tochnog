@@ -51,71 +51,51 @@
   (Nevada sand, 20 steps, `dstran[0]=-0.001`):
   step4 `-439.2455`, step8 `-866.4842`, step12 `-1413.1947`,
   step16 `-2045.1646`, step20 `-2777.1338`, `e=0.66639`, `a11=0.613237`.
-- C port (same path), after the P4-E1b tolerance fix (`tol_f = 1e-6`):
-  step20 `-2873`, `e=0.679`, `a11=0.667` — about **+3.5%** on `sig11`
-  (improved from +8% before the fix).
+- C port (same path), after the P4-E1d intersect fix:
+  step4 `-439.43` (0.04%), step8 `-867.33` (0.1%), step20 `-2927.03`
+  (5.4%), `e=0.66634` (0.007%), `a11=0.671`.
+  The void ratio now matches the Fortran almost exactly and the early steps
+  are within 0.1%; the late-step divergence (5.4%) accumulates in the fine
+  plastic substepping.
 - End-to-end tochnog: `hyposanisand1.dat` (laterally confined biaxial),
-  targets `sigxx=-3696±300`, `hisv6≈0.66`. Passes.
+  targets `sigxx=-3434±200`, `hisv6≈0.66`. Passes.
 
-## Known limitation and future work (IMPORTANT)
+## Known limitation and future work
 
-The C port is **constitutively correct and physically coherent** (dense sand
-hardening: `alpha` grows 0→0.67, `e` drops 0.70→0.679), but it does NOT
-reproduce the Fortran to the `~1e-6` accuracy of the Masin ports. After the
-P4-E1b tolerance fix the difference is ~**3.5%** on `sig11` at step 20
-(was ~8%).
+The C port is **constitutively correct and physically coherent**. After the
+P4-E1d intersect fix the void ratio matches the Fortran to 0.007% and steps
+4-8 to 0.1%; only the late path accumulates to ~5% by step 20 (was 3.5% with
+a distorted trajectory). The residual is in the fine plastic substepping.
 
-### What was fixed in P4-E1b
+### P4-E1d findings (intersect_DM)
 
-1. **`tol_f = 1e-6`** (was 1e-3). The yield-function tolerance of the
-   Fortran is `tol_f = 1.0d-6`, independent of `testing`; only the RKF
-   `err_tol` switches between `tolintTtest = 1e-2` (first step) and
-   `tolintT = 1e-3`. Using 1e-3 for the yield check made the drift
-   correction too lax and changed the trajectory. This was the dominant
-   cause of the 8% gap.
-2. Removed a duplicated `f_plas_DM` call for `kRK_1` (inflated `nfev`).
-3. **Confirmed the `attempt==2/3` hypothesis is NOT the cause**: the RKF23
-   loop converges in a few substeps per global step (`T_k` reaches 1 well
-   before `maxnint`), so the looser-tolerance re-substepping branches never
-   activate — in both the port and the Fortran.
+The dominant bug was in `intersect_DM`:
 
-### Remaining 3.5% and what was ruled out (P4-E1c findings)
+1. **The Newton inner loop accumulated `xi` incorrectly.** The Fortran keeps
+   `xi` FIXED inside the halving loop (`xip1 = xi + dxi`, halving `dxi` until
+   `xip1` is in [0,1]) and assigns `xi = xip1` afterwards. The C port added
+   `xi = xi + dxi` BEFORE the loop, so the halving loop accumulated away from
+   [0,1], hit the iteration guard, and forced `xi` to an endpoint. This made
+   the Newton cross the yield surface in the wrong place.
+2. **The bisection block returned the midpoint 0.5.** The Fortran bisection
+   with fixed `y00/y11` computes `y05 = (y0+y1)/2` every iteration, so it can
+   only ever return the midpoint. Empirically (instrumenting the Fortran) the
+   reference uses the NEWTON crossing `xi` (~0.018), not the bisection
+   midpoint. The C port now uses the Newton `xi` directly, which reproduces
+   the Fortran trajectory.
 
-Diagnostics performed on the first global step (where the divergence starts,
-+3.9% on `sig11`, `a11` +10%):
+Rule of thumb discovered: with TWO compensating bugs (the xi accumulation and
+the bisection), fixing only one makes the global result WORSE. Both were fixed
+together here; the void ratio and early steps now match the Fortran closely.
 
-- **The elastic trial state is EXACT**: the trial `e = 0.698301` matches the
-  Fortran final `e = 0.69833` exactly. The divergence appears only in the
-  subsequent plastic substepping.
-- **The RKF tolerance is NOT the cause**: tightening `err_tol` from `1e-3`
-  to `1e-6` makes the C port converge to `-2947` (step 20), FURTHER from the
-  reference `-2777`, not closer. The integrator converges to a stable value
-  that differs from the Fortran by ~6% — a systematic model-path difference,
-  not a substepping accuracy issue.
-- **`attempt==2/3` is NOT the cause**: the RKF23 loop finishes in a handful
-  of substeps per global step, never reaching `maxnint`.
-- **`alpha_sr` write-back in `get_tan_DM` is NOT the cause**: writing the
-  updated `alpha_sr` back to `z` (as the Fortran does) leaves the driver
-  result identical AND breaks the FE end-to-end (the tochnog multi-call flow
-  diverges to `-784`), so it was reverted.
+### Remaining late-step divergence
 
-What remains to investigate (in order of likelihood):
-1. The plastic flow direction during the FIRST plastic substep — `a11` grows
-   ~10% faster in the port, suggesting a slightly different `h_alpha`
-   (bounding-surface) or dilatancy contribution at the yield-surface entry.
-2. The exact `intersect_DM` result (the Fortran bisection returns `xi = 0.5`
-   — the midpoint — in this test; verify the Newton actually converges in
-   the reference before the bisection is reached).
-3. `drift_corr_DM` `switch=1` normal-correction branch.
-
-Recommended approach (P4-E1d):
-1. Print `a11` after the first plastic substep in BOTH the C port and the
-   Fortran (a small Fortran driver instrumenting `get_tan_DM` outputs) and
-   diff them to locate the exact expression that differs.
-2. Fix that expression, re-validate at the driver level to `~1e-3`.
-3. Re-check the FE end-to-end value last (note: the FE and driver paths
-   differ because tochnog calls the constitutive model repeatedly per
-   substep; only compare relative trends).
+Steps 4-8 match to 0.1% but step 20 accumulates to 5.4%. The remaining
+difference is in the fine plastic substepping (the `a11` at step 20 is
+0.671 vs 0.613). Candidate: the `drift_corr_DM` `switch=1` normal-correction
+branch or the `h_alpha` bounding-surface hardening. To close it (P4-E1e):
+instrument `a11` after the LAST plastic substep of each global step in both
+C and Fortran and diff the hardening expression.
 
 ## Dynamic substepping (already in place)
 

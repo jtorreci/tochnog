@@ -338,14 +338,14 @@ propuesto por demanda práctica:
       **P4-E1b (2026-08-10)**: afinado a ~3.5% (driver, paso 20: C=-2873 vs
       F=-2777). Fix: tol_f=1e-6 (era 1e-3, la tol de yield del Fortran es
       independiente de testing) + llamada duplicada de f_plas eliminada.
-      DESCATADO: el attempt==2/3 NO es la causa (el RKF converge en pocos
-      substeps, nunca lo alcanza). El 3.5% restante está en el substepping
-      fino (candidatos: intersect_DM, orden numérico de los stages RKF,
-      drift_corr). NOTA: el integrador RKF23 YA hace substepping dinámico
-      por convergencia (S_hull=0.9*DT_k*(err_tol/norm_R)^(1/3), acepta con
-      min(4DT,S_hull), rechaza con max(DT/4,S_hull)); el control_timestep
-      global de tochnog es ortogonal. Plan detallado en
-      manual-developer/group_materi_plasti_sanisand.md.
+      **P4-E1d (2026-08-10)**: fix del intersect_DM — (1) el bucle interno de
+      Newton acumulaba xi prematuramente (xip1 desde xi fijo, el Fortran usa
+      xip1=xi+dxi); (2) la bisection devolvía el punto medio 0.5, el Fortran
+      usa el xi del cruce del Newton (~0.018). Ambos bugs se compensaban:
+      arreglar solo uno empeoraba el global. Con ambos corregidos: e coincide
+      0.007% y pasos 4-8 al 0.1%; el paso 20 acumula ~5.4% (substepping
+      plástico fino). Candidatos restantes: drift_corr switch=1 o h_alpha
+      (P4-E1e: instrumentar a11 tras el último substep y diff del hardening).
 - [ ] `PM4Sand` (Boulanger & Ziotopoulou, arenas licuefactables) — P4-E2.
 - [ ] `Sand Hypoplasticity` (Gudehus/Bauer, wolfersdorff ya cubierto en hypo.c —
       solo validar) — P4-E3.
