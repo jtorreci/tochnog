@@ -343,9 +343,19 @@ propuesto por demanda práctica:
       xip1=xi+dxi); (2) la bisection devolvía el punto medio 0.5, el Fortran
       usa el xi del cruce del Newton (~0.018). Ambos bugs se compensaban:
       arreglar solo uno empeoraba el global. Con ambos corregidos: e coincide
-      0.007% y pasos 4-8 al 0.1%; el paso 20 acumula ~5.4% (substepping
-      plástico fino). Candidatos restantes: drift_corr switch=1 o h_alpha
-      (P4-E1e: instrumentar a11 tras el último substep y diff del hardening).
+      0.007% y pasos 1-11 al 0.1%; el paso 20 acumula ~5.4% (substepping
+      plástico fino).
+      **P4-E1e (2026-08-10)**: diagnosticado el 5.4% restante — pasos 1-11
+      coinciden, la divergencia empieza en el paso 12-13 donde el a11 del C
+      sigue creciendo (0.671) mientras el Fortran satura (~0.605). b0,
+      alpha_b y psi son idénticos; la diferencia está en d_sr (distancia al
+      alpha de reversión): el Fortran lo tiene fluctuante (se resetea
+      dinámicamente), el C constante (~0.82). CONSTRAINT descubierta: el
+      write-back de alpha_sr en get_tan_DM rompe el FE end-to-end (sigxx
+      -3434→-1335) por el flujo multi-llamada de tochnog — debe mantenerse
+      descartado. Siguiente paso (P4-E1f): comparar la dirección n usada en
+      distance(alpha,alpha_sr,n) dentro del primer substep rechazado del paso
+      12.
 - [ ] `PM4Sand` (Boulanger & Ziotopoulou, arenas licuefactables) — P4-E2.
 - [ ] `Sand Hypoplasticity` (Gudehus/Bauer, wolfersdorff ya cubierto en hypo.c —
       solo validar) — P4-E3.

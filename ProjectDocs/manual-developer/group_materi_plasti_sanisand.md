@@ -88,14 +88,45 @@ Rule of thumb discovered: with TWO compensating bugs (the xi accumulation and
 the bisection), fixing only one makes the global result WORSE. Both were fixed
 together here; the void ratio and early steps now match the Fortran closely.
 
-### Remaining late-step divergence
+### Remaining late-step divergence (P4-E1e findings)
 
-Steps 4-8 match to 0.1% but step 20 accumulates to 5.4%. The remaining
-difference is in the fine plastic substepping (the `a11` at step 20 is
-0.671 vs 0.613). Candidate: the `drift_corr_DM` `switch=1` normal-correction
-branch or the `h_alpha` bounding-surface hardening. To close it (P4-E1e):
-instrument `a11` after the LAST plastic substep of each global step in both
-C and Fortran and diff the hardening expression.
+Steps 1-11 match the Fortran to ~0.1% (void ratio exact to 0.007%). The
+divergence starts at step 12-13: the C back-stress `a11` keeps growing
+(0.614 → 0.671) while the Fortran saturates at ~0.605 and even decreases
+slightly (0.610 → 0.608 at step 13).
+
+Per-step diagnostics (C vs Fortran) showed:
+
+- `b0`, `alpha_b` (bounding surface), `psi` (state parameter) are nearly
+  IDENTICAL between C and Fortran (e.g. step 20: C `alpha_b=0.846`,
+  F `alpha_b=0.844`; both `psi≈-0.026`).
+- The Fortran `d_sr` (distance to the reversal `alpha_sr`) FLUCTUATES during
+  the plastic substepping (values 0.74, 0.16, 0.61, 0.38) and `hh = b0/d_sr`
+  varies (100-480), while the C keeps `d_sr ≈ 0.82` constant. The Fortran
+  reversal `alpha_sr` is updated dynamically; the C one is not.
+
+Hypothesis: the Fortran resets `alpha_sr` (via `if(d_sr<0) push(alpha,
+alpha_sr)` in `get_tan_DM`) at some points in the fine substepping, which
+lowers `d_sr` and `hh`, softening the hardening and saturating `a11`. The C
+`alpha_sr` reset never fires because the `z1` passed to `get_F_sig_q` is a
+substep-local copy that is re-copied from `z_k` each iteration (the reset
+write is lost).
+
+**Important constraint discovered**: writing `alpha_sr` back to `z` in
+`get_tan_DM` (as the Fortran does) leaves the single-element DRIVER result
+unchanged BUT breaks the tochnog FE end-to-end (hyposanisand1 sigxx drops
+from -3434 to -1335), because tochnog calls the constitutive model
+repeatedly per substep and the write-back desynchronises the multi-call
+flow. The write-back must stay discarded (as in the current code).
+
+Next step (P4-E1f): track how the Fortran `alpha_sr` (the `z1` in rkf23)
+is updated between substeps — it is copied `push(z_k,z1)` at the START of
+each substep, so a reset inside `get_tan_DM` should NOT persist across
+substeps in either code. The remaining difference is therefore likely in
+the substep-internal `d_sr` evaluation (the `n` direction used in
+`distance(alpha, alpha_sr, n)`), which may differ in sign/orientation
+between C and Fortran during the near-saturation substeps. Compare the `n`
+vector and `d_sr` inside the FIRST rejected substep at step 12.
 
 ## Dynamic substepping (already in place)
 
