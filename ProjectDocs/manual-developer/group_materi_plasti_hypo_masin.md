@@ -19,12 +19,23 @@
   stress/tangent/history.
 - `tochnog.h` / `tochnog-mod.h` — enum entries:
   `GROUP_MATERI_PLASTI_HYPO_MASIN`, `_STRUCTURE`, `_OCR`,
-  `CONTROL_MATERI_PLASTI_HYPO_MASIN_OCR_APPLY` (same order, must stay in sync).
+  `CONTROL_MATERI_PLASTI_HYPO_MASIN_OCR_APPLY`, `_MASIN_CLAY`,
+  `_MASIN_CLAY_ADVANCED_PARAMETERS`, `_MASIN_CLAY_AVANCED_DIRECTION`,
+  `_MASIN_CLAY_OCR`, `_MASIN_CLAY_STRUCTURE`,
+  `CONTROL_MATERI_PLASTI_HYPO_MASIN_CLAY_OCR_APPLY`,
+  `_HYPO_STRAIN_INTERGRANULAR_MASIN_CLAY` (same order, must stay in sync).
 - `database.cc` — keyword registrations:
   - `group_materi_plasti_hypo_masin`: DOUBLE, length 5.
   - `group_materi_plasti_hypo_masin_structure`: DOUBLE, length 3.
   - `group_materi_plasti_hypo_masin_ocr`: DOUBLE, length 1.
   - `control_materi_plasti_hypo_masin_ocr_apply`: INTEGER, CONTROL class.
+  - `group_materi_plasti_hypo_masin_clay`: DOUBLE, length 5.
+  - `group_materi_plasti_hypo_masin_clay_advanced_parameters`: DOUBLE, length 4.
+  - `group_materi_plasti_hypo_masin_clay_avanced_direction`: INTEGER, length 1.
+  - `group_materi_plasti_hypo_masin_clay_ocr`: DOUBLE, length 1.
+  - `group_materi_plasti_hypo_masin_clay_structure`: DOUBLE, length 3.
+  - `control_materi_plasti_hypo_masin_clay_ocr_apply`: INTEGER, CONTROL class.
+  - `group_materi_plasti_hypo_strain_intergranular_masin_clay`: DOUBLE, length 7.
 - `check.cc` — requires `materi_stress` and `materi_history_variables`.
 - `Makefile` — `MASIN_SRC=masin.c`, `MASIN_OBJ=masin.o`, compiled like
   `hypo.c` (pure C, no f2c); `-lm` already in the link line.
@@ -32,13 +43,28 @@
 ## Implementation details
 
 - **Parameter mapping** (the 5-record values do NOT map 1:1 to `props`):
-  `group_materi_plasti_hypo_masin` = `phi_c lambda* kappa* N r` is read into a
-  temp array, then `props[0]=phi_c, props[2]=lambda*, props[3]=kappa*,
-  props[4]=N, props[5]=r`. `props[1]=p_t` is reserved for the cohesion shift
-  (kept 0). `GET_AND_CHECK` needs the explicit length (5).
+  `group_materi_plasti_hypo_masin` / `_clay` = `phi_c lambda* kappa* N r/nu_pp`
+  is read into a temp array, then `props[0]=phi_c, props[2]=lambda*,
+  props[3]=kappa*, props[4]=N, props[5]=r|nu_pp`. `props[1]=p_t` is reserved
+  for the cohesion shift (kept 0). `GET_AND_CHECK` needs the explicit
+  length (5).
+- **Clay anisotropic mapping** (P4-B2a):
+  - `_clay_advanced_parameters` = `alpha_G alpha_f ay oc` is read into
+    `props[6]`, `props[20]`, `props[22]`, `props[23]` (in that order).
+  - `_clay_avanced_direction` `diri` (0/1/2) maps to `props[17]=diri+1`.
+  - `_clay_structure` fills `props[7,8,9]=k,A,s_f`.
+  - `alpha_E`/`alpha_nu` stay 0 -> the kernel auto-derives them
+    (`alpha_E=alpha_G^1.25`, `alpha_nu=alpha_G`).
+  - In `masin.c`, `ay`/`oc` are read from `parms[22]`/`parms[23]` with
+    defaults 0.30/2.0 when absent (both in `get_tan` and `check_RKF`).
+- **Intergranular strain masin clay** (P4-B2b):
+  `_strain_intergranular_masin_clay` = `R A_g n_g m_rat beta_r chi [theta]`
+  maps to `props[10]=R, [13]=A_g, [14]=n_g, [15]=m_rat, [11]=beta_r,
+  [12]=chi`. `A_g>0` activates the kernel `istrain=1` branch (small-strain
+  stiffness). `theta` has no direct slot (the kernel interpolates with chi).
 - **Defaults** applied: `props[6]=1` (alpha_G isotropic), `props[9]=1`
   (s_f), `props[13]=0` (A_g: intergranular strain off), `props[17]=3`
-  (vertical direction z). Structure record fills `props[7,8,9]=k,A,s_f`.
+  (vertical direction z), `props[22]=props[23]=0` (ay/oc kernel defaults).
 - **History layout** (`materi_history_variables >= 8`):
   `hisv[0..5]`=intergranular strain, `hisv[6]`=e, `hisv[7]`=sensitivity.
   The Fortran reference defines `move_asv_hcea` (which negates the
@@ -64,11 +90,20 @@
   generated reference strain paths (`iso_path1.txt`, `iso_path2.txt`,
   `aniso_path2.txt`). The C port reproduces them to `5e-7` (the residual is
   only the Fortran print precision `E20.10`).
-- End-to-end: `validation-suite/test-2014/hypomasin1.dat` (single quad4,
-  laterally confined biaxial path). Targets: `sigxx=-340.7` (reference
-  -334.8, +1.8%), `hisv6=0.6333` (reference 0.6663, -5%). The difference
-  comes from the strain path of the single-element FE setup vs the ideal
-  driver path, NOT from the kernel.
+- End-to-end (single quad4, laterally confined biaxial path):
+  - `hypomasin1.dat` (basic law): `sigxx=-340.7` (reference -334.8, +1.8%),
+    `hisv6=0.6333` (reference 0.6663, -5%).
+  - `hypomasin2.dat` (clay anisotropic, `alpha_G=2`): `sigxx=-429.6`
+    (reference -418.6, +2.6%). The void ratio is identical to the isotropic
+    case (anisotropy only affects the deviatoric response).
+  - `hypomasin3.dat` (intergranular strain): `sigxx=-155.8`, `hisv6=0.6932`.
+    NOTE: the kernel matches the Fortran reference (sig11=-195.4 at 20
+    steps), but the FE end-to-end result differs (~20%) because the
+    intergranular stiffness is sensitive to the equilibrium iterations
+    inside each substep (each Newton iteration re-integrates with the delta
+    of the previous iteration but the stress of the start of the step).
+    The basic/anisotropic paths agree closely because they are not
+    path-history-sensitive in the same way.
 - Regression: hypo1-4 still pass (wolfersdorff unaffected).
 
 ## External dependencies
@@ -83,15 +118,21 @@
 
 - `mtesting=0` is hardcoded; the PLAXIS first-call loose-tolerance mode
   (`testing=1`) and the stiffness-only mode (`testing=2`) are not exposed.
-- The intergranular strain slots (`hisv[0..5]`) are reserved but inactive
-  (`A_g=0` forces the basic law); activating them requires `props[13]>0`
-  plus reading `group_materi_plasti_hypo_strain_intergranular_masin_clay`.
-- The clay anisotropic variant (alpha_G, alpha_E, alpha_nu, direction) is
-  hardcoded to isotropic defaults; the advanced/clay keywords are not
-  registered yet (P4-B2).
+- **Intergranular strain end-to-end discrepancy (P4-B2b)**: the kernel matches
+  the Fortran, but the FE result in `hypomasin3.dat` differs (~20%). Root
+  cause hypothesis: the equilibrium iterations inside each substep re-integrate
+  with the intergranular delta of the previous iteration while keeping the
+  stress of the start of the step, damping the small-strain stiffness. A fix
+  would pass the converged delta of the substep into the next iteration (or
+  store the intergranular tensor in `old_epi`/`new_epi` and use
+  `materi_strain_intergranular`). NOT yet done.
+- The visco extension (`group_materi_plasti_hypo_masin_clay_visco`, `Dr Iv`)
+  is NOT exposed; requires the visco UMAT port (P4-B3).
 - `materi_history_variables >= 8` is enforced with an explicit error; the
   check could be lifted to a softer warning for backwards compatibility.
 - The `OCR` initial-void-ratio formula duplicates the Fortran; verify against
   the Fortran when the OCR path is exercised.
+- `theta` in `_strain_intergranular_masin_clay` is accepted but unused (the
+  kernel interpolates with chi).
 - `masin.c` uses fixed `props[29]` and `statev[16]` sizes; refactor to
   structs if more variants (strength reduction, visco) are ported.

@@ -187,7 +187,8 @@ void hypoplasticity( long int element, long int gr,
 
   }   /* end hypoplasticity dispatch */
 
-  if ( db_active_index( GROUP_MATERI_PLASTI_HYPO_MASIN, gr, VERSION_NORMAL ) ) {
+  if ( db_active_index( GROUP_MATERI_PLASTI_HYPO_MASIN, gr, VERSION_NORMAL ) ||
+       db_active_index( GROUP_MATERI_PLASTI_HYPO_MASIN_CLAY, gr, VERSION_NORMAL ) ) {
 
       // Masin clay hypoplasticity (masin.c, port of umat_hcea.for)
       // ------------------------------------------------------------------
@@ -204,10 +205,13 @@ void hypoplasticity( long int element, long int gr,
     double mstress[6], mdstran[6], mstatev[16], mddsdde[36], mprops[29];
     double ocr=0., e0=0., mdt=0.;
     int merror=0, mtesting=0, i2, j2;
-    long int ocr_apply=-NO;
+    long int ocr_apply=-NO, hypo_masin_clay=0, diri=0;
+
+    if ( db_active_index( GROUP_MATERI_PLASTI_HYPO_MASIN_CLAY, gr, VERSION_NORMAL ) )
+      hypo_masin_clay = 1;
 
     if ( materi_history_variables<8 ) {
-      pri( "Error: materi_history_variables should be at least 8 for GROUP_MATERI_PLASTI_HYPO_MASIN." );
+      pri( "Error: materi_history_variables should be at least 8 for GROUP_MATERI_PLASTI_HYPO_MASIN(_CLAY)." );
       pri( "   hisv[0..5] = intergranular strain, hisv[6] = void ratio e, hisv[7] = sensitivity." );
       exit(TN_EXIT_STATUS);
     }
@@ -218,15 +222,19 @@ void hypoplasticity( long int element, long int gr,
     }
 
       // material parameters (29 props, raw layout of umat_hcea.for)
-      // group_materi_plasti_hypo_masin = phi_c lambda* kappa* N r
+      // group_materi_plasti_hypo_masin        = phi_c lambda* kappa* N r
+      // group_materi_plasti_hypo_masin_clay   = phi_c lambda* kappa* N nu_pp
       //   -> props[0]=phi_c, props[2]=lambda*, props[3]=kappa*,
-      //      props[4]=N, props[5]=r(nu_pp)
+      //      props[4]=N, props[5]=r/nu_pp
       //   props[1]=p_t is kept 0 (no cohesion shift)
     for ( i=0; i<29; i++ ) mprops[i] = 0.;
     length_wolfersdorff = 5;
     {
       double mpar[5];
-      db( GROUP_MATERI_PLASTI_HYPO_MASIN, gr, idum, mpar, length_wolfersdorff, VERSION_NORMAL, GET_AND_CHECK );
+      if ( hypo_masin_clay )
+        db( GROUP_MATERI_PLASTI_HYPO_MASIN_CLAY, gr, idum, mpar, length_wolfersdorff, VERSION_NORMAL, GET_AND_CHECK );
+      else
+        db( GROUP_MATERI_PLASTI_HYPO_MASIN, gr, idum, mpar, length_wolfersdorff, VERSION_NORMAL, GET_AND_CHECK );
       mprops[0] = mpar[0];   // phi_c [deg]
       mprops[2] = mpar[1];   // lambda*
       mprops[3] = mpar[2];   // kappa*
@@ -238,16 +246,60 @@ void hypoplasticity( long int element, long int gr,
     mprops[9] = 1.;                       // s_f (1 => no structure effect)
     mprops[13] = 0.;                      // A_g (0 => intergranular strain off)
     mprops[17] = 3.;                      // vertical direction (z in 3D)
-    if ( db_active_index( GROUP_MATERI_PLASTI_HYPO_MASIN_STRUCTURE, gr, VERSION_NORMAL ) ) {
-      length_intergranularstrain = 3;
-      db( GROUP_MATERI_PLASTI_HYPO_MASIN_STRUCTURE, gr, idum, &mprops[7], length_intergranularstrain, VERSION_NORMAL, GET_AND_CHECK );
-        // mprops[7,8,9] = k, A, s_f
+    mprops[22] = 0.;                      // ay (0 => 0.30 default in kernel)
+    mprops[23] = 0.;                      // oc (0 => 2.0 default in kernel)
+
+    if ( hypo_masin_clay ) {
+        // advanced parameters: alpha_G alpha_f ay oc
+      if ( db_active_index( GROUP_MATERI_PLASTI_HYPO_MASIN_CLAY_ADVANCED_PARAMETERS, gr, VERSION_NORMAL ) ) {
+        length_intergranularstrain = 4;
+        db( GROUP_MATERI_PLASTI_HYPO_MASIN_CLAY_ADVANCED_PARAMETERS, gr, idum, &mprops[6], length_intergranularstrain, VERSION_NORMAL, GET_AND_CHECK );
+          // mprops[6]=alpha_G, [20]=alpha_f, [22]=ay, [23]=oc
+      }
+        // direction diri: 0=1D(x), 1=2D(y), 2=3D(z) -> props[17]=diri+1
+      if ( db_active_index( GROUP_MATERI_PLASTI_HYPO_MASIN_CLAY_AVANCED_DIRECTION, gr, VERSION_NORMAL ) ) {
+        db( GROUP_MATERI_PLASTI_HYPO_MASIN_CLAY_AVANCED_DIRECTION, gr, &diri, ddum, ldum, VERSION_NORMAL, GET_AND_CHECK );
+        if ( diri>=0 && diri<=2 ) mprops[17] = diri + 1.;
+      }
+        // structure: k A s_f
+      if ( db_active_index( GROUP_MATERI_PLASTI_HYPO_MASIN_CLAY_STRUCTURE, gr, VERSION_NORMAL ) ) {
+        length_intergranularstrain = 3;
+        db( GROUP_MATERI_PLASTI_HYPO_MASIN_CLAY_STRUCTURE, gr, idum, &mprops[7], length_intergranularstrain, VERSION_NORMAL, GET_AND_CHECK );
+      }
+    }
+    else {
+        // basic model: optional structure
+      if ( db_active_index( GROUP_MATERI_PLASTI_HYPO_MASIN_STRUCTURE, gr, VERSION_NORMAL ) ) {
+        length_intergranularstrain = 3;
+        db( GROUP_MATERI_PLASTI_HYPO_MASIN_STRUCTURE, gr, idum, &mprops[7], length_intergranularstrain, VERSION_NORMAL, GET_AND_CHECK );
+          // mprops[7,8,9] = k, A, s_f
+      }
+    }
+      // intergranular strain masin clay: R Ag ng mrat beta_r chi [theta]
+      //   -> props[10]=R, [13]=A_g(G0), [14]=n_g, [15]=m_rat,
+      //      [11]=beta_r, [12]=chi. theta has no direct slot (kernel uses chi).
+    if ( db_active_index( GROUP_MATERI_PLASTI_HYPO_STRAIN_INTERGRANULAR_MASIN_CLAY, gr, VERSION_NORMAL ) ) {
+      double mgr[7];
+      length_wolfersdorff = 7;
+      db( GROUP_MATERI_PLASTI_HYPO_STRAIN_INTERGRANULAR_MASIN_CLAY, gr, idum, mgr, length_wolfersdorff, VERSION_NORMAL, GET_AND_CHECK );
+      mprops[10] = mgr[0];   // R
+      mprops[13] = mgr[1];   // A_g
+      mprops[14] = mgr[2];   // n_g
+      mprops[15] = mgr[3];   // m_rat
+      mprops[11] = mgr[4];   // beta_r
+      mprops[12] = mgr[5];   // chi
     }
       // initial void ratio / OCR: props[21] = e0, or OCR+10 if > 10
     e0 = new_hisv[6];
     if ( e0>0.001 ) mprops[21] = e0;
-    db( GROUP_MATERI_PLASTI_HYPO_MASIN_OCR, gr, idum, &ocr, ldum, VERSION_NORMAL, GET_IF_EXISTS );
-    db( CONTROL_MATERI_PLASTI_HYPO_MASIN_OCR_APPLY, gr, &ocr_apply, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+    if ( hypo_masin_clay ) {
+      db( GROUP_MATERI_PLASTI_HYPO_MASIN_CLAY_OCR, gr, idum, &ocr, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+      db( CONTROL_MATERI_PLASTI_HYPO_MASIN_CLAY_OCR_APPLY, gr, &ocr_apply, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+    }
+    else {
+      db( GROUP_MATERI_PLASTI_HYPO_MASIN_OCR, gr, idum, &ocr, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+      db( CONTROL_MATERI_PLASTI_HYPO_MASIN_OCR_APPLY, gr, &ocr_apply, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+    }
     if ( ocr_apply==-YES && ocr>0. ) mprops[21] = ocr + 10.;
 
       // strain increment: 3x3 (row-major) -> Voigt6
@@ -319,6 +371,8 @@ void hypoplasticity( long int element, long int gr,
 
     array_add( new_sig, stress, new_sig, MDIM*MDIM );
     array_subtract( new_sig, rotated_old_sig, new_sig, MDIM*MDIM );
+
+
 
     (void)mhis;
 

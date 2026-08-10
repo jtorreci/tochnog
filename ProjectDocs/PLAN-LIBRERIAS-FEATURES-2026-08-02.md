@@ -294,12 +294,53 @@ El índice es limpio: cada entrada de la sección 6 "data records" es una keywor
       e 0.6333 vs 0.6663). Pendiente P4-B2: variante clay anisotrópica
       (alpha_G/alpha_E/alpha_nu/dirección), intergranular strain masin, visco,
       y las variantes strength-reduction/visco del UMAT (paquetes descargados).
+      **P4-B2 (2026-08-10)**: `group_materi_plasti_hypo_masin_clay` (anisotrópico,
+      5 params) + `_clay_advanced_parameters` (αG αf ay oc) +
+      `_clay_avanced_direction` (diri) + `_clay_ocr` + `_clay_structure` +
+      `control_*_clay_ocr_apply` + `group_materi_plasti_hypo_strain_intergranular_masin_clay`
+      (R Ag ng mrat βr χ θ) IMPLEMENTADOS. Tests: hypomasin2.dat (αG=2: sigxx
+      -429.6 vs -418.6 ref), hypomasin3.dat (intergranular: kernel OK, end-to-end
+      con discrepancia ~20% por iteraciones del equilibrio — pendiente de fix).
+      **P4-B3 PENDIENTE**: visco (`_clay_visco` Dr Iv, requiere port de
+      umat_visco.f), y variantes strength-reduction del UMAT.
 - [ ] `group_materi_plasti_tension_direct_normal` (+ `_automatic`) — requiere `group_materi_plasti_tension_direct` (no existe).
       `group_materi_plasti_mohr_coul_direct_normal` (+ `_automatic`) — requiere `group_interface_materi_plasti_mohr_coul_direct`.
 - [ ] `group_groundflow_permeability_vertical_stress`.
 - [ ] `materi_plasti_hypo_*` variantes del kernel hipoplástico (lowangles, cohesion,
       intergranularstrain, pressuredependentvoidratio, wolfersdorff) — registradas,
       verificar lógica y tests (P4-B).
+
+#### P4-E — Otros modelos de suelo (SoilModels.com) — METODOLOGÍA MASIN
+Metodología establecida en P4-B1 (port fiel del UMAT Fortran autorizado → C puro
+→ validación numérica a ~1e-6 contra el original vía driver de elemento único →
+integración con keywords/dispatch/tests → documentación). Infraestructura
+reutilizable: `masin.c` como plantilla de kernel, hypoplas.cc como patrón de
+dispatch, drivers de validación en validation-suite/reference-masin/.
+
+El usuario descarga el UMAT de SoilModels a petición (login gratuito). Orden
+propuesto por demanda práctica:
+- [ ] `SANISAND` (Dafalias & Manzari, arena no-cohesiva, UMAT disponible) — P4-E1.
+- [ ] `PM4Sand` (Boulanger & Ziotopoulou, arenas licuefactables) — P4-E2.
+- [ ] `Sand Hypoplasticity` (Gudehus/Bauer, wolfersdorff ya cubierto en hypo.c —
+      solo validar) — P4-E3.
+- [ ] `EMC` / otros (ISA, barodesy, viscohypoplasticity) según demanda — P4-E4.
+- [ ] `hypo.c` refactor a C idiomático (ver P4-F) ANTES de portar más kernels
+      f2c: cada nuevo modelo se portaría directo a C limpio.
+
+#### P4-F — Refactor de código adaptado de Fortran (hypo.c) — C idiomático
+`hypo.c` es un port f2c→C puro (wolfersdorff, 1380 líneas, `static` locals,
+notación de punteros f2c, `f2c.h` con tipos `integer`/`doublereal`). Objetivos:
+- [ ] Eliminar dependencia de `f2c.h` (tipos propios `long int`/`double`,
+      funciones `hypo_*` con firma explícita). El binario ya NO enlaza libf2c
+      (0 símbolos); `f2c.h` solo aporta typedefs.
+- [ ] Reemplazar `static` locals y paso por referencia estilo f2c por structs
+      de estado por punto de integración (reentrante, sin estado global).
+- [ ] Eliminar macros `min`/`max` de f2c.h que rompen C++ estándar
+      (tochnog.h:45 ya documenta el workaround).
+- [ ] Beneficio esperado de velocidad: bajo para el propio wolfersdorff (el
+      código numérico es el mismo); el gana está en legibilidad, reentrancia y
+      en los kernels nuevos (masin.c ya es C limpio). La validación de
+      regresión: hypo1-4 + hypomasin1.
 
 #### P5 — Post-proceso y salida (medio)
 - [ ] `control_print_history_smooth`, `control_print_gid_*` (varios),

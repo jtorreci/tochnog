@@ -324,8 +324,10 @@ static void get_tan(double *deps, double *sig, double *q, int nasv,
   if (sin2phim < 0) sin2phim = 0;
 
   cos2phic = 1 - sin(phi)*sin(phi);
-  ashape = 0.30;
-  ocrcs = 2.0;
+  ashape = parms[22];          /* ay, default 0.30 */
+  if (ashape < 1.0e-6) ashape = 0.30;
+  ocrcs = parms[23];           /* oc, default 2.0 */
+  if (ocrcs < 1.0e-6) ocrcs = 2.0;
   npow = -log(cos2phic)/log(ocrcs) + ashape*(sin2phim - sin(phi)*sin(phi));
   fdsbs = ocrcs*pow(1 - sin2phim, 1/npow);
 
@@ -643,8 +645,10 @@ static void check_RKF(int *error_RKF, double *y, int ny, int nasv,
   OCR = -sensit*exp((parms[4] - log(1 + y[6+6]))/parms[2])/pp;
   cos2phic = 1 - sin(parms[0])*sin(parms[0]);
 
-  ashape = 0.3;
-  ocrcs = 2.;
+  ashape = parms[22];
+  if (ashape < 1.0e-6) ashape = 0.3;
+  ocrcs = parms[23];
+  if (ocrcs < 1.0e-6) ocrcs = 2.;
   omega = -log(cos2phic)/log(ocrcs) + ashape*(sin2phim - sin(parms[0])*sin(parms[0]));
   fSBS = sin2phim + pow(1/OCR, omega) - 1;
 
