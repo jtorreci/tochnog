@@ -42,6 +42,8 @@ control_materi_plasti_hypo_masin_clay_ocr_apply <element_group> -yes|-no
 group_materi_plasti_hypo_masin_clay_structure <element_group>  k A s_f
 
 group_materi_plasti_hypo_masin_clay_visco <element_group>
+                        Dr Iv
+group_materi_plasti_hypo_masin_clay_visco_jm <element_group>
                         ocparam beta_deg ksi gama_deg Dref
 
 group_materi_plasti_hypo_strain_intergranular_masin_clay <element_group>
@@ -78,6 +80,8 @@ group_materi_plasti_hypo_strain_intergranular_masin_clay <element_group>
 | `ksi` | Visco exponent controlling the flow-direction weighting. |
 | `gama_deg` | Flow-direction deviation angle, degrees (0 = auto). |
 | `Dref` | Visco reference strain rate; activates the visco response (`> 0`). |
+| `Dr` | Reference strain rate of the Niemunis visco law (e.g. 1e-6). |
+| `Iv` | Viscosity index of the Niemunis visco law (e.g. 0.1). |
 
 Defaults applied by the implementation when the optional records are absent:
 `p_t = 0` (no cohesion shift), `alpha_G = 1` (isotropic),
@@ -124,9 +128,14 @@ intergranular-strain variant (`hypomasin3.dat`) are also regression-tested.
 - The intergranular-strain record activates the small-strain stiffness
   enhancement; `theta` is accepted for compatibility but has no direct slot
   in the kernel (chi is used).
-- The visco extension (`_clay_visco`, Jerman-Masin 2020) uses the same
-  `_clay` base parameters plus `ocparam beta_deg ksi gama_deg Dref`. With
-  `Dref > 0` the stress rate is scaled by the reference rate, so the model
-  shows creep/relaxation under a held load or strain rate. It requires
-  `materi_history_variables 10` (2 extra state slots). Regression:
-  `validation-suite/test-2014/hypomasin4.dat`.
+- The visco extension comes in two formulations:
+  - `_clay_visco Dr Iv` — the **Niemunis visco law** from the professional
+    manual (creep rate `Dr*(1/OCR)^(1/Iv)`). The internal parameters
+    (`ee0 pe0 lambda betaR`) are derived from the clay defaults. Requires
+    `materi_history_variables 10`. Regression:
+    `validation-suite/test-2014/hypomasin5.dat`.
+  - `_clay_visco_jm ocparam beta_deg ksi gama_deg Dref` — the Jerman-Masin
+    2020 formulation (rate scaling by `Dref`, shear-band rotation). The
+    manual documents only `Dr Iv` for `_clay_visco`; the JM variant is kept
+    under its own keyword. Regression: `hypomasin4.dat`.
+  Both require `materi_history_variables 10`.

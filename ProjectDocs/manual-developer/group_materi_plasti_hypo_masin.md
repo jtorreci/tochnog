@@ -27,6 +27,14 @@
   - `masin_visco_umat()` reduces `phi_c` by `beta` (shear-band softening)
     and reads e0/OCR from `props[27]`.
   - Validated against `umat_visco.f`: identical `sig11=-82.5684` at step 20.
+  - `masin_niemunis_visco_umat()` — the **Niemunis visco law** (`Dr Iv`)
+    implemented from the professional manual theory (no reference UMAT
+    exists; the soilmodels "Niemunis" page is the unrelated High-Cycle
+    Accumulation model). Computes `L = fb*Lhat`, the flow rule `m`, the
+    Niemunis `OCR = pe/pe+` and the creep rate `Dr*(1/OCR)^(1/Iv)`. The
+    internal parameters default to clay values: `lambda=lambda*`,
+    `ee0=e_initial`, `pe0=p_initial`, `betaR=1`. The creep exponent is
+    clamped (`creep_rate <= 1e3*Dr`) to keep the simplified defaults stable.
 - `hypoplas.cc` — dispatch block for `GROUP_MATERI_PLASTI_HYPO_MASIN`:
   reads parameters, converts tensors 3x3(row-major) to/from Voigt6, maps
   `hisv` to/from `statev`, calls `masin_umat()`, writes back
@@ -118,10 +126,13 @@
     of the previous iteration but the stress of the start of the step).
     The basic/anisotropic paths agree closely because they are not
     path-history-sensitive in the same way.
-  - `hypomasin4.dat` (visco, `Dref=0.5`): `sigxx=-82.88` (Fortran reference
-    -82.57, +0.4%), `hisv6=0.6932`. The visco kernel relaxes the stress
-    under constant strain rate, matching the Fortran `umat_visco.f`
+  - `hypomasin4.dat` (visco JM, `Dref=0.5`): `sigxx=-82.88` (Fortran
+    reference -82.57, +0.4%), `hisv6=0.6932`. The JM kernel relaxes the
+    stress under constant strain rate, matching the Fortran `umat_visco.f`
     (identical at the driver level: sig11=-82.5684).
+  - `hypomasin5.dat` (Niemunis visco, `Dr=1e-6 Iv=0.1`): `sigxx=-104.1`.
+    No numeric reference exists (theory-only implementation); the test pins
+    the value and guards against regressions of the creep formulation.
 - Regression: hypo1-4 still pass (wolfersdorff unaffected).
 
 ## External dependencies
@@ -144,13 +155,12 @@
   would pass the converged delta of the substep into the next iteration (or
   store the intergranular tensor in `old_epi`/`new_epi` and use
   `materi_strain_intergranular`). NOT yet done.
-- The visco extension (`group_materi_plasti_hypo_masin_clay_visco`,
-  `ocparam beta_deg ksi gama_deg Dref`) is IMPLEMENTED via `masin_visco.c`
-  (P4-B3). Interface note: the professional manual documents `Dr Iv` for the
-  classic creep-rate formulation, but the ported UMAT uses the newer
-  Jerman-Masin rate scaling (`Dref`); the two are mathematically different
-  (not reducible to each other), and this integration exposes the UMAT
-  formulation.
+- The Niemunis visco law (`Dr Iv`) is implemented from the manual theory
+  with clay-derived defaults for `ee0/pe0/lambda/betaR` (the manual exposes
+  only `Dr Iv`). There is NO reference UMAT to validate it numerically; the
+  regression test pins the behaviour and the creep exponent is clamped for
+  stability. If a reference implementation is later found, it should be
+  ported and validated the same way as the JM kernel.
 - `materi_history_variables >= 8` is enforced with an explicit error; the
   check could be lifted to a softer warning for backwards compatibility.
 - The `OCR` initial-void-ratio formula duplicates the Fortran; verify against

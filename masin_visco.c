@@ -1159,3 +1159,170 @@ void masin_visco_umat(double *stress, double *statev, double *ddsdde,
 
   (void)theta; (void)ameanstress;
 }
+
+/* ------------------------------------------------------------------ */
+/* Niemunis visco law (Dr, Iv) — theory from the professional manual   */
+/* (section "Niemunis visco law", the extension used by                */
+/*  group_materi_plasti_hypo_masin_clay_visco Dr Iv).                  */
+/*                                                                     */
+/*   stress rate:  sig_dot = M:D - L:eps_vis                          */
+/*   L = fb*Lhat,  fb = -sigkk / ((1+a^2/3)*kappa)                    */
+/*   Lhat = F^2 I + a^2 shat s_hat + b^2 (I - 1/3 II)                */
+/*   eps_vis = Dr * mhat * (1/OCR)^(1/Iv)                              */
+/*   m = -(F^2/a^2 (shat + shat*) + (shat:shat) shat*                 */
+/*        - shat (shat:shat*))                                         */
+/*   OCR = pe / pe+                                                    */
+/*                                                                     */
+/* Defaults derived from the clay parameters (the manual exposes only  */
+/* Dr Iv): kappa=lambda*, ee0=e_initial, pe0=p_initial, betaR=1.       */
+/* props: [0]=phi_c, [2]=lambda*, [3]=kappa*(unused, see default),     */
+/*        [5]=nu_pp, [17]=vertical, [25]=Dr, [26]=Iv, [27]=e0          */
+/* ------------------------------------------------------------------ */
+void masin_niemunis_visco_umat(double *stress, double *statev,
+  double *ddsdde, double *dstran, double dtime, double *props, int nprops,
+  int testing, int *error)
+{
+  double phi, p_t, lam_star, nu_pp, vertical;
+  double Dr, Iv, e0, evoid;
+  double sig[6], sig_star[6], sig_rot_tmp[6], deps[6];
+  double I1, I2, I3, pp, qq, cos3t;
+  double F, F2, a, a2, b2, fb;
+  double sig_hat[6], sig_dev[6], pmean, s2;
+  double m[6], mnorm, mhat[6];
+  double pe, pe0, peplus, eta, M, betaR, kappa, lambda;
+  double OCR, creep_rate, Lhat[36], L[36], Ldeps[6];
+  int i, j;
+  double vnu;
+
+  (void)testing; (void)nprops;
+
+  phi = props[0]*PI/180.0;
+  p_t = props[1];
+  lam_star = props[2];
+  nu_pp = props[5];
+  vertical = props[17];
+  Dr = props[25];
+  Iv = props[26];
+  e0 = props[27];
+  evoid = statev[6];
+
+  /* defaults from the clay parameters */
+  lambda = lam_star;
+  kappa = lam_star;   /* kappa not exposed by the clay; use lambda* */
+  betaR = 1.0;
+  pe0 = -(stress[0]+stress[1]+stress[2])/3.0;
+  if (pe0 <= 0) pe0 = 1.0;
+  if (evoid <= 0) evoid = e0;
+
+  /* current stress (effective), axis-shifted */
+  sig[0]=stress[0]; sig[1]=stress[1]; sig[2]=stress[2];
+  sig[3]=stress[3]; sig[4]=stress[4]; sig[5]=stress[5];
+  sig_star[0]=sig[0]-p_t; sig_star[1]=sig[1]-p_t; sig_star[2]=sig[2]-p_t;
+  sig_star[3]=sig[3]; sig_star[4]=sig[4]; sig_star[5]=sig[5];
+
+  inv_sig(sig_star, &pp, &qq, &cos3t, &cos3t, &I1, &I2, &I3,
+    &I1, &I2, &I3, sig_rot_tmp, props);
+  /* NOTE: inv_sig is the rotated version; for the Niemunis law we
+     use the non-rotated invariants I1,I2,I3 (rotated outputs ignored). */
+
+  pmean = -I1/3.0;
+  if (pmean < 1.0e-10) { *error = 10; return; }
+
+  /* Matsuoka-Nakai F */
+  if ((I3 + I1*I2) != 0) {
+    double sin2phim = (9*I3 + I1*I2)/(I3 + I1*I2);
+    if (sin2phim > 1) sin2phim = 1;
+    if (sin2phim < 0) sin2phim = 0;
+    F = sqrt(sin2phim);
+  } else {
+    F = 1.0;
+  }
+  F2 = F*F;
+
+  a = sqrt(3.0)*(3.0 - sin(phi))/(2.0*sqrt(2.0)*sin(phi));
+  a2 = a*a;
+  b2 = (1.0 + a2/3.0)*(1.0 - 2.0*nu_pp)/(1.0 + nu_pp) - 1.0;
+  if (b2 < 0) b2 = 0.0;
+
+  fb = -I1/((1.0 + a2/3.0)*kappa);
+
+  /* normalised stress shat = sig_star / I1 */
+  for (i = 0; i < 6; i++) sig_hat[i] = sig_star[i]/I1;
+  sig_dev[0]=sig_hat[0]-1.0/3.0; sig_dev[1]=sig_hat[1]-1.0/3.0;
+  sig_dev[2]=sig_hat[2]-1.0/3.0;
+  sig_dev[3]=sig_hat[3]; sig_dev[4]=sig_hat[4]; sig_dev[5]=sig_hat[5];
+
+  /* Lhat = F^2 I + a^2 shat shat + b^2 (I - 1/3 II)  in Voigt */
+  for (i = 0; i < 36; i++) Lhat[i] = 0.0;
+  Lhat[0*6+0]=1; Lhat[1*6+1]=1; Lhat[2*6+2]=1;
+  Lhat[3*6+3]=1; Lhat[4*6+4]=1; Lhat[5*6+5]=1;
+  for (i = 0; i < 6; i++)
+    for (j = 0; j < 6; j++) {
+      double Kron[6];
+      Kron[0]=1; Kron[1]=1; Kron[2]=1; Kron[3]=0; Kron[4]=0; Kron[5]=0;
+      Lhat[i*6+j] = F2*Lhat[i*6+j] +
+        a2*sig_hat[i]*sig_hat[j] +
+        b2*( (i==j?1.0:0.0) - (1.0/3.0)*Kron[i]*Kron[j] );
+    }
+
+  /* L = fb * Lhat */
+  for (i = 0; i < 36; i++) L[i] = fb*Lhat[i];
+
+  /* flow rule m */
+  s2 = 0.0;
+  for (i = 0; i < 6; i++) s2 += sig_dev[i]*sig_dev[i];
+  for (i = 0; i < 6; i++)
+    m[i] = -(F2/a2)*(sig_hat[i] + sig_dev[i]) + s2*sig_dev[i] -
+      sig_hat[i]*s2;
+
+  mnorm = 0.0;
+  for (i = 0; i < 6; i++) mnorm += m[i]*m[i];
+  if (mnorm > 1.0e-12) mnorm = sqrt(mnorm);
+  else mnorm = 1.0;
+  for (i = 0; i < 6; i++) mhat[i] = m[i]/mnorm;
+
+  /* OCR = pe / pe+  (Niemunis) */
+  pe = pe0*exp((1.0/lambda)*log((1.0+e0)/(1.0+evoid)));
+  M = 6.0*F*sin(phi)/(3.0 - sin(phi));
+  eta = qq/(M*pmean);
+  if (eta < 1.0) {
+    peplus = pmean/(betaR - 1.0)*
+      (betaR*sqrt(1.0 + eta*eta*(betaR*betaR - 1.0)) - 1.0);
+  } else {
+    peplus = pmean*pow(1.0 + eta*eta, (1.0 + betaR)/2.0);
+  }
+  if (peplus > 1.0e-12) OCR = pe/peplus;
+  else OCR = 1.0;
+  if (OCR <= 0) OCR = 1.0e-6;
+
+  /* creep rate; clamp the exponent to keep the model stable. In the
+     Niemunis theory OCR>=1 in normal use (1/OCR <= 1); the clamp only
+     protects against pathological states from the simplified defaults. */
+  creep_rate = Dr*pow(1.0/OCR, 1.0/Iv);
+  if (creep_rate > 1.0e3*Dr) creep_rate = 1.0e3*Dr;
+
+  /* sig_dot = L:D - L:eps_vis ; eps_vis = creep_rate * mhat */
+  for (i = 0; i < 6; i++) {
+    deps[i] = dstran[i]/dtime;   /* strain rate */
+    Ldeps[i] = 0.0;
+    for (j = 0; j < 6; j++) Ldeps[i] += L[i*6+j]*deps[j];
+  }
+  for (i = 0; i < 6; i++) {
+    double Lm = 0.0;
+    for (j = 0; j < 6; j++) Lm += L[i*6+j]*mhat[j];
+    stress[i] += (Ldeps[i] - Lm*creep_rate)*dtime;
+  }
+
+  /* void ratio evolution: de = (1+e)*tr(D) - visco volumetric part */
+  {
+    double trD = (deps[0]+deps[1]+deps[2])*dtime;
+    double trm_vis = (mhat[0]+mhat[1]+mhat[2])*creep_rate*dtime;
+    evoid += (1.0+evoid)*(trD - trm_vis);
+  }
+  statev[6] = evoid;
+
+  /* tangent: use L (elastic-like), scaled by (1 - creep sensitivity) */
+  for (i = 0; i < 36; i++) ddsdde[i] = L[i];
+
+  (void)vertical;
+}

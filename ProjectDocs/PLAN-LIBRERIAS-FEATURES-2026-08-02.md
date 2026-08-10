@@ -301,14 +301,17 @@ El índice es limpio: cada entrada de la sección 6 "data records" es una keywor
       (R Ag ng mrat βr χ θ) IMPLEMENTADOS. Tests: hypomasin2.dat (αG=2: sigxx
       -429.6 vs -418.6 ref), hypomasin3.dat (intergranular: kernel OK, end-to-end
       con discrepancia ~20% por iteraciones del equilibrio — pendiente de fix).
-      **P4-B3 (2026-08-10)**: `group_materi_plasti_hypo_masin_clay_visco`
+      **P4-B3 (2026-08-10)**: `group_materi_plasti_hypo_masin_clay_visco_jm`
       (ocparam beta_deg ksi gama_deg Dref) IMPLEMENTADO via `masin_visco.c`
       (port C de umat_visco.f, Jerman-Masin 2020, validado: sig11 -82.5684
       idéntico al Fortran). Test hypomasin4.dat (sigxx -82.88 vs -82.57).
-      Nota interfaz: el manual profesional documenta `Dr Iv` (creep rate
-      clásico); el UMAT portado usa `Dref` (escalado de tasa, formulación
-      nueva) — no son equivalentes. El visco del manual (`Dr Iv`) queda como
-      posible trabajo futuro si se desea.
+      **P4-B4 (2026-08-10)**: `group_materi_plasti_hypo_masin_clay_visco`
+      (Dr Iv, Niemunis visco law del manual) IMPLEMENTADO desde la teoría
+      (sin UMAT autorizado — el "Niemunis" de soilmodels es el HCA 2005, no
+      relacionado). Kernel masin_niemunis_visco_umat con defaults derivados
+      del clay (lambda=λ*, ee0=e0, pe0=p0, betaR=1), creep clamp por
+      estabilidad. Test hypomasin5.dat (sigxx -104.1). Refactor interfaz:
+      Dref movido a _clay_visco_jm para dejar _clay_visco fiel al manual.
 - [ ] `group_materi_plasti_tension_direct_normal` (+ `_automatic`) — requiere `group_materi_plasti_tension_direct` (no existe).
       `group_materi_plasti_mohr_coul_direct_normal` (+ `_automatic`) — requiere `group_interface_materi_plasti_mohr_coul_direct`.
 - [ ] `group_groundflow_permeability_vertical_stress`.

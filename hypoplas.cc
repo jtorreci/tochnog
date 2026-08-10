@@ -46,6 +46,11 @@ extern "C"
     double *dstran, double dtime, double *props, int nprops, int testing,
     int *error );
 
+extern "C" 
+  void masin_niemunis_visco_umat( double *stress, double *statev,
+    double *ddsdde, double *dstran, double dtime, double *props, int nprops,
+    int testing, int *error );
+
 void hypoplasticity( long int element, long int gr,
   long int formulation, double old_hisv[], double new_hisv[], 
   double old_unknowns[], double new_unknowns[], 
@@ -211,11 +216,14 @@ void hypoplasticity( long int element, long int gr,
     double ocr=0., e0=0., mdt=0.;
     int merror=0, mtesting=0, i2, j2;
     long int ocr_apply=-NO, hypo_masin_clay=0, hypo_masin_visco=0, diri=0;
+    long int hypo_masin_visco_jm=0;
 
     if ( db_active_index( GROUP_MATERI_PLASTI_HYPO_MASIN_CLAY, gr, VERSION_NORMAL ) )
       hypo_masin_clay = 1;
     if ( db_active_index( GROUP_MATERI_PLASTI_HYPO_MASIN_CLAY_VISCO, gr, VERSION_NORMAL ) )
       hypo_masin_visco = 1;
+    if ( db_active_index( GROUP_MATERI_PLASTI_HYPO_MASIN_CLAY_VISCO_JM, gr, VERSION_NORMAL ) )
+      hypo_masin_visco_jm = 1;
 
     if ( materi_history_variables<8 ) {
       pri( "Error: materi_history_variables should be at least 8 for GROUP_MATERI_PLASTI_HYPO_MASIN(_CLAY)." );
@@ -309,21 +317,32 @@ void hypoplasticity( long int element, long int gr,
     }
     if ( ocr_apply==-YES && ocr>0. ) mprops[21] = ocr + 10.;
 
-      // visco parameters (Jerman-Masin 2020): ocparam beta_deg ksi gama_deg Dref
-      //   -> props[21]=ocparam, [22]=beta_deg, [23]=ksi, [24]=gama_deg,
-      //      [25]=Dref; e0/OCR goes to props[27] for the visco kernel.
+      // visco parameters:
+      //   _clay_visco (Dr Iv)     -> props[25]=Dr, props[26]=Iv  (Niemunis law)
+      //   _clay_visco_jm (Dref)   -> props[21]=ocparam, [22]=beta_deg, [23]=ksi,
+      //                              [24]=gama_deg, [25]=Dref (Jerman-Masin)
+      //   e0/OCR goes to props[27] for the visco kernels.
     if ( hypo_masin_visco ) {
+      double mvisco[2];
+      length_wolfersdorff = 2;
+      db( GROUP_MATERI_PLASTI_HYPO_MASIN_CLAY_VISCO, gr, idum, mvisco,
+        length_wolfersdorff, VERSION_NORMAL, GET_AND_CHECK );
+      mprops[25] = mvisco[0];   // Dr
+      mprops[26] = mvisco[1];   // Iv
+      mprops[27] = e0;
+      if ( ocr_apply==-YES && ocr>0. ) mprops[27] = ocr + 10.;
+    }
+    if ( hypo_masin_visco_jm ) {
       double mvisco[5];
       length_wolfersdorff = 5;
-      db( GROUP_MATERI_PLASTI_HYPO_MASIN_CLAY_VISCO, gr, idum, mvisco,
+      db( GROUP_MATERI_PLASTI_HYPO_MASIN_CLAY_VISCO_JM, gr, idum, mvisco,
         length_wolfersdorff, VERSION_NORMAL, GET_AND_CHECK );
       mprops[21] = mvisco[0];   // ocparam
       mprops[22] = mvisco[1];   // beta_deg
       mprops[23] = mvisco[2];   // ksi
       mprops[24] = mvisco[3];   // gama_deg
       mprops[25] = mvisco[4];   // Dref
-      mprops[27] = mprops[21];  // e0 placeholder (overwritten below)
-      if ( e0>0.001 ) mprops[27] = e0;
+      mprops[27] = e0;
       if ( ocr_apply==-YES && ocr>0. ) mprops[27] = ocr + 10.;
     }
 
@@ -359,6 +378,9 @@ void hypoplasticity( long int element, long int gr,
 
       // stress contribution by Masin hypoplasticity
     if ( hypo_masin_visco )
+      masin_niemunis_visco_umat( mstress, mstatev, mddsdde, mdstran, mdt,
+        mprops, 29, mtesting, &merror );
+    else if ( hypo_masin_visco_jm )
       masin_visco_umat( mstress, mstatev, mddsdde, mdstran, mdt, mprops, 29,
         mtesting, &merror );
     else

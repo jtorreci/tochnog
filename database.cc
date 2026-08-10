@@ -2657,9 +2657,15 @@ void db_initialize( long int dof_type[], long int dof_label[] )
 
   strcpy(name[GROUP_MATERI_PLASTI_HYPO_MASIN_CLAY_VISCO],"group_materi_plasti_hypo_masin_clay_visco");
   type[GROUP_MATERI_PLASTI_HYPO_MASIN_CLAY_VISCO] = DOUBLE_PRECISION;
-  data_length[GROUP_MATERI_PLASTI_HYPO_MASIN_CLAY_VISCO] = 5;
+  data_length[GROUP_MATERI_PLASTI_HYPO_MASIN_CLAY_VISCO] = 2;
   data_class[GROUP_MATERI_PLASTI_HYPO_MASIN_CLAY_VISCO] = MATERI;
   data_required[GROUP_MATERI_PLASTI_HYPO_MASIN_CLAY_VISCO] = GROUP_TYPE;
+
+  strcpy(name[GROUP_MATERI_PLASTI_HYPO_MASIN_CLAY_VISCO_JM],"group_materi_plasti_hypo_masin_clay_visco_jm");
+  type[GROUP_MATERI_PLASTI_HYPO_MASIN_CLAY_VISCO_JM] = DOUBLE_PRECISION;
+  data_length[GROUP_MATERI_PLASTI_HYPO_MASIN_CLAY_VISCO_JM] = 5;
+  data_class[GROUP_MATERI_PLASTI_HYPO_MASIN_CLAY_VISCO_JM] = MATERI;
+  data_required[GROUP_MATERI_PLASTI_HYPO_MASIN_CLAY_VISCO_JM] = GROUP_TYPE;
 
   strcpy(name[CONTROL_MATERI_PLASTI_HYPO_MASIN_CLAY_OCR_APPLY],"control_materi_plasti_hypo_masin_clay_ocr_apply");
   type[CONTROL_MATERI_PLASTI_HYPO_MASIN_CLAY_OCR_APPLY] = INTEGER;
