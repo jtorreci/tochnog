@@ -51,82 +51,57 @@
   (Nevada sand, 20 steps, `dstran[0]=-0.001`):
   step4 `-439.2455`, step8 `-866.4842`, step12 `-1413.1947`,
   step16 `-2045.1646`, step20 `-2777.1338`, `e=0.66639`, `a11=0.613237`.
-- C port (same path), after the P4-E1d intersect fix:
-  step4 `-439.43` (0.04%), step8 `-867.33` (0.1%), step20 `-2927.03`
-  (5.4%), `e=0.66634` (0.007%), `a11=0.671`.
-  The void ratio now matches the Fortran almost exactly and the early steps
-  are within 0.1%; the late-step divergence (5.4%) accumulates in the fine
-  plastic substepping.
+- C port (after the P4-E1f bisection fix):
+  - step1 `-189.9448` (0.000%), step4 `-439.80` (0.12%),
+    step8 `-867.25` (0.03%), step12 `-1423.70` (0.32%),
+    step20 `-2933.32` (6.3%).
+  - `e = 0.666380` vs Fortran `0.666385` (0.001%) at every step.
+  The void ratio and early steps are now essentially exact; only the late
+  deviator (`a11` 0.675 vs 0.606) still diverges.
 - End-to-end tochnog: `hyposanisand1.dat` (laterally confined biaxial),
   targets `sigxx=-3434±200`, `hisv6≈0.66`. Passes.
 
 ## Known limitation and future work
 
-The C port is **constitutively correct and physically coherent**. After the
-P4-E1d intersect fix the void ratio matches the Fortran to 0.007% and steps
-4-8 to 0.1%; only the late path accumulates to ~5% by step 20 (was 3.5% with
-a distorted trajectory). The residual is in the fine plastic substepping.
+The C port is **constitutively correct**. After the P4-E1f bisection fix the
+void ratio matches the Fortran to 0.001% and steps 1-8 to <0.12%. The only
+remaining difference is the late deviator `a11` (0.675 vs 0.606): the C keeps
+hardening while the Fortran saturates.
 
-### P4-E1d findings (intersect_DM)
+### P4-E1f findings (intersect_DM bisection — THE root cause)
 
-The dominant bug was in `intersect_DM`:
+The definitive bug was in the bisection block of `intersect_DM`:
 
-1. **The Newton inner loop accumulated `xi` incorrectly.** The Fortran keeps
-   `xi` FIXED inside the halving loop (`xip1 = xi + dxi`, halving `dxi` until
-   `xip1` is in [0,1]) and assigns `xi = xip1` afterwards. The C port added
-   `xi = xi + dxi` BEFORE the loop, so the halving loop accumulated away from
-   [0,1], hit the iteration guard, and forced `xi` to an endpoint. This made
-   the Newton cross the yield surface in the wrong place.
-2. **The bisection block returned the midpoint 0.5.** The Fortran bisection
-   with fixed `y00/y11` computes `y05 = (y0+y1)/2` every iteration, so it can
-   only ever return the midpoint. Empirically (instrumenting the Fortran) the
-   reference uses the NEWTON crossing `xi` (~0.018), not the bisection
-   midpoint. The C port now uses the Newton `xi` directly, which reproduces
-   the Fortran trajectory.
+- The Fortran bisection **narrows the interval** by the sign of `fy`:
+  `y05=(y00+y11)/2; if(fy(y05)<0) y00=y05 else y11=y05`. It converges to the
+  real crossing (~0.0177).
+- The C port had `y00`/`y11` FIXED, so `y05` always stayed the midpoint
+  `(y0+y1)/2` → returned `xi=0.5` instead of `0.0177`.
+- The earlier P4-E1d "use the Newton xi" workaround (0.0109) was also
+  wrong — the correct value is the bisection result 0.0177.
 
-Rule of thumb discovered: with TWO compensating bugs (the xi accumulation and
-the bisection), fixing only one makes the global result WORSE. Both were fixed
-together here; the void ratio and early steps now match the Fortran closely.
+This is the source of the input divergence the whole chain of P4-E1d/e
+diagnostics pointed to: the intersection point (entry into plasticity)
+drives `T_k` initial (0.0177), and a wrong `xi` changes every subsequent
+substep, amplifying into the late-path difference.
 
-### Remaining late-step divergence (P4-E1e findings)
+### P4-E1e findings (code-identity verification)
 
-Steps 1-11 match the Fortran to ~0.1% (void ratio exact to 0.007%). The
-divergence starts at step 12-13: the C back-stress `a11` keeps growing
-(0.614 → 0.671) while the Fortran saturates at ~0.605 and even decreases
-slightly (0.610 → 0.608 at step 13).
+Verified line by line that ALL constitutive functions are exact transcriptions
+of the Fortran: `yf_DM`, `el_stiff_DM`, `lode_DM` (Van Eekelen), `grad_f_DM`,
+`grad_g_DM`, `alpha_th_DM`, `plast_mod_DM`, `get_tan_DM` (Hep/HH_fab),
+`check_parms_DM`, `psi_void_DM`, `drift_corr_DM`. No transcription errors.
+(This is why the "inputs must differ" reasoning led to the intersection
+point.)
 
-Per-step diagnostics (C vs Fortran) showed:
+### Remaining late deviator difference (P4-E1h)
 
-- `b0`, `alpha_b` (bounding surface), `psi` (state parameter) are nearly
-  IDENTICAL between C and Fortran (e.g. step 20: C `alpha_b=0.846`,
-  F `alpha_b=0.844`; both `psi≈-0.026`).
-- The Fortran `d_sr` (distance to the reversal `alpha_sr`) FLUCTUATES during
-  the plastic substepping (values 0.74, 0.16, 0.61, 0.38) and `hh = b0/d_sr`
-  varies (100-480), while the C keeps `d_sr ≈ 0.82` constant. The Fortran
-  reversal `alpha_sr` is updated dynamically; the C one is not.
-
-Hypothesis: the Fortran resets `alpha_sr` (via `if(d_sr<0) push(alpha,
-alpha_sr)` in `get_tan_DM`) at some points in the fine substepping, which
-lowers `d_sr` and `hh`, softening the hardening and saturating `a11`. The C
-`alpha_sr` reset never fires because the `z1` passed to `get_F_sig_q` is a
-substep-local copy that is re-copied from `z_k` each iteration (the reset
-write is lost).
-
-**Important constraint discovered**: writing `alpha_sr` back to `z` in
-`get_tan_DM` (as the Fortran does) leaves the single-element DRIVER result
-unchanged BUT breaks the tochnog FE end-to-end (hyposanisand1 sigxx drops
-from -3434 to -1335), because tochnog calls the constitutive model
-repeatedly per substep and the write-back desynchronises the multi-call
-flow. The write-back must stay discarded (as in the current code).
-
-Next step (P4-E1f): track how the Fortran `alpha_sr` (the `z1` in rkf23)
-is updated between substeps — it is copied `push(z_k,z1)` at the START of
-each substep, so a reset inside `get_tan_DM` should NOT persist across
-substeps in either code. The remaining difference is therefore likely in
-the substep-internal `d_sr` evaluation (the `n` direction used in
-`distance(alpha, alpha_sr, n)`), which may differ in sign/orientation
-between C and Fortran during the near-saturation substeps. Compare the `n`
-vector and `d_sr` inside the FIRST rejected substep at step 12.
+The void ratio is exact, so the volumetric path is perfect. The `a11` (back
+stress) still grows in the C (0.675) while the Fortran saturates (~0.606).
+`alpha_sr=0` in both, `alpha_b≈0.85` in both. Next step: compare the plastic
+increment `dalpha = Hep*deps` (or `Kp`) at the step-20 substeps in both codes
+— with the void ratio exact, the difference must be in the deviator
+hardening accumulation.
 
 ## Dynamic substepping (already in place)
 

@@ -1043,10 +1043,33 @@ static void intersect_DM(const double *y0, const double *y1, double *y_star,
   }
 
   if (bisect == 1) {
-    /* The Fortran bisection (fixed y00/y11) returns the midpoint 0.5, but
-       the observed Fortran intersect returns the Newton crossing xi. Use
-       the Newton xi directly (the point where fy crossed the yield). */
-    for (i = 0; i < n; i++) y_star[i] = y0[i] + xi_local*(y1[i]-y0[i]);
+    /* Fortran bisection: narrows the interval [y00,y11] by the sign of fy.
+       y00=y0, y11=y1; y05=(y00+y11)/2; if fy(y05)<0 -> y00=y05 else y11=y05. */
+    for (i = 0; i < n; i++) { y00[i] = y0[i]; y11[i] = y1[i]; }
+    for (i = 0; i < n; i++) y05[i] = y0[i];
+    pp05 = (y05[0]+y05[1]+y05[2])*onethird;
+    fy05 = yf_DM(y05, n, parms, nparms);
+    err = fabs(fy05/pp05);
+    if (pp05 > one) err = fabs(fy05);
+    while (err > tol_ff) {
+      kiter_bis = kiter_bis + 1;
+      for (i = 0; i < 6; i++) y05[i] = half*(y00[i]+y11[i]);
+      fy05 = yf_DM(y05, n, parms, nparms);
+      pp05 = (y05[0]+y05[1]+y05[2])*onethird;
+      err = fabs(fy05/pp05);
+      if (pp05 > one) err = fabs(fy05);
+      if (fy05 < zero) push(y05, y00, n);
+      else push(y05, y11, n);
+      if (kiter_bis > maxiter + 1) err = 0;
+    }
+    for (i = 0; i < n; i++) y_star[i] = y05[i];
+    xi_max = zero;
+    for (i = 0; i < 6; i++)
+      if ((y1[i]-y0[i]) != zero) {
+        xi_i = (y05[i]-y0[i])/(y1[i]-y0[i]);
+        if (xi_i > xi_max) xi_max = xi_i;
+      }
+    xi_local = xi_max;
   }
 
   *xi = xi_local;
