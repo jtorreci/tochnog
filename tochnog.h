@@ -508,6 +508,7 @@ enum {
   GROUP_GROUNDFLOW_PERMEABILITY,
   GROUP_GROUNDFLOW_PERMEABILITY_NONLINEAR_METHOD,
   GROUP_GROUNDFLOW_PERMEABILITY_NONLINEAR_PARAMETERS,
+  GROUP_GROUNDFLOW_PERMEABILITY_VERTICAL_STRESS,
   GROUP_GROUNDFLOW_POROSITY,
   GROUP_INTEGRATION_METHOD,
   GROUP_INTEGRATION_POINTS,
@@ -1264,7 +1265,8 @@ long int *get_new_int( long int n );
 int      *get_new_int_short( long int n );
 void      groundflow_data( long int element, long int gr, 
             double old_unknowns[], double new_unknowns[], 
-            double coord_ip[], double pe[], double &C );
+            double coord_ip[], double pe[], double &C,
+            double h[], long int nnol );
 void      groundflow( long int element, long int group, long int nnol,
             double coord_ip[], double h[], double d[], 
             double volume, double old_unknowns[], 

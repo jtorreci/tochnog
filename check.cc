@@ -400,6 +400,10 @@ long int check( long int idat, long int task )
   }
   if ( data_number==GROUP_GROUNDFLOW_PERMEABILITY )
     ok = check_unknown( "groundflow_pressure", YES, task );
+  if ( data_number==GROUP_GROUNDFLOW_PERMEABILITY_VERTICAL_STRESS ) {
+    ok = check_unknown( "groundflow_pressure", YES, task );
+    ok = ok && check_unknown( "materi_stress", YES, task );
+  }
   if ( data_number==GROUP_INTEGRATION_POINTS )
     ok = check_unknowns_are_specified( task );
   if ( data_number==GROUP_MATERI_DAMAGE_MAZARS )

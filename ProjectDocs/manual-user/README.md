@@ -74,6 +74,7 @@ input parameters it accepts.
 ## Phase 4 features
 
 - [groundflow_pressure_factor](groundflow_pressure_factor.md) — scale the pore-pressure contribution to the total stress.
+- [group_groundflow_permeability_vertical_stress](group_groundflow_permeability_vertical_stress.md) — stress-dependent groundflow permeability (kp = a/(sigv/sig0)^b).
 - [group_materi_hyper_besseling](group_materi_hyper_besseling.md) — hyperelastic family (Besseling, Blatz-Ko, Mooney-Rivlin, Neo-Hookean, reduced polynomial, volumetric laws).
 - [group_materi_maxwell_chain](group_materi_maxwell_chain.md) — linear viscoelasticity with parallel Maxwell chains.
 - [group_materi_viscosity](group_materi_viscosity.md) — Newtonian viscosity, heat generation and user viscosity.

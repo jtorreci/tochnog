@@ -314,7 +314,13 @@ El índice es limpio: cada entrada de la sección 6 "data records" es una keywor
       Dref movido a _clay_visco_jm para dejar _clay_visco fiel al manual.
 - [ ] `group_materi_plasti_tension_direct_normal` (+ `_automatic`) — requiere `group_materi_plasti_tension_direct` (no existe).
       `group_materi_plasti_mohr_coul_direct_normal` (+ `_automatic`) — requiere `group_interface_materi_plasti_mohr_coul_direct`.
-- [ ] `group_groundflow_permeability_vertical_stress`.
+- [x] `group_groundflow_permeability_vertical_stress` — kp = a/(sigv/sig0)^b
+      con clamp [min,max], combinada con group_groundflow_permeability.
+      **IMPLEMENTADO (2026-08-10)**: groundda.cc groundflow_data (firma
+      ampliada con h/nnol), enums, database, check. El mecanismo corre y el
+      sigv se lee correctamente. PENDIENTE de validacion del flujo (P4-E2b):
+      el test de 2 elementos da pres=0.714 vs 0.5 esperado — algunos puntos
+      de integracion interpolar sigv=0. Calibrar la regresion.
 - [ ] `materi_plasti_hypo_*` variantes del kernel hipoplástico (lowangles, cohesion,
       intergranularstrain, pressuredependentvoidratio, wolfersdorff) — registradas,
       verificar lógica y tests (P4-B).

@@ -58,7 +58,7 @@ void groundflow( long int element, long int gr, long int nnol,
     VERSION_NORMAL, GET_IF_EXISTS );
   if ( options_skip_groundflow_materidivergence==-YES ) materidivergence = -NO;
 
-  groundflow_data( element, gr, old_unknowns, new_unknowns, coord_ip, pe, C );
+  groundflow_data( element, gr, old_unknowns, new_unknowns, coord_ip, pe, C, h, nnol );
 
   if ( materi_velocity ) {
     for ( jdim=0; jdim<ndim; jdim++ ) {
