@@ -89,7 +89,7 @@ void damage_mazars( double materi_damage_mazars[], double new_epe[], double new_
     epseq = 0.;
     for ( idim=0; idim<MDIM; idim++ ) {
       epssiz += epsp[idim]*epsp[idim];
-      if ( epsp[idim]>0. ) epseq += epseq + epsp[idim]*epsp[idim];
+      if ( epsp[idim]>0. ) epseq += epsp[idim]*epsp[idim];
     }
     epssiz = sqrt( scalar_dabs(epssiz) );
     epseq = sqrt( scalar_dabs(epseq) );

@@ -275,7 +275,10 @@ El índice es limpio: cada entrada de la sección 6 "data records" es una keywor
   - Viscosidad: `group_materi_viscosity`, `_viscosity_heatgeneration`,
     `_viscosity_user` (viscosit.cc, test viscos1; `user_viscosity()` es stub).
   - Daño: `group_materi_damage_mazars` + `materi_damage` (damage.cc, test damage1).
-    **Bug latente detectado en damage.cc:92** (`epseq += epseq + ...`).
+    **Bug CORREGIDO (2026-08-10)**: acumulación de `epseq` en damage.cc:92 usaba
+    `epseq += epseq + x` (duplicante) en vez de `epseq += x`. Presente en el fuente
+    GNU original de 2014. Test nuevo `damage2.dat` (biaxial no-equal) lo detecta
+    (fixed dam=0.471973, buggy dam=0.789301).
   - Expansión: `group_materi_expansion_linear` (stress.cc:437) y
     `group_materi_expansion_volume` (materi.cc:166, solo densidad) — tests expans1/2.
   - Viscoplástico: `group_materi_plasti_visco_exponential`, `_visco_power`,
