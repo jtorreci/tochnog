@@ -333,15 +333,19 @@ propuesto por demanda práctica:
       tochnog (keyword `group_materi_plasti_sanisand`, 19 params,
       `materi_history_variables 36`). Test hyposanisand1.dat end-to-end pasa.
       **LIMITACIÓN**: valida ~8% vs el Fortran (no 1e-6 como Masin) por el
-      substepping adaptativo elasto-plástico simplificado (branches
-      attempt==2/3 con tolerancia relajada no activados). Constitutivamente
-      correcto (endurecimiento de arena densa). El camino recomendado para
-      cerrar la brecha está documentado en
-      manual-developer/group_materi_plasti_sanisand.md (P4-E1b): (1) replicar
-      la máquina de estados attempt/maxnint_1/err_tol_1/switch3 del Fortran;
-      (2) propagar el flag `plastic` por referencia (common block); (3)
-      re-validar contra ref_triaxial.txt apuntando a ~1e-3; (4) re-chequear
-      el FE end-to-end.
+      substepping adaptativo elasto-plástico simplificado. Constitutivamente
+      correcto (endurecimiento de arena densa).
+      **P4-E1b (2026-08-10)**: afinado a ~3.5% (driver, paso 20: C=-2873 vs
+      F=-2777). Fix: tol_f=1e-6 (era 1e-3, la tol de yield del Fortran es
+      independiente de testing) + llamada duplicada de f_plas eliminada.
+      DESCATADO: el attempt==2/3 NO es la causa (el RKF converge en pocos
+      substeps, nunca lo alcanza). El 3.5% restante está en el substepping
+      fino (candidatos: intersect_DM, orden numérico de los stages RKF,
+      drift_corr). NOTA: el integrador RKF23 YA hace substepping dinámico
+      por convergencia (S_hull=0.9*DT_k*(err_tol/norm_R)^(1/3), acepta con
+      min(4DT,S_hull), rechaza con max(DT/4,S_hull)); el control_timestep
+      global de tochnog es ortogonal. Plan detallado en
+      manual-developer/group_materi_plasti_sanisand.md.
 - [ ] `PM4Sand` (Boulanger & Ziotopoulou, arenas licuefactables) — P4-E2.
 - [ ] `Sand Hypoplasticity` (Gudehus/Bauer, wolfersdorff ya cubierto en hypo.c —
       solo validar) — P4-E3.

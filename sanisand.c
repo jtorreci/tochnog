@@ -23,6 +23,7 @@
 #define NZDIM   14      /* alpha_sr 6 + unused */
 #define NASV_HH 14
 
+
 static void pp_kk_set(const double *y, double *pp_kk);
 #define nz_unused 0
 
@@ -1235,16 +1236,6 @@ static void rkf23_upd_DM(double *y, double *z, int n, int nasvy, int nasvz,
 
         push(z_k, z1, nasvz);
 
-        f_plas_DM(y_k, n, nasvy, z1, nasvz, parms, nparms, deps_np1,
-          kRK_1, nfev, 0, *mario_DT_test, error, tol_f, check_ff, drcor,
-          p_thres, *plastic);
-        if (*error == 10) return;
-
-        {
-          int switch2_1 = 0;
-          (void)switch2_1;
-        }
-
         {
           int sw1 = 0, sw2 = 0, sw3 = 0;
           /* kRK_1 */
@@ -1506,8 +1497,9 @@ void sanisand_umat(double *stress, double *statev, double *ddsdde,
   for (i = 0; i < nprops && i < 40; i++) parms[i] = props[i];
   check_parms_DM(props, parms, nprops);
 
-  if (testing == 1) { tol_f = 1.0e-2; tol_f_test = 1.0e-2; }
-  else { tol_f = 1.0e-3; tol_f_test = 1.0e-3; }
+  tol_f = 1.0e-6;            /* yield-function tolerance (Fortran tol_f) */
+  if (testing == 1) { tol_f_test = 1.0e-2; }   /* RKF err_tol on first step */
+  else { tol_f_test = 1.0e-3; }                /* RKF err_tol afterwards */
   *error = 0;
 
   /* ndi must be 3 */
@@ -1565,9 +1557,9 @@ void sanisand_umat(double *stress, double *statev, double *ddsdde,
 
   /* integrate */
   rkf23_upd_DM(y, z, nyact, nasvy, nasvz,
-    (testing == 1) ? tol_f_test : tol_f, 50000, 1.0e-18,
+    tol_f_test, 50000, 1.0e-18,
     deps_np1, parms, nprops, &nfev, 0, &mario_DT_test, error,
-    (testing == 1) ? tol_f_test : tol_f, 0, 1, p_thres, &plastic_int);
+    tol_f, 0, 1, p_thres, &plastic_int);
   /* NOTE: check_ff=0, drcor=1, plastic passed as 0 here; the reference
      passes plastic by value (common block) - see notes. */
 

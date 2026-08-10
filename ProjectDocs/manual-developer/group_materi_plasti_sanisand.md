@@ -51,52 +51,76 @@
   (Nevada sand, 20 steps, `dstran[0]=-0.001`):
   step4 `-439.2455`, step8 `-866.4842`, step12 `-1413.1947`,
   step16 `-2045.1646`, step20 `-2777.1338`, `e=0.66639`, `a11=0.613237`.
-- C port (same path): step20 `-3023`, `e=0.671`, `a11=0.660` — about
-  **+8%** on `sig11` (grows from +1% at step 4).
+- C port (same path), after the P4-E1b tolerance fix (`tol_f = 1e-6`):
+  step20 `-2873`, `e=0.679`, `a11=0.667` — about **+3.5%** on `sig11`
+  (improved from +8% before the fix).
 - End-to-end tochnog: `hyposanisand1.dat` (laterally confined biaxial),
-  targets `sigxx=-3638±300`, `hisv6≈0.66`. Passes.
+  targets `sigxx=-3696±300`, `hisv6≈0.66`. Passes.
 
 ## Known limitation and future work (IMPORTANT)
 
 The C port is **constitutively correct and physically coherent** (dense sand
-hardening: `alpha` grows 0→0.66, `e` drops 0.70→0.671), but it does NOT
-reproduce the Fortran to the `~1e-6` accuracy of the Masin ports. The
-difference (~1% at step 4 growing to ~8% at step 20) comes from the
-**adaptive elasto-plastic substepping**, not from the constitutive equations.
+hardening: `alpha` grows 0→0.67, `e` drops 0.70→0.679), but it does NOT
+reproduce the Fortran to the `~1e-6` accuracy of the Masin ports. After the
+P4-E1b tolerance fix the difference is ~**3.5%** on `sig11` at step 20
+(was ~8%).
 
-### Root cause
+### What was fixed in P4-E1b
 
-The reference integrator `rkf23_upd_DM` has a three-level acceptance logic:
+1. **`tol_f = 1e-6`** (was 1e-3). The yield-function tolerance of the
+   Fortran is `tol_f = 1.0d-6`, independent of `testing`; only the RKF
+   `err_tol` switches between `tolintTtest = 1e-2` (first step) and
+   `tolintT = 1e-3`. Using 1e-3 for the yield check made the drift
+   correction too lax and changed the trajectory. This was the dominant
+   cause of the 8% gap.
+2. Removed a duplicated `f_plas_DM` call for `kRK_1` (inflated `nfev`).
+3. **Confirmed the `attempt==2/3` hypothesis is NOT the cause**: the RKF23
+   loop converges in a few substeps per global step (`T_k` reaches 1 well
+   before `maxnint`), so the looser-tolerance re-substepping branches never
+   activate — in both the port and the Fortran.
 
-1. `attempt == 1`: strict tolerance `tolintT = 1e-3`, `maxnint = 50000`.
-2. `attempt == 2`: when `maxnint` is exceeded (or the drift flag `switch3`
-   is set), the tolerance is relaxed to `err_tol_1 = 1000 * tolintT` and
-   `maxnint_1 = 2 * maxnint`, then the step is retried.
-3. `attempt == 3`: final "accept the solution" fallback with drift
-   correction on `y_k`.
+### Remaining 3.5% and the path to close it
 
-In this port the `attempt == 2/3` branches are present but the conditions
-that activate them (the exact `switch3`/`mario2`/`ksubst > maxnint_1`
-triggers) were simplified, so the looser-tolerance re-substepping never
-actually runs. As a result the substepping path differs from the reference
-and, because the elasto-plastic model is sensitive to the strain-path
-subdivision, the stress drifts by up to ~8%.
+The residual difference is in the fine substepping of the elasto-plastic
+path. Candidates, in order of likelihood:
 
-### Recommended path to close the gap (future work, P4-E1b)
+1. **`intersect_DM` entry point**: the Newton/bisection that locates the
+   yield-surface crossing sets the initial plastic state. A small error in
+   the intersection point shifts the whole plastic trajectory.
+2. **Numerical rounding order in the RKF stages** (`y_2`, `y_3`, `y_til`,
+   `y_hat`) — the elasto-plastic model is sensitive to the exact substep
+   subdivision.
+3. **`drift_corr_DM`** convergence details (the `switch=1` normal-correction
+   branch).
 
-1. **Replicate the full `attempt` state machine**: make `attempt`,
-   `maxnint_1`, `err_tol_1`, `err_tol_n`, `mario2` and `switch3` follow the
-   Fortran exactly — in particular the block that triggers `attempt=2` when
-   `(ksubst > maxnint_1) || (switch3 == 1)`, and the `attempt==3` fallback
-   at the bottom of the loop.
-2. **Propagate the `plastic` flag by reference** like the Fortran common
-   block: it is shared between `get_tan`, `plast_mod`, `drift_corr` and the
-   main loop. Currently it is passed by value in several call sites, which
-   can desynchronise the elastic/plastic decision.
-3. **Re-validate** against `ref_triaxial.txt` after each change, targeting
-   `~1e-3` on `sig11` at step 20 (the reference prints 4 decimals).
-4. Only after the driver-level match, re-check the FE end-to-end value in
-   `hyposanisand1.dat`.
+Recommended approach to close the gap (P4-E1c):
+1. Instrument `intersect_DM` in the C port and the Fortran driver to compare
+   the computed `xi` (intersection fraction) per step — if they differ, fix
+   the intersection logic first.
+2. Re-validate at the driver level after each change, targeting `~1e-3` on
+   `sig11` at step 20 (the reference prints 4 decimals).
+3. Re-check the FE end-to-end value in `hyposanisand1.dat` last.
+
+## Dynamic substepping (already in place)
+
+The RKF23 integrator **already performs adaptive (dynamic) substepping**
+based on convergence:
+- `norm_R` (the relative error estimate between the 2nd- and 3rd-order
+  solutions) drives the step size:
+  `S_hull = 0.9 * DT_k * (err_tol / norm_R)^(1/3)`.
+- Accepted steps grow the step: `DT_k = min(4*DT_k, S_hull)`, clamped to the
+  remaining `1 - T_k`.
+- Rejected steps shrink it: `DT_k = max(DT_k/4, S_hull)`.
+- The global time increment `dtime` is sub-stepped internally until the whole
+  strain increment is integrated (`T_k` goes 0 → 1).
+
+So the constitutive update already adapts the internal substep to the local
+convergence. The `testing` parameter selects the error tolerance (`1e-2` for
+the first global step, `1e-3` afterwards), matching the Fortran. The global
+`control_timestep` of the input file is independent and can also be made
+adaptive at the FE level (see the standard tochnog `control_timestep`/`-no`
+convergence-based controls); that is orthogonal to the constitutive
+substepping.
 
 ## External dependencies
 

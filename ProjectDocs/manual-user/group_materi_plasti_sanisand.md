@@ -91,8 +91,8 @@ confined biaxial compression.
   surface cone is centred about the current stress state; the fabric `z` and
   the reversal memory `alpha_sr` start at zero.
 - **Known limitation**: the adaptive elasto-plastic substepping of this port
-  reproduces the Fortran reference to about **8%** on the triaxial path (not
-  the ~1e-6 of the Masin ports). The constitutive equations are correct; the
-  difference comes from the adaptive time-step acceptance logic (the
-  `attempt==2/3` looser-tolerance branches of the original integrator are not
-  fully activated). See the developer manual for the future-work plan.
+  reproduces the Fortran reference to about **3.5%** on the triaxial path
+  (not the ~1e-6 of the Masin ports). The constitutive equations are correct;
+  the difference comes from the fine adaptive substepping (entry-point
+  intersection and stage rounding). See the developer manual for the
+  future-work plan.
