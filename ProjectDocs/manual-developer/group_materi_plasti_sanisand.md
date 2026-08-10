@@ -79,27 +79,43 @@ P4-E1b tolerance fix the difference is ~**3.5%** on `sig11` at step 20
    before `maxnint`), so the looser-tolerance re-substepping branches never
    activate — in both the port and the Fortran.
 
-### Remaining 3.5% and the path to close it
+### Remaining 3.5% and what was ruled out (P4-E1c findings)
 
-The residual difference is in the fine substepping of the elasto-plastic
-path. Candidates, in order of likelihood:
+Diagnostics performed on the first global step (where the divergence starts,
++3.9% on `sig11`, `a11` +10%):
 
-1. **`intersect_DM` entry point**: the Newton/bisection that locates the
-   yield-surface crossing sets the initial plastic state. A small error in
-   the intersection point shifts the whole plastic trajectory.
-2. **Numerical rounding order in the RKF stages** (`y_2`, `y_3`, `y_til`,
-   `y_hat`) — the elasto-plastic model is sensitive to the exact substep
-   subdivision.
-3. **`drift_corr_DM`** convergence details (the `switch=1` normal-correction
-   branch).
+- **The elastic trial state is EXACT**: the trial `e = 0.698301` matches the
+  Fortran final `e = 0.69833` exactly. The divergence appears only in the
+  subsequent plastic substepping.
+- **The RKF tolerance is NOT the cause**: tightening `err_tol` from `1e-3`
+  to `1e-6` makes the C port converge to `-2947` (step 20), FURTHER from the
+  reference `-2777`, not closer. The integrator converges to a stable value
+  that differs from the Fortran by ~6% — a systematic model-path difference,
+  not a substepping accuracy issue.
+- **`attempt==2/3` is NOT the cause**: the RKF23 loop finishes in a handful
+  of substeps per global step, never reaching `maxnint`.
+- **`alpha_sr` write-back in `get_tan_DM` is NOT the cause**: writing the
+  updated `alpha_sr` back to `z` (as the Fortran does) leaves the driver
+  result identical AND breaks the FE end-to-end (the tochnog multi-call flow
+  diverges to `-784`), so it was reverted.
 
-Recommended approach to close the gap (P4-E1c):
-1. Instrument `intersect_DM` in the C port and the Fortran driver to compare
-   the computed `xi` (intersection fraction) per step — if they differ, fix
-   the intersection logic first.
-2. Re-validate at the driver level after each change, targeting `~1e-3` on
-   `sig11` at step 20 (the reference prints 4 decimals).
-3. Re-check the FE end-to-end value in `hyposanisand1.dat` last.
+What remains to investigate (in order of likelihood):
+1. The plastic flow direction during the FIRST plastic substep — `a11` grows
+   ~10% faster in the port, suggesting a slightly different `h_alpha`
+   (bounding-surface) or dilatancy contribution at the yield-surface entry.
+2. The exact `intersect_DM` result (the Fortran bisection returns `xi = 0.5`
+   — the midpoint — in this test; verify the Newton actually converges in
+   the reference before the bisection is reached).
+3. `drift_corr_DM` `switch=1` normal-correction branch.
+
+Recommended approach (P4-E1d):
+1. Print `a11` after the first plastic substep in BOTH the C port and the
+   Fortran (a small Fortran driver instrumenting `get_tan_DM` outputs) and
+   diff them to locate the exact expression that differs.
+2. Fix that expression, re-validate at the driver level to `~1e-3`.
+3. Re-check the FE end-to-end value last (note: the FE and driver paths
+   differ because tochnog calls the constitutive model repeatedly per
+   substep; only compare relative trends).
 
 ## Dynamic substepping (already in place)
 
