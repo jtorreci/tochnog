@@ -41,6 +41,9 @@ group_materi_plasti_hypo_masin_clay_ocr <element_group>  OCR
 control_materi_plasti_hypo_masin_clay_ocr_apply <element_group> -yes|-no
 group_materi_plasti_hypo_masin_clay_structure <element_group>  k A s_f
 
+group_materi_plasti_hypo_masin_clay_visco <element_group>
+                        ocparam beta_deg ksi gama_deg Dref
+
 group_materi_plasti_hypo_strain_intergranular_masin_clay <element_group>
                         R A_g n_g m_rat beta_r chi [theta]
 ```
@@ -70,6 +73,11 @@ group_materi_plasti_hypo_strain_intergranular_masin_clay <element_group>
 | `m_rat` | Intergranular strain m_T/m_R ratio (e.g. 0.5). |
 | `beta_r` | Intergranular strain beta (e.g. 0.08). |
 | `chi` | Intergranular strain chi (e.g. 7). |
+| `ocparam` | Critical-state ratio parameter of the visco law (default 2.0). |
+| `beta_deg` | Shear-band rotation angle, degrees (softening mechanism). |
+| `ksi` | Visco exponent controlling the flow-direction weighting. |
+| `gama_deg` | Flow-direction deviation angle, degrees (0 = auto). |
+| `Dref` | Visco reference strain rate; activates the visco response (`> 0`). |
 
 Defaults applied by the implementation when the optional records are absent:
 `p_t = 0` (no cohesion shift), `alpha_G = 1` (isotropic),
@@ -116,4 +124,9 @@ intergranular-strain variant (`hypomasin3.dat`) are also regression-tested.
 - The intergranular-strain record activates the small-strain stiffness
   enhancement; `theta` is accepted for compatibility but has no direct slot
   in the kernel (chi is used).
-- The visco extension (`Dr Iv`) is NOT yet exposed; see the developer manual.
+- The visco extension (`_clay_visco`, Jerman-Masin 2020) uses the same
+  `_clay` base parameters plus `ocparam beta_deg ksi gama_deg Dref`. With
+  `Dref > 0` the stress rate is scaled by the reference rate, so the model
+  shows creep/relaxation under a held load or strain rate. It requires
+  `materi_history_variables 10` (2 extra state slots). Regression:
+  `validation-suite/test-2014/hypomasin4.dat`.

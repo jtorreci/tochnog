@@ -13,6 +13,20 @@
     `norm_res()`, `inv_sig()`, `inv_eps()`, `solout()`, `calc_statev()`.
   - Validated against the Fortran reference to `5e-7` on three strain paths
     (isotropic, triaxial, anisotropic; see `validation-suite/reference-masin/`).
+- `masin_visco.c` — **new pure-C port** of the visco extension
+  `umat_visco.f` (Jerman & Masin 2020, GPL). Same skeleton as `masin.c` but:
+  - `NASV=10` (2 extra state slots; `materi_history_variables >= 10`).
+  - `inv_sig()` computes rotated invariants (`sig_rot` from the shear-band
+    angle `beta`, `cos3t_rot`, `I1rot/I2rot/I3rot`).
+  - `get_tan()` uses `Fmfactor_rot` (rotated Matsuoka-Nakai), `ocparam`
+    (parms[21]) instead of ocrcs=2, and the LD approach: `gama`
+    (flow-direction angle, auto-initialized from `tangama` when < -pi/2),
+    `hypo_Dsom_ld`, `wy`/`acorrwy`, and the `LL_unl`/`LL` split.
+  - `get_F_sig_q()` divides `deps` by `dtime` (rate formulation), scales by
+    `Dref`, and re-multiplies — the rate-dependent visco response.
+  - `masin_visco_umat()` reduces `phi_c` by `beta` (shear-band softening)
+    and reads e0/OCR from `props[27]`.
+  - Validated against `umat_visco.f`: identical `sig11=-82.5684` at step 20.
 - `hypoplas.cc` — dispatch block for `GROUP_MATERI_PLASTI_HYPO_MASIN`:
   reads parameters, converts tensors 3x3(row-major) to/from Voigt6, maps
   `hisv` to/from `statev`, calls `masin_umat()`, writes back
@@ -104,6 +118,10 @@
     of the previous iteration but the stress of the start of the step).
     The basic/anisotropic paths agree closely because they are not
     path-history-sensitive in the same way.
+  - `hypomasin4.dat` (visco, `Dref=0.5`): `sigxx=-82.88` (Fortran reference
+    -82.57, +0.4%), `hisv6=0.6932`. The visco kernel relaxes the stress
+    under constant strain rate, matching the Fortran `umat_visco.f`
+    (identical at the driver level: sig11=-82.5684).
 - Regression: hypo1-4 still pass (wolfersdorff unaffected).
 
 ## External dependencies
@@ -126,8 +144,13 @@
   would pass the converged delta of the substep into the next iteration (or
   store the intergranular tensor in `old_epi`/`new_epi` and use
   `materi_strain_intergranular`). NOT yet done.
-- The visco extension (`group_materi_plasti_hypo_masin_clay_visco`, `Dr Iv`)
-  is NOT exposed; requires the visco UMAT port (P4-B3).
+- The visco extension (`group_materi_plasti_hypo_masin_clay_visco`,
+  `ocparam beta_deg ksi gama_deg Dref`) is IMPLEMENTED via `masin_visco.c`
+  (P4-B3). Interface note: the professional manual documents `Dr Iv` for the
+  classic creep-rate formulation, but the ported UMAT uses the newer
+  Jerman-Masin rate scaling (`Dref`); the two are mathematically different
+  (not reducible to each other), and this integration exposes the UMAT
+  formulation.
 - `materi_history_variables >= 8` is enforced with an explicit error; the
   check could be lifted to a softer warning for backwards compatibility.
 - The `OCR` initial-void-ratio formula duplicates the Fortran; verify against

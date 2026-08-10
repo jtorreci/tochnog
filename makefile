@@ -14,8 +14,11 @@ HYPO_OBJ=hypo.o
 #  ***********  Masin clay hypoplasticity ****************
 # masin.c is a pure-C port of the reference Fortran umat_hcea.for
 # (Masin 2014 clay hypoplasticity, GPL). Built like hypo.c.
+# masin_visco.c is the visco extension (Jerman & Masin 2020, umat_visco.f).
 MASIN_SRC=masin.c
 MASIN_OBJ=masin.o
+MASIN_VISCO_SRC=masin_visco.c
+MASIN_VISCO_OBJ=masin_visco.o
 
 #  ***********  profiler ***********************
 # for the gnu profiler, use as follows:
@@ -268,7 +271,7 @@ tochnog: adjust.$(OBJ) area.$(OBJ) \
 	filter.$(OBJ) force.$(OBJ) general.$(OBJ) \
 	geometry.$(OBJ) generate.$(OBJ) \
 	groundda.$(OBJ) groundfl.$(OBJ) group.$(OBJ) \
-        hyperela.$(OBJ) $(HYPO_OBJ) $(MASIN_OBJ) \
+        hyperela.$(OBJ) $(HYPO_OBJ) $(MASIN_OBJ) $(MASIN_VISCO_OBJ) \
 	hypoplas.$(OBJ) initia.$(OBJ) \
 	input.$(OBJ) integra.$(OBJ) intersec.$(OBJ) \
 	inverse.$(OBJ) locate.$(OBJ) \
@@ -407,6 +410,9 @@ $(HYPO_OBJ): $(HYPO_SRC)
 
 $(MASIN_OBJ): $(MASIN_SRC)
 	$(COMPILER_C) $(COMPILER_FLAGS) $(MASIN_SRC)
+
+$(MASIN_VISCO_OBJ): $(MASIN_VISCO_SRC)
+	$(COMPILER_C) $(COMPILER_FLAGS) $(MASIN_VISCO_SRC)
 
 hypoplas.$(OBJ): hypoplas.$(SRC_CPP) tochnog.h
 	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)hypoplas.$(SRC_CPP)
