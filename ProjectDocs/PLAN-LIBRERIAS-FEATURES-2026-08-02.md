@@ -364,6 +364,19 @@ propuesto por demanda práctica:
       (caotico). e exacta 0.001% y pasos 1-8 al 0.12% validan la fisica. No
       se persigue el bit-exact (espejismo). Documentado en ambos manuales.
 - [ ] `PM4Sand` (Boulanger & Ziotopoulou, arenas licuefactables) — P4-E2.
+      **SOLO ARTÍCULOS DISPONIBLES (2026-08-10)**: el UMAT NO está descargado
+      (solo los papers de Boulanger & Ziotopoulou 2017 y relacionados). Para
+      implementarlo con la metodología Masin hace falta el UMAT de referencia
+      (SoilModels o UCD) para validar numéricamente. Sin él, implementar desde
+      la teoría sería como el visco Dr/Iv (validación débil). Posponer hasta
+      obtener el UMAT. LECCIÓN P4-E: la implementación de modelos constitutivos
+      se ha revelado como retante hasta conseguir una CALIBRACIÓN CORRECTA
+      (SANISAND requirió 6 iteraciones de debug: intersect, bisection,
+      tolerancias); el orden de operaciones del compilador impone un límite de
+      reproducibilidad (no bit-exact) entre implementaciones equivalentes. Para
+      cada nuevo modelo: (1) obtener el UMAT autorizado, (2) driver de
+      referencia primero, (3) validar contra resultado publicado o tercera
+      implementación, no solo contra el UMAT.
 - [ ] `Sand Hypoplasticity` (Gudehus/Bauer, wolfersdorff ya cubierto en hypo.c —
       solo validar) — P4-E3.
 - [ ] `EMC` / otros (ISA, barodesy, viscohypoplasticity) según demanda — P4-E4.
