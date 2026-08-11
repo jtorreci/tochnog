@@ -846,6 +846,10 @@ void step_close( long int task, long int ipar, long int npar, long int ipar_i, l
       db( CONTROL_PRINT_VTK, icontrol, ival, ddum, ldum, VERSION_NORMAL, GET );
       if ( ival[0]==-YES ) print_vtk( icontrol );
     }
+    if ( db_active_index( CONTROL_PRINT_TABULAR, icontrol, VERSION_NORMAL ) ) {
+      db( CONTROL_PRINT_TABULAR, icontrol, ival, ddum, ldum, VERSION_NORMAL, GET );
+      if ( ival[0]==-YES ) print_tabular( icontrol );
+    }
   }
   cout << flush;
 

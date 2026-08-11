@@ -309,6 +309,7 @@ enum {
   CONTROL_PRINT_UNKNOWNS,
   CONTROL_PRINT_UNKNOWNSRHSIDE,
   CONTROL_PRINT_VTK,
+  CONTROL_PRINT_TABULAR,
   CONTROL_RELAXATION_CONDIF_TEMPERATURE,
   CONTROL_RELAXATION_GROUNDFLOW_PRESSURE,
   CONTROL_RELAXATION_MATERI_VELOCITY,
@@ -1476,6 +1477,7 @@ void      print_tecplot( long int ival[] );
 void      print_unknowns( void );
 void      print_unknownsrhside( void );
 void      print_vtk( long int icontrol );
+void      print_tabular( long int icontrol );
 class     SqliteDB;
 SqliteDB* sqlite_db_open( const char* filename );
 void      sqlite_db_close( SqliteDB* db );

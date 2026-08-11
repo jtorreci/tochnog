@@ -1085,6 +1085,12 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   data_length[CONTROL_PRINT_VTK] = 1;
   data_class[CONTROL_PRINT_VTK] = CONTROL;
 
+  strcpy(name[CONTROL_PRINT_TABULAR],"control_print_tabular");
+  type[CONTROL_PRINT_TABULAR] = INTEGER;
+  data_length[CONTROL_PRINT_TABULAR] = DATA_ITEM_SIZE;
+  fixed_length[CONTROL_PRINT_TABULAR] = 0;
+  data_class[CONTROL_PRINT_TABULAR] = CONTROL;
+
   strcpy(name[CONTROL_RELAXATION_CONDIF_TEMPERATURE],"control_relaxation_condif_temperature");
   type[CONTROL_RELAXATION_CONDIF_TEMPERATURE] = DOUBLE_PRECISION;
   data_length[CONTROL_RELAXATION_CONDIF_TEMPERATURE] = 1;
