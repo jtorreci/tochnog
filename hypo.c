@@ -8,9 +8,8 @@
 
 #define TRUE_ 1
 #define FALSE_ 0
-#define min(a,b) ((a) <= (b) ? (a) : (b))
-#define max(a,b) ((a) >= (b) ? (a) : (b))
 #define abs(x) ((x) >= 0 ? (x) : -(x))
+
 
 /* Table of constant values */
 
@@ -494,12 +493,12 @@ long int *iuseepi, *ihypotype;
 
     if( *ihypotype == 1 ) {
         eigen_(&stress[4], eigval);
-        dmob_1 = abs(eigval[0]), dmob_2 = abs(eigval[1]), dmob_1 = max(dmob_1,dmob_2), dmob_2 
+        dmob_1 = abs(eigval[0]), dmob_2 = abs(eigval[1]), dmob_1 = ((dmob_1>dmob_2)?dmob_1:dmob_2), dmob_2 
 	    = abs(eigval[2]);
-        tmax = -max(dmob_1,dmob_2);
-        dmob_1 = abs(eigval[0]), dmob_2 = abs(eigval[1]), dmob_1 = min(dmob_1,dmob_2), dmob_2 
+        tmax = -((dmob_1>dmob_2)?dmob_1:dmob_2);
+        dmob_1 = abs(eigval[0]), dmob_2 = abs(eigval[1]), dmob_1 = ((dmob_1<dmob_2)?dmob_1:dmob_2), dmob_2 
 	    = abs(eigval[2]);
-        tmin = -min(dmob_1,dmob_2);
+        tmin = -((dmob_1<dmob_2)?dmob_1:dmob_2);
         if ((dmob_1 = tmax + tmin, abs(dmob_1)) < 1e-12) 
 	   phimob = phic;
         else 
@@ -633,13 +632,13 @@ long int *iuseepi, *ihypotype;
 /*       mobilised friction angle for postprocessing */
     eigen_(&stress[4], eigval);
 /* Computing MAX */
-    d__1 = abs(eigval[0]), d__2 = abs(eigval[1]), d__1 = max(d__1,d__2), d__2 
+    d__1 = abs(eigval[0]), d__2 = abs(eigval[1]), d__1 = ((d__1>d__2)?d__1:d__2), d__2 
 	    = abs(eigval[2]);
-    tmax = -max(d__1,d__2);
+    tmax = -((d__1>d__2)?d__1:d__2);
 /* Computing MIN */
-    d__1 = abs(eigval[0]), d__2 = abs(eigval[1]), d__1 = min(d__1,d__2), d__2 
+    d__1 = abs(eigval[0]), d__2 = abs(eigval[1]), d__1 = ((d__1<d__2)?d__1:d__2), d__2 
 	    = abs(eigval[2]);
-    tmin = -min(d__1,d__2);
+    tmin = -((d__1<d__2)?d__1:d__2);
     if ((d__1 = tmax + tmin, abs(d__1)) < 1e-12) {
 	phimob = phic;
     } else {

@@ -209,7 +209,7 @@ long int equations_factor( long int n, double **a, long int *p, long int *f )
 {
 
    #define TINY 1E-20 /* to avoid numerical instability */
-   #define max(x,y) (x>y ? x:y)
+   // (max macro removed: use ternary)
 
    long int i,j,k, status=0;
    double u=0., maxpiv=0., minpiv=0., abspiv=0.;
@@ -217,7 +217,7 @@ long int equations_factor( long int n, double **a, long int *p, long int *f )
    for ( i=0; i<n; i++ ) if (!f[i])
    {
       for ( j=p[i]; j<i; j++ ) if (!f[j])
-         for ( k=max(p[i],p[j]); k<j; k++ ) if (!f[k])
+         for ( k=((p[i]>p[j])?p[i]:p[j]); k<j; k++ ) if (!f[k])
             a[i][j-p[i]] -= a[j][k-p[j]]*a[i][k-p[i]];
 
       for ( j=p[i]; j<i; j++ ) if (!f[j])
@@ -239,9 +239,8 @@ long int equations_factor( long int n, double **a, long int *p, long int *f )
       else if ( abspiv < minpiv ) minpiv = abspiv;
    }
 
-   if ( minpiv / maxpiv < 1.e-12 ) status = max( status, 1 );
+   if ( minpiv / maxpiv < 1.e-12 ) status = ((status>1)?status:1);
 
-   #undef max
    #undef TINY
 
    if ( status==0 ) status = 1;

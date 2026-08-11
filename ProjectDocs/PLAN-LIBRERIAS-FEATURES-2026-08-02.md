@@ -411,8 +411,12 @@ notación de punteros f2c, `f2c.h` con tipos `integer`/`doublereal`). Objetivos:
       (Masin, SANISAND, damage, groundflow) en verde. Esto hace hypo_ REENTRANTE
       (habilita OpenMP futuro). Nota: la regresión confirma que ninguna variable
       local dependía de la persistencia entre llamadas.
-- [ ] Eliminar macros `min`/`max` de f2c.h que rompen C++ estándar
-      (tochnog.h:45 ya documenta el workaround).
+- [x] Eliminar macros `min`/`max` de f2c.h que rompen C++ estándar
+      (tochnog.h:45 ya documenta el workaround). **HECHO (2026-08-11, paso 3)**:
+      sin macros min/max en ningun .cc. math.cc (que definia su propia macro
+      max) usa ternarios; hypo.c usa ternarios (no scalar_dmax/dmin porque el
+      enlazado C de hypo.c no resuelve el mangling C++ de math.cc). El
+      bloque #undef min/max obsoleto de tochnog.h fue removido en el paso 1.
 - [ ] Beneficio esperado de velocidad: bajo para el propio wolfersdorff (el
       código numérico es el mismo); el gana está en legibilidad, reentrancia y
       en los kernels nuevos (masin.c ya es C limpio). La validación de
