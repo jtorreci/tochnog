@@ -41,32 +41,32 @@ long int *iusepres, *iuseepi, *ihypotype;
     double exp();
 
     /* Local variables */
-    static double epid;
-    static long int idim, jdim, kdim, ldim;
-    static double stress_work__[9]	/* was [3][3] */, rate_epi__[9]	/* 
+    double epid;
+    long int idim, jdim, kdim, ldim;
+    double stress_work__[9]	/* was [3][3] */, rate_epi__[9]	/* 
 	    was [3][3] */;
     extern /* Subroutine */ int copy_();
-    static double dstr[9]	/* was [3][3] */, his_save__[100], epi_size__,
+    double dstr[9]	/* was [3][3] */, his_save__[100], epi_size__,
 	     new_epi_save__[9]	/* was [3][3] */, d__[9]	/* was [3][3] 
 	    */, previous_epi__[9]	/* was [3][3] */;
-    static long int i__;
-    static double trace;
+    long int i__;
+    double trace;
     extern /* Subroutine */ int sigma_();
     extern double inpro_();
-    static long int error;
+    long int error;
     extern /* Subroutine */ int minus_();
     extern double power_();
-    static double direction_epi__[9]	/* was [3][3] */, ed, ei, ep, 
+    double direction_epi__[9]	/* was [3][3] */, ed, ei, ep, 
 	    dt, middle_epi__[9]	/* was [3][3] */;
     extern /* Subroutine */ int pridbl_(), privec_();
-    static double dt_tot__;
-    static long int switch__;
+    double dt_tot__;
+    long int switch__;
     extern /* Subroutine */ int mul_();
-    static double tmp, epi_rho__;
+    double tmp, epi_rho__;
     extern double normvec_();
     extern /* Subroutine */ int extract_();
-    static long int iter_strain__;
-    static double stress_save__[9]	/* was [3][3] */;
+    long int iter_strain__;
+    double stress_save__[9]	/* was [3][3] */;
 
     int counter=0;
     double dnorm_nonloc[1]={0};
@@ -296,38 +296,38 @@ long int *iuseepi, *ihypotype;
     double sqrt(), sin(), exp(), asin();
 
     /* Local variables */
-    static double alfa, beta;
+    double alfa, beta;
     extern /* Subroutine */ int abdyadic_();
-    static double eold, phic, edot, lmat[81]	/* 
+    double eold, phic, edot, lmat[81]	/* 
 	    was [3][3][3][3] */, nmat[9]	/* was [3][3] */, nval, rval, that[
 	    9]	/* was [3][3] */, tmin, tmax;
     extern /* Subroutine */ int copy_(), zero_();
-    static double a, work1[9]	/* was [3][3] */, d__[9]	/* 
+    double a, work1[9]	/* was [3][3] */, d__[9]	/* 
 	    was [3][3] */, e, f, work2[9]	/* was [3][3] */;
-    static long int i__, j, k, l, m, n;
+    long int i__, j, k, l, m, n;
     extern /* Subroutine */ int eigen_();
     extern double power_();
-    static double lwork[81]	/* was [3][3][3][3] */, tcohesion[9]	/* 
+    double lwork[81]	/* was [3][3][3][3] */, tcohesion[9]	/* 
 	    was [3][3] */;
     extern /* Subroutine */ int addfac_();
-    static double cos3th, ec, ed, fd, fe, fb, ei, hs, c1, c2, xi, re, powxi;
+    double cos3th, ec, ed, fd, fe, fb, ei, hs, c1, c2, xi, re, powxi;
     extern /* Subroutine */ int unity4_();
-    static double eigval[3];
+    double eigval[3];
     extern /* Subroutine */ int pridbl_();
-    static double d_size__, phimob, ec0, ed0, epi_rhochi__;
+    double d_size__, phimob, ec0, ed0, epi_rhochi__;
     extern /* Subroutine */ int privec_();
-    static double tanpsi, ei0;
+    double tanpsi, ei0;
     extern long int null_array__();
-    static double inc_stress__[9]	/* was [3][3] */;
+    double inc_stress__[9]	/* was [3][3] */;
     extern /* Subroutine */ int abc_(), add_();
-    static double fac;
+    double fac;
     extern /* Subroutine */ int dev_();
     extern double tra_();
     extern /* Subroutine */ int mul_();
-    static double tmp;
+    double tmp;
     extern /* Subroutine */ int a4bc_();
     extern long int negativ_();
-    static double thatdev[9]	/* was [3][3] */;
+    double thatdev[9]	/* was [3][3] */;
     extern double normvec_();
     extern /* Subroutine */ int extract_();
     extern double normmat_();
@@ -663,7 +663,7 @@ L1000:
 /* Subroutine */ int abc_(a, b, c__)
 double *a, *b, *c__;
 {
-    static long int idi, jdi, kdi;
+    long int idi, jdi, kdi;
 
 /* ------------------------------------------------------------------------------ */
 
@@ -695,7 +695,7 @@ double *a, *b, *c__;
 /* Subroutine */ int a4bc_(a, b, c__)
 double *a, *b, *c__;
 {
-    static long int idi, jdi, kdi, ldi;
+    long int idi, jdi, kdi, ldi;
 
 /* ------------------------------------------------------------------------------ */
 
@@ -736,7 +736,7 @@ long int *n;
     long int i__1;
 
     /* Local variables */
-    static long int i__;
+    long int i__;
 
 /* ----------------------------------------------------------------------------- */
 
@@ -766,7 +766,7 @@ long int *n;
     long int i__1;
 
     /* Local variables */
-    static long int i__;
+    long int i__;
 
 /* ----------------------------------------------------------------------------- */
 
@@ -795,7 +795,7 @@ long int *n;
     long int i__1;
 
     /* Local variables */
-    static long int i__;
+    long int i__;
 
 /* ------------------------------------------------------------------------------ */
 
@@ -819,7 +819,7 @@ long int *n;
 /* Subroutine */ int dev_(a, adev)
 double *a, *adev;
 {
-    static long int idi, jdi;
+    long int idi, jdi;
     extern double tra_();
 
 /* ------------------------------------------------------------------------------ */
@@ -880,7 +880,7 @@ long int *n;
     long int i__1;
 
     /* Local variables */
-    static long int i__;
+    long int i__;
 
 /* ----------------------------------------------------------------------------- */
 
@@ -910,7 +910,7 @@ long int *n;
     long int i__1;
 
     /* Local variables */
-    static long int i__;
+    long int i__;
 
 /* ----------------------------------------------------------------------------- */
 
@@ -960,7 +960,7 @@ double *a;
     double sqrt();
 
     /* Local variables */
-    static double work[9]	/* was [3][3] */;
+    double work[9]	/* was [3][3] */;
     extern /* Subroutine */ int abc_();
     extern double tra_();
 
@@ -992,7 +992,7 @@ long int *n;
     double sqrt();
 
     /* Local variables */
-    static long int i__;
+    long int i__;
 
 /* ------------------------------------------------------------------------------ */
 
@@ -1109,7 +1109,7 @@ long int label_len;
     long int i__1;
 
     /* Local variables */
-    static long int i__;
+    long int i__;
 
 
 /* ------------------------------------------------------------------------------ */
@@ -1160,7 +1160,7 @@ long int *n;
     long int i__1;
 
     /* Local variables */
-    static long int i__;
+    long int i__;
 
 /* ----------------------------------------------------------------------------- */
 
@@ -1188,9 +1188,9 @@ double *sigmat, *eigval;
     double sqrt(), acos(), cos();
 
     /* Local variables */
-    static double bigr, p, q, r__, s, t;
+    double bigr, p, q, r__, s, t;
     extern /* Subroutine */ int invar_();
-    static double i1, i2, i3, y0, y1, y2, phi, inv[3], tmp;
+    double i1, i2, i3, y0, y1, y2, phi, inv[3], tmp;
 
 /* ----------------------------------------------------------------------------- */
 
@@ -1286,7 +1286,7 @@ double *a, *det;
 /* Subroutine */ int unity4_(a)
 double *a;
 {
-    static long int idi, jdi, kdi, ldi;
+    long int idi, jdi, kdi, ldi;
 
 /* ----------------------------------------------------------------------------- */
 
@@ -1322,7 +1322,7 @@ double *a;
 /* Subroutine */ int abdyadic_(a, b, c__)
 double *a, *b, *c__;
 {
-    static long int idi, jdi, kdi, ldi;
+    long int idi, jdi, kdi, ldi;
 
 /* ----------------------------------------------------------------------------- */
 
@@ -1362,7 +1362,7 @@ long int *n;
     double ret_val;
 
     /* Local variables */
-    static long int i__;
+    long int i__;
 
 /* ------------------------------------------------------------------------------ */
 

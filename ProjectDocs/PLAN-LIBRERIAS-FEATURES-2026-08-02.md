@@ -401,8 +401,16 @@ notación de punteros f2c, `f2c.h` con tipos `integer`/`doublereal`). Objetivos:
       (de hypo.c y de tochnog.h/tochnog-mod.h). Bug clave: `abs` de f2c.h era una
       macro que funcionaba con double; sin ella, `abs(int)` de stdlib truncaba a
       int y rompía hypo1-3. Validado: hypo1-4 + regresión completa en verde.
-- [ ] Reemplazar `static` locals y paso por referencia estilo f2c por structs
+- [x] Reemplazar `static` locals y paso por referencia estilo f2c por structs
       de estado por punto de integración (reentrante, sin estado global).
+      **HECHO (2026-08-11, paso 2)**: los 46 `static` locals de hypo.c
+      convertidos a automáticas (las 3 constantes c__9/c_b45/c__81 quedan como
+      static const de solo lectura). Los warnings de "may be uninitialized"
+      (tcohesion, c1, c2) son falsos positivos: copy_/power_ son funciones
+      externas que inicializan. Validado: hypo1-4 + regresión completa
+      (Masin, SANISAND, damage, groundflow) en verde. Esto hace hypo_ REENTRANTE
+      (habilita OpenMP futuro). Nota: la regresión confirma que ninguna variable
+      local dependía de la persistencia entre llamadas.
 - [ ] Eliminar macros `min`/`max` de f2c.h que rompen C++ estándar
       (tochnog.h:45 ya documenta el workaround).
 - [ ] Beneficio esperado de velocidad: bajo para el propio wolfersdorff (el
