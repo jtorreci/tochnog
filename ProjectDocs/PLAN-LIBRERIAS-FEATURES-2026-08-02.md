@@ -322,9 +322,14 @@ El índice es limpio: cada entrada de la sección 6 "data records" es una keywor
       un indicador de base nodal, no shape functions (promedio sobre nodos).
       VALIDADO: sigv=-100 -> kp=0.1; sigv=-200 -> kp=0.05 (la ley exacta).
       Test groundperm_vs.dat (pres nodo medio 0.498756 vs 0.5, 0.25%).
-- [ ] `materi_plasti_hypo_*` variantes del kernel hipoplástico (lowangles, cohesion,
+- [x] `materi_plasti_hypo_*` variantes del kernel hipoplástico (lowangles, cohesion,
       intergranularstrain, pressuredependentvoidratio, wolfersdorff) — registradas,
-      verificar lógica y tests (P4-B).
+      verificar lógica y tests (P4-A1). **VERIFICADO (2026-08-11, P4-A1)**: las 5
+      variantes funcionan. Tests: hypo1 (wolfersdorff), hypo2/3/4
+      (intergranularstrain), + 3 nuevos: hypo_cohesion.dat (c=5, sigyy=-3945.4),
+      hypo_lowangles.dat (rval=2, powxi=2, sigyy=-4263.7), hypo_pdvr.dat
+      (-yes, sigyy=-943.0). Documentado en
+      manual-user/manual-developer/group_materi_plasti_hypo_wolfersdorff.md.
 
 #### P4-E — Otros modelos de suelo (SoilModels.com) — METODOLOGÍA MASIN
 Metodología establecida en P4-B1 (port fiel del UMAT Fortran autorizado → C puro
@@ -389,6 +394,20 @@ propuesto por demanda práctica:
 - [ ] `EMC` / otros (ISA, barodesy, viscohypoplasticity) según demanda — P4-E4.
 - [ ] `hypo.c` refactor a C idiomático (ver P4-F) ANTES de portar más kernels
       f2c: cada nuevo modelo se portaría directo a C limpio.
+
+#### P4 pendientes documentados para el futuro (2026-08-11)
+- **Firma f2c de hypo_ (cosmético)**: `hypo_` conserva la declaración de
+  parámetros después de la firma (estilo f2c años 90). Funciona y no bloquea;
+  modernizarla (mover los parámetros a la firma) es de riesgo sin beneficio
+  funcional. POSPUESTO.
+- **P4-C (bloqueado)**: `group_materi_plasti_tension_direct_normal` y
+  `group_materi_plasti_mohr_coul_direct_normal` requieren
+  `group_materi_plasti_tension_direct` y elementos de interfaz
+  (`group_interface_*`) que NO existen en esta base. Requiere evaluar primero
+  si los elementos de interfaz son implementables. BLOQUEADO.
+- **P4-E (modelos nuevos)**: PM4Sand (sin UMAT), Sand Hypoplasticity (solo
+  validar wolfersdorff ya cubierto), EMC/otros (ISA, barodesy) según demanda.
+  Requieren UMAT de referencia o trabajo de calibración extenso. POSPUESTO.
 
 #### P4-F — Refactor de código adaptado de Fortran (hypo.c) — C idiomático
 `hypo.c` es un port f2c→C puro (wolfersdorff, 1380 líneas, `static` locals,
