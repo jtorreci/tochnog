@@ -41,12 +41,18 @@ else
   exit 1
 fi
 
+# SQLite (optional, for tabular export). Empty by default; if libsqlite3-dev
+# is installed, enable with -lsqlite3. The header is included via ALL_INCLUDE
+# in the Makefile when SQLITE_USE=1 in tn_sqlite.h.
+SQLITE_INC="-I/usr/include"
+SQLITE_LIB="-lsqlite3"
+
 MAKE_FLAGS=( "SYS_FILE=sysposix" "OBJ=o" "BCPP=" "VCPP="
   "COMPILER_C=gcc" "COMPILER_CPP=g++"
-  "COMPILER_FLAGS=-c -O1 -Wall -D_REENTRANT $SUPERLU_INC"
+  "COMPILER_FLAGS=-c -O1 -Wall -D_REENTRANT $SUPERLU_INC $SQLITE_INC"
   "LINK_FLAGS_BEFORE=" )
 
-LINK_FLAGS_AFTER="-l:liblapack.so.3 -l:libblas.so.3 $SUPERLU_A -lm -lpthread -o build/tochnog"
+LINK_FLAGS_AFTER="-l:liblapack.so.3 -l:libblas.so.3 $SUPERLU_A $SQLITE_LIB -lm -lpthread -o build/tochnog"
 
 echo "==> Limite de memoria por proceso: 4 GB"
 ulimit -v 4000000 2>/dev/null || echo "    (no se pudo aplicar ulimit, continuando)"

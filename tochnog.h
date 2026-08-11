@@ -38,6 +38,7 @@
 #include "tnsuplu.h"
 #include "tnlapack.h"
 #include "tnhypo.h"
+#include "tn_sqlite.h"
 #include "matrix.h"
 #include "time.h"
 
@@ -1475,6 +1476,9 @@ void      print_tecplot( long int ival[] );
 void      print_unknowns( void );
 void      print_unknownsrhside( void );
 void      print_vtk( long int icontrol );
+class     SqliteDB;
+SqliteDB* sqlite_db_open( const char* filename );
+void      sqlite_db_close( SqliteDB* db );
 long int  project_point_exactly_on_line( double coord[], double coord0[], 
             double coord1[], double weight[] );
 long int  project_point_exactly_on_quad( double coord[], double coord0[], 

@@ -20,6 +20,10 @@ MASIN_OBJ=masin.o
 MASIN_VISCO_SRC=masin_visco.c
 MASIN_VISCO_OBJ=masin_visco.o
 
+#  ***********  SQLite (optional, tabular export) ******************
+SQLITE_SRC=sqlite.cc
+SQLITE_OBJ=sqlite.o
+
 #  ***********  SANISAND (Dafalias & Manzari 2004) ******************
 SANISAND_SRC=sanisand.c
 SANISAND_OBJ=sanisand.o
@@ -85,8 +89,18 @@ LAPACK_LIB=
 #
 #  ***********  All libraries *******************
 
-ALL_INCLUDE= $(PETSC_INCLUDE) $(SUPERLU_INCLUDE) $(LAPACK_INCLUDE)
-ALL_LIB=  $(LAPACK_LIB)  $(BLAS_LIB) -lm $(PETSC_LIB) $(SUPERLU_LIB)
+ALL_INCLUDE= $(PETSC_INCLUDE) $(SUPERLU_INCLUDE) $(LAPACK_INCLUDE) $(SQLITE_INCLUDE)
+#  ***********  SQLite library (optional, for tabular export) ***********
+# For SQLite usage (control_print_tabular -sqlite):
+#   1. Set SQLITE_USE to 1 in tn_sqlite.h
+#   2. Activate and adjust the next two lines
+SQLITE_INCLUDE=-I/usr/include
+SQLITE_LIB=-lsqlite3
+#   3. Requires the SQLite development headers (libsqlite3-dev on Debian).
+#      If compiled without SQLITE_USE, requesting -sqlite prints a warning
+#      and falls back to CSV.
+
+ALL_LIB=  $(LAPACK_LIB)  $(BLAS_LIB) -lm $(PETSC_LIB) $(SUPERLU_LIB) $(SQLITE_LIB)
 
 #  ***********  default platform  *******************
 default: darwin-intel
@@ -275,7 +289,7 @@ tochnog: adjust.$(OBJ) area.$(OBJ) \
 	filter.$(OBJ) force.$(OBJ) general.$(OBJ) \
 	geometry.$(OBJ) generate.$(OBJ) \
 	groundda.$(OBJ) groundfl.$(OBJ) group.$(OBJ) \
-        hyperela.$(OBJ) $(HYPO_OBJ) $(MASIN_OBJ) $(MASIN_VISCO_OBJ) $(SANISAND_OBJ) \
+        hyperela.$(OBJ) $(HYPO_OBJ) $(MASIN_OBJ) $(MASIN_VISCO_OBJ) $(SANISAND_OBJ) $(SQLITE_OBJ) \
 	hypoplas.$(OBJ) initia.$(OBJ) \
 	input.$(OBJ) integra.$(OBJ) intersec.$(OBJ) \
 	inverse.$(OBJ) locate.$(OBJ) \
@@ -420,6 +434,9 @@ $(MASIN_VISCO_OBJ): $(MASIN_VISCO_SRC)
 
 $(SANISAND_OBJ): $(SANISAND_SRC)
 	$(COMPILER_C) $(COMPILER_FLAGS) $(SANISAND_SRC)
+
+$(SQLITE_OBJ): $(SQLITE_SRC)
+	$(COMPILER_CPP) $(COMPILER_FLAGS) $(SQLITE_SRC)
 
 hypoplas.$(OBJ): hypoplas.$(SRC_CPP) tochnog.h
 	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)hypoplas.$(SRC_CPP)
