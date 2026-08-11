@@ -442,6 +442,40 @@ notación de punteros f2c, `f2c.h` con tipos `integer`/`doublereal`). Objetivos:
       regresión: hypo1-4 + hypomasin1.
 
 #### P5 — Post-proceso y salida (medio)
+
+#### P5-T — Exportación tabular + SQLite (post-proceso programático) [PLAN APROBADO 2026-08-11]
+Objetivo: almacén SQLite + CSV opcional para post-proceso con código (pandas,
+análisis estadístico, magnitudes derivadas, gráficas, esfuerzos sobre líneas).
+Dependencias OPCIONALES en compilación (patrón SUPERLU/PETSC: `tn_sqlite.h`
+con `SQLITE_USE`; si se compila sin soporte, al solicitar la feature se
+advierte y se continúa con CSV). En esta máquina se instala `libsqlite3-dev`
+(runtime ya presente).
+- [ ] **P5-T0**: infraestructura condicional — `tn_sqlite.h` (`SQLITE_USE`),
+      makefile (`SQLITE_INCLUDE`/`SQLITE_LIB`), `sqlite.cc` (clase `SqliteDB`
+      con RAII, esquema normalizado). Instalar `libsqlite3-dev`.
+- [ ] **P5-T1**: `control_print_tabular` — CSV de un instante (`-last`) +
+      escritura SQLite tabla `primary`. Reutiliza acceso `db_dbl(NODE_DOF,
+      VERSION_PRINT)` + `dof_scal_vec_mat` (patrón print_vt.cc).
+- [ ] **P5-T2**: series temporales — CSV multi-incremento con columna `t` +
+      SQLite por paso (patrón print_history). Desde el inicio.
+- [ ] **P5-T3**: magnitudes derivadas C++ (`template<int D> Tensor`, von Mises,
+      Tresca, principales con `matrix_jacobi`) → tabla `derived`. Integración
+      con `print_vtk` (`POINT_DATA` sin duplicar lógica).
+- [ ] **P5-T4**: `tools/postprocess.py` (pandas+sqlite3): estadísticas, gráficas
+      tiempo, esfuerzos sobre `geometry_line`, variables de usuario → tabla
+      `user`.
+
+Esquema SQLite (normalizado por tablas, clave compuesta `(node,t)`):
+```
+primary(node, t, ux.., sigxx.., exx..)     -- variables fijas
+derived(node, t, vmises, tresca, sig1..3)  -- magnitudes C++
+user(node, t, energia, ...)                -- variables Python
+meta(key, value)                           -- malla, unidades, convencion
+```
+Añadir magnitudes NO altera `primary` (tablas separadas por familia; JOIN por
+(node,t) en SQL/pandas).
+
+
 - [ ] `control_print_history_smooth`, `control_print_gid_*` (varios),
       `control_print_vtk_*`, `control_print_gmsh_*`, `control_print_frd_*`,
       `control_print_materi_stress_force`, `control_print_interface_stress*`.
@@ -466,6 +500,56 @@ notación de punteros f2c, `f2c.h` con tipos `integer`/`doublereal`). Objetivos:
 - Inventario completo: `ProjectDocs/inventario-features-faltantes-2024.txt` (718 líneas).
 - Marcar con `[x]` cada feature al implementarla y verificar su test.
 - Al final de cada sesión: guardar el progreso en memoria (Engram) con el plan actualizado.
+
+---
+
+## 6b. Decisión de arquitectura: C vs C++ (2026-08-11)
+
+### Contexto (evidencia)
+
+- El proyecto se compila como C++ (`.cc` con g++), pero el C++ real usado es solo
+  `ofstream`/`cout` (21 archivos de salida). Cero `std::vector`, `std::map`,
+  RAII o templates en el código de proceso.
+- Los kernels constitutivos (`hypo.c`, `masin.c`, `masin_visco.c`, `sanisand.c`)
+  son C puro tras P4-F (reentrancia, ABI estable, port Fortran).
+- El núcleo de cálculo usa arrays planos con indexación manual
+  (`element_matrix[indx*nnol*npuknwn+indx]`) y `get_new_dbl/get_new_int`
+  (= `malloc` sin RAII).
+- `MDIM` es una constante de compilación (`#define MDIM 3`), lo que habilita
+  templates de dimensión fija.
+
+### Decisión
+
+**C++ se usa donde aporta valor real; no hay una "evolución C++" global ni se
+lleva todo a C puro.** El criterio es por capas, según el coste/beneficio:
+
+| Capa | Lenguaje | Razón |
+|------|----------|-------|
+| Kernels constitutivos | **C puro** | Reentrancia, ABI estable, port Fortran (P4-F). Decisión cerrada. |
+| Núcleo de cálculo (assembl/solve/element/db) | C plano (intocable) | Estable 40 años, usa LAPACK/BLAS; los templates solo aportarían claridad marginal a costa de riesgo de regresión. NO se reescribe. |
+| **Capa nueva** (post-proceso, SQLite, magnitudes derivadas) | **C++ moderno** | Aquí C++ aporta: RAII para `SqliteDB`, `std::vector`/`std::map` para buffers y series, `template<int D> Tensor` para magnitudes con dimensiones fijas (2D/3D). No es ostream por ostream — es gestión de recursos y tipos seguros. |
+
+### Razones de la decisión
+
+1. **C puro no hace perder nada hoy**: el cuello de botella real es el
+   assemblaggio/solve con LAPACK — un `std::vector` no acelera eso, y una
+   reescritura C++ del núcleo es un riesgo enorme sin beneficio medido.
+2. **C++ aporta donde la gestión de recursos y tipos importa**: RAII evita
+   fugas de `sqlite3*`/buffers (el patrón `get_new_dbl`+`free` manual de 40
+   años); los templates de dimensión fija (`Tensor<D>`) eliminan la indexación
+   manual y los bounds checks en el código nuevo.
+3. **Refactor C++ del ensamblaje SOLO si el profiling lo justifica**: si un
+   día se mide un cuello de botella en los bucles de elementos, los templates
+   `Tensor<MDIM>` pueden acelerarlos — pero de forma incremental por módulo,
+   nunca como reescritura global.
+4. **Decisiones cerradas se mantienen**: P4-F (kernels C puro) no se revierte.
+
+### Consecuencia práctica
+
+- Los kernels nuevos siguen en C puro.
+- La capa P5 (SQLite, tabular, derivadas) se implementa en C++ moderno
+  (RAII + contenedores + `Tensor<D>`).
+- El núcleo no se toca salvo bug crítico.
 
 ---
 
