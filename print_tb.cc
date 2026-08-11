@@ -2,10 +2,14 @@
     print_tb.cc - control_print_tabular
     Tabular export of nodal results for programmatic post-processing.
 
-    P5-T1: CSV of the current (last) state + optional SQLite primary table.
+    P5-T2: time series. The CSV is written in append mode (header only on
+    the first step), each call adds a row per node with the current time t.
+    The SQLite primary table uses INSERT OR REPLACE on the (node,t) key, so
+    each time step accumulates rows.
+
     Exports the dofs present in the model (displacement, stress, strain,
-    pressure, ...), detected via dof_label/dof_scal_vec_mat (same approach
-    as print_vtk.cc).
+    pressure, ...), detected via dof_scal_vec_mat (same approach as
+    print_vtk.cc: dof type is -SCALAR / -VECTOR / -MATRIX).
 
     CSV always available. SQLite only if compiled with SQLITE_USE=1; else a
     warning is printed and the CSV is still produced.
@@ -19,11 +23,12 @@
 void print_tabular( long int icontrol )
 {
   long int i=0, inod=0, idim=0, swit=0, max_node=0, nder_=0;
-  long int ldum=0, idum[1], length=0, nuknwn_=0;
-  long int *dof_label=NULL, *dof_type=NULL, *dof_scal_vec_mat=NULL;
+  long int ldum=0, idum[1], nuknwn_=0;
+  long int *dof_label=NULL, *dof_scal_vec_mat=NULL;
   double ddum[1], coord[MDIM], *node_dof=NULL, time_current=0.;
   char filename[MCHAR];
   std::string csv_file, sqlite_file;
+  std::ifstream fexists;
 
   swit = set_swit(-1,-1,"print_tabular");
   if ( swit ) pri( "In routine PRINT_TABULAR" );
@@ -37,17 +42,11 @@ void print_tabular( long int icontrol )
 
   // Detect present dofs via dof_label / dof_scal_vec_mat
   dof_label = get_new_int(MUKNWN);
-  dof_type = get_new_int(MUKNWN);
   dof_scal_vec_mat = get_new_int(MUKNWN);
   db( DOF_LABEL, 0, dof_label, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
-  db( DOF_TYPE, 0, dof_type, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
   db( DOF_SCAL_VEC_MAT, 0, dof_scal_vec_mat, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
 
-  // Count active scalar/vector/matrix dofs
-  for ( i=0; i<nuknwn_; i++ ) {
-  }
-
-  // CSV output: base<icontrol>.csv
+  // CSV output: base<icontrol>.csv (append per time step)
   strcpy( filename, data_file_base );
   if ( icontrol!=-1 ) {
     char str[MCHAR];
@@ -56,75 +55,109 @@ void print_tabular( long int icontrol )
   }
   strcat( filename, ".csv" );
   csv_file = filename;
-  for (i=0;i<nuknwn_;i++) fprintf(stderr, "TB dof[%ld] label=%ld svm=%ld\n", i, dof_label[i], dof_scal_vec_mat[i]);
-  {
-    std::ofstream out(csv_file);
-    out.precision(TN_PRECISION);
-    out << "node,t";
-    for ( i=0; i<nuknwn_; i++ ) {
-      if ( dof_scal_vec_mat[i]!=-NO ) {
-        if      ( dof_scal_vec_mat[i]==-SCALAR )
-          out << "," << db_name(dof_label[i]);
-        else if ( dof_scal_vec_mat[i]==-VECTOR ) {
-          for ( idim=0; idim<ndim; idim++ )
-            out << "," << db_name(dof_label[i]) << "_" << idim;
-        }
-        else if ( dof_scal_vec_mat[i]==-MATRIX ) {
-          long int kdim, ldim;
-          for ( kdim=0; kdim<MDIM; kdim++ )
-            for ( ldim=0; ldim<MDIM; ldim++ ) {
-              if ( stress_indx(kdim,ldim)>=0 && dof_label[stres_indx+stress_indx(kdim,ldim)*nder_]>=0 )
-                out << "," << db_name(dof_label[i]) << "_" << kdim << ldim;
-            }
-        }
-      }
-    }
-    out << "\n";
 
-    for ( inod=1; inod<=max_node; inod++ ) {
-      db( NODE, inod, idum, coord, ldum, VERSION_PRINT, GET );
-      node_dof = db_dbl( NODE_DOF, inod, VERSION_PRINT );
-      out << inod << "," << time_current;
+  {
+    // write header only if the file does not exist yet (first call)
+    fexists.open(csv_file.c_str());
+    bool first = !fexists.is_open();
+    fexists.close();
+
+    std::ofstream out(csv_file.c_str(), std::ios::app);
+    out.precision(TN_PRECISION);
+    if ( first ) {
+      out << "node,t";
       for ( i=0; i<nuknwn_; i++ ) {
         if ( dof_scal_vec_mat[i]!=-NO ) {
           if      ( dof_scal_vec_mat[i]==-SCALAR )
-            out << "," << node_dof[i];
+            out << "," << db_name(dof_label[i]);
           else if ( dof_scal_vec_mat[i]==-VECTOR ) {
-            for ( idim=0; idim<ndim; idim++ )
-              out << "," << node_dof[i+idim*nder_];
+            for ( idim=0; idim<ndim; idim++ ) {
+              char str[MCHAR];
+              sprintf(str, "%s_%ld", db_name(dof_label[i]), idim);
+              out << "," << str;
+            }
           }
           else if ( dof_scal_vec_mat[i]==-MATRIX ) {
             long int kdim, ldim;
             for ( kdim=0; kdim<MDIM; kdim++ )
               for ( ldim=0; ldim<MDIM; ldim++ ) {
-                long int indx = stress_indx(kdim,ldim);
-                if ( indx>=0 && dof_label[stres_indx+indx*nder_]>=0 )
-                  out << "," << node_dof[stres_indx+indx*nder_];
+                char str[MCHAR];
+                sprintf(str, "%s_%ld%ld", db_name(dof_label[i]), kdim, ldim);
+                out << "," << str;
               }
           }
         }
       }
       out << "\n";
     }
+
+    for ( inod=1; inod<=max_node; inod++ ) {
+      db( NODE, inod, idum, coord, ldum, VERSION_PRINT, GET );
+      node_dof = db_dbl( NODE_DOF, inod, VERSION_PRINT );
+      out << inod << "," << time_current;
+      for ( i=0; i<nuknwn_; i++ ) {
+        if ( dof_scal_vec_mat[i]==-SCALAR ) {
+          out << "," << node_dof[i];
+        }
+        else if ( dof_scal_vec_mat[i]==-VECTOR ) {
+          for ( idim=0; idim<ndim; idim++ )
+            out << "," << node_dof[i+idim*nder_];
+        }
+        else if ( dof_scal_vec_mat[i]==-MATRIX ) {
+          long int kdim, ldim;
+          for ( kdim=0; kdim<MDIM; kdim++ )
+            for ( ldim=0; ldim<MDIM; ldim++ ) {
+              long int indx = stress_indx(kdim,ldim);
+              out << "," << node_dof[i+indx*nder_];
+            }
+        }
+      }
+      out << "\n";
+    }
   }
 
-  // SQLite primary table (optional)
+  // SQLite primary table (optional): long format (node,dof,t,value)
   sqlite_file = csv_file.substr(0, csv_file.size()-4) + ".sqlite";
   {
     SqliteDB* db = sqlite_db_open( sqlite_file.c_str() );
     if ( !db ) {
       pri( "Warning: SQLite not available in this build; CSV written only." );
     } else {
-      char sql[2048];
-      for ( inod=0; inod<=max_node; inod++ ) {
+      char sql[512];
+      for ( inod=1; inod<=max_node; inod++ ) {
         node_dof = db_dbl( NODE_DOF, inod, VERSION_PRINT );
-        sprintf(sql, "INSERT OR REPLACE INTO primary_data (node,t) VALUES (%ld,%g);",
-          inod, time_current);
-        db->exec(sql);
+        for ( i=0; i<nuknwn_; i++ ) {
+          if ( dof_scal_vec_mat[i]==-SCALAR ) {
+            sprintf(sql,
+              "INSERT OR REPLACE INTO primary_data (node,dof,t,value) VALUES (%ld,'%s',%g,%g);",
+              inod, db_name(dof_label[i]), time_current, node_dof[i]);
+            db->exec(sql);
+          }
+          else if ( dof_scal_vec_mat[i]==-VECTOR ) {
+            for ( idim=0; idim<ndim; idim++ ) {
+              sprintf(sql,
+                "INSERT OR REPLACE INTO primary_data (node,dof,t,value) VALUES (%ld,'%s_%ld',%g,%g);",
+                inod, db_name(dof_label[i]), idim, time_current, node_dof[i+idim*nder_]);
+              db->exec(sql);
+            }
+          }
+          else if ( dof_scal_vec_mat[i]==-MATRIX ) {
+            long int kdim, ldim;
+            for ( kdim=0; kdim<MDIM; kdim++ )
+              for ( ldim=0; ldim<MDIM; ldim++ ) {
+                long int indx = stress_indx(kdim,ldim);
+                sprintf(sql,
+                  "INSERT OR REPLACE INTO primary_data (node,dof,t,value) VALUES (%ld,'%s_%ld%ld',%g,%g);",
+                  inod, db_name(dof_label[i]), kdim, ldim, time_current,
+                  node_dof[i+indx*nder_]);
+                db->exec(sql);
+              }
+          }
+        }
       }
       sqlite_db_close( db );
     }
   }
+
   if ( swit ) pri( "Out routine PRINT_TABULAR" );
-  (void)dof_type; (void)length; (void)max_node;
 }
