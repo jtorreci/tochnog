@@ -25,6 +25,8 @@ SQLITE_SRC=sqlite.cc
 SQLITE_OBJ=sqlite.o
 PRINT_TB_SRC=print_tb.cc
 PRINT_TB_OBJ=print_tb.o
+DERIVED_SRC=derived.cc
+DERIVED_OBJ=derived.o
 
 #  ***********  SANISAND (Dafalias & Manzari 2004) ******************
 SANISAND_SRC=sanisand.c
@@ -308,7 +310,7 @@ tochnog: adjust.$(OBJ) area.$(OBJ) \
 	print_gi.$(OBJ) print_g5.$(OBJ) print_g6.$(OBJ)\
 	print_gm.$(OBJ) print_hi.$(OBJ) \
 	print_pl.$(OBJ) print_ma.$(OBJ) print_rs.$(OBJ) \
-	print_te.$(OBJ) print_un.$(OBJ) print_vt.$(OBJ) print_tb.$(OBJ) \
+	print_te.$(OBJ) print_un.$(OBJ) print_vt.$(OBJ) print_tb.$(OBJ) $(DERIVED_OBJ) \
 	project.$(OBJ) range.$(OBJ) \
 	refine_g.$(OBJ) refine_l.$(OBJ) remesh.$(OBJ) \
 	renumber.$(OBJ) repeat.$(OBJ) restart.$(OBJ) \
@@ -568,6 +570,9 @@ print_vt.$(OBJ): print_vt.$(SRC_CPP) tochnog.h
 
 print_tb.$(OBJ): print_tb.$(SRC_CPP) tochnog.h
 	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)print_tb.$(SRC_CPP)
+
+$(DERIVED_OBJ): $(DERIVED_SRC) tochnog.h
+	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)$(DERIVED_SRC)
 
 project.$(OBJ): project.$(SRC_CPP) tochnog.h
 	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)project.$(SRC_CPP)

@@ -2,14 +2,15 @@
     print_tb.cc - control_print_tabular
     Tabular export of nodal results for programmatic post-processing.
 
-    P5-T2: time series. The CSV is written in append mode (header only on
-    the first step), each call adds a row per node with the current time t.
-    The SQLite primary table uses INSERT OR REPLACE on the (node,t) key, so
-    each time step accumulates rows.
+    P5-T3: time series + derived magnitudes (von Mises, Tresca, principal
+    stresses) computed in C++ when a stress tensor dof is present.
 
-    Exports the dofs present in the model (displacement, stress, strain,
-    pressure, ...), detected via dof_scal_vec_mat (same approach as
-    print_vtk.cc: dof type is -SCALAR / -VECTOR / -MATRIX).
+    The CSV is written in append mode (header only on the first step), each
+    call adds a row per node with the current time t. The SQLite uses long
+    format primary(node,dof,t,value) and a derived(node,t,...) table.
+
+    Exports the dofs present in the model, detected via dof_scal_vec_mat
+    (same approach as print_vtk.cc: dof type is -SCALAR/-VECTOR/-MATRIX).
 
     CSV always available. SQLite only if compiled with SQLITE_USE=1; else a
     warning is printed and the CSV is still produced.
@@ -23,12 +24,11 @@
 void print_tabular( long int icontrol )
 {
   long int i=0, inod=0, idim=0, swit=0, max_node=0, nder_=0;
-  long int ldum=0, idum[1], nuknwn_=0;
+  long int ldum=0, idum[1], nuknwn_=0, sig_indx=-1;
   long int *dof_label=NULL, *dof_scal_vec_mat=NULL;
   double ddum[1], coord[MDIM], *node_dof=NULL, time_current=0.;
   char filename[MCHAR];
   std::string csv_file, sqlite_file;
-  std::ifstream fexists;
 
   swit = set_swit(-1,-1,"print_tabular");
   if ( swit ) pri( "In routine PRINT_TABULAR" );
@@ -40,13 +40,15 @@ void print_tabular( long int icontrol )
   nder_ = nder;
   nuknwn_ = nuknwn;
 
-  // Detect present dofs via dof_label / dof_scal_vec_mat
   dof_label = get_new_int(MUKNWN);
   dof_scal_vec_mat = get_new_int(MUKNWN);
   db( DOF_LABEL, 0, dof_label, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
   db( DOF_SCAL_VEC_MAT, 0, dof_scal_vec_mat, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
 
-  // CSV output: base<icontrol>.csv (append per time step)
+  // stress tensor dof (if present) for derived magnitudes
+  for ( i=0; i<nuknwn_; i++ )
+    if ( dof_scal_vec_mat[i]==-MATRIX ) { sig_indx = i; break; }
+
   strcpy( filename, data_file_base );
   if ( icontrol!=-1 ) {
     char str[MCHAR];
@@ -56,14 +58,15 @@ void print_tabular( long int icontrol )
   strcat( filename, ".csv" );
   csv_file = filename;
 
+  // --- CSV (append per time step) ---
   {
-    // write header only if the file does not exist yet (first call)
-    fexists.open(csv_file.c_str());
+    std::ifstream fexists(csv_file.c_str());
     bool first = !fexists.is_open();
     fexists.close();
 
     std::ofstream out(csv_file.c_str(), std::ios::app);
     out.precision(TN_PRECISION);
+
     if ( first ) {
       out << "node,t";
       for ( i=0; i<nuknwn_; i++ ) {
@@ -88,6 +91,7 @@ void print_tabular( long int icontrol )
           }
         }
       }
+      if ( sig_indx>=0 ) out << ",vmises,tresca,sig1,sig2,sig3";
       out << "\n";
     }
 
@@ -112,11 +116,22 @@ void print_tabular( long int icontrol )
             }
         }
       }
+      if ( sig_indx>=0 ) {
+        double sig[6], dout[5];
+        sig[0]=node_dof[sig_indx+stress_indx(0,0)*nder_];
+        sig[1]=node_dof[sig_indx+stress_indx(1,1)*nder_];
+        sig[2]=node_dof[sig_indx+stress_indx(2,2)*nder_];
+        sig[3]=node_dof[sig_indx+stress_indx(0,1)*nder_];
+        sig[4]=node_dof[sig_indx+stress_indx(0,2)*nder_];
+        sig[5]=node_dof[sig_indx+stress_indx(1,2)*nder_];
+        calc_derived( sig, dout );
+        for ( i=0; i<5; i++ ) out << "," << dout[i];
+      }
       out << "\n";
     }
   }
 
-  // SQLite primary table (optional): long format (node,dof,t,value)
+  // --- SQLite (optional) ---
   sqlite_file = csv_file.substr(0, csv_file.size()-4) + ".sqlite";
   {
     SqliteDB* db = sqlite_db_open( sqlite_file.c_str() );
@@ -153,6 +168,21 @@ void print_tabular( long int icontrol )
                 db->exec(sql);
               }
           }
+        }
+        if ( sig_indx>=0 ) {
+          double sig[6], dout[5];
+          sig[0]=node_dof[sig_indx+stress_indx(0,0)*nder_];
+          sig[1]=node_dof[sig_indx+stress_indx(1,1)*nder_];
+          sig[2]=node_dof[sig_indx+stress_indx(2,2)*nder_];
+          sig[3]=node_dof[sig_indx+stress_indx(0,1)*nder_];
+          sig[4]=node_dof[sig_indx+stress_indx(0,2)*nder_];
+          sig[5]=node_dof[sig_indx+stress_indx(1,2)*nder_];
+          calc_derived( sig, dout );
+          sprintf(sql,
+            "INSERT OR REPLACE INTO derived (node,t,vmises,tresca,sig1,sig2,sig3)"
+            " VALUES (%ld,%g,%g,%g,%g,%g,%g);",
+            inod, time_current, dout[0], dout[1], dout[2], dout[3], dout[4]);
+          db->exec(sql);
         }
       }
       sqlite_db_close( db );

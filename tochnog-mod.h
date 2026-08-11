@@ -1445,6 +1445,7 @@ void      print_unknowns( void );
 void      print_unknownsrhside( void );
  void      print_vtk( long int icontrol );
  void      print_tabular( long int icontrol );
+ bool      calc_derived( const double sig[6], double out[5] );
  class     SqliteDB;
  SqliteDB* sqlite_db_open( const char* filename );
  void      sqlite_db_close( SqliteDB* db );

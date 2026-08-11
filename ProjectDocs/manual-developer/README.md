@@ -31,6 +31,7 @@ Each file corresponds to the same feature in the [User Manual](../manual-user/).
 - [check_used](check_used.md) — report unused data items.
 - [materi_plasti_maximum_iterations](materi_plasti_maximum_iterations.md) — limit plastic iterations.
 - [control_print_history_factor](control_print_history_factor.md) — multiply history output.
+- [control_print_tabular](control_print_tabular.md) — CSV/SQLite tabular export of nodal results.
 - [control_print_data_versus_data_factor](control_print_data_versus_data_factor.md) — multiply data-versus-data output.
 - [force_point](force_point.md) — point force anywhere in space.
 - [post_point_move](post_point_move.md) — post point follows material.

@@ -1087,7 +1087,7 @@ void db_initialize( long int dof_type[], long int dof_label[] )
 
   strcpy(name[CONTROL_PRINT_TABULAR],"control_print_tabular");
   type[CONTROL_PRINT_TABULAR] = INTEGER;
-  data_length[CONTROL_PRINT_TABULAR] = DATA_ITEM_SIZE;
+  data_length[CONTROL_PRINT_TABULAR] = 1;
   fixed_length[CONTROL_PRINT_TABULAR] = 0;
   data_class[CONTROL_PRINT_TABULAR] = CONTROL;
 
