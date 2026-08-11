@@ -24,7 +24,7 @@
 
 #include "tochnog.h"
 
-void groundflow( long int element, long int gr, long int nnol,
+void groundflow( long int element, long int gr, long int nnol, long int nodes[],
   double coord_ip[], double h[], double d[], 
   double volume, double old_unknowns[], 
   double new_unknowns[], double grad_new_unknowns[], 
@@ -58,7 +58,7 @@ void groundflow( long int element, long int gr, long int nnol,
     VERSION_NORMAL, GET_IF_EXISTS );
   if ( options_skip_groundflow_materidivergence==-YES ) materidivergence = -NO;
 
-  groundflow_data( element, gr, old_unknowns, new_unknowns, coord_ip, pe, C, h, nnol );
+  groundflow_data( element, gr, nodes, old_unknowns, new_unknowns, coord_ip, pe, C, h, nnol );
 
   if ( materi_velocity ) {
     for ( jdim=0; jdim<ndim; jdim++ ) {

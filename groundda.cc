@@ -20,13 +20,13 @@
 
 #include "tochnog.h"
 
-void groundflow_data( long int element, long int gr, double old_unknowns[], 
-  double new_unknowns[], double coord_ip[], double pe[], double &C,
-  double h[], long int nnol )
+void groundflow_data( long int element, long int gr, long int nodes[],
+  double old_unknowns[], double new_unknowns[], double coord_ip[],
+  double pe[], double &C, double h[], long int nnol )
 
 {
-  long int ldum=0, idum=0, inol=0, idim=0, jdim=0, vert=0, nuknwn=0;
-  double ddum[1], pvs[5], sigv=0., tmp=0., sig=0., pres=0., vertmax=0.;
+  long int ldum=0, idum=0, inol=0, idim=0, jdim=0, vert=0, nuknwn=0, inod=0;
+  double ddum[1], pvs[5], sigv=0., tmp=0., sig=0., pres=0., vertmax=0., *node_dof=NULL;
   double force_gravity[MDIM];
 
   nuknwn = npuknwn * nder;
@@ -54,13 +54,16 @@ void groundflow_data( long int element, long int gr, double old_unknowns[],
       if ( fabs(force_gravity[idim]) > vertmax ) { vertmax = fabs(force_gravity[idim]); vert = idim; }
     }
 
-    // interpolate effective vertical stress to the integration point
+    // average the effective vertical stress over the element nodes
     sigv = 0.;
     for ( inol=0; inol<nnol; inol++ ) {
-      sig = new_unknowns[ inol*npuknwn*nder + stres_indx + stress_indx(vert,vert)*nder ];
-      pres = new_unknowns[ inol*npuknwn*nder + pres_indx ];
-      sigv += h[inol] * ( sig - pres );   // effective vertical stress
+      inod = nodes[inol];
+      node_dof = db_dbl( NODE_DOF, inod, VERSION_NEW );
+      sig = node_dof[ stres_indx + stress_indx(vert,vert)*nder ];
+      pres = node_dof[ pres_indx ];
+      sigv += ( sig - pres );   // effective vertical stress
     }
+    sigv /= (double)nnol;
     if ( fabs(sigv) > 1.e-10 ) {
       tmp = pvs[0] / pow( fabs(sigv)/pvs[2], pvs[1] );
       if ( tmp < pvs[3] ) tmp = pvs[3];

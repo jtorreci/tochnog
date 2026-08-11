@@ -316,11 +316,12 @@ El índice es limpio: cada entrada de la sección 6 "data records" es una keywor
       `group_materi_plasti_mohr_coul_direct_normal` (+ `_automatic`) — requiere `group_interface_materi_plasti_mohr_coul_direct`.
 - [x] `group_groundflow_permeability_vertical_stress` — kp = a/(sigv/sig0)^b
       con clamp [min,max], combinada con group_groundflow_permeability.
-      **IMPLEMENTADO (2026-08-10)**: groundda.cc groundflow_data (firma
-      ampliada con h/nnol), enums, database, check. El mecanismo corre y el
-      sigv se lee correctamente. PENDIENTE de validacion del flujo (P4-E2b):
-      el test de 2 elementos da pres=0.714 vs 0.5 esperado — algunos puntos
-      de integracion interpolar sigv=0. Calibrar la regresion.
+      **IMPLEMENTADO y VALIDADO (2026-08-11)**: groundda.cc groundflow_data.
+      Fix clave P4-E2b: el stress nodal se lee via db_dbl(NODE_DOF, inod,
+      VERSION_NEW), no indexando new_unknowns manualmente; el h[] pasado es
+      un indicador de base nodal, no shape functions (promedio sobre nodos).
+      VALIDADO: sigv=-100 -> kp=0.1; sigv=-200 -> kp=0.05 (la ley exacta).
+      Test groundperm_vs.dat (pres nodo medio 0.498756 vs 0.5, 0.25%).
 - [ ] `materi_plasti_hypo_*` variantes del kernel hipoplástico (lowangles, cohesion,
       intergranularstrain, pressuredependentvoidratio, wolfersdorff) — registradas,
       verificar lógica y tests (P4-B).
@@ -392,9 +393,14 @@ propuesto por demanda práctica:
 #### P4-F — Refactor de código adaptado de Fortran (hypo.c) — C idiomático
 `hypo.c` es un port f2c→C puro (wolfersdorff, 1380 líneas, `static` locals,
 notación de punteros f2c, `f2c.h` con tipos `integer`/`doublereal`). Objetivos:
-- [ ] Eliminar dependencia de `f2c.h` (tipos propios `long int`/`double`,
+- [x] Eliminar dependencia de `f2c.h` (tipos propios `long int`/`double`,
       funciones `hypo_*` con firma explícita). El binario ya NO enlaza libf2c
-      (0 símbolos); `f2c.h` solo aporta typedefs.
+      (0 símbolos); `f2c.h` solo aportaba typedefs. **HECHO (2026-08-11)**: hypo.c
+      convertido a C puro (doublereal→double, integer/logical/ftnlen→long int,
+      macros TRUE_/FALSE_/min/max/abs definidas localmente), `f2c.h` ELIMINADO
+      (de hypo.c y de tochnog.h/tochnog-mod.h). Bug clave: `abs` de f2c.h era una
+      macro que funcionaba con double; sin ella, `abs(int)` de stdlib truncaba a
+      int y rompía hypo1-3. Validado: hypo1-4 + regresión completa en verde.
 - [ ] Reemplazar `static` locals y paso por referencia estilo f2c por structs
       de estado por punto de integración (reentrante, sin estado global).
 - [ ] Eliminar macros `min`/`max` de f2c.h que rompen C++ estándar

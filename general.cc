@@ -86,7 +86,7 @@ void general( long int element, long int name, long int nnol, long int element_g
       &condif_conductivity, ldum, GET_IF_EXISTS );
   }
   else if ( type==-GROUNDFLOW ) {
-    groundflow_data( element, element_group, old_unknowns, new_unknowns, coord_ip, pe, C, h, nnol );
+    groundflow_data( element, element_group, nodes, old_unknowns, new_unknowns, coord_ip, pe, C, h, nnol );
   }
   else if ( type==-MATERI ) {
     dens = get_materi_density( element, element_group, nnol, nodes, new_unknowns );

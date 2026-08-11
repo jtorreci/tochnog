@@ -724,7 +724,7 @@ void elem( long int element, long int ithread )
           new_unknowns, element_lhside, element_matrix, element_rhside, 
           element_residue );
       else if ( type==-GROUNDFLOW )
-        groundflow( element, element_group, nnol, 
+        groundflow( element, element_group, nnol, nodes,
           coord_ip, &h[ipoint*nnol], 
           &new_d[ipoint*ndim*nnol], volumeip, old_unknowns, 
           new_unknowns, new_grad_new_unknowns,

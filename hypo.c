@@ -6,13 +6,17 @@
    do_lio, e_wsle, s_stop) and pow_dd have been replaced with C equivalents.
 */
 
-#include "f2c.h"
+#define TRUE_ 1
+#define FALSE_ 0
+#define min(a,b) ((a) <= (b) ? (a) : (b))
+#define max(a,b) ((a) >= (b) ? (a) : (b))
+#define abs(x) ((x) >= 0 ? (x) : -(x))
 
 /* Table of constant values */
 
-static integer c__9 = 9;
-static doublereal c_b45 = 1.5;
-static integer c__81 = 81;
+static long int c__9 = 9;
+static double c_b45 = 1.5;
+static long int c__81 = 81;
 
 /* ------------------------------------------------------------------------------ */
 /* Subroutine */ int hypo_(stress, mmat, his, inc_ept__, time, dtime, nhis, 
@@ -20,49 +24,49 @@ static integer c__81 = 81;
 	epi_chi__, old_epi__, new_epi__, iusepres, iuseepi, ihypotype, 
 	softvar_nonloc, softvar_loc, find_local_sv, options_nonlocal)
 
-integer *find_local_sv, *options_nonlocal;
-doublereal *softvar_nonloc, *softvar_loc;
-doublereal *stress, *mmat, *his, *inc_ept__, *time, *dtime;
-integer *nhis;
-doublereal *data;
-integer *ndata;
-doublereal *cohesion, *epi_r__, *epi_mr__, *epi_mt__, *epi_betar__, *
+long int *find_local_sv, *options_nonlocal;
+double *softvar_nonloc, *softvar_loc;
+double *stress, *mmat, *his, *inc_ept__, *time, *dtime;
+long int *nhis;
+double *data;
+long int *ndata;
+double *cohesion, *epi_r__, *epi_mr__, *epi_mt__, *epi_betar__, *
 	epi_chi__, *old_epi__, *new_epi__;
-integer *iusepres, *iuseepi, *ihypotype;
+long int *iusepres, *iuseepi, *ihypotype;
 {
     /* System generated locals */
-    doublereal d__1;
+    double d__1;
 
     /* Builtin functions */
     double exp();
 
     /* Local variables */
-    static doublereal epid;
-    static integer idim, jdim, kdim, ldim;
-    static doublereal stress_work__[9]	/* was [3][3] */, rate_epi__[9]	/* 
+    static double epid;
+    static long int idim, jdim, kdim, ldim;
+    static double stress_work__[9]	/* was [3][3] */, rate_epi__[9]	/* 
 	    was [3][3] */;
     extern /* Subroutine */ int copy_();
-    static doublereal dstr[9]	/* was [3][3] */, his_save__[100], epi_size__,
+    static double dstr[9]	/* was [3][3] */, his_save__[100], epi_size__,
 	     new_epi_save__[9]	/* was [3][3] */, d__[9]	/* was [3][3] 
 	    */, previous_epi__[9]	/* was [3][3] */;
-    static integer i__;
-    static doublereal trace;
+    static long int i__;
+    static double trace;
     extern /* Subroutine */ int sigma_();
-    extern doublereal inpro_();
-    static logical error;
+    extern double inpro_();
+    static long int error;
     extern /* Subroutine */ int minus_();
-    extern doublereal power_();
-    static doublereal direction_epi__[9]	/* was [3][3] */, ed, ei, ep, 
+    extern double power_();
+    static double direction_epi__[9]	/* was [3][3] */, ed, ei, ep, 
 	    dt, middle_epi__[9]	/* was [3][3] */;
     extern /* Subroutine */ int pridbl_(), privec_();
-    static doublereal dt_tot__;
-    static logical switch__;
+    static double dt_tot__;
+    static long int switch__;
     extern /* Subroutine */ int mul_();
-    static doublereal tmp, epi_rho__;
-    extern doublereal normvec_();
+    static double tmp, epi_rho__;
+    extern double normvec_();
     extern /* Subroutine */ int extract_();
-    static integer iter_strain__;
-    static doublereal stress_save__[9]	/* was [3][3] */;
+    static long int iter_strain__;
+    static double stress_save__[9]	/* was [3][3] */;
 
     int counter=0;
     double dnorm_nonloc[1]={0};
@@ -258,8 +262,8 @@ L210:
 /* ***************  some last printing ******************** */
     switch__ = FALSE_;
     if (switch__) {
-	pridbl_("dt    ", &dt, (ftnlen)6);
-	privec_("stress", &stress[4], &c__9, (ftnlen)6);
+	pridbl_("dt    ", &dt, (long int)6);
+	privec_("stress", &stress[4], &c__9, (long int)6);
     }
 
     return 0;
@@ -272,61 +276,61 @@ L210:
 	epi_betar__, epi_chi__, epid, direction_epi__, iuseepi, ihypotype,
 	softvar_nonloc, softvar_loc, find_local_sv, options_nonlocal, dnorm_nonloc)
 
-integer *find_local_sv, *options_nonlocal;
-doublereal *softvar_nonloc, *softvar_loc, *dnorm_nonloc;
-logical *switch__, *error;
-doublereal *stress, *mmat, *his, *dstr, *dt;
-integer *nhis;
-doublereal *data;
-integer *ndata;
-doublereal *cohesion, *epi_rho__, *epi_mr__, *epi_mt__, *epi_betar__, *
+long int *find_local_sv, *options_nonlocal;
+double *softvar_nonloc, *softvar_loc, *dnorm_nonloc;
+long int *switch__, *error;
+double *stress, *mmat, *his, *dstr, *dt;
+long int *nhis;
+double *data;
+long int *ndata;
+double *cohesion, *epi_rho__, *epi_mr__, *epi_mt__, *epi_betar__, *
 	epi_chi__, *epid, *direction_epi__;
-integer *iuseepi, *ihypotype;
+long int *iuseepi, *ihypotype;
 {
 
 
     /* System generated locals */
-    doublereal d__1, d__2, d__3, d__4, dmob_1, dmob_2;
+    double d__1, d__2, d__3, d__4, dmob_1, dmob_2;
 
     /* Builtin functions */
     double sqrt(), sin(), exp(), asin();
 
     /* Local variables */
-    static doublereal alfa, beta;
+    static double alfa, beta;
     extern /* Subroutine */ int abdyadic_();
-    static doublereal eold, phic, edot, lmat[81]	/* 
+    static double eold, phic, edot, lmat[81]	/* 
 	    was [3][3][3][3] */, nmat[9]	/* was [3][3] */, nval, rval, that[
 	    9]	/* was [3][3] */, tmin, tmax;
     extern /* Subroutine */ int copy_(), zero_();
-    static doublereal a, work1[9]	/* was [3][3] */, d__[9]	/* 
+    static double a, work1[9]	/* was [3][3] */, d__[9]	/* 
 	    was [3][3] */, e, f, work2[9]	/* was [3][3] */;
-    static integer i__, j, k, l, m, n;
+    static long int i__, j, k, l, m, n;
     extern /* Subroutine */ int eigen_();
-    extern doublereal power_();
-    static doublereal lwork[81]	/* was [3][3][3][3] */, tcohesion[9]	/* 
+    extern double power_();
+    static double lwork[81]	/* was [3][3][3][3] */, tcohesion[9]	/* 
 	    was [3][3] */;
     extern /* Subroutine */ int addfac_();
-    static doublereal cos3th, ec, ed, fd, fe, fb, ei, hs, c1, c2, xi, re, powxi;
+    static double cos3th, ec, ed, fd, fe, fb, ei, hs, c1, c2, xi, re, powxi;
     extern /* Subroutine */ int unity4_();
-    static doublereal eigval[3];
+    static double eigval[3];
     extern /* Subroutine */ int pridbl_();
-    static doublereal d_size__, phimob, ec0, ed0, epi_rhochi__;
+    static double d_size__, phimob, ec0, ed0, epi_rhochi__;
     extern /* Subroutine */ int privec_();
-    static doublereal tanpsi, ei0;
-    extern logical null_array__();
-    static doublereal inc_stress__[9]	/* was [3][3] */;
+    static double tanpsi, ei0;
+    extern long int null_array__();
+    static double inc_stress__[9]	/* was [3][3] */;
     extern /* Subroutine */ int abc_(), add_();
-    static doublereal fac;
+    static double fac;
     extern /* Subroutine */ int dev_();
-    extern doublereal tra_();
+    extern double tra_();
     extern /* Subroutine */ int mul_();
-    static doublereal tmp;
+    static double tmp;
     extern /* Subroutine */ int a4bc_();
-    extern logical negativ_();
-    static doublereal thatdev[9]	/* was [3][3] */;
-    extern doublereal normvec_();
+    extern long int negativ_();
+    static double thatdev[9]	/* was [3][3] */;
+    extern double normvec_();
     extern /* Subroutine */ int extract_();
-    extern doublereal normmat_();
+    extern double normmat_();
 
 /* ------------------------------------------------------------------------------ */
 
@@ -408,8 +412,8 @@ integer *iuseepi, *ihypotype;
 	}
     }
     if (*switch__) {
-	pridbl_("tanpsi", &tanpsi, (ftnlen)6);
-	pridbl_("cos3th", &cos3th, (ftnlen)6);
+	pridbl_("tanpsi", &tanpsi, (long int)6);
+	pridbl_("cos3th", &cos3th, (long int)6);
     }
 
     a = sqrt(3.) * (3. - sin(phic)) / (sqrt(2.) * 2. * sin(phic));
@@ -421,8 +425,8 @@ integer *iuseepi, *ihypotype;
     }
     f = sqrt(tmp) - tanpsi / (sqrt(2.) * 2.);
     if (*switch__) {
-	pridbl_("f     ", &f, (ftnlen)6);
-	pridbl_("a     ", &a, (ftnlen)6);
+	pridbl_("f     ", &f, (long int)6);
+	pridbl_("a     ", &a, (long int)6);
     }
 
     d__1 = -tra_(tcohesion);
@@ -436,9 +440,9 @@ integer *iuseepi, *ihypotype;
     ec = tmp * ec0;
     ed = tmp * ed0;
     if (*switch__) {
-	pridbl_("ei    ", &ei, (ftnlen)6);
-	pridbl_("ec    ", &ec, (ftnlen)6);
-	pridbl_("ed    ", &ed, (ftnlen)6);
+	pridbl_("ei    ", &ei, (long int)6);
+	pridbl_("ec    ", &ec, (long int)6);
+	pridbl_("ed    ", &ed, (long int)6);
     }
 
     d__1 = ec / e;
@@ -513,9 +517,9 @@ integer *iuseepi, *ihypotype;
     }
     
     if (*switch__) {
-	pridbl_("fb    ", &fb, (ftnlen)6);
-	pridbl_("fe    ", &fe, (ftnlen)6);
-	pridbl_("fd    ", &fd, (ftnlen)6);
+	pridbl_("fb    ", &fb, (long int)6);
+	pridbl_("fe    ", &fe, (long int)6);
+	pridbl_("fd    ", &fd, (long int)6);
     }
 
     abc_(that, that, work1);
@@ -623,7 +627,7 @@ integer *iuseepi, *ihypotype;
     mul_(inc_stress__, dt, &c__9);
     add_(&stress[4], inc_stress__, &stress[4], &c__9);
     if (*switch__) {
-	privec_("stress", &stress[4], &c__9, (ftnlen)6);
+	privec_("stress", &stress[4], &c__9, (long int)6);
     }
 
 /*       mobilised friction angle for postprocessing */
@@ -657,9 +661,9 @@ L1000:
 
 /* ------------------------------------------------------------------------------ */
 /* Subroutine */ int abc_(a, b, c__)
-doublereal *a, *b, *c__;
+double *a, *b, *c__;
 {
-    static integer idi, jdi, kdi;
+    static long int idi, jdi, kdi;
 
 /* ------------------------------------------------------------------------------ */
 
@@ -689,9 +693,9 @@ doublereal *a, *b, *c__;
 
 /* ------------------------------------------------------------------------------ */
 /* Subroutine */ int a4bc_(a, b, c__)
-doublereal *a, *b, *c__;
+double *a, *b, *c__;
 {
-    static integer idi, jdi, kdi, ldi;
+    static long int idi, jdi, kdi, ldi;
 
 /* ------------------------------------------------------------------------------ */
 
@@ -725,14 +729,14 @@ doublereal *a, *b, *c__;
 
 /* ----------------------------------------------------------------------------- */
 /* Subroutine */ int add_(a, b, c__, n)
-doublereal *a, *b, *c__;
-integer *n;
+double *a, *b, *c__;
+long int *n;
 {
     /* System generated locals */
-    integer i__1;
+    long int i__1;
 
     /* Local variables */
-    static integer i__;
+    static long int i__;
 
 /* ----------------------------------------------------------------------------- */
 
@@ -755,14 +759,14 @@ integer *n;
 
 /* ----------------------------------------------------------------------------- */
 /* Subroutine */ int addfac_(tot, inc, factor, n)
-doublereal *tot, *inc, *factor;
-integer *n;
+double *tot, *inc, *factor;
+long int *n;
 {
     /* System generated locals */
-    integer i__1;
+    long int i__1;
 
     /* Local variables */
-    static integer i__;
+    static long int i__;
 
 /* ----------------------------------------------------------------------------- */
 
@@ -784,14 +788,14 @@ integer *n;
 
 /* ----------------------------------------------------------------------------- */
 /* Subroutine */ int copy_(a, b, n)
-doublereal *a, *b;
-integer *n;
+double *a, *b;
+long int *n;
 {
     /* System generated locals */
-    integer i__1;
+    long int i__1;
 
     /* Local variables */
-    static integer i__;
+    static long int i__;
 
 /* ------------------------------------------------------------------------------ */
 
@@ -813,10 +817,10 @@ integer *n;
 
 /* ----------------------------------------------------------------------------- */
 /* Subroutine */ int dev_(a, adev)
-doublereal *a, *adev;
+double *a, *adev;
 {
-    static integer idi, jdi;
-    extern doublereal tra_();
+    static long int idi, jdi;
+    extern double tra_();
 
 /* ------------------------------------------------------------------------------ */
 
@@ -842,10 +846,10 @@ doublereal *a, *adev;
 
 /* ----------------------------------------------------------------------------- */
 /* Subroutine */ int extract_(dstr, dt, d__)
-doublereal *dstr, *dt, *d__;
+double *dstr, *dt, *d__;
 {
     /* System generated locals */
-    doublereal d__1;
+    double d__1;
 
     /* Local variables */
     extern /* Subroutine */ int copy_(), mul_();
@@ -869,14 +873,14 @@ doublereal *dstr, *dt, *d__;
 
 /* ----------------------------------------------------------------------------- */
 /* Subroutine */ int minus_(a, b, c__, n)
-doublereal *a, *b, *c__;
-integer *n;
+double *a, *b, *c__;
+long int *n;
 {
     /* System generated locals */
-    integer i__1;
+    long int i__1;
 
     /* Local variables */
-    static integer i__;
+    static long int i__;
 
 /* ----------------------------------------------------------------------------- */
 
@@ -899,14 +903,14 @@ integer *n;
 
 /* ----------------------------------------------------------------------------- */
 /* Subroutine */ int mul_(a, scal, n)
-doublereal *a, *scal;
-integer *n;
+double *a, *scal;
+long int *n;
 {
     /* System generated locals */
-    integer i__1;
+    long int i__1;
 
     /* Local variables */
-    static integer i__;
+    static long int i__;
 
 /* ----------------------------------------------------------------------------- */
 
@@ -926,11 +930,11 @@ integer *n;
 
 
 /* ----------------------------------------------------------------------------- */
-logical negativ_(x)
-doublereal *x;
+long int negativ_(x)
+double *x;
 {
     /* System generated locals */
-    logical ret_val;
+    long int ret_val;
 
 /* ------------------------------------------------------------------------------ */
 
@@ -946,19 +950,19 @@ doublereal *x;
 
 
 /* ------------------------------------------------------------------------------ */
-doublereal normmat_(a)
-doublereal *a;
+double normmat_(a)
+double *a;
 {
     /* System generated locals */
-    doublereal ret_val;
+    double ret_val;
 
     /* Builtin functions */
     double sqrt();
 
     /* Local variables */
-    static doublereal work[9]	/* was [3][3] */;
+    static double work[9]	/* was [3][3] */;
     extern /* Subroutine */ int abc_();
-    extern doublereal tra_();
+    extern double tra_();
 
 /* ------------------------------------------------------------------------------ */
 
@@ -976,19 +980,19 @@ doublereal *a;
 
 
 /* ------------------------------------------------------------------------------ */
-doublereal normvec_(a, n)
-doublereal *a;
-integer *n;
+double normvec_(a, n)
+double *a;
+long int *n;
 {
     /* System generated locals */
-    integer i__1;
-    doublereal ret_val;
+    long int i__1;
+    double ret_val;
 
     /* Builtin functions */
     double sqrt();
 
     /* Local variables */
-    static integer i__;
+    static long int i__;
 
 /* ------------------------------------------------------------------------------ */
 
@@ -1010,11 +1014,11 @@ integer *n;
 
 
 /* ----------------------------------------------------------------------------- */
-logical null_array__(x)
-doublereal *x;
+long int null_array__(x)
+double *x;
 {
     /* System generated locals */
-    logical ret_val;
+    long int ret_val;
 
 /* ------------------------------------------------------------------------------ */
 
@@ -1030,11 +1034,11 @@ doublereal *x;
 
 
 /* ------------------------------------------------------------------------------ */
-doublereal power_(x, y)
-doublereal *x, *y;
+double power_(x, y)
+double *x, *y;
 {
     /* System generated locals */
-    doublereal ret_val;
+    double ret_val;
 
 /* ------------------------------------------------------------------------------ */
 
@@ -1048,8 +1052,8 @@ doublereal *x, *y;
 /* ------------------------------------------------------------------------------ */
 /* Subroutine */ int pridbl_(label, a, label_len)
 char *label;
-doublereal *a;
-ftnlen label_len;
+double *a;
+long int label_len;
 {
 
 
@@ -1064,8 +1068,8 @@ ftnlen label_len;
 
 /* Subroutine */ int priint_(label, a, label_len)
 char *label;
-integer *a;
-ftnlen label_len;
+long int *a;
+long int label_len;
 {
 
 
@@ -1081,7 +1085,7 @@ ftnlen label_len;
 /* ------------------------------------------------------------------------------ */
 /* Subroutine */ int pritxt_(label, label_len)
 char *label;
-ftnlen label_len;
+long int label_len;
 {
 
 
@@ -1097,15 +1101,15 @@ ftnlen label_len;
 /* ------------------------------------------------------------------------------ */
 /* Subroutine */ int privec_(label, a, n, label_len)
 char *label;
-doublereal *a;
-integer *n;
-ftnlen label_len;
+double *a;
+long int *n;
+long int label_len;
 {
     /* System generated locals */
-    integer i__1;
+    long int i__1;
 
     /* Local variables */
-    static integer i__;
+    static long int i__;
 
 
 /* ------------------------------------------------------------------------------ */
@@ -1127,11 +1131,11 @@ ftnlen label_len;
 
 
 /* ------------------------------------------------------------------------------ */
-doublereal tra_(a)
-doublereal *a;
+double tra_(a)
+double *a;
 {
     /* System generated locals */
-    doublereal ret_val;
+    double ret_val;
 
 /* ------------------------------------------------------------------------------ */
 
@@ -1149,14 +1153,14 @@ doublereal *a;
 
 /* ----------------------------------------------------------------------------- */
 /* Subroutine */ int zero_(a, n)
-doublereal *a;
-integer *n;
+double *a;
+long int *n;
 {
     /* System generated locals */
-    integer i__1;
+    long int i__1;
 
     /* Local variables */
-    static integer i__;
+    static long int i__;
 
 /* ----------------------------------------------------------------------------- */
 
@@ -1178,15 +1182,15 @@ integer *n;
 
 /* ----------------------------------------------------------------------------- */
 /* Subroutine */ int eigen_(sigmat, eigval)
-doublereal *sigmat, *eigval;
+double *sigmat, *eigval;
 {
     /* Builtin functions */
     double sqrt(), acos(), cos();
 
     /* Local variables */
-    static doublereal bigr, p, q, r__, s, t;
+    static double bigr, p, q, r__, s, t;
     extern /* Subroutine */ int invar_();
-    static doublereal i1, i2, i3, y0, y1, y2, phi, inv[3], tmp;
+    static double i1, i2, i3, y0, y1, y2, phi, inv[3], tmp;
 
 /* ----------------------------------------------------------------------------- */
 
@@ -1237,7 +1241,7 @@ doublereal *sigmat, *eigval;
 
 /* ----------------------------------------------------------------------------- */
 /* Subroutine */ int invar_(sigmat, inv)
-doublereal *sigmat, *inv;
+double *sigmat, *inv;
 {
     extern /* Subroutine */ int determ_();
 
@@ -1262,7 +1266,7 @@ doublereal *sigmat, *inv;
 
 /* ----------------------------------------------------------------------------- */
 /* Subroutine */ int determ_(a, det)
-doublereal *a, *det;
+double *a, *det;
 {
 /* ----------------------------------------------------------------------------- */
 
@@ -1280,9 +1284,9 @@ doublereal *a, *det;
 
 /* ----------------------------------------------------------------------------- */
 /* Subroutine */ int unity4_(a)
-doublereal *a;
+double *a;
 {
-    static integer idi, jdi, kdi, ldi;
+    static long int idi, jdi, kdi, ldi;
 
 /* ----------------------------------------------------------------------------- */
 
@@ -1316,9 +1320,9 @@ doublereal *a;
 
 /* ----------------------------------------------------------------------------- */
 /* Subroutine */ int abdyadic_(a, b, c__)
-doublereal *a, *b, *c__;
+double *a, *b, *c__;
 {
-    static integer idi, jdi, kdi, ldi;
+    static long int idi, jdi, kdi, ldi;
 
 /* ----------------------------------------------------------------------------- */
 
@@ -1349,16 +1353,16 @@ doublereal *a, *b, *c__;
 } /* abdyadic_ */
 
 /* ----------------------------------------------------------------------------- */
-doublereal inpro_(a, b, n)
-doublereal *a, *b;
-integer *n;
+double inpro_(a, b, n)
+double *a, *b;
+long int *n;
 {
     /* System generated locals */
-    integer i__1;
-    doublereal ret_val;
+    long int i__1;
+    double ret_val;
 
     /* Local variables */
-    static integer i__;
+    static long int i__;
 
 /* ------------------------------------------------------------------------------ */
 

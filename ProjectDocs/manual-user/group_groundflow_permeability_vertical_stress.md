@@ -60,9 +60,11 @@ group_groundflow_permeability_vertical_stress 0
 
 ## Notes
 
-- `sigv` is interpolated to the integration point from the nodal effective
-  vertical stress. The vertical direction is the gravity axis (largest
-  `force_gravity` component).
+- `sigv` is the average vertical effective stress over the element nodes
+  (`sig_vertical - pres`). The vertical direction is the gravity axis
+  (largest `force_gravity` component).
 - If `|sigv|` is below a small threshold (1e-10), the base
   `group_groundflow_permeability` value is kept, avoiding division by zero.
 - The effective stress uses the CURRENT pore pressure of the flow solution.
+- Validated: `sigv=-100` gives `kp=0.1`, `sigv=-200` gives `kp=0.05`
+  (the law `kp=a/(sigv/sig0)^b`).

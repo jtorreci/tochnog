@@ -38,7 +38,6 @@ iostream/*
 #include "tnhypo.h"
 #include "matrix.h"
 /*#include "time.h"*/
-#include "f2c.h"
 
 using namespace std;
 
@@ -1239,11 +1238,12 @@ char     *get_new_char( long int n );
 double   *get_new_dbl( long int n );
 long int *get_new_int( long int n );
 int      *get_new_int_short( long int n );
-void      groundflow_data( long int element, long int gr, 
+void      groundflow_data( long int element, long int gr, long int nodes[],
             double old_unknowns[], double new_unknowns[], 
             double coord_ip[], double pe[], double &C,
             double h[], long int nnol );
 void      groundflow( long int element, long int group, long int nnol,
+            long int nodes[],
             double coord_ip[], double h[], double d[], 
             double volume, double old_unknowns[], 
             double new_unknowns[], double grad_new_unknowns[],
