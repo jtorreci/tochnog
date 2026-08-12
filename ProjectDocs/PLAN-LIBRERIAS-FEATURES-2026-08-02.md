@@ -476,8 +476,12 @@ Añadir magnitudes NO altera `primary` (tablas separadas por familia; JOIN por
 (node,t) en SQL/pandas).
 
 
-- [ ] `control_print_history_smooth`, `control_print_gid_*` (varios),
-      `control_print_vtk_*`, `control_print_gmsh_*`, `control_print_frd_*`,
+- [x] `control_print_history_smooth`, `control_print_gid_*` (varios),
+      `control_print_vtk_*`,
+      `control_print_gmsh` + `control_print_gmsh_dummy` +
+      `control_print_gmsh_element_data` + `control_print_gmsh_node_method`
+      (familia GMSH, 2026-08-12),
+      `control_print_frd_*`,
       `control_print_materi_stress_force`, `control_print_interface_stress*`.
 - [ ] `print_group_data`, `strain_settlement_diagram*`, `post_point_move` (hecho).
 - [ ] `force_edge_multi_linear_factor_x`, `force_edge_projected*`, `force_volume*`,

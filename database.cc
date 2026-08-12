@@ -1091,6 +1091,30 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   fixed_length[CONTROL_PRINT_TABULAR] = 0;
   data_class[CONTROL_PRINT_TABULAR] = CONTROL;
 
+  strcpy(name[CONTROL_PRINT_GMSH],"control_print_gmsh");
+  type[CONTROL_PRINT_GMSH] = INTEGER;
+  data_length[CONTROL_PRINT_GMSH] = 1;
+  fixed_length[CONTROL_PRINT_GMSH] = 0;
+  data_class[CONTROL_PRINT_GMSH] = CONTROL;
+
+  strcpy(name[CONTROL_PRINT_GMSH_DUMMY],"control_print_gmsh_dummy");
+  type[CONTROL_PRINT_GMSH_DUMMY] = INTEGER;
+  data_length[CONTROL_PRINT_GMSH_DUMMY] = 1;
+  fixed_length[CONTROL_PRINT_GMSH_DUMMY] = 0;
+  data_class[CONTROL_PRINT_GMSH_DUMMY] = CONTROL;
+
+  strcpy(name[CONTROL_PRINT_GMSH_ELEMENT_DATA],"control_print_gmsh_element_data");
+  type[CONTROL_PRINT_GMSH_ELEMENT_DATA] = INTEGER;
+  data_length[CONTROL_PRINT_GMSH_ELEMENT_DATA] = 1;
+  fixed_length[CONTROL_PRINT_GMSH_ELEMENT_DATA] = 0;
+  data_class[CONTROL_PRINT_GMSH_ELEMENT_DATA] = CONTROL;
+
+  strcpy(name[CONTROL_PRINT_GMSH_NODE_METHOD],"control_print_gmsh_node_method");
+  type[CONTROL_PRINT_GMSH_NODE_METHOD] = INTEGER;
+  data_length[CONTROL_PRINT_GMSH_NODE_METHOD] = 1;
+  fixed_length[CONTROL_PRINT_GMSH_NODE_METHOD] = 0;
+  data_class[CONTROL_PRINT_GMSH_NODE_METHOD] = CONTROL;
+
   strcpy(name[CONTROL_RELAXATION_CONDIF_TEMPERATURE],"control_relaxation_condif_temperature");
   type[CONTROL_RELAXATION_CONDIF_TEMPERATURE] = DOUBLE_PRECISION;
   data_length[CONTROL_RELAXATION_CONDIF_TEMPERATURE] = 1;
@@ -3636,6 +3660,13 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   version_all[NODE_START_REFINED] = 1;
   data_class[NODE_START_REFINED] = NODE;
   data_required[NODE_START_REFINED] = NODE;
+
+  strcpy(name[NODE_DEFORMED_MESH],"node_deformed_mesh");
+  type[NODE_DEFORMED_MESH] = DOUBLE_PRECISION;
+  data_length[NODE_DEFORMED_MESH] = 1;
+  version_all[NODE_DEFORMED_MESH] = 1;
+  data_class[NODE_DEFORMED_MESH] = NODE;
+  data_required[NODE_DEFORMED_MESH] = NODE;
 
   strcpy(name[NODE_SET],"node_set");
   type[NODE_SET] = INTEGER;

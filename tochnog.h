@@ -310,6 +310,10 @@ enum {
   CONTROL_PRINT_UNKNOWNSRHSIDE,
   CONTROL_PRINT_VTK,
   CONTROL_PRINT_TABULAR,
+  CONTROL_PRINT_GMSH,
+  CONTROL_PRINT_GMSH_DUMMY,
+  CONTROL_PRINT_GMSH_ELEMENT_DATA,
+  CONTROL_PRINT_GMSH_NODE_METHOD,
   CONTROL_RELAXATION_CONDIF_TEMPERATURE,
   CONTROL_RELAXATION_GROUNDFLOW_PRESSURE,
   CONTROL_RELAXATION_MATERI_VELOCITY,
@@ -792,6 +796,7 @@ enum {
   NODE_RHSIDE_PRINT,
   NODE_SET,
   NODE_START_REFINED,
+  NODE_DEFORMED_MESH,
   NODE_STIFFNESS,
   NONE,
   NONLOCAL_ELEMENT_INFO,
@@ -1477,6 +1482,7 @@ void      print_tecplot( long int ival[] );
 void      print_unknowns( void );
 void      print_unknownsrhside( void );
 void      print_vtk( long int icontrol );
+void      print_gmsh( long int icontrol, long int task );
 void      print_tabular( long int icontrol );
 bool      calc_derived( const double sig[6], double out[5] );
 class     SqliteDB;
