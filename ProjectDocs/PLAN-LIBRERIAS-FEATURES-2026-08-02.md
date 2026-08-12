@@ -481,7 +481,8 @@ Añadir magnitudes NO altera `primary` (tablas separadas por familia; JOIN por
       `control_print_gmsh` + `control_print_gmsh_dummy` +
       `control_print_gmsh_element_data` + `control_print_gmsh_node_method`
       (familia GMSH, 2026-08-12),
-      `control_print_frd_*`,
+      `control_print_frd` + `control_print_frd_freecad` +
+      `control_print_frd_prepomax` (familia FRD, 2026-08-12),
       `control_print_materi_stress_force`, `control_print_interface_stress*`.
 - [ ] `print_group_data`, `strain_settlement_diagram*`, `post_point_move` (hecho).
 - [ ] `force_edge_multi_linear_factor_x`, `force_edge_projected*`, `force_volume*`,

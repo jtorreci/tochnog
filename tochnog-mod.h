@@ -310,6 +310,9 @@ enum {
   CONTROL_PRINT_GMSH_DUMMY,
   CONTROL_PRINT_GMSH_ELEMENT_DATA,
   CONTROL_PRINT_GMSH_NODE_METHOD,
+  CONTROL_PRINT_FRD,
+  CONTROL_PRINT_FRD_FREECAD,
+  CONTROL_PRINT_FRD_PREPOMAX,
   CONTROL_RELAXATION_CONDIF_TEMPERATURE,
   CONTROL_RELAXATION_GROUNDFLOW_PRESSURE,
   CONTROL_RELAXATION_MATERI_VELOCITY,
@@ -1450,6 +1453,7 @@ void      print_unknowns( void );
 void      print_unknownsrhside( void );
  void      print_vtk( long int icontrol );
  void      print_gmsh( long int icontrol, long int task );
+ void      print_frd( long int icontrol, long int task );
  void      print_tabular( long int icontrol );
  bool      calc_derived( const double sig[6], double out[5] );
  class     SqliteDB;

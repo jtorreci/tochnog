@@ -1115,6 +1115,24 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   fixed_length[CONTROL_PRINT_GMSH_NODE_METHOD] = 0;
   data_class[CONTROL_PRINT_GMSH_NODE_METHOD] = CONTROL;
 
+  strcpy(name[CONTROL_PRINT_FRD],"control_print_frd");
+  type[CONTROL_PRINT_FRD] = INTEGER;
+  data_length[CONTROL_PRINT_FRD] = 1;
+  fixed_length[CONTROL_PRINT_FRD] = 0;
+  data_class[CONTROL_PRINT_FRD] = CONTROL;
+
+  strcpy(name[CONTROL_PRINT_FRD_FREECAD],"control_print_frd_freecad");
+  type[CONTROL_PRINT_FRD_FREECAD] = INTEGER;
+  data_length[CONTROL_PRINT_FRD_FREECAD] = 1;
+  fixed_length[CONTROL_PRINT_FRD_FREECAD] = 0;
+  data_class[CONTROL_PRINT_FRD_FREECAD] = CONTROL;
+
+  strcpy(name[CONTROL_PRINT_FRD_PREPOMAX],"control_print_frd_prepomax");
+  type[CONTROL_PRINT_FRD_PREPOMAX] = INTEGER;
+  data_length[CONTROL_PRINT_FRD_PREPOMAX] = 1;
+  fixed_length[CONTROL_PRINT_FRD_PREPOMAX] = 0;
+  data_class[CONTROL_PRINT_FRD_PREPOMAX] = CONTROL;
+
   strcpy(name[CONTROL_RELAXATION_CONDIF_TEMPERATURE],"control_relaxation_condif_temperature");
   type[CONTROL_RELAXATION_CONDIF_TEMPERATURE] = DOUBLE_PRECISION;
   data_length[CONTROL_RELAXATION_CONDIF_TEMPERATURE] = 1;

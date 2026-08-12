@@ -33,6 +33,7 @@ input parameters it accepts.
 - [control_print_history_factor](control_print_history_factor.md) — multiply history output values.
 - [control_print_tabular](control_print_tabular.md) — export nodal results to CSV/SQLite for programmatic post-processing.
 - [control_print_gmsh](control_print_gmsh.md) — write mesh and results in the Gmsh 2.2 (.msh) format.
+- [control_print_frd](control_print_frd.md) — write mesh and results in the CalculiX (.frd) format.
 - [postprocess.py](postprocess_py.md) — Python tool for post-processing the tabular SQLite database.
 - [control_print_data_versus_data_factor](control_print_data_versus_data_factor.md) — multiply data-versus-data output values.
 - [force_point](force_point.md) — point force anywhere in space.
