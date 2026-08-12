@@ -526,6 +526,89 @@ Añadir magnitudes NO altera `primary` (tablas separadas por familia; JOIN por
 
 ---
 
+## 6c. Brecha de convergencia con Tochnog Professional — estudio de limitantes (2026-08-12)
+
+### Métrica global
+
+Comparando los keywords documentados en el manual de Professional
+(`UserManual-professional.txt`, secciones `N.M keyword`) contra los
+registrados en `database.cc` del GNU:
+
+- **856** keywords en Professional
+- **252** presentes en el GNU (**29 %**)
+- **604** faltantes
+
+La brecha no es uniforme: hay clusters de infraestructura que bloquean
+familias enteras, y clusters puramente añaditivos (keywords nuevos sobre
+infraestructura existente).
+
+### Limitantes de infraestructura (bloquean familias enteras)
+
+1. **Elementos de interfaz (`interface`)** — **AUSENTE en el GNU**.
+   Professional tiene toda una familia (conversión automática bar2/bar3/
+   tria3/tria6 → quad4/quad6/prism6/prism12 con `control_mesh_convert`, y
+   ~15 keywords `group_interface_*`: rigidez kn/kt, Mohr-Coulomb directo,
+   tension_direct, gap, memoria, conductividad, groundflow). El GNU no
+   tiene ningún enum INTERFACE. **Bloquea**: `control_print_interface_stress*`,
+   `control_reset_interface*`, `interface_gap_apply`, toda la familia
+   `group_interface_*`, y los elementos de interfaz en sí.
+   → Requiere: nuevo tipo de elemento + ensamblaje de rigidez de interfaz
+   (esfuerzo alto, toca el núcleo del solver).
+
+2. **Contacto plástico** — parcial en el GNU. Existen `contactspring` y
+   `control_mesh_generate_contactspring*` (generación de elementos), y los
+   enums `GROUP_CONTACTSPRING_*`, pero **sin keywords registrados** para la
+   plasticidad de contacto (cohesión, fricción, dirección automática,
+   memoria). **Bloquea**: `group_contact_spring_plasti_*`,
+   `contact_plasti_friction`, `contact_apply`. → Requiere: ley constitutiva
+   de contacto sobre los contactspring (medio-alto).
+
+3. **`post_calcul` limitado** — el GNU tiene `post_calcul` genérico
+   (operaciones sobre dofs), pero **no** `post_calcul_materi_stress_force`
+   (integración de tensiones sobre cortes → fuerzas/momentos). **Bloquea**:
+   `control_print_materi_stress_force`. → Requiere: rutina de integración
+   de tensiones sobre secciones (medio).
+
+4. **Beams/vigas con plasticidad** — faltan `group_beam_*`
+   (direction_z, shear, force_moment_plasti) y `control_print_beam*`.
+   El GNU tiene elementos beam pero la familia de propiedades plásticas y
+   su post-proceso no están. → Medio.
+
+### Clusters puramente añaditivos (sin infraestructura nueva)
+
+- **`control_mesh_*`** (~50 faltantes): truss/beam generation, extrude,
+  delete, remove, convert, merge. El GNU ya tiene el núcleo de
+  `control_mesh_*`; la mayoría son variantes añaditivas.
+- **`force_edge_*`** (~44 faltantes): factores de carga multilineales,
+  proyectados, etc. Son variantes de `force_edge` ya existente.
+- **`control_print_*`** (~60 faltantes tras descartar gid): dof, node,
+  vtk_*, history_smooth — la mayoría son post-proceso sobre
+  infraestructura existente (patrón print_tabular/gmsh/frd).
+- **`group_materi_*`** — modelos de material nuevos (algunos ya hechos:
+  masin, sanisand, wolfersdorff; faltan los de P4-E).
+
+### Conclusión
+
+- La convergencia total es **mucho mayor de 604 keywords**: la brecha real
+  se mide en infraestructura, no en keywords.
+- El limitante **más estructural es la familia de interfaz** (elementos +
+  plasticidad + post-proceso), que falta por completo.
+- Los siguientes limitantes por orden de impacto: contacto plástico,
+  post_calcul de fuerzas, vigas plásticas.
+- El resto (malla, fuerzas de borde, post-proceso) es aditivo y
+  incremental con el patrón que ya dominamos.
+
+### Opciones estratégicas (a decidir)
+
+- **A**: Atacar la infraestructura de interfaz (mayor impacto, mayor
+  esfuerzo, toca el núcleo del solver).
+- **B**: Avanzar por clusters aditivos (malla, force_edge, print_*) y
+  dejar interfaz/contacto para cuando haya un caso de uso concreto.
+- **C**: Mixto: cerrar los aditivos baratos y planificar interfaz como
+  proyecto independiente con su propia especificación y tests.
+
+---
+
 ## 6b. Decisión de arquitectura: C vs C++ (2026-08-11)
 
 ### Contexto (evidencia)
