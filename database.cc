@@ -1714,6 +1714,13 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   data_class[FORCE_ELEMENT_EDGE_FACTOR] = FORCE;
   data_required[FORCE_ELEMENT_EDGE_FACTOR] = FORCE_ELEMENT_EDGE;
 
+  strcpy(name[FORCE_ELEMENT_EDGE_MULTI_LINEAR_FACTOR_X],"force_element_edge_multi_linear_factor_x");
+  type[FORCE_ELEMENT_EDGE_MULTI_LINEAR_FACTOR_X] = DOUBLE_PRECISION;
+  data_length[FORCE_ELEMENT_EDGE_MULTI_LINEAR_FACTOR_X] = DATA_ITEM_SIZE;
+  fixed_length[FORCE_ELEMENT_EDGE_MULTI_LINEAR_FACTOR_X] = 0;
+  data_class[FORCE_ELEMENT_EDGE_MULTI_LINEAR_FACTOR_X] = FORCE;
+  data_required[FORCE_ELEMENT_EDGE_MULTI_LINEAR_FACTOR_X] = FORCE_ELEMENT_EDGE;
+
   strcpy(name[FORCE_ELEMENT_EDGE_GEOMETRY],"force_element_edge_geometry");
   type[FORCE_ELEMENT_EDGE_GEOMETRY] = INTEGER;
   data_length[FORCE_ELEMENT_EDGE_GEOMETRY] = DATA_ITEM_SIZE;

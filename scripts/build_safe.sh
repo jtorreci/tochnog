@@ -82,7 +82,7 @@ fi
 
 echo "==> Ejecutando tests hypo con limites de memoria..."
 HIPO_OK=0
-for t in hypo1 hypo2 hypo3 hypo4 smooth1 dof1; do
+for t in hypo1 hypo2 hypo3 hypo4 smooth1 dof1 mlx1; do
   ( cd validation-suite/test-2014 &&
     ulimit -v 4000000 &&
     timeout 120 "$REPO_DIR/build/tochnog" "$t.dat" > "/tmp/${t}_safe.out" 2>&1 )
@@ -94,5 +94,5 @@ for t in hypo1 hypo2 hypo3 hypo4 smooth1 dof1; do
     echo "    $t: FALLO (rc=$RC)"
   fi
 done
-echo "==> Resumen: $HIPO_OK/6 tests hypo en verde."
+echo "==> Resumen: $HIPO_OK/7 tests hypo en verde."
 echo "==> Log de compilacion completo en /tmp/tn_build_safe.log"

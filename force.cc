@@ -197,6 +197,37 @@ void force_factor( long int factor_name, long int iforce,
       }
     }
   }
+
+  // multilinear multiplication factor in x-direction for edge forces:
+  // force_element_edge_multi_linear_factor_x with x_0 factor_0 x_1
+  // factor_1 ... ; factor 0 outside the specified x-range.
+  if ( factor_name==FORCE_ELEMENT_EDGE_FACTOR &&
+       db_active_index( FORCE_ELEMENT_EDGE_MULTI_LINEAR_FACTOR_X, iforce,
+         VERSION_NORMAL ) ) {
+    length = db_len( FORCE_ELEMENT_EDGE_MULTI_LINEAR_FACTOR_X, iforce,
+      VERSION_NORMAL );
+    factor_name_values = db_dbl( FORCE_ELEMENT_EDGE_MULTI_LINEAR_FACTOR_X,
+      iforce, VERSION_NORMAL );
+    x = coord[0];
+    double mlfactor = 0.;
+    for ( j=0; j+1<length; j+=2 ) {
+      double xa = factor_name_values[j];
+      double fa = factor_name_values[j+1];
+      if ( j+3>=length ) {
+        // last segment: constant beyond its right end
+        if ( x>=xa ) mlfactor = fa;
+      }
+      else {
+        double xb = factor_name_values[j+2];
+        double fb = factor_name_values[j+3];
+        if ( x>=xa && x<=xb ) {
+          mlfactor = (xb>xa) ? fa + (fb-fa)*(x-xa)/(xb-xa) : fa;
+          break;
+        }
+      }
+    }
+    factor *= mlfactor;
+  }
 }
 
 void force_gravity_calculate( double force_gravity[] ) 

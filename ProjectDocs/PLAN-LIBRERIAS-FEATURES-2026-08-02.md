@@ -641,8 +641,9 @@ suite. Criterio de cierre: keyword implementado + documentado
 - [x] `control_print_history_smooth` (suavizado de history; factible, sin
   dependencias nuevas — la única de las 3 originales del bloque P5 que no
   requiere infraestructura). **HECHO 2026-08-12**.
-- `force_edge_multi_linear_factor_x` (carga de borde multilineal sobre
-  `force_edge` existente).
+- [x] `force_element_edge_multi_linear_factor_x` (carga de borde
+  multilineal sobre `force_edge` existente). **HECHO 2026-08-13**
+  (multiplicador multilineal en x sobre force_element_edge).
 - `control_print_vtk_*` (variantes de print_vtk).
 
 #### Carril B — Features recientes de Professional (del changelog)

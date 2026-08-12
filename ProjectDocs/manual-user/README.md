@@ -29,6 +29,7 @@ input parameters it accepts.
 ## Phase 1 features
 
 - [check_used](check_used.md) — report data items defined but never used.
+- [force_element_edge_multi_linear_factor_x](force_element_edge_multi_linear_factor_x.md) — multilinear x-factor for distributed edge forces.
 - [materi_plasti_maximum_iterations](materi_plasti_maximum_iterations.md) — limit plastic iterations.
 - [control_print_history_factor](control_print_history_factor.md) — multiply history output values.
 - [control_print_history_smooth](control_print_history_smooth.md) — moving-average smoothing of history output.
