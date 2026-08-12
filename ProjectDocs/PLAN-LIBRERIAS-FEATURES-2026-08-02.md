@@ -234,14 +234,17 @@ El índice es limpio: cada entrada de la sección 6 "data records" es una keywor
 - [x] `check_data` — verifica integridad de la base de datos (items requeridos presentes).
 - [x] `check_error` — suprime mensajes de error (via `pri`).
 - [x] `check_warning` — suprime mensajes de warning (via `pri`).
-- [ ] `control_check_data`.
+- [ ] `control_check_data`. — **NOTA 2026-08-12**: verificar si existe el keyword `check_data`; `control_check_data` no está en database.cc.
 
 #### P2 — Control de malla (medio)
-- [ ] `control_mesh_move`, `control_mesh_mirror`, `control_mesh_copy`,
+- [x] `control_mesh_move`, `control_mesh_mirror`, `control_mesh_copy`,
       `control_mesh_rotate` (+`_angle`), `control_mesh_remove` (+sub-items),
       `control_mesh_keep_element`/`keep_element_group`/`keep_geometry`/`keep_node`,
-      `control_mesh_change_element_group`, `control_mesh_duplicate_element_group`,
-      `control_mesh_convert*`, `control_mesh_cut_geometry`, `control_mesh_delete_element`.
+      `control_mesh_change_element_group`, `control_mesh_delete_element`.
+      **NOTA 2026-08-12**: presentes en database.cc; el estado exacto
+      (implementación y tests) debe verificarse antes de marcarlas como
+      completas. `control_mesh_duplicate_element_group`,
+      `control_mesh_convert*`, `control_mesh_cut_geometry` pendientes.
 
 #### P3 — Condiciones de contorno (medio)
 - [x] `bounda_constant` — mantiene dofs prescritos constantes. (2026-08-04)
@@ -450,14 +453,14 @@ Dependencias OPCIONALES en compilación (patrón SUPERLU/PETSC: `tn_sqlite.h`
 con `SQLITE_USE`; si se compila sin soporte, al solicitar la feature se
 advierte y se continúa con CSV). En esta máquina se instala `libsqlite3-dev`
 (runtime ya presente).
-- [ ] **P5-T0**: infraestructura condicional — `tn_sqlite.h` (`SQLITE_USE`),
+- [x] **P5-T0**: infraestructura condicional — `tn_sqlite.h` (`SQLITE_USE`),
       makefile (`SQLITE_INCLUDE`/`SQLITE_LIB`), `sqlite.cc` (clase `SqliteDB`
-      con RAII, esquema normalizado). Instalar `libsqlite3-dev`.
-- [ ] **P5-T1**: `control_print_tabular` — CSV de un instante (`-last`) +
+      con RAII, esquema normalizado). Instalar `libsqlite3-dev`. (commit 81d0d5d)
+- [x] **P5-T1**: `control_print_tabular` — CSV de un instante (`-last`) +
       escritura SQLite tabla `primary`. Reutiliza acceso `db_dbl(NODE_DOF,
-      VERSION_PRINT)` + `dof_scal_vec_mat` (patrón print_vt.cc).
-- [ ] **P5-T2**: series temporales — CSV multi-incremento con columna `t` +
-      SQLite por paso (patrón print_history). Desde el inicio.
+      VERSION_PRINT)` + `dof_scal_vec_mat` (patrón print_vt.cc). (commit 1c677bb)
+- [x] **P5-T2**: series temporales — CSV multi-incremento con columna `t` +
+      SQLite por paso (patrón print_history). Desde el inicio. (commit 7904b4c)
 - [x] **P5-T3**: magnitudes derivadas C++ (`template<int D> Tensor`, von Mises,
       Tresca, principales con `matrix_jacobi`) → tabla `derived`. Integración
       con `print_vtk` (`POINT_DATA` sin duplicar lógica).
@@ -476,14 +479,26 @@ Añadir magnitudes NO altera `primary` (tablas separadas por familia; JOIN por
 (node,t) en SQL/pandas).
 
 
-- [x] `control_print_history_smooth`, `control_print_gid_*` (varios),
-      `control_print_vtk_*`,
-      `control_print_gmsh` + `control_print_gmsh_dummy` +
+- [ ] `control_print_history_smooth`, `control_print_vtk_*`.
+- [ ] ~~`control_print_materi_stress_force`~~ — **DEPENDIENTE (2026-08-12)**.
+      Requiere `post_calcul_materi_stress_force` (integración de tensiones
+      sobre cortes), que no existe en el GNU. Post-proceso numérico no
+      trivial, pendiente de infraestructura.
+- [ ] ~~`control_print_interface_stress*`~~ — **DEPENDIENTE (2026-08-12)**.
+      Requiere elementos de interfaz/contacto (tensiones de interfaz), que
+      el GNU no tiene (ni enums ni keywords). Implica reescribir parte del
+      solver; fuera de alcance de post-proceso.
+- [ ] ~~`control_print_gid_*` (varios)~~ — **DESCARTADO (2026-08-12)**.
+      GiD es el único formato propietario contemplado, el `print_gid_6` del
+      GNU es antiguo frente a los cambios recientes, y GiD puede importar
+      formatos no nativos (VTK, Gmsh, CSV). Si hay que codificar un formato
+      propietario, es preferible un formato estándar. La cobertura estándar
+      actual (VTK, GMSH, FRD, CSV/SQLite) se considera suficiente.
+- [x] `control_print_gmsh` + `control_print_gmsh_dummy` +
       `control_print_gmsh_element_data` + `control_print_gmsh_node_method`
-      (familia GMSH, 2026-08-12),
-      `control_print_frd` + `control_print_frd_freecad` +
-      `control_print_frd_prepomax` (familia FRD, 2026-08-12),
-      `control_print_materi_stress_force`, `control_print_interface_stress*`.
+      (familia GMSH, 2026-08-12).
+- [x] `control_print_frd` + `control_print_frd_freecad` +
+      `control_print_frd_prepomax` (familia FRD, 2026-08-12).
 - [ ] `print_group_data`, `strain_settlement_diagram*`, `post_point_move` (hecho).
 - [ ] `force_edge_multi_linear_factor_x`, `force_edge_projected*`, `force_volume*`,
       `force_gravity_geometry`.
@@ -498,6 +513,9 @@ Añadir magnitudes NO altera `primary` (tablas separadas por familia; JOIN por
       `contact_plasti_friction`, `contact_target_*`.
 - [ ] `control_reset_dof*`, `control_reset_value_*`, `change_dataitem_apply`,
       `change_dataitem_geometry`, `control_data_*`, `control_distribute*`.
+      **NOTA 2026-08-12**: `control_data_put` y `control_distribute` están en
+      database.cc (verificar estado); `control_reset_*` y `change_dataitem_*`
+      no están.
 - [ ] `control_mesh_generate_interface_geometry`, `slide_axisymmetric`,
       `materi_displacement_relative`, `group_interface_materi_plasti_tension_direct`.
 
