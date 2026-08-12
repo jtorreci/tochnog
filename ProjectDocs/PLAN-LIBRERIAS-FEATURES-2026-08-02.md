@@ -542,6 +542,25 @@ La brecha no es uniforme: hay clusters de infraestructura que bloquean
 familias enteras, y clusters puramente añaditivos (keywords nuevos sobre
 infraestructura existente).
 
+### Métrica de ejecución (la que importa para convergencia)
+
+- **197 tests del GNU 2014** (`external-downloads/sfnet/extracted/test`,
+  `test-2014.zip`) corren hoy con **cobertura 100 % de keywords**: los
+  364 keywords que usan esos tests están todos reconocidos por el GNU
+  (los 4 aparentemente "faltantes" — `echo`, `derivatives`,
+  `end_initia`, `number_of_space_dimensions` — son secciones del bloque
+  `initia` que el parser trata aparte, no keywords de `database.cc`).
+- Por tanto el GNU es **retro-compatible con su propia suite** (2014).
+- **La brecha de convergencia con Professional son los inputs que no
+  podemos correr**: los 604 keywords sin infraestructura o con
+  infraestructura parcial. La métrica operativa es "qué porcentaje de un
+  input de Professional arranca y da resultados físicamente correctos",
+  no el conteo de keywords.
+- **Fuente de verdad para priorizar**: el changelog de Professional
+  (`external-downloads/professional/changes-site-archive.txt`). Las
+  features recientes/activas son las que un usuario de Professional 2024
+  esperaría.
+
 ### Limitantes de infraestructura (bloquean familias enteras)
 
 1. **Elementos de interfaz (`interface`)** — **AUSENTE en el GNU**.
@@ -554,6 +573,10 @@ infraestructura existente).
    `group_interface_*`, y los elementos de interfaz en sí.
    → Requiere: nuevo tipo de elemento + ensamblaje de rigidez de interfaz
    (esfuerzo alto, toca el núcleo del solver).
+   **Evidencia de actualidad**: el changelog de Professional confirma que
+   la familia de interfaz es activa y reciente (2022: "Re-introduced
+   `group_interface_materi_plasti_tension_direct`", "Changed
+   `group_interface_gap`"), no legacy — ver Carril A.
 
 2. **Contacto plástico** — parcial en el GNU. Existen `contactspring` y
    `control_mesh_generate_contactspring*` (generación de elementos), y los
@@ -598,14 +621,68 @@ infraestructura existente).
 - El resto (malla, fuerzas de borde, post-proceso) es aditivo y
   incremental con el patrón que ya dominamos.
 
-### Opciones estratégicas (a decidir)
+### Estrategia de convergencia — carriles C → B → A (2026-08-12)
 
-- **A**: Atacar la infraestructura de interfaz (mayor impacto, mayor
-  esfuerzo, toca el núcleo del solver).
-- **B**: Avanzar por clusters aditivos (malla, force_edge, print_*) y
-  dejar interfaz/contacto para cuando haya un caso de uso concreto.
-- **C**: Mixto: cerrar los aditivos baratos y planificar interfaz como
-  proyecto independiente con su propia especificación y tests.
+Prioridad acordada: **Carril C (aditivos, valor inmediato) → Carril B
+(features recientes de Professional) → Carril A (infraestructura de
+interfaz, proyecto con especificación propia)**.
+
+#### Carril C — Clusters aditivos (valor inmediato, patrón ya dominado)
+
+Keywords nuevos sobre infraestructura existente; cada uno con test en la
+suite. Criterio de cierre: keyword implementado + documentado
+(manual-user/developer) + test en verde.
+
+- `control_mesh_generate_truss`, `control_mesh_generate_beam` y variantes
+  (el núcleo `control_mesh_*` ya existe).
+- `control_print_dof`, `control_print_node` (post-proceso sobre nodos).
+- `control_print_history_smooth` (suavizado de history; factible, sin
+  dependencias nuevas — la única de las 3 originales del bloque P5 que no
+  requiere infraestructura).
+- `force_edge_multi_linear_factor_x` (carga de borde multilineal sobre
+  `force_edge` existente).
+- `control_print_vtk_*` (variantes de print_vtk).
+
+#### Carril B — Features recientes de Professional (del changelog)
+
+Del changelog (`changes-site-archive.txt`), un usuario de Professional
+2024 esperaría estas. **Pendientes**:
+
+- `materi_displacement_relative` (i.c.w. `materi_velocity_integrated`)
+- `strain_settlement_diagram*` (asientos dependientes de tensiones)
+- `control_reset_value_dof`
+- `group_materi_plasti_mohr_coul_direct_normal` y
+  `group_materi_plasti_tension_direct_normal` (+ `_automatic`)
+- `bounda_time_until_*`
+- `change_dataitem_apply`
+- `slide_axisymmetric`
+- `control_mesh_generate_interface_geometry` (depende del Carril A)
+
+**Ya presentes en el GNU** (marcar `[x]`): `control_mesh_switch`,
+`groundflow_pressure_factor`, `group_groundflow_permeability_vertical_stress`,
+`control_print_history_factor`, `control_print_data_versus_data_factor`,
+`bounda_time_on_off`, `force_point`, `check_used`,
+`bounda_factor_parabolic_x`, `group_materi_plasti_maximum_iterations`
+(el changelog la lista como `materi_plasti_maximum_iterations*`).
+
+#### Carril A — Infraestructura de interfaz (proyecto independiente)
+
+Los interface elements son features **activas y recientes** de
+Professional (changelog 2022: "Re-introduced
+`group_interface_materi_plasti_tension_direct`", "Changed
+`group_interface_gap`"), no legacy — la familia es una brecha real de
+convergencia. Es el limitante más estructural y toca el núcleo del solver,
+por eso merece especificación y diseño propios.
+
+Fases propuestas:
+
+1. Tipo de elemento de interfaz + ensamblaje de rigidez (kn/kt).
+2. `control_mesh_convert` (bar2/bar3/tria3/tria6 → quad4/quad6/prism6/
+   prism12) y `control_mesh_generate_interface_geometry`.
+3. Familia `group_interface_*` (~15 keywords: rigidez, Mohr-Coulomb
+   directo, tension_direct, gap, memoria, conductividad, groundflow).
+4. Post-proceso: `control_print_interface_stress*`,
+   `control_reset_interface*`, `interface_gap_apply`.
 
 ---
 
