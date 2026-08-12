@@ -267,6 +267,35 @@ void print_vtk( long int icontrol )
       ready = (ipuknwn>=npuknwn);
     }
 
+    // derived magnitudes from the first stress tensor dof (von Mises,
+    // Tresca, principal stresses), reusing calc_derived() from derived.cc
+    {
+      long int sig_indx = -1;
+      for ( i=0; i<nuknwn; i++ )
+        if ( dof_scal_vec_mat[i]==-MATRIX ) { sig_indx = i; break; }
+      if ( sig_indx>=0 ) {
+        const char* derived_names[5] =
+          { "vmises", "tresca", "sig1", "sig2", "sig3" };
+        for ( idim=0; idim<5; idim++ ) {
+          outvtk << "SCALARS " << derived_names[idim] << " double\n";
+          outvtk << "LOOKUP_TABLE default\n";
+          for ( inod=0; inod<=max_node; inod++ ) {
+            node_dof = db_dbl( NODE_DOF, inod, VERSION_PRINT );
+            double sig[6], dout[5];
+            sig[0]=node_dof[sig_indx+stress_indx(0,0)*nder];
+            sig[1]=node_dof[sig_indx+stress_indx(1,1)*nder];
+            sig[2]=node_dof[sig_indx+stress_indx(2,2)*nder];
+            sig[3]=node_dof[sig_indx+stress_indx(0,1)*nder];
+            sig[4]=node_dof[sig_indx+stress_indx(0,2)*nder];
+            sig[5]=node_dof[sig_indx+stress_indx(1,2)*nder];
+            calc_derived( sig, dout );
+            outvtk << dout[idim] << "\n";
+          }
+          outvtk << "\n";
+        }
+      }
+    }
+
     if ( db_active_index( POST_CALCUL, 0,  VERSION_NORMAL ) ) {
       db( POST_CALCUL_UNKNOWN_OPERAT, 0, post_calcul_unknown_operat, 
         ddum, ldum, VERSION_NORMAL, GET );

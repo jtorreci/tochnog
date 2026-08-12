@@ -458,7 +458,7 @@ advierte y se continúa con CSV). En esta máquina se instala `libsqlite3-dev`
       VERSION_PRINT)` + `dof_scal_vec_mat` (patrón print_vt.cc).
 - [ ] **P5-T2**: series temporales — CSV multi-incremento con columna `t` +
       SQLite por paso (patrón print_history). Desde el inicio.
-- [ ] **P5-T3**: magnitudes derivadas C++ (`template<int D> Tensor`, von Mises,
+- [x] **P5-T3**: magnitudes derivadas C++ (`template<int D> Tensor`, von Mises,
       Tresca, principales con `matrix_jacobi`) → tabla `derived`. Integración
       con `print_vtk` (`POINT_DATA` sin duplicar lógica).
 - [x] **P5-T4**: `tools/postprocess.py` (pandas+sqlite3): estadísticas, gráficas

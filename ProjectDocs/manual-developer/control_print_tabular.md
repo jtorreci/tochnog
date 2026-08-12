@@ -10,6 +10,9 @@
 - **Derived magnitudes**: `calc_derived()` in `derived.cc` — a
   `template<int D> Tensor` helper, `matrix_jacobi` for the 3x3
   eigenvalues, von Mises from the invariants, Tresca as `sig1-sig3`.
+  Reused without duplication by both `print_tabular()` (print_tb.cc) and
+  `print_vtk()` (print_vt.cc, written as SCALARS vmises/tresca/sig1-3 in
+  POINT_DATA when a stress tensor dof is present).
 - **SQLite access**: `sqlite.cc` / `sqlite.h` — a C++ RAII `SqliteDB`
   wrapper, guarded by `SQLITE_USE` (set in `tn_sqlite.h`). Enabled at
   build time via `makefile` (`SQLITE_OBJ`, `-lsqlite3`).
@@ -30,6 +33,8 @@
 
 - `db_version_copy(VERSION_NORMAL, VERSION_PRINT)` +
   `renumbering(...)` before reading `NODE_DOF` (same as print_vtk).
+  `print_tabular` uses `renumbering(..., YES, ..., old_node_numbers, ...)`
+  to recover the original (input) node numbers in its output.
 - `stress_indx(kdim,ldim)` maps Voigt components; the 6-component `sig[]`
   passed to `calc_derived` is `[xx,yy,zz,xy,xz,yz]`.
 - `matrix_jacobi` does **not** sort its eigenvalues; `calc_derived`

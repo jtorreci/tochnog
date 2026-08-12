@@ -8,6 +8,11 @@ R or any spreadsheet tool. It is the recommended alternative to
 `control_print_plotmtv`/`control_print_gid` when the results are to be
 analyzed numerically instead of visualized.
 
+The derived stress magnitudes (von Mises, Tresca, principal stresses)
+produced by this keyword are also written by `control_print_vtk` as
+`SCALARS vmises/tresca/sig1/sig2/sig3` in the POINT_DATA section when a
+stress tensor dof (`materi_stress`) is present.
+
 Each `control_print_tabular` record produces two files next to the output
 base name:
 
