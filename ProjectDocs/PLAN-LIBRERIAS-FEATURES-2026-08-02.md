@@ -635,7 +635,9 @@ suite. Criterio de cierre: keyword implementado + documentado
 
 - `control_mesh_generate_truss`, `control_mesh_generate_beam` y variantes
   (el núcleo `control_mesh_*` ya existe).
-- `control_print_dof`, `control_print_node` (post-proceso sobre nodos).
+- [x] `control_print_dof` (post-proceso sobre nodos; dofs + coordenadas en
+  ASCII plano). **HECHO 2026-08-12** (variantes `_id`/`_smooth_*`/`_line`
+  pendientes).
 - [x] `control_print_history_smooth` (suavizado de history; factible, sin
   dependencias nuevas — la única de las 3 originales del bloque P5 que no
   requiere infraestructura). **HECHO 2026-08-12**.

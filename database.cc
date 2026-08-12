@@ -1140,6 +1140,12 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   fixed_length[CONTROL_PRINT_FRD_PREPOMAX] = 0;
   data_class[CONTROL_PRINT_FRD_PREPOMAX] = CONTROL;
 
+  strcpy(name[CONTROL_PRINT_DOF],"control_print_dof");
+  type[CONTROL_PRINT_DOF] = INTEGER;
+  data_length[CONTROL_PRINT_DOF] = 1;
+  fixed_length[CONTROL_PRINT_DOF] = 0;
+  data_class[CONTROL_PRINT_DOF] = CONTROL;
+
   strcpy(name[CONTROL_RELAXATION_CONDIF_TEMPERATURE],"control_relaxation_condif_temperature");
   type[CONTROL_RELAXATION_CONDIF_TEMPERATURE] = DOUBLE_PRECISION;
   data_length[CONTROL_RELAXATION_CONDIF_TEMPERATURE] = 1;

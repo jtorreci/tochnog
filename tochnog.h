@@ -318,6 +318,7 @@ enum {
   CONTROL_PRINT_FRD,
   CONTROL_PRINT_FRD_FREECAD,
   CONTROL_PRINT_FRD_PREPOMAX,
+  CONTROL_PRINT_DOF,
   CONTROL_RELAXATION_CONDIF_TEMPERATURE,
   CONTROL_RELAXATION_GROUNDFLOW_PRESSURE,
   CONTROL_RELAXATION_MATERI_VELOCITY,
@@ -1480,6 +1481,7 @@ void      print_giddata( long int task );
 void      print_gmv( long int icontrol, long int ival[] );
 void      print_history( long int ival[], long int nval );
 void      print_history_smooth( long int ival[], long int nval );
+void      print_dof( long int icontrol, long int task );
 void      print_plotmtv( long int icontrol, long int ival[] );
 void      print_matlab( void );
 void      print_restart( long int icontrol );

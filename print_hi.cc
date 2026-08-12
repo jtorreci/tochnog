@@ -233,3 +233,127 @@ void print_history_smooth( long int ival[], long int nval )
 
   if ( swit ) pri( "Out routine PRINT_HISTORY_SMOOTH" );
 }
+
+// print_dof - control_print_dof: print the primary dofs with the
+// coordinates at which they hold. Lines like "x y z dof" per node; in 1D
+// only x, etc. The coordinates themselves are also printed in separate
+// files. Filenames: dof.<index> (-separate_index) or dof.<n>
+// (-separate_sequential).
+void print_dof( long int icontrol, long int task )
+
+{
+  long int inod=0, idim=0, ipuknwn=0, iuknwn=0, nder_=0, nuknwn_=0,
+    swit=0, ldum=0, nval=0, seq=0;
+  long int idum[1], *dof_label=NULL, *dof_scal_vec_mat=NULL;
+  double ddum[1], coord[MDIM], *node_dof=NULL;
+  char filename[MCHAR], str[MCHAR];
+
+  swit = set_swit(-1,-1,"print_dof");
+  if ( swit ) pri( "In routine PRINT_DOF" );
+
+  db_version_copy( VERSION_NORMAL, VERSION_PRINT );
+  renumbering( VERSION_PRINT, NO, 0, 0, idum, idum );
+  db_highest_index( NODE, inod, VERSION_PRINT );
+  long int max_node = inod;
+  if ( max_node<0 ) return;
+  nder_ = nder;
+  nuknwn_ = nuknwn;
+
+  dof_label = get_new_int(MUKNWN);
+  dof_scal_vec_mat = get_new_int(MUKNWN);
+  db( DOF_LABEL, 0, dof_label, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+  db( DOF_SCAL_VEC_MAT, 0, dof_scal_vec_mat, ddum, ldum, VERSION_NORMAL,
+    GET_IF_EXISTS );
+
+  // file name: dof.<index> or dof.<seq>
+  strcpy( filename, "dof." );
+  if      ( task==-SEPARATE_INDEX && icontrol>=0 ) {
+    long_to_a( icontrol, str );
+    strcat( filename, str );
+  }
+  else if ( task==-SEPARATE_SEQUENTIAL ) {
+    static long int dof_seq=0;
+    long_to_a( dof_seq++, str );
+    strcat( filename, str );
+  }
+  else {
+    long_to_a( icontrol, str );
+    strcat( filename, str );
+  }
+
+  ofstream out( filename, ios::app );
+  out.precision(TN_PRECISION);
+
+  // coordinates file: coord.<index> (written only the first time)
+  {
+    char cfname[MCHAR];
+    strcpy( cfname, "coord." );
+    if      ( task==-SEPARATE_INDEX && icontrol>=0 ) {
+      long_to_a( icontrol, str );
+      strcat( cfname, str );
+    }
+    else if ( task==-SEPARATE_SEQUENTIAL ) {
+      long_to_a( seq, str );
+      strcat( cfname, str );
+    }
+    else {
+      long_to_a( icontrol, str );
+      strcat( cfname, str );
+    }
+    {
+      std::ifstream fexists( cfname );
+      if ( !fexists.is_open() ) {
+        ofstream outcoord( cfname, ios::app );
+        outcoord.precision(TN_PRECISION);
+        for ( inod=0; inod<=max_node; inod++ ) {
+          db( NODE, inod, idum, coord, ldum, VERSION_PRINT, GET );
+          for ( idim=0; idim<ndim; idim++ )
+            outcoord << coord[idim] << " ";
+          outcoord << "\n";
+        }
+        outcoord.close();
+      }
+      fexists.close();
+    }
+  }
+
+  for ( ipuknwn=0; ipuknwn<nuknwn_; ipuknwn++ ) {
+    if ( dof_scal_vec_mat[ipuknwn]!=-SCALAR &&
+         dof_scal_vec_mat[ipuknwn]!=-VECTOR &&
+         dof_scal_vec_mat[ipuknwn]!=-MATRIX ) continue;
+    iuknwn = ipuknwn*nder_;
+    nval = 1;
+    if      ( dof_scal_vec_mat[ipuknwn]==-VECTOR ) nval = ndim;
+    else if ( dof_scal_vec_mat[ipuknwn]==-MATRIX ) nval = 6;
+    for ( long int k=0; k<nval; k++ ) {
+      for ( inod=0; inod<=max_node; inod++ ) {
+        db( NODE, inod, idum, coord, ldum, VERSION_PRINT, GET );
+        node_dof = db_dbl( NODE_DOF, inod, VERSION_PRINT );
+        long int indx = iuknwn;
+        if      ( dof_scal_vec_mat[ipuknwn]==-VECTOR )
+          indx = iuknwn + k*nder_;
+        else if ( dof_scal_vec_mat[ipuknwn]==-MATRIX ) {
+          long int kk, ll;
+          if      ( k==0 ) { kk=0; ll=0; }
+          else if ( k==1 ) { kk=1; ll=1; }
+          else if ( k==2 ) { kk=2; ll=2; }
+          else if ( k==3 ) { kk=0; ll=1; }
+          else if ( k==4 ) { kk=0; ll=2; }
+          else              { kk=1; ll=2; }
+          indx = iuknwn + stress_indx(kk,ll)*nder_;
+        }
+        for ( idim=0; idim<ndim; idim++ )
+          out << coord[idim] << " ";
+        out << node_dof[indx] << "\n";
+      }
+    }
+  }
+
+  out.close();
+
+  db_version_delete( VERSION_PRINT );
+  delete[] dof_label;
+  delete[] dof_scal_vec_mat;
+
+  if ( swit ) pri( "Out routine PRINT_DOF" );
+}
