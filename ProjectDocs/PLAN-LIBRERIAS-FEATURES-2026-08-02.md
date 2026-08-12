@@ -461,7 +461,7 @@ advierte y se continúa con CSV). En esta máquina se instala `libsqlite3-dev`
 - [ ] **P5-T3**: magnitudes derivadas C++ (`template<int D> Tensor`, von Mises,
       Tresca, principales con `matrix_jacobi`) → tabla `derived`. Integración
       con `print_vtk` (`POINT_DATA` sin duplicar lógica).
-- [ ] **P5-T4**: `tools/postprocess.py` (pandas+sqlite3): estadísticas, gráficas
+- [x] **P5-T4**: `tools/postprocess.py` (pandas+sqlite3): estadísticas, gráficas
       tiempo, esfuerzos sobre `geometry_line`, variables de usuario → tabla
       `user`.
 

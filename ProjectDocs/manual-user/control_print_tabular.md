@@ -56,11 +56,16 @@ single time step, remove the file before running.
 
 Tables (long format):
 
+- `coords(node, x, y, z)` — nodal coordinates (0.0 for unused dimensions).
 - `primary_data(node, dof, t, value)` — every exported dof, one row per
   (node, dof, t).
 - `derived(node, t, vmises, tresca, sig1, sig2, sig3)` — derived stress
   magnitudes, one row per node per time step.
-- `meta(key, value)` — metadata.
+- `user_data(node, variable, t, value)` — user variables computed by
+  `tools/postprocess.py user`.
+- `meta(key, value)` — metadata (ndim, sign convention, file base).
+
+`node` is the original node number as written in the input mesh.
 
 ## Example
 

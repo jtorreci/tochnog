@@ -26,6 +26,7 @@ void print_tabular( long int icontrol )
   long int i=0, inod=0, idim=0, swit=0, max_node=0, nder_=0;
   long int ldum=0, idum[1], nuknwn_=0, sig_indx=-1;
   long int *dof_label=NULL, *dof_scal_vec_mat=NULL;
+  long int *old_node_numbers=NULL;
   double ddum[1], coord[MDIM], *node_dof=NULL, time_current=0.;
   char filename[MCHAR];
   std::string csv_file, sqlite_file;
@@ -34,7 +35,9 @@ void print_tabular( long int icontrol )
   if ( swit ) pri( "In routine PRINT_TABULAR" );
 
   db_version_copy( VERSION_NORMAL, VERSION_PRINT );
-  renumbering( VERSION_PRINT, NO, 0, 0, idum, idum );
+  db_highest_index( NODE, max_node, VERSION_PRINT );
+  old_node_numbers = get_new_int(max_node+1);
+  renumbering( VERSION_PRINT, YES, 0, 0, old_node_numbers, idum );
   db_highest_index( NODE, max_node, VERSION_PRINT );
   db( TIME_CURRENT, 0, idum, &time_current, ldum, VERSION_NORMAL, GET );
   nder_ = nder;
@@ -95,10 +98,11 @@ void print_tabular( long int icontrol )
       out << "\n";
     }
 
-    for ( inod=1; inod<=max_node; inod++ ) {
+    for ( inod=0; inod<=max_node; inod++ ) {
+      long int node_nr = old_node_numbers[inod];
       db( NODE, inod, idum, coord, ldum, VERSION_PRINT, GET );
       node_dof = db_dbl( NODE_DOF, inod, VERSION_PRINT );
-      out << inod << "," << time_current;
+      out << node_nr << "," << time_current;
       for ( i=0; i<nuknwn_; i++ ) {
         if ( dof_scal_vec_mat[i]==-SCALAR ) {
           out << "," << node_dof[i];
@@ -134,26 +138,43 @@ void print_tabular( long int icontrol )
   // --- SQLite (optional) ---
   sqlite_file = csv_file.substr(0, csv_file.size()-4) + ".sqlite";
   {
-    SqliteDB* db = sqlite_db_open( sqlite_file.c_str() );
-    if ( !db ) {
+    SqliteDB* sdb = sqlite_db_open( sqlite_file.c_str() );
+    if ( !sdb ) {
       pri( "Warning: SQLite not available in this build; CSV written only." );
     } else {
       char sql[512];
-      for ( inod=1; inod<=max_node; inod++ ) {
+      // metadata (idempotent): mesh, convention, units
+      sprintf(sql,
+        "INSERT OR REPLACE INTO meta (key,value) VALUES ('ndim','%ld');", ndim);
+      sdb->exec(sql);
+      sprintf(sql,
+        "INSERT OR REPLACE INTO meta (key,value) VALUES ('convention','compression-negative');");
+      sdb->exec(sql);
+      sprintf(sql,
+        "INSERT OR REPLACE INTO meta (key,value) VALUES ('file_base','%s');", data_file_base);
+      sdb->exec(sql);
+      for ( inod=0; inod<=max_node; inod++ ) {
+        long int node_nr = old_node_numbers[inod];
+        db( NODE, inod, idum, coord, ldum, VERSION_PRINT, GET );
+        double cz = ndim>2 ? coord[2] : 0.0;
+        sprintf(sql,
+          "INSERT OR REPLACE INTO coords (node,x,y,z) VALUES (%ld,%g,%g,%g);",
+          node_nr, coord[0], coord[1], cz);
+        sdb->exec(sql);
         node_dof = db_dbl( NODE_DOF, inod, VERSION_PRINT );
         for ( i=0; i<nuknwn_; i++ ) {
           if ( dof_scal_vec_mat[i]==-SCALAR ) {
             sprintf(sql,
               "INSERT OR REPLACE INTO primary_data (node,dof,t,value) VALUES (%ld,'%s',%g,%g);",
-              inod, db_name(dof_label[i]), time_current, node_dof[i]);
-            db->exec(sql);
+              node_nr, db_name(dof_label[i]), time_current, node_dof[i]);
+            sdb->exec(sql);
           }
           else if ( dof_scal_vec_mat[i]==-VECTOR ) {
             for ( idim=0; idim<ndim; idim++ ) {
               sprintf(sql,
                 "INSERT OR REPLACE INTO primary_data (node,dof,t,value) VALUES (%ld,'%s_%ld',%g,%g);",
-                inod, db_name(dof_label[i]), idim, time_current, node_dof[i+idim*nder_]);
-              db->exec(sql);
+                node_nr, db_name(dof_label[i]), idim, time_current, node_dof[i+idim*nder_]);
+              sdb->exec(sql);
             }
           }
           else if ( dof_scal_vec_mat[i]==-MATRIX ) {
@@ -163,9 +184,9 @@ void print_tabular( long int icontrol )
                 long int indx = stress_indx(kdim,ldim);
                 sprintf(sql,
                   "INSERT OR REPLACE INTO primary_data (node,dof,t,value) VALUES (%ld,'%s_%ld%ld',%g,%g);",
-                  inod, db_name(dof_label[i]), kdim, ldim, time_current,
+                  node_nr, db_name(dof_label[i]), kdim, ldim, time_current,
                   node_dof[i+indx*nder_]);
-                db->exec(sql);
+                sdb->exec(sql);
               }
           }
         }
@@ -181,13 +202,17 @@ void print_tabular( long int icontrol )
           sprintf(sql,
             "INSERT OR REPLACE INTO derived (node,t,vmises,tresca,sig1,sig2,sig3)"
             " VALUES (%ld,%g,%g,%g,%g,%g,%g);",
-            inod, time_current, dout[0], dout[1], dout[2], dout[3], dout[4]);
-          db->exec(sql);
+            node_nr, time_current, dout[0], dout[1], dout[2], dout[3], dout[4]);
+          sdb->exec(sql);
         }
       }
-      sqlite_db_close( db );
+      sqlite_db_close( sdb );
     }
   }
 
   if ( swit ) pri( "Out routine PRINT_TABULAR" );
+
+  delete[] old_node_numbers;
+  delete[] dof_label;
+  delete[] dof_scal_vec_mat;
 }

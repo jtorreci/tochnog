@@ -2,9 +2,10 @@
     sqlite.cc - Implementation of SqliteDB (see sqlite.h).
 
     Schema (normalised by (node,t) composite key):
-      primary(node, t, ux.., sigxx.., exx..)     -- primary variables
+      primary(node, t, ux.., sigxx.., exx..)     -- primary variables (long format)
       derived(node, t, vmises, tresca, sig1..3)  -- derived magnitudes (C++)
-      user(node, t, ...)                         -- user variables (Python)
+      coords(node, x, y, z)                      -- nodal coordinates
+      user(node, variable, t, value)             -- user variables (Python, long format)
       meta(key, value)                           -- mesh, units, convention
 */
 
@@ -54,9 +55,12 @@ void SqliteDB::create_schema() {
         " node INTEGER, t REAL,"
         " vmises REAL, tresca REAL, sig1 REAL, sig2 REAL, sig3 REAL,"
         " PRIMARY KEY (node, t));" );
+  exec( "CREATE TABLE IF NOT EXISTS coords ("
+        " node INTEGER, x REAL, y REAL, z REAL,"
+        " PRIMARY KEY (node));" );
   exec( "CREATE TABLE IF NOT EXISTS user_data ("
-        " node INTEGER, t REAL,"
-        " PRIMARY KEY (node, t));" );
+        " node INTEGER, variable TEXT, t REAL, value REAL,"
+        " PRIMARY KEY (node, variable, t));" );
 }
 
 #else
