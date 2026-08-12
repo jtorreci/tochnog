@@ -297,6 +297,7 @@ enum {
   CONTROL_PRINT_GMV_MESH,
   CONTROL_PRINT_HISTORY,
   CONTROL_PRINT_HISTORY_FACTOR,
+  CONTROL_PRINT_HISTORY_SMOOTH,
   CONTROL_PRINT_MATLAB,
   CONTROL_PRINT_PLOTMTV,
   CONTROL_PRINT_PLOTMTV_MESH,
@@ -1445,6 +1446,7 @@ long int  print_gid_6( long int task );
 void      print_giddata( long int task );
 void      print_gmv( long int icontrol, long int ival[] );
 void      print_history( long int ival[], long int nval );
+void      print_history_smooth( long int ival[], long int nval );
 void      print_plotmtv( long int icontrol, long int ival[] );
 void      print_matlab( void );
 void      print_restart( long int icontrol );

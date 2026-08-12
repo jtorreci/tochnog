@@ -1041,6 +1041,13 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   data_class[CONTROL_PRINT_HISTORY_FACTOR] = CONTROL;
   data_required[CONTROL_PRINT_HISTORY_FACTOR] = CONTROL_PRINT_HISTORY;
 
+  strcpy(name[CONTROL_PRINT_HISTORY_SMOOTH],"control_print_history_smooth");
+  type[CONTROL_PRINT_HISTORY_SMOOTH] = INTEGER;
+  data_length[CONTROL_PRINT_HISTORY_SMOOTH] = DATA_ITEM_SIZE;
+  fixed_length[CONTROL_PRINT_HISTORY_SMOOTH] = 0;
+  data_class[CONTROL_PRINT_HISTORY_SMOOTH] = CONTROL;
+  data_required[CONTROL_PRINT_HISTORY_SMOOTH] = CONTROL_PRINT_HISTORY;
+
   strcpy(name[CONTROL_PRINT_PLOTMTV],"control_print_plotmtv");
   type[CONTROL_PRINT_PLOTMTV] = INTEGER;
   data_length[CONTROL_PRINT_PLOTMTV] = 1;

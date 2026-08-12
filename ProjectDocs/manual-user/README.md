@@ -31,6 +31,7 @@ input parameters it accepts.
 - [check_used](check_used.md) — report data items defined but never used.
 - [materi_plasti_maximum_iterations](materi_plasti_maximum_iterations.md) — limit plastic iterations.
 - [control_print_history_factor](control_print_history_factor.md) — multiply history output values.
+- [control_print_history_smooth](control_print_history_smooth.md) — moving-average smoothing of history output.
 - [control_print_tabular](control_print_tabular.md) — export nodal results to CSV/SQLite for programmatic post-processing.
 - [control_print_gmsh](control_print_gmsh.md) — write mesh and results in the Gmsh 2.2 (.msh) format.
 - [control_print_frd](control_print_frd.md) — write mesh and results in the CalculiX (.frd) format.

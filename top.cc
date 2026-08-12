@@ -813,6 +813,8 @@ void step_close( long int task, long int ipar, long int npar, long int ipar_i, l
     if ( db_active_index( CONTROL_PRINT_HISTORY, icontrol, VERSION_NORMAL ) ) {
       db( CONTROL_PRINT_HISTORY, icontrol, ival, ddum, nval, VERSION_NORMAL, GET );
       print_history( ival, nval );
+      if ( db_active_index( CONTROL_PRINT_HISTORY_SMOOTH, icontrol, VERSION_NORMAL ) )
+        print_history_smooth( ival, nval );
     }
     if ( db_active_index( CONTROL_PRINT_PLOTMTV, icontrol, VERSION_NORMAL ) ) {
       db( CONTROL_PRINT_PLOTMTV, icontrol, ival, ddum, ldum, VERSION_NORMAL, GET );
