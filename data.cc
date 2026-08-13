@@ -28,12 +28,16 @@ void data( long int task, double dtime, double time_current )
   long int idat=0, in=0, iv=0, index=0, range_length=0, icontrol=0, length=0, 
     swit=0, max_index=0, inod=0, max_node=0, found=0, 
     ichange=0, max_change=0, idim=0, operat=0, ldum=0, 
+    ireset=0, max_reset=0, idof_reset=0, idof_value=0, ireset_val=0,
+    length_diagram=0,
+    reset_method=-USE,
     data_item_name=0, data_item_index=0, data_item_number=0,
     change_dataitem_time_discrete=-NO, change_dataitem_time_user=0,
     idum[1], change_dataitem[4], *dof_label=NULL, *integer_range=NULL, 
-    *data_delete=NULL, *data_put=NULL;
+    *data_delete=NULL, *data_put=NULL, *reset_dof=NULL, *reset_value_dof=NULL;
   double rdum=0., val=0., ddum[MDIM], *change_dataitem_time=NULL, 
-    *dval=NULL, *coord=NULL;
+    *dval=NULL, *coord=NULL, *node_dof=NULL, *reset_value_diagram=NULL,
+    reset_value_constant=0.;
 
   dof_label = get_new_int(MUKNWN);
   integer_range = get_new_int(MRANGE);
@@ -382,6 +386,82 @@ void data( long int task, double dtime, double time_current )
         }
       }
     }
+  }
+
+  // control_reset_dof: reset the listed node dofs to a value that is
+  // constant, or depends on another dof (via control_reset_value_dof +
+  // control_reset_value_dof_diagram). Method -add or -multiply relative
+  // to the current value, or -use to set the value.
+  reset_dof = get_new_int(DATA_ITEM_SIZE);
+  reset_value_dof = get_new_int(DATA_ITEM_SIZE);
+  reset_value_diagram = get_new_dbl(DATA_ITEM_SIZE);
+  db_max_index( CONTROL_RESET_DOF, max_reset, VERSION_NORMAL, GET );
+  if ( max_reset>=0 ) {
+    swit = set_swit(-1,-1,"data");
+    if ( swit ) pri( "In routine DATA (control_reset)" );
+    db( DOF_LABEL, 0, dof_label, ddum, ldum, VERSION_NORMAL, GET );
+    for ( ireset=0; ireset<=max_reset; ireset++ ) {
+      if ( db_active_index( CONTROL_RESET_DOF, ireset, VERSION_NORMAL ) ) {
+        db( CONTROL_RESET_DOF, ireset, reset_dof, ddum, ldum, VERSION_NORMAL, GET );
+        idof_reset = reset_dof[0];
+        reset_method = -USE;
+        db( CONTROL_RESET_VALUE_METHOD, ireset, &reset_method, ddum, ldum,
+          VERSION_NORMAL, GET_IF_EXISTS );
+        if ( db_active_index( CONTROL_RESET_VALUE_CONSTANT, ireset, VERSION_NORMAL ) ) {
+          db( CONTROL_RESET_VALUE_CONSTANT, ireset, idum, &reset_value_constant,
+            ldum, VERSION_NORMAL, GET );
+          for ( inod=0; inod<=max_node; inod++ ) {
+            if ( db_active_index( NODE, inod, VERSION_NORMAL ) ) {
+              node_dof = db_dbl( NODE_DOF, inod, VERSION_NORMAL );
+              length = db_len( NODE_DOF, inod, VERSION_NORMAL );
+              long int indx = idof_reset;
+              if ( indx<0 ) {
+                array_member( dof_label, indx, nuknwn, indx );
+                if ( length==npuknwn ) indx /= nder;
+              }
+              if ( indx<0 || indx>length-1 )
+                db_error( CONTROL_RESET_DOF, ireset );
+              if      ( reset_method==-ADD ) node_dof[indx] += reset_value_constant;
+              else if ( reset_method==-MULTIPLY ) node_dof[indx] *= reset_value_constant;
+              else                            node_dof[indx] = reset_value_constant;
+            }
+          }
+        }
+        else if ( db_active_index( CONTROL_RESET_VALUE_DOF, ireset, VERSION_NORMAL ) ) {
+          db( CONTROL_RESET_VALUE_DOF, ireset, &idof_value, ddum, ldum,
+            VERSION_NORMAL, GET );
+          db( CONTROL_RESET_VALUE_DOF_DIAGRAM, ireset, idum, reset_value_diagram,
+            length_diagram, VERSION_NORMAL, GET );
+          for ( inod=0; inod<=max_node; inod++ ) {
+            if ( db_active_index( NODE, inod, VERSION_NORMAL ) ) {
+              node_dof = db_dbl( NODE_DOF, inod, VERSION_NORMAL );
+              length = db_len( NODE_DOF, inod, VERSION_NORMAL );
+              long int indx_reset = idof_reset, indx_val = idof_value;
+              if ( indx_reset<0 ) {
+                array_member( dof_label, indx_reset, nuknwn, indx_reset );
+                if ( length==npuknwn ) indx_reset /= nder;
+              }
+              if ( indx_val<0 ) {
+                array_member( dof_label, indx_val, nuknwn, indx_val );
+                if ( length==npuknwn ) indx_val /= nder;
+              }
+              if ( indx_reset<0 || indx_reset>length-1 )
+                db_error( CONTROL_RESET_DOF, ireset );
+              if ( indx_val<0 || indx_val>length-1 )
+                db_error( CONTROL_RESET_DOF, ireset );
+              table_xy( reset_value_diagram, "CONTROL_RESET_VALUE_DOF_DIAGRAM",
+                length_diagram, node_dof[indx_val], val );
+              if      ( reset_method==-ADD ) node_dof[indx_reset] += val;
+              else if ( reset_method==-MULTIPLY ) node_dof[indx_reset] *= val;
+              else                             node_dof[indx_reset] = val;
+            }
+          }
+        }
+      }
+    }
+    delete[] reset_dof;
+    delete[] reset_value_dof;
+    delete[] reset_value_diagram;
   }
 
   delete[] dof_label;

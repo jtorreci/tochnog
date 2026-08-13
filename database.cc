@@ -68,6 +68,7 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   strcpy(name[ABSOL],"absol" );
 
   strcpy(name[ADD],"add" );
+  strcpy(name[MULTIPLY],"multiply" );
 
   strcpy(name[ADD_ALWAYS],"add_always" );
 
@@ -876,6 +877,37 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   data_length[CONTROL_MESH_SWITCH] = DATA_ITEM_SIZE;
   fixed_length[CONTROL_MESH_SWITCH] = 0;
   data_class[CONTROL_MESH_SWITCH] = CONTROL;
+
+  strcpy(name[CONTROL_RESET_DOF],"control_reset_dof");
+  type[CONTROL_RESET_DOF] = INTEGER;
+  data_length[CONTROL_RESET_DOF] = DATA_ITEM_SIZE;
+  fixed_length[CONTROL_RESET_DOF] = 0;
+  data_class[CONTROL_RESET_DOF] = CONTROL;
+
+  strcpy(name[CONTROL_RESET_VALUE_CONSTANT],"control_reset_value_constant");
+  type[CONTROL_RESET_VALUE_CONSTANT] = DOUBLE_PRECISION;
+  data_length[CONTROL_RESET_VALUE_CONSTANT] = 1;
+  data_class[CONTROL_RESET_VALUE_CONSTANT] = CONTROL;
+  data_required[CONTROL_RESET_VALUE_CONSTANT] = CONTROL_RESET_DOF;
+
+  strcpy(name[CONTROL_RESET_VALUE_DOF],"control_reset_value_dof");
+  type[CONTROL_RESET_VALUE_DOF] = INTEGER;
+  data_length[CONTROL_RESET_VALUE_DOF] = 1;
+  data_class[CONTROL_RESET_VALUE_DOF] = CONTROL;
+  data_required[CONTROL_RESET_VALUE_DOF] = CONTROL_RESET_DOF;
+
+  strcpy(name[CONTROL_RESET_VALUE_DOF_DIAGRAM],"control_reset_value_dof_diagram");
+  type[CONTROL_RESET_VALUE_DOF_DIAGRAM] = DOUBLE_PRECISION;
+  data_length[CONTROL_RESET_VALUE_DOF_DIAGRAM] = DATA_ITEM_SIZE;
+  fixed_length[CONTROL_RESET_VALUE_DOF_DIAGRAM] = 0;
+  data_class[CONTROL_RESET_VALUE_DOF_DIAGRAM] = CONTROL;
+  data_required[CONTROL_RESET_VALUE_DOF_DIAGRAM] = CONTROL_RESET_VALUE_DOF;
+
+  strcpy(name[CONTROL_RESET_VALUE_METHOD],"control_reset_value_method");
+  type[CONTROL_RESET_VALUE_METHOD] = INTEGER;
+  data_length[CONTROL_RESET_VALUE_METHOD] = 1;
+  data_class[CONTROL_RESET_VALUE_METHOD] = CONTROL;
+  data_required[CONTROL_RESET_VALUE_METHOD] = CONTROL_RESET_DOF;
 
   strcpy(name[CONTROL_OPTIONS_CONVECTION],"control_options_convection");
   type[CONTROL_OPTIONS_CONVECTION] = INTEGER;

@@ -663,7 +663,11 @@ Del changelog (`changes-site-archive.txt`), un usuario de Professional
 
 - `materi_displacement_relative` (i.c.w. `materi_velocity_integrated`)
 - `strain_settlement_diagram*` (asientos dependientes de tensiones)
-- `control_reset_value_dof`
+- [x] `control_reset_value_dof` (y `control_reset_dof`, `_value_constant`,
+  `_value_dof_diagram`, `_value_method`). **HECHO 2026-08-13** (verificado:
+  hisv0 reseteado a 0.55; diagrama sigyy→hisv0; métodos -use/-add/-multiply).
+  Otras distribuciones `_value_*` (exponent/linear/log/power/sqrt/multi_linear)
+  pendientes.
 - `group_materi_plasti_mohr_coul_direct_normal` y
   `group_materi_plasti_tension_direct_normal` (+ `_automatic`)
 - `bounda_time_until_*`

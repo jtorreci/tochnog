@@ -36,6 +36,7 @@ input parameters it accepts.
 - [control_print_dof](control_print_dof.md) — print primary dofs with coordinates to plain ASCII files.
 - [control_print_vtk_dof](control_print_vtk_dof.md) — limit the fields written to VTK files.
 - [control_mesh_generate_truss](control_mesh_generate_truss.md) — generate truss/beam elements between neighbouring nodes on a geometry.
+- [control_reset_dof](control_reset_dof.md) — reset a nodal dof to a constant value or one depending on another dof.
 - [control_print_tabular](control_print_tabular.md) — export nodal results to CSV/SQLite for programmatic post-processing.
 - [control_print_gmsh](control_print_gmsh.md) — write mesh and results in the Gmsh 2.2 (.msh) format.
 - [control_print_frd](control_print_frd.md) — write mesh and results in the CalculiX (.frd) format.
