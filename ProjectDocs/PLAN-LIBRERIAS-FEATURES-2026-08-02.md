@@ -521,6 +521,9 @@ Añadir magnitudes NO altera `primary` (tablas separadas por familia; JOIN por
 
 ### Fichero de control
 - Inventario completo: `ProjectDocs/inventario-features-faltantes-2024.txt` (718 líneas).
+- **Seguimiento exhaustivo**: `ProjectDocs/SEGUIMIENTO-CONVERGENCIA.md` — lista de TODAS
+  las features de Professional vs GNU con estado, fecha/commit de cada feature
+  implementada, features descartadas con razón, y registro de verificación.
 - Marcar con `[x]` cada feature al implementarla y verificar su test.
 - Al final de cada sesión: guardar el progreso en memoria (Engram) con el plan actualizado.
 
