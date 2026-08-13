@@ -661,20 +661,31 @@ suite. Criterio de cierre: keyword implementado + documentado
 Del changelog (`changes-site-archive.txt`), un usuario de Professional
 2024 esperaría estas. **Pendientes**:
 
-- `materi_displacement_relative` (i.c.w. `materi_velocity_integrated`)
-- `strain_settlement_diagram*` (asientos dependientes de tensiones)
+- `materi_displacement_relative` (i.c.w. `materi_velocity_integrated`) —
+  **PENDIENTE DE DISEÑO (2026-08-13)**: requiere guardar el desplazamiento
+  de referencia en cada cambio de paso/reset y calcular la diferencia;
+  toca múltiples rutinas de integración. Nivel alto.
+- `strain_settlement_diagram*` (asientos dependientes de tensiones) —
+  **PENDIENTE DE DISEÑO (2026-08-13)**: cálculo de asientos no trivial.
 - [x] `control_reset_value_dof` (y `control_reset_dof`, `_value_constant`,
   `_value_dof_diagram`, `_value_method`). **HECHO 2026-08-13** (verificado:
   hisv0 reseteado a 0.55; diagrama sigyy→hisv0; métodos -use/-add/-multiply).
   Otras distribuciones `_value_*` (exponent/linear/log/power/sqrt/multi_linear)
   pendientes.
 - `group_materi_plasti_mohr_coul_direct_normal` y
-  `group_materi_plasti_tension_direct_normal` (+ `_automatic`)
+  `group_materi_plasti_tension_direct_normal` (+ `_automatic`) —
+  **PENDIENTE DE DISEÑO (2026-08-13)**: el GNU no tiene la familia
+  `mohr_coul_direct`/`tension_direct` en absoluto; implementarla requiere
+  el modelo constitutivo completo con plano normal. Nivel alto.
 - `bounda_time_until_*` (ya implementado: bounda_time_until_force)
 - [x] `control_change_dataitem_apply`. **HECHO 2026-08-13** (con -no ignora
   change_dataitem: targets de hypo1 se cumplen; sin apply la geometry
   cambia y los targets fallan).
-- `slide_axisymmetric`
+- `slide_axisymmetric` — **PENDIENTE DE DISEÑO (2026-08-13)**: se intentó
+  implementar (escala 2πr de la fricción) pero la validación es
+  problemática: sin fuerza normal la fricción de Coulomb es 0 y no hay
+  efecto observable. Requiere un test axisimétrico con fuerza normal y
+  targets propios. Revertido; queda pendiente.
 - `control_mesh_generate_interface_geometry` (depende del Carril A)
 
 **Ya presentes en el GNU** (marcar `[x]`): `control_mesh_switch`,
