@@ -34,6 +34,7 @@ Each file corresponds to the same feature in the [User Manual](../manual-user/).
 - [control_print_history_smooth](control_print_history_smooth.md) — moving-average smoothing of history output.
 - [control_print_dof](control_print_dof.md) — print primary dofs with coordinates to plain ASCII files.
 - [control_print_vtk_dof](control_print_vtk_dof.md) — limit the fields written to VTK files.
+- [control_mesh_generate_truss](control_mesh_generate_truss.md) — generate truss/beam elements between neighbouring nodes on a geometry.
 - [force_element_edge_multi_linear_factor_x](force_element_edge_multi_linear_factor_x.md) — multilinear x-factor for distributed edge forces.
 - [control_print_tabular](control_print_tabular.md) — CSV/SQLite tabular export of nodal results.
 - [control_print_gmsh](control_print_gmsh.md) — Gmsh 2.2 (.msh) output of mesh and results.

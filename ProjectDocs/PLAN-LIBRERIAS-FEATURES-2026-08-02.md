@@ -633,8 +633,11 @@ Keywords nuevos sobre infraestructura existente; cada uno con test en la
 suite. Criterio de cierre: keyword implementado + documentado
 (manual-user/developer) + test en verde.
 
-- `control_mesh_generate_truss`, `control_mesh_generate_beam` y variantes
-  (el núcleo `control_mesh_*` ya existe).
+- [x] `control_mesh_generate_truss`, `control_mesh_generate_beam` y variantes
+  (`trussbeam`, `_loose`, `_macro`; el núcleo `control_mesh_*` ya existe).
+  **VERIFICADO 2026-08-13** — ya implementados en generate.cc
+  (`generate_beam_truss`); tests gen1 (truss) y genbeam1 (beam) añadidos
+  al harness. Docs creados.
 - [x] `control_print_dof` (post-proceso sobre nodos; dofs + coordenadas en
   ASCII plano). **HECHO 2026-08-12** (variantes `_id`/`_smooth_*`/`_line`
   pendientes).
@@ -647,6 +650,8 @@ suite. Criterio de cierre: keyword implementado + documentado
 - [x] `control_print_vtk_dof` (variante de print_vtk: filtrar los campos
   escritos). **HECHO 2026-08-13** (`_coord`/`_empty`/`_node_method`/
   `_other` pendientes).
+- **Carril C COMPLETO (2026-08-13)**. Próximo: Carril B (features
+  recientes del changelog de Professional).
 
 #### Carril B — Features recientes de Professional (del changelog)
 
