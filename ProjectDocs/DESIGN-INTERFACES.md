@@ -129,6 +129,79 @@ Límites correctos: kn→∞ → soldado, kn→0 → libre. La fuerza nodal usa
 `-sign*stress*dir` (principio de trabajos virtuales); el signo invertido
 hacía que la interfaz empujara en vez de resistir.
 
+## Fase 2 — Conversión automática (diseño 2026-08-13)
+
+### Objetivo
+
+`control_mesh_convert` convierte automáticamente los elementos de interfaz
+de baja dimensión a su equivalente isoparamétrico, creando los nodos del
+lado opuesto de la interfaz. Caso principal 2D: `-bar2` → `-quad4`.
+
+### Flujo de uso (del manual de Professional)
+
+```
+element 1 -bar2 101 102
+element_group 1 10
+group_interface 10 -yes
+control_mesh_convert 110 -yes
+control_mesh_convert_element_group 110 0 1   (grupos a un lado de la interfaz)
+```
+
+El usuario genera con GID una malla con elementos `-bar2` en la interfaz
+(entre pile y soil), y `control_mesh_convert` crea los nodos duplicados y
+reconecta los vecinos.
+
+### Algoritmo (caso 2D bar2 → quad4)
+
+Para cada elemento `-bar2` cuyo grupo tiene `group_interface -yes`:
+
+1. **Leer el bar2**: nodos {a, b} — forman el lado 1 de la interfaz.
+2. **Calcular la normal** de la interfaz: perpendicular a la línea a-b,
+   en el plano de la malla (2D).
+3. **Crear 2 nodos nuevos** {a', b'} = copias de {a, b} desplazadas en la
+   normal (dirección hacia el otro lado). Copiar NODE, NODE_START_REFINED,
+   NODE_DOF, NODE_DOF_START_REFINED (patrón generate.cc:340-390).
+4. **Reescribir el elemento** como `-quad4` con nodos {a, b, a', b'}.
+5. **Reconectar los vecinos**: para cada elemento vecino que comparte los
+   nodos {a, b}:
+   - Si el vecino está en un grupo de `control_mesh_convert_element_group`
+     (un lado de la interfaz): se queda con {a, b}.
+   - Si el vecino está en el OTRO lado: reemplazar {a, b} por {a', b'} en
+     su conectividad.
+6. **Reconstruir la malla**: `mesh_has_changed(VERSION_NORMAL)` para
+   actualizar NODE_NODE/NODE_ELEMENT.
+
+### Identificación de lados
+
+- `control_mesh_convert_element_group index g0 g1 ...` define los grupos a
+  UN lado de la interfaz. Los vecinos en esos grupos usan los nodos
+  originales; los demás vecinos (que comparten el lado) usan los nuevos.
+- La normal apunta desde el lado especificado hacia el otro.
+
+### Condiciones de validez (del manual)
+
+- Cada interfaz debe tener vecinos isoparamétricos que compartan un lado
+  completo.
+- Las superficies con interfaces no deben intersectarse.
+
+### Invocación en top.cc
+
+La conversión se inserta en `mesh_changed()` (o tras `generate_spring`),
+igual que las otras generaciones: comprobar `CONTROL_MESH_CONVERT` activo
+y llamar a `interface_convert()`.
+
+### Casos 3D (futuro)
+
+- `-tria3` → `-prism6`, `-quad4` → `-hex8` (3D), etc. Siguen el mismo
+  patrón con más nodos nuevos.
+
+### Riesgos
+
+- La reconexión de vecinos es la parte delicada: identificar correctamente
+  qué vecinos están a cada lado sin doble-conectar.
+- Añadir nodos cambia la numeración; requiere renumbering consistente.
+- Los dofs de los nodos nuevos deben inicializarse (copiar del original).
+
 ## Riesgos
 
 - `elem.cc` es complejo (1007 líneas) y toca el ensamblaje global; un

@@ -708,8 +708,11 @@ Estado de fases:
 - Estrategia de no-interpenetración decidida: **penalización implícita +
   control_timestep_iterations** (sin line-search/arc-length); rigidez
   actualizada por iteración en la Fase 3 (patrón contactspring).
-- Fase 2 (conversión automática `control_mesh_convert`): pendiente
-  (requiere re-mallado, sensible).
+- Fase 2 (conversión automática `control_mesh_convert`): **DISEÑO
+  (2026-08-13)** — algoritmo bar2→quad4 documentado en
+  DESIGN-INTERFACES.md (crear 2 nodos duplicados en la normal, reescribir
+  el elemento, reconectar vecinos con control_mesh_convert_element_group).
+  Pendiente de implementar.
 - Fase 3 (ley constitutiva): **IMPLEMENTADA (2026-08-13)** —
   `group_interface_gap` (validado: con gap la interfaz abre y el bloque se
   separa velix=29.5, sin gap resiste velix=-3.24),
