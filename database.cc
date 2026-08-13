@@ -1092,6 +1092,13 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   data_length[CONTROL_PRINT_VTK] = 1;
   data_class[CONTROL_PRINT_VTK] = CONTROL;
 
+  strcpy(name[CONTROL_PRINT_VTK_DOF],"control_print_vtk_dof");
+  type[CONTROL_PRINT_VTK_DOF] = INTEGER;
+  data_length[CONTROL_PRINT_VTK_DOF] = DATA_ITEM_SIZE;
+  fixed_length[CONTROL_PRINT_VTK_DOF] = 0;
+  data_class[CONTROL_PRINT_VTK_DOF] = CONTROL;
+  data_required[CONTROL_PRINT_VTK_DOF] = CONTROL_PRINT_VTK;
+
   strcpy(name[CONTROL_PRINT_TABULAR],"control_print_tabular");
   type[CONTROL_PRINT_TABULAR] = INTEGER;
   data_length[CONTROL_PRINT_TABULAR] = 1;

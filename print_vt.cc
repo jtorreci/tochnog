@@ -27,14 +27,21 @@ void print_vtk( long int icontrol )
     icalcul=0, ready=0, indx=0, nval=0, length_cells=0,
     length_post_calcul_scal_vec_mat=0,
     calcul_unknown=0, calcul_operat=0, swit=0, ldum=0, 
+    nvtk_dof=0, ifilter=0, print_field=1,
     idum[1], *dof_label=NULL, *dof_type=NULL, *dof_scal_vec_mat=NULL, 
     *post_calcul_scal_vec_mat=NULL, *post_calcul_unknown_operat=NULL, 
-    *nodes=NULL, *el=NULL;
+    *nodes=NULL, *el=NULL, *vtk_dof=NULL;
   double ddum[1], coord[MDIM], *node_dof=NULL, *node_dof_calcul=NULL;
   char str[MCHAR], outputname[MCHAR], filename[MCHAR];
 
   swit = set_swit(-1,-1,"print_vtk");
   if ( swit ) pri( "In routine PRINT_VTK" );
+
+  // control_print_vtk_dof: only the listed solution fields are written
+  // (e.g. -condif_temperature, -materi_velocity, ...); -none -> nothing.
+  vtk_dof = get_new_int(DATA_ITEM_SIZE);
+  db( CONTROL_PRINT_VTK_DOF, icontrol, vtk_dof, ddum, nvtk_dof,
+    VERSION_NORMAL, GET_IF_EXISTS );
 
   dof_label = get_new_int(MUKNWN);
   dof_type = get_new_int(MUKNWN);
@@ -191,57 +198,73 @@ void print_vtk( long int icontrol )
     ipuknwn = 0; ready = 0;
     while ( !ready ) {
       iuknwn = ipuknwn*nder;
-      if      ( dof_scal_vec_mat[iuknwn]==-SCALAR ) {
+      // filter by control_print_vtk_dof (dof_type names, or -none)
+      print_field = 1;
+      if ( nvtk_dof>0 && vtk_dof ) {
+        if ( vtk_dof[0]==-NONE ) print_field = 0;
+        else {
+          print_field = 0;
+          for ( ifilter=0; ifilter<nvtk_dof; ifilter++ )
+            if ( dof_type[iuknwn]==vtk_dof[ifilter] ) { print_field = 1; break; }
+        }
+      }
+      if      ( dof_scal_vec_mat[iuknwn]==-SCALAR )
         nval = 1;
-        outvtk << "SCALARS " << db_name(dof_label[iuknwn]) << " double\n";
-        outvtk << "LOOKUP_TABLE default\n";
-      }
-      else if ( dof_scal_vec_mat[iuknwn]==-VECTOR ) {
+      else if ( dof_scal_vec_mat[iuknwn]==-VECTOR )
         nval = ndim;
-        outvtk << "VECTORS " << db_name(dof_type[iuknwn]) << " double\n";
-      }
       else {
         assert( dof_scal_vec_mat[iuknwn]==-MATRIX );
         nval = 6;
-        outvtk << "TENSORS " << db_name(dof_type[iuknwn]) << " double\n";
       }
-      for ( inod=0; inod<=max_node; inod++ ) {
-        node_dof = db_dbl( NODE_DOF, inod, VERSION_PRINT );
+      if ( print_field ) {
         if      ( dof_scal_vec_mat[iuknwn]==-SCALAR ) {
-          if ( node_dof[iuknwn]==0.0 )
-            outvtk << "0.0";
-          else
-            outvtk << node_dof[iuknwn];
+          outvtk << "SCALARS " << db_name(dof_label[iuknwn]) << " double\n";
+          outvtk << "LOOKUP_TABLE default\n";
         }
         else if ( dof_scal_vec_mat[iuknwn]==-VECTOR ) {
-          for ( idim=0; idim<MDIM; idim++ ) {
-            if      ( idim>ndim-1 )
-              outvtk << "0.0" << " ";
-            else {
-              indx = iuknwn+idim*nder;
-              if ( node_dof[indx]==0.0 )
-                outvtk << "0.0" << " ";
-              else
-                outvtk << node_dof[indx] << " ";
-            }
-          }
+          outvtk << "VECTORS " << db_name(dof_type[iuknwn]) << " double\n";
         }
         else {
-          assert( dof_scal_vec_mat[iuknwn]==-MATRIX );
-          for ( idim=0; idim<MDIM; idim++ ) {
-            for ( jdim=0; jdim<MDIM; jdim++ ) {
-              indx = iuknwn + stress_indx(idim,jdim)*nder;
-              if ( node_dof[indx]==0.0 )
-                outvtk << "0.0" << " ";
-              else
-                outvtk << node_dof[indx] << " ";
-            }
-            if ( idim!=MDIM-1 ) outvtk << "\n";
+          outvtk << "TENSORS " << db_name(dof_type[iuknwn]) << " double\n";
+        }
+        for ( inod=0; inod<=max_node; inod++ ) {
+          node_dof = db_dbl( NODE_DOF, inod, VERSION_PRINT );
+          if      ( dof_scal_vec_mat[iuknwn]==-SCALAR ) {
+            if ( node_dof[iuknwn]==0.0 )
+              outvtk << "0.0";
+            else
+              outvtk << node_dof[iuknwn];
           }
+          else if ( dof_scal_vec_mat[iuknwn]==-VECTOR ) {
+            for ( idim=0; idim<MDIM; idim++ ) {
+              if      ( idim>ndim-1 )
+                outvtk << "0.0" << " ";
+              else {
+                indx = iuknwn+idim*nder;
+                if ( node_dof[indx]==0.0 )
+                  outvtk << "0.0" << " ";
+                else
+                  outvtk << node_dof[indx] << " ";
+              }
+            }
+          }
+          else {
+            assert( dof_scal_vec_mat[iuknwn]==-MATRIX );
+            for ( idim=0; idim<MDIM; idim++ ) {
+              for ( jdim=0; jdim<MDIM; jdim++ ) {
+                indx = iuknwn + stress_indx(idim,jdim)*nder;
+                if ( node_dof[indx]==0.0 )
+                  outvtk << "0.0" << " ";
+                else
+                  outvtk << node_dof[indx] << " ";
+              }
+              if ( idim!=MDIM-1 ) outvtk << "\n";
+            }
+          }
+          outvtk << "\n";
         }
         outvtk << "\n";
       }
-      outvtk << "\n";
       ipuknwn += nval;
       ready = (ipuknwn>=npuknwn);
     }
@@ -250,7 +273,16 @@ void print_vtk( long int icontrol )
     ipuknwn = 0; ready = 0;
     while ( !ready ) {
       iuknwn = ipuknwn*nder;
-      if ( dof_scal_vec_mat[iuknwn]!=-SCALAR ) {
+      print_field = 1;
+      if ( nvtk_dof>0 && vtk_dof ) {
+        if ( vtk_dof[0]==-NONE ) print_field = 0;
+        else {
+          print_field = 0;
+          for ( ifilter=0; ifilter<nvtk_dof; ifilter++ )
+            if ( dof_type[iuknwn]==vtk_dof[ifilter] ) { print_field = 1; break; }
+        }
+      }
+      if ( print_field && dof_scal_vec_mat[iuknwn]!=-SCALAR ) {
         outvtk << "SCALARS " << db_name(dof_label[iuknwn]) << " double\n";
         outvtk << "LOOKUP_TABLE default\n";
         for ( inod=0; inod<=max_node; inod++ ) {
@@ -273,7 +305,14 @@ void print_vtk( long int icontrol )
       long int sig_indx = -1;
       for ( i=0; i<nuknwn; i++ )
         if ( dof_scal_vec_mat[i]==-MATRIX ) { sig_indx = i; break; }
-      if ( sig_indx>=0 ) {
+      // respect control_print_vtk_dof: only write derived magnitudes when
+      // the filter (if any) includes a stress field
+      long int print_derived = ( nvtk_dof<=0 || !vtk_dof );
+      if ( !print_derived && vtk_dof ) {
+        for ( ifilter=0; ifilter<nvtk_dof; ifilter++ )
+          if ( vtk_dof[ifilter]==-MATERI_STRESS ) { print_derived = 1; break; }
+      }
+      if ( sig_indx>=0 && print_derived ) {
         const char* derived_names[5] =
           { "vmises", "tresca", "sig1", "sig2", "sig3" };
         for ( idim=0; idim<5; idim++ ) {
@@ -388,6 +427,7 @@ void print_vtk( long int icontrol )
   delete[] post_calcul_unknown_operat;
   delete[] nodes;
   delete[] el;
+  delete[] vtk_dof;
 
   if ( swit ) pri( "Out routine PRINT_VTK" );
 }

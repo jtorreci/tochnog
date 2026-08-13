@@ -644,7 +644,9 @@ suite. Criterio de cierre: keyword implementado + documentado
 - [x] `force_element_edge_multi_linear_factor_x` (carga de borde
   multilineal sobre `force_edge` existente). **HECHO 2026-08-13**
   (multiplicador multilineal en x sobre force_element_edge).
-- `control_print_vtk_*` (variantes de print_vtk).
+- [x] `control_print_vtk_dof` (variante de print_vtk: filtrar los campos
+  escritos). **HECHO 2026-08-13** (`_coord`/`_empty`/`_node_method`/
+  `_other` pendientes).
 
 #### Carril B — Features recientes de Professional (del changelog)
 
