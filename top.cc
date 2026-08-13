@@ -465,6 +465,7 @@ void step_start( long int task, long int options_solver[], double dtime, double 
   long int icontrol=0, control_mesh_remesh=0, control_materi_diffusion=0,
     element=0, max_element=0, length=0, nnol=0, mnol=0,
     name=0, any_beam=0, any_truss=0, any_spring=0, any_contactspring=0,
+    any_interface=0,
     ldum=0, options_matrix_group=-NO, options_matrix_length=0, 
     element_group=0, max_group=0, exit_tochnog=0,
     el[1+MNOL], control_adjust_geometry[4];
@@ -602,6 +603,8 @@ void step_start( long int task, long int options_solver[], double dtime, double 
         db( ELEMENT_GROUP, element, &element_group, ddum, ldum,
           VERSION_NORMAL, GET_IF_EXISTS );
         if ( element_group>max_group ) max_group = element_group;
+        if ( db_active_index( GROUP_INTERFACE, element_group, VERSION_NORMAL ) )
+          any_interface = 1;
       }
     }               
 
@@ -676,6 +679,9 @@ void step_start( long int task, long int options_solver[], double dtime, double 
     if ( any_spring ) {
       db_allocate( ELEMENT_SPRING_DIRECTION, max_element, VERSION_NEW, MINIMAL );
       db_allocate( ELEMENT_SPRING_FORCE, max_element, VERSION_NEW, MINIMAL );
+    }
+    if ( any_interface ) {
+      db_allocate( ELEMENT_INTERFACE_STRAIN_NORMAL, max_element, VERSION_NEW, MINIMAL );
     }
     if ( any_truss ) {
       db_allocate( ELEMENT_TRUSS_DIRECTION, max_element, VERSION_NEW, MINIMAL );

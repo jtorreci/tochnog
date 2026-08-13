@@ -27,6 +27,35 @@
 - The displacement dof is `veli_indx` (velocity_integrated) or `dis_indx`
   (displacement), selected via `materi_velocity_integrated`.
 
+## Ley constitutiva (Fase 3)
+
+- **Gap** (`group_interface_gap`): the interface only generates stresses
+  when the accumulated normal strain `strain_normal < gap`. The accumulated
+  strain is stored in `ELEMENT_INTERFACE_STRAIN_NORMAL`. If not specified
+  the interface is always closed (gap = 1.e20).
+- **Residual stiffness** (`group_interface_materi_residual_stiffness`):
+  fraction of the original stiffness used when the interface is open
+  (default 0.01).
+- **Tension limit** (`group_interface_materi_plasti_tension_direct`):
+  if the incremental normal force exceeds the limit the interface opens
+  (residual stiffness).
+- **Mohr-Coulomb** (`group_interface_materi_plasti_mohr_coul_direct
+  phi c phi_flow`): max friction = `c + Fn*tan(phi)` where
+  `Fn = kn * strain_normal` (total normal force, compression negative).
+  When the limit is reached the tangential stiffness is zeroed.
+
+## Validación
+
+- **Fase 1 elástica**: test 2 bloques (`/tmp/iface2.dat`) — kn=100→0.044,
+  kn=1000→0.0018, kn=1e6→-0.003 (aprox soldado), kn=0.001→≈1.0 libre,
+  sin interfaz→-0.0066. Límites físicos correctos.
+- **Fase 3 gap**: test (`/tmp/iface_gap.dat`) — bloque derecho empujado
+  con fuerza de volumen: CON gap=0.001 → velix(nodo6)=29.5 (interfaz
+  abierta, bloque se separa); SIN gap → -3.24 (resiste). Efecto claro.
+- **Mohr-Coulomb / tension_direct**: implementados, validación de humo
+  (corren sin error); validación numérica completa pendiente (requiere
+  test con compresión normal + deslizamiento tangencial).
+
 ## Ensamblaje
 
 - The stiffness matrix is `[K -K; -K K]` on the displacement dofs of the

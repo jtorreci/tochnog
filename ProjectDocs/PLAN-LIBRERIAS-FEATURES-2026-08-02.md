@@ -708,8 +708,15 @@ Estado de fases:
 - Estrategia de no-interpenetración decidida: **penalización implícita +
   control_timestep_iterations** (sin line-search/arc-length); rigidez
   actualizada por iteración en la Fase 3 (patrón contactspring).
-- Fase 2 (conversión automática): pendiente.
-- Fase 3 (ley constitutiva completa, unilateralidad): pendiente.
+- Fase 2 (conversión automática `control_mesh_convert`): pendiente
+  (requiere re-mallado, sensible).
+- Fase 3 (ley constitutiva): **IMPLEMENTADA (2026-08-13)** —
+  `group_interface_gap` (validado: con gap la interfaz abre y el bloque se
+  separa velix=29.5, sin gap resiste velix=-3.24),
+  `group_interface_materi_residual_stiffness`,
+  `group_interface_materi_plasti_tension_direct`,
+  `group_interface_materi_plasti_mohr_coul_direct` (MC/tension en
+  validación de humo).
 - Fase 4 (post-proceso): pendiente.
 
 La familia `group_interface_*` (11 keywords) está documentada en el

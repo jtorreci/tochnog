@@ -8,8 +8,8 @@ Documento de control del proceso de convergencia entre Tochnog Professional
 
 - **1094** keywords documentados en Professional (tras limpiar 1 keyword
   espurio del manual)
-- **300** presentes en el GNU (**27 %** de cobertura nominal)
-- **794** faltantes
+- **304** presentes en el GNU (**28 %** de cobertura nominal)
+- **790** faltantes
 - Además: 197 tests del GNU 2014 corren con cobertura 100 % de keywords (ver plan, sección 6c)
 
 ## Features implementadas por nosotros — registro de verificación
@@ -54,6 +54,7 @@ suite sfnet, o un test propio. El registro completo:
 | `control_change_dataitem_apply` | `bdcdeaf` | 2026-08-13 | con -no ignora change_dataitem (targets hypo1 se cumplen); sin apply la geometry cambia y los targets fallan |
 | Carril A (diseño) | — | 2026-08-13 | diseño técnico en DESIGN-INTERFACES.md: modelo físico (strain = dif. de desplazamiento entre lados), análisis del codebase (patrón spring.cc en elem.cc), 4 fases, test de validación propuesto. Sin tests de referencia sfnet. |
 | Carril A Fase 1 (`group_interface` + `_elasti_stiffness`) | `a82cbc7` | 2026-08-13 | interface_element() en interface.cc. **Validada** (test 2 bloques): signo corregido (-sign*stress*dir); kn=100→0.044, kn=1e6→-0.003≈soldado, kn=0.001→≈1.0 libre. Límites físicos correctos. Estrategia de no-interpenetración: penalización implícita + control_timestep_iterations (sin line-search/arc-length). |
+| Carril A Fase 3 (gap, residual_stiffness, tension_direct, mohr_coul_direct) | (commit pendiente) | 2026-08-13 | gap VALIDADO (test iface_gap): CON gap la interfaz abre y el bloque se separa velix=29.5, SIN gap resiste velix=-3.24. MC/tension en validación de humo. |
 
 Nota: las features marcadas solo "GNU" en el detalle por familia (sin
 fila en esta tabla) ya existían en el fork sfnet 2014 y no fueron
@@ -1080,18 +1081,18 @@ marcado `PENDIENTE` puede estar cubierto en el GNU bajo otro nombre:
 - [ ] `group_integration_method_reduced_factor` — PENDIENTE
 - [x] `group_integration_points` — presente en el GNU
 
-### group_interface (2/11)
+### group_interface (6/11)
 
-- [x] `group_interface` — Fase 1 implementada (commit `a82cbc7`, 2026-08-13; plastico/gap/memory pendientes)
+- [x] `group_interface` — Fase 1 implementada (commit `a82cbc7`, 2026-08-13; memory/condif pendientes)
 - [ ] `group_interface_condif_conductivity` — PENDIENTE
-- [ ] `group_interface_gap` — PENDIENTE
+- [x] `group_interface_gap` — Fase 3 implementada (2026-08-13; validada)
 - [ ] `group_interface_ground` — PENDIENTE
 - [x] `group_interface_materi_elasti_sti` — Fase 1 implementada (commit `a82cbc7`, 2026-08-13)
 - [ ] `group_interface_materi_expansion_normal` — PENDIENTE
 - [ ] `group_interface_materi_memory` — PENDIENTE
-- [ ] `group_interface_materi_plasti_mohr_coul_direct` — PENDIENTE
-- [ ] `group_interface_materi_plasti_tension_direct` — PENDIENTE
-- [ ] `group_interface_materi_residual_sti` — PENDIENTE
+- [x] `group_interface_materi_plasti_mohr_coul_direct` — Fase 3 implementada (2026-08-13; validación de humo)
+- [x] `group_interface_materi_plasti_tension_direct` — Fase 3 implementada (2026-08-13; validación de humo)
+- [x] `group_interface_materi_residual_sti` — Fase 3 implementada (2026-08-13)
 - [ ] `group_interface_tangential_reference_point` — PENDIENTE
 
 ### group_materi (56/124)
