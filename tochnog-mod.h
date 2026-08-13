@@ -523,6 +523,8 @@ enum {
   GROUP_GROUNDFLOW_POROSITY,
   GROUP_INTEGRATION_METHOD,
   GROUP_INTEGRATION_POINTS,
+  GROUP_INTERFACE,
+  GROUP_INTERFACE_MATERI_ELASTI_STIFFNESS,
   GROUP_MATERI_DAMAGE_MAZARS,
   GROUP_MATERI_DAMPING,
   GROUP_MATERI_DENSITY,
@@ -1552,6 +1554,10 @@ void      sort( double val[], double vec[] );
 void      spring( long int element, long int name, long int element_group, 
             double coord[], double old_dof[], double new_dof[], 
             double element_lhside[], double element_matrix[],
+            double element_rhside[] );    
+void      interface_element( long int element, long int name,
+            long int element_group, double coord[], double old_dof[],
+            double new_dof[], double element_lhside[], double element_matrix[],
             double element_rhside[] );    
 long int  stress_indx( long int idim, long int jdim );
 void      stress_umat( long int element, long int gr, long int formulation,

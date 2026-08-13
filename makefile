@@ -319,7 +319,7 @@ tochnog: adjust.$(OBJ) area.$(OBJ) \
 	slide.$(OBJ) \
 	so.$(OBJ) so_bicg.$(OBJ) so_suplu.$(OBJ) \
 	   split.$(OBJ) \
-	spring.$(OBJ) stress.$(OBJ) \
+	spring.$(OBJ) stress.$(OBJ) interface.$(OBJ) \
 	$(SYS_FILE).$(OBJ) tendon.$(OBJ) time.$(OBJ) tn.$(OBJ) \
 	top.$(OBJ) truss.$(OBJ) \
 	umat.$(OBJ) unknown.$(OBJ) user.$(OBJ) \
@@ -623,6 +623,9 @@ split.$(OBJ): split.$(SRC_CPP) tochnog.h
 
 spring.$(OBJ): spring.$(SRC_CPP) tochnog.h
 	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)spring.$(SRC_CPP)
+
+interface.$(OBJ): interface.$(SRC_CPP) tochnog.h
+	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)interface.$(SRC_CPP)
 
 stress.$(OBJ): stress.$(SRC_CPP) tochnog.h
 	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)stress.$(SRC_CPP)

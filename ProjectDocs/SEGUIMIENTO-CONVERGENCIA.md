@@ -53,6 +53,7 @@ suite sfnet, o un test propio. El registro completo:
 | `control_reset_dof` + `_value_constant` + `_value_dof` + `_value_dof_diagram` + `_value_method` | `b6eaee4` | 2026-08-13 | hisv0 reseteado a 0.55 (0.5986 sin reset); diagrama sigyy→hisv0; métodos -use/-add/-multiply |
 | `control_change_dataitem_apply` | `bdcdeaf` | 2026-08-13 | con -no ignora change_dataitem (targets hypo1 se cumplen); sin apply la geometry cambia y los targets fallan |
 | Carril A (diseño) | — | 2026-08-13 | diseño técnico en DESIGN-INTERFACES.md: modelo físico (strain = dif. de desplazamiento entre lados), análisis del codebase (patrón spring.cc en elem.cc), 4 fases, test de validación propuesto. Sin tests de referencia sfnet. |
+| Carril A Fase 1 (`group_interface` + `_elasti_stiffness`) | (en curso) | 2026-08-13 | interface_element() en interface.cc; ensamblaje verificado (matriz y fuerza generados). Validación física del acoplamiento PENDIENTE (test de 2 bloques: kn alta no reduce el desplazamiento como se espera). |
 
 Nota: las features marcadas solo "GNU" en el detalle por familia (sin
 fila en esta tabla) ya existían en el fork sfnet 2014 y no fueron
@@ -1079,13 +1080,13 @@ marcado `PENDIENTE` puede estar cubierto en el GNU bajo otro nombre:
 - [ ] `group_integration_method_reduced_factor` — PENDIENTE
 - [x] `group_integration_points` — presente en el GNU
 
-### group_interface (0/11)
+### group_interface (2/11)
 
-- [ ] `group_interface` — PENDIENTE
+- [x] `group_interface` — Fase 1 implementada (commit pendiente, 2026-08-13; plastico/gap/memory pendientes)
 - [ ] `group_interface_condif_conductivity` — PENDIENTE
 - [ ] `group_interface_gap` — PENDIENTE
 - [ ] `group_interface_ground` — PENDIENTE
-- [ ] `group_interface_materi_elasti_sti` — PENDIENTE
+- [x] `group_interface_materi_elasti_sti` — Fase 1 implementada (commit pendiente, 2026-08-13)
 - [ ] `group_interface_materi_expansion_normal` — PENDIENTE
 - [ ] `group_interface_materi_memory` — PENDIENTE
 - [ ] `group_interface_materi_plasti_mohr_coul_direct` — PENDIENTE

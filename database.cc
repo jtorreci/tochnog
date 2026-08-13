@@ -2341,6 +2341,18 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   data_class[GROUP_INTEGRATION_POINTS] = GROUP_INTEGRATION_POINTS;
   data_required[GROUP_INTEGRATION_POINTS] = GROUP_TYPE;
 
+  strcpy(name[GROUP_INTERFACE],"group_interface");
+  type[GROUP_INTERFACE] = INTEGER;
+  data_length[GROUP_INTERFACE] = 1;
+  data_class[GROUP_INTERFACE] = GROUP_TYPE;
+  data_required[GROUP_INTERFACE] = GROUP_TYPE;
+
+  strcpy(name[GROUP_INTERFACE_MATERI_ELASTI_STIFFNESS],"group_interface_materi_elasti_stiffness");
+  type[GROUP_INTERFACE_MATERI_ELASTI_STIFFNESS] = DOUBLE_PRECISION;
+  data_length[GROUP_INTERFACE_MATERI_ELASTI_STIFFNESS] = 3;
+  data_class[GROUP_INTERFACE_MATERI_ELASTI_STIFFNESS] = GROUP_TYPE;
+  data_required[GROUP_INTERFACE_MATERI_ELASTI_STIFFNESS] = GROUP_INTERFACE;
+
   strcpy(name[GROUP_MATERI_ELASTI_CAMCLAY_G],"group_materi_elasti_camclay_g");
   type[GROUP_MATERI_ELASTI_CAMCLAY_G] = DOUBLE_PRECISION;
   data_length[GROUP_MATERI_ELASTI_CAMCLAY_G] = 1;

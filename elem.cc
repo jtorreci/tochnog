@@ -509,6 +509,14 @@ void elem( long int element, long int ithread )
     if(find_nonlocal_weights && scalar_dabs(options_nonlocal_softvar)>TINY) return;
     goto add_to_system_vectors;
   }
+  else if ( db_active_index( GROUP_INTERFACE, element_group, VERSION_NORMAL ) ) {
+    // interface elements (Carril A): 2D quadrilaterals whose strains are
+    // the displacement differences between the two opposite sides
+    interface_element( element, name, element_group, coord, old_dof,
+      new_dof, element_lhside, element_matrix, element_rhside );
+    if(find_nonlocal_weights && scalar_dabs(options_nonlocal_softvar)>TINY) return;
+    goto add_to_system_vectors;
+  }
   else if ( name==-TRUSS ) {
     truss( element, element_group, coord, old_dof, 
       new_dof, element_lhside, element_matrix, element_rhside );

@@ -701,8 +701,12 @@ con el patrón de spring.cc), las 4 fases, y el test de validación
 propuesto.
 
 Estado de fases:
-- Fase 1 (elemento elástico kn/kt + `group_interface`): DISEÑO LISTO,
-  pendiente de implementar.
+- Fase 1 (elemento elástico kn/kt + `group_interface`): **IMPLEMENTADA
+  (2026-08-13)** — interface_element() en interface.cc, keywords
+  group_interface y group_interface_materi_elasti_stiffness, conexión en
+  elem.cc. Ensamblaje verificado (matriz y fuerza se generan). Validación
+  física del acoplamiento con el solver PENDIENTE de afinado (el test de 2
+  bloques no reduce el desplazamiento con kn alta como se espera).
 - Fase 2 (conversión automática): pendiente.
 - Fase 3 (ley constitutiva completa): pendiente.
 - Fase 4 (post-proceso): pendiente.
