@@ -8,8 +8,8 @@ Documento de control del proceso de convergencia entre Tochnog Professional
 
 - **1094** keywords documentados en Professional (tras limpiar 1 keyword
   espurio del manual)
-- **295** presentes en el GNU (**27 %** de cobertura nominal)
-- **799** faltantes
+- **300** presentes en el GNU (**27 %** de cobertura nominal)
+- **794** faltantes
 - Además: 197 tests del GNU 2014 corren con cobertura 100 % de keywords (ver plan, sección 6c)
 
 ## Features implementadas por nosotros — registro de verificación
@@ -50,7 +50,7 @@ suite sfnet, o un test propio. El registro completo:
 | `control_print_vtk_dof` | `b3e58a4` | 2026-08-13 | campos filtrados verificados (test vtk_dof1) |
 | `force_element_edge_multi_linear_factor_x` | `86f6d03` | 2026-08-13 | efecto del factor 0/1 en target (test mlx1) |
 | `control_mesh_generate_truss/beam` | `bd7b3ab` | 2026-08-13 | contra tests sfnet genera1/ho_othr1 (gen1/genbeam1) |
-| `control_reset_dof` + `_value_constant` + `_value_dof` + `_value_dof_diagram` + `_value_method` | (en curso) | 2026-08-13 | hisv0 reseteado a 0.55 (0.5986 sin reset); diagrama sigyy→hisv0; métodos -use/-add/-multiply |
+| `control_reset_dof` + `_value_constant` + `_value_dof` + `_value_dof_diagram` + `_value_method` | `b6eaee4` | 2026-08-13 | hisv0 reseteado a 0.55 (0.5986 sin reset); diagrama sigyy→hisv0; métodos -use/-add/-multiply |
 
 Nota: las features marcadas solo "GNU" en el detalle por familia (sin
 fila en esta tabla) ya existían en el fork sfnet 2014 y no fueron
@@ -609,23 +609,23 @@ marcado `PENDIENTE` puede estar cubierto en el GNU bajo otro nombre:
 - [ ] `control_repeat_save` — PENDIENTE
 - [ ] `control_repeat_save_calculate` — PENDIENTE
 
-### control_reset (0/18)
+### control_reset (5/18)
 
-- [ ] `control_reset_dof` — PENDIENTE
+- [x] `control_reset_dof` — implementada (commit `b6eaee4`, 2026-08-13)
 - [ ] `control_reset_element_dof` — PENDIENTE
 - [ ] `control_reset_element_group` — PENDIENTE
 - [ ] `control_reset_geometry` — PENDIENTE
 - [ ] `control_reset_interface` — PENDIENTE
 - [ ] `control_reset_interface_strain` — PENDIENTE
 - [ ] `control_reset_node` — PENDIENTE
-- [ ] `control_reset_value_constant` — PENDIENTE
-- [ ] `control_reset_value_dof` — PENDIENTE
-- [ ] `control_reset_value_dof_diagram` — PENDIENTE
+- [x] `control_reset_value_constant` — implementada (commit `b6eaee4`, 2026-08-13)
+- [x] `control_reset_value_dof` — implementada (commit `b6eaee4`, 2026-08-13)
+- [x] `control_reset_value_dof_diagram` — implementada (commit `b6eaee4`, 2026-08-13)
 - [ ] `control_reset_value_exponent` — PENDIENTE
 - [ ] `control_reset_value_linear` — PENDIENTE
 - [ ] `control_reset_value_logarithmic_` — PENDIENTE
 - [ ] `control_reset_value_logarithmic_second` — PENDIENTE
-- [ ] `control_reset_value_method` — PENDIENTE
+- [x] `control_reset_value_method` — implementada (commit `b6eaee4`, 2026-08-13)
 - [ ] `control_reset_value_multi_linear` — PENDIENTE
 - [ ] `control_reset_value_power` — PENDIENTE
 - [ ] `control_reset_value_square_root` — PENDIENTE
