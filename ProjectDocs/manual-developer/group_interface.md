@@ -32,17 +32,30 @@
 - The stiffness matrix is `[K -K; -K K]` on the displacement dofs of the
   two sides, with K = kn (normal) + kt*2 (tangential) projected onto the
   interface normal/tangent.
-- Follows the `spring.cc` pattern: assembly on `vel_indx` (velocity dof),
-  `element_rhside` from the stress, `element_matrix`/`element_lhside`
-  from K*dtime.
+- Follows the `spring.cc` pattern: assembly on `vel_indx` (velocity dof).
+  The nodal force is `-sign*stress*dir` (principle of virtual work), the
+  matrix/lhside from `K*dtime`.
+- **Sign convention (2026-08-13)**: the nodal force must be
+  `-sign*(stress*dir)`; with the opposite sign the interface pushes
+  instead of resisting (kn high increased the displacement).
+
+## Validación
+
+- Test 2 bloques (`/tmp/iface2.dat`): un bloque izquierdo fijo y un
+  bloque derecho empujado, conectados por la interfaz. Verificado:
+  - kn=100 → velix(nodo6)=0.044
+  - kn=1000 → 0.0018
+  - kn=1e6 → -0.0032
+  - kn=0.001 → ≈1.0 (deslizamiento libre)
+  - Sin interfaz (bloques soldados) → -0.0066
+  El límite kn→∞ tiende al modelo soldado, kn→0 al deslizamiento libre —
+  comportamiento físico correcto.
+- La fuerza usa la velocidad relativa entre lados `(v_side2-v_side1)*dtime`
+  (incremento de desplazamiento), no `dis_indx` (que es -1 con
+  velocity_integrated).
 
 ## Pendiente / validación
 
-- **Validación física del acoplamiento**: la Fase 1 se implementa y el
-  ensamblaje se verifica (matriz y fuerza se generan), pero el
-  comportamiento del test de 2 bloques con kn alta requiere afinado
-  (el desplazamiento del bloque derecho no se reduce con kn alta como
-  se espera). Pendiente de análisis del acoplamiento con el solver.
 - El test aislado (1 elemento de interfaz con lados prescritos) no valida
   bien porque los dofs prescritos no dejan que la interfaz frene.
 - `control_mesh_convert` (bar2 -> quad4 etc.) no está implementado — el

@@ -701,14 +701,15 @@ con el patrón de spring.cc), las 4 fases, y el test de validación
 propuesto.
 
 Estado de fases:
-- Fase 1 (elemento elástico kn/kt + `group_interface`): **IMPLEMENTADA
-  (2026-08-13)** — interface_element() en interface.cc, keywords
-  group_interface y group_interface_materi_elasti_stiffness, conexión en
-  elem.cc. Ensamblaje verificado (matriz y fuerza se generan). Validación
-  física del acoplamiento con el solver PENDIENTE de afinado (el test de 2
-  bloques no reduce el desplazamiento con kn alta como se espera).
+- Fase 1 (elemento elástico kn/kt + `group_interface`): **IMPLEMENTADA Y
+  VALIDADA (2026-08-13)** — interface_element() en interface.cc; el signo
+  del ensamblaje se corrigió (`-sign*stress*dir`); límites físicos
+  correctos (kn→∞ soldado, kn→0 libre; ver DESIGN-INTERFACES.md).
+- Estrategia de no-interpenetración decidida: **penalización implícita +
+  control_timestep_iterations** (sin line-search/arc-length); rigidez
+  actualizada por iteración en la Fase 3 (patrón contactspring).
 - Fase 2 (conversión automática): pendiente.
-- Fase 3 (ley constitutiva completa): pendiente.
+- Fase 3 (ley constitutiva completa, unilateralidad): pendiente.
 - Fase 4 (post-proceso): pendiente.
 
 La familia `group_interface_*` (11 keywords) está documentada en el

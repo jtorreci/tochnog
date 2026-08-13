@@ -83,20 +83,18 @@ void interface_element( long int element, long int name,
     tangent[0] = 1.; tangent[1] = 0.; tangent[2] = 0.;
   }
 
-  // displacement difference between the sides (side2 - side1).
-  // old_dof is the previous displacement, new_dof the current one; the
-  // incremental displacement difference drives the stress increment.
+  // velocity difference between the sides (side2 - side1) on the
+  // velocity dof. The interface force is k * (relative velocity * dtime),
+  // i.e. the incremental displacement difference (same as spring2:
+  // force = k * incremental_length). The displacement dof (dis_indx or
+  // veli_indx) is only used to track the accumulated relative slip for
+  // output/plasticity in later phases.
   for ( idim=0; idim<ndim; idim++ ) {
-    double u_side1_old = 0.5*( old_dof[0*nuknwn+dis_indx+idim*nder] +
-                               old_dof[1*nuknwn+dis_indx+idim*nder] );
-    double u_side2_old = 0.5*( old_dof[2*nuknwn+dis_indx+idim*nder] +
-                               old_dof[3*nuknwn+dis_indx+idim*nder] );
-    double u_side1_new = 0.5*( new_dof[0*nuknwn+dis_indx+idim*nder] +
-                               new_dof[1*nuknwn+dis_indx+idim*nder] );
-    double u_side2_new = 0.5*( new_dof[2*nuknwn+dis_indx+idim*nder] +
-                               new_dof[3*nuknwn+dis_indx+idim*nder] );
-    du[idim] = ( u_side2_new - u_side1_new ) -
-               ( u_side2_old - u_side1_old );
+    double v_side1 = 0.5*( new_dof[0*nuknwn+vel_indx+idim*nder] +
+                           new_dof[1*nuknwn+vel_indx+idim*nder] );
+    double v_side2 = 0.5*( new_dof[2*nuknwn+vel_indx+idim*nder] +
+                           new_dof[3*nuknwn+vel_indx+idim*nder] );
+    du[idim] = ( v_side2 - v_side1 ) * dtime;
   }
 
   du_norm  = array_inproduct( du, normal, ndim );
@@ -128,7 +126,7 @@ void interface_element( long int element, long int name,
       // sign: + on side2 nodes (2,3), - on side1 nodes (0,1)
       double sign = ( inol>=2 ) ? +1. : -1.;
       indx = inol*npuknwn + (vel_indx+idim*nder)/nder;
-      tmp = sign*( stress_normal*dirn + stress_shear1*dirt );
+      tmp = -sign*( stress_normal*dirn + stress_shear1*dirt );
       element_rhside[indx] += tmp;
       for ( jnol=0; jnol<nnol; jnol++ ) {
         double jsign = ( jnol>=2 ) ? +1. : -1.;

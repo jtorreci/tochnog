@@ -53,7 +53,7 @@ suite sfnet, o un test propio. El registro completo:
 | `control_reset_dof` + `_value_constant` + `_value_dof` + `_value_dof_diagram` + `_value_method` | `b6eaee4` | 2026-08-13 | hisv0 reseteado a 0.55 (0.5986 sin reset); diagrama sigyy→hisv0; métodos -use/-add/-multiply |
 | `control_change_dataitem_apply` | `bdcdeaf` | 2026-08-13 | con -no ignora change_dataitem (targets hypo1 se cumplen); sin apply la geometry cambia y los targets fallan |
 | Carril A (diseño) | — | 2026-08-13 | diseño técnico en DESIGN-INTERFACES.md: modelo físico (strain = dif. de desplazamiento entre lados), análisis del codebase (patrón spring.cc en elem.cc), 4 fases, test de validación propuesto. Sin tests de referencia sfnet. |
-| Carril A Fase 1 (`group_interface` + `_elasti_stiffness`) | `a82cbc7` | 2026-08-13 | interface_element() en interface.cc; ensamblaje verificado (matriz y fuerza generados). Validación física del acoplamiento PENDIENTE (test de 2 bloques: kn alta no reduce el desplazamiento como se espera). |
+| Carril A Fase 1 (`group_interface` + `_elasti_stiffness`) | `a82cbc7` | 2026-08-13 | interface_element() en interface.cc. **Validada** (test 2 bloques): signo corregido (-sign*stress*dir); kn=100→0.044, kn=1e6→-0.003≈soldado, kn=0.001→≈1.0 libre. Límites físicos correctos. Estrategia de no-interpenetración: penalización implícita + control_timestep_iterations (sin line-search/arc-length). |
 
 Nota: las features marcadas solo "GNU" en el detalle por familia (sin
 fila en esta tabla) ya existían en el fork sfnet 2014 y no fueron

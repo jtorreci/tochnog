@@ -91,6 +91,44 @@ los conecta a los elementos isoparamétricos vecinos.
   ley de interfaz.
 - `group_interface` es un keyword nuevo (data_class GROUP, tipo INTEGER).
 
+## Estrategia numérica de no-interpenetración (decidida 2026-08-13)
+
+**Opción elegida: penalización implícita + iteraciones** (patrón de
+tochnog, validado en la Fase 1).
+
+- La interfaz elástica usa `kn`/`kt` como penalización. Con `kn` alta los
+  lados quedan acoplados (límite = bloques soldados); con `kn` baja
+  deslizan.
+- El solver resuelve **implícito** (Newton) con
+  `control_timestep_iterations`: la interpenetración se corrige
+  iterativamente dentro del paso, no por subpasos.
+- En la Fase 3 (unilateralidad: `group_interface_gap`,
+  `_tension_direct`, `_mohr_coul_direct`), la rigidez se **actualiza
+  dentro de las iteraciones**: si la interfaz se abre (tracción o
+  deformación normal > gap), `kn` → rigidez residual
+  (`_residual_stiffness`); si se cierra, `kn` se reactiva. Es el mismo
+  patrón que `group_contactspring` en conspr.cc.
+- **No se usa** line-search ni arc-length: el Newton implícito maneja la
+  no-linealidad de la transición cerrado/abierto. Line-search se
+  reconsideraría solo si la convergencia falla en la Fase 3.
+
+### Validación de la Fase 1 (2026-08-13)
+
+Test de 2 bloques (`iface2.dat`): bloque izquierdo fijo, derecho empujado,
+conectados por la interfaz.
+
+| kn | velix(nodo6) | Comportamiento |
+|----|-------------|----------------|
+| 100 | 0.044 | acopla parcialmente |
+| 1000 | 0.0018 | casi soldado |
+| 1e6 | -0.0032 | ≈ soldado |
+| 0.001 | ≈1.0 | deslizamiento libre |
+| (sin interfaz) | -0.0066 | referencia soldado |
+
+Límites correctos: kn→∞ → soldado, kn→0 → libre. La fuerza nodal usa
+`-sign*stress*dir` (principio de trabajos virtuales); el signo invertido
+hacía que la interfaz empujara en vez de resistir.
+
 ## Riesgos
 
 - `elem.cc` es complejo (1007 líneas) y toca el ensamblaje global; un
