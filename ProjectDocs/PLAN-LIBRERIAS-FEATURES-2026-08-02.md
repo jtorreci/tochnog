@@ -658,6 +658,11 @@ suite. Criterio de cierre: keyword implementado + documentado
 
 #### Carril B — Features recientes de Professional (del changelog)
 
+**ESTADO 2026-08-13**: 2 features completadas (`control_reset_dof`,
+`control_change_dataitem_apply`); `bounda_time_until_force` ya existía;
+los 4 restantes quedan **PENDIENTES PARA MÁS ADELANTE** (decisión del
+usuario 2026-08-13 — se avanza al Carril A):
+
 Del changelog (`changes-site-archive.txt`), un usuario de Professional
 2024 esperaría estas. **Pendientes**:
 
@@ -687,6 +692,24 @@ Del changelog (`changes-site-archive.txt`), un usuario de Professional
   efecto observable. Requiere un test axisimétrico con fuerza normal y
   targets propios. Revertido; queda pendiente.
 - `control_mesh_generate_interface_geometry` (depende del Carril A)
+
+#### Carril A — Infraestructura de interfaz (EN CURSO 2026-08-13)
+
+Fase de diseño técnico completada. Ver `ProjectDocs/DESIGN-INTERFACES.md`
+para el modelo físico, el análisis del codebase (cómo encaja en elem.cc
+con el patrón de spring.cc), las 4 fases, y el test de validación
+propuesto.
+
+Estado de fases:
+- Fase 1 (elemento elástico kn/kt + `group_interface`): DISEÑO LISTO,
+  pendiente de implementar.
+- Fase 2 (conversión automática): pendiente.
+- Fase 3 (ley constitutiva completa): pendiente.
+- Fase 4 (post-proceso): pendiente.
+
+La familia `group_interface_*` (11 keywords) está documentada en el
+seguimiento. Sin tests de referencia en sfnet — validación con test
+propio de 2 bloques.
 
 **Ya presentes en el GNU** (marcar `[x]`): `control_mesh_switch`,
 `groundflow_pressure_factor`, `group_groundflow_permeability_vertical_stress`,
