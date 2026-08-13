@@ -29,7 +29,7 @@ void data( long int task, double dtime, double time_current )
     swit=0, max_index=0, inod=0, max_node=0, found=0, 
     ichange=0, max_change=0, idim=0, operat=0, ldum=0, 
     ireset=0, max_reset=0, idof_reset=0, idof_value=0, ireset_val=0,
-    length_diagram=0,
+    length_diagram=0, change_dataitem_apply=-YES,
     reset_method=-USE,
     data_item_name=0, data_item_index=0, data_item_number=0,
     change_dataitem_time_discrete=-NO, change_dataitem_time_user=0,
@@ -331,6 +331,9 @@ void data( long int task, double dtime, double time_current )
   db_max_index( CHANGE_DATAITEM, max_change, VERSION_NORMAL, GET );
   if ( max_change>=0 ) {
     swit = set_swit(-1,-1,"data");
+    db( CONTROL_CHANGE_DATAITEM_APPLY, icontrol, &change_dataitem_apply,
+      ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+    if ( change_dataitem_apply!=-NO ) {
     for ( ichange=0; ichange<=max_change; ichange++ ) {
       if ( db_active_index( CHANGE_DATAITEM, ichange, VERSION_NORMAL ) ) {
         db( CHANGE_DATAITEM, ichange, change_dataitem, ddum, ldum, VERSION_NORMAL, GET );
@@ -385,6 +388,7 @@ void data( long int task, double dtime, double time_current )
           db( data_item_name, data_item_index, idum, dval, ldum, VERSION_NORMAL, PUT );
         }
       }
+    }
     }
   }
 

@@ -51,6 +51,7 @@ suite sfnet, o un test propio. El registro completo:
 | `force_element_edge_multi_linear_factor_x` | `86f6d03` | 2026-08-13 | efecto del factor 0/1 en target (test mlx1) |
 | `control_mesh_generate_truss/beam` | `bd7b3ab` | 2026-08-13 | contra tests sfnet genera1/ho_othr1 (gen1/genbeam1) |
 | `control_reset_dof` + `_value_constant` + `_value_dof` + `_value_dof_diagram` + `_value_method` | `b6eaee4` | 2026-08-13 | hisv0 reseteado a 0.55 (0.5986 sin reset); diagrama sigyy→hisv0; métodos -use/-add/-multiply |
+| `control_change_dataitem_apply` | (en curso) | 2026-08-13 | con -no ignora change_dataitem (targets hypo1 se cumplen); sin apply la geometry cambia y los targets fallan |
 
 Nota: las features marcadas solo "GNU" en el detalle por familia (sin
 fila en esta tabla) ya existían en el fork sfnet 2014 y no fueron
@@ -325,7 +326,7 @@ marcado `PENDIENTE` puede estar cubierto en el GNU bajo otro nombre:
 
 ### control_change (0/1)
 
-- [ ] `control_change_dataitem_apply` — PENDIENTE
+- [x] `control_change_dataitem_apply` — implementada (commit pendiente, 2026-08-13)
 
 ### control_check (0/1)
 

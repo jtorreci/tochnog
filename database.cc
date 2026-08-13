@@ -488,6 +488,11 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   no_index[CONTACT_STICK] = 1;
   data_class[CONTACT_STICK] = CONTACT;
 
+  strcpy(name[CONTROL_CHANGE_DATAITEM_APPLY],"control_change_dataitem_apply");
+  type[CONTROL_CHANGE_DATAITEM_APPLY] = INTEGER;
+  data_length[CONTROL_CHANGE_DATAITEM_APPLY] = 1;
+  data_class[CONTROL_CHANGE_DATAITEM_APPLY] = CONTROL;
+
   strcpy(name[CONTROL_CRACK],"control_crack");
   type[CONTROL_CRACK] = INTEGER;
   data_length[CONTROL_CRACK] = 1;

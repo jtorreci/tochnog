@@ -670,8 +670,10 @@ Del changelog (`changes-site-archive.txt`), un usuario de Professional
   pendientes.
 - `group_materi_plasti_mohr_coul_direct_normal` y
   `group_materi_plasti_tension_direct_normal` (+ `_automatic`)
-- `bounda_time_until_*`
-- `change_dataitem_apply`
+- `bounda_time_until_*` (ya implementado: bounda_time_until_force)
+- [x] `control_change_dataitem_apply`. **HECHO 2026-08-13** (con -no ignora
+  change_dataitem: targets de hypo1 se cumplen; sin apply la geometry
+  cambia y los targets fallan).
 - `slide_axisymmetric`
 - `control_mesh_generate_interface_geometry` (depende del Carril A)
 
