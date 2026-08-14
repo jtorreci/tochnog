@@ -690,6 +690,18 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   fixed_length[CONTROL_MESH_GENERATE_TRUSS_BEAM_MACRO] = 0;
   data_class[CONTROL_MESH_GENERATE_TRUSS_BEAM_MACRO] = CONTROL;
 
+  strcpy(name[CONTROL_MESH_CONVERT],"control_mesh_convert");
+  type[CONTROL_MESH_CONVERT] = INTEGER;
+  data_length[CONTROL_MESH_CONVERT] = 1;
+  data_class[CONTROL_MESH_CONVERT] = CONTROL;
+
+  strcpy(name[CONTROL_MESH_CONVERT_ELEMENT_GROUP],"control_mesh_convert_element_group");
+  type[CONTROL_MESH_CONVERT_ELEMENT_GROUP] = INTEGER;
+  data_length[CONTROL_MESH_CONVERT_ELEMENT_GROUP] = DATA_ITEM_SIZE;
+  fixed_length[CONTROL_MESH_CONVERT_ELEMENT_GROUP] = 0;
+  data_class[CONTROL_MESH_CONVERT_ELEMENT_GROUP] = CONTROL;
+  data_required[CONTROL_MESH_CONVERT_ELEMENT_GROUP] = CONTROL_MESH_CONVERT;
+
   strcpy(name[CONTROL_MESH_KEEP_ELEMENT],"control_mesh_keep_element");
   type[CONTROL_MESH_KEEP_ELEMENT] = INTEGER;
   data_length[CONTROL_MESH_KEEP_ELEMENT] = DATA_ITEM_SIZE;

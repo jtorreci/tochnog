@@ -55,6 +55,7 @@ suite sfnet, o un test propio. El registro completo:
 | Carril A (diseño) | — | 2026-08-13 | diseño técnico en DESIGN-INTERFACES.md: modelo físico (strain = dif. de desplazamiento entre lados), análisis del codebase (patrón spring.cc en elem.cc), 4 fases, test de validación propuesto. Sin tests de referencia sfnet. |
 | Carril A Fase 1 (`group_interface` + `_elasti_stiffness`) | `a82cbc7` | 2026-08-13 | interface_element() en interface.cc. **Validada** (test 2 bloques): signo corregido (-sign*stress*dir); kn=100→0.044, kn=1e6→-0.003≈soldado, kn=0.001→≈1.0 libre. Límites físicos correctos. Estrategia de no-interpenetración: penalización implícita + control_timestep_iterations (sin line-search/arc-length). |
 | Carril A Fase 3 (gap, residual_stiffness, tension_direct, mohr_coul_direct) | `60bf78c` | 2026-08-13 | gap VALIDADO (test iface_gap): CON gap la interfaz abre y el bloque se separa velix=29.5, SIN gap resiste velix=-3.24. MC/tension en validación de humo. |
+| Carril A Fase 2 (`control_mesh_convert` bar2→quad4) | (commit pendiente) | 2026-08-14 | validado (test iface_conv): nodos 7,8 en x=0.99 creados, elemento reescrito quad4, bloques reconectados. |
 
 Nota: las features marcadas solo "GNU" en el detalle por familia (sin
 fila en esta tabla) ya existían en el fork sfnet 2014 y no fueron
@@ -415,8 +416,8 @@ marcado `PENDIENTE` puede estar cubierto en el GNU bajo otro nombre:
 - [ ] `control_mesh_activate_gravity_apply` — PENDIENTE
 - [x] `control_mesh_adjust_geometry` — presente en el GNU
 - [x] `control_mesh_change_element_group` — implementada (commit `afc1dad`, 2026-08-05)
-- [ ] `control_mesh_convert` — PENDIENTE
-- [ ] `control_mesh_convert_element_group` — PENDIENTE
+- [x] `control_mesh_convert` — implementada (commit pendiente, 2026-08-14; Carril A Fase 2, bar2→quad4)
+- [x] `control_mesh_convert_element_group` — implementada (commit pendiente, 2026-08-14)
 - [ ] `control_mesh_convert_quad9_quad6` — PENDIENTE
 - [ ] `control_mesh_convert_tria6_tria3` — PENDIENTE
 - [x] `control_mesh_copy` — implementada (commit `3e94dac`, 2026-08-05)

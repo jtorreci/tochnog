@@ -58,6 +58,10 @@ group_interface_materi_elasti_stiffness 10  1000.0  0.0  0.0
   `group_interface_materi_plasti_tension_direct`,
   `group_interface_materi_plasti_mohr_coul_direct`.
   Validación completa de gap; Mohr-Coulomb/tension en validación de humo.
-- **Pendiente**: `control_mesh_convert` (automatic conversion of bar2 ->
-  quad4 etc.), `group_interface_materi_memory`, conductivity/groundflow,
-  and the interface post-processing. See `ProjectDocs/DESIGN-INTERFACES.md`.
+- **Implementado (Fase 2)**: `control_mesh_convert` — conversion
+  automatica de `-bar2` a `-quad4` para interfaces: crea los 2 nodos del
+  lado opuesto de la interfaz y reconecta los elementos vecinos del otro
+  lado (con `control_mesh_convert_element_group` para los grupos a un
+  lado).
+- **Pendiente**: `group_interface_materi_memory`, conductivity/groundflow,
+  y el post-proceso de interfaz. See `ProjectDocs/DESIGN-INTERFACES.md`.

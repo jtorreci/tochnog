@@ -753,6 +753,7 @@ void step_close( long int task, long int ipar, long int npar, long int ipar_i, l
   generate_beam_truss( icontrol, TRUSS ); 
   generate_beam_truss( icontrol, TRUSSBEAM ); 
   generate_spring( icontrol );
+  interface_convert( icontrol );
 
   if ( task==YES ) maxwell_scatter();
 

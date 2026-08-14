@@ -236,6 +236,8 @@ enum {
   CONTROL_MESH_GENERATE_TRUSSBEAM,
   CONTROL_MESH_GENERATE_TRUSS_BEAM_LOOSE,
   CONTROL_MESH_GENERATE_TRUSS_BEAM_MACRO,
+  CONTROL_MESH_CONVERT,
+  CONTROL_MESH_CONVERT_ELEMENT_GROUP,
   CONTROL_MESH_KEEP_ELEMENT,
   CONTROL_MESH_KEEP_ELEMENT_GROUP,
   CONTROL_MESH_KEEP_GEOMETRY,
@@ -1560,10 +1562,11 @@ void      spring( long int element, long int name, long int element_group,
             double coord[], double old_dof[], double new_dof[], 
             double element_lhside[], double element_matrix[],
             double element_rhside[] );    
-void      interface_element( long int element, long int name,
+ void      interface_element( long int element, long int name,
             long int element_group, double coord[], double old_dof[],
             double new_dof[], double element_lhside[], double element_matrix[],
             double element_rhside[] );    
+ void      interface_convert( long int icontrol );
 long int  stress_indx( long int idim, long int jdim );
 void      stress_umat( long int element, long int gr, long int formulation,
             long int nuser_data, double user_data[], double coord_ip[],
