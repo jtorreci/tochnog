@@ -32,14 +32,24 @@
 //       group_interface_materi_elasti_stiffness kn kt,first kt,second
 //       stress_normal = kn * strain_normal
 //       stress_shear  = kt * 2 * strain_shear
-//   - gap (Fase 3): the interface only generates stresses when the
-//       accumulated normal strain < gap (closed). Otherwise the stiffness
-//       is the residual one.
-//   - tension limit (Fase 3):
-//       group_interface_materi_plasti_tension_direct tension_limit
-//   - Mohr-Coulomb (Fase 3):
+//   - gap (Fase 3, RF-3): the interface is OPEN when the accumulated
+//       normal strain <= gap (only residual stiffness acts), CLOSED when
+//       strain_normal > gap. Compression (strain_normal > 0) always closes;
+//       a physical gap is a NEGATIVE gap value. Default gap = 1.e20
+//       (always closed).
+//   - tension limit (Fase 3, RF-2): the interface opens in traction when
+//       the TOTAL accumulated normal force |kn*strain_normal| exceeds the
+//       limit: group_interface_materi_plasti_tension_direct tension_limit
+//   - Mohr-Coulomb (Fase 3, RF-1): cumulative. The friction limit applies
+//       to the TOTAL tangential force F_t (history ELEMENT_INTERFACE_FORCE_TANG):
 //       group_interface_materi_plasti_mohr_coul_direct phi c phi_flow
-//       max friction force = c + Fn * tan(phi)
+//       trial = F_t,old + kt*2*du_tang, clamped to +/- max_fric with
+//       max_fric = max(c + Fn*tan(phi), 0), Fn = kn*strain_normal (total).
+//       Active by the PRESENCE of the record (phi=0,c=0 -> max_fric=0 ->
+//       free sliding). The assembled rhs increment is F_t - F_t,old and the
+//       tangential stiffness is 0 while plastic.
+//   - dilatancy (Fase 3, RF-4): when the tangential force plastifies,
+//       strain_normal += -|du_tang|*tan(phi_flow) (plastic normal opening).
 //   - residual stiffness (Fase 3):
 //       group_interface_materi_residual_stiffness factor
 //       (fraction of the original stiffness used in opened interfaces)
@@ -53,13 +63,14 @@ void interface_element( long int element, long int name,
 
 {
   long int idim=0, jdim=0, inol=0, jnol=0, indx=0, swit=0, ldum=0, 
-    nnol=4, idum[1];
+    nnol=4, mc_active=0, plastified=0, idum[1];
   double dtime=0., kn=0., kt1=0., kt2=0., tmp=0., ddum[1],
     normal[MDIM], tangent[MDIM], du[MDIM],
     du_norm=0., du_tang=0., stress_normal=0., stress_shear=0.,
-    strain_normal=0., force_norm=0., force_tang=0., gap=0., tension_limit=0.,
+    strain_normal=0., force_norm=0., gap=0., tension_limit=0.,
     residual_factor=0.01, phi=0., c=0., phi_flow=0., max_fric=0.,
-    stiff_normal=0., stiff_tang=0., ddum3[3];
+    stiff_normal=0., stiff_tang=0., ddum3[3],
+    f_t_old=0., f_t=0., trial=0., fn_total=0.;
 
   swit = set_swit(element,-1,"interface_element");
   if ( swit ) pri( "In routine INTERFACE_ELEMENT." );
@@ -77,9 +88,6 @@ void interface_element( long int element, long int name,
     &tension_limit, ldum, VERSION_NORMAL, GET_IF_EXISTS );
   db( GROUP_INTERFACE_MATERI_RESIDUAL_STIFFNESS, element_group, idum,
     &residual_factor, ldum, VERSION_NORMAL, GET_IF_EXISTS );
-  db( GROUP_INTERFACE_MATERI_PLASTI_MOHR_COUL_DIRECT, element_group, idum,
-    ddum3, ldum, VERSION_NORMAL, GET_IF_EXISTS );
-  phi = ddum3[0]; c = ddum3[1]; phi_flow = ddum3[2];
 
   // 2D interface: sides are node pairs {0,1} and {2,3}. A -bar2 element
   // reaching here means it was not converted by control_mesh_convert;
@@ -130,50 +138,86 @@ void interface_element( long int element, long int name,
   du_norm  = array_inproduct( du, normal, ndim );
   du_tang  = array_inproduct( du, tangent, ndim );
 
-  // accumulated normal strain (history) - used only to decide closed/open
+  // accumulated normal strain (history, VERSION_NORMAL). Sign convention:
+  // compression is POSITIVE (verified empirically). The history is read
+  // BEFORE adding the current step's increment so that gap / tension /
+  // Mohr-Coulomb decisions see the accumulated total.
   db( ELEMENT_INTERFACE_STRAIN_NORMAL, element, idum, &strain_normal,
     ldum, VERSION_NORMAL, GET_IF_EXISTS );
   strain_normal += du_norm;
 
-  // normal force: INCREMENTAL (validated Fase 1 approach, spring2 pattern:
-  // force = kn*du). The stiffness depends on the closed/open state: if
-  // the interface is opened (accumulated strain >= gap), only the residual
-  // stiffness acts. If gap is not specified the interface is always
-  // closed (gap = +1e20 -> never opens).
+  // accumulated total tangential force (history, VERSION_NORMAL). Default 0:
+  // without the Mohr-Coulomb record the interface stays purely elastic
+  // (Fase 1 behavior).
+  f_t_old = 0.;
+  db( ELEMENT_INTERFACE_FORCE_TANG, element, idum, &f_t_old, ldum,
+    VERSION_NORMAL, GET_IF_EXISTS );
+
+  // gap (FIX 3, RF-3): the interface is OPEN when strain_normal <= gap
+  // (only residual stiffness acts), CLOSED when strain_normal > gap.
+  // Compression (strain_normal > 0) always closes the interface. A physical
+  // gap is a NEGATIVE gap value: the interface stays open until compression
+  // exceeds |gap|. If no gap is specified the interface is always closed:
+  // default gap = -1e20 (the OLD code used +1e20, valid only for the old
+  // condition strain >= gap; with the inverted condition strain <= gap a
+  // positive default would leave the interface ALWAYS open).
   if ( !db( GROUP_INTERFACE_GAP, element_group, idum, &gap, ldum,
       VERSION_NORMAL, GET_IF_EXISTS ) )
-    gap = 1.e20;
+    gap = -1.e20;
   stiff_normal = kn;
-  if ( strain_normal >= gap ) {
+  if ( strain_normal <= gap ) {
     stiff_normal = kn * residual_factor;
   }
   force_norm = stiff_normal * du_norm;
-  // tension limit: if the interface opens in tension, switch to residual
-  if ( tension_limit>0. && strain_normal>0. && force_norm>tension_limit ) {
+  // tension limit (FIX 2, RF-2): the interface opens in traction when the
+  // TOTAL accumulated normal force |Fn_total| = |kn*strain_normal| exceeds
+  // the limit, and only if it was still closed (stiff_normal==kn). On
+  // opening: residual stiffness and normal force capped at the limit.
+  fn_total = kn * strain_normal;
+  if ( tension_limit>0. && strain_normal<0. && fabs(fn_total)>tension_limit
+      && stiff_normal==kn ) {
     stiff_normal = kn * residual_factor;
-    force_norm = tension_limit;
+    force_norm = ( du_norm>=0. ) ? tension_limit : -tension_limit;
   }
   stress_normal = force_norm;
 
-  // tangential force: incremental elastic, limited by Mohr-Coulomb.
-  // max friction = c + Fn*tan(phi), where Fn = kn*strain_normal is the
-  // total normal force (compression negative).
-  force_tang = kt1 * 2. * du_tang;
-  stiff_tang = kt1 * 2.;
-  if ( phi>0. || c>0. ) {
-    double fn = kn * strain_normal;
-    max_fric = c + fn * tan(phi);
-    if      ( force_tang>  max_fric ) { force_tang =  max_fric; stiff_tang = 0.; }
-    else if ( force_tang< -max_fric ) { force_tang = -max_fric; stiff_tang = 0.; }
+  // cumulative Mohr-Coulomb (FIX 1, RF-1): the friction limit applies to
+  // the TOTAL tangential force, not the per-step force. The MC law is
+  // active by the PRESENCE of the record (D2): phi=0,c=0 gives max_fric=0
+  // -> free sliding; without the record the interface stays purely elastic
+  // (Fase 1 behavior).
+  mc_active = db( GROUP_INTERFACE_MATERI_PLASTI_MOHR_COUL_DIRECT, element_group,
+    idum, ddum3, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+  phi = ddum3[0]; c = ddum3[1]; phi_flow = ddum3[2];
+  trial = f_t_old + kt1 * 2. * du_tang;
+  plastified = 0;
+  if ( mc_active ) {
+    max_fric = c + kn * strain_normal * tan( phi );
+    if ( max_fric < 0. ) max_fric = 0.;   // D5: floor at 0
+    if      ( trial >  max_fric ) { trial =  max_fric; plastified = 1; }
+    else if ( trial < -max_fric ) { trial = -max_fric; plastified = 1; }
   }
-  stress_shear = force_tang;
+  f_t = trial;
+  stiff_tang = ( mc_active && plastified ) ? 0. : kt1 * 2.;
+
+  // dilatancy (FIX 4, RF-4): plastic slip opens the interface by
+  // du_n^p = -|du_tang|*tan(phi_flow) (always opening; compression positive).
+  if ( plastified && phi_flow>0. ) {
+    strain_normal += -fabs( du_tang ) * tan( phi_flow );
+  }
+
+  // the rhs carries the INCREMENT F_t - F_t,old (D3): == kt*2*du_tang when
+  // elastic (Fase 1 backward compatible), == clamped increment when plastic.
+  stress_shear = f_t - f_t_old;
 
   if ( swit ) {
     pri( "du_norm", du_norm );
     pri( "du_tang", du_tang );
     pri( "strain_normal", strain_normal );
     pri( "stress_normal", stress_normal );
-    pri( "force_tang", force_tang );
+    pri( "f_t_old", f_t_old );
+    pri( "f_t", f_t );
+    pri( "stress_shear", stress_shear );
   }
 
   // assembly: nodal force -sign*(stress*dir) and stiffness matrix on the
@@ -203,10 +247,13 @@ void interface_element( long int element, long int name,
     }
   }
 
-  // store accumulated normal strain history (used by gap / Mohr-Coulomb)
+  // store accumulated histories (used by gap / tension / Mohr-Coulomb and
+  // the next step's cumulative trial)
   ldum = 1;
   db( ELEMENT_INTERFACE_STRAIN_NORMAL, element, idum, &strain_normal,
     ldum, VERSION_NEW, PUT );
+  db( ELEMENT_INTERFACE_FORCE_TANG, element, idum, &f_t, ldum,
+    VERSION_NEW, PUT );
 
   if ( swit ) pri( "Out function INTERFACE_ELEMENT" );
 }

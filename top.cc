@@ -682,6 +682,7 @@ void step_start( long int task, long int options_solver[], double dtime, double 
     }
     if ( any_interface ) {
       db_allocate( ELEMENT_INTERFACE_STRAIN_NORMAL, max_element, VERSION_NEW, MINIMAL );
+      db_allocate( ELEMENT_INTERFACE_FORCE_TANG, max_element, VERSION_NEW, MINIMAL );
     }
     if ( any_truss ) {
       db_allocate( ELEMENT_TRUSS_DIRECTION, max_element, VERSION_NEW, MINIMAL );
