@@ -54,7 +54,7 @@ suite sfnet, o un test propio. El registro completo:
 | `control_change_dataitem_apply` | `bdcdeaf` | 2026-08-13 | con -no ignora change_dataitem (targets hypo1 se cumplen); sin apply la geometry cambia y los targets fallan |
 | Carril A (diseño) | — | 2026-08-13 | diseño técnico en DESIGN-INTERFACES.md: modelo físico (strain = dif. de desplazamiento entre lados), análisis del codebase (patrón spring.cc en elem.cc), 4 fases, test de validación propuesto. Sin tests de referencia sfnet. |
 | Carril A Fase 1 (`group_interface` + `_elasti_stiffness`) | `a82cbc7` | 2026-08-13 | interface_element() en interface.cc. **Validada** (test 2 bloques): signo corregido (-sign*stress*dir); kn=100→0.044, kn=1e6→-0.003≈soldado, kn=0.001→≈1.0 libre. Límites físicos correctos. Estrategia de no-interpenetración: penalización implícita + control_timestep_iterations (sin line-search/arc-length). |
-| Carril A Fase 3 (gap, residual_stiffness, tension_direct, mohr_coul_direct) | `60bf78c` | 2026-08-13 | gap VALIDADO (test iface_gap): CON gap la interfaz abre y el bloque se separa velix=29.5, SIN gap resiste velix=-3.24. MC/tension en validación de humo. |
+| Carril A Fase 3 (gap, residual_stiffness, tension_direct, mohr_coul_direct — fix y validación) | `9c2f4c8` (código T1-T5; docs T8 + build_safe T7 en el commit del orquestador) | 2026-08-14 | VALIDADO (familia `iface_mc`, 13 tests / 18 runs en verde). Mohr-Coulomb acumulativo (history `element_interface_force_tang`, activación por presencia del record, phi_flow = dilatancia); gap: cerrada si strain > gap, default -1e20 (siempre cerrada), hueco físico = gap negativo; tension_direct abre en tracción sobre la fuerza normal TOTAL. a/a' y b/b' invariantes en nº de pasos. Corrige los bugs de `60bf78c` (2026-08-13). |
 | Carril A Fase 2 (`control_mesh_convert` bar2→quad4) | `490545b` | 2026-08-14 | validado (test iface_conv): nodos 7,8 en x=0.99 creados, elemento reescrito quad4, bloques reconectados. |
 | Carril A Fase 4 (`control_print_interface_stress` 2D) | `01f6c3e` | 2026-08-14 | validado (test iface_stress): interface_stress.0 generado con distancia+sign (strain acumulado * kn); sign crece con la compresion. sigt=0 y 3D pendientes. |
 
@@ -1087,13 +1087,13 @@ marcado `PENDIENTE` puede estar cubierto en el GNU bajo otro nombre:
 
 - [x] `group_interface` — Fase 1 implementada (commit `a82cbc7`, 2026-08-13; memory/condif pendientes)
 - [ ] `group_interface_condif_conductivity` — PENDIENTE
-- [x] `group_interface_gap` — Fase 3 implementada (commit `60bf78c`, 2026-08-13; validada)
+- [x] `group_interface_gap` — Fase 3 implementada (commit `9c2f4c8`, 2026-08-14; cerrada si strain > gap, default -1e20, hueco físico = gap negativo; validada con iface_mc_gap)
 - [ ] `group_interface_ground` — PENDIENTE
 - [x] `group_interface_materi_elasti_sti` — Fase 1 implementada (commit `a82cbc7`, 2026-08-13)
 - [ ] `group_interface_materi_expansion_normal` — PENDIENTE
 - [ ] `group_interface_materi_memory` — PENDIENTE
-- [x] `group_interface_materi_plasti_mohr_coul_direct` — Fase 3 implementada (commit `60bf78c`, 2026-08-13; validación de humo)
-- [x] `group_interface_materi_plasti_tension_direct` — Fase 3 implementada (commit `60bf78c`, 2026-08-13; validación de humo)
+- [x] `group_interface_materi_plasti_mohr_coul_direct` — Fase 3 implementada (commit `9c2f4c8`, 2026-08-14; MC acumulativo con history `element_interface_force_tang`, activación por presencia del record; validada con iface_mc_slip/iface_mc)
+- [x] `group_interface_materi_plasti_tension_direct` — Fase 3 implementada (commit `9c2f4c8`, 2026-08-14; abre en tracción sobre la fuerza normal TOTAL; validada con iface_mc_tension)
 - [x] `group_interface_materi_residual_sti` — Fase 3 implementada (commit `60bf78c`, 2026-08-13)
 - [ ] `group_interface_tangential_reference_point` — PENDIENTE
 
