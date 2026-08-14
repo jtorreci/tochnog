@@ -39,6 +39,7 @@ input parameters it accepts.
 - [control_reset_dof](control_reset_dof.md) — reset a nodal dof to a constant value or one depending on another dof.
 - [group_interface](group_interface.md) — interface elements (joints between blocks).
 - [control_mesh_convert](control_mesh_convert.md) — automatic conversion of bar2 to quad4 for interfaces.
+- [control_print_interface_stress](control_print_interface_stress.md) — print interface stresses along a cut line.
 - [control_change_dataitem_apply](control_change_dataitem_apply.md) — enable or disable change_dataitem for a control index.
 - [control_print_tabular](control_print_tabular.md) — export nodal results to CSV/SQLite for programmatic post-processing.
 - [control_print_gmsh](control_print_gmsh.md) — write mesh and results in the Gmsh 2.2 (.msh) format.

@@ -56,6 +56,7 @@ suite sfnet, o un test propio. El registro completo:
 | Carril A Fase 1 (`group_interface` + `_elasti_stiffness`) | `a82cbc7` | 2026-08-13 | interface_element() en interface.cc. **Validada** (test 2 bloques): signo corregido (-sign*stress*dir); kn=100→0.044, kn=1e6→-0.003≈soldado, kn=0.001→≈1.0 libre. Límites físicos correctos. Estrategia de no-interpenetración: penalización implícita + control_timestep_iterations (sin line-search/arc-length). |
 | Carril A Fase 3 (gap, residual_stiffness, tension_direct, mohr_coul_direct) | `60bf78c` | 2026-08-13 | gap VALIDADO (test iface_gap): CON gap la interfaz abre y el bloque se separa velix=29.5, SIN gap resiste velix=-3.24. MC/tension en validación de humo. |
 | Carril A Fase 2 (`control_mesh_convert` bar2→quad4) | `490545b` | 2026-08-14 | validado (test iface_conv): nodos 7,8 en x=0.99 creados, elemento reescrito quad4, bloques reconectados. |
+| Carril A Fase 4 (`control_print_interface_stress` 2D) | (commit pendiente) | 2026-08-14 | validado (test iface_stress): interface_stress.0 generado con distancia+sign (strain acumulado * kn); sign crece con la compresion. sigt=0 y 3D pendientes. |
 
 Nota: las features marcadas solo "GNU" en el detalle por familia (sin
 fila en esta tabla) ya existían en el fork sfnet 2014 y no fueron
@@ -585,8 +586,8 @@ marcado `PENDIENTE` puede estar cubierto en el GNU bajo otro nombre:
 - [x] `control_print_history_factor` — implementada (commit `3793892`, 2026-08-04)
 - [ ] `control_print_history_relative_time` — PENDIENTE
 - [x] `control_print_history_smooth` — implementada (commit `8f8ad67`, 2026-08-12)
-- [ ] `control_print_interface_stress` — PENDIENTE
-- [ ] `control_print_interface_stress_2d_coordinates` — PENDIENTE
+- [x] `control_print_interface_stress` — implementada (commit pendiente, 2026-08-14; Carril A Fase 4, 2D)
+- [x] `control_print_interface_stress_2d_coordinates` — implementada (commit pendiente, 2026-08-14)
 - [ ] `control_print_interface_stress_3d_geometry` — PENDIENTE
 - [ ] `control_print_interface_stress_3d_order` — PENDIENTE
 - [ ] `control_print_materi_stress_force` — PENDIENTE

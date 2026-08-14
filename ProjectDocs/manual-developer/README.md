@@ -38,6 +38,7 @@ Each file corresponds to the same feature in the [User Manual](../manual-user/).
 - [control_reset_dof](control_reset_dof.md) — reset a nodal dof to a constant value or one depending on another dof.
 - [group_interface](group_interface.md) — interface elements (joints between blocks).
 - [control_mesh_convert](control_mesh_convert.md) — automatic conversion of bar2 to quad4 for interfaces.
+- [control_print_interface_stress](control_print_interface_stress.md) — print interface stresses along a cut line.
 - [control_change_dataitem_apply](control_change_dataitem_apply.md) — enable or disable change_dataitem for a control index.
 - [force_element_edge_multi_linear_factor_x](force_element_edge_multi_linear_factor_x.md) — multilinear x-factor for distributed edge forces.
 - [control_print_tabular](control_print_tabular.md) — CSV/SQLite tabular export of nodal results.

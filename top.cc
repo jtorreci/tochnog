@@ -867,6 +867,11 @@ void step_close( long int task, long int ipar, long int npar, long int ipar_i, l
       db( CONTROL_PRINT_FRD, icontrol, ival, ddum, ldum, VERSION_NORMAL, GET );
       if ( ival[0]!=-NO ) print_frd( icontrol, ival[0] );
     }
+    if ( db_active_index( CONTROL_PRINT_INTERFACE_STRESS, icontrol, VERSION_NORMAL ) ) {
+      db( CONTROL_PRINT_INTERFACE_STRESS, icontrol, ival, ddum, ldum,
+        VERSION_NORMAL, GET );
+      if ( ival[0]!=-NO ) print_interface_stress( icontrol, ival[0] );
+    }
     if ( db_active_index( CONTROL_PRINT_DOF, icontrol, VERSION_NORMAL ) ) {
       db( CONTROL_PRINT_DOF, icontrol, ival, ddum, ldum, VERSION_NORMAL, GET );
       if ( ival[0]!=-NO ) print_dof( icontrol, ival[0] );

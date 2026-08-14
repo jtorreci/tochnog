@@ -311,6 +311,10 @@ enum {
   CONTROL_PRINT_HISTORY,
   CONTROL_PRINT_HISTORY_FACTOR,
   CONTROL_PRINT_HISTORY_SMOOTH,
+  CONTROL_PRINT_INTERFACE_STRESS,
+  CONTROL_PRINT_INTERFACE_STRESS_2D_COORDINATES,
+  CONTROL_PRINT_INTERFACE_STRESS_3D_GEOMETRY,
+  CONTROL_PRINT_INTERFACE_STRESS_3D_ORDER,
   CONTROL_PRINT_MATLAB,
   CONTROL_PRINT_PLOTMTV,
   CONTROL_PRINT_PLOTMTV_MESH,
@@ -1509,6 +1513,7 @@ void      print_unknownsrhside( void );
 void      print_vtk( long int icontrol );
 void      print_gmsh( long int icontrol, long int task );
 void      print_frd( long int icontrol, long int task );
+void      print_interface_stress( long int icontrol, long int task );
 void      print_tabular( long int icontrol );
 bool      calc_derived( const double sig[6], double out[5] );
 class     SqliteDB;

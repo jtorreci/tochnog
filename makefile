@@ -27,6 +27,8 @@ PRINT_TB_SRC=print_tb.cc
 PRINT_TB_OBJ=print_tb.o
 PRINT_FR_SRC=print_fr.cc
 PRINT_FR_OBJ=print_fr.o
+PRINT_IFACE_STRESS_SRC=print_interface_stress.cc
+PRINT_IFACE_STRESS_OBJ=print_interface_stress.o
 DERIVED_SRC=derived.cc
 DERIVED_OBJ=derived.o
 
@@ -312,7 +314,7 @@ tochnog: adjust.$(OBJ) area.$(OBJ) \
 	print_gi.$(OBJ) print_g5.$(OBJ) print_g6.$(OBJ)\
 	print_gm.$(OBJ) print_hi.$(OBJ) \
 	print_pl.$(OBJ) print_ma.$(OBJ) print_rs.$(OBJ) \
-	print_te.$(OBJ) print_un.$(OBJ) print_vt.$(OBJ) print_tb.$(OBJ) $(PRINT_FR_OBJ) $(DERIVED_OBJ) \
+	print_te.$(OBJ) print_un.$(OBJ) print_vt.$(OBJ) print_tb.$(OBJ) $(PRINT_FR_OBJ) $(PRINT_IFACE_STRESS_OBJ) $(DERIVED_OBJ) \
 	project.$(OBJ) range.$(OBJ) \
 	refine_g.$(OBJ) refine_l.$(OBJ) remesh.$(OBJ) \
 	renumber.$(OBJ) repeat.$(OBJ) restart.$(OBJ) \
@@ -578,6 +580,9 @@ $(DERIVED_OBJ): $(DERIVED_SRC) tochnog.h
 
 $(PRINT_FR_OBJ): $(PRINT_FR_SRC) tochnog.h
 	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)$(PRINT_FR_SRC)
+
+$(PRINT_IFACE_STRESS_OBJ): $(PRINT_IFACE_STRESS_SRC) tochnog.h
+	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)$(PRINT_IFACE_STRESS_SRC)
 
 project.$(OBJ): project.$(SRC_CPP) tochnog.h
 	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)project.$(SRC_CPP)
