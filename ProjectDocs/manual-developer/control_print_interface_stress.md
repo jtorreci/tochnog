@@ -22,7 +22,11 @@
 
 - Recorre los elementos de interfaz (grupo con `GROUP_INTERFACE`).
 - Lee el strain normal acumulado `ELEMENT_INTERFACE_STRAIN_NORMAL` y la
-  rigidez `kn` del grupo; `sign = kn * strain_normal`.
+  rigidez `kn` del grupo; `sign = kn * strain_normal` (fuerza normal
+  total acumulada).
+- Lee la fuerza tangencial total acumulada
+  `ELEMENT_INTERFACE_FORCE_TANG` (history de la Fase 3: Mohr-Coulomb
+  acumulativo o elástica total) y la reporta como `sigt`.
 - Para cada nodo del elemento, proyecta la coordenada sobre el vector del
   corte: `proj = ((x-xstart)*dx + (y-ystart)*dy)/len`.
 - Escribe `proj sign sigt` por nodo en `interface_stress.<index>`
@@ -30,13 +34,13 @@
 
 ## Detalles
 
-- `sigt` (tensión tangencial) se reporta 0: la fuerza tangencial
-  acumulada no se almacena por elemento. Pendiente de implementar.
+- `sign` y `sigt` son valores ACUMULADOS (fuerzas totales del último paso
+  convergido), leídos de VERSION_NORMAL — igual semántica que los
+  histories usados por la ley constitutiva.
 - El archivo crece por paso (append), como los otros prints.
 
 ## Pendiente
 
 - 3D (`_3d_geometry`, `_3d_order`) registrados pero sin implementar.
-- `sigt` tangencial no se calcula.
 - El strain normal se lee de VERSION_NORMAL (el del paso anterior); el
   valor mostrado es el del último paso completado.

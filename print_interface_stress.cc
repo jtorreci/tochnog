@@ -17,7 +17,7 @@ void print_interface_stress( long int icontrol, long int task )
     *nodes=NULL;
   double ddum[1], xstart=0., ystart=0., xend=0., yend=0.,
     dx=0., dy=0., len=0., strain_normal=0., sign=0., sigt=0., kn=0.,
-    ddum3[3];
+    f_t=0., ddum3[3];
   char filename[MCHAR], str[MCHAR];
 
   swit = set_swit(-1,-1,"print_interface_stress");
@@ -75,14 +75,18 @@ void print_interface_stress( long int icontrol, long int task )
       ddum3, ldum, VERSION_NORMAL, GET_IF_EXISTS );
     kn = ddum3[0];
 
-    // accumulated normal strain -> stresses
+    // accumulated normal strain -> normal stress (total normal force)
     strain_normal = 0.;
     db( ELEMENT_INTERFACE_STRAIN_NORMAL, element, idum, &strain_normal,
       ldum, VERSION_NORMAL, GET_IF_EXISTS );
     sign = kn * strain_normal;
-    // tangential force is not stored; report 0 for now (or compute from
-    // velocity difference if needed)
-    sigt = 0.;
+    // accumulated total tangential force (history ELEMENT_INTERFACE_FORCE_TANG,
+    // Fase 3): cumulative Mohr-Coulomb or elastic total. Same accumulated
+    // semantics as sign -> consistent sigt.
+    f_t = 0.;
+    db( ELEMENT_INTERFACE_FORCE_TANG, element, idum, &f_t, ldum,
+      VERSION_NORMAL, GET_IF_EXISTS );
+    sigt = f_t;
 
     for ( inol=0; inol<nnol; inol++ ) {
       inod = nodes[inol];

@@ -44,6 +44,8 @@ control_print_interface_stress_2d_coordinates 0  0. 0. 3. 0.
 - **Implementado**: 2D — `control_print_interface_stress` +
   `control_print_interface_stress_2d_coordinates`. The normal stress
   (`interface_sign`) comes from the accumulated normal strain
-  (`kn * strain_normal`); the tangential stress is currently reported as 0.
-- **Pendiente**: 3D (`_3d_geometry`, `_3d_order`), and the tangential
-  stress output.
+  (`kn * strain_normal`); the tangential stress (`interface_sigt`) comes
+  from the accumulated total tangential force
+  (`ELEMENT_INTERFACE_FORCE_TANG`), so both are total accumulated
+  stresses of the last converged step.
+- **Pendiente**: 3D (`_3d_geometry`, `_3d_order`).

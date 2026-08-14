@@ -58,6 +58,8 @@ suite sfnet, o un test propio. El registro completo:
 | Carril A Fase 2 (`control_mesh_convert` bar2→quad4) | `490545b` | 2026-08-14 | validado (test iface_conv): nodos 7,8 en x=0.99 creados, elemento reescrito quad4, bloques reconectados. |
 | Carril A Fase 4 (`control_print_interface_stress` 2D) | `01f6c3e` | 2026-08-14 | validado (test iface_stress): interface_stress.0 generado con distancia+sign (strain acumulado * kn); sign crece con la compresion. sigt=0 y 3D pendientes. |
 
+**Carril A Fase 4 — sigt implementado** | (commit en curso) | 2026-08-14 | `interface_sigt` ya no es 0: se lee del history `element_interface_force_tang` (fuerza tangencial total acumulada, Fase 3), consistente con `sign`. Documentado en ambos manuales. 3D pendiente. |
+
 Nota: las features marcadas solo "GNU" en el detalle por familia (sin
 fila en esta tabla) ya existían en el fork sfnet 2014 y no fueron
 implementadas por nosotros.
