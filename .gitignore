@@ -19,3 +19,6 @@ validation-suite/
 tn.tmp
 tn.log
 tn.dvd
+
+# Auditoria de sesion (WSL/opencode)
+session-audit.log
