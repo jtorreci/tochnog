@@ -723,8 +723,9 @@ Estado de fases:
   validación de humo).
 - Fase 4 (post-proceso): **IMPLEMENTADA PARCIAL (2026-08-14)** —
   `control_print_interface_stress` 2D (sign normal desde el strain
-  acumulado, corte por línea; sigt=0 pendiente). 3D registrado sin
-  implementar.
+  acumulado, corte por línea; sigt leído del history
+  `element_interface_force_tang` desde `8ef45c4`, ya no 0). 3D registrado
+  sin implementar.
 
 La familia `group_interface_*` (11 keywords) está documentada en el
 seguimiento. Sin tests de referencia en sfnet — validación con test
