@@ -553,6 +553,11 @@ void step_start( long int task, long int options_solver[], double dtime, double 
     mesh_remove( icontrol );
   }
 
+  // control_mesh_convert: convert interface elements (bar2->quad4 in 2D,
+  // tria3->prism6 / quad4->hex8 in 3D). Must run BEFORE the first
+  // element_loop of the step so the converted elements are assembled.
+  interface_convert( icontrol );
+
   change_geometry( task, dtime, time_current );
 
   data( task, dtime, time_current ); 
@@ -683,6 +688,7 @@ void step_start( long int task, long int options_solver[], double dtime, double 
     if ( any_interface ) {
       db_allocate( ELEMENT_INTERFACE_STRAIN_NORMAL, max_element, VERSION_NEW, MINIMAL );
       db_allocate( ELEMENT_INTERFACE_FORCE_TANG, max_element, VERSION_NEW, MINIMAL );
+      db_allocate( ELEMENT_INTERFACE_FORCE_TANG2, max_element, VERSION_NEW, MINIMAL );
     }
     if ( any_truss ) {
       db_allocate( ELEMENT_TRUSS_DIRECTION, max_element, VERSION_NEW, MINIMAL );
@@ -754,7 +760,6 @@ void step_close( long int task, long int ipar, long int npar, long int ipar_i, l
   generate_beam_truss( icontrol, TRUSS ); 
   generate_beam_truss( icontrol, TRUSSBEAM ); 
   generate_spring( icontrol );
-  interface_convert( icontrol );
 
   if ( task==YES ) maxwell_scatter();
 
