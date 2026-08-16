@@ -5,15 +5,20 @@
 `control_print_interface_stress` prints the interface stresses through a
 set of interfaces. In 2D the interfaces are cut by a straight line from
 `(xstart,ystart)` to `(xend,yend)`, specified by
-`control_print_interface_stress_2d_coordinates`.
+`control_print_interface_stress_2d_coordinates`. In 3D the average
+interface stresses are printed at the middle of each interface element.
 
 The stresses are written to the file `interface_stress.<index>`:
-- first column: distance from the start point (projected on the cut
-  direction)
-- second column: `interface_sign` (normal stress)
-- third column: `interface_sigt` (tangential stress)
-
-A line is written for each node of each interface element.
+- **2D**, a line per node of each interface element:
+  - first column: distance from the start point (projected on the cut
+    direction)
+  - second column: `interface_sign` (normal stress)
+  - third column: `interface_sigt` (tangential stress)
+- **3D**, a line per interface element:
+  - columns 1-3: coordinates of the element middle (x y z)
+  - column 4: `interface_sign` (normal stress)
+  - column 5: `interface_sigt1` (first tangential stress)
+  - column 6: `interface_sigt2` (second tangential stress, 3D)
 
 ## Uso
 
@@ -36,8 +41,10 @@ control_print_interface_stress_2d_coordinates 0  0. 0. 3. 0.
 
 - `control_print_interface_stress_2d_coordinates index xstart ystart
   xend yend` — cut line (2D only).
-- `control_print_interface_stress_3d_geometry`, `_3d_order` — 3D variants
-  (not implemented yet).
+- `control_print_interface_stress_3d_geometry name index` — 3D filter:
+  only interface elements on the given geometry are printed.
+- `control_print_interface_stress_3d_order order` — 3D ordering
+  (`-x`, `-y`, `-z`; default element order).
 
 ## Estado de implementación
 
@@ -48,4 +55,9 @@ control_print_interface_stress_2d_coordinates 0  0. 0. 3. 0.
   from the accumulated total tangential force
   (`ELEMENT_INTERFACE_FORCE_TANG`), so both are total accumulated
   stresses of the last converged step.
-- **Pendiente**: 3D (`_3d_geometry`, `_3d_order`).
+- **Implementado**: 3D — `control_print_interface_stress` + `_3d_geometry`
+  + `_3d_order`. Prints the element middle, `sign`, `sigt1` and `sigt2`
+  (the second tangential force comes from `ELEMENT_INTERFACE_FORCE_TANG2`).
+  Validated with `iface_3d_stress` (single interface: centroid 1.5 0.5 0.5,
+  sign grows with compression, sigt2 ~0) and `iface_3d_order` (two
+  interfaces ordered by x).

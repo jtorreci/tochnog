@@ -709,11 +709,12 @@ Estado de fases:
   control_timestep_iterations** (sin line-search/arc-length); rigidez
   actualizada por iteración en la Fase 3 (patrón contactspring).
 - Fase 2 (conversión automática `control_mesh_convert`): **IMPLEMENTADA
-  (2026-08-14)** — bar2→quad4: crea 2 nodos duplicados desplazados en la
-  normal, reescribe el elemento, reconecta vecinos del otro lado con
-  `control_mesh_convert_element_group`. Validada (test iface_conv:
-  nodos 7,8 en x=0.99 creados, bloques reconectados). Solo 2D; casos 3D
-  pendientes.
+  (2026-08-14, 3D 2026-08-16)** — bar2→quad4: crea 2 nodos duplicados
+  desplazados en la normal, reescribe el elemento, reconecta vecinos del
+  otro lado con `control_mesh_convert_element_group`. Validada (test
+  iface_conv: nodos 7,8 en x=0.99 creados, bloques reconectados). 3D:
+  tria3→prism6 y quad4→hex8 (test iface_conv3d). La llamada se movió a
+  `step_start` para convertir antes del primer `element_loop`.
 - Fase 3 (ley constitutiva): **IMPLEMENTADA (2026-08-13, +memory 2026-08-16)** —
   `group_interface_gap` (validado: con gap la interfaz abre y el bloque se
   separa velix=29.5, sin gap resiste velix=-3.24),
@@ -722,11 +723,13 @@ Estado de fases:
   `group_interface_materi_plasti_mohr_coul_direct` (MC/tension en
   validación de humo), `group_interface_materi_memory`
   (`-updated_linear`/`-total_linear`, commit `643865b`).
-- Fase 4 (post-proceso): **IMPLEMENTADA PARCIAL (2026-08-14)** —
+- Fase 4 (post-proceso): **IMPLEMENTADA (2026-08-16)** —
   `control_print_interface_stress` 2D (sign normal desde el strain
   acumulado, corte por línea; sigt leído del history
-  `element_interface_force_tang` desde `8ef45c4`, ya no 0). 3D registrado
-  sin implementar.
+  `element_interface_force_tang`) y 3D (centroide + sign + sigt1 +
+  sigt2, filtro `_3d_geometry`, orden `_3d_order -x/-y/-z`).
+  Interfaz 3D (prism6/hex8, 2 tangentes, history `force_tang2`) y
+  conversión 3D (tria3→prism6, quad4→hex8) implementadas (`d57faf4`).
 
 La familia `group_interface_*` (11 keywords) está documentada en el
 seguimiento. Sin tests de referencia en sfnet — validación con test

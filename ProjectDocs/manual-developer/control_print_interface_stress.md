@@ -39,8 +39,21 @@
   histories usados por la ley constitutiva.
 - El archivo crece por paso (append), como los otros prints.
 
+## Algoritmo (3D)
+
+- En 3D se imprime una línea por elemento de interfaz: las coordenadas
+  del **centroide** del elemento (x y z) seguidas de `sign`, `sigt1`
+  (history `ELEMENT_INTERFACE_FORCE_TANG`) y `sigt2` (history
+  `ELEMENT_INTERFACE_FORCE_TANG2`, la 2ª componente tangencial 3D).
+- `control_print_interface_stress_3d_geometry name index`: filtra por
+  geometría (patrón `geometry()` de adjust.cc) — solo los elementos de
+  interfaz con al menos un nodo dentro de la geometría se imprimen.
+- `control_print_interface_stress_3d_order -x|-y|-z`: ordena las líneas
+  por la coordenada pedida del centroide (ascendente); sin el keyword se
+  imprime en orden de elemento. Las líneas 3D se recolectan y ordenan
+  antes de escribir (los elementos no se recorren en orden de centroide).
+
 ## Pendiente
 
-- 3D (`_3d_geometry`, `_3d_order`) registrados pero sin implementar.
 - El strain normal se lee de VERSION_NORMAL (el del paso anterior); el
   valor mostrado es el del último paso completado.
