@@ -60,6 +60,8 @@ suite sfnet, o un test propio. El registro completo:
 
 **Carril A Fase 4 — sigt implementado** | `8ef45c4` | 2026-08-14 | `interface_sigt` ya no es 0: se lee del history `element_interface_force_tang` (fuerza tangencial total acumulada, Fase 3), consistente con `sign`. Verificado con probe: sigt=23.28 == F_t acumulada del último paso. Documentado en ambos manuales. 3D pendiente. |
 
+**Carril A — `group_interface_materi_memory`** | `643865b` | 2026-08-16 | modelo de memoria de la ley de interfaz: `-updated_linear` (default, normal/tangente de la config actual) o `-total_linear` (geometría de referencia tiempo 0, `NODE_START_REFINED`). Valores inválidos → `db_error`. Test `iface_mc_mem` (familia iface_mc, 7º run → 19 runs). |
+
 Nota: las features marcadas solo "GNU" en el detalle por familia (sin
 fila en esta tabla) ya existían en el fork sfnet 2014 y no fueron
 implementadas por nosotros.

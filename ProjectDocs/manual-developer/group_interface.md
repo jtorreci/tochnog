@@ -10,6 +10,8 @@
   - `group_interface` (INTEGER, length 1, required GROUP_TYPE).
   - `group_interface_materi_elasti_stiffness` (DOUBLE, length 3, required
     GROUP_INTERFACE).
+  - `group_interface_materi_memory` (INTEGER, length 1, required
+    GROUP_INTERFACE).
 - **New enums**: `GROUP_INTERFACE`, `GROUP_INTERFACE_MATERI_ELASTI_STIFFNESS`
   in `tochnog.h` / `tochnog-mod.h` (kept in sync), placed between
   `GROUP_INTEGRATION_POINTS` and `GROUP_MATERI_DAMAGE_MAZARS`.
@@ -69,6 +71,13 @@
   `strain_normal += -|du_tang| * tan(phi_flow)` (magnitude, not signed
   du_tang — a signed flow would close one direction, anti-physical). Feeds
   back into the normal history → gap/tension/max_fric of the next step.
+- **Memory model** (`group_interface_materi_memory`): `-updated_linear`
+  (default) computes the interface normal/tangent from `coord` (current
+  configuration) each step; `-total_linear` reads the time-0 reference
+  geometry (`NODE_START_REFINED` of side-1 nodes) so the interface keeps
+  its original orientation even when the mesh deforms. Invalid values
+  raise `db_error` (pattern `conspr.cc`). Read in `interface_element()`
+  before the geometry block.
 
 ## Validación
 

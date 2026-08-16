@@ -714,13 +714,14 @@ Estado de fases:
   `control_mesh_convert_element_group`. Validada (test iface_conv:
   nodos 7,8 en x=0.99 creados, bloques reconectados). Solo 2D; casos 3D
   pendientes.
-- Fase 3 (ley constitutiva): **IMPLEMENTADA (2026-08-13)** —
+- Fase 3 (ley constitutiva): **IMPLEMENTADA (2026-08-13, +memory 2026-08-16)** —
   `group_interface_gap` (validado: con gap la interfaz abre y el bloque se
   separa velix=29.5, sin gap resiste velix=-3.24),
   `group_interface_materi_residual_stiffness`,
   `group_interface_materi_plasti_tension_direct`,
   `group_interface_materi_plasti_mohr_coul_direct` (MC/tension en
-  validación de humo).
+  validación de humo), `group_interface_materi_memory`
+  (`-updated_linear`/`-total_linear`, commit `643865b`).
 - Fase 4 (post-proceso): **IMPLEMENTADA PARCIAL (2026-08-14)** —
   `control_print_interface_stress` 2D (sign normal desde el strain
   acumulado, corte por línea; sigt leído del history

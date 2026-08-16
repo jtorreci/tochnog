@@ -36,6 +36,11 @@ implemented:
   interface is purely elastic. `phi_flow` is the dilatancy angle
   (non-associated flow): plastic slip opens the interface in both sliding
   directions.
+- `group_interface_materi_memory memory_type`: memory model of the
+  constitutive law. `-updated_linear` (default) recomputes the interface
+  normal/tangent from the current (deformed) configuration each step;
+  `-total_linear` uses the time-0 reference geometry
+  (`NODE_START_REFINED`) and keeps the original interface orientation.
 
 In 2D the interface element is a quadrilateral with 4 nodes: nodes 0-1
 form side 1 and nodes 2-3 form side 2.
@@ -65,6 +70,7 @@ group_interface_materi_elasti_stiffness 10  1000.0  0.0  0.0
 | `group_interface_materi_residual_stiffness` | `factor` | Stiffness fraction of an open interface (default 0.01). |
 | `group_interface_materi_plasti_tension_direct` | `tension_limit` | Opens in traction when the total normal force `\|kn*strain_normal\|` exceeds the limit (and the interface was closed). |
 | `group_interface_materi_plasti_mohr_coul_direct` | `phi c phi_flow` | phi = friction angle (rad), c = cohesion, phi_flow = dilatancy angle (rad). The record's presence activates the cumulative Mohr-Coulomb law; phi=0,c=0 gives free sliding. |
+| `group_interface_materi_memory` | `memory_type` | `-updated_linear` (default) or `-total_linear`. Memory model of the interface law; `-total_linear` fixes the normal/tangent to the time-0 geometry. |
 
 ## Related
 
@@ -79,9 +85,10 @@ group_interface_materi_elasti_stiffness 10  1000.0  0.0  0.0
   `group_interface_materi_residual_stiffness`,
   `group_interface_materi_plasti_tension_direct`,
   `group_interface_materi_plasti_mohr_coul_direct` (Mohr-Coulomb acumulativo
-  con history `element_interface_force_tang`; `phi_flow` = dilatancia).
+  con history `element_interface_force_tang`; `phi_flow` = dilatancia),
+  `group_interface_materi_memory` (`-updated_linear`/`-total_linear`).
   Validados con la familia `iface_mc` (13º test de `build_safe.sh`,
-  6 runs): fricción alta sostiene la carga tangencial, fricción nula
+  7 runs): fricción alta sostiene la carga tangencial, fricción nula
   desliza libre, tracción abre la interfaz, gap cierra bajo compresión.
 - **Implementado (Fase 2)**: `control_mesh_convert` — conversion
   automatica de `-bar2` a `-quad4` para interfaces: crea los 2 nodos del
