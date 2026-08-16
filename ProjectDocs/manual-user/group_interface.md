@@ -88,8 +88,11 @@ group_interface_materi_elasti_stiffness 10  1000.0  0.0  0.0
   con history `element_interface_force_tang`; `phi_flow` = dilatancia),
   `group_interface_materi_memory` (`-updated_linear`/`-total_linear`).
   Validados con la familia `iface_mc` (13º test de `build_safe.sh`,
-  7 runs): fricción alta sostiene la carga tangencial, fricción nula
-  desliza libre, tracción abre la interfaz, gap cierra bajo compresión.
+  10 runs): fricción alta sostiene la carga tangencial, fricción nula
+  desliza libre, tracción abre la interfaz, gap cierra bajo compresión,
+  dilatancia (`phi_flow`) abre la interfaz bajo deslizamiento plástico, y
+  el clamp del MC reproduce `max_fric = c + kn*strain*tan(phi)` de forma
+  numérica exacta.
 - **Implementado (Fase 2)**: `control_mesh_convert` — conversion
   automatica de `-bar2` a `-quad4` para interfaces: crea los 2 nodos del
   lado opuesto de la interfaz y reconecta los elementos vecinos del otro

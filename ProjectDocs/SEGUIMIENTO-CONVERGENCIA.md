@@ -62,6 +62,8 @@ suite sfnet, o un test propio. El registro completo:
 
 **Carril A — `group_interface_materi_memory`** | `643865b` | 2026-08-16 | modelo de memoria de la ley de interfaz: `-updated_linear` (default, normal/tangente de la config actual) o `-total_linear` (geometría de referencia tiempo 0, `NODE_START_REFINED`). Valores inválidos → `db_error`. Test `iface_mc_mem` (familia iface_mc, 7º run → 19 runs). |
 
+**Carril A — validación numérica MC/tension completa** | `(commit en curso)` | 2026-08-16 | cierre de RF-4: `iface_mc_dil` (phi_flow=30° → strain_normal acumulado −2.8065 vs +0.0802 sin dilatancia; apertura por deslizamiento > compresión), `iface_mc_dil_1step` (invarianza paso, −2.82675, dif ~0.7%) y `iface_mc_num` (clamp MC: c=50, phi=0, vely=1000 → `element_interface_force_tang`=50.0 exacto = max_fric=c). Familia iface_mc → 10 runs (22 totales). |
+
 Nota: las features marcadas solo "GNU" en el detalle por familia (sin
 fila en esta tabla) ya existían en el fork sfnet 2014 y no fueron
 implementadas por nosotros.

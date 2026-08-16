@@ -8,7 +8,7 @@
 #     para que un archivo patologico no pueda matar la VM.
 #   - timeout en el paso de compilacion: si algo se cuelga, se aborta.
 #   - Link con LAPACK/BLAS real (sin libf2c, ya no es necesaria).
-#   - Verificacion automatica: corre la suite de tests (13 tests / 19 runs)
+#   - Verificacion automatica: corre la suite de tests (13 tests / 22 runs)
 #     y comprueba targets.
 #
 # Uso: ./scripts/build_safe.sh [--clean]
@@ -86,10 +86,11 @@ HIPO_OK=0
 HIPO_TOTAL=0
 # 13 tests: 12 preexistentes + familia iface_mc (1 test logico = 6 runs:
 # iface_mc a/a' invarianza, iface_mc_slip b/b' invarianza, tension c, gap d)
-# + iface_mc_mem (memory -total_linear, 7mo run).
+# + iface_mc_mem (memory), + iface_mc_dil/dil_1step/num (dilatancia RF-4 y
+# clamp numerico del MC) -> 10 runs de la familia.
 for t in hypo1 hypo2 hypo3 hypo4 smooth1 dof1 mlx1 vtk_dof1 gen1 genbeam1 reset1 cda1 \
          iface_mc iface_mc_1step iface_mc_slip iface_mc_slip_1step iface_mc_tension iface_mc_gap \
-         iface_mc_mem; do
+         iface_mc_mem iface_mc_dil iface_mc_dil_1step iface_mc_num; do
   HIPO_TOTAL=$((HIPO_TOTAL+1))
   ( cd validation-suite/test-2014 &&
     ulimit -v 4000000 &&
@@ -102,5 +103,5 @@ for t in hypo1 hypo2 hypo3 hypo4 smooth1 dof1 mlx1 vtk_dof1 gen1 genbeam1 reset1
     echo "    $t: FALLO (rc=$RC)"
   fi
 done
-echo "==> Resumen: $HIPO_OK/$HIPO_TOTAL runs OK (13 tests: 12 preexistentes + familia iface_mc en 7 runs)."
+echo "==> Resumen: $HIPO_OK/$HIPO_TOTAL runs OK (13 tests: 12 preexistentes + familia iface_mc en 10 runs)."
 echo "==> Log de compilacion completo en /tmp/tn_build_safe.log"

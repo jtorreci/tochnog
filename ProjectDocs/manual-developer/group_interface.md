@@ -84,7 +84,7 @@
 - **Fase 1 elástica**: test 2 bloques (`/tmp/iface2.dat`) — kn=100→0.044,
   kn=1000→0.0018, kn=1e6→-0.003 (aprox soldado), kn=0.001→≈1.0 libre,
   sin interfaz→-0.0066. Límites físicos correctos.
-- **Fase 3 validada (familia `iface_mc`, 13º test de build_safe.sh, 6 runs)**:
+- **Fase 3 validada (familia `iface_mc`, 13º test de build_safe.sh, 10 runs)**:
   - (a/a') fricción alta sostiene: phi=45°, c=0, Fy=5 < límite ≈ 80 →
     vely(nodo 6) ≈ 0 (0.20 en 10 pasos / 0.006 en 1 paso — invarianza de
     nº de pasos OK, mismos targets).
@@ -95,6 +95,16 @@
     (strain_normal < 0; el código viejo exigía compresión y nunca abría).
   - (d) gap cierra con compresión: gap=0.001, Fx=-10 → strain 0.138 > gap →
     velix(nodo 6) ≈ 0 (−0.06; el código viejo abría bajo compresión).
+  - (memory) `-total_linear` explícito: mismos targets que (a)
+    (`iface_mc_mem`).
+  - (dil/dil_1step) dilatancia RF-4: phi_flow=30° → strain_normal acumulado
+    NEGATIVO (−2.8065 en 10 pasos / −2.82675 en 1 paso) frente a +0.0802
+    con phi_flow=0 — la apertura por deslizamiento plástico supera la
+    compresión. Diferencia 1-paso vs 10-pasos ~0.7% (dilatancia depende del
+    |du_tang| incremental).
+  - (num) clamp del MC numérico: c=50, phi=0, vely=1000 prescrita →
+    `element_interface_force_tang`(2) = 50.0 exacto en todos los pasos
+    (= max_fric = c; sin MC sería elástico ~2e5).
   - Discriminadores vs el código viejo: (b)/(b') elástico puro →
     force_tang ~10⁴ ≫ 1.0 FALLA; (c) nunca abre → velix −13.66 FALLA;
     (d) abre con compresión → velix grande FALLA.
