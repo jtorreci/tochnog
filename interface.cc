@@ -63,7 +63,7 @@ void interface_element( long int element, long int name,
 
 {
   long int idim=0, jdim=0, inol=0, jnol=0, indx=0, swit=0, ldum=0, 
-    nnol=4, mc_active=0, plastified=0, idum[1];
+    nnol=4, mc_active=0, plastified=0, memory=-UPDATED_LINEAR, idum[1];
   double dtime=0., kn=0., kt1=0., kt2=0., tmp=0., ddum[1],
     normal[MDIM], tangent[MDIM], du[MDIM],
     du_norm=0., du_tang=0., stress_normal=0., stress_shear=0.,
@@ -71,6 +71,7 @@ void interface_element( long int element, long int name,
     residual_factor=0.01, phi=0., c=0., phi_flow=0., max_fric=0.,
     stiff_normal=0., stiff_tang=0., ddum3[3],
     f_t_old=0., f_t=0., trial=0., fn_total=0.;
+  long int *nodes=NULL;
 
   swit = set_swit(element,-1,"interface_element");
   if ( swit ) pri( "In routine INTERFACE_ELEMENT." );
@@ -89,6 +90,23 @@ void interface_element( long int element, long int name,
   db( GROUP_INTERFACE_MATERI_RESIDUAL_STIFFNESS, element_group, idum,
     &residual_factor, ldum, VERSION_NORMAL, GET_IF_EXISTS );
 
+  // memory model (Fase 3, group_interface_materi_memory): -updated_linear
+  // (default) recomputes the interface normal/tangent from the current
+  // (deformed) configuration each step; -total_linear uses the time-0
+  // reference geometry (NODE_START_REFINED), so the interface keeps its
+  // original orientation (elem.cc pattern: TOTAL_LINEAR -> fixed reference).
+  db( GROUP_INTERFACE_MATERI_MEMORY, element_group, &memory, ddum,
+    ldum, VERSION_NORMAL, GET_IF_EXISTS );
+  if ( memory!=-UPDATED_LINEAR && memory!=-TOTAL_LINEAR )
+    db_error( GROUP_INTERFACE_MATERI_MEMORY, element_group );
+
+  // node numbers (needed to read the time-0 reference geometry)
+  long int length_el=0, *el=NULL;
+  el = get_new_int(MAXIMUM_NODE+1);
+  nodes = get_new_int(MAXIMUM_NODE);
+  db( ELEMENT, element, el, ddum, length_el, VERSION_NORMAL, GET );
+  array_move( &el[1], nodes, length_el-1 );
+
   // 2D interface: sides are node pairs {0,1} and {2,3}. A -bar2 element
   // reaching here means it was not converted by control_mesh_convert;
   // treat it as a degenerate interface (side 1 = node 0, side 2 = node 1)
@@ -103,8 +121,19 @@ void interface_element( long int element, long int name,
 
   // normal to the interface: perpendicular to side 1 (nodes 0,1)
   if ( ndim==2 ) {
-    tangent[0] = coord[1*ndim+0] - coord[0*ndim+0];
-    tangent[1] = coord[1*ndim+1] - coord[0*ndim+1];
+    double *ca, *cb;
+    if ( memory==-TOTAL_LINEAR ) {
+      // time-0 reference geometry (NODE_START_REFINED): the interface keeps
+      // its original orientation even when the mesh deforms.
+      ca = db_dbl( NODE_START_REFINED, nodes[0], VERSION_NORMAL );
+      cb = db_dbl( NODE_START_REFINED, nodes[1], VERSION_NORMAL );
+    }
+    else {
+      ca = &coord[0*ndim];
+      cb = &coord[1*ndim];
+    }
+    tangent[0] = cb[0] - ca[0];
+    tangent[1] = cb[1] - ca[1];
     array_normalize( tangent, ndim );
     normal[0] = -tangent[1];
     normal[1] =  tangent[0];
@@ -254,6 +283,9 @@ void interface_element( long int element, long int name,
     ldum, VERSION_NEW, PUT );
   db( ELEMENT_INTERFACE_FORCE_TANG, element, idum, &f_t, ldum,
     VERSION_NEW, PUT );
+
+  delete[] el;
+  delete[] nodes;
 
   if ( swit ) pri( "Out function INTERFACE_ELEMENT" );
 }

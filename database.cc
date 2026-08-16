@@ -2410,6 +2410,12 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   data_class[GROUP_INTERFACE_MATERI_ELASTI_STIFFNESS] = GROUP_TYPE;
   data_required[GROUP_INTERFACE_MATERI_ELASTI_STIFFNESS] = GROUP_INTERFACE;
 
+  strcpy(name[GROUP_INTERFACE_MATERI_MEMORY],"group_interface_materi_memory");
+  type[GROUP_INTERFACE_MATERI_MEMORY] = INTEGER;
+  data_length[GROUP_INTERFACE_MATERI_MEMORY] = 1;
+  data_class[GROUP_INTERFACE_MATERI_MEMORY] = GROUP_TYPE;
+  data_required[GROUP_INTERFACE_MATERI_MEMORY] = GROUP_INTERFACE;
+
   strcpy(name[GROUP_INTERFACE_MATERI_PLASTI_MOHR_COUL_DIRECT],"group_interface_materi_plasti_mohr_coul_direct");
   type[GROUP_INTERFACE_MATERI_PLASTI_MOHR_COUL_DIRECT] = DOUBLE_PRECISION;
   data_length[GROUP_INTERFACE_MATERI_PLASTI_MOHR_COUL_DIRECT] = 3;
@@ -4423,6 +4429,8 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   strcpy(name[UNIFORM],"uniform");
 
   strcpy(name[UPDATED],"updated");
+
+  strcpy(name[UPDATED_LINEAR],"updated_linear");
 
   strcpy(name[UPDATED_WITHOUT_ROTATION],"updated_without_rotation");
 
