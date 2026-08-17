@@ -234,6 +234,8 @@ enum {
   CONTROL_MESH_GENERATE_BEAM,
   CONTROL_MESH_GENERATE_CONTACTSPRING,
   CONTROL_MESH_GENERATE_CONTACTSPRING_ELEMENT,
+  CONTROL_MESH_GENERATE_INTERFACE,
+  CONTROL_MESH_GENERATE_INTERFACE_GEOMETRY,
   CONTROL_MESH_GENERATE_SPRING1,
   CONTROL_MESH_GENERATE_SPRING2,
   CONTROL_MESH_GENERATE_TRUSS,
@@ -1282,6 +1284,7 @@ void      general( long int element, long int name, long int nnol, long int gr,
             double element_lhside[], double element_matrix[] );
 void      generate_beam_truss( long int icontrol, long int task );
 void      generate_spring( long int icontrol );
+void      generate_interface( long int icontrol );
 void      geometry( long int inod, double co[], long int geometry_entity[],
             long int &found, double &factor, double normal[],
             double &penetration, double projection[],

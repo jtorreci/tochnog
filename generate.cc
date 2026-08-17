@@ -446,3 +446,177 @@ void generate_beam_truss( long int icontrol, long int task )
   if ( swit ) pri( "Out routine GENERATE_BEAM_TRUSS." );
 
 }
+
+// generate_interface - control_mesh_generate_interface (Carril B).
+//
+// Generates interface elements between two element groups that share a
+// common face (spatially coincident nodes, e.g. duplicated nodes between
+// two blocks). The record syntax is:
+//
+//   control_mesh_generate_interface index
+//     eg0 eg00 eg01 eg1 eg10 eg11 ...
+//
+// For each triple (eg_i, eg_a, eg_b): an interface element is generated
+// for every element pair (one in group eg_a, one in group eg_b) that
+// shares a complete face. The interface element is assigned to group
+// eg_i. The generated element type follows the shared face:
+//   - 2D, 2 shared nodes  : -quad4  {nA0 nA1 nB0 nB1}
+//   - 3D, 3 shared nodes  : -prism6 {nA0 nA1 nA2 nB0 nB1 nB2}
+//   - 3D, 4 shared nodes  : -hex8   {nA0..nA3 nB0..nB3}
+// control_mesh_generate_interface_geometry restricts generation to the
+// given geometry (all shared nodes must be inside it).
+void generate_interface( long int icontrol )
+
+{
+  long int i=0, k=0, iel=0, jel=0, inol=0, jnol=0,
+    max_element=0, max_node=0, element_group=0, in_geometry=0, ldum=0,
+    swit=0, length=0, nshared=0, sharedA[MNOL], sharedB[MNOL],
+    length_geometry=0, length_gen=0,
+    new_name=0, idum[1], *elA=NULL, *elB=NULL, *nodesA=NULL, *nodesB=NULL,
+    *geometry_entity=NULL, *gen=NULL;
+  double rdum=0., ddum[MDIM], *cA=NULL, *cB=NULL;
+  long int zero=0, mnolnuknwn=npointmax*nuknwn,
+    length_nei=1+npointmax*ndim+npointmax+2;
+  double *tmp_element_dof=NULL, *dworknei=NULL;
+
+  swit = set_swit(-1,-1,"generate_interface");
+  if ( swit ) pri( "In routine GENERATE_INTERFACE." );
+
+  if ( !db_active_index( CONTROL_MESH_GENERATE_INTERFACE, icontrol, VERSION_NORMAL ) )
+    return;
+
+  tmp_element_dof = get_new_dbl(mnolnuknwn);
+  dworknei = get_new_dbl(length_nei);
+  array_set( dworknei, 0, length_nei );
+
+  gen = get_new_int(DATA_ITEM_SIZE);
+  db( CONTROL_MESH_GENERATE_INTERFACE, icontrol, gen, ddum, length_gen,
+    VERSION_NORMAL, GET );
+
+  geometry_entity = get_new_int(DATA_ITEM_SIZE);
+  if ( db_active_index( CONTROL_MESH_GENERATE_INTERFACE_GEOMETRY, icontrol,
+      VERSION_NORMAL ) ) {
+    db( CONTROL_MESH_GENERATE_INTERFACE_GEOMETRY, icontrol, geometry_entity,
+      ddum, length_geometry, VERSION_NORMAL, GET );
+  }
+
+  elA = get_new_int(MAXIMUM_NODE+1);
+  elB = get_new_int(MAXIMUM_NODE+1);
+  nodesA = get_new_int(MAXIMUM_NODE);
+  nodesB = get_new_int(MAXIMUM_NODE);
+
+  db_highest_index( ELEMENT, max_element, VERSION_NORMAL );
+  db_max_index( NODE_START_REFINED, max_node, VERSION_NORMAL, GET );
+  long int max_element_old = max_element;
+
+  // the record is a list of triples (eg_i, eg_a, eg_b)
+  for ( i=0; i+2<length_gen; i+=3 ) {
+    long int eg_iface = gen[i];
+    long int eg_a = gen[i+1];
+    long int eg_b = gen[i+2];
+
+    for ( iel=0; iel<=max_element_old; iel++ ) {
+      if ( !db_active_index( ELEMENT, iel, VERSION_NORMAL ) ) continue;
+      long int grA = 0;
+      db( ELEMENT_GROUP, iel, &grA, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+      if ( grA!=eg_a ) continue;
+      // already generated an interface for this element in a previous step
+      long int iface_done = -1;
+      db( ELEMENT_MACRO_GENERATE, iel, &iface_done, ddum, ldum,
+        VERSION_NORMAL, GET_IF_EXISTS );
+      if ( iface_done==icontrol ) continue;
+      db( ELEMENT, iel, elA, ddum, length, VERSION_NORMAL, GET );
+      long int nnolA = length - 1;
+      array_move( &elA[1], nodesA, nnolA );
+
+      for ( jel=0; jel<=max_element_old; jel++ ) {
+        if ( jel==iel ) continue;
+        if ( !db_active_index( ELEMENT, jel, VERSION_NORMAL ) ) continue;
+        long int grB = 0;
+        db( ELEMENT_GROUP, jel, &grB, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+        if ( grB!=eg_b ) continue;
+        db( ELEMENT, jel, elB, ddum, length, VERSION_NORMAL, GET );
+        long int nnolB = length - 1;
+        array_move( &elB[1], nodesB, nnolB );
+
+        // shared face = node pairs of A and B with coincident coordinates
+        nshared = 0;
+        for ( inol=0; inol<nnolA && nshared<=4; inol++ ) {
+          cA = db_dbl( NODE_START_REFINED, nodesA[inol], VERSION_NORMAL );
+          for ( jnol=0; jnol<nnolB; jnol++ ) {
+            cB = db_dbl( NODE_START_REFINED, nodesB[jnol], VERSION_NORMAL );
+            if ( array_distance( cA, cB, ddum, ndim ) < EPS_COORD ) {
+              sharedA[nshared] = nodesA[inol];
+              sharedB[nshared] = nodesB[jnol];
+              nshared++;
+              break;
+            }
+          }
+        }
+        // decide the generated element from the number of shared nodes
+        if      ( ndim==2 && nshared==2 ) new_name = -QUAD4;
+        else if ( ndim==3 && nshared==3 ) new_name = -PRISM6;
+        else if ( ndim==3 && nshared==4 ) new_name = -HEX8;
+        else continue;
+
+        // geometry restriction: every shared node must be inside
+        if ( length_geometry>0 ) {
+          for ( k=0; k<nshared; k++ ) {
+            in_geometry = 0;
+            geometry( sharedA[k], ddum, geometry_entity, in_geometry, rdum,
+              ddum, rdum, ddum, NODE_START_REFINED, PROJECT_EXACT,
+              VERSION_NORMAL );
+            if ( !in_geometry ) break;
+          }
+          if ( !in_geometry ) continue;
+        }
+
+        // avoid duplicate generation: skip if element iel already has an
+        // interface on this face (an interface element is in group eg_iface
+        // and shares the face). For simplicity rely on the pair scan: the
+        // symmetric pair (jel,iel) is skipped because iel<jel only once is
+        // enforced below by checking the element numbering.
+        if ( iel>jel ) continue;
+
+        // generate the interface element
+        max_element++;
+        elB[0] = new_name;
+        length = 1 + 2*nshared;
+        for ( k=0; k<nshared; k++ ) {
+          elB[1+k]        = sharedA[k];
+          elB[1+nshared+k] = sharedB[k];
+        }
+        db( ELEMENT, max_element, elB, ddum, length, VERSION_NORMAL, PUT );
+        element_group = eg_iface;
+        length = 1;
+        db( ELEMENT_GROUP, max_element, &element_group, ddum, length,
+          VERSION_NORMAL, PUT );
+        db( ELEMENT_MACRO_GENERATE, max_element, &icontrol, ddum, length,
+          VERSION_NORMAL, PUT );
+        db( ELEMENT_DOF, max_element, idum, tmp_element_dof, mnolnuknwn,
+          VERSION_NORMAL, PUT );
+        db( ELEMENT_DOF_INITIALISED, max_element, &zero, ddum, length,
+          VERSION_NORMAL, PUT );
+        db( NONLOCAL_ELEMENT_INFO, max_element, idum, dworknei, length_nei,
+          VERSION_NORMAL, PUT );
+        // mark the source elements so the interface is generated only once
+        db( ELEMENT_MACRO_GENERATE, iel, &icontrol, ddum, length,
+          VERSION_NORMAL, PUT );
+        db( ELEMENT_MACRO_GENERATE, jel, &icontrol, ddum, length,
+          VERSION_NORMAL, PUT );
+      }
+    }
+  }
+
+  delete[] gen;
+  delete[] geometry_entity;
+  delete[] elA;
+  delete[] elB;
+  delete[] nodesA;
+  delete[] nodesB;
+  delete[] tmp_element_dof;
+  delete[] dworknei;
+
+  mesh_has_changed( VERSION_NORMAL );
+  if ( swit ) pri( "Out routine GENERATE_INTERFACE." );
+}

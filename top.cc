@@ -592,6 +592,10 @@ void step_start( long int task, long int options_solver[], double dtime, double 
     ldum, VERSION_NORMAL, GET_IF_EXISTS );
   if ( control_materi_diffusion==-INITIALIZE ) materi_diffusion_calculate( INITIALIZE );
 
+  // generate interface elements BEFORE scanning any_interface so the
+  // interface histories are allocated for the generated elements too.
+  generate_interface( icontrol );
+
   if ( task==YES ) {
 
     db_max_index( ELEMENT, max_element, VERSION_NORMAL, GET );
