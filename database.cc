@@ -671,6 +671,12 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   data_class[CONTROL_MESH_GENERATE_INTERFACE_GEOMETRY] = CONTROL;
   data_required[CONTROL_MESH_GENERATE_INTERFACE_GEOMETRY] = CONTROL_MESH_GENERATE_INTERFACE;
 
+  strcpy(name[CONTROL_MESH_GENERATE_INTERFACE_METHOD],"control_mesh_generate_interface_method");
+  type[CONTROL_MESH_GENERATE_INTERFACE_METHOD] = INTEGER;
+  data_length[CONTROL_MESH_GENERATE_INTERFACE_METHOD] = 2;
+  data_class[CONTROL_MESH_GENERATE_INTERFACE_METHOD] = CONTROL;
+  data_required[CONTROL_MESH_GENERATE_INTERFACE_METHOD] = CONTROL_MESH_GENERATE_INTERFACE;
+
   strcpy(name[CONTROL_MESH_GENERATE_SPRING1],"control_mesh_generate_spring1");
   type[CONTROL_MESH_GENERATE_SPRING1] = INTEGER;
   data_length[CONTROL_MESH_GENERATE_SPRING1] = 3;
@@ -1553,9 +1559,15 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   type[ELEMENT_EMPTY] = INTEGER;
   data_length[ELEMENT_EMPTY] = 1;
   version_all[ELEMENT_EMPTY] = 1;
-  external[ELEMENT_EMPTY] = 0;   
-  data_class[ELEMENT_EMPTY] = ELEMENT;   
-  data_required[ELEMENT_EMPTY] = ELEMENT;   
+  data_class[ELEMENT_EMPTY] = ELEMENT;
+  data_required[ELEMENT_EMPTY] = ELEMENT;
+
+  strcpy(name[ELEMENT_GEOMETRY],"element_geometry");
+  type[ELEMENT_GEOMETRY] = INTEGER;
+  data_length[ELEMENT_GEOMETRY] = 1;
+  version_all[ELEMENT_GEOMETRY] = 1;
+  data_class[ELEMENT_GEOMETRY] = ELEMENT;
+  data_required[ELEMENT_GEOMETRY] = ELEMENT;
 
   strcpy(name[ELEMENT_GROUP],"element_group");
   type[ELEMENT_GROUP] = INTEGER;

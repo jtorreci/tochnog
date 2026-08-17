@@ -493,6 +493,19 @@ void generate_interface( long int icontrol )
   db( CONTROL_MESH_GENERATE_INTERFACE, icontrol, gen, ddum, length_gen,
     VERSION_NORMAL, GET );
 
+  // method: method_select / method_generate. Default = element_group.
+  // -element_geometry selects by element_geometry and/or generates an
+  // element_geometry record for the interface element (manual 6.192).
+  long int method_select=0, method_generate=0;
+  {
+    long int method[2] = {0, 0};
+    if ( db( CONTROL_MESH_GENERATE_INTERFACE_METHOD, icontrol, method,
+        ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS ) ) {
+      method_select  = method[0];
+      method_generate = method[1];
+    }
+  }
+
   geometry_entity = get_new_int(DATA_ITEM_SIZE);
   if ( db_active_index( CONTROL_MESH_GENERATE_INTERFACE_GEOMETRY, icontrol,
       VERSION_NORMAL ) ) {
@@ -517,8 +530,12 @@ void generate_interface( long int icontrol )
 
     for ( iel=0; iel<=max_element_old; iel++ ) {
       if ( !db_active_index( ELEMENT, iel, VERSION_NORMAL ) ) continue;
+      // select by element_group (default) or by element_geometry (method)
       long int grA = 0;
-      db( ELEMENT_GROUP, iel, &grA, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+      if ( method_select==-ELEMENT_GEOMETRY )
+        db( ELEMENT_GEOMETRY, iel, &grA, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+      else
+        db( ELEMENT_GROUP, iel, &grA, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
       if ( grA!=eg_a ) continue;
       // already generated an interface for this element in a previous step
       long int iface_done = -1;
@@ -533,7 +550,10 @@ void generate_interface( long int icontrol )
         if ( jel==iel ) continue;
         if ( !db_active_index( ELEMENT, jel, VERSION_NORMAL ) ) continue;
         long int grB = 0;
-        db( ELEMENT_GROUP, jel, &grB, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+        if ( method_select==-ELEMENT_GEOMETRY )
+          db( ELEMENT_GEOMETRY, jel, &grB, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+        else
+          db( ELEMENT_GROUP, jel, &grB, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
         if ( grB!=eg_b ) continue;
         db( ELEMENT, jel, elB, ddum, length, VERSION_NORMAL, GET );
         long int nnolB = length - 1;
@@ -571,11 +591,7 @@ void generate_interface( long int icontrol )
           if ( !in_geometry ) continue;
         }
 
-        // avoid duplicate generation: skip if element iel already has an
-        // interface on this face (an interface element is in group eg_iface
-        // and shares the face). For simplicity rely on the pair scan: the
-        // symmetric pair (jel,iel) is skipped because iel<jel only once is
-        // enforced below by checking the element numbering.
+        // avoid duplicate generation of the symmetric pair (jel,iel)
         if ( iel>jel ) continue;
 
         // generate the interface element
@@ -587,10 +603,18 @@ void generate_interface( long int icontrol )
           elB[1+nshared+k] = sharedB[k];
         }
         db( ELEMENT, max_element, elB, ddum, length, VERSION_NORMAL, PUT );
-        element_group = eg_iface;
         length = 1;
-        db( ELEMENT_GROUP, max_element, &element_group, ddum, length,
-          VERSION_NORMAL, PUT );
+        if ( method_generate==-ELEMENT_GEOMETRY ) {
+          // generate an element_geometry record instead of element_group
+          element_group = eg_iface;
+          db( ELEMENT_GEOMETRY, max_element, &element_group, ddum, length,
+            VERSION_NORMAL, PUT );
+        }
+        else {
+          element_group = eg_iface;
+          db( ELEMENT_GROUP, max_element, &element_group, ddum, length,
+            VERSION_NORMAL, PUT );
+        }
         db( ELEMENT_MACRO_GENERATE, max_element, &icontrol, ddum, length,
           VERSION_NORMAL, PUT );
         db( ELEMENT_DOF, max_element, idum, tmp_element_dof, mnolnuknwn,
