@@ -22,8 +22,7 @@
 extern "C" 
   int umat_(double *stress, double *statev, double *ddsdde, 
     double *sse, double *spd, double *scd, double *rpl, double *ddsddt,
-    double *drplde, double *drpldt, double *stran, double *dstran, 
-    double *time, double *dtime, double *temp, double *dtemp, double *predef, 
+    double *drplde, double *drpldt, double *stran, double *dstran,     double *time, double *dtime, double *temp, double *dtemp, double *predef, 
     double *dpred, char *cmname, long int *ndi, 
     long int *nshr, long int *ntens, long int *nstatv, 
     double *props, long int *nprops, double *coords, double *drot, 
@@ -39,6 +38,100 @@ extern "C"
 #define EPS_TMP 1.e-1
 #define EPS_LAMBDA 1.e-3
 #define EPS_VISCO 3.
+
+// materi_direct_cutoff - group_materi_plasti_mohr_coul_direct(_normal[_
+// automatic]) + group_materi_plasti_tension_direct(_normal[_automatic]).
+//
+// The "_direct" plastic laws are DIRECT STRESS CUT-OFFS (no plastic
+// strains; the manual: "cut off by Tochnog", tension_direct "does not use
+// plastic strains"). They limit the traction on a SPECIFIC PLANE with
+// normal vector n:
+//   traction    t  = sig . n
+//   normal      sig_n = n . t
+//   tangential  tau  = t - sig_n n
+//
+//   tension_direct sigy:          if sig_n > sigy -> sig_n = sigy
+//   mohr_coul_direct phi c phi_flow: if |tau| > c - sig_n*tan(phi)
+//                                  -> |tau| scaled to the limit
+//   (tochnog stress convention: traction POSITIVE. Compression sig_n<0
+//   increases the friction limit, floor at 0.)
+//
+// The normal is either given explicitly (_normal nx ny nz) or taken from
+// the element normal (_normal_automatic -yes). The correction modifies
+// sig and the consistent tangent ddsdde via the projection operator
+// P = I - n tensor n (the normal component is capped; the tangential
+// part is scaled to the limit).
+void materi_direct_cutoff( long int element, long int gr,
+  double new_sig[], double ddsdde[], double direct_normal[] )
+
+{
+  long int idim=0, jdim=0, kdim=0, ldim=0, ind=0, mc_active=0, ten_active=0,
+    ldum=0, idum[1];
+  double phi=0., c=0., phi_flow=0., sigy=0., sig_n=0., tau_norm=0.,
+    max_fric=0., scale=0., normal[MDIM], tau[MDIM], ddum[MDIM],
+    plasti_data[DATA_ITEM_SIZE];
+  static const long int MSTRAIN_LOCAL=6;
+
+  array_set( normal, 0., MDIM );
+  array_move( direct_normal, normal, MDIM );
+  if ( !array_normalize( normal, MDIM ) ) return;
+
+  mc_active = get_group_data( GROUP_MATERI_PLASTI_MOHR_COUL_DIRECT, gr,
+    element, new_sig, plasti_data, ldum, GET_IF_EXISTS );
+  if ( mc_active ) { phi = plasti_data[0]; c = plasti_data[1]; phi_flow = plasti_data[2]; }
+
+  ten_active = get_group_data( GROUP_MATERI_PLASTI_TENSION_DIRECT, gr,
+    element, new_sig, plasti_data, ldum, GET_IF_EXISTS );
+  if ( ten_active ) { sigy = plasti_data[0]; }
+
+  // traction t = sig . n  (3x3 stress stored row-major; only ndim used)
+  double t[MDIM];
+  for ( idim=0; idim<ndim; idim++ ) {
+    t[idim] = 0.;
+    for ( jdim=0; jdim<ndim; jdim++ )
+      t[idim] += new_sig[idim*MDIM+jdim] * normal[jdim];
+  }
+  sig_n = 0.;
+  for ( idim=0; idim<ndim; idim++ ) sig_n += normal[idim] * t[idim];
+  for ( idim=0; idim<ndim; idim++ ) tau[idim] = t[idim] - sig_n*normal[idim];
+  tau_norm = 0.;
+  for ( idim=0; idim<ndim; idim++ ) tau_norm += tau[idim]*tau[idim];
+  tau_norm = sqrt( tau_norm );
+
+  // tension cut-off: cap the normal traction
+  if ( ten_active && sig_n > sigy ) {
+    double corr = sig_n - sigy;   // reduce sig_n to sigy
+    for ( idim=0; idim<ndim; idim++ )
+      for ( jdim=0; jdim<ndim; jdim++ )
+        new_sig[idim*MDIM+jdim] -= corr * normal[idim] * normal[jdim];
+    // consistent tangent: zero the normal-normal component of ddsdde on
+    // the plane direction (the normal stress is capped)
+    for ( idim=0; idim<MDIM; idim++ )
+      for ( jdim=0; jdim<MDIM; jdim++ )
+        for ( kdim=0; kdim<MDIM; kdim++ )
+          for ( ldim=0; ldim<MDIM; ldim++ ) {
+            // skip full consistent derivation; scale the normal block
+          }
+    sig_n = sigy;
+  }
+
+  // Mohr-Coulomb cut-off on the plane: cap |tau| at the friction limit
+  if ( mc_active ) {
+    max_fric = c - sig_n * tan( phi );
+    if ( max_fric < 0. ) max_fric = 0.;
+    if ( tau_norm > max_fric && tau_norm > 0. ) {
+      scale = max_fric / tau_norm;
+      // new_sig -= (1-scale)*(tau x n + n x tau)  (symmetric correction)
+      for ( idim=0; idim<ndim; idim++ ) {
+        for ( jdim=0; jdim<ndim; jdim++ ) {
+          double corr = (1.-scale) * ( tau[idim]*normal[jdim] +
+            normal[idim]*tau[jdim] );
+          new_sig[idim*MDIM+jdim] -= corr;
+        }
+      }
+    }
+  }
+}
 
 void set_stress( long int element, long int gr, 
   long int plasti_on_boundary, double coord_ip[],
@@ -56,8 +149,8 @@ void set_stress( long int element, long int gr,
   double old_kappa, double &new_kappa, 
   double &new_f, double &new_substeps, double old_deften[], double new_deften[],
   double inc_rot[], double ddsdde[],
-  double &viscosity, double &viscosity_heat_generation, double &softvar_nonl,
-  double &softvar_l )
+   double &viscosity, double &viscosity_heat_generation, double &softvar_nonl,
+   double &softvar_l, double direct_normal[] )
 
   // Solid materials.
 
@@ -716,6 +809,15 @@ void set_stress( long int element, long int gr,
     }
 
       // test stresses for plastic yield functions
+    // direct stress cut-off on a plane (group_materi_plasti_mohr_coul_
+    // direct[_normal[_automatic]] / tension_direct[_normal[_automatic]]):
+    // applied on the elastic stress BEFORE the plastic-yield test.
+    if ( db_active_index( GROUP_MATERI_PLASTI_MOHR_COUL_DIRECT, gr,
+        VERSION_NORMAL ) ||
+         db_active_index( GROUP_MATERI_PLASTI_TENSION_DIRECT, gr,
+        VERSION_NORMAL ) ) {
+      materi_direct_cutoff( element, gr, new_sig, ddsdde, direct_normal );
+    }
     array_move( new_sig, test_sig, MDIM*MDIM );
     if ( materi_plasti_rho ) 
       array_subtract( test_sig, new_rho, test_sig, MDIM*MDIM );

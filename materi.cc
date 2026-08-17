@@ -44,7 +44,7 @@ void materi( long int element, long int gr, long int nnol,
     old_f=0., new_f=0., void_fraction=0., new_pres=0., old_substeps=0., new_substeps=0.,
     softvar_nonl=0, softvar_l=0, 
     static_pressure=0., total_pressure=0., location=0.,
-    J=0., ddum[1], *force_gravity=NULL, 
+    J=0., ddum[1], direct_normal[MDIM], *force_gravity=NULL, 
     *old_deften=NULL, *new_deften=NULL, *inv_deften=NULL,
     *old_epe=NULL, *inc_epe=NULL, *new_epe=NULL,
     *old_epp=NULL, *inc_epp=NULL, 
@@ -292,6 +292,39 @@ void materi( long int element, long int gr, long int nnol,
 
     // set stress, strain
   if ( materi_stress ) {
+    // direct-normal plane (group_materi_plasti_*_direct_normal[_automatic]):
+    // explicit normal from the keyword, or the element normal computed from
+    // the element geometry (cross product of two side-1 edges).
+    array_set( direct_normal, 0., MDIM );
+    if ( db_active_index( GROUP_MATERI_PLASTI_MOHR_COUL_DIRECT_NORMAL, gr,
+        VERSION_NORMAL ) ) {
+      db( GROUP_MATERI_PLASTI_MOHR_COUL_DIRECT_NORMAL, gr, idum,
+        direct_normal, ldum, VERSION_NORMAL, GET );
+    }
+    else if ( db_active_index( GROUP_MATERI_PLASTI_TENSION_DIRECT_NORMAL, gr,
+        VERSION_NORMAL ) ) {
+      db( GROUP_MATERI_PLASTI_TENSION_DIRECT_NORMAL, gr, idum,
+        direct_normal, ldum, VERSION_NORMAL, GET );
+    }
+    else if ( db_active_index( GROUP_MATERI_PLASTI_MOHR_COUL_DIRECT_NORMAL_AUTOMATIC,
+        gr, VERSION_NORMAL ) ||
+              db_active_index( GROUP_MATERI_PLASTI_TENSION_DIRECT_NORMAL_AUTOMATIC,
+        gr, VERSION_NORMAL ) ) {
+      // element normal: cross product of the first two element edges
+      double e1[MDIM], e2[MDIM];
+      double *c0, *c1, *c2;
+      c0 = db_dbl( NODE, nodes[0], VERSION_NORMAL );
+      c1 = db_dbl( NODE, nodes[1], VERSION_NORMAL );
+      c2 = db_dbl( NODE, nodes[2], VERSION_NORMAL );
+      for ( i=0; i<3; i++ ) {
+        e1[i] = c1[i] - c0[i];
+        e2[i] = c2[i] - c0[i];
+      }
+      direct_normal[0] = e1[1]*e2[2] - e1[2]*e2[1];
+      direct_normal[1] = e1[2]*e2[0] - e1[0]*e2[2];
+      direct_normal[2] = e1[0]*e2[1] - e1[1]*e2[0];
+      array_normalize( direct_normal, 3 );
+    }
     set_stress( element, gr, plasti_on_boundary, coord_ip,
       old_unknowns, new_unknowns,
       old_grad_old_unknowns, new_grad_new_unknowns, 
@@ -301,7 +334,8 @@ void materi( long int element, long int gr, long int nnol,
       old_epi, new_epi, old_hisv, new_hisv, 
       old_damage, new_damage, old_kappa, new_kappa, new_f, new_substeps,
       old_deften, new_deften, inc_rot,
-      ddsdde, viscosity, viscosity_heatgeneration, softvar_nonl, softvar_l);
+      ddsdde, viscosity, viscosity_heatgeneration, softvar_nonl, softvar_l,
+      direct_normal);
     tendons( element, gr, nnol, npoint, volume, new_d, old_unknowns, new_unknowns,
       new_rot, inc_ept, tendon_element_rhside, ddsdde_tendon );
     array_add( ddsdde, ddsdde_tendon, ddsdde_total, MSTRAIN*MSTRAIN );

@@ -644,8 +644,14 @@ enum {
   GROUP_MATERI_PLASTI_MOHRCOUL_APEX,
   GROUP_MATERI_PLASTI_MOHRCOUL_SOFTENING,
   GROUP_MATERI_PLASTI_MOHRCOUL_TENSIONCUTOFF,
+  GROUP_MATERI_PLASTI_MOHR_COUL_DIRECT,
+  GROUP_MATERI_PLASTI_MOHR_COUL_DIRECT_NORMAL,
+  GROUP_MATERI_PLASTI_MOHR_COUL_DIRECT_NORMAL_AUTOMATIC,
   GROUP_MATERI_PLASTI_STRESS,
   GROUP_MATERI_PLASTI_TENSION,
+  GROUP_MATERI_PLASTI_TENSION_DIRECT,
+  GROUP_MATERI_PLASTI_TENSION_DIRECT_NORMAL,
+  GROUP_MATERI_PLASTI_TENSION_DIRECT_NORMAL_AUTOMATIC,
   GROUP_MATERI_PLASTI_TSKH,
   GROUP_MATERI_PLASTI_USER,
   GROUP_MATERI_PLASTI_VISCO_ALWAYS,
@@ -1592,7 +1598,7 @@ void      set_stress( long int element, long int gr,
             double &new_f, double &new_substeps, double old_deften[], double new_deften[],
             double inc_rot[], double ddsdde[],
             double &viscosity, double &viscosity_heat_generation, 
-	    double &softvar_nonl, double &softvar_l );
+	    double &softvar_nonl, double &softvar_l, double direct_normal[] );
 long int  set_swit( long int element, long int inod, const char *routine
  );
 void      slide( void );
