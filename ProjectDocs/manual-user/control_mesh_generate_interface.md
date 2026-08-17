@@ -81,6 +81,20 @@ control_mesh_generate_interface_method 0  -element_geometry -element_geometry
 | 3D, 3 nodes (between two `tet4`) | `-prism6` |
 | 3D, 4 nodes (between two `hex8`) | `-hex8` |
 
+**Elementos cuadráticos**: when the contacting elements are quadratic
+(`quad9`, `tet10`, `hex27`, `bar3`), the shared face has mid-side nodes.
+The face is **subdivided into linear interface elements** so all face
+nodes (including mid-side and centre) are coupled:
+
+| Shared face | Sub-division |
+|-------------|--------------|
+| 2D quadratic edge (3 nodes, `quad9`/`bar3`) | 2 `-quad4` |
+| 3D tria6 (6 nodes, `tet10`) | 4 `-prism6` |
+| 3D quad9 (9 nodes, `hex27`) | 4 `-hex8` |
+
+This is the current behaviour. Native quadratic interface elements
+(`quad6`/`tria12`/`quad18`) are a documented future option.
+
 ## Related
 
 - `group_interface` — the element group of the generated interface
@@ -99,12 +113,15 @@ control_mesh_generate_interface_method 0  -element_geometry -element_geometry
 
 - **Implementado**: `control_mesh_generate_interface` (2D `quad4`, 3D
   `prism6`/`hex8`) + `control_mesh_generate_interface_geometry` +
-  `control_mesh_generate_interface_method` (`-element_geometry`).
+  `control_mesh_generate_interface_method` (`-element_geometry`) +
+  **subdivisión de caras cuadráticas** (quad9/tet10/hex27/bar3).
   Validado con `iface_gen` (dos quad4 con nodos duplicados en x=1 →
   interfaz `{2 4 5 7}` generada; la fricción MC sostiene la carga
   tangencial), `iface_gen_geom` (geometría que cubre la interfaz → se
   genera), `iface_gen_geom_off` (geometría desplazada → no se genera, el
   bloque se mueve libre), `iface_gen_method` (selección por
-  `element_geometry`) e `iface_gen_method_gen` (generación con
-  `element_geometry`).
-- **Pendiente**: elementos cuadráticos (quad6, tria12, quad18).
+  `element_geometry`), `iface_gen_method_gen` (generación con
+  `element_geometry`) e `iface_gen_quad9` (dos `quad9` con arista
+  cuadrática → 2 interfaces `quad4`; la fricción MC sostiene).
+- **Pendiente / futuro**: interfaces cuadráticas nativas
+  (`quad6`/`tria12`/`quad18`); soporte serendipito (`hex20`/`quad8`).

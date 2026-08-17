@@ -34,12 +34,24 @@ For each triple `(eg_i, eg_a, eg_b)` in the record:
    `element_geometry` when `method_select==-ELEMENT_GEOMETRY`.
 2. Count the shared-face node pairs: nodes of `iel` and `jel` with
    coincident coordinates (`NODE_START_REFINED`, tolerance `EPS_COORD`).
-3. Choose the generated element type from the number of shared nodes:
-   - 2D, 2 shared nodes → `-quad4` `{nA0 nA1 nB0 nB1}`
-   - 3D, 3 shared nodes → `-prism6` `{nA0 nA1 nA2 nB0 nB1 nB2}`
-   - 3D, 4 shared nodes → `-hex8` `{nA0..nA3 nB0..nB3}`
-   - otherwise no interface is generated.
-4. The new element is assigned to group `eg_i` (by default), or to
+3. Subdivide the shared face into LINEAR sub-faces
+   (`interface_face_subdivide`):
+   - linear face (2 nodes in 2D, 3/4 in 3D): a single sub-face, used as is.
+   - 2D quadratic edge (3 nodes, from quad9/bar3): 2 linear segments.
+   - 3D tria6 (6 nodes, from tet10): 4 linear triangles.
+   - 3D quad9 (9 nodes, from hex27): 4 linear quads.
+   The sub-faces are classified by COORDINATES (a mid-side node is the
+   average of two others; the quad9 centre is the average of the four
+   corners), so the generated interfaces couple ALL face nodes including
+   mid-side/centre nodes.
+4. For each sub-face generate one LINEAR interface element:
+   - 2 nodes → `-quad4` `{nA0 nA1 nB0 nB1}`
+   - 3 nodes → `-prism6` `{nA0 nA1 nA2 nB0 nB1 nB2}`
+   - 4 nodes → `-hex8` `{nA0..nA3 nB0..nB3}`
+   The sub-faces are ordered so the interface normal points from side 2
+   towards side 1 (compression = positive normal strain, consistent with
+   `interface_element`).
+5. The new element is assigned to group `eg_i` (by default), or to
    `element_geometry = eg_i` when `method_generate==-ELEMENT_GEOMETRY`,
    marked with `ELEMENT_MACRO_GENERATE = icontrol`, and `ELEMENT_DOF` /
    `ELEMENT_DOF_INITIALISED` / `NONLOCAL_ELEMENT_INFO` are initialized
@@ -72,7 +84,16 @@ For each triple `(eg_i, eg_a, eg_b)` in the record:
 - `control_mesh_generate_interface_geometry` filters by the geometry; the
   element pair must be inside the geometry.
 
-## Pendiente
+## Pendiente y opciones futuras
 
-- Tipos cuadráticos (bar3→quad6, tet10→tria12, hex27→quad18) no
-  implementados; se generan solo `quad4`/`prism6`/`hex8`.
+- **Interfaces cuadráticas nativas** (quad6/tria12/quad18, como hace
+  Professional): no implementadas. La subdivisión de la cara cuadrática en
+  sub-faces lineales acopla todos los nodos y es la opción actual. Una
+  interfaz cuadrática nativa ahorraría elementos generados (1 en vez de
+  2/4) y sería exacta en el borde, pero requiere shape functions de
+  elementos nuevos en `polynom.cc` y soporte en `interface_element`.
+- **Serendipitos (hex20/quad8)**: el GNU no los tiene como elementos
+  volumétricos (solo lagrangianos quad9/hex27/tet10). Si se añadieran, su
+  cara (8 nodos, sin centro) no es subdividible en quads lineales sin
+  inventar un nodo central; la opción sería mallar la cara con triángulos
+  (2 tria6 → 4 tria3 lineales) o añadir el nodo central.
