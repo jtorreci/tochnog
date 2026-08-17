@@ -68,7 +68,7 @@ suite sfnet, o un test propio. El registro completo:
 
 **Carril A — print 3D `control_print_interface_stress` (item E)** | `b8804c6` | 2026-08-16 | 3D implementado: imprime centroide (x y z) + `sign` + `sigt1` + `sigt2` por elemento de interfaz. `_3d_geometry` filtra por geometría (patrón adjust.cc); `_3d_order -x/-y/-z` ordena las líneas por la coordenada del centroide (recolección+sort). Validado con `iface_3d_stress` (centroide 1.5 0.5 0.5, sign crece con compresión, sigt2≈0) e `iface_3d_order` (2 interfaces ordenadas por x). |
 
-**Carril B — `control_mesh_generate_interface` (+ `_geometry`)** | `(commit en curso)` | 2026-08-17 | genera elementos de interfaz entre dos grupos de elementos que comparten una cara (nodos duplicados espacialmente). Sintaxis `index eg_i eg_a eg_b eg_j eg_c eg_d...`; el elemento generado (2D `quad4`, 3D `prism6`/`hex8` según nº de nodos de la cara) se asigna a `eg_i`. `_geometry` filtra el par por geometría. `generate_interface()` en generate.cc, invocada en `step_start` ANTES del scan de `any_interface` (para que los histories se aloquen). Idempotente: marca `ELEMENT_MACRO_GENERATE` en los elementos fuente. Validado con `iface_gen` (fricción MC sostiene), `iface_gen_geom` (geometría cubre → genera) e `iface_gen_geom_off` (geometría no cubre → no genera). |
+**Carril B — `control_mesh_generate_interface` (+ `_geometry` + `_method`)** | `947ac83` (código) + `87f157d` (docs) + `(commit _method en curso)` | 2026-08-17 | genera elementos de interfaz entre dos grupos de elementos que comparten una cara (nodos duplicados espacialmente). Sintaxis `index eg_i eg_a eg_b eg_j eg_c eg_d...`; el elemento generado (2D `quad4`, 3D `prism6`/`hex8` según nº de nodos de la cara) se asigna a `eg_i`. `_geometry` filtra el par por geometría. `_method` (`-element_geometry`) selecciona por `element_geometry` y/o genera un registro `element_geometry` para el elemento de interfaz. `generate_interface()` en generate.cc, invocada en `step_start` ANTES del scan de `any_interface`. Idempotente: marca `ELEMENT_MACRO_GENERATE` en los elementos fuente. Validado con `iface_gen`, `iface_gen_geom` (cubre → genera), `iface_gen_geom_off` (no cubre → no genera), `iface_gen_method` (selección por geometría) e `iface_gen_method_gen` (generación con `element_geometry`). |
 
 Nota: las features marcadas solo "GNU" en el detalle por familia (sin
 fila en esta tabla) ya existían en el fork sfnet 2014 y no fueron
@@ -463,7 +463,7 @@ marcado `PENDIENTE` puede estar cubierto en el GNU bajo otro nombre:
 - [ ] `control_mesh_generate_contact_spring_element_group` — PENDIENTE
 - [x] `control_mesh_generate_interface` — implementada (genera interfaces entre grupos con cara compartida; validada con `iface_gen`, `iface_gen_geom`, `iface_gen_geom_off`)
 - [x] `control_mesh_generate_interface_geometry` — implementada (filtro por geometría del par de elementos)
-- [ ] `control_mesh_generate_interface_method` — PENDIENTE (variante -element_geometry)
+- [x] `control_mesh_generate_interface_method` — implementada (`-element_geometry` para selección y/o generación; validada con `iface_gen_method` e `iface_gen_method_gen`)
 - [x] `control_mesh_generate_spring1` — presente en el GNU
 - [x] `control_mesh_generate_spring2` — presente en el GNU
 - [x] `control_mesh_generate_truss` — implementada (commit `bd7b3ab`, 2026-08-13)

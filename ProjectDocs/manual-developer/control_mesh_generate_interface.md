@@ -12,17 +12,26 @@
   - `control_mesh_generate_interface_geometry` (INTEGER, length 2, required
     `CONTROL_MESH_GENERATE_INTERFACE`): `geometry_item_name
     geometry_item_index` — restricts generation to the given geometry.
+  - `control_mesh_generate_interface_method` (INTEGER, length 2, required
+    `CONTROL_MESH_GENERATE_INTERFACE`): `method_select method_generate`.
+    `-element_geometry` selects between elements by `element_geometry`
+    (instead of `element_group`) and/or generates an `element_geometry`
+    record for the interface element.
+  - `element_geometry` (INTEGER, length 1, data_class ELEMENT): assigns a
+    geometrical set number to an element; elements with the same number
+    form a geometry referenced as `-element_geometry N`.
 - **New enums**: `CONTROL_MESH_GENERATE_INTERFACE`,
-  `CONTROL_MESH_GENERATE_INTERFACE_GEOMETRY` in `tochnog.h` /
-  `tochnog-mod.h` (kept in sync), between `_GENERATE_CONTACTSPRING_ELEMENT`
-  and `_GENERATE_SPRING1`.
+  `CONTROL_MESH_GENERATE_INTERFACE_GEOMETRY`,
+  `CONTROL_MESH_GENERATE_INTERFACE_METHOD`, `ELEMENT_GEOMETRY` in
+  `tochnog.h` / `tochnog-mod.h` (kept in sync).
 
 ## Algoritmo
 
 For each triple `(eg_i, eg_a, eg_b)` in the record:
 
-1. Scan element pairs `(iel, jel)` with `iel` in group `eg_a` and `jel`
-   in group `eg_b`.
+1. Scan element pairs `(iel, jel)` with `iel` matching `eg_a` and `jel`
+   matching `eg_b`. The match is by `element_group` by default, or by
+   `element_geometry` when `method_select==-ELEMENT_GEOMETRY`.
 2. Count the shared-face node pairs: nodes of `iel` and `jel` with
    coincident coordinates (`NODE_START_REFINED`, tolerance `EPS_COORD`).
 3. Choose the generated element type from the number of shared nodes:
@@ -30,8 +39,9 @@ For each triple `(eg_i, eg_a, eg_b)` in the record:
    - 3D, 3 shared nodes → `-prism6` `{nA0 nA1 nA2 nB0 nB1 nB2}`
    - 3D, 4 shared nodes → `-hex8` `{nA0..nA3 nB0..nB3}`
    - otherwise no interface is generated.
-4. The new element is assigned to group `eg_i`, marked with
-   `ELEMENT_MACRO_GENERATE = icontrol`, and `ELEMENT_DOF` /
+4. The new element is assigned to group `eg_i` (by default), or to
+   `element_geometry = eg_i` when `method_generate==-ELEMENT_GEOMETRY`,
+   marked with `ELEMENT_MACRO_GENERATE = icontrol`, and `ELEMENT_DOF` /
    `ELEMENT_DOF_INITIALISED` / `NONLOCAL_ELEMENT_INFO` are initialized
    (pattern `generate_spring`).
 5. `control_mesh_generate_interface_geometry`: every shared node of `iel`
@@ -64,7 +74,5 @@ For each triple `(eg_i, eg_a, eg_b)` in the record:
 
 ## Pendiente
 
-- `control_mesh_generate_interface_method` (`-element_geometry`) no
-  implementado: la asignación usa siempre `element_group`.
 - Tipos cuadráticos (bar3→quad6, tet10→tria12, hex27→quad18) no
   implementados; se generan solo `quad4`/`prism6`/`hex8`.

@@ -52,6 +52,27 @@ control_mesh_generate_interface_geometry 0  -geometry_quadrilateral 1
 Only element pairs whose shared nodes lie inside the geometry are
 converted.
 
+## Selección y generación por `element_geometry`
+
+`control_mesh_generate_interface_method index method_select method_generate`
+changes how elements are selected and how the generated interface is
+assigned:
+
+- `method_select = -element_geometry`: the pairs `eg_a eg_b` select
+  elements by `element_geometry` instead of `element_group`.
+- `method_generate = -element_geometry`: the generated interface element
+  receives an `element_geometry` record (instead of `element_group`).
+
+`element_geometry index geometry_set` assigns a geometrical set number to
+an element:
+
+```
+element_geometry 1  20
+element_geometry 2  30
+control_mesh_generate_interface 0  10 20 30
+control_mesh_generate_interface_method 0  -element_geometry -element_geometry
+```
+
 ## Elementos generados
 
 | Shared face | Generated element |
@@ -68,15 +89,22 @@ converted.
   their isoparametric equivalent.
 - `control_mesh_generate_interface_geometry index geometry_item_name
   geometry_item_index` — restrict generation to a geometry.
+- `control_mesh_generate_interface_method index method_select
+  method_generate` — select by `-element_geometry` and/or generate an
+  `element_geometry` record.
+- `element_geometry index geometry_set` — assign a geometrical set to an
+  element.
 
 ## Estado de implementación
 
 - **Implementado**: `control_mesh_generate_interface` (2D `quad4`, 3D
-  `prism6`/`hex8`) + `control_mesh_generate_interface_geometry`.
+  `prism6`/`hex8`) + `control_mesh_generate_interface_geometry` +
+  `control_mesh_generate_interface_method` (`-element_geometry`).
   Validado con `iface_gen` (dos quad4 con nodos duplicados en x=1 →
   interfaz `{2 4 5 7}` generada; la fricción MC sostiene la carga
   tangencial), `iface_gen_geom` (geometría que cubre la interfaz → se
-  genera) e `iface_gen_geom_off` (geometría desplazada → no se genera,
-  el bloque se mueve libre).
-- **Pendiente**: `control_mesh_generate_interface_method`
-  (`-element_geometry`); elementos cuadráticos (quad6, tria12, quad18).
+  genera), `iface_gen_geom_off` (geometría desplazada → no se genera, el
+  bloque se mueve libre), `iface_gen_method` (selección por
+  `element_geometry`) e `iface_gen_method_gen` (generación con
+  `element_geometry`).
+- **Pendiente**: elementos cuadráticos (quad6, tria12, quad18).

@@ -125,7 +125,7 @@ Fase 2: `control_mesh_switch`, `bounda_time_on_off`, `bounda_time_until_force`.
 **Controles / malla:**
 - `control_mesh_move`
 - `control_mesh_generate_interface_geometry` (2d/3d) — **HECHO 2026-08-17**
-  (`control_mesh_generate_interface` + `_geometry`, commits de la sesión)
+  (`control_mesh_generate_interface` + `_geometry` + `_method`, commits de la sesión)
 - `control_reset_value_dof`
 - `control_print_history_smooth`
 - `change_dataitem_apply`
@@ -693,8 +693,8 @@ Del changelog (`changes-site-archive.txt`), un usuario de Professional
   efecto observable. Requiere un test axisimétrico con fuerza normal y
   targets propios. Revertido; queda pendiente.
 - `control_mesh_generate_interface_geometry` — **HECHO 2026-08-17**
-  (`control_mesh_generate_interface` + `_geometry`; genera interfaces
-  entre grupos con cara compartida; `_method` queda pendiente)
+  (`control_mesh_generate_interface` + `_geometry` + `_method`; genera
+  interfaces entre grupos con cara compartida)
 
 #### Carril A — Infraestructura de interfaz (EN CURSO 2026-08-13)
 
