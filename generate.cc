@@ -22,6 +22,222 @@
 
 #define EPS_COORD 1.e-10
 
+// interface_face_subdivide - subdivide a shared face into linear sub-faces.
+//
+// The interface elements implemented are LINEAR (quad4/prism6/hex8). When
+// the two contacting elements are QUADRATIC (quad9/tet10/hex27/bar3), the
+// shared face has mid-side nodes (2D: 3 nodes; 3D tria6: 6 nodes; 3D
+// quad9: 9 nodes). Using a single linear interface over only the corner
+// nodes would leave the mid-side nodes kinematically uncoupled, creating
+// gaps. Instead we SUBDIVIDE the quadratic face into linear sub-faces
+// (pattern: mesh the face with triangles/quadrilaterals) and generate one
+// linear interface per sub-face, so ALL face nodes are coupled.
+//
+//   face_nnodes: number of shared nodes (2,3 linear; 3/6/9 quadratic)
+//   node_xyz[][]: coordinates of the shared nodes (side A)
+//   sub_faces[][]: filled with the node indices (into node_xyz) of each
+//                  linear sub-face
+//   sub_nnodes[]: number of nodes of each sub-face (2 or 3 or 4)
+//   returns: number of sub-faces
+//
+// The shared-node ordering is arbitrary (depends on the element scan), so
+// the geometry is classified by COORDINATES: a node is a mid-side node if
+// it is the average of two other nodes; the centre of a quad9 is the
+// average of the four corners. Sub-division rules:
+//   2D, 3 nodes (quadratic edge): 2 linear segments [c0 m] [m c1]
+//   3D, 6 nodes (tria6 from tet10): 4 linear triangles
+//   3D, 9 nodes (quad9 from hex27): 4 linear quads
+long int interface_face_subdivide( long int face_nnodes, double node_xyz[][MDIM],
+  long int sub_faces[][4], long int sub_nnodes[] )
+
+{
+  long int i=0, j=0, k=0, d=0;
+
+  // 2D linear edge (2 nodes): single sub-face
+  if ( face_nnodes==2 && ndim==2 ) {
+    sub_nnodes[0] = 2; sub_faces[0][0] = 0; sub_faces[0][1] = 1;
+    return 1;
+  }
+  // 3D linear tria (3 nodes): single sub-face
+  if ( face_nnodes==3 && ndim==3 ) {
+    sub_nnodes[0] = 3; sub_faces[0][0] = 0; sub_faces[0][1] = 1; sub_faces[0][2] = 2;
+    return 1;
+  }
+  // 3D linear quad (4 nodes): single sub-face
+  if ( face_nnodes==4 && ndim==3 ) {
+    sub_nnodes[0] = 4; sub_faces[0][0] = 0; sub_faces[0][1] = 1; sub_faces[0][2] = 2; sub_faces[0][3] = 3;
+    return 1;
+  }
+
+  // 2D quadratic edge (3 nodes): the mid node is the average of the two ends.
+  if ( face_nnodes==3 ) {
+    long int m = -1;
+    for ( i=0; i<3; i++ ) {
+      j = (i+1)%3; k = (i+2)%3;
+      long int ok = 1;
+      for ( d=0; d<ndim && ok; d++ )
+        if ( fabs( node_xyz[i][d] - 0.5*(node_xyz[j][d]+node_xyz[k][d]) ) > EPS_COORD )
+          ok = 0;
+      if ( ok ) { m = i; break; }
+    }
+    if ( m<0 ) return 0;
+    long int c0 = (m+1)%3, c1 = (m+2)%3;
+    // order each linear segment so its first node has the smaller
+    // coordinate along the edge direction -> tangent points +, normal
+    // points from side 2 towards side 1 (compression = positive strain).
+    sub_nnodes[0]=2; sub_nnodes[1]=2;
+    long int seg0a = c0, seg0b = m, seg1a = m, seg1b = c1;
+    // compare along the dominant edge direction
+    long int d0 = 0;
+    double span = -1.;
+    for ( d=0; d<ndim; d++ ) {
+      double s = fabs( node_xyz[c1][d] - node_xyz[c0][d] );
+      if ( s>span ) { span = s; d0 = d; }
+    }
+    if ( node_xyz[seg0b][d0] < node_xyz[seg0a][d0] ) { long int t=seg0a; seg0a=seg0b; seg0b=t; }
+    if ( node_xyz[seg1b][d0] < node_xyz[seg1a][d0] ) { long int t=seg1a; seg1a=seg1b; seg1b=t; }
+    sub_faces[0][0]=seg0a; sub_faces[0][1]=seg0b;
+    sub_faces[1][0]=seg1a; sub_faces[1][1]=seg1b;
+    return 2;
+  }
+
+  // 3D quadratic tria (6 nodes, from tet10). Identify the 3 corners
+  // (not an average of another pair) and the 3 mid-edge nodes.
+  if ( face_nnodes==6 ) {
+    long int corner[3], ncorner=0, mid[3], nmid=0;
+    for ( i=0; i<6; i++ ) {
+      long int is_mid = 0;
+      for ( j=0; j<6 && !is_mid; j++ ) {
+        if ( j==i ) continue;
+        for ( k=j+1; k<6 && !is_mid; k++ ) {
+          if ( k==i ) continue;
+          long int ok = 1;
+          for ( d=0; d<3 && ok; d++ )
+            if ( fabs( node_xyz[i][d] - 0.5*(node_xyz[j][d]+node_xyz[k][d]) ) > EPS_COORD )
+              ok = 0;
+          if ( ok ) is_mid = 1;
+        }
+      }
+      if ( is_mid ) mid[nmid++] = i; else corner[ncorner++] = i;
+    }
+    if ( ncorner!=3 || nmid!=3 ) return 0;
+    // corner i is opposite mid[i] (the mid of the two edges from corner i
+    // to the other two corners). Build the corner triangles so the
+    // mid-edges pair up: triangle i = (corner_i, mid_i, mid_k) with
+    // k such that mid_k connects corner_i's other two neighbours.
+    long int mid_opp[3][2];   // for corner i, the two mid nodes adjacent
+    for ( i=0; i<3; i++ ) {
+      long int a = (i+1)%3, b = (i+2)%3;
+      mid_opp[i][0] = -1; mid_opp[i][1] = -1;
+      for ( j=0; j<3; j++ ) {
+        // mid[j] is adjacent to corner i if it is the average of
+        // corner[i] and one of the other corners
+        long int ok = 1;
+        for ( d=0; d<3 && ok; d++ )
+          if ( fabs( node_xyz[mid[j]][d] - 0.5*(node_xyz[corner[i]][d]+node_xyz[corner[a]][d]) ) > EPS_COORD )
+            ok = 0;
+        if ( ok ) { mid_opp[i][0] = mid[j]; break; }
+      }
+      for ( j=0; j<3; j++ ) {
+        long int ok = 1;
+        for ( d=0; d<3 && ok; d++ )
+          if ( fabs( node_xyz[mid[j]][d] - 0.5*(node_xyz[corner[i]][d]+node_xyz[corner[b]][d]) ) > EPS_COORD )
+            ok = 0;
+        if ( ok ) { mid_opp[i][1] = mid[j]; break; }
+      }
+      if ( mid_opp[i][0]<0 || mid_opp[i][1]<0 ) return 0;
+    }
+    // central triangle = the 3 mid nodes
+    sub_nnodes[0]=3; sub_faces[0][0]=mid[0]; sub_faces[0][1]=mid[1]; sub_faces[0][2]=mid[2];
+    for ( i=0; i<3; i++ ) {
+      sub_nnodes[1+i]=3;
+      sub_faces[1+i][0]=corner[i];
+      sub_faces[1+i][1]=mid_opp[i][0];
+      sub_faces[1+i][2]=mid_opp[i][1];
+    }
+    return 4;
+  }
+
+  // 3D quadratic quad (9 nodes, from hex27). 4 corners, 4 mid-edge, 1 centre.
+  if ( face_nnodes==9 ) {
+    long int corner[4], ncorner=0, mid[4], nmid=0, centre=-1;
+    for ( i=0; i<9; i++ ) {
+      long int is_mid = 0;
+      for ( j=0; j<9 && !is_mid; j++ ) {
+        if ( j==i ) continue;
+        for ( k=j+1; k<9 && !is_mid; k++ ) {
+          if ( k==i ) continue;
+          long int ok = 1;
+          for ( d=0; d<3 && ok; d++ )
+            if ( fabs( node_xyz[i][d] - 0.5*(node_xyz[j][d]+node_xyz[k][d]) ) > EPS_COORD )
+              ok = 0;
+          if ( ok ) is_mid = 1;
+        }
+      }
+      if ( is_mid ) mid[nmid++] = i;
+      else corner[ncorner++] = i;
+    }
+    if ( ncorner!=4 || nmid!=4 ) return 0;
+    // centre = the node that is the average of the 4 corners
+    double cx=0., cy=0., cz=0.;
+    for ( i=0; i<4; i++ ) { cx+=node_xyz[corner[i]][0]; cy+=node_xyz[corner[i]][1]; cz+=node_xyz[corner[i]][2]; }
+    cx/=4.; cy/=4.; cz/=4.;
+    for ( i=0; i<9; i++ ) {
+      long int is_corner=0;
+      for ( j=0; j<4 && !is_corner; j++ ) if ( i==corner[j] ) is_corner=1;
+      if ( !is_corner ) {
+        long int is_mid=0;
+        for ( j=0; j<4 && !is_mid; j++ ) if ( i==mid[j] ) is_mid=1;
+        if ( !is_mid ) { centre=i; break; }
+      }
+    }
+    if ( centre<0 ) return 0;
+    // order the corners around the centre by angle
+    long int ordered[4]; ordered[0]=corner[0];
+    // mid edge between corner[i] and corner[j]
+    long int mid_ij[4][4]; for ( i=0;i<4;i++) for (j=0;j<4;j++) mid_ij[i][j]=-1;
+    for ( i=0; i<4; i++ ) {
+      for ( j=i+1; j<4; j++ ) {
+        for ( k=0; k<4; k++ ) {
+          long int ok = 1;
+          for ( d=0; d<3 && ok; d++ )
+            if ( fabs( node_xyz[mid[k]][d] - 0.5*(node_xyz[corner[i]][d]+node_xyz[corner[j]][d]) ) > EPS_COORD )
+              ok = 0;
+          if ( ok ) { mid_ij[i][j]=mid_ij[j][i]=mid[k]; break; }
+        }
+      }
+    }
+    // walk the perimeter: from corner 0, the two adjacent mids connect to
+    // two of the other corners; pick the next corner that shares a mid with
+    // corner 0, then continue.
+    for ( i=1; i<4; i++ ) {
+      long int prev = ordered[i-1];
+      long int nxt = -1;
+      for ( j=0; j<4 && nxt<0; j++ ) {
+        if ( j==prev ) continue;
+        long int used = 0;
+        for ( k=0; k<i; k++ ) if ( ordered[k]==j ) used=1;
+        if ( used ) continue;
+        if ( mid_ij[prev][j]>=0 ) nxt = j;
+      }
+      if ( nxt<0 ) return 0;
+      ordered[i] = nxt;
+    }
+    // sub-faces: (corner_i, mid_i->i+1, centre, mid_i-1->i)
+    for ( i=0; i<4; i++ ) {
+      long int a = ordered[i], b = ordered[(i+1)%4], c = ordered[(i+3)%4];
+      sub_nnodes[i]=4;
+      sub_faces[i][0]=a;
+      sub_faces[i][1]=mid_ij[a][b];
+      sub_faces[i][2]=centre;
+      sub_faces[i][3]=mid_ij[c][a];
+    }
+    return 4;
+  }
+
+  return 0;
+}
+
 void generate_spring( long int icontrol )
 
 {
@@ -468,13 +684,14 @@ void generate_beam_truss( long int icontrol, long int task )
 void generate_interface( long int icontrol )
 
 {
-  long int i=0, k=0, iel=0, jel=0, inol=0, jnol=0,
+  long int i=0, k=0, iel=0, jel=0, inol=0, jnol=0, isub=0, nsub=0,
     max_element=0, max_node=0, element_group=0, in_geometry=0, ldum=0,
     swit=0, length=0, nshared=0, sharedA[MNOL], sharedB[MNOL],
     length_geometry=0, length_gen=0,
-    new_name=0, idum[1], *elA=NULL, *elB=NULL, *nodesA=NULL, *nodesB=NULL,
+    new_name=0, sub_faces[8][4], sub_nnodes[8],
+    idum[1], *elA=NULL, *elB=NULL, *nodesA=NULL, *nodesB=NULL,
     *geometry_entity=NULL, *gen=NULL;
-  double rdum=0., ddum[MDIM], *cA=NULL, *cB=NULL;
+  double rdum=0., ddum[MDIM], *cA=NULL, *cB=NULL, node_xyz[MNOL][MDIM];
   long int zero=0, mnolnuknwn=npointmax*nuknwn,
     length_nei=1+npointmax*ndim+npointmax+2;
   double *tmp_element_dof=NULL, *dworknei=NULL;
@@ -561,7 +778,7 @@ void generate_interface( long int icontrol )
 
         // shared face = node pairs of A and B with coincident coordinates
         nshared = 0;
-        for ( inol=0; inol<nnolA && nshared<=4; inol++ ) {
+        for ( inol=0; inol<nnolA && nshared<MNOL; inol++ ) {
           cA = db_dbl( NODE_START_REFINED, nodesA[inol], VERSION_NORMAL );
           for ( jnol=0; jnol<nnolB; jnol++ ) {
             cB = db_dbl( NODE_START_REFINED, nodesB[jnol], VERSION_NORMAL );
@@ -573,11 +790,7 @@ void generate_interface( long int icontrol )
             }
           }
         }
-        // decide the generated element from the number of shared nodes
-        if      ( ndim==2 && nshared==2 ) new_name = -QUAD4;
-        else if ( ndim==3 && nshared==3 ) new_name = -PRISM6;
-        else if ( ndim==3 && nshared==4 ) new_name = -HEX8;
-        else continue;
+        if ( nshared<2 ) continue;
 
         // geometry restriction: every shared node must be inside
         if ( length_geometry>0 ) {
@@ -594,35 +807,54 @@ void generate_interface( long int icontrol )
         // avoid duplicate generation of the symmetric pair (jel,iel)
         if ( iel>jel ) continue;
 
-        // generate the interface element
-        max_element++;
-        elB[0] = new_name;
-        length = 1 + 2*nshared;
+        // collect the shared-node coordinates (side A) for the subdivision
         for ( k=0; k<nshared; k++ ) {
-          elB[1+k]        = sharedA[k];
-          elB[1+nshared+k] = sharedB[k];
+          cA = db_dbl( NODE_START_REFINED, sharedA[k], VERSION_NORMAL );
+          for ( long int d=0; d<ndim; d++ ) node_xyz[k][d] = cA[d];
         }
-        db( ELEMENT, max_element, elB, ddum, length, VERSION_NORMAL, PUT );
-        length = 1;
-        if ( method_generate==-ELEMENT_GEOMETRY ) {
-          // generate an element_geometry record instead of element_group
-          element_group = eg_iface;
-          db( ELEMENT_GEOMETRY, max_element, &element_group, ddum, length,
+
+        // subdivide the (possibly quadratic) face into linear sub-faces.
+        // A quadratic face (3 nodes in 2D, 6/9 in 3D) is split so ALL
+        // face nodes (including mid-side) get coupled by the interface.
+        nsub = interface_face_subdivide( nshared, node_xyz, sub_faces,
+          sub_nnodes );
+        if ( nsub<=0 ) continue;
+
+        // generate one linear interface element per sub-face
+        for ( isub=0; isub<nsub; isub++ ) {
+          long int nnsub = sub_nnodes[isub];
+          if      ( nnsub==2 ) new_name = -QUAD4;
+          else if ( nnsub==3 ) new_name = -PRISM6;
+          else                 new_name = -HEX8;
+          max_element++;
+          elB[0] = new_name;
+          length = 1 + 2*nnsub;
+          for ( k=0; k<nnsub; k++ ) {
+            elB[1+k]           = sharedA[ sub_faces[isub][k] ];
+            elB[1+nnsub+k]     = sharedB[ sub_faces[isub][k] ];
+          }
+          db( ELEMENT, max_element, elB, ddum, length, VERSION_NORMAL, PUT );
+          length = 1;
+          if ( method_generate==-ELEMENT_GEOMETRY ) {
+            // generate an element_geometry record instead of element_group
+            element_group = eg_iface;
+            db( ELEMENT_GEOMETRY, max_element, &element_group, ddum, length,
+              VERSION_NORMAL, PUT );
+          }
+          else {
+            element_group = eg_iface;
+            db( ELEMENT_GROUP, max_element, &element_group, ddum, length,
+              VERSION_NORMAL, PUT );
+          }
+          db( ELEMENT_MACRO_GENERATE, max_element, &icontrol, ddum, length,
+            VERSION_NORMAL, PUT );
+          db( ELEMENT_DOF, max_element, idum, tmp_element_dof, mnolnuknwn,
+            VERSION_NORMAL, PUT );
+          db( ELEMENT_DOF_INITIALISED, max_element, &zero, ddum, length,
+            VERSION_NORMAL, PUT );
+          db( NONLOCAL_ELEMENT_INFO, max_element, idum, dworknei, length_nei,
             VERSION_NORMAL, PUT );
         }
-        else {
-          element_group = eg_iface;
-          db( ELEMENT_GROUP, max_element, &element_group, ddum, length,
-            VERSION_NORMAL, PUT );
-        }
-        db( ELEMENT_MACRO_GENERATE, max_element, &icontrol, ddum, length,
-          VERSION_NORMAL, PUT );
-        db( ELEMENT_DOF, max_element, idum, tmp_element_dof, mnolnuknwn,
-          VERSION_NORMAL, PUT );
-        db( ELEMENT_DOF_INITIALISED, max_element, &zero, ddum, length,
-          VERSION_NORMAL, PUT );
-        db( NONLOCAL_ELEMENT_INFO, max_element, idum, dworknei, length_nei,
-          VERSION_NORMAL, PUT );
         // mark the source elements so the interface is generated only once
         db( ELEMENT_MACRO_GENERATE, iel, &icontrol, ddum, length,
           VERSION_NORMAL, PUT );
