@@ -62,14 +62,15 @@ extern "C"
 // P = I - n tensor n (the normal component is capped; the tangential
 // part is scaled to the limit).
 void materi_direct_cutoff( long int element, long int gr,
+  long int plasti_on_boundary, double dtime,
   double new_sig[], double ddsdde[], double direct_normal[] )
 
 {
   long int idim=0, jdim=0, kdim=0, ldim=0, ind=0, mc_active=0, ten_active=0,
-    ldum=0, idum[1];
+    visco_mc=0, visco_ten=0, ldum=0, idum[1];
   double phi=0., c=0., phi_flow=0., sigy=0., sig_n=0., tau_norm=0.,
-    max_fric=0., scale=0., normal[MDIM], tau[MDIM], ddum[MDIM],
-    plasti_data[DATA_ITEM_SIZE];
+    max_fric=0., scale=0., factor=0., normal[MDIM], tau[MDIM], ddum[MDIM],
+    plasti_data[DATA_ITEM_SIZE], tm=0.;
   static const long int MSTRAIN_LOCAL=6;
 
   array_set( normal, 0., MDIM );
@@ -79,10 +80,39 @@ void materi_direct_cutoff( long int element, long int gr,
   mc_active = get_group_data( GROUP_MATERI_PLASTI_MOHR_COUL_DIRECT, gr,
     element, new_sig, plasti_data, ldum, GET_IF_EXISTS );
   if ( mc_active ) { phi = plasti_data[0]; c = plasti_data[1]; phi_flow = plasti_data[2]; }
+  // wall values (element attached to a wall) and visco relaxation time
+  if ( mc_active && plasti_on_boundary ) {
+    if ( get_group_data( GROUP_MATERI_PLASTI_MOHR_COUL_DIRECT_WALL, gr,
+        element, new_sig, plasti_data, ldum, GET_IF_EXISTS ) ) {
+      phi = plasti_data[0]; c = plasti_data[1]; phi_flow = plasti_data[2];
+    }
+  }
+  if ( mc_active ) {
+    if ( get_group_data( GROUP_MATERI_PLASTI_MOHR_COUL_DIRECT_VISCO, gr,
+        element, new_sig, plasti_data, ldum, GET_IF_EXISTS ) ) {
+      visco_mc = 1;
+      tm = plasti_data[0];
+    }
+  }
 
   ten_active = get_group_data( GROUP_MATERI_PLASTI_TENSION_DIRECT, gr,
     element, new_sig, plasti_data, ldum, GET_IF_EXISTS );
   if ( ten_active ) { sigy = plasti_data[0]; }
+  if ( ten_active && plasti_on_boundary ) {
+    if ( get_group_data( GROUP_MATERI_PLASTI_TENSION_DIRECT_WALL, gr,
+        element, new_sig, plasti_data, ldum, GET_IF_EXISTS ) ) {
+      sigy = plasti_data[0];
+    }
+  }
+  if ( ten_active ) {
+    if ( get_group_data( GROUP_MATERI_PLASTI_TENSION_DIRECT_VISCO, gr,
+        element, new_sig, plasti_data, ldum, GET_IF_EXISTS ) ) {
+      visco_ten = 1;
+      tm = plasti_data[0];
+    }
+  }
+  // visco factor: f = 1 - exp(-dt/tm); f->0 elastic (dt<<tm), f->1 plastic
+  factor = 1. - exp( -dtime / ( (tm>0.) ? tm : 1. ) );
 
   // traction t = sig . n  (3x3 stress stored row-major; only ndim used)
   double t[MDIM];
@@ -101,17 +131,10 @@ void materi_direct_cutoff( long int element, long int gr,
   // tension cut-off: cap the normal traction
   if ( ten_active && sig_n > sigy ) {
     double corr = sig_n - sigy;   // reduce sig_n to sigy
+    if ( visco_ten ) corr *= factor;   // visco: partial relaxation
     for ( idim=0; idim<ndim; idim++ )
       for ( jdim=0; jdim<ndim; jdim++ )
         new_sig[idim*MDIM+jdim] -= corr * normal[idim] * normal[jdim];
-    // consistent tangent: zero the normal-normal component of ddsdde on
-    // the plane direction (the normal stress is capped)
-    for ( idim=0; idim<MDIM; idim++ )
-      for ( jdim=0; jdim<MDIM; jdim++ )
-        for ( kdim=0; kdim<MDIM; kdim++ )
-          for ( ldim=0; ldim<MDIM; ldim++ ) {
-            // skip full consistent derivation; scale the normal block
-          }
     sig_n = sigy;
   }
 
@@ -121,6 +144,7 @@ void materi_direct_cutoff( long int element, long int gr,
     if ( max_fric < 0. ) max_fric = 0.;
     if ( tau_norm > max_fric && tau_norm > 0. ) {
       scale = max_fric / tau_norm;
+      if ( visco_mc ) scale = 1. - factor*(1.-scale);   // visco: partial
       // new_sig -= (1-scale)*(tau x n + n x tau)  (symmetric correction)
       for ( idim=0; idim<ndim; idim++ ) {
         for ( jdim=0; jdim<ndim; jdim++ ) {
@@ -816,7 +840,8 @@ void set_stress( long int element, long int gr,
         VERSION_NORMAL ) ||
          db_active_index( GROUP_MATERI_PLASTI_TENSION_DIRECT, gr,
         VERSION_NORMAL ) ) {
-      materi_direct_cutoff( element, gr, new_sig, ddsdde, direct_normal );
+      materi_direct_cutoff( element, gr, plasti_on_boundary, dtime,
+        new_sig, ddsdde, direct_normal );
     }
     array_move( new_sig, test_sig, MDIM*MDIM );
     if ( materi_plasti_rho ) 
