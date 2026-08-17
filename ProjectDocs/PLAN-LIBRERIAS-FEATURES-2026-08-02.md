@@ -77,7 +77,7 @@ Fuente: changelog oficial de tochnogprofessional.nl (captura web.archive.org 202
 | Activación periódica de bounda_time | `bounda_time_on_off` | `bounda.cc` |
 | Factor multiplicador en prints | `control_print_history_factor`, `control_print_data_versus_data_factor` | `print*.cc` |
 | Print suavizado de historia | `control_print_history_smooth` | `print_hi.cc` |
-| Desplazamiento relativo de material | `materi_displacement_relative` (i.c.w. `materi_velocity_integrated`) | `materi.cc` / `elem.cc` |
+| Desplazamiento relativo de material | `materi_displacement_relative` (i.c.w. `materi_velocity_integrated`) | `dof.cc` / `top.cc` / `data.cc` — **HECHO 2026-08-17** |
 | Apply/no-apply de change_dataitem | `change_dataitem_apply` | `change.cc` |
 | Check de uso de datos | `check_used` | `check.cc` |
 | Iteraciones plásticas máximas | `materi_plasti_maximum_iterations` | `plasti.cc` |
@@ -671,9 +671,10 @@ Del changelog (`changes-site-archive.txt`), un usuario de Professional
 2024 esperaría estas. **Pendientes**:
 
 - `materi_displacement_relative` (i.c.w. `materi_velocity_integrated`) —
-  **PENDIENTE DE DISEÑO (2026-08-13)**: requiere guardar el desplazamiento
-  de referencia en cada cambio de paso/reset y calcular la diferencia;
-  toca múltiples rutinas de integración. Nivel alto.
+  **HECHO 2026-08-17**: dof relativo `disr*` con referencia re-sincronizada
+  en cambio de timestep (`control_timestep`) y reset de desplazamiento
+  (`control_reset_dof`); integración en `dof.cc`; validado con `mat_rel`
+  y `mat_rel_reset`.
 - `strain_settlement_diagram*` (asientos dependientes de tensiones) —
   **PENDIENTE DE DISEÑO (2026-08-13)**: cálculo de asientos no trivial.
 - [x] `control_reset_value_dof` (y `control_reset_dof`, `_value_constant`,
