@@ -61,8 +61,8 @@ Fuente: changelog oficial de tochnogprofessional.nl (captura web.archive.org 202
 |---|---|---|
 | Hipoplasticidad Masin con OCR | `group_materi_plasti_hypo_masin` | `plasti.cc`, similar a hypo_wolfersdorff |
 | Permeabilidad dependiente de tensión vertical | `group_groundflow_permeability_vertical_stress` | `groundda.cc` / flujo |
-| Tension directa en plano normal | `group_materi_plasti_tension_direct_normal` (+ `_automatic`) | `plasti.cc` |
-| Mohr-Coul en plano normal | `group_materi_plasti_mohr_coul_direct_normal` (+ `_automatic`) | `plasti.cc` |
+| Tension directa en plano normal | `group_materi_plasti_tension_direct_normal` (+ `_automatic`) | `stress.cc` (`materi_direct_cutoff`) — **HECHO 2026-08-17** |
+| Mohr-Coul en plano normal | `group_materi_plasti_mohr_coul_direct_normal` (+ `_automatic`) | `stress.cc` (`materi_direct_cutoff`) — **HECHO 2026-08-17** |
 | Gap de interfaz | `group_interface_gap` (cambio de default) | `interface` / `contact.cc` |
 
 ### 2.2 Comandos de control (dificultad media)
@@ -317,8 +317,8 @@ El índice es limpio: cada entrada de la sección 6 "data records" es una keywor
       del clay (lambda=λ*, ee0=e0, pe0=p0, betaR=1), creep clamp por
       estabilidad. Test hypomasin5.dat (sigxx -104.1). Refactor interfaz:
       Dref movido a _clay_visco_jm para dejar _clay_visco fiel al manual.
-- [ ] `group_materi_plasti_tension_direct_normal` (+ `_automatic`) — requiere `group_materi_plasti_tension_direct` (no existe).
-      `group_materi_plasti_mohr_coul_direct_normal` (+ `_automatic`) — requiere `group_interface_materi_plasti_mohr_coul_direct`.
+- [x] `group_materi_plasti_tension_direct_normal` (+ `_automatic`) — **HECHO 2026-08-17** (cut-off directo de tracción en un plano; `materi_direct_cutoff` en stress.cc; con `group_materi_plasti_tension_direct`)
+- [x] `group_materi_plasti_mohr_coul_direct_normal` (+ `_automatic`) — **HECHO 2026-08-17** (cut-off directo de cortante en un plano; `materi_direct_cutoff` en stress.cc; con `group_materi_plasti_mohr_coul_direct`)
 - [x] `group_groundflow_permeability_vertical_stress` — kp = a/(sigv/sig0)^b
       con clamp [min,max], combinada con group_groundflow_permeability.
       **IMPLEMENTADO y VALIDADO (2026-08-11)**: groundda.cc groundflow_data.
@@ -410,6 +410,8 @@ propuesto por demanda práctica:
   `group_materi_plasti_tension_direct` y elementos de interfaz
   (`group_interface_*`) que NO existen en esta base. Requiere evaluar primero
   si los elementos de interfaz son implementables. BLOQUEADO.
+  **RESUELTO 2026-08-17**: los elementos de interfaz (Carril A) y la familia
+  `_direct` en materia (Carril B) están implementados.
 - **P4-E (modelos nuevos)**: PM4Sand (sin UMAT), Sand Hypoplasticity (solo
   validar wolfersdorff ya cubierto), EMC/otros (ISA, barodesy) según demanda.
   Requieren UMAT de referencia o trabajo de calibración extenso. POSPUESTO.
@@ -681,9 +683,10 @@ Del changelog (`changes-site-archive.txt`), un usuario de Professional
   pendientes.
 - `group_materi_plasti_mohr_coul_direct_normal` y
   `group_materi_plasti_tension_direct_normal` (+ `_automatic`) —
-  **PENDIENTE DE DISEÑO (2026-08-13)**: el GNU no tiene la familia
-  `mohr_coul_direct`/`tension_direct` en absoluto; implementarla requiere
-  el modelo constitutivo completo con plano normal. Nivel alto.
+  **HECHO 2026-08-17**: la familia `mohr_coul_direct`/`tension_direct`
+  en materia implementada como cut-off directo de tensiones en un plano
+  (`materi_direct_cutoff` en stress.cc); validada con materi_direct,
+  materi_direct_mc y materi_direct_auto.
 - `bounda_time_until_*` (ya implementado: bounda_time_until_force)
 - [x] `control_change_dataitem_apply`. **HECHO 2026-08-13** (con -no ignora
   change_dataitem: targets de hypo1 se cumplen; sin apply la geometry
