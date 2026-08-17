@@ -70,7 +70,7 @@ suite sfnet, o un test propio. El registro completo:
 
 **Carril B — `control_mesh_generate_interface` (+ `_geometry` + `_method` + subdivisión cuadrática)** | `947ac83` + `87f157d` + `3d9ed64` + `ced696f` + `9a2b422` + `14a94d3` | 2026-08-17 | genera elementos de interfaz entre dos grupos de elementos que comparten una cara (nodos duplicados espacialmente). Sintaxis `index eg_i eg_a eg_b eg_j eg_c eg_d...`; el elemento generado se asigna a `eg_i`. `_geometry` filtra por geometría; `_method` (`-element_geometry`) selecciona por `element_geometry` y/o genera un registro `element_geometry`. **Subdivisión de caras cuadráticas** (`interface_face_subdivide`): quad9/bar3 (arista 3 nodos → 2 `quad4`), tet10 (tria6 → 4 `prism6`), hex27 (quad9 → 4 `hex8`) — acopla todos los nodos incl. medios/centro; clasificación por coordenadas. Validado con `iface_gen*` (lineal, geometría, método) e `iface_gen_quad9` (2 quad9 → 2 interfaces quad4, fricción MC sostiene). |
 
-**Carril B — `group_materi_plasti_mohr_coul_direct`/`tension_direct` (+ `_normal`/`_normal_automatic`)** | `(commit en curso)` | 2026-08-17 | leyes plásticas de **cut-off directo de tensiones** en un plano con normal `n` (patrón del manual: sin deformaciones plásticas). `tension_direct sigy` capa la tracción normal; `mohr_coul_direct phi c phi_flow` capa el cortante a `max_fric = max(c - sig_n*tan(phi),0)`. `_normal` da la normal explícita; `_normal_automatic -yes` la toma del elemento (cross product de aristas, en `materi()`). `materi_direct_cutoff()` en stress.cc, llamado tras el cálculo elástico y antes del test de fluencia. Tangente consistente ajustada via proyección sobre el plano. Validado con `materi_direct` (tracción uniaxial → sigyy=1.0), `materi_direct_mc` (cortante puro → sigxy=1.0) y `materi_direct_auto` (normal del elemento → sigzz=1.0). |
+**Carril B — `group_materi_plasti_mohr_coul_direct`/`tension_direct` (+ `_normal`/`_normal_automatic`/`_visco`/`_wall`)** | `b6d4be6` + `7f51812` + `(commit visco/wall en curso)` | 2026-08-17 | leyes plásticas de **cut-off directo de tensiones** en un plano con normal `n` (patrón del manual: sin deformaciones plásticas). `tension_direct sigy` capa la tracción normal; `mohr_coul_direct phi c phi_flow` capa el cortante a `max_fric = max(c - sig_n*tan(phi),0)`. `_normal` da la normal explícita; `_normal_automatic -yes` la toma del elemento; `_visco tm` relaja el cut-off (`factor=1-exp(-dt/tm)`); `_wall` usa valores alternativos si el elemento está pegado a una pared (`plasti_on_boundary`). `materi_direct_cutoff()` en stress.cc. Validado con `materi_direct`, `materi_direct_mc`, `materi_direct_auto`, `materi_direct_visco` y `materi_direct_wall`. |
 
 Nota: las features marcadas solo "GNU" en el detalle por familia (sin
 fila en esta tabla) ya existían en el fork sfnet 2014 y no fueron
@@ -1204,8 +1204,8 @@ marcado `PENDIENTE` puede estar cubierto en el GNU bajo otro nombre:
 - [x] `group_materi_plasti_mohr_coul_direct` — implementada (cut-off directo de cortante en un plano; `materi_direct_cutoff` en stress.cc; validada con `materi_direct_mc`)
 - [x] `group_materi_plasti_mohr_coul_direct_normal` — implementada (normal explícita del plano; validada con `materi_direct_mc`)
 - [x] `group_materi_plasti_mohr_coul_direct_normal_automatic` — implementada (normal del elemento; validada con `materi_direct_auto`)
-- [ ] `group_materi_plasti_mohr_coul_direct_visco` — PENDIENTE
-- [ ] `group_materi_plasti_mohr_coul_direct_wall` — PENDIENTE
+- [x] `group_materi_plasti_mohr_coul_direct_visco` — implementada (relajación visco: `factor = 1-exp(-dt/tm)`; validada con `materi_direct_visco`)
+- [x] `group_materi_plasti_mohr_coul_direct_wall` — implementada (valores alternativos si el elemento está pegado a una pared, vía `plasti_on_boundary`; validada con `materi_direct_wall`)
 - [ ] `group_materi_plasti_mohr_coul_hardening_softening` — PENDIENTE
 - [ ] `group_materi_plasti_mpc` — PENDIENTE
 - [ ] `group_materi_plasti_mpc_factor` — PENDIENTE
@@ -1215,8 +1215,8 @@ marcado `PENDIENTE` puede estar cubierto en el GNU bajo otro nombre:
 - [x] `group_materi_plasti_tension_direct` — implementada (cut-off directo de tracción normal en un plano; validada con `materi_direct`)
 - [x] `group_materi_plasti_tension_direct_normal` — implementada (normal explícita; validada con `materi_direct`)
 - [x] `group_materi_plasti_tension_direct_normal_automatic` — implementada (normal del elemento; validada con `materi_direct_auto`)
-- [ ] `group_materi_plasti_tension_direct_visco` — PENDIENTE
-- [ ] `group_materi_plasti_tension_direct_wall` — PENDIENTE
+- [x] `group_materi_plasti_tension_direct_visco` — implementada (relajación visco; validada con `materi_direct_visco`)
+- [x] `group_materi_plasti_tension_direct_wall` — implementada (valores alternativos en pared; validada con `materi_direct_wall`)
 - [x] `group_materi_plasti_user` — presente en el GNU
 - [x] `group_materi_plasti_visco_exponential` — presente en el GNU
 - [ ] `group_materi_plasti_visco_exponential_limit` — PENDIENTE

@@ -17,6 +17,14 @@
     the direct record): `normal_x normal_y normal_z`.
   - `group_materi_plasti_tension_direct_normal_automatic` (INTEGER, length 1,
     required the direct record): `switch` (`-yes`).
+  - `group_materi_plasti_mohr_coul_direct_visco` (DOUBLE, length 1, required
+    the direct record): `tm`.
+  - `group_materi_plasti_mohr_coul_direct_wall` (DOUBLE, length 3, required
+    the direct record): `phi c phi_flow`.
+  - `group_materi_plasti_tension_direct_visco` (DOUBLE, length 1, required
+    the direct record): `tm`.
+  - `group_materi_plasti_tension_direct_wall` (DOUBLE, length 1, required
+    the direct record): `sigy`.
 - **New enums**: `GROUP_MATERI_PLASTI_MOHR_COUL_DIRECT(_NORMAL[_AUTOMATIC])`,
   `GROUP_MATERI_PLASTI_TENSION_DIRECT(_NORMAL[_AUTOMATIC])` in `tochnog.h` /
   `tochnog-mod.h` (kept in sync, alphabetical order).
@@ -72,6 +80,26 @@ via the projection operator; the full consistent tangent derivation (the
 - `_normal_automatic` computes the element normal from the first two edges;
   for 2D elements (in the xy plane) this gives the z direction.
 
+## Viscoplasticidad (`_visco`)
+
+`group_materi_plasti_*_direct_visco tm` relaxes the cut-off over time. The
+viscous response interpolates between the elastic and the (fully capped)
+plastic response:
+```
+sig_vp = sig_e + factor*(sig_p - sig_e),   factor = 1 - exp(-dt/tm)
+```
+`factor -> 0` for `dt << tm` (elastic response), `factor -> 1` for `dt >> tm`
+(fully plastic). Implemented in `materi_direct_cutoff` by scaling the
+correction by `factor` (tension cap and MC `scale`).
+
+## Pared (`_wall`)
+
+`group_materi_plasti_*_direct_wall` provides alternative parameters used when
+the element is attached to a wall, detected via `plasti_on_boundary`
+(`group.cc`: an element node belongs to a group listed in
+`group_materi_plasti_boundary`). `set_stress` passes `plasti_on_boundary` to
+`materi_direct_cutoff`, which selects the `_wall` values when it is set.
+
 ## Validación
 
 - `materi_direct`: quad4 uniaxial tension in y, `tension_direct 1.0` +
@@ -80,3 +108,7 @@ via the projection operator; the full consistent tangent derivation (the
   `_normal 0 1 0` → sigxy capped to 1.0 (max_fric = c).
 - `materi_direct_auto`: hex8 uniaxial tension in z, `tension_direct 1.0` +
   `_normal_automatic -yes` → sigzz capped to 1.0 (element normal = z).
+- `materi_direct_visco`: same as materi_direct but with `_visco tm=1.0` →
+  sigyy relaxed to ~1210 (between elastic 2000 and fully capped 1.0).
+- `materi_direct_wall`: quad4 with `group_materi_plasti_boundary` + `_wall
+  10.0` → sigyy capped to ~10.17 (the wall value, not the base 1.0).

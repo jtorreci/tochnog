@@ -61,8 +61,8 @@ Fuente: changelog oficial de tochnogprofessional.nl (captura web.archive.org 202
 |---|---|---|
 | Hipoplasticidad Masin con OCR | `group_materi_plasti_hypo_masin` | `plasti.cc`, similar a hypo_wolfersdorff |
 | Permeabilidad dependiente de tensión vertical | `group_groundflow_permeability_vertical_stress` | `groundda.cc` / flujo |
-| Tension directa en plano normal | `group_materi_plasti_tension_direct_normal` (+ `_automatic`) | `stress.cc` (`materi_direct_cutoff`) — **HECHO 2026-08-17** |
-| Mohr-Coul en plano normal | `group_materi_plasti_mohr_coul_direct_normal` (+ `_automatic`) | `stress.cc` (`materi_direct_cutoff`) — **HECHO 2026-08-17** |
+| Tension directa en plano normal | `group_materi_plasti_tension_direct_normal` (+ `_automatic`, `_visco`, `_wall`) | `stress.cc` (`materi_direct_cutoff`) — **HECHO 2026-08-17** |
+| Mohr-Coul en plano normal | `group_materi_plasti_mohr_coul_direct_normal` (+ `_automatic`, `_visco`, `_wall`) | `stress.cc` (`materi_direct_cutoff`) — **HECHO 2026-08-17** |
 | Gap de interfaz | `group_interface_gap` (cambio de default) | `interface` / `contact.cc` |
 
 ### 2.2 Comandos de control (dificultad media)
