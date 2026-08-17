@@ -8,7 +8,7 @@
 #     para que un archivo patologico no pueda matar la VM.
 #   - timeout en el paso de compilacion: si algo se cuelga, se aborta.
 #   - Link con LAPACK/BLAS real (sin libf2c, ya no es necesaria).
-#   - Verificacion automatica: corre la suite de tests (13 tests / 38 runs)
+#   - Verificacion automatica: corre la suite de tests (13 tests / 40 runs)
 #     y comprueba targets.
 #
 # Uso: ./scripts/build_safe.sh [--clean]
@@ -94,7 +94,8 @@ HIPO_TOTAL=0
 # + iface_gen_method/iface_gen_method_gen (control_mesh_generate_interface_method)
 # + iface_gen_quad9 (subdivision de caras cuadraticas 2D)
 # + materi_direct/materi_direct_mc/materi_direct_auto (plasti directo normal)
-# + materi_direct_visco/materi_direct_wall (_visco/_wall del plasti directo).
+# + materi_direct_visco/materi_direct_wall (_visco/_wall del plasti directo)
+# + mat_rel/mat_rel_reset (materi_displacement_relative).
 for t in hypo1 hypo2 hypo3 hypo4 smooth1 dof1 mlx1 vtk_dof1 gen1 genbeam1 reset1 cda1 \
          iface_mc iface_mc_1step iface_mc_slip iface_mc_slip_1step iface_mc_tension iface_mc_gap \
          iface_mc_mem iface_mc_dil iface_mc_dil_1step iface_mc_num \
@@ -102,7 +103,8 @@ for t in hypo1 hypo2 hypo3 hypo4 smooth1 dof1 mlx1 vtk_dof1 gen1 genbeam1 reset1
          iface_gen iface_gen_geom iface_gen_geom_off iface_gen_method iface_gen_method_gen \
          iface_gen_quad9 \
          materi_direct materi_direct_mc materi_direct_auto \
-         materi_direct_visco materi_direct_wall; do
+         materi_direct_visco materi_direct_wall \
+         mat_rel mat_rel_reset; do
   HIPO_TOTAL=$((HIPO_TOTAL+1))
   ( cd validation-suite/test-2014 &&
     ulimit -v 4000000 &&
@@ -115,5 +117,5 @@ for t in hypo1 hypo2 hypo3 hypo4 smooth1 dof1 mlx1 vtk_dof1 gen1 genbeam1 reset1
     echo "    $t: FALLO (rc=$RC)"
   fi
 done
-echo "==> Resumen: $HIPO_OK/$HIPO_TOTAL runs OK (13 tests: 12 preexistentes + familia iface_mc en 10 runs + familia 3D en 5 runs + familia generate_interface en 6 runs + familia materi_direct en 5 runs)."
+echo "==> Resumen: $HIPO_OK/$HIPO_TOTAL runs OK (13 tests: 12 preexistentes + familia iface_mc en 10 runs + familia 3D en 5 runs + familia generate_interface en 6 runs + familia materi_direct en 5 runs + materi_displacement_relative en 2 runs)."
 echo "==> Log de compilacion completo en /tmp/tn_build_safe.log"

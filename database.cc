@@ -3575,6 +3575,15 @@ void db_initialize( long int dof_type[], long int dof_label[] )
 
   strcpy(name[MATERI_DISPLACEMENT],"materi_displacement");
 
+  strcpy(name[MATERI_DISPLACEMENT_RELATIVE],"materi_displacement_relative");
+
+  strcpy(name[MATERI_DISPLACEMENT_RELATIVE_REF],"materi_displacement_relative_ref");
+  type[MATERI_DISPLACEMENT_RELATIVE_REF] = DOUBLE_PRECISION;
+  data_length[MATERI_DISPLACEMENT_RELATIVE_REF] = 1;
+  no_index[MATERI_DISPLACEMENT_RELATIVE_REF] = 1;
+  version_all[MATERI_DISPLACEMENT_RELATIVE_REF] = 1;
+  data_class[MATERI_DISPLACEMENT_RELATIVE_REF] = MATERI;
+
   strcpy(name[MATERI_HISTORY_VARIABLES],"materi_history_variables");
 
   strcpy(name[MATERI_MAXWELL_STRESS],"materi_maxwell_stress");
@@ -4599,6 +4608,13 @@ void db_initialize( long int dof_type[], long int dof_label[] )
       if      ( n==1 ) strcpy( basename, "disx"  );
       else if ( n==2 ) strcpy( basename, "disy"  );
       else if ( n==3 ) strcpy( basename, "disz"  );
+    }
+    else if ( dof_type[iuknwn]==-MATERI_DISPLACEMENT_RELATIVE ) {
+      if ( iuknwn==dis_rel_indx ) n = 0;
+      n++;
+      if      ( n==1 ) strcpy( basename, "disrx"  );
+      else if ( n==2 ) strcpy( basename, "disry"  );
+      else if ( n==3 ) strcpy( basename, "disrz"  );
     }
     else if ( dof_type[iuknwn]==-MATERI_HISTORY_VARIABLES ) {
       if ( iuknwn==hisv_indx ) n = 0;

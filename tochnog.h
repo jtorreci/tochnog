@@ -754,6 +754,8 @@ enum {
   MATERI_DIFFUSION_SMOOTH,
   MATERI_DIFFUSION_TEMPERATURE,
   MATERI_DISPLACEMENT,
+  MATERI_DISPLACEMENT_RELATIVE,
+  MATERI_DISPLACEMENT_RELATIVE_REF,
   MATERI_HISTORY_VARIABLES,
   MATERI_MAXWELL_STRESS,
   MATERI_PLASTI_F,
@@ -1014,7 +1016,7 @@ extern long int echo, ndim, derivatives,
   beam_rotation, condif_temperature, 
   groundflow_velocity, groundflow_pressure, materi_history_variables,
   materi_damage, materi_density, 
-  materi_diffusion, materi_displacement, 
+  materi_diffusion, materi_displacement, materi_displacement_relative, 
   materi_maxwell_stress, materi_plasti_kappa, 
   materi_plasti_f, materi_plasti_f_nonlocal, materi_plasti_incremental_substeps,
   materi_plasti_softvar_local,
@@ -1041,6 +1043,7 @@ extern long int
   dens_indx, // index stating start of materi_density in node_dof
   diff_indx, // index stating start of materi_diffusion in node_dof
   dis_indx, // index stating start of materi_displacement in node_dof
+  dis_rel_indx, // index stating start of materi_displacement_relative in node_dof
   ener_indx, // index stating start of materi_strainenergy in node_dof
   epe_indx, // index stating start of materi_strain_elasti in node_dof
   epi_indx, // index stating start of strain_intergranular in node_dof

@@ -138,6 +138,13 @@ void parallel_new_dof_diagonal( void )
             node_dof_new[iuknwn] = node_dof[iuknwn] + node_dof_new[ind] * dtime;   
           }
         }
+        if ( materi_displacement_relative ) {
+          for ( idim=0; idim<ndim; idim++ ) {
+            iuknwn = dis_rel_indx + idim * nder;
+            ind = vel_indx+idim*nder;   
+            node_dof_new[iuknwn] = node_dof[iuknwn] + node_dof_new[ind] * dtime;   
+          }
+        }
         if ( materi_plasti_kappa ) {
           iuknwn = kap_indx;
           if ( node_dof_new[iuknwn]<0. ) node_dof_new[iuknwn] = 0.;

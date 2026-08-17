@@ -408,6 +408,25 @@ void data( long int task, double dtime, double time_current )
       if ( db_active_index( CONTROL_RESET_DOF, ireset, VERSION_NORMAL ) ) {
         db( CONTROL_RESET_DOF, ireset, reset_dof, ddum, ldum, VERSION_NORMAL, GET );
         idof_reset = reset_dof[0];
+        // materi_displacement_relative: a displacement reset re-synchronizes
+        // the relative displacement reference (manual 4.13).
+        if ( materi_displacement_relative ) {
+          long int idof_reset_idx = idof_reset;
+          if ( idof_reset_idx<0 ) {
+            array_member( dof_label, idof_reset_idx, nuknwn, idof_reset_idx );
+            if ( db_len( NODE_DOF, 1, VERSION_NORMAL )==npuknwn )
+              idof_reset_idx /= nder;
+          }
+          if ( idof_reset_idx==dis_indx ) {
+            for ( inod=0; inod<=max_node; inod++ ) {
+              if ( db_active_index( NODE, inod, VERSION_NORMAL ) ) {
+                node_dof = db_dbl( NODE_DOF, inod, VERSION_NORMAL );
+                for ( long int idim=0; idim<ndim; idim++ )
+                  node_dof[dis_rel_indx+idim*nder] = 0.;
+              }
+            }
+          }
+        }
         reset_method = -USE;
         db( CONTROL_RESET_VALUE_METHOD, ireset, &reset_method, ddum, ldum,
           VERSION_NORMAL, GET_IF_EXISTS );

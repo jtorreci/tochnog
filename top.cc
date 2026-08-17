@@ -282,6 +282,26 @@ void top( void )
                     length = 1;
                     db( TIME_OLD, 0, idum, &time_old, length, VERSION_NORMAL, PUT );
                     db( TIME_NEW, 0, idum, &time_new, length, VERSION_NORMAL, PUT );
+                    // materi_displacement_relative: the reference point is
+                    // re-synchronized (dis_rel reset to 0) when the timestep
+                    // changes (manual 4.13).
+                    if ( materi_displacement_relative ) {
+                      double dtime_ref = -1.;
+                      db( MATERI_DISPLACEMENT_RELATIVE_REF, 0, idum, &dtime_ref,
+                        ldum, VERSION_NORMAL, GET_IF_EXISTS );
+                      if ( dtime_ref<0. || dtime_ref!=dtime_initial ) {
+                        db_max_index( NODE, max_node, VERSION_NORMAL, GET );
+                        for ( inod=0; inod<=max_node; inod++ ) {
+                          if ( db_active_index( NODE, inod, VERSION_NORMAL ) ) {
+                            double *ndof = db_dbl( NODE_DOF, inod, VERSION_NORMAL );
+                            for ( long int idim=0; idim<ndim; idim++ )
+                              ndof[dis_rel_indx+idim*nder] = 0.;
+                          }
+                        }
+                        db( MATERI_DISPLACEMENT_RELATIVE_REF, 0, idum,
+                          &dtime_initial, length, VERSION_NORMAL, PUT );
+                      }
+                    }
                     if ( swit ) {
                       pri( "dtime", dtime );
                       pri( "time_old", time_old );

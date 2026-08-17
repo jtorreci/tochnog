@@ -27,7 +27,7 @@ long int
   beam_rotation=0, condif_temperature=0, 
   groundflow_velocity=0, groundflow_pressure=0, 
   materi_history_variables=0, materi_damage=0, materi_density=0, 
-  materi_displacement=0, materi_diffusion=0, materi_maxwell_stress=0, 
+  materi_displacement=0, materi_displacement_relative=0, materi_diffusion=0, materi_maxwell_stress=0, 
   materi_plasti_incremental_substeps=0,
   materi_plasti_kappa=0, materi_strain_intergranular=0,
   materi_plasti_rho=0, materi_plasti_f=0, materi_plasti_f_nonlocal=0,
@@ -42,7 +42,7 @@ long int
   find_local_softvar=0, find_nonlocal_weights=0, nonlocal_first_set=0;
 long int 
   any_runtime=0, nder=1, npuknwn=0, nuknwn=0, npointmax=6, nprinc=0, dam_indx=-1,
-  dens_indx=-1, diff_indx=-1, dis_indx=-1, ener_indx=-1,
+  dens_indx=-1, diff_indx=-1, dis_indx=-1, dis_rel_indx=-1, ener_indx=-1,
   epe_indx=-1, epi_indx=-1, epp_indx=-1, ept_indx=-1,
   maxfe_indx=-1, maxe_indx=-1, maxer_indx=-1, maxei_indx=0,
   gvel_indx=-1, hisv_indx=-1, kap_indx=-1, f_indx=-1, fn_indx=-1,

@@ -234,6 +234,13 @@ void input( )
       array_set( &dof_type[dis_indx], -MATERI_DISPLACEMENT, n*nder );
       array_set( &dof_scal_vec_mat[unknown_indx], -VECTOR, n*nder );
     }
+    else if ( !strcmp(str,"materi_displacement_relative") ) {
+      materi_displacement_relative = 1;
+      dis_rel_indx = unknown_indx;
+      n = ndim;
+      array_set( &dof_type[dis_rel_indx], -MATERI_DISPLACEMENT_RELATIVE, n*nder );
+      array_set( &dof_scal_vec_mat[unknown_indx], -VECTOR, n*nder );
+    }
     else if ( !strcmp(str,"materi_history_variables") ) {
       if ( !(cin >> materi_history_variables) ) {
         pri( "\nError in initialization part." );
@@ -476,6 +483,11 @@ void input( )
   }
   if ( materi_displacement ) 
     check_unknown( "materi_velocity", YES, CHECK_USAGE_AND_ERROR );
+  if ( materi_displacement_relative ) {
+    check_unknown( "materi_displacement", YES, CHECK_USAGE_AND_ERROR );
+    check_unknown( "materi_velocity", YES, CHECK_USAGE_AND_ERROR );
+    check_unknown( "materi_velocity_integrated", YES, CHECK_USAGE_AND_ERROR );
+  }
   if ( materi_work ) {
     check_unknown( "materi_stress", YES, CHECK_USAGE_AND_ERROR );
     check_unknown( "materi_velocity", YES, CHECK_USAGE_AND_ERROR );
