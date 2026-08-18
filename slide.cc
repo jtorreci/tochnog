@@ -23,15 +23,17 @@ void slide( void )
 
 {
   long int inod=0, max_node=0, idim=0, swit=0, islide=0, max_slide=0,
-    in_geometry=0, ldum=0, idum[1], slide_geometry[2];
+    in_geometry=0, ldum=0, slide_axisymmetric=-NO, idum[1], slide_geometry[2];
   double normal_velocity=0., slide_force=0., normal_force=0., slide_friction=0., 
-    dtime=0., slide_penalty=1.e15, tmp=0., rdum=0., ddum[MDIM], 
+    dtime=0., slide_penalty=1.e15, tmp=0., rdum=0., radius=0., ddum[MDIM], 
     velocity[MDIM], slide_velocity[MDIM], normal[MDIM], 
     *new_node_dof=NULL, *node_lhside=NULL, *node_rhside=NULL;
 
   if ( db_max_index( SLIDE_GEOMETRY, max_slide, VERSION_NORMAL, GET ) > 0 ) {
     swit = set_swit(-1,-1,"slide");
     if ( swit ) pri( "In routine SLIDE" );
+    db( SLIDE_AXISYMMETRIC, 0, &slide_axisymmetric, ddum, ldum,
+      VERSION_NORMAL, GET_IF_EXISTS );
     for ( islide=0; islide<max_slide; islide++ ) {
       if ( db_active_index( SLIDE_GEOMETRY, islide, VERSION_NORMAL ) ) {
         db( DTIME, 0, idum, &dtime, ldum, VERSION_NEW, GET );
@@ -59,6 +61,14 @@ void slide( void )
               node_rhside = db_dbl( NODE_RHSIDE, inod, VERSION_NORMAL );
               normal_force = array_inproduct( node_rhside, normal, ndim );
               slide_force = slide_friction * normal_force;
+              // slide_axisymmetric -yes: the slide friction acts on the
+              // whole ring of circumference 2*pi*r (r = radial distance of
+              // the node to the axis, the x coordinate in axisymmetric).
+              if ( slide_axisymmetric==-YES ) {
+                double *coord = db_dbl( NODE, inod, VERSION_NORMAL );
+                radius = coord[0];
+                slide_force *= 2. * PIRAD * radius;
+              }
               if ( array_normalize( slide_velocity, ndim ) ) {
                 for ( idim=0; idim<ndim; idim++ ) {
                   node_lhside[vel_indx+idim*nder] += slide_penalty * dtime;
