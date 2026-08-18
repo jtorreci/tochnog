@@ -38,6 +38,7 @@ input parameters it accepts.
 - [control_print_vtk_dof](control_print_vtk_dof.md) — limit the fields written to VTK files.
 - [control_mesh_generate_truss](control_mesh_generate_truss.md) — generate truss/beam elements between neighbouring nodes on a geometry.
 - [control_reset_dof](control_reset_dof.md) — reset a nodal dof to a constant value or one depending on another dof.
+- [slide_axisymmetric](slide_axisymmetric.md) — axisymmetric scaling of the slide friction.
 - [group_interface](group_interface.md) — interface elements (joints between blocks).
 - [control_mesh_convert](control_mesh_convert.md) — automatic conversion of bar2 to quad4 for interfaces.
 - [control_mesh_generate_interface](control_mesh_generate_interface.md) — generate interface elements between element groups sharing a face.

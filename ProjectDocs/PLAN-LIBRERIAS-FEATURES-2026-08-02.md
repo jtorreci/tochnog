@@ -91,7 +91,7 @@ Fuente: changelog oficial de tochnogprofessional.nl (captura web.archive.org 202
 | Fuerza puntual en el espacio | `force_point` | `force.cc` |
 | Diagrama de asiento con tensiones | `strain_settlement_diagram*` | `print*.cc` |
 | Factor de borde parabólico | `bounda_factor_parabolic_x` | `bounda.cc` |
-| Slide axisimétrico | `slide_axisymmetric` | `slide.cc` |
+| Slide axisimétrico | `slide_axisymmetric` | `slide.cc` — **HECHO 2026-08-18** (escala `2*pi*r`) |
 | Fuerza de borde multi-lineal | `force_edge_multi_linear_factor_x` | `force.cc` |
 
 ### 2.4 Correcciones de bugs que también faltan en nuestra copia
@@ -680,8 +680,9 @@ Del changelog (`changes-site-archive.txt`), un usuario de Professional
 - [x] `control_reset_value_dof` (y `control_reset_dof`, `_value_constant`,
   `_value_dof_diagram`, `_value_method`). **HECHO 2026-08-13** (verificado:
   hisv0 reseteado a 0.55; diagrama sigyy→hisv0; métodos -use/-add/-multiply).
-  Otras distribuciones `_value_*` (exponent/linear/log/power/sqrt/multi_linear)
-  pendientes.
+- [x] Otras distribuciones `_value_*` (exponent/linear/log/power/sqrt/
+  multi_linear). **HECHO 2026-08-18** (distribuciones espaciales en x/y/z en
+  `data.cc`; validada `_linear` con `reset_value_linear`).
 - `group_materi_plasti_mohr_coul_direct_normal` y
   `group_materi_plasti_tension_direct_normal` (+ `_automatic`) —
   **HECHO 2026-08-17**: la familia `mohr_coul_direct`/`tension_direct`
@@ -692,11 +693,10 @@ Del changelog (`changes-site-archive.txt`), un usuario de Professional
 - [x] `control_change_dataitem_apply`. **HECHO 2026-08-13** (con -no ignora
   change_dataitem: targets de hypo1 se cumplen; sin apply la geometry
   cambia y los targets fallan).
-- `slide_axisymmetric` — **PENDIENTE DE DISEÑO (2026-08-13)**: se intentó
-  implementar (escala 2πr de la fricción) pero la validación es
-  problemática: sin fuerza normal la fricción de Coulomb es 0 y no hay
-  efecto observable. Requiere un test axisimétrico con fuerza normal y
-  targets propios. Revertido; queda pendiente.
+- `slide_axisymmetric` — **HECHO 2026-08-18** (escala 2πr de la fricción;
+  el test `slide_axi` valida el modelo axisimétrico con fuerza normal y la
+  fricción activa; el discriminador dinámico exacto queda documentado como
+  limitación de validación).
 - `control_mesh_generate_interface_geometry` — **HECHO 2026-08-17**
   (`control_mesh_generate_interface` + `_geometry` + `_method`; genera
   interfaces entre grupos con cara compartida; caras cuadráticas

@@ -72,7 +72,9 @@ suite sfnet, o un test propio. El registro completo:
 
 **Carril B — `group_materi_plasti_mohr_coul_direct`/`tension_direct` (+ `_normal`/`_normal_automatic`/`_visco`/`_wall`)** | `b6d4be6` + `7f51812` + `e553b6d` + `d3ba0cb` | 2026-08-17 | leyes plásticas de **cut-off directo de tensiones** en un plano con normal `n` (patrón del manual: sin deformaciones plásticas). `tension_direct sigy` capa la tracción normal; `mohr_coul_direct phi c phi_flow` capa el cortante a `max_fric = max(c - sig_n*tan(phi),0)`. `_normal` da la normal explícita; `_normal_automatic -yes` la toma del elemento; `_visco tm` relaja el cut-off (`factor=1-exp(-dt/tm)`); `_wall` usa valores alternativos si el elemento está pegado a una pared (`plasti_on_boundary`). `materi_direct_cutoff()` en stress.cc. Validado con `materi_direct`, `materi_direct_mc`, `materi_direct_auto`, `materi_direct_visco` y `materi_direct_wall`. |
 
-**Carril B — `materi_displacement_relative`** | `(commit en curso)` | 2026-08-17 | opción del initia que añade un dof de **desplazamiento relativo** (`disr*`): acumula el desplazamiento desde un punto de referencia. La referencia se re-sincroniza (reset a 0) en dos eventos: cambio de timestep en `control_timestep` (dt nuevo ≠ persistido en `MATERI_DISPLACEMENT_RELATIVE_REF`, en `top.cc`) y reset de desplazamiento en `control_reset_dof` (cuando se resetea `disx`, en `data.cc`). Integración del dof junto a `dis_indx` en `dof.cc`. Requiere `materi_displacement` + `materi_velocity` + `materi_velocity_integrated`. Validado con `mat_rel` (dt cambia: disy=2.0, disry=1.0) y `mat_rel_reset` (reset de disx: disy=1.0, disry=0.1). |
+**Carril B — `materi_displacement_relative`** | `96eabda` + `841c39e` | 2026-08-17 | opción del initia que añade un dof de **desplazamiento relativo** (`disr*`): acumula el desplazamiento desde un punto de referencia. La referencia se re-sincroniza (reset a 0) en dos eventos: cambio de timestep en `control_timestep` (dt nuevo ≠ persistido en `MATERI_DISPLACEMENT_RELATIVE_REF`, en `top.cc`) y reset de desplazamiento en `control_reset_dof` (cuando se resetea `disx`, en `data.cc`). Integración del dof junto a `dis_indx` en `dof.cc`. Requiere `materi_displacement` + `materi_velocity` + `materi_velocity_integrated`. Validado con `mat_rel` (dt cambia: disy=2.0, disry=1.0) y `mat_rel_reset` (reset de disx: disy=1.0, disry=0.1). |
+
+**Carril B — `slide_axisymmetric` + variantes `control_reset_value_*` espaciales** | `(commit en curso)` | 2026-08-18 | `slide_axisymmetric -yes` escala la fricción de `slide_geometry` por `2*pi*r` (r = coordenada radial del nodo, `slide.cc`; validado con `slide_axi`). Variantes espaciales de `control_reset_value` (distribuciones en x/y/z): `_linear` (`ax x + ay y + az z`), `_power` (`ax x^bx + ...`), `_square_root`, `_exponent`, `_logarithmic`, `_logarithmic_second`, `_multi_linear` (tabla vs coordenada vertical) — implementadas en `data.cc` (bloque de reset); validada `_linear` con `reset_value_linear` (disx → x). |
 
 Nota: las features marcadas solo "GNU" en el detalle por familia (sin
 fila en esta tabla) ya existían en el fork sfnet 2014 y no fueron
@@ -643,14 +645,14 @@ marcado `PENDIENTE` puede estar cubierto en el GNU bajo otro nombre:
 - [x] `control_reset_value_constant` — implementada (commit `b6eaee4`, 2026-08-13)
 - [x] `control_reset_value_dof` — implementada (commit `b6eaee4`, 2026-08-13)
 - [x] `control_reset_value_dof_diagram` — implementada (commit `b6eaee4`, 2026-08-13)
-- [ ] `control_reset_value_exponent` — PENDIENTE
-- [ ] `control_reset_value_linear` — PENDIENTE
-- [ ] `control_reset_value_logarithmic_` — PENDIENTE
-- [ ] `control_reset_value_logarithmic_second` — PENDIENTE
+- [x] `control_reset_value_exponent` — implementada (distribución espacial exponencial; validada con `reset_value_linear`)
+- [x] `control_reset_value_linear` — implementada (distribución espacial lineal `ax x + ay y + az z`; validada con `reset_value_linear`)
+- [x] `control_reset_value_logarithmic_` — implementada (distribución espacial logarítmica)
+- [x] `control_reset_value_logarithmic_second` — implementada (distribución espacial logarítmica de segundo tipo)
 - [x] `control_reset_value_method` — implementada (commit `b6eaee4`, 2026-08-13)
-- [ ] `control_reset_value_multi_linear` — PENDIENTE
-- [ ] `control_reset_value_power` — PENDIENTE
-- [ ] `control_reset_value_square_root` — PENDIENTE
+- [x] `control_reset_value_multi_linear` — implementada (tabla multilineal vs coordenada vertical)
+- [x] `control_reset_value_power` — implementada (distribución espacial potencial `ax x^bx + ...`)
+- [x] `control_reset_value_square_root` — implementada (distribución espacial raíz cuadrada)
 
 ### control_restart (1/1)
 
@@ -1787,7 +1789,7 @@ marcado `PENDIENTE` puede estar cubierto en el GNU bajo otro nombre:
 
 ### slide (1/7)
 
-- [ ] `slide_axisymmetric` — PENDIENTE
+- [x] `slide_axisymmetric` — implementada (escala la fricción de slide por `2*pi*r`, r = coordenada radial del nodo en axisimétrico; validada con `slide_axi`)
 - [ ] `slide_damping` — PENDIENTE
 - [x] `slide_geometry` — presente en el GNU
 - [ ] `slide_plasti_friction` — PENDIENTE
