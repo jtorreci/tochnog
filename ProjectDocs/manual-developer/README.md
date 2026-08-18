@@ -31,6 +31,8 @@ Each file corresponds to the same feature in the [User Manual](../manual-user/).
 - [check_used](check_used.md) — report unused data items.
 - [materi_plasti_maximum_iterations](materi_plasti_maximum_iterations.md) — limit plastic iterations.
 - [materi_displacement_relative](materi_displacement_relative.md) — relative displacement dof (input.cc, dof.cc, top.cc, data.cc).
+- [mesh_activate_gravity_time](mesh_activate_gravity_time.md) — gradual gravity activation (mesh.cc).
+- [strain_settlement_parameters](strain_settlement_parameters.md) — settlement creep strain (materi.cc).
 - [control_print_history_factor](control_print_history_factor.md) — multiply history output.
 - [control_print_history_smooth](control_print_history_smooth.md) — moving-average smoothing of history output.
 - [control_print_dof](control_print_dof.md) — print primary dofs with coordinates to plain ASCII files.

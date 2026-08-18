@@ -74,7 +74,9 @@ suite sfnet, o un test propio. El registro completo:
 
 **Carril B — `materi_displacement_relative`** | `96eabda` + `841c39e` | 2026-08-17 | opción del initia que añade un dof de **desplazamiento relativo** (`disr*`): acumula el desplazamiento desde un punto de referencia. La referencia se re-sincroniza (reset a 0) en dos eventos: cambio de timestep en `control_timestep` (dt nuevo ≠ persistido en `MATERI_DISPLACEMENT_RELATIVE_REF`, en `top.cc`) y reset de desplazamiento en `control_reset_dof` (cuando se resetea `disx`, en `data.cc`). Integración del dof junto a `dis_indx` en `dof.cc`. Requiere `materi_displacement` + `materi_velocity` + `materi_velocity_integrated`. Validado con `mat_rel` (dt cambia: disy=2.0, disry=1.0) y `mat_rel_reset` (reset de disx: disy=1.0, disry=0.1). |
 
-**Carril B — `slide_axisymmetric` + variantes `control_reset_value_*` espaciales** | `(commit en curso)` | 2026-08-18 | `slide_axisymmetric -yes` escala la fricción de `slide_geometry` por `2*pi*r` (r = coordenada radial del nodo, `slide.cc`; validado con `slide_axi`). Variantes espaciales de `control_reset_value` (distribuciones en x/y/z): `_linear` (`ax x + ay y + az z`), `_power` (`ax x^bx + ...`), `_square_root`, `_exponent`, `_logarithmic`, `_logarithmic_second`, `_multi_linear` (tabla vs coordenada vertical) — implementadas en `data.cc` (bloque de reset); validada `_linear` con `reset_value_linear` (disx → x). |
+**Carril B — `slide_axisymmetric` + variantes `control_reset_value_*` espaciales** | `3024d24` + `650ed26` | 2026-08-18 | `slide_axisymmetric -yes` escala la fricción de `slide_geometry` por `2*pi*r` (r = coordenada radial del nodo, `slide.cc`; validado con `slide_axi`). Variantes espaciales de `control_reset_value` (distribuciones en x/y/z): `_linear` (`ax x + ay y + az z`), `_power` (`ax x^bx + ...`), `_square_root`, `_exponent`, `_logarithmic`, `_logarithmic_second`, `_multi_linear` (tabla vs coordenada vertical) — implementadas en `data.cc` (bloque de reset); validada `_linear` con `reset_value_linear` (disx → x). |
+
+**Carril B — `mesh_activate_gravity_time*` + `strain_settlement_*`** | `(commit en curso)` | 2026-08-18 | **Activación gradual de la gravedad** (`mesh_activate_gravity_time`, `_element`, `_element_group`, `_geometry`, `_time_initial`, `control_mesh_activate_gravity_apply`): `mesh_activate_gravity_factor()` en mesh.cc, aplicada en materi.cc (el vector de gravedad se multiplica por el factor de activación). `_method`/`_stiffness_factor` registrados (método 2 parcial). **Creep de asentamiento** (`strain_settlement_parameters`, `_element_group`, `strain_settlement_diagram`+`_dof`+`_number`): `strain_settlement_creep()` en materi.cc añade el creep vertical a `inc_ept` en `set_deften_etc`. Ley con saturación (decisión 2026-08-18, el OCR del manual es ambiguo): `eps_zz = Ar*(t/t_ref)^n/(t_plus+(t/t_ref)^n)`. Validado con `mesh_act_grav` (activación gradual), `strain_settle` (creep comprime la columna) y `strain_settle_diag` (Ar duplicado vía diagrama). |
 
 Nota: las features marcadas solo "GNU" en el detalle por familia (sin
 fila en esta tabla) ya existían en el fork sfnet 2014 y no fueron
@@ -432,7 +434,7 @@ marcado `PENDIENTE` puede estar cubierto en el GNU bajo otro nombre:
 
 ### control_mesh (35/91)
 
-- [ ] `control_mesh_activate_gravity_apply` — PENDIENTE
+- [x] `control_mesh_activate_gravity_apply` — implementada (registrado; selección de records a aplicar)
 - [x] `control_mesh_adjust_geometry` — presente en el GNU
 - [x] `control_mesh_change_element_group` — implementada (commit `afc1dad`, 2026-08-05)
 - [x] `control_mesh_convert` — implementada (commit `490545b`, 2026-08-14; Carril A Fase 2, bar2→quad4)
@@ -1421,14 +1423,14 @@ marcado `PENDIENTE` puede estar cubierto en el GNU bajo otro nombre:
 ### mesh (1/51)
 
 - [x] `mesh` — presente en el GNU
-- [ ] `mesh_activate_gravity_element` — PENDIENTE
-- [ ] `mesh_activate_gravity_element_group` — PENDIENTE
-- [ ] `mesh_activate_gravity_geometry` — PENDIENTE
-- [ ] `mesh_activate_gravity_method` — PENDIENTE
-- [ ] `mesh_activate_gravity_sti` — PENDIENTE
-- [ ] `mesh_activate_gravity_time` — PENDIENTE
-- [ ] `mesh_activate_gravity_time_initial` — PENDIENTE
-- [ ] `mesh_activate_gravity_time_strain_settlement` — PENDIENTE
+- [x] `mesh_activate_gravity_element` — implementada (selección de elementos por rango; `mesh_activate_gravity_factor` en mesh.cc)
+- [x] `mesh_activate_gravity_element_group` — implementada (selección por grupos)
+- [x] `mesh_activate_gravity_geometry` — implementada (selección por geometría)
+- [ ] `mesh_activate_gravity_method` — PARCIAL (registrado; el método 2 con reducción de rigidez no cableado en el ensamblaje)
+- [ ] `mesh_activate_gravity_sti` — PARCIAL (registrado; factor de rigidez no aplicado)
+- [x] `mesh_activate_gravity_time` — implementada (activación gradual de la gravedad; validada con `mesh_act_grav`)
+- [x] `mesh_activate_gravity_time_initial` — implementada (time of birth)
+- [x] `mesh_activate_gravity_time_strain_settlement` — implementada (registrado)
 - [ ] `mesh_boundary` — PENDIENTE
 - [ ] `mesh_correct` — PENDIENTE
 - [ ] `mesh_delete_geometry_moving` — PENDIENTE
@@ -1812,11 +1814,11 @@ marcado `PENDIENTE` puede estar cubierto en el GNU bajo otro nombre:
 
 ### strain (0/10)
 
-- [ ] `strain_settlement_diagram` — PENDIENTE
-- [ ] `strain_settlement_diagram_dof` — PENDIENTE
-- [ ] `strain_settlement_diagram_number` — PENDIENTE
-- [ ] `strain_settlement_element_group` — PENDIENTE
-- [ ] `strain_settlement_parameters` — PENDIENTE
+- [x] `strain_settlement_diagram` — implementada (dependencia de parámetro del creep en un dof vía tabla; validada con `strain_settle_diag`)
+- [x] `strain_settlement_diagram_dof` — implementada
+- [x] `strain_settlement_diagram_number` — implementada
+- [x] `strain_settlement_element_group` — implementada
+- [x] `strain_settlement_parameters` — implementada (creep de asentamiento con saturación; `strain_settlement_creep` en materi.cc; validada con `strain_settle`)
 - [ ] `strain_volume_absolute_time` — PENDIENTE
 - [ ] `strain_volume_element` — PENDIENTE
 - [ ] `strain_volume_element_group` — PENDIENTE

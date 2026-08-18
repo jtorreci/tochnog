@@ -89,7 +89,7 @@ Fuente: changelog oficial de tochnogprofessional.nl (captura web.archive.org 202
 |---|---|---|
 | Seguir partícula material | `post_point_move` | `print*.cc` |
 | Fuerza puntual en el espacio | `force_point` | `force.cc` |
-| Diagrama de asiento con tensiones | `strain_settlement_diagram*` | `print*.cc` |
+| Diagrama de asiento con tensiones | `strain_settlement_diagram*` (+ `strain_settlement_parameters`, `mesh_activate_gravity_time`) | `materi.cc` / `mesh.cc` — **HECHO 2026-08-18** |
 | Factor de borde parabólico | `bounda_factor_parabolic_x` | `bounda.cc` |
 | Slide axisimétrico | `slide_axisymmetric` | `slide.cc` — **HECHO 2026-08-18** (escala `2*pi*r`) |
 | Fuerza de borde multi-lineal | `force_edge_multi_linear_factor_x` | `force.cc` |
@@ -676,7 +676,11 @@ Del changelog (`changes-site-archive.txt`), un usuario de Professional
   (`control_reset_dof`); integración en `dof.cc`; validado con `mat_rel`
   y `mat_rel_reset`.
 - `strain_settlement_diagram*` (asientos dependientes de tensiones) —
-  **PENDIENTE DE DISEÑO (2026-08-13)**: cálculo de asientos no trivial.
+  **HECHO 2026-08-18**: familia completa implementada
+  (`mesh_activate_gravity_time*` activación gradual + `strain_settlement_parameters`
+  creep con saturación + `strain_settlement_diagram*` dependencia de parámetros
+  en dofs); validado con `mesh_act_grav`, `strain_settle`, `strain_settle_diag`.
+  `_method`/`_stiffness_factor` (método 2) parciales.
 - [x] `control_reset_value_dof` (y `control_reset_dof`, `_value_constant`,
   `_value_dof_diagram`, `_value_method`). **HECHO 2026-08-13** (verificado:
   hisv0 reseteado a 0.55; diagrama sigyy→hisv0; métodos -use/-add/-multiply).
