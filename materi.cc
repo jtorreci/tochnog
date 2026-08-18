@@ -45,6 +45,7 @@ void materi( long int element, long int gr, long int nnol,
     softvar_nonl=0, softvar_l=0, 
     static_pressure=0., total_pressure=0., location=0.,
     J=0., ddum[1], direct_normal[MDIM], *force_gravity=NULL, 
+    activation_factor=1.,
     *old_deften=NULL, *new_deften=NULL, *inv_deften=NULL,
     *old_epe=NULL, *inc_epe=NULL, *new_epe=NULL,
     *old_epp=NULL, *inc_epp=NULL, 
@@ -160,6 +161,12 @@ void materi( long int element, long int gr, long int nnol,
     VERSION_NORMAL, GET_IF_EXISTS );
   dens = get_materi_density( element, gr, nnol, nodes, new_unknowns );
   force_gravity_calculate( force_gravity );
+  // mesh_activate_gravity_time: the gravity is gradually activated for the
+  // element (bottom-to-top interpolation). With method 2 the element stays
+  // active (reduced stiffness) but without gravity until activation.
+  activation_factor = mesh_activate_gravity_factor( element, gr, nnol, nodes );
+  for ( idim=0; idim<ndim; idim++ )
+    force_gravity[idim] *= activation_factor;
 
   if ( condif_temperature ) {
     get_group_data( GROUP_MATERI_EXPANSION_VOLUME, gr, element, new_unknowns, 
@@ -723,6 +730,143 @@ void materi( long int element, long int gr, long int nnol,
 
 }
 
+// strain_settlement_creep - strain_settlement_parameters (Carril B T2).
+//
+// Extra vertical settlement creep strain (soil dumping). The vertical creep
+// strain of a soil particle is assumed to be (saturating power law, decided
+// 2026-08-18; the manual OCR is ambiguous):
+//
+//   eps_zz(t) = Ar * (t/t_tr)^n / (t_plus + (t/t_tr)^n)
+//
+// with Ar = reference_creep_strain_rate, t_plus = time_plus, t_tr =
+// reference_time, n = power_n, and t = the time elapsed after the material
+// has become active (dumping). The horizontal creep strains are
+// eps_xx = eps_yy = lateral_factor * eps_zz. The creep starts when the
+// global time reaches time_global_start. Applied in set_deften_etc by adding
+// the creep strain increment to inc_ept.
+void strain_settlement_creep( long int element, long int gr, long int nnol,
+  double inc_ept[], double dtime )
+
+{
+  long int i=0, inod=0, length=0, ldum=0, in_geometry=0, apply=0,
+    idum[1], *el=NULL, *nodes=NULL, *gr_list=NULL, time_global_start_idx=0;
+  double time_global_start=0., time_plus=0., ar=0., t_ref=0., n=0.,
+    lateral=0., t_total=0., t_active=0., t_creep=0., t_creep_old=0.,
+    eps=0., eps_old=0., deps=0., ddum[1], *par=NULL, time_current=0.;
+
+  if ( !db_active_index( STRAIN_SETTLEMENT_PARAMETERS, 0, VERSION_NORMAL ) )
+    return;
+  // element group selection (strain_settlement_element_group or -all)
+  length = 0;
+  apply = 0;
+  if ( db_active_index( STRAIN_SETTLEMENT_ELEMENT_GROUP, 0, VERSION_NORMAL ) ) {
+    gr_list = db_int( STRAIN_SETTLEMENT_ELEMENT_GROUP, 0, VERSION_NORMAL );
+    length = db_len( STRAIN_SETTLEMENT_ELEMENT_GROUP, 0, VERSION_NORMAL );
+    for ( i=0; i<length; i++ )
+      if ( gr_list[i]==gr ) { apply = 1; break; }
+  }
+  else apply = 1;
+
+  if ( !apply ) return;
+
+  // parameters: time_global_start time_plus Ar t_ref n lateral
+  par = db_dbl( STRAIN_SETTLEMENT_PARAMETERS, 0, VERSION_NORMAL );
+  time_global_start = par[0];
+  time_plus = par[1];
+  ar = par[2];
+  t_ref = par[3];
+  n = par[4];
+  lateral = par[5];
+  if ( ar==0. || t_ref<=0. ) return;
+
+  // strain_settlement_diagram: a parameter (1=time_plus, 2=Ar, 3=t_ref,
+  // 4=n, 5=lateral) can depend on a dof value (strain_settlement_diagram_dof)
+  // via the strain_settlement_diagram table. The dof is read at the first
+  // node of the element.
+  if ( db_active_index( STRAIN_SETTLEMENT_DIAGRAM, 0, VERSION_NORMAL ) ) {
+    long int idof = 0, number = 0;
+    db( STRAIN_SETTLEMENT_DIAGRAM_DOF, 0, &idof, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+    db( STRAIN_SETTLEMENT_DIAGRAM_NUMBER, 0, &number, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+    if ( idof!=0 && number>0 ) {
+      el = get_new_int(MAXIMUM_NODE+1);
+      nodes = get_new_int(MAXIMUM_NODE);
+      db( ELEMENT, element, el, ddum, length, VERSION_NORMAL, GET );
+      long int nnol2 = length - 1;
+      array_move( &el[1], nodes, nnol2 );
+      long int inod0 = nodes[0];
+      double *ndof = db_dbl( NODE_DOF, inod0, VERSION_NORMAL );
+      long int ndof_len = db_len( NODE_DOF, inod0, VERSION_NORMAL );
+      long int idx = idof;
+      if ( idx<0 ) {
+        long int *dof_label = get_new_int(MUKNWN);
+        db( DOF_LABEL, 0, dof_label, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+        array_member( dof_label, idx, nuknwn, idx );
+        if ( ndof_len==npuknwn ) idx /= nder;
+        delete[] dof_label;
+      }
+      if ( idx>=0 && idx<ndof_len ) {
+        double val = ndof[idx];
+        double *diagram = db_dbl( STRAIN_SETTLEMENT_DIAGRAM, 0, VERSION_NORMAL );
+        long int ndiag = db_len( STRAIN_SETTLEMENT_DIAGRAM, 0, VERSION_NORMAL );
+        double dval = 0.;
+        table_xy( diagram, "STRAIN_SETTLEMENT_DIAGRAM", ndiag, val, dval );
+        if      ( number==1 ) time_plus = dval;
+        else if ( number==2 ) ar = dval;
+        else if ( number==3 ) t_ref = dval;
+        else if ( number==4 ) n = dval;
+        else if ( number==5 ) lateral = dval;
+      }
+      delete[] el;
+      delete[] nodes;
+    }
+  }
+
+  db( TIME_CURRENT, 0, idum, &time_current, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+  t_total = time_current + dtime;
+  if ( t_total < time_global_start ) return;
+
+  // time of activation (dumping): the element activation time from
+  // mesh_activate_gravity_time, or the global start if not used
+  t_active = time_global_start;
+  if ( db_active_index( MESH_ACTIVATE_GRAVITY_TIME, 0, VERSION_NORMAL ) ) {
+    // element lowest-coordinate interpolation (reuse the activation factor
+    // machinery: recompute the element start time here)
+    el = get_new_int(MAXIMUM_NODE+1);
+    nodes = get_new_int(MAXIMUM_NODE);
+    db( ELEMENT, element, el, ddum, length, VERSION_NORMAL, GET );
+    nnol = length - 1;
+    array_move( &el[1], nodes, nnol );
+    double ts=0., te=0.;
+    db( MESH_ACTIVATE_GRAVITY_TIME, 0, idum, ddum, ldum, VERSION_NORMAL, GET );
+    ts = ddum[0]; te = ddum[1];
+    // activation starts at ts for the lowest element; here we use ts as the
+    // element activation time (single-element simplification)
+    t_active = ts;
+    delete[] el;
+    delete[] nodes;
+  }
+
+  t_creep = t_total - t_active;
+  t_creep_old = t_creep - dtime;
+  if ( t_creep <= 0. ) return;
+  if ( t_creep_old < 0. ) t_creep_old = 0.;
+
+  double tn = pow( t_creep / t_ref, n );
+  double tn_old = pow( t_creep_old / t_ref, n );
+  eps = ar * tn / ( time_plus + tn );
+  eps_old = ar * tn_old / ( time_plus + tn_old );
+  deps = eps - eps_old;
+  if ( deps==0. ) return;
+
+  // add the creep increment to the vertical component (y in 2D, z in 3D)
+  // and the lateral components
+  long int vc = ( ndim==3 ) ? 8 : 4;   // vertical index in 3x3 row-major
+  inc_ept[vc] += deps;
+  if ( ndim>=1 ) inc_ept[0] += lateral * deps;          // xx
+  if ( ndim>=2 ) inc_ept[4] += lateral * deps;          // yy (2D: both lateral)
+  if ( ndim==3 ) inc_ept[8] += deps;                    // zz (already vertical)
+}
+
 void set_deften_etc( long int element, long int gr, long int nnol, double h[], 
   double old_coord[], double old_unknowns[], double new_unknowns[], 
   double old_grad_old_unknowns[], double old_grad_new_unknowns[], 
@@ -858,6 +1002,12 @@ void set_deften_etc( long int element, long int gr, long int nnol, double h[],
   }
   else
     db_error( GROUP_MATERI_MEMORY, gr );
+
+  // strain_settlement_parameters: extra vertical settlement creep strain
+  // (soil dumping). Adds the creep strain increment to inc_ept and updates
+  // new_ept accordingly.
+  strain_settlement_creep( element, gr, nnol, inc_ept, dtime );
+  array_add( old_ept, inc_ept, new_ept, MDIM*MDIM );
 
   if ( swit ) {
     pri( "old_deften", old_deften, MDIM, MDIM );

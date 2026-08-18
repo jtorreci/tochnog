@@ -219,6 +219,7 @@ enum {
   CONTROL_EIGEN_SCALE,
   CONTROL_EIGEN_VALUES,
   CONTROL_MATERI_DIFFUSION,
+  CONTROL_MESH_ACTIVATE_GRAVITY_APPLY,
   CONTROL_MESH_ADJUST_GEOMETRY,
   CONTROL_MESH_CHANGE_ELEMENT_GROUP,
   CONTROL_MESH_DELETE_GEOMETRY,
@@ -813,6 +814,14 @@ enum {
   MAXWELL_SCATTER_PORT_OUTPUT,
   MAXWELL_TIME,
   MESH,
+  MESH_ACTIVATE_GRAVITY_ELEMENT,
+  MESH_ACTIVATE_GRAVITY_ELEMENT_GROUP,
+  MESH_ACTIVATE_GRAVITY_GEOMETRY,
+  MESH_ACTIVATE_GRAVITY_METHOD,
+  MESH_ACTIVATE_GRAVITY_STIFFNESS_FACTOR,
+  MESH_ACTIVATE_GRAVITY_TIME,
+  MESH_ACTIVATE_GRAVITY_TIME_INITIAL,
+  MESH_ACTIVATE_GRAVITY_TIME_STRAIN_SETTLEMENT,
   METHOD1,
   METHOD2,
   MG,
@@ -966,6 +975,11 @@ enum {
   START,
   STATIC,
   STEP,
+  STRAIN_SETTLEMENT_DIAGRAM,
+  STRAIN_SETTLEMENT_DIAGRAM_DOF,
+  STRAIN_SETTLEMENT_DIAGRAM_NUMBER,
+  STRAIN_SETTLEMENT_ELEMENT_GROUP,
+  STRAIN_SETTLEMENT_PARAMETERS,
   STRESS,
   SUM,
   TARGET,
@@ -1450,6 +1464,8 @@ void      merge( void );
 void      mesh_add( long int version_from, long int version_to );
 void      mesh_delete_small( long int version );
 void      mesh_has_changed( long int version );
+double    mesh_activate_gravity_factor( long int element, long int element_group,
+            long int nnol, long int nodes[] );
 void      mesh_split( long int version );
 void      mesh_switch( long int control_mesh_switch[], long int length );
 void      mesh_move( double control_mesh_move[], long int length );

@@ -572,6 +572,12 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   data_length[CONTROL_MATERI_DIFFUSION] = 1;
   data_class[CONTROL_MATERI_DIFFUSION] = CONTROL;
 
+  strcpy(name[CONTROL_MESH_ACTIVATE_GRAVITY_APPLY],"control_mesh_activate_gravity_apply");
+  type[CONTROL_MESH_ACTIVATE_GRAVITY_APPLY] = INTEGER;
+  data_length[CONTROL_MESH_ACTIVATE_GRAVITY_APPLY] = DATA_ITEM_SIZE;
+  fixed_length[CONTROL_MESH_ACTIVATE_GRAVITY_APPLY] = 0;
+  data_class[CONTROL_MESH_ACTIVATE_GRAVITY_APPLY] = CONTROL;
+
   strcpy(name[CONTROL_MESH_ADJUST_GEOMETRY],"control_mesh_adjust_geometry");
   type[CONTROL_MESH_ADJUST_GEOMETRY] = INTEGER;
   data_length[CONTROL_MESH_ADJUST_GEOMETRY] = 4;
@@ -3777,6 +3783,48 @@ void db_initialize( long int dof_type[], long int dof_label[] )
 
   strcpy(name[MESH],"mesh");
 
+  strcpy(name[MESH_ACTIVATE_GRAVITY_ELEMENT],"mesh_activate_gravity_element");
+  type[MESH_ACTIVATE_GRAVITY_ELEMENT] = INTEGER;
+  data_length[MESH_ACTIVATE_GRAVITY_ELEMENT] = DATA_ITEM_SIZE;
+  fixed_length[MESH_ACTIVATE_GRAVITY_ELEMENT] = 0;
+  data_class[MESH_ACTIVATE_GRAVITY_ELEMENT] = CONTROL;
+
+  strcpy(name[MESH_ACTIVATE_GRAVITY_ELEMENT_GROUP],"mesh_activate_gravity_element_group");
+  type[MESH_ACTIVATE_GRAVITY_ELEMENT_GROUP] = INTEGER;
+  data_length[MESH_ACTIVATE_GRAVITY_ELEMENT_GROUP] = DATA_ITEM_SIZE;
+  fixed_length[MESH_ACTIVATE_GRAVITY_ELEMENT_GROUP] = 0;
+  data_class[MESH_ACTIVATE_GRAVITY_ELEMENT_GROUP] = CONTROL;
+
+  strcpy(name[MESH_ACTIVATE_GRAVITY_GEOMETRY],"mesh_activate_gravity_geometry");
+  type[MESH_ACTIVATE_GRAVITY_GEOMETRY] = INTEGER;
+  data_length[MESH_ACTIVATE_GRAVITY_GEOMETRY] = 2;
+  data_class[MESH_ACTIVATE_GRAVITY_GEOMETRY] = CONTROL;
+
+  strcpy(name[MESH_ACTIVATE_GRAVITY_METHOD],"mesh_activate_gravity_method");
+  type[MESH_ACTIVATE_GRAVITY_METHOD] = INTEGER;
+  data_length[MESH_ACTIVATE_GRAVITY_METHOD] = 1;
+  data_class[MESH_ACTIVATE_GRAVITY_METHOD] = CONTROL;
+
+  strcpy(name[MESH_ACTIVATE_GRAVITY_STIFFNESS_FACTOR],"mesh_activate_gravity_stiffness_factor");
+  type[MESH_ACTIVATE_GRAVITY_STIFFNESS_FACTOR] = DOUBLE_PRECISION;
+  data_length[MESH_ACTIVATE_GRAVITY_STIFFNESS_FACTOR] = 1;
+  data_class[MESH_ACTIVATE_GRAVITY_STIFFNESS_FACTOR] = CONTROL;
+
+  strcpy(name[MESH_ACTIVATE_GRAVITY_TIME],"mesh_activate_gravity_time");
+  type[MESH_ACTIVATE_GRAVITY_TIME] = DOUBLE_PRECISION;
+  data_length[MESH_ACTIVATE_GRAVITY_TIME] = 2;
+  data_class[MESH_ACTIVATE_GRAVITY_TIME] = CONTROL;
+
+  strcpy(name[MESH_ACTIVATE_GRAVITY_TIME_INITIAL],"mesh_activate_gravity_time_initial");
+  type[MESH_ACTIVATE_GRAVITY_TIME_INITIAL] = DOUBLE_PRECISION;
+  data_length[MESH_ACTIVATE_GRAVITY_TIME_INITIAL] = 1;
+  data_class[MESH_ACTIVATE_GRAVITY_TIME_INITIAL] = CONTROL;
+
+  strcpy(name[MESH_ACTIVATE_GRAVITY_TIME_STRAIN_SETTLEMENT],"mesh_activate_gravity_time_strain_settlement");
+  type[MESH_ACTIVATE_GRAVITY_TIME_STRAIN_SETTLEMENT] = INTEGER;
+  data_length[MESH_ACTIVATE_GRAVITY_TIME_STRAIN_SETTLEMENT] = 1;
+  data_class[MESH_ACTIVATE_GRAVITY_TIME_STRAIN_SETTLEMENT] = CONTROL;
+
   strcpy(name[METHOD1],"method1");
 
   strcpy(name[METHOD2],"method2");
@@ -4448,6 +4496,37 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   strcpy(name[STATIC],"static" );
 
   strcpy(name[STEP],"step");
+
+  strcpy(name[STRAIN_SETTLEMENT_DIAGRAM],"strain_settlement_diagram");
+  type[STRAIN_SETTLEMENT_DIAGRAM] = DOUBLE_PRECISION;
+  data_length[STRAIN_SETTLEMENT_DIAGRAM] = DATA_ITEM_SIZE;
+  fixed_length[STRAIN_SETTLEMENT_DIAGRAM] = 0;
+  data_class[STRAIN_SETTLEMENT_DIAGRAM] = CONTROL;
+  data_required[STRAIN_SETTLEMENT_DIAGRAM] = STRAIN_SETTLEMENT_PARAMETERS;
+
+  strcpy(name[STRAIN_SETTLEMENT_DIAGRAM_DOF],"strain_settlement_diagram_dof");
+  type[STRAIN_SETTLEMENT_DIAGRAM_DOF] = INTEGER;
+  data_length[STRAIN_SETTLEMENT_DIAGRAM_DOF] = 1;
+  data_class[STRAIN_SETTLEMENT_DIAGRAM_DOF] = CONTROL;
+  data_required[STRAIN_SETTLEMENT_DIAGRAM_DOF] = STRAIN_SETTLEMENT_DIAGRAM;
+
+  strcpy(name[STRAIN_SETTLEMENT_DIAGRAM_NUMBER],"strain_settlement_diagram_number");
+  type[STRAIN_SETTLEMENT_DIAGRAM_NUMBER] = INTEGER;
+  data_length[STRAIN_SETTLEMENT_DIAGRAM_NUMBER] = 1;
+  data_class[STRAIN_SETTLEMENT_DIAGRAM_NUMBER] = CONTROL;
+  data_required[STRAIN_SETTLEMENT_DIAGRAM_NUMBER] = STRAIN_SETTLEMENT_DIAGRAM;
+
+  strcpy(name[STRAIN_SETTLEMENT_ELEMENT_GROUP],"strain_settlement_element_group");
+  type[STRAIN_SETTLEMENT_ELEMENT_GROUP] = INTEGER;
+  data_length[STRAIN_SETTLEMENT_ELEMENT_GROUP] = DATA_ITEM_SIZE;
+  fixed_length[STRAIN_SETTLEMENT_ELEMENT_GROUP] = 0;
+  data_class[STRAIN_SETTLEMENT_ELEMENT_GROUP] = CONTROL;
+  data_required[STRAIN_SETTLEMENT_ELEMENT_GROUP] = STRAIN_SETTLEMENT_PARAMETERS;
+
+  strcpy(name[STRAIN_SETTLEMENT_PARAMETERS],"strain_settlement_parameters");
+  type[STRAIN_SETTLEMENT_PARAMETERS] = DOUBLE_PRECISION;
+  data_length[STRAIN_SETTLEMENT_PARAMETERS] = 6;
+  data_class[STRAIN_SETTLEMENT_PARAMETERS] = CONTROL;
 
   strcpy(name[STRESS],"stress");
 

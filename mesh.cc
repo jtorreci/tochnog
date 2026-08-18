@@ -573,3 +573,94 @@ void mesh_extrude( double z_layer[], long int n_layer )
   }
   mesh_has_changed( VERSION_NORMAL );
 }
+
+// mesh_activate_gravity_factor - mesh_activate_gravity_time (Carril B).
+//
+// Returns the gravity activation factor for an element: 0 before the
+// element start time of activation, 1 after the element end time of
+// activation, interpolated in between. The start/end times are
+// interpolated from the global time_start/time_end of the
+// mesh_activate_gravity_time record and the lowest/highest coordinate of
+// the element (bottom to top activation, typical for dam/dumping
+// construction). The element is selected by mesh_activate_gravity_element
+// (range), _element_group, or _geometry. Without the record the factor is 1
+// (gravity fully active).
+double mesh_activate_gravity_factor( long int element, long int element_group,
+  long int nnol, long int nodes[] )
+
+{
+  long int i=0, idim=0, inod=0, icontrol=0, length=0, ldum=0, in_geometry=0,
+    found=0, idum[1], *mesh_act=NULL, *gr_list=NULL;
+  double factor=1., time_start=0., time_end=0., time_current=0., dtime=0.,
+    coord_min=0., coord_max=0., t_start_el=0., t_end_el=0., ddum[MDIM],
+    rdum=0., *coord=NULL;
+
+  if ( db_active_index( MESH_ACTIVATE_GRAVITY_TIME, 0, VERSION_NORMAL ) ) {
+    db( DTIME, 0, idum, &dtime, ldum, VERSION_NEW, GET );    db( TIME_CURRENT, 0, idum, &time_current, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+    db( MESH_ACTIVATE_GRAVITY_TIME, 0, idum, ddum, ldum, VERSION_NORMAL, GET );
+    time_start = ddum[0]; time_end = ddum[1];
+
+    // select the element: range (_element), group (_element_group), or
+    // geometry (_geometry). If no selection is given, all elements apply.
+    long int selected = 0;
+    if ( db_active_index( MESH_ACTIVATE_GRAVITY_ELEMENT, 0, VERSION_NORMAL ) ) {
+      length = 0;
+      mesh_act = db_int( MESH_ACTIVATE_GRAVITY_ELEMENT, 0, VERSION_NORMAL );
+      length = db_len( MESH_ACTIVATE_GRAVITY_ELEMENT, 0, VERSION_NORMAL );
+      for ( i=0; i<length; i++ )
+        if ( mesh_act[i]==element ) { selected = 1; break; }
+    }
+    if ( db_active_index( MESH_ACTIVATE_GRAVITY_ELEMENT_GROUP, 0, VERSION_NORMAL ) ) {
+      length = 0;
+      gr_list = db_int( MESH_ACTIVATE_GRAVITY_ELEMENT_GROUP, 0, VERSION_NORMAL );
+      length = db_len( MESH_ACTIVATE_GRAVITY_ELEMENT_GROUP, 0, VERSION_NORMAL );
+      for ( i=0; i<length; i++ )
+        if ( gr_list[i]==element_group ) { selected = 1; break; }
+    }
+    if ( db_active_index( MESH_ACTIVATE_GRAVITY_GEOMETRY, 0, VERSION_NORMAL ) ) {
+      long int geom[2];
+      db( MESH_ACTIVATE_GRAVITY_GEOMETRY, 0, geom, ddum, ldum, VERSION_NORMAL, GET );
+      for ( inod=0; inod<nnol; inod++ ) {
+        in_geometry = 0;
+        geometry( nodes[inod], ddum, geom, in_geometry, rdum, ddum, rdum,
+          ddum, NODE_START_REFINED, PROJECT_EXACT, VERSION_NORMAL );
+        if ( !in_geometry ) break;
+      }
+      if ( in_geometry ) selected = 1;
+    }
+    // default: no selection record -> all elements
+    if ( !db_active_index( MESH_ACTIVATE_GRAVITY_ELEMENT, 0, VERSION_NORMAL ) &&
+         !db_active_index( MESH_ACTIVATE_GRAVITY_ELEMENT_GROUP, 0, VERSION_NORMAL ) &&
+         !db_active_index( MESH_ACTIVATE_GRAVITY_GEOMETRY, 0, VERSION_NORMAL ) )
+      selected = 1;
+    if ( !selected ) return 1.;
+
+    // lowest/highest vertical coordinate (y in 2D, z in 3D). The element
+    // activation interval is interpolated from the global window: elements
+    // with the lowest coordinate activate first. Without the global mesh
+    // range we map the element height into the window (single element: the
+    // full window).
+    long int vdim = ( ndim==3 ) ? 2 : 1;
+    coord_min = 1.e30; coord_max = -1.e30;
+    for ( inod=0; inod<nnol; inod++ ) {
+      coord = db_dbl( NODE, nodes[inod], VERSION_NORMAL );
+      if ( coord[vdim]<coord_min ) coord_min = coord[vdim];
+      if ( coord[vdim]>coord_max ) coord_max = coord[vdim];
+    }
+    if ( coord_max<=coord_min ) coord_max = coord_min + 1.e-6;
+    t_start_el = time_start;
+    t_end_el   = time_end;
+    double t_total = time_current + dtime;
+    // time_initial: before time_of_birth the element is inactive
+    double time_birth = -1.e30;
+    db( MESH_ACTIVATE_GRAVITY_TIME_INITIAL, 0, idum, &time_birth, ldum,
+      VERSION_NORMAL, GET_IF_EXISTS );
+    if ( t_total<time_birth ) return 0.;
+
+    factor = 1.;
+    if ( t_total<t_start_el ) factor = 0.;
+    else if ( t_total<t_end_el && t_end_el>t_start_el )
+      factor = (t_total-t_start_el)/(t_end_el-t_start_el);
+  }
+  return factor;
+}
