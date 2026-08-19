@@ -435,6 +435,12 @@ void db_initialize( long int dof_type[], long int dof_label[] )
 
   strcpy(name[CONTACTSPRING],"contactspring");
 
+  strcpy(name[CONTACT_APPLY],"contact_apply");
+  type[CONTACT_APPLY] = INTEGER;
+  data_length[CONTACT_APPLY] = 1;
+  no_index[CONTACT_APPLY] = 1;
+  data_class[CONTACT_APPLY] = CONTACT;
+
   strcpy(name[CONTACT_FRICTION],"contact_friction");
   type[CONTACT_FRICTION] = DOUBLE_PRECISION;
   data_length[CONTACT_FRICTION] = 1;
@@ -476,6 +482,12 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   no_index[CONTACT_PENALTY_VELOCITY] = 1;
   data_class[CONTACT_PENALTY_VELOCITY] = CONTACT;
 
+  strcpy(name[CONTACT_PLASTI_FRICTION],"contact_plasti_friction");
+  type[CONTACT_PLASTI_FRICTION] = DOUBLE_PRECISION;
+  data_length[CONTACT_PLASTI_FRICTION] = 2;
+  no_index[CONTACT_PLASTI_FRICTION] = 1;
+  data_class[CONTACT_PLASTI_FRICTION] = CONTACT;
+
   strcpy(name[CONTACT_RELAXATION],"contact_relaxation");
   type[CONTACT_RELAXATION] = DOUBLE_PRECISION;
   data_length[CONTACT_RELAXATION] = 1;
@@ -487,6 +499,24 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   data_length[CONTACT_STICK] = 1;
   no_index[CONTACT_STICK] = 1;
   data_class[CONTACT_STICK] = CONTACT;
+
+  strcpy(name[CONTACT_TARGET_ELEMENT_GROUP],"contact_target_element_group");
+  type[CONTACT_TARGET_ELEMENT_GROUP] = INTEGER;
+  data_length[CONTACT_TARGET_ELEMENT_GROUP] = DATA_ITEM_SIZE;
+  fixed_length[CONTACT_TARGET_ELEMENT_GROUP] = 0;
+  no_index[CONTACT_TARGET_ELEMENT_GROUP] = 1;
+  data_class[CONTACT_TARGET_ELEMENT_GROUP] = CONTACT;
+
+  strcpy(name[CONTACT_TARGET_GEOMETRY],"contact_target_geometry");
+  type[CONTACT_TARGET_GEOMETRY] = INTEGER;
+  data_length[CONTACT_TARGET_GEOMETRY] = 2;
+  data_class[CONTACT_TARGET_GEOMETRY] = CONTACT;
+
+  strcpy(name[CONTACT_TARGET_GEOMETRY_SWITCH],"contact_target_geometry_switch");
+  type[CONTACT_TARGET_GEOMETRY_SWITCH] = INTEGER;
+  data_length[CONTACT_TARGET_GEOMETRY_SWITCH] = 1;
+  data_class[CONTACT_TARGET_GEOMETRY_SWITCH] = CONTACT;
+  data_required[CONTACT_TARGET_GEOMETRY_SWITCH] = CONTACT_TARGET_GEOMETRY;
 
   strcpy(name[CONTROL_CHANGE_DATAITEM_APPLY],"control_change_dataitem_apply");
   type[CONTROL_CHANGE_DATAITEM_APPLY] = INTEGER;
