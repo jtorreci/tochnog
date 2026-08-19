@@ -57,8 +57,8 @@ mesh_activate_gravity_element 0  -ra 1 5 -ra
 - **Implementado**: `mesh_activate_gravity_time` (gradual gravity activation,
   `mesh_activate_gravity_factor` in mesh.cc, applied in materi.cc). The
   element selection (`_element`/`_element_group`/`_geometry`),
-  `_time_initial`, and the factor interpolation are implemented. Validated
-  with `mesh_act_grav`.
-- **Parcial**: `_method` (the stiffness reduction of method 2 is registered
-  but the stiffness factor application is not yet wired into the element
-  assembly).
+  `_time_initial`, the factor interpolation, and **`_method`** (method 1 and
+  2) with **`_stiffness_factor`** are implemented. Method 2 keeps the element
+  active with reduced stiffness before activation (the element matrix and
+  lhside are scaled by the stiffness factor in materi.cc). Validated with
+  `mesh_act_grav` (method 1) and `mesh_act_grav2` (method 2).

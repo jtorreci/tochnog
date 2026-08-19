@@ -515,6 +515,8 @@ Añadir magnitudes NO altera `primary` (tablas separadas por familia; JOIN por
       umbral (default 0 → solo succión). Documentado en manual-developer/bounda_water.md.
 - [ ] Contacto: `contact_apply`, `contact_heat_generation`, `contact_penalty_*`,
       `contact_plasti_friction`, `contact_target_*`.
+      **SIGUIENTE 2026-08-18**: tras cerrar el Carril B (incl. método 2 de
+      `mesh_activate_gravity`), el contacto es el siguiente objetivo (P6).
 - [ ] `control_reset_dof*`, `control_reset_value_*`, `change_dataitem_apply`,
       `change_dataitem_geometry`, `control_data_*`, `control_distribute*`.
       **NOTA 2026-08-12**: `control_data_put` y `control_distribute` están en
@@ -680,7 +682,7 @@ Del changelog (`changes-site-archive.txt`), un usuario de Professional
   (`mesh_activate_gravity_time*` activación gradual + `strain_settlement_parameters`
   creep con saturación + `strain_settlement_diagram*` dependencia de parámetros
   en dofs); validado con `mesh_act_grav`, `strain_settle`, `strain_settle_diag`.
-  `_method`/`_stiffness_factor` (método 2) parciales.
+  `_method`/`_stiffness_factor` (método 2) implementados.
 - [x] `control_reset_value_dof` (y `control_reset_dof`, `_value_constant`,
   `_value_dof_diagram`, `_value_method`). **HECHO 2026-08-13** (verificado:
   hisv0 reseteado a 0.55; diagrama sigyy→hisv0; métodos -use/-add/-multiply).

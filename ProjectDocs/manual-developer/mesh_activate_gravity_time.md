@@ -23,6 +23,7 @@
 
 ## Pendiente
 
-- `_method`/`_stiffness_factor`: method 2 (element active with reduced
-  stiffness) is registered but the stiffness reduction in the element
-  assembly is not yet wired.
+- Nada pendiente del `mesh_activate_gravity_*`: method 1 y 2 implementados.
+  Nota: con stiffness_factor bajo y dofs libres el modelo puede ser
+  numéricamente inestable (documentado en el test mesh_act_grav2, que usa
+  todos los nodos fijos).
