@@ -34,6 +34,7 @@ input parameters it accepts.
 - [materi_displacement_relative](materi_displacement_relative.md) — relative displacement dof (reference re-synced on timestep change / reset).
 - [mesh_activate_gravity_time](mesh_activate_gravity_time.md) — gradual gravity activation (dams/dumping).
 - [strain_settlement_parameters](strain_settlement_parameters.md) — settlement creep strain model.
+- [contact_apply](contact_apply.md) — contact algorithm records (apply, plastic friction, targets).
 - [control_print_history_factor](control_print_history_factor.md) — multiply history output values.
 - [control_print_history_smooth](control_print_history_smooth.md) — moving-average smoothing of history output.
 - [control_print_dof](control_print_dof.md) — print primary dofs with coordinates to plain ASCII files.

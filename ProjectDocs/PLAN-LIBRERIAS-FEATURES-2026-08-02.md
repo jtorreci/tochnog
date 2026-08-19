@@ -513,10 +513,11 @@ Añadir magnitudes NO altera `primary` (tablas separadas por familia; JOIN por
 - [ ] `groundflow_pressure_atmospheric` — relacionado con `bounda_water`: el
       clamp de `groundflow_phreatic_coord()` limita la presión estática a este
       umbral (default 0 → solo succión). Documentado en manual-developer/bounda_water.md.
-- [ ] Contacto: `contact_apply`, `contact_heat_generation`, `contact_penalty_*`,
-      `contact_plasti_friction`, `contact_target_*`.
-      **SIGUIENTE 2026-08-18**: tras cerrar el Carril B (incl. método 2 de
-      `mesh_activate_gravity`), el contacto es el siguiente objetivo (P6).
+- [x] Contacto: `contact_apply`, `contact_plasti_friction`,
+      `contact_target_element_group`, `contact_target_geometry`/`_switch`.
+      **HECHO 2026-08-19** (contact.cc: gate apply, fricción Mohr-Coulomb,
+      filtro de targets por grupo, alias de geometría). `contact_heat_generation`
+      (factor) y `control_contact_apply` siguen pendientes.
 - [ ] `control_reset_dof*`, `control_reset_value_*`, `change_dataitem_apply`,
       `change_dataitem_geometry`, `control_data_*`, `control_distribute*`.
       **NOTA 2026-08-12**: `control_data_put` y `control_distribute` están en

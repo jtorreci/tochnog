@@ -76,7 +76,9 @@ suite sfnet, o un test propio. El registro completo:
 
 **Carril B — `slide_axisymmetric` + variantes `control_reset_value_*` espaciales** | `3024d24` + `650ed26` | 2026-08-18 | `slide_axisymmetric -yes` escala la fricción de `slide_geometry` por `2*pi*r` (r = coordenada radial del nodo, `slide.cc`; validado con `slide_axi`). Variantes espaciales de `control_reset_value` (distribuciones en x/y/z): `_linear` (`ax x + ay y + az z`), `_power` (`ax x^bx + ...`), `_square_root`, `_exponent`, `_logarithmic`, `_logarithmic_second`, `_multi_linear` (tabla vs coordenada vertical) — implementadas en `data.cc` (bloque de reset); validada `_linear` con `reset_value_linear` (disx → x). |
 
-**Carril B — `mesh_activate_gravity_time*` + `strain_settlement_*`** | `f6b8935` + `b58fd8f` + `(commit method2 en curso)` | 2026-08-18 | **Activación gradual de la gravedad** (`mesh_activate_gravity_time`, `_element`, `_element_group`, `_geometry`, `_time_initial`, `_method` 1 y 2, `_stiffness_factor`, `control_mesh_activate_gravity_apply`): `mesh_activate_gravity_factor()` en mesh.cc, aplicada en materi.cc (el vector de gravedad se multiplica por el factor de activación; el método 2 escala la matriz del elemento por el factor de rigidez). **Creep de asentamiento** (`strain_settlement_parameters`, `_element_group`, `strain_settlement_diagram`+`_dof`+`_number`): `strain_settlement_creep()` en materi.cc añade el creep vertical a `inc_ept` en `set_deften_etc`. Ley con saturación (decisión 2026-08-18, el OCR del manual es ambiguo): `eps_zz = Ar*(t/t_ref)^n/(t_plus+(t/t_ref)^n)`. Validado con `mesh_act_grav`, `mesh_act_grav2` (método 2), `strain_settle` (creep comprime la columna) y `strain_settle_diag` (Ar duplicado vía diagrama). |
+**Carril B — `mesh_activate_gravity_time*` + `strain_settlement_*`** | `f6b8935` + `b58fd8f` + `4fc3419` + `6f44549` | 2026-08-18 | **Activación gradual de la gravedad** (`mesh_activate_gravity_time`, `_element`, `_element_group`, `_geometry`, `_time_initial`, `_method` 1 y 2, `_stiffness_factor`, `control_mesh_activate_gravity_apply`): `mesh_activate_gravity_factor()` en mesh.cc, aplicada en materi.cc (el vector de gravedad se multiplica por el factor de activación; el método 2 escala la matriz del elemento por el factor de rigidez). **Creep de asentamiento** (`strain_settlement_parameters`, `_element_group`, `strain_settlement_diagram`+`_dof`+`_number`): `strain_settlement_creep()` en materi.cc añade el creep vertical a `inc_ept` en `set_deften_etc`. Ley con saturación (decisión 2026-08-18, el OCR del manual es ambiguo): `eps_zz = Ar*(t/t_ref)^n/(t_plus+(t/t_ref)^n)`. Validado con `mesh_act_grav`, `mesh_act_grav2` (método 2), `strain_settle` (creep comprime la columna) y `strain_settle_diag` (Ar duplicado vía diagrama). |
+
+**Carril B — familia `contact_*` (apply, plasti_friction, targets)** | `(commit en curso)` | 2026-08-19 | el GNU ya tenía el algoritmo de contacto (`parallel_contact` en contact.cc: geometría target, penalties, stick, relaxation, heatgeneration) y `contact_friction` simple. Se completan: `contact_apply` (gate `-yes`/`-no` por timestep), `contact_plasti_friction` (Mohr-Coulomb `max(c + Fn*tan(phi),0)` en el slip, reemplaza el `mu*Fn`), `contact_target_element_group` (filtro de targets por grupo), `contact_target_geometry`/`_switch` (alias de `contact_geometry`/`_switch`). Validado con `contact` (la familia se parsea y el modelo corre estable; el algoritmo de contacto es experimental y la detección de penetración depende del caso). |
 
 Nota: las features marcadas solo "GNU" en el detalle por familia (sin
 fila en esta tabla) ya existían en el fork sfnet 2014 y no fueron
@@ -320,9 +322,9 @@ marcado `PENDIENTE` puede estar cubierto en el GNU bajo otro nombre:
 
 - [x] `condif_temperature` — presente en el GNU
 
-### contact_apply (0/1)
+### contact_apply (1/1)
 
-- [ ] `contact_apply` — PENDIENTE
+- [x] `contact_apply` — implementada (gate `-yes`/`-no` en `parallel_contact`; validada con `contact`)
 
 ### contact_heat (0/1)
 
@@ -334,15 +336,15 @@ marcado `PENDIENTE` puede estar cubierto en el GNU bajo otro nombre:
 - [x] `contact_penalty_temperature` — presente en el GNU
 - [x] `contact_penalty_velocity` — presente en el GNU
 
-### contact_plasti (0/1)
+### contact_plasti (1/1)
 
-- [ ] `contact_plasti_friction` — PENDIENTE
+- [x] `contact_plasti_friction` — implementada (Mohr-Coulomb `max(c + Fn*tan(phi), 0)` en el slip)
 
-### contact_target (0/3)
+### contact_target (3/3)
 
-- [ ] `contact_target_element_group` — PENDIENTE
-- [ ] `contact_target_geometry` — PENDIENTE
-- [ ] `contact_target_geometry_switch` — PENDIENTE
+- [x] `contact_target_element_group` — implementada (filtro de targets por grupo)
+- [x] `contact_target_geometry` — implementada (alias de `contact_geometry`)
+- [x] `contact_target_geometry_switch` — implementada (alias de `contact_geometry_switch`)
 
 ### control_bounda (0/2)
 
