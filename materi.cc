@@ -45,7 +45,7 @@ void materi( long int element, long int gr, long int nnol,
     softvar_nonl=0, softvar_l=0, 
     static_pressure=0., total_pressure=0., location=0.,
     J=0., ddum[1], direct_normal[MDIM], *force_gravity=NULL, 
-    activation_factor=1.,
+    activation_factor=1., activation_stiff=1.,
     *old_deften=NULL, *new_deften=NULL, *inv_deften=NULL,
     *old_epe=NULL, *inc_epe=NULL, *new_epe=NULL,
     *old_epp=NULL, *inc_epp=NULL, 
@@ -164,7 +164,8 @@ void materi( long int element, long int gr, long int nnol,
   // mesh_activate_gravity_time: the gravity is gradually activated for the
   // element (bottom-to-top interpolation). With method 2 the element stays
   // active (reduced stiffness) but without gravity until activation.
-  activation_factor = mesh_activate_gravity_factor( element, gr, nnol, nodes );
+  activation_factor = mesh_activate_gravity_factor( element, gr, nnol, nodes,
+    &activation_stiff );
   for ( idim=0; idim<ndim; idim++ )
     force_gravity[idim] *= activation_factor;
 
@@ -715,6 +716,17 @@ void materi( long int element, long int gr, long int nnol,
 
     }
     }//Not used when searching for local values of softening variable -- end
+  }
+
+  // mesh_activate_gravity method 2: the element stays active but with a
+  // REDUCED STIFFNESS before/during activation (the reduced matrix keeps the
+  // not-yet-activated material from artificially stiffening the model).
+  if ( activation_stiff!=1. ) {
+    long int nmat = nnol*npuknwn*nnol*npuknwn;
+    for ( long int im=0; im<nmat; im++ )
+      element_matrix[im] *= activation_stiff;
+    for ( long int im=0; im<nnol*npuknwn; im++ )
+      element_lhside[im] *= activation_stiff;
   }
 
   if ( swit ) {

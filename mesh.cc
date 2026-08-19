@@ -585,20 +585,33 @@ void mesh_extrude( double z_layer[], long int n_layer )
 // construction). The element is selected by mesh_activate_gravity_element
 // (range), _element_group, or _geometry. Without the record the factor is 1
 // (gravity fully active).
+//
+// With mesh_activate_gravity_method -method2 the element stays ACTIVE in
+// the calculation before its activation but without gravity and with a
+// REDUCED STIFFNESS (mesh_activate_gravity_stiffness_factor, default 1e-6).
+// When stiff_factor is non-NULL it receives the element stiffness factor
+// (1 fully active; stiffness_factor before activation, ramping up between
+// the element start/end times).
 double mesh_activate_gravity_factor( long int element, long int element_group,
-  long int nnol, long int nodes[] )
+  long int nnol, long int nodes[], double *stiff_factor )
 
 {
   long int i=0, idim=0, inod=0, icontrol=0, length=0, ldum=0, in_geometry=0,
-    found=0, idum[1], *mesh_act=NULL, *gr_list=NULL;
+    found=0, method=-METHOD1, idum[1], *mesh_act=NULL, *gr_list=NULL;
   double factor=1., time_start=0., time_end=0., time_current=0., dtime=0.,
     coord_min=0., coord_max=0., t_start_el=0., t_end_el=0., ddum[MDIM],
-    rdum=0., *coord=NULL;
+    rdum=0., *coord=NULL, stiff=1.;
 
+  if ( stiff_factor ) *stiff_factor = 1.;
   if ( db_active_index( MESH_ACTIVATE_GRAVITY_TIME, 0, VERSION_NORMAL ) ) {
     db( DTIME, 0, idum, &dtime, ldum, VERSION_NEW, GET );    db( TIME_CURRENT, 0, idum, &time_current, ldum, VERSION_NORMAL, GET_IF_EXISTS );
     db( MESH_ACTIVATE_GRAVITY_TIME, 0, idum, ddum, ldum, VERSION_NORMAL, GET );
     time_start = ddum[0]; time_end = ddum[1];
+    db( MESH_ACTIVATE_GRAVITY_METHOD, 0, &method, ddum, ldum,
+      VERSION_NORMAL, GET_IF_EXISTS );
+    double stiff_factor_val = 1.e-6;
+    db( MESH_ACTIVATE_GRAVITY_STIFFNESS_FACTOR, 0, idum, &stiff_factor_val,
+      ldum, VERSION_NORMAL, GET_IF_EXISTS );
 
     // select the element: range (_element), group (_element_group), or
     // geometry (_geometry). If no selection is given, all elements apply.
@@ -655,12 +668,30 @@ double mesh_activate_gravity_factor( long int element, long int element_group,
     double time_birth = -1.e30;
     db( MESH_ACTIVATE_GRAVITY_TIME_INITIAL, 0, idum, &time_birth, ldum,
       VERSION_NORMAL, GET_IF_EXISTS );
-    if ( t_total<time_birth ) return 0.;
+    if ( t_total<time_birth ) {
+      // method1: inactive before birth (no stiffness). method2: still active
+      // with the reduced stiffness.
+      if ( method==-METHOD2 && stiff_factor ) *stiff_factor = stiff_factor_val;
+      return ( method==-METHOD2 ) ? 1. : 0.;
+    }
 
     factor = 1.;
-    if ( t_total<t_start_el ) factor = 0.;
-    else if ( t_total<t_end_el && t_end_el>t_start_el )
+    if ( t_total<t_start_el ) {
+      factor = 0.;
+      // method2: element stays active with reduced stiffness until activation
+      if ( method==-METHOD2 ) {
+        factor = 1.;
+        stiff = stiff_factor_val;
+      }
+    }
+    else if ( t_total<t_end_el && t_end_el>t_start_el ) {
       factor = (t_total-t_start_el)/(t_end_el-t_start_el);
+      // method2: stiffness ramps from reduced to full between the times
+      if ( method==-METHOD2 )
+        stiff = stiff_factor_val +
+          (1.-stiff_factor_val) * (t_total-t_start_el)/(t_end_el-t_start_el);
+    }
   }
+  if ( stiff_factor ) *stiff_factor = stiff;
   return factor;
 }

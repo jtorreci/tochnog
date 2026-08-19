@@ -1465,7 +1465,7 @@ void      mesh_add( long int version_from, long int version_to );
 void      mesh_delete_small( long int version );
 void      mesh_has_changed( long int version );
 double    mesh_activate_gravity_factor( long int element, long int element_group,
-            long int nnol, long int nodes[] );
+            long int nnol, long int nodes[], double *stiff_factor );
 void      mesh_split( long int version );
 void      mesh_switch( long int control_mesh_switch[], long int length );
 void      mesh_move( double control_mesh_move[], long int length );
