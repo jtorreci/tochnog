@@ -71,7 +71,7 @@ void interface_element( long int element, long int name,
     residual_factor=0.01, phi=0., c=0., phi_flow=0., max_fric=0.,
     stiff_normal=0., stiff_tang=0., stiff_tang2=0., ddum3[3],
     f_t_old=0., f_t=0., f_t2_old=0., f_t2=0., trial=0., trial2=0.,
-    ft_mag=0., fn_total=0.;
+    ft_mag=0., fn_total=0., force_gravity[MDIM];
   long int *nodes=NULL;
 
   swit = set_swit(element,-1,"interface_element");
@@ -374,6 +374,75 @@ void interface_element( long int element, long int name,
   if ( ndim==3 )
     db( ELEMENT_INTERFACE_FORCE_TANG2, element, idum, &f_t2, ldum,
       VERSION_NEW, PUT );
+
+  // group_interface_groundflow_permeability: ground flow THROUGH the
+  // interface. The interface connects the pore pressures on both sides;
+  // the flux across it is q = pe * (pres_side1 - pres_side2) per unit
+  // length (2D) or area (3D), assembled on the pressure dofs of the
+  // facing node pairs. group_interface_groundflow_capacity adds a storage
+  // term on the pressure dofs of the interface nodes.
+  // group_interface_groundflow_total_pressure_tension: when the accumulated
+  // normal strain exceeds strain_normal_minimum (crack open), the static
+  // water pressure from water_height is used instead of the pore pressure
+  // from the groundflow equation when it is larger in absolute value.
+  if ( groundflow_pressure ) {
+    double pe_iface = 0., C_iface = 0.;
+    long int has_pe = 0, has_C = 0;
+    has_pe = db( GROUP_INTERFACE_GROUNDFLOW_PERMEABILITY, element_group, idum,
+      &pe_iface, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+    has_C  = db( GROUP_INTERFACE_GROUNDFLOW_CAPACITY, element_group, idum,
+      &C_iface, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+    if ( has_pe || has_C || db_active_index(
+        GROUP_INTERFACE_GROUNDFLOW_TOTAL_PRESSURE_TENSION, element_group,
+        VERSION_NORMAL ) ) {
+      // storage term on the pressure dofs of the interface nodes (lumped)
+      if ( has_C ) {
+        for ( inol=0; inol<nnol; inol++ ) {
+          long int jndx = inol*npuknwn + pres_indx/nder;
+          double dpres = ( new_dof[inol*nuknwn+pres_indx] -
+            old_dof[inol*nuknwn+pres_indx] ) / dtime;
+          element_rhside[jndx] -= C_iface * dpres;
+        }
+      }
+      // through-interface flux coupling the facing node pairs
+      if ( has_pe ) {
+        long int ns1 = nnol/2;
+        for ( inol=0; inol<ns1; inol++ ) {
+          long int jn1 = inol*npuknwn + pres_indx/nder;
+          long int jn2 = (inol+ns1)*npuknwn + pres_indx/nder;
+          double pres1 = new_dof[inol*nuknwn+pres_indx];
+          double pres2 = new_dof[(inol+ns1)*nuknwn+pres_indx];
+          double q = pe_iface * ( pres1 - pres2 );
+          element_rhside[jn1] -= q;
+          element_rhside[jn2] += q;
+          element_matrix[jn1*nnol*npuknwn+jn1] += pe_iface;
+          element_matrix[jn1*nnol*npuknwn+jn2] -= pe_iface;
+          element_matrix[jn2*nnol*npuknwn+jn1] -= pe_iface;
+          element_matrix[jn2*nnol*npuknwn+jn2] += pe_iface;
+        }
+      }
+      // crack pressure: static water pressure on an opened interface
+      if ( db_active_index( GROUP_INTERFACE_GROUNDFLOW_TOTAL_PRESSURE_TENSION,
+          element_group, VERSION_NORMAL ) ) {
+        double gitpt[2], dens=0.;
+        db( GROUP_INTERFACE_GROUNDFLOW_TOTAL_PRESSURE_TENSION, element_group,
+          idum, gitpt, ldum, VERSION_NORMAL, GET );
+        db( GROUNDFLOW_DENSITY, 0, idum, &dens, ldum, VERSION_NORMAL,
+          GET_IF_EXISTS );
+        force_gravity_calculate( force_gravity );
+        if ( strain_normal > gitpt[0] && dens>0. ) {
+          for ( inol=0; inol<nnol; inol++ ) {
+            long int jndx = inol*npuknwn + pres_indx/nder;
+            double static_pres =
+              force_gravity[ndim-1] * dens * gitpt[1];
+            double pres_n = new_dof[inol*nuknwn+pres_indx];
+            if ( scalar_dabs(static_pres) > scalar_dabs(pres_n) )
+              element_rhside[jndx] += static_pres - pres_n;
+          }
+        }
+      }
+    }
+  }
 
   delete[] el;
   delete[] nodes;

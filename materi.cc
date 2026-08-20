@@ -417,6 +417,38 @@ void materi( long int element, long int gr, long int nnol,
       new_pres = new_unknowns[pres_indx];
       if ( groundflow_phreatic_coord( -1, coord_ip, new_unknowns, 
         total_pressure, static_pressure, location ) ) new_pres = total_pressure;
+      // group_groundflow_total_pressure_tension: if the largest eigenvalue of
+      // materi_strain_plastic_tension exceeds plastic_tension_minimum, use the
+      // static water pore pressure determined from water_height (when it is
+      // larger in absolute value than the pore pressure from the groundflow
+      // equation). Takes care that in cracks in concrete the largest water
+      // pressure from an environment is used.
+      if ( db_active_index( GROUP_GROUNDFLOW_TOTAL_PRESSURE_TENSION, gr,
+          VERSION_NORMAL ) ) {
+        double gptt[2], epp_princ[3], epp_t[MDIM*MDIM], dens_water=0.;
+        db( GROUP_GROUNDFLOW_TOTAL_PRESSURE_TENSION, gr, idum, gptt, ldum,
+          VERSION_NORMAL, GET );
+        db( GROUNDFLOW_DENSITY, 0, idum, &dens_water, ldum, VERSION_NORMAL,
+          GET_IF_EXISTS );
+        for ( idim=0; idim<MDIM; idim++ ) {
+          for ( jdim=0; jdim<MDIM; jdim++ ) {
+            if ( materi_strain_plasti )
+              epp_t[idim*MDIM+jdim] =
+                new_unknowns[epp_indx+stress_indx(idim,jdim)*nder];
+            else
+              epp_t[idim*MDIM+jdim] = 0.;
+          }
+        }
+        matrix_eigenvalues( epp_t, epp_princ );
+        tmp = epp_princ[0];
+        if ( epp_princ[1] > tmp ) tmp = epp_princ[1];
+        if ( epp_princ[2] > tmp ) tmp = epp_princ[2];
+        if ( tmp > gptt[0] ) {
+          double static_pres =
+            force_gravity[ndim-1] * dens_water * ( gptt[1] - coord_ip[ndim-1] );
+          if ( scalar_dabs(static_pres) > scalar_dabs(new_pres) ) new_pres = static_pres;
+        }
+      }
       new_pres *= gpf;
       for ( idim=0; idim<MDIM; idim++ ) total_new_sig[idim*MDIM+idim] += new_pres;
     }

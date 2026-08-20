@@ -526,6 +526,14 @@ Añadir magnitudes NO altera `primary` (tablas separadas por familia; JOIN por
       c = csat + n*dS/dphi_p, permeabilidad ki = krel(S)*ksat,i con Mualem;
       dof `groundflow_saturation` guarda S por nodo). Tests
       `groundflow_vangenuchten` y `groundflow_nonsaturated_off`.
+- [x] Presión de grieta + interfaz groundflow: `group_groundflow_total_pressure_tension`,
+      `group_interface_groundflow_capacity`, `group_interface_groundflow_permeability`,
+      `group_interface_groundflow_total_pressure_tension`.
+      **HECHO 2026-08-20** (materi.cc: presión estática de water_height si el
+      mayor autovalor de epp supera plastic_tension_minimum; interface.cc:
+      capacidad lumped, flujo a través q=pe*(pres1-pres2), presión estática si
+      strain_normal > strain_normal_minimum). Tests `groundflow_total_pressure_tension`
+      y `groundflow_interface`.
 - [x] Contacto: `contact_apply`, `contact_plasti_friction`,
       `contact_target_element_group`, `contact_target_geometry`/`_switch`.
       **HECHO 2026-08-19** (contact.cc: gate apply, fricción Mohr-Coulomb,
