@@ -84,7 +84,9 @@ suite sfnet, o un test propio. El registro completo:
 
 **P6 — modelo no saturado van Genuchten (`group_groundflow_nonsaturated_vangenuchten`, `group_groundflow_nonsaturated_eps_permeability`, `groundflow_nonsaturated_apply`, `control_groundflow_nonsaturated_apply`)** | `cdaf8a6` | 2026-08-20 | ley van Genuchten del manual 2024 en groundda.cc (`groundflow_data`): `S(phi_p) = Sres + (Ssat-Sres)(1+(ga|phi_p|)^gn)^((1-gn)/gn)` con `phi_p = -pres/(dens*|g|)`; capacidad no saturada `c = csat + n*dS/dphi_p` (derivada analítica); permeabilidad `ki = krel(S)*ksat,i` con `krel = Se^gl[1-(1-Se^(gn/(gn-1)))^((gn-1)/gn)]²` (Mualem). `group_groundflow_nonsaturated_eps_permeability` fija el suelo de `krel`. Dof `groundflow_saturation` (initia, almacenado no resuelto) guarda S por nodo. Gates `groundflow_nonsaturated_apply` (global, default -yes) y `control_groundflow_nonsaturated_apply` (por timestep). Requiere `group_groundflow_porosity` + `groundflow_saturation`. Validado con `groundflow_vangenuchten` (gsat nodo 5 = 0.7364 exacto; pres media -2.76 vs -5 lineal por la k reducida) y `groundflow_nonsaturated_off` (con `-no` pres media -5.0 exacta, saturado). |
 
-**P6 — presión de grieta + interfaz groundflow (`group_groundflow_total_pressure_tension`, `group_interface_groundflow_capacity`, `group_interface_groundflow_permeability`, `group_interface_groundflow_total_pressure_tension`)** | `(commit en curso)` | 2026-08-20 | `group_groundflow_total_pressure_tension` (materi.cc, bloque groundflow_pressure): si el mayor autovalor de `materi_strain_plastic_tension` supera `plastic_tension_minimum`, la presión estática `dens_agua*g*(water_height - coord)` reemplaza a la de la ecuación si es mayor en valor absoluto (grietas de hormigón). Usa `GROUNDFLOW_DENSITY` (no la densidad del material). En interfaz (interface.cc): `_capacity` (almacenamiento lumped en pres dofs), `_permeability` (flujo a través `q = pe*(pres_s1 - pres_s2)` acoplando los pares de nodos opuestos, con tangente simétrica ±pe), `_total_pressure_tension` (presión estática forzada si `strain_normal` acumulado > `strain_normal_minimum`). Validado con `groundflow_total_pressure_tension` (epp inicial 0.01: node_rhside velx -4.147 vs 0.0525 sin la corrección) y `groundflow_interface` (bloque derecho aislado se llena hasta pres 2.0 solo con la permeabilidad de interfaz; sin ella queda 0). |
+**P6 — presión de grieta + interfaz groundflow (`group_groundflow_total_pressure_tension`, `group_interface_groundflow_capacity`, `group_interface_groundflow_permeability`, `group_interface_groundflow_total_pressure_tension`)** | `25352a8` | 2026-08-20 | `group_groundflow_total_pressure_tension` (materi.cc, bloque groundflow_pressure): si el mayor autovalor de `materi_strain_plastic_tension` supera `plastic_tension_minimum`, la presión estática `dens_agua*g*(water_height - coord)` reemplaza a la de la ecuación si es mayor en valor absoluto (grietas de hormigón). Usa `GROUNDFLOW_DENSITY` (no la densidad del material). En interfaz (interface.cc): `_capacity` (almacenamiento lumped en pres dofs), `_permeability` (flujo a través `q = pe*(pres_s1 - pres_s2)` acoplando los pares de nodos opuestos, con tangente simétrica ±pe), `_total_pressure_tension` (presión estática forzada si `strain_normal` acumulado > `strain_normal_minimum`). Validado con `groundflow_total_pressure_tension` (epp inicial 0.01: node_rhside velx -4.147 vs 0.0525 sin la corrección) y `groundflow_interface` (bloque derecho aislado se llena hasta pres 2.0 solo con la permeabilidad de interfaz; sin ella queda 0). |
+
+**P6 — familia `groundflow_flux_edge_normal*` (11 keywords)** | `(commit en curso)` | 2026-08-20 | flux de agua distribuido normal a la arista, traducido a flux nodal equivalente en el rhs del dof de presión (`area()` en area.cc, `type[5]`/`type_area[5]`, MTYPES 5→6). Principal `groundflow_flux_edge_normal` + `_geometry` (área, e.g. `-geometry_line`), `_time`/`_sine` (carga temporal), `_factor` (polinomio espacial, via `force_factor`). Restricciones: `_element`, `_element_group`, `_element_node`, `_element_node_factor` (factores por nodo local, DOUBLE: values_fac[0]=elemento), `_element_side` (pares elemento/lado), `_node` (nodos globales). Atención del manual: si se usa DENTRO de la malla el flux total se anula (normales opuestas). Validado con `groundflow_flux_edge` (flux 0.1 por el borde inferior → pres 2.0 en el nodo inferior, `pres = flux*altura/k`; con flux 0 queda 0; variantes `_element_group` y `_node` verificadas). |
 
 Nota: las features marcadas solo "GNU" en el detalle por familia (sin
 fila en esta tabla) ya existían en el fork sfnet 2014 y no fueron
@@ -1068,20 +1070,20 @@ marcado `PENDIENTE` puede estar cubierto en el GNU bajo otro nombre:
 
 - [x] `ground` — presente en el GNU
 
-### groundflow (3/23)
+### groundflow (14/23)
 
 - [x] `groundflow_consolidation_apply` — P6 (2026-08-20)
-- [ ] `groundflow_flux_edge_normal` — PENDIENTE (P6)
-- [ ] `groundflow_flux_edge_normal_element` — PENDIENTE (P6)
-- [ ] `groundflow_flux_edge_normal_element_group` — PENDIENTE (P6)
-- [ ] `groundflow_flux_edge_normal_element_node` — PENDIENTE (P6)
-- [ ] `groundflow_flux_edge_normal_element_node_factor` — PENDIENTE (P6)
-- [ ] `groundflow_flux_edge_normal_element_side` — PENDIENTE (P6)
-- [ ] `groundflow_flux_edge_normal_factor` — PENDIENTE (P6)
-- [ ] `groundflow_flux_edge_normal_geometry` — PENDIENTE (P6)
-- [ ] `groundflow_flux_edge_normal_node` — PENDIENTE (P6)
-- [ ] `groundflow_flux_edge_normal_sine` — PENDIENTE (P6)
-- [ ] `groundflow_flux_edge_normal_time` — PENDIENTE (P6)
+- [x] `groundflow_flux_edge_normal` — P6 (2026-08-20)
+- [x] `groundflow_flux_edge_normal_element` — P6 (2026-08-20)
+- [x] `groundflow_flux_edge_normal_element_group` — P6 (2026-08-20)
+- [x] `groundflow_flux_edge_normal_element_node` — P6 (2026-08-20)
+- [x] `groundflow_flux_edge_normal_element_node_factor` — P6 (2026-08-20)
+- [x] `groundflow_flux_edge_normal_element_side` — P6 (2026-08-20)
+- [x] `groundflow_flux_edge_normal_factor` — P6 (2026-08-20)
+- [x] `groundflow_flux_edge_normal_geometry` — P6 (2026-08-20)
+- [x] `groundflow_flux_edge_normal_node` — P6 (2026-08-20)
+- [x] `groundflow_flux_edge_normal_sine` — P6 (2026-08-20)
+- [x] `groundflow_flux_edge_normal_time` — P6 (2026-08-20)
 - [x] `groundflow_nonsaturated_apply` — P6 (2026-08-20)
 - [ ] `groundflow_phreatic_level_multiple` — PENDIENTE (P6)
 - [ ] `groundflow_phreatic_level_multiple_element` — PENDIENTE (P6)

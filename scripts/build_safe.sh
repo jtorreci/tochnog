@@ -110,6 +110,9 @@ HIPO_TOTAL=0
 #   de water_height reemplaza a la de la ecuacion: node_rhside -4.147 vs 0.0525)
 #   y groundflow_interface (permeabilidad de interfaz llena el bloque derecho
 #   aislado hasta pres 2.0; sin el registro queda 0).
+# + groundflow_flux_edge (groundflow_flux_edge_normal sobre geometry_line 1:
+#   flux 0.1 entrando por el borde inferior da pres 2.0 en el nodo inferior;
+#   con flux 0 queda 0).
 for t in hypo1 hypo2 hypo3 hypo4 smooth1 dof1 mlx1 vtk_dof1 gen1 genbeam1 reset1 cda1 \
          iface_mc iface_mc_1step iface_mc_slip iface_mc_slip_1step iface_mc_tension iface_mc_gap \
          iface_mc_mem iface_mc_dil iface_mc_dil_1step iface_mc_num \
@@ -123,7 +126,7 @@ for t in hypo1 hypo2 hypo3 hypo4 smooth1 dof1 mlx1 vtk_dof1 gen1 genbeam1 reset1
          mesh_act_grav mesh_act_grav2 strain_settle strain_settle_diag \
          contact \
          groundflow_consolidate_off groundflow_vangenuchten groundflow_nonsaturated_off \
-         groundflow_total_pressure_tension groundflow_interface; do
+         groundflow_total_pressure_tension groundflow_interface groundflow_flux_edge; do
   HIPO_TOTAL=$((HIPO_TOTAL+1))
   ( cd validation-suite/test-2014 &&
     ulimit -v 4000000 &&
@@ -136,5 +139,5 @@ for t in hypo1 hypo2 hypo3 hypo4 smooth1 dof1 mlx1 vtk_dof1 gen1 genbeam1 reset1
     echo "    $t: FALLO (rc=$RC)"
   fi
 done
-echo "==> Resumen: $HIPO_OK/$HIPO_TOTAL runs OK (13 tests: 12 preexistentes + familia iface_mc en 10 runs + familia 3D en 5 runs + familia generate_interface en 6 runs + familia materi_direct en 5 runs + materi_displacement_relative en 2 runs + slide/reset_value en 2 runs + gravity/settlement en 4 runs + contact en 1 run + groundflow_consolidate_off en 1 run + groundflow_vangenuchten/groundflow_nonsaturated_off en 2 runs + groundflow_total_pressure_tension/groundflow_interface en 2 runs)."
+echo "==> Resumen: $HIPO_OK/$HIPO_TOTAL runs OK (13 tests: 12 preexistentes + familia iface_mc en 10 runs + familia 3D en 5 runs + familia generate_interface en 6 runs + familia materi_direct en 5 runs + materi_displacement_relative en 2 runs + slide/reset_value en 2 runs + gravity/settlement en 4 runs + contact en 1 run + groundflow_consolidate_off en 1 run + groundflow_vangenuchten/groundflow_nonsaturated_off en 2 runs + groundflow_total_pressure_tension/groundflow_interface en 2 runs + groundflow_flux_edge en 1 run)."
 echo "==> Log de compilacion completo en /tmp/tn_build_safe.log"

@@ -534,6 +534,11 @@ Añadir magnitudes NO altera `primary` (tablas separadas por familia; JOIN por
       capacidad lumped, flujo a través q=pe*(pres1-pres2), presión estática si
       strain_normal > strain_normal_minimum). Tests `groundflow_total_pressure_tension`
       y `groundflow_interface`.
+- [x] Familia `groundflow_flux_edge_normal*` (11 keywords): flux de agua
+      prescrito normal a la arista → flux nodal en el pres dof (area.cc).
+      **HECHO 2026-08-20** (principal + _geometry + _time/_sine/_factor +
+      restricciones _element/_element_group/_element_node/_element_node_factor/
+      _element_side/_node). Test `groundflow_flux_edge`.
 - [x] Contacto: `contact_apply`, `contact_plasti_friction`,
       `contact_target_element_group`, `contact_target_geometry`/`_switch`.
       **HECHO 2026-08-19** (contact.cc: gate apply, fricción Mohr-Coulomb,

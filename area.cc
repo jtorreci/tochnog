@@ -20,7 +20,7 @@
 
 #include "tochnog.h"
 
-#define MTYPES 5
+#define MTYPES 6
 
 static long int border_nodes_tria3[] = {
     0, 1,
@@ -96,9 +96,11 @@ void area( long int element, long int name,
     iso[MNOL], average_element_coord[MDIM], average_side_coord[MDIM],
     weight[MNOL], weight_tmp[MNOL], vec01[MDIM], vec02[MDIM],
     values[DATA_ITEM_SIZE], vec[MDIM], normal[MDIM], normal_tmp[MDIM],
+    values_fac[DATA_ITEM_SIZE],
     *force_element_edge_time=NULL, *force_element_edge_normal_time=NULL,
     *force_element_edge_water_time=NULL, *force_element_edge_sine=NULL,
-    *force_element_edge_normal_sine=NULL;
+    *force_element_edge_normal_sine=NULL,
+    *groundflow_flux_edge_normal_time=NULL, *groundflow_flux_edge_normal_sine=NULL;
 
 
   type[0] = CONDIF_RADIATION;
@@ -106,11 +108,13 @@ void area( long int element, long int name,
   type[2] = FORCE_ELEMENT_EDGE;
   type[3] = FORCE_ELEMENT_EDGE_NORMAL;
   type[4] = FORCE_ELEMENT_EDGE_WATER;
+  type[5] = GROUNDFLOW_FLUX_EDGE_NORMAL;
   type_area[0] = CONDIF_RADIATION_GEOMETRY;
   type_area[1] = CONDIF_CONVECTION_GEOMETRY;
   type_area[2] = FORCE_ELEMENT_EDGE_GEOMETRY;
   type_area[3] = FORCE_ELEMENT_EDGE_NORMAL_GEOMETRY;
   type_area[4] = FORCE_ELEMENT_EDGE_WATER_GEOMETRY;
+  type_area[5] = GROUNDFLOW_FLUX_EDGE_NORMAL_GEOMETRY;
   db( DOF_PRINCIPAL, 0, dof_principal, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
 
   db( DTIME, 0, idum, &dtime, ldum, VERSION_NEW, GET_IF_EXISTS );
@@ -205,6 +209,35 @@ void area( long int element, long int name,
               db_data_class(geometry_entity[0])==GEOMETRY );
             if ( !use_geom ) db_error( type[itype], ind );
           }
+          if ( type[itype]==GROUNDFLOW_FLUX_EDGE_NORMAL ) {
+            // restriction variants for groundflow_flux_edge_normal
+            if ( db_active_index( GROUNDFLOW_FLUX_EDGE_NORMAL_ELEMENT,
+                ind, VERSION_NORMAL ) ) {
+              long int elt[DATA_ITEM_SIZE], length_elt=0;
+              db( GROUNDFLOW_FLUX_EDGE_NORMAL_ELEMENT, ind, elt, ddum,
+                length_elt, VERSION_NORMAL, GET );
+              if ( !array_member( elt, element, length_elt, ldum ) ) continue;
+            }
+            if ( db_active_index( GROUNDFLOW_FLUX_EDGE_NORMAL_ELEMENT_GROUP,
+                ind, VERSION_NORMAL ) ) {
+              long int grp[DATA_ITEM_SIZE], length_grp=0;
+              db( GROUNDFLOW_FLUX_EDGE_NORMAL_ELEMENT_GROUP, ind, grp, ddum,
+                length_grp, VERSION_NORMAL, GET );
+              if ( !array_member( grp, gr, length_grp, ldum ) ) continue;
+            }
+            if ( db_active_index( GROUNDFLOW_FLUX_EDGE_NORMAL_ELEMENT_SIDE,
+                ind, VERSION_NORMAL ) ) {
+              long int side_sel[DATA_ITEM_SIZE], length_side=0;
+              db( GROUNDFLOW_FLUX_EDGE_NORMAL_ELEMENT_SIDE, ind, side_sel, ddum,
+                length_side, VERSION_NORMAL, GET );
+              // pairs (element, side); skip this element if not listed
+              long int ok_side = 0;
+              for ( i=0; i+1<length_side; i+=2 )
+                if ( side_sel[i]==element ) ok_side = 1;
+              if ( !ok_side ) continue;
+            }
+          }
+
           if      ( type[itype]==FORCE_ELEMENT_EDGE ) {
             if      ( db_active_index( FORCE_ELEMENT_EDGE_SINE, ind, VERSION_NORMAL ) ) {
               force_element_edge_sine = db_dbl( FORCE_ELEMENT_EDGE_SINE, ind, VERSION_NORMAL );
@@ -269,6 +302,32 @@ void area( long int element, long int name,
               length = db_len( FORCE_ELEMENT_EDGE_WATER_TIME, ind, VERSION_NORMAL );
               force_time( force_element_edge_water_time,
                 "FORCE_ELEMENT_EDGE_WATER_TIME", length, load );
+            }
+            else
+              load = 1.;
+          }
+          else if ( type[itype]==GROUNDFLOW_FLUX_EDGE_NORMAL ) {
+            if ( db_active_index( GROUNDFLOW_FLUX_EDGE_NORMAL_SINE, ind, VERSION_NORMAL ) ) {
+              groundflow_flux_edge_normal_sine = db_dbl( GROUNDFLOW_FLUX_EDGE_NORMAL_SINE,
+                ind, VERSION_NORMAL );
+              nfreq = ( db_len( GROUNDFLOW_FLUX_EDGE_NORMAL_SINE, ind, VERSION_NORMAL ) - 1 ) / 2;
+              time_start = groundflow_flux_edge_normal_sine[0];
+              load = 0.;
+              if ( time_total>time_start ) {
+                for ( ifreq=0; ifreq<nfreq; ifreq++ ) {
+                  frequency = groundflow_flux_edge_normal_sine[1+ifreq*2+0];
+                  amplitude = groundflow_flux_edge_normal_sine[1+ifreq*2+1];
+                  load += amplitude * sin( 2. * PIRAD * frequency * time_total );
+                }
+              }
+            }
+            else if ( db_active_index( GROUNDFLOW_FLUX_EDGE_NORMAL_TIME,
+                ind, VERSION_NORMAL ) ) {
+              groundflow_flux_edge_normal_time = db_dbl( GROUNDFLOW_FLUX_EDGE_NORMAL_TIME,
+                ind, VERSION_NORMAL );
+              length = db_len( GROUNDFLOW_FLUX_EDGE_NORMAL_TIME, ind, VERSION_NORMAL );
+              force_time( groundflow_flux_edge_normal_time,
+                "GROUNDFLOW_FLUX_EDGE_NORMAL_TIME", length, load );
             }
             else
               load = 1.;
@@ -488,6 +547,51 @@ void area( long int element, long int name,
                         pressure * values[2+idim];
                       element_rhside[inol*npuknwn+ipuknwn] += tmp;
                     }
+                  }
+                }
+                else if ( type[itype]==GROUNDFLOW_FLUX_EDGE_NORMAL ) {
+                  force_factor( GROUNDFLOW_FLUX_EDGE_NORMAL_FACTOR, ind, 
+                    &new_coord[inol*ndim], factor );
+                  db( GROUNDFLOW_FLUX_EDGE_NORMAL, ind, idum, values, 
+                    ldum, VERSION_NORMAL, GET );
+                  // restriction by node
+                  long int use_it = 1;
+                  if ( db_active_index( GROUNDFLOW_FLUX_EDGE_NORMAL_NODE,
+                      ind, VERSION_NORMAL ) ) {
+                    long int nds[DATA_ITEM_SIZE], length_nds=0;
+                    db( GROUNDFLOW_FLUX_EDGE_NORMAL_NODE, ind, nds, ddum,
+                      length_nds, VERSION_NORMAL, GET );
+                    if ( !array_member( nds, inod, length_nds, ldum ) ) use_it = 0;
+                  }
+                  if ( db_active_index( GROUNDFLOW_FLUX_EDGE_NORMAL_ELEMENT_NODE,
+                      ind, VERSION_NORMAL ) ) {
+                    long int en[DATA_ITEM_SIZE], length_en=0;
+                    db( GROUNDFLOW_FLUX_EDGE_NORMAL_ELEMENT_NODE, ind, en, ddum,
+                      length_en, VERSION_NORMAL, GET );
+                    // en[0]=element, en[1..]=local node numbers
+                    if ( en[0]!=element || !array_member( &en[1], inol,
+                        length_en-1, ldum ) ) use_it = 0;
+                  }
+                  double node_factor = 1.;
+                  if ( db_active_index( GROUNDFLOW_FLUX_EDGE_NORMAL_ELEMENT_NODE_FACTOR,
+                      ind, VERSION_NORMAL ) ) {
+                    long int length_enf=0;
+                    db( GROUNDFLOW_FLUX_EDGE_NORMAL_ELEMENT_NODE_FACTOR, ind,
+                      idum, values_fac, length_enf, VERSION_NORMAL, GET );
+                    // values_fac[0]=element, values_fac[1..]=factors for the
+                    // local nodes of that element
+                    long int enf_el = (long int)values_fac[0];
+                    long int j;
+                    if ( enf_el==element ) {
+                      for ( j=0; j+1<length_enf; j++ )
+                        if ( j==inol ) node_factor = values_fac[j+1];
+                    }
+                  }
+                  if ( use_it ) {
+                    ipuknwn = pres_indx/nder;
+                    tmp = factor * node_factor *
+                      load * weight[inol_side] * area_size * values[0];
+                    element_rhside[inol*npuknwn+ipuknwn] += tmp;
                   }
                 }
                 else
