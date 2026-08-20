@@ -4968,6 +4968,8 @@ void db_initialize( long int dof_type[], long int dof_label[] )
       else if ( n==2 ) strcpy( basename, "gvely"  );
       else if ( n==3 ) strcpy( basename, "gvelz"  );
     }
+    else if ( dof_type[iuknwn]==-GROUNDFLOW_SATURATION ) 
+      strcpy( basename, "gsat" );
     else if ( dof_type[iuknwn]==-MATERI_DAMAGE ) 
       strcpy( basename, "dam" );
     else if ( dof_type[iuknwn]==-MATERI_DENSITY ) 

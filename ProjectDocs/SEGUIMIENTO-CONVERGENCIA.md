@@ -80,7 +80,9 @@ suite sfnet, o un test propio. El registro completo:
 
 **Carril B — familia `contact_*` (apply, plasti_friction, targets)** | `(commit en curso)` | 2026-08-19 | el GNU ya tenía el algoritmo de contacto (`parallel_contact` en contact.cc: geometría target, penalties, stick, relaxation, heatgeneration) y `contact_friction` simple. Se completan: `contact_apply` (gate `-yes`/`-no` por timestep), `contact_plasti_friction` (Mohr-Coulomb `max(c + Fn*tan(phi),0)` en el slip, reemplaza el `mu*Fn`), `contact_target_element_group` (filtro de targets por grupo), `contact_target_geometry`/`_switch` (alias de `contact_geometry`/`_switch`). Validado con `contact` (la familia se parsea y el modelo corre estable; el algoritmo de contacto es experimental y la detección de penetración depende del caso). |
 
-**P6 — switches de consolidación groundflow (`groundflow_consolidation_apply`, `control_groundflow_consolidation_apply`, `group_groundflow_consolidation_apply`)** | `(commit en curso)` | 2026-08-20 | switches `-yes`/`-no` que controlan el término de consolidación (divergencia material) en la ecuación de groundflow: global, por timestep (`control_*`, index) y por grupo. Precedencia: group > global > control; cualquier `-no` fuerza `materidivergence=-NO` en groundfl.cc (además de los legacy `OPTIONS_SKIP_GROUNDFLOW_MATERIDIVERGENCE`/`CONTROL_OPTIONS_...`). Se corrigió un bug latente en database.cc: `CONTROL_OPTIONS_SKIP_GROUNDFLOW_MATERIDIVERGENCE` estaba registrado duplicado como `..._NONLINEAR` y nunca se parseaba. Validado con `groundflow_consolidate_off` (campo de velocidad con divergencia 2: con `-no` la presión queda 0; con default `-yes` es 1.67, el target falla). |
+**P6 — switches de consolidación groundflow (`groundflow_consolidation_apply`, `control_groundflow_consolidation_apply`, `group_groundflow_consolidation_apply`)** | `7fd1966` | 2026-08-20 | switches `-yes`/`-no` que controlan el término de consolidación (divergencia material) en la ecuación de groundflow: global, por timestep (`control_*`, index) y por grupo. Precedencia: group > global > control; cualquier `-no` fuerza `materidivergence=-NO` en groundfl.cc (además de los legacy `OPTIONS_SKIP_GROUNDFLOW_MATERIDIVERGENCE`/`CONTROL_OPTIONS_...`). Se corrigió un bug latente en database.cc: `CONTROL_OPTIONS_SKIP_GROUNDFLOW_MATERIDIVERGENCE` estaba registrado duplicado como `..._NONLINEAR` y nunca se parseaba. Validado con `groundflow_consolidate_off` (campo de velocidad con divergencia 2: con `-no` la presión queda 0; con default `-yes` es 1.67, el target falla). |
+
+**P6 — modelo no saturado van Genuchten (`group_groundflow_nonsaturated_vangenuchten`, `group_groundflow_nonsaturated_eps_permeability`, `groundflow_nonsaturated_apply`, `control_groundflow_nonsaturated_apply`)** | `(commit en curso)` | 2026-08-20 | ley van Genuchten del manual 2024 en groundda.cc (`groundflow_data`): `S(phi_p) = Sres + (Ssat-Sres)(1+(ga|phi_p|)^gn)^((1-gn)/gn)` con `phi_p = -pres/(dens*|g|)`; capacidad no saturada `c = csat + n*dS/dphi_p` (derivada analítica); permeabilidad `ki = krel(S)*ksat,i` con `krel = Se^gl[1-(1-Se^(gn/(gn-1)))^((gn-1)/gn)]²` (Mualem). `group_groundflow_nonsaturated_eps_permeability` fija el suelo de `krel`. Dof `groundflow_saturation` (initia, almacenado no resuelto) guarda S por nodo. Gates `groundflow_nonsaturated_apply` (global, default -yes) y `control_groundflow_nonsaturated_apply` (por timestep). Requiere `group_groundflow_porosity` + `groundflow_saturation`. Validado con `groundflow_vangenuchten` (gsat nodo 5 = 0.7364 exacto; pres media -2.76 vs -5 lineal por la k reducida) y `groundflow_nonsaturated_off` (con `-no` pres media -5.0 exacta, saturado). |
 
 Nota: las features marcadas solo "GNU" en el detalle por familia (sin
 fila en esta tabla) ya existían en el fork sfnet 2014 y no fueron
@@ -410,10 +412,10 @@ marcado `PENDIENTE` puede estar cubierto en el GNU bajo otro nombre:
 
 - [ ] `control_ground` — PENDIENTE
 
-### control_groundflow (1/2)
+### control_groundflow (2/2)
 
 - [x] `control_groundflow_consolidation_apply` — P6 (2026-08-20)
-- [ ] `control_groundflow_nonsaturated_apply` — PENDIENTE (P6)
+- [x] `control_groundflow_nonsaturated_apply` — P6 (2026-08-20)
 
 ### control_inertia (0/1)
 
@@ -1064,7 +1066,7 @@ marcado `PENDIENTE` puede estar cubierto en el GNU bajo otro nombre:
 
 - [x] `ground` — presente en el GNU
 
-### groundflow (3/25)
+### groundflow (3/23)
 
 - [x] `groundflow_consolidation_apply` — P6 (2026-08-20)
 - [ ] `groundflow_flux_edge_normal` — PENDIENTE (P6)
@@ -1078,7 +1080,7 @@ marcado `PENDIENTE` puede estar cubierto en el GNU bajo otro nombre:
 - [ ] `groundflow_flux_edge_normal_node` — PENDIENTE (P6)
 - [ ] `groundflow_flux_edge_normal_sine` — PENDIENTE (P6)
 - [ ] `groundflow_flux_edge_normal_time` — PENDIENTE (P6)
-- [ ] `groundflow_nonsaturated_apply` — PENDIENTE (P6)
+- [x] `groundflow_nonsaturated_apply` — P6 (2026-08-20)
 - [ ] `groundflow_phreatic_level_multiple` — PENDIENTE (P6)
 - [ ] `groundflow_phreatic_level_multiple_element` — PENDIENTE (P6)
 - [ ] `groundflow_phreatic_level_multiple_element_geometry` — PENDIENTE (P6)
@@ -1132,13 +1134,13 @@ marcado `PENDIENTE` puede estar cubierto en el GNU bajo otro nombre:
 
 - [ ] `group_ground` — PENDIENTE
 
-### group_groundflow (4/7)
+### group_groundflow (6/7)
 
 - [x] `group_groundflow_capacity` — presente en el GNU
 - [x] `group_groundflow_consolidation_apply` — P6 (2026-08-20)
 - [x] `group_groundflow_materidivergence` — presente en el GNU
-- [ ] `group_groundflow_nonsaturated_eps_permeability` — PENDIENTE (P6)
-- [ ] `group_groundflow_nonsaturated_vangenuchten` — PENDIENTE (P6)
+- [x] `group_groundflow_nonsaturated_eps_permeability` — P6 (2026-08-20)
+- [x] `group_groundflow_nonsaturated_vangenuchten` — P6 (2026-08-20)
 - [x] `group_groundflow_permeability_vertical_stress` — presente en el GNU
 - [ ] `group_groundflow_total_pressure_tension` — PENDIENTE (P6)
 

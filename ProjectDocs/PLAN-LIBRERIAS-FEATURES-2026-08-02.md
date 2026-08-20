@@ -519,6 +519,13 @@ Añadir magnitudes NO altera `primary` (tablas separadas por familia; JOIN por
       **HECHO 2026-08-20** (groundfl.cc: término `materidivergence` gated por
       global/timestep/grupo; fix de database.cc — `CONTROL_OPTIONS_SKIP_GROUNDFLOW_MATERIDIVERGENCE`
       estaba duplicado como NONLINEAR y no se parseaba). Test `groundflow_consolidate_off`.
+- [x] Modelo no saturado van Genuchten: `group_groundflow_nonsaturated_vangenuchten`,
+      `group_groundflow_nonsaturated_eps_permeability`,
+      `groundflow_nonsaturated_apply`, `control_groundflow_nonsaturated_apply`.
+      **HECHO 2026-08-20** (groundda.cc: ley S(phi_p), capacidad no saturada
+      c = csat + n*dS/dphi_p, permeabilidad ki = krel(S)*ksat,i con Mualem;
+      dof `groundflow_saturation` guarda S por nodo). Tests
+      `groundflow_vangenuchten` y `groundflow_nonsaturated_off`.
 - [x] Contacto: `contact_apply`, `contact_plasti_friction`,
       `contact_target_element_group`, `contact_target_geometry`/`_switch`.
       **HECHO 2026-08-19** (contact.cc: gate apply, fricción Mohr-Coulomb,
