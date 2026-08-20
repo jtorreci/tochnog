@@ -544,6 +544,10 @@ Añadir magnitudes NO altera `primary` (tablas separadas por familia; JOIN por
       (_element/_element_group/_element_geometry/_node) y `_static` para
       presión estática. **HECHO 2026-08-20** (groundfl.cc: _find + integración
       en _coord y _apply). Test `groundflow_phreatic_multiple`.
+- [x] Familia `groundflow_seepage_*` (eps, geometry, node): borde con flujo solo
+      de salida, punto de salida automático. **HECHO 2026-08-20** (bounda.cc:
+      si el flujo de Darcy proyectado en la normal exterior es entrante, se
+      cierra el borde; si sale, se impone la presión). Test `groundflow_seepage`.
 - [x] Contacto: `contact_apply`, `contact_plasti_friction`,
       `contact_target_element_group`, `contact_target_geometry`/`_switch`.
       **HECHO 2026-08-19** (contact.cc: gate apply, fricción Mohr-Coulomb,

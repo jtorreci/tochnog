@@ -396,6 +396,68 @@ void bounda( )
                     if ( swit ) pri( "node_dof", node_dof, nuknwn );
                     ind1 = ipuknwn*nder + nder - 1;
                     node_bounded[ipuknwn] = 1;
+                    // groundflow seepage: on a seepage edge the pore pressure
+                    // is prescribed (typically 0, free air) ONLY when water
+                    // flows OUT of the domain. When water would flow IN, the
+                    // edge is closed (no boundary condition). The normal of the
+                    // seepage geometry must point outwards the material.
+                    if ( iuknwn==pres_indx && groundflow_pressure &&
+                         db_active_index( GROUNDFLOW_SEEPAGE_EPS, 0,
+                           VERSION_NORMAL ) ) {
+                      long int in_seep=0, inod_tmp=0;
+                      double coords_tmp[MDIM], seep_normal[MDIM], flow_dot=0.;
+                      double seep_eps=0.1;
+                      db( GROUNDFLOW_SEEPAGE_EPS, 0, idum, &seep_eps, ldum,
+                        VERSION_NORMAL, GET_IF_EXISTS );
+                      // node-based seepage list
+                      if ( db_active_index( GROUNDFLOW_SEEPAGE_NODE, 0,
+                          VERSION_NORMAL ) ) {
+                        long int snode[DATA_ITEM_SIZE], lsn=0;
+                        db( GROUNDFLOW_SEEPAGE_NODE, 0, snode, ddum, lsn,
+                          VERSION_NORMAL, GET );
+                        if ( array_member( snode, inod, lsn, ldum ) ) in_seep = 1;
+                      }
+                      // geometry-based seepage list
+                      long int max_seep=0, iseep=0;
+                      db_max_index( GROUNDFLOW_SEEPAGE_GEOMETRY, max_seep,
+                        VERSION_NORMAL, GET );
+                      for ( iseep=0; iseep<=max_seep && !in_seep; iseep++ ) {
+                        if ( db_active_index( GROUNDFLOW_SEEPAGE_GEOMETRY,
+                            iseep, VERSION_NORMAL ) ) {
+                          long int gent[2];
+                          db( GROUNDFLOW_SEEPAGE_GEOMETRY, iseep, gent, ddum,
+                            ldum, VERSION_NORMAL, GET );
+                          db( NODE, inod, idum, coords_tmp, ldum,
+                            VERSION_NORMAL, GET );
+                          long int gfound=0;
+                          double gfac=0., gnor[MDIM], gpen=0., gproj[MDIM];
+                          geometry( inod, coords_tmp, gent, gfound, gfac,
+                            gnor, gpen, gproj, NODE_START_REFINED,
+                            PROJECT_EXACT, VERSION_NORMAL );
+                          if ( gfound ) {
+                            in_seep = 1;
+                            array_move( gnor, seep_normal, ndim );
+                            array_normalize( seep_normal, ndim );
+                            // flow = -k*grad(pres) ~ -gvel (Darcy velocity);
+                            // check the component along the outward normal.
+                            flow_dot = 0.;
+                            if ( groundflow_velocity ) {
+                              double *gvel = db_dbl( NODE_DOF, inod,
+                                VERSION_NORMAL );
+                              for ( inod_tmp=0; inod_tmp<ndim; inod_tmp++ )
+                                flow_dot += gvel[gvel_indx+inod_tmp*nder] *
+                                  seep_normal[inod_tmp];
+                            }
+                          }
+                        }
+                      }
+                      // water flows OUT when flow_dot>0 (Darcy velocity points
+                      // outwards). If it flows IN, close the edge: do not
+                      // impose the pressure boundary condition.
+                      if ( in_seep && flow_dot < -seep_eps ) {
+                        node_bounded[ipuknwn] = 0;
+                      }
+                    }
                     if ( sine ) {
                       new_node_dof[iuknwn] = new_node_dof[ind1] = 0.;
                       for ( ifreq=0; ifreq<nfreq; ifreq++ ) {
