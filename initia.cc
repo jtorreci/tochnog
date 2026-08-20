@@ -25,7 +25,7 @@
 long int 
   echo=0, ndim=-1, derivatives=0, 
   beam_rotation=0, condif_temperature=0, 
-  groundflow_velocity=0, groundflow_pressure=0, 
+  groundflow_velocity=0, groundflow_pressure=0, groundflow_saturation=0, 
   materi_history_variables=0, materi_damage=0, materi_density=0, 
   materi_displacement=0, materi_displacement_relative=0, materi_diffusion=0, materi_maxwell_stress=0, 
   materi_plasti_incremental_substeps=0,
@@ -47,6 +47,7 @@ long int
   maxfe_indx=-1, maxe_indx=-1, maxer_indx=-1, maxei_indx=0,
   gvel_indx=-1, hisv_indx=-1, kap_indx=-1, f_indx=-1, fn_indx=-1,
   mstres_indx=-1, pres_indx=-1, res_indx=-1, rho_indx=-1,
+  gsat_indx=-1,
   rot_indx=-1, scal_indx=-1, stres_indx=-1, substeps_indx=-1,
   svloc_indx=-1, svnonloc_indx=-1,
   temp_indx=-1, fscal_indx=-1, vel_indx=-1,

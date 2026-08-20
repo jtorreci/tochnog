@@ -1037,7 +1037,7 @@ enum {
   // see initialization part in manual
 extern long int echo, ndim, derivatives, 
   beam_rotation, condif_temperature, 
-  groundflow_velocity, groundflow_pressure, materi_history_variables,
+  groundflow_velocity, groundflow_pressure, groundflow_saturation, materi_history_variables,
   materi_damage, materi_density, 
   materi_diffusion, materi_displacement, materi_displacement_relative, 
   materi_maxwell_stress, materi_plasti_kappa, 
@@ -1081,6 +1081,7 @@ extern long int
   fn_indx, // index stating start of materi_plasti_f_nonlocal in node_dof
   fscal_indx, // index stating start of wave_fscalar in node_dof
   gvel_indx, // index stating start of groundflow_velocity in node_dof
+  gsat_indx, // index stating start of groundflow_saturation in node_dof
   hisv_indx, // index stating start of materi_history_variables in node_dof
   mstres_indx, // index stating start of materi_maxwell stress in node_dof
   pres_indx, // index stating start of groundflow_pressure in node_dof

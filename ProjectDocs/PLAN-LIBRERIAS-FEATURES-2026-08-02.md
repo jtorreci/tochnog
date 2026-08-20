@@ -513,6 +513,12 @@ Añadir magnitudes NO altera `primary` (tablas separadas por familia; JOIN por
 - [ ] `groundflow_pressure_atmospheric` — relacionado con `bounda_water`: el
       clamp de `groundflow_phreatic_coord()` limita la presión estática a este
       umbral (default 0 → solo succión). Documentado en manual-developer/bounda_water.md.
+- [x] Switches de consolidación groundflow: `groundflow_consolidation_apply`,
+      `control_groundflow_consolidation_apply`,
+      `group_groundflow_consolidation_apply`.
+      **HECHO 2026-08-20** (groundfl.cc: término `materidivergence` gated por
+      global/timestep/grupo; fix de database.cc — `CONTROL_OPTIONS_SKIP_GROUNDFLOW_MATERIDIVERGENCE`
+      estaba duplicado como NONLINEAR y no se parseaba). Test `groundflow_consolidate_off`.
 - [x] Contacto: `contact_apply`, `contact_plasti_friction`,
       `contact_target_element_group`, `contact_target_geometry`/`_switch`.
       **HECHO 2026-08-19** (contact.cc: gate apply, fricción Mohr-Coulomb,

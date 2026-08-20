@@ -206,6 +206,13 @@ void input( )
       array_set( &dof_type[gvel_indx], -GROUNDFLOW_VELOCITY, n*nder );
       array_set( &dof_scal_vec_mat[gvel_indx], -VECTOR, n*nder );
     }
+    else if ( !strcmp(str,"groundflow_saturation") ) {
+      groundflow_saturation = 1;
+      gsat_indx = unknown_indx;
+      n = 1;
+      array_set( &dof_type[gsat_indx], -GROUNDFLOW_SATURATION, n*nder );
+      array_set( &dof_scal_vec_mat[unknown_indx], -SCALAR, n*nder );
+    }
     else if ( !strcmp(str,"materi_damage") ) {
       materi_damage = 1;
       dam_indx = unknown_indx;

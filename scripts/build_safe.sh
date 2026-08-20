@@ -101,6 +101,8 @@ HIPO_TOTAL=0
 # + mesh_act_grav/mesh_act_grav2 (mesh_activate_gravity_time, método 1 y 2)
 # + strain_settle/strain_settle_diag (strain_settlement_parameters/_diagram)
 # + contact (familia contact_*: apply, penalty, plasti_friction, target).
+# + groundflow_consolidate_off (groundflow_consolidation_apply -no: omite el
+#   termino de divergencia material; presion queda 0 frente a 1.67 con default).
 for t in hypo1 hypo2 hypo3 hypo4 smooth1 dof1 mlx1 vtk_dof1 gen1 genbeam1 reset1 cda1 \
          iface_mc iface_mc_1step iface_mc_slip iface_mc_slip_1step iface_mc_tension iface_mc_gap \
          iface_mc_mem iface_mc_dil iface_mc_dil_1step iface_mc_num \
@@ -112,7 +114,8 @@ for t in hypo1 hypo2 hypo3 hypo4 smooth1 dof1 mlx1 vtk_dof1 gen1 genbeam1 reset1
          mat_rel mat_rel_reset \
          slide_axi reset_value_linear \
          mesh_act_grav mesh_act_grav2 strain_settle strain_settle_diag \
-         contact; do
+         contact \
+         groundflow_consolidate_off; do
   HIPO_TOTAL=$((HIPO_TOTAL+1))
   ( cd validation-suite/test-2014 &&
     ulimit -v 4000000 &&
@@ -125,5 +128,5 @@ for t in hypo1 hypo2 hypo3 hypo4 smooth1 dof1 mlx1 vtk_dof1 gen1 genbeam1 reset1
     echo "    $t: FALLO (rc=$RC)"
   fi
 done
-echo "==> Resumen: $HIPO_OK/$HIPO_TOTAL runs OK (13 tests: 12 preexistentes + familia iface_mc en 10 runs + familia 3D en 5 runs + familia generate_interface en 6 runs + familia materi_direct en 5 runs + materi_displacement_relative en 2 runs + slide/reset_value en 2 runs + gravity/settlement en 4 runs + contact en 1 run)."
+echo "==> Resumen: $HIPO_OK/$HIPO_TOTAL runs OK (13 tests: 12 preexistentes + familia iface_mc en 10 runs + familia 3D en 5 runs + familia generate_interface en 6 runs + familia materi_direct en 5 runs + materi_displacement_relative en 2 runs + slide/reset_value en 2 runs + gravity/settlement en 4 runs + contact en 1 run + groundflow_consolidate_off en 1 run)."
 echo "==> Log de compilacion completo en /tmp/tn_build_safe.log"

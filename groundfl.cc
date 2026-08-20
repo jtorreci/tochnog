@@ -34,6 +34,8 @@ void groundflow( long int element, long int gr, long int nnol, long int nodes[],
 {
   long int swit=0, inol=0, jnol=0, jdim=0, ipuknwn=0, iuknwn=0, jpuknwn=0,
     indx=0, indxi=0, indxj=0, icontrol=0, options_skip_groundflow_materidivergence=-NO,
+    groundflow_consolidation_apply=-YES, control_groundflow_consolidation_apply=-YES,
+    group_groundflow_consolidation_apply=-YES,
     materidivergence=-YES, ldum=0, idum[1];
   double tmp=0., C=0., dtime=0., divergence=0., dens=0., ddum[1], pe[MDIM];
 
@@ -50,12 +52,21 @@ void groundflow( long int element, long int gr, long int nnol, long int nodes[],
   db( GROUNDFLOW_DENSITY, 0, idum, &dens, ldum, VERSION_NORMAL, GET_IF_EXISTS );
   db( GROUP_GROUNDFLOW_MATERIDIVERGENCE, gr, &materidivergence, ddum, ldum,
     VERSION_NORMAL, GET_IF_EXISTS );
+  db( GROUP_GROUNDFLOW_CONSOLIDATION_APPLY, gr, &group_groundflow_consolidation_apply,
+    ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+  db( GROUNDFLOW_CONSOLIDATION_APPLY, 0, &groundflow_consolidation_apply,
+    ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
   db( OPTIONS_SKIP_GROUNDFLOW_MATERIDIVERGENCE, 0, &options_skip_groundflow_materidivergence, 
     ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
   db( ICONTROL, 0, &icontrol, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+  db( CONTROL_GROUNDFLOW_CONSOLIDATION_APPLY, icontrol,
+    &control_groundflow_consolidation_apply, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
   db( CONTROL_OPTIONS_SKIP_GROUNDFLOW_MATERIDIVERGENCE, icontrol, 
     &options_skip_groundflow_materidivergence, ddum, ldum, 
     VERSION_NORMAL, GET_IF_EXISTS );
+  if ( group_groundflow_consolidation_apply==-NO ) materidivergence = -NO;
+  if ( groundflow_consolidation_apply==-NO ) materidivergence = -NO;
+  if ( control_groundflow_consolidation_apply==-NO ) materidivergence = -NO;
   if ( options_skip_groundflow_materidivergence==-YES ) materidivergence = -NO;
 
   groundflow_data( element, gr, nodes, old_unknowns, new_unknowns, coord_ip, pe, C, h, nnol );

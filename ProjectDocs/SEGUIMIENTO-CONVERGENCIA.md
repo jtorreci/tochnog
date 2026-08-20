@@ -80,6 +80,8 @@ suite sfnet, o un test propio. El registro completo:
 
 **Carril B — familia `contact_*` (apply, plasti_friction, targets)** | `(commit en curso)` | 2026-08-19 | el GNU ya tenía el algoritmo de contacto (`parallel_contact` en contact.cc: geometría target, penalties, stick, relaxation, heatgeneration) y `contact_friction` simple. Se completan: `contact_apply` (gate `-yes`/`-no` por timestep), `contact_plasti_friction` (Mohr-Coulomb `max(c + Fn*tan(phi),0)` en el slip, reemplaza el `mu*Fn`), `contact_target_element_group` (filtro de targets por grupo), `contact_target_geometry`/`_switch` (alias de `contact_geometry`/`_switch`). Validado con `contact` (la familia se parsea y el modelo corre estable; el algoritmo de contacto es experimental y la detección de penetración depende del caso). |
 
+**P6 — switches de consolidación groundflow (`groundflow_consolidation_apply`, `control_groundflow_consolidation_apply`, `group_groundflow_consolidation_apply`)** | `(commit en curso)` | 2026-08-20 | switches `-yes`/`-no` que controlan el término de consolidación (divergencia material) en la ecuación de groundflow: global, por timestep (`control_*`, index) y por grupo. Precedencia: group > global > control; cualquier `-no` fuerza `materidivergence=-NO` en groundfl.cc (además de los legacy `OPTIONS_SKIP_GROUNDFLOW_MATERIDIVERGENCE`/`CONTROL_OPTIONS_...`). Se corrigió un bug latente en database.cc: `CONTROL_OPTIONS_SKIP_GROUNDFLOW_MATERIDIVERGENCE` estaba registrado duplicado como `..._NONLINEAR` y nunca se parseaba. Validado con `groundflow_consolidate_off` (campo de velocidad con divergencia 2: con `-no` la presión queda 0; con default `-yes` es 1.67, el target falla). |
+
 Nota: las features marcadas solo "GNU" en el detalle por familia (sin
 fila en esta tabla) ya existían en el fork sfnet 2014 y no fueron
 implementadas por nosotros.
@@ -407,6 +409,11 @@ marcado `PENDIENTE` puede estar cubierto en el GNU bajo otro nombre:
 ### control_ground (0/1)
 
 - [ ] `control_ground` — PENDIENTE
+
+### control_groundflow (1/2)
+
+- [x] `control_groundflow_consolidation_apply` — P6 (2026-08-20)
+- [ ] `control_groundflow_nonsaturated_apply` — PENDIENTE (P6)
 
 ### control_inertia (0/1)
 
@@ -1057,6 +1064,32 @@ marcado `PENDIENTE` puede estar cubierto en el GNU bajo otro nombre:
 
 - [x] `ground` — presente en el GNU
 
+### groundflow (3/25)
+
+- [x] `groundflow_consolidation_apply` — P6 (2026-08-20)
+- [ ] `groundflow_flux_edge_normal` — PENDIENTE (P6)
+- [ ] `groundflow_flux_edge_normal_element` — PENDIENTE (P6)
+- [ ] `groundflow_flux_edge_normal_element_group` — PENDIENTE (P6)
+- [ ] `groundflow_flux_edge_normal_element_node` — PENDIENTE (P6)
+- [ ] `groundflow_flux_edge_normal_element_node_factor` — PENDIENTE (P6)
+- [ ] `groundflow_flux_edge_normal_element_side` — PENDIENTE (P6)
+- [ ] `groundflow_flux_edge_normal_factor` — PENDIENTE (P6)
+- [ ] `groundflow_flux_edge_normal_geometry` — PENDIENTE (P6)
+- [ ] `groundflow_flux_edge_normal_node` — PENDIENTE (P6)
+- [ ] `groundflow_flux_edge_normal_sine` — PENDIENTE (P6)
+- [ ] `groundflow_flux_edge_normal_time` — PENDIENTE (P6)
+- [ ] `groundflow_nonsaturated_apply` — PENDIENTE (P6)
+- [ ] `groundflow_phreatic_level_multiple` — PENDIENTE (P6)
+- [ ] `groundflow_phreatic_level_multiple_element` — PENDIENTE (P6)
+- [ ] `groundflow_phreatic_level_multiple_element_geometry` — PENDIENTE (P6)
+- [ ] `groundflow_phreatic_level_multiple_element_group` — PENDIENTE (P6)
+- [ ] `groundflow_phreatic_level_multiple_node` — PENDIENTE (P6)
+- [ ] `groundflow_phreatic_level_multiple_static` — PENDIENTE (P6)
+- [ ] `groundflow_seepage_geometry` — PENDIENTE (P6)
+- [ ] `groundflow_seepage_node` — PENDIENTE (P6)
+- [x] `groundflow_pressure_factor` — presente en el GNU
+- [ ] `groundflow_phreatic_level_multiple_n` — PENDIENTE (P6)
+
 ### group_axisymmetric (1/1)
 
 - [x] `group_axisymmetric` — presente en el GNU
@@ -1099,6 +1132,16 @@ marcado `PENDIENTE` puede estar cubierto en el GNU bajo otro nombre:
 
 - [ ] `group_ground` — PENDIENTE
 
+### group_groundflow (4/7)
+
+- [x] `group_groundflow_capacity` — presente en el GNU
+- [x] `group_groundflow_consolidation_apply` — P6 (2026-08-20)
+- [x] `group_groundflow_materidivergence` — presente en el GNU
+- [ ] `group_groundflow_nonsaturated_eps_permeability` — PENDIENTE (P6)
+- [ ] `group_groundflow_nonsaturated_vangenuchten` — PENDIENTE (P6)
+- [x] `group_groundflow_permeability_vertical_stress` — presente en el GNU
+- [ ] `group_groundflow_total_pressure_tension` — PENDIENTE (P6)
+
 ### group_integration (2/3)
 
 - [x] `group_integration_method` — presente en el GNU
@@ -1111,6 +1154,9 @@ marcado `PENDIENTE` puede estar cubierto en el GNU bajo otro nombre:
 - [ ] `group_interface_condif_conductivity` — PENDIENTE
 - [x] `group_interface_gap` — Fase 3 implementada (commit `9c2f4c8`, 2026-08-14; cerrada si strain > gap, default -1e20, hueco físico = gap negativo; validada con iface_mc_gap)
 - [ ] `group_interface_ground` — PENDIENTE
+- [ ] `group_interface_groundflow_capacity` — PENDIENTE (P6)
+- [ ] `group_interface_groundflow_permeability` — PENDIENTE (P6)
+- [ ] `group_interface_groundflow_total_pressure_tension` — PENDIENTE (P6)
 - [x] `group_interface_materi_elasti_sti` — Fase 1 implementada (commit `a82cbc7`, 2026-08-13)
 - [ ] `group_interface_materi_expansion_normal` — PENDIENTE
 - [ ] `group_interface_materi_memory` — PENDIENTE

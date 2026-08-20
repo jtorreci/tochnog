@@ -309,6 +309,16 @@ long int check( long int idat, long int task )
   }
   if ( data_number==GROUNDFLOW_DENSITY )
     ok = check_unknown( "groundflow_pressure", YES, task );
+  if ( data_number==GROUNDFLOW_CONSOLIDATION_APPLY )
+    ok = check_unknown( "groundflow_pressure", YES, task );
+  if ( data_number==GROUNDFLOW_FLUX_EDGE_NORMAL ) {
+    ok = check_unknown( "groundflow_pressure", YES, task );
+    ok = ok && check_ndim( 2, 3, task );
+  }
+  if ( data_number==GROUNDFLOW_FLUX_EDGE_NORMAL_GEOMETRY )
+    ok = check_unknown( "groundflow_pressure", YES, task );
+  if ( data_number==GROUNDFLOW_NONSATURATED_APPLY )
+    ok = check_unknown( "groundflow_pressure", YES, task );
   if ( data_number==GROUNDFLOW_PHREATICLEVEL )
     ok = check_unknown_atleastone( "materi_stress", 
       "groundflow_pressure", task );
@@ -318,7 +328,19 @@ long int check( long int idat, long int task )
   }
   if ( data_number==GROUNDFLOW_PHREATICLEVEL_BOUNDA )
     ok = check_unknown( "groundflow_pressure", YES, task );
+  if ( data_number==GROUNDFLOW_PHREATICLEVEL_MULTIPLE )
+    ok = check_unknown( "groundflow_pressure", YES, task );
+  if ( data_number==GROUNDFLOW_PHREATICLEVEL_MULTIPLE_N ) {
+    ok = check_unknown( "groundflow_pressure", YES, task );
+    ok = ok && check_ndim( 3, 3, task );
+  }
   if ( data_number==GROUNDFLOW_PRESSURE )
+    ok = check_unknown( "groundflow_pressure", YES, task );
+  if ( data_number==GROUNDFLOW_SATURATION )
+    ok = check_unknown( "groundflow_pressure", YES, task );
+  if ( data_number==GROUNDFLOW_SEEPAGE_GEOMETRY )
+    ok = check_unknown( "groundflow_pressure", YES, task );
+  if ( data_number==GROUNDFLOW_SEEPAGE_NODE )
     ok = check_unknown( "groundflow_pressure", YES, task );
   if ( data_number==GROUNDFLOW_PRESSURE_ATMOSPHERIC )
     ok = check_unknown( "groundflow_pressure", YES, task );
@@ -394,15 +416,29 @@ long int check( long int idat, long int task )
   }
   if ( data_number==GROUP_GROUNDFLOW_CAPACITY )
     ok = check_unknown( "groundflow_pressure", YES, task );
+  if ( data_number==GROUP_GROUNDFLOW_CONSOLIDATION_APPLY ) {
+    ok = check_unknown( "groundflow_pressure", YES, task );
+    ok = ok && check_unknown( "materi_velocity", YES, task );
+  }
   if ( data_number==GROUP_GROUNDFLOW_MATERIDIVERGENCE ) {
     ok = check_unknown( "groundflow_pressure", YES, task );
     ok = ok && check_unknown( "materi_velocity", YES, task );
   }
   if ( data_number==GROUP_GROUNDFLOW_PERMEABILITY )
     ok = check_unknown( "groundflow_pressure", YES, task );
+  if ( data_number==GROUP_GROUNDFLOW_NONSATURATED_EPS_PERMEABILITY )
+    ok = check_unknown( "groundflow_pressure", YES, task );
+  if ( data_number==GROUP_GROUNDFLOW_NONSATURATED_VANGENUCHTEN ) {
+    ok = check_unknown( "groundflow_pressure", YES, task );
+    ok = ok && check_unknown( "groundflow_saturation", YES, task );
+  }
   if ( data_number==GROUP_GROUNDFLOW_PERMEABILITY_VERTICAL_STRESS ) {
     ok = check_unknown( "groundflow_pressure", YES, task );
     ok = ok && check_unknown( "materi_stress", YES, task );
+  }
+  if ( data_number==GROUP_GROUNDFLOW_TOTAL_PRESSURE_TENSION ) {
+    ok = check_unknown( "groundflow_pressure", YES, task );
+    ok = ok && check_unknown( "materi_strain_plasti", YES, task );
   }
   if ( data_number==GROUP_INTEGRATION_POINTS )
     ok = check_unknowns_are_specified( task );
