@@ -118,6 +118,98 @@ void groundflow( long int element, long int gr, long int nnol, long int nodes[],
 
 }
 
+long int groundflow_phreatic_level_multiple_find( long int inod )
+
+// Returns the index (imult) of the groundflow_phreatic_level_multiple record
+// that owns the given node, or -1 if none. The domain of each record is
+// selected by exactly one of _element, _element_group, _element_geometry or
+// _node (they are not combinable, per the manual). The node belongs to the
+// domain if it is listed in _node, or if one of its elements is in the
+// _element/_element_group/_element_geometry list.
+
+{
+  long int imult=0, max_multiple=-1, found=-1, length=0, ldum=0,
+    idum[1], nel=0, iel=0, elnum=0, gr=0, j=0,
+    length_list=0, use_element=0, use_group=0, use_geometry=0, use_node=0,
+    itmp=0, all=0, any=0;
+  double ddum[1], rdum=0.;
+  long int *node_element=NULL, *sel=NULL, *nodes=NULL, *el=NULL;
+
+  db_max_index( GROUNDFLOW_PHREATICLEVEL_MULTIPLE, max_multiple, VERSION_NORMAL, GET );
+  if ( max_multiple<0 ) return -1;
+
+  nodes = get_new_int(MNOL);
+  el = get_new_int(MNOL+1);
+  for ( imult=0; imult<=max_multiple && found<0; imult++ ) {
+    if ( !db_active_index( GROUNDFLOW_PHREATICLEVEL_MULTIPLE, imult, VERSION_NORMAL ) )
+      continue;
+    use_element = use_group = use_geometry = use_node = 0;
+    if ( db_active_index( GROUNDFLOW_PHREATICLEVEL_MULTIPLE_ELEMENT,
+        imult, VERSION_NORMAL ) ) {
+      use_element = 1;
+      sel = db_int( GROUNDFLOW_PHREATICLEVEL_MULTIPLE_ELEMENT, imult, VERSION_NORMAL );
+      length_list = db_len( GROUNDFLOW_PHREATICLEVEL_MULTIPLE_ELEMENT, imult, VERSION_NORMAL );
+    }
+    else if ( db_active_index( GROUNDFLOW_PHREATICLEVEL_MULTIPLE_ELEMENT_GROUP,
+        imult, VERSION_NORMAL ) ) {
+      use_group = 1;
+      sel = db_int( GROUNDFLOW_PHREATICLEVEL_MULTIPLE_ELEMENT_GROUP, imult, VERSION_NORMAL );
+      length_list = db_len( GROUNDFLOW_PHREATICLEVEL_MULTIPLE_ELEMENT_GROUP,
+        imult, VERSION_NORMAL );
+    }
+    else if ( db_active_index( GROUNDFLOW_PHREATICLEVEL_MULTIPLE_ELEMENT_GEOMETRY,
+        imult, VERSION_NORMAL ) ) {
+      use_geometry = 1;
+      sel = db_int( GROUNDFLOW_PHREATICLEVEL_MULTIPLE_ELEMENT_GEOMETRY,
+        imult, VERSION_NORMAL );
+      length_list = db_len( GROUNDFLOW_PHREATICLEVEL_MULTIPLE_ELEMENT_GEOMETRY,
+        imult, VERSION_NORMAL );
+    }
+    else if ( db_active_index( GROUNDFLOW_PHREATICLEVEL_MULTIPLE_NODE,
+        imult, VERSION_NORMAL ) ) {
+      use_node = 1;
+      sel = db_int( GROUNDFLOW_PHREATICLEVEL_MULTIPLE_NODE, imult, VERSION_NORMAL );
+      length_list = db_len( GROUNDFLOW_PHREATICLEVEL_MULTIPLE_NODE,
+        imult, VERSION_NORMAL );
+    }
+    if ( use_node ) {
+      if ( array_member( sel, inod, length_list, ldum ) ) found = imult;
+    }
+    else if ( use_element || use_group || use_geometry ) {
+      node_element = db_int( NODE_ELEMENT, inod, VERSION_NORMAL );
+      nel = db_len( NODE_ELEMENT, inod, VERSION_NORMAL );
+      for ( iel=0; iel<nel && found<0; iel++ ) {
+        elnum = node_element[iel];
+        if ( use_element ) {
+          if ( array_member( sel, elnum, length_list, ldum ) ) found = imult;
+        }
+        else if ( use_group ) {
+          gr = 0;
+          db( ELEMENT_GROUP, elnum, &gr, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+          if ( array_member( sel, gr, length_list, ldum ) ) found = imult;
+        }
+        else if ( use_geometry ) {
+          db( ELEMENT, elnum, el, ddum, length, VERSION_NORMAL, GET );
+          long int nnol_el = length - 1;
+          for ( j=1; j<=nnol_el; j++ ) nodes[j-1] = el[j];
+          all = 1; any = 0;
+          for ( j=0; j<nnol_el; j++ ) {
+            geometry( nodes[j], ddum, sel, itmp, rdum, ddum, rdum,
+              ddum, NODE_START_REFINED, PROJECT_EXACT, VERSION_NORMAL );
+            if ( !itmp ) all = 0;
+            if ( itmp ) any = 1;
+          }
+          if ( all || any ) found = imult;
+        }
+      }
+    }
+  }
+  delete[] nodes;
+  delete[] el;
+
+  return found;
+}
+
 long int groundflow_phreatic_coord( long int inod, double coord[], double dof[],
   double &total_pressure, double &static_pressure, double &location )
 
@@ -125,7 +217,7 @@ long int groundflow_phreatic_coord( long int inod, double coord[], double dof[],
 
 {
 
-  long int length=0, found=0, ldum=0, idum[1], number[2];
+  long int length=0, found=0, ldum=0, idum[1], number[2], imult=0;
   double water_level=0., dens=0., pressure_atmospheric=0., addtopressure=0.,
     ddum[1], force_gravity[MDIM], *groundflow_phreatic=NULL;
 
@@ -139,7 +231,54 @@ long int groundflow_phreatic_coord( long int inod, double coord[], double dof[],
     total_pressure = dof[pres_indx] - dens * force_gravity[ndim-1] * coord[ndim-1];
   }
 
-  if ( db_active_index( GROUNDFLOW_PHREATICLEVEL, 0, VERSION_NORMAL ) ) {
+  // groundflow_phreatic_level_multiple: several groundwater levels, each
+  // owning a part of the domain (selected by _element/_element_group/
+  // _element_geometry/_node). The node uses the level of its owning record.
+  if ( db_active_index( GROUNDFLOW_PHREATICLEVEL_MULTIPLE, 0, VERSION_NORMAL ) ) {
+    imult = groundflow_phreatic_level_multiple_find( inod );
+    if ( imult>=0 ) {
+      length = db_len( GROUNDFLOW_PHREATICLEVEL_MULTIPLE, imult, VERSION_NORMAL );
+      groundflow_phreatic = db_dbl( GROUNDFLOW_PHREATICLEVEL_MULTIPLE, imult, VERSION_NORMAL );
+      if      ( ndim==1 ) {
+        if ( length!=1 ) db_error( GROUNDFLOW_PHREATICLEVEL_MULTIPLE, imult );
+        water_level = groundflow_phreatic[0];
+        found = 1;
+      }
+      else if ( ndim==2 ) {
+        if ( length==1 ) {
+          found = 1;
+          water_level = groundflow_phreatic[0];
+        }
+        else {
+          found = table_xy( groundflow_phreatic, "GROUNDFLOW_PHREATICLEVEL_MULTIPLE",
+            length, coord[0], water_level );
+        }
+      }
+      else {
+        assert( ndim==3 );
+        if ( length==1 ) {
+          found = 1;
+          water_level = groundflow_phreatic[0];
+        }
+        else {
+          db( GROUNDFLOW_PHREATICLEVEL_MULTIPLE_N, imult, number, ddum, ldum,
+            VERSION_NORMAL, GET );
+          if ( number[0]*number[1]*3 != length )
+            db_error( GROUNDFLOW_PHREATICLEVEL_MULTIPLE, imult );
+          found = table_xyz( groundflow_phreatic, number, coord, water_level );
+        }
+      }
+      if ( found ) {
+        location = water_level;
+        if ( groundflow_pressure ) {
+          static_pressure = 
+            force_gravity[ndim-1] * dens * ( water_level - coord[ndim-1] );
+          total_pressure = dof[pres_indx] + static_pressure;
+        }
+      }
+    }
+  }
+  else if ( db_active_index( GROUNDFLOW_PHREATICLEVEL, 0, VERSION_NORMAL ) ) {
 
     length = db_len( GROUNDFLOW_PHREATICLEVEL, 0, VERSION_NORMAL );
     groundflow_phreatic = db_dbl( GROUNDFLOW_PHREATICLEVEL, 0, VERSION_NORMAL ); 
@@ -193,7 +332,8 @@ void groundflow_phreatic_apply( void )
 {
   long int inod=0, max_node=0, iuknwn=0, ipuknwn=0, 
     groundflow_phreaticlevel_bounda=-NO, length=0, 
-    node_phreaticlevel=0, ldum=0, idum[1], *node_bounded=NULL;
+    node_phreaticlevel=0, ldum=0, idum[1], *node_bounded=NULL,
+    imult2=0, static_switch=-NO;
   double total_pressure=0, static_pressure=0., dens=0., location=0.,
     ddum[1], force_gravity[MDIM], *coord=NULL, *node_dof=NULL;
  
@@ -237,6 +377,46 @@ void groundflow_phreatic_apply( void )
           length = 1;
           db( NODE_PHREATICLEVEL, inod, &node_phreaticlevel, ddum, 
             length, VERSION_NORMAL, PUT );
+        }
+      }
+    }
+  }
+
+  // groundflow_phreatic_level_multiple_static: for the nodes of a multiple
+  // phreatic level with _static -yes, set the total pressure (pore pressure)
+  // equal to the static pressure. Convenient when the phreatic line is located
+  // above the mesh part to which it belongs (no boundary condition can be
+  // imposed), and to avoid solving the hydraulic heads (saves memory and CPU).
+  if ( db_active_index( GROUNDFLOW_PHREATICLEVEL_MULTIPLE, 0, VERSION_NORMAL ) ) {
+    long int max_multiple=0, iuknwn=0, ipuknwn=0;
+    db_max_index( GROUNDFLOW_PHREATICLEVEL_MULTIPLE, max_multiple, VERSION_NORMAL, GET );
+    db( GROUNDFLOW_DENSITY, 0, idum, &dens, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+    force_gravity_calculate( force_gravity );
+    for ( imult2=0; imult2<=max_multiple; imult2++ ) {
+      if ( !db_active_index( GROUNDFLOW_PHREATICLEVEL_MULTIPLE, imult2, VERSION_NORMAL ) )
+        continue;
+      if ( !db_active_index( GROUNDFLOW_PHREATICLEVEL_MULTIPLE_STATIC, imult2,
+          VERSION_NORMAL ) )
+        continue;
+      db( GROUNDFLOW_PHREATICLEVEL_MULTIPLE_STATIC, imult2, &static_switch,
+        ddum, ldum, VERSION_NORMAL, GET );
+      if ( static_switch==-YES ) {
+        db_max_index( NODE, max_node, VERSION_NORMAL, GET );
+        for ( inod=0; inod<=max_node; inod++ ) {
+          if ( db_active_index( NODE_START_REFINED, inod, VERSION_NORMAL ) ) {
+            if ( groundflow_phreatic_level_multiple_find( inod )==imult2 ) {
+              coord = db_dbl( NODE_START_REFINED, inod, VERSION_NORMAL );
+              node_dof = db_dbl( NODE_DOF, inod, VERSION_NEW );
+              if ( groundflow_phreatic_coord( inod, coord, node_dof, total_pressure,
+                  static_pressure, location ) ) {
+                iuknwn = pres_indx;
+                ipuknwn = iuknwn / nder;
+                node_dof[iuknwn] = static_pressure;
+                node_bounded = db_int( NODE_BOUNDED, inod, VERSION_NORMAL );
+                node_bounded[ipuknwn] = 1;
+              }
+            }
+          }
         }
       }
     }

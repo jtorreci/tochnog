@@ -539,6 +539,11 @@ Añadir magnitudes NO altera `primary` (tablas separadas por familia; JOIN por
       **HECHO 2026-08-20** (principal + _geometry + _time/_sine/_factor +
       restricciones _element/_element_group/_element_node/_element_node_factor/
       _element_side/_node). Test `groundflow_flux_edge`.
+- [x] Familia `groundflow_phreatic_level_multiple*` (7 keywords): varios niveles
+      freáticos indexados, cada uno dueño de una parte del dominio
+      (_element/_element_group/_element_geometry/_node) y `_static` para
+      presión estática. **HECHO 2026-08-20** (groundfl.cc: _find + integración
+      en _coord y _apply). Test `groundflow_phreatic_multiple`.
 - [x] Contacto: `contact_apply`, `contact_plasti_friction`,
       `contact_target_element_group`, `contact_target_geometry`/`_switch`.
       **HECHO 2026-08-19** (contact.cc: gate apply, fricción Mohr-Coulomb,
