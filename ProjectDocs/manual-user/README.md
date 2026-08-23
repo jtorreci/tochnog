@@ -105,3 +105,23 @@ input parameters it accepts.
 - [group_materi_plasti_hypo_masin](group_materi_plasti_hypo_masin.md) — Masin clay hypoplasticity (critical state model for fine-grained soils).
 - [group_materi_plasti_sanisand](group_materi_plasti_sanisand.md) — SANISAND (Dafalias & Manzari 2004, sand with fabric effects).
 - [group_materi_plasti_hypo_wolfersdorff](group_materi_plasti_hypo_wolfersdorff.md) — hypoplasticity (wolfersdorff, lowangles, cohesion, intergranular strain, pressure-dependent void ratio).
+
+## P6 — groundflow family (2026-08-20) and inherited GNU keywords
+
+- [groundflow_consolidation_apply](groundflow_consolidation_apply.md) — global -yes/-no switch for the consolidation (material divergence) term.
+- [control_groundflow_consolidation_apply](control_groundflow_consolidation_apply.md) — per-timestep switch for the consolidation term.
+- [group_groundflow_consolidation_apply](group_groundflow_consolidation_apply.md) — per-group switch for the consolidation term.
+- [groundflow_nonsaturated_apply](groundflow_nonsaturated_apply.md) — global gate for the unsaturated (van Genuchten) model.
+- [control_groundflow_nonsaturated_apply](control_groundflow_nonsaturated_apply.md) — per-timestep gate for the unsaturated model.
+- [group_groundflow_nonsaturated_vangenuchten](group_groundflow_nonsaturated_vangenuchten.md) — van Genuchten unsaturated soil model (retention, capacity, Mualem krel).
+- [group_groundflow_nonsaturated_eps_permeability](group_groundflow_nonsaturated_eps_permeability.md) — lower bound of the relative permeability krel.
+- [group_groundflow_total_pressure_tension](group_groundflow_total_pressure_tension.md) — static crack water pressure when plastic tension strain exceeds a threshold.
+- [group_interface_groundflow_capacity](group_interface_groundflow_capacity.md) — lumped storage in the pressure dofs of interface elements.
+- [group_interface_groundflow_permeability](group_interface_groundflow_permeability.md) — water flow across the interface q = pe*(p1-p2).
+- [group_interface_groundflow_total_pressure_tension](group_interface_groundflow_total_pressure_tension.md) — forced static pressure when the interface normal strain opens.
+- [groundflow_flux_edge_normal](groundflow_flux_edge_normal.md) — distributed water flux normal to an edge (11-keyword family).
+- [groundflow_phreatic_level_multiple](groundflow_phreatic_level_multiple.md) — several indexed phreatic levels, each owning part of the domain (7-keyword family).
+- [groundflow_seepage_eps](groundflow_seepage_eps.md) — tolerance of the seepage (outflow-only) boundary condition.
+- [groundflow_seepage_geometry](groundflow_seepage_geometry.md) — seepage edge selected by geometry entity.
+- [groundflow_seepage_node](groundflow_seepage_node.md) — seepage condition on explicit nodes.
+- [groundflow_pressure_atmospheric](groundflow_pressure_atmospheric.md) — cap on the static/total pore pressure from the phreatic level (GNU-inherited; default 0 removes suction).

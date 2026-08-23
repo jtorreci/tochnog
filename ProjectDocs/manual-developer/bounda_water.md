@@ -56,34 +56,33 @@
 
 ## Known limitation: the `pressure_atmospheric` clamp in `groundflow_phreatic_coord()`
 
-`groundfl.cc:173-174` applies an upper clamp:
+`groundfl.cc:323-325` applies an upper clamp:
 
 ```c
 if ( static_pressure>=pressure_atmospheric ) static_pressure = pressure_atmospheric;
 if ( total_pressure>=pressure_atmospheric ) total_pressure = pressure_atmospheric;
 ```
 
-Semantics:
-- This is a **cap/clamp**, not a gauge conversion: the code never subtracts the
-  atmospheric pressure from the total; it simply truncates any value at the
-  `groundflow_pressure_atmospheric` threshold (`database.cc:2040`,
-  `no_index=1`, default **0** if unspecified).
-- Because the default threshold is 0, and the static pressure
-  `dens*g*(water_level - y)` is **positive below the phreatic level**
-  (compression) and **negative above it** (suction), the clamp forces every
-  positive (compression) value to 0. In practice, with the default setting,
-  `groundflow_phreatic_coord()` only returns meaningful values for **suction**
-  (negative pressures, i.e. nodes above the phreatic level).
-- It is NOT "relative/gauge pressure": no atmospheric term is subtracted. If the
-  user defines `groundflow_pressure_atmospheric` (e.g. 101.325 kPa), positive
-  pressures up to that threshold are kept, but this is a "do not exceed
-  atmospheric" behaviour, not an absolute-to-gauge conversion.
-- `bounda_water` bypasses this clamp entirely and uses the direct formula, so it
-  returns the full static pressure (including positive/compression values below
-  the phreatic level). This is intentional but means `bounda_water` and
-  `groundflow_phreatic_coord()` will give different numbers unless
-  `groundflow_pressure_atmospheric` is configured consistently.
+Semantics (see `groundflow_pressure_atmospheric.md` for the full write-up):
 
-Pending: document `groundflow_pressure_atmospheric` as a related feature and
-clarify whether the clamp should also apply to `bounda_water` for consistency
-with the unsaturated-soil model.
+- This is a **cap/clamp**, not a gauge conversion: the code never subtracts
+  the atmospheric pressure; it truncates any value at the
+  `groundflow_pressure_atmospheric` threshold (`database.cc:2476`,
+  `no_index=1`, default **0** if unspecified).
+- With `force_gravity (0,-1)` the static pressure `fg[dens]*(wl-y)` is
+  NEGATIVE below the phreatic level (compression) and POSITIVE above it
+  (suction). The clamp therefore caps the SUCTION side: with the default 0,
+  suction above the phreatic surface is annulled ("no suction" behaviour),
+  while compression below the level passes through untouched. A positive
+  threshold keeps suction up to that value.
+- `bounda_water` bypasses this clamp entirely and uses the direct formula,
+  so it returns the full hydrostatic pressure on both sides of the level.
+  This is intentional but means `bounda_water` and
+  `groundflow_phreatic_coord()` give different numbers above the phreatic
+  level unless `groundflow_pressure_atmospheric` is configured
+  consistently.
+
+`groundflow_pressure_atmospheric` is documented and verified in its own
+manual pages (tests `groundflow_pressure_atm` / `_def`). Remaining open
+question: whether the clamp should also apply to `bounda_water` for
+consistency with the unsaturated-soil model.

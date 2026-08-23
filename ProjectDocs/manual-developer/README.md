@@ -106,6 +106,24 @@ Each file corresponds to the same feature in the [User Manual](../manual-user/).
 - [group_materi_plasti_sanisand](group_materi_plasti_sanisand.md) — SANISAND (sanisand.c port of the Dafalias-Manzari UMAT; functional ~8% vs Fortran, integrator tightening pending in P4-E1b).
 - [group_materi_plasti_hypo_wolfersdorff](group_materi_plasti_hypo_wolfersdorff.md) — hypoplasticity kernel (hypo.c pure-C, all 5 variants verified).
 
+## P6 — groundflow family (2026-08-20) and inherited GNU keywords
+
+- [groundflow_consolidation_apply](groundflow_consolidation_apply.md) — consolidation term gating in groundfl.cc (group > global > control precedence; database.cc duplicate-registration fix).
+- [control_groundflow_consolidation_apply](control_groundflow_consolidation_apply.md) — per-timestep consolidation switch.
+- [group_groundflow_consolidation_apply](group_groundflow_consolidation_apply.md) — per-group consolidation switch.
+- [groundflow_nonsaturated_apply](groundflow_nonsaturated_apply.md) — global gate of the unsaturated model.
+- [control_groundflow_nonsaturated_apply](control_groundflow_nonsaturated_apply.md) — per-timestep gate of the unsaturated model.
+- [group_groundflow_nonsaturated_vangenuchten](group_groundflow_nonsaturated_vangenuchten.md) — van Genuchten law in groundda.cc groundflow_data (analytic dS/dphi, Mualem krel, groundflow_saturation dof).
+- [group_groundflow_nonsaturated_eps_permeability](group_groundflow_nonsaturated_eps_permeability.md) — krel lower bound in groundda.cc.
+- [group_groundflow_total_pressure_tension](group_groundflow_total_pressure_tension.md) — crack pressure block in materi.cc (groundflow_pressure).
+- [group_interface_groundflow_capacity](group_interface_groundflow_capacity.md) — lumped storage on pres dofs (interface.cc).
+- [group_interface_groundflow_permeability](group_interface_groundflow_permeability.md) — across-interface flow q=pe*(p1-p2) with symmetric tangent (interface.cc).
+- [group_interface_groundflow_total_pressure_tension](group_interface_groundflow_total_pressure_tension.md) — forced static pressure on opening interfaces (interface.cc).
+- [groundflow_flux_edge_normal](groundflow_flux_edge_normal.md) — nodal flux from edge-normal water flux (area.cc area(), type[5]).
+- [groundflow_phreatic_level_multiple](groundflow_phreatic_level_multiple.md) — multiple phreatic levels (groundfl.cc _find/_coord + phreatic_apply _static).
+- [groundflow_seepage](groundflow_seepage.md) — seepage boundary in bounda.cc (Darcy flow projection on the outward normal).
+- [groundflow_pressure_atmospheric](groundflow_pressure_atmospheric.md) — static/total pressure cap in groundfl.cc groundflow_phreatic_coord (GNU-inherited keyword, documented + verified 2026-08-24).
+
 ## Cross-cutting notes
 
 - Enum consistency: `tochnog.h` and `tochnog-mod.h` must stay in sync.
