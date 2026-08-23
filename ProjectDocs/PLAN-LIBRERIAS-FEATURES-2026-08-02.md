@@ -483,7 +483,8 @@ Añadir magnitudes NO altera `primary` (tablas separadas por familia; JOIN por
 (node,t) en SQL/pandas).
 
 
-- [ ] `control_print_history_smooth`, `control_print_vtk_*`.
+- [x] `control_print_history_smooth` (8f8ad67, 2026-08-12),
+      `control_print_vtk_dof` (b3e58a4, 2026-08-13).
 - [ ] ~~`control_print_materi_stress_force`~~ — **DEPENDIENTE (2026-08-12)**.
       Requiere `post_calcul_materi_stress_force` (integración de tensiones
       sobre cortes), que no existe en el GNU. Post-proceso numérico no
@@ -503,13 +504,15 @@ Añadir magnitudes NO altera `primary` (tablas separadas por familia; JOIN por
       (familia GMSH, 2026-08-12).
 - [x] `control_print_frd` + `control_print_frd_freecad` +
       `control_print_frd_prepomax` (familia FRD, 2026-08-12).
-- [ ] `print_group_data`, `strain_settlement_diagram*`, `post_point_move` (hecho).
-- [ ] `force_edge_multi_linear_factor_x`, `force_edge_projected*`, `force_volume*`,
-      `force_gravity_geometry`.
+- [ ] `print_group_data` (`strain_settlement_diagram*` HECHO f6b8935
+      2026-08-18; `post_point_move` HECHO).
+- [ ] `force_edge_projected*`, `force_volume*`, `force_gravity_geometry`
+      (`force_element_edge_multi_linear_factor_x` HECHO 86f6d03 2026-08-13).
 
 #### P6 — Groundflow, contacto, miscelánea
-- [ ] `groundflow_seepage_*`, `groundflow_phreatic_*`,
-      `groundflow_flux_edge_normal*`, `groundflow_total_pressure_limit`.
+- [ ] `groundflow_total_pressure_limit` (`groundflow_seepage_*`,
+      `groundflow_phreatic_*` y `groundflow_flux_edge_normal*` HECHOS 2026-08-20,
+      ver entradas abajo).
 - [ ] `groundflow_pressure_atmospheric` — relacionado con `bounda_water`: el
       clamp de `groundflow_phreatic_coord()` limita la presión estática a este
       umbral (default 0 → solo succión). Documentado en manual-developer/bounda_water.md.
@@ -553,13 +556,18 @@ Añadir magnitudes NO altera `primary` (tablas separadas por familia; JOIN por
       **HECHO 2026-08-19** (contact.cc: gate apply, fricción Mohr-Coulomb,
       filtro de targets por grupo, alias de geometría). `contact_heat_generation`
       (factor) y `control_contact_apply` siguen pendientes.
-- [ ] `control_reset_dof*`, `control_reset_value_*`, `change_dataitem_apply`,
-      `change_dataitem_geometry`, `control_data_*`, `control_distribute*`.
+- [ ] `change_dataitem_geometry`, `change_dataitem_time_method`,
+      `control_data_*`, `control_distribute*`.
+      (`control_reset_dof*` + `control_reset_value_*` HECHOS b6eaee4 2026-08-13
+      y variantes espaciales 3024d24 2026-08-18; `control_change_dataitem_apply`
+      HECHO bdcdeaf 2026-08-13.)
       **NOTA 2026-08-12**: `control_data_put` y `control_distribute` están en
-      database.cc (verificar estado); `control_reset_*` y `change_dataitem_*`
-      no están.
-- [ ] `control_mesh_generate_interface_geometry`, `slide_axisymmetric`,
-      `materi_displacement_relative`, `group_interface_materi_plasti_tension_direct`.
+      database.cc (verificar estado).
+- [x] `control_mesh_generate_interface_geometry` (familia generate_interface,
+      2026-08-17), `slide_axisymmetric` (3024d24, 2026-08-18),
+      `materi_displacement_relative` (96eabda, 2026-08-17),
+      `group_interface_materi_plasti_tension_direct` (Carril A Fase 3,
+      9c2f4c8, 2026-08-14).
 
 ### Fichero de control
 - Inventario completo: `ProjectDocs/inventario-features-faltantes-2024.txt` (718 líneas).
