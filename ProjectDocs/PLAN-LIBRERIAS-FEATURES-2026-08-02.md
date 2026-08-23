@@ -513,9 +513,12 @@ Añadir magnitudes NO altera `primary` (tablas separadas por familia; JOIN por
 - [ ] `groundflow_total_pressure_limit` (`groundflow_seepage_*`,
       `groundflow_phreatic_*` y `groundflow_flux_edge_normal*` HECHOS 2026-08-20,
       ver entradas abajo).
-- [ ] `groundflow_pressure_atmospheric` — relacionado con `bounda_water`: el
-      clamp de `groundflow_phreatic_coord()` limita la presión estática a este
-      umbral (default 0 → solo succión). Documentado en manual-developer/bounda_water.md.
+- [x] `groundflow_pressure_atmospheric`. **HECHO 2026-08-24** (documentación +
+      verificación; el código es heredado del GNU sfnet 2014 — clamp en
+      `groundflow_phreatic_coord()`, groundfl.cc — y el keyword NO existe en
+      Professional 2024. Default 0 anula la SUCCIÓN sobre el nivel freático;
+      el signo descrito en manual-developer/bounda_water.md estaba invertido
+      y se corrigió. Tests `groundflow_pressure_atm`/`_def`, suite 57/57).
 - [x] Switches de consolidación groundflow: `groundflow_consolidation_apply`,
       `control_groundflow_consolidation_apply`,
       `group_groundflow_consolidation_apply`.
