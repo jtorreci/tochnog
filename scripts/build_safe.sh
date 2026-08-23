@@ -8,7 +8,7 @@
 #     para que un archivo patologico no pueda matar la VM.
 #   - timeout en el paso de compilacion: si algo se cuelga, se aborta.
 #   - Link con LAPACK/BLAS real (sin libf2c, ya no es necesaria).
-#   - Verificacion automatica: corre la suite de tests (13 tests / 47 runs)
+#   - Verificacion automatica: corre la suite de tests (lista en el bucle)
 #     y comprueba targets.
 #
 # Uso: ./scripts/build_safe.sh [--clean]
@@ -44,16 +44,31 @@ fi
 
 # SQLite (optional, for tabular export). Empty by default; if libsqlite3-dev
 # is installed, enable with -lsqlite3. The header is included via ALL_INCLUDE
-# in the Makefile when SQLITE_USE=1 in tn_sqlite.h.
+# in the Makefile when SQLITE_USE=1 in tn_sqlite.h. -l: uses the runtime
+# soname directly so libsqlite3-dev (symlink) is not required.
 SQLITE_INC="-I/usr/include"
-SQLITE_LIB="-lsqlite3"
+SQLITE_LIB="-l:libsqlite3.so.0"
+
+# Runtime numerico local (opcional): maquinas sin liblapack3/libblas3 en el
+# sistema y sin sudo. external-downloads/numlib-runtime/ contiene las libs
+# extraidas de .deb de Debian (ver su README.txt). Si existe, se anade al
+# link (-L + -rpath-link) y se exporta LD_LIBRARY_PATH para los tests.
+NUMLIB_RUNTIME="$REPO_DIR/external-downloads/numlib-runtime"
+NUMLIB_LINK=""
+NUMLIB_FORTRAN=""
+if [ -d "$NUMLIB_RUNTIME" ]; then
+  NUMLIB_LINK="-L$NUMLIB_RUNTIME -Wl,-rpath-link,$NUMLIB_RUNTIME"
+  NUMLIB_FORTRAN="-l:libgfortran.so.5"
+  export LD_LIBRARY_PATH="$NUMLIB_RUNTIME${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+  echo "==> Runtime numerico local: $NUMLIB_RUNTIME"
+fi
 
 MAKE_FLAGS=( "SYS_FILE=sysposix" "OBJ=o" "BCPP=" "VCPP="
   "COMPILER_C=gcc" "COMPILER_CPP=g++"
   "COMPILER_FLAGS=-c -O1 -Wall -D_REENTRANT $SUPERLU_INC $SQLITE_INC"
   "LINK_FLAGS_BEFORE=" )
 
-LINK_FLAGS_AFTER="-l:liblapack.so.3 -l:libblas.so.3 $SUPERLU_A $SQLITE_LIB -lm -lpthread -o build/tochnog"
+LINK_FLAGS_AFTER="$NUMLIB_LINK -Wl,--start-group $SUPERLU_A -l:liblapack.so.3 -l:libblas.so.3 $NUMLIB_FORTRAN -Wl,--end-group $SQLITE_LIB -lm -lpthread -o build/tochnog"
 
 echo "==> Limite de memoria por proceso: 4 GB"
 ulimit -v 4000000 2>/dev/null || echo "    (no se pudo aplicar ulimit, continuando)"
@@ -117,6 +132,10 @@ HIPO_TOTAL=0
 #   dos columnas con niveles 3 y 1 dan pres estatica -3 y -1 en el fondo).
 # + groundflow_seepage (groundflow_seepage_geometry + bounda_dof -pres 0:
 #   flujo saliente por el fondo -> perfil drenado, pres media 1.0).
+# + groundflow_pressure_atm/_def (groundflow_pressure_atmospheric, keyword
+#   heredado del GNU: cap de la presion estatica en phreatic_coord. Con
+#   pa=0.5 la succion +1 se mantiene en 0.5 y la compresion -1 pasa intacta;
+#   con default 0 la succion se anula -> 0).
 for t in hypo1 hypo2 hypo3 hypo4 smooth1 dof1 mlx1 vtk_dof1 gen1 genbeam1 reset1 cda1 \
          iface_mc iface_mc_1step iface_mc_slip iface_mc_slip_1step iface_mc_tension iface_mc_gap \
          iface_mc_mem iface_mc_dil iface_mc_dil_1step iface_mc_num \
@@ -131,7 +150,8 @@ for t in hypo1 hypo2 hypo3 hypo4 smooth1 dof1 mlx1 vtk_dof1 gen1 genbeam1 reset1
          contact \
          groundflow_consolidate_off groundflow_vangenuchten groundflow_nonsaturated_off \
          groundflow_total_pressure_tension groundflow_interface groundflow_flux_edge \
-         groundflow_phreatic_multiple groundflow_seepage; do
+         groundflow_phreatic_multiple groundflow_seepage \
+         groundflow_pressure_atm groundflow_pressure_atm_def; do
   HIPO_TOTAL=$((HIPO_TOTAL+1))
   ( cd validation-suite/test-2014 &&
     ulimit -v 4000000 &&
@@ -144,5 +164,5 @@ for t in hypo1 hypo2 hypo3 hypo4 smooth1 dof1 mlx1 vtk_dof1 gen1 genbeam1 reset1
     echo "    $t: FALLO (rc=$RC)"
   fi
 done
-echo "==> Resumen: $HIPO_OK/$HIPO_TOTAL runs OK (13 tests: 12 preexistentes + familia iface_mc en 10 runs + familia 3D en 5 runs + familia generate_interface en 6 runs + familia materi_direct en 5 runs + materi_displacement_relative en 2 runs + slide/reset_value en 2 runs + gravity/settlement en 4 runs + contact en 1 run + groundflow_consolidate_off en 1 run + groundflow_vangenuchten/groundflow_nonsaturated_off en 2 runs + groundflow_total_pressure_tension/groundflow_interface en 2 runs + groundflow_flux_edge en 1 run + groundflow_phreatic_multiple en 1 run + groundflow_seepage en 1 run)."
+echo "==> Resumen: $HIPO_OK/$HIPO_TOTAL runs OK (13 tests: 12 preexistentes + familia iface_mc en 10 runs + familia 3D en 5 runs + familia generate_interface en 6 runs + familia materi_direct en 5 runs + materi_displacement_relative en 2 runs + slide/reset_value en 2 runs + gravity/settlement en 4 runs + contact en 1 run + groundflow_consolidate_off en 1 run + groundflow_vangenuchten/groundflow_nonsaturated_off en 2 runs + groundflow_total_pressure_tension/groundflow_interface en 2 runs + groundflow_flux_edge en 1 run + groundflow_phreatic_multiple en 1 run + groundflow_seepage en 1 run + groundflow_pressure_atm/_def en 2 runs)."
 echo "==> Log de compilacion completo en /tmp/tn_build_safe.log"
