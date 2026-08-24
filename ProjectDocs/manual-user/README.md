@@ -147,3 +147,8 @@ input parameters it accepts.
 ## P6 — control_distribute family (random fields)
 
 - [control_distribute](control_distribute.md) — normal/lognormal random fields per element or node, with seed, spatial correlation and min/max clamping.
+
+## Sprint 7 — condif heat family
+
+- [condif_heat_edge_normal](condif_heat_edge_normal.md) — distributed heat flux normal to element edges (11-keyword family: geometry, element/group/side/node restrictions, factor, time/sine).
+- [condif_heat_volume](condif_heat_volume.md) — distributed volume heat source (9-keyword family: element/group/geometry restrictions, factor, time/sine/user).

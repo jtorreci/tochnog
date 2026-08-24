@@ -20,7 +20,42 @@
 
 #include "tochnog.h"
 
-#define MTYPES 6
+#define MTYPES 7
+
+// companion items for the edge-normal flux families: the groundflow water
+// flux (groundflow_flux_edge_normal) and the condif heat flux
+// (condif_heat_edge_normal) share the same machinery. which selects:
+// 0=_ELEMENT 1=_ELEMENT_GROUP 2=_ELEMENT_SIDE 3=_SINE 4=_TIME 5=_FACTOR
+// 6=_NODE 7=_ELEMENT_NODE 8=_ELEMENT_NODE_FACTOR
+static long int flux_edge_companion( long int master, long int which )
+{
+  static long int groundflow[] = {
+    GROUNDFLOW_FLUX_EDGE_NORMAL_ELEMENT,
+    GROUNDFLOW_FLUX_EDGE_NORMAL_ELEMENT_GROUP,
+    GROUNDFLOW_FLUX_EDGE_NORMAL_ELEMENT_SIDE,
+    GROUNDFLOW_FLUX_EDGE_NORMAL_SINE,
+    GROUNDFLOW_FLUX_EDGE_NORMAL_TIME,
+    GROUNDFLOW_FLUX_EDGE_NORMAL_FACTOR,
+    GROUNDFLOW_FLUX_EDGE_NORMAL_NODE,
+    GROUNDFLOW_FLUX_EDGE_NORMAL_ELEMENT_NODE,
+    GROUNDFLOW_FLUX_EDGE_NORMAL_ELEMENT_NODE_FACTOR };
+  static long int condif[] = {
+    CONDIF_HEAT_EDGE_NORMAL_ELEMENT,
+    CONDIF_HEAT_EDGE_NORMAL_ELEMENT_GROUP,
+    CONDIF_HEAT_EDGE_NORMAL_ELEMENT_SIDE,
+    CONDIF_HEAT_EDGE_NORMAL_SINE,
+    CONDIF_HEAT_EDGE_NORMAL_TIME,
+    CONDIF_HEAT_EDGE_NORMAL_FACTOR,
+    CONDIF_HEAT_EDGE_NORMAL_NODE,
+    CONDIF_HEAT_EDGE_NORMAL_ELEMENT_NODE,
+    CONDIF_HEAT_EDGE_NORMAL_ELEMENT_NODE_FACTOR };
+  return ( master==GROUNDFLOW_FLUX_EDGE_NORMAL ? groundflow[which] : condif[which] );
+}
+
+static long int flux_edge_is_master( long int item )
+{
+  return item==GROUNDFLOW_FLUX_EDGE_NORMAL || item==CONDIF_HEAT_EDGE_NORMAL;
+}
 
 static long int border_nodes_tria3[] = {
     0, 1,
@@ -109,12 +144,14 @@ void area( long int element, long int name,
   type[3] = FORCE_ELEMENT_EDGE_NORMAL;
   type[4] = FORCE_ELEMENT_EDGE_WATER;
   type[5] = GROUNDFLOW_FLUX_EDGE_NORMAL;
+  type[6] = CONDIF_HEAT_EDGE_NORMAL;
   type_area[0] = CONDIF_RADIATION_GEOMETRY;
   type_area[1] = CONDIF_CONVECTION_GEOMETRY;
   type_area[2] = FORCE_ELEMENT_EDGE_GEOMETRY;
   type_area[3] = FORCE_ELEMENT_EDGE_NORMAL_GEOMETRY;
   type_area[4] = FORCE_ELEMENT_EDGE_WATER_GEOMETRY;
   type_area[5] = GROUNDFLOW_FLUX_EDGE_NORMAL_GEOMETRY;
+  type_area[6] = CONDIF_HEAT_EDGE_NORMAL_GEOMETRY;
   db( DOF_PRINCIPAL, 0, dof_principal, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
 
   db( DTIME, 0, idum, &dtime, ldum, VERSION_NEW, GET_IF_EXISTS );
@@ -209,26 +246,26 @@ void area( long int element, long int name,
               db_data_class(geometry_entity[0])==GEOMETRY );
             if ( !use_geom ) db_error( type[itype], ind );
           }
-          if ( type[itype]==GROUNDFLOW_FLUX_EDGE_NORMAL ) {
-            // restriction variants for groundflow_flux_edge_normal
-            if ( db_active_index( GROUNDFLOW_FLUX_EDGE_NORMAL_ELEMENT,
+          if ( flux_edge_is_master(type[itype]) ) {
+            // restriction variants for the edge-normal flux families
+            if ( db_active_index( flux_edge_companion(type[itype],0),
                 ind, VERSION_NORMAL ) ) {
               long int elt[DATA_ITEM_SIZE], length_elt=0;
-              db( GROUNDFLOW_FLUX_EDGE_NORMAL_ELEMENT, ind, elt, ddum,
+              db( flux_edge_companion(type[itype],0), ind, elt, ddum,
                 length_elt, VERSION_NORMAL, GET );
               if ( !array_member( elt, element, length_elt, ldum ) ) continue;
             }
-            if ( db_active_index( GROUNDFLOW_FLUX_EDGE_NORMAL_ELEMENT_GROUP,
+            if ( db_active_index( flux_edge_companion(type[itype],1),
                 ind, VERSION_NORMAL ) ) {
               long int grp[DATA_ITEM_SIZE], length_grp=0;
-              db( GROUNDFLOW_FLUX_EDGE_NORMAL_ELEMENT_GROUP, ind, grp, ddum,
+              db( flux_edge_companion(type[itype],1), ind, grp, ddum,
                 length_grp, VERSION_NORMAL, GET );
               if ( !array_member( grp, gr, length_grp, ldum ) ) continue;
             }
-            if ( db_active_index( GROUNDFLOW_FLUX_EDGE_NORMAL_ELEMENT_SIDE,
+            if ( db_active_index( flux_edge_companion(type[itype],2),
                 ind, VERSION_NORMAL ) ) {
               long int side_sel[DATA_ITEM_SIZE], length_side=0;
-              db( GROUNDFLOW_FLUX_EDGE_NORMAL_ELEMENT_SIDE, ind, side_sel, ddum,
+              db( flux_edge_companion(type[itype],2), ind, side_sel, ddum,
                 length_side, VERSION_NORMAL, GET );
               // pairs (element, side); skip this element if not listed
               long int ok_side = 0;
@@ -306,11 +343,13 @@ void area( long int element, long int name,
             else
               load = 1.;
           }
-          else if ( type[itype]==GROUNDFLOW_FLUX_EDGE_NORMAL ) {
-            if ( db_active_index( GROUNDFLOW_FLUX_EDGE_NORMAL_SINE, ind, VERSION_NORMAL ) ) {
-              groundflow_flux_edge_normal_sine = db_dbl( GROUNDFLOW_FLUX_EDGE_NORMAL_SINE,
-                ind, VERSION_NORMAL );
-              nfreq = ( db_len( GROUNDFLOW_FLUX_EDGE_NORMAL_SINE, ind, VERSION_NORMAL ) - 1 ) / 2;
+          else if ( flux_edge_is_master(type[itype]) ) {
+            if ( db_active_index( flux_edge_companion(type[itype],3),
+                ind, VERSION_NORMAL ) ) {
+              groundflow_flux_edge_normal_sine = db_dbl(
+                flux_edge_companion(type[itype],3), ind, VERSION_NORMAL );
+              nfreq = ( db_len( flux_edge_companion(type[itype],3), ind,
+                VERSION_NORMAL ) - 1 ) / 2;
               time_start = groundflow_flux_edge_normal_sine[0];
               load = 0.;
               if ( time_total>time_start ) {
@@ -321,13 +360,14 @@ void area( long int element, long int name,
                 }
               }
             }
-            else if ( db_active_index( GROUNDFLOW_FLUX_EDGE_NORMAL_TIME,
+            else if ( db_active_index( flux_edge_companion(type[itype],4),
                 ind, VERSION_NORMAL ) ) {
-              groundflow_flux_edge_normal_time = db_dbl( GROUNDFLOW_FLUX_EDGE_NORMAL_TIME,
-                ind, VERSION_NORMAL );
-              length = db_len( GROUNDFLOW_FLUX_EDGE_NORMAL_TIME, ind, VERSION_NORMAL );
+              groundflow_flux_edge_normal_time = db_dbl(
+                flux_edge_companion(type[itype],4), ind, VERSION_NORMAL );
+              length = db_len( flux_edge_companion(type[itype],4), ind,
+                VERSION_NORMAL );
               force_time( groundflow_flux_edge_normal_time,
-                "GROUNDFLOW_FLUX_EDGE_NORMAL_TIME", length, load );
+                "EDGE_NORMAL_TIME", length, load );
             }
             else
               load = 1.;
@@ -549,34 +589,34 @@ void area( long int element, long int name,
                     }
                   }
                 }
-                else if ( type[itype]==GROUNDFLOW_FLUX_EDGE_NORMAL ) {
-                  force_factor( GROUNDFLOW_FLUX_EDGE_NORMAL_FACTOR, ind, 
+                else if ( flux_edge_is_master(type[itype]) ) {
+                  force_factor( flux_edge_companion(type[itype],5), ind,
                     &new_coord[inol*ndim], factor );
-                  db( GROUNDFLOW_FLUX_EDGE_NORMAL, ind, idum, values, 
+                  db( type[itype], ind, idum, values,
                     ldum, VERSION_NORMAL, GET );
                   // restriction by node
                   long int use_it = 1;
-                  if ( db_active_index( GROUNDFLOW_FLUX_EDGE_NORMAL_NODE,
+                  if ( db_active_index( flux_edge_companion(type[itype],6),
                       ind, VERSION_NORMAL ) ) {
                     long int nds[DATA_ITEM_SIZE], length_nds=0;
-                    db( GROUNDFLOW_FLUX_EDGE_NORMAL_NODE, ind, nds, ddum,
+                    db( flux_edge_companion(type[itype],6), ind, nds, ddum,
                       length_nds, VERSION_NORMAL, GET );
                     if ( !array_member( nds, inod, length_nds, ldum ) ) use_it = 0;
                   }
-                  if ( db_active_index( GROUNDFLOW_FLUX_EDGE_NORMAL_ELEMENT_NODE,
+                  if ( db_active_index( flux_edge_companion(type[itype],7),
                       ind, VERSION_NORMAL ) ) {
                     long int en[DATA_ITEM_SIZE], length_en=0;
-                    db( GROUNDFLOW_FLUX_EDGE_NORMAL_ELEMENT_NODE, ind, en, ddum,
+                    db( flux_edge_companion(type[itype],7), ind, en, ddum,
                       length_en, VERSION_NORMAL, GET );
                     // en[0]=element, en[1..]=local node numbers
                     if ( en[0]!=element || !array_member( &en[1], inol,
                         length_en-1, ldum ) ) use_it = 0;
                   }
                   double node_factor = 1.;
-                  if ( db_active_index( GROUNDFLOW_FLUX_EDGE_NORMAL_ELEMENT_NODE_FACTOR,
+                  if ( db_active_index( flux_edge_companion(type[itype],8),
                       ind, VERSION_NORMAL ) ) {
                     long int length_enf=0;
-                    db( GROUNDFLOW_FLUX_EDGE_NORMAL_ELEMENT_NODE_FACTOR, ind,
+                    db( flux_edge_companion(type[itype],8), ind,
                       idum, values_fac, length_enf, VERSION_NORMAL, GET );
                     // values_fac[0]=element, values_fac[1..]=factors for the
                     // local nodes of that element
@@ -588,7 +628,10 @@ void area( long int element, long int name,
                     }
                   }
                   if ( use_it ) {
-                    ipuknwn = pres_indx/nder;
+                    if ( type[itype]==GROUNDFLOW_FLUX_EDGE_NORMAL )
+                      ipuknwn = pres_indx/nder;
+                    else
+                      ipuknwn = temp_indx/nder;
                     tmp = factor * node_factor *
                       load * weight[inol_side] * area_size * values[0];
                     element_rhside[inol*npuknwn+ipuknwn] += tmp;

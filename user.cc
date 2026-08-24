@@ -188,3 +188,23 @@ void user_viscosity( double user_data[], double new_unknowns[], double &visc )
   cout << "\nError: routine user_viscosity not programmed.\n";
   exit(0);
 }
+
+void user_condif_heat_volume( long int ind, double time, double coord[],
+  double &heat )
+
+  /* condif_heat_volume_user -yes: distributed volume heat source defined
+     by the user.
+
+     ind:   Input. Index of the condif_heat_volume record.
+     time:  Input. Total time (time_current + dtime).
+     coord: Input. Coordinates of the integration point.
+     heat:  Output. The heat source value; enters the record as the value
+            of condif_heat_volume (edit this routine to define it).
+
+     Example: heat = 1. + coord[0];
+  */
+
+{
+  cout << "\nError: routine user_condif_heat_volume not programmed.\n";
+  exit(0);
+}

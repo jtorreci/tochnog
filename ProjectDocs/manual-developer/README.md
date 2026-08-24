@@ -145,6 +145,11 @@ Each file corresponds to the same feature in the [User Manual](../manual-user/).
 
 - [control_distribute](control_distribute.md) — Professional 4-slot layout in distri.cc (seed/parameters/correlation/min-max; GNU triplet layout kept for ho_othr4).
 
+## Sprint 7 — condif heat family
+
+- [condif_heat_edge_normal](condif_heat_edge_normal.md) — shared edge-normal machinery in area.cc (MTYPES 7, flux_edge_companion helper; temp_indx target).
+- [condif_heat_volume](condif_heat_volume.md) — volume source block in condif.cc (coord_ip signature extension; user_condif_heat_volume stub in user.cc).
+
 ## Cross-cutting notes
 
 - Enum consistency: `tochnog.h` and `tochnog-mod.h` must stay in sync.

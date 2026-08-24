@@ -727,9 +727,9 @@ void elem( long int element, long int ithread )
         grad_massflow, element_rhside, element_residue, 
         element_lhside, element_matrix );
       if      ( type==-CONDIF )
-        condif( element, element_group, nnol, 
-          &h[ipoint*nnol], volumeip,
-          new_unknowns, element_lhside, element_matrix, element_rhside, 
+        condif( element, element_group, nnol,
+          &h[ipoint*nnol], coord_ip, volumeip,
+          new_unknowns, element_lhside, element_matrix, element_rhside,
           element_residue );
       else if ( type==-GROUNDFLOW )
         groundflow( element, element_group, nnol, nodes,

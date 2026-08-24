@@ -96,6 +96,28 @@ long int check( long int idat, long int task )
   }
   if ( data_number==CONDIF_RADIATION ) {
     ok = check_ndim( 2, 3, task );
+    ok = ok && check_unknown( "condif_temperature", YES, task );
+  }
+  if ( data_number==CONDIF_HEAT_EDGE_NORMAL ||
+       data_number==CONDIF_HEAT_EDGE_NORMAL_ELEMENT ||
+       data_number==CONDIF_HEAT_EDGE_NORMAL_ELEMENT_GROUP ||
+       data_number==CONDIF_HEAT_EDGE_NORMAL_ELEMENT_NODE ||
+       data_number==CONDIF_HEAT_EDGE_NORMAL_ELEMENT_NODE_FACTOR ||
+       data_number==CONDIF_HEAT_EDGE_NORMAL_ELEMENT_SIDE ||
+       data_number==CONDIF_HEAT_EDGE_NORMAL_FACTOR ||
+       data_number==CONDIF_HEAT_EDGE_NORMAL_GEOMETRY ||
+       data_number==CONDIF_HEAT_EDGE_NORMAL_NODE ||
+       data_number==CONDIF_HEAT_EDGE_NORMAL_SINE ||
+       data_number==CONDIF_HEAT_EDGE_NORMAL_TIME ||
+       data_number==CONDIF_HEAT_VOLUME ||
+       data_number==CONDIF_HEAT_VOLUME_ELEMENT ||
+       data_number==CONDIF_HEAT_VOLUME_ELEMENT_GROUP ||
+       data_number==CONDIF_HEAT_VOLUME_FACTOR ||
+       data_number==CONDIF_HEAT_VOLUME_GEOMETRY ||
+       data_number==CONDIF_HEAT_VOLUME_SINE ||
+       data_number==CONDIF_HEAT_VOLUME_TIME ||
+       data_number==CONDIF_HEAT_VOLUME_USER ||
+       data_number==CONDIF_HEAT_VOLUME_USER_PARAMETERS ) {
     ok = check_unknown( "condif_temperature", YES, task );
   }
   if ( data_number==CONDIF_RADIATION_GEOMETRY ) {
