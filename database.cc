@@ -4531,6 +4531,34 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   data_class[NODE_DAMPING] = NODE;
   data_required[NODE_DAMPING] = NODE;
 
+  strcpy(name[NODE_CONVECTION_APPLY],"node_convection_apply");
+  type[NODE_CONVECTION_APPLY] = INTEGER;
+  data_length[NODE_CONVECTION_APPLY] = 1;
+  version_all[NODE_CONVECTION_APPLY] = 1;
+  data_class[NODE_CONVECTION_APPLY] = NODE;
+  data_required[NODE_CONVECTION_APPLY] = NODE;
+
+  strcpy(name[NODE_DYNAMIC_PRESSURE],"node_dynamic_pressure");
+  type[NODE_DYNAMIC_PRESSURE] = DOUBLE_PRECISION;
+  data_length[NODE_DYNAMIC_PRESSURE] = 1;
+  version_all[NODE_DYNAMIC_PRESSURE] = 1;
+  data_class[NODE_DYNAMIC_PRESSURE] = NODE;
+  data_required[NODE_DYNAMIC_PRESSURE] = NODE;
+
+  strcpy(name[NODE_FORCE],"node_force");
+  type[NODE_FORCE] = DOUBLE_PRECISION;
+  data_length[NODE_FORCE] = ndim;
+  version_all[NODE_FORCE] = 1;
+  data_class[NODE_FORCE] = NODE;
+  data_required[NODE_FORCE] = NODE;
+
+  strcpy(name[NODE_INERTIA],"node_inertia");
+  type[NODE_INERTIA] = DOUBLE_PRECISION;
+  data_length[NODE_INERTIA] = ndim;
+  version_all[NODE_INERTIA] = 1;
+  data_class[NODE_INERTIA] = NODE;
+  data_required[NODE_INERTIA] = NODE;
+
   strcpy(name[NODE_DOF],"node_dof");
   type[NODE_DOF] = DOUBLE_PRECISION;
   data_length[NODE_DOF] = nuknwn;
@@ -4594,7 +4622,11 @@ void db_initialize( long int dof_type[], long int dof_label[] )
 
   strcpy(name[NODE_MASS],"node_mass");
   type[NODE_MASS] = DOUBLE_PRECISION;
-  data_length[NODE_MASS] = 1;
+  // FIX (2026-08-24): was 1, so node_mass in 2D/3D consumed only the
+  // first component and the parser choked on the rest (node_mass was
+  // effectively unusable since the GNU origins; node_damping and
+  // node_stiffness correctly use ndim)
+  data_length[NODE_MASS] = ndim;
   version_all[NODE_MASS] = 1;
   data_class[NODE_MASS] = NODE;
   data_required[NODE_MASS] = NODE;
@@ -4692,6 +4724,34 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   data_required[NODE_START_REFINED] = NODE;
 
   strcpy(name[NODE_DEFORMED_MESH],"node_deformed_mesh");
+
+  strcpy(name[NODE_MESH],"node_mesh");
+  type[NODE_MESH] = INTEGER;
+  data_length[NODE_MESH] = 1;
+  version_all[NODE_MESH] = 1;
+  data_class[NODE_MESH] = NODE;
+  data_required[NODE_MESH] = NODE;
+
+  strcpy(name[NODE_SLIDE],"node_slide");
+  type[NODE_SLIDE] = INTEGER;
+  data_length[NODE_SLIDE] = 1;
+  version_all[NODE_SLIDE] = 1;
+  data_class[NODE_SLIDE] = NODE;
+  data_required[NODE_SLIDE] = NODE;
+
+  strcpy(name[NODE_STATIC_PRESSURE],"node_static_pressure");
+  type[NODE_STATIC_PRESSURE] = DOUBLE_PRECISION;
+  data_length[NODE_STATIC_PRESSURE] = 1;
+  version_all[NODE_STATIC_PRESSURE] = 1;
+  data_class[NODE_STATIC_PRESSURE] = NODE;
+  data_required[NODE_STATIC_PRESSURE] = NODE;
+
+  strcpy(name[NODE_TOTAL_PRESSURE],"node_total_pressure");
+  type[NODE_TOTAL_PRESSURE] = DOUBLE_PRECISION;
+  data_length[NODE_TOTAL_PRESSURE] = 1;
+  version_all[NODE_TOTAL_PRESSURE] = 1;
+  data_class[NODE_TOTAL_PRESSURE] = NODE;
+  data_required[NODE_TOTAL_PRESSURE] = NODE;
   type[NODE_DEFORMED_MESH] = DOUBLE_PRECISION;
   data_length[NODE_DEFORMED_MESH] = 1;
   version_all[NODE_DEFORMED_MESH] = 1;

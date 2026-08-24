@@ -50,25 +50,58 @@ void parallel_new_dof_before( void )
           node_dof_new = db_dbl( NODE_DOF, inod, VERSION_NEW );
           node_lhside = db_dbl( NODE_LHSIDE, inod, VERSION_NORMAL );
           node_rhside = db_dbl( NODE_RHSIDE, inod, VERSION_NORMAL );
-          db( NODE_DAMPING, inod, idum, node_damping, ldum, 
+          db( NODE_DAMPING, inod, idum, node_damping, ldum,
             VERSION_NORMAL, GET_IF_EXISTS );
-          db( NODE_STIFFNESS, inod, idum, node_stiffness, ldum, 
+          db( NODE_STIFFNESS, inod, idum, node_stiffness, ldum,
             VERSION_NORMAL, GET_IF_EXISTS );
-          db( NODE_MASS, inod, idum, node_mass, ldum, 
+          db( NODE_MASS, inod, idum, node_mass, ldum,
             VERSION_NORMAL, GET_IF_EXISTS );
+          // node_force: discrete nodal force (manual Professional 6.887);
+          // same sign convention as force_point/force_element_edge
+          // (node_rhside -= force)
+          {
+            double node_force[MDIM];
+            array_set( node_force, 0., MDIM );
+            if ( db( NODE_FORCE, inod, idum, node_force, ldum,
+                VERSION_NORMAL, GET_IF_EXISTS ) ) {
+              for ( idim=0; idim<ndim; idim++ ) {
+                ipuknwn = vel_indx/nder + idim;
+                node_rhside[ipuknwn] -= node_force[idim];
+              }
+            }
+          }
           for ( idim=0; idim<ndim; idim++ ) {
             ipuknwn = vel_indx/nder + idim;
             iuknwn = vel_indx + idim * nder;
-            node_lhside[ipuknwn] += node_stiffness[idim]*dtime + node_damping[idim] + 
+            node_lhside[ipuknwn] += node_stiffness[idim]*dtime + node_damping[idim] +
               node_mass[idim] / dtime;
             tmp = node_damping[idim] * node_dof_new[iuknwn] +
-              node_mass[idim] * ( node_dof_new[iuknwn] - node_dof[iuknwn] ) / 
+              node_mass[idim] * ( node_dof_new[iuknwn] - node_dof[iuknwn] ) /
               dtime + node_mass[idim] * force_gravity[idim];
-            if ( materi_displacement ) 
+            if ( materi_displacement )
               tmp += node_stiffness[idim] * node_dof_new[dis_indx+idim*nder];
             else if ( materi_velocity_integrated ) 
               tmp += node_stiffness[idim] * node_dof_new[veli_indx+idim*nder];
             node_rhside[ipuknwn] -= tmp;
+          }
+          // node_inertia (manual Professional 6.889): fill the record with
+          // the calculated inertia terms (mass*acceleration + gravity
+          // share, per direction). Consumers: printing and the d'alembert
+          // trick control_data_copy node_inertia -> node_force with
+          // factor -1 (static nodal forces replacing the mass inertia for
+          // the remainder of the calculation).
+          if ( db_active_index( NODE_INERTIA, inod, VERSION_NORMAL ) ) {
+            double inertia_terms[MDIM];
+            for ( idim=0; idim<ndim; idim++ )
+              inertia_terms[idim] = node_mass[idim] *
+                ( node_dof_new[vel_indx+idim*nder] -
+                  node_dof[vel_indx+idim*nder] ) / dtime +
+                node_mass[idim] * force_gravity[idim];
+            // PUT in VERSION_NEW: the end-of-step db_version_copy
+            // (NEW -> NORMAL) would overwrite a NORMAL write with the
+            // input values
+            db( NODE_INERTIA, inod, idum, inertia_terms, ndim,
+              VERSION_NEW, PUT );
           }
         }
       }

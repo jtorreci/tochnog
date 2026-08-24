@@ -46,8 +46,19 @@ void slide( void )
         db_max_index( NODE, max_node, VERSION_NORMAL, GET );
         for ( inod=0; inod<=max_node; inod++ ) {
           if ( db_active_index( NODE, inod, VERSION_NORMAL ) ) {
-            geometry( inod, ddum, slide_geometry, in_geometry, rdum, normal, 
+            // node_slide: ADDITIONAL membership by explicit node record
+            // (manual Professional 6.893): the node belongs to the sliding
+            // geometry with index islide when its node_slide record
+            // carries slide_number islide, EVEN IF the node is not inside
+            // the geometry itself. The plane normal still comes from
+            // slide_geometry (for all members).
+            long int node_slide_member = 0, node_slide_number = -1;
+            if ( db( NODE_SLIDE, inod, &node_slide_number, ddum, ldum,
+                 VERSION_NORMAL, GET_IF_EXISTS ) )
+              if ( node_slide_number==islide ) node_slide_member = 1;
+            geometry( inod, ddum, slide_geometry, in_geometry, rdum, normal,
               rdum, ddum, NODE_START_REFINED, PROJECT_EXACT, VERSION_NORMAL );
+            if ( node_slide_member ) in_geometry = 1;
             if ( in_geometry ) {
               new_node_dof = db_dbl( NODE_DOF, inod, VERSION_NEW );
               for ( idim=0; idim<ndim; idim++ ) velocity[idim] = 

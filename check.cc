@@ -112,6 +112,12 @@ long int check( long int idat, long int task )
     ok = check_ndim( 2, 3, task );
     ok = ok && check_unknown( "condif_temperature", YES, task );
   }
+  if ( data_number==NODE_FORCE || data_number==NODE_INERTIA )
+    ok = check_unknown( "materi_velocity", YES, task );
+  if ( data_number==NODE_STATIC_PRESSURE || data_number==NODE_DYNAMIC_PRESSURE ||
+       data_number==NODE_TOTAL_PRESSURE )
+    ok = check_unknown( "groundflow_pressure", YES, task );
+
   if ( data_number==GROUP_INTERFACE_CONDIF_CONDUCTIVITY ||
        data_number==GROUP_INTERFACE_MATERI_EXPANSION_NORMAL )
     ok = check_unknown( "condif_temperature", YES, task );

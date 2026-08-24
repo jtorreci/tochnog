@@ -455,7 +455,7 @@ void calculate_operat( double unknown_values[], long int inod,
 
 {
 
-  long int idim=0, jdim=0, indx=0, n=0, idum[1];
+  long int idim=0, jdim=0, indx=0, n=0, ldum=0, idum[1];
   double average=0., phim=0., d__1=0., d__2=0., tmax=0., tmin=0., 
     cohesion=0., tmp1=0., tmp2=0., a=0., b=0., c=0., x1=0., x2=0.,
     pres=0., static_pres=0., total_pres=0., location=0.,
@@ -600,9 +600,13 @@ void calculate_operat( double unknown_values[], long int inod,
     length_result = 1;
   }
   else if ( labs(calcul_operat)==TOTAL ) {
-    groundflow_phreatic_coord( inod, coord, dof, total_pres, 
+    groundflow_phreatic_coord( inod, coord, dof, total_pres,
        static_pres, location );
     pres = total_pres;
+    // node_total_pressure: user override of the calculated total pressure
+    // (manual Professional 6.898)
+    db( NODE_TOTAL_PRESSURE, inod, idum, &pres, ldum, VERSION_NORMAL,
+      GET_IF_EXISTS );
     if ( calcul_matrix ) {
       result[0] = unknown_values[0] + pres;
       result[1] = unknown_values[1];
@@ -619,19 +623,25 @@ void calculate_operat( double unknown_values[], long int inod,
   }                        
   else if ( labs(calcul_operat)==STATIC ) {
     pres = 0.;
-    if ( groundflow_phreatic_coord( inod, coord, dof, total_pres, 
+    if ( groundflow_phreatic_coord( inod, coord, dof, total_pres,
         static_pres, location ) )
       pres = static_pres;
+    // node_static_pressure: user override (manual Professional 6.894)
+    db( NODE_STATIC_PRESSURE, inod, idum, &pres, ldum, VERSION_NORMAL,
+      GET_IF_EXISTS );
     result[0] = pres;
     length_result = 1;
   }
   else if ( labs(calcul_operat)==DYNAMIC ) {
     pres = dof[pres_indx];
-    if ( groundflow_phreatic_coord( inod, coord, dof, total_pres, 
-        static_pres, location ) ) 
+    if ( groundflow_phreatic_coord( inod, coord, dof, total_pres,
+        static_pres, location ) )
       pres = total_pres - static_pres;
+    // node_dynamic_pressure: user override (manual Professional 6.886)
+    db( NODE_DYNAMIC_PRESSURE, inod, idum, &pres, ldum, VERSION_NORMAL,
+      GET_IF_EXISTS );
     result[0] = pres;
-    length_result = 1;                 
+    length_result = 1;
   }
   else
     db_error( POST_CALCUL, 0 );

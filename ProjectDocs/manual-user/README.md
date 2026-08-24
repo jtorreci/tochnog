@@ -165,3 +165,7 @@ input parameters it accepts.
 - [group_interface_condif_conductivity](group_interface_condif_conductivity.md) — heat flow through the interface q=k*(T1-T2) (thermal analog of the groundflow permeability).
 - [group_interface_materi_expansion_normal](group_interface_materi_expansion_normal.md) — thermal expansion in thickness direction (eigenstrain on the normal force; mechanical strain for gap/MC).
 - [group_interface_tangential_reference_point](group_interface_tangential_reference_point.md) — reference point defining the first tangential direction of 3D interfaces.
+
+## Sprint 8 — node family additions
+
+- [node_force](node_force.md) — discrete nodal force; node_inertia output record (d'alembert source); node_static/dynamic/total_pressure overrides; node_slide membership.
