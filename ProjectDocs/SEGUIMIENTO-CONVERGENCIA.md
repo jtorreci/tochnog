@@ -106,6 +106,8 @@ suite sfnet, o un test propio. El registro completo:
 
 **P6 — familia `control_distribute_*` completa (manual Professional 6.127-6.132; P6 CERRADO)** | `c7d4002` | 2026-08-24 | layout Professional añadido a `distribute()` (distri.cc): record de 4 slots `[-normal/-lognormal, item, index|-all, number]` discriminado del legacy GNU (triplets + `_values`, que se conserva intacto — ho_othr4 sigue verde). `_parameters` da mean/std del VALOR (lognormal vía mu_ln/sigma_ln = ln(1+(s/m)²)); `_seed` reinicializa el ran1 de Numerical Recipes (idum negativo) → campos reproducibles; `_correlation_length` (1..ndim valores por dirección; >1e12 = campo constante) con kernel exponencial `v_i = Σ w_ij z_j / √Σw_ij²`, w=exp(-d_eff), distancia de correlación por defecto 4·L (`_correlation_distance` la sobreescribe); `_minimum_maximum` clampa el draw. Aplicación: group_* → delta = draw − record en `ELEMENT_DISTRIBUTE_VALUES` (el `+=` de get_group_data da el valor exacto; filtrado por ELEMENT_GROUP del index o `-all`); node-like → REPLACE del slot (ejemplos del manual: temperaturas nodales, coordenada y). Dispara por PASO en step_start (como el GNU). Validado con `cdist_normal` (deltas calibrados exactos +35.4136/−21.3726 con seed 7: draws distintos y reproducibles), `cdist_corr` (correlation_length 2e12 → ambos deltas IGUALES 35.4136 pese a 25 unidades de distancia) y `cdist_clamp` (std 1e6 + min/max 995/1005 → deltas exactamente ±5). Suite 70/70. **P6 COMPLETO**: todas las familias del bloque cerradas (groundflow, contacto, change, control_data, control_distribute). |
 
+**Sprint 7 — familia `condif_heat_*` completa (manual Professional 6.72-6.91; 20 keywords)** | `8ae0feb` | 2026-08-24 | **edge_normal (11 kw)**: maquinaria COMPARTIDA con groundflow_flux_edge en area.cc — MTYPES 6→7, type[6]=CONDIF_HEAT_EDGE_NORMAL + _GEOMETRY; los 3 bloques groundflow-específicos (restricciones element/group/side, carga sine/time, aplicación nodal con factor y restricciones por nodo) generalizados con helpers estáticos `flux_edge_is_master`/`flux_edge_companion` que mapean cada master a sus 9 companions; el dof objetivo es `temp_indx` (heat) vs `pres_indx` (groundflow). Comportamiento groundflow bit-idéntico (groundflow_flux_edge verde). **volume (9 kw)**: bloque nuevo en condif() (condif.cc) — restricciones `_element`/`_element_group` (array_member) y `_geometry` (todos los nodos del elemento en la geometría), valor del record o de `user_condif_heat_volume` con `_user -yes` (stub en user.cc, patrón user_viscosity), carga `_sine`/`_time` (force_time), `_factor` polinomio espacial en el punto de integración (firma de condif() extendida con coord_ip; call-site elem.cc actualizado); contribución rhs += volume·h_i·S·load·factor. GOTCHA descubierto: `group_condif_flow` en 2D exige 2 valores (vector), 1 solo valor rompe el parser. Validado con `condif_heat_edge` (columna q=0.1 por el borde inferior, k=0.1, T=0 arriba: T fondo **2.0** y medio **1.0** exactos por Fourier), `condif_heat_vol` (barra 1D con `_element` solo elemento 2: T(centro) = **0.25 analítico**; 0.5 calentando ambos — A/B de la restricción) y `condif_heat_vol2` (`_factor 0. 1.` → S(x)=x: T(centro) = **0.5 analítico**). Suite 73/73. |
+
 Nota: las features marcadas solo "GNU" en el detalle por familia (sin
 fila en esta tabla) ya existían en el fork sfnet 2014 y no fueron
 implementadas por nosotros.
@@ -312,28 +314,28 @@ marcado `PENDIENTE` puede estar cubierto en el GNU bajo otro nombre:
 - [ ] `condif_convection_edge_normal_geometry` — PENDIENTE
 - [ ] `condif_convection_edge_normal_node` — PENDIENTE
 
-### condif_heat (0/20)
+### condif_heat (20/20)
 
-- [ ] `condif_heat_edge_normal` — PENDIENTE
-- [ ] `condif_heat_edge_normal_element` — PENDIENTE
-- [ ] `condif_heat_edge_normal_element_group` — PENDIENTE
-- [ ] `condif_heat_edge_normal_element_node` — PENDIENTE
-- [ ] `condif_heat_edge_normal_element_node_factor` — PENDIENTE
-- [ ] `condif_heat_edge_normal_element_side` — PENDIENTE
-- [ ] `condif_heat_edge_normal_factor` — PENDIENTE
-- [ ] `condif_heat_edge_normal_geometry` — PENDIENTE
-- [ ] `condif_heat_edge_normal_node` — PENDIENTE
-- [ ] `condif_heat_edge_normal_sine` — PENDIENTE
-- [ ] `condif_heat_edge_normal_time` — PENDIENTE
-- [ ] `condif_heat_volume` — PENDIENTE
-- [ ] `condif_heat_volume_element` — PENDIENTE
-- [ ] `condif_heat_volume_element_group` — PENDIENTE
-- [ ] `condif_heat_volume_factor` — PENDIENTE
-- [ ] `condif_heat_volume_geometry` — PENDIENTE
-- [ ] `condif_heat_volume_sine` — PENDIENTE
-- [ ] `condif_heat_volume_time` — PENDIENTE
-- [ ] `condif_heat_volume_user` — PENDIENTE
-- [ ] `condif_heat_volume_user_parameters` — PENDIENTE
+- [x] `condif_heat_edge_normal` — Sprint 7 (2026-08-24)
+- [x] `condif_heat_edge_normal_element` — Sprint 7 (2026-08-24)
+- [x] `condif_heat_edge_normal_element_group` — Sprint 7 (2026-08-24)
+- [x] `condif_heat_edge_normal_element_node` — Sprint 7 (2026-08-24)
+- [x] `condif_heat_edge_normal_element_node_factor` — Sprint 7 (2026-08-24)
+- [x] `condif_heat_edge_normal_element_side` — Sprint 7 (2026-08-24)
+- [x] `condif_heat_edge_normal_factor` — Sprint 7 (2026-08-24)
+- [x] `condif_heat_edge_normal_geometry` — Sprint 7 (2026-08-24)
+- [x] `condif_heat_edge_normal_node` — Sprint 7 (2026-08-24)
+- [x] `condif_heat_edge_normal_sine` — Sprint 7 (2026-08-24)
+- [x] `condif_heat_edge_normal_time` — Sprint 7 (2026-08-24)
+- [x] `condif_heat_volume` — Sprint 7 (2026-08-24)
+- [x] `condif_heat_volume_element` — Sprint 7 (2026-08-24)
+- [x] `condif_heat_volume_element_group` — Sprint 7 (2026-08-24)
+- [x] `condif_heat_volume_factor` — Sprint 7 (2026-08-24)
+- [x] `condif_heat_volume_geometry` — Sprint 7 (2026-08-24)
+- [x] `condif_heat_volume_sine` — Sprint 7 (2026-08-24)
+- [x] `condif_heat_volume_time` — Sprint 7 (2026-08-24)
+- [x] `condif_heat_volume_user` — Sprint 7 (2026-08-24)
+- [x] `condif_heat_volume_user_parameters` — Sprint 7 (2026-08-24)
 
 ### condif_radiation (0/7)
 

@@ -506,8 +506,18 @@ Añadir magnitudes NO altera `primary` (tablas separadas por familia; JOIN por
       `control_print_frd_prepomax` (familia FRD, 2026-08-12).
 - [ ] `print_group_data` (`strain_settlement_diagram*` HECHO f6b8935
       2026-08-18; `post_point_move` HECHO).
-- [ ] `force_edge_projected*`, `force_volume*`, `force_gravity_geometry`
-      (`force_element_edge_multi_linear_factor_x` HECHO 86f6d03 2026-08-13).
+- [x] `condif_heat_edge_normal*` + `condif_heat_volume*`. **HECHO 2026-08-24
+      (Sprint 7)**: edge_normal (11 kw) comparte maquinaria con
+      groundflow_flux_edge en area.cc (MTYPES 7 + helpers
+      flux_edge_companion); volume (9 kw) bloque nuevo en condif.cc con
+      firma extendida coord_ip + user stub. Tests condif_heat_edge
+      (Fourier exacto 2.0/1.0), condif_heat_vol (_element: 0.25 analitico
+      vs 0.5 ambos) y condif_heat_vol2 (_factor x: 0.5 analitico).
+      Suite 73/73. Quedan del bloque condif: `condif_convection_*` (7) y
+      `condif_radiation_*` (7) — NOTA: los masters CONDIF_CONVECTION/
+      CONDIF_RADIATION ya existen en el GNU con su _geometry (area.cc
+      types 0/1): falta registrar las variantes de restriccion.
+- [ ] `force_edge_projected*`, `force_volume*`, `force_gravity_geometry`.
 
 #### P6 — Groundflow, contacto, miscelánea
 - [x] `groundflow_total_pressure_limit`. **HECHO 2026-08-24** (manual
