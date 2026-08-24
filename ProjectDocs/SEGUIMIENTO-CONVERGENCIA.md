@@ -119,6 +119,8 @@ suite sfnet, o un test propio. El registro completo:
 **Sprint 8 — cierre: `control_reset_*` COMPLETA 18/18 (manual Professional 6.351-6.356)** | `e5cceac` | 2026-08-24 | filtros de región/nodo para control_reset_dof: `_geometry` (nodos de elementos completamente dentro), `_node` (elementos con todos sus nodos listados) y `_element_group` (restringe los elementos) — el filtro se calcula UNA vez por record antes de las variantes de valor y se aplica en todos los loops de nodos (array marcador reset_dof_node_filter). Resets de interfaz como records independientes: `_interface` (strain_normal + fuerzas tangenciales a 0) y `_interface_strain` (solo strain_normal; las fuerzas tangenciales quedan como tensiones "recordadas" — nuevos esfuerzos crecen desde ahí vía la rigidez). `_element_dof` registrado pero la rama -yes (solo element_dof, no node_dof) sin cablear (parcial documentado: requiere el almacenamiento por punto de integración). Validado con `creset_geom` (hisv0 0.5→0 SOLO columna izquierda dentro del brick; derecha conserva 0.5; A/B sin filtro FALLA) y `creset_iface` (history strain_normal de la interfaz 0.0 EXACTO tras el reset). Suite 87/87. **SPRINT 8 CERRADO**: area_element_group 13/13, bounda_time_factor, group_interface 13/13 (Carril A completo), node_* 7+fix node_mass, control_reset 18/18 — ~42 keywords, 2 fixes preexistentes (node_mass data_length, alias-copy order), 8 gotchas documentados. |
 **Sprint 9 — lote 1: nombres Professional force_* + variantes de restricción + gates control_materi (~47 keywords)** | `f178849` | 2026-08-24 | **Traducción de prefijo DENTRO de db_number** (database.cc): `force_edge_*`→`force_element_edge_*` y `force_volume_*`→`force_element_volume_*` — clave crítica: el detector de fin-de-valores de records variable-length TAMBIÉN llama db_number; la primera versión (traducir solo en el punto del keyword de input.cc) rompía el parseo ("Problem reading : bounda_time"). Con el fix, los inputs Professional puros arrancan tal cual. **Variantes nuevas** (patrón companion): `_element`/`_element_group`/`_element_side`/`_node`/`_element_node` para las 3 familias edge + `_node_factor` (edge y normal) + `force_edge_water_factor` (nuevo, el GNU no lo tenía) + `_element`/`_element_group` para volume (force.cc). **Gates control_materi**: helper `control_materi_gate_off` (general.cc, ICONTROL-indexado) cableado a 5 features — viscosity (viscosit.cc), damage+failure (damage.cc), plasti_tension (materi_direct_cutoff), plasti_visco (set_stress), updated -no (set_stress, punto canónico de GROUP_MATERI_MEMORY); otros 7 registrados como parciales (sin término subyacente en el GNU). Validado con `fedge_alias` (sintaxis Professional pura: sigxx 5.0), `fedge_restrict` (`_element` que no toca la geometría: disx 0), `fvol_elem` (`_element_group`: 0.5/0.0) y `cmat_gate` (tension_apply -no: lineal −88.4 vs capped ~1, A/B sin gate falla). Suite 91/91. |
 
+**Sprint 9 — lote 2: `force_edge_projected*` completa (Terzaghi; manual Professional 6.478-6.487; force_edge 44/44 COMPLETA)** | `812bb02` | 2026-08-24 | master como type 9 de area() (MTYPES 10) con las 10 variants companion (patrón force_edge_companion + temporal _time/_sine + _factor polinomio). Física: campo lineal ph/pv evaluado en las coordenadas del nodo; vd normalizado (fallback (0,−1,0)); hd = tunnel×vd (2D: (−vd_y, vd_x, 0)); proyección con productos internos explícitos — sig_radial = ph(n·hd)²+pv(n·vd)², sig_tang = ph(t·hd)(n·hd)+pv(t·vd)(n·vd); aplicada como fn·sig_radial·n + ft·sig_tang·t (positiva hacia afuera, hacia la excavación). FIX dimensional propio: la primera versión acumulaba n2/t2 en un loop con un escalar mal dimensionado. GOTCHA del test (segunda vez): convención Z del quad4 (3=arriba-IZQUIERDA) — malla cruzada ⇒ sigxx=0; el control de aislamiento con force_edge_normal (familia conocida-buena) en la misma malla separó bug-de-test de bug-de-feature. Validado con `fproj_tunnel`: sigxx=10 EXACTO (ph en pared vertical) y sigyy=20 (pv en horizontal) — el ratio 2:1 prueba la proyección por orientación (una presión uniforme daría 1:1). Suite 92/92. |
+
 
 Nota: las features marcadas solo "GNU" en el detalle por familia (sin
 fila en esta tabla) ya existían en el fork sfnet 2014 y no fueron
@@ -912,7 +914,7 @@ marcado `PENDIENTE` puede estar cubierto en el GNU bajo otro nombre:
 - [ ] `end_data` — PENDIENTE
 - [ ] `end_initia` — PENDIENTE
 
-### force_edge (34/44; 10 _projected pendientes)
+### force_edge (44/44 — familia COMPLETA)
 
 - [x] `force_edge` — por equivalencia (alias prefijo Professional→`force_element_edge`, Sprint 9)
 - [ ] `force_edge_diagram` — PENDIENTE
@@ -936,17 +938,17 @@ marcado `PENDIENTE` puede estar cubierto en el GNU bajo otro nombre:
 - [x] `force_edge_normal_node_factor` — Sprint 9
 - [x] `force_edge_normal_sine` — por equivalencia
 - [x] `force_edge_normal_time` — por equivalencia
-- [ ] `force_edge_projected` — PENDIENTE (carga proyectada de túnel, 13 parámetros)
-- [ ] `force_edge_projected_element` — PENDIENTE
-- [ ] `force_edge_projected_element_group` — PENDIENTE
-- [ ] `force_edge_projected_element_node` — PENDIENTE
-- [ ] `force_edge_projected_element_side` — PENDIENTE
-- [ ] `force_edge_projected_factor` — PENDIENTE
-- [ ] `force_edge_projected_geometry` — PENDIENTE
-- [ ] `force_edge_projected_node` — PENDIENTE
-- [ ] `force_edge_projected_node_factor` — PENDIENTE
-- [ ] `force_edge_projected_sine` — PENDIENTE
-- [ ] `force_edge_projected_time` — PENDIENTE
+- [x] `force_edge_projected` — Sprint 9 (lote 2: force_edge_projected Terzaghi) (carga proyectada de túnel, 13 parámetros)
+- [x] `force_edge_projected_element` — Sprint 9 (lote 2: companion)
+- [x] `force_edge_projected_element_group` — Sprint 9 (lote 2: companion)
+- [x] `force_edge_projected_element_node` — Sprint 9 (lote 2: companion)
+- [x] `force_edge_projected_element_side` — Sprint 9 (lote 2: companion)
+- [x] `force_edge_projected_factor` — Sprint 9 (lote 2: companion)
+- [x] `force_edge_projected_geometry` — Sprint 9 (lote 2: companion)
+- [x] `force_edge_projected_node` — Sprint 9 (lote 2: companion)
+- [x] `force_edge_projected_node_factor` — Sprint 9 (lote 2: companion)
+- [x] `force_edge_projected_sine` — Sprint 9 (lote 2: companion)
+- [x] `force_edge_projected_time` — Sprint 9 (lote 2: companion)
 - [x] `force_edge_sine` — por equivalencia
 - [x] `force_edge_time` — por equivalencia
 - [x] `force_edge_water` — por equivalencia
