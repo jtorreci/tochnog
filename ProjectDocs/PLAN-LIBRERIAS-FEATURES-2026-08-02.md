@@ -510,9 +510,15 @@ Añadir magnitudes NO altera `primary` (tablas separadas por familia; JOIN por
       (`force_element_edge_multi_linear_factor_x` HECHO 86f6d03 2026-08-13).
 
 #### P6 — Groundflow, contacto, miscelánea
-- [ ] `groundflow_total_pressure_limit` (`groundflow_seepage_*`,
-      `groundflow_phreatic_*` y `groundflow_flux_edge_normal*` HECHOS 2026-08-20,
-      ver entradas abajo).
+- [x] `groundflow_total_pressure_limit`. **HECHO 2026-08-24** (manual
+      Professional 6.588 + interacción seco/consolidación 2.4.3: clamp del
+      pres resuelto tras cada solve en nodos libres; con limit 0 y pres 0 el
+      elemento está seco y se salta el término de divergencia material.
+      Record-gated en el GNU — Professional defaultea 0 sin record, aquí sin
+      record no se clampa para no romper modelos con pres positiva legítima;
+      diferencia documentada. Tests `groundflow_total_pressure_limit/_dry`,
+      suite 59/59). (`groundflow_seepage_*`, `groundflow_phreatic_*` y
+      `groundflow_flux_edge_normal*` HECHOS 2026-08-20, ver entradas abajo).
 - [x] `groundflow_pressure_atmospheric`. **HECHO 2026-08-24** (documentación +
       verificación; el código es heredado del GNU sfnet 2014 — clamp en
       `groundflow_phreatic_coord()`, groundfl.cc — y el keyword NO existe en
