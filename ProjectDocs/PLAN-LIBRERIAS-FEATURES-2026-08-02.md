@@ -563,8 +563,16 @@ Añadir magnitudes NO altera `primary` (tablas separadas por familia; JOIN por
 - [x] Contacto: `contact_apply`, `contact_plasti_friction`,
       `contact_target_element_group`, `contact_target_geometry`/`_switch`.
       **HECHO 2026-08-19** (contact.cc: gate apply, fricción Mohr-Coulomb,
-      filtro de targets por grupo, alias de geometría). `contact_heat_generation`
-      (factor) y `control_contact_apply` siguen pendientes.
+      filtro de targets por grupo, alias de geometría).
+- [x] `contact_heat_generation` + `control_contact_apply`.
+      **HECHO 2026-08-24** (contact_heat_generation = nombre Professional
+      del legacy contact_heatgeneration: keyword nuevo + lectura dual en el
+      punto de consumo, física Q=η·Ff·vf heredada del GNU; SIN alias PUT —
+      aborta en el parallel loop. control_contact_apply: gate por timestep
+      indexado por ICONTROL, cualquier -no gana. Tests contact_block
+      (penalty detiene bloque: disy≈-0.003), contact_ctrl_apply (-no:
+      caída libre exacta -0.055) y contact_heatgen (térmico, nombre nuevo);
+      valor fluye: friction_energy escala exacto con el factor. Suite 62/62).
 - [ ] `change_dataitem_geometry`, `change_dataitem_time_method`,
       `control_data_*`, `control_distribute*`.
       (`control_reset_dof*` + `control_reset_value_*` HECHOS b6eaee4 2026-08-13
