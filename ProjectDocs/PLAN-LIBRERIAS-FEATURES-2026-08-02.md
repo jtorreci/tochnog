@@ -264,6 +264,18 @@ El índice es limpio: cada entrada de la sección 6 "data records" es una keywor
 - [x] `bounda_dof_radial` — velocidad prescrita radial a un punto. (2026-08-04)
 - [x] `bounda_dof_cylindrical` — velocidad prescrita cilíndrica a una línea. (2026-08-04)
 - [ ] `bounda_baseline_correction` (+`_parameters`, requiere `bounda_time_smc` — señales sísmicas SMC, de nicho).
+- [x] `bounda_time_factor` — factor de multiplicación de los loads de bounda_time (Sprint 8, 2026-08-24; bt_factor: tabla 5.0 × 2.0 → sigyy 20 vs 10).
+- [x] `area_element_group_*` completa 13/13 — Sprint 8 (2026-08-24):
+      `_element`/`_node`/`_method` (-any_but_not_all, entero N)/
+      `_interface`/`_time` (re-eval por paso) + sequence con alias
+      Professional `element_group` (copia ANTES del max_index),
+      `_geometry_method`, `_interface`. HALLAZGO: los `_method` se leían
+      en group.cc desde 2014 pero NUNCA estuvieron registrados.
+      Tests aeg_node (sigyy -4/-2 A/B del young duplicado) y aeg_seq
+      (switch t=0.1: -2.0 exacto mixto E1000/E2000).
+      `bounda_time_o`/`smc_o` del inventario = OCR de `offset`; SMC (3)
+      y until_data/value_minimum (2, requieren post_node_result)
+      quedan pendientes documentados. GOTCHA tests: `-ra a b` = RANGO.
 
 **P3 COMPLETA en lo implementable (2026-08-04)**: 14 features (constant, time_increment, time_offset, factor, factor_parabolic_x, found, time_units, geometry_method, dof, alternate, normal, water, dof_radial, dof_cylindrical). Solo `bounda_baseline_correction` pendiente (de nicho, requiere SMC).
 

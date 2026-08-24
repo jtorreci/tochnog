@@ -110,6 +110,8 @@ suite sfnet, o un test propio. El registro completo:
 
 **Sprint 7 — cierre: `condif_convection_edge_normal*` + `condif_radiation_edge_normal*` (manual Professional 6.65-6.71/6.92-6.98; 14 keywords; BLOQUE CONDIF 34/34 COMPLETO)** | `19757b0` | 2026-08-24 | nombres Professional de los legacy `condif_convection`/`condif_radiation` (misma física h·(Tenv−T) y αr·(Tr⁴−T⁴) con tangente, misma maquinaria area()): masters como tipos 7/8 (MTYPES 7→9) con helper `conv_rad_is_master`/`conv_rad_companion` (5 variantes de restricción: _element/_element_group/_element_side antes del bucle de lados, _node/_element_node en la aplicación); rama de aplicación extendida a los 4 masters (lectura de values desde type[itype]; los legacy conservan su camino exacto — convec1/convec2/condif8/condif10 verdes). `_geometry` dual: entidad O lista de nodos (camino genérico area[0]>0). GOTCHA MAYOR descubierto calibrando: `border_nodes_quad4 = {0,1, 1,3, 3,2, 2,0}` — tochnog conecta el quad4 en convención **Z** (1,2 abajo / 3,4 arriba en el mismo orden x), NO ccw; una "arista" fuera de esa tabla NUNCA dispara silenciosamente (la matriz de conducción sí es correcta con cualquier orden — por eso los tests mecánicos ccw pasan). Los tests con features de area() deben usar la convención Z. Validado con `condif_convec` (T=0.5 analítico exacto), `condif_rad` (no lineal: T+T⁴=1 → 0.7245 con 10 iteraciones Newton) y `condif_convec_el` (`_element` que no toca la geometría → T=0 exacto, A/B de la restricción). Suite 76/76. |
 
+**Sprint 8 — `area_element_group*` completa (13/13) + `bounda_time_factor`** | `dbd210a` | 2026-08-24 | variantes nuevas en group.cc: `_element` (filtro por nombre de elemento), `_node` (lista global de nodos vía array_member en vez de geometría), `_method` extendido con `-any_but_not_all` y entero N (≥N nodos dentro), `_interface` -no (excluye elementos cuyo grupo tiene GROUP_INTERFACE; GNU también acepta -yes para las interfaces del Carril A), `_time -yes` (re-evaluación por paso: `area_element_group_time_active()` en top.cc step_close). Sequence: alias Professional `..._element_group` (con guiones; copia al legacy ANTES del max_index — un input solo-alias veía max=-1 y nunca entraba al loop, bug cazado con diagnóstico element_group), `_geometry_method`, `_interface`, métodos extendidos. HALLAZGO: `area_element_group_method` y `..._sequence_method` se LEÍAN en group.cc desde el GNU 2014 pero NUNCA estuvieron registrados en database.cc — eran inutilizables; registrados. `bounda_time_factor` (6.36): multiplica los LOADS (posiciones impares) del bounda_time tras el _units. GOTCHA de tests: `bounda_unknown -ra a b` es un RANGO (a..b), no una lista — confundió dos tests con strain=0 misterioso. Validado con `aeg_node` (brick solo columna izquierda + `-any` + `_time`: sigyy -4.0 vs -2.0 = A/B del young duplicado), `aeg_seq` (alias + `_geometry_method -any`, switch t=0.1 con 3 pasos: sigyy -2.0 EXACTO = 2 pasos E1000 + 1 paso E2000) y `bt_factor` (tabla 5.0 × factor 2.0 → sigyy 20 vs 10). Checklist bounda_time: `bounda_time_o`/`smc_o` eran OCR truncados de offset; SMC (3) y until_data/value_minimum (2, requieren post_node_result) quedan pendientes documentados. Suite 79/79. |
+
 Nota: las features marcadas solo "GNU" en el detalle por familia (sin
 fila en esta tabla) ya existían en el fork sfnet 2014 y no fueron
 implementadas por nosotros.
@@ -162,21 +164,21 @@ marcado `PENDIENTE` puede estar cubierto en el GNU bajo otro nombre:
 
 
 
-### area_element (5/13)
+### area_element (13/13)
 
-- [x] `area_element_group` — presente en el GNU
-- [ ] `area_element_group_element` — PENDIENTE
-- [ ] `area_element_group_interface` — PENDIENTE
-- [ ] `area_element_group_method` — PENDIENTE
-- [ ] `area_element_group_node` — PENDIENTE
+- [x] `area_element_group` — presente en el GNU (variantes Sprint 8)
+- [x] `area_element_group_element` — Sprint 8 (2026-08-24)
+- [x] `area_element_group_interface` — Sprint 8 (2026-08-24; -no excluye, GNU también acepta -yes para las interfaces del Carril A)
+- [x] `area_element_group_method` — Sprint 8 (2026-08-24; HALLAZGO: se leía en group.cc desde el GNU pero NUNCA estuvo registrado — era inutilizable)
+- [x] `area_element_group_node` — Sprint 8 (2026-08-24)
 - [x] `area_element_group_sequence` — presente en el GNU
 - [x] `area_element_group_sequence_element` — presente en el GNU
-- [ ] `area_element_group_sequence_element_group` — PENDIENTE
+- [x] `area_element_group_sequence_element_group` — Sprint 8 (2026-08-24; alias Professional del legacy `..._elementgroup`)
 - [x] `area_element_group_sequence_geometry` — presente en el GNU
-- [ ] `area_element_group_sequence_geometry_method` — PENDIENTE
-- [ ] `area_element_group_sequence_interface` — PENDIENTE
+- [x] `area_element_group_sequence_geometry_method` — Sprint 8 (2026-08-24)
+- [x] `area_element_group_sequence_interface` — Sprint 8 (2026-08-24)
 - [x] `area_element_group_sequence_time` — presente en el GNU
-- [ ] `area_element_group_time` — PENDIENTE
+- [x] `area_element_group_time` — Sprint 8 (2026-08-24; re-evaluación por paso vía area_element_group_time_active en top.cc)
 
 ### area_node (3/3)
 
@@ -242,18 +244,18 @@ marcado `PENDIENTE` puede estar cubierto en el GNU bajo otro nombre:
 
 - [x] `bounda_sine` — presente en el GNU
 
-### bounda_time (4/11)
+### bounda_time (5/11; 1 falso pendiente por OCR, 3 SMC + 2 until pendientes)
 
 - [x] `bounda_time` — presente en el GNU
-- [ ] `bounda_time_factor` — PENDIENTE
+- [x] `bounda_time_factor` — Sprint 8 (2026-08-24)
 - [x] `bounda_time_increment` — presente en el GNU
-- [ ] `bounda_time_o` — PENDIENTE
-- [ ] `bounda_time_smc` — PENDIENTE
-- [ ] `bounda_time_smc_o` — PENDIENTE
-- [ ] `bounda_time_smc_units` — PENDIENTE
+- [x] `bounda_time_offset` — presente en el GNU (el "bounda_time_o" del inventario era OCR truncado de offset)
+- [ ] `bounda_time_smc` — PENDIENTE (lector de archivos SMC USGS; requiere archivo de ejemplo para verificar)
+- [ ] `bounda_time_smc_offset` — PENDIENTE (OCR "smc_o"; ídem)
+- [ ] `bounda_time_smc_units` — PENDIENTE (ídem)
 - [x] `bounda_time_units` — implementada (commit `ba20c45`, 2026-08-05)
-- [ ] `bounda_time_until_data` — PENDIENTE
-- [ ] `bounda_time_until_value_minimum` — PENDIENTE
+- [ ] `bounda_time_until_data` — PENDIENTE (requiere `post_node_result`, que no existe; `bounda_time_until_force` 2026-08-05 cubre el caso fuerza de reacción)
+- [ ] `bounda_time_until_value_minimum` — PENDIENTE (compañero del anterior)
 - [x] `bounda_time_user` — presente en el GNU
 
 ### bounda_water (1/1)
