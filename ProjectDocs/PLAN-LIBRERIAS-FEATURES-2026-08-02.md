@@ -573,12 +573,16 @@ Añadir magnitudes NO altera `primary` (tablas separadas por familia; JOIN por
       (penalty detiene bloque: disy≈-0.003), contact_ctrl_apply (-no:
       caída libre exacta -0.055) y contact_heatgen (térmico, nombre nuevo);
       valor fluye: friction_energy escala exacto con el factor. Suite 62/62).
-- [ ] `control_data_*`, `control_distribute*`.
-      (`change_dataitem_geometry` + `change_dataitem_time_method` HECHOS
-      2026-08-24 — familia change completa 6/6. time_method: acos/asin/atan
-      del valor temporal (phi-c). geometry: split del grupo, cambio solo al
-      clon. Tests cd_method (target genérico lee phi=atan(tabla) exacto) y
-      cd_geom (sigxy 0 vs 1 + record original intacto). Suite 64/64.
+- [ ] `control_distribute*`.
+      (`control_data_*` HECHO 2026-08-24: activate (borrado destructivo de
+      records), arithmetic+double (-plus/-minus/-multiply/-divide, -ra, -all),
+      copy+factor y copy_index+factor (helper data_copy_apply; d'alembert
+      node_inertia->node_force -1 cubierto). control_data_save DESCARTADO
+      (consumidor unico: print_gid_save_difference, familia GiD descartada;
+      equivalente SQLite/CSV). Tests cda_arith/copy/activate con targets
+      genericos exactos + relajacion fisica. Suite 67/67.
+      GOTCHA: control_timestep 2º numero = DURACION del bloque, no tiempo
+      final — un record de control_data_* dispara una vez POR PASO.
       `control_reset_dof*` + `control_reset_value_*` HECHOS b6eaee4 2026-08-13
       y variantes espaciales 3024d24 2026-08-18; `control_change_dataitem_apply`
       HECHO bdcdeaf 2026-08-13.)

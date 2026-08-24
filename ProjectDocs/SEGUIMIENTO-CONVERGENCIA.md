@@ -102,6 +102,8 @@ suite sfnet, o un test propio. El registro completo:
 
 **P6 — `change_dataitem_time_method` + `change_dataitem_geometry` (manual Professional 6.51/6.48, familia change 6/6)** | `54af57a` | 2026-08-24 | `_time_method`: la tabla temporal da valores de coseno/seno/tangente y se almacena el ángulo inverso (`acos/asin/atan(val)`) — el caso phi-c del manual (tablas de tan(phi), parámetro phi en radianes). Switch enums COSINUS/SINUS/TANGENT con registro de nombres en database.cc (el parser resuelve -tangent por la tabla de nombres, como cualquier switch). `_geometry`: restricción de un cambio de record `group_*` a los elementos dentro de la geometría, materializada como SPLIT del grupo: clon con copia de todos los records `group_*` (grupo nuevo = max+1, mapa estático), elementos completamente dentro de la geometría movidos al clon (patrón geometry() de CONTROL_DATA_INITELDOF_GEOMETRY + PUT de ELEMENT_GROUP como delete.cc), cambio aplicado solo al clon (los de fuera y el record original quedan intactos). Validado con `cd_method` (unit test exacto: `target_item -group_materi_plasti_mohr_coul_direct 0 0` = 0.5235988 = atan(0.57735027); sigxy invariante ~1 → sin efectos colaterales) y `cd_geom` (dos bloques en shear: izquierdo dentro del brick → sigxy~0 con c=0 en el clon; derecho → sigxy~1; el record original conserva c=1.0 leído por target genérico — prueba la restricción, no solo la ausencia de crash). Suite 64/64. |
 
+**P6 — familia `control_data_*` (activate, arithmetic+double, copy+factor, copy_index+factor; manual Professional 6.114-6.120)** | `2051bc6` | 2026-08-24 | bloques nuevos en `data()` (disparan en cada step_close cuyo ICONTROL casa): `_arithmetic` cambia un record con el valor de `_double` vía -plus/-minus/-multiply/-divide (índice simple o rango -ra, número simple o -all; ints rechazados; división por 0 rechazada; switches PLUS/MINUS/DIVIDE nuevos con nombres registrados); `_copy` copia TODOS los índices from→to con factor opcional (helper data_copy_apply: int requiere factor 1, double multiplica; el caso d'alembert node_inertia→node_force -1 queda cubierto); `_copy_index` copia un índice concreto con `_factor`; `_activate` -no BORRA todos los records de los items listados (db_delete_index; los consumidores los saltan) y -yes es no-op (desactivación destructiva, diferencia GNU documentada). `control_data_save` DESCARTADO (solo consumidor: control_print_gid_save_difference, familia GiD descartada; equivalente en post-proceso SQLite/CSV). GOTCHA crítico descubierto calibrando: `control_timestep i dt incremento` — el 2º número es la DURACIÓN del bloque, no el tiempo final (`0.1 0.2` desde t=0.1 = 2 pasos hasta 0.3; un record por paso dispara 2 veces). Validado con `cda_arith` (young 1000 → ×2 → +500-all → 2500 exacto por target genérico), `cda_copy` (copy_index ×2 → 2000; copy todos ×0.5 → 500/1000 exactos) y `cda_activate` (columna traccionada disy~0.01 → bounda_force borrado → relaja a 0±0.004 en cuasiestático). Suite 67/67. |
+
 Nota: las features marcadas solo "GNU" en el detalle por familia (sin
 fila en esta tabla) ya existían en el fork sfnet 2014 y no fueron
 implementadas por nosotros.
@@ -126,6 +128,7 @@ en el apartado 'Diferencias con la versión Professional' del manual correspondi
 | Feature | Razón del descarte |
 |---------|--------------------|
 | `control_print_gid_*` (familia ~20) | Único formato propietario contemplado; `print_gid_6` del GNU es de 1998 (anterior a cambios recientes); GiD puede importar formatos no nativos (VTK, Gmsh, CSV). Ver plan sección 6c. |
+| `control_data_save` | Su único consumidor es `control_print_gid_save_difference` (diferencias contra el estado salvado), de la familia GiD descartada. El mismo análisis de diferencias se hace en post-proceso con la exportación SQLite/CSV de P5-T (dos instantes, resta en pandas). |
 | `control_print_interface_stress*` | Requiere elementos de interfaz/contacto, que el GNU no tiene (ni enums). Depende del Carril A. |
 | `control_print_materi_stress_force` | Requiere `post_calcul_materi_stress_force` (integración de tensiones sobre cortes), no existente. |
 
@@ -391,18 +394,18 @@ marcado `PENDIENTE` puede estar cubierto en el GNU bajo otro nombre:
 
 ### control_data (4/12)
 
-- [ ] `control_data_activate` — PENDIENTE
-- [ ] `control_data_arithmetic` — PENDIENTE
-- [ ] `control_data_arithmetic_double` — PENDIENTE
-- [ ] `control_data_copy` — PENDIENTE
-- [ ] `control_data_copy_factor` — PENDIENTE
-- [ ] `control_data_copy_index` — PENDIENTE
-- [ ] `control_data_copy_index_factor` — PENDIENTE
+- [x] `control_data_activate` — P6 (2026-08-24)
+- [x] `control_data_arithmetic` — P6 (2026-08-24)
+- [x] `control_data_arithmetic_double` — P6 (2026-08-24)
+- [x] `control_data_copy` — P6 (2026-08-24)
+- [x] `control_data_copy_factor` — P6 (2026-08-24)
+- [x] `control_data_copy_index` — P6 (2026-08-24)
+- [x] `control_data_copy_index_factor` — P6 (2026-08-24)
 - [x] `control_data_delete` — presente en el GNU
 - [x] `control_data_put` — presente en el GNU
 - [x] `control_data_put_double` — presente en el GNU
 - [x] `control_data_put_integer` — presente en el GNU
-- [ ] `control_data_save` — PENDIENTE
+- [ ] `control_data_save` — DESCARTADO (ver tabla de descartes)
 
 ### control_dependency (0/1)
 
