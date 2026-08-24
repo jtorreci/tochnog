@@ -112,6 +112,8 @@ suite sfnet, o un test propio. El registro completo:
 
 **Sprint 8 — `area_element_group*` completa (13/13) + `bounda_time_factor`** | `dbd210a` | 2026-08-24 | variantes nuevas en group.cc: `_element` (filtro por nombre de elemento), `_node` (lista global de nodos vía array_member en vez de geometría), `_method` extendido con `-any_but_not_all` y entero N (≥N nodos dentro), `_interface` -no (excluye elementos cuyo grupo tiene GROUP_INTERFACE; GNU también acepta -yes para las interfaces del Carril A), `_time -yes` (re-evaluación por paso: `area_element_group_time_active()` en top.cc step_close). Sequence: alias Professional `..._element_group` (con guiones; copia al legacy ANTES del max_index — un input solo-alias veía max=-1 y nunca entraba al loop, bug cazado con diagnóstico element_group), `_geometry_method`, `_interface`, métodos extendidos. HALLAZGO: `area_element_group_method` y `..._sequence_method` se LEÍAN en group.cc desde el GNU 2014 pero NUNCA estuvieron registrados en database.cc — eran inutilizables; registrados. `bounda_time_factor` (6.36): multiplica los LOADS (posiciones impares) del bounda_time tras el _units. GOTCHA de tests: `bounda_unknown -ra a b` es un RANGO (a..b), no una lista — confundió dos tests con strain=0 misterioso. Validado con `aeg_node` (brick solo columna izquierda + `-any` + `_time`: sigyy -4.0 vs -2.0 = A/B del young duplicado), `aeg_seq` (alias + `_geometry_method -any`, switch t=0.1 con 3 pasos: sigyy -2.0 EXACTO = 2 pasos E1000 + 1 paso E2000) y `bt_factor` (tabla 5.0 × factor 2.0 → sigyy 20 vs 10). Checklist bounda_time: `bounda_time_o`/`smc_o` eran OCR truncados de offset; SMC (3) y until_data/value_minimum (2, requieren post_node_result) quedan pendientes documentados. Suite 79/79. |
 
+**Sprint 8 — `group_interface_*` COMPLETA 13/13 (Carril A cerrado del todo; manual Professional 6.625/6.630/6.636)** | `7b414fa` | 2026-08-24 | 3 keywords nuevas en interface.cc: `condif_conductivity` (q = k·(T1−T2) en los dofs temp de los pares enfrentados con tangente simétrica — espejo exacto de groundflow_permeability); `materi_expansion_normal` (eps_th total = α·T_media resta al strain acumulado para gap/tracción/MC vía `strain_eff`; el INCREMENTO térmico d(α·T) se resta de du_norm → pseudo-carga incremental, mismo patrón eigenstrain que stress.cc; el history queda puramente mecánico — sin doble conteo por paso); `tangential_reference_point` 3D (t1 = parte perpendicular de (ref − centroide) según el manual, t2 = n×t1; fallback al frame geométrico si degenera; consistente con memory -total_linear). Checklist corregido: `group_interface_ground` NUNCA existió (artefacto), `_materi_memory` ya estaba hecho (643865b), `_elasti_sti`/`_residual_sti` = OCR de stiffness, `tangential_reference_point` faltaba en el checklist. GOTCHA MAYOR re-verificado a la mala: insertar enums en tochnog.h exige BUILD LIMPIO COMPLETO — el binario mixto corrompido daba checks fantasma ("at least one of materi_velocity_integrated..."). Validado con `iface_condif` (bloque aislado llega a T=2.0 SOLO por la interfaz), `iface_expansion` (bloques fijos: sigxx = 1.984 ≈ 2·kn·α·T; 0 exacto sin el record) y `iface_tangref` (ref en +z rota t1: la cortante en y pasa a f_t2 = 10.40 y f_t ≈ −7.6e−07; frame por defecto la pondría en f_t). Suite 82/82. |
+
 Nota: las features marcadas solo "GNU" en el detalle por familia (sin
 fila en esta tabla) ya existían en el fork sfnet 2014 y no fueron
 implementadas por nosotros.
@@ -1182,21 +1184,23 @@ marcado `PENDIENTE` puede estar cubierto en el GNU bajo otro nombre:
 - [ ] `group_integration_method_reduced_factor` — PENDIENTE
 - [x] `group_integration_points` — presente en el GNU
 
-### group_interface (9/11)
+### group_interface (13/13 — familia COMPLETA del Carril A)
 
-- [x] `group_interface` — Fase 1 implementada (commit `a82cbc7`, 2026-08-13; memory/condif pendientes)
-- [ ] `group_interface_condif_conductivity` — PENDIENTE
+- [x] `group_interface` — Fase 1 implementada (commit `a82cbc7`, 2026-08-13)
+- [x] `group_interface_condif_conductivity` — Sprint 8 (2026-08-24)
 - [x] `group_interface_gap` — Fase 3 implementada (commit `9c2f4c8`, 2026-08-14; cerrada si strain > gap, default -1e20, hueco físico = gap negativo; validada con iface_mc_gap)
-- [ ] `group_interface_ground` — PENDIENTE
 - [x] `group_interface_groundflow_capacity` — P6 (2026-08-20)
 - [x] `group_interface_groundflow_permeability` — P6 (2026-08-20)
 - [x] `group_interface_groundflow_total_pressure_tension` — P6 (2026-08-20)
-- [x] `group_interface_materi_elasti_sti` — Fase 1 implementada (commit `a82cbc7`, 2026-08-13)
-- [ ] `group_interface_materi_expansion_normal` — PENDIENTE
-- [ ] `group_interface_materi_memory` — PENDIENTE
-- [x] `group_interface_materi_plasti_mohr_coul_direct` — Fase 3 implementada (commit `9c2f4c8`, 2026-08-14; MC acumulativo con history `element_interface_force_tang`, activación por presencia del record; validada con iface_mc_slip/iface_mc)
-- [x] `group_interface_materi_plasti_tension_direct` — Fase 3 implementada (commit `9c2f4c8`, 2026-08-14; abre en tracción sobre la fuerza normal TOTAL; validada con iface_mc_tension)
-- [x] `group_interface_materi_residual_sti` — Fase 3 implementada (commit `60bf78c`, 2026-08-13)
+- [x] `group_interface_materi_elasti_stiffness` — Fase 1 (commit `a82cbc7`; "elasti_sti" era OCR truncado)
+- [x] `group_interface_materi_expansion_normal` — Sprint 8 (2026-08-24)
+- [x] `group_interface_materi_memory` — commit `643865b` (2026-08-16; el checklist estaba desactualizado)
+- [x] `group_interface_materi_plasti_mohr_coul_direct` — Fase 3 implementada (commit `9c2f4c8`, 2026-08-14; MC acumulativo con history `element_interface_force_tang`)
+- [x] `group_interface_materi_plasti_tension_direct` — Fase 3 implementada (commit `9c2f4c8`, 2026-08-14)
+- [x] `group_interface_materi_residual_stiffness` — Fase 3 (commit `60bf78c`; "residual_sti" era OCR truncado)
+- [x] `group_interface_tangential_reference_point` — Sprint 8 (2026-08-24; faltaba en el checklist original)
+
+Nota: `group_interface_ground` del checklist anterior NUNCA existió (artefacto del inventario; no está en el manual ni en el inventario original de 2024).
 - [ ] `group_interface_tangential_reference_point` — PENDIENTE
 
 ### group_materi (56/124)

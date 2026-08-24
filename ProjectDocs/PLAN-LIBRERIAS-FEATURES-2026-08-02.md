@@ -275,7 +275,18 @@ El índice es limpio: cada entrada de la sección 6 "data records" es una keywor
       (switch t=0.1: -2.0 exacto mixto E1000/E2000).
       `bounda_time_o`/`smc_o` del inventario = OCR de `offset`; SMC (3)
       y until_data/value_minimum (2, requieren post_node_result)
-      quedan pendientes documentados. GOTCHA tests: `-ra a b` = RANGO.
+      quedan       pendientes documentados. GOTCHA tests: `-ra a b` = RANGO.
+- [x] `group_interface_*` COMPLETA 13/13 — Carril A cerrado del todo
+      (Sprint 8, 2026-08-24): condif_conductivity (espejo termico de
+      groundflow_permeability), materi_expansion_normal (eigenstrain
+      incremental sobre la fuerza normal + strain_eff mecanico para
+      gap/MC; history puro), tangential_reference_point 3D (t1
+      perpendicular desde el centroide, t2 = n x t1). Checklist
+      corregido: group_interface_ground nunca existio; _materi_memory
+      ya estaba (643865b); tangential_reference_point faltaba.
+      Tests iface_condif (T=2 solo por interfaz), iface_expansion
+      (sigxx 2*kn*alfa*T vs 0), iface_tangref (f_t~0, f_t2=10.4).
+      Suite 82/82.
 
 **P3 COMPLETA en lo implementable (2026-08-04)**: 14 features (constant, time_increment, time_offset, factor, factor_parabolic_x, found, time_units, geometry_method, dof, alternate, normal, water, dof_radial, dof_cylindrical). Solo `bounda_baseline_correction` pendiente (de nicho, requiere SMC).
 
