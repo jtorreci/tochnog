@@ -83,6 +83,11 @@ void interface_element( long int element, long int name,
   db( DTIME, 0, idum, &dtime, ldum, VERSION_NEW, GET );
 
   // group parameters
+  // ddum3 MUST be zeroed: with GET_IF_EXISTS on a missing record db() does
+  // not write dval, and an uninitialized buffer made kn/kt garbage (NaN in
+  // the assembled matrix with gcc -O1; exposed 2026-08-24 by the clean
+  // rebuild on a newer compiler).
+  array_set( ddum3, 0., 3 );
   db( GROUP_INTERFACE_MATERI_ELASTI_STIFFNESS, element_group, idum, ddum3,
     ldum, VERSION_NORMAL, GET_IF_EXISTS );
   kn = ddum3[0]; kt1 = ddum3[1]; kt2 = ddum3[2];

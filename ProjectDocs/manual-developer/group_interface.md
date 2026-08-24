@@ -150,3 +150,16 @@
 - `normal`/`tangent` se calculan de la geometría: tangent a lo largo del
   lado 1, normal perpendicular (2D).
 - La deformación usa el incremento `du_new - du_old` (acumulativo).
+
+## Bugfix 2026-08-24: ddum3 sin inicializar en interface_element (NaN con -O1)
+
+`db(GROUP_INTERFACE_MATERI_ELASTI_STIFFNESS, ..., ddum3, ..., GET_IF_EXISTS)`
+no escribe `ddum3` cuando el record no existe, y el buffer local estaba sin
+inicializar: en modelos que solo usan `group_interface_groundflow_*` (sin
+rigidez elástica) `kn/kt1/kt2` quedaban con basura de stack. Compilado con
+gcc 14.2 -O1 la basura contenía no-finitos y la matriz ensamblada daba NaN
+(BI-CG "initial error -nan", test groundflow_interface). Con -O0 o con el
+gcc del entorno anterior la basura no mordía — UB latente desde 2026-08-20.
+
+Fix: `array_set(ddum3, 0., 3)` antes de la lectura. Regla general para todo
+el codebase: inicializar SIEMPRE los buffers pasados a GET_IF_EXISTS.
