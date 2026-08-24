@@ -116,6 +116,8 @@ suite sfnet, o un test propio. El registro completo:
 
 **Sprint 8 — familia `node_*`: 7 keywords + FIX preexistente de `node_mass`** | `ff6ff8b` | 2026-08-24 | node_force (fuerza nodal discreta en dof.cc, convención force_point), node_inertia (record calculado m·(a+g) por paso — la fuente del d'alembert documentado en control_data_copy), node_static/dynamic/total_pressure (overrides del post_calcul -static/-dynamic/-total en calcul.cc), node_slide (membresía ADITIVA de slide en slide.cc: geometría O record; la normal sigue viniendo de slide_geometry). node_mesh/node_convection_apply registrados+parseados sin comportamiento (documentado como parciales). FIX PREEXISTENTE: data_length[NODE_MASS]=1 → ndim (node_damping/stiffness usaban ndim; con 1 el parser se atragantaba en 2D/3D — node_mass inutilizable desde los orígenes del GNU). TRES GOTCHAS encadenados cazados con probes de una línea: (1) todo item NODE-class input-eable exige version_all=1 — mesh_has_changed BORRA los records NODE sin versión en cada cambio de malla (el GET_IF_EXISTS jamás disparaba); (2) el PUT de records calculados va en VERSION_NEW — el db_version_copy(NEW→NORMAL) del cierre de paso pisa cualquier escritura en NORMAL; (3) PUT con length=ldum(0) → db_error (length≥1). OCRs aclarados: node_dof_start_re/node_start_re/node_sti = truncados de refined/stiffness. Tests: node_force_inertia (inertia −19.83 ≈ m·g=−20 con node_force −30 activo; ejercicio del fix node_mass 2D), node_pressure (override static 7.5 EXACTO vs −2.0 calculado = A/B) y node_slide (smoke; LIMITACIÓN documentada: slide_axi original TAMBIÉN da rhside 0 — su target ±0.05 pasaba trivial, la verificación física del slide necesita modelo dedicado). Suite 85/85. |
 
+**Sprint 8 — cierre: `control_reset_*` COMPLETA 18/18 (manual Professional 6.351-6.356)** | `e5cceac` | 2026-08-24 | filtros de región/nodo para control_reset_dof: `_geometry` (nodos de elementos completamente dentro), `_node` (elementos con todos sus nodos listados) y `_element_group` (restringe los elementos) — el filtro se calcula UNA vez por record antes de las variantes de valor y se aplica en todos los loops de nodos (array marcador reset_dof_node_filter). Resets de interfaz como records independientes: `_interface` (strain_normal + fuerzas tangenciales a 0) y `_interface_strain` (solo strain_normal; las fuerzas tangenciales quedan como tensiones "recordadas" — nuevos esfuerzos crecen desde ahí vía la rigidez). `_element_dof` registrado pero la rama -yes (solo element_dof, no node_dof) sin cablear (parcial documentado: requiere el almacenamiento por punto de integración). Validado con `creset_geom` (hisv0 0.5→0 SOLO columna izquierda dentro del brick; derecha conserva 0.5; A/B sin filtro FALLA) y `creset_iface` (history strain_normal de la interfaz 0.0 EXACTO tras el reset). Suite 87/87. **SPRINT 8 CERRADO**: area_element_group 13/13, bounda_time_factor, group_interface 13/13 (Carril A completo), node_* 7+fix node_mass, control_reset 18/18 — ~42 keywords, 2 fixes preexistentes (node_mass data_length, alias-copy order), 8 gotchas documentados. |
+
 Nota: las features marcadas solo "GNU" en el detalle por familia (sin
 fila en esta tabla) ya existían en el fork sfnet 2014 y no fueron
 implementadas por nosotros.
@@ -681,15 +683,15 @@ marcado `PENDIENTE` puede estar cubierto en el GNU bajo otro nombre:
 - [ ] `control_repeat_save` — PENDIENTE
 - [ ] `control_repeat_save_calculate` — PENDIENTE
 
-### control_reset (5/18)
+### control_reset (18/18 — familia COMPLETA; 1 parcial documentado)
 
 - [x] `control_reset_dof` — implementada (commit `b6eaee4`, 2026-08-13)
-- [ ] `control_reset_element_dof` — PENDIENTE
-- [ ] `control_reset_element_group` — PENDIENTE
-- [ ] `control_reset_geometry` — PENDIENTE
-- [ ] `control_reset_interface` — PENDIENTE
-- [ ] `control_reset_interface_strain` — PENDIENTE
-- [ ] `control_reset_node` — PENDIENTE
+- [x] `control_reset_element_dof` — Sprint 8 (2026-08-24; PARCIAL: registrado, la rama -yes solo-element_dof sin cablear — documentado)
+- [x] `control_reset_element_group` — Sprint 8 (2026-08-24)
+- [x] `control_reset_geometry` — Sprint 8 (2026-08-24)
+- [x] `control_reset_interface` — Sprint 8 (2026-08-24)
+- [x] `control_reset_interface_strain` — Sprint 8 (2026-08-24)
+- [x] `control_reset_node` — Sprint 8 (2026-08-24)
 - [x] `control_reset_value_constant` — implementada (commit `b6eaee4`, 2026-08-13)
 - [x] `control_reset_value_dof` — implementada (commit `b6eaee4`, 2026-08-13)
 - [x] `control_reset_value_dof_diagram` — implementada (commit `b6eaee4`, 2026-08-13)
