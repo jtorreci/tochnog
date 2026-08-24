@@ -148,6 +148,24 @@ void bounda( )
             else bounda_time[iu] *= bounda_time_units[1];
           }
         }
+        // bounda_time_factor (manual Professional 6.36): multiplication
+        // factor for the LOAD values of bounda_time (odd positions; times
+        // are untouched). Handy to convert an imported time-load table
+        // whose load definition differs (e.g. fractions of g).
+        {
+          double bounda_time_factor_value = 1.;
+          if ( db( BOUNDA_TIME_FACTOR, iboun, idum,
+              &bounda_time_factor_value, ldum, VERSION_NORMAL,
+              GET_IF_EXISTS ) ) {
+            if ( length_bounda_time==1 )
+              bounda_time[0] *= bounda_time_factor_value;
+            else {
+              long int iu=0;
+              for ( iu=1; iu<length_bounda_time; iu+=2 )
+                bounda_time[iu] *= bounda_time_factor_value;
+            }
+          }
+        }
         db( BOUNDA_TIME_INCREMENT, iboun, idum, &bounda_time_increment, ldum,
           VERSION_NORMAL, GET_IF_EXISTS );
         if ( bounda_time_increment>0. )

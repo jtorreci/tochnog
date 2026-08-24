@@ -80,12 +80,41 @@ void db_initialize( long int dof_type[], long int dof_label[] )
 
   strcpy(name[ALL],"all" );
 
+  strcpy(name[ANY],"any" );
+
+  strcpy(name[ANY_BUT_NOT_ALL],"any_but_not_all" );
+
   strcpy(name[AREA],"area");
 
   strcpy(name[AREA_ELEMENT_GROUP],"area_element_group");
   type[AREA_ELEMENT_GROUP] = INTEGER;
   data_length[AREA_ELEMENT_GROUP] = 3;
   data_class[AREA_ELEMENT_GROUP] = AREA;
+
+  strcpy(name[AREA_ELEMENT_GROUP_ELEMENT],"area_element_group_element");
+  type[AREA_ELEMENT_GROUP_ELEMENT] = INTEGER;
+  data_length[AREA_ELEMENT_GROUP_ELEMENT] = 1;
+  data_class[AREA_ELEMENT_GROUP_ELEMENT] = AREA;
+  data_required[AREA_ELEMENT_GROUP_ELEMENT] = AREA_ELEMENT_GROUP;
+
+  strcpy(name[AREA_ELEMENT_GROUP_INTERFACE],"area_element_group_interface");
+  type[AREA_ELEMENT_GROUP_INTERFACE] = INTEGER;
+  data_length[AREA_ELEMENT_GROUP_INTERFACE] = 1;
+  data_class[AREA_ELEMENT_GROUP_INTERFACE] = AREA;
+  data_required[AREA_ELEMENT_GROUP_INTERFACE] = AREA_ELEMENT_GROUP;
+
+  strcpy(name[AREA_ELEMENT_GROUP_NODE],"area_element_group_node");
+  type[AREA_ELEMENT_GROUP_NODE] = INTEGER;
+  data_length[AREA_ELEMENT_GROUP_NODE] = DATA_ITEM_SIZE;
+  fixed_length[AREA_ELEMENT_GROUP_NODE] = 0;
+  data_class[AREA_ELEMENT_GROUP_NODE] = AREA;
+  data_required[AREA_ELEMENT_GROUP_NODE] = AREA_ELEMENT_GROUP;
+
+  strcpy(name[AREA_ELEMENT_GROUP_TIME],"area_element_group_time");
+  type[AREA_ELEMENT_GROUP_TIME] = INTEGER;
+  data_length[AREA_ELEMENT_GROUP_TIME] = 1;
+  data_class[AREA_ELEMENT_GROUP_TIME] = AREA;
+  data_required[AREA_ELEMENT_GROUP_TIME] = AREA_ELEMENT_GROUP;
 
   strcpy(name[AREA_ELEMENT_GROUP_SEQUENCE],"area_element_group_sequence");
   type[AREA_ELEMENT_GROUP_SEQUENCE] = INTEGER;
@@ -110,14 +139,46 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   type[AREA_ELEMENT_GROUP_SEQUENCE_GEOMETRY] = INTEGER;
   data_length[AREA_ELEMENT_GROUP_SEQUENCE_GEOMETRY] = 2;
   data_class[AREA_ELEMENT_GROUP_SEQUENCE_GEOMETRY] = AREA;
-  data_required[AREA_ELEMENT_GROUP_SEQUENCE_GEOMETRY] = AREA_ELEMENT_GROUP_SEQUENCE_ELEMENTGROUP;
+  // combination checked at runtime (area_element_group_sequence accepts
+  // both the legacy elementgroup and the Professional element_group alias)
 
   strcpy(name[AREA_ELEMENT_GROUP_SEQUENCE_TIME],"area_element_group_sequence_time");
   type[AREA_ELEMENT_GROUP_SEQUENCE_TIME] = DOUBLE_PRECISION;
   data_length[AREA_ELEMENT_GROUP_SEQUENCE_TIME] = DATA_ITEM_SIZE;
   data_class[AREA_ELEMENT_GROUP_SEQUENCE_TIME] = AREA;
   fixed_length[AREA_ELEMENT_GROUP_SEQUENCE_TIME] = 0;
-  data_required[AREA_ELEMENT_GROUP_SEQUENCE_GEOMETRY] = AREA_ELEMENT_GROUP_SEQUENCE_ELEMENTGROUP;
+  // combination checked at runtime (area_element_group_sequence accepts
+  // both the legacy elementgroup and the Professional element_group alias)
+
+  strcpy(name[AREA_ELEMENT_GROUP_METHOD],"area_element_group_method");
+  type[AREA_ELEMENT_GROUP_METHOD] = INTEGER;
+  data_length[AREA_ELEMENT_GROUP_METHOD] = 1;
+  data_class[AREA_ELEMENT_GROUP_METHOD] = AREA;
+  data_required[AREA_ELEMENT_GROUP_METHOD] = AREA_ELEMENT_GROUP;
+
+  strcpy(name[AREA_ELEMENT_GROUP_SEQUENCE_METHOD],"area_element_group_sequence_method");
+  type[AREA_ELEMENT_GROUP_SEQUENCE_METHOD] = INTEGER;
+  data_length[AREA_ELEMENT_GROUP_SEQUENCE_METHOD] = 1;
+  data_class[AREA_ELEMENT_GROUP_SEQUENCE_METHOD] = AREA;
+  data_required[AREA_ELEMENT_GROUP_SEQUENCE_METHOD] = AREA_ELEMENT_GROUP_SEQUENCE_ELEMENTGROUP;
+
+  strcpy(name[AREA_ELEMENT_GROUP_SEQUENCE_ELEMENT_GROUP],"area_element_group_sequence_element_group");
+  type[AREA_ELEMENT_GROUP_SEQUENCE_ELEMENT_GROUP] = INTEGER;
+  data_length[AREA_ELEMENT_GROUP_SEQUENCE_ELEMENT_GROUP] = DATA_ITEM_SIZE;
+  data_class[AREA_ELEMENT_GROUP_SEQUENCE_ELEMENT_GROUP] = AREA;
+  fixed_length[AREA_ELEMENT_GROUP_SEQUENCE_ELEMENT_GROUP] = 0;
+
+  strcpy(name[AREA_ELEMENT_GROUP_SEQUENCE_GEOMETRY_METHOD],"area_element_group_sequence_geometry_method");
+  type[AREA_ELEMENT_GROUP_SEQUENCE_GEOMETRY_METHOD] = INTEGER;
+  data_length[AREA_ELEMENT_GROUP_SEQUENCE_GEOMETRY_METHOD] = 1;
+  data_class[AREA_ELEMENT_GROUP_SEQUENCE_GEOMETRY_METHOD] = AREA;
+  data_required[AREA_ELEMENT_GROUP_SEQUENCE_GEOMETRY_METHOD] = AREA_ELEMENT_GROUP_SEQUENCE_GEOMETRY;
+
+  strcpy(name[AREA_ELEMENT_GROUP_SEQUENCE_INTERFACE],"area_element_group_sequence_interface");
+  type[AREA_ELEMENT_GROUP_SEQUENCE_INTERFACE] = INTEGER;
+  data_length[AREA_ELEMENT_GROUP_SEQUENCE_INTERFACE] = 1;
+  data_class[AREA_ELEMENT_GROUP_SEQUENCE_INTERFACE] = AREA;
+  data_required[AREA_ELEMENT_GROUP_SEQUENCE_INTERFACE] = AREA_ELEMENT_GROUP_SEQUENCE_ELEMENTGROUP;
 
   strcpy(name[AREA_NODE_DATAITEM],"area_node_dataitem");
   type[AREA_NODE_DATAITEM] = INTEGER;
@@ -256,6 +317,12 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   data_length[BOUNDA_TIME_OFFSET] = 1;
   data_class[BOUNDA_TIME_OFFSET] = BOUNDA;
   data_required[BOUNDA_TIME_OFFSET] = BOUNDA_TIME;
+
+  strcpy(name[BOUNDA_TIME_FACTOR],"bounda_time_factor");
+  type[BOUNDA_TIME_FACTOR] = DOUBLE_PRECISION;
+  data_length[BOUNDA_TIME_FACTOR] = 1;
+  data_class[BOUNDA_TIME_FACTOR] = BOUNDA;
+  data_required[BOUNDA_TIME_FACTOR] = BOUNDA_TIME;
 
   strcpy(name[BOUNDA_TIME_ON_OFF],"bounda_time_on_off");
   type[BOUNDA_TIME_ON_OFF] = DOUBLE_PRECISION;

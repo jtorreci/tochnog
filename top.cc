@@ -605,6 +605,10 @@ void step_start( long int task, long int options_solver[], double dtime, double 
 
   distribute();
 
+  // area_element_group_time -yes: re-evaluate the area_element_group
+  // records at all times, not only when the mesh changes (manual 6.6)
+  if ( task==YES && area_element_group_time_active() )
+    area_element_group( VERSION_NORMAL );
   if ( task==YES ) area_element_group_sequence( );
 
   crack();

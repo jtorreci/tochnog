@@ -151,6 +151,10 @@ Each file corresponds to the same feature in the [User Manual](../manual-user/).
 - [condif_heat_volume](condif_heat_volume.md) — volume source block in condif.cc (coord_ip signature extension; user_condif_heat_volume stub in user.cc).
 - [condif_convection_radiation_edge_normal](condif_convection_radiation_edge_normal.md) — Professional masters as area.cc types 7/8 (MTYPES 9, conv_rad_companion helper; quad4 Z-node border gotcha documented).
 
+## Sprint 8 — area_element_group + bounda_time_factor
+
+- [area_element_group](area_element_group.md) — group.cc extension (_node/_element/_method extensions/_interface guards, alias copy BEFORE max_index, time_active hook in top.cc) + bounda_time_factor in bounda.cc; -ra-is-a-range gotcha documented.
+
 ## Cross-cutting notes
 
 - Enum consistency: `tochnog.h` and `tochnog-mod.h` must stay in sync.

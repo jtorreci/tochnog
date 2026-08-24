@@ -109,15 +109,23 @@ enum {
   PLUS,
   ALL,
   ANY,
+  ANY_BUT_NOT_ALL,
   AREA,
   AREA_ELEMENT_GROUP,
+  AREA_ELEMENT_GROUP_ELEMENT,
+  AREA_ELEMENT_GROUP_INTERFACE,
   AREA_ELEMENT_GROUP_METHOD,
+  AREA_ELEMENT_GROUP_NODE,
   AREA_ELEMENT_GROUP_SEQUENCE,
   AREA_ELEMENT_GROUP_SEQUENCE_ELEMENT,
   AREA_ELEMENT_GROUP_SEQUENCE_ELEMENTGROUP,
+  AREA_ELEMENT_GROUP_SEQUENCE_ELEMENT_GROUP,
   AREA_ELEMENT_GROUP_SEQUENCE_GEOMETRY,
+  AREA_ELEMENT_GROUP_SEQUENCE_GEOMETRY_METHOD,
+  AREA_ELEMENT_GROUP_SEQUENCE_INTERFACE,
   AREA_ELEMENT_GROUP_SEQUENCE_METHOD,
   AREA_ELEMENT_GROUP_SEQUENCE_TIME,
+  AREA_ELEMENT_GROUP_TIME,
   AREA_NODE_DATAITEM,
   AREA_NODE_DATAITEM_DOUBLE,
   AREA_NODE_DATAITEM_INTEGER,
@@ -150,6 +158,7 @@ enum {
   BOUNDA_TIME_FILE,
   BOUNDA_TIME_INCREMENT,
   BOUNDA_TIME_OFFSET,
+  BOUNDA_TIME_FACTOR,
   BOUNDA_TIME_ON_OFF,
   BOUNDA_TIME_UNTIL_FORCE,
   BOUNDA_TIME_UNITS,
@@ -1252,6 +1261,7 @@ void      area( long int element, long int name,
             double coord[], double new_dof[], double element_lhside[], 
             double element_matrix[], double element_rhside[] );
 void      area_element_group( long int version );
+long int  area_element_group_time_active( void );
 void      area_element_group_sequence( );
 void      area_node_dataitem( void );
 void      array_add( double a[], double b[], double c[], long int n );

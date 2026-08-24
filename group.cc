@@ -23,42 +23,88 @@
 void area_element_group( long int version )
 
 {
-  long int element=0, max_element=0, inol=0, nnol=0, inod=0, 
-    any=0, all=0, length=0, itmp=0, iarea=0, 
-    max_area_element_group=0, area_element_group[3], 
-    element_group=0, method=0, ldum=0, *el=NULL, *nodes=NULL;
+  long int element=0, max_element=0, inol=0, nnol=0, inod=0,
+    any=0, all=0, length=0, itmp=0, iarea=0, count_in=0,
+    max_area_element_group=0, area_element_group[3],
+    element_group=0, method=0, ldum=0, el_name=0, use_node_list=0,
+    length_nodes_list=0, *el=NULL, *nodes=NULL,
+    *nodes_list=NULL;
   double rdum=0., ddum[MDIM];
 
   db_max_index( AREA_ELEMENT_GROUP, max_area_element_group, VERSION_NORMAL, GET );
   if ( max_area_element_group>=0 ) {
     el = get_new_int(MNOL+1);
     nodes = get_new_int(MNOL);
+    nodes_list = get_new_int(DATA_ITEM_SIZE);
     db_max_index( ELEMENT, max_element, version, GET );
     for ( iarea=0; iarea<=max_area_element_group; iarea++ ) {
       if ( db_active_index( AREA_ELEMENT_GROUP, iarea, VERSION_NORMAL ) ) {
-        db( AREA_ELEMENT_GROUP, iarea, area_element_group, ddum, 
+        db( AREA_ELEMENT_GROUP, iarea, area_element_group, ddum,
           ldum, VERSION_NORMAL, GET );
         method = -ALL;
-        db( AREA_ELEMENT_GROUP_METHOD, iarea, &method, ddum, 
+        db( AREA_ELEMENT_GROUP_METHOD, iarea, &method, ddum,
           ldum, VERSION_NORMAL, GET_IF_EXISTS );
+        // area_element_group_element: only elements with this element
+        // name (manual 6.2); default all elements
+        el_name = -ALL;
+        db( AREA_ELEMENT_GROUP_ELEMENT, iarea, &el_name, ddum,
+          ldum, VERSION_NORMAL, GET_IF_EXISTS );
+        // area_element_group_node: direct global node numbers instead of
+        // a geometry (manual 6.5); the last value of the master record is
+        // the element group
+        use_node_list = 0;
+        if ( db_active_index( AREA_ELEMENT_GROUP_NODE, iarea,
+            VERSION_NORMAL ) ) {
+          db( AREA_ELEMENT_GROUP_NODE, iarea, nodes_list, ddum,
+            length_nodes_list, VERSION_NORMAL, GET );
+          use_node_list = 1;
+        }
+        // area_element_group_time -yes: evaluate at all times, not only
+        // at the start (manual 6.6). The caller re-runs this routine per
+        // step when any record asks for it (top.cc step_start).
         for ( element=0; element<=max_element; element++ ) {
           if ( db_active_index( ELEMENT, element, version ) ) {
             db( ELEMENT, element, el, ddum, length, version, GET );
             nnol = length - 1; array_move( &el[1], nodes, nnol );
+            if ( el_name!=-ALL && el[0]!=el_name ) continue;
+            // area_element_group_interface -no (the only legal value,
+            // manual 6.3): interface elements are excluded from the
+            // re-grouping (their group keeps GROUP_INTERFACE parameters)
+            {
+              long int grp_now = -1, interface_switch = -NO;
+              db( ELEMENT_GROUP, element, &grp_now, ddum, ldum, version,
+                GET_IF_EXISTS );
+              if ( grp_now>=0 &&
+                   db_active_index( GROUP_INTERFACE, grp_now, VERSION_NORMAL ) ) {
+                db( AREA_ELEMENT_GROUP_INTERFACE, iarea, &interface_switch,
+                  ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+                if ( interface_switch!=-YES ) continue;
+              }
+            }
             all = 1;
             any = 0;
+            count_in = 0;
             for ( inol=0; inol<nnol; inol++ ) {
               inod = nodes[inol];
-              geometry( inod, ddum, area_element_group, itmp, rdum, ddum, rdum,
-                ddum, NODE_START_REFINED, PROJECT_EXACT, version );
+              if ( use_node_list ) {
+                itmp = array_member( nodes_list, inod,
+                  length_nodes_list, ldum );
+              }
+              else {
+                geometry( inod, ddum, area_element_group, itmp, rdum, ddum, rdum,
+                  ddum, NODE_START_REFINED, PROJECT_EXACT, version );
+              }
               if ( !itmp ) all = 0;
-              if ( itmp ) any = 1;
+              if ( itmp ) { any = 1; count_in++; }
             }
-            if ( ( method==-ALL && all ) || ( method==-ANY && any ) ) {
+            if ( ( method==-ALL && all ) ||
+                 ( method==-ANY && any ) ||
+                 ( method==-ANY_BUT_NOT_ALL && any && !all ) ||
+                 ( method>=0 && count_in>=method ) ) {
               element_group = area_element_group[2];
-              length = 1; db( ELEMENT_GROUP, element, &element_group, ddum, 
+              length = 1; db( ELEMENT_GROUP, element, &element_group, ddum,
                 length, version, PUT );
-              length = 1; db( ELEMENT_GROUP_AREA_ELEMENT_GROUP, 
+              length = 1; db( ELEMENT_GROUP_AREA_ELEMENT_GROUP,
                 element, &iarea, ddum, length, VERSION_NORMAL, PUT );
             }
           }
@@ -67,14 +113,32 @@ void area_element_group( long int version )
     }
     delete[] el;
     delete[] nodes;
+    delete[] nodes_list;
   }
 
+}
+
+// does any area_element_group record ask for evaluation at all times?
+// (area_element_group_time -yes, manual 6.6)
+long int area_element_group_time_active( void )
+{
+  long int iarea=0, max_area=0, swit=0, ldum=0;
+  double ddum[1];
+  db_max_index( AREA_ELEMENT_GROUP_TIME, max_area, VERSION_NORMAL, GET );
+  for ( iarea=0; iarea<=max_area; iarea++ ) {
+    if ( db_active_index( AREA_ELEMENT_GROUP_TIME, iarea, VERSION_NORMAL ) ) {
+      db( AREA_ELEMENT_GROUP_TIME, iarea, &swit, ddum, ldum,
+        VERSION_NORMAL, GET );
+      if ( swit==-YES ) return 1;
+    }
+  }
+  return 0;
 }
 
 void area_element_group_sequence( void )
 
 {
-  long int element=0, max_element=0, itime=0, inol=0, nnol=0, 
+  long int element=0, max_element=0, itime=0, inol=0, nnol=0, count_in=0,
     inod=0, ok=0, length=0, name=0, length_elementgroup=0,
     itmp=0, all=0, any=0, method=0, found=0, iarea=0, max_area_element_group=0, 
     length_area_element_group_sequence=0,
@@ -87,7 +151,30 @@ void area_element_group_sequence( void )
   double time=0., time_total=0., rdum=0., 
     ddum[MDIM], area_element_group_sequence_time[DATA_ITEM_SIZE];
 
-  db_max_index( AREA_ELEMENT_GROUP_SEQUENCE_ELEMENTGROUP, 
+  // area_element_group_sequence_element_group (with underscores) is the
+  // Professional manual name of the legacy GNU keyword
+  // area_element_group_sequence_elementgroup (without). Copy the record
+  // when only the Professional name is used (safe PUT: this routine runs
+  // in step_close, not in a parallel loop). This runs BEFORE the
+  // max_index query of the legacy item.
+  {
+    long int ialias=0, max_alias=0, length_alias=0,
+      alias_groups[DATA_ITEM_SIZE];
+    db_max_index( AREA_ELEMENT_GROUP_SEQUENCE_ELEMENT_GROUP, max_alias,
+      VERSION_NORMAL, GET );
+    for ( ialias=0; ialias<=max_alias; ialias++ ) {
+      if ( db_active_index( AREA_ELEMENT_GROUP_SEQUENCE_ELEMENT_GROUP,
+           ialias, VERSION_NORMAL ) &&
+           !db_active_index( AREA_ELEMENT_GROUP_SEQUENCE_ELEMENTGROUP,
+           ialias, VERSION_NORMAL ) ) {
+        db( AREA_ELEMENT_GROUP_SEQUENCE_ELEMENT_GROUP, ialias,
+          alias_groups, ddum, length_alias, VERSION_NORMAL, GET );
+        db( AREA_ELEMENT_GROUP_SEQUENCE_ELEMENTGROUP, ialias,
+          alias_groups, ddum, length_alias, VERSION_NORMAL, PUT );
+      }
+    }
+  }
+  db_max_index( AREA_ELEMENT_GROUP_SEQUENCE_ELEMENTGROUP,
     max_area_element_group, VERSION_NORMAL, GET );
   if ( max_area_element_group>=0 ) {
     el = get_new_int(MNOL+1);
@@ -124,9 +211,19 @@ void area_element_group_sequence( void )
           area_element_group_sequence_element, ddum, 
           ldum, VERSION_NORMAL, GET_IF_EXISTS );
         method = -ALL;
-        db( AREA_ELEMENT_GROUP_SEQUENCE_METHOD, iarea, 
+        db( AREA_ELEMENT_GROUP_SEQUENCE_METHOD, iarea,
           &method, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
-        db( AREA_ELEMENT_GROUP_SEQUENCE_ELEMENTGROUP, iarea, 
+        // area_element_group_sequence_geometry_method (manual 6.11): the
+        // -all/-any selection of the geometry, kept separate from
+        // AREA_ELEMENT_GROUP_SEQUENCE_METHOD for Professional parity;
+        // it wins for the geometry test when both are given
+        {
+          long int geometry_method = 0;
+          if ( db( AREA_ELEMENT_GROUP_SEQUENCE_GEOMETRY_METHOD, iarea,
+              &geometry_method, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS ) )
+            method = geometry_method;
+        }
+        db( AREA_ELEMENT_GROUP_SEQUENCE_ELEMENTGROUP, iarea,
           area_element_group_sequence_elementgroup, ddum, 
           length_elementgroup, VERSION_NORMAL, GET );
         db( AREA_ELEMENT_GROUP_SEQUENCE_TIME, iarea, 
@@ -141,15 +238,19 @@ void area_element_group_sequence( void )
               name = el[0];
               all = 1;
               any = 0;
+              count_in = 0;
               for ( inol=0; inol<nnol; inol++ ) {
                 inod = nodes[inol];
-                geometry( inod, ddum, area_element_group_sequence_geometry, 
-                  itmp, rdum, ddum, rdum, ddum, NODE_START_REFINED, 
+                geometry( inod, ddum, area_element_group_sequence_geometry,
+                  itmp, rdum, ddum, rdum, ddum, NODE_START_REFINED,
                   PROJECT_EXACT, VERSION_NORMAL );
                 if ( !itmp ) all = 0;
-                if ( itmp ) any = 1;
+                if ( itmp ) { any = 1; count_in++; }
               }
-              if ( ( method==-ALL && all ) || ( method==-ANY && any ) ) {
+              if ( ( method==-ALL && all ) ||
+                   ( method==-ANY && any ) ||
+                   ( method==-ANY_BUT_NOT_ALL && any && !all ) ||
+                   ( method>=0 && count_in>=method ) ) {
                 ok = 1;
               }
               if ( area_element_group_sequence_element[0]!=-ALL ) {
@@ -159,6 +260,20 @@ void area_element_group_sequence( void )
             if ( use_element ) {
               if ( array_member( area_element_group_sequence, element,
                 length_area_element_group_sequence, ldum ) ) ok = 1;
+            }
+            // area_element_group_sequence_interface -no (the only legal
+            // value, manual 6.12): interface elements are excluded
+            if ( ok ) {
+              long int grp_now = -1, interface_switch = -NO;
+              db( ELEMENT_GROUP, element, &grp_now, ddum, ldum,
+                VERSION_NORMAL, GET_IF_EXISTS );
+              if ( grp_now>=0 &&
+                   db_active_index( GROUP_INTERFACE, grp_now, VERSION_NORMAL ) ) {
+                db( AREA_ELEMENT_GROUP_SEQUENCE_INTERFACE, iarea,
+                  &interface_switch, ddum, ldum, VERSION_NORMAL,
+                  GET_IF_EXISTS );
+                if ( interface_switch!=-YES ) ok = 0;
+              }
             }
             if ( ok ) {
               found = 0;
