@@ -353,9 +353,9 @@ marcado `PENDIENTE` puede estar cubierto en el GNU bajo otro nombre:
 
 - [x] `contact_apply` — implementada (gate `-yes`/`-no` en `parallel_contact`; validada con `contact`)
 
-### contact_heat (0/1)
+### contact_heat (1/1)
 
-- [ ] `contact_heat_generation` — PENDIENTE
+- [x] `contact_heat_generation` — P6 (2026-08-24)
 
 ### contact_penalty (3/3)
 
@@ -378,7 +378,7 @@ marcado `PENDIENTE` puede estar cubierto en el GNU bajo otro nombre:
 - [ ] `control_bounda_relax` — PENDIENTE
 - [ ] `control_bounda_relax_geometry` — PENDIENTE
 
-### control_change (0/1)
+### control_change (1/1)
 
 - [x] `control_change_dataitem_apply` — implementada (commit `bdcdeaf`, 2026-08-13)
 
@@ -386,15 +386,15 @@ marcado `PENDIENTE` puede estar cubierto en el GNU bajo otro nombre:
 
 - [ ] `control_check_data` — PENDIENTE
 
-### control_contact (0/1)
+### control_contact (1/1)
 
-- [ ] `control_contact_apply` — PENDIENTE
+- [x] `control_contact_apply` — P6 (2026-08-24)
 
 ### control_convection (0/1)
 
 - [ ] `control_convection_apply` — PENDIENTE
 
-### control_data (4/12)
+### control_data (11/12; 1 descartado)
 
 - [x] `control_data_activate` — P6 (2026-08-24)
 - [x] `control_data_arithmetic` — P6 (2026-08-24)
