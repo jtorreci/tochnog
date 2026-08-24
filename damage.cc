@@ -29,6 +29,15 @@ void damage( long int gr, double new_epe[], double new_sig[],
   double damage_data[DATA_ITEM_SIZE];
 
   swit = set_swit(-1,-1,"damage");
+
+  // control_materi_damage_apply / control_materi_failure_apply -no
+  // (manual Professional 6.141/6.143): ignore any damage/failure data
+  // in the input file for these timesteps (new_damage stays old_damage)
+  if ( control_materi_gate_off( CONTROL_MATERI_DAMAGE_APPLY ) ||
+       control_materi_gate_off( CONTROL_MATERI_FAILURE_APPLY ) ) {
+    new_damage = old_damage;
+    return;
+  }
   if ( swit ) pri( "In routine DAMAGE" );
 
   if ( db( GROUP_MATERI_DAMAGE_MAZARS, gr, idum, damage_data, 

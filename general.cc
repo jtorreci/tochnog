@@ -389,3 +389,20 @@ void general( long int element, long int name, long int nnol, long int element_g
   if ( swit ) pri( "Out function GENERAL" );
 
 }
+
+// control_materi_*_apply switch helper: returns 1 when the per-timestep
+// switch record (indexed by the current ICONTROL) is -no, i.e. the
+// feature should be IGNORED for these timesteps (manual Professional
+// 6.141-6.154). Default (record absent): 0 (feature active).
+long int control_materi_gate_off( long int control_item )
+{
+  long int icontrol=0, swit=-YES, ldum=0, idum[1];
+  double ddum[1];
+  if ( db_active_index( control_item, 0, VERSION_NORMAL ) ) {
+    db( ICONTROL, 0, &icontrol, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+    db( control_item, icontrol, &swit, ddum, ldum, VERSION_NORMAL,
+      GET_IF_EXISTS );
+    if ( swit==-NO ) return 1;
+  }
+  return 0;
+}

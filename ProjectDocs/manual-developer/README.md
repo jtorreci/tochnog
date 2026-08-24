@@ -162,3 +162,7 @@ Each file corresponds to the same feature in the [User Manual](../manual-user/).
 - Enum consistency: `tochnog.h` and `tochnog-mod.h` must stay in sync.
 - Build: only clean builds are reliable on the current filesystem; linking to
   `/tmp` and copying the binary avoids I/O failures.
+
+## Sprint 9 — force aliases + control_materi gates
+
+- [force_edge_volume_aliases](force_edge_volume_aliases.md) — prefix translation INSIDE db_number (keyword AND end-of-values detection), restriction variants for the 3 edge families + volume, control_materi gate helper.

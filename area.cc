@@ -86,6 +86,44 @@ static long int flux_edge_is_master( long int item )
   return item==GROUNDFLOW_FLUX_EDGE_NORMAL || item==CONDIF_HEAT_EDGE_NORMAL;
 }
 
+// companion items for the force_element_edge families (Professional
+// force_edge_*): _ELEMENT _ELEMENT_GROUP _ELEMENT_SIDE _NODE
+// _ELEMENT_NODE _NODE_FACTOR(DOUBLE, normal family only)
+static long int force_edge_companion( long int master, long int which )
+{
+  static long int edge[] = {
+    FORCE_ELEMENT_EDGE_ELEMENT,
+    FORCE_ELEMENT_EDGE_ELEMENT_GROUP,
+    FORCE_ELEMENT_EDGE_ELEMENT_SIDE,
+    FORCE_ELEMENT_EDGE_NODE,
+    FORCE_ELEMENT_EDGE_ELEMENT_NODE,
+    -1 };
+  static long int normal[] = {
+    FORCE_ELEMENT_EDGE_NORMAL_ELEMENT,
+    FORCE_ELEMENT_EDGE_NORMAL_ELEMENT_GROUP,
+    FORCE_ELEMENT_EDGE_NORMAL_ELEMENT_SIDE,
+    FORCE_ELEMENT_EDGE_NORMAL_NODE,
+    FORCE_ELEMENT_EDGE_NORMAL_ELEMENT_NODE,
+    FORCE_ELEMENT_EDGE_NORMAL_NODE_FACTOR };
+  static long int water[] = {
+    FORCE_ELEMENT_EDGE_WATER_ELEMENT,
+    FORCE_ELEMENT_EDGE_WATER_ELEMENT_GROUP,
+    FORCE_ELEMENT_EDGE_WATER_ELEMENT_SIDE,
+    FORCE_ELEMENT_EDGE_WATER_NODE,
+    FORCE_ELEMENT_EDGE_WATER_ELEMENT_NODE,
+    -1 };
+  if ( master==FORCE_ELEMENT_EDGE ) return edge[which];
+  if ( master==FORCE_ELEMENT_EDGE_NORMAL ) return normal[which];
+  if ( master==FORCE_ELEMENT_EDGE_WATER ) return water[which];
+  return -1;
+}
+
+static long int force_edge_is_master( long int item )
+{
+  return item==FORCE_ELEMENT_EDGE || item==FORCE_ELEMENT_EDGE_NORMAL ||
+    item==FORCE_ELEMENT_EDGE_WATER;
+}
+
 static long int border_nodes_tria3[] = {
     0, 1,
     1, 2,
@@ -568,7 +606,38 @@ void area( long int element, long int name,
                      type[itype]==CONDIF_CONVECTION_EDGE_NORMAL ) {
                   // node restrictions for the Professional-name masters
                   long int use_it = 1;
-                  if ( conv_rad_is_master(type[itype]) ) {
+          if ( force_edge_is_master(type[itype]) ) {
+            // element-level restrictions for the force_element_edge
+            // families (Professional force_edge_*)
+            if ( force_edge_companion(type[itype],0)>=0 &&
+                 db_active_index( force_edge_companion(type[itype],0),
+                     ind, VERSION_NORMAL ) ) {
+              long int elt[DATA_ITEM_SIZE], length_elt=0;
+              db( force_edge_companion(type[itype],0), ind, elt, ddum,
+                length_elt, VERSION_NORMAL, GET );
+              if ( !array_member( elt, element, length_elt, ldum ) ) continue;
+            }
+            if ( force_edge_companion(type[itype],1)>=0 &&
+                 db_active_index( force_edge_companion(type[itype],1),
+                     ind, VERSION_NORMAL ) ) {
+              long int grp[DATA_ITEM_SIZE], length_grp=0;
+              db( force_edge_companion(type[itype],1), ind, grp, ddum,
+                length_grp, VERSION_NORMAL, GET );
+              if ( !array_member( grp, gr, length_grp, ldum ) ) continue;
+            }
+            if ( force_edge_companion(type[itype],2)>=0 &&
+                 db_active_index( force_edge_companion(type[itype],2),
+                     ind, VERSION_NORMAL ) ) {
+              long int side_sel[DATA_ITEM_SIZE], length_side=0;
+              db( force_edge_companion(type[itype],2), ind, side_sel, ddum,
+                length_side, VERSION_NORMAL, GET );
+              long int ok_side = 0;
+              for ( i=0; i+1<length_side; i+=2 )
+                if ( side_sel[i]==element ) ok_side = 1;
+              if ( !ok_side ) continue;
+            }
+          }
+          if ( conv_rad_is_master(type[itype]) ) {
                     if ( db_active_index( conv_rad_companion(type[itype],3),
                         ind, VERSION_NORMAL ) ) {
                       long int nds[DATA_ITEM_SIZE], length_nds=0;
@@ -623,7 +692,40 @@ void area( long int element, long int name,
                     heat_flux;
                 }
                 else if ( type[itype]==FORCE_ELEMENT_EDGE ) {
-                  force_factor( FORCE_ELEMENT_EDGE_FACTOR, ind, 
+                  // node restrictions (Professional force_edge_*)
+                  long int use_it = 1;
+                  if ( force_edge_companion(type[itype],3)>=0 &&
+                       db_active_index( force_edge_companion(type[itype],3),
+                           ind, VERSION_NORMAL ) ) {
+                    long int nds[DATA_ITEM_SIZE], length_nds=0;
+                    db( force_edge_companion(type[itype],3), ind, nds, ddum,
+                      length_nds, VERSION_NORMAL, GET );
+                    if ( !array_member( nds, inod, length_nds, ldum ) )
+                      use_it = 0;
+                  }
+                  if ( force_edge_companion(type[itype],4)>=0 &&
+                       db_active_index( force_edge_companion(type[itype],4),
+                           ind, VERSION_NORMAL ) ) {
+                    long int en[DATA_ITEM_SIZE], length_en=0;
+                    db( force_edge_companion(type[itype],4), ind, en, ddum,
+                      length_en, VERSION_NORMAL, GET );
+                    if ( en[0]!=element || !array_member( &en[1], inol,
+                        length_en-1, ldum ) ) use_it = 0;
+                  }
+                  double node_factor = 1.;
+                  if ( db_active_index( FORCE_ELEMENT_EDGE_NODE_FACTOR,
+                      ind, VERSION_NORMAL ) ) {
+                    long int length_nf=0;
+                    double values_nf[DATA_ITEM_SIZE];
+                    db( FORCE_ELEMENT_EDGE_NODE_FACTOR, ind,
+                      idum, values_nf, length_nf, VERSION_NORMAL, GET );
+                    long int nf_el = (long int)values_nf[0], jnf;
+                    if ( nf_el==element )
+                      for ( jnf=0; jnf+1<length_nf; jnf++ )
+                        if ( jnf==inol ) node_factor = values_nf[jnf+1];
+                  }
+                  if ( !use_it ) continue;
+                  force_factor( FORCE_ELEMENT_EDGE_FACTOR, ind,
                     &new_coord[inol*ndim], factor );
                   db( FORCE_ELEMENT_EDGE, ind, idum, values, 
                     ldum, VERSION_NORMAL, GET );
@@ -631,38 +733,92 @@ void area( long int element, long int name,
                   for ( ipuknwn=0; ipuknwn<npuknwn; ipuknwn++ ) {
                     iuknwn = ipuknwn*nder;
                     if ( dof_principal[iuknwn]>=0 ) {
-                      element_rhside[inol*npuknwn+ipuknwn] += factor *
+                      element_rhside[inol*npuknwn+ipuknwn] += factor * node_factor *
                         load * weight[inol_side] * area_size * values[iprinc];
                       iprinc++;
                     }
                   }
                 }
                 else if ( type[itype]==FORCE_ELEMENT_EDGE_NORMAL ) {
-                  force_factor( FORCE_ELEMENT_EDGE_NORMAL_FACTOR, ind, 
+                  // node restrictions + per-node factor (Professional
+                  // force_edge_normal_node_factor)
+                  long int use_it = 1;
+                  double node_factor = 1.;
+                  if ( db_active_index( force_edge_companion(type[itype],3),
+                      ind, VERSION_NORMAL ) ) {
+                    long int nds[DATA_ITEM_SIZE], length_nds=0;
+                    db( force_edge_companion(type[itype],3), ind, nds, ddum,
+                      length_nds, VERSION_NORMAL, GET );
+                    if ( !array_member( nds, inod, length_nds, ldum ) )
+                      use_it = 0;
+                  }
+                  if ( db_active_index( force_edge_companion(type[itype],4),
+                      ind, VERSION_NORMAL ) ) {
+                    long int en[DATA_ITEM_SIZE], length_en=0;
+                    db( force_edge_companion(type[itype],4), ind, en, ddum,
+                      length_en, VERSION_NORMAL, GET );
+                    if ( en[0]!=element || !array_member( &en[1], inol,
+                        length_en-1, ldum ) ) use_it = 0;
+                  }
+                  if ( db_active_index( FORCE_ELEMENT_EDGE_NORMAL_NODE_FACTOR,
+                      ind, VERSION_NORMAL ) ) {
+                    long int length_nf=0;
+                    double values_nf[DATA_ITEM_SIZE];
+                    db( FORCE_ELEMENT_EDGE_NORMAL_NODE_FACTOR, ind,
+                      idum, values_nf, length_nf, VERSION_NORMAL, GET );
+                    long int nf_el = (long int)values_nf[0], jnf;
+                    if ( nf_el==element )
+                      for ( jnf=0; jnf+1<length_nf; jnf++ )
+                        if ( jnf==inol ) node_factor = values_nf[jnf+1];
+                  }
+                  if ( !use_it ) continue;
+                  force_factor( FORCE_ELEMENT_EDGE_NORMAL_FACTOR, ind,
                     &new_coord[inol*ndim], factor );
-                  db( FORCE_ELEMENT_EDGE_NORMAL, ind, idum, values, 
+                  db( FORCE_ELEMENT_EDGE_NORMAL, ind, idum, values,
                     ldum, VERSION_NORMAL, GET );
                   for ( idim=0; idim<ndim; idim++ ) {
                     ipuknwn = vel_indx/nder + idim;
-                    tmp = factor *
-                      load * weight[inol_side] * area_size * 
+                    tmp = factor * node_factor *
+                      load * weight[inol_side] * area_size *
                       values[0] * normal[idim];
                     element_rhside[inol*npuknwn+ipuknwn] += tmp;
                   }
                 }
                 else if ( type[itype]==FORCE_ELEMENT_EDGE_WATER ) {
+                  // node restrictions (Professional force_edge_water_*)
+                  long int use_it = 1;
+                  if ( db_active_index( force_edge_companion(type[itype],3),
+                      ind, VERSION_NORMAL ) ) {
+                    long int nds[DATA_ITEM_SIZE], length_nds=0;
+                    db( force_edge_companion(type[itype],3), ind, nds, ddum,
+                      length_nds, VERSION_NORMAL, GET );
+                    if ( !array_member( nds, inod, length_nds, ldum ) )
+                      use_it = 0;
+                  }
+                  if ( db_active_index( force_edge_companion(type[itype],4),
+                      ind, VERSION_NORMAL ) ) {
+                    long int en[DATA_ITEM_SIZE], length_en=0;
+                    db( force_edge_companion(type[itype],4), ind, en, ddum,
+                      length_en, VERSION_NORMAL, GET );
+                    if ( en[0]!=element || !array_member( &en[1], inol,
+                        length_en-1, ldum ) ) use_it = 0;
+                  }
+                  if ( !use_it ) continue;
                   if ( all_under_phreatic_level ) {
-                    groundflow_phreatic_coord( inod, &new_coord[inol*ndim], 
+                    double water_factor = 1.;
+                    force_factor( FORCE_ELEMENT_EDGE_WATER_FACTOR, ind,
+                      &new_coord[inol*ndim], water_factor );
+                    groundflow_phreatic_coord( inod, &new_coord[inol*ndim],
                       ddum, ddum[0], ddum[0], water_level );
-                    db( FORCE_ELEMENT_EDGE_WATER, ind, idum, values, 
+                    db( FORCE_ELEMENT_EDGE_WATER, ind, idum, values,
                       ldum, VERSION_NORMAL, GET );
                     array_normalize( &values[2], ndim );
                     delta_z = water_level - new_coord[inol*ndim+ndim-1];
                     pressure = values[0] * values[1] * delta_z;
                     for ( idim=0; idim<ndim; idim++ ) {
                       ipuknwn = vel_indx/nder + idim;
-                      tmp = load * weight[inol_side] * area_size * 
-                        pressure * values[2+idim];
+                      tmp = load * weight[inol_side] * area_size *
+                        pressure * values[2+idim] * water_factor;
                       element_rhside[inol*npuknwn+ipuknwn] += tmp;
                     }
                   }

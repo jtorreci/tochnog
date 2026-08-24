@@ -544,7 +544,7 @@ void input( )
       // data item name
     input_skip_comment( str );
     if ( echo ) cout << str << " ";
-    idat = db_number( str ); 
+    idat = db_number( str );
     if ( idat<0 ) {
       pri( "\nError in data part." );
       pri( "I do not know ", str );

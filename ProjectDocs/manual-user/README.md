@@ -169,3 +169,7 @@ input parameters it accepts.
 ## Sprint 8 — node family additions
 
 - [node_force](node_force.md) — discrete nodal force; node_inertia output record (d'alembert source); node_static/dynamic/total_pressure overrides; node_slide membership.
+
+## Sprint 9 — force aliases + control_materi gates
+
+- [force_edge_volume_aliases](force_edge_volume_aliases.md) — Professional force_edge_*/force_volume_* names accepted directly; restriction variants (_element/_element_group/_element_side/_node/_element_node/_node_factor) and control_materi_*_apply per-timestep gates.

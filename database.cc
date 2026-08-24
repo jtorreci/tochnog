@@ -2361,6 +2361,48 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   data_length[FORCE_ELEMENT_EDGE] = nprinc;
   data_class[FORCE_ELEMENT_EDGE] = FORCE;
 
+  strcpy(name[FORCE_ELEMENT_EDGE_ELEMENT],"force_element_edge_element");
+  type[FORCE_ELEMENT_EDGE_ELEMENT] = INTEGER;
+  data_length[FORCE_ELEMENT_EDGE_ELEMENT] = DATA_ITEM_SIZE;
+  fixed_length[FORCE_ELEMENT_EDGE_ELEMENT] = 0;
+  data_class[FORCE_ELEMENT_EDGE_ELEMENT] = FORCE;
+  data_required[FORCE_ELEMENT_EDGE_ELEMENT] = FORCE_ELEMENT_EDGE;
+
+  strcpy(name[FORCE_ELEMENT_EDGE_ELEMENT_GROUP],"force_element_edge_element_group");
+  type[FORCE_ELEMENT_EDGE_ELEMENT_GROUP] = INTEGER;
+  data_length[FORCE_ELEMENT_EDGE_ELEMENT_GROUP] = DATA_ITEM_SIZE;
+  fixed_length[FORCE_ELEMENT_EDGE_ELEMENT_GROUP] = 0;
+  data_class[FORCE_ELEMENT_EDGE_ELEMENT_GROUP] = FORCE;
+  data_required[FORCE_ELEMENT_EDGE_ELEMENT_GROUP] = FORCE_ELEMENT_EDGE;
+
+  strcpy(name[FORCE_ELEMENT_EDGE_ELEMENT_NODE],"force_element_edge_element_node");
+  type[FORCE_ELEMENT_EDGE_ELEMENT_NODE] = INTEGER;
+  data_length[FORCE_ELEMENT_EDGE_ELEMENT_NODE] = DATA_ITEM_SIZE;
+  fixed_length[FORCE_ELEMENT_EDGE_ELEMENT_NODE] = 0;
+  data_class[FORCE_ELEMENT_EDGE_ELEMENT_NODE] = FORCE;
+  data_required[FORCE_ELEMENT_EDGE_ELEMENT_NODE] = FORCE_ELEMENT_EDGE;
+
+  strcpy(name[FORCE_ELEMENT_EDGE_ELEMENT_SIDE],"force_element_edge_element_side");
+  type[FORCE_ELEMENT_EDGE_ELEMENT_SIDE] = INTEGER;
+  data_length[FORCE_ELEMENT_EDGE_ELEMENT_SIDE] = DATA_ITEM_SIZE;
+  fixed_length[FORCE_ELEMENT_EDGE_ELEMENT_SIDE] = 0;
+  data_class[FORCE_ELEMENT_EDGE_ELEMENT_SIDE] = FORCE;
+  data_required[FORCE_ELEMENT_EDGE_ELEMENT_SIDE] = FORCE_ELEMENT_EDGE;
+
+  strcpy(name[FORCE_ELEMENT_EDGE_NODE],"force_element_edge_node");
+  type[FORCE_ELEMENT_EDGE_NODE] = INTEGER;
+  data_length[FORCE_ELEMENT_EDGE_NODE] = DATA_ITEM_SIZE;
+  fixed_length[FORCE_ELEMENT_EDGE_NODE] = 0;
+  data_class[FORCE_ELEMENT_EDGE_NODE] = FORCE;
+  data_required[FORCE_ELEMENT_EDGE_NODE] = FORCE_ELEMENT_EDGE;
+
+  strcpy(name[FORCE_ELEMENT_EDGE_NODE_FACTOR],"force_element_edge_node_factor");
+  type[FORCE_ELEMENT_EDGE_NODE_FACTOR] = DOUBLE_PRECISION;
+  data_length[FORCE_ELEMENT_EDGE_NODE_FACTOR] = DATA_ITEM_SIZE;
+  fixed_length[FORCE_ELEMENT_EDGE_NODE_FACTOR] = 0;
+  data_class[FORCE_ELEMENT_EDGE_NODE_FACTOR] = FORCE;
+  data_required[FORCE_ELEMENT_EDGE_NODE_FACTOR] = FORCE_ELEMENT_EDGE;
+
   strcpy(name[FORCE_ELEMENT_EDGE_FACTOR],"force_element_edge_factor");
   type[FORCE_ELEMENT_EDGE_FACTOR] = DOUBLE_PRECISION;
   data_length[FORCE_ELEMENT_EDGE_FACTOR] = DATA_ITEM_SIZE;
@@ -2406,6 +2448,48 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   data_length[FORCE_ELEMENT_EDGE_NORMAL] = 1;
   data_class[FORCE_ELEMENT_EDGE_NORMAL] = FORCE;
 
+  strcpy(name[FORCE_ELEMENT_EDGE_NORMAL_ELEMENT],"force_element_edge_normal_element");
+  type[FORCE_ELEMENT_EDGE_NORMAL_ELEMENT] = INTEGER;
+  data_length[FORCE_ELEMENT_EDGE_NORMAL_ELEMENT] = DATA_ITEM_SIZE;
+  fixed_length[FORCE_ELEMENT_EDGE_NORMAL_ELEMENT] = 0;
+  data_class[FORCE_ELEMENT_EDGE_NORMAL_ELEMENT] = FORCE;
+  data_required[FORCE_ELEMENT_EDGE_NORMAL_ELEMENT] = FORCE_ELEMENT_EDGE_NORMAL;
+
+  strcpy(name[FORCE_ELEMENT_EDGE_NORMAL_ELEMENT_GROUP],"force_element_edge_normal_element_group");
+  type[FORCE_ELEMENT_EDGE_NORMAL_ELEMENT_GROUP] = INTEGER;
+  data_length[FORCE_ELEMENT_EDGE_NORMAL_ELEMENT_GROUP] = DATA_ITEM_SIZE;
+  fixed_length[FORCE_ELEMENT_EDGE_NORMAL_ELEMENT_GROUP] = 0;
+  data_class[FORCE_ELEMENT_EDGE_NORMAL_ELEMENT_GROUP] = FORCE;
+  data_required[FORCE_ELEMENT_EDGE_NORMAL_ELEMENT_GROUP] = FORCE_ELEMENT_EDGE_NORMAL;
+
+  strcpy(name[FORCE_ELEMENT_EDGE_NORMAL_ELEMENT_NODE],"force_element_edge_normal_element_node");
+  type[FORCE_ELEMENT_EDGE_NORMAL_ELEMENT_NODE] = INTEGER;
+  data_length[FORCE_ELEMENT_EDGE_NORMAL_ELEMENT_NODE] = DATA_ITEM_SIZE;
+  fixed_length[FORCE_ELEMENT_EDGE_NORMAL_ELEMENT_NODE] = 0;
+  data_class[FORCE_ELEMENT_EDGE_NORMAL_ELEMENT_NODE] = FORCE;
+  data_required[FORCE_ELEMENT_EDGE_NORMAL_ELEMENT_NODE] = FORCE_ELEMENT_EDGE_NORMAL;
+
+  strcpy(name[FORCE_ELEMENT_EDGE_NORMAL_ELEMENT_SIDE],"force_element_edge_normal_element_side");
+  type[FORCE_ELEMENT_EDGE_NORMAL_ELEMENT_SIDE] = INTEGER;
+  data_length[FORCE_ELEMENT_EDGE_NORMAL_ELEMENT_SIDE] = DATA_ITEM_SIZE;
+  fixed_length[FORCE_ELEMENT_EDGE_NORMAL_ELEMENT_SIDE] = 0;
+  data_class[FORCE_ELEMENT_EDGE_NORMAL_ELEMENT_SIDE] = FORCE;
+  data_required[FORCE_ELEMENT_EDGE_NORMAL_ELEMENT_SIDE] = FORCE_ELEMENT_EDGE_NORMAL;
+
+  strcpy(name[FORCE_ELEMENT_EDGE_NORMAL_NODE],"force_element_edge_normal_node");
+  type[FORCE_ELEMENT_EDGE_NORMAL_NODE] = INTEGER;
+  data_length[FORCE_ELEMENT_EDGE_NORMAL_NODE] = DATA_ITEM_SIZE;
+  fixed_length[FORCE_ELEMENT_EDGE_NORMAL_NODE] = 0;
+  data_class[FORCE_ELEMENT_EDGE_NORMAL_NODE] = FORCE;
+  data_required[FORCE_ELEMENT_EDGE_NORMAL_NODE] = FORCE_ELEMENT_EDGE_NORMAL;
+
+  strcpy(name[FORCE_ELEMENT_EDGE_NORMAL_NODE_FACTOR],"force_element_edge_normal_node_factor");
+  type[FORCE_ELEMENT_EDGE_NORMAL_NODE_FACTOR] = DOUBLE_PRECISION;
+  data_length[FORCE_ELEMENT_EDGE_NORMAL_NODE_FACTOR] = DATA_ITEM_SIZE;
+  fixed_length[FORCE_ELEMENT_EDGE_NORMAL_NODE_FACTOR] = 0;
+  data_class[FORCE_ELEMENT_EDGE_NORMAL_NODE_FACTOR] = FORCE;
+  data_required[FORCE_ELEMENT_EDGE_NORMAL_NODE_FACTOR] = FORCE_ELEMENT_EDGE_NORMAL;
+
   strcpy(name[FORCE_ELEMENT_EDGE_NORMAL_FACTOR],"force_element_edge_normal_factor");
   type[FORCE_ELEMENT_EDGE_NORMAL_FACTOR] = DOUBLE_PRECISION;
   data_length[FORCE_ELEMENT_EDGE_NORMAL_FACTOR] = DATA_ITEM_SIZE;
@@ -2442,6 +2526,48 @@ void db_initialize( long int dof_type[], long int dof_label[] )
     data_length[FORCE_ELEMENT_EDGE_WATER] = 5;
   data_class[FORCE_ELEMENT_EDGE_WATER] = FORCE;
 
+  strcpy(name[FORCE_ELEMENT_EDGE_WATER_ELEMENT],"force_element_edge_water_element");
+  type[FORCE_ELEMENT_EDGE_WATER_ELEMENT] = INTEGER;
+  data_length[FORCE_ELEMENT_EDGE_WATER_ELEMENT] = DATA_ITEM_SIZE;
+  fixed_length[FORCE_ELEMENT_EDGE_WATER_ELEMENT] = 0;
+  data_class[FORCE_ELEMENT_EDGE_WATER_ELEMENT] = FORCE;
+  data_required[FORCE_ELEMENT_EDGE_WATER_ELEMENT] = FORCE_ELEMENT_EDGE_WATER;
+
+  strcpy(name[FORCE_ELEMENT_EDGE_WATER_ELEMENT_GROUP],"force_element_edge_water_element_group");
+  type[FORCE_ELEMENT_EDGE_WATER_ELEMENT_GROUP] = INTEGER;
+  data_length[FORCE_ELEMENT_EDGE_WATER_ELEMENT_GROUP] = DATA_ITEM_SIZE;
+  fixed_length[FORCE_ELEMENT_EDGE_WATER_ELEMENT_GROUP] = 0;
+  data_class[FORCE_ELEMENT_EDGE_WATER_ELEMENT_GROUP] = FORCE;
+  data_required[FORCE_ELEMENT_EDGE_WATER_ELEMENT_GROUP] = FORCE_ELEMENT_EDGE_WATER;
+
+  strcpy(name[FORCE_ELEMENT_EDGE_WATER_ELEMENT_NODE],"force_element_edge_water_element_node");
+  type[FORCE_ELEMENT_EDGE_WATER_ELEMENT_NODE] = INTEGER;
+  data_length[FORCE_ELEMENT_EDGE_WATER_ELEMENT_NODE] = DATA_ITEM_SIZE;
+  fixed_length[FORCE_ELEMENT_EDGE_WATER_ELEMENT_NODE] = 0;
+  data_class[FORCE_ELEMENT_EDGE_WATER_ELEMENT_NODE] = FORCE;
+  data_required[FORCE_ELEMENT_EDGE_WATER_ELEMENT_NODE] = FORCE_ELEMENT_EDGE_WATER;
+
+  strcpy(name[FORCE_ELEMENT_EDGE_WATER_ELEMENT_SIDE],"force_element_edge_water_element_side");
+  type[FORCE_ELEMENT_EDGE_WATER_ELEMENT_SIDE] = INTEGER;
+  data_length[FORCE_ELEMENT_EDGE_WATER_ELEMENT_SIDE] = DATA_ITEM_SIZE;
+  fixed_length[FORCE_ELEMENT_EDGE_WATER_ELEMENT_SIDE] = 0;
+  data_class[FORCE_ELEMENT_EDGE_WATER_ELEMENT_SIDE] = FORCE;
+  data_required[FORCE_ELEMENT_EDGE_WATER_ELEMENT_SIDE] = FORCE_ELEMENT_EDGE_WATER;
+
+  strcpy(name[FORCE_ELEMENT_EDGE_WATER_FACTOR],"force_element_edge_water_factor");
+  type[FORCE_ELEMENT_EDGE_WATER_FACTOR] = DOUBLE_PRECISION;
+  data_length[FORCE_ELEMENT_EDGE_WATER_FACTOR] = DATA_ITEM_SIZE;
+  fixed_length[FORCE_ELEMENT_EDGE_WATER_FACTOR] = 0;
+  data_class[FORCE_ELEMENT_EDGE_WATER_FACTOR] = FORCE;
+  data_required[FORCE_ELEMENT_EDGE_WATER_FACTOR] = FORCE_ELEMENT_EDGE_WATER;
+
+  strcpy(name[FORCE_ELEMENT_EDGE_WATER_NODE],"force_element_edge_water_node");
+  type[FORCE_ELEMENT_EDGE_WATER_NODE] = INTEGER;
+  data_length[FORCE_ELEMENT_EDGE_WATER_NODE] = DATA_ITEM_SIZE;
+  fixed_length[FORCE_ELEMENT_EDGE_WATER_NODE] = 0;
+  data_class[FORCE_ELEMENT_EDGE_WATER_NODE] = FORCE;
+  data_required[FORCE_ELEMENT_EDGE_WATER_NODE] = FORCE_ELEMENT_EDGE_WATER;
+
   strcpy(name[FORCE_ELEMENT_EDGE_WATER_GEOMETRY],"force_element_edge_water_geometry");
   type[FORCE_ELEMENT_EDGE_WATER_GEOMETRY] = INTEGER;
   data_length[FORCE_ELEMENT_EDGE_WATER_GEOMETRY] = 2;
@@ -2461,6 +2587,20 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   data_length[FORCE_ELEMENT_VOLUME] = nprinc;
   version_all[FORCE_ELEMENT_VOLUME] = 1;
   data_class[FORCE_ELEMENT_VOLUME] = FORCE;
+
+  strcpy(name[FORCE_ELEMENT_VOLUME_ELEMENT],"force_element_volume_element");
+  type[FORCE_ELEMENT_VOLUME_ELEMENT] = INTEGER;
+  data_length[FORCE_ELEMENT_VOLUME_ELEMENT] = DATA_ITEM_SIZE;
+  fixed_length[FORCE_ELEMENT_VOLUME_ELEMENT] = 0;
+  data_class[FORCE_ELEMENT_VOLUME_ELEMENT] = FORCE;
+  data_required[FORCE_ELEMENT_VOLUME_ELEMENT] = FORCE_ELEMENT_VOLUME;
+
+  strcpy(name[FORCE_ELEMENT_VOLUME_ELEMENT_GROUP],"force_element_volume_element_group");
+  type[FORCE_ELEMENT_VOLUME_ELEMENT_GROUP] = INTEGER;
+  data_length[FORCE_ELEMENT_VOLUME_ELEMENT_GROUP] = DATA_ITEM_SIZE;
+  fixed_length[FORCE_ELEMENT_VOLUME_ELEMENT_GROUP] = 0;
+  data_class[FORCE_ELEMENT_VOLUME_ELEMENT_GROUP] = FORCE;
+  data_required[FORCE_ELEMENT_VOLUME_ELEMENT_GROUP] = FORCE_ELEMENT_VOLUME;
 
   strcpy(name[FORCE_ELEMENT_VOLUME_FACTOR],"force_element_volume_factor");
   type[FORCE_ELEMENT_VOLUME_FACTOR] = DOUBLE_PRECISION;
@@ -3609,6 +3749,71 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   data_length[GROUP_MATERI_PLASTI_HYPO_MASIN_OCR] = 1;
   data_class[GROUP_MATERI_PLASTI_HYPO_MASIN_OCR] = MATERI;
   data_required[GROUP_MATERI_PLASTI_HYPO_MASIN_OCR] = GROUP_TYPE;
+
+  strcpy(name[CONTROL_MATERI_DAMAGE_APPLY],"control_materi_damage_apply");
+  type[CONTROL_MATERI_DAMAGE_APPLY] = INTEGER;
+  data_length[CONTROL_MATERI_DAMAGE_APPLY] = 1;
+  data_class[CONTROL_MATERI_DAMAGE_APPLY] = CONTROL;
+
+  strcpy(name[CONTROL_MATERI_DYNAMIC],"control_materi_dynamic");
+  type[CONTROL_MATERI_DYNAMIC] = INTEGER;
+  data_length[CONTROL_MATERI_DYNAMIC] = 1;
+  data_class[CONTROL_MATERI_DYNAMIC] = CONTROL;
+
+  strcpy(name[CONTROL_MATERI_ELASTI_K0],"control_materi_elasti_k0");
+  type[CONTROL_MATERI_ELASTI_K0] = INTEGER;
+  data_length[CONTROL_MATERI_ELASTI_K0] = 1;
+  data_class[CONTROL_MATERI_ELASTI_K0] = CONTROL;
+
+  strcpy(name[CONTROL_MATERI_FAILURE_APPLY],"control_materi_failure_apply");
+  type[CONTROL_MATERI_FAILURE_APPLY] = INTEGER;
+  data_length[CONTROL_MATERI_FAILURE_APPLY] = 1;
+  data_class[CONTROL_MATERI_FAILURE_APPLY] = CONTROL;
+
+  strcpy(name[CONTROL_MATERI_PLASTI_HARDSOIL_GAMMAP_INITIAL],"control_materi_plasti_hardsoil_gammap_initial");
+  type[CONTROL_MATERI_PLASTI_HARDSOIL_GAMMAP_INITIAL] = INTEGER;
+  data_length[CONTROL_MATERI_PLASTI_HARDSOIL_GAMMAP_INITIAL] = 1;
+  data_class[CONTROL_MATERI_PLASTI_HARDSOIL_GAMMAP_INITIAL] = CONTROL;
+
+  strcpy(name[CONTROL_MATERI_PLASTI_HYPO_NIEMUNIS_VISCO_OCR_APPLY],"control_materi_plasti_hypo_niemunis_visco_ocr_apply");
+  type[CONTROL_MATERI_PLASTI_HYPO_NIEMUNIS_VISCO_OCR_APPLY] = INTEGER;
+  data_length[CONTROL_MATERI_PLASTI_HYPO_NIEMUNIS_VISCO_OCR_APPLY] = 1;
+  data_class[CONTROL_MATERI_PLASTI_HYPO_NIEMUNIS_VISCO_OCR_APPLY] = CONTROL;
+
+  strcpy(name[CONTROL_MATERI_PLASTI_HYPO_PRESSURE_DEPENDENT_VOID_RATIO],"control_materi_plasti_hypo_pressure_dependent_void_ratio");
+  type[CONTROL_MATERI_PLASTI_HYPO_PRESSURE_DEPENDENT_VOID_RATIO] = INTEGER;
+  data_length[CONTROL_MATERI_PLASTI_HYPO_PRESSURE_DEPENDENT_VOID_RATIO] = 1;
+  data_class[CONTROL_MATERI_PLASTI_HYPO_PRESSURE_DEPENDENT_VOID_RATIO] = CONTROL;
+
+  strcpy(name[CONTROL_MATERI_PLASTI_HYPO_SUBSTEPPING],"control_materi_plasti_hypo_substepping");
+  type[CONTROL_MATERI_PLASTI_HYPO_SUBSTEPPING] = INTEGER;
+  data_length[CONTROL_MATERI_PLASTI_HYPO_SUBSTEPPING] = 1;
+  data_class[CONTROL_MATERI_PLASTI_HYPO_SUBSTEPPING] = CONTROL;
+
+  strcpy(name[CONTROL_MATERI_PLASTI_TENSION_APPLY],"control_materi_plasti_tension_apply");
+  type[CONTROL_MATERI_PLASTI_TENSION_APPLY] = INTEGER;
+  data_length[CONTROL_MATERI_PLASTI_TENSION_APPLY] = 1;
+  data_class[CONTROL_MATERI_PLASTI_TENSION_APPLY] = CONTROL;
+
+  strcpy(name[CONTROL_MATERI_PLASTI_VISCO_APPLY],"control_materi_plasti_visco_apply");
+  type[CONTROL_MATERI_PLASTI_VISCO_APPLY] = INTEGER;
+  data_length[CONTROL_MATERI_PLASTI_VISCO_APPLY] = 1;
+  data_class[CONTROL_MATERI_PLASTI_VISCO_APPLY] = CONTROL;
+
+  strcpy(name[CONTROL_MATERI_UNDRAINED_APPLY],"control_materi_undrained_apply");
+  type[CONTROL_MATERI_UNDRAINED_APPLY] = INTEGER;
+  data_length[CONTROL_MATERI_UNDRAINED_APPLY] = 1;
+  data_class[CONTROL_MATERI_UNDRAINED_APPLY] = CONTROL;
+
+  strcpy(name[CONTROL_MATERI_UPDATED_APPLY],"control_materi_updated_apply");
+  type[CONTROL_MATERI_UPDATED_APPLY] = INTEGER;
+  data_length[CONTROL_MATERI_UPDATED_APPLY] = 1;
+  data_class[CONTROL_MATERI_UPDATED_APPLY] = CONTROL;
+
+  strcpy(name[CONTROL_MATERI_VISCOSITY_APPLY],"control_materi_viscosity_apply");
+  type[CONTROL_MATERI_VISCOSITY_APPLY] = INTEGER;
+  data_length[CONTROL_MATERI_VISCOSITY_APPLY] = 1;
+  data_class[CONTROL_MATERI_VISCOSITY_APPLY] = CONTROL;
 
   strcpy(name[CONTROL_MATERI_PLASTI_HYPO_MASIN_OCR_APPLY],"control_materi_plasti_hypo_masin_ocr_apply");
   type[CONTROL_MATERI_PLASTI_HYPO_MASIN_OCR_APPLY] = INTEGER;
@@ -6285,6 +6490,27 @@ long int db_number( char str[] )
 
   for ( data_number=0; data_number<MDAT && found<0; data_number++ ) {
     if ( !strcmp(str,db_name(data_number)) ) found = data_number;
+  }
+  if ( found>=0 ) return found;
+
+  // Professional manual names of GNU keywords with another prefix:
+  // force_edge_* -> force_element_edge_*, force_volume_* ->
+  // force_element_volume_*. Resolve here so that BOTH the keyword
+  // detection and the end-of-variable-values detection (input.cc
+  // checks db_number(str)>=0 to stop reading data values) see the
+  // translated item. Equivalence table in SEGUIMIENTO-CONVERGENCIA.md.
+  {
+    static char translated[MCHAR];
+    if ( !strncmp( str, "force_edge", 10 ) ) {
+      strcpy( translated, "force_element_" );
+      strncat( translated, &str[6], MCHAR-20 );
+      return db_number( translated );
+    }
+    else if ( !strncmp( str, "force_volume", 12 ) ) {
+      strcpy( translated, "force_element_volume" );
+      strncat( translated, &str[12], MCHAR-40 );
+      return db_number( translated );
+    }
   }
 
   return found;

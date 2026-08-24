@@ -41,6 +41,28 @@ void force_element_volume_set( long int element, long int nnol,
     if ( db_active_index( FORCE_ELEMENT_VOLUME, iforce, VERSION_NORMAL ) ) {
       db( FORCE_ELEMENT_VOLUME, iforce, idum, force_work, ldum, VERSION_NORMAL, GET );
       ok = 1;
+      // force_element_volume_element / _element_group (Professional
+      // force_volume_element / _element_group, manual 6.503/6.504):
+      // restrict the elements (and groups) the record applies to
+      if ( db_active_index( FORCE_ELEMENT_VOLUME_ELEMENT, iforce,
+          VERSION_NORMAL ) ) {
+        long int *fel = db_int( FORCE_ELEMENT_VOLUME_ELEMENT, iforce,
+          VERSION_NORMAL );
+        long int lfel = db_len( FORCE_ELEMENT_VOLUME_ELEMENT, iforce,
+          VERSION_NORMAL );
+        if ( !array_member( fel, element, lfel, ldum ) ) ok = 0;
+      }
+      if ( ok && db_active_index( FORCE_ELEMENT_VOLUME_ELEMENT_GROUP,
+          iforce, VERSION_NORMAL ) ) {
+        long int *fgr = db_int( FORCE_ELEMENT_VOLUME_ELEMENT_GROUP,
+          iforce, VERSION_NORMAL );
+        long int lfgr = db_len( FORCE_ELEMENT_VOLUME_ELEMENT_GROUP,
+          iforce, VERSION_NORMAL );
+        long int element_group = -1;
+        db( ELEMENT_GROUP, element, &element_group, ddum, ldum,
+          VERSION_NORMAL, GET_IF_EXISTS );
+        if ( !array_member( fgr, element_group, lfgr, ldum ) ) ok = 0;
+      }
       if ( db_active_index( FORCE_ELEMENT_VOLUME_GEOMETRY, iforce, VERSION_NORMAL ) ) {
         force_element_volume_geometry = 
           db_int( FORCE_ELEMENT_VOLUME_GEOMETRY, iforce, VERSION_NORMAL );

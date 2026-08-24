@@ -95,7 +95,11 @@ void materi_direct_cutoff( long int element, long int gr,
     }
   }
 
-  ten_active = get_group_data( GROUP_MATERI_PLASTI_TENSION_DIRECT, gr,
+  // control_materi_plasti_tension_apply -no (manual Professional
+  // 6.150): ignore any tension-plasticity data for these timesteps
+  // (the Mohr-Coulomb direct cutoff stays active)
+  ten_active = !control_materi_gate_off( CONTROL_MATERI_PLASTI_TENSION_APPLY ) &&
+    get_group_data( GROUP_MATERI_PLASTI_TENSION_DIRECT, gr,
     element, new_sig, plasti_data, ldum, GET_IF_EXISTS );
   if ( ten_active ) { sigy = plasti_data[0]; }
   if ( ten_active && plasti_on_boundary ) {
@@ -232,10 +236,21 @@ void set_stress( long int element, long int gr,
   }
 
   db( DTIME, 0, idum, &dtime, ldum, VERSION_NORMAL, GET_IF_EXISTS );
-  db( GROUP_MATERI_PLASTI_VISCO_ALWAYS, gr, &viscoplasti_always, 
+  // control_materi_plasti_visco_apply -no (manual Professional 6.151):
+  // ignore any visco-plasticity data for these timesteps
+  if ( control_materi_gate_off( CONTROL_MATERI_PLASTI_VISCO_APPLY ) )
+    viscoplasti = 0;
+  db( GROUP_MATERI_PLASTI_VISCO_ALWAYS, gr, &viscoplasti_always,
     ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
   db( GROUP_MATERI_MEMORY, gr, &memory, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
-
+  // control_materi_updated_apply -no (manual Professional 6.152): any
+  // -updated material memory is set to -updated_linear for these
+  // timesteps (the -yes direction — defaulting unspecified memory to
+  // -updated — is not wired: see manual-developer)
+  if ( control_materi_gate_off( CONTROL_MATERI_UPDATED_APPLY ) ) {
+    if ( memory==-UPDATED || memory==-UPDATED_WITHOUT_ROTATION )
+      memory = -UPDATED_LINEAR;
+  }
   array_set( &C[0][0][0][0], 0., MDIM*MDIM*MDIM*MDIM );
   array_set( &Cmem[0][0][0][0], 0., MDIM*MDIM*MDIM*MDIM );
   get_group_data( GROUP_MATERI_ELASTI_COMPRESSIBILITY, gr, element, new_unknowns, 
