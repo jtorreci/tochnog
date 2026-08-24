@@ -145,6 +145,11 @@ HIPO_TOTAL=0
 #   pres resuelto tras el solve; nodos Dirichlet exentos. Con limit 0.5 los
 #   nodos libres quedan en 0.5 (sin limit ~1.67); con limit 0 y pres 0 el
 #   elemento esta seco y se salta el termino de consolidacion -> pres 0).
+# + contact_block/ctrl_apply/heatgen (remate P6 contacto: bloque en caida
+#   detenido por el penalty disy~-0.003 vs -0.055 libre; control_contact_apply
+#   0 -no = caida libre exacta; contact_heat_generation nombre Professional
+#   del legacy contact_heatgeneration, valor fluye: friction_energy escala
+#   0.5->1.312, 1.0->2.624 via TOCHNOG_DEBUG).
 for t in hypo1 hypo2 hypo3 hypo4 smooth1 dof1 mlx1 vtk_dof1 gen1 genbeam1 reset1 cda1 \
          iface_mc iface_mc_1step iface_mc_slip iface_mc_slip_1step iface_mc_tension iface_mc_gap \
          iface_mc_mem iface_mc_dil iface_mc_dil_1step iface_mc_num \
@@ -157,6 +162,7 @@ for t in hypo1 hypo2 hypo3 hypo4 smooth1 dof1 mlx1 vtk_dof1 gen1 genbeam1 reset1
          slide_axi reset_value_linear \
          mesh_act_grav mesh_act_grav2 strain_settle strain_settle_diag \
          contact \
+         contact_block contact_ctrl_apply contact_heatgen \
          groundflow_consolidate_off groundflow_vangenuchten groundflow_nonsaturated_off \
          groundflow_total_pressure_tension groundflow_interface groundflow_flux_edge \
          groundflow_phreatic_multiple groundflow_seepage \
@@ -174,5 +180,5 @@ for t in hypo1 hypo2 hypo3 hypo4 smooth1 dof1 mlx1 vtk_dof1 gen1 genbeam1 reset1
     echo "    $t: FALLO (rc=$RC)"
   fi
 done
-echo "==> Resumen: $HIPO_OK/$HIPO_TOTAL runs OK (13 tests: 12 preexistentes + familia iface_mc en 10 runs + familia 3D en 5 runs + familia generate_interface en 6 runs + familia materi_direct en 5 runs + materi_displacement_relative en 2 runs + slide/reset_value en 2 runs + gravity/settlement en 4 runs + contact en 1 run + groundflow_consolidate_off en 1 run + groundflow_vangenuchten/groundflow_nonsaturated_off en 2 runs + groundflow_total_pressure_tension/groundflow_interface en 2 runs + groundflow_flux_edge en 1 run + groundflow_phreatic_multiple en 1 run + groundflow_seepage en 1 run + groundflow_pressure_atm/_def en 2 runs + groundflow_total_pressure_limit/_dry en 2 runs)."
+echo "==> Resumen: $HIPO_OK/$HIPO_TOTAL runs OK (13 tests: 12 preexistentes + familia iface_mc en 10 runs + familia 3D en 5 runs + familia generate_interface en 6 runs + familia materi_direct en 5 runs + materi_displacement_relative en 2 runs + slide/reset_value en 2 runs + gravity/settlement en 4 runs + contact en 1 run + contact_block/ctrl_apply/heatgen en 3 runs + groundflow_consolidate_off en 1 run + groundflow_vangenuchten/groundflow_nonsaturated_off en 2 runs + groundflow_total_pressure_tension/groundflow_interface en 2 runs + groundflow_flux_edge en 1 run + groundflow_phreatic_multiple en 1 run + groundflow_seepage en 1 run + groundflow_pressure_atm/_def en 2 runs + groundflow_total_pressure_limit/_dry en 2 runs)."
 echo "==> Log de compilacion completo en /tmp/tn_build_safe.log"

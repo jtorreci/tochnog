@@ -125,6 +125,11 @@ Each file corresponds to the same feature in the [User Manual](../manual-user/).
 - [groundflow_pressure_atmospheric](groundflow_pressure_atmospheric.md) — static/total pressure cap in groundfl.cc groundflow_phreatic_coord (GNU-inherited keyword, documented + verified 2026-08-24).
 - [groundflow_total_pressure_limit](groundflow_total_pressure_limit.md) — solved-pressure cap after solve (top.cc hook) + dry-element consolidation skip (groundfl.cc, manual Professional 6.588/2.4.3).
 
+## P6 — contact family remnant
+
+- [contact_heat_generation](contact_heat_generation.md) — Professional name of contact_heatgeneration, dual read at the consumption point in contact.cc (no alias PUT: parallel loop).
+- [control_contact_apply](control_contact_apply.md) — per-timestep contact gate in contact.cc parallel_contact (ICONTROL-indexed, any -no wins).
+
 ## Cross-cutting notes
 
 - Enum consistency: `tochnog.h` and `tochnog-mod.h` must stay in sync.

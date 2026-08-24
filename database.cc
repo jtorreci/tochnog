@@ -464,6 +464,12 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   no_index[CONTACT_HEATGENERATION] = 1;
   data_class[CONTACT_HEATGENERATION] = CONTACT;
 
+  strcpy(name[CONTACT_HEAT_GENERATION],"contact_heat_generation");
+  type[CONTACT_HEAT_GENERATION] = DOUBLE_PRECISION;
+  data_length[CONTACT_HEAT_GENERATION] = 1;
+  no_index[CONTACT_HEAT_GENERATION] = 1;
+  data_class[CONTACT_HEAT_GENERATION] = CONTACT;
+
   strcpy(name[CONTACT_PENALTY_PRESSURE],"contact_penalty_pressure");
   type[CONTACT_PENALTY_PRESSURE] = DOUBLE_PRECISION;
   data_length[CONTACT_PENALTY_PRESSURE] = 1;
@@ -522,6 +528,11 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   type[CONTROL_CHANGE_DATAITEM_APPLY] = INTEGER;
   data_length[CONTROL_CHANGE_DATAITEM_APPLY] = 1;
   data_class[CONTROL_CHANGE_DATAITEM_APPLY] = CONTROL;
+
+  strcpy(name[CONTROL_CONTACT_APPLY],"control_contact_apply");
+  type[CONTROL_CONTACT_APPLY] = INTEGER;
+  data_length[CONTROL_CONTACT_APPLY] = 1;
+  data_class[CONTROL_CONTACT_APPLY] = CONTACT;
 
   strcpy(name[CONTROL_CRACK],"control_crack");
   type[CONTROL_CRACK] = INTEGER;

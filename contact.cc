@@ -57,10 +57,15 @@ void parallel_contact( void )
 
   // contact_apply -yes/-no: the contact algorithm can be enabled/disabled
   // per timestep (manual 6.99). Default: enabled when contact data exists.
+  // control_contact_apply index -yes/-no (manual 6.112): same gate, but
+  // scoped to the control_timestep record with the same index.
   if ( any_contact_data ) {
-    long int contact_apply = -YES;
+    long int contact_apply = -YES, control_contact_apply = -YES, icontrol = 0;
+    db( ICONTROL, 0, &icontrol, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
     db( CONTACT_APPLY, 0, &contact_apply, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
-    if ( contact_apply==-NO ) return;
+    db( CONTROL_CONTACT_APPLY, icontrol, &control_contact_apply, ddum,
+      ldum, VERSION_NORMAL, GET_IF_EXISTS );
+    if ( contact_apply==-NO || control_contact_apply==-NO ) return;
   }
 
   // contact_target_geometry/_switch: alias of contact_geometry/_switch (the
@@ -115,7 +120,15 @@ void parallel_contact( void )
     if ( swit ) pri( "In routine CONTACT" );
 
     db( NUMBER_ITERATIONS, 0, &iteration, ddum, ldum, VERSION_NEW, GET );
-    db( CONTACT_HEATGENERATION, 0, idum, 
+    // contact_heatgeneration is the legacy GNU name; contact_heat_generation
+    // (manual 6.100) is the Professional name of the same factor (which part
+    // of the frictional energy loss Q = eta*Ff*vf becomes heat on the
+    // condif_temperature dof). Read both without allocating (this runs in a
+    // parallel loop): if both records exist the Professional name wins.
+    contact_heat_generation = 0.;
+    db( CONTACT_HEATGENERATION, 0, idum,
+      &contact_heat_generation, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+    db( CONTACT_HEAT_GENERATION, 0, idum,
       &contact_heat_generation, ldum, VERSION_NORMAL, GET_IF_EXISTS );
     db( CONTACT_PENALTY_PRESSURE, 0, idum, 
       &pressure_penalty, ldum, VERSION_NORMAL, GET_IF_EXISTS );

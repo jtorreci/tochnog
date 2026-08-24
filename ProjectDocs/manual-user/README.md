@@ -126,3 +126,8 @@ input parameters it accepts.
 - [groundflow_seepage_node](groundflow_seepage_node.md) — seepage condition on explicit nodes.
 - [groundflow_pressure_atmospheric](groundflow_pressure_atmospheric.md) — cap on the static/total pore pressure from the phreatic level (GNU-inherited; default 0 removes suction).
 - [groundflow_total_pressure_limit](groundflow_total_pressure_limit.md) — cap on the solved pore pressure; limit 0 + pressure 0 marks dry elements (consolidation skipped).
+
+## P6 — contact family remnant
+
+- [contact_heat_generation](contact_heat_generation.md) — fraction of frictional loss injected as heat on the temperature dofs (Professional name of contact_heatgeneration).
+- [control_contact_apply](control_contact_apply.md) — per-timestep on/off switch of the contact algorithm.
