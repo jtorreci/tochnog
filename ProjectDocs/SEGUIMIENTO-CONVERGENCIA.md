@@ -910,31 +910,31 @@ marcado `PENDIENTE` puede estar cubierto en el GNU bajo otro nombre:
 - [ ] `end_data` — PENDIENTE
 - [ ] `end_initia` — PENDIENTE
 
-### force_edge (0/44)
+### force_edge (34/44; 10 _projected pendientes)
 
-- [ ] `force_edge` — PENDIENTE
+- [x] `force_edge` — por equivalencia (alias prefijo Professional→`force_element_edge`, Sprint 9)
 - [ ] `force_edge_diagram` — PENDIENTE
-- [ ] `force_edge_element` — PENDIENTE
-- [ ] `force_edge_element_group` — PENDIENTE
-- [ ] `force_edge_element_node` — PENDIENTE
-- [ ] `force_edge_element_side` — PENDIENTE
-- [ ] `force_edge_factor` — PENDIENTE
-- [ ] `force_edge_geometry` — PENDIENTE
-- [ ] `force_edge_multi_linear_factor_x` — PENDIENTE
-- [ ] `force_edge_node` — PENDIENTE
-- [ ] `force_edge_node_factor` — PENDIENTE
-- [ ] `force_edge_normal` — PENDIENTE
-- [ ] `force_edge_normal_element` — PENDIENTE
-- [ ] `force_edge_normal_element_group` — PENDIENTE
-- [ ] `force_edge_normal_element_node` — PENDIENTE
-- [ ] `force_edge_normal_element_side` — PENDIENTE
-- [ ] `force_edge_normal_factor` — PENDIENTE
-- [ ] `force_edge_normal_geometry` — PENDIENTE
-- [ ] `force_edge_normal_node` — PENDIENTE
-- [ ] `force_edge_normal_node_factor` — PENDIENTE
-- [ ] `force_edge_normal_sine` — PENDIENTE
-- [ ] `force_edge_normal_time` — PENDIENTE
-- [ ] `force_edge_projected` — PENDIENTE
+- [x] `force_edge_element` — Sprint 9 (variante nueva)
+- [x] `force_edge_element_group` — Sprint 9
+- [x] `force_edge_element_node` — Sprint 9
+- [x] `force_edge_element_side` — Sprint 9
+- [x] `force_edge_factor` — por equivalencia
+- [x] `force_edge_geometry` — por equivalencia
+- [x] `force_edge_multi_linear_factor_x` — por equivalencia (`force_element_edge_multi_linear_factor_x`, 86f6d03)
+- [x] `force_edge_node` — Sprint 9
+- [x] `force_edge_node_factor` — Sprint 9
+- [x] `force_edge_normal` — por equivalencia
+- [x] `force_edge_normal_element` — Sprint 9
+- [x] `force_edge_normal_element_group` — Sprint 9
+- [x] `force_edge_normal_element_node` — Sprint 9
+- [x] `force_edge_normal_element_side` — Sprint 9
+- [x] `force_edge_normal_factor` — por equivalencia
+- [x] `force_edge_normal_geometry` — por equivalencia
+- [x] `force_edge_normal_node` — Sprint 9
+- [x] `force_edge_normal_node_factor` — Sprint 9
+- [x] `force_edge_normal_sine` — por equivalencia
+- [x] `force_edge_normal_time` — por equivalencia
+- [ ] `force_edge_projected` — PENDIENTE (carga proyectada de túnel, 13 parámetros)
 - [ ] `force_edge_projected_element` — PENDIENTE
 - [ ] `force_edge_projected_element_group` — PENDIENTE
 - [ ] `force_edge_projected_element_node` — PENDIENTE
@@ -945,17 +945,17 @@ marcado `PENDIENTE` puede estar cubierto en el GNU bajo otro nombre:
 - [ ] `force_edge_projected_node_factor` — PENDIENTE
 - [ ] `force_edge_projected_sine` — PENDIENTE
 - [ ] `force_edge_projected_time` — PENDIENTE
-- [ ] `force_edge_sine` — PENDIENTE
-- [ ] `force_edge_time` — PENDIENTE
-- [ ] `force_edge_water` — PENDIENTE
-- [ ] `force_edge_water_element` — PENDIENTE
-- [ ] `force_edge_water_element_group` — PENDIENTE
-- [ ] `force_edge_water_element_node` — PENDIENTE
-- [ ] `force_edge_water_element_side` — PENDIENTE
-- [ ] `force_edge_water_factor` — PENDIENTE
-- [ ] `force_edge_water_geometry` — PENDIENTE
-- [ ] `force_edge_water_node` — PENDIENTE
-- [ ] `force_edge_water_time` — PENDIENTE
+- [x] `force_edge_sine` — por equivalencia
+- [x] `force_edge_time` — por equivalencia
+- [x] `force_edge_water` — por equivalencia
+- [x] `force_edge_water_element` — Sprint 9
+- [x] `force_edge_water_element_group` — Sprint 9
+- [x] `force_edge_water_element_node` — Sprint 9
+- [x] `force_edge_water_element_side` — Sprint 9
+- [x] `force_edge_water_factor` — Sprint 9 (nuevo, el GNU no lo tenía)
+- [x] `force_edge_water_geometry` — por equivalencia
+- [x] `force_edge_water_node` — Sprint 9
+- [x] `force_edge_water_time` — por equivalencia
 
 ### force_gravity (2/3)
 
@@ -967,15 +967,15 @@ marcado `PENDIENTE` puede estar cubierto en el GNU bajo otro nombre:
 
 - [x] `force_point` — implementada (commit `3793892`, 2026-08-04)
 
-### force_volume (0/7)
+### force_volume (7/7)
 
-- [ ] `force_volume` — PENDIENTE
-- [ ] `force_volume_element` — PENDIENTE
-- [ ] `force_volume_element_group_0` — PENDIENTE
-- [ ] `force_volume_factor` — PENDIENTE
-- [ ] `force_volume_geometry` — PENDIENTE
-- [ ] `force_volume_sine` — PENDIENTE
-- [ ] `force_volume_time` — PENDIENTE
+- [x] `force_volume` — por equivalencia (alias prefijo→`force_element_volume`, Sprint 9)
+- [x] `force_volume_element` — Sprint 9
+- [x] `force_volume_element_group_0` — Sprint 9 (`force_volume_element_group`)
+- [x] `force_volume_factor` — por equivalencia
+- [x] `force_volume_geometry` — por equivalencia
+- [x] `force_volume_sine` — por equivalencia
+- [x] `force_volume_time` — por equivalencia
 
 ### geometry_bounda (3/3)
 
