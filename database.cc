@@ -1361,6 +1361,42 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   fixed_length[CONTROL_RESET_DOF] = 0;
   data_class[CONTROL_RESET_DOF] = CONTROL;
 
+  strcpy(name[CONTROL_RESET_ELEMENT_DOF],"control_reset_element_dof");
+  type[CONTROL_RESET_ELEMENT_DOF] = INTEGER;
+  data_length[CONTROL_RESET_ELEMENT_DOF] = 1;
+  data_class[CONTROL_RESET_ELEMENT_DOF] = CONTROL;
+  data_required[CONTROL_RESET_ELEMENT_DOF] = CONTROL_RESET_DOF;
+
+  strcpy(name[CONTROL_RESET_ELEMENT_GROUP],"control_reset_element_group");
+  type[CONTROL_RESET_ELEMENT_GROUP] = INTEGER;
+  data_length[CONTROL_RESET_ELEMENT_GROUP] = DATA_ITEM_SIZE;
+  fixed_length[CONTROL_RESET_ELEMENT_GROUP] = 0;
+  data_class[CONTROL_RESET_ELEMENT_GROUP] = CONTROL;
+  data_required[CONTROL_RESET_ELEMENT_GROUP] = CONTROL_RESET_DOF;
+
+  strcpy(name[CONTROL_RESET_GEOMETRY],"control_reset_geometry");
+  type[CONTROL_RESET_GEOMETRY] = INTEGER;
+  data_length[CONTROL_RESET_GEOMETRY] = 2;
+  data_class[CONTROL_RESET_GEOMETRY] = CONTROL;
+  data_required[CONTROL_RESET_GEOMETRY] = CONTROL_RESET_DOF;
+
+  strcpy(name[CONTROL_RESET_INTERFACE],"control_reset_interface");
+  type[CONTROL_RESET_INTERFACE] = INTEGER;
+  data_length[CONTROL_RESET_INTERFACE] = 2;
+  data_class[CONTROL_RESET_INTERFACE] = CONTROL;
+
+  strcpy(name[CONTROL_RESET_INTERFACE_STRAIN],"control_reset_interface_strain");
+  type[CONTROL_RESET_INTERFACE_STRAIN] = INTEGER;
+  data_length[CONTROL_RESET_INTERFACE_STRAIN] = 2;
+  data_class[CONTROL_RESET_INTERFACE_STRAIN] = CONTROL;
+
+  strcpy(name[CONTROL_RESET_NODE],"control_reset_node");
+  type[CONTROL_RESET_NODE] = INTEGER;
+  data_length[CONTROL_RESET_NODE] = DATA_ITEM_SIZE;
+  fixed_length[CONTROL_RESET_NODE] = 0;
+  data_class[CONTROL_RESET_NODE] = CONTROL;
+  data_required[CONTROL_RESET_NODE] = CONTROL_RESET_DOF;
+
   strcpy(name[CONTROL_RESET_VALUE_CONSTANT],"control_reset_value_constant");
   type[CONTROL_RESET_VALUE_CONSTANT] = DOUBLE_PRECISION;
   data_length[CONTROL_RESET_VALUE_CONSTANT] = 1;

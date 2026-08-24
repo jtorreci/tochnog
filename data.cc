@@ -680,6 +680,74 @@ void data( long int task, double dtime, double time_current )
     swit = set_swit(-1,-1,"data");
     if ( swit ) pri( "In routine DATA (control_reset)" );
     db( DOF_LABEL, 0, dof_label, ddum, ldum, VERSION_NORMAL, GET );
+
+    // control_reset_interface / control_reset_interface_strain (manual
+    // Professional 6.354/6.355): reset the accumulated histories of the
+    // interface elements located in the geometry. _interface resets ALL
+    // interface data (strains + tangential forces); _interface_strain
+    // resets only the normal strain, keeping the tangential force
+    // history (the stresses are "remembered": new strains start at 0 and
+    // new stresses grow from the remembered ones through the stiffness).
+    {
+      long int ireset_i = 0, max_reset_i = 0, iel_i = 0, max_element_i = 0,
+        inol_i = 0, length_el_i = 0, all_in_i = 0, in_geom_i = 0,
+        geometry_i[2], zero_one = 0;
+      double rdum_i = 0.;
+      db_max_index( CONTROL_RESET_INTERFACE, max_reset_i, VERSION_NORMAL, GET );
+      db_max_index( CONTROL_RESET_INTERFACE_STRAIN, max_reset_i, VERSION_NORMAL, GET );
+      if ( max_reset_i>=0 ) {
+        db_max_index( ELEMENT, max_element_i, VERSION_NORMAL, GET );
+        for ( ireset_i=0; ireset_i<=max_reset_i; ireset_i++ ) {
+          long int full_reset = 0, strain_reset = 0;
+          if ( db_active_index( CONTROL_RESET_INTERFACE, ireset_i,
+               VERSION_NORMAL ) ) full_reset = 1;
+          if ( db_active_index( CONTROL_RESET_INTERFACE_STRAIN, ireset_i,
+               VERSION_NORMAL ) ) strain_reset = 1;
+          if ( !full_reset && !strain_reset ) continue;
+          {
+            long int geometry_src[2];
+            if ( full_reset )
+              db( CONTROL_RESET_INTERFACE, ireset_i, geometry_src, ddum,
+                ldum, VERSION_NORMAL, GET );
+            else
+              db( CONTROL_RESET_INTERFACE_STRAIN, ireset_i, geometry_src, ddum,
+                ldum, VERSION_NORMAL, GET );
+            geometry_i[0] = geometry_src[0];
+            geometry_i[1] = geometry_src[1];
+          }
+          for ( iel_i=0; iel_i<=max_element_i; iel_i++ ) {
+            long int el_i[MNOL+1];
+            if ( !db_active_index( ELEMENT, iel_i, VERSION_NORMAL ) )
+              continue;
+            db( ELEMENT, iel_i, el_i, ddum, length_el_i, VERSION_NORMAL, GET );
+            all_in_i = 1;
+            for ( inol_i=1; inol_i<length_el_i; inol_i++ ) {
+              geometry( el_i[inol_i], ddum, geometry_i, in_geom_i, rdum_i,
+                ddum, rdum_i, ddum, NODE_START_REFINED,
+                CONTROL_RESET_INTERFACE, VERSION_NORMAL );
+              if ( !in_geom_i ) all_in_i = 0;
+            }
+            if ( all_in_i ) {
+              zero_one = 0;
+              if ( strain_reset || full_reset ) {
+                double zero_dbl = 0.;
+                db( ELEMENT_INTERFACE_STRAIN_NORMAL, iel_i, idum, &zero_dbl,
+                  ldum, VERSION_NORMAL, PUT );
+              }
+              if ( full_reset ) {
+                double zero_dbl = 0.;
+                db( ELEMENT_INTERFACE_FORCE_TANG, iel_i, idum, &zero_dbl,
+                  ldum, VERSION_NORMAL, PUT );
+                db( ELEMENT_INTERFACE_FORCE_TANG2, iel_i, idum, &zero_dbl,
+                  ldum, VERSION_NORMAL, PUT );
+              }
+            }
+          }
+        }
+      }
+    }
+
+    long int *reset_dof_node_filter = NULL;
     for ( ireset=0; ireset<=max_reset; ireset++ ) {
       if ( db_active_index( CONTROL_RESET_DOF, ireset, VERSION_NORMAL ) ) {
         db( CONTROL_RESET_DOF, ireset, reset_dof, ddum, ldum, VERSION_NORMAL, GET );
@@ -706,11 +774,103 @@ void data( long int task, double dtime, double time_current )
         reset_method = -USE;
         db( CONTROL_RESET_VALUE_METHOD, ireset, &reset_method, ddum, ldum,
           VERSION_NORMAL, GET_IF_EXISTS );
+
+        // node selection filters (manual Professional 6.352/6.353/6.356):
+        // control_reset_geometry (nodes of elements completely inside the
+        // geometry), control_reset_node (nodes of elements with all their
+        // nodes listed) and control_reset_element_group (restrict to
+        // elements of the listed groups). Without any filter all nodes are
+        // treated (previous behaviour).
+        {
+          long int use_filter = 0, length_rn = 0, length_reg = 0,
+            iel2 = 0, inol2 = 0, max_element2 = 0, length_el2 = 0,
+            all_in = 0, in_geometry2 = 0, all_nodes_listed = 0,
+            el_group2 = 0, el2[MNOL+1];
+          long int *reset_nodes_list = NULL;
+          double rdum2 = 0.;
+          reset_nodes_list = get_new_int(1+max_node);
+          array_set( reset_nodes_list, 0, 1+max_node );
+          if ( db_active_index( CONTROL_RESET_GEOMETRY, ireset,
+              VERSION_NORMAL ) ||
+               db_active_index( CONTROL_RESET_NODE, ireset,
+              VERSION_NORMAL ) ||
+               db_active_index( CONTROL_RESET_ELEMENT_GROUP, ireset,
+              VERSION_NORMAL ) ) {
+            long int reset_geometry[2] = {0,0};
+            use_filter = 1;
+            if ( db_active_index( CONTROL_RESET_GEOMETRY, ireset,
+                VERSION_NORMAL ) )
+              db( CONTROL_RESET_GEOMETRY, ireset, reset_geometry, ddum,
+                ldum, VERSION_NORMAL, GET );
+            if ( db_active_index( CONTROL_RESET_NODE, ireset,
+                VERSION_NORMAL ) ) {
+              db( CONTROL_RESET_NODE, ireset, reset_nodes_list, ddum,
+                length_rn, VERSION_NORMAL, GET );
+              // convert the listed nodes to a marker set (avoid clashing
+              // with the output array usage below)
+              for ( long int k=0; k<length_rn; k++ )
+                reset_nodes_list[reset_nodes_list[k]] = 1;
+            }
+            db_max_index( ELEMENT, max_element2, VERSION_NORMAL, GET );
+            for ( iel2=0; iel2<=max_element2; iel2++ ) {
+              if ( !db_active_index( ELEMENT, iel2, VERSION_NORMAL ) )
+                continue;
+              if ( db_active_index( CONTROL_RESET_ELEMENT_GROUP, ireset,
+                  VERSION_NORMAL ) ) {
+                long int go = 0;
+                long int *reg = NULL;
+                reg = db_int( CONTROL_RESET_ELEMENT_GROUP, ireset,
+                  VERSION_NORMAL );
+                length_reg = db_len( CONTROL_RESET_ELEMENT_GROUP, ireset,
+                  VERSION_NORMAL );
+                el_group2 = -1;
+                db( ELEMENT_GROUP, iel2, &el_group2, ddum, ldum,
+                  VERSION_NORMAL, GET_IF_EXISTS );
+                if ( array_member( reg, el_group2, length_reg, ldum ) )
+                  go = 1;
+                if ( !go ) continue;
+              }
+              db( ELEMENT, iel2, el2, ddum, length_el2, VERSION_NORMAL, GET );
+              all_in = 1;
+              all_nodes_listed = 1;
+              for ( inol2=1; inol2<length_el2; inol2++ ) {
+                if ( db_active_index( CONTROL_RESET_GEOMETRY, ireset,
+                    VERSION_NORMAL ) ) {
+                  geometry( el2[inol2], ddum, reset_geometry, in_geometry2,
+                    rdum2, ddum, rdum2, ddum, NODE_START_REFINED,
+                    CONTROL_RESET_GEOMETRY, VERSION_NORMAL );
+                  if ( !in_geometry2 ) all_in = 0;
+                }
+                if ( db_active_index( CONTROL_RESET_NODE, ireset,
+                    VERSION_NORMAL ) ) {
+                  if ( !reset_nodes_list[el2[inol2]] )
+                    all_nodes_listed = 0;
+                }
+              }
+              if ( all_in && all_nodes_listed ) {
+                for ( inol2=1; inol2<length_el2; inol2++ )
+                  reset_nodes_list[el2[inol2]] = 2;
+              }
+            }
+          }
+          if ( use_filter ) {
+            // marker 2 = selected; collapse to 0/1
+            for ( inod=0; inod<=max_node; inod++ )
+              reset_nodes_list[inod] = ( reset_nodes_list[inod]==2 );
+          }
+          else {
+            for ( inod=0; inod<=max_node; inod++ )
+              reset_nodes_list[inod] = 1;
+          }
+          reset_dof_node_filter = reset_nodes_list;
+        }
+
         if ( db_active_index( CONTROL_RESET_VALUE_CONSTANT, ireset, VERSION_NORMAL ) ) {
           db( CONTROL_RESET_VALUE_CONSTANT, ireset, idum, &reset_value_constant,
             ldum, VERSION_NORMAL, GET );
           for ( inod=0; inod<=max_node; inod++ ) {
-            if ( db_active_index( NODE, inod, VERSION_NORMAL ) ) {
+            if ( db_active_index( NODE, inod, VERSION_NORMAL ) &&
+                 ( !reset_dof_node_filter || reset_dof_node_filter[inod] ) ) {
               node_dof = db_dbl( NODE_DOF, inod, VERSION_NORMAL );
               length = db_len( NODE_DOF, inod, VERSION_NORMAL );
               long int indx = idof_reset;
@@ -732,7 +892,8 @@ void data( long int task, double dtime, double time_current )
           db( CONTROL_RESET_VALUE_DOF_DIAGRAM, ireset, idum, reset_value_diagram,
             length_diagram, VERSION_NORMAL, GET );
           for ( inod=0; inod<=max_node; inod++ ) {
-            if ( db_active_index( NODE, inod, VERSION_NORMAL ) ) {
+            if ( db_active_index( NODE, inod, VERSION_NORMAL ) &&
+                 ( !reset_dof_node_filter || reset_dof_node_filter[inod] ) ) {
               node_dof = db_dbl( NODE_DOF, inod, VERSION_NORMAL );
               length = db_len( NODE_DOF, inod, VERSION_NORMAL );
               long int indx_reset = idof_reset, indx_val = idof_value;
@@ -782,7 +943,8 @@ void data( long int task, double dtime, double time_current )
            else if ( spatial_active==CONTROL_RESET_VALUE_LOGARITHMIC ) nl = 5*ndim;
            else if ( spatial_active==CONTROL_RESET_VALUE_LOGARITHMIC_SECOND ) nl = 7*ndim;
            for ( inod=0; inod<=max_node; inod++ ) {
-             if ( db_active_index( NODE, inod, VERSION_NORMAL ) ) {
+             if ( db_active_index( NODE, inod, VERSION_NORMAL ) &&
+                  ( !reset_dof_node_filter || reset_dof_node_filter[inod] ) ) {
                node_dof = db_dbl( NODE_DOF, inod, VERSION_NORMAL );
                length = db_len( NODE_DOF, inod, VERSION_NORMAL );
                long int indx_reset = idof_reset;
