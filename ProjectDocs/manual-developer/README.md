@@ -123,6 +123,7 @@ Each file corresponds to the same feature in the [User Manual](../manual-user/).
 - [groundflow_phreatic_level_multiple](groundflow_phreatic_level_multiple.md) — multiple phreatic levels (groundfl.cc _find/_coord + phreatic_apply _static).
 - [groundflow_seepage](groundflow_seepage.md) — seepage boundary in bounda.cc (Darcy flow projection on the outward normal).
 - [groundflow_pressure_atmospheric](groundflow_pressure_atmospheric.md) — static/total pressure cap in groundfl.cc groundflow_phreatic_coord (GNU-inherited keyword, documented + verified 2026-08-24).
+- [groundflow_total_pressure_limit](groundflow_total_pressure_limit.md) — solved-pressure cap after solve (top.cc hook) + dry-element consolidation skip (groundfl.cc, manual Professional 6.588/2.4.3).
 
 ## Cross-cutting notes
 

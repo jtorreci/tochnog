@@ -373,6 +373,7 @@ void top( void )
                           slide(); 
                           if ( print_where==-YES ) pri( "Where: before solver." ); 
                           solve( options_solver );
+                          groundflow_total_pressure_limit_apply();
                           if ( print_where==-YES ) pri( "Where: after solver." ); 
                           parallel_sys_routine( &parallel_new_dof_diagonal );
                           locate();

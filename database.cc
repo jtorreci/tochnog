@@ -2508,6 +2508,12 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   fixed_length[GROUNDFLOW_SEEPAGE_NODE] = 0;
   data_class[GROUNDFLOW_SEEPAGE_NODE] = GROUNDFLOW;
 
+  strcpy(name[GROUNDFLOW_TOTAL_PRESSURE_LIMIT],"groundflow_total_pressure_limit");
+  type[GROUNDFLOW_TOTAL_PRESSURE_LIMIT] = DOUBLE_PRECISION;
+  data_length[GROUNDFLOW_TOTAL_PRESSURE_LIMIT] = 1;
+  no_index[GROUNDFLOW_TOTAL_PRESSURE_LIMIT] = 1;
+  data_class[GROUNDFLOW_TOTAL_PRESSURE_LIMIT] = GROUNDFLOW;
+
   strcpy(name[GROUNDFLOW_VELOCITY],"groundflow_velocity");
 
   strcpy(name[GROUP_AXISYMMETRIC],"group_axisymmetric");

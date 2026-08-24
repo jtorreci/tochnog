@@ -36,8 +36,8 @@ void groundflow( long int element, long int gr, long int nnol, long int nodes[],
     indx=0, indxi=0, indxj=0, icontrol=0, options_skip_groundflow_materidivergence=-NO,
     groundflow_consolidation_apply=-YES, control_groundflow_consolidation_apply=-YES,
     group_groundflow_consolidation_apply=-YES,
-    materidivergence=-YES, ldum=0, idum[1];
-  double tmp=0., C=0., dtime=0., divergence=0., dens=0., ddum[1], pe[MDIM];
+    materidivergence=-YES, total_pressure_limit_set=0, ldum=0, idum[1];
+  double tmp=0., C=0., dtime=0., divergence=0., dens=0., limit=0., ddum[1], pe[MDIM];
 
   swit = set_swit(element,-1,"groundflow");
   if ( swit ) pri( "In routine GROUNDFLOW." );
@@ -68,6 +68,16 @@ void groundflow( long int element, long int gr, long int nnol, long int nodes[],
   if ( groundflow_consolidation_apply==-NO ) materidivergence = -NO;
   if ( control_groundflow_consolidation_apply==-NO ) materidivergence = -NO;
   if ( options_skip_groundflow_materidivergence==-YES ) materidivergence = -NO;
+
+  // groundflow_total_pressure_limit: with limit 0 and a total pressure of 0
+  // the node/element is considered dry (no water), so the consolidation part
+  // (material divergence term) is skipped for this element (manual 2.4.3).
+  total_pressure_limit_set = db( GROUNDFLOW_TOTAL_PRESSURE_LIMIT, 0, idum,
+    &limit, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+  if ( total_pressure_limit_set && groundflow_pressure &&
+       scalar_dabs(limit)<TINY &&
+       scalar_dabs(new_unknowns[pres_indx])<TINY )
+    materidivergence = -NO;
 
   groundflow_data( element, gr, nodes, old_unknowns, new_unknowns, coord_ip, pe, C, h, nnol );
 
@@ -421,5 +431,44 @@ void groundflow_phreatic_apply( void )
       }
     }
   }
- 
+  
+}
+
+void groundflow_total_pressure_limit_apply( void )
+
+// groundflow_total_pressure_limit: maximum allowed total pressure. Any
+// higher value resulting from the groundflow equations is cut off to this
+// value (manual Professional 6.588). Nodes with a prescribed pressure
+// (bounded/Dirichlet, e.g. from bounda_dof or phreatic _static) keep their
+// prescribed value; only solved values are cut. The record is required to
+// activate the limit: without it nothing is clamped (GNU difference with
+// Professional, which defaults the limit to 0).
+
+{
+  long int inod=0, max_node=0, iuknwn=0, ipuknwn=0, ldum=0, idum[1],
+    *node_bounded=NULL;
+  double limit=0., ddum[1], *node_dof=NULL;
+
+  if ( !db_active_index( GROUNDFLOW_TOTAL_PRESSURE_LIMIT, 0, VERSION_NORMAL ) )
+    return;
+
+  if ( !groundflow_pressure ) return;
+
+  db( GROUNDFLOW_TOTAL_PRESSURE_LIMIT, 0, idum, &limit, ldum,
+    VERSION_NORMAL, GET );
+  db_max_index( NODE, max_node, VERSION_NORMAL, GET );
+
+  for ( inod=0; inod<=max_node; inod++ ) {
+    if ( !db_active_index( NODE_START_REFINED, inod, VERSION_NORMAL ) )
+      continue;
+    node_dof = db_dbl( NODE_DOF, inod, VERSION_NEW );
+    if ( !node_dof ) continue;
+    iuknwn = pres_indx;
+    ipuknwn = iuknwn / nder;
+    node_bounded = db_int( NODE_BOUNDED, inod, VERSION_NORMAL );
+    if ( node_bounded && node_bounded[ipuknwn] )
+      continue;
+    if ( node_dof[iuknwn] > limit ) node_dof[iuknwn] = limit;
+  }
+
 }

@@ -42,11 +42,16 @@ else
   exit 1
 fi
 
-# SQLite (optional, for tabular export). Empty by default; if libsqlite3-dev
-# is installed, enable with -lsqlite3. The header is included via ALL_INCLUDE
-# in the Makefile when SQLITE_USE=1 in tn_sqlite.h. -l: uses the runtime
-# soname directly so libsqlite3-dev (symlink) is not required.
+# SQLite (optional, for tabular export). The header may come from the
+# system (libsqlite3-dev) or from external-downloads/numlib-runtime/include
+# (header extracted from a .deb for machines without the dev package);
+# -l: uses the runtime soname directly so the dev symlink is not required.
 SQLITE_INC="-I/usr/include"
+if [ -f "$REPO_DIR/external-downloads/numlib-runtime/include/sqlite3.h" ] && \
+   [ ! -f /usr/include/sqlite3.h ]; then
+  SQLITE_INC="-I$REPO_DIR/external-downloads/numlib-runtime/include"
+  echo "==> Header sqlite3.h del runtime numerico local"
+fi
 SQLITE_LIB="-l:libsqlite3.so.0"
 
 # Runtime numerico local (opcional): maquinas sin liblapack3/libblas3 en el
@@ -136,6 +141,10 @@ HIPO_TOTAL=0
 #   heredado del GNU: cap de la presion estatica en phreatic_coord. Con
 #   pa=0.5 la succion +1 se mantiene en 0.5 y la compresion -1 pasa intacta;
 #   con default 0 la succion se anula -> 0).
+# + groundflow_total_pressure_limit/_dry (manual Professional 6.588: cap del
+#   pres resuelto tras el solve; nodos Dirichlet exentos. Con limit 0.5 los
+#   nodos libres quedan en 0.5 (sin limit ~1.67); con limit 0 y pres 0 el
+#   elemento esta seco y se salta el termino de consolidacion -> pres 0).
 for t in hypo1 hypo2 hypo3 hypo4 smooth1 dof1 mlx1 vtk_dof1 gen1 genbeam1 reset1 cda1 \
          iface_mc iface_mc_1step iface_mc_slip iface_mc_slip_1step iface_mc_tension iface_mc_gap \
          iface_mc_mem iface_mc_dil iface_mc_dil_1step iface_mc_num \
@@ -151,7 +160,8 @@ for t in hypo1 hypo2 hypo3 hypo4 smooth1 dof1 mlx1 vtk_dof1 gen1 genbeam1 reset1
          groundflow_consolidate_off groundflow_vangenuchten groundflow_nonsaturated_off \
          groundflow_total_pressure_tension groundflow_interface groundflow_flux_edge \
          groundflow_phreatic_multiple groundflow_seepage \
-         groundflow_pressure_atm groundflow_pressure_atm_def; do
+         groundflow_pressure_atm groundflow_pressure_atm_def \
+         groundflow_total_pressure_limit groundflow_total_pressure_limit_dry; do
   HIPO_TOTAL=$((HIPO_TOTAL+1))
   ( cd validation-suite/test-2014 &&
     ulimit -v 4000000 &&
@@ -164,5 +174,5 @@ for t in hypo1 hypo2 hypo3 hypo4 smooth1 dof1 mlx1 vtk_dof1 gen1 genbeam1 reset1
     echo "    $t: FALLO (rc=$RC)"
   fi
 done
-echo "==> Resumen: $HIPO_OK/$HIPO_TOTAL runs OK (13 tests: 12 preexistentes + familia iface_mc en 10 runs + familia 3D en 5 runs + familia generate_interface en 6 runs + familia materi_direct en 5 runs + materi_displacement_relative en 2 runs + slide/reset_value en 2 runs + gravity/settlement en 4 runs + contact en 1 run + groundflow_consolidate_off en 1 run + groundflow_vangenuchten/groundflow_nonsaturated_off en 2 runs + groundflow_total_pressure_tension/groundflow_interface en 2 runs + groundflow_flux_edge en 1 run + groundflow_phreatic_multiple en 1 run + groundflow_seepage en 1 run + groundflow_pressure_atm/_def en 2 runs)."
+echo "==> Resumen: $HIPO_OK/$HIPO_TOTAL runs OK (13 tests: 12 preexistentes + familia iface_mc en 10 runs + familia 3D en 5 runs + familia generate_interface en 6 runs + familia materi_direct en 5 runs + materi_displacement_relative en 2 runs + slide/reset_value en 2 runs + gravity/settlement en 4 runs + contact en 1 run + groundflow_consolidate_off en 1 run + groundflow_vangenuchten/groundflow_nonsaturated_off en 2 runs + groundflow_total_pressure_tension/groundflow_interface en 2 runs + groundflow_flux_edge en 1 run + groundflow_phreatic_multiple en 1 run + groundflow_seepage en 1 run + groundflow_pressure_atm/_def en 2 runs + groundflow_total_pressure_limit/_dry en 2 runs)."
 echo "==> Log de compilacion completo en /tmp/tn_build_safe.log"

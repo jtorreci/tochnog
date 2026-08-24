@@ -344,6 +344,8 @@ long int check( long int idat, long int task )
     ok = check_unknown( "groundflow_pressure", YES, task );
   if ( data_number==GROUNDFLOW_PRESSURE_ATMOSPHERIC )
     ok = check_unknown( "groundflow_pressure", YES, task );
+  if ( data_number==GROUNDFLOW_TOTAL_PRESSURE_LIMIT )
+    ok = check_unknown( "groundflow_pressure", YES, task );
   if ( data_number==GROUP_BEAM_INERTIA ) {
     ok = check_unknown_atleastone( "materi_velocity_integrated", 
       "materi_displacement", task );

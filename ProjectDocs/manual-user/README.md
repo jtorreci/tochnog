@@ -125,3 +125,4 @@ input parameters it accepts.
 - [groundflow_seepage_geometry](groundflow_seepage_geometry.md) — seepage edge selected by geometry entity.
 - [groundflow_seepage_node](groundflow_seepage_node.md) — seepage condition on explicit nodes.
 - [groundflow_pressure_atmospheric](groundflow_pressure_atmospheric.md) — cap on the static/total pore pressure from the phreatic level (GNU-inherited; default 0 removes suction).
+- [groundflow_total_pressure_limit](groundflow_total_pressure_limit.md) — cap on the solved pore pressure; limit 0 + pressure 0 marks dry elements (consolidation skipped).
