@@ -100,6 +100,8 @@ suite sfnet, o un test propio. El registro completo:
 
 **P6 — remate contacto: `contact_heat_generation` + `control_contact_apply`** | `b2694c8` | 2026-08-24 | `contact_heat_generation` (manual 6.100) es el nombre Professional del legacy `contact_heatgeneration`: la física (Q = η·Ff·vf inyectado en el dof temp, heredada del GNU 2014) ya existía; se registra el keyword nuevo y se lee AMBOS nombres en el único punto de consumo (contact.cc; buffer a 0 antes — regla GET_IF_EXISTS). Sin alias PUT: el PUT en `parallel_contact` aborta con "Data is allocated in a parallel loop" (lo pilló el probe). `control_contact_apply index -yes/-no` (manual 6.112): gate por timestep junto al `contact_apply` global, indexado por ICONTROL, cualquier -no gana. Validación con A/B real de bloque en caída: `contact_block` (contacto activo: el penalty detiene el bloque, disy≈-0.003) vs `contact_ctrl_apply` (-no: caída libre exacta disy=-0.055, idéntico a sin contacto) + `contact_heatgen` (modelo térmico con el nombre nuevo, mecánica estable). Flujo del VALOR verificado con TOCHNOG_DEBUG: friction_energy escala exacto con el factor (0.5→1.31194, 1.0→2.62387). Limitación documentada: la temp acumulada queda ~0 porque la iteración final de equilibrio vuelve a STICK (algoritmo experimental). Suite 62/62. |
 
+**P6 — `change_dataitem_time_method` + `change_dataitem_geometry` (manual Professional 6.51/6.48, familia change 6/6)** | `54af57a` | 2026-08-24 | `_time_method`: la tabla temporal da valores de coseno/seno/tangente y se almacena el ángulo inverso (`acos/asin/atan(val)`) — el caso phi-c del manual (tablas de tan(phi), parámetro phi en radianes). Switch enums COSINUS/SINUS/TANGENT con registro de nombres en database.cc (el parser resuelve -tangent por la tabla de nombres, como cualquier switch). `_geometry`: restricción de un cambio de record `group_*` a los elementos dentro de la geometría, materializada como SPLIT del grupo: clon con copia de todos los records `group_*` (grupo nuevo = max+1, mapa estático), elementos completamente dentro de la geometría movidos al clon (patrón geometry() de CONTROL_DATA_INITELDOF_GEOMETRY + PUT de ELEMENT_GROUP como delete.cc), cambio aplicado solo al clon (los de fuera y el record original quedan intactos). Validado con `cd_method` (unit test exacto: `target_item -group_materi_plasti_mohr_coul_direct 0 0` = 0.5235988 = atan(0.57735027); sigxy invariante ~1 → sin efectos colaterales) y `cd_geom` (dos bloques en shear: izquierdo dentro del brick → sigxy~0 con c=0 en el clon; derecho → sigxy~1; el record original conserva c=1.0 leído por target genérico — prueba la restricción, no solo la ausencia de crash). Suite 64/64. |
+
 Nota: las features marcadas solo "GNU" en el detalle por familia (sin
 fila en esta tabla) ya existían en el fork sfnet 2014 y no fueron
 implementadas por nosotros.
@@ -247,13 +249,13 @@ marcado `PENDIENTE` puede estar cubierto en el GNU bajo otro nombre:
 
 - [x] `bounda_water` — implementada (commit `e7861f6`, 2026-08-05)
 
-### change (4/6)
+### change (6/6)
 
 - [x] `change_dataitem` — presente en el GNU
-- [ ] `change_dataitem_geometry` — PENDIENTE
+- [x] `change_dataitem_geometry` — P6 (2026-08-24)
 - [x] `change_dataitem_time` — presente en el GNU
 - [x] `change_dataitem_time_discrete` — presente en el GNU
-- [ ] `change_dataitem_time_method` — PENDIENTE
+- [x] `change_dataitem_time_method` — P6 (2026-08-24)
 - [x] `change_dataitem_time_user` — presente en el GNU
 
 ### check_data (1/1)
