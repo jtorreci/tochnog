@@ -152,3 +152,5 @@ input parameters it accepts.
 
 - [condif_heat_edge_normal](condif_heat_edge_normal.md) — distributed heat flux normal to element edges (11-keyword family: geometry, element/group/side/node restrictions, factor, time/sine).
 - [condif_heat_volume](condif_heat_volume.md) — distributed volume heat source (9-keyword family: element/group/geometry restrictions, factor, time/sine/user).
+- [condif_convection_edge_normal](condif_convection_edge_normal.md) — convection BC q=h*(Tenv-T) on edges (Professional name of condif_convection; 7-keyword family with restrictions).
+- [condif_radiation_edge_normal](condif_radiation_edge_normal.md) — radiation BC q=alpha_r*(Tr^4-T^4) on edges (Professional name of condif_radiation; 7-keyword family).

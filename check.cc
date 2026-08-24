@@ -86,7 +86,14 @@ long int check( long int idat, long int task )
     ok = check_unknown( "condif_temperature", YES, task );
     ok = ok && check_unknown( "wave_scalar", NO, task );
   }
-  if ( data_number==CONDIF_CONVECTION ) {
+  if ( data_number==CONDIF_CONVECTION ||
+       data_number==CONDIF_CONVECTION_EDGE_NORMAL ||
+       data_number==CONDIF_CONVECTION_EDGE_NORMAL_ELEMENT ||
+       data_number==CONDIF_CONVECTION_EDGE_NORMAL_ELEMENT_GROUP ||
+       data_number==CONDIF_CONVECTION_EDGE_NORMAL_ELEMENT_NODE ||
+       data_number==CONDIF_CONVECTION_EDGE_NORMAL_ELEMENT_SIDE ||
+       data_number==CONDIF_CONVECTION_EDGE_NORMAL_GEOMETRY ||
+       data_number==CONDIF_CONVECTION_EDGE_NORMAL_NODE ) {
     ok = check_ndim( 2, 3, task );
     ok = ok && check_unknown( "condif_temperature", YES, task );
   }
@@ -94,7 +101,14 @@ long int check( long int idat, long int task )
     ok = check_ndim( 2, 3, task );
     ok = ok && check_unknown( "condif_temperature", YES, task );
   }
-  if ( data_number==CONDIF_RADIATION ) {
+  if ( data_number==CONDIF_RADIATION ||
+       data_number==CONDIF_RADIATION_EDGE_NORMAL ||
+       data_number==CONDIF_RADIATION_EDGE_NORMAL_ELEMENT ||
+       data_number==CONDIF_RADIATION_EDGE_NORMAL_ELEMENT_GROUP ||
+       data_number==CONDIF_RADIATION_EDGE_NORMAL_ELEMENT_NODE ||
+       data_number==CONDIF_RADIATION_EDGE_NORMAL_ELEMENT_SIDE ||
+       data_number==CONDIF_RADIATION_EDGE_NORMAL_GEOMETRY ||
+       data_number==CONDIF_RADIATION_EDGE_NORMAL_NODE ) {
     ok = check_ndim( 2, 3, task );
     ok = ok && check_unknown( "condif_temperature", YES, task );
   }

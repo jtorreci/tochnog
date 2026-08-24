@@ -20,7 +20,36 @@
 
 #include "tochnog.h"
 
-#define MTYPES 7
+#define MTYPES 9
+
+// companion items for the convection/radiation edge families
+// (condif_convection_edge_normal / condif_radiation_edge_normal, the
+// Professional names of the legacy condif_convection / condif_radiation).
+// which: 0=_ELEMENT 1=_ELEMENT_GROUP 2=_ELEMENT_SIDE 3=_NODE
+// 4=_ELEMENT_NODE
+static long int conv_rad_companion( long int master, long int which )
+{
+  static long int convection[] = {
+    CONDIF_CONVECTION_EDGE_NORMAL_ELEMENT,
+    CONDIF_CONVECTION_EDGE_NORMAL_ELEMENT_GROUP,
+    CONDIF_CONVECTION_EDGE_NORMAL_ELEMENT_SIDE,
+    CONDIF_CONVECTION_EDGE_NORMAL_NODE,
+    CONDIF_CONVECTION_EDGE_NORMAL_ELEMENT_NODE };
+  static long int radiation[] = {
+    CONDIF_RADIATION_EDGE_NORMAL_ELEMENT,
+    CONDIF_RADIATION_EDGE_NORMAL_ELEMENT_GROUP,
+    CONDIF_RADIATION_EDGE_NORMAL_ELEMENT_SIDE,
+    CONDIF_RADIATION_EDGE_NORMAL_NODE,
+    CONDIF_RADIATION_EDGE_NORMAL_ELEMENT_NODE };
+  return ( master==CONDIF_CONVECTION_EDGE_NORMAL ?
+    convection[which] : radiation[which] );
+}
+
+static long int conv_rad_is_master( long int item )
+{
+  return item==CONDIF_CONVECTION_EDGE_NORMAL ||
+    item==CONDIF_RADIATION_EDGE_NORMAL;
+}
 
 // companion items for the edge-normal flux families: the groundflow water
 // flux (groundflow_flux_edge_normal) and the condif heat flux
@@ -145,6 +174,8 @@ void area( long int element, long int name,
   type[4] = FORCE_ELEMENT_EDGE_WATER;
   type[5] = GROUNDFLOW_FLUX_EDGE_NORMAL;
   type[6] = CONDIF_HEAT_EDGE_NORMAL;
+  type[7] = CONDIF_CONVECTION_EDGE_NORMAL;
+  type[8] = CONDIF_RADIATION_EDGE_NORMAL;
   type_area[0] = CONDIF_RADIATION_GEOMETRY;
   type_area[1] = CONDIF_CONVECTION_GEOMETRY;
   type_area[2] = FORCE_ELEMENT_EDGE_GEOMETRY;
@@ -152,6 +183,8 @@ void area( long int element, long int name,
   type_area[4] = FORCE_ELEMENT_EDGE_WATER_GEOMETRY;
   type_area[5] = GROUNDFLOW_FLUX_EDGE_NORMAL_GEOMETRY;
   type_area[6] = CONDIF_HEAT_EDGE_NORMAL_GEOMETRY;
+  type_area[7] = CONDIF_CONVECTION_EDGE_NORMAL_GEOMETRY;
+  type_area[8] = CONDIF_RADIATION_EDGE_NORMAL_GEOMETRY;
   db( DOF_PRINCIPAL, 0, dof_principal, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
 
   db( DTIME, 0, idum, &dtime, ldum, VERSION_NEW, GET_IF_EXISTS );
@@ -245,6 +278,33 @@ void area( long int element, long int name,
             use_geom = ( geometry_entity[0]<0 && 
               db_data_class(geometry_entity[0])==GEOMETRY );
             if ( !use_geom ) db_error( type[itype], ind );
+          }
+          if ( conv_rad_is_master(type[itype]) ) {
+            // restriction variants for the convection/radiation families
+            if ( db_active_index( conv_rad_companion(type[itype],0),
+                ind, VERSION_NORMAL ) ) {
+              long int elt[DATA_ITEM_SIZE], length_elt=0;
+              db( conv_rad_companion(type[itype],0), ind, elt, ddum,
+                length_elt, VERSION_NORMAL, GET );
+              if ( !array_member( elt, element, length_elt, ldum ) ) continue;
+            }
+            if ( db_active_index( conv_rad_companion(type[itype],1),
+                ind, VERSION_NORMAL ) ) {
+              long int grp[DATA_ITEM_SIZE], length_grp=0;
+              db( conv_rad_companion(type[itype],1), ind, grp, ddum,
+                length_grp, VERSION_NORMAL, GET );
+              if ( !array_member( grp, gr, length_grp, ldum ) ) continue;
+            }
+            if ( db_active_index( conv_rad_companion(type[itype],2),
+                ind, VERSION_NORMAL ) ) {
+              long int side_sel[DATA_ITEM_SIZE], length_side=0;
+              db( conv_rad_companion(type[itype],2), ind, side_sel, ddum,
+                length_side, VERSION_NORMAL, GET );
+              long int ok_side = 0;
+              for ( i=0; i+1<length_side; i+=2 )
+                if ( side_sel[i]==element ) ok_side = 1;
+              if ( !ok_side ) continue;
+            }
           }
           if ( flux_edge_is_master(type[itype]) ) {
             // restriction variants for the edge-normal flux families
@@ -502,16 +562,34 @@ void area( long int element, long int name,
                 }
                 else
                   area_size = ar;
-                if ( type[itype]==CONDIF_RADIATION || 
-                     type[itype]==CONDIF_CONVECTION ) {
-                  if ( type[itype]==CONDIF_RADIATION )
-                    db( CONDIF_RADIATION, ind, idum, values, 
-                      ldum, VERSION_NORMAL, GET );
-                  else {
-                    assert( type[itype]==CONDIF_CONVECTION );
-                    db( CONDIF_CONVECTION, ind, idum, values, 
-                      ldum, VERSION_NORMAL, GET );
+                if ( type[itype]==CONDIF_RADIATION ||
+                     type[itype]==CONDIF_CONVECTION ||
+                     type[itype]==CONDIF_RADIATION_EDGE_NORMAL ||
+                     type[itype]==CONDIF_CONVECTION_EDGE_NORMAL ) {
+                  // node restrictions for the Professional-name masters
+                  long int use_it = 1;
+                  if ( conv_rad_is_master(type[itype]) ) {
+                    if ( db_active_index( conv_rad_companion(type[itype],3),
+                        ind, VERSION_NORMAL ) ) {
+                      long int nds[DATA_ITEM_SIZE], length_nds=0;
+                      db( conv_rad_companion(type[itype],3), ind, nds, ddum,
+                        length_nds, VERSION_NORMAL, GET );
+                      if ( !array_member( nds, inod, length_nds, ldum ) )
+                        use_it = 0;
+                    }
+                    if ( db_active_index( conv_rad_companion(type[itype],4),
+                        ind, VERSION_NORMAL ) ) {
+                      long int en[DATA_ITEM_SIZE], length_en=0;
+                      db( conv_rad_companion(type[itype],4), ind, en, ddum,
+                        length_en, VERSION_NORMAL, GET );
+                      // en[0]=element, en[1..]=local node numbers
+                      if ( en[0]!=element || !array_member( &en[1], inol,
+                          length_en-1, ldum ) ) use_it = 0;
+                    }
                   }
+                  if ( !use_it ) continue;
+                  db( type[itype], ind, idum, values,
+                    ldum, VERSION_NORMAL, GET );
                   alpha = values[0]; env_temp = values[1];
                   if ( swit ) {
                     pri( "alpha", alpha );
@@ -519,16 +597,16 @@ void area( long int element, long int name,
                   }
                   temp = new_dof[inol*nuknwn+temp_indx];
                   if ( swit ) pri( "temp", temp );
-                  if ( type[itype]==CONDIF_RADIATION ) {
+                  if ( type[itype]==CONDIF_RADIATION ||
+                       type[itype]==CONDIF_RADIATION_EDGE_NORMAL ) {
                     heat_flux = alpha * weight[inol_side] * area_size *
                       (scalar_power(env_temp,4)-scalar_power(temp,4));
                     if ( swit ) pri( "heat_flux", heat_flux );
-                    heat_flux_stiffness = alpha * weight[inol_side] * area_size * 
+                    heat_flux_stiffness = alpha * weight[inol_side] * area_size *
                       4.*scalar_power(temp,3);
                     if ( swit ) pri( "heat_flux_stiffness", heat_flux_stiffness );
                   }
                   else {
-                    assert( type[itype]==CONDIF_CONVECTION );
                     heat_flux = alpha * weight[inol_side] * area_size * (env_temp-temp);
                     heat_flux_stiffness = alpha * weight[inol_side] * area_size;
                   }
@@ -541,7 +619,7 @@ void area( long int element, long int name,
                   indx = inol*npuknwn + temp_indx/nder;
                   element_lhside[indx] += heat_flux_stiffness;
                   element_matrix[indx*nnol*npuknwn+indx] += heat_flux_stiffness;
-                  element_rhside[inol*npuknwn+temp_indx/nder] += 
+                  element_rhside[inol*npuknwn+temp_indx/nder] +=
                     heat_flux;
                 }
                 else if ( type[itype]==FORCE_ELEMENT_EDGE ) {

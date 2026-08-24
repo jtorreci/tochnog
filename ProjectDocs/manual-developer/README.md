@@ -149,6 +149,7 @@ Each file corresponds to the same feature in the [User Manual](../manual-user/).
 
 - [condif_heat_edge_normal](condif_heat_edge_normal.md) — shared edge-normal machinery in area.cc (MTYPES 7, flux_edge_companion helper; temp_indx target).
 - [condif_heat_volume](condif_heat_volume.md) — volume source block in condif.cc (coord_ip signature extension; user_condif_heat_volume stub in user.cc).
+- [condif_convection_radiation_edge_normal](condif_convection_radiation_edge_normal.md) — Professional masters as area.cc types 7/8 (MTYPES 9, conv_rad_companion helper; quad4 Z-node border gotcha documented).
 
 ## Cross-cutting notes
 
