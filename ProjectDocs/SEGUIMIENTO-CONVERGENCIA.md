@@ -104,6 +104,8 @@ suite sfnet, o un test propio. El registro completo:
 
 **P6 — familia `control_data_*` (activate, arithmetic+double, copy+factor, copy_index+factor; manual Professional 6.114-6.120)** | `2051bc6` | 2026-08-24 | bloques nuevos en `data()` (disparan en cada step_close cuyo ICONTROL casa): `_arithmetic` cambia un record con el valor de `_double` vía -plus/-minus/-multiply/-divide (índice simple o rango -ra, número simple o -all; ints rechazados; división por 0 rechazada; switches PLUS/MINUS/DIVIDE nuevos con nombres registrados); `_copy` copia TODOS los índices from→to con factor opcional (helper data_copy_apply: int requiere factor 1, double multiplica; el caso d'alembert node_inertia→node_force -1 queda cubierto); `_copy_index` copia un índice concreto con `_factor`; `_activate` -no BORRA todos los records de los items listados (db_delete_index; los consumidores los saltan) y -yes es no-op (desactivación destructiva, diferencia GNU documentada). `control_data_save` DESCARTADO (solo consumidor: control_print_gid_save_difference, familia GiD descartada; equivalente en post-proceso SQLite/CSV). GOTCHA crítico descubierto calibrando: `control_timestep i dt incremento` — el 2º número es la DURACIÓN del bloque, no el tiempo final (`0.1 0.2` desde t=0.1 = 2 pasos hasta 0.3; un record por paso dispara 2 veces). Validado con `cda_arith` (young 1000 → ×2 → +500-all → 2500 exacto por target genérico), `cda_copy` (copy_index ×2 → 2000; copy todos ×0.5 → 500/1000 exactos) y `cda_activate` (columna traccionada disy~0.01 → bounda_force borrado → relaja a 0±0.004 en cuasiestático). Suite 67/67. |
 
+**P6 — familia `control_distribute_*` completa (manual Professional 6.127-6.132; P6 CERRADO)** | `c7d4002` | 2026-08-24 | layout Professional añadido a `distribute()` (distri.cc): record de 4 slots `[-normal/-lognormal, item, index|-all, number]` discriminado del legacy GNU (triplets + `_values`, que se conserva intacto — ho_othr4 sigue verde). `_parameters` da mean/std del VALOR (lognormal vía mu_ln/sigma_ln = ln(1+(s/m)²)); `_seed` reinicializa el ran1 de Numerical Recipes (idum negativo) → campos reproducibles; `_correlation_length` (1..ndim valores por dirección; >1e12 = campo constante) con kernel exponencial `v_i = Σ w_ij z_j / √Σw_ij²`, w=exp(-d_eff), distancia de correlación por defecto 4·L (`_correlation_distance` la sobreescribe); `_minimum_maximum` clampa el draw. Aplicación: group_* → delta = draw − record en `ELEMENT_DISTRIBUTE_VALUES` (el `+=` de get_group_data da el valor exacto; filtrado por ELEMENT_GROUP del index o `-all`); node-like → REPLACE del slot (ejemplos del manual: temperaturas nodales, coordenada y). Dispara por PASO en step_start (como el GNU). Validado con `cdist_normal` (deltas calibrados exactos +35.4136/−21.3726 con seed 7: draws distintos y reproducibles), `cdist_corr` (correlation_length 2e12 → ambos deltas IGUALES 35.4136 pese a 25 unidades de distancia) y `cdist_clamp` (std 1e6 + min/max 995/1005 → deltas exactamente ±5). Suite 70/70. **P6 COMPLETO**: todas las familias del bloque cerradas (groundflow, contacto, change, control_data, control_distribute). |
+
 Nota: las features marcadas solo "GNU" en el detalle por familia (sin
 fila en esta tabla) ya existían en el fork sfnet 2014 y no fueron
 implementadas por nosotros.
@@ -411,14 +413,14 @@ marcado `PENDIENTE` puede estar cubierto en el GNU bajo otro nombre:
 
 - [ ] `control_dependency_apply` — PENDIENTE
 
-### control_distribute (1/6)
+### control_distribute (6/6)
 
-- [x] `control_distribute` — presente en el GNU
-- [ ] `control_distribute_correlation_distance` — PENDIENTE
-- [ ] `control_distribute_correlation_length` — PENDIENTE
-- [ ] `control_distribute_minimum_maximum` — PENDIENTE
-- [ ] `control_distribute_parameters` — PENDIENTE
-- [ ] `control_distribute_seed` — PENDIENTE
+- [x] `control_distribute` — presente en el GNU; layout Professional 6.127 añadido (2026-08-24)
+- [x] `control_distribute_correlation_distance` — P6 (2026-08-24)
+- [x] `control_distribute_correlation_length` — P6 (2026-08-24)
+- [x] `control_distribute_minimum_maximum` — P6 (2026-08-24)
+- [x] `control_distribute_parameters` — P6 (2026-08-24)
+- [x] `control_distribute_seed` — P6 (2026-08-24)
 
 ### control_element (0/2)
 

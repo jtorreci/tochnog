@@ -573,7 +573,17 @@ Añadir magnitudes NO altera `primary` (tablas separadas por familia; JOIN por
       (penalty detiene bloque: disy≈-0.003), contact_ctrl_apply (-no:
       caída libre exacta -0.055) y contact_heatgen (térmico, nombre nuevo);
       valor fluye: friction_energy escala exacto con el factor. Suite 62/62).
-- [ ] `control_distribute*`.
+- [x] `control_distribute*`. **HECHO 2026-08-24 — P6 CERRADO**:
+      layout Professional (4 slots, -normal/-lognormal) en distri.cc junto
+      al legacy GNU (triplets, ho_othr4 intacto). _parameters mean/std del
+      valor (lognormal via mu_ln/sigma_ln), _seed reproducible (ran1 idum
+      negativo), _correlation_length por direccion (>1e12 campo constante,
+      kernel exponencial normalizado a varianza 1, _correlation_distance
+      default 4L), _minimum_maximum clamp. group_* -> delta por elemento en
+      ELEMENT_DISTRIBUTE_VALUES (+= de get_group_data da el draw exacto);
+      node-like -> replace. Tests cdist_normal/corr/clamp con targets
+      calibrados exactos. Suite 70/70. Bloque P6 completo: groundflow,
+      contacto, change, control_data, control_distribute.
       (`control_data_*` HECHO 2026-08-24: activate (borrado destructivo de
       records), arithmetic+double (-plus/-minus/-multiply/-divide, -ra, -all),
       copy+factor y copy_index+factor (helper data_copy_apply; d'alembert
