@@ -70,6 +70,12 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   strcpy(name[ADD],"add" );
   strcpy(name[MULTIPLY],"multiply" );
 
+  strcpy(name[DIVIDE],"divide" );
+
+  strcpy(name[MINUS],"minus" );
+
+  strcpy(name[PLUS],"plus" );
+
   strcpy(name[ADD_ALWAYS],"add_always" );
 
   strcpy(name[ALL],"all" );
@@ -550,6 +556,46 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   type[CONTROL_CRACK] = INTEGER;
   data_length[CONTROL_CRACK] = 1;
   data_class[CONTROL_CRACK] = CONTROL;     
+
+  strcpy(name[CONTROL_DATA_ACTIVATE],"control_data_activate");
+  type[CONTROL_DATA_ACTIVATE] = INTEGER;
+  data_length[CONTROL_DATA_ACTIVATE] = DATA_ITEM_SIZE;
+  fixed_length[CONTROL_DATA_ACTIVATE] = 0;
+  data_class[CONTROL_DATA_ACTIVATE] = CONTROL;
+
+  strcpy(name[CONTROL_DATA_ARITHMETIC],"control_data_arithmetic");
+  type[CONTROL_DATA_ARITHMETIC] = INTEGER;
+  data_length[CONTROL_DATA_ARITHMETIC] = DATA_ITEM_SIZE;
+  fixed_length[CONTROL_DATA_ARITHMETIC] = 0;
+  data_class[CONTROL_DATA_ARITHMETIC] = CONTROL;
+
+  strcpy(name[CONTROL_DATA_ARITHMETIC_DOUBLE],"control_data_arithmetic_double");
+  type[CONTROL_DATA_ARITHMETIC_DOUBLE] = DOUBLE_PRECISION;
+  data_length[CONTROL_DATA_ARITHMETIC_DOUBLE] = 1;
+  data_class[CONTROL_DATA_ARITHMETIC_DOUBLE] = CONTROL;
+  data_required[CONTROL_DATA_ARITHMETIC_DOUBLE] = CONTROL_DATA_ARITHMETIC;
+
+  strcpy(name[CONTROL_DATA_COPY],"control_data_copy");
+  type[CONTROL_DATA_COPY] = INTEGER;
+  data_length[CONTROL_DATA_COPY] = 2;
+  data_class[CONTROL_DATA_COPY] = CONTROL;
+
+  strcpy(name[CONTROL_DATA_COPY_FACTOR],"control_data_copy_factor");
+  type[CONTROL_DATA_COPY_FACTOR] = DOUBLE_PRECISION;
+  data_length[CONTROL_DATA_COPY_FACTOR] = 1;
+  data_class[CONTROL_DATA_COPY_FACTOR] = CONTROL;
+  data_required[CONTROL_DATA_COPY_FACTOR] = CONTROL_DATA_COPY;
+
+  strcpy(name[CONTROL_DATA_COPY_INDEX],"control_data_copy_index");
+  type[CONTROL_DATA_COPY_INDEX] = INTEGER;
+  data_length[CONTROL_DATA_COPY_INDEX] = 4;
+  data_class[CONTROL_DATA_COPY_INDEX] = CONTROL;
+
+  strcpy(name[CONTROL_DATA_COPY_INDEX_FACTOR],"control_data_copy_index_factor");
+  type[CONTROL_DATA_COPY_INDEX_FACTOR] = DOUBLE_PRECISION;
+  data_length[CONTROL_DATA_COPY_INDEX_FACTOR] = 1;
+  data_class[CONTROL_DATA_COPY_INDEX_FACTOR] = CONTROL;
+  data_required[CONTROL_DATA_COPY_INDEX_FACTOR] = CONTROL_DATA_COPY_INDEX;
 
   strcpy(name[CONTROL_DATA_DELETE],"control_data_delete");
   type[CONTROL_DATA_DELETE] = INTEGER;

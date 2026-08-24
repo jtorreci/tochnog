@@ -22,6 +22,43 @@
 
 #define EPS_TIME 1.e-12
 
+// helper for control_data_copy / control_data_copy_index (manual
+// Professional 6.117/6.119): copy one record index from idat_from to
+// idat_to with an optional multiplication factor. Integer copies require
+// factor 1; the manual's special node_inertia -> node_force case is a
+// double copy with factor -1 (d'alembert), which this covers naturally.
+static void data_copy_apply( long int idat_from, long int index_from,
+  long int idat_to, long int index_to, double factor,
+  long int idat_control, long int icontrol )
+{
+  long int ldum=0, idum[1], length_from=0, i=0;
+  double ddum[1], *dval_copy=NULL;
+  long int *ival_copy=NULL;
+
+  ival_copy = get_new_int(DATA_ITEM_SIZE);
+  dval_copy = get_new_dbl(DATA_ITEM_SIZE);
+
+  length_from = db_len( idat_from, index_from, VERSION_NORMAL );
+  if ( db_type(idat_from)==INTEGER && db_type(idat_to)==INTEGER ) {
+    if ( scalar_dabs(factor-1.)>TINY ) db_error( idat_control, icontrol );
+    db( idat_from, index_from, ival_copy, ddum, length_from,
+      VERSION_NORMAL, GET );
+    db( idat_to, index_to, ival_copy, ddum, length_from,
+      VERSION_NORMAL, PUT );
+  }
+  else if ( db_type(idat_from)==DOUBLE_PRECISION &&
+            db_type(idat_to)==DOUBLE_PRECISION ) {
+    db( idat_from, index_from, idum, dval_copy, length_from,
+      VERSION_NORMAL, GET );
+    if ( scalar_dabs(factor-1.)>TINY )
+      for ( i=0; i<length_from; i++ ) dval_copy[i] *= factor;
+    db( idat_to, index_to, idum, dval_copy, length_from,
+      VERSION_NORMAL, PUT );
+  }
+  else
+    db_error( idat_control, icontrol );
+}
+
 void data( long int task, double dtime, double time_current )
 
 {
@@ -283,8 +320,133 @@ void data( long int task, double dtime, double time_current )
       db_error( CONTROL_DATA_PUT, icontrol );
   }
 
-  if ( db_active_index( CONTROL_DATA_INITELDOF_GEOMETRY, icontrol, VERSION_NORMAL )  ) {
+  // control_data_activate (manual Professional 6.114): activate/deactivate
+  // data items. -no deletes all records of the listed items (the records
+  // stop being used by the solvers); -yes is a no-op: input records are
+  // active by default, and the GNU deletion is destructive, so
+  // re-activation would require re-putting the records (documented
+  // difference with Professional).
+  if ( db_active_index( CONTROL_DATA_ACTIVATE, icontrol, VERSION_NORMAL ) ) {
+    long int *data_activate=NULL, activate_switch=0, idat_activate=0,
+      max_activate=0;
+    data_activate = db_int( CONTROL_DATA_ACTIVATE, icontrol, VERSION_NORMAL );
+    length = db_len( CONTROL_DATA_ACTIVATE, icontrol, VERSION_NORMAL );
+    activate_switch = data_activate[length-1];
+    for ( in=0; in<length-1; in++ ) {
+      idat_activate = data_activate[in];
+      if ( idat_activate>=0 )
+        db_error( CONTROL_DATA_ACTIVATE, icontrol );
+      if ( activate_switch==-NO ) {
+        db_max_index( idat_activate, max_activate, VERSION_NORMAL, GET );
+        for ( index=0; index<=max_activate; index++ )
+          if ( db_active_index( idat_activate, index, VERSION_NORMAL ) )
+            db_delete_index( idat_activate, index, VERSION_NORMAL );
+      }
+    }
+  }
 
+  // control_data_arithmetic (manual Professional 6.115/6.116): change the
+  // selected data item with the value of control_data_arithmetic_double
+  // (same index) using -plus/-minus/-multiply/-divide. Record layout:
+  //   [ item, index | -RA range..., number | -ALL, operat ]
+  // number and operat are the LAST two slots; -ALL applies the operation
+  // to all numbers of the record.
+  if ( db_active_index( CONTROL_DATA_ARITHMETIC, icontrol, VERSION_NORMAL ) ) {
+    long int *data_arith=NULL, arith_operat=0, arith_number=0, idat_arith=0,
+      iindx=0, length_record=0, number_indx=0, *arith_doflabel=NULL;
+    double arith_val=0.;
+    db( CONTROL_DATA_ARITHMETIC_DOUBLE, icontrol, idum, &arith_val, ldum,
+      VERSION_NORMAL, GET );
+    data_arith = db_int( CONTROL_DATA_ARITHMETIC, icontrol, VERSION_NORMAL );
+    length = db_len( CONTROL_DATA_ARITHMETIC, icontrol, VERSION_NORMAL );
+    idat_arith = data_arith[0];
+    arith_number = data_arith[length-2];
+    arith_operat = data_arith[length-1];
+    if ( idat_arith>=0 || db_type(idat_arith)==INTEGER )
+      db_error( CONTROL_DATA_ARITHMETIC, icontrol );
+    if ( arith_operat==-DIVIDE && scalar_dabs(arith_val)<TINY )
+      db_error( CONTROL_DATA_ARITHMETIC, icontrol );
+    if ( data_arith[1]==-RA )
+      range_expand( &data_arith[1], integer_range, length, range_length );
+    else {
+      integer_range[0] = data_arith[1];
+      range_length = 1;
+    }
+    arith_doflabel = get_new_int(MUKNWN);
+    for ( iindx=0; iindx<range_length; iindx++ ) {
+      index = integer_range[iindx];
+      if ( db_active_index( idat_arith, index, VERSION_NORMAL ) ) {
+        length_record = db_len( idat_arith, index, VERSION_NORMAL );
+        db( idat_arith, index, idum, dval, ldum, VERSION_NORMAL, GET );
+        if ( arith_number==-ALL ) {
+          for ( in=0; in<length_record; in++ ) {
+            if      ( arith_operat==-PLUS )    dval[in] += arith_val;
+            else if ( arith_operat==-MINUS )   dval[in] -= arith_val;
+            else if ( arith_operat==-MULTIPLY ) dval[in] *= arith_val;
+            else if ( arith_operat==-DIVIDE )  dval[in] /= arith_val;
+          }
+        }
+        else {
+          number_indx = arith_number;
+          if ( number_indx<0 ) {
+            db( DOF_LABEL, 0, arith_doflabel, ddum, ldum,
+              VERSION_NORMAL, GET );
+            array_member( arith_doflabel, number_indx, nuknwn, number_indx );
+            if ( length_record==npuknwn ) number_indx /= nder;
+          }
+          if ( number_indx<0 || number_indx>length_record-1 )
+            db_error( CONTROL_DATA_ARITHMETIC, icontrol );
+          if      ( arith_operat==-PLUS )    dval[number_indx] += arith_val;
+          else if ( arith_operat==-MINUS )   dval[number_indx] -= arith_val;
+          else if ( arith_operat==-MULTIPLY ) dval[number_indx] *= arith_val;
+          else if ( arith_operat==-DIVIDE )  dval[number_indx] /= arith_val;
+          else
+            db_error( CONTROL_DATA_ARITHMETIC, icontrol );
+        }
+        db( idat_arith, index, idum, dval, length_record,
+          VERSION_NORMAL, PUT );
+      }
+    }
+  }
+
+  // control_data_copy (manual Professional 6.117): copy ALL indices of
+  // data_item_from to data_item_to, with optional multiplication factor
+  // from control_data_copy_factor (same index).
+  if ( db_active_index( CONTROL_DATA_COPY, icontrol, VERSION_NORMAL ) ) {
+    long int *data_copy=NULL, idat_from=0, idat_to=0, max_copy=0;
+    double copy_factor=1.;
+    db( CONTROL_DATA_COPY_FACTOR, icontrol, idum, &copy_factor, ldum,
+      VERSION_NORMAL, GET_IF_EXISTS );
+    data_copy = db_int( CONTROL_DATA_COPY, icontrol, VERSION_NORMAL );
+    idat_from = data_copy[0];
+    idat_to = data_copy[1];
+    if ( idat_from>=0 || idat_to>=0 ) db_error( CONTROL_DATA_COPY, icontrol );
+    db_max_index( idat_from, max_copy, VERSION_NORMAL, GET );
+    for ( index=0; index<=max_copy; index++ )
+      if ( db_active_index( idat_from, index, VERSION_NORMAL ) )
+        data_copy_apply( idat_from, index, idat_to, index, copy_factor,
+          CONTROL_DATA_COPY, icontrol );
+  }
+
+  // control_data_copy_index (manual Professional 6.119): copy a single
+  // record index_from of data_item_from to index_to of data_item_to, with
+  // optional multiplication factor from control_data_copy_index_factor.
+  if ( db_active_index( CONTROL_DATA_COPY_INDEX, icontrol, VERSION_NORMAL ) ) {
+    long int *data_copy=NULL, idat_from=0, idat_to=0;
+    double copy_factor=1.;
+    db( CONTROL_DATA_COPY_INDEX_FACTOR, icontrol, idum, &copy_factor, ldum,
+      VERSION_NORMAL, GET_IF_EXISTS );
+    data_copy = db_int( CONTROL_DATA_COPY_INDEX, icontrol, VERSION_NORMAL );
+    idat_from = data_copy[0];
+    idat_to = data_copy[2];
+    if ( idat_from>=0 || idat_to>=0 )
+      db_error( CONTROL_DATA_COPY_INDEX, icontrol );
+    if ( db_active_index( idat_from, data_copy[1], VERSION_NORMAL ) )
+      data_copy_apply( idat_from, data_copy[1], idat_to, data_copy[3],
+        copy_factor, CONTROL_DATA_COPY_INDEX, icontrol );
+  }
+
+  if ( db_active_index( CONTROL_DATA_INITELDOF_GEOMETRY, icontrol, VERSION_NORMAL )  ) {
     long int in_geometry=0, max_element=0, *node_in_geometry=NULL,
     	control_data_initeldof_geometry[2], nodes[MNOL], el[MNOL+1], zero=0, one=1,
 	length_nodes = 1+max_node;

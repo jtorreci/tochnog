@@ -135,6 +135,12 @@ Each file corresponds to the same feature in the [User Manual](../manual-user/).
 - [change_dataitem_time_method](change_dataitem_time_method.md) — inverse trig transform of the time value in data.cc (switch enums COSINUS/SINUS/TANGENT).
 - [change_dataitem_geometry](change_dataitem_geometry.md) — group-split materialization in data.cc (clone group_*, move elements fully inside the geometry, redirect the change).
 
+## P6 — control_data family
+
+- [control_data_arithmetic](control_data_arithmetic.md) — arithmetic block in data.cc (switch enums PLUS/MINUS/DIVIDE; fires per step_close; control_timestep 2nd number is DURATION).
+- [control_data_copy](control_data_copy.md) — data_copy_apply helper in data.cc (int requires factor 1, double applies factor; copy + copy_index).
+- [control_data_activate](control_data_activate.md) — destructive de-activation via db_delete_index in data.cc (records gone; -yes no-op).
+
 ## Cross-cutting notes
 
 - Enum consistency: `tochnog.h` and `tochnog-mod.h` must stay in sync.

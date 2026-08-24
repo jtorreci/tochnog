@@ -136,3 +136,10 @@ input parameters it accepts.
 
 - [change_dataitem_time_method](change_dataitem_time_method.md) — store acos/asin/atan of the time-table value (phi-c reduction).
 - [change_dataitem_geometry](change_dataitem_geometry.md) — restrict a group_* change to the elements inside a geometry (group split).
+
+## P6 — control_data family
+
+- [control_data_arithmetic](control_data_arithmetic.md) — arithmetic change of a data item (-plus/-minus/-multiply/-divide, ranges, -all) with control_data_arithmetic_double.
+- [control_data_copy](control_data_copy.md) — copy all indices of a data item with an optional factor (d'alembert node_inertia -> node_force -1).
+- [control_data_copy_index](control_data_copy_index.md) — copy one record index with an optional factor.
+- [control_data_activate](control_data_activate.md) — activate/deactivate data items at a timestep (destructive de-activation).
