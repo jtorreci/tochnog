@@ -300,6 +300,11 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   type[CHANGE_DATAITEM] = INTEGER;
   data_length[CHANGE_DATAITEM] = 4;
 
+  strcpy(name[CHANGE_DATAITEM_GEOMETRY],"change_dataitem_geometry");
+  type[CHANGE_DATAITEM_GEOMETRY] = INTEGER;
+  data_length[CHANGE_DATAITEM_GEOMETRY] = 2;
+  data_required[CHANGE_DATAITEM_GEOMETRY] = CHANGE_DATAITEM;
+
   strcpy(name[CHANGE_DATAITEM_TIME],"change_dataitem_time");
   type[CHANGE_DATAITEM_TIME] = DOUBLE_PRECISION;
   data_length[CHANGE_DATAITEM_TIME] = DATA_ITEM_SIZE;
@@ -310,6 +315,11 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   type[CHANGE_DATAITEM_TIME_DISCRETE] = INTEGER;
   data_length[CHANGE_DATAITEM_TIME_DISCRETE] = 1;
   data_required[CHANGE_DATAITEM_TIME_DISCRETE] = CHANGE_DATAITEM;
+
+  strcpy(name[CHANGE_DATAITEM_TIME_METHOD],"change_dataitem_time_method");
+  type[CHANGE_DATAITEM_TIME_METHOD] = INTEGER;
+  data_length[CHANGE_DATAITEM_TIME_METHOD] = 1;
+  data_required[CHANGE_DATAITEM_TIME_METHOD] = CHANGE_DATAITEM;
 
   strcpy(name[CHANGE_DATAITEM_TIME_USER],"change_dataitem_time_user");
   type[CHANGE_DATAITEM_TIME_USER] = INTEGER;
@@ -430,6 +440,8 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   data_required[CONDIF_RADIATION_GEOMETRY] = CONDIF_RADIATION;
 
   strcpy(name[CONDIF_TEMPERATURE],"condif_temperature");
+
+  strcpy(name[COSINUS],"cosinus");
 
   strcpy(name[CONTACT],"contact");
 
@@ -4717,6 +4729,8 @@ void db_initialize( long int dof_type[], long int dof_label[] )
 
   strcpy(name[SIZETOT],"sizetot");
 
+  strcpy(name[SINUS],"sinus");
+
   strcpy(name[SLES],"sles");
 
   strcpy(name[SLIDE_AXISYMMETRIC],"slide_axisymmetric");
@@ -4801,6 +4815,8 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   data_length[TARGET_VALUE] = 2;
   data_class[TARGET_VALUE] = TARGET;
   data_required[TARGET_VALUE] = TARGET_ITEM;
+
+  strcpy(name[TANGENT],"tangent");
 
   strcpy(name[TCQMR],"tcqmr");
 

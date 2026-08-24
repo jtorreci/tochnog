@@ -33,6 +33,7 @@ void data( long int task, double dtime, double time_current )
     reset_method=-USE,
     data_item_name=0, data_item_index=0, data_item_number=0,
     change_dataitem_time_discrete=-NO, change_dataitem_time_user=0,
+    change_dataitem_time_method=0, change_dataitem_geometry[2]={0,0},
     idum[1], change_dataitem[4], *dof_label=NULL, *integer_range=NULL, 
     *data_delete=NULL, *data_put=NULL, *reset_dof=NULL, *reset_value_dof=NULL;
   double rdum=0., val=0., ddum[MDIM], *change_dataitem_time=NULL, 
@@ -366,6 +367,119 @@ void data( long int task, double dtime, double time_current )
           else {
             found = table_xy( change_dataitem_time, "CHANGE_DATAITEM_TIME",
               length, time_current, val );
+          }
+        }
+        // change_dataitem_time_method (manual Professional 6.51): the time
+        // table contains cosinus, sinus or tangent values; the inverse
+        // trigonometric angle is stored instead of the value itself.
+        // Typically used for phi-c reduction: the table gives tan(phi),
+        // the stored parameter is phi = atan(val), so cohesion and tangent
+        // of the friction angle can be decreased at the same ratio.
+        change_dataitem_time_method = 0;
+        db( CHANGE_DATAITEM_TIME_METHOD, ichange, &change_dataitem_time_method,
+          ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+        if ( found ) {
+          if      ( change_dataitem_time_method==-COSINUS ) val = acos(val);
+          else if ( change_dataitem_time_method==-SINUS )   val = asin(val);
+          else if ( change_dataitem_time_method==-TANGENT ) val = atan(val);
+        }
+
+        // change_dataitem_geometry (manual Professional 6.48): restrict the
+        // change of a group_* record to the elements of the group that are
+        // inside the geometry. Materialized by splitting the group: on the
+        // first application a clone group with identical group records is
+        // created and the elements fully inside the geometry move to it;
+        // the value change is then applied to the clone only, so elements
+        // outside the geometry (and the original group record) keep the old
+        // value. Element internal state (NODE_DOF history) is untouched.
+        if ( db( CHANGE_DATAITEM_GEOMETRY, ichange, change_dataitem_geometry,
+              ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS ) ) {
+          if ( strncmp( db_name(data_item_name), "group_", 6 ) )
+            db_error( CHANGE_DATAITEM_GEOMETRY, ichange );
+          {
+            static long int *clone_map = NULL;
+            static long int clone_map_len = 0;
+            long int idat2=0, ielem2=0, max_element2=0, in_geometry2=0,
+              all_in=0, new_group=0, max_group=0, length_clone=0,
+              el_group2=0, length_nodes2=0, *node_in_geometry2=NULL,
+              *ival_clone=NULL, el2[MNOL+1];
+            double rdum2=0.;
+            if ( found ) {
+              db_max_index( GROUP_TYPE, max_group, VERSION_NORMAL, GET );
+              if ( !clone_map ) {
+                clone_map_len = 2*max_group + 64;
+                clone_map = new long int[clone_map_len];
+                for ( long int k=0; k<clone_map_len; k++ ) clone_map[k] = -1;
+              }
+              if ( data_item_index>=clone_map_len ) {
+                long int new_len = 2*data_item_index + 64, *new_map =
+                  new long int[new_len];
+                for ( long int k=0; k<new_len; k++ )
+                  new_map[k] = ( k<clone_map_len ? clone_map[k] : -1 );
+                delete[] clone_map; clone_map = new_map;
+                clone_map_len = new_len;
+              }
+              new_group = clone_map[data_item_index];
+              if ( new_group<0 ) {
+                new_group = max_group + 1;
+                clone_map[data_item_index] = new_group;
+                // clone all per-group records ("group_*") of the original
+                ival_clone = get_new_int(DATA_ITEM_SIZE);
+                for ( idat2=0; idat2<MDAT; idat2++ ) {
+                  if ( !strncmp(db_name(idat2),"group_",6) &&
+                       db_active_index(idat2, data_item_index,
+                         VERSION_NORMAL) ) {
+                    length_clone = db_len( idat2, data_item_index,
+                      VERSION_NORMAL );
+                    if ( db_type(idat2)==INTEGER ) {
+                      db( idat2, data_item_index, ival_clone, ddum,
+                        length_clone, VERSION_NORMAL, GET );
+                      db( idat2, new_group, ival_clone, ddum,
+                        length_clone, VERSION_NORMAL, PUT );
+                    }
+                    else {
+                      db( idat2, data_item_index, idum, dval,
+                        length_clone, VERSION_NORMAL, GET );
+                      db( idat2, new_group, idum, dval,
+                        length_clone, VERSION_NORMAL, PUT );
+                    }
+                  }
+                }
+                // move the elements fully inside the geometry to the clone
+                node_in_geometry2 = get_new_int( 1+max_node );
+                array_set( node_in_geometry2, 0, 1+max_node );
+                for ( inod=0; inod<=max_node; inod++ ) {
+                  if ( db_active_index( NODE, inod, VERSION_NORMAL ) ) {
+                    geometry( inod, ddum, change_dataitem_geometry,
+                      in_geometry2, rdum2, ddum, rdum2, ddum,
+                      NODE_START_REFINED, CHANGE_DATAITEM_GEOMETRY,
+                      VERSION_NORMAL );
+                    if ( in_geometry2 ) node_in_geometry2[inod] = 1;
+                  }
+                }
+                db_max_index( ELEMENT, max_element2, VERSION_NORMAL, GET );
+                for ( ielem2=0; ielem2<=max_element2; ielem2++ ) {
+                  if ( db_active_index( ELEMENT, ielem2, VERSION_NORMAL ) ) {
+                    el_group2 = -1;
+                    db( ELEMENT_GROUP, ielem2, &el_group2, ddum, ldum,
+                      VERSION_NORMAL, GET_IF_EXISTS );
+                    if ( el_group2==data_item_index ) {
+                      db( ELEMENT, ielem2, el2, ddum, length_nodes2,
+                        VERSION_NORMAL, GET );
+                      all_in = 1;
+                      for ( long int k=1; k<length_nodes2; k++ )
+                        if ( !node_in_geometry2[el2[k]] ) all_in = 0;
+                      if ( all_in )
+                        db( ELEMENT_GROUP, ielem2, &new_group, ddum, ldum,
+                          VERSION_NORMAL, PUT );
+                    }
+                  }
+                }
+                delete[] node_in_geometry2;
+              }
+              // from now on the change applies to the clone group
+              data_item_index = new_group;
+            }
           }
         }
         if ( found && db_active_index( data_item_name, data_item_index, VERSION_NORMAL ) ) {

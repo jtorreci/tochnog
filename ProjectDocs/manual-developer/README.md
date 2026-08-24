@@ -130,6 +130,11 @@ Each file corresponds to the same feature in the [User Manual](../manual-user/).
 - [contact_heat_generation](contact_heat_generation.md) — Professional name of contact_heatgeneration, dual read at the consumption point in contact.cc (no alias PUT: parallel loop).
 - [control_contact_apply](control_contact_apply.md) — per-timestep contact gate in contact.cc parallel_contact (ICONTROL-indexed, any -no wins).
 
+## P6 — change_dataitem family
+
+- [change_dataitem_time_method](change_dataitem_time_method.md) — inverse trig transform of the time value in data.cc (switch enums COSINUS/SINUS/TANGENT).
+- [change_dataitem_geometry](change_dataitem_geometry.md) — group-split materialization in data.cc (clone group_*, move elements fully inside the geometry, redirect the change).
+
 ## Cross-cutting notes
 
 - Enum consistency: `tochnog.h` and `tochnog-mod.h` must stay in sync.

@@ -131,3 +131,8 @@ input parameters it accepts.
 
 - [contact_heat_generation](contact_heat_generation.md) — fraction of frictional loss injected as heat on the temperature dofs (Professional name of contact_heatgeneration).
 - [control_contact_apply](control_contact_apply.md) — per-timestep on/off switch of the contact algorithm.
+
+## P6 — change_dataitem family
+
+- [change_dataitem_time_method](change_dataitem_time_method.md) — store acos/asin/atan of the time-table value (phi-c reduction).
+- [change_dataitem_geometry](change_dataitem_geometry.md) — restrict a group_* change to the elements inside a geometry (group split).
