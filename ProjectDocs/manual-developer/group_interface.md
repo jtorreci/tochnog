@@ -163,3 +163,35 @@ gcc del entorno anterior la basura no mordía — UB latente desde 2026-08-20.
 
 Fix: `array_set(ddum3, 0., 3)` antes de la lectura. Regla general para todo
 el codebase: inicializar SIEMPRE los buffers pasados a GET_IF_EXISTS.
+
+## Sprint 8 additions (2026-08-24)
+
+Three keywords completing the family (manual Professional 6.625/6.630/6.636):
+
+- `group_interface_condif_conductivity`: q = k*(T1-T2) on the temp dofs
+  of the facing node pairs with symmetric tangent — mirrors
+  `group_interface_groundflow_permeability` exactly (interface.cc, right
+  after the groundflow block; guarded by `condif_temperature`).
+- `group_interface_materi_expansion_normal`: eps_th_total =
+  alpha*T_avg (sides averaged) subtracted from the accumulated strain
+  for the gap/tension/Mohr-Coulomb state (`strain_eff`); the INCREMENT
+  d(alpha*T) is subtracted from du_norm so the normal FORCE this step
+  is stiff*(du_norm - d_eps_th) — the same incremental eigenstrain
+  pattern as stress.cc thermal strains. The stored
+  ELEMENT_INTERFACE_STRAIN_NORMAL history stays purely mechanical (no
+  thermal re-counting). Empirical: force per node pair = kn*alpha*T
+  (test shows 2*kn*alpha*T sigxx for the 2-pair quad4).
+- `group_interface_tangential_reference_point` (3D): t1 = perpendicular
+  part of (ref - element centroid), t2 = n x t1; falls back to the
+  default frame when the perpendicular part degenerates. Memory-model
+  consistent (centroid from NODE_START_REFINED with -total_linear).
+
+Also fixed the checklist: `group_interface_ground` never existed
+(artifact); `_materi_memory` was already done (643865b);
+`_elasti_sti`/`_residual_sti` are OCR truncations of `_stiffness`.
+
+GOTCHA (bit me): ANY enum insertion in tochnog.h requires a FULL CLEAN
+BUILD — incremental .o mixing old/new enum numbering corrupts the binary
+with phantom check errors ("at least one of materi_velocity_integrated
+or materi_displacement..." from mismatched ids). This is the documented
+AGENTS.md build rule; now verified the hard way.

@@ -159,3 +159,9 @@ input parameters it accepts.
 
 - [area_element_group](area_element_group.md) — element group assignment by geometry/node selection with -all/-any/-any_but_not_all/N methods, element-name filter, interface exclusion and per-time re-evaluation; sequence subfamily changes groups in time (Professional alias element_group).
 - [bounda_time_factor](bounda_time_factor.md) — multiplication factor for the load values of a bounda_time table.
+
+## Sprint 8 — interface family completion
+
+- [group_interface_condif_conductivity](group_interface_condif_conductivity.md) — heat flow through the interface q=k*(T1-T2) (thermal analog of the groundflow permeability).
+- [group_interface_materi_expansion_normal](group_interface_materi_expansion_normal.md) — thermal expansion in thickness direction (eigenstrain on the normal force; mechanical strain for gap/MC).
+- [group_interface_tangential_reference_point](group_interface_tangential_reference_point.md) — reference point defining the first tangential direction of 3D interfaces.

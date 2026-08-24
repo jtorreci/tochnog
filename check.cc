@@ -112,8 +112,11 @@ long int check( long int idat, long int task )
     ok = check_ndim( 2, 3, task );
     ok = ok && check_unknown( "condif_temperature", YES, task );
   }
-  if ( data_number==CONDIF_HEAT_EDGE_NORMAL ||
-       data_number==CONDIF_HEAT_EDGE_NORMAL_ELEMENT ||
+  if ( data_number==GROUP_INTERFACE_CONDIF_CONDUCTIVITY ||
+       data_number==GROUP_INTERFACE_MATERI_EXPANSION_NORMAL )
+    ok = check_unknown( "condif_temperature", YES, task );
+
+  if ( data_number==CONDIF_HEAT_EDGE_NORMAL ||       data_number==CONDIF_HEAT_EDGE_NORMAL_ELEMENT ||
        data_number==CONDIF_HEAT_EDGE_NORMAL_ELEMENT_GROUP ||
        data_number==CONDIF_HEAT_EDGE_NORMAL_ELEMENT_NODE ||
        data_number==CONDIF_HEAT_EDGE_NORMAL_ELEMENT_NODE_FACTOR ||

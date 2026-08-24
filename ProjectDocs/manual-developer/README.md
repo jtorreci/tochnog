@@ -154,6 +154,7 @@ Each file corresponds to the same feature in the [User Manual](../manual-user/).
 ## Sprint 8 — area_element_group + bounda_time_factor
 
 - [area_element_group](area_element_group.md) — group.cc extension (_node/_element/_method extensions/_interface guards, alias copy BEFORE max_index, time_active hook in top.cc) + bounda_time_factor in bounda.cc; -ra-is-a-range gotcha documented.
+- [group_interface](group_interface.md) — Sprint 8 additions: condif_conductivity, expansion_normal (incremental eigenstrain), tangential_reference_point; clean-build-after-enum-change gotcha verified.
 
 ## Cross-cutting notes
 

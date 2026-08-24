@@ -67,7 +67,7 @@ void interface_element( long int element, long int name,
   double dtime=0., kn=0., kt1=0., kt2=0., tmp=0., ddum[1],
     normal[MDIM], tangent[MDIM], tangent2[MDIM], du[MDIM],
     du_norm=0., du_tang=0., du_tang2=0., stress_normal=0., stress_shear=0.,
-    stress_shear2=0., strain_normal=0., force_norm=0., gap=0., tension_limit=0.,
+    stress_shear2=0., strain_normal=0., strain_eff=0., force_norm=0., gap=0., tension_limit=0.,
     residual_factor=0.01, phi=0., c=0., phi_flow=0., max_fric=0.,
     stiff_normal=0., stiff_tang=0., stiff_tang2=0., ddum3[3],
     f_t_old=0., f_t=0., f_t2_old=0., f_t2=0., trial=0., trial2=0.,
@@ -202,6 +202,39 @@ void interface_element( long int element, long int name,
     tangent2[0] = normal[1]*tangent[2] - normal[2]*tangent[1];
     tangent2[1] = normal[2]*tangent[0] - normal[0]*tangent[2];
     tangent2[2] = normal[0]*tangent[1] - normal[1]*tangent[0];
+
+    // group_interface_tangential_reference_point (manual Professional
+    // 6.636): defines the first tangential direction from a reference
+    // point. t1 = the part of (ref_point - element_centroid)
+    // perpendicular to the normal; t2 = normal x t1. 3D only; falls back
+    // to the geometric tangent if the reference point is on the normal
+    // line through the centroid.
+    if ( db( GROUP_INTERFACE_TANGENTIAL_REFERENCE_POINT, element_group,
+        idum, ddum3, ldum, VERSION_NORMAL, GET_IF_EXISTS ) ) {
+      double centroid[MDIM], vref[MDIM], dotn = 0.;
+      array_set( centroid, 0., MDIM );
+      if ( memory==-TOTAL_LINEAR ) {
+        for ( inol=0; inol<nnol; inol++ ) {
+          double *cn = db_dbl( NODE_START_REFINED, nodes[inol], VERSION_NORMAL );
+          for ( idim=0; idim<3; idim++ ) centroid[idim] += cn[idim]/nnol;
+        }
+      }
+      else {
+        for ( inol=0; inol<nnol; inol++ )
+          for ( idim=0; idim<3; idim++ )
+            centroid[idim] += coord[inol*ndim+idim]/nnol;
+      }
+      for ( idim=0; idim<3; idim++ ) vref[idim] = ddum3[idim] - centroid[idim];
+      for ( idim=0; idim<3; idim++ ) dotn += vref[idim]*normal[idim];
+      for ( idim=0; idim<3; idim++ ) vref[idim] -= dotn*normal[idim];
+      if ( array_size( vref, 3 ) > 1.e-12 ) {
+        for ( idim=0; idim<3; idim++ ) tangent[idim] = vref[idim];
+        array_normalize( tangent, 3 );
+        tangent2[0] = normal[1]*tangent[2] - normal[2]*tangent[1];
+        tangent2[1] = normal[2]*tangent[0] - normal[0]*tangent[2];
+        tangent2[2] = normal[0]*tangent[1] - normal[1]*tangent[0];
+      }
+    }
   }
 
   // velocity difference between the sides (side2 - side1) on the
@@ -241,6 +274,36 @@ void interface_element( long int element, long int name,
     ldum, VERSION_NORMAL, GET_IF_EXISTS );
   strain_normal += du_norm;
 
+  // group_interface_materi_expansion_normal (manual Professional 6.630):
+  // thermal strain expansion in interface thickness direction per unit
+  // temperature; the temperature is the average of both sides. The
+  // MECHANICAL strain seen by gap / tension / Mohr-Coulomb is the
+  // accumulated strain minus the thermal expansion; the stored history
+  // stays purely mechanical (no thermal re-counting per step). Only
+  // meaningful with condif_temperature.
+  strain_eff = strain_normal;
+  if ( condif_temperature ) {
+    double alpha_n = 0., t_side1 = 0., t_side2 = 0.;
+    if ( db( GROUP_INTERFACE_MATERI_EXPANSION_NORMAL, element_group, idum,
+        &alpha_n, ldum, VERSION_NORMAL, GET_IF_EXISTS ) ) {
+      long int ns1 = nnol/2;
+      double t1_old = 0., t2_old = 0.;
+      for ( inol=0; inol<ns1; inol++ ) {
+        t_side1 += new_dof[inol*nuknwn+temp_indx];
+        t_side2 += new_dof[(inol+ns1)*nuknwn+temp_indx];
+        t1_old   += old_dof[inol*nuknwn+temp_indx];
+        t2_old   += old_dof[(inol+ns1)*nuknwn+temp_indx];
+      }
+      t_side1 /= ns1; t_side2 /= ns1; t1_old /= ns1; t2_old /= ns1;
+      // total thermal expansion (for gap / tension / Mohr-Coulomb state)
+      strain_eff = strain_normal - alpha_n * 0.5*(t_side1+t_side2);
+      // incremental thermal expansion acts as a pseudo-load this step:
+      // the normal force increment is stiff*(du_norm - d_alpha*T), the
+      // same incremental pattern as stress.cc thermal strains
+      du_norm -= alpha_n * ( 0.5*(t_side1+t_side2) - 0.5*(t1_old+t2_old) );
+    }
+  }
+
   // accumulated total tangential force (history, VERSION_NORMAL). Default 0:
   // without the Mohr-Coulomb record the interface stays purely elastic
   // (Fase 1 behavior). 3D: two tangential components (tangent and tangent2).
@@ -264,7 +327,7 @@ void interface_element( long int element, long int name,
       VERSION_NORMAL, GET_IF_EXISTS ) )
     gap = -1.e20;
   stiff_normal = kn;
-  if ( strain_normal <= gap ) {
+  if ( strain_eff <= gap ) {
     stiff_normal = kn * residual_factor;
   }
   force_norm = stiff_normal * du_norm;
@@ -272,7 +335,7 @@ void interface_element( long int element, long int name,
   // TOTAL accumulated normal force |Fn_total| = |kn*strain_normal| exceeds
   // the limit, and only if it was still closed (stiff_normal==kn). On
   // opening: residual stiffness and normal force capped at the limit.
-  fn_total = kn * strain_normal;
+  fn_total = kn * strain_eff;
   if ( tension_limit>0. && strain_normal<0. && fabs(fn_total)>tension_limit
       && stiff_normal==kn ) {
     stiff_normal = kn * residual_factor;
@@ -293,7 +356,7 @@ void interface_element( long int element, long int name,
   trial2 = f_t2_old + kt2 * 2. * du_tang2;
   plastified = 0;
   if ( mc_active ) {
-    max_fric = c + kn * strain_normal * tan( phi );
+    max_fric = c + kn * strain_eff * tan( phi );
     if ( max_fric < 0. ) max_fric = 0.;   // D5: floor at 0
     if ( ndim==3 ) {
       // clamp the magnitude of (trial, trial2) at max_fric
@@ -435,7 +498,7 @@ void interface_element( long int element, long int name,
         db( GROUNDFLOW_DENSITY, 0, idum, &dens, ldum, VERSION_NORMAL,
           GET_IF_EXISTS );
         force_gravity_calculate( force_gravity );
-        if ( strain_normal > gitpt[0] && dens>0. ) {
+        if ( strain_eff > gitpt[0] && dens>0. ) {
           for ( inol=0; inol<nnol; inol++ ) {
             long int jndx = inol*npuknwn + pres_indx/nder;
             double static_pres =
@@ -445,6 +508,34 @@ void interface_element( long int element, long int name,
               element_rhside[jndx] += static_pres - pres_n;
           }
         }
+      }
+    }
+  }
+
+  // group_interface_condif_conductivity (manual Professional 6.625): heat
+  // flow through the interface per unit temperature difference between the
+  // facing sides, q = k * (T_side1 - T_side2), assembled on the temperature
+  // dofs of the facing node pairs (thermal analog of
+  // group_interface_groundflow_permeability). k is the conductivity of the
+  // layer simulated by the interface (thermal thickness included), not the
+  // material conductivity.
+  if ( condif_temperature ) {
+    double k_iface = 0.;
+    if ( db( GROUP_INTERFACE_CONDIF_CONDUCTIVITY, element_group, idum,
+        &k_iface, ldum, VERSION_NORMAL, GET_IF_EXISTS ) ) {
+      long int ns1 = nnol/2;
+      for ( inol=0; inol<ns1; inol++ ) {
+        long int jn1 = inol*npuknwn + temp_indx/nder;
+        long int jn2 = (inol+ns1)*npuknwn + temp_indx/nder;
+        double temp1 = new_dof[inol*nuknwn+temp_indx];
+        double temp2 = new_dof[(inol+ns1)*nuknwn+temp_indx];
+        double q = k_iface * ( temp1 - temp2 );
+        element_rhside[jn1] -= q;
+        element_rhside[jn2] += q;
+        element_matrix[jn1*nnol*npuknwn+jn1] += k_iface;
+        element_matrix[jn1*nnol*npuknwn+jn2] -= k_iface;
+        element_matrix[jn2*nnol*npuknwn+jn1] -= k_iface;
+        element_matrix[jn2*nnol*npuknwn+jn2] += k_iface;
       }
     }
   }
