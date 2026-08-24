@@ -117,6 +117,8 @@ suite sfnet, o un test propio. El registro completo:
 **Sprint 8 — familia `node_*`: 7 keywords + FIX preexistente de `node_mass`** | `ff6ff8b` | 2026-08-24 | node_force (fuerza nodal discreta en dof.cc, convención force_point), node_inertia (record calculado m·(a+g) por paso — la fuente del d'alembert documentado en control_data_copy), node_static/dynamic/total_pressure (overrides del post_calcul -static/-dynamic/-total en calcul.cc), node_slide (membresía ADITIVA de slide en slide.cc: geometría O record; la normal sigue viniendo de slide_geometry). node_mesh/node_convection_apply registrados+parseados sin comportamiento (documentado como parciales). FIX PREEXISTENTE: data_length[NODE_MASS]=1 → ndim (node_damping/stiffness usaban ndim; con 1 el parser se atragantaba en 2D/3D — node_mass inutilizable desde los orígenes del GNU). TRES GOTCHAS encadenados cazados con probes de una línea: (1) todo item NODE-class input-eable exige version_all=1 — mesh_has_changed BORRA los records NODE sin versión en cada cambio de malla (el GET_IF_EXISTS jamás disparaba); (2) el PUT de records calculados va en VERSION_NEW — el db_version_copy(NEW→NORMAL) del cierre de paso pisa cualquier escritura en NORMAL; (3) PUT con length=ldum(0) → db_error (length≥1). OCRs aclarados: node_dof_start_re/node_start_re/node_sti = truncados de refined/stiffness. Tests: node_force_inertia (inertia −19.83 ≈ m·g=−20 con node_force −30 activo; ejercicio del fix node_mass 2D), node_pressure (override static 7.5 EXACTO vs −2.0 calculado = A/B) y node_slide (smoke; LIMITACIÓN documentada: slide_axi original TAMBIÉN da rhside 0 — su target ±0.05 pasaba trivial, la verificación física del slide necesita modelo dedicado). Suite 85/85. |
 
 **Sprint 8 — cierre: `control_reset_*` COMPLETA 18/18 (manual Professional 6.351-6.356)** | `e5cceac` | 2026-08-24 | filtros de región/nodo para control_reset_dof: `_geometry` (nodos de elementos completamente dentro), `_node` (elementos con todos sus nodos listados) y `_element_group` (restringe los elementos) — el filtro se calcula UNA vez por record antes de las variantes de valor y se aplica en todos los loops de nodos (array marcador reset_dof_node_filter). Resets de interfaz como records independientes: `_interface` (strain_normal + fuerzas tangenciales a 0) y `_interface_strain` (solo strain_normal; las fuerzas tangenciales quedan como tensiones "recordadas" — nuevos esfuerzos crecen desde ahí vía la rigidez). `_element_dof` registrado pero la rama -yes (solo element_dof, no node_dof) sin cablear (parcial documentado: requiere el almacenamiento por punto de integración). Validado con `creset_geom` (hisv0 0.5→0 SOLO columna izquierda dentro del brick; derecha conserva 0.5; A/B sin filtro FALLA) y `creset_iface` (history strain_normal de la interfaz 0.0 EXACTO tras el reset). Suite 87/87. **SPRINT 8 CERRADO**: area_element_group 13/13, bounda_time_factor, group_interface 13/13 (Carril A completo), node_* 7+fix node_mass, control_reset 18/18 — ~42 keywords, 2 fixes preexistentes (node_mass data_length, alias-copy order), 8 gotchas documentados. |
+**Sprint 9 — lote 1: nombres Professional force_* + variantes de restricción + gates control_materi (~47 keywords)** | `f178849` | 2026-08-24 | **Traducción de prefijo DENTRO de db_number** (database.cc): `force_edge_*`→`force_element_edge_*` y `force_volume_*`→`force_element_volume_*` — clave crítica: el detector de fin-de-valores de records variable-length TAMBIÉN llama db_number; la primera versión (traducir solo en el punto del keyword de input.cc) rompía el parseo ("Problem reading : bounda_time"). Con el fix, los inputs Professional puros arrancan tal cual. **Variantes nuevas** (patrón companion): `_element`/`_element_group`/`_element_side`/`_node`/`_element_node` para las 3 familias edge + `_node_factor` (edge y normal) + `force_edge_water_factor` (nuevo, el GNU no lo tenía) + `_element`/`_element_group` para volume (force.cc). **Gates control_materi**: helper `control_materi_gate_off` (general.cc, ICONTROL-indexado) cableado a 5 features — viscosity (viscosit.cc), damage+failure (damage.cc), plasti_tension (materi_direct_cutoff), plasti_visco (set_stress), updated -no (set_stress, punto canónico de GROUP_MATERI_MEMORY); otros 7 registrados como parciales (sin término subyacente en el GNU). Validado con `fedge_alias` (sintaxis Professional pura: sigxx 5.0), `fedge_restrict` (`_element` que no toca la geometría: disx 0), `fvol_elem` (`_element_group`: 0.5/0.0) y `cmat_gate` (tension_apply -no: lineal −88.4 vs capped ~1, A/B sin gate falla). Suite 91/91. |
+
 
 Nota: las features marcadas solo "GNU" en el detalle por familia (sin
 fila en esta tabla) ya existían en el fork sfnet 2014 y no fueron
@@ -154,7 +156,7 @@ marcado `PENDIENTE` puede estar cubierto en el GNU bajo otro nombre:
 
 | Professional | GNU | Notas |
 |--------------|-----|-------|
-| `force_edge*` | `force_element_edge*` | Fuerzas de borde distribuidas. El GNU usa `force_element_edge`, `force_element_edge_factor`, etc. |
+| `force_edge*` | `force_element_edge*` | Fuerzas de borde distribuidas. El parser traduce el prefijo Professional DENTRO de db_number (Sprint 9): los nombres `force_edge_*` se aceptan directamente. |
 | `condif_convection_edge_normal` (+ `_geometry`) | `condif_convection` (+ `condif_convection_geometry`) | Misma física h·(Tenv−T). Ambos nombres conviven: los Professional son masters types 7/8 de area.cc (con variantes de restricción); los legacy conservan su camino (tests convec1/2, condif8/10). |
 | `condif_radiation_edge_normal` (+ `_geometry`) | `condif_radiation` (+ `condif_radiation_geometry`) | Misma física αr·(Tr⁴−T⁴). Ambos nombres conviven como arriba. |
 | `materi_plasti_maximum_iterations` | `group_materi_plasti_maximum_iterations` | Prefijo `group_` en el GNU. |
@@ -462,23 +464,23 @@ marcado `PENDIENTE` puede estar cubierto en el GNU bajo otro nombre:
 
 - [ ] `control_input` — PENDIENTE
 
-### control_materi (2/15)
+### control_materi (15/15 — familia COMPLETA; 7 parciales documentados)
 
-- [ ] `control_materi_damage_apply` — PENDIENTE
-- [ ] `control_materi_dynamic` — PENDIENTE
-- [ ] `control_materi_elasti_k0` — PENDIENTE
-- [ ] `control_materi_failure_apply` — PENDIENTE
-- [ ] `control_materi_plasti_hardsoil_gammap_initial` — PENDIENTE
+- [x] `control_materi_damage_apply` — Sprint 9 (gate en damage.cc)
+- [x] `control_materi_dynamic` — Sprint 9 (PARCIAL: registrado, sin comportamiento — sin término materi_dynamic claro en el GNU)
+- [x] `control_materi_elasti_k0` — Sprint 9 (PARCIAL: group_materi_elasti_k0 no existe en el GNU)
+- [x] `control_materi_failure_apply` — Sprint 9 (gate junto a damage_apply)
+- [x] `control_materi_plasti_hardsoil_gammap_initial` — Sprint 9 (PARCIAL: hardsoil no existe en el GNU)
 - [x] `control_materi_plasti_hypo_masin_clay_ocr_apply` — presente en el GNU
 - [x] `control_materi_plasti_hypo_masin_ocr_apply` — presente en el GNU
-- [ ] `control_materi_plasti_hypo_niemunis_visco_ocr_apply` — PENDIENTE
-- [ ] `control_materi_plasti_hypo_pressure_dependent_void_ratio` — PENDIENTE
-- [ ] `control_materi_plasti_hypo_substepping` — PENDIENTE
-- [ ] `control_materi_plasti_tension_apply` — PENDIENTE
-- [ ] `control_materi_plasti_visco_apply` — PENDIENTE
-- [ ] `control_materi_undrained_apply` — PENDIENTE
-- [ ] `control_materi_updated_apply` — PENDIENTE
-- [ ] `control_materi_viscosity_apply` — PENDIENTE
+- [x] `control_materi_plasti_hypo_niemunis_visco_ocr_apply` — Sprint 9 (PARCIAL: registrado, sin hook en hypo)
+- [x] `control_materi_plasti_hypo_pressure_dependent_void_ratio` — Sprint 9 (PARCIAL: ídem)
+- [x] `control_materi_plasti_hypo_substepping` — Sprint 9 (PARCIAL: ídem)
+- [x] `control_materi_plasti_tension_apply` — Sprint 9 (gate en stress.cc materi_direct_cutoff; validado con cmat_gate)
+- [x] `control_materi_plasti_visco_apply` — Sprint 9 (gate en set_stress)
+- [x] `control_materi_undrained_apply` — Sprint 9 (PARCIAL: group_materi_undrained_capacity no existe en el GNU)
+- [x] `control_materi_updated_apply` — Sprint 9 (dirección -no cableada en set_stress; la -yes documentada como no cableada)
+- [x] `control_materi_viscosity_apply` — Sprint 9 (gate en viscosit.cc)
 
 ### control_mesh (35/91)
 
