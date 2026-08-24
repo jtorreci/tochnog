@@ -517,6 +517,17 @@ Añadir magnitudes NO altera `primary` (tablas separadas por familia; JOIN por
       `condif_radiation_*` (7) — NOTA: los masters CONDIF_CONVECTION/
       CONDIF_RADIATION ya existen en el GNU con su _geometry (area.cc
       types 0/1): falta registrar las variantes de restriccion.
+- [x] `condif_convection_edge_normal*` + `condif_radiation_edge_normal*`.
+      **HECHO 2026-08-24 (Sprint 7) — BLOQUE CONDIF COMPLETO (34/34)**:
+      nombres Professional de los legacy condif_convection/radiation
+      como masters types 7/8 de area.cc (MTYPES 9, helper conv_rad_
+      companion con 5 variantes de restriccion; legacy intacto).
+      GOTCHA MAYOR: border_nodes_quad4 conecta en convencion Z (1,2
+      abajo / 3,4 arriba mismo orden x), NO ccw — una arista fuera de la
+      tabla nunca dispara silenciosamente; los tests con area() deben
+      usar Z. Tests condif_convec (0.5 analitico), condif_rad (T+T^4=1
+      -> 0.7245 Newton 10 it) y condif_convec_el (_element sin tocar
+      geometria -> T=0 exacto). Suite 76/76.
 - [ ] `force_edge_projected*`, `force_volume*`, `force_gravity_geometry`.
 
 #### P6 — Groundflow, contacto, miscelánea

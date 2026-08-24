@@ -108,6 +108,8 @@ suite sfnet, o un test propio. El registro completo:
 
 **Sprint 7 — familia `condif_heat_*` completa (manual Professional 6.72-6.91; 20 keywords)** | `8ae0feb` | 2026-08-24 | **edge_normal (11 kw)**: maquinaria COMPARTIDA con groundflow_flux_edge en area.cc — MTYPES 6→7, type[6]=CONDIF_HEAT_EDGE_NORMAL + _GEOMETRY; los 3 bloques groundflow-específicos (restricciones element/group/side, carga sine/time, aplicación nodal con factor y restricciones por nodo) generalizados con helpers estáticos `flux_edge_is_master`/`flux_edge_companion` que mapean cada master a sus 9 companions; el dof objetivo es `temp_indx` (heat) vs `pres_indx` (groundflow). Comportamiento groundflow bit-idéntico (groundflow_flux_edge verde). **volume (9 kw)**: bloque nuevo en condif() (condif.cc) — restricciones `_element`/`_element_group` (array_member) y `_geometry` (todos los nodos del elemento en la geometría), valor del record o de `user_condif_heat_volume` con `_user -yes` (stub en user.cc, patrón user_viscosity), carga `_sine`/`_time` (force_time), `_factor` polinomio espacial en el punto de integración (firma de condif() extendida con coord_ip; call-site elem.cc actualizado); contribución rhs += volume·h_i·S·load·factor. GOTCHA descubierto: `group_condif_flow` en 2D exige 2 valores (vector), 1 solo valor rompe el parser. Validado con `condif_heat_edge` (columna q=0.1 por el borde inferior, k=0.1, T=0 arriba: T fondo **2.0** y medio **1.0** exactos por Fourier), `condif_heat_vol` (barra 1D con `_element` solo elemento 2: T(centro) = **0.25 analítico**; 0.5 calentando ambos — A/B de la restricción) y `condif_heat_vol2` (`_factor 0. 1.` → S(x)=x: T(centro) = **0.5 analítico**). Suite 73/73. |
 
+**Sprint 7 — cierre: `condif_convection_edge_normal*` + `condif_radiation_edge_normal*` (manual Professional 6.65-6.71/6.92-6.98; 14 keywords; BLOQUE CONDIF 34/34 COMPLETO)** | `19757b0` | 2026-08-24 | nombres Professional de los legacy `condif_convection`/`condif_radiation` (misma física h·(Tenv−T) y αr·(Tr⁴−T⁴) con tangente, misma maquinaria area()): masters como tipos 7/8 (MTYPES 7→9) con helper `conv_rad_is_master`/`conv_rad_companion` (5 variantes de restricción: _element/_element_group/_element_side antes del bucle de lados, _node/_element_node en la aplicación); rama de aplicación extendida a los 4 masters (lectura de values desde type[itype]; los legacy conservan su camino exacto — convec1/convec2/condif8/condif10 verdes). `_geometry` dual: entidad O lista de nodos (camino genérico area[0]>0). GOTCHA MAYOR descubierto calibrando: `border_nodes_quad4 = {0,1, 1,3, 3,2, 2,0}` — tochnog conecta el quad4 en convención **Z** (1,2 abajo / 3,4 arriba en el mismo orden x), NO ccw; una "arista" fuera de esa tabla NUNCA dispara silenciosamente (la matriz de conducción sí es correcta con cualquier orden — por eso los tests mecánicos ccw pasan). Los tests con features de area() deben usar la convención Z. Validado con `condif_convec` (T=0.5 analítico exacto), `condif_rad` (no lineal: T+T⁴=1 → 0.7245 con 10 iteraciones Newton) y `condif_convec_el` (`_element` que no toca la geometría → T=0 exacto, A/B de la restricción). Suite 76/76. |
+
 Nota: las features marcadas solo "GNU" en el detalle por familia (sin
 fila en esta tabla) ya existían en el fork sfnet 2014 y no fueron
 implementadas por nosotros.
@@ -145,6 +147,8 @@ marcado `PENDIENTE` puede estar cubierto en el GNU bajo otro nombre:
 | Professional | GNU | Notas |
 |--------------|-----|-------|
 | `force_edge*` | `force_element_edge*` | Fuerzas de borde distribuidas. El GNU usa `force_element_edge`, `force_element_edge_factor`, etc. |
+| `condif_convection_edge_normal` (+ `_geometry`) | `condif_convection` (+ `condif_convection_geometry`) | Misma física h·(Tenv−T). Ambos nombres conviven: los Professional son masters types 7/8 de area.cc (con variantes de restricción); los legacy conservan su camino (tests convec1/2, condif8/10). |
+| `condif_radiation_edge_normal` (+ `_geometry`) | `condif_radiation` (+ `condif_radiation_geometry`) | Misma física αr·(Tr⁴−T⁴). Ambos nombres conviven como arriba. |
 | `materi_plasti_maximum_iterations` | `group_materi_plasti_maximum_iterations` | Prefijo `group_` en el GNU. |
 | `control_mesh_convert` (interfaces) | — | Solo conversión de interfaz; el GNU no tiene elementos de interfaz (Carril A). |
 
@@ -304,15 +308,15 @@ marcado `PENDIENTE` puede estar cubierto en el GNU bajo otro nombre:
 
 - [x] `check_warning` — implementada (commit `5a2b3d2`, 2026-08-04)
 
-### condif_convection (0/7)
+### condif_convection (7/7)
 
-- [ ] `condif_convection_edge_normal` — PENDIENTE
-- [ ] `condif_convection_edge_normal_element` — PENDIENTE
-- [ ] `condif_convection_edge_normal_element_group` — PENDIENTE
-- [ ] `condif_convection_edge_normal_element_node` — PENDIENTE
-- [ ] `condif_convection_edge_normal_element_side` — PENDIENTE
-- [ ] `condif_convection_edge_normal_geometry` — PENDIENTE
-- [ ] `condif_convection_edge_normal_node` — PENDIENTE
+- [x] `condif_convection_edge_normal` — Sprint 7 (2026-08-24; nombre Professional del legacy `condif_convection`)
+- [x] `condif_convection_edge_normal_element` — Sprint 7 (2026-08-24)
+- [x] `condif_convection_edge_normal_element_group` — Sprint 7 (2026-08-24)
+- [x] `condif_convection_edge_normal_element_node` — Sprint 7 (2026-08-24)
+- [x] `condif_convection_edge_normal_element_side` — Sprint 7 (2026-08-24)
+- [x] `condif_convection_edge_normal_geometry` — Sprint 7 (2026-08-24)
+- [x] `condif_convection_edge_normal_node` — Sprint 7 (2026-08-24)
 
 ### condif_heat (20/20)
 
@@ -337,15 +341,15 @@ marcado `PENDIENTE` puede estar cubierto en el GNU bajo otro nombre:
 - [x] `condif_heat_volume_user` — Sprint 7 (2026-08-24)
 - [x] `condif_heat_volume_user_parameters` — Sprint 7 (2026-08-24)
 
-### condif_radiation (0/7)
+### condif_radiation (7/7)
 
-- [ ] `condif_radiation_edge_normal` — PENDIENTE
-- [ ] `condif_radiation_edge_normal_element` — PENDIENTE
-- [ ] `condif_radiation_edge_normal_element_group` — PENDIENTE
-- [ ] `condif_radiation_edge_normal_element_node` — PENDIENTE
-- [ ] `condif_radiation_edge_normal_element_side` — PENDIENTE
-- [ ] `condif_radiation_edge_normal_geometry` — PENDIENTE
-- [ ] `condif_radiation_edge_normal_node` — PENDIENTE
+- [x] `condif_radiation_edge_normal` — Sprint 7 (2026-08-24; nombre Professional del legacy `condif_radiation`)
+- [x] `condif_radiation_edge_normal_element` — Sprint 7 (2026-08-24)
+- [x] `condif_radiation_edge_normal_element_group` — Sprint 7 (2026-08-24)
+- [x] `condif_radiation_edge_normal_element_node` — Sprint 7 (2026-08-24)
+- [x] `condif_radiation_edge_normal_element_side` — Sprint 7 (2026-08-24)
+- [x] `condif_radiation_edge_normal_geometry` — Sprint 7 (2026-08-24)
+- [x] `condif_radiation_edge_normal_node` — Sprint 7 (2026-08-24)
 
 ### condif_temperature (1/1)
 
