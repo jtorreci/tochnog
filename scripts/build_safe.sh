@@ -162,7 +162,14 @@ HIPO_TOTAL=0
 #   indices x0.5): 500/1000 targets exactos; control_data_activate -no
 #   borra los records bounda_force -> columna descargada relaja a disy~0
 #   en cuasiestatico, vs ~0.01 con la fuerza activa).
-for t in hypo1 hypo2 hypo3 hypo4 smooth1 dof1 mlx1 vtk_dof1 gen1 genbeam1          reset1 cda1 cda_arith cda_copy cda_activate cd_method cd_geom \
+# + cdist_normal/corr/clamp (control_distribute layout Professional
+#   [-normal/-lognormal item index|-all number] + _parameters mean/std +
+#   _seed reproducible: deltas por elemento calibrados exactos +35.41/
+#   -21.37, distintos entre elementos; _correlation_length 2e12 = campo
+#   constante: ambos deltas IGUALES 35.41 pese a 25 unidades de distancia;
+#   _minimum_maximum con std 1e6: deltas exactamente +-5 = clamp activo.
+#   Layout GNU (triplets + _values, ho_othr4) intacto).
+for t in hypo1 hypo2 hypo3 hypo4 smooth1 dof1 mlx1 vtk_dof1 gen1 genbeam1          reset1 cda1 cda_arith cda_copy cda_activate cdist_normal cdist_corr cdist_clamp cd_method cd_geom \
          iface_mc iface_mc_1step iface_mc_slip iface_mc_slip_1step iface_mc_tension iface_mc_gap \
          iface_mc_mem iface_mc_dil iface_mc_dil_1step iface_mc_num \
          iface_3d iface_3d_slip iface_conv3d iface_3d_stress iface_3d_order \
@@ -192,5 +199,5 @@ for t in hypo1 hypo2 hypo3 hypo4 smooth1 dof1 mlx1 vtk_dof1 gen1 genbeam1       
     echo "    $t: FALLO (rc=$RC)"
   fi
 done
-echo "==> Resumen: $HIPO_OK/$HIPO_TOTAL runs OK (13 tests: 12 preexistentes + familia iface_mc en 10 runs + familia 3D en 5 runs + familia generate_interface en 6 runs + familia materi_direct en 5 runs + materi_displacement_relative en 2 runs + slide/reset_value en 2 runs + cda_arith/copy/activate en 3 runs + cd_method/cd_geom en 2 runs + gravity/settlement en 4 runs + contact en 1 run + contact_block/ctrl_apply/heatgen en 3 runs + groundflow_consolidate_off en 1 run + groundflow_vangenuchten/groundflow_nonsaturated_off en 2 runs + groundflow_total_pressure_tension/groundflow_interface en 2 runs + groundflow_flux_edge en 1 run + groundflow_phreatic_multiple en 1 run + groundflow_seepage en 1 run + groundflow_pressure_atm/_def en 2 runs + groundflow_total_pressure_limit/_dry en 2 runs)."
+echo "==> Resumen: $HIPO_OK/$HIPO_TOTAL runs OK (13 tests: 12 preexistentes + familia iface_mc en 10 runs + familia 3D en 5 runs + familia generate_interface en 6 runs + familia materi_direct en 5 runs + materi_displacement_relative en 2 runs + slide/reset_value en 2 runs + cda_arith/copy/activate en 3 runs + cdist_normal/corr/clamp en 3 runs + cd_method/cd_geom en 2 runs + gravity/settlement en 4 runs + contact en 1 run + contact_block/ctrl_apply/heatgen en 3 runs + groundflow_consolidate_off en 1 run + groundflow_vangenuchten/groundflow_nonsaturated_off en 2 runs + groundflow_total_pressure_tension/groundflow_interface en 2 runs + groundflow_flux_edge en 1 run + groundflow_phreatic_multiple en 1 run + groundflow_seepage en 1 run + groundflow_pressure_atm/_def en 2 runs + groundflow_total_pressure_limit/_dry en 2 runs)."
 echo "==> Log de compilacion completo en /tmp/tn_build_safe.log"

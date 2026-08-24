@@ -143,3 +143,7 @@ input parameters it accepts.
 - [control_data_copy](control_data_copy.md) — copy all indices of a data item with an optional factor (d'alembert node_inertia -> node_force -1).
 - [control_data_copy_index](control_data_copy_index.md) — copy one record index with an optional factor.
 - [control_data_activate](control_data_activate.md) — activate/deactivate data items at a timestep (destructive de-activation).
+
+## P6 — control_distribute family (random fields)
+
+- [control_distribute](control_distribute.md) — normal/lognormal random fields per element or node, with seed, spatial correlation and min/max clamping.

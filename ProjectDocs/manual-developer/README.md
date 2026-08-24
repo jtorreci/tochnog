@@ -141,6 +141,10 @@ Each file corresponds to the same feature in the [User Manual](../manual-user/).
 - [control_data_copy](control_data_copy.md) — data_copy_apply helper in data.cc (int requires factor 1, double applies factor; copy + copy_index).
 - [control_data_activate](control_data_activate.md) — destructive de-activation via db_delete_index in data.cc (records gone; -yes no-op).
 
+## P6 — control_distribute family (random fields)
+
+- [control_distribute](control_distribute.md) — Professional 4-slot layout in distri.cc (seed/parameters/correlation/min-max; GNU triplet layout kept for ho_othr4).
+
 ## Cross-cutting notes
 
 - Enum consistency: `tochnog.h` and `tochnog-mod.h` must stay in sync.
