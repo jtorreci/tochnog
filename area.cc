@@ -20,7 +20,7 @@
 
 #include "tochnog.h"
 
-#define MTYPES 9
+#define MTYPES 10
 
 // companion items for the convection/radiation edge families
 // (condif_convection_edge_normal / condif_radiation_edge_normal, the
@@ -112,16 +112,24 @@ static long int force_edge_companion( long int master, long int which )
     FORCE_ELEMENT_EDGE_WATER_NODE,
     FORCE_ELEMENT_EDGE_WATER_ELEMENT_NODE,
     -1 };
+  static long int projected[] = {
+    FORCE_ELEMENT_EDGE_PROJECTED_ELEMENT,
+    FORCE_ELEMENT_EDGE_PROJECTED_ELEMENT_GROUP,
+    FORCE_ELEMENT_EDGE_PROJECTED_ELEMENT_SIDE,
+    FORCE_ELEMENT_EDGE_PROJECTED_NODE,
+    FORCE_ELEMENT_EDGE_PROJECTED_ELEMENT_NODE,
+    FORCE_ELEMENT_EDGE_PROJECTED_NODE_FACTOR };
   if ( master==FORCE_ELEMENT_EDGE ) return edge[which];
   if ( master==FORCE_ELEMENT_EDGE_NORMAL ) return normal[which];
   if ( master==FORCE_ELEMENT_EDGE_WATER ) return water[which];
+  if ( master==FORCE_ELEMENT_EDGE_PROJECTED ) return projected[which];
   return -1;
 }
 
 static long int force_edge_is_master( long int item )
 {
   return item==FORCE_ELEMENT_EDGE || item==FORCE_ELEMENT_EDGE_NORMAL ||
-    item==FORCE_ELEMENT_EDGE_WATER;
+    item==FORCE_ELEMENT_EDGE_WATER || item==FORCE_ELEMENT_EDGE_PROJECTED;
 }
 
 static long int border_nodes_tria3[] = {
@@ -214,6 +222,7 @@ void area( long int element, long int name,
   type[6] = CONDIF_HEAT_EDGE_NORMAL;
   type[7] = CONDIF_CONVECTION_EDGE_NORMAL;
   type[8] = CONDIF_RADIATION_EDGE_NORMAL;
+  type[9] = FORCE_ELEMENT_EDGE_PROJECTED;
   type_area[0] = CONDIF_RADIATION_GEOMETRY;
   type_area[1] = CONDIF_CONVECTION_GEOMETRY;
   type_area[2] = FORCE_ELEMENT_EDGE_GEOMETRY;
@@ -223,6 +232,7 @@ void area( long int element, long int name,
   type_area[6] = CONDIF_HEAT_EDGE_NORMAL_GEOMETRY;
   type_area[7] = CONDIF_CONVECTION_EDGE_NORMAL_GEOMETRY;
   type_area[8] = CONDIF_RADIATION_EDGE_NORMAL_GEOMETRY;
+  type_area[9] = FORCE_ELEMENT_EDGE_PROJECTED_GEOMETRY;
   db( DOF_PRINCIPAL, 0, dof_principal, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
 
   db( DTIME, 0, idum, &dtime, ldum, VERSION_NEW, GET_IF_EXISTS );
@@ -437,6 +447,35 @@ void area( long int element, long int name,
               length = db_len( FORCE_ELEMENT_EDGE_WATER_TIME, ind, VERSION_NORMAL );
               force_time( force_element_edge_water_time,
                 "FORCE_ELEMENT_EDGE_WATER_TIME", length, load );
+            }
+            else
+              load = 1.;
+          }
+          else if ( type[itype]==FORCE_ELEMENT_EDGE_PROJECTED ) {
+            if ( db_active_index( FORCE_ELEMENT_EDGE_PROJECTED_SINE,
+                ind, VERSION_NORMAL ) ) {
+              groundflow_flux_edge_normal_sine = db_dbl(
+                FORCE_ELEMENT_EDGE_PROJECTED_SINE, ind, VERSION_NORMAL );
+              nfreq = ( db_len( FORCE_ELEMENT_EDGE_PROJECTED_SINE, ind,
+                VERSION_NORMAL ) - 1 ) / 2;
+              time_start = groundflow_flux_edge_normal_sine[0];
+              load = 0.;
+              if ( time_total>time_start ) {
+                for ( ifreq=0; ifreq<nfreq; ifreq++ ) {
+                  frequency = groundflow_flux_edge_normal_sine[1+ifreq*2+0];
+                  amplitude = groundflow_flux_edge_normal_sine[1+ifreq*2+1];
+                  load += amplitude * sin( 2. * PIRAD * frequency * time_total );
+                }
+              }
+            }
+            else if ( db_active_index( FORCE_ELEMENT_EDGE_PROJECTED_TIME,
+                ind, VERSION_NORMAL ) ) {
+              groundflow_flux_edge_normal_time = db_dbl(
+                FORCE_ELEMENT_EDGE_PROJECTED_TIME, ind, VERSION_NORMAL );
+              length = db_len( FORCE_ELEMENT_EDGE_PROJECTED_TIME, ind,
+                VERSION_NORMAL );
+              force_time( groundflow_flux_edge_normal_time,
+                "FORCE_ELEMENT_EDGE_PROJECTED_TIME", length, load );
             }
             else
               load = 1.;
@@ -819,6 +858,112 @@ void area( long int element, long int name,
                       ipuknwn = vel_indx/nder + idim;
                       tmp = load * weight[inol_side] * area_size *
                         pressure * values[2+idim] * water_factor;
+                      element_rhside[inol*npuknwn+ipuknwn] += tmp;
+                    }
+                  }
+                }
+                else if ( type[itype]==FORCE_ELEMENT_EDGE_PROJECTED ) {
+                  // force_edge_projected (manual Professional 6.478):
+                  // Terzaghi tunnel load. A linear ground stress field
+                  //   ph = ph0 + ph_grad . x   (horizontal, ⊥ tunnel axis)
+                  //   pv = pv0 + pv_grad . x   (vertical, along v_dir)
+                  // is projected on the edge: with the edge outward
+                  // normal n and tangent t,
+                  //   sig_radial     = ph (n.hd)^2 + pv (n.vd)^2
+                  //   sig_tangential = ph (t.hd)(n.hd) + pv (t.vd)(n.vd)
+                  // applied as factor_normal*sig_radial*n +
+                  // factor_tangential*sig_tangential*t (the release load
+                  // pushes the excavation boundary outward into the void).
+                  // hd = tunnel_dir x v_dir (2D: out-of-plane x v_dir).
+                  long int use_it = 1;
+                  double node_factor = 1.;
+                  if ( db_active_index( force_edge_companion(type[itype],3),
+                      ind, VERSION_NORMAL ) ) {
+                    long int nds[DATA_ITEM_SIZE], length_nds=0;
+                    db( force_edge_companion(type[itype],3), ind, nds, ddum,
+                      length_nds, VERSION_NORMAL, GET );
+                    if ( !array_member( nds, inod, length_nds, ldum ) )
+                      use_it = 0;
+                  }
+                  if ( db_active_index( force_edge_companion(type[itype],4),
+                      ind, VERSION_NORMAL ) ) {
+                    long int en[DATA_ITEM_SIZE], length_en=0;
+                    db( force_edge_companion(type[itype],4), ind, en, ddum,
+                      length_en, VERSION_NORMAL, GET );
+                    if ( en[0]!=element || !array_member( &en[1], inol,
+                        length_en-1, ldum ) ) use_it = 0;
+                  }
+                  if ( db_active_index( FORCE_ELEMENT_EDGE_PROJECTED_NODE_FACTOR,
+                      ind, VERSION_NORMAL ) ) {
+                    long int length_nf=0;
+                    double values_nf[DATA_ITEM_SIZE];
+                    db( FORCE_ELEMENT_EDGE_PROJECTED_NODE_FACTOR, ind,
+                      idum, values_nf, length_nf, VERSION_NORMAL, GET );
+                    long int nf_el = (long int)values_nf[0], jnf;
+                    if ( nf_el==element )
+                      for ( jnf=0; jnf+1<length_nf; jnf++ )
+                        if ( jnf==inol ) node_factor = values_nf[jnf+1];
+                  }
+                  if ( !use_it ) continue;
+                  force_factor( FORCE_ELEMENT_EDGE_PROJECTED_FACTOR, ind,
+                    &new_coord[inol*ndim], factor );
+                  {
+                    double pdata[16], ph=0., pv=0., fn=1., ft=0.;
+                    long int idir;
+                    double vd[MDIM], hd[MDIM], tang[MDIM], n2=0., t2=0.;
+                    db( FORCE_ELEMENT_EDGE_PROJECTED, ind, idum, pdata,
+                      ldum, VERSION_NORMAL, GET );
+                    // stress field at the node
+                    if ( ndim==2 ) {
+                      ph = pdata[0] + pdata[1]*new_coord[inol*ndim+0]
+                                   + pdata[2]*new_coord[inol*ndim+1];
+                      pv = pdata[3] + pdata[4]*new_coord[inol*ndim+0]
+                                   + pdata[5]*new_coord[inol*ndim+1];
+                      fn = pdata[6]; ft = pdata[7];
+                      vd[0] = pdata[8]; vd[1] = pdata[9]; vd[2] = 0.;
+                      // 2D: tunnel axis out-of-plane; hd = z_axis x vd
+                      hd[0] = -vd[1]; hd[1] = vd[0]; hd[2] = 0.;
+                    }
+                    else {
+                      ph = pdata[0]  + pdata[1]*new_coord[inol*ndim+0]
+                                    + pdata[2]*new_coord[inol*ndim+1]
+                                    + pdata[3]*new_coord[inol*ndim+2];
+                      pv = pdata[4]  + pdata[5]*new_coord[inol*ndim+0]
+                                    + pdata[6]*new_coord[inol*ndim+1]
+                                    + pdata[7]*new_coord[inol*ndim+2];
+                      fn = pdata[8]; ft = pdata[9];
+                      vd[0] = pdata[10]; vd[1] = pdata[11]; vd[2] = pdata[12];
+                      // hd = tunnel_dir x vd (tunnel pdata[13..15])
+                      hd[0] = pdata[14]*vd[2] - pdata[15]*vd[1];
+                      hd[1] = pdata[15]*vd[0] - pdata[13]*vd[2];
+                      hd[2] = pdata[13]*vd[1] - pdata[14]*vd[0];
+                    }
+                    if ( !array_normalize( vd, 3 ) ) {
+                      vd[0] = 0.; vd[1] = -1.; vd[2] = 0.;
+                    }
+                    if ( !array_normalize( hd, 3 ) ) {
+                      pri( "Error: force_edge_projected tunnel/vertical directions degenerate." );
+                      exit(TN_EXIT_STATUS);
+                    }
+                    // edge tangent from the outward normal (2D rotation)
+                    tang[0] = -normal[1]; tang[1] = normal[0]; tang[2] = 0.;
+                    {
+                      double ndothd=0., ndotvd=0., tdothd=0., tdotvd=0.;
+                      long int kk;
+                      for ( kk=0; kk<3; kk++ ) {
+                        ndothd += hd[kk]*normal[kk];
+                        ndotvd += vd[kk]*normal[kk];
+                        tdothd += hd[kk]*tang[kk];
+                        tdotvd += vd[kk]*tang[kk];
+                      }
+                      n2 = ph*ndothd*ndothd + pv*ndotvd*ndotvd;
+                      t2 = ph*ndothd*tdothd + pv*ndotvd*tdotvd;
+                    }
+                    for ( idim=0; idim<ndim; idim++ ) {
+                      ipuknwn = vel_indx/nder + idim;
+                      tmp = factor * node_factor * load *
+                        weight[inol_side] * area_size *
+                        ( fn * n2 * normal[idim] + ft * t2 * tang[idim] );
                       element_rhside[inol*npuknwn+ipuknwn] += tmp;
                     }
                   }

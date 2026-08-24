@@ -37,3 +37,25 @@ fedge_alias (pure Professional syntax, sigxx 5.0), fedge_restrict
 total_linear), fvol_elem (group restriction: 0.5/0.0), cmat_gate
 (tension cutoff ignored -> linear -88.4 vs capped ~1; A/B fails without
 the gate).
+
+## force_edge_projected (Sprint 9 lote 2)
+
+Master as area.cc type 9 (MTYPES 10) with the full companion set in
+force_edge_companion (incl. _node_factor). The projection: ph/pv from
+the linear field at the NODE coordinates; vd normalized (fallback
+(0,-1,0)); hd = tunnel x vd (2D: (-vd_y, vd_x, 0)); ndothd/ndotvd/
+tdothd/tdotvd explicit inner products (the first draft accumulated
+n2/t2 inside a loop with a dimensionally WRONG scalar — always compute
+t·σ·n as ph(t.hd)(n.hd) + pv(t.vd)(n.vd)). Tangent from the outward
+normal (2D rotation). The load sign follows the force_edge_normal
+convention (positive pushes along +n, i.e. outward into the void).
+
+Test gotcha (bit twice now): quad4 Z-convention — node 3 is TOP-LEFT,
+node 4 TOP-RIGHT. A crossed mesh gives sigxx=0 mysteries and
+"-ra 2 3" velx constrains bottom-right + top-LEFT (crossed). Verified
+with force_edge_normal on the same mesh first (known-good family) to
+separate test bugs from feature bugs.
+
+Verification: fproj_tunnel (sigxx=10 ph exact on the vertical wall,
+sigyy=20 pv on the horizontal wall; 2:1 ratio discriminates the
+projection from a uniform pressure). Suite 92/92.
