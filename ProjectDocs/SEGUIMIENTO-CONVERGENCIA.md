@@ -114,6 +114,8 @@ suite sfnet, o un test propio. El registro completo:
 
 **Sprint 8 — `group_interface_*` COMPLETA 13/13 (Carril A cerrado del todo; manual Professional 6.625/6.630/6.636)** | `7b414fa` | 2026-08-24 | 3 keywords nuevas en interface.cc: `condif_conductivity` (q = k·(T1−T2) en los dofs temp de los pares enfrentados con tangente simétrica — espejo exacto de groundflow_permeability); `materi_expansion_normal` (eps_th total = α·T_media resta al strain acumulado para gap/tracción/MC vía `strain_eff`; el INCREMENTO térmico d(α·T) se resta de du_norm → pseudo-carga incremental, mismo patrón eigenstrain que stress.cc; el history queda puramente mecánico — sin doble conteo por paso); `tangential_reference_point` 3D (t1 = parte perpendicular de (ref − centroide) según el manual, t2 = n×t1; fallback al frame geométrico si degenera; consistente con memory -total_linear). Checklist corregido: `group_interface_ground` NUNCA existió (artefacto), `_materi_memory` ya estaba hecho (643865b), `_elasti_sti`/`_residual_sti` = OCR de stiffness, `tangential_reference_point` faltaba en el checklist. GOTCHA MAYOR re-verificado a la mala: insertar enums en tochnog.h exige BUILD LIMPIO COMPLETO — el binario mixto corrompido daba checks fantasma ("at least one of materi_velocity_integrated..."). Validado con `iface_condif` (bloque aislado llega a T=2.0 SOLO por la interfaz), `iface_expansion` (bloques fijos: sigxx = 1.984 ≈ 2·kn·α·T; 0 exacto sin el record) y `iface_tangref` (ref en +z rota t1: la cortante en y pasa a f_t2 = 10.40 y f_t ≈ −7.6e−07; frame por defecto la pondría en f_t). Suite 82/82. |
 
+**Sprint 8 — familia `node_*`: 7 keywords + FIX preexistente de `node_mass`** | `ff6ff8b` | 2026-08-24 | node_force (fuerza nodal discreta en dof.cc, convención force_point), node_inertia (record calculado m·(a+g) por paso — la fuente del d'alembert documentado en control_data_copy), node_static/dynamic/total_pressure (overrides del post_calcul -static/-dynamic/-total en calcul.cc), node_slide (membresía ADITIVA de slide en slide.cc: geometría O record; la normal sigue viniendo de slide_geometry). node_mesh/node_convection_apply registrados+parseados sin comportamiento (documentado como parciales). FIX PREEXISTENTE: data_length[NODE_MASS]=1 → ndim (node_damping/stiffness usaban ndim; con 1 el parser se atragantaba en 2D/3D — node_mass inutilizable desde los orígenes del GNU). TRES GOTCHAS encadenados cazados con probes de una línea: (1) todo item NODE-class input-eable exige version_all=1 — mesh_has_changed BORRA los records NODE sin versión en cada cambio de malla (el GET_IF_EXISTS jamás disparaba); (2) el PUT de records calculados va en VERSION_NEW — el db_version_copy(NEW→NORMAL) del cierre de paso pisa cualquier escritura en NORMAL; (3) PUT con length=ldum(0) → db_error (length≥1). OCRs aclarados: node_dof_start_re/node_start_re/node_sti = truncados de refined/stiffness. Tests: node_force_inertia (inertia −19.83 ≈ m·g=−20 con node_force −30 activo; ejercicio del fix node_mass 2D), node_pressure (override static 7.5 EXACTO vs −2.0 calculado = A/B) y node_slide (smoke; LIMITACIÓN documentada: slide_axi original TAMBIÉN da rhside 0 — su target ±0.05 pasaba trivial, la verificación física del slide necesita modelo dedicado). Suite 85/85. |
+
 Nota: las features marcadas solo "GNU" en el detalle por familia (sin
 fila en esta tabla) ya existían en el fork sfnet 2014 y no fueron
 implementadas por nosotros.
@@ -1592,31 +1594,31 @@ Nota: `group_interface_ground` del checklist anterior NUNCA existió (artefacto 
 
 - [ ] `mstring` — PENDIENTE
 
-### node (9/23)
+### node (18/23; 3 parciales documentados, 2 print-only pendientes)
 
 - [x] `node` — presente en el GNU
 - [x] `node_boundary` — presente en el GNU
 - [x] `node_bounded` — presente en el GNU
-- [ ] `node_bounded_index` — PENDIENTE
-- [ ] `node_convection_apply` — PENDIENTE
+- [ ] `node_bounded_index` — PENDIENTE (print-only, sin consumidor en el GNU)
+- [ ] `node_convection_apply` — PARCIAL: registrado+parseado, sin comportamiento (requiere cirugía de options_convection por nodo)
 - [x] `node_damping` — presente en el GNU
 - [x] `node_deformed_mesh` — presente en el GNU
 - [x] `node_dof` — presente en el GNU
 - [x] `node_dof_calcul` — presente en el GNU
-- [ ] `node_dof_start_re` — PENDIENTE
-- [ ] `node_dynamic_pressure` — PENDIENTE
-- [ ] `node_force` — PENDIENTE
-- [ ] `node_geometry_present` — PENDIENTE
-- [ ] `node_inertia` — PENDIENTE
-- [x] `node_mass` — presente en el GNU
-- [ ] `node_mesh` — PENDIENTE
+- [x] `node_dof_start_refined` — presente en el GNU (el "node_dof_start_re" del inventario era OCR truncado)
+- [x] `node_dynamic_pressure` — Sprint 8 (2026-08-24; override en calcul.cc)
+- [x] `node_force` — Sprint 8 (2026-08-24; dof.cc)
+- [ ] `node_geometry_present` — PENDIENTE (print-only)
+- [x] `node_inertia` — Sprint 8 (2026-08-24; record calculado m·(a+g), fuente del d'alembert)
+- [x] `node_mass` — presente en el GNU + FIX data_length=1→ndim (Sprint 8: en 2D/3D el parser se atragantaba — inutilizable desde los orígenes)
+- [ ] `node_mesh` — PARCIAL: registrado+parseado, sin consumidor del record `mesh` por nodo en el GNU
 - [x] `node_rhside` — presente en el GNU
-- [ ] `node_slide` — PENDIENTE
-- [ ] `node_start_re` — PENDIENTE
-- [ ] `node_static_pressure` — PENDIENTE
-- [ ] `node_sti` — PENDIENTE
-- [ ] `node_support_edge_normal_plasti_tension_status` — PENDIENTE
-- [ ] `node_total_pressure` — PENDIENTE
+- [x] `node_slide` — Sprint 8 (2026-08-24; membresía aditiva en slide.cc; verificación física pendiente de modelo dedicado — smoke test)
+- [x] `node_start_refined` — presente en el GNU (OCR "node_start_re")
+- [x] `node_static_pressure` — Sprint 8 (2026-08-24; override en calcul.cc)
+- [x] `node_stiffness` — presente en el GNU (OCR "node_sti")
+- [ ] `node_support_edge_normal_plasti_tension_status` — PENDIENTE (requiere support_edge_normal, inexistente)
+- [x] `node_total_pressure` — Sprint 8 (2026-08-24; override en calcul.cc)
 
 ### nonlocal (0/2)
 
