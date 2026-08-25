@@ -104,6 +104,8 @@ Each file corresponds to the same feature in the [User Manual](../manual-user/).
 - [group_materi_plasti_mohr_coul_direct](group_materi_plasti_mohr_coul_direct.md) — direct stress cut-off (materi_direct_cutoff in stress.cc).
 - [group_materi_plasti_mohr_coul_hardening_softening](group_materi_plasti_mohr_coul_hardening_softening.md) — classic MC with linear c/phi hardening-softening vs kappa (plasti.cc plasti_rule block).
 - [group_materi_plasti_cap2](group_materi_plasti_cap2.md) — db_number alias of GROUP_MATERI_PLASTI_CAP (same physics, plasti.cc untouched).
+- [group_materi_plasti_cap1](group_materi_plasti_cap1.md) — cap1 yield/flow block in plasti_rule() (f = q^2/M^2 + p*(p* - p*c)); pc hardening in set_stress() (kappa pattern) + RHS in materi(); initia dof with basename pc.
+- [materi_plasti_cap1_history](materi_plasti_cap1_history.md) — initia: scalar dof pc (basename `pc`), kappa-pattern evolution (general.cc inertia/conv_part, dof.cc clamp >= 0).
 - [group_materi_failure_crunching](group_materi_failure_crunching.md) — name[] fixed to the Professional spelling + db_number alias for the GNU typo (failure.cc; negative-threshold semantics).
 - [group_materi_failure_void_fraction](group_materi_failure_void_fraction.md) — name[] fixed to the Professional spelling + db_number alias for the GNU name (failure.cc; node_dof -from/-to gotcha).
 - [group_materi_elasti_poisson_power](group_materi_elasti_poisson_power.md) — power-law nu block in set_stress() (stress.cc), young_power pattern; ~84% of the analytic fixed point (coupling gotcha).

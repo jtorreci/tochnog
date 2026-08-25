@@ -104,6 +104,8 @@ input parameters it accepts.
 - [group_materi_plasti_mohr_coul_direct](group_materi_plasti_mohr_coul_direct.md) — direct stress cut-off (Mohr-Coulomb / tension) on a plane.
 - [group_materi_plasti_mohr_coul_hardening_softening](group_materi_plasti_mohr_coul_hardening_softening.md) — Mohr-Coulomb classic with linear hardening/softening of c and phi with kappa.
 - [group_materi_plasti_cap2](group_materi_plasti_cap2.md) — Professional name of the cap plasticity (c phi alpha R + epsilonp_v/pb table), alias of the GNU cap.
+- [group_materi_plasti_cap1](group_materi_plasti_cap1.md) — elastoplastic cap for high-pressure compaction of granular materials (phi c M lambda* kappa* K_ref p_ref m); combines with shear plasticity (max-f selection).
+- [materi_plasti_cap1_history](materi_plasti_cap1_history.md) — initia: scalar history dof pc (cap1 hardening) in the node_dof records, initial value via node_dof.
 - [group_materi_failure_crunching](group_materi_failure_crunching.md) — element failure on the compression strain (Professional spelling; GNU typo kept as alias).
 - [group_materi_failure_void_fraction](group_materi_failure_void_fraction.md) — element failure on the void fraction (Professional spelling; GNU name kept as alias).
 - [group_materi_elasti_poisson_power](group_materi_elasti_poisson_power.md) — pressure-dependent power-law Poisson ratio nu = nu0 + nu1*(p/p1)^alpha (nu <= nu2).
