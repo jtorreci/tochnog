@@ -102,6 +102,7 @@ input parameters it accepts.
 - [group_materi_expansion_linear](group_materi_expansion_linear.md) — linear and volumetric thermal expansion.
 - [group_materi_plasti_visco_exponential](group_materi_plasti_visco_exponential.md) — viscoplasticity (exponential / power / always).
 - [group_materi_plasti_mohr_coul_direct](group_materi_plasti_mohr_coul_direct.md) — direct stress cut-off (Mohr-Coulomb / tension) on a plane.
+- [group_materi_plasti_mohr_coul_hardening_softening](group_materi_plasti_mohr_coul_hardening_softening.md) — Mohr-Coulomb classic with linear hardening/softening of c and phi with kappa.
 - [group_materi_plasti_hypo_masin](group_materi_plasti_hypo_masin.md) — Masin clay hypoplasticity (critical state model for fine-grained soils).
 - [group_materi_plasti_sanisand](group_materi_plasti_sanisand.md) — SANISAND (Dafalias & Manzari 2004, sand with fabric effects).
 - [group_materi_plasti_hypo_wolfersdorff](group_materi_plasti_hypo_wolfersdorff.md) — hypoplasticity (wolfersdorff, lowangles, cohesion, intergranular strain, pressure-dependent void ratio).
