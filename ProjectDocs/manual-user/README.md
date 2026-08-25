@@ -106,6 +106,11 @@ input parameters it accepts.
 - [group_materi_plasti_cap2](group_materi_plasti_cap2.md) — Professional name of the cap plasticity (c phi alpha R + epsilonp_v/pb table), alias of the GNU cap.
 - [group_materi_plasti_cap1](group_materi_plasti_cap1.md) — elastoplastic cap for high-pressure compaction of granular materials (phi c M lambda* kappa* K_ref p_ref m); combines with shear plasticity (max-f selection).
 - [materi_plasti_cap1_history](materi_plasti_cap1_history.md) — initia: scalar history dof pc (cap1 hardening) in the node_dof records, initial value via node_dof.
+- [group_materi_elasti_hardsoil](group_materi_elasti_hardsoil.md) — Hardening-Soil elastic power law E = Eref*((sig3 + c*cot(phi))/(sigmaref + c*cot(phi)))^m in the minor principal stress, with E50/nu50 first loading vs Eur/nuur unloading (max |p| history switch).
+- [group_materi_plasti_hardsoil](group_materi_plasti_hardsoil.md) — Hardening-Soil yield f = q/(E50*(1-q/qa)) - 2q/Eur - gamma_p (phi c psi Rf; qa = qf/Rf with qf from Mohr-Coulomb at failure; hardening = kappa).
+- [materi_plasti_hardsoil_history](materi_plasti_hardsoil_history.md) — initia: maximum |p| history dof (shared sph dof) for the hardsoil loading/unloading switch.
+- [materi_strain_plasti_hardsoil](materi_strain_plasti_hardsoil.md) — initia: hardsoil plastic strain tensor in the node_dof records (dedicated dof epphsxx...).
+- [control_materi_plasti_hardsoil_gammap_initial](control_materi_plasti_hardsoil_gammap_initial.md) — -yes creates the extra initial gamma_p so f = 0 at the initial deviatoric stress (element_intpnt_materi_plasti_hardsoil_gammap_initial).
 - [group_materi_failure_crunching](group_materi_failure_crunching.md) — element failure on the compression strain (Professional spelling; GNU typo kept as alias).
 - [group_materi_failure_void_fraction](group_materi_failure_void_fraction.md) — element failure on the void fraction (Professional spelling; GNU name kept as alias).
 - [group_materi_elasti_poisson_power](group_materi_elasti_poisson_power.md) — pressure-dependent power-law Poisson ratio nu = nu0 + nu1*(p/p1)^alpha (nu <= nu2).

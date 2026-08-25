@@ -106,6 +106,11 @@ Each file corresponds to the same feature in the [User Manual](../manual-user/).
 - [group_materi_plasti_cap2](group_materi_plasti_cap2.md) — db_number alias of GROUP_MATERI_PLASTI_CAP (same physics, plasti.cc untouched).
 - [group_materi_plasti_cap1](group_materi_plasti_cap1.md) — cap1 yield/flow block in plasti_rule() (f = q^2/M^2 + p*(p* - p*c)); pc hardening in set_stress() (kappa pattern) + RHS in materi(); initia dof with basename pc.
 - [materi_plasti_cap1_history](materi_plasti_cap1_history.md) — initia: scalar dof pc (basename `pc`), kappa-pattern evolution (general.cc inertia/conv_part, dof.cc clamp >= 0).
+- [group_materi_elasti_hardsoil](group_materi_elasti_hardsoil.md) — Hardening-Soil elastic block in set_stress() (sig3 = largest algebraic eigenvalue = manual's least compressive; E50/Eur switch via the sph max|p| dof; base clamps).
+- [group_materi_plasti_hardsoil](group_materi_plasti_hardsoil.md) — Hardening-Soil yield/flow block in plasti_rule() (f = q/(E50(1-q/qa)) - 2q/Eur - gamma_p; qf from Mohr-Coulomb; gamma_p = kappa + gammap_initial record; numeric gotchas of the small-f return).
+- [materi_plasti_hardsoil_history](materi_plasti_hardsoil_history.md) — initia: shared sph dof (running max |p| in dof.cc), basename `sph`.
+- [materi_strain_plasti_hardsoil](materi_strain_plasti_hardsoil.md) — initia: dedicated plastic-strain dof hsepp (RHS in materi.cc, inertia in general.cc).
+- [control_materi_plasti_hardsoil_gammap_initial](control_materi_plasti_hardsoil_gammap_initial.md) — first-timestep gamma_p_extra (sentinel -1 pre-allocation in top.cc, parallel-loop safe) stored in element_intpnt_materi_plasti_hardsoil_gammap_initial and added to the yield.
 - [group_materi_failure_crunching](group_materi_failure_crunching.md) — name[] fixed to the Professional spelling + db_number alias for the GNU typo (failure.cc; negative-threshold semantics).
 - [group_materi_failure_void_fraction](group_materi_failure_void_fraction.md) — name[] fixed to the Professional spelling + db_number alias for the GNU name (failure.cc; node_dof -from/-to gotcha).
 - [group_materi_elasti_poisson_power](group_materi_elasti_poisson_power.md) — power-law nu block in set_stress() (stress.cc), young_power pattern; ~84% of the analytic fixed point (coupling gotcha).
