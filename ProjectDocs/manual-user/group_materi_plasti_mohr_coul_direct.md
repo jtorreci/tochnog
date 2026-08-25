@@ -81,3 +81,25 @@ the two to define the plane.
   automatic), `materi_direct_visco` (visco relaxation) and
   `materi_direct_wall` (wall values).
 - **Pendiente**: softening via dependency diagrams (`materi_strain_total_shear_kappa`).
+
+## Sprint 10 additions: compression_direct + pressure/coord limits
+
+- `group_materi_plasti_compression_direct index sigy`: principal
+  stresses lower than sigy are cut off (direct cut-off, no plastic
+  strains; manual Professional 6.694). Spectral implementation:
+  sigma = V diag(d) V^T, eigenvalues below sigy pulled up.
+- `group_materi_plasti_compression_direct_visco index tm`: relaxation
+  time; the cut relaxes with factor 1-exp(-dt/tm) (without the record
+  the cut is total).
+- `group_materi_plasti_pressure_limit index pressure_limit`: neglect the
+  DIRECT plasticity laws when the pressure (positive in compression,
+  -tr/3) exceeds the limit — free-surface problems (manual 6.688).
+- `group_materi_plasti_coord_limit index coord_limit`: neglect them when
+  the vertical coordinate exceeds coord_limit (manual 6.689).
+- `group_materi_plasti_heat_generation index factor`: Professional name
+  (with underscores) of the legacy `group_materi_plasti_heatgeneration`
+  (fraction of plastic energy converted to heat; requires
+  condif_temperature).
+
+Tests: mdirect_comp (sigyy -10 capped at -5.0 EXACT), mdirect_gate
+(pressure_limit disables the cap -> elastic -10; A/B fails without it).

@@ -39,6 +39,54 @@ extern "C"
 #define EPS_LAMBDA 1.e-3
 #define EPS_VISCO 3.
 
+// materi_compression_cutoff - group_materi_plasti_compression_direct
+// (+_visco) (manual Professional 6.694/6.695): principal stresses lower
+// than sigy are cut off (direct stress cut-off, no plastic strains).
+// Spectral: sigma = V diag(d) V^T; each eigenvalue d_i < sigy is pulled
+// up towards sigy with the visco factor 1-exp(-dtime/tm) (full cut when
+// no visco record: factor 1).
+void materi_compression_cutoff( long int element, long int gr,
+  double dtime, double new_sig[] )
+
+{
+  long int ldum=0, idum[1], idim=0, jdim=0, kdim=0, nrot=0;
+  double sigy=0., tm=0., factor=1., sig_work[MDIM*MDIM],
+    d[MDIM], v[MDIM*MDIM], ddum[MDIM], plasti_data[DATA_ITEM_SIZE];
+
+  if ( !get_group_data( GROUP_MATERI_PLASTI_COMPRESSION_DIRECT, gr,
+      element, new_sig, plasti_data, ldum, GET_IF_EXISTS ) )
+    return;
+  sigy = plasti_data[0];
+  if ( get_group_data( GROUP_MATERI_PLASTI_COMPRESSION_DIRECT_VISCO, gr,
+      element, new_sig, plasti_data, ldum, GET_IF_EXISTS ) )
+    tm = plasti_data[0];
+  // factor 1 = full cut; with the _visco record the cut relaxes with
+  // 1-exp(-dtime/tm)
+  factor = 1.;
+  if ( get_group_data( GROUP_MATERI_PLASTI_COMPRESSION_DIRECT_VISCO, gr,
+      element, new_sig, plasti_data, ldum, GET_IF_EXISTS ) ) {
+    tm = plasti_data[0];
+    factor = 1. - exp( -dtime / ( (tm>0.) ? tm : 1. ) );
+  }
+
+  array_move( new_sig, sig_work, MDIM*MDIM );
+  matrix_jacobi( sig_work, 3, d, v, &nrot );
+  {
+    long int any_cut = 0, i=0;
+    for ( i=0; i<3; i++ )
+      if ( d[i]<sigy ) { d[i] += factor*(sigy-d[i]); any_cut = 1; }
+    if ( !any_cut ) return;
+  }
+  // sigma = V diag(d) V^T  (V columns are eigenvectors)
+  for ( idim=0; idim<MDIM; idim++ )
+    for ( jdim=0; jdim<MDIM; jdim++ ) {
+      double tmp = 0.;
+      for ( kdim=0; kdim<MDIM; kdim++ )
+        tmp += v[idim*MDIM+kdim] * d[kdim] * v[jdim*MDIM+kdim];
+      new_sig[idim*MDIM+jdim] = tmp;
+    }
+}
+
 // materi_direct_cutoff - group_materi_plasti_mohr_coul_direct(_normal[_
 // automatic]) + group_materi_plasti_tension_direct(_normal[_automatic]).
 //
@@ -851,12 +899,33 @@ void set_stress( long int element, long int gr,
     // direct stress cut-off on a plane (group_materi_plasti_mohr_coul_
     // direct[_normal[_automatic]] / tension_direct[_normal[_automatic]]):
     // applied on the elastic stress BEFORE the plastic-yield test.
-    if ( db_active_index( GROUP_MATERI_PLASTI_MOHR_COUL_DIRECT, gr,
-        VERSION_NORMAL ) ||
-         db_active_index( GROUP_MATERI_PLASTI_TENSION_DIRECT, gr,
-        VERSION_NORMAL ) ) {
-      materi_direct_cutoff( element, gr, plasti_on_boundary, dtime,
-        new_sig, ddsdde, direct_normal );
+    // group_materi_plasti_pressure_limit / _coord_limit (manual
+    // Professional 6.688/6.689): neglect the direct plasticity laws when
+    // the pressure exceeds pressure_limit (free-surface problems; the
+    // pressure is taken positive in compression) or when the vertical
+    // coordinate exceeds coord_limit.
+    {
+      double pressure_now = -(
+        new_sig[0] + new_sig[4] + new_sig[8] ) / 3.;
+      double limit_gate = 0.;
+      long int gate_off = 0;
+      if ( db( GROUP_MATERI_PLASTI_PRESSURE_LIMIT, gr, idum,
+          &limit_gate, ldum, VERSION_NORMAL, GET_IF_EXISTS ) )
+        if ( pressure_now>limit_gate ) gate_off = 1;
+      if ( !gate_off &&
+           db( GROUP_MATERI_PLASTI_COORD_LIMIT, gr, idum,
+          &limit_gate, ldum, VERSION_NORMAL, GET_IF_EXISTS ) )
+        if ( coord_ip[ndim-1]>limit_gate ) gate_off = 1;
+      if ( !gate_off ) {
+        if ( db_active_index( GROUP_MATERI_PLASTI_MOHR_COUL_DIRECT, gr,
+            VERSION_NORMAL ) ||
+             db_active_index( GROUP_MATERI_PLASTI_TENSION_DIRECT, gr,
+            VERSION_NORMAL ) ) {
+          materi_direct_cutoff( element, gr, plasti_on_boundary, dtime,
+            new_sig, ddsdde, direct_normal );
+        }
+        materi_compression_cutoff( element, gr, dtime, new_sig );
+      }
     }
     array_move( new_sig, test_sig, MDIM*MDIM );
     if ( materi_plasti_rho ) 

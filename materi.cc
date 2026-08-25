@@ -157,6 +157,13 @@ void materi( long int element, long int gr, long int nnol,
     &damping, ldum, GET_IF_EXISTS );
   get_group_data( GROUP_MATERI_PLASTI_HEATGENERATION, gr, element,
     new_unknowns, &plasti_heatgeneration, ldum, GET_IF_EXISTS );
+  // group_materi_plasti_heat_generation (manual Professional 6.703):
+  // the Professional name (with underscores) of the legacy GNU keyword
+  // group_materi_plasti_heatgeneration. Dual read at the consumption
+  // point (get_group_data is allocation-free here): the Professional
+  // name wins when both exist.
+  get_group_data( GROUP_MATERI_PLASTI_HEAT_GENERATION, gr, element,
+    new_unknowns, &plasti_heatgeneration, ldum, GET_IF_EXISTS );
   db( GROUP_MATERI_MEMORY, gr, &memory, ddum, ldum,
     VERSION_NORMAL, GET_IF_EXISTS );
   dens = get_materi_density( element, gr, nnol, nodes, new_unknowns );
