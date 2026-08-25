@@ -199,3 +199,8 @@ input parameters it accepts.
 - [force_edge_volume_aliases](force_edge_volume_aliases.md) — Professional force_edge_*/force_volume_* names accepted directly; restriction variants (_element/_element_group/_element_side/_node/_element_node/_node_factor) and control_materi_*_apply per-timestep gates.
 - [force_edge_projected](force_edge_projected.md) — Terzaghi projected tunnel load (linear ph/pv ground stress field projected on the excavation boundary; 11-keyword family).
 - [data_family](data_family.md) — data_activate/delete(+_time), data_ignore (input-time skip), control_solver aliases, bicg_stop and print_mesh_dof dump.
+
+## Sprint 10 — control_repeat family completion
+
+- [control_repeat_save](control_repeat_save.md) — save the current value of selected data items at every control_repeat jump (repeat_save_result, one index per repeat).
+- [control_repeat_save_calculate](control_repeat_save_calculate.md) — mean and (population) variance of the saved values when the repeat completes (repeat_calculate_result).

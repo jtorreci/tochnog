@@ -190,3 +190,8 @@ Each file corresponds to the same feature in the [User Manual](../manual-user/).
 ## Sprint 9 — force aliases + control_materi gates
 
 - [force_edge_volume_aliases](force_edge_volume_aliases.md) — prefix translation INSIDE db_number (keyword AND end-of-values detection), restriction variants for the 3 edge families + volume, control_materi gate helper.
+
+## Sprint 10 — control_repeat family completion
+
+- [control_repeat_save](control_repeat_save.md) — save block in repeat.cc (CONTROL_REPEAT branch, per-jump capture into repeat_save_result; db_max_index heuristic GOTCHA: count active indices).
+- [control_repeat_save_calculate](control_repeat_save_calculate.md) — statistics block in repeat.cc when the counter reaches 0 (two-pass mean/population-variance into repeat_calculate_result).
