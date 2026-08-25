@@ -110,6 +110,12 @@ Each file corresponds to the same feature in the [User Manual](../manual-user/).
 - [group_materi_plasti_hardsoil](group_materi_plasti_hardsoil.md) — Hardening-Soil yield/flow block in plasti_rule() (f = q/(E50(1-q/qa)) - 2q/Eur - gamma_p; qf from Mohr-Coulomb; gamma_p = kappa + gammap_initial record; numeric gotchas of the small-f return).
 - [materi_plasti_hardsoil_history](materi_plasti_hardsoil_history.md) — initia: shared sph dof (running max |p| in dof.cc), basename `sph`.
 - [materi_strain_plasti_hardsoil](materi_strain_plasti_hardsoil.md) — initia: dedicated plastic-strain dof hsepp (RHS in materi.cc, inertia in general.cc).
+- [materi_strain_plasti_cap](materi_strain_plasti_cap.md) — initia: dedicated dof capepp; consolidated per-model epp RHS block in materi.cc (table of {flag, indx}).
+- [materi_strain_plasti_compression](materi_strain_plasti_compression.md) — initia: dedicated dof cepp (same consolidated RHS block).
+- [materi_strain_plasti_diprisco](materi_strain_plasti_diprisco.md) — initia: dedicated dof depp (same consolidated RHS block); diprisco_density NOT implemented (interpolation law undocumented).
+- [materi_strain_plasti_druckprag](materi_strain_plasti_druckprag.md) — initia: dedicated dof dpepp (same consolidated RHS block); equals the generic epp exactly in pure shear.
+- [materi_plasti_diprisco_history](materi_plasti_diprisco_history.md) — initia: alias of materi_history_variables (same parser branch, same hisv dof); diprisco group checks accept either name.
+- [group_materi_elasti_camclay_pressure_min](group_materi_elasti_camclay_pressure_min.md) — clamp of the pressure used for K in the camclay elastic block of set_stress() (stress.cc).
 - [control_materi_plasti_hardsoil_gammap_initial](control_materi_plasti_hardsoil_gammap_initial.md) — first-timestep gamma_p_extra (sentinel -1 pre-allocation in top.cc, parallel-loop safe) stored in element_intpnt_materi_plasti_hardsoil_gammap_initial and added to the yield.
 - [group_materi_failure_crunching](group_materi_failure_crunching.md) — name[] fixed to the Professional spelling + db_number alias for the GNU typo (failure.cc; negative-threshold semantics).
 - [group_materi_failure_void_fraction](group_materi_failure_void_fraction.md) — name[] fixed to the Professional spelling + db_number alias for the GNU name (failure.cc; node_dof -from/-to gotcha).

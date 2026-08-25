@@ -110,6 +110,12 @@ input parameters it accepts.
 - [group_materi_plasti_hardsoil](group_materi_plasti_hardsoil.md) — Hardening-Soil yield f = q/(E50*(1-q/qa)) - 2q/Eur - gamma_p (phi c psi Rf; qa = qf/Rf with qf from Mohr-Coulomb at failure; hardening = kappa).
 - [materi_plasti_hardsoil_history](materi_plasti_hardsoil_history.md) — initia: maximum |p| history dof (shared sph dof) for the hardsoil loading/unloading switch.
 - [materi_strain_plasti_hardsoil](materi_strain_plasti_hardsoil.md) — initia: hardsoil plastic strain tensor in the node_dof records (dedicated dof epphsxx...).
+- [materi_strain_plasti_cap](materi_strain_plasti_cap.md) — initia: cap plastic strain tensor in the node_dof records (dedicated dof eppcapxx...).
+- [materi_strain_plasti_compression](materi_strain_plasti_compression.md) — initia: compression plastic strain tensor in the node_dof records (dedicated dof eppcmpxx...).
+- [materi_strain_plasti_diprisco](materi_strain_plasti_diprisco.md) — initia: di Prisco plastic strain tensor in the node_dof records (dedicated dof eppdipxx...).
+- [materi_strain_plasti_druckprag](materi_strain_plasti_druckprag.md) — initia: drucker-prager plastic strain tensor in the node_dof records (dedicated dof eppdrpxx...).
+- [materi_plasti_diprisco_history](materi_plasti_diprisco_history.md) — initia: per-model name of materi_history_variables for the di Prisco models (11 vars, 12 for diprisco_density).
+- [group_materi_elasti_camclay_pressure_min](group_materi_elasti_camclay_pressure_min.md) — minimal allowed pressure for the camclay bulk modulus K = (1+e)*p/kappa (clamp prevents very low/negative K).
 - [control_materi_plasti_hardsoil_gammap_initial](control_materi_plasti_hardsoil_gammap_initial.md) — -yes creates the extra initial gamma_p so f = 0 at the initial deviatoric stress (element_intpnt_materi_plasti_hardsoil_gammap_initial).
 - [group_materi_failure_crunching](group_materi_failure_crunching.md) — element failure on the compression strain (Professional spelling; GNU typo kept as alias).
 - [group_materi_failure_void_fraction](group_materi_failure_void_fraction.md) — element failure on the void fraction (Professional spelling; GNU name kept as alias).
