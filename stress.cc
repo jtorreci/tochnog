@@ -1054,6 +1054,19 @@ void set_stress( long int element, long int gr,
     }
   }
 
+  // group_materi_factor (manual Professional 6.666): multiplication
+  // factor for the material stresses AND stiffness (unit conversion of
+  // a stress law specified in other units than the calculation).
+  {
+    double materi_factor = 1.;
+    if ( get_group_data( GROUP_MATERI_FACTOR, gr, element,
+        new_unknowns, &materi_factor, ldum, GET_IF_EXISTS ) ) {
+      if ( scalar_dabs(materi_factor-1.)>TINY ) {
+        array_multiply( new_sig, new_sig, materi_factor, MDIM*MDIM );
+        array_multiply( ddsdde, ddsdde, materi_factor, MSTRAIN*MSTRAIN );
+      }
+    }
+  }
   if ( swit ) {
     pri( "plasti_found", plasti_found );
     pri( "membrane_found", membrane_found );

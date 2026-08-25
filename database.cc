@@ -3525,6 +3525,32 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   data_length[GROUP_MATERI_DENSITY_GROUNDFLOW] = 2;
   data_required[GROUP_MATERI_DENSITY_GROUNDFLOW] = GROUP_TYPE;
 
+  strcpy(name[GROUP_MATERI_DAMPING_METHOD],"group_materi_damping_method");
+  type[GROUP_MATERI_DAMPING_METHOD] = INTEGER;
+  data_length[GROUP_MATERI_DAMPING_METHOD] = 1;
+  data_required[GROUP_MATERI_DAMPING_METHOD] = GROUP_TYPE;
+
+  strcpy(name[GROUP_MATERI_FACTOR],"group_materi_factor");
+  type[GROUP_MATERI_FACTOR] = DOUBLE_PRECISION;
+  data_length[GROUP_MATERI_FACTOR] = 1;
+  data_required[GROUP_MATERI_FACTOR] = GROUP_TYPE;
+
+  strcpy(name[GROUP_MATERI_PLASTI_VISCO_EXPONENTIAL_LIMIT],"group_materi_plasti_visco_exponential_limit");
+  type[GROUP_MATERI_PLASTI_VISCO_EXPONENTIAL_LIMIT] = DOUBLE_PRECISION;
+  data_length[GROUP_MATERI_PLASTI_VISCO_EXPONENTIAL_LIMIT] = 1;
+  data_required[GROUP_MATERI_PLASTI_VISCO_EXPONENTIAL_LIMIT] = GROUP_TYPE;
+
+  strcpy(name[GROUP_MATERI_PLASTI_VISCO_EXPONENTIAL_NAME],"group_materi_plasti_visco_exponential_name");
+  type[GROUP_MATERI_PLASTI_VISCO_EXPONENTIAL_NAME] = INTEGER;
+  data_length[GROUP_MATERI_PLASTI_VISCO_EXPONENTIAL_NAME] = 1;
+  data_required[GROUP_MATERI_PLASTI_VISCO_EXPONENTIAL_NAME] = GROUP_TYPE;
+
+  strcpy(name[GROUP_MATERI_PLASTI_VISCO_EXPONENTIAL_VALUES],"group_materi_plasti_visco_exponential_values");
+  type[GROUP_MATERI_PLASTI_VISCO_EXPONENTIAL_VALUES] = DOUBLE_PRECISION;
+  data_length[GROUP_MATERI_PLASTI_VISCO_EXPONENTIAL_VALUES] = DATA_ITEM_SIZE;
+  fixed_length[GROUP_MATERI_PLASTI_VISCO_EXPONENTIAL_VALUES] = 0;
+  data_required[GROUP_MATERI_PLASTI_VISCO_EXPONENTIAL_VALUES] = GROUP_TYPE;
+
   strcpy(name[GROUP_MATERI_ELASTI_COMPRESSIBILITY],"group_materi_elasti_compressibility");
   type[GROUP_MATERI_ELASTI_COMPRESSIBILITY] = DOUBLE_PRECISION;
   data_length[GROUP_MATERI_ELASTI_COMPRESSIBILITY] = 1;
@@ -6699,6 +6725,12 @@ long int db_number( char str[] )
       return CONTROL_OPTIONS_SOLVER_BICG_ERROR;
     else if ( !strcmp( str, "axisymmetric" ) )
       return GROUP_AXISYMMETRIC;
+    else if ( !strcmp( str, "group_materi_plasti_druck_prag" ) )
+      return GROUP_MATERI_PLASTI_DRUCKPRAG;
+    else if ( !strcmp( str, "group_materi_plasti_bounda" ) )
+      return GROUP_MATERI_PLASTI_BOUNDARY;
+    else if ( !strcmp( str, "group_materi_plasti_bounda_factor" ) )
+      return GROUP_MATERI_PLASTI_BOUNDARY_FACTOR;
     else if ( !strncmp( str, "bounda_print_mesh_dof", 21 ) ) {
       strcpy( translated, "print_mesh_dof" );
       strncat( translated, &str[21], MCHAR-40 );

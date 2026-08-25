@@ -103,3 +103,31 @@ the two to define the plane.
 
 Tests: mdirect_comp (sigyy -10 capped at -5.0 EXACT), mdirect_gate
 (pressure_limit disables the cap -> elastic -10; A/B fails without it).
+
+## Sprint 10 lote 2: Drucker-Prager alias + analytic validation
+
+- `group_materi_plasti_druck_prag index phi c phi_flow` — the
+  Professional name (with underscore) of the legacy GNU
+  `group_materi_plasti_druckprag` (alias in db_number; same physics,
+  layout [phi c phi_flow], legacy tests druckpr1/examp23).
+- `group_materi_plasti_bounda` / `_factor` — Professional names of
+  `group_materi_plasti_boundary` / `_factor`.
+- `group_materi_factor index factor` — multiplication factor for the
+  material stresses AND stiffness (unit conversion).
+- Registered partials: `group_materi_damping_method`,
+  `group_materi_density_groundflow` (pre-existing),
+  `group_materi_plasti_visco_exponential_limit/_name/_values`.
+
+### Analytic validation (test mdp_shear)
+
+The GNU implements f = sqrt(J2) + 3·alpha·sigma_m − K (the standard DP
+form; NOTE sqrt(J2), not sqrt(3·J2)) with the manual's matching
+constants. In PURE SHEAR with phi = 0 (alpha = 0, no pressure term, no
+dilatancy) the capped stress is exactly
+
+    sigma_xy = K = 6·c·cos(phi) / ( sqrt(3)·(3 − sin(phi)) ) = 2c/sqrt(3)
+
+With c = 30: sigma_xy = 34.641. Measured at dt = 0.05: 34.636 —
+0.014% error. (With phi ≠ 0 the associative flow generates normal
+stresses in a displacement-imposed shear rig, so sigma_m ≠ 0; use
+phi = 0 for the closed-form check.)
