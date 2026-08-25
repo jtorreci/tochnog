@@ -183,6 +183,10 @@ void general( long int element, long int name, long int nnol, long int element_g
         unknown_belongs_to_type = 1;
         inertia = 1.;
       }
+      else if ( dof_type[iuknwn]==-MATERI_STRAIN_PLASTI_HARDSOIL ) {
+        unknown_belongs_to_type = 1;
+        inertia = 1.;
+      }
       else if ( dof_type[iuknwn]==-MATERI_STRAIN_TOTAL ) {
         unknown_belongs_to_type = 1;
         inertia = 1.;
@@ -273,6 +277,8 @@ void general( long int element, long int name, long int nnol, long int element_g
           else if ( dof_type[iuknwn]==-MATERI_STRAIN_INTERGRANULAR && type==-MATERI )
             conv_part = 1.;
           else if ( dof_type[iuknwn]==-MATERI_STRAIN_PLASTI && type==-MATERI )
+            conv_part = 1.;
+          else if ( dof_type[iuknwn]==-MATERI_STRAIN_PLASTI_HARDSOIL && type==-MATERI )
             conv_part = 1.;
           else if ( dof_type[iuknwn]==-MATERI_STRAIN_TOTAL && type==-MATERI )
             conv_part = 1.;

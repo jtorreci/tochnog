@@ -155,6 +155,10 @@ void parallel_new_dof_diagonal( void )
               tmp = node_rhside[ipuknwn] / node_lhside[ipuknwn];
               if ( dof_principal[iuknwn]>=0 ) tmp *= options_relaxation[iprinc];
               node_dof_new[iuknwn] += tmp;
+              if ( iuknwn==stres_indx+0*nder ) {
+              }
+              if ( iuknwn==stres_indx+3*nder ) {
+              }
             }
           }
           if ( dof_principal[iuknwn]>=0 ) iprinc++;
@@ -186,17 +190,21 @@ void parallel_new_dof_diagonal( void )
           iuknwn = cap1_indx;
           if ( node_dof_new[iuknwn]<0. ) node_dof_new[iuknwn] = 0.;
         }
-        if ( materi_stress_pressure_history && materi_stress ) {
-          // materi_stress_pressure_history (manual Professional 4.50):
-          // the maximum of the absolute value of the pressure over time
-          // is added to the node_dof records. p = -sig_mean (positive in
+        if ( ( materi_stress_pressure_history || materi_plasti_hardsoil_history ) &&
+             materi_stress ) {
+          // materi_stress_pressure_history (manual Professional 4.50)
+          // and materi_plasti_hardsoil_history (manual 4.22, hardsoil
+          // model): the maximum of the absolute value of the pressure
+          // over time is added to the node_dof records (SHARED dof
+          // sph_indx, same concept). p = -sig_mean (positive in
           // compression, same convention as the young_power/poisson_power
           // records). node_dof_new was copied from node_dof (VERSION_NORMAL)
           // at step start, so this is max(previous max, |p_new|): the
           // record is kept while unloading/reloading (|p| < max) and
           // updated when the current pressure is the new maximum. The
-          // consumer is group_materi_elasti_stress_pressure_history_factor
-          // in set_stress() (stress.cc), which reads the interpolated dof.
+          // consumers are group_materi_elasti_stress_pressure_history_factor
+          // and the hardsoil E50/Eur switch in set_stress() (stress.cc),
+          // which read the interpolated dof.
           iuknwn = sph_indx;
           tmp = scalar_dabs( -( node_dof_new[stres_indx] +
             node_dof_new[stres_indx+3*nder] +

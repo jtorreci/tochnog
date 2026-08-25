@@ -2229,6 +2229,13 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   data_class[ELEMENT_MIDDLE] = ELEMENT;
   data_required[ELEMENT_MIDDLE] = ELEMENT;
 
+  strcpy(name[ELEMENT_INTPNT_MATERI_PLASTI_HARDSOIL_GAMMAP_INITIAL],
+    "element_intpnt_materi_plasti_hardsoil_gammap_initial");
+  type[ELEMENT_INTPNT_MATERI_PLASTI_HARDSOIL_GAMMAP_INITIAL] = DOUBLE_PRECISION;
+  data_length[ELEMENT_INTPNT_MATERI_PLASTI_HARDSOIL_GAMMAP_INITIAL] = 1;
+  data_class[ELEMENT_INTPNT_MATERI_PLASTI_HARDSOIL_GAMMAP_INITIAL] = ELEMENT;
+  data_required[ELEMENT_INTPNT_MATERI_PLASTI_HARDSOIL_GAMMAP_INITIAL] = ELEMENT;
+
   strcpy(name[ELEMENT_NONLOCAL],"element_nonlocal");
   type[ELEMENT_NONLOCAL] = INTEGER;
   data_length[ELEMENT_NONLOCAL] = NONLOCAL_ITEM_SIZE*npointmax;
@@ -3563,6 +3570,12 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   data_class[GROUP_MATERI_ELASTI_K0] = MATERI;
   data_required[GROUP_MATERI_ELASTI_K0] = GROUP_TYPE;
 
+  strcpy(name[GROUP_MATERI_ELASTI_HARDSOIL],"group_materi_elasti_hardsoil");
+  type[GROUP_MATERI_ELASTI_HARDSOIL] = DOUBLE_PRECISION;
+  data_length[GROUP_MATERI_ELASTI_HARDSOIL] = 7;
+  data_class[GROUP_MATERI_ELASTI_HARDSOIL] = MATERI;
+  data_required[GROUP_MATERI_ELASTI_HARDSOIL] = GROUP_TYPE;
+
   strcpy(name[GROUP_MATERI_ELASTI_LADE],"group_materi_elasti_lade");
   type[GROUP_MATERI_ELASTI_LADE] = DOUBLE_PRECISION;
   data_length[GROUP_MATERI_ELASTI_LADE] = 3;
@@ -3834,6 +3847,12 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   data_length[GROUP_MATERI_PLASTI_CAP1] = 8;
   data_class[GROUP_MATERI_PLASTI_CAP1] = MATERI;
   data_required[GROUP_MATERI_PLASTI_CAP1] = GROUP_TYPE;
+
+  strcpy(name[GROUP_MATERI_PLASTI_HARDSOIL],"group_materi_plasti_hardsoil");
+  type[GROUP_MATERI_PLASTI_HARDSOIL] = DOUBLE_PRECISION;
+  data_length[GROUP_MATERI_PLASTI_HARDSOIL] = 4;
+  data_class[GROUP_MATERI_PLASTI_HARDSOIL] = MATERI;
+  data_required[GROUP_MATERI_PLASTI_HARDSOIL] = GROUP_TYPE;
 
   strcpy(name[GROUP_MATERI_PLASTI_COMPRESSION],"group_materi_plasti_compression");
   type[GROUP_MATERI_PLASTI_COMPRESSION] = DOUBLE_PRECISION;
@@ -4786,6 +4805,8 @@ void db_initialize( long int dof_type[], long int dof_label[] )
 
   strcpy(name[MATERI_PLASTI_CAP1_HISTORY],"materi_plasti_cap1_history");
 
+  strcpy(name[MATERI_PLASTI_HARDSOIL_HISTORY],"materi_plasti_hardsoil_history");
+
   strcpy(name[MATERI_PLASTI_RHO],"materi_plasti_rho");
 
   strcpy(name[MATERI_PLASTI_SOFTVAR_LOCAL],"materi_plasti_softvar_local");
@@ -4801,6 +4822,8 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   strcpy(name[MATERI_STRAIN_INTERGRANULAR],"materi_strain_intergranular");
 
   strcpy(name[MATERI_STRAIN_PLASTI],"materi_strain_plasti");
+
+  strcpy(name[MATERI_STRAIN_PLASTI_HARDSOIL],"materi_strain_plasti_hardsoil");
 
   strcpy(name[MATERI_STRAIN_TOTAL],"materi_strain_total" );
 
@@ -6010,6 +6033,11 @@ void db_initialize( long int dof_type[], long int dof_label[] )
       strcpy( basename, "kap" );
     else if ( dof_type[iuknwn]==-MATERI_PLASTI_CAP1_HISTORY )
       strcpy( basename, "pc" );
+    else if ( dof_type[iuknwn]==-MATERI_PLASTI_HARDSOIL_HISTORY )
+      // maximum |p| history of the hardsoil model (manual Professional
+      // 4.22): same concept as materi_stress_pressure_history (4.50),
+      // same shared dof (sph_indx), same basename
+      strcpy( basename, "sph" );
     else if ( dof_type[iuknwn]==-MATERI_PLASTI_RHO ) {
       if ( iuknwn==rho_indx ) n = 0;
       n++;
@@ -6055,6 +6083,18 @@ void db_initialize( long int dof_type[], long int dof_label[] )
       else if ( n==4 ) strcpy( basename, "eppyy" );
       else if ( n==5 ) strcpy( basename, "eppyz" );
       else if ( n==6 ) strcpy( basename, "eppzz" );
+    }
+    else if ( dof_type[iuknwn]==-MATERI_STRAIN_PLASTI_HARDSOIL ) {
+      // hardsoil plastic strain (manual Professional 4.40): same
+      // 6-component layout as materi_strain_plasti, dedicated dof
+      if ( iuknwn==hsepp_indx ) n = 0;
+      n++;
+      if      ( n==1 ) strcpy( basename, "epphsxx" );
+      else if ( n==2 ) strcpy( basename, "epphsxy" );
+      else if ( n==3 ) strcpy( basename, "epphsxz" );
+      else if ( n==4 ) strcpy( basename, "epphsyy" );
+      else if ( n==5 ) strcpy( basename, "epphsyz" );
+      else if ( n==6 ) strcpy( basename, "epphszz" );
     }
     else if ( dof_type[iuknwn]==-MATERI_STRAIN_TOTAL ) {
       if ( iuknwn==ept_indx ) n = 0;

@@ -591,6 +591,10 @@ void materi( long int element, long int gr, long int nnol,
             tmp = volume * h[inol] * ( new_sig[idim*MDIM+jdim] - 
               old_sig[idim*MDIM+jdim] ) / dtime;
             element_rhside[indx] += tmp;
+            if ( jdim==1 && idim==1 ) {
+            }
+            if ( jdim==0 && idim==0 ) {
+            }
 		//added for options_element_dof
             if(options_element_dof==-YES) new_unknowns[ipuknwn] = new_sig[idim*MDIM+jdim];// new_sig_nonrot[idim*MDIM+jdim];
             ipuknwn++;
@@ -708,6 +712,27 @@ void materi( long int element, long int gr, long int nnol,
             array_inproduct( new_sig, inc_epp, MDIM*MDIM ) / dtime;
           element_rhside[indx] += tmp;
           element_residue[indx] -= tmp;
+        }
+      }
+
+      if ( materi_strain_plasti_hardsoil ) {
+        // materi_strain_plasti_hardsoil (manual Professional 4.40):
+        // the plastic strain specifically for the hardsoil model is
+        // added to the node_dof records. Same integration as
+        // materi_strain_plasti: the dof accumulates the plastic
+        // strain increment (dedicated dof hsepp_indx).
+        ipuknwn = hsepp_indx/nder;
+        for ( idim=0; idim<MDIM; idim++ ) {
+          for ( jdim=idim; jdim<MDIM; jdim++ ) {
+            indx = inol*npuknwn + ipuknwn;
+            tmp = volume * h[inol] * inc_epp[idim*MDIM+jdim] / dtime;
+            element_rhside[indx] += tmp;
+            // added for options_element_dof
+            if(options_element_dof==-YES)
+              new_unknowns[ipuknwn] = old_epp[idim*MDIM+jdim] +
+                inc_epp[idim*MDIM+jdim];
+            ipuknwn++;
+          }
         }
       }
 

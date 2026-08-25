@@ -60,6 +60,8 @@ void plasti_rule( long int element, long int gr,
     plasti_on_boundary_factor=BOUNDARY_REDUCTION_FACTOR,
     m=0., lambda=0., e=0., N=0., de=0., p0=0., dp0=0., rdum=0.,
     M=0., pc=0., p_star=0., pc_star=0.,
+    hs_elasti[7], hs_sig3=0., hs_base=0., hs_E50=0., hs_Eur=0., hs_qf=0.,
+    hs_qa=0., hs_gp_extra=0., hs_ccot=0., hs_Rf=0., gammap=0.,
     prisco_rv[MDIM][MDIM], prisco_st[MDIM][MDIM], prisco_rr[MDIM][MDIM],
     prisco_st1[MDIM][MDIM], prisco_st2[MDIM][MDIM], prisco_sv0[MDIM][MDIM],
     prisco_chi[MDIM*MDIM], prisco_chihat[MDIM*MDIM],
@@ -276,6 +278,124 @@ void plasti_rule( long int element, long int gr,
         if (  f_yield>f ) {
           f = f_yield;
           tmp_plasti_type = GROUP_MATERI_PLASTI_CAP1;
+        }
+        if ( swit ) pri( "f_yield", f_yield );
+      }
+      else {
+        assert( task==GET_FLOW_RULE );
+        f = f_flow;
+        if ( swit ) pri( "f_flow", f_flow );
+      }
+    }
+  }
+  if ( get_group_data( GROUP_MATERI_PLASTI_HARDSOIL, gr, element, new_unknowns,
+    plasti_data, length, GET_IF_EXISTS ) ) {
+    test1 = task==GET_YIELD_RULE&&plasti_type==-NONE;
+    test2 = task==GET_YIELD_RULE&&plasti_type==GROUP_MATERI_PLASTI_HARDSOIL;
+    test3 = task==GET_FLOW_RULE&&plasti_type==GROUP_MATERI_PLASTI_HARDSOIL;
+    if ( test1 || test2 || test3 ) {
+      if ( swit ) pri( "check plasti_hardsoil" );
+        // manual Professional 6.703 + theory "Hardening-Soil model":
+        // 4 parameters phi c psi Rf. The yield function reads
+        // f = q/(E50*(1 - q/qa)) - 2*q/Eur - gamma_p with q the
+        // equivalent shear stress, qa = qf/Rf the asymptotic shear
+        // stress and gamma_p the equivalent plastic shear strain
+        // (here the materi_plasti_kappa dof, see below). E50 and Eur
+        // are the power-law moduli of group_materi_elasti_hardsoil
+        // evaluated at the CURRENT minor principal stress sig3
+        // (coupled elasticity-plasticity, one-step lag documented).
+        // The manual does not give the explicit qf; standard Schanz:
+        // at Mohr-Coulomb failure in triaxial (q = sig1 - sig3,
+        // sig1 = sig3*(1+sin(phi))/(1-sin(phi)) +
+        // 2c*cos(phi)/(1-sin(phi))) qf = sig1 - sig3 =
+        // 2*sin(phi)*(sig3 + c*cot(phi))/(1-sin(phi)) with sig3 the
+        // minor principal stress in the manual (compression-positive)
+        // convention: sig3_manual = -sig3_code + c*cot(phi),
+        // sig3_code = largest algebraic eigenvalue (least compressive).
+        // Flow: associative (the flow direction is the numerical
+        // gradient of f, computed by the driver with central
+        // differences: the law only defines f; psi is accepted for
+        // input compatibility and documented as pending for the
+        // non-associative flow potential).
+      phi = plasti_data[0];
+      c = plasti_data[1];
+      hs_Rf = plasti_data[3];
+      if ( sin(phi)<=0. || cos(phi)<=0. ) db_error( GROUP_MATERI_PLASTI_HARDSOIL, gr );
+      if ( hs_Rf<=0. ) db_error( GROUP_MATERI_PLASTI_HARDSOIL, gr );
+      if ( !get_group_data( GROUP_MATERI_ELASTI_HARDSOIL, gr, element,
+          new_unknowns, hs_elasti, ldum, GET_IF_EXISTS ) ) {
+        pri( "Error: GROUP_MATERI_PLASTI_HARDSOIL needs group_materi_elasti_hardsoil" );
+        exit(TN_EXIT_STATUS);
+      }
+      if ( hs_elasti[0]<=0. || hs_elasti[4]<=0. )
+        db_error( GROUP_MATERI_ELASTI_HARDSOIL, gr );
+      hs_ccot = 0.;
+      if ( c!=0. ) hs_ccot = c * cos(phi) / sin(phi);
+        // minor principal stress: largest algebraic eigenvalue (the
+        // manual's sig3, least compressive; see the elastic block)
+      matrix_eigenvalues( sig, sig_princ );
+      hs_sig3 = sig_princ[0];
+      for ( i=1; i<MDIM; i++ )
+        if ( sig_princ[i]>hs_sig3 ) hs_sig3 = sig_princ[i];
+      hs_base = -hs_sig3 + hs_ccot;
+      hs_E50 = hs_elasti[0];
+      hs_Eur = hs_elasti[4];
+      if ( hs_base>0. ) {
+        if ( hs_elasti[1]+hs_ccot<=0. || hs_elasti[5]+hs_ccot<=0. )
+          db_error( GROUP_MATERI_ELASTI_HARDSOIL, gr );
+        hs_E50 = hs_elasti[0] *
+          scalar_power( hs_base/(hs_elasti[1]+hs_ccot), hs_elasti[3] );
+        hs_Eur = hs_elasti[4] *
+          scalar_power( hs_base/(hs_elasti[5]+hs_ccot), hs_elasti[3] );
+      }
+      if ( hs_elasti[3]==0. ) { hs_E50 = hs_elasti[0]; hs_Eur = hs_elasti[4]; }
+        // base <= 0 (sig3 very tensile beyond the cohesion): E = Eref
+        // (same clamp as the elastic block) and the yield surface does
+        // not exist -> no yielding from the hardsoil law (documented;
+        // use a tension cut-off for those states)
+      if ( hs_base<=0. ) {
+        f_yield = NO_YIELD_F;
+        f_flow = NO_YIELD_F;
+      }
+      else {
+          // gamma_p: the accumulated plastic strain size kappa
+          // (materi_plasti_kappa dof, kappa = int sqrt(0.5*deps_p:deps_p),
+          // the same measure the manual calls "equivalent plastic shear
+          // strain"; the yield function is calibrated to it, see
+          // manual-developer) plus the optional extra initial
+          // contribution from control_materi_plasti_hardsoil_gammap_initial
+          // (stored per element by set_stress on the first timestep)
+        gammap = 0.;
+        if ( materi_plasti_kappa ) gammap = new_unknowns[kap_indx];
+        hs_gp_extra = 0.;
+        ldum = 0;
+        db( ELEMENT_INTPNT_MATERI_PLASTI_HARDSOIL_GAMMAP_INITIAL, element, idum,
+          &hs_gp_extra, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+        gammap += hs_gp_extra;
+          // equivalent shear stress (same invariant as cap1)
+        q = sqrt(
+          0.5*( scalar_square(sig[0]-sig[4])+
+                scalar_square(sig[4]-sig[8])+
+                scalar_square(sig[0]-sig[8]) ) +
+          3.*( scalar_square(sig[1]) +
+               scalar_square(sig[2]) +
+               scalar_square(sig[5]) ) );
+        hs_qf = 2. * sin(phi) * hs_base / ( 1. - sin(phi) );
+        hs_qa = hs_qf / hs_Rf;
+          // q >= qa is the asymptote of the surface: the stress can
+          // never reach qa, f -> +infinity approaching it. Set f to a
+          // very large positive value (the driver's own "too large
+          // time steps" exit threshold) so the return is driven hard;
+          // if the plastic iterations cannot bring q below qa, the
+          // driver exits with "too large time steps" (documented).
+        if ( q>=hs_qa ) f_yield = DBL_MAX/1.e6;
+        else f_yield = q / ( hs_E50 * ( 1. - q/hs_qa ) ) - 2.*q/hs_Eur - gammap;
+        f_flow = f_yield;
+      }
+      if ( task==GET_YIELD_RULE ) {
+        if (  f_yield>f ) {
+          f = f_yield;
+          tmp_plasti_type = GROUP_MATERI_PLASTI_HARDSOIL;
         }
         if ( swit ) pri( "f_yield", f_yield );
       }

@@ -556,6 +556,15 @@ long int check( long int idat, long int task )
     ok = ok && check_unknown( "materi_velocity", YES, task );
     ok = ok && check_unknown( "materi_stress_pressure_history", YES, task );
   }
+  if ( data_number==GROUP_MATERI_ELASTI_HARDSOIL ) {
+    // manual Professional 6.649 + theory HS: the elastic law needs the
+    // maximum |p| history (materi_plasti_hardsoil_history, manual
+    // 4.22) to switch between E50 (first loading) and Eur
+    // (unloading/reloading); without it the law silently stays on E50.
+    ok = check_unknown( "materi_stress", YES, task );
+    ok = ok && check_unknown( "materi_velocity", YES, task );
+    ok = ok && check_unknown( "materi_plasti_hardsoil_history", YES, task );
+  }
   if ( data_number==GROUP_MATERI_EXPANSION_LINEAR ) {
     ok = check_unknown( "condif_temperature", YES, task );
     ok = ok && check_unknown( "materi_velocity", YES, task );
@@ -630,6 +639,19 @@ long int check( long int idat, long int task )
     ok = check_unknown( "materi_stress", YES, task );
     ok = ok && check_unknown( "materi_strain_plasti", YES, task );
     ok = ok && check_unknown( "materi_plasti_cap1_history", YES, task );
+  }
+  if ( data_number==GROUP_MATERI_PLASTI_HARDSOIL ) {
+    // manual Professional 6.703 + theory HS: the yield function needs
+    // the elastic group (E50/Eur), the hardening gamma_p (here the
+    // materi_plasti_kappa dof, the equivalent plastic strain size),
+    // the maximum |p| history (materi_plasti_hardsoil_history) and
+    // the hardsoil plastic strain dof (materi_strain_plasti_hardsoil,
+    // manual 4.40 prescribes both initializations).
+    ok = check_unknown( "materi_stress", YES, task );
+    ok = ok && check_unknown( "materi_velocity", YES, task );
+    ok = ok && check_unknown( "materi_plasti_kappa", YES, task );
+    ok = ok && check_unknown( "materi_strain_plasti_hardsoil", YES, task );
+    ok = ok && check_unknown( "materi_plasti_hardsoil_history", YES, task );
   }
   if ( data_number==GROUP_MATERI_PLASTI_COMPRESSION ) {
     ok = check_unknown( "materi_stress", YES, task );
@@ -874,11 +896,16 @@ long int check( long int idat, long int task )
     ok = check_unknown( "materi_strain_elasti", YES, task );
   if ( data_number==MATERI_STRAIN_PLASTI )
     ok = check_unknown( "materi_strain_plasti", YES, task );
+  if ( data_number==MATERI_STRAIN_PLASTI_HARDSOIL )
+    ok = check_unknown( "materi_strain_plasti_hardsoil", YES, task );
   if ( data_number==MATERI_STRAIN_TOTAL )
     ok = check_unknown( "materi_strain_total", YES, task );
   if ( data_number==MATERI_STRESS )
     ok = check_unknown( "materi_stress", YES, task );
   if ( data_number==MATERI_STRESS_PRESSURE_HISTORY )
+    ok = check_unknown( "materi_stress", YES, task );
+  if ( data_number==MATERI_PLASTI_HARDSOIL_HISTORY )
+    // the shared sph dof is updated from the stress dofs (dof.cc)
     ok = check_unknown( "materi_stress", YES, task );
   if ( data_number==MATERI_VELOCITY )
     ok = check_unknown( "materi_velocity", YES, task );

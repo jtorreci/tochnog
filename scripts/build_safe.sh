@@ -352,6 +352,48 @@ HIPO_TOTAL=0
 #   velx=100 en un paso). Solucion: formato increment en TODOS los records.
 #   GOTCHA indice: k=floor(t/increment) -> 41 cargas + 5 descargas dan
 #   40 pasos de carga + 5 de descarga.
+# + mhardsoil_elast/mhardsoil_elast2/mhardsoil_unload/mhardsoil_unload_flat
+#   /mhardsoil_plast/mhardsoil_plast_elast/mhardsoil_gp0/mhardsoil_gp0_off
+#   (Sprint 10 lote 8: HARDENING-SOIL implementado de cero, manual 6.649/
+#   6.703/4.22/4.40/6.146. Elastico: E = Eref*((sig3+c*cot(phi))/
+#   (sigmaref+c*cot(phi)))^m con sig3_manual = la menor compresiva =
+#   mayor autovalor algebraico en codigo (traccion positiva; el menor
+#   autovalor daria el axial, NO el confinamiento); primer paso de carga
+#   E50/nu50 vs descarga/recarga Eur/nuur con el switch del maximo |p|
+#   historico (dof sph compartido con materi_stress_pressure_history);
+#   base <= 0 -> E = Eref. Plastico: f = q/(E50*(1-q/qa)) - 2*q/Eur -
+#   gamma_p con qa = qf/Rf y qf = 2*sin(phi)*(sig3+c*cot(phi))/
+#   (1-sin(phi)) derivado de Mohr-Coulomb en falla (Schanz); gamma_p =
+#   el dof kappa (materi_plasti_kappa, int sqrt(0.5*deps_p:deps_p)) +
+#   el extra inicial de control_materi_plasti_hardsoil_gammap_initial
+#   (6.146: -yes crea gamma_p_extra = f(estado inicial) en el primer
+#   paso, guardado en element_intpnt_materi_plasti_hardsoil_gammap_initial
+#   y SUMADO a gamma_p en la ley -> f = 0 al arrancar con tensiones
+#   desviadoras). Validacion ANALITICA: mhardsoil_elast (uniaxial
+#   plano con c=10 phi=30 m=0.5: E50 = 1000*sqrt(17.32/117.32) = 384.23,
+#   sigyy = -1.098901*384.23*0.0004 = -0.1689 EXACTO; A/B sigmaref=200
+#   -> -0.1241), mhardsoil_unload (oedometro confinado 4+2 pasos, m=0:
+#   Eur=3000 -> +0.2692 vs -0.2692 con Eur=1000, patron msph),
+#   mhardsoil_plast_elast (gemelo elastico -4.0385 EXACTO),
+#   mhardsoil_gp0 (tension inicial sigxx=-2 + control: f=0 -> el estado
+#   NO se relaja, sigxx -2.0 EXACTO, record 0.0007763 = f(q=2) analitico,
+#   kappa 0) y mhardsoil_gp0_off (sin control: el retorno relaja la
+#   desviadora a sigxx -1.225 y kappa crece a 0.000293; el estado final
+#   cumple f ~ 0: 0.687/(1000*(1-0.687/38.49)) - 2*0.687/3000 -
+#   0.000293 = -0.000061). mhardsoil_plast (sigxx=-4): kappa 0.0006 =
+#   2x gp0_off -> el endurecimiento ESCALA con q inicial. GOTCHAS: el
+#   retorno plastico del HS (f = O(q/E) ~ 1e-4, minisculo) converge en
+#   el punto de integracion pero el dof de tension del sistema acoplado
+#   NO lo propaga (el estado medido queda sobre la superficie f ~ 0 con
+#   el kappa crecido; el gemelo con carga pura da la respuesta elastica:
+#   quirk numerico del formulacion de tensiones con leyes de f pequena,
+#   ver manual-developer). node_dof: nder = ndim+2 con derivatives
+#   (2D: 4), la lista de valores es UNA por nodo aplicada al rango
+#   (nuknwn valores, no nuknwn*nodos). La pre-alocacion del record
+#   element_intpnt_* (necesaria: el PUT del primer paso corre en el
+#   bucle paralelo de elementos donde no se puede alocar) usa el
+#   centinela -1 (top.cc) y el primer paso lo sobrescribe con
+#   gamma_p_extra >= 0.
 for t in hypo1 hypo2 hypo3 hypo4 smooth1 dof1 mlx1 vtk_dof1 gen1 genbeam1          reset1 cda1 cda_arith cda_copy cda_activate cdist_normal cdist_corr cdist_clamp cd_method cd_geom \
          iface_mc iface_mc_1step iface_mc_slip iface_mc_slip_1step iface_mc_tension iface_mc_gap \
          iface_mc_mem iface_mc_dil iface_mc_dil_1step iface_mc_num \
@@ -380,7 +422,9 @@ for t in hypo1 hypo2 hypo3 hypo4 smooth1 dof1 mlx1 vtk_dof1 gen1 genbeam1       
          dsmall dignore          mdirect_comp mdirect_gate mdp_shear mfactor mmc_tension mmchs_soft \
          mcap2 mcap_legacy mcrunch mcrunch_low mvoid mvoid_low mpower mshf mshf_nof mk0 mk0_off \
          myoung6 myoung6_e2 myoung6_e3 myoung6_apply msph msph_flat \
-         mcap1 mcap1_elast mcap1_comb; do
+         mcap1 mcap1_elast mcap1_comb \
+         mhardsoil_elast mhardsoil_elast2 mhardsoil_unload mhardsoil_unload_flat \
+         mhardsoil_plast mhardsoil_plast_elast mhardsoil_gp0 mhardsoil_gp0_off; do
   HIPO_TOTAL=$((HIPO_TOTAL+1))
   ( cd validation-suite/test-2014 &&
     ulimit -v 4000000 &&
@@ -393,5 +437,5 @@ for t in hypo1 hypo2 hypo3 hypo4 smooth1 dof1 mlx1 vtk_dof1 gen1 genbeam1       
     echo "    $t: FALLO (rc=$RC)"
   fi
 done
-echo "==> Resumen: $HIPO_OK/$HIPO_TOTAL runs OK (13 tests: 12 preexistentes + familia iface_mc en 10 runs + familia 3D en 5 runs + familia generate_interface en 6 runs + familia materi_direct en 5 runs + materi_displacement_relative en 2 runs + slide/reset_value en 2 runs + cda_arith/copy/activate en 3 runs + cdist_normal/corr/clamp en 3 runs + cd_method/cd_geom en 2 runs + gravity/settlement en 4 runs + contact en 1 run + contact_block/ctrl_apply/heatgen en 3 runs + groundflow_consolidate_off en 1 run + groundflow_vangenuchten/groundflow_nonsaturated_off en 2 runs + groundflow_total_pressure_tension/groundflow_interface en 2 runs + groundflow_flux_edge en 1 run + groundflow_phreatic_multiple en 1 run + groundflow_seepage en 1 run + groundflow_pressure_atm/_def en 2 runs + groundflow_total_pressure_limit/_dry en 2 runs + condif_heat_edge/vol/vol2 en 3 runs + condif_convec/rad/convec_el en 3 runs + aeg_node/aeg_seq/bt_factor en 3 runs + iface_condif/expansion/tangref en 3 runs + node_force_inertia/slide/pressure en 3 runs + creset_geom/iface en 2 runs + fedge_alias/restrict, fvol_elem y cmat_gate en 4 runs + fproj_tunnel en 1 run + dsmall/dignore en 2 runs + mdirect_comp/gate en 2 runs + mdp_shear/mfactor en 2 runs + mmc_tension en 1 run + mmchs_soft en 1 run + mcap2/mcap_legacy en 2 runs + mcrunch/mcrunch_low en 2 runs + mvoid/mvoid_low en 2 runs + mpower en 1 run + mshf/mshf_nof en 2 runs + mk0/mk0_off en 2 runs + myoung6/myoung6_e2/myoung6_e3/myoung6_apply en 4 runs + msph/msph_flat en 2 runs + mcap1/mcap1_elast/mcap1_comb en 3 runs)."
+echo "==> Resumen: $HIPO_OK/$HIPO_TOTAL runs OK (13 tests: 12 preexistentes + familia iface_mc en 10 runs + familia 3D en 5 runs + familia generate_interface en 6 runs + familia materi_direct en 5 runs + materi_displacement_relative en 2 runs + slide/reset_value en 2 runs + cda_arith/copy/activate en 3 runs + cdist_normal/corr/clamp en 3 runs + cd_method/cd_geom en 2 runs + gravity/settlement en 4 runs + contact en 1 run + contact_block/ctrl_apply/heatgen en 3 runs + groundflow_consolidate_off en 1 run + groundflow_vangenuchten/groundflow_nonsaturated_off en 2 runs + groundflow_total_pressure_tension/groundflow_interface en 2 runs + groundflow_flux_edge en 1 run + groundflow_phreatic_multiple en 1 run + groundflow_seepage en 1 run + groundflow_pressure_atm/_def en 2 runs + groundflow_total_pressure_limit/_dry en 2 runs + condif_heat_edge/vol/vol2 en 3 runs + condif_convec/rad/convec_el en 3 runs + aeg_node/aeg_seq/bt_factor en 3 runs + iface_condif/expansion/tangref en 3 runs + node_force_inertia/slide/pressure en 3 runs + creset_geom/iface en 2 runs + fedge_alias/restrict, fvol_elem y cmat_gate en 4 runs + fproj_tunnel en 1 run + dsmall/dignore en 2 runs + mdirect_comp/gate en 2 runs + mdp_shear/mfactor en 2 runs + mmc_tension en 1 run + mmchs_soft en 1 run + mcap2/mcap_legacy en 2 runs + mcrunch/mcrunch_low en 2 runs + mvoid/mvoid_low en 2 runs + mpower en 1 run + mshf/mshf_nof en 2 runs + mk0/mk0_off en 2 runs + myoung6/myoung6_e2/myoung6_e3/myoung6_apply en 4 runs + msph/msph_flat en 2 runs + mcap1/mcap1_elast/mcap1_comb en 3 runs + mhardsoil_elast/elast2/unload/unload_flat/plast/plast_elast/gp0/gp0_off en 8 runs)."
 echo "==> Log de compilacion completo en /tmp/tn_build_safe.log"

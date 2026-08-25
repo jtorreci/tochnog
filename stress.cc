@@ -239,7 +239,8 @@ void set_stress( long int element, long int gr,
     memory=-UPDATED, max_plasti_iter=0, total_plasti_iter=0, 
     nuser_data=0, idim=0, jdim=0, kdim=0, ldim=0, k0_active=0, 
     k0_control_swit=0,
-    formulation=INCREMENTAL, ldum=0, idum[1], task[2];
+    formulation=INCREMENTAL, ldum=0, idum[1], task[2],
+    hs_gp_swit=-NO, icontrol_hs=0, hs_plasti_present=0, hs_len=1;
   double lambda=0., deps_size=0., lambda_new=0., lambda_previous=0., 
     tmp=0., tmp_old=0., tmp_inc=0., tmp_new=0., 
     f=0., f_previous=0, f_ref=0., materi_expansion_linear=0., 
@@ -249,10 +250,15 @@ void set_stress( long int element, long int gr,
     compressibility=0., fac=0., kappa=0., g=0., k=0., e=0.,
     lade_1=0., lade_2=0, lade_3=0., p=0., p0=0., p1=0., young0=0., young1=0.,
     young2=0., young3=0.,
-    nu0=0., nu1=0., nu2=0.,
+    nu0=0., nu1=0., nu2=0., nu50=0., nuur=0.,
     alpha=0., gamma=0., dtime=0., rdum=0., camclay[1], tskh[DATA_ITEM_SIZE],
     smallstrain[6],
     group_materi_elasti_lade[3], sig_dev[MDIM*MDIM], ddum[MDIM*MDIM], ddumarray[MDIM][MDIM], 
+    sig_princ[MDIM],
+    hs_elasti[7], hs_plasti[4],
+    hs_sig3=0., hs_base=0., hs_E50=0., hs_Eur=0., hs_Eref50=0., hs_sigref50=0.,
+    hs_Erefur=0., hs_sigrefur=0., hs_m=0., hs_ccot=0., hs_qf=0.,
+    hs_qa=0., hs_gp_extra=0., hs_phi=0., hs_c=0.,
     memmat[MDIM][MDIM], elasti_transverse_isotropy[DATA_ITEM_SIZE],
     inc_temperature_strain[MDIM*MDIM], new_temperature_strain[MDIM*MDIM], 
     plasti_dir[MDIM*MDIM], young_power[6], young_polynomial[DATA_ITEM_SIZE],
@@ -331,7 +337,9 @@ void set_stress( long int element, long int gr,
   // replaces group_materi_elasti_poisson in the elastic stress law with
   // group_materi_elasti_young or group_materi_elasti_young_power. For
   // K0 > 0.95 Tochnog takes 0.95. (The group_materi_elasti_hardsoil
-  // combination is not implemented: see manual-developer.)
+  // combination uses its own nu50/nuur from the hardsoil record and is
+  // NOT affected by this switch: the manual lists the k0 record for
+  // young/young_power only.)
   k0_active = 0;
   if ( db_active_index( CONTROL_MATERI_ELASTI_K0, 0, VERSION_NORMAL ) ) {
     idum[0] = 0;
@@ -412,7 +420,176 @@ void set_stress( long int element, long int gr,
     task[1] = membrane;
     C_matrix( young, poisson, elasti_transverse_isotropy, Cmem, task );
   }
-  if ( get_group_data( GROUP_MATERI_ELASTI_POISSON_POWER, gr, element, new_unknowns, 
+  // group_materi_elasti_hardsoil (manual Professional 6.649 + theory
+  // "Hardening-Soil model"): 7 parameters Eref_50 sigmaref_50 nu50 m
+  // Eref_ur sigmaref_ur nuur. The Young modulus follows the power law
+  // E = Eref * ((sig3 + c*cot(phi))/(sigmaref + c*cot(phi)))^m where
+  // sig3 is the MINOR principal stress (the LEAST compressive one; the
+  // manual orders sig3 > sig2 > sig1 with sig1 the largest compressive
+  // stress). In this code (tension positive, compression negative) the
+  // largest compressive stress is the SMALLEST algebraic eigenvalue, so
+  // sig3_code = LARGEST algebraic eigenvalue and sig3_manual = -sig3_code
+  // + c*cot(phi). NOTE: taking the SMALLEST eigenvalue would give the
+  // AXIAL stress (sig1_manual) and the stiffness would depend on the
+  // axial load instead of the confinement -- that is NOT the HS model
+  // (verified analytically in the mhardsoil tests, see manual-developer).
+  // First loading uses E50/nu50, unloading/reloading Eur/nuur. The
+  // switch reads the maximum |p| history dof (initia
+  // materi_plasti_hardsoil_history, manual 4.22 -- the shared sph dof,
+  // updated in dof.cc): if the CURRENT estimated pressure of the step
+  // (p_old + dp, dp the elastic pressure increment evaluated with the
+  // first-loading tangent) is SMALLER than the maximum at step start,
+  // the material is unloading/reloading -> Eur; otherwise first loading
+  // -> E50. Same decision logic and one-step dp estimate as
+  // group_materi_elasti_stress_pressure_history_factor (lot 6).
+  if ( get_group_data( GROUP_MATERI_ELASTI_HARDSOIL, gr, element, new_unknowns,
+      hs_elasti, ldum, GET_IF_EXISTS ) ) {
+    // C_matrix ACCUMULATES into its target: the hardsoil law IS the
+    // Young modulus, any elastic C built before must be cleared
+    array_set( &C[0][0][0][0], 0., MDIM*MDIM*MDIM*MDIM );
+    array_set( &Cmem[0][0][0][0], 0., MDIM*MDIM*MDIM*MDIM );
+    hs_Eref50 = hs_elasti[0];
+    hs_sigref50 = hs_elasti[1];
+    nu50 = hs_elasti[2];
+    hs_m = hs_elasti[3];
+    hs_Erefur = hs_elasti[4];
+    hs_sigrefur = hs_elasti[5];
+    nuur = hs_elasti[6];
+    if ( hs_Eref50<=0. || hs_Erefur<=0. )
+      db_error( GROUP_MATERI_ELASTI_HARDSOIL, gr );
+    // cohesion term c*cot(phi) comes from the plastic group; without it
+    // c = 0 (base = sig3_manual). cot(phi) is never evaluated for c = 0
+    // (the term vanishes identically).
+    hs_ccot = 0.;
+    hs_plasti_present = 0;
+    if ( get_group_data( GROUP_MATERI_PLASTI_HARDSOIL, gr, element,
+        new_unknowns, hs_plasti, ldum, GET_IF_EXISTS ) ) {
+      hs_plasti_present = 1;
+      hs_phi = hs_plasti[0];
+      hs_c = hs_plasti[1];
+      if ( sin(hs_phi)<=0. || cos(hs_phi)<=0. )
+        db_error( GROUP_MATERI_PLASTI_HARDSOIL, gr );
+      if ( hs_c!=0. ) hs_ccot = hs_c * cos(hs_phi) / sin(hs_phi);
+    }
+    if ( hs_sigref50+hs_ccot<=0. || hs_sigrefur+hs_ccot<=0. )
+      db_error( GROUP_MATERI_ELASTI_HARDSOIL, gr );
+    // control_materi_plasti_hardsoil_gammap_initial (manual 6.146,
+    // theory HS): with -yes tochnog creates an extra initial
+    // contribution to gamma_p exactly such that the yield function is
+    // zero-valued at the INITIAL stress state (convenient to start a
+    // calculation with deviatoric stresses which would be outside the
+    // yield surface without this contribution). Done in the first
+    // timestep (the element record does not exist yet); the value is
+    // stored in element_intpnt_materi_plasti_hardsoil_gammap_initial
+    // (one value per element in this port; per integration point
+    // pending, see manual-developer) and ADDED to gamma_p inside the
+    // hardsoil yield function (plasti_rule reads the record). The
+    // extra value is gamma_p = f(initial stress, gamma_p = 0) =
+    // q/(E50*(1-q/qa)) - 2*q/Eur evaluated at the initial state.
+    hs_gp_swit = -NO;
+    db( ICONTROL, 0, &icontrol_hs, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+    db( CONTROL_MATERI_PLASTI_HARDSOIL_GAMMAP_INITIAL, icontrol_hs, &hs_gp_swit,
+      ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+    if ( hs_gp_swit==-YES && hs_plasti_present ) {
+      // first timestep detection: the record was pre-allocated (top.cc)
+      // with the sentinel -1; the initialization overwrites it with
+      // gamma_p_extra >= 0 (values < 0 mean "not initialized yet")
+      hs_gp_extra = -1.;
+      db( ELEMENT_INTPNT_MATERI_PLASTI_HARDSOIL_GAMMAP_INITIAL, element, idum,
+        &hs_gp_extra, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+      if ( hs_gp_extra<0. ) {
+      double hs_q0 = 0.;
+      double sig0[MDIM*MDIM];
+      array_move( new_sig, sig0, MDIM*MDIM );
+      matrix_eigenvalues( sig0, sig_princ );
+      hs_sig3 = sig_princ[0];
+      for ( i=1; i<MDIM; i++ )
+        if ( sig_princ[i]>hs_sig3 ) hs_sig3 = sig_princ[i];
+      hs_base = -hs_sig3 + hs_ccot;
+      if ( hs_base<=0. ) {
+        hs_E50 = hs_Eref50; hs_Eur = hs_Erefur;   // clamp, documented
+      }
+      else {
+        hs_E50 = hs_Eref50 * scalar_power( hs_base/(hs_sigref50+hs_ccot), hs_m );
+        hs_Eur = hs_Erefur * scalar_power( hs_base/(hs_sigrefur+hs_ccot), hs_m );
+      }
+      if ( hs_m==0. ) { hs_E50 = hs_Eref50; hs_Eur = hs_Erefur; }
+      hs_q0 = sqrt(
+        0.5*( scalar_square(sig0[0]-sig0[4]) +
+              scalar_square(sig0[4]-sig0[8]) +
+              scalar_square(sig0[0]-sig0[8]) ) +
+        3.*( scalar_square(sig0[1]) + scalar_square(sig0[2]) +
+             scalar_square(sig0[5]) ) );
+      hs_qf = 2. * sin(hs_phi) * hs_base / ( 1. - sin(hs_phi) );
+      hs_qa = hs_qf / hs_plasti[3];
+      if ( hs_qa<=0. ) db_error( GROUP_MATERI_PLASTI_HARDSOIL, gr );
+      if ( hs_q0>=hs_qa ) {
+        // initial deviatoric stress already beyond the asymptote: no
+        // finite gamma_p brings f to zero (clamp, documented)
+        hs_gp_extra = 1.e10;
+      }
+      else {
+        hs_gp_extra = hs_q0 / ( hs_E50 * ( 1. - hs_q0/hs_qa ) )
+          - 2. * hs_q0 / hs_Eur;
+        if ( hs_gp_extra<0. ) hs_gp_extra = 0.;
+      }
+      db( ELEMENT_INTPNT_MATERI_PLASTI_HARDSOIL_GAMMAP_INITIAL, element, idum,
+        &hs_gp_extra, hs_len, VERSION_NORMAL, PUT );
+      }
+    }
+    // minor principal stress (sig3_manual = least compressive =
+    // largest algebraic eigenvalue) at the step-start stress
+    matrix_eigenvalues( new_sig, sig_princ );
+    hs_sig3 = sig_princ[0];
+    for ( i=1; i<MDIM; i++ )
+      if ( sig_princ[i]>hs_sig3 ) hs_sig3 = sig_princ[i];
+    hs_base = -hs_sig3 + hs_ccot;
+    // base <= 0 (sig3 very tensile beyond the cohesion): clamp to
+    // E = Eref (the power law is not evaluated on a non-positive base;
+    // avoids zero/negative stiffness, documented in manual-developer)
+    if ( hs_base<=0. ) {
+      hs_E50 = hs_Eref50; hs_Eur = hs_Erefur;
+    }
+    else {
+      hs_E50 = hs_Eref50 * scalar_power( hs_base/(hs_sigref50+hs_ccot), hs_m );
+      hs_Eur = hs_Erefur * scalar_power( hs_base/(hs_sigrefur+hs_ccot), hs_m );
+    }
+    if ( hs_m==0. ) { hs_E50 = hs_Eref50; hs_Eur = hs_Erefur; }
+    // trial first-loading C for the pressure-increment estimate of the
+    // loading/unloading decision (matrix_a4b is NOT in-place safe:
+    // work is a separate scratch, see lot 6)
+    task[1] = -NO;
+    C_matrix( hs_E50, nu50, elasti_transverse_isotropy, C, task );
+    p = - ( new_sig[0] + new_sig[4] + new_sig[8] ) / 3.;
+    {
+      double dp_hs = 0.;
+      matrix_a4b( C, inc_ept, work );
+      dp_hs = -( work[0] + work[4] + work[8] ) / 3.;
+      p += dp_hs;
+    }
+    // normalize IEEE -0.0 (scalar_dabs(-0.0) returns -0.0 and
+    // -0.0 < sph is TRUE, which would take the Eur branch from the
+    // very first load step, see lot 6)
+    if ( p==0. ) p = 0.;
+    if ( materi_plasti_hardsoil_history &&
+         scalar_dabs(p) < old_unknowns[sph_indx] ) {
+      // unloading/reloading
+      young = hs_Eur;
+      poisson = nuur;
+    }
+    else {
+      // first loading
+      young = hs_E50;
+      poisson = nu50;
+    }
+    array_set( &C[0][0][0][0], 0., MDIM*MDIM*MDIM*MDIM );
+    array_set( &Cmem[0][0][0][0], 0., MDIM*MDIM*MDIM*MDIM );
+    task[1] = -NO;
+    C_matrix( young, poisson, elasti_transverse_isotropy, C, task );
+    task[1] = membrane;
+    C_matrix( young, poisson, elasti_transverse_isotropy, Cmem, task );
+  }
+  if ( get_group_data( GROUP_MATERI_ELASTI_POISSON_POWER, gr, element, new_unknowns,
       poisson_power, ldum, GET_IF_EXISTS ) ) {
     get_group_data( GROUP_MATERI_ELASTI_POISSON, gr, element,
       new_unknowns, &poisson, ldum, GET_IF_EXISTS );

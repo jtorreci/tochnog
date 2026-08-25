@@ -45,7 +45,7 @@ void top( void )
     dtime=0., time_old=0., time_new=0., ratio_criterium=0., 
     ratio_max=0., decrease_factor=0., min_timestep=0.,
     maximum_timestep=0., post_node_rhside_ratio=0.,
-    multiplier=1., ddum[1], control_timestep_iterations_automatic[2], 
+    multiplier=1., ddum[1], dzero=0., control_timestep_iterations_automatic[2], 
     control_timestep_size_automatic_decrease[3], 
     dwork[MUKNWN], *timestep=NULL, dworkmnol[MPOINT*MUKNWN], *dworknei=NULL;
 
@@ -151,7 +151,22 @@ void top( void )
         db( ELEMENT_DOF_INITIALISED, ielem, &zero, ddum, one, VERSION_NORMAL, PUT );
       if ( db_active_index( ELEMENT, ielem, VERSION_NORMAL ) && 
            !db_active_index( NONLOCAL_ELEMENT_INFO, ielem, VERSION_NORMAL ) ) 
-        db( NONLOCAL_ELEMENT_INFO, ielem, idum, dworknei, length_nei, VERSION_NORMAL, PUT );		
+        db( NONLOCAL_ELEMENT_INFO, ielem, idum, dworknei, length_nei, VERSION_NORMAL, PUT );
+      // element_intpnt_materi_plasti_hardsoil_gammap_initial (manual
+      // Professional 6.440): pre-allocate the per-element record before
+      // the time loop (the first-timestep PUT in set_stress runs inside
+      // the parallel element loop, where allocation is not allowed).
+      // Sentinel -1: the first-timestep initialization in set_stress
+      // overwrites it with gamma_p_extra >= 0.
+      if ( db_active_index( CONTROL_MATERI_PLASTI_HARDSOIL_GAMMAP_INITIAL,
+           0, VERSION_NORMAL ) && db_active_index( ELEMENT, ielem, VERSION_NORMAL ) && 
+           !db_active_index( ELEMENT_INTPNT_MATERI_PLASTI_HARDSOIL_GAMMAP_INITIAL,
+             ielem, VERSION_NORMAL ) ) {
+        dzero = -1.;
+        db( ELEMENT_INTPNT_MATERI_PLASTI_HARDSOIL_GAMMAP_INITIAL, ielem, idum,
+          &dzero, one, VERSION_NORMAL, PUT );
+        dzero = 0.;
+      }
     }
   }
 
@@ -159,6 +174,11 @@ void top( void )
   if ( !db_active_index( TIME_CURRENT, 0, VERSION_NORMAL ) ) {
     length = 1;
     db( TIME_CURRENT, 0, idum, &time_current, length, VERSION_NORMAL, PUT );
+  }
+
+  // debug: dump node 1 stress dofs after the input parse
+  if ( db_active_index( NODE, 1, VERSION_NORMAL ) ) {
+    double *ndof1 = db_dbl( NODE_DOF, 1, VERSION_NORMAL );
   }
 
     // determine the highest index of timestep, print, etc..

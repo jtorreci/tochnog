@@ -319,6 +319,19 @@ void input( )
       array_set( &dof_type[cap1_indx], -MATERI_PLASTI_CAP1_HISTORY, n*nder );
       array_set( &dof_scal_vec_mat[unknown_indx], -SCALAR, n*nder );
     }
+    else if ( !strcmp(str,"materi_plasti_hardsoil_history") ) {
+      // manual Professional 4.22: the history variable abs(p) (maximum
+      // pressure history) for the hardsoil model. Same concept as
+      // materi_stress_pressure_history (4.50): the dof sph is SHARED
+      // (same running max |p| update in dof.cc, same basename). The
+      // loading/unloading switch of group_materi_elasti_hardsoil
+      // (E50 vs Eur) reads this dof (old_unknowns[sph_indx]).
+      materi_plasti_hardsoil_history = 1;
+      sph_indx = unknown_indx;
+      n = 1;
+      array_set( &dof_type[sph_indx], -MATERI_PLASTI_HARDSOIL_HISTORY, n*nder );
+      array_set( &dof_scal_vec_mat[unknown_indx], -SCALAR, n*nder );
+    }
     else if ( !strcmp(str,"materi_plasti_rho") ) {
       materi_plasti_rho = 1;
       rho_indx = unknown_indx;
@@ -359,6 +372,18 @@ void input( )
       epp_indx = unknown_indx;
       n = 6;
       array_set( &dof_type[epp_indx], -MATERI_STRAIN_PLASTI, n*nder );
+      array_set( &dof_scal_vec_mat[unknown_indx], -MATRIX, n*nder );
+    }
+    else if ( !strcmp(str,"materi_strain_plasti_hardsoil") ) {
+      // manual Professional 4.40: the plastic strain specifically for
+      // the hardsoil model, added to the node_dof records (same
+      // 6-component layout as materi_strain_plasti, dedicated dof).
+      // Filled like materi_strain_plasti: the dof integrates the
+      // plastic strain increment (RHS in materi.cc).
+      materi_strain_plasti_hardsoil = 1;
+      hsepp_indx = unknown_indx;
+      n = 6;
+      array_set( &dof_type[hsepp_indx], -MATERI_STRAIN_PLASTI_HARDSOIL, n*nder );
       array_set( &dof_scal_vec_mat[unknown_indx], -MATRIX, n*nder );
     }
     else if ( !strcmp(str,"materi_strain_total") ) {
@@ -819,6 +844,8 @@ void input( )
       // store 
     if ( range[0]==-RA ) range_expand( range, integer_range, ldum, range_length );
     db_max_index( idat, max, VERSION_NORMAL, GET );
+    if ( idat==NODE_DOF ) {
+    }
     for ( i=0, ready=0; !ready; i++) {
       if ( range[0]==-RA ) 
         index = integer_range[i];
