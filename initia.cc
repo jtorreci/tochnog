@@ -36,6 +36,7 @@ long int
   materi_strainenergy=0, materi_strain_elasti=0, 
   materi_strain_plasti=0, materi_strain_total=0,
   materi_stress=0, materi_velocity=0, materi_velocity_integrated=0,
+  materi_stress_pressure_history=0,
   materi_void_fraction=0, materi_work=0, 
   maxwell_e=0, maxwell_fe=0, maxwell_er=0, maxwell_ei=0,
   residue=0, wave_scalar=0, wave_fscalar=0,
@@ -48,7 +49,7 @@ long int
   gvel_indx=-1, hisv_indx=-1, kap_indx=-1, f_indx=-1, fn_indx=-1,
   mstres_indx=-1, pres_indx=-1, res_indx=-1, rho_indx=-1,
   gsat_indx=-1,
-  rot_indx=-1, scal_indx=-1, stres_indx=-1, substeps_indx=-1,
+  rot_indx=-1, scal_indx=-1, stres_indx=-1, sph_indx=-1, substeps_indx=-1,
   svloc_indx=-1, svnonloc_indx=-1,
   temp_indx=-1, fscal_indx=-1, vel_indx=-1,
   veli_indx=-1, void_indx=-1, work_indx=-1;

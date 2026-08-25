@@ -182,6 +182,23 @@ void parallel_new_dof_diagonal( void )
           iuknwn = kap_indx;
           if ( node_dof_new[iuknwn]<0. ) node_dof_new[iuknwn] = 0.;
         }
+        if ( materi_stress_pressure_history && materi_stress ) {
+          // materi_stress_pressure_history (manual Professional 4.50):
+          // the maximum of the absolute value of the pressure over time
+          // is added to the node_dof records. p = -sig_mean (positive in
+          // compression, same convention as the young_power/poisson_power
+          // records). node_dof_new was copied from node_dof (VERSION_NORMAL)
+          // at step start, so this is max(previous max, |p_new|): the
+          // record is kept while unloading/reloading (|p| < max) and
+          // updated when the current pressure is the new maximum. The
+          // consumer is group_materi_elasti_stress_pressure_history_factor
+          // in set_stress() (stress.cc), which reads the interpolated dof.
+          iuknwn = sph_indx;
+          tmp = scalar_dabs( -( node_dof_new[stres_indx] +
+            node_dof_new[stres_indx+3*nder] +
+            node_dof_new[stres_indx+5*nder] ) / 3. );
+          if ( node_dof_new[iuknwn] < tmp ) node_dof_new[iuknwn] = tmp;
+        }
         if ( materi_velocity_integrated ) {
           for ( idim=0; idim<ndim; idim++ ) {
             iuknwn = veli_indx + idim * nder;

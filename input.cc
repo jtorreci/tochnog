@@ -368,6 +368,16 @@ void input( )
       array_set( &dof_type[stres_indx], -MATERI_STRESS, n*nder );
       array_set( &dof_scal_vec_mat[unknown_indx], -MATRIX, n*nder );
     }
+    else if ( !strcmp(str,"materi_stress_pressure_history") ) {
+      // manual Professional 4.50: the maximum of the absolute value of
+      // the pressure over time is stored in the node_dof records (see
+      // group_materi_elasti_stress_pressure_history_factor, manual 6.655).
+      materi_stress_pressure_history = 1;
+      sph_indx = unknown_indx;
+      n = 1;
+      array_set( &dof_type[sph_indx], -MATERI_STRESS_PRESSURE_HISTORY, n*nder );
+      array_set( &dof_scal_vec_mat[unknown_indx], -SCALAR, n*nder );
+    }
     else if ( !strcmp(str,"materi_velocity") ) {
       materi_velocity = 1;
       vel_indx = unknown_indx;

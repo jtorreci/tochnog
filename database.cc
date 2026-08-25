@@ -3593,6 +3593,12 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   data_class[GROUP_MATERI_ELASTI_SMALLSTRAIN] = MATERI;
   data_required[GROUP_MATERI_ELASTI_SMALLSTRAIN] = GROUP_TYPE;
 
+  strcpy(name[GROUP_MATERI_ELASTI_STRESS_PRESSURE_HISTORY_FACTOR],"group_materi_elasti_stress_pressure_history_factor");
+  type[GROUP_MATERI_ELASTI_STRESS_PRESSURE_HISTORY_FACTOR] = DOUBLE_PRECISION;
+  data_length[GROUP_MATERI_ELASTI_STRESS_PRESSURE_HISTORY_FACTOR] = 1;
+  data_class[GROUP_MATERI_ELASTI_STRESS_PRESSURE_HISTORY_FACTOR] = MATERI;
+  data_required[GROUP_MATERI_ELASTI_STRESS_PRESSURE_HISTORY_FACTOR] = GROUP_TYPE;
+
   strcpy(name[GROUP_MATERI_ELASTI_TRANSVERSE_ISOTROPY],"group_materi_elasti_transverse_isotropy");
   type[GROUP_MATERI_ELASTI_TRANSVERSE_ISOTROPY] = DOUBLE_PRECISION;
   data_length[GROUP_MATERI_ELASTI_TRANSVERSE_ISOTROPY] = 8;
@@ -3639,7 +3645,7 @@ void db_initialize( long int dof_type[], long int dof_label[] )
 
   strcpy(name[GROUP_MATERI_ELASTI_YOUNG_POWER],"group_materi_elasti_young_power");
   type[GROUP_MATERI_ELASTI_YOUNG_POWER] = DOUBLE_PRECISION;
-  data_length[GROUP_MATERI_ELASTI_YOUNG_POWER] = 3;
+  data_length[GROUP_MATERI_ELASTI_YOUNG_POWER] = 6;
   data_class[GROUP_MATERI_ELASTI_YOUNG_POWER] = MATERI;
   data_required[GROUP_MATERI_ELASTI_YOUNG_POWER] = GROUP_TYPE;
 
@@ -3982,6 +3988,11 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   type[CONTROL_MATERI_ELASTI_K0] = INTEGER;
   data_length[CONTROL_MATERI_ELASTI_K0] = 1;
   data_class[CONTROL_MATERI_ELASTI_K0] = CONTROL;
+
+  strcpy(name[CONTROL_MATERI_ELASTI_YOUNG_POWER_APPLY],"control_materi_elasti_young_power_apply");
+  type[CONTROL_MATERI_ELASTI_YOUNG_POWER_APPLY] = INTEGER;
+  data_length[CONTROL_MATERI_ELASTI_YOUNG_POWER_APPLY] = 1;
+  data_class[CONTROL_MATERI_ELASTI_YOUNG_POWER_APPLY] = CONTROL;
 
   strcpy(name[CONTROL_MATERI_FAILURE_APPLY],"control_materi_failure_apply");
   type[CONTROL_MATERI_FAILURE_APPLY] = INTEGER;
@@ -4786,6 +4797,8 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   strcpy(name[MATERI_STRAIN_TOTAL],"materi_strain_total" );
 
   strcpy(name[MATERI_STRESS],"materi_stress");
+
+  strcpy(name[MATERI_STRESS_PRESSURE_HISTORY],"materi_stress_pressure_history");
 
   strcpy(name[MATERI_VELOCITY],"materi_velocity");
 
@@ -6053,6 +6066,8 @@ void db_initialize( long int dof_type[], long int dof_label[] )
       else if ( n==5 ) strcpy( basename, "sigyz" );
       else if ( n==6 ) strcpy( basename, "sigzz" );
     }
+    else if ( dof_type[iuknwn]==-MATERI_STRESS_PRESSURE_HISTORY )
+      strcpy( basename, "sph" );
     else if ( dof_type[iuknwn]==-MATERI_VELOCITY ) {
       if ( iuknwn==vel_indx ) n = 0;
       n++;
@@ -6751,6 +6766,8 @@ long int db_number( char str[] )
     }
     else if ( !strcmp( str, "control_solver" ) )
       return CONTROL_OPTIONS_SOLVER;
+    else if ( !strcmp( str, "materi_elasti_young_power_apply" ) )
+      return CONTROL_MATERI_ELASTI_YOUNG_POWER_APPLY;
     else if ( !strcmp( str, "control_solver_bicg_error" ) )
       return CONTROL_OPTIONS_SOLVER_BICG_ERROR;
     else if ( !strcmp( str, "axisymmetric" ) )

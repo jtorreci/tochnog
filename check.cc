@@ -551,6 +551,11 @@ long int check( long int idat, long int task )
     ok = check_unknown( "materi_stress", YES, task );
     ok = ok && check_unknown( "materi_velocity", YES, task );
   }
+  if ( data_number==GROUP_MATERI_ELASTI_STRESS_PRESSURE_HISTORY_FACTOR ) {
+    ok = check_unknown( "materi_stress", YES, task );
+    ok = ok && check_unknown( "materi_velocity", YES, task );
+    ok = ok && check_unknown( "materi_stress_pressure_history", YES, task );
+  }
   if ( data_number==GROUP_MATERI_EXPANSION_LINEAR ) {
     ok = check_unknown( "condif_temperature", YES, task );
     ok = ok && check_unknown( "materi_velocity", YES, task );
@@ -867,6 +872,8 @@ long int check( long int idat, long int task )
   if ( data_number==MATERI_STRAIN_TOTAL )
     ok = check_unknown( "materi_strain_total", YES, task );
   if ( data_number==MATERI_STRESS )
+    ok = check_unknown( "materi_stress", YES, task );
+  if ( data_number==MATERI_STRESS_PRESSURE_HISTORY )
     ok = check_unknown( "materi_stress", YES, task );
   if ( data_number==MATERI_VELOCITY )
     ok = check_unknown( "materi_velocity", YES, task );

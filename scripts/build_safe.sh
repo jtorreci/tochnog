@@ -297,6 +297,39 @@ HIPO_TOTAL=0
 #   manual 6.650: nu = K0/(1+K0), K0>0.95 truncado. Con K0=0.5 -> nu=1/3:
 #   oedometro confinado sigma_xx/sigma_yy = 0.5 EXACTO (sigxx -0.75,
 #   sigyy -1.5). A/B con el control -no: nu=0.3 -> -0.5769/-1.3462).
+# + myoung6/myoung6_e2/myoung6_e3/myoung6_apply (Sprint 10 lote 6:
+#   group_materi_elasti_young_power UPGRADE 3->6 params, manual 6.662 /
+#   theory 2.2.2: E = E0 + E1*(p/p1)^alpha con E>=E2 y E<=E3, p=-sig_mean
+#   (compresion positiva). Oedometro E0=1000 E1=500 E2=800 E3=3000 p1=1
+#   alpha=1: punto fijo analitico E=1714.29 (sigzz -2.3077/sigxx -0.9890);
+#   el codigo incremental aterriza en E_eff~1237 = 72% del fijo (medido
+#   sigxx -0.713886/sigyy -1.66573; GOTCHA: el dof de tension es unknown
+#   del sistema acoplado — la respuesta NO es el fijo secante; el stress
+#   acumulado usa el PROMEDIO de los E pasados). CAMBIO SEMANTICO: la
+#   forma GNU 3-params (young0*|p/p0|^alpha) ya no se acepta. GOTCHA
+#   mayor: C_matrix ACUMULA (array_add), el GNU 2014 con young+young_power
+#   sumaba C(1000)+C(E_power) -> rigidez doblada; el bloque young_power
+#   ahora LIMPIA C/Cmem antes de construir (semantica Professional: la
+#   ley ES el modulo). Clamps A/B analiticos EXACTOS: myoung6_e2 (E2=3000
+#   fuerza E=3000: sigxx -1.7308/sigyy -4.0385) y myoung6_e3 (E3=800
+#   fuerza E=800: sigxx -0.4615/sigyy -1.0769). myoung6_apply:
+#   materi_elasti_young_power_apply -no (manual 6.801) -> E=E0=1000
+#   constante EXACTO (sigxx -0.5769/sigyy -1.3462, la base lineal).
+# + msph/msph_flat (Sprint 10 lote 6: group_materi_elasti_stress_pressure_history_factor
+#   manual 6.655 + initia materi_stress_pressure_history 4.50: el maximo
+#   |p| historico se guarda en el dof sph; si la presion actual es MENOR
+#   (descarga/recarga) la rigidez se multiplica por factor, si es el nuevo
+#   maximo NO. Oedometro 2 fases: carga 4 pasos vely=-0.002 (pico sigyy
+#   -0.5385, sph=0.3333) + descarga 2 pasos vely=+0.002. Con factor 3 el
+#   tangente de descarga es 3E y la tension SOBREPASA a +0.2692 vs -0.2692
+#   con factor 1 (A/B msph_flat). La decision usa la presion ESTIMADA del
+#   paso actual (p_old + dp con dp=-mean(C:inc_ept)) contra el maximo
+#   historico a INICIO de paso (old_unknowns[sph]): captura el PRIMER paso
+#   de descarga y evita la degeneracion p==sph en el pico (redondeo ->
+#   factor espurio -> historia runaway). GOTCHA IEEE: scalar_dabs(-0.0)
+#   devuelve -0.0 y -0.0 < sph es TRUE -> el factor se aplicaria desde el
+#   primer paso de carga; normalizado con p==0. -> p=0. GOTCHA matrix_a4b:
+#   NO es in-place seguro (corrompe el buffer de salida).
 for t in hypo1 hypo2 hypo3 hypo4 smooth1 dof1 mlx1 vtk_dof1 gen1 genbeam1          reset1 cda1 cda_arith cda_copy cda_activate cdist_normal cdist_corr cdist_clamp cd_method cd_geom \
          iface_mc iface_mc_1step iface_mc_slip iface_mc_slip_1step iface_mc_tension iface_mc_gap \
          iface_mc_mem iface_mc_dil iface_mc_dil_1step iface_mc_num \
@@ -323,7 +356,8 @@ for t in hypo1 hypo2 hypo3 hypo4 smooth1 dof1 mlx1 vtk_dof1 gen1 genbeam1       
          creset_geom creset_iface \
          fedge_alias fedge_restrict fvol_elem cmat_gate fproj_tunnel \
          dsmall dignore          mdirect_comp mdirect_gate mdp_shear mfactor mmc_tension mmchs_soft \
-         mcap2 mcap_legacy mcrunch mcrunch_low mvoid mvoid_low mpower mshf mshf_nof mk0 mk0_off; do
+         mcap2 mcap_legacy mcrunch mcrunch_low mvoid mvoid_low mpower mshf mshf_nof mk0 mk0_off \
+         myoung6 myoung6_e2 myoung6_e3 myoung6_apply msph msph_flat; do
   HIPO_TOTAL=$((HIPO_TOTAL+1))
   ( cd validation-suite/test-2014 &&
     ulimit -v 4000000 &&
@@ -336,5 +370,5 @@ for t in hypo1 hypo2 hypo3 hypo4 smooth1 dof1 mlx1 vtk_dof1 gen1 genbeam1       
     echo "    $t: FALLO (rc=$RC)"
   fi
 done
-echo "==> Resumen: $HIPO_OK/$HIPO_TOTAL runs OK (13 tests: 12 preexistentes + familia iface_mc en 10 runs + familia 3D en 5 runs + familia generate_interface en 6 runs + familia materi_direct en 5 runs + materi_displacement_relative en 2 runs + slide/reset_value en 2 runs + cda_arith/copy/activate en 3 runs + cdist_normal/corr/clamp en 3 runs + cd_method/cd_geom en 2 runs + gravity/settlement en 4 runs + contact en 1 run + contact_block/ctrl_apply/heatgen en 3 runs + groundflow_consolidate_off en 1 run + groundflow_vangenuchten/groundflow_nonsaturated_off en 2 runs + groundflow_total_pressure_tension/groundflow_interface en 2 runs + groundflow_flux_edge en 1 run + groundflow_phreatic_multiple en 1 run + groundflow_seepage en 1 run + groundflow_pressure_atm/_def en 2 runs + groundflow_total_pressure_limit/_dry en 2 runs + condif_heat_edge/vol/vol2 en 3 runs + condif_convec/rad/convec_el en 3 runs + aeg_node/aeg_seq/bt_factor en 3 runs + iface_condif/expansion/tangref en 3 runs + node_force_inertia/slide/pressure en 3 runs + creset_geom/iface en 2 runs + fedge_alias/restrict, fvol_elem y cmat_gate en 4 runs + fproj_tunnel en 1 run + dsmall/dignore en 2 runs + mdirect_comp/gate en 2 runs + mdp_shear/mfactor en 2 runs + mmc_tension en 1 run + mmchs_soft en 1 run + mcap2/mcap_legacy en 2 runs + mcrunch/mcrunch_low en 2 runs + mvoid/mvoid_low en 2 runs + mpower en 1 run + mshf/mshf_nof en 2 runs + mk0/mk0_off en 2 runs)."
+echo "==> Resumen: $HIPO_OK/$HIPO_TOTAL runs OK (13 tests: 12 preexistentes + familia iface_mc en 10 runs + familia 3D en 5 runs + familia generate_interface en 6 runs + familia materi_direct en 5 runs + materi_displacement_relative en 2 runs + slide/reset_value en 2 runs + cda_arith/copy/activate en 3 runs + cdist_normal/corr/clamp en 3 runs + cd_method/cd_geom en 2 runs + gravity/settlement en 4 runs + contact en 1 run + contact_block/ctrl_apply/heatgen en 3 runs + groundflow_consolidate_off en 1 run + groundflow_vangenuchten/groundflow_nonsaturated_off en 2 runs + groundflow_total_pressure_tension/groundflow_interface en 2 runs + groundflow_flux_edge en 1 run + groundflow_phreatic_multiple en 1 run + groundflow_seepage en 1 run + groundflow_pressure_atm/_def en 2 runs + groundflow_total_pressure_limit/_dry en 2 runs + condif_heat_edge/vol/vol2 en 3 runs + condif_convec/rad/convec_el en 3 runs + aeg_node/aeg_seq/bt_factor en 3 runs + iface_condif/expansion/tangref en 3 runs + node_force_inertia/slide/pressure en 3 runs + creset_geom/iface en 2 runs + fedge_alias/restrict, fvol_elem y cmat_gate en 4 runs + fproj_tunnel en 1 run + dsmall/dignore en 2 runs + mdirect_comp/gate en 2 runs + mdp_shear/mfactor en 2 runs + mmc_tension en 1 run + mmchs_soft en 1 run + mcap2/mcap_legacy en 2 runs + mcrunch/mcrunch_low en 2 runs + mvoid/mvoid_low en 2 runs + mpower en 1 run + mshf/mshf_nof en 2 runs + mk0/mk0_off en 2 runs + myoung6/myoung6_e2/myoung6_e3/myoung6_apply en 4 runs + msph/msph_flat en 2 runs)."
 echo "==> Log de compilacion completo en /tmp/tn_build_safe.log"

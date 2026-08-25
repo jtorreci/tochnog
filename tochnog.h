@@ -292,6 +292,7 @@ enum {
   CONTROL_MATERI_DIFFUSION,
   CONTROL_MATERI_DYNAMIC,
   CONTROL_MATERI_ELASTI_K0,
+  CONTROL_MATERI_ELASTI_YOUNG_POWER_APPLY,
   CONTROL_MATERI_FAILURE_APPLY,
   CONTROL_MATERI_PLASTI_HARDSOIL_GAMMAP_INITIAL,
   CONTROL_MATERI_PLASTI_HYPO_NIEMUNIS_VISCO_OCR_APPLY,
@@ -738,6 +739,7 @@ enum {
   GROUP_MATERI_ELASTI_POISSON_POWER,
   GROUP_MATERI_ELASTI_SHEAR_FACTOR,
   GROUP_MATERI_ELASTI_SMALLSTRAIN,
+  GROUP_MATERI_ELASTI_STRESS_PRESSURE_HISTORY_FACTOR,
   GROUP_MATERI_ELASTI_TRANSVERSE_ISOTROPY,
   GROUP_MATERI_ELASTI_TRANSVERSE_ISOTROPY_GRAHOUL,
   GROUP_MATERI_ELASTI_TSKH,
@@ -961,6 +963,7 @@ enum {
   MATERI_STRAIN_PLASTI,
   MATERI_STRAIN_TOTAL,
   MATERI_STRESS,
+  MATERI_STRESS_PRESSURE_HISTORY,
   MATERI_VELOCITY,
   MATERI_VELOCITY_INTEGRATED,
   MATERI_VOID_FRACTION,
@@ -1239,7 +1242,8 @@ extern long int echo, ndim, derivatives,
   materi_plasti_softvar_nonlocal,
   materi_strain_intergranular, materi_plasti_rho, materi_strainenergy,
   materi_strain_elasti, materi_strain_plasti, materi_strain_total, 
-  materi_stress, materi_velocity, materi_velocity_integrated,
+  materi_stress, materi_stress_pressure_history,
+  materi_velocity, materi_velocity_integrated,
   materi_void_fraction, materi_work, 
   maxwell_e, maxwell_fe,
   maxwell_er, maxwell_ei,
@@ -1284,6 +1288,7 @@ extern long int
   rot_indx, // index stating start of beam_rotation in node_dof
   scal_indx, // index stating start of wave_scalar in node_dof
   stres_indx, // index stating start of materi_stress in node_dof
+  sph_indx, // index stating start of materi_stress_pressure_history in node_dof
   substeps_indx, // index stating start of materi_plasti_incremental_substeps in node_dof
   svloc_indx, // index stating start of materi_plasti_softvar_local in node_dof
   svnonloc_indx, // index stating start of materi_plasti_softvar_nonlocal in node_dof

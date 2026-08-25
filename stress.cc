@@ -246,15 +246,16 @@ void set_stress( long int element, long int gr,
 	 meanstrain=0.,
     plasti_kinematic_hardening=0., young = 0., young_linear_ept=0., poisson=0., 
     compressibility=0., fac=0., kappa=0., g=0., k=0., e=0.,
-    lade_1=0., lade_2=0, lade_3=0., p=0., p0=0., p1=0., young0=0.,
+    lade_1=0., lade_2=0, lade_3=0., p=0., p0=0., p1=0., young0=0., young1=0.,
+    young2=0., young3=0.,
     nu0=0., nu1=0., nu2=0.,
     alpha=0., gamma=0., dtime=0., rdum=0., camclay[1], tskh[DATA_ITEM_SIZE],
     smallstrain[6],
     group_materi_elasti_lade[3], sig_dev[MDIM*MDIM], ddum[MDIM*MDIM], ddumarray[MDIM][MDIM], 
     memmat[MDIM][MDIM], elasti_transverse_isotropy[DATA_ITEM_SIZE],
     inc_temperature_strain[MDIM*MDIM], new_temperature_strain[MDIM*MDIM], 
-    plasti_dir[MDIM*MDIM], young_power[3], young_polynomial[DATA_ITEM_SIZE],
-    poisson_power[5], shear_factor=0., k0_elasti=0.,
+    plasti_dir[MDIM*MDIM], young_power[6], young_polynomial[DATA_ITEM_SIZE],
+    poisson_power[5], shear_factor=0., k0_elasti=0., sph_factor=0.,
     young_strainstress[DATA_ITEM_SIZE], ept_dev[MDIM*MDIM],
     plasti_visco_exponential[2], plasti_visco_power[3], 
     inc_rho[MDIM*MDIM], test_sig[MDIM*MDIM], total_inc_epp[MDIM*MDIM], 
@@ -369,15 +370,42 @@ void set_stress( long int element, long int gr,
   }
   if ( get_group_data( GROUP_MATERI_ELASTI_YOUNG_POWER, gr, element, new_unknowns, 
       young_power, ldum, GET_IF_EXISTS ) ) {
+    // C_matrix ACCUMULATES into its target (array_add), so any elastic C
+    // built before this block (e.g. group_materi_elasti_young) must be
+    // cleared: the power law IS the Young modulus (Professional 6.662),
+    // it does not add to the constant young. (The GNU 2014 code let both
+    // records accumulate -> the stiffness was doubled; fixed here, see
+    // manual-developer.)
+    array_set( &C[0][0][0][0], 0., MDIM*MDIM*MDIM*MDIM );
+    array_set( &Cmem[0][0][0][0], 0., MDIM*MDIM*MDIM*MDIM );
     if ( get_group_data( GROUP_MATERI_ELASTI_POISSON, gr, element,
         new_unknowns, &poisson, ldum, GET_IF_EXISTS ) && k0_active )
       poisson = k0_elasti/(1.+k0_elasti);
-    p0 = young_power[0];
-    young0 = young_power[1];
-    alpha = young_power[2];
-    if ( p0<=0. ) db_error( GROUP_MATERI_ELASTI_YOUNG_POWER, gr );
+    // manual Professional 6.662 / theory 2.2.2: E = E0 + E1*(p/p1)^alpha
+    // with the conditions E >= E2 and E <= E3, where p is the pressure
+    // (p = -(sig11+sig22+sig33)/3, positive in compression; compression
+    // raises E). Parameters E0 E1 E2 E3 p1 alpha. NOTE: this is the
+    // Professional 6-parameter convention — the GNU 3-parameter form
+    // (young = young0*|p/p0|^alpha) is no longer accepted (see
+    // manual-developer).
+    young0 = young_power[0];
+    young1 = young_power[1];
+    young2 = young_power[2];
+    young3 = young_power[3];
+    p1 = young_power[4];
+    alpha = young_power[5];
+    if ( p1<=0. ) db_error( GROUP_MATERI_ELASTI_YOUNG_POWER, gr );
     p = - ( new_sig[0] + new_sig[4] + new_sig[8] ) / 3.;
-    young = young0 * scalar_power(scalar_dabs(p/p0),alpha);
+    // materi_elasti_young_power_apply -no (manual Professional 6.801):
+    // the power-law nonlinearity is ignored and the constant young from
+    // the record (E0) is applied at all times.
+    if ( control_materi_gate_off( CONTROL_MATERI_ELASTI_YOUNG_POWER_APPLY ) )
+      young = young0;
+    else {
+      young = young0 + young1 * scalar_power( p/p1, alpha );
+      if ( young<young2 ) young = young2;
+      if ( young>young3 ) young = young3;
+    }
     task[1] = -NO;
     C_matrix( young, poisson, elasti_transverse_isotropy, C, task );
     task[1] = membrane;
@@ -426,6 +454,61 @@ void set_stress( long int element, long int gr,
           }
         }
       }
+    }
+  }
+  // group_materi_elasti_stress_pressure_history_factor (manual
+  // Professional 6.655): models a different soil stiffness on first
+  // loading versus unloading/reloading. Requires the initia
+  // materi_stress_pressure_history (manual 4.50), which stores the
+  // maximum of the absolute value of the pressure over time in the
+  // node_dof records (updated in dof.cc, parallel_new_dof_diagonal).
+  // If the CURRENT pressure |p| (p = -sig_mean, positive in compression)
+  // is SMALLER than the largest pressure in history (the interpolated
+  // dof new_unknowns[sph_indx]), the material is unloading/reloading and
+  // the elastic stiffness is multiplied with factor; if the current
+  // pressure is the new maximum, it becomes the maximum history pressure
+  // (in dof.cc) and the stiffness is NOT multiplied. Point of
+  // application: the final elastic C/Cmem (after shear_factor), so the
+  // factor scales the complete stiffness built from group_materi_elasti_young
+  // or group_materi_elasti_young_power and combines with
+  // group_materi_elasti_poisson_power/shear_factor (see manual-developer).
+  if ( materi_stress_pressure_history &&
+       get_group_data( GROUP_MATERI_ELASTI_STRESS_PRESSURE_HISTORY_FACTOR,
+         gr, element, new_unknowns, &sph_factor, ldum, GET_IF_EXISTS ) ) {
+    // The elastic stiffness is evaluated with the PREVIOUS step's stress
+    // (new_sig is initialized from the old unknowns), so the pressure for
+    // the unloading/reloading decision is the pressure the CURRENT step
+    // will reach: p_new = p_old + dp, dp = -mean(C:inc_ept) (the elastic
+    // pressure increment of this step). This catches the FIRST unloading
+    // step (with p_old only, the decision lags one step: p_old == sph at
+    // the peak, so the factor would start one step late). The history
+    // maximum is read from the OLD unknowns (VERSION_NORMAL, the value at
+    // the START of the step): during the step the sph dof is raised by
+    // dof.cc (parallel_new_dof_diagonal) with the running |p|, and the
+    // decision must compare against the history EXCLUDING the current
+    // step — otherwise p_est == sph exactly at the peak and any rounding
+    // decides loading vs unloading (spurious factor, runaway history).
+    p = - ( new_sig[0] + new_sig[4] + new_sig[8] ) / 3.;
+    {
+      double dp=0.;
+      // work = C:inc_ept (elastic stress increment of this step); the
+      // source inc_ept is untouched (matrix_a4b must not be in-place)
+      matrix_a4b( C, inc_ept, work );
+      dp = -( work[0] + work[4] + work[8] ) / 3.;
+      p += dp;
+    }
+    // normalize IEEE -0.0: scalar_dabs(-0.0) returns -0.0 (the branch
+    // a<0. is false for -0.0), and -0.0 < sph is TRUE for any sph,
+    // which would apply the factor from the very first load step.
+    if ( p==0. ) p = 0.;
+    if ( scalar_dabs(p) < old_unknowns[sph_indx] ) {
+      for ( idim=0; idim<MDIM; idim++ )
+        for ( jdim=0; jdim<MDIM; jdim++ )
+          for ( kdim=0; kdim<MDIM; kdim++ )
+            for ( ldim=0; ldim<MDIM; ldim++ ) {
+              C[idim][jdim][kdim][ldim] *= sph_factor;
+              Cmem[idim][jdim][kdim][ldim] *= sph_factor;
+            }
     }
   }
   if ( get_group_data( GROUP_MATERI_ELASTI_YOUNG_STRAINSTRESS, gr, element, new_unknowns, 
