@@ -3557,6 +3557,12 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   data_class[GROUP_MATERI_ELASTI_COMPRESSIBILITY] = MATERI;
   data_required[GROUP_MATERI_ELASTI_COMPRESSIBILITY] = GROUP_TYPE;
 
+  strcpy(name[GROUP_MATERI_ELASTI_K0],"group_materi_elasti_k0");
+  type[GROUP_MATERI_ELASTI_K0] = DOUBLE_PRECISION;
+  data_length[GROUP_MATERI_ELASTI_K0] = 1;
+  data_class[GROUP_MATERI_ELASTI_K0] = MATERI;
+  data_required[GROUP_MATERI_ELASTI_K0] = GROUP_TYPE;
+
   strcpy(name[GROUP_MATERI_ELASTI_LADE],"group_materi_elasti_lade");
   type[GROUP_MATERI_ELASTI_LADE] = DOUBLE_PRECISION;
   data_length[GROUP_MATERI_ELASTI_LADE] = 3;
@@ -3568,6 +3574,18 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   data_length[GROUP_MATERI_ELASTI_POISSON] = 1;
   data_class[GROUP_MATERI_ELASTI_POISSON] = MATERI;
   data_required[GROUP_MATERI_ELASTI_POISSON] = GROUP_TYPE;
+
+  strcpy(name[GROUP_MATERI_ELASTI_POISSON_POWER],"group_materi_elasti_poisson_power");
+  type[GROUP_MATERI_ELASTI_POISSON_POWER] = DOUBLE_PRECISION;
+  data_length[GROUP_MATERI_ELASTI_POISSON_POWER] = 5;
+  data_class[GROUP_MATERI_ELASTI_POISSON_POWER] = MATERI;
+  data_required[GROUP_MATERI_ELASTI_POISSON_POWER] = GROUP_TYPE;
+
+  strcpy(name[GROUP_MATERI_ELASTI_SHEAR_FACTOR],"group_materi_elasti_shear_factor");
+  type[GROUP_MATERI_ELASTI_SHEAR_FACTOR] = DOUBLE_PRECISION;
+  data_length[GROUP_MATERI_ELASTI_SHEAR_FACTOR] = 1;
+  data_class[GROUP_MATERI_ELASTI_SHEAR_FACTOR] = MATERI;
+  data_required[GROUP_MATERI_ELASTI_SHEAR_FACTOR] = GROUP_TYPE;
 
   strcpy(name[GROUP_MATERI_ELASTI_SMALLSTRAIN],"group_materi_elasti_smallstrain");
   type[GROUP_MATERI_ELASTI_SMALLSTRAIN] = DOUBLE_PRECISION;
@@ -3644,7 +3662,7 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   data_class[GROUP_MATERI_EXPANSION_VOLUME] = MATERI;
   data_required[GROUP_MATERI_EXPANSION_VOLUME] = GROUP_TYPE;
 
-  strcpy(name[GROUP_MATERI_FAILURE_CRUCHING],"group_materi_failure_cruching");
+  strcpy(name[GROUP_MATERI_FAILURE_CRUCHING],"group_materi_failure_crunching");
   type[GROUP_MATERI_FAILURE_CRUCHING] = DOUBLE_PRECISION;
   data_length[GROUP_MATERI_FAILURE_CRUCHING] = 2;
   data_class[GROUP_MATERI_FAILURE_CRUCHING] = MATERI;
@@ -3668,7 +3686,7 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   data_class[GROUP_MATERI_FAILURE_RUPTURE] = MATERI;
   data_required[GROUP_MATERI_FAILURE_RUPTURE] = GROUP_TYPE;
 
-  strcpy(name[GROUP_MATERI_FAILURE_VOIDFRACTION],"group_materi_failure_voidfraction");
+  strcpy(name[GROUP_MATERI_FAILURE_VOIDFRACTION],"group_materi_failure_void_fraction");
   type[GROUP_MATERI_FAILURE_VOIDFRACTION] = DOUBLE_PRECISION;
   data_length[GROUP_MATERI_FAILURE_VOIDFRACTION] = 2;
   data_class[GROUP_MATERI_FAILURE_VOIDFRACTION] = MATERI;
@@ -6739,6 +6757,12 @@ long int db_number( char str[] )
       return GROUP_AXISYMMETRIC;
     else if ( !strcmp( str, "group_materi_plasti_druck_prag" ) )
       return GROUP_MATERI_PLASTI_DRUCKPRAG;
+    else if ( !strcmp( str, "group_materi_plasti_cap2" ) )
+      return GROUP_MATERI_PLASTI_CAP;
+    else if ( !strcmp( str, "group_materi_failure_cruching" ) )
+      return GROUP_MATERI_FAILURE_CRUCHING;
+    else if ( !strcmp( str, "group_materi_failure_voidfraction" ) )
+      return GROUP_MATERI_FAILURE_VOIDFRACTION;
     else if ( !strcmp( str, "group_materi_plasti_bounda" ) )
       return GROUP_MATERI_PLASTI_BOUNDARY;
     else if ( !strcmp( str, "group_materi_plasti_bounda_factor" ) )

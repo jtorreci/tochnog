@@ -236,7 +236,8 @@ void set_stress( long int element, long int gr,
     swit=0, length=0, membrane=-NO, viscoplasti=0, 
     viscoplasti_always=-NO, plasti_type=-NONE, volumetric_young_order=0,
     memory=-UPDATED, max_plasti_iter=0, total_plasti_iter=0, 
-    nuser_data=0, idim=0, jdim=0, kdim=0, ldim=0, 
+    nuser_data=0, idim=0, jdim=0, kdim=0, ldim=0, k0_active=0, 
+    k0_control_swit=0,
     formulation=INCREMENTAL, ldum=0, idum[1], task[2];
   double lambda=0., deps_size=0., lambda_new=0., lambda_previous=0., 
     tmp=0., tmp_old=0., tmp_inc=0., tmp_new=0., 
@@ -245,13 +246,15 @@ void set_stress( long int element, long int gr,
 	 meanstrain=0.,
     plasti_kinematic_hardening=0., young = 0., young_linear_ept=0., poisson=0., 
     compressibility=0., fac=0., kappa=0., g=0., k=0., e=0.,
-    lade_1=0., lade_2=0, lade_3=0., p=0., p0=0., young0=0.,
+    lade_1=0., lade_2=0, lade_3=0., p=0., p0=0., p1=0., young0=0.,
+    nu0=0., nu1=0., nu2=0.,
     alpha=0., gamma=0., dtime=0., rdum=0., camclay[1], tskh[DATA_ITEM_SIZE],
     smallstrain[6],
     group_materi_elasti_lade[3], sig_dev[MDIM*MDIM], ddum[MDIM*MDIM], ddumarray[MDIM][MDIM], 
     memmat[MDIM][MDIM], elasti_transverse_isotropy[DATA_ITEM_SIZE],
     inc_temperature_strain[MDIM*MDIM], new_temperature_strain[MDIM*MDIM], 
     plasti_dir[MDIM*MDIM], young_power[3], young_polynomial[DATA_ITEM_SIZE],
+    poisson_power[5], shear_factor=0., k0_elasti=0.,
     young_strainstress[DATA_ITEM_SIZE], ept_dev[MDIM*MDIM],
     plasti_visco_exponential[2], plasti_visco_power[3], 
     inc_rho[MDIM*MDIM], test_sig[MDIM*MDIM], total_inc_epp[MDIM*MDIM], 
@@ -320,10 +323,32 @@ void set_stress( long int element, long int gr,
     task[0] = GROUP_MATERI_ELASTI_TRANSVERSE_ISOTROPY_GRAHOUL;
   }
 
+  // group_materi_elasti_k0 (manual Professional 6.650): when this record
+  // is specified AND control_materi_elasti_k0 is set to -yes, the poisson
+  // coefficient consistent with K0, nu = K0/(1+K0) (from K0 = nu/(1-nu)),
+  // replaces group_materi_elasti_poisson in the elastic stress law with
+  // group_materi_elasti_young or group_materi_elasti_young_power. For
+  // K0 > 0.95 Tochnog takes 0.95. (The group_materi_elasti_hardsoil
+  // combination is not implemented: see manual-developer.)
+  k0_active = 0;
+  if ( db_active_index( CONTROL_MATERI_ELASTI_K0, 0, VERSION_NORMAL ) ) {
+    idum[0] = 0;
+    db( ICONTROL, 0, idum, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+    db( CONTROL_MATERI_ELASTI_K0, idum[0], &k0_control_swit, ddum, ldum,
+      VERSION_NORMAL, GET_IF_EXISTS );
+    if ( k0_control_swit==-YES &&
+         get_group_data( GROUP_MATERI_ELASTI_K0, gr, element, new_unknowns,
+           &k0_elasti, ldum, GET_IF_EXISTS ) ) {
+      if ( k0_elasti>0.95 ) k0_elasti = 0.95;
+      k0_active = 1;
+    }
+  }
+
   if ( get_group_data( GROUP_MATERI_ELASTI_YOUNG, gr, element, new_unknowns, 
       &young, ldum, GET_IF_EXISTS ) ) {
-    get_group_data( GROUP_MATERI_ELASTI_POISSON, gr, element,
-      new_unknowns, &poisson, ldum, GET_IF_EXISTS ); 
+    if ( get_group_data( GROUP_MATERI_ELASTI_POISSON, gr, element,
+        new_unknowns, &poisson, ldum, GET_IF_EXISTS ) && k0_active )
+      poisson = k0_elasti/(1.+k0_elasti);
     task[1] = -NO;
     C_matrix( young, poisson, elasti_transverse_isotropy, C, task );
     task[1] = membrane;
@@ -344,8 +369,9 @@ void set_stress( long int element, long int gr,
   }
   if ( get_group_data( GROUP_MATERI_ELASTI_YOUNG_POWER, gr, element, new_unknowns, 
       young_power, ldum, GET_IF_EXISTS ) ) {
-    get_group_data( GROUP_MATERI_ELASTI_POISSON, gr, element,
-      new_unknowns, &poisson, ldum, GET_IF_EXISTS ); 
+    if ( get_group_data( GROUP_MATERI_ELASTI_POISSON, gr, element,
+        new_unknowns, &poisson, ldum, GET_IF_EXISTS ) && k0_active )
+      poisson = k0_elasti/(1.+k0_elasti);
     p0 = young_power[0];
     young0 = young_power[1];
     alpha = young_power[2];
@@ -356,6 +382,51 @@ void set_stress( long int element, long int gr,
     C_matrix( young, poisson, elasti_transverse_isotropy, C, task );
     task[1] = membrane;
     C_matrix( young, poisson, elasti_transverse_isotropy, Cmem, task );
+  }
+  if ( get_group_data( GROUP_MATERI_ELASTI_POISSON_POWER, gr, element, new_unknowns, 
+      poisson_power, ldum, GET_IF_EXISTS ) ) {
+    get_group_data( GROUP_MATERI_ELASTI_POISSON, gr, element,
+      new_unknowns, &poisson, ldum, GET_IF_EXISTS );
+    // manual Professional 6.653 / theory 2.2.2: nu = nu0 + nu1*(p/p1)^alpha
+    // with the condition nu <= nu2, where p is the pressure
+    // (p = -(sig11+sig22+sig33)/3, positive in compression; same sign
+    // convention as GROUP_MATERI_ELASTI_YOUNG_POWER).
+    nu0 = poisson_power[0];
+    nu1 = poisson_power[1];
+    nu2 = poisson_power[2];
+    p1 = poisson_power[3];
+    alpha = poisson_power[4];
+    if ( p1<=0. ) db_error( GROUP_MATERI_ELASTI_POISSON_POWER, gr );
+    p = - ( new_sig[0] + new_sig[4] + new_sig[8] ) / 3.;
+    poisson = nu0 + nu1 * scalar_power(scalar_dabs(p/p1),alpha);
+    if ( poisson>nu2 ) poisson = nu2;
+    task[1] = -NO;
+    C_matrix( young, poisson, elasti_transverse_isotropy, C, task );
+    task[1] = membrane;
+    C_matrix( young, poisson, elasti_transverse_isotropy, Cmem, task );
+  }
+  // group_materi_elasti_shear_factor (manual Professional 6.654): the
+  // shear stiffness following from a specified young and poisson is
+  // multiplied with factor (convenient to test the effect of low shear
+  // stiffness). Scales ONLY the shear entries of C and Cmem — the terms
+  // C[i][j][k][l] that connect shear strain (k!=l) to shear stress
+  // (i!=j); in C_matrix those are the (0,1),(0,2),(1,2) shear blocks
+  // (diagonal (3,3),(4,4),(5,5) entries of the Voigt matrix in 3D, and
+  // the (2,2) shear entry in 2D plane strain/plane stress).
+  if ( get_group_data( GROUP_MATERI_ELASTI_SHEAR_FACTOR, gr, element, 
+      new_unknowns, &shear_factor, ldum, GET_IF_EXISTS ) ) {
+    for ( idim=0; idim<MDIM; idim++ ) {
+      for ( jdim=0; jdim<MDIM; jdim++ ) {
+        if ( idim==jdim ) continue;
+        for ( kdim=0; kdim<MDIM; kdim++ ) {
+          for ( ldim=0; ldim<MDIM; ldim++ ) {
+            if ( kdim==ldim ) continue;
+            C[idim][jdim][kdim][ldim] *= shear_factor;
+            Cmem[idim][jdim][kdim][ldim] *= shear_factor;
+          }
+        }
+      }
+    }
   }
   if ( get_group_data( GROUP_MATERI_ELASTI_YOUNG_STRAINSTRESS, gr, element, new_unknowns, 
       young_strainstress, length, GET_IF_EXISTS ) ) {

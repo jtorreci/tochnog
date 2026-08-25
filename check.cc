@@ -539,6 +539,18 @@ long int check( long int idat, long int task )
     ok = ok && check_unknown( "materi_velocity", YES, task );
     ok = ok && check_unknown( "materi_strain_total", YES, task );
   }
+  if ( data_number==GROUP_MATERI_ELASTI_POISSON_POWER ) {
+    ok = check_unknown( "materi_stress", YES, task );
+    ok = ok && check_unknown( "materi_velocity", YES, task );
+  }
+  if ( data_number==GROUP_MATERI_ELASTI_SHEAR_FACTOR ) {
+    ok = check_unknown( "materi_stress", YES, task );
+    ok = ok && check_unknown( "materi_velocity", YES, task );
+  }
+  if ( data_number==GROUP_MATERI_ELASTI_K0 ) {
+    ok = check_unknown( "materi_stress", YES, task );
+    ok = ok && check_unknown( "materi_velocity", YES, task );
+  }
   if ( data_number==GROUP_MATERI_EXPANSION_LINEAR ) {
     ok = check_unknown( "condif_temperature", YES, task );
     ok = ok && check_unknown( "materi_velocity", YES, task );
