@@ -132,6 +132,8 @@ suite sfnet, o un test propio. El registro completo:
 
 **Sprint 10 — lote 5: aliases Professional (cap2 + failure typo/underscore) + elásticas menores (poisson_power, shear_factor, k0)** | `1e5eb8e` | 2026-08-25 | `group_materi_plasti_cap2`: alias db_number del legacy `plasti_cap` (misma física, plasti.cc intacto; smoke A/B `mcap2`==`mcap_legacy` → sigxx −0.5769 EXACTO con c=1e6, f=p−pb<0). **Renombres de name[]**: `failure_cruching`→`failure_crunching` (typo de la "n") y `failure_voidfraction`→`failure_void_fraction` (underscore), ambos con el nombre GNU como alias db_number (sin tests legacy afectados). A/B de threshold en failure: alto→intacto, negativo→elemento marcado en el primer timestep (element_delete_times[0]=0.05; GOTCHA: threshold negativo dispara a deformación cero — semántica GNU fiel a jan-2014). `group_materi_elasti_poisson_power` (6.653): nu=ν0+ν1·(p/p1)^α con ν≤ν2, p=−sig_mean — bloque en set_stress tras young_power; oedometro E·eps=1.2 → punto fijo analítico ν=0.4, p=2 (σxx=−1.7143); medido σxx −1.4389/σyy −3.2924 (84%, ν~0.43; GOTCHA: el dof de tensión es unknown del sistema acoplado → la respuesta NO es exactamente el fijo secante). `group_materi_elasti_shear_factor` (6.654): escala SOLO las entradas de corte de C/Cmem (bloques (0,1),(0,2),(1,2)); cizalla pura 1 paso: factor 2→σxy 50 vs 33.33 sin record, factor 0→0 EXACTO (GOTCHA: ratio 1.5 no 2 — respuesta no lineal del dof acoplado; el rig de fuerza NO sirve como sonda de rigidez: el desplazamiento no responde a E). `group_materi_elasti_k0` (6.650) + hook de `control_materi_elasti_k0` (parcial Sprint 9 conectado): ν=K0/(1+K0), K0>0.95→0.95, SOLO con young/young_power Y poisson; K0=0.5→ν=1/3→σxx −0.75/σyy −1.5 EXACTOS, A/B control −no→−0.5769/−1.3462. Suite 111/111 (100 legacy + 11 nuevos). |
 
+**Sprint 10 — lote 6: `elasti_young_power` UPGRADE 3→6 params (CAMBIO SEMÁNTICO) + `stress_pressure_history_factor` + initia `materi_stress_pressure_history` + gate `materi_elasti_young_power_apply`** | `260d199` | 2026-08-25 | `group_materi_elasti_young_power` (6.662/teoría 2.2.2): E=E0+E1·(p/p1)^α con E≥E2 y E≤E3, p=−sig_mean (compresión sube E). **CAMBIO SEMÁNTICO**: la forma GNU 3-params (young0·|p/p0|^α) ya no se acepta (verificado: ningún test legacy ni sfnet la usa). **FIX de bug preexistente del GNU 2014**: C_matrix ACUMULA (array_add, elasti.cc) — con young+young_power el GNU sumaba C(1000)+C(E_power) → rigidez DOBLADA (probe: −1.3961 = 2×−0.6980); el bloque young_power ahora LIMPIA C/Cmem antes de construir (la ley ES el módulo). Oedometro E0=1000 E1=500 E2=800 E3=3000 p1=1 α=1: punto fijo analítico E=1714.29 (σzz −2.3077/σxx −0.9890); medido σxx −0.713886/σyy −1.66573 = E_eff~1237 = 72% del fijo (GOTCHA: la C se evalúa con la tensión del paso previo y la tensión acumulada usa el PROMEDIO de los E pasados — trayectoria por debajo del fijo, modelo E_{n+1}=1.00417·E_n verificado a 1.4%). Clamps A/B analíticos EXACTOS: `myoung6_e2` (E2=3000 fuerza E=3000: −1.7308/−4.0385) y `myoung6_e3` (E3=800 fuerza E=800: −0.4615/−1.0769). `materi_elasti_young_power_apply` (6.801): gate control_...−no → E=E0 constante → `myoung6_apply` −0.5769/−1.3462 EXACTO (base lineal; alias db_number del nombre del manual). `group_materi_elasti_stress_pressure_history_factor` (6.655, NUEVO) + initia `materi_stress_pressure_history` (4.50): dof `sph` = máximo running |p| (dof.cc parallel_new_dof_diagonal, patrón clamp de kap; sin ecuación en general.cc, patrón veli); en set_stress, si la presión estimada del paso actual (p_old + dp, dp=−mean(C:inc_ept)) es MENOR que el máximo a INICIO de paso (old_unknowns[sph]) → C/Cmem × factor (descarga/recarga); si es el nuevo máximo → NO. Diseño: p_est captura el PRIMER paso de descarga y evita la degeneración p==sph en el pico (con new_unknowns[sph] subido medio paso, cualquier redondeo disparaba el factor → tensión 6x → sph inflado 0.3333→0.5 → runaway). GOTCHAS: scalar_dabs(−0.0) devuelve −0.0 y −0.0<sph es TRUE (factor desde el paso 1 de carga; normalizado p==0.); matrix_a4b NO es in-place seguro. Oedometro 2 fases `msph` (carga 4 pasos vely −0.002 + descarga 2 pasos +0.002, factor 3): tangente de descarga 3E → σyy +0.2692 vs −0.2692 con factor 1 (`msph_flat`); sph 0.3333 EXACTO en ambos. Suite 117/117 (111 + 6 nuevos). |
+
 
 : ~74 keywords (aliases force 24+11 projected, control_materi 13, data 5, solver 7, print 3, axisymmetric 1) + 4 fixes/gotchas documentados. |
 
@@ -1215,14 +1217,14 @@ Nota: `group_interface_ground` del checklist anterior NUNCA existió (artefacto 
 - [x] `group_materi_elasti_poisson` — presente en el GNU
 - [x] `group_materi_elasti_poisson_power` — Sprint 10 (lote 5; bloque en set_stress tras young_power: nu = nu0+nu1*(p/p1)^alpha, nu<=nu2, p=-sig_mean; validado con `mpower`: nu0=0.2 nu1=0.1 p1=1 alpha=1, E*eps=1.2 -> punto fijo analitico nu=0.4 p=2 (sigxx -1.7143); medido sigxx -1.4389/sigyy -3.2924 = 84% del fijo, ventana que discrimina la base nu=0.3)
 - [x] `group_materi_elasti_shear_factor` — Sprint 10 (lote 5; multiplica SOLO las entradas de corte de C/Cmem, bloques (0,1),(0,2),(1,2); validado con `mshf`/`mshf_nof`: cizalla pura 1 paso, factor 2 -> sigxy 50 vs 33.33 sin record; factor 0 -> 0 EXACTO; GOTCHA: dof sigxy del sistema acoplado no responde lineal (ratio 1.5)
-- [ ] `group_materi_elasti_stress_pressure_history_factor` — PENDIENTE
+- [x] `group_materi_elasti_stress_pressure_history_factor` — Sprint 10 (lote 6; dof sph con el maximo |p| historico (initia 4.50) + en set_stress: si p_est del paso actual < maximo a inicio de paso -> C/Cmem x factor (descarga/recarga); validado con `msph`/`msph_flat`: carga 4 pasos + descarga 2 pasos, factor 3 -> sigyy +0.2692 vs -0.2692 con factor 1; sph 0.3333 EXACTO)
 - [x] `group_materi_elasti_transverse_isotropy` — presente en el GNU
 - [x] `group_materi_elasti_volumetric_poisson` — presente en el GNU
 - [x] `group_materi_elasti_volumetric_young_order` — presente en el GNU
 - [x] `group_materi_elasti_volumetric_young_values` — presente en el GNU
 - [x] `group_materi_elasti_young` — presente en el GNU
 - [x] `group_materi_elasti_young_polynomial` — presente en el GNU
-- [x] `group_materi_elasti_young_power` — presente en el GNU
+- [x] `group_materi_elasti_young_power` — Sprint 10 lote 6 (UPGRADE 3→6 params: E=E0+E1*(p/p1)^alpha con E>=E2 y E<=E3, p=-sig_mean; la forma GNU 3-params ya no se acepta — CAMBIO SEMANTICO; fix del bug de C_matrix acumulativo del GNU 2014 (young+young_power doblaban la rigidez); validado con `myoung6` (E_eff~1237 = 72% del fijo secante 1714.29), `myoung6_e2`/`myoung6_e3` (clamps E2=3000/E3=800 EXACTOS) y `myoung6_apply` (gate -no -> E=E0 EXACTO))
 - [ ] `group_materi_elasti_young_user` — PENDIENTE
 - [x] `group_materi_expansion_linear` — presente en el GNU
 - [x] `group_materi_expansion_volume` — presente en el GNU
@@ -1423,7 +1425,7 @@ Nota: `group_interface_ground` del checklist anterior NUNCA existió (artefacto 
 
 ### materi_elasti (0/1)
 
-- [ ] `materi_elasti_young_power_apply` — PENDIENTE
+- [x] `materi_elasti_young_power_apply` — Sprint 10 (lote 6; gate control_materi_elasti_young_power_apply -no -> E=E0 constante del record young_power (manual 6.801); alias db_number para el nombre del manual; validado con `myoung6_apply`: -0.5769/-1.3462 EXACTO = base lineal)
 
 ### materi_failure (0/1)
 
@@ -1483,7 +1485,7 @@ Nota: `group_interface_ground` del checklist anterior NUNCA existió (artefacto 
 ### materi_stress (1/2)
 
 - [x] `materi_stress` — presente en el GNU
-- [ ] `materi_stress_pressure_history` — PENDIENTE
+- [x] `materi_stress_pressure_history` — Sprint 10 (lote 6; initia: dof sph = maximo running de |p| (p=-sig_mean) en node_dof, actualizado en dof.cc parallel_new_dof_diagonal (patron clamp de kap); basename -sph; validado con `msph`/`msph_flat`: sph 0.3333 EXACTO en el pico y mantenido en la descarga)
 
 ### materi_velocity (2/2)
 
