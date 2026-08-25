@@ -733,6 +733,7 @@ enum {
   GROUP_MATERI_FACTOR,
   GROUP_MATERI_ELASTI_CAMCLAY_G,
   GROUP_MATERI_ELASTI_CAMCLAY_POISSON,
+  GROUP_MATERI_ELASTI_CAMCLAY_PRESSURE_MIN,
   GROUP_MATERI_ELASTI_COMPRESSIBILITY,
   GROUP_MATERI_ELASTI_K0,
   GROUP_MATERI_ELASTI_HARDSOIL,
@@ -954,6 +955,7 @@ enum {
   MATERI_HISTORY_VARIABLES,
   MATERI_MAXWELL_STRESS,
   MATERI_PLASTI_CAP1_HISTORY,
+  MATERI_PLASTI_DIPRISCO_HISTORY,
   MATERI_PLASTI_HARDSOIL_HISTORY,
   MATERI_PLASTI_F,
   MATERI_PLASTI_F_NONLOCAL,
@@ -967,6 +969,10 @@ enum {
   MATERI_STRAIN_ELASTI,
   MATERI_STRAIN_INTERGRANULAR,
   MATERI_STRAIN_PLASTI,
+  MATERI_STRAIN_PLASTI_CAP,
+  MATERI_STRAIN_PLASTI_COMPRESSION,
+  MATERI_STRAIN_PLASTI_DIPRISCO,
+  MATERI_STRAIN_PLASTI_DRUCKPRAG,
   MATERI_STRAIN_PLASTI_HARDSOIL,
   MATERI_STRAIN_TOTAL,
   MATERI_STRESS,
@@ -1245,7 +1251,11 @@ extern long int echo, ndim, derivatives,
   materi_diffusion, materi_displacement, materi_displacement_relative, 
   materi_maxwell_stress, materi_plasti_kappa, 
   materi_plasti_cap1_history,
-  materi_plasti_hardsoil_history, materi_strain_plasti_hardsoil,
+  materi_plasti_diprisco_history,
+  materi_plasti_hardsoil_history,
+  materi_strain_plasti_hardsoil, materi_strain_plasti_cap,
+  materi_strain_plasti_compression, materi_strain_plasti_diprisco,
+  materi_strain_plasti_druckprag,
   materi_plasti_f, materi_plasti_f_nonlocal, materi_plasti_incremental_substeps,
   materi_plasti_softvar_local,
   materi_plasti_softvar_nonlocal,
@@ -1295,6 +1305,10 @@ extern long int
   kap_indx, // index stating start of materi_plasti_kappa in node_dof
   cap1_indx, // index stating start of materi_plasti_cap1_history in node_dof
   hsepp_indx, // index stating start of materi_strain_plasti_hardsoil in node_dof
+  capepp_indx, // index stating start of materi_strain_plasti_cap in node_dof
+  cepp_indx, // index stating start of materi_strain_plasti_compression in node_dof
+  depp_indx, // index stating start of materi_strain_plasti_diprisco in node_dof
+  dpepp_indx, // index stating start of materi_strain_plasti_druckprag in node_dof
   rho_indx, // index stating start of materi_plasti_rho in node_dof
   rot_indx, // index stating start of beam_rotation in node_dof
   scal_indx, // index stating start of wave_scalar in node_dof

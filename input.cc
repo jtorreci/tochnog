@@ -248,7 +248,15 @@ void input( )
       array_set( &dof_type[dis_rel_indx], -MATERI_DISPLACEMENT_RELATIVE, n*nder );
       array_set( &dof_scal_vec_mat[unknown_indx], -VECTOR, n*nder );
     }
-    else if ( !strcmp(str,"materi_history_variables") ) {
+    else if ( !strcmp(str,"materi_history_variables") ||
+              !strcmp(str,"materi_plasti_diprisco_history") ) {
+      // materi_plasti_diprisco_history (manual Professional 4.18) is
+      // the per-model name of materi_history_variables: same mechanism,
+      // same shared hisv dof (basenames hisv0..hisv(n-1)). The manual
+      // prescribes n = 11 for group_materi_plasti_diprisco and n = 12
+      // for group_materi_plasti_diprisco_density.
+      if ( !strcmp(str,"materi_plasti_diprisco_history") )
+        materi_plasti_diprisco_history = 1;
       if ( !(cin >> materi_history_variables) ) {
         pri( "\nError in initialization part." );
         exit(TN_EXIT_STATUS);
@@ -384,6 +392,41 @@ void input( )
       hsepp_indx = unknown_indx;
       n = 6;
       array_set( &dof_type[hsepp_indx], -MATERI_STRAIN_PLASTI_HARDSOIL, n*nder );
+      array_set( &dof_scal_vec_mat[unknown_indx], -MATRIX, n*nder );
+    }
+    else if ( !strcmp(str,"materi_strain_plasti_cap") ) {
+      // manual Professional 4.35: the plastic strain specifically for
+      // cap models, added to the node_dof records. Same mechanism as
+      // materi_strain_plasti_hardsoil: dedicated dof, filled with the
+      // plastic strain increment (RHS in materi.cc, consolidated block).
+      materi_strain_plasti_cap = 1;
+      capepp_indx = unknown_indx;
+      n = 6;
+      array_set( &dof_type[capepp_indx], -MATERI_STRAIN_PLASTI_CAP, n*nder );
+      array_set( &dof_scal_vec_mat[unknown_indx], -MATRIX, n*nder );
+    }
+    else if ( !strcmp(str,"materi_strain_plasti_compression") ) {
+      // manual Professional 4.36: idem for the compression model.
+      materi_strain_plasti_compression = 1;
+      cepp_indx = unknown_indx;
+      n = 6;
+      array_set( &dof_type[cepp_indx], -MATERI_STRAIN_PLASTI_COMPRESSION, n*nder );
+      array_set( &dof_scal_vec_mat[unknown_indx], -MATRIX, n*nder );
+    }
+    else if ( !strcmp(str,"materi_strain_plasti_diprisco") ) {
+      // manual Professional 4.37: idem for the di Prisco model.
+      materi_strain_plasti_diprisco = 1;
+      depp_indx = unknown_indx;
+      n = 6;
+      array_set( &dof_type[depp_indx], -MATERI_STRAIN_PLASTI_DIPRISCO, n*nder );
+      array_set( &dof_scal_vec_mat[unknown_indx], -MATRIX, n*nder );
+    }
+    else if ( !strcmp(str,"materi_strain_plasti_druckprag") ) {
+      // manual Professional 4.39: idem for the drucker-prager model.
+      materi_strain_plasti_druckprag = 1;
+      dpepp_indx = unknown_indx;
+      n = 6;
+      array_set( &dof_type[dpepp_indx], -MATERI_STRAIN_PLASTI_DRUCKPRAG, n*nder );
       array_set( &dof_scal_vec_mat[unknown_indx], -MATRIX, n*nder );
     }
     else if ( !strcmp(str,"materi_strain_total") ) {

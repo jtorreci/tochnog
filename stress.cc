@@ -771,6 +771,15 @@ void set_stress( long int element, long int gr,
     kappa = work[1];
     e = old_hisv[0];
     pressure = - ( new_sig[0] + new_sig[4] + new_sig[8] ) / 3.;
+    // group_materi_elasti_camclay_pressure_min (manual Professional
+    // 6.647): minimal allowed value for the pressure in the camclay
+    // bulk modulus. Pressures below pressure_min are set to
+    // pressure_min, preventing numerical problems for very low (or
+    // negative/tensile) bulk modulus values K = (1+e)*p/kappa.
+    if ( get_group_data( GROUP_MATERI_ELASTI_CAMCLAY_PRESSURE_MIN, gr,
+        element, new_unknowns, camclay, ldum, GET_IF_EXISTS ) ) {
+      if ( pressure<camclay[0] ) pressure = camclay[0];
+    }
     k = (1.+e)*pressure/kappa;
     if      ( get_group_data( GROUP_MATERI_ELASTI_CAMCLAY_G, gr, element, 
         new_unknowns, camclay, ldum, GET_IF_EXISTS ) ) {

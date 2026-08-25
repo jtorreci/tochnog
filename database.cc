@@ -3505,6 +3505,12 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   data_class[GROUP_MATERI_ELASTI_CAMCLAY_POISSON] = MATERI;
   data_required[GROUP_MATERI_ELASTI_CAMCLAY_POISSON] = GROUP_TYPE;
 
+  strcpy(name[GROUP_MATERI_ELASTI_CAMCLAY_PRESSURE_MIN],"group_materi_elasti_camclay_pressure_min");
+  type[GROUP_MATERI_ELASTI_CAMCLAY_PRESSURE_MIN] = DOUBLE_PRECISION;
+  data_length[GROUP_MATERI_ELASTI_CAMCLAY_PRESSURE_MIN] = 1;
+  data_class[GROUP_MATERI_ELASTI_CAMCLAY_PRESSURE_MIN] = MATERI;
+  data_required[GROUP_MATERI_ELASTI_CAMCLAY_PRESSURE_MIN] = GROUP_TYPE;
+
   strcpy(name[GROUP_MATERI_ELASTI_TSKH],"group_materi_elasti_tskh");
   type[GROUP_MATERI_ELASTI_TSKH] = DOUBLE_PRECISION;
   data_length[GROUP_MATERI_ELASTI_TSKH] = DATA_ITEM_SIZE;
@@ -4805,6 +4811,8 @@ void db_initialize( long int dof_type[], long int dof_label[] )
 
   strcpy(name[MATERI_PLASTI_CAP1_HISTORY],"materi_plasti_cap1_history");
 
+  strcpy(name[MATERI_PLASTI_DIPRISCO_HISTORY],"materi_plasti_diprisco_history");
+
   strcpy(name[MATERI_PLASTI_HARDSOIL_HISTORY],"materi_plasti_hardsoil_history");
 
   strcpy(name[MATERI_PLASTI_RHO],"materi_plasti_rho");
@@ -4822,6 +4830,14 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   strcpy(name[MATERI_STRAIN_INTERGRANULAR],"materi_strain_intergranular");
 
   strcpy(name[MATERI_STRAIN_PLASTI],"materi_strain_plasti");
+
+  strcpy(name[MATERI_STRAIN_PLASTI_CAP],"materi_strain_plasti_cap");
+
+  strcpy(name[MATERI_STRAIN_PLASTI_COMPRESSION],"materi_strain_plasti_compression");
+
+  strcpy(name[MATERI_STRAIN_PLASTI_DIPRISCO],"materi_strain_plasti_diprisco");
+
+  strcpy(name[MATERI_STRAIN_PLASTI_DRUCKPRAG],"materi_strain_plasti_druckprag");
 
   strcpy(name[MATERI_STRAIN_PLASTI_HARDSOIL],"materi_strain_plasti_hardsoil");
 
@@ -6083,6 +6099,51 @@ void db_initialize( long int dof_type[], long int dof_label[] )
       else if ( n==4 ) strcpy( basename, "eppyy" );
       else if ( n==5 ) strcpy( basename, "eppyz" );
       else if ( n==6 ) strcpy( basename, "eppzz" );
+    }
+    else if ( dof_type[iuknwn]==-MATERI_STRAIN_PLASTI_CAP ) {
+      // cap plastic strain (manual Professional 4.35): same
+      // 6-component layout as materi_strain_plasti, dedicated dof
+      if ( iuknwn==capepp_indx ) n = 0;
+      n++;
+      if      ( n==1 ) strcpy( basename, "eppcapxx" );
+      else if ( n==2 ) strcpy( basename, "eppcapxy" );
+      else if ( n==3 ) strcpy( basename, "eppcapxz" );
+      else if ( n==4 ) strcpy( basename, "eppcappyy" );
+      else if ( n==5 ) strcpy( basename, "eppcapyz" );
+      else if ( n==6 ) strcpy( basename, "eppcapzz" );
+    }
+    else if ( dof_type[iuknwn]==-MATERI_STRAIN_PLASTI_COMPRESSION ) {
+      // compression plastic strain (manual Professional 4.36)
+      if ( iuknwn==cepp_indx ) n = 0;
+      n++;
+      if      ( n==1 ) strcpy( basename, "eppcmpxx" );
+      else if ( n==2 ) strcpy( basename, "eppcmpxy" );
+      else if ( n==3 ) strcpy( basename, "eppcmpxz" );
+      else if ( n==4 ) strcpy( basename, "eppcmpyy" );
+      else if ( n==5 ) strcpy( basename, "eppcmpyz" );
+      else if ( n==6 ) strcpy( basename, "eppcmpzz" );
+    }
+    else if ( dof_type[iuknwn]==-MATERI_STRAIN_PLASTI_DIPRISCO ) {
+      // di Prisco plastic strain (manual Professional 4.37)
+      if ( iuknwn==depp_indx ) n = 0;
+      n++;
+      if      ( n==1 ) strcpy( basename, "eppdipxx" );
+      else if ( n==2 ) strcpy( basename, "eppdipxy" );
+      else if ( n==3 ) strcpy( basename, "eppdipxz" );
+      else if ( n==4 ) strcpy( basename, "eppdipyy" );
+      else if ( n==5 ) strcpy( basename, "eppdipyz" );
+      else if ( n==6 ) strcpy( basename, "eppdipzz" );
+    }
+    else if ( dof_type[iuknwn]==-MATERI_STRAIN_PLASTI_DRUCKPRAG ) {
+      // drucker-prager plastic strain (manual Professional 4.39)
+      if ( iuknwn==dpepp_indx ) n = 0;
+      n++;
+      if      ( n==1 ) strcpy( basename, "eppdrpxx" );
+      else if ( n==2 ) strcpy( basename, "eppdrpxy" );
+      else if ( n==3 ) strcpy( basename, "eppdrpxz" );
+      else if ( n==4 ) strcpy( basename, "eppdrpyy" );
+      else if ( n==5 ) strcpy( basename, "eppdrpyz" );
+      else if ( n==6 ) strcpy( basename, "eppdrpzz" );
     }
     else if ( dof_type[iuknwn]==-MATERI_STRAIN_PLASTI_HARDSOIL ) {
       // hardsoil plastic strain (manual Professional 4.40): same

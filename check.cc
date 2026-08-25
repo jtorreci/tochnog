@@ -507,6 +507,12 @@ long int check( long int idat, long int task )
     ok = check_unknown( "materi_stress", YES, task );
     ok = ok && check_unknown( "materi_history_variables", YES, task );
   }
+  if ( data_number==GROUP_MATERI_ELASTI_CAMCLAY_PRESSURE_MIN ) {
+    // manual Professional 6.647: modifier of the camclay bulk modulus
+    // (needs the same state as the camclay elastic records)
+    ok = check_unknown( "materi_stress", YES, task );
+    ok = ok && check_unknown( "materi_history_variables", YES, task );
+  }
   if ( data_number==GROUP_MATERI_ELASTI_COMPRESSIBILITY ) {
     ok = check_unknown( "materi_stress", YES, task );
     ok = ok && check_unknown( "materi_velocity", YES, task );
@@ -659,12 +665,14 @@ long int check( long int idat, long int task )
   }
   if ( data_number==GROUP_MATERI_PLASTI_DIPRISCO ) {
     ok = check_unknown( "materi_stress", YES, task );
-    ok = ok && check_unknown( "materi_history_variables", YES, task );
+    ok = ok && check_unknown_atleastone( "materi_history_variables",
+      "materi_plasti_diprisco_history", task );
     ok = ok && check_unknown( "materi_strain_plasti", YES, task );
   }
   if ( data_number==GROUP_MATERI_PLASTI_DIPRISCO_RT ) {
     ok = check_unknown( "materi_stress", YES, task );
-    ok = ok && check_unknown( "materi_history_variables", YES, task );
+    ok = ok && check_unknown_atleastone( "materi_history_variables",
+      "materi_plasti_diprisco_history", task );
     ok = ok && check_unknown( "materi_strain_plasti", YES, task );
   }
   if ( data_number==GROUP_MATERI_PLASTI_DRUCKPRAG ) {
@@ -896,6 +904,14 @@ long int check( long int idat, long int task )
     ok = check_unknown( "materi_strain_elasti", YES, task );
   if ( data_number==MATERI_STRAIN_PLASTI )
     ok = check_unknown( "materi_strain_plasti", YES, task );
+  if ( data_number==MATERI_STRAIN_PLASTI_CAP )
+    ok = check_unknown( "materi_strain_plasti_cap", YES, task );
+  if ( data_number==MATERI_STRAIN_PLASTI_COMPRESSION )
+    ok = check_unknown( "materi_strain_plasti_compression", YES, task );
+  if ( data_number==MATERI_STRAIN_PLASTI_DIPRISCO )
+    ok = check_unknown( "materi_strain_plasti_diprisco", YES, task );
+  if ( data_number==MATERI_STRAIN_PLASTI_DRUCKPRAG )
+    ok = check_unknown( "materi_strain_plasti_druckprag", YES, task );
   if ( data_number==MATERI_STRAIN_PLASTI_HARDSOIL )
     ok = check_unknown( "materi_strain_plasti_hardsoil", YES, task );
   if ( data_number==MATERI_STRAIN_TOTAL )
@@ -906,6 +922,10 @@ long int check( long int idat, long int task )
     ok = check_unknown( "materi_stress", YES, task );
   if ( data_number==MATERI_PLASTI_HARDSOIL_HISTORY )
     // the shared sph dof is updated from the stress dofs (dof.cc)
+    ok = check_unknown( "materi_stress", YES, task );
+  if ( data_number==MATERI_PLASTI_DIPRISCO_HISTORY )
+    // alias of materi_history_variables (manual Professional 4.18):
+    // the history dof is updated inside the stress law (set_stress)
     ok = check_unknown( "materi_stress", YES, task );
   if ( data_number==MATERI_VELOCITY )
     ok = check_unknown( "materi_velocity", YES, task );

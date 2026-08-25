@@ -715,23 +715,43 @@ void materi( long int element, long int gr, long int nnol,
         }
       }
 
-      if ( materi_strain_plasti_hardsoil ) {
-        // materi_strain_plasti_hardsoil (manual Professional 4.40):
-        // the plastic strain specifically for the hardsoil model is
-        // added to the node_dof records. Same integration as
-        // materi_strain_plasti: the dof accumulates the plastic
-        // strain increment (dedicated dof hsepp_indx).
-        ipuknwn = hsepp_indx/nder;
-        for ( idim=0; idim<MDIM; idim++ ) {
-          for ( jdim=idim; jdim<MDIM; jdim++ ) {
-            indx = inol*npuknwn + ipuknwn;
-            tmp = volume * h[inol] * inc_epp[idim*MDIM+jdim] / dtime;
-            element_rhside[indx] += tmp;
-            // added for options_element_dof
-            if(options_element_dof==-YES)
-              new_unknowns[ipuknwn] = old_epp[idim*MDIM+jdim] +
-                inc_epp[idim*MDIM+jdim];
-            ipuknwn++;
+      if ( materi_strain_plasti_hardsoil || materi_strain_plasti_cap ||
+           materi_strain_plasti_compression || materi_strain_plasti_diprisco ||
+           materi_strain_plasti_druckprag ) {
+        // materi_strain_plasti_<model> (manual Professional 4.35-4.40):
+        // the plastic strain specifically for each model, added to the
+        // node_dof records. All dedicated dofs accumulate the SAME
+        // plastic strain increment (inc_epp, computed by the stress
+        // law driver) with the SAME integration as materi_strain_plasti
+        // -- the per-model initias are registration aliases pointing to
+        // this single consolidated mechanism (dedicated dof per model:
+        // hsepp/capepp/cepp/depp/dpepp, basenames epphs*/eppcap*/...).
+        long int epp_model_active[5], epp_model_indx[5], epp_model_ii=0;
+        epp_model_active[0] = materi_strain_plasti_hardsoil;
+        epp_model_indx[0] = hsepp_indx;
+        epp_model_active[1] = materi_strain_plasti_cap;
+        epp_model_indx[1] = capepp_indx;
+        epp_model_active[2] = materi_strain_plasti_compression;
+        epp_model_indx[2] = cepp_indx;
+        epp_model_active[3] = materi_strain_plasti_diprisco;
+        epp_model_indx[3] = depp_indx;
+        epp_model_active[4] = materi_strain_plasti_druckprag;
+        epp_model_indx[4] = dpepp_indx;
+        for ( epp_model_ii=0; epp_model_ii<5; epp_model_ii++ ) {
+          if ( epp_model_active[epp_model_ii] ) {
+            ipuknwn = epp_model_indx[epp_model_ii]/nder;
+            for ( idim=0; idim<MDIM; idim++ ) {
+              for ( jdim=idim; jdim<MDIM; jdim++ ) {
+                indx = inol*npuknwn + ipuknwn;
+                tmp = volume * h[inol] * inc_epp[idim*MDIM+jdim] / dtime;
+                element_rhside[indx] += tmp;
+                // added for options_element_dof
+                if(options_element_dof==-YES)
+                  new_unknowns[ipuknwn] = old_epp[idim*MDIM+jdim] +
+                    inc_epp[idim*MDIM+jdim];
+                ipuknwn++;
+              }
+            }
           }
         }
       }

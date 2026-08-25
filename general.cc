@@ -183,6 +183,22 @@ void general( long int element, long int name, long int nnol, long int element_g
         unknown_belongs_to_type = 1;
         inertia = 1.;
       }
+      else if ( dof_type[iuknwn]==-MATERI_STRAIN_PLASTI_CAP ) {
+        unknown_belongs_to_type = 1;
+        inertia = 1.;
+      }
+      else if ( dof_type[iuknwn]==-MATERI_STRAIN_PLASTI_COMPRESSION ) {
+        unknown_belongs_to_type = 1;
+        inertia = 1.;
+      }
+      else if ( dof_type[iuknwn]==-MATERI_STRAIN_PLASTI_DIPRISCO ) {
+        unknown_belongs_to_type = 1;
+        inertia = 1.;
+      }
+      else if ( dof_type[iuknwn]==-MATERI_STRAIN_PLASTI_DRUCKPRAG ) {
+        unknown_belongs_to_type = 1;
+        inertia = 1.;
+      }
       else if ( dof_type[iuknwn]==-MATERI_STRAIN_PLASTI_HARDSOIL ) {
         unknown_belongs_to_type = 1;
         inertia = 1.;
@@ -277,6 +293,14 @@ void general( long int element, long int name, long int nnol, long int element_g
           else if ( dof_type[iuknwn]==-MATERI_STRAIN_INTERGRANULAR && type==-MATERI )
             conv_part = 1.;
           else if ( dof_type[iuknwn]==-MATERI_STRAIN_PLASTI && type==-MATERI )
+            conv_part = 1.;
+          else if ( dof_type[iuknwn]==-MATERI_STRAIN_PLASTI_CAP && type==-MATERI )
+            conv_part = 1.;
+          else if ( dof_type[iuknwn]==-MATERI_STRAIN_PLASTI_COMPRESSION && type==-MATERI )
+            conv_part = 1.;
+          else if ( dof_type[iuknwn]==-MATERI_STRAIN_PLASTI_DIPRISCO && type==-MATERI )
+            conv_part = 1.;
+          else if ( dof_type[iuknwn]==-MATERI_STRAIN_PLASTI_DRUCKPRAG && type==-MATERI )
             conv_part = 1.;
           else if ( dof_type[iuknwn]==-MATERI_STRAIN_PLASTI_HARDSOIL && type==-MATERI )
             conv_part = 1.;
