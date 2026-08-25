@@ -408,6 +408,18 @@ HIPO_TOTAL=0
 # mc_pressure_min_off sin record: +0.06566, signo invertido =
 # K degenerado). diprisco_density: PENDIENTE (ley de interpolacion
 # loose/dense no documentada en el manual, ver SEGUIMIENTO).
+# Sprint 10 lote 10: mrepeat_save — control_repeat_save (6.348) +
+# control_repeat_save_calculate (6.349): columna elastica con vely
+# prescrita -0.01, control_repeat 3 saltos a control_timestep dt=0.05:
+# cada salto guarda disy del post_point (paso -0.0005, secuencia
+# aritmetica exacta) en REPEAT_SAVE_RESULT[indice del repeat]; al
+# agotarse el contador se calculan media (-0.001) y varianza
+# POBLACIONAL (d^2*(N^2-1)/12 = 1.6666667e-7) en
+# REPEAT_CALCULATE_RESULT. Targets exactos sobre ambos records;
+# el target de varianza discrimina el NUMERO de saves (un 4o save
+# daria 3.125e-7 y media -0.00125). A/B ad-hoc: sin
+# control_repeat_save_calculate el record repeat_calculate_result no
+# existe (target -> exit 1, verificado por separado).
 for t in hypo1 hypo2 hypo3 hypo4 smooth1 dof1 mlx1 vtk_dof1 gen1 genbeam1          reset1 cda1 cda_arith cda_copy cda_activate cdist_normal cdist_corr cdist_clamp cd_method cd_geom \
          iface_mc iface_mc_1step iface_mc_slip iface_mc_slip_1step iface_mc_tension iface_mc_gap \
          iface_mc_mem iface_mc_dil iface_mc_dil_1step iface_mc_num \
@@ -442,7 +454,7 @@ for t in hypo1 hypo2 hypo3 hypo4 smooth1 dof1 mlx1 vtk_dof1 gen1 genbeam1       
          mstrain_cap mstrain_cap_elast mstrain_compression mstrain_compression_elast \
          mstrain_diprisco mstrain_diprisco_elast \
          mstrain_druckprag mstrain_druckprag_elast \
-         mdiprisco_hist mc_pressure_min mc_pressure_min_off; do
+         mdiprisco_hist mc_pressure_min mc_pressure_min_off mrepeat_save; do
   HIPO_TOTAL=$((HIPO_TOTAL+1))
   ( cd validation-suite/test-2014 &&
     ulimit -v 4000000 &&
@@ -455,5 +467,5 @@ for t in hypo1 hypo2 hypo3 hypo4 smooth1 dof1 mlx1 vtk_dof1 gen1 genbeam1       
     echo "    $t: FALLO (rc=$RC)"
   fi
 done
-echo "==> Resumen: $HIPO_OK/$HIPO_TOTAL runs OK (13 tests: 12 preexistentes + familia iface_mc en 10 runs + familia 3D en 5 runs + familia generate_interface en 6 runs + familia materi_direct en 5 runs + materi_displacement_relative en 2 runs + slide/reset_value en 2 runs + cda_arith/copy/activate en 3 runs + cdist_normal/corr/clamp en 3 runs + cd_method/cd_geom en 2 runs + gravity/settlement en 4 runs + contact en 1 run + contact_block/ctrl_apply/heatgen en 3 runs + groundflow_consolidate_off en 1 run + groundflow_vangenuchten/groundflow_nonsaturated_off en 2 runs + groundflow_total_pressure_tension/groundflow_interface en 2 runs + groundflow_flux_edge en 1 run + groundflow_phreatic_multiple en 1 run + groundflow_seepage en 1 run + groundflow_pressure_atm/_def en 2 runs + groundflow_total_pressure_limit/_dry en 2 runs + condif_heat_edge/vol/vol2 en 3 runs + condif_convec/rad/convec_el en 3 runs + aeg_node/aeg_seq/bt_factor en 3 runs + iface_condif/expansion/tangref en 3 runs + node_force_inertia/slide/pressure en 3 runs + creset_geom/iface en 2 runs + fedge_alias/restrict, fvol_elem y cmat_gate en 4 runs + fproj_tunnel en 1 run + dsmall/dignore en 2 runs + mdirect_comp/gate en 2 runs + mdp_shear/mfactor en 2 runs + mmc_tension en 1 run + mmchs_soft en 1 run + mcap2/mcap_legacy en 2 runs + mcrunch/mcrunch_low en 2 runs + mvoid/mvoid_low en 2 runs + mpower en 1 run + mshf/mshf_nof en 2 runs + mk0/mk0_off en 2 runs + myoung6/myoung6_e2/myoung6_e3/myoung6_apply en 4 runs + msph/msph_flat en 2 runs + mcap1/mcap1_elast/mcap1_comb en 3 runs + mhardsoil_elast/elast2/unload/unload_flat/plast/plast_elast/gp0/gp0_off en 8 runs + mstrain_cap/_elast, mstrain_compression/_elast, mstrain_diprisco/_elast, mstrain_druckprag/_elast en 8 runs + mdiprisco_hist en 1 run + mc_pressure_min/_off en 2 runs (Sprint 10 lote 9))."
+echo "==> Resumen: $HIPO_OK/$HIPO_TOTAL runs OK (13 tests: 12 preexistentes + familia iface_mc en 10 runs + familia 3D en 5 runs + familia generate_interface en 6 runs + familia materi_direct en 5 runs + materi_displacement_relative en 2 runs + slide/reset_value en 2 runs + cda_arith/copy/activate en 3 runs + cdist_normal/corr/clamp en 3 runs + cd_method/cd_geom en 2 runs + gravity/settlement en 4 runs + contact en 1 run + contact_block/ctrl_apply/heatgen en 3 runs + groundflow_consolidate_off en 1 run + groundflow_vangenuchten/groundflow_nonsaturated_off en 2 runs + groundflow_total_pressure_tension/groundflow_interface en 2 runs + groundflow_flux_edge en 1 run + groundflow_phreatic_multiple en 1 run + groundflow_seepage en 1 run + groundflow_pressure_atm/_def en 2 runs + groundflow_total_pressure_limit/_dry en 2 runs + condif_heat_edge/vol/vol2 en 3 runs + condif_convec/rad/convec_el en 3 runs + aeg_node/aeg_seq/bt_factor en 3 runs + iface_condif/expansion/tangref en 3 runs + node_force_inertia/slide/pressure en 3 runs + creset_geom/iface en 2 runs + fedge_alias/restrict, fvol_elem y cmat_gate en 4 runs + fproj_tunnel en 1 run + dsmall/dignore en 2 runs + mdirect_comp/gate en 2 runs + mdp_shear/mfactor en 2 runs + mmc_tension en 1 run + mmchs_soft en 1 run + mcap2/mcap_legacy en 2 runs + mcrunch/mcrunch_low en 2 runs + mvoid/mvoid_low en 2 runs + mpower en 1 run + mshf/mshf_nof en 2 runs + mk0/mk0_off en 2 runs + myoung6/myoung6_e2/myoung6_e3/myoung6_apply en 4 runs + msph/msph_flat en 2 runs + mcap1/mcap1_elast/mcap1_comb en 3 runs + mhardsoil_elast/elast2/unload/unload_flat/plast/plast_elast/gp0/gp0_off en 8 runs + mstrain_cap/_elast, mstrain_compression/_elast, mstrain_diprisco/_elast, mstrain_druckprag/_elast en 8 runs + mdiprisco_hist en 1 run + mc_pressure_min/_off en 2 runs (Sprint 10 lote 9) + mrepeat_save en 1 run (Sprint 10 lote 10))."
 echo "==> Log de compilacion completo en /tmp/tn_build_safe.log"

@@ -1841,6 +1841,19 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   external[CONTROL_REPEAT_UNTIL_VALUE] = 0;
   data_class[CONTROL_REPEAT_UNTIL_VALUE] = CONTROL;
 
+  strcpy(name[CONTROL_REPEAT_SAVE],"control_repeat_save");
+  type[CONTROL_REPEAT_SAVE] = INTEGER;
+  data_length[CONTROL_REPEAT_SAVE] = DATA_ITEM_SIZE;
+  fixed_length[CONTROL_REPEAT_SAVE] = 0;
+  data_class[CONTROL_REPEAT_SAVE] = CONTROL;
+  data_required[CONTROL_REPEAT_SAVE] = CONTROL_REPEAT;
+
+  strcpy(name[CONTROL_REPEAT_SAVE_CALCULATE],"control_repeat_save_calculate");
+  type[CONTROL_REPEAT_SAVE_CALCULATE] = INTEGER;
+  data_length[CONTROL_REPEAT_SAVE_CALCULATE] = 1;
+  data_class[CONTROL_REPEAT_SAVE_CALCULATE] = CONTROL;
+  data_required[CONTROL_REPEAT_SAVE_CALCULATE] = CONTROL_REPEAT;
+
   strcpy(name[CONTROL_RESTART],"control_restart");
   type[CONTROL_RESTART] = INTEGER;
   data_length[CONTROL_RESTART] = 1;
@@ -5690,6 +5703,17 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   strcpy(name[RA],"ra");
 
   strcpy(name[RECTANGLE],"rectangle" );
+
+  strcpy(name[REPEAT_CALCULATE_RESULT],"repeat_calculate_result");
+  type[REPEAT_CALCULATE_RESULT] = DOUBLE_PRECISION;
+  data_length[REPEAT_CALCULATE_RESULT] = 2;
+  data_class[REPEAT_CALCULATE_RESULT] = CALCUL;
+
+  strcpy(name[REPEAT_SAVE_RESULT],"repeat_save_result");
+  type[REPEAT_SAVE_RESULT] = DOUBLE_PRECISION;
+  data_length[REPEAT_SAVE_RESULT] = MCALCUL;
+  fixed_length[REPEAT_SAVE_RESULT] = 0;
+  data_class[REPEAT_SAVE_RESULT] = CALCUL;
 
   strcpy(name[RESIDUE],"residue");
 
