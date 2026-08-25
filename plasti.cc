@@ -537,6 +537,51 @@ void plasti_rule( long int element, long int gr,
       }
     }
   }
+  if ( get_group_data( GROUP_MATERI_PLASTI_MOHR_COUL, gr, element, new_unknowns,
+      plasti_data, ldum, GET_IF_EXISTS ) ) {
+    test1 = task==GET_YIELD_RULE&&plasti_type==-NONE;
+    test2 = task==GET_YIELD_RULE&&plasti_type==GROUP_MATERI_PLASTI_MOHR_COUL;
+    test3 = task==GET_FLOW_RULE&&plasti_type==GROUP_MATERI_PLASTI_MOHR_COUL;
+    if ( test1 || test2 || test3 ) {
+      if ( swit ) pri( "plasti_mohr_coul" );
+      phi = plasti_data[0];
+      c = plasti_data[1];
+      phi_flow = plasti_data[2];
+      if ( plasti_on_boundary ) {
+        phi *= plasti_on_boundary_factor;
+        phi_flow *= plasti_on_boundary_factor;
+      }
+      // Mohr-Coulomb (manual Professional: 0.5(sig1-sig3) +
+      // 0.5(sig1+sig3) sin(phi) - c cos(phi) = 0, sig1 the LARGEST and
+      // sig3 the SMALLEST principal stress, tension-positive). The flow
+      // rule uses phi_flow (non-associative when different).
+      matrix_eigenvalues( sig, sig_princ );
+      {
+        double sig_max = sig_princ[0], sig_min = sig_princ[0];
+        long int ipr;
+        for ( ipr=1; ipr<MDIM; ipr++ ) {
+          if ( sig_princ[ipr]>sig_max ) sig_max = sig_princ[ipr];
+          if ( sig_princ[ipr]<sig_min ) sig_min = sig_princ[ipr];
+        }
+        f_yield = 0.5*(sig_max-sig_min) + 0.5*(sig_max+sig_min)*sin(phi)
+                 - c*cos(phi);
+        f_flow  = 0.5*(sig_max-sig_min) + 0.5*(sig_max+sig_min)*sin(phi_flow)
+                 - c*cos(phi);
+      }
+      if      ( task==GET_YIELD_RULE ) {
+        if ( f_yield>f ) {
+          f = f_yield;
+          tmp_plasti_type = GROUP_MATERI_PLASTI_MOHR_COUL;
+        }
+        if ( swit ) pri( "f_yield", f_yield );
+      }
+      else {
+        assert( task==GET_FLOW_RULE );
+        f = f_flow;
+        if ( swit ) pri( "f_flow", f_flow );
+      }
+    }
+  }
   if ( get_group_data( GROUP_MATERI_PLASTI_DRUCKPRAG, gr, element, new_unknowns,
       plasti_data, ldum, GET_IF_EXISTS ) ) {
     tension_cutoff = -NO;

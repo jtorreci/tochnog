@@ -3823,6 +3823,12 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   data_class[GROUP_MATERI_PLASTI_DIPRISCO_RT] = MATERI;
   data_required[GROUP_MATERI_PLASTI_DIPRISCO_RT] = GROUP_TYPE;
 
+  strcpy(name[GROUP_MATERI_PLASTI_MOHR_COUL],"group_materi_plasti_mohr_coul");
+  type[GROUP_MATERI_PLASTI_MOHR_COUL] = DOUBLE_PRECISION;
+  data_length[GROUP_MATERI_PLASTI_MOHR_COUL] = 3;
+  data_class[GROUP_MATERI_PLASTI_MOHR_COUL] = MATERI;
+  data_required[GROUP_MATERI_PLASTI_MOHR_COUL] = GROUP_TYPE;
+
   strcpy(name[GROUP_MATERI_PLASTI_DRUCKPRAG],"group_materi_plasti_druckprag");
   type[GROUP_MATERI_PLASTI_DRUCKPRAG] = DOUBLE_PRECISION;
   data_length[GROUP_MATERI_PLASTI_DRUCKPRAG] = 3;

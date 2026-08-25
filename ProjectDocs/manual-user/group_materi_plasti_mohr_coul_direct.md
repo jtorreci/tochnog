@@ -131,3 +131,39 @@ With c = 30: sigma_xy = 34.641. Measured at dt = 0.05: 34.636 —
 0.014% error. (With phi ≠ 0 the associative flow generates normal
 stresses in a displacement-imposed shear rig, so sigma_m ≠ 0; use
 phi = 0 for the closed-form check.)
+
+## Sprint 10 lote 3: Mohr-Coulomb CLASSIC (analytic validation)
+
+`group_materi_plasti_mohr_coul index phi c phi_flow` — the classic
+Mohr-Coulomb law (NEW implementation; the GNU only had the `_direct`
+cut-off and the Professional manual advises `_direct` as "more stable
+and fast" — both are now available). Surface (manual 6.724,
+tension-positive, sig1 largest / sig3 smallest principal):
+
+    f = 0.5(sig1 - sig3) + 0.5(sig1 + sig3) sin(phi) - c cos(phi) = 0
+
+Flow rule with phi_flow (non-associative when different; phi_flow = 0
+avoids dilatancy). Eigenvalues via matrix_eigenvalues; the flow
+direction is provided by the standard tochnog driver (central finite
+differences), so the law integrates with the existing cutting-plane
+return mapping, plasti_kappa, boundary reduction, etc.
+
+### Analytic validation (test mmc_tension)
+
+In UNIAXIAL TENSION (sig1 = sigxx, sig3 = 0) the surface reduces to the
+classic MC tensile strength:
+
+    sig_t = 2 c cos(phi) / (1 + sin(phi))
+
+With c = 40, phi = 30 deg: sig_t = 46.19. Measured: 46.19 EXACT (first
+run). Sanity phi = 0 (Tresca): sig_t = 2c = 80; converges slowly
+(79.55 at dt=0.02) because the Tresca vertex in uniaxial tension is a
+singular point for the cutting plane (documented numerical behaviour,
+not a law error).
+
+NOTE for test designers: a displacement-imposed "pure shear" rig with
+plastic flow does NOT stay in pure shear — the accumulated plastic
+strain rotates the state to uniaxial tension at 45 degrees (sig =
+tau*[[1,1],[1,1]]), which saturates at the SAME sig_t: measured sigxy
+= c·cos(phi)/(1+sin(phi)) = 23.09 for the same parameters (that is how
+the surface was first confirmed).
