@@ -103,6 +103,12 @@ input parameters it accepts.
 - [group_materi_plasti_visco_exponential](group_materi_plasti_visco_exponential.md) — viscoplasticity (exponential / power / always).
 - [group_materi_plasti_mohr_coul_direct](group_materi_plasti_mohr_coul_direct.md) — direct stress cut-off (Mohr-Coulomb / tension) on a plane.
 - [group_materi_plasti_mohr_coul_hardening_softening](group_materi_plasti_mohr_coul_hardening_softening.md) — Mohr-Coulomb classic with linear hardening/softening of c and phi with kappa.
+- [group_materi_plasti_cap2](group_materi_plasti_cap2.md) — Professional name of the cap plasticity (c phi alpha R + epsilonp_v/pb table), alias of the GNU cap.
+- [group_materi_failure_crunching](group_materi_failure_crunching.md) — element failure on the compression strain (Professional spelling; GNU typo kept as alias).
+- [group_materi_failure_void_fraction](group_materi_failure_void_fraction.md) — element failure on the void fraction (Professional spelling; GNU name kept as alias).
+- [group_materi_elasti_poisson_power](group_materi_elasti_poisson_power.md) — pressure-dependent power-law Poisson ratio nu = nu0 + nu1*(p/p1)^alpha (nu <= nu2).
+- [group_materi_elasti_shear_factor](group_materi_elasti_shear_factor.md) — multiply the shear stiffness from young+poisson by a factor.
+- [group_materi_elasti_k0](group_materi_elasti_k0.md) — K0 data; with control_materi_elasti_k0 -yes the poisson becomes K0/(1+K0).
 - [group_materi_plasti_hypo_masin](group_materi_plasti_hypo_masin.md) — Masin clay hypoplasticity (critical state model for fine-grained soils).
 - [group_materi_plasti_sanisand](group_materi_plasti_sanisand.md) — SANISAND (Dafalias & Manzari 2004, sand with fabric effects).
 - [group_materi_plasti_hypo_wolfersdorff](group_materi_plasti_hypo_wolfersdorff.md) — hypoplasticity (wolfersdorff, lowangles, cohesion, intergranular strain, pressure-dependent void ratio).

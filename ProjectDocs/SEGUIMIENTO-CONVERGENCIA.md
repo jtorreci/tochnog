@@ -130,6 +130,8 @@ suite sfnet, o un test propio. El registro completo:
 **Sprint 10 — lote 3: Mohr-Coulomb CLÁSICO implementado de cero + VALIDACIÓN ANALÍTICA (la 3ª superficie plástica validada)** | `b315ade` | 2026-08-24 | `group_materi_plasti_mohr_coul [phi c phi_flow]` (el GNU solo tenía el `_direct`): bloque en plasti.cc con `matrix_eigenvalues` sobre sig — f = 0.5(σ1−σ3) + 0.5(σ1+σ3)sinφ − c·cosφ EXACTA del manual 6.724 (σ1 mayor, σ3 menor, tracción-positiva); f_flow con phi_flow. La dirección de flujo la aporta el driver estándar (gradiente por diferencias finitas centrales) → integración completa con el cutting-plane, plasti_kappa y boundary-reduction existentes. **Validación**: tracción uniaxial → σt = 2c·cosφ/(1+sinφ) = 46.19 **EXACTO a la primera** (c=40, φ=30°, ν=0). Sanity Tresca (φ=0): σt=2c=80, converge lento (79.55) por el VÉRTICE singular de Tresca para el cutting plane (numérico, no de la ley — documentado). **Hallazgo de trayectoria**: un rig de cizalla impuesta con flujo plástico NO permanece en cizalla pura — la deformación plástica acumulada rota el estado a tracción uniaxial a 45° (σ=τ[[1,1],[1,1]], satura en el MISMO σt; medido τ = c·cosφ/(1+sinφ) = 23.09 = 46.19/2 ✓): así se confirmó la superficie antes de rediseñar el test. Suite 99/99. Tres superficies plásticas validadas analíticamente: DP (0.014%), compression_direct (exacto), MC (exacto). |
 **Sprint 10 — lote 4: Mohr-Coulomb hardening-SOFTENING implementado y CALIBRADO (la convergencia con softening era un problema de TEST, no de ley)** | `9d135a6` | 2026-08-25 | `group_materi_plasti_mohr_coul_hardening_softening [phi_0 c_0 phi_flow_0 phi_1 c_1 phi_flow_1 kappa_shear_crit]`: interpolación LINEAL con `kappa/kappa_shear_crit` clampado a [0,1], mismo f que el MC clásico (matrix_eigenvalues), phi_flow para la dirección. **Causa raíz de la no-convergencia con softening**: (1) el test de 1 paso brutal hacía que κ saltara más allá de κ_crit y la superficie BAJABA más rápido de lo que el cutting-plane podía perseguir → σ=7.55; (2) el default `control_timestep_iterations=1` deja el acoplamiento kappa→ley DÉBIL (la ley usa el κ nodal de la iteración anterior) → σ queda por encima de la superficie. **Calibración**: pasos pequeños dt=0.02 (20 pasos) + κ_crit=0.5 (κ/κ_crit=0.318/0.5=0.636 en zona lineal) + `control_timestep_iterations 8` → σxx medido **81.9 vs 83.6 analítico (98%)**, target 83.6±5. A/B sin softening (c₁=c₀=80) → 159.2=2c₀: discrimina. GOTCHA: el target del dof usa el basename `-kap`, NO `-materi_plasti_kappa` (ese da lectura fuera de límites/DBL_MAX). Suite 100/100. |
 
+**Sprint 10 — lote 5: aliases Professional (cap2 + failure typo/underscore) + elásticas menores (poisson_power, shear_factor, k0)** | `1e5eb8e` | 2026-08-25 | `group_materi_plasti_cap2`: alias db_number del legacy `plasti_cap` (misma física, plasti.cc intacto; smoke A/B `mcap2`==`mcap_legacy` → sigxx −0.5769 EXACTO con c=1e6, f=p−pb<0). **Renombres de name[]**: `failure_cruching`→`failure_crunching` (typo de la "n") y `failure_voidfraction`→`failure_void_fraction` (underscore), ambos con el nombre GNU como alias db_number (sin tests legacy afectados). A/B de threshold en failure: alto→intacto, negativo→elemento marcado en el primer timestep (element_delete_times[0]=0.05; GOTCHA: threshold negativo dispara a deformación cero — semántica GNU fiel a jan-2014). `group_materi_elasti_poisson_power` (6.653): nu=ν0+ν1·(p/p1)^α con ν≤ν2, p=−sig_mean — bloque en set_stress tras young_power; oedometro E·eps=1.2 → punto fijo analítico ν=0.4, p=2 (σxx=−1.7143); medido σxx −1.4389/σyy −3.2924 (84%, ν~0.43; GOTCHA: el dof de tensión es unknown del sistema acoplado → la respuesta NO es exactamente el fijo secante). `group_materi_elasti_shear_factor` (6.654): escala SOLO las entradas de corte de C/Cmem (bloques (0,1),(0,2),(1,2)); cizalla pura 1 paso: factor 2→σxy 50 vs 33.33 sin record, factor 0→0 EXACTO (GOTCHA: ratio 1.5 no 2 — respuesta no lineal del dof acoplado; el rig de fuerza NO sirve como sonda de rigidez: el desplazamiento no responde a E). `group_materi_elasti_k0` (6.650) + hook de `control_materi_elasti_k0` (parcial Sprint 9 conectado): ν=K0/(1+K0), K0>0.95→0.95, SOLO con young/young_power Y poisson; K0=0.5→ν=1/3→σxx −0.75/σyy −1.5 EXACTOS, A/B control −no→−0.5769/−1.3462. Suite 111/111 (100 legacy + 11 nuevos). |
+
 
 : ~74 keywords (aliases force 24+11 projected, control_materi 13, data 5, solver 7, print 3, axisymmetric 1) + 4 fixes/gotchas documentados. |
 
@@ -482,7 +484,7 @@ marcado `PENDIENTE` puede estar cubierto en el GNU bajo otro nombre:
 
 - [x] `control_materi_damage_apply` — Sprint 9 (gate en damage.cc)
 - [x] `control_materi_dynamic` — Sprint 9 (PARCIAL: registrado, sin comportamiento — sin término materi_dynamic claro en el GNU)
-- [x] `control_materi_elasti_k0` — Sprint 9 (PARCIAL: group_materi_elasti_k0 no existe en el GNU)
+- [x] `control_materi_elasti_k0` — Sprint 9 (registrado) + Sprint 10 lote 5 (hook conectado en set_stress: nu = K0/(1+K0) con group_materi_elasti_k0; validado con `mk0`/`mk0_off`)
 - [x] `control_materi_failure_apply` — Sprint 9 (gate junto a damage_apply)
 - [x] `control_materi_plasti_hardsoil_gammap_initial` — Sprint 9 (PARCIAL: hardsoil no existe en el GNU)
 - [x] `control_materi_plasti_hypo_masin_clay_ocr_apply` — presente en el GNU
@@ -1208,11 +1210,11 @@ Nota: `group_interface_ground` del checklist anterior NUNCA existió (artefacto 
 - [ ] `group_materi_elasti_camclay_pressure_min` — PENDIENTE
 - [x] `group_materi_elasti_compressibility` — presente en el GNU
 - [ ] `group_materi_elasti_hardsoil` — PENDIENTE
-- [ ] `group_materi_elasti_k0` — PENDIENTE
+- [x] `group_materi_elasti_k0` — Sprint 10 (lote 5; nu = K0/(1+K0), K0>0.95 truncado a 0.95; hook de control_materi_elasti_k0 conectado en set_stress — SOLO con young/young_power y poisson presentes; validado con `mk0`: K0=0.5 -> nu=1/3 -> oedometro sigxx -0.75/sigyy -1.5 EXACTOS = ratio K0; A/B con control -no -> -0.5769/-1.3462)
 - [x] `group_materi_elasti_lade` — presente en el GNU
 - [x] `group_materi_elasti_poisson` — presente en el GNU
-- [ ] `group_materi_elasti_poisson_power` — PENDIENTE
-- [ ] `group_materi_elasti_shear_factor` — PENDIENTE
+- [x] `group_materi_elasti_poisson_power` — Sprint 10 (lote 5; bloque en set_stress tras young_power: nu = nu0+nu1*(p/p1)^alpha, nu<=nu2, p=-sig_mean; validado con `mpower`: nu0=0.2 nu1=0.1 p1=1 alpha=1, E*eps=1.2 -> punto fijo analitico nu=0.4 p=2 (sigxx -1.7143); medido sigxx -1.4389/sigyy -3.2924 = 84% del fijo, ventana que discrimina la base nu=0.3)
+- [x] `group_materi_elasti_shear_factor` — Sprint 10 (lote 5; multiplica SOLO las entradas de corte de C/Cmem, bloques (0,1),(0,2),(1,2); validado con `mshf`/`mshf_nof`: cizalla pura 1 paso, factor 2 -> sigxy 50 vs 33.33 sin record; factor 0 -> 0 EXACTO; GOTCHA: dof sigxy del sistema acoplado no responde lineal (ratio 1.5)
 - [ ] `group_materi_elasti_stress_pressure_history_factor` — PENDIENTE
 - [x] `group_materi_elasti_transverse_isotropy` — presente en el GNU
 - [x] `group_materi_elasti_volumetric_poisson` — presente en el GNU
@@ -1225,11 +1227,11 @@ Nota: `group_interface_ground` del checklist anterior NUNCA existió (artefacto 
 - [x] `group_materi_expansion_linear` — presente en el GNU
 - [x] `group_materi_expansion_volume` — presente en el GNU
 - [x] `group_materi_factor` — Sprint 10 (escala tensiones+rigidez; verificado con vely prescrita)
-- [ ] `group_materi_failure_crunching` — PENDIENTE
+- [x] `group_materi_failure_crunching` — Sprint 10 (lote 5; ortografia Professional con la "n" en name[], typo GNU `cruching` como alias db_number; validado con `mcrunch`/`mcrunch_low`: threshold alto 0.5 intacto sigxx -0.5769 EXACTO vs threshold -0.5 -> elemento marcado en t=0.05)
 - [x] `group_materi_failure_damage` — presente en el GNU
 - [x] `group_materi_failure_plasti_kappa` — presente en el GNU
 - [x] `group_materi_failure_rupture` — presente en el GNU
-- [ ] `group_materi_failure_void_fraction` — PENDIENTE
+- [x] `group_materi_failure_void_fraction` — Sprint 10 (lote 5; ortografia Professional con underscore en name[], GNU `voidfraction` como alias db_number; validado con `mvoid`/`mvoid_low`: void inicial 0.3, threshold 0.9 intacto vs 0.2 -> marcado en t=0.05)
 - [ ] `group_materi_history_variable_user` — PENDIENTE
 - [ ] `group_materi_history_variable_user_parameters` — PENDIENTE
 - [x] `group_materi_hyper_besseling` — presente en el GNU
@@ -1249,7 +1251,7 @@ Nota: `group_interface_ground` del checklist anterior NUNCA existió (artefacto 
 - [x] `group_materi_plasti_bounda_factor` — Sprint 10 (alias)
 - [x] `group_materi_plasti_camclay` — presente en el GNU
 - [ ] `group_materi_plasti_cap1` — PENDIENTE
-- [ ] `group_materi_plasti_cap2` — PENDIENTE
+- [x] `group_materi_plasti_cap2` — Sprint 10 (lote 5; alias db_number del legacy cap (misma fisica c phi alpha R + tabla epsilonp_v pb; plasti.cc intacto); validado con `mcap2`/`mcap_legacy`: oedometro elastico c=1e6 -> sigxx -0.5769 EXACTO con AMBAS keywords = cap2 == legacy)
 - [x] `group_materi_plasti_compression` — presente en el GNU
 - [x] `group_materi_plasti_compression_direct` — Sprint 10 (cutoff espectral de autovalores)
 - [x] `group_materi_plasti_compression_direct_visco` — Sprint 10 (relajacion 1-exp(-dt/tm))

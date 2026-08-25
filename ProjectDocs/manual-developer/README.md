@@ -103,6 +103,12 @@ Each file corresponds to the same feature in the [User Manual](../manual-user/).
 - [group_materi_plasti_visco_exponential](group_materi_plasti_visco_exponential.md) — viscoplasticity (stress.cc:100-115, 737-755; EPS_VISCO hardcoded).
 - [group_materi_plasti_mohr_coul_direct](group_materi_plasti_mohr_coul_direct.md) — direct stress cut-off (materi_direct_cutoff in stress.cc).
 - [group_materi_plasti_mohr_coul_hardening_softening](group_materi_plasti_mohr_coul_hardening_softening.md) — classic MC with linear c/phi hardening-softening vs kappa (plasti.cc plasti_rule block).
+- [group_materi_plasti_cap2](group_materi_plasti_cap2.md) — db_number alias of GROUP_MATERI_PLASTI_CAP (same physics, plasti.cc untouched).
+- [group_materi_failure_crunching](group_materi_failure_crunching.md) — name[] fixed to the Professional spelling + db_number alias for the GNU typo (failure.cc; negative-threshold semantics).
+- [group_materi_failure_void_fraction](group_materi_failure_void_fraction.md) — name[] fixed to the Professional spelling + db_number alias for the GNU name (failure.cc; node_dof -from/-to gotcha).
+- [group_materi_elasti_poisson_power](group_materi_elasti_poisson_power.md) — power-law nu block in set_stress() (stress.cc), young_power pattern; ~84% of the analytic fixed point (coupling gotcha).
+- [group_materi_elasti_shear_factor](group_materi_elasti_shear_factor.md) — scales the shear entries of C/Cmem only (stress.cc); nonlinear post_point response (coupled stress formulation).
+- [group_materi_elasti_k0](group_materi_elasti_k0.md) — K0 record + control_materi_elasti_k0 hook (Sprint 9 partial wired): nu = K0/(1+K0) in the young/young_power blocks.
 - [group_materi_plasti_hypo_masin](group_materi_plasti_hypo_masin.md) — Masin clay hypoplasticity (masin.c pure-C port of umat_hcea.for, validated to 5e-7; hypoplas.cc dispatch).
 - [group_materi_plasti_sanisand](group_materi_plasti_sanisand.md) — SANISAND (sanisand.c port of the Dafalias-Manzari UMAT; functional ~8% vs Fortran, integrator tightening pending in P4-E1b).
 - [group_materi_plasti_hypo_wolfersdorff](group_materi_plasti_hypo_wolfersdorff.md) — hypoplasticity kernel (hypo.c pure-C, all 5 variants verified).
