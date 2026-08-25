@@ -59,6 +59,7 @@ void plasti_rule( long int element, long int gr,
     phi1_flow=0., kappa=0., kappa_crit=0., I1=0., I2=0., I3=0.,
     plasti_on_boundary_factor=BOUNDARY_REDUCTION_FACTOR,
     m=0., lambda=0., e=0., N=0., de=0., p0=0., dp0=0., rdum=0.,
+    M=0., pc=0., p_star=0., pc_star=0.,
     prisco_rv[MDIM][MDIM], prisco_st[MDIM][MDIM], prisco_rr[MDIM][MDIM],
     prisco_st1[MDIM][MDIM], prisco_st2[MDIM][MDIM], prisco_sv0[MDIM][MDIM],
     prisco_chi[MDIM*MDIM], prisco_chihat[MDIM*MDIM],
@@ -229,6 +230,63 @@ void plasti_rule( long int element, long int gr,
       }
     }
   }
+  if ( get_group_data( GROUP_MATERI_PLASTI_CAP1, gr, element, new_unknowns, 
+    plasti_data, length, GET_IF_EXISTS ) ) {
+    test1 = task==GET_YIELD_RULE&&plasti_type==-NONE;
+    test2 = task==GET_YIELD_RULE&&plasti_type==GROUP_MATERI_PLASTI_CAP1;
+    test3 = task==GET_FLOW_RULE&&plasti_type==GROUP_MATERI_PLASTI_CAP1;
+    if ( test1 || test2 || test3 ) {
+      if ( swit ) pri( "check plasti_cap1" );
+        // manual Professional 6.691 (theory cap1): 8 parameters
+        // phi c M lambda_star kappa_star K_ref p_ref m. M is READ from
+        // the record (typically 6*sin(phi)/(3-sin(phi))). Surface:
+        // f = q^2/M^2 + p*(p* - p*c) with p* = p + c*cot(phi),
+        // p*c = pc + c*cot(phi), pc the materi_plasti_cap1_history
+        // node dof (initial value given via node_dof). The hardening
+        // (stress.cc) grows pc with the cap plastic volume strain, so
+        // the surface translates along the p axis. Combined with shear
+        // laws (DP, MC, ...) the standard driver picks the largest f.
+      c = plasti_data[0];
+      phi = plasti_data[1];
+      M = plasti_data[2];
+        // cot(phi) diverges at phi=0: the manual expects phi>0; the
+        // tension pole at phi=pi/2 (cot = 0) is also rejected
+      if ( cos(phi)==0. || sin(phi)==0. ) db_error( GROUP_MATERI_PLASTI_CAP1, gr );
+      if ( M==0. ) db_error( GROUP_MATERI_PLASTI_CAP1, gr );
+      if ( !materi_plasti_cap1_history ) {
+        pri( "Error: GROUP_MATERI_PLASTI_CAP1 needs initia 'materi_plasti_cap1_history'" );
+        exit(TN_EXIT_STATUS);
+      }
+      pc = new_unknowns[cap1_indx];
+        // invariants: p compression-positive; q invariant to the sign
+      p = -( sig[0] + sig[4] + sig[8] ) / 3.;
+      q = sqrt( 
+        0.5*( scalar_square(sig[0]-sig[4])+
+              scalar_square(sig[4]-sig[8])+
+              scalar_square(sig[0]-sig[8]) ) + 
+        3.*( scalar_square(sig[1]) +
+             scalar_square(sig[2]) +
+             scalar_square(sig[5]) ) );
+      tmp = c * cos(phi) / sin(phi);
+      p_star = p + tmp;
+      pc_star = pc + tmp;
+      f_yield = q*q/(M*M) + p_star*(p_star - pc_star);
+      f_flow = f_yield;
+      if      ( task==GET_YIELD_RULE ) {
+        if (  f_yield>f ) {
+          f = f_yield;
+          tmp_plasti_type = GROUP_MATERI_PLASTI_CAP1;
+        }
+        if ( swit ) pri( "f_yield", f_yield );
+      }
+      else {
+        assert( task==GET_FLOW_RULE );
+        f = f_flow;
+        if ( swit ) pri( "f_flow", f_flow );
+      }
+    }
+  }
+
   if ( get_group_data( GROUP_MATERI_PLASTI_COMPRESSION, gr, element, new_unknowns, 
     plasti_data, ldum, GET_IF_EXISTS ) ) {
     test1 = task==GET_YIELD_RULE&&plasti_type==-NONE;

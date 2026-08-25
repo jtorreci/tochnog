@@ -3829,6 +3829,12 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   fixed_length[GROUP_MATERI_PLASTI_CAP] = 0;
   data_required[GROUP_MATERI_PLASTI_CAP] = GROUP_TYPE;
 
+  strcpy(name[GROUP_MATERI_PLASTI_CAP1],"group_materi_plasti_cap1");
+  type[GROUP_MATERI_PLASTI_CAP1] = DOUBLE_PRECISION;
+  data_length[GROUP_MATERI_PLASTI_CAP1] = 8;
+  data_class[GROUP_MATERI_PLASTI_CAP1] = MATERI;
+  data_required[GROUP_MATERI_PLASTI_CAP1] = GROUP_TYPE;
+
   strcpy(name[GROUP_MATERI_PLASTI_COMPRESSION],"group_materi_plasti_compression");
   type[GROUP_MATERI_PLASTI_COMPRESSION] = DOUBLE_PRECISION;
   data_length[GROUP_MATERI_PLASTI_COMPRESSION] = 1;
@@ -4777,6 +4783,8 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   strcpy(name[MATERI_PLASTI_INCREMENTAL_SUBSTEPS],"materi_plasti_incremental_substeps");
 
   strcpy(name[MATERI_PLASTI_KAPPA],"materi_plasti_kappa");
+
+  strcpy(name[MATERI_PLASTI_CAP1_HISTORY],"materi_plasti_cap1_history");
 
   strcpy(name[MATERI_PLASTI_RHO],"materi_plasti_rho");
 
@@ -6000,6 +6008,8 @@ void db_initialize( long int dof_type[], long int dof_label[] )
       strcpy( basename, "substeps" );
     else if ( dof_type[iuknwn]==-MATERI_PLASTI_KAPPA )
       strcpy( basename, "kap" );
+    else if ( dof_type[iuknwn]==-MATERI_PLASTI_CAP1_HISTORY )
+      strcpy( basename, "pc" );
     else if ( dof_type[iuknwn]==-MATERI_PLASTI_RHO ) {
       if ( iuknwn==rho_indx ) n = 0;
       n++;

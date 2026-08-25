@@ -312,6 +312,13 @@ void input( )
       array_set( &dof_type[kap_indx], -MATERI_PLASTI_KAPPA, n*nder );
       array_set( &dof_scal_vec_mat[unknown_indx], -SCALAR, n*nder );
     }
+    else if ( !strcmp(str,"materi_plasti_cap1_history") ) {
+      materi_plasti_cap1_history = 1;
+      cap1_indx = unknown_indx;
+      n = 1;
+      array_set( &dof_type[cap1_indx], -MATERI_PLASTI_CAP1_HISTORY, n*nder );
+      array_set( &dof_scal_vec_mat[unknown_indx], -SCALAR, n*nder );
+    }
     else if ( !strcmp(str,"materi_plasti_rho") ) {
       materi_plasti_rho = 1;
       rho_indx = unknown_indx;

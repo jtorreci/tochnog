@@ -223,6 +223,7 @@ void set_stress( long int element, long int gr,
   double old_hisv[], double new_hisv[], 
   double old_damage, double &new_damage, 
   double old_kappa, double &new_kappa, 
+  double old_cap1pc, double &new_cap1pc, 
   double &new_f, double &new_substeps, double old_deften[], double new_deften[],
   double inc_rot[], double ddsdde[],
    double &viscosity, double &viscosity_heat_generation, double &softvar_nonl,
@@ -863,6 +864,41 @@ void set_stress( long int element, long int gr,
 	  new_kappa = old_kappa + sqrt(0.5*tmp);     
 	  if ( swit ) pri( "new_kappa", new_kappa );
 	}
+        // cap1 hardening (materi_plasti_cap1_history, manual theory
+        // cap1): pc hardens with the cap plastic volume strain
+        // eps_p_cv_dot = (lambda*/kappa* - 1)/K_ref (p_ref/p*c)^m pc_dot,
+        // inverted and integrated explicitly with the OLD pc:
+        // new_pc = old_pc + deps_p_cv*K_ref/(lambda*/kappa* - 1)
+        //                     *((old_pc + c*cot(phi))/p_ref)^m
+        // with deps_p_cv = -trace(inc_epp) (positive in compression,
+        // clamped >= 0: unloading never decreases pc).
+        if ( materi_plasti_cap1_history ) {
+          double cap1_plasti_data[8], ccotphi = 0., deps_p_cv = 0.,
+            lambda_star = 0., kappa_star = 0., K_ref = 0., p_ref = 0.,
+            m_cap1 = 0.;
+          long int cap1_length = 0;
+          new_cap1pc = old_cap1pc;
+          if ( get_group_data( GROUP_MATERI_PLASTI_CAP1, gr, element,
+              new_unknowns, cap1_plasti_data, cap1_length,
+              GET_IF_EXISTS ) ) {
+            lambda_star = cap1_plasti_data[3];
+            kappa_star = cap1_plasti_data[4];
+            K_ref = cap1_plasti_data[5];
+            p_ref = cap1_plasti_data[6];
+            m_cap1 = cap1_plasti_data[7];
+            ccotphi = cap1_plasti_data[0] * cos(cap1_plasti_data[1]) /
+              sin(cap1_plasti_data[1]);
+            deps_p_cv = - ( inc_epp[0] + inc_epp[4] + inc_epp[8] );
+            if ( deps_p_cv<0. ) deps_p_cv = 0.;
+            if ( lambda_star>kappa_star && K_ref>0. && p_ref>0. ) {
+              tmp = old_cap1pc + ccotphi;
+              new_cap1pc = old_cap1pc + deps_p_cv * K_ref /
+                ( lambda_star/kappa_star - 1. ) *
+                scalar_power( tmp/p_ref, m_cap1 );
+            }
+          }
+          if ( swit ) pri( "new_cap1pc", new_cap1pc );
+        }
   }
   else {
 
@@ -890,6 +926,37 @@ void set_stress( long int element, long int gr,
       tmp = array_inproduct( inc_epp, inc_epp, MDIM*MDIM );
       new_kappa = old_kappa + sqrt(0.5*tmp);     
       if ( swit ) pri( "new_kappa", new_kappa );
+    }
+
+      // cap1 hardening (materi_plasti_cap1_history): see the incremental
+      // branch above for the law; pc grows with the converged cap
+      // plastic volume strain of this step.
+    if ( materi_plasti_cap1_history ) {
+      double cap1_plasti_data[8], ccotphi = 0., deps_p_cv = 0.,
+        lambda_star = 0., kappa_star = 0., K_ref = 0., p_ref = 0.,
+        m_cap1 = 0.;
+      long int cap1_length = 0;
+      new_cap1pc = old_cap1pc;
+      if ( get_group_data( GROUP_MATERI_PLASTI_CAP1, gr, element,
+          new_unknowns, cap1_plasti_data, cap1_length,
+          GET_IF_EXISTS ) ) {
+        lambda_star = cap1_plasti_data[3];
+        kappa_star = cap1_plasti_data[4];
+        K_ref = cap1_plasti_data[5];
+        p_ref = cap1_plasti_data[6];
+        m_cap1 = cap1_plasti_data[7];
+        ccotphi = cap1_plasti_data[0] * cos(cap1_plasti_data[1]) /
+          sin(cap1_plasti_data[1]);
+        deps_p_cv = - ( inc_epp[0] + inc_epp[4] + inc_epp[8] );
+        if ( deps_p_cv<0. ) deps_p_cv = 0.;
+        if ( lambda_star>kappa_star && K_ref>0. && p_ref>0. ) {
+          tmp = old_cap1pc + ccotphi;
+          new_cap1pc = old_cap1pc + deps_p_cv * K_ref /
+            ( lambda_star/kappa_star - 1. ) *
+            scalar_power( tmp/p_ref, m_cap1 );
+        }
+      }
+      if ( swit ) pri( "new_cap1pc", new_cap1pc );
     }
 
       // plasti rho

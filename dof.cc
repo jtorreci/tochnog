@@ -182,6 +182,10 @@ void parallel_new_dof_diagonal( void )
           iuknwn = kap_indx;
           if ( node_dof_new[iuknwn]<0. ) node_dof_new[iuknwn] = 0.;
         }
+        if ( materi_plasti_cap1_history ) {
+          iuknwn = cap1_indx;
+          if ( node_dof_new[iuknwn]<0. ) node_dof_new[iuknwn] = 0.;
+        }
         if ( materi_stress_pressure_history && materi_stress ) {
           // materi_stress_pressure_history (manual Professional 4.50):
           // the maximum of the absolute value of the pressure over time

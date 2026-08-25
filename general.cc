@@ -147,6 +147,10 @@ void general( long int element, long int name, long int nnol, long int element_g
         unknown_belongs_to_type = 1;
         inertia = 1.;
       }
+      else if ( dof_type[iuknwn]==-MATERI_PLASTI_CAP1_HISTORY ) {
+        unknown_belongs_to_type = 1;
+        inertia = 1.;
+      }
       else if ( dof_type[iuknwn]==-MATERI_PLASTI_RHO ) {
         unknown_belongs_to_type = 1;
         inertia = 1.;
@@ -259,6 +263,8 @@ void general( long int element, long int name, long int nnol, long int element_g
           else if ( dof_type[iuknwn]==-MATERI_MAXWELL_STRESS && type==-MATERI )
             conv_part = 1.;
           else if ( dof_type[iuknwn]==-MATERI_PLASTI_KAPPA && type==-MATERI )
+            conv_part = 1.;
+          else if ( dof_type[iuknwn]==-MATERI_PLASTI_CAP1_HISTORY && type==-MATERI )
             conv_part = 1.;
           else if ( dof_type[iuknwn]==-MATERI_PLASTI_RHO && type==-MATERI )
             conv_part = 1.;

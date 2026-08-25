@@ -41,6 +41,7 @@ void materi( long int element, long int gr, long int nnol,
     materi_expansion_volume=0., temp=0., tmp=0., damping=0., fac=0, 
     plasti_heatgeneration=0., viscosity_heatgeneration=0.,
     viscosity=0., old_damage=0., new_damage=0., old_kappa=0., new_kappa=0., 
+    old_cap1pc=0., new_cap1pc=0.,
     old_f=0., new_f=0., void_fraction=0., new_pres=0., old_substeps=0., new_substeps=0.,
     softvar_nonl=0, softvar_l=0, 
     static_pressure=0., total_pressure=0., location=0.,
@@ -224,6 +225,11 @@ void materi( long int element, long int gr, long int nnol,
     old_kappa = old_unknowns[iuknwn];
     new_kappa = new_unknowns[iuknwn];
   }
+  if ( materi_plasti_cap1_history ) {
+    iuknwn = cap1_indx;
+    old_cap1pc = old_unknowns[iuknwn];
+    new_cap1pc = new_unknowns[iuknwn];
+  }
   if ( materi_damage ) {
     iuknwn = dam_indx;
     old_damage = old_unknowns[iuknwn];
@@ -347,7 +353,8 @@ void materi( long int element, long int gr, long int nnol,
       rotated_old_msig, new_msig, inc_ept, new_ept,
       old_epe, inc_epe, old_epp, inc_epp, old_rho, new_rho, 
       old_epi, new_epi, old_hisv, new_hisv, 
-      old_damage, new_damage, old_kappa, new_kappa, new_f, new_substeps,
+      old_damage, new_damage, old_kappa, new_kappa, old_cap1pc, new_cap1pc,
+      new_f, new_substeps,
       old_deften, new_deften, inc_rot,
       ddsdde, viscosity, viscosity_heatgeneration, softvar_nonl, softvar_l,
       direct_normal);
@@ -608,6 +615,13 @@ void materi( long int element, long int gr, long int nnol,
         ipuknwn = kap_indx/nder;
         indx = inol*npuknwn + ipuknwn;
         tmp = volume * h[inol] * ( new_kappa - old_kappa ) / dtime;
+        element_rhside[indx] += tmp;
+      }
+
+      if ( materi_plasti_cap1_history ) {
+        ipuknwn = cap1_indx/nder;
+        indx = inol*npuknwn + ipuknwn;
+        tmp = volume * h[inol] * ( new_cap1pc - old_cap1pc ) / dtime;
         element_rhside[indx] += tmp;
       }
 

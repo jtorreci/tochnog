@@ -779,6 +779,7 @@ enum {
   GROUP_MATERI_PLASTI_CAMCLAY,
   GROUP_MATERI_PLASTI_CAMCLAY_INCREMENTAL,
   GROUP_MATERI_PLASTI_CAP,
+  GROUP_MATERI_PLASTI_CAP1,
   GROUP_MATERI_PLASTI_COMPRESSION,
   GROUP_MATERI_PLASTI_DIPRISCO,
   GROUP_MATERI_PLASTI_DIPRISCO_RT,
@@ -949,6 +950,7 @@ enum {
   MATERI_DISPLACEMENT_RELATIVE_REF,
   MATERI_HISTORY_VARIABLES,
   MATERI_MAXWELL_STRESS,
+  MATERI_PLASTI_CAP1_HISTORY,
   MATERI_PLASTI_F,
   MATERI_PLASTI_F_NONLOCAL,
   MATERI_PLASTI_INCREMENTAL_SUBSTEPS,
@@ -1237,6 +1239,7 @@ extern long int echo, ndim, derivatives,
   materi_damage, materi_density, 
   materi_diffusion, materi_displacement, materi_displacement_relative, 
   materi_maxwell_stress, materi_plasti_kappa, 
+  materi_plasti_cap1_history,
   materi_plasti_f, materi_plasti_f_nonlocal, materi_plasti_incremental_substeps,
   materi_plasti_softvar_local,
   materi_plasti_softvar_nonlocal,
@@ -1284,6 +1287,7 @@ extern long int
   pres_indx, // index stating start of groundflow_pressure in node_dof
   res_indx, // index stating start of residue in node_dof
   kap_indx, // index stating start of materi_plasti_kappa in node_dof
+  cap1_indx, // index stating start of materi_plasti_cap1_history in node_dof
   rho_indx, // index stating start of materi_plasti_rho in node_dof
   rot_indx, // index stating start of beam_rotation in node_dof
   scal_indx, // index stating start of wave_scalar in node_dof
@@ -1831,6 +1835,7 @@ void      set_stress( long int element, long int gr,
             double old_hisv[], double new_hisv[], 
             double old_damage, double &new_damage,
             double old_kappa, double &new_kappa,
+            double old_cap1pc, double &new_cap1pc,
             double &new_f, double &new_substeps, double old_deften[], double new_deften[],
             double inc_rot[], double ddsdde[],
             double &viscosity, double &viscosity_heat_generation, 

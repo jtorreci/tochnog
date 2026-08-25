@@ -626,6 +626,11 @@ long int check( long int idat, long int task )
     ok = check_unknown( "materi_stress", YES, task );
     ok = ok && check_unknown( "materi_strain_plasti", YES, task );
   }
+  if ( data_number==GROUP_MATERI_PLASTI_CAP1 ) {
+    ok = check_unknown( "materi_stress", YES, task );
+    ok = ok && check_unknown( "materi_strain_plasti", YES, task );
+    ok = ok && check_unknown( "materi_plasti_cap1_history", YES, task );
+  }
   if ( data_number==GROUP_MATERI_PLASTI_COMPRESSION ) {
     ok = check_unknown( "materi_stress", YES, task );
     ok = ok && check_unknown( "materi_strain_plasti", YES, task );
