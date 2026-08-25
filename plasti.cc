@@ -537,6 +537,69 @@ void plasti_rule( long int element, long int gr,
       }
     }
   }
+  if ( get_group_data( GROUP_MATERI_PLASTI_MOHR_COUL_HARDENING_SOFTENING, gr, element, new_unknowns,
+      plasti_data, ldum, GET_IF_EXISTS ) ) {
+    test1 = task==GET_YIELD_RULE&&plasti_type==-NONE;
+    test2 = task==GET_YIELD_RULE&&plasti_type==GROUP_MATERI_PLASTI_MOHR_COUL_HARDENING_SOFTENING;
+    test3 = task==GET_FLOW_RULE&&plasti_type==GROUP_MATERI_PLASTI_MOHR_COUL_HARDENING_SOFTENING;
+    if ( test1 || test2 || test3 ) {
+      if ( swit ) pri( "plasti_mohr_coul_hardening_softening" );
+      // manual Professional 6.731: same surface as mohr_coul, but c and
+      // phi (both yield and flow) vary LINEARLY with the effective
+      // plastic strain kappa_shear from the _0 values at kappa=0 up to
+      // the _1 values at kappa_shear_crit, constant afterwards. The
+      // accumulated kappa is the materi_plasti_kappa dof
+      // (new_unknowns[kap_indx], a node dof filled by the standard
+      // driver; kappa = int sqrt(0.5*depsp:depsp)).
+      {
+        double phi_0 = plasti_data[0], c_0 = plasti_data[1],
+               phi_flow_0 = plasti_data[2], phi_1 = plasti_data[3],
+               c_1 = plasti_data[4], phi_flow_1 = plasti_data[5],
+               kappa_crit = plasti_data[6], kappa_now = 0., ratio;
+        if ( materi_plasti_kappa )
+          kappa_now = new_unknowns[kap_indx];
+        if ( kappa_crit>0. ) {
+          ratio = kappa_now/kappa_crit;
+          if ( ratio>1. ) ratio = 1.;
+          if ( ratio<0. ) ratio = 0.;
+        }
+        else
+          ratio = 1.;
+        phi = phi_0 + ratio*(phi_1-phi_0);
+        c = c_0 + ratio*(c_1-c_0);
+        phi_flow = phi_flow_0 + ratio*(phi_flow_1-phi_flow_0);
+      }
+      if ( plasti_on_boundary ) {
+        phi *= plasti_on_boundary_factor;
+        phi_flow *= plasti_on_boundary_factor;
+      }
+      matrix_eigenvalues( sig, sig_princ );
+      {
+        double sig_max = sig_princ[0], sig_min = sig_princ[0];
+        long int ipr;
+        for ( ipr=1; ipr<MDIM; ipr++ ) {
+          if ( sig_princ[ipr]>sig_max ) sig_max = sig_princ[ipr];
+          if ( sig_princ[ipr]<sig_min ) sig_min = sig_princ[ipr];
+        }
+        f_yield = 0.5*(sig_max-sig_min) + 0.5*(sig_max+sig_min)*sin(phi)
+                 - c*cos(phi);
+        f_flow  = 0.5*(sig_max-sig_min) + 0.5*(sig_max+sig_min)*sin(phi_flow)
+                 - c*cos(phi);
+      }
+      if      ( task==GET_YIELD_RULE ) {
+        if ( f_yield>f ) {
+          f = f_yield;
+          tmp_plasti_type = GROUP_MATERI_PLASTI_MOHR_COUL_HARDENING_SOFTENING;
+        }
+        if ( swit ) pri( "f_yield", f_yield );
+      }
+      else {
+        assert( task==GET_FLOW_RULE );
+        f = f_flow;
+        if ( swit ) pri( "f_flow", f_flow );
+      }
+    }
+  }
   if ( get_group_data( GROUP_MATERI_PLASTI_MOHR_COUL, gr, element, new_unknowns,
       plasti_data, ldum, GET_IF_EXISTS ) ) {
     test1 = task==GET_YIELD_RULE&&plasti_type==-NONE;
