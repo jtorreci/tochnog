@@ -121,7 +121,10 @@ suite sfnet, o un test propio. El registro completo:
 
 **Sprint 9 — lote 2: `force_edge_projected*` completa (Terzaghi; manual Professional 6.478-6.487; force_edge 44/44 COMPLETA)** | `812bb02` | 2026-08-24 | master como type 9 de area() (MTYPES 10) con las 10 variants companion (patrón force_edge_companion + temporal _time/_sine + _factor polinomio). Física: campo lineal ph/pv evaluado en las coordenadas del nodo; vd normalizado (fallback (0,−1,0)); hd = tunnel×vd (2D: (−vd_y, vd_x, 0)); proyección con productos internos explícitos — sig_radial = ph(n·hd)²+pv(n·vd)², sig_tang = ph(t·hd)(n·hd)+pv(t·vd)(n·vd); aplicada como fn·sig_radial·n + ft·sig_tang·t (positiva hacia afuera, hacia la excavación). FIX dimensional propio: la primera versión acumulaba n2/t2 en un loop con un escalar mal dimensionado. GOTCHA del test (segunda vez): convención Z del quad4 (3=arriba-IZQUIERDA) — malla cruzada ⇒ sigxx=0; el control de aislamiento con force_edge_normal (familia conocida-buena) en la misma malla separó bug-de-test de bug-de-feature. Validado con `fproj_tunnel`: sigxx=10 EXACTO (ph en pared vertical) y sigyy=20 (pv en horizontal) — el ratio 2:1 prueba la proyección por orientación (una presión uniforme daría 1:1). Suite 92/92. |
 
-**Sprint 9 — lote 3: `data_*` completa + aliases solver/misc + `print_mesh_dof` (~16 keywords; SPRINT 9 CERRADO)** | `1e21cec` | 2026-08-24 | `data_activate`/`data_delete` (+`_time`): variantes time-gated de los control_data_* (mismo patrón destructivo, gate EPS_TIME) evaluadas en data(). `data_ignore`: skip a nivel de PARSEO (input.cc) — dos gotchas: el enum del item se guarda NEGATIVO (match −idat) y el record debe PREDECER a lo que ignora (se evalúa leyendo). Aliases db_number: `control_solver`→`control_options_solver`, `control_solver_bicg_error`, `axisymmetric`→`group_axisymmetric`, `bounda_print_mesh_dof*`→`print_mesh_dof*`. `control_solver_bicg_stop -no` cableado en so_bicg.cc (warning+continuar vs exit); bicg_restart/matrix_save/pardiso_* registrados como parciales. `print_mesh_dof`(+`_geometry`): dump one-shot a print_mesh_dof.dat (coords + dofs listados); `_values` registrado sin uso. Nota: DATA no existe como data_class → los data_* usan CONTROL. Validado con `dsmall` (data_activate_time borra la carga en t=0.1 → relaja a disy~0; aliases y dump ejercitados) y `dignore` (data_ignore declarado ANTES: load default 0, disy 0 exacto). Suite 94/94. **SPRINT 9 CERRADO**: ~74 keywords (aliases force 24+11 projected, control_materi 13, data 5, solver 7, print 3, axisymmetric 1) + 4 fixes/gotchas documentados. |
+**Sprint 9 — lote 3: `data_*` completa + aliases solver/misc + `print_mesh_dof` (~16 keywords; SPRINT 9 CERRADO)** | `1e21cec` | 2026-08-24 | `data_activate`/`data_delete` (+`_time`): variantes time-gated de los control_data_* (mismo patrón destructivo, gate EPS_TIME) evaluadas en data(). `data_ignore`: skip a nivel de PARSEO (input.cc) — dos gotchas: el enum del item se guarda NEGATIVO (match −idat) y el record debe PREDECER a lo que ignora (se evalúa leyendo). Aliases db_number: `control_solver`→`control_options_solver`, `control_solver_bicg_error`, `axisymmetric`→`group_axisymmetric`, `bounda_print_mesh_dof*`→`print_mesh_dof*`. `control_solver_bicg_stop -no` cableado en so_bicg.cc (warning+continuar vs exit); bicg_restart/matrix_save/pardiso_* registrados como parciales. `print_mesh_dof`(+`_geometry`): dump one-shot a print_mesh_dof.dat (coords + dofs listados); `_values` registrado sin uso. Nota: DATA no existe como data_class → los data_* usan CONTROL. Validado con `dsmall` (data_activate_time borra la carga en t=0.1 → relaja a disy~0; aliases y dump ejercitados) y `dignore` (data_ignore declarado ANTES: load default 0, disy 0 exacto). Suite 94/94. **SPRINT 9 CERRADO**
+
+**Sprint 10 — lote 1: `compression_direct`(+_visco) + `pressure_limit`/`coord_limit` + alias `heat_generation` (6 keywords)** | `f987f54` | 2026-08-24 | `materi_compression_cutoff` (stress.cc): descomposición espectral con matrix_jacobi — todo autovalor < sigy se sube hacia sigy (corte total sin record visco; relajación 1−exp(−dt/tm) con `_visco`). BUG propio cazado: el patrón factor=1−exp(−dt/(tm?:1)) heredado del cutoff de plano relajaba también SIN record (factor≈0.095) — la regla: el factor visco SOLO aplica cuando existe el record; sin record, factor=1. Gates `pressure_limit`/`coord_limit` en el call-site canónico de set_stress (cubren las tres leyes directas; documentado que NO cubren hypo). Alias `plasti_heat_generation` por dual-read en materi.cc (gana el nombre Professional). Tests: mdirect_comp (sigyy −10 → **−5.0 exacto**) y mdirect_gate (pressure_limit 0.1 desactiva el cap → −10 elástico; A/B sin limit falla). Suite 96/96. |
+: ~74 keywords (aliases force 24+11 projected, control_materi 13, data 5, solver 7, print 3, axisymmetric 1) + 4 fixes/gotchas documentados. |
 
 
 Nota: las features marcadas solo "GNU" en el detalle por familia (sin
@@ -1241,9 +1244,9 @@ Nota: `group_interface_ground` del checklist anterior NUNCA existió (artefacto 
 - [ ] `group_materi_plasti_cap1` — PENDIENTE
 - [ ] `group_materi_plasti_cap2` — PENDIENTE
 - [x] `group_materi_plasti_compression` — presente en el GNU
-- [ ] `group_materi_plasti_compression_direct` — PENDIENTE
-- [ ] `group_materi_plasti_compression_direct_visco` — PENDIENTE
-- [ ] `group_materi_plasti_coord_limit` — PENDIENTE
+- [x] `group_materi_plasti_compression_direct` — Sprint 10 (cutoff espectral de autovalores)
+- [x] `group_materi_plasti_compression_direct_visco` — Sprint 10 (relajacion 1-exp(-dt/tm))
+- [x] `group_materi_plasti_coord_limit` — Sprint 10 (gate por coordenada vertical)
 - [x] `group_materi_plasti_diprisco` — presente en el GNU
 - [ ] `group_materi_plasti_diprisco_density` — PENDIENTE
 - [ ] `group_materi_plasti_druck_prag` — PENDIENTE
@@ -1252,7 +1255,7 @@ Nota: `group_interface_ground` del checklist anterior NUNCA existió (artefacto 
 - [ ] `group_materi_plasti_generalised_non_associate_cam_clay_for_bonded_soils` — PENDIENTE
 - [x] `group_materi_plasti_gurson` — presente en el GNU
 - [ ] `group_materi_plasti_hardsoil` — PENDIENTE
-- [ ] `group_materi_plasti_heat_generation` — PENDIENTE
+- [x] `group_materi_plasti_heat_generation` — Sprint 10 (nombre Professional del legacy heatgeneration, dual-read)
 - [x] `group_materi_plasti_hypo_cohesion` — presente en el GNU
 - [x] `group_materi_plasti_hypo_masin` — implementada (commit `974b284`, 2026-08-06)
 - [x] `group_materi_plasti_hypo_masin_clay` — presente en el GNU
@@ -1281,8 +1284,8 @@ Nota: `group_interface_ground` del checklist anterior NUNCA existió (artefacto 
 - [ ] `group_materi_plasti_mohr_coul_hardening_softening` — PENDIENTE
 - [ ] `group_materi_plasti_mpc` — PENDIENTE
 - [ ] `group_materi_plasti_mpc_factor` — PENDIENTE
-- [ ] `group_materi_plasti_pressure_limit` — PENDIENTE
-- [ ] `group_materi_plasti_residual_sti` — PENDIENTE
+- [x] `group_materi_plasti_pressure_limit` — Sprint 10 (gate p=-tr/3 en el camino direct)
+- [x] `group_materi_plasti_residual_sti` — OCR: residual_stiffness
 - [x] `group_materi_plasti_tension` — presente en el GNU
 - [x] `group_materi_plasti_tension_direct` — implementada (cut-off directo de tracción normal en un plano; validada con `materi_direct`)
 - [x] `group_materi_plasti_tension_direct_normal` — implementada (normal explícita; validada con `materi_direct`)
