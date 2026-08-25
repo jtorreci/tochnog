@@ -124,6 +124,9 @@ suite sfnet, o un test propio. El registro completo:
 **Sprint 9 — lote 3: `data_*` completa + aliases solver/misc + `print_mesh_dof` (~16 keywords; SPRINT 9 CERRADO)** | `1e21cec` | 2026-08-24 | `data_activate`/`data_delete` (+`_time`): variantes time-gated de los control_data_* (mismo patrón destructivo, gate EPS_TIME) evaluadas en data(). `data_ignore`: skip a nivel de PARSEO (input.cc) — dos gotchas: el enum del item se guarda NEGATIVO (match −idat) y el record debe PREDECER a lo que ignora (se evalúa leyendo). Aliases db_number: `control_solver`→`control_options_solver`, `control_solver_bicg_error`, `axisymmetric`→`group_axisymmetric`, `bounda_print_mesh_dof*`→`print_mesh_dof*`. `control_solver_bicg_stop -no` cableado en so_bicg.cc (warning+continuar vs exit); bicg_restart/matrix_save/pardiso_* registrados como parciales. `print_mesh_dof`(+`_geometry`): dump one-shot a print_mesh_dof.dat (coords + dofs listados); `_values` registrado sin uso. Nota: DATA no existe como data_class → los data_* usan CONTROL. Validado con `dsmall` (data_activate_time borra la carga en t=0.1 → relaja a disy~0; aliases y dump ejercitados) y `dignore` (data_ignore declarado ANTES: load default 0, disy 0 exacto). Suite 94/94. **SPRINT 9 CERRADO**
 
 **Sprint 10 — lote 1: `compression_direct`(+_visco) + `pressure_limit`/`coord_limit` + alias `heat_generation` (6 keywords)** | `f987f54` | 2026-08-24 | `materi_compression_cutoff` (stress.cc): descomposición espectral con matrix_jacobi — todo autovalor < sigy se sube hacia sigy (corte total sin record visco; relajación 1−exp(−dt/tm) con `_visco`). BUG propio cazado: el patrón factor=1−exp(−dt/(tm?:1)) heredado del cutoff de plano relajaba también SIN record (factor≈0.095) — la regla: el factor visco SOLO aplica cuando existe el record; sin record, factor=1. Gates `pressure_limit`/`coord_limit` en el call-site canónico de set_stress (cubren las tres leyes directas; documentado que NO cubren hypo). Alias `plasti_heat_generation` por dual-read en materi.cc (gana el nombre Professional). Tests: mdirect_comp (sigyy −10 → **−5.0 exacto**) y mdirect_gate (pressure_limit 0.1 desactiva el cap → −10 elástico; A/B sin limit falla). Suite 96/96. |
+
+**Sprint 10 — lote 2: `druck_prag` alias + VALIDACIÓN ANALÍTICA Drucker-Prager + `materi_factor` + parciales (9 keywords)** | `3eca27f` | 2026-08-24 | **Hallazgo de convención**: el GNU implementa f = √J₂ + 3α·σm − K (la forma DP estándar; NO √(3J₂) como asumí primero) — con las constantes de matching del manual α = 2sinφ/(√3(3−sinφ)), K = 6c·cosφ/(√3(3−sinφ)). **Validación analítica** (`mdp_shear`): cizalla pura con φ=0 (α=0: sin término de presión ni dilatancia) → σxy capped en K = 2c/√3 EXACTO: c=30, dt=0.05 → **34.636 vs 34.641 = 0.014% de error**. Con φ≠0 el flujo asociativo genera σn≠0 en rigs de desplazamiento (documentado: usar φ=0 para el check de forma cerrada). El nombre Professional `druck_prag` (con guion) vía alias db_number del legacy `druckprag` (misma física, tests legacy druckpr1/examp23 verdes). `group_materi_factor`: escala tensiones Y rigidez (en equilibrio con fuerza σ no cambia pero u sí; con vely prescrita σ=ε·f·E directo: −0.1 vs −1.0, A/B). Alias `plasti_bounda(_factor)` → `boundary(_factor)`. Parciales registrados: damping_method, visco_exponential_limit/_name/_values; density_groundflow preexistente (checklist al día). GOTCHA de edición: borrar duplicados por primera ocurrencia puede eliminar el enum equivocado (GROUP_MATERI_FACTOR era único en tochnog.h y lo borré) — verificar con grep tras cada limpieza. Suite 98/98. |
+
 : ~74 keywords (aliases force 24+11 projected, control_materi 13, data 5, solver 7, print 3, axisymmetric 1) + 4 fixes/gotchas documentados. |
 
 
@@ -1190,9 +1193,9 @@ Nota: `group_interface_ground` del checklist anterior NUNCA existió (artefacto 
 
 - [x] `group_materi_damage_mazars` — presente en el GNU
 - [x] `group_materi_damping` — presente en el GNU
-- [ ] `group_materi_damping_method` — PENDIENTE
+- [x] `group_materi_damping_method` — Sprint 10 (PARCIAL: registrado)
 - [x] `group_materi_density` — presente en el GNU
-- [ ] `group_materi_density_ground` — PENDIENTE
+- [x] `group_materi_density_ground` — Sprint 10 (preexistente como density_groundflow; checklist al día)
 - [ ] `group_materi_elasti_borja_tamagnini` — PENDIENTE
 - [ ] `group_materi_elasti_c` — PENDIENTE
 - [ ] `group_materi_elasti_c_direction` — PENDIENTE
@@ -1217,7 +1220,7 @@ Nota: `group_interface_ground` del checklist anterior NUNCA existió (artefacto 
 - [ ] `group_materi_elasti_young_user` — PENDIENTE
 - [x] `group_materi_expansion_linear` — presente en el GNU
 - [x] `group_materi_expansion_volume` — presente en el GNU
-- [ ] `group_materi_factor` — PENDIENTE
+- [x] `group_materi_factor` — Sprint 10 (escala tensiones+rigidez; verificado con vely prescrita)
 - [ ] `group_materi_failure_crunching` — PENDIENTE
 - [x] `group_materi_failure_damage` — presente en el GNU
 - [x] `group_materi_failure_plasti_kappa` — presente en el GNU
@@ -1238,8 +1241,8 @@ Nota: `group_interface_ground` del checklist anterior NUNCA existió (artefacto 
 - [x] `group_materi_maxwell_chain` — presente en el GNU
 - [x] `group_materi_membrane` — presente en el GNU
 - [x] `group_materi_memory` — presente en el GNU
-- [ ] `group_materi_plasti_bounda` — PENDIENTE
-- [ ] `group_materi_plasti_bounda_factor` — PENDIENTE
+- [x] `group_materi_plasti_bounda` — Sprint 10 (alias de plasti_boundary)
+- [x] `group_materi_plasti_bounda_factor` — Sprint 10 (alias)
 - [x] `group_materi_plasti_camclay` — presente en el GNU
 - [ ] `group_materi_plasti_cap1` — PENDIENTE
 - [ ] `group_materi_plasti_cap2` — PENDIENTE
@@ -1249,7 +1252,7 @@ Nota: `group_interface_ground` del checklist anterior NUNCA existió (artefacto 
 - [x] `group_materi_plasti_coord_limit` — Sprint 10 (gate por coordenada vertical)
 - [x] `group_materi_plasti_diprisco` — presente en el GNU
 - [ ] `group_materi_plasti_diprisco_density` — PENDIENTE
-- [ ] `group_materi_plasti_druck_prag` — PENDIENTE
+- [x] `group_materi_plasti_druck_prag` — Sprint 10 (alias del legacy druckprag; VALIDACIÓN ANALÍTICA: cizalla φ=0 → σxy=2c/√3, 0.014% error)
 - [ ] `group_materi_plasti_element_group` — PENDIENTE
 - [ ] `group_materi_plasti_element_group_factor` — PENDIENTE
 - [ ] `group_materi_plasti_generalised_non_associate_cam_clay_for_bonded_soils` — PENDIENTE
@@ -1294,9 +1297,9 @@ Nota: `group_interface_ground` del checklist anterior NUNCA existió (artefacto 
 - [x] `group_materi_plasti_tension_direct_wall` — implementada (valores alternativos en pared; validada con `materi_direct_wall`)
 - [x] `group_materi_plasti_user` — presente en el GNU
 - [x] `group_materi_plasti_visco_exponential` — presente en el GNU
-- [ ] `group_materi_plasti_visco_exponential_limit` — PENDIENTE
-- [ ] `group_materi_plasti_visco_exponential_name` — PENDIENTE
-- [ ] `group_materi_plasti_visco_exponential_values` — PENDIENTE
+- [x] `group_materi_plasti_visco_exponential_limit` — Sprint 10 (PARCIAL)
+- [x] `group_materi_plasti_visco_exponential_name` — Sprint 10 (PARCIAL)
+- [x] `group_materi_plasti_visco_exponential_values` — Sprint 10 (PARCIAL)
 - [x] `group_materi_plasti_visco_power` — presente en el GNU
 - [ ] `group_materi_plasti_visco_power_name` — PENDIENTE
 - [ ] `group_materi_plasti_visco_power_value` — PENDIENTE
