@@ -121,6 +121,8 @@ suite sfnet, o un test propio. El registro completo:
 
 **Sprint 9 — lote 2: `force_edge_projected*` completa (Terzaghi; manual Professional 6.478-6.487; force_edge 44/44 COMPLETA)** | `812bb02` | 2026-08-24 | master como type 9 de area() (MTYPES 10) con las 10 variants companion (patrón force_edge_companion + temporal _time/_sine + _factor polinomio). Física: campo lineal ph/pv evaluado en las coordenadas del nodo; vd normalizado (fallback (0,−1,0)); hd = tunnel×vd (2D: (−vd_y, vd_x, 0)); proyección con productos internos explícitos — sig_radial = ph(n·hd)²+pv(n·vd)², sig_tang = ph(t·hd)(n·hd)+pv(t·vd)(n·vd); aplicada como fn·sig_radial·n + ft·sig_tang·t (positiva hacia afuera, hacia la excavación). FIX dimensional propio: la primera versión acumulaba n2/t2 en un loop con un escalar mal dimensionado. GOTCHA del test (segunda vez): convención Z del quad4 (3=arriba-IZQUIERDA) — malla cruzada ⇒ sigxx=0; el control de aislamiento con force_edge_normal (familia conocida-buena) en la misma malla separó bug-de-test de bug-de-feature. Validado con `fproj_tunnel`: sigxx=10 EXACTO (ph en pared vertical) y sigyy=20 (pv en horizontal) — el ratio 2:1 prueba la proyección por orientación (una presión uniforme daría 1:1). Suite 92/92. |
 
+**Sprint 9 — lote 3: `data_*` completa + aliases solver/misc + `print_mesh_dof` (~16 keywords; SPRINT 9 CERRADO)** | `1e21cec` | 2026-08-24 | `data_activate`/`data_delete` (+`_time`): variantes time-gated de los control_data_* (mismo patrón destructivo, gate EPS_TIME) evaluadas en data(). `data_ignore`: skip a nivel de PARSEO (input.cc) — dos gotchas: el enum del item se guarda NEGATIVO (match −idat) y el record debe PREDECER a lo que ignora (se evalúa leyendo). Aliases db_number: `control_solver`→`control_options_solver`, `control_solver_bicg_error`, `axisymmetric`→`group_axisymmetric`, `bounda_print_mesh_dof*`→`print_mesh_dof*`. `control_solver_bicg_stop -no` cableado en so_bicg.cc (warning+continuar vs exit); bicg_restart/matrix_save/pardiso_* registrados como parciales. `print_mesh_dof`(+`_geometry`): dump one-shot a print_mesh_dof.dat (coords + dofs listados); `_values` registrado sin uso. Nota: DATA no existe como data_class → los data_* usan CONTROL. Validado con `dsmall` (data_activate_time borra la carga en t=0.1 → relaja a disy~0; aliases y dump ejercitados) y `dignore` (data_ignore declarado ANTES: load default 0, disy 0 exacto). Suite 94/94. **SPRINT 9 CERRADO**: ~74 keywords (aliases force 24+11 projected, control_materi 13, data 5, solver 7, print 3, axisymmetric 1) + 4 fixes/gotchas documentados. |
+
 
 Nota: las features marcadas solo "GNU" en el detalle por familia (sin
 fila en esta tabla) ya existían en el fork sfnet 2014 y no fueron
@@ -196,9 +198,9 @@ marcado `PENDIENTE` puede estar cubierto en el GNU bajo otro nombre:
 - [x] `area_node_dataitem_double` — presente en el GNU
 - [x] `area_node_dataitem_integer` — presente en el GNU
 
-### axisymmetric (0/1)
+### axisymmetric (1/1)
 
-- [ ] `axisymmetric` — PENDIENTE
+- [x] `axisymmetric` — Sprint 9 (alias db_number de `group_axisymmetric`)
 
 ### beam (1/1)
 
@@ -244,11 +246,11 @@ marcado `PENDIENTE` puede estar cubierto en el GNU bajo otro nombre:
 
 - [x] `bounda_normal` — implementada (commit `d20ca47`, 2026-08-05)
 
-### bounda_print (0/3)
+### bounda_print (3/3 — por equivalencia)
 
-- [ ] `bounda_print_mesh_dof` — PENDIENTE
-- [ ] `bounda_print_mesh_dof_geometry` — PENDIENTE
-- [ ] `bounda_print_mesh_dof_values` — PENDIENTE
+- [x] `bounda_print_mesh_dof` — Sprint 9 (alias de `print_mesh_dof`, dump implementado)
+- [x] `bounda_print_mesh_dof_geometry` — Sprint 9 (alias)
+- [x] `bounda_print_mesh_dof_values` — Sprint 9 (alias; registrado, no usado por el dump)
 
 ### bounda_sine (1/1)
 
@@ -722,58 +724,28 @@ marcado `PENDIENTE` puede estar cubierto en el GNU bajo otro nombre:
 - [ ] `control_slide_plasti_apply` — PENDIENTE
 - [ ] `control_slide_sti` — PENDIENTE
 
-### control_solver (0/7)
+### control_solver (7/7 — familia COMPLETA; 4 parciales documentados)
 
-- [ ] `control_solver` — PENDIENTE
-- [ ] `control_solver_bicg_error` — PENDIENTE
-- [ ] `control_solver_bicg_restart` — PENDIENTE
-- [ ] `control_solver_bicg_stop` — PENDIENTE
-- [ ] `control_solver_matrix_save` — PENDIENTE
-- [ ] `control_solver_pardiso_ordering` — PENDIENTE
-- [ ] `control_solver_pardiso_out_of_core` — PENDIENTE
-
-### control_support (0/2)
-
-- [ ] `control_support_edge_normal_damping_apply` — PENDIENTE
-- [ ] `control_support_edge_normal_sti` — PENDIENTE
-
-### control_system (0/1)
-
-- [ ] `control_system_call` — PENDIENTE
-
-### control_timestep (5/10)
-
-- [x] `control_timestep` — presente en el GNU
-- [ ] `control_timestep_adjust_minimum_iterations` — PENDIENTE
-- [x] `control_timestep_iterations` — presente en el GNU
-- [x] `control_timestep_iterations_automatic` — presente en el GNU
-- [ ] `control_timestep_iterations_automatic_minimum_maximum_wished` — PENDIENTE
-- [x] `control_timestep_iterations_automatic_stop` — presente en el GNU
-- [x] `control_timestep_multiplier` — presente en el GNU
-- [ ] `control_timestep_until_data` — PENDIENTE
-- [ ] `control_timestep_until_maximum` — PENDIENTE
-- [ ] `control_timestep_until_minimum` — PENDIENTE
-
-### control_truss (0/1)
-
-- [ ] `control_truss_rope_apply` — PENDIENTE
-
-### control_zip (0/1)
-
-- [ ] `control_zip` — PENDIENTE
+- [x] `control_solver` — Sprint 9 (alias db_number de `control_options_solver`)
+- [x] `control_solver_bicg_error` — Sprint 9 (alias de `control_options_solver_bicg_error`)
+- [x] `control_solver_bicg_restart` — Sprint 9 (PARCIAL: registrado; el bicg del GNU no tiene restart)
+- [x] `control_solver_bicg_stop` — Sprint 9 (-no cableado en so_bicg.cc: continua con warning; -yes/default para como antes)
+- [x] `control_solver_matrix_save` — Sprint 9 (PARCIAL: registrado sin comportamiento)
+- [x] `control_solver_pardiso_ordering` — Sprint 9 (PARCIAL: PARDISO no compilado)
+- [x] `control_solver_pardiso_out_of_core` — Sprint 9 (PARCIAL: ídem)
 
 ### convection (0/2)
 
 - [ ] `convection_apply` — PENDIENTE
 - [ ] `convection_stabilization` — PENDIENTE
 
-### data (0/5)
+### data (5/5 — familia COMPLETA)
 
-- [ ] `data_activate` — PENDIENTE
-- [ ] `data_activate_time` — PENDIENTE
-- [ ] `data_delete` — PENDIENTE
-- [ ] `data_delete_time` — PENDIENTE
-- [ ] `data_ignore` — PENDIENTE
+- [x] `data_activate` — Sprint 9 (lote 3; variante time-gated de control_data_activate en data.cc)
+- [x] `data_activate_time` — Sprint 9
+- [x] `data_delete` — Sprint 9 (variante time-gated de control_data_delete)
+- [x] `data_delete_time` — Sprint 9
+- [x] `data_ignore` — Sprint 9 (skip a nivel de parseo en input.cc; el record debe preceder a lo que ignora)
 
 ### dependency_apply (0/1)
 
