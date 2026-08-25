@@ -145,6 +145,24 @@ long int solve_iterative_bicg( void )
     else if ( scalar_dabs(error-last_error)<1.e-1*check_error )
       ready = 1;
     else if ( iter==max_iter ) {
+      // control_solver_bicg_stop -no (manual Professional 6.376):
+      // do NOT stop the calculation when the bicg solver does not
+      // converge (continue with the current solution); -yes (and the
+      // default) stops as before
+      long int icontrol_bicg = 0, bicg_stop = -YES, ldum_bs = 0;
+      double ddum_bs[1];
+      if ( db_active_index( CONTROL_SOLVER_BICG_STOP, 0,
+           VERSION_NORMAL ) ) {
+        db( ICONTROL, 0, &icontrol_bicg, ddum_bs, ldum_bs,
+          VERSION_NORMAL, GET_IF_EXISTS );
+        db( CONTROL_SOLVER_BICG_STOP, icontrol_bicg, &bicg_stop,
+          ddum_bs, ldum_bs, VERSION_NORMAL, GET_IF_EXISTS );
+      }
+      if ( bicg_stop==-NO ) {
+        pri( "Warning: the BI-CG solver did not converge (continuing)." );
+        ready = 1;
+      }
+      else {
       pri( "" );
       pri( "Error: the, default, BI-CG solver did not converge." );
       pri( "The initial error in the linear equations is", initial_error );
@@ -154,6 +172,7 @@ long int solve_iterative_bicg( void )
       pri( "- Not enough boundary conditions?" );
       pri( "- A diverged calculation?\n" );
       exit_tn_on_error();
+      }
     }
   }
   length = 1;

@@ -59,3 +59,23 @@ separate test bugs from feature bugs.
 Verification: fproj_tunnel (sigxx=10 ph exact on the vertical wall,
 sigyy=20 pv on the horizontal wall; 2:1 ratio discriminates the
 projection from a uniform pressure). Suite 92/92.
+
+## Lote 3 (data family + solver aliases)
+
+- data_activate/data_delete: time-gated loops in data() BEFORE the
+  control_data_* blocks (same destructive patterns). EPS_TIME gate.
+- data_ignore: input.cc, right after idat resolution — the record loop
+  condition `while(strcmp(str,"end_data"))` re-tests str, so consuming
+  until db_number>=0 and `continue` handles both the next keyword and
+  end_data. GOTCHAS: the ignored item enum is stored NEGATIVE
+  (match -idat), and the data_ignore record must precede the records it
+  ignores (it is evaluated while reading).
+- db_number explicit aliases: control_solver→control_options_solver,
+  control_solver_bicg_error→control_options_solver_bicg_error,
+  axisymmetric→group_axisymmetric, bounda_print_mesh_dof*→print_mesh_dof*.
+- control_solver_bicg_stop -no: wired in so_bicg.cc (warn+continue
+  instead of exit; GET_IF_EXISTS only — safe in the solver context).
+- print_mesh_dof: one-shot dump in data() (static flag), file
+  print_mesh_dof.dat; _geometry filter via geometry(); _values
+  registered but unused by the dump (documented).
+- DATA has no data_class — the data_* records use CONTROL.

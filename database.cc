@@ -1511,6 +1511,31 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   data_length[CONTROL_OPTIONS_SOLVER] = 1;
   data_class[CONTROL_OPTIONS_SOLVER] = CONTROL;
 
+  strcpy(name[CONTROL_SOLVER_BICG_RESTART],"control_solver_bicg_restart");
+  type[CONTROL_SOLVER_BICG_RESTART] = INTEGER;
+  data_length[CONTROL_SOLVER_BICG_RESTART] = 1;
+  data_class[CONTROL_SOLVER_BICG_RESTART] = CONTROL;
+
+  strcpy(name[CONTROL_SOLVER_BICG_STOP],"control_solver_bicg_stop");
+  type[CONTROL_SOLVER_BICG_STOP] = INTEGER;
+  data_length[CONTROL_SOLVER_BICG_STOP] = 1;
+  data_class[CONTROL_SOLVER_BICG_STOP] = CONTROL;
+
+  strcpy(name[CONTROL_SOLVER_MATRIX_SAVE],"control_solver_matrix_save");
+  type[CONTROL_SOLVER_MATRIX_SAVE] = INTEGER;
+  data_length[CONTROL_SOLVER_MATRIX_SAVE] = 1;
+  data_class[CONTROL_SOLVER_MATRIX_SAVE] = CONTROL;
+
+  strcpy(name[CONTROL_SOLVER_PARDISO_ORDERING],"control_solver_pardiso_ordering");
+  type[CONTROL_SOLVER_PARDISO_ORDERING] = INTEGER;
+  data_length[CONTROL_SOLVER_PARDISO_ORDERING] = 1;
+  data_class[CONTROL_SOLVER_PARDISO_ORDERING] = CONTROL;
+
+  strcpy(name[CONTROL_SOLVER_PARDISO_OUT_OF_CORE],"control_solver_pardiso_out_of_core");
+  type[CONTROL_SOLVER_PARDISO_OUT_OF_CORE] = INTEGER;
+  data_length[CONTROL_SOLVER_PARDISO_OUT_OF_CORE] = 1;
+  data_class[CONTROL_SOLVER_PARDISO_OUT_OF_CORE] = CONTROL;
+
   strcpy(name[CONTROL_OPTIONS_SOLVER_BICG_ERROR],"control_options_solver_bicg_error");
   type[CONTROL_OPTIONS_SOLVER_BICG_ERROR] = DOUBLE_PRECISION;
   data_length[CONTROL_OPTIONS_SOLVER_BICG_ERROR] = 1;
@@ -1978,6 +2003,36 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   no_index[DOF_TYPE] = 1;
   external[DOF_TYPE] = 0;
   data_class[DOF_TYPE] = DOF;
+
+  strcpy(name[DATA_ACTIVATE],"data_activate");
+  type[DATA_ACTIVATE] = INTEGER;
+  data_length[DATA_ACTIVATE] = DATA_ITEM_SIZE;
+  fixed_length[DATA_ACTIVATE] = 0;
+  data_class[DATA_ACTIVATE] = CONTROL;
+
+  strcpy(name[DATA_ACTIVATE_TIME],"data_activate_time");
+  type[DATA_ACTIVATE_TIME] = DOUBLE_PRECISION;
+  data_length[DATA_ACTIVATE_TIME] = 1;
+  data_class[DATA_ACTIVATE_TIME] = CONTROL;
+  data_required[DATA_ACTIVATE_TIME] = DATA_ACTIVATE;
+
+  strcpy(name[DATA_DELETE],"data_delete");
+  type[DATA_DELETE] = INTEGER;
+  data_length[DATA_DELETE] = DATA_ITEM_SIZE;
+  fixed_length[DATA_DELETE] = 0;
+  data_class[DATA_DELETE] = CONTROL;
+
+  strcpy(name[DATA_DELETE_TIME],"data_delete_time");
+  type[DATA_DELETE_TIME] = DOUBLE_PRECISION;
+  data_length[DATA_DELETE_TIME] = 1;
+  data_class[DATA_DELETE_TIME] = CONTROL;
+  data_required[DATA_DELETE_TIME] = DATA_DELETE;
+
+  strcpy(name[DATA_IGNORE],"data_ignore");
+  type[DATA_IGNORE] = INTEGER;
+  data_length[DATA_IGNORE] = 1;
+  no_index[DATA_IGNORE] = 1;
+  data_class[DATA_IGNORE] = CONTROL;
 
   strcpy(name[DTIME],"dtime");
   type[DTIME] = DOUBLE_PRECISION;
@@ -5425,6 +5480,26 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   data_class[PRINT_FAILURE] = PRINT;
   no_index[PRINT_FAILURE] = 1;
 
+  strcpy(name[PRINT_MESH_DOF],"print_mesh_dof");
+  type[PRINT_MESH_DOF] = INTEGER;
+  data_length[PRINT_MESH_DOF] = DATA_ITEM_SIZE;
+  fixed_length[PRINT_MESH_DOF] = 0;
+  no_index[PRINT_MESH_DOF] = 1;
+  data_class[PRINT_MESH_DOF] = PRINT;
+
+  strcpy(name[PRINT_MESH_DOF_GEOMETRY],"print_mesh_dof_geometry");
+  type[PRINT_MESH_DOF_GEOMETRY] = INTEGER;
+  data_length[PRINT_MESH_DOF_GEOMETRY] = 2;
+  no_index[PRINT_MESH_DOF_GEOMETRY] = 1;
+  data_class[PRINT_MESH_DOF_GEOMETRY] = PRINT;
+
+  strcpy(name[PRINT_MESH_DOF_VALUES],"print_mesh_dof_values");
+  type[PRINT_MESH_DOF_VALUES] = DOUBLE_PRECISION;
+  data_length[PRINT_MESH_DOF_VALUES] = DATA_ITEM_SIZE;
+  fixed_length[PRINT_MESH_DOF_VALUES] = 0;
+  no_index[PRINT_MESH_DOF_VALUES] = 1;
+  data_class[PRINT_MESH_DOF_VALUES] = PRINT;
+
   strcpy(name[PRINT_FILTER],"print_filter");
   type[PRINT_FILTER] = INTEGER;
   data_length[PRINT_FILTER] = DATA_ITEM_SIZE;
@@ -6586,6 +6661,17 @@ long int db_number( char str[] )
     else if ( !strncmp( str, "force_volume", 12 ) ) {
       strcpy( translated, "force_element_volume" );
       strncat( translated, &str[12], MCHAR-40 );
+      return db_number( translated );
+    }
+    else if ( !strcmp( str, "control_solver" ) )
+      return CONTROL_OPTIONS_SOLVER;
+    else if ( !strcmp( str, "control_solver_bicg_error" ) )
+      return CONTROL_OPTIONS_SOLVER_BICG_ERROR;
+    else if ( !strcmp( str, "axisymmetric" ) )
+      return GROUP_AXISYMMETRIC;
+    else if ( !strncmp( str, "bounda_print_mesh_dof", 21 ) ) {
+      strcpy( translated, "print_mesh_dof" );
+      strncat( translated, &str[21], MCHAR-40 );
       return db_number( translated );
     }
   }

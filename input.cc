@@ -551,6 +551,34 @@ void input( )
       exit(TN_EXIT_STATUS);
     }
 
+    // data_ignore (manual Professional 6.401): skip every record with
+    // the listed item name. The record loop condition re-tests str, so
+    // after consuming the ignored values 'continue' processes the next
+    // keyword and "end_data" exits the loop naturally.
+    if ( db_active_index( DATA_IGNORE, 0, VERSION_NORMAL ) ) {
+      long int iign=0, max_ign=0, ign_item=0, skipping=0, ldum2=0;
+      double ddum2[1];
+      db_max_index( DATA_IGNORE, max_ign, VERSION_NORMAL, GET );
+      for ( iign=0; iign<=max_ign; iign++ ) {
+        if ( db_active_index( DATA_IGNORE, iign, VERSION_NORMAL ) ) {
+          ign_item = -1;
+          db( DATA_IGNORE, iign, &ign_item, ddum2, ldum2,
+            VERSION_NORMAL, GET );
+          if ( ign_item==-idat || ign_item==idat ) skipping = 1;
+        }
+      }
+      if ( skipping ) {
+        if ( echo ) cout << "\n";
+        while ( strcmp(str,"end_data") ) {
+          input_read_string( echo, str, d, d_is_set );
+          input_skip_comment( str );
+          if ( d_is_set ) continue;
+          if ( db_number(str)>=0 || !strcmp(str,"end_data") ) break;
+        }
+        continue;
+      }
+    }
+
     // import an abaqus mesh (generates tochnog_abaqus.dat)
     if ( idat==INPUT_ABAQUS ) {
       long int input_abaqus_switch=0;

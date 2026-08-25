@@ -320,6 +320,125 @@ void data( long int task, double dtime, double time_current )
       db_error( CONTROL_DATA_PUT, icontrol );
   }
 
+  // data_activate / data_delete (manual Professional 6.397-6.400):
+  // time-gated variants of control_data_activate/control_data_delete
+  // (not per control-timestep). Evaluated when time_current >= the
+  // data_*_time point (default: at the start of the calculation).
+  {
+    long int idata_recs = 0, max_idata = 0, iv2 = 0, idat2 = 0,
+      max_del2 = 0, *data_list = NULL, switch_val = -YES, length_list = 0;
+    double time_gate = 0.;
+
+    db_max_index( DATA_ACTIVATE, max_idata, VERSION_NORMAL, GET );
+    for ( idata_recs=0; idata_recs<=max_idata; idata_recs++ ) {
+      if ( !db_active_index( DATA_ACTIVATE, idata_recs, VERSION_NORMAL ) )
+        continue;
+      time_gate = 0.;
+      db( DATA_ACTIVATE_TIME, idata_recs, idum, &time_gate, ldum,
+        VERSION_NORMAL, GET_IF_EXISTS );
+      if ( time_current<(time_gate-EPS_TIME) ) continue;
+      data_list = db_int( DATA_ACTIVATE, idata_recs, VERSION_NORMAL );
+      length_list = db_len( DATA_ACTIVATE, idata_recs, VERSION_NORMAL );
+      switch_val = data_list[length_list-1];
+      if ( switch_val!=-NO ) continue;
+      for ( iv2=0; iv2<length_list-1; iv2++ ) {
+        idat2 = data_list[iv2];
+        if ( idat2>=0 ) continue;
+        db_max_index( idat2, max_del2, VERSION_NORMAL, GET );
+        for ( index=0; index<=max_del2; index++ )
+          if ( db_active_index( idat2, index, VERSION_NORMAL ) )
+            db_delete_index( idat2, index, VERSION_NORMAL );
+      }
+    }
+
+    db_max_index( DATA_DELETE, max_idata, VERSION_NORMAL, GET );
+    for ( idata_recs=0; idata_recs<=max_idata; idata_recs++ ) {
+      if ( !db_active_index( DATA_DELETE, idata_recs, VERSION_NORMAL ) )
+        continue;
+      time_gate = 0.;
+      db( DATA_DELETE_TIME, idata_recs, idum, &time_gate, ldum,
+        VERSION_NORMAL, GET_IF_EXISTS );
+      if ( time_current<(time_gate-EPS_TIME) ) continue;
+      data_list = db_int( DATA_DELETE, idata_recs, VERSION_NORMAL );
+      length_list = db_len( DATA_DELETE, idata_recs, VERSION_NORMAL );
+      idat2 = data_list[0];
+      if ( idat2>=0 ) continue;
+      if ( data_list[1]>=0 ) {
+        if      ( idat2==-ELEMENT ) delete_element( data_list[1], VERSION_NORMAL );
+        else if ( idat2==-NODE ) delete_node( data_list[1], VERSION_NORMAL );
+        else
+          db_delete_index( idat2, data_list[1], VERSION_NORMAL );
+      }
+      else if ( data_list[1]==-RA ) {
+        range_expand( &data_list[1], integer_range, length_list, range_length );
+        for ( in=0; in<range_length; in++ ) {
+          index = integer_range[in];
+          if      ( idat2==-ELEMENT ) delete_element( index, VERSION_NORMAL );
+          else if ( idat2==-NODE ) delete_node( index, VERSION_NORMAL );
+          else
+            db_delete_index( idat2, index, VERSION_NORMAL );
+        }
+      }
+      else if ( data_list[1]==-ALL ) {
+        db_max_index( idat2, max_del2, VERSION_NORMAL, GET );
+        for ( index=0; index<=max_del2; index++ ) {
+          if      ( idat2==-ELEMENT ) delete_element( index, VERSION_NORMAL );
+          else if ( idat2==-NODE ) delete_node( index, VERSION_NORMAL );
+          else
+            db_delete_index( idat2, index, VERSION_NORMAL );
+        }
+      }
+    }
+  }
+
+  // print_mesh_dof (manual Professional 6.31-6.33 via bounda_print_mesh_dof):
+  // one-shot dump of node coordinates and the listed dof values (all
+  // dofs when none are listed) at the first evaluation; nodes can be
+  // restricted to a geometry. Written to print_mesh_dof.dat.
+  {
+    static long int print_mesh_dof_done = 0;
+    long int *pmd_dofs = NULL, length_pmd = 0, pmd_geometry[2] = {0,0},
+      in_geometry_pmd = 0, idof_pmd = 0, indx_pmd = 0;
+    double *coord_pmd = NULL, *node_dof_pmd = NULL, rdum_pmd = 0.;
+
+    if ( !print_mesh_dof_done &&
+         db_active_index( PRINT_MESH_DOF, 0, VERSION_NORMAL ) ) {
+      print_mesh_dof_done = 1;
+      pmd_dofs = db_int( PRINT_MESH_DOF, 0, VERSION_NORMAL );
+      length_pmd = db_len( PRINT_MESH_DOF, 0, VERSION_NORMAL );
+      if ( db_active_index( PRINT_MESH_DOF_GEOMETRY, 0, VERSION_NORMAL ) )
+        db( PRINT_MESH_DOF_GEOMETRY, 0, pmd_geometry, ddum, ldum,
+          VERSION_NORMAL, GET );
+      ofstream pmd_out( "print_mesh_dof.dat" );
+      for ( inod=0; inod<=max_node; inod++ ) {
+        if ( !db_active_index( NODE, inod, VERSION_NORMAL ) ) continue;
+        if ( pmd_geometry[0] ) {
+          geometry( inod, ddum, pmd_geometry, in_geometry_pmd, rdum_pmd,
+            ddum, rdum_pmd, ddum, NODE_START_REFINED, PROJECT_EXACT,
+            VERSION_NORMAL );
+          if ( !in_geometry_pmd ) continue;
+        }
+        coord_pmd = db_dbl( NODE_START_REFINED, inod, VERSION_NORMAL );
+        node_dof_pmd = db_dbl( NODE_DOF, inod, VERSION_NORMAL );
+        length = db_len( NODE_DOF, inod, VERSION_NORMAL );
+        pmd_out << inod;
+        for ( idim=0; idim<ndim; idim++ )
+          pmd_out << " " << coord_pmd[idim];
+        for ( iv=0; iv<length_pmd; iv++ ) {
+          indx_pmd = pmd_dofs[iv];
+          if ( indx_pmd<0 ) {
+            array_member( dof_label, indx_pmd, nuknwn, indx_pmd );
+            if ( length==npuknwn ) indx_pmd /= nder;
+          }
+          if ( indx_pmd>=0 && indx_pmd<length )
+            pmd_out << " " << node_dof_pmd[indx_pmd];
+        }
+        pmd_out << "\n";
+      }
+      pmd_out.close();
+    }
+  }
+
   // control_data_activate (manual Professional 6.114): activate/deactivate
   // data items. -no deletes all records of the listed items (the records
   // stop being used by the solvers); -yes is a no-op: input records are
