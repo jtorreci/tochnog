@@ -104,6 +104,12 @@ fi
 echo "==> Ejecutando tests hypo con limites de memoria..."
 HIPO_OK=0
 HIPO_TOTAL=0
+# Sprint 11 lote 1 (control_print_*): los archivos de salida que se
+# APPENDEN entre ejecuciones se limpian antes del bucle para que las
+# verificaciones de la seccion posterior partan de archivos frescos.
+rm -f validation-suite/test-2014/dof.20 validation-suite/test-2014/dof.21 \
+      validation-suite/test-2014/coord.20 validation-suite/test-2014/coord.21 \
+      validation-suite/test-2014/disx1.his validation-suite/test-2014/disx2.his
 # 13 tests: 12 preexistentes + familia iface_mc (1 test logico = 6 runs:
 # iface_mc a/a' invarianza, iface_mc_slip b/b' invarianza, tension c, gap d)
 # + iface_mc_mem (memory), + iface_mc_dil/dil_1step/num (dilatancia RF-4 y
@@ -420,6 +426,35 @@ HIPO_TOTAL=0
 # daria 3.125e-7 y media -0.00125). A/B ad-hoc: sin
 # control_repeat_save_calculate el record repeat_calculate_result no
 # existe (target -> exit 1, verificado por separado).
+# Sprint 11 lote 1 (8 keywords control_print_*):
+# + dbmeth (control_print_database_method 6.266: -all -> dbmeth20.dbs con
+#   TODOS los records base y sin "Size of"; -size_tot -> dbmeth21.dbs con
+#   "Size of <record> is <bytes>" por record + "Total size" + "Size of the
+#   system matrix is <ecuaciones>"; -size_tot_large -> dbmeth22.dbs con
+#   SOLO la linea de la matriz del sistema: todos los records del modelo
+#   son < 1 Mb — el A/B entre 21 y 22 discrimina el filtro de tamano).
+# + partialname (control_print_partialname 6.337: el stdout contiene los
+#   records element* (element, element_group, element_mass, ...) y NINGUN
+#   record node*; grep sobre /tmp/partialname_safe.out).
+# + elmethod (control_print_element_method 6.286: -middle default -> 2
+#   lineas con la coordenada MEDIA del elemento; -node -> 4 lineas con las
+#   coordenadas nodales; 2*mid1 == x_node2 EXACTO = la media es el
+#   promedio de las coords nodales. La fuerza inicial se relaja a 0 con la
+#   deformacion (self-stress), el discriminador es estructural).
+# + hreltime (control_print_history_relative_time 6.322: con tr=0.2 la
+#   ultima linea de disx1.his es 0.1 (0.3-0.2); sin tr la ultima de
+#   disx2.his es 0.4; el A/B de 0.3 discrimina el desplazamiento).
+# + numit (control_print_number_iterations 6.336: monitor de consola,
+#   control_timestep_iterations 8 -> 16 lineas "control_print_number_iterations:"
+#   en el stdout (2 pasos x 8 iteraciones); NO es
+#   -inverse_iteration_number).
+# + meshdoff (alias control_print_mesh_dof -> print_mesh_dof via db_number:
+#   smoke del dump print_mesh_dof.dat, primera linea "1 0 0").
+# + dofrhside (alias control_print_dof_rhside -> CONTROL_PRINT_UNKNOWNSRHSIDE
+#   via db_number: smoke de velx_rhside.20 con 3 columnas x y rhs).
+# + dofid_no (control_print_dof_id 6.270 -no: dof.21 con 3 columnas x y dof;
+#   dof1 con el default -yes produce dof.20 con 4 columnas x y dof node —
+#   el contraste 4 vs 3 columnas discrimina el default).
 for t in hypo1 hypo2 hypo3 hypo4 smooth1 dof1 mlx1 vtk_dof1 gen1 genbeam1          reset1 cda1 cda_arith cda_copy cda_activate cdist_normal cdist_corr cdist_clamp cd_method cd_geom \
          iface_mc iface_mc_1step iface_mc_slip iface_mc_slip_1step iface_mc_tension iface_mc_gap \
          iface_mc_mem iface_mc_dil iface_mc_dil_1step iface_mc_num \
@@ -454,7 +489,8 @@ for t in hypo1 hypo2 hypo3 hypo4 smooth1 dof1 mlx1 vtk_dof1 gen1 genbeam1       
          mstrain_cap mstrain_cap_elast mstrain_compression mstrain_compression_elast \
          mstrain_diprisco mstrain_diprisco_elast \
          mstrain_druckprag mstrain_druckprag_elast \
-         mdiprisco_hist mc_pressure_min mc_pressure_min_off mrepeat_save; do
+         mdiprisco_hist mc_pressure_min mc_pressure_min_off mrepeat_save \
+         dbmeth partialname meshdoff dofrhside elmethod hreltime numit dofid_no; do
   HIPO_TOTAL=$((HIPO_TOTAL+1))
   ( cd validation-suite/test-2014 &&
     ulimit -v 4000000 &&
@@ -467,5 +503,114 @@ for t in hypo1 hypo2 hypo3 hypo4 smooth1 dof1 mlx1 vtk_dof1 gen1 genbeam1       
     echo "    $t: FALLO (rc=$RC)"
   fi
 done
-echo "==> Resumen: $HIPO_OK/$HIPO_TOTAL runs OK (13 tests: 12 preexistentes + familia iface_mc en 10 runs + familia 3D en 5 runs + familia generate_interface en 6 runs + familia materi_direct en 5 runs + materi_displacement_relative en 2 runs + slide/reset_value en 2 runs + cda_arith/copy/activate en 3 runs + cdist_normal/corr/clamp en 3 runs + cd_method/cd_geom en 2 runs + gravity/settlement en 4 runs + contact en 1 run + contact_block/ctrl_apply/heatgen en 3 runs + groundflow_consolidate_off en 1 run + groundflow_vangenuchten/groundflow_nonsaturated_off en 2 runs + groundflow_total_pressure_tension/groundflow_interface en 2 runs + groundflow_flux_edge en 1 run + groundflow_phreatic_multiple en 1 run + groundflow_seepage en 1 run + groundflow_pressure_atm/_def en 2 runs + groundflow_total_pressure_limit/_dry en 2 runs + condif_heat_edge/vol/vol2 en 3 runs + condif_convec/rad/convec_el en 3 runs + aeg_node/aeg_seq/bt_factor en 3 runs + iface_condif/expansion/tangref en 3 runs + node_force_inertia/slide/pressure en 3 runs + creset_geom/iface en 2 runs + fedge_alias/restrict, fvol_elem y cmat_gate en 4 runs + fproj_tunnel en 1 run + dsmall/dignore en 2 runs + mdirect_comp/gate en 2 runs + mdp_shear/mfactor en 2 runs + mmc_tension en 1 run + mmchs_soft en 1 run + mcap2/mcap_legacy en 2 runs + mcrunch/mcrunch_low en 2 runs + mvoid/mvoid_low en 2 runs + mpower en 1 run + mshf/mshf_nof en 2 runs + mk0/mk0_off en 2 runs + myoung6/myoung6_e2/myoung6_e3/myoung6_apply en 4 runs + msph/msph_flat en 2 runs + mcap1/mcap1_elast/mcap1_comb en 3 runs + mhardsoil_elast/elast2/unload/unload_flat/plast/plast_elast/gp0/gp0_off en 8 runs + mstrain_cap/_elast, mstrain_compression/_elast, mstrain_diprisco/_elast, mstrain_druckprag/_elast en 8 runs + mdiprisco_hist en 1 run + mc_pressure_min/_off en 2 runs (Sprint 10 lote 9) + mrepeat_save en 1 run (Sprint 10 lote 10))."
+echo "==> Resumen: $HIPO_OK/$HIPO_TOTAL runs OK (13 tests: 12 preexistentes + familia iface_mc en 10 runs + familia 3D en 5 runs + familia generate_interface en 6 runs + familia materi_direct en 5 runs + materi_displacement_relative en 2 runs + slide/reset_value en 2 runs + cda_arith/copy/activate en 3 runs + cdist_normal/corr/clamp en 3 runs + cd_method/cd_geom en 2 runs + gravity/settlement en 4 runs + contact en 1 run + contact_block/ctrl_apply/heatgen en 3 runs + groundflow_consolidate_off en 1 run + groundflow_vangenuchten/groundflow_nonsaturated_off en 2 runs + groundflow_total_pressure_tension/groundflow_interface en 2 runs + groundflow_flux_edge en 1 run + groundflow_phreatic_multiple en 1 run + groundflow_seepage en 1 run + groundflow_pressure_atm/_def en 2 runs + groundflow_total_pressure_limit/_dry en 2 runs + condif_heat_edge/vol/vol2 en 3 runs + condif_convec/rad/convec_el en 3 runs + aeg_node/aeg_seq/bt_factor en 3 runs + iface_condif/expansion/tangref en 3 runs + node_force_inertia/slide/pressure en 3 runs + creset_geom/iface en 2 runs + fedge_alias/restrict, fvol_elem y cmat_gate en 4 runs + fproj_tunnel en 1 run + dsmall/dignore en 2 runs + mdirect_comp/gate en 2 runs + mdp_shear/mfactor en 2 runs + mmc_tension en 1 run + mmchs_soft en 1 run + mcap2/mcap_legacy en 2 runs + mcrunch/mcrunch_low en 2 runs + mvoid/mvoid_low en 2 runs + mpower en 1 run + mshf/mshf_nof en 2 runs + mk0/mk0_off en 2 runs + myoung6/myoung6_e2/myoung6_e3/myoung6_apply en 4 runs + msph/msph_flat en 2 runs + mcap1/mcap1_elast/mcap1_comb en 3 runs + mhardsoil_elast/elast2/unload/unload_flat/plast/plast_elast/gp0/gp0_off en 8 runs + mstrain_cap/_elast, mstrain_compression/_elast, mstrain_diprisco/_elast, mstrain_druckprag/_elast en 8 runs + mdiprisco_hist en 1 run + mc_pressure_min/_off en 2 runs (Sprint 10 lote 9) + mrepeat_save en 1 run (Sprint 10 lote 10) + dbmeth/partialname/meshdoff/dofrhside/elmethod/hreltime/numit/dofid_no en 8 runs (Sprint 11 lote 1))."
+
+# ---------------------------------------------------------------------
+# Sprint 11 lote 1: verificacion de ARCHIVOS y STDOUT de los 8 keywords
+# control_print_* (los targets de los .dat verifican el modelo; aqui se
+# verifican los archivos generados y el stdout capturado en /tmp).
+# ---------------------------------------------------------------------
+T2014="$REPO_DIR/validation-suite/test-2014"
+CHECK_FAIL=0
+check_ok()   { echo "    $1: OK"; }
+check_fail() { echo "    $1: FALLO ($2)"; CHECK_FAIL=1; }
+
+# dof1: control_print_dof_id DEFAULT -yes -> dof.20 con 4 columnas (x y dof node)
+if awk 'NF!=4{exit 1}' "$T2014/dof.20" 2>/dev/null; then
+  check_ok "dof.20 (control_print_dof_id default -yes: lineas x y dof node)"
+else
+  check_fail "dof.20" "esperaba 4 columnas por linea (x y dof node)"
+fi
+
+# dofid_no: control_print_dof_id -no -> dof.21 con 3 columnas (x y dof)
+if awk 'NF!=3{exit 1}' "$T2014/dof.21" 2>/dev/null; then
+  check_ok "dof.21 (control_print_dof_id -no: lineas x y dof)"
+else
+  check_fail "dof.21" "esperaba 3 columnas por linea (x y dof)"
+fi
+
+# dbmeth: -all sin tamanos; -size_tot con tamanos + matriz del sistema;
+# -size_tot_large solo la matriz (todos los records < 1 Mb en el modelo)
+if [ -f "$T2014/dbmeth20.dbs" ] && [ "$(grep -c 'Size of' "$T2014/dbmeth20.dbs")" = "0" ] \
+   && grep -q "end_data" "$T2014/dbmeth20.dbs" \
+   && grep -q "^element  " "$T2014/dbmeth20.dbs"; then
+  check_ok "dbmeth20.dbs (method -all: todos los records, sin tamanos)"
+else
+  check_fail "dbmeth20.dbs" "dump -all incompleto"
+fi
+if [ -f "$T2014/dbmeth21.dbs" ] && [ "$(grep -c 'Size of' "$T2014/dbmeth21.dbs")" -gt 10 ] \
+   && grep -q "Total size is" "$T2014/dbmeth21.dbs" \
+   && grep -q "Size of the system matrix is" "$T2014/dbmeth21.dbs"; then
+  check_ok "dbmeth21.dbs (method -size_tot: tamanos + total + matriz del sistema)"
+else
+  check_fail "dbmeth21.dbs" "dump -size_tot incompleto"
+fi
+if [ -f "$T2014/dbmeth22.dbs" ] && [ "$(grep -c 'Size of' "$T2014/dbmeth22.dbs")" = "1" ] \
+   && grep -q "Size of the system matrix is" "$T2014/dbmeth22.dbs"; then
+  check_ok "dbmeth22.dbs (method -size_tot_large: solo la matriz del sistema)"
+else
+  check_fail "dbmeth22.dbs" "dump -size_tot_large incorrecto"
+fi
+
+# partialname: el stdout tiene records element* y NINGUN record node*
+if [ "$(grep -c '^element' /tmp/partialname_safe.out)" -ge 5 ] \
+   && ! grep -q '^node ' /tmp/partialname_safe.out; then
+  check_ok "partialname (prefijo -element: solo records element*)"
+else
+  check_fail "partialname" "el stdout no discrimina el prefijo"
+fi
+
+# elmethod: -middle -> 2 lineas (coordenada media); -node -> 4 lineas
+# (coordenadas nodales); 2*mid1 == x_node2 (la media es el promedio)
+NMID=$(wc -l < "$T2014/element_truss_force_0.20")
+NNOD=$(wc -l < "$T2014/element_truss_force_0.21")
+MID1=$(awk 'NR==1{print $1}' "$T2014/element_truss_force_0.20")
+XN2=$(awk 'NR==2{print $1}' "$T2014/element_truss_force_0.21")
+if [ "$NMID" = "2" ] && [ "$NNOD" = "4" ] && \
+   awk -v a="$MID1" -v b="$XN2" 'BEGIN{ d=2*a-b; exit !(d<1.e-3 && d>-1.e-3) }'; then
+  check_ok "elmethod (-middle 2 lineas vs -node 4 lineas; 2*mid1=$MID1 == x_node2=$XN2)"
+else
+  check_fail "elmethod" "lineas o relacion media/nodal incorrecta"
+fi
+
+# hreltime: con tr=0.2 la ultima linea de disx1.his es 0.1 (0.3-0.2);
+# sin tr la ultima de disx2.his es 0.4
+T1=$(awk 'END{print $1}' "$T2014/disx1.his")
+T2=$(awk 'END{print $1}' "$T2014/disx2.his")
+if awk -v a="$T1" -v b="$T2" \
+   'BEGIN{ d1=a-0.1; d2=b-0.4; exit !(d1<1.e-3 && d1>-1.e-3 && d2<1.e-3 && d2>-1.e-3) }'; then
+  check_ok "hreltime (tr=0.2: ultima linea 0.1 vs 0.4 sin tr)"
+else
+  check_fail "hreltime" "tiempos relativos incorrectos (t1=$T1 t2=$T2)"
+fi
+
+# numit: 16 lineas de monitoreo en stdout (2 pasos x control_timestep_iterations 8)
+NIT=$(grep -c "control_print_number_iterations:" /tmp/numit_safe.out)
+if [ "$NIT" = "16" ]; then
+  check_ok "numit (16 monitoreos de iteracion: 2 pasos x 8 iteraciones)"
+else
+  check_fail "numit" "esperaba 16 monitoreos, hay $NIT"
+fi
+
+# meshdoff: alias control_print_mesh_dof -> dump print_mesh_dof.dat (smoke)
+if [ -f "$T2014/print_mesh_dof.dat" ] && [ "$(head -1 "$T2014/print_mesh_dof.dat")" = "1 0 0" ]; then
+  check_ok "meshdoff (alias control_print_mesh_dof: print_mesh_dof.dat generado)"
+else
+  check_fail "meshdoff" "print_mesh_dof.dat no generado o primera linea incorrecta"
+fi
+
+# dofrhside: alias control_print_dof_rhside -> velx_rhside.20 (x y rhs)
+if [ -f "$T2014/velx_rhside.20" ] && awk 'NF!=3{exit 1}' "$T2014/velx_rhside.20"; then
+  check_ok "dofrhside (alias control_print_dof_rhside: velx_rhside.20 x y rhs)"
+else
+  check_fail "dofrhside" "velx_rhside.20 no generado o formato incorrecto"
+fi
+
+if [ "$CHECK_FAIL" = "1" ]; then
+  echo "==> ALGUNAS VERIFICACIONES DE ARCHIVOS FALLARON"
+  exit 1
+else
+  echo "==> Verificacion de archivos de salida (Sprint 11 lote 1): TODAS OK"
+fi
+
 echo "==> Log de compilacion completo en /tmp/tn_build_safe.log"

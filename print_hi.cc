@@ -40,6 +40,16 @@ void print_history( long int ival[], long int nval )
   db( ICONTROL, 0, &icontrol, ddum, ldum, VERSION_NORMAL, GET );
   nset = nval / 3;
 
+  // control_print_history_relative_time (manual Professional 6.322): the
+  // time printed in the history files is time_current - tr (relative time
+  // axis). Applies to the same icontrol as control_print_history.
+  {
+    double time_relative=0.;
+    db( CONTROL_PRINT_HISTORY_RELATIVE_TIME, icontrol, idum, &time_relative,
+      ldum, VERSION_NORMAL, GET_IF_EXISTS );
+    time_current -= time_relative;
+  }
+
   // multiplication factors for the printed data values
   if ( db_active_index( CONTROL_PRINT_HISTORY_FACTOR, icontrol,
       VERSION_NORMAL ) ) {
@@ -131,6 +141,16 @@ void print_history_smooth( long int ival[], long int nval )
   db( TIME_CURRENT, 0, idum, &time_current, ldum, VERSION_NORMAL, GET );
   db( ICONTROL, 0, &icontrol, ddum, ldum, VERSION_NORMAL, GET );
   nset = nval / 3;
+
+  // control_print_history_relative_time (manual Professional 6.322): the
+  // time printed in the history files is time_current - tr. The smoothed
+  // history file shares the same relative time axis.
+  {
+    double time_relative=0.;
+    db( CONTROL_PRINT_HISTORY_RELATIVE_TIME, icontrol, idum, &time_relative,
+      ldum, VERSION_NORMAL, GET_IF_EXISTS );
+    time_current -= time_relative;
+  }
 
   // smooth window sizes: one per data value, or a single value for all
   if ( db_active_index( CONTROL_PRINT_HISTORY_SMOOTH, icontrol,
@@ -243,13 +263,32 @@ void print_dof( long int icontrol, long int task )
 
 {
   long int inod=0, idim=0, ipuknwn=0, iuknwn=0, nder_=0, nuknwn_=0,
-    swit=0, ldum=0, nval=0, seq=0;
-  long int idum[1], *dof_label=NULL, *dof_scal_vec_mat=NULL;
+    swit=0, ldum=0, nval=0, seq=0, dof_id=-YES;
+  long int idum[1], *dof_label=NULL, *dof_scal_vec_mat=NULL,
+    *node_number_of_position=NULL;
   double ddum[1], coord[MDIM], *node_dof=NULL;
   char filename[MCHAR], str[MCHAR];
 
   swit = set_swit(-1,-1,"print_dof");
   if ( swit ) pri( "In routine PRINT_DOF" );
+
+  // control_print_dof_id (manual Professional 6.270): -yes (default) also
+  // writes the node number ('identity') - lines with x y z <dof> <node>.
+  // The node number is the ORIGINAL node number: renumbering() below
+  // compacts the node indices, so the old number is captured here.
+  db( CONTROL_PRINT_DOF_ID, icontrol, &dof_id, ddum, ldum,
+    VERSION_NORMAL, GET_IF_EXISTS );
+  if ( dof_id!=-YES && dof_id!=-NO )
+    db_error( CONTROL_PRINT_DOF_ID, icontrol );
+  if ( dof_id==-YES ) {
+    long int max_node_raw=0, pos=0;
+    db_max_index( NODE, max_node_raw, VERSION_NORMAL, GET );
+    node_number_of_position = get_new_int( max_node_raw+1 );
+    for ( inod=0; inod<=max_node_raw; inod++ ) {
+      if ( db_active_index( NODE, inod, VERSION_NORMAL ) )
+        node_number_of_position[pos++] = inod;
+    }
+  }
 
   db_version_copy( VERSION_NORMAL, VERSION_PRINT );
   renumbering( VERSION_PRINT, NO, 0, 0, idum, idum );
@@ -344,7 +383,9 @@ void print_dof( long int icontrol, long int task )
         }
         for ( idim=0; idim<ndim; idim++ )
           out << coord[idim] << " ";
-        out << node_dof[indx] << "\n";
+        out << node_dof[indx];
+        if ( dof_id==-YES ) out << " " << node_number_of_position[inod];
+        out << "\n";
       }
     }
   }
@@ -354,6 +395,7 @@ void print_dof( long int icontrol, long int task )
   db_version_delete( VERSION_PRINT );
   delete[] dof_label;
   delete[] dof_scal_vec_mat;
+  if ( node_number_of_position ) delete[] node_number_of_position;
 
   if ( swit ) pri( "Out routine PRINT_DOF" );
 }

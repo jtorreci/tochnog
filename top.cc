@@ -362,10 +362,26 @@ void top( void )
                         VERSION_NEW, PUT );
                         // equilibrium loop
 
-                      for ( iteration=1; ( iteration<=iteration_min || 
-                          post_node_rhside_ratio>=ratio_criterium ) && 
-                          iteration<=iteration_max; iteration++ ) {
-                        if ( swit ) pri( "iteration", iteration );
+                      {
+                        // control_print_number_iterations (manual
+                        // Professional 6.336): console monitor - when the
+                        // switch is -yes the iteration counter is printed
+                        // on stdout during the equilibrium iterations of
+                        // the time step. NOT the data item
+                        // -inverse_iteration_number (iterations of the
+                        // finished step).
+                        long int print_number_iterations=-NO;
+                        db( CONTROL_PRINT_NUMBER_ITERATIONS, icontrol,
+                          &print_number_iterations, ddum, ldum,
+                          VERSION_NORMAL, GET_IF_EXISTS );
+                        for ( iteration=1; ( iteration<=iteration_min ||
+                            post_node_rhside_ratio>=ratio_criterium ) &&
+                            iteration<=iteration_max; iteration++ ) {
+                          if ( print_number_iterations==-YES )
+                            cout << "control_print_number_iterations: time "
+                                 << time_current << " iteration " << iteration
+                                 << "\n";
+                          if ( swit ) pri( "iteration", iteration );
                         number_iterations = iteration;
                         db( NUMBER_ITERATIONS, 0, &number_iterations, 
                           ddum, length, VERSION_NEW, PUT );
@@ -402,6 +418,7 @@ void top( void )
                           db( POST_NODE_RHSIDE_RATIO, 0, idum, &post_node_rhside_ratio, 
                             ldum, VERSION_NORMAL, GET );
                         }
+                      }
                       }
 
                       if ( use_control_timestep_iterations_automatic ) {
@@ -858,6 +875,22 @@ void step_close( long int task, long int ipar, long int npar, long int ipar_i, l
       db( CONTROL_PRINT_DATABASE, icontrol, ival, ddum, ldum, VERSION_NORMAL, GET );
       if ( ival[0]==-RESTART ) print_restart( icontrol );
       else print_database( icontrol, VERSION_NORMAL, ival[0] );
+    }
+    if ( db_active_index( CONTROL_PRINT_DATABASE_METHOD, icontrol, VERSION_NORMAL ) ) {
+      // control_print_database_method (manual Professional 6.266): method
+      // -all (default) prints all base records, -size_tot prints the size
+      // of all base records (plus the system matrix), -size_tot_large only
+      // the records larger than 1 Mb (plus the system matrix).
+      db( CONTROL_PRINT_DATABASE_METHOD, icontrol, ival, ddum, ldum,
+        VERSION_NORMAL, GET );
+      if      ( ival[0]==-ALL ) print_database( icontrol, VERSION_NORMAL, -EVERYTHING );
+      else if ( ival[0]==-SIZETOT ) print_database( icontrol, VERSION_NORMAL, -SIZETOT );
+      else if ( ival[0]==-SIZE_TOT_LARGE ) print_database( icontrol, VERSION_NORMAL, -SIZE_TOT_LARGE );
+      else db_error( CONTROL_PRINT_DATABASE_METHOD, icontrol );
+    }
+    if ( db_active_index( CONTROL_PRINT_PARTIALNAME, icontrol, VERSION_NORMAL ) ) {
+      db( CONTROL_PRINT_PARTIALNAME, icontrol, ival, ddum, nval, VERSION_NORMAL, GET );
+      print_partialname( icontrol, VERSION_NORMAL, ival, nval );
     }
     if ( db_active_index( CONTROL_PRINT_DATA_VERSUS_DATA, icontrol, VERSION_NORMAL ) ) {
       db( CONTROL_PRINT_DATA_VERSUS_DATA, icontrol, ival, ddum, length, VERSION_NORMAL, GET );

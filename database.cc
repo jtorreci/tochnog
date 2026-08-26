@@ -1575,10 +1575,21 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   data_length[CONTROL_PRINT_DATABASE] = 1;
   data_class[CONTROL_PRINT_DATABASE] = CONTROL;
 
+  strcpy(name[CONTROL_PRINT_DATABASE_METHOD],"control_print_database_method");
+  type[CONTROL_PRINT_DATABASE_METHOD] = INTEGER;
+  data_length[CONTROL_PRINT_DATABASE_METHOD] = 1;
+  data_class[CONTROL_PRINT_DATABASE_METHOD] = CONTROL;
+
   strcpy(name[CONTROL_PRINT_ELEMENT],"control_print_element");
   type[CONTROL_PRINT_ELEMENT] = INTEGER;
   data_length[CONTROL_PRINT_ELEMENT] = 1;
   data_class[CONTROL_PRINT_ELEMENT] = CONTROL;
+
+  strcpy(name[CONTROL_PRINT_ELEMENT_METHOD],"control_print_element_method");
+  type[CONTROL_PRINT_ELEMENT_METHOD] = INTEGER;
+  data_length[CONTROL_PRINT_ELEMENT_METHOD] = 1;
+  data_class[CONTROL_PRINT_ELEMENT_METHOD] = CONTROL;
+  data_required[CONTROL_PRINT_ELEMENT_METHOD] = CONTROL_PRINT_ELEMENT;
 
   strcpy(name[CONTROL_PRINT_DATA_VERSUS_DATA],"control_print_data_versus_data");
   type[CONTROL_PRINT_DATA_VERSUS_DATA] = INTEGER;
@@ -1667,6 +1678,12 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   data_class[CONTROL_PRINT_HISTORY_SMOOTH] = CONTROL;
   data_required[CONTROL_PRINT_HISTORY_SMOOTH] = CONTROL_PRINT_HISTORY;
 
+  strcpy(name[CONTROL_PRINT_HISTORY_RELATIVE_TIME],"control_print_history_relative_time");
+  type[CONTROL_PRINT_HISTORY_RELATIVE_TIME] = DOUBLE_PRECISION;
+  data_length[CONTROL_PRINT_HISTORY_RELATIVE_TIME] = 1;
+  data_class[CONTROL_PRINT_HISTORY_RELATIVE_TIME] = CONTROL;
+  data_required[CONTROL_PRINT_HISTORY_RELATIVE_TIME] = CONTROL_PRINT_HISTORY;
+
   strcpy(name[CONTROL_PRINT_PLOTMTV],"control_print_plotmtv");
   type[CONTROL_PRINT_PLOTMTV] = INTEGER;
   data_length[CONTROL_PRINT_PLOTMTV] = 1;
@@ -1706,6 +1723,17 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   type[CONTROL_PRINT_MATLAB] = INTEGER;
   data_length[CONTROL_PRINT_MATLAB] = 1;
   data_class[CONTROL_PRINT_MATLAB] = CONTROL;
+
+  strcpy(name[CONTROL_PRINT_NUMBER_ITERATIONS],"control_print_number_iterations");
+  type[CONTROL_PRINT_NUMBER_ITERATIONS] = INTEGER;
+  data_length[CONTROL_PRINT_NUMBER_ITERATIONS] = 1;
+  data_class[CONTROL_PRINT_NUMBER_ITERATIONS] = CONTROL;
+
+  strcpy(name[CONTROL_PRINT_PARTIALNAME],"control_print_partialname");
+  type[CONTROL_PRINT_PARTIALNAME] = INTEGER;
+  data_length[CONTROL_PRINT_PARTIALNAME] = DATA_ITEM_SIZE;
+  fixed_length[CONTROL_PRINT_PARTIALNAME] = 0;
+  data_class[CONTROL_PRINT_PARTIALNAME] = CONTROL;
 
   strcpy(name[CONTROL_PRINT_TECPLOT],"control_print_tecplot");
   type[CONTROL_PRINT_TECPLOT] = INTEGER;
@@ -1794,6 +1822,12 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   data_length[CONTROL_PRINT_DOF] = 1;
   fixed_length[CONTROL_PRINT_DOF] = 0;
   data_class[CONTROL_PRINT_DOF] = CONTROL;
+
+  strcpy(name[CONTROL_PRINT_DOF_ID],"control_print_dof_id");
+  type[CONTROL_PRINT_DOF_ID] = INTEGER;
+  data_length[CONTROL_PRINT_DOF_ID] = 1;
+  data_class[CONTROL_PRINT_DOF_ID] = CONTROL;
+  data_required[CONTROL_PRINT_DOF_ID] = CONTROL_PRINT_DOF;
 
   strcpy(name[CONTROL_RELAXATION_CONDIF_TEMPERATURE],"control_relaxation_condif_temperature");
   type[CONTROL_RELAXATION_CONDIF_TEMPERATURE] = DOUBLE_PRECISION;
@@ -5018,6 +5052,8 @@ void db_initialize( long int dof_type[], long int dof_label[] )
 
   strcpy(name[METHOD2],"method2");
 
+  strcpy(name[MIDDLE],"middle");
+
   strcpy(name[MINIMAL],"minimal");
 
   strcpy(name[MINUS_ONE],"minus_one" );
@@ -5742,6 +5778,8 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   strcpy(name[MISES],"mises");
 
   strcpy(name[SIZETOT],"sizetot");
+
+  strcpy(name[SIZE_TOT_LARGE],"size_tot_large");
 
   strcpy(name[SINUS],"sinus");
 
@@ -6922,6 +6960,16 @@ long int db_number( char str[] )
     else if ( !strncmp( str, "bounda_print_mesh_dof", 21 ) ) {
       strcpy( translated, "print_mesh_dof" );
       strncat( translated, &str[21], MCHAR-40 );
+      return db_number( translated );
+    }
+    else if ( !strcmp( str, "control_print_dof_rhside" ) )
+      return CONTROL_PRINT_UNKNOWNSRHSIDE;
+    else if ( !strcmp( str, "size_tot" ) )
+      // Professional spelling (manual 6.266) of the GNU switch "sizetot".
+      return SIZETOT;
+    else if ( !strncmp( str, "control_print_mesh_dof", 22 ) ) {
+      strcpy( translated, "print_mesh_dof" );
+      strncat( translated, &str[22], MCHAR-40 );
       return db_number( translated );
     }
   }
