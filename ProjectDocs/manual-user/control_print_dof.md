@@ -30,9 +30,13 @@ control_print_dof 20 -separate_index
 ## Output
 
 - `dof.<index>` — one line per node per dof component:
-  `x y z <dof_value>` (only `x` in 1D, `x y` in 2D, `x y z` in 3D). Each
-  call to `control_print_dof` appends the current state, so the file
-  grows as a time series (one block of all dofs per time step).
+  `x y z <dof_value> <node_number>` (only `x` in 1D, `x y` in 2D,
+  `x y z` in 3D). The node number column is written by the companion
+  record [`control_print_dof_id`](control_print_dof_id.md), which
+  defaults to `-yes`; with `control_print_dof_id ... -no` the lines are
+  `x y z <dof_value>` without the node number. Each call to
+  `control_print_dof` appends the current state, so the file grows as a
+  time series (one block of all dofs per time step).
 - `coord.<index>` — the nodal coordinates, written only on the first call.
 
 Vectors are printed per component (`velx`, `vely`, ...), matrices (stress)
@@ -47,5 +51,5 @@ control_timestep                20  0.001 0.04
 ```
 
 Produces `dof.20` with, for each time step, one block of
-`x y <dof_value>` lines for every nodal dof component, and `coord.20`
-with the coordinates.
+`x y <dof_value> <node_number>` lines for every nodal dof component, and
+`coord.20` with the coordinates.

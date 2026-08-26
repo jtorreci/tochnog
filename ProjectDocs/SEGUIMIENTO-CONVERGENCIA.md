@@ -138,6 +138,8 @@ suite sfnet, o un test propio. El registro completo:
 **Sprint 10 — lote 9: initias por-modelo `materi_strain_plasti_cap` (4.35) / `_compression` (4.36) / `_diprisco` (4.37) / `_druckprag` (4.39) + alias `materi_plasti_diprisco_history` (4.18) + `group_materi_elasti_camclay_pressure_min` (6.647)** | `ddacc43` | 2026-08-25 | **Initias por-modelo (4.35-4.40)**: mismo patrón que hardsoil (lote 8) pero CONSOLIDADO — cada initia registra su dof dedicado (capepp/cepp/depp/dpepp, basenames eppcapxx.../eppcmpxx.../eppdipxx.../eppdrpxx...; 6 componentes) y un ÚNICO bloque RHS en materi.cc (tabla {flag, indx}) llena TODOS los dofs por-modelo con el MISMO inc_epp del driver (refactor del bloque hardsoil a la tabla: hsepp incluido, comportamiento idéntico — suite anterior intacta). Enums MATERI_STRAIN_PLASTI_CAP/COMPRESSION/DIPRISCO/DRUCKPRAG + general.cc (inercia/conv_part) + check.cc self-checks. **VALIDACIÓN**: `mstrain_cap` (cap1, compresión isotrópica 20 pasos plásticos): eppcapzz = **−0.0360001 EXACTO** (análitico: deps_p_cv = 0.0054/paso × 20 / 3); `mstrain_druckprag` (cizalla pura mdp_shear): eppdrpxy = 0.910768 **IDÉNTICO al epp genérico** del mismo run (prueba el mecanismo compartido) y sigxy 34.64 intacto; `mstrain_diprisco` (diprisc1 + initia): eppdipyy −0.0105714, eppdipxx = eppdipzz +0.00350735, hisv10 −152.795 idéntico a diprisc1; `mstrain_compression` (oedómetro, sig_yield 1.0): eppcmpzz −8.96e-05. Gemelos elásticos de los 4 (carga bajo yield / c=1e6 / sin record plástico): dof = **0 exacto**. A/B: sin la initia el dof NO existe (target −eppcapzz → "I do not know" → exit 1, verificado). **`materi_plasti_diprisco_history` (4.18)**: alias de materi_history_variables (misma rama del parser, mismo dof hisv compartido); checks de GROUP_MATERI_PLASTI_DIPRISCO/_RT aceptan cualquiera de los dos nombres (check_unknown_atleastone). `mdiprisco_hist`: diprisc1 con el alias → hisv10 **−152.795 IDÉNTICO**. diprisc1.dat legacy sigue verde. **`group_materi_elasti_camclay_pressure_min` (6.647)**: hook en el bloque elástico camclay de set_stress (K = (1+e)·p/kappa): si existe el record, p < pressure_min → p = pressure_min (solo para K, el estado de tensión intacto). `mc_pressure_min` (p inicial 0.001, pressure_min 10, 1 paso oedómetro): K = 1.5·10/0.02 = 750 → **sigxx −0.0093333 y sigyy −0.2093333 ANALÍTICOS EXACTOS** (dp = K·tr = 0.075); A/B `mc_pressure_min_off` sin record: K = 0.075 degenerado → **sigxx +0.06566 (signo invertido)** — el problema numérico que el manual previene. **`diprisco_density` (6.697)**: DECISIÓN PENDIENTE documentada (NO implementada): la ley de interpolación loose/dense entre los 22 parámetros no está en el manual (solo "interpolated... using the current density", remite a papers) → sin fórmula verificable no se implementa (regla AGENTS.md); además exigiría reescribir el bloque diprisco arriesgando diprisc1; la 12ª variable (densidad relativa) sin ley de evolución documentada. La initia 4.18 acepta 12 vars. GOTCHA node_dof: añadir una initia con n unknowns exige expandir el node_dof plano (nuknwn = npuknwn·nder valores por nodo; con derivatives nder = ndim+2 → 155 por nodo en el hex8 3D del mcap1: 30 slots nuevos antes de pc). GOTCHA 2D: el strain de carga oedómetro va en yy (sigyy), no en zz (fuera de plano). Suite 139/139 (128 + 11 nuevos). |
 **Sprint 10 — lote 10: `control_repeat_save` (6.348) + `control_repeat_save_calculate` (6.349) + records `repeat_save_result` / `repeat_calculate_result`** | `86accd4` | 2026-08-26 | **VALIDACIÓN ANALÍTICA** (`mrepeat_save`): columna elástica con vely prescrita −0.01 y `control_repeat 3` saltos a `control_timestep` dt=0.05 — cada salto guarda `veliy` (= desplazamiento integrado; con memoria `-updated_without_rotation` el dof de desplazamiento es `materi_velocity_integrated`, label `-veliy`) del post_point: secuencia aritmética EXACTA {−0.0005, −0.001, −0.0015} en `repeat_save_result[0..2]` (medido −0.000499999975586, error 5e-11). Al agotarse el contador, media = **−0.000999999951172 vs −0.001 analítico** y varianza POBLACIONAL = **1.66666650391e-07 vs d²(N²−1)/12 = 1.6666667e-07** (error 1.6e-14). El target de varianza discrimina el NÚMERO de saves (un 4º save daría 3.125e-7 → falla). A/B verificado: sin `control_repeat_save_calculate` el record `repeat_calculate_result` NO existe (target → "Error in calculation" → exit 1). GOTCHAS: (1) `db_max_index` devuelve el máximo ALOCADO (margen heurístico de db_allocate) — el índice libre de `repeat_save_result` se cuenta con `db_active_index`; (2) `materi_displacement` está PROHIBIDO con memoria `-updated_without_rotation` (stress.cc: "should not be initialized") — el dof de desplazamiento es el `veli` integrado. Suite 140/140 (139 + mrepeat_save). Los legacy con control_repeat siguen verdes (force5/examp6/examp23/repeat1/repeat2); examp9/examp24/ho_mech3/refine5 fallan igual con el binario PREVIO (pre-existentes: bad_alloc/timeout/TET10-refine/divergencia bicg). |
 
+**Sprint 11 — lote 1: 8 keywords control_print (manual Professional 6.266/6.270/6.284/6.286/6.322/6.329/6.336/6.337)** | `4e3d836` | 2026-08-26 | `control_print_database_method`: -all → dump COMPLETO a .dbs (sin líneas "Size of"), -size_tot → "Size of <record> is <bytes>" por record + "Total size" + "Size of the system matrix is <solve_nlocal>" (nº de ecuaciones del último solve — la métrica del band solver en so.cc), -size_tot_large → SOLO records > 1 Mb (en el modelo pequeño del test solo queda la línea de la matriz — A/B con -size_tot discrimina el filtro). `control_print_dof_id`: default -yes → dof.<index> con 4 columnas (x y dof node); el número de nodo es el ORIGINAL (mapeo posición→número capturado ANTES del renumbering); -no conserva 3 columnas (contraste dof.20 vs dof.21). `control_print_dof_rhside`: alias db_number de control_print_unknownsrhside (mismo enum/dispatch; el detector de fin-de-valores también llama db_number — patrón f178849); smoke velx_rhside.20. `control_print_element_method`: -middle (default, UNA línea por elemento con la coordenada media) vs -node (líneas por nodo); discriminado por conteo 2 vs 4 líneas y la relación EXACTA 2*mid1 == x_node2 (la media = promedio de coords nodales; GOTCHA: el self-stress del truss se relaja a 0 con la deformación — el test discrimina por estructura, no por valor). `control_print_history_relative_time`: tr=0.2 → última línea de disx1.his = 0.1 (0.3−0.2) vs 0.4 sin tr (disx2.his); también aplica al smooth file. `control_print_mesh_dof`: alias de prefijo db_number → print_mesh_dof (cubre _geometry/_values); smoke print_mesh_dof.dat. `control_print_number_iterations`: monitor de consola en el bucle de equilibrio — 16 líneas exactas (2 pasos × control_timestep_iterations 8); NO es -inverse_iteration_number. `control_print_partialname`: print_partialname() en print_db.cc — match de PREFIJO (strncmp, no el strstr del helper) sobre los nombres registrados; stdout con records element* y NINGÚN node* (grep). Suite 148/148 (140 + 8). Checks de archivos en build_safe.sh. |
+
 
 : ~74 keywords (aliases force 24+11 projected, control_materi 13, data 5, solver 7, print 3, axisymmetric 1) + 4 fixes/gotchas documentados. |
 
@@ -613,19 +615,19 @@ marcado `PENDIENTE` puede estar cubierto en el GNU bajo otro nombre:
 - [ ] `control_post_apply` — PENDIENTE
 - [ ] `control_post_element_force` — PENDIENTE
 
-### control_print (21/85)
+### control_print (34/85)
 
 - [x] `control_print` — presente en el GNU
-- [ ] `control_print_` — PENDIENTE
+- [x] `control_print_filter` — presente en el GNU (el "control_print_" del inventario era OCR truncado de filter; CONTROL_PRINT_FILTER en database.cc:1608)
 - [ ] `control_print_beam_force_moment` — PENDIENTE
 - [ ] `control_print_beam_force_moment_coordinates` — PENDIENTE
 - [ ] `control_print_beam_force_moment_switch` — PENDIENTE
 - [x] `control_print_data_versus_data` — presente en el GNU
 - [x] `control_print_data_versus_data_factor` — implementada (commit `3793892`, 2026-08-04)
 - [x] `control_print_database` — presente en el GNU
-- [ ] `control_print_database_method` — PENDIENTE
+- [x] `control_print_database_method` — Sprint 11, lote 1 (2026-08-26)
 - [x] `control_print_dof` — implementada (commit `ca2a9e4`, 2026-08-12)
-- [ ] `control_print_dof_id` — PENDIENTE
+- [x] `control_print_dof_id` — Sprint 11, lote 1 (2026-08-26; default -yes, nodo en dof.<index>)
 - [ ] `control_print_dof_line` — PENDIENTE
 - [ ] `control_print_dof_line_coordinates` — PENDIENTE
 - [ ] `control_print_dof_line_element_group` — PENDIENTE
@@ -637,11 +639,11 @@ marcado `PENDIENTE` puede estar cubierto en el GNU bajo otro nombre:
 - [ ] `control_print_dof_point` — PENDIENTE
 - [ ] `control_print_dof_point_coordinates` — PENDIENTE
 - [ ] `control_print_dof_point_time` — PENDIENTE
-- [ ] `control_print_dof_rhside` — PENDIENTE
+- [x] `control_print_dof_rhside` — Sprint 11, lote 1 (2026-08-26; alias de control_print_unknownsrhside)
 - [ ] `control_print_dof_smooth_dof` — PENDIENTE
 - [ ] `control_print_dof_smooth_n` — PENDIENTE
 - [x] `control_print_element` — presente en el GNU
-- [ ] `control_print_element_method` — PENDIENTE
+- [x] `control_print_element_method` — Sprint 11, lote 1 (2026-08-26; -middle default / -node)
 - [x] `control_print_frd` — implementada (commit `19a8d08`, 2026-08-12)
 - [x] `control_print_frd_freecad` — implementada (commit `19a8d08`, 2026-08-12)
 - [x] `control_print_frd_prepomax` — implementada (commit `19a8d08`, 2026-08-12)
@@ -676,22 +678,22 @@ marcado `PENDIENTE` puede estar cubierto en el GNU bajo otro nombre:
 - [x] `control_print_gmsh_node_method` — implementada (commit `90798f9`, 2026-08-12)
 - [x] `control_print_history` — presente en el GNU
 - [x] `control_print_history_factor` — implementada (commit `3793892`, 2026-08-04)
-- [ ] `control_print_history_relative_time` — PENDIENTE
+- [x] `control_print_history_relative_time` — Sprint 11, lote 1 (2026-08-26; time_current - tr)
 - [x] `control_print_history_smooth` — implementada (commit `8f8ad67`, 2026-08-12)
 - [x] `control_print_interface_stress` — implementada (commit `01f6c3e`, 2026-08-14; Carril A Fase 4, 2D)
 - [x] `control_print_interface_stress_2d_coordinates` — implementada (commit `01f6c3e`, 2026-08-14)
-- [ ] `control_print_interface_stress_3d_geometry` — PENDIENTE
-- [ ] `control_print_interface_stress_3d_order` — PENDIENTE
+- [x] `control_print_interface_stress_3d_geometry` — implementada (commit `b8804c6`, 2026-08-16; print_interface_stress.cc:65-89)
+- [x] `control_print_interface_stress_3d_order` — implementada (commit `b8804c6`, 2026-08-16)
 - [ ] `control_print_materi_stress_force` — PENDIENTE
-- [ ] `control_print_mesh_dof` — PENDIENTE
+- [x] `control_print_mesh_dof` — Sprint 11, lote 1 (2026-08-26; alias de print_mesh_dof)
 - [ ] `control_print_node` — PENDIENTE
 - [ ] `control_print_node_angular` — PENDIENTE
 - [ ] `control_print_node_angular_middle` — PENDIENTE
 - [ ] `control_print_node_geometry` — PENDIENTE
 - [ ] `control_print_node_sort` — PENDIENTE
 - [ ] `control_print_node_zero` — PENDIENTE
-- [ ] `control_print_number_iterations` — PENDIENTE
-- [ ] `control_print_partialname` — PENDIENTE
+- [x] `control_print_number_iterations` — Sprint 11, lote 1 (2026-08-26; monitor de consola)
+- [x] `control_print_partialname` — Sprint 11, lote 1 (2026-08-26; prefijo en db_number, stdout)
 - [x] `control_print_tecplot` — presente en el GNU
 - [x] `control_print_vtk` — presente en el GNU
 - [ ] `control_print_vtk_coord` — PENDIENTE

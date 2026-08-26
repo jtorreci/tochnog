@@ -195,3 +195,14 @@ Each file corresponds to the same feature in the [User Manual](../manual-user/).
 
 - [control_repeat_save](control_repeat_save.md) — save block in repeat.cc (CONTROL_REPEAT branch, per-jump capture into repeat_save_result; db_max_index heuristic GOTCHA: count active indices).
 - [control_repeat_save_calculate](control_repeat_save_calculate.md) — statistics block in repeat.cc when the counter reaches 0 (two-pass mean/population-variance into repeat_calculate_result).
+
+## Sprint 11 — control_print family (batch 1)
+
+- [control_print_database_method](control_print_database_method.md) — dispatch in top.cc + -SIZE_TOT_LARGE branch in print_database (1 Mb filter); system matrix size via solve_nlocal; "size_tot" vs "size_tot_large" naming GOTCHA resolved in db_number.
+- [control_print_dof_id](control_print_dof_id.md) — node-number mapping captured BEFORE renumbering (position -> original node number); 1-based node indices discovery.
+- [control_print_dof_rhside](control_print_dof_rhside.md) — pure alias via db_number (end-of-values detection GOTCHA, pattern f178849).
+- [control_print_element_method](control_print_element_method.md) — -middle/-node in print_element; default CHANGE to -middle; truss self-stress relaxation GOTCHA in the test.
+- [control_print_history_relative_time](control_print_history_relative_time.md) — time_current - tr in print_history and print_history_smooth (shared axis).
+- [control_print_mesh_dof](control_print_mesh_dof.md) — prefix alias via db_number (also covers _geometry/_values); GNU no_index layout kept.
+- [control_print_number_iterations](control_print_number_iterations.md) — monitor before/in the equilibrium loop of top(); NOT inverse_iteration_number.
+- [control_print_partialname](control_print_partialname.md) — print_partialname() in print_db.cc; PREFIX match (strncmp), not the strstr helper; stdout like control_print.

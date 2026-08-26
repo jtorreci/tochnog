@@ -204,3 +204,14 @@ input parameters it accepts.
 
 - [control_repeat_save](control_repeat_save.md) — save the current value of selected data items at every control_repeat jump (repeat_save_result, one index per repeat).
 - [control_repeat_save_calculate](control_repeat_save_calculate.md) — mean and (population) variance of the saved values when the repeat completes (repeat_calculate_result).
+
+## Sprint 11 — control_print family (batch 1)
+
+- [control_print_database_method](control_print_database_method.md) — database print method: -all (default), -size_tot (sizes of all base records) and -size_tot_large (records > 1 Mb); with the size methods also the system matrix size.
+- [control_print_dof_id](control_print_dof_id.md) — add the node number ('identity') to the control_print_dof files (default -yes).
+- [control_print_dof_rhside](control_print_dof_rhside.md) — right-hand-side of the primary dofs with coordinates (Professional name of control_print_unknownsrhside).
+- [control_print_element_method](control_print_element_method.md) — -middle (default: average value + middle coordinate) or -node (nodal values + nodal coordinates) for control_print_element.
+- [control_print_history_relative_time](control_print_history_relative_time.md) — history time axis shifted by tr (time_current - tr).
+- [control_print_mesh_dof](control_print_mesh_dof.md) — Professional name of the print_mesh_dof one-shot dump (node number + coords + listed dofs).
+- [control_print_number_iterations](control_print_number_iterations.md) — console monitor of the live iteration counter during the equilibrium iterations.
+- [control_print_partialname](control_print_partialname.md) — print every record whose name starts with the given prefix (like control_print, partial).

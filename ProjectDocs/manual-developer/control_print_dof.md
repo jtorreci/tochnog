@@ -41,8 +41,9 @@
 
 ## Pendiente
 
-- `control_print_dof_id` (node number column), `_smooth_dof`,
-  `_smooth_n` and `_line` variants are not implemented.
+- `control_print_dof_id` is implemented (node number column; default
+  `-yes`, see [control_print_dof_id](control_print_dof_id.md)).
+  `_smooth_dof`, `_smooth_n` and `_line` variants are not implemented.
 - No time column: reconstructing the time of a block requires knowing the
   step sequence.
 - `-separate_sequential` numbering uses a static counter (resets per run).
