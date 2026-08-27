@@ -451,6 +451,17 @@ enum {
   CONTROL_PRINT_FRD_PREPOMAX,
   CONTROL_PRINT_DOF,
   CONTROL_PRINT_DOF_ID,
+  CONTROL_PRINT_DOF_LINE,
+  CONTROL_PRINT_DOF_LINE_COORDINATES,
+  CONTROL_PRINT_DOF_LINE_ELEMENT_GROUP,
+  CONTROL_PRINT_DOF_LINE_EPS_ISO,
+  CONTROL_PRINT_DOF_LINE_METHOD,
+  CONTROL_PRINT_DOF_LINE_MOVE,
+  CONTROL_PRINT_DOF_LINE_N,
+  CONTROL_PRINT_DOF_LINE_TIME,
+  CONTROL_PRINT_DOF_POINT,
+  CONTROL_PRINT_DOF_POINT_COORDINATES,
+  CONTROL_PRINT_DOF_POINT_TIME,
   CONTROL_PRINT_FREQUENCY_TIMEINTERVAL,
   CONTROL_PRINT_FREQUENCY_TIMEINTERVAL_TIME,
   CONTROL_PRINT_FREQUENCY_TIMESTEP,
@@ -1769,7 +1780,8 @@ void      plasti_rule( long int element, long int group,
             long int task, long int &plasti_type, 
             double sig[], double &f, double &new_f, double dir[] );
 long int  point_el( double point[], double coord[], double weight[],
-            long int name, long int nnol );
+            long int name, long int nnol,
+            double eps_iso = 1.e-3 );
 void      pol( long int element, long int element_group,
             long int name, long int nnol, double old_coord[], 
             double new_coord[], long int &npoint, double h[], 
@@ -1804,6 +1816,8 @@ void      print_gmv( long int icontrol, long int ival[] );
 void      print_history( long int ival[], long int nval );
 void      print_history_smooth( long int ival[], long int nval );
 void      print_dof( long int icontrol, long int task );
+void      print_dof_line( long int icontrol, long int task );
+void      print_dof_point( long int icontrol, long int task );
 void      print_plotmtv( long int icontrol, long int ival[] );
 void      print_matlab( void );
 void      print_restart( long int icontrol );

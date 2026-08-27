@@ -16,6 +16,12 @@
 
 set -uo pipefail
 
+# Las comprobaciones numericas con awk/mawk dependen de la conversion
+# string->numero de strtod, que respeta LC_NUMERIC: con una locale de
+# ',' decimal (p.ej. es_ES.UTF-8) "0.5" se convierte en 0 y los checks
+# fallan espuriamente. Fijar el locale C hace el parseo deterministico.
+export LC_ALL=C
+
 REPO_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$REPO_DIR"
 
@@ -113,6 +119,9 @@ HIPO_TOTAL=0
 # sigxx4.his (historia de los 2 tests, se suma).
 # Sprint 11 lote 3 (extensiones VTK): tn30..tn43.vtk de vtk_coord1/
 # vtk_dofcalc1/vtk_empty1/vtk_nodmeth1/vtk_other1.
+# Sprint 11 lote 4 (dof_line/dof_point): disy.*/velx.*/vely.*/disx.* de
+# dpline1/dpline_n/dpline_geom/dpline_group/dpline_eps/dpline_method/
+# dpline_move/dpline_time/dpoint_time/dpoint1 y adis.* (calcul de dpoint1).
 rm -f validation-suite/test-2014/dof.* \
       validation-suite/test-2014/freq_timeint*.frd \
       validation-suite/test-2014/freq_timestep*.frd \
@@ -122,7 +131,10 @@ rm -f validation-suite/test-2014/dof.* \
       validation-suite/test-2014/tn34.vtk validation-suite/test-2014/tn35.vtk \
       validation-suite/test-2014/tn36.vtk validation-suite/test-2014/tn40.vtk \
       validation-suite/test-2014/tn41.vtk validation-suite/test-2014/tn42.vtk \
-      validation-suite/test-2014/tn43.vtk
+      validation-suite/test-2014/tn43.vtk \
+      validation-suite/test-2014/velx.* validation-suite/test-2014/vely.* \
+      validation-suite/test-2014/disx.* validation-suite/test-2014/disy.* \
+      validation-suite/test-2014/adis.*
 # 13 tests: 12 preexistentes + familia iface_mc (1 test logico = 6 runs:
 # iface_mc a/a' invarianza, iface_mc_slip b/b' invarianza, tension c, gap d)
 # + iface_mc_mem (memory), + iface_mc_dil/dil_1step/num (dilatancia RF-4 y
@@ -501,6 +513,52 @@ rm -f validation-suite/test-2014/dof.* \
 #   SCALARS boundary_condition (nodo 1=1.0, nodo 4=0.0: bounda_force no
 #   es condicion de contorno) + VECTORS mesh_deformation; -no ->
 #   tn43.vtk sin ninguno de los dos campos).
+# Sprint 11 lote 4 (dof_line + dof_point, manual Professional
+# 6.273-6.283): interpolacion de node_dof Y node_dof_calcul a lo largo
+# de una polilinea / en un punto. Modelo base: quad4 elastico 2D con
+# vely=-0.01 arriba / 0 abajo -> campo lineal exacto disy=-0.01*t*y (o
+# uniforme -0.01*t con vely en TODOS los nodos). node_start_refined se
+# da como INPUT (registro NODE-class, version_all=1) -> el metodo por
+# defecto -node_start_refined busca en el frame de referencia.
+# + dpline1 (interpolacion EXACTA: linea (0.5,0)->(0.5,1) con n=3 ->
+#   disy.30 = 3 lineas con 0/-0.005/-0.01; las funciones de forma
+#   lineales reproducen un campo lineal).
+# + dpline_n (control_print_dof_line_n 6.279): A/B n=3 vs n=5 -> disy.31
+#   3 lineas (t=1) vs disy.32 5 lineas (t=2: 0/-0.005/-0.01/-0.015/-0.02;
+#   los bloques control_timestep CORREN EN SERIE, el 32 arranca en t=1).
+# + dpline_geom (polilinea en V (0,0)->(1,1)->(2,0), n=5): disy.33 con
+#   (0.5,0.5), (1,1), (1.5,0.5) -> los puntos se reparten sobre los 2
+#   SEGMENTOS (longitud total 2*sqrt(2)), no sobre la recta (0,0)->(2,0).
+# + dpline_group (control_print_dof_line_element_group 6.275): elemento
+#   1 en group 0, elemento 2 en group 1; con el filtro {1} el punto
+#   (0,0.5) (elemento 1) NO se imprime -> disy.34 2 lineas (x=1, x=2) vs
+#   disy.35 3 lineas (x=0,1,2) sin filtro.
+# + dpline_eps (control_print_dof_line_eps_iso 6.276): punto (1.02,0.5)
+#   0.02 fuera de la malla: con el default 1.e-3 NO se acepta (distancia
+#   > element_largest_size*eps) -> disy.36 1 linea; con eps_iso=1.0 se
+#   acepta (extrapolacion) -> disy.37 2 lineas (x=0.5 y x=1.02).
+# + dpline_method (control_print_dof_line_method 6.277): analisis
+#   follow-material (materi_velocity SIN materi_displacement) con
+#   node_start_refined de input; tras 1 paso dt=1 la malla deformada
+#   tiene el borde superior en y=0.99. Linea (0.5,0)->(0.5,0.995), n=2:
+#   -node_start_refined -> vely.38 2 lineas (y=0 y y=0.995); -node ->
+#   vely.39 1 linea ((0.5,0.995) queda 0.005 POR ENCIMA del borde
+#   deformado y no se acepta). GOTCHA: con group_materi_memory -total el
+#   check de matrix_inverse(old_rot) estalla (distorsion espuria en el
+#   follow-material 1-elemento) -> -updated_without_rotation.
+# + dpline_move (control_print_dof_line_move 6.278): vely=-0.01 uniforme
+#   (translacion rigida), linea (0.5,0.5)->(0.5,0.6), n=2, 2 pasos
+#   dt=0.1: con -yes las coordenadas siguen la particula (y=0.499 en la
+#   linea 3 de disy.40) vs fijas (y=0.5 en disy.41).
+# + dpline_time (control_print_dof_line_time 6.280) / dpoint_time
+#   (6.283): primera linea de cada archivo = "# time 0.1" (comentario
+#   gnuplot) en disy.42 / disy.43.
+# + dpoint1 (control_print_dof_point 6.281): serie temporal en el punto
+#   (0.5,0.5) -> disy.44 2 lineas -0.001/-0.002 (t=0.1/0.2) + calcul
+#   node_dof_calcul: post_calcul -materi_displacement -average -> adis.44
+#   con la media del vector desplazamiento (disx+disy)/2 = -0.0005/-0.001.
+#   GOTCHA del modelo: con fixed_in_space el strain total es 0 (F=I), por
+#   eso el calcul usa el desplazamiento, no el strain.
 for t in hypo1 hypo2 hypo3 hypo4 smooth1 dof1 mlx1 vtk_dof1 gen1 genbeam1          reset1 cda1 cda_arith cda_copy cda_activate cdist_normal cdist_corr cdist_clamp cd_method cd_geom \
          iface_mc iface_mc_1step iface_mc_slip iface_mc_slip_1step iface_mc_tension iface_mc_gap \
          iface_mc_mem iface_mc_dil iface_mc_dil_1step iface_mc_num \
@@ -538,7 +596,9 @@ for t in hypo1 hypo2 hypo3 hypo4 smooth1 dof1 mlx1 vtk_dof1 gen1 genbeam1       
          mdiprisco_hist mc_pressure_min mc_pressure_min_off mrepeat_save \
          dbmeth partialname meshdoff dofrhside elmethod hreltime numit dofid_no \
          freq_timeint freq_timestep \
-         vtk_coord1 vtk_dofcalc1 vtk_empty1 vtk_nodmeth1 vtk_other1; do
+         vtk_coord1 vtk_dofcalc1 vtk_empty1 vtk_nodmeth1 vtk_other1 \
+         dpline1 dpline_n dpline_geom dpline_group dpline_eps \
+         dpline_method dpline_move dpline_time dpoint_time dpoint1; do
   HIPO_TOTAL=$((HIPO_TOTAL+1))
   ( cd validation-suite/test-2014 &&
     ulimit -v 4000000 &&
@@ -551,7 +611,7 @@ for t in hypo1 hypo2 hypo3 hypo4 smooth1 dof1 mlx1 vtk_dof1 gen1 genbeam1       
     echo "    $t: FALLO (rc=$RC)"
   fi
 done
-echo "==> Resumen: $HIPO_OK/$HIPO_TOTAL runs OK (13 tests: 12 preexistentes + familia iface_mc en 10 runs + familia 3D en 5 runs + familia generate_interface en 6 runs + familia materi_direct en 5 runs + materi_displacement_relative en 2 runs + slide/reset_value en 2 runs + cda_arith/copy/activate en 3 runs + cdist_normal/corr/clamp en 3 runs + cd_method/cd_geom en 2 runs + gravity/settlement en 4 runs + contact en 1 run + contact_block/ctrl_apply/heatgen en 3 runs + groundflow_consolidate_off en 1 run + groundflow_vangenuchten/groundflow_nonsaturated_off en 2 runs + groundflow_total_pressure_tension/groundflow_interface en 2 runs + groundflow_flux_edge en 1 run + groundflow_phreatic_multiple en 1 run + groundflow_seepage en 1 run + groundflow_pressure_atm/_def en 2 runs + groundflow_total_pressure_limit/_dry en 2 runs + condif_heat_edge/vol/vol2 en 3 runs + condif_convec/rad/convec_el en 3 runs + aeg_node/aeg_seq/bt_factor en 3 runs + iface_condif/expansion/tangref en 3 runs + node_force_inertia/slide/pressure en 3 runs + creset_geom/iface en 2 runs + fedge_alias/restrict, fvol_elem y cmat_gate en 4 runs + fproj_tunnel en 1 run + dsmall/dignore en 2 runs + mdirect_comp/gate en 2 runs + mdp_shear/mfactor en 2 runs + mmc_tension en 1 run + mmchs_soft en 1 run + mcap2/mcap_legacy en 2 runs + mcrunch/mcrunch_low en 2 runs + mvoid/mvoid_low en 2 runs + mpower en 1 run + mshf/mshf_nof en 2 runs + mk0/mk0_off en 2 runs + myoung6/myoung6_e2/myoung6_e3/myoung6_apply en 4 runs + msph/msph_flat en 2 runs + mcap1/mcap1_elast/mcap1_comb en 3 runs + mhardsoil_elast/elast2/unload/unload_flat/plast/plast_elast/gp0/gp0_off en 8 runs + mstrain_cap/_elast, mstrain_compression/_elast, mstrain_diprisco/_elast, mstrain_druckprag/_elast en 8 runs + mdiprisco_hist en 1 run + mc_pressure_min/_off en 2 runs (Sprint 10 lote 9) + mrepeat_save en 1 run (Sprint 10 lote 10) + dbmeth/partialname/meshdoff/dofrhside/elmethod/hreltime/numit/dofid_no en 8 runs (Sprint 11 lote 1) + freq_timeint/freq_timestep en 2 runs (Sprint 11 lote 2) + vtk_coord1/vtk_dofcalc1/vtk_empty1/vtk_nodmeth1/vtk_other1 en 5 runs (Sprint 11 lote 3))."
+echo "==> Resumen: $HIPO_OK/$HIPO_TOTAL runs OK (13 tests: 12 preexistentes + familia iface_mc en 10 runs + familia 3D en 5 runs + familia generate_interface en 6 runs + familia materi_direct en 5 runs + materi_displacement_relative en 2 runs + slide/reset_value en 2 runs + cda_arith/copy/activate en 3 runs + cdist_normal/corr/clamp en 3 runs + cd_method/cd_geom en 2 runs + gravity/settlement en 4 runs + contact en 1 run + contact_block/ctrl_apply/heatgen en 3 runs + groundflow_consolidate_off en 1 run + groundflow_vangenuchten/groundflow_nonsaturated_off en 2 runs + groundflow_total_pressure_tension/groundflow_interface en 2 runs + groundflow_flux_edge en 1 run + groundflow_phreatic_multiple en 1 run + groundflow_seepage en 1 run + groundflow_pressure_atm/_def en 2 runs + groundflow_total_pressure_limit/_dry en 2 runs + condif_heat_edge/vol/vol2 en 3 runs + condif_convec/rad/convec_el en 3 runs + aeg_node/aeg_seq/bt_factor en 3 runs + iface_condif/expansion/tangref en 3 runs + node_force_inertia/slide/pressure en 3 runs + creset_geom/iface en 2 runs + fedge_alias/restrict, fvol_elem y cmat_gate en 4 runs + fproj_tunnel en 1 run + dsmall/dignore en 2 runs + mdirect_comp/gate en 2 runs + mdp_shear/mfactor en 2 runs + mmc_tension en 1 run + mmchs_soft en 1 run + mcap2/mcap_legacy en 2 runs + mcrunch/mcrunch_low en 2 runs + mvoid/mvoid_low en 2 runs + mpower en 1 run + mshf/mshf_nof en 2 runs + mk0/mk0_off en 2 runs + myoung6/myoung6_e2/myoung6_e3/myoung6_apply en 4 runs + msph/msph_flat en 2 runs + mcap1/mcap1_elast/mcap1_comb en 3 runs + mhardsoil_elast/elast2/unload/unload_flat/plast/plast_elast/gp0/gp0_off en 8 runs + mstrain_cap/_elast, mstrain_compression/_elast, mstrain_diprisco/_elast, mstrain_druckprag/_elast en 8 runs + mdiprisco_hist en 1 run + mc_pressure_min/_off en 2 runs (Sprint 10 lote 9) + mrepeat_save en 1 run (Sprint 10 lote 10) + dbmeth/partialname/meshdoff/dofrhside/elmethod/hreltime/numit/dofid_no en 8 runs (Sprint 11 lote 1) + freq_timeint/freq_timestep en 2 runs (Sprint 11 lote 2) + vtk_coord1/vtk_dofcalc1/vtk_empty1/vtk_nodmeth1/vtk_other1 en 5 runs (Sprint 11 lote 3) + dpline1/dpline_n/dpline_geom/dpline_group/dpline_eps/dpline_method/dpline_move/dpline_time/dpoint_time/dpoint1 en 10 runs (Sprint 11 lote 4))."
 
 # ---------------------------------------------------------------------
 # Sprint 11 lote 1: verificacion de ARCHIVOS y STDOUT de los 8 keywords
@@ -795,11 +855,138 @@ else
   check_fail "vtk_other" "los campos other no discriminan -yes/-no (B1=$B1 B4=$B4)"
 fi
 
+# ---------------------------------------------------------------------
+# Sprint 11 lote 4: verificacion de ARCHIVOS de dof_line/dof_point
+# (manual Professional 6.273-6.283). Lineas "x y <dof>", un archivo por
+# label de dof (disy.30, vely.38, ...) y por item de node_dof_calcul
+# (adis.44 = "a"+dis, convencion de print_unknowns).
+# ---------------------------------------------------------------------
+
+# dpline1: interpolacion EXACTA del campo lineal disy=-0.01*y en la
+# linea (0.5,0)->(0.5,1) con n=3: 3 lineas con 0/-0.005/-0.01
+N30=$(wc -l < "$T2014/disy.30" 2>/dev/null || echo 0)
+L30_2=$(awk 'NR==2{print $2, $3}' "$T2014/disy.30" 2>/dev/null)
+L30_3=$(awk 'NR==3{print $2, $3}' "$T2014/disy.30" 2>/dev/null)
+Y2_30=$(echo "$L30_2" | awk '{print $1}'); V2_30=$(echo "$L30_2" | awk '{print $2}')
+Y3_30=$(echo "$L30_3" | awk '{print $1}'); V3_30=$(echo "$L30_3" | awk '{print $2}')
+if [ "$N30" = "3" ] && awk -v y="$Y2_30" -v v="$V2_30" \
+   'BEGIN{d1=y-0.5; d2=v+0.005; exit !(d1<1e-3 && d1>-1e-3 && d2<1e-3 && d2>-1e-3)}' && \
+   awk -v y="$Y3_30" -v v="$V3_30" \
+   'BEGIN{d1=y-1.0; d2=v+0.01; exit !(d1<1e-3 && d1>-1e-3 && d2<1e-3 && d2>-1e-3)}'; then
+  check_ok "dpline1 (interpolacion exacta: (0.5,0.5,-0.005) y (0.5,1,-0.01))"
+else
+  check_fail "dpline1" "disy.30 no interpola el campo lineal (N=$N30, l2=$L30_2, l3=$L30_3)"
+fi
+
+# dpline_n: A/B del numero de puntos -> 3 vs 5 lineas; el punto 2 de n=5
+# cae en y=0.25 con -0.005 (t=2) y el ultimo en (0.5,1,-0.02)
+N31=$(wc -l < "$T2014/disy.31" 2>/dev/null || echo 0)
+N32=$(wc -l < "$T2014/disy.32" 2>/dev/null || echo 0)
+L32_5=$(awk 'NR==5{print $2, $3}' "$T2014/disy.32" 2>/dev/null)
+Y5_32=$(echo "$L32_5" | awk '{print $1}'); V5_32=$(echo "$L32_5" | awk '{print $2}')
+if [ "$N31" = "3" ] && [ "$N32" = "5" ] && \
+   awk -v y="$Y5_32" -v v="$V5_32" \
+   'BEGIN{d1=y-1.0; d2=v+0.02; exit !(d1<1e-3 && d1>-1e-3 && d2<1e-3 && d2>-1e-3)}'; then
+  check_ok "dpline_n (n=3 -> $N31 lineas vs n=5 -> $N32 lineas; ultimo punto (0.5,1,-0.02))"
+else
+  check_fail "dpline_n" "el numero de puntos no discrimina (N31=$N31 N32=$N32, l5=$L32_5)"
+fi
+
+# dpline_geom: polilinea en V -> los puntos 2,3,4 caen en (0.5,0.5),
+# (1,1), (1.5,0.5) (sobre los segmentos, no sobre la recta (0,0)-(2,0))
+G33_2=$(awk 'NR==2{print $1, $2, $3}' "$T2014/disy.33" 2>/dev/null)
+G33_3=$(awk 'NR==3{print $1, $2, $3}' "$T2014/disy.33" 2>/dev/null)
+G33_4=$(awk 'NR==4{print $1, $2, $3}' "$T2014/disy.33" 2>/dev/null)
+if awk -v a="$G33_2" -v b="$G33_3" -v c="$G33_4" \
+   'BEGIN{ split(a,A); split(b,B); split(c,C);
+     exit !( (A[1]-0.5<1e-3&&A[1]-0.5>-1e-3&&A[2]-0.5<1e-3&&A[2]-0.5>-1e-3&&A[3]+0.005<1e-3&&A[3]+0.005>-1e-3) &&
+             (B[1]-1.0<1e-3&&B[1]-1.0>-1e-3&&B[2]-1.0<1e-3&&B[2]-1.0>-1e-3&&B[3]+0.01<1e-3&&B[3]+0.01>-1e-3) &&
+             (C[1]-1.5<1e-3&&C[1]-1.5>-1e-3&&C[2]-0.5<1e-3&&C[2]-0.5>-1e-3&&C[3]+0.005<1e-3&&C[3]+0.005>-1e-3) ) }'; then
+  check_ok "dpline_geom (polilinea en V: (0.5,0.5), (1,1), (1.5,0.5))"
+else
+  check_fail "dpline_geom" "la distribucion sobre la polilinea es incorrecta (l2=$G33_2 l3=$G33_3 l4=$G33_4)"
+fi
+
+# dpline_group: con el filtro {1} el punto (0,0.5) (elemento 1, group 0)
+# NO se imprime -> 2 lineas empezando en x=1; sin filtro -> 3 lineas
+N34=$(wc -l < "$T2014/disy.34" 2>/dev/null || echo 0)
+N35=$(wc -l < "$T2014/disy.35" 2>/dev/null || echo 0)
+X1_34=$(awk 'NR==1{print $1}' "$T2014/disy.34" 2>/dev/null)
+X1_35=$(awk 'NR==1{print $1}' "$T2014/disy.35" 2>/dev/null)
+if [ "$N34" = "2" ] && [ "$N35" = "3" ] && [ "$X1_34" = "1" ] && [ "$X1_35" = "0" ]; then
+  check_ok "dpline_group (filtro {1}: $N34 lineas desde x=$X1_34 vs sin filtro $N35 desde x=$X1_35)"
+else
+  check_fail "dpline_group" "el filtro de grupos no discrimina (N34=$N34 N35=$N35 x34=$X1_34 x35=$X1_35)"
+fi
+
+# dpline_eps: con el default el punto (1.02,0.5) fuera de la malla NO se
+# acepta -> 1 linea; con eps_iso=1.0 se acepta -> 2 lineas (x=1.02)
+N36=$(wc -l < "$T2014/disy.36" 2>/dev/null || echo 0)
+N37=$(wc -l < "$T2014/disy.37" 2>/dev/null || echo 0)
+X2_37=$(awk 'NR==2{print $1}' "$T2014/disy.37" 2>/dev/null)
+if [ "$N36" = "1" ] && [ "$N37" = "2" ] && [ "$X2_37" = "1.02" ]; then
+  check_ok "dpline_eps (default: $N36 linea; eps_iso=1.0: $N37 lineas con x=$X2_37)"
+else
+  check_fail "dpline_eps" "eps_iso no discrimina (N36=$N36 N37=$N37 x2=$X2_37)"
+fi
+
+# dpline_method: -node_start_refined -> 2 lineas (y=0 y y=0.995);
+# -node -> 1 linea (el punto y=0.995 queda sobre el borde deformado 0.99)
+N38=$(wc -l < "$T2014/vely.38" 2>/dev/null || echo 0)
+N39=$(wc -l < "$T2014/vely.39" 2>/dev/null || echo 0)
+Y2_38=$(awk 'NR==2{print $2, $3}' "$T2014/vely.38" 2>/dev/null)
+if [ "$N38" = "2" ] && [ "$N39" = "1" ] && \
+   awk -v a="$Y2_38" 'BEGIN{split(a,A); d1=A[1]-0.995; d2=A[2]+0.00995;
+     exit !(d1<1e-3 && d1>-1e-3 && d2<1e-3 && d2>-1e-3)}'; then
+  check_ok "dpline_method (-node_start_refined $N38 lineas vs -node $N39; y2=$Y2_38)"
+else
+  check_fail "dpline_method" "el metodo no discrimina (N38=$N38 N39=$N39 y2=$Y2_38)"
+fi
+
+# dpline_move: con -yes la linea 3 (2o paso) imprime en y=0.499 (la
+# particula se movio con vely=-0.01*dt=0.1); sin move y=0.5
+Y3_40=$(awk 'NR==3{print $2}' "$T2014/disy.40" 2>/dev/null)
+Y3_41=$(awk 'NR==3{print $2}' "$T2014/disy.41" 2>/dev/null)
+N40=$(wc -l < "$T2014/disy.40" 2>/dev/null || echo 0)
+N41=$(wc -l < "$T2014/disy.41" 2>/dev/null || echo 0)
+if [ "$N40" = "4" ] && [ "$N41" = "4" ] && \
+   awk -v a="$Y3_40" -v b="$Y3_41" \
+   'BEGIN{d1=a-0.499; d2=b-0.5; exit !(d1<1e-3 && d1>-1e-3 && d2<1e-3 && d2>-1e-3)}'; then
+  check_ok "dpline_move (linea 3: y=$Y3_40 movida vs y=$Y3_41 fija)"
+else
+  check_fail "dpline_move" "el move no discrimina (y3_40=$Y3_40 y3_41=$Y3_41)"
+fi
+
+# dpline_time / dpoint_time: primera linea = comentario gnuplot "# time 0.1"
+if [ "$(head -1 "$T2014/disy.42" 2>/dev/null)" = "# time 0.1" ] && \
+   [ "$(head -1 "$T2014/disy.43" 2>/dev/null)" = "# time 0.1" ] && \
+   [ "$(wc -l < "$T2014/disy.42" 2>/dev/null || echo 0)" = "3" ] && \
+   [ "$(wc -l < "$T2014/disy.43" 2>/dev/null || echo 0)" = "2" ]; then
+  check_ok "dpline_time/dpoint_time (primera linea '# time 0.1' + lineas de datos)"
+else
+  check_fail "dpline_time/dpoint_time" "el comentario de tiempo no se escribe"
+fi
+
+# dpoint1: serie temporal en el punto (0.5,0.5): disy = -0.001 (t=0.1) y
+# -0.002 (t=0.2); adis.44 (node_dof_calcul: media del desplazamiento)
+# = -0.0005 y -0.001
+V1_44=$(awk 'NR==1{print $3}' "$T2014/disy.44" 2>/dev/null)
+V2_44=$(awk 'NR==2{print $3}' "$T2014/disy.44" 2>/dev/null)
+A1_44=$(awk 'NR==1{print $3}' "$T2014/adis.44" 2>/dev/null)
+A2_44=$(awk 'NR==2{print $3}' "$T2014/adis.44" 2>/dev/null)
+if awk -v a="$V1_44" -v b="$V2_44" -v c="$A1_44" -v d="$A2_44" \
+   'BEGIN{exit !(a+0.001<1e-3&&a+0.001>-1e-3 && b+0.002<1e-3&&b+0.002>-1e-3 &&
+                 c+0.0005<1e-3&&c+0.0005>-1e-3 && d+0.001<1e-3&&d+0.001>-1e-3)}'; then
+  check_ok "dpoint1 (disy.44 $V1_44/$V2_44 serie; adis.44 $A1_44/$A2_44 calcul)"
+else
+  check_fail "dpoint1" "punto o calcul incorrectos (disy $V1_44/$V2_44, adis $A1_44/$A2_44)"
+fi
+
 if [ "$CHECK_FAIL" = "1" ]; then
   echo "==> ALGUNAS VERIFICACIONES DE ARCHIVOS FALLARON"
   exit 1
 else
-  echo "==> Verificacion de archivos de salida (Sprint 11 lotes 1, 2 y 3): TODAS OK"
+  echo "==> Verificacion de archivos de salida (Sprint 11 lotes 1, 2, 3 y 4): TODAS OK"
 fi
 
 echo "==> Log de compilacion completo en /tmp/tn_build_safe.log"

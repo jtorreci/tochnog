@@ -25,7 +25,7 @@
 #define DELTA 1.e-4
 
 long int point_el( double point[], double coords[], double weight[],
-  long int name, long int nnol )
+  long int name, long int nnol, double eps_iso )
 
 {
   long int found=1, idim=0, inol=0, jnol=0, knol=0, lnol=0, i=0,
@@ -59,17 +59,17 @@ long int point_el( double point[], double coords[], double weight[],
     L1 = work[0];
     L2 = work[1];
     L3 = work[2];
-    if      ( L1<-EPS_ISOP ) 
+    if      ( L1<-eps_iso ) 
       found = 0;
-    else if ( L2<-EPS_ISOP ) 
+    else if ( L2<-eps_iso ) 
       found = 0;
-    else if ( L3<-EPS_ISOP ) 
+    else if ( L3<-eps_iso ) 
       found = 0;
-    else if ( L1>(1.+EPS_ISOP) ) 
+    else if ( L1>(1.+eps_iso) ) 
       found = 0;
-    else if ( L2>(1.+EPS_ISOP) ) 
+    else if ( L2>(1.+eps_iso) ) 
       found = 0;
-    else if ( L3>(1.+EPS_ISOP) ) 
+    else if ( L3>(1.+eps_iso) ) 
       found = 0;
     else {
       if ( name==-TRIA3 ) {
@@ -142,10 +142,10 @@ long int point_el( double point[], double coords[], double weight[],
         for ( i=0; i<nnol; i++ )
           work[idim] += weight[i] * coords[i*ndim+idim];
       }
-      if ( L1<-EPS_ISOP || L1>(1.+EPS_ISOP) ||
-           L2<-EPS_ISOP || L2>(1.+EPS_ISOP) ||
-           L3<-EPS_ISOP || L3>(1.+EPS_ISOP) ||
-           L4<-EPS_ISOP || L4>(1.+EPS_ISOP) ||
+      if ( L1<-eps_iso || L1>(1.+eps_iso) ||
+           L2<-eps_iso || L2>(1.+eps_iso) ||
+           L3<-eps_iso || L3>(1.+eps_iso) ||
+           L4<-eps_iso || L4>(1.+eps_iso) ||
            ( scalar_dabs(point[0]-work[0]) > EPS_SIZE ) ||
            ( scalar_dabs(point[1]-work[1]) > EPS_SIZE ) ||
            ( scalar_dabs(point[2]-work[2]) > EPS_SIZE )
@@ -293,10 +293,10 @@ long int point_el( double point[], double coords[], double weight[],
           array_move( iso_new, iso_old, MDIM );
         }
       }
-      if ( iso_old[0]<(-(1.+EPS_ISOP)) || iso_old[0]>(1.+EPS_ISOP) ||
-           iso_old[1]<(-(1.+EPS_ISOP)) || iso_old[1]>(1.+EPS_ISOP) ||
-           iso_old[2]<(-(1.+EPS_ISOP)) || iso_old[2]>(1.+EPS_ISOP) ||
-           dist_old>element_largest_size*EPS_ISOP || !converged ) found = 0;
+      if ( iso_old[0]<(-(1.+eps_iso)) || iso_old[0]>(1.+eps_iso) ||
+           iso_old[1]<(-(1.+eps_iso)) || iso_old[1]>(1.+eps_iso) ||
+           iso_old[2]<(-(1.+eps_iso)) || iso_old[2]>(1.+eps_iso) ||
+           dist_old>element_largest_size*eps_iso || !converged ) found = 0;
     }
   }
 
