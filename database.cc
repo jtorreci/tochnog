@@ -1769,6 +1769,37 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   data_class[CONTROL_PRINT_VTK_DOF] = CONTROL;
   data_required[CONTROL_PRINT_VTK_DOF] = CONTROL_PRINT_VTK;
 
+  strcpy(name[CONTROL_PRINT_VTK_COORD],"control_print_vtk_coord");
+  type[CONTROL_PRINT_VTK_COORD] = INTEGER;
+  data_length[CONTROL_PRINT_VTK_COORD] = 1;
+  data_class[CONTROL_PRINT_VTK_COORD] = CONTROL;
+  data_required[CONTROL_PRINT_VTK_COORD] = CONTROL_PRINT_VTK;
+
+  strcpy(name[CONTROL_PRINT_VTK_DOF_CALCUL],"control_print_vtk_dof_calcul");
+  type[CONTROL_PRINT_VTK_DOF_CALCUL] = INTEGER;
+  data_length[CONTROL_PRINT_VTK_DOF_CALCUL] = DATA_ITEM_SIZE;
+  fixed_length[CONTROL_PRINT_VTK_DOF_CALCUL] = 0;
+  data_class[CONTROL_PRINT_VTK_DOF_CALCUL] = CONTROL;
+  data_required[CONTROL_PRINT_VTK_DOF_CALCUL] = CONTROL_PRINT_VTK;
+
+  strcpy(name[CONTROL_PRINT_VTK_EMPTY],"control_print_vtk_empty");
+  type[CONTROL_PRINT_VTK_EMPTY] = INTEGER;
+  data_length[CONTROL_PRINT_VTK_EMPTY] = 1;
+  data_class[CONTROL_PRINT_VTK_EMPTY] = CONTROL;
+  data_required[CONTROL_PRINT_VTK_EMPTY] = CONTROL_PRINT_VTK;
+
+  strcpy(name[CONTROL_PRINT_VTK_NODE_METHOD],"control_print_vtk_node_method");
+  type[CONTROL_PRINT_VTK_NODE_METHOD] = INTEGER;
+  data_length[CONTROL_PRINT_VTK_NODE_METHOD] = 1;
+  data_class[CONTROL_PRINT_VTK_NODE_METHOD] = CONTROL;
+  data_required[CONTROL_PRINT_VTK_NODE_METHOD] = CONTROL_PRINT_VTK;
+
+  strcpy(name[CONTROL_PRINT_VTK_OTHER],"control_print_vtk_other");
+  type[CONTROL_PRINT_VTK_OTHER] = INTEGER;
+  data_length[CONTROL_PRINT_VTK_OTHER] = 1;
+  data_class[CONTROL_PRINT_VTK_OTHER] = CONTROL;
+  data_required[CONTROL_PRINT_VTK_OTHER] = CONTROL_PRINT_VTK;
+
   strcpy(name[CONTROL_PRINT_TABULAR],"control_print_tabular");
   type[CONTROL_PRINT_TABULAR] = INTEGER;
   data_length[CONTROL_PRINT_TABULAR] = 1;

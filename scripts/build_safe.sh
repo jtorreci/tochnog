@@ -111,10 +111,18 @@ HIPO_TOTAL=0
 # dof.0..dof.12 y freq_timestep dof.22/23; dof.20/21 se regeneran en el
 # bucle), los .frd de print_frd -separate_sequential (uno por print) y
 # sigxx4.his (historia de los 2 tests, se suma).
+# Sprint 11 lote 3 (extensiones VTK): tn30..tn43.vtk de vtk_coord1/
+# vtk_dofcalc1/vtk_empty1/vtk_nodmeth1/vtk_other1.
 rm -f validation-suite/test-2014/dof.* \
       validation-suite/test-2014/freq_timeint*.frd \
       validation-suite/test-2014/freq_timestep*.frd \
-      validation-suite/test-2014/sigxx4.his
+      validation-suite/test-2014/sigxx4.his \
+      validation-suite/test-2014/tn30.vtk validation-suite/test-2014/tn31.vtk \
+      validation-suite/test-2014/tn32.vtk validation-suite/test-2014/tn33.vtk \
+      validation-suite/test-2014/tn34.vtk validation-suite/test-2014/tn35.vtk \
+      validation-suite/test-2014/tn36.vtk validation-suite/test-2014/tn40.vtk \
+      validation-suite/test-2014/tn41.vtk validation-suite/test-2014/tn42.vtk \
+      validation-suite/test-2014/tn43.vtk
 # 13 tests: 12 preexistentes + familia iface_mc (1 test logico = 6 runs:
 # iface_mc a/a' invarianza, iface_mc_slip b/b' invarianza, tension c, gap d)
 # + iface_mc_mem (memory), + iface_mc_dil/dil_1step/num (dilatancia RF-4 y
@@ -476,6 +484,23 @@ rm -f validation-suite/test-2014/dof.* \
 #   tendria paso en 0.40; con 2 incrementos la secuencia es 0.04..0.40,0.41.
 #   control_print_history NO se gatea (excepcion): sigxx4.his tiene una
 #   linea por paso (10 + 11 = 21), no 6.
+# Sprint 11 lote 3 (extensiones VTK, manual Professional 6.340-6.346):
+# + vtk_coord1 (control_print_vtk_coord: -yes/default escribe el bloque
+#   POINTS en tn30.vtk; -no lo omite en tn31.vtk pero CELLS queda).
+# + vtk_dofcalc1 (control_print_vtk_dof_calcul: sin filtro -> tn32.vtk con
+#   los 2 campos post (materi_strain_total_average + materi_stress_mises);
+#   -none -> tn33.vtk sin campos post pero con los primarios; filtro
+#   -materi_strain_total -> tn34.vtk solo con el campo ept).
+# + vtk_empty1 (control_print_vtk_empty: elemento 2 vacio por densidad 0
+#   (ELEMENT_EMPTY=-YES); default -> tn35.vtk con 2 celdas; -no ->
+#   tn36.vtk con 1 celda en CELLS y CELL_TYPES).
+# + vtk_nodmeth1 (control_print_vtk_node_method: total lagrange con
+#   vely=-0.01 -> disy=-0.001; -node -> tn40.vtk con la coordenada
+#   almacenada y=1.0; -node_deformed_mesh -> tn41.vtk con y=0.999).
+# + vtk_other1 (control_print_vtk_other: default -> tn42.vtk con
+#   SCALARS boundary_condition (nodo 1=1.0, nodo 4=0.0: bounda_force no
+#   es condicion de contorno) + VECTORS mesh_deformation; -no ->
+#   tn43.vtk sin ninguno de los dos campos).
 for t in hypo1 hypo2 hypo3 hypo4 smooth1 dof1 mlx1 vtk_dof1 gen1 genbeam1          reset1 cda1 cda_arith cda_copy cda_activate cdist_normal cdist_corr cdist_clamp cd_method cd_geom \
          iface_mc iface_mc_1step iface_mc_slip iface_mc_slip_1step iface_mc_tension iface_mc_gap \
          iface_mc_mem iface_mc_dil iface_mc_dil_1step iface_mc_num \
@@ -512,7 +537,8 @@ for t in hypo1 hypo2 hypo3 hypo4 smooth1 dof1 mlx1 vtk_dof1 gen1 genbeam1       
          mstrain_druckprag mstrain_druckprag_elast \
          mdiprisco_hist mc_pressure_min mc_pressure_min_off mrepeat_save \
          dbmeth partialname meshdoff dofrhside elmethod hreltime numit dofid_no \
-         freq_timeint freq_timestep; do
+         freq_timeint freq_timestep \
+         vtk_coord1 vtk_dofcalc1 vtk_empty1 vtk_nodmeth1 vtk_other1; do
   HIPO_TOTAL=$((HIPO_TOTAL+1))
   ( cd validation-suite/test-2014 &&
     ulimit -v 4000000 &&
@@ -525,7 +551,7 @@ for t in hypo1 hypo2 hypo3 hypo4 smooth1 dof1 mlx1 vtk_dof1 gen1 genbeam1       
     echo "    $t: FALLO (rc=$RC)"
   fi
 done
-echo "==> Resumen: $HIPO_OK/$HIPO_TOTAL runs OK (13 tests: 12 preexistentes + familia iface_mc en 10 runs + familia 3D en 5 runs + familia generate_interface en 6 runs + familia materi_direct en 5 runs + materi_displacement_relative en 2 runs + slide/reset_value en 2 runs + cda_arith/copy/activate en 3 runs + cdist_normal/corr/clamp en 3 runs + cd_method/cd_geom en 2 runs + gravity/settlement en 4 runs + contact en 1 run + contact_block/ctrl_apply/heatgen en 3 runs + groundflow_consolidate_off en 1 run + groundflow_vangenuchten/groundflow_nonsaturated_off en 2 runs + groundflow_total_pressure_tension/groundflow_interface en 2 runs + groundflow_flux_edge en 1 run + groundflow_phreatic_multiple en 1 run + groundflow_seepage en 1 run + groundflow_pressure_atm/_def en 2 runs + groundflow_total_pressure_limit/_dry en 2 runs + condif_heat_edge/vol/vol2 en 3 runs + condif_convec/rad/convec_el en 3 runs + aeg_node/aeg_seq/bt_factor en 3 runs + iface_condif/expansion/tangref en 3 runs + node_force_inertia/slide/pressure en 3 runs + creset_geom/iface en 2 runs + fedge_alias/restrict, fvol_elem y cmat_gate en 4 runs + fproj_tunnel en 1 run + dsmall/dignore en 2 runs + mdirect_comp/gate en 2 runs + mdp_shear/mfactor en 2 runs + mmc_tension en 1 run + mmchs_soft en 1 run + mcap2/mcap_legacy en 2 runs + mcrunch/mcrunch_low en 2 runs + mvoid/mvoid_low en 2 runs + mpower en 1 run + mshf/mshf_nof en 2 runs + mk0/mk0_off en 2 runs + myoung6/myoung6_e2/myoung6_e3/myoung6_apply en 4 runs + msph/msph_flat en 2 runs + mcap1/mcap1_elast/mcap1_comb en 3 runs + mhardsoil_elast/elast2/unload/unload_flat/plast/plast_elast/gp0/gp0_off en 8 runs + mstrain_cap/_elast, mstrain_compression/_elast, mstrain_diprisco/_elast, mstrain_druckprag/_elast en 8 runs + mdiprisco_hist en 1 run + mc_pressure_min/_off en 2 runs (Sprint 10 lote 9) + mrepeat_save en 1 run (Sprint 10 lote 10) + dbmeth/partialname/meshdoff/dofrhside/elmethod/hreltime/numit/dofid_no en 8 runs (Sprint 11 lote 1) + freq_timeint/freq_timestep en 2 runs (Sprint 11 lote 2))."
+echo "==> Resumen: $HIPO_OK/$HIPO_TOTAL runs OK (13 tests: 12 preexistentes + familia iface_mc en 10 runs + familia 3D en 5 runs + familia generate_interface en 6 runs + familia materi_direct en 5 runs + materi_displacement_relative en 2 runs + slide/reset_value en 2 runs + cda_arith/copy/activate en 3 runs + cdist_normal/corr/clamp en 3 runs + cd_method/cd_geom en 2 runs + gravity/settlement en 4 runs + contact en 1 run + contact_block/ctrl_apply/heatgen en 3 runs + groundflow_consolidate_off en 1 run + groundflow_vangenuchten/groundflow_nonsaturated_off en 2 runs + groundflow_total_pressure_tension/groundflow_interface en 2 runs + groundflow_flux_edge en 1 run + groundflow_phreatic_multiple en 1 run + groundflow_seepage en 1 run + groundflow_pressure_atm/_def en 2 runs + groundflow_total_pressure_limit/_dry en 2 runs + condif_heat_edge/vol/vol2 en 3 runs + condif_convec/rad/convec_el en 3 runs + aeg_node/aeg_seq/bt_factor en 3 runs + iface_condif/expansion/tangref en 3 runs + node_force_inertia/slide/pressure en 3 runs + creset_geom/iface en 2 runs + fedge_alias/restrict, fvol_elem y cmat_gate en 4 runs + fproj_tunnel en 1 run + dsmall/dignore en 2 runs + mdirect_comp/gate en 2 runs + mdp_shear/mfactor en 2 runs + mmc_tension en 1 run + mmchs_soft en 1 run + mcap2/mcap_legacy en 2 runs + mcrunch/mcrunch_low en 2 runs + mvoid/mvoid_low en 2 runs + mpower en 1 run + mshf/mshf_nof en 2 runs + mk0/mk0_off en 2 runs + myoung6/myoung6_e2/myoung6_e3/myoung6_apply en 4 runs + msph/msph_flat en 2 runs + mcap1/mcap1_elast/mcap1_comb en 3 runs + mhardsoil_elast/elast2/unload/unload_flat/plast/plast_elast/gp0/gp0_off en 8 runs + mstrain_cap/_elast, mstrain_compression/_elast, mstrain_diprisco/_elast, mstrain_druckprag/_elast en 8 runs + mdiprisco_hist en 1 run + mc_pressure_min/_off en 2 runs (Sprint 10 lote 9) + mrepeat_save en 1 run (Sprint 10 lote 10) + dbmeth/partialname/meshdoff/dofrhside/elmethod/hreltime/numit/dofid_no en 8 runs (Sprint 11 lote 1) + freq_timeint/freq_timestep en 2 runs (Sprint 11 lote 2) + vtk_coord1/vtk_dofcalc1/vtk_empty1/vtk_nodmeth1/vtk_other1 en 5 runs (Sprint 11 lote 3))."
 
 # ---------------------------------------------------------------------
 # Sprint 11 lote 1: verificacion de ARCHIVOS y STDOUT de los 8 keywords
@@ -698,11 +724,82 @@ else
   check_fail "excepcion history" "esperaba 21 lineas en sigxx4.his (10+11 pasos), hay $NHIS"
 fi
 
+# ---------------------------------------------------------------------
+# Sprint 11 lote 3: verificacion de ARCHIVOS de las 5 extensiones VTK
+# (control_print_vtk_coord 6.340, _dof_calcul 6.342, _empty 6.343,
+# _node_method 6.345, _other 6.346). Los .vtk se regeneran por paso y
+# quedan los de la ultima escritura.
+# ---------------------------------------------------------------------
+
+# vtk_coord1: default (o -yes) escribe el bloque POINTS; -no lo omite
+# (tn31.vtk conserva CELLS/CELL_TYPES: solo desaparecen las coordenadas)
+if [ "$(grep -c '^POINTS' "$T2014/tn30.vtk" 2>/dev/null)" -ge 1 ] && \
+   [ "$(grep -c '^POINTS' "$T2014/tn31.vtk" 2>/dev/null)" = "0" ] && \
+   grep -q '^CELLS' "$T2014/tn31.vtk"; then
+  check_ok "vtk_coord (tn30 con POINTS por defecto; tn31 -no sin POINTS pero con CELLS)"
+else
+  check_fail "vtk_coord" "el bloque POINTS no discrimina -yes/-no"
+fi
+
+# vtk_dofcalc1: sin filtro -> los 2 campos post; -none -> ninguno (los
+# primarios intactos: VECTORS materi_velocity); filtro -materi_strain_total
+# -> solo el campo ept (materi_stress_mises ausente)
+if grep -q "materi_strain_total_average" "$T2014/tn32.vtk" 2>/dev/null && \
+   grep -q "materi_stress_mises" "$T2014/tn32.vtk" && \
+   ! grep -q "materi_strain_total_average" "$T2014/tn33.vtk" && \
+   ! grep -q "materi_stress_mises" "$T2014/tn33.vtk" && \
+   grep -q "materi_velocity" "$T2014/tn33.vtk" && \
+   grep -q "materi_strain_total_average" "$T2014/tn34.vtk" && \
+   ! grep -q "materi_stress_mises" "$T2014/tn34.vtk"; then
+  check_ok "vtk_dof_calcul (sin filtro ambos campos post; -none ninguno; filtro solo ept; primarios intactos)"
+else
+  check_fail "vtk_dof_calcul" "el filtro de campos post no discrimina"
+fi
+
+# vtk_empty1: default -> 2 celdas (elemento vacio incluido); -no -> 1
+# celda (el elemento vacio por densidad 0 se excluye de CELLS/CELL_TYPES)
+C35=$(awk '/^CELLS /{print $2; exit}' "$T2014/tn35.vtk" 2>/dev/null)
+C36=$(awk '/^CELLS /{print $2; exit}' "$T2014/tn36.vtk" 2>/dev/null)
+T36=$(awk '/^CELL_TYPES /{print $2; exit}' "$T2014/tn36.vtk" 2>/dev/null)
+if [ "$C35" = "2" ] && [ "$C36" = "1" ] && [ "$T36" = "1" ]; then
+  check_ok "vtk_empty (tn35 $C35 celdas incluye el vacio; tn36 -no $C36 celda)"
+else
+  check_fail "vtk_empty" "el conteo de celdas no discrimina -yes/-no (C35=$C35 C36=$C36 T36=$T36)"
+fi
+
+# vtk_nodmeth1: -node -> coordenadas almacenadas (y del nodo 4 = 1.0);
+# -node_deformed_mesh -> deformadas (y ~ 1 + disy = 0.998, disy=-0.002
+# con vely=-0.01 durante 0.2)
+Y40=$(awk '/^POINTS /{f=1;next} f&&/^CELLS /{exit} f&&NF{n++; if(n==4){print $2; exit}}' "$T2014/tn40.vtk" 2>/dev/null)
+Y41=$(awk '/^POINTS /{f=1;next} f&&/^CELLS /{exit} f&&NF{n++; if(n==4){print $2; exit}}' "$T2014/tn41.vtk" 2>/dev/null)
+if awk -v a="$Y40" -v b="$Y41" \
+   'BEGIN{ d1=a-1.0; d2=(b-a)+0.002; exit !(d1<1.e-3 && d1>-1.e-3 && d2<1.e-3 && d2>-1.e-3) }'; then
+  check_ok "vtk_node_method (tn40 y=$Y40 almacenada vs tn41 y=$Y41 deformada)"
+else
+  check_fail "vtk_node_method" "coordenadas no discriminan -node/-node_deformed_mesh (y40=$Y40 y41=$Y41)"
+fi
+
+# vtk_other1: default -> boundary_condition (nodo 1 = 1.0 por bounda_unknown,
+# nodo 4 = 0.0 por bounda_force que NO es condicion de contorno) +
+# mesh_deformation; -no -> ninguno de los dos campos
+BC=$(awk '/^SCALARS boundary_condition/{f=1;next} f&&/^$/{exit} f&&/^LOOKUP_TABLE/{next} f' "$T2014/tn42.vtk" 2>/dev/null)
+B1=$(echo "$BC" | awk 'NR==1{print $1}')
+B4=$(echo "$BC" | awk 'NR==4{print $1}')
+if grep -q "boundary_condition" "$T2014/tn42.vtk" 2>/dev/null && \
+   grep -q "mesh_deformation" "$T2014/tn42.vtk" && \
+   [ "$B1" = "1.0" ] && [ "$B4" = "0.0" ] && \
+   ! grep -q "boundary_condition" "$T2014/tn43.vtk" && \
+   ! grep -q "mesh_deformation" "$T2014/tn43.vtk"; then
+  check_ok "vtk_other (tn42 boundary_condition $B1/$B4 + mesh_deformation; tn43 -no sin campos)"
+else
+  check_fail "vtk_other" "los campos other no discriminan -yes/-no (B1=$B1 B4=$B4)"
+fi
+
 if [ "$CHECK_FAIL" = "1" ]; then
   echo "==> ALGUNAS VERIFICACIONES DE ARCHIVOS FALLARON"
   exit 1
 else
-  echo "==> Verificacion de archivos de salida (Sprint 11 lotes 1 y 2): TODAS OK"
+  echo "==> Verificacion de archivos de salida (Sprint 11 lotes 1, 2 y 3): TODAS OK"
 fi
 
 echo "==> Log de compilacion completo en /tmp/tn_build_safe.log"
