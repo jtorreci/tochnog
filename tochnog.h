@@ -426,6 +426,7 @@ enum {
   CONTROL_PRINT_INTERFACE_STRESS_3D_GEOMETRY,
   CONTROL_PRINT_INTERFACE_STRESS_3D_ORDER,
   CONTROL_PRINT_MATLAB,
+  CONTROL_PRINT_MATERI_STRESS_FORCE,
   CONTROL_PRINT_NUMBER_ITERATIONS,
   CONTROL_PRINT_PARTIALNAME,
   CONTROL_PRINT_PLOTMTV,
@@ -1141,6 +1142,16 @@ enum {
   POSITIVE,
   POST,
   POST_CALCUL,
+  POST_CALCUL_MATERI_STRESS_FORCE_AVERAGE,
+  POST_CALCUL_MATERI_STRESS_FORCE_DIRECTION_EXCLUDE,
+  POST_CALCUL_MATERI_STRESS_FORCE_DIRECTION_EXCLUDE_EPSILON,
+  POST_CALCUL_MATERI_STRESS_FORCE_DIRECTION_INCLUDE,
+  POST_CALCUL_MATERI_STRESS_FORCE_DIRECTION_INCLUDE_EPSILON,
+  POST_CALCUL_MATERI_STRESS_FORCE_ELEMENT_GROUP,
+  POST_CALCUL_MATERI_STRESS_FORCE_OUTER,
+  POST_CALCUL_MATERI_STRESS_FORCE_PLOT_SWITCH,
+  POST_CALCUL_MATERI_STRESS_FORCE_REFERENCE_POINT,
+  POST_CALCUL_MATERI_STRESS_FORCE_THICKNESS_SWITCH,
   POST_CALCUL_SCAL_VEC_MAT,
   POST_CALCUL_UNKNOWN_OPERAT,
   POST_ERROR_ITEM,
@@ -1171,6 +1182,7 @@ enum {
   POST_QUADRILATERAL_DOF_CALCUL,
   POST_QUADRILATERAL_N,
   PREONLY,
+  PRIMARY,
   PRINT,
   PRINT_ARITHMETIC,
   PRINT_CONTROL,
@@ -1455,6 +1467,11 @@ void      bounda( void );
 void      bounda_time_file_apply( long int iboun, double total_time,
             double bounda_time[], long int &ninc );
 void      calculate( void );
+void      post_calcul_materi_stress_force_validate( void );
+long int  post_calcul_materi_stress_force_items( void );
+void      post_calcul_materi_stress_force( double unknown_values[],
+            long int inod, double coord[], double dof[],
+            double result[], long int &length_result );
 void      calculate_operat( double unknown_values[], long int inod, 
             double coord[], double dof[],
             double result[], long int &length_result );
@@ -1842,6 +1859,7 @@ void      print_gmsh( long int icontrol, long int task );
 void      print_frd( long int icontrol, long int task );
 void      print_interface_stress( long int icontrol, long int task );
 void      print_beam_force_moment( long int icontrol, long int task );
+void      print_materi_stress_force( long int icontrol, long int method );
 void      print_tabular( long int icontrol );
 bool      calc_derived( const double sig[6], double out[5] );
 class     SqliteDB;

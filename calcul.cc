@@ -128,6 +128,28 @@ void calculate( void )
       }
       calcul_operat = calcul[icalcul*2+1];
 
+      // post_calcul -materi_stress -force (manual Professional 6.913):
+      // the family is NODAL - reject the POST_LINE_DOF/POST_POINT_DOF/
+      // POST_QUADRILATERAL_DOF records (there is no element behind them
+      // to integrate over) and validate the configuration records once
+      // per record (calcul_force.cc).
+      if ( unknown==-MATERI_STRESS && labs(calcul_operat)==FORCE ) {
+        for ( itype=0; itype<NTYPE; itype++ ) {
+          db_max_index( type_post_dof[itype], max_type_post,
+            VERSION_NORMAL, GET );
+          for ( ipost=0; ipost<=max_type_post; ipost++ ) {
+            if ( db_active_index( type_post_dof[itype], ipost,
+                 VERSION_NORMAL ) ) {
+              pri( "Error: post_calcul -materi_stress -force is a NODAL "
+                   "calculation; POST_LINE_DOF/POST_POINT_DOF/"
+                   "POST_QUADRILATERAL_DOF records are not supported" );
+              exit(TN_EXIT_STATUS);
+            }
+          }
+        }
+        post_calcul_materi_stress_force_validate();
+      }
+
       if ( calcul_matrix ) {
         if ( dof_amount[calcul_mat_indx]==MDIM*MDIM ) {
           pri( "Error: POST_CALCUL is not available for non-symmetric matrices" );
@@ -374,6 +396,50 @@ void calculate( void )
         post_calcul_scal_vec_mat[ncalcul-1] = -SCALAR;
         post_calcul_unknown_operat[(ncalcul-1)*2+0] = unknown;
         post_calcul_unknown_operat[(ncalcul-1)*2+1] = calcul_operat;           
+      }
+      else if ( unknown==-MATERI_STRESS && labs(calcul_operat)==FORCE ) {
+        long int iforce=0, icomp=0, nforce_stems=0, nforce_comp=0;
+        char force_stem[MCHAR], force_comp[MCHAR];
+        // post_calcul -materi_stress -force (manual Professional 6.913):
+        // normal force, shear force and moment(s) per node. The items are
+        // GLOBAL PLOT vectors (components in the structure thickness
+        // direction; only the SIZE is the physical value):
+        //   2D (9 items):  norx nory nors | shex shey shes | momx momy moms
+        //   3D (16 items): norx nory norz nors | shex shey shez shes |
+        //                  mom1x mom1y mom1z mom1s | mom2x mom2y mom2z mom2s
+        // The flat NODE_DOF_CALCUL layout is ONE slot per item (the
+        // SCALARS section of print_vt.cc reads them one by one); the
+        // -VECTOR marks group the item with its ndim component siblings
+        // (print_vt.cc advances nval=MDIM for -VECTOR entries). Both
+        // layouts fit in MCALCUL=20 (9 and 16); the 3D block leaves only
+        // 4 slots for other post_calcul items (documented limitation).
+        if ( ndim==2 ) { nforce_stems = 3; nforce_comp = 3; }
+        else           { nforce_stems = 4; nforce_comp = 4; }
+        for ( iforce=0; iforce<nforce_stems; iforce++ ) {
+          if      ( iforce==0 ) strcpy( force_stem, "nor" );
+          else if ( iforce==1 ) strcpy( force_stem, "she" );
+          else if ( ndim==2 )   strcpy( force_stem, "mom" );
+          else if ( iforce==2 ) strcpy( force_stem, "mom1" );
+          else                  strcpy( force_stem, "mom2" );
+          for ( icomp=0; icomp<nforce_comp; icomp++ ) {
+            if      ( icomp==0 ) strcpy( force_comp, "x" );
+            else if ( icomp==1 ) strcpy( force_comp, "y" );
+            else if ( ndim==2 )  strcpy( force_comp, "s" );
+            else if ( icomp==2 ) strcpy( force_comp, "z" );
+            else                 strcpy( force_comp, "s" );
+            strcpy( outname, force_stem );
+            strcat( outname, force_comp );
+            strcat( outname, "_" );
+            strcat( outname, unknown_name );
+            ncalcul++;
+            strcpy( post_calcul_names[ncalcul-1], outname );
+            strcpy( post_calcul_names_without_extension[ncalcul-1], outname );
+            post_calcul_scal_vec_mat[ncalcul-1] =
+              ( icomp==nforce_comp-1 ) ? -SCALAR : -VECTOR;
+            post_calcul_unknown_operat[(ncalcul-1)*2+0] = unknown;
+            post_calcul_unknown_operat[(ncalcul-1)*2+1] = calcul_operat;
+          }
+        }
       }
       else
         db_error( POST_CALCUL, 0 );
@@ -642,6 +708,14 @@ void calculate_operat( double unknown_values[], long int inod,
       GET_IF_EXISTS );
     result[0] = pres;
     length_result = 1;
+  }
+  else if ( labs(calcul_operat)==FORCE ) {
+    // post_calcul -materi_stress -force (manual Professional 6.913):
+    // per-node normal/shear force and moment(s); the values come from
+    // the stub in calcul_force.cc (lot 1: zero-filled layout, the
+    // numerical integration lands in L2/L3).
+    post_calcul_materi_stress_force( unknown_values, inod, coord, dof,
+      result, length_result );
   }
   else
     db_error( POST_CALCUL, 0 );

@@ -1089,6 +1089,16 @@ void step_close( long int task, long int ipar, long int npar, long int ipar_i, l
         VERSION_NORMAL, GET );
       print_beam_force_moment( icontrol, ival[0] );
     }
+    if ( frequency_allowed && db_active_index( CONTROL_PRINT_MATERI_STRESS_FORCE, icontrol, VERSION_NORMAL ) ) {
+      // control_print_materi_stress_force (manual Professional 6.328):
+      // prints the post_calcul -materi_stress -force results to
+      // materi_stress_force.<icontrol> (the manual "index" is the
+      // record index, like control_print_beam_force_moment); the record
+      // value is the method (-all / -primary).
+      db( CONTROL_PRINT_MATERI_STRESS_FORCE, icontrol, ival, ddum, ldum,
+        VERSION_NORMAL, GET );
+      print_materi_stress_force( icontrol, ival[0] );
+    }
   }
   cout << flush;
 

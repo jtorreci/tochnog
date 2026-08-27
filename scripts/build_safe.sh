@@ -130,6 +130,9 @@ HIPO_TOTAL=0
 # Sprint 11 lote 6 (beam force/moment): beam_force_moment.5/7/8 (bmom1/
 # bmom_truss/bmom_2d), beam_force_moment.0 (bmom_switch, sequential) y
 # element_truss_force_0.7 (bmom_truss; bmom_noint NO debe crear archivo).
+# Sub-sprint materi_stress_force lote 1 (infraestructura): los archivos
+# materi_stress_force.* de msf_parse/msf_print/msf_errors_2dwarn (el
+# print escribe UN bloque por step_close en modo append).
 rm -f validation-suite/test-2014/dof.* \
       validation-suite/test-2014/freq_timeint*.frd \
       validation-suite/test-2014/freq_timestep*.frd \
@@ -146,6 +149,7 @@ rm -f validation-suite/test-2014/dof.* \
       validation-suite/test-2014/avel.* \
       validation-suite/test-2014/node_dof_0.11 validation-suite/test-2014/node_dof_1.11 \
       validation-suite/test-2014/beam_force_moment.* \
+      validation-suite/test-2014/materi_stress_force.* \
       validation-suite/test-2014/element_truss_force_0.7
 # 13 tests: 12 preexistentes + familia iface_mc (1 test logico = 6 runs:
 # iface_mc a/a' invarianza, iface_mc_slip b/b' invarianza, tension c, gap d)
@@ -612,7 +616,8 @@ for t in hypo1 hypo2 hypo3 hypo4 smooth1 dof1 mlx1 vtk_dof1 gen1 genbeam1       
          dpline1 dpline_n dpline_geom dpline_group dpline_eps \
          dpline_method dpline_move dpline_time dpoint_time dpoint1 \
          cpn1 cpn_angular cpn_geom cpn_sort cpn_zero dsmooth1 dsmooth_n \
-         bmom1 bmom_switch bmom_truss bmom_2d bmom_noint; do
+         bmom1 bmom_switch bmom_truss bmom_2d bmom_noint \
+         msf_parse msf_parse_3d msf_print msf_errors_2dwarn; do
   HIPO_TOTAL=$((HIPO_TOTAL+1))
   ( cd validation-suite/test-2014 &&
     ulimit -v 4000000 &&
@@ -625,7 +630,7 @@ for t in hypo1 hypo2 hypo3 hypo4 smooth1 dof1 mlx1 vtk_dof1 gen1 genbeam1       
     echo "    $t: FALLO (rc=$RC)"
   fi
 done
-echo "==> Resumen: $HIPO_OK/$HIPO_TOTAL runs OK (13 tests: 12 preexistentes + familia iface_mc en 10 runs + familia 3D en 5 runs + familia generate_interface en 6 runs + familia materi_direct en 5 runs + materi_displacement_relative en 2 runs + slide/reset_value en 2 runs + cda_arith/copy/activate en 3 runs + cdist_normal/corr/clamp en 3 runs + cd_method/cd_geom en 2 runs + gravity/settlement en 4 runs + contact en 1 run + contact_block/ctrl_apply/heatgen en 3 runs + groundflow_consolidate_off en 1 run + groundflow_vangenuchten/groundflow_nonsaturated_off en 2 runs + groundflow_total_pressure_tension/groundflow_interface en 2 runs + groundflow_flux_edge en 1 run + groundflow_phreatic_multiple en 1 run + groundflow_seepage en 1 run + groundflow_pressure_atm/_def en 2 runs + groundflow_total_pressure_limit/_dry en 2 runs + condif_heat_edge/vol/vol2 en 3 runs + condif_convec/rad/convec_el en 3 runs + aeg_node/aeg_seq/bt_factor en 3 runs + iface_condif/expansion/tangref en 3 runs + node_force_inertia/slide/pressure en 3 runs + creset_geom/iface en 2 runs + fedge_alias/restrict, fvol_elem y cmat_gate en 4 runs + fproj_tunnel en 1 run + dsmall/dignore en 2 runs + mdirect_comp/gate en 2 runs + mdp_shear/mfactor en 2 runs + mmc_tension en 1 run + mmchs_soft en 1 run + mcap2/mcap_legacy en 2 runs + mcrunch/mcrunch_low en 2 runs + mvoid/mvoid_low en 2 runs + mpower en 1 run + mshf/mshf_nof en 2 runs + mk0/mk0_off en 2 runs + myoung6/myoung6_e2/myoung6_e3/myoung6_apply en 4 runs + msph/msph_flat en 2 runs + mcap1/mcap1_elast/mcap1_comb en 3 runs + mhardsoil_elast/elast2/unload/unload_flat/plast/plast_elast/gp0/gp0_off en 8 runs + mstrain_cap/_elast, mstrain_compression/_elast, mstrain_diprisco/_elast, mstrain_druckprag/_elast en 8 runs + mdiprisco_hist en 1 run + mc_pressure_min/_off en 2 runs (Sprint 10 lote 9) + mrepeat_save en 1 run (Sprint 10 lote 10) + dbmeth/partialname/meshdoff/dofrhside/elmethod/hreltime/numit/dofid_no en 8 runs (Sprint 11 lote 1) + freq_timeint/freq_timestep en 2 runs (Sprint 11 lote 2) + vtk_coord1/vtk_dofcalc1/vtk_empty1/vtk_nodmeth1/vtk_other1 en 5 runs (Sprint 11 lote 3) + dpline1/dpline_n/dpline_geom/dpline_group/dpline_eps/dpline_method/dpline_move/dpline_time/dpoint_time/dpoint1 en 10 runs (Sprint 11 lote 4) + cpn1/cpn_angular/cpn_geom/cpn_sort/cpn_zero/dsmooth1/dsmooth_n en 7 runs (Sprint 11 lote 5) + bmom1/bmom_switch/bmom_truss/bmom_2d/bmom_noint en 5 runs (Sprint 11 lote 6))."
+echo "==> Resumen: $HIPO_OK/$HIPO_TOTAL runs OK (13 tests: 12 preexistentes + familia iface_mc en 10 runs + familia 3D en 5 runs + familia generate_interface en 6 runs + familia materi_direct en 5 runs + materi_displacement_relative en 2 runs + slide/reset_value en 2 runs + cda_arith/copy/activate en 3 runs + cdist_normal/corr/clamp en 3 runs + cd_method/cd_geom en 2 runs + gravity/settlement en 4 runs + contact en 1 run + contact_block/ctrl_apply/heatgen en 3 runs + groundflow_consolidate_off en 1 run + groundflow_vangenuchten/groundflow_nonsaturated_off en 2 runs + groundflow_total_pressure_tension/groundflow_interface en 2 runs + groundflow_flux_edge en 1 run + groundflow_phreatic_multiple en 1 run + groundflow_seepage en 1 run + groundflow_pressure_atm/_def en 2 runs + groundflow_total_pressure_limit/_dry en 2 runs + condif_heat_edge/vol/vol2 en 3 runs + condif_convec/rad/convec_el en 3 runs + aeg_node/aeg_seq/bt_factor en 3 runs + iface_condif/expansion/tangref en 3 runs + node_force_inertia/slide/pressure en 3 runs + creset_geom/iface en 2 runs + fedge_alias/restrict, fvol_elem y cmat_gate en 4 runs + fproj_tunnel en 1 run + dsmall/dignore en 2 runs + mdirect_comp/gate en 2 runs + mdp_shear/mfactor en 2 runs + mmc_tension en 1 run + mmchs_soft en 1 run + mcap2/mcap_legacy en 2 runs + mcrunch/mcrunch_low en 2 runs + mvoid/mvoid_low en 2 runs + mpower en 1 run + mshf/mshf_nof en 2 runs + mk0/mk0_off en 2 runs + myoung6/myoung6_e2/myoung6_e3/myoung6_apply en 4 runs + msph/msph_flat en 2 runs + mcap1/mcap1_elast/mcap1_comb en 3 runs + mhardsoil_elast/elast2/unload/unload_flat/plast/plast_elast/gp0/gp0_off en 8 runs + mstrain_cap/_elast, mstrain_compression/_elast, mstrain_diprisco/_elast, mstrain_druckprag/_elast en 8 runs + mdiprisco_hist en 1 run + mc_pressure_min/_off en 2 runs (Sprint 10 lote 9) + mrepeat_save en 1 run (Sprint 10 lote 10) + dbmeth/partialname/meshdoff/dofrhside/elmethod/hreltime/numit/dofid_no en 8 runs (Sprint 11 lote 1) + freq_timeint/freq_timestep en 2 runs (Sprint 11 lote 2) + vtk_coord1/vtk_dofcalc1/vtk_empty1/vtk_nodmeth1/vtk_other1 en 5 runs (Sprint 11 lote 3) + dpline1/dpline_n/dpline_geom/dpline_group/dpline_eps/dpline_method/dpline_move/dpline_time/dpoint_time/dpoint1 en 10 runs (Sprint 11 lote 4) + cpn1/cpn_angular/cpn_geom/cpn_sort/cpn_zero/dsmooth1/dsmooth_n en 7 runs (Sprint 11 lote 5) + bmom1/bmom_switch/bmom_truss/bmom_2d/bmom_noint en 5 runs (Sprint 11 lote 6) + msf_parse/msf_parse_3d/msf_print/msf_errors_2dwarn en 4 runs (sub-sprint materi_stress_force, lote 1))."
 
 # ---------------------------------------------------------------------
 # Sprint 11 lote 1: verificacion de ARCHIVOS y STDOUT de los 8 keywords
@@ -1158,11 +1163,89 @@ else
   check_fail "bmom_noint" "beam_force_moment.9 no deberia existir"
 fi
 
+# ---------------------------------------------------------------------
+# Sub-sprint materi_stress_force, lote 1 (infraestructura): registro +
+# dispatch + print. A/B verificado con el calcul.cc de HEAD (binario
+# temporal): post_calcul -materi_stress -force moria en
+# db_error(POST_CALCUL,0) del dispatch de operats ("Error detected for
+# data item : post_calcul"); ahora la rama FORCE existe en calculate()/
+# calculate_operat (calcul.cc), los 10 records de configuracion
+# post_calcul_materi_stress_force_* y control_print_materi_stress_force
+# estan registrados, y el print escribe materi_stress_force.<index>.
+# El calculo numerico llega en L2/L3: en lote 1 los valores son 0.
+# ---------------------------------------------------------------------
+
+# msf_parse: 2D con 9 records de configuracion + print -> archivo
+# materi_stress_force.100 con 3 lineas de cabecera (#) + 4 nodos; el
+# aviso "not yet implemented" aparece UNA vez en el stdout; el warning
+# de direction_* en 2D tambien
+if [ -f "$T2014/materi_stress_force.100" ] && \
+   [ "$(grep -c '^#' "$T2014/materi_stress_force.100")" -ge 3 ] && \
+   [ "$(grep -vc '^#' "$T2014/materi_stress_force.100")" = "4" ] && \
+   [ "$(grep -c 'not yet implemented' /tmp/msf_parse_safe.out)" = "1" ] && \
+   grep -q "direction" /tmp/msf_parse_safe.out; then
+  check_ok "msf_parse (2D: cabecera comentada + 4 lineas de nodo + aviso not-yet-implemented unico + warning 2D)"
+else
+  check_fail "msf_parse" "materi_stress_force.100 o mensajes inesperados ($(ls "$T2014"/materi_stress_force.* 2>/dev/null))"
+fi
+
+# msf_parse_3d: 16 items 3D (MCALCUL=20 OK) -> materi_stress_force.200
+# con 16 columnas de datos y 8 lineas de nodo
+MSF200_NCOL=$(awk '!/^#/ && NF>0 {print NF; exit}' "$T2014/materi_stress_force.200" 2>/dev/null)
+if [ -f "$T2014/materi_stress_force.200" ] && \
+   [ "$(grep -vc '^#' "$T2014/materi_stress_force.200")" = "8" ] && \
+   [ "$MSF200_NCOL" = "17" ]; then
+  check_ok "msf_parse_3d (3D: 8 nodos x 16 items + columna nodo = $MSF200_NCOL columnas)"
+else
+  check_fail "msf_parse_3d" "materi_stress_force.200 inesperado ($MSF200_NCOL columnas)"
+fi
+
+# msf_print: -all (300) y -primary (301) -> en lote 1 sin promediado
+# quad9/hex27 ambos escriben 4 lineas (todos los nodos son primarios);
+# valores 0 (integracion L2/L3 pendiente) y cabecera comentada
+N300=$(grep -vc '^#' "$T2014/materi_stress_force.300" 2>/dev/null || echo 0)
+N301=$(grep -vc '^#' "$T2014/materi_stress_force.301" 2>/dev/null || echo 0)
+if [ "$N300" = "4" ] && [ "$N301" = "4" ] && \
+   awk '!/^#/ && NF==10 { for (i=2;i<=NF;i++) if ($i!=0) bad=1 } END{exit bad}' \
+   "$T2014/materi_stress_force.300" 2>/dev/null; then
+  check_ok "msf_print (-all 4 lineas == -primary 4 lineas; 9 items 2D todos 0 en lote 1)"
+else
+  check_fail "msf_print" "conteo o valores inesperados (N300=$N300 N301=$N301)"
+fi
+
+# msf_errors_2dwarn: 2D sin reference_point -> warning y rc=0 (run OK)
+if grep -q "default reference point" /tmp/msf_errors_2dwarn_safe.out; then
+  check_ok "msf_errors_2dwarn (2D sin reference_point: warning + default documentado, rc=0)"
+else
+  check_fail "msf_errors_2dwarn" "faltaba el warning del default"
+fi
+
+# msf_errors_*: las validaciones fallan con rc=1 y un mensaje claro
+# (cada una se ejecuta fuera del bucle: son errores esperados)
+msf_error_ok() {
+  local t="$1" msg="$2"
+  ( cd validation-suite/test-2014 &&
+    ulimit -v 4000000 &&
+    timeout 60 "$REPO_DIR/build/tochnog" "$t.dat" > "/tmp/${t}_safe.out" 2>&1 )
+  local rc=$?
+  if [ "$rc" = "1" ] && grep -q "$msg" "/tmp/${t}_safe.out"; then
+    check_ok "$t (rc=1 + '$msg')"
+  else
+    check_fail "$t" "rc=$rc, sin mensaje '$msg'"
+  fi
+}
+msf_error_ok msf_errors_nogroup  "requires post_calcul_materi_stress_force_element_group"
+msf_error_ok msf_errors_bothdir  "are mutually exclusive"
+msf_error_ok msf_errors_3dnodir  "requires either"
+msf_error_ok msf_errors_3dnoref  "requires.*reference_point"
+msf_error_ok msf_errors_refcount "reference_point needs one point"
+msf_error_ok msf_errors_posttype "NODAL calculation"
+
 if [ "$CHECK_FAIL" = "1" ]; then
   echo "==> ALGUNAS VERIFICACIONES DE ARCHIVOS FALLARON"
   exit 1
 else
-  echo "==> Verificacion de archivos de salida (Sprint 11 lotes 1, 2, 3, 4, 5 y 6): TODAS OK"
+  echo "==> Verificacion de archivos de salida (Sprint 11 lotes 1-6 + sub-sprint materi_stress_force lote 1): TODAS OK"
 fi
 
 echo "==> Log de compilacion completo en /tmp/tn_build_safe.log"

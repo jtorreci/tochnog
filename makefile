@@ -33,6 +33,10 @@ PRINT_NODE_SRC=print_node.cc
 PRINT_NODE_OBJ=print_node.o
 PRINT_BEAM_FORCE_MOMENT_SRC=print_beam_force_moment.cc
 PRINT_BEAM_FORCE_MOMENT_OBJ=print_beam_force_moment.o
+PRINT_MATERI_STRESS_FORCE_SRC=print_materi_stress_force.cc
+PRINT_MATERI_STRESS_FORCE_OBJ=print_materi_stress_force.o
+CALCUL_FORCE_SRC=calcul_force.cc
+CALCUL_FORCE_OBJ=calcul_force.o
 DERIVED_SRC=derived.cc
 DERIVED_OBJ=derived.o
 
@@ -289,7 +293,7 @@ alpha_parallel:
 # In lines below I removed ---clapack.$(OBJ) 
 
 tochnog: adjust.$(OBJ) area.$(OBJ) \
-	beam.$(OBJ) bounda.$(OBJ) calcul.$(OBJ) \
+	beam.$(OBJ) bounda.$(OBJ) calcul.$(OBJ) $(CALCUL_FORCE_OBJ) \
 	change.$(OBJ) check.$(OBJ) \
 	condif.$(OBJ) \
 	contact.$(OBJ) conspr.$(OBJ) \
@@ -317,7 +321,7 @@ tochnog: adjust.$(OBJ) area.$(OBJ) \
 	print_da.$(OBJ) print_dx.$(OBJ) print_el.$(OBJ) \
 	print_gi.$(OBJ) print_g5.$(OBJ) print_g6.$(OBJ)\
 	print_gm.$(OBJ) print_hi.$(OBJ) print_dl.$(OBJ) print_node.$(OBJ) \
-	$(PRINT_BEAM_FORCE_MOMENT_OBJ) \
+	$(PRINT_BEAM_FORCE_MOMENT_OBJ) $(PRINT_MATERI_STRESS_FORCE_OBJ) \
 	print_pl.$(OBJ) print_ma.$(OBJ) print_rs.$(OBJ) \
 	print_te.$(OBJ) print_un.$(OBJ) print_vt.$(OBJ) print_tb.$(OBJ) $(PRINT_FR_OBJ) $(PRINT_IFACE_STRESS_OBJ) $(DERIVED_OBJ) \
 	project.$(OBJ) range.$(OBJ) \
@@ -567,6 +571,12 @@ print_node.$(OBJ): print_node.$(SRC_CPP) tochnog.h
 
 print_beam_force_moment.$(OBJ): print_beam_force_moment.$(SRC_CPP) tochnog.h
 	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)print_beam_force_moment.$(SRC_CPP)
+
+print_materi_stress_force.$(OBJ): print_materi_stress_force.$(SRC_CPP) tochnog.h
+	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)print_materi_stress_force.$(SRC_CPP)
+
+calcul_force.$(OBJ): calcul_force.$(SRC_CPP) tochnog.h
+	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)calcul_force.$(SRC_CPP)
 
 print_ma.$(OBJ): print_ma.$(SRC_CPP) tochnog.h
 	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)print_ma.$(SRC_CPP)
