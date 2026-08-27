@@ -262,6 +262,7 @@ input parameters it accepts.
 
 ## Sub-sprint materi_stress_force (lot 1 — infrastructure)
 
+- [post_calcul_materi_stress_force](post_calcul_materi_stress_force.md) — the feature (manual 6.913): normal force, shear force and moment(s) of quad4/quad9 (2D) and hex8/hex27 (3D, pending) elements with one element over the thickness; stresses integrated over the cross-section faces, per unit length; 2D implemented (quad9 recommended), 3D pending.
 - [post_calcul_materi_stress_force_element_group](post_calcul_materi_stress_force_element_group.md) — mandatory target element groups of `post_calcul -materi_stress -force` (manual 6.913; quad4/quad9/hex8/hex27, one element over the structure thickness: sheet piles, tunnel shells).
 - [post_calcul_materi_stress_force_direction_exclude](post_calcul_materi_stress_force_direction_exclude.md) — 3D: exclude the element sides whose normal points in the given direction (tunnel length direction).
 - [post_calcul_materi_stress_force_direction_exclude_epsilon](post_calcul_materi_stress_force_direction_exclude_epsilon.md) — tolerance of the exclusion test (default 1.e-8).

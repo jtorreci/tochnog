@@ -15,7 +15,12 @@
   [`post_calcul_materi_stress_force_outer`](post_calcul_materi_stress_force_outer.md)
   are also selected with it).
 
-## Pendiente
+## Implementación (lote 2, 2D)
 
-- The orientation logic (sign of the vectors relative to the reference
-  point) lands in lot 2/3.
+- Implemented in `msf_element_contribution_2d` (calcul_force.cc): the
+  thickness direction is t = (element centroid - reference_point)
+  normalized in-plane; the two end faces are the sides whose exterior
+  normals are most perpendicular to t (smallest |n*t|); the plot
+  vectors point along t (outward/inward per the reference point).
+  Degenerate case (reference point at the element centroid): warning
+  + the element is skipped (no forces). Pending for 3D (lot 3).

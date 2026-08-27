@@ -14,4 +14,6 @@
 
 ## Pendiente
 
-- The shortest/longest direction analysis lands in lot 2/3.
+- The switch is a 3D concept (shortest/longest element direction as
+  the structure thickness, manual 6.917) and is consumed by the 3D
+  integration (lot 3); in 2D it is validated but unused.

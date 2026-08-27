@@ -10,6 +10,9 @@
   moments to the nodes at the outer sides (furthest from the reference
   point).
 
-## Pendiente
+## Implementación (lote 2, 2D)
 
-- The outer-node selection lands in lot 2/3.
+- Implemented in `msf_element_contribution_2d` (calcul_force.cc): with
+  `-yes` only the PRIMARY nodes at the maximum distance from the
+  reference point receive values; the averaged nodes receive nothing
+  (documented decision). Pending for hex27 (lot 3).

@@ -12,6 +12,9 @@
 - Semantics (consumed in lots 2/3): `-yes` inverts the plot vector
   direction of the corresponding item (manual 6.916).
 
-## Pendiente
+## Implementación (lote 2, 2D)
 
-- The inversion lands in lot 2/3.
+- Implemented in `msf_element_contribution_2d` (calcul_force.cc):
+  `-yes` inverts the x/y plot components of the item (the drawing
+  direction, manual 6.916); the s (size) component is untouched.
+  Pending for 3D (lot 3).

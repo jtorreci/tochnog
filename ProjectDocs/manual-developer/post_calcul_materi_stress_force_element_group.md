@@ -13,7 +13,10 @@
 - Consumed by the numerical integration in lots 2/3 (element sides of
   the listed groups); lot 1 only validates and stores.
 
-## Pendiente
+## Implementación (lote 2, 2D)
 
-- The actual element-side selection over the listed groups lands in
-  lot 2/3.
+- Consumed by `msf_calculate_node_2d` (calcul_force.cc): the per-node
+  element scan is restricted to the target groups; in 2D the target
+  groups may only contain quad4/quad9 elements (validated with a clear
+  error in post_calcul_materi_stress_force_validate()). Pending for
+  3D (lot 3).
