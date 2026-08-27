@@ -54,23 +54,30 @@
 //
 // The file is opened in append mode (one block per print, pattern of
 // print_beam_force_moment). LOT 1 (infrastructure): the numerical
-// integration of the -force family is not implemented yet, so the values
-// are 0; -primary and -all write the same lines until the averaging of
-// L2/L3 marks non-primary nodes (the filter hook msf_node_is_averaged
-// returns 0 for every node). If no -force post_calcul block exists no
-// file is written (decision, like print_beam_force_moment without
-// crossed elements).
+// integration was not implemented (values 0, -primary == -all). LOT 2:
+// the 2D integration fills the values and marks the averaged nodes
+// (POST_CALCUL_MATERI_STRESS_FORCE_AVERAGED_NODE) so that -primary
+// skips them; the 3D integration (lot 3) still writes 0. If no -force
+// post_calcul block exists no file is written (decision, like
+// print_beam_force_moment without crossed elements).
 
 // Filter hook for the -primary method: returns 1 when the node values
 // are the AVERAGED results (quad9/hex27 middle-plane nodes with
 // post_calcul_materi_stress_force_average -yes) that -primary must
-// skip. LOT 1: no averaging exists yet, so every node is primary.
-// The L2/L3 integration will flag the averaged nodes (e.g. a per-node
-// record) and this hook will read that flag.
+// skip. The L2 integration (calcul_force.cc) writes the per-node flag
+// POST_CALCUL_MATERI_STRESS_FORCE_AVERAGED_NODE in VERSION_NORMAL;
+// the print reads it from VERSION_PRINT (db_version_copy +
+// renumbering carry the NODE-class record like NODE_DOF_CALCUL).
+// Missing record / node -> -NO (primary).
 static long int msf_node_is_averaged( long int inod )
 
 {
-  return 0;
+  long int ldum=0, value=-NO;
+  double ddum[1];
+
+  db( POST_CALCUL_MATERI_STRESS_FORCE_AVERAGED_NODE, inod, &value, ddum,
+    ldum, VERSION_PRINT, GET_IF_EXISTS );
+  return ( value==-YES );
 }
 
 void print_materi_stress_force( long int icontrol, long int method )

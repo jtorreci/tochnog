@@ -47,6 +47,10 @@ void calculate( void )
     db_delete( POST_POINT_DOF_CALCUL, VERSION_NORMAL );
     db_delete( POST_LINE_DOF_CALCUL, VERSION_NORMAL );
     db_delete( POST_QUADRILATERAL_DOF_CALCUL, VERSION_NORMAL );
+    // per-node averaged flag of post_calcul -materi_stress -force
+    // (calcul_force.cc, consumed by the -primary print): refreshed
+    // every calculate() like NODE_DOF_CALCUL.
+    db_delete( POST_CALCUL_MATERI_STRESS_FORCE_AVERAGED_NODE, VERSION_NORMAL );
 
     type_post_dof[0] = POST_LINE_DOF;
     type_post_dof_calcul[0] = POST_LINE_DOF_CALCUL;
@@ -160,6 +164,8 @@ void calculate( void )
         // to prevent memory problems in parallel comp.
       db_max_index( NODE, max_node, VERSION_NORMAL, GET );
       db_allocate( -NODE_DOF_CALCUL, max_node, VERSION_NORMAL, MINIMAL );
+      db_allocate( -POST_CALCUL_MATERI_STRESS_FORCE_AVERAGED_NODE,
+        max_node, VERSION_NORMAL, MINIMAL );
       parallel_sys_routine( &parallel_calcul_node );
 
       for ( itype=0; itype<NTYPE; itype++ ) {

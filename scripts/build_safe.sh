@@ -617,7 +617,8 @@ for t in hypo1 hypo2 hypo3 hypo4 smooth1 dof1 mlx1 vtk_dof1 gen1 genbeam1       
          dpline_method dpline_move dpline_time dpoint_time dpoint1 \
          cpn1 cpn_angular cpn_geom cpn_sort cpn_zero dsmooth1 dsmooth_n \
          bmom1 bmom_switch bmom_truss bmom_2d bmom_noint \
-         msf_parse msf_parse_3d msf_print msf_errors_2dwarn; do
+         msf_parse msf_parse_3d msf_print msf_errors_2dwarn \
+         msf_beam2d msf_beam2d_pure msf_quad9 msf_quad9_noavg msf_nor msf_shear; do
   HIPO_TOTAL=$((HIPO_TOTAL+1))
   ( cd validation-suite/test-2014 &&
     ulimit -v 4000000 &&
@@ -630,7 +631,7 @@ for t in hypo1 hypo2 hypo3 hypo4 smooth1 dof1 mlx1 vtk_dof1 gen1 genbeam1       
     echo "    $t: FALLO (rc=$RC)"
   fi
 done
-echo "==> Resumen: $HIPO_OK/$HIPO_TOTAL runs OK (13 tests: 12 preexistentes + familia iface_mc en 10 runs + familia 3D en 5 runs + familia generate_interface en 6 runs + familia materi_direct en 5 runs + materi_displacement_relative en 2 runs + slide/reset_value en 2 runs + cda_arith/copy/activate en 3 runs + cdist_normal/corr/clamp en 3 runs + cd_method/cd_geom en 2 runs + gravity/settlement en 4 runs + contact en 1 run + contact_block/ctrl_apply/heatgen en 3 runs + groundflow_consolidate_off en 1 run + groundflow_vangenuchten/groundflow_nonsaturated_off en 2 runs + groundflow_total_pressure_tension/groundflow_interface en 2 runs + groundflow_flux_edge en 1 run + groundflow_phreatic_multiple en 1 run + groundflow_seepage en 1 run + groundflow_pressure_atm/_def en 2 runs + groundflow_total_pressure_limit/_dry en 2 runs + condif_heat_edge/vol/vol2 en 3 runs + condif_convec/rad/convec_el en 3 runs + aeg_node/aeg_seq/bt_factor en 3 runs + iface_condif/expansion/tangref en 3 runs + node_force_inertia/slide/pressure en 3 runs + creset_geom/iface en 2 runs + fedge_alias/restrict, fvol_elem y cmat_gate en 4 runs + fproj_tunnel en 1 run + dsmall/dignore en 2 runs + mdirect_comp/gate en 2 runs + mdp_shear/mfactor en 2 runs + mmc_tension en 1 run + mmchs_soft en 1 run + mcap2/mcap_legacy en 2 runs + mcrunch/mcrunch_low en 2 runs + mvoid/mvoid_low en 2 runs + mpower en 1 run + mshf/mshf_nof en 2 runs + mk0/mk0_off en 2 runs + myoung6/myoung6_e2/myoung6_e3/myoung6_apply en 4 runs + msph/msph_flat en 2 runs + mcap1/mcap1_elast/mcap1_comb en 3 runs + mhardsoil_elast/elast2/unload/unload_flat/plast/plast_elast/gp0/gp0_off en 8 runs + mstrain_cap/_elast, mstrain_compression/_elast, mstrain_diprisco/_elast, mstrain_druckprag/_elast en 8 runs + mdiprisco_hist en 1 run + mc_pressure_min/_off en 2 runs (Sprint 10 lote 9) + mrepeat_save en 1 run (Sprint 10 lote 10) + dbmeth/partialname/meshdoff/dofrhside/elmethod/hreltime/numit/dofid_no en 8 runs (Sprint 11 lote 1) + freq_timeint/freq_timestep en 2 runs (Sprint 11 lote 2) + vtk_coord1/vtk_dofcalc1/vtk_empty1/vtk_nodmeth1/vtk_other1 en 5 runs (Sprint 11 lote 3) + dpline1/dpline_n/dpline_geom/dpline_group/dpline_eps/dpline_method/dpline_move/dpline_time/dpoint_time/dpoint1 en 10 runs (Sprint 11 lote 4) + cpn1/cpn_angular/cpn_geom/cpn_sort/cpn_zero/dsmooth1/dsmooth_n en 7 runs (Sprint 11 lote 5) + bmom1/bmom_switch/bmom_truss/bmom_2d/bmom_noint en 5 runs (Sprint 11 lote 6) + msf_parse/msf_parse_3d/msf_print/msf_errors_2dwarn en 4 runs (sub-sprint materi_stress_force, lote 1))."
+echo "==> Resumen: $HIPO_OK/$HIPO_TOTAL runs OK (13 tests: 12 preexistentes + familia iface_mc en 10 runs + familia 3D en 5 runs + familia generate_interface en 6 runs + familia materi_direct en 5 runs + materi_displacement_relative en 2 runs + slide/reset_value en 2 runs + cda_arith/copy/activate en 3 runs + cdist_normal/corr/clamp en 3 runs + cd_method/cd_geom en 2 runs + gravity/settlement en 4 runs + contact en 1 run + contact_block/ctrl_apply/heatgen en 3 runs + groundflow_consolidate_off en 1 run + groundflow_vangenuchten/groundflow_nonsaturated_off en 2 runs + groundflow_total_pressure_tension/groundflow_interface en 2 runs + groundflow_flux_edge en 1 run + groundflow_phreatic_multiple en 1 run + groundflow_seepage en 1 run + groundflow_pressure_atm/_def en 2 runs + groundflow_total_pressure_limit/_dry en 2 runs + condif_heat_edge/vol/vol2 en 3 runs + condif_convec/rad/convec_el en 3 runs + aeg_node/aeg_seq/bt_factor en 3 runs + iface_condif/expansion/tangref en 3 runs + node_force_inertia/slide/pressure en 3 runs + creset_geom/iface en 2 runs + fedge_alias/restrict, fvol_elem y cmat_gate en 4 runs + fproj_tunnel en 1 run + dsmall/dignore en 2 runs + mdirect_comp/gate en 2 runs + mdp_shear/mfactor en 2 runs + mmc_tension en 1 run + mmchs_soft en 1 run + mcap2/mcap_legacy en 2 runs + mcrunch/mcrunch_low en 2 runs + mvoid/mvoid_low en 2 runs + mpower en 1 run + mshf/mshf_nof en 2 runs + mk0/mk0_off en 2 runs + myoung6/myoung6_e2/myoung6_e3/myoung6_apply en 4 runs + msph/msph_flat en 2 runs + mcap1/mcap1_elast/mcap1_comb en 3 runs + mhardsoil_elast/elast2/unload/unload_flat/plast/plast_elast/gp0/gp0_off en 8 runs + mstrain_cap/_elast, mstrain_compression/_elast, mstrain_diprisco/_elast, mstrain_druckprag/_elast en 8 runs + mdiprisco_hist en 1 run + mc_pressure_min/_off en 2 runs (Sprint 10 lote 9) + mrepeat_save en 1 run (Sprint 10 lote 10) + dbmeth/partialname/meshdoff/dofrhside/elmethod/hreltime/numit/dofid_no en 8 runs (Sprint 11 lote 1) + freq_timeint/freq_timestep en 2 runs (Sprint 11 lote 2) + vtk_coord1/vtk_dofcalc1/vtk_empty1/vtk_nodmeth1/vtk_other1 en 5 runs (Sprint 11 lote 3) + dpline1/dpline_n/dpline_geom/dpline_group/dpline_eps/dpline_method/dpline_move/dpline_time/dpoint_time/dpoint1 en 10 runs (Sprint 11 lote 4) + cpn1/cpn_angular/cpn_geom/cpn_sort/cpn_zero/dsmooth1/dsmooth_n en 7 runs (Sprint 11 lote 5) + bmom1/bmom_switch/bmom_truss/bmom_2d/bmom_noint en 5 runs (Sprint 11 lote 6) + msf_parse/msf_parse_3d/msf_print/msf_errors_2dwarn en 4 runs (sub-sprint materi_stress_force, lote 1) + msf_beam2d/msf_beam2d_pure/msf_quad9/msf_quad9_noavg/msf_nor/msf_shear en 6 runs (sub-sprint materi_stress_force, lote 2))."
 
 # ---------------------------------------------------------------------
 # Sprint 11 lote 1: verificacion de ARCHIVOS y STDOUT de los 8 keywords
@@ -1172,19 +1173,22 @@ fi
 # calculate_operat (calcul.cc), los 10 records de configuracion
 # post_calcul_materi_stress_force_* y control_print_materi_stress_force
 # estan registrados, y el print escribe materi_stress_force.<index>.
-# El calculo numerico llega en L2/L3: en lote 1 los valores son 0.
+# Lote 2: la integracion 2D rellena los valores; msf_parse conserva
+# valores 0 porque su reference_point (0.5,0.5) COINCIDE con el
+# centroide del elemento (caso degenerado documentado: warning + sin
+# fuerzas). El aviso "not yet implemented" queda SOLO para 3D (lote 3).
 # ---------------------------------------------------------------------
 
 # msf_parse: 2D con 9 records de configuracion + print -> archivo
 # materi_stress_force.100 con 3 lineas de cabecera (#) + 4 nodos; el
-# aviso "not yet implemented" aparece UNA vez en el stdout; el warning
-# de direction_* en 2D tambien
+# warning de direction_* en 2D y el del centroide (reference_point en
+# el centroide -> 0 fuerzas, caso documentado) aparecen en el stdout
 if [ -f "$T2014/materi_stress_force.100" ] && \
    [ "$(grep -c '^#' "$T2014/materi_stress_force.100")" -ge 3 ] && \
    [ "$(grep -vc '^#' "$T2014/materi_stress_force.100")" = "4" ] && \
-   [ "$(grep -c 'not yet implemented' /tmp/msf_parse_safe.out)" = "1" ] && \
+   [ "$(grep -c 'coincides with the centroid' /tmp/msf_parse_safe.out)" = "1" ] && \
    grep -q "direction" /tmp/msf_parse_safe.out; then
-  check_ok "msf_parse (2D: cabecera comentada + 4 lineas de nodo + aviso not-yet-implemented unico + warning 2D)"
+  check_ok "msf_parse (2D: cabecera comentada + 4 lineas de nodo + warning centroide unico + warning 2D)"
 else
   check_fail "msf_parse" "materi_stress_force.100 o mensajes inesperados ($(ls "$T2014"/materi_stress_force.* 2>/dev/null))"
 fi
@@ -1200,15 +1204,16 @@ else
   check_fail "msf_parse_3d" "materi_stress_force.200 inesperado ($MSF200_NCOL columnas)"
 fi
 
-# msf_print: -all (300) y -primary (301) -> en lote 1 sin promediado
-# quad9/hex27 ambos escriben 4 lineas (todos los nodos son primarios);
-# valores 0 (integracion L2/L3 pendiente) y cabecera comentada
+# msf_print: -all (300) y -primary (301) -> 4 lineas cada uno (quad4:
+# sin promediado, todos los nodos primarios); valores 0 porque el
+# reference_point (0.5,0.5) coincide con el centroide del unico
+# elemento (caso degenerado documentado) y cabecera comentada
 N300=$(grep -vc '^#' "$T2014/materi_stress_force.300" 2>/dev/null || echo 0)
 N301=$(grep -vc '^#' "$T2014/materi_stress_force.301" 2>/dev/null || echo 0)
 if [ "$N300" = "4" ] && [ "$N301" = "4" ] && \
    awk '!/^#/ && NF==10 { for (i=2;i<=NF;i++) if ($i!=0) bad=1 } END{exit bad}' \
    "$T2014/materi_stress_force.300" 2>/dev/null; then
-  check_ok "msf_print (-all 4 lineas == -primary 4 lineas; 9 items 2D todos 0 en lote 1)"
+  check_ok "msf_print (-all 4 lineas == -primary 4 lineas; 9 items 2D todos 0: reference_point en el centroide)"
 else
   check_fail "msf_print" "conteo o valores inesperados (N300=$N300 N301=$N301)"
 fi
@@ -1241,11 +1246,132 @@ msf_error_ok msf_errors_3dnoref  "requires.*reference_point"
 msf_error_ok msf_errors_refcount "reference_point needs one point"
 msf_error_ok msf_errors_posttype "NODAL calculation"
 
+# ---------------------------------------------------------------------
+# Sub-sprint materi_stress_force, lote 2 (integracion 2D quad4/quad9):
+# verificacion ANALITICA por estatica. Decisiones de diseno (manual-
+# developer/post_calcul_materi_stress_force.md): caras extremas = las
+# 2 aristas mas perpendiculares a la direccion de espesor t (definida
+# por el reference_point); mom con dt = (x-C)*t (distancia en direccion
+# de espesor respecto al centroide, CONSISTENTE entre las 2 caras de la
+# seccion - el parametro de arista s daria signos opuestos); fuente de
+# tension = la nodal (incognita resuelta); cuadratura de arista
+# Gauss(2)/Lobatto(3) (el integrando del momento es cuadratico/cubico);
+# promedio quad9 (average -yes default) en el plano medio; bandas FE
+# documentadas: quad9 mom 1-3% y she +/-30% (condicion de superficie
+# libre debil de la formulacion mixta), quad4 1-en-espesor con shear
+# locking (mom 0.23x medido) - por eso los tests de flexion usan
+# quad9. GOTCHA cazado con ASan: leer coords nodales con MDIM (3) en
+# vez de ndim (2) lee 8 bytes FUERA del record NODE (heap OOB) y
+# corrompe el solve posterior (campo de tensiones localizado en las
+# ultimas columnas) - corregido (i<ndim).
+# ---------------------------------------------------------------------
+
+# msf_beam2d (410): mensula 8xquad9, L=8, P=1e-2 en la punta (x=8),
+# empotrada en x=0. Secciones primarias (file nodes 0,2,4,...,16 =
+# x=0..8): moms = P*(8-x) dentro de 3e-3 (medido 0.0820, 0.0708, 0.0600,
+# 0.0500, 0.0400, 0.0300, 0.0200, 0.0099, 0.0003); nors < 2.5e-3 (sin
+# axial); shes en la banda documentada [0.5P, 1.5P] (medido 0.0109..0.0133).
+MSF_BEAM_OK=1
+for i in 0 2 4 6 8 10 12 14 16; do
+  x=$((i/2))
+  if awk -v i="$i" -v x="$x" '!/^#/ && $1==i { d=$10-0.01*(8-x); if (d<0) d=-d; ok=(d<0.003 && $7>0.005 && $7<0.015 && $4<0.0025) } END{exit !ok}' \
+    "$T2014/materi_stress_force.410"; then :; else MSF_BEAM_OK=0; fi
+done
+# promediado quad9 EXACTO: node 1 (x=0.5, plano medio del elem 1) =
+# (face x=0 + face x=1)/2 (medido 0.0764 = (0.0820+0.0708)/2)
+if awk '!/^#/ && ($1==0||$1==1||$1==2) { v[$1]=$10 } END{ d=v[1]-0.5*(v[0]+v[2]); if (d<0) d=-d; exit !(d<1.e-6) }' \
+   "$T2014/materi_stress_force.410"; then :; else MSF_BEAM_OK=0; fi
+if [ "$(grep -vc '^#' "$T2014/materi_stress_force.410")" = "51" ] && \
+   [ "$MSF_BEAM_OK" = "1" ]; then
+  check_ok "msf_beam2d (mensula 8xquad9: moms=P*(8-x) 1-3%, promediado EXACTO, shes banda FE documentada, nors~0)"
+else
+  check_fail "msf_beam2d" "moms/she/nors fuera de banda o conteo inesperado"
+fi
+
+# msf_beam2d_pure (420): FLEXION PURA 4 puntos (viga apoyada, cargas en
+# x=1 y x=3): tramo central x in [1,3] con M = P*1 = 1e-2 cte y V = 0.
+# node 4 (x=2): moms ~ 1e-2 (medido 0.01015, 1.5%) y shes = 0 EXACTO;
+# node 8 (x=4, apoyo): moms ~ 0 (medido 0.00044). DECISION: el par de
+# extremos se descarto (par nodal no excita flexion en el FE discreto:
+# trabajo nulo sobre el modo de flexion - verificado: responde con
+# cizalla pura; quad4 Y quad9).
+MSF_PURE_OK=1
+awk '!/^#/ && ($1==4||$1==8) { v[$1]=$10; s[$1]=$7 } END{ d4=v[4]-0.01; if (d4<0) d4=-d4; ok=(d4<5.e-4 && s[4]<1.e-5 && v[8]<1.e-3); exit !ok }' \
+  "$T2014/materi_stress_force.420" || MSF_PURE_OK=0
+if [ "$(grep -vc '^#' "$T2014/materi_stress_force.420")" = "27" ] && \
+   [ "$MSF_PURE_OK" = "1" ]; then
+  check_ok "msf_beam2d_pure (flexion pura: M cte 1e-2 en el tramo central, shes=0 EXACTO)"
+else
+  check_fail "msf_beam2d_pure" "momento/cizalla del tramo central inesperados"
+fi
+
+# msf_quad9 (320/321): mensula 4xquad9, L=4, P=1e-2: -all 27 lineas vs
+# -primary 15 (los 12 nodos del plano medio son AVERAGED y se omiten);
+# secciones primarias x=0,2,4: moms ~ 4e-2, 2e-2, 0 (medido 0.0406,
+# 0.0200, 0.0003); el promediado es la media EXACTA de las caras.
+MSF_Q9_OK=1
+if awk '!/^#/ && ($1==0||$1==1||$1==2) { v[$1]=$10 } END{ d=v[1]-0.5*(v[0]+v[2]); if (d<0) d=-d; exit !(d<1.e-6) }' \
+  "$T2014/materi_stress_force.320"; then :; else MSF_Q9_OK=0; fi
+if [ "$(grep -vc '^#' "$T2014/materi_stress_force.320")" = "27" ] && \
+   [ "$(grep -vc '^#' "$T2014/materi_stress_force.321")" = "15" ] && \
+   [ "$MSF_Q9_OK" = "1" ] && \
+   awk '!/^#/ && $1==1 {found=1} END{exit found}' "$T2014/materi_stress_force.321"; then
+  check_ok "msf_quad9 (-all 27 vs -primary 15: nodos promediados omitidos; moms 1-3%; promedio EXACTO)"
+else
+  check_fail "msf_quad9" "conteos, promediado o filtro -primary inesperados"
+fi
+
+# msf_quad9_noavg (330/331): A/B con average -no: los nodos del plano
+# medio NO reciben nada (0) y no se marcan como averaged -> -all ==
+# -primary (27 lineas cada uno); los primarios conservan sus valores.
+MSF_Q9NA_OK=1
+awk '!/^#/ && ($1==1||$1==10||$1==19) { if ($4!=0 || $7!=0 || $10!=0) bad=1 }
+     END{exit bad}' "$T2014/materi_stress_force.330" || MSF_Q9NA_OK=0
+if [ "$(grep -vc '^#' "$T2014/materi_stress_force.330")" = "27" ] && \
+   [ "$(grep -vc '^#' "$T2014/materi_stress_force.331")" = "27" ] && \
+   [ "$MSF_Q9NA_OK" = "1" ]; then
+  check_ok "msf_quad9_noavg (average -no: nodos medios a 0, -all == -primary 27 lineas)"
+else
+  check_fail "msf_quad9_noavg" "average -no inesperado (nodos medios no nulos o conteos distintos)"
+fi
+
+# msf_nor (340): traccion axial pura N=2e-2 (2 cargas de 1e-2 en x=8,
+# nu=0.3): nors = N en todas las secciones (medido 0.0209 en x=0 por la
+# perturbacion de Poisson del empotramiento y 0.0200 en el resto),
+# shes ~ 0 y moms ~ 0. GOTCHA documentado: con nu=0.0 el solve
+# multi-elemento LOCALIZA la deformacion (el dof de tension sale 0 en
+# la mitad izquierda - quirk del solver mixto iterativo, no del
+# integrador).
+MSF_NOR_OK=1
+awk '!/^#/ && ($1==0||$1==4||$1==8) { v[$1]=$4; s[$1]=$7; m[$1]=$10 } END{ d0=v[0]-0.02; if (d0<0) d0=-d0; d4=v[4]-0.02; if (d4<0) d4=-d4; d8=v[8]-0.02; if (d8<0) d8=-d8; ok=(d0<2.e-3 && d4<1.e-3 && d8<1.e-3 && s[0]<1.e-6 && m[0]<1.e-3 && s[4]<1.e-6 && m[4]<1.e-3); exit !ok }' \
+  "$T2014/materi_stress_force.340" || MSF_NOR_OK=0
+if [ "$(grep -vc '^#' "$T2014/materi_stress_force.340")" = "18" ] && \
+   [ "$MSF_NOR_OK" = "1" ]; then
+  check_ok "msf_nor (axial N=2e-2: nors=N 0-5%, shes~0, moms~0)"
+else
+  check_fail "msf_nor" "axial inesperado (nors fuera de N o shes/moms no nulos)"
+fi
+
+# msf_shear (430): CORTE SIMPLE (borde inferior fijo, superior con
+# velx=1e-2 prescrito): campo uniforme EXACTO sigma_xy = G*gamma =
+# 384.615*1e-3 = 0.384615 -> she = |int sigma_nt ds| = 0.384615 EXACTO
+# (nor = 0, mom = 0). Cubre el valor EXACTO de she que la mensula no
+# puede dar (cizalla FE 1-en-espesor contaminada).
+MSF_SHEAR_OK=1
+awk '!/^#/ && NF==10 { d=$7-0.3846153846; if (d<0) d=-d; if (d>1.e-4 || $4>1.e-6 || $10>1.e-6) bad=1 } END{exit bad}' \
+  "$T2014/materi_stress_force.430" || MSF_SHEAR_OK=0
+if [ "$(grep -vc '^#' "$T2014/materi_stress_force.430")" = "4" ] && \
+   [ "$MSF_SHEAR_OK" = "1" ]; then
+  check_ok "msf_shear (corte simple: she = G*gamma = 0.384615 EXACTO, nor=mom=0)"
+else
+  check_fail "msf_shear" "corte simple inesperado (she != G*gamma o nor/mom no nulos)"
+fi
+
 if [ "$CHECK_FAIL" = "1" ]; then
   echo "==> ALGUNAS VERIFICACIONES DE ARCHIVOS FALLARON"
   exit 1
 else
-  echo "==> Verificacion de archivos de salida (Sprint 11 lotes 1-6 + sub-sprint materi_stress_force lote 1): TODAS OK"
+  echo "==> Verificacion de archivos de salida (Sprint 11 lotes 1-6 + sub-sprint materi_stress_force lotes 1-2): TODAS OK"
 fi
 
 echo "==> Log de compilacion completo en /tmp/tn_build_safe.log"

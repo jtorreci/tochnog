@@ -5758,6 +5758,21 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   data_class[POST_CALCUL_MATERI_STRESS_FORCE_THICKNESS_SWITCH] = POST;
   data_required[POST_CALCUL_MATERI_STRESS_FORCE_THICKNESS_SWITCH] = POST_CALCUL;
 
+  // per-node flag record of the -force family: -YES when the node
+  // received the AVERAGED results of the quad9 middle plane
+  // (post_calcul_materi_stress_force_average -yes), consumed by
+  // control_print_materi_stress_force -primary through the
+  // msf_node_is_averaged() hook (print_materi_stress_force.cc).
+  // NODE class + version_all=1 so that db_version_copy and the
+  // renumbering of the print (VERSION_PRINT) carry it like
+  // NODE_DOF_CALCUL.
+  strcpy(name[POST_CALCUL_MATERI_STRESS_FORCE_AVERAGED_NODE],"post_calcul_materi_stress_force_averaged_node");
+  type[POST_CALCUL_MATERI_STRESS_FORCE_AVERAGED_NODE] = INTEGER;
+  data_length[POST_CALCUL_MATERI_STRESS_FORCE_AVERAGED_NODE] = 1;
+  version_all[POST_CALCUL_MATERI_STRESS_FORCE_AVERAGED_NODE] = 1;
+  data_class[POST_CALCUL_MATERI_STRESS_FORCE_AVERAGED_NODE] = NODE;
+  data_required[POST_CALCUL_MATERI_STRESS_FORCE_AVERAGED_NODE] = NODE;
+
   strcpy(name[POST_CALCUL_SCAL_VEC_MAT],"post_calcul_scal_vec_mat");
   type[POST_CALCUL_SCAL_VEC_MAT] = INTEGER;
   data_length[POST_CALCUL_SCAL_VEC_MAT] = DATA_ITEM_SIZE;
