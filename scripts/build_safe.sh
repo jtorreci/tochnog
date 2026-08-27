@@ -127,6 +127,9 @@ HIPO_TOTAL=0
 # cpn_zero; velx.*/vely.* ya cubiertos), node_dof_0.11/node_dof_1.11
 # (cpn1 numerico), avel.12 (calcul de cpn1) y dof.60/61/70/71
 # (dsmooth1/dsmooth_n; dof.* ya cubierto).
+# Sprint 11 lote 6 (beam force/moment): beam_force_moment.5/7/8 (bmom1/
+# bmom_truss/bmom_2d), beam_force_moment.0 (bmom_switch, sequential) y
+# element_truss_force_0.7 (bmom_truss; bmom_noint NO debe crear archivo).
 rm -f validation-suite/test-2014/dof.* \
       validation-suite/test-2014/freq_timeint*.frd \
       validation-suite/test-2014/freq_timestep*.frd \
@@ -141,7 +144,9 @@ rm -f validation-suite/test-2014/dof.* \
       validation-suite/test-2014/disx.* validation-suite/test-2014/disy.* \
       validation-suite/test-2014/adis.* \
       validation-suite/test-2014/avel.* \
-      validation-suite/test-2014/node_dof_0.11 validation-suite/test-2014/node_dof_1.11
+      validation-suite/test-2014/node_dof_0.11 validation-suite/test-2014/node_dof_1.11 \
+      validation-suite/test-2014/beam_force_moment.* \
+      validation-suite/test-2014/element_truss_force_0.7
 # 13 tests: 12 preexistentes + familia iface_mc (1 test logico = 6 runs:
 # iface_mc a/a' invarianza, iface_mc_slip b/b' invarianza, tension c, gap d)
 # + iface_mc_mem (memory), + iface_mc_dil/dil_1step/num (dilatancia RF-4 y
@@ -606,7 +611,8 @@ for t in hypo1 hypo2 hypo3 hypo4 smooth1 dof1 mlx1 vtk_dof1 gen1 genbeam1       
          vtk_coord1 vtk_dofcalc1 vtk_empty1 vtk_nodmeth1 vtk_other1 \
          dpline1 dpline_n dpline_geom dpline_group dpline_eps \
          dpline_method dpline_move dpline_time dpoint_time dpoint1 \
-         cpn1 cpn_angular cpn_geom cpn_sort cpn_zero dsmooth1 dsmooth_n; do
+         cpn1 cpn_angular cpn_geom cpn_sort cpn_zero dsmooth1 dsmooth_n \
+         bmom1 bmom_switch bmom_truss bmom_2d bmom_noint; do
   HIPO_TOTAL=$((HIPO_TOTAL+1))
   ( cd validation-suite/test-2014 &&
     ulimit -v 4000000 &&
@@ -619,7 +625,7 @@ for t in hypo1 hypo2 hypo3 hypo4 smooth1 dof1 mlx1 vtk_dof1 gen1 genbeam1       
     echo "    $t: FALLO (rc=$RC)"
   fi
 done
-echo "==> Resumen: $HIPO_OK/$HIPO_TOTAL runs OK (13 tests: 12 preexistentes + familia iface_mc en 10 runs + familia 3D en 5 runs + familia generate_interface en 6 runs + familia materi_direct en 5 runs + materi_displacement_relative en 2 runs + slide/reset_value en 2 runs + cda_arith/copy/activate en 3 runs + cdist_normal/corr/clamp en 3 runs + cd_method/cd_geom en 2 runs + gravity/settlement en 4 runs + contact en 1 run + contact_block/ctrl_apply/heatgen en 3 runs + groundflow_consolidate_off en 1 run + groundflow_vangenuchten/groundflow_nonsaturated_off en 2 runs + groundflow_total_pressure_tension/groundflow_interface en 2 runs + groundflow_flux_edge en 1 run + groundflow_phreatic_multiple en 1 run + groundflow_seepage en 1 run + groundflow_pressure_atm/_def en 2 runs + groundflow_total_pressure_limit/_dry en 2 runs + condif_heat_edge/vol/vol2 en 3 runs + condif_convec/rad/convec_el en 3 runs + aeg_node/aeg_seq/bt_factor en 3 runs + iface_condif/expansion/tangref en 3 runs + node_force_inertia/slide/pressure en 3 runs + creset_geom/iface en 2 runs + fedge_alias/restrict, fvol_elem y cmat_gate en 4 runs + fproj_tunnel en 1 run + dsmall/dignore en 2 runs + mdirect_comp/gate en 2 runs + mdp_shear/mfactor en 2 runs + mmc_tension en 1 run + mmchs_soft en 1 run + mcap2/mcap_legacy en 2 runs + mcrunch/mcrunch_low en 2 runs + mvoid/mvoid_low en 2 runs + mpower en 1 run + mshf/mshf_nof en 2 runs + mk0/mk0_off en 2 runs + myoung6/myoung6_e2/myoung6_e3/myoung6_apply en 4 runs + msph/msph_flat en 2 runs + mcap1/mcap1_elast/mcap1_comb en 3 runs + mhardsoil_elast/elast2/unload/unload_flat/plast/plast_elast/gp0/gp0_off en 8 runs + mstrain_cap/_elast, mstrain_compression/_elast, mstrain_diprisco/_elast, mstrain_druckprag/_elast en 8 runs + mdiprisco_hist en 1 run + mc_pressure_min/_off en 2 runs (Sprint 10 lote 9) + mrepeat_save en 1 run (Sprint 10 lote 10) + dbmeth/partialname/meshdoff/dofrhside/elmethod/hreltime/numit/dofid_no en 8 runs (Sprint 11 lote 1) + freq_timeint/freq_timestep en 2 runs (Sprint 11 lote 2) + vtk_coord1/vtk_dofcalc1/vtk_empty1/vtk_nodmeth1/vtk_other1 en 5 runs (Sprint 11 lote 3) + dpline1/dpline_n/dpline_geom/dpline_group/dpline_eps/dpline_method/dpline_move/dpline_time/dpoint_time/dpoint1 en 10 runs (Sprint 11 lote 4) + cpn1/cpn_angular/cpn_geom/cpn_sort/cpn_zero/dsmooth1/dsmooth_n en 7 runs (Sprint 11 lote 5))."
+echo "==> Resumen: $HIPO_OK/$HIPO_TOTAL runs OK (13 tests: 12 preexistentes + familia iface_mc en 10 runs + familia 3D en 5 runs + familia generate_interface en 6 runs + familia materi_direct en 5 runs + materi_displacement_relative en 2 runs + slide/reset_value en 2 runs + cda_arith/copy/activate en 3 runs + cdist_normal/corr/clamp en 3 runs + cd_method/cd_geom en 2 runs + gravity/settlement en 4 runs + contact en 1 run + contact_block/ctrl_apply/heatgen en 3 runs + groundflow_consolidate_off en 1 run + groundflow_vangenuchten/groundflow_nonsaturated_off en 2 runs + groundflow_total_pressure_tension/groundflow_interface en 2 runs + groundflow_flux_edge en 1 run + groundflow_phreatic_multiple en 1 run + groundflow_seepage en 1 run + groundflow_pressure_atm/_def en 2 runs + groundflow_total_pressure_limit/_dry en 2 runs + condif_heat_edge/vol/vol2 en 3 runs + condif_convec/rad/convec_el en 3 runs + aeg_node/aeg_seq/bt_factor en 3 runs + iface_condif/expansion/tangref en 3 runs + node_force_inertia/slide/pressure en 3 runs + creset_geom/iface en 2 runs + fedge_alias/restrict, fvol_elem y cmat_gate en 4 runs + fproj_tunnel en 1 run + dsmall/dignore en 2 runs + mdirect_comp/gate en 2 runs + mdp_shear/mfactor en 2 runs + mmc_tension en 1 run + mmchs_soft en 1 run + mcap2/mcap_legacy en 2 runs + mcrunch/mcrunch_low en 2 runs + mvoid/mvoid_low en 2 runs + mpower en 1 run + mshf/mshf_nof en 2 runs + mk0/mk0_off en 2 runs + myoung6/myoung6_e2/myoung6_e3/myoung6_apply en 4 runs + msph/msph_flat en 2 runs + mcap1/mcap1_elast/mcap1_comb en 3 runs + mhardsoil_elast/elast2/unload/unload_flat/plast/plast_elast/gp0/gp0_off en 8 runs + mstrain_cap/_elast, mstrain_compression/_elast, mstrain_diprisco/_elast, mstrain_druckprag/_elast en 8 runs + mdiprisco_hist en 1 run + mc_pressure_min/_off en 2 runs (Sprint 10 lote 9) + mrepeat_save en 1 run (Sprint 10 lote 10) + dbmeth/partialname/meshdoff/dofrhside/elmethod/hreltime/numit/dofid_no en 8 runs (Sprint 11 lote 1) + freq_timeint/freq_timestep en 2 runs (Sprint 11 lote 2) + vtk_coord1/vtk_dofcalc1/vtk_empty1/vtk_nodmeth1/vtk_other1 en 5 runs (Sprint 11 lote 3) + dpline1/dpline_n/dpline_geom/dpline_group/dpline_eps/dpline_method/dpline_move/dpline_time/dpoint_time/dpoint1 en 10 runs (Sprint 11 lote 4) + cpn1/cpn_angular/cpn_geom/cpn_sort/cpn_zero/dsmooth1/dsmooth_n en 7 runs (Sprint 11 lote 5) + bmom1/bmom_switch/bmom_truss/bmom_2d/bmom_noint en 5 runs (Sprint 11 lote 6))."
 
 # ---------------------------------------------------------------------
 # Sprint 11 lote 1: verificacion de ARCHIVOS y STDOUT de los 8 keywords
@@ -1084,11 +1090,79 @@ else
   check_fail "dsmooth_n" "pasadas incorrectas (dof.70=$SEQ70 d71_3=$D71_3)"
 fi
 
+# ---------------------------------------------------------------------
+# Sprint 11 lote 6: control_print_beam_force_moment (6.262-6.264)
+# ---------------------------------------------------------------------
+# bmom1: 1 linea, dist = 0.5 EXACTO (corte vertical en x=0 sobre el nodo
+# fijo, fixed_in_space), fy1 = -F = -0.01, mz1 = -F*L = -0.01, fy2 =
+# +F = +0.01, mz2 = 0 (snap del ruido del solver), axial 0 (viga pura
+# sin truss). Signo = el del vector de fuerzas internas del elemento
+# (ELEMENT_BEAM_MOMENT), verificado empiricamente. Columnas: dist fx1
+# fy1 fz1 mx1 my1 mz1 fx2 fy2 fz2 mx2 my2 mz2.
+if [ "$(wc -l < "$T2014/beam_force_moment.5" 2>/dev/null)" = "1" ] && \
+   awk 'NF==13 && $1>0.4999 && $1<0.5001 && $2==0 && $3>-0.0101 && $3<-0.0099 \
+        && $4==0 && $5==0 && $6==0 && $7>-0.0101 && $7<-0.0099 && $8==0 \
+        && $9>0.0099 && $9<0.0101 && $10==0 && $11==0 && $12==0 && $13==0 \
+        {ok=1} END{exit !ok}' "$T2014/beam_force_moment.5" 2>/dev/null; then
+  check_ok "bmom1 (analitico: dist 0.5 fy1=-F mz1=-F*L fy2=+F mz2=0)"
+else
+  check_fail "bmom1" "valores inesperados: [$(cat "$T2014/beam_force_moment.5" 2>/dev/null)]"
+fi
+
+# bmom_switch: -separate_sequential (archivo beam_force_moment.0) con
+# switch -yes -> los 12 componentes con el signo INVERTIDO respecto a
+# bmom1 (fy1 = +0.01, mz1 = +0.01, fy2 = -0.01)
+if [ "$(wc -l < "$T2014/beam_force_moment.0" 2>/dev/null)" = "1" ] && \
+   awk 'NF==13 && $1>0.4999 && $1<0.5001 && $3>0.0099 && $3<0.0101 \
+        && $7>0.0099 && $7<0.0101 && $9>-0.0101 && $9<-0.0099 && $13==0 \
+        {ok=1} END{exit !ok}' "$T2014/beam_force_moment.0" 2>/dev/null; then
+  check_ok "bmom_switch (-yes: signos invertidos vs bmom1; archivo sequential .0)"
+else
+  check_fail "bmom_switch" "valores inesperados: [$(cat "$T2014/beam_force_moment.0" 2>/dev/null)]"
+fi
+
+# bmom_truss: la fuerza axial sale del truss (fx1 = +N, fx2 = -N) y el
+# resto de columnas de la viga (fy1 = -F, mz1 = -F*L, fy2 = +F, mz2 =
+# 0). N se verifica contra control_print_element -element_truss_force
+# (element_truss_force_0.7: "x y N" con method -middle): ambos leen
+# ELEMENT_TRUSS_FORCE y deben coincidir EXACTAMENTE.
+NTR=$(awk 'NR==1{print $3}' "$T2014/element_truss_force_0.7" 2>/dev/null)
+if [ "$(wc -l < "$T2014/beam_force_moment.7" 2>/dev/null)" = "1" ] && \
+   awk -v ntr="$NTR" 'NF==13 && $1>0.4999 && $1<0.5001 && $2>0.019 && $2<0.021 \
+        && $3>-0.0101 && $3<-0.0099 && $7>-0.0101 && $7<-0.0099 \
+        && $8>-0.021 && $8<-0.019 && $9>0.0099 && $9<0.0101 && $13==0 \
+        && ntr>0.019 && ntr<0.021 {ok=1} END{exit !ok}' \
+        "$T2014/beam_force_moment.7" 2>/dev/null; then
+  check_ok "bmom_truss (axial fx1=+N fx2=-N con N=$NTR == element_truss_force; fy/mz de la viga)"
+else
+  check_fail "bmom_truss" "axial o beam incorrectos (NTR=$NTR): [$(cat "$T2014/beam_force_moment.7" 2>/dev/null)]"
+fi
+
+# bmom_2d: 2 vigas colineales + corte DIAGONAL 2D (solo x,y) que cruza
+# SOLO el elemento 2 (x=0.75): 1 linea, dist = sqrt(1.25) =
+# 1.11803398875, mz1 = -F*0.5 = -0.005 (momento en x=0.5), fy2 = +F
+if [ "$(wc -l < "$T2014/beam_force_moment.8" 2>/dev/null)" = "1" ] && \
+   awk 'NF==13 && $1>1.1179 && $1<1.1182 && $2==0 && $3>-0.0101 && $3<-0.0099 \
+        && $7>-0.0051 && $7<-0.0049 && $9>0.0099 && $9<0.0101 && $13==0 \
+        {ok=1} END{exit !ok}' "$T2014/beam_force_moment.8" 2>/dev/null; then
+  check_ok "bmom_2d (2D: corte diagonal cruza solo el elem 2: dist sqrt(1.25), mz1=-F*0.5)"
+else
+  check_fail "bmom_2d" "valores inesperados: [$(cat "$T2014/beam_force_moment.8" 2>/dev/null)]"
+fi
+
+# bmom_noint: el corte (x=1.5) no cruza ninguna viga -> NO se escribe
+# archivo (decision documentada)
+if [ ! -f "$T2014/beam_force_moment.9" ]; then
+  check_ok "bmom_noint (corte sin vigas: archivo NO creado)"
+else
+  check_fail "bmom_noint" "beam_force_moment.9 no deberia existir"
+fi
+
 if [ "$CHECK_FAIL" = "1" ]; then
   echo "==> ALGUNAS VERIFICACIONES DE ARCHIVOS FALLARON"
   exit 1
 else
-  echo "==> Verificacion de archivos de salida (Sprint 11 lotes 1, 2, 3, 4 y 5): TODAS OK"
+  echo "==> Verificacion de archivos de salida (Sprint 11 lotes 1, 2, 3, 4, 5 y 6): TODAS OK"
 fi
 
 echo "==> Log de compilacion completo en /tmp/tn_build_safe.log"

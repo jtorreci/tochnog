@@ -474,6 +474,9 @@ enum {
   CONTROL_PRINT_FREQUENCY_TIMEINTERVAL_TIME,
   CONTROL_PRINT_FREQUENCY_TIMESTEP,
   CONTROL_PRINT_FREQUENCY_TIMESTEP_COUNT,
+  CONTROL_PRINT_BEAM_FORCE_MOMENT,
+  CONTROL_PRINT_BEAM_FORCE_MOMENT_COORDINATES,
+  CONTROL_PRINT_BEAM_FORCE_MOMENT_SWITCH,
   CONTROL_RELAXATION_CONDIF_TEMPERATURE,
   CONTROL_RELAXATION_GROUNDFLOW_PRESSURE,
   CONTROL_RELAXATION_MATERI_VELOCITY,
@@ -1838,6 +1841,7 @@ void      print_vtk( long int icontrol );
 void      print_gmsh( long int icontrol, long int task );
 void      print_frd( long int icontrol, long int task );
 void      print_interface_stress( long int icontrol, long int task );
+void      print_beam_force_moment( long int icontrol, long int task );
 void      print_tabular( long int icontrol );
 bool      calc_derived( const double sig[6], double out[5] );
 class     SqliteDB;

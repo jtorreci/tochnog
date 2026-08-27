@@ -31,6 +31,8 @@ PRINT_IFACE_STRESS_SRC=print_interface_stress.cc
 PRINT_IFACE_STRESS_OBJ=print_interface_stress.o
 PRINT_NODE_SRC=print_node.cc
 PRINT_NODE_OBJ=print_node.o
+PRINT_BEAM_FORCE_MOMENT_SRC=print_beam_force_moment.cc
+PRINT_BEAM_FORCE_MOMENT_OBJ=print_beam_force_moment.o
 DERIVED_SRC=derived.cc
 DERIVED_OBJ=derived.o
 
@@ -315,6 +317,7 @@ tochnog: adjust.$(OBJ) area.$(OBJ) \
 	print_da.$(OBJ) print_dx.$(OBJ) print_el.$(OBJ) \
 	print_gi.$(OBJ) print_g5.$(OBJ) print_g6.$(OBJ)\
 	print_gm.$(OBJ) print_hi.$(OBJ) print_dl.$(OBJ) print_node.$(OBJ) \
+	$(PRINT_BEAM_FORCE_MOMENT_OBJ) \
 	print_pl.$(OBJ) print_ma.$(OBJ) print_rs.$(OBJ) \
 	print_te.$(OBJ) print_un.$(OBJ) print_vt.$(OBJ) print_tb.$(OBJ) $(PRINT_FR_OBJ) $(PRINT_IFACE_STRESS_OBJ) $(DERIVED_OBJ) \
 	project.$(OBJ) range.$(OBJ) \
@@ -561,6 +564,9 @@ print_dl.$(OBJ): print_dl.$(SRC_CPP) tochnog.h
 
 print_node.$(OBJ): print_node.$(SRC_CPP) tochnog.h
 	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)print_node.$(SRC_CPP)
+
+print_beam_force_moment.$(OBJ): print_beam_force_moment.$(SRC_CPP) tochnog.h
+	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)print_beam_force_moment.$(SRC_CPP)
 
 print_ma.$(OBJ): print_ma.$(SRC_CPP) tochnog.h
 	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)print_ma.$(SRC_CPP)

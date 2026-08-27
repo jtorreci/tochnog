@@ -1084,6 +1084,11 @@ void step_close( long int task, long int ipar, long int npar, long int ipar_i, l
       db( CONTROL_PRINT_NODE, icontrol, ival, ddum, ldum, VERSION_NORMAL, GET );
       print_node( icontrol, ival, ldum );
     }
+    if ( frequency_allowed && db_active_index( CONTROL_PRINT_BEAM_FORCE_MOMENT, icontrol, VERSION_NORMAL ) ) {
+      db( CONTROL_PRINT_BEAM_FORCE_MOMENT, icontrol, ival, ddum, ldum,
+        VERSION_NORMAL, GET );
+      print_beam_force_moment( icontrol, ival[0] );
+    }
   }
   cout << flush;
 
