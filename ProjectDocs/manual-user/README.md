@@ -215,3 +215,8 @@ input parameters it accepts.
 - [control_print_mesh_dof](control_print_mesh_dof.md) — Professional name of the print_mesh_dof one-shot dump (node number + coords + listed dofs).
 - [control_print_number_iterations](control_print_number_iterations.md) — console monitor of the live iteration counter during the equilibrium iterations.
 - [control_print_partialname](control_print_partialname.md) — print every record whose name starts with the given prefix (like control_print, partial).
+
+## Sprint 11 — control_print family (batch 2)
+
+- [control_print_frequency_timeinterval](control_print_frequency_timeinterval.md) — run the control_print_* records of the same index each time after a time interval has passed (and always at the end of the time increment); history and control_print are exempt.
+- [control_print_frequency_timestep](control_print_frequency_timestep.md) — same, but after a number of time steps instead of a time interval.

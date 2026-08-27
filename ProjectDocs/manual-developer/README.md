@@ -206,3 +206,8 @@ Each file corresponds to the same feature in the [User Manual](../manual-user/).
 - [control_print_mesh_dof](control_print_mesh_dof.md) — prefix alias via db_number (also covers _geometry/_values); GNU no_index layout kept.
 - [control_print_number_iterations](control_print_number_iterations.md) — monitor before/in the equilibrium loop of top(); NOT inverse_iteration_number.
 - [control_print_partialname](control_print_partialname.md) — print_partialname() in print_db.cc; PREFIX match (strncmp), not the strstr helper; stdout like control_print.
+
+## Sprint 11 — control_print family (batch 2)
+
+- [control_print_frequency_timeinterval](control_print_frequency_timeinterval.md) — per-icontrol gate control_print_frequency_allowed() in top.cc wrapping every gated control_print_* of step_close; end-of-increment detected with the same time_current>=time_new condition of the timestep loop; state record per icontrol (external 0, NOT no_index=1: db() rejects PUT index>0 on no_index records); TIME_OLD anchoring for the manual cadence.
+- [control_print_frequency_timestep](control_print_frequency_timestep.md) — same gate, step counter per icontrol reset on every print; GNU step-clamp GOTCHA (0.04 0.41 has no step at 0.40 -> two increments in the test to reproduce the manual example).
