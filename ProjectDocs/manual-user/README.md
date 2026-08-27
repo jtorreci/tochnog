@@ -253,3 +253,9 @@ input parameters it accepts.
 - [control_print_node_geometry](control_print_node_geometry.md) — print only the nodes located on the given geometry.
 - [control_print_node_sort](control_print_node_sort.md) — sort the printed lines ascending (-angle with angular; -x, -y, -z otherwise).
 - [control_print_node_zero](control_print_node_zero.md) — -no suppresses zero valued results (exact zero comparison; default -yes).
+
+## Sprint 11 — control_print family (batch 6, beam force/moment)
+
+- [control_print_beam_force_moment](control_print_beam_force_moment.md) — print the forces and moments of the beam/truss/truss-beam elements crossed by a cut segment to beam_force_moment.<index> (or <seq>); first column = distance from the cut start, then the 12 components in the local beam axes; the truss force is used for the axial force; lines sorted by distance; no file when nothing is crossed.
+- [control_print_beam_force_moment_coordinates](control_print_beam_force_moment_coordinates.md) — the cut segment (xstart ystart zstart xend yend zend; 2D: only x y; exactly 2*ndim values).
+- [control_print_beam_force_moment_switch](control_print_beam_force_moment_switch.md) — -yes multiplies all 12 components by -1 (invert the output sign).

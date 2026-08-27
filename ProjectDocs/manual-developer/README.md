@@ -244,3 +244,9 @@ Each file corresponds to the same feature in the [User Manual](../manual-user/).
 - [control_print_node_geometry](control_print_node_geometry.md) — geometry() filter (filter.cc pattern) with NODE_START_REFINED fallback to NODE; fixed 2-value record.
 - [control_print_node_sort](control_print_node_sort.md) — collect+sort pattern of print_interface_stress.cc (stable insertion sort on an index array, ascending); key = the printed coordinate or angle; -y only ndim>=2, -z only 3D.
 - [control_print_node_zero](control_print_node_zero.md) — default -yes; -no drops lines with value EXACTLY 0, per file (per part).
+
+## Sprint 11 — control_print family (batch 6, beam force/moment)
+
+- [control_print_beam_force_moment](control_print_beam_force_moment.md) — new print_beam_force_moment.cc; ELEMENT_BEAM_MOMENT = 6 doubles (2 nodes x {2 in-plane forces + 1 out-of-plane moment}, beam-PLANE axes); local frame = beam_2d rotation ((a,b) = direction components on index_plane); axial from ELEMENT_TRUSS_FORCE (+N/-N) for -truss/-trussbeam; selection = 3D segment-segment min distance < 1e-6*max(1,cut); sorted by distance; two-pass (no file if nothing crossed); snap of solver noise ~1e-6; GOTCHA: the reference closest-point algorithm's s/u parameters were swapped during calibration.
+- [control_print_beam_force_moment_coordinates](control_print_beam_force_moment_coordinates.md) — variable length (fixed_length=0): 4 values in 2D, 6 in 3D; mandatory (db_error when absent or wrong length or zero-length cut); distance column = s*cut_length.
+- [control_print_beam_force_moment_switch](control_print_beam_force_moment_switch.md) — -yes -> factor -1 on the 12 components only (distance column untouched); -no/absent -> +1.
