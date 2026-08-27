@@ -250,3 +250,17 @@ Each file corresponds to the same feature in the [User Manual](../manual-user/).
 - [control_print_beam_force_moment](control_print_beam_force_moment.md) — new print_beam_force_moment.cc; ELEMENT_BEAM_MOMENT = 6 doubles (2 nodes x {2 in-plane forces + 1 out-of-plane moment}, beam-PLANE axes); local frame = beam_2d rotation ((a,b) = direction components on index_plane); axial from ELEMENT_TRUSS_FORCE (+N/-N) for -truss/-trussbeam; selection = 3D segment-segment min distance < 1e-6*max(1,cut); sorted by distance; two-pass (no file if nothing crossed); snap of solver noise ~1e-6; GOTCHA: the reference closest-point algorithm's s/u parameters were swapped during calibration.
 - [control_print_beam_force_moment_coordinates](control_print_beam_force_moment_coordinates.md) — variable length (fixed_length=0): 4 values in 2D, 6 in 3D; mandatory (db_error when absent or wrong length or zero-length cut); distance column = s*cut_length.
 - [control_print_beam_force_moment_switch](control_print_beam_force_moment_switch.md) — -yes -> factor -1 on the 12 components only (distance column untouched); -no/absent -> +1.
+
+## Sub-sprint materi_stress_force (lot 1 — infrastructure)
+
+- [post_calcul_materi_stress_force_element_group](post_calcul_materi_stress_force_element_group.md) — mandatory config record (no_index=1, data_required=POST_CALCUL); validated in post_calcul_materi_stress_force_validate() (calcul_force.cc); consumed in L2/L3.
+- [post_calcul_materi_stress_force_direction_exclude](post_calcul_materi_stress_force_direction_exclude.md) — variable DOUBLE (exactly ndim); XOR with direction_include; 3D requires one of them; 2D warns and ignores.
+- [post_calcul_materi_stress_force_direction_exclude_epsilon](post_calcul_materi_stress_force_direction_exclude_epsilon.md) — fixed 1 double; default 1.e-8 documented, consumed in L2/L3.
+- [post_calcul_materi_stress_force_direction_include](post_calcul_materi_stress_force_direction_include.md) — variable DOUBLE (exactly ndim); the include side of the XOR.
+- [post_calcul_materi_stress_force_direction_include_epsilon](post_calcul_materi_stress_force_direction_include_epsilon.md) — fixed 1 double; default 1.e-8 documented, consumed in L2/L3.
+- [post_calcul_materi_stress_force_reference_point](post_calcul_materi_stress_force_reference_point.md) — variable DOUBLE, length ngroups*ndim validated; 3D required, 2D warns with the (0,0) default.
+- [post_calcul_materi_stress_force_thickness_switch](post_calcul_materi_stress_force_thickness_switch.md) — variable INTEGER, length == ngroups, values -yes/-no validated.
+- [post_calcul_materi_stress_force_average](post_calcul_materi_stress_force_average.md) — fixed 1 INTEGER, default -yes; the -primary filter hook msf_node_is_averaged() returns 0 until L2/L3.
+- [post_calcul_materi_stress_force_outer](post_calcul_materi_stress_force_outer.md) — fixed 1 INTEGER, default -no; consumed in L2/L3.
+- [post_calcul_materi_stress_force_plot_switch](post_calcul_materi_stress_force_plot_switch.md) — variable INTEGER, length 3 (2D) / 4 (3D) = the VECTOR items, not the 9/16 result items.
+- [control_print_materi_stress_force](control_print_materi_stress_force.md) — new print_materi_stress_force.cc; reads NODE_DOF_CALCUL (VERSION_PRINT) at the -force block offset (1 slot per item); file materi_stress_force.<icontrol> with header comments from post_calcul_names; -all/-primary; no file without a -force block; MCALCUL=20 limitation documented (3D uses 16 of 20 slots).

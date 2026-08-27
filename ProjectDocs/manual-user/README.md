@@ -259,3 +259,17 @@ input parameters it accepts.
 - [control_print_beam_force_moment](control_print_beam_force_moment.md) — print the forces and moments of the beam/truss/truss-beam elements crossed by a cut segment to beam_force_moment.<index> (or <seq>); first column = distance from the cut start, then the 12 components in the local beam axes; the truss force is used for the axial force; lines sorted by distance; no file when nothing is crossed.
 - [control_print_beam_force_moment_coordinates](control_print_beam_force_moment_coordinates.md) — the cut segment (xstart ystart zstart xend yend zend; 2D: only x y; exactly 2*ndim values).
 - [control_print_beam_force_moment_switch](control_print_beam_force_moment_switch.md) — -yes multiplies all 12 components by -1 (invert the output sign).
+
+## Sub-sprint materi_stress_force (lot 1 — infrastructure)
+
+- [post_calcul_materi_stress_force_element_group](post_calcul_materi_stress_force_element_group.md) — mandatory target element groups of `post_calcul -materi_stress -force` (manual 6.913; quad4/quad9/hex8/hex27, one element over the structure thickness: sheet piles, tunnel shells).
+- [post_calcul_materi_stress_force_direction_exclude](post_calcul_materi_stress_force_direction_exclude.md) — 3D: exclude the element sides whose normal points in the given direction (tunnel length direction).
+- [post_calcul_materi_stress_force_direction_exclude_epsilon](post_calcul_materi_stress_force_direction_exclude_epsilon.md) — tolerance of the exclusion test (default 1.e-8).
+- [post_calcul_materi_stress_force_direction_include](post_calcul_materi_stress_force_direction_include.md) — 3D: exclude the element sides whose normal is perpendicular to the given direction (sheet pile height direction).
+- [post_calcul_materi_stress_force_direction_include_epsilon](post_calcul_materi_stress_force_direction_include_epsilon.md) — tolerance of the inclusion test (default 1.e-8).
+- [post_calcul_materi_stress_force_reference_point](post_calcul_materi_stress_force_reference_point.md) — approximate tunnel middle / sheet-pile reference point, one per element group (ndim values each), for the force/moment orientation.
+- [post_calcul_materi_stress_force_thickness_switch](post_calcul_materi_stress_force_thickness_switch.md) — -yes uses the longest element direction as structure thickness (one switch per group).
+- [post_calcul_materi_stress_force_average](post_calcul_materi_stress_force_average.md) — quad9/hex27: average the end-face forces/moments on the middle-plane nodes (default -yes).
+- [post_calcul_materi_stress_force_outer](post_calcul_materi_stress_force_outer.md) — -yes restricts the results to the outer nodes (furthest from the reference point; default -no).
+- [post_calcul_materi_stress_force_plot_switch](post_calcul_materi_stress_force_plot_switch.md) — inverts the plot-vector direction of the items (3 switches in 2D, 4 in 3D).
+- [control_print_materi_stress_force](control_print_materi_stress_force.md) — prints the -force results to materi_stress_force.<index> (the manual "index" = record index), one line per node with header comments; -all / -primary methods.
