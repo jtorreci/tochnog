@@ -220,3 +220,11 @@ input parameters it accepts.
 
 - [control_print_frequency_timeinterval](control_print_frequency_timeinterval.md) — run the control_print_* records of the same index each time after a time interval has passed (and always at the end of the time increment); history and control_print are exempt.
 - [control_print_frequency_timestep](control_print_frequency_timestep.md) — same, but after a number of time steps instead of a time interval.
+
+## Sprint 11 — control_print family (batch 3, VTK extensions)
+
+- [control_print_vtk_coord](control_print_vtk_coord.md) — whether the node coordinates (the POINTS block) are written to the vtk files (default -yes; -no omits them; documented limitation: invalid dataset for visualization).
+- [control_print_vtk_dof_calcul](control_print_vtk_dof_calcul.md) — filter on the post_calcul fields written to the vtk files (mirror of control_print_vtk_dof; -none writes no post field; names match the underlying data or the field label).
+- [control_print_vtk_empty](control_print_vtk_empty.md) — whether empty elements (ELEMENT_EMPTY -yes, computed for materi_diffusion/materi_density) are included in the vtk file (default -yes).
+- [control_print_vtk_node_method](control_print_vtk_node_method.md) — which node coordinates are written: -node, -node_start_refined (default) or -node_deformed_mesh.
+- [control_print_vtk_other](control_print_vtk_other.md) — "other things" written to the vtk files (default -yes). PARTIAL subset: boundary_condition scalar (bounded nodes) + mesh_deformation vector (materi_displacement); the full gid_other list is not implemented (discarded GiD family).

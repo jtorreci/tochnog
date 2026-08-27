@@ -211,3 +211,11 @@ Each file corresponds to the same feature in the [User Manual](../manual-user/).
 
 - [control_print_frequency_timeinterval](control_print_frequency_timeinterval.md) — per-icontrol gate control_print_frequency_allowed() in top.cc wrapping every gated control_print_* of step_close; end-of-increment detected with the same time_current>=time_new condition of the timestep loop; state record per icontrol (external 0, NOT no_index=1: db() rejects PUT index>0 on no_index records); TIME_OLD anchoring for the manual cadence.
 - [control_print_frequency_timestep](control_print_frequency_timestep.md) — same gate, step counter per icontrol reset on every print; GNU step-clamp GOTCHA (0.04 0.41 has no step at 0.40 -> two increments in the test to reproduce the manual example).
+
+## Sprint 11 — control_print family (batch 3, VTK extensions)
+
+- [control_print_vtk_coord](control_print_vtk_coord.md) — POINTS-block switch in print_vt.cc; decision documented: coordinates appear only in POINTS (no gmsh-style node_0/1/2 fields); -no yields an invalid-but-smaller dataset.
+- [control_print_vtk_dof_calcul](control_print_vtk_dof_calcul.md) — per-field flags gating both post_calcul loops; GNU adaptation of post_calcul_label: exact match on the underlying unknown + substring match on post_calcul_names; -none kills all post fields.
+- [control_print_vtk_empty](control_print_vtk_empty.md) — vtk_element_is_empty() helper (ELEMENT_EMPTY -yes, print_g5 pattern); ncell keeps CELLS/CELL_TYPES consistent; unsupported-type abort unchanged.
+- [control_print_vtk_node_method](control_print_vtk_node_method.md) — POINTS coordinate selection (stored / start_refined / deformed); default -node_start_refined; semantic change documented: deformed coordinates only with -node_deformed_mesh (before, materi_displacement always deformed the mesh).
+- [control_print_vtk_other](control_print_vtk_other.md) — PARTIAL: boundary_condition (NODE_BOUNDED, 1-based NORMAL indices + 1 offset gotcha; use db_max_index, not index-0 active) + mesh_deformation (dis dofs); bounda_force is not a boundary condition (value discriminator of the test).
