@@ -1029,3 +1029,38 @@ database.cc, elem.cc genérico) ya está lista.
   como elemento de malla en database.cc con data_length. El manual 2024 lista
   solo `-bar2/3/4` en 1D — beam es una feature de la versión GNU original.
   Verificar cómo se activa (si es por otro mecanismo) antes de decidir.
+
+### 8.5 Post-convergencia: BEAM3D y PLATE (AGENDADO 2026-08-27)
+
+Features MÁS ALLÁ de la convergencia Professional (no están en el manual ni en
+el inventario). Análisis prospectivo con evidencia del código (elem.cc:493-533:
+`BEAM → beam_3d()`, `TRUSS → truss()`, `TRUSSBEAM → ambos`; NO existe rama
+plate/shell — el nombre `shell` en database.cc:5967 es código muerto).
+
+- **`beam_3d` REAL (viga espacial, 6 dofs/nodo)** — el `beam_3d()` actual es una
+  viga PLANA proyectada a un plano (2 fuerzas + 1 momento por nodo, vía
+  `group_beam_plane`). Un beam 3D de verdad requiere: matriz 12×12 (axial +
+  torsión + 2 planos de flexión), frame local 3D (orientación por punto de
+  referencia o nodo 3º — a diseñar, riesgo de casos degenerados), torsión
+  (J, G), resultados 12 componentes en ejes locales, masa consistente.
+  No-lineal con grandes rotaciones (corotacional) = nivel aparte.
+  **Estimación: 3-5 lotes (~2-4 sesiones).** La infraestructura de viga ya
+  existe (beam_3d, ELEMENT_BEAM_MOMENT, control_print_beam_force_moment).
+
+- **`plate` / laja (placa plana)** — comportamiento in-plane (membrana, tensión
+  plana) y out-of-plane (flexión, Mindlin-Reissner) DESACOPLADOS: en placa plana
+  lineal la rigidez es bloque diagonal → se construyen por separado y se
+  superponen. 5 dofs/nodo (disx disy w rotx roty) o solo flexión (3 dofs:
+  w rotx roty). Sin drilling dof (rotz NO hace falta en placa plana). Riesgo
+  numérico principal: **shear locking** → integración reducida selectiva.
+  Storage de momentos/cortantes por punto de integración + post-proceso.
+  **Validación obligatoria: patch test + solución de Timoshenko** (no hay
+  ejemplo del manual — regla de verificación del proyecto no aplica).
+  **Estimación: 2-4 lotes (~1 semana)** — más sencillo de lo que parece por el
+  desacople in-plane/out-plane (confirmado 2026-08-27).
+
+- **NO agendado: lámina pura (shell general curvo)** — el difícil: la curvatura
+  acopla membrana-flexión y aparece el **drilling dof (rotz)**, mal definido en
+  teoría de placas (rigidez nula en el continuo) → requiere estabilización
+  (Allman / Hughes-Brezzi / MITC) + interpolaciones anti-locking. Ese sí es un
+  proyecto grande por sí solo.
