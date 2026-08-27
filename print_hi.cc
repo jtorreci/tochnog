@@ -254,6 +254,164 @@ void print_history_smooth( long int ival[], long int nval )
   if ( swit ) pri( "Out routine PRINT_HISTORY_SMOOTH" );
 }
 
+// print_dof_smooth_apply - control_print_dof_smooth_dof (manual
+// Professional 6.271) + control_print_dof_smooth_n (6.272): nodal
+// smoothing of the values printed by control_print_dof, computed BEFORE
+// the lines are written. Each pass replaces the value of a node by the
+// average of the values of its NEIGHBOUR nodes (nodes connected to it by
+// at least one element; the node itself is NOT part of the average --
+// documented decision, see manual-developer). The number of passes comes
+// from control_print_dof_smooth_n (default 10). With -all every dof
+// component is smoothed; otherwise the listed dof labels (e.g. -velx).
+// smooth_field, when the routine returns 1, holds (max_node+1)*nuknwn
+// doubles indexed [position*nuknwn+component]; the caller prints those
+// values instead of the raw node_dof values. Nodes without an active
+// NODE_DOF record are not smoothed (value 0.0; in practice every node
+// has one).
+static long int print_dof_smooth_apply( long int icontrol, long int max_node,
+  long int nuknwn_, double *smooth_field )
+
+{
+  long int ldum=0, nsmooth=10, nval=0, iv=0, ncomp=0, ic=0, inod=0,
+    pos=0, npos=0, max_node_raw=0, element=0, max_element=0, length=0,
+    nnol=0, i=0, j=0, u=0, v=0, upos=0, vpos=0, nedge=0, edge=0,
+    pass=0, *smooth_dof=NULL, *dof_label=NULL, *pos2orig=NULL,
+    *orig2pos=NULL, *el=NULL, *nodes=NULL, *head=NULL, *to=NULL,
+    *next_edge=NULL;
+  double ddum[1], *tmp=NULL;
+
+  // not an error: without the record no smoothing
+  if ( !db_active_index( CONTROL_PRINT_DOF_SMOOTH_DOF, icontrol,
+       VERSION_NORMAL ) ) return 0;
+  smooth_dof = get_new_int(DATA_ITEM_SIZE);
+  db( CONTROL_PRINT_DOF_SMOOTH_DOF, icontrol, smooth_dof, ddum, nval,
+    VERSION_NORMAL, GET );
+  if ( nval<=0 ) { delete[] smooth_dof; return 0; }
+  db( CONTROL_PRINT_DOF_SMOOTH_N, icontrol, &nsmooth, ddum, ldum,
+    VERSION_NORMAL, GET_IF_EXISTS );
+  if ( nsmooth<1 ) db_error( CONTROL_PRINT_DOF_SMOOTH_N, icontrol );
+
+  // selected components: -all or the listed dof labels
+  dof_label = get_new_int(MUKNWN);
+  db( DOF_LABEL, 0, dof_label, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+  long int *comp = get_new_int(nuknwn_);
+  for ( iv=0; iv<nval; iv++ ) {
+    if ( smooth_dof[iv]==-ALL ) {
+      for ( ic=0; ic<nuknwn_; ic++ ) comp[ncomp++] = ic;
+      break;
+    }
+    else {
+      long int idx=0;
+      if ( array_member( dof_label, smooth_dof[iv], nuknwn_, idx ) &&
+           ncomp<nuknwn_ ) comp[ncomp++] = idx;
+    }
+  }
+  if ( ncomp==0 ) {
+    delete[] smooth_dof; delete[] dof_label; delete[] comp;
+    return 0;
+  }
+
+  // position mapping: position p <-> p-th active node (ascending), the
+  // same order that renumbering() produced for VERSION_PRINT
+  db_max_index( NODE, max_node_raw, VERSION_NORMAL, GET );
+  pos2orig = get_new_int(max_node_raw+1);
+  orig2pos = get_new_int(max_node_raw+1);
+  array_set( orig2pos, -1, max_node_raw+1 );
+  for ( inod=0; inod<=max_node_raw; inod++ ) {
+    if ( db_active_index( NODE, inod, VERSION_NORMAL ) ) {
+      pos2orig[npos] = inod;
+      orig2pos[inod] = npos++;
+    }
+  }
+  if ( npos==0 ) {
+    delete[] smooth_dof; delete[] dof_label; delete[] comp;
+    delete[] pos2orig; delete[] orig2pos;
+    return 0;
+  }
+
+  // element connectivity (VERSION_NORMAL; elements do not change within
+  // a step): count the undirected node pairs, then fill the adjacency
+  // lists (head/to/next_edge, indexed by position)
+  el = get_new_int(MAXIMUM_NODE+1);
+  nodes = get_new_int(MAXIMUM_NODE);
+  db_max_index( ELEMENT, max_element, VERSION_NORMAL, GET );
+  for ( element=0; element<=max_element; element++ ) {
+    if ( !db_active_index( ELEMENT, element, VERSION_NORMAL ) ) continue;
+    db( ELEMENT, element, el, ddum, length, VERSION_NORMAL, GET );
+    nnol = length - 1;
+    if ( nnol>MAXIMUM_NODE ) nnol = MAXIMUM_NODE;
+    array_move( &el[1], nodes, nnol );
+    for ( i=0; i<nnol; i++ )
+      for ( j=i+1; j<nnol; j++ )
+        if ( nodes[i]!=nodes[j] ) nedge += 2;
+  }
+  head = get_new_int(npos);
+  array_set( head, -1, npos );
+  to = get_new_int(nedge);
+  next_edge = get_new_int(nedge);
+  edge = 0;
+  for ( element=0; element<=max_element; element++ ) {
+    if ( !db_active_index( ELEMENT, element, VERSION_NORMAL ) ) continue;
+    db( ELEMENT, element, el, ddum, length, VERSION_NORMAL, GET );
+    nnol = length - 1;
+    if ( nnol>MAXIMUM_NODE ) nnol = MAXIMUM_NODE;
+    array_move( &el[1], nodes, nnol );
+    for ( i=0; i<nnol; i++ ) {
+      for ( j=i+1; j<nnol; j++ ) {
+        if ( nodes[i]==nodes[j] ) continue;
+        u = nodes[i]; v = nodes[j];
+        if ( u<0 || u>max_node_raw || v<0 || v>max_node_raw ) continue;
+        upos = orig2pos[u]; vpos = orig2pos[v];
+        if ( upos<0 || vpos<0 ) continue;
+        to[edge] = vpos; next_edge[edge] = head[upos]; head[upos] = edge; edge++;
+        to[edge] = upos; next_edge[edge] = head[vpos]; head[vpos] = edge; edge++;
+      }
+    }
+  }
+
+  // copy the raw values (by POSITION: node_dof in VERSION_PRINT is
+  // indexed by the compacted node numbers, the same order as the write
+  // loop of print_dof) and run the passes over the selected components
+  for ( pos=0; pos<npos; pos++ ) {
+    if ( db_active_index( NODE_DOF, pos, VERSION_PRINT ) ) {
+      double *nd = db_dbl( NODE_DOF, pos, VERSION_PRINT );
+      for ( ic=0; ic<nuknwn_; ic++ ) smooth_field[pos*nuknwn_+ic] = nd[ic];
+    }
+  }
+  tmp = get_new_dbl(npos*nuknwn_);
+  double *sum_comp = get_new_dbl(ncomp);
+  for ( pass=0; pass<nsmooth; pass++ ) {
+    array_move( smooth_field, tmp, npos*nuknwn_ );
+    for ( pos=0; pos<npos; pos++ ) {
+      long int count=0;
+      array_set( sum_comp, 0., ncomp );
+      for ( edge=head[pos]; edge>=0; edge=next_edge[edge] ) {
+        count++;
+        for ( ic=0; ic<ncomp; ic++ )
+          sum_comp[ic] += tmp[to[edge]*nuknwn_+comp[ic]];
+      }
+      if ( count==0 ) continue; // isolated node: keep the value
+      for ( ic=0; ic<ncomp; ic++ )
+        smooth_field[pos*nuknwn_+comp[ic]] = sum_comp[ic] / ((double) count);
+    }
+  }
+
+  delete[] sum_comp;
+
+  delete[] smooth_dof;
+  delete[] dof_label;
+  delete[] comp;
+  delete[] pos2orig;
+  delete[] orig2pos;
+  delete[] el;
+  delete[] nodes;
+  delete[] head;
+  delete[] to;
+  delete[] next_edge;
+  delete[] tmp;
+  return 1;
+}
+
 // print_dof - control_print_dof: print the primary dofs with the
 // coordinates at which they hold. Lines like "x y z dof" per node; in 1D
 // only x, etc. The coordinates themselves are also printed in separate
@@ -263,10 +421,10 @@ void print_dof( long int icontrol, long int task )
 
 {
   long int inod=0, idim=0, ipuknwn=0, iuknwn=0, nder_=0, nuknwn_=0,
-    swit=0, ldum=0, nval=0, seq=0, dof_id=-YES;
+    swit=0, ldum=0, nval=0, seq=0, dof_id=-YES, smooth_active=0;
   long int idum[1], *dof_label=NULL, *dof_scal_vec_mat=NULL,
     *node_number_of_position=NULL;
-  double ddum[1], coord[MDIM], *node_dof=NULL;
+  double ddum[1], coord[MDIM], *node_dof=NULL, *smooth_field=NULL;
   char filename[MCHAR], str[MCHAR];
 
   swit = set_swit(-1,-1,"print_dof");
@@ -303,6 +461,20 @@ void print_dof( long int icontrol, long int task )
   db( DOF_LABEL, 0, dof_label, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
   db( DOF_SCAL_VEC_MAT, 0, dof_scal_vec_mat, ddum, ldum, VERSION_NORMAL,
     GET_IF_EXISTS );
+
+  // control_print_dof_smooth_dof / _n (manual Professional 6.271/6.272):
+  // nodal smoothing of the printed values (see print_dof_smooth_apply).
+  // The smoothed field substitutes the raw values in the write loop; the
+  // node id column (control_print_dof_id) is NOT smoothed.
+  if ( nuknwn_>0 && max_node>=0 ) {
+    smooth_field = get_new_dbl((max_node+1)*nuknwn_);
+    smooth_active = print_dof_smooth_apply( icontrol, max_node, nuknwn_,
+      smooth_field );
+    if ( !smooth_active ) {
+      delete[] smooth_field;
+      smooth_field = NULL;
+    }
+  }
 
   // file name: dof.<index> or dof.<seq>
   strcpy( filename, "dof." );
@@ -383,7 +555,10 @@ void print_dof( long int icontrol, long int task )
         }
         for ( idim=0; idim<ndim; idim++ )
           out << coord[idim] << " ";
-        out << node_dof[indx];
+        if ( smooth_field )
+          out << smooth_field[inod*nuknwn_+indx];
+        else
+          out << node_dof[indx];
         if ( dof_id==-YES ) out << " " << node_number_of_position[inod];
         out << "\n";
       }
@@ -395,6 +570,7 @@ void print_dof( long int icontrol, long int task )
   db_version_delete( VERSION_PRINT );
   delete[] dof_label;
   delete[] dof_scal_vec_mat;
+  if ( smooth_field ) delete[] smooth_field;
   if ( node_number_of_position ) delete[] node_number_of_position;
 
   if ( swit ) pri( "Out routine PRINT_DOF" );

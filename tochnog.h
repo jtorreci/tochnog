@@ -462,6 +462,14 @@ enum {
   CONTROL_PRINT_DOF_POINT,
   CONTROL_PRINT_DOF_POINT_COORDINATES,
   CONTROL_PRINT_DOF_POINT_TIME,
+  CONTROL_PRINT_DOF_SMOOTH_DOF,
+  CONTROL_PRINT_DOF_SMOOTH_N,
+  CONTROL_PRINT_NODE,
+  CONTROL_PRINT_NODE_ANGULAR,
+  CONTROL_PRINT_NODE_ANGULAR_MIDDLE,
+  CONTROL_PRINT_NODE_GEOMETRY,
+  CONTROL_PRINT_NODE_SORT,
+  CONTROL_PRINT_NODE_ZERO,
   CONTROL_PRINT_FREQUENCY_TIMEINTERVAL,
   CONTROL_PRINT_FREQUENCY_TIMEINTERVAL_TIME,
   CONTROL_PRINT_FREQUENCY_TIMESTEP,
@@ -1272,6 +1280,7 @@ enum {
   X,
   Y,
   Z,
+  ANGLE,
   LAST_DUMMY }; // keep LAST_DUMMY always the last one
 
 #define MDAT LAST_DUMMY+DATA_ITEM_SIZE  // reserve space for unknowns
@@ -1818,6 +1827,7 @@ void      print_history_smooth( long int ival[], long int nval );
 void      print_dof( long int icontrol, long int task );
 void      print_dof_line( long int icontrol, long int task );
 void      print_dof_point( long int icontrol, long int task );
+void      print_node( long int icontrol, long int ival[], long int nval );
 void      print_plotmtv( long int icontrol, long int ival[] );
 void      print_matlab( void );
 void      print_restart( long int icontrol );

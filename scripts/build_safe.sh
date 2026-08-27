@@ -122,6 +122,11 @@ HIPO_TOTAL=0
 # Sprint 11 lote 4 (dof_line/dof_point): disy.*/velx.*/vely.*/disx.* de
 # dpline1/dpline_n/dpline_geom/dpline_group/dpline_eps/dpline_method/
 # dpline_move/dpline_time/dpoint_time/dpoint1 y adis.* (calcul de dpoint1).
+# Sprint 11 lote 5 (node prints + dof smoothing): velx.10/11/20/30/40/52,
+# vely.10/11/20/21/54/55/56/57/50/51 (cpn1/cpn_angular/cpn_geom/cpn_sort/
+# cpn_zero; velx.*/vely.* ya cubiertos), node_dof_0.11/node_dof_1.11
+# (cpn1 numerico), avel.12 (calcul de cpn1) y dof.60/61/70/71
+# (dsmooth1/dsmooth_n; dof.* ya cubierto).
 rm -f validation-suite/test-2014/dof.* \
       validation-suite/test-2014/freq_timeint*.frd \
       validation-suite/test-2014/freq_timestep*.frd \
@@ -134,7 +139,9 @@ rm -f validation-suite/test-2014/dof.* \
       validation-suite/test-2014/tn43.vtk \
       validation-suite/test-2014/velx.* validation-suite/test-2014/vely.* \
       validation-suite/test-2014/disx.* validation-suite/test-2014/disy.* \
-      validation-suite/test-2014/adis.*
+      validation-suite/test-2014/adis.* \
+      validation-suite/test-2014/avel.* \
+      validation-suite/test-2014/node_dof_0.11 validation-suite/test-2014/node_dof_1.11
 # 13 tests: 12 preexistentes + familia iface_mc (1 test logico = 6 runs:
 # iface_mc a/a' invarianza, iface_mc_slip b/b' invarianza, tension c, gap d)
 # + iface_mc_mem (memory), + iface_mc_dil/dil_1step/num (dilatancia RF-4 y
@@ -598,7 +605,8 @@ for t in hypo1 hypo2 hypo3 hypo4 smooth1 dof1 mlx1 vtk_dof1 gen1 genbeam1       
          freq_timeint freq_timestep \
          vtk_coord1 vtk_dofcalc1 vtk_empty1 vtk_nodmeth1 vtk_other1 \
          dpline1 dpline_n dpline_geom dpline_group dpline_eps \
-         dpline_method dpline_move dpline_time dpoint_time dpoint1; do
+         dpline_method dpline_move dpline_time dpoint_time dpoint1 \
+         cpn1 cpn_angular cpn_geom cpn_sort cpn_zero dsmooth1 dsmooth_n; do
   HIPO_TOTAL=$((HIPO_TOTAL+1))
   ( cd validation-suite/test-2014 &&
     ulimit -v 4000000 &&
@@ -611,7 +619,7 @@ for t in hypo1 hypo2 hypo3 hypo4 smooth1 dof1 mlx1 vtk_dof1 gen1 genbeam1       
     echo "    $t: FALLO (rc=$RC)"
   fi
 done
-echo "==> Resumen: $HIPO_OK/$HIPO_TOTAL runs OK (13 tests: 12 preexistentes + familia iface_mc en 10 runs + familia 3D en 5 runs + familia generate_interface en 6 runs + familia materi_direct en 5 runs + materi_displacement_relative en 2 runs + slide/reset_value en 2 runs + cda_arith/copy/activate en 3 runs + cdist_normal/corr/clamp en 3 runs + cd_method/cd_geom en 2 runs + gravity/settlement en 4 runs + contact en 1 run + contact_block/ctrl_apply/heatgen en 3 runs + groundflow_consolidate_off en 1 run + groundflow_vangenuchten/groundflow_nonsaturated_off en 2 runs + groundflow_total_pressure_tension/groundflow_interface en 2 runs + groundflow_flux_edge en 1 run + groundflow_phreatic_multiple en 1 run + groundflow_seepage en 1 run + groundflow_pressure_atm/_def en 2 runs + groundflow_total_pressure_limit/_dry en 2 runs + condif_heat_edge/vol/vol2 en 3 runs + condif_convec/rad/convec_el en 3 runs + aeg_node/aeg_seq/bt_factor en 3 runs + iface_condif/expansion/tangref en 3 runs + node_force_inertia/slide/pressure en 3 runs + creset_geom/iface en 2 runs + fedge_alias/restrict, fvol_elem y cmat_gate en 4 runs + fproj_tunnel en 1 run + dsmall/dignore en 2 runs + mdirect_comp/gate en 2 runs + mdp_shear/mfactor en 2 runs + mmc_tension en 1 run + mmchs_soft en 1 run + mcap2/mcap_legacy en 2 runs + mcrunch/mcrunch_low en 2 runs + mvoid/mvoid_low en 2 runs + mpower en 1 run + mshf/mshf_nof en 2 runs + mk0/mk0_off en 2 runs + myoung6/myoung6_e2/myoung6_e3/myoung6_apply en 4 runs + msph/msph_flat en 2 runs + mcap1/mcap1_elast/mcap1_comb en 3 runs + mhardsoil_elast/elast2/unload/unload_flat/plast/plast_elast/gp0/gp0_off en 8 runs + mstrain_cap/_elast, mstrain_compression/_elast, mstrain_diprisco/_elast, mstrain_druckprag/_elast en 8 runs + mdiprisco_hist en 1 run + mc_pressure_min/_off en 2 runs (Sprint 10 lote 9) + mrepeat_save en 1 run (Sprint 10 lote 10) + dbmeth/partialname/meshdoff/dofrhside/elmethod/hreltime/numit/dofid_no en 8 runs (Sprint 11 lote 1) + freq_timeint/freq_timestep en 2 runs (Sprint 11 lote 2) + vtk_coord1/vtk_dofcalc1/vtk_empty1/vtk_nodmeth1/vtk_other1 en 5 runs (Sprint 11 lote 3) + dpline1/dpline_n/dpline_geom/dpline_group/dpline_eps/dpline_method/dpline_move/dpline_time/dpoint_time/dpoint1 en 10 runs (Sprint 11 lote 4))."
+echo "==> Resumen: $HIPO_OK/$HIPO_TOTAL runs OK (13 tests: 12 preexistentes + familia iface_mc en 10 runs + familia 3D en 5 runs + familia generate_interface en 6 runs + familia materi_direct en 5 runs + materi_displacement_relative en 2 runs + slide/reset_value en 2 runs + cda_arith/copy/activate en 3 runs + cdist_normal/corr/clamp en 3 runs + cd_method/cd_geom en 2 runs + gravity/settlement en 4 runs + contact en 1 run + contact_block/ctrl_apply/heatgen en 3 runs + groundflow_consolidate_off en 1 run + groundflow_vangenuchten/groundflow_nonsaturated_off en 2 runs + groundflow_total_pressure_tension/groundflow_interface en 2 runs + groundflow_flux_edge en 1 run + groundflow_phreatic_multiple en 1 run + groundflow_seepage en 1 run + groundflow_pressure_atm/_def en 2 runs + groundflow_total_pressure_limit/_dry en 2 runs + condif_heat_edge/vol/vol2 en 3 runs + condif_convec/rad/convec_el en 3 runs + aeg_node/aeg_seq/bt_factor en 3 runs + iface_condif/expansion/tangref en 3 runs + node_force_inertia/slide/pressure en 3 runs + creset_geom/iface en 2 runs + fedge_alias/restrict, fvol_elem y cmat_gate en 4 runs + fproj_tunnel en 1 run + dsmall/dignore en 2 runs + mdirect_comp/gate en 2 runs + mdp_shear/mfactor en 2 runs + mmc_tension en 1 run + mmchs_soft en 1 run + mcap2/mcap_legacy en 2 runs + mcrunch/mcrunch_low en 2 runs + mvoid/mvoid_low en 2 runs + mpower en 1 run + mshf/mshf_nof en 2 runs + mk0/mk0_off en 2 runs + myoung6/myoung6_e2/myoung6_e3/myoung6_apply en 4 runs + msph/msph_flat en 2 runs + mcap1/mcap1_elast/mcap1_comb en 3 runs + mhardsoil_elast/elast2/unload/unload_flat/plast/plast_elast/gp0/gp0_off en 8 runs + mstrain_cap/_elast, mstrain_compression/_elast, mstrain_diprisco/_elast, mstrain_druckprag/_elast en 8 runs + mdiprisco_hist en 1 run + mc_pressure_min/_off en 2 runs (Sprint 10 lote 9) + mrepeat_save en 1 run (Sprint 10 lote 10) + dbmeth/partialname/meshdoff/dofrhside/elmethod/hreltime/numit/dofid_no en 8 runs (Sprint 11 lote 1) + freq_timeint/freq_timestep en 2 runs (Sprint 11 lote 2) + vtk_coord1/vtk_dofcalc1/vtk_empty1/vtk_nodmeth1/vtk_other1 en 5 runs (Sprint 11 lote 3) + dpline1/dpline_n/dpline_geom/dpline_group/dpline_eps/dpline_method/dpline_move/dpline_time/dpoint_time/dpoint1 en 10 runs (Sprint 11 lote 4) + cpn1/cpn_angular/cpn_geom/cpn_sort/cpn_zero/dsmooth1/dsmooth_n en 7 runs (Sprint 11 lote 5))."
 
 # ---------------------------------------------------------------------
 # Sprint 11 lote 1: verificacion de ARCHIVOS y STDOUT de los 8 keywords
@@ -982,11 +990,105 @@ else
   check_fail "dpoint1" "punto o calcul incorrectos (disy $V1_44/$V2_44, adis $A1_44/$A2_44)"
 fi
 
+# ---------------------------------------------------------------------
+# Sprint 11 lote 5: verificacion de ARCHIVOS de control_print_node
+# (manual Professional 6.330-6.335) y del suavizado de control_print_dof
+# (6.271-6.272). control_print_node: "x y <value>" por nodo, un archivo
+# por parte seleccionada; el suavizado modifica la salida dof.<index>.
+# ---------------------------------------------------------------------
+
+# cpn1: labels -velx -vely (ejemplo del manual) -> vely.10 con el campo
+# EXACTO 0/0/-0.01/-0.01 (todos los dofs Dirichlet); partes numericas
+# 0 1 -> node_dof_1.11 == vely.10; node_dof_calcul -materi_velocity
+# (post_calcul -average) -> avel.12 = (velx+vely)/2 = -0.005 arriba
+N10=$(wc -l < "$T2014/vely.10" 2>/dev/null || echo 0)
+V10_4=$(awk 'NR==4{print $3}' "$T2014/vely.10" 2>/dev/null)
+AV12_4=$(awk 'NR==4{print $3}' "$T2014/avel.12" 2>/dev/null)
+if [ "$N10" = "4" ] && \
+   awk -v v="$V10_4" 'BEGIN{d=v+0.01; exit !(d<1e-3 && d>-1e-3)}' && \
+   awk -v v="$AV12_4" 'BEGIN{d=v+0.005; exit !(d<1e-3 && d>-1e-3)}' && \
+   diff -q "$T2014/vely.10" "$T2014/node_dof_1.11" >/dev/null 2>&1; then
+  check_ok "cpn1 (labels vely.10; numerico node_dof_1.11 == vely.10; calcul avel.12)"
+else
+  check_fail "cpn1" "labels/numerico/calcul incorrectos (N10=$N10 v10_4=$V10_4 avel_4=$AV12_4)"
+fi
+
+# cpn_angular: angulo en GRADOS desde +x hacia +y con middle (0.5,0.5):
+# nodo 4 (1,1) = atan2(0.5,0.5) = 45 grados EXACTO; sin sort el orden de
+# nodo es -135/-45/135/45; con sort -angle ascendente -135/-45/45/135
+A20_4=$(awk 'NR==4{print $1}' "$T2014/vely.20" 2>/dev/null)
+A21_1=$(awk 'NR==1{print $1}' "$T2014/vely.21" 2>/dev/null)
+A21_4=$(awk 'NR==4{print $1}' "$T2014/vely.21" 2>/dev/null)
+if awk -v a="$A20_4" -v b="$A21_1" -v c="$A21_4" \
+   'BEGIN{exit !(a-45<1e-6 && a-45>-1e-6 && b+135<1e-6 && b+135>-1e-6 && c-135<1e-6 && c-135>-1e-6)}'; then
+  check_ok "cpn_angular (nodo (1,1)=45 grados; sort -angle: -135..135)"
+else
+  check_fail "cpn_angular" "angulos incorrectos (a4=$A20_4 s1=$A21_1 s4=$A21_4)"
+fi
+
+# cpn_geom: geometry_line sobre el borde inferior -> SOLO los 2 nodos del
+# borde (2 lineas) vs 4 lineas sin el record. Icrontrols 54/55: los
+# 30-44 estan ocupados por la familia dof_line (dpline1 escribe
+# vely.30; dpline_move vely.40/41 - colision de nombres de archivo).
+N30=$(wc -l < "$T2014/vely.54" 2>/dev/null || echo 0)
+N31=$(wc -l < "$T2014/vely.55" 2>/dev/null || echo 0)
+if [ "$N30" = "2" ] && [ "$N31" = "4" ]; then
+  check_ok "cpn_geom (filtro geometria: $N30 lineas vs $N31 sin filtro)"
+else
+  check_fail "cpn_geom" "el filtro de geometria no discrimina (N30=$N30 N31=$N31)"
+fi
+
+# cpn_sort: nodos 1=(0,1) 2=(0,0) 3=(1,1) 4=(1,0) -> sin sort la primera
+# linea es "0 1 -0.01" (orden de nodo); con sort -y la primera es
+# "0 0 0" y la ultima "1 1 -0.01" (y ascendente). Icrontrols 56/57.
+S40_1=$(head -1 "$T2014/vely.56" 2>/dev/null)
+S41_1=$(head -1 "$T2014/vely.57" 2>/dev/null)
+S41_4=$(tail -1 "$T2014/vely.57" 2>/dev/null)
+if [ "$S40_1" = "0 1 -0.01" ] && [ "$S41_1" = "0 0 0" ] && [ "$S41_4" = "1 1 -0.01" ]; then
+  check_ok "cpn_sort (sort -y ascendente: $S41_1 .. $S41_4 vs $S40_1 sin sort)"
+else
+  check_fail "cpn_sort" "el sort no discrimina (56_1=$S40_1 57_1=$S41_1 57_4=$S41_4)"
+fi
+
+# cpn_zero: -no suprime los valores 0 (2 lineas vs 4 con el default -yes);
+# con -velx (TODO 0) el archivo queda VACIO (comparacion de cero EXACTA)
+N50=$(wc -l < "$T2014/vely.50" 2>/dev/null || echo 0)
+N51=$(wc -l < "$T2014/vely.51" 2>/dev/null || echo 0)
+N52=$(wc -l < "$T2014/velx.52" 2>/dev/null || echo 0)
+if [ "$N50" = "2" ] && [ "$N51" = "4" ] && [ "$N52" = "0" ]; then
+  check_ok "cpn_zero (zero -no: $N50 lineas vs default $N51; velx todo 0: $N52)"
+else
+  check_fail "cpn_zero" "el filtro de ceros no discrimina (N50=$N50 N51=$N51 N52=$N52)"
+fi
+
+# dsmooth1: 1 pasada con -all sobre la cadena 0,1,2,3,4 -> el interior es
+# el promedio de vecinos EXACTO (1,1,2,3,3) vs raw (0,1,2,3,4) en dof.61
+SEQ60=$(awk '{printf "%s ", $2}' "$T2014/dof.60" 2>/dev/null)
+SEQ61=$(awk '{printf "%s ", $2}' "$T2014/dof.61" 2>/dev/null)
+if [ "$SEQ60" = "1 1 2 3 3 " ] && [ "$SEQ61" = "0 1 2 3 4 " ]; then
+  check_ok "dsmooth1 (1 pasada: interior=promedio de vecinos (1,1,2,3,3) vs raw)"
+else
+  check_fail "dsmooth1" "suavizado 1 pasada incorrecto (dof.60=$SEQ60 dof.61=$SEQ61)"
+fi
+
+# dsmooth_n: A/B 3 pasadas (1.5,1.5,2,2.5,2.5 EXACTO) vs default 10
+# pasadas (1.9375,1.96875,2,2.03125,2.0625): todos los valores a menos
+# de 0.1 de la MEDIA 2.0 (convergencia) y el nodo central x=2 EXACTO
+SEQ70=$(awk '{printf "%s ", $2}' "$T2014/dof.70" 2>/dev/null)
+D71_3=$(awk 'NR==3{print $2}' "$T2014/dof.71" 2>/dev/null)
+if [ "$SEQ70" = "1.5 1.5 2 2.5 2.5 " ] && \
+   awk '{d=$2-2; if (d<0) d=-d; if (d>0.1) exit 1}' "$T2014/dof.71" 2>/dev/null \
+   && [ "$D71_3" = "2" ]; then
+  check_ok "dsmooth_n (3 pasadas exactas; default 10 convergido a la media 2.0)"
+else
+  check_fail "dsmooth_n" "pasadas incorrectas (dof.70=$SEQ70 d71_3=$D71_3)"
+fi
+
 if [ "$CHECK_FAIL" = "1" ]; then
   echo "==> ALGUNAS VERIFICACIONES DE ARCHIVOS FALLARON"
   exit 1
 else
-  echo "==> Verificacion de archivos de salida (Sprint 11 lotes 1, 2, 3 y 4): TODAS OK"
+  echo "==> Verificacion de archivos de salida (Sprint 11 lotes 1, 2, 3, 4 y 5): TODAS OK"
 fi
 
 echo "==> Log de compilacion completo en /tmp/tn_build_safe.log"

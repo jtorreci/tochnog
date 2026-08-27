@@ -1929,6 +1929,57 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   data_class[CONTROL_PRINT_DOF_POINT_TIME] = CONTROL;
   data_required[CONTROL_PRINT_DOF_POINT_TIME] = CONTROL_PRINT_DOF_POINT;
 
+  strcpy(name[CONTROL_PRINT_DOF_SMOOTH_DOF],"control_print_dof_smooth_dof");
+  type[CONTROL_PRINT_DOF_SMOOTH_DOF] = INTEGER;
+  data_length[CONTROL_PRINT_DOF_SMOOTH_DOF] = DATA_ITEM_SIZE;
+  fixed_length[CONTROL_PRINT_DOF_SMOOTH_DOF] = 0;
+  data_class[CONTROL_PRINT_DOF_SMOOTH_DOF] = CONTROL;
+  data_required[CONTROL_PRINT_DOF_SMOOTH_DOF] = CONTROL_PRINT_DOF;
+
+  strcpy(name[CONTROL_PRINT_DOF_SMOOTH_N],"control_print_dof_smooth_n");
+  type[CONTROL_PRINT_DOF_SMOOTH_N] = INTEGER;
+  data_length[CONTROL_PRINT_DOF_SMOOTH_N] = 1;
+  data_class[CONTROL_PRINT_DOF_SMOOTH_N] = CONTROL;
+  data_required[CONTROL_PRINT_DOF_SMOOTH_N] = CONTROL_PRINT_DOF_SMOOTH_DOF;
+
+  strcpy(name[CONTROL_PRINT_NODE],"control_print_node");
+  type[CONTROL_PRINT_NODE] = INTEGER;
+  data_length[CONTROL_PRINT_NODE] = DATA_ITEM_SIZE;
+  fixed_length[CONTROL_PRINT_NODE] = 0;
+  data_class[CONTROL_PRINT_NODE] = CONTROL;
+
+  strcpy(name[CONTROL_PRINT_NODE_ANGULAR],"control_print_node_angular");
+  type[CONTROL_PRINT_NODE_ANGULAR] = INTEGER;
+  data_length[CONTROL_PRINT_NODE_ANGULAR] = 3;
+  fixed_length[CONTROL_PRINT_NODE_ANGULAR] = 0;
+  data_class[CONTROL_PRINT_NODE_ANGULAR] = CONTROL;
+  data_required[CONTROL_PRINT_NODE_ANGULAR] = CONTROL_PRINT_NODE;
+
+  strcpy(name[CONTROL_PRINT_NODE_ANGULAR_MIDDLE],"control_print_node_angular_middle");
+  type[CONTROL_PRINT_NODE_ANGULAR_MIDDLE] = DOUBLE_PRECISION;
+  data_length[CONTROL_PRINT_NODE_ANGULAR_MIDDLE] = 3;
+  fixed_length[CONTROL_PRINT_NODE_ANGULAR_MIDDLE] = 0;
+  data_class[CONTROL_PRINT_NODE_ANGULAR_MIDDLE] = CONTROL;
+  data_required[CONTROL_PRINT_NODE_ANGULAR_MIDDLE] = CONTROL_PRINT_NODE_ANGULAR;
+
+  strcpy(name[CONTROL_PRINT_NODE_GEOMETRY],"control_print_node_geometry");
+  type[CONTROL_PRINT_NODE_GEOMETRY] = INTEGER;
+  data_length[CONTROL_PRINT_NODE_GEOMETRY] = 2;
+  data_class[CONTROL_PRINT_NODE_GEOMETRY] = CONTROL;
+  data_required[CONTROL_PRINT_NODE_GEOMETRY] = CONTROL_PRINT_NODE;
+
+  strcpy(name[CONTROL_PRINT_NODE_SORT],"control_print_node_sort");
+  type[CONTROL_PRINT_NODE_SORT] = INTEGER;
+  data_length[CONTROL_PRINT_NODE_SORT] = 1;
+  data_class[CONTROL_PRINT_NODE_SORT] = CONTROL;
+  data_required[CONTROL_PRINT_NODE_SORT] = CONTROL_PRINT_NODE;
+
+  strcpy(name[CONTROL_PRINT_NODE_ZERO],"control_print_node_zero");
+  type[CONTROL_PRINT_NODE_ZERO] = INTEGER;
+  data_length[CONTROL_PRINT_NODE_ZERO] = 1;
+  data_class[CONTROL_PRINT_NODE_ZERO] = CONTROL;
+  data_required[CONTROL_PRINT_NODE_ZERO] = CONTROL_PRINT_NODE;
+
   strcpy(name[CONTROL_PRINT_FREQUENCY_TIMEINTERVAL],"control_print_frequency_timeinterval");
   type[CONTROL_PRINT_FREQUENCY_TIMEINTERVAL] = DOUBLE_PRECISION;
   data_length[CONTROL_PRINT_FREQUENCY_TIMEINTERVAL] = 1;
@@ -6144,6 +6195,8 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   strcpy(name[Y],"y");
 
   strcpy(name[Z],"z");
+
+  strcpy(name[ANGLE],"angle");
 
   for ( idat=0; idat<MDAT; idat++ ) {
     if ( data_length[idat]<1 ) data_length[idat] = 1;
