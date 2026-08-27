@@ -774,14 +774,116 @@ void iteration_start( void )
   db_set_dbl( ELEMENT_VOLUME, VERSION_NORMAL );
 }
 
+// control_print_frequency gate (manual Professional 6.291/6.292).
+// Returns 1 when the control_print_* records of this icontrol may print
+// in the current step_close, 0 when the print is gated by a
+// control_print_frequency_timeinterval / control_print_frequency_timestep
+// record. The 3 exceptions (control_print, control_print_history and
+// control_print_data_versus_data) are NOT gated by the caller.
+//
+// Semantics (manual): the gated prints run each time after a time
+// interval has passed (timeinterval) or after N time steps (timestep),
+// and ALWAYS also at the end of the time increment. The end of the
+// increment is detected with the SAME condition the timestep loop in
+// top() uses: TIME_NEW is set at the start of each control_timestep
+// increment and the last step is clamped exactly to it, so
+// time_current>=time_new means the increment of the control_timestep
+// record finished (step_close is called once per step).
+//
+// State (last print time / steps since last print) lives in dedicated
+// VERSION_NORMAL records per icontrol (pattern of control_print_gid_time)
+// so it survives restarts; on restart the cadence is re-anchored at the
+// start of the current increment. If both frequency records exist for the
+// same icontrol the timeinterval record wins (documented decision).
+long int control_print_frequency_allowed( long int icontrol )
+
+{
+  long int ldum=0, idum[1], frequency_timestep=0, frequency_count=0,
+    zero=0, one=1;
+  double ddum[1], frequency_interval=0., last_print_time=0.,
+    time_current=0., time_new=0., time_old=0.;
+  long int end_of_increment=0;
+
+  // no frequency record for this icontrol -> normal behaviour (allowed)
+  if ( !db_active_index( CONTROL_PRINT_FREQUENCY_TIMEINTERVAL, icontrol,
+       VERSION_NORMAL ) &&
+       !db_active_index( CONTROL_PRINT_FREQUENCY_TIMESTEP, icontrol,
+       VERSION_NORMAL ) )
+    return 1;
+
+  db( TIME_CURRENT, 0, idum, &time_current, ldum, VERSION_NORMAL, GET );
+
+  if ( db_active_index( CONTROL_TIMESTEP, icontrol, VERSION_NORMAL ) &&
+       db( TIME_NEW, 0, idum, &time_new, ldum, VERSION_NORMAL,
+       GET_IF_EXISTS ) && time_current>=time_new-1.e-9*scalar_dabs(time_new) )
+    end_of_increment = 1;
+
+  if ( db_active_index( CONTROL_PRINT_FREQUENCY_TIMEINTERVAL, icontrol,
+       VERSION_NORMAL ) ) {
+    db( CONTROL_PRINT_FREQUENCY_TIMEINTERVAL, icontrol, idum,
+      &frequency_interval, ldum, VERSION_NORMAL, GET );
+    if ( frequency_interval<=0. )
+      db_error( CONTROL_PRINT_FREQUENCY_TIMEINTERVAL, icontrol );
+    if ( db( CONTROL_PRINT_FREQUENCY_TIMEINTERVAL_TIME, icontrol, idum,
+         &last_print_time, ldum, VERSION_NORMAL, GET_IF_EXISTS ) ) {
+      // restart: the calculation was rewound, re-anchor the interval at
+      // the start of the current increment
+      if ( last_print_time>time_current ) {
+        if ( db( TIME_OLD, 0, idum, &time_old, ldum, VERSION_NORMAL,
+             GET_IF_EXISTS ) && time_old<=time_current )
+          last_print_time = time_old;
+        else
+          last_print_time = time_current;
+      }
+    }
+    else {
+      // first use: anchor the interval at the START of the current
+      // increment (TIME_OLD). The manual example (interval 0.15, dt 0.04,
+      // increment 0.41) prints at 0.16, 0.32, 0.41 - anchoring at the
+      // first step (0.04) would print at 0.20 instead of 0.16.
+      if ( db( TIME_OLD, 0, idum, &time_old, ldum, VERSION_NORMAL,
+           GET_IF_EXISTS ) && time_old<=time_current )
+        last_print_time = time_old;
+      else
+        last_print_time = time_current;
+    }
+    if ( end_of_increment || time_current>=last_print_time+frequency_interval ) {
+      // the print is done in this step_close: re-anchor the cadence
+      db( CONTROL_PRINT_FREQUENCY_TIMEINTERVAL_TIME, icontrol, idum,
+        &time_current, one, VERSION_NORMAL, PUT );
+      return 1;
+    }
+    return 0;
+  }
+  else {
+    // control_print_frequency_timestep: print after N time steps
+    // (and always at the end of the time increment)
+    db( CONTROL_PRINT_FREQUENCY_TIMESTEP, icontrol, &frequency_timestep,
+      ddum, ldum, VERSION_NORMAL, GET );
+    if ( frequency_timestep<=0 )
+      db_error( CONTROL_PRINT_FREQUENCY_TIMESTEP, icontrol );
+    db( CONTROL_PRINT_FREQUENCY_TIMESTEP_COUNT, icontrol, &frequency_count,
+      ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+    frequency_count++;
+    if ( end_of_increment || frequency_count>=frequency_timestep ) {
+      db( CONTROL_PRINT_FREQUENCY_TIMESTEP_COUNT, icontrol, &zero,
+        ddum, one, VERSION_NORMAL, PUT );
+      return 1;
+    }
+    db( CONTROL_PRINT_FREQUENCY_TIMESTEP_COUNT, icontrol, &frequency_count,
+      ddum, one, VERSION_NORMAL, PUT );
+    return 0;
+  }
+}
+
 void step_close( long int task, long int ipar, long int npar, long int ipar_i, long int ipar_n )
 
 {
   long int i=0, nval=0, data_item=0, icontrol=0, ldum=0, control_split=0,
     use_control_refine_globally_geometry=0, length_control_refine_globally=0,
-    length=0, time_of_calculation=0, time_at_start=0, time_at_end=0,
+    length=0,     time_of_calculation=0, time_at_start=0, time_at_end=0,
     print_lastdatabase=-NO, control_refine_globally[4], control_refine_globally_geometry[2], 
-    idum[1], renumber[2], *ival=NULL;
+    idum[1], renumber[2], *ival=NULL, frequency_allowed=1;
   double ddum[MDIM];
 
   ival = get_new_int(DATA_ITEM_SIZE);
@@ -862,6 +964,12 @@ void step_close( long int task, long int ipar, long int npar, long int ipar_i, l
     ddum, length, VERSION_NORMAL, PUT );
 
   if ( npar==0 || ( ipar==npar-1 && ipar_i==ipar_n-1 ) ) {
+    // control_print_frequency_timeinterval / control_print_frequency_timestep
+    // (manual Professional 6.291/6.292): gate every control_print_* of this
+    // icontrol EXCEPT control_print, control_print_history and
+    // control_print_data_versus_data. The gate is per icontrol: when it
+    // returns 0 none of the gated prints runs in this step_close.
+    frequency_allowed = control_print_frequency_allowed( icontrol );
     if ( db_active_index( CONTROL_PRINT, icontrol, VERSION_NORMAL ) ) {
       db( CONTROL_PRINT, icontrol, ival, ddum, nval, VERSION_NORMAL, GET );
       for ( i=0; i<nval; i++ ) {
@@ -871,12 +979,12 @@ void step_close( long int task, long int ipar, long int npar, long int ipar_i, l
       }
       cout << "\n\n";
     }
-    if ( db_active_index( CONTROL_PRINT_DATABASE, icontrol, VERSION_NORMAL ) ) {
+    if ( frequency_allowed && db_active_index( CONTROL_PRINT_DATABASE, icontrol, VERSION_NORMAL ) ) {
       db( CONTROL_PRINT_DATABASE, icontrol, ival, ddum, ldum, VERSION_NORMAL, GET );
       if ( ival[0]==-RESTART ) print_restart( icontrol );
       else print_database( icontrol, VERSION_NORMAL, ival[0] );
     }
-    if ( db_active_index( CONTROL_PRINT_DATABASE_METHOD, icontrol, VERSION_NORMAL ) ) {
+    if ( frequency_allowed && db_active_index( CONTROL_PRINT_DATABASE_METHOD, icontrol, VERSION_NORMAL ) ) {
       // control_print_database_method (manual Professional 6.266): method
       // -all (default) prints all base records, -size_tot prints the size
       // of all base records (plus the system matrix), -size_tot_large only
@@ -888,7 +996,7 @@ void step_close( long int task, long int ipar, long int npar, long int ipar_i, l
       else if ( ival[0]==-SIZE_TOT_LARGE ) print_database( icontrol, VERSION_NORMAL, -SIZE_TOT_LARGE );
       else db_error( CONTROL_PRINT_DATABASE_METHOD, icontrol );
     }
-    if ( db_active_index( CONTROL_PRINT_PARTIALNAME, icontrol, VERSION_NORMAL ) ) {
+    if ( frequency_allowed && db_active_index( CONTROL_PRINT_PARTIALNAME, icontrol, VERSION_NORMAL ) ) {
       db( CONTROL_PRINT_PARTIALNAME, icontrol, ival, ddum, nval, VERSION_NORMAL, GET );
       print_partialname( icontrol, VERSION_NORMAL, ival, nval );
     }
@@ -896,12 +1004,12 @@ void step_close( long int task, long int ipar, long int npar, long int ipar_i, l
       db( CONTROL_PRINT_DATA_VERSUS_DATA, icontrol, ival, ddum, length, VERSION_NORMAL, GET );
       print_data_versus_data( ival, length );
     }
-    if ( db_active_index( CONTROL_PRINT_DX, icontrol, VERSION_NORMAL ) ) {
+    if ( frequency_allowed && db_active_index( CONTROL_PRINT_DX, icontrol, VERSION_NORMAL ) ) {
       db( CONTROL_PRINT_DX, icontrol, ival, ddum, ldum, VERSION_NORMAL, GET );
       if ( ival[0]==-YES ) print_dx( -NO );
       else if ( ival[0]!=-NO ) db_error( CONTROL_PRINT_DX, icontrol );
     }
-    if ( db_active_index( CONTROL_PRINT_ELEMENT, icontrol, VERSION_NORMAL ) ) {
+    if ( frequency_allowed && db_active_index( CONTROL_PRINT_ELEMENT, icontrol, VERSION_NORMAL ) ) {
       db( CONTROL_PRINT_ELEMENT, icontrol, ival, ddum, ldum, VERSION_NORMAL, GET );
       print_element( ival[0] );
     }
@@ -911,56 +1019,56 @@ void step_close( long int task, long int ipar, long int npar, long int ipar_i, l
       if ( db_active_index( CONTROL_PRINT_HISTORY_SMOOTH, icontrol, VERSION_NORMAL ) )
         print_history_smooth( ival, nval );
     }
-    if ( db_active_index( CONTROL_PRINT_PLOTMTV, icontrol, VERSION_NORMAL ) ) {
+    if ( frequency_allowed && db_active_index( CONTROL_PRINT_PLOTMTV, icontrol, VERSION_NORMAL ) ) {
       db( CONTROL_PRINT_PLOTMTV, icontrol, ival, ddum, ldum, VERSION_NORMAL, GET );
       if ( ival[0]==-YES || ival[0]>=0 ) print_plotmtv( icontrol, ival );
     }
-    if ( db_active_index( CONTROL_PRINT_GID, icontrol, VERSION_NORMAL ) ) {
+    if ( frequency_allowed && db_active_index( CONTROL_PRINT_GID, icontrol, VERSION_NORMAL ) ) {
       db( CONTROL_PRINT_GID, icontrol, ival, ddum, ldum, VERSION_NORMAL, GET );
       if ( ival[0]!=-NO ) print_gid( ival[0] );
     }
-    if ( db_active_index( CONTROL_PRINT_GMV, icontrol, VERSION_NORMAL ) ) {
+    if ( frequency_allowed && db_active_index( CONTROL_PRINT_GMV, icontrol, VERSION_NORMAL ) ) {
       db( CONTROL_PRINT_GMV, icontrol, ival, ddum, ldum, VERSION_NORMAL, GET );
       if ( ival[0]==-YES || ival[0]>=0 ) print_gmv( icontrol, ival );
     }
-    if ( db_active_index( CONTROL_PRINT_MATLAB, icontrol, VERSION_NORMAL ) ) {
+    if ( frequency_allowed && db_active_index( CONTROL_PRINT_MATLAB, icontrol, VERSION_NORMAL ) ) {
       db( CONTROL_PRINT_MATLAB, icontrol, ival, ddum, ldum, VERSION_NORMAL, GET );
       if ( ival[0]==-YES || ival[0]>=0 ) print_matlab( );
     }
-    if ( db_active_index( CONTROL_PRINT_TECPLOT, icontrol, VERSION_NORMAL ) ) {
+    if ( frequency_allowed && db_active_index( CONTROL_PRINT_TECPLOT, icontrol, VERSION_NORMAL ) ) {
       db( CONTROL_PRINT_TECPLOT, icontrol, ival, ddum, ldum, VERSION_NORMAL, GET );
       if ( ival[0]!=-NO  ) print_tecplot( ival );
     }
-    if ( db_active_index( CONTROL_PRINT_UNKNOWNS, icontrol, VERSION_NORMAL ) ) {
+    if ( frequency_allowed && db_active_index( CONTROL_PRINT_UNKNOWNS, icontrol, VERSION_NORMAL ) ) {
       db( CONTROL_PRINT_UNKNOWNS, icontrol, ival, ddum, ldum, VERSION_NORMAL, GET );
       if ( ival[0]==-YES ) print_unknowns( );
     }
-    if ( db_active_index( CONTROL_PRINT_UNKNOWNSRHSIDE, icontrol, VERSION_NORMAL ) ) {
+    if ( frequency_allowed && db_active_index( CONTROL_PRINT_UNKNOWNSRHSIDE, icontrol, VERSION_NORMAL ) ) {
       db( CONTROL_PRINT_UNKNOWNSRHSIDE, icontrol, ival, ddum, ldum, VERSION_NORMAL, GET );
       if ( ival[0]==-YES ) print_unknownsrhside( );
     }
-    if ( db_active_index( CONTROL_PRINT_VTK, icontrol, VERSION_NORMAL ) ) {
+    if ( frequency_allowed && db_active_index( CONTROL_PRINT_VTK, icontrol, VERSION_NORMAL ) ) {
       db( CONTROL_PRINT_VTK, icontrol, ival, ddum, ldum, VERSION_NORMAL, GET );
       if ( ival[0]==-YES ) print_vtk( icontrol );
     }
-    if ( db_active_index( CONTROL_PRINT_TABULAR, icontrol, VERSION_NORMAL ) ) {
+    if ( frequency_allowed && db_active_index( CONTROL_PRINT_TABULAR, icontrol, VERSION_NORMAL ) ) {
       db( CONTROL_PRINT_TABULAR, icontrol, ival, ddum, ldum, VERSION_NORMAL, GET );
       if ( ival[0]==-YES ) print_tabular( icontrol );
     }
-    if ( db_active_index( CONTROL_PRINT_GMSH, icontrol, VERSION_NORMAL ) ) {
+    if ( frequency_allowed && db_active_index( CONTROL_PRINT_GMSH, icontrol, VERSION_NORMAL ) ) {
       db( CONTROL_PRINT_GMSH, icontrol, ival, ddum, ldum, VERSION_NORMAL, GET );
       if ( ival[0]!=-NO ) print_gmsh( icontrol, ival[0] );
     }
-    if ( db_active_index( CONTROL_PRINT_FRD, icontrol, VERSION_NORMAL ) ) {
+    if ( frequency_allowed && db_active_index( CONTROL_PRINT_FRD, icontrol, VERSION_NORMAL ) ) {
       db( CONTROL_PRINT_FRD, icontrol, ival, ddum, ldum, VERSION_NORMAL, GET );
       if ( ival[0]!=-NO ) print_frd( icontrol, ival[0] );
     }
-    if ( db_active_index( CONTROL_PRINT_INTERFACE_STRESS, icontrol, VERSION_NORMAL ) ) {
+    if ( frequency_allowed && db_active_index( CONTROL_PRINT_INTERFACE_STRESS, icontrol, VERSION_NORMAL ) ) {
       db( CONTROL_PRINT_INTERFACE_STRESS, icontrol, ival, ddum, ldum,
         VERSION_NORMAL, GET );
       if ( ival[0]!=-NO ) print_interface_stress( icontrol, ival[0] );
     }
-    if ( db_active_index( CONTROL_PRINT_DOF, icontrol, VERSION_NORMAL ) ) {
+    if ( frequency_allowed && db_active_index( CONTROL_PRINT_DOF, icontrol, VERSION_NORMAL ) ) {
       db( CONTROL_PRINT_DOF, icontrol, ival, ddum, ldum, VERSION_NORMAL, GET );
       if ( ival[0]!=-NO ) print_dof( icontrol, ival[0] );
     }

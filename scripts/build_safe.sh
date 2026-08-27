@@ -107,9 +107,14 @@ HIPO_TOTAL=0
 # Sprint 11 lote 1 (control_print_*): los archivos de salida que se
 # APPENDEN entre ejecuciones se limpian antes del bucle para que las
 # verificaciones de la seccion posterior partan de archivos frescos.
-rm -f validation-suite/test-2014/dof.20 validation-suite/test-2014/dof.21 \
-      validation-suite/test-2014/coord.20 validation-suite/test-2014/coord.21 \
-      validation-suite/test-2014/disx1.his validation-suite/test-2014/disx2.his
+# Sprint 11 lote 2 (frecuencia de prints): dof.* (freq_timeint usa
+# dof.0..dof.12 y freq_timestep dof.22/23; dof.20/21 se regeneran en el
+# bucle), los .frd de print_frd -separate_sequential (uno por print) y
+# sigxx4.his (historia de los 2 tests, se suma).
+rm -f validation-suite/test-2014/dof.* \
+      validation-suite/test-2014/freq_timeint*.frd \
+      validation-suite/test-2014/freq_timestep*.frd \
+      validation-suite/test-2014/sigxx4.his
 # 13 tests: 12 preexistentes + familia iface_mc (1 test logico = 6 runs:
 # iface_mc a/a' invarianza, iface_mc_slip b/b' invarianza, tension c, gap d)
 # + iface_mc_mem (memory), + iface_mc_dil/dil_1step/num (dilatancia RF-4 y
@@ -455,6 +460,22 @@ rm -f validation-suite/test-2014/dof.20 validation-suite/test-2014/dof.21 \
 # + dofid_no (control_print_dof_id 6.270 -no: dof.21 con 3 columnas x y dof;
 #   dof1 con el default -yes produce dof.20 con 4 columnas x y dof node —
 #   el contraste 4 vs 3 columnas discrimina el default).
+# Sprint 11 lote 2 (frecuencia de prints, manual Professional 6.291/6.292):
+# + freq_timeint (control_print_frequency_timeinterval 10 0.15 sobre
+#   control_timestep 10 0.04 0.41): control_print_dof 10 -separate_sequential
+#   escribe SOLO 3 archivos dof.0..dof.2 (t=0.16, 0.32, 0.41 — los tiempos
+#   EXACTOS del ejemplo del manual) y control_print_frd 10
+#   -separate_sequential uno por print (freq_timeint0-2.frd con la linea
+#   100CL = tiempo del print). El bloque 11 sin frecuencia escribe
+#   dof.3..dof.12 (10 archivos): el contraste 10 vs 3 discrimina el gate.
+# + freq_timestep (control_print_frequency_timestep 22 5): dof.22 se
+#   escribe SOLO en t=0.20, 0.40, 0.41 (freq_timestep0-2.frd) y dof.23
+#   (sin frecuencia) 11 veces: 3*L23 == 11*L22. control_timestep 0.04 0.40
+#   0.01 0.01 (2 incrementos): el GNU CLAMPEA el ultimo paso parcial de un
+#   incremento (0.36+0.04 -> 0.41), asi que un solo incremento 0.41 no
+#   tendria paso en 0.40; con 2 incrementos la secuencia es 0.04..0.40,0.41.
+#   control_print_history NO se gatea (excepcion): sigxx4.his tiene una
+#   linea por paso (10 + 11 = 21), no 6.
 for t in hypo1 hypo2 hypo3 hypo4 smooth1 dof1 mlx1 vtk_dof1 gen1 genbeam1          reset1 cda1 cda_arith cda_copy cda_activate cdist_normal cdist_corr cdist_clamp cd_method cd_geom \
          iface_mc iface_mc_1step iface_mc_slip iface_mc_slip_1step iface_mc_tension iface_mc_gap \
          iface_mc_mem iface_mc_dil iface_mc_dil_1step iface_mc_num \
@@ -490,7 +511,8 @@ for t in hypo1 hypo2 hypo3 hypo4 smooth1 dof1 mlx1 vtk_dof1 gen1 genbeam1       
          mstrain_diprisco mstrain_diprisco_elast \
          mstrain_druckprag mstrain_druckprag_elast \
          mdiprisco_hist mc_pressure_min mc_pressure_min_off mrepeat_save \
-         dbmeth partialname meshdoff dofrhside elmethod hreltime numit dofid_no; do
+         dbmeth partialname meshdoff dofrhside elmethod hreltime numit dofid_no \
+         freq_timeint freq_timestep; do
   HIPO_TOTAL=$((HIPO_TOTAL+1))
   ( cd validation-suite/test-2014 &&
     ulimit -v 4000000 &&
@@ -503,7 +525,7 @@ for t in hypo1 hypo2 hypo3 hypo4 smooth1 dof1 mlx1 vtk_dof1 gen1 genbeam1       
     echo "    $t: FALLO (rc=$RC)"
   fi
 done
-echo "==> Resumen: $HIPO_OK/$HIPO_TOTAL runs OK (13 tests: 12 preexistentes + familia iface_mc en 10 runs + familia 3D en 5 runs + familia generate_interface en 6 runs + familia materi_direct en 5 runs + materi_displacement_relative en 2 runs + slide/reset_value en 2 runs + cda_arith/copy/activate en 3 runs + cdist_normal/corr/clamp en 3 runs + cd_method/cd_geom en 2 runs + gravity/settlement en 4 runs + contact en 1 run + contact_block/ctrl_apply/heatgen en 3 runs + groundflow_consolidate_off en 1 run + groundflow_vangenuchten/groundflow_nonsaturated_off en 2 runs + groundflow_total_pressure_tension/groundflow_interface en 2 runs + groundflow_flux_edge en 1 run + groundflow_phreatic_multiple en 1 run + groundflow_seepage en 1 run + groundflow_pressure_atm/_def en 2 runs + groundflow_total_pressure_limit/_dry en 2 runs + condif_heat_edge/vol/vol2 en 3 runs + condif_convec/rad/convec_el en 3 runs + aeg_node/aeg_seq/bt_factor en 3 runs + iface_condif/expansion/tangref en 3 runs + node_force_inertia/slide/pressure en 3 runs + creset_geom/iface en 2 runs + fedge_alias/restrict, fvol_elem y cmat_gate en 4 runs + fproj_tunnel en 1 run + dsmall/dignore en 2 runs + mdirect_comp/gate en 2 runs + mdp_shear/mfactor en 2 runs + mmc_tension en 1 run + mmchs_soft en 1 run + mcap2/mcap_legacy en 2 runs + mcrunch/mcrunch_low en 2 runs + mvoid/mvoid_low en 2 runs + mpower en 1 run + mshf/mshf_nof en 2 runs + mk0/mk0_off en 2 runs + myoung6/myoung6_e2/myoung6_e3/myoung6_apply en 4 runs + msph/msph_flat en 2 runs + mcap1/mcap1_elast/mcap1_comb en 3 runs + mhardsoil_elast/elast2/unload/unload_flat/plast/plast_elast/gp0/gp0_off en 8 runs + mstrain_cap/_elast, mstrain_compression/_elast, mstrain_diprisco/_elast, mstrain_druckprag/_elast en 8 runs + mdiprisco_hist en 1 run + mc_pressure_min/_off en 2 runs (Sprint 10 lote 9) + mrepeat_save en 1 run (Sprint 10 lote 10) + dbmeth/partialname/meshdoff/dofrhside/elmethod/hreltime/numit/dofid_no en 8 runs (Sprint 11 lote 1))."
+echo "==> Resumen: $HIPO_OK/$HIPO_TOTAL runs OK (13 tests: 12 preexistentes + familia iface_mc en 10 runs + familia 3D en 5 runs + familia generate_interface en 6 runs + familia materi_direct en 5 runs + materi_displacement_relative en 2 runs + slide/reset_value en 2 runs + cda_arith/copy/activate en 3 runs + cdist_normal/corr/clamp en 3 runs + cd_method/cd_geom en 2 runs + gravity/settlement en 4 runs + contact en 1 run + contact_block/ctrl_apply/heatgen en 3 runs + groundflow_consolidate_off en 1 run + groundflow_vangenuchten/groundflow_nonsaturated_off en 2 runs + groundflow_total_pressure_tension/groundflow_interface en 2 runs + groundflow_flux_edge en 1 run + groundflow_phreatic_multiple en 1 run + groundflow_seepage en 1 run + groundflow_pressure_atm/_def en 2 runs + groundflow_total_pressure_limit/_dry en 2 runs + condif_heat_edge/vol/vol2 en 3 runs + condif_convec/rad/convec_el en 3 runs + aeg_node/aeg_seq/bt_factor en 3 runs + iface_condif/expansion/tangref en 3 runs + node_force_inertia/slide/pressure en 3 runs + creset_geom/iface en 2 runs + fedge_alias/restrict, fvol_elem y cmat_gate en 4 runs + fproj_tunnel en 1 run + dsmall/dignore en 2 runs + mdirect_comp/gate en 2 runs + mdp_shear/mfactor en 2 runs + mmc_tension en 1 run + mmchs_soft en 1 run + mcap2/mcap_legacy en 2 runs + mcrunch/mcrunch_low en 2 runs + mvoid/mvoid_low en 2 runs + mpower en 1 run + mshf/mshf_nof en 2 runs + mk0/mk0_off en 2 runs + myoung6/myoung6_e2/myoung6_e3/myoung6_apply en 4 runs + msph/msph_flat en 2 runs + mcap1/mcap1_elast/mcap1_comb en 3 runs + mhardsoil_elast/elast2/unload/unload_flat/plast/plast_elast/gp0/gp0_off en 8 runs + mstrain_cap/_elast, mstrain_compression/_elast, mstrain_diprisco/_elast, mstrain_druckprag/_elast en 8 runs + mdiprisco_hist en 1 run + mc_pressure_min/_off en 2 runs (Sprint 10 lote 9) + mrepeat_save en 1 run (Sprint 10 lote 10) + dbmeth/partialname/meshdoff/dofrhside/elmethod/hreltime/numit/dofid_no en 8 runs (Sprint 11 lote 1) + freq_timeint/freq_timestep en 2 runs (Sprint 11 lote 2))."
 
 # ---------------------------------------------------------------------
 # Sprint 11 lote 1: verificacion de ARCHIVOS y STDOUT de los 8 keywords
@@ -606,11 +628,81 @@ else
   check_fail "dofrhside" "velx_rhside.20 no generado o formato incorrecto"
 fi
 
+# ---------------------------------------------------------------------
+# Sprint 11 lote 2: control_print_frequency_timeinterval (6.291) y
+# control_print_frequency_timestep (6.292). Los .frd de
+# -separate_sequential son UNO POR PRINT con la linea 100CL = tiempo
+# exacto del print (campo 3); los conteos de dof.* discriminan el gate.
+# ---------------------------------------------------------------------
+
+# freq_timeint: 3 prints SOLO en t=0.16, 0.32, 0.41 (ejemplo del manual
+# 6.291: control_timestep 10 0.04 0.41 + frequency_timeinterval 10 0.15)
+FTI0=$(grep "100CL" "$T2014/freq_timeint0.frd" 2>/dev/null | awk '{print $3}')
+FTI1=$(grep "100CL" "$T2014/freq_timeint1.frd" 2>/dev/null | awk '{print $3}')
+FTI2=$(grep "100CL" "$T2014/freq_timeint2.frd" 2>/dev/null | awk '{print $3}')
+NFRD_TI=$(ls "$T2014"/freq_timeint?.frd 2>/dev/null | wc -l)
+if [ "$NFRD_TI" = "3" ] && \
+   awk -v a="$FTI0" -v b="$FTI1" -v c="$FTI2" \
+   'BEGIN{ d1=a-0.16; d2=b-0.32; d3=c-0.41;
+          exit !(d1<1.e-6 && d1>-1.e-6 && d2<1.e-6 && d2>-1.e-6 && d3<1.e-6 && d3>-1.e-6) }'; then
+  check_ok "freq_timeint (3 prints SOLO en t=0.16, 0.32, 0.41: 100CL $FTI0/$FTI1/$FTI2)"
+else
+  check_fail "freq_timeint" "esperaba 3 prints en 0.16/0.32/0.41, hay $NFRD_TI frd con tiempos $FTI0/$FTI1/$FTI2"
+fi
+
+# freq_timeint: dof.0..dof.2 = 3 archivos de 176 lineas (3 prints gated);
+# el bloque 11 sin frecuencia escribe dof.3..dof.12 (10 archivos) ->
+# 13 archivos en total. Sin el gate habria 13 archivos solo de dof.0..12
+# con los MISMO conteos... el discriminator real es 3 vs 10 por bloque.
+NDF_TI=$(ls "$T2014"/dof.[0-9] "$T2014"/dof.1[0-2] 2>/dev/null | wc -l)
+L0_TI=$(wc -l < "$T2014/dof.0" 2>/dev/null || echo 0)
+L12_TI=$(wc -l < "$T2014/dof.12" 2>/dev/null || echo 0)
+if [ "$NDF_TI" = "13" ] && [ "$L0_TI" = "176" ] && [ "$L12_TI" = "176" ]; then
+  check_ok "freq_timeint (dof.0..dof.12 = $NDF_TI archivos: 3 gated + 10 sin frecuencia, 176 lineas/print)"
+else
+  check_fail "freq_timeint dof.*" "esperaba 13 archivos de 176 lineas (3 gated + 10), hay $NDF_TI archivos"
+fi
+
+# freq_timestep: 3 prints SOLO en t=0.20, 0.40, 0.41 (ejemplo del manual
+# 6.292: control_print_frequency_timestep 22 5)
+FTS0=$(grep "100CL" "$T2014/freq_timestep0.frd" 2>/dev/null | awk '{print $3}')
+FTS1=$(grep "100CL" "$T2014/freq_timestep1.frd" 2>/dev/null | awk '{print $3}')
+FTS2=$(grep "100CL" "$T2014/freq_timestep2.frd" 2>/dev/null | awk '{print $3}')
+NFRD_TS=$(ls "$T2014"/freq_timestep?.frd 2>/dev/null | wc -l)
+if [ "$NFRD_TS" = "3" ] && \
+   awk -v a="$FTS0" -v b="$FTS1" -v c="$FTS2" \
+   'BEGIN{ d1=a-0.20; d2=b-0.40; d3=c-0.41;
+          exit !(d1<1.e-6 && d1>-1.e-6 && d2<1.e-6 && d2>-1.e-6 && d3<1.e-6 && d3>-1.e-6) }'; then
+  check_ok "freq_timestep (3 prints SOLO en t=0.20, 0.40, 0.41: 100CL $FTS0/$FTS1/$FTS2)"
+else
+  check_fail "freq_timestep" "esperaba 3 prints en 0.20/0.40/0.41, hay $NFRD_TS frd con tiempos $FTS0/$FTS1/$FTS2"
+fi
+
+# freq_timestep: dof.22 (3 prints gated) vs dof.23 (11 prints sin
+# frecuencia): mismo numero de lineas por print -> 3*L23 == 11*L22
+L22_TS=$(wc -l < "$T2014/dof.22" 2>/dev/null || echo 0)
+L23_TS=$(wc -l < "$T2014/dof.23" 2>/dev/null || echo 0)
+if [ "$L22_TS" != "0" ] && [ "$((3*L23_TS))" = "$((11*L22_TS))" ]; then
+  check_ok "freq_timestep (ratio 3*L23==11*L22: dof.22=$L22_TS lineas, dof.23=$L23_TS)"
+else
+  check_fail "freq_timestep ratio" "3*$L23_TS != 11*$L22_TS"
+fi
+
+# excepciones: control_print_history NO se gatea -> sigxx4.his tiene una
+# linea por paso (10 pasos de freq_timeint + 11 de freq_timestep = 21),
+# no 6 (2 bloques x 3 prints gated)
+NHIS=$(wc -l < "$T2014/sigxx4.his" 2>/dev/null || echo 0)
+if [ "$NHIS" = "21" ]; then
+  check_ok "excepcion history (sigxx4.his con $NHIS lineas = 10+11 pasos: control_print_history NO gateado)"
+else
+  check_fail "excepcion history" "esperaba 21 lineas en sigxx4.his (10+11 pasos), hay $NHIS"
+fi
+
 if [ "$CHECK_FAIL" = "1" ]; then
   echo "==> ALGUNAS VERIFICACIONES DE ARCHIVOS FALLARON"
   exit 1
 else
-  echo "==> Verificacion de archivos de salida (Sprint 11 lote 1): TODAS OK"
+  echo "==> Verificacion de archivos de salida (Sprint 11 lotes 1 y 2): TODAS OK"
 fi
 
 echo "==> Log de compilacion completo en /tmp/tn_build_safe.log"
