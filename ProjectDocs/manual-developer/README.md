@@ -233,3 +233,14 @@ Each file corresponds to the same feature in the [User Manual](../manual-user/).
 - [control_print_dof_point](control_print_dof_point.md) — same driver with npoints=1 and the point coordinates record; node_dof_calcul files use post_calcul_names_without_extension (a-dis/a-vel convention of print_unknowns).
 - [control_print_dof_point_coordinates](control_print_dof_point_coordinates.md) — single point record of ndim values; validated (ncoord>=ndim).
 - [control_print_dof_point_time](control_print_dof_point_time.md) — same "# time" first-line behavior as the line variant.
+
+## Sprint 11 — control_print family (batch 5, node prints + dof smoothing)
+
+- [control_print_dof_smooth_dof](control_print_dof_smooth_dof.md) — print_hi.cc: print_dof_smooth_apply() builds the smoothed field (nodal average over element-neighbour nodes, node itself NOT included; adjacency head/to/next_edge by position; -all or dof labels); print_dof writes smooth_field instead of node_dof; GOTCHA: read values by POSITION (VERSION_PRINT is compacted), per-component sums.
+- [control_print_dof_smooth_n](control_print_dof_smooth_n.md) — default 10 passes; nsmooth<1 is an error; each pass uses the previous pass state.
+- [control_print_node](control_print_node.md) — new print_node.cc, dispatched in top.cc inside the frequency gate; one file per part: dof labels (db_name(dof_label)), calcul items (post_calcul_names_without_extension, unknown-exact OR label-substring match — GNU adaptation of post_calcul_label), numeric parts (<record>_<n>); no parts -> all; VERSION_NORMAL, append mode.
+- [control_print_node_angular](control_print_node_angular.md) — degrees; 1D rejected, 2D only -yes -yes without switch_z, 3D the three combinations; with angular only sort -angle.
+- [control_print_node_angular_middle](control_print_node_angular_middle.md) — 2 values in 2D, 3 in 3D; default (0,0,0); only consumed by node_angle_degrees().
+- [control_print_node_geometry](control_print_node_geometry.md) — geometry() filter (filter.cc pattern) with NODE_START_REFINED fallback to NODE; fixed 2-value record.
+- [control_print_node_sort](control_print_node_sort.md) — collect+sort pattern of print_interface_stress.cc (stable insertion sort on an index array, ascending); key = the printed coordinate or angle; -y only ndim>=2, -z only 3D.
+- [control_print_node_zero](control_print_node_zero.md) — default -yes; -no drops lines with value EXACTLY 0, per file (per part).

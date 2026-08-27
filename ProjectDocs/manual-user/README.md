@@ -242,3 +242,14 @@ input parameters it accepts.
 - [control_print_dof_point](control_print_dof_point.md) — interpolate the node_dof and node_dof_calcul fields in a point in space; one file per dof label.
 - [control_print_dof_point_coordinates](control_print_dof_point_coordinates.md) — coordinates of the point.
 - [control_print_dof_point_time](control_print_dof_point_time.md) — -yes writes the time_current as the first line of each file (gnuplot comment).
+
+## Sprint 11 — control_print family (batch 5, node prints + dof smoothing)
+
+- [control_print_dof_smooth_dof](control_print_dof_smooth_dof.md) — smooth the control_print_dof values: each pass replaces a node value by the average of its neighbour nodes; -all or dof labels; number of passes from _smooth_n (default 10).
+- [control_print_dof_smooth_n](control_print_dof_smooth_n.md) — number of smoothing passes (default 10); repeated passes converge to the mean value.
+- [control_print_node](control_print_node.md) — print any node* data record to files, one file per selected part (dof labels like -velx -> velx.index; numbers -> node_<record>_<n>.index; node_dof_calcul labels).
+- [control_print_node_angular](control_print_node_angular.md) — print an angle in DEGREES (from +x to +y, +y to +z or +x to +z) instead of the coordinates.
+- [control_print_node_angular_middle](control_print_node_angular_middle.md) — middle point of the angle axes (default 0 0 0).
+- [control_print_node_geometry](control_print_node_geometry.md) — print only the nodes located on the given geometry.
+- [control_print_node_sort](control_print_node_sort.md) — sort the printed lines ascending (-angle with angular; -x, -y, -z otherwise).
+- [control_print_node_zero](control_print_node_zero.md) — -no suppresses zero valued results (exact zero comparison; default -yes).
