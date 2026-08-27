@@ -219,3 +219,17 @@ Each file corresponds to the same feature in the [User Manual](../manual-user/).
 - [control_print_vtk_empty](control_print_vtk_empty.md) — vtk_element_is_empty() helper (ELEMENT_EMPTY -yes, print_g5 pattern); ncell keeps CELLS/CELL_TYPES consistent; unsupported-type abort unchanged.
 - [control_print_vtk_node_method](control_print_vtk_node_method.md) — POINTS coordinate selection (stored / start_refined / deformed); default -node_start_refined; semantic change documented: deformed coordinates only with -node_deformed_mesh (before, materi_displacement always deformed the mesh).
 - [control_print_vtk_other](control_print_vtk_other.md) — PARTIAL: boundary_condition (NODE_BOUNDED, 1-based NORMAL indices + 1 offset gotcha; use db_max_index, not index-0 active) + mesh_deformation (dis dofs); bounda_force is not a boundary condition (value discriminator of the test).
+
+## Sprint 11 — control_print family (batch 4, dof line/point)
+
+- [control_print_dof_line](control_print_dof_line.md) — new print_dl.cc (print_dof_line/print_dof_point share one driver); interpolation per point reuses point_el() with a NEW optional eps_iso parameter (default = legacy EPS_ISOP 1.e-3); serial element loop with optional group filter; one file per dof label; outside-mesh points omitted.
+- [control_print_dof_line_coordinates](control_print_dof_line_coordinates.md) — polyline stored as one CONTROL record (ncoord = nvertices*ndim); equidistant points over the TOTAL length (decision documented, default n=5); degenerate polyline collapses to its first vertex.
+- [control_print_dof_line_element_group](control_print_dof_line_element_group.md) — filter in the interpolation loop: elements outside the listed groups are skipped BEFORE point_el (ELEMENT_GROUP record per element).
+- [control_print_dof_line_eps_iso](control_print_dof_line_eps_iso.md) — routed into point_el's eps_iso (the isoparametric bounds AND the distance element_largest_size*eps_iso checks); GOTCHA: eps>1 also accepts extrapolated points.
+- [control_print_dof_line_method](control_print_dof_line_method.md) — -node_start_refined (default) / -node select the coordinate set used for the point-in-element test AND written to the files; per-node fallback to NODE when NODE_START_REFINED is absent.
+- [control_print_dof_line_move](control_print_dof_line_move.md) — POST_POINT_MOVE pattern (post.cc): coords += interpolated vel * DTIME, stored back into the coordinates record; only when materi_velocity is initialized.
+- [control_print_dof_line_n](control_print_dof_line_n.md) — default 5 (legacy POST_LINE_N); n<1 is an error; n=1 prints only the start point.
+- [control_print_dof_line_time](control_print_dof_line_time.md) — "# time <time_current>" as the first line of each call's block (one line per call when the file is appended).
+- [control_print_dof_point](control_print_dof_point.md) — same driver with npoints=1 and the point coordinates record; node_dof_calcul files use post_calcul_names_without_extension (a-dis/a-vel convention of print_unknowns).
+- [control_print_dof_point_coordinates](control_print_dof_point_coordinates.md) — single point record of ndim values; validated (ncoord>=ndim).
+- [control_print_dof_point_time](control_print_dof_point_time.md) — same "# time" first-line behavior as the line variant.

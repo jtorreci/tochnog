@@ -228,3 +228,17 @@ input parameters it accepts.
 - [control_print_vtk_empty](control_print_vtk_empty.md) — whether empty elements (ELEMENT_EMPTY -yes, computed for materi_diffusion/materi_density) are included in the vtk file (default -yes).
 - [control_print_vtk_node_method](control_print_vtk_node_method.md) — which node coordinates are written: -node, -node_start_refined (default) or -node_deformed_mesh.
 - [control_print_vtk_other](control_print_vtk_other.md) — "other things" written to the vtk files (default -yes). PARTIAL subset: boundary_condition scalar (bounded nodes) + mesh_deformation vector (materi_displacement); the full gid_other list is not implemented (discarded GiD family).
+
+## Sprint 11 — control_print family (batch 4, dof line/point)
+
+- [control_print_dof_line](control_print_dof_line.md) — interpolate the node_dof and node_dof_calcul fields along a polyline in space; one file per dof label.
+- [control_print_dof_line_coordinates](control_print_dof_line_coordinates.md) — vertices of the polyline (variable length, 1/2/3 coordinates per vertex).
+- [control_print_dof_line_element_group](control_print_dof_line_element_group.md) — restrict the interpolation to the given element groups.
+- [control_print_dof_line_eps_iso](control_print_dof_line_eps_iso.md) — tolerance with which a line point is accepted as part of an element (default 1.e-3).
+- [control_print_dof_line_method](control_print_dof_line_method.md) — -node or -node_start_refined (default) coordinate frame for the interpolation and the printed coordinates.
+- [control_print_dof_line_move](control_print_dof_line_move.md) — -yes moves the line coordinates with the velocity field (follow material particles; requires materi_velocity).
+- [control_print_dof_line_n](control_print_dof_line_n.md) — number of points printed along the line (default 5).
+- [control_print_dof_line_time](control_print_dof_line_time.md) — -yes writes the time_current as the first line of each file (gnuplot comment).
+- [control_print_dof_point](control_print_dof_point.md) — interpolate the node_dof and node_dof_calcul fields in a point in space; one file per dof label.
+- [control_print_dof_point_coordinates](control_print_dof_point_coordinates.md) — coordinates of the point.
+- [control_print_dof_point_time](control_print_dof_point_time.md) — -yes writes the time_current as the first line of each file (gnuplot comment).
