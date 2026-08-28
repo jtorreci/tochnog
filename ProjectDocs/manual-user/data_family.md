@@ -35,6 +35,14 @@ Typical use: disable `-print_apply`-style switches to get full output.
 
 `control_solver_bicg_stop index -no`: the calculation CONTINUES when
 the BI-CG solver does not converge (warning; default/`-yes` stops).
+Since the A+B solver fix (2026-08-28) this also covers the breakdown
+exits (the solver no longer reports breakdown/stagnation as success —
+see the solver note in the developer manual): a non-converging or
+breakdown solve stops the calculation with RC≠0 by default, and
+continues with the current solution (warning) with `-no`. The `index`
+must match the control index of the `control_timestep` block of the
+model (e.g. `control_solver_bicg_stop 5 -no` for `control_timestep 5
+...`); with a non-matching index the record is silently ignored.
 Registered without behaviour (documented): `control_solver_bicg_restart`
 (no restart in the GNU bicg), `control_solver_matrix_save`,
 `control_solver_pardiso_ordering`/`_out_of_core` (PARDISO not compiled

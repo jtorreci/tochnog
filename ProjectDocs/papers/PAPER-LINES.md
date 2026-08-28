@@ -1,7 +1,9 @@
 # Tochnog solver findings — three paper lines
 
 Date: 2026-08-28
-Status: research agenda (findings detected and documented; repair in progress)
+Status: research agenda (findings detected and documented; fixes A+B **DONE**
+2026-08-28 — honest stopping criteria + CG; the staggered fixed point is
+confirmed scheme-owned → C/D pending)
 
 Related artifacts in this repository:
 - `ProjectDocs/DIAG-SOLVE-MIXTO.md` — full technical diagnosis (paper-grade, 506 lines)
@@ -93,7 +95,11 @@ results. The diagnosis (with quantitative evidence) established:
 - **Targets**: Computer Methods in Applied Mechanics and Engineering /
   IJNME (full paper); Advances in Engineering Software or Finite Elements in
   Analysis and Design (shorter empirical paper).
-- **Status**: evidence complete; repair (A)+(B) in progress.
+- **Status**: evidence complete; repair (A)+(B) **DONE** (2026-08-28): the
+  honest solver converges the 3D flat-residual cases and confirms the
+  0.2315× fixed point is the scheme's — the paper's central contrast is
+  now "dishonest criteria vs honest criteria vs scheme fixed point" with
+  measured numbers for all three.
 
 ### Line 2 — Sensitivity of solver formulations on the same system
 
@@ -105,8 +111,9 @@ results. The diagnosis (with quantitative evidence) established:
   outer-scheme fixed points per configuration.
 - **Targets**: empirical/computational conference (ECCOMAS, COMPLAS) or a
   comparative journal paper.
-- **Status**: initial measurements exist; needs the repair to complete the
-  comparison table.
+- **Status**: initial measurements exist; repair (A)+(B) **DONE** adds the
+  honest-vs-dishonest and CG-vs-Bi-CG comparison rows (measured); the
+  monolithic mixed comparison (C) remains future work.
 
 ### Line 3 — Pedagogical: hand calculations catch rubbish FE results
 
@@ -126,19 +133,24 @@ results. The diagnosis (with quantitative evidence) established:
 
 | Line | Description | Status |
 |------|-------------|--------|
-| (A) | Honest stopping criteria in the iterative solver (residual-based; no false-success exits) | IN PROGRESS (lote A+B) |
-| (B) | Conjugate Gradient for the SPD system (replacing/augmenting Bi-CG) | IN PROGRESS (lote A+B) |
-| (C) | Real monolithic mixed u-sigma solve (MINRES / SuperLU with pivoting) | Proposed — definitive fix, large refactor |
-| (D) | Regularization of the staggered scheme so its fixed point matches the true solution | Proposed |
+| (A) | Honest stopping criteria in the iterative solver (residual-based; no false-success exits) | **DONE** (lote A+B, 2026-08-28) — success only on the real residual test; breakdown/stagnation false-success exits removed; honest failure (RC≠0) with the real relative residual; `control_solver_bicg_stop -no` as the documented continue-escape. Key result: the 3D flat-residual cantilever (A·b≈0 family) now converges (final error 4.2e-37) — the flat-residual identity is NOT stagnation, CG just needs to keep iterating. |
+| (B) | Conjugate Gradient for the SPD system (replacing/augmenting Bi-CG) | **DONE** (lote A+B, 2026-08-28) — runtime symmetry check dispatches CG (symmetric) / honest Bi-CG (non-symmetric: beam dtime-asymmetry, plastic-slip interface with dᵀAd<0); primal-residual monitor (the old monitor measured the transpose residual, which never vanishes on non-symmetric systems — a measurement bug of the dishonest criteria family). |
+| (C) | Real monolithic mixed u-sigma solve (MINRES / SuperLU with pivoting) | Proposed — definitive fix, large refactor. **Confirmed necessary**: the 0.2315× fixed point is scheme-owned (unchanged with the honest solver) and the road statics check still fails (0.143·pL²/8). |
+| (D) | Regularization of the staggered scheme so its fixed point matches the true solution | Proposed — same evidence as (C). |
 | — | Q4 selective reduced integration (opt-in) | DONE — `group_element_selective_reduced_integration` |
 
 ## 5. Open questions
 
-- Is the 0.2315× fixed point a property of the staggered scheme itself, or an
-  artifact of the dishonest inner solver polluting the outer iterations?
-  (Lote A+B will answer.)
+- ~~Is the 0.2315× fixed point a property of the staggered scheme itself, or
+  an artifact of the dishonest inner solver polluting the outer
+  iterations?~~ **ANSWERED (lote A+B)**: it is the scheme's. With the honest
+  solver the sweep 1..32 gives identical fixed points (plain 0.0185184 =
+  0.23148×, SRI 0.0185298 = 0.23162×) — the 2D inner solve was already
+  converging honestly. The road model confirms: with converged solves,
+  |M_end| + M_center = 0.143·pL²/8, still impossible statics.
 - The hex27 divergence (2.16e+13 after 720 iterations) was not reproduced with
   regular cantilevers; the exact failing mesh from the earlier session is not
-  in the repository.
+  in the repository. (The hex27 ×8 regular cantilever now converges with the
+  honest solver: 79 iterations, mom ≈ 1.1·P·(L−x).)
 - Moment extraction for meshes with 2+ elements in thickness was
   inconclusive (open question).

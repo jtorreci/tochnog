@@ -1,6 +1,9 @@
 # DIAG-SOLVE-MIXTO.md — Root-cause diagnosis of the GNU mixed u-σ solve
 
 **Status**: completed (2026-08-28) — branch `documentation-improvement`.
+**Fixes A+B implemented** (2026-08-28, §8.1): honest stopping criteria +
+CG for the SPD system; the staggered fixed point is confirmed scheme-owned
+(0.2315× unchanged) → C/D pending.
 **Scope**: the `materi_stress` mixed formulation of the GNU (sfnet 2014
 fork): why the default Bi-CG solve produces `A·b ≈ 0` / divergence in 3D,
 ill-conditioning and wrong section moments in 2D, and how the user-level
@@ -462,6 +465,78 @@ the current assembly); it protects against the breakdown family.
 Recommended order: A (correctness of the stop criteria) → B (CG) → C
 (monolithic mixed, the real fix for the user case) as a separate lot;
 D/E as short-term mitigations.
+
+---
+
+## 8.1 Results of lot A+B (implemented 2026-08-28)
+
+**Status**: A (honest criteria) and B (CG) are **DONE** (commit
+`feat(solver): ...`); C/D remain the definitive repair for the user case.
+
+### What was implemented
+
+- **A — honest stopping criteria** in `so_bicg.cc`: success is reported
+  ONLY on the residual test `error < check_error` (relative, with the
+  absolute floor; residual recomputed from the iterate every pass). The
+  breakdown exits (`|dAd|<1e-16`, `|r1·r2|<1e-16`) and the stagnation exit
+  (`|Δerror|<0.1·check_error`) no longer report success: a genuine
+  breakdown is an honest failure (RC≠0, message with the real relative
+  residual), a flat step just keeps iterating, and `max_iter` fails loudly
+  (with `control_solver_bicg_stop -no` as the documented "continue"
+  escape).
+- **B — CG for the SPD system**: a runtime symmetry check
+  (`solve_iterative_bicg_symmetric`, one serial pass over the element
+  matrices, `EPS_SYMMETRY=1e-8`) dispatches to plain CG for the
+  measured-symmetric systems (velocity/temp/pres) and to the honest Bi-CG
+  for the measured non-symmetric ones (beam: translation↔rotation blocks
+  carry different `dtime` factors; plastic-slip 3D interface: `max_rel_asym`
+  up to 1.0, `dᵀAd<0`). Same dispatch, same RC contract.
+- **Primal-residual monitor**: the accumulated residual is now the PRIMAL
+  `b̂−Āx̂` (the old accumulation measured the transpose residual, which
+  never vanishes at the solution of a non-symmetric system — the beam
+  solve could only "finish" through the false breakdown exit). Identical
+  values for symmetric systems.
+
+### The KEY question — did the fixed point change?
+
+**No.** Sweeping the outer staggered iterations 1..32 with the honest
+solver gives the SAME fixed point as §5.4:
+
+| iterations | plain quad4 (old) | plain (new) | SRI (old) | SRI (new) |
+|---|---|---|---|---|
+| 2 | 0.018518 | 0.0185184 | 0.0249998 | 0.0249999 |
+| 8 | 0.018518 | 0.0185184 | 0.018530 | 0.0185303 |
+| 32 | 0.018518 (0.23148×) | 0.0185184 | 0.018530 (0.23163×) | 0.0185298 (0.23162×) |
+
+The `0.2315×` fixed point is **a property of the staggered scheme**, not
+an artifact of the dishonest inner solver (the 2D inner solves were already
+converging honestly: `error 8.4e-13 < check_error`). **C/D are still
+required.**
+
+### The 3D family is fixed
+
+- 1-hex8 cantilever with tip load (the `A·b≈0` flat-residual case): the
+  old code stopped at iteration 1 with `RC=0` and error `4.72727e-07`;
+  the new CG iterates through the flat step and converges
+  (`iterations 0..3`, `final error 4.2e-37`, `relative residual 9.4e-16`).
+- hex8 ×8 and hex27 ×8 with REAL load + MSF section forces: both solve
+  (RC=0, CG path). hex27 gives `mom ≈ 1.1·P·(L−x)` and `she ≈ P` — the
+  load-based 3D validation of the MSF family is unblocked. hex8 ×8 gives
+  `mom ≈ 0.26·P·L` (the 1-in-thickness lock, same family as 2D).
+- The road model (concrete 1-in-thickness on soil, plane strain,
+  fixed-fixed, distributed load): now runs RC=0 with converged solves, but
+  `|M_end| + M_center = 0.001435 = 0.143·pL²/8` — the statics check still
+  fails by a factor ≈ 7 (the scheme's fixed point for that model).
+
+### Suite impact (199 tests, clean build)
+
+`198/199` unchanged; `iface_3d_slip` updated (test corregido): the
+plastic-slip 3D interface system is non-symmetric/indefinite and the
+honest Bi-CG breaks down; the test now opts into the documented
+`control_solver_bicg_stop -no` (continue with warning) and keeps
+verifying the interface physics. All file checks pass. No test approaches
+the 120 s timeout (slowest ≈ 1.4 s). Details: `ProjectDocs/manual-developer/
+solve_iterative_bicg.md`.
 
 ---
 

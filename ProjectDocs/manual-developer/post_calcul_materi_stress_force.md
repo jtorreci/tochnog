@@ -263,14 +263,23 @@
   Bi-CG declaran éxito en breakdown/estancamiento con error ≫
   tolerancia, y el punto fijo del esquema converge al estado locked
   (0.2315× para quad4 plain Y SRI; SuperLU ≡ Bi-CG byte-idénticos).
+  **ARREGLADO (2026-08-28, lote A+B del diagnóstico — ver
+  [solve_iterative_bicg.md](solve_iterative_bicg.md))**: criterios de
+  parada honestos + CG para el sistema SPD. El cantilever 3D con
+  carga REAL ya resuelve (hex8 1-e: converge a 4.2e-37; hex8×8/hex27×8:
+  fuerzas de sección — hex27 mom ≈ 1.1·P·(L−x), she ≈ P) y la
+  validación 3D con carga queda desbloqueada. El punto fijo escalonado
+  0.2315× NO cambió (confirmado por barrido con el solver honesto) —
+  el deficit de momentos de sección de las mallas 1-en-espesor sigue
+  siendo del esquema (fix C/D pendiente).
 
 ## Pendiente
 
-- **Arreglo del solve mixto 3D del GNU** (matriz v-v degenerada del
-  hex8/hex27 + BiCG): sin él, los tests de carga (cantilever con
-  fuerza en punta, vaso de presión con cargas consistentes) no pueden
-  validarse — lote aparte, fuera del sub-sprint MSF. Los tests 3D del
-  lote 3 usan deformación prescrita (ver GOTCHA MAYOR arriba).
+- **Fix C/D del esquema escalonado** (monolítico mixto real con
+  MINRES/SuperLU-pivoting, o regularización del actualizado de σ):
+  el solver lineal honesto (A+B) desbloqueó la validación 3D con
+  carga, pero el punto fijo del esquema sigue en el estado locked
+  (0.2315× 2D, 0.143× en el modelo de carretera) — lote aparte.
 - axisimétrico: implementado (l=2πr) pero sin test dedicado en este
   lote (pendiente; el MSF L4 previsto pulirá el caso).
 - Los tests `.dat` viven en `validation-suite/test-2014/` (gitignored;
