@@ -3660,6 +3660,14 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   data_class[GROUP_INTEGRATION_POINTS] = GROUP_INTEGRATION_POINTS;
   data_required[GROUP_INTEGRATION_POINTS] = GROUP_TYPE;
 
+  strcpy(name[GROUP_ELEMENT_SELECTIVE_REDUCED_INTEGRATION],
+    "group_element_selective_reduced_integration");
+  type[GROUP_ELEMENT_SELECTIVE_REDUCED_INTEGRATION] = INTEGER;
+  data_length[GROUP_ELEMENT_SELECTIVE_REDUCED_INTEGRATION] = 1;
+  version_all[GROUP_ELEMENT_SELECTIVE_REDUCED_INTEGRATION] = 1;
+  data_class[GROUP_ELEMENT_SELECTIVE_REDUCED_INTEGRATION] = GROUP_TYPE;
+  data_required[GROUP_ELEMENT_SELECTIVE_REDUCED_INTEGRATION] = GROUP_TYPE;
+
   strcpy(name[GROUP_INTERFACE],"group_interface");
   type[GROUP_INTERFACE] = INTEGER;
   data_length[GROUP_INTERFACE] = 1;

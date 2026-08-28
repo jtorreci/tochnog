@@ -339,6 +339,44 @@ long int stress_indx( long int idim, long int jdim )
   return indx;
 }
 
+long int sri_quad4_active( long int element, long int element_group,
+  long int name, long int nnol )
+
+  // group_element_selective_reduced_integration (SRI, Hughes): opt-in
+  // fix for the shear locking of the bilinear quad4 in bending. Returns
+  // 1 when the keyword is -yes AND the full SRI applies to the element:
+  //   - 2D bilinear quad4 (nnol==4) only (hex8 SRI is future work)
+  //   - NOT axisymmetric
+  //   - NOT large displacement (materi_displacement): the reduced shear
+  //     point is built from the reference coordinates passed to materi()
+  //   - LINEAR ELASTICITY only: the split D = D_norm + D_shear is exact
+  //     only when the tangent is constant over the element (the reduced
+  //     point has no material state of its own)
+  // Used by both pol() (which switches the full rule to Gauss 2x2 for
+  // the normal terms) and materi() (which splits D and adds the shear
+  // term with 1 Gauss point at the centroid). Kept in ONE place so the
+  // quadrature and the stiffness split can never disagree.
+
+{
+  long int sri=-NO, axisymmetric=-NO;
+  long int ldum=0;
+  double ddum[1];
+
+  if ( !( name==-QUAD4 && nnol==4 && ndim==2 ) ) return 0;
+  db( GROUP_ELEMENT_SELECTIVE_REDUCED_INTEGRATION, element_group, &sri,
+    ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+  if ( sri!=-YES ) return 0;
+  if ( !materi_stress ) return 0;
+  db( GROUP_AXISYMMETRIC, element_group, &axisymmetric, ddum, ldum,
+    VERSION_NORMAL, GET_IF_EXISTS );
+  if ( axisymmetric==-YES ) return 0;
+  if ( materi_displacement ) return 0;
+  if ( materi_plasti_kappa || materi_strain_plasti || materi_plasti_f ||
+    materi_plasti_softvar_local || materi_plasti_softvar_nonlocal ||
+    materi_damage || materi_maxwell_stress ) return 0;
+  return 1;
+}
+
 char *long_to_a( long int n, char s[] )
 
 {

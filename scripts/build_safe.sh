@@ -619,7 +619,9 @@ for t in hypo1 hypo2 hypo3 hypo4 smooth1 dof1 mlx1 vtk_dof1 gen1 genbeam1       
          bmom1 bmom_switch bmom_truss bmom_2d bmom_noint \
          msf_parse msf_parse_3d msf_print msf_errors_2dwarn \
          msf_beam2d msf_beam2d_pure msf_quad9 msf_quad9_noavg msf_nor msf_shear \
-         msf_sheet3d msf_sheet3d_hex8 msf_hex27_avg msf_tunnel3d; do
+          msf_sheet3d msf_sheet3d_hex8 msf_hex27_avg msf_tunnel3d \
+          qsri_beam2d qsri_beam2d_sri qsri_patch_s qsri_patch_s_off \
+          qsri_patch_t qsri_patch_t_off qsri_modes qsri_modes_rigid; do
   HIPO_TOTAL=$((HIPO_TOTAL+1))
   ( cd validation-suite/test-2014 &&
     ulimit -v 4000000 &&
@@ -632,7 +634,7 @@ for t in hypo1 hypo2 hypo3 hypo4 smooth1 dof1 mlx1 vtk_dof1 gen1 genbeam1       
     echo "    $t: FALLO (rc=$RC)"
   fi
 done
-echo "==> Resumen: $HIPO_OK/$HIPO_TOTAL runs OK (13 tests: 12 preexistentes + familia iface_mc en 10 runs + familia 3D en 5 runs + familia generate_interface en 6 runs + familia materi_direct en 5 runs + materi_displacement_relative en 2 runs + slide/reset_value en 2 runs + cda_arith/copy/activate en 3 runs + cdist_normal/corr/clamp en 3 runs + cd_method/cd_geom en 2 runs + gravity/settlement en 4 runs + contact en 1 run + contact_block/ctrl_apply/heatgen en 3 runs + groundflow_consolidate_off en 1 run + groundflow_vangenuchten/groundflow_nonsaturated_off en 2 runs + groundflow_total_pressure_tension/groundflow_interface en 2 runs + groundflow_flux_edge en 1 run + groundflow_phreatic_multiple en 1 run + groundflow_seepage en 1 run + groundflow_pressure_atm/_def en 2 runs + groundflow_total_pressure_limit/_dry en 2 runs + condif_heat_edge/vol/vol2 en 3 runs + condif_convec/rad/convec_el en 3 runs + aeg_node/aeg_seq/bt_factor en 3 runs + iface_condif/expansion/tangref en 3 runs + node_force_inertia/slide/pressure en 3 runs + creset_geom/iface en 2 runs + fedge_alias/restrict, fvol_elem y cmat_gate en 4 runs + fproj_tunnel en 1 run + dsmall/dignore en 2 runs + mdirect_comp/gate en 2 runs + mdp_shear/mfactor en 2 runs + mmc_tension en 1 run + mmchs_soft en 1 run + mcap2/mcap_legacy en 2 runs + mcrunch/mcrunch_low en 2 runs + mvoid/mvoid_low en 2 runs + mpower en 1 run + mshf/mshf_nof en 2 runs + mk0/mk0_off en 2 runs + myoung6/myoung6_e2/myoung6_e3/myoung6_apply en 4 runs + msph/msph_flat en 2 runs + mcap1/mcap1_elast/mcap1_comb en 3 runs + mhardsoil_elast/elast2/unload/unload_flat/plast/plast_elast/gp0/gp0_off en 8 runs + mstrain_cap/_elast, mstrain_compression/_elast, mstrain_diprisco/_elast, mstrain_druckprag/_elast en 8 runs + mdiprisco_hist en 1 run + mc_pressure_min/_off en 2 runs (Sprint 10 lote 9) + mrepeat_save en 1 run (Sprint 10 lote 10) + dbmeth/partialname/meshdoff/dofrhside/elmethod/hreltime/numit/dofid_no en 8 runs (Sprint 11 lote 1) + freq_timeint/freq_timestep en 2 runs (Sprint 11 lote 2) + vtk_coord1/vtk_dofcalc1/vtk_empty1/vtk_nodmeth1/vtk_other1 en 5 runs (Sprint 11 lote 3) + dpline1/dpline_n/dpline_geom/dpline_group/dpline_eps/dpline_method/dpline_move/dpline_time/dpoint_time/dpoint1 en 10 runs (Sprint 11 lote 4) + cpn1/cpn_angular/cpn_geom/cpn_sort/cpn_zero/dsmooth1/dsmooth_n en 7 runs (Sprint 11 lote 5) + bmom1/bmom_switch/bmom_truss/bmom_2d/bmom_noint en 5 runs (Sprint 11 lote 6) + msf_parse/msf_parse_3d/msf_print/msf_errors_2dwarn en 4 runs (sub-sprint materi_stress_force, lote 1) + msf_beam2d/msf_beam2d_pure/msf_quad9/msf_quad9_noavg/msf_nor/msf_shear en 6 runs (sub-sprint materi_stress_force, lote 2) + msf_sheet3d/msf_sheet3d_hex8/msf_hex27_avg/msf_tunnel3d en 4 runs (sub-sprint materi_stress_force, lote 3))."
+echo "==> Resumen: $HIPO_OK/$HIPO_TOTAL runs OK (13 tests: 12 preexistentes + familia iface_mc en 10 runs + familia 3D en 5 runs + familia generate_interface en 6 runs + familia materi_direct en 5 runs + materi_displacement_relative en 2 runs + slide/reset_value en 2 runs + cda_arith/copy/activate en 3 runs + cdist_normal/corr/clamp en 3 runs + cd_method/cd_geom en 2 runs + gravity/settlement en 4 runs + contact en 1 run + contact_block/ctrl_apply/heatgen en 3 runs + groundflow_consolidate_off en 1 run + groundflow_vangenuchten/groundflow_nonsaturated_off en 2 runs + groundflow_total_pressure_tension/groundflow_interface en 2 runs + groundflow_flux_edge en 1 run + groundflow_phreatic_multiple en 1 run + groundflow_seepage en 1 run + groundflow_pressure_atm/_def en 2 runs + groundflow_total_pressure_limit/_dry en 2 runs + condif_heat_edge/vol/vol2 en 3 runs + condif_convec/rad/convec_el en 3 runs + aeg_node/aeg_seq/bt_factor en 3 runs + iface_condif/expansion/tangref en 3 runs + node_force_inertia/slide/pressure en 3 runs + creset_geom/iface en 2 runs + fedge_alias/restrict, fvol_elem y cmat_gate en 4 runs + fproj_tunnel en 1 run + dsmall/dignore en 2 runs + mdirect_comp/gate en 2 runs + mdp_shear/mfactor en 2 runs + mmc_tension en 1 run + mmchs_soft en 1 run + mcap2/mcap_legacy en 2 runs + mcrunch/mcrunch_low en 2 runs + mvoid/mvoid_low en 2 runs + mpower en 1 run + mshf/mshf_nof en 2 runs + mk0/mk0_off en 2 runs + myoung6/myoung6_e2/myoung6_e3/myoung6_apply en 4 runs + msph/msph_flat en 2 runs + mcap1/mcap1_elast/mcap1_comb en 3 runs + mhardsoil_elast/elast2/unload/unload_flat/plast/plast_elast/gp0/gp0_off en 8 runs + mstrain_cap/_elast, mstrain_compression/_elast, mstrain_diprisco/_elast, mstrain_druckprag/_elast en 8 runs + mdiprisco_hist en 1 run + mc_pressure_min/_off en 2 runs (Sprint 10 lote 9) + mrepeat_save en 1 run (Sprint 10 lote 10) + dbmeth/partialname/meshdoff/dofrhside/elmethod/hreltime/numit/dofid_no en 8 runs (Sprint 11 lote 1) + freq_timeint/freq_timestep en 2 runs (Sprint 11 lote 2) + vtk_coord1/vtk_dofcalc1/vtk_empty1/vtk_nodmeth1/vtk_other1 en 5 runs (Sprint 11 lote 3) + dpline1/dpline_n/dpline_geom/dpline_group/dpline_eps/dpline_method/dpline_move/dpline_time/dpoint_time/dpoint1 en 10 runs (Sprint 11 lote 4) + cpn1/cpn_angular/cpn_geom/cpn_sort/cpn_zero/dsmooth1/dsmooth_n en 7 runs (Sprint 11 lote 5) + bmom1/bmom_switch/bmom_truss/bmom_2d/bmom_noint en 5 runs (Sprint 11 lote 6) + msf_parse/msf_parse_3d/msf_print/msf_errors_2dwarn en 4 runs (sub-sprint materi_stress_force, lote 1) + msf_beam2d/msf_beam2d_pure/msf_quad9/msf_quad9_noavg/msf_nor/msf_shear en 6 runs (sub-sprint materi_stress_force, lote 2) + msf_sheet3d/msf_sheet3d_hex8/msf_hex27_avg/msf_tunnel3d en 4 runs (sub-sprint materi_stress_force, lote 3) + qsri_beam2d/qsri_beam2d_sri/qsri_patch_s/qsri_patch_s_off/qsri_patch_t/qsri_patch_t_off/qsri_modes/qsri_modes_rigid en 8 runs (shear locking quad4 + SRI))."
 
 # ---------------------------------------------------------------------
 # Sprint 11 lote 1: verificacion de ARCHIVOS y STDOUT de los 8 keywords
@@ -1471,15 +1473,100 @@ else
 fi
 
 # msf_errors_3dbothdir: 3D con exclude+include juntos -> error
-msf_error_ok msf_errors_3dbothdir "are mutually exclusive"
-# msf_errors_3drefcount: 3D con 2 grupos y 1 solo reference_point
-msf_error_ok msf_errors_3drefcount "reference_point needs one point"
+ msf_error_ok msf_errors_3dbothdir "are mutually exclusive"
+ # msf_errors_3drefcount: 3D con 2 grupos y 1 solo reference_point
+ msf_error_ok msf_errors_3drefcount "reference_point needs one point"
+
+# ---------------------------------------------------------------------
+# Shear locking del quad4 + integracion reducida selectiva (SRI, Hughes):
+# familia qsri. FENOMENO (ver manual-developer/group_element_selective_
+# reduced_integration.md): la flexion pura requiere u_y ~ -kappa*x^2/2,
+# no representable por el bilineal -> cizalla parastia gamma_xy != 0 ->
+# respuesta en flexion DEMASIADO RIGIDA. MEDIDO en qsri_beam2d (A/B):
+# sin SRI mom = 0.231*P*(8-x) y she = 0.741*P (reproduce el lock
+# documentado del lote MSF 2); con SRI mom = 0.312*P*(8-x) y she =
+# 0.65*P (mejoria real; el valor clasico del SRI ~1.0* requiere el
+# solve de desplazamiento puro - ver la nota del solver en el manual).
+# PATCH TESTS (estados constantes, EXACTOS con SRI): qsri_patch_s she =
+# G*gamma = 0.384615384615 EXACTO (12 digitos), qsri_patch_t nor
+# identico con/sin SRI (el SRI integra constantes exactamente).
+# MODOS: qsri_modes_rigid -> rotacion rigida prescrita da tensiones 0
+# EXACTAS (los 3 modos rigidos son modos cero); qsri_modes (hourglass
+# prescrito) -> tensiones NO nulas (el modo espurio del quad4 reducido
+# TOTAL tiene energia positiva con el SRI: sin modo hourglass).
+# ---------------------------------------------------------------------
+
+# qsri_beam2d (440): A/B sin SRI - reproduce el lock documentado:
+# mom en x=0 (node 0) = 0.018518 = 0.231*P*8 (dentro de 5e-4) y she
+# en las secciones interiores (node 4, x=2) = 0.007407 = 0.741*P
+QSR_BEAM_OFF_OK=1
+awk '!/^#/ && $1==0 { d=$10-0.018518; if (d<0) d=-d; if (d>5.e-4) bad=1 }
+     !/^#/ && $1==4 { d=$7-0.007407; if (d<0) d=-d; if (d>1.e-4) bad=1 }
+     END{exit bad}' "$T2014/materi_stress_force.440" || QSR_BEAM_OFF_OK=0
+# qsri_beam2d_sri (441): A/B con SRI - mejora el lock: mom en x=0 =
+# 0.0250 = 0.312*P*8 (dentro de 5e-4, mayor que el 0.0185 sin SRI) y
+# she interior = 0.0065 = 0.65*P
+QSR_BEAM_SRI_OK=1
+awk '!/^#/ && $1==0 { d=$10-0.0250; if (d<0) d=-d; if (d>5.e-4) bad=1; if ($10<0.02) bad=1 }
+     !/^#/ && $1==4 { d=$7-0.0065; if (d<0) d=-d; if (d>1.e-4) bad=1 }
+     END{exit bad}' "$T2014/materi_stress_force.441" || QSR_BEAM_SRI_OK=0
+if [ "$QSR_BEAM_OFF_OK" = "1" ] && [ "$QSR_BEAM_SRI_OK" = "1" ]; then
+  check_ok "qsri_beam2d (lock: mom=0.231x she=0.741x vs SRI: mom=0.312x she=0.65x; SRI > OFF)"
+else
+  check_fail "qsri_beam2d" "lock o mejoria SRI inesperados"
+fi
+
+# qsri_patch_s (442) / qsri_patch_s_off (443): corte simple prescrito
+# gamma=1e-3 -> she = G*gamma = 0.384615384615 EXACTO en los 4 nodos,
+# nor = mom = 0; IDENTICO con y sin SRI (el SRI integra constantes
+# exactamente) -> los archivos deben ser byte-identicos salvo cabecera
+QSR_PATCH_S_OK=1
+awk '!/^#/ { d=$7-0.384615384615; if (d<0) d=-d; if (d>1.e-6 || $4>1.e-8 || $10>1.e-8) bad=1 }
+     END{exit bad}' "$T2014/materi_stress_force.442" || QSR_PATCH_S_OK=0
+awk '!/^#/ { d=$7-0.384615384615; if (d<0) d=-d; if (d>1.e-6 || $4>1.e-8 || $10>1.e-8) bad=1 }
+     END{exit bad}' "$T2014/materi_stress_force.443" || QSR_PATCH_S_OK=0
+if [ "$QSR_PATCH_S_OK" = "1" ]; then
+  check_ok "qsri_patch_s (she = G*gamma = 0.384615384615 EXACTO, nor=mom=0; identico con/sin SRI)"
+else
+  check_fail "qsri_patch_s" "el estado constante no es exacto o difiere entre SRI/no-SRI"
+fi
+
+# qsri_patch_t (444) / qsri_patch_t_off (445): traccion uniaxial
+# prescrita eps=1e-3 -> nor = 1.025641 (valor del esquema mixto,
+# IDENTICO con y sin SRI: el SRI no degrada el estado constante)
+QSR_PATCH_T_OK=1
+awk '!/^#/ { d=$4-1.025641; if (d<0) d=-d; if (d>1.e-5) bad=1 }
+     END{exit bad}' "$T2014/materi_stress_force.444" || QSR_PATCH_T_OK=0
+awk '!/^#/ { d=$4-1.025641; if (d<0) d=-d; if (d>1.e-5) bad=1 }
+     END{exit bad}' "$T2014/materi_stress_force.445" || QSR_PATCH_T_OK=0
+if [ "$QSR_PATCH_T_OK" = "1" ]; then
+  check_ok "qsri_patch_t (nor identico con/sin SRI = 1.025641: estado constante no degradado)"
+else
+  check_fail "qsri_patch_t" "el estado constante difiere entre SRI/no-SRI"
+fi
+
+# qsri_modes (448): modo hourglass prescrito u_y = a*x*y -> con el SRI
+# las tensiones son NO nulas (el modo tiene energia positiva: NO hay
+# modo espurio de energia cero). she en [0.2, 0.35] y nor en [0.15, 0.3]
+QSR_MODES_OK=1
+awk '!/^#/ { if ($7<0.2 || $7>0.35 || $4<0.15 || $4>0.3) bad=1 }
+     END{exit bad}' "$T2014/materi_stress_force.448" || QSR_MODES_OK=0
+# qsri_modes_rigid (449): rotacion rigida prescrita -> tensiones 0
+# EXACTAS (los 3 modos rigidos son modos cero exactos de la matriz SRI)
+QSR_MODES_RIGID_OK=1
+awk '!/^#/ { if ($4!=0 || $7!=0 || $10!=0) bad=1 }
+     END{exit bad}' "$T2014/materi_stress_force.449" || QSR_MODES_RIGID_OK=0
+if [ "$QSR_MODES_OK" = "1" ] && [ "$QSR_MODES_RIGID_OK" = "1" ]; then
+  check_ok "qsri_modes (hourglass con energia positiva; rotacion rigida con tension 0 EXACTA: 3 modos cero, sin hourglass)"
+else
+  check_fail "qsri_modes" "modos espurios o rigidos incorrectos"
+fi
 
 if [ "$CHECK_FAIL" = "1" ]; then
   echo "==> ALGUNAS VERIFICACIONES DE ARCHIVOS FALLARON"
   exit 1
 else
-  echo "==> Verificacion de archivos de salida (Sprint 11 lotes 1-6 + sub-sprint materi_stress_force lotes 1-3): TODAS OK"
+  echo "==> Verificacion de archivos de salida (Sprint 11 lotes 1-6 + sub-sprint materi_stress_force lotes 1-3 + familia qsri): TODAS OK"
 fi
 
 echo "==> Log de compilacion completo en /tmp/tn_build_safe.log"

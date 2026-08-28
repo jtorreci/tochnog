@@ -21,7 +21,7 @@
 
 #define EPS_H 1.e-8
 
-void materi( long int element, long int gr, long int nnol, 
+void materi( long int element, long int gr, long int name, long int nnol, 
   long int npoint, long int nodes[], long int plasti_on_boundary,
   double coord_ip[], double old_coord[],
   double h[], double new_d[], double new_b[],
@@ -36,7 +36,8 @@ void materi( long int element, long int gr, long int nnol,
   long int i=0, j=0, idim=0, jdim=0, kdim=0,
     inol=0, jnol=0, m=0, n=0, indx=0, ipuknwn=0, iuknwn=0, jpuknwn=0, 
     swit=0, indxi=0, indxj=0, indx1=0, indx2=0, memory=-UPDATED, 
-    ind_ddsdde=0, ldum=0, idum[1];
+    ind_ddsdde=0, ldum=0, idum[1],
+    sri=-NO, sri_quad4=0;
   double rdum=0., dens=0., dtime=0., materi_expansion_linear=0., 
     materi_expansion_volume=0., temp=0., tmp=0., damping=0., fac=0, 
     plasti_heatgeneration=0., viscosity_heatgeneration=0.,
@@ -47,6 +48,7 @@ void materi( long int element, long int gr, long int nnol,
     static_pressure=0., total_pressure=0., location=0.,
     J=0., ddum[1], direct_normal[MDIM], *force_gravity=NULL, 
     activation_factor=1., activation_stiff=1.,
+    sri_g=0., sri_volfac=1., sri_detj_weight=0., sri_coord_center[MDIM],
     *old_deften=NULL, *new_deften=NULL, *inv_deften=NULL,
     *old_epe=NULL, *inc_epe=NULL, *new_epe=NULL,
     *old_epp=NULL, *inc_epp=NULL, 
@@ -65,8 +67,11 @@ void materi( long int element, long int gr, long int nnol,
     *ddsdde=NULL, *ddsdde_tendon=NULL,
     *ddsdde_total=NULL, *sigvec=NULL,
     *work=NULL, *stiffness=NULL, *force=NULL,
+    *stiffness_shear=NULL, *b_shear=NULL,
     *dbl_array=NULL,
     *new_sig_nonrot=NULL;
+
+  static long int sri_warning_done = 0;
 
   swit = set_swit(element,-1,"materi");
   if ( swit ) pri( "In routine MATERI." );
@@ -84,13 +89,15 @@ void materi( long int element, long int gr, long int nnol,
     materi_maxwell_stress*MDIM*MDIM + materi_maxwell_stress*MDIM*MDIM + MDIM*MDIM + MDIM*MDIM +
     nuknwn + nuknwn + MSTRAIN*MSTRAIN + MSTRAIN*MSTRAIN +
     MSTRAIN*MSTRAIN + MSTRAIN*MSTRAIN +
-    nnol*MDIM*nnol*MDIM + nnol*ndim*nnol*ndim + nnol*ndim + MDIM*MDIM;
+    nnol*MDIM*nnol*MDIM + nnol*ndim*nnol*ndim + nnol*ndim + MDIM*MDIM +
+    nnol*ndim*nnol*ndim + nnol*ndim;
   dbl_array = get_new_dbl(n);
   assert( indx<=n );
  
   indx = 0;
   work = &dbl_array[indx]; indx += nnol*MDIM*nnol*MDIM;
-  stiffness = &dbl_array[indx]; indx += nnol*ndim*nnol*ndim;
+  stiffness_shear = &dbl_array[indx]; indx += nnol*ndim*nnol*ndim;
+  b_shear = &dbl_array[indx]; indx += nnol*ndim;
   force = &dbl_array[indx]; indx += nnol*ndim;
   force_gravity = &dbl_array[indx]; indx += MDIM;
   old_deften = &dbl_array[indx]; indx += MDIM*MDIM;
@@ -169,6 +176,32 @@ void materi( long int element, long int gr, long int nnol,
     VERSION_NORMAL, GET_IF_EXISTS );
   dens = get_materi_density( element, gr, nnol, nodes, new_unknowns );
   force_gravity_calculate( force_gravity );
+
+  // group_element_selective_reduced_integration (SRI, Hughes):
+  // opt-in fix for the shear locking of the bilinear quad4 in bending.
+  // When -yes, the gamma_xy shear part of the constitutive matrix is
+  // integrated with 1 Gauss point at the element centroid while the
+  // normal/volumetric part keeps the full rule - which for the SRI
+  // group becomes the classic 2x2 Gauss rule (pol() switches it; the
+  // codebase default 2x2 Lobatto corner rule would cap the benefit at
+  // ~0.35x of the exact section moment, measured). The scope decision
+  // is in sri_quad4_active() (miscel.cc): LINEAR ELASTICITY only,
+  // because the split D = D_norm + D_shear is exact only when the
+  // tangent is constant over the element (the reduced point has no
+  // material state of its own); plasticity, damage, maxwell, large
+  // displacement and axisymmetric groups ignore the keyword with a
+  // one-time warning.
+  db( GROUP_ELEMENT_SELECTIVE_REDUCED_INTEGRATION, gr, &sri, ddum, ldum,
+    VERSION_NORMAL, GET_IF_EXISTS );
+  sri_quad4 = sri_quad4_active( element, gr, name, nnol );
+  if ( sri==-YES && materi_stress && !sri_quad4 && !sri_warning_done ) {
+    pri( "Warning: group_element_selective_reduced_integration ignored: "
+      "only linear elastic 2D quad4 groups are supported (no "
+      "axisymmetry, no materi_displacement, no plasticity/damage/maxwell; "
+      "hex8 SRI is future work)." );
+    sri_warning_done = 1;
+  }
+
   // mesh_activate_gravity_time: the gravity is gradually activated for the
   // element (bottom-to-top interpolation). With method 2 the element stays
   // active (reduced stiffness) but without gravity until activation.
@@ -473,11 +506,71 @@ void materi( long int element, long int gr, long int nnol,
       }
     }
     matrix_atb( new_b, sigvec, force, MSTRAIN, nnol*ndim, 1 );
+    if ( sri_quad4 ) {
+      // SRI: D = D_norm + D_shear. The gamma_xy entry (index 1,
+      // stress_indx(0,1)) is the only shear term of the 2D plane
+      // formulation; it is excluded from the full (2x2) integration
+      // and added back with 1 point at the centroid below. For linear
+      // elasticity the tangent is constant over the element, so the
+      // shear modulus captured here is exact for the reduced point.
+      sri_g = ddsdde_total[1*MSTRAIN+1];
+      ddsdde_total[1*MSTRAIN+1] = 0.;
+    }
     matrix_atba( new_b, ddsdde_total, stiffness, work, MSTRAIN, nnol*ndim );
     if ( swit ) {
       pri( "force", force, nnol*ndim );
       pri( "stiffness", stiffness, nnol*ndim, nnol*ndim );
       pri( "sigvec", sigvec, MSTRAIN );
+    }
+    if ( sri_quad4 ) {
+      // SRI: stiffness of the shear term integrated with 1 Gauss point
+      // at the element centroid. For the bilinear quad4 the local
+      // derivatives at iso (0,0) are dN/dxi = xi_i/4 and
+      // dN/deta = eta_i/4 with the LOCAL node coordinates (xi_i,
+      // eta_i) = ((2*(i%2)-1), (2*(i/2)-1)) - the row-major-from-
+      // bottom convention that polynom.cc uses (node 0 = (-1,-1),
+      // 1 = (+1,-1), 2 = (-1,+1), 3 = (+1,+1); NOT the textbook
+      // counter-clockwise order). Deriving them from the index
+      // (instead of hardcoding) keeps the centroid B consistent with
+      // the B matrices of pol() for ANY physical node numbering; the
+      // Jacobian at the centroid handles distorted elements exactly.
+      // The 1x1 Gauss weight on [-1,1]^2 is 4.
+      double jac[4], invjac[4], dnxi[4], dnet[4], detj_center=0.;
+      for ( inol=0; inol<nnol; inol++ ) {
+        dnxi[inol] = 0.25 * ( (inol%2) ? 1. : -1. );
+        dnet[inol] = 0.25 * ( (inol/2) ? 1. : -1. );
+      }
+      for ( idim=0; idim<ndim; idim++ ) sri_coord_center[idim] = 0.;
+      array_set( jac, 0., 4 );
+      for ( inol=0; inol<nnol; inol++ ) {
+        jac[0] += dnxi[inol] * old_coord[inol*ndim+0];
+        jac[1] += dnxi[inol] * old_coord[inol*ndim+1];
+        jac[2] += dnet[inol] * old_coord[inol*ndim+0];
+        jac[3] += dnet[inol] * old_coord[inol*ndim+1];
+        for ( idim=0; idim<ndim; idim++ )
+          sri_coord_center[idim] += 0.25 * old_coord[inol*ndim+idim];
+      }
+      detj_center = jac[0]*jac[3] - jac[1]*jac[2];
+      if ( scalar_dabs(detj_center)<TINY ) {
+        array_set( stiffness_shear, 0., nnol*ndim*nnol*ndim );
+      }
+      else {
+        invjac[0] =  jac[3]/detj_center; invjac[1] = -jac[1]/detj_center;
+        invjac[2] = -jac[2]/detj_center; invjac[3] =  jac[0]/detj_center;
+        for ( inol=0; inol<nnol; inol++ ) {
+          // dN/dy and dN/dx at the centroid
+          b_shear[inol*ndim+0] = invjac[2]*dnxi[inol] + invjac[3]*dnet[inol];
+          b_shear[inol*ndim+1] = invjac[0]*dnxi[inol] + invjac[1]*dnet[inol];
+        }
+        sri_volfac = 1.;
+        volume_factor( gr, sri_coord_center, sri_volfac );
+        sri_detj_weight = 4. * detj_center;
+        for ( i=0; i<nnol*ndim; i++ )
+          for ( j=0; j<nnol*ndim; j++ )
+            stiffness_shear[i*nnol*ndim+j] = sri_g * sri_volfac *
+              sri_detj_weight * b_shear[i] * b_shear[j];
+      }
+      if ( swit ) pri( "stiffness_shear", stiffness_shear, nnol*ndim, nnol*ndim );
     }
   }
 
@@ -547,6 +640,15 @@ void materi( long int element, long int gr, long int nnol,
             tmp = volume * dtime * stiffness[indx1*nnol*ndim+indx2];
             element_matrix[indxi*nnol*npuknwn+indxj] += tmp;
             if ( indxi==indxj ) element_lhside[indx] += fac * tmp;
+            if ( sri_quad4 ) {
+              // SRI: the reduced-integrated shear stiffness (1x1 at the
+              // centroid) is added scaled by 1/npoint because materi()
+              // is called once per integration point; the npoint calls
+              // sum exactly to the full reduced integral.
+              tmp = dtime * stiffness_shear[indx1*nnol*ndim+indx2] / npoint;
+              element_matrix[indxi*nnol*npuknwn+indxj] += tmp;
+              if ( indxi==indxj ) element_lhside[indx] += fac * tmp;
+            }
               // viscosity
             jpuknwn = vel_indx/nder + jdim;
             indxj = jnol*npuknwn + jpuknwn;

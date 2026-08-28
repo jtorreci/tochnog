@@ -738,7 +738,7 @@ void elem( long int element, long int ithread )
           new_unknowns, new_grad_new_unknowns,
           element_matrix, element_rhside, element_residue );
       else if ( type==-MATERI ) 
-        materi( element, element_group, nnol, npoint, 
+        materi( element, element_group, name, nnol, npoint, 
           nodes, plasti_on_boundary, coord_ip, coord, 
           &h[ipoint*nnol], &new_d[ipoint*ndim*nnol], 
           &new_b[ipoint*MSTRAIN*nnol*ndim], 

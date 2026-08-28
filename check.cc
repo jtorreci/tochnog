@@ -489,6 +489,12 @@ long int check( long int idat, long int task )
   }
   if ( data_number==GROUP_INTEGRATION_POINTS )
     ok = check_unknowns_are_specified( task );
+  if ( data_number==GROUP_ELEMENT_SELECTIVE_REDUCED_INTEGRATION ) {
+    // selective reduced integration only makes sense in the mixed
+    // stress formulation (it modifies the B^T*D*B stiffness block)
+    ok = check_unknown( "materi_stress", YES, task );
+    ok = ok && check_unknown( "materi_velocity", YES, task );
+  }
   if ( data_number==GROUP_MATERI_DAMAGE_MAZARS )
     ok = check_unknown( "materi_damage", YES, task );
   if ( data_number==GROUP_MATERI_DAMPING )

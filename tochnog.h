@@ -750,6 +750,7 @@ enum {
   GROUP_GROUNDFLOW_TOTAL_PRESSURE_TENSION,
   GROUP_INTEGRATION_METHOD,
   GROUP_INTEGRATION_POINTS,
+  GROUP_ELEMENT_SELECTIVE_REDUCED_INTEGRATION,
   GROUP_INTERFACE,
   GROUP_INTERFACE_CONDIF_CONDUCTIVITY,
   GROUP_INTERFACE_GAP,
@@ -1699,7 +1700,7 @@ void      macro( void );
 void      make_dev(double tnz[9], double dev[9]);
 void      map_element( long int element );
 void      map_node( long int inod );
-void      materi( long int element, long int group, long int nnol, 
+void      materi( long int element, long int group, long int name, long int nnol, 
             long int npoint, long int nodes[], 
             long int plasti_on_boundary, double coord_ip[],
             double old_coord[], double h[], double new_d[], 
@@ -1955,6 +1956,8 @@ void      spring( long int element, long int name, long int element_group,
             double element_rhside[] );    
  void      interface_convert( long int icontrol );
 long int  stress_indx( long int idim, long int jdim );
+long int  sri_quad4_active( long int element, long int element_group,
+            long int name, long int nnol );
 void      stress_umat( long int element, long int gr, long int formulation,
             long int nuser_data, double user_data[], double coord_ip[],
             double old_hisv[], double new_hisv[], 
