@@ -618,7 +618,8 @@ for t in hypo1 hypo2 hypo3 hypo4 smooth1 dof1 mlx1 vtk_dof1 gen1 genbeam1       
          cpn1 cpn_angular cpn_geom cpn_sort cpn_zero dsmooth1 dsmooth_n \
          bmom1 bmom_switch bmom_truss bmom_2d bmom_noint \
          msf_parse msf_parse_3d msf_print msf_errors_2dwarn \
-         msf_beam2d msf_beam2d_pure msf_quad9 msf_quad9_noavg msf_nor msf_shear; do
+         msf_beam2d msf_beam2d_pure msf_quad9 msf_quad9_noavg msf_nor msf_shear \
+         msf_sheet3d msf_sheet3d_hex8 msf_hex27_avg msf_tunnel3d; do
   HIPO_TOTAL=$((HIPO_TOTAL+1))
   ( cd validation-suite/test-2014 &&
     ulimit -v 4000000 &&
@@ -631,7 +632,7 @@ for t in hypo1 hypo2 hypo3 hypo4 smooth1 dof1 mlx1 vtk_dof1 gen1 genbeam1       
     echo "    $t: FALLO (rc=$RC)"
   fi
 done
-echo "==> Resumen: $HIPO_OK/$HIPO_TOTAL runs OK (13 tests: 12 preexistentes + familia iface_mc en 10 runs + familia 3D en 5 runs + familia generate_interface en 6 runs + familia materi_direct en 5 runs + materi_displacement_relative en 2 runs + slide/reset_value en 2 runs + cda_arith/copy/activate en 3 runs + cdist_normal/corr/clamp en 3 runs + cd_method/cd_geom en 2 runs + gravity/settlement en 4 runs + contact en 1 run + contact_block/ctrl_apply/heatgen en 3 runs + groundflow_consolidate_off en 1 run + groundflow_vangenuchten/groundflow_nonsaturated_off en 2 runs + groundflow_total_pressure_tension/groundflow_interface en 2 runs + groundflow_flux_edge en 1 run + groundflow_phreatic_multiple en 1 run + groundflow_seepage en 1 run + groundflow_pressure_atm/_def en 2 runs + groundflow_total_pressure_limit/_dry en 2 runs + condif_heat_edge/vol/vol2 en 3 runs + condif_convec/rad/convec_el en 3 runs + aeg_node/aeg_seq/bt_factor en 3 runs + iface_condif/expansion/tangref en 3 runs + node_force_inertia/slide/pressure en 3 runs + creset_geom/iface en 2 runs + fedge_alias/restrict, fvol_elem y cmat_gate en 4 runs + fproj_tunnel en 1 run + dsmall/dignore en 2 runs + mdirect_comp/gate en 2 runs + mdp_shear/mfactor en 2 runs + mmc_tension en 1 run + mmchs_soft en 1 run + mcap2/mcap_legacy en 2 runs + mcrunch/mcrunch_low en 2 runs + mvoid/mvoid_low en 2 runs + mpower en 1 run + mshf/mshf_nof en 2 runs + mk0/mk0_off en 2 runs + myoung6/myoung6_e2/myoung6_e3/myoung6_apply en 4 runs + msph/msph_flat en 2 runs + mcap1/mcap1_elast/mcap1_comb en 3 runs + mhardsoil_elast/elast2/unload/unload_flat/plast/plast_elast/gp0/gp0_off en 8 runs + mstrain_cap/_elast, mstrain_compression/_elast, mstrain_diprisco/_elast, mstrain_druckprag/_elast en 8 runs + mdiprisco_hist en 1 run + mc_pressure_min/_off en 2 runs (Sprint 10 lote 9) + mrepeat_save en 1 run (Sprint 10 lote 10) + dbmeth/partialname/meshdoff/dofrhside/elmethod/hreltime/numit/dofid_no en 8 runs (Sprint 11 lote 1) + freq_timeint/freq_timestep en 2 runs (Sprint 11 lote 2) + vtk_coord1/vtk_dofcalc1/vtk_empty1/vtk_nodmeth1/vtk_other1 en 5 runs (Sprint 11 lote 3) + dpline1/dpline_n/dpline_geom/dpline_group/dpline_eps/dpline_method/dpline_move/dpline_time/dpoint_time/dpoint1 en 10 runs (Sprint 11 lote 4) + cpn1/cpn_angular/cpn_geom/cpn_sort/cpn_zero/dsmooth1/dsmooth_n en 7 runs (Sprint 11 lote 5) + bmom1/bmom_switch/bmom_truss/bmom_2d/bmom_noint en 5 runs (Sprint 11 lote 6) + msf_parse/msf_parse_3d/msf_print/msf_errors_2dwarn en 4 runs (sub-sprint materi_stress_force, lote 1) + msf_beam2d/msf_beam2d_pure/msf_quad9/msf_quad9_noavg/msf_nor/msf_shear en 6 runs (sub-sprint materi_stress_force, lote 2))."
+echo "==> Resumen: $HIPO_OK/$HIPO_TOTAL runs OK (13 tests: 12 preexistentes + familia iface_mc en 10 runs + familia 3D en 5 runs + familia generate_interface en 6 runs + familia materi_direct en 5 runs + materi_displacement_relative en 2 runs + slide/reset_value en 2 runs + cda_arith/copy/activate en 3 runs + cdist_normal/corr/clamp en 3 runs + cd_method/cd_geom en 2 runs + gravity/settlement en 4 runs + contact en 1 run + contact_block/ctrl_apply/heatgen en 3 runs + groundflow_consolidate_off en 1 run + groundflow_vangenuchten/groundflow_nonsaturated_off en 2 runs + groundflow_total_pressure_tension/groundflow_interface en 2 runs + groundflow_flux_edge en 1 run + groundflow_phreatic_multiple en 1 run + groundflow_seepage en 1 run + groundflow_pressure_atm/_def en 2 runs + groundflow_total_pressure_limit/_dry en 2 runs + condif_heat_edge/vol/vol2 en 3 runs + condif_convec/rad/convec_el en 3 runs + aeg_node/aeg_seq/bt_factor en 3 runs + iface_condif/expansion/tangref en 3 runs + node_force_inertia/slide/pressure en 3 runs + creset_geom/iface en 2 runs + fedge_alias/restrict, fvol_elem y cmat_gate en 4 runs + fproj_tunnel en 1 run + dsmall/dignore en 2 runs + mdirect_comp/gate en 2 runs + mdp_shear/mfactor en 2 runs + mmc_tension en 1 run + mmchs_soft en 1 run + mcap2/mcap_legacy en 2 runs + mcrunch/mcrunch_low en 2 runs + mvoid/mvoid_low en 2 runs + mpower en 1 run + mshf/mshf_nof en 2 runs + mk0/mk0_off en 2 runs + myoung6/myoung6_e2/myoung6_e3/myoung6_apply en 4 runs + msph/msph_flat en 2 runs + mcap1/mcap1_elast/mcap1_comb en 3 runs + mhardsoil_elast/elast2/unload/unload_flat/plast/plast_elast/gp0/gp0_off en 8 runs + mstrain_cap/_elast, mstrain_compression/_elast, mstrain_diprisco/_elast, mstrain_druckprag/_elast en 8 runs + mdiprisco_hist en 1 run + mc_pressure_min/_off en 2 runs (Sprint 10 lote 9) + mrepeat_save en 1 run (Sprint 10 lote 10) + dbmeth/partialname/meshdoff/dofrhside/elmethod/hreltime/numit/dofid_no en 8 runs (Sprint 11 lote 1) + freq_timeint/freq_timestep en 2 runs (Sprint 11 lote 2) + vtk_coord1/vtk_dofcalc1/vtk_empty1/vtk_nodmeth1/vtk_other1 en 5 runs (Sprint 11 lote 3) + dpline1/dpline_n/dpline_geom/dpline_group/dpline_eps/dpline_method/dpline_move/dpline_time/dpoint_time/dpoint1 en 10 runs (Sprint 11 lote 4) + cpn1/cpn_angular/cpn_geom/cpn_sort/cpn_zero/dsmooth1/dsmooth_n en 7 runs (Sprint 11 lote 5) + bmom1/bmom_switch/bmom_truss/bmom_2d/bmom_noint en 5 runs (Sprint 11 lote 6) + msf_parse/msf_parse_3d/msf_print/msf_errors_2dwarn en 4 runs (sub-sprint materi_stress_force, lote 1) + msf_beam2d/msf_beam2d_pure/msf_quad9/msf_quad9_noavg/msf_nor/msf_shear en 6 runs (sub-sprint materi_stress_force, lote 2) + msf_sheet3d/msf_sheet3d_hex8/msf_hex27_avg/msf_tunnel3d en 4 runs (sub-sprint materi_stress_force, lote 3))."
 
 # ---------------------------------------------------------------------
 # Sprint 11 lote 1: verificacion de ARCHIVOS y STDOUT de los 8 keywords
@@ -1367,11 +1368,118 @@ else
   check_fail "msf_shear" "corte simple inesperado (she != G*gamma o nor/mom no nulos)"
 fi
 
+# ---------------------------------------------------------------------
+# Sub-sprint materi_stress_force, lote 3 (integracion 3D hex8/hex27).
+# GOTCHA MAYOR del GNU (documentado en manual-developer): el solve
+# mixto 3D materi_stress + BiCG es DEGENERADO - la matriz v-v del
+# hex8/hex27 con la integracion default (Lobatto 2x2x2/3x3x3) da
+# A*b ~ 0 para muchas configuraciones de carga (el cantilever con
+# carga en punta se detiene en la iteracion 0 con x=0, o diverge con
+# hex27: error final 2.16e+13 tras 720 iteraciones) y el ring con
+# presion convergia mal (meseta ~1e-12, tensiones contaminadas). Por
+# eso los tests 3D usan DEFORMACION PRESCRITA (Dirichlet puro, sin
+# solve): campos lineales/cuadraticos exactos para el hex8/hex27, con
+# expectativas analiticas EXACTAS. Los .dat documentan cada campo.
+# Decisiones de diseno 3D (manual-developer): caras extremas = las 2
+# candidatas con |n*t_hat| minima (t_hat = normalizado(centroide -
+# reference_point)); el check "not opposing" usa el producto escalar
+# de las normales < 0.1 (los +-theta de un anillo de 45 grados no son
+# paralelos: dot = -cos(22.5) = -0.92); el cuadratura de cara =
+# Gauss(2)xGauss(2) (hex8) / Lobatto(3)xLobatto(3) (hex27) con el
+# factor 4 (los dos intervalos [-1,1]); los momentos se miden desde el
+# PUNTO MEDIO DE LA CARA (el centroide por esquinas de los elementos
+# curvos queda en la cuerda y anade un momento espurio, verificado);
+# el hex8 1-en-espesor no puede representar el campo de flexion
+# (u_x ~ y^2) -> shear locking (documentado; el test hex8 usa corte
+# puro, campo lineal EXACTO).
+# ---------------------------------------------------------------------
+
+# msf_sheet3d (500/501): FLEXION PURA PRESCRITA (hex27, 4 elementos,
+# 81 nodos): u_y = kappa*(x-0.5)*y, u_x = -kappa*y^2/2, nu=0 ->
+# sigma_yy = E*kappa*(x-0.5) EXACTO -> mom1 = E*kappa/12 = 0.0833333
+# const en todas las secciones (+-y), nor = 0, she = 0. -all 81 vs
+# -primary 45 (los 4 planos medios x 9 nodos = 36 promediados).
+MSF_S3_OK=1
+awk '!/^#/ && NF==17 { d=$13-0.0833333333; if (d<0) d=-d; if (d>1.e-5 || $5>1.e-8 || $9>1.e-8) bad=1 } END{exit bad}' \
+  "$T2014/materi_stress_force.500" || MSF_S3_OK=0
+if [ "$(grep -vc '^#' "$T2014/materi_stress_force.500")" = "81" ] && \
+   [ "$(grep -vc '^#' "$T2014/materi_stress_force.501")" = "45" ] && \
+   [ "$MSF_S3_OK" = "1" ]; then
+  check_ok "msf_sheet3d (hex27 flexion prescrita: mom1 = E*kappa/12 = 0.0833333 EXACTO en los 81 nodos, nor=she=0, -all 81 vs -primary 45)"
+else
+  check_fail "msf_sheet3d" "mom1/nor/she o conteos inesperados"
+fi
+
+# msf_sheet3d_hex8 (510/511): CORTE PURO PRESCRITO (hex8, campo lineal
+# u_x = gamma*y EXACTO para el hex8): sigma_xy = G*gamma -> she =
+# G*gamma*t = 500*1e-3 = 0.5 EXACTO en los 20 nodos, nor = mom1 = 0.
+# DOCUMENTA el limite del hex8: el campo de FLEXION (u_x ~ y^2) no es
+# representable por el trilineal -> shear locking 1-en-espesor (el
+# mismo fenomeno del quad4 2D del lote 2); el test de flexion usa
+# hex27. hex8 sin promedio: -all == -primary (20 lineas cada uno).
+MSF_S8_OK=1
+awk '!/^#/ && NF==17 { d=$9-0.5; if (d<0) d=-d; if (d>1.e-5 || $5>1.e-8 || $13>1.e-8) bad=1 } END{exit bad}' \
+  "$T2014/materi_stress_force.510" || MSF_S8_OK=0
+if [ "$(grep -vc '^#' "$T2014/materi_stress_force.510")" = "20" ] && \
+   [ "$(grep -vc '^#' "$T2014/materi_stress_force.511")" = "20" ] && \
+   [ "$MSF_S8_OK" = "1" ]; then
+  check_ok "msf_sheet3d_hex8 (hex8 corte puro prescrito: she = G*gamma*t = 0.5 EXACTO, nor=mom1=0, -all == -primary)"
+else
+  check_fail "msf_sheet3d_hex8" "she/nor/mom1 o conteos inesperados"
+fi
+
+# msf_hex27_avg (530/531): promedio del plano medio hex27 (manual
+# 6.908, average -yes default): placa 2xhex27 con la flexion prescrita:
+# mom1 = 0.0833333 en todos; los 18 nodos de los planos medios (9 por
+# elemento) reciben la media EXACTA de las 2 caras extremas y se
+# marcan averaged -> -all 45 lineas vs -primary 27 (los promediados
+# omitidos); los nodos promediados = los 18 que NO estan en las caras
+# +-y de los elementos.
+MSF_HA_OK=1
+awk '!/^#/ && NF==17 { if ($13<0.0833 || $13>0.0834) bad=1 } END{exit bad}' \
+  "$T2014/materi_stress_force.530" || MSF_HA_OK=0
+# los nodos promediados aparecen en -all y faltan en -primary
+MSF_HA_AVG=1
+for pos in 3 4 5 9 10 11 18 19 20 24 25 26 33 34 35 39 40 41; do
+  awk -v p="$pos" '!/^#/ && $1==p {found=1} END{exit !found}' "$T2014/materi_stress_force.530" || MSF_HA_AVG=0
+  awk -v p="$pos" '!/^#/ && $1==p {found=1} END{exit found}' "$T2014/materi_stress_force.531" || MSF_HA_AVG=0
+done
+if [ "$(grep -vc '^#' "$T2014/materi_stress_force.530")" = "45" ] && \
+   [ "$(grep -vc '^#' "$T2014/materi_stress_force.531")" = "27" ] && \
+   [ "$MSF_HA_OK" = "1" ] && [ "$MSF_HA_AVG" = "1" ]; then
+  check_ok "msf_hex27_avg (promedio plano medio hex27: -all 45 vs -primary 27, 18 nodos promediados con la media exacta)"
+else
+  check_fail "msf_hex27_avg" "conteos, valores o filtro -primary inesperados"
+fi
+
+# msf_tunnel3d (520/521): TUNEL - anillo de 8xhex27 con EXPANSION
+# RADIAL PROPORCIONAL prescrita u_r = u0*r/R (u0=1e-3, nu=0):
+# sigma_theta = E*u0/R = 1.0 const sobre el espesor EXACTO -> nor =
+# E*u0*t/R = 0.1 (= p*R con la presion equivalente p = E*u0*t/R^2 =
+# 0.1, vaso de presion) en los 144 nodos; mom1 = 0 (3.6e-12) y she = 0.
+# direction_exclude = eje (0 0 1); caras extremas = las 2
+# +-circunferenciales. -all 144 vs -primary 72 (8 planos medios x 9).
+MSF_TN_OK=1
+awk '!/^#/ && NF==17 { d=$5-0.1; if (d<0) d=-d; if (d>1.e-5 || $13>1.e-5 || $9>1.e-8) bad=1 } END{exit bad}' \
+  "$T2014/materi_stress_force.520" || MSF_TN_OK=0
+if [ "$(grep -vc '^#' "$T2014/materi_stress_force.520")" = "144" ] && \
+   [ "$(grep -vc '^#' "$T2014/materi_stress_force.521")" = "72" ] && \
+   [ "$MSF_TN_OK" = "1" ]; then
+  check_ok "msf_tunnel3d (hex27 anillo expansion prescrita: nor = E*u0*t/R = p*R = 0.1 EXACTO en los 144 nodos, mom1=she=0, -all 144 vs -primary 72)"
+else
+  check_fail "msf_tunnel3d" "nor/mom1/she o conteos inesperados"
+fi
+
+# msf_errors_3dbothdir: 3D con exclude+include juntos -> error
+msf_error_ok msf_errors_3dbothdir "are mutually exclusive"
+# msf_errors_3drefcount: 3D con 2 grupos y 1 solo reference_point
+msf_error_ok msf_errors_3drefcount "reference_point needs one point"
+
 if [ "$CHECK_FAIL" = "1" ]; then
   echo "==> ALGUNAS VERIFICACIONES DE ARCHIVOS FALLARON"
   exit 1
 else
-  echo "==> Verificacion de archivos de salida (Sprint 11 lotes 1-6 + sub-sprint materi_stress_force lotes 1-2): TODAS OK"
+  echo "==> Verificacion de archivos de salida (Sprint 11 lotes 1-6 + sub-sprint materi_stress_force lotes 1-3): TODAS OK"
 fi
 
 echo "==> Log de compilacion completo en /tmp/tn_build_safe.log"
