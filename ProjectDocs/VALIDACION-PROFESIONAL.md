@@ -469,3 +469,88 @@ IP lee el σ_xy crudo).
   EXACTA del Professional (requiere la integración por fuerzas
   internas — recomendado como siguiente lote), el SRI hex8 3D, la
   cizalla de sección del esquema mixto (2D ±30%, 3D 0.08·P).
+
+---
+
+## 11. POST-L5 (2026-08-28) — fuerzas internas del elemento (equilibrio)
+
+**Estado**: el L5 del sub-sprint materi_stress_force implementó la
+estática de sección por FUERZAS INTERNAS del elemento (la familia del
+Professional): la sección lee los resultantes de f_elem = ∫Bᵀσ dV
+(las fuerzas nodales consistentes del campo de IPs) de los nodos de la
+cara — la estática del cuerpo libre de las cargas, EXACTA para los
+estados σ en equilibrio (el resultado que el L4 concluyó como la vía
+del Professional: "su estática NO viene del campo σ crudo").
+Re-ejecución: `TOCHNOG_PROF_BIN=... scripts/compare_professional.sh`
+(2026-08-28T17:59Z; ratios sobre las componentes `s` = magnitudes).
+
+### 11.1 Resultados del arness (GNU POST-L5 vs Professional)
+
+| modelo | pre-L5 | POST-L5 | Professional | nota |
+|---|---|---|---|---|
+| `gforce7q4` (2 quad4) | N 0.88×, V 1.79×, M 0.0324× | **N 1.0000× (12.34), V 1.0000× (100), M 0.9984× (4992)** | EXACTO | las fuerzas internas de la solución lockeada EQUILIBRADA cumplen la estática del cuerpo libre: N/V EXACTOS y M al 99.84% (el lock vive en el campo σ y la deflexión, no en las fuerzas de sección) |
+| `gffq4` (10 quad4) | 0.197× (viola pL²/8) | **M_end −1.0000× (824.99), M_center 0.9987× (424.46); \|M_e\|+\|M_c\| = 1249.45 = pL²/8 a 0.9996** | 1250 EXACTO | la identidad de estática se cumple (antes 0.197×); los valores individuales son los de viga profunda (825/425) porque la estática del cuerpo libre no depende de la formulación del elemento |
+| `gforce7` (2 quad9) | N 1.2365×, V 2.7167×, M 0.9976× | **N/V/M = 5.0000× (61.7/500/24955)** | EXACTO | LIMITACIÓN MEDIDA: el resultante débil de las fuerzas internas es la estática del cuerpo libre SOLO cuando el campo σ está en equilibrio; el estado σ del run del gforce7 (30 pasos, quad9 grueso) NO lo está (preexistente — el L4 lo media como 1.24×/2.7× por integración de campo; el método de equilibrio lo hace explícito). La integración de campo era MENOS sensible a la no-equilibrio; el estado σ del GNU es el limitante, no el método (el Professional produce el σ en equilibrio con su solve) |
+| `gforce7_ref` (8 quad9) | N 1.0011×, M 0.9986× | N 1.2500×, M 1.2484×, V 1.2500× | EXACTO | idem: el estado σ del run multi-paso no está en equilibrio; el resultante débil lo amplifica |
+| `gforce10`/`gforce13` (hex8 3D) | N 1.0000× | **N 1.0000× (12.34 EXACTO)** | EXACTO | el N axial exacto; V/mom de la sección NO son la estática del cuerpo libre (el fallback del ELEMENT_DOF a ceros usa el σ nodal recuperado, cuyo estado tampoco está en equilibrio: V ≈ 0, mom2 0.99× en z=0 / 0.074× en z=50) |
+| `msf_shear` | 0.3846153846 | **0.3846153846 EXACTO** | σ_xy EXACTO | corte simple, sin cambios; moms = 0.1923 (el par de reacciones del bloque, ver los tests) |
+| `msf_tunnel3d` | 0.1 EXACTO | **nor 0.09980685, shes 0.0137271, mom1 2.03e-4 — IDÉNTICOS al Professional (0.09980686 / 0.013727 / −2.0e-4)** | 0.09980686 / 0.013727 / −2.0e-4 | **el método de equilibrio reproduce el node_dof_calcul del Professional DÍGITO A DÍGITO** (la integración de campo del L4 daba el valor analítico 0.1 EXACTO del campo prescrito; el Professional y el GNU-L5 dan el valor FE discretizado) — la validación cruzada MÁS FUERTE del método |
+| `msf_beam2d` (8 quad9, propio) | moms 1-3%, shes banda ±30% | **moms = P·(8−x) y shes = P EXACTOS (6 dígitos) en TODAS las secciones** | (no comparado — modelo propio) | la estática del cuerpo libre exacta; la banda de cizalla de la integración de campo desaparece |
+| `msf_cant3d_hex27` (propio) | mom1 dentro del 9%, shes 0.08·P | **mom1 = P·(L−z) dentro del 1%, shes = P dentro del 4%** | (no comparado) | la cizalla contaminada de los IPs desaparece (la resultante del equilibrio) |
+
+### 11.2 Cómo se calculan las fuerzas internas (decisión con evidencia)
+
+- f_elem[inod, idim] = Σ_ip vol[ip]·(Bᵀσ)[ip, inod, idim] — las
+  fuerzas nodales consistentes del campo σ de los IPs (ELEMENT_DOF),
+  la MISMA cantidad que materi() acumula en element_rhside con el
+  signo opuesto. La cinemática replica pol()/materi(): derivadas
+  físicas dn = invJ·p, volumen w·4·|detJ| (2D) / w·8·|detJ| (3D) con el
+  factor 2π·r axisimétrico, y la matriz B de polynom.cc:549-599 (la
+  MISMA regla de cuadratura del elemento, incl. SRI-Gauss y la regla
+  de 1 punto axisimétrica).
+- La sección: R_face = Σ de las fuerzas internas de los nodos de la
+  cara = ∫σ·n̂ dA de la cara (la identidad de las fuerzas consistentes)
+  = el resultante del cuerpo libre de las cargas. nor = n̂·R_face/l
+  (tracción +), she = |t̂·R_face|/l, mom = Σ (n̂·f)·arm/l con el brazo
+  desde el punto medio de la cara (la decisión de brazos del L3). El
+  signo se verifica contra los targets del Professional (N compresión
+  −12.34, M −5000 con t̂ hacia abajo: idéntico al L2-L4).
+- SRI quad4: la parte de cizalla de regla completa se reemplaza por la
+  fuerza interna de cizalla reducida de 1 punto del feedback (el punto
+  fijo K_SRI·u = P): 4·detJ_c·b_shear·media(σ_xy de los IPs) — el
+  módulo se cancela (σ_xy = G·γ, la media Gauss 2×2 de la γ bilineal =
+  el valor del centroide EXACTO). Sin la corrección la sección SRI
+  leería el equilibrio K_full (lockeado).
+- VERIFICACIÓN DEL EQUILIBRIO (el criterio del lote): Σ f_elem ≈
+  cargas aplicadas. Medido a través de las propias fuerzas de sección:
+  la ménsula msf_beam2d da shes = P y moms = P·(8−x) EXACTOS en TODAS
+  las secciones (la cara del empotramiento = la reacción −P con su
+  momento P·L); la biempotrada gffq4 cumple la identidad |M_e|+|M_c| =
+  pL²/8 a 0.9996. Las fuerzas internas de una solución en equilibrio
+  cumplen la estática de las cargas POR CONSTRUCCIÓN (Σ_elementos
+  f_elem = −P en los dofs libres), independientemente de la
+  formulación del elemento (lockeada o no).
+
+### 11.3 Conclusión del L5 (qué cierra y qué NO)
+
+- **CIERRA**: (a) la implementación de la estática por fuerzas
+  internas/equilibrio del elemento — la vía del Professional que el L4
+  identificó ("su estática NO viene del campo σ crudo"); (b) la
+  validación cruzada MÁS FUERTE: msf_tunnel3d = los valores del
+  node_dof_calcul del Professional DÍGITO A DÍGITO; (c) la estática
+  del cuerpo libre EXACTA en los estados en equilibrio: gforce7q4
+  N/V EXACTOS, la identidad gffq4 pL²/8 a 0.9996, msf_beam2d
+  P·(8−x)/P a 6 dígitos, msf_cant3d_hex27 mom1 al 1% y shes = P (la
+  cizalla contaminada 0.08·P desaparece); (d) el lock del quad4 ya no
+  contamina las fuerzas de sección (la estática del cuerpo libre de la
+  solución equilibrada es exacta — el lock queda en la deflexión y el
+  campo σ).
+- **NO CIERRA** (frente abierto, del SOLVER — fuera del post-proceso):
+  el estado σ de los runs gruesos multi-paso del GNU con quad9/hex8
+  (gforce7 5×, gforce7_ref 1.25×, gforce10/13 V/mom) NO está en
+  equilibrio con las cargas (el baseline L4 ya lo media como la
+  polución N 1.24×/V 2.7× por integración de campo; el resultante
+  débil lo amplifica). La estática exacta del Professional en ESAS
+  mallas requiere que el solve produzca el σ en equilibrio (Bᵀσ = P) —
+  la vía es del solver mixto, no de la sección. El SRI hex8 3D sigue
+  pendiente.

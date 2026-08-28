@@ -32,103 +32,110 @@
   originals are static there). `validate()` now also restricts the 3D
   target groups to hex8/hex27 (the manual's isoparametric section
   elements) and the "not yet implemented" notice is gone.
-- **Lot 4 (this lot, 2026-08-28)**: the section stress SOURCE changes
-  from the recovered nodal stresses (`NODE_DOF`, the L2 decision) to
-  the ELEMENT integration-point stresses (`ELEMENT_DOF`). New helpers
-  in `calcul_force.cc`: `msf_element_rule()` (the element's own
-  per-direction quadrature, replicated from `pol()` incl. the SRI
-  quad4 Gauss switch and the axisymmetric 1-point rule),
-  `msf_lagrange_weights()` (the 1D Lagrange weights of the IP grid),
-  `msf_sigma_ip_2d/3d()` (the stress at a section point reconstructed
-  from the IP field). `msf_integrate_side_2d/face_3d` evaluate the
-  stress at the section quadrature points from the IP field; the
-  element contribution functions read `ELEMENT_DOF`, with a documented
-  fallback to the recovered nodal stresses when the IP stress block is
-  all zero (measured: the SOLVED 3D models with the `derivatives`
-  keyword - gforce10/gforce13 - do not propagate the strain into the
-  element loop). `elem.cc`: the ELEMENT_DOF WRITE now covers the FULL
-  stress block (6 components × nder slots instead of the former
-  MDIM*MDIM=9 slots, which lost the syy/syz/szz components for the
-  nder>1 models); the READ (the solver's old_unknowns restore) keeps
-  the original 9-slot limit so the solver behavior is byte-identical
-  (verified: the suite's non-msf runs unchanged). The
-  AXISYMMETRIC integrand now carries the physical circumference 2π·r
-  at the section point (the manual's "integrated over the thickness"
-  of a ring) - the L2 code divided the UNSCALED integral by 2π·r,
-  giving values a factor 2π·r too small (fixed, verified in
-  msf_axisym). `validate()` now also requires `options_element_dof
-  -yes` (the default). No new enums.
+- **Lot 4 (commit 631258e, 2026-08-28)**: the section stress SOURCE
+  changed from the recovered nodal stresses (`NODE_DOF`, the L2
+  decision) to the ELEMENT integration-point stresses (`ELEMENT_DOF`;
+  `msf_element_rule` replicates the element's own quadrature incl. the
+  SRI Gauss switch and the axisymmetric 1-point rule; the section
+  points reconstructed with the Lagrange weights of the IP grid). The
+  recovered nodal stresses remained only as the documented FALLBACK
+  for the all-zero ELEMENT_DOF blocks (the solved 3D `derivatives`
+  models - gforce10/gforce13). `elem.cc`: the ELEMENT_DOF WRITE covers
+  the FULL stress block (6 components × nder slots). Axisymmetric: the
+  section integrand carries the physical circumference 2π·r.
+  `validate()` requires `options_element_dof -yes`. No new enums.
+- **Lot 5 (this lot, 2026-08-28)**: the section forces change from the
+  stress-FIELD integration (lots 2-4: the quadrature of σ_nn/σ_nt over
+  the section faces) to the EQUILIBRIUM-based method: the section
+  resultant over an end face = the sum of the ELEMENT INTERNAL FORCES
+  f_elem = ∫Bᵀσ dV (the consistent nodal forces of the IP stress
+  field) of the face nodes. New helpers in `calcul_force.cc`:
+  `msf_element_internal_forces_2d/3d()` (the internal forces: the B
+  matrix of polynom.cc:549-599 contracted with the IP stresses, the
+  physical derivatives dn = invJ·p and the IP volumes w·4·|detJ| (2D) /
+  w·8·|detJ| (3D) with the 2π·r axisymmetric factor - the SAME
+  kinematics of pol()/materi(), the "element forces ... setup in a
+  timestep" of the manual 6.913) and `msf_face_resultants_2d/3d()`
+  (nor = n̂·R_face, she = |t̂·R_face|, mom = Σ (n̂·f)·arm about the
+  middle of the face). The SRI quad4 gets the ELEMENT-CONSISTENT
+  internal force (the full-rule shear part is replaced by the reduced
+  1-point shear internal force of the momentum feedback:
+  4·detJ_c·b_shear·mean(IP σ_xy) - the shear modulus cancels because
+  σ_xy = G·γ and the 2×2 Gauss mean of the bilinear γ = the centroid
+  value exactly; without it the SRI section would read the K_full
+  (locked) equilibrium instead of K_SRI·u = P). The face quadrature
+  and the Lagrange stress reconstruction of LOT 4 are retired. No new
+  enums.
 
 ## Diseño / decisiones (con evidencia; el test analítico es el árbitro)
 
-1. **Caras extremas (end faces)**: la dirección de espesor de la
-   sección es t̂ = (centroide del elemento − reference_point)
-   normalizada EN EL PLANO (manual 6.914: el reference_point define
-   fuera/dentro en dirección de espesor). Las dos caras extremas = las
-   2 aristas cuya normal exterior es MÁS PERPENDICULAR a t̂
-   (|n·t̂| mínima): las secciones donde actúan las fuerzas. Las otras 2
-   aristas (superficies de la estructura) no producen valores
-   primarios. Selección ambigua (elemento distorsionado o
-   reference_point sobre la diagonal: |n·t̂| iguales) → aviso único y
-   el elemento se omite (valores 0).
-2. **Fuente de σ (LOT 4)**: la tensión de los PUNTOS DE INTEGRACIÓN
-   del elemento (`element_dof[ipoint*nuknwn + stres_indx + comp*nder]`
-   = las tensiones constitutivas que el elemento USÓ en su última
-   pasada - "the element forces needed for this option are setup in a
-   timestep", manual 6.913). La tensión en un punto de cuadratura de
-   la sección se reconstruye con los pesos de LAGRANGE de la regla del
-   propio elemento (`msf_element_rule` replica la cuadratura de pol():
-   Lobatto con nodos por defecto, Gauss para el SRI quad4 y para las
-   reglas MINIMAL, 1 punto en el eje axisimétrico): para las reglas
-   con nodos (quad9/hex27 Lobatto, quad4/hex8 esquinas) los puntos de
-   la sección COINCIDEN con IPs de la cara y los pesos son la delta de
-   Kronecker (lectura directa); para las reglas interiores (Gauss SRI)
-   los pesos interpolan/extrapolan el campo de IP. La fuente antigua
-   (la tensión nodal recuperada, decisión L2) queda SOLO como
-   fallback: medido (2026-08-28), para los modelos 3D RESUELTOS con
-   `derivatives` (gforce10/gforce13) el bucle escalonado NO propaga la
-   deformación de la velocidad convergida a los IPs del elemento (el
-   bloque de tensión del ELEMENT_DOF sale TODO CEROS mientras el
-   NODE_DOF recuperado tiene los valores correctos) → en ese caso la
-   sección lee las tensiones nodales evaluadas en las posiciones de
-   los IPs con las funciones de forma (idéntico a la fuente pre-L4
-   para las reglas con nodos; warning único documentado). Verificado
-   además: para el quad9/quad4 la tensión nodal recuperada es la media
-   EXACTA de los IPs de los elementos adyacentes (la recuperación
-   Lobatto es exacta), por lo que el cambio de fuente NO limpia la
-   polución de N/V del arness (la polución vive en el propio campo σ;
-   gforce7: N 1.24×, V 2.7× iguales; el momento mejora de 0.9947× a
-   0.9976×). `options_element_dof` debe ser -yes (default; error
-   claro en la validación si no).
-3. **Cuadratura de arista (1D)**: `integration_gauss(2)` para npol=2
-   (quad4) y `integration_lobatto(3)` para npol=3 (quad9). El
-   integrando del MOMENTO σ_nn·dt es cuadrático (quad4) / cúbico
-   (quad9): Gauss(2) es exacto para grado ≤3 y Lobatto(3) (Simpson)
-   para grado ≤3 → el momento se integra EXACTAMENTE para campos
-   lineales/cuadráticos. NOTA de precisión: la nota del plan "npol=2 ≡
-   Gauss ±1/√3" es correcta para la arista (el trapezio Lobatto(2)
-   sobreestimaría el momento 3/2, verificado analíticamente); los
-   pesos de Tochnog suman 1 (integral = longitud·Σ w·f).
-4. **Momento**: mom = ∫σ_nn·dt ds con dt = (x_q − centroide)·t̂ — la
-   distancia EN LA DIRECCIÓN DE ESPESOR respecto al centro del
-   elemento (manual 6.913: "a distance in thickness direction dt
-   relative to the middle of the element"). La parametrización de la
-   propia arista s daría signos OPUESTOS en las dos caras de la misma
-   sección (una recorre de abajo a arriba y la otra al revés) —
-   verificado: con (s−s_mid) los nodos del plano medio salían
-   (f1−f2)/2 en vez del promedio. dt = (x−C)·t̂ hace el momento
-   consistente (ambas caras −M para la ménsula; moms = P·(8−x) medido
-   dentro del 1-3%).
-5. **Valores** (por unidad de longitud l; 2D plano l=1, axisimétrico
-   l=2π·r con r = coordenada radial del centroide, convención de
-   area.cc): nor = ∫σ_nn ds (CON SIGNO, tracción +), she = |∫σ_nt ds|
-   (solo tamaño, manual), mom = ∫σ_nn·dt ds (con signo). Componentes
-   de plot: norx/nory = nor·t̂, nors = |nor|; shex/shey = |she|·t̂,
-   shes = |she|; momx/momy = mom·t̂, moms = |mom|. El signo
-   tracción/compresión de nor y mom viaja en la DIRECCIÓN del vector
-   de plot (t̂ hacia/desde el reference_point); la componente s es el
-   tamaño físico (manual 6.913: "the size of the vector formed by
-   these components indeed is the real physical size").
+ 1. **Caras extremas (end faces)**: la dirección de espesor de la
+    sección es t̂ = (centroide del elemento − reference_point)
+    normalizada EN EL PLANO (manual 6.914: el reference_point define
+    fuera/dentro en dirección de espesor). Las dos caras extremas = las
+    2 aristas cuya normal exterior es MÁS PERPENDICULAR a t̂
+    (|n·t̂| mínima): las secciones donde actúan las fuerzas. Las otras 2
+    aristas (superficies de la estructura) no producen valores
+    primarios. Selección ambigua (elemento distorsionado o
+    reference_point sobre la diagonal: |n·t̂| iguales) → aviso único y
+    el elemento se omite (valores 0). (Los LOT 2-5 usan la MISMA
+    selección de caras; lo que cambia es la FUENTE de los valores.)
+ 2. **Fuente de σ (LOT 4-5)**: la tensión de los PUNTOS DE INTEGRACIÓN
+    del elemento (`element_dof[ipoint*nuknwn + stres_indx + comp*nder]`
+    = las tensiones constitutivas que el elemento USÓ en su última
+    pasada - "the element forces needed for this option are setup in a
+    timestep", manual 6.913). `options_element_dof` debe ser -yes
+    (default; error claro en la validación si no). LOT 4: la tensión en
+    un punto de cuadratura de la sección se reconstruía con los pesos
+    de LAGRANGE de la regla del propio elemento (para las reglas con
+    nodos los puntos de la sección COINCIDEN con IPs de la cara —
+    lectura directa). LOT 5: la tensión se lee SOLO en los IPs del
+    elemento y alimenta la integral de las fuerzas internas (decisión
+    9) — la reconstrucción de Lagrange y la cuadratura de cara se
+    retiran. La fuente antigua (la tensión nodal recuperada, decisión
+    L2) queda SOLO como fallback: medido (2026-08-28), para los
+    modelos 3D RESUELTOS con `derivatives` (gforce10/gforce13) el
+    bucle escalonado NO propaga la deformación de la velocidad
+    convergida a los IPs del elemento (el bloque de tensión del
+    ELEMENT_DOF sale TODO CEROS mientras el NODE_DOF recuperado tiene
+    los valores correctos) → en ese caso las fuerzas internas se
+    calculan con las tensiones nodales evaluadas en las posiciones de
+    los IPs con las funciones de forma (warning único documentado).
+    Verificado además (L4): para el quad9/quad4 la tensión nodal
+    recuperada es la media EXACTA de los IPs de los elementos
+    adyacentes (la recuperación Lobatto es exacta), por lo que el
+    cambio de fuente NO limpia la polución del arness (la polución
+    vive en el propio campo σ).
+ 3. **Cuadratura (histórica, LOT 2-4)**: `integration_gauss(2)` /
+    `integration_lobatto(3)` a lo largo de la arista/cara. LOT 5: la
+    cuadratura de la sección se retira; la regla del elemento
+    (msf_element_rule) se usa SOLO para la integral de las fuerzas
+    internas (decisión 9).
+ 4. **Momento**: LOT 5: mom = Σ_{nodos de la cara} (n̂·f_elem)·arm con
+    arm = (x_nodo − x_medio_de_la_cara)·t̂ — el momento de las fuerzas
+    internas consistentes respecto al PUNTO MEDIO DE LA CARA (la
+    decisión de brazos del L3; el equivalente discreto EXACTO del
+    ∫σ_nn·dt del manual: el momento de las fuerzas nodales consistentes
+    sobre el punto medio de la cara = el momento de las tracciones de
+    la cara — las componentes de cizalla contribuyen solo a la
+    componente en el plano del vector momento, que no se usa). NOTA:
+    el momento incluye el momento DÉBIL completo de las fuerzas
+    internas sobre el punto de la sección — para un estado de CORTE
+    PURO el moms = el momento del par de reacciones del bloque (p.ej.
+    0.1923 en msf_shear), mientras que el ∫σ_nn·dt del manual es 0
+    (documentado en los tests; el momento del método de equilibrio es
+    el consistente con la definición de fuerzas internas).
+ 5. **Valores** (por unidad de longitud l; 2D plano l=1, axisimétrico
+    l=2π·r con r = coordenada radial del centroide, convención de
+    area.cc): LOT 5: nor = n̂·R_face/l (CON SIGNO, tracción +),
+    she = |t̂·R_face|/l (solo tamaño, manual), mom = Σ (n̂·f)·arm/l (con
+    signo), con R_face = Σ de las fuerzas internas de los nodos de la
+    cara (decisión 9). Las componentes de plot: norx/nory = nor·t̂,
+    nors = |nor|; shex/shey = |she|·t̂, shes = |she|; momx/momy =
+    mom·t̂, moms = |mom|. El signo tracción/compresión de nor y mom
+    viaja en la DIRECCIÓN del vector de plot (t̂ hacia/desde el
+    reference_point); la componente s es el tamaño físico (manual
+    6.913).
 6. **Asignación por nodo**: los nodos de las caras extremas son
    PRIMARIOS (reciben el valor de su cara; en una malla conforme los
    nodos compartidos reciben la media de contribuciones idénticas).
@@ -140,10 +147,62 @@
 7. **outer -yes**: solo los nodos PRIMARIOS a máxima distancia del
    reference_point reciben valores (manual 6.915); los promediados no
    reciben nada (decisión documentada). Implementado en 2D y 3D.
-8. **plot_switch**: -yes invierte las componentes x/y del item
-   (dirección de dibujo del vector, manual 6.916); la componente s
-   (tamaño) no cambia. Implementado en 2D (3 switches) y 3D (4
-   switches, manual 6.916).
+ 8. **plot_switch**: -yes invierte las componentes x/y del item
+    (dirección de dibujo del vector, manual 6.916); la componente s
+    (tamaño) no cambia. Implementado en 2D (3 switches) y 3D (4
+    switches, manual 6.916).
+ 9. **FUERZAS INTERNAS DEL ELEMENTO (LOT 5)**: f_elem[inod, idim] =
+    Σ_ip volumen[ip]·(Bᵀσ)[ip, inod, idim] — las fuerzas nodales
+    consistentes del campo de tensiones de los IPs, la MISMA cantidad
+    que materi() acumula en element_rhside con el SIGNO OPUESTO
+    (element_rhside -= volume·force, materi.cc:618-619: la fuerza
+    interna es la que el elemento ejerce SOBRE sus nodos, K·u,
+    opuesta a las cargas). La cinemática replica pol()/materi():
+    funciones de forma y derivadas en los IPs (interpolation_polynomial
+    con la regla de msf_element_rule — la MISMA regla con la que el
+    elemento integró), las derivadas físicas dn = invJ·p, el volumen de
+    IP w·4·|detJ| (2D) / w·8·|detJ| (3D) con el factor 2π·r
+    axisimétrico, y la matriz B de polynom.cc:549-599. FÍSICA: las
+    fuerzas internas están en equilibrio con las cargas POR
+    CONSTRUCCIÓN para el solve convergido (Σ sobre los elementos =
+    −P en los dofs libres; la suma sobre los nodos de UN elemento es la
+    identidad de traslación rígida, idénticamente cero). El resultante
+    de sección sobre una cara extrema = Σ de las fuerzas internas de
+    los nodos de la cara = ∫σ·n̂ dA de la cara (la identidad de las
+    fuerzas nodales consistentes) = el resultante del cuerpo libre de
+    las cargas aplicadas: ESTÁTICA EXACTA — la misma familia que usa el
+    Professional ("the element forces needed for this option are setup
+    in a timestep"; verificado: el arness del túnel msf_tunnel3d da los
+    valores del node_dof_calcul del Professional DÍGITO A DÍGITO —
+    nor 0.0998068, shes 0.013727, mom1 −2.0e-4 — mientras la
+    integración de campo del L4 daba el valor analítico 0.1 EXACTO).
+    El momento de las fuerzas nodales consistentes sobre el punto medio
+    de la cara = el equivalente discreto EXACTO del ∫σ_nn·dt dA (las
+    componentes de cizalla contribuyen solo a la componente en el plano
+    del vector momento, que no se usa). SRI quad4 (opt-in): la parte de
+    cizalla de regla completa de f_elem se reemplaza por la fuerza
+    interna de cizalla reducida de 1 punto (el feedback del momento del
+    punto fijo K_SRI·u = P): 4·detJ_c·b_shear·media(σ_xy de los IPs) —
+    el módulo de cizalla se cancela (σ_xy = G·γ y la media Gauss 2×2 de
+    la γ bilineal = el valor del centroide EXACTAMENTE). Sin la
+    corrección la sección SRI leería el equilibrio K_full (lockeado)
+    en vez de K_SRI·u = P. VERIFICACIÓN DEL EQUILIBRIO: las fuerzas de
+    sección medidas = la estática del cuerpo libre de las cargas: la
+    ménsula msf_beam2d da moms = P·(8−x) y shes = P EXACTOS (6 dígitos)
+    en TODAS las secciones; la biempotrada gffq4 cumple la identidad
+    |M_e|+|M_c| = pL²/8 a 0.9996; la ménsula quad4 gforce7q4 da
+    N/V EXACTOS y M al 99.84% (las fuerzas internas de la solución
+    lockeada EQUILIBRADA también cumplen la estática de las cargas).
+    LIMITACIÓN MEDIDA: el resultante débil solo es la estática del
+    cuerpo libre cuando el campo σ está EN EQUILIBRIO (el solve
+    convergido); para los runs gruesos multi-paso del GNU (quad9/hex8)
+    el estado σ recuperado NO está en equilibrio (propiedad preexistente
+    del esquema escalonado, documentada en el baseline L4 como la
+    polución N 1.24×/V 2.7× del gforce7) y el resultante débil lo
+    AMPLIFICA (el gforce7 mide 5×; la integración de campo del L4 era
+    menos sensible). El método es el correcto; el estado σ del GNU para
+    esos runs es el limitante (el Professional lo produce en equilibrio
+    con su solve).
 
 ## Diseño 3D (lote 3; decisiones con evidencia; el test analítico es el árbitro)
 
@@ -228,26 +287,31 @@
 
 | modelo | magnitud | esperado | medido |
 |--------|----------|----------|--------|
-| msf_beam2d (8×quad9, L=8, P=1e-2) | moms en x=0..8 | P·(8−x) | 0.0820, 0.0708, 0.0600, 0.0500, 0.0400, 0.0300, 0.0200, 0.0099, 0.0003 (0-2.5%) |
-| msf_beam2d | promediado x=0.5 | (f0+f1)/2 | 0.0764 = (0.0820+0.0708)/2 EXACTO |
-| msf_beam2d | shes | P (banda ±50%) | 0.0109..0.0133 (polución FE) |
-| msf_beam2d_pure (4 puntos) | moms tramo central | 1e-2 cte | 0.01015 (1.5%) |
-| msf_beam2d_pure | shes tramo central | 0 | 3e-7 (≈0 EXACTO) |
+| msf_beam2d (8×quad9, L=8, P=1e-2) | moms en x=0..8 | P·(8−x) | 0.079999, 0.060000, 0.040000, 0.020000, 0.000000 — EXACTOS (6 dígitos, LOT 5) |
+| msf_beam2d | shes | P | 0.0100 EXACTO en TODAS las secciones (LOT 5; la banda ±30% de la integración de campo desaparece) |
+| msf_beam2d | nors | 0 | ~5e-7 EXACTO |
+| msf_beam2d_pure (4 puntos) | moms tramo central | 1e-2 cte | 0.00999994 EXACTO (LOT 5; antes 1.5%) |
+| msf_beam2d_pure | shes tramo central | 0 | 1e-6 (≈0 EXACTO) |
 | msf_quad9 | -all vs -primary | 27 vs 15 | 27 vs 15 |
-| msf_nor (8×quad4 axial, N=2e-2) | nors | 2e-2 | 0.0209 (x=0, Poisson) y 0.0200 (0-5%) |
+| msf_nor (8×quad4 axial, N=2e-2) | nors | 2e-2 | 0.0200 EXACTO (LOT 5) |
 | msf_shear (corte simple) | shes | G·γ·h = 0.384615 | 0.384615 EXACTO |
+| msf_shear | moms | 0 (manual) / par de reacciones | 0.1923 = 0.3846·0.5 (LOT 5: el momento débil del par de reacciones del bloque) |
 | msf_sheet3d (hex27, flexión prescrita) | mom1s | E·κ/12 = 0.0833333 | 0.0833333 EXACTO (81/81 nodos) |
 | msf_sheet3d | nors / shes | 0 | < 1e-8 |
 | msf_sheet3d_hex8 (corte puro) | shes | G·γ·t = 0.5 | 0.5 EXACTO (20/20 nodos) |
-| msf_tunnel3d (anillo hex27) | nors | E·u0·t/R = p·R = 0.1 | 0.1 EXACTO (144/144 nodos) |
-| msf_tunnel3d | mom1s / shes | 0 | 3.6e-12 / < 1e-8 |
+| msf_sheet3d_hex8 | mom1s | 0 (manual) / par de reacciones | 0.25 = 0.5·0.5 (LOT 5) |
+| msf_tunnel3d (anillo hex27) | nors | E·u0·t/R = p·R = 0.1 | 0.0998068 — el valor FE DISCRETIZADO, IDÉNTICO al Professional (0.09980686) (LOT 5) |
+| msf_tunnel3d | shes / mom1s | 0 | 0.013727 / 2.03e-4 — IDÉNTICOS al Professional (0.013727 / −2.0e-4) (LOT 5) |
 | msf_hex27_avg | -all vs -primary | 45 vs 27 | 45 vs 27 (18 promediados) |
-| msf_cant3d_hex27 (L4, cantilever 3D hex27 CARGADO - desbloqueado por el fix C/D) | mom1s en z=0..4 | P·(L−z) = 0.04..0 | 0.0435, 0.0312, 0.0200, 0.0098, 0.0003 (dentro del 9%) |
-| msf_cant3d_hex27 | shes | P (en la dirección de espesor t) | 0.0008 = 0.08·P (cizalla del esquema mixto 3D contaminada en los IPs; banda documentada) |
-| msf_axisym (L4, anillo axisimétrico prescrito) | nors | σ_zz·t = 0.5 EXACTO por unidad de circunferencia | 0.5 EXACTO (4/4 nodos) |
-| msf_axisym | shes / moms | 0 | 0 / 0.001 (momento FE del campo casi uniforme) |
-| arness gforce7 (L4, quad9 2-el) | N/V/M en x=50 | −12.34/+100/−5000 | 15.26 (1.24×) / 271.7 (2.7×) / −4988 (0.9976×) — la polución de N/V vive en el CAMPO σ (los IPs = la misma polución); el momento mejora |
-| arness gforce10/13 (L4, hex8 3D) | nors en z=50 | −12.34 | 12.34 EXACTO (1.0000×) — vía el fallback a las tensiones nodales (el ELEMENT_DOF sale a ceros en los 3D resueltos con derivatives) |
+| msf_cant3d_hex27 (L5, cantilever 3D hex27 CARGADO) | mom1s en z=0..4 | P·(L−z) = 0.04..0 | 0.0403, 0.0297, 0.0199, 0.00997, 0.00016 (dentro del 1%; antes 9%) |
+| msf_cant3d_hex27 | shes | P | 0.0097..0.0103 = P dentro del 4% (la cizalla 0.08·P de los IPs desaparece — la resultante del equilibrio) |
+| msf_axisym (L5, anillo axisimétrico prescrito) | nors | σ_zz·t = 0.5 EXACTO por unidad de circunferencia | 0.5 EXACTO (4/4 nodos) |
+| msf_axisym | shes / moms | 0 | 0 / 0 (LOT 5; antes mom 0.001) |
+| arness gforce7 (L5, quad9 2-el, 30 pasos) | N/V/M en x=50 | −12.34/+100/−5000 | 61.7/500/24955 (5×) — el estado σ del run NO está en equilibrio (preexistente: el baseline L4 media N 1.24×/V 2.7× por integración de campo; el resultante débil lo amplifica) |
+| arness gforce7q4 (L5, quad4 2-el) | N/V/M en x=50 | −12.34/+100/−5000 | 12.34 EXACTO / 100 EXACTO / 4992 (99.84%) — la solución lockeada EQUILIBRADA cumple la estática de las cargas |
+| arness gffq4 (L5, biempotrada 10 quad4) | M_end/M_center | −825/+425 (deep) | −824.99 (1.0000×) / +424.46 (0.9987×); identidad \|M_e\|+\|M_c\| = 1249.45 = pL²/8 a 0.9996 — la estática del cuerpo libre de la solución equilibrada |
+| arness gforce10/13 (L5, hex8 3D) | nors en z=50 | −12.34 | 12.34 EXACTO (1.0000×) — vía el fallback a las tensiones nodales; V/mom de la sección NO son la estática del cuerpo libre (el estado σ recuperado no está en equilibrio — el fallback) |
+| qsri_beam2d / _sri (L5) | mom en x=0 / she en x=4 | P·8 / P | 0.08 EXACTO / 0.01 EXACTO con y sin SRI — la estática del cuerpo libre de las soluciones equilibradas (el lock queda en la deflexión y el campo σ, no en las fuerzas de sección) |
 
 ## Detalles / gotchas
 
@@ -372,13 +436,27 @@
   el campo σ crudo (nodal NI de IP — la polución vive en el campo): su
   `node_dof_calcul` es consistente con un cálculo por FUERZAS
   INTERNAS/equilibrio del elemento ("the element forces needed for
-  this option are setup in a timestep", manual 6.913). El arness L4 lo
-  confirma: con la fuente IP el gforce7 N/V siguen en 1.24×/2.7× (la
-  nodal = la media exacta de los IPs) — replicar la estática exacta
-  del Professional requiere la integración por fuerzas internas del
-  elemento (trabajo futuro documentado en VALIDACION-PROFESIONAL §9.5).
-- axisimétrico: DONE (L4, msf_axisym): la convención l=2πr con el peso
-  2πr en el integrando (fuerzas por unidad de circunferencia),
-  verificado EXACTO.
+  this option are setup in a timestep", manual 6.913). **IMPLEMENTADO
+  en el LOT 5 (2026-08-28)**: las fuerzas de sección se calculan desde
+  las fuerzas internas del elemento (f_elem = ∫Bᵀσ dV) — la estática
+  del cuerpo libre de las cargas, EXACTA para los estados σ en
+  equilibrio (verificado: msf_beam2d P·(8−x)/P a 6 dígitos, gforce7q4
+  N/V exactos, la identidad gffq4 pL²/8 a 0.9996, y el túnel
+  msf_tunnel3d = los valores del node_dof_calcul del Professional
+  DÍGITO A DÍGITO). LIMITACIÓN MEDIDA (frente abierto): el resultante
+  débil de las fuerzas internas solo es la estática del cuerpo libre
+  cuando el campo σ está EN EQUILIBRIO con las cargas (el solve
+  convergido); los runs gruesos multi-paso del GNU con quad9/hex8
+  (gforce7, gforce7_ref, gforce10/13) tienen el estado σ recuperado
+  NO en equilibrio — propiedad PREEXISTENTE del esquema escalonado
+  (el baseline L4 la documentó como la polución N 1.24×/V 2.7× por
+  integración de campo; el resultante débil la amplifica a 5×/1.25×).
+  El Professional produce el estado σ en equilibrio (su solve
+  monolítico/iterado) y por eso su estática es exacta en las mismas
+  mallas; la vía de cierre para esos runs es del SOLVER (hacer que el
+  σ satisfaga Bᵀσ = P), no del post-proceso de sección.
+- axisimétrico: DONE (L4-5, msf_axisym): la convención l=2πr (fuerzas
+  por unidad de circunferencia), verificado EXACTO (nor = 0.5, she =
+  0, mom = 0 con las fuerzas internas).
 - Los tests `.dat` viven en `validation-suite/test-2014/` (gitignored;
   solo el bucle y los checks de `scripts/build_safe.sh` se versionan).

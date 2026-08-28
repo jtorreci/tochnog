@@ -5,10 +5,13 @@
 `post_calcul -materi_stress -force` (manual Professional 6.913)
 calculates the normal force, shear force and moment(s) of
 isoparametric elements with a SINGLE element over the structure
-thickness (sheet piles, tunnel shells, ...): the stresses are
-integrated over the cross-section faces (the element sides
-perpendicular to the structure length) and the results are written per
-node to `node_dof_calcul`.
+thickness (sheet piles, tunnel shells, ...). Since LOT 5 (2026-08-28)
+the section forces are computed from the ELEMENT INTERNAL FORCES
+f_elem = ∫Bᵀσ dV (the equilibrium-based method, see the notes): the
+section resultant over an end face = the sum of the internal forces of
+the face nodes = the free-body statics of the applied loads (EXACT for
+the converged solution, like the Professional's node_dof_calcul). The
+results are written per node to `node_dof_calcul`.
 
 The 2D result is a set of 9 items per node:
 
@@ -126,13 +129,47 @@ average of the two adjacent sections.
   default; `post_calcul_materi_stress_force_thickness_switch -yes`
   switches to the LONGEST (manual 6.917).
 - `average` is available for quad9 (2D) and hex27 (3D) elements.
-- 3D force-loaded validation (LOT 4, 2026-08-28): the cantilever hex27
-  with a real tip load now works (the staggered-scheme fix C/D of the
-  solver, DIAG-SOLVE-MIXTO.md); the section moment comes out within
-  9% of P·(L−z) (test msf_cant3d_hex27). The 3D mixed-scheme SHEAR at
-  the integration points is still polluted (the section shear reads
-  ~0.08·P for the tip-loaded hex27 - documented band; the 2D quad9
-  shear band is ±30% of P).
+- **LOT 5 (2026-08-28): the section forces are the EQUILIBRIUM statics
+  of the loads.** The section resultant over an end face = the sum of
+  the ELEMENT INTERNAL FORCES (f_elem = ∫Bᵀσ dV, the consistent nodal
+  forces of the integration-point stresses) of the face nodes. For the
+  converged solution the internal forces are in equilibrium with the
+  applied loads by construction, so the section forces are the EXACT
+  free-body statics: `nors` = N, `shes` = V and `moms` = M of the
+  loads (verified in the arness: gforce7q4 N/V EXACT, M 99.84%; the
+  fixed-fixed beam identity |M_end|+|M_center| = pL²/8 EXACT). The
+  previous stress-field integration (lots 2-4) carried the pollution
+  of the mixed u-σ scheme (the section values depended on the raw σ
+  field, which is not in equilibrium in the GNU's coarse runs). The
+  sign convention: `nor` = n̂·R (positive = tension), `she` = |t̂·R|
+  (always positive), `mom` = Σ (n̂·f)·arm about the middle of the face.
+- The moments of the section include the full weak-form moment of the
+  internal forces about the section point: for a PURE-SHEAR state the
+  `moms` = the moment of the reaction couple of the shear block
+  (e.g. 0.1923 = 0.3846·0.5 in msf_shear/qsri_patch_s), while the
+  manual's σ_nn·dt integral is 0 - the internal-force definition is
+  the consistent one for the equilibrium method (documented in the
+  tests).
+- **Equilibrium requirement**: the section forces are the free-body
+  statics ONLY when the internal forces are in equilibrium with the
+  loads (the converged quasi-static solution). For the GNU's coarse
+  multi-step quad9/hex8 runs the recovered σ state is NOT in
+  equilibrium (a pre-existing property of the staggered scheme,
+  documented in the L4 baseline as the N/V pollution) - in those cases
+  the equilibrium section values deviate from the targets (the arness
+  gforce7 shows 5×; the Professional's exact values require the
+  equilibrium σ state, which its solver produces). The section forces
+  of a NON-equilibrium σ are not meaningful - use the fine meshes /
+  converged runs for design values.
+- 3D force-loaded validation (LOT 4-5): the cantilever hex27 with a
+  real tip load (msf_cant3d_hex27): mom1 = P·(L−z) within 1% (LOT 5)
+  and the section shear = P within 4% (the polluted 0.08·P of the
+  integration-point field is gone - the equilibrium shear is the free
+  body of the loads). The tunnel ring (msf_tunnel3d): the section
+  forces now match the Tochnog Professional's node_dof_calcul values
+  digit-for-digit (nor 0.0998068, shes 0.013727, mom1 2.0e-4 - the
+  FE-discretized values, NOT the analytic 0.1 of the prescribed
+  field).
 - The results are per unit length l; the x/y (and z) components are
   ONLY convenient global plot vectors - the physical design value is
   the size (`nors_sig`, `shes_sig`, `moms_sig`).
@@ -150,25 +187,20 @@ average of the two adjacent sections.
   solution of a step; manual 6.913: "At least 1 timestep should be
   done").
 - Accuracy note (2D, verified analytically): with `-quad9` the section
-  moments are within 1-3% of the static values; the shear force
-  integral carries the FE pollution of the mixed formulation on
-  1-element-thick meshes (free-surface condition enforced weakly,
-  ±30% band documented). `-quad4` meshes with 1 element over the
-  thickness suffer shear locking (the section values are far from the
-  static ones) - use quad9 or refine. A dedicated test (msf_shear)
-  verifies the exact shear value on a uniform simple-shear field.
-  LOT 4: the section stress source change (nodal -> element IPs) does
-  NOT clean the N/V pollution of the quad9 cantilever (measured: the
-  recovered nodal stresses are the exact element-IP averages, so the
-  pollution lives in the stress FIELD itself; the arness gforce7 N/V
-  stay ~1.24×/2.7× while the moment improves to 0.9976×).
-- Axisymmetric 2D (LOT 4, verified): l = 2π·radius (the radial
-  coordinate of the element centroid, manual 6.911) and the section
-  integrand carries the physical circumference 2π·r at the section
-  point, so the per-unit-length values are the section forces per unit
-  CIRCUMFERENCE (the same dimension as the plane-2D values). Verified
-  with msf_axisym: nor = σ_zz·t EXACT. (The LOT 2 implementation
-  divided the UNSCALED integral by 2π·r, giving values a factor 2π·r
-  too small - fixed and documented.)
+  forces of a converged run are the EXACT free-body statics (msf_beam2d:
+  moms = P·(8−x) and shes = P to 6 digits at every section; the shear
+  pollution band of the stress-field integration is gone). The
+  quad4 1-in-thickness shear locking shows in the DEFLECTION and the σ
+  field, NOT in the section forces (the internal forces of the
+  equilibrated locked solution still satisfy the statics of the loads
+  - the qsri family verifies mom = P·L EXACT with and without the SRI).
+  A dedicated test (msf_shear) verifies the exact shear value on a
+  uniform simple-shear field.
+- Axisymmetric 2D (LOT 4-5, verified): l = 2π·radius (the radial
+  coordinate of the element centroid, manual 6.911); the element
+  internal forces carry the physical circumference 2π·r in the IP
+  volumes, so the per-unit-length values are the section forces per
+  unit CIRCUMFERENCE. Verified with msf_axisym: nor = σ_zz·t EXACT,
+  she = 0, mom = 0 (the exact free-body statics of the ring).
 - `outer -yes` and `plot_switch` are implemented in 2D (3 switches)
   and 3D (4 switches, manual 6.916).

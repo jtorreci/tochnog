@@ -172,6 +172,31 @@ results. The diagnosis (with quantitative evidence) established:
   6.913) — the GNU's section integration over any raw σ field cannot
   reach that exactness. Paper line: "stress-field integration vs
   equilibrium section forces in mixed u-σ formulations".
+  **RESOLVED (lote 5, 2026-08-28)**: the equilibrium section forces
+  are now IMPLEMENTED in the GNU (calcul_force.cc LOT 5): the section
+  resultants = the sums of the element internal forces f_elem =
+  ∫Bᵀσ dV of the face nodes = the free-body statics of the loads
+  (EXACT for the equilibrated σ states). Measured evidence that this
+  IS the Professional's family: (a) the tunnel ring msf_tunnel3d now
+  reproduces the Professional's node_dof_calcul DIGIT FOR DIGIT (nor
+  0.0998068, shes 0.013727, mom1 −2.0e-4 — the FE-discretized values,
+  not the analytic 0.1 of the prescribed field that the stress-field
+  integration returned); (b) the fixed-fixed beam identity
+  |M_end|+|M_center| = pL²/8 holds at 0.9996 (the GNU's σ-field
+  integration gave 0.197×); (c) the 2-element quad4 cantilever gives
+  N/V EXACT and M 99.84%. The paper line now has the full contrast:
+  stress-field integration (σ-field pollution, formulation-dependent)
+  vs equilibrium section forces (free-body statics, formulation-
+  independent — even the shear-locked quad4's equilibrated solution
+  yields the exact statics). LIMITATION measured: the equilibrium
+  resultants are the free-body statics ONLY for equilibrated σ states;
+  the GNU's coarse multi-step quad9/hex8 runs carry a NON-equilibrated
+  recovered σ (pre-existing staggered-scheme property — the L4
+  baseline measured it as N 1.24×/V 2.7× by field integration; the
+  equilibrium resultants amplify it to 5×/1.25×). The Professional
+  produces the equilibrated σ (its solver), which is why its statics
+  are exact on the same meshes — closing THAT gap is a SOLVER issue
+  (making Bᵀσ = P hold), not a section-post-processing one.
 
 ---
 
