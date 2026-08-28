@@ -274,3 +274,7 @@ input parameters it accepts.
 - [post_calcul_materi_stress_force_outer](post_calcul_materi_stress_force_outer.md) — -yes restricts the results to the outer nodes (furthest from the reference point; default -no).
 - [post_calcul_materi_stress_force_plot_switch](post_calcul_materi_stress_force_plot_switch.md) — inverts the plot-vector direction of the items (3 switches in 2D, 4 in 3D).
 - [control_print_materi_stress_force](control_print_materi_stress_force.md) — prints the -force results to materi_stress_force.<index> (the manual "index" = record index), one line per node with header comments; -all / -primary methods.
+
+## Integración reducida selectiva (SRI) para quad4
+
+- [group_element_selective_reduced_integration](group_element_selective_reduced_integration.md) — opt-in fix of the classic shear locking of the bilinear quad4 in bending (Hughes): the shear term is integrated with 1 Gauss point at the centroid, the normal terms with the full 2×2 Gauss rule. Elastic 2D quad4 only. Measured A/B (family qsri): section moment 0.231× → 0.312×, section shear 0.741× → 0.65×.

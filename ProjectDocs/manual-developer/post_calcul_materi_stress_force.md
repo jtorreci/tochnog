@@ -221,7 +221,12 @@
   según la sección (el valor exacto se verifica con msf_shear, campo
   uniforme). El quad4 1-en-espesor sufre shear locking (mom ≈ 0.23× y
   she ≈ 0.74× del valor estático, medido) → los tests de flexión usan
-  quad9.
+  quad9. El fenómeno (cizalla parásita del bilineal en flexión) y el
+  fix opt-in con integración reducida selectiva están documentados en
+  [group_element_selective_reduced_integration](group_element_selective_reduced_integration.md):
+  con el keyword el mom mejora de 0.231× a 0.312× y la she de 0.741×
+  a 0.65× (familia qsri, A/B medido). El hex8 3D sufre el mismo
+  fenómeno (u_x ~ y² no representable); el SRI hex8 es trabajo futuro.
 - El flag averaged se pre-aloca en `calculate()` (db_allocate) como
   NODE_DOF_CALCUL: el PUT dentro del bucle paralelo no puede alocar.
   version_all=1 → db_version_copy + renumbering lo llevan a
