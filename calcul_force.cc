@@ -46,7 +46,7 @@
 // quadrature, mom1/mom2, hex27 middle-plane averaging. The 3D design
 // decisions are documented in
 // ProjectDocs/manual-developer/post_calcul_materi_stress_force.md.
-// LOT 4 (this lot): the section stress SOURCE changes from the
+// LOT 4 (commit 631258e): the section stress SOURCE changed from the
 // recovered nodal stresses (NODE_DOF, the L2 decision) to the ELEMENT
 // integration-point stresses (ELEMENT_DOF, the constitutive stresses
 // the element actually used - "the element forces needed for this
@@ -62,6 +62,25 @@
 // circumference 2*PI*r at the section point (the manual's "integrated
 // over the thickness" of a ring), so the per-unit-length values match
 // the plane-2D dimension (a force per unit circumference).
+// LOT 5 (this lot): the section forces are NO LONGER an integral of
+// ANY raw stress field over the section (the measured evidence: the
+// N/V pollution of the mixed u-sigma scheme lives IN the sigma field
+// itself - the nodal values are the exact IP averages, both polluted;
+// the Professional is exact because its statics do not come from a
+// raw sigma field). The section forces are computed from the ELEMENT
+// INTERNAL FORCES f_elem = int B^T*sigma dV (the consistent nodal
+// forces of the IP stress field - the equilibrium/equilibrium-based
+// section method of the Professional, manual 6.913). The section
+// resultant over an end face = the sum of the internal forces of the
+// face nodes = int sigma*n_hat dA of the face: for the converged
+// solve the internal forces are in equilibrium with the applied loads
+// BY CONSTRUCTION (sum_elements f_elem = -P at the free dofs), so the
+// section forces are the EXACT statics of the loads (N/V/M ~ 1.000x
+// in the arness), not the polluted field integral. The face
+// quadrature and the Lagrange stress reconstruction of LOT 4 are
+// retired (the stress is read at the element IPs only, the same
+// ELEMENT_DOF source); the B matrix and the IP volumes replicate
+// pol()/materi() (documented in the helpers).
 
 // Number of result items of the -force family: 3 vector groups of
 // (ndim components + size) in 2D (nor, she, mom) and 4 in 3D (nor, she,
@@ -355,52 +374,45 @@ void post_calcul_materi_stress_force_validate( void )
 //      produce no primary values. Ambiguous selection (distorted
 //      elements, e.g. |n*t| equal for 3+ sides) warns and skips the
 //      element.
-//   2. STRESS SOURCE (LOT 4): the ELEMENT integration-point stresses
+//   2. STRESS SOURCE (LOT 4+5): the ELEMENT integration-point stresses
 //      (ELEMENT_DOF, element_dof_npoint[ipoint*nuknwn+i] with the
 //      stress at stres_indx, the constitutive stresses of the last
 //      element_loop - the "element forces ... setup in a timestep" of
-//      the manual 6.913). The stress at a section quadrature point is
-//      the Lagrange reconstruction from the element IP grid: for the
-//      node-containing rules (quad4 Lobatto corners, quad9 Lobatto
-//      nodes) the section points coincide with IPs on the end face
-//      (the weights reduce to the Kronecker delta = a direct read);
-//      for the interior rules (the SRI quad4 2x2 Gauss, the MINIMAL
-//      rules) the weights interpolate/extrapolate the IP field. The
-//      OLD source (the recovered nodal stresses, NODE_DOF - the L2
-//      decision) is retired: the measured evidence (2026-08-28) shows
-//      the nodal values are the exact element-IP averages at the
-//      shared nodes, so the section values would be identical for the
-//      node-containing rules, and the recovered values DILUTE the
-//      Gauss-point stresses of the SRI quad4 (the D-b recovery of
-//      DIAG-SOLVE-MIXTO fixes only the normal components). The
-//      element IP stresses are the ones CONSISTENT with the stiffness
-//      matrix (the fixed point of the staggered scheme, DIAG 12.2).
-//      The validation now requires options_element_dof -yes (the
-//      default; the record is maintained by elem.cc).
-//   3. QUADRATURE: 1D along the side with npol points (polynom.cc:
-//      quad4 npol=2, quad9 npol=3): integration_gauss(2) for npol=2
-//      (exact for the QUADRATIC moment integrand sigma_nn*(s-s_mid);
-//      the element-area Lobatto(2) trapezoid would give 3/2 x the
-//      moment) and integration_lobatto(3) (Simpson, exact for the
-//      CUBIC moment integrand) for npol=3. Weights sum to 1 (Tochnog
-//      convention: integral = side_length * sum(w*f)).
+//      the manual 6.913). LOT 4 read the stress at section quadrature
+//      points via the Lagrange reconstruction from the element IP
+//      grid; LOT 5 (this lot) reads the stress at the element IPs
+//      ONLY and builds the element internal forces f_elem = int B^T*sigma
+//      dV (see note 9) - the section resultants are the equilibrium
+//      sums over the face nodes, not a stress field integral. The OLD
+//      source (the recovered nodal stresses, NODE_DOF - the L2
+//      decision) is retired except as the documented FALLBACK for the
+//      all-zero ELEMENT_DOF blocks (measured: the SOLVED 3D models
+//      with the `derivatives` keyword - gforce10/gforce13). The
+//      measured evidence of LOT 4: the nodal values are the exact
+//      element-IP averages at the shared nodes, so the N/V pollution
+//      lives in the sigma FIELD itself; the element IP stresses are
+//      the ones CONSISTENT with the stiffness matrix (the fixed point
+//      of the staggered scheme, DIAG 12.2). The validation requires
+//      options_element_dof -yes (the default; the record is
+//      maintained by elem.cc).
+//   3. QUADRATURE: retired from the section integration (LOT 5); the
+//      element's own rule (msf_element_rule) is used ONLY to build the
+//      internal-force integral (note 9). Historical (LOT 2-4): 1D
+//      Gauss(2)/Lobatto(3) along the side/face.
 //   4. VALUES (per unit length l; plane 2D l=1, axisymmetric
 //      l = 2*PI*radial coordinate of the element centroid, manual
 //      6.911: "In a axi-symmetric 2D calculation, the length of the
 //      elements is set to 2*PI*radius by Tochnog"):
-//      nor = int sigma_nn ds (SIGNED: positive = tension), she = the
-//      absolute value of int sigma_nt ds (only the size, manual
-//      6.913), mom = int sigma_nn*(s-s_mid) ds (signed; s along the
-//      side = thickness direction of the section, s_mid = side
-//      midpoint). LOT 4: the AXISYMMETRIC integrand carries the
-//      physical circumference 2*PI*r at the section point (the manual
-//      "integrated over the thickness" of a ring = the physical
-//      section area 2*PI*r*ds), divided by l = 2*PI*r_centroid: the
-//      per-unit-length values are the PHYSICAL section forces per unit
-//      circumference (the same dimension as the plane-2D per-unit-
-//      thickness values). Measured before LOT 4: the unscaled integral
-//      divided by 2*PI*r gave values 2*PI*r too small (documented in
-//      msf_axisym).
+//      nor = n_hat . R_face / l (SIGNED: positive = tension), she =
+//      |t_hat . R_face| / l (only the size, manual 6.913), mom =
+//      sum_inod (n_hat . f_inod) * arm_inod / l with arm_inod =
+//      (x_inod - x_mid) . t_hat measured from the MIDDLE OF THE FACE
+//      (the LOT 5 equivalents of the LOT 2-4 integrals; R_face = the
+//      sum of the internal forces of the face nodes - see note 9).
+//      The axisymmetric f_elem carries the physical circumference
+//      2*PI*r in the IP volumes (the ring section area 2*PI*r*ds),
+//      divided by l = 2*PI*r_centroid: the per-unit-length values are
+//      the PHYSICAL section forces per unit circumference.
 //   5. PLOT COMPONENTS: norx/nory = nor*t, nors = |nor|;
 //      shex/shey = |she|*t, shes = |she|; momx/momy = mom*t,
 //      moms = |mom|. The tension/compression sign of nor and mom is
@@ -414,7 +426,10 @@ void post_calcul_materi_stress_force_validate( void )
 //      (the 3 nodes NOT on the end faces) receive the AVERAGE of both
 //      faces with average -yes (default), nothing (0) with -no. A node
 //      shared by several elements receives the mean of its element
-//      contributions (identical for a conforming mesh).
+//      contributions (identical for a conforming mesh: the face
+//      resultants of the two elements at a shared section are the SAME
+//      equilibrium value - the face normals and the internal-force
+//      resultants flip together, verified in LOT 5).
 //   7. outer -yes: only the PRIMARY nodes at the maximum distance from
 //      the reference point receive values (manual 6.915: "the nodes
 //      which have the furthest distance relative to the reference
@@ -424,6 +439,36 @@ void post_calcul_materi_stress_force_validate( void )
 //      node received middle-plane averaged values) is written in
 //      VERSION_NORMAL and consumed by msf_node_is_averaged() of the
 //      -primary print (print_materi_stress_force.cc).
+//   9. ELEMENT INTERNAL FORCES (LOT 5): f_elem[inod, idim] =
+//      sum_ip volume[ip] * (B^T*sigma)[ip, inod, idim] - the
+//      consistent nodal forces of the IP stress field, the same
+//      quantity materi() accumulates in element_rhside with the
+//      OPPOSITE sign (element_rhside -= volume*force). The kinematics
+//      replicate pol()/materi(): shape functions + derivatives at the
+//      element IPs (interpolation_polynomial), the physical
+//      derivatives dn = invJ*p, the IP volume w*4*|detJ| (2D) /
+//      w*8*|detJ| (3D) with the 2*PI*r axisymmetric factor, and the B
+//      matrix of polynom.cc:549-599. PHYSICS: the internal forces are
+//      in equilibrium with the applied loads BY CONSTRUCTION for the
+//      converged solve (sum over all elements = -P at the free dofs;
+//      the sum over ONE element's nodes is the rigid-translation
+//      identity, identically zero). The section resultant over an end
+//      face = sum of the internal forces of the face nodes =
+//      int sigma*n_hat dA of the face (the consistent nodal force
+//      identity) = the applied-load resultant of the free body: EXACT
+//      statics, the same family the Professional uses ("the element
+//      forces needed for this option are setup in a timestep"). The
+//      moment of the consistent nodal forces about the face middle is
+//      the EXACT discrete equivalent of int sigma_nn*dt dA (the shear
+//      components contribute only to the in-face component of the
+//      moment vector, which is not used). SRI quad4 (opt-in): the
+//      full-rule shear part of f_elem is replaced by the reduced
+//      1-point shear internal force (the momentum feedback of the
+//      fixed point K_SRI*u = P): 4*detJ_c*b_shear*mean(IP sigma_xy)
+//      (the shear modulus cancels: sigma_xy = G*gamma, the 2x2 Gauss
+//      mean of the bilinear gamma = the centroid value exactly).
+//      Without the correction the SRI section forces would read the
+//      K_full (locked) equilibrium instead of the K_SRI one.
 // ---------------------------------------------------------------------
 
 // local-node side tables (2D): side s has npol nodes (2 for quad4,
@@ -444,13 +489,14 @@ static long int msf_border_nodes_quad9[] = {
   6, 3, 0 };
 
 // ---------------------------------------------------------------------
-// LOT 4: the element integration-point stress field. Helpers.
+// LOT 4+5: the element integration-point stress field + the element
+// internal forces. Helpers.
 // ---------------------------------------------------------------------
 
 // The element's per-direction integration rule, replicated from pol()
 // (polynom.cc:388-459) for the isoparametric section elements so the
-// section reconstruction uses EXACTLY the quadrature the element
-// integrated with:
+// section forces use EXACTLY the quadrature the element integrated
+// with:
 //   - npol from the element name; integration_points default -MAXIMAL
 //     (npol points per direction); -MINIMAL override = npol-1 points
 //     (Gauss, interior);
@@ -461,12 +507,14 @@ static long int msf_border_nodes_quad9[] = {
 //   - axisymmetric + materi_velocity forces GAUSS + MINIMAL (polynom
 //     cc:401-407: the 1-point rule at the centroid).
 // nper[d] = the number of points in direction d, iso[d][0..nper-1] =
-// the iso coordinates (the same arrays pol() uses for the element
-// integration points: ipoint = izeta*nper[0]*nper[1] + ieta*nper[0] +
-// ixi in 3D, ipoint = ieta*nper[0] + ixi in 2D).
+// the iso coordinates and weight[d][0..nper-1] the 1D weights (the
+// same arrays pol() uses for the element integration points:
+// ipoint = izeta*nper[0]*nper[1] + ieta*nper[0] + ixi in 3D,
+// ipoint = ieta*nper[0] + ixi in 2D; the product of the 1D weights
+// is the point weight).
 static void msf_element_rule( long int element, long int element_group,
   long int name, long int npol, long int nnol, long int nper[],
-  double iso[][MPOINT] )
+  double iso[][MPOINT], double weight[][MPOINT] )
 
 {
   long int integration_method=-LOBATTO, integration_points=-MAXIMAL,
@@ -488,174 +536,280 @@ static void msf_element_rule( long int element, long int element_group,
   if ( sri_quad4_active( element, element_group, name, nnol ) )
     integration_method = -GAUSS;
   for ( idim=0; idim<ndim; idim++ ) {
-    double wtmp[MPOINT];
     nper[idim] = ( integration_points==-MINIMAL ? npol-1 : npol );
     if      ( integration_method==-GAUSS )
-      integration_gauss( nper[idim], iso[idim], wtmp );
+      integration_gauss( nper[idim], iso[idim], weight[idim] );
     else if ( integration_method==-LOBATTO )
-      integration_lobatto( nper[idim], iso[idim], wtmp );
+      integration_lobatto( nper[idim], iso[idim], weight[idim] );
     else if ( nper[idim]<npol )
-      integration_gauss( nper[idim], iso[idim], wtmp );
+      integration_gauss( nper[idim], iso[idim], weight[idim] );
     else
-      integration_lobatto( nper[idim], iso[idim], wtmp );
+      integration_lobatto( nper[idim], iso[idim], weight[idim] );
   }
 }
 
-// The 1D Lagrange weights of the point x on the grid iso[0..nper-1]:
-// w[k] = prod_{j!=k} (x-iso[j])/(iso[k]-iso[j]). For x on the grid
-// w = the Kronecker delta (the section points on an end face that
-// coincide with the element IPs read their IP directly); between the
-// grid points the weights give the consistent interpolation of the
-// superconvergent IP values (the "same B" recovery of the fix D-b).
-static void msf_lagrange_weights( double x, long int nper, double iso[],
-  double w[] )
+// ---------------------------------------------------------------------
+// LOT 5: the element internal forces f_elem = int B^T*sigma dV (the
+// consistent nodal forces of the stress field) and the section
+// resultants over an end face. Physics (validated in the arness and
+// documented in manual-developer/post_calcul_materi_stress_force.md):
+// the internal forces are in equilibrium with the applied loads BY
+// CONSTRUCTION for the converged solve (sum_elements f_elem = -P at
+// the free dofs), so the section resultant over a face =
+// sum of the internal forces of the face nodes = the traction
+// resultant int sigma*n_hat dA of the face (exact up to the solver
+// tolerance). The Professional's exact statics (1e-10) are consistent
+// with this equilibrium/integration ("the element forces needed for
+// this option are setup in a timestep", manual 6.913), while the
+// section integration over ANY raw sigma field (nodal or IP, lots 2-4)
+// carries the pollution of the mixed u-sigma scheme (gforce7 N 1.24x,
+// V 2.7x - the pollution lives in the sigma FIELD itself).
+// ---------------------------------------------------------------------
+
+// The element internal forces f_elem[inod*ndim+idim] =
+// sum_ip volume[ip]*(B^T*sigma)[ip, inod, idim] - the same quantity
+// materi() accumulates in element_rhside with the OPPOSITE sign
+// (element_rhside -= volume*force, materi.cc:618-619): the internal
+// force is the force the element exerts ON its nodes (K*u, opposing
+// the applied loads). The kinematics replicate pol() (polynom.cc):
+//   - the quadrature rule (nper/iso/weight) comes from msf_element_rule
+//     (the SAME rule the element integrated with);
+//   - the physical derivatives dn[inod*ndim+idim] = dN_inod/dx_idim =
+//     invJ * p (polynom.cc:500-513, the Jacobian J[idim][jdim] =
+//     sum_inol p[inoln jdim]*coord[inoln idim]);
+//   - the IP volume = w*4*|detJ| (2D) / w*8*|detJ| (3D) with the
+//     axisymmetric 2*PI*r factor (polynom.cc:514-526);
+//   - the B matrix contracted with sigma (polynom.cc:549-599): in 2D
+//     f[inod,0] += vol*(sxx*dN/dx + sxy*dN/dy),
+//     f[inod,1] += vol*(sxy*dN/dx + syy*dN/dy); in 3D the 6-component
+//     counterpart. The coordinates used are the NORMAL (reference)
+//     ones - identical to the new_coord of pol() for the small-strain
+//     analyses of the section family (materi_displacement-free or
+//     total_linear; documented).
+// SRI quad4 (opt-in): the section internal forces are the
+// ELEMENT-CONSISTENT ones of the momentum feedback (DIAG-SOLVE-MIXTO
+// fix D-c: the fixed point is K_SRI*u = P): the full-rule shear part
+// (from the raw Gauss sigma_xy, polluted by the parasitic shear) is
+// replaced by the reduced 1-point shear internal force
+// sri_g*4*detJ_c*b_shear*(b_shear^T*u) = 4*detJ_c*b_shear*mean(IP
+// sigma_xy) (the shear modulus cancels: sigma_xy = G*gamma and the
+// 2x2 Gauss mean of the bilinear gamma = the centroid value EXACTLY).
+static void msf_element_internal_forces_2d( long int npol, long int nnol,
+  double coords[], long int nper[], double iso[][MPOINT],
+  double weight[][MPOINT], double sig_ip[], double f_elem[], long int sri,
+  long int axisym )
 
 {
-  long int i=0, j=0;
-  for ( i=0; i<nper; i++ ) {
-    w[i] = 1.;
-    for ( j=0; j<nper; j++ ) if ( j!=i ) w[i] *= (x-iso[j])/(iso[i]-iso[j]);
+  double hx[MPOINT], px[MPOINT], hy[MPOINT], py[MPOINT], xq[MDIM],
+    jac[4], invjac[4], detj=0., w=0., vol=0., sxx=0., sxy=0., syy=0.,
+    dn[2*MNOL], b_shear[2*MNOL], detj_c=0., mean_xy=0.;
+  long int ixi=0, ieta=0, ip=0, inol=0, idim=0;
+
+  for ( inol=0; inol<nnol*ndim; inol++ ) f_elem[inol] = 0.;
+  if ( sri ) {
+    // the reduced 1-point shear internal force: the centroid B (dN/dy,
+    // dN/dx at iso 0,0 - materi.cc:551-553), the centroid detJ and the
+    // mean sigma_xy of the 2x2 Gauss points. The centroid Jacobian is
+    // computed below at ip=0 (iso 0,0 of the GAUSS 2x2 rule).
+    for ( inol=0; inol<nnol; inol++ ) {
+      dn[inol*2+0] = 0.25 * ( (inol%2) ? 1. : -1. );
+      dn[inol*2+1] = 0.25 * ( (inol/2) ? 1. : -1. );
+    }
+    array_set( jac, 0., 4 );
+    for ( inol=0; inol<nnol; inol++ ) {
+      jac[0] += dn[inol*2+0]*coords[inol*MDIM+0];
+      jac[1] += dn[inol*2+0]*coords[inol*MDIM+1];
+      jac[2] += dn[inol*2+1]*coords[inol*MDIM+0];
+      jac[3] += dn[inol*2+1]*coords[inol*MDIM+1];
+    }
+    detj_c = jac[0]*jac[3] - jac[1]*jac[2];
+    if ( detj_c<0. ) detj_c = -detj_c;
+    if ( detj_c<1.e-20 ) detj_c = 0.;
+    // b_shear[inod,0] = dN/dy, b_shear[inod,1] = dN/dx at the centroid
+    // (the invJ pattern of materi.cc:570-576: dN/dy = invjac[2]*dnxi +
+    // invjac[3]*dnet, dN/dx = invjac[0]*dnxi + invjac[1]*dnet)
+    for ( inol=0; inol<nnol; inol++ ) {
+      double detj_s = jac[0]*jac[3]-jac[1]*jac[2];
+      b_shear[inol*2+0] = ( -jac[2]*dn[inol*2+0] + jac[0]*dn[inol*2+1] )
+                        / detj_s;
+      b_shear[inol*2+1] = (  jac[3]*dn[inol*2+0] - jac[1]*dn[inol*2+1] )
+                        / detj_s;
+    }
+    mean_xy = 0.;
+    for ( ip=0; ip<nper[0]*nper[1]; ip++ ) mean_xy += sig_ip[ip*3+2];
+    mean_xy /= (double)( nper[0]*nper[1] );
   }
-}
 
-// The 3 stress components (sxx, syy, sxy) of the element IP field at
-// the reference point (xis, etas): the tensor product of the 1D
-// Lagrange weights over the element quadrature grid (2D; the IP
-// layout ip = ieta*nper[0] + ixi of pol()).
-static void msf_sigma_ip_2d( double xis, double etas, long int nper[],
-  double iso[][MPOINT], double edof_sig[], double sig[] )
-
-{
-  double wxi[MPOINT], weta[MPOINT];
-  long int ixi=0, ieta=0, ip=0, c=0;
-
-  msf_lagrange_weights( xis, nper[0], iso[0], wxi );
-  msf_lagrange_weights( etas, nper[1], iso[1], weta );
-  for ( c=0; c<3; c++ ) {
-    sig[c] = 0.;
-    for ( ieta=0; ieta<nper[1]; ieta++ ) {
-      for ( ixi=0; ixi<nper[0]; ixi++ ) {
-        ip = ieta*nper[0] + ixi;
-        sig[c] += wxi[ixi]*weta[ieta]*edof_sig[ip*3+c];
+  for ( ieta=0; ieta<nper[1]; ieta++ ) {
+    interpolation_polynomial( iso[1][ieta], npol, hy, py );
+    for ( ixi=0; ixi<nper[0]; ixi++ ) {
+      interpolation_polynomial( iso[0][ixi], npol, hx, px );
+      ip = ieta*nper[0] + ixi;
+      array_set( jac, 0., 4 );
+      for ( inol=0; inol<nnol; inol++ ) {
+        jac[0] += px[inol%npol]*hy[inol/npol]*coords[inol*MDIM+0];
+        jac[1] += px[inol%npol]*hy[inol/npol]*coords[inol*MDIM+1];
+        jac[2] += hx[inol%npol]*py[inol/npol]*coords[inol*MDIM+0];
+        jac[3] += hx[inol%npol]*py[inol/npol]*coords[inol*MDIM+1];
+      }
+      detj = jac[0]*jac[3] - jac[1]*jac[2];
+      if ( detj<0. ) detj = -detj;
+      if ( detj<1.e-20 ) continue;
+      invjac[0] =  jac[3]/( jac[0]*jac[3]-jac[1]*jac[2] );
+      invjac[1] = -jac[1]/( jac[0]*jac[3]-jac[1]*jac[2] );
+      invjac[2] = -jac[2]/( jac[0]*jac[3]-jac[1]*jac[2] );
+      invjac[3] =  jac[0]/( jac[0]*jac[3]-jac[1]*jac[2] );
+      for ( inol=0; inol<nnol; inol++ ) {
+        dn[inol*2+0] = invjac[0]*px[inol%npol]*hy[inol/npol]
+                     + invjac[2]*hx[inol%npol]*py[inol/npol];
+        dn[inol*2+1] = invjac[1]*px[inol%npol]*hy[inol/npol]
+                     + invjac[3]*hx[inol%npol]*py[inol/npol];
+      }
+      w = weight[0][ixi]*weight[1][ieta];
+      vol = w*4.*detj;
+      if ( axisym==-YES ) {
+        xq[0] = 0.;
+        for ( inol=0; inol<nnol; inol++ )
+          xq[0] += hx[inol%npol]*hy[inol/npol]*coords[inol*MDIM+0];
+        vol *= 2.*PIRAD*scalar_dabs( xq[0] );
+      }
+      sxx = sig_ip[ip*3+0];
+      syy = sig_ip[ip*3+1];
+      sxy = ( sri ? 0. : sig_ip[ip*3+2] ); // SRI: reduced 1-point shear
+      for ( inol=0; inol<nnol; inol++ ) {
+        f_elem[inol*2+0] += vol*( sxx*dn[inol*2+0] + sxy*dn[inol*2+1] );
+        f_elem[inol*2+1] += vol*( sxy*dn[inol*2+0] + syy*dn[inol*2+1] );
       }
     }
   }
+  if ( sri && detj_c>=1.e-20 ) {
+    // the reduced 1-point shear internal force (the momentum feedback
+    // of the fixed point K_SRI*u = P; the modulus cancels)
+    for ( inol=0; inol<nnol; inol++ ) {
+      f_elem[inol*2+0] += 4.*detj_c*b_shear[inol*2+0]*mean_xy;
+      f_elem[inol*2+1] += 4.*detj_c*b_shear[inol*2+1]*mean_xy;
+    }
+  }
+  (void)idim;
+  (void)idim;
 }
 
-// The 6 stress components (sxx sxy sxz syy syz szz, the msf order of
-// the face integration) of the element IP field at the reference point
-// (xis, etas, zetas): the tensor product of the 1D Lagrange weights
-// over the element quadrature grid (3D; the IP layout
-// ip = izeta*nper[0]*nper[1] + ieta*nper[0] + ixi of pol()).
-static void msf_sigma_ip_3d( double xis, double etas, double zetas,
-  long int nper[], double iso[][MPOINT], double edof_sig[], double sig[] )
+// The 3D counterpart of msf_element_internal_forces_2d: the 6 stress
+// components (sxx sxy sxz syy syz szz, the msf order) contracted with
+// the B rows of polynom.cc:549-599.
+static void msf_element_internal_forces_3d( long int npol, long int nnol,
+  double coords[], long int nper[], double iso[][MPOINT],
+  double weight[][MPOINT], double sig_ip[], double f_elem[] )
 
 {
-  double wxi[MPOINT], weta[MPOINT], wzeta[MPOINT];
-  long int ixi=0, ieta=0, izeta=0, ip=0, c=0;
+  double hx[MPOINT], px[MPOINT], hy[MPOINT], py[MPOINT], hz[MPOINT],
+    pz[MPOINT], jac[9], invjac[9], detj=0., w=0., vol=0., sig[6],
+    dn[3*MNOL];
+  long int ixi=0, ieta=0, izeta=0, ip=0, inol=0, idim=0, jdim=0;
 
-  msf_lagrange_weights( xis, nper[0], iso[0], wxi );
-  msf_lagrange_weights( etas, nper[1], iso[1], weta );
-  msf_lagrange_weights( zetas, nper[2], iso[2], wzeta );
-  for ( c=0; c<6; c++ ) {
-    sig[c] = 0.;
-    for ( izeta=0; izeta<nper[2]; izeta++ ) {
-      for ( ieta=0; ieta<nper[1]; ieta++ ) {
-        for ( ixi=0; ixi<nper[0]; ixi++ ) {
-          ip = izeta*nper[0]*nper[1] + ieta*nper[0] + ixi;
-          sig[c] += wxi[ixi]*weta[ieta]*wzeta[izeta]*edof_sig[ip*6+c];
+  for ( inol=0; inol<nnol*ndim; inol++ ) f_elem[inol] = 0.;
+  for ( izeta=0; izeta<nper[2]; izeta++ ) {
+    interpolation_polynomial( iso[2][izeta], npol, hz, pz );
+    for ( ieta=0; ieta<nper[1]; ieta++ ) {
+      interpolation_polynomial( iso[1][ieta], npol, hy, py );
+      for ( ixi=0; ixi<nper[0]; ixi++ ) {
+        interpolation_polynomial( iso[0][ixi], npol, hx, px );
+        ip = izeta*nper[0]*nper[1] + ieta*nper[0] + ixi;
+        array_set( jac, 0., 9 );
+        for ( inol=0; inol<nnol; inol++ ) {
+          double p3[3];
+          p3[0] = px[inol%npol]*hy[(inol/npol)%npol]*hz[inol/(npol*npol)];
+          p3[1] = hx[inol%npol]*py[(inol/npol)%npol]*hz[inol/(npol*npol)];
+          p3[2] = hx[inol%npol]*hy[(inol/npol)%npol]*pz[inol/(npol*npol)];
+          for ( idim=0; idim<3; idim++ )
+            for ( jdim=0; jdim<3; jdim++ )
+              jac[idim*3+jdim] += p3[idim]*coords[inol*MDIM+jdim];
+        }
+        detj = jac[0]*( jac[4]*jac[8] - jac[5]*jac[7] )
+             - jac[1]*( jac[3]*jac[8] - jac[5]*jac[6] )
+             + jac[2]*( jac[3]*jac[7] - jac[4]*jac[6] );
+        if ( !matrix_inverse( jac, invjac, detj, 3 ) ) continue;
+        if ( detj<0. ) detj = -detj; // pol() takes |detJ| (line 514)
+        if ( detj<1.e-20 ) continue;
+        for ( inol=0; inol<nnol; inol++ ) {
+          double p3[3];
+          p3[0] = px[inol%npol]*hy[(inol/npol)%npol]*hz[inol/(npol*npol)];
+          p3[1] = hx[inol%npol]*py[(inol/npol)%npol]*hz[inol/(npol*npol)];
+          p3[2] = hx[inol%npol]*hy[(inol/npol)%npol]*pz[inol/(npol*npol)];
+          for ( idim=0; idim<3; idim++ ) {
+            dn[inol*3+idim] = 0.;
+            for ( jdim=0; jdim<3; jdim++ )
+              dn[inol*3+idim] += invjac[idim*3+jdim]*p3[jdim];
+          }
+        }
+        w = weight[0][ixi]*weight[1][ieta]*weight[2][izeta];
+        vol = w*8.*detj;
+        for ( idim=0; idim<6; idim++ ) sig[idim] = sig_ip[ip*6+idim];
+        for ( inol=0; inol<nnol; inol++ ) {
+          f_elem[inol*3+0] += vol*( sig[0]*dn[inol*3+0]
+                                  + sig[1]*dn[inol*3+1]
+                                  + sig[2]*dn[inol*3+2] );
+          f_elem[inol*3+1] += vol*( sig[1]*dn[inol*3+0]
+                                  + sig[3]*dn[inol*3+1]
+                                  + sig[4]*dn[inol*3+2] );
+          f_elem[inol*3+2] += vol*( sig[2]*dn[inol*3+0]
+                                  + sig[4]*dn[inol*3+1]
+                                  + sig[5]*dn[inol*3+2] );
         }
       }
     }
   }
 }
 
-// Integrates the section forces over ONE element side (2D): the side
-// is the CROSS-SECTION face of the structure. The stress is
-// reconstructed from the ELEMENT integration-point field (edof_sig:
-// 3 components per element IP, the ip = ieta*nper[0]+ixi layout of
-// pol()) at the section quadrature points via the Lagrange weights of
-// the element's own rule (LOT 4; for the node-containing rules the
-// section points coincide with the IPs on the face and the weights
-// are the Kronecker delta). node_ref: the (xi,eta) reference
-// coordinates of the local nodes (the section point reference
-// coordinates are interpolated with the side shape functions, so the
-// node-ordering of the element never matters). nrm = exterior normal,
-// tng = side tangent (unit vectors). axisym: the integrand carries
-// the physical circumference 2*PI*r at the section point (LOT 4;
-// l = 2*PI*r_centroid divides). Results per unit length l (see the
-// design notes above):
-//   nor = int sigma_nn ds      (signed, tension positive)
-//   she = |int sigma_nt ds|    (always positive)
-//   mom = int sigma_nn*dt ds   (signed), dt = the signed distance of
-//         the integration point from the element centroid IN THE
-//         THICKNESS DIRECTION t (manual 6.913: "a distance in
-//         thickness direction dt relative to the middle of the
-//         element"). dt = (x_q - centroid)*t makes the moment of BOTH
-//         end faces of a section consistent (the side parametrization
-//         s alone would give opposite signs for the two faces, since
-//         one runs bottom->top and the other top->bottom).
-static void msf_integrate_side_2d( long int npol, long int side_nodes[],
-  double node_coord[], double node_ref[], double edof_sig[],
-  long int nper[], double iso[][MPOINT], double nrm[], double tng[],
-  double centroid[], double thick[], double l, long int axisym,
-  double &nor, double &she, double &mom )
+// The section resultants over ONE element side (2D): the side is the
+// CROSS-SECTION face of the structure and the resultants come from the
+// ELEMENT INTERNAL FORCES f_elem (LOT 5), not from a stress field
+// integration: R_face = sum of the internal forces of the face nodes =
+// int sigma*n_hat dA of the face (the consistent nodal force identity;
+// for the converged solve = the applied-load resultant of the free
+// body, EXACT up to the solver tolerance). Values per unit length l
+// (see the design notes above):
+//   nor = n_hat . R_face / l   (signed, tension positive)
+//   she = |t_hat . R_face| / l (always positive)
+//   mom = sum_inod (n_hat . f_inod) * arm_inod / l (signed), with the
+//         arm_inod = (x_inod - x_mid) . t_hat measured from the MIDDLE
+//         OF THE FACE (the L3 decision; the discrete equivalent of
+//         int sigma_nn*dt dA - the moment of the consistent nodal
+//         forces about the face middle is EXACT, the shear components
+//         contribute only to the in-face component of the moment
+//         vector, which is not used - manual 6.913).
+static void msf_face_resultants_2d( long int npol, long int face_nodes[],
+  double coords[], double f_elem[], double nrm[], double tng[],
+  double thick[], double l, double &nor, double &she, double &mom )
 
 {
-  double isoq[MPOINT], weight[MPOINT], h_pol[MPOINT], p_pol[MPOINT],
-    xa[MDIM], xb[MDIM], xq[MDIM], side_len=0., sxx=0., syy=0., sxy=0.,
-    snn=0., snt=0., dt=0., in_nn=0., in_nt=0., in_mom=0., xis=0.,
-    etas=0., fac=1., sig[3];
-  long int iq=0, i=0, idim=0;
+  double rx=0., ry=0., mid[MDIM], arm=0.;
+  long int i=0, inol=0, idim=0;
 
-  for ( i=0; i<ndim; i++ ) {
-    xa[i] = node_coord[side_nodes[0]*MDIM + i];
-    xb[i] = node_coord[side_nodes[npol-1]*MDIM + i];
+  array_set( mid, 0., MDIM );
+  for ( i=0; i<npol; i++ )
+    for ( idim=0; idim<ndim; idim++ )
+      mid[idim] += coords[face_nodes[i]*MDIM+idim]/npol;
+  rx = ry = 0.;
+  for ( i=0; i<npol; i++ ) {
+    inol = face_nodes[i];
+    rx += f_elem[inol*ndim+0];
+    ry += f_elem[inol*ndim+1];
   }
-  array_subtract( xb, xa, xb, ndim );
-  side_len = array_size( xb, ndim );
-  if ( side_len<1.e-12 ) { // degenerate side: no section to integrate
-    nor = she = mom = 0.;
-    return;
+  nor = ( nrm[0]*rx + nrm[1]*ry )/l;
+  she = ( tng[0]*rx + tng[1]*ry );
+  if ( she<0. ) she = -she;
+  she /= l;
+  mom = 0.;
+  for ( i=0; i<npol; i++ ) {
+    inol = face_nodes[i];
+    arm = 0.;
+    for ( idim=0; idim<ndim; idim++ )
+      arm += ( coords[inol*MDIM+idim] - mid[idim] )*thick[idim];
+    mom += ( nrm[0]*f_elem[inol*ndim+0]
+           + nrm[1]*f_elem[inol*ndim+1] )*arm;
   }
-
-  if ( npol==2 ) integration_gauss( 2, isoq, weight );
-  else           integration_lobatto( 3, isoq, weight );
-
-  for ( iq=0; iq<npol; iq++ ) {
-    interpolation_polynomial( isoq[iq], npol, h_pol, p_pol );
-    xis = etas = 0.;
-    for ( i=0; i<ndim; i++ ) xq[i] = 0.;
-    for ( i=0; i<npol; i++ ) {
-      xis += h_pol[i]*node_ref[side_nodes[i]*2+0];
-      etas += h_pol[i]*node_ref[side_nodes[i]*2+1];
-      for ( idim=0; idim<ndim; idim++ )
-        xq[idim] += h_pol[i]*node_coord[side_nodes[i]*MDIM+idim];
-    }
-    // the element IP stress field at the section point (LOT 4)
-    msf_sigma_ip_2d( xis, etas, nper, iso, edof_sig, sig );
-    sxx = sig[0];
-    syy = sig[1];
-    sxy = sig[2];
-    snn = sxx*nrm[0]*nrm[0] + syy*nrm[1]*nrm[1] + 2.*sxy*nrm[0]*nrm[1];
-    snt = sxx*nrm[0]*tng[0] + syy*nrm[1]*tng[1]
-        + sxy*(nrm[0]*tng[1] + nrm[1]*tng[0]);
-    dt = 0.;
-    for ( i=0; i<ndim; i++ ) dt += ( xq[i]-centroid[i] )*thick[i];
-    // axisymmetric: the physical circumference at the section point
-    fac = ( axisym==-YES ? 2.*PIRAD*xq[0] : 1. );
-    in_nn  += weight[iq]*snn*fac;
-    in_nt  += weight[iq]*snt*fac;
-    in_mom += weight[iq]*snn*dt*fac;
-  }
-  // sum(w)=1 (Tochnog convention) with ds = L/2*d(iso): the physical
-  // integrals pick up the side length L.
-  in_nn  *= side_len;
-  in_nt  *= side_len;
-  in_mom *= side_len;
-  nor = in_nn/l;
-  she = ( in_nt<0. ? -in_nt : in_nt )/l;
-  mom = in_mom/l;
+  mom /= l;
 }
 
 // Per-element contribution for ONE node of a quad4/quad9 element (2D).
@@ -674,10 +828,11 @@ static void msf_element_contribution_2d( long int element, long int name,
     nside=4, npol=0, nnol=0, node=0, axisym=-NO, iface=0,
     is_face_node=0, order[4], corners[4], itmp=0,
     icorner=0, ncorner=0, inod_pos=-1, *el=NULL, npoint_ip=0,
-    nper[2], ip=0;
+    nper[2], ip=0, sri=0;
   double ddum[1], *coord=NULL, *node_dof=NULL, *edof=NULL,
-    coords[MDIM*MNOL], node_ref[2*MNOL], n_iso_v[3], sig_ip[3*MPOINT],
-    sig_n[3*MNOL], iso[2][MPOINT], nrm[MDIM], tng[MDIM],
+    coords[MDIM*MNOL], sig_ip[3*MPOINT],
+    sig_n[3*MNOL], iso[2][MPOINT], wrule[2][MPOINT],
+    f_elem[2*MNOL], nrm[MDIM], tng[MDIM],
     centroid[MDIM], thick[MDIM], side_nrm[4][MDIM], side_tng[4][MDIM],
     side_score[4], face_nor[2], face_she[2], face_mom[2],
     max_dist=0., d=0., nor=0., she=0., mom=0., l=1., tol=0., sig_sum=0.;
@@ -700,22 +855,15 @@ static void msf_element_contribution_2d( long int element, long int name,
     corners[0]=0; corners[1]=2; corners[2]=8; corners[3]=6;
   }
 
-  // element nodes: coordinates + the reference (xi,eta) positions
-  // (the pol() node ordering: inol = inol_eta*npol + inol_xi with the
-  // node grid n_iso = {-1,0,+1} for npol=3, {-1,+1} for npol=2) + the
-  // recovered nodal stresses (the fallback source, see below)
+  // element nodes: coordinates + the recovered nodal stresses (the
+  // fallback source, see below)
   el = get_new_int(DATA_ITEM_SIZE);
   db( ELEMENT, element, el, ddum, length_el, VERSION_NORMAL, GET );
   nnol = length_el - 1;
-  n_iso_v[0] = -1.;
-  n_iso_v[1] = ( npol==2 ? 1. : 0. );
-  n_iso_v[2] = 1.;
   for ( inol=0; inol<nnol; inol++ ) {
     node = el[1+inol];
     coord = db_dbl( NODE, node, VERSION_NORMAL );
     for ( i=0; i<ndim; i++ ) coords[inol*MDIM+i] = coord[i];
-    node_ref[inol*2+0] = n_iso_v[inol%npol];
-    node_ref[inol*2+1] = n_iso_v[inol/npol];
     node_dof = db_dbl( NODE_DOF, node, VERSION_NORMAL );
     sig_n[inol*3+0] = node_dof[stres_indx + stress_indx(0,0)*nder];
     sig_n[inol*3+1] = node_dof[stres_indx + stress_indx(1,1)*nder];
@@ -725,7 +873,7 @@ static void msf_element_contribution_2d( long int element, long int name,
   delete[] el;
   if ( inod_pos<0 ) return; // node not in this element (should not happen)
 
-  // the section stress source (LOT 4): the ELEMENT integration-point
+  // the section stress source (LOT 4+5): the ELEMENT integration-point
   // stresses (ELEMENT_DOF, the constitutive stresses the element used;
   // the recovered nodal values of the L2 source are retired). The
   // element's own quadrature rule is replicated (msf_element_rule) and
@@ -733,7 +881,9 @@ static void msf_element_contribution_2d( long int element, long int name,
   // ip = ieta*nper[0]+ixi (nuknwn values per IP, the stress at
   // stres_indx). A missing record (options_element_dof -no is rejected
   // in the validation) skips the element with a warning.
-  msf_element_rule( element, element_group, name, npol, nnol, nper, iso );
+  msf_element_rule( element, element_group, name, npol, nnol, nper, iso,
+    wrule );
+  sri = sri_quad4_active( element, element_group, name, nnol );
   npoint_ip = nper[0]*nper[1];
   if ( options_element_dof==-YES &&
        db_active_index( ELEMENT_DOF, element, VERSION_NORMAL ) ) {
@@ -890,13 +1040,18 @@ static void msf_element_contribution_2d( long int element, long int name,
     }
   }
 
-  // integrate the two end faces
+  // the element internal forces (LOT 5): f_elem = int B^T*sigma dV,
+  // the consistent nodal forces of the IP stress field - in equilibrium
+  // with the applied loads for the converged solve. The face resultants
+  // (nor/she/mom) follow from the free body of the face nodes.
+  msf_element_internal_forces_2d( npol, nnol, coords, nper, iso, wrule,
+    sig_ip, f_elem, sri, axisym );
   for ( j=0; j<2; j++ ) {
     iside = order[j];
     for ( i=0; i<npol; i++ ) face_nodes[j][i] = side_nodes[iside][i];
-    msf_integrate_side_2d( npol, face_nodes[j], coords, node_ref, sig_ip,
-      nper, iso, side_nrm[iside], side_tng[iside], centroid, thick, l,
-      axisym, face_nor[j], face_she[j], face_mom[j] );
+    msf_face_resultants_2d( npol, face_nodes[j], coords, f_elem,
+      side_nrm[iside], side_tng[iside], thick, l,
+      face_nor[j], face_she[j], face_mom[j] );
   }
 
   // role of the current node
@@ -1172,116 +1327,63 @@ static long int msf_border_nodes_hex27[] = {
 static long int msf_corner_nodes_hex27[] = {
    0,  2,  6,  8, 18, 20, 24, 26 };
 
-// 3D stress components: the compacted symmetric layout read from
-// node_dof[stres_indx + stress_indx(i,j)*nder] (miscel.cc stress_indx:
-// sxx=0, sxy=1, sxz=2, syy=3, syz=4, szz=5).
-static const long int msf_sig_sxx=0, msf_sig_sxy=1, msf_sig_sxz=2,
-  msf_sig_syy=3, msf_sig_syz=4, msf_sig_szz=5;
-
-// Integrates the section quantities over ONE face of a hex8/hex27
-// element (3D): the face is one of the two END faces of the section.
-// The stress is interpolated from the NODAL values (node_sig: per node
-// the 6 components sxx sxy sxz syy syz szz) with the face polynomial
-// (npol per in-face direction). nrm = outward normal, thick = the
-// face thickness direction t (unit), leng = the face length direction
-// l (unit), face_mid = the middle of the face (the mean of its nodes;
-// "the middle of the element" of the manual 6.913 in the thickness/
-// length directions), l = the element size in the length direction.
-// Results per unit length l:
-//   nor  = int int sigma_nn dA / l   (signed, tension positive)
-//   she  = |int int sigma_nt dA| / l (always positive)
-//   mom1 = int int sigma_nn*dt dA / l, dt = (x-face_mid)*t
-//   mom2 = int int sigma_nn*dl dA / l, dl = (x-face_mid)*l
-static void msf_integrate_face_3d( long int npol, long int face_nodes[],
-  double node_coord[], double node_ref[], double edof_sig[],
-  long int nper[], double iso[][MPOINT], double nrm[], double thick[],
-  double leng[], double face_mid[], double l, double &nor, double &she,
-  double &mom1, double &mom2 )
+// The section resultants over ONE face of a hex8/hex27 element (3D):
+// the face is one of the two END faces of the section and the
+// resultants come from the ELEMENT INTERNAL FORCES f_elem (LOT 5, the
+// 2D decision): R_face = sum of the internal forces of the face nodes
+// = int sigma*n_hat dA of the face (for the converged solve = the
+// applied-load resultant of the free body, EXACT up to the solver
+// tolerance). nrm = outward normal, thick = the face thickness
+// direction t (unit), leng = the face length direction l (unit),
+// face_mid = the middle of the face (the mean of its nodes; "the
+// middle of the element" of the manual 6.913 in the thickness/length
+// directions - the L3 arm decision). Results per unit length l:
+//   nor  = n_hat . R_face / l   (signed, tension positive)
+//   she  = |t_hat . R_face| / l (always positive)
+//   mom1 = sum (n_hat . f_inod) * ((x_inod-face_mid) . t_hat) / l
+//   mom2 = sum (n_hat . f_inod) * ((x_inod-face_mid) . l_hat) / l
+static void msf_face_resultants_3d( long int npol, long int face_nodes[],
+  double coords[], double f_elem[], double nrm[], double thick[],
+  double leng[], double l, double &nor, double &she, double &mom1,
+  double &mom2 )
 
 {
-  double isof[MPOINT], weight[MPOINT], h_u[MPOINT], p_u[MPOINT],
-    h_v[MPOINT], p_v[MPOINT], xq[MDIM], xu[MDIM], xv[MDIM],
-    sxx=0., sxy=0., sxz=0., syy=0., syz=0., szz=0., snn=0., snt=0.,
-    dt=0., dl=0., in_nn=0., in_nt=0., in_m1=0., in_m2=0., jac=0.,
-    nx=0., ny=0., nz=0., xis=0., etas=0., zetas=0., sig[6];
-  long int iu=0, iv=0, iu_node=0, iv_node=0, i=0, idim=0, nface=0,
-    inol=0;
-  double hu=0., hv=0., dhu=0., dhv=0., x=0.;
+  double rx=0., ry=0., rz=0., mid[MDIM], arm=0.;
+  long int i=0, inol=0, idim=0, nface=npol*npol;
 
-  nface = npol*npol;
-  if ( npol==2 ) integration_gauss( 2, isof, weight );
-  else           integration_lobatto( 3, isof, weight );
-
-  for ( iu=0; iu<npol; iu++ ) {
-    interpolation_polynomial( isof[iu], npol, h_u, p_u );
-    for ( iv=0; iv<npol; iv++ ) {
-      interpolation_polynomial( isof[iv], npol, h_v, p_v );
-      array_set( xq, 0., MDIM );
-      array_set( xu, 0., MDIM );
-      array_set( xv, 0., MDIM );
-      xis = etas = zetas = 0.;
-      for ( i=0; i<nface; i++ ) {
-        iu_node = i/npol;
-        iv_node = i%npol;
-        hu = h_u[iu_node];
-        hv = h_v[iv_node];
-        dhu = p_u[iu_node];
-        dhv = p_v[iv_node];
-        inol = face_nodes[i];
-        xis   += hu*hv*node_ref[inol*3+0];
-        etas   += hu*hv*node_ref[inol*3+1];
-        zetas  += hu*hv*node_ref[inol*3+2];
-        for ( idim=0; idim<ndim; idim++ ) {
-          x = node_coord[inol*MDIM+idim];
-          xq[idim] += hu*hv*x;
-          xu[idim] += dhu*hv*x;
-          xv[idim] += hu*dhv*x;
-        }
-      }
-      // face Jacobian |du x dv|
-      nx = xu[1]*xv[2] - xu[2]*xv[1];
-      ny = xu[2]*xv[0] - xu[0]*xv[2];
-      nz = xu[0]*xv[1] - xu[1]*xv[0];
-      jac = sqrt( nx*nx + ny*ny + nz*nz );
-      if ( jac<1.e-20 ) continue; // degenerate face region
-      // the element IP stress field at the section point (LOT 4)
-      msf_sigma_ip_3d( xis, etas, zetas, nper, iso, edof_sig, sig );
-      sxx = sig[msf_sig_sxx];
-      sxy = sig[msf_sig_sxy];
-      sxz = sig[msf_sig_sxz];
-      syy = sig[msf_sig_syy];
-      syz = sig[msf_sig_syz];
-      szz = sig[msf_sig_szz];
-      snn = nrm[0]*nrm[0]*sxx + nrm[1]*nrm[1]*syy + nrm[2]*nrm[2]*szz
-          + 2.*( nrm[0]*nrm[1]*sxy + nrm[0]*nrm[2]*sxz
-               + nrm[1]*nrm[2]*syz );
-      snt = nrm[0]*thick[0]*sxx + nrm[1]*thick[1]*syy
-          + nrm[2]*thick[2]*szz
-          + ( nrm[0]*thick[1] + nrm[1]*thick[0] )*sxy
-          + ( nrm[0]*thick[2] + nrm[2]*thick[0] )*sxz
-          + ( nrm[1]*thick[2] + nrm[2]*thick[1] )*syz;
-      dt = dl = 0.;
-      for ( idim=0; idim<ndim; idim++ ) {
-        dt += ( xq[idim]-face_mid[idim] )*thick[idim];
-        dl += ( xq[idim]-face_mid[idim] )*leng[idim];
-      }
-      in_nn  += 4.*weight[iu]*weight[iv]*snn*jac;
-      in_nt  += 4.*weight[iu]*weight[iv]*snt*jac;
-      in_m1  += 4.*weight[iu]*weight[iv]*snn*dt*jac;
-      in_m2  += 4.*weight[iu]*weight[iv]*snn*dl*jac;
-    }
+  array_set( mid, 0., MDIM );
+  for ( i=0; i<nface; i++ )
+    for ( idim=0; idim<ndim; idim++ )
+      mid[idim] += coords[face_nodes[i]*MDIM+idim]/nface;
+  rx = ry = rz = 0.;
+  for ( i=0; i<nface; i++ ) {
+    inol = face_nodes[i];
+    rx += f_elem[inol*ndim+0];
+    ry += f_elem[inol*ndim+1];
+    rz += f_elem[inol*ndim+2];
   }
-  // the weights sum to 1 per direction (Tochnog convention), the
-  // integration intervals are [-1,1] each: the factor 4 = the
-  // d(xi)*d(eta) = 2*2 of the two in-face coordinates (the 2D analog of
-  // the implicit 2*side_len/2 = side_len of the 1D side integration of
-  // the lot 2 code). Verified: the tunnel ring nor = p*R and the sheet
-  // bending mom1 = E*kappa/12 come out EXACT with the factor; without
-  // it they are 4x too small.
-  nor = in_nn/l;
-  she = ( in_nt<0. ? -in_nt : in_nt )/l;
-  mom1 = in_m1/l;
-  mom2 = in_m2/l;
+  nor = ( nrm[0]*rx + nrm[1]*ry + nrm[2]*rz )/l;
+  she = ( thick[0]*rx + thick[1]*ry + thick[2]*rz );
+  if ( she<0. ) she = -she;
+  she /= l;
+  mom1 = mom2 = 0.;
+  for ( i=0; i<nface; i++ ) {
+    inol = face_nodes[i];
+    arm = 0.;
+    for ( idim=0; idim<ndim; idim++ )
+      arm += ( coords[inol*MDIM+idim] - mid[idim] )*thick[idim];
+    mom1 += ( nrm[0]*f_elem[inol*ndim+0]
+            + nrm[1]*f_elem[inol*ndim+1]
+            + nrm[2]*f_elem[inol*ndim+2] )*arm;
+    arm = 0.;
+    for ( idim=0; idim<ndim; idim++ )
+      arm += ( coords[inol*MDIM+idim] - mid[idim] )*leng[idim];
+    mom2 += ( nrm[0]*f_elem[inol*ndim+0]
+            + nrm[1]*f_elem[inol*ndim+1]
+            + nrm[2]*f_elem[inol*ndim+2] )*arm;
+  }
+  mom1 /= l;
+  mom2 /= l;
 }
 
 // Per-element contribution for ONE node of a hex8/hex27 element (3D).
@@ -1303,8 +1405,9 @@ static void msf_element_contribution_3d( long int element, long int name,
     iend=0, jend=0, cand[6], dir_has=0, exclude=0, nface=0,
     npoint_ip=0, ip=0, c=0, nper3[3];
   double ddum[1], *coord=NULL, *node_dof=NULL, *edof=NULL,
-    coords[MDIM*MNOL], node_ref[3*MNOL], n_iso_v[3], sig_ip[6*MPOINT],
-    sig_n[6*MNOL], iso3[3][MPOINT], nrm[MDIM], tng[MDIM],
+    coords[MDIM*MNOL], sig_ip[6*MPOINT],
+    sig_n[6*MNOL], iso3[3][MPOINT], wrule3[3][MPOINT],
+    f_elem[3*MNOL], nrm[MDIM], tng[MDIM],
     centroid[MDIM], t_global[MDIM], side_nrm[6][MDIM],
     face_t[2][MDIM], face_l[2][MDIM], face_len[2], face_nor[2],
     face_she[2], face_m1[2], face_m2[2], max_dist=0., d=0., nor=0.,
@@ -1324,23 +1427,15 @@ static void msf_element_contribution_3d( long int element, long int name,
   nface = npol*npol;
   ncorner = 8;
 
-  // element nodes: coordinates + the reference (xi,eta,zeta) positions
-  // (the pol() node ordering: inol = inol_zeta*npol*npol +
-  // inol_eta*npol + inol_xi with the node grid n_iso) + the recovered
-  // nodal stresses (the fallback source, see below)
+  // element nodes: coordinates + the recovered nodal stresses (the
+  // fallback source, see below)
   el = get_new_int(DATA_ITEM_SIZE);
   db( ELEMENT, element, el, ddum, length_el, VERSION_NORMAL, GET );
   nnol = length_el - 1;
-  n_iso_v[0] = -1.;
-  n_iso_v[1] = ( npol==2 ? 1. : 0. );
-  n_iso_v[2] = 1.;
   for ( inol=0; inol<nnol; inol++ ) {
     node = el[1+inol];
     coord = db_dbl( NODE, node, VERSION_NORMAL );
     for ( i=0; i<ndim; i++ ) coords[inol*MDIM+i] = coord[i];
-    node_ref[inol*3+0] = n_iso_v[inol%npol];
-    node_ref[inol*3+1] = n_iso_v[(inol/npol)%npol];
-    node_ref[inol*3+2] = n_iso_v[inol/(npol*npol)];
     node_dof = db_dbl( NODE_DOF, node, VERSION_NORMAL );
     for ( c=0; c<6; c++ )
       sig_n[inol*6+c] = node_dof[stres_indx + c*nder];
@@ -1356,7 +1451,8 @@ static void msf_element_contribution_3d( long int element, long int name,
   // layout ip = izeta*nper[0]*nper[1] + ieta*nper[0] + ixi. A missing
   // record (options_element_dof -no is rejected in the validation)
   // skips the element with a warning.
-  msf_element_rule( element, element_group, name, npol, nnol, nper3, iso3 );
+  msf_element_rule( element, element_group, name, npol, nnol, nper3, iso3,
+    wrule3 );
   npoint_ip = nper3[0]*nper3[1]*nper3[2];
   if ( options_element_dof==-YES &&
        db_active_index( ELEMENT_DOF, element, VERSION_NORMAL ) ) {
@@ -1704,17 +1800,26 @@ static void msf_element_contribution_3d( long int element, long int name,
     // for the moment arms dt and dl ("the middle of the element" of
     // the manual 6.913; for the curved ring elements the corner-mean
     // element centroid lies on the chord and would add a spurious
-    // moment - verified in msf_tunnel3d)
+    // moment - verified in msf_tunnel3d). The section resultants come
+    // from the ELEMENT INTERNAL FORCES (LOT 5, see below).
     for ( j=0; j<nface; j++ ) face_nodes[iside][j] = side_nodes[fs][j];
     array_set( mid, 0., MDIM );
     for ( j=0; j<nface; j++ ) {
       for ( i=0; i<ndim; i++ )
         mid[i] += coords[face_nodes[iside][j]*MDIM+i]/nface;
     }
-    msf_integrate_face_3d( npol, face_nodes[iside], coords, node_ref,
-      sig_ip, nper3, iso3, side_nrm[fs], face_t[iside], face_l[iside],
-      mid, face_len[iside], face_nor[iside], face_she[iside],
-      face_m1[iside], face_m2[iside] );
+  }
+  // the element internal forces (LOT 5): f_elem = int B^T*sigma dV,
+  // the consistent nodal forces of the IP stress field - in equilibrium
+  // with the applied loads for the converged solve. The face resultants
+  // (nor/she/mom1/mom2) follow from the free body of the face nodes.
+  msf_element_internal_forces_3d( npol, nnol, coords, nper3, iso3, wrule3,
+    sig_ip, f_elem );
+  for ( iside=0; iside<2; iside++ ) {
+    long int fs = ( iside==0 ? iend : jend );
+    msf_face_resultants_3d( npol, face_nodes[iside], coords, f_elem,
+      side_nrm[fs], face_t[iside], face_l[iside], face_len[iside],
+      face_nor[iside], face_she[iside], face_m1[iside], face_m2[iside] );
   }
 
   // role of the current node
