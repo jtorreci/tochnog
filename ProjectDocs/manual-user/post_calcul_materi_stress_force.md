@@ -22,8 +22,25 @@ The 2D result is a set of 9 items per node:
 | `moms_sig` | moment per unit length, physical size |
 
 The 3D result has 16 items (nor, she, mom1, mom2 with 3 components +
-size each); the 3D numerical integration is NOT implemented yet (the
-values are 0, pending lot 3).
+size each):
+
+| item | meaning |
+|------|---------|
+| `norx_sig` `nory_sig` `norz_sig` | normal force per unit length, plot components |
+| `nors_sig` | normal force per unit length, physical size |
+| `shex_sig` `shey_sig` `shez_sig` | shear force per unit length, plot components |
+| `shes_sig` | shear force per unit length, physical size |
+| `mom1x_sig` `mom1y_sig` `mom1z_sig` | moment in THICKNESS direction per unit length, plot components |
+| `mom1s_sig` | that moment, physical size |
+| `mom2x_sig` `mom2y_sig` `mom2z_sig` | moment in LENGTH direction per unit length, plot components |
+| `mom2s_sig` | that moment, physical size |
+
+The 3D numerical integration (hex8/hex27) is implemented (lot 3):
+`mom1` = the thickness bending moment (radial bending moment in a
+tunnel shell, thickness bending moment in a sheet pile) and `mom2` =
+the length-direction bending moment (manual 6.913), both from the
+σ_nn moment contributions with a distance relative to the middle of
+the element.
 
 Definitions (manual 6.913): `nor` = normal stresses σ_nn integrated
 over the thickness (a positive value = tension); `she` = shear stresses
@@ -93,9 +110,29 @@ average of the two adjacent sections.
 
 ## Notes
 
-- 2D supports `-quad4` and `-quad9` elements only (error for other
-  element types in the target groups); 3D will support `-hex8` /
-  `-hex27` (lot 3).
+- 2D supports `-quad4` and `-quad9`; 3D supports `-hex8` / `-hex27`
+  (error for other element types in the target groups, manual 6.913).
+- 3D face selection (manual 6.909/6.911): specify
+  `post_calcul_materi_stress_force_direction_exclude` (typically the
+  tunnel length axis) or `_include` (typically the sheet pile height
+  direction) so that Tochnog knows on which element sides the forces
+  act; both together are an error. The direction must leave exactly 4
+  element sides consistent with it (manual 6.913), otherwise the
+  element is skipped with a warning. The two END faces where the
+  forces are primarily calculated (manual 6.908) are the 2 sides most
+  perpendicular to the thickness direction defined by the reference
+  point.
+- 3D thickness direction in a face: the SHORTEST element direction by
+  default; `post_calcul_materi_stress_force_thickness_switch -yes`
+  switches to the LONGEST (manual 6.917).
+- `average` is available for quad9 (2D) and hex27 (3D) elements.
+- KNOWN LIMITATION (current GNU 3D mixed solver, documented in the
+  developer manual): the 3D materi_stress + BiCG solve is degenerate
+  for many load configurations (tip-loaded cantilevers, consistent
+  pressure loads on curved faces) - the validation tests of this lot
+  use PRESCRIBED deformations (Dirichlet) with exact analytical
+  expectations. The force-loaded 3D validation is pending the solver
+  fix (separate lot).
 - The results are per unit length l; the x/y (and z) components are
   ONLY convenient global plot vectors - the physical design value is
   the size (`nors_sig`, `shes_sig`, `moms_sig`).
@@ -115,6 +152,5 @@ average of the two adjacent sections.
 - Axisymmetric 2D: implemented as l = 2π·radius (radial coordinate of
   the element centroid; area.cc convention). Not covered by a
   dedicated test in this lot (pending).
-- `outer -yes` and `plot_switch` are implemented in 2D.
-- The 3D integration (hex8/hex27) is pending (lot 3): 3D values are 0
-  with a notice.
+- `outer -yes` and `plot_switch` are implemented in 2D (3 switches)
+  and 3D (4 switches, manual 6.916).

@@ -253,7 +253,7 @@ Each file corresponds to the same feature in the [User Manual](../manual-user/).
 
 ## Sub-sprint materi_stress_force (lot 1 — infrastructure)
 
-- [post_calcul_materi_stress_force](post_calcul_materi_stress_force.md) — the 2D numerical integration (lot 2, calcul_force.cc): end-face selection by |n*t|, stress integration over the faces (Gauss(2)/Lobatto(3)), moment with dt=(x-C)*t, quad9 middle-plane averaging, outer/plot_switch, the averaged-node flag; design decisions + FE accuracy evidence (msf_beam2d/pure/quad9/nor/shear).
+- [post_calcul_materi_stress_force](post_calcul_materi_stress_force.md) — the 2D (lot 2) and 3D (lot 3) numerical integration (calcul_force.cc): end-face selection, face quadrature, moment arms, middle-plane averaging, the averaged-node flag; 3D: direction_exclude/include face selection, per-face t/l frame, mom1/mom2, hex27 average; design decisions + FE accuracy evidence + the MAJOR GOTCHA of the degenerate 3D mixed solver (tests use prescribed deformations).
 - [post_calcul_materi_stress_force_element_group](post_calcul_materi_stress_force_element_group.md) — mandatory config record (no_index=1, data_required=POST_CALCUL); validated in post_calcul_materi_stress_force_validate() (calcul_force.cc); consumed by the 2D integration (lot 2) and 3D (lot 3).
 - [post_calcul_materi_stress_force_direction_exclude](post_calcul_materi_stress_force_direction_exclude.md) — variable DOUBLE (exactly ndim); XOR with direction_include; 3D requires one of them; 2D warns and ignores.
 - [post_calcul_materi_stress_force_direction_exclude_epsilon](post_calcul_materi_stress_force_direction_exclude_epsilon.md) — fixed 1 double; default 1.e-8 documented, consumed in L2/L3.

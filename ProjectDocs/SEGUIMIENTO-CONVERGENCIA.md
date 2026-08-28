@@ -58,6 +58,7 @@ suite sfnet, o un test propio. El registro completo:
 | Carril A Fase 2 (`control_mesh_convert` bar2→quad4) | `490545b` | 2026-08-14 | validado (test iface_conv): nodos 7,8 en x=0.99 creados, elemento reescrito quad4, bloques reconectados. |
 | Carril A Fase 4 (`control_print_interface_stress` 2D) | `01f6c3e` | 2026-08-14 | validado (test iface_stress): interface_stress.0 generado con distancia+sign (strain acumulado * kn); sign crece con la compresion. sigt=0 y 3D pendientes. |
 | `post_calcul -materi_stress -force` (integración 2D) | `1babf2d` | 2026-08-28 | analítico por estática (tests propios): msf_beam2d (moms = P·(8−x) 0-2.5%, promediado exacto), msf_beam2d_pure (M cte, shes=0), msf_quad9 (promedio exacto, -primary 15/27), msf_quad9_noavg (avg -no), msf_nor (N=2e-2 0-5%), msf_shear (she = G·γ·h = 0.384615 EXACTO) |
+| `post_calcul -materi_stress -force` (integración 3D hex8/hex27) | `fa7650b` | 2026-08-28 | analítico con deformación prescrita (tests propios; GOTCHA del solve mixto 3D del GNU documentado): msf_sheet3d (hex27 flexión prescrita: mom1 = E·κ/12 = 0.0833333 EXACTO 81/81), msf_sheet3d_hex8 (hex8 corte puro: she = G·γ·t = 0.5 EXACTO; limita del hex8 en flexión documentado), msf_hex27_avg (-all 45 vs -primary 27, promedio exacto), msf_tunnel3d (anillo hex27 expansión radial prescrita: nor = E·u0·t/R = p·R = 0.1 EXACTO 144/144, mom1 = she = 0) |
 
 **Carril A Fase 4 — sigt implementado** | `8ef45c4` | 2026-08-14 | `interface_sigt` ya no es 0: se lee del history `element_interface_force_tang` (fuerza tangencial total acumulada, Fase 3), consistente con `sign`. Verificado con probe: sigt=23.28 == F_t acumulada del último paso. Documentado en ambos manuales. 3D pendiente. |
 
@@ -694,7 +695,7 @@ marcado `PENDIENTE` puede estar cubierto en el GNU bajo otro nombre:
 - [x] `control_print_interface_stress_2d_coordinates` — implementada (commit `01f6c3e`, 2026-08-14)
 - [x] `control_print_interface_stress_3d_geometry` — implementada (commit `b8804c6`, 2026-08-16; print_interface_stress.cc:65-89)
 - [x] `control_print_interface_stress_3d_order` — implementada (commit `b8804c6`, 2026-08-16)
-- [x] `control_print_materi_stress_force` — sub-sprint materi_stress_force, lote 1 (2026-08-28; imprime las fuerzas/momentos de `post_calcul -materi_stress -force` → materi_stress_force.<icontrol> — el "index" del manual es el índice del RECORD, convención de beam_force_moment — con cabecera de comentarios (#) explicando las columnas (9 items 2D / 16 items 3D, una línea por nodo); método -all/-primary (idénticos hasta el promediado de L2/L3); valores 0 hasta la integración numérica; sin bloque -force → sin archivo)
+- [x] `control_print_materi_stress_force` — sub-sprint materi_stress_force, lotes 1-3 (2026-08-28; imprime las fuerzas/momentos de `post_calcul -materi_stress -force` → materi_stress_force.<icontrol> — el "index" del manual es el índice del RECORD — con cabecera de comentarios (#) explicando las columnas (9 items 2D / 16 items 3D, una línea por nodo); método -all/-primary (desde L2/L3 -primary omite los nodos promediados quad9/hex27); sin bloque -force → sin archivo)
 - [x] `control_print_mesh_dof` — Sprint 11, lote 1 (2026-08-26; alias de print_mesh_dof)
 - [x] `control_print_node` — Sprint 11, lote 5 (2026-08-27; print_node.cc: un archivo por parte seleccionada — labels de dof -> label.index (ej. velx.10), items node_dof_calcul -> post_calcul_names (ej. avel.10), números -> <record>_<n>.index; sin partes -> todas)
 - [x] `control_print_node_angular` — Sprint 11, lote 5 (2026-08-27; ángulo en GRADOS en vez de coordenadas; 2D solo -yes -yes sin switch_z; 3D las 3 combinaciones; 1D error)
@@ -1652,16 +1653,16 @@ Nota: `group_interface_ground` del checklist anterior NUNCA existió (artefacto 
 - [ ] `post_calcul_apparent_total` — PENDIENTE
 - [ ] `post_calcul_label` — PENDIENTE
 - [ ] `post_calcul_limit` — PENDIENTE
-- [x] `post_calcul_materi_stress_force_average` — sub-sprint materi_stress_force, lote 1 + 2 (2026-08-28; quad9/hex27: promedio de las fuerzas/momentos de las caras opuestas en los nodos del plano medio; default -yes; IMPLEMENTADO en 2D (lote 2): promedio EXACTO + flag por nodo para -primary; hex27 pendiente en L3)
-- [x] `post_calcul_materi_stress_force_direction_exclude` — sub-sprint materi_stress_force, lote 1 (2026-08-28; 3D: caras con |n·dir| > 1-eps excluidas; XOR con direction_include; en 2D aviso y se ignora)
-- [x] `post_calcul_materi_stress_force_direction_exclude_epsilon` — sub-sprint materi_stress_force, lote 1 (2026-08-28; tolerancia del test de exclusión, default 1.e-8)
-- [x] `post_calcul_materi_stress_force_direction_include` — sub-sprint materi_stress_force, lote 1 (2026-08-28; 3D: caras con |n·dir| < eps excluidas; la alternativa a direction_exclude)
-- [x] `post_calcul_materi_stress_force_direction_include_epsilon` — sub-sprint materi_stress_force, lote 1 (2026-08-28; tolerancia del test de inclusión, default 1.e-8)
-- [x] `post_calcul_materi_stress_force_element_group` — sub-sprint materi_stress_force, lote 1 (2026-08-28; grupos objetivo, OBLIGATORIO; lista INTEGER no_index=1)
-- [x] `post_calcul_materi_stress_force_outer` — sub-sprint materi_stress_force, lote 1 + 2 (2026-08-28; -yes restringe a los nodos exteriores primarios, los más lejanos del reference_point; default -no; IMPLEMENTADO en 2D en L2)
-- [x] `post_calcul_materi_stress_force_plot_switch` — sub-sprint materi_stress_force, lote 1 + 2 (2026-08-28; invierte la dirección de los vectores de plot; 3 switches en 2D / 4 en 3D — por VECTOR item; IMPLEMENTADO en 2D en L2)
-- [x] `post_calcul_materi_stress_force_reference_point` — sub-sprint materi_stress_force, lote 1 + 2 (2026-08-28; punto de referencia por element group (ndim valores); 3D obligatorio, 2D sin él → aviso + default (0,0); IMPLEMENTADO en 2D en L2: define t̂ y las caras extremas)
-- [x] `post_calcul_materi_stress_force_thickness_switch` — sub-sprint materi_stress_force, lote 1 (2026-08-28; -yes usa la dirección más LARGA del elemento como espesor estructural; uno por group)
+- [x] `post_calcul_materi_stress_force_average` — sub-sprint materi_stress_force, lotes 1-3 (2026-08-28; quad9/hex27: promedio de las fuerzas/momentos de las caras opuestas en los nodos del plano medio; default -yes; IMPLEMENTADO en 2D (lote 2) y 3D hex27 (lote 3): promedio EXACTO + flag por nodo para -primary; msf_hex27_avg 45 vs 27)
+- [x] `post_calcul_materi_stress_force_direction_exclude` — sub-sprint materi_stress_force, lotes 1 + 3 (2026-08-28; 3D: caras con |n·dir| > 1-eps excluidas; XOR con direction_include; en 2D aviso y se ignora; CONSUMIDO en L3: selección de caras, túnel msf_tunnel3d)
+- [x] `post_calcul_materi_stress_force_direction_exclude_epsilon` — sub-sprint materi_stress_force, lotes 1 + 3 (2026-08-28; tolerancia del test de exclusión, default 1.e-8; consumido en L3)
+- [x] `post_calcul_materi_stress_force_direction_include` — sub-sprint materi_stress_force, lotes 1 + 3 (2026-08-28; 3D: caras con |n·dir| < eps excluidas; la alternativa a direction_exclude; CONSUMIDO en L3: sheet pile msf_sheet3d)
+- [x] `post_calcul_materi_stress_force_direction_include_epsilon` — sub-sprint materi_stress_force, lotes 1 + 3 (2026-08-28; tolerancia del test de inclusión, default 1.e-8; consumido en L3)
+- [x] `post_calcul_materi_stress_force_element_group` — sub-sprint materi_stress_force, lotes 1-3 (2026-08-28; grupos objetivo, OBLIGATORIO; lista INTEGER no_index=1; validado: 2D solo quad4/quad9, 3D solo hex8/hex27)
+- [x] `post_calcul_materi_stress_force_outer` — sub-sprint materi_stress_force, lotes 1-3 (2026-08-28; -yes restringe a los nodos exteriores primarios, los más lejanos del reference_point; default -no; IMPLEMENTADO en 2D (L2) y 3D (L3))
+- [x] `post_calcul_materi_stress_force_plot_switch` — sub-sprint materi_stress_force, lotes 1-3 (2026-08-28; invierte la dirección de los vectores de plot; 3 switches en 2D / 4 en 3D — por VECTOR item; IMPLEMENTADO en 2D (L2) y 3D (L3))
+- [x] `post_calcul_materi_stress_force_reference_point` — sub-sprint materi_stress_force, lotes 1-3 (2026-08-28; punto de referencia por element group (ndim valores); 3D obligatorio, 2D sin él → aviso + default (0,0); IMPLEMENTADO en 2D (L2) y 3D (L3): define t̂, las caras extremas y la orientación del vector de plot)
+- [x] `post_calcul_materi_stress_force_thickness_switch` — sub-sprint materi_stress_force, lotes 1 + 3 (2026-08-28; -yes usa la dirección más LARGA del elemento como espesor estructural; uno por group; CONSUMIDO en L3: t̂ de la cara = menor extensión física, -yes → la mayor)
 - [ ] `post_calcul_multiply` — PENDIENTE
 - [ ] `post_calcul_safety_default` — PENDIENTE
 - [ ] `post_calcul_safety_maximum` — PENDIENTE
