@@ -154,3 +154,38 @@ results. The diagnosis (with quantitative evidence) established:
   honest solver: 79 iterations, mom ≈ 1.1·P·(L−x).)
 - Moment extraction for meshes with 2+ elements in thickness was
   inconclusive (open question).
+
+---
+
+## 6. The definitive comparison: Tochnog Professional (2026-08-28)
+
+The user obtained the Tochnog Professional binary (version 02-08-2026, from
+the author's public Drive "PublicDennis") and we ran it on the SAME
+pathological models. **The bug does not survive in the Professional.**
+
+- **Cantilever quad4 1-element-in-thickness** (the Professional's own
+  `force7.dat` statics rebuilt with quad4 instead of quad9): Professional
+  gives N = -12.34, V = +100, M(x=50) = -5000, M(x=0) = -10000,
+  M(x=100) = 0 — ALL EXACT to 1e-10. The GNU gives 0.2315×.
+- **Fixed-fixed beam, uniform load, quad4 1-in-thickness** (the user's
+  road-base case): |M_end| + |M_center| = 825 + 425 = **1250 = pL²/8
+  EXACT** to 1e-10. The individual 825/425 are the correct deep-beam
+  Timoshenko fixed-end moments for h/L = 0.1 (Euler-Bernoulli would give
+  833/417); the sum is the statics identity the GNU violates by ≈7×.
+- The Professional's own validation family uses quad9 (force7/8) and 2×2
+  in-section hex8 (force10/13) — defensive test design; the quad4
+  1-in-thickness case itself works correctly in the Professional.
+- The GNU's staggered "stress follows the principal unknowns" architecture
+  is documented in the 2011 open manual — the defect is inherited
+  open-source lineage, not present in the proprietary product.
+
+Full evidence: `ProjectDocs/DIAG-SOLVE-MIXTO.md` §11.
+
+## 7. Status of the three lines (updated)
+
+| Line | Status | New material from the Professional comparison |
+|------|--------|-----------------------------------------------|
+| 1 — staggered fixed point + solver honesty | Evidence complete; repair A+B done, C/D pending | The Professional proves the correct answer is attainable with the same element/mesh — isolates the open-source scheme as the defect carrier |
+| 2 — solver formulation sensitivity | Initial measurements; needs the repair to complete the comparison table | Bi-CG ≡ SuperLU (md5) + the Professional's exact results bracket "what the solver should deliver" |
+| 3 — pedagogical hand calculation | Case study complete | The road-base case now has a positive control: the SAME model gives exact statics in the Professional — the detector works, the defect is software-specific |
+

@@ -579,3 +579,84 @@ solve_iterative_bicg.md`.
   group_element_selective_reduced_integration.md` (SRI; the "93.75 %"
   reference is the pure-displacement system), `ProjectDocs/
   SEGUIMIENTO-CONVERGENCIA.md` (tracking row added).
+
+---
+
+## 11. The definitive test: Tochnog Professional comparison (2026-08-28)
+
+The Tochnog Professional binary (version 02-08-2026, from the author's
+public Drive, "PublicDennis") was obtained and run on the SAME pathological
+models that expose the GNU bug. **The bug does not survive in the
+Professional.**
+
+### 11.1 Cantilever, quad4, 1 element in thickness (force7q4.dat)
+
+The exact model of the Professional's own `force7.dat` validation test
+(which uses quad9) rebuilt with **quad4** elements (L=100, h=10, 2 elements
+along x, 1 in thickness, tip load (fx,fy)=(-1.234,-10.)/unit length).
+Statics: N = -12.34, V = +100, M(x=50) = -5000, M(x=0) = -10000, M(x=100) = 0.
+
+| quantity | node_dof_calcul value (Professional) | statics |
+|---|---|---|
+| nory_sig (node 2, x=50) | -12.33999999989 | -12.34 EXACT |
+| shey_sig (node 2, x=50) | +100.0000000000 | +100 EXACT |
+| momy_sig (node 2, x=50) | -4999.999999991 | -5000 EXACT |
+| momy_sig (node 1, x=0)  | -10000.00000002 | -10000 EXACT |
+| momy_sig (node 3, x=100) | +3.38e-08 | 0 EXACT |
+
+Targets pass (exit 0). The GNU on the same configuration gives 0.2315×
+(§5.4) — the locked section moments.
+
+### 11.2 Fixed-fixed beam, uniform load, quad4 1-in-thickness (ffq4.dat)
+
+The user's road-base check: L=100, h=10, 10 quad4 elements along x, 1 in
+thickness, uniform p=1/unit length on the top edge, both ends fixed.
+The statics identity |M_end| + |M_center| = pL²/8 = 1250 must hold.
+
+| node | momy_sig (Professional) | expected |
+|---|---|---|
+| 1 (x=0, end) | -825.0000000036 | -pL²/12 = -833.33 (Euler) / -825 (deep beam, Timoshenko) |
+| 6 (x=50, center) | +425.0000000068 | +pL²/24 = +416.67 (Euler) / +425 (deep beam) |
+| sum | 1250.0000000104 | pL²/8 = 1250 EXACT |
+
+**|M_end| + |M_center| = 1250 = pL²/8 exactly** (to 1e-10). The individual
+values (825/425 instead of Euler 833/417) are the correct deep-beam
+(Timoshenko) fixed-end moments for h/L = 0.1 — shear deformation is
+physical here, not an error. The statics identity that the GNU violates by
+a factor ≈ 7 (§8.1 road model) holds exactly in the Professional.
+
+Nodal shear (shey_sig) shows the same free-surface pollution band seen in
+the GNU MSF family (45 vs the exact reaction 50 at the constrained ends;
+5 vs 0 at the center) — a shared characteristic of nodal section-force
+averaging, unrelated to the lock.
+
+### 11.3 What this proves
+
+- The quad4 1-element-in-thickness locking + staggered-scheme fixed point +
+  dishonest solver stopping is **specific to the GNU open-source line**
+  (verified back to the 2009/2011-era binary architecture: "stresses follow
+  from the principal unknowns", 2011 manual §"initia").
+- The Professional produces exact section statics with the SAME element,
+  SAME mesh, SAME configuration → its formulation/solver does not suffer the
+  bug (consistent with a monolithic mixed solve or an honest solver; the
+  exact-to-1e-10 results suggest a formulation whose section equilibrium is
+  built in).
+- The Professional's own validation tests use quad9 (force7/8) and 2×2
+  elements in section for hex8 (force10/13) — a defensive choice that
+  sidesteps the GNU-only failure mode; the quad4 1-in-thickness case itself
+  works correctly in the Professional.
+
+### 11.4 Reproducibility
+
+- Professional binary: `tochnog_version_02-08-2026` from the author's public
+  Drive folder (PublicDennis; tochnog_linux_64_bit.tar.gz, build date
+  2-8-2026; statically linked, with debug_info). Not committed to this repo
+  (56 MB).
+- Test inputs: `/tmp/opencode/tn_prof/force7q4/force7q4.dat` (11.1) and
+  `/tmp/opencode/tn_prof/fixedfixed/ffq4.dat` (11.2) — regenerable; the
+  Professional syntax is documented in its own `test/other/force*.dat`.
+- Professional's own validation family: `test/other/force7.dat` (quad9 2D),
+  `force10.dat` (hex8 3D), `force13.dat` (hex8 3D), `beam2d_3.dat`,
+  `test/tutorial/tutorial_4/tutorial_4.dat` — all use
+  `post_calcul -materi_stress -force` with statics targets.
+
