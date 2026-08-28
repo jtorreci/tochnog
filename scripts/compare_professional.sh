@@ -115,8 +115,8 @@ RC=0
 # ---------------------------------------------------------------------------
 for m in gforce7 gforce7q4; do
   case "$m" in
-    gforce7)   pdat="force7.dat"  ;;
-    gforce7q4) pdat="force7q4.dat" ;;
+    gforce7)   pdat="force7.dat";  gnode=7 ;;
+    gforce7q4) pdat="force7q4.dat"; gnode=2 ;;
   esac
   wd="$WORK/$m"; mkdir -p "$wd"
   gd="$wd/gnu"; pd="$wd/prof"; mkdir -p "$gd" "$pd"
@@ -129,11 +129,13 @@ for m in gforce7 gforce7q4; do
   echo "|---|---|---|---|---|---|"
   if [ -f "$gd/$m.dbs" ] && [ -f "$pd/${pdat%.dat}.dbs" ]; then
     if gnu_diverged "$gd"; then
-      p=$(ndc "$pd/${pdat%.dat}.dbs" 2 1); echo "| N | 2 | ±12.34 | SOLVER DIVERGED (residual in $gd/run.log) | $p | - |"
-      p=$(ndc "$pd/${pdat%.dat}.dbs" 2 4); echo "| V | 2 | ±100 | SOLVER DIVERGED | $p | - |"
-      p=$(ndc "$pd/${pdat%.dat}.dbs" 2 7); echo "| M | 2 | ±5000 | SOLVER DIVERGED | $p | - |"
+      p=$(ndc "$pd/${pdat%.dat}.dbs" 2 2); echo "| N | 2 | ±12.34 | SOLVER DIVERGED (residual in $gd/run.log) | $p | - |"
+      p=$(ndc "$pd/${pdat%.dat}.dbs" 2 5); echo "| V | 2 | ±100 | SOLVER DIVERGED | $p | - |"
+      p=$(ndc "$pd/${pdat%.dat}.dbs" 2 8); echo "| M | 2 | ±5000 | SOLVER DIVERGED | $p | - |"
     else
-      for spec in "N 7 1 12.34" "V 7 4 100" "M 7 7 5000"; do
+      # magnitude indices (s components): 2=nors 5=shes 8=moms; the
+      # directional components flip sign between binaries (t orientation)
+      for spec in "N $gnode 2 12.34" "V $gnode 5 100" "M $gnode 8 5000"; do
         set -- $spec; qty=$1; node=$2; idx=$3; an=$4
         g=$(ndc "$gd/$m.dbs" "$node" "$idx")
         p=$(ndc "$pd/${pdat%.dat}.dbs" "$node" "$idx")
@@ -156,8 +158,8 @@ cp "$SUITE/$m.dat" "$gd/" && cp "$PROF_DIR/ffq4.dat" "$pd/"
 run_gnu "$gd" "$m.dat"; GRC=$?; run_prof "$pd" "ffq4.dat"; PRC=$?
 echo "## $m (fixed-fixed beam, 10 quad4, p=1/unit length on top edge)"
 if [ -f "$gd/$m.dbs" ] && [ -f "$pd/ffq4.dbs" ]; then
-  ge=$(ndc "$gd/$m.dbs" 1 7); pe=$(ndc "$pd/ffq4.dbs" 1 7)
-  gc=$(ndc "$gd/$m.dbs" 6 7); pc=$(ndc "$pd/ffq4.dbs" 6 7)
+  ge=$(ndc "$gd/$m.dbs" 1 8); pe=$(ndc "$pd/ffq4.dbs" 1 8)
+  gc=$(ndc "$gd/$m.dbs" 6 8); pc=$(ndc "$pd/ffq4.dbs" 6 8)
   awk -v ge="$ge" -v pe="$pe" -v gc="$gc" -v pc="$pc" 'BEGIN{
     gs = (ge<0?-ge:ge) + (gc<0?-gc:gc)
     ps = (pe<0?-pe:pe) + (pc<0?-pc:pc)
@@ -181,7 +183,7 @@ echo "## $m (8 quad9, same statics; Professional reference = its force7 family)"
 echo "| qty | node(x) | analytic | GNU |"
 echo "|---|---|---|---|"
 if [ -f "$gd/$m.dbs" ]; then
-  for spec in "N 23 1 12.34" "M 23 7 5000" "M 35 7 2500" "V 23 4 100"; do
+  for spec in "N 23 2 12.34" "M 23 8 5000" "M 35 8 2500" "V 23 5 100"; do
     set -- $spec; qty=$1; node=$2; idx=$3; an=$4
     g=$(ndc "$gd/$m.dbs" "$node" "$idx")
     awk -v q="$qty" -v n="$node" -v g="$g" -v a="$an" 'BEGIN{
@@ -194,26 +196,29 @@ echo ""
 
 # ---------------------------------------------------------------------------
 # 3D cantilevers (hex8). Statics at z=50 per unit width: N=-12.34, V=-100,
-# M=-5000. The GNU's 3D mixed solve is DOCUMENTED as degenerate for loaded
-# hex8 (manual-developer/post_calcul_materi_stress_force.md): expect a
-# diverged solve; the Professional is exact.
+# M=-5000. POST-FIX (lot C/D, 2026-08-28): the GNU converges (the
+# previous divergence was an input BC bug - the -ra 1 4 list clamped only
+# two opposite corners of the bottom face, leaving a rigid rotation free;
+# fixed to 1 2 3 4). The axial N is EXACT; the section moment stays at the
+# locked hex8 element solution (element physics; SRI for hex8 is future
+# work); the Professional is exact.
 # ---------------------------------------------------------------------------
 for m in gforce10 gforce13; do
   case "$m" in
-    gforce10) pdat="force10.dat"; pnode=5; pidx=1; pan=12.34 ;;
+    gforce10) pdat="force10.dat"; pnode=5; pidx=3; pan=12.34 ;;
     gforce13) pdat="force13.dat"; pnode=5; pidx=3; pan=12.34 ;;
   esac
   wd="$WORK/$m"; mkdir -p "$wd"; gd="$wd/gnu"; pd="$wd/prof"; mkdir -p "$gd" "$pd"
   cp "$SUITE/$m.dat" "$gd/" && cp "$PROF_DIR/$pdat" "$pd/"
   run_gnu "$gd" "$m.dat"; GRC=$?; run_prof "$pd" "$pdat"; PRC=$?
-  echo "## $m (hex8 3D cantilever; GNU 3D mixed solve documented degenerate)"
+  echo "## $m (hex8 3D cantilever; GNU converged with the BC fix)"
   if [ -f "$gd/$m.dbs" ] && [ -f "$pd/${pdat%.dat}.dbs" ]; then
     p=$(ndc "$pd/${pdat%.dat}.dbs" "$pnode" "$pidx")
     if gnu_diverged "$gd"; then
       echo "| nory_sig (z=50) | 5 | ±$pan | GNU: SOLVER DIVERGED (documented 3D mixed-solve degeneracy) | PROF: $p | - |"
     else
-      g=$(ndc "$gd/$m.dbs" 5 1)
-      echo "| nory_sig (z=50) | 5 | ±$pan | GNU: $g | PROF: $p | $(ratio "$g" "$p") |"
+      g=$(ndc "$gd/$m.dbs" 5 3)
+      echo "| nors_sig (z=50) | 5 | ±$pan | GNU: $g | PROF: $p | $(ratio "$g" "$p") |"
     fi
   else
     echo "| (no .dbs) GNU rc=$GRC PROF rc=$PRC |"; RC=1

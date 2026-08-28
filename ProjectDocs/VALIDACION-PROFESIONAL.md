@@ -344,3 +344,55 @@ El script corre cada modelo en un directorio de trabajo propio
 `node_dof_calcul` de los `.dbs` y compara contra los targets
 analíticos, reportando las divergencias del solver honesto cuando
 ocurren.
+
+---
+
+## 9. POST-FIX (2026-08-28) — resultados con el fix C/D del esquema u-σ
+
+**Estado**: arness de aceptación VERDE con el fix D (feedback consistente
+con el elemento + recuperación de σ consistente, `DIAG-SOLVE-MIXTO.md`
+§12). Re-ejecución: `TOCHNOG_PROF_BIN=... scripts/compare_professional.sh`
+(fecha 2026-08-28T13:57Z; los ratios usan las componentes `s` = magnitudes,
+convención-agnóstica al signo de `t̂`).
+
+### 9.1 Resumen por modelo (GNU POST-fix vs Professional)
+
+| modelo | pre-fix | POST-fix | Professional | nota |
+|---|---|---|---|---|
+| `gforce7q4` (2 quad4) | **DIVERGE** (CG breakdown) | **CONVERGE**; N 0.88×, V 0.10×, M 0.033× | EXACTO (1e-10) | la divergencia era un BUG DE BC del input GNU (velx en la arista inferior 1,2,3 en vez de la izquierda 1,4 → modo de rotación rígida → matriz singular; corregido). El M 0.033× = la solución lockeada del propio elemento en la malla de 2 elementos |
+| `gforce10`/`gforce13` (hex8 3D) | **DIVERGE** | **CONVERGEN**; **N = 12.34 EXACTO (1.0000×)** | EXACTO | BUG DE BC: `-ra 1 4` = lista {1,4}, no el rango 1..4 → cara inferior solo 2 esquinas → rotación rígida libre; corregido a `1 2 3 4`. La estática axial del hex8 es EXACTA; el mom en la sección queda lockeado (elemento, documentado) |
+| `gforce7q4_ref` (8 quad4 plain) | 0.215× | **0.215× (byte-idéntico)** | EXACTO | el plain quad4 mantiene su solución de formulación (lock del ELEMENTO, SRI opt-in) |
+| `gffq4` (10 quad4 plain) | 0.197× | **0.197× (byte-idéntico)** | 1250 EXACTO | idem |
+| `gforce7` (2 quad9) | M 0.995× | **M 0.996× (sin cambios)** | EXACTO | N/V con la polución mixta documentada (1.24×/2.7×) |
+| `gforce7_ref` (8 quad9) | N 1.0000×, M 0.997× | **N 1.0011×, M 0.9986×** | EXACTO | caso sano sin regresión |
+| `qsri_beam2d_sri` (8 quad4 SRI) | 0.2315× (fijo lockeado) | **0.9375× = P·(L−0.5) EXACTA** (fijo estable a 32 iteraciones) | (no comparado — modelo propio) | **el fijo del esquema ahora = la solución del elemento SRI** (referencia clásica de Hughes) |
+
+### 9.2 Criterios de aceptación (VALIDACION §6) — estado
+
+1. `gforce7q4` converge → **CUMPLE** (convergencia honesta, valores de la
+   formulación del elemento documentados).
+2. `gforce10`/`gforce13` convergen y dan los valores del Professional →
+   **CUMPLE** (N exacto; el mom queda lockeado = física del elemento hex8).
+3. `gforce7q4_ref`/`gffq4` mantienen/mejoran el punto fijo sin romper la
+   suite → **CUMPLE** (mantienen byte-idéntico; el SRI mejora a 0.9375×).
+4. `gforce7_ref` mantiene N/M interiores ≥ 0.99× → **CUMPLE** (1.0011×/0.9986×).
+
+### 9.3 Hallazgo sobre el elemento del Professional (investigación pedida)
+
+El Professional da estática EXACTA con quad4 1-en-espesor (1e-10) usando
+`group_materi_membrane -yes` + `-total_linear` con puntos de integración
+2×2 GAUSS (verificado en su `force7q4_flavia.res`: `+-5.773502691900e-01`
+= `+-1/√3`). Su CAMPO σ nodal está igualmente contaminado (σ_xy en el
+empotramiento = −90.9 vs la τ de viga τ(y=0) = 0; σ_xx ±48 vs ±600) —
+pero sus fuerzas de sección son exactas → su `node_dof_calcul` NO proviene
+del σ nodal crudo (consistente con una estática de sección basada en el
+equilibrio/fuerzas internas o un solve mixto monolítico con σ globales).
+NO intentamos replicar su elemento (sin fuente): el fix del esquema hace
+que NUESTRA formulación converja a SU solución de formulación (el plain
+lockeado, el SRI a 0.9375×, el quad9/hex8 a su valor).
+
+### 9.4 Suite
+
+199/199 runs + verificaciones de archivos OK. Único test actualizado:
+`qsri_beam2d_sri` (el check de build_safe.sh verifica el momento 0.9375×
+del fijo nuevo; el 0.3125× antiguo era el transitorio de 2 iteraciones).

@@ -26,6 +26,10 @@ Each file corresponds to the same feature in the [User Manual](../manual-user/).
 - [check_error](check_error.md) — suppress "Error" messages.
 - [check_warning](check_warning.md) — suppress "Warning" messages.
 
+## Solver / mixed u-σ scheme
+
+- [materi_stress_scheme_fixed_point](materi_stress_scheme_fixed_point.md) — the staggered u-σ scheme fixed point is now the element solution (element-consistent momentum feedback + consistent σ recovery, lot C/D of DIAG-SOLVE-MIXTO).
+
 ## Phase 1 features
 
 - [check_used](check_used.md) — report unused data items.

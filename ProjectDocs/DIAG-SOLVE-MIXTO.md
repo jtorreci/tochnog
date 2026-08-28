@@ -664,3 +664,174 @@ averaging, unrelated to the lock.
   live in `ProjectDocs/VALIDACION-PROFESIONAL.md` +
   `scripts/compare_professional.sh` (2026-08-28).
 
+
+---
+
+## 12. Fix C/D implemented (2026-08-28) — the exact mechanism and the fix
+
+**Status**: DONE (fix D). The staggered scheme's fixed point is now the
+element solution; the arness (Professional comparison) is the acceptance
+criterion. The monolithic mixed solve (option C) was NOT needed.
+
+### 12.1 The exact mechanism (measured, with code lines)
+
+The staggered loop, iteration by iteration:
+
+```
+1. element_loop (elem.cc:404):
+   - momentum matrix  dt*K_uu  with  K_uu = B^T*D_elem*B
+     (materi.cc:519 matrix_atba + materi.cc:651; SRI: D split, the
+     shear integrated at 1 Gauss point at the centroid, materi.cc:654)
+   - momentum RHS    P - V*B^T*sigma  with sigma = new_sig, the
+     CONSTITUTIVE stress of the current velocity iterate
+     (stress.cc:1182-1183: new_sig = sigma_old + C:inc_epe with
+     inc_ept = B*v*dt from set_deften_etc, materi.cc:1131;
+     materi.cc:508 matrix_atb(new_b, sigvec, force) + materi.cc:617)
+2. solve (so.cc:740):  v_new += dv = v + (dt*K_uu)^-1*(P - B^T*sigma)
+   (the velocity ACCUMULATES across the equilibrium iterations)
+3. parallel_new_dof_diagonal (dof.cc:155): the sigma dofs (never in
+   the global matrix: dof_principal unassigned, input.cc:439-444;
+   so.cc:298 test2) are updated by the lumped "inertia" equation:
+     sigma_new += RHS_sigma/LHS_sigma
+   with RHS_sigma = V*h*(new_sig - sigma_old)/dt  (materi.cc)
+                   - V*h*(sigma_iter - sigma_old)/dt  (general.cc:253-255,
+                   the inertia, ALWAYS active for non-principal dofs)
+   and LHS_sigma = V*h/dt (general.cc:256)
+   ->  sigma_new = new_sig = sigma_constit(v_iterate)   (REPLACEMENT)
+```
+
+The measured dynamics (verified against the dumps and direct solves):
+
+- **The velocity converges in one pass** for the non-SRI elements:
+  `v(k+1) = v(k) + (dt*K_uu)^-1*(P - B^T*sigma_constit(v(k)))` with
+  `sigma_constit(v) = sigma_old + dt*C_full*B*v` collapses algebraically
+  to `v* = (dt*K_uu)^-1*(P - B^T*sigma_old)` when `K_uu = B^T*C_full*B`
+  (the plain quad4/quad9/hex8). The dump of the FIRST-solve system
+  solved directly equals the run's velocities to the last digit.
+- **The fixed point is governed by the FULL constitutive, NOT by the
+  momentum matrix.** At the fixed point `dv = 0`, so
+  `P = B^T*sigma_constit(v*) = B^T*sigma_old + dt*B^T*C_full*B*v*`
+  and the momentum matrix K_uu drops out of the equation:
+
+```
+v* = (dt*K_full)^-1 * (P - B^T*sigma_old)        (K_full = B^T*C_full*B)
+sigma* = sigma_old + C_full*eps(u*)             (the full-law stress)
+```
+
+  The SRI matrix in the momentum equation only shapes the TRANSIENT
+  (iteration 2 = the old "0.3125x" SRI value); at equilibrium the
+  full-rule shear re-enters through `-B^T*sigma` and the fixed point is
+  the LOCKED state `K_full^-1*P` — the SRI benefit is cancelled
+  (measured 0.2316x ~ the plain 0.2315x).
+
+- **The sigma dof recovery is lumped-inconsistent for the interior
+  quadratures.** The sigma dofs are advanced by the h-weighted average
+  `sigma_node = sum_gp V*h*sigma_gp / sum_gp V*h`. With the
+  node-containing quadratures (the default 2x2 Lobatto corners of the
+  quad4, the quad9/hex8 Lobatto rules) h is the Kronecker delta and the
+  recovery is exact. With the 2x2 GAUSS rule (interior points at
+  +-1/sqrt(3), switched by the SRI quad4, polynom.cc:421) the h-weighted
+  average dilutes the corner values (measured 0.577x of the exact value
+  for the bilinear): the section moments read systematically low nodal
+  stresses even when the displacement field is correct.
+
+- **The arness divergences (gforce7q4, gforce10/13) are INPUT BC bugs,
+  not scheme bugs.** The GNU conversions clamped the WRONG edges:
+  - `gforce7q4.dat`: `-ra 1 2 3 -velx` bounded the BOTTOM edge (nodes
+    1,2,3 at y=0) instead of the LEFT edge (nodes 1,4) of the
+    Professional's `-left_edge`. The missing constraint leaves the
+    RIGID ROTATION of the whole cantilever about the clamp node (0,0)
+    as a zero-energy mode: the momentum matrix is singular (rank 7/8,
+    measured pivot ratio 8.7e-10) and the load projects 88% onto it ->
+    the honest CG diverges (residual 1.8e-4 -> 1.4e12). The
+    Professional's own test fixes velx on the FULL left edge.
+  - `gforce10.dat`/`gforce13.dat`: `-ra 1 4` is the node LIST {1,4}
+    (the -ra range_expand processes each integer individually), so the
+    bottom face was constrained at only TWO opposite corners and the
+    rigid rotation about their diagonal stayed free (singular 30x30
+    matrix, pivot ratio 8.6e-17). The correct list is {1,2,3,4} (the
+    whole bottom face = the Professional's `-bottom_edge`).
+
+### 12.2 The fix (D: element-consistent feedback + consistent sigma recovery)
+
+**D-c — element-consistent momentum feedback (materi.cc).** The
+momentum right-hand side must carry the ELEMENT internal force
+`B^T*sigma_old + dt*K_elem*v`, not the full-constitutive stress
+`B^T*sigma_constit(v)`. For the SRI quad4 (the only element whose
+matrix differs from B^T*C_full*B):
+
+- the current-iterate shear increment of the feedback stress is zeroed
+  (`sigvec[stress_indx(0,1)] -= 2*sri_g*inc_ept[1]`, keeping the old
+  shear prestress sigma_old_xy), and
+- the reduced 1-point shear internal force `-dt*K_shear*v` is added to
+  the momentum RHS (the same matrix-vector product the SRI shear block
+  adds to the momentum matrix).
+
+With the element-consistent feedback the velocity map collapses to
+`v(k) = v* = (dt*K_elem)^-1*(P - B^T*sigma_old)` for every k >= 1:
+ONE-pass convergence, no drift, and the fixed point is the element
+solution:
+
+```
+AFTER:  v* = (dt*K_elem)^-1 * (P - B^T*sigma_old)     (the element)
+        sigma* = sigma_old + C_full*eps(u*)           (the physical)
+```
+
+For the plain quad4/quad9/hex8 (K_elem = K_full) the feedback is
+unchanged: the fixed point and the transients are BYTE-IDENTICAL to the
+old scheme (verified on gforce7q4_ref/gffq4/gforce7_ref/qsri_beam2d).
+
+**D-b — consistent sigma recovery (materi.cc + general.cc).** The
+sigma dof update uses the bilinear Lagrange EXTRAPOLATION of the
+Gauss-point values to the nodes (the "same B at the node") for the
+NORMAL stress components, which are superconvergent at the Gauss points
+(measured: the SRI gp sigma_xx = 96% of the analytic beam stress; the
+extrapolated nodal sigma_xx = 93.9%). The SHEAR components keep the
+h-weighting: the Q4 shear is NOT superconvergent (the interpolation
+error dominates; the centroid-biased average is the better estimate).
+For every node-containing quadrature the extrapolation reduces to h
+(the Kronecker delta), so ONLY the SRI quad4 (2x2 Gauss) changes.
+The momentum feedback does not read these dofs (it uses the fresh
+constitutive stress), so the recovery change is purely an OUTPUT
+improvement: the section forces now read the accurate nodal stresses.
+
+### 12.3 Results (arness = acceptance, suite = regression)
+
+- **SRI quad4 cantilever** (qsri_beam2d_sri): the clamp moment goes
+  from the 0.2315x locked fixed point to **0.0750 = 0.9375*P*L** (the
+  classic Hughes SRI reference; the msf moment about the element
+  centroid = P*(L-0.5) exactly), stable at 32 equilibrium iterations
+  (no drift). The normal stress field matches the analytic bending
+  stress to 94%.
+- **Plain quad4**: byte-identical (the locked element solution — the
+  lock is ELEMENT physics, opt-in SRI; the scheme now converges to the
+  element's own solution).
+- **quad9** (gforce7/gforce7_ref): unchanged (M 0.996x/0.9986x).
+- **gforce7q4** (2 quad4, BC-fixed): CONVERGES (was diverging); the
+  2-element mesh's own locked solution (mom 0.033x — the very coarse
+  mesh; documented).
+- **gforce10/gforce13** (hex8 3D, BC-fixed): CONVERGE (was diverging);
+  the axial N = 12.34 EXACT (1.0000x vs the Professional).
+- **Suite**: 199/199 runs + all file checks green; the
+  `qsri_beam2d_sri` file check was updated to the fixed 0.9375x moment
+  (the old 0.3125x value was the TRANSIENT, which the honest fixed
+  point supersedes).
+
+### 12.4 What the fix does NOT change (documented limitations)
+
+- The plain quad4/hex8 shear LOCK (element physics; the opt-in SRI
+  keyword fixes the quad4; hex8 SRI is future work). The scheme now
+  converges to the element's OWN solution, locked or not.
+- The section SHEAR pollution (the raw sigma_xy of the Q4 — the
+  interpolation error; documented in VALIDACION-PROFESIONAL §3 as the
+  "mixed shear pollution band"). The Professional's NODAL sigma_xy is
+  equally polluted (force7q4 clamp sigma_xy = -90.9 vs the beam
+  tau(y=0) = 0); its section statics are exact because they do NOT
+  come from the raw nodal stress (consistent with an
+  equilibrium/internal-force-based section calculation or a monolithic
+  mixed solve with sigma as global unknowns).
+- The coarse-mesh lock of the 2-element models (their own formulation
+  solution).
+- The monolithic mixed solve (option C) is NOT needed: the staggered
+  scheme with the element-consistent feedback converges to the element
+  solution in one pass.

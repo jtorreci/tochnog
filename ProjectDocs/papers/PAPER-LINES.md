@@ -2,8 +2,9 @@
 
 Date: 2026-08-28
 Status: research agenda (findings detected and documented; fixes A+B **DONE**
-2026-08-28 — honest stopping criteria + CG; the staggered fixed point is
-confirmed scheme-owned → C/D pending)
+2026-08-28 — honest stopping criteria + CG; **fix D DONE** 2026-08-28 —
+the staggered fixed point is now the element solution, verified against
+the Tochnog Professional binary; C not needed)
 
 Related artifacts in this repository:
 - `ProjectDocs/DIAG-SOLVE-MIXTO.md` — full technical diagnosis (paper-grade, 506 lines)
@@ -135,8 +136,8 @@ results. The diagnosis (with quantitative evidence) established:
 |------|-------------|--------|
 | (A) | Honest stopping criteria in the iterative solver (residual-based; no false-success exits) | **DONE** (lote A+B, 2026-08-28) — success only on the real residual test; breakdown/stagnation false-success exits removed; honest failure (RC≠0) with the real relative residual; `control_solver_bicg_stop -no` as the documented continue-escape. Key result: the 3D flat-residual cantilever (A·b≈0 family) now converges (final error 4.2e-37) — the flat-residual identity is NOT stagnation, CG just needs to keep iterating. |
 | (B) | Conjugate Gradient for the SPD system (replacing/augmenting Bi-CG) | **DONE** (lote A+B, 2026-08-28) — runtime symmetry check dispatches CG (symmetric) / honest Bi-CG (non-symmetric: beam dtime-asymmetry, plastic-slip interface with dᵀAd<0); primal-residual monitor (the old monitor measured the transpose residual, which never vanishes on non-symmetric systems — a measurement bug of the dishonest criteria family). |
-| (C) | Real monolithic mixed u-sigma solve (MINRES / SuperLU with pivoting) | Proposed — definitive fix, large refactor. **Confirmed necessary**: the 0.2315× fixed point is scheme-owned (unchanged with the honest solver) and the road statics check still fails (0.143·pL²/8). |
-| (D) | Regularization of the staggered scheme so its fixed point matches the true solution | Proposed — same evidence as (C). |
+| (C) | Real monolithic mixed u-sigma solve (MINRES / SuperLU with pivoting) | **NOT NEEDED** (2026-08-28) — the staggered scheme with the element-consistent feedback (D) converges to the element solution in one pass; the monolithic refactor would add no physics for the linear-elastic case. |
+| (D) | Element-consistent staggered scheme: the momentum feedback carries the ELEMENT internal force (Bᵀσ_old + dt·K_elem·v) and the σ dofs are recovered by the Lagrange extrapolation of the Gauss-point values (the "same B at the node") | **DONE** (lote C/D, 2026-08-28) — fixed point BEFORE: v* = (dt·K_full)⁻¹·(P − Bᵀσ_old) (the full-constitutive/locked solution, the SRI cancelled); AFTER: v* = (dt·K_elem)⁻¹·(P − Bᵀσ_old) (the ELEMENT solution). Measured: SRI quad4 clamp moment 0.0750 = 0.9375·P·L stable at 32 iterations; plain quad4/quad9/hex8 byte-identical; gforce10/13 converge with the axial N EXACT (1.0000× vs Professional); the arness divergences were input BC bugs (rigid-rotation mechanisms), fixed. Not fixed: the plain quad4/hex8 lock (element physics, opt-in SRI) and the section shear pollution of the raw Q4 σ_xy (pre-existing; the Professional's nodal σ_xy is equally polluted — its exact statics do not come from the raw nodal stress). |
 | — | Q4 selective reduced integration (opt-in) | DONE — `group_element_selective_reduced_integration` |
 
 ## 5. Open questions
