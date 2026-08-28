@@ -723,7 +723,7 @@ void elem( long int element, long int ithread )
         nodes, coord_ip, old_dof, new_dof, 
         old_unknowns, new_unknowns, 
         new_grad_new_unknowns, &h[ipoint*nnol], 
-        &new_d[ipoint*ndim*nnol], volumeip,
+        &new_d[ipoint*ndim*nnol], volumeip, npoint, ipoint,
         grad_massflow, element_rhside, element_residue, 
         element_lhside, element_matrix );
       if      ( type==-CONDIF )
@@ -739,10 +739,11 @@ void elem( long int element, long int ithread )
           element_matrix, element_rhside, element_residue );
       else if ( type==-MATERI ) 
         materi( element, element_group, name, nnol, npoint, 
-          nodes, plasti_on_boundary, coord_ip, coord, 
-          &h[ipoint*nnol], &new_d[ipoint*ndim*nnol], 
+          nodes, plasti_on_boundary, coord_ip, coord, ipoint,
+          new_dof, &h[ipoint*nnol], &new_d[ipoint*ndim*nnol], 
           &new_b[ipoint*MSTRAIN*nnol*ndim], 
-          volumeip, old_unknowns, new_unknowns, old_grad_old_unknowns, 
+          volumeip, old_unknowns, new_unknowns,
+          old_grad_old_unknowns, 
           old_grad_new_unknowns, new_grad_new_unknowns,
           element_lhside, element_matrix,
           element_rhside, element_residue, tendon_element_rhside );

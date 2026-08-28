@@ -23,8 +23,8 @@
 
 void materi( long int element, long int gr, long int name, long int nnol, 
   long int npoint, long int nodes[], long int plasti_on_boundary,
-  double coord_ip[], double old_coord[],
-  double h[], double new_d[], double new_b[],
+  double coord_ip[], double old_coord[], long int ipoint,
+  double new_dof[], double h[], double new_d[], double new_b[],
   double volume, double old_unknowns[], 
   double new_unknowns[], double old_grad_old_unknowns[], 
   double old_grad_new_unknowns[], double new_grad_new_unknowns[],
@@ -505,7 +505,6 @@ void materi( long int element, long int gr, long int name, long int nnol,
         sigvec[indx] = total_new_sig[idim*MDIM+jdim];
       }
     }
-    matrix_atb( new_b, sigvec, force, MSTRAIN, nnol*ndim, 1 );
     if ( sri_quad4 ) {
       // SRI: D = D_norm + D_shear. The gamma_xy entry (index 1,
       // stress_indx(0,1)) is the only shear term of the 2D plane
@@ -514,8 +513,21 @@ void materi( long int element, long int gr, long int name, long int nnol,
       // elasticity the tangent is constant over the element, so the
       // shear modulus captured here is exact for the reduced point.
       sri_g = ddsdde_total[1*MSTRAIN+1];
+      // Element-consistent momentum feedback (DIAG lot C/D, fix D-c):
+      // the shear part of the feedback stress must use the SAME reduced
+      // integration as the momentum matrix (1 point at the centroid),
+      // otherwise the full-rule shear re-enters the right-hand side and
+      // the staggered fixed point converges to K_full*u = P (the locked
+      // state) instead of K_SRI*u = P (the element solution) - the SRI
+      // benefit is cancelled at equilibrium. The current-iterate shear
+      // increment of the feedback stress is zeroed here (the old shear
+      // prestress sigma_old_xy is kept) and the reduced 1-point shear
+      // internal force -dt*K_shear*v is added to the momentum RHS in the
+      // velocity block below.
+      sigvec[stress_indx(0,1)] -= 2. * sri_g * inc_ept[stress_indx(0,1)];
       ddsdde_total[1*MSTRAIN+1] = 0.;
     }
+    matrix_atb( new_b, sigvec, force, MSTRAIN, nnol*ndim, 1 );
     matrix_atba( new_b, ddsdde_total, stiffness, work, MSTRAIN, nnol*ndim );
     if ( swit ) {
       pri( "force", force, nnol*ndim );
@@ -605,6 +617,26 @@ void materi( long int element, long int gr, long int name, long int nnol,
           // stress gradient (rhside with green partial integration)
         tmp = force[inol*ndim+idim];
         element_rhside[indx] -= volume * tmp;
+        if ( sri_quad4 ) {
+          // Element-consistent momentum feedback (DIAG lot C/D, fix D-c,
+          // second half): the reduced 1-point shear internal force
+          // -dt*K_shear*v of the current iterate. Together with the
+          // zeroed full-rule shear increment of the feedback stress
+          // (see the sigvec block above) the momentum right-hand side
+          // carries the ELEMENT internal force B^T*sigma_old +
+          // dt*K_SRI*v, so the staggered fixed point solves
+          // K_SRI*u = P - B^T*sigma_old (the element solution) and the
+          // iteration converges in one pass for linear elasticity.
+          double v_shear = 0.;
+          for ( jnol=0; jnol<nnol; jnol++ ) {
+            for ( jdim=0; jdim<ndim; jdim++ ) {
+              v_shear += stiffness_shear[(inol*ndim+idim)*nnol*ndim +
+                jnol*ndim+jdim] *
+                new_dof[jnol*nuknwn + vel_indx + jdim*nder];
+            }
+          }
+          element_rhside[indx] -= dtime * v_shear / npoint;
+        }
         for ( jdim=0; jdim<ndim; jdim++ ) {
           iuknwn = stres_indx+stress_indx(idim,jdim)*nder;
           if ( residue ) element_residue[indx] += h[inol] *
@@ -687,11 +719,29 @@ void materi( long int element, long int gr, long int name, long int nnol,
       
       if ( materi_stress ) {
         ipuknwn = stres_indx/nder;
+        // stress dof recovery weight (DIAG lot C/D, fix D-b): with the
+        // SRI quad4 (2x2 Gauss) the lumped h-weighted average dilutes
+        // the corner nodal stresses; the consistent recovery is the
+        // Lagrange extrapolation of the Gauss-point values to the nodes
+        // (the "same B at the node"), which for every other quadrature
+        // (node-containing rules) reduces to h. The momentum feedback
+        // does NOT read these dofs (it uses the fresh constitutive
+        // stress), so this changes only the OUTPUT stress field used by
+        // the section-force integration and the prints. The NORMAL
+        // stresses of the bilinear are superconvergent at the Gauss
+        // points (the extrapolation is the exact nodal recovery); the
+        // SHEAR stress is not (the interpolation error dominates), so
+        // its dofs keep the h-weighting (the centroid-biased average,
+        // the same estimate the SRI's reduced point provides).
+        double weight = h[inol];
+        if ( sri_quad4 )
+          weight = sri_stress_recovery_weight( nnol, inol, npoint,
+            ipoint, h[inol], 1 );
         for ( idim=0; idim<MDIM; idim++ ) {
           for ( jdim=idim; jdim<MDIM; jdim++ ) {
             indx = inol*npuknwn + ipuknwn;
-            tmp = volume * h[inol] * ( new_sig[idim*MDIM+jdim] - 
-              old_sig[idim*MDIM+jdim] ) / dtime;
+            tmp = volume * ( (idim==jdim) ? weight : h[inol] ) *
+              ( new_sig[idim*MDIM+jdim] - old_sig[idim*MDIM+jdim] ) / dtime;
             element_rhside[indx] += tmp;
             if ( jdim==1 && idim==1 ) {
             }

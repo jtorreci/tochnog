@@ -1609,7 +1609,8 @@ void      general( long int element, long int name, long int nnol, long int gr,
 			      double old_dof[], double new_dof[],
             double old_unknowns[], double new_unknowns[], 
             double grad_new_unknowns[], double h[], 
-            double d[], double volume, double grad_massflow[],
+            double d[], double volume, long int npoint, long int ipoint,
+            double grad_massflow[],
             double element_rhside[], double element_residue[], 
             double element_lhside[], double element_matrix[] );
 void      generate_beam_truss( long int icontrol, long int task );
@@ -1703,7 +1704,8 @@ void      map_node( long int inod );
 void      materi( long int element, long int group, long int name, long int nnol, 
             long int npoint, long int nodes[], 
             long int plasti_on_boundary, double coord_ip[],
-            double old_coord[], double h[], double new_d[], 
+            double old_coord[], long int ipoint, double new_dof[], 
+            double h[], double new_d[], 
             double new_b[], double volume,
             double old_unknowns[], double new_unknowns[],
             double old_grad_old_unknowns[], double old_grad_new_unknowns[], 
@@ -1958,6 +1960,9 @@ void      spring( long int element, long int name, long int element_group,
 long int  stress_indx( long int idim, long int jdim );
 long int  sri_quad4_active( long int element, long int element_group,
             long int name, long int nnol );
+double    sri_stress_recovery_weight( long int nnol, long int inol,
+            long int npoint, long int ipoint, double h_inol,
+            long int sri_active );
 void      stress_umat( long int element, long int gr, long int formulation,
             long int nuser_data, double user_data[], double coord_ip[],
             double old_hisv[], double new_hisv[], 

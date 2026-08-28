@@ -1503,15 +1503,19 @@ QSR_BEAM_OFF_OK=1
 awk '!/^#/ && $1==0 { d=$10-0.018518; if (d<0) d=-d; if (d>5.e-4) bad=1 }
      !/^#/ && $1==4 { d=$7-0.007407; if (d<0) d=-d; if (d>1.e-4) bad=1 }
      END{exit bad}' "$T2014/materi_stress_force.440" || QSR_BEAM_OFF_OK=0
-# qsri_beam2d_sri (441): A/B con SRI - mejora el lock: mom en x=0 =
-# 0.0250 = 0.312*P*8 (dentro de 5e-4, mayor que el 0.0185 sin SRI) y
-# she interior = 0.0065 = 0.65*P
+# qsri_beam2d_sri (441): A/B con SRI - el esquema escalonado corregido
+# (fix C/D del DIAG-SOLVE-MIXTO) hace que el punto fijo sea la solucion
+# del ELEMENTO: mom en x=0 = 0.0750 = 0.9375*P*8 (la referencia clasica
+# SRI de Hughes, dentro de 5e-4; el fijo 0.312x del transitorio antiguo
+# se cancelaba al converger). La cizalla interior (65% de P) queda en la
+# banda de polucion del sigma_xy del Q4 documentada (el sigma_xy crudo
+# no es superconvergente; el valor por equilibrio es P).
 QSR_BEAM_SRI_OK=1
-awk '!/^#/ && $1==0 { d=$10-0.0250; if (d<0) d=-d; if (d>5.e-4) bad=1; if ($10<0.02) bad=1 }
+awk '!/^#/ && $1==0 { d=$10-0.0750; if (d<0) d=-d; if (d>5.e-4) bad=1; if ($10<0.05) bad=1 }
      !/^#/ && $1==4 { d=$7-0.0065; if (d<0) d=-d; if (d>1.e-4) bad=1 }
      END{exit bad}' "$T2014/materi_stress_force.441" || QSR_BEAM_SRI_OK=0
 if [ "$QSR_BEAM_OFF_OK" = "1" ] && [ "$QSR_BEAM_SRI_OK" = "1" ]; then
-  check_ok "qsri_beam2d (lock: mom=0.231x she=0.741x vs SRI: mom=0.312x she=0.65x; SRI > OFF)"
+  check_ok "qsri_beam2d (lock: mom=0.231x she=0.741x vs SRI: mom=0.9375x en el punto fijo; SRI > OFF)"
 else
   check_fail "qsri_beam2d" "lock o mejoria SRI inesperados"
 fi

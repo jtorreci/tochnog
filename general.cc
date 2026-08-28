@@ -28,8 +28,9 @@ void general( long int element, long int name, long int nnol, long int element_g
   long int type, long int nodes[], double coord_ip[], double old_dof[], double new_dof[], 
   double old_unknowns[], double new_unknowns[], 
   double new_grad_new_unknowns[], double h[], double new_d[], 
-  double volume, double grad_massflow[], double element_rhside[], 
-  double element_residue[], double element_lhside[], double element_matrix[] )
+  double volume, long int npoint, long int ipoint, double grad_massflow[], 
+  double element_rhside[], double element_residue[], double element_lhside[], 
+  double element_matrix[] )
 
 {
   long int inol=0, inod=0, jnol=0, jdim=0, ipuknwn=0, iuknwn=0,
@@ -249,13 +250,33 @@ void general( long int element, long int name, long int nnol, long int element_g
 
           // inertia (lumped)
         if ( options_inertia==-YES || !principal_unknown ) {
-          tmp = h[inol] * inertia *
+          // stress dof recovery weight (DIAG lot C/D, fix D-b): for the
+          // SRI quad4 (2x2 Gauss points) the h-weighted lumped average
+          // dilutes the corner nodal stresses; the consistent recovery
+          // is the Lagrange extrapolation of the Gauss-point values to
+          // the nodes (the "same B at the node"). Applied to the NORMAL
+          // stress components only (superconvergent at the Gauss
+          // points); the SHEAR components keep h (the Q4 shear is not
+          // superconvergent - the interpolation error dominates). For
+          // every other quadrature the weight reduces to h
+          // (node-containing rules).
+          double weight = h[inol];
+          if ( dof_type[iuknwn]==-MATERI_STRESS && sri_quad4_active(
+              element, element_group, name, nnol ) ) {
+            // normal components: stress_indx(0,0)=0, (1,1)=3, (2,2)=5
+            // (times nder for the derivative slots)
+            long int kcomp = iuknwn - stres_indx;
+            if ( kcomp==0 || kcomp==3*nder || kcomp==5*nder )
+              weight = sri_stress_recovery_weight( nnol, inol, npoint,
+                ipoint, h[inol], 1 );
+          }
+          tmp = weight * inertia *
             ( new_dof[inol*nuknwn+ipuknwn*nder] -
               old_dof[inol*nuknwn+ipuknwn*nder] ) / dtime;
           element_rhside_add -= volume * tmp;
-          element_lhside_add += volume * h[inol] * inertia / dtime;
+          element_lhside_add += volume * weight * inertia / dtime;
           if ( residue && dof_principal[iuknwn]>=0 ) element_residue[indx] -= tmp;
-          element_matrix[indx*nnol*npuknwn+indx] += volume * h[inol] * inertia / dtime;
+          element_matrix[indx*nnol*npuknwn+indx] += volume * weight * inertia / dtime;
         }
           
         for ( jdim=0; jdim<ndim; jdim++ ) {

@@ -377,6 +377,54 @@ long int sri_quad4_active( long int element, long int element_group,
   return 1;
 }
 
+double sri_stress_recovery_weight( long int nnol, long int inol,
+  long int npoint, long int ipoint, double h_inol, long int sri_active )
+
+  // Nodal stress recovery weight of the lumped sigma-dof update
+  // (DIAG-SOLVE-MIXTO lot C/D, fix D-b). The sigma dofs are advanced by
+  // the lumped "inertia" equation (general.cc) with the shape function
+  // h as the weight: sigma_node = sum_gp h*sigma_gp / sum_gp h. With
+  // the NODE-CONTAINING quadratures (the default 2x2 Lobatto corners of
+  // the quad4, the quad9/hex8 Lobatto rules) h is the Kronecker delta
+  // and the recovery is exact. With the 2x2 GAUSS rule (interior points
+  // at +-1/sqrt(3), switched by the SRI quad4) the h-weighted average
+  // DILUTES the nodal values at the corners (measured: 0.577x of the
+  // exact value for the bilinear), so the section moments of the
+  // materi_stress_force integration read systematically low values even
+  // when the displacement field is correct (SRI: mom = 0.29x instead of
+  // the element's 93.75%).
+  //
+  // The consistent recovery is the evaluation of the element's stress
+  // field at the nodes - the bilinear Lagrange extrapolation of the
+  // Gauss-point values (the "same B at the node"). For the 2-point 1D
+  // rules the extrapolation weight of the node iso coordinate xi_n in
+  // {+1,-1} for the Gauss point xi_g in {+1/sqrt(3), -1/sqrt(3)} is
+  //   w(xi_n, xi_g) = prod_{g' != g} (xi_n - xi_g')/(xi_g - xi_g')
+  // which for the corner Lobatto rule (xi_g = +-1) reduces to the
+  // Kronecker delta, i.e. w = h (the node IS the integration point).
+  // Returns the 2D tensor product w_xi * w_eta for the bilinear quad4
+  // with the 2x2 rule (row-major-from-bottom ordering of nodes and
+  // points, the same convention as pol() and the SRI centroid B), and
+  // h_inol for every other case (quad9/hex8/1-point rules: unchanged).
+
+{
+  if ( !( nnol==4 && npoint==4 && sri_active ) ) return h_inol;
+
+  // node iso coordinates (+-1, row-major from bottom: inol 0 = (-1,-1),
+  // 1 = (+1,-1), 2 = (-1,+1), 3 = (+1,+1)); point iso coordinates
+  // (+-1/sqrt(3), ipoint 0 = (-1,-1), 1 = (+1,-1), 2 = (-1,+1),
+  // 3 = (+1,+1) - the pol() izeta->ieta->ixi loop with nxi = 2).
+  double xi_n  = ( inol%2   == 0 ? -1. : 1. );
+  double eta_n = ( inol/2   == 0 ? -1. : 1. );
+  double xi_g  = ( ipoint%2 == 0 ? -1. : 1. ) / sqrt(3.);
+  double eta_g = ( ipoint/2 == 0 ? -1. : 1. ) / sqrt(3.);
+  double xi_g_other  = -xi_g;
+  double eta_g_other = -eta_g;
+  double w_xi  = ( xi_n  - xi_g_other  ) / ( xi_g  - xi_g_other  );
+  double w_eta = ( eta_n - eta_g_other ) / ( eta_g - eta_g_other );
+  return w_xi * w_eta;
+}
+
 char *long_to_a( long int n, char s[] )
 
 {
