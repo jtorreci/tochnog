@@ -659,4 +659,8 @@ averaging, unrelated to the lock.
   `force10.dat` (hex8 3D), `force13.dat` (hex8 3D), `beam2d_3.dat`,
   `test/tutorial/tutorial_4/tutorial_4.dat` — all use
   `post_calcul -materi_stress -force` with statics targets.
+- **Repeatable baseline**: the full A/B harness (every model in both
+  binaries, node_dof_calcul comparison, ratios) and the baseline tables
+  live in `ProjectDocs/VALIDACION-PROFESIONAL.md` +
+  `scripts/compare_professional.sh` (2026-08-28).
 
