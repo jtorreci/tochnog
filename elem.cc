@@ -626,6 +626,17 @@ void elem( long int element, long int ithread )
     if(options_element_dof==-YES) {
     	long int startindx=nuknwn*ipoint;
 	if(element_dof_initialised) {
+	  // the remembered IP dofs. The stress restore keeps the
+	  // original MDIM*MDIM=9-slot limit (the solver behavior is
+	  // untouched); the WRITE below stores the FULL stress block
+	  // (6 components x nder slots, the compacted symmetric layout
+	  // of stress_indx(), input.cc) because the materi_stress_force
+	  // section integration (calcul_force.cc LOT 4) reads the
+	  // syy/syz/szz components from ELEMENT_DOF, which the former
+	  // 9-slot limit lost for the nder>1 models (`derivatives`,
+	  // fixed 2026-08-28). The strain blocks keep the original
+	  // MDIM*MDIM limit (the -1 block indices would make wider
+	  // ranges catch unrelated slots).
           for ( int i=0; i<nuknwn; i++ ) 
 	    if((i>=hisv_indx && i<(hisv_indx+materi_history_variables))||
 	      (i>=stres_indx && i<(stres_indx+MDIM*MDIM))||
@@ -791,7 +802,7 @@ void elem( long int element, long int ithread )
     	long int startindx=nuknwn*ipoint;
         for ( int i=0; i<nuknwn; i++ ) 
  	  if((i>=hisv_indx && i<(hisv_indx+materi_history_variables))||
-	    (i>=stres_indx && i<(stres_indx+MDIM*MDIM))||
+	    (i>=stres_indx && i<(stres_indx+6*nder))||
 	    (i>=epe_indx && i<(epe_indx+MDIM*MDIM))||
    	    (i>=epp_indx && i<(epp_indx+MDIM*MDIM))||
    	    (i>=ept_indx && i<(ept_indx+MDIM*MDIM))||
