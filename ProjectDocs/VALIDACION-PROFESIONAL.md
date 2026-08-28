@@ -396,3 +396,76 @@ lockeado, el SRI a 0.9375×, el quad9/hex8 a su valor).
 199/199 runs + verificaciones de archivos OK. Único test actualizado:
 `qsri_beam2d_sri` (el check de build_safe.sh verifica el momento 0.9375×
 del fijo nuevo; el 0.3125× antiguo era el transitorio de 2 iteraciones).
+
+---
+
+## 10. POST-L4 (2026-08-28) — fuente de σ = puntos de integración del elemento
+
+**Estado**: el L4 del sub-sprint materi_stress_force cambió la fuente
+de la tensión de sección de la NODAL recuperada (`NODE_DOF`) a los
+PUNTOS DE INTEGRACIÓN del elemento (`ELEMENT_DOF`, las tensiones
+constitutivas que el elemento usó — "the element forces needed for
+this option are setup in a timestep", manual 6.913). Re-ejecución:
+`TOCHNOG_PROF_BIN=... scripts/compare_professional.sh`
+(2026-08-28T15:11Z; ratios sobre las componentes `s` = magnitudes).
+
+### 10.1 Resultados del arness (GNU POST-L4 vs Professional)
+
+| modelo | pre-L4 | POST-L4 | Professional | nota |
+|---|---|---|---|---|
+| `gforce7` (2 quad9) | N 1.2345×, V 2.7125×, M 0.9947× | **N 1.2365×, V 2.7167×, M 0.9976×** | EXACTO | la polución de N/V NO desaparece: las tensiones nodales recuperadas son la media EXACTA de los IPs de los elementos adyacentes (verificado en los .dbs) → la polución vive en el CAMPO σ (IPs = nodal); el MOMENTO mejora (0.9947 → 0.9976) |
+| `gforce7q4` (2 quad4) | N 0.88×, V 0.10×, M 0.033× | N 0.88×, V 1.79×, M 0.0324× | EXACTO | el V cambia por el promedio por-elemento de la cizalla (|∫σ_nt| por cara); la solución lockeada del elemento intacta |
+| `gforce7q4_ref` (8 quad4) | 0.215× | **0.215× (byte-idéntico)** | EXACTO | el plain quad4 mantiene su solución de formulación |
+| `gffq4` (10 quad4) | 0.197× | **0.197×** | 1250 EXACTO | idem |
+| `gforce7_ref` (8 quad9) | N 1.0011×, M 0.9986× | **N 1.0011×, M 0.9986×/0.9970×, V 1.4719×** | EXACTO | caso sano sin regresión |
+| `gforce10`/`gforce13` (hex8 3D) | N 1.0000× | **N 1.0000× (12.34 EXACTO)** | EXACTO | vía el FALLBACK documentado: en los 3D resueltos con `derivatives` el bucle escalonado NO propaga la deformación a los IPs del elemento (el ELEMENT_DOF sale a ceros) → la sección lee las tensiones nodales recuperadas (warning único) |
+| `msf_shear` | 0.3846153846 | **0.3846153846 EXACTO** | σ_xy EXACTO | corte simple, sin cambios |
+| `msf_tunnel3d` | 0.1 EXACTO | **0.1 EXACTO** | 0.09980686 | sin cambios |
+
+### 10.2 Cómo se reconstruye σ en la sección desde los IPs (decisión con evidencia)
+
+- La cuadratura de la sección (Gauss(2)/Lobatto(3) según npol) NO
+  cambia. Lo que cambia es la FUENTE evaluada en los puntos de la
+  sección: la reconstrucción por LAGRANGE del campo de IPs del
+  elemento (los pesos 1D de la regla PROPIA del elemento, replicada
+  de pol(): Lobatto con nodos por defecto, Gauss para el SRI quad4 y
+  las reglas MINIMAL, 1 punto en el eje axisimétrico).
+- Reglas con nodos (quad9/hex27 Lobatto, quad4/hex8 esquinas): los
+  puntos de la sección COINCIDEN con los IPs de la cara → los pesos
+  son la delta de Kronecker (lectura directa del ELEMENT_DOF).
+- Reglas interiores (SRI quad4 2×2 Gauss): los pesos interpolan/
+  extrapolan el campo de IPs al punto de la sección (la misma
+  reconstrucción "same B" del fix D-b; el momento SRI queda
+  byte-idéntico — 0.9375·P·L — y la cizalla pasa a leer el σ_xy crudo
+  de los Gauss points, 8.4·P medido — el σ_xy del Q4 no es
+  superconvergente, DIAG §12.4).
+- El cambio NO logra la estática exacta del Professional: la polución
+  de N/V del quad9 vive en el CAMPO σ (los IPs la tienen igual) y el
+  Professional es exacto porque NO integra el campo crudo (ni nodal ni
+  de IP) — consistente con un cálculo por fuerzas internas/equilibrio
+  del elemento.
+
+### 10.3 Suite
+
+201/201 runs + verificaciones de archivos OK (199 + msf_cant3d_hex27 +
+msf_axisym). Checks actualizados CON justificación: los promediados
+quad9/hex27 (los nodos del plano medio usan las caras del PROPIO
+elemento — correcto per manual 6.906; banda FE < 2e-3), la cizalla de
+flexión pura (2.3e-4 = 2.3% de P, el orden del promedio |∫| por
+elemento), y las cizallas qsri (2.07·P plain / 8.4·P SRI — la fuente
+IP lee el σ_xy crudo).
+
+### 10.4 Conclusión del L4 (qué cierra y qué NO)
+
+- **CIERRA**: (a) la pregunta (b) del DIAG §12 ("su estática NO viene
+  del σ nodal crudo") — tampoco viene del σ de IP: la nodal es la
+  media exacta de los IPs, ambos contaminados; el Professional integra
+  por fuerzas internas/equilibrio (ver papers/PAPER-LINES.md); (b) la
+  validación 3D con carga REAL (msf_cant3d_hex27: mom1 = P·(L−z)
+  dentro del 9%); (c) el axisimétrico pendiente del L2 (msf_axisym:
+  nor = σ·t por unidad de circunferencia EXACTO — con el fix del
+  factor 2πr en el integrando).
+- **NO CIERRA** (frentes anotados, fuera del alcance): la estática
+  EXACTA del Professional (requiere la integración por fuerzas
+  internas — recomendado como siguiente lote), el SRI hex8 3D, la
+  cizalla de sección del esquema mixto (2D ±30%, 3D 0.08·P).

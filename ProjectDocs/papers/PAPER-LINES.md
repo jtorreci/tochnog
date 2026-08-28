@@ -155,6 +155,23 @@ results. The diagnosis (with quantitative evidence) established:
   honest solver: 79 iterations, mom ≈ 1.1·P·(L−x).)
 - Moment extraction for meshes with 2+ elements in thickness was
   inconclusive (open question).
+- ~~Does the Professional's exact section statics come from the raw nodal
+  stress or from something else (DIAG §12.4, question (b))?~~
+  **CLOSED (lote 4, 2026-08-28)**: it does NOT come from the raw
+  stress AT ALL — not the nodal AND NOT the element integration-point
+  stress. Measured in the arness: for the quad9 the recovered nodal
+  stresses are the EXACT element-IP averages (the Lobatto recovery is
+  the Kronecker delta at the shared nodes), so switching the section
+  source from NODE_DOF to ELEMENT_DOF (calcul_force.cc LOT 4) leaves
+  the N/V pollution unchanged (gforce7 N 1.24×, V 2.7× — the
+  pollution lives in the σ FIELD itself, which the Professional's
+  nodal σ shares, DIAG §12.4: clamp σ_xy = −90.9 vs τ = 0). The
+  Professional's exact statics (1e-10) are consistent with an
+  EQUILIBRIUM/INTERNAL-FORCE-based section calculation ("the element
+  forces needed for this option are setup in a timestep", manual
+  6.913) — the GNU's section integration over any raw σ field cannot
+  reach that exactness. Paper line: "stress-field integration vs
+  equilibrium section forces in mixed u-σ formulations".
 
 ---
 

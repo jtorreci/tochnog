@@ -126,18 +126,26 @@ average of the two adjacent sections.
   default; `post_calcul_materi_stress_force_thickness_switch -yes`
   switches to the LONGEST (manual 6.917).
 - `average` is available for quad9 (2D) and hex27 (3D) elements.
-- KNOWN LIMITATION (current GNU 3D mixed solver, documented in the
-  developer manual): the 3D materi_stress + BiCG solve is degenerate
-  for many load configurations (tip-loaded cantilevers, consistent
-  pressure loads on curved faces) - the validation tests of this lot
-  use PRESCRIBED deformations (Dirichlet) with exact analytical
-  expectations. The force-loaded 3D validation is pending the solver
-  fix (separate lot).
+- 3D force-loaded validation (LOT 4, 2026-08-28): the cantilever hex27
+  with a real tip load now works (the staggered-scheme fix C/D of the
+  solver, DIAG-SOLVE-MIXTO.md); the section moment comes out within
+  9% of P·(L−z) (test msf_cant3d_hex27). The 3D mixed-scheme SHEAR at
+  the integration points is still polluted (the section shear reads
+  ~0.08·P for the tip-loaded hex27 - documented band; the 2D quad9
+  shear band is ±30% of P).
 - The results are per unit length l; the x/y (and z) components are
   ONLY convenient global plot vectors - the physical design value is
   the size (`nors_sig`, `shes_sig`, `moms_sig`).
-- The stresses are read from the solved nodal unknowns (`node_dof`),
-  so `materi_stress` must be present in the initia section.
+- The stresses are read from the ELEMENT integration points
+  (`element_dof`, the constitutive stresses the element used in the
+  step - "the element forces needed for this option are setup in a
+  timestep", manual 6.913), so `materi_stress` must be present in the
+  initia section AND `options_element_dof -yes` (the default; an error
+  is raised otherwise). For the solved 3D models with the
+  `derivatives` keyword, where the staggered element loop does not
+  propagate the strain into the element integration points (measured
+  in gforce10/gforce13), the recovered nodal stresses are used instead
+  (documented fallback with a warning).
 - At least 1 timestep must be done (the stresses come from the
   solution of a step; manual 6.913: "At least 1 timestep should be
   done").
@@ -149,8 +157,18 @@ average of the two adjacent sections.
   thickness suffer shear locking (the section values are far from the
   static ones) - use quad9 or refine. A dedicated test (msf_shear)
   verifies the exact shear value on a uniform simple-shear field.
-- Axisymmetric 2D: implemented as l = 2π·radius (radial coordinate of
-  the element centroid; area.cc convention). Not covered by a
-  dedicated test in this lot (pending).
+  LOT 4: the section stress source change (nodal -> element IPs) does
+  NOT clean the N/V pollution of the quad9 cantilever (measured: the
+  recovered nodal stresses are the exact element-IP averages, so the
+  pollution lives in the stress FIELD itself; the arness gforce7 N/V
+  stay ~1.24×/2.7× while the moment improves to 0.9976×).
+- Axisymmetric 2D (LOT 4, verified): l = 2π·radius (the radial
+  coordinate of the element centroid, manual 6.911) and the section
+  integrand carries the physical circumference 2π·r at the section
+  point, so the per-unit-length values are the section forces per unit
+  CIRCUMFERENCE (the same dimension as the plane-2D values). Verified
+  with msf_axisym: nor = σ_zz·t EXACT. (The LOT 2 implementation
+  divided the UNSCALED integral by 2π·r, giving values a factor 2π·r
+  too small - fixed and documented.)
 - `outer -yes` and `plot_switch` are implemented in 2D (3 switches)
   and 3D (4 switches, manual 6.916).

@@ -21,7 +21,7 @@
   (`msf_node_is_averaged()` in `print_materi_stress_force.cc`).
   Enum additions in `tochnog.h`/`tochnog-mod.h` in sync (clean build
   required after enum changes).
-- **Lot 3 (this lot, 3D numerical integration)** in `calcul_force.cc`:
+- **Lot 3 (commit fa7650b, 3D numerical integration)** in `calcul_force.cc`:
   `msf_calculate_node_3d()` (per-node scan, 16 items) →
   `msf_element_contribution_3d()` (face selection from
   direction_exclude/include, per-face frame, node roles) →
@@ -32,6 +32,32 @@
   originals are static there). `validate()` now also restricts the 3D
   target groups to hex8/hex27 (the manual's isoparametric section
   elements) and the "not yet implemented" notice is gone.
+- **Lot 4 (this lot, 2026-08-28)**: the section stress SOURCE changes
+  from the recovered nodal stresses (`NODE_DOF`, the L2 decision) to
+  the ELEMENT integration-point stresses (`ELEMENT_DOF`). New helpers
+  in `calcul_force.cc`: `msf_element_rule()` (the element's own
+  per-direction quadrature, replicated from `pol()` incl. the SRI
+  quad4 Gauss switch and the axisymmetric 1-point rule),
+  `msf_lagrange_weights()` (the 1D Lagrange weights of the IP grid),
+  `msf_sigma_ip_2d/3d()` (the stress at a section point reconstructed
+  from the IP field). `msf_integrate_side_2d/face_3d` evaluate the
+  stress at the section quadrature points from the IP field; the
+  element contribution functions read `ELEMENT_DOF`, with a documented
+  fallback to the recovered nodal stresses when the IP stress block is
+  all zero (measured: the SOLVED 3D models with the `derivatives`
+  keyword - gforce10/gforce13 - do not propagate the strain into the
+  element loop). `elem.cc`: the ELEMENT_DOF WRITE now covers the FULL
+  stress block (6 components × nder slots instead of the former
+  MDIM*MDIM=9 slots, which lost the syy/syz/szz components for the
+  nder>1 models); the READ (the solver's old_unknowns restore) keeps
+  the original 9-slot limit so the solver behavior is byte-identical
+  (verified: the suite's non-msf runs unchanged). The
+  AXISYMMETRIC integrand now carries the physical circumference 2π·r
+  at the section point (the manual's "integrated over the thickness"
+  of a ring) - the L2 code divided the UNSCALED integral by 2π·r,
+  giving values a factor 2π·r too small (fixed, verified in
+  msf_axisym). `validate()` now also requires `options_element_dof
+  -yes` (the default). No new enums.
 
 ## Diseño / decisiones (con evidencia; el test analítico es el árbitro)
 
@@ -45,12 +71,35 @@
    primarios. Selección ambigua (elemento distorsionado o
    reference_point sobre la diagonal: |n·t̂| iguales) → aviso único y
    el elemento se omite (valores 0).
-2. **Fuente de σ**: la tensión NODAL (`node_dof[stres_indx +
-   stress_indx(i,j)*nder]`), la incógnita resuelta. Directa y exacta
-   para el campo lineal/cuadrático a lo largo de la arista; la
-   alternativa `ELEMENT_DOF` (tensiones de los puntos de integración)
-   requeriría extrapolación IP→arista y se descartó. Verificado:
-   `materi_stress` debe estar en initia (validado).
+2. **Fuente de σ (LOT 4)**: la tensión de los PUNTOS DE INTEGRACIÓN
+   del elemento (`element_dof[ipoint*nuknwn + stres_indx + comp*nder]`
+   = las tensiones constitutivas que el elemento USÓ en su última
+   pasada - "the element forces needed for this option are setup in a
+   timestep", manual 6.913). La tensión en un punto de cuadratura de
+   la sección se reconstruye con los pesos de LAGRANGE de la regla del
+   propio elemento (`msf_element_rule` replica la cuadratura de pol():
+   Lobatto con nodos por defecto, Gauss para el SRI quad4 y para las
+   reglas MINIMAL, 1 punto en el eje axisimétrico): para las reglas
+   con nodos (quad9/hex27 Lobatto, quad4/hex8 esquinas) los puntos de
+   la sección COINCIDEN con IPs de la cara y los pesos son la delta de
+   Kronecker (lectura directa); para las reglas interiores (Gauss SRI)
+   los pesos interpolan/extrapolan el campo de IP. La fuente antigua
+   (la tensión nodal recuperada, decisión L2) queda SOLO como
+   fallback: medido (2026-08-28), para los modelos 3D RESUELTOS con
+   `derivatives` (gforce10/gforce13) el bucle escalonado NO propaga la
+   deformación de la velocidad convergida a los IPs del elemento (el
+   bloque de tensión del ELEMENT_DOF sale TODO CEROS mientras el
+   NODE_DOF recuperado tiene los valores correctos) → en ese caso la
+   sección lee las tensiones nodales evaluadas en las posiciones de
+   los IPs con las funciones de forma (idéntico a la fuente pre-L4
+   para las reglas con nodos; warning único documentado). Verificado
+   además: para el quad9/quad4 la tensión nodal recuperada es la media
+   EXACTA de los IPs de los elementos adyacentes (la recuperación
+   Lobatto es exacta), por lo que el cambio de fuente NO limpia la
+   polución de N/V del arness (la polución vive en el propio campo σ;
+   gforce7: N 1.24×, V 2.7× iguales; el momento mejora de 0.9947× a
+   0.9976×). `options_element_dof` debe ser -yes (default; error
+   claro en la validación si no).
 3. **Cuadratura de arista (1D)**: `integration_gauss(2)` para npol=2
    (quad4) y `integration_lobatto(3)` para npol=3 (quad9). El
    integrando del MOMENTO σ_nn·dt es cuadrático (quad4) / cúbico
@@ -193,6 +242,12 @@
 | msf_tunnel3d (anillo hex27) | nors | E·u0·t/R = p·R = 0.1 | 0.1 EXACTO (144/144 nodos) |
 | msf_tunnel3d | mom1s / shes | 0 | 3.6e-12 / < 1e-8 |
 | msf_hex27_avg | -all vs -primary | 45 vs 27 | 45 vs 27 (18 promediados) |
+| msf_cant3d_hex27 (L4, cantilever 3D hex27 CARGADO - desbloqueado por el fix C/D) | mom1s en z=0..4 | P·(L−z) = 0.04..0 | 0.0435, 0.0312, 0.0200, 0.0098, 0.0003 (dentro del 9%) |
+| msf_cant3d_hex27 | shes | P (en la dirección de espesor t) | 0.0008 = 0.08·P (cizalla del esquema mixto 3D contaminada en los IPs; banda documentada) |
+| msf_axisym (L4, anillo axisimétrico prescrito) | nors | σ_zz·t = 0.5 EXACTO por unidad de circunferencia | 0.5 EXACTO (4/4 nodos) |
+| msf_axisym | shes / moms | 0 | 0 / 0.001 (momento FE del campo casi uniforme) |
+| arness gforce7 (L4, quad9 2-el) | N/V/M en x=50 | −12.34/+100/−5000 | 15.26 (1.24×) / 271.7 (2.7×) / −4988 (0.9976×) — la polución de N/V vive en el CAMPO σ (los IPs = la misma polución); el momento mejora |
+| arness gforce10/13 (L4, hex8 3D) | nors en z=50 | −12.34 | 12.34 EXACTO (1.0000×) — vía el fallback a las tensiones nodales (el ELEMENT_DOF sale a ceros en los 3D resueltos con derivatives) |
 
 ## Detalles / gotchas
 
@@ -215,18 +270,31 @@
   quad4 Y quad9. Por eso el test de flexión pura usa la configuración
   estándar de 4 puntos (viga apoyada + 2 cargas → tramo central con M
   cte y V=0).
-- **GOTCHA (malla 1-en-espesor)**: la cizalla integrada de la
-  formulación mixta tiene polución en las superficies libres
-  (condición de superficie libre débil): |∫σ_xy dy| oscila ±30% de P
-  según la sección (el valor exacto se verifica con msf_shear, campo
-  uniforme). El quad4 1-en-espesor sufre shear locking (mom ≈ 0.23× y
-  she ≈ 0.74× del valor estático, medido) → los tests de flexión usan
-  quad9. El fenómeno (cizalla parásita del bilineal en flexión) y el
-  fix opt-in con integración reducida selectiva están documentados en
-  [group_element_selective_reduced_integration](group_element_selective_reduced_integration.md):
-  con el keyword el mom mejora de 0.231× a 0.312× y la she de 0.741×
-  a 0.65× (familia qsri, A/B medido). El hex8 3D sufre el mismo
-  fenómeno (u_x ~ y² no representable); el SRI hex8 es trabajo futuro.
+- **GOTCHA (L4, promediado quad9/hex27)**: con la fuente IP las caras
+  de los elementos adyacentes en una sección compartida DIEREN (el
+  campo σ es discontinuo entre elementos; las tensiones nodales
+  recuperadas eran su media exacta). Los nodos PRIMARIOS de la sección
+  muestran la media de las dos caras (linealidad: idéntico a la fuente
+  antigua), pero los nodos PROME-DIADOS del plano medio usan las caras
+  del PROPIO elemento → ya no coinciden exactamente con la media de
+  los valores de salida (banda FE medida: desviación < 2e-3 absoluta;
+  antes era exacta). El comportamiento es el CORRECTO del manual 6.906
+  ("the averaged values from the forces and moments on the two
+  opposing end faces" DEL ELEMENTO).
+- **GOTCHA (L4, orden del promedio de la cizalla)**: la cizalla se
+  promedia como |∫σ_nt| POR ELEMENTO y luego se promedian las
+  magnitudes (la integral firmada se pierde): los checks de
+  msf_beam2d_pure/qsri se actualizaron a los nuevos valores medidos
+  (la cancelación de signos del campo nodal promediado no se
+  conserva).
+- **GOTCHA (L4, SRI quad4)**: la cizalla de la sección lee ahora el
+  campo σ_xy CRUDO de los puntos de Gauss (la recuperación nodal
+  h-weighted del fix D-b diluía la cizalla; el DIAG 12.4 documenta que
+  el σ_xy del Q4 NO es superconvergente) → el shes del SRI sube a
+  8.4·P en la sección interior (medido en qsri_beam2d_sri); el
+  MOMENTO SRI no cambia (0.9375·P·L, la referencia de Hughes — el
+  campo σ_nn reconstruido de los IPs Gauss = el mismo que la
+  extrapolación nodal del D-b).
 - El flag averaged se pre-aloca en `calculate()` (db_allocate) como
   NODE_DOF_CALCUL: el PUT dentro del bucle paralelo no puede alocar.
   version_all=1 → db_version_copy + renumbering lo llevan a
@@ -234,8 +302,9 @@
 - `validate()` añade en L2: `materi_stress` obligatorio en initia
   (stres_indx ≥ 0) y, en 2D, los grupos objetivo solo pueden contener
   quad4/quad9 (error claro para otros tipos). En L3: en 3D solo
-  hex8/hex27 (el manual 6.913). El aviso "not yet implemented" se
-  elimina en L3.
+  hex8/hex27 (el manual 6.913). En L4: `options_element_dof` debe ser
+  -yes (la fuente IP del ELEMENT_DOF; error claro si no). El aviso
+  "not yet implemented" se elimina en L3.
 - **GOTCHA MAYOR del GNU (3D, documentado — fuera del alcance del
   integrador)**: el solve mixto 3D materi_stress + BiCG por defecto es
   DEGENERADO. La matriz v-v del hex8/hex27 con la integración default
@@ -267,20 +336,49 @@
   [solve_iterative_bicg.md](solve_iterative_bicg.md))**: criterios de
   parada honestos + CG para el sistema SPD. El cantilever 3D con
   carga REAL ya resuelve (hex8 1-e: converge a 4.2e-37; hex8×8/hex27×8:
-  fuerzas de sección — hex27 mom ≈ 1.1·P·(L−x), she ≈ P) y la
-  validación 3D con carga queda desbloqueada. El punto fijo escalonado
-  0.2315× NO cambió (confirmado por barrido con el solver honesto) —
-  el deficit de momentos de sección de las mallas 1-en-espesor sigue
-  siendo del esquema (fix C/D pendiente).
+  fuerzas de sección — hex27 mom ≈ 1.1·P·(L−x)) y la validación 3D con
+  carga queda desbloqueada (el test msf_cant3d_hex27 del L4 la
+  verifica: mom1 = P·(L−z) dentro del 9%; la cizalla de sección del
+  esquema mixto 3D queda contaminada — 0.08·P medido — la "she ≈ P"
+  del diagnóstico usaba una dirección de carga distinta y el campo
+  nodal, ver el gotcha L4). **Fix C/D (2026-08-28, DIAG §12)**: el
+  punto fijo del esquema = la solución del elemento (SRI quad4
+  0.9375×; plain byte-idéntico; quad9/hex8 a su valor) — la estática
+  exacta del Professional requiere además la integración por fuerzas
+  internas (ver Pendiente).
 
 ## Pendiente
 
-- **Fix C/D del esquema escalonado** (monolítico mixto real con
-  MINRES/SuperLU-pivoting, o regularización del actualizado de σ):
-  el solver lineal honesto (A+B) desbloqueó la validación 3D con
-  carga, pero el punto fijo del esquema sigue en el estado locked
-  (0.2315× 2D, 0.143× en el modelo de carretera) — lote aparte.
-- axisimétrico: implementado (l=2πr) pero sin test dedicado en este
-  lote (pendiente; el MSF L4 previsto pulirá el caso).
+- **GOTCHA (malla 1-en-espesor, pre-L4 — la banda de cizalla)**:
+  la cizalla integrada de la formulación mixta tiene polución en las
+  superficies libres (condición de superficie libre débil): el
+  quad9 1-en-espesor da |∫σ_xy dy| en la banda ±30% de P según la
+  sección (medido en msf_beam2d: 0.0109..0.0133 con P=1e-2; la banda
+  NO se aprieta con la fuente IP del L4 — la polución vive en el campo
+  σ, los IPs = la misma polución que la nodal recuperada; el valor
+  EXACTO de she se verifica con msf_shear, campo uniforme). El quad4
+  1-en-espesor sufre shear locking (mom ≈ 0.23× y she ≈ 0.74× del
+  valor estático) → los tests de flexión usan quad9; el SRI quad4
+  (opt-in, familia qsri) mejora el momento a 0.9375× (fix C/D) pero la
+  cizalla leída de los IPs Gauss queda contaminada (8.4·P medido — el
+  σ_xy del Q4 no es superconvergente, DIAG 12.4). El hex8 3D sufre el
+  mismo fenómeno (u_x ~ y² no representable); el SRI hex8 es trabajo
+  futuro.
+- **Fix C/D del esquema escalonado**: DONE (2026-08-28, ver
+  [DIAG-SOLVE-MIXTO.md](../DIAG-SOLVE-MIXTO.md) §12): el punto fijo del
+  esquema = la solución del elemento (SRI quad4 0.9375×, plain
+  byte-idéntico, quad9/hex8 a su valor). La estática de sección del
+  Professional es EXACTA en TODOS los casos (1e-10) porque NO integra
+  el campo σ crudo (nodal NI de IP — la polución vive en el campo): su
+  `node_dof_calcul` es consistente con un cálculo por FUERZAS
+  INTERNAS/equilibrio del elemento ("the element forces needed for
+  this option are setup in a timestep", manual 6.913). El arness L4 lo
+  confirma: con la fuente IP el gforce7 N/V siguen en 1.24×/2.7× (la
+  nodal = la media exacta de los IPs) — replicar la estática exacta
+  del Professional requiere la integración por fuerzas internas del
+  elemento (trabajo futuro documentado en VALIDACION-PROFESIONAL §9.5).
+- axisimétrico: DONE (L4, msf_axisym): la convención l=2πr con el peso
+  2πr en el integrando (fuerzas por unidad de circunferencia),
+  verificado EXACTO.
 - Los tests `.dat` viven en `validation-suite/test-2014/` (gitignored;
   solo el bucle y los checks de `scripts/build_safe.sh` se versionan).
