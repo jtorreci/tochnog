@@ -255,7 +255,14 @@
   carga en punta y el vaso de presión con cargas consistentes quedan
   PENDIENTES del arreglo del solve mixto 3D (lote aparte, fuera del
   sub-sprint MSF). Cada `.dat` documenta el campo prescrito y su
-  expectativa.
+  expectativa. **Diagnóstico completo (2026-08-28) en
+  [DIAG-SOLVE-MIXTO.md](../DIAG-SOLVE-MIXTO.md)**: el sistema que Bi-CG
+  resuelve es SOLO de velocidades y SPD (los dofs σ nunca entran en la
+  matriz global; σ avanza por una actualización diagonal lumped —
+  esquema escalonado, no saddle-point); los criterios de parada del
+  Bi-CG declaran éxito en breakdown/estancamiento con error ≫
+  tolerancia, y el punto fijo del esquema converge al estado locked
+  (0.2315× para quad4 plain Y SRI; SuperLU ≡ Bi-CG byte-idénticos).
 
 ## Pendiente
 

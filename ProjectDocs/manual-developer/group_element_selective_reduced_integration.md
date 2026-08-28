@@ -174,14 +174,28 @@ the extracted element matrices) gives tip deflection 99.3% and clamp
 moment 93.75% of the analytic values. The GNU solve of this mixed u-σ
 formulation, however, is numerically unreliable for the 1-element-in-
 thickness quad4 system (condition number ≈ 2·10⁴): the Bi-CG stops at a
-misleading residual and the direct solvers (which renumber the nodes)
-produce null-mode-polluted fields (measured). This is the SAME family of
+misleading residual. This is the SAME family of
 GOTCHA as the 3D mixed-solve degeneration documented in the
-materi_stress_force sprint — it is a solver property, NOT a defect of
-the SRI element (whose stiffness is verified exact). The measured A/B
+materi_stress_force sprint. The measured A/B
 above (0.231× → 0.312×) is therefore the reproducible improvement in the
 current solver, and the classic 1.0× value is documented as the
 solver-independent reference.
+
+**Correction (2026-08-28, DIAG-SOLVE-MIXTO.md)**: the diagnosis was
+refined — the linear solver is NOT the limiter. The Bi-CG system is
+velocity-only and SPD (the σ dofs never enter the global matrix; the σ
+field is advanced by a lumped staggered update), and a direct solve
+(`control_options_solver -matrix_superlu`) of the SAME assembled system
+is **byte-identical** to Bi-CG (md5 `62e82a92...`, `mom = 0.0249998465889`
+at the default 2 equilibrium iterations). The true limiters are: (a) the
+Bi-CG exit criteria, which report *success* on breakdown/stagnation with
+`error ≫ check_error` (wrong solutions with `RC=0`), and (b) the
+staggered fixed point, which converges to `mom = 0.2315×` for BOTH the
+plain and the SRI quad4 (the `0.3125×` SRI value is a transient of the
+2-iteration default; the σ-gradient RHS re-introduces the full
+constitutive shear at equilibrium, cancelling the SRI). The `93.75%`
+reference is the pure-displacement system `K_SRI·u = P`, which the GNU
+mixed scheme does not assemble.
 
 ## Hardcoded parameters / pending refactorings
 
