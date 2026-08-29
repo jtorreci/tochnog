@@ -18,11 +18,11 @@ The 2D result is a set of 9 items per node:
 | item | meaning |
 |------|---------|
 | `norx_sig` `nory_sig` | normal force per unit length, GLOBAL PLOT vector components (drawn in the structure thickness direction) |
-| `nors_sig` | normal force per unit length, the PHYSICAL size (design value) |
+| `nors_sig` | normal force per unit length, the SIGNED physical scalar (positive = tension; the Professional's convention) |
 | `shex_sig` `shey_sig` | shear force per unit length, plot components |
 | `shes_sig` | shear force per unit length, physical size (always positive - only the size is available, manual 6.913) |
 | `momx_sig` `momy_sig` | moment per unit length, plot components |
-| `moms_sig` | moment per unit length, physical size |
+| `moms_sig` | moment per unit length, the SIGNED physical scalar |
 
 The 3D result has 16 items (nor, she, mom1, mom2 with 3 components +
 size each):
@@ -30,13 +30,20 @@ size each):
 | item | meaning |
 |------|---------|
 | `norx_sig` `nory_sig` `norz_sig` | normal force per unit length, plot components |
-| `nors_sig` | normal force per unit length, physical size |
+| `nors_sig` | normal force per unit length, the SIGNED physical scalar (positive = tension) |
 | `shex_sig` `shey_sig` `shez_sig` | shear force per unit length, plot components |
 | `shes_sig` | shear force per unit length, physical size |
 | `mom1x_sig` `mom1y_sig` `mom1z_sig` | moment in THICKNESS direction per unit length, plot components |
-| `mom1s_sig` | that moment, physical size |
+| `mom1s_sig` | that moment, the SIGNED physical scalar |
 | `mom2x_sig` `mom2y_sig` `mom2z_sig` | moment in LENGTH direction per unit length, plot components |
-| `mom2s_sig` | that moment, physical size |
+| `mom2s_sig` | that moment, the SIGNED physical scalar |
+
+SIGN CONVENTIONS (sprint 12 lot 1, converged with Tochnog
+Professional - measured on its force7/force10 validation records):
+the `*_s` items of `nor` and the moments are the SIGNED scalars
+(`nors = -12.34` under axial compression, tension positive), `shes`
+is always positive, and the plot vector components follow the
+thickness direction `t` oriented TOWARD the reference point.
 
 The 3D numerical integration (hex8/hex27) is implemented (lot 3):
 `mom1` = the thickness bending moment (radial bending moment in a
@@ -127,7 +134,15 @@ average of the two adjacent sections.
   point.
 - 3D thickness direction in a face: the SHORTEST element direction by
   default; `post_calcul_materi_stress_force_thickness_switch -yes`
-  switches to the LONGEST (manual 6.917).
+  switches to the LONGEST (manual 6.917). A SQUARE end face (equal
+  edge extents) carries no thickness information in the extents: the
+  tie is broken by the reference point - the edge best aligned with
+  the reference direction wins (measured: the Professional's force10
+  resolves its 10x10 square section the same way; its own validation
+  file carries `thickness_switch -yes`). **Practical rule: for a
+  square-section structure always specify the reference point ON the
+  thickness line and (as in the Professional's own examples) set
+  `thickness_switch -yes`.**
 - `average` is available for quad9 (2D) and hex27 (3D) elements.
 - **LOT 5 (2026-08-28): the section forces are the EQUILIBRIUM statics
   of the loads.** The section resultant over an end face = the sum of

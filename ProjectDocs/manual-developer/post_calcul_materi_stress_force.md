@@ -239,14 +239,39 @@
    claramente separada de la 3ª candidata (elemento distorsionado →
    aviso único y omisión).
 3. **Frame por cara**: n (normal saliente), t = la dirección en la
-   cara de MENOR extensión física (manual 6.917; thickness_switch
-   -yes → la mayor), orientada hacia FUERA del reference_point (la
-   dirección de dibujo); l̂ = n×t̂ (dirección de longitud). l = el
-   tamaño del elemento en dirección de longitud = la extensión de la
-   cara proyectada sobre l̂ (manual 6.913: "the length of an element
-   is determined from the nodal coordinates differences in length
-   direction"). Para el túnel l = el tamaño axial (la hoop por unidad
-   de longitud axial); para el sheet pile l = el ancho.
+    cara de MENOR extensión física (manual 6.917; thickness_switch
+    -yes → la mayor), orientada HACIA el reference_point (la
+    dirección de dibujo — sprint 12 lote 1: convención del
+    Professional MEDIDA moviendo su reference_point en force10; la
+    orientación hacia fuera daba TODA componente direccional con
+    signo invertido, documentado antes en VALIDACION §2); l̂ = n×t̂
+    (dirección de longitud). l = el tamaño del elemento en dirección
+    de longitud = la extensión de la cara proyectada sobre l̂ (manual
+    6.913: "the length of an element is determined from the nodal
+    coordinates differences in length direction"). Para el túnel l =
+    el tamaño axial (la hoop por unidad de longitud axial); para el
+    sheet pile l = el ancho. DOS GOTCHAS del frame (sprint 12 lote 1,
+    medidos en gforce10 contra el Professional):
+    (a) las ESQUINAS de la cara deben extraerse como BUCLE de quad
+    [00,10,11,01] de la tabla de bordes lexicográfica — la extracción
+    anterior [0,npol-1,npol*(npol-1),nface-1] hacía corner3−corner0 =
+    la DIAGONAL de la cara (e2 nunca fue una arista; con
+    thickness_switch -yes la diagonal ganaba la regla de extensión y
+    el frame salía ROTADO 45°: t = diag(x̂+ŷ), nors = 17.45 en vez de
+    12.34). La orientación de la normal n = e1×e2 NO cambia con el
+    bucle (la diagonal vieja iba a lo largo de e1+e2 y e1×(e1+e2) =
+    e1×e2);
+    (b) una cara CUADRADA (extensiones iguales) no carga información
+    de espesor en las extensiones: el EMPATE lo rompe el reference
+    point (la arista mejor alineada con la dirección del reference
+    point gana; si la proyección es nula o simétrica se conserva la
+    primera arista de la tabla). El Professional resuelve el mismo
+    empate 10×10 de force10 hacia la dirección del reference point
+    (MEDIDO: su nory/shey/mom1y solo cuadran con t = ŷ); su propio
+    force10.dat lleva thickness_switch -yes, y SIN el switch el
+    Professional TAMBIÉN da el frame rotado (vectores ≈ 0, el momento
+    en el slot mom2) — nuestra conversión gforce10/13 había omitido
+    el keyword (bug de input, como el -ra 1 4 del lote C/D).
 4. **Cuadratura de cara (2D)** — consistente con la decisión 2D-3:
    Gauss(2)×Gauss(2) para hex8 (4 puntos; el integrando del momento es
    cuadrático) y Lobatto(3)×Lobatto(3) para hex27 (9 puntos, Simpson;
@@ -257,16 +282,24 @@
    la integral 2D (análogo del side_len implícito de la integral 1D
    del lote 2) — GOTCHA verificado: sin el factor los valores salían
    4× pequeños (nor = 0.025 en vez de p·R = 0.1).
-5. **Valores** (por unidad de longitud l): nor = ∫∫σ_nn dA / l (con
-   signo, tracción +), she = |∫∫σ_nt dA| / l (solo tamaño), mom1 =
-   ∫∫σ_nn·dt dA / l y mom2 = ∫∫σ_nn·dl dA / l. dt y dl se miden desde
-   el PUNTO MEDIO DE LA CARA (la media de sus nodos), no desde el
-   centroide del elemento: para los elementos CURVOS del anillo el
-   centroide por esquinas queda en la CUERDA (no en el arco medio) y
-   añade un momento espurio (verificado en msf_tunnel3d: mom1 ≈ 0.015
-   con el centroide vs 3.6e-12 con el punto medio de la cara); para
-   los elementos rectos ambas definiciones coinciden con la decisión
-   2D-4.
+ 5. **Valores** (por unidad de longitud l): nor = ∫∫σ_nn dA / l (con
+    signo, tracción +), she = |∫∫σ_nt dA| / l (solo tamaño), mom1 =
+    ∫∫σ_nn·dt dA / l y mom2 = ∫∫σ_nn·dl dA / l. dt y dl se miden desde
+    el PUNTO MEDIO DE LA CARA (la media de sus nodos), no desde el
+    centroide del elemento: para los elementos CURVOS del anillo el
+    centroide por esquinas queda en la CUERDA (no en el arco medio) y
+    añade un momento espurio (verificado en msf_tunnel3d: mom1 ≈ 0.015
+    con el centroide vs 3.6e-12 con el punto medio de la cara); para
+    los elementos rectos ambas definiciones coinciden con la decisión
+    2D-4. El BRAZO es (medio − nodo), no (nodo − medio): sprint 12
+    lote 1 — la convención del Professional (medido en sus records
+    force7/force10: sus momy/mom1y solo cuadran con el brazo
+    medio−nodo; con nodo−medio TODOS los momentos salían con el signo
+    invertido). Los items escalares `*_s` de nor y los momentos son
+    los escalares FIRMADOS (mismo lote: el Professional emite moms =
+    −5000 y mom2s = −2.7e-13, imposibles como tamaños |·|; antes el
+    GNU emitía |valor| — divergencia documentada en VALIDACION §2,
+    ya convergida; shes sigue siendo siempre positivo, manual 6.913).
 6. **Asignación por nodo** (3D): los nodos de las 2 caras extremas
    (18 en hex27, 8 en hex8 — caras opuestas disjuntas) son PRIMARIOS;
    los 9 nodos del hex27 que NO están en ninguna cara extrema (el

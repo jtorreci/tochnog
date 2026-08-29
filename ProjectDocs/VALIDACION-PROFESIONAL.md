@@ -49,43 +49,45 @@ el vector físico dibujado en la dirección de espesor `t̂` (manual
 Professional 6.913: "the components ... are only convenient values for
 getting clear plots"; el tamaño del vector = el valor físico).
 
-### Diferencia de convención en los componentes `s` (nor_sig, she_sig, mom_sig)
+### Componentes `s` (nor_sig, she_sig, mom_sig) — CONVERGIDOS (sprint 12 lote 1)
 
-| componente | Professional | GNU |
+El GNU emite ahora los escalares FIRMADOS como el Professional
+(`nors = −12.34` a compresión; `moms`/`mom1s`/`mom2s` firmados;
+`shes` siempre positivo — manual 6.913). Antes emitía `|valor|`
+(divergencia documentada abajo, historia). Evidencia de la
+convergencia: force10 node 5, GNU `nory/nors/shey/shes/mom1y/mom1s =
+−12.34/−12.34/−100/+100/−5000/−5000` = el Professional dígito a
+dígito (ver §13).
+
+<details><summary>Historia (pre-sprint-12, obsoleta)</summary>
+
+| componente | Professional | GNU (ANTES) |
 |---|---|---|
 | `nors_sig` 2D | COPIA CON SIGNO del componente dominante (p.ej. `nors = nory = −12.34` en force7) | `|nor|` SIEMPRE no-negativo (el "design value") |
 | `shes_sig` 2D | copia con signo (`shes = shey = +100`) | `|she|` |
 | `moms_sig` 2D | copia con signo (`moms = momy = −5000`) | `|mom|` |
 | `nors_sig` 3D | escalar firmado (`−12.34`) | `|nor|` |
-| `shes_sig` / `mom1s_sig` 3D | `|she|` / `|mom1|` (positivos) | `|she|` / `|mom1|` |
 
 Verificado empíricamente: force7q4 (Professional) node 2:
 `0, −12.34, −12.34, 0, +100, +100, 0, −5000, −5000` — los `s` llevan el
-signo del componente. El GNU en el mismo modelo: `0, +15.23, +15.26,
-0, −271.2, +271.7, 0, +4974, +4981` — los `s` son siempre magnitudes.
-En el GNU la fuente es `calcul_force.cc` (decisión 5: "nors = |nor|,
-shes = |she|, moms = |mom|"). El manual del Professional (6.913) define
-los `s` como "the physical real size", pero en 2D el Professional los
-emite como copia firmada del componente — inconsistencia interna del
-propio Professional entre 2D y 3D (en 3D `nors` firmado pero `shes`/
-`mom1s` positivos).
+signo del componente. El GNU en el mismo modelo (pre-fix-C/D):
+`0, +15.23, +15.26, 0, −271.2, +271.7, 0, +4974, +4981`. El manual del
+Professional (6.913) define los `s` como "the physical real size",
+pero los emite firmados (su mom2s = −2.7e-13 en force10 es imposible
+como tamaño) — el escalar firmado es la lectura correcta de su
+comportamiento.
 
-### Diferencia de convención en los componentes direccionales (signo)
+</details>
 
-`t̂` = dirección de espesor: el GNU usa `t̂ = normalize(centroid −
-reference_point)` (apunta HACIA la estructura); el Professional usa la
-orientación OPUESTA (apunta hacia el reference_point). Consecuencia: en
-el mismo modelo los componentes direccionales salen con SIGNOS OPUESTOS
-en los dos binarios; las MAGNITUDES coinciden. Verificado en force7q4:
+### Componentes direccionales (signo) — CONVERGIDOS (sprint 12 lote 1)
 
-| | Professional | GNU |
-|---|---|---|
-| `nory_sig` (x=50) | −12.34 (= nor·t̂, nor = −12.34 compresión) | +15.23 (= nor·t̂, nor = −15.23 compresión) |
-| `shey_sig` | +100 | −271.2 |
-| `momy_sig` | −5000 | +4974 |
-
-El signo físico de nor (compresión/tracción) y mom coincide entre
-binarios; el signo de los componentes de ploteo se invierte por `t̂`.
+`t̂` = dirección de espesor: el GNU usa ahora `t̂ =
+normalize(reference_point − centroid)` (apunta HACIA el
+reference_point) — la orientación del Professional, MEDIDA moviendo
+su reference_point en force10 (orig/refx/refdiag, §13). Antes usaba
+la orientación opuesta y TODA componente direccional salía con signo
+invertido (magnitudes idénticas). Los ratios GNU/Prof del arness
+pasaron de −1.0000 a +1.0000.
 
 El GNU no tiene los labels `-norx_sig`/`-nory_sig`/... de `target_item`
 (los enums `_sig` no están registrados); los targets del GNU usan
@@ -629,3 +631,79 @@ para SRI y OFF — el discriminador SRI es la deflexión de los targets,
   sección 3D de los modelos con carga axial (gforce10/13 — la cara/el
   brazo 3D del post-proceso, no el esquema), el SRI hex8 3D con modos
   de energía cero, la polución de cizalla del σ_xy crudo del Q4.
+
+---
+
+## 13. Sprint 12 lote 1 — el frame de sección 3D: CIERRE DEL ARNESS (2026-08-29)
+
+El último frente del §12.4 (V/mom ≈ 0 de gforce10/13) era un problema
+de FRAME de sección, no del esquema. Autopsia completa con el
+Professional como juez (sus binarios traen símbolos; el
+comportamiento se midió por caja negra moviendo su `reference_point`):
+
+### 13.1 Los tres hallazgos
+
+1. **BUG DE INPUT (nuestra conversión)**: el `force10.dat` del
+   Professional lleva `post_calcul_materi_stress_force_thickness_switch
+   -yes` (y `plot_switch -no -yes -yes -yes`); nuestra conversión
+   `gforce10/13.dat` los había OMITIDO. MEDIDO: sin el switch el
+   PROPIO Professional da el frame roto (vectores ≈ 0, el momento en
+   el slot mom2, she ≈ 0) — exactamente lo que veíamos en el GNU. La
+   sección cuadrada 10×10 del force10 EMPATA la regla de extensión
+   (corta/larga) del manual 6.917 y el modelo del Professional
+   NECESITA el switch.
+2. **BUG DE CÓDIGO (GNU)**: la extracción de esquinas de cara
+   `corners = [0, npol-1, npol(npol-1), nface-1]` sobre las tablas de
+   bordes LEXICOGRÁFICAS hacía `corner3−corner0` = la DIAGONAL de la
+   cara (e2 nunca fue una arista). Con `-yes` la diagonal (siempre la
+   mayor) ganaba la regla de extensión → frame ROTADO 45° (t =
+   diag(x̂+ŷ), nors = 17.45 = 12.34·√2). Fix: el bucle de quad
+   [00,10,11,01]; la normal n = e1×e2 no cambia de orientación (la
+   diagonal vieja iba a lo largo de e1+e2).
+3. **CONVENCIONES (GNU → Professional)**: (a) el empate de cara
+   cuadrada se rompe por el REFERENCE POINT (la arista mejor alineada
+   con la dirección del reference point gana — el Professional
+   resuelve el mismo empate hacia ŷ en force10, medido); (b) t apunta
+   HACIA el reference point (medido moviéndolo: orig → t=+ŷ, refx →
+   t=−ŷ — siempre hacia; nuestra orientación "away" invertía TODA
+   componente direccional); (c) el brazo de momento es (medio −
+   nodo), no (nodo − medio); (d) los items `*_s` son escalares
+   FIRMADOS (nors = −12.34 a compresión), no |valor|.
+
+### 13.2 El arness POST-lote — CONVERGIDO (ratios +1.0000, signos incluidos)
+
+Re-ejecución: `TOCHNOG_PROF_BIN=... scripts/compare_professional.sh`
+(2026-08-29T08:5xZ):
+
+| modelo | GNU vs Professional (ratio) |
+|---|---|
+| `gforce7` (2 quad9) | N **1.0000** V **1.0000** M **0.9984** |
+| `gforce7q4` (2 quad4) | N **1.0000** V **1.0000** M **0.9984** |
+| `gffq4` (identidad pL²/8) | extremos **1.0000**, centro 0.9987, identidad 0.9996 |
+| `gforce7_ref` (8 quad9) | N 1.0000 M 0.9987/0.9972 V 1.0000 |
+| `gforce10` (hex8 3D) | nory **1.0000** shey **1.0000** mom1y **1.0000** |
+| `gforce13` (hex8 3D) | nory **1.0000** shey **1.0000** mom1y **1.0000** |
+| `msf_tunnel3d` (hex27) | nory **1.0000** (0.0998068555 vs 0.0998068556 — el MISMO valor FE) |
+
+Los tres valores 3D del objetivo del lote son EXACTOS a la precisión
+impresa: `nory = −12.340000001 / −12.3399999996`,
+`shey = −99.9999999862 / −100`,
+`mom1y = −5000 / −5000`. La estática por fuerzas internas del L5 da
+el cuerpo libre EXACTO también en 3D. El túnel pasó de "0.1 analítico
+vs 0.0998 Professional" a valores IDÉNTICOS a 9 dígitos.
+
+### 13.3 Residuales documentados (no bloqueantes)
+
+- gforce7 node 7 (2D, esquina cargada): componentes cruzados
+  norx/shex/momx ≈ 5% (0.62/−5.0/250 vs 0 del Professional) — la
+  polución del σ de borde del quad9 que ya documentaba el baseline
+  (§3); los items principales (nors/shes/moms) están a 0.998-1.0000×.
+- El Professional-noswitch sobre sección cuadrada da el frame roto
+  (arbitrariedad de su desempate); el GNU con el desempate por
+  reference point da el frame correcto TAMBIÉN sin el switch —
+  divergencia deliberada, documentada (mejor comportamiento en input
+  degenerado).
+- Suite 209/209 + verificaciones de archivo TODAS OK en build limpio;
+  los checks de s-items firmados comparan magnitudes (el signo depende
+  del reference point de cada modelo; la convergencia de signos la
+  certifica este arness).
