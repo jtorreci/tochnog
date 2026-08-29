@@ -1994,3 +1994,47 @@ Nota: `group_interface_ground` del checklist anterior NUNCA existió (artefacto 
 - [ ] `zip` — PENDIENTE
 
 </details>
+
+---
+
+# SPRINT 12 — PLANIFICADO (2026-08-29)
+
+Estado al cierre de la sesión del 28-29 ago 2026: sub-sprint materi_stress_force
+COMPLETO (L1-L5 + fix A+B + fix C/D + SRI quad4 + SRI hex8 + arness Professional
+COMPLETO — todos los casos ≈ 1.000×). Suite 209/209. Paquete para colaboradores
+en `ProjectDocs/shared/`.
+
+## Objetivo del Sprint 12
+
+Madurar la versión para ofrecer a los colaboradores originales (Fernando Lorenzo,
+Osman Buyukusik): cerrar los cabos abiertos y continuar la convergencia.
+
+## Lotes propuestos (en orden; ajustar a decisión del usuario al volver)
+
+1. **Cierre del arness — V/mom 3D de sección en carga axial** (gforce10/13: N
+   EXACTO, V/mom ≈ 0): frente de cara/brazo 3D del post-proceso MSF
+   (`msf_face_resultants_3d`), no del esquema. Pequeño-medio.
+2. **Paper línea 3 (pedagógica)** — caso carretera + pL²/8 + control positivo
+   Professional + estática del cuerpo libre independiente de la formulación.
+   Es la más madura; documenta la saga. (Si el usuario prefiere código, posponer.)
+3. **Convergencia — familias grandes del checklist** (elegir al volver):
+   - `safety` (0/31) — estabilidad de taludes (slip circles): alto valor para el
+     campo geotécnico, pero sub-sprint grande (requiere exploración propia).
+   - `support` (0/18) — soportes elástico-plásticos: medio, más accesible.
+   - `solver` (0/10) — aliases/opciones del solver: pequeño-medio, conecta con
+     el trabajo del solve u-σ.
+   - `strain_volume_*` (4/10), `timestep` (0/2), `volume_factor_x` (0/1),
+     `tochnog_version` (0/1), `zip` (0/1): pequeños.
+4. **Email a los colaboradores** — el paquete `ProjectDocs/shared/` está listo;
+   falta redactar el correo (inglés) con la oferta (código + docs + papers).
+5. **Revalidar con el Professional** al cierre del sprint y actualizar
+   `VALIDACION-PROFESIONAL.md` + el paquete shared.
+
+## Cabos abiertos documentados (no bloqueantes)
+
+- SRI hex8 3D: 3 modos twist + warping de sección (matriz singular sin BCs que
+  los maten) — limitación clásica del SRI de cizalla del ladrillo; la literatura
+  usa B-bar/ANS (posible lote de investigación).
+- `control_print` checklist: 63/85 (implementables agotados; dependientes y
+  descartados documentados).
+- BEAM3D y PLATE: agendados post-convergencia (§8.5 del plan).
