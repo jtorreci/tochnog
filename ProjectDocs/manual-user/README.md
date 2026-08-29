@@ -290,3 +290,5 @@ input parameters it accepts.
 ## Sprint 13 lote 1 — soporte Winkler distribuido
 
 - [support_edge_normal](support_edge_normal.md) — the distributed edge support (manual 6.1067): normal+tangential stiffness per unit length (2D) / area (3D), displacement-driven force + consistent matrix stiffness; the 5 same-index side selectors; output `node_support_edge_normal_force`.
+
+  - the additional records: `_damping`, `_damping_automatic`, `_damping_automatic_apparent`, `_density`, `_factor`, `_force_initial`, `_time` (the formula Eoed/G and the role of each term; the time diagram scales the FORCE only); the two control records (`_damping_apply` wired, `_stiffness_freeze` parsed-only for elastic).

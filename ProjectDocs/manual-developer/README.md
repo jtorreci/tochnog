@@ -289,3 +289,4 @@ Each file corresponds to the same feature in the [User Manual](../manual-user/).
 ## Sprint 13 lote 1 — soporte Winkler distribuido
 
 - [support_edge_normal](support_edge_normal.md) — area.cc type[10]: the RHS force from total displacements + the consistent dt-scaled side stiffness in the matrix (solvability), the output record with per-sweep re-zeroing (last-element detection), the bounda gotchas (-node no-op, shared bounda_time values, 3D two-record quirk).
+  - the lot-2 additions: damping (manual record + automatic from group E/ν/ρ with Eoed/G), density (a from old NODE_DOF VERSION_NORMAL), factor (scales stiffnesses only), force_initial (compression preload), time diagram (scales the total force), the two control records; the "E from the attached element" gotcha; the 4 tests verified analytically.

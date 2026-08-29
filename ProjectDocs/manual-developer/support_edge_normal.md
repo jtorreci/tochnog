@@ -67,3 +67,53 @@ All in `area.cc`, as a new `type[10]` of the edge-integral machinery
 (-0.05, +0.5) EXACT = k·u·L/2), `tsup_solve` (column on springs:
 u_top = -(F·L/EA + F/kL) = -3e-3, reaction 0.5/node),
 `tsup_3d` (hex8 face: k·u·A/4 = 0.025 per corner). Suite 219/219.
+
+
+## Lot 2: damping, density, factor, force_initial, time (manual 6.1068-6.1071, 6.1075-6.1076, 6.1084 + 6.380/6.381)
+
+Extended the SUPPORT_EDGE_NORMAL branch in `area.cc`:
+
+- **Damping**: per-node viscous force `−(c_n·v_n)·n − c_t·v_t` (same
+  structure as the stiffness force). Velocity from `new_dof[vel_indx]`
+  ✓ (the lot-1 first-assembly observation showed the prescribed
+  velocities are visible). The gate `control_support_edge_normal_
+  damping_apply -no` (per-control block) skips both `_DAMPING` and
+  the `_AUTOMATIC*` variants.
+- **Automatic damping**: `c_n = sqrt(ρ·Eoed)`, `c_t = 0.25·sqrt(ρ·G)`
+  with `Eoed = (1−ν)E/((1+ν)(1−2ν))`, `G = E/(2(1+ν))`. Reads
+  `group_materi_elasti_young/poisson` and `group_materi_density` of the
+  attached group (no materials → `c_n = 0`, warned once if
+  `ρ ≤ 0`). The `_APPARENT` variant uses the current nodal
+  stress/strain along the loading axis to estimate `E_app` (guards fall
+  back to nominal); for elastic behavior identical to the nominal
+  values, so the test path matches `_automatic` exactly.
+- **Density**: `d_n·a_n` with `a = (v_new − v_old)/dt` (the old velocity
+  from `NODE_DOF VERSION_NORMAL`).
+- **Factor**: the spatial factor scales only the STIFFNESSES (manual
+  6.1075: "for the support stiffnesses and not the force"). Reused
+  `force_factor(SUPPORT_EDGE_NORMAL_FACTOR, ...)`.
+- **Force_initial**: `f0 = a0 + a1*(y in 2D, z in 3D)` adds a compression
+  preload (the reaction is `−f0·n` pushing the element). At zero
+  displacement the record still shows the preload (test `tsup_init`).
+- **Time diagram**: the time factor `load` multiplies the total
+  support force (manual 6.1084). Reused `force_time(...)`.
+- **Controls**: `control_support_edge_normal_damping_apply` wired (per
+  control); `control_support_edge_normal_stiffness_freeze` parsed only
+  (the elastic support stiffness doesn't change; meaning only with
+  plasticity, lot 3).
+
+## Gotcha: the "E from the element" in `_automatic`
+
+The manual says the automatic damping reads "the Young value E and the
+Poisson ratio ν from the isoparametric element attached to the
+support" — that is the GROUP's E and ν, NOT a separate support-level
+record. Test `tsup_auto` uses the group's E = 1e7 (NOT a support-only
+E) and the measured values (c_n·v = 4472·1e-3, c_t·v = 790.6·1e-4)
+confirm the formula.
+
+## Verification (223/223 + TODAS las verificaciones)
+
+`tsup_damp` (damping+factor: -0.0075 / +0.35 EXACT), `tsup_auto`
+(automatic: 2.73607 / -0.04453 EXACT), `tsup_init` (force_initial +
+time×2: 0.1 / 0.3 EXACT, linear with y), `tsup_dens` (density:
+0.525/node EXACT).

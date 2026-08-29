@@ -61,3 +61,20 @@ the nodal force is exactly k·u·L/2 per corner node (test
 `_time`, and the plasticity family (`_plasti_compression`,
 `_plasti_tension`, `_plasti_tension_double`, `_plasti_friction`,
 `_plasti_residual_stiffness`, `node_support_edge_normal_plasti_tension_status`).
+
+## Damping, density, factor, force_initial, time (6.1068-6.1071, 6.1075-6.1076, 6.1084)
+
+| record | meaning | notes |
+|---|---|---|
+| `support_edge_normal_damping <i> c_n c_t` | viscous dampers at the edge (6.1068) | per unit length (2D) / area (3D); sign: with `n` the outward side normal, the viscous force opposes `v` along `−n` and `−t` |
+| `support_edge_normal_damping_automatic <i> sw` | compute the damping from the attached group (6.1069) | `c_n = sqrt(ρ·Eoed)`, `c_t = 0.25·sqrt(ρ·G)` with `Eoed = (1−ν)E/((1+ν)(1−2ν))`, `G = E/(2(1+ν))`; requires `group_materi_density > 0` |
+| `support_edge_normal_damping_automatic_apparent <i> sw` | as `_automatic` but using the apparent moduli from the current nodal state (6.1070) | for elastic behavior identical to the nominal values; guards fall back to nominal when the current strain is too small |
+| `support_edge_normal_density <i> d_n d_t` | distributed mass at the edge (6.1071) | the inertia force opposes `a = (v_new − v_old)/dt`; small effect unless the velocities change |
+| `support_edge_normal_factor <i> a0 a1 ...` | polynomial scaling in space of the STIFFNESSES only (6.1075) | the same helper as `force_factor`; the time diagram (next) scales the FORCE, not the stiffness |
+| `support_edge_normal_force_initial <i> a0 a1` | a0 + a1·(y in 2D, z in 3D) of pre-existing compression in the support (6.1076) | the reaction pushes the element even at zero displacement; useful for at-rest earth pressure on a wall |
+| `support_edge_normal_time <i> t f t f ...` | time diagram multiplier for the support force (6.1084) | same format as `force_time`; applies to the total support force |
+
+| record | meaning |
+|---|---|
+| `control_support_edge_normal_damping_apply <i> sw` | -no neglects every `support_edge_normal_damping`/`_automatic`/`_automatic_apparent` record (6.380) |
+| `control_support_edge_normal_stiffness_freeze <i> sw` | freeze the stiffness at its initial value (6.381) | PARTIAL in the GNU: parsed and accepted; for the elastic support the stiffness never changes (the freeze is meaningful only with plasticity, lot 3) |
