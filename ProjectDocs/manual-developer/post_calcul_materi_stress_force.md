@@ -460,3 +460,38 @@
   0, mom = 0 con las fuerzas internas).
 - Los tests `.dat` viven en `validation-suite/test-2014/` (gitignored;
   solo el bucle y los checks de `scripts/build_safe.sh` se versionan).
+- **LOT 6 (2026-08-29) — el estado σ en equilibrio CIERRA el frente
+  abierto del L5**: las dos causas del "no-equilibrio" eran del
+  post-proceso/salida, no del esquema (DIAG §13):
+  1. **ELEMENT_DOF 3D a ceros (el misterio inc_ept=0 del L4)**:
+     materi.cc:850 escribía el σ constitutivo en
+     `new_unknowns[stres_indx/nder + j]` (índice de unknown) en vez del
+     slot `stres_indx + j·nder` — para nder>1 (3D con `derivatives`,
+     nder=5) el σ caía en el bloque de desplazamientos y el write de
+     elem.cc (que copia los slots del stress) guardaba la interpolación
+     de la σ nodal (cero en el último write por el lag de una iteración
+     con el default de 2 iteraciones). Además el restore del bloque leía
+     solo 9 slots (parcial para nder>1) y los rangos epe/epp/epi con
+     índices −1 (initias ausentes) capturaban slots [0,8) (velocidades).
+     FIX: materi.cc (slot `stres_indx + j·nder`, + hisv), elem.cc
+     (restore 6·nder, rangos hisv·nder, guard hisv_indx>=0). El σ
+     constitutivo ahora llega al ELEMENT_DOF → el fallback a la nodal
+     del L4 queda obsoleto (ya no dispara) y la sección lee el estado
+     en equilibrio.
+  2. **Cinemática de la sección 2D (msf_element_internal_forces_2d)**:
+     las derivadas físicas usaban la inversa del jacobiano TRASPUESTO
+     (términos cruzados invjac[1]↔[2] intercambiados). Para el quad9 con
+     el orden local [9,8,7,...] (eje local ξ VERTICAL — jacobiano
+     [[0,−5],[−25,0]] no diagonal) el error = 5× (elemento 50×10 del
+     gforce7) o 5/4× (12.5×10 del gforce7_ref); los jacobianos
+     diagonales (quad4, quad9 cuadrados) y el 3D (producto
+     matriz-vector completo) eran correctos. FIX: swap invjac[1]↔[2]
+     en las dos líneas dn (el SRI b_shear ya tenía la fórmula correcta).
+  Consecuencia: la estática del cuerpo libre del L5 es EXACTA para
+  TODOS los estados convergidos (gforce7/gforce7_ref a 1.0000×;
+  gforce7q4/gffq4 byte-idénticos) y el 3D lee el ELEMENT_DOF real.
+  Checks recalibrados (justificados): mesh_act_grav, cmat_gate (el
+  restore σ completo cambia la acumulación de σ de los modelos con
+  derivatives — valores previos eran el artefacto del restore parcial)
+  y qsri3d_beam (mom1s = P·L = 0.08 para SRI/OFF — la estática del
+  cuerpo libre; el discriminador SRI es la deflexión).

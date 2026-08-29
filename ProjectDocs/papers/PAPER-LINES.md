@@ -100,7 +100,11 @@ results. The diagnosis (with quantitative evidence) established:
   honest solver converges the 3D flat-residual cases and confirms the
   0.2315× fixed point is the scheme's — the paper's central contrast is
   now "dishonest criteria vs honest criteria vs scheme fixed point" with
-  measured numbers for all three.
+  measured numbers for all three. **Repair (E) DONE** (2026-08-29): the
+  end-of-step σ state satisfies Bᵀσ = P (the ELEMENT_DOF 3D write fixed
+  + the section kinematics corrected) — the last arness gap (gforce7
+  5×) closes to 1.0000×, measured as a post-processing artifact, not a
+  scheme defect.
 
 ### Line 2 — Sensitivity of solver formulations on the same system
 
@@ -119,7 +123,13 @@ results. The diagnosis (with quantitative evidence) established:
   comparative journal paper.
 - **Status**: initial measurements exist; repair (A)+(B) **DONE** adds the
   honest-vs-dishonest and CG-vs-Bi-CG comparison rows (measured); the
-  monolithic mixed comparison (C) remains future work.
+  monolithic mixed comparison (C) remains future work. New (2026-08-29):
+  the element-order sensitivity row now includes the section-kinematics
+  comparison — the LOT-5 transposed-inverse bug amplified the statics
+  by the element aspect ratio (5× for 50×10, 5/4× for 12.5×10 quad9s;
+  zero for the diagonal Jacobians and the 3D full matrix-vector
+  product) — a clean, measured example of post-processing kinematics
+  sensitivity on the SAME converged state.
 
 ### Line 3 — Pedagogical: hand calculations catch rubbish FE results
 
@@ -143,6 +153,7 @@ results. The diagnosis (with quantitative evidence) established:
 | (B) | Conjugate Gradient for the SPD system (replacing/augmenting Bi-CG) | **DONE** (lote A+B, 2026-08-28) — runtime symmetry check dispatches CG (symmetric) / honest Bi-CG (non-symmetric: beam dtime-asymmetry, plastic-slip interface with dᵀAd<0); primal-residual monitor (the old monitor measured the transpose residual, which never vanishes on non-symmetric systems — a measurement bug of the dishonest criteria family). |
 | (C) | Real monolithic mixed u-sigma solve (MINRES / SuperLU with pivoting) | **NOT NEEDED** (2026-08-28) — the staggered scheme with the element-consistent feedback (D) converges to the element solution in one pass; the monolithic refactor would add no physics for the linear-elastic case. |
 | (D) | Element-consistent staggered scheme: the momentum feedback carries the ELEMENT internal force (Bᵀσ_old + dt·K_elem·v) and the σ dofs are recovered by the Lagrange extrapolation of the Gauss-point values (the "same B at the node") | **DONE** (lote C/D, 2026-08-28) — fixed point BEFORE: v* = (dt·K_full)⁻¹·(P − Bᵀσ_old) (the full-constitutive/locked solution, the SRI cancelled); AFTER: v* = (dt·K_elem)⁻¹·(P − Bᵀσ_old) (the ELEMENT solution). Measured: SRI quad4 clamp moment 0.0750 = 0.9375·P·L stable at 32 iterations; plain quad4/quad9/hex8 byte-identical; gforce10/13 converge with the axial N EXACT (1.0000× vs Professional); the arness divergences were input BC bugs (rigid-rotation mechanisms), fixed. Not fixed: the plain quad4/hex8 lock (element physics, opt-in SRI — the hex8 SRI now recovers 0.897× of the EB deflection, 2026-08-29) and the section shear pollution of the raw Q4 σ_xy (pre-existing; the Professional's nodal σ_xy is equally polluted — its exact statics do not come from the raw nodal stress). |
+| (E) | Equilibrated sigma state at the end of each step: the ELEMENT_DOF 3D write fixed (the constitutive stress lands at the nder-correct slot) + the LOT-5 2D section kinematics corrected (the inverse of the true Jacobian) | **DONE** (lote 6, 2026-08-29) — gforce7/gforce7_ref N/V/M from 5.0000×/1.2500× to 1.0000×/0.9984×; the 3D reads the real ELEMENT_DOF (the L4 fallback retired); the assembled internal forces equal the loads to the solver tolerance (Bᵀσ = P); suite 209/209. Measured: the "non-equilibrated σ" of the arness was a post-processing artifact — the scheme's fixed point was equilibrated all along. |
 | — | Q4/Q8 (hex8) selective reduced integration (opt-in) | DONE — `group_element_selective_reduced_integration` (quad4 2026-08-28; hex8 2026-08-29). SRI hex8 measured: loaded 8×1×1 cantilever 0.897× of the EB deflection (vs 0.221× locked) — close to but below the 2D 0.9375×. Measured caveat for the LINE 2 sensitivity table: the shear-only SRI hex8 has 9 zero eigenvalues isolated (6 rigid + 3 twist) and section-warping zero modes in a mesh (the clamped cantilever system is singular; the load-orthogonal solve still converges) — the classic instability that moved the brick literature to B-bar/ANS; the 2D quad4 SRI is stable. |
 
 ## 5. Open questions
@@ -233,7 +244,7 @@ Full evidence: `ProjectDocs/DIAG-SOLVE-MIXTO.md` §11.
 
 | Line | Status | New material from the Professional comparison |
 |------|--------|-----------------------------------------------|
-| 1 — staggered fixed point + solver honesty | Evidence complete; repair A+B done, C/D pending | The Professional proves the correct answer is attainable with the same element/mesh — isolates the open-source scheme as the defect carrier |
+| 1 — staggered fixed point + solver honesty | Evidence complete; repairs A+B, C/D and E done (2026-08-28/29) | The Professional proves the correct answer is attainable with the same element/mesh — isolates the open-source scheme as the defect carrier; repair E closes the arness gap (Bᵀσ = P at the end of every step) |
 | 2 — solver formulation sensitivity | Initial measurements; needs the repair to complete the comparison table | Bi-CG ≡ SuperLU (md5) + the Professional's exact results bracket "what the solver should deliver" |
 | 3 — pedagogical hand calculation | Case study complete | The road-base case now has a positive control: the SAME model gives exact statics in the Professional — the detector works, the defect is software-specific |
 

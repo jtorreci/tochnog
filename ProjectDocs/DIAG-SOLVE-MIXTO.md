@@ -840,3 +840,142 @@ improvement: the section forces now read the accurate nodal stresses.
 - The monolithic mixed solve (option C) is NOT needed: the staggered
   scheme with the element-consistent feedback converges to the element
   solution in one pass.
+
+---
+
+## 13. Fix E (2026-08-29) — the equilibrated sigma state: ELEMENT_DOF populated + section kinematics corrected
+
+**Status**: DONE. Two independent mechanisms were mislabeled as "the
+staggered scheme's non-equilibrated sigma state" (VALIDACION §11, the
+L4/L5 open front): (a) the ELEMENT_DOF stress block of the 3D
+`derivatives` models was never written (the "inc_ept=0" mystery of L4 —
+measured mechanism below), and (b) the LOT-5 section internal forces of
+the 2D quad9 were computed with a transposed-inverse-Jacobian bug that
+amplified the statics by a mesh-dependent factor (5× for the 50×10
+gforce7 elements). With both fixed, the recovered sigma satisfies
+Bᵀσ = P at the end of the step for every family in the arness: the
+"non-equilibrated state" was a post-processing artifact, NOT a scheme
+property. The scheme's fixed point WAS the equilibrium all along.
+
+### 13.1 The ELEMENT_DOF zero-stress mechanism (the L4 "inc_ept=0" mystery, resolved)
+
+Measured with per-iteration dumps (element_dof / new_unknowns /
+new_dof) on gforce10 (hex8 3D, `derivatives`, nder=5, 1 step × 2
+equilibrium iterations):
+
+1. The constitutive stress IS computed at every integration point
+   (new_sig = σ_old + C:inc_ept, set_stress) and it IS used — in the
+   momentum feedback (materi.cc:559 `matrix_atb(new_b, sigvec, force)`
+   and the RHS at materi.cc:717) and in the nodal recovery
+   (dof.cc:155, the lumped σ dof update). The run's node_dof σ is
+   correct (node 5's σxz = 0.7407 = E·εxz — verified).
+2. **The ELEMENT_DOF write never saw it** (materi.cc:850): the stress
+   was written to `new_unknowns[stres_indx/nder + j]` — the
+   UNKNOWN-NUMBER index — which for nder>1 lands inside the
+   displacement block (gforce10: stres_indx/5 = 15 → slots 15..20 =
+   disx..disz), NOT at the value slots `stres_indx + j*nder`
+   (75..105). The elem.cc write (which copies the stres slots) then
+   stored the INTERPOLATED NODAL σ — zero at every write because the
+   nodal recovery runs AFTER the element loop in the same iteration
+   (the one-iteration lag: the recovery at it=1 reads an RHS built
+   with v=0, so the it=2 element loop still sees zero nodal σ, and the
+   it=2 recovery — the final one — happens after the last write).
+3. A secondary corruption: the restore/write ranges for the
+   epe/epp/epi blocks used the uninitialized globals epe_indx=-1 etc.
+   when those initia were absent, so `i>=epe_indx && i<(epe_indx+9)`
+   matched slots [0,8) and copied the VELOCITY values into the
+   ELEMENT_DOF head (the "3.27e-16 0.000377" noise seen in the L4-era
+   .dbs). The stress block [stres_indx, stres_indx+6*nder) stayed
+   zero, which triggered the L4 fallback ("the element integration
+   point stresses are all zero") and its interpretation "the staggered
+   loop does not propagate the deformation" — the deformation WAS
+   propagated (the RHS and the recovery prove it); only the
+   ELEMENT_DOF RECORD was blind.
+
+**The fix (minimal, nder=1 byte-identical)**:
+- materi.cc:850: `new_unknowns[stres_indx + (ipuknwn - stres_indx/nder)*nder]`
+  (the value slot of the j-th stress component; for nder=1 this is
+  exactly the old expression). Same one-line fix for the
+  materi_history_variables write (materi.cc:807).
+- elem.cc: the stress restore range widened from MDIM*MDIM=9 to
+  6*nder (the L4 write already used 6*nder — the restore was
+  inconsistent and read a partial/mixed block for nder>1); the hisv
+  restore/write ranges now use materi_history_variables*nder (the old
+  narrow ranges lost the value slots of the derivatives models) with
+  a `hisv_indx>=0` guard.
+
+**Why no extra pass is needed (the one-pass property)**: the scheme
+converges in ONE pass (v(k) = v* = (dt·K_elem)^-1·(P − Bᵀσ_old) for
+k ≥ 1, fix C/D), so the material call of the LAST element loop runs on
+the converged velocity and the element_dof now carries σ* = the
+equilibrium constitutive stress. The Bᵀσ = P condition holds for the
+written state at the end of the step.
+
+### 13.2 The 5× section statics mechanism (the L5 "non-equilibrated gforce7", resolved)
+
+The arness measured gforce7 (2 quad9, 50×10) at N/V/M = 5.0000× and
+gforce7_ref (8 quad9, 12.5×10) at 1.2500×. The σ field is NOT
+non-equilibrated: the momentum residual of the last solve is 2.19e-13
+(the honest CG, fix A), the velocity is the equilibrium Timoshenko
+field (vely(x=50) = -0.01154 vs the analytic 0.01138), and the nodal
+σxx(x=50) = ±301 matches the analytic bending stress ±300. The
+amplification is a KINEMATICS BUG of the LOT-5 section integration
+(msf_element_internal_forces_2d, calcul_force.cc):
+
+- The physical derivatives were computed with the inverse of the
+  TRANSPOSED Jacobian: `dn[0] = invjac[0]*pξ + invjac[2]*pη` uses
+  invjac[2] (= ∂ξ/∂y) where the correct dN/dx needs invjac[1]
+  (= ∂η/∂x); the cross terms invjac[1]↔invjac[2] were swapped.
+- The tochnog quad9 local ordering [9,8,7,6,5,4,3,2,1] runs the local
+  ξ-axis VERTICALLY (local node 0 = the top-right corner), so the
+  Jacobian is the non-diagonal [[0,-5],[-25,0]] and the swap matters:
+  dN_0/dx at the corner reads 0.3 instead of the true 0.06 — a 5×
+  error for the 50×10 element (the factor = the element aspect ratio
+  times the swap; measured 5× for 50/10 and 5/4 for 12.5/10).
+- The quad4/quad9-square elements have diagonal Jacobians (the swap
+  multiplies zeros) — gforce7q4, gffq4, msf_beam2d (1×1 quad9s) were
+  exact and are BYTE-IDENTICAL after the fix. The 3D version uses the
+  full matrix-vector product invjac·p3 (correct) — msf_tunnel3d /
+  msf_cant3d_hex27 were exact and unchanged.
+
+**The fix (minimal)**: swap invjac[1] and invjac[2] in the two dn
+lines of msf_element_internal_forces_2d (the SRI branch's b_shear —
+written later — already used the correct formula).
+
+### 13.3 Results (arness = acceptance, suite = regression)
+
+| model | BEFORE | AFTER | Professional |
+|---|---|---|---|
+| gforce7 (2 quad9) | N/V/M 5.0000× | **N 1.0000×, V 1.0000×, M 0.9984×** | EXACTO |
+| gforce7_ref (8 quad9) | N/M/V 1.2500× | **N 1.0000×, V 1.0000×, M 0.9987×** | EXACTO |
+| gforce7q4 (2 quad4) | N/V 1.0000×, M 0.9984× | byte-idéntico | EXACTO |
+| gffq4 (10 quad4) | identidad pL²/8 0.9996 | byte-idéntico | EXACTO |
+| gforce10/13 (hex8 3D) | N 1.0000× (fallback) | **N 1.0000× (ELEMENT_DOF real, sin fallback)** | EXACTO |
+
+The equilibrium check (assembled internal forces from the ELEMENT_DOF
+σ with the corrected kinematics, gforce7): Σ f_elem = -P at the free
+dofs and the clamp reactions (12.34, 100) match the loads exactly —
+Bᵀσ = P to the solver tolerance (1e-5). The L5's "the state σ is not
+in equilibrium" (VALIDACION §11) is retracted: the state was always
+equilibrated; the L5 kinematics amplified it.
+
+### 13.4 What this does NOT change
+
+- The 3D section V/mom of the axial-loaded arness models (gforce10/13:
+  the section shear/moment stay ≈ 0 — a remaining 3D face/arm issue of
+  the section post-processing, NOT the scheme; the N is exact and is
+  the arness acceptance). The y-loaded 3D cantilever (msf_cant3d_hex27)
+  DOES produce the free-body statics (shes = P within 4%).
+- The plain quad4/hex8 lock, the SRI hex8 zero modes, the section
+  shear pollution of the raw Q4 σ_xy (all documented in §12.4).
+- The targets of mesh_act_grav / cmat_gate / qsri3d_beam were UPDATED
+  with justification: they were calibrated against the partial σ
+  restore of the derivatives models (the old restore read only 9 slots
+  and lost σyy/σxy... for nder=4; the fixed restore reads the full
+  6*nder block). mesh_act_grav's velx flips from the artifact -0.95 to
+  the physical +1.3333 (the +x gravity ramp: the elastic displacement
+  u = F·L/(E·A) = 1000·1/1000 = 1); cmat_gate's sigxy from -88.39 to
+  +9.09 (the linear shear with the capped first step); qsri3d_beam's
+  section moments now read the free-body statics P·L = 0.08 for both
+  SRI and OFF (the SRI discriminator is the deflection, not the
+  section moment).

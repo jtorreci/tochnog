@@ -554,3 +554,78 @@ Re-ejecución: `TOCHNOG_PROF_BIN=... scripts/compare_professional.sh`
   mallas requiere que el solve produzca el σ en equilibrio (Bᵀσ = P) —
   la vía es del solver mixto, no de la sección. El SRI hex8 3D sigue
   pendiente.
+
+---
+
+## 12. POST-L6 (2026-08-29) — estado σ en equilibrio: ELEMENT_DOF 3D poblado + cinemática de sección corregida
+
+**Estado**: el frente abierto del L5 ("el estado σ de los runs gruesos
+NO está en equilibrio — Bᵀσ = P requiere la vía del solver mixto") se
+CIERRA con dos fixes del POST-PROCESO/salida, no del solver: (a) el
+ELEMENT_DOF de los 3D con `derivatives` nunca recibía el σ
+constitutivo (el misterio "inc_ept=0" del L4 — mecanismo medido en
+DIAG §13.1: materi.cc:850 escribía en el slot `stres_indx/nder + j`
+en vez de `stres_indx + j·nder`, y con nder=5 el σ caía en el bloque de
+desplazamientos; el restore del bloque de tensión leía solo 9 slots —
+parcial — y los rangos epe/epp/epi con índices -1 capturaban slots
+[0,8)); (b) las fuerzas internas de sección 2D (L5) se integraban con
+la inversa del jacobiano TRASPUESTO (términos cruzados invjac[1]↔[2]
+intercambiados en msf_element_internal_forces_2d) — un factor de
+amplificación dependiente de la malla (5× para los elementos 50×10 del
+gforce7, 5/4× para los 12.5×10 del gforce7_ref) que NO existía para
+jacobianos diagonales (quad4, quad9 cuadrados) ni en 3D (producto
+matriz-vector completo). El campo σ SÍ estaba en equilibrio: residuo
+del solver 2.19e-13, vely(x=50) = −0.01154 ≈ 0.01138 analítico, σxx
+nodal = ±301 ≈ ±300 analítico. Re-ejecución:
+`TOCHNOG_PROF_BIN=... scripts/compare_professional.sh` (2026-08-29T05:54Z).
+
+### 12.1 Resultados del arness (GNU POST-L6 vs Professional)
+
+| modelo | POST-L5 | POST-L6 | Professional | nota |
+|---|---|---|---|---|
+| `gforce7` (2 quad9) | N/V/M 5.0000× | **N 1.0000× (12.34), V 1.0000× (100), M 0.9984× (4992)** | EXACTO | la estática del cuerpo libre del estado equilibrado — el 5× era la cinemática del L5 (DIAG §13.2), no el no-equilibrio |
+| `gforce7_ref` (8 quad9) | N/M/V 1.2500× | **N 1.0000×, V 1.0000×, M 0.9987×** | EXACTO | idem (factor 5/4× de la misma cinemática) |
+| `gforce7q4` (2 quad4) | N 1.0000×, V 1.0000×, M 0.9984× | **byte-idéntico** | EXACTO | jacobiano diagonal: la cinemática corregida es idéntica |
+| `gffq4` (10 quad4) | identidad pL²/8 0.9996 | **byte-idéntico** | EXACTO | idem |
+| `gforce10`/`gforce13` (hex8 3D) | N 1.0000× (fallback del L4) | **N 1.0000× (ELEMENT_DOF real — el fallback ya no dispara)** | EXACTO | el misterio inc_ept=0 cerrado: el σ constitutivo llega a los IPs; V/mom de la sección 3D siguen ≈ 0 (frente de caras 3D del post-proceso, no del esquema — el cantilever cargado en y msf_cant3d_hex27 SÍ da shes = P al 4%) |
+| `msf_shear` | 0.3846153846 EXACTO | **EXACTO, sin cambios** | σ_xy EXACTO | — |
+| `msf_tunnel3d` | = Professional dígito a dígito | **sin cambios** | 0.09980686 | — |
+
+### 12.2 Verificación del equilibrio (el criterio del lote)
+
+Residuo Bᵀσ − P medido con las fuerzas internas del ELEMENT_DOF
+(cinemática corregida, gforce7): Σ f_elem = −P en los dofs libres y
+las reacciones de empotramiento (12.34, 100) iguales a las cargas —
+Bᵀσ = P dentro de la tolerancia del solver (1e-5) ANTES y DESPUÉS del
+lote: el estado σ del esquema escalonado con el fix C/D SIEMPRE estuvo
+en equilibrio; el "5×" era la lectura del L5. Residuo de la lectura:
+61.7/500/24955 (5×) → 12.34/100/4992 (1.0000×/1.0000×/0.9984×).
+
+### 12.3 Suite
+
+209/209 runs + verificaciones de archivos OK en build limpio. Checks
+actualizados CON justificación (calibrados contra el restore σ parcial
+de los modelos con `derivatives`, que perdía σyy/σxy... para nder=4 —
+el restore ahora lee el bloque completo 6·nder): mesh_act_grav
+(velx −0.95 → +1.3333 — el signo físico de la rampa de gravedad +x: el
+desplazamiento elástico u = F·L/(E·A) = 1000·1/1000 = 1), cmat_gate
+(sigxy −88.39 → +9.09 — la cizalla lineal con el primer paso capped;
+el A/B |sigxy| > 1.0 se conserva) y qsri3d_beam (los momentos de
+sección 710/711 ahora leen la estática del cuerpo libre P·L = 0.08
+para SRI y OFF — el discriminador SRI es la deflexión de los targets,
+0.897× vs 0.221× de la EB). Tiempos: peor caso 6 s por test (timeout
+120 s sin riesgo).
+
+### 12.4 Conclusión del L6 (qué cierra y qué NO)
+
+- **CIERRA**: (a) el misterio inc_ept=0 del L4 (el ELEMENT_DOF de los
+  3D con `derivatives` sale a ceros) — mecanismo completo: slot de
+  escritura equivocado + lag de una iteración + restore parcial —
+  fijado en materi.cc:850/elem.cc; (b) el "no-equilibrio" del L5 — el
+  campo σ estaba en equilibrio, el 5× era la cinemática traspuesta de
+  la sección 2D (fix en msf_element_internal_forces_2d); (c) la última
+  brecha del arness: gforce7/gforce7_ref a 1.0000× sin el fallback 3D.
+- **NO CIERRA** (frentes anotados, fuera del alcance): el V/mom de la
+  sección 3D de los modelos con carga axial (gforce10/13 — la cara/el
+  brazo 3D del post-proceso, no el esquema), el SRI hex8 3D con modos
+  de energía cero, la polución de cizalla del σ_xy crudo del Q4.
