@@ -285,3 +285,7 @@ Each file corresponds to the same feature in the [User Manual](../manual-user/).
 - [tochnog_version](tochnog_version.md) — the record PUT at top() init parsed from __DATE__.
 - [volume_factor_x](volume_factor_x.md) — volume.cc piecewise factor at the IP x; the right-of-last-x factor-1 guard; odd-length validation.
 - [zip](zip.md) — exit_tn() after targets/before db_close; the nullglob trap (per-file existence test); isolated-directory testing.
+
+## Sprint 13 lote 1 — soporte Winkler distribuido
+
+- [support_edge_normal](support_edge_normal.md) — area.cc type[10]: the RHS force from total displacements + the consistent dt-scaled side stiffness in the matrix (solvability), the output record with per-sweep re-zeroing (last-element detection), the bounda gotchas (-node no-op, shared bounda_time values, 3D two-record quirk).

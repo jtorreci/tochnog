@@ -286,3 +286,7 @@ input parameters it accepts.
 - [tochnog_version](tochnog_version.md) — the build date as a queryable record (day, month, year; 6.1091).
 - [volume_factor_x](volume_factor_x.md) — piecewise-constant volume factor in x (6.1094): thickness/area by x intervals.
 - [zip](zip.md) — gzip the output files at the end of the calculation (6.1095).
+
+## Sprint 13 lote 1 — soporte Winkler distribuido
+
+- [support_edge_normal](support_edge_normal.md) — the distributed edge support (manual 6.1067): normal+tangential stiffness per unit length (2D) / area (3D), displacement-driven force + consistent matrix stiffness; the 5 same-index side selectors; output `node_support_edge_normal_force`.
