@@ -122,9 +122,13 @@ void parallel_new_dof_diagonal( void )
 
   db( ICONTROL, 0, &icontrol, ddum, ldum, VERSION_NORMAL, GET );
   db( DTIME, 0, idum, &dtime, ldum, VERSION_NEW, GET );
-  db( OPTIONS_SOLVER, 0, &options_solver, ddum, ldum, 
+  db( OPTIONS_SOLVER, 0, &options_solver, ddum, ldum,
     VERSION_NORMAL, GET_IF_EXISTS );
-  db( CONTROL_OPTIONS_SOLVER, icontrol, &options_solver, ddum, ldum, 
+  db( CONTROL_OPTIONS_SOLVER, icontrol, &options_solver, ddum, ldum,
+    VERSION_NORMAL, GET_IF_EXISTS );
+  // solver (manual Professional 6.1047): the global record overwrites
+  // every control_solver (see top.cc)
+  db( SOLVER, 0, &options_solver, ddum, ldum,
     VERSION_NORMAL, GET_IF_EXISTS );
   db( DOF_PRINCIPAL, 0, dof_principal, ddum, ldum, VERSION_NORMAL, GET );
   db_max_index( NODE, max_node, VERSION_NORMAL, GET );

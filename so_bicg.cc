@@ -94,6 +94,10 @@ long int solve_iterative_bicg( void )
     // relative check error
   db( CONTROL_OPTIONS_SOLVER_BICG_ERROR, icontrol, idum, &bicg_error,
 	  ldum, VERSION_NORMAL, GET_IF_EXISTS );
+  // solver_bicg_error (manual Professional 6.1048): the global record
+  // overwrites the per-control one
+  db( SOLVER_BICG_ERROR, 0, idum, &bicg_error,
+	  ldum, VERSION_NORMAL, GET_IF_EXISTS );
   check_error = bicg_error * initial_error;
   if ( swit ) pri( "check_error", check_error );
 
@@ -113,12 +117,39 @@ long int solve_iterative_bicg( void )
     db( CONTROL_SOLVER_BICG_STOP, icontrol_bicg, &bicg_stop,
       ddum_bs, ldum_bs, VERSION_NORMAL, GET_IF_EXISTS );
   }
+  // solver_bicg_stop (manual Professional 6.1050): the global record
+  // overwrites the per-control one
+  db( SOLVER_BICG_STOP, 0, &bicg_stop,
+    ddum_bs, ldum_bs, VERSION_NORMAL, GET_IF_EXISTS );
 
     // the velocity/temperature/pressure system assembled by the GNU is
     // symmetric when every element matrix is symmetric (the diagonal
     // NODE_LHSIDE block is diagonal). Measured per solve; symmetric ->
     // plain CG, non-symmetric (e.g. some coupled terms) -> honest Bi-CG.
-  solve_iterative_bicg_use_cg = solve_iterative_bicg_symmetric( );
+  {
+    long int matrix_symmetric = -NO;
+    long int measured_symmetric = solve_iterative_bicg_symmetric( );
+    // solver_matrix_symmetric -yes (manual Professional 6.1052): the
+    // user asserts the system is symmetric - the per-solve measurement
+    // is bypassed and the symmetric solver (CG) is used. The
+    // Professional symmetrizes the matrix if needed; the GNU runs CG
+    // on the as-assembled matrix, so a warning is printed when the
+    // measurement disagrees with the user's assertion.
+    db( SOLVER_MATRIX_SYMMETRIC, 0, &matrix_symmetric, ddum_bs, ldum_bs,
+      VERSION_NORMAL, GET_IF_EXISTS );
+    if ( matrix_symmetric==-YES ) {
+      solve_iterative_bicg_use_cg = 1;
+      if ( swit ) pri( "solver_matrix_symmetric -yes: using CG" );
+      if ( !measured_symmetric ) {
+        pri( "Warning: solver_matrix_symmetric -yes but the measured "
+             "system is NOT symmetric - CG may not converge on it "
+             "(the Professional symmetrizes the matrix in this case)" );
+      }
+    }
+    else {
+      solve_iterative_bicg_use_cg = measured_symmetric;
+    }
+  }
   if ( swit ) {
     if ( solve_iterative_bicg_use_cg ) pri( "system is symmetric: using CG" );
     else pri( "system is NOT symmetric: using Bi-CG" );

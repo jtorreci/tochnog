@@ -600,6 +600,27 @@ void exit_tn( long int print_database_type )
     }
   }
 
+  // zip (manual Professional 6.1095): zip all *flavia*, *msh, vtk,
+  // *.plt and *.dbs files with the gzip program at the end of the
+  // calculation (the gzip program must be installed). Read BEFORE
+  // db_close (the record lives in the database).
+  {
+    long int zip = -NO;
+    db( ZIP, 0, &zip, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+    if ( zip==-YES ) {
+      // only existing files are gzipped (a glob without matches must
+      // not count as a failure)
+      int rc = system( "for f in *flavia* *msh vtk* *.plt *.dbs ; do "
+                       "[ -f \"$f\" ] && gzip -f \"$f\" ; done "
+                       ">/dev/null 2>&1" );
+      if ( rc!=0 )
+        pri( "Warning: zip -yes but gzipping the output files failed "
+             "(is the gzip program installed?)" );
+      else
+        pri( "zip -yes: output files zipped with gzip" );
+    }
+  }
+
   db_close();
 
   ofstream out( "tn.log", ios::app );

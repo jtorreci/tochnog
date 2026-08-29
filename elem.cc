@@ -315,9 +315,13 @@ void elem( long int element, long int ithread )
   db( DOF_TYPE, 0, dof_type, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
   db( DOF_PRINCIPAL, 0, dof_principal, ddum, ldum, VERSION_NORMAL, GET );
   db( ICONTROL, 0, &icontrol, ddum, ldum, VERSION_NORMAL, GET );
-  db( OPTIONS_SOLVER, 0, &options_solver, ddum, 
+  db( OPTIONS_SOLVER, 0, &options_solver, ddum,
     ldum, VERSION_NORMAL, GET_IF_EXISTS );
-  db( CONTROL_OPTIONS_SOLVER, icontrol, &options_solver, ddum, 
+  db( CONTROL_OPTIONS_SOLVER, icontrol, &options_solver, ddum,
+    ldum, VERSION_NORMAL, GET_IF_EXISTS );
+  // solver (manual Professional 6.1047): the global record overwrites
+  // every control_solver (see top.cc)
+  db( SOLVER, 0, &options_solver, ddum,
     ldum, VERSION_NORMAL, GET_IF_EXISTS );
   db( GROUP_MATERI_MEMBRANE, element_group, &membrane, ddum, ldum, 
     VERSION_NORMAL, GET_IF_EXISTS );

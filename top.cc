@@ -35,6 +35,7 @@ void top( void )
     use_control_timestep_iterations_automatic=0, 
     use_control_timestep_size_automatic_decrease=0, 
     control_timestep_iterations_automatic_stop=-YES, 
+    timestep_iterations_automatic_apply=-YES, 
     converged_once=0, time_at_start=0,
     options_stabilization=-STATIC, options_elementloop=-YES,
     print_control=-NO, options_solver=-MATRIX_ITERATIVE_BICG, print_where=-NO,
@@ -62,6 +63,30 @@ void top( void )
 
   time_at_start = (long int) time(NULL);
   length=1; db( TIME_AT_START, 0, &time_at_start, ddum, length, VERSION_NORMAL, PUT );
+
+  // tochnog_version (manual Professional 6.1091): the build date as a
+  // queryable record (day, month, year) - parsed from the compiler's
+  // __DATE__ string so the record always matches the binary
+  {
+    long int version[3] = { 0, 0, 0 };
+    char month_str[16] = "";
+    long int day = 0, year = 0, imonth = 0;
+    char *months[12] = { (char*)"Jan", (char*)"Feb", (char*)"Mar",
+      (char*)"Apr", (char*)"May", (char*)"Jun", (char*)"Jul",
+      (char*)"Aug", (char*)"Sep", (char*)"Oct", (char*)"Nov",
+      (char*)"Dec" };
+    if ( sscanf( __DATE__, "%15s %ld %ld", month_str, &day, &year )==3 ) {
+      for ( imonth=0; imonth<12; imonth++ )
+        if ( !strcmp( month_str, months[imonth] ) ) break;
+      if ( imonth<12 ) {
+        version[0] = day;
+        version[1] = imonth + 1;
+        version[2] = year;
+      }
+    }
+    length = 3;
+    db( TOCHNOG_VERSION, 0, version, ddum, length, VERSION_NORMAL, PUT );
+  }
 
   if ( materi_velocity ) {
     array_set( options_mesh, -FOLLOW_MATERIAL, ndim );
@@ -247,7 +272,15 @@ void top( void )
                   maximum_timestep = DBL_MAX;
                   ratio_criterium = DBL_MAX;
                   use_control_timestep_iterations_automatic = 0;
-                  if ( db_active_index(  CONTROL_TIMESTEP_ITERATIONS_AUTOMATIC, 
+                  // timestep_iterations_automatic_apply -no (manual
+                  // Professional 6.1090): neglect every
+                  // control_timestep_iterations_automatic record
+                  timestep_iterations_automatic_apply = -YES;
+                  db( TIMESTEP_ITERATIONS_AUTOMATIC_APPLY, 0,
+                    &timestep_iterations_automatic_apply, ddum, ldum,
+                    VERSION_NORMAL, GET_IF_EXISTS );
+                  if ( timestep_iterations_automatic_apply!=-NO &&
+                       db_active_index(  CONTROL_TIMESTEP_ITERATIONS_AUTOMATIC, 
                       icontrol, VERSION_NORMAL ) ) {
                     db( CONTROL_TIMESTEP_ITERATIONS_AUTOMATIC, icontrol, 
                       idum, control_timestep_iterations_automatic, ldum, 
@@ -350,6 +383,12 @@ void top( void )
                       db( OPTIONS_SOLVER, 0, &options_solver, ddum, length,
                         VERSION_NORMAL, GET_IF_EXISTS );
                       db( CONTROL_OPTIONS_SOLVER, icontrol, &options_solver, ddum, length,
+                        VERSION_NORMAL, GET_IF_EXISTS );
+                      // solver (manual Professional 6.1047): the GLOBAL
+                      // solver type - overwrites every control_solver
+                      // (the opposite precedence of options_solver,
+                      // which the per-control record overwrites)
+                      db( SOLVER, 0, &options_solver, ddum, length,
                         VERSION_NORMAL, GET_IF_EXISTS );
 						
                       step_start( YES, &options_solver, dtime, time_current );

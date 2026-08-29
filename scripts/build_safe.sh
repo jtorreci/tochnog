@@ -623,8 +623,9 @@ for t in hypo1 hypo2 hypo3 hypo4 smooth1 dof1 mlx1 vtk_dof1 gen1 genbeam1       
           msf_cant3d_hex27 msf_axisym \
           qsri_beam2d qsri_beam2d_sri qsri_patch_s qsri_patch_s_off \
           qsri_patch_t qsri_patch_t_off qsri_modes qsri_modes_rigid \
-          qsri3d_patch_s qsri3d_patch_s_off qsri3d_patch_t qsri3d_patch_t_off \
-          qsri3d_modes_rigid qsri3d_modes qsri3d_beam qsri3d_beam_off; do
+         qsri3d_patch_s qsri3d_patch_s_off qsri3d_patch_t qsri3d_patch_t_off \
+         qsri3d_modes_rigid qsri3d_modes qsri3d_beam qsri3d_beam_off \
+         tslv_vfx tslv_part tslv_symm tslv_bsym tslv_ver tslv_auto tslv_override; do
   HIPO_TOTAL=$((HIPO_TOTAL+1))
   ( cd validation-suite/test-2014 &&
     ulimit -v 4000000 &&
@@ -637,7 +638,7 @@ for t in hypo1 hypo2 hypo3 hypo4 smooth1 dof1 mlx1 vtk_dof1 gen1 genbeam1       
     echo "    $t: FALLO (rc=$RC)"
   fi
 done
-echo "==> Resumen: $HIPO_OK/$HIPO_TOTAL runs OK (13 tests: 12 preexistentes + familia iface_mc en 10 runs + familia 3D en 5 runs + familia generate_interface en 6 runs + familia materi_direct en 5 runs + materi_displacement_relative en 2 runs + slide/reset_value en 2 runs + cda_arith/copy/activate en 3 runs + cdist_normal/corr/clamp en 3 runs + cd_method/cd_geom en 2 runs + gravity/settlement en 4 runs + contact en 1 run + contact_block/ctrl_apply/heatgen en 3 runs + groundflow_consolidate_off en 1 run + groundflow_vangenuchten/groundflow_nonsaturated_off en 2 runs + groundflow_total_pressure_tension/groundflow_interface en 2 runs + groundflow_flux_edge en 1 run + groundflow_phreatic_multiple en 1 run + groundflow_seepage en 1 run + groundflow_pressure_atm/_def en 2 runs + groundflow_total_pressure_limit/_dry en 2 runs + condif_heat_edge/vol/vol2 en 3 runs + condif_convec/rad/convec_el en 3 runs + aeg_node/aeg_seq/bt_factor en 3 runs + iface_condif/expansion/tangref en 3 runs + node_force_inertia/slide/pressure en 3 runs + creset_geom/iface en 2 runs + fedge_alias/restrict, fvol_elem y cmat_gate en 4 runs + fproj_tunnel en 1 run + dsmall/dignore en 2 runs + mdirect_comp/gate en 2 runs + mdp_shear/mfactor en 2 runs + mmc_tension en 1 run + mmchs_soft en 1 run + mcap2/mcap_legacy en 2 runs + mcrunch/mcrunch_low en 2 runs + mvoid/mvoid_low en 2 runs + mpower en 1 run + mshf/mshf_nof en 2 runs + mk0/mk0_off en 2 runs + myoung6/myoung6_e2/myoung6_e3/myoung6_apply en 4 runs + msph/msph_flat en 2 runs + mcap1/mcap1_elast/mcap1_comb en 3 runs + mhardsoil_elast/elast2/unload/unload_flat/plast/plast_elast/gp0/gp0_off en 8 runs + mstrain_cap/_elast, mstrain_compression/_elast, mstrain_diprisco/_elast, mstrain_druckprag/_elast en 8 runs + mdiprisco_hist en 1 run + mc_pressure_min/_off en 2 runs (Sprint 10 lote 9) + mrepeat_save en 1 run (Sprint 10 lote 10) + dbmeth/partialname/meshdoff/dofrhside/elmethod/hreltime/numit/dofid_no en 8 runs (Sprint 11 lote 1) + freq_timeint/freq_timestep en 2 runs (Sprint 11 lote 2) + vtk_coord1/vtk_dofcalc1/vtk_empty1/vtk_nodmeth1/vtk_other1 en 5 runs (Sprint 11 lote 3) + dpline1/dpline_n/dpline_geom/dpline_group/dpline_eps/dpline_method/dpline_move/dpline_time/dpoint_time/dpoint1 en 10 runs (Sprint 11 lote 4) + cpn1/cpn_angular/cpn_geom/cpn_sort/cpn_zero/dsmooth1/dsmooth_n en 7 runs (Sprint 11 lote 5) + bmom1/bmom_switch/bmom_truss/bmom_2d/bmom_noint en 5 runs (Sprint 11 lote 6) + msf_parse/msf_parse_3d/msf_print/msf_errors_2dwarn en 4 runs (sub-sprint materi_stress_force, lote 1) + msf_beam2d/msf_beam2d_pure/msf_quad9/msf_quad9_noavg/msf_nor/msf_shear en 6 runs (sub-sprint materi_stress_force, lote 2) + msf_sheet3d/msf_sheet3d_hex8/msf_hex27_avg/msf_tunnel3d en 4 runs (sub-sprint materi_stress_force, lote 3) + qsri_beam2d/qsri_beam2d_sri/qsri_patch_s/qsri_patch_s_off/qsri_patch_t/qsri_patch_t_off/qsri_modes/qsri_modes_rigid en 8 runs (shear locking quad4 + SRI) + qsri3d_patch_s/_off, qsri3d_patch_t/_off, qsri3d_modes_rigid, qsri3d_modes, qsri3d_beam/_off en 8 runs (SRI hex8 3D) + msf_cant3d_hex27/msf_axisym en 2 runs (sub-sprint materi_stress_force, lote 4))."
+echo "==> Resumen: $HIPO_OK/$HIPO_TOTAL runs OK (13 tests: 12 preexistentes + familia iface_mc en 10 runs + familia 3D en 5 runs + familia generate_interface en 6 runs + familia materi_direct en 5 runs + materi_displacement_relative en 2 runs + slide/reset_value en 2 runs + cda_arith/copy/activate en 3 runs + cdist_normal/corr/clamp en 3 runs + cd_method/cd_geom en 2 runs + gravity/settlement en 4 runs + contact en 1 run + contact_block/ctrl_apply/heatgen en 3 runs + groundflow_consolidate_off en 1 run + groundflow_vangenuchten/groundflow_nonsaturated_off en 2 runs + groundflow_total_pressure_tension/groundflow_interface en 2 runs + groundflow_flux_edge en 1 run + groundflow_phreatic_multiple en 1 run + groundflow_seepage en 1 run + groundflow_pressure_atm/_def en 2 runs + groundflow_total_pressure_limit/_dry en 2 runs + condif_heat_edge/vol/vol2 en 3 runs + condif_convec/rad/convec_el en 3 runs + aeg_node/aeg_seq/bt_factor en 3 runs + iface_condif/expansion/tangref en 3 runs + node_force_inertia/slide/pressure en 3 runs + creset_geom/iface en 2 runs + fedge_alias/restrict, fvol_elem y cmat_gate en 4 runs + fproj_tunnel en 1 run + dsmall/dignore en 2 runs + mdirect_comp/gate en 2 runs + mdp_shear/mfactor en 2 runs + mmc_tension en 1 run + mmchs_soft en 1 run + mcap2/mcap_legacy en 2 runs + mcrunch/mcrunch_low en 2 runs + mvoid/mvoid_low en 2 runs + mpower en 1 run + mshf/mshf_nof en 2 runs + mk0/mk0_off en 2 runs + myoung6/myoung6_e2/myoung6_e3/myoung6_apply en 4 runs + msph/msph_flat en 2 runs + mcap1/mcap1_elast/mcap1_comb en 3 runs + mhardsoil_elast/elast2/unload/unload_flat/plast/plast_elast/gp0/gp0_off en 8 runs + mstrain_cap/_elast, mstrain_compression/_elast, mstrain_diprisco/_elast, mstrain_druckprag/_elast en 8 runs + mdiprisco_hist en 1 run + mc_pressure_min/_off en 2 runs (Sprint 10 lote 9) + mrepeat_save en 1 run (Sprint 10 lote 10) + dbmeth/partialname/meshdoff/dofrhside/elmethod/hreltime/numit/dofid_no en 8 runs (Sprint 11 lote 1) + freq_timeint/freq_timestep en 2 runs (Sprint 11 lote 2) + vtk_coord1/vtk_dofcalc1/vtk_empty1/vtk_nodmeth1/vtk_other1 en 5 runs (Sprint 11 lote 3) + dpline1/dpline_n/dpline_geom/dpline_group/dpline_eps/dpline_method/dpline_move/dpline_time/dpoint_time/dpoint1 en 10 runs (Sprint 11 lote 4) + cpn1/cpn_angular/cpn_geom/cpn_sort/cpn_zero/dsmooth1/dsmooth_n en 7 runs (Sprint 11 lote 5) + bmom1/bmom_switch/bmom_truss/bmom_2d/bmom_noint en 5 runs (Sprint 11 lote 6) + msf_parse/msf_parse_3d/msf_print/msf_errors_2dwarn en 4 runs (sub-sprint materi_stress_force, lote 1) + msf_beam2d/msf_beam2d_pure/msf_quad9/msf_quad9_noavg/msf_nor/msf_shear en 6 runs (sub-sprint materi_stress_force, lote 2) + msf_sheet3d/msf_sheet3d_hex8/msf_hex27_avg/msf_tunnel3d en 4 runs (sub-sprint materi_stress_force, lote 3) + qsri_beam2d/qsri_beam2d_sri/qsri_patch_s/qsri_patch_s_off/qsri_patch_t/qsri_patch_t_off/qsri_modes/qsri_modes_rigid en 8 runs (shear locking quad4 + SRI) + qsri3d_patch_s/_off, qsri3d_patch_t/_off, qsri3d_modes_rigid, qsri3d_modes, qsri3d_beam/_off en 8 runs (SRI hex8 3D) + msf_cant3d_hex27/msf_axisym en 2 runs (sub-sprint materi_stress_force, lote 4) + tslv_vfx/tslv_part/tslv_symm/tslv_bsym/tslv_ver/tslv_auto/tslv_override en 7 runs (Sprint 12 lote 3: solver_* global + chicos))."
 
 # ---------------------------------------------------------------------
 # Sprint 11 lote 1: verificacion de ARCHIVOS y STDOUT de los 8 keywords
@@ -1770,11 +1771,59 @@ else
   check_fail "qsri3d_beam" "momens de seccion o targets inesperados (710=$M710 711=$M711)"
 fi
 
+# ---------------------------------------------------------------------
+# Sprint 12 lote 3: familia solver_* global + timestep_*/tochnog_version/
+# volume_factor_x/zip (manual Professional 6.1047-6.1056, 6.1089-6.1091,
+# 6.1094-6.1095). El zip corre en directorio AISLADO: su glob gzipearia
+# todos los *.dbs del directorio compartido.
+# ---------------------------------------------------------------------
+TSLV_OK=1
+# tslv_override: el banner de SuperLU prueba que el record GLOBAL
+# solver piso al control_solver -matrix_iterative_bicg
+if rg -q "Solution Found" /tmp/tslv_override_safe.out 2>/dev/null; then
+  check_ok "tslv_override (solver -matrix_superlu GLOBAL pisa a control_solver bicg: banner SuperLU en stdout)"
+else
+  check_fail "tslv_override" "sin banner de SuperLU - el override global no tomo efecto"; TSLV_OK=0
+fi
+# tslv_bsym: el warning de solver_matrix_symmetric -yes sobre sistema
+# medido NO simetrico (el beam) - el record se lee y se consume
+if rg -q "solver_matrix_symmetric -yes but the measured" /tmp/tslv_bsym_safe.out 2>/dev/null; then
+  check_ok "tslv_bsym (warning de -yes sobre sistema NO simetrico medido: el record se consume)"
+else
+  check_fail "tslv_bsym" "sin warning de matrix_symmetric"; TSLV_OK=0
+fi
+# tslv_vfx: la estatica de serie con espesor 2 en la mitad derecha
+if v9=$(awk '$1=="node_dof"&&$2==9{print $3; exit}' "$T2014/tslv_vfx.dbs" 2>/dev/null) && \
+   awk -v v="$v9" 'BEGIN{exit !(v>1.0e-3 && v<1.3e-3)}'; then
+  check_ok "tslv_vfx (volume_factor_x: velx punta 1.15e-3 = N*4/(E*1)+N*4/(E*2), A/B 1.59e-3 sin el record)"
+else
+  check_fail "tslv_vfx" "velx punta fuera de banda (esperada ~1.15e-3)"; TSLV_OK=0
+fi
+# tslv_ver: el record tochnog_version con el ano de build (target del .dat)
+if rg -aq "^tochnog_version" "$T2014/tslv_ver.dbs" 2>/dev/null; then
+  check_ok "tslv_ver (tochnog_version presente en el .dbs con la fecha de build)"
+else
+  check_fail "tslv_ver" "sin record tochnog_version en el .dbs"; TSLV_OK=0
+fi
+# tslv_zip: corrida AISLADA - el .dbs.gz aparece y no hay warning
+ZDIR="/tmp/tslv_zip_isolated"
+rm -rf "$ZDIR" && mkdir -p "$ZDIR" && cp "$T2014/tslv_zip.dat" "$ZDIR/" && \
+  ( cd "$ZDIR" && ulimit -v 4000000 && timeout 120 "$REPO_DIR/build/tochnog" tslv_zip.dat > run.out 2>&1 )
+if [ -f "$ZDIR/tslv_zip.dbs.gz" ] && ! rg -q "gzipping.*failed" "$ZDIR/run.out" 2>/dev/null; then
+  check_ok "tslv_zip (zip -yes: .dbs.gz creado al final, sin warning)"
+else
+  check_fail "tslv_zip" "sin .dbs.gz o con warning de gzip"; TSLV_OK=0
+fi
+rm -rf "$ZDIR"
+if [ "$TSLV_OK" = "1" ]; then
+  echo "==> Sprint 12 lote 3 (solver_* global + timestep_* + tochnog_version + volume_factor_x + zip): TODAS OK"
+fi
+
 if [ "$CHECK_FAIL" = "1" ]; then
   echo "==> ALGUNAS VERIFICACIONES DE ARCHIVOS FALLARON"
   exit 1
 else
-  echo "==> Verificacion de archivos de salida (Sprint 11 lotes 1-6 + sub-sprint materi_stress_force lotes 1-5 + familia qsri + familia qsri3d): TODAS OK"
+  echo "==> Verificacion de archivos de salida (Sprint 11 lotes 1-6 + sub-sprint materi_stress_force lotes 1-5 + familia qsri + familia qsri3d + lote 3 sprint 12): TODAS OK"
 fi
 
 echo "==> Log de compilacion completo en /tmp/tn_build_safe.log"

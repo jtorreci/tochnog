@@ -58,6 +58,34 @@ void volume_factor( long int element_group, double coord[], double &volfac )
   }
   volfac = factor;
 
+  // volume_factor_x (manual Professional 6.1094): an in x-direction
+  // piecewise-constant volume factor: left from x0 the factor is 1,
+  // from x0 to x1 it is fac01, etcetera, and right from the last x the
+  // factor is 1 again. The record is x0 fac01 x1 fac12 ... xn (an odd
+  // number of values). It multiplies the polynomial volume_factor and
+  // the group_volume_factor.
+  if ( db_active_index( VOLUME_FACTOR_X, 0, VERSION_NORMAL ) ) {
+    length = db_len( VOLUME_FACTOR_X, 0, VERSION_NORMAL );
+    ptr = db_dbl( VOLUME_FACTOR_X, 0, VERSION_NORMAL );
+    if ( length>=3 && length%2==1 ) {
+      x = coord[0];
+      factor = 1.;
+      // inside [x0, xn): the factor of the containing interval; left
+      // from x0 and right from xn: 1 (manual 6.1094)
+      if ( x>=ptr[0] && x<ptr[length-1] ) {
+        for ( j=0; j<length-1; j+=2 ) {
+          if ( x>=ptr[j] ) factor = ptr[j+1];
+          else break;
+        }
+      }
+      volfac *= factor;
+    }
+    else {
+      pri( "Warning: volume_factor_x needs an odd number of values "
+           "(x0 fac01 x1 fac12 ... xn) - the record is neglected" );
+    }
+  }
+
   db( GROUP_VOLUME_FACTOR, element_group, idum, &group_volume_factor, 
     ldum, VERSION_NORMAL, GET_IF_EXISTS );
   volfac *= group_volume_factor;

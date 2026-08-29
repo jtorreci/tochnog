@@ -6306,6 +6306,87 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   no_index[VOLUME_FACTOR] = 1;
   data_class[VOLUME_FACTOR] = VOLUME;
 
+  // Sprint 12 lot 3: the Professional's global solver_* family (manual
+  // 6.1047-6.1056), timestep_predict_velocity / _iterations_automatic_
+  // apply (6.1089-6.1090), tochnog_version (6.1091), volume_factor_x
+  // (6.1094) and zip (6.1095). Plain (non-indexed) records, unlike
+  // their control_solver_* counterparts of Sprint 9.
+  strcpy(name[SOLVER],"solver");
+  type[SOLVER] = INTEGER;
+  data_length[SOLVER] = 1;
+  no_index[SOLVER] = 1;
+
+  strcpy(name[SOLVER_BICG_ERROR],"solver_bicg_error");
+  type[SOLVER_BICG_ERROR] = DOUBLE_PRECISION;
+  data_length[SOLVER_BICG_ERROR] = 1;
+  no_index[SOLVER_BICG_ERROR] = 1;
+
+  strcpy(name[SOLVER_BICG_RESTART],"solver_bicg_restart");
+  type[SOLVER_BICG_RESTART] = INTEGER;
+  data_length[SOLVER_BICG_RESTART] = 1;
+  no_index[SOLVER_BICG_RESTART] = 1;
+
+  strcpy(name[SOLVER_BICG_STOP],"solver_bicg_stop");
+  type[SOLVER_BICG_STOP] = INTEGER;
+  data_length[SOLVER_BICG_STOP] = 1;
+  no_index[SOLVER_BICG_STOP] = 1;
+
+  strcpy(name[SOLVER_MATRIX_SAVE],"solver_matrix_save");
+  type[SOLVER_MATRIX_SAVE] = INTEGER;
+  data_length[SOLVER_MATRIX_SAVE] = 1;
+  no_index[SOLVER_MATRIX_SAVE] = 1;
+
+  strcpy(name[SOLVER_MATRIX_SYMMETRIC],"solver_matrix_symmetric");
+  type[SOLVER_MATRIX_SYMMETRIC] = INTEGER;
+  data_length[SOLVER_MATRIX_SYMMETRIC] = 1;
+  no_index[SOLVER_MATRIX_SYMMETRIC] = 1;
+
+  strcpy(name[SOLVER_PARDISO_ORDERING],"solver_pardiso_ordering");
+  type[SOLVER_PARDISO_ORDERING] = INTEGER;
+  data_length[SOLVER_PARDISO_ORDERING] = 1;
+  no_index[SOLVER_PARDISO_ORDERING] = 1;
+
+  strcpy(name[SOLVER_PARDISO_OUT_OF_CORE],"solver_pardiso_out_of_core");
+  type[SOLVER_PARDISO_OUT_OF_CORE] = INTEGER;
+  data_length[SOLVER_PARDISO_OUT_OF_CORE] = 1;
+  no_index[SOLVER_PARDISO_OUT_OF_CORE] = 1;
+
+  strcpy(name[SOLVER_PARDISO_PROCESSORS],"solver_pardiso_processors");
+  type[SOLVER_PARDISO_PROCESSORS] = INTEGER;
+  data_length[SOLVER_PARDISO_PROCESSORS] = 1;
+  no_index[SOLVER_PARDISO_PROCESSORS] = 1;
+
+  strcpy(name[SOLVER_PARDISO_PROCESSORS_MAXIMUM],"solver_pardiso_processors_maximum");
+  type[SOLVER_PARDISO_PROCESSORS_MAXIMUM] = INTEGER;
+  data_length[SOLVER_PARDISO_PROCESSORS_MAXIMUM] = 1;
+  no_index[SOLVER_PARDISO_PROCESSORS_MAXIMUM] = 1;
+
+  strcpy(name[TIMESTEP_ITERATIONS_AUTOMATIC_APPLY],"timestep_iterations_automatic_apply");
+  type[TIMESTEP_ITERATIONS_AUTOMATIC_APPLY] = INTEGER;
+  data_length[TIMESTEP_ITERATIONS_AUTOMATIC_APPLY] = 1;
+  no_index[TIMESTEP_ITERATIONS_AUTOMATIC_APPLY] = 1;
+
+  strcpy(name[TIMESTEP_PREDICT_VELOCITY],"timestep_predict_velocity");
+  type[TIMESTEP_PREDICT_VELOCITY] = INTEGER;
+  data_length[TIMESTEP_PREDICT_VELOCITY] = 1;
+  no_index[TIMESTEP_PREDICT_VELOCITY] = 1;
+
+  strcpy(name[TOCHNOG_VERSION],"tochnog_version");
+  type[TOCHNOG_VERSION] = INTEGER;
+  data_length[TOCHNOG_VERSION] = 3;
+
+  strcpy(name[VOLUME_FACTOR_X],"volume_factor_x");
+  type[VOLUME_FACTOR_X] = DOUBLE_PRECISION;
+  data_length[VOLUME_FACTOR_X] = DATA_ITEM_SIZE;
+  fixed_length[VOLUME_FACTOR_X] = 0;
+  no_index[VOLUME_FACTOR_X] = 1;
+  data_class[VOLUME_FACTOR_X] = VOLUME;
+
+  strcpy(name[ZIP],"zip");
+  type[ZIP] = INTEGER;
+  data_length[ZIP] = 1;
+  no_index[ZIP] = 1;
+
   strcpy(name[WAVE],"wave");
 
   strcpy(name[WAVE_SCALAR],"wave_scalar");
