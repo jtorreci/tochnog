@@ -1958,7 +1958,7 @@ void      spring( long int element, long int name, long int element_group,
             double element_rhside[] );    
  void      interface_convert( long int icontrol );
 long int  stress_indx( long int idim, long int jdim );
-long int  sri_quad4_active( long int element, long int element_group,
+long int  sri_active( long int element, long int element_group,
             long int name, long int nnol );
 double    sri_stress_recovery_weight( long int nnol, long int inol,
             long int npoint, long int ipoint, double h_inol,

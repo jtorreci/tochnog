@@ -339,30 +339,49 @@ long int stress_indx( long int idim, long int jdim )
   return indx;
 }
 
-long int sri_quad4_active( long int element, long int element_group,
+long int sri_active( long int element, long int element_group,
   long int name, long int nnol )
 
   // group_element_selective_reduced_integration (SRI, Hughes): opt-in
-  // fix for the shear locking of the bilinear quad4 in bending. Returns
-  // 1 when the keyword is -yes AND the full SRI applies to the element:
-  //   - 2D bilinear quad4 (nnol==4) only (hex8 SRI is future work)
+  // fix for the shear locking of the bilinear elements in bending.
+  // Returns 1 when the keyword is -yes AND the full SRI applies to the
+  // element:
+  //   - 2D bilinear quad4 (nnol==4, ndim==2)
+  //   - 3D trilinear hex8 (nnol==8, ndim==3) — EXTENSION 2026-08-29
+  //     (same mechanism: the shear strains gamma_xy/gamma_xz/gamma_yz
+  //     integrated at 1 Gauss point at the centroid)
   //   - NOT axisymmetric
   //   - NOT large displacement (materi_displacement): the reduced shear
   //     point is built from the reference coordinates passed to materi()
   //   - LINEAR ELASTICITY only: the split D = D_norm + D_shear is exact
   //     only when the tangent is constant over the element (the reduced
   //     point has no material state of its own)
-  // Used by both pol() (which switches the full rule to Gauss 2x2 for
-  // the normal terms) and materi() (which splits D and adds the shear
-  // term with 1 Gauss point at the centroid). Kept in ONE place so the
-  // quadrature and the stiffness split can never disagree.
+  // Used by both pol() (which switches the full rule to Gauss 2x2 /
+  // 2x2x2 for the normal terms) and materi() (which splits D and adds
+  // the shear terms with 1 Gauss point at the centroid). Kept in ONE
+  // place so the quadrature and the stiffness split can never disagree.
+  //
+  // WARNING (measured 2026-08-29, documented in the developer manual):
+  // the 2D quad4 SRI is hourglass-free (the 2D "section warping" mode
+  // has a normal strain and is stabilized by the full normal rule),
+  // but the 3D hex8 SRI retains ZERO-ENERGY modes: the isolated
+  // element has 9 (6 rigid + 3 twist) and a mesh has the additional
+  // "section warping" modes (u_y = A(x)*(2z-1), u_z = A(x)*(2y-1):
+  // all normal strains zero, the shear strains vanish at the section
+  // centroid, so the 1-point rule misses them). The loaded
+  // configurations (cantilever) therefore assemble a SINGULAR matrix.
+  // The patch tests (constant states) and the rigid modes remain exact.
+  // This is the known limitation of the shear-only selective
+  // integration of the 8-node brick (the literature moved to the
+  // B-bar/assumed-strain formulations for this reason).
 
 {
   long int sri=-NO, axisymmetric=-NO;
   long int ldum=0;
   double ddum[1];
 
-  if ( !( name==-QUAD4 && nnol==4 && ndim==2 ) ) return 0;
+  if ( !( ( name==-QUAD4 && nnol==4 && ndim==2 ) ||
+          ( name==-HEX8 && nnol==8 && ndim==3 ) ) ) return 0;
   db( GROUP_ELEMENT_SELECTIVE_REDUCED_INTEGRATION, element_group, &sri,
     ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
   if ( sri!=-YES ) return 0;
@@ -385,44 +404,53 @@ double sri_stress_recovery_weight( long int nnol, long int inol,
   // the lumped "inertia" equation (general.cc) with the shape function
   // h as the weight: sigma_node = sum_gp h*sigma_gp / sum_gp h. With
   // the NODE-CONTAINING quadratures (the default 2x2 Lobatto corners of
-  // the quad4, the quad9/hex8 Lobatto rules) h is the Kronecker delta
-  // and the recovery is exact. With the 2x2 GAUSS rule (interior points
-  // at +-1/sqrt(3), switched by the SRI quad4) the h-weighted average
-  // DILUTES the nodal values at the corners (measured: 0.577x of the
-  // exact value for the bilinear), so the section moments of the
-  // materi_stress_force integration read systematically low values even
-  // when the displacement field is correct (SRI: mom = 0.29x instead of
-  // the element's 93.75%).
+  // the quad4, the 2x2x2 Lobatto corners of the hex8, the quad9/hex27
+  // Lobatto rules) h is the Kronecker delta and the recovery is exact.
+  // With the interior GAUSS rules (2x2 for the SRI quad4, 2x2x2 for the
+  // SRI hex8) the h-weighted average DILUTES the nodal values at the
+  // corners (measured: 0.577x of the exact value for the bilinear), so
+  // the section moments of the materi_stress_force integration read
+  // systematically low values even when the displacement field is
+  // correct (SRI quad4: mom = 0.29x instead of the element's 93.75%).
   //
   // The consistent recovery is the evaluation of the element's stress
-  // field at the nodes - the bilinear Lagrange extrapolation of the
-  // Gauss-point values (the "same B at the node"). For the 2-point 1D
-  // rules the extrapolation weight of the node iso coordinate xi_n in
-  // {+1,-1} for the Gauss point xi_g in {+1/sqrt(3), -1/sqrt(3)} is
+  // field at the nodes - the bilinear/trilinear Lagrange extrapolation
+  // of the Gauss-point values (the "same B at the node"). For the
+  // 2-point 1D rules the extrapolation weight of the node iso
+  // coordinate xi_n in {+1,-1} for the Gauss point xi_g in
+  // {+1/sqrt(3), -1/sqrt(3)} is
   //   w(xi_n, xi_g) = prod_{g' != g} (xi_n - xi_g')/(xi_g - xi_g')
   // which for the corner Lobatto rule (xi_g = +-1) reduces to the
   // Kronecker delta, i.e. w = h (the node IS the integration point).
   // Returns the 2D tensor product w_xi * w_eta for the bilinear quad4
-  // with the 2x2 rule (row-major-from-bottom ordering of nodes and
-  // points, the same convention as pol() and the SRI centroid B), and
-  // h_inol for every other case (quad9/hex8/1-point rules: unchanged).
+  // with the 2x2 rule and the 3D tensor product w_xi*w_eta*w_zeta for
+  // the trilinear hex8 with the 2x2x2 rule (row-major-from-bottom
+  // ordering of nodes and points, the same convention as pol() and the
+  // SRI centroid B), and h_inol for every other case (quad9/hex27/
+  // 1-point rules: unchanged).
 
 {
-  if ( !( nnol==4 && npoint==4 && sri_active ) ) return h_inol;
+  if ( !( sri_active && ( ( nnol==4 && npoint==4 ) ||
+                          ( nnol==8 && npoint==8 ) ) ) )
+    return h_inol;
 
-  // node iso coordinates (+-1, row-major from bottom: inol 0 = (-1,-1),
-  // 1 = (+1,-1), 2 = (-1,+1), 3 = (+1,+1)); point iso coordinates
-  // (+-1/sqrt(3), ipoint 0 = (-1,-1), 1 = (+1,-1), 2 = (-1,+1),
-  // 3 = (+1,+1) - the pol() izeta->ieta->ixi loop with nxi = 2).
+  // node iso coordinates (+-1, row-major from bottom): quad4 inol 0 =
+  // (-1,-1), 1 = (+1,-1), 2 = (-1,+1), 3 = (+1,+1); hex8 inol 0 =
+  // (-1,-1,-1), 1 = (+1,-1,-1), ..., 7 = (+1,+1,+1). Point iso
+  // coordinates (+-1/sqrt(3)): ipoint = izeta*nxi*neta + ieta*nxi +
+  // ixi (the pol() izeta->ieta->ixi loop with nxi = neta = nzeta = 2).
   double xi_n  = ( inol%2   == 0 ? -1. : 1. );
-  double eta_n = ( inol/2   == 0 ? -1. : 1. );
+  double eta_n = ( (inol/2)%2 == 0 ? -1. : 1. );
   double xi_g  = ( ipoint%2 == 0 ? -1. : 1. ) / sqrt(3.);
-  double eta_g = ( ipoint/2 == 0 ? -1. : 1. ) / sqrt(3.);
-  double xi_g_other  = -xi_g;
-  double eta_g_other = -eta_g;
-  double w_xi  = ( xi_n  - xi_g_other  ) / ( xi_g  - xi_g_other  );
-  double w_eta = ( eta_n - eta_g_other ) / ( eta_g - eta_g_other );
-  return w_xi * w_eta;
+  double eta_g = ( (ipoint/2)%2 == 0 ? -1. : 1. ) / sqrt(3.);
+  double w_xi  = ( xi_n  + xi_g  ) / ( 2.*xi_g  );
+  double w_eta = ( eta_n + eta_g ) / ( 2.*eta_g );
+  if ( nnol==4 ) return w_xi * w_eta;
+
+  double zeta_n = ( inol/4 == 0 ? -1. : 1. );
+  double zeta_g = ( ipoint/4 == 0 ? -1. : 1. ) / sqrt(3.);
+  double w_zeta = ( zeta_n + zeta_g ) / ( 2.*zeta_g );
+  return w_xi * w_eta * w_zeta;
 }
 
 char *long_to_a( long int n, char s[] )

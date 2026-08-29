@@ -411,14 +411,15 @@ void pol( long int element, long int element_group,
     db( GROUP_INTEGRATION_METHOD, element_group, &integration_method, ddum, 
       ldum, VERSION_NORMAL, GET_IF_EXISTS );
     // group_element_selective_reduced_integration (SRI, Hughes): for the
-    // bilinear quad4 with the keyword active the FULL rule becomes the
-    // classic 2x2 Gauss rule (the codebase default is the 2x2 Lobatto
-    // rule at the element corners, which over-integrates the quadratic
-    // bending energy and caps the shear-only SRI at ~0.35x of the exact
-    // section moment; measured). The shear term is handled in materi():
-    // D is split into D_norm (integrated here with this full rule) and
-    // D_shear (integrated with 1 Gauss point at the centroid).
-    if ( sri_quad4_active( element, element_group, name, nnol ) )
+    // bilinear quad4 and the trilinear hex8 with the keyword active the
+    // FULL rule becomes the classic Gauss rule (2x2 / 2x2x2; the
+    // codebase default is the Lobatto rule at the element corners,
+    // which over-integrates the quadratic bending energy and caps a
+    // shear-only SRI at ~0.35x of the exact section moment; measured).
+    // The shear terms are handled in materi(): D is split into D_norm
+    // (integrated here with this full rule) and D_shear (integrated
+    // with 1 Gauss point at the centroid).
+    if ( sri_active( element, element_group, name, nnol ) )
       integration_method = -GAUSS;
     if ( integration_points==-NORMAL ) integration_points = -MAXIMAL;
     npoint = 1;

@@ -37,7 +37,7 @@ void materi( long int element, long int gr, long int name, long int nnol,
     inol=0, jnol=0, m=0, n=0, indx=0, ipuknwn=0, iuknwn=0, jpuknwn=0, 
     swit=0, indxi=0, indxj=0, indx1=0, indx2=0, memory=-UPDATED, 
     ind_ddsdde=0, ldum=0, idum[1],
-    sri=-NO, sri_quad4=0;
+    sri=-NO, sri_on=0;
   double rdum=0., dens=0., dtime=0., materi_expansion_linear=0., 
     materi_expansion_volume=0., temp=0., tmp=0., damping=0., fac=0, 
     plasti_heatgeneration=0., viscosity_heatgeneration=0.,
@@ -48,7 +48,8 @@ void materi( long int element, long int gr, long int name, long int nnol,
     static_pressure=0., total_pressure=0., location=0.,
     J=0., ddum[1], direct_normal[MDIM], *force_gravity=NULL, 
     activation_factor=1., activation_stiff=1.,
-    sri_g=0., sri_volfac=1., sri_detj_weight=0., sri_coord_center[MDIM],
+    sri_g=0., sri_g2=0., sri_g3=0., sri_volfac=1., sri_detj_weight=0.,
+    sri_coord_center[MDIM],
     *old_deften=NULL, *new_deften=NULL, *inv_deften=NULL,
     *old_epe=NULL, *inc_epe=NULL, *new_epe=NULL,
     *old_epp=NULL, *inc_epp=NULL, 
@@ -178,27 +179,33 @@ void materi( long int element, long int gr, long int name, long int nnol,
   force_gravity_calculate( force_gravity );
 
   // group_element_selective_reduced_integration (SRI, Hughes):
-  // opt-in fix for the shear locking of the bilinear quad4 in bending.
-  // When -yes, the gamma_xy shear part of the constitutive matrix is
-  // integrated with 1 Gauss point at the element centroid while the
-  // normal/volumetric part keeps the full rule - which for the SRI
-  // group becomes the classic 2x2 Gauss rule (pol() switches it; the
-  // codebase default 2x2 Lobatto corner rule would cap the benefit at
-  // ~0.35x of the exact section moment, measured). The scope decision
-  // is in sri_quad4_active() (miscel.cc): LINEAR ELASTICITY only,
-  // because the split D = D_norm + D_shear is exact only when the
-  // tangent is constant over the element (the reduced point has no
-  // material state of its own); plasticity, damage, maxwell, large
-  // displacement and axisymmetric groups ignore the keyword with a
-  // one-time warning.
+  // opt-in fix for the shear locking of the bilinear quad4 (2D) and
+  // the trilinear hex8 (3D) in bending. When -yes, the shear part of
+  // the constitutive matrix (gamma_xy for the quad4; gamma_xy, gamma_xz
+  // and gamma_yz for the hex8) is integrated with 1 Gauss point at the
+  // element centroid while the normal/volumetric part keeps the full
+  // rule - which for the SRI group becomes the classic Gauss rule
+  // (2x2 / 2x2x2; pol() switches it; the codebase default Lobatto
+  // corner rule would cap the benefit at ~0.35x of the exact section
+  // moment, measured). The scope decision is in sri_active()
+  // (miscel.cc): LINEAR ELASTICITY only, because the split
+  // D = D_norm + D_shear is exact only when the tangent is constant
+  // over the element (the reduced point has no material state of its
+  // own); plasticity, damage, maxwell, large displacement and
+  // axisymmetric groups ignore the keyword with a one-time warning.
+  // WARNING (measured 2026-08-29): the hex8 SRI retains zero-energy
+  // modes (3 twist modes of the isolated element; section-warping
+  // modes of a mesh), so LOADED hex8 configurations assemble a
+  // singular momentum matrix - see sri_active() and the developer
+  // manual. The patch tests (constant states) and the rigid modes
+  // stay exact.
   db( GROUP_ELEMENT_SELECTIVE_REDUCED_INTEGRATION, gr, &sri, ddum, ldum,
     VERSION_NORMAL, GET_IF_EXISTS );
-  sri_quad4 = sri_quad4_active( element, gr, name, nnol );
-  if ( sri==-YES && materi_stress && !sri_quad4 && !sri_warning_done ) {
+  sri_on = sri_active( element, gr, name, nnol );
+  if ( sri==-YES && materi_stress && !sri_on && !sri_warning_done ) {
     pri( "Warning: group_element_selective_reduced_integration ignored: "
-      "only linear elastic 2D quad4 groups are supported (no "
-      "axisymmetry, no materi_displacement, no plasticity/damage/maxwell; "
-      "hex8 SRI is future work)." );
+      "only linear elastic 2D quad4 / 3D hex8 groups are supported (no "
+      "axisymmetry, no materi_displacement, no plasticity/damage/maxwell)." );
     sri_warning_done = 1;
   }
 
@@ -505,27 +512,49 @@ void materi( long int element, long int gr, long int name, long int nnol,
         sigvec[indx] = total_new_sig[idim*MDIM+jdim];
       }
     }
-    if ( sri_quad4 ) {
-      // SRI: D = D_norm + D_shear. The gamma_xy entry (index 1,
-      // stress_indx(0,1)) is the only shear term of the 2D plane
-      // formulation; it is excluded from the full (2x2) integration
-      // and added back with 1 point at the centroid below. For linear
+    if ( sri_on ) {
+      // SRI: D = D_norm + D_shear. The shear diagonal entries of D
+      // (the engineering-shear moduli G: index stress_indx(0,1)=1 for
+      // gamma_xy, (0,2)=2 for gamma_xz and (1,2)=4 for gamma_yz in 3D;
+      // index 1 only in 2D) are excluded from the full integration and
+      // added back with 1 point at the centroid below. For linear
       // elasticity the tangent is constant over the element, so the
-      // shear modulus captured here is exact for the reduced point.
-      sri_g = ddsdde_total[1*MSTRAIN+1];
+      // shear moduli captured here are exact for the reduced point
+      // (isotropic: the shear rows of D are decoupled, so zeroing the
+      // diagonal is the exact D_norm).
       // Element-consistent momentum feedback (DIAG lot C/D, fix D-c):
       // the shear part of the feedback stress must use the SAME reduced
       // integration as the momentum matrix (1 point at the centroid),
       // otherwise the full-rule shear re-enters the right-hand side and
       // the staggered fixed point converges to K_full*u = P (the locked
-      // state) instead of K_SRI*u = P (the element solution) - the SRI
+      // state) instead of K_elem*u = P (the element solution) - the SRI
       // benefit is cancelled at equilibrium. The current-iterate shear
-      // increment of the feedback stress is zeroed here (the old shear
-      // prestress sigma_old_xy is kept) and the reduced 1-point shear
-      // internal force -dt*K_shear*v is added to the momentum RHS in the
-      // velocity block below.
-      sigvec[stress_indx(0,1)] -= 2. * sri_g * inc_ept[stress_indx(0,1)];
-      ddsdde_total[1*MSTRAIN+1] = 0.;
+      // increments of the feedback stress are zeroed here (the old
+      // shear prestresses are kept) and the reduced 1-point shear
+      // internal force -dt*K_shear*v is added to the momentum RHS in
+      // the velocity block below. NOTE the strain indexing: inc_ept is
+      // the MDIMxMDIM TENSOR strain (inc_ept[idim*MDIM+jdim]), while
+      // sigvec is Voigt-indexed (stress_indx). In 2D the indices
+      // coincide; in 3D the yz entry differs (tensor 1*MDIM+2 = 5 vs
+      // Voigt stress_indx(1,2) = 4), so the strain MUST use the tensor
+      // index idim*MDIM+jdim.
+      if ( name==-QUAD4 ) {
+        sri_g = ddsdde_total[1*MSTRAIN+1];
+        sigvec[stress_indx(0,1)] -= 2. * sri_g * inc_ept[stress_indx(0,1)];
+        ddsdde_total[1*MSTRAIN+1] = 0.;
+      }
+      else {
+        assert( name==-HEX8 );
+        sri_g  = ddsdde_total[1*MSTRAIN+1];   // G for gamma_xy
+        sri_g2 = ddsdde_total[2*MSTRAIN+2];   // G for gamma_xz
+        sri_g3 = ddsdde_total[4*MSTRAIN+4];   // G for gamma_yz
+        sigvec[stress_indx(0,1)] -= 2.*sri_g *inc_ept[0*MDIM+1];
+        sigvec[stress_indx(0,2)] -= 2.*sri_g2*inc_ept[0*MDIM+2];
+        sigvec[stress_indx(1,2)] -= 2.*sri_g3*inc_ept[1*MDIM+2];
+        ddsdde_total[1*MSTRAIN+1] = 0.;
+        ddsdde_total[2*MSTRAIN+2] = 0.;
+        ddsdde_total[4*MSTRAIN+4] = 0.;
+      }
     }
     matrix_atb( new_b, sigvec, force, MSTRAIN, nnol*ndim, 1 );
     matrix_atba( new_b, ddsdde_total, stiffness, work, MSTRAIN, nnol*ndim );
@@ -534,7 +563,7 @@ void materi( long int element, long int gr, long int name, long int nnol,
       pri( "stiffness", stiffness, nnol*ndim, nnol*ndim );
       pri( "sigvec", sigvec, MSTRAIN );
     }
-    if ( sri_quad4 ) {
+    if ( sri_on ) {
       // SRI: stiffness of the shear term integrated with 1 Gauss point
       // at the element centroid. For the bilinear quad4 the local
       // derivatives at iso (0,0) are dN/dxi = xi_i/4 and
@@ -542,47 +571,117 @@ void materi( long int element, long int gr, long int name, long int nnol,
       // eta_i) = ((2*(i%2)-1), (2*(i/2)-1)) - the row-major-from-
       // bottom convention that polynom.cc uses (node 0 = (-1,-1),
       // 1 = (+1,-1), 2 = (-1,+1), 3 = (+1,+1); NOT the textbook
-      // counter-clockwise order). Deriving them from the index
-      // (instead of hardcoding) keeps the centroid B consistent with
-      // the B matrices of pol() for ANY physical node numbering; the
+      // counter-clockwise order). For the trilinear hex8 the local
+      // derivatives at iso (0,0,0) are dN/dxi = xi_i/8 etc. with
+      // (xi_i, eta_i, zeta_i) = ((2*(i%2)-1), (2*((i/2)%2)-1),
+      // (2*(i/4)-1)). Deriving them from the index (instead of
+      // hardcoding) keeps the centroid B consistent with the B
+      // matrices of pol() for ANY physical node numbering; the
       // Jacobian at the centroid handles distorted elements exactly.
-      // The 1x1 Gauss weight on [-1,1]^2 is 4.
-      double jac[4], invjac[4], dnxi[4], dnet[4], detj_center=0.;
-      for ( inol=0; inol<nnol; inol++ ) {
-        dnxi[inol] = 0.25 * ( (inol%2) ? 1. : -1. );
-        dnet[inol] = 0.25 * ( (inol/2) ? 1. : -1. );
-      }
-      for ( idim=0; idim<ndim; idim++ ) sri_coord_center[idim] = 0.;
-      array_set( jac, 0., 4 );
-      for ( inol=0; inol<nnol; inol++ ) {
-        jac[0] += dnxi[inol] * old_coord[inol*ndim+0];
-        jac[1] += dnxi[inol] * old_coord[inol*ndim+1];
-        jac[2] += dnet[inol] * old_coord[inol*ndim+0];
-        jac[3] += dnet[inol] * old_coord[inol*ndim+1];
-        for ( idim=0; idim<ndim; idim++ )
-          sri_coord_center[idim] += 0.25 * old_coord[inol*ndim+idim];
-      }
-      detj_center = jac[0]*jac[3] - jac[1]*jac[2];
-      if ( scalar_dabs(detj_center)<TINY ) {
-        array_set( stiffness_shear, 0., nnol*ndim*nnol*ndim );
+      // The 1x1 / 1x1x1 Gauss weight on [-1,1]^2 / [-1,1]^3 is 4 / 8.
+      if ( name==-QUAD4 ) {
+        double jac[4], invjac[4], dnxi[4], dnet[4], detj_center=0.;
+        for ( inol=0; inol<nnol; inol++ ) {
+          dnxi[inol] = 0.25 * ( (inol%2) ? 1. : -1. );
+          dnet[inol] = 0.25 * ( (inol/2) ? 1. : -1. );
+        }
+        for ( idim=0; idim<ndim; idim++ ) sri_coord_center[idim] = 0.;
+        array_set( jac, 0., 4 );
+        for ( inol=0; inol<nnol; inol++ ) {
+          jac[0] += dnxi[inol] * old_coord[inol*ndim+0];
+          jac[1] += dnxi[inol] * old_coord[inol*ndim+1];
+          jac[2] += dnet[inol] * old_coord[inol*ndim+0];
+          jac[3] += dnet[inol] * old_coord[inol*ndim+1];
+          for ( idim=0; idim<ndim; idim++ )
+            sri_coord_center[idim] += 0.25 * old_coord[inol*ndim+idim];
+        }
+        detj_center = jac[0]*jac[3] - jac[1]*jac[2];
+        if ( scalar_dabs(detj_center)<TINY ) {
+          array_set( stiffness_shear, 0., nnol*ndim*nnol*ndim );
+        }
+        else {
+          invjac[0] =  jac[3]/detj_center; invjac[1] = -jac[1]/detj_center;
+          invjac[2] = -jac[2]/detj_center; invjac[3] =  jac[0]/detj_center;
+          for ( inol=0; inol<nnol; inol++ ) {
+            // dN/dy and dN/dx at the centroid
+            b_shear[inol*ndim+0] = invjac[2]*dnxi[inol] + invjac[3]*dnet[inol];
+            b_shear[inol*ndim+1] = invjac[0]*dnxi[inol] + invjac[1]*dnet[inol];
+          }
+          sri_volfac = 1.;
+          volume_factor( gr, sri_coord_center, sri_volfac );
+          sri_detj_weight = 4. * detj_center;
+          for ( i=0; i<nnol*ndim; i++ )
+            for ( j=0; j<nnol*ndim; j++ )
+              stiffness_shear[i*nnol*ndim+j] = sri_g * sri_volfac *
+                sri_detj_weight * b_shear[i] * b_shear[j];
+        }
+        if ( swit ) pri( "stiffness_shear", stiffness_shear, nnol*ndim, nnol*ndim );
       }
       else {
-        invjac[0] =  jac[3]/detj_center; invjac[1] = -jac[1]/detj_center;
-        invjac[2] = -jac[2]/detj_center; invjac[3] =  jac[0]/detj_center;
+        assert( name==-HEX8 );
+        // 3D: the three engineering shear rows of B at the centroid:
+        //   gamma_xy: [dN/dy, dN/dx, 0]
+        //   gamma_xz: [dN/dz, 0, dN/dx]
+        //   gamma_yz: [0, dN/dz, dN/dy]
+        // (the polynom.cc:549-599 B convention; the local derivatives
+        // from the index, the physical dN/dx_idim = sum_jdim
+        // invjac[idim][jdim]*dN/dxi_jdim with the transpose Jacobian
+        // convention of pol()/calcul_force.cc).
+        double jac3[9], invjac3[9], dnxi[8], dnet[8], dnzt[8],
+          b_xy[24], b_xz[24], b_yz[24], detj_center=0.;
         for ( inol=0; inol<nnol; inol++ ) {
-          // dN/dy and dN/dx at the centroid
-          b_shear[inol*ndim+0] = invjac[2]*dnxi[inol] + invjac[3]*dnet[inol];
-          b_shear[inol*ndim+1] = invjac[0]*dnxi[inol] + invjac[1]*dnet[inol];
+          dnxi[inol] = 0.125 * ( 2.*(inol%2) - 1. );
+          dnet[inol] = 0.125 * ( 2.*((inol/2)%2) - 1. );
+          dnzt[inol] = 0.125 * ( 2.*(inol/4) - 1. );
         }
-        sri_volfac = 1.;
-        volume_factor( gr, sri_coord_center, sri_volfac );
-        sri_detj_weight = 4. * detj_center;
-        for ( i=0; i<nnol*ndim; i++ )
-          for ( j=0; j<nnol*ndim; j++ )
-            stiffness_shear[i*nnol*ndim+j] = sri_g * sri_volfac *
-              sri_detj_weight * b_shear[i] * b_shear[j];
+        for ( idim=0; idim<ndim; idim++ ) sri_coord_center[idim] = 0.;
+        array_set( jac3, 0., 9 );
+        for ( inol=0; inol<nnol; inol++ ) {
+          jac3[0] += dnxi[inol]*old_coord[inol*ndim+0];
+          jac3[1] += dnxi[inol]*old_coord[inol*ndim+1];
+          jac3[2] += dnxi[inol]*old_coord[inol*ndim+2];
+          jac3[3] += dnet[inol]*old_coord[inol*ndim+0];
+          jac3[4] += dnet[inol]*old_coord[inol*ndim+1];
+          jac3[5] += dnet[inol]*old_coord[inol*ndim+2];
+          jac3[6] += dnzt[inol]*old_coord[inol*ndim+0];
+          jac3[7] += dnzt[inol]*old_coord[inol*ndim+1];
+          jac3[8] += dnzt[inol]*old_coord[inol*ndim+2];
+          for ( idim=0; idim<ndim; idim++ )
+            sri_coord_center[idim] += 0.125 * old_coord[inol*ndim+idim];
+        }
+        detj_center = jac3[0]*( jac3[4]*jac3[8] - jac3[5]*jac3[7] )
+                    - jac3[1]*( jac3[3]*jac3[8] - jac3[5]*jac3[6] )
+                    + jac3[2]*( jac3[3]*jac3[7] - jac3[4]*jac3[6] );
+        if ( scalar_dabs(detj_center)<TINY ||
+             !matrix_inverse( jac3, invjac3, detj_center, 3 ) ) {
+          array_set( stiffness_shear, 0., nnol*ndim*nnol*ndim );
+        }
+        else {
+          for ( inol=0; inol<nnol; inol++ ) {
+            // physical derivatives dN/dx_idim = sum_jdim
+            // invjac3[idim][jdim] * (dN/dxi_jdim at the centroid)
+            double p3[3], dnx=0., dny=0., dnz=0.;
+            p3[0] = dnxi[inol]; p3[1] = dnet[inol]; p3[2] = dnzt[inol];
+            for ( jdim=0; jdim<3; jdim++ ) {
+              dnx += invjac3[0*3+jdim]*p3[jdim];
+              dny += invjac3[1*3+jdim]*p3[jdim];
+              dnz += invjac3[2*3+jdim]*p3[jdim];
+            }
+            b_xy[inol*3+0] = dny;  b_xy[inol*3+1] = dnx;  b_xy[inol*3+2] = 0.;
+            b_xz[inol*3+0] = dnz;  b_xz[inol*3+1] = 0.;   b_xz[inol*3+2] = dnx;
+            b_yz[inol*3+0] = 0.;   b_yz[inol*3+1] = dnz;  b_yz[inol*3+2] = dny;
+          }
+          sri_volfac = 1.;
+          volume_factor( gr, sri_coord_center, sri_volfac );
+          sri_detj_weight = 8. * detj_center;
+          for ( i=0; i<nnol*ndim; i++ )
+            for ( j=0; j<nnol*ndim; j++ )
+              stiffness_shear[i*nnol*ndim+j] = sri_volfac *
+                sri_detj_weight * ( sri_g *b_xy[i]*b_xy[j] +
+                  sri_g2*b_xz[i]*b_xz[j] + sri_g3*b_yz[i]*b_yz[j] );
+        }
+        if ( swit ) pri( "stiffness_shear", stiffness_shear, nnol*ndim, nnol*ndim );
       }
-      if ( swit ) pri( "stiffness_shear", stiffness_shear, nnol*ndim, nnol*ndim );
     }
   }
 
@@ -617,7 +716,7 @@ void materi( long int element, long int gr, long int name, long int nnol,
           // stress gradient (rhside with green partial integration)
         tmp = force[inol*ndim+idim];
         element_rhside[indx] -= volume * tmp;
-        if ( sri_quad4 ) {
+        if ( sri_on ) {
           // Element-consistent momentum feedback (DIAG lot C/D, fix D-c,
           // second half): the reduced 1-point shear internal force
           // -dt*K_shear*v of the current iterate. Together with the
@@ -672,7 +771,7 @@ void materi( long int element, long int gr, long int name, long int nnol,
             tmp = volume * dtime * stiffness[indx1*nnol*ndim+indx2];
             element_matrix[indxi*nnol*npuknwn+indxj] += tmp;
             if ( indxi==indxj ) element_lhside[indx] += fac * tmp;
-            if ( sri_quad4 ) {
+            if ( sri_on ) {
               // SRI: the reduced-integrated shear stiffness (1x1 at the
               // centroid) is added scaled by 1/npoint because materi()
               // is called once per integration point; the npoint calls
@@ -734,7 +833,7 @@ void materi( long int element, long int gr, long int name, long int nnol,
         // its dofs keep the h-weighting (the centroid-biased average,
         // the same estimate the SRI's reduced point provides).
         double weight = h[inol];
-        if ( sri_quad4 )
+        if ( sri_on )
           weight = sri_stress_recovery_weight( nnol, inol, npoint,
             ipoint, h[inol], 1 );
         for ( idim=0; idim<MDIM; idim++ ) {

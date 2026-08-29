@@ -502,8 +502,8 @@ static long int msf_border_nodes_quad9[] = {
 //     (Gauss, interior);
 //   - integration_method default -LOBATTO (the node-containing rules);
 //     -GAUSS override;
-//   - the SRI quad4 switches the FULL rule to 2x2 GAUSS
-//     (polynom.cc:421; the same single source sri_quad4_active);
+//   - the SRI quad4/hex8 switches the FULL rule to GAUSS (2x2 / 2x2x2;
+//     polynom.cc:421; the same single source sri_active);
 //   - axisymmetric + materi_velocity forces GAUSS + MINIMAL (polynom
 //     cc:401-407: the 1-point rule at the centroid).
 // nper[d] = the number of points in direction d, iso[d][0..nper-1] =
@@ -533,7 +533,7 @@ static void msf_element_rule( long int element, long int element_group,
   db( GROUP_INTEGRATION_METHOD, element_group, &integration_method, ddum,
     ldum, VERSION_NORMAL, GET_IF_EXISTS );
   if ( integration_points==-NORMAL ) integration_points = -MAXIMAL;
-  if ( sri_quad4_active( element, element_group, name, nnol ) )
+  if ( sri_active( element, element_group, name, nnol ) )
     integration_method = -GAUSS;
   for ( idim=0; idim<ndim; idim++ ) {
     nper[idim] = ( integration_points==-MINIMAL ? npol-1 : npol );
@@ -697,17 +697,78 @@ static void msf_element_internal_forces_2d( long int npol, long int nnol,
 // The 3D counterpart of msf_element_internal_forces_2d: the 6 stress
 // components (sxx sxy sxz syy syz szz, the msf order) contracted with
 // the B rows of polynom.cc:549-599.
+// SRI hex8 (opt-in): same correction as the 2D quad4 - the full-rule
+// shear part of f_elem (from the raw Gauss sigma_xy/xz/yz) is replaced
+// by the reduced 1-point shear internal force of the momentum feedback
+// (DIAG-SOLVE-MIXTO fix D-c: the fixed point is K_elem*u = P):
+// 8*detJ_c * ( b_xy*mean_xy + b_xz*mean_xz + b_yz*mean_yz ) with the
+// centroid B rows and the means of the IP shear stresses (the shear
+// moduli cancel: sigma = G*gamma and the 2x2x2 Gauss mean of the
+// trilinear gamma = the centroid value). NOTE (measured 2026-08-29):
+// the SRI hex8 is singular for loaded configurations (section-warping
+// zero-energy modes), so this correction only applies to the stable
+// part of the solution - documented in the developer manual.
 static void msf_element_internal_forces_3d( long int npol, long int nnol,
   double coords[], long int nper[], double iso[][MPOINT],
-  double weight[][MPOINT], double sig_ip[], double f_elem[] )
+  double weight[][MPOINT], double sig_ip[], double f_elem[], long int sri )
 
 {
   double hx[MPOINT], px[MPOINT], hy[MPOINT], py[MPOINT], hz[MPOINT],
     pz[MPOINT], jac[9], invjac[9], detj=0., w=0., vol=0., sig[6],
-    dn[3*MNOL];
+    dn[3*MNOL], b_xy[3*MNOL], b_xz[3*MNOL], b_yz[3*MNOL],
+    jacc[9], invjacc[9], detj_c=0., mean_xy=0., mean_xz=0., mean_yz=0.;
   long int ixi=0, ieta=0, izeta=0, ip=0, inol=0, idim=0, jdim=0;
 
   for ( inol=0; inol<nnol*ndim; inol++ ) f_elem[inol] = 0.;
+  if ( sri ) {
+    // the reduced 1-point shear internal force: the centroid B rows
+    // (materi.cc SRI hex8 branch), the centroid detJ and the means of
+    // the IP shear stresses over the 2x2x2 Gauss points.
+    array_set( jacc, 0., 9 );
+    for ( inol=0; inol<nnol; inol++ ) {
+      double p3[3];
+      p3[0] = 0.125 * ( 2.*(inol%2) - 1. );
+      p3[1] = 0.125 * ( 2.*((inol/2)%2) - 1. );
+      p3[2] = 0.125 * ( 2.*(inol/4) - 1. );
+      for ( idim=0; idim<3; idim++ )
+        for ( jdim=0; jdim<3; jdim++ )
+          jacc[idim*3+jdim] += p3[idim]*coords[inol*MDIM+jdim];
+    }
+    detj_c = jacc[0]*( jacc[4]*jacc[8] - jacc[5]*jacc[7] )
+           - jacc[1]*( jacc[3]*jacc[8] - jacc[5]*jacc[6] )
+           + jacc[2]*( jacc[3]*jacc[7] - jacc[4]*jacc[6] );
+    if ( detj_c<0. ) detj_c = -detj_c;
+    if ( detj_c<1.e-20 ) detj_c = 0.;
+    if ( detj_c>=1.e-20 && matrix_inverse( jacc, invjacc, detj_c, 3 ) ) {
+      for ( inol=0; inol<nnol; inol++ ) {
+        double p3[3], dnx=0., dny=0., dnz=0.;
+        p3[0] = 0.125 * ( 2.*(inol%2) - 1. );
+        p3[1] = 0.125 * ( 2.*((inol/2)%2) - 1. );
+        p3[2] = 0.125 * ( 2.*(inol/4) - 1. );
+        for ( jdim=0; jdim<3; jdim++ ) {
+          dnx += invjacc[0*3+jdim]*p3[jdim];
+          dny += invjacc[1*3+jdim]*p3[jdim];
+          dnz += invjacc[2*3+jdim]*p3[jdim];
+        }
+        b_xy[inol*3+0] = dny;  b_xy[inol*3+1] = dnx;  b_xy[inol*3+2] = 0.;
+        b_xz[inol*3+0] = dnz;  b_xz[inol*3+1] = 0.;   b_xz[inol*3+2] = dnx;
+        b_yz[inol*3+0] = 0.;   b_yz[inol*3+1] = dnz;  b_yz[inol*3+2] = dny;
+      }
+    }
+    else {
+      array_set( b_xy, 0., 3*MNOL );
+      array_set( b_xz, 0., 3*MNOL );
+      array_set( b_yz, 0., 3*MNOL );
+    }
+    for ( ip=0; ip<nper[0]*nper[1]*nper[2]; ip++ ) {
+      mean_xy += sig_ip[ip*6+1];
+      mean_xz += sig_ip[ip*6+2];
+      mean_yz += sig_ip[ip*6+4];
+    }
+    mean_xy /= (double)( nper[0]*nper[1]*nper[2] );
+    mean_xz /= (double)( nper[0]*nper[1]*nper[2] );
+    mean_yz /= (double)( nper[0]*nper[1]*nper[2] );
+  }
   for ( izeta=0; izeta<nper[2]; izeta++ ) {
     interpolation_polynomial( iso[2][izeta], npol, hz, pz );
     for ( ieta=0; ieta<nper[1]; ieta++ ) {
@@ -745,6 +806,7 @@ static void msf_element_internal_forces_3d( long int npol, long int nnol,
         w = weight[0][ixi]*weight[1][ieta]*weight[2][izeta];
         vol = w*8.*detj;
         for ( idim=0; idim<6; idim++ ) sig[idim] = sig_ip[ip*6+idim];
+        if ( sri ) sig[1] = sig[2] = sig[4] = 0.; // reduced 1-point shear
         for ( inol=0; inol<nnol; inol++ ) {
           f_elem[inol*3+0] += vol*( sig[0]*dn[inol*3+0]
                                   + sig[1]*dn[inol*3+1]
@@ -757,6 +819,18 @@ static void msf_element_internal_forces_3d( long int npol, long int nnol,
                                   + sig[5]*dn[inol*3+2] );
         }
       }
+    }
+  }
+  if ( sri && detj_c>=1.e-20 ) {
+    // the reduced 1-point shear internal force (the momentum feedback
+    // of the fixed point K_elem*u = P; the moduli cancel)
+    for ( inol=0; inol<nnol; inol++ ) {
+      f_elem[inol*3+0] += 8.*detj_c*( b_xy[inol*3+0]*mean_xy
+                                    + b_xz[inol*3+0]*mean_xz );
+      f_elem[inol*3+1] += 8.*detj_c*( b_xy[inol*3+1]*mean_xy
+                                    + b_yz[inol*3+1]*mean_yz );
+      f_elem[inol*3+2] += 8.*detj_c*( b_xz[inol*3+2]*mean_xz
+                                    + b_yz[inol*3+2]*mean_yz );
     }
   }
 }
@@ -883,7 +957,7 @@ static void msf_element_contribution_2d( long int element, long int name,
   // in the validation) skips the element with a warning.
   msf_element_rule( element, element_group, name, npol, nnol, nper, iso,
     wrule );
-  sri = sri_quad4_active( element, element_group, name, nnol );
+  sri = sri_active( element, element_group, name, nnol );
   npoint_ip = nper[0]*nper[1];
   if ( options_element_dof==-YES &&
        db_active_index( ELEMENT_DOF, element, VERSION_NORMAL ) ) {
@@ -1403,7 +1477,7 @@ static void msf_element_contribution_3d( long int element, long int name,
     npol=0, nnol=0, node=0, iface=0, is_face_node=0, order[6], itmp=0,
     ncorner=0, icorner=0, inod_pos=-1, *el=NULL, ncand=0, nper=0,
     iend=0, jend=0, cand[6], dir_has=0, exclude=0, nface=0,
-    npoint_ip=0, ip=0, c=0, nper3[3];
+    npoint_ip=0, ip=0, c=0, nper3[3], sri=0;
   double ddum[1], *coord=NULL, *node_dof=NULL, *edof=NULL,
     coords[MDIM*MNOL], sig_ip[6*MPOINT],
     sig_n[6*MNOL], iso3[3][MPOINT], wrule3[3][MPOINT],
@@ -1813,8 +1887,12 @@ static void msf_element_contribution_3d( long int element, long int name,
   // the consistent nodal forces of the IP stress field - in equilibrium
   // with the applied loads for the converged solve. The face resultants
   // (nor/she/mom1/mom2) follow from the free body of the face nodes.
+  // SRI hex8 (opt-in): the full-rule shear part is replaced by the
+  // reduced 1-point shear internal force (the momentum feedback of the
+  // fixed point K_elem*u = P, the same correction as the 2D quad4).
+  sri = sri_active( element, element_group, name, nnol );
   msf_element_internal_forces_3d( npol, nnol, coords, nper3, iso3, wrule3,
-    sig_ip, f_elem );
+    sig_ip, f_elem, sri );
   for ( iside=0; iside<2; iside++ ) {
     long int fs = ( iside==0 ? iend : jend );
     msf_face_resultants_3d( npol, face_nodes[iside], coords, f_elem,

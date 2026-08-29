@@ -261,7 +261,7 @@ void general( long int element, long int name, long int nnol, long int element_g
           // every other quadrature the weight reduces to h
           // (node-containing rules).
           double weight = h[inol];
-          if ( dof_type[iuknwn]==-MATERI_STRESS && sri_quad4_active(
+          if ( dof_type[iuknwn]==-MATERI_STRESS && sri_active(
               element, element_group, name, nnol ) ) {
             // normal components: stress_indx(0,0)=0, (1,1)=3, (2,2)=5
             // (times nder for the derivative slots)
