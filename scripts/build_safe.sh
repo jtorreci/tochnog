@@ -626,7 +626,8 @@ for t in hypo1 hypo2 hypo3 hypo4 smooth1 dof1 mlx1 vtk_dof1 gen1 genbeam1       
          qsri3d_patch_s qsri3d_patch_s_off qsri3d_patch_t qsri3d_patch_t_off \
          qsri3d_modes_rigid qsri3d_modes qsri3d_beam qsri3d_beam_off \
          tslv_vfx tslv_part tslv_symm tslv_bsym tslv_ver tslv_auto tslv_override \
-         tsup_winkler tsup_solve tsup_3d; do
+         tsup_winkler tsup_solve tsup_3d \
+         tsup_damp tsup_auto tsup_init tsup_dens; do
   HIPO_TOTAL=$((HIPO_TOTAL+1))
   ( cd validation-suite/test-2014 &&
     ulimit -v 4000000 &&
@@ -639,7 +640,7 @@ for t in hypo1 hypo2 hypo3 hypo4 smooth1 dof1 mlx1 vtk_dof1 gen1 genbeam1       
     echo "    $t: FALLO (rc=$RC)"
   fi
 done
-echo "==> Resumen: $HIPO_OK/$HIPO_TOTAL runs OK (13 tests: 12 preexistentes + familia iface_mc en 10 runs + familia 3D en 5 runs + familia generate_interface en 6 runs + familia materi_direct en 5 runs + materi_displacement_relative en 2 runs + slide/reset_value en 2 runs + cda_arith/copy/activate en 3 runs + cdist_normal/corr/clamp en 3 runs + cd_method/cd_geom en 2 runs + gravity/settlement en 4 runs + contact en 1 run + contact_block/ctrl_apply/heatgen en 3 runs + groundflow_consolidate_off en 1 run + groundflow_vangenuchten/groundflow_nonsaturated_off en 2 runs + groundflow_total_pressure_tension/groundflow_interface en 2 runs + groundflow_flux_edge en 1 run + groundflow_phreatic_multiple en 1 run + groundflow_seepage en 1 run + groundflow_pressure_atm/_def en 2 runs + groundflow_total_pressure_limit/_dry en 2 runs + condif_heat_edge/vol/vol2 en 3 runs + condif_convec/rad/convec_el en 3 runs + aeg_node/aeg_seq/bt_factor en 3 runs + iface_condif/expansion/tangref en 3 runs + node_force_inertia/slide/pressure en 3 runs + creset_geom/iface en 2 runs + fedge_alias/restrict, fvol_elem y cmat_gate en 4 runs + fproj_tunnel en 1 run + dsmall/dignore en 2 runs + mdirect_comp/gate en 2 runs + mdp_shear/mfactor en 2 runs + mmc_tension en 1 run + mmchs_soft en 1 run + mcap2/mcap_legacy en 2 runs + mcrunch/mcrunch_low en 2 runs + mvoid/mvoid_low en 2 runs + mpower en 1 run + mshf/mshf_nof en 2 runs + mk0/mk0_off en 2 runs + myoung6/myoung6_e2/myoung6_e3/myoung6_apply en 4 runs + msph/msph_flat en 2 runs + mcap1/mcap1_elast/mcap1_comb en 3 runs + mhardsoil_elast/elast2/unload/unload_flat/plast/plast_elast/gp0/gp0_off en 8 runs + mstrain_cap/_elast, mstrain_compression/_elast, mstrain_diprisco/_elast, mstrain_druckprag/_elast en 8 runs + mdiprisco_hist en 1 run + mc_pressure_min/_off en 2 runs (Sprint 10 lote 9) + mrepeat_save en 1 run (Sprint 10 lote 10) + dbmeth/partialname/meshdoff/dofrhside/elmethod/hreltime/numit/dofid_no en 8 runs (Sprint 11 lote 1) + freq_timeint/freq_timestep en 2 runs (Sprint 11 lote 2) + vtk_coord1/vtk_dofcalc1/vtk_empty1/vtk_nodmeth1/vtk_other1 en 5 runs (Sprint 11 lote 3) + dpline1/dpline_n/dpline_geom/dpline_group/dpline_eps/dpline_method/dpline_move/dpline_time/dpoint_time/dpoint1 en 10 runs (Sprint 11 lote 4) + cpn1/cpn_angular/cpn_geom/cpn_sort/cpn_zero/dsmooth1/dsmooth_n en 7 runs (Sprint 11 lote 5) + bmom1/bmom_switch/bmom_truss/bmom_2d/bmom_noint en 5 runs (Sprint 11 lote 6) + msf_parse/msf_parse_3d/msf_print/msf_errors_2dwarn en 4 runs (sub-sprint materi_stress_force, lote 1) + msf_beam2d/msf_beam2d_pure/msf_quad9/msf_quad9_noavg/msf_nor/msf_shear en 6 runs (sub-sprint materi_stress_force, lote 2) + msf_sheet3d/msf_sheet3d_hex8/msf_hex27_avg/msf_tunnel3d en 4 runs (sub-sprint materi_stress_force, lote 3) + qsri_beam2d/qsri_beam2d_sri/qsri_patch_s/qsri_patch_s_off/qsri_patch_t/qsri_patch_t_off/qsri_modes/qsri_modes_rigid en 8 runs (shear locking quad4 + SRI) + qsri3d_patch_s/_off, qsri3d_patch_t/_off, qsri3d_modes_rigid, qsri3d_modes, qsri3d_beam/_off en 8 runs (SRI hex8 3D) + msf_cant3d_hex27/msf_axisym en 2 runs (sub-sprint materi_stress_force, lote 4) + tslv_vfx/tslv_part/tslv_symm/tslv_bsym/tslv_ver/tslv_auto/tslv_override en 7 runs (Sprint 12 lote 3: solver_* global + chicos) + tsup_winkler/tsup_solve/tsup_3d en 3 runs (Sprint 13 lote 1: support_edge_normal))."
+echo "==> Resumen: $HIPO_OK/$HIPO_TOTAL runs OK (13 tests: 12 preexistentes + familia iface_mc en 10 runs + familia 3D en 5 runs + familia generate_interface en 6 runs + familia materi_direct en 5 runs + materi_displacement_relative en 2 runs + slide/reset_value en 2 runs + cda_arith/copy/activate en 3 runs + cdist_normal/corr/clamp en 3 runs + cd_method/cd_geom en 2 runs + gravity/settlement en 4 runs + contact en 1 run + contact_block/ctrl_apply/heatgen en 3 runs + groundflow_consolidate_off en 1 run + groundflow_vangenuchten/groundflow_nonsaturated_off en 2 runs + groundflow_total_pressure_tension/groundflow_interface en 2 runs + groundflow_flux_edge en 1 run + groundflow_phreatic_multiple en 1 run + groundflow_seepage en 1 run + groundflow_pressure_atm/_def en 2 runs + groundflow_total_pressure_limit/_dry en 2 runs + condif_heat_edge/vol/vol2 en 3 runs + condif_convec/rad/convec_el en 3 runs + aeg_node/aeg_seq/bt_factor en 3 runs + iface_condif/expansion/tangref en 3 runs + node_force_inertia/slide/pressure en 3 runs + creset_geom/iface en 2 runs + fedge_alias/restrict, fvol_elem y cmat_gate en 4 runs + fproj_tunnel en 1 run + dsmall/dignore en 2 runs + mdirect_comp/gate en 2 runs + mdp_shear/mfactor en 2 runs + mmc_tension en 1 run + mmchs_soft en 1 run + mcap2/mcap_legacy en 2 runs + mcrunch/mcrunch_low en 2 runs + mvoid/mvoid_low en 2 runs + mpower en 1 run + mshf/mshf_nof en 2 runs + mk0/mk0_off en 2 runs + myoung6/myoung6_e2/myoung6_e3/myoung6_apply en 4 runs + msph/msph_flat en 2 runs + mcap1/mcap1_elast/mcap1_comb en 3 runs + mhardsoil_elast/elast2/unload/unload_flat/plast/plast_elast/gp0/gp0_off en 8 runs + mstrain_cap/_elast, mstrain_compression/_elast, mstrain_diprisco/_elast, mstrain_druckprag/_elast en 8 runs + mdiprisco_hist en 1 run + mc_pressure_min/_off en 2 runs (Sprint 10 lote 9) + mrepeat_save en 1 run (Sprint 10 lote 10) + dbmeth/partialname/meshdoff/dofrhside/elmethod/hreltime/numit/dofid_no en 8 runs (Sprint 11 lote 1) + freq_timeint/freq_timestep en 2 runs (Sprint 11 lote 2) + vtk_coord1/vtk_dofcalc1/vtk_empty1/vtk_nodmeth1/vtk_other1 en 5 runs (Sprint 11 lote 3) + dpline1/dpline_n/dpline_geom/dpline_group/dpline_eps/dpline_method/dpline_move/dpline_time/dpoint_time/dpoint1 en 10 runs (Sprint 11 lote 4) + cpn1/cpn_angular/cpn_geom/cpn_sort/cpn_zero/dsmooth1/dsmooth_n en 7 runs (Sprint 11 lote 5) + bmom1/bmom_switch/bmom_truss/bmom_2d/bmom_noint en 5 runs (Sprint 11 lote 6) + msf_parse/msf_parse_3d/msf_print/msf_errors_2dwarn en 4 runs (sub-sprint materi_stress_force, lote 1) + msf_beam2d/msf_beam2d_pure/msf_quad9/msf_quad9_noavg/msf_nor/msf_shear en 6 runs (sub-sprint materi_stress_force, lote 2) + msf_sheet3d/msf_sheet3d_hex8/msf_hex27_avg/msf_tunnel3d en 4 runs (sub-sprint materi_stress_force, lote 3) + qsri_beam2d/qsri_beam2d_sri/qsri_patch_s/qsri_patch_s_off/qsri_patch_t/qsri_patch_t_off/qsri_modes/qsri_modes_rigid en 8 runs (shear locking quad4 + SRI) + qsri3d_patch_s/_off, qsri3d_patch_t/_off, qsri3d_modes_rigid, qsri3d_modes, qsri3d_beam/_off en 8 runs (SRI hex8 3D) + msf_cant3d_hex27/msf_axisym en 2 runs (sub-sprint materi_stress_force, lote 4) + tslv_vfx/tslv_part/tslv_symm/tslv_bsym/tslv_ver/tslv_auto/tslv_override en 7 runs (Sprint 12 lote 3: solver_* global + chicos) + tsup_winkler/tsup_solve/tsup_3d en 3 runs (Sprint 13 lote 1: support_edge_normal) + tsup_damp/tsup_auto/tsup_init/tsup_dens en 4 runs (Sprint 13 lote 2: support_edge_normal damping/density/factor/force_initial/time + automaticos + time diagram))."
 
 # ---------------------------------------------------------------------
 # Sprint 11 lote 1: verificacion de ARCHIVOS y STDOUT de los 8 keywords
@@ -1851,6 +1852,52 @@ else
 fi
 if [ "$TSUP_OK" = "1" ]; then
   echo "==> Sprint 13 lote 1 (support_edge_normal elastico 2D/3D + record de salida): TODAS OK"
+fi
+
+# ---------------------------------------------------------------------
+# Sprint 13 lote 2: damping (manual + automaticos), density, factor,
+# force_initial, time diagram. El check compara MAGNITUDES — los
+# gotchas del GNU (bounda multi-record, orientacion de la normal por
+# producto vectorial, etc) se calibran test por test.
+# ---------------------------------------------------------------------
+TSUP2_OK=1
+# tsup_damp: k=(1000,100), c=(200,100), factor 0.5, u=v=(1e-4,-1e-3):
+# node1 fx = -(0.5*100*1e-4 + 100*1e-4)*0.5 = -0.0075; node2 fy = +(0.5*1000*1e-3+200*1e-3)*0.5 = 0.35
+if awk '$1=="node_support_edge_normal_force" && $2==1 { d=$3+0.0075; if (d<0) d=-d; exit !(d<1.e-4) }
+       $1=="node_support_edge_normal_force" && $2==2 { d=$4-0.35; if (d<0) d=-d; exit !(d<1.e-4) }' \
+   "$T2014/tsup_damp.dbs" 2>/dev/null; then
+  check_ok "tsup_damp (damping+factor: -0.0075 / +0.35 EXACTO)"
+else
+  check_fail "tsup_damp" "damping+factor fuera de banda"; TSUP2_OK=0
+fi
+# tsup_auto: grupo E=1e7 nu=0 rho=2 -> c_n=4472.136, c_t=790.569, k=(1000,100)
+# u=v=(1e-4,-1e-3) -> node1 fy = (1000+4472.136)/2 = 2.73607; node1 fx = -(100+790.569)/2 = -0.04453
+if awk '$1=="node_support_edge_normal_force" && $2==1 { d=$4-2.73607; if (d<0) d=-d; exit !(d<1.e-4)
+                                                    d=$3+0.04453; if (d<0) d=-d; exit !(d<1.e-4) }' \
+   "$T2014/tsup_auto.dbs" 2>/dev/null; then
+  check_ok "tsup_auto (damping automatico del grupo: c_n y c_t calculados, EXACTO)"
+else
+  check_fail "tsup_auto" "automatic fuera de banda"; TSUP2_OK=0
+fi
+# tsup_init: force_initial F0 = 0.1+0.2*y, time factor 2, prescribed 0
+# node1 (y=0): fx = 2*0.1*0.5 = 0.1; node3 (y=1): fx = 2*0.3*0.5 = 0.3
+if awk '$1=="node_support_edge_normal_force" && $2==1 { d=$3-0.1; if (d<0) d=-d; exit !(d<1.e-4) }
+       $1=="node_support_edge_normal_force" && $2==3 { d=$3-0.3; if (d<0) d=-d; exit !(d<1.e-4) }' \
+   "$T2014/tsup_init.dbs" 2>/dev/null; then
+  check_ok "tsup_init (force_initial lineal F0=0.1+0.2*y + time factor 2: 0.1, 0.3 EXACTO)"
+else
+  check_fail "tsup_init" "F0+time fuera de banda"; TSUP2_OK=0
+fi
+# tsup_dens: d=(50,20), prescribed v=(0,-1e-3) one step -> a=-1e-3
+# node both = (k_n*1e-3 + d_n*1e-3)*0.5 = 0.525
+if awk '$1=="node_support_edge_normal_force" && ($2==1||$2==2) { d=$4-0.525; if (d<0) d=-d; exit !(d<1.e-4) }' \
+   "$T2014/tsup_dens.dbs" 2>/dev/null; then
+  check_ok "tsup_dens (density: a=-1e-3 d_n=50 -> +0.05/u + 0.025/inertia = 0.525/node EXACTO)"
+else
+  check_fail "tsup_dens" "densidad fuera de banda"; TSUP2_OK=0
+fi
+if [ "$TSUP2_OK" = "1" ]; then
+  echo "==> Sprint 13 lote 2 (damping manual+automatico, density, factor, force_initial, time): TODAS OK"
 fi
 
 if [ "$CHECK_FAIL" = "1" ]; then

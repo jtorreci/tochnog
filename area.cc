@@ -566,9 +566,20 @@ void area( long int element, long int name,
               load = 1.;
           }
           if ( type[itype]==SUPPORT_EDGE_NORMAL ) {
-            // lot 1: no time diagram yet (support_edge_normal_time is
-            // lot 2); the support force itself is displacement-driven
-            load = 1.;
+            // support_edge_normal_time (manual Professional 6.1084):
+            // a multiplication factor for the support edge force
+            // (linear interpolation between the diagram points)
+            if ( db_active_index( SUPPORT_EDGE_NORMAL_TIME, ind,
+                 VERSION_NORMAL ) ) {
+              double *sup_time = db_dbl( SUPPORT_EDGE_NORMAL_TIME, ind,
+                VERSION_NORMAL );
+              length = db_len( SUPPORT_EDGE_NORMAL_TIME, ind,
+                VERSION_NORMAL );
+              force_time( sup_time, "SUPPORT_EDGE_NORMAL_TIME",
+                length, load );
+            }
+            else
+              load = 1.;
           }
           if ( swit ) pri( "load", load );
 
@@ -955,20 +966,153 @@ void area( long int element, long int name,
                     db( SUPPORT_EDGE_NORMAL, ind, idum, values,
                       ldum, VERSION_NORMAL, GET );
                     {
-                      double un = 0., sup_nodal[MDIM];
-                      for ( idim=0; idim<ndim; idim++ )
+                      double un = 0., vn = 0., an = 0., f0 = 0.,
+                        sup_nodal[MDIM], old_dof_node[MDIM+MUKNWN];
+                      double cn = 0., ct = 0., fac_k = 1.;
+                      long int idim2 = 0;
+                      // the spatial factor scales the STIFFNESSES only
+                      // (manual 6.1075: "for the support stiffnesses
+                      // and not the force")
+                      force_factor( SUPPORT_EDGE_NORMAL_FACTOR, ind,
+                        &new_coord[inol*ndim], fac_k );
+                      // the velocity and acceleration of the node
+                      // (acceleration: backward difference of the
+                      // velocity dofs; the old values from NODE_DOF
+                      // VERSION_NORMAL)
+                      array_move( db_dbl( NODE_DOF, inod,
+                        VERSION_NORMAL ), old_dof_node, nuknwn );
+                      for ( idim=0; idim<ndim; idim++ ) {
                         un += new_dof[inol*nuknwn+dis_indx+idim*nder]
                              *normal[idim];
+                        vn += new_dof[inol*nuknwn+vel_indx+idim*nder]
+                             *normal[idim];
+                        an += ( new_dof[inol*nuknwn+vel_indx+idim*nder]
+                              - old_dof_node[vel_indx+idim*nder] )
+                              /dtime*normal[idim];
+                      }
+                      // the initial normal force (manual 6.1076):
+                      // a0 + a1*depth, a compression preload of the
+                      // support (the reaction pushes the element even
+                      // at zero displacement)
+                      if ( db_active_index( SUPPORT_EDGE_NORMAL_FORCE_INITIAL,
+                           ind, VERSION_NORMAL ) ) {
+                        double fi[2];
+                        db( SUPPORT_EDGE_NORMAL_FORCE_INITIAL, ind,
+                          idum, fi, ldum, VERSION_NORMAL, GET );
+                        f0 = fi[0] + fi[1]
+                          *new_coord[inol*ndim+ndim-1];
+                      }
+                      // the damping coefficients (manual 6.1068):
+                      // viscous dampers on the support. Gated by
+                      // control_support_edge_normal_damping_apply -no
+                      // (manual 6.380). The automatic variants
+                      // (6.1069/6.1070) compute them from the
+                      // attached element group: c_n = Cn*rho*Vn with
+                      // Cn = 1, Vn = sqrt(Eoed/rho), Eoed =
+                      // (1-nu)E/((1+nu)(1-2nu)); c_t = Ct*rho*Vt with
+                      // Ct = 0.25, Vt = sqrt(G/rho), G = E/(2(1+nu)).
+                      // The _apparent variant uses the apparent
+                      // moduli from the CURRENT nodal state (for
+                      // elastic behavior identical to the nominal
+                      // values; guards fall back to nominal).
+                      {
+                        long int damping_apply = -YES;
+                        long int icontrol_d = 0;
+                        db( ICONTROL, 0, &icontrol_d, ddum, ldum,
+                          VERSION_NORMAL, GET_IF_EXISTS );
+                        db( CONTROL_SUPPORT_EDGE_NORMAL_DAMPING_APPLY,
+                          icontrol_d, &damping_apply, ddum, ldum,
+                          VERSION_NORMAL, GET_IF_EXISTS );
+                        if ( damping_apply!=-NO ) {
+                          if ( db_active_index(
+                               SUPPORT_EDGE_NORMAL_DAMPING, ind,
+                               VERSION_NORMAL ) ) {
+                            double cdamp[2];
+                            db( SUPPORT_EDGE_NORMAL_DAMPING, ind,
+                              idum, cdamp, ldum, VERSION_NORMAL, GET );
+                            cn = cdamp[0];
+                            ct = cdamp[1];
+                          }
+                          else if ( db_active_index(
+                               SUPPORT_EDGE_NORMAL_DAMPING_AUTOMATIC,
+                               ind, VERSION_NORMAL ) ||
+                                    db_active_index(
+                               SUPPORT_EDGE_NORMAL_DAMPING_AUTOMATIC_APPARENT,
+                               ind, VERSION_NORMAL ) ) {
+                            double e_mod = 0., nu = 0., rho = 0.;
+                            db( GROUP_MATERI_ELASTI_YOUNG, gr, idum,
+                              &e_mod, ldum, VERSION_NORMAL,
+                              GET_IF_EXISTS );
+                            db( GROUP_MATERI_ELASTI_POISSON, gr, idum,
+                              &nu, ldum, VERSION_NORMAL,
+                              GET_IF_EXISTS );
+                            db( GROUP_MATERI_DENSITY, gr, idum, &rho,
+                              ldum, VERSION_NORMAL, GET_IF_EXISTS );
+                            if ( rho<=0. ) {
+                              pri( "Warning: support_edge_normal_"
+                                "damping_automatic needs "
+                                "group_materi_density > 0 on the "
+                                "supported group - no damping "
+                                "applied" );
+                            }
+                            else if ( e_mod>0. && nu<0.5 ) {
+                              if ( db_active_index(
+                                   SUPPORT_EDGE_NORMAL_DAMPING_AUTOMATIC_APPARENT,
+                                   ind, VERSION_NORMAL ) ) {
+                                // the apparent moduli: from the
+                                // current nodal stress/strain along
+                                // the loading axis, with guards
+                                double eps =
+                                  new_dof[inol*nuknwn+ept_indx
+                                    +(ndim-1)*nder];
+                                double sig =
+                                  new_dof[inol*nuknwn+stres_indx
+                                    +(ndim-1)*nder];
+                                if ( scalar_dabs(eps)>1.e-12 &&
+                                     sig/eps>0. && sig/eps<e_mod )
+                                  e_mod = sig/eps;
+                              }
+                              double eoed = (1.-nu)*e_mod
+                                /((1.+nu)*(1.-2.*nu));
+                              double g_mod = e_mod/(2.*(1.+nu));
+                              cn = 1.    *sqrt( rho*eoed );
+                              ct = 0.25 *sqrt( rho*g_mod );
+                            }
+                          }
+                        }
+                      }
+                      // the distributed support density (manual
+                      // 6.1071): inertia of the support mass
+                      double dn = 0., dt_ = 0.;
+                      if ( db_active_index( SUPPORT_EDGE_NORMAL_DENSITY,
+                           ind, VERSION_NORMAL ) ) {
+                        double densv[2];
+                        db( SUPPORT_EDGE_NORMAL_DENSITY, ind, idum,
+                          densv, ldum, VERSION_NORMAL, GET );
+                        dn = densv[0];
+                        dt_ = densv[1];
+                      }
                       // the consistent nodal support force (Lobatto:
-                      // the side nodes carry the line/area load)
+                      // the side nodes carry the line/area load),
+                      // all terms times the time factor
                       for ( idim=0; idim<ndim; idim++ ) {
                         double ut_idim =
                           new_dof[inol*nuknwn+dis_indx+idim*nder]
                           - un*normal[idim];
-                        double fidim = -( values[0]*un )*normal[idim]
-                                       - values[1]*ut_idim;
+                        double vt_idim =
+                          new_dof[inol*nuknwn+vel_indx+idim*nder]
+                          - vn*normal[idim];
+                        double at_idim =
+                          ( new_dof[inol*nuknwn+vel_indx+idim*nder]
+                          - old_dof_node[vel_indx+idim*nder] )
+                          /dtime - an*normal[idim];
+                        double fn = -( fac_k*values[0]*un
+                          + cn*vn + dn*an + f0 );
+                        double fidim = fn*normal[idim]
+                          -( fac_k*values[1]*ut_idim + ct*vt_idim
+                             + dt_*at_idim );
                         sup_nodal[idim] =
-                          weight[inol_side] * area_size * fidim;
+                          load * weight[inol_side] * area_size * fidim;
                         ipuknwn = vel_indx/nder + idim;
                         element_rhside[inol*npuknwn+ipuknwn]
                           += sup_nodal[idim];
