@@ -661,8 +661,8 @@ static void msf_element_internal_forces_2d( long int npol, long int nnol,
       invjac[3] =  jac[0]/( jac[0]*jac[3]-jac[1]*jac[2] );
       for ( inol=0; inol<nnol; inol++ ) {
         dn[inol*2+0] = invjac[0]*px[inol%npol]*hy[inol/npol]
-                     + invjac[2]*hx[inol%npol]*py[inol/npol];
-        dn[inol*2+1] = invjac[1]*px[inol%npol]*hy[inol/npol]
+                     + invjac[1]*hx[inol%npol]*py[inol/npol];
+        dn[inol*2+1] = invjac[2]*px[inol%npol]*hy[inol/npol]
                      + invjac[3]*hx[inol%npol]*py[inol/npol];
       }
       w = weight[0][ixi]*weight[1][ieta];

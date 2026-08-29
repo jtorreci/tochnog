@@ -638,8 +638,8 @@ void elem( long int element, long int ithread )
 	  // MDIM*MDIM limit (the -1 block indices would make wider
 	  // ranges catch unrelated slots).
           for ( int i=0; i<nuknwn; i++ ) 
-	    if((i>=hisv_indx && i<(hisv_indx+materi_history_variables))||
-	      (i>=stres_indx && i<(stres_indx+MDIM*MDIM))||
+	    if((hisv_indx>=0 && i>=hisv_indx && i<(hisv_indx+materi_history_variables*nder))||
+	      (i>=stres_indx && i<(stres_indx+6*nder))||
 	      (i>=epe_indx && i<(epe_indx+MDIM*MDIM))||
    	      (i>=epp_indx && i<(epp_indx+MDIM*MDIM))||
    	      (i>=ept_indx && i<(ept_indx+MDIM*MDIM))||
@@ -801,7 +801,7 @@ void elem( long int element, long int ithread )
     if(options_element_dof==-YES) {
     	long int startindx=nuknwn*ipoint;
         for ( int i=0; i<nuknwn; i++ ) 
- 	  if((i>=hisv_indx && i<(hisv_indx+materi_history_variables))||
+ 	  if((hisv_indx>=0 && i>=hisv_indx && i<(hisv_indx+materi_history_variables*nder))||
 	    (i>=stres_indx && i<(stres_indx+6*nder))||
 	    (i>=epe_indx && i<(epe_indx+MDIM*MDIM))||
    	    (i>=epp_indx && i<(epp_indx+MDIM*MDIM))||

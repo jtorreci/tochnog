@@ -1740,19 +1740,21 @@ fi
 # la DEFLEXION de la punta (targets de velocidad en los .dat: SRI
 # 0.18379 vs OFF 0.04528 = 0.897x vs 0.221x de la Euler-Bernoulli -
 # el lock del hex8 full y la recuperacion del SRI). Las secciones
-# 710/711 leen el campo sigma via el fallback documentado (ELEMENT_DOF
-# cero para el hex8 con derivatives - la polucion del campo sigma del
-# esquema mixto, preexistente): mom1s(710) = 0.0909 (1.14x P*L) >
-# mom1s(711) = 0.0788 (0.985x P*L) - la mejoria del campo sigma del
-# SRI (el momento de la flexion) frente al lock.
+# 710/711 leen las fuerzas internas del elemento (LOT 5): con el fix
+# del ELEMENT_DOF 3D (2026-08-29 - el write del sigma constitutivo al
+# slot nder-correcto) el campo sigma de los IPs ya NO es cero y el
+# fallback a la nodal quedo obsoleto: la seccion lee el estado en
+# equilibrio -> mom1s = P*L = 0.08 EXACTO para AMBOS (la estatica del
+# cuerpo libre es independiente de la formulacion del elemento; el
+# discriminador SRI es la deflexion, no el momento de seccion).
 QSR3D_BEAM_OK=1
 M710=$(awk '!/^#/ {print $13; exit}' "$T2014/materi_stress_force.710" 2>/dev/null)
 M711=$(awk '!/^#/ {print $13; exit}' "$T2014/materi_stress_force.711" 2>/dev/null)
 if [ -n "$M710" ] && [ -n "$M711" ] && \
    awk -v a="$M710" -v b="$M711" \
-   'BEGIN{ d1=a-0.0909; d2=b-0.0788;
-          exit !(d1<0.005 && d1>-0.005 && d2<0.005 && d2>-0.005 && a>b) }'; then
-  check_ok "qsri3d_beam (SRI: deflexion 0.897x EB vs OFF 0.221x - targets .dat; mom1s 710 > 711: el campo sigma del SRI mejora el lock)"
+   'BEGIN{ d1=a-0.08; d2=b-0.08;
+          exit !(d1<0.005 && d1>-0.005 && d2<0.005 && d2>-0.005) }'; then
+  check_ok "qsri3d_beam (SRI: deflexion 0.897x EB vs OFF 0.221x - targets .dat; mom1s 710 ~ 711 = P*L = 0.08: la estatica del cuerpo libre del estado equilibrado)"
 else
   check_fail "qsri3d_beam" "momens de seccion o targets inesperados (710=$M710 711=$M711)"
 fi

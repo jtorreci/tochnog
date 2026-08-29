@@ -804,7 +804,7 @@ void materi( long int element, long int gr, long int name, long int nnol,
           tmp = volume * h[inol] * ( new_hisv[i] - old_hisv[i] ) / dtime;
           element_rhside[indx] += tmp;
 		//added for options_element_dof
-          if(options_element_dof==-YES) new_unknowns[ipuknwn] = new_hisv[i];
+          if(options_element_dof==-YES) new_unknowns[hisv_indx + i*nder] = new_hisv[i];
           ipuknwn++;
         }
       }
@@ -847,7 +847,18 @@ void materi( long int element, long int gr, long int name, long int nnol,
             if ( jdim==0 && idim==0 ) {
             }
 		//added for options_element_dof
-            if(options_element_dof==-YES) new_unknowns[ipuknwn] = new_sig[idim*MDIM+jdim];// new_sig_nonrot[idim*MDIM+jdim];
+            // NOTE (measured 2026-08-29, the ELEMENT_DOF zero-stress
+            // mystery of the 3D `derivatives` models): the write index
+            // must be the SLOT stres_indx + j*nder (the value slot of
+            // the j-th stress component), NOT the unknown-number index
+            // stres_indx/nder + j. For nder=1 both coincide (the 2D
+            // default); for nder>1 (3D with `derivatives`, nder=5) the
+            // old index landed the constitutive stress inside the
+            // displacement block, so the elem.cc ELEMENT_DOF write
+            // (which reads the stres slots) never saw it and the
+            // element integration-point stresses stayed zero. Same
+            // fix for the materi_history_variables write above.
+            if(options_element_dof==-YES) new_unknowns[stres_indx + (ipuknwn - stres_indx/nder)*nder] = new_sig[idim*MDIM+jdim];// new_sig_nonrot[idim*MDIM+jdim];
             ipuknwn++;
           }
         }
