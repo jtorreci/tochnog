@@ -70,6 +70,7 @@ suite sfnet, o un test propio. El registro completo:
 | **LOTE C/D del solve u-σ — FIX del esquema escalonado: punto fijo = solución del elemento + recuperación de σ consistente** | `feat(solver): fix del esquema escalonado u-sigma — punto fijo consistente` (2026-08-28) | 2026-08-28 | **MECANISMO EXACTO (medido, FASE 1)**: (1) el mapa del esquema: v(k+1) = v(k) + (dt·K_uu)⁻¹·(P − Bᵀ·σ_constit(v(k))) con σ_constit(v) = σ_old + C_full·ε(v·dt) (stress.cc:1182) y el update de σ por reemplazo σ_new = σ_constit(v) (la inercia lumped de general.cc:253 cancela el σ_iterate; dof.cc:155) — la velocidad acumula (so.cc:740) → para K_uu = K_full el mapa colapsa en UNA pasada a v* = (dt·K_uu)⁻¹P; (2) el PUNTO FIJO: dv=0 → P = Bᵀ·σ_constit(v*) = dt·Bᵀ·C_full·B·v* → **v* = (dt·K_full)⁻¹·(P − Bᵀσ_old) SIEMPRE** — la matriz del momento (SRI o no) NO entra en el fijo (solo en el transitorio) → el SRI se cancela al converger (0.2316× ≈ plain 0.2315×, confirmado con 32 iteraciones) — la "rigidez doble" del diagnóstico es el transitorio; el fijo es el K_full⁻¹P; (3) la RECUPERACIÓN del σ dof (promedio h-weighted lumped) DILUYE los valores nodales con la cuadratura 2×2 GAUSS del SRI (puntos interiores ±1/√3): σ_nodo ≈ 0.577·σ_esquina (medido) → los momentos de sección leen tensiones bajas aunque el desplazamiento sea correcto (SRI: 0.29× en vez de 0.9375×); con las reglas con nodos (Lobatto esquinas, quad9/hex8) h = δ → recuperación exacta (sin cambio); (4) las DIVERGENCIAS del arness son BUGS DE BC de los inputs GNU: gforce7q4 fijaba velx en la arista INFERIOR (1,2,3) en vez de la izquierda (1,4) → modo de rotación rígida libre → matriz singular (pivot 8.7e-10, carga 88% en el modo nulo) → CG honesto diverge; gforce10/13 usaban `-ra 1 4` = lista {1,4} no el rango → cara inferior solo 2 esquinas → singular (pivot 8.6e-17). **FIX D (mínimo)**: (c) feedback del momento consistente con el elemento — para el quad4 SRI la cizalla del feedback se integra como la matriz (incremento de cizalla del iterado a cero en sigvec + fuerza interna reducida −dt·K_shear·v en el RHS) → fijo = (dt·K_elem)⁻¹·(P − Bᵀσ_old) = solución del ELEMENTO, convergencia en UNA pasada sin deriva; (b) recuperación del σ consistente — extrapolación de Lagrange de los valores de Gauss a los nodos ("mismo B en el nodo") para las componentes NORMALES (superconvergentes: σ_xx SRI 94% del analítico), h para las de cizalla (no superconvergentes; la media h = estimación centróide) — solo cambia el quad4 SRI (las reglas con nodos dan L = δ = h). **VERIFICACIÓN**: SRI: mom = 0.0750 = 0.9375·P·L (referencia clásica Hughes) estable a 32 iteraciones; plain quad4/quad9/hex8 byte-idénticos (gforce7q4_ref 0.215×, gffq4 0.197×, gforce7_ref 0.9986×, gforce7 0.996×); gforce7q4 y gforce10/13 CONVERGEN (BC corregidas; el N axial 3D = 12.34 EXACTO 1.0000× vs Professional); arness de aceptación VERDE (compare_professional.sh); suite **199/199 + verificaciones de archivos OK** (check de qsri_beam2d_sri actualizado al fijo 0.9375×). NO arregla (documentado): el lock del plain quad4/hex8 (física del ELEMENTO, SRI opt-in) — el esquema ahora converge a la solución de la formulación; la cizalla de sección del σ_xy crudo (polución de interpolación preexistente; el σ nodal del Professional está igualmente contaminado — su estática exacta no viene del σ nodal). Fix C (monolítico) NO necesario. Detalle: DIAG-SOLVE-MIXTO §12, VALIDACION-PROFESIONAL §9, PAPER-LINES (C/D status). |
 **Carril A Fase 4 — sigt implementado** | `8ef45c4` | 2026-08-14 | `interface_sigt` ya no es 0: se lee del history `element_interface_force_tang` (fuerza tangencial total acumulada, Fase 3), consistente con `sign`. Verificado con probe: sigt=23.28 == F_t acumulada del último paso. Documentado en ambos manuales. 3D pendiente. |
 | **VERIFICACIÓN CONTRA TOCHNOG PROFESSIONAL (binario 02-08-2026, Drive público del autor) — el bug NO sobrevive en Professional** | `04b2558`-familia (docs) | 2026-08-28 | **force7q4.dat** (la ménsula de estática de force7.dat del Professional reconstruida con **quad4** 1-en-espesor, L=100 h=10): N=-12.34, V=+100, M(x=50)=-5000, M(x=0)=-10000, M(x=100)=0 — TODOS EXACTOS a 1e-10 (targets exit 0); el GNU da 0.2315× en la misma configuración. **ffq4.dat** (el caso real del usuario: biempotrada, carga uniforme, quad4 1-en-espesor): \|M_extremo\|+\|M_centro\| = 825+425 = **1250 = pL²/8 EXACTO** (825/425 son los correctos de viga profunda Timoshenko h/L=0.1; Euler daría 833/417; la identidad estática que el GNU viola por ≈7× se cumple exacta). Los tests de validación propios del Professional usan quad9 (force7/8) y 2×2-en-sección hex8 (force10/13) — diseño defensivo; el caso quad4 1-en-espesor funciona correctamente allí. Conclusión: el lock + fijo del esquema escalonado + criterios deshonestos es de la línea GNU open source (arquitectura 'stress follows the principal unknowns' documentada en el manual 2011); la línea propietaria no lo tiene. Detalle completo: DIAG-SOLVE-MIXTO.md §11 y papers/PAPER-LINES.md §6-7. |
+| **SPRINT 12 LOTE 3 — familia solver (10/10) + timestep (2/2) + tochnog_version + volume_factor_x + zip (15 keywords)** | `feat(solver): familia solver global + timestep_*/tochnog_version/volume_factor_x/zip` (2026-08-29) | 2026-08-29 | **código**: los `solver_*` del Professional (6.1047-6.1056) son records PLANOS (sin índice, `no_index=1`), a diferencia de los `control_solver_*` del Sprint 9: enums propios en sync + registros en database.cc. `solver` = el tipo GLOBAL que PISA a todo control_solver — leído al FINAL en los tres puntos de consumo (top.cc/elem.cc/dof.cc; precedencia OPUESTA al options_solver legacy, que el control pisa). `solver_bicg_error`/`_stop` pisan a sus control en so_bicg.cc. `solver_matrix_symmetric -yes` fuerza el CG saltándose la medición por solve, con WARNING honesto si la medición discrepa (el Professional simetriza la matriz; el GNU corre CG sobre la tal-cual — conecta con el fix A+B). PARCIALES documentados: `solver_bicg_restart` (el bicg del GNU no tiene restart), `solver_matrix_save` (cache de solver directo), `solver_pardiso_*` ×4 (PARDISO no compilado), `timestep_predict_velocity` (el esquema escalonado arranca el solve de x=0 y ACUMULA el resultado — una predicción de velocidades previas duplicaría; neutral verificado). **Comportamiento real**: `timestep_iterations_automatic_apply -no` (gate en top.cc que descarta los control_timestep_iterations_automatic), `tochnog_version` (la fecha de BUILD parseada de `__DATE__`, escrita al inicio de top(), targeteable), `volume_factor_x` (factor por tramos de x a nivel de IP en volume.cc — multiplica al polinómico y al de grupo; derecha de xn factor 1 como el manual), `zip -yes` (gzip de *flavia*/*msh/vtk*/*.plt/*.dbs al final en exit_tn, tras los targets y antes de db_close; solo archivos existentes — el glob sin match no cuenta como fallo). **VERIFICACIÓN** (suite **216/216** = 209 + 7, checks TODOS OK): `tslv_override` (control_solver bicg + solver -matrix_superlu → el BANNER de SuperLU en stdout prueba el override), `tslv_bsym` (el beam medido NO simétrico + -yes → el warning se imprime, sobrevive con stop -no), `tslv_symm` (simétrico + -yes = valores idénticos), `tslv_vfx` (estática de serie 8×1 con espesor 2 a la derecha: σ 2e-2/1e-2 por mitades, punta 1.15e-3 vs 1.2e-3 analítico; A/B sin el record 1.59e-3), `tslv_part` (los 7 parciales juntos = física sin cambio), `tslv_auto` (record automático + -no = física sin cambio), `tslv_ver` (target del año de build pasa), `tslv_zip` (aislado: .dbs.gz creado sin warning). Arness sin regresión (gforce10 1.0000). GOTCHAS del lote: los comentarios de .dat cuentan paréntesis (un "[1,3)" rompió el parse — conocido); `-ra 1 4` sin el segundo -ra revienta MRANGE (usar -node explícito); el combo de unknowns para σ necesita strain_total (+displacement si hay targets de tensión); el staggered cuasiestático colapsa en una pasada → los contadores de iteraciones son INVISIBLES en estos modelos (el gate del automatic queda verificado por construcción + no-cambio). |
 | **SPRINT 12 LOTE 1 — frame de sección 3D: CIERRE DEL ARNESS (gforce10/13 V/mom + convenciones de signo)** | `feat(post): frame de seccion 3d — cierre del arness professional` (2026-08-29) | 2026-08-29 | **HALLAZGO (el V/mom ≈ 0 de gforce10/13 era un problema de FRAME, no del esquema)**: (1) BUG DE INPUT — el force10.dat del Professional lleva `thickness_switch -yes` (+ `plot_switch`); nuestra conversión gforce10/13 los omitió. MEDIDO por caja negra (reference_point movido en el binario del Professional): sin el switch el PROPIO Professional da el frame roto (vectores ≈ 0, momento en mom2) — la sección cuadrada 10×10 empata la regla de extensión del manual 6.917; (2) BUG DE CÓDIGO — corners[] = [0,npol−1,npol(npol−1),nface−1] sobre tablas de bordes LEXICOGRÁFICAS hacía corner3−corner0 = la DIAGONAL de la cara (e2 nunca fue arista; con −yes la diagonal ganaba → frame a 45°, nors 17.45 = 12.34·√2). FIX: bucle [00,10,11,01] (la normal n = e1×e2 no cambia: la diagonal vieja iba a lo largo de e1+e2); (3) CONVENCIONES convergidas al Professional (todas medidas): empate de cara cuadrata roto por el reference point (la arista mejor alineada gana; proyección nula → primera arista, conserva msf_cant3d/qsri3d), t orientado HACIA el reference point (antes "away" → TODA componente direccional invertida, ratios −1.0000), brazo de momento (medio−nodo) (antes nodo−medio), items `*_s` ESCALARES FIRMADOS (nors = −12.34 a compresión; antes \|valor\|). **VERIFICACIÓN**: (1) arness COMPLETO convergido — gforce10/13 **nory 1.0000 / shey 1.0000 / mom1y 1.0000** (−12.34/−100/−5000 vs Professional, EXACTOS a la precisión impresa — la estática del cuerpo libre del L5 es exacta también en 3D); gforce7/7q4 N/V 1.0000 M 0.9984 CON SIGNOS; gffq4 identidad 0.9996; msf_tunnel3d nory **1.0000** (0.0998068555 vs 0.0998068556, el MISMO valor FE, mismo signo); (2) suite **209/209** + verificaciones TODAS OK en build limpio (5 checks de s-items actualizados a comparación por MAGNITUDES con justificación — el signo depende del reference point de cada modelo); (3) los .dat gforce10/13 actualizados con thickness_switch+plot_switch (fieles al original). Residuales documentados (VALIDACION §13.3): componentes cruzados ~5% del nodo esquina 2D cargado (polución σ de borde del quad9, preexistente), y el GNU da el frame correcto sin switch donde el Professional da el roto (divergencia deliberada en input degenerado). |
 
 **Carril A — `group_interface_materi_memory`** | `643865b` | 2026-08-16 | modelo de memoria de la ley de interfaz: `-updated_linear` (default, normal/tangente de la config actual) o `-total_linear` (geometría de referencia tiempo 0, `NODE_START_REFINED`). Valores inválidos → `db_error`. Test `iface_mc_mem` (familia iface_mc, 7º run → 19 runs). |
@@ -1906,18 +1907,18 @@ Nota: `group_interface_ground` del checklist anterior NUNCA existió (artefacto 
 - [ ] `slide_sti` — PENDIENTE
 - [ ] `slide_user` — PENDIENTE
 
-### solver (0/10)
+### solver (10/10)
 
-- [ ] `solver` — PENDIENTE
-- [ ] `solver_bicg_error` — PENDIENTE
-- [ ] `solver_bicg_restart` — PENDIENTE
-- [ ] `solver_bicg_stop` — PENDIENTE
-- [ ] `solver_matrix_save` — PENDIENTE
-- [ ] `solver_matrix_symmetric` — PENDIENTE
-- [ ] `solver_pardiso_ordering` — PENDIENTE
-- [ ] `solver_pardiso_out_of_core` — PENDIENTE
-- [ ] `solver_pardiso_processors` — PENDIENTE
-- [ ] `solver_pardiso_processors_maximum` — PENDIENTE
+- [x] `solver` — Sprint 12 lote 3 (el tipo GLOBAL pisa a todo control_solver: leído al FINAL en top.cc/elem.cc/dof.cc — precedencia OPUESTA al options_solver legacy; probado con banner SuperLU)
+- [x] `solver_bicg_error` — Sprint 12 lote 3 (global, pisa al control_solver_bicg_error en so_bicg.cc)
+- [x] `solver_bicg_restart` — Sprint 12 lote 3 (PARCIAL: registrado; el bicg del GNU no tiene restart, como su contraparte de control)
+- [x] `solver_bicg_stop` — Sprint 12 lote 3 (global, pisa al control_solver_bicg_stop)
+- [x] `solver_matrix_save` — Sprint 12 lote 3 (PARCIAL: registrado; cache de descomposición es funcionalidad de solver directo)
+- [x] `solver_matrix_symmetric` — Sprint 12 lote 3 (-yes fuerza el CG saltándose la medición por solve; WARNING honesto si la medición discrepa — el Professional simetriza, el GNU corre CG sobre la matriz tal cual)
+- [x] `solver_pardiso_ordering` — Sprint 12 lote 3 (PARCIAL: PARDISO no compilado)
+- [x] `solver_pardiso_out_of_core` — Sprint 12 lote 3 (PARCIAL, ídem)
+- [x] `solver_pardiso_processors` — Sprint 12 lote 3 (PARCIAL, ídem)
+- [x] `solver_pardiso_processors_maximum` — Sprint 12 lote 3 (PARCIAL, ídem)
 
 ### strain (0/10)
 
@@ -1963,14 +1964,14 @@ Nota: `group_interface_ground` del checklist anterior NUNCA existió (artefacto 
 - [x] `time_calculation` — presente en el GNU
 - [x] `time_current` — presente en el GNU
 
-### timestep (0/2)
+### timestep (2/2)
 
-- [ ] `timestep_iterations_automatic_apply` — PENDIENTE
-- [ ] `timestep_predict_velocity` — PENDIENTE
+- [x] `timestep_iterations_automatic_apply` — Sprint 12 lote 3 (-no descarta todo control_timestep_iterations_automatic: gate en top.cc antes de la rama automática; física sin cambio verificada)
+- [x] `timestep_predict_velocity` — Sprint 12 lote 3 (PARCIAL: registrado; el esquema escalonado del GNU arranca el solve de x=0 y ACUMULA el resultado — una predicción de velocidades previas duplicaría; neutral verificado)
 
-### tochnog (0/1)
+### tochnog (1/1)
 
-- [ ] `tochnog_version` — PENDIENTE
+- [x] `tochnog_version` — Sprint 12 lote 3 (record con la fecha de BUILD parseada de __DATE__, escrito al inicio de top(); targeteable — test del año)
 
 ### truss (0/1)
 
@@ -1980,19 +1981,19 @@ Nota: `group_interface_ground` del checklist anterior NUNCA existió (artefacto 
 
 - [ ] `up` — PENDIENTE
 
-### volume (1/2)
+### volume (2/2)
 
 - [x] `volume_factor` — presente en el GNU
-- [ ] `volume_factor_x` — PENDIENTE
+- [x] `volume_factor_x` — Sprint 12 lote 3 (factor por tramos de x en volume.cc, a nivel de IP; derecha de xn factor 1; multiplica al polinómico y al de grupo; verificado analítico 8x1: sigma 2e-2/1e-2 por mitades, punta 1.15e-3 vs 1.2e-3)
 
 ### wave (2/2)
 
 - [x] `wave_fscalar` — presente en el GNU
 - [x] `wave_scalar` — presente en el GNU
 
-### zip (0/1)
+### zip (1/1)
 
-- [ ] `zip` — PENDIENTE
+- [x] `zip` — Sprint 12 lote 3 (-yes gzipea *flavia*/*msh/vtk*/*.plt/*.dbs al final del cálculo en exit_tn, tras los targets y antes de db_close; test en directorio aislado)
 
 </details>
 
@@ -2018,17 +2019,17 @@ Osman Buyukusik): cerrar los cabos abiertos y continuar la convergencia.
    convenciones de signo/escalar), no del esquema. Arness COMPLETO a
    ratios +1.0000 con signos — ver la fila SPRNT 12 LOTE 1 del registro
    y VALIDACION-PROFESIONAL §13.
-2. **Paper línea 3 (pedagógica)** — caso carretera + pL²/8 + control positivo
-   Professional + estática del cuerpo libre independiente de la formulación.
-   Es la más madura; documenta la saga. (Si el usuario prefiere código, posponer.)
-3. **Convergencia — familias grandes del checklist** (elegir al volver):
-   - `safety` (0/31) — estabilidad de taludes (slip circles): alto valor para el
-     campo geotécnico, pero sub-sprint grande (requiere exploración propia).
-   - `support` (0/18) — soportes elástico-plásticos: medio, más accesible.
-   - `solver` (0/10) — aliases/opciones del solver: pequeño-medio, conecta con
-     el trabajo del solve u-σ.
-   - `strain_volume_*` (4/10), `timestep` (0/2), `volume_factor_x` (0/1),
-     `tochnog_version` (0/1), `zip` (0/1): pequeños.
+2. **[DONE 2026-08-29] Paper línea 3 (pedagógica)** — pospuesta por
+   decisión del usuario ("los papers los dejaremos para más
+   adelante"); los datos de las líneas 1 y 2 se van recopilando en
+   PAPER-LINES.md con cada lote.
+3. **[DONE 2026-08-29] Convergencia — familias grandes del checklist**:
+   este lote cerró `solver` (0/10 → 10/10), `timestep` (0/2 → 2/2),
+   `tochnog_version` (0/1), `volume_factor_x` (0/1) y `zip` (0/1) —
+   ver la fila SPRNT 12 LOTE 3 del registro. Quedan pendientes:
+   `safety` (0/31, sub-sprint propio), `support` (0/18) y
+   `strain_volume_*` (4/10) + `post_strain_volume_*` (3) +
+   `post_calcul_safety_*` (3).
 4. **Email a los colaboradores** — el paquete `ProjectDocs/shared/` está listo;
    falta redactar el correo (inglés) con la oferta (código + docs + papers).
 5. **Revalidar con el Professional** al cierre del sprint y actualizar

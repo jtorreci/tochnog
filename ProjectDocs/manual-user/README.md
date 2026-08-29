@@ -278,3 +278,11 @@ input parameters it accepts.
 ## Integración reducida selectiva (SRI) para quad4
 
 - [group_element_selective_reduced_integration](group_element_selective_reduced_integration.md) — opt-in fix of the classic shear locking of the bilinear quad4 (2D) and the trilinear hex8 (3D) in bending (Hughes): the shear terms are integrated with 1 Gauss point at the centroid, the normal terms with the full Gauss rule (2×2 / 2×2×2). Elastic quad4/hex8 only. Measured: 2D cantilever 0.9375× of P·L (fix C/D); 3D cantilever 0.897× of the Euler-Bernoulli deflection vs 0.221× locked (family qsri3d). KNOWN LIMITATION (hex8): the shear-only SRI retains zero-energy twist/warping modes (see the developer manual).
+
+## Sprint 12 lote 3 — solver global + pequeños
+
+- [solver](solver.md) — the GLOBAL solver type (manual 6.1047): overwrites every control_solver; the plain `solver_*` family (bicg_error/bicg_restart/bicg_stop/matrix_save/matrix_symmetric/pardiso×4, 6.1048-6.1056) with the wired/partial status of each.
+- [timestep_predict_velocity](timestep_predict_velocity.md) — previous-velocity prediction (6.1089, PARTIAL in the GNU) + `timestep_iterations_automatic_apply` (6.1090): -no neglects every control_timestep_iterations_automatic.
+- [tochnog_version](tochnog_version.md) — the build date as a queryable record (day, month, year; 6.1091).
+- [volume_factor_x](volume_factor_x.md) — piecewise-constant volume factor in x (6.1094): thickness/area by x intervals.
+- [zip](zip.md) — gzip the output files at the end of the calculation (6.1095).

@@ -277,3 +277,11 @@ Each file corresponds to the same feature in the [User Manual](../manual-user/).
 ## Solve u-σ — honest stopping criteria + CG (lote A+B de DIAG-SOLVE-MIXTO)
 
 - [solve_iterative_bicg](solve_iterative_bicg.md) — the default iterative solver (so_bicg.cc) after the A+B fix: ONLY residual-based success exits (relative residual test with floor; breakdown/stagnation false-success exits removed), honest failure at max_iter and on genuine breakdown (singular/indefinite systems, RC≠0), the real relative residual |b−Ax|/|b| in the diagnostics, CG for measured-symmetric systems + honest Bi-CG for non-symmetric ones (runtime symmetry check per solve), and the primal-residual monitor (the old accumulation measured the transpose residual, which never vanishes on non-symmetric systems). Evidence: the 3D flat-residual cantilever now converges (4.2e-37), the 2D staggered fixed point is unchanged (0.2315× — the scheme's, not the solver's), the road statics check still fails (0.143×), timing unchanged.
+
+## Sprint 12 lote 3 — solver global + pequeños
+
+- [solver](solver.md) — the plain solver_* enums (no_index), the global type override read LAST in top.cc/elem.cc/dof.cc (opposite precedence of the legacy options_solver), solver_bicg_error/stop wired in so_bicg.cc, solver_matrix_symmetric bypassing the symmetry measurement with the honest warning, the partials (restart/matrix_save/pardiso×4) verified behavior-neutral.
+- [timestep_predict_velocity](timestep_predict_velocity.md) — why the previous-velocity initial guess does not map to the staggered scheme (x=0 start + += accumulation) and the automatic-apply gate in top.cc; the quasistatic iteration-count invisibility gotcha.
+- [tochnog_version](tochnog_version.md) — the record PUT at top() init parsed from __DATE__.
+- [volume_factor_x](volume_factor_x.md) — volume.cc piecewise factor at the IP x; the right-of-last-x factor-1 guard; odd-length validation.
+- [zip](zip.md) — exit_tn() after targets/before db_close; the nullglob trap (per-file existence test); isolated-directory testing.
