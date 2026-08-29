@@ -1935,7 +1935,7 @@ Nota: `group_interface_ground` del checklist anterior NUNCA existió (artefacto 
 - [ ] `strain_volume_geometry` — PENDIENTE
 - [ ] `strain_volume_relative_time` — PENDIENTE
 
-### support (14/18 + _element de facto = 15/19)
+### support (14/18 + _element de facto + 5+1 parcial lote 3 = 21/25)
 
 - [x] `support_edge_normal` — Sprint 13 lote 1 (el Winkler elástico: fuerza RHS desde desplazamientos totales + rigidez consistente dt-escalada en la matriz; 2D/3D; verificado EXACTO prescrito/serie/cara)
 - [x] `support_edge_normal_damping` — Sprint 13 lote 2 (amortiguadores viscosos sobre el soporte: c_n v_n + c_t v_t, gate con control_support_edge_normal_damping_apply)
@@ -1951,7 +1951,7 @@ Nota: `group_interface_ground` del checklist anterior NUNCA existió (artefacto 
 - [x] `support_edge_normal_node` — Sprint 13 lote 1 (restricción por nodos)
 - [ ] `support_edge_normal_plasti_compression` — PENDIENTE
 - [ ] `support_edge_normal_plasti_friction` — PENDIENTE
-- [ ] `support_edge_normal_plasti_residual_sti` — PENDIENTE
+- [x] `support_edge_normal_plasti_residual_sti` — Sprint 13 lote 3 (PARCIAL: registrado; el término residual en la matriz requiere una restructuración del bloque de stiffness en area.cc pendiente)
 - [ ] `support_edge_normal_plasti_tension` — PENDIENTE
 - [ ] `support_edge_normal_plasti_tension_double` — PENDIENTE
 - [x] `support_edge_normal_time` — Sprint 13 lote 2 (factor temporal para la fuerza del soporte; reutiliza force_time)

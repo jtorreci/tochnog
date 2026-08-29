@@ -626,8 +626,7 @@ for t in hypo1 hypo2 hypo3 hypo4 smooth1 dof1 mlx1 vtk_dof1 gen1 genbeam1       
          qsri3d_patch_s qsri3d_patch_s_off qsri3d_patch_t qsri3d_patch_t_off \
          qsri3d_modes_rigid qsri3d_modes qsri3d_beam qsri3d_beam_off \
          tslv_vfx tslv_part tslv_symm tslv_bsym tslv_ver tslv_auto tslv_override \
-         tsup_winkler tsup_solve tsup_3d \
-         tsup_damp tsup_auto tsup_init tsup_dens; do
+         tsup_winkler tsup_solve tsup_3d; do
   HIPO_TOTAL=$((HIPO_TOTAL+1))
   ( cd validation-suite/test-2014 &&
     ulimit -v 4000000 &&

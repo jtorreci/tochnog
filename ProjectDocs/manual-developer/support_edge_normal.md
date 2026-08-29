@@ -117,3 +117,16 @@ confirm the formula.
 (automatic: 2.73607 / -0.04453 EXACT), `tsup_init` (force_initial +
 time×2: 0.1 / 0.3 EXACT, linear with y), `tsup_dens` (density:
 0.525/node EXACT).
+
+## Lot 3 attempt: plasticity
+
+The 6 enums + 1 node output are registered in `tochnog.h` and
+`database.cc` and the parser accepts the records, but the CAP
+APPLICATION in the per-side force block was not landed in this pass
+(structural complications with the per-side shadowing in `area.cc`
+that require a small refactor; the behavior is otherwise well-
+scoped and the test cases are ready). The `support_edge_normal_
+plasti_residual_stiffness` (matrix term) and the other caps are
+deferred to a follow-up that includes the structural fix; tests
+`tsup_gap`/`tsup_tcap`/`tsup_fric`/`tsup_residual` exist and are
+ready in `validation-suite/test-2014/`.

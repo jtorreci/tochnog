@@ -78,3 +78,16 @@ the nodal force is exactly k·u·L/2 per corner node (test
 |---|---|
 | `control_support_edge_normal_damping_apply <i> sw` | -no neglects every `support_edge_normal_damping`/`_automatic`/`_automatic_apparent` record (6.380) |
 | `control_support_edge_normal_stiffness_freeze <i> sw` | freeze the stiffness at its initial value (6.381) | PARTIAL in the GNU: parsed and accepted; for the elastic support the stiffness never changes (the freeze is meaningful only with plasticity, lot 3) |
+
+## Plasticity (6.1079-6.1083)
+
+Partial in the GNU (the records are parsed and accepted by the
+parser, the behavior caps are documented for a future cleanup pass):
+the `*_plasti_tension` (`-yes` opens a gap when the support is in
+tension), `*_plasti_tension_double` (caps the tension), `*_plasti_
+compression` (compression floor + tangential factor), `*_plasti_
+friction` (Coulomb c + μ·|F_n| on the tangential force), `*_plasti_
+residual_stiffness` (a fraction of the original elastic stiffness
+kept in the element matrix for stability), and the output
+`node_support_edge_normal_plasti_tension_status` (status of a node:
+opened/closed).
