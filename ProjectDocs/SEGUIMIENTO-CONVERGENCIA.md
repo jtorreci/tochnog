@@ -2042,4 +2042,33 @@ Osman Buyukusik): cerrar los cabos abiertos y continuar la convergencia.
   usa B-bar/ANS (posible lote de investigación).
 - `control_print` checklist: 63/85 (implementables agotados; dependientes y
   descartados documentados).
-- BEAM3D y PLATE: agendados post-convergencia (§8.5 del plan).
+
+---
+
+## ROADMAP APROBADO (2026-08-29, decisión del usuario)
+
+Principio: cubrir TODO lo posible del Professional (GiD queda fuera de
+momento, se analizará después) + añadir funcionalidad PROPIA más allá
+de la convergencia (vigas 3D, placas y lajas de comportamiento plano).
+El correo a los colaboradores espera a tener un grado de convergencia
+y avance mejor.
+
+- **Sprint 13 — bloque geotécnico**: `support_edge_normal` (19) +
+  `safety_slip` (~35 con control/post_calcul). Sub-sprints grandes.
+- **Sprint 14 — materiales**: `group_materi` (30) + `materi_plasti` (9)
+  + `materi_strain`/`strain_volume` (~22).
+- **Sprint 15 — MPC + contacto + exportadores + cola**: `mpc` (17),
+  contacto (11), exportadores (vtk completo; gmsh/frd/tecplot a
+  decidir), barrido de familias 1-2 (~80, muchos serán descartes
+  documentados tipo alias), tick de preexistentes (echo, derivatives).
+- **Sprint 16 — funcionalidad propia I (§8.5)**: BEAM3D real (12×12,
+  6 dofs/nodo, torsión, frame local 3D) + lajas/membrana (§8.3:
+  elemento de tensión plana pura — NOTA: el COMPORTAMIENTO de tensión
+  plana ya existe como material, `group_materi_membrane -yes`, usado
+  en msf_nor; lo que falta es el elemento dedicado si se quiere).
+- **Sprint 17 — funcionalidad propia II (§8.3)**: PLATE (Reissner-
+  Mindlin: dofs rotacionales, toca ensamblaje y solver).
+- **Cierre formal**: sesión de descartes documentados (mesh_gid/GiD y
+  los que salgan), revalidación con el arness, actualización del
+  paquete shared/ → entonces el correo a Fernando Lorenzo y Osman
+  Buyukusik.
