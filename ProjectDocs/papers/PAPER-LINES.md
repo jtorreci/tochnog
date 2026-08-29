@@ -104,7 +104,21 @@ results. The diagnosis (with quantitative evidence) established:
   end-of-step σ state satisfies Bᵀσ = P (the ELEMENT_DOF 3D write fixed
   + the section kinematics corrected) — the last arness gap (gforce7
   5×) closes to 1.0000×, measured as a post-processing artifact, not a
-  scheme defect.
+  scheme defect. NEW DATA (sprint 12 lot 1, 2026-08-29): the FULL 3D
+  statics of gforce10/13 (nory/shey/mom1y = −12.34/−100/−5000) now
+  match the Professional EXACTLY — the equilibrium-based section
+  resultants of a converged-but-LOCKED hex8 solution still satisfy
+  the exact free-body statics (the lock lives in the stress field and
+  the deflection, never in the equilibrium resultants). Paper-1
+  implication, measured: "the scheme's fixed point is not the
+  displacement solution, BUT its equilibrium resultants are still
+  exact statics — what is wrong is the field, and any validation that
+  reads statics (instead of deflections) can be fooled". Also: the
+  reference Professional binary itself needs `thickness_switch -yes`
+  on the square-section cantilever — without it, ITS section frame
+  degenerates too (vectors ≈ 0, moment in the wrong slot): validation
+  keywords, not physics, decide what a reference implementation
+  answers on degenerate input.
 
 ### Line 2 — Sensitivity of solver formulations on the same system
 
@@ -129,7 +143,22 @@ results. The diagnosis (with quantitative evidence) established:
   by the element aspect ratio (5× for 50×10, 5/4× for 12.5×10 quad9s;
   zero for the diagonal Jacobians and the 3D full matrix-vector
   product) — a clean, measured example of post-processing kinematics
-  sensitivity on the SAME converged state.
+  sensitivity on the SAME converged state. NEW DATA (sprint 12 lot 1,
+  2026-08-29): a complete measured TAXONOMY of section-frame
+  sensitivities, same converged gforce10 state, four independent
+  effects: (a) lexicographic border tables → the corner "edges" were
+  edge+DIAGONAL (with -yes the diagonal wins the extent rule: a
+  45°-rotated frame, nors 17.45 = 12.34·√2 — the error carries √2);
+  (b) the square-section tie (10×10) defeats the extent rule — the
+  tie-break (reference-point direction vs edge order) decides which
+  axis is "thickness", i.e. WHICH slot carries the moment (mom1 5000
+  vs mom2 5000, she 100 vs she ≈ 0); (c) the t-orientation convention
+  (toward vs away from the reference point) flips EVERY directional
+  component's sign (ratios −1.0000 vs +1.0000 against the reference);
+  (d) the moment-arm convention (mid−node vs node−mid) flips every
+  moment's sign independently of (c). All four measured
+  independently; the reference implementation exhibits (b) itself
+  without its own validation keyword.
 
 ### Line 3 — Pedagogical: hand calculations catch rubbish FE results
 
