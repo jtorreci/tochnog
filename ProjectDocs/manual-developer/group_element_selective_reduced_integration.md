@@ -51,8 +51,10 @@ element in the thickness, L=8, h=1, E=1000, ν=0.3, tip load P=1e-2
 The same model with quad9 gives the section moment within 1-3% of P·(8−x)
 (`msf_beam2d`). The same phenomenon exists for the trilinear hex8 in 3D
 (`msf_sheet3d_hex8`, lote MSF L3): the hex8 cannot represent the
-quadratic bending field `u_x ~ y²` either; the hex8 SRI is FUTURE WORK
-(only the 2D quad4 is wired to this keyword).
+quadratic bending field `u_x ~ y²` either (measured in this extension:
+0.221× of the Euler-Bernoulli deflection for the loaded 8×1×1
+cantilever without the keyword). The hex8 SRI is implemented in this
+extension (2026-08-29, section below).
 
 ## The fix: selective reduced integration (SRI, Hughes)
 
@@ -92,27 +94,28 @@ group_element_selective_reduced_integration <element_group> -yes
 - Opt-in, DEFAULT OFF: without the keyword (or with `-no`) the group
   behaves EXACTLY as before (byte-identical path; the full 191-run suite
   stays green unchanged).
-- Scope (validated with the keyword): 2D bilinear **quad4** (nnol==4),
-  LINEAR ELASTICITY only, no axisymmetry, no `materi_displacement`
-  (large displacement), no plasticity/damage/maxwell models. Any other
-  use is ignored with a one-time warning (see `sri_quad4_active()`).
-  hex8 SRI in 3D is future work.
+- Scope (validated with the keyword): 2D bilinear **quad4** (nnol==4)
+  and 3D trilinear **hex8** (nnol==8), LINEAR ELASTICITY only, no
+  axisymmetry, no `materi_displacement` (large displacement), no
+  plasticity/damage/maxwell models. Any other use is ignored with a
+  one-time warning (see `sri_active()`).
 
 ## Files and functions
 
-- `miscel.cc` — `sri_quad4_active(element, element_group, name, nnol)`:
-  the SINGLE scope gate used by BOTH consumers below (so the quadrature
-  and the stiffness split can never disagree). Reads the keyword
+- `miscel.cc` — `sri_active(element, element_group, name, nnol)`
+  (renamed from `sri_quad4_active` with the hex8 extension): the SINGLE
+  scope gate used by BOTH consumers below (so the quadrature and the
+  stiffness split can never disagree). Reads the keyword
   (`GROUP_ELEMENT_SELECTIVE_REDUCED_INTEGRATION`) and applies the
   exclusions above.
-- `polynom.cc` — `pol()`: when `sri_quad4_active()` is true, the
-  integration method of the quad4 is forced to `-GAUSS` (the classic
-  2×2 full rule for the normal terms; the codebase default is the 2×2
-  Lobatto corner rule).
+- `polynom.cc` — `pol()`: when `sri_active()` is true, the
+  integration method of the element is forced to `-GAUSS` (the classic
+  2×2 / 2×2×2 full rule for the normal terms; the codebase default is
+  the Lobatto corner rule).
 - `materi.cc` — `materi()`: the constitutive split. At every
   integration point, after `set_stress()` fills `ddsdde_total`:
   ```c
-  if ( sri_quad4 ) {
+  if ( sri_on ) {
     sri_g = ddsdde_total[1*MSTRAIN+1];   // G: gamma_xy entry (stress_indx(0,1))
     ddsdde_total[1*MSTRAIN+1] = 0.;      // D_norm for the full integration
   }
@@ -197,7 +200,159 @@ constitutive shear at equilibrium, cancelling the SRI). The `93.75%`
 reference is the pure-displacement system `K_SRI·u = P`, which the GNU
 mixed scheme does not assemble.
 
+## HEX8 extension (3D, implemented 2026-08-29) — same keyword, same scope
+
+The keyword now applies to the trilinear **hex8** (3D) as well, with the
+same opt-in default-OFF scope: linear elasticity, no
+`materi_displacement`, no plasticity/damage/maxwell (axisymmetry is a 2D
+concept and does not apply). The single gate is `sri_active()`
+(miscel.cc, renamed from `sri_quad4_active()`): `(QUAD4 && nnol==4 &&
+ndim==2) || (HEX8 && nnol==8 && ndim==3)`.
+
+### The 3D split
+
+`D = D_norm + D_shear` with the shear diagonal entries of the 6×6
+isotropic tangent zeroed for the full rule: indices `stress_indx(0,1)=1`
+(γ_xy), `stress_indx(0,2)=2` (γ_xz) and `stress_indx(1,2)=4` (γ_yz).
+The reduced shear stiffness is the 1×1×1 Gauss point at the centroid
+(weight 8), built from the three engineering shear rows of B at the
+centroid (the polynom.cc:549-599 convention, local derivatives derived
+from the index, the transpose-Jacobian physical derivatives):
+
+```
+gamma_xy: [dN/dy, dN/dx, 0]      gamma_xz: [dN/dz, 0, dN/dx]
+gamma_yz: [0, dN/dz, dN/dy]
+K_shear = volfac * 8*detJ_c * ( G_xy*b_xy*b_xy^T + G_xz*b_xz*b_xz^T
+                                + G_yz*b_yz*b_yz^T )
+```
+
+### The element-consistent feedback (D-c) in 3D
+
+The momentum RHS must use the SAME reduced shear as the matrix (fix D-c
+of DIAG-SOLVE-MIXTO §12, without which the SRI is cancelled at the
+fixed point — measured for the quad4). For the hex8 the current-iterate
+shear increments of the feedback stress are zeroed in `sigvec` and the
+reduced internal force `-dt*K_shear*v` is added to the RHS, exactly as
+for the quad4. **Indexing gotcha (measured)**: `inc_ept` is the
+MDIM×MDIM TENSOR strain (`inc_ept[idim*MDIM+jdim]`) while `sigvec` is
+Voigt-indexed (`stress_indx`). In 2D the indices coincide; in 3D the yz
+entry differs (tensor `1*MDIM+2 = 5` vs Voigt `stress_indx(1,2) = 4`),
+so the strain MUST use the tensor index `idim*MDIM+jdim`.
+
+### The consistent σ recovery (D-b) in 3D
+
+The normal stress components (`stress_indx` 0, 3, 5 — the same list as
+the 2D) get the trilinear Lagrange extrapolation of the 2×2×2
+Gauss-point values to the nodes (`sri_stress_recovery_weight` with the
+3D tensor product `w_xi*w_eta*w_zeta`, node iso coordinates
+`(2*(i%2)-1, 2*((i/2)%2)-1, 2*(i/4)-1)`); the shear components keep the
+h-weighting. The section (calcul_force.cc) switches the full rule to
+Gauss 2×2×2 (`msf_element_rule`) and replaces the full-rule shear part
+of the element internal forces by the reduced 1-point shear internal
+force (the mean IP shear stresses, the moduli cancel — the same
+correction as the 2D quad4, extended to the three shear rows).
+
+### VERIFICATION — a measured deviation from the classic claim
+
+**The shear-only SRI hex8 is NOT hourglass-free** (unlike the 2D
+quad4). Verified with the eigenvalue analysis of the isolated element
+(independent reconstruction of B and D in the code conventions):
+
+| rule | zero eigenvalues of the isolated hex8 |
+|------|---------------------------------------|
+| full 2×2×2 (everything) | 6 (the rigid modes) |
+| **SRI (2×2×2 normals + 1-point shear)** | **9 (6 rigid + 3 twist)** |
+| 1-point (fully reduced) | 18 (6 rigid + 12 hourglass) |
+
+The three twist modes are `u = (y·z,0,0)`, `u = (0,x·z,0)`,
+`u = (0,0,x·y)`: all normal strains zero, the shear strains vanish at
+the section centroid, so the 1-point rule misses them. In a mesh the
+additional **section-warping** modes appear, `u_y = A(x)·(2z−1)`,
+`u_z = A(x)·(2y−1)` with A a piecewise-linear hat (measured: 8 such
+modes in the clamped 8×1×1 cantilever — the clamped system is
+SINGULAR). The 2D quad4 SRI is stable because its warping analog
+`u_y = A(x)·(2y−1)` has a normal strain `ε_yy = 2A(x)` that the full
+normal rule stabilizes; the 3D warping modes have all normal strains
+zero. This is the KNOWN reason the FE literature moved from the
+shear-only selective integration of the 8-node brick to the B-bar /
+assumed-strain (ANS) formulations.
+
+**The loaded cantilever still works in the GNU mixed scheme** (measured,
+family `qsri3d`): the 8×1×1 hex8 cantilever (L=8, section 1×1,
+P=1e-2 tip, E=1000, ν=0.3 — the direct 3D analog of `qsri_beam2d`):
+
+| quantity | hex8 full (OFF) | hex8 SRI (ON) | Euler-Bernoulli |
+|----------|-----------------|---------------|-----------------|
+| tip deflection | 0.00453 (0.221×) | 0.01838 (**0.897×**) | 0.02048 |
+| axial σ_zz at the clamp | ±0.123 (0.26×) | ±0.509 (1.06×) | ±0.48 |
+| section mom1s (fallback σ-field) | 0.0788 (0.985×) | 0.0909 (1.14×) | P·L = 0.08 |
+
+The OFF value reproduces the documented hex8 lock (the 0.23× family of
+MSF L3); the SRI recovers ~90% of the Euler-Bernoulli deflection and
+~100% of the bending stress — close to but below the 2D quad4 SRI's
+93.75% (the task-expected "the hex8 does not reach the exact 2D
+0.9375"; measured: 0.897×). The solve converges because the load is
+orthogonal to the warping nullspace and the honest CG stays out of it;
+meshes whose BCs do NOT kill the warping modes (free lateral faces,
+simply-supported configurations) are at risk — the documented
+limitation of the shear-only SRI hex8.
+
+Patch tests (constant states, single/few elements, prescribed
+velocities): 3D simple shear `she = G·γ·t = 0.5` EXACT and 3D confined
+tension `nor = 1.346154` EXACT, with IDENTICAL values with and without
+the SRI (the SRI integrates constants exactly) — `qsri3d_patch_s/_off`
+(700-703) and `qsri3d_patch_t/_off` (704-707). Rigid rotation: section
+0 within 1e-17 (the 6 rigid modes are exact zeros of the SRI matrix) —
+`qsri3d_modes_rigid` (708). Prescribed twist `u_x = a·(y−0.5)·(z−0.5)`:
+the SRI section reads ~0 (the zero-energy mode is invisible to the
+reduced rule) while the full constitutive law still sees the shear at
+the 2×2×2 points (the nodal σ output is nonzero) — the DOCUMENTATION
+test of the twist mode, `qsri3d_modes` (709). Cantilever A/B:
+`qsri3d_beam` (710, SRI) / `qsri3d_beam_off` (711) with the tip
+deflection targets in the .dat (0.18379 vs 0.04528, discriminating).
+
+**Arness (Professional comparison)**: the hex8 cases gforce10/gforce13
+(default, no SRI — they use `materi_displacement`, outside the SRI
+scope anyway) stay at the axial N = 12.34 EXACT (1.0000× vs the
+Professional) — no regression. **Suite**: 209/209 runs + all file
+checks green on a clean build (201 pre-existing + 8 new); the default
+(no keyword) path is byte-identical (the SRI gates are all
+`GET_IF_EXISTS` + element-scope checks).
+
 ## Hardcoded parameters / pending refactorings
+
+- The quad4 shear term index is hardcoded as `1*MSTRAIN+1`
+  (stress_indx(0,1), the γ_xy entry); the hex8 shear diagonal indices
+  are hardcoded as `1*MSTRAIN+1`, `2*MSTRAIN+2`, `4*MSTRAIN+4`
+  (isotropic: the shear rows of D are decoupled, so the diagonal
+  zeroing is the exact D_norm; a general anisotropic tangent would
+  need the full row/column zeroing).
+- The 3D strain indexing gotcha: `inc_ept` is the MDIM×MDIM tensor
+  strain, so the yz shear entry is `inc_ept[1*MDIM+2]` (NOT
+  `inc_ept[stress_indx(1,2)] = inc_ept[4]`) — the quad4 2D coincidence
+  does not hold in 3D.
+- The reduced point is the centroid of the isoparametric element
+  (1×1 / 1×1×1 Gauss, weight 4 / 8) — valid for any distorted element
+  (the centroid Jacobian is used).
+- The centroid B is built from the reference coordinates passed to
+  materi() (== the deformed ones when `materi_displacement` is off,
+  which is a scope condition).
+- KNOWN LIMITATION (measured 2026-08-29): the shear-only SRI hex8
+  retains zero-energy modes (3 twist modes isolated, section-warping
+  modes in a mesh — the clamped cantilever system is singular). The
+  load-orthogonal cantilever still solves (0.897× EB), but general
+  meshes need the stabilization that the literature moved to
+  (B-bar / assumed-strain). The 2D quad4 SRI does NOT have this
+  limitation (its warping mode has a normal strain).
+- The section (calcul_force.cc) reads the element internal forces of
+  the ELEMENT_DOF σ field with the documented fallback to the
+  recovered nodal σ when the staggered loop does not propagate the
+  strains (hex8 + `derivatives`); the fallback σ of the loaded hex8 is
+  NOT in equilibrium, so the beam section values (710/711) are the
+  polluted σ-field readings — the deflection targets are the
+  discriminating checks.
+
+
 
 - The shear term index is hardcoded as `1*MSTRAIN+1` (stress_indx(0,1),
   the γ_xy entry); correct for the 2D plane formulation (isotropic: the
@@ -208,5 +363,7 @@ mixed scheme does not assemble.
 - The centroid B is built from the reference coordinates passed to
   materi() (== the deformed ones when `materi_displacement` is off,
   which is a scope condition).
-- hex8 SRI in 3D: future work (same mechanism, the shear terms are
-  γ_xy, γ_xz, γ_yz).
+- hex8 SRI in 3D: IMPLEMENTED (2026-08-29, the section above; the
+  shear terms γ_xy, γ_xz, γ_yz at the 1×1×1 centroid point) — with the
+  measured zero-energy twist/warping modes documented as the known
+  limitation of the shear-only selective integration of the brick.

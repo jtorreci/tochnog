@@ -277,4 +277,4 @@ input parameters it accepts.
 
 ## Integración reducida selectiva (SRI) para quad4
 
-- [group_element_selective_reduced_integration](group_element_selective_reduced_integration.md) — opt-in fix of the classic shear locking of the bilinear quad4 in bending (Hughes): the shear term is integrated with 1 Gauss point at the centroid, the normal terms with the full 2×2 Gauss rule. Elastic 2D quad4 only. Measured A/B (family qsri): section moment 0.231× → 0.312×, section shear 0.741× → 0.65×.
+- [group_element_selective_reduced_integration](group_element_selective_reduced_integration.md) — opt-in fix of the classic shear locking of the bilinear quad4 (2D) and the trilinear hex8 (3D) in bending (Hughes): the shear terms are integrated with 1 Gauss point at the centroid, the normal terms with the full Gauss rule (2×2 / 2×2×2). Elastic quad4/hex8 only. Measured: 2D cantilever 0.9375× of P·L (fix C/D); 3D cantilever 0.897× of the Euler-Bernoulli deflection vs 0.221× locked (family qsri3d). KNOWN LIMITATION (hex8): the shear-only SRI retains zero-energy twist/warping modes (see the developer manual).

@@ -820,8 +820,13 @@ improvement: the section forces now read the accurate nodal stresses.
 ### 12.4 What the fix does NOT change (documented limitations)
 
 - The plain quad4/hex8 shear LOCK (element physics; the opt-in SRI
-  keyword fixes the quad4; hex8 SRI is future work). The scheme now
-  converges to the element's OWN solution, locked or not.
+  keyword fixes the quad4 and, since 2026-08-29, the hex8: the loaded
+  8×1×1 cantilever recovers 0.897× of the Euler-Bernoulli deflection
+  vs 0.221× locked — with the measured caveat that the shear-only SRI
+  hex8 retains zero-energy twist/warping modes, see
+  manual-developer/group_element_selective_reduced_integration.md
+  HEX8 extension). The scheme now converges to the element's OWN
+  solution, locked or not.
 - The section SHEAR pollution (the raw sigma_xy of the Q4 — the
   interpolation error; documented in VALIDACION-PROFESIONAL §3 as the
   "mixed shear pollution band"). The Professional's NODAL sigma_xy is

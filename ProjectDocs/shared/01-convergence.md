@@ -80,10 +80,17 @@ This harness is the acceptance test for every solver-related change.
 
 ## Current state
 
-- 201-test suite, all green.
+- 209-test suite, all green (201 + the 8 qsri3d SRI-hex8 tests).
 - `control_print` family: 63/85 (implementable subset complete).
 - The deep solver defect of the open-source line: diagnosed, fixed, and
   validated against the Professional (see `02-solver-finding.md`).
-- Open fronts: the SRI (selective reduced integration) extension to hex8
-  elements; the coarse-mesh multi-step stress equilibrium; the remaining
-  Professional families (safety, support, etc.).
+- The SRI (selective reduced integration) extension: DONE for the quad4
+  (2D) and the hex8 (3D, 2026-08-29 — the loaded cantilever recovers
+  0.897× of the Euler-Bernoulli deflection vs 0.221× locked). Measured
+  caveat: the shear-only SRI hex8 retains zero-energy twist/warping
+  modes (the classic limitation of the shear-only selective
+  integration of the 8-node brick; the 2D quad4 SRI is stable).
+- Open fronts: the coarse-mesh multi-step stress equilibrium (the
+  recovered σ of the staggered scheme is not in equilibrium — a solver
+  issue, not post-processing); the remaining Professional families
+  (safety, support, etc.).
