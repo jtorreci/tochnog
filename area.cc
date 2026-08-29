@@ -20,7 +20,7 @@
 
 #include "tochnog.h"
 
-#define MTYPES 10
+#define MTYPES 11
 
 // companion items for the convection/radiation edge families
 // (condif_convection_edge_normal / condif_radiation_edge_normal, the
@@ -126,6 +126,21 @@ static long int force_edge_companion( long int master, long int which )
   return -1;
 }
 
+// Sprint 13 lot 1: the support_edge_normal family companions (same
+// index): element / element_group / element_side (element-level) and
+// node / element_node (node-level)
+static long int support_edge_companion( long int which )
+{
+  static long int sup[] = {
+    SUPPORT_EDGE_NORMAL_ELEMENT,
+    SUPPORT_EDGE_NORMAL_ELEMENT_GROUP,
+    SUPPORT_EDGE_NORMAL_ELEMENT_SIDE,
+    SUPPORT_EDGE_NORMAL_NODE,
+    SUPPORT_EDGE_NORMAL_ELEMENT_NODE,
+    -1 };
+  return sup[which];
+}
+
 static long int force_edge_is_master( long int item )
 {
   return item==FORCE_ELEMENT_EDGE || item==FORCE_ELEMENT_EDGE_NORMAL ||
@@ -223,6 +238,7 @@ void area( long int element, long int name,
   type[7] = CONDIF_CONVECTION_EDGE_NORMAL;
   type[8] = CONDIF_RADIATION_EDGE_NORMAL;
   type[9] = FORCE_ELEMENT_EDGE_PROJECTED;
+  type[10] = SUPPORT_EDGE_NORMAL;
   type_area[0] = CONDIF_RADIATION_GEOMETRY;
   type_area[1] = CONDIF_CONVECTION_GEOMETRY;
   type_area[2] = FORCE_ELEMENT_EDGE_GEOMETRY;
@@ -233,6 +249,7 @@ void area( long int element, long int name,
   type_area[7] = CONDIF_CONVECTION_EDGE_NORMAL_GEOMETRY;
   type_area[8] = CONDIF_RADIATION_EDGE_NORMAL_GEOMETRY;
   type_area[9] = FORCE_ELEMENT_EDGE_PROJECTED_GEOMETRY;
+  type_area[10] = SUPPORT_EDGE_NORMAL_GEOMETRY;
   db( DOF_PRINCIPAL, 0, dof_principal, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
 
   db( DTIME, 0, idum, &dtime, ldum, VERSION_NEW, GET_IF_EXISTS );
@@ -247,6 +264,45 @@ void area( long int element, long int name,
   }
 
   if ( any_area_integral ) {
+
+    // Sprint 13 lot 1: re-zero the node_support_edge_normal_force
+    // records ONCE per area() call at the start of each assembly sweep
+    // (the element loop runs ascending and area() is called once per
+    // element per sweep: a non-increasing element number means a new
+    // sweep started). The records accumulate over the elements sharing
+    // a node within the sweep. Single-threaded only: with
+    // OPTIONS_PROCESSORS > 1 the interleaving breaks the accumulation
+    // (the support forces themselves stay correct) - warned once.
+    {
+      static long int s_last_element = -1;
+      static long int s_warned_thread = 0;
+      if ( db_max_index( SUPPORT_EDGE_NORMAL, max, VERSION_NORMAL, GET )
+           >=0 ) {
+        long int nthread = 1;
+        db( OPTIONS_PROCESSORS, 0, &nthread, ddum, ldum,
+          VERSION_NORMAL, GET_IF_EXISTS );
+        if ( nthread>1 && !s_warned_thread ) {
+          pri( "Warning: node_support_edge_normal_force accumulation "
+               "requires OPTIONS_PROCESSORS 1 (the support forces "
+               "themselves are correct)" );
+          s_warned_thread = 1;
+        }
+        if ( element<=s_last_element ) {
+          long int max_nd = -1, ind2;
+          db_max_index( NODE_SUPPORT_EDGE_NORMAL_FORCE, max_nd,
+            VERSION_NORMAL, GET );
+          for ( ind2=0; ind2<=max_nd; ind2++ )
+            if ( db_active_index( NODE_SUPPORT_EDGE_NORMAL_FORCE, ind2,
+                 VERSION_NORMAL ) ) {
+              double z[MDIM];
+              array_set( z, 0., MDIM );
+              db( NODE_SUPPORT_EDGE_NORMAL_FORCE, ind2, idum, z, ndim,
+                VERSION_NEW, PUT );
+            }
+        }
+        s_last_element = element;
+      }
+    }
 
     swit = set_swit(-1,-1,"area");
     if ( swit ) pri( "In routine AREA" );
@@ -508,6 +564,11 @@ void area( long int element, long int name,
             }
             else
               load = 1.;
+          }
+          if ( type[itype]==SUPPORT_EDGE_NORMAL ) {
+            // lot 1: no time diagram yet (support_edge_normal_time is
+            // lot 2); the support force itself is displacement-driven
+            load = 1.;
           }
           if ( swit ) pri( "load", load );
 
@@ -821,6 +882,205 @@ void area( long int element, long int name,
                       load * weight[inol_side] * area_size *
                       values[0] * normal[idim];
                     element_rhside[inol*npuknwn+ipuknwn] += tmp;
+                  }
+                }
+                else if ( type[itype]==SUPPORT_EDGE_NORMAL ) {
+                  // Sprint 13 lot 1: the distributed Winkler support
+                  // (manual Professional 6.1067). The support force is
+                  // computed from the TOTAL DISPLACEMENTS of the side
+                  // nodes (the Professional: "supports calculate forces
+                  // directly from total displacements") and applied as
+                  // a consistent nodal force of the side quadrature
+                  // (Lobatto: the nodes themselves), per unit length in
+                  // 2D / unit area in 3D:
+                  //   f = -( k_n * u_n ) * n - k_t * ( u - u_n * n )
+                  // with n the OUTWARD side normal (into the support:
+                  // u_n > 0 compresses the support and it pushes back
+                  // along -n). Element-level restrictions (element /
+                  // element_group / element_side) and node-level
+                  // restrictions (node / element_node), same index.
+                  {
+                    long int use_it = 1;
+                    if ( db_active_index( support_edge_companion(0),
+                        ind, VERSION_NORMAL ) ) {
+                      long int elt[DATA_ITEM_SIZE], length_elt=0;
+                      db( support_edge_companion(0), ind, elt, ddum,
+                        length_elt, VERSION_NORMAL, GET );
+                      if ( !array_member( elt, element, length_elt, ldum ) )
+                        continue;
+                    }
+                    if ( db_active_index( support_edge_companion(1),
+                        ind, VERSION_NORMAL ) ) {
+                      long int grp[DATA_ITEM_SIZE], length_grp=0;
+                      db( support_edge_companion(1), ind, grp, ddum,
+                        length_grp, VERSION_NORMAL, GET );
+                      if ( !array_member( grp, gr, length_grp, ldum ) )
+                        continue;
+                    }
+                    if ( db_active_index( support_edge_companion(2),
+                        ind, VERSION_NORMAL ) ) {
+                      long int side_sel[DATA_ITEM_SIZE], length_side=0;
+                      db( support_edge_companion(2), ind, side_sel, ddum,
+                        length_side, VERSION_NORMAL, GET );
+                      long int ok_side = 0;
+                      for ( i=0; i+1<length_side; i+=2 )
+                        if ( side_sel[i]==element &&
+                             side_sel[i+1]==iside+1 ) ok_side = 1;
+                      if ( !ok_side ) continue;
+                    }
+                    if ( db_active_index( support_edge_companion(3),
+                        ind, VERSION_NORMAL ) ) {
+                      long int nds[DATA_ITEM_SIZE], length_nds=0;
+                      db( support_edge_companion(3), ind, nds, ddum,
+                        length_nds, VERSION_NORMAL, GET );
+                      if ( !array_member( nds, inod, length_nds, ldum ) )
+                        use_it = 0;
+                    }
+                    if ( db_active_index( support_edge_companion(4),
+                        ind, VERSION_NORMAL ) ) {
+                      long int en[DATA_ITEM_SIZE], length_en=0;
+                      db( support_edge_companion(4), ind, en, ddum,
+                        length_en, VERSION_NORMAL, GET );
+                      // en[0]=element, en[1..]=local node numbers
+                      if ( en[0]!=element || !array_member( &en[1], inol,
+                          length_en-1, ldum ) ) use_it = 0;
+                    }
+                    if ( !use_it ) continue;
+                    if ( !materi_displacement ) {
+                      pri( "Error: support_edge_normal needs "
+                        "materi_displacement (the support force is "
+                        "computed from total displacements)" );
+                      exit(TN_EXIT_STATUS);
+                    }
+                    db( SUPPORT_EDGE_NORMAL, ind, idum, values,
+                      ldum, VERSION_NORMAL, GET );
+                    {
+                      double un = 0., sup_nodal[MDIM];
+                      for ( idim=0; idim<ndim; idim++ )
+                        un += new_dof[inol*nuknwn+dis_indx+idim*nder]
+                             *normal[idim];
+                      // the consistent nodal support force (Lobatto:
+                      // the side nodes carry the line/area load)
+                      for ( idim=0; idim<ndim; idim++ ) {
+                        double ut_idim =
+                          new_dof[inol*nuknwn+dis_indx+idim*nder]
+                          - un*normal[idim];
+                        double fidim = -( values[0]*un )*normal[idim]
+                                       - values[1]*ut_idim;
+                        sup_nodal[idim] =
+                          weight[inol_side] * area_size * fidim;
+                        ipuknwn = vel_indx/nder + idim;
+                        element_rhside[inol*npuknwn+ipuknwn]
+                          += sup_nodal[idim];
+                      }
+                      // the consistent support stiffness in the
+                      // MATRIX (and the diagonal element_lhside):
+                      // dt * int ( k_n n(x)n + k_t (I - n(x)n) ) N_i
+                      // N_j dA over the side. Without it a body
+                      // resting on the support keeps a zero-energy
+                      // rigid mode in the velocity matrix and the
+                      // solver breaks down (measured); with it the
+                      // fixed point is unchanged (the equilibrium is
+                      // in the RHS force; the matrix term only
+                      // carries the iteration - the Professional's
+                      // plasti_residual_stiffness documentation states
+                      // the same for the plastic case). Same dtime
+                      // scaling as the element stiffness (materi.cc:
+                      // volume*dtime*stiffness).
+                      {
+                        double gxi[3], gw[3];
+                        long int ngs = ( nnol_side<3 ? 2 : 3 ), igs=0,
+                          jgs=0, inol_i=0, inol_j=0, ia=0, ib=0;
+                        long int n1 = ( ndim==2 ? nnol_side
+                          : (long int) sqrt((double)nnol_side) );
+                        // 2D: the side is a 1D interval [-1,1],
+                        // ds = ar/2. 3D: the face is the tensor
+                        // [-1,1]^2, dA = ar/4; the border-table face
+                        // node order is tensor with the first
+                        // direction fastest (the same order the 3D
+                        // Lobatto weights above use).
+                        double measfac = ( ndim==2 ? ar/2. : ar/4. );
+                        double cij[MNOL*MNOL];
+                        for ( inol_i=0; inol_i<nnol_side; inol_i++ )
+                          for ( inol_j=0; inol_j<nnol_side; inol_j++ )
+                            cij[inol_i*nnol_side+inol_j] = 0.;
+                        integration_gauss( ngs, gxi, gw );
+                        for ( igs=0; igs<ngs; igs++ ) {
+                          double hi1[MNOL], pdum[MPOINT];
+                          interpolation_polynomial( gxi[igs], n1,
+                            hi1, pdum );
+                          for ( jgs=0; jgs<( ndim==2 ? 1 : ngs );
+                            jgs++ ) {
+                            double hj1[MNOL];
+                            double wt = gw[igs]*measfac;
+                            interpolation_polynomial(
+                              ( ndim==2 ? 0. : gxi[jgs] ), n1,
+                              hj1, pdum );
+                            if ( ndim==3 ) wt *= gw[jgs];
+                            for ( inol_i=0; inol_i<nnol_side;
+                              inol_i++ ) {
+                              double hii = ( ndim==2 ? hi1[inol_i] :
+                                hi1[inol_i%n1]*hj1[inol_i/n1] );
+                              for ( inol_j=0; inol_j<nnol_side;
+                                inol_j++ ) {
+                                double hjj = ( ndim==2 ?
+                                  hi1[inol_j] :
+                                  hi1[inol_j%n1]*hj1[inol_j/n1] );
+                                cij[inol_i*nnol_side+inol_j]
+                                  += wt*hii*hjj;
+                              }
+                            }
+                          }
+                        }
+                        for ( inol_i=0; inol_i<nnol_side; inol_i++ ) {
+                          long int node_i =
+                            sides[iside*nnol_side+inol_i];
+                          for ( inol_j=0; inol_j<nnol_side; inol_j++ ) {
+                            long int node_j =
+                              sides[iside*nnol_side+inol_j];
+                            for ( ia=0; ia<ndim; ia++ ) {
+                              for ( ib=0; ib<ndim; ib++ ) {
+                                double kterm = dtime *
+                                  ( values[0]*normal[ia]*normal[ib]
+                                    + values[1]*( (ia==ib?1.:0.)
+                                      - normal[ia]*normal[ib] ) ) *
+                                  cij[inol_i*nnol_side+inol_j];
+                                long int indxi = node_i*npuknwn
+                                  + vel_indx/nder + ia;
+                                long int indxj = node_j*npuknwn
+                                  + vel_indx/nder + ib;
+                                element_matrix[indxi*nnol*npuknwn+indxj]
+                                  += kterm;
+                                if ( inol_i==inol_j && ia==ib )
+                                  element_lhside[indxi] += kterm;
+                              }
+                            }
+                          }
+                        }
+                      }
+                      // the output record
+                      // node_support_edge_normal_force: the consistent
+                      // nodal support force, accumulated over the
+                      // elements sharing the node. Re-zeroed at EVERY
+                      // assembly sweep (detected by the element number
+                      // NOT increasing - one call per element per
+                      // sweep, the loop runs ascending). Single
+                      // threaded only: with OPTIONS_PROCESSORS > 1 the
+                      // interleaving breaks the accumulation (the
+                      // support forces themselves stay correct) -
+                      // warned once.
+                      if ( db_active_index( NODE_SUPPORT_EDGE_NORMAL_FORCE,
+                           inod, VERSION_NORMAL ) ) {
+                        double acc[MDIM];
+                        array_set( acc, 0., MDIM );
+                        db( NODE_SUPPORT_EDGE_NORMAL_FORCE, inod,
+                          idum, acc, ldum, VERSION_NEW, GET_IF_EXISTS );
+                        for ( idim=0; idim<ndim; idim++ )
+                          acc[idim] += sup_nodal[idim];
+                        db( NODE_SUPPORT_EDGE_NORMAL_FORCE, inod,
+                          idum, acc, ndim, VERSION_NEW, PUT );
+                      }
+                    }
                   }
                 }
                 else if ( type[itype]==FORCE_ELEMENT_EDGE_WATER ) {

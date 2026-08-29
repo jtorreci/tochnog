@@ -6299,6 +6299,84 @@ void db_initialize( long int dof_type[], long int dof_label[] )
 
   strcpy(name[VECTOR],"vector");
 
+
+  // Sprint 13 lote 1: support_edge_normal - the distributed Winkler
+  // support of an edge (manual Professional 6.1067-6.1078). Master
+  // record: stiffness_normal + stiffness_tangential per unit length
+  // (2D) / area (3D). Companions: the side selectors (geometry /
+  // element_side / element_node / node) and the element_group
+  // restriction, same-index. Output: node_support_edge_normal_force
+  // (the consistent nodal support forces, filled by area()).
+  strcpy(name[SUPPORT_EDGE_NORMAL],"support_edge_normal");
+  type[SUPPORT_EDGE_NORMAL] = DOUBLE_PRECISION;
+  data_length[SUPPORT_EDGE_NORMAL] = 2;
+  data_class[SUPPORT_EDGE_NORMAL] = FORCE;
+  // the _GEOMETRY record is required by the area() machinery (it can
+  // carry a geometry entity OR a node list); the other companions
+  // (element_side / element_node / node / element_group) are
+  // additional restrictions on top of it, manual Professional 6.1067
+  // "Also the record support_edge_normal_geometry should be specified"
+  data_required[SUPPORT_EDGE_NORMAL] = SUPPORT_EDGE_NORMAL_GEOMETRY;
+
+  strcpy(name[SUPPORT_EDGE_NORMAL_GEOMETRY],"support_edge_normal_geometry");
+  type[SUPPORT_EDGE_NORMAL_GEOMETRY] = INTEGER;
+  data_length[SUPPORT_EDGE_NORMAL_GEOMETRY] = DATA_ITEM_SIZE;
+  fixed_length[SUPPORT_EDGE_NORMAL_GEOMETRY] = 0;
+  data_class[SUPPORT_EDGE_NORMAL_GEOMETRY] = FORCE;
+  data_required[SUPPORT_EDGE_NORMAL_GEOMETRY] = SUPPORT_EDGE_NORMAL;
+
+  strcpy(name[SUPPORT_EDGE_NORMAL_ELEMENT],"support_edge_normal_element");
+  type[SUPPORT_EDGE_NORMAL_ELEMENT] = INTEGER;
+  data_length[SUPPORT_EDGE_NORMAL_ELEMENT] = DATA_ITEM_SIZE;
+  fixed_length[SUPPORT_EDGE_NORMAL_ELEMENT] = 0;
+  data_class[SUPPORT_EDGE_NORMAL_ELEMENT] = FORCE;
+  data_required[SUPPORT_EDGE_NORMAL_ELEMENT] = SUPPORT_EDGE_NORMAL;
+
+  strcpy(name[SUPPORT_EDGE_NORMAL_ELEMENT_GROUP],"support_edge_normal_element_group");
+  type[SUPPORT_EDGE_NORMAL_ELEMENT_GROUP] = INTEGER;
+  data_length[SUPPORT_EDGE_NORMAL_ELEMENT_GROUP] = DATA_ITEM_SIZE;
+  fixed_length[SUPPORT_EDGE_NORMAL_ELEMENT_GROUP] = 0;
+  data_class[SUPPORT_EDGE_NORMAL_ELEMENT_GROUP] = FORCE;
+  data_required[SUPPORT_EDGE_NORMAL_ELEMENT_GROUP] = SUPPORT_EDGE_NORMAL;
+
+  strcpy(name[SUPPORT_EDGE_NORMAL_ELEMENT_SIDE],"support_edge_normal_element_side");
+  type[SUPPORT_EDGE_NORMAL_ELEMENT_SIDE] = INTEGER;
+  data_length[SUPPORT_EDGE_NORMAL_ELEMENT_SIDE] = DATA_ITEM_SIZE;
+  fixed_length[SUPPORT_EDGE_NORMAL_ELEMENT_SIDE] = 0;
+  data_class[SUPPORT_EDGE_NORMAL_ELEMENT_SIDE] = FORCE;
+  data_required[SUPPORT_EDGE_NORMAL_ELEMENT_SIDE] = SUPPORT_EDGE_NORMAL;
+
+  strcpy(name[SUPPORT_EDGE_NORMAL_ELEMENT_NODE],"support_edge_normal_element_node");
+  type[SUPPORT_EDGE_NORMAL_ELEMENT_NODE] = INTEGER;
+  data_length[SUPPORT_EDGE_NORMAL_ELEMENT_NODE] = DATA_ITEM_SIZE;
+  fixed_length[SUPPORT_EDGE_NORMAL_ELEMENT_NODE] = 0;
+  data_class[SUPPORT_EDGE_NORMAL_ELEMENT_NODE] = FORCE;
+  data_required[SUPPORT_EDGE_NORMAL_ELEMENT_NODE] = SUPPORT_EDGE_NORMAL;
+
+  strcpy(name[SUPPORT_EDGE_NORMAL_NODE],"support_edge_normal_node");
+  type[SUPPORT_EDGE_NORMAL_NODE] = INTEGER;
+  data_length[SUPPORT_EDGE_NORMAL_NODE] = DATA_ITEM_SIZE;
+  fixed_length[SUPPORT_EDGE_NORMAL_NODE] = 0;
+  data_class[SUPPORT_EDGE_NORMAL_NODE] = FORCE;
+  data_required[SUPPORT_EDGE_NORMAL_NODE] = SUPPORT_EDGE_NORMAL;
+
+  strcpy(name[NODE_SUPPORT_EDGE_NORMAL_FORCE],"node_support_edge_normal_force");
+  type[NODE_SUPPORT_EDGE_NORMAL_FORCE] = DOUBLE_PRECISION;
+  data_length[NODE_SUPPORT_EDGE_NORMAL_FORCE] = ndim;
+  version_all[NODE_SUPPORT_EDGE_NORMAL_FORCE] = 1;
+  data_class[NODE_SUPPORT_EDGE_NORMAL_FORCE] = NODE;
+  data_required[NODE_SUPPORT_EDGE_NORMAL_FORCE] = NODE;
+
+  strcpy(name[CONTROL_SUPPORT_EDGE_NORMAL_DAMPING_APPLY],"control_support_edge_normal_damping_apply");
+  type[CONTROL_SUPPORT_EDGE_NORMAL_DAMPING_APPLY] = INTEGER;
+  data_length[CONTROL_SUPPORT_EDGE_NORMAL_DAMPING_APPLY] = 1;
+  data_class[CONTROL_SUPPORT_EDGE_NORMAL_DAMPING_APPLY] = CONTROL;
+
+  strcpy(name[CONTROL_SUPPORT_EDGE_NORMAL_STIFFNESS_FREEZE],"control_support_edge_normal_stiffness_freeze");
+  type[CONTROL_SUPPORT_EDGE_NORMAL_STIFFNESS_FREEZE] = INTEGER;
+  data_length[CONTROL_SUPPORT_EDGE_NORMAL_STIFFNESS_FREEZE] = 1;
+  data_class[CONTROL_SUPPORT_EDGE_NORMAL_STIFFNESS_FREEZE] = CONTROL;
+
   strcpy(name[VOLUME_FACTOR],"volume_factor");
   type[VOLUME_FACTOR] = DOUBLE_PRECISION;
   data_length[VOLUME_FACTOR] = DATA_ITEM_SIZE;
