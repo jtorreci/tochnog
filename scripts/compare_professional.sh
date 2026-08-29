@@ -199,26 +199,39 @@ echo ""
 # M=-5000. POST-FIX (lot C/D, 2026-08-28): the GNU converges (the
 # previous divergence was an input BC bug - the -ra 1 4 list clamped only
 # two opposite corners of the bottom face, leaving a rigid rotation free;
-# fixed to 1 2 3 4). The axial N is EXACT; the section moment stays at the
-# locked hex8 element solution (element physics; SRI for hex8 is future
-# work); the Professional is exact.
+# fixed to 1 2 3 4). POST-FIX (sprint 12 lot 1, 2026-08-29): the section
+# FRAME converged - the Professional's force10 carries thickness_switch
+# -yes (its square 10x10 end face ties the extent rule; without the
+# switch the PROFESSIONAL ITSELF gives the rotated frame: vectors ~0,
+# mom in the mom2 slot - measured); our conversion had omitted the
+# keyword. GNU fixes: the face corners as a quad loop (e2 was the face
+# DIAGONAL - a 45-degree frame with -yes), the square-face tie broken
+# by the reference-point direction (the Professional resolves the same
+# tie to the reference direction), and the t orientation TOWARD the
+# reference point + signed s-items (the Professional's conventions).
+# Items compared: nory=1 shey=5 mom1y=9 of the 16-item 3D layout.
 # ---------------------------------------------------------------------------
 for m in gforce10 gforce13; do
   case "$m" in
-    gforce10) pdat="force10.dat"; pnode=5; pidx=3; pan=12.34 ;;
-    gforce13) pdat="force13.dat"; pnode=5; pidx=3; pan=12.34 ;;
+    gforce10) pdat="force10.dat"; pnode=5 ;;
+    gforce13) pdat="force13.dat"; pnode=5 ;;
   esac
   wd="$WORK/$m"; mkdir -p "$wd"; gd="$wd/gnu"; pd="$wd/prof"; mkdir -p "$gd" "$pd"
   cp "$SUITE/$m.dat" "$gd/" && cp "$PROF_DIR/$pdat" "$pd/"
   run_gnu "$gd" "$m.dat"; GRC=$?; run_prof "$pd" "$pdat"; PRC=$?
-  echo "## $m (hex8 3D cantilever; GNU converged with the BC fix)"
+  echo "## $m (hex8 3D cantilever; section frame converged - sprint 12 lot 1)"
   if [ -f "$gd/$m.dbs" ] && [ -f "$pd/${pdat%.dat}.dbs" ]; then
-    p=$(ndc "$pd/${pdat%.dat}.dbs" "$pnode" "$pidx")
     if gnu_diverged "$gd"; then
-      echo "| nory_sig (z=50) | 5 | ±$pan | GNU: SOLVER DIVERGED (documented 3D mixed-solve degeneracy) | PROF: $p | - |"
+      echo "| node 5 | 5 | N=-12.34 V=-100 M=-5000 | GNU: SOLVER DIVERGED | |"; RC=1
     else
-      g=$(ndc "$gd/$m.dbs" 5 3)
-      echo "| nors_sig (z=50) | 5 | ±$pan | GNU: $g | PROF: $p | $(ratio "$g" "$p") |"
+      echo "| qty | node | analytic | GNU | Professional | GNU/Prof |"
+      echo "|---|---|---|---|---|---|"
+      for spec in "nory:1:-12.34" "shey:5:-100" "mom1y:9:-5000"; do
+        lbl=${spec%%:*}; rest=${spec#*:}; idx=${rest%%:*}; ann=${rest##*:}
+        p=$(ndc "$pd/${pdat%.dat}.dbs" "$pnode" "$idx")
+        g=$(ndc "$gd/$m.dbs" 5 "$idx")
+        echo "| $lbl (z=50) | 5 | $ann | $g | $p | $(ratio "$g" "$p") |"
+      done
     fi
   else
     echo "| (no .dbs) GNU rc=$GRC PROF rc=$PRC |"; RC=1
@@ -250,16 +263,21 @@ if [ -f "$PROF_DIR/msf_shear.dat" ]; then
   echo ""
 fi
 if [ -f "$PROF_DIR/msf_tunnel3d.dat" ]; then
-  wd="$WORK/msf_tunnel"; mkdir -p "$wd"; pd="$wd/prof"; mkdir -p "$pd"
+  wd="$WORK/msf_tunnel"; mkdir -p "$wd"; gd="$wd/gnu"; pd="$wd/prof"; mkdir -p "$gd" "$pd"
   cp "$PROF_DIR/msf_tunnel3d.dat" "$pd/"
+  cp "$SUITE/msf_tunnel3d.dat" "$gd/"
   run_prof "$pd" "msf_tunnel3d.dat"; PRC=$?
+  run_gnu "$gd" "msf_tunnel3d.dat"; GRC=$?
   echo "## msf_tunnel3d cross-validation (hex27 ring, hoop nor = E*u0*t/R = p*R = 0.1)"
-  if [ -f "$pd/msf_tunnel3d.dbs" ]; then
+  if [ -f "$pd/msf_tunnel3d.dbs" ] && [ -f "$gd/msf_tunnel3d.dbs" ]; then
     p=$(ndc "$pd/msf_tunnel3d.dbs" 1 3)
-    echo "| quantity | GNU (materi_stress_force.510) | Professional |"
-    echo "| nors (hoop, per unit length) | 0.1000000000 EXACT | $p |"
+    g=$(ndc "$gd/msf_tunnel3d.dbs" 1 3)
+    echo "| quantity | GNU | Professional | GNU/Prof |"
+    echo "|---|---|---|---|"
+    echo "| nory (hoop, node 1) | $g | $p | $(ratio "$g" "$p") |"
+    echo "| note | LOT 5+: the section reads the element internal forces - both binaries give the FE-DISCRETIZED hoop of the curved ring (the L4 field integral gave the analytic 0.1 EXACT interpolating the prescribed field) | |"
   else
-    echo "| (no .dbs) PROF rc=$PRC |"; RC=1
+    echo "| (no .dbs) GNU rc=$GRC PROF rc=$PRC |"; RC=1
   fi
   echo ""
 fi

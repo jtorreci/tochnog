@@ -1302,7 +1302,10 @@ fi
 
 # msf_beam2d_pure (420): FLEXION PURA 4 puntos (viga apoyada, cargas en
 # x=1 y x=3): tramo central x in [1,3] con M = P*1 = 1e-2 cte y V = 0.
-# node 4 (x=2): moms ~ 1e-2 (medido 0.01015, 1.5%) y shes = 0 EXACTO
+# node 4 (x=2): moms ~ 1e-2 (medido 0.01015, 1.5%; SIGNED desde el
+# lote 1 del sprint 12: la convencion del Professional, medido -0.01
+# con el ref point de este modelo - el check compara MAGNITUDES) y
+# shes = 0 EXACTO
 # (LOT 4: la fuente IP da la polucion de las caras por elemento, medido
 # 2.3e-4 = 2.3% de P - la cancelacion casi exacta del campo nodal
 # promediado se pierde; banda < 5e-4 documentada); node 8 (x=4, apoyo):
@@ -1311,7 +1314,7 @@ fi
 # modo de flexion - verificado: responde con cizalla pura; quad4 Y
 # quad9).
 MSF_PURE_OK=1
-awk '!/^#/ && ($1==4||$1==8) { v[$1]=$10; s[$1]=$7 } END{ d4=v[4]-0.01; if (d4<0) d4=-d4; ok=(d4<5.e-4 && s[4]<5.e-4 && v[8]<1.e-3); exit !ok }' \
+awk '!/^#/ && ($1==4||$1==8) { v[$1]=$10; if (v[$1]<0) v[$1]=-v[$1]; s[$1]=$7 } END{ d4=v[4]-0.01; if (d4<0) d4=-d4; ok=(d4<5.e-4 && s[4]<5.e-4 && v[8]<1.e-3); exit !ok }' \
   "$T2014/materi_stress_force.420" || MSF_PURE_OK=0
 if [ "$(grep -vc '^#' "$T2014/materi_stress_force.420")" = "27" ] && \
    [ "$MSF_PURE_OK" = "1" ]; then
@@ -1416,10 +1419,12 @@ fi
 # msf_sheet3d (500/501): FLEXION PURA PRESCRITA (hex27, 4 elementos,
 # 81 nodos): u_y = kappa*(x-0.5)*y, u_x = -kappa*y^2/2, nu=0 ->
 # sigma_yy = E*kappa*(x-0.5) EXACTO -> mom1 = E*kappa/12 = 0.0833333
-# const en todas las secciones (+-y), nor = 0, she = 0. -all 81 vs
+# const en todas las secciones (+-y; SIGNED desde el lote 1 del sprint
+# 12: medido -0.0833 con el ref point de este modelo - el check compara
+# MAGNITUDES), nor = 0, she = 0. -all 81 vs
 # -primary 45 (los 4 planos medios x 9 nodos = 36 promediados).
 MSF_S3_OK=1
-awk '!/^#/ && NF==17 { d=$13-0.0833333333; if (d<0) d=-d; if (d>1.e-5 || $5>1.e-8 || $9>1.e-8) bad=1 } END{exit bad}' \
+awk '!/^#/ && NF==17 { m=$13; if (m<0) m=-m; d=m-0.0833333333; if (d<0) d=-d; if (d>1.e-5 || $5>1.e-8 || $9>1.e-8) bad=1 } END{exit bad}' \
   "$T2014/materi_stress_force.500" || MSF_S3_OK=0
 if [ "$(grep -vc '^#' "$T2014/materi_stress_force.500")" = "81" ] && \
    [ "$(grep -vc '^#' "$T2014/materi_stress_force.501")" = "45" ] && \
@@ -1455,7 +1460,7 @@ fi
 # omitidos); los nodos promediados = los 18 que NO estan en las caras
 # +-y de los elementos.
 MSF_HA_OK=1
-awk '!/^#/ && NF==17 { if ($13<0.0833 || $13>0.0834) bad=1 } END{exit bad}' \
+awk '!/^#/ && NF==17 { m=$13; if (m<0) m=-m; if (m<0.0833 || m>0.0834) bad=1 } END{exit bad}' \
   "$T2014/materi_stress_force.530" || MSF_HA_OK=0
 # los nodos promediados aparecen en -all y faltan en -primary
 MSF_HA_AVG=1
@@ -1517,13 +1522,15 @@ fi
 # ESTATICA: mom1(z) = P*(L-z) (0.04/0.03/0.02/0.01/0 en z=0..4).
 # LOT 5 (fuerzas internas del elemento): mom1s = 0.0403, 0.0297, 0.0199,
 # 0.00997, 0.00016 (dentro del 1% - la estatica del cuerpo libre de la
-# solucion equilibrada) y shes = 0.0097..0.0103 = P dentro del 4% (la
+# solucion equilibrada; SIGNED desde el lote 1 del sprint 12: medidos
+# negativos con el ref point de este modelo - el check compara
+# MAGNITUDES) y shes = 0.0097..0.0103 = P dentro del 4% (la
 # cizalla contaminada 0.08*P del esquema mixto del L4 desaparece: la
 # resultante de las fuerzas internas de los nodos de la cara es la del
 # equilibrio); nors ~ 0.
 MSF_C3D_OK=1
-awk '!/^#/ && NF==17 { if ($1==1) d=$13-0.04; else if ($1==19) d=$13-0.03;
-       else if ($1==37) d=$13-0.02; else if ($1==55) d=$13-0.01; else if ($1==73) d=$13;
+awk '!/^#/ && NF==17 { m=$13; if (m<0) m=-m; if ($1==1) d=m-0.04; else if ($1==19) d=m-0.03;
+       else if ($1==37) d=m-0.02; else if ($1==55) d=m-0.01; else if ($1==73) d=m;
        else next; if (d<0) d=-d; if (d>0.002 || $9>0.011 || $9<0.009 || $5>0.001) bad=1 }
      END{exit bad}' "$T2014/materi_stress_force.600" || MSF_C3D_OK=0
 if [ "$(grep -vc '^#' "$T2014/materi_stress_force.600")" = "81" ] && \
@@ -1540,9 +1547,13 @@ fi
 # circunferencia): nor = [int sigma_zz*(2*PI*r) ds]/(2*PI*r) =
 # sigma_zz*t = 0.5 EXACTO (el L4 anade el peso 2*PI*r al integrando:
 # antes la integral sin pesar daba sigma*t/(2*PI*r) = 0.00796, un
-# factor 2*PI*r pequeno - bug documentado). she = 0, mom ~ 0.
+# factor 2*PI*r pequeno - bug documentado; SIGNED desde el lote 1 del
+# sprint 12: la pared esta a compresion, nors = -0.5 con la convencion
+# tension-positiva del Professional - el check compara MAGNITUDES).
+# she = 0, mom ~ 0.
 MSF_AX_OK=1
-awk '!/^#/ && NF==10 { d=$4-0.5; if (d<0) d=-d; if (d>0.005 || $7>1.e-6 || $10>0.005) bad=1 }
+awk '!/^#/ && NF==10 { n=$4; if (n<0) n=-n; d=n-0.5; if (d<0) d=-d; m=$10; if (m<0) m=-m;
+       if (d>0.005 || $7>1.e-6 || m>0.005) bad=1 }
      END{exit bad}' "$T2014/materi_stress_force.610" || MSF_AX_OK=0
 if [ "$(grep -vc '^#' "$T2014/materi_stress_force.610")" = "4" ] && \
    [ "$MSF_AX_OK" = "1" ]; then

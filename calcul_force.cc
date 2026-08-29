@@ -406,8 +406,10 @@ void post_calcul_materi_stress_force_validate( void )
 //      nor = n_hat . R_face / l (SIGNED: positive = tension), she =
 //      |t_hat . R_face| / l (only the size, manual 6.913), mom =
 //      sum_inod (n_hat . f_inod) * arm_inod / l with arm_inod =
-//      (x_inod - x_mid) . t_hat measured from the MIDDLE OF THE FACE
-//      (the LOT 5 equivalents of the LOT 2-4 integrals; R_face = the
+//      (x_mid - x_inod) . t_hat measured from the MIDDLE OF THE FACE
+//      (the Professional's sign convention, measured on its force7/
+//      force10 records; the LOT 5 equivalents of the LOT 2-4
+//      integrals; R_face = the
 //      sum of the internal forces of the face nodes - see note 9).
 //      The axisymmetric f_elem carries the physical circumference
 //      2*PI*r in the IP volumes (the ring section area 2*PI*r*ds),
@@ -846,8 +848,9 @@ static void msf_element_internal_forces_3d( long int npol, long int nnol,
 //   nor = n_hat . R_face / l   (signed, tension positive)
 //   she = |t_hat . R_face| / l (always positive)
 //   mom = sum_inod (n_hat . f_inod) * arm_inod / l (signed), with the
-//         arm_inod = (x_inod - x_mid) . t_hat measured from the MIDDLE
-//         OF THE FACE (the L3 decision; the discrete equivalent of
+//         arm_inod = (x_mid - x_inod) . t_hat measured from the MIDDLE
+//         OF THE FACE (the Professional's sign convention, measured on
+//         its force7/force10 records; the discrete equivalent of
 //         int sigma_nn*dt dA - the moment of the consistent nodal
 //         forces about the face middle is EXACT, the shear components
 //         contribute only to the in-face component of the moment
@@ -878,8 +881,12 @@ static void msf_face_resultants_2d( long int npol, long int face_nodes[],
   for ( i=0; i<npol; i++ ) {
     inol = face_nodes[i];
     arm = 0.;
+    // moment arm RELATIVE TO THE MIDDLE (mid - node, along the
+    // thickness direction): the Professional's sign convention -
+    // measured on its force7/force10 records (the node-minus-middle
+    // arm gave every moment the opposite sign)
     for ( idim=0; idim<ndim; idim++ )
-      arm += ( coords[inol*MDIM+idim] - mid[idim] )*thick[idim];
+      arm += ( mid[idim] - coords[inol*MDIM+idim] )*thick[idim];
     mom += ( nrm[0]*f_elem[inol*ndim+0]
            + nrm[1]*f_elem[inol*ndim+1] )*arm;
   }
@@ -1021,8 +1028,13 @@ static void msf_element_contribution_2d( long int element, long int name,
       centroid[i] += coords[corners[icorner]*MDIM+i]/ncorner;
   }
 
-  // thickness direction t = (centroid - reference_point), in-plane
-  for ( i=0; i<ndim; i++ ) thick[i] = centroid[i] - reference_point[i];
+  // thickness direction t = (reference_point - centroid), in-plane.
+  // TOWARD the reference point - the Professional's convention
+  // (measured on its force10 with the reference point moved around:
+  // its t follows ref_point - centroid; the previous away convention
+  // gave every directional component the opposite sign, documented in
+  // VALIDACION-PROFESIONAL section 2)
+  for ( i=0; i<ndim; i++ ) thick[i] = reference_point[i] - centroid[i];
   d = array_size( thick, ndim );
   if ( d<1.e-12 ) {
     // the reference point coincides with the element centroid: no
@@ -1180,17 +1192,19 @@ static void msf_element_contribution_2d( long int element, long int name,
   }
 
   // plot components (global x/y in the thickness direction t; the s
-  // component is the physical SIZE; nor/mom keep their sign in the
-  // vector direction, she is always positive - manual 6.913)
+  // component is the SIGNED physical scalar - the Professional's
+  // convention, measured on its force7/force10 records (its moms =
+  // -5000, mom2s = -2.7e-13: signed, not sizes); the she scalar stays
+  // always positive - manual 6.913)
   node_values[0] = nor*thick[0];
   node_values[1] = nor*thick[1];
-  node_values[2] = ( nor<0. ? -nor : nor );
+  node_values[2] = nor;
   node_values[3] = she*thick[0];
   node_values[4] = she*thick[1];
   node_values[5] = she;
   node_values[6] = mom*thick[0];
   node_values[7] = mom*thick[1];
-  node_values[8] = ( mom<0. ? -mom : mom );
+  node_values[8] = mom;
   // plot_switch -yes: invert the drawing direction of the item vector
   for ( j=0; j<3; j++ ) {
     if ( plot_switch[j]==-YES ) {
@@ -1443,15 +1457,18 @@ static void msf_face_resultants_3d( long int npol, long int face_nodes[],
   mom1 = mom2 = 0.;
   for ( i=0; i<nface; i++ ) {
     inol = face_nodes[i];
+    // moment arms RELATIVE TO THE MIDDLE (mid - node): the
+    // Professional's sign convention (same as the 2D mom - the
+    // node-minus-middle arm gives every moment the opposite sign)
     arm = 0.;
     for ( idim=0; idim<ndim; idim++ )
-      arm += ( coords[inol*MDIM+idim] - mid[idim] )*thick[idim];
+      arm += ( mid[idim] - coords[inol*MDIM+idim] )*thick[idim];
     mom1 += ( nrm[0]*f_elem[inol*ndim+0]
             + nrm[1]*f_elem[inol*ndim+1]
             + nrm[2]*f_elem[inol*ndim+2] )*arm;
     arm = 0.;
     for ( idim=0; idim<ndim; idim++ )
-      arm += ( coords[inol*MDIM+idim] - mid[idim] )*leng[idim];
+      arm += ( mid[idim] - coords[inol*MDIM+idim] )*leng[idim];
     mom2 += ( nrm[0]*f_elem[inol*ndim+0]
             + nrm[1]*f_elem[inol*ndim+1]
             + nrm[2]*f_elem[inol*ndim+2] )*arm;
@@ -1596,10 +1613,13 @@ static void msf_element_contribution_3d( long int element, long int name,
       centroid[i] += coords[cn*MDIM+i]/ncorner;
   }
 
-  // thickness direction of the structure t_hat = (centroid -
-  // reference_point) normalized (2D decision 1; also the plot
-  // direction of the averaged nodes)
-  for ( i=0; i<ndim; i++ ) t_global[i] = centroid[i] - reference_point[i];
+  // thickness direction of the structure t_hat = (reference_point -
+  // centroid) normalized, TOWARD the reference point (the
+  // Professional's convention, measured on its force10; the 2D
+  // decision 1; also the plot direction of the averaged nodes; the
+  // end-face selection and the square-face tie-break use |n*t_hat|
+  // and are insensitive to the orientation)
+  for ( i=0; i<ndim; i++ ) t_global[i] = reference_point[i] - centroid[i];
   d = array_size( t_global, ndim );
   if ( d<1.e-12 ) {
     // the reference point coincides with the element centroid: no
@@ -1644,10 +1664,17 @@ static void msf_element_contribution_3d( long int element, long int name,
         ? msf_border_nodes_hex8[iside*nface+j]
         : msf_border_nodes_hex27[iside*nface+j] );
     }
+    // the four face corners as a proper QUAD LOOP [00,10,11,01] of the
+    // lexicographic (i,j) border table, so that BOTH corner1-corner0
+    // and corner3-corner0 are face EDGES (the previous [0,npol-1,
+    // npol*(npol-1),nface-1] pick made corner3-corner0 the face
+    // DIAGONAL: e2 was never an edge, and with thickness_switch -yes
+    // the diagonal became the thickness direction - a 45-degree
+    // rotated section frame, measured in gforce10)
     corners[iside][0] = side_nodes[iside][0];
     corners[iside][1] = side_nodes[iside][npol-1];
-    corners[iside][2] = side_nodes[iside][npol*(npol-1)];
-    corners[iside][3] = side_nodes[iside][nface-1];
+    corners[iside][2] = side_nodes[iside][nface-1];
+    corners[iside][3] = side_nodes[iside][npol*(npol-1)];
     for ( i=0; i<ndim; i++ ) {
       e1[i] = coords[corners[iside][1]*MDIM+i]
             - coords[corners[iside][0]*MDIM+i];
@@ -1795,9 +1822,19 @@ static void msf_element_contribution_3d( long int element, long int name,
   // physical extent (thickness_switch -yes -> the longest), oriented
   // away from the reference point; l = n x t (unit); l = the element
   // size in the length direction (manual 6.913: the nodal coordinate
-  // difference in the length direction)
+  // difference in length direction). A SQUARE end face (equal edge
+  // extents) carries no thickness information in the extents: the tie
+  // is broken by the reference point - the edge best aligned with the
+  // away-from-reference direction wins (manual 6.912: the reference
+  // point sits at a large perpendicular distance from the structure,
+  // i.e. ON its thickness line; measured in gforce10, where the
+  // Professional resolves the same 10x10 tie to the reference
+  // direction). An (almost) equal alignment on both edges keeps the
+  // extent-rule pick (the away direction has no in-face component -
+  // e.g. a reference point along the section normal)
   for ( iside=0; iside<2; iside++ ) {
     long int fs = ( iside==0 ? iend : jend );
+    long int prefer_e1 = 0;
     for ( i=0; i<ndim; i++ ) {
       e1[i] = coords[corners[fs][1]*MDIM+i]
             - coords[corners[fs][0]*MDIM+i];
@@ -1814,8 +1851,23 @@ static void msf_element_contribution_3d( long int element, long int name,
       }
       return;
     }
-    if ( ( len1<len2 && thickness_switch!=-YES )
-      || ( len1>=len2 && thickness_switch==-YES ) ) {
+    prefer_e1 = ( ( len1<len2 && thickness_switch!=-YES )
+               || ( len1>len2 && thickness_switch==-YES ) );
+    if ( scalar_dabs(len1-len2)
+         <= 1.e-6*( len1>len2 ? len1 : len2 ) ) {
+      // square-face tie: |cos| of each edge with the (unit) away
+      // direction t_global
+      s1 = scalar_dabs( e1[0]*t_global[0] + e1[1]*t_global[1]
+                      + e1[2]*t_global[2] )/len1;
+      s2 = scalar_dabs( e2[0]*t_global[0] + e2[1]*t_global[1]
+                      + e2[2]*t_global[2] )/len2;
+      if ( s2>s1+1.e-6 ) prefer_e1 = 0;
+      else if ( s1>s2+1.e-6 ) prefer_e1 = 1;
+      else prefer_e1 = 1; // indecisive: the first border edge
+        // (corner0->corner1) - the historical GNU pick of the
+        // effectively-square sections (msf_cant3d_hex27, qsri3d_beam)
+    }
+    if ( prefer_e1 ) {
       array_multiply( e1, e1, 1./len1, ndim );
       for ( i=0; i<MDIM; i++ ) face_t[iside][i] = e1[i];
       array_multiply( e2, e2, 1./len2, ndim );
@@ -1825,14 +1877,16 @@ static void msf_element_contribution_3d( long int element, long int name,
       for ( i=0; i<MDIM; i++ ) face_t[iside][i] = e2[i];
       array_multiply( e1, e1, 1./len1, ndim );
     }
-    // orient t away from the reference point (plot direction)
+    // orient t TOWARD the reference point (plot direction; the
+    // Professional's convention, measured on its force10 - the away
+    // convention gave every directional component the opposite sign)
     d = 0.;
     for ( i=0; i<ndim; i++ )
       d += face_t[iside][i]*( centroid[i]-reference_point[i] );
-    if ( d<0. ) {
+    if ( d>0. ) {
       for ( i=0; i<MDIM; i++ ) face_t[iside][i] = -face_t[iside][i];
     }
-    else if ( d<1.e-12 ) {
+    else if ( scalar_dabs(d)<1.e-12 ) {
       // reference point on the face plane normal line through the
       // centroid: keep the raw direction (documented edge case)
       if ( !warned_orient ) {
@@ -1953,8 +2007,9 @@ static void msf_element_contribution_3d( long int element, long int name,
   }
 
   // plot components (global x/y/z in the thickness direction; the s
-  // component is the physical SIZE; nor/mom keep their sign in the
-  // vector direction, she is always positive - manual 6.913). Primary
+  // component is the SIGNED physical scalar - the Professional's
+  // convention, measured on its force10 records; the she scalar is
+  // always positive - manual 6.913). Primary
   // nodes: the face's t; averaged nodes: the element t_hat.
   if ( is_face_node ) {
     for ( i=0; i<MDIM; i++ ) tng[i] = face_t[iface][i];
@@ -1965,7 +2020,9 @@ static void msf_element_contribution_3d( long int element, long int name,
   node_values[0]  = nor*tng[0];
   node_values[1]  = nor*tng[1];
   node_values[2]  = nor*tng[2];
-  node_values[3]  = ( nor<0. ? -nor : nor );
+  node_values[3]  = nor; // the SIGNED scalar (the Professional's
+    // convention, measured on its force10 records; the she scalar
+    // stays always positive - manual 6.913)
   node_values[4]  = she*tng[0];
   node_values[5]  = she*tng[1];
   node_values[6]  = she*tng[2];
@@ -1973,11 +2030,11 @@ static void msf_element_contribution_3d( long int element, long int name,
   node_values[8]  = mom1*tng[0];
   node_values[9]  = mom1*tng[1];
   node_values[10] = mom1*tng[2];
-  node_values[11] = ( mom1<0. ? -mom1 : mom1 );
+  node_values[11] = mom1; // the SIGNED scalar (idem)
   node_values[12] = mom2*tng[0];
   node_values[13] = mom2*tng[1];
   node_values[14] = mom2*tng[2];
-  node_values[15] = ( mom2<0. ? -mom2 : mom2 );
+  node_values[15] = mom2; // the SIGNED scalar (idem)
   // plot_switch -yes: invert the drawing direction of the item vector
   for ( j=0; j<4; j++ ) {
     if ( plot_switch[j]==-YES ) {
