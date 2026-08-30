@@ -62,17 +62,17 @@ void interface_element( long int element, long int name,
   double element_lhside[], double element_matrix[], double element_rhside[] )
 
 {
-  long int idim=0, jdim=0, inol=0, jnol=0, indx=0, swit=0, ldum=0, 
+  long int idim=0, jdim=0, inol=0, jnol=0, knol=0, indx=0, swit=0, ldum=0, 
     nnol=4, mc_active=0, plastified=0, memory=-UPDATED_LINEAR, idum[1];
   double dtime=0., kn=0., kt1=0., kt2=0., tmp=0., ddum[1],
     normal[MDIM], tangent[MDIM], tangent2[MDIM], du[MDIM],
     du_norm=0., du_tang=0., du_tang2=0., stress_normal=0., stress_shear=0.,
-    stress_shear2=0., strain_normal=0., strain_eff=0.,     force_norm=0., gap=0., tension_limit=0.,
-    residual_factor=0.01, phi=0., c=0., phi_flow=0., max_fric=0.,
-    stiff_normal=0., stiff_tang=0., stiff_tang2=0., ddum3[3],
-    f_t_old=0., f_t=0., f_t2_old=0., f_t2=0., trial=0., trial2=0.,
-    dgamma=0.,
-    ft_mag=0., fn_total=0., force_gravity[MDIM];
+    stress_shear2=0., strain_normal=0., strain_eff=0., force_norm=0.,
+    gap=0., tension_limit=0.,
+    residual_factor=0.01, phi=0., c=0., phi_flow=0.,
+    ddum3[3],
+    f_t_old=0., f_t=0., f_t2_old=0., f_t2=0.,
+    force_gravity[MDIM];
   long int *nodes=NULL;
   swit = set_swit(element,-1,"interface_element");
   if ( swit ) pri( "In routine INTERFACE_ELEMENT." );
@@ -258,43 +258,76 @@ void interface_element( long int element, long int name,
   // For a -bar2 (not converted): node 0 = side 1, node 1 = side 2.
   // 2D quad4: sides {0,1} and {2,3}. 3D prism6: {0,1,2}/{3,4,5},
   // hex8: {0,1,2,3}/{4,5,6,7} (side 1 = first half, side 2 = second half).
+  //
+  // CONVERGENCE (2026-08-30): the Professional assembles the interface
+  // PER INTEGRATION POINT - each facing pair of nodes (i, i+ns1) is an
+  // independent spring with its own relative displacement du_i and its
+  // own Lobatto weight (quad6: 1/6, 4/6, 1/6; quad4: 1/2, 1/2; bar2: 1;
+  // prism6: 1/6,4/6,1/6; hex8: 1/12,5/12,5/12,1/12). The old code
+  // averaged the whole side and assembled every node against every node,
+  // which produced a rank-1 matrix per side -> SINGULAR for ns1>1
+  // (interface1: only element 1, 3 free nodes -> band solver info!=0).
+  // Verified against the Professional .dbs of interface1: the applied
+  // loads -1,-4,-1 on nodes 4,5,6 ARE the Lobatto weights times the
+  // total 6 (the interface nodal force = weight_i * sigma_i).
+  long int ns1 = nnol/2;
+  double *w_ip = get_new_dbl( ns1 );
+  if      ( ns1==1 ) { w_ip[0] = 1.; }
+  else if ( ns1==2 ) { w_ip[0] = 0.5; w_ip[1] = 0.5; }
+  else if ( ns1==3 ) { w_ip[0] = 1./6.; w_ip[1] = 4./6.; w_ip[2] = 1./6.; }
+  else               { w_ip[0] = 1./12.; w_ip[1] = 5./12.;
+                       w_ip[2] = 5./12.; w_ip[3] = 1./12.; }
+  double *du_ip = get_new_dbl( ns1 * MDIM );
+  array_set( du_ip, 0., ns1 * MDIM );
   if ( name==-BAR2 ) {
     for ( idim=0; idim<ndim; idim++ ) {
       double v1 = new_dof[0*nuknwn+vel_indx+idim*nder];
       double v2 = new_dof[1*nuknwn+vel_indx+idim*nder];
-      du[idim] = ( v2 - v1 ) * dtime;
+      du_ip[0*MDIM+idim] = ( v2 - v1 ) * dtime;
     }
   }
   else {
-    long int ns1 = nnol/2;   // nodes on side 1
-    for ( idim=0; idim<ndim; idim++ ) {
-      double v_side1 = 0., v_side2 = 0.;
-      for ( inol=0; inol<ns1; inol++ ) {
-        v_side1 += new_dof[inol*nuknwn+vel_indx+idim*nder];
-        v_side2 += new_dof[(inol+ns1)*nuknwn+vel_indx+idim*nder];
+    for ( inol=0; inol<ns1; inol++ ) {
+      for ( idim=0; idim<ndim; idim++ ) {
+        double v1 = new_dof[inol*nuknwn+vel_indx+idim*nder];
+        double v2 = new_dof[(inol+ns1)*nuknwn+vel_indx+idim*nder];
+        du_ip[inol*MDIM+idim] = ( v2 - v1 ) * dtime;
       }
-      v_side1 /= ns1; v_side2 /= ns1;
-      du[idim] = ( v_side2 - v_side1 ) * dtime;
     }
   }
-
-  if ( element==3 ) {
-    pri( "DBG el3: du", du[0] );
-    pri( "DBG el3: duy", du[1] );
-    pri( "DBG el3: normal", normal[0] );
-    pri( "DBG el3: normaly", normal[1] );
-  }
+  // mean over the pairs (the value the whole element sees for the
+  // records: for uniform loading all pairs carry the same du)
+  du[0] = 0.; du[1] = 0.; du[2] = 0.;
+  for ( inol=0; inol<ns1; inol++ )
+    for ( idim=0; idim<ndim; idim++ )
+      du[idim] += w_ip[inol] * du_ip[inol*MDIM+idim];
   du_norm  = array_inproduct( du, normal, ndim );
   du_tang  = array_inproduct( du, tangent, ndim );
   du_tang2 = ( ndim==3 ) ? array_inproduct( du, tangent2, ndim ) : 0.;
 
-  // accumulated normal strain (history, VERSION_NORMAL). Sign convention:
-  // compression is POSITIVE (verified empirically). The history is read
-  // BEFORE adding the current step's increment so that gap / tension /
-  // Mohr-Coulomb decisions see the accumulated total.
-  db( ELEMENT_INTERFACE_STRAIN_NORMAL, element, idum, &strain_normal,
-    ldum, VERSION_NORMAL, GET_IF_EXISTS );
-  strain_normal += du_norm;
+  // accumulated normal strain per integration point (history arrays).
+  // Sign convention: compression is POSITIVE (verified empirically). The
+  // history is read BEFORE adding the current step's increment so that
+  // gap / tension / Mohr-Coulomb decisions see the accumulated total.
+  // (2026-08-30: the Professional stores one value per integration point
+  //  - the .dbs of interface1 shows intpnt_strain with 3 entries for the
+  //  quad6 - so the histories are arrays of ns1 now.)
+  double *strain_normal_ip = get_new_dbl( ns1 );
+  double *strain_eff_ip    = get_new_dbl( ns1 );
+  array_set( strain_normal_ip, 0., ns1 );
+  array_set( strain_eff_ip, 0., ns1 );
+  {
+    long int ln = ns1;
+    double *hist = get_new_dbl( ns1 );
+    array_set( hist, 0., ns1 );
+    if ( db( ELEMENT_INTERFACE_STRAIN_NORMAL, element, idum, hist,
+        ln, VERSION_NORMAL, GET_IF_EXISTS ) && ln>0 ) {
+      for ( inol=0; inol<ns1; inol++ ) strain_normal_ip[inol] = hist[inol];
+    }
+    delete[] hist;
+    for ( inol=0; inol<ns1; inol++ )
+      strain_normal_ip[inol] += array_inproduct( &du_ip[inol*MDIM], normal, ndim );
+  }
 
   // group_interface_materi_expansion_normal (manual Professional 6.630):
   // thermal strain expansion in interface thickness direction per unit
@@ -303,12 +336,11 @@ void interface_element( long int element, long int name,
   // accumulated strain minus the thermal expansion; the stored history
   // stays purely mechanical (no thermal re-counting per step). Only
   // meaningful with condif_temperature.
-  strain_eff = strain_normal;
+  for ( inol=0; inol<ns1; inol++ ) strain_eff_ip[inol] = strain_normal_ip[inol];
   if ( condif_temperature ) {
     double alpha_n = 0., t_side1 = 0., t_side2 = 0.;
     if ( db( GROUP_INTERFACE_MATERI_EXPANSION_NORMAL, element_group, idum,
         &alpha_n, ldum, VERSION_NORMAL, GET_IF_EXISTS ) ) {
-      long int ns1 = nnol/2;
       double t1_old = 0., t2_old = 0.;
       for ( inol=0; inol<ns1; inol++ ) {
         t_side1 += new_dof[inol*nuknwn+temp_indx];
@@ -317,25 +349,47 @@ void interface_element( long int element, long int name,
         t2_old   += old_dof[(inol+ns1)*nuknwn+temp_indx];
       }
       t_side1 /= ns1; t_side2 /= ns1; t1_old /= ns1; t2_old /= ns1;
-      // total thermal expansion (for gap / tension / Mohr-Coulomb state)
-      strain_eff = strain_normal - alpha_n * 0.5*(t_side1+t_side2);
-      // incremental thermal expansion acts as a pseudo-load this step:
-      // the normal force increment is stiff*(du_norm - d_alpha*T), the
-      // same incremental pattern as stress.cc thermal strains
-      du_norm -= alpha_n * ( 0.5*(t_side1+t_side2) - 0.5*(t1_old+t2_old) );
+      for ( inol=0; inol<ns1; inol++ ) {
+        // total thermal expansion (for gap / tension / Mohr-Coulomb state)
+        strain_eff_ip[inol] = strain_normal_ip[inol] -
+          alpha_n * 0.5*(t_side1+t_side2);
+        // incremental thermal expansion acts as a pseudo-load this step
+        du_ip[inol*MDIM] -= alpha_n *
+          ( 0.5*(t_side1+t_side2) - 0.5*(t1_old+t2_old) );
+      }
     }
   }
 
-  // accumulated total tangential force (history, VERSION_NORMAL). Default 0:
-  // without the Mohr-Coulomb record the interface stays purely elastic
-  // (Fase 1 behavior). 3D: two tangential components (tangent and tangent2).
-  f_t_old = 0.;
-  db( ELEMENT_INTERFACE_FORCE_TANG, element, idum, &f_t_old, ldum,
-    VERSION_NORMAL, GET_IF_EXISTS );
-  f_t2_old = 0.;
-  if ( ndim==3 )
-    db( ELEMENT_INTERFACE_FORCE_TANG2, element, idum, &f_t2_old, ldum,
-      VERSION_NORMAL, GET_IF_EXISTS );
+  // accumulated total tangential force per IP (history arrays).
+  // Default 0: without the Mohr-Coulomb record the interface stays purely
+  // elastic (Fase 1 behavior). 3D: two tangential components.
+  double *f_t_old_ip = get_new_dbl( ns1 );
+  double *f_t_ip     = get_new_dbl( ns1 );
+  double *f_t2_old_ip = get_new_dbl( ns1 );
+  double *f_t2_ip     = get_new_dbl( ns1 );
+  array_set( f_t_old_ip, 0., ns1 );
+  array_set( f_t_ip, 0., ns1 );
+  array_set( f_t2_old_ip, 0., ns1 );
+  array_set( f_t2_ip, 0., ns1 );
+  {
+    long int ln = ns1;
+    double *hist = get_new_dbl( ns1 );
+    array_set( hist, 0., ns1 );
+    if ( db( ELEMENT_INTERFACE_FORCE_TANG, element, idum, hist,
+        ln, VERSION_NORMAL, GET_IF_EXISTS ) && ln>0 ) {
+      for ( inol=0; inol<ns1; inol++ ) f_t_old_ip[inol] = hist[inol];
+    }
+    delete[] hist;
+    if ( ndim==3 ) {
+      hist = get_new_dbl( ns1 );
+      array_set( hist, 0., ns1 );
+      if ( db( ELEMENT_INTERFACE_FORCE_TANG2, element, idum, hist,
+          ln, VERSION_NORMAL, GET_IF_EXISTS ) && ln>0 ) {
+        for ( inol=0; inol<ns1; inol++ ) f_t2_old_ip[inol] = hist[inol];
+      }
+      delete[] hist;
+    }
+  }
 
   // gap (FIX 3, RF-3): the interface is OPEN when strain_normal <= gap
   // (only residual stiffness acts), CLOSED when strain_normal > gap.
@@ -348,98 +402,91 @@ void interface_element( long int element, long int name,
   if ( !db( GROUP_INTERFACE_GAP, element_group, idum, &gap, ldum,
       VERSION_NORMAL, GET_IF_EXISTS ) )
     gap = -1.e20;
-  stiff_normal = kn;
-  if ( strain_eff <= gap ) {
-    stiff_normal = kn * residual_factor;
-  }
-  force_norm = stiff_normal * du_norm;
-  // tension limit (FIX 2, RF-2): the interface opens in traction when the
-  // TOTAL accumulated normal force |Fn_total| = |kn*strain_normal| exceeds
-  // the limit, and only if it was still closed (stiff_normal==kn). On
-  // opening: residual stiffness and normal force capped at the limit.
-  fn_total = kn * strain_eff;
-  if ( tension_limit>0. && strain_normal<0. && fabs(fn_total)>tension_limit
-      && stiff_normal==kn ) {
-    stiff_normal = kn * residual_factor;
-    force_norm = ( du_norm>=0. ) ? tension_limit : -tension_limit;
-  }
-  stress_normal = force_norm;
 
-  // cumulative Mohr-Coulomb (FIX 1, RF-1): the friction limit applies to
-  // the TOTAL tangential force, not the per-step force. The MC law is
-  // active by the PRESENCE of the record (D2): phi=0,c=0 gives max_fric=0
-  // -> free sliding; without the record the interface stays purely elastic
-  // (Fase 1 behavior). 3D: the two tangential components are clamped
-  // together on the magnitude (max_fric), preserving their ratio.
-  //
-  // CONVERGENCE FIX (2026-08-30, verified against Professional .dbs):
-  // (a) the tangential stiffness acts as F_t = kt*du_tang (the manual
-  // 6.631: stress,shear = kt * gamma where gamma = 2*strain,shear and
-  // strain,shear = du_tang/2 -> kt*du_tang). The old kt*2*du_tang
-  // DOUBLED the tangential stiffness vs Professional (interface14:
-  // kt=5e3, du_tang=1 -> Professional tau=5e3, ours would be 1e4).
-  // (b) the plastic return is IMPLICIT with dilatancy: the system
-  // f_t = trial - kt*dgamma with max_fric = |c + Fn*tan(phi)| where
-  // Fn = kn*strain_eff and the dilatancy opens by dgamma*tan(phi_flow)
-  // gives dgamma = (|trial| - max_fric)/(kt + kn*tan(phi)*tan(phi_flow)).
-  // Verified EXACT against interface15: dgamma=0.8537 -> f_t=731.6,
-  // strain_dil=0.17305 -> sigma_n=kn*strain_eff=-1730.5 (tan(phi) ratio
-  // 731.63/1730.48 = 0.42279 = tan(0.4) EXACT).
-  mc_active = db( GROUP_INTERFACE_MATERI_PLASTI_MOHR_COUL_DIRECT, element_group,
-    idum, ddum3, ldum, VERSION_NORMAL, GET_IF_EXISTS );
-  phi = ddum3[0]; c = ddum3[1]; phi_flow = ddum3[2];
-  trial  = f_t_old  + kt1 * du_tang;
-  trial2 = f_t2_old + kt2 * du_tang2;
-  plastified = 0;
-  {
-    double strain_eff_mc = strain_eff;
+  // per-IP constitutive state
+  double *stiff_normal_ip = get_new_dbl( ns1 );
+  double *stress_normal_ip = get_new_dbl( ns1 );
+  double *stress_shear_ip  = get_new_dbl( ns1 );
+  double *stress_shear2_ip = get_new_dbl( ns1 );
+  double *stiff_tang_ip    = get_new_dbl( ns1 );
+  double *stiff_tang2_ip   = get_new_dbl( ns1 );
+  long int *plastified_ip  = get_new_int( ns1 );
+  for ( inol=0; inol<ns1; inol++ ) {
+    double du_norm_i  = array_inproduct( &du_ip[inol*MDIM], normal, ndim );
+    double du_tang_i  = array_inproduct( &du_ip[inol*MDIM], tangent, ndim );
+    double du_tang2_i = ( ndim==3 ) ?
+      array_inproduct( &du_ip[inol*MDIM], tangent2, ndim ) : 0.;
+    double stiff_normal_i = kn;
+    if ( strain_eff_ip[inol] <= gap ) stiff_normal_i = kn * residual_factor;
+    double force_norm_i = stiff_normal_i * du_norm_i;
+    // tension limit (FIX 2, RF-2): opens in traction when the TOTAL
+    // accumulated normal force |Fn_total| exceeds the limit, and only if
+    // it was still closed.
+    double fn_total_i = kn * strain_eff_ip[inol];
+    if ( tension_limit>0. && strain_normal_ip[inol]<0. &&
+        fabs(fn_total_i)>tension_limit && stiff_normal_i==kn ) {
+      stiff_normal_i = kn * residual_factor;
+      force_norm_i = ( du_norm_i>=0. ) ? tension_limit : -tension_limit;
+    }
+    stress_normal_ip[inol] = force_norm_i;
+    stiff_normal_ip[inol]  = stiff_normal_i;
+
+    // cumulative Mohr-Coulomb (FIX 1, RF-1): friction limit on the TOTAL
+    // tangential force. CONVERGENCE (2026-08-30): F_t = kt*du_tang (not
+    // kt*2*du_tang), and the plastic return is IMPLICIT with dilatancy
+    // (see the block comments above; verified EXACT against interface15).
+    double trial_i  = f_t_old_ip[inol]  + kt1 * du_tang_i;
+    double trial2_i = f_t2_old_ip[inol] + kt2 * du_tang2_i;
+    long int plast_i = 0;
     if ( mc_active ) {
-      double trial_mag = sqrt( trial*trial + trial2*trial2 );
-      // |max_fric|: Fn = kn*strain_eff is the normal FORCE (manual: "Fn
-      // is a negative value under compression"); the friction limit is the
-      // absolute value (the clamp is symmetric).
-      double max_fric_abs = fabs( c + kn * strain_eff_mc * tan( phi ) );
+      double strain_eff_mc_i = strain_eff_ip[inol];
+      double trial_mag = sqrt( trial_i*trial_i + trial2_i*trial2_i );
+      double max_fric_abs = fabs( c + kn * strain_eff_mc_i * tan( phi ) );
       if ( trial_mag > max_fric_abs && trial_mag>0. ) {
-        // implicit return with dilatancy: dgamma solves
-        // f_t = trial - kt*dgamma on the yield surface with
-        // strain_eff += -dgamma*tan(phi_flow)
-        dgamma = ( trial_mag - max_fric_abs ) /
+        double dgamma = ( trial_mag - max_fric_abs ) /
           ( kt1 + kn * tan( phi ) * tan( phi_flow ) );
         if ( dgamma<0. ) dgamma = 0.;
         double scale = ( trial_mag - kt1 * dgamma ) / trial_mag;
-        trial *= scale; trial2 *= scale; plastified = 1;
+        trial_i *= scale; trial2_i *= scale; plast_i = 1;
         // dilatancy: plastic slip OPENS the interface (reduces the
-        // accumulated compressive strain). 3D: uses the total slip.
-        strain_eff += -dgamma * tan( phi_flow );
+        // accumulated compressive strain).
+        double opening = -dgamma * tan( phi_flow );
+        strain_normal_ip[inol] += opening;
+        stress_normal_ip[inol] += kn * opening;
       }
     }
-  }
-  f_t  = trial;
-  f_t2 = trial2;
-  stiff_tang  = ( mc_active && plastified ) ? 0. : kt1;
-  stiff_tang2 = ( mc_active && plastified ) ? 0. : kt2;
-
-  // dilatancy (FIX 4, RF-4, now IMPLICIT): plastic slip OPENS the interface
-  // by dgamma*tan(phi_flow) (compression positive). The opening is added to
-  // the accumulated history (used by the next step's Mohr-Coulomb) AND to
-  // this step's normal stress (the RHS carries the full incremental normal
-  // force kn*(du_norm + opening), verified against Professional interface15:
-  // opening = 0.8537*tan(0.2) = 0.17305 -> sigma_n = 1e4*0.17305 = 1730.5).
-  if ( plastified && phi_flow>0. ) {
-    double opening = -dgamma * tan( phi_flow );
-    strain_normal += opening;
-    stress_normal += kn * opening;
+    f_t_ip[inol]  = trial_i;
+    f_t2_ip[inol] = trial2_i;
+    plastified_ip[inol] = plast_i;
+    stiff_tang_ip[inol]  = ( mc_active && plast_i ) ? 0. : kt1;
+    stiff_tang2_ip[inol] = ( mc_active && plast_i ) ? 0. : kt2;
+    // the rhs carries the INCREMENT F_t - F_t,old
+    stress_shear_ip[inol]  = f_t_ip[inol]  - f_t_old_ip[inol];
+    stress_shear2_ip[inol] = f_t2_ip[inol] - f_t2_old_ip[inol];
   }
 
-  // the rhs carries the INCREMENT F_t - F_t,old: == kt*du_tang when
-  // elastic (Fase 1 backward compatible), == clamped increment when plastic.
-  stress_shear  = f_t  - f_t_old;
-  stress_shear2 = f_t2 - f_t2_old;
+  // mean over the pairs (for the swit debug and legacy scalar view)
+  du_norm = 0.; du_tang = 0.; du_tang2 = 0.; strain_normal = 0.;
+  stress_normal = 0.; stress_shear = 0.; stress_shear2 = 0.; f_t = 0.;
+  f_t_old = 0.; f_t2 = 0.; f_t2_old = 0.;
+  for ( inol=0; inol<ns1; inol++ ) {
+    du_norm  += w_ip[inol] * array_inproduct( &du_ip[inol*MDIM], normal, ndim );
+    du_tang  += w_ip[inol] * array_inproduct( &du_ip[inol*MDIM], tangent, ndim );
+    du_tang2 += w_ip[inol] * ( ( ndim==3 ) ?
+      array_inproduct( &du_ip[inol*MDIM], tangent2, ndim ) : 0. );
+    strain_normal += w_ip[inol] * strain_normal_ip[inol];
+    stress_normal += w_ip[inol] * stress_normal_ip[inol];
+    stress_shear  += w_ip[inol] * stress_shear_ip[inol];
+    stress_shear2 += w_ip[inol] * stress_shear2_ip[inol];
+    f_t  += w_ip[inol] * f_t_ip[inol];
+    f_t_old += w_ip[inol] * f_t_old_ip[inol];
+    f_t2 += w_ip[inol] * f_t2_ip[inol];
+    f_t2_old += w_ip[inol] * f_t2_old_ip[inol];
+  }
 
   if ( swit ) {
     pri( "du_norm", du_norm );
     pri( "du_tang", du_tang );
-    pri( "du_tang2", du_tang2 );
     pri( "strain_normal", strain_normal );
     pri( "stress_normal", stress_normal );
     pri( "f_t_old", f_t_old );
@@ -451,44 +498,65 @@ void interface_element( long int element, long int name,
   // velocity dofs (pattern spring.cc). side 1 = first half of the nodes,
   // side 2 = second half (2D quad4: {0,1}/{2,3}; prism6 {0,1,2}/{3,4,5};
   // hex8 {0,1,2,3}/{4,5,6,7}).
-  long int ns1 = nnol/2;
-  for ( idim=0; idim<ndim; idim++ ) {
-    double dirn = normal[idim], dirt = tangent[idim], dirt2 = tangent2[idim];
-    for ( inol=0; inol<nnol; inol++ ) {
-      double sign = ( inol>=ns1 ) ? +1. : -1.;
-      indx = inol*npuknwn + (vel_indx+idim*nder)/nder;
-      tmp = -sign*( stress_normal*dirn + stress_shear*dirt +
-        stress_shear2*dirt2 );
-      element_rhside[indx] += tmp;
-      for ( jnol=0; jnol<nnol; jnol++ ) {
-        double jsign = ( jnol>=ns1 ) ? +1. : -1.;
+  // CONVERGENCE (2026-08-30): each facing pair (i, i+ns1) is assembled as
+  // an independent spring with its own Lobatto weight w_ip[i] and its own
+  // per-IP stress/stiffness. The old code assembled every node against
+  // every node with the full stiffness, which produced a rank-1 matrix
+  // per side (SINGULAR for ns1>1) and applied ns1 times the force.
+  // The Professional nodal force is weight_i * sigma_i (interface1:
+  // loads -1,-4,-1 = (1/6,4/6,1/6)*(-6)).
+  for ( inol=0; inol<ns1; inol++ ) {
+    double w_i = w_ip[inol];
+    double s_normal_i = stress_normal_ip[inol];
+    double s_shear_i  = stress_shear_ip[inol];
+    double s_shear2_i = stress_shear2_ip[inol];
+    double stiff_n_i = stiff_normal_ip[inol];
+    double stiff_t_i = stiff_tang_ip[inol];
+    double stiff_t2_i= stiff_tang2_ip[inol];
+    for ( idim=0; idim<ndim; idim++ ) {
+      double dirn = normal[idim], dirt = tangent[idim], dirt2 = tangent2[idim];
+      // side 1 node (negative sign), side 2 node (positive sign)
+      for ( jnol=0; jnol<2; jnol++ ) {
+        long int inod = inol + ( jnol ? ns1 : 0 );
+        double sign = ( jnol ) ? +1. : -1.;
+        indx = inod*npuknwn + (vel_indx+idim*nder)/nder;
+        tmp = -sign * w_i * ( s_normal_i*dirn + s_shear_i*dirt +
+          s_shear2_i*dirt2 );
+        element_rhside[indx] += tmp;
         for ( jdim=0; jdim<ndim; jdim++ ) {
           double jdirn = normal[jdim], jdirt = tangent[jdim],
             jdirt2 = tangent2[jdim];
-          double kkk = sign*jsign*( stiff_normal*dirn*jdirn +
-            stiff_tang*dirt*jdirt + stiff_tang2*dirt2*jdirt2 );
-          long int jndx = inol*npuknwn*nnol*npuknwn +
-            ((vel_indx+idim*nder)/nder)*nnol*npuknwn +
-            jnol*npuknwn + (vel_indx+jdim*nder)/nder;
-          element_matrix[jndx] += kkk * dtime;
-          if ( jnol==inol && jdim==idim )
-            element_lhside[inol*npuknwn+(vel_indx+idim*nder)/nder] +=
-              kkk * dtime;
+          double kkk = sign * w_i * ( stiff_n_i*dirn*jdirn +
+            stiff_t_i*dirt*jdirt + stiff_t2_i*dirt2*jdirt2 );
+          // jnode: same pair's side-1 or side-2 node
+          for ( knol=0; knol<2; knol++ ) {
+            long int jnod = inol + ( knol ? ns1 : 0 );
+            double jsign = ( knol ) ? +1. : -1.;
+            long int jndx = inod*npuknwn*nnol*npuknwn +
+              ((vel_indx+idim*nder)/nder)*nnol*npuknwn +
+              jnod*npuknwn + (vel_indx+jdim*nder)/nder;
+            element_matrix[jndx] += kkk * jsign * dtime;
+            if ( jnod==inod && jdim==idim )
+              element_lhside[inod*npuknwn+(vel_indx+idim*nder)/nder] +=
+                kkk * jsign * dtime;
+          }
         }
       }
     }
   }
 
-  // store accumulated histories (used by gap / tension / Mohr-Coulomb and
-  // the next step's cumulative trial)
-  ldum = 1;
-  db( ELEMENT_INTERFACE_STRAIN_NORMAL, element, idum, &strain_normal,
-    ldum, VERSION_NEW, PUT );
-  db( ELEMENT_INTERFACE_FORCE_TANG, element, idum, &f_t, ldum,
-    VERSION_NEW, PUT );
-  if ( ndim==3 )
-    db( ELEMENT_INTERFACE_FORCE_TANG2, element, idum, &f_t2, ldum,
-      VERSION_NEW, PUT );
+  // store accumulated histories per IP (used by gap / tension /
+  // Mohr-Coulomb and the next step's cumulative trial)
+  {
+    long int ln = ns1;
+    db( ELEMENT_INTERFACE_STRAIN_NORMAL, element, idum, strain_normal_ip,
+      ln, VERSION_NEW, PUT );
+    db( ELEMENT_INTERFACE_FORCE_TANG, element, idum, f_t_ip,
+      ln, VERSION_NEW, PUT );
+    if ( ndim==3 )
+      db( ELEMENT_INTERFACE_FORCE_TANG2, element, idum, f_t2_ip,
+        ln, VERSION_NEW, PUT );
+  }
 
   // output records (Professional compatibility, verified against .dbs of
   // interface1/13/14/15): the Professional fills element_interface_intpnt_stress,
@@ -527,24 +595,25 @@ void interface_element( long int element, long int name,
     array_set( avg_stress, 0., nval );
     array_set( avg_strain, 0., nval );
     for ( i_intpnt=0; i_intpnt<n_intpnt; i_intpnt++ ) {
-      // the current-step values (uniform intpnt: same at every point)
-      rec_stress[i_intpnt*nval+0] = stress_normal;
-      rec_stress[i_intpnt*nval+1] = stress_shear;
-      rec_strain[i_intpnt*nval+0] = du_norm;
-      rec_strain[i_intpnt*nval+1] = du_tang/2.;
+      // the current-step values per integration point
+      rec_stress[i_intpnt*nval+0] = stress_normal_ip[i_intpnt];
+      rec_stress[i_intpnt*nval+1] = stress_shear_ip[i_intpnt];
+      rec_strain[i_intpnt*nval+0] =
+        array_inproduct( &du_ip[i_intpnt*MDIM], normal, ndim );
+      rec_strain[i_intpnt*nval+1] =
+        array_inproduct( &du_ip[i_intpnt*MDIM], tangent, ndim ) / 2.;
       if ( ndim==3 ) {
-        rec_stress[i_intpnt*nval+2] = stress_shear2;
-        rec_strain[i_intpnt*nval+2] = du_tang2/2.;
+        rec_stress[i_intpnt*nval+2] = stress_shear2_ip[i_intpnt];
+        rec_strain[i_intpnt*nval+2] =
+          array_inproduct( &du_ip[i_intpnt*MDIM], tangent2, ndim ) / 2.;
       }
-      rec_status[i_intpnt] = ( strain_eff <= gap ) ? OPENED : CLOSED;
+      rec_status[i_intpnt] =
+        ( strain_eff_ip[i_intpnt] <= gap ) ? OPENED : CLOSED;
       for ( iv=0; iv<nval; iv++ ) {
         avg_stress[iv] += rec_stress[i_intpnt*nval+iv] / n_intpnt;
         avg_strain[iv] += rec_strain[i_intpnt*nval+iv] / n_intpnt;
       }
     }
-    pri( "DBG rec: element", element );
-    pri( "DBG rec: n_intpnt", n_intpnt );
-    pri( "DBG rec: active NORMAL", db_active_index( ELEMENT_INTERFACE_INTPNT_STRESS, element, VERSION_NORMAL ) );
     ldum = n_intpnt * nval;
     // VERSION_NORMAL (t) is what print_database and the target checker read;
     // VERSION_NEW (t+dt) keeps the record current for the next step's loop.
@@ -573,6 +642,16 @@ void interface_element( long int element, long int name,
     free( rec_stress ); free( rec_strain ); free( rec_status );
     free( avg_stress ); free( avg_strain );
   }
+
+  // release per-IP work arrays
+  delete[] w_ip; delete[] du_ip;
+  delete[] strain_normal_ip; delete[] strain_eff_ip;
+  delete[] f_t_old_ip; delete[] f_t_ip;
+  delete[] f_t2_old_ip; delete[] f_t2_ip;
+  delete[] stiff_normal_ip; delete[] stress_normal_ip;
+  delete[] stress_shear_ip; delete[] stress_shear2_ip;
+  delete[] stiff_tang_ip; delete[] stiff_tang2_ip;
+  delete[] plastified_ip;
 
   // group_interface_groundflow_permeability: ground flow THROUGH the
   // interface. The interface connects the pore pressures on both sides;

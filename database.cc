@@ -2543,7 +2543,8 @@ void db_initialize( long int dof_type[], long int dof_label[] )
 
   strcpy(name[ELEMENT_INTERFACE_STRAIN_NORMAL],"element_interface_strain_normal");
   type[ELEMENT_INTERFACE_STRAIN_NORMAL] = DOUBLE_PRECISION;
-  data_length[ELEMENT_INTERFACE_STRAIN_NORMAL] = 1;
+  data_length[ELEMENT_INTERFACE_STRAIN_NORMAL] = 4;
+  fixed_length[ELEMENT_INTERFACE_STRAIN_NORMAL] = 0;
   version_all[ELEMENT_INTERFACE_STRAIN_NORMAL] = 1;
   print_only[ELEMENT_INTERFACE_STRAIN_NORMAL] = 1;
   data_class[ELEMENT_INTERFACE_STRAIN_NORMAL] = ELEMENT;
@@ -2551,7 +2552,8 @@ void db_initialize( long int dof_type[], long int dof_label[] )
 
   strcpy(name[ELEMENT_INTERFACE_FORCE_TANG],"element_interface_force_tang");
   type[ELEMENT_INTERFACE_FORCE_TANG] = DOUBLE_PRECISION;
-  data_length[ELEMENT_INTERFACE_FORCE_TANG] = 1;
+  data_length[ELEMENT_INTERFACE_FORCE_TANG] = 4;
+  fixed_length[ELEMENT_INTERFACE_FORCE_TANG] = 0;
   version_all[ELEMENT_INTERFACE_FORCE_TANG] = 1;
   print_only[ELEMENT_INTERFACE_FORCE_TANG] = 1;
   data_class[ELEMENT_INTERFACE_FORCE_TANG] = ELEMENT;
@@ -2559,7 +2561,8 @@ void db_initialize( long int dof_type[], long int dof_label[] )
 
   strcpy(name[ELEMENT_INTERFACE_FORCE_TANG2],"element_interface_force_tang2");
   type[ELEMENT_INTERFACE_FORCE_TANG2] = DOUBLE_PRECISION;
-  data_length[ELEMENT_INTERFACE_FORCE_TANG2] = 1;
+  data_length[ELEMENT_INTERFACE_FORCE_TANG2] = 4;
+  fixed_length[ELEMENT_INTERFACE_FORCE_TANG2] = 0;
   version_all[ELEMENT_INTERFACE_FORCE_TANG2] = 1;
   print_only[ELEMENT_INTERFACE_FORCE_TANG2] = 1;
   data_class[ELEMENT_INTERFACE_FORCE_TANG2] = ELEMENT;

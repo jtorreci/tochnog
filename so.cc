@@ -168,10 +168,14 @@ void solve( long int task )
 	/*----- lapack  ----*/  
 
         /*----- pardiso (Professional): NOT compiled in the GNU.
-          Accepted with a warning and a fallback to the honest Bi-CG
+          Accepted with a warning and a fallback to the iterative Bi-CG
           (the iterative default) so Professional inputs PARSE - the
           convergence corpus runs; PARDISO itself is the documented
-          partial of the solver family 6.1047 */  
+          partial of the solver family 6.1047.
+          (2026-08-30: after the interface per-pair assembly the Bi-CG
+          converges on the interface models that were previously
+          singular - interface1 solves to -6e-10 EXACT - so the band
+          solver is NOT needed for the interface family anymore.) */
 	if ( task==-MATRIX_PARDISO )
 	{
           static long int warned_pardiso = 0;
@@ -180,6 +184,7 @@ void solve( long int task )
               "- falling back to the iterative Bi-CG solver" );
             warned_pardiso = 1;
           }
+          bicg_solver = 1;
 	}
 
   array_set( control_eigen, 0, 2 );
@@ -323,6 +328,7 @@ void solve( long int task )
     }
   }
   if ( band>solve_nlocal ) band = solve_nlocal;
+
   if ( swit )
   {
     pri( "solve_nlocal", solve_nlocal );
