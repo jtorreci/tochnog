@@ -7502,6 +7502,14 @@ long int db_number( char str[] )
       return GROUNDFLOW_PHREATICLEVEL;
     else if ( !strcmp( str, "size_dev" ) )
       return SIZEDEV;
+    else if ( !strcmp( str, "total_pressure" ) )
+      return TOTAL;
+    else if ( !strcmp( str, "static_pressure" ) )
+      return STATIC;
+    else if ( !strcmp( str, "dynamic_pressure" ) )
+      return DYNAMIC;
+    else if ( !strcmp( str, "topres" ) )
+      return GROUNDFLOW_PRESSURE;
     else if ( !strcmp( str, "inertia_apply" ) )
       return OPTIONS_INERTIA;
     else if ( !strcmp( str, "control_inertia_apply" ) )
