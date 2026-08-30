@@ -47,7 +47,7 @@ long int
   residue=0, wave_scalar=0, wave_fscalar=0,
   find_local_softvar=0, find_nonlocal_weights=0, nonlocal_first_set=0;
 long int 
-  any_runtime=0, nder=1, npuknwn=0, nuknwn=0, npointmax=6, nprinc=0, dam_indx=-1,
+  any_runtime=0, nder=1, npuknwn=0, nuknwn=0, npointmax=9, nprinc=0, dam_indx=-1,
   dens_indx=-1, diff_indx=-1, dis_indx=-1, dis_rel_indx=-1, ener_indx=-1,
   epe_indx=-1, epi_indx=-1, epp_indx=-1, ept_indx=-1,
   hsepp_indx=-1,
