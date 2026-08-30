@@ -73,7 +73,6 @@ void interface_element( long int element, long int name,
     f_t_old=0., f_t=0., f_t2_old=0., f_t2=0., trial=0., trial2=0.,
     ft_mag=0., fn_total=0., force_gravity[MDIM];
   long int *nodes=NULL;
-
   swit = set_swit(element,-1,"interface_element");
   if ( swit ) pri( "In routine INTERFACE_ELEMENT." );
 

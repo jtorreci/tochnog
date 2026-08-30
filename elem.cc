@@ -123,7 +123,7 @@ void parallel_element_loop( void )
       element = next_of_loop[iloop];
       if ( element>max_element )
         break;
-      else if ( db_active_index( ELEMENT, element, VERSION_NORMAL ) )
+      if ( db_active_index( ELEMENT, element, VERSION_NORMAL ) )
         elem( element, ithread );
     }
     delete[] next_of_loop;
