@@ -30,7 +30,7 @@ Familias que fallan (las mismas que en el 2001):
 - petsc1 (necesita PETSC), ho_mech4 (materi_strain_plasti init)
 - feature gaps varios
 
-## Professional 363: 68 PASS (18.7%) = LA MEDIDA DE CONVERGENCIA (batches 1-4)
+## Professional 363: 68 PASS + post_element_force (53ba151) = 18.7% + la feature de secciones
 
 253 parse-errors = backlog exacto de keywords (missing_keywords.txt):
 print_apply x29, inertia_apply x14, -total_pressure x11,
