@@ -3746,7 +3746,7 @@ void db_initialize( long int dof_type[], long int dof_label[] )
 
   strcpy(name[GROUP_INTERFACE_DAMPING],"group_interface_damping");
   type[GROUP_INTERFACE_DAMPING] = DOUBLE_PRECISION;
-  data_length[GROUP_INTERFACE_DAMPING] = 2;
+  data_length[GROUP_INTERFACE_DAMPING] = 1;
   data_class[GROUP_INTERFACE_DAMPING] = GROUP_INTERFACE;
   strcpy(name[GROUP_INTERFACE_MATERI_PLASTI_MOHR_COUL_DIRECT],"group_interface_materi_plasti_mohr_coul_direct");
 

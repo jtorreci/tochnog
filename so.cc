@@ -172,10 +172,12 @@ void solve( long int task )
           (the iterative default) so Professional inputs PARSE - the
           convergence corpus runs; PARDISO itself is the documented
           partial of the solver family 6.1047.
-          (2026-08-30: after the interface per-pair assembly the Bi-CG
-          converges on the interface models that were previously
-          singular - interface1 solves to -6e-10 EXACT - so the band
-          solver is NOT needed for the interface family anymore.) */
+          (2026-08-30: the LAPACK band solver dgbsv silently returns 0
+          for some models (truss, some 2D interfaces) because its matrix
+          fill is incomplete, while it works for the 3D hex8 interfaces.
+          The Bi-CG is the honest general fallback; the 3D interface
+          family with kn >> E needs a real direct solver (SuperLU) -
+          documented as pending.) */
 	if ( task==-MATRIX_PARDISO )
 	{
           static long int warned_pardiso = 0;

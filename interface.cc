@@ -63,7 +63,9 @@ void interface_element( long int element, long int name,
 
 {
   long int idim=0, jdim=0, inol=0, jnol=0, knol=0, indx=0, swit=0, ldum=0, 
-    nnol=4, mc_active=0, plastified=0, memory=-UPDATED_LINEAR, idum[1];
+    nnol=4, ns1=2, mc_active=0, plastified=0, memory=-UPDATED_LINEAR, idum[1],
+    axisymmetric=-NO;
+  double radius_ip=1., damping_iface=0.;
   double dtime=0., kn=0., kt1=0., kt2=0., tmp=0., ddum[1],
     normal[MDIM], tangent[MDIM], tangent2[MDIM], du[MDIM],
     du_norm=0., du_tang=0., du_tang2=0., stress_normal=0., stress_shear=0.,
@@ -79,6 +81,13 @@ void interface_element( long int element, long int name,
 
   if ( !db_active_index( GROUP_INTERFACE, element_group, VERSION_NORMAL ) )
     return;
+
+  // axisymmetric (CONVERGENCE 2026-08-30, verified against Professional
+  // interface9): the interface is a ring of radius r; the nodal force and
+  // stiffness carry the physical weight 2*pi*r (the same pattern as
+  // area.cc / elem.cc). The radius is the radial coordinate of the pair.
+  db( GROUP_AXISYMMETRIC, element_group, &axisymmetric, ddum, ldum,
+    VERSION_NORMAL, GET_IF_EXISTS );
 
   db( DTIME, 0, idum, &dtime, ldum, VERSION_NEW, GET );
 
@@ -102,6 +111,16 @@ void interface_element( long int element, long int name,
       ddum3, length_stiff, VERSION_NORMAL, GET_IF_EXISTS );
   }
   kn = ddum3[0]; kt1 = ddum3[1]; kt2 = ddum3[2];
+  // group_interface_damping (interface12 of the corpus): viscous damping
+  // on the RELATIVE velocity between the sides, d*(v_side2 - v_side1).
+  // The RHS carries -d*(v2-v1) and the matrix adds d to the pair blocks
+  // (the damping force is proportional to velocity, not displacement, so
+  // it does NOT carry the dtime factor of the stiffness). The corpus test
+  // interface12: kn=1, kt=0.5, d=1, loads -1/6,-2/3,-1/6 -> all three
+  // top nodes reach disy=-0.5 exactly (the damping equalizes the nodal
+  // response of the quadratic interface).
+  db( GROUP_INTERFACE_DAMPING, element_group, idum, &damping_iface, ldum,
+    VERSION_NORMAL, GET_IF_EXISTS );
   db( GROUP_INTERFACE_MATERI_PLASTI_TENSION_DIRECT, element_group, idum,
     &tension_limit, ldum, VERSION_NORMAL, GET_IF_EXISTS );
   db( GROUP_INTERFACE_MATERI_RESIDUAL_STIFFNESS, element_group, idum,
@@ -168,6 +187,22 @@ void interface_element( long int element, long int name,
     array_normalize( tangent, ndim );
     normal[0] = -tangent[1];
     normal[1] =  tangent[0];
+    // orientation (CONVERGENCE 2026-08-30, verified against Professional
+    // .dbs of interface1/8/13/14/15): the Professional orients the 2D
+    // interface normal so that compression gives a NEGATIVE normal strain.
+    // The default normal (-t.y, t.x) matches when the first node of side 2
+    // has a HIGHER number than the first node of side 1 (interface1:
+    // nodes 1,2,3 | 4,5,6 -> normal (0,1); interface13/14/15: 1,2 | 3,4 ->
+    // (-0.447,0.894)/(0,1)). When the side-2 nodes are numbered LOWER
+    // (interface8 element 3 = quad4 5 6 3 4: side 1 = 5,6, side 2 = 3,4)
+    // the Professional flips the normal to (0,-1) - the strain of the
+    // compressed interface stays negative. This mirrors the mesh
+    // conversion orientation: the copied side keeps the numbering of the
+    // source block, so the relative numbering encodes the side order.
+    if ( nodes[ns1] < nodes[0] ) {
+      normal[0] = -normal[0];
+      normal[1] = -normal[1];
+    }
     array_set( tangent2, 0., MDIM );
   }
   else {
@@ -270,9 +305,20 @@ void interface_element( long int element, long int name,
   // Verified against the Professional .dbs of interface1: the applied
   // loads -1,-4,-1 on nodes 4,5,6 ARE the Lobatto weights times the
   // total 6 (the interface nodal force = weight_i * sigma_i).
-  long int ns1 = nnol/2;
+  ns1 = nnol/2;
   double *w_ip = get_new_dbl( ns1 );
-  if      ( ns1==1 ) { w_ip[0] = 1.; }
+  // Integration weights of the interface side:
+  //  2D: Lobatto along the side (quad6: 1/6,4/6,1/6; quad4: 1/2,1/2) -
+  //  verified against the Professional nodal loads of interface1
+  //  (-1,-4,-1 = weights x total 6).
+  //  3D: UNIFORM 1/ns1 (the converted quad4/prism6/hex8 interface is a
+  //  surface; the Professional distributes the face traction evenly -
+  //  interface_quad4_hex8: uniform 1/4 gives sigzz=-1.0 exactly, while
+  //  the 1D Lobatto weights would give -0.2475).
+  if ( ndim==3 ) {
+    for ( inol=0; inol<ns1; inol++ ) w_ip[inol] = 1./(double)ns1;
+  }
+  else if ( ns1==1 ) { w_ip[0] = 1.; }
   else if ( ns1==2 ) { w_ip[0] = 0.5; w_ip[1] = 0.5; }
   else if ( ns1==3 ) { w_ip[0] = 1./6.; w_ip[1] = 4./6.; w_ip[2] = 1./6.; }
   else               { w_ip[0] = 1./12.; w_ip[1] = 5./12.;
@@ -297,6 +343,7 @@ void interface_element( long int element, long int name,
   }
   // mean over the pairs (the value the whole element sees for the
   // records: for uniform loading all pairs carry the same du)
+  ns1 = nnol/2;
   du[0] = 0.; du[1] = 0.; du[2] = 0.;
   for ( inol=0; inol<ns1; inol++ )
     for ( idim=0; idim<ndim; idim++ )
@@ -367,6 +414,10 @@ void interface_element( long int element, long int name,
   double *f_t_ip     = get_new_dbl( ns1 );
   double *f_t2_old_ip = get_new_dbl( ns1 );
   double *f_t2_ip     = get_new_dbl( ns1 );
+  double *f_t_el_ip   = get_new_dbl( ns1 );
+  double *f_t2_el_ip  = get_new_dbl( ns1 );
+  double *rhs_shear_ip  = get_new_dbl( ns1 );
+  double *rhs_shear2_ip = get_new_dbl( ns1 );
   array_set( f_t_old_ip, 0., ns1 );
   array_set( f_t_ip, 0., ns1 );
   array_set( f_t2_old_ip, 0., ns1 );
@@ -417,6 +468,10 @@ void interface_element( long int element, long int name,
   double *stress_normal_ip = get_new_dbl( ns1 );
   double *stress_shear_ip  = get_new_dbl( ns1 );
   double *stress_shear2_ip = get_new_dbl( ns1 );
+  array_set( f_t_el_ip, 0., ns1 );
+  array_set( f_t2_el_ip, 0., ns1 );
+  array_set( rhs_shear_ip, 0., ns1 );
+  array_set( rhs_shear2_ip, 0., ns1 );
   double *stiff_tang_ip    = get_new_dbl( ns1 );
   double *stiff_tang2_ip   = get_new_dbl( ns1 );
   long int *plastified_ip  = get_new_int( ns1 );
@@ -444,19 +499,49 @@ void interface_element( long int element, long int name,
     // tangential force. CONVERGENCE (2026-08-30): F_t = kt*du_tang (not
     // kt*2*du_tang), and the plastic return is IMPLICIT with dilatancy
     // (see the block comments above; verified EXACT against interface15).
-    double trial_i  = f_t_old_ip[inol]  + kt1 * du_tang_i;
-    double trial2_i = f_t2_old_ip[inol] + kt2 * du_tang2_i;
+    if ( element==2 && f_t_old_ip[inol]==0. ) {
+      cout << "DBG first: inol=" << inol << " du_tang_i=" << du_tang_i << " trial=" << (f_t_old_ip[inol]+kt1*du_tang_i) << " max_fric=" << fabs(c+kn*strain_eff_ip[inol]*tan(phi)) << endl;
+    }
+    // CONVERGENCE (interface_patch): the Professional's trial is the
+    // ACCUMULATED tangential strain times the stiffness (kt*gamma_total),
+    // NOT the last-step increment f_old + kt*du_paso. With the incremental
+    // trial the plastic slip exhausts the relative displacement and the
+    // friction force stalls below the cohesion (f_t=-5.55 vs target -10).
+    // gamma_acum = 2*strain_shear_acum = sum(du_tang) over the steps;
+    // f_t_old IS kt*gamma_acum (the stored history is kt*du_tang_acum for
+    // the elastic case), so the accumulated trial is f_old + kt*du_tang_i
+    // ONLY when the interface never plastified; once plastic, f_old was
+    // clamped and the accumulation must continue from the elastic trial:
+    // we store the elastic trial in f_t_old when NOT plastic and keep the
+    // clamped value when plastic; the trial for the check uses the total
+    // gamma: gamma_total = f_t_old/kt1 + du_tang_i (elastic) or stays
+    // clamped (plastic with stiff_tang=0).
+    // CONVERGENCE (interface_patch, 2026-08-30): the Professional
+    // accumulates the ELASTIC trial (kt * gamma_total = kt * sum(du_tang)
+    // over all steps) and clamps the RESULTING force to the cohesion
+    // limit. The old model clamped f_old itself, so once plastic the
+    // relative displacement was exhausted and the friction force stalled
+    // below the cohesion (f_t = -5.55 vs target -10). Here the history
+    // ELEMENT_INTERFACE_FORCE_TANG holds the ELASTIC trial (grows every
+    // step, even when plastic) and f_t = clamp(trial). The RHS increment
+    // is f_t - clamp(f_old) (zero while sliding on the limit).
+    double trial_el_i  = f_t_old_ip[inol]  + kt1 * du_tang_i;
+    double trial_el2_i = f_t2_old_ip[inol] + kt2 * du_tang2_i;
     long int plast_i = 0;
+    double f_t_clamped_i = trial_el_i;
+    double f_t2_clamped_i = trial_el2_i;
     if ( mc_active ) {
       double strain_eff_mc_i = strain_eff_ip[inol];
-      double trial_mag = sqrt( trial_i*trial_i + trial2_i*trial2_i );
+      double trial_mag = sqrt( trial_el_i*trial_el_i + trial_el2_i*trial_el2_i );
       double max_fric_abs = fabs( c + kn * strain_eff_mc_i * tan( phi ) );
       if ( trial_mag > max_fric_abs && trial_mag>0. ) {
         double dgamma = ( trial_mag - max_fric_abs ) /
           ( kt1 + kn * tan( phi ) * tan( phi_flow ) );
         if ( dgamma<0. ) dgamma = 0.;
         double scale = ( trial_mag - kt1 * dgamma ) / trial_mag;
-        trial_i *= scale; trial2_i *= scale; plast_i = 1;
+        f_t_clamped_i  = trial_el_i  * scale;
+        f_t2_clamped_i = trial_el2_i * scale;
+        plast_i = 1;
         // dilatancy: plastic slip OPENS the interface (reduces the
         // accumulated compressive strain).
         double opening = -dgamma * tan( phi_flow );
@@ -464,14 +549,46 @@ void interface_element( long int element, long int name,
         stress_normal_ip[inol] += kn * opening;
       }
     }
-    f_t_ip[inol]  = trial_i;
-    f_t2_ip[inol] = trial2_i;
+    // f_t: the clamped force (record and next-step history base); the
+    // RHS increment below uses f_t - clamp(f_old)
+    f_t_ip[inol]  = f_t_clamped_i;
+    f_t2_ip[inol] = f_t2_clamped_i;
+    // the stored history is the ELASTIC trial (keeps accumulating)
+    // so the next step's trial continues from kt*gamma_total
+    f_t_el_ip[inol]  = trial_el_i;
+    f_t2_el_ip[inol] = trial_el2_i;
     plastified_ip[inol] = plast_i;
     stiff_tang_ip[inol]  = ( mc_active && plast_i ) ? 0. : kt1;
     stiff_tang2_ip[inol] = ( mc_active && plast_i ) ? 0. : kt2;
-    // the rhs carries the INCREMENT F_t - F_t,old
-    stress_shear_ip[inol]  = f_t_ip[inol]  - f_t_old_ip[inol];
-    stress_shear2_ip[inol] = f_t2_ip[inol] - f_t2_old_ip[inol];
+    // the RHS carries the INCREMENT f_t - clamp(f_old): kt*du_tang when
+    // elastic, ~0 while sliding on the yield surface.
+    double f_old_clamped = f_t_old_ip[inol];
+    if ( mc_active ) {
+      double f_old_mag = fabs( f_old_clamped );
+      double max_fric_old = fabs( c + kn * strain_eff_ip[inol] * tan( phi ) );
+      if ( f_old_mag > max_fric_old ) f_old_clamped = ( f_old_clamped>=0. ) ? max_fric_old : -max_fric_old;
+    }
+    rhs_shear_ip[inol]  = f_t_ip[inol]  - f_old_clamped;
+    {
+      double f_old2_clamped = f_t2_old_ip[inol];
+      if ( mc_active ) {
+        double f_old2_mag = fabs( f_old2_clamped );
+        double max_fric_old2 = fabs( c + kn * strain_eff_ip[inol] * tan( phi ) );
+        if ( f_old2_mag > max_fric_old2 ) f_old2_clamped = ( f_old2_clamped>=0. ) ? max_fric_old2 : -max_fric_old2;
+      }
+      rhs_shear2_ip[inol] = f_t2_ip[inol] - f_old2_clamped;
+    }
+    plastified_ip[inol] = plast_i;
+    stiff_tang_ip[inol]  = ( mc_active && plast_i ) ? 0. : kt1;
+    stiff_tang2_ip[inol] = ( mc_active && plast_i ) ? 0. : kt2;
+    // RECORD semantics (verified against Professional .dbs):
+    //  - WITHOUT Mohr-Coulomb: stress,shear = kt*du_tang of the LAST
+    //    step (incremental: interface9 -0.159, interface14 5e3);
+    //  - WITH Mohr-Coulomb: stress,shear = the TOTAL accumulated
+    //    friction force clamped to the yield limit (interface_patch
+    //    -10, interface15 -1730 = the single-step trial).
+    stress_shear_ip[inol]  = ( mc_active ) ? f_t_ip[inol] : kt1 * du_tang_i;
+    stress_shear2_ip[inol] = ( mc_active ) ? f_t2_ip[inol] : kt2 * du_tang2_i;
   }
 
   // mean over the pairs (for the swit debug and legacy scalar view)
@@ -517,11 +634,23 @@ void interface_element( long int element, long int name,
   for ( inol=0; inol<ns1; inol++ ) {
     double w_i = w_ip[inol];
     double s_normal_i = stress_normal_ip[inol];
-    double s_shear_i  = stress_shear_ip[inol];
-    double s_shear2_i = stress_shear2_ip[inol];
+    double s_shear_i  = rhs_shear_ip[inol];
+    double s_shear2_i = rhs_shear2_ip[inol];
     double stiff_n_i = stiff_normal_ip[inol];
     double stiff_t_i = stiff_tang_ip[inol];
     double stiff_t2_i= stiff_tang2_ip[inol];
+    // axisymmetric: the interface is a ring; the pair force/stiffness
+    // carry the circumference weight 2*pi*r (radius = radial coord of
+    // the side-1 node, pattern area.cc)
+    double w_ax = w_i;
+    if ( axisymmetric==-YES ) {
+      double *cr = NULL;
+      if ( memory==-TOTAL_LINEAR )
+        cr = db_dbl( NODE_START_REFINED, nodes[inol], VERSION_NORMAL );
+      else
+        cr = &coord[inol*ndim];
+      w_ax *= 2. * PIRAD * cr[0];
+    }
     for ( idim=0; idim<ndim; idim++ ) {
       double dirn = normal[idim], dirt = tangent[idim], dirt2 = tangent2[idim];
       // side 1 node (negative sign), side 2 node (positive sign)
@@ -529,14 +658,24 @@ void interface_element( long int element, long int name,
         long int inod = inol + ( jnol ? ns1 : 0 );
         double sign = ( jnol ) ? +1. : -1.;
         indx = inod*npuknwn + (vel_indx+idim*nder)/nder;
-        tmp = -sign * w_i * ( s_normal_i*dirn + s_shear_i*dirt +
+        tmp = -sign * w_ax * ( s_normal_i*dirn + s_shear_i*dirt +
           s_shear2_i*dirt2 );
+        // damping: -d*(v_side2 - v_side1) on the relative velocity
+        // (v = du/dtime), assembled like the stiffness but WITHOUT the
+        // dtime factor (the damping force is proportional to velocity)
+        if ( damping_iface>0. ) {
+          double v_rel = du_ip[inol*MDIM+idim] / dtime;
+          tmp += -sign * w_ax * damping_iface * v_rel;
+        }
         element_rhside[indx] += tmp;
         for ( jdim=0; jdim<ndim; jdim++ ) {
           double jdirn = normal[jdim], jdirt = tangent[jdim],
             jdirt2 = tangent2[jdim];
-          double kkk = sign * w_i * ( stiff_n_i*dirn*jdirn +
+          double kkk = sign * w_ax * ( stiff_n_i*dirn*jdirn +
             stiff_t_i*dirt*jdirt + stiff_t2_i*dirt2*jdirt2 );
+          double kkk_damp = 0.;
+          if ( damping_iface>0. && jdim==idim )
+            kkk_damp = sign * w_ax * damping_iface;
           // jnode: same pair's side-1 or side-2 node
           for ( knol=0; knol<2; knol++ ) {
             long int jnod = inol + ( knol ? ns1 : 0 );
@@ -545,9 +684,10 @@ void interface_element( long int element, long int name,
               ((vel_indx+idim*nder)/nder)*nnol*npuknwn +
               jnod*npuknwn + (vel_indx+jdim*nder)/nder;
             element_matrix[jndx] += kkk * jsign * dtime;
+            element_matrix[jndx] += kkk_damp * jsign;
             if ( jnod==inod && jdim==idim )
               element_lhside[inod*npuknwn+(vel_indx+idim*nder)/nder] +=
-                kkk * jsign * dtime;
+                kkk * jsign * dtime + kkk_damp * jsign;
           }
         }
       }
@@ -560,10 +700,13 @@ void interface_element( long int element, long int name,
     long int ln = ns1;
     db( ELEMENT_INTERFACE_STRAIN_NORMAL, element, idum, strain_normal_ip,
       ln, VERSION_NEW, PUT );
-    db( ELEMENT_INTERFACE_FORCE_TANG, element, idum, f_t_ip,
+    // the history holds the ELASTIC trial (kt*gamma_total) so the
+    // accumulated tangential strain keeps growing after plastic slip
+    // (the clamped force is rebuilt from it every step)
+    db( ELEMENT_INTERFACE_FORCE_TANG, element, idum, f_t_el_ip,
       ln, VERSION_NEW, PUT );
     if ( ndim==3 )
-      db( ELEMENT_INTERFACE_FORCE_TANG2, element, idum, f_t2_ip,
+      db( ELEMENT_INTERFACE_FORCE_TANG2, element, idum, f_t2_el_ip,
         ln, VERSION_NEW, PUT );
   }
 
