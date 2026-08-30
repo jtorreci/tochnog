@@ -2075,3 +2075,24 @@ y avance mejor.
   los que salgan), revalidación con el arness, actualización del
   paquete shared/ → entonces el correo a Fernando Lorenzo y Osman
   Buyukusik.
+
+## Sprint 13 lote 5 — interfaz: records de salida + fixes de convergencia (2026-08-30)
+
+| Commit | Fecha | Estado |
+|--------|-------|--------|
+| `260e12e` feat(interface): records de salida Professional + fix F_t=kt·du_tang + MC implicito | 2026-08-30 | **code**: 3 fixes verificados contra .dbs del Professional |
+
+**Hallazgo de convergencia** (deducido de los .dbs del Professional con dump python):
+1. **F_t = kt·du_tang** (NO kt·2·du_tang). El manual 6.631: stress,shear = kt·gamma = 2·kt·strain,shear donde strain,shear = du_tang/2 → stress = kt·du_tang. Nuestro factor 2 desde Carril A Fase 1 DUPLICABA la rigidez tangencial (interface14: kt=5e3, du=1 → Professional τ=5e3, nosotros 1e4).
+2. **Return mapping MC implícito con dilatancia**: dgamma = (|trial|−max_fric)/(kt + kn·tanφ·tanψ); f_t = trial − kt·dgamma; dilatancia CIERRA (strain_eff += −dgamma·tanψ, compresión positiva). Validado EXACTO con interface15: dgamma=0.8537, f_t=731.63, σn=−1730.48 (τ/σn = tan(0.4) = 0.42279 EXACTO).
+3. **Records de salida** (antes registrados pero NUNCA escritos): `element_interface_intpnt_stress`/`_intpnt_strain` (n_intpnt = nnol/2 IPs: bar2=1, quad4=2, quad6=3, prism6=3, hex8=4; valores del PASO actual: strain,normal=du_norm, strain,shear=du_tang/2, stress,normal=kn·strain_eff, stress,shear=F_t−F_old), `_stress_average`/`_strain_average` (promedio), `_intpnt_materi_tension_status` (−opened/−closed, enums OPENED/CLOSED nuevos). Pre-alocación en top.cc (db_allocate NO puede correr en el bucle paralelo) + data_length/fixed_length en database.cc.
+
+**GOTCHAS nuevos** (manual-developer):
+- `fixed_length[MDAT]` default = **1** (database.cc:61) — records de longitud variable necesitan `fixed_length[rec]=0` o el PUT falla "Length too small".
+- `db_allocate` NO puede alocar DENTRO del bucle paralelo de elementos — pre-alocar en top.cc con el patrón `ELEMENT_INTERFACE_STRAIN_NORMAL`.
+- Los records de salida se escriben en VERSION_NORMAL Y VERSION_NEW (el chequeo de target y print_database leen NORMAL).
+- El .dbs del Professional se puede volcar con python (buscar el nombre del record + slice) para deducir la semántica EXACTA.
+
+**Verificación**: suite 16/16 OK; corpus Professional 77→81 PASS (21.2%→22.3%): interface14 rc=0 y interface15 rc=0 con targets EXACTOS (MC + elástico tangencial).
+
+**Gap documentado**: interface1/8 (y otros con `solver -matrix_pardiso` + nodos coincidentes espesor-0) no convergen con el Bi-CG del GNU — requieren solver directo (PARDISO/SuperLU). El GNU 2014 tiene so_suplu.c sin compilar. Este es el siguiente bloqueo grande para la familia interface_*.
