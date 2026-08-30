@@ -743,9 +743,29 @@ void area( long int element, long int name,
               db( force_edge_companion(type[itype],2), ind, side_sel, ddum,
                 length_side, VERSION_NORMAL, GET );
               long int ok_side = 0;
+              // element_side i  side_0 element_1 side_1...:
+              // BOTH the element AND the (1-based local) side must
+              // match for the side to be selected
               for ( i=0; i+1<length_side; i+=2 )
-                if ( side_sel[i]==element ) ok_side = 1;
+                if ( side_sel[i]==element &&
+                     side_sel[i+1]==iside+1 ) ok_side = 1;
               if ( !ok_side ) continue;
+            }
+            // element_node (Professional manual 6.1072): node-level
+            // restriction by (element, local node indices)
+            if ( force_edge_companion(type[itype],4)>=0 &&
+                 db_active_index( force_edge_companion(type[itype],4),
+                     ind, VERSION_NORMAL ) ) {
+              long int en[DATA_ITEM_SIZE], length_en=0;
+              db( force_edge_companion(type[itype],4), ind, en, ddum,
+                length_en, VERSION_NORMAL, GET );
+              long int ok_en = 0;
+              // element_node i en_0 en_1...:
+              for ( i=0; i+1<length_en; i+=2 )
+                if ( en[i]==element &&
+                     array_member( &en[i+1], inol, length_en-i-1, ldum ) )
+                  ok_en = 1;
+              if ( !ok_en ) use_it = 0;
             }
           }
           if ( conv_rad_is_master(type[itype]) ) {
@@ -1095,6 +1115,192 @@ void area( long int element, long int name,
                       // the consistent nodal support force (Lobatto:
                       // the side nodes carry the line/area load),
                       // all terms times the time factor
+                      // -- pre-loop: compute the RAW support reaction
+                      // and tangential vector and apply the PLASTIC
+                      // caps before the per-direction loop. My sign:
+                      // S = k*u_n + c*v_n + d*a_n + f0 (POSITIVE =
+                      // compression, manual convention 6.1079); fn
+                      // = -S is the NORMAL REACTION (positive = pushes
+                      // the element OUT of the support).
+                      double fn_raw = -( fac_k*values[0]*un
+                        + cn*vn + dn*an + f0 );
+                      double ft_raw_local[MDIM];
+                      double ft_mag2_local = 0.;
+                      // the TANGENTIAL components use the tangential
+                      // displacement u_t = u - (u.n)n, velocity
+                      // v_t = v - (v.n)n and acceleration a_t, NOT the
+                      // full vectors (the normal part is carried by fn)
+                      for ( long int idim_p = 0; idim_p<ndim; idim_p++ ) {
+                        double ut_p =
+                          new_dof[inol*nuknwn+dis_indx+idim_p*nder]
+                          - un*normal[idim_p];
+                        double vt_p =
+                          new_dof[inol*nuknwn+vel_indx+idim_p*nder]
+                          - vn*normal[idim_p];
+                        double at_p =
+                          ( new_dof[inol*nuknwn+vel_indx+idim_p*nder]
+                          - old_dof_node[vel_indx+idim_p*nder] )
+                          /dtime - an*normal[idim_p];
+                        ft_raw_local[idim_p] = -( fac_k*values[1]*ut_p
+                          + ct*vt_p + dt_*at_p );
+                        ft_mag2_local += ft_raw_local[idim_p]
+                          *ft_raw_local[idim_p];
+                      }
+                      // the PLASTICITY records (manual 6.1079-6.1082)
+                      long int pt_gap = 0, has_tension_max = 0,
+                        has_comp_min = 0, has_tang_fac = 0,
+                        has_friction = 0;
+                      double comp_min_mag = 1.e300, tang_factor = 1.e300,
+                        tension_max = -1.e300, cohesion = 0.,
+                        friction_mu = 0.;
+                      if ( db_active_index(
+                           SUPPORT_EDGE_NORMAL_PLASTI_TENSION, ind,
+                           VERSION_NORMAL ) ) {
+                        long int sw_pt = 0;
+                        long int *ptr2 = db_int(
+                          SUPPORT_EDGE_NORMAL_PLASTI_TENSION, ind,
+                          VERSION_NORMAL );
+                        sw_pt = *ptr2;
+                        {
+                        const char *sw_str = (const char *)ptr2;
+                        // the parser stores -yes/-no as ival = -YES (the
+                        // NEGATIVE of the YES enum ordinal); check the
+                        // matching pattern
+                        if ( sw_pt == -YES ) pt_gap = 1;
+                        }
+                      }
+                      if ( db_active_index(
+                           SUPPORT_EDGE_NORMAL_PLASTI_TENSION_DOUBLE, ind,
+                           VERSION_NORMAL ) ) {
+                        long int need = 1;
+                        double ptmax_v = 0.;
+                        if ( db_active_index(
+                             SUPPORT_EDGE_NORMAL_PLASTI_TENSION_DOUBLE,
+                             ind, VERSION_NEW ) ) {
+                          double *ptr2 = db_dbl(
+                            SUPPORT_EDGE_NORMAL_PLASTI_TENSION_DOUBLE,
+                            ind, VERSION_NEW );
+                          ptmax_v = *ptr2;
+                        }
+                        else {
+                          db( SUPPORT_EDGE_NORMAL_PLASTI_TENSION_DOUBLE,
+                            ind, idum, &ptmax_v, ldum,
+                            VERSION_NORMAL, GET );
+                        }
+                        (void)need;
+                        tension_max = ptmax_v;
+                        has_tension_max = 1;
+                      }
+                      if ( db_active_index(
+                           SUPPORT_EDGE_NORMAL_PLASTI_COMPRESSION, ind,
+                           VERSION_NORMAL ) ) {
+                        double pc[2];
+                        db( SUPPORT_EDGE_NORMAL_PLASTI_COMPRESSION, ind,
+                          idum, pc, ldum, VERSION_NORMAL, GET );
+                        comp_min_mag = scalar_dabs( pc[0] );
+                        has_comp_min = 1;
+                        tang_factor = pc[1];
+                        has_tang_fac = 1;
+                      }
+                      if ( db_active_index(
+                           SUPPORT_EDGE_NORMAL_PLASTI_FRICTION, ind,
+                           VERSION_NORMAL ) ) {
+                        double pf[2];
+                        db( SUPPORT_EDGE_NORMAL_PLASTI_FRICTION, ind,
+                          idum, pf, ldum, VERSION_NORMAL, GET );
+                        cohesion = pf[0];
+                        friction_mu = pf[1];
+                        has_friction = 1;
+                      }
+                      // apply the PLASTICITY caps (manual 6.1079-6.1082)
+                      double S = -fn_raw;
+                      long int side_opened = 0;
+                      if ( has_tension_max ) {
+                        // tension cap (manual 6.1082): when the
+                        // tension exceeded, S is clipped and the
+                        // tangential force is zeroed
+                        if ( S<-tension_max ) S = -tension_max;
+                      }
+                      if ( has_comp_min ) {
+                        // compression floor: the compression cannot
+                        // exceed the floor (manual 6.1079)
+                        if ( S>comp_min_mag ) S = comp_min_mag;
+                      }
+                      if ( pt_gap && S<0. ) {
+                        // tension gap (manual 6.1081): when the support
+                        // is in tension, all forces are zero
+                        S = 0.; ft_mag2_local = 0.;
+                        for ( long int idim_q = 0;
+                          idim_q<ndim; idim_q++ )
+                          ft_raw_local[idim_q] = 0.;
+                        side_opened = 1;
+                      }
+                      if ( has_tension_max && S==-tension_max ) {
+                        // tension cap zeroes the tangential force
+                        for ( long int idim_r = 0; idim_r<ndim;
+                          idim_r++ )
+                          ft_raw_local[idim_r] = 0.;
+                        ft_mag2_local = 0.;
+                      }
+                      // the tangential magnitude caps (manual 6.1079
+                      // compression tangential factor and 6.1080
+                      // Coulomb friction): the smallest of the two
+                      // governs
+                      if ( has_tang_fac || has_friction ) {
+                        double ft_cap = 1.e300;
+                        if ( has_tang_fac )
+                          ft_cap = tang_factor*scalar_dabs(S);
+                        if ( has_friction ) {
+                          double f_lim = cohesion
+                            + friction_mu*scalar_dabs(S);
+                          if ( f_lim<ft_cap ) ft_cap = f_lim;
+                        }
+                        if ( ft_mag2_local>ft_cap*ft_cap &&
+                             ft_mag2_local>0. ) {
+                          double scale = ft_cap/sqrt(ft_mag2_local);
+                          for ( long int idim_s = 0; idim_s<ndim;
+                            idim_s++ )
+                            ft_raw_local[idim_s] *= scale;
+                        }
+                      }
+                      // the final capped values: fn (from S) and
+                      // ft_raw_local[idim] for each direction
+                      double fn = -S;
+                      // now the per-direction loop builds fidim from
+                      // the CAPPED fn and the CAPPED ft_raw_local
+                      // element-level restrictions (support_edge_normal_
+                      // element_side + _element_node, same index)
+                      {
+                        long int ok_side_l = 1, ok_node_l = 1;
+                        if ( support_edge_companion(2)>=0 &&
+                             db_active_index(
+                                 support_edge_companion(2),
+                                 ind, VERSION_NORMAL ) ) {
+                          long int side_sel[DATA_ITEM_SIZE],
+                            length_side=0;
+                          db( support_edge_companion(2), ind, side_sel, ddum,
+                            length_side, VERSION_NORMAL, GET );
+                          ok_side_l = 0;
+                          for ( long int ii=0; ii+1<length_side; ii+=2 )
+                            if ( side_sel[ii]==element &&
+                                 side_sel[ii+1]==iside+1 ) ok_side_l = 1;
+                        }
+                        if ( support_edge_companion(4)>=0 &&
+                             db_active_index(
+                                 support_edge_companion(4),
+                                 ind, VERSION_NORMAL ) ) {
+                          long int en[DATA_ITEM_SIZE], length_en=0;
+                          db( support_edge_companion(4), ind, en, ddum,
+                            length_en, VERSION_NORMAL, GET );
+                          ok_node_l = 0;
+                          for ( long int ii=0; ii+1<length_en; ii+=2 )
+                            if ( en[ii]==element &&
+                                 array_member( &en[ii+1], inol,
+                                   length_en-ii-1, ldum ) )
+                              ok_node_l = 1;
+                        }
+                        if ( !ok_side_l || !ok_node_l ) continue;
+                      }
                       for ( idim=0; idim<ndim; idim++ ) {
                         double ut_idim =
                           new_dof[inol*nuknwn+dis_indx+idim*nder]
@@ -1106,16 +1312,45 @@ void area( long int element, long int name,
                           ( new_dof[inol*nuknwn+vel_indx+idim*nder]
                           - old_dof_node[vel_indx+idim*nder] )
                           /dtime - an*normal[idim];
-                        double fn = -( fac_k*values[0]*un
-                          + cn*vn + dn*an + f0 );
+                        // fidim uses the CAPPED fn and ft_raw_local
+                        // (the gap/tension-cap branch zeros ft_raw_local
+                        // and the per-side prefactor ft_raw_local is
+                        // the only thing the tang force depends on)
+
                         double fidim = fn*normal[idim]
-                          -( fac_k*values[1]*ut_idim + ct*vt_idim
-                             + dt_*at_idim );
+                          + ft_raw_local[idim];
+
                         sup_nodal[idim] =
                           load * weight[inol_side] * area_size * fidim;
                         ipuknwn = vel_indx/nder + idim;
                         element_rhside[inol*npuknwn+ipuknwn]
                           += sup_nodal[idim];
+                      }
+                      // the output record
+                      // node_support_edge_normal_plasti_tension_status
+                      // (manual 6.895): 0 = closed (no gap), 1 =
+                      // opened (tension gap fired at this side).
+                      // Same per-sweep re-zeroing as the force record
+                      // (accumulated per node with OR semantics).
+                      if ( db_active_index(
+                           NODE_SUPPORT_EDGE_NORMAL_PLASTI_TENSION_STATUS,
+                           inod, VERSION_NORMAL ) ) {
+                        long int acc_t = 0;
+                        if ( db_active_index(
+                             NODE_SUPPORT_EDGE_NORMAL_PLASTI_TENSION_STATUS,
+                             inod, VERSION_NEW ) ) {
+                          long int *ptr = db_int(
+                            NODE_SUPPORT_EDGE_NORMAL_PLASTI_TENSION_STATUS,
+                            inod, VERSION_NEW );
+                          acc_t = *ptr;
+                        }
+                        if ( side_opened>0.5 ) acc_t = 1;
+                        {
+                          long int *ptr = db_int(
+                            NODE_SUPPORT_EDGE_NORMAL_PLASTI_TENSION_STATUS,
+                            inod, VERSION_NEW );
+                          *ptr = acc_t;
+                        }
                       }
                       // the consistent support stiffness in the
                       // MATRIX (and the diagonal element_lhside):
@@ -1131,8 +1366,24 @@ void area( long int element, long int name,
                       // the same for the plastic case). Same dtime
                       // scaling as the element stiffness (materi.cc:
                       // volume*dtime*stiffness).
+                      // support_edge_normal_plasti_residual_stiffness
+                      // (manual 6.1083): a fraction factor in [0,1] of the
+                      // original elastic stiffness is added to the matrix
+                      // for stability. Default factor=1 means NO extra
+                      // stiffness beyond the elastic baseline.
                       {
-                        double gxi[3], gw[3];
+                        double fac_res = 0.;
+                        if ( db_active_index(
+                             SUPPORT_EDGE_NORMAL_PLASTI_RESIDUAL_STIFFNESS,
+                             ind, VERSION_NORMAL ) ) {
+                          double res_v = 0.;
+                          db( SUPPORT_EDGE_NORMAL_PLASTI_RESIDUAL_STIFFNESS,
+                            ind, idum, &res_v, ldum,
+                            VERSION_NORMAL, GET );
+                          fac_res = res_v;
+                        }
+                        {
+                          double gxi[3], gw[3];
                         long int ngs = ( nnol_side<3 ? 2 : 3 ), igs=0,
                           jgs=0, inol_i=0, inol_j=0, ia=0, ib=0;
                         long int n1 = ( ndim==2 ? nnol_side
@@ -1195,6 +1446,23 @@ void area( long int element, long int name,
                                   + vel_indx/nder + ib;
                                 element_matrix[indxi*nnol*npuknwn+indxj]
                                   += kterm;
+                                  // support_edge_normal_plasti_residual_
+                                  // stiffness (manual 6.1083): a fraction
+                                  // factor in [0,1] of the original
+                                  // elastic stiffness is added to the matrix
+                                  // for stability; default 1 (no extra
+                                  // stiffness beyond the elastic baseline).
+                                  if ( fac_res>0. ) {
+                                    double rterm = dtime*fac_res*
+                                      ( values[0]*normal[ia]*normal[ib]
+                                       + values[1]*((ia==ib?1.:0.)
+                                         - normal[ia]*normal[ib]) )*
+                                      cij[inol_i*nnol_side+inol_j];
+                                    element_matrix[indxi*nnol*npuknwn+indxj]
+                                      += rterm;
+                                    if ( inol_i==inol_j && ia==ib )
+                                      element_lhside[indxi] += rterm;
+                                  }
                                 if ( inol_i==inol_j && ia==ib )
                                   element_lhside[indxi] += kterm;
                               }
@@ -1223,6 +1491,7 @@ void area( long int element, long int name,
                           acc[idim] += sup_nodal[idim];
                         db( NODE_SUPPORT_EDGE_NORMAL_FORCE, inod,
                           idum, acc, ndim, VERSION_NEW, PUT );
+                      }
                       }
                     }
                   }
