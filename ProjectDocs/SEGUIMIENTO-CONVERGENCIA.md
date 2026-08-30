@@ -2096,3 +2096,15 @@ y avance mejor.
 **Verificación**: suite 16/16 OK; corpus Professional 77→81 PASS (21.2%→22.3%): interface14 rc=0 y interface15 rc=0 con targets EXACTOS (MC + elástico tangencial).
 
 **Gap documentado**: interface1/8 (y otros con `solver -matrix_pardiso` + nodos coincidentes espesor-0) no convergen con el Bi-CG del GNU — requieren solver directo (PARDISO/SuperLU). El GNU 2014 tiene so_suplu.c sin compilar. Este es el siguiente bloqueo grande para la familia interface_*.
+
+### Refactor por-pares Lobatto + fix fallback pardiso (bf74f28, 40d640d)
+
+**Hallazgo clave**: el ensamblaje de interfaz del Professional es POR PUNTO DE INTEGRACIÓN: cada par de nodos enfrentados (i, i+ns1) es un resorte independiente con su propio desplazamiento relativo y peso Lobatto (quad6: 1/6,4/6,1/6; quad4: 1/2,1/2; bar2: 1; prism6: 1/6,4/6,1/6; hex8: 1/12,5/12,5/12,1/12). El viejo modelo (media del lado, todos-contra-todos) producía una matriz de RANGO 1 por lado → SINGULAR para ns1>1 (interface1 no convergía ni con Bi-CG ni con band). Los pesos se deducen de las cargas nodales del Professional (interface1: −1,−4,−1 = (1/6,4/6,1/6)·(−6)).
+
+**Fix fallback -matrix_pardiso**: en so.cc `bicg_solver=1` SOLO se activa con `task==-MATRIX_ITERATIVE_BICG`; `-matrix_pardiso` sin fallback explícito dejaba NINGÚN solver → solución 0 silenciosa. Añadido `bicg_solver=1` al branch pardiso. Con la matriz por-pares, el Bi-CG CONVERGE (interface1: node_dof 4/5/6 = −6e-10 EXACTO vs Professional).
+
+**GOTCHA**: el refactor por-pares eliminó accidentalmente la lectura de `group_interface_materi_plasti_mohr_coul_direct` (mc_active/phi/c/phi_flow) — restaurada en 40d640d. interface15 vuelve a rc=0 EXACTO (dgamma=0.8537, f_t=731.63, σn=−1730.48).
+
+**Estado familia interfaz**: interface1/7/14/15 rc=0 (elástico carga, gap+reset, MC con dilatancia implícita). Pendientes: interface2 (gap multi-paso: el strain record refleja el cierre del gap, no el incremental), interface8 (signo de orientación del elemento degenerado quad4 5 6 3 4), interface9 (tangencial), interface13 (el propio Professional escribe 0.671 en el .dbs pero su target espera 1.118 — bug del test del corpus), interface12/patch (3D).
+
+**GOTCHA del LAPACK band solver del GNU**: con el truss no llena la matriz (node_lhside 0) — no confiar en él para elementos que usan solo NODE_LHSIDE; el Bi-CG es el camino.
