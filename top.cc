@@ -795,10 +795,25 @@ void step_start( long int task, long int options_solver[], double dtime, double 
       db_allocate( ELEMENT_SPRING_DIRECTION, max_element, VERSION_NEW, MINIMAL );
       db_allocate( ELEMENT_SPRING_FORCE, max_element, VERSION_NEW, MINIMAL );
     }
+    pri( "DBG top: any_interface", any_interface );
     if ( any_interface ) {
       db_allocate( ELEMENT_INTERFACE_STRAIN_NORMAL, max_element, VERSION_NEW, MINIMAL );
       db_allocate( ELEMENT_INTERFACE_FORCE_TANG, max_element, VERSION_NEW, MINIMAL );
       db_allocate( ELEMENT_INTERFACE_FORCE_TANG2, max_element, VERSION_NEW, MINIMAL );
+      // output records (Professional compatibility): allocated BEFORE the
+      // parallel element loop (db_allocate cannot run inside it), both
+      // versions so print_database / target checker (VERSION_NORMAL) and
+      // the next step's loop (VERSION_NEW) can read them.
+      db_allocate( ELEMENT_INTERFACE_INTPNT_STRESS, max_element, VERSION_NORMAL, MINIMAL );
+      db_allocate( ELEMENT_INTERFACE_INTPNT_STRESS, max_element, VERSION_NEW, MINIMAL );
+      db_allocate( ELEMENT_INTERFACE_INTPNT_STRAIN, max_element, VERSION_NORMAL, MINIMAL );
+      db_allocate( ELEMENT_INTERFACE_INTPNT_STRAIN, max_element, VERSION_NEW, MINIMAL );
+      db_allocate( ELEMENT_INTERFACE_STRESS_AVERAGE, max_element, VERSION_NORMAL, MINIMAL );
+      db_allocate( ELEMENT_INTERFACE_STRESS_AVERAGE, max_element, VERSION_NEW, MINIMAL );
+      db_allocate( ELEMENT_INTERFACE_STRAIN_AVERAGE, max_element, VERSION_NORMAL, MINIMAL );
+      db_allocate( ELEMENT_INTERFACE_STRAIN_AVERAGE, max_element, VERSION_NEW, MINIMAL );
+      db_allocate( ELEMENT_INTERFACE_INTPNT_MATERI_TENSION_STATUS, max_element, VERSION_NORMAL, MINIMAL );
+      db_allocate( ELEMENT_INTERFACE_INTPNT_MATERI_TENSION_STATUS, max_element, VERSION_NEW, MINIMAL );
     }
     if ( any_truss ) {
       db_allocate( ELEMENT_TRUSS_DIRECTION, max_element, VERSION_NEW, MINIMAL );

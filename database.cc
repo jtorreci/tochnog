@@ -3697,10 +3697,50 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   // Sprint 13: the interface element print items + damping (the
   // Professional's interface tests)
   strcpy(name[ELEMENT_INTERFACE_STRESS_AVERAGE],"element_interface_stress_average");
+  type[ELEMENT_INTERFACE_STRESS_AVERAGE] = DOUBLE_PRECISION;
+  data_length[ELEMENT_INTERFACE_STRESS_AVERAGE] = 3;
+  version_all[ELEMENT_INTERFACE_STRESS_AVERAGE] = 1;
+  print_only[ELEMENT_INTERFACE_STRESS_AVERAGE] = 1;
+  data_class[ELEMENT_INTERFACE_STRESS_AVERAGE] = ELEMENT;
+  data_required[ELEMENT_INTERFACE_STRESS_AVERAGE] = ELEMENT;
+  fixed_length[ELEMENT_INTERFACE_STRESS_AVERAGE] = 0;
+
   strcpy(name[ELEMENT_INTERFACE_INTPNT_STRESS],"element_interface_intpnt_stress");
+  type[ELEMENT_INTERFACE_INTPNT_STRESS] = DOUBLE_PRECISION;
+  data_length[ELEMENT_INTERFACE_INTPNT_STRESS] = 12;
+  version_all[ELEMENT_INTERFACE_INTPNT_STRESS] = 1;
+  print_only[ELEMENT_INTERFACE_INTPNT_STRESS] = 1;
+  data_class[ELEMENT_INTERFACE_INTPNT_STRESS] = ELEMENT;
+  data_required[ELEMENT_INTERFACE_INTPNT_STRESS] = ELEMENT;
+  fixed_length[ELEMENT_INTERFACE_INTPNT_STRESS] = 0;
+
   strcpy(name[ELEMENT_INTERFACE_STRAIN_AVERAGE],"element_interface_strain_average");
+  type[ELEMENT_INTERFACE_STRAIN_AVERAGE] = DOUBLE_PRECISION;
+  data_length[ELEMENT_INTERFACE_STRAIN_AVERAGE] = 3;
+  version_all[ELEMENT_INTERFACE_STRAIN_AVERAGE] = 1;
+  print_only[ELEMENT_INTERFACE_STRAIN_AVERAGE] = 1;
+  data_class[ELEMENT_INTERFACE_STRAIN_AVERAGE] = ELEMENT;
+  data_required[ELEMENT_INTERFACE_STRAIN_AVERAGE] = ELEMENT;
+  fixed_length[ELEMENT_INTERFACE_STRAIN_AVERAGE] = 0;
+
   strcpy(name[ELEMENT_INTERFACE_INTPNT_MATERI_TENSION_STATUS],"element_interface_intpnt_materi_tension_status");
+  type[ELEMENT_INTERFACE_INTPNT_MATERI_TENSION_STATUS] = INTEGER;
+  data_length[ELEMENT_INTERFACE_INTPNT_MATERI_TENSION_STATUS] = 4;
+  version_all[ELEMENT_INTERFACE_INTPNT_MATERI_TENSION_STATUS] = 1;
+  print_only[ELEMENT_INTERFACE_INTPNT_MATERI_TENSION_STATUS] = 1;
+  data_class[ELEMENT_INTERFACE_INTPNT_MATERI_TENSION_STATUS] = ELEMENT;
+  data_required[ELEMENT_INTERFACE_INTPNT_MATERI_TENSION_STATUS] = ELEMENT;
+  fixed_length[ELEMENT_INTERFACE_INTPNT_MATERI_TENSION_STATUS] = 0;
+
   strcpy(name[ELEMENT_INTERFACE_INTPNT_STRAIN],"element_interface_intpnt_strain");
+  type[ELEMENT_INTERFACE_INTPNT_STRAIN] = DOUBLE_PRECISION;
+  data_length[ELEMENT_INTERFACE_INTPNT_STRAIN] = 12;
+  version_all[ELEMENT_INTERFACE_INTPNT_STRAIN] = 1;
+  print_only[ELEMENT_INTERFACE_INTPNT_STRAIN] = 1;
+  data_class[ELEMENT_INTERFACE_INTPNT_STRAIN] = ELEMENT;
+  data_required[ELEMENT_INTERFACE_INTPNT_STRAIN] = ELEMENT;
+  fixed_length[ELEMENT_INTERFACE_INTPNT_STRAIN] = 0;
+
   strcpy(name[GROUP_INTERFACE_DAMPING],"group_interface_damping");
   type[GROUP_INTERFACE_DAMPING] = DOUBLE_PRECISION;
   data_length[GROUP_INTERFACE_DAMPING] = 2;
@@ -5288,6 +5328,9 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   strcpy(name[NEGATIVE],"negative");
 
   strcpy(name[NO],"no");
+
+  strcpy(name[OPENED],"opened");
+  strcpy(name[CLOSED],"closed");
 
   strcpy(name[NODE],"node");
   type[NODE] = DOUBLE_PRECISION;
