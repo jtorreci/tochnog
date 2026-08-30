@@ -508,6 +508,11 @@ void top( void )
 
                         db_version_copy( VERSION_NEW, VERSION_NORMAL );
                         db_version_delete( VERSION_NEW );
+                        // post_element_force (manual Professional
+                        // 6.927): the cross-section forces/moments
+                        // from the element internal nodal forces of
+                        // the converged state
+                        post_element_force_calculate();
                         step_close( YES, ipar, npar, ipar_i, ipar_n );
                         if ( repeat(start_control) ) goto repeat_point;
                       }

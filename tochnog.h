@@ -1192,8 +1192,16 @@ enum {
   PREONLY,
   PRIMARY,
   PRINT,
-  PRINT_APPLY,
-  PRINT_ARITHMETIC,
+  POST_ELEMENT_FORCE,
+  POST_ELEMENT_FORCE_GEOMETRY,
+  POST_ELEMENT_FORCE_GROUP,
+  POST_ELEMENT_FORCE_NUMBER,
+  POST_ELEMENT_FORCE_NORMAL,
+  POST_ELEMENT_FORCE_FORCE,
+  POST_ELEMENT_FORCE_INERTIA,
+  POST_ELEMENT_FORCE_MULTIPLY_FACTOR,
+  POST_ELEMENT_FORCE_RESULT,
+  PRINT_APPLY,  PRINT_ARITHMETIC,
   PRINT_CONTROL,
   PRINT_DEFINE,
   PRINT_LASTDATABASE,
@@ -1568,6 +1576,7 @@ void      damage( long int gr, double new_epe[], double new_sig[],
 void      damage_mazars( double materi_damage_mazars[], double new_epe[], double new_sig[], 
             double old_damage, double &new_damage );
 void      data( long int task, double dtime, double time_current );
+void      post_element_force_calculate( void );
 void      date( void );
 long int  db( long int idat, long int index, long int *ival,
             double *dval, long int &length, long int version,

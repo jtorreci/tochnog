@@ -6467,6 +6467,56 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   data_length[GROUP_BEAM_SHEAR] = 1;
   data_class[GROUP_BEAM_SHEAR] = BEAM;
 
+  // Sprint 13: post_element_force family (manual Professional 6.927-
+  // 6.935): cross-section forces/moments from the element internal
+  // nodal forces (the free-body statics of the L5 machinery)
+  strcpy(name[POST_ELEMENT_FORCE],"post_element_force");
+  type[POST_ELEMENT_FORCE] = DOUBLE_PRECISION;
+  data_length[POST_ELEMENT_FORCE] = DATA_ITEM_SIZE;
+  fixed_length[POST_ELEMENT_FORCE] = 0;
+
+  strcpy(name[POST_ELEMENT_FORCE_GEOMETRY],"post_element_force_geometry");
+  type[POST_ELEMENT_FORCE_GEOMETRY] = INTEGER;
+  data_length[POST_ELEMENT_FORCE_GEOMETRY] = DATA_ITEM_SIZE;
+  fixed_length[POST_ELEMENT_FORCE_GEOMETRY] = 0;
+  data_required[POST_ELEMENT_FORCE_GEOMETRY] = POST_ELEMENT_FORCE;
+
+  strcpy(name[POST_ELEMENT_FORCE_GROUP],"post_element_force_group");
+  type[POST_ELEMENT_FORCE_GROUP] = INTEGER;
+  data_length[POST_ELEMENT_FORCE_GROUP] = DATA_ITEM_SIZE;
+  fixed_length[POST_ELEMENT_FORCE_GROUP] = 0;
+  data_required[POST_ELEMENT_FORCE_GROUP] = POST_ELEMENT_FORCE;
+
+  strcpy(name[POST_ELEMENT_FORCE_NUMBER],"post_element_force_number");
+  type[POST_ELEMENT_FORCE_NUMBER] = INTEGER;
+  data_length[POST_ELEMENT_FORCE_NUMBER] = DATA_ITEM_SIZE;
+  fixed_length[POST_ELEMENT_FORCE_NUMBER] = 0;
+  data_required[POST_ELEMENT_FORCE_NUMBER] = POST_ELEMENT_FORCE;
+
+  strcpy(name[POST_ELEMENT_FORCE_NORMAL],"post_element_force_normal");
+  type[POST_ELEMENT_FORCE_NORMAL] = DOUBLE_PRECISION;
+  data_length[POST_ELEMENT_FORCE_NORMAL] = MDIM;
+  data_required[POST_ELEMENT_FORCE_NORMAL] = POST_ELEMENT_FORCE;
+
+  strcpy(name[POST_ELEMENT_FORCE_FORCE],"post_element_force_force");
+  type[POST_ELEMENT_FORCE_FORCE] = INTEGER;
+  data_length[POST_ELEMENT_FORCE_FORCE] = 1;
+  data_required[POST_ELEMENT_FORCE_FORCE] = POST_ELEMENT_FORCE;
+
+  strcpy(name[POST_ELEMENT_FORCE_INERTIA],"post_element_force_inertia");
+  type[POST_ELEMENT_FORCE_INERTIA] = INTEGER;
+  data_length[POST_ELEMENT_FORCE_INERTIA] = 1;
+  data_required[POST_ELEMENT_FORCE_INERTIA] = POST_ELEMENT_FORCE;
+
+  strcpy(name[POST_ELEMENT_FORCE_MULTIPLY_FACTOR],"post_element_force_multiply_factor");
+  type[POST_ELEMENT_FORCE_MULTIPLY_FACTOR] = DOUBLE_PRECISION;
+  data_length[POST_ELEMENT_FORCE_MULTIPLY_FACTOR] = 1;
+  data_required[POST_ELEMENT_FORCE_MULTIPLY_FACTOR] = POST_ELEMENT_FORCE;
+
+  strcpy(name[POST_ELEMENT_FORCE_RESULT],"post_element_force_result");
+  type[POST_ELEMENT_FORCE_RESULT] = DOUBLE_PRECISION;
+  data_length[POST_ELEMENT_FORCE_RESULT] = 5;
+
   strcpy(name[PRINT_APPLY],"print_apply");
   type[PRINT_APPLY] = INTEGER;
   data_length[PRINT_APPLY] = 1;
