@@ -404,6 +404,15 @@ void interface_element( long int element, long int name,
     gap = -1.e20;
 
   // per-IP constitutive state
+  // Mohr-Coulomb (FIX 1, RF-1): friction limit on the TOTAL tangential
+  // force. The law is active by the PRESENCE of the record (D2): phi=0,c=0
+  // gives max_fric=0 -> free sliding; without the record the interface
+  // stays purely elastic (Fase 1 behavior). The manual 6.631: the maximum
+  // friction force is c + Fn*tan(phi) where Fn = kn*strain_eff is the
+  // normal FORCE (negative under compression).
+  mc_active = db( GROUP_INTERFACE_MATERI_PLASTI_MOHR_COUL_DIRECT, element_group,
+    idum, ddum3, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+  phi = ddum3[0]; c = ddum3[1]; phi_flow = ddum3[2];
   double *stiff_normal_ip = get_new_dbl( ns1 );
   double *stress_normal_ip = get_new_dbl( ns1 );
   double *stress_shear_ip  = get_new_dbl( ns1 );
