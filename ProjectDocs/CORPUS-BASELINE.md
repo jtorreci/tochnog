@@ -11,14 +11,16 @@ referencia, contra SU corpus de 197 tests:
 | Fernando (referencia) | 163/197 |
 | Nosotros | 160/197 |
 
-- **Regresiones reales: 2 de 163 (98.8% preservado)**
+- **Regresiones reales: 2 de 163 (98.8% preservado)** (verificacion
+  corregida — la primera pasada tenia un bug con rg -w y underscores):
   - force5 (phreatic level en FORCE_ELEMENT_EDGE_WATER — gap)
-  - beam2d (mesh-refinement path — investigar)
-- **3 falsas regresiones**: examp1, examp2, matrix1 = el solver
-  HONESTO (fix A+B): los criterios viejos fake-pasaban con x=0
-- **5 MEJORAS**: condif5, examp14, ground3, ho_othr2 y hypo1 (¡el
-  test de hipoplasticidad de Fernando falla con SU binario y pasa
-  con el nuestro!)
+  - taylor3 (kap 2.564 vs 2.584, 0.8% sobre la tolerancia 1% —
+    diferencia numerica marginal, no crash)
+- **4 falsas regresiones**: examp1, examp2, incnav5, matrix1 = el
+  solver HONESTO (fix A+B): los criterios viejos fake-pasaban con x=0
+- beam2d familia: falla en AMBOS binarios (NO es regresion nuestra —
+  el camino mesh-refine de 2014 ya estaba roto en el GNU original)
+- **1 mejora**: ho_othr2 (falla con Fernando, pasa con nosotros)
 
 ## GNU 2014 completo: 160/197 (81%)
 
