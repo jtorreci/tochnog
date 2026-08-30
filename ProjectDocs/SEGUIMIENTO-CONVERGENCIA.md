@@ -2108,3 +2108,17 @@ y avance mejor.
 **Estado familia interfaz**: interface1/7/14/15 rc=0 (elástico carga, gap+reset, MC con dilatancia implícita). Pendientes: interface2 (gap multi-paso: el strain record refleja el cierre del gap, no el incremental), interface8 (signo de orientación del elemento degenerado quad4 5 6 3 4), interface9 (tangencial), interface13 (el propio Professional escribe 0.671 en el .dbs pero su target espera 1.118 — bug del test del corpus), interface12/patch (3D).
 
 **GOTCHA del LAPACK band solver del GNU**: con el truss no llena la matriz (node_lhside 0) — no confiar en él para elementos que usan solo NODE_LHSIDE; el Bi-CG es el camino.
+
+### Cierre familia 2D de interfaz (4b6548a) — 8 tests rc=0
+
+**Tests que pasan**: interface1 (elástico carga), interface7 (2 pasos + reset), interface8 (orientación degenerada), interface9 (axisimétrico), interface12 (damping), interface14 (elástico tangencial), interface15 (MC con dilatancia), interface_patch (fricción multi-paso).
+
+**Fixes nuevos** (verificados contra .dbs Professional):
+1. **Orientación 2D por numeración**: normal = (−t.y, t.x) pero si el primer nodo del lado 2 tiene número MENOR que el lado 1, se invierte (interface8: quad4 5 6 3 4 → normal (0,−1); interface1: 1 2 3 | 4 5 6 → (0,1)). La numeración relativa codifica el orden de los lados de la conversión.
+2. **Axisimétrico**: la interfaz anillo lleva el peso 2πr (interface9: τ = −0.159 EXACTO).
+3. **Damping** (`group_interface_damping`): d·(v2−v1) en RHS + d en la matriz SIN dtime (interface12: 3 nodos −0.5 EXACTO). data_length 2→1.
+4. **MC con trial elástico acumulado**: el history guarda kt·gamma_total (crece aunque plastifique); f_t = clamp(trial); RHS = f_t − clamp(f_old). Sin esto la fricción multi-paso estancaba (−5.55 vs −10).
+5. **Record**: sin MC → kt·du_paso (incremental); con MC → f_t total clampado.
+6. **Pesos 3D uniformes** 1/ns1 (el quad4 convertido a hex8 reparte la tracción de cara uniforme; Lobatto 1D daría 4× menos — interface_quad4_hex8: −0.2475 vs −1.0).
+
+**Pendiente documentado**: los 3D con kn>>E (interface_quad4_hex8, interface_bar2_hex8, interface_bar2_quad4, interface_quad4_hex8_many) necesitan solver directo real. El band dgbsv resuelve el hex8 3D pero rompe 2D (truss/interface1/8 → 0 silencioso); el Bi-CG no converge con ratio 1e10. SuperLU = proyecto aparte (so_suplu.c existe en el GNU 2014).
