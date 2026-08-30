@@ -6462,6 +6462,11 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   data_class[CONTROL_SUPPORT_EDGE_NORMAL_STIFFNESS_FREEZE] = CONTROL;
 
   // Sprint 13: Professional convergence backlog (CORPUS-BASELINE)
+  strcpy(name[GROUP_BEAM_SHEAR],"group_beam_shear");
+  type[GROUP_BEAM_SHEAR] = DOUBLE_PRECISION;
+  data_length[GROUP_BEAM_SHEAR] = 1;
+  data_class[GROUP_BEAM_SHEAR] = BEAM;
+
   strcpy(name[PRINT_APPLY],"print_apply");
   type[PRINT_APPLY] = INTEGER;
   data_length[PRINT_APPLY] = 1;
@@ -7493,6 +7498,10 @@ long int db_number( char str[] )
       return GROUP_TRUSS_YOUNG;
     else if ( !strcmp( str, "truss_beam" ) )
       return TRUSSBEAM;
+    else if ( !strcmp( str, "groundflow_phreatic_level" ) )
+      return GROUNDFLOW_PHREATICLEVEL;
+    else if ( !strcmp( str, "size_dev" ) )
+      return SIZEDEV;
     else if ( !strcmp( str, "inertia_apply" ) )
       return OPTIONS_INERTIA;
     else if ( !strcmp( str, "control_inertia_apply" ) )
