@@ -3693,6 +3693,20 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   data_class[GROUP_INTERFACE_TANGENTIAL_REFERENCE_POINT] = GROUP_INTERFACE;
   data_required[GROUP_INTERFACE_TANGENTIAL_REFERENCE_POINT] = GROUP_INTERFACE;
 
+
+  // Sprint 13: the interface element print items + damping (the
+  // Professional's interface tests)
+  strcpy(name[ELEMENT_INTERFACE_STRESS_AVERAGE],"element_interface_stress_average");
+  strcpy(name[ELEMENT_INTERFACE_INTPNT_STRESS],"element_interface_intpnt_stress");
+  strcpy(name[ELEMENT_INTERFACE_STRAIN_AVERAGE],"element_interface_strain_average");
+  strcpy(name[ELEMENT_INTERFACE_INTPNT_MATERI_TENSION_STATUS],"element_interface_intpnt_materi_tension_status");
+  strcpy(name[ELEMENT_INTERFACE_INTPNT_STRAIN],"element_interface_intpnt_strain");
+  strcpy(name[GROUP_INTERFACE_DAMPING],"group_interface_damping");
+  type[GROUP_INTERFACE_DAMPING] = DOUBLE_PRECISION;
+  data_length[GROUP_INTERFACE_DAMPING] = 2;
+  data_class[GROUP_INTERFACE_DAMPING] = GROUP_INTERFACE;
+  strcpy(name[GROUP_INTERFACE_MATERI_PLASTI_MOHR_COUL_DIRECT],"group_interface_materi_plasti_mohr_coul_direct");
+
   strcpy(name[GROUP_INTERFACE_GAP],"group_interface_gap");
   type[GROUP_INTERFACE_GAP] = DOUBLE_PRECISION;
   data_length[GROUP_INTERFACE_GAP] = 1;
@@ -3720,6 +3734,9 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   strcpy(name[GROUP_INTERFACE_MATERI_ELASTI_STIFFNESS],"group_interface_materi_elasti_stiffness");
   type[GROUP_INTERFACE_MATERI_ELASTI_STIFFNESS] = DOUBLE_PRECISION;
   data_length[GROUP_INTERFACE_MATERI_ELASTI_STIFFNESS] = 3;
+  // variable-length: 2 values in 2D (kn, kt), 3 in 3D (kn, kt1, kt2)
+  data_length[GROUP_INTERFACE_MATERI_ELASTI_STIFFNESS] = DATA_ITEM_SIZE;
+  fixed_length[GROUP_INTERFACE_MATERI_ELASTI_STIFFNESS] = 0;
   data_class[GROUP_INTERFACE_MATERI_ELASTI_STIFFNESS] = GROUP_TYPE;
   data_required[GROUP_INTERFACE_MATERI_ELASTI_STIFFNESS] = GROUP_INTERFACE;
 
@@ -6032,6 +6049,7 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   strcpy(name[PUT],"put");
 
   strcpy(name[QUAD4],"quad4");
+  strcpy(name[QUAD6],"quad6");
 
   strcpy(name[QUAD9],"quad9");
 

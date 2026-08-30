@@ -88,8 +88,19 @@ void interface_element( long int element, long int name,
   // the assembled matrix with gcc -O1; exposed 2026-08-24 by the clean
   // rebuild on a newer compiler).
   array_set( ddum3, 0., 3 );
-  db( GROUP_INTERFACE_MATERI_ELASTI_STIFFNESS, element_group, idum, ddum3,
-    ldum, VERSION_NORMAL, GET_IF_EXISTS );
+  {
+    // variable-length: 2D tests give 2 values (kn, kt), 3D give 3
+    // (kn, kt1, kt2) - read only what the record carries (manual
+    // Professional: "kn kt,first kt,second" with kt,second omitted
+    // in 2D)
+    long int length_stiff = db_len(
+      GROUP_INTERFACE_MATERI_ELASTI_STIFFNESS, element_group,
+      VERSION_NORMAL );
+    if ( length_stiff>3 ) length_stiff = 3;
+    if ( length_stiff<2 ) length_stiff = 3; // default: read 3 (zeroed)
+    db( GROUP_INTERFACE_MATERI_ELASTI_STIFFNESS, element_group, idum,
+      ddum3, length_stiff, VERSION_NORMAL, GET_IF_EXISTS );
+  }
   kn = ddum3[0]; kt1 = ddum3[1]; kt2 = ddum3[2];
   db( GROUP_INTERFACE_MATERI_PLASTI_TENSION_DIRECT, element_group, idum,
     &tension_limit, ldum, VERSION_NORMAL, GET_IF_EXISTS );
@@ -122,6 +133,11 @@ void interface_element( long int element, long int name,
   }
   else if ( name==-QUAD4 ) {
     nnol = 4;
+  }
+  else if ( name==-QUAD6 ) {
+    // the quadratic 2D interface (a converted bar3/quad8/quad9:
+    // 3 nodes per side, manual Professional control_mesh_convert)
+    nnol = 6;
   }
   else if ( name==-PRISM6 ) {
     nnol = 6;
