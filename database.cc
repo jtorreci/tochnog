@@ -5121,6 +5121,7 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   strcpy(name[MATRIX_SUPERLU_MT],"matrix_superlu_mt");
   
   strcpy(name[MATRIX_LAPACK],"matrix_lapack");
+  strcpy(name[MATRIX_PARDISO],"matrix_pardiso");
 
   strcpy(name[MAXFRE],"maxfre");
 
@@ -6459,6 +6460,12 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   data_length[CONTROL_SUPPORT_EDGE_NORMAL_STIFFNESS_FREEZE] = 1;
   data_class[CONTROL_SUPPORT_EDGE_NORMAL_STIFFNESS_FREEZE] = CONTROL;
 
+  // Sprint 13: Professional convergence backlog (CORPUS-BASELINE)
+  strcpy(name[PRINT_APPLY],"print_apply");
+  type[PRINT_APPLY] = INTEGER;
+  data_length[PRINT_APPLY] = 1;
+  no_index[PRINT_APPLY] = 1;
+
   strcpy(name[VOLUME_FACTOR],"volume_factor");
   type[VOLUME_FACTOR] = DOUBLE_PRECISION;
   data_length[VOLUME_FACTOR] = DATA_ITEM_SIZE;
@@ -7481,6 +7488,8 @@ long int db_number( char str[] )
     }
     else if ( !strcmp( str, "control_solver" ) )
       return CONTROL_OPTIONS_SOLVER;
+    else if ( !strcmp( str, "group_truss_elasti_young" ) )
+      return GROUP_TRUSS_YOUNG;
     else if ( !strcmp( str, "materi_elasti_young_power_apply" ) )
       return CONTROL_MATERI_ELASTI_YOUNG_POWER_APPLY;
     else if ( !strcmp( str, "control_solver_bicg_error" ) )

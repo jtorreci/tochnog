@@ -167,6 +167,21 @@ void solve( long int task )
 	}
 	/*----- lapack  ----*/  
 
+        /*----- pardiso (Professional): NOT compiled in the GNU.
+          Accepted with a warning and a fallback to the honest Bi-CG
+          (the iterative default) so Professional inputs PARSE - the
+          convergence corpus runs; PARDISO itself is the documented
+          partial of the solver family 6.1047 */  
+	if ( task==-MATRIX_PARDISO )
+	{
+          static long int warned_pardiso = 0;
+          if ( !warned_pardiso ) {
+            pri( "Warning: -matrix_pardiso is not compiled in the GNU "
+              "- falling back to the iterative Bi-CG solver" );
+            warned_pardiso = 1;
+          }
+	}
+
   array_set( control_eigen, 0, 2 );
   if ( task==-CONTROL_EIGEN )
   {

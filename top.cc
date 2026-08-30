@@ -1009,6 +1009,14 @@ void step_close( long int task, long int ipar, long int npar, long int ipar_i, l
     // control_print_data_versus_data. The gate is per icontrol: when it
     // returns 0 none of the gated prints runs in this step_close.
     frequency_allowed = control_print_frequency_allowed( icontrol );
+    // print_apply -no (manual Professional 6.968): ALL control_print_*
+    // records are neglected (a global gate for the whole run)
+    {
+      long int print_apply = -YES;
+      db( PRINT_APPLY, 0, &print_apply, ddum, ldum,
+        VERSION_NORMAL, GET_IF_EXISTS );
+      if ( print_apply==-NO ) frequency_allowed = 0;
+    }
     if ( db_active_index( CONTROL_PRINT, icontrol, VERSION_NORMAL ) ) {
       db( CONTROL_PRINT, icontrol, ival, ddum, nval, VERSION_NORMAL, GET );
       for ( i=0; i<nval; i++ ) {
