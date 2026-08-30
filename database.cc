@@ -1478,7 +1478,8 @@ void db_initialize( long int dof_type[], long int dof_label[] )
 
   strcpy(name[CONTROL_OPTIONS_INERTIA],"control_options_inertia");
   type[CONTROL_OPTIONS_INERTIA] = INTEGER;
-  data_length[CONTROL_OPTIONS_INERTIA] = 1;
+  data_length[CONTROL_OPTIONS_INERTIA] = DATA_ITEM_SIZE;
+  fixed_length[CONTROL_OPTIONS_INERTIA] = 0;
   data_class[CONTROL_OPTIONS_INERTIA] = CONTROL;
 
   strcpy(name[CONTROL_OPTIONS_RELAXATION],"control_options_relaxation");
@@ -7490,6 +7491,12 @@ long int db_number( char str[] )
       return CONTROL_OPTIONS_SOLVER;
     else if ( !strcmp( str, "group_truss_elasti_young" ) )
       return GROUP_TRUSS_YOUNG;
+    else if ( !strcmp( str, "truss_beam" ) )
+      return TRUSSBEAM;
+    else if ( !strcmp( str, "inertia_apply" ) )
+      return OPTIONS_INERTIA;
+    else if ( !strcmp( str, "control_inertia_apply" ) )
+      return CONTROL_OPTIONS_INERTIA;
     else if ( !strcmp( str, "materi_elasti_young_power_apply" ) )
       return CONTROL_MATERI_ELASTI_YOUNG_POWER_APPLY;
     else if ( !strcmp( str, "control_solver_bicg_error" ) )
