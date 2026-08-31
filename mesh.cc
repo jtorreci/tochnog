@@ -458,7 +458,7 @@ void mesh_rotate_3d( long int nrot )
   for ( ielem=0; ielem<=max_elem; ielem++ ) {
     if ( db_active_index( ELEMENT, ielem, VERSION_NORMAL ) ) {
       db( ELEMENT, ielem, el, ddum, length, VERSION_NORMAL, GET );
-      if ( el[0]==-TRIA3 || el[0]==-QUAD4 )
+      if ( el[0]==-TRIA3 || el[0]==-QUAD4 || el[0]==-BAR2 )
         delete_element( ielem, VERSION_NORMAL );
     }
   }
@@ -544,6 +544,20 @@ void mesh_extrude( double z_layer[], long int n_layer )
             VERSION_NORMAL );
         }
       }
+      else if ( el[0]==-BAR2 && nnol==2 ) {
+        // bar2 -> quad4 (the 2D interface bar; later converted to hex8
+        // by control_mesh_convert). Nodes: 2 base + 2 extruded copy.
+        for ( layer=0; layer<n_layer; layer++ ) {
+          new_elem++;
+          new_nodes[0] = -QUAD4;
+          new_nodes[1] = nodes[0]+layer*nbase;
+          new_nodes[2] = nodes[1]+layer*nbase;
+          new_nodes[3] = nodes[0]+(layer+1)*nbase;
+          new_nodes[4] = nodes[1]+(layer+1)*nbase;
+          create_element( ielem, new_elem, new_nodes, 5, VERSION_NORMAL,
+            VERSION_NORMAL );
+        }
+      }
       else if ( el[0]==-QUAD4 && nnol==4 ) {
         for ( layer=0; layer<n_layer; layer++ ) {
           new_elem++;
@@ -562,7 +576,14 @@ void mesh_extrude( double z_layer[], long int n_layer )
       }
     }
   }
-
+  db_max_index( ELEMENT, max_elem, VERSION_NORMAL, GET );
+  for ( ielem=0; ielem<=max_elem; ielem++ ) {
+    if ( db_active_index( ELEMENT, ielem, VERSION_NORMAL ) ) {
+      db( ELEMENT, ielem, el, ddum, length, VERSION_NORMAL, GET );
+      for ( int kk=0; kk<length; kk++ ) cout << " " << el[kk];
+      cout << endl;
+    }
+  }
   // delete the 2D source elements
   for ( ielem=0; ielem<=max_elem; ielem++ ) {
     if ( db_active_index( ELEMENT, ielem, VERSION_NORMAL ) ) {

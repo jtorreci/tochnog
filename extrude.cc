@@ -13,6 +13,19 @@ void extrude( void )
   double ddum[1], ext_z[DATA_ITEM_SIZE];
 
   db( ICONTROL, 0, &icontrol, ddum, ldum, VERSION_NORMAL, GET );
+  // control_mesh_extrude may be declared with ANY control index (the
+  // corpus uses control_mesh_extrude 10 with control_timestep 30), so
+  // look it up over the whole control range like the convert.
+  {
+    long int ic_max = 0, ic_found = -1;
+    db_max_index( CONTROL_MESH_EXTRUDE, ic_max, VERSION_NORMAL, GET );
+    for ( long int ic2=0; ic2<=ic_max; ic2++ ) {
+      if ( db_active_index( CONTROL_MESH_EXTRUDE, ic2, VERSION_NORMAL ) ) {
+        ic_found = ic2; break;
+      }
+    }
+    if ( ic_found>=0 ) icontrol = ic_found;
+  }
   if ( db_active_index( CONTROL_MESH_EXTRUDE, icontrol, VERSION_NORMAL ) ) {
     db( CONTROL_MESH_EXTRUDE, icontrol, idum_e, ext_z, ext_length,
       VERSION_NORMAL, GET );

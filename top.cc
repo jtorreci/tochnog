@@ -658,7 +658,17 @@ void step_start( long int task, long int options_solver[], double dtime, double 
   // control_mesh_convert: convert interface elements (bar2->quad4 in 2D,
   // tria3->prism6 / quad4->hex8 in 3D). Must run BEFORE the first
   // element_loop of the step so the converted elements are assembled.
-  interface_convert( icontrol );
+  // Only on the FIRST step (task==YES): re-running it on later steps
+  // would re-convert the already-extruded/converted interface elements
+  // (interface_bar2_hex8: the extruded quad4 interface is processed
+  // again and the neighbour reconnection hits non-existent nodes).
+  if ( task==YES ) interface_convert( icontrol );
+
+  // extrude only on the first step (task==YES): re-running it on later
+  // steps duplicates the mesh. Must run BEFORE data()/merge() so those
+  // phases see the final 3D elements (the 2D quad4/bar2 sources would
+  // otherwise be processed as 3D solids - interface_bar2_hex8).
+  if ( task==YES ) extrude();
 
   change_geometry( task, dtime, time_current );
 
@@ -679,8 +689,6 @@ void step_start( long int task, long int options_solver[], double dtime, double 
   db_delete( NODE_REMESH_VELOCITY, VERSION_NORMAL );
 
   delete_geom( time_current ); 
-
-  extrude();
 
   failure( time_current ); 
 

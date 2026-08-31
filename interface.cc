@@ -500,7 +500,6 @@ void interface_element( long int element, long int name,
     // kt*2*du_tang), and the plastic return is IMPLICIT with dilatancy
     // (see the block comments above; verified EXACT against interface15).
     if ( element==2 && f_t_old_ip[inol]==0. ) {
-      cout << "DBG first: inol=" << inol << " du_tang_i=" << du_tang_i << " trial=" << (f_t_old_ip[inol]+kt1*du_tang_i) << " max_fric=" << fabs(c+kn*strain_eff_ip[inol]*tan(phi)) << endl;
     }
     // CONVERGENCE (interface_patch): the Professional's trial is the
     // ACCUMULATED tangential strain times the stiffness (kt*gamma_total),
@@ -923,7 +922,7 @@ void interface_element( long int element, long int name,
 void interface_convert( long int icontrol )
 
 {
-  long int element=0, max_element=0, i=0, j=0,
+  long int element=0, max_element=0, max_element_c=0, i=0, j=0,
     name=0, length=0, ldum=0, swit=0, element_group=0,
     max_node=0, max_node_old=0, length_convert_groups=0, found=0, nconv=0,
     idum[1], *el=NULL, *convert_groups=NULL, *node_element=NULL;
@@ -933,16 +932,29 @@ void interface_convert( long int icontrol )
   swit = set_swit(-1,-1,"interface_convert");
   if ( swit ) pri( "In routine INTERFACE_CONVERT." );
 
-  if ( !db_active_index( CONTROL_MESH_CONVERT, icontrol, VERSION_NORMAL ) )
-    return;
-
-  long int convert_switch = -YES;
-  db( CONTROL_MESH_CONVERT, icontrol, &convert_switch, ddum, ldum,
-    VERSION_NORMAL, GET );
-  if ( convert_switch!= -YES ) return;
+  // control_mesh_convert may be declared with ANY control index (the
+  // corpus uses e.g. control_mesh_convert 20 -yes with
+  // control_timestep 30), so look it up over the whole control range
+  // instead of only the current icontrol. The first active -yes record
+  // found drives the conversion.
+  {
+    long int ic_max = 0, ic_found = -1;
+    long int conv_sw = -NO;
+    db_max_index( CONTROL_MESH_CONVERT, ic_max, VERSION_NORMAL, GET );
+    for ( long int ic2=0; ic2<=ic_max; ic2++ ) {
+      if ( db_active_index( CONTROL_MESH_CONVERT, ic2, VERSION_NORMAL ) ) {
+        db( CONTROL_MESH_CONVERT, ic2, &conv_sw, ddum, ldum,
+          VERSION_NORMAL, GET );
+        if ( conv_sw==-YES ) { ic_found = ic2; break; }
+      }
+    }
+    if ( ic_found<0 ) return;
+    icontrol = ic_found;
+  }
 
   el = get_new_int(MAXIMUM_NODE+1);
   db_highest_index( ELEMENT, max_element, VERSION_NORMAL );
+  max_element_c = max_element;
   db_highest_index( NODE, max_node, VERSION_NORMAL );
   max_node_old = max_node;
 
@@ -951,7 +963,6 @@ void interface_convert( long int icontrol )
   convert_groups = get_new_int(DATA_ITEM_SIZE);
   db( CONTROL_MESH_CONVERT_ELEMENT_GROUP, icontrol, convert_groups,
     ddum, length_convert_groups, VERSION_NORMAL, GET_IF_EXISTS );
-
   nconv = 0;
   for ( element=0; element<=max_element; element++ ) {
     if ( !db_active_index( ELEMENT, element, VERSION_NORMAL ) ) continue;
@@ -982,8 +993,29 @@ void interface_convert( long int icontrol )
       normal[0] = -tangent[1];
       normal[1] =  tangent[0];
     }
+    else if ( name==-BAR2 ) {
+      // 3D bar2: a LINE (only 2 nodes) - the normal cannot come from a
+      // cross product of two edges. Verified against the Professional
+      // .dbs of interface_bar2_hex8: the extruded quad4 interface has
+      // normal (0,1,0) for a bar2 along +x in the xy-plane, which is
+      // z_hat x tangent (the extrusion direction is z). The converted
+      // quad4 lives in the xy-plane; later control_mesh_convert lifts it
+      // to the hex8 interface.
+      ca = db_dbl( NODE, el[1], VERSION_NORMAL );
+      cb = db_dbl( NODE, el[2], VERSION_NORMAL );
+      for ( i=0; i<3; i++ ) tangent[i] = cb[i] - ca[i];
+      array_normalize( tangent, 3 );
+      normal[0] = 0.*tangent[2] - tangent[1]*1.;
+      normal[1] = tangent[0]*1. - 0.*tangent[2];
+      normal[2] = 0.;
+      array_normalize( normal, 3 );
+      if ( array_size( normal, 3 )<1.e-12 ) {
+        // degenerate (bar2 along z): pick +x
+        normal[0] = 1.; normal[1] = 0.; normal[2] = 0.;
+      }
+    }
     else {
-      // 3D: normal = cross product of two side-1 edges
+      // 3D tria3/quad4: normal = cross product of two side-1 edges
       ca = db_dbl( NODE, el[1], VERSION_NORMAL );
       cb = db_dbl( NODE, el[2], VERSION_NORMAL );
       double *cc = db_dbl( NODE, el[3], VERSION_NORMAL );
@@ -1037,40 +1069,88 @@ void interface_convert( long int icontrol )
 
     // reconnect neighbours on the OTHER side: elements sharing a side-1
     // node that are NOT in convert_groups get that node replaced by its
-    // new duplicate.
-    for ( j=0; j<ns1; j++ ) {
-      long int src = el[1+j];
-      long int dst = el[1+ns1+j];
-      node_element = db_int( NODE_ELEMENT, src, VERSION_NORMAL );
-      long int nel = db_len( NODE_ELEMENT, src, VERSION_NORMAL );
-      for ( long int iel=0; iel<nel; iel++ ) {
-        long int elnum = node_element[iel];
-        if ( elnum==element ) continue;
-        long int gr = 0;
-        db( ELEMENT_GROUP, elnum, &gr, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
-        // if the neighbour is in a convert group (one side), keep it
-        found = 0;
-        for ( long int ig=0; ig<length_convert_groups; ig++ )
-          if ( convert_groups[ig]==gr ) { found = 1; break; }
-        if ( found ) continue;
-        // reconnect: replace src by dst in the neighbour connectivity
-        long int ln = 0;
-        long int *nel2 = get_new_int(MAXIMUM_NODE+1);
-        db( ELEMENT, elnum, nel2, ddum, ln, VERSION_NORMAL, GET );
-        for ( long int k=1; k<ln; k++ )
-          if ( nel2[k]==src ) nel2[k] = dst;
-        db( ELEMENT, elnum, nel2, ddum, ln, VERSION_NORMAL, PUT );
-        delete[] nel2;
+    // new duplicate. FIX (2026-08-31, interface_bar2_hex8): only the
+    // neighbours on the OTHER side - those containing ALL the side-1
+    // nodes of the converted element - are reconnected. The old code
+    // replaced src in EVERY neighbour sharing a side-1 node, which
+    // corrupted the solid on the SAME side (elem 1 = quad4 1 2 3 4
+    // shared node 3 with the bar2 and got 3->7, destroying it).
+    long int *nel_neigh = get_new_int(MAXIMUM_NODE+1);
+    for ( long int iel=0; iel<=max_element_c; iel++ ) {
+      if ( !db_active_index( ELEMENT, iel, VERSION_NORMAL ) ) continue;
+      long int gr = 0;
+      db( ELEMENT_GROUP, iel, &gr, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+      found = 0;
+      for ( long int ig=0; ig<length_convert_groups; ig++ )
+        if ( convert_groups[ig]==gr ) { found = 1; break; }
+      if ( found ) continue;
+      if ( iel==element ) continue;
+      long int ln_n = 0;
+      db( ELEMENT, iel, nel_neigh, ddum, ln_n, VERSION_NORMAL, GET );
+      // count how many side-1 nodes of the converted element this
+      // neighbour contains
+      long int shared = 0;
+      for ( long int jj2=0; jj2<ns1; jj2++ ) {
+        long int s2 = el[1+jj2];
+        for ( long int k2=1; k2<ln_n; k2++ )
+          if ( nel_neigh[k2]==s2 ) { shared++; break; }
       }
+      if ( shared!=ns1 ) continue;   // NOT on the other side
+      // ONLY the neighbours on the +normal side are reconnected: their
+      // centroid lies in the direction of the interface normal from the
+      // interface centroid. The solid on the -normal side keeps the
+      // original nodes (interface_bar2_hex8: elem 2 (3 4 5 6, +y) is
+      // reconnected, elem 1 (1 2 3 4, -y) keeps 3,4).
+      {
+        double icx = 0., icy = 0., icz = 0., ncx = 0., ncy = 0., ncz = 0.;
+        long int nshared_nodes = 0;
+        for ( long int k2=1; k2<ln_n; k2++ ) {
+          double *cn2 = db_dbl( NODE, nel_neigh[k2], VERSION_NORMAL );
+          ncx += cn2[0]; ncy += cn2[1]; ncz += cn2[2]; nshared_nodes++;
+        }
+        if ( nshared_nodes>0 ) {
+          ncx /= nshared_nodes; ncy /= nshared_nodes; ncz /= nshared_nodes;
+          icx = 0.; icy = 0.; icz = 0.;
+          for ( long int jj2=0; jj2<ns1; jj2++ ) {
+            double *cn1 = db_dbl( NODE, el[1+jj2], VERSION_NORMAL );
+            icx += cn1[0]; icy += cn1[1]; icz += cn1[2];
+          }
+          icx /= ns1; icy /= ns1; icz /= ns1;
+          double ddx = ncx-icx, ddy = ncy-icy, ddz = ncz-icz;
+          double dot = ddx*normal[0] + ddy*normal[1] + ddz*normal[2];
+          if ( dot<=0. ) continue;   // same side as the interface normal base
+        }
+      }
+      // reconnect: replace every side-1 src by its dst
+      for ( long int jj2=0; jj2<ns1; jj2++ ) {
+        long int src2 = el[1+jj2];
+        long int dst2 = el[1+ns1+jj2];
+        for ( long int k2=1; k2<ln_n; k2++ )
+          if ( nel_neigh[k2]==src2 ) nel_neigh[k2] = dst2;
+      }
+      db( ELEMENT, iel, nel_neigh, ddum, ln_n, VERSION_NORMAL, PUT );
     }
+    delete[] nel_neigh;
     nconv++;
   }
-
   delete[] el;
   delete[] convert_groups;
-
-  if ( nconv>0 )
-    mesh_has_changed( VERSION_NORMAL );
+  // mesh_has_changed: called UNLESS a control_mesh_extrude exists - in
+  // that 3D workflow the converted quad4/bar2 are still 2D elements and
+  // area_element_group (called by mesh_has_changed) would process them
+  // as 3D solids and fail (interface_bar2_hex8: 'element 1'). The
+  // extrude runs right after the convert and calls mesh_has_changed
+  // once the 3D mesh is complete. Without extrude (2D convert, e.g.
+  // interface_bar2_quad4) the connections must be rebuilt here.
+  {
+    long int ic_max = 0, has_extrude = 0;
+    db_max_index( CONTROL_MESH_EXTRUDE, ic_max, VERSION_NORMAL, GET );
+    for ( long int ic2=0; ic2<=ic_max; ic2++ )
+      if ( db_active_index( CONTROL_MESH_EXTRUDE, ic2, VERSION_NORMAL ) )
+        { has_extrude = 1; break; }
+    if ( !has_extrude && nconv>0 )
+      mesh_has_changed( VERSION_NORMAL );
+  }
 
   if ( swit ) pri( "Out function INTERFACE_CONVERT" );
 }
