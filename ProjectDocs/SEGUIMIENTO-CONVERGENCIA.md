@@ -2150,3 +2150,13 @@ y avance mejor.
 7. **mesh_has_changed del convert**: condicional a que NO haya extrude (el extrude lo llama al final; sin extrude el convert debe reconstruir conexiones).
 
 **Resultado**: corpus 87→90 PASS. Suite 16/16. Tests de interfaz pasando: 1, 7, 8, 9, 12, 14, 15, patch, quad4_hex8, bar2_quad4, quad4_hex8_many (11). Queda interface_bar2_hex8 (la interfaz hex8 extruida conecta en z en vez de y — conectividad fina).
+
+### Orden extrude→convert — interface_bar2_hex8 rc=0 (b9dec4f) — corpus 91
+
+**El último caso fino de la familia 3D**: el bar2 de interfaz 3D debe EXTRUIRSE primero (bar2 → quad4 en el plano XZ) y LUEGO convertirse a hex8 (quad4 → hex8 con el lado 2 en +y). El orden inverso (convert → extrude) producía un hex8 de interfaz con la normal en Z — el push en Y nunca se transmitía (sigyy=0).
+
+**Fixes**: (1) top.cc: extrude() ANTES de interface_convert(); (2) interface.cc: mesh_has_changed SIEMPRE tras el convert (los sólidos ya son hex8 cuando el convert corre).
+
+**Familia interfaz: 12/14 tests rc=0** (1, 7, 8, 9, 12, 14, 15, patch, quad4_hex8, bar2_hex8, bar2_quad4, quad4_hex8_many). Solo quedan interface2 (gap multi-paso) e interface13 (bug del propio test del corpus: el Professional escribe 0.671 pero su target pide 1.118).
+
+**Corpus: 90 → 91 PASS** (de 363). Suite 16/16.
