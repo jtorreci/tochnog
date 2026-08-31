@@ -2137,3 +2137,16 @@ y avance mejor.
 **Resultado**: corpus 81→87 PASS. interface_quad4_hex8 rc=0 (el 3D de interfaz con kn=1e10 que el Bi-CG no podía). Suite propia 16/16 intacta.
 
 **Pendientes**: interface_bar2_hex8/bar2_quad4/many (bug de extrusión bar2→quad4→hex8, separado del solver), interface2 (gap multi-paso), interface13 (bug del propio test del corpus).
+
+### Extrusión bar2→quad4 + fixes convert/reconexión (d7b2dfd) — corpus 90
+
+**Desbloquea la familia 3D de interfaz** (bar2_quad4, quad4_hex8_many, y +1 del corpus):
+1. **mesh_extrude**: bar2 → quad4 (antes solo tria3/quad4).
+2. **interface_convert bar2 3D**: la normal = ẑ×tangent (antes leía el[3] inexistente → índice basura).
+3. **Fix reconexión**: solo los vecinos del lado +normal (centroide en dirección de la normal) se reconectan con los nodos nuevos; el lado −normal conserva los originales (antes corrompía el sólido del mismo lado: elem 1 = 1 2 3 4 → 1 2 7 8).
+4. **control_mesh_convert/extrude** se buscan en TODO el rango de controles (antes solo icontrol actual — nunca coincidía con control 20 + timestep 30).
+5. **convert/extrude solo en el primer step** (task==YES) — re-ejecutarlos duplicaba la malla.
+6. **extrude se mueve ANTES de data()/merge()** — data veía los quad4 3D sin extruir y fallaba.
+7. **mesh_has_changed del convert**: condicional a que NO haya extrude (el extrude lo llama al final; sin extrude el convert debe reconstruir conexiones).
+
+**Resultado**: corpus 87→90 PASS. Suite 16/16. Tests de interfaz pasando: 1, 7, 8, 9, 12, 14, 15, patch, quad4_hex8, bar2_quad4, quad4_hex8_many (11). Queda interface_bar2_hex8 (la interfaz hex8 extruida conecta en z en vez de y — conectividad fina).
