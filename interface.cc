@@ -1135,22 +1135,13 @@ void interface_convert( long int icontrol )
   }
   delete[] el;
   delete[] convert_groups;
-  // mesh_has_changed: called UNLESS a control_mesh_extrude exists - in
-  // that 3D workflow the converted quad4/bar2 are still 2D elements and
-  // area_element_group (called by mesh_has_changed) would process them
-  // as 3D solids and fail (interface_bar2_hex8: 'element 1'). The
-  // extrude runs right after the convert and calls mesh_has_changed
-  // once the 3D mesh is complete. Without extrude (2D convert, e.g.
-  // interface_bar2_quad4) the connections must be rebuilt here.
-  {
-    long int ic_max = 0, has_extrude = 0;
-    db_max_index( CONTROL_MESH_EXTRUDE, ic_max, VERSION_NORMAL, GET );
-    for ( long int ic2=0; ic2<=ic_max; ic2++ )
-      if ( db_active_index( CONTROL_MESH_EXTRUDE, ic2, VERSION_NORMAL ) )
-        { has_extrude = 1; break; }
-    if ( !has_extrude && nconv>0 )
-      mesh_has_changed( VERSION_NORMAL );
-  }
+  // mesh_has_changed: ALWAYS called after a conversion (the 3D extrude
+  // now runs BEFORE the convert, so by the time the convert lifts the
+  // extruded quad4 interface to hex8 the solids are already 3D and
+  // area_element_group processes valid hex8 - the old order (convert
+  // first) left 2D quad4/bar2 that area_element_group could not handle).
+  if ( nconv>0 )
+    mesh_has_changed( VERSION_NORMAL );
 
   if ( swit ) pri( "Out function INTERFACE_CONVERT" );
 }
