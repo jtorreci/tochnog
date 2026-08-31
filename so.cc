@@ -38,6 +38,10 @@ extern "C"
   int dgbsv_(integer *n, integer *kl, integer *ku, integer *
 		   nrhs, double *mat, integer *ldmat, integer *ipiv, double *solve_b, 
 		   integer *ldb, integer *info);
+// Lapack dense LU solver (dgesv): the GNU substitute for PARDISO.
+extern "C"
+  int dgesv_(integer *n, integer *nrhs, double *a, integer *lda,
+    integer *ipiv, double *b, integer *ldb, integer *info);
 //Lapack Band Solver
 extern "C" 
   long int solve_iterative_petsc( double **solve_A, double solve_b[],
@@ -73,13 +77,13 @@ void solve( long int task )
     control_options_solver_petsc_ksptype=-1, control_options_solver_petsc_pctype=-1,
     idum[1], control_eigen[2], *node_bounded=NULL, *dof_principal=NULL, 
     *node_node=NULL, *dof_label=NULL, *dof_type=NULL,
-    *element_matrix_unknowns=NULL, *ipiv=NULL, 
+    *element_matrix_unknowns=NULL, *ipiv=NULL, *ipiv_dense=NULL,
     *ordered_global=NULL, *global_ordered=NULL, *ordering_has_been_done=NULL;
   int superlu_nnz=0, *nnz=NULL, **inz=NULL,  *length_inz=NULL, *int_ptr=NULL,
     *superlu_asub=NULL, *superlu_xa=NULL;
   double max=0., tmp=0., control_eigen_scale=0., ddum[1],
     *node_eigen=NULL, *options_relaxation=NULL,
-    *mat=NULL, *matlin=NULL, *matss=NULL, *w=NULL, *z=NULL, *work=NULL, 
+    *mat=NULL, *mat_dense=NULL, *matlin=NULL, *matss=NULL, *w=NULL, *z=NULL, *work=NULL, 
     *node_lhside=NULL, *node_rhside=NULL, *element_matrix_values=NULL,  
     *element_matrix_second_values=NULL, *node_dof_new=NULL,
     **solve_A=NULL, *superlu_A=NULL, *dbl_ptr=NULL, *solve_b_temp=NULL;
@@ -245,6 +249,22 @@ void solve( long int task )
         ordered_global[inod] = inod;
       }
     }
+    // also compute the band width (needed by the direct-LU retry after
+    // a Bi-CG failure: dgbsv requires kl/ku/ldmat)
+    band = 0;
+    for ( inod=0; inod<=max_node; inod++ ) {
+      if ( db_active_index( NODE, inod, VERSION_NORMAL ) ) {
+        nnod = 0;
+        db( NODE_NODE, inod, node_node, ddum, nnod, VERSION_NORMAL, GET );
+        for ( jj=0; jj<nnod; jj++ ) {
+          jnod = labs(node_node[jj]);
+          if ( db_active_index( NODE, jnod, VERSION_NORMAL ) ) {
+            long int diff = ( inod>jnod ) ? inod-jnod : jnod-inod;
+            if ( diff*nprinc > band ) band = diff*nprinc;
+          }
+        }
+      }
+    }
   }
   else
   {
@@ -376,17 +396,32 @@ void solve( long int task )
       }
     }
 
-    if ( band_solver )
-    {
-      ipiv = get_new_int( solve_nlocal );
-      array_set( ipiv, 0, solve_nlocal );
-      n = solve_nlocal;
-      kl = band;
-      ku = band;
-      ldmat = 2*kl+ku+1;
-      lmat = ldmat*solve_nlocal;
+    // dense LU (dgesv) workspace: A(row,col) direct fill. Allocated
+    // ALWAYS (also for the Bi-CG path) so the retry after a Bi-CG
+    // failure can resolve with dgesv without re-filling.
+    if ( solve_nlocal>0 ) {
+      mat_dense = get_new_dbl( solve_nlocal*solve_nlocal );
+      array_set( mat_dense, 0., solve_nlocal*solve_nlocal );
+      ipiv_dense = get_new_int( solve_nlocal );
+      array_set( ipiv_dense, 0, solve_nlocal );
+    }
+    // band LU workspace (dgbsv): allocated ALWAYS (also for the Bi-CG
+    // path) so the retry after a Bi-CG failure can resolve with dgbsv
+    // (the band pivoting handles the near-singular 3D interface systems
+    // that the dense dgesv rejects).
+    kl = band;
+    ku = band;
+    ldmat = 2*kl+ku+1;
+    lmat = ldmat*solve_nlocal;
+    if ( solve_nlocal>0 ) {
       mat = get_new_dbl( lmat );
       array_set( mat, 0., lmat );
+      ipiv = get_new_int( solve_nlocal );
+      array_set( ipiv, 0, solve_nlocal );
+    }
+    if ( band_solver )
+    {
+      n = solve_nlocal;
       if ( swit )
       {
         pri( "ldmat", ldmat );
@@ -421,7 +456,8 @@ void solve( long int task )
     }
 
 // fill matrices in band format or profile format
-    if ( band_solver || petsc_solver || superlu_solver ) {
+    // (also under bicg_solver: the direct-LU retry needs mat/mat_dense)
+    if ( band_solver || petsc_solver || superlu_solver || bicg_solver ) {
       for ( element=0; element<=max_element; element++ ) {
         if ( db_active_index( ELEMENT, element, VERSION_NORMAL ) ) {
           element_group = 0;
@@ -457,7 +493,11 @@ void solve( long int task )
               ilocal = solve_global_local[iglobal];
               jlocal = solve_global_local[jglobal];
               if ( ilocal!=-NO && jlocal!=-NO ) {
-                if ( band_solver ) {
+                // dense LU fill (always, for the Bi-CG retry): A direct
+                if ( mat_dense )
+                  mat_dense[ilocal*solve_nlocal+jlocal] +=
+                    element_matrix_values[imat];
+                if ( mat ) {
                   ii = kl + ku + 1 + (ilocal+1) - (jlocal+1);
                   jj = jlocal + 1;
                   indx = (jj-1)*ldmat + ii;
@@ -536,7 +576,11 @@ void solve( long int task )
             ilocal = solve_global_local[iglobal];
             jlocal = ilocal;
             if ( ilocal!=-NO ) {
-              if ( band_solver ) {
+              // dense LU diagonal (always, for the Bi-CG retry)
+              if ( mat_dense && use_node_lhside )
+                mat_dense[ilocal*solve_nlocal+ilocal] +=
+                  node_lhside[ipuknwn];
+              if ( mat ) {
                 ii = kl + ku + 1 + (ilocal+1) - (jlocal+1);
                 jj = jlocal + 1;
                 indx = (jj-1)*ldmat + ii;
@@ -605,8 +649,43 @@ void solve( long int task )
     }
 
 // call solver
-    if      ( bicg_solver ) 
+    if      ( bicg_solver ) {
       succesful = solve_iterative_bicg( );
+      // CONVERGENCE (2026-08-30): if the Bi-CG fails (3D interfaces
+      // with kn >> E, ratio 1e10), retry with the dense LU (dgesv).
+      // The dense matrix is filled alongside the band path.
+      if ( !succesful && ( mat_dense || mat ) ) {
+        static long int warned_dense = 0;
+        if ( !warned_dense ) {
+          pri( "Warning: Bi-CG did not converge - retrying with direct LU" );
+          warned_dense = 1;
+        }
+        // the Bi-CG overwrote solve_b (workspace); restore the original
+        // right-hand side from solve_b_temp before the direct solve
+        for ( ii=0; ii<solve_nlocal; ii++ )
+          solve_b[ii] = solve_b_temp[ii+1];
+        // try the band LU first (handles the near-singular 3D interface
+        // systems with pivoting); fall back to the dense LU
+        if ( mat ) {
+          n = solve_nlocal;
+          kl = band;
+          ku = band;
+          nrhs = 1;
+          dgbsv_( &n, &kl, &ku, &nrhs, mat, &ldmat, ipiv, solve_b, &n, &info );
+        }
+        else {
+          n = solve_nlocal;
+          nrhs = 1;
+          dgesv_( &n, &nrhs, mat_dense, &n, ipiv_dense, solve_b, &n, &info );
+        }
+        if ( info !=0 ) {
+          pri( "Error with Lapack direct solver." );
+          pri( "Try one of the other solver option:" );
+          exit(TN_EXIT_STATUS);
+        }
+        succesful = 1;
+      }
+    }
     else if ( petsc_solver ) {
       if ( db( CONTROL_OPTIONS_SOLVER_PETSC_KSPTYPE, icontrol, &control_options_solver_petsc_ksptype, 
           ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS ) ) {
@@ -747,7 +826,8 @@ if (band_solver)
 // fill dofs
     for ( inod=0; inod<=max_node; inod++ ) {
       if ( db_active_index( NODE, inod, VERSION_NORMAL ) ) {
-        if ( bicg_solver || petsc_solver || superlu_solver || lapack_solver) 
+        if ( bicg_solver || petsc_solver || superlu_solver || lapack_solver
+             || band_solver )
           node_dof_new = db_dbl( NODE_DOF, inod, VERSION_NEW );
         for ( i=0; i<neigen_positive*nuknwn; i++ ) node_eigen[i] = 0.;
         iprinc=0;
@@ -757,7 +837,8 @@ if (band_solver)
           if ( solve_global_local[iglobal]>=0 ) {
             ilocal = solve_global_local[iglobal];
             if ( ilocal!=-NO ) {
-              if ( bicg_solver || petsc_solver || superlu_solver || lapack_solver) {
+              if ( bicg_solver || petsc_solver || superlu_solver || lapack_solver
+                   || band_solver ) {
                 tmp = solve_b[ilocal];
                 if ( dof_principal[iuknwn]>=0 ) tmp *= options_relaxation[iprinc];
                 node_dof_new[iuknwn] += tmp;
@@ -790,6 +871,13 @@ if (band_solver)
 	{
       delete[] mat;
       delete[] ipiv;
+    }
+    if ( mat_dense )
+    {
+      delete[] mat_dense;
+      delete[] ipiv_dense;
+      mat_dense = NULL;
+      ipiv_dense = NULL;
     }
     if ( petsc_solver ) 
 	{

@@ -215,7 +215,8 @@ long int solve_iterative_bicg( void )
       pri( "- Not enough boundary conditions?" );
       pri( "- A singular or badly scaled system?" );
       pri( "- A diverged calculation?\n" );
-      exit_tn_on_error();
+      succesful = 0;
+      break;
     }
     if ( solve_iterative_bicg_use_cg ) {
         // CG for the symmetric system: d = r, one direction vector.
@@ -248,7 +249,8 @@ long int solve_iterative_bicg( void )
         pri( "- Not enough boundary conditions?" );
         pri( "- An invalid element connectivity (negative Jacobians)?" );
         pri( "- A load in a zero-energy mode of the matrix?\n" );
-        exit_tn_on_error();
+        succesful = 0;
+        break;
       }
       alpha = error / dAd;
       for ( ilocal=0; ilocal<solve_nlocal; ilocal++ ) {
@@ -299,7 +301,8 @@ long int solve_iterative_bicg( void )
         pri( "- Not enough boundary conditions?" );
         pri( "- An invalid element connectivity (negative Jacobians)?" );
         pri( "- A load in a zero-energy mode of the matrix?\n" );
-        exit_tn_on_error();
+        succesful = 0;
+        break;
       }
       alpha = size_r1r2 / dAd;
       for ( ilocal=0; ilocal<solve_nlocal; ilocal++ ) {
