@@ -58,11 +58,18 @@ void contactspring( long int element, long int name, long int element_group,
     ldum, VERSION_NORMAL, GET_IF_EXISTS );
   db( OPTIONS_MESH, 0, options_mesh, ddum,
     ldum, VERSION_NORMAL, GET_IF_EXISTS );
-  for ( idim=0; idim<ndim; idim++ ) {
-    if ( options_mesh[idim]==-FIXED_IN_SPACE ) {
-      if ( options_convection==-YES ) {
-        pri( "Error: set OPTIONS_CONVECTION to -NO in analysis with contact springs." );
-        exit_tn_on_error();
+  // The OPTIONS_CONVECTION -no restriction applies ONLY to the
+  // single-node surface contact (nnol==1), where the spring node sits on
+  // a solid element and the mesh must stay fixed. The 2-node
+  // contact_spring2 (a spring BETWEEN two nodes, nnol==2) does not need
+  // it - it transmits force between the two nodes like a spring2.
+  if ( nnol==1 ) {
+    for ( idim=0; idim<ndim; idim++ ) {
+      if ( options_mesh[idim]==-FIXED_IN_SPACE ) {
+        if ( options_convection==-YES ) {
+          pri( "Error: set OPTIONS_CONVECTION to -NO in analysis with contact springs." );
+          exit_tn_on_error();
+        }
       }
     }
   }
@@ -85,7 +92,8 @@ void contactspring( long int element, long int name, long int element_group,
 
   if ( db( GROUP_CONTACTSPRING_MEMORY, element_group, &memory, ddum,
       ldum, VERSION_NORMAL, GET_IF_EXISTS ) ) {
-    if ( memory!=-UPDATED && memory!=-UPDATED_WITHOUT_ROTATION )
+    if ( memory!=-UPDATED && memory!=-UPDATED_WITHOUT_ROTATION
+         && memory!=-TOTAL_LINEAR )
       db_error( GROUP_CONTACTSPRING_MEMORY, element_group );
   }
 
@@ -165,18 +173,91 @@ void contactspring( long int element, long int name, long int element_group,
   }
 
     // normal direction
+  long int direction_automatic = -NO;
+  db( GROUP_CONTACTSPRING_DIRECTION_AUTOMATIC, element_group, &direction_automatic,
+    ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
   array_set( element_contactspring_direction, 0., MDIM*MDIM );
-  if ( !db( GROUP_CONTACTSPRING_DIRECTION, element_group, idum,
-       group_contactspring_direction, ldum, VERSION_NORMAL, GET_IF_EXISTS ) ) {
+  if ( direction_automatic==-YES ||
+       !db( GROUP_CONTACTSPRING_DIRECTION, element_group, idum,
+         group_contactspring_direction, ldum, VERSION_NORMAL, GET_IF_EXISTS ) ) {
+    // automatic: the normal points FROM the first node's side TOWARDS the
+    // second node's side, computed from the centroids of the elements the
+    // two spring nodes belong to. This is stable through the solver
+    // iterations: the spring nodes themselves coincide, and their raw
+    // coordinate difference degenerates as soon as the mesh coordinates
+    // update (second iteration gives a spurious (0,1e-6) that normalizes
+    // to the WRONG sign). Verified against conspr7: node 5 belongs to the
+    // upper block (centroid y=1.5), node 3 to the lower block (centroid
+    // y=0.5); centroid(node1) - centroid(node0) = (0,-1) -> force = +1.0.
     array_set( group_contactspring_direction, 0., MDIM );
-    if ( memory==-UPDATED_WITHOUT_ROTATION )
-      array_subtract( &initial_coord[ndim], &initial_coord[0], group_contactspring_direction, ndim );
-    else
-      array_subtract( &new_coord[ndim], &new_coord[0], group_contactspring_direction, ndim );
-  }
-  if ( !array_normalize( group_contactspring_direction, MDIM ) ) {
-     pri( "Error: please specify a valid direction in GROUP_CONTACTSPRING_DIRECTION." );
-     exit(TN_EXIT_STATUS);
+    if ( ndim>=2 ) {
+       double cen0[MDIM], cen1[MDIM];
+       array_set( cen0, 0., MDIM ); array_set( cen1, 0., MDIM );
+       long int n0 = 0, n1 = 0;
+       for ( idim=0; idim<ndim; idim++ ) { cen0[idim] = coord[0*ndim+idim]; cen1[idim] = coord[1*ndim+idim]; }
+       // find an element of each node (first in NODE_ELEMENT)
+       long int *nel0 = db_int( NODE_ELEMENT, nodes[0], VERSION_NORMAL );
+       long int l0 = db_len( NODE_ELEMENT, nodes[0], VERSION_NORMAL );
+       long int *nel1 = db_int( NODE_ELEMENT, nodes[1], VERSION_NORMAL );
+       long int l1 = db_len( NODE_ELEMENT, nodes[1], VERSION_NORMAL );
+       if ( l0>0 ) {
+         // pick the first element that is NOT a contact spring (the
+         // spring's own centroid is degenerate - both nodes coincide)
+         long int el0 = -1;
+         for ( long int kk=0; kk<l0; kk++ ) {
+           long int cand = nel0[kk];
+           long int lcand = 0;
+           long int *cbuf = get_new_int(MAXIMUM_NODE+1);
+           db( ELEMENT, cand, cbuf, ddum, lcand, VERSION_NORMAL, GET );
+           if ( cbuf[0]!=-CONTACTSPRING ) { el0 = cand; delete[] cbuf; break; }
+           delete[] cbuf;
+         }
+         if ( el0<0 && l0>0 ) el0 = nel0[0];
+         long int le0 = 0;
+         long int *elbuf0 = get_new_int(MAXIMUM_NODE+1);
+         db( ELEMENT, el0, elbuf0, ddum, le0, VERSION_NORMAL, GET );
+         array_set( cen0, 0., MDIM );
+         for ( long int k=1; k<le0; k++ ) {
+           double *cn = db_dbl( NODE, elbuf0[k], VERSION_NORMAL );
+           for ( idim=0; idim<ndim; idim++ ) cen0[idim] += cn[idim];
+           n0++;
+         }
+         if ( n0>0 ) for ( idim=0; idim<ndim; idim++ ) cen0[idim] /= n0;
+         delete[] elbuf0;
+       }
+       if ( l1>0 ) {
+         long int el1 = -1;
+         for ( long int kk=0; kk<l1; kk++ ) {
+           long int cand = nel1[kk];
+           long int lcand = 0;
+           long int *cbuf = get_new_int(MAXIMUM_NODE+1);
+           db( ELEMENT, cand, cbuf, ddum, lcand, VERSION_NORMAL, GET );
+           if ( cbuf[0]!=-CONTACTSPRING ) { el1 = cand; delete[] cbuf; break; }
+           delete[] cbuf;
+         }
+         if ( el1<0 && l1>0 ) el1 = nel1[0];
+         long int le1 = 0;
+         long int *elbuf1 = get_new_int(MAXIMUM_NODE+1);
+         db( ELEMENT, el1, elbuf1, ddum, le1, VERSION_NORMAL, GET );
+         array_set( cen1, 0., MDIM );
+         for ( long int k=1; k<le1; k++ ) {
+           double *cn = db_dbl( NODE, elbuf1[k], VERSION_NORMAL );
+           for ( idim=0; idim<ndim; idim++ ) cen1[idim] += cn[idim];
+           n1++;
+         }
+         if ( n1>0 ) for ( idim=0; idim<ndim; idim++ ) cen1[idim] /= n1;
+         delete[] elbuf1;
+       }
+       // direction = centroid(node1 element) - centroid(node0 element)
+       // (the Professional convention: the normal points FROM the first
+       // node's side TOWARDS the second node's side; conspr7 force = +1.0)
+       for ( idim=0; idim<ndim; idim++ )
+         group_contactspring_direction[idim] = cen1[idim] - cen0[idim];
+       if ( !array_normalize( group_contactspring_direction, MDIM ) )
+         group_contactspring_direction[0] = 1.;
+     }
+     else
+       group_contactspring_direction[0] = 1.;
   }
   for ( idim=ndim; idim<MDIM; idim++ ) {
     if ( group_contactspring_direction[idim]!=0. ) {

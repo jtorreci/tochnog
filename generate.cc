@@ -245,11 +245,14 @@ void generate_spring( long int icontrol )
     element_group=0, in_geometry=0, length=0, swit=0, ldum=0, 
     correct_elements=0, length_node_element_inod=0, length_node_element_jnod=0, 
     control_mesh_generate_contactspring_element_specified=0, 
+    control_mesh_generate_contactspring_element_group_specified=0,
+    contact_group_0=0, contact_group_1=0,
     iel=0, element=0, name=0, element_name0=0, element_name1=0,
     element0_in_node_element_inod=0, element0_in_node_element_jnod=0,
     element1_in_node_element_inod=0, element1_in_node_element_jnod=0,
     control_mesh_generate_spring[3], el[1+MNOL],
-    control_mesh_generate_contactspring_element[2], 
+    control_mesh_generate_contactspring_element[2],
+    control_mesh_generate_contactspring_element_group[2],
     geometry_entity[2], *in_geometry_list=NULL, 
     *node_element_inod=NULL, *node_element_jnod=NULL;
   double distance=0., rdum=0., ddum[MDIM], *coordi=NULL, *coordj=NULL;
@@ -363,6 +366,20 @@ void generate_spring( long int icontrol )
       node_element_inod = get_new_int(1+max_element);
       node_element_jnod = get_new_int(1+max_element);
     }
+    // _element_group: generate springs between elements of two groups
+    // (manual Professional 6.189): a node pair is correct when one node
+    // belongs to an element of group_0 and the other to group_1.
+    control_mesh_generate_contactspring_element_group_specified = 0;
+    if ( db( CONTROL_MESH_GENERATE_CONTACTSPRING_ELEMENT_GROUP, icontrol,
+        control_mesh_generate_contactspring_element_group, ddum, ldum,
+        VERSION_NORMAL, GET_IF_EXISTS ) ) {
+      control_mesh_generate_contactspring_element_group_specified = 1;
+      contact_group_0 = control_mesh_generate_contactspring_element_group[0];
+      contact_group_1 = control_mesh_generate_contactspring_element_group[1];
+      length = 1+max_element;
+      node_element_inod = get_new_int(1+max_element);
+      node_element_jnod = get_new_int(1+max_element);
+    }
     in_geometry_list = get_new_int(1+max_node);
     element_group = control_mesh_generate_spring[0];
     array_move( &control_mesh_generate_spring[1], geometry_entity, 2 );
@@ -378,7 +395,33 @@ void generate_spring( long int icontrol )
             coordj = db_dbl( NODE_START_REFINED, jnod, VERSION_NORMAL );
             distance = array_distance( coordi, coordj, ddum, ndim );
             correct_elements = 1;
-            if ( control_mesh_generate_contactspring_element_specified ) {
+            if ( control_mesh_generate_contactspring_element_group_specified ) {
+              // correct when the two nodes belong to the two groups
+              // (in any order)
+              long int g_inod_0 = 0, g_inod_1 = 0, g_jnod_0 = 0, g_jnod_1 = 0;
+              db( NODE_ELEMENT, inod, node_element_inod, ddum,
+                length_node_element_inod, VERSION_NORMAL, GET );
+              for ( iel=0; iel<length_node_element_inod; iel++ ) {
+                element = node_element_inod[iel];
+                long int eg = 0;
+                db( ELEMENT_GROUP, element, &eg, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+                if ( eg==contact_group_0 ) g_inod_0 = 1;
+                if ( eg==contact_group_1 ) g_inod_1 = 1;
+              }
+              db( NODE_ELEMENT, jnod, node_element_jnod, ddum,
+                length_node_element_jnod, VERSION_NORMAL, GET );
+              for ( iel=0; iel<length_node_element_jnod; iel++ ) {
+                element = node_element_jnod[iel];
+                long int eg = 0;
+                db( ELEMENT_GROUP, element, &eg, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+                if ( eg==contact_group_0 ) g_jnod_0 = 1;
+                if ( eg==contact_group_1 ) g_jnod_1 = 1;
+              }
+              if      ( g_inod_0 && g_jnod_1 ) correct_elements = 1;
+              else if ( g_inod_1 && g_jnod_0 ) correct_elements = 1;
+              else correct_elements = 0;
+            }
+            else if ( control_mesh_generate_contactspring_element_specified ) {
               db( NODE_ELEMENT, inod, node_element_inod, ddum, 
                 length_node_element_inod, VERSION_NORMAL, GET );
               db( NODE_ELEMENT, jnod, node_element_jnod, ddum, 

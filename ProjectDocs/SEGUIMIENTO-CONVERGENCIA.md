@@ -2160,3 +2160,17 @@ y avance mejor.
 **Familia interfaz: 12/14 tests rc=0** (1, 7, 8, 9, 12, 14, 15, patch, quad4_hex8, bar2_hex8, bar2_quad4, quad4_hex8_many). Solo quedan interface2 (gap multi-paso) e interface13 (bug del propio test del corpus: el Professional escribe 0.671 pero su target pide 1.118).
 
 **Corpus: 90 → 91 PASS** (de 363). Suite 16/16.
+
+### contact_spring2 + familia conspr/genera2 — corpus 99
+
+**Cierre de la familia contact_spring del corpus** (conspr1-7 + genera2, 8 tests):
+1. **Aliases**: `contact_spring`/`contact_spring2` → CONTACTSPRING; `group_contact_spring_*` → `group_contactspring_*` (stiffness, memory, direction, direction_automatic, damping).
+2. **`group_contact_spring_direction_automatic`** + `control_mesh_generate_contact_spring_element_group` + `control_mesh_generate_contact_spring*`: registrados como records.
+3. **OPTIONS_CONVECTION -no**: la restricción aplica SOLO a nnol==1 (spring de nodo sobre sólido); contact_spring2 (nnol==2, spring ENTRE nodos) no la necesita.
+4. **memory -total_linear** aceptado (antes db_error).
+5. **generate_contactspring_element_group** implementado: crea springs entre nodos coincidentes de dos elementos/grupos dados; dirección automática por centroides.
+6. **FIX crítico de dirección automática**: la dirección se calcula SIEMPRE de los centroides de los elementos de los nodos (cen1−cen0, con filtro que excluye los springs — su centroide es degenerado). La resta de coords de los nodos del spring degenera en la 2ª iteración del solver: coord ya deformado da (0,1e-6) que normaliza a (0,1) — signo EQUIVOCADO. Con centroides: nodo5 (bloque sup, y=1.5) − nodo3 (bloque inf, y=0.5) = (0,−1) → force = +1.0 correcto. conspr7: la carga total 2 (nodos 7,8 con −vely) se reparte 1 por spring.
+
+**Resultado**: conspr1-7 y genera2 → rc=0. **Corpus: 91 → 99 PASS** (de 363). Suite 16/16. Desglose actual del corpus: 99 PASS / 224 RUNFAIL / 40 PARSE.
+
+**Pendientes del corpus**: interface2 (gap multi-paso), interface13 (bug del propio test), y los parse-errors de mayor frecuencia: `-nory_sig`/`-norx_sig` (6), `geometry_factor` (4), `-quad8`/`-hex20` (5), `mesh_gid_point_coord`/`mesh_gid_circle_coord` (5), `-updated_area` (3), `processors` (2).

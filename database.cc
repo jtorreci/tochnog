@@ -1097,6 +1097,10 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   data_class[CONTROL_MESH_GENERATE_CONTACTSPRING] = CONTROL;
 
   strcpy(name[CONTROL_MESH_GENERATE_CONTACTSPRING_ELEMENT],"control_mesh_generate_contactspring_element");
+  strcpy(name[CONTROL_MESH_GENERATE_CONTACTSPRING_ELEMENT_GROUP],"control_mesh_generate_contactspring_element_group");
+  type[CONTROL_MESH_GENERATE_CONTACTSPRING_ELEMENT_GROUP] = INTEGER;
+  data_length[CONTROL_MESH_GENERATE_CONTACTSPRING_ELEMENT_GROUP] = 2;
+  data_class[CONTROL_MESH_GENERATE_CONTACTSPRING_ELEMENT_GROUP] = CONTROL;
   type[CONTROL_MESH_GENERATE_CONTACTSPRING_ELEMENT] = INTEGER;
   data_length[CONTROL_MESH_GENERATE_CONTACTSPRING_ELEMENT] = 2;
   data_class[CONTROL_MESH_GENERATE_CONTACTSPRING_ELEMENT] = CONTROL;
@@ -3545,6 +3549,12 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   data_length[GROUP_CONTACTSPRING_DIRECTION] = MDIM;
   data_class[GROUP_CONTACTSPRING_DIRECTION] = CONTACTSPRING;
   data_required[GROUP_CONTACTSPRING_DIRECTION] = GROUP_TYPE;
+
+  strcpy(name[GROUP_CONTACTSPRING_DIRECTION_AUTOMATIC],"group_contactspring_direction_automatic");
+  type[GROUP_CONTACTSPRING_DIRECTION_AUTOMATIC] = INTEGER;
+  data_length[GROUP_CONTACTSPRING_DIRECTION_AUTOMATIC] = 1;
+  data_class[GROUP_CONTACTSPRING_DIRECTION_AUTOMATIC] = CONTACTSPRING;
+  data_required[GROUP_CONTACTSPRING_DIRECTION_AUTOMATIC] = GROUP_TYPE;
 
   strcpy(name[GROUP_CONTACTSPRING_FRICTION],"group_contactspring_friction");
   type[GROUP_CONTACTSPRING_FRICTION] = DOUBLE_PRECISION;
@@ -7616,6 +7626,34 @@ long int db_number( char str[] )
       return GROUNDFLOW_PHREATICLEVEL;
     else if ( !strcmp( str, "size_dev" ) )
       return SIZEDEV;
+    else if ( !strcmp( str, "contact_spring" ) )
+      return CONTACTSPRING;
+    else if ( !strcmp( str, "contact_spring2" ) )
+      return CONTACTSPRING;
+    else if ( !strcmp( str, "control_mesh_generate_contact_spring" ) )
+      return CONTROL_MESH_GENERATE_CONTACTSPRING;
+    else if ( !strcmp( str, "control_mesh_generate_contact_spring_element" ) )
+      return CONTROL_MESH_GENERATE_CONTACTSPRING_ELEMENT;
+    else if ( !strcmp( str, "control_mesh_generate_contact_spring_element_group" ) )
+      return CONTROL_MESH_GENERATE_CONTACTSPRING_ELEMENT_GROUP;
+    else if ( !strcmp( str, "group_contact_spring_direction_automatic" ) )
+      return GROUP_CONTACTSPRING_DIRECTION_AUTOMATIC;
+    else if ( !strcmp( str, "element_contact_spring_force" ) )
+      return ELEMENT_CONTACTSPRING_FORCE;
+    else if ( !strcmp( str, "element_contact_spring_strain" ) )
+      return ELEMENT_CONTACTSPRING_FORCE;
+    else if ( !strcmp( str, "group_contact_spring_stiffness" ) )
+      return db_number( "group_contactspring_stiffness" );
+    else if ( !strcmp( str, "group_contact_spring_direction" ) )
+      return db_number( "group_contactspring_direction" );
+    else if ( !strcmp( str, "group_contact_spring_plasti_friction" ) )
+      return db_number( "group_contactspring_friction" );
+    else if ( !strcmp( str, "group_contact_spring_friction_automatic" ) )
+      return db_number( "group_contactspring_friction_automatic" );
+    else if ( !strcmp( str, "group_contact_spring_cohesion" ) )
+      return db_number( "group_contactspring_cohesion" );
+    else if ( !strcmp( str, "group_contact_spring_memory" ) )
+      return db_number( "group_contactspring_memory" );
     else if ( !strcmp( str, "total_pressure" ) )
       return TOTAL;
     else if ( !strcmp( str, "static_pressure" ) )
