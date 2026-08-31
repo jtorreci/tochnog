@@ -2122,3 +2122,18 @@ y avance mejor.
 6. **Pesos 3D uniformes** 1/ns1 (el quad4 convertido a hex8 reparte la tracción de cara uniforme; Lobatto 1D daría 4× menos — interface_quad4_hex8: −0.2475 vs −1.0).
 
 **Pendiente documentado**: los 3D con kn>>E (interface_quad4_hex8, interface_bar2_hex8, interface_bar2_quad4, interface_quad4_hex8_many) necesitan solver directo real. El band dgbsv resuelve el hex8 3D pero rompe 2D (truss/interface1/8 → 0 silencioso); el Bi-CG no converge con ratio 1e10. SuperLU = proyecto aparte (so_suplu.c existe en el GNU 2014).
+
+### Solver directo: retry LU (band dgbsv) tras fallo Bi-CG (5b7bb8b)
+
+**Solución al bloqueo 3D**: `-matrix_pardiso` usa Bi-CG por defecto; cuando el Bi-CG no converge (interfaces 3D con kn>>E, ratio 1e10 — interface_quad4_hex8 con kn=1e10 vs E=1), el solver reintenta con el LAPACK band LU (dgbsv) directo. El band maneja la casi-singularidad con pivoteo (el denso dgesv la rechaza).
+
+**Fixes necesarios**:
+1. `so_bicg.cc`: los 3 fallos (no convergencia, breakdown CG/BiCG) retornan `succesful=0` (antes `exit_tn_on_error`) para permitir el retry.
+2. `so.cc`: `mat` (band) y `mat_dense` (dgesv) se alocan y llenan SIEMPRE (también en el camino bicg).
+3. `band` se calcula también en el renumbering bicg (antes solo en el else no-bicg).
+4. **FIX fill dofs**: `band_solver` añadido a la condición de copia `solve_b` → `node_dof_new` — el band NUNCA llenaba los dofs → solución 0 silenciosa. ESTE era el bug de "band da 0" (truss/interfaces 2D con band).
+5. El retry restaura `solve_b` desde `solve_b_temp` (el Bi-CG lo sobrescribe).
+
+**Resultado**: corpus 81→87 PASS. interface_quad4_hex8 rc=0 (el 3D de interfaz con kn=1e10 que el Bi-CG no podía). Suite propia 16/16 intacta.
+
+**Pendientes**: interface_bar2_hex8/bar2_quad4/many (bug de extrusión bar2→quad4→hex8, separado del solver), interface2 (gap multi-paso), interface13 (bug del propio test del corpus).
