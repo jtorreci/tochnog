@@ -467,13 +467,15 @@ void mesh_rotate_3d( long int nrot )
   mesh_has_changed( VERSION_NORMAL );
 }
 
-void mesh_extrude( double z_layer[], long int n_layer )
+void mesh_extrude( double z_layer[], long int n_layer, long int quad9_layers )
 
 {
   // extrude a 2D mesh (z=0) to 3D along the z-axis.
   // z_layer[] gives the z-coordinate of each layer boundary;
   // one 3D element is generated per 2D element per layer.
-  // -tria3 -> -prism6, -quad4 -> -hex8.
+  // -tria3 -> -prism6, -quad4 -> -hex8, -quad9 -> -hex27
+  // (quad9_layers: the number of hex27 layers from
+  // control_mesh_extrude_n, splitting the z_layer extent evenly).
   long int inod=0, max_node=0, ielem=0, max_elem=0, inol=0, nnol=0,
     length=0, layer=0, len3=3, idum[1], el[1+MNOL], nodes[MNOL],
     new_nodes[1+MNOL];
@@ -525,6 +527,8 @@ void mesh_extrude( double z_layer[], long int n_layer )
 
   // create 3D elements: one per 2D element per layer
   long int new_elem = max_elem;
+  long int next_node = nbase + n_layer*nbase; // after all boundary copies
+  long int last_top = 0; // the top node block of the previous quad9 layer
   for ( ielem=0; ielem<=max_elem; ielem++ ) {
     if ( db_active_index( ELEMENT, ielem, VERSION_NORMAL ) ) {
       db( ELEMENT, ielem, el, ddum, length, VERSION_NORMAL, GET );
@@ -574,21 +578,113 @@ void mesh_extrude( double z_layer[], long int n_layer )
             VERSION_NORMAL );
         }
       }
-    }
-  }
-  db_max_index( ELEMENT, max_elem, VERSION_NORMAL, GET );
-  for ( ielem=0; ielem<=max_elem; ielem++ ) {
-    if ( db_active_index( ELEMENT, ielem, VERSION_NORMAL ) ) {
-      db( ELEMENT, ielem, el, ddum, length, VERSION_NORMAL, GET );
-      for ( int kk=0; kk<length; kk++ ) cout << " " << el[kk];
-      cout << endl;
+      else if ( el[0]==-QUAD9 && nnol==9 ) {
+        // quad9 -> hex27 (the Professional's extrusion of the quadratic
+        // section elements; measured on its force11 .dbs: 9 base nodes +
+        // 9 mid-plane nodes at the segment mid-height + 9 top nodes per
+        // layer). The number of layers comes from control_mesh_extrude_n
+        // (quad9_layers; the z record gives the total extent z0..z1).
+        // The intermediate boundary nodes and the mid-plane nodes are
+        // NEW nodes; the existing copy at z1 serves as the top of the
+        // last layer, the source nodes as the base of the first.
+        long int nq = ( quad9_layers>1 ? quad9_layers : 1 );
+        double zq0 = z_layer[0], zq1 = z_layer[n_layer-1];
+        for ( long int lay=0; lay<nq; lay++ ) {
+          double zb = zq0 + lay*(zq1-zq0)/nq;
+          double zt = zq0 + (lay+1)*(zq1-zq0)/nq;
+          double z_mid = 0.5*( zb + zt );
+          // base: lay 0 -> the SOURCE nodes; later layers -> the
+          // ABSOLUTE block of the previous layer's top (last_top)
+          long int base_abs = ( lay==0 ? -1 : last_top );
+          // top: last layer -> the existing copy offset n_layer*nbase
+          // (nodes[inol] + offset); other layers -> a NEW absolute
+          // node block at zt
+          long int top_off = -1, top_abs = -1;
+          if ( lay==nq-1 ) {
+            top_off = n_layer*nbase;
+          }
+          else {
+            top_abs = next_node;
+            for ( inol=0; inol<9; inol++ ) {
+              db( NODE, nodes[inol], idum, coords, ndim,
+                VERSION_NORMAL, GET );
+              coords[2] = zt;
+              db( NODE, next_node, idum, coords, len3, VERSION_NORMAL,
+                PUT );
+              for ( int idat=0; idat<MDAT; idat++ ) {
+                if ( idat!=NODE && db_data_class(idat)==NODE &&
+                     db_active_index( idat, nodes[inol],
+                       VERSION_NORMAL ) ) {
+                  long int ndata_len = db_len( idat, nodes[inol],
+                    VERSION_NORMAL );
+                  if ( db_type(idat)==DOUBLE_PRECISION ) {
+                    double *dold = db_dbl( idat, nodes[inol],
+                      VERSION_NORMAL );
+                    db( idat, next_node, idum, dold, ndata_len,
+                      VERSION_NORMAL, PUT );
+                  }
+                  else {
+                    long int *iold = db_int( idat, nodes[inol],
+                      VERSION_NORMAL );
+                    db( idat, next_node, iold, ddum, ndata_len,
+                      VERSION_NORMAL, PUT );
+                  }
+                }
+              }
+              next_node++;
+            }
+          }
+          // the mid-plane nodes at the layer mid-height
+          long int mid0 = next_node;
+          for ( inol=0; inol<9; inol++ ) {
+            db( NODE, nodes[inol], idum, coords, ndim, VERSION_NORMAL,
+              GET );
+            coords[2] = z_mid;
+            db( NODE, next_node, idum, coords, len3, VERSION_NORMAL,
+              PUT );
+            for ( int idat=0; idat<MDAT; idat++ ) {
+              if ( idat!=NODE && db_data_class(idat)==NODE &&
+                   db_active_index( idat, nodes[inol],
+                     VERSION_NORMAL ) ) {
+                long int ndata_len = db_len( idat, nodes[inol],
+                  VERSION_NORMAL );
+                if ( db_type(idat)==DOUBLE_PRECISION ) {
+                  double *dold = db_dbl( idat, nodes[inol],
+                    VERSION_NORMAL );
+                  db( idat, next_node, idum, dold, ndata_len,
+                    VERSION_NORMAL, PUT );
+                }
+                else {
+                  long int *iold = db_int( idat, nodes[inol],
+                    VERSION_NORMAL );
+                  db( idat, next_node, iold, ddum, ndata_len,
+                    VERSION_NORMAL, PUT );
+                }
+              }
+            }
+            next_node++;
+          }
+          new_elem++;
+          new_nodes[0] = -HEX27;
+          for ( inol=0; inol<9; inol++ ) {
+            new_nodes[1+inol] = ( base_abs>=0 ? base_abs+inol
+                                               : nodes[inol] );
+            new_nodes[10+inol] = mid0 + inol;
+            new_nodes[19+inol] = ( top_abs>=0 ? top_abs+inol
+                                               : nodes[inol]+top_off );
+          }
+          create_element( ielem, new_elem, new_nodes, 28, VERSION_NORMAL,
+            VERSION_NORMAL );
+          last_top = ( top_abs>=0 ? top_abs : 0 );
+        }
+      }
     }
   }
   // delete the 2D source elements
   for ( ielem=0; ielem<=max_elem; ielem++ ) {
     if ( db_active_index( ELEMENT, ielem, VERSION_NORMAL ) ) {
       db( ELEMENT, ielem, el, ddum, length, VERSION_NORMAL, GET );
-      if ( el[0]==-TRIA3 || el[0]==-QUAD4 )
+      if ( el[0]==-TRIA3 || el[0]==-QUAD4 || el[0]==-QUAD9 )
         delete_element( ielem, VERSION_NORMAL );
     }
   }

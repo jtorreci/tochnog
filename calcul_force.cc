@@ -167,40 +167,57 @@ void post_calcul_materi_stress_force_validate( void )
     exit(TN_EXIT_STATUS);
   }
 
-  // the target groups may only contain the isoparametric section
-  // elements of the manual 6.913: quad4/quad9 in 2D, hex8/hex27 in 3D
-  {
-    db_highest_index( ELEMENT, max_element, VERSION_NORMAL );
-    for ( element=0; element<=max_element; element++ ) {
-      if ( !db_active_index( ELEMENT, element, VERSION_NORMAL ) ) continue;
-      db( ELEMENT_GROUP, element, &element_group, ddum, ldum,
-        VERSION_NORMAL, GET );
-      for ( i=0; i<ngroups; i++ ) if ( ival[i]==element_group ) break;
-      if ( i>=ngroups ) continue;
-      db( ELEMENT, element, ival, ddum, length_el, VERSION_NORMAL, GET );
-      name = ival[0];
-      if ( ndim==2 && name!=-QUAD4 && name!=-QUAD9 ) {
-        char str[256], str2[32];
-        strcpy( str, "Error: post_calcul -materi_stress -force (2D) "
-                     "supports only -quad4/-quad9 elements; element " );
-        long_to_a( element, str2 );
-        strcat( str, str2 );
-        strcat( str, " of the target groups is another type" );
-        pri( str );
-        exit(TN_EXIT_STATUS);
-      }
-      if ( ndim==3 && name!=-HEX8 && name!=-HEX27 ) {
-        char str[256], str2[32];
-        strcpy( str, "Error: post_calcul -materi_stress -force (3D) "
-                     "supports only -hex8/-hex27 elements; element " );
-        long_to_a( element, str2 );
-        strcat( str, str2 );
-        strcat( str, " of the target groups is another type" );
-        pri( str );
-        exit(TN_EXIT_STATUS);
-      }
-    }
-  }
+   // the target groups may only contain the isoparametric section
+   // elements of the manual 6.913: quad4/quad9 in 2D, hex8/hex27 in 3D.
+   // The element-type check runs only on the FINAL mesh: the control
+   // blocks WITHOUT a control_timestep (the mesh-setup blocks - e.g.
+   // control_mesh_extrude declared at its own control index, as in the
+   // force11 ring) run step_close/calculate BEFORE the mesh changes of
+   // the first timestep, so the mesh still contains the SOURCE 2D
+   // elements (quad9 in a 3D calculation). Those pre-steps skip the
+   // check; the timestep steps validate the final mesh.
+   {
+     long int icontrol_now=0;
+     db( ICONTROL, 0, &icontrol_now, ddum, ldum, VERSION_NORMAL,
+       GET_IF_EXISTS );
+     if ( db_active_index( CONTROL_TIMESTEP, icontrol_now, VERSION_NORMAL ) )
+     {
+       db_highest_index( ELEMENT, max_element, VERSION_NORMAL );
+       for ( element=0; element<=max_element; element++ ) {
+         if ( !db_active_index( ELEMENT, element, VERSION_NORMAL ) ) continue;
+         // explicit 'element' records carry no ELEMENT_GROUP unless the
+         // user also writes 'element_group'; the default is group 0 (the
+         // same convention as top.cc)
+         element_group = 0;
+         db( ELEMENT_GROUP, element, &element_group, ddum, ldum,
+           VERSION_NORMAL, GET_IF_EXISTS );
+         for ( i=0; i<ngroups; i++ ) if ( ival[i]==element_group ) break;
+         if ( i>=ngroups ) continue;
+         db( ELEMENT, element, ival, ddum, length_el, VERSION_NORMAL, GET );
+         name = ival[0];
+         if ( ndim==2 && name!=-QUAD4 && name!=-QUAD9 ) {
+           char str[256], str2[32];
+           strcpy( str, "Error: post_calcul -materi_stress -force (2D) "
+                        "supports only -quad4/-quad9 elements; element " );
+           long_to_a( element, str2 );
+           strcat( str, str2 );
+           strcat( str, " of the target groups is another type" );
+           pri( str );
+           exit(TN_EXIT_STATUS);
+         }
+         if ( ndim==3 && name!=-HEX8 && name!=-HEX27 ) {
+           char str[256], str2[32];
+           strcpy( str, "Error: post_calcul -materi_stress -force (3D) "
+                        "supports only -hex8/-hex27 elements; element " );
+           long_to_a( element, str2 );
+           strcat( str, str2 );
+           strcat( str, " of the target groups is another type" );
+           pri( str );
+           exit(TN_EXIT_STATUS);
+         }
+       }
+     }
+   }
 
   // direction: exclude XOR include (manual 6.913: "Only one of ... and
   // ... should be specified, not both"); 3D requires one of them
@@ -915,6 +932,7 @@ static void msf_element_contribution_2d( long int element, long int name,
     sig_n[3*MNOL], iso[2][MPOINT], wrule[2][MPOINT],
     f_elem[2*MNOL], nrm[MDIM], tng[MDIM],
     centroid[MDIM], thick[MDIM], side_nrm[4][MDIM], side_tng[4][MDIM],
+    face_t[2][MDIM],
     side_score[4], face_nor[2], face_she[2], face_mom[2],
     max_dist=0., d=0., nor=0., she=0., mom=0., l=1., tol=0., sig_sum=0.;
   long int side_nodes[4][3], face_nodes[2][3];
@@ -1135,8 +1153,22 @@ static void msf_element_contribution_2d( long int element, long int name,
   for ( j=0; j<2; j++ ) {
     iside = order[j];
     for ( i=0; i<npol; i++ ) face_nodes[j][i] = side_nodes[iside][i];
+    // the plot/thickness direction of the face: the FACE TANGENT (the
+    // direction along the section = the structure thickness direction;
+    // the Professional's force7/force8 give nory == nors exactly for
+    // the vertical sections of the cantilever even with the reference
+    // point at x=0 - its plot vector follows the face, not the
+    // reference direction), oriented TOWARD the reference point (the
+    // sign convention measured on its force10, 3D decision 1)
+    for ( i=0; i<MDIM; i++ ) face_t[j][i] = side_tng[iside][i];
+    d = 0.;
+    for ( i=0; i<ndim; i++ )
+      d += face_t[j][i]*( centroid[i] - reference_point[i] );
+    if ( d>0. ) {
+      for ( i=0; i<MDIM; i++ ) face_t[j][i] = -face_t[j][i];
+    }
     msf_face_resultants_2d( npol, face_nodes[j], coords, f_elem,
-      side_nrm[iside], side_tng[iside], thick, l,
+      side_nrm[iside], side_tng[iside], face_t[j], l,
       face_nor[j], face_she[j], face_mom[j] );
   }
 
@@ -1195,16 +1227,40 @@ static void msf_element_contribution_2d( long int element, long int name,
   // component is the SIGNED physical scalar - the Professional's
   // convention, measured on its force7/force10 records (its moms =
   // -5000, mom2s = -2.7e-13: signed, not sizes); the she scalar stays
-  // always positive - manual 6.913)
-  node_values[0] = nor*thick[0];
-  node_values[1] = nor*thick[1];
-  node_values[2] = nor;
-  node_values[3] = she*thick[0];
-  node_values[4] = she*thick[1];
-  node_values[5] = she;
-  node_values[6] = mom*thick[0];
-  node_values[7] = mom*thick[1];
-  node_values[8] = mom;
+  // always positive - manual 6.913). The direction is the FACE
+  // tangent of the node's own end face (oriented toward the reference
+  // point); the averaged nodes receive the mean of both faces.
+  {
+    double plot_t[2][MDIM];
+    for ( j=0; j<2; j++ )
+      for ( i=0; i<MDIM; i++ ) plot_t[j][i] = face_t[j][i];
+    if ( is_face_node ) {
+      node_values[0] = nor*plot_t[iface][0];
+      node_values[1] = nor*plot_t[iface][1];
+      node_values[2] = nor;
+      node_values[3] = she*plot_t[iface][0];
+      node_values[4] = she*plot_t[iface][1];
+      node_values[5] = she;
+      node_values[6] = mom*plot_t[iface][0];
+      node_values[7] = mom*plot_t[iface][1];
+      node_values[8] = mom;
+    }
+    else {
+      // averaged node: the mean of the two faces' plot vectors
+      for ( i=0; i<9; i++ ) node_values[i] = 0.;
+      for ( j=0; j<2; j++ ) {
+        node_values[0] += 0.5*face_nor[j]*plot_t[j][0];
+        node_values[1] += 0.5*face_nor[j]*plot_t[j][1];
+        node_values[2] += 0.5*face_nor[j];
+        node_values[3] += 0.5*face_she[j]*plot_t[j][0];
+        node_values[4] += 0.5*face_she[j]*plot_t[j][1];
+        node_values[5] += 0.5*face_she[j];
+        node_values[6] += 0.5*face_mom[j]*plot_t[j][0];
+        node_values[7] += 0.5*face_mom[j]*plot_t[j][1];
+        node_values[8] += 0.5*face_mom[j];
+      }
+    }
+  }
   // plot_switch -yes: invert the drawing direction of the item vector
   for ( j=0; j<3; j++ ) {
     if ( plot_switch[j]==-YES ) {
@@ -1255,8 +1311,9 @@ static void msf_calculate_node_2d( long int inod, double result[] )
   el = get_new_int(DATA_ITEM_SIZE);
   for ( element=0; element<=max_element; element++ ) {
     if ( !db_active_index( ELEMENT, element, VERSION_NORMAL ) ) continue;
+    element_group = 0;
     db( ELEMENT_GROUP, element, &element_group, ddum, ldum,
-      VERSION_NORMAL, GET );
+      VERSION_NORMAL, GET_IF_EXISTS );
     for ( ig=0; ig<ngroups; ig++ ) if ( groups[ig]==element_group ) break;
     if ( ig>=ngroups ) continue;
     db( ELEMENT, element, el, ddum, length_el, VERSION_NORMAL, GET );
@@ -2094,8 +2151,9 @@ static void msf_calculate_node_3d( long int inod, double result[] )
   el = get_new_int(DATA_ITEM_SIZE);
   for ( element=0; element<=max_element; element++ ) {
     if ( !db_active_index( ELEMENT, element, VERSION_NORMAL ) ) continue;
+    element_group = 0;
     db( ELEMENT_GROUP, element, &element_group, ddum, ldum,
-      VERSION_NORMAL, GET );
+      VERSION_NORMAL, GET_IF_EXISTS );
     for ( ig=0; ig<ngroups; ig++ ) if ( groups[ig]==element_group ) break;
     if ( ig>=ngroups ) continue;
     db( ELEMENT, element, el, ddum, length_el, VERSION_NORMAL, GET );
@@ -2192,6 +2250,7 @@ void post_element_force_calculate( void )
     wrule[3][MPOINT], f_elem[3*MNOL], res[5],
     dir_n[MDIM], dir_s0[MDIM], dir_s1[MDIM], mid[MDIM],
     *node_force=NULL, ddum3[MDIM];
+  long int pef_normal=0;
 
   db_max_index( POST_ELEMENT_FORCE, max_pef, VERSION_NORMAL, GET );
   if ( max_pef<0 ) return;
@@ -2238,10 +2297,18 @@ void post_element_force_calculate( void )
       continue;
     }
 
-    // the multiply factor (manual 6.935)
+    // the multiply factor (manual 6.934)
     fac = 1.;
     db( POST_ELEMENT_FORCE_MULTIPLY_FACTOR, ipef, idum,
       &fac, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+
+    // the positive-normal-direction restriction (manual 6.935): with
+    // -yes only the elements on the positive side of the section plane
+    // contribute (without it, elements on both sides are used if
+    // present - their internal forces cancel at the shared face)
+    pef_normal = 0;
+    db( POST_ELEMENT_FORCE_NORMAL, ipef, &pef_normal, ddum, ldum,
+      VERSION_NORMAL, GET_IF_EXISTS );
 
     // zero the accumulated nodal forces
     for ( inod=0; inod<=max_node; inod++ )
@@ -2276,7 +2343,7 @@ void post_element_force_calculate( void )
       }
 
       db( ELEMENT_GROUP, ielem, &element_group, ddum, ldum,
-        VERSION_NORMAL, GET );
+        VERSION_NORMAL, GET_IF_EXISTS );
       if ( ngrp>0 ) {
         long int ok_grp = 0;
         for ( igroup=0; igroup<ngrp; igroup++ )
@@ -2294,6 +2361,23 @@ void post_element_force_calculate( void )
         for ( i=0; i<ndim; i++ ) coords[inol*MDIM+i] = coord[i];
       }
       delete[] el;
+
+      // post_element_force_normal -yes (manual 6.935): only the
+      // elements on the positive side of the section plane (plane
+      // through the middle, normal dir_n) contribute their internal
+      // forces. Without the record both sides are used if present.
+      if ( pef_normal==-YES ) {
+        double cx=0., cy=0., cz=0., side=0.;
+        for ( inol=0; inol<nnol; inol++ ) {
+          cx += coords[inol*MDIM+0];
+          cy += ( ndim>1 ? coords[inol*MDIM+1] : 0. );
+          cz += ( ndim>2 ? coords[inol*MDIM+2] : 0. );
+        }
+        cx /= nnol; cy /= nnol; cz /= nnol;
+        side = (cx-mid[0])*dir_n[0] + (cy-mid[1])*dir_n[1]
+             + (cz-mid[2])*dir_n[2];
+        if ( side<0. ) continue;
+      }
 
       // the section stress source: the ELEMENT_DOF IP stresses (the
       // same source as the support L5; options_element_dof required)

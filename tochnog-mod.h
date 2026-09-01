@@ -1167,6 +1167,31 @@ enum {
   POST_CALCUL_MATERI_STRESS_FORCE_REFERENCE_POINT,
   POST_CALCUL_MATERI_STRESS_FORCE_THICKNESS_SWITCH,
   POST_CALCUL_MATERI_STRESS_FORCE_AVERAGED_NODE,
+  // item names of post_calcul -materi_stress -force (manual
+  // Professional 6.913), used as VALUE names of target_item records
+  // (target_item N -node_dof_calcul <node> -norx_sig ...). Pure names:
+  // no record (type/class left default); exit_tn (miscel.cc) resolves
+  // them to the slot of the flat NODE_DOF_CALCUL layout through
+  // post_calcul_names (calcul.cc calculate()).
+  NORX_SIG,
+  NORY_SIG,
+  NORZ_SIG,
+  NORS_SIG,
+  SHEX_SIG,
+  SHEY_SIG,
+  SHEZ_SIG,
+  SHES_SIG,
+  MOMX_SIG,
+  MOMY_SIG,
+  MOMS_SIG,
+  MOM1X_SIG,
+  MOM1Y_SIG,
+  MOM1Z_SIG,
+  MOM1S_SIG,
+  MOM2X_SIG,
+  MOM2Y_SIG,
+  MOM2Z_SIG,
+  MOM2S_SIG,
   POST_CALCUL_SCAL_VEC_MAT,
   POST_CALCUL_UNKNOWN_OPERAT,
   POST_ERROR_ITEM,

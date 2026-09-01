@@ -528,12 +528,30 @@ void exit_tn( long int print_database_type )
           length = db_len( data_item_name, data_item_index, VERSION_NORMAL );
           if ( target_item[2]<0 ) {
             array_member(dof_label,target_item[2],nuknwn,number);
-            if ( db_len(data_item_name,data_item_index,VERSION_NORMAL)==npuknwn ) 
+            if ( number<0 && data_item_name==NODE_DOF_CALCUL ) {
+              // post_calcul -materi_stress -force (manual Professional
+              // 6.913): the item names (-norx_sig, -nory_sig, ...,
+              // -mom2s_sig) name the SLOTS of the flat NODE_DOF_CALCUL
+              // record. The slot is the position of the generated item
+              // name in post_calcul_names (calcul.cc calculate());
+              // not found -> number stays -1 -> db_error below.
+              long int icalc=0;
+              const char *item_name = db_name(labs(target_item[2]));
+              for ( icalc=0; icalc<DATA_ITEM_SIZE; icalc++ ) {
+                if ( post_calcul_names[icalc][0] &&
+                     !strcmp( post_calcul_names[icalc], item_name ) ) {
+                  number = icalc;
+                  break;
+                }
+              }
+            }
+            if ( number>=0 &&
+                 db_len(data_item_name,data_item_index,VERSION_NORMAL)==npuknwn ) 
               number /= nder;
           }
           else
             number = target_item[2];
-          if ( number>length-1 ) db_error( TARGET_ITEM, itarget );
+          if ( number<0 || number>length-1 ) db_error( TARGET_ITEM, itarget );
           target_value = db_dbl( TARGET_VALUE, itarget, VERSION_NORMAL );
           value        = target_value[0];
           tolerance    = target_value[1];

@@ -5888,6 +5888,32 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   data_class[POST_CALCUL_MATERI_STRESS_FORCE_AVERAGED_NODE] = NODE;
   data_required[POST_CALCUL_MATERI_STRESS_FORCE_AVERAGED_NODE] = NODE;
 
+  // item names of post_calcul -materi_stress -force (manual
+  // Professional 6.913): -norx_sig, -nory_sig, -nors_sig, ... are the
+  // VALUE names of target_item records against the flat NODE_DOF_CALCUL
+  // layout (target_item N -node_dof_calcul <node> -norx_sig). These are
+  // PURE NAME entries (no record: type/class stay default): exit_tn
+  // (miscel.cc) maps them to the slot of the item via post_calcul_names.
+  strcpy(name[NORX_SIG],"norx_sig");
+  strcpy(name[NORY_SIG],"nory_sig");
+  strcpy(name[NORZ_SIG],"norz_sig");
+  strcpy(name[NORS_SIG],"nors_sig");
+  strcpy(name[SHEX_SIG],"shex_sig");
+  strcpy(name[SHEY_SIG],"shey_sig");
+  strcpy(name[SHEZ_SIG],"shez_sig");
+  strcpy(name[SHES_SIG],"shes_sig");
+  strcpy(name[MOMX_SIG],"momx_sig");
+  strcpy(name[MOMY_SIG],"momy_sig");
+  strcpy(name[MOMS_SIG],"moms_sig");
+  strcpy(name[MOM1X_SIG],"mom1x_sig");
+  strcpy(name[MOM1Y_SIG],"mom1y_sig");
+  strcpy(name[MOM1Z_SIG],"mom1z_sig");
+  strcpy(name[MOM1S_SIG],"mom1s_sig");
+  strcpy(name[MOM2X_SIG],"mom2x_sig");
+  strcpy(name[MOM2Y_SIG],"mom2y_sig");
+  strcpy(name[MOM2Z_SIG],"mom2z_sig");
+  strcpy(name[MOM2S_SIG],"mom2s_sig");
+
   strcpy(name[POST_CALCUL_SCAL_VEC_MAT],"post_calcul_scal_vec_mat");
   type[POST_CALCUL_SCAL_VEC_MAT] = INTEGER;
   data_length[POST_CALCUL_SCAL_VEC_MAT] = DATA_ITEM_SIZE;
@@ -6600,8 +6626,8 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   data_required[POST_ELEMENT_FORCE_NUMBER] = POST_ELEMENT_FORCE;
 
   strcpy(name[POST_ELEMENT_FORCE_NORMAL],"post_element_force_normal");
-  type[POST_ELEMENT_FORCE_NORMAL] = DOUBLE_PRECISION;
-  data_length[POST_ELEMENT_FORCE_NORMAL] = MDIM;
+  type[POST_ELEMENT_FORCE_NORMAL] = INTEGER;
+  data_length[POST_ELEMENT_FORCE_NORMAL] = 1;
   data_required[POST_ELEMENT_FORCE_NORMAL] = POST_ELEMENT_FORCE;
 
   strcpy(name[POST_ELEMENT_FORCE_FORCE],"post_element_force_force");
