@@ -453,6 +453,11 @@ void top( void )
                           groundflow_total_pressure_limit_apply();
                           if ( print_where==-YES ) pri( "Where: after solver." ); 
                           parallel_sys_routine( &parallel_new_dof_diagonal );
+                          // multi point constraints: re-sync the slave
+                          // dofs with the freshly solved master values
+                          // (the pre-solve bounda() pass lags one solve
+                          // behind when the masters are free unknowns)
+                          mpc_node_apply();
                           locate();
                           nonlocal_apply();
                           post_node_rhside_fixed_free();

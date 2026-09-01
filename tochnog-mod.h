@@ -1120,6 +1120,9 @@ enum {
   NODE_DEFORMED_MESH,
   NODE_STATIC_PRESSURE,
   NODE_STIFFNESS,
+  NODE_SUPPORT_EDGE_NORMAL_FORCE,
+  NODE_SUPPORT_EDGE_NORMAL_PLASTI_TENSION_STATUS,
+  NODE_TOTAL_PRESSURE,
   NONE,
   NONLOCAL_ELEMENT_INFO,
   NORMAL,
@@ -1400,6 +1403,7 @@ enum {
   MPC_LINEAR_QUADRATIC,
   MPC_NODE_FACTOR,
   MPC_NODE_NUMBER,
+  MPC_LINEAR_QUADRATIC_MESH_FINGERPRINT,
   POST_CALCUL_LENGTH,
   POST_STRAIN_VOLUME_ABSOLUTE,
   POST_STRAIN_VOLUME_RELATIVE,
@@ -1885,7 +1889,9 @@ void      plasti_rule( long int element, long int group,
             long int task, long int &plasti_type, 
             double sig[], double &f, double &new_f, double dir[] );
 long int  point_el( double point[], double coord[], double weight[],
-            long int name, long int nnol );
+            long int name, long int nnol,
+            double eps_iso = 1.e-3 );
+void      mpc_node_apply( void );
 void      pol( long int element, long int element_group,
             long int name, long int nnol, double old_coord[], 
             double new_coord[], long int &npoint, double h[], 

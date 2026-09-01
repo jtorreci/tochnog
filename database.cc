@@ -6860,6 +6860,20 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   fixed_length[MPC_NODE_NUMBER] = 0;
   data_class[MPC_NODE_NUMBER] = CONTROL;
 
+  // mpc_linear_quadratic_mesh_fingerprint: INTERNAL record (external 0,
+  // never written to the .dbs) that stores the mesh fingerprint of the
+  // last mpc_linear_quadratic tie generation plus the index range of the
+  // generated mpc_node_number/mpc_node_factor records:
+  // [fingerprint, start_index, count].
+  strcpy(name[MPC_LINEAR_QUADRATIC_MESH_FINGERPRINT],
+    "mpc_linear_quadratic_mesh_fingerprint");
+  type[MPC_LINEAR_QUADRATIC_MESH_FINGERPRINT] = INTEGER;
+  data_length[MPC_LINEAR_QUADRATIC_MESH_FINGERPRINT] = 3;
+  fixed_length[MPC_LINEAR_QUADRATIC_MESH_FINGERPRINT] = 3;
+  external[MPC_LINEAR_QUADRATIC_MESH_FINGERPRINT] = 0;
+  no_index[MPC_LINEAR_QUADRATIC_MESH_FINGERPRINT] = 1;
+  data_class[MPC_LINEAR_QUADRATIC_MESH_FINGERPRINT] = CONTROL;
+
   // control_mesh_truss_distribute_mpc (manual Professional 6.245) and
   // the _exact variant (6.250): distribute truss nodes over the
   // isoparametric elements with multi point constraints. Consumption

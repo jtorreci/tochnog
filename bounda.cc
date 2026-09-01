@@ -890,6 +890,12 @@ void bounda( )
 
   end_of_bounda:
 
+  // multi point constraints (manual Professional 6.856-6.875): consume
+  // the mpc_node_number/mpc_node_factor records. Runs also when there
+  // are no bounda records (mpc-only models); the slave dofs are bounded
+  // and get the value sum(factor*master dof) of the current iteration.
+  mpc_node_apply();
+
   delete[] val;
   delete[] integer_range;
   delete[] dof_label;
