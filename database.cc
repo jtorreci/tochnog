@@ -2132,7 +2132,10 @@ void db_initialize( long int dof_type[], long int dof_label[] )
 
   strcpy(name[CONTROL_TIMESTEP_ITERATIONS_AUTOMATIC],"control_timestep_iterations_automatic");
   type[CONTROL_TIMESTEP_ITERATIONS_AUTOMATIC] = DOUBLE_PRECISION;
-  data_length[CONTROL_TIMESTEP_ITERATIONS_AUTOMATIC] = 2;
+  // manual Professional 6.386: ratio_criterium minimal_timestep
+  // maximum_timestep (3 values). The GNU used 2 (ratio, maximum) -
+  // the corpus slope tests give all three.
+  data_length[CONTROL_TIMESTEP_ITERATIONS_AUTOMATIC] = 3;
   data_class[CONTROL_TIMESTEP_ITERATIONS_AUTOMATIC] = CONTROL;
   data_required[CONTROL_TIMESTEP_ITERATIONS_AUTOMATIC] = CONTROL_TIMESTEP;
 
@@ -4208,6 +4211,16 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   data_class[GROUP_MATERI_PLASTI_MOHR_COUL_HARDENING_SOFTENING] = MATERI;
   data_required[GROUP_MATERI_PLASTI_MOHR_COUL_HARDENING_SOFTENING] = GROUP_TYPE;
 
+  // manual Professional (dam_building): the "direct" variant of the
+  // hardening-softening record - same 7 values (phi_0 c_0 phiflow_0
+  // phi_1 c_1 phiflow_1 kappashear_crit) but the angles are in DEGREES
+  // like every group_materi_plasti_mohr_coul_direct record.
+  strcpy(name[GROUP_MATERI_PLASTI_MOHR_COUL_DIRECT_HARDENING_SOFTENING],"group_materi_plasti_mohr_coul_direct_hardening_softening");
+  type[GROUP_MATERI_PLASTI_MOHR_COUL_DIRECT_HARDENING_SOFTENING] = DOUBLE_PRECISION;
+  data_length[GROUP_MATERI_PLASTI_MOHR_COUL_DIRECT_HARDENING_SOFTENING] = 7;
+  data_class[GROUP_MATERI_PLASTI_MOHR_COUL_DIRECT_HARDENING_SOFTENING] = MATERI;
+  data_required[GROUP_MATERI_PLASTI_MOHR_COUL_DIRECT_HARDENING_SOFTENING] = GROUP_TYPE;
+
   strcpy(name[GROUP_MATERI_PLASTI_MOHR_COUL],"group_materi_plasti_mohr_coul");
   type[GROUP_MATERI_PLASTI_MOHR_COUL] = DOUBLE_PRECISION;
   data_length[GROUP_MATERI_PLASTI_MOHR_COUL] = 3;
@@ -4294,7 +4307,11 @@ void db_initialize( long int dof_type[], long int dof_label[] )
 
   strcpy(name[GROUP_MATERI_PLASTI_HYPO_INTERGRANULARSTRAIN],"group_materi_plasti_hypo_intergranularstrain");
   type[GROUP_MATERI_PLASTI_HYPO_INTERGRANULARSTRAIN] = DOUBLE_PRECISION;
-  data_length[GROUP_MATERI_PLASTI_HYPO_INTERGRANULARSTRAIN] = 5;
+  // manual Professional 6.715: R mR mT beta_r chi theta (6 params).
+  // theta is the exponent of the rho^theta f_d N S_hat term in the
+  // stiffness; for monotonic loading the manual recommends theta=chi,
+  // and the GNU kernel evaluates that term with chi, so both coincide.
+  data_length[GROUP_MATERI_PLASTI_HYPO_INTERGRANULARSTRAIN] = 6;
   data_class[GROUP_MATERI_PLASTI_HYPO_INTERGRANULARSTRAIN] = MATERI;
   data_required[GROUP_MATERI_PLASTI_HYPO_INTERGRANULARSTRAIN] = GROUP_TYPE;
 
@@ -4403,7 +4420,8 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   type[CONTROL_MATERI_PLASTI_HYPO_MASIN_OCR_APPLY] = INTEGER;
   data_length[CONTROL_MATERI_PLASTI_HYPO_MASIN_OCR_APPLY] = 1;
   data_class[CONTROL_MATERI_PLASTI_HYPO_MASIN_OCR_APPLY] = CONTROL;
-  data_required[CONTROL_MATERI_PLASTI_HYPO_MASIN_OCR_APPLY] = GROUP_TYPE;
+  // per-timestep switch indexed by ICONTROL (manual 6.147): no group
+  // is required at the same index.
 
   strcpy(name[GROUP_MATERI_PLASTI_HYPO_MASIN_CLAY],"group_materi_plasti_hypo_masin_clay");
   type[GROUP_MATERI_PLASTI_HYPO_MASIN_CLAY] = DOUBLE_PRECISION;
@@ -4451,7 +4469,8 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   type[CONTROL_MATERI_PLASTI_HYPO_MASIN_CLAY_OCR_APPLY] = INTEGER;
   data_length[CONTROL_MATERI_PLASTI_HYPO_MASIN_CLAY_OCR_APPLY] = 1;
   data_class[CONTROL_MATERI_PLASTI_HYPO_MASIN_CLAY_OCR_APPLY] = CONTROL;
-  data_required[CONTROL_MATERI_PLASTI_HYPO_MASIN_CLAY_OCR_APPLY] = GROUP_TYPE;
+  // per-timestep switch indexed by ICONTROL (manual 6.147): no group
+  // is required at the same index.
 
   strcpy(name[GROUP_MATERI_PLASTI_HYPO_STRAIN_INTERGRANULAR_MASIN_CLAY],"group_materi_plasti_hypo_strain_intergranular_masin_clay");
   type[GROUP_MATERI_PLASTI_HYPO_STRAIN_INTERGRANULAR_MASIN_CLAY] = DOUBLE_PRECISION;
@@ -5133,6 +5152,10 @@ void db_initialize( long int dof_type[], long int dof_label[] )
 
   strcpy(name[MATERI_PLASTI_KAPPA],"materi_plasti_kappa");
 
+  strcpy(name[MATERI_PLASTI_KAPPA_SHEAR],"materi_plasti_kappa_shear");
+
+  strcpy(name[MATERI_PLASTI_HYPO_HISTORY],"materi_plasti_hypo_history");
+
   strcpy(name[MATERI_PLASTI_CAP1_HISTORY],"materi_plasti_cap1_history");
 
   strcpy(name[MATERI_PLASTI_DIPRISCO_HISTORY],"materi_plasti_diprisco_history");
@@ -5689,6 +5712,15 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   type[OPTIONS_NONLOCAL_SOFTVAR] = DOUBLE_PRECISION;
   data_length[OPTIONS_NONLOCAL_SOFTVAR] = 1;
   no_index[OPTIONS_NONLOCAL_SOFTVAR] = 1;
+
+  // nonlocal_name (manual Professional 6.898): the name of the
+  // plasticity model treated nonlocal. The GNU applies the nonlocal
+  // yield rule contribution to every model (plasti.cc), so the record
+  // is accepted but has no per-model gate (partial).
+  strcpy(name[NONLOCAL_NAME],"nonlocal_name");
+  type[NONLOCAL_NAME] = INTEGER;
+  data_length[NONLOCAL_NAME] = 1;
+  no_index[NONLOCAL_NAME] = 1;
 
   strcpy(name[OPTIONS_PROCESSORS],"options_processors");
   type[OPTIONS_PROCESSORS] = INTEGER;
@@ -6761,6 +6793,16 @@ void db_initialize( long int dof_type[], long int dof_label[] )
       strcat( basename, str );
       n++;
     }
+    else if ( dof_type[iuknwn]==-MATERI_PLASTI_HYPO_HISTORY ) {
+      // manual Professional 4.23: hyhis0..hyhis7 (void ratio e,
+      // substep size, mobilized friction angle, stiffness measure,
+      // structure s, OCR, density index, intergranular rho)
+      if ( iuknwn==hisv_indx ) n = 0;
+      strcpy( basename, "hyhis" );
+      long_to_a( n, str );
+      strcat( basename, str );
+      n++;
+    }
     else if ( dof_type[iuknwn]==-MATERI_MAXWELL_STRESS ) {
       if ( iuknwn==mstres_indx ) { 
         m = 1; 
@@ -6788,6 +6830,8 @@ void db_initialize( long int dof_type[], long int dof_label[] )
       strcpy( basename, "substeps" );
     else if ( dof_type[iuknwn]==-MATERI_PLASTI_KAPPA )
       strcpy( basename, "kap" );
+    else if ( dof_type[iuknwn]==-MATERI_PLASTI_KAPPA_SHEAR )
+      strcpy( basename, "kapsh" );
     else if ( dof_type[iuknwn]==-MATERI_PLASTI_CAP1_HISTORY )
       strcpy( basename, "pc" );
     else if ( dof_type[iuknwn]==-MATERI_PLASTI_HARDSOIL_HISTORY )
@@ -7593,6 +7637,26 @@ long int db_number( char str[] )
 {
   long int data_number=0, found=-1;
 
+  // "mesh" is the Professional short alias of options_mesh (the GNU
+  // MESH record is a dead placeholder with no type/class; routing it
+  // through the exact-name loop would return MESH with no_index=0 and
+  // the parser would read "-fixed_in_space" as an illegal index).
+  if ( !strcmp( str, "mesh" ) )
+    return OPTIONS_MESH;
+  // "nonlocal" (manual Professional 6.897) is the short name of
+  // options_nonlocal: the radius of the nonlocal averaging (the GNU
+  // machinery reads OPTIONS_NONLOCAL in nonloc.cc).
+  if ( !strcmp( str, "nonlocal" ) )
+    return OPTIONS_NONLOCAL;
+  // the Professional writes the visco exponential table with the
+  // singular "value"; the GNU canonical name is ..._values.
+  if ( !strcmp( str, "group_materi_plasti_visco_exponential_value" ) )
+    return GROUP_MATERI_PLASTI_VISCO_EXPONENTIAL_VALUES;
+  // control_mesh_refine_locally_dof (manual Professional 6.222) is the
+  // Professional name of the legacy control_mesh_refine_locally_unknown.
+  if ( !strcmp( str, "control_mesh_refine_locally_dof" ) )
+    return CONTROL_MESH_REFINE_LOCALLY_UNKNOWN;
+
   for ( data_number=0; data_number<MDAT && found<0; data_number++ ) {
     if ( !strcmp(str,db_name(data_number)) ) found = data_number;
   }
@@ -7620,8 +7684,26 @@ long int db_number( char str[] )
       return CONTROL_OPTIONS_SOLVER;
     else if ( !strcmp( str, "group_truss_elasti_young" ) )
       return GROUP_TRUSS_YOUNG;
+    else if ( !strcmp( str, "group_materi_plasti_hypo_wolffersdorff" ) )
+      // Professional spelling (double f); GNU canonical is wolfersdorff
+      return GROUP_MATERI_PLASTI_HYPO_WOLFERSDORFF;
+    else if ( !strcmp( str, "group_materi_plasti_hypo_strain_intergranular" ) )
+      // Professional name of the GNU canonical intergranularstrain record
+      return GROUP_MATERI_PLASTI_HYPO_INTERGRANULARSTRAIN;
+    else if ( !strcmp( str, "group_materi_plasti_hypo_void_ratio_linear" ) )
+      // Professional name of the GNU canonical pressuredependentvoidratio
+      return GROUP_MATERI_PLASTI_HYPO_PRESSUREDEPENDENTVOIDRATIO;
+    else if ( !strcmp( str, "group_materi_plasti_hypo_masin_clay_advanced_direction" ) )
+      // Professional spelling; GNU canonical has the avanced typo
+      return GROUP_MATERI_PLASTI_HYPO_MASIN_CLAY_AVANCED_DIRECTION;
     else if ( !strcmp( str, "truss_beam" ) )
       return TRUSSBEAM;
+    else if ( !strcmp( str, "mesh" ) )
+      // Professional manual 6.799? "mesh" is the short alias of
+      // options_mesh: mesh -fixed_in_space -fixed_in_space sets the
+      // mesh motion (manual Professional 6.10xx). The GNU parser had a
+      // dead MESH record (no type/class); route it to OPTIONS_MESH.
+      return OPTIONS_MESH;
     else if ( !strcmp( str, "groundflow_phreatic_level" ) )
       return GROUNDFLOW_PHREATICLEVEL;
     else if ( !strcmp( str, "size_dev" ) )

@@ -840,6 +840,7 @@ enum {
   GROUP_MATERI_PLASTI_DRUCKPRAG,
   GROUP_MATERI_PLASTI_MOHR_COUL,
   GROUP_MATERI_PLASTI_MOHR_COUL_HARDENING_SOFTENING,
+  GROUP_MATERI_PLASTI_MOHR_COUL_DIRECT_HARDENING_SOFTENING,
   GROUP_MATERI_PLASTI_DRUCKPRAG_APEX,
   GROUP_MATERI_PLASTI_DRUCKPRAG_TENSIONCUTOFF,
   GROUP_MATERI_PLASTI_DRUCKPRAG_TENSIONLIMIT,
@@ -1006,12 +1007,14 @@ enum {
   MATERI_HISTORY_VARIABLES,
   MATERI_MAXWELL_STRESS,
   MATERI_PLASTI_CAP1_HISTORY,
+  MATERI_PLASTI_HYPO_HISTORY,
   MATERI_PLASTI_DIPRISCO_HISTORY,
   MATERI_PLASTI_HARDSOIL_HISTORY,
   MATERI_PLASTI_F,
   MATERI_PLASTI_F_NONLOCAL,
   MATERI_PLASTI_INCREMENTAL_SUBSTEPS,
   MATERI_PLASTI_KAPPA,
+  MATERI_PLASTI_KAPPA_SHEAR,
   MATERI_PLASTI_RHO,
   MATERI_PLASTI_SOFTVAR_LOCAL,
   MATERI_PLASTI_SOFTVAR_NONLOCAL,
@@ -1133,6 +1136,7 @@ enum {
   OPTIONS_MESH,
   OPTIONS_NONLOCAL,
   OPTIONS_NONLOCAL_SOFTVAR,
+  NONLOCAL_NAME,
   OPTIONS_PROCESSORS,
   OPTIONS_RELAXATION,
   OPTIONS_RESIDUEFACTOR,
@@ -1364,6 +1368,7 @@ extern long int echo, ndim, derivatives,
   materi_maxwell_stress, materi_plasti_kappa, 
   materi_plasti_cap1_history,
   materi_plasti_diprisco_history,
+  materi_plasti_hypo_history, materi_plasti_kappa_shear,
   materi_plasti_hardsoil_history,
   materi_strain_plasti_hardsoil, materi_strain_plasti_cap,
   materi_strain_plasti_compression, materi_strain_plasti_diprisco,
@@ -1415,6 +1420,7 @@ extern long int
   pres_indx, // index stating start of groundflow_pressure in node_dof
   res_indx, // index stating start of residue in node_dof
   kap_indx, // index stating start of materi_plasti_kappa in node_dof
+  kapsh_indx, // index stating start of materi_plasti_kappa_shear in node_dof
   cap1_indx, // index stating start of materi_plasti_cap1_history in node_dof
   hsepp_indx, // index stating start of materi_strain_plasti_hardsoil in node_dof
   capepp_indx, // index stating start of materi_strain_plasti_cap in node_dof

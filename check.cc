@@ -710,27 +710,33 @@ long int check( long int idat, long int task )
   }
   if ( data_number==GROUP_MATERI_PLASTI_HYPO_PRESSUREDEPENDENTVOIDRATIO ) {
     ok = check_unknown( "materi_stress", YES, task );
-    ok = ok && check_unknown( "materi_history_variables", YES, task );
+    ok = ok && check_unknown_atleastone( "materi_history_variables",
+      "materi_plasti_hypo_history", task );
   }
   if ( data_number==GROUP_MATERI_PLASTI_HYPO_WOLFERSDORFF ) {
     ok = check_unknown( "materi_stress", YES, task );
-    ok = ok && check_unknown( "materi_history_variables", YES, task );
+    ok = ok && check_unknown_atleastone( "materi_history_variables",
+      "materi_plasti_hypo_history", task );
   }
   if ( data_number==GROUP_MATERI_PLASTI_HYPO_MASIN ) {
     ok = check_unknown( "materi_stress", YES, task );
-    ok = ok && check_unknown( "materi_history_variables", YES, task );
+    ok = ok && check_unknown_atleastone( "materi_history_variables",
+      "materi_plasti_hypo_history", task );
   }
   if ( data_number==GROUP_MATERI_PLASTI_HYPO_MASIN_CLAY ) {
     ok = check_unknown( "materi_stress", YES, task );
-    ok = ok && check_unknown( "materi_history_variables", YES, task );
+    ok = ok && check_unknown_atleastone( "materi_history_variables",
+      "materi_plasti_hypo_history", task );
   }
   if ( data_number==GROUP_MATERI_PLASTI_HYPO_MASIN_CLAY_VISCO ) {
     ok = check_unknown( "materi_stress", YES, task );
-    ok = ok && check_unknown( "materi_history_variables", YES, task );
+    ok = ok && check_unknown_atleastone( "materi_history_variables",
+      "materi_plasti_hypo_history", task );
   }
   if ( data_number==GROUP_MATERI_PLASTI_HYPO_MASIN_CLAY_VISCO_JM ) {
     ok = check_unknown( "materi_stress", YES, task );
-    ok = ok && check_unknown( "materi_history_variables", YES, task );
+    ok = ok && check_unknown_atleastone( "materi_history_variables",
+      "materi_plasti_hypo_history", task );
   }
   if ( data_number==GROUP_MATERI_PLASTI_SANISAND ) {
     ok = check_unknown( "materi_stress", YES, task );

@@ -202,10 +202,12 @@ void area_element_group_sequence( void )
           length_area_element_group_sequence = db_len( AREA_ELEMENT_GROUP_SEQUENCE,
             iarea, VERSION_NORMAL );
         }
-        if ( !use_geometry && !use_element ) {
-          pri( "Error: AREA_ELEMENT_GROUP_SEQUENCE_GEOMETRY or AREA_ELEMENT_GROUP_SEQUENCE should be specified." );
-          exit(TN_EXIT_STATUS);
-        }
+        // manual Professional 6.9: as a completely separate option, NEITHER
+        // geometry NOR the element list is used - then the elements of the
+        // PREVIOUS group number group_(i-1) get the new group number
+        // group_i at time_i (the previous group selects the elements).
+        // The old GNU code required one of the selectors and errored out
+        // (dam_building only uses _element_group + _time).
         area_element_group_sequence_element[0] = -ALL;
         db( AREA_ELEMENT_GROUP_SEQUENCE_ELEMENT, iarea, 
           area_element_group_sequence_element, ddum, 
@@ -273,6 +275,33 @@ void area_element_group_sequence( void )
                   &interface_switch, ddum, ldum, VERSION_NORMAL,
                   GET_IF_EXISTS );
                 if ( interface_switch!=-YES ) ok = 0;
+              }
+            }
+            if ( ok ) {
+              // mode without geometry/element selectors: the element must
+              // currently have the PREVIOUS group in the sequence (the
+              // i-th time point maps group_(i-1) -> group_i)
+              if ( !use_geometry && !use_element ) {
+                long int grp_now2 = -1;
+                db( ELEMENT_GROUP, element, &grp_now2, ddum, ldum,
+                  VERSION_NORMAL, GET_IF_EXISTS );
+                if ( grp_now2>=0 ) {
+                  long int prev_grp = -1;
+                  for ( long int it2=0; it2<length_elementgroup; it2++ ) {
+                    double tt2 = area_element_group_sequence_time[it2];
+                    if ( time_total>=(tt2-EPS_SMALL) )
+                      prev_grp = area_element_group_sequence_elementgroup[it2];
+                  }
+                  // find the group BEFORE the current time window
+                  long int prev2 = -1;
+                  for ( long int it2=0; it2<length_elementgroup; it2++ ) {
+                    double tt2 = area_element_group_sequence_time[it2];
+                    if ( time_total < (tt2-EPS_SMALL) ) break;
+                    prev2 = area_element_group_sequence_elementgroup[it2];
+                  }
+                  if ( prev2<0 ) prev2 = prev_grp;
+                  if ( grp_now2!=prev2 ) ok = 0;
+                }
               }
             }
             if ( ok ) {

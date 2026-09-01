@@ -715,13 +715,24 @@ void plasti_rule( long int element, long int gr,
       }
     }
   }
+  long int mc_hs_direct = 0;
   if ( get_group_data( GROUP_MATERI_PLASTI_MOHR_COUL_HARDENING_SOFTENING, gr, element, new_unknowns,
-      plasti_data, ldum, GET_IF_EXISTS ) ) {
+      plasti_data, ldum, GET_IF_EXISTS ) ||
+       ( ( mc_hs_direct = get_group_data( GROUP_MATERI_PLASTI_MOHR_COUL_DIRECT_HARDENING_SOFTENING,
+         gr, element, new_unknowns, plasti_data, ldum, GET_IF_EXISTS ) ) ) ) {
     test1 = task==GET_YIELD_RULE&&plasti_type==-NONE;
     test2 = task==GET_YIELD_RULE&&plasti_type==GROUP_MATERI_PLASTI_MOHR_COUL_HARDENING_SOFTENING;
     test3 = task==GET_FLOW_RULE&&plasti_type==GROUP_MATERI_PLASTI_MOHR_COUL_HARDENING_SOFTENING;
     if ( test1 || test2 || test3 ) {
       if ( swit ) pri( "plasti_mohr_coul_hardening_softening" );
+      if ( mc_hs_direct ) {
+        // direct variant: the angles are in degrees (like every
+        // group_materi_plasti_mohr_coul_direct record)
+        plasti_data[0] *= PIRAD/180.;
+        plasti_data[2] *= PIRAD/180.;
+        plasti_data[3] *= PIRAD/180.;
+        plasti_data[5] *= PIRAD/180.;
+      }
       // manual Professional 6.731: same surface as mohr_coul, but c and
       // phi (both yield and flow) vary LINEARLY with the effective
       // plastic strain kappa_shear from the _0 values at kappa=0 up to
@@ -734,7 +745,14 @@ void plasti_rule( long int element, long int gr,
                phi_flow_0 = plasti_data[2], phi_1 = plasti_data[3],
                c_1 = plasti_data[4], phi_flow_1 = plasti_data[5],
                kappa_crit = plasti_data[6], kappa_now = 0., ratio;
-        if ( materi_plasti_kappa )
+        // manual Professional 6.731: the hardening variable is the
+        // SHEAR plastic strain kappa_shear (materi_plasti_kappa_shear
+        // dof kapsh, manual 4.25) - the size of the deviatoric plastic
+        // strain. The total kappa (materi_plasti_kappa, 4.24) is used
+        // only when the shear dof is not initialized.
+        if ( materi_plasti_kappa_shear )
+          kappa_now = new_unknowns[kapsh_indx];
+        else if ( materi_plasti_kappa )
           kappa_now = new_unknowns[kap_indx];
         if ( kappa_crit>0. ) {
           ratio = kappa_now/kappa_crit;

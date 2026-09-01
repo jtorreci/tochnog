@@ -292,7 +292,9 @@ void top( void )
                     iteration_max = 20;
                     use_control_timestep_iterations_automatic = 1;
                     ratio_criterium = control_timestep_iterations_automatic[0];
-                    maximum_timestep = control_timestep_iterations_automatic[1];
+                    // manual Professional 6.386: [1]=minimal_timestep,
+                    // [2]=maximum_timestep
+                    maximum_timestep = control_timestep_iterations_automatic[2];
                   }
                   else if ( db_active_index( CONTROL_TIMESTEP_ITERATIONS, 
                       icontrol, VERSION_NORMAL ) ) {

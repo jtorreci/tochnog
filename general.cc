@@ -136,6 +136,12 @@ void general( long int element, long int name, long int nnol, long int element_g
         unknown_belongs_to_type = 1;
         inertia = 1.;
       }
+      else if ( dof_type[iuknwn]==-MATERI_PLASTI_HYPO_HISTORY ) {
+        // manual Professional 4.23: the 8 hypoplasticity history vars
+        // (hyhis0..7) are integrated like the generic history variables
+        unknown_belongs_to_type = 1;
+        inertia = 1.;
+      }
       else if ( dof_type[iuknwn]==-MATERI_PLASTI_F ) {
         unknown_belongs_to_type = 1;
         inertia = 1.;
@@ -145,6 +151,10 @@ void general( long int element, long int name, long int nnol, long int element_g
         inertia = 1.;
       }
       else if ( dof_type[iuknwn]==-MATERI_PLASTI_KAPPA ) {
+        unknown_belongs_to_type = 1;
+        inertia = 1.;
+      }
+      else if ( dof_type[iuknwn]==-MATERI_PLASTI_KAPPA_SHEAR ) {
         unknown_belongs_to_type = 1;
         inertia = 1.;
       }
@@ -301,9 +311,13 @@ void general( long int element, long int name, long int nnol, long int element_g
           }
           else if ( dof_type[iuknwn]==-MATERI_HISTORY_VARIABLES && type==-MATERI )
             conv_part = 1.;
+          else if ( dof_type[iuknwn]==-MATERI_PLASTI_HYPO_HISTORY && type==-MATERI )
+            conv_part = 1.;
           else if ( dof_type[iuknwn]==-MATERI_MAXWELL_STRESS && type==-MATERI )
             conv_part = 1.;
           else if ( dof_type[iuknwn]==-MATERI_PLASTI_KAPPA && type==-MATERI )
+            conv_part = 1.;
+          else if ( dof_type[iuknwn]==-MATERI_PLASTI_KAPPA_SHEAR && type==-MATERI )
             conv_part = 1.;
           else if ( dof_type[iuknwn]==-MATERI_PLASTI_CAP1_HISTORY && type==-MATERI )
             conv_part = 1.;
@@ -450,12 +464,14 @@ void general( long int element, long int name, long int nnol, long int element_g
 // control_materi_*_apply switch helper: returns 1 when the per-timestep
 // switch record (indexed by the current ICONTROL) is -no, i.e. the
 // feature should be IGNORED for these timesteps (manual Professional
-// 6.141-6.154). Default (record absent): 0 (feature active).
+// 6.141-6.154). Default (record absent at the current index): 0
+// (feature active).
 long int control_materi_gate_off( long int control_item )
 {
-  long int icontrol=0, swit=-YES, ldum=0, idum[1];
+  long int icontrol=0, swit=-YES, ldum=0, idum[1], max_index=-1;
   double ddum[1];
-  if ( db_active_index( control_item, 0, VERSION_NORMAL ) ) {
+  db_max_index( control_item, max_index, VERSION_NORMAL, GET );
+  if ( max_index>=0 ) {
     db( ICONTROL, 0, &icontrol, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
     db( control_item, icontrol, &swit, ddum, ldum, VERSION_NORMAL,
       GET_IF_EXISTS );

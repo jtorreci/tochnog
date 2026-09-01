@@ -249,25 +249,57 @@ void input( )
       array_set( &dof_scal_vec_mat[unknown_indx], -VECTOR, n*nder );
     }
     else if ( !strcmp(str,"materi_history_variables") ||
-              !strcmp(str,"materi_plasti_diprisco_history") ) {
+              !strcmp(str,"materi_plasti_diprisco_history") ||
+              !strcmp(str,"materi_plasti_hypo_history") ) {
       // materi_plasti_diprisco_history (manual Professional 4.18) is
       // the per-model name of materi_history_variables: same mechanism,
       // same shared hisv dof (basenames hisv0..hisv(n-1)). The manual
       // prescribes n = 11 for group_materi_plasti_diprisco and n = 12
       // for group_materi_plasti_diprisco_density.
+      //
+      // materi_plasti_hypo_history (manual Professional 4.23) declares
+      // EIGHT hypoplasticity history variables named hyhis0..hyhis7
+      // (void ratio, substep size, mobilized friction angle, stiffness
+      // measure, structure s, OCR, density index, intergranular rho).
+      // It uses the same shared hisv dof mechanism but with the hyhis
+      // basename so target/print names match the Professional.
       if ( !strcmp(str,"materi_plasti_diprisco_history") )
         materi_plasti_diprisco_history = 1;
-      if ( !(cin >> materi_history_variables) ) {
-        pri( "\nError in initialization part." );
-        exit(TN_EXIT_STATUS);
+      if ( !strcmp(str,"materi_plasti_hypo_history") )
+        materi_plasti_hypo_history = 1;
+      if ( materi_plasti_hypo_history ) {
+        // fixed 8 history variables, no number follows the keyword
+        materi_history_variables = 8;
+        if ( echo ) cout << materi_history_variables;
+        initialization_values[ninitia-1] = materi_history_variables;
+        hisv_indx = unknown_indx;
+        n = materi_history_variables;
+        array_set( &dof_type[hisv_indx], -MATERI_PLASTI_HYPO_HISTORY,
+          materi_history_variables*nder );
+        array_set( &dof_scal_vec_mat[unknown_indx], -SCALAR, n*nder );
       }
-      assert( materi_history_variables>0 );
-      if ( echo ) cout << materi_history_variables;
-      initialization_values[ninitia-1] = materi_history_variables;
-      hisv_indx = unknown_indx;
-      n = materi_history_variables;
-      array_set( &dof_type[hisv_indx], -MATERI_HISTORY_VARIABLES, 
-        materi_history_variables*nder );
+      else {
+        if ( !(cin >> materi_history_variables) ) {
+          pri( "\nError in initialization part." );
+          exit(TN_EXIT_STATUS);
+        }
+        assert( materi_history_variables>0 );
+        if ( echo ) cout << materi_history_variables;
+        initialization_values[ninitia-1] = materi_history_variables;
+        hisv_indx = unknown_indx;
+        n = materi_history_variables;
+        array_set( &dof_type[hisv_indx], -MATERI_HISTORY_VARIABLES,
+          materi_history_variables*nder );
+        array_set( &dof_scal_vec_mat[unknown_indx], -SCALAR, n*nder );
+      }
+    }
+    else if ( !strcmp(str,"materi_plasti_kappa_shear") ) {
+      // manual Professional 4.25: the size of the shear part of the
+      // plastic strain kappa_shear is added to the node_dof records.
+      materi_plasti_kappa_shear = 1;
+      kapsh_indx = unknown_indx;
+      n = 1;
+      array_set( &dof_type[kapsh_indx], -MATERI_PLASTI_KAPPA_SHEAR, n*nder );
       array_set( &dof_scal_vec_mat[unknown_indx], -SCALAR, n*nder );
     }
     else if ( !strcmp(str,"materi_maxwell_stress") ) {

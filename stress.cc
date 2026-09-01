@@ -223,6 +223,7 @@ void set_stress( long int element, long int gr,
   double old_hisv[], double new_hisv[], 
   double old_damage, double &new_damage, 
   double old_kappa, double &new_kappa, 
+  double old_kapsh, double &new_kapsh, 
   double old_cap1pc, double &new_cap1pc, 
   double &new_f, double &new_substeps, double old_deften[], double new_deften[],
   double inc_rot[], double ddsdde[],
@@ -942,7 +943,13 @@ void set_stress( long int element, long int gr,
   }
   if ( memory==-UPDATED || memory==-UPDATED_WITHOUT_ROTATION ) {
     check_unknown( "materi_velocity", YES, CHECK_USAGE_AND_ERROR );
-    check_unknown( "materi_displacement", NO, CHECK_USAGE_AND_ERROR );
+    // The displacement restriction applies only when the updated
+    // formulation is EXPLICITLY requested: with the default memory
+    // (record absent) the Professional accepts materi_displacement
+    // together with materi_velocity (e.g. the Masin clay corpus tests
+    // hypo12/13 run without group_materi_memory).
+    if ( db_active_index( GROUP_MATERI_MEMORY, gr, VERSION_NORMAL ) )
+      check_unknown( "materi_displacement", NO, CHECK_USAGE_AND_ERROR );
     check_unknown( "materi_stress", YES, CHECK_USAGE_AND_ERROR );
   }
 
@@ -1050,6 +1057,23 @@ void set_stress( long int element, long int gr,
 	  new_kappa = old_kappa + sqrt(0.5*tmp);     
 	  if ( swit ) pri( "new_kappa", new_kappa );
 	}
+        // materi_plasti_kappa_shear (manual 4.25): the size of the SHEAR
+        // plastic strain rate kappa_shear = int sqrt(0.5*dev(eps_p):dev(eps_p)).
+        if ( materi_plasti_kappa_shear ) {
+          double epp_dev[MDIM*MDIM];
+          array_move( inc_epp, epp_dev, MDIM*MDIM );
+          {
+            double mean_epp = 0.;
+            for ( int idim=0; idim<MDIM; idim++ ) mean_epp += epp_dev[idim*MDIM+idim];
+            mean_epp /= MDIM;
+            for ( int idim=0; idim<MDIM; idim++ ) epp_dev[idim*MDIM+idim] -= mean_epp;
+          }
+          tmp = array_inproduct( epp_dev, epp_dev, MDIM*MDIM );
+          new_kapsh = old_kapsh + sqrt(0.5*tmp);
+          if ( swit ) pri( "new_kapsh", new_kapsh );
+        }
+        else
+          new_kapsh = old_kapsh;
         // cap1 hardening (materi_plasti_cap1_history, manual theory
         // cap1): pc hardens with the cap plastic volume strain
         // eps_p_cv_dot = (lambda*/kappa* - 1)/K_ref (p_ref/p*c)^m pc_dot,
@@ -1113,6 +1137,24 @@ void set_stress( long int element, long int gr,
       new_kappa = old_kappa + sqrt(0.5*tmp);     
       if ( swit ) pri( "new_kappa", new_kappa );
     }
+    // materi_plasti_kappa_shear (manual 4.25): the size of the SHEAR
+    // plastic strain rate (deviatoric part), independent of the total
+    // kappa dof.
+    if ( materi_plasti_kappa_shear ) {
+      double epp_dev2[MDIM*MDIM];
+      array_move( inc_epp, epp_dev2, MDIM*MDIM );
+      {
+        double mean_epp2 = 0.;
+        for ( int idim=0; idim<MDIM; idim++ ) mean_epp2 += epp_dev2[idim*MDIM+idim];
+        mean_epp2 /= MDIM;
+        for ( int idim=0; idim<MDIM; idim++ ) epp_dev2[idim*MDIM+idim] -= mean_epp2;
+      }
+      tmp = array_inproduct( epp_dev2, epp_dev2, MDIM*MDIM );
+      new_kapsh = old_kapsh + sqrt(0.5*tmp);
+      if ( swit ) pri( "new_kapsh", new_kapsh );
+    }
+    else
+      new_kapsh = old_kapsh;
 
       // cap1 hardening (materi_plasti_cap1_history): see the incremental
       // branch above for the law; pc grows with the converged cap
@@ -1213,7 +1255,7 @@ void set_stress( long int element, long int gr,
 
         // compressibility
       if ( compressibility!=0. ) {
-        if      ( memory==-TOTAL_LINEAR ) {
+        if      ( memory==-TOTAL_LINEAR || memory==-UPDATED_LINEAR ) {
           tmp_old = ( old_epe[0] + old_epe[4] + old_epe[8] ) / compressibility;
           tmp_new = ( new_epe[0] + new_epe[4] + new_epe[8] ) / compressibility;
           tmp_inc = tmp_new - tmp_old;

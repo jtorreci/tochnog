@@ -866,11 +866,25 @@ void data( long int task, double dtime, double time_current )
       }
     }
 
-    long int *reset_dof_node_filter = NULL;
+    long int *reset_dof_node_filter = NULL, reset_dof_length = 0, idof_list = 0;
     for ( ireset=0; ireset<=max_reset; ireset++ ) {
       if ( db_active_index( CONTROL_RESET_DOF, ireset, VERSION_NORMAL ) ) {
+        // manual Professional 6.350: control_reset_dof is indexed like
+        // every control; it is applied only in the control steps of ITS
+        // own index (icontrol==ireset). The corpus tests (hypo2/3,
+        // mohrcou4, ...) reset -hyhis0/-epixx/-sigxx with indices 1..3
+        // while the timestep runs at index 20. The Professional REJECTS
+        // a reset sharing the timestep index ("Error detected for data
+        // item : control_reset_dof, record : 20" - measured), so the
+        // reset runs ONCE in its own (timeless) control step.
+        if ( ireset!=icontrol ) continue;
         db( CONTROL_RESET_DOF, ireset, reset_dof, ddum, ldum, VERSION_NORMAL, GET );
-        idof_reset = reset_dof[0];
+        // the record may list SEVERAL dofs (-sigxx -sigyy -sigzz ...);
+        // every listed dof gets the reset value.
+        reset_dof_length = ldum;
+        if ( reset_dof_length<1 ) db_error( CONTROL_RESET_DOF, ireset );
+        for ( idof_list=0; idof_list<reset_dof_length; idof_list++ ) {
+        idof_reset = reset_dof[idof_list];
         // materi_displacement_relative: a displacement reset re-synchronizes
         // the relative displacement reference (manual 4.13).
         if ( materi_displacement_relative ) {
@@ -1140,18 +1154,19 @@ void data( long int task, double dtime, double time_current )
                  table_xy( reset_value_diagram, "CONTROL_RESET_VALUE_MULTI_LINEAR",
                    nl/2, coords[vdim], val );
                }
-               if      ( reset_method==-ADD ) node_dof[indx_reset] += val;
-               else if ( reset_method==-MULTIPLY ) node_dof[indx_reset] *= val;
-               else                             node_dof[indx_reset] = val;
-             }
-           }
-         }
-       }
-     }
-     delete[] reset_dof;
-     delete[] reset_value_dof;
-     delete[] reset_value_diagram;
-   }
+                if      ( reset_method==-ADD ) node_dof[indx_reset] += val;
+                else if ( reset_method==-MULTIPLY ) node_dof[indx_reset] *= val;
+                else                             node_dof[indx_reset] = val;
+              }
+            }
+          }
+        }
+        }   // end dof list loop
+      }
+      delete[] reset_dof;
+      delete[] reset_value_dof;
+      delete[] reset_value_diagram;
+    }
 
   delete[] dof_label;
   delete[] integer_range;

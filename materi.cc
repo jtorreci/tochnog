@@ -42,6 +42,7 @@ void materi( long int element, long int gr, long int name, long int nnol,
     materi_expansion_volume=0., temp=0., tmp=0., damping=0., fac=0, 
     plasti_heatgeneration=0., viscosity_heatgeneration=0.,
     viscosity=0., old_damage=0., new_damage=0., old_kappa=0., new_kappa=0., 
+    old_kapsh=0., new_kapsh=0., 
     old_cap1pc=0., new_cap1pc=0.,
     old_f=0., new_f=0., void_fraction=0., new_pres=0., old_substeps=0., new_substeps=0.,
     softvar_nonl=0, softvar_l=0, 
@@ -265,6 +266,11 @@ void materi( long int element, long int gr, long int name, long int nnol,
     old_kappa = old_unknowns[iuknwn];
     new_kappa = new_unknowns[iuknwn];
   }
+  if ( materi_plasti_kappa_shear ) {
+    iuknwn = kapsh_indx;
+    old_kapsh = old_unknowns[iuknwn];
+    new_kapsh = new_unknowns[iuknwn];
+  }
   if ( materi_plasti_cap1_history ) {
     iuknwn = cap1_indx;
     old_cap1pc = old_unknowns[iuknwn];
@@ -334,7 +340,7 @@ void materi( long int element, long int gr, long int name, long int nnol,
     }
   }
   else if ( memory==-UPDATED || memory==-TOTAL_LINEAR ||
-      memory==-UPDATED_WITHOUT_ROTATION ) {
+      memory==-UPDATED_WITHOUT_ROTATION || memory==-UPDATED_LINEAR ) {
     if ( materi_stress )
       array_move( old_sig, rotated_old_sig, MDIM*MDIM );
     if ( materi_plasti_rho ) 
@@ -393,7 +399,8 @@ void materi( long int element, long int gr, long int name, long int nnol,
       rotated_old_msig, new_msig, inc_ept, new_ept,
       old_epe, inc_epe, old_epp, inc_epp, old_rho, new_rho, 
       old_epi, new_epi, old_hisv, new_hisv, 
-      old_damage, new_damage, old_kappa, new_kappa, old_cap1pc, new_cap1pc,
+      old_damage, new_damage, old_kappa, new_kappa, old_kapsh, new_kapsh,
+      old_cap1pc, new_cap1pc,
       new_f, new_substeps,
       old_deften, new_deften, inc_rot,
       ddsdde, viscosity, viscosity_heatgeneration, softvar_nonl, softvar_l,
@@ -420,8 +427,9 @@ void materi( long int element, long int gr, long int name, long int nnol,
 
   array_move( new_sig, new_sig_nonrot, MDIM*MDIM );
     // rotate to new configuration
-  if ( memory==-UPDATED || memory==-TOTAL || memory==-TOTAL_PIOLA ) {
-    if      ( memory==-UPDATED ) 
+  if ( memory==-UPDATED || memory==-UPDATED_LINEAR || memory==-TOTAL ||
+       memory==-TOTAL_PIOLA ) {
+    if      ( memory==-UPDATED || memory==-UPDATED_LINEAR )
       array_move( inc_rot, rot, MDIM*MDIM );
     else {
       assert( memory==-TOTAL || memory==-TOTAL_PIOLA );
@@ -807,6 +815,14 @@ void materi( long int element, long int gr, long int name, long int nnol,
           if(options_element_dof==-YES) new_unknowns[hisv_indx + i*nder] = new_hisv[i];
           ipuknwn++;
         }
+      }
+
+      if ( materi_plasti_kappa_shear ) {
+        ipuknwn = kapsh_indx/nder;
+        indx = inol*npuknwn + ipuknwn;
+        tmp = volume * h[inol] * ( new_kapsh - old_kapsh ) / dtime;
+        element_rhside[indx] += tmp;
+        ipuknwn++;
       }
 
       if ( materi_damage ) {
@@ -1311,7 +1327,8 @@ void set_deften_etc( long int element, long int gr, long int nnol, double h[],
   }
 
     // rotation matrices
-  if      ( memory==-UPDATED_WITHOUT_ROTATION || memory==-TOTAL_LINEAR ) {
+  if      ( memory==-UPDATED_WITHOUT_ROTATION || memory==-UPDATED_LINEAR ||
+            memory==-TOTAL_LINEAR ) {
     for ( idim=0; idim<MDIM; idim++ ) {
       old_rot[idim*MDIM+idim] = 1.;
       new_rot[idim*MDIM+idim] = 1.;
@@ -1325,7 +1342,7 @@ void set_deften_etc( long int element, long int gr, long int nnol, double h[],
   set_deften_u_rot( inc_deften, inc_u, inc_rot );
 
       // strain matrices
-  if ( memory==-UPDATED_WITHOUT_ROTATION ) {
+  if ( memory==-UPDATED_WITHOUT_ROTATION || memory==-UPDATED_LINEAR ) {
       // linear engineering strains
     for ( idim=0; idim<MDIM; idim++ ) {
       for ( jdim=0; jdim<MDIM; jdim++ ) inc_ept[idim*MDIM+jdim] = 
