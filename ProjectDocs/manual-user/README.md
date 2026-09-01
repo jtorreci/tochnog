@@ -308,6 +308,8 @@ input parameters it accepts.
 - [nonlocal](nonlocal.md) — the short `nonlocal` radius record + `nonlocal_name` model selector (6.897/6.898).
 - [geometry_factor](geometry_factor.md) — the Professional name (6.527) of geometry_bounda_factor: spatial weighting factors of bounda_dof/bounda_force/force_edge_* on a geometry entity (2 = linear, 3 = parabolic on a line).
 - [processors](processors.md) — the Professional short name of options_processors: number of solver threads.
+- [mpc_node_number](mpc_node_number.md) — multi point constraint on nodal dofs (6.874/6.875): the slave dof = sum(factor x master dof), slave treated as a known (bounded) quantity; mpc_node_factor gives the factors (default 1). Unlocks mpc1 (tie verified on mohr_coul_direct2/4/7; those stay RUNFAIL on the direct material family).
+- [mpc_linear_quadratic](mpc_linear_quadratic.md) — automatic tying (6.873) of the dangling quadratic-element nodes to the adjacent linear element with its shape functions (mid-edge 0.5/0.5, mid-face 0.25 each). Records verified byte-for-byte on mpc3/4/5; the tests stay RUNFAIL on the staggered-solver field (DIAG-SOLVE-MIXTO).
 
 ## Records *_sig del post_calcul -materi_stress -force
 

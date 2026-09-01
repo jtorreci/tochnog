@@ -306,6 +306,8 @@ Each file corresponds to the same feature in the [User Manual](../manual-user/).
 - [nonlocal](nonlocal.md) — nonlocal alias + NONLOCAL_NAME enum; the legacy nonlocal buffer bug documented as pending.
 - [geometry_factor](geometry_factor.md) — db_number alias to GEOMETRY_BOUNDA_FACTOR (geometry.cc linear/parabolic interpolation); verified against the Professional .dbs (matrix2).
 - [processors](processors.md) — db_number alias to OPTIONS_PROCESSORS (elem.cc thread buffers); exact-match only, processors_used NOT translated.
+- [mpc_node_number](mpc_node_number.md) — mpc.cc::mpc_node_apply() called from bounda.cc: slave bounded + value = sum(factor*master) each iteration, no condensation/force transfer (verified vs Professional .dbs); mpc_apply/mpc_geometry/mpc_element_group PENDING.
+- [mpc_linear_quadratic](mpc_linear_quadratic.md) — tie generation for dangling quadratic nodes via point_el() (linear shape functions), mesh fingerprint record MPC_LINEAR_QUADRATIC_MESH_FINGERPRINT (external=0), regeneration on mesh change; verified byte-for-byte vs the Professional .dbs (mpc3/4/5). mpc5 blocked on the delete-factor family.
 
 ## Records *_sig del post_calcul -materi_stress -force
 
