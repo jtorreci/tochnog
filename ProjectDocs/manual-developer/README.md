@@ -303,3 +303,7 @@ Each file corresponds to the same feature in the [User Manual](../manual-user/).
 - [mesh](mesh.md) — db_number routing to OPTIONS_MESH (dead MESH placeholder avoided).
 - [group_materi_memory_updated_linear](group_materi_memory_updated_linear.md) — the UPDATED_LINEAR branches in materi.cc/set_deften_etc/stress.cc + the explicit-memory-only displacement check.
 - [nonlocal](nonlocal.md) — nonlocal alias + NONLOCAL_NAME enum; the legacy nonlocal buffer bug documented as pending.
+
+## Records *_sig del post_calcul -materi_stress -force
+
+- [post_calcul_materi_stress_force_sig_records](post_calcul_materi_stress_force_sig_records.md) — the name registration (tochnog.h/tochnog-mod.h/database.cc), the exit_tn resolution through post_calcul_names, the 2D plot direction fix (face tangent, not reference direction), the validate pre-step gate, post_element_force_normal (INTEGER + centroid-side filter), the quad9->hex27 extrusion (mesh.cc) and the npointmax 9->27 default; verified against the Professional .dbs (force7-13).

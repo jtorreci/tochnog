@@ -305,3 +305,7 @@ input parameters it accepts.
 - [mesh](mesh.md) — the short alias of options_mesh (mesh -fixed_in_space ...).
 - [group_materi_memory_updated_linear](group_materi_memory_updated_linear.md) — the -updated_linear memory: updated Lagrange with linear engineering strains.
 - [nonlocal](nonlocal.md) — the short `nonlocal` radius record + `nonlocal_name` model selector (6.897/6.898).
+
+## Records *_sig del post_calcul -materi_stress -force
+
+- [post_calcul_materi_stress_force_sig_records](post_calcul_materi_stress_force_sig_records.md) — the output item names of the -force family used as target_item value numbers (`-norx_sig`, `-nory_sig`, `-nors_sig`, the shear `-she*_sig`, the moments `-mom*_sig`/`-mom1*_sig`/`-mom2*_sig`; manual 6.913): the x/y(/z) components are the global plot vectors in the structure thickness direction, the `s` items are the signed physical sizes. Unlocks the corpus force7-13 family.

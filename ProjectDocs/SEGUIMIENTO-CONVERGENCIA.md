@@ -20,6 +20,7 @@ suite sfnet, o un test propio. El registro completo:
 
 | Feature | Commit | Fecha | Verificación |
 |---------|--------|-------|--------------|
+| Records `*_sig` de `post_calcul -materi_stress -force` (nombres de items node_dof_calcul: -norx_sig ... -mom2s_sig) + dirección de plot 2D = tangente de cara + gate de validación pre-step + `post_element_force_normal` INTEGER/filtro +n + extrude quad9→hex27 + default npointmax 27 | (commit feat de este lote, 2026-09-01) | 2026-09-01 | **Contra el binario del Professional (user-supplied 25-10-2023, .dbs)**: force7/8 (ménsula quad9 2D): nory/norx = −12.34, shey/shex = +100, momy/momx = −5000 EXACTOS; force9 (anillo quad9 2D, Roark pág. 262): nory≈0, shey = −0.5, momy = +14.4125; force10/13 (ménsula hex8 3D): nory = −12.34, shey = −100, mom1y = −5000; nors = −12.34, shes = +100; post_element_force_result −123.4/0/1000/0/−1e5 (force10) y −123.4/0/1000/0/−5e4 (force13). force11 (anillo 3D quad9→hex27): shey = −0.2 EXACTO, mom1y 0.19% alto (malla 1 capa) — RUNFAIL por timeout del solve Bi-CG (45 s del corpus), familia solver. **Corpus: 112 → 118 PASS** (223 RUNFAIL / 22 PARSE). Suite propia 16/16 en build limpio. |
 | `check_used` | `3793892` | 2026-08-04 | test propio |
 | `check_element_shape`, `check_memory` | `762f2ca` | 2026-08-04 | test propio |
 | `check_solver` | `e42e12d` | 2026-08-04 | test propio |
@@ -557,7 +558,7 @@ marcado `PENDIENTE` puede estar cubierto en el GNU bajo otro nombre:
 - [x] `control_mesh_delete_small` — presente en el GNU
 - [ ] `control_mesh_duplicate_element_group` — PENDIENTE
 - [ ] `control_mesh_element_group_apply` — PENDIENTE
-- [x] `control_mesh_extrude` — implementada (commit `5dec3c2`, 2026-08-05)
+- [x] `control_mesh_extrude` — implementada (commit `5dec3c2`, 2026-08-05; 2026-09-01: + quad9→hex27 con n capas de `control_mesh_extrude_n` — el anillo 3D del Professional force11; los branches lineales tria3/bar2/quad4 intactos)
 - [ ] `control_mesh_extrude_contact_spring_element_group` — PENDIENTE
 - [ ] `control_mesh_extrude_contact_spring_element_group_new` — PENDIENTE
 - [ ] `control_mesh_extrude_direction` — PENDIENTE
@@ -1678,6 +1679,7 @@ Nota: `group_interface_ground` del checklist anterior NUNCA existió (artefacto 
 - [x] `post_calcul_materi_stress_force_plot_switch` — sub-sprint materi_stress_force, lotes 1-5 (2026-08-28; invierte la dirección de los vectores de plot; 3 switches en 2D / 4 en 3D — por VECTOR item; IMPLEMENTADO en 2D (L2) y 3D (L3))
 - [x] `post_calcul_materi_stress_force_reference_point` — sub-sprint materi_stress_force, lotes 1-5 (2026-08-28; punto de referencia por element group (ndim valores); 3D obligatorio, 2D sin él → aviso + default (0,0); IMPLEMENTADO en 2D (L2) y 3D (L3): define t̂, las caras extremas y la orientación del vector de plot)
 - [x] `post_calcul_materi_stress_force_thickness_switch` — sub-sprint materi_stress_force, lotes 1 + 3 (2026-08-28; -yes usa la dirección más LARGA del elemento como espesor estructural; uno por group; CONSUMIDO en L3: t̂ de la cara = menor extensión física, -yes → la mayor)
+- [x] Records `*_sig` de `post_calcul -materi_stress -force` (-norx_sig -nory_sig -norz_sig -nors_sig, shear, mom1/mom2; manual 6.913) — 2026-09-01; los nombres de los items node_dof_calcul como VALOR de target_item (target_item N -node_dof_calcul <nodo> -nory_sig): enums + tabla de nombres (19), resolución en exit_tn vía post_calcul_names; dirección de plot 2D = TANGENTE de la cara orientada al reference point (antes ref−centroid, inclinado); gate de la validación de tipos en bloques sin timestep; desbloquea force7/8/9/10/13 (ver registro de verificación)
 - [ ] `post_calcul_multiply` — PENDIENTE
 - [ ] `post_calcul_safety_default` — PENDIENTE
 - [ ] `post_calcul_safety_maximum` — PENDIENTE
@@ -1698,15 +1700,15 @@ Nota: `group_interface_ground` del checklist anterior NUNCA existió (artefacto 
 
 ### post_element (0/9)
 
-- [ ] `post_element_force` — PENDIENTE
-- [ ] `post_element_force_force` — PENDIENTE
-- [ ] `post_element_force_geometry` — PENDIENTE
-- [ ] `post_element_force_group` — PENDIENTE
-- [ ] `post_element_force_inertia` — PENDIENTE
-- [ ] `post_element_force_multiply_factor` — PENDIENTE
-- [ ] `post_element_force_normal` — PENDIENTE
-- [ ] `post_element_force_number` — PENDIENTE
-- [ ] `post_element_force_result` — PENDIENTE
+- [x] `post_element_force` — implementado (commits `53ba151`/`255bc9e` + este lote 2026-09-01; sección de fuerzas/momentos por fuerzas internas del elemento ∫Bᵀσ dV, 5 valores en `post_element_force_result`; verificado contra el Professional en force10/force13: normal −123.4, shear0 ~0, shear1 +1000, moment0 ~0, moment1 −1e5/−5e4 EXACTOS)
+- [x] `post_element_force_force` — registrado + parseado (2026-09-01; "también las fuerzas externas se añaden al resultado", manual 6.933 — SIN consumir aún en el cálculo: las fuerzas internas del elemento ya son el cuerpo libre de las cargas, el añadido de fuerzas externas explícitas queda pendiente)
+- [x] `post_element_force_geometry` — implementado (commits `53ba151`/`255bc9e`; restricción a los nodos sobre una geometría, PROYECCIÓN EXACTA sobre la posición INICIAL, manual 6.931)
+- [x] `post_element_force_group` — implementado (commits `53ba151`/`255bc9e`; restricción a ciertos grupos de elementos, manual 6.932)
+- [x] `post_element_force_inertia` — registrado + parseado (2026-09-01; "también las fuerzas de inercia se añaden al resultado", manual 6.933 — SIN consumir aún: las fuerzas de inercia nodales no entran en el resultante de sección, pendiente)
+- [x] `post_element_force_multiply_factor` — implementado (commits `53ba151`/`255bc9e`; factor multiplicador del resultado, manual 6.934)
+- [x] `post_element_force_normal` — implementado (2026-09-01; switch INTEGER (6.935); con -yes solo los elementos en la dirección normal POSITIVA del plano de sección contribuyen — filtro por centroide; sin el record se usan ambos lados si existen; force13 valida el filtro)
+- [x] `post_element_force_number` — implementado (commits `53ba151`/`255bc9e`; restricción a ciertos números de elemento, manual 6.936)
+- [x] `post_element_force_result` — implementado (commits `53ba151`/`255bc9e`; normal_force shear0_force shear1_force moment0 moment1, manual 6.937; verificado contra el Professional en force10/force13)
 
 ### post_global (1/1)
 
