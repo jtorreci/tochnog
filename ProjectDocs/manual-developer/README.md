@@ -290,3 +290,16 @@ Each file corresponds to the same feature in the [User Manual](../manual-user/).
 
 - [support_edge_normal](support_edge_normal.md) — area.cc type[10]: the RHS force from total displacements + the consistent dt-scaled side stiffness in the matrix (solvability), the output record with per-sweep re-zeroing (last-element detection), the bounda gotchas (-node no-op, shared bounda_time values, 3D two-record quirk).
   - the lot-2 additions: damping (manual record + automatic from group E/ν/ρ with Eoed/G), density (a from old NODE_DOF VERSION_NORMAL), factor (scales stiffnesses only), force_initial (compression preload), time diagram (scales the total force), the two control records; the "E from the attached element" gotcha; the 4 tests verified analytically.
+
+## Batch hypo/mohr/kapsh (hyhis, kappa_shear, direct hardening, resets, updated_linear)
+
+- [materi_plasti_hypo_history](materi_plasti_hypo_history.md) — hyhis0..hyhis7 registration, unknown handling, Masin kernel slot mapping (e = slot 0, s = slot 4 with the hyhis layout).
+- [materi_plasti_kappa_shear](materi_plasti_kappa_shear.md) — kapsh dof registration + deviatoric plastic strain accumulation in set_stress + element RHS + hardening read in plasti_rule.
+- [group_materi_plasti_mohr_coul_direct_hardening_softening](group_materi_plasti_mohr_coul_direct_hardening_softening.md) — degrees conversion (PIRAD/180) in plasti_rule before the interpolation block.
+- [control_timestep_iterations_automatic](control_timestep_iterations_automatic.md) — data_length 2->3; [1]=minimal (registered, not consumed), [2]=maximum.
+- [group_materi_plasti_hypo_intergranularstrain](group_materi_plasti_hypo_intergranularstrain.md) — data_length 5->6 + LENGTH_INTERGRANULARSTRAIN 6; theta has no kernel slot (kernel uses chi).
+- [control_reset_dof_scoping](control_reset_dof_scoping.md) — icontrol==ireset gate + multi-dof iteration in data.cc; verified against the Professional binary.
+- [area_element_group_sequence_no_selectors](area_element_group_sequence_no_selectors.md) — previous-group matching in group.cc.
+- [mesh](mesh.md) — db_number routing to OPTIONS_MESH (dead MESH placeholder avoided).
+- [group_materi_memory_updated_linear](group_materi_memory_updated_linear.md) — the UPDATED_LINEAR branches in materi.cc/set_deften_etc/stress.cc + the explicit-memory-only displacement check.
+- [nonlocal](nonlocal.md) — nonlocal alias + NONLOCAL_NAME enum; the legacy nonlocal buffer bug documented as pending.

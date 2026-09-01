@@ -292,3 +292,16 @@ input parameters it accepts.
 - [support_edge_normal](support_edge_normal.md) — the distributed edge support (manual 6.1067): normal+tangential stiffness per unit length (2D) / area (3D), displacement-driven force + consistent matrix stiffness; the 5 same-index side selectors; output `node_support_edge_normal_force`.
 
   - the additional records: `_damping`, `_damping_automatic`, `_damping_automatic_apparent`, `_density`, `_factor`, `_force_initial`, `_time` (the formula Eoed/G and the role of each term; the time diagram scales the FORCE only); the two control records (`_damping_apply` wired, `_stiffness_freeze` parsed-only for elastic).
+
+## Batch hypo/mohr/kapsh (hyhis, kappa_shear, direct hardening, resets, updated_linear)
+
+- [materi_plasti_hypo_history](materi_plasti_hypo_history.md) — the 8 hypoplasticity history variables hyhis0..hyhis7 (manual Professional 4.23); fixed count, Professional basenames, shared hisv dof.
+- [materi_plasti_kappa_shear](materi_plasti_kappa_shear.md) — the kapsh dof (manual 4.25): size of the SHEAR plastic strain, hardening variable of the Mohr-Coulomb hardening-softening family.
+- [group_materi_plasti_mohr_coul_direct_hardening_softening](group_materi_plasti_mohr_coul_direct_hardening_softening.md) — the direct (degrees) variant of the hardening-softening record (7 values; dam_building).
+- [control_timestep_iterations_automatic](control_timestep_iterations_automatic.md) — THREE values: ratio_criterium minimal_timestep maximum_timestep (manual 6.386).
+- [group_materi_plasti_hypo_intergranularstrain](group_materi_plasti_hypo_intergranularstrain.md) — SIX parameters: R m_R m_T beta_r chi theta (manual 6.715).
+- [control_reset_dof_scoping](control_reset_dof_scoping.md) — the reset runs ONCE at its own control index (the Professional rejects a reset at the timestep index) and multi-dof records reset EVERY listed dof.
+- [area_element_group_sequence_no_selectors](area_element_group_sequence_no_selectors.md) — the sequence without geometry/element selectors: group_(i-1) elements become group_i at time_i (dam_building).
+- [mesh](mesh.md) — the short alias of options_mesh (mesh -fixed_in_space ...).
+- [group_materi_memory_updated_linear](group_materi_memory_updated_linear.md) — the -updated_linear memory: updated Lagrange with linear engineering strains.
+- [nonlocal](nonlocal.md) — the short `nonlocal` radius record + `nonlocal_name` model selector (6.897/6.898).

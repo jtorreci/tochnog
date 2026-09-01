@@ -50,7 +50,7 @@ suite sfnet, o un test propio. El registro completo:
 | `control_print_vtk_dof` | `b3e58a4` | 2026-08-13 | campos filtrados verificados (test vtk_dof1) |
 | `force_element_edge_multi_linear_factor_x` | `86f6d03` | 2026-08-13 | efecto del factor 0/1 en target (test mlx1) |
 | `control_mesh_generate_truss/beam` | `bd7b3ab` | 2026-08-13 | contra tests sfnet genera1/ho_othr1 (gen1/genbeam1) |
-| `control_reset_dof` + `_value_constant` + `_value_dof` + `_value_dof_diagram` + `_value_method` | `b6eaee4` | 2026-08-13 | hisv0 reseteado a 0.55 (0.5986 sin reset); diagrama sigyy→hisv0; métodos -use/-add/-multiply |
+| `control_reset_dof` + `_value_constant` + `_value_dof` + `_value_dof_diagram` + `_value_method` | `b6eaee4` + batch hypo | 2026-08-13 / 2026-09-01 | hisv0 reseteado a 0.55 (0.5986 sin reset); diagrama sigyy→hisv0; métodos -use/-add/-multiply. **Batch**: (a) scoping por indice (`icontrol==ireset`: el reset corre UNA vez en su propio paso de control; el Professional RECHAZA un reset en el indice del timestep — medido); (b) records multi-dof: TODOS los dofs listados reciben el valor (antes solo reset_dof[0]) |
 | `control_change_dataitem_apply` | `bdcdeaf` | 2026-08-13 | con -no ignora change_dataitem (targets hypo1 se cumplen); sin apply la geometry cambia y los targets fallan |
 | Carril A (diseño) | — | 2026-08-13 | diseño técnico en DESIGN-INTERFACES.md: modelo físico (strain = dif. de desplazamiento entre lados), análisis del codebase (patrón spring.cc en elem.cc), 4 fases, test de validación propuesto. Sin tests de referencia sfnet. |
 | Carril A Fase 1 (`group_interface` + `_elasti_stiffness`) | `a82cbc7` | 2026-08-13 | interface_element() en interface.cc. **Validada** (test 2 bloques): signo corregido (-sign*stress*dir); kn=100→0.044, kn=1e6→-0.003≈soldado, kn=0.001→≈1.0 libre. Límites físicos correctos. Estrategia de no-interpenetración: penalización implícita + control_timestep_iterations (sin line-search/arc-length). |
@@ -520,8 +520,8 @@ marcado `PENDIENTE` puede estar cubierto en el GNU bajo otro nombre:
 - [x] `control_materi_elasti_k0` — Sprint 9 (registrado) + Sprint 10 lote 5 (hook conectado en set_stress: nu = K0/(1+K0) con group_materi_elasti_k0; validado con `mk0`/`mk0_off`)
 - [x] `control_materi_failure_apply` — Sprint 9 (gate junto a damage_apply)
 - [x] `control_materi_plasti_hardsoil_gammap_initial` — Sprint 10 (lote 8; -yes crea γp_extra = f(estado inicial) en el primer paso (centinela -1 pre-alocado en top.cc, PUT paralelo-safe), guardado en element_intpnt_materi_plasti_hardsoil_gammap_initial y SUMADO a γp en la ley -> f=0 al arrancar con tensiones desviadoras; validado con `mhardsoil_gp0`: σxx -2.0 EXACTO + record 0.0007763 analitico; A/B `mhardsoil_gp0_off` sin control -> retorno σxx -1.225 y kappa 0.000293)
-- [x] `control_materi_plasti_hypo_masin_clay_ocr_apply` — presente en el GNU
-- [x] `control_materi_plasti_hypo_masin_ocr_apply` — presente en el GNU
+- [x] `control_materi_plasti_hypo_masin_clay_ocr_apply` — batch hypo (2026-09-01; gate control_materi por ICONTROL en la rama masin de hypoplas.cc, default -YES; data_required GROUP_TYPE eliminado — el record es CONTROL indexado por timestep; hypo12/13 lo consumen)
+- [x] `control_materi_plasti_hypo_masin_ocr_apply` — batch hypo (2026-09-01; gate control_materi por ICONTROL en la rama masin, default -YES; data_required GROUP_TYPE eliminado)
 - [x] `control_materi_plasti_hypo_niemunis_visco_ocr_apply` — Sprint 9 (PARCIAL: registrado, sin hook en hypo)
 - [x] `control_materi_plasti_hypo_pressure_dependent_void_ratio` — Sprint 9 (PARCIAL: ídem)
 - [x] `control_materi_plasti_hypo_substepping` — Sprint 9 (PARCIAL: ídem)
@@ -565,9 +565,9 @@ marcado `PENDIENTE` puede estar cubierto en el GNU bajo otro nombre:
 - [ ] `control_mesh_extrude_element_group_new` — PENDIENTE
 - [x] `control_mesh_extrude_n` — presente en el GNU
 - [x] `control_mesh_generate_beam` — implementada (commit `bd7b3ab`, 2026-08-13)
-- [ ] `control_mesh_generate_contact_spring` — PENDIENTE
-- [ ] `control_mesh_generate_contact_spring_element` — PENDIENTE
-- [ ] `control_mesh_generate_contact_spring_element_group` — PENDIENTE
+- [x] `control_mesh_generate_contact_spring` — `892541a` (2026-08-31; alias db_number -> CONTROL_MESH_GENERATE_CONTACTSPRING; conspr1-7 rc=0)
+- [x] `control_mesh_generate_contact_spring_element` — `892541a` (2026-08-31; alias db_number -> CONTROL_MESH_GENERATE_CONTACTSPRING_ELEMENT)
+- [x] `control_mesh_generate_contact_spring_element_group` — `892541a` (2026-08-31; alias -> CONTROL_MESH_GENERATE_CONTACTSPRING_ELEMENT_GROUP + implementado en generate.cc)
 - [x] `control_mesh_generate_interface` — implementada (genera interfaces entre grupos con cara compartida; validada con `iface_gen`, `iface_gen_geom`, `iface_gen_geom_off`)
 - [x] `control_mesh_generate_interface_geometry` — implementada (filtro por geometría del par de elementos)
 - [x] `control_mesh_generate_interface_method` — implementada (`-element_geometry` para selección y/o generación; validada con `iface_gen_method` e `iface_gen_method_gen`)
@@ -852,11 +852,11 @@ marcado `PENDIENTE` puede estar cubierto en el GNU bajo otro nombre:
 
 - [ ] `element_boundary` — PENDIENTE
 
-### element_contact (0/3)
+### element_contact (2/3)
 
 - [ ] `element_contact_spring_direction` — PENDIENTE
-- [ ] `element_contact_spring_force` — PENDIENTE
-- [ ] `element_contact_spring_strain` — PENDIENTE
+- [x] `element_contact_spring_force` — `892541a` (2026-08-31; alias db_number -> ELEMENT_CONTACTSPRING_FORCE)
+- [x] `element_contact_spring_strain` — `892541a` (2026-08-31; alias db_number -> ELEMENT_CONTACTSPRING_FORCE, mismo record)
 
 ### element_dof (1/3)
 
@@ -1173,16 +1173,16 @@ marcado `PENDIENTE` puede estar cubierto en el GNU bajo otro nombre:
 - [x] `group_condif_conductivity` — presente en el GNU
 - [x] `group_condif_density` — presente en el GNU
 
-### group_contact (0/8)
+### group_contact (7/8)
 
-- [ ] `group_contact_spring_direction` — PENDIENTE
-- [ ] `group_contact_spring_direction_automatic` — PENDIENTE
+- [x] `group_contact_spring_direction` — `892541a` (2026-08-31; alias -> group_contactspring_direction)
+- [x] `group_contact_spring_direction_automatic` — `892541a` (2026-08-31; alias -> GROUP_CONTACTSPRING_DIRECTION_AUTOMATIC; centroides de elementos)
 - [ ] `group_contact_spring_direction_automatic_planes` — PENDIENTE
-- [ ] `group_contact_spring_memory` — PENDIENTE
-- [ ] `group_contact_spring_plasti_cohesion` — PENDIENTE
-- [ ] `group_contact_spring_plasti_friction` — PENDIENTE
-- [ ] `group_contact_spring_plasti_friction_automatic` — PENDIENTE
-- [ ] `group_contact_spring_sti` — PENDIENTE
+- [x] `group_contact_spring_memory` — `892541a` (2026-08-31; alias -> group_contactspring_memory; -total_linear aceptado)
+- [x] `group_contact_spring_plasti_cohesion` — `892541a` (2026-08-31; alias -> group_contactspring_cohesion)
+- [x] `group_contact_spring_plasti_friction` — `892541a` (2026-08-31; alias -> group_contactspring_friction)
+- [x] `group_contact_spring_plasti_friction_automatic` — `892541a` (2026-08-31; alias -> group_contactspring_friction_automatic)
+- [x] `group_contact_spring_sti` — `892541a` (2026-08-31; alias -> group_contactspring_stiffness)
 
 ### group_dof (0/2)
 
@@ -1311,7 +1311,7 @@ Nota: `group_interface_ground` del checklist anterior NUNCA existió (artefacto 
 - [ ] `group_materi_plasti_hypo_minimum_void_ratio` — PENDIENTE
 - [ ] `group_materi_plasti_hypo_niemunis_visco` — PENDIENTE
 - [ ] `group_materi_plasti_hypo_niemunis_visco_ocr` — PENDIENTE
-- [ ] `group_materi_plasti_hypo_strain_intergranular` — PENDIENTE
+- [x] `group_materi_plasti_hypo_strain_intergranular` — batch hypo (2026-09-01; 6 params R m_R m_T beta_r chi theta, manual 6.715; alias db_number del nombre Professional `..._hypo_strain_intergranular`; theta sin slot en el kernel (usa chi); hypo2/3 rc=0)
 - [x] `group_materi_plasti_hypo_strain_intergranular_masin_clay` — presente en el GNU
 - [ ] `group_materi_plasti_hypo_strain_isa` — PENDIENTE
 - [ ] `group_materi_plasti_hypo_void_ratio_linear` — PENDIENTE
@@ -1324,6 +1324,7 @@ Nota: `group_interface_ground` del checklist anterior NUNCA existió (artefacto 
 - [x] `group_materi_plasti_mohr_coul_direct_visco` — implementada (relajación visco: `factor = 1-exp(-dt/tm)`; validada con `materi_direct_visco`)
 - [x] `group_materi_plasti_mohr_coul_direct_wall` — implementada (valores alternativos si el elemento está pegado a una pared, vía `plasti_on_boundary`; validada con `materi_direct_wall`)
 - [x] `group_materi_plasti_mohr_coul_hardening_softening` — Sprint 10 (lote 4; interpolación LINEAL de phi/c/phi_flow con kappa/kappa_shear_crit en [0,1]; bloque en plasti.cc con matrix_eigenvalues, mismo f que el MC clásico; validado con `mmchs_soft`: tracción uniaxial φ=0, c 80→20, κ_crit=0.5 → κ medido 0.318 (ratio 0.636 → c=41.8 → σt=83.6 analítico) → σxx medido 81.9 = 98%; calibración del test: pasos pequeños dt=0.02 + control_timestep_iterations 8 para que el retorno persiga la superficie que BAJA — el rig de 1 paso brutal divergía a 7.55)
+- [x] `group_materi_plasti_mohr_coul_direct_hardening_softening` — batch hypo (2026-09-01; variante DIRECT (angulos en GRADOS) del hardening_softening, 7 valores; conversion PIRAD/180 en plasti_rule; dam_building la usa)
 - [ ] `group_materi_plasti_mpc` — PENDIENTE
 - [ ] `group_materi_plasti_mpc_factor` — PENDIENTE
 - [x] `group_materi_plasti_pressure_limit` — Sprint 10 (gate p=-tr/3 en el camino direct)
@@ -1338,7 +1339,7 @@ Nota: `group_interface_ground` del checklist anterior NUNCA existió (artefacto 
 - [x] `group_materi_plasti_visco_exponential` — presente en el GNU
 - [x] `group_materi_plasti_visco_exponential_limit` — Sprint 10 (PARCIAL)
 - [x] `group_materi_plasti_visco_exponential_name` — Sprint 10 (PARCIAL)
-- [x] `group_materi_plasti_visco_exponential_values` — Sprint 10 (PARCIAL)
+- [x] `group_materi_plasti_visco_exponential_values` — Sprint 10 (PARCIAL) + batch hypo (2026-09-01; alias db_number del singular Professional `..._value`)
 - [x] `group_materi_plasti_visco_power` — presente en el GNU
 - [ ] `group_materi_plasti_visco_power_name` — PENDIENTE
 - [ ] `group_materi_plasti_visco_power_value` — PENDIENTE
@@ -1479,10 +1480,10 @@ Nota: `group_interface_ground` del checklist anterior NUNCA existió (artefacto 
 - [x] `materi_plasti_f_nonlocal` — presente en el GNU
 - [ ] `materi_plasti_generalised_non_associate_cam_clay_for_bonded_soils_history` — PENDIENTE
 - [x] `materi_plasti_hardsoil_history` — Sprint 10 (lote 8; initia 4.22: dof escalar max |p| historico — mismo concepto que materi_stress_pressure_history (4.50), dof `sph` COMPARTIDO (misma actualizacion running-max en dof.cc, mismo basename); el switch E50/Eur del elastico lo lee (old_unknowns[sph]); validado con `mhardsoil_unload`: sph = 0.3333 en el pico y Eur desde el primer paso de descarga)
-- [ ] `materi_plasti_hypo_history` — PENDIENTE
+- [x] `materi_plasti_hypo_history` — batch hypo (2026-09-01; initia 4.23: 8 variables hyhis0..hyhis7, mismo dof hisv compartido, basenames hyhis; kernel masin mapea e=hyhis0 y s=hyhis4; hypo2/4 rc=0)
 - [ ] `materi_plasti_hypo_substepping` — PENDIENTE
 - [x] `materi_plasti_kappa` — presente en el GNU
-- [ ] `materi_plasti_kappa_shear` — PENDIENTE
+- [x] `materi_plasti_kappa_shear` — batch hypo (2026-09-01; initia 4.25: dof kapsh = int sqrt(0.5 dev(epp):dev(epp)); variable de hardening de la familia hardening_softening (plasti_rule); dam_building/slope la consumen)
 - [ ] `materi_plasti_maximum_iterations` — PENDIENTE
 - [ ] `materi_plasti_phimob` — PENDIENTE
 - [x] `materi_plasti_rho` — presente en el GNU
@@ -1643,10 +1644,10 @@ Nota: `group_interface_ground` del checklist anterior NUNCA existió (artefacto 
 - [x] `node_support_edge_normal_plasti_tension_status` — Sprint 13 lote 3 COMPLETO (4e0074f: 0=cerrado, 1=abierto, OR por nodo)
 - [x] `node_total_pressure` — Sprint 8 (2026-08-24; override en calcul.cc)
 
-### nonlocal (0/2)
+### nonlocal (2/2)
 
-- [ ] `nonlocal` — PENDIENTE
-- [ ] `nonlocal_name` — PENDIENTE
+- [x] `nonlocal` — batch hypo (2026-09-01; alias de options_nonlocal, manual 6.897; slope_nonlocal_refine parsea; el run choca con el bug legacy del buffer NONLOCAL_ITEM_SIZE de nonloc.cc — PENDIENTE)
+- [x] `nonlocal_name` — batch hypo (2026-09-01; record nuevo 6.898, PARCIAL: aceptado pero sin gate por modelo (el GNU aplica el termino no-local a todo modelo))
 
 ### number (0/1)
 
@@ -1969,7 +1970,7 @@ Nota: `group_interface_ground` del checklist anterior NUNCA existió (artefacto 
 
 ### timestep (2/2)
 
-- [x] `timestep_iterations_automatic_apply` — Sprint 12 lote 3 (-no descarta todo control_timestep_iterations_automatic: gate en top.cc antes de la rama automática; física sin cambio verificada)
+- [x] `timestep_iterations_automatic_apply` — Sprint 12 lote 3 (-no descarta todo control_timestep_iterations_automatic: gate en top.cc antes de la rama automática; física sin cambio verificada). **Batch hypo (2026-09-01)**: `control_timestep_iterations_automatic` pasa a 3 valores (ratio minimal maximum, manual 6.386); [2]=maximum (antes [1]); [1]=minimal registrado sin consumir (parcial); slope_classical_numerical ya avanza (antes maximum=1e-6 → timeout)
 - [x] `timestep_predict_velocity` — Sprint 12 lote 3 (PARCIAL: registrado; el esquema escalonado del GNU arranca el solve de x=0 y ACUMULA el resultado — una predicción de velocidades previas duplicaría; neutral verificado)
 
 ### tochnog (1/1)
@@ -2174,3 +2175,55 @@ y avance mejor.
 **Resultado**: conspr1-7 y genera2 → rc=0. **Corpus: 91 → 99 PASS** (de 363). Suite 16/16. Desglose actual del corpus: 99 PASS / 224 RUNFAIL / 40 PARSE.
 
 **Pendientes del corpus**: interface2 (gap multi-paso), interface13 (bug del propio test), y los parse-errors de mayor frecuencia: `-nory_sig`/`-norx_sig` (6), `geometry_factor` (4), `-quad8`/`-hex20` (5), `mesh_gid_point_coord`/`mesh_gid_circle_coord` (5), `-updated_area` (3), `processors` (2).
+
+### Batch hypo/mohr/kapsh/reset — corpus 112 (2026-09-01) — `feat(hypo): hyhis0..7 + kappa_shear + direct_hardening_softening + resets multi-dof` (`22801c3`)
+
+**Cierre del batch iniciado en la sesión anterior** (16 archivos sin commitear, prints DBG eliminados, diagnóstico cerrado):
+
+1. **`materi_plasti_hypo_history` (4.23)**: 8 variables hyhis0..hyhis7, dof hisv compartido, basenames hyhis; checks de los grupos hypo aceptan el nombre (check_unknown_atleastone).
+2. **`materi_plasti_kappa_shear` (4.25)**: dof `kapsh` = int sqrt(0.5·dev(epp):dev(epp)); hardening de la familia hardening_softening (plasti_rule); RHS en materi.cc.
+3. **`group_materi_plasti_mohr_coul_direct_hardening_softening`**: variante DIRECT con ángulos EN GRADOS (PIRAD/180 en plasti_rule); dam_building la usa.
+4. **`control_timestep_iterations_automatic` → 3 valores** (ratio minimal maximum, 6.386); [2]=maximum; slope_classical_numerical ya avanza.
+5. **`group_materi_plasti_hypo_intergranularstrain` → 6 params** (R m_R m_T beta_r chi theta, 6.715) + alias del nombre Professional `_hypo_strain_intergranular`.
+6. **`control_reset_dof`**: (a) scoping por índice (icontrol==ireset — verificado contra el Professional: RECHAZA un reset en el índice del timestep, "Error detected for data item : control_reset_dof, record : 20"); (b) FIX multi-dof: todos los dofs listados reciben el valor (antes solo reset_dof[0] — bug latente que rompía el reset de 17 dofs de dam_building).
+7. **`area_element_group_sequence` sin selectores** (6.9): los elementos del grupo anterior (i−1) pasan al grupo i en tiempo i; dam_building la usa.
+8. **Alias `mesh` → OPTIONS_MESH** (el placeholder MESH muerto rompía el parse de `mesh -fixed_in_space`).
+9. **`memory==-UPDATED_LINEAR`**: ramas en materi.cc / set_deften_etc / stress.cc; el check de materia_displacement solo aplica con el record EXPLÍCITO (hipo12/13 corren sin group_materi_memory).
+10. **Rama masin (hypoplas.cc)**: e = hyhis0, s = hyhis4 (layout Professional); delta intergranular desde el dof epi; gates `control_materi_plasti_hypo_masin(_clay)_ocr_apply` por ICONTROL (default -YES; data_required GROUP_TYPE eliminado).
+11. **Aliases nuevos**: `nonlocal` → OPTIONS_NONLOCAL (6.897), `nonlocal_name` (6.898), `group_materi_plasti_visco_exponential_value` (singular), `control_mesh_refine_locally_dof` (6.222).
+
+**Corpus: 99 → 112 PASS** (de 363; 229 RUNFAIL / 22 PARSE). Suite 16/16. La subida neta viene del fix multi-dof de control_reset_dof (+15 tests) menos la caída de hypo1/hypo3 (−3, kernel, ver abajo).
+
+**Fixes de bugs reales encontrados**:
+- `control_reset_dof` multi-dof: solo el PRIMER dof del record recibía el valor (latente desde b6eaee4). El Professional resetea todos los listados (verificado en sus .dbs: sigxx/sigyy/sigzz evolucionan desde −100).
+- `control_materi_gate_off` (general.cc): el chequeo `db_active_index(item, 0)` fallaba para records en índices ≠ 0 → ahora `db_max_index` (los gates por ICONTROL funcionan para cualquier índice).
+- Check de UPDATED: el rechazo de materi_displacement solo aplica con el record explícito.
+
+**Tests objetivo — estado final**:
+- hypo2, hypo4: **rc=0** (targets del Professional).
+- hypo1 (−862.766 vs −862.92, 0.019%): kernel wolfersdorff (hypo.c) — la corrección del reset reveló la desviación (antes el bug reset_dof[0] la compensaba por coincidencia de tolerancia).
+- hypo3 (−0.104 vs −0.1618): kernel wolfersdorff con estado inicial anisótropo — desviación 36%, calibración pendiente.
+- hypo7/8/9 (−224/−216/−224 vs −231.8/−230.6/−231.8, 3-6%): kernel masin (masin.c) — mejoran desde −2064/−31.87/−2064.
+- hypo12/13: corren (fix del gate OCR + layout hyhis) pero el kernel masin visco desborda la razón de vacíos (1.19e17) — calibración pendiente.
+- hypo6/11: PENDIENTE (modelos Niemunis visco no implementados en el kernel GNU).
+- hypo10/triaxial/direct_shear: PENDIENTE (extensión ISA + incremental_driver no implementados).
+- dam_building: corre pero necesita ~10 min (corpus 45 s) — los features (kapsh, direct_hardening_softening, sequence sin selectores, timestep 3 valores, reset 17 dofs) se ejercitan.
+- slope_classical_numerical: corre hasta t=2; el target de colapso 1.275 no se cumple (física de la reducción phi-c pendiente).
+- slope_nonlocal_refine: parsea (nonlocal/nonlocal_name/visco_exponential_value/refine_locally_dof); el run choca con el bug legacy del buffer NONLOCAL_ITEM_SIZE de nonloc.cc (PENDIENTE).
+- mohr_coul_direct1-8: RUNFAIL pre-existente (ley directa, eptxx 1/5 del target — no relacionado con el batch).
+- mesh_gid_1-8: RUNFAIL (requieren el programa GID).
+
+**Registro de verificación**:
+| Feature | Verificación |
+|---------|-------------|
+| materi_plasti_hypo_history | hypo2/4 rc=0; resets -hyhis0/-hyhis4 contra .dbs del Professional (e evoluciona, s se mantiene) |
+| materi_plasti_kappa_shear | dam_building/slope parsean y corren; reset -kapsh en el record de 17 dofs |
+| direct_hardening_softening | dam_building parsea y corre (0. 16.5 0. 0. 12. 0. 0.18) |
+| timestep_iterations_automatic 3v | slope_classical_numerical avanza (antes timeout por maximum=1e-6) |
+| intergranularstrain 6 params | hypo2/3 con 6 valores rc=0 |
+| reset scoping + multi-dof | Professional rechaza reset en índice de timestep (medido); corpus +15 |
+| sequence sin selectores | dam_building corre la construcción por capas |
+| alias mesh | slope_classical_numerical parsea `mesh -fixed_in_space` |
+| updated_linear | hypo7/8 corren con -updated_linear; hypo12/13 con memory por defecto |
+| masin layout hyhis | hypo7: −2064 → −224 (3.4% del target) |
+| nonlocal/nonlocal_name | slope_nonlocal_refine parsea; bug legacy del buffer documentado |
