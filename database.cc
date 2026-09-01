@@ -7807,6 +7807,16 @@ long int db_number( char str[] )
       strncat( translated, &str[22], MCHAR-40 );
       return db_number( translated );
     }
+    else if ( !strcmp( str, "geometry_factor" ) )
+      // Professional manual 6.527: spatial weighting factors of
+      // boundary/force_edge loads along a geometry entity. Same record
+      // as the GNU geometry_bounda_factor (read by geometry()): same
+      // index as the geometry entity, 2 values = linear, 3 = quadratic.
+      return GEOMETRY_BOUNDA_FACTOR;
+    else if ( !strcmp( str, "processors" ) )
+      // Professional short name of options_processors: number of
+      // solver threads (consumed in area.cc/elem.cc).
+      return OPTIONS_PROCESSORS;
   }
 
   return found;
