@@ -305,6 +305,8 @@ input parameters it accepts.
 - [mesh](mesh.md) — the short alias of options_mesh (mesh -fixed_in_space ...).
 - [group_materi_memory_updated_linear](group_materi_memory_updated_linear.md) — the -updated_linear memory: updated Lagrange with linear engineering strains.
 - [nonlocal](nonlocal.md) — the short `nonlocal` radius record + `nonlocal_name` model selector (6.897/6.898).
+- [geometry_factor](geometry_factor.md) — the Professional name (6.527) of geometry_bounda_factor: spatial weighting factors of bounda_dof/bounda_force/force_edge_* on a geometry entity (2 = linear, 3 = parabolic on a line).
+- [processors](processors.md) — the Professional short name of options_processors: number of solver threads.
 
 ## Records *_sig del post_calcul -materi_stress -force
 

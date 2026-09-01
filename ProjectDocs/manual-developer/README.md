@@ -303,6 +303,8 @@ Each file corresponds to the same feature in the [User Manual](../manual-user/).
 - [mesh](mesh.md) — db_number routing to OPTIONS_MESH (dead MESH placeholder avoided).
 - [group_materi_memory_updated_linear](group_materi_memory_updated_linear.md) — the UPDATED_LINEAR branches in materi.cc/set_deften_etc/stress.cc + the explicit-memory-only displacement check.
 - [nonlocal](nonlocal.md) — nonlocal alias + NONLOCAL_NAME enum; the legacy nonlocal buffer bug documented as pending.
+- [geometry_factor](geometry_factor.md) — db_number alias to GEOMETRY_BOUNDA_FACTOR (geometry.cc linear/parabolic interpolation); verified against the Professional .dbs (matrix2).
+- [processors](processors.md) — db_number alias to OPTIONS_PROCESSORS (elem.cc thread buffers); exact-match only, processors_used NOT translated.
 
 ## Records *_sig del post_calcul -materi_stress -force
 

@@ -20,6 +20,7 @@ suite sfnet, o un test propio. El registro completo:
 
 | Feature | Commit | Fecha | Verificación |
 |---------|--------|-------|--------------|
+| Aliases `geometry_factor` (6.527) → `geometry_bounda_factor` y `processors` → `options_processors` en db_number() | `9d22f6c` | 2026-09-01 | **Contra el binario del Professional (user-supplied 25-10-2023, .dbs)**: matrix2 (condif, factores lineales 1..4 por lado) post_point_dof = 2.4999998123 vs 2.500000000000e+00 del Professional (8 cifras); el ejemplo del manual 6.527 (nodo x=0.2 → 20·1.6, x=0.4 → 20·2.2) coincide con la interpolación de geometry.cc. **Corpus: 118 → 121 PASS** (220 RUNFAIL / 22 PARSE). Suite propia 16/16. mpc4/interface11/validation_14_mesh siguen RUNFAIL por blockers ajenos al alias (mpc_linear_quadratic, mesh_interface_triangle_coordinate, bounda_time_until_data). delete3 RUNFAIL documentado (control_mesh_delete_geometry_factor sin aplicar). |
 | Records `*_sig` de `post_calcul -materi_stress -force` (nombres de items node_dof_calcul: -norx_sig ... -mom2s_sig) + dirección de plot 2D = tangente de cara + gate de validación pre-step + `post_element_force_normal` INTEGER/filtro +n + extrude quad9→hex27 + default npointmax 27 | (commit feat de este lote, 2026-09-01) | 2026-09-01 | **Contra el binario del Professional (user-supplied 25-10-2023, .dbs)**: force7/8 (ménsula quad9 2D): nory/norx = −12.34, shey/shex = +100, momy/momx = −5000 EXACTOS; force9 (anillo quad9 2D, Roark pág. 262): nory≈0, shey = −0.5, momy = +14.4125; force10/13 (ménsula hex8 3D): nory = −12.34, shey = −100, mom1y = −5000; nors = −12.34, shes = +100; post_element_force_result −123.4/0/1000/0/−1e5 (force10) y −123.4/0/1000/0/−5e4 (force13). force11 (anillo 3D quad9→hex27): shey = −0.2 EXACTO, mom1y 0.19% alto (malla 1 capa) — RUNFAIL por timeout del solve Bi-CG (45 s del corpus), familia solver. **Corpus: 112 → 118 PASS** (223 RUNFAIL / 22 PARSE). Suite propia 16/16 en build limpio. |
 | `check_used` | `3793892` | 2026-08-04 | test propio |
 | `check_element_shape`, `check_memory` | `762f2ca` | 2026-08-04 | test propio |
@@ -1041,9 +1042,9 @@ marcado `PENDIENTE` puede estar cubierto en el GNU bajo otro nombre:
 
 - [ ] `geometry_exclude` — PENDIENTE
 
-### geometry_factor (0/1)
+### geometry_factor (1/1)
 
-- [ ] `geometry_factor` — PENDIENTE
+- [x] `geometry_factor` — alias de `geometry_bounda_factor` en db_number() (2026-09-01): misma semántica (interpolación lineal/parabólica en `geometry()`, mismo índice); desbloquea matrix2/temp2/matrix4; verificado contra el binario Professional 25-10-2023 (post_point_dof 2.4999998123 vs 2.5). El `control_mesh_delete_geometry_factor` (delete2/delete3) es una feature de clase CONTROL aparte, PENDIENTE (parsea pero no se aplica: delete3 RUNFAIL sigyy 0 vs 0.6).
 
 ### geometry_hexahedral (0/1)
 
@@ -1858,9 +1859,9 @@ Nota: `group_interface_ground` del checklist anterior NUNCA existió (artefacto 
 
 - [x] `print_where` — presente en el GNU
 
-### processors (0/3)
+### processors (1/3)
 
-- [ ] `processors` — PENDIENTE
+- [x] `processors` — alias de `options_processors` en db_number() (2026-09-01, match EXACTO): el GNU ya lo consume en elem.cc (nthread de element_loop) y area.cc. mpc4/interface11 parsean pero siguen RUNFAIL por `mpc_linear_quadratic` y `mesh_interface_triangle_coordinate`; validation_14_mesh por `bounda_time_until_data` + `processors_used` (record de salida aparte).
 - [ ] `processors_maximum` — PENDIENTE
 - [ ] `processors_partition` — PENDIENTE
 
@@ -2176,7 +2177,35 @@ y avance mejor.
 
 **Resultado**: conspr1-7 y genera2 → rc=0. **Corpus: 91 → 99 PASS** (de 363). Suite 16/16. Desglose actual del corpus: 99 PASS / 224 RUNFAIL / 40 PARSE.
 
-**Pendientes del corpus**: interface2 (gap multi-paso), interface13 (bug del propio test), y los parse-errors de mayor frecuencia: `-nory_sig`/`-norx_sig` (6), `geometry_factor` (4), `-quad8`/`-hex20` (5), `mesh_gid_point_coord`/`mesh_gid_circle_coord` (5), `-updated_area` (3), `processors` (2).
+**Pendientes del corpus**: interface2 (gap multi-paso), interface13 (bug del propio test), y los parse-errors de mayor frecuencia: `-nory_sig`/`-norx_sig` (6), `-quad8`/`-hex20` (5), `mesh_gid_point_coord`/`mesh_gid_circle_coord` (5), `-updated_area` (3).
+
+### Aliases `geometry_factor` + `processors` — corpus 121 (2026-09-01) — `feat(alias): geometry_factor -> GEOMETRY_BOUNDA_FACTOR, processors -> OPTIONS_PROCESSORS` (`9d22f6c`)
+
+Dos aliases triviales en la cadena de traducción de `db_number()`
+(database.cc):
+
+1. **`geometry_factor`** (manual Professional 6.527) → `GEOMETRY_BOUNDA_FACTOR`:
+   el GNU ya leía el record con la MISMA semántica (interpolación lineal
+   2 valores / parabólica 3 valores en `geometry()`, mismo índice que la
+   entidad geométrica). El ejemplo del manual (línea 0..1 con factores
+   1/4: nodo x=0.2 → 20·1.6, x=0.4 → 20·2.2) coincide EXACTAMENTE con la
+   interpolación de geometry.cc. Desbloquea matrix2/temp2/matrix4
+   (rc=0). Verificado contra el binario Professional 25-10-2023
+   (matrix2: post_point_dof GNU 2.4999998123 vs Professional
+   2.500000000000e+00).
+2. **`processors`** → `OPTIONS_PROCESSORS`: el GNU ya lo consumía en
+   elem.cc (buffers por-thread de element_loop) y area.cc (warning de
+   acumulación single-thread). Match EXACTO (strcmp) para no traducir
+   `processors_used`/`processors_maximum`/`processors_partition`.
+   mpc4/interface11 parsean ahora, pero siguen RUNFAIL por sus blockers
+   (`mpc_linear_quadratic`, `mesh_interface_triangle_coordinate`);
+   validation_14_mesh por `bounda_time_until_data` + `processors_used`
+   (record de salida aparte).
+
+**Resultado**: **Corpus: 118 → 121 PASS** (220 RUNFAIL / 22 PARSE, de
+363). Suite propia 16/16. delete3 sigue RUNFAIL (sigyy 0 vs 0.6: el
+`control_mesh_delete_geometry_factor` parsea pero NO se aplica — feature
+de clase CONTROL aparte, PENDIENTE).
 
 ### Batch hypo/mohr/kapsh/reset — corpus 112 (2026-09-01) — `feat(hypo): hyhis0..7 + kappa_shear + direct_hardening_softening + resets multi-dof` (`22801c3`)
 
