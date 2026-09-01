@@ -336,6 +336,53 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   data_class[BOUNDA_TIME_UNTIL_FORCE] = BOUNDA;
   data_required[BOUNDA_TIME_UNTIL_FORCE] = BOUNDA_TIME;
 
+  // manual Professional 6.40: bounda_time_until_data index
+  // data_item_name data_item_index data_item_number. Monitor the data
+  // item; when it falls from start (6.41) the load of the bounda_time
+  // record with the same index is reduced, reaching 0 when the monitor
+  // reaches wanted. The reduction factor is quadratic:
+  // ((monitor/first - wanted)/(start - wanted))^2, clamped [0,1],
+  // where first is the initial value of the monitor (verified against
+  // the Professional binary 25-10-2023: until1.dat E=1 and E=2 runs).
+  strcpy(name[BOUNDA_TIME_UNTIL_DATA],"bounda_time_until_data");
+  type[BOUNDA_TIME_UNTIL_DATA] = INTEGER;
+  data_length[BOUNDA_TIME_UNTIL_DATA] = 3;
+  fixed_length[BOUNDA_TIME_UNTIL_DATA] = 1;
+  data_class[BOUNDA_TIME_UNTIL_DATA] = BOUNDA;
+  data_required[BOUNDA_TIME_UNTIL_DATA] = BOUNDA_TIME;
+
+  strcpy(name[BOUNDA_TIME_UNTIL_VALUE_MINIMUM],"bounda_time_until_value_minimum");
+  type[BOUNDA_TIME_UNTIL_VALUE_MINIMUM] = DOUBLE_PRECISION;
+  data_length[BOUNDA_TIME_UNTIL_VALUE_MINIMUM] = 2;
+  fixed_length[BOUNDA_TIME_UNTIL_VALUE_MINIMUM] = 1;
+  data_class[BOUNDA_TIME_UNTIL_VALUE_MINIMUM] = BOUNDA;
+  data_required[BOUNDA_TIME_UNTIL_VALUE_MINIMUM] = BOUNDA_TIME_UNTIL_DATA;
+
+  // records written to the .dbs database (same output semantics as the
+  // Professional): bounda_time_until_first = initial monitor value,
+  // bounda_time_until_used = reduction factor applied in the step.
+  strcpy(name[BOUNDA_TIME_UNTIL_FIRST],"bounda_time_until_first");
+  type[BOUNDA_TIME_UNTIL_FIRST] = DOUBLE_PRECISION;
+  data_length[BOUNDA_TIME_UNTIL_FIRST] = 1;
+  data_class[BOUNDA_TIME_UNTIL_FIRST] = BOUNDA;
+
+  strcpy(name[BOUNDA_TIME_UNTIL_USED],"bounda_time_until_used");
+  type[BOUNDA_TIME_UNTIL_USED] = DOUBLE_PRECISION;
+  data_length[BOUNDA_TIME_UNTIL_USED] = 1;
+  data_class[BOUNDA_TIME_UNTIL_USED] = BOUNDA;
+
+  // manual Professional 6.41 variant used by the 02-08-2026 corpus
+  // (validation_14_mesh): bounda_time_until_value index min max start.
+  // Registered as a known keyword so the parser accepts it; the
+  // consumption semantics could not be verified (the 25-10-2023 binary
+  // rejects the record) and is documented as PENDING.
+  strcpy(name[BOUNDA_TIME_UNTIL_VALUE],"bounda_time_until_value");
+  type[BOUNDA_TIME_UNTIL_VALUE] = DOUBLE_PRECISION;
+  data_length[BOUNDA_TIME_UNTIL_VALUE] = 3;
+  fixed_length[BOUNDA_TIME_UNTIL_VALUE] = 1;
+  data_class[BOUNDA_TIME_UNTIL_VALUE] = BOUNDA;
+  data_required[BOUNDA_TIME_UNTIL_VALUE] = BOUNDA_TIME_UNTIL_DATA;
+
   strcpy(name[BOUNDA_TIME_UNITS],"bounda_time_units");
   type[BOUNDA_TIME_UNITS] = DOUBLE_PRECISION;
   data_length[BOUNDA_TIME_UNITS] = 2;
@@ -6747,6 +6794,114 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   strcpy(name[WAVE_SCALAR],"wave_scalar");
 
   strcpy(name[WAVE_FSCALAR],"wave_fscalar");
+
+  // --- corpus parser keywords (registered for the parser only; the
+  //     consumption of these families is PENDING, see
+  //     SEGUIMIENTO-CONVERGENCIA.md) ---
+
+  // post_calcul_length (written by the Professional in the .dbs and
+  // used as input by the corpus tests): length of the post_calcul
+  // record. The GNU derives the length from the parsed values.
+  // bounda_used (written by the Professional in the .dbs database):
+  // switch whether the bounda record with the index was applied in the
+  // step. Output record for .dbs parity.
+  strcpy(name[BOUNDA_USED],"bounda_used");
+  type[BOUNDA_USED] = INTEGER;
+  data_length[BOUNDA_USED] = 1;
+  data_class[BOUNDA_USED] = BOUNDA;
+
+  strcpy(name[POST_CALCUL_LENGTH],"post_calcul_length");
+  type[POST_CALCUL_LENGTH] = INTEGER;
+  data_length[POST_CALCUL_LENGTH] = 1;
+  no_index[POST_CALCUL_LENGTH] = 1;
+  data_class[POST_CALCUL_LENGTH] = POST;
+
+  // family mpc_* (manual Professional 6.856-6.875): multi point
+  // constraints. Consumption PENDING.
+  strcpy(name[MPC_ELEMENT_GROUP],"mpc_element_group");
+  type[MPC_ELEMENT_GROUP] = INTEGER;
+  data_length[MPC_ELEMENT_GROUP] = DATA_ITEM_SIZE;
+  fixed_length[MPC_ELEMENT_GROUP] = 0;
+  data_class[MPC_ELEMENT_GROUP] = CONTROL;
+
+  strcpy(name[MPC_GEOMETRY],"mpc_geometry");
+  type[MPC_GEOMETRY] = INTEGER;
+  data_length[MPC_GEOMETRY] = DATA_ITEM_SIZE;
+  fixed_length[MPC_GEOMETRY] = 0;
+  data_class[MPC_GEOMETRY] = CONTROL;
+
+  strcpy(name[MPC_GEOMETRY_DOF],"mpc_geometry_dof");
+  type[MPC_GEOMETRY_DOF] = INTEGER;
+  data_length[MPC_GEOMETRY_DOF] = DATA_ITEM_SIZE;
+  fixed_length[MPC_GEOMETRY_DOF] = 0;
+  data_class[MPC_GEOMETRY_DOF] = CONTROL;
+
+  strcpy(name[MPC_GEOMETRY_SWITCH],"mpc_geometry_switch");
+  type[MPC_GEOMETRY_SWITCH] = INTEGER;
+  data_length[MPC_GEOMETRY_SWITCH] = DATA_ITEM_SIZE;
+  fixed_length[MPC_GEOMETRY_SWITCH] = 0;
+  data_class[MPC_GEOMETRY_SWITCH] = CONTROL;
+
+  strcpy(name[MPC_LINEAR_QUADRATIC],"mpc_linear_quadratic");
+  type[MPC_LINEAR_QUADRATIC] = INTEGER;
+  data_length[MPC_LINEAR_QUADRATIC] = 1;
+  no_index[MPC_LINEAR_QUADRATIC] = 1;
+  data_class[MPC_LINEAR_QUADRATIC] = CONTROL;
+
+  strcpy(name[MPC_NODE_FACTOR],"mpc_node_factor");
+  type[MPC_NODE_FACTOR] = DOUBLE_PRECISION;
+  data_length[MPC_NODE_FACTOR] = DATA_ITEM_SIZE;
+  fixed_length[MPC_NODE_FACTOR] = 0;
+  data_class[MPC_NODE_FACTOR] = CONTROL;
+
+  strcpy(name[MPC_NODE_NUMBER],"mpc_node_number");
+  type[MPC_NODE_NUMBER] = INTEGER;
+  data_length[MPC_NODE_NUMBER] = DATA_ITEM_SIZE;
+  fixed_length[MPC_NODE_NUMBER] = 0;
+  data_class[MPC_NODE_NUMBER] = CONTROL;
+
+  // control_mesh_truss_distribute_mpc (manual Professional 6.245) and
+  // the _exact variant (6.250): distribute truss nodes over the
+  // isoparametric elements with multi point constraints. Consumption
+  // PENDING.
+  strcpy(name[CONTROL_MESH_TRUSS_DISTRIBUTE_MPC],"control_mesh_truss_distribute_mpc");
+  type[CONTROL_MESH_TRUSS_DISTRIBUTE_MPC] = INTEGER;
+  data_length[CONTROL_MESH_TRUSS_DISTRIBUTE_MPC] = 1;
+  fixed_length[CONTROL_MESH_TRUSS_DISTRIBUTE_MPC] = 1;
+  data_class[CONTROL_MESH_TRUSS_DISTRIBUTE_MPC] = CONTROL;
+
+  strcpy(name[CONTROL_MESH_TRUSS_DISTRIBUTE_MPC_EXACT],"control_mesh_truss_distribute_mpc_exact");
+  type[CONTROL_MESH_TRUSS_DISTRIBUTE_MPC_EXACT] = INTEGER;
+  data_length[CONTROL_MESH_TRUSS_DISTRIBUTE_MPC_EXACT] = 1;
+  fixed_length[CONTROL_MESH_TRUSS_DISTRIBUTE_MPC_EXACT] = 1;
+  data_class[CONTROL_MESH_TRUSS_DISTRIBUTE_MPC_EXACT] = CONTROL;
+
+  // strain_volume_* (manual Professional 6.96x): prescribed volume
+  // strain and its element. Consumption PENDING.
+  strcpy(name[STRAIN_VOLUME_ABSOLUTE_TIME],"strain_volume_absolute_time");
+  type[STRAIN_VOLUME_ABSOLUTE_TIME] = DOUBLE_PRECISION;
+  data_length[STRAIN_VOLUME_ABSOLUTE_TIME] = DATA_ITEM_SIZE;
+  fixed_length[STRAIN_VOLUME_ABSOLUTE_TIME] = 0;
+  data_class[STRAIN_VOLUME_ABSOLUTE_TIME] = CONTROL;
+
+  strcpy(name[STRAIN_VOLUME_ELEMENT],"strain_volume_element");
+  type[STRAIN_VOLUME_ELEMENT] = INTEGER;
+  data_length[STRAIN_VOLUME_ELEMENT] = 1;
+  fixed_length[STRAIN_VOLUME_ELEMENT] = 1;
+  data_class[STRAIN_VOLUME_ELEMENT] = CONTROL;
+
+  // strain_volume output items (manual Professional 6.966/6.968):
+  // consumed by the target_item records of the corpus tests.
+  // Consumption PENDING.
+  strcpy(name[POST_STRAIN_VOLUME_ABSOLUTE],"post_strain_volume_absolute");
+  type[POST_STRAIN_VOLUME_ABSOLUTE] = DOUBLE_PRECISION;
+  data_length[POST_STRAIN_VOLUME_ABSOLUTE] = 1;
+  data_class[POST_STRAIN_VOLUME_ABSOLUTE] = POST;
+
+  strcpy(name[POST_STRAIN_VOLUME_RELATIVE],"post_strain_volume_relative");
+  type[POST_STRAIN_VOLUME_RELATIVE] = DOUBLE_PRECISION;
+  data_length[POST_STRAIN_VOLUME_RELATIVE] = 1;
+  data_class[POST_STRAIN_VOLUME_RELATIVE] = POST;
 
   strcpy(name[YES],"yes");
 

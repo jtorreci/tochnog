@@ -49,6 +49,13 @@ void bounda( )
     bounda_dof_cylindrical[6];
   double bounda_time_increment=0., bounda_time_offset=0.;
   double bounda_factor[4], bounda_factor_px[3], bounda_time_units[2];
+  // bounda_time_until_data + bounda_time_until_value_minimum (manual
+  // Professional 6.40/6.41): reduce the load of the bounda_time record
+  // when the monitored data item falls from start to wanted.
+  long int bounda_until_data=0, until_data[3], until_data_item_name=0,
+    until_data_item_index=0, until_data_item_number=0;
+  double bounda_until_factor=1., bounda_until_first=0., bounda_until_monitor=0.,
+    bounda_until_wanted=0., bounda_until_start=0.;
 
   swit = set_swit(-1,-1,"bounda");
   if ( swit ) pri( "In routine BOUNDA" );
@@ -181,6 +188,56 @@ void bounda( )
         ninc = 2;
         time = 1;
         length_bounda_time = 0;
+      }
+      // bounda_time_until_data + bounda_time_until_value_minimum
+      // (manual Professional 6.40/6.41): reduce the load of this
+      // bounda_time when the monitored data item falls from start to
+      // wanted. Verified against the Professional binary 25-10-2023
+      // (until1.dat, E=1 and E=2 runs): the reduction factor is
+      // quadratic, ((monitor/first - wanted)/(start - wanted))^2 with
+      // clamp [0,1], where first is the initial monitor value
+      // (bounda_time_until_first) and the monitor is the data item
+      // value of the PREVIOUS time step (post_node_result is written
+      // by post() at the end of the step, so the value available here
+      // is the one of the previous step). The monitor is read here;
+      // first is captured and the factor computed in the time loop
+      // below, on the first step in which this bounda_time is active.
+      bounda_until_data = 0;
+      bounda_until_factor = 1.;
+      bounda_until_monitor = 0.;
+      if ( db_active_index( BOUNDA_TIME_UNTIL_DATA, iboun, VERSION_NORMAL ) ) {
+        db( BOUNDA_TIME_UNTIL_DATA, iboun, until_data, ddum, ldum,
+          VERSION_NORMAL, GET );
+        until_data_item_name   = labs( until_data[0] );
+        until_data_item_index  = until_data[1];
+        until_data_item_number = until_data[2];
+        {
+          double until_min[2];
+          db( BOUNDA_TIME_UNTIL_VALUE_MINIMUM, iboun, idum, until_min, ldum,
+            VERSION_NORMAL, GET );
+          bounda_until_wanted = until_min[0];
+          bounda_until_start  = until_min[1];
+        }
+        if ( db_active_index( until_data_item_name, until_data_item_index,
+            VERSION_NORMAL ) ) {
+          long int number = 0, item_len = 0;
+          if ( until_data_item_number<0 ) {
+            array_member( dof_label, until_data_item_number, nuknwn, number );
+            if ( number>=0 && db_len( until_data_item_name,
+                until_data_item_index, VERSION_NORMAL )==npuknwn )
+              number /= nder;
+          }
+          else
+            number = until_data_item_number;
+          item_len = db_len( until_data_item_name, until_data_item_index,
+            VERSION_NORMAL );
+          if ( number>=0 && number<item_len ) {
+            double *dbl_item = db_dbl( until_data_item_name,
+              until_data_item_index, VERSION_NORMAL );
+            bounda_until_monitor = dbl_item[number];
+            bounda_until_data = 1;
+          }
+        }
       }
       // only periodically use the bounda_time values
       if ( db_active_index( BOUNDA_TIME_ON_OFF, iboun, VERSION_NORMAL ) ) {
@@ -330,6 +387,36 @@ void bounda( )
         else {
           load = 0.;
           found = 1;
+        }
+
+        // bounda_time_until_data (manual Professional 6.40/6.41):
+        // scale the load with the quadratic reduction factor computed
+        // from the monitored data item of the previous step. first is
+        // captured on the first active step (matches the Professional:
+        // bounda_time_until_first = monitor value of the step before
+        // the until starts reducing).
+        if ( found && bounda_until_data ) {
+          // first: initial value of the monitor (written once)
+          if ( !db( BOUNDA_TIME_UNTIL_FIRST, iboun, idum, &bounda_until_first,
+              ldum, VERSION_NORMAL, GET_IF_EXISTS ) ) {
+            bounda_until_first = bounda_until_monitor;
+            ldum = 1;
+            db( BOUNDA_TIME_UNTIL_FIRST, iboun, idum, &bounda_until_first,
+              ldum, VERSION_NORMAL, PUT );
+          }
+          if ( bounda_until_first!=0. &&
+               bounda_until_start>bounda_until_wanted ) {
+            double ratio = ( bounda_until_monitor/bounda_until_first
+              - bounda_until_wanted ) /
+              ( bounda_until_start - bounda_until_wanted );
+            if ( ratio<0. ) ratio = 0.;
+            if ( ratio>1. ) ratio = 1.;
+            bounda_until_factor = ratio*ratio;
+          }
+          ldum = 1;
+          db( BOUNDA_TIME_UNTIL_USED, iboun, idum, &bounda_until_factor,
+            ldum, VERSION_NORMAL, PUT );
+          load *= bounda_until_factor;
         }
 
         if ( found ) {
