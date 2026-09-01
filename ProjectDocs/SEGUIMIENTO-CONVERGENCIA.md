@@ -20,6 +20,7 @@ suite sfnet, o un test propio. El registro completo:
 
 | Feature | Commit | Fecha | Verificación |
 |---------|--------|-------|--------------|
+| Familia `bounda_time_until_data` + `bounda_time_until_value_minimum` (6.40/6.41) + registro de keywords del corpus (mpc_*, control_mesh_truss_distribute_mpc, post_calcul_length, strain_volume_*, bounda_used, processors_used...) | (commit feat de este lote, 2026-09-01) | 2026-09-01 | **Contra el binario del Professional (user-supplied 25-10-2023, .dbs)**: la ley del factor del until se verificó con DOS runs de until1.dat (E=1 y E=2): factor = ((monitor/first − wanted)/(start − wanted))² con clamp [0,1], monitor del PASO ANTERIOR (post_node_result), first = valor inicial del monitor — match 1e-6 en TODA la serie (p.ej. E=1 t=1.992: 0.81 = (9e-3/1e-2)²; E=2 t=1.992: 0.81 = (1.8e-2/(1e-2·2))²). until1 rc=0 (target node_rhside 1 −velx = 0.0 ± 1e-3; GNU 5.45e-5 vs Professional 9.76e-5). **Corpus: 121 → 123 PASS** (218 RUNFAIL / 22 PARSE). Suite propia 16/16. mpc2 rc=0 por coincidencia física (traslación rígida del quad4; la familia MPC queda registrada sin consumo — ver registro). |
 | Aliases `geometry_factor` (6.527) → `geometry_bounda_factor` y `processors` → `options_processors` en db_number() | `9d22f6c` | 2026-09-01 | **Contra el binario del Professional (user-supplied 25-10-2023, .dbs)**: matrix2 (condif, factores lineales 1..4 por lado) post_point_dof = 2.4999998123 vs 2.500000000000e+00 del Professional (8 cifras); el ejemplo del manual 6.527 (nodo x=0.2 → 20·1.6, x=0.4 → 20·2.2) coincide con la interpolación de geometry.cc. **Corpus: 118 → 121 PASS** (220 RUNFAIL / 22 PARSE). Suite propia 16/16. mpc4/interface11/validation_14_mesh siguen RUNFAIL por blockers ajenos al alias (mpc_linear_quadratic, mesh_interface_triangle_coordinate, bounda_time_until_data). delete3 RUNFAIL documentado (control_mesh_delete_geometry_factor sin aplicar). |
 | Records `*_sig` de `post_calcul -materi_stress -force` (nombres de items node_dof_calcul: -norx_sig ... -mom2s_sig) + dirección de plot 2D = tangente de cara + gate de validación pre-step + `post_element_force_normal` INTEGER/filtro +n + extrude quad9→hex27 + default npointmax 27 | (commit feat de este lote, 2026-09-01) | 2026-09-01 | **Contra el binario del Professional (user-supplied 25-10-2023, .dbs)**: force7/8 (ménsula quad9 2D): nory/norx = −12.34, shey/shex = +100, momy/momx = −5000 EXACTOS; force9 (anillo quad9 2D, Roark pág. 262): nory≈0, shey = −0.5, momy = +14.4125; force10/13 (ménsula hex8 3D): nory = −12.34, shey = −100, mom1y = −5000; nors = −12.34, shes = +100; post_element_force_result −123.4/0/1000/0/−1e5 (force10) y −123.4/0/1000/0/−5e4 (force13). force11 (anillo 3D quad9→hex27): shey = −0.2 EXACTO, mom1y 0.19% alto (malla 1 capa) — RUNFAIL por timeout del solve Bi-CG (45 s del corpus), familia solver. **Corpus: 112 → 118 PASS** (223 RUNFAIL / 22 PARSE). Suite propia 16/16 en build limpio. |
 | `check_used` | `3793892` | 2026-08-04 | test propio |
@@ -303,7 +304,7 @@ marcado `PENDIENTE` puede estar cubierto en el GNU bajo otro nombre:
 
 - [x] `bounda_sine` — presente en el GNU
 
-### bounda_time (5/11; 1 falso pendiente por OCR, 3 SMC + 2 until pendientes)
+### bounda_time (7/11; 1 falso pendiente por OCR, 3 SMC pendientes)
 
 - [x] `bounda_time` — presente en el GNU
 - [x] `bounda_time_factor` — Sprint 8 (2026-08-24)
@@ -313,9 +314,10 @@ marcado `PENDIENTE` puede estar cubierto en el GNU bajo otro nombre:
 - [ ] `bounda_time_smc_offset` — PENDIENTE (OCR "smc_o"; ídem)
 - [ ] `bounda_time_smc_units` — PENDIENTE (ídem)
 - [x] `bounda_time_units` — implementada (commit `ba20c45`, 2026-08-05)
-- [ ] `bounda_time_until_data` — PENDIENTE (requiere `post_node_result`, que no existe; `bounda_time_until_force` 2026-08-05 cubre el caso fuerza de reacción)
-- [ ] `bounda_time_until_value_minimum` — PENDIENTE (compañero del anterior)
+- [x] `bounda_time_until_data` — implementada (lote bounda 2026-09-01; ver registro de verificación)
+- [x] `bounda_time_until_value_minimum` — implementada (lote bounda 2026-09-01; ver registro de verificación)
 - [x] `bounda_time_user` — presente en el GNU
+- [ ] `bounda_time_until_value` (variante 3 valores del corpus 02-08-2026) — registrada como keyword conocida; consumo PENDIENTE (el binario 25-10-2023 la rechaza, no verificable)
 
 ### bounda_water (1/1)
 
@@ -2258,3 +2260,6 @@ de clase CONTROL aparte, PENDIENTE).
 | updated_linear | hypo7/8 corren con -updated_linear; hypo12/13 con memory por defecto |
 | masin layout hyhis | hypo7: −2064 → −224 (3.4% del target) |
 | nonlocal/nonlocal_name | slope_nonlocal_refine parsea; bug legacy del buffer documentado |
+| bounda_time_until_data + until_value_minimum | until1 rc=0; ley del factor verificada contra el binario Professional 25-10-2023 con DOS runs (E=1 y E=2): factor = ((monitor/first − wanted)/(start − wanted))² clamp [0,1], monitor del paso ANTERIOR, first = valor inicial del monitor; match 1e-6 en toda la serie t=1.99..3.0 (p.ej. t=1.992 → 0.81 = (9e-3/1e-2)²) |
+| mpc2 PASS (bounda_time + mpc_geometry) | mpc2 rc=0 y node_dof 2/4 disx = 1.0 IDÉNTICO al .dbs del Professional — la familia MPC está registrada pero SIN consumo: el test pasa porque la traslación rígida del quad4 produce el mismo resultado (coincidencia física, no implementación del MPC) |
+| corpus +2 | 121 → 123 PASS (218 RUNFAIL / 22 PARSE); suite propia 16/16 |

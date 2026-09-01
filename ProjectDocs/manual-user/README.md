@@ -90,6 +90,7 @@ input parameters it accepts.
 - [bounda_water](bounda_water.md) — hydrostatic pore-water pressure from the phreatic level.
 - [bounda_dof_radial](bounda_dof_radial.md) — prescribe velocity radial to a point.
 - [bounda_dof_cylindrical](bounda_dof_cylindrical.md) — prescribe velocity radial to a line defined by two points.
+- [bounda_time_until_data](bounda_time_until_data.md) — reduce a bounda_time load when a monitored data item falls (manual 6.40/6.41); `bounda_time_until_data` + `bounda_time_until_value_minimum` with the quadratic factor verified against the Professional.
 
 ## Phase 4 features
 

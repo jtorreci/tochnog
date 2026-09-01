@@ -88,6 +88,7 @@ Each file corresponds to the same feature in the [User Manual](../manual-user/).
 - [bounda_factor_parabolic_x](bounda_factor_parabolic_x.md) — parabolic x^2 load factor.
 - [bounda_found](bounda_found.md) — diagnostic flag: was a bounda_* record applied.
 - [bounda_time_units](bounda_time_units.md) — scale time/load units in bounda_time.
+- [bounda_time_until_data](bounda_time_until_data.md) — bounda_time_until_data + until_value_minimum in bounda.cc (quadratic factor verified against the Professional binary with two runs); the corpus parser keywords (mpc_*, control_mesh_truss_distribute_mpc, post_calcul_length, strain_volume_*, bounda_used) registered without consumption; until_value 3-value variant PENDING.
 - [bounda_geometry_method](bounda_geometry_method.md) — node type for geometry checks.
 - [bounda_dof](bounda_dof.md) — prescribe dof values (Dirichlet), alias of bounda_unknown.
 - [bounda_normal](bounda_normal.md) — slide nodes on a plane by projecting the velocity vector.
