@@ -26,7 +26,7 @@ void groundflow_data( long int element, long int gr, long int nodes[],
 
 {
   long int ldum=0, idum[1], inol=0, idim=0, vert=0, nuknwn=0, inod=0,
-    icontrol=0, nonsaturated_apply=-YES;
+    icontrol=0, nonsaturated_apply=-YES, permeability_length=0;
   double ddum[1], pvs[5], vg[5], sigv=0., tmp=0., sig=0., pres=0., vertmax=0.,
     *node_dof=NULL, por=0., head=0., S=0., Se=0., krel=0., dS=0., dens=0.,
     gravity=0., eps_permeability=0.;
@@ -35,9 +35,15 @@ void groundflow_data( long int element, long int gr, long int nodes[],
   nuknwn = npuknwn * nder;
 
   get_group_data( GROUP_GROUNDFLOW_PERMEABILITY, gr, element, new_unknowns,
-    pe, ldum, GET_IF_EXISTS );
+    pe, permeability_length, GET_IF_EXISTS );
   get_group_data( GROUP_GROUNDFLOW_CAPACITY, gr, element, new_unknowns, 
     &C, ldum, GET_IF_EXISTS );
+  // group_groundflow_permeability (manual Professional 6.618): one value
+  // is used in each space direction (isotropic); otherwise one value per
+  // direction (pex pey pez).
+  if ( permeability_length==1 && ndim>1 ) {
+    for ( idim=1; idim<ndim; idim++ ) pe[idim] = pe[0];
+  }
 
   // group_groundflow_permeability_vertical_stress: kp = a / (sigv/sig0)^b,
   // clamped to [minimum, maximum]. sigv = vertical EFFECTIVE stress.

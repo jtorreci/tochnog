@@ -1277,10 +1277,17 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   fixed_length[CONTROL_MESH_MERGE_MACRO_GENERATE] = 0;
   data_class[CONTROL_MESH_MERGE_MACRO_GENERATE] = CONTROL;
 
-  strcpy(name[CONTROL_MESH_MERGE_NOT],"control_mesh_merge_not");
+  strcpy(name[CONTROL_MESH_MERGE_NOT],"control_mesh_merge_geometry_not");
   type[CONTROL_MESH_MERGE_NOT] = INTEGER;
-  data_length[CONTROL_MESH_MERGE_NOT] = 2;
+  data_length[CONTROL_MESH_MERGE_NOT] = DATA_ITEM_SIZE;
+  fixed_length[CONTROL_MESH_MERGE_NOT] = 0;
   data_class[CONTROL_MESH_MERGE_NOT] = CONTROL;
+
+  strcpy(name[CONTROL_MESH_MERGE_GEOMETRY],"control_mesh_merge_geometry");
+  type[CONTROL_MESH_MERGE_GEOMETRY] = INTEGER;
+  data_length[CONTROL_MESH_MERGE_GEOMETRY] = DATA_ITEM_SIZE;
+  fixed_length[CONTROL_MESH_MERGE_GEOMETRY] = 0;
+  data_class[CONTROL_MESH_MERGE_GEOMETRY] = CONTROL;
 
   strcpy(name[CONTROL_MESH_MIRROR],"control_mesh_mirror");
   type[CONTROL_MESH_MIRROR] = INTEGER;
@@ -2725,6 +2732,9 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   type[FORCE_ELEMENT_EDGE] = DOUBLE_PRECISION;
   data_length[FORCE_ELEMENT_EDGE] = nprinc;
   data_class[FORCE_ELEMENT_EDGE] = FORCE;
+  // variable length: one value per space direction (Professional
+  // force_edge, manual 6.454) or one value per principal dof (legacy)
+  fixed_length[FORCE_ELEMENT_EDGE] = 0;
 
   strcpy(name[FORCE_ELEMENT_EDGE_ELEMENT],"force_element_edge_element");
   type[FORCE_ELEMENT_EDGE_ELEMENT] = INTEGER;
@@ -3678,6 +3688,9 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   data_length[GROUP_GROUNDFLOW_PERMEABILITY] = ndim;
   data_class[GROUP_GROUNDFLOW_PERMEABILITY] = GROUNDFLOW;
   data_required[GROUP_GROUNDFLOW_PERMEABILITY] = GROUP_TYPE;
+  // variable length 1..ndim: a single value is used in each space
+  // direction (manual Professional 6.618)
+  fixed_length[GROUP_GROUNDFLOW_PERMEABILITY] = 0;
 
   strcpy(name[GROUP_GROUNDFLOW_PERMEABILITY_NONLINEAR_METHOD],"group_groundflow_permeability_nonlinear_method");
   type[GROUP_GROUNDFLOW_PERMEABILITY_NONLINEAR_METHOD] = INTEGER;
@@ -6832,6 +6845,29 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   fixed_length[MPC_ELEMENT_GROUP] = 0;
   data_class[MPC_ELEMENT_GROUP] = CONTROL;
 
+  strcpy(name[MPC_ELEMENT_GROUP_DOF],"mpc_element_group_dof");
+  type[MPC_ELEMENT_GROUP_DOF] = INTEGER;
+  data_length[MPC_ELEMENT_GROUP_DOF] = DATA_ITEM_SIZE;
+  fixed_length[MPC_ELEMENT_GROUP_DOF] = 0;
+  data_class[MPC_ELEMENT_GROUP_DOF] = CONTROL;
+
+  strcpy(name[MPC_ELEMENT_GROUP_GEOMETRY],"mpc_element_group_geometry");
+  type[MPC_ELEMENT_GROUP_GEOMETRY] = INTEGER;
+  data_length[MPC_ELEMENT_GROUP_GEOMETRY] = DATA_ITEM_SIZE;
+  fixed_length[MPC_ELEMENT_GROUP_GEOMETRY] = 0;
+  data_class[MPC_ELEMENT_GROUP_GEOMETRY] = CONTROL;
+
+  strcpy(name[MPC_APPLY],"mpc_apply");
+  type[MPC_APPLY] = INTEGER;
+  data_length[MPC_APPLY] = 1;
+  no_index[MPC_APPLY] = 1;
+  data_class[MPC_APPLY] = CONTROL;
+
+  strcpy(name[CONTROL_MPC_APPLY],"control_mpc_apply");
+  type[CONTROL_MPC_APPLY] = INTEGER;
+  data_length[CONTROL_MPC_APPLY] = 1;
+  data_class[CONTROL_MPC_APPLY] = CONTROL;
+
   strcpy(name[MPC_GEOMETRY],"mpc_geometry");
   type[MPC_GEOMETRY] = INTEGER;
   data_length[MPC_GEOMETRY] = DATA_ITEM_SIZE;
@@ -6881,6 +6917,18 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   external[MPC_LINEAR_QUADRATIC_MESH_FINGERPRINT] = 0;
   no_index[MPC_LINEAR_QUADRATIC_MESH_FINGERPRINT] = 1;
   data_class[MPC_LINEAR_QUADRATIC_MESH_FINGERPRINT] = CONTROL;
+
+  // mpc_element_group_mesh_fingerprint: INTERNAL bookkeeping record of
+  // the mpc_element_group tie generation (same layout as the
+  // mpc_linear_quadratic one): [mesh fingerprint, start_index, count].
+  strcpy(name[MPC_ELEMENT_GROUP_MESH_FINGERPRINT],
+    "mpc_element_group_mesh_fingerprint");
+  type[MPC_ELEMENT_GROUP_MESH_FINGERPRINT] = INTEGER;
+  data_length[MPC_ELEMENT_GROUP_MESH_FINGERPRINT] = 3;
+  fixed_length[MPC_ELEMENT_GROUP_MESH_FINGERPRINT] = 3;
+  external[MPC_ELEMENT_GROUP_MESH_FINGERPRINT] = 0;
+  no_index[MPC_ELEMENT_GROUP_MESH_FINGERPRINT] = 1;
+  data_class[MPC_ELEMENT_GROUP_MESH_FINGERPRINT] = CONTROL;
 
   // control_mesh_truss_distribute_mpc (manual Professional 6.245) and
   // the _exact variant (6.250): distribute truss nodes over the
@@ -7859,6 +7907,14 @@ long int db_number( char str[] )
   // Professional name of the legacy control_mesh_refine_locally_unknown.
   if ( !strcmp( str, "control_mesh_refine_locally_dof" ) )
     return CONTROL_MESH_REFINE_LOCALLY_UNKNOWN;
+  // control_mesh_merge_not: legacy GNU spelling of the Professional
+  // control_mesh_merge_geometry_not (manual 6.215)
+  if ( !strcmp( str, "control_mesh_merge_not" ) )
+    return CONTROL_MESH_MERGE_NOT;
+  // control_mesh_merge_eps_coord (manual 6.212): Professional spelling
+  // of the legacy control_mesh_merge_epscoord
+  if ( !strcmp( str, "control_mesh_merge_eps_coord" ) )
+    return CONTROL_MESH_MERGE_EPSCOORD;
 
   for ( data_number=0; data_number<MDAT && found<0; data_number++ ) {
     if ( !strcmp(str,db_name(data_number)) ) found = data_number;

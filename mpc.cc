@@ -255,6 +255,229 @@ static void mpc_linear_quadratic_generate( void )
 
 }
 
+// ---------------------------------------------------------------------------
+// mpc_element_group (manual Professional 6.860): each node of an element of
+// group element_group_0 that is also located inside an element of group
+// element_group_1 is tied to that element with multi point constraints
+// consistent with the shape functions at the node's isoparametric
+// location. mpc_element_group_dof (6.864) selects the dofs that are set
+// equal (default: all principal dofs); mpc_element_group_geometry (6.866)
+// restricts the nodes of element_group_0 to those lying on a geometry.
+// The generated mpc_node_number/mpc_node_factor records are the same ones
+// the Professional writes to the .dbs, and are re-created when the mesh
+// changes (fingerprint bookkeeping, mirroring mpc_linear_quadratic).
+//
+// Nodes that are already members of the node list of the containing
+// element of element_group_1 (i.e. the two meshes are connected there by
+// shared nodes) are NOT tied: the tie would reduce to the node itself and
+// freeze its equation (mpc_element_group_always -no semantics, 6.861).
+// ---------------------------------------------------------------------------
+
+static void mpc_element_group_generate( void )
+
+{
+  long int ldum=0, idum[1], length=0, max_meg=0, ieg=0, i=0;
+  double ddum[1];
+
+  db_max_index( MPC_ELEMENT_GROUP, max_meg, VERSION_NORMAL, GET );
+  if ( max_meg<0 ) return;
+
+  long int fingerprint = mpc_mesh_fingerprint();
+  long int stored[3] = { -1, -1, 0 };
+  long int stored_len = 0;
+  db( MPC_ELEMENT_GROUP_MESH_FINGERPRINT, 0, stored, ddum, stored_len,
+    VERSION_NORMAL, GET_IF_EXISTS );
+  if ( stored_len>=3 && stored[0]==fingerprint ) return;
+
+  // delete the previously generated records
+  if ( stored_len>=3 && stored[2]>0 ) {
+    for ( i=0; i<stored[2]; i++ ) {
+      db_delete_index( MPC_NODE_NUMBER, stored[1]+i, VERSION_NORMAL );
+      db_delete_index( MPC_NODE_FACTOR, stored[1]+i, VERSION_NORMAL );
+    }
+  }
+
+  long int dof_label[MUKNWN], dof_principal[MUKNWN];
+  db( DOF_LABEL, 0, dof_label, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+  db( DOF_PRINCIPAL, 0, dof_principal, ddum, ldum, VERSION_NORMAL,
+    GET_IF_EXISTS );
+
+  // start index of the generated records: after the highest ACTIVE
+  // mpc_node_number record (user records and any mpc_linear_quadratic
+  // generated records)
+  long int start_index = 0;
+  db_highest_index( MPC_NODE_NUMBER, start_index, VERSION_NORMAL );
+  start_index++;
+  long int count = 0;
+  long int vals[DATA_ITEM_SIZE];
+
+  long int max_element=0, max_node=0;
+  db_max_index( ELEMENT, max_element, VERSION_NORMAL, GET );
+  db_max_index( NODE, max_node, VERSION_NORMAL, GET );
+
+  for ( ieg=0; ieg<=max_meg; ieg++ ) {
+    if ( !db_active_index( MPC_ELEMENT_GROUP, ieg, VERSION_NORMAL ) )
+      continue;
+    long int *eg_vals = db_int( MPC_ELEMENT_GROUP, ieg, VERSION_NORMAL );
+    long int eg_length = db_len( MPC_ELEMENT_GROUP, ieg, VERSION_NORMAL );
+    if ( eg_length<2 ) db_error( MPC_ELEMENT_GROUP, ieg );
+    long int gr0 = eg_vals[0];
+
+    // master element groups: eg_vals[1..] or -all (all other groups)
+    long int master_groups[DATA_ITEM_SIZE];
+    long int nmaster_groups = 0, all_groups = 0;
+    for ( i=1; i<eg_length; i++ ) {
+      if ( eg_vals[i]==-ALL ) all_groups = 1;
+      else master_groups[nmaster_groups++] = eg_vals[i];
+    }
+
+    // selected dofs (negative dof labels); empty -> all principal dofs
+    long int dof_sel[MUKNWN];
+    long int ndof_sel = 0;
+    if ( db_active_index( MPC_ELEMENT_GROUP_DOF, ieg, VERSION_NORMAL ) ) {
+      long int *dof_vals = db_int( MPC_ELEMENT_GROUP_DOF, ieg,
+        VERSION_NORMAL );
+      long int dof_length = db_len( MPC_ELEMENT_GROUP_DOF, ieg,
+        VERSION_NORMAL );
+      for ( i=0; i<dof_length; i++ ) dof_sel[ndof_sel++] = dof_vals[i];
+    }
+
+    // restricting geometry pairs (geometry entity + index per pair)
+    long int geom_vals[DATA_ITEM_SIZE];
+    long int geom_length = 0;
+    if ( db_active_index( MPC_ELEMENT_GROUP_GEOMETRY, ieg,
+        VERSION_NORMAL ) ) {
+      long int *gvals = db_int( MPC_ELEMENT_GROUP_GEOMETRY, ieg,
+        VERSION_NORMAL );
+      geom_length = db_len( MPC_ELEMENT_GROUP_GEOMETRY, ieg,
+        VERSION_NORMAL );
+      for ( i=0; i<geom_length; i++ ) geom_vals[i] = gvals[i];
+    }
+
+    // visited marker: each node is tied at most once per record
+    long int *visited = NULL;
+    if ( max_node>=0 ) {
+      visited = get_new_int( 1+max_node );
+      array_set( visited, 0, 1+max_node );
+    }
+
+    long int element=0, inod=0, inol=0, nnol=0, jelem=0, jnol=0,
+      nnol_m=0, name_m=0, length_m=0, nmaster=0, k=0,
+      km=0, ipuknwn=0, iuknwn=0, length_put=0, iuse=0, found=0,
+      in_geom=0;
+    long int el[MNOL+1], el_m[MNOL+1], el_grp=0;
+    double coord[MDIM], coords_m[MNOL*MDIM], weight[MNOL], rdum=0.;
+    long int geometry_entity[2];
+
+    for ( element=0; element<=max_element; element++ ) {
+      if ( !db_active_index( ELEMENT, element, VERSION_NORMAL ) ) continue;
+      el_grp = 0;
+      db( ELEMENT_GROUP, element, &el_grp, ddum, length, VERSION_NORMAL,
+        GET_IF_EXISTS );
+      if ( el_grp!=gr0 ) continue;
+      db( ELEMENT, element, el, ddum, length, VERSION_NORMAL, GET );
+      nnol = length - 1;
+      for ( inol=1; inol<=nnol; inol++ ) {
+        inod = el[inol];
+        if ( visited && visited[inod] ) continue;
+        // geometry restriction
+        if ( geom_length>0 ) {
+          in_geom = 0;
+          for ( k=0; k+1<geom_length; k+=2 ) {
+            geometry_entity[0] = geom_vals[k];
+            geometry_entity[1] = geom_vals[k+1];
+            geometry( inod, ddum, geometry_entity, in_geom, rdum, ddum,
+              rdum, ddum, NODE_START_REFINED, PROJECT_EXACT,
+              VERSION_NORMAL );
+            if ( in_geom ) break;
+          }
+          if ( !in_geom ) continue;
+        }
+        db( NODE_START_REFINED, inod, idum, coord, ldum, VERSION_NORMAL,
+          GET );
+        // find a master element containing the node (first match)
+        found = 0;
+        for ( jelem=0; jelem<=max_element && !found; jelem++ ) {
+          if ( !db_active_index( ELEMENT, jelem, VERSION_NORMAL ) )
+            continue;
+          el_grp = 0;
+          db( ELEMENT_GROUP, jelem, &el_grp, ddum, length, VERSION_NORMAL,
+            GET_IF_EXISTS );
+          iuse = 0;
+          if ( all_groups ) { if ( el_grp!=gr0 ) iuse = 1; }
+          else {
+            for ( k=0; k<nmaster_groups; k++ )
+              if ( master_groups[k]==el_grp ) iuse = 1;
+          }
+          if ( !iuse ) continue;
+          db( ELEMENT, jelem, el_m, ddum, length_m, VERSION_NORMAL, GET );
+          name_m = el_m[0]; nnol_m = length_m - 1;
+          // skip master elements that already contain the node as a
+          // member (the meshes are connected there; a tie would reduce
+          // to the node itself)
+          for ( jnol=1; jnol<=nnol_m; jnol++ )
+            if ( el_m[jnol]==inod ) iuse = 0;
+          if ( !iuse ) continue;
+          for ( jnol=0; jnol<nnol_m; jnol++ ) {
+            db( NODE_START_REFINED, el_m[1+jnol], idum,
+              &coords_m[jnol*ndim], ldum, VERSION_NORMAL, GET );
+          }
+          if ( point_el( coord, coords_m, weight, name_m, nnol_m,
+              MPC_EPS_ISO ) ) {
+            // masters: the master element nodes with non-zero shape
+            // function weight at the node position
+            nmaster = 0;
+            for ( jnol=0; jnol<nnol_m; jnol++ ) {
+              if ( scalar_dabs( weight[jnol] ) > MPC_WEIGHT_ZERO ) {
+                el_m[1+nmaster] = el_m[1+jnol];
+                weight[nmaster] = weight[jnol];
+                nmaster++;
+              }
+            }
+            if ( nmaster==0 ) { iuse = 0; continue; }
+            found = 1;
+          }
+          if ( !found ) continue;
+          // generate one mpc record per selected dof
+          for ( ipuknwn=0; ipuknwn<npuknwn; ipuknwn++ ) {
+            iuknwn = ipuknwn*nder;
+            if ( dof_principal[iuknwn]<0 ) continue;
+            if ( ndof_sel>0 ) {
+              long int iuse_dof = 0;
+              for ( k=0; k<ndof_sel; k++ )
+                if ( dof_sel[k]==dof_label[iuknwn] ) iuse_dof = 1;
+              if ( !iuse_dof ) continue;
+            }
+            // record: [node_0 dof_0 node_1 dof_0 node_2 dof_0 ...]
+            long int iv = 0;
+            vals[iv++] = inod;
+            vals[iv++] = dof_label[iuknwn];
+            for ( km=0; km<nmaster; km++ ) {
+              vals[iv++] = el_m[1+km];
+              vals[iv++] = dof_label[iuknwn];
+            }
+            length_put = iv;
+            db( MPC_NODE_NUMBER, start_index+count, vals, ddum,
+              length_put, VERSION_NORMAL, PUT );
+            length_put = nmaster;
+            db( MPC_NODE_FACTOR, start_index+count, idum, weight,
+              length_put, VERSION_NORMAL, PUT );
+            count++;
+          }
+          if ( visited ) visited[inod] = 1;
+        }
+      }
+    }
+    delete[] visited;
+  }
+
+  stored[0] = fingerprint; stored[1] = start_index; stored[2] = count;
+  length = 3;
+  db( MPC_ELEMENT_GROUP_MESH_FINGERPRINT, 0, stored, ddum, length,
+    VERSION_NORMAL, PUT );
+
+}
+
 // consume the mpc_node_number / mpc_node_factor records. Called from
 // bounda() AFTER the bounda records, once per equilibrium iteration: the
 // slave dofs are bounded and get the value sum(factor*master dof) from
@@ -265,8 +488,20 @@ void mpc_node_apply( void )
   long int ldum=0, idum[1], max_mpc=0, impc=0;
   double ddum[1];
 
-  // mpc_linear_quadratic generation (mesh-change detection inside)
+  // mpc_apply (manual 6.859, no index) / control_mpc_apply (6.255,
+  // current control index): switch the whole mpc machinery off
+  long int mpc_apply = -YES, icontrol = 0;
+  db( MPC_APPLY, 0, &mpc_apply, ddum, ldum, VERSION_NORMAL,
+    GET_IF_EXISTS );
+  db( ICONTROL, 0, &icontrol, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+  db( CONTROL_MPC_APPLY, icontrol, &mpc_apply, ddum, ldum, VERSION_NORMAL,
+    GET_IF_EXISTS );
+  if ( mpc_apply==-NO ) return;
+
+  // mpc_linear_quadratic and mpc_element_group generation (mesh-change
+  // detection inside)
   mpc_linear_quadratic_generate();
+  mpc_element_group_generate();
 
   db_max_index( MPC_NODE_NUMBER, max_mpc, VERSION_NORMAL, GET );
   if ( max_mpc<0 ) return;

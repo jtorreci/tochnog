@@ -860,10 +860,14 @@ void area( long int element, long int name,
                     &new_coord[inol*ndim], factor );
                   db( FORCE_ELEMENT_EDGE, ind, idum, values, 
                     ldum, VERSION_NORMAL, GET );
+                  // one value per space direction (Professional
+                  // force_edge, manual 6.454); the number of stored
+                  // values (ldum) bounds the principal dof mapping
                   iprinc = 0;
                   for ( ipuknwn=0; ipuknwn<npuknwn; ipuknwn++ ) {
                     iuknwn = ipuknwn*nder;
                     if ( dof_principal[iuknwn]>=0 ) {
+                      if ( iprinc>=ldum ) break;
                       element_rhside[inol*npuknwn+ipuknwn] += factor * node_factor *
                         load * weight[inol_side] * area_size * values[iprinc];
                       iprinc++;
