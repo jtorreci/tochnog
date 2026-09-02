@@ -4626,6 +4626,9 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   data_length[GROUP_MATERI_PLASTI_MOHR_COUL_DIRECT_NORMAL] = 3;
   data_class[GROUP_MATERI_PLASTI_MOHR_COUL_DIRECT_NORMAL] = MATERI;
   data_required[GROUP_MATERI_PLASTI_MOHR_COUL_DIRECT_NORMAL] = GROUP_MATERI_PLASTI_MOHR_COUL_DIRECT;
+  // the plane normal is ndim-flexible (manual Professional 6.727:
+  // "In 1d only specify normal_x, etc."; in 2D nx ny; in 3D nx ny nz)
+  fixed_length[GROUP_MATERI_PLASTI_MOHR_COUL_DIRECT_NORMAL] = 0;
 
   strcpy(name[GROUP_MATERI_PLASTI_MOHR_COUL_DIRECT_NORMAL_AUTOMATIC],"group_materi_plasti_mohr_coul_direct_normal_automatic");
   type[GROUP_MATERI_PLASTI_MOHR_COUL_DIRECT_NORMAL_AUTOMATIC] = INTEGER;
@@ -4668,6 +4671,8 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   data_length[GROUP_MATERI_PLASTI_TENSION_DIRECT_NORMAL] = 3;
   data_class[GROUP_MATERI_PLASTI_TENSION_DIRECT_NORMAL] = MATERI;
   data_required[GROUP_MATERI_PLASTI_TENSION_DIRECT_NORMAL] = GROUP_MATERI_PLASTI_TENSION_DIRECT;
+  // ndim-flexible plane normal (manual Professional 6.739)
+  fixed_length[GROUP_MATERI_PLASTI_TENSION_DIRECT_NORMAL] = 0;
 
   strcpy(name[GROUP_MATERI_PLASTI_TENSION_DIRECT_NORMAL_AUTOMATIC],"group_materi_plasti_tension_direct_normal_automatic");
   type[GROUP_MATERI_PLASTI_TENSION_DIRECT_NORMAL_AUTOMATIC] = INTEGER;

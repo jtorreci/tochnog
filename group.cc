@@ -452,6 +452,34 @@ void group_materi_plasti_boundary_evaluate( long int nodes[], long int nnol,
          if ( array_member( group_materi_plasti_boundary, gr, length, ldum ) )
            plasti_on_boundary = 1;
        }
+       // group_materi_plasti_bounda (manual Professional 6.231): the
+       // listed values are the indices of the bounda_dof records that put
+       // the element on a wall ("an element is on a wall when at least
+       // one of the velocities of the elements is prescribed via
+       // bounda_dof"). When a listed value matches an ACTIVE bounda_dof
+       // record the element is on the wall when one of its nodes is
+       // bounded (node_bounded) on the velocity or displacement parts.
+       if ( !plasti_on_boundary ) {
+         long int ib=0;
+         for ( ib=0; ib<length && !plasti_on_boundary; ib++ ) {
+           long int iboun = group_materi_plasti_boundary[ib];
+           if ( iboun>=0 && db_active_index( BOUNDA_DOF, iboun,
+               VERSION_NORMAL ) ) {
+             long int ip=0, *node_bounded=NULL;
+             if ( !db_active_index( NODE_BOUNDED, inod, VERSION_NORMAL ) )
+               continue;
+             node_bounded = db_int( NODE_BOUNDED, inod, VERSION_NORMAL );
+             // velocity/displacement parts (nder = 1 in the current
+             // formulation: one value per dof part)
+             for ( ip=0; ip<npuknwn && !plasti_on_boundary; ip++ ) {
+               if ( node_bounded[ip] &&
+                    ( ( vel_indx>=0 && ip>=vel_indx && ip<vel_indx+ndim ) ||
+                      ( dis_indx>=0 && ip>=dis_indx && ip<dis_indx+ndim ) ) )
+                 plasti_on_boundary = 1;
+             }
+           }
+         }
+       }
      }
    }
 

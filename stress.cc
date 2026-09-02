@@ -87,6 +87,172 @@ void materi_compression_cutoff( long int element, long int gr,
     }
 }
 
+// materi_direct_full_mc - group_materi_plasti_mohr_coul_direct +
+// group_materi_plasti_tension_direct WITHOUT a plane normal (the manual
+// Professional 6.726/6.738). This is the FULL Mohr-Coulomb "direct"
+// stress cut-off (the alternative programming of the MC law, "very
+// stable"): principal stresses higher than sigy are cut off (spectral
+// tension cap, 6.738) and principal stress differences higher than
+// allowed by the mohr-coulomb criterion are cut off (6.726):
+//   f = 0.5(sig1-sig3) + 0.5(sig1+sig3) sin(phi) - c cos(phi) <= 0
+// with sig1 the LARGEST and sig3 the SMALLEST principal stress
+// (tension-positive). The cut is a one-shot return along the
+// non-associative flow direction (phi_flow): for phi_flow = 0 it reduces
+// to the mean-preserving difference cut, for phi_flow > 0 the pair mean
+// shifts into compression (dilatant flow). When the middle principal sits
+// at the sig1 level (the sigma1=sigma2 corner of the surface, e.g. a
+// shear-only state after the tension cap) it is pulled down with sig1 so
+// the state ends on the surface edge (verified against the Professional
+// 25-10-2023 binary: the shear-only trial maps to
+// (-a(1-sin), -a(1-sin), -a(1+sin)) in the principal frame with a the
+// capped shear). When sigy is not given but mohr_coul_direct is
+// available, sigy = 0 (6.738). _visco tm relaxes the cut with the factor
+// 1-exp(-dtime/tm); _wall provides the parameters used when the element
+// is attached to a wall.
+void materi_direct_full_mc( long int element, long int gr,
+  long int plasti_on_boundary, double dtime,
+  double new_sig[], double ddsdde[] )
+
+{
+  long int idim=0, jdim=0, kdim=0, nrot=0, mc_present=0, ten_present=0,
+    ldum=0, idum[1];
+  double phi=0., c=0., phi_flow=0., sigy=0., factor=1., tm=0., young=0.,
+    poisson=0., lambda_lame=0., gmod=0.,
+    sig_work[MDIM*MDIM], d[MDIM], v[MDIM*MDIM], ddum[MDIM],
+    plasti_data[DATA_ITEM_SIZE], ten_data[DATA_ITEM_SIZE];
+
+  // elastic constants for the one-shot return (the C projection on the
+  // principal flow direction); the direct cut runs on the elastic stress
+  // so the elastic C is the active tangent
+  get_group_data( GROUP_MATERI_ELASTI_YOUNG, gr, element,
+    new_sig, &young, ldum, GET_IF_EXISTS );
+  get_group_data( GROUP_MATERI_ELASTI_POISSON, gr, element,
+    new_sig, &poisson, ldum, GET_IF_EXISTS );
+
+  mc_present = get_group_data( GROUP_MATERI_PLASTI_MOHR_COUL_DIRECT, gr,
+    element, new_sig, plasti_data, ldum, GET_IF_EXISTS );
+  if ( mc_present ) {
+    phi = plasti_data[0]; c = plasti_data[1]; phi_flow = plasti_data[2];
+    if ( plasti_on_boundary )
+      if ( get_group_data( GROUP_MATERI_PLASTI_MOHR_COUL_DIRECT_WALL, gr,
+          element, new_sig, plasti_data, ldum, GET_IF_EXISTS ) ) {
+        phi = plasti_data[0]; c = plasti_data[1]; phi_flow = plasti_data[2];
+      }
+  }
+  // tension_direct: gate control_materi_plasti_tension_apply (6.150)
+  ten_present = !control_materi_gate_off( CONTROL_MATERI_PLASTI_TENSION_APPLY ) &&
+    get_group_data( GROUP_MATERI_PLASTI_TENSION_DIRECT, gr,
+    element, new_sig, ten_data, ldum, GET_IF_EXISTS );
+  // 6.738: if tension_direct is not specified, sigy is set to 0 when the
+  // mohr_coul_direct is available for the group.
+  if ( ten_present ) sigy = ten_data[0];
+  else if ( mc_present ) sigy = 0.;
+  else return;   // nothing to do (no MC and no tension record)
+  if ( ten_present && plasti_on_boundary )
+    if ( get_group_data( GROUP_MATERI_PLASTI_TENSION_DIRECT_WALL, gr,
+        element, new_sig, ten_data, ldum, GET_IF_EXISTS ) )
+      sigy = ten_data[0];
+  // visco relaxation: factor 1-exp(-dtime/tm); f->0 elastic, f->1 full cut
+  if ( get_group_data( GROUP_MATERI_PLASTI_MOHR_COUL_DIRECT_VISCO, gr,
+      element, new_sig, plasti_data, ldum, GET_IF_EXISTS ) ||
+       get_group_data( GROUP_MATERI_PLASTI_TENSION_DIRECT_VISCO, gr,
+      element, new_sig, plasti_data, ldum, GET_IF_EXISTS ) ) {
+    tm = plasti_data[0];
+    factor = 1. - exp( -dtime / ( (tm>0.) ? tm : 1. ) );
+  }
+
+  array_move( new_sig, sig_work, MDIM*MDIM );
+  matrix_jacobi( sig_work, 3, d, v, &nrot );
+  {
+    double w[3], w_new[3], tmp=0., f=0.;
+    long int i=0, j=0, any_cut=0, order[3];
+    // sort ascending into w[0] <= w[1] <= w[2], tracking the eigenvector
+    // columns of v (w[k] belongs to the eigenvector v[.][order[k]])
+    for ( i=0; i<3; i++ ) { w[i] = d[i]; order[i] = i; }
+    for ( i=0; i<3; i++ )
+      for ( j=i+1; j<3; j++ )
+        if ( w[i]>w[j] ) {
+          tmp = w[i]; w[i] = w[j]; w[j] = tmp;
+          tmp = order[i]; order[i] = order[j]; order[j] = (long int)tmp;
+        }
+    // 1) tension cap: principal stresses higher than sigy are cut off
+    for ( i=0; i<3; i++ ) {
+      if ( w[i]>sigy ) { w[i] = sigy; any_cut = 1; }
+    }
+    // re-sort after the cap (capping the maximum can change the order)
+    for ( i=0; i<3; i++ )
+      for ( j=i+1; j<3; j++ )
+        if ( w[i]>w[j] ) {
+          tmp = w[i]; w[i] = w[j]; w[j] = tmp;
+          tmp = order[i]; order[i] = order[j]; order[j] = (long int)tmp;
+        }
+    // 2) Mohr-Coulomb principal-stress-difference cut
+    if ( mc_present ) {
+      // w[2] largest, w[0] smallest (tension-positive)
+      f = 0.5*(w[2]-w[0]) + 0.5*(w[2]+w[0])*sin(phi) - c*cos(phi);
+      if ( f>0. ) {
+        // One-shot return along the non-associative flow direction of the
+        // plastic potential g = 0.5(s1-s3) + 0.5(s1+s3) sin(phi_flow):
+        //   deps = lambda * (0.5(1+sin psi), 0, -0.5(1-sin psi))  (princ.)
+        // with lambda solved so the corrected stress sits on the MC
+        // surface. The stress correction -C:deps couples the principal
+        // directions through the isotropic C (the intermediate principal
+        // moves when the flow is dilatant, sin psi != 0). For psi = 0
+        // the correction is the mean-preserving difference cut.
+        double sf = sin(phi_flow);
+        if ( young>0. && poisson<0.5 ) {
+          lambda_lame = young*poisson/((1.+poisson)*(1.-2.*poisson));
+          gmod = young/(2.*(1.+poisson));
+        }
+        else {   // no elastic data: decoupled correction (E-normalized)
+          lambda_lame = 0.;
+          gmod = 0.5;
+        }
+        // (C:d) components (principal frame, isotropic C)
+        double cd1 = lambda_lame*sf + 2.*gmod*0.5*(1.+sf);
+        double cd2 = lambda_lame*sf;
+        double cd3 = lambda_lame*sf - 2.*gmod*0.5*(1.-sf);
+        double denom = 0.5*(cd1-cd3) + 0.5*(cd1+cd3)*sin(phi);
+        if ( denom<1.e-12 ) denom = 1.e-12;
+        double dlam = f/denom;
+        w_new[2] = w[2] - dlam*cd1;
+        w_new[0] = w[0] - dlam*cd3;
+        // middle principal: the isotropic C couples the flow to the
+        // intermediate direction (dilatant flow moves it, lambda_lame*sf);
+        // when it then sits at (or above) the new maximum (the sigma1 =
+        // sigma2 corner, e.g. the shear-only state after the tension cap)
+        // it is pulled down to the new maximum so the state lands on the
+        // surface edge (Professional behaviour).
+        w_new[1] = w[1] - dlam*cd2;
+        if ( w_new[1] > w_new[2] ) w_new[1] = w_new[2];
+        // apply with the visco factor (partial relaxation)
+        for ( i=0; i<3; i++ ) {
+          double corr = (w_new[i]-w[i]);
+          if ( factor<1. ) corr *= factor;
+          if ( corr!=0. ) any_cut = 1;
+          w_new[i] = w[i] + corr;
+        }
+        for ( i=0; i<3; i++ ) w[i] = w_new[i];
+      }
+    }
+    if ( any_cut ) {
+      // rebuild sigma = V diag(w) V^T (V columns are eigenvectors;
+      // w[k] belongs to the column order[k] of v)
+      double vv[MDIM*MDIM];
+      for ( i=0; i<3; i++ )
+        for ( j=0; j<3; j++ )
+          vv[i*MDIM+j] = v[i*MDIM+order[j]];
+      for ( idim=0; idim<MDIM; idim++ )
+        for ( jdim=0; jdim<MDIM; jdim++ ) {
+          double tmp2 = 0.;
+          for ( kdim=0; kdim<MDIM; kdim++ )
+            tmp2 += vv[idim*MDIM+kdim] * w[kdim] * vv[jdim*MDIM+kdim];
+          new_sig[idim*MDIM+jdim] = tmp2;
+        }
+    }
+  }
+}
+
 // materi_direct_cutoff - group_materi_plasti_mohr_coul_direct(_normal[_
 // automatic]) + group_materi_plasti_tension_direct(_normal[_automatic]).
 //
@@ -141,6 +307,20 @@ void materi_direct_cutoff( long int element, long int gr,
       visco_mc = 1;
       tm = plasti_data[0];
     }
+  }
+  // group_materi_plasti_bounda/_factor (Professional 6.231/6.232 aliases
+  // of the boundary reduction): when the element is attached to a wall
+  // (a node belongs to a group listed in group_materi_plasti_bounda) the
+  // friction parameters are reduced by the factor (manual 6.232; the
+  // direct cutoff uses the reduced phi/c exactly like the incremental
+  // laws - verified against the Professional: mohr_coul_direct8 with the
+  // factor 0 gives a zero friction stress on the boundary elements)
+  if ( mc_active && plasti_on_boundary ) {
+    double bounda_factor = 1.;
+    db( GROUP_MATERI_PLASTI_BOUNDARY_FACTOR, gr, idum, &bounda_factor,
+      ldum, VERSION_NORMAL, GET_IF_EXISTS );
+    phi *= bounda_factor;
+    c *= bounda_factor;
   }
 
   // control_materi_plasti_tension_apply -no (manual Professional
@@ -1370,8 +1550,20 @@ void set_stress( long int element, long int gr,
             VERSION_NORMAL ) ||
              db_active_index( GROUP_MATERI_PLASTI_TENSION_DIRECT, gr,
             VERSION_NORMAL ) ) {
-          materi_direct_cutoff( element, gr, plasti_on_boundary, dtime,
-            new_sig, ddsdde, direct_normal );
+          // Without a plane normal (_normal / _normal_automatic) the
+          // direct records are the FULL Mohr-Coulomb / tension spectral
+          // cut-offs on the principal stresses (manual Professional
+          // 6.726/6.738); with a plane normal they limit the traction on
+          // that specific plane (6.727/6.739, handled by
+          // materi_direct_cutoff).
+          double normal_test[MDIM];
+          array_move( direct_normal, normal_test, MDIM );
+          if ( !array_normalize( normal_test, MDIM ) )
+            materi_direct_full_mc( element, gr, plasti_on_boundary, dtime,
+              new_sig, ddsdde );
+          else
+            materi_direct_cutoff( element, gr, plasti_on_boundary, dtime,
+              new_sig, ddsdde, direct_normal );
         }
         materi_compression_cutoff( element, gr, dtime, new_sig );
       }
