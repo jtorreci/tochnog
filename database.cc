@@ -7948,6 +7948,16 @@ long int db_number( char str[] )
       return OPTIONS_INERTIA;
     else if ( !strcmp( str, "control_inertia_apply" ) )
       return CONTROL_OPTIONS_INERTIA;
+    // convection_apply (manual Professional 6.395) is the input name of
+    // options_convection; control_convection_apply (6.113) the indexed
+    // per-timestep form; convection_stabilization (6.396) maps to
+    // options_stabilization (-no/-yes/-maximal, default -yes).
+    else if ( !strcmp( str, "convection_apply" ) )
+      return OPTIONS_CONVECTION;
+    else if ( !strcmp( str, "control_convection_apply" ) )
+      return CONTROL_OPTIONS_CONVECTION;
+    else if ( !strcmp( str, "convection_stabilization" ) )
+      return OPTIONS_STABILIZATION;
     else if ( !strcmp( str, "materi_elasti_young_power_apply" ) )
       return CONTROL_MATERI_ELASTI_YOUNG_POWER_APPLY;
     else if ( !strcmp( str, "control_solver_bicg_error" ) )
