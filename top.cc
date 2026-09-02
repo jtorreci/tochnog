@@ -433,6 +433,15 @@ void top( void )
                           if ( print_where==-YES ) pri( "Where: after boundary conditions." ); 
                           unknown_freeze(); 
                           if ( options_elementloop==-YES ) {
+			    // classic nonlocal (materi_plasti_f_nonlocal,
+			    // radius in `nonlocal`): the NODE_NONLOCAL lists
+			    // are rebuilt once after every mesh change (flag
+			    // cleared by mesh_changed). The softvar branch
+			    // below guards its own (integration-point) set.
+			    if ( materi_plasti_f_nonlocal && !nonlocal_first_set ) {
+			      nonlocal_set();
+			      nonlocal_first_set = 1;
+			    }
 			    if (scalar_dabs(options_nonlocal_softvar)>TINY) {
 				  if(!nonlocal_first_set) nonlocal_set();
 				  nonlocal_first_set=1;

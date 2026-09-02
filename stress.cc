@@ -417,6 +417,7 @@ void set_stress( long int element, long int gr,
     plasti_iter=0, membrane_found=0, membrane_iter=0,
     swit=0, length=0, membrane=-NO, viscoplasti=0, 
     viscoplasti_always=-NO, plasti_type=-NONE, volumetric_young_order=0,
+    visco_power_length=0,
     memory=-UPDATED, max_plasti_iter=0, total_plasti_iter=0, 
     nuser_data=0, idim=0, jdim=0, kdim=0, ldim=0, k0_active=0, 
     k0_control_swit=0,
@@ -469,10 +470,15 @@ void set_stress( long int element, long int gr,
       db_error(  GROUP_MATERI_PLASTI_VISCO_EXPONENTIAL, gr );
   }
   else if ( get_group_data( GROUP_MATERI_PLASTI_VISCO_POWER, gr, element, 
-      new_unknowns, plasti_visco_power, ldum, GET_IF_EXISTS ) ) {
+      new_unknowns, plasti_visco_power, visco_power_length, GET_IF_EXISTS ) ) {
     viscoplasti = 1;
     eta = plasti_visco_power[0]; p = plasti_visco_power[1];
-    f_ref = plasti_visco_power[2]; assert( f_ref!=0. );
+    // Professional layout (eta p, manual 6.748): the power law reads
+    // eps_dot_pl = eta * f^p (no reference stress). The legacy GNU
+    // layout (eta p f_ref) is still accepted and keeps its f/f_ref role.
+    if ( visco_power_length>=3 ) f_ref = plasti_visco_power[2];
+    else f_ref = 1.;
+    assert( f_ref!=0. );
   }
 
   db( DTIME, 0, idum, &dtime, ldum, VERSION_NORMAL, GET_IF_EXISTS );

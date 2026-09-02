@@ -4722,6 +4722,9 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   data_length[GROUP_MATERI_PLASTI_VISCO_POWER] = 3;
   data_class[GROUP_MATERI_PLASTI_VISCO_POWER] = MATERI;
   data_required[GROUP_MATERI_PLASTI_VISCO_POWER] = GROUP_TYPE;
+  // variable length: Professional layout (eta p, manual 6.748) and the
+  // legacy GNU layout (eta p f_ref) are both accepted
+  fixed_length[GROUP_MATERI_PLASTI_VISCO_POWER] = 0;
 
   strcpy(name[GROUP_MATERI_PLASTI_VONMISES],"group_materi_plasti_vonmises");
   type[GROUP_MATERI_PLASTI_VONMISES] = DOUBLE_PRECISION;
