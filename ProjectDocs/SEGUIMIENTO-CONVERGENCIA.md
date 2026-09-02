@@ -20,6 +20,7 @@ suite sfnet, o un test propio. El registro completo:
 
 | Feature | Commit | Fecha | Verificación |
 |---------|--------|-------|--------------|
+| Aliases `convection_apply` (6.395) / `control_convection_apply` (6.113) / `convection_stabilization` (6.396) en db_number() → `options_convection`/`options_stabilization` (machinery ya en general.cc: convección con velocidad materi + upwind peclet) | (commit feat de este lote, 2026-09-02) | 2026-09-02 | **Contra el binario del Professional (user-supplied 25-10-2023, .dbs)**: condif2/condif3 rc=0 con temp nodo 2 = 0.992028 (target 1.0±2e-2; el Professional da 1.000000 EXACTO); tube1 rc=0 con vely post_point = 1066.59 (target 1000±100; el Professional 1000.49). El .dbs del Professional guarda los records con esos mismos nombres. **Corpus: 130 → 133 PASS** (208 RUNFAIL / 22 PARSE). Suite propia 16/16. Blocker por test: validation_1 — parsea y corre, pero el transitorio del NS euleriano (auto-advección de velocidad, quad9 p+h refinado) diverge del Professional desde el paso 2 (velx final +0.0723 vs −0.0391 en el post_point; la variante sin convección de AMBOS códigos coincide → el término convectivo del ensamblaje mixto velocidad/tensión necesita sprint A/B dedicado); validation_8 — parsea hasta `-veln` (dof de bounda_dof para velocidad normal con generación de MPC, manual 6.22; el Professional genera mpc_node_number con -velx/-vely según la entidad — algoritmo de elección de eje no deducible sin más datos). Familia force_element_edge_water/excavate1: ver nota de layout en su sección. |
 | Familia material `mohr_coul_direct`/`tension_direct` — modo completo (manual 6.726/6.738: cut-off espectral de tensiones + cut del diferencia de tensiones principales con flujo no-asociado phi_flow) + normal `_normal` ndim-flexible + reducción de fricción en paredes `group_materi_plasti_bounda/_factor` (6.231/6.232) | (commit feat de este lote, 2026-09-02) | 2026-09-02 | **Contra el binario del Professional (user-supplied 25-10-2023, .dbs)**: (1) `materi_direct_full_mc()` en stress.cc — cap espectral (`matrix_jacobi`, sigy=0 por defecto si falta tension_direct con MC) + cut del par (max,min) con el flujo `(1+sin psi)/(1-sin psi)` y acoplamiento C del principal intermedio + regla de esquina sigma1=sigma2. (2) mohr_coul_direct1 rc=0 (oedómetro eptxx 1.49e-2, antes 2.99e-3 ≈ 5×) y mohr_coul_direct2 rc=0 (dilatancia phi_flow=π/4: vely=velx, antes 0.35). (3) mohr_coul_direct6/7: la ley material es EXACTA contra el Professional (con `-total_linear`: sigxy = 0.0249584 EXACTO en direct6); los runs del corpus siguen RUNFAIL porque su incremento único de cortante 100 % (γ=1.0) ejercita la deformación de elemento `-updated` (polar U-I) del GNU vs la lineal del Professional — blocker de CINEMÁTICA de elemento, no de la ley. (4) mohr_coul_direct8: parse arreglado (`_normal` con ndim valores + alias `group_materi_plasti_bounda`), RUNFAIL residual por la semántica de detección de pared. **Corpus: 124 → 130 PASS** (211 RUNFAIL / 22 PARSE). Suite propia 16/16. Blocker por test: direct3/4 interfaz (reacción −50 vs −100), direct5 (force_edge sobre bar2 axisimétrico), direct6/7 (cinemática -updated vs lineal a γ=1.0), direct8 (reducción de pared). |
 | Familia MPC: `mpc_node_number`/`mpc_node_factor` (6.874/6.875, consumo de los records) + `mpc_linear_quadratic` (6.873, generación automática de ties) + record interno `mpc_linear_quadratic_mesh_fingerprint` (regeneración al cambiar la malla) | (commit feat de este lote, 2026-09-01) | 2026-09-01 | **Contra el binario del Professional (user-supplied 25-10-2023, .dbs)**: (1) semántica de mpc_node_number/factor — esclavo = Σ factor×maestro, esclavo bounded (node_bounded=1) recomputado cada iteración, fila excluida del sistema SIN condensación ni redistribución (experimentos: maestro libre + link rígido → pardiso del Professional falla por sistema singular; fuerza externa sobre esclavo queda en su rhside sin transferirse, u3=0). (2) mpc1 rc=0 con node_dof IDÉNTICO al Professional: nodo 2 velx=disx=2, sigxx=0.5. (3) ties de mpc_linear_quadratic byte-idénticos en mpc3/4/5 (mid-edge 2 maestros ×0.5, mid-face 4 ×0.25, índices 0..N); tie de mohr_coul_direct2 verificado (nodos 3=4 exactamente iguales). **Corpus: 123 → 124 PASS** (217 RUNFAIL / 22 PARSE). Suite propia 16/16. mpc3/mpc4 siguen RUNFAIL por el solver staggered u-σ (0.299/0.350 vs 0.333 exacto del tying; familia DIAG-SOLVE-MIXTO); mpc5 por control_mesh_delete_geometry_factor + reset de stress (0 vs 0.5, mismo root que delete3); mohr_coul_direct2/4/7 por la familia MATERIAL direct (mohr_coul_direct1/3/5/6/8 sin mpc también fallan, p.ej. eptxx 2.99e-3 vs 1.49e-2). mpc8/mpc9: SEGV pre-existente (también sin records mpc). |
 | Familia `bounda_time_until_data` + `bounda_time_until_value_minimum` (6.40/6.41) + registro de keywords del corpus (mpc_*, control_mesh_truss_distribute_mpc, post_calcul_length, strain_volume_*, bounda_used, processors_used...) | (commit feat de este lote, 2026-09-01) | 2026-09-01 | **Contra el binario del Professional (user-supplied 25-10-2023, .dbs)**: la ley del factor del until se verificó con DOS runs de until1.dat (E=1 y E=2): factor = ((monitor/first − wanted)/(start − wanted))² con clamp [0,1], monitor del PASO ANTERIOR (post_node_result), first = valor inicial del monitor — match 1e-6 en TODA la serie (p.ej. E=1 t=1.992: 0.81 = (9e-3/1e-2)²; E=2 t=1.992: 0.81 = (1.8e-2/(1e-2·2))²). until1 rc=0 (target node_rhside 1 −velx = 0.0 ± 1e-3; GNU 5.45e-5 vs Professional 9.76e-5). **Corpus: 121 → 123 PASS** (218 RUNFAIL / 22 PARSE). Suite propia 16/16. mpc2 rc=0 por coincidencia física (traslación rígida del quad4; la familia MPC queda registrada sin consumo — ver registro). |
@@ -461,9 +462,9 @@ marcado `PENDIENTE` puede estar cubierto en el GNU bajo otro nombre:
 
 - [x] `control_contact_apply` — P6 (2026-08-24)
 
-### control_convection (0/1)
+### control_convection (1/1)
 
-- [ ] `control_convection_apply` — PENDIENTE
+- [x] `control_convection_apply` — 2026-09-02 (alias de db_number → CONTROL_OPTIONS_CONVECTION, manual 6.113; consumido por general.cc/truss.cc/spring.cc)
 
 ### control_data (11/12; 1 descartado)
 
@@ -785,10 +786,11 @@ marcado `PENDIENTE` puede estar cubierto en el GNU bajo otro nombre:
 - [x] `control_solver_pardiso_ordering` — Sprint 9 (PARCIAL: PARDISO no compilado)
 - [x] `control_solver_pardiso_out_of_core` — Sprint 9 (PARCIAL: ídem)
 
-### convection (0/2)
+### convection (2/2)
 
-- [ ] `convection_apply` — PENDIENTE
-- [ ] `convection_stabilization` — PENDIENTE
+- [x] `convection_apply` — 2026-09-02 (alias de db_number → OPTIONS_CONVECTION, manual 6.395; la física de convección ya existía en general.cc, incluida la de condif con flujo materi)
+- [x] `convection_stabilization` — 2026-09-02 (alias de db_number → OPTIONS_STABILIZATION, manual 6.396; -yes/-no/-maximal con el upwind peclet de general.cc)
+- NOTA: condif2/condif3/tube1 rc=0. validation_1 parsea y corre pero su transitorio NS euleriano diverge del Professional (ver registro); validation_8 sigue bloqueado por el dof `-veln` de bounda_dof (MPC de velocidad normal, manual 6.22 — no implementado ni en el GNU ni en el linaje 2014).
 
 ### data (5/5 — familia COMPLETA)
 
@@ -937,9 +939,31 @@ marcado `PENDIENTE` puede estar cubierto en el GNU bajo otro nombre:
 - [ ] `end_data` — PENDIENTE
 - [ ] `end_initia` — PENDIENTE
 
-### force_edge (44/44 — familia COMPLETA)
+### force_edge (44/44 — registro COMPLETO; LAYOUT de records PENDIENTE)
 
-- [x] `force_edge` — por equivalencia (alias prefijo Professional→`force_element_edge`, Sprint 9)
+NOTA (2026-09-02): los 44 nombres están registrados (Sprint 9) pero los
+6 tests del corpus que usan la familia (consolidation_gibson, foundation1,
+foundation_consolidation_settlement, undrained1, tutorial_4, excavate1)
+fallan TODOS en el PARSE del layout, no del nombre:
+- `force_element_edge` registra `data_length=nprinc` (3 en modelos u-p con
+  pres) pero el Professional da "una fuerza por dirección" = `ndim`
+  (2 en 2D) — el parser consume el keyword siguiente como 3er valor.
+  Los usuarios del GNU-2014 (axisym2/beam2d_2/condif7/9/disk1/distri1)
+  usan siempre `ndim` valores → cambiar a `ndim` es seguro para la suite,
+  pero el consumidor de area.cc reparte `values[iprinc]` sobre TODOS los
+  dofs principales (incl. el slot de presión en modelos u-p) → hay que
+  verificar/limitar el reparto a los dofs de dirección contra el .dbs.
+- `force_element_edge_water` es en el Professional un SWITCH
+  (`force_edge_water idx -yes`, hidrostática automática con
+  groundflow_density/force_gravity/phreatic_level; manual 6.489), pero el
+  GNU-2014 (force5.dat) lo usa con 4 doubles explícitos (densidad g
+  dirección) → dos layouts incompatibles en el mismo nombre, requiere
+  diseño (tipo/carga dual o record nuevo).
+- `oo_time` (define 1.e9) y los nombres de geometría de start_define se
+  expanden bien por la maquinaria de defines; force_edge_time/geometry NO
+  son el blocker.
+
+- [x] `force_edge` — por equivalencia (alias prefijo Professional→`force_element_edge`, Sprint 9; LAYOUT data_length nprinc→ndim PENDIENTE)
 - [ ] `force_edge_diagram` — PENDIENTE
 - [x] `force_edge_element` — Sprint 9 (variante nueva)
 - [x] `force_edge_element_group` — Sprint 9
