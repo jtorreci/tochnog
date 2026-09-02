@@ -309,6 +309,7 @@ input parameters it accepts.
 - [area_element_group_sequence_no_selectors](area_element_group_sequence_no_selectors.md) — the sequence without geometry/element selectors: group_(i-1) elements become group_i at time_i (dam_building).
 - [mesh](mesh.md) — the short alias of options_mesh (mesh -fixed_in_space ...).
 - [group_materi_memory_updated_linear](group_materi_memory_updated_linear.md) — the -updated_linear memory: updated Lagrange with linear engineering strains.
+- [group_materi_memory_updated_area](group_materi_memory_updated_area.md) — the -updated_area memory (incremental_driver, 6.784): small deformation WITH the area change of the loaded surface (driver-scoped; blocked by the incremental_driver family in the GNU).
 - [nonlocal](nonlocal.md) — the short `nonlocal` radius record + `nonlocal_name` model selector (6.897/6.898).
 - [geometry_factor](geometry_factor.md) — the Professional name (6.527) of geometry_bounda_factor: spatial weighting factors of bounda_dof/bounda_force/force_edge_* on a geometry entity (2 = linear, 3 = parabolic on a line).
 - [convection_apply](convection_apply.md) — the convection switches of eulerian flows: convection_apply (6.395), control_convection_apply (6.113) and convection_stabilization (6.396), aliases of options_convection/options_stabilization. Unlocks condif2/condif3/tube1.

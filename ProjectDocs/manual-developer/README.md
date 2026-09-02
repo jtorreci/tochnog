@@ -307,6 +307,7 @@ Each file corresponds to the same feature in the [User Manual](../manual-user/).
 - [area_element_group_sequence_no_selectors](area_element_group_sequence_no_selectors.md) — previous-group matching in group.cc.
 - [mesh](mesh.md) — db_number routing to OPTIONS_MESH (dead MESH placeholder avoided).
 - [group_materi_memory_updated_linear](group_materi_memory_updated_linear.md) — the UPDATED_LINEAR branches in materi.cc/set_deften_etc/stress.cc + the explicit-memory-only displacement check.
+- [group_materi_memory_updated_area](group_materi_memory_updated_area.md) — the UPDATED_AREA enum/name + linear branches (identical kinematics to UPDATED_LINEAR); the load-area term needs the pending incremental_driver machinery.
 - [nonlocal](nonlocal.md) — nonlocal alias + NONLOCAL_NAME enum; classic-path nonlocal_set() call restored (top.cc iteration loop, mesh-change flag); legacy nonlocal buffer bug documented as pending.
 - [geometry_factor](geometry_factor.md) — db_number alias to GEOMETRY_BOUNDA_FACTOR (geometry.cc linear/parabolic interpolation); verified against the Professional .dbs (matrix2).
 - [convection_apply](convection_apply.md) — db_number aliases convection_apply/control_convection_apply/convection_stabilization to OPTIONS_CONVECTION/CONTROL_OPTIONS_CONVECTION/OPTIONS_STABILIZATION (general.cc consumers); eulerian-NS transient divergence of validation_1 documented as pending.

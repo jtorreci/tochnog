@@ -1313,6 +1313,7 @@ Nota: `group_interface_ground` del checklist anterior NUNCA existió (artefacto 
 - [x] `group_materi_maxwell_chain` — presente en el GNU
 - [x] `group_materi_membrane` — presente en el GNU
 - [x] `group_materi_memory` — presente en el GNU
+  - [x] valor `-updated_area` — implementado (`a1d9d12`, sesión 2026-09-02): pequeña deformación idéntica a `-updated_linear`; la parte de área actual de cargas queda sin portador hasta `incremental_driver`. Los 3 tests del corpus etiquetados como "-updated_area" están bloqueados por la familia `incremental_driver`, NO por el valor (verificado empíricamente: con el valor aceptado, el parseo avanza hasta el record `incremental_driver`). Manuales `group_materi_memory_updated_area` (user/developer).
 - [x] `group_materi_plasti_bounda` — Sprint 10 (alias de plasti_boundary)
 - [x] `group_materi_plasti_bounda_factor` — Sprint 10 (alias)
 - [x] `group_materi_plasti_camclay` — presente en el GNU
@@ -1439,7 +1440,7 @@ Nota: `group_interface_ground` del checklist anterior NUNCA existió (artefacto 
 
 ### incremental (0/1)
 
-- [ ] `incremental_driver` — PENDIENTE
+- [ ] `incremental_driver` — PENDIENTE (2026-09-02, diagnóstico corregido: los 6 tests de `test/incremental_driver/` —oedometric/triaxial drained/undrained mohr_coul_direct, direct_shear_drained_hypo, triaxial_drained_hypo_isa, syntax— dependen TODOS de esta familia, incluidos los 3 atribuidos antes a `-updated_area`. El GNU no registra NINGÚN record de la familia (0 refs). El test syntax bloquea además en initia por `materi_strain_isa_c` y en data por `incremental_ntime`/`incremental_driver_*`/hipo wolfersdorff/ISA)
 
 ### inertia (0/1)
 
@@ -2207,7 +2208,7 @@ y avance mejor.
 
 **Resultado**: conspr1-7 y genera2 → rc=0. **Corpus: 91 → 99 PASS** (de 363). Suite 16/16. Desglose actual del corpus: 99 PASS / 224 RUNFAIL / 40 PARSE.
 
-**Pendientes del corpus**: interface2 (gap multi-paso), interface13 (bug del propio test), y los parse-errors de mayor frecuencia: `-nory_sig`/`-norx_sig` (6), `-quad8`/`-hex20` (5), `mesh_gid_point_coord`/`mesh_gid_circle_coord` (5), `-updated_area` (3).
+**Pendientes del corpus**: interface2 (gap multi-paso), interface13 (bug del propio test), y los parse-errors de mayor frecuencia: `-nory_sig`/`-norx_sig` (6), `-quad8`/`-hex20` (5), `mesh_gid_point_coord`/`mesh_gid_circle_coord` (5). (`-updated_area` se corrigió en 2026-09-02: el valor YA se acepta; los 3 tests etiquetados quedan bloqueados por la familia `incremental_driver`, no por el valor).
 
 ### Aliases `geometry_factor` + `processors` — corpus 121 (2026-09-01) — `feat(alias): geometry_factor -> GEOMETRY_BOUNDA_FACTOR, processors -> OPTIONS_PROCESSORS` (`9d22f6c`)
 
@@ -2291,3 +2292,48 @@ de clase CONTROL aparte, PENDIENTE).
 | bounda_time_until_data + until_value_minimum | until1 rc=0; ley del factor verificada contra el binario Professional 25-10-2023 con DOS runs (E=1 y E=2): factor = ((monitor/first − wanted)/(start − wanted))² clamp [0,1], monitor del paso ANTERIOR, first = valor inicial del monitor; match 1e-6 en toda la serie t=1.99..3.0 (p.ej. t=1.992 → 0.81 = (9e-3/1e-2)²) |
 | mpc2 PASS (bounda_time + mpc_geometry) | mpc2 rc=0 y node_dof 2/4 disx = 1.0 IDÉNTICO al .dbs del Professional — la familia MPC está registrada pero SIN consumo: el test pasa porque la traslación rígida del quad4 produce el mismo resultado (coincidencia física, no implementación del MPC) |
 | corpus +2 | 121 → 123 PASS (218 RUNFAIL / 22 PARSE); suite propia 16/16 |
+
+### `-updated_area` — corpus 140 (2026-09-02) — `feat(memory): -updated_area option (small strain, updated load area)` (`a1d9d12`)
+
+**Diagnóstico corregido de la familia**: los 3 tests objetivo
+(oedometric_drained_mohr_coulomb, triaxial_compression_drained/undrained_mohr_coulomb)
+fallaban en `-updated_area` solo como PRIMER token desconocido del parseo. Con el
+valor aceptado, el parseo avanza y muere en el record `incremental_driver` — los 3
+tests pertenecen a la familia `incremental_driver` (manual Professional 6.784), que
+el GNU no implementa (0 records registrados; los 6 tests de `test/incremental_driver/`
+fallan por ella). El estudio previo que etiquetó "-updated_area (3)" era un artefacto
+del orden de parseo.
+
+**Implementado**:
+1. **`-updated_area` como valor de memoria** (`group_materi_memory`): enum
+   `UPDATED_AREA` en `tochnog.h` + `tochnog-mod.h` (mismo sitio: entre `UPDATED` y
+   `UPDATED_LINEAR`) + `name[UPDATED_AREA]="updated_area"` en database.cc.
+2. **Semántica** (manual 6.784, bloque MATERIAL MEMORY del incremental_driver):
+   pequeña deformación como `-updated_linear`, PERO con el área de la superficie
+   cargada actualizada (cargas = tensión × área ACTUAL). Ramas tocadas para que la
+   cinemática siga EXACTAMENTE el camino de `-UPDATED_LINEAR`: materi.cc `materi()`
+   (back-rotación de old_sig + rotación a la nueva configuración con `inc_rot`) y
+   `set_deften_etc()` (rotaciones identidad + deformaciones lineales de ingeniería);
+   stress.cc `set_stress()` (bloque de compressibility lineal).
+3. **NO tocado a propósito**: la conversión de `control_materi_updated_apply -no`
+   (solo memorias de gran deformación); el check de materi_displacement; el update
+   de `new_coord` en elem.cc (ya usa geometría actual para todo lo que no es
+   -total_linear). El TÉRMINO DE ÁREA ACTUAL en cargas no tiene portador en el GNU:
+   solo existe dentro de la maquinaria `incremental_driver` (PENDIENTE, sprint
+   dedicado — ver la fila incremental arriba).
+
+**Verificación**:
+- A/B en el modelo GNU hypo2 (hipoplasticidad + intergranular, oedómetro):
+  `-updated_area` vs `-updated_linear` → ambos rc=0, salida y targets de check
+  idénticos (sigxx −0.17361, hisv0 0.63843).
+- Parseo del corpus: los 4 .dat con `-updated_area` ahora fallan en el primer
+  record desconocido `incremental_driver` (oedometric/triaxial: RUNFAIL;
+  incremental_driver_syntax: PARSE, bloqueado antes en initia por
+  `materi_strain_isa_c`).
+- Corpus: 140 PASS / 201 RUNFAIL / 22 PARSE (sin regresión). Suite propia 16/16.
+
+**Registro de verificación**:
+| Feature | Verificación |
+|---------|-------------|
+| -updated_area (valor de memoria) | hypo2 con -updated_area rc=0 y salida/targets IDÉNTICOS a -updated_linear (A/B); parseo del corpus avanza de `-updated_area` a `incremental_driver` (diagnóstico corregido) |
+| corpus | 140 PASS / 201 RUNFAIL / 22 PARSE (sin regresión); suite propia 16/16 |
