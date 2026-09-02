@@ -1,114 +1,70 @@
 # group_materi_plasti_mohr_coul_direct / tension_direct (+ _normal, _normal_automatic)
 
-## Implementación
+## Implementación (dos modos)
 
-- **Ley**: `materi_direct_cutoff()` in `stress.cc` (new), called from
-  `set_stress()` right after the elastic stress computation and BEFORE the
-  plastic-yield test, when the group has `group_materi_plasti_mohr_coul_direct`
-  or `group_materi_plasti_tension_direct`.
-- **Keywords** (data_class MATERI) registered in `database.cc`:
-  - `group_materi_plasti_mohr_coul_direct` (DOUBLE, length 3): `phi c phi_flow`.
-  - `group_materi_plasti_mohr_coul_direct_normal` (DOUBLE, length 3, required
-    the direct record): `normal_x normal_y normal_z`.
-  - `group_materi_plasti_mohr_coul_direct_normal_automatic` (INTEGER, length 1,
-    required the direct record): `switch` (`-yes`).
-  - `group_materi_plasti_tension_direct` (DOUBLE, length 1): `sigy`.
-  - `group_materi_plasti_tension_direct_normal` (DOUBLE, length 3, required
-    the direct record): `normal_x normal_y normal_z`.
-  - `group_materi_plasti_tension_direct_normal_automatic` (INTEGER, length 1,
-    required the direct record): `switch` (`-yes`).
-  - `group_materi_plasti_mohr_coul_direct_visco` (DOUBLE, length 1, required
-    the direct record): `tm`.
-  - `group_materi_plasti_mohr_coul_direct_wall` (DOUBLE, length 3, required
-    the direct record): `phi c phi_flow`.
-  - `group_materi_plasti_tension_direct_visco` (DOUBLE, length 1, required
-    the direct record): `tm`.
-  - `group_materi_plasti_tension_direct_wall` (DOUBLE, length 1, required
-    the direct record): `sigy`.
-- **New enums**: `GROUP_MATERI_PLASTI_MOHR_COUL_DIRECT(_NORMAL[_AUTOMATIC])`,
-  `GROUP_MATERI_PLASTI_TENSION_DIRECT(_NORMAL[_AUTOMATIC])` in `tochnog.h` /
-  `tochnog-mod.h` (kept in sync, alphabetical order).
-- **Normal**: the plane normal is read from the `_normal` record; with
-  `_normal_automatic -yes` it is computed in `materi()` as the cross product
-  of the first two element edges (`nodes[0..2]`, `NODE` VERSION_NORMAL) and
-  passed to `set_stress` via the new `direct_normal[]` argument.
+The direct records have TWO modes selected by the presence of a plane normal:
+
+1. **Full principal-stress mode** (NO `_normal` / `_normal_automatic`):
+   `materi_direct_full_mc()` in `stress.cc`, dispatched from `set_stress()`
+   right after the elastic stress and BEFORE the plastic-yield test. It
+   implements the manual Professional 6.726 + 6.738:
+   - spectral tension cap: `matrix_jacobi` eigenvalues above `sigy` are cut
+     to `sigy` (6.738; `sigy` defaults to 0 when `tension_direct` is absent
+     but `mohr_coul_direct` is present);
+   - Mohr-Coulomb principal-stress-difference cut: sorted eigenvalues
+     `w0<=w1<=w2`, `f = 0.5(w2-w0) + 0.5(w2+w0) sin(phi) - c cos(phi)`; when
+     `f > 0` a ONE-SHOT return runs along the non-associative flow direction
+     `deps = (0.5(1+sin psi), 0, -0.5(1-sin psi))` (psi = phi_flow) projected
+     with the isotropic elastic C (`lambda_lame`, `gmod` from the group
+     elastic data): `w2 -= f*cd1/denom`, `w0 += ...`, and the middle
+     principal gets the C-coupling `-f*cd2/denom` (`lambda_lame*sin psi`),
+     with the corner rule `w1 = min(w1, new w2)` (the sigma1 = sigma2 edge
+     of the surface). Eigenvector tracking: the eigenvalues are sorted with
+     an order[] index so the rebuild `sigma = V diag(w) V^T` keeps the
+     eigenvector columns aligned.
+   - `_visco tm` relaxes the whole correction with `1-exp(-dt/tm)`; `_wall`
+     replaces phi/c/sigy when `plasti_on_boundary`.
+
+2. **Plane traction mode** (with `_normal` / `_normal_automatic`):
+   `materi_direct_cutoff()` in `stress.cc` (the pre-existing plane cut-off:
+   `max_fric = max(c - sig_n*tan(phi), 0)` on the plane with the given
+   normal). NEW: `group_materi_plasti_bounda/_factor` (Professional 6.231/
+   6.232) now reduce phi and c by the factor for the elements on the wall.
 
 ## Física
 
-The "_direct" plastic laws are **direct stress cut-offs** on a specific
-plane with normal vector `n` (the manual: "cut off by Tochnog"; tension_direct
-"does not use plastic strains"). They are NOT incremental return-mapping laws
-with plastic strains; they cap the traction on the plane:
+- Full mode (6.726): "Principal stress differences higher than allowed by
+  the mohr-coulomb criterium are not allowed and will be cut off by
+  Tochnog" — the alternative programming of the MC law. The cut does not
+  use plastic strains; phi_flow enters the cut DIRECTION (the non-assoc
+  flow ratio `(1+sin psi)/(1-sin psi)` of the max/min corrections; for
+  psi=0 the cut is the mean-preserving difference cut).
+- Plane mode (6.727/6.739): limits the friction/tension stress on the
+  specific plane (interface semantics).
 
-- traction    `t     = sig . n`
-- normal      `sig_n = n . t`
-- tangential  `tau   = t - sig_n n`
+## Validación (Professional 25-10-2023)
 
-With tochnog's stress convention (traction POSITIVE):
+- mohr_coul_direct1 (oedometer, phi=0.4 c=1 psi=0.2): PASS — eptxx target
+  1.49e-2 reached (the flow ratio reproduces the dilative lateral strain).
+- mohr_coul_direct2 (direct shear, phi=0 c=0 psi=pi/4): PASS — vely = velx.
+- mohr_coul_direct6/7 (single-increment 100% shear, tension cap at 0):
+  the material map is EXACT (sigma_xy = a*sin(phi), sigma_zz =
+  -a*(1-sin(phi)) with a the capped shear) when the element kinematics are
+  linear (`group_materi_memory -total_linear`: sigxy = 0.0249584 EXACT for
+  direct6). The corpus runs keep the GNU DEFAULT `-updated` element strain
+  (incremental polar decomposition U-I), which differs from the
+  Professional's linear response at the gamma=1.0 single increment -> the
+  two tests stay RUNFAIL on the ELEMENT kinematics (not the material law).
 
-- `group_materi_plasti_tension_direct sigy`: if `sig_n > sigy` the normal
-  traction is capped to `sigy`.
-- `group_materi_plasti_mohr_coul_direct phi c phi_flow`: if `|tau|` exceeds
-  `max_fric = max(c - sig_n*tan(phi), 0)` the tangential traction is scaled
-  to `max_fric`. Compression (`sig_n < 0`) increases the friction limit,
-  floor at 0 (consistent with the interface Mohr-Coulomb law).
+## Keywords
 
-The correction modifies the stress tensor:
-- tension cap: `sig -= (sig_n - sigy) * (n x n)`.
-- MC cap: `sig -= (1-scale) * (tau x n + n x tau)` (symmetric), with
-  `scale = max_fric / |tau|`.
+- The `_normal` records are now `fixed_length = 0` (ndim values: 1 in 1D,
+  2 in 2D, 3 in 3D — manual 6.727 "In 1d only specify normal_x").
 
-## Tangente
+## group_materi_plasti_bounda wall detection (group.cc)
 
-The user requested a consistent tangent. The `ddsdde` tensor is modified by
-`materi_direct_cutoff` through the projection on the plane direction: the
-normal-normal component is zeroed when the tension cap is active (the normal
-stress is capped, i.e. insensitive to further normal strain), and the
-tangential block is scaled by `scale` when the MC cap is active. The
-implementation currently applies the stress correction and adjusts `ddsdde`
-via the projection operator; the full consistent tangent derivation (the
-`P = I - n x n` projector) is applied on the affected block.
-
-## Detalles
-
-- The cut-off runs BEFORE the standard plastic-yield test, so the direct
-  laws combine with the incremental plasticity models (e.g. mohrcoul) — the
-  direct cap is applied first, then the incremental yield test sees the
-  capped stress.
-- `phi_flow` is accepted for interface compatibility but has no effect on the
-  stress cut-off (no plastic flow rule).
-- `_normal_automatic` computes the element normal from the first two edges;
-  for 2D elements (in the xy plane) this gives the z direction.
-
-## Viscoplasticidad (`_visco`)
-
-`group_materi_plasti_*_direct_visco tm` relaxes the cut-off over time. The
-viscous response interpolates between the elastic and the (fully capped)
-plastic response:
-```
-sig_vp = sig_e + factor*(sig_p - sig_e),   factor = 1 - exp(-dt/tm)
-```
-`factor -> 0` for `dt << tm` (elastic response), `factor -> 1` for `dt >> tm`
-(fully plastic). Implemented in `materi_direct_cutoff` by scaling the
-correction by `factor` (tension cap and MC `scale`).
-
-## Pared (`_wall`)
-
-`group_materi_plasti_*_direct_wall` provides alternative parameters used when
-the element is attached to a wall, detected via `plasti_on_boundary`
-(`group.cc`: an element node belongs to a group listed in
-`group_materi_plasti_boundary`). `set_stress` passes `plasti_on_boundary` to
-`materi_direct_cutoff`, which selects the `_wall` values when it is set.
-
-## Validación
-
-- `materi_direct`: quad4 uniaxial tension in y, `tension_direct 1.0` +
-  `_normal 0 1 0` → sigyy capped to 1.0 (elastic would be 2000).
-- `materi_direct_mc`: quad4 pure shear, `mohr_coul_direct 0 1.0 0` +
-  `_normal 0 1 0` → sigxy capped to 1.0 (max_fric = c).
-- `materi_direct_auto`: hex8 uniaxial tension in z, `tension_direct 1.0` +
-  `_normal_automatic -yes` → sigzz capped to 1.0 (element normal = z).
-- `materi_direct_visco`: same as materi_direct but with `_visco tm=1.0` →
-  sigyy relaxed to ~1210 (between elastic 2000 and fully capped 1.0).
-- `materi_direct_wall`: quad4 with `group_materi_plasti_boundary` + `_wall
-  10.0` → sigyy capped to ~10.17 (the wall value, not the base 1.0).
+`plasti_on_boundary()` (group.cc) keeps the legacy element-group semantics
+AND adds the Professional bounda semantics (6.231): when a listed value
+matches an ACTIVE `bounda_dof` record, the element is on the wall when one
+of its nodes is bounded (`node_bounded`) on the velocity/displacement
+parts.

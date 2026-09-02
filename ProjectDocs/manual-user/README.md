@@ -102,7 +102,7 @@ input parameters it accepts.
 - [group_materi_damage_mazars](group_materi_damage_mazars.md) — Mazars isotropic damage for quasi-brittle materials.
 - [group_materi_expansion_linear](group_materi_expansion_linear.md) — linear and volumetric thermal expansion.
 - [group_materi_plasti_visco_exponential](group_materi_plasti_visco_exponential.md) — viscoplasticity (exponential / power / always).
-- [group_materi_plasti_mohr_coul_direct](group_materi_plasti_mohr_coul_direct.md) — direct stress cut-off (Mohr-Coulomb / tension) on a plane.
+- [group_materi_plasti_mohr_coul_direct](group_materi_plasti_mohr_coul_direct.md) — direct stress cut-off Mohr-Coulomb/tension: full principal-stress mode (6.726/6.738: spectral tension cap + MC difference cut with the non-assoc phi_flow) or plane-traction mode (6.727, with `_normal`).
 - [group_materi_plasti_mohr_coul_hardening_softening](group_materi_plasti_mohr_coul_hardening_softening.md) — Mohr-Coulomb classic with linear hardening/softening of c and phi with kappa.
 - [group_materi_plasti_cap2](group_materi_plasti_cap2.md) — Professional name of the cap plasticity (c phi alpha R + epsilonp_v/pb table), alias of the GNU cap.
 - [group_materi_plasti_cap1](group_materi_plasti_cap1.md) — elastoplastic cap for high-pressure compaction of granular materials (phi c M lambda* kappa* K_ref p_ref m); combines with shear plasticity (max-f selection).
