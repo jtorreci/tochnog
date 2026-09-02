@@ -340,7 +340,8 @@ void materi( long int element, long int gr, long int name, long int nnol,
     }
   }
   else if ( memory==-UPDATED || memory==-TOTAL_LINEAR ||
-      memory==-UPDATED_WITHOUT_ROTATION || memory==-UPDATED_LINEAR ) {
+      memory==-UPDATED_WITHOUT_ROTATION || memory==-UPDATED_LINEAR ||
+      memory==-UPDATED_AREA ) {
     if ( materi_stress )
       array_move( old_sig, rotated_old_sig, MDIM*MDIM );
     if ( materi_plasti_rho ) 
@@ -427,9 +428,10 @@ void materi( long int element, long int gr, long int name, long int nnol,
 
   array_move( new_sig, new_sig_nonrot, MDIM*MDIM );
     // rotate to new configuration
-  if ( memory==-UPDATED || memory==-UPDATED_LINEAR || memory==-TOTAL ||
-       memory==-TOTAL_PIOLA ) {
-    if      ( memory==-UPDATED || memory==-UPDATED_LINEAR )
+  if ( memory==-UPDATED || memory==-UPDATED_LINEAR || memory==-UPDATED_AREA ||
+       memory==-TOTAL || memory==-TOTAL_PIOLA ) {
+    if      ( memory==-UPDATED || memory==-UPDATED_LINEAR ||
+              memory==-UPDATED_AREA )
       array_move( inc_rot, rot, MDIM*MDIM );
     else {
       assert( memory==-TOTAL || memory==-TOTAL_PIOLA );
@@ -1328,7 +1330,7 @@ void set_deften_etc( long int element, long int gr, long int nnol, double h[],
 
     // rotation matrices
   if      ( memory==-UPDATED_WITHOUT_ROTATION || memory==-UPDATED_LINEAR ||
-            memory==-TOTAL_LINEAR ) {
+            memory==-UPDATED_AREA || memory==-TOTAL_LINEAR ) {
     for ( idim=0; idim<MDIM; idim++ ) {
       old_rot[idim*MDIM+idim] = 1.;
       new_rot[idim*MDIM+idim] = 1.;
@@ -1342,7 +1344,8 @@ void set_deften_etc( long int element, long int gr, long int nnol, double h[],
   set_deften_u_rot( inc_deften, inc_u, inc_rot );
 
       // strain matrices
-  if ( memory==-UPDATED_WITHOUT_ROTATION || memory==-UPDATED_LINEAR ) {
+  if ( memory==-UPDATED_WITHOUT_ROTATION || memory==-UPDATED_LINEAR ||
+       memory==-UPDATED_AREA ) {
       // linear engineering strains
     for ( idim=0; idim<MDIM; idim++ ) {
       for ( jdim=0; jdim<MDIM; jdim++ ) inc_ept[idim*MDIM+jdim] = 

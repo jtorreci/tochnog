@@ -6489,6 +6489,8 @@ void db_initialize( long int dof_type[], long int dof_label[] )
 
   strcpy(name[UPDATED],"updated");
 
+  strcpy(name[UPDATED_AREA],"updated_area");
+
   strcpy(name[UPDATED_LINEAR],"updated_linear");
 
   strcpy(name[UPDATED_WITHOUT_ROTATION],"updated_without_rotation");

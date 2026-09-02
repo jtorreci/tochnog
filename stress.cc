@@ -1441,7 +1441,8 @@ void set_stress( long int element, long int gr,
 
         // compressibility
       if ( compressibility!=0. ) {
-        if      ( memory==-TOTAL_LINEAR || memory==-UPDATED_LINEAR ) {
+        if      ( memory==-TOTAL_LINEAR || memory==-UPDATED_LINEAR ||
+                  memory==-UPDATED_AREA ) {
           tmp_old = ( old_epe[0] + old_epe[4] + old_epe[8] ) / compressibility;
           tmp_new = ( new_epe[0] + new_epe[4] + new_epe[8] ) / compressibility;
           tmp_inc = tmp_new - tmp_old;
