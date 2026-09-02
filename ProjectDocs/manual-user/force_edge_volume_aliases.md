@@ -69,3 +69,15 @@ control_materi_plasti_tension_apply 1  -no
 ```
 (test `cmat_gate`: the tension cutoff is ignored during timestep 1 ->
 linear sigxy -88.4 instead of the capped ~1)
+
+## Record layout of `force_edge` (variable length)
+
+`force_edge` (`force_element_edge`) accepts ONE value per space
+direction (manual Professional 6.454: "specify a force term for each
+direction") — e.g. `force_edge 10 1.0 0.0 0.0` in a 3D
+velocity-pressure calculation, where the fourth principal dof (the pore
+pressure) gets NO load. The record is variable length (1 up to the
+number of principal dofs): the legacy layout, one value per principal
+dof, still parses and loads the pore-pressure/temperature dof. The
+legacy GNU required exactly one value per principal dof, which rejected
+valid Professional input in coupled calculations (`large2`, `large3`).

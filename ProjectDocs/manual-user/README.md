@@ -96,12 +96,14 @@ input parameters it accepts.
 
 - [groundflow_pressure_factor](groundflow_pressure_factor.md) — scale the pore-pressure contribution to the total stress.
 - [group_groundflow_permeability_vertical_stress](group_groundflow_permeability_vertical_stress.md) — stress-dependent groundflow permeability (kp = a/(sigv/sig0)^b).
+- [group_groundflow_permeability](group_groundflow_permeability.md) — base saturated permeability (6.618): one value per direction, a single value used in EVERY direction (isotropic). Unlocks ground19_water_under_dam/large2/large3 with the merge/mpc/force work.
 - [group_materi_hyper_besseling](group_materi_hyper_besseling.md) — hyperelastic family (Besseling, Blatz-Ko, Mooney-Rivlin, Neo-Hookean, reduced polynomial, volumetric laws).
 - [group_materi_maxwell_chain](group_materi_maxwell_chain.md) — linear viscoelasticity with parallel Maxwell chains.
 - [group_materi_viscosity](group_materi_viscosity.md) — Newtonian viscosity, heat generation and user viscosity.
 - [group_materi_damage_mazars](group_materi_damage_mazars.md) — Mazars isotropic damage for quasi-brittle materials.
 - [group_materi_expansion_linear](group_materi_expansion_linear.md) — linear and volumetric thermal expansion.
 - [group_materi_plasti_visco_exponential](group_materi_plasti_visco_exponential.md) — viscoplasticity (exponential / power / always).
+- [group_materi_plasti_visco_power](group_materi_plasti_visco_power.md) — viscoplasticity power law (6.748): `eta p` (Professional) or legacy `eta p f_ref`; eps_dot_pl = eta*f^p. Unlocks visc_pl1/visc_pl2/validation_12.
 - [group_materi_plasti_mohr_coul_direct](group_materi_plasti_mohr_coul_direct.md) — direct stress cut-off Mohr-Coulomb/tension: full principal-stress mode (6.726/6.738: spectral tension cap + MC difference cut with the non-assoc phi_flow) or plane-traction mode (6.727, with `_normal`).
 - [group_materi_plasti_mohr_coul_hardening_softening](group_materi_plasti_mohr_coul_hardening_softening.md) — Mohr-Coulomb classic with linear hardening/softening of c and phi with kappa.
 - [group_materi_plasti_cap2](group_materi_plasti_cap2.md) — Professional name of the cap plasticity (c phi alpha R + epsilonp_v/pb table), alias of the GNU cap.
@@ -198,6 +200,7 @@ input parameters it accepts.
 ## Sprint 9 — force aliases + control_materi gates
 
 - [force_edge_volume_aliases](force_edge_volume_aliases.md) — Professional force_edge_*/force_volume_* names accepted directly; restriction variants (_element/_element_group/_element_side/_node/_element_node/_node_factor) and control_materi_*_apply per-timestep gates.
+- [control_mesh_merge_geometry](control_mesh_merge_geometry.md) — geometry scoping of control_mesh_merge (6.214/6.215): `_geometry` (merge only on) / `_geometry_not` (never on), multi-pair records; `control_mesh_merge_eps_coord` alias. Unlocks the ground19_water_under_dam wall mesh.
 - [force_edge_projected](force_edge_projected.md) — Terzaghi projected tunnel load (linear ph/pv ground stress field projected on the excavation boundary; 11-keyword family).
 - [data_family](data_family.md) — data_activate/delete(+_time), data_ignore (input-time skip), control_solver aliases, bicg_stop and print_mesh_dof dump.
 
@@ -283,6 +286,7 @@ input parameters it accepts.
 ## Sprint 12 lote 3 — solver global + pequeños
 
 - [solver](solver.md) — the GLOBAL solver type (manual 6.1047): overwrites every control_solver; the plain `solver_*` family (bicg_error/bicg_restart/bicg_stop/matrix_save/matrix_symmetric/pardiso×4, 6.1048-6.1056) with the wired/partial status of each.
+- [solver_matrix_symmetric](solver_matrix_symmetric.md) — symmetrization switch of the bicg family (6.1053): honest Bi-CG on the as-assembled matrix when the measured system is NOT symmetric under `-yes` (CG diverges there); unlocks large2/large3 coupled consolidation.
 - [timestep_predict_velocity](timestep_predict_velocity.md) — previous-velocity prediction (6.1089, PARTIAL in the GNU) + `timestep_iterations_automatic_apply` (6.1090): -no neglects every control_timestep_iterations_automatic.
 - [tochnog_version](tochnog_version.md) — the build date as a queryable record (day, month, year; 6.1091).
 - [volume_factor_x](volume_factor_x.md) — piecewise-constant volume factor in x (6.1094): thickness/area by x intervals.
@@ -311,6 +315,7 @@ input parameters it accepts.
 - [processors](processors.md) — the Professional short name of options_processors: number of solver threads.
 - [mpc_node_number](mpc_node_number.md) — multi point constraint on nodal dofs (6.874/6.875): the slave dof = sum(factor x master dof), slave treated as a known (bounded) quantity; mpc_node_factor gives the factors (default 1). Unlocks mpc1 (tie verified on mohr_coul_direct2/4/7; those stay RUNFAIL on the direct material family).
 - [mpc_linear_quadratic](mpc_linear_quadratic.md) — automatic tying (6.873) of the dangling quadratic-element nodes to the adjacent linear element with its shape functions (mid-edge 0.5/0.5, mid-face 0.25 each). Records verified byte-for-byte on mpc3/4/5; the tests stay RUNFAIL on the staggered-solver field (DIAG-SOLVE-MIXTO).
+- [mpc_element_group](mpc_element_group.md) — automatic tying of the nodes of one element group into the elements of another (6.860/6.864/6.866) with shape-function-consistent factors, plus the mpc_apply/control_mpc_apply switches (6.859/6.255). Unlocks ground19_water_under_dam (cut-off wall) and mpc7 (patch test 1.e-8).
 
 ## Records *_sig del post_calcul -materi_stress -force
 

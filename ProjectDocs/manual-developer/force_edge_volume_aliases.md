@@ -79,3 +79,15 @@ projection from a uniform pressure). Suite 92/92.
   print_mesh_dof.dat; _geometry filter via geometry(); _values
   registered but unused by the dump (documented).
 - DATA has no data_class — the data_* records use CONTROL.
+
+## Record layout of force_element_edge (variable length)
+
+data_length[FORCE_ELEMENT_EDGE] = nprinc (storage width, dynamic) with
+fixed_length = 0: inputs give 1..nprinc values. The consumption loop in
+area.cc maps the stored values onto the PRINCIPAL dofs in order and
+STOPS at the stored length (guard `iprinc>=ldum`, where ldum = db_len
+of the record): a 3-value record loads only the three velocity dofs and
+never reads past the stored values. Professional force_edge (6.454)
+carries one value per direction, so coupled runs with 4 principal dofs
+(velx y z + pres) load only the velocities. Force tests with exactly
+nprinc values (legacy) are unchanged.

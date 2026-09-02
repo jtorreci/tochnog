@@ -100,12 +100,14 @@ Each file corresponds to the same feature in the [User Manual](../manual-user/).
 
 - [groundflow_pressure_factor](groundflow_pressure_factor.md) — scale the pore-pressure contribution to the total stress.
 - [group_groundflow_permeability_vertical_stress](group_groundflow_permeability_vertical_stress.md) — stress-dependent groundflow permeability (groundda.cc groundflow_data, extended signature).
+- [group_groundflow_permeability](group_groundflow_permeability.md) — base saturated permeability: variable-length 1..ndim (single value isotropic) in groundda.cc groundflow_data + database.cc metadata; ground19/large2/large3.
 - [group_materi_hyper_besseling](group_materi_hyper_besseling.md) — hyperelastic family (hyperela.cc: hyperelasticity/hyper_Cmat/hyper_stress/hyper_law).
 - [group_materi_maxwell_chain](group_materi_maxwell_chain.md) — Maxwell chains (viscoela.cc); nonlinear chain is a stub.
 - [group_materi_viscosity](group_materi_viscosity.md) — viscosity (viscosit.cc viscous_stress; user.cc stub).
 - [group_materi_damage_mazars](group_materi_damage_mazars.md) — Mazars damage (damage.cc; epseq accumulation bug fixed 2026-08-10).
 - [group_materi_expansion_linear](group_materi_expansion_linear.md) — thermal expansion (stress.cc:437, materi.cc:166).
 - [group_materi_plasti_visco_exponential](group_materi_plasti_visco_exponential.md) — viscoplasticity (stress.cc:100-115, 737-755; EPS_VISCO hardcoded).
+- [group_materi_plasti_visco_power](group_materi_plasti_visco_power.md) — power viscoplasticity: dual layout (Professional eta p / legacy eta p f_ref), f_ref=1 implicit, lambda = eta*(f/f_ref)^p times dtime.
 - [group_materi_plasti_mohr_coul_direct](group_materi_plasti_mohr_coul_direct.md) — direct stress cut-off (materi_direct_cutoff in stress.cc).
 - [group_materi_plasti_mohr_coul_hardening_softening](group_materi_plasti_mohr_coul_hardening_softening.md) — classic MC with linear c/phi hardening-softening vs kappa (plasti.cc plasti_rule block).
 - [group_materi_plasti_cap2](group_materi_plasti_cap2.md) — db_number alias of GROUP_MATERI_PLASTI_CAP (same physics, plasti.cc untouched).
@@ -195,6 +197,7 @@ Each file corresponds to the same feature in the [User Manual](../manual-user/).
 ## Sprint 9 — force aliases + control_materi gates
 
 - [force_edge_volume_aliases](force_edge_volume_aliases.md) — prefix translation INSIDE db_number (keyword AND end-of-values detection), restriction variants for the 3 edge families + volume, control_materi gate helper.
+- [control_mesh_merge_geometry](control_mesh_merge_geometry.md) — merge.cc geometry scoping of control_mesh_merge: _geometry whitelist / _geometry_not blacklist, multi-pair records, db_number aliases (eps_coord, legacy _not).
 
 ## Sprint 10 — control_repeat family completion
 
@@ -281,7 +284,8 @@ Each file corresponds to the same feature in the [User Manual](../manual-user/).
 
 ## Sprint 12 lote 3 — solver global + pequeños
 
-- [solver](solver.md) — the plain solver_* enums (no_index), the global type override read LAST in top.cc/elem.cc/dof.cc (opposite precedence of the legacy options_solver), solver_bicg_error/stop wired in so_bicg.cc, solver_matrix_symmetric bypassing the symmetry measurement with the honest warning, the partials (restart/matrix_save/pardiso×4) verified behavior-neutral.
+- [solver](solver.md) — the plain solver_* enums (no_index), the global type override read LAST in top.cc/elem.cc/dof.cc (opposite precedence of the legacy options_solver), solver_bicg_error/stop wired in so_bicg.cc, solver_matrix_symmetric -yes with honest Bi-CG fallback when the measured system is asymmetric (large2), the partials (restart/matrix_save/pardiso×4) verified behavior-neutral.
+- [solver_matrix_symmetric](solver_matrix_symmetric.md) — so_bicg.cc per-solve selection: CG on measured-symmetric systems, honest Bi-CG (as-assembled, not re-symmetrized) under -yes when asymmetric; large2/large3 verification.
 - [timestep_predict_velocity](timestep_predict_velocity.md) — why the previous-velocity initial guess does not map to the staggered scheme (x=0 start + += accumulation) and the automatic-apply gate in top.cc; the quasistatic iteration-count invisibility gotcha.
 - [tochnog_version](tochnog_version.md) — the record PUT at top() init parsed from __DATE__.
 - [volume_factor_x](volume_factor_x.md) — volume.cc piecewise factor at the IP x; the right-of-last-x factor-1 guard; odd-length validation.
@@ -303,12 +307,13 @@ Each file corresponds to the same feature in the [User Manual](../manual-user/).
 - [area_element_group_sequence_no_selectors](area_element_group_sequence_no_selectors.md) — previous-group matching in group.cc.
 - [mesh](mesh.md) — db_number routing to OPTIONS_MESH (dead MESH placeholder avoided).
 - [group_materi_memory_updated_linear](group_materi_memory_updated_linear.md) — the UPDATED_LINEAR branches in materi.cc/set_deften_etc/stress.cc + the explicit-memory-only displacement check.
-- [nonlocal](nonlocal.md) — nonlocal alias + NONLOCAL_NAME enum; the legacy nonlocal buffer bug documented as pending.
+- [nonlocal](nonlocal.md) — nonlocal alias + NONLOCAL_NAME enum; classic-path nonlocal_set() call restored (top.cc iteration loop, mesh-change flag); legacy nonlocal buffer bug documented as pending.
 - [geometry_factor](geometry_factor.md) — db_number alias to GEOMETRY_BOUNDA_FACTOR (geometry.cc linear/parabolic interpolation); verified against the Professional .dbs (matrix2).
 - [convection_apply](convection_apply.md) — db_number aliases convection_apply/control_convection_apply/convection_stabilization to OPTIONS_CONVECTION/CONTROL_OPTIONS_CONVECTION/OPTIONS_STABILIZATION (general.cc consumers); eulerian-NS transient divergence of validation_1 documented as pending.
 - [processors](processors.md) — db_number alias to OPTIONS_PROCESSORS (elem.cc thread buffers); exact-match only, processors_used NOT translated.
-- [mpc_node_number](mpc_node_number.md) — mpc.cc::mpc_node_apply() called from bounda.cc: slave bounded + value = sum(factor*master) each iteration, no condensation/force transfer (verified vs Professional .dbs); mpc_apply/mpc_geometry/mpc_element_group PENDING.
+- [mpc_node_number](mpc_node_number.md) — mpc.cc::mpc_node_apply() called from bounda.cc: slave bounded + value = sum(factor*master) each iteration, no condensation/force transfer (verified vs Professional .dbs); mpc_apply/control_mpc_apply gates wired, mpc_geometry family PENDING.
 - [mpc_linear_quadratic](mpc_linear_quadratic.md) — tie generation for dangling quadratic nodes via point_el() (linear shape functions), mesh fingerprint record MPC_LINEAR_QUADRATIC_MESH_FINGERPRINT (external=0), regeneration on mesh change; verified byte-for-byte vs the Professional .dbs (mpc3/4/5). mpc5 blocked on the delete-factor family.
+- [mpc_element_group](mpc_element_group.md) — tie generation of group_0 nodes into group_1 elements via point_el() (shape-function factors), geometry/dof selectors, member-skip semantics, fingerprint record MPC_ELEMENT_GROUP_MESH_FINGERPRINT; mpc7 patch test 1.e-8, ground19 wall.
 
 ## Records *_sig del post_calcul -materi_stress -force
 

@@ -8,8 +8,8 @@ Documento de control del proceso de convergencia entre Tochnog Professional
 
 - **1094** keywords documentados en Professional (tras limpiar 1 keyword
   espurio del manual)
-- **304** presentes en el GNU (**28 %** de cobertura nominal)
-- **790** faltantes
+- **309** presentes en el GNU (**28 %** de cobertura nominal)
+- **785** faltantes
 - Además: 197 tests del GNU 2014 corren con cobertura 100 % de keywords (ver plan, sección 6c)
 
 ## Features implementadas por nosotros — registro de verificación
@@ -21,6 +21,8 @@ suite sfnet, o un test propio. El registro completo:
 | Feature | Commit | Fecha | Verificación |
 |---------|--------|-------|--------------|
 | Aliases `convection_apply` (6.395) / `control_convection_apply` (6.113) / `convection_stabilization` (6.396) en db_number() → `options_convection`/`options_stabilization` (machinery ya en general.cc: convección con velocidad materi + upwind peclet) | (commit feat de este lote, 2026-09-02) | 2026-09-02 | **Contra el binario del Professional (user-supplied 25-10-2023, .dbs)**: condif2/condif3 rc=0 con temp nodo 2 = 0.992028 (target 1.0±2e-2; el Professional da 1.000000 EXACTO); tube1 rc=0 con vely post_point = 1066.59 (target 1000±100; el Professional 1000.49). El .dbs del Professional guarda los records con esos mismos nombres. **Corpus: 130 → 133 PASS** (208 RUNFAIL / 22 PARSE). Suite propia 16/16. Blocker por test: validation_1 — parsea y corre, pero el transitorio del NS euleriano (auto-advección de velocidad, quad9 p+h refinado) diverge del Professional desde el paso 2 (velx final +0.0723 vs −0.0391 en el post_point; la variante sin convección de AMBOS códigos coincide → el término convectivo del ensamblaje mixto velocidad/tensión necesita sprint A/B dedicado); validation_8 — parsea hasta `-veln` (dof de bounda_dof para velocidad normal con generación de MPC, manual 6.22; el Professional genera mpc_node_number con -velx/-vely según la entidad — algoritmo de elección de eje no deducible sin más datos). Familia force_element_edge_water/excavate1: ver nota de layout en su sección. |
+| `group_materi_plasti_visco_power` (6.748) — layout Professional `η p` (2 valores; ley ε̇_pl = η·f^p sin tensión de referencia) + fix del camino nonlocal clásico (nonlocal_set() por cambio de malla) | (commit feat de este lote, 2026-09-02) | 2026-09-02 | **Contra el binario del Professional (user-supplied 25-10-2023, .dbs)**: el GNU legacy exigía 3 valores (`η p f_ref`, test GNU 2001 `1. 1. 10.` ≡ Professional `0.1 1.` con f_ref=1); el record pasa a variable-length y el consumo en stress.cc toma f_ref del 3er valor si existe, si no f_ref=1. visc_pl1 rc=0 (sigxx Professional 1.0243 vs target 1±0.1; overshoot visco y relajación a la superficie de fluencia), visc_pl2 rc=0 (η=1e-6: sigxx elástico 2.0±1e-3 con epp ~5e-7, igual que el Professional), validation_12 rc=0 (tensión NO-LOCAL con 2 zonas materiales y hardening kap: target kap 0.0065; el fix es la llamada restaurada a nonlocal_set() en la rama clásica de la iteración — antes NODE_NONLOCAL nunca se construía y fallaba con db_error). **Corpus: 133 → 140 PASS** (201 RUNFAIL / 22 PARSE). Suite propia 16/16. |
+| `group_groundflow_permeability` (6.618) isotrópico de 1 valor + `control_mesh_merge_geometry(_not)` (6.214/6.215) + `mpc_element_group`/`_dof`/`_geometry` (6.860/6.864/6.866) + gates `mpc_apply`/`control_mpc_apply` (6.859/6.255) + layout `force_edge` por dirección (6.454) + `solver_matrix_symmetric` honesto | (commit feat de este lote, 2026-09-02) | 2026-09-02 | **Contra el binario del Professional (user-supplied 25-10-2023, .dbs)**: (1) groundflow_permeability era FIXED a ndim valores; ahora variable 1..ndim con replicación isotrópica en groundda.cc. (2) mpc_element_group genera ties con las shape functions del elemento master (point_el, patrón mpc_linear_quadratic) restringidos por geometría/dofs, saltando nodos ya miembros del master (semántica always -no; el tie consigo mismo congelaría la ecuación). (3) mpc7 rc=0 = patch test EXACTO sigxx 1.0±1e-8 (2 quad4 pequeños en 1 grande). (4) ground19 rc=0: flujo post_node_result -0.00557863 vs target -0.00557268±1e-5 (Professional: -0.00557268; el bloque mpc NO altera el campo de presiones — A/B con/sin mpc idéntico en el Professional). (5) large2/large3 rc=0 (consolidación 3D acoplada; large2 divergía porque solver_matrix_symmetric -yes forzaba CG sobre un sistema medido NO simétrico — ahora Bi-CG honesto sobre la matriz tal-cual, como el Professional que simetriza "si hace falta"; large3 con bounda_alternate mide simétrico y queda igual). (6) force_element_edge variable 1..nprinc (Professional: 1 valor por dirección; el 4º principal dof de pres NO se carga). **Corpus: 133 → 140 PASS** (7 nuevos: visc_pl1/2, validation_12, ground19_water_under_dam, large2/3 + mpc7). Suite propia 16/16. |
 | Familia material `mohr_coul_direct`/`tension_direct` — modo completo (manual 6.726/6.738: cut-off espectral de tensiones + cut del diferencia de tensiones principales con flujo no-asociado phi_flow) + normal `_normal` ndim-flexible + reducción de fricción en paredes `group_materi_plasti_bounda/_factor` (6.231/6.232) | (commit feat de este lote, 2026-09-02) | 2026-09-02 | **Contra el binario del Professional (user-supplied 25-10-2023, .dbs)**: (1) `materi_direct_full_mc()` en stress.cc — cap espectral (`matrix_jacobi`, sigy=0 por defecto si falta tension_direct con MC) + cut del par (max,min) con el flujo `(1+sin psi)/(1-sin psi)` y acoplamiento C del principal intermedio + regla de esquina sigma1=sigma2. (2) mohr_coul_direct1 rc=0 (oedómetro eptxx 1.49e-2, antes 2.99e-3 ≈ 5×) y mohr_coul_direct2 rc=0 (dilatancia phi_flow=π/4: vely=velx, antes 0.35). (3) mohr_coul_direct6/7: la ley material es EXACTA contra el Professional (con `-total_linear`: sigxy = 0.0249584 EXACTO en direct6); los runs del corpus siguen RUNFAIL porque su incremento único de cortante 100 % (γ=1.0) ejercita la deformación de elemento `-updated` (polar U-I) del GNU vs la lineal del Professional — blocker de CINEMÁTICA de elemento, no de la ley. (4) mohr_coul_direct8: parse arreglado (`_normal` con ndim valores + alias `group_materi_plasti_bounda`), RUNFAIL residual por la semántica de detección de pared. **Corpus: 124 → 130 PASS** (211 RUNFAIL / 22 PARSE). Suite propia 16/16. Blocker por test: direct3/4 interfaz (reacción −50 vs −100), direct5 (force_edge sobre bar2 axisimétrico), direct6/7 (cinemática -updated vs lineal a γ=1.0), direct8 (reducción de pared). |
 | Familia MPC: `mpc_node_number`/`mpc_node_factor` (6.874/6.875, consumo de los records) + `mpc_linear_quadratic` (6.873, generación automática de ties) + record interno `mpc_linear_quadratic_mesh_fingerprint` (regeneración al cambiar la malla) | (commit feat de este lote, 2026-09-01) | 2026-09-01 | **Contra el binario del Professional (user-supplied 25-10-2023, .dbs)**: (1) semántica de mpc_node_number/factor — esclavo = Σ factor×maestro, esclavo bounded (node_bounded=1) recomputado cada iteración, fila excluida del sistema SIN condensación ni redistribución (experimentos: maestro libre + link rígido → pardiso del Professional falla por sistema singular; fuerza externa sobre esclavo queda en su rhside sin transferirse, u3=0). (2) mpc1 rc=0 con node_dof IDÉNTICO al Professional: nodo 2 velx=disx=2, sigxx=0.5. (3) ties de mpc_linear_quadratic byte-idénticos en mpc3/4/5 (mid-edge 2 maestros ×0.5, mid-face 4 ×0.25, índices 0..N); tie de mohr_coul_direct2 verificado (nodos 3=4 exactamente iguales). **Corpus: 123 → 124 PASS** (217 RUNFAIL / 22 PARSE). Suite propia 16/16. mpc3/mpc4 siguen RUNFAIL por el solver staggered u-σ (0.299/0.350 vs 0.333 exacto del tying; familia DIAG-SOLVE-MIXTO); mpc5 por control_mesh_delete_geometry_factor + reset de stress (0 vs 0.5, mismo root que delete3); mohr_coul_direct2/4/7 por la familia MATERIAL direct (mohr_coul_direct1/3/5/6/8 sin mpc también fallan, p.ej. eptxx 2.99e-3 vs 1.49e-2). mpc8/mpc9: SEGV pre-existente (también sin records mpc). |
 | Familia `bounda_time_until_data` + `bounda_time_until_value_minimum` (6.40/6.41) + registro de keywords del corpus (mpc_*, control_mesh_truss_distribute_mpc, post_calcul_length, strain_volume_*, bounda_used, processors_used...) | (commit feat de este lote, 2026-09-01) | 2026-09-01 | **Contra el binario del Professional (user-supplied 25-10-2023, .dbs)**: la ley del factor del until se verificó con DOS runs de until1.dat (E=1 y E=2): factor = ((monitor/first − wanted)/(start − wanted))² con clamp [0,1], monitor del PASO ANTERIOR (post_node_result), first = valor inicial del monitor — match 1e-6 en TODA la serie (p.ej. E=1 t=1.992: 0.81 = (9e-3/1e-2)²; E=2 t=1.992: 0.81 = (1.8e-2/(1e-2·2))²). until1 rc=0 (target node_rhside 1 −velx = 0.0 ± 1e-3; GNU 5.45e-5 vs Professional 9.76e-5). **Corpus: 121 → 123 PASS** (218 RUNFAIL / 22 PARSE). Suite propia 16/16. mpc2 rc=0 por coincidencia física (traslación rígida del quad4; la familia MPC queda registrada sin consumo — ver registro). |
@@ -597,9 +599,9 @@ marcado `PENDIENTE` puede estar cubierto en el GNU bajo otro nombre:
 - [x] `control_mesh_macro_parameters` — presente en el GNU
 - [ ] `control_mesh_map` — PENDIENTE
 - [x] `control_mesh_merge` — presente en el GNU
-- [ ] `control_mesh_merge_eps_coord` — PENDIENTE
-- [ ] `control_mesh_merge_geometry` — PENDIENTE
-- [ ] `control_mesh_merge_geometry_not` — PENDIENTE
+- [x] `control_mesh_merge_eps_coord` — alias db_number → control_mesh_merge_epscoord (2026-09-02; parse-level, sin test de corpus)
+- [x] `control_mesh_merge_geometry` — 2026-09-02 (whitelist de geometrías del merge, merge.cc; merge2/tutorial_3 siguen RUNFAIL por otros blockers)
+- [x] `control_mesh_merge_geometry_not` — 2026-09-02 (blacklist; nombre Professional del legacy control_mesh_merge_not, alias conservado; ground19_water_under_dam)
 - [x] `control_mesh_merge_macro_generate` — presente en el GNU
 - [x] `control_mesh_mirror` — implementada (commit `3e94dac`, 2026-08-05)
 - [x] `control_mesh_move` — implementada (commit `3e94dac`, 2026-08-05)
@@ -632,9 +634,9 @@ marcado `PENDIENTE` puede estar cubierto en el GNU bajo otro nombre:
 - [ ] `control_mesh_truss_distribute_mpc_geometry_isoparametric` — PENDIENTE
 - [ ] `control_mesh_truss_distribute_mpc_geometry_truss` — PENDIENTE
 
-### control_mpc (0/2)
+### control_mpc (1/2)
 
-- [ ] `control_mpc_apply` — PENDIENTE
+- [x] `control_mpc_apply` — 2026-09-02 (gate por índice de control en mpc.cc::mpc_node_apply; mpc_apply global + control por timestep)
 - [ ] `control_mpc_element_group` — PENDIENTE
 
 ### control_plasti (0/1)
@@ -963,7 +965,7 @@ fallan TODOS en el PARSE del layout, no del nombre:
   expanden bien por la maquinaria de defines; force_edge_time/geometry NO
   son el blocker.
 
-- [x] `force_edge` — por equivalencia (alias prefijo Professional→`force_element_edge`, Sprint 9; LAYOUT data_length nprinc→ndim PENDIENTE)
+- [x] `force_edge` — por equivalencia (alias prefijo Professional→`force_element_edge`, Sprint 9) + 2026-09-02 (LAYOUT: record variable 1..nprinc; la forma Professional de 1 valor por dirección carga solo los dofs mecánicos en problemas acoplados — large2/large3)
 - [ ] `force_edge_diagram` — PENDIENTE
 - [x] `force_edge_element` — Sprint 9 (variante nueva)
 - [x] `force_edge_element_group` — Sprint 9
@@ -1223,8 +1225,9 @@ fallan TODOS en el PARSE del layout, no del nombre:
 
 - [ ] `group_ground` — PENDIENTE
 
-### group_groundflow (7/7)
+### group_groundflow (8/8)
 
+- [x] `group_groundflow_permeability` — 2026-09-02 (variable 1..ndim; 1 valor = isotrópico en cada dirección, 6.618; ground19/large2/large3 rc=0)
 - [x] `group_groundflow_capacity` — presente en el GNU
 - [x] `group_groundflow_consolidation_apply` — P6 (2026-08-20)
 - [x] `group_groundflow_materidivergence` — presente en el GNU
@@ -1370,7 +1373,7 @@ Nota: `group_interface_ground` del checklist anterior NUNCA existió (artefacto 
 - [x] `group_materi_plasti_visco_exponential_limit` — Sprint 10 (PARCIAL)
 - [x] `group_materi_plasti_visco_exponential_name` — Sprint 10 (PARCIAL)
 - [x] `group_materi_plasti_visco_exponential_values` — Sprint 10 (PARCIAL) + batch hypo (2026-09-01; alias db_number del singular Professional `..._value`)
-- [x] `group_materi_plasti_visco_power` — presente en el GNU
+- [x] `group_materi_plasti_visco_power` — layout Professional `η p` (variable-length, f_ref implícito=1; el layout legacy `η p f_ref` sigue aceptado) — 2026-09-02 (visc_pl1/2, validation_12 rc=0)
 - [ ] `group_materi_plasti_visco_power_name` — PENDIENTE
 - [ ] `group_materi_plasti_visco_power_value` — PENDIENTE
 - [x] `group_materi_plasti_vonmises` — presente en el GNU
@@ -1620,19 +1623,18 @@ Nota: `group_interface_ground` del checklist anterior NUNCA existió (artefacto 
 
 - [ ] `message` — PENDIENTE
 
-### mpc (2/17)
+### mpc (6/17)
 
-- [ ] `mpc_apply` — PENDIENTE (switch global -yes/-no; default -yes, los records se aplican siempre)
+- [x] `mpc_apply` — 2026-09-02 (switch global sin índice; default -yes; -no apaga generación Y aplicación en mpc.cc::mpc_node_apply)
 - [x] `mpc_node_number` + `mpc_node_factor` — implementadas (2026-09-01, mpc.cc::mpc_node_apply desde bounda.cc + re-sync post-solve en top.cc): dof esclavo = Σ factor×dof maestro, esclavo bounded (valor recomputado cada iteración), sin condensación ni redistribución de fuerzas (semántica verificada contra el binario Professional 25-10-2023). Desbloquea mpc1 (rc=0, node_dof idéntico al Professional: nodo 2 velx=disx=2, sigxx=0.5) y el tie de mohr_coul_direct2/4/7 (nodos 3=4 idénticos; los tests siguen RUNFAIL por la familia MATERIAL direct: mohr_coul_direct1/3/5/6/8 sin mpc también fallan, eptxx 2.99e-3 vs 1.49e-2)
 - [x] `mpc_linear_quadratic` — implementada (2026-09-01, mpc.cc::mpc_linear_quadratic_generate): generación de ties para nodos colgantes de elementos cuadráticos contra el elemento lineal adyacente (shape functions vía point_el, eps_iso 1.e-4), regeneración automática al cambiar la malla (fingerprint en record interno MPC_LINEAR_QUADRATIC_MESH_FINGERPRINT). Records generados byte-idénticos al Professional (mpc3/4/5: mid-edge 2 maestros ×0.5, mid-face 4 ×0.25). mpc3/mpc4 siguen RUNFAIL por el SOLVER staggered u-σ (el punto fijo no da el campo homogéneo exacto ±1e-3 que exigen los tests de tying: 0.299/0.350 vs 0.333; familia DIAG-SOLVE-MIXTO); mpc5 además necesita la familia control_mesh_delete_geometry_factor (0 vs 0.5, mismo root que delete3)
-- [ ] `mpc_apply` — PENDIENTE
-- [ ] `mpc_element_group` — PENDIENTE
+- [x] `mpc_element_group` — 2026-09-02 (mpc.cc::mpc_element_group_generate): ties de los nodos de group_0 dentro de elementos de group_1 con las shape functions en su posición iso (point_el, eps 1e-4), restricción de geometría (_geometry) y de dofs (_dof); saltos de nodos ya miembros del elemento master (semántica always -no); regeneración por fingerprint (record interno MPC_ELEMENT_GROUP_MESH_FINGERPRINT). mpc7 rc=0: patch test sigxx 1.0±1e-8; ground19 (muro cut-off) rc=0
 - [ ] `mpc_element_group_always` — PENDIENTE
 - [ ] `mpc_element_group_closest` — PENDIENTE
 - [ ] `mpc_element_group_coord_geometry` — PENDIENTE
-- [ ] `mpc_element_group_dof` — PENDIENTE
+- [x] `mpc_element_group_dof` — 2026-09-02 (selección de dofs a igualar; default: todos los principal)
 - [ ] `mpc_element_group_eps_iso` — PENDIENTE
-- [ ] `mpc_element_group_geometry` — PENDIENTE
+- [x] `mpc_element_group_geometry` — 2026-09-02 (restringe los nodos candidatos a los de la geometría)
 - [ ] `mpc_element_group_keep` — PENDIENTE
 - [ ] `mpc_geometry` — PENDIENTE
 - [ ] `mpc_geometry_dof` — PENDIENTE
@@ -1676,7 +1678,7 @@ Nota: `group_interface_ground` del checklist anterior NUNCA existió (artefacto 
 
 ### nonlocal (2/2)
 
-- [x] `nonlocal` — batch hypo (2026-09-01; alias de options_nonlocal, manual 6.897; slope_nonlocal_refine parsea; el run choca con el bug legacy del buffer NONLOCAL_ITEM_SIZE de nonloc.cc — PENDIENTE)
+- [x] `nonlocal` — batch hypo (2026-09-01; alias de options_nonlocal, manual 6.897) + 2026-09-02 (fix camino clásico: nonlocal_set() restaurado tras cambio de malla en la iteración — validation_12 rc=0 con target kap no-local; slope_nonlocal_refine sigue chocando con el bug legacy del buffer NONLOCAL_ITEM_SIZE de nonloc.cc — PENDIENTE)
 - [x] `nonlocal_name` — batch hypo (2026-09-01; record nuevo 6.898, PARCIAL: aceptado pero sin gate por modelo (el GNU aplica el termino no-local a todo modelo))
 
 ### number (0/1)
@@ -1949,7 +1951,7 @@ Nota: `group_interface_ground` del checklist anterior NUNCA existió (artefacto 
 - [x] `solver_bicg_restart` — Sprint 12 lote 3 (PARCIAL: registrado; el bicg del GNU no tiene restart, como su contraparte de control)
 - [x] `solver_bicg_stop` — Sprint 12 lote 3 (global, pisa al control_solver_bicg_stop)
 - [x] `solver_matrix_save` — Sprint 12 lote 3 (PARCIAL: registrado; cache de descomposición es funcionalidad de solver directo)
-- [x] `solver_matrix_symmetric` — Sprint 12 lote 3 (-yes fuerza el CG saltándose la medición por solve; WARNING honesto si la medición discrepa — el Professional simetriza, el GNU corre CG sobre la matriz tal cual)
+- [x] `solver_matrix_symmetric` — Sprint 12 lote 3 + 2026-09-02 (con -yes, sistema medido NO simétrico → Bi-CG honesto sobre la matriz tal-cual en vez de CG divergente — el Professional simetriza "si hace falta"; large2 rc=0, large3 sin cambio)
 - [x] `solver_pardiso_ordering` — Sprint 12 lote 3 (PARCIAL: PARDISO no compilado)
 - [x] `solver_pardiso_out_of_core` — Sprint 12 lote 3 (PARCIAL, ídem)
 - [x] `solver_pardiso_processors` — Sprint 12 lote 3 (PARCIAL, ídem)

@@ -25,6 +25,13 @@
   (nonloc.cc): the `NONLOCAL_ITEM_SIZE` (160) buffer of `node_nonlocal`
   overflows for dense meshes - a pre-existing jan-2014 bug, documented
   in SEGUIMIENTO (PENDIENTE).
+- Classic nonlocal path fix (top.cc, equilibrium iteration loop):
+  `nonlocal_set()` builds the NODE_NONLOCAL/NODE_NONLOCAL_WEIGHT node
+  lists once per mesh change (flag `nonlocal_first_set`, cleared by
+  `mesh_changed()`), mirroring the softvar branch. Previously the call
+  was only wired to the softvar branch and the classic path crashed on
+  the missing lists (`node_nonlocal` db_error). validation_12
+  (nonlocal tension, kap target 0.0065) passes with the fix.
 
 ## Pending
 
