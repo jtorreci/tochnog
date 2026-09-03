@@ -35,6 +35,15 @@
   traction NEGATIVE. This is the convention used by gap, tension_direct
   and `max_fric` (`kn*strain_normal` grows with compression). The old doc
   said "compression negative" — wrong, corrected 2026-08-14.
+  NOTE (2026-09-03, verified against the Professional .dbs of
+  mohr_coul_direct3): the orientation flip of the 2D normal (side-2 nodes
+  numbered lower than side-1) makes the RECORDED accumulated strain
+  NEGATIVE under compression (direct3 strain −1e-6, sigma_n −100 at
+  t=1) — the internal sign of `strain_normal` depends on the element node
+  numbering; the physical branch decisions (gap/tension/max_fric) only
+  compare magnitudes/signs consistently within one element. The yield
+  limit uses `max_fric = |c - kn*strain_normal*tan(phi)|` so that the
+  normal FORCE is positive under compression regardless of the numbering.
 - **Gap** (`group_interface_gap`): the interface is OPEN (residual
   stiffness only) when the accumulated normal strain `strain_normal <= gap`,
   CLOSED (full stiffness) when `strain_normal > gap`. Compression
@@ -53,24 +62,43 @@
   (`stiff_normal == kn`). On opening: residual stiffness and `force_norm`
   capped at `±tension_limit` (signed by the opening direction).
 - **Cumulative Mohr-Coulomb** (`group_interface_materi_plasti_mohr_coul_direct
-  phi c phi_flow`): active by the PRESENCE of the record (D2). With
-  phi=0,c=0 the limit is 0 → free sliding; without the record the interface
-  stays purely elastic (Fase 1). The limit applies to the TOTAL tangential
-  force, stored in the history `ELEMENT_INTERFACE_FORCE_TANG` (spring.cc
-  pattern, GET VERSION_NORMAL with GET_IF_EXISTS, PUT VERSION_NEW):
-  - `trial = f_t_old + kt1*2*du_tang` (accumulated across steps; the
-    step loop copies NORMAL→NEW at step start, NEW→NORMAL at step close)
-  - `max_fric = max(c + kn*strain_normal*tan(phi), 0)` (floor at 0, D5)
+  phi c phi_flow`, manual Professional 6.632 — angles in RADIANS): active
+  by the PRESENCE of the record (D2). With phi=0,c=0 the limit is 0 →
+  free sliding; without the record the interface stays purely elastic
+  (Fase 1). The limit applies to the TOTAL tangential force, stored in
+  the history `ELEMENT_INTERFACE_FORCE_TANG` (spring.cc pattern, GET
+  VERSION_NORMAL with GET_IF_EXISTS, PUT VERSION_NEW):
+  - `trial = f_t_old + kt1*du_tang` — the stored history is the ELASTIC
+    trial `kt*gamma_total` (gamma_total = sum(du_tang) over ALL steps;
+    it keeps accumulating even while plastic, so the force can reach the
+    cohesion after a large slip — interface_patch -10)
+  - `max_fric = |c + Fn*tan(phi)|` with `Fn = -kn*strain_normal`
+    (POSITIVE under compression — verified against the Professional
+    plateau of mohr_coul_direct4: c + |Fn|*tan(phi) = 1.20271 with
+    c=1, phi=0.2, sigma_n = -1; the manual text "Fn negative under
+    compression" is a sign slip of the manual)
   - clamp: `f_t = clamp(trial, ±max_fric)`; if plastified →
     `stiff_tang = 0` (consistent tangent, D3, avoids Newton oscillation
     at the elastic/plastic boundary)
-  - `stress_shear = f_t - f_t_old` (the rhs carries the INCREMENT; without
-    MC this equals `kt1*2*du_tang` exactly — Fase 1 backward compatible)
+  - CONVERGENCE (2026-09-03): the assembled rhs carries the FULL
+    accumulated forces (spring.cc pattern), NOT the step increment:
+    `stress_normal = kn*strain_normal_acc` and `stress_shear = f_t`
+    (elastic: `kt*gamma_total`). With an incremental rhs the node
+    reactions of a multi-step run only showed the last increment
+    (mohr_coul_direct3: −50 vs the Professional −100 per node =
+    w*kn*eps_acc) and a constant load made the interface creep one
+    increment per step (interface9: 10 equal steps vs the Professional
+    single-step static equilibrium).
 - **phi_flow = dilatancy (RF-4, non-associated flow)**: if plastified and
-  `phi_flow > 0`, slip OPENS the interface in both sliding directions:
-  `strain_normal += -|du_tang| * tan(phi_flow)` (magnitude, not signed
-  du_tang — a signed flow would close one direction, anti-physical). Feeds
-  back into the normal history → gap/tension/max_fric of the next step.
+  `phi_flow > 0`, the INCREMENTAL plastic slip of the step opens the
+  interface in both sliding directions:
+  `strain_normal += -dgamma_inc * tan(phi_flow)` where `dgamma_inc =
+  dgamma - gamma_pl_old` (the accumulated-trial return multiplier
+  dgamma is the TOTAL plastic slip; the slip already accumulated in the
+  past, gamma_pl_old = (|trial_old| - |clamp(trial_old)|)/kt1, is
+  subtracted so the ratchet is not re-counted — mohr_coul_direct3
+  sigma_n = −200 = kn*(−1e-6 − 1e-6*tan(pi/4)), not −250). Feeds back
+  into the normal history → gap/tension/max_fric of the next step.
 - **Memory model** (`group_interface_materi_memory`): `-updated_linear`
   (default) computes the interface normal/tangent from `coord` (current
   configuration) each step; `-total_linear` reads the time-0 reference
@@ -195,3 +223,52 @@ BUILD — incremental .o mixing old/new enum numbering corrupts the binary
 with phantom check errors ("at least one of materi_velocity_integrated
 or materi_displacement..." from mismatched ids). This is the documented
 AGENTS.md build rule; now verified the hard way.
+
+## Convergence record 2026-09-03 — interface Mohr-Coulomb direct (mohr_coul_direct3/4)
+
+Changes in `interface_element()` (interface.cc) + `data()` (data.cc),
+verified against the Professional binary .dbs (user-supplied 25-10-2023):
+
+1. **Full-force assembly** (interface.cc, constitutive block + assembly):
+   the element rhs now carries `stress_normal_ip = stiff*strain_normal_ip`
+   (accumulated incl. this step + dilatancy) and the clamped accumulated
+   trial `f_t` for the shear (both MC and elastic: `kt*gamma_total`).
+   The records use the same accumulated values (rec_stress block
+   unchanged, reads the same per-IP arrays). The matrix/tangent and the
+   Lobatto-weighted per-pair assembly are unchanged.
+2. **Incremental dilatancy**: `dgamma_inc = dgamma - gamma_pl_old` with
+   `gamma_pl_old = (|f_el_old| - min(|f_el_old|, max_fric))/kt1`.
+3. **Fn sign**: `max_fric_abs = |c - kn*strain_eff*tan(phi)|` (the
+   accumulated strain is negative under compression, so this equals
+   |c + |Fn|*tan(phi)|).
+4. **`control_reset_dof -sigxx/-sigyy/-sigzz` → interface pre-stress**
+   (data.cc, inside the CONTROL_RESET_VALUE_CONSTANT branch): after the
+   node-dof reset, interface elements whose normal aligns with the reset
+   axis (dot > 0.99 over the reference geometry) get
+   `ELEMENT_INTERFACE_STRAIN_NORMAL := reset_value/kn` (all IPs, both
+   versions). Verified: direct4 reset −sigyy −1 → the .dbs probe shows
+   `element_interface_strain_normal 3 -1e-06 -1e-06` == the Professional
+   epsilon_n = −1e-6.
+5. **`control_reset_interface`/`_interface_strain` FIX** (data.cc): the
+   reset block was nested inside `if (max_reset>=0)` (the control_reset_dof
+   gate) AND bounded by `db_max_index(CONTROL_RESET_INTERFACE...)` which
+   returns −1 although the records are active (measured: record 15 active,
+   max index −1) AND wrote one value with a leftover length (only
+   VERSION_NORMAL). Now: unconditional scan of the control range with
+   `db_active_index` (0..1000), fires at its own control index, zeroes ALL
+   ns1 slots of ELEMENT_INTERFACE_STRAIN_NORMAL / FORCE_TANG(_2) in BOTH
+   versions. Without this fix interface7 (2 one-step phases separated by a
+   reset at index 15) accumulates −2 instead of −1 with the new
+   accumulated records.
+
+Blast radius (corpus 363): 141 PASS (baseline 140) / 200 RUNFAIL /
+22 PARSE; interface1/7/8/9/12/14/15/patch + conspr1-7 rc=0; direct3 rc=0
+(σn −199.99997, node_rhside ±99.99998 — identical to the Professional).
+mohr_coul_direct4 = RUNFAIL blocker: GNU 0.251052 vs target 0.10244 at
+t=100. The GNU reaches the static plastic equilibrium (u3 = cap/4 = 0.25
+with cap ≈ c = 1.0 since the kinematic σn relaxes to ~0 as the blocks
+drift) while the Professional's σn = −1 (the −sigyy reset) is held for
+the whole 100 s run (its stress-dof state persists; u3 relaxes to
+0.10244). Reproducing it requires the reset to act as a PERSISTENT
+pre-stress on the block + interface stress-dof mechanics, not just an
+initial condition — out of scope of the interface family.
