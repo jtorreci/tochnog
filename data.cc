@@ -795,76 +795,102 @@ void data( long int task, double dtime, double time_current )
   reset_value_dof = get_new_int(DATA_ITEM_SIZE);
   reset_value_diagram = get_new_dbl(DATA_ITEM_SIZE);
   db_max_index( CONTROL_RESET_DOF, max_reset, VERSION_NORMAL, GET );
+  // control_reset_interface / control_reset_interface_strain (manual
+  // Professional 6.354/6.355) may exist WITHOUT any control_reset_dof
+  // (interface7 of the corpus). FIX (2026-09-03): the interface history
+  // reset is scanned with db_active_index over the control range (its
+  // db_max_index returns -1 although the records are active - measured
+  // on interface7, record 15 active but max index -1), and it is no
+  // longer nested inside the control_reset_dof gate, so it fires even
+  // when only the interface reset record is present.
   if ( max_reset>=0 ) {
     swit = set_swit(-1,-1,"data");
     if ( swit ) pri( "In routine DATA (control_reset)" );
     db( DOF_LABEL, 0, dof_label, ddum, ldum, VERSION_NORMAL, GET );
+  }
 
-    // control_reset_interface / control_reset_interface_strain (manual
-    // Professional 6.354/6.355): reset the accumulated histories of the
-    // interface elements located in the geometry. _interface resets ALL
-    // interface data (strains + tangential forces); _interface_strain
-    // resets only the normal strain, keeping the tangential force
-    // history (the stresses are "remembered": new strains start at 0 and
-    // new stresses grow from the remembered ones through the stiffness).
-    {
-      long int ireset_i = 0, max_reset_i = 0, iel_i = 0, max_element_i = 0,
-        inol_i = 0, length_el_i = 0, all_in_i = 0, in_geom_i = 0,
-        geometry_i[2], zero_one = 0;
-      double rdum_i = 0.;
-      db_max_index( CONTROL_RESET_INTERFACE, max_reset_i, VERSION_NORMAL, GET );
-      db_max_index( CONTROL_RESET_INTERFACE_STRAIN, max_reset_i, VERSION_NORMAL, GET );
-      if ( max_reset_i>=0 ) {
-        db_max_index( ELEMENT, max_element_i, VERSION_NORMAL, GET );
-        for ( ireset_i=0; ireset_i<=max_reset_i; ireset_i++ ) {
-          long int full_reset = 0, strain_reset = 0;
-          if ( db_active_index( CONTROL_RESET_INTERFACE, ireset_i,
-               VERSION_NORMAL ) ) full_reset = 1;
-          if ( db_active_index( CONTROL_RESET_INTERFACE_STRAIN, ireset_i,
-               VERSION_NORMAL ) ) strain_reset = 1;
-          if ( !full_reset && !strain_reset ) continue;
-          {
-            long int geometry_src[2];
-            if ( full_reset )
-              db( CONTROL_RESET_INTERFACE, ireset_i, geometry_src, ddum,
-                ldum, VERSION_NORMAL, GET );
-            else
-              db( CONTROL_RESET_INTERFACE_STRAIN, ireset_i, geometry_src, ddum,
-                ldum, VERSION_NORMAL, GET );
-            geometry_i[0] = geometry_src[0];
-            geometry_i[1] = geometry_src[1];
+  // control_reset_interface / control_reset_interface_strain: reset the
+  // accumulated histories of the interface elements located in the
+  // geometry. _interface resets ALL interface data (strains + tangential
+  // forces); _interface_strain resets only the normal strain, keeping
+  // the tangential force history (the stresses are "remembered": new
+  // strains start at 0 and new stresses grow from the remembered ones
+  // through the stiffness). Control records fire in the control step of
+  // their own index (same rule as control_reset_dof, manual Professional
+  // 6.350): interface7 resets at index 15 between the control 10/20
+  // phases.
+  {
+    long int ireset_i = 0, iel_i = 0, max_element_i = 0,
+      inol_i = 0, length_el_i = 0, all_in_i = 0, in_geom_i = 0,
+      geometry_i[2], zero_one = 0;
+    double rdum_i = 0.;
+    db_max_index( ELEMENT, max_element_i, VERSION_NORMAL, GET );
+    for ( ireset_i=0; ireset_i<=1000; ireset_i++ ) {
+      long int full_reset = 0, strain_reset = 0;
+      if ( db_active_index( CONTROL_RESET_INTERFACE, ireset_i,
+           VERSION_NORMAL ) ) full_reset = 1;
+      if ( db_active_index( CONTROL_RESET_INTERFACE_STRAIN, ireset_i,
+           VERSION_NORMAL ) ) strain_reset = 1;
+      if ( !full_reset && !strain_reset ) continue;
+      if ( ireset_i!=icontrol ) continue;
+      {
+        long int geometry_src[2];
+        if ( full_reset )
+          db( CONTROL_RESET_INTERFACE, ireset_i, geometry_src, ddum,
+            ldum, VERSION_NORMAL, GET );
+        else
+          db( CONTROL_RESET_INTERFACE_STRAIN, ireset_i, geometry_src, ddum,
+            ldum, VERSION_NORMAL, GET );
+        geometry_i[0] = geometry_src[0];
+        geometry_i[1] = geometry_src[1];
+      }
+      for ( iel_i=0; iel_i<=max_element_i; iel_i++ ) {
+        long int el_i[MNOL+1];
+        if ( !db_active_index( ELEMENT, iel_i, VERSION_NORMAL ) )
+          continue;
+        db( ELEMENT, iel_i, el_i, ddum, length_el_i, VERSION_NORMAL, GET );
+        all_in_i = 1;
+        for ( inol_i=1; inol_i<length_el_i; inol_i++ ) {
+          geometry( el_i[inol_i], ddum, geometry_i, in_geom_i, rdum_i,
+            ddum, rdum_i, ddum, NODE_START_REFINED,
+            CONTROL_RESET_INTERFACE, VERSION_NORMAL );
+          if ( !in_geom_i ) all_in_i = 0;
+        }
+        if ( all_in_i ) {
+          zero_one = 0;
+          // per-integration-point histories (one value per facing pair,
+          // ns1 = nnol/2); zero ALL slots in BOTH versions (FIX
+          // 2026-09-03: the old PUT passed a leftover length and a
+          // single value, so the reset never cleared the whole record
+          // and the accumulated strain survived the reset).
+          if ( strain_reset || full_reset ) {
+            long int ns1_r = ( length_el_i-1 )/2;
+            double zero_arr[4];
+            for ( inol_i=0; inol_i<ns1_r && inol_i<4; inol_i++ )
+              zero_arr[inol_i] = 0.;
+            db( ELEMENT_INTERFACE_STRAIN_NORMAL, iel_i, idum, zero_arr,
+              ns1_r, VERSION_NORMAL, PUT );
+            db( ELEMENT_INTERFACE_STRAIN_NORMAL, iel_i, idum, zero_arr,
+              ns1_r, VERSION_NEW, PUT );
           }
-          for ( iel_i=0; iel_i<=max_element_i; iel_i++ ) {
-            long int el_i[MNOL+1];
-            if ( !db_active_index( ELEMENT, iel_i, VERSION_NORMAL ) )
-              continue;
-            db( ELEMENT, iel_i, el_i, ddum, length_el_i, VERSION_NORMAL, GET );
-            all_in_i = 1;
-            for ( inol_i=1; inol_i<length_el_i; inol_i++ ) {
-              geometry( el_i[inol_i], ddum, geometry_i, in_geom_i, rdum_i,
-                ddum, rdum_i, ddum, NODE_START_REFINED,
-                CONTROL_RESET_INTERFACE, VERSION_NORMAL );
-              if ( !in_geom_i ) all_in_i = 0;
-            }
-            if ( all_in_i ) {
-              zero_one = 0;
-              if ( strain_reset || full_reset ) {
-                double zero_dbl = 0.;
-                db( ELEMENT_INTERFACE_STRAIN_NORMAL, iel_i, idum, &zero_dbl,
-                  ldum, VERSION_NORMAL, PUT );
-              }
-              if ( full_reset ) {
-                double zero_dbl = 0.;
-                db( ELEMENT_INTERFACE_FORCE_TANG, iel_i, idum, &zero_dbl,
-                  ldum, VERSION_NORMAL, PUT );
-                db( ELEMENT_INTERFACE_FORCE_TANG2, iel_i, idum, &zero_dbl,
-                  ldum, VERSION_NORMAL, PUT );
-              }
-            }
+          if ( full_reset ) {
+            long int ns1_r = ( length_el_i-1 )/2;
+            double zero_arr[4];
+            for ( inol_i=0; inol_i<ns1_r && inol_i<4; inol_i++ )
+              zero_arr[inol_i] = 0.;
+            db( ELEMENT_INTERFACE_FORCE_TANG, iel_i, idum, zero_arr,
+              ns1_r, VERSION_NORMAL, PUT );
+            db( ELEMENT_INTERFACE_FORCE_TANG, iel_i, idum, zero_arr,
+              ns1_r, VERSION_NEW, PUT );
+            db( ELEMENT_INTERFACE_FORCE_TANG2, iel_i, idum, zero_arr,
+              ns1_r, VERSION_NORMAL, PUT );
+            db( ELEMENT_INTERFACE_FORCE_TANG2, iel_i, idum, zero_arr,
+              ns1_r, VERSION_NEW, PUT );
           }
         }
       }
     }
+  }
 
     long int *reset_dof_node_filter = NULL, reset_dof_length = 0, idof_list = 0;
     for ( ireset=0; ireset<=max_reset; ireset++ ) {
@@ -1018,6 +1044,100 @@ void data( long int task, double dtime, double time_current )
               else                            node_dof[indx] = reset_value_constant;
             }
           }
+          // CONVERGENCE (2026-09-03, mohr_coul_direct4): a reset of a
+          // normal stress dof (-sigxx/-sigyy/-sigzz) also initialises the
+          // accumulated normal strain of the interface elements whose
+          // normal aligns with the reset axis: sigma_n := reset_value ->
+          // ELEMENT_INTERFACE_STRAIN_NORMAL := reset_value/kn. Verified
+          // against the Professional .dbs: mohr_coul_direct4 resets
+          // -sigyy to -1 and the horizontal interface carries
+          // sigma_n = -1 (eps_n = -1e-6 with kn = 1e6) through the whole
+          // run, so the yield limit sees c + |Fn|*tan(phi) = 1.20271
+          // instead of the unconfined cohesion c.
+          if ( reset_method!=-ADD && reset_method!=-MULTIPLY ) {
+            long int reset_axis = -1;
+            const char *reset_name = db_name( labs( idof_reset ) );
+            if ( reset_name && !strcmp( reset_name, "sigxx" ) ) reset_axis = 0;
+            else if ( reset_name && !strcmp( reset_name, "sigyy" ) ) reset_axis = 1;
+            else if ( reset_name && !strcmp( reset_name, "sigzz" ) ) reset_axis = 2;
+            if ( reset_axis>=0 && reset_axis<ndim ) {
+              long int max_element_r = 0, iel_r = 0, length_el_r = 0,
+                element_group_r = 0, inol_r = 0;
+              double ddum_r[1], kn_r = 0., normal_r[MDIM];
+              db_max_index( ELEMENT, max_element_r, VERSION_NORMAL, GET );
+              for ( iel_r=0; iel_r<=max_element_r; iel_r++ ) {
+                if ( !db_active_index( ELEMENT, iel_r, VERSION_NORMAL ) ) continue;
+                element_group_r = 0;
+                db( ELEMENT_GROUP, iel_r, &element_group_r, ddum_r, ldum,
+                  VERSION_NORMAL, GET_IF_EXISTS );
+                if ( !db_active_index( GROUP_INTERFACE, element_group_r,
+                    VERSION_NORMAL ) ) continue;
+                long int el_r[MNOL+1];
+                db( ELEMENT, iel_r, el_r, ddum_r, length_el_r, VERSION_NORMAL, GET );
+                if ( length_el_r<3 ) continue;
+                // normal of the interface plane from the reference
+                // geometry (NODE_START_REFINED, total_linear frame of
+                // interface_element()): 2D normal perpendicular to the
+                // side-1 edge; 3D normal = cross product of the side-1
+                // edges.
+                {
+                  double *ca = db_dbl( NODE_START_REFINED, el_r[1], VERSION_NORMAL );
+                  double *cb = db_dbl( NODE_START_REFINED, el_r[2], VERSION_NORMAL );
+                  if ( ndim==2 ) {
+                    normal_r[0] = -( cb[1] - ca[1] );
+                    normal_r[1] =    cb[0] - ca[0];
+                  }
+                  else if ( length_el_r>=4 ) {
+                    double *cc = db_dbl( NODE_START_REFINED, el_r[3], VERSION_NORMAL );
+                    double e1[MDIM], e2[MDIM];
+                    for ( long int d=0; d<3; d++ ) {
+                      e1[d] = cb[d] - ca[d];
+                      e2[d] = cc[d] - ca[d];
+                    }
+                    normal_r[0] = e1[1]*e2[2] - e1[2]*e2[1];
+                    normal_r[1] = e1[2]*e2[0] - e1[0]*e2[2];
+                    normal_r[2] = e1[0]*e2[1] - e1[1]*e2[0];
+                  }
+                  else continue;
+                }
+                {
+                  double dot = 0.;
+                  for ( long int d=0; d<ndim; d++ ) dot += normal_r[d]*normal_r[d];
+                  if ( dot<1.e-24 ) continue;
+                  dot = normal_r[reset_axis]*normal_r[reset_axis]/dot;
+                  if ( dot<0.99 ) continue;
+                }
+                {
+                  double ddum3_r[3];
+                  array_set( ddum3_r, 0., 3 );
+                  db( GROUP_INTERFACE_MATERI_ELASTI_STIFFNESS, element_group_r,
+                    idum, ddum3_r, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+                  kn_r = ddum3_r[0];
+                }
+                if ( kn_r<=0. ) continue;
+                // all nodes of the element inside the reset filter (when
+                // a geometry/node/element_group filter is active)
+                if ( reset_dof_node_filter ) {
+                  long int all_in_r = 1;
+                  for ( inol_r=1; inol_r<length_el_r; inol_r++ ) {
+                    if ( !reset_dof_node_filter[el_r[inol_r]] ) all_in_r = 0;
+                  }
+                  if ( !all_in_r ) continue;
+                }
+                {
+                  long int ns1_r = ( length_el_r-1 )/2;
+                  double strain_r[4];
+                  for ( inol_r=0; inol_r<ns1_r; inol_r++ )
+                    strain_r[inol_r] = reset_value_constant / kn_r;
+                  ldum = ns1_r;
+                  db( ELEMENT_INTERFACE_STRAIN_NORMAL, iel_r, idum, strain_r,
+                    ldum, VERSION_NORMAL, PUT );
+                  db( ELEMENT_INTERFACE_STRAIN_NORMAL, iel_r, idum, strain_r,
+                    ldum, VERSION_NEW, PUT );
+                }
+              }
+            }
+          }
         }
         else if ( db_active_index( CONTROL_RESET_VALUE_DOF, ireset, VERSION_NORMAL ) ) {
           db( CONTROL_RESET_VALUE_DOF, ireset, &idof_value, ddum, ldum,
@@ -1166,7 +1286,6 @@ void data( long int task, double dtime, double time_current )
       delete[] reset_dof;
       delete[] reset_value_dof;
       delete[] reset_value_diagram;
-    }
 
   delete[] dof_label;
   delete[] integer_range;

@@ -43,13 +43,23 @@
 //   - Mohr-Coulomb (Fase 3, RF-1): cumulative. The friction limit applies
 //       to the TOTAL tangential force F_t (history ELEMENT_INTERFACE_FORCE_TANG):
 //       group_interface_materi_plasti_mohr_coul_direct phi c phi_flow
-//       trial = F_t,old + kt*2*du_tang, clamped to +/- max_fric with
-//       max_fric = max(c + Fn*tan(phi), 0), Fn = kn*strain_normal (total).
-//       Active by the PRESENCE of the record (phi=0,c=0 -> max_fric=0 ->
-//       free sliding). The assembled rhs increment is F_t - F_t,old and the
-//       tangential stiffness is 0 while plastic.
+//       trial = F_t,old + kt*du_tang (the history stores the ELASTIC trial
+//       kt*gamma_total, which keeps accumulating across plastic steps),
+//       clamped to +/- max_fric with
+//       max_fric = |c + Fn*tan(phi)|, Fn = -kn*strain_normal (POSITIVE
+//       under compression: verified against the Professional plateau of
+//       mohr_coul_direct4: c + |Fn|*tan(phi) = 1.20271). Active by the
+//       PRESENCE of the record (phi=0,c=0 -> max_fric=0 -> free sliding).
+//       The assembled rhs carries the FULL accumulated forces (spring.cc
+//       pattern: node_rhside = w*sigma with sigma = kn*eps_acc for the
+//       normal and sigma = clamped trial for the shear - direct3/4 and
+//       interface9 verified against the Professional .dbs).
 //   - dilatancy (Fase 3, RF-4): when the tangential force plastifies,
-//       strain_normal += -|du_tang|*tan(phi_flow) (plastic normal opening).
+//       strain_normal += -dgamma_inc*tan(phi_flow) (plastic normal
+//       opening), where dgamma_inc is the plastic slip INCREMENT of the
+//       step (the accumulated-trial return multiplier minus the slip
+//       already accumulated in the past - otherwise the dilatancy
+//       ratchet double-counts, direct3 sigma_n -250 vs -200).
 //   - residual stiffness (Fase 3):
 //       group_interface_materi_residual_stiffness factor
 //       (fraction of the original stiffness used in opened interfaces)
@@ -482,7 +492,6 @@ void interface_element( long int element, long int name,
       array_inproduct( &du_ip[inol*MDIM], tangent2, ndim ) : 0.;
     double stiff_normal_i = kn;
     if ( strain_eff_ip[inol] <= gap ) stiff_normal_i = kn * residual_factor;
-    double force_norm_i = stiff_normal_i * du_norm_i;
     // tension limit (FIX 2, RF-2): opens in traction when the TOTAL
     // accumulated normal force |Fn_total| exceeds the limit, and only if
     // it was still closed.
@@ -490,40 +499,32 @@ void interface_element( long int element, long int name,
     if ( tension_limit>0. && strain_normal_ip[inol]<0. &&
         fabs(fn_total_i)>tension_limit && stiff_normal_i==kn ) {
       stiff_normal_i = kn * residual_factor;
-      force_norm_i = ( du_norm_i>=0. ) ? tension_limit : -tension_limit;
     }
-    stress_normal_ip[inol] = force_norm_i;
-    stiff_normal_ip[inol]  = stiff_normal_i;
+    stiff_normal_ip[inol] = stiff_normal_i;
 
     // cumulative Mohr-Coulomb (FIX 1, RF-1): friction limit on the TOTAL
     // tangential force. CONVERGENCE (2026-08-30): F_t = kt*du_tang (not
     // kt*2*du_tang), and the plastic return is IMPLICIT with dilatancy
     // (see the block comments above; verified EXACT against interface15).
-    if ( element==2 && f_t_old_ip[inol]==0. ) {
-    }
     // CONVERGENCE (interface_patch): the Professional's trial is the
     // ACCUMULATED tangential strain times the stiffness (kt*gamma_total),
     // NOT the last-step increment f_old + kt*du_paso. With the incremental
     // trial the plastic slip exhausts the relative displacement and the
     // friction force stalls below the cohesion (f_t=-5.55 vs target -10).
-    // gamma_acum = 2*strain_shear_acum = sum(du_tang) over the steps;
-    // f_t_old IS kt*gamma_acum (the stored history is kt*du_tang_acum for
-    // the elastic case), so the accumulated trial is f_old + kt*du_tang_i
-    // ONLY when the interface never plastified; once plastic, f_old was
-    // clamped and the accumulation must continue from the elastic trial:
-    // we store the elastic trial in f_t_old when NOT plastic and keep the
-    // clamped value when plastic; the trial for the check uses the total
-    // gamma: gamma_total = f_t_old/kt1 + du_tang_i (elastic) or stays
-    // clamped (plastic with stiff_tang=0).
-    // CONVERGENCE (interface_patch, 2026-08-30): the Professional
-    // accumulates the ELASTIC trial (kt * gamma_total = kt * sum(du_tang)
-    // over all steps) and clamps the RESULTING force to the cohesion
-    // limit. The old model clamped f_old itself, so once plastic the
-    // relative displacement was exhausted and the friction force stalled
-    // below the cohesion (f_t = -5.55 vs target -10). Here the history
-    // ELEMENT_INTERFACE_FORCE_TANG holds the ELASTIC trial (grows every
-    // step, even when plastic) and f_t = clamp(trial). The RHS increment
-    // is f_t - clamp(f_old) (zero while sliding on the limit).
+    // The stored history ELEMENT_INTERFACE_FORCE_TANG holds the ELASTIC
+    // trial (grows every step, even when plastic: it is kt*gamma_total
+    // with gamma_total = sum(du_tang) over all steps) and the resulting
+    // force is f_t = clamp(trial) to the yield limit.
+    // CONVERGENCE (2026-09-03, mohr_coul_direct3/4): the interface
+    // assembles the FULL accumulated forces into the rhs (spring.cc
+    // pattern, like every other element), NOT the step increment. With
+    // an incremental rhs the equilibrium of a multi-step run only sees
+    // the last increment: the Professional's node_rhside = w*kn*eps_acc
+    // (direct3: -100 per node = 0.5*(-200)) while the old code reported
+    // the last-step increment (0.5*(-100) = -50). The incremental rhs
+    // also made the interface creep one increment per step under a
+    // constant load (interface9: 10 equal steps vs the Professional's
+    // single-step static equilibrium).
     double trial_el_i  = f_t_old_ip[inol]  + kt1 * du_tang_i;
     double trial_el2_i = f_t2_old_ip[inol] + kt2 * du_tang2_i;
     long int plast_i = 0;
@@ -532,7 +533,12 @@ void interface_element( long int element, long int name,
     if ( mc_active ) {
       double strain_eff_mc_i = strain_eff_ip[inol];
       double trial_mag = sqrt( trial_el_i*trial_el_i + trial_el2_i*trial_el2_i );
-      double max_fric_abs = fabs( c + kn * strain_eff_mc_i * tan( phi ) );
+      // Normal force of the yield limit: the Professional uses the normal
+      // force POSITIVE under compression (direct4 plateau 1.20271 =
+      // c + |kn*eps|*tan(phi) with c=1, eps=-1e-6, phi=0.2). The stored
+      // accumulated strain is NEGATIVE under compression, hence the
+      // minus sign: max_fric = |c - kn*eps*tan(phi)| = |c + Fn*tan(phi)|.
+      double max_fric_abs = fabs( c - kn * strain_eff_mc_i * tan( phi ) );
       if ( trial_mag > max_fric_abs && trial_mag>0. ) {
         double dgamma = ( trial_mag - max_fric_abs ) /
           ( kt1 + kn * tan( phi ) * tan( phi_flow ) );
@@ -542,14 +548,26 @@ void interface_element( long int element, long int name,
         f_t2_clamped_i = trial_el2_i * scale;
         plast_i = 1;
         // dilatancy: plastic slip OPENS the interface (reduces the
-        // accumulated compressive strain).
-        double opening = -dgamma * tan( phi_flow );
-        strain_normal_ip[inol] += opening;
-        stress_normal_ip[inol] += kn * opening;
+        // accumulated compressive strain). The return multiplier dgamma
+        // is the TOTAL plastic slip (the accumulated-trial return maps
+        // the whole history back to the surface); the opening of THIS
+        // step must use only the INCREMENTAL plastic slip, otherwise the
+        // slip already accumulated in the past is re-counted every step
+        // (direct3 sigma_n = -200 = kn*(-1e-6 - 1e-6*tan(pi/4)) for a
+        // total slip of 1e-6, NOT -250). The past plastic slip follows
+        // from the stored elastic trial: gamma_pl_old =
+        // (|trial_old| - |clamp(trial_old)|)/kt.
+        double f_el_mag_old = sqrt( f_t_old_ip[inol]*f_t_old_ip[inol] +
+                                    f_t2_old_ip[inol]*f_t2_old_ip[inol] );
+        double f_old_surf_mag = f_el_mag_old;
+        if ( f_old_surf_mag > max_fric_abs ) f_old_surf_mag = max_fric_abs;
+        double gamma_pl_old = ( kt1>0. ) ? ( f_el_mag_old - f_old_surf_mag )/kt1 : 0.;
+        double dgamma_inc = dgamma - gamma_pl_old;
+        if ( dgamma_inc<0. ) dgamma_inc = 0.;
+        strain_normal_ip[inol] += -dgamma_inc * tan( phi_flow );
       }
     }
-    // f_t: the clamped force (record and next-step history base); the
-    // RHS increment below uses f_t - clamp(f_old)
+    // f_t: the clamped force of the current state (record + assembly)
     f_t_ip[inol]  = f_t_clamped_i;
     f_t2_ip[inol] = f_t2_clamped_i;
     // the stored history is the ELASTIC trial (keeps accumulating)
@@ -559,35 +577,21 @@ void interface_element( long int element, long int name,
     plastified_ip[inol] = plast_i;
     stiff_tang_ip[inol]  = ( mc_active && plast_i ) ? 0. : kt1;
     stiff_tang2_ip[inol] = ( mc_active && plast_i ) ? 0. : kt2;
-    // the RHS carries the INCREMENT f_t - clamp(f_old): kt*du_tang when
-    // elastic, ~0 while sliding on the yield surface.
-    double f_old_clamped = f_t_old_ip[inol];
-    if ( mc_active ) {
-      double f_old_mag = fabs( f_old_clamped );
-      double max_fric_old = fabs( c + kn * strain_eff_ip[inol] * tan( phi ) );
-      if ( f_old_mag > max_fric_old ) f_old_clamped = ( f_old_clamped>=0. ) ? max_fric_old : -max_fric_old;
-    }
-    rhs_shear_ip[inol]  = f_t_ip[inol]  - f_old_clamped;
-    {
-      double f_old2_clamped = f_t2_old_ip[inol];
-      if ( mc_active ) {
-        double f_old2_mag = fabs( f_old2_clamped );
-        double max_fric_old2 = fabs( c + kn * strain_eff_ip[inol] * tan( phi ) );
-        if ( f_old2_mag > max_fric_old2 ) f_old2_clamped = ( f_old2_clamped>=0. ) ? max_fric_old2 : -max_fric_old2;
-      }
-      rhs_shear2_ip[inol] = f_t2_ip[inol] - f_old2_clamped;
-    }
-    plastified_ip[inol] = plast_i;
-    stiff_tang_ip[inol]  = ( mc_active && plast_i ) ? 0. : kt1;
-    stiff_tang2_ip[inol] = ( mc_active && plast_i ) ? 0. : kt2;
-    // RECORD semantics (verified against Professional .dbs):
-    //  - WITHOUT Mohr-Coulomb: stress,shear = kt*du_tang of the LAST
-    //    step (incremental: interface9 -0.159, interface14 5e3);
-    //  - WITH Mohr-Coulomb: stress,shear = the TOTAL accumulated
-    //    friction force clamped to the yield limit (interface_patch
-    //    -10, interface15 -1730 = the single-step trial).
-    stress_shear_ip[inol]  = ( mc_active ) ? f_t_ip[inol] : kt1 * du_tang_i;
-    stress_shear2_ip[inol] = ( mc_active ) ? f_t2_ip[inol] : kt2 * du_tang2_i;
+    // FULL accumulated normal force (spring.cc pattern): stress,normal =
+    // kn * strain,normal (accumulated incl. this step's du and the
+    // dilatancy opening). stress_normal_ip is set AFTER the plastic block
+    // so the record/assembly carry the post-dilatancy value.
+    stress_normal_ip[inol] = stiff_normal_i * strain_normal_ip[inol];
+    // stress,shear = the accumulated tangential force clamped to the
+    // yield limit (WITH Mohr-Coulomb) or the accumulated elastic trial
+    // kt*gamma_total (WITHOUT: elastic, single- and multi-step alike -
+    // interface9 -0.159 = kt*du_total, interface14 5e3 = kt*1).
+    stress_shear_ip[inol]  = f_t_ip[inol];
+    stress_shear2_ip[inol] = f_t2_ip[inol];
+    // the assembled rhs carries the FULL current forces (see the block
+    // comment above); the names rhs_shear_* are kept for the assembly.
+    rhs_shear_ip[inol]  = f_t_ip[inol];
+    rhs_shear2_ip[inol] = f_t2_ip[inol];
   }
 
   // mean over the pairs (for the swit debug and legacy scalar view)
