@@ -956,6 +956,8 @@ enum {
   GROUP_VOLUME_FACTOR,
   GROUP_WAVE_SPEED_OF_SOUND,
   GROWTH,
+  HEX18,
+  HEX20,
   HEX27,
   HEX64,
   HEX8,
@@ -1930,6 +1932,7 @@ void      mesh_copy( double move_coords[] );
 void      mesh_rotate_2d( double angle_deg );
 void      mesh_rotate_3d( long int nrot );
 void      mesh_convert_quad8( void );
+void      mesh_convert_hex20( void );
 void      mesh_extrude( double z_layer[], long int n_layer,
             long int quad9_layers );
 void      mesh_delete_keep( long int icontrol );

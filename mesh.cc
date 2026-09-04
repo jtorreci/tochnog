@@ -576,6 +576,205 @@ void mesh_convert_quad8( void )
   if ( swit ) pri( "Out function MESH_CONVERT_QUAD8" );
 }
 
+// mesh_convert_hex20 - auto-convert the Professional 20-node serendipity
+// hex20 volume elements to the GNU 27-node Lagrange hex27.
+//
+// The GNU has no real hex20 element routine: the Professional handles
+// -hex20 natively (its .dbs keeps the 20-node records, verified with the
+// 25-10-2023 user-supplied binary on the corpus hex20.dat), while the GNU
+// formulation is the complete 27-node Lagrange hex. Like the quad8 lot,
+// the auto-conversion elevates the serendipity input to the richer
+// Lagrange element (7 extra nodes: 6 face centres + the body centre).
+//
+// The slot permutation below is NOT guessed: the Professional itself
+// auto-converts the mesh on its interface_quad8_hex20 corpus file and the
+// resulting .dbs shows the SAME hex27 slot layout as the GNU tensor order
+// (base plane quad9 tensor [BL,BM,BR,LM,C,RM,TL,TM,TR], mid plane, top
+// plane - mesh_extrude/area.cc border_nodes_hex27 conventions). For the
+// input hex20 record of that test
+//
+//   element 1 -hex20 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20
+//     (corners: base BL,BR,TL,TR = 1,2,3,4 ; top BL,BR,TL,TR = 5,6,7,8
+//      base mid-edges BM,LM,RM,TM = 9,10,11,12
+//      top  mid-edges BM,LM,RM,TM = 13,14,15,16
+//      verticals at (x0,y0),(x1,y0),(x0,y1),(x1,y1) = 17,18,19,20)
+//
+// the Professional .dbs writes
+//
+//   element 1 -hex27 1 9 2 10 56 11 3 12 4  17 57 18 60 61 59 19 58 20
+//                    5 13 6 14 55 15 7 16 8
+//
+// (nodes 55-61 = the NEW face/body centres of that run), which is exactly
+// the permutation implemented here:
+//
+//   base  plane (slots 1..9):  BL,BM,BR,LM,Cf_base,RM,TL,TM,TR
+//   mid   plane (slots 10..18): v(x0,y0), Cf_y0, v(x1,y0), Cf_x0, Cbody,
+//                               Cf_x1, v(x0,y1), Cf_y1, v(x1,y1)
+//   top   plane (slots 19..27): BL,BM,BR,LM,Cf_top,RM,TL,TM,TR
+//
+// Face centres = average of the 4 face corners, body centre = average of
+// the 8 corners. The face centres of faces shared between neighbouring
+// hex20 elements are DEDUPLICATED BY COORDINATES (EPS_COORD): two stacked
+// hex20 (hex20.dat of the corpus: shared face z=1) must end up with ONE
+// centre node on the shared face, otherwise the mesh tears apart.
+//
+// The hook runs at EVERY step_start (same rationale as mesh_convert_quad8:
+// a -hex20 is not a native element, so an intermediate control step below
+// the timestep would evaluate the raw hex20), BEFORE extrude() and BEFORE
+// interface_convert() (the 3D interface split of the quad8 face must see
+// the hex27 bulk with the shared face centre node - interface_quad8_hex20
+// family). Idempotent: converted elements are -hex27 and skipped on later
+// steps.
+void mesh_convert_hex20( void )
+
+{
+  long int element=0, max_element=0, max_node=0, length=0, ldum=0,
+    swit=0, i=0, inol=0, nconv=0, jnod=0, d=0, idum[1];
+  double ddum[1], coord[MDIM], centre[MDIM];
+  long int el[1+MNOL], h27[1+27];
+
+  swit = set_swit(-1,-1,"mesh_convert_hex20");
+  if ( swit ) pri( "In routine MESH_CONVERT_HEX20" );
+
+  if ( ndim!=3 ) return;
+  db_highest_index( ELEMENT, max_element, VERSION_NORMAL );
+  db_highest_index( NODE, max_node, VERSION_NORMAL );
+  if ( max_element<0 ) return;
+
+  for ( element=0; element<=max_element; element++ ) {
+    if ( !db_active_index( ELEMENT, element, VERSION_NORMAL ) ) continue;
+    db( ELEMENT, element, el, ddum, length, VERSION_NORMAL, GET );
+    if ( el[0]!=-HEX20 ) continue;
+    if ( length!=1+20 ) db_error( ELEMENT, element );
+
+    // corners of the 6 faces (into el[1..8], 1-based) used for the new
+    // centre nodes: base (1,2,3,4), top (5,6,7,8), y0 (1,2,5,6),
+    // y1 (3,4,7,8), x0 (1,3,5,7), x1 (2,4,6,8); body = all 8.
+    // h27 slot layout (1-based, GNU tensor hex27):
+    //   base plane  quad9 tensor: BL BM BR LM C RM TL TM TR
+    //   mid plane:  v00 Cf_y0 v10 Cf_x0 Cbody Cf_x1 v01 Cf_y1 v11
+    //   top plane   quad9 tensor: BL BM BR LM C RM TL TM TR
+    h27[1]  = el[1];   // BL base
+    h27[2]  = el[9];   // BM base
+    h27[3]  = el[2];   // BR base
+    h27[4]  = el[10];  // LM base
+    h27[5]  = 0;       // Cf base (new)
+    h27[6]  = el[11];  // RM base
+    h27[7]  = el[3];   // TL base
+    h27[8]  = el[12];  // TM base
+    h27[9]  = el[4];   // TR base
+    h27[10] = el[17];  // vertical (x0,y0)
+    h27[11] = 0;       // Cf y0 (new)
+    h27[12] = el[18];  // vertical (x1,y0)
+    h27[13] = 0;       // Cf x0 (new)
+    h27[14] = 0;       // Cbody (new)
+    h27[15] = 0;       // Cf x1 (new)
+    h27[16] = el[19];  // vertical (x0,y1)
+    h27[17] = 0;       // Cf y1 (new)
+    h27[18] = el[20];  // vertical (x1,y1)
+    h27[19] = el[5];   // BL top
+    h27[20] = el[13];  // BM top
+    h27[21] = el[6];   // BR top
+    h27[22] = el[14];  // LM top
+    h27[23] = 0;       // Cf top (new)
+    h27[24] = el[15];  // RM top
+    h27[25] = el[7];   // TL top
+    h27[26] = el[16];  // TM top
+    h27[27] = el[8];   // TR top
+
+    // the 7 new node positions: (slot, 4 face corners into el[], all 8)
+    long int nnew = 0, newslot[7], corner_of[7][4];
+    for ( int k=0; k<7; k++ ) for ( int c=0; c<4; c++ ) corner_of[k][c] = 0;
+    // base face centre (slot 5)
+    newslot[nnew]=5;   corner_of[nnew][0]=1; corner_of[nnew][1]=2;
+    corner_of[nnew][2]=3; corner_of[nnew][3]=4; nnew++;
+    // y0 face centre (slot 11)
+    newslot[nnew]=11;  corner_of[nnew][0]=1; corner_of[nnew][1]=2;
+    corner_of[nnew][2]=5; corner_of[nnew][3]=6; nnew++;
+    // x0 face centre (slot 13)
+    newslot[nnew]=13;  corner_of[nnew][0]=1; corner_of[nnew][1]=3;
+    corner_of[nnew][2]=5; corner_of[nnew][3]=7; nnew++;
+    // body centre (slot 14): 8 corners = corners of faces 1 and 5
+    newslot[nnew]=14;  nnew++;
+    // x1 face centre (slot 15)
+    newslot[nnew]=15;  corner_of[nnew][0]=2; corner_of[nnew][1]=4;
+    corner_of[nnew][2]=6; corner_of[nnew][3]=8; nnew++;
+    // y1 face centre (slot 17)
+    newslot[nnew]=17;  corner_of[nnew][0]=3; corner_of[nnew][1]=4;
+    corner_of[nnew][2]=7; corner_of[nnew][3]=8; nnew++;
+    // top face centre (slot 23)
+    newslot[nnew]=23;  corner_of[nnew][0]=5; corner_of[nnew][1]=6;
+    corner_of[nnew][2]=7; corner_of[nnew][3]=8; nnew++;
+
+    for ( int k=0; k<nnew; k++ ) {
+      array_set( centre, 0., MDIM );
+      long int ncorner = ( newslot[k]==14 ) ? 8 : 4;
+      long int slot_c[8];
+      if ( newslot[k]==14 ) {
+        for ( int c=0; c<8; c++ ) slot_c[c] = 1+c;
+      }
+      else {
+        for ( int c=0; c<4; c++ ) slot_c[c] = corner_of[k][c];
+      }
+      for ( int c=0; c<ncorner; c++ ) {
+        db( NODE, el[slot_c[c]], idum, coord, ndim, VERSION_NORMAL, GET );
+        for ( i=0; i<ndim; i++ ) centre[i] += coord[i];
+      }
+      for ( i=0; i<ndim; i++ ) centre[i] /= (double)ncorner;
+
+      // deduplicate by coordinates: a face shared with a neighbouring
+      // hex20 (or an already existing node of the mesh) must reuse that
+      // node - two coincident centres would tear the mesh apart. Search
+      // every active node seen so far (pre-existing + created by this
+      // conversion on earlier elements).
+      long int found = -1;
+      for ( jnod=0; jnod<=max_node; jnod++ ) {
+        if ( !db_active_index( NODE, jnod, VERSION_NORMAL ) ) continue;
+        db( NODE, jnod, idum, coord, ndim, VERSION_NORMAL, GET );
+        long int ok = 1;
+        for ( d=0; d<ndim && ok; d++ )
+          if ( fabs( coord[d]-centre[d] )>1.e-10 ) ok = 0;
+        if ( ok ) { found = jnod; break; }
+      }
+      if ( found<0 ) {
+        max_node++;
+        found = max_node;
+        db( NODE, found, idum, centre, ndim, VERSION_NORMAL, PUT );
+        db( NODE_START_REFINED, found, idum, centre, ndim,
+          VERSION_NORMAL, PUT );
+        // the new node carries the full dof state of the corners (zeros
+        // at the first step; same pattern as mesh_convert_quad8 /
+        // interface_convert / extrude)
+        for ( int idat=0; idat<MDAT; idat++ ) {
+          if ( idat!=NODE && idat!=NODE_START_REFINED &&
+               db_data_class(idat)==NODE &&
+               db_active_index( idat, el[1], VERSION_NORMAL ) ) {
+            long int ndata_len = db_len( idat, el[1], VERSION_NORMAL );
+            if ( db_type(idat)==DOUBLE_PRECISION ) {
+              double *dold = db_dbl( idat, el[1], VERSION_NORMAL );
+              db( idat, found, idum, dold, ndata_len, VERSION_NORMAL, PUT );
+            }
+            else {
+              long int *iold = db_int( idat, el[1], VERSION_NORMAL );
+              db( idat, found, iold, ddum, ndata_len, VERSION_NORMAL, PUT );
+            }
+          }
+        }
+      }
+      h27[newslot[k]] = found;
+    }
+
+    // rewrite the element: -hex20 -> -hex27 in the GNU tensor ordering
+    h27[0] = -HEX27;
+    length = 1+27;
+    db( ELEMENT, element, h27, ddum, length, VERSION_NORMAL, PUT );
+    nconv++;
+  }
+  if ( nconv>0 ) mesh_has_changed( VERSION_NORMAL );
+
+  if ( swit ) pri( "Out function MESH_CONVERT_HEX20" );
+}
+
 void mesh_extrude( double z_layer[], long int n_layer, long int quad9_layers )
 
 {

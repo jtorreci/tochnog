@@ -691,7 +691,13 @@ void step_start( long int task, long int options_solver[], double dtime, double 
   // mesh must become quad9 first so the quadratic extrusion can lift it
   // to hex27) and before interface_convert (the interface split must
   // see the quad9 bulk).
+  // mesh_convert_hex20 (3D serendipity hex20 -> Lagrange hex27, 7 new
+  // nodes: 6 face centres + body centre, deduplicated by coordinates):
+  // same every-step rationale and ordering - the 3D interface split of
+  // the quad8 face (interface_quad8_hex20 family) must see the hex27
+  // bulk with the shared face centre node already in place.
   mesh_convert_quad8();
+  mesh_convert_hex20();
   if ( task==YES ) extrude();
   if ( task==YES ) interface_convert( icontrol );
 

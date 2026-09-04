@@ -5035,6 +5035,10 @@ void db_initialize( long int dof_type[], long int dof_label[] )
 
   strcpy(name[GROWTH],"growth");
 
+  strcpy(name[HEX18],"hex18");
+
+  strcpy(name[HEX20],"hex20");
+
   strcpy(name[HEX8],"hex8");
 
   strcpy(name[HEX27],"hex27");
