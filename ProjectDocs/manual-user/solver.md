@@ -20,6 +20,12 @@ Valid types are the same as for `control_solver`:
 When using the bicg solver, consider also setting
 `solver_matrix_symmetric -yes` to speed up the solve.
 
+`-matrix_superlu` runs the direct sparse SuperLU LU factorization
+(2026-09-04: the route was segfaulting; fixed in `c2cbaf7`). It is the
+direct-solver alternative to `-matrix_pardiso` (PARDISO itself is not
+compiled in the GNU - that type falls back to the iterative Bi-CG with
+an automatic retry with the direct band LU when the Bi-CG fails).
+
 ## The global solver_* family (manual Professional 6.1048-6.1056)
 
 These plain records are the global counterparts of the per-control
