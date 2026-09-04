@@ -54,6 +54,59 @@ extern "C"
 
 double *solve_solution;
 
+// Sparse assembly helper for the column (SuperLU) / row (PETSc) lists
+// used by the direct sparse solvers. inz[list] and solve_A[list] are
+// parallel int/double arrays with nnz[list] used entries and
+// length_inz[list] allocated capacity. If the row (col) index is already
+// present the value is accumulated into its slot; otherwise a new slot is
+// appended (growing the arrays when full) and the value stored there.
+// Returns the slot index used for the value.
+// (2026-09-04: the previous code searched with array_member() casting the
+// int buffer to long int* - a long-stride scan over an int array. For
+// columns with more than two entries the scan compared composite
+// int-pairs against the searched index, so repeated (row,col) pairs were
+// NOT merged: duplicate CSC entries, values accumulated into wrong slots
+// and missing diagonals resulted, and SuperLU (colamd) crashed on the
+// malformed structure. This helper scans with the correct int stride.)
+static long int sparse_list_add( int **inz, double **solve_A,
+  int *nnz, int *length_inz, long int list, int member,
+  double value )
+
+{
+  long int i=0, index=-1;
+
+  for ( i=0; i<nnz[list]; i++ ) {
+    if ( inz[list][i]==member ) {
+      index = i;
+      break;
+    }
+  }
+  if ( index<0 ) {
+    if ( nnz[list]+1>length_inz[list] ) {
+      int *int_ptr = get_new_int_short( 2*length_inz[list] );
+      double *dbl_ptr = get_new_dbl( 2*length_inz[list] );
+      for ( i=0; i<length_inz[list]; i++ ) {
+        int_ptr[i] = inz[list][i];
+        dbl_ptr[i] = solve_A[list][i];
+      }
+      for ( i=length_inz[list]; i<2*length_inz[list]; i++ ) {
+        int_ptr[i] = 0;
+        dbl_ptr[i] = 0.;
+      }
+      delete[] inz[list];
+      delete[] solve_A[list];
+      inz[list] = int_ptr;
+      solve_A[list] = dbl_ptr;
+      length_inz[list] *= 2;
+    }
+    index = nnz[list];
+    nnz[list]++;
+    inz[list][index] = member;
+  }
+  solve_A[list][index] += value;
+  return index;
+}
+
 #define EPS_MAT 1.e-8
 #define EPS_EIGEN 1.e-10
 #define EPS_SOL 1.e15
@@ -79,14 +132,14 @@ void solve( long int task )
     *node_node=NULL, *dof_label=NULL, *dof_type=NULL,
     *element_matrix_unknowns=NULL, *ipiv=NULL, *ipiv_dense=NULL,
     *ordered_global=NULL, *global_ordered=NULL, *ordering_has_been_done=NULL;
-  int superlu_nnz=0, *nnz=NULL, **inz=NULL,  *length_inz=NULL, *int_ptr=NULL,
+  int superlu_nnz=0, *nnz=NULL, **inz=NULL,  *length_inz=NULL,
     *superlu_asub=NULL, *superlu_xa=NULL;
   double max=0., tmp=0., control_eigen_scale=0., ddum[1],
     *node_eigen=NULL, *options_relaxation=NULL,
     *mat=NULL, *mat_dense=NULL, *matlin=NULL, *matss=NULL, *w=NULL, *z=NULL, *work=NULL, 
     *node_lhside=NULL, *node_rhside=NULL, *element_matrix_values=NULL,  
     *element_matrix_second_values=NULL, *node_dof_new=NULL,
-    **solve_A=NULL, *superlu_A=NULL, *dbl_ptr=NULL, *solve_b_temp=NULL;
+    **solve_A=NULL, *superlu_A=NULL, *solve_b_temp=NULL;
   char jobz[10], uplo[10], *ksptype=NULL, *pctype=NULL, cdum[MCHAR];
 
   db_highest_index( ELEMENT, max_element, VERSION_NORMAL );
@@ -497,7 +550,14 @@ void solve( long int task )
                 if ( mat_dense )
                   mat_dense[ilocal*solve_nlocal+jlocal] +=
                     element_matrix_values[imat];
-                if ( mat ) {
+                // the band fill feeds the dgbsv direct-LU retry after a
+                // Bi-CG failure (and the -matrix_lapack route). The
+                // sparse fill below feeds SuperLU/PETSc: it must run
+                // whenever those solvers are active even though the band
+                // workspace is also allocated (since 5b7bb8b the always-
+                // allocated mat made this sparse branch dead code and the
+                // SuperLU path received an EMPTY matrix -> segfault).
+                if ( mat && !petsc_solver && !superlu_solver ) {
                   ii = kl + ku + 1 + (ilocal+1) - (jlocal+1);
                   jj = jlocal + 1;
                   indx = (jj-1)*ldmat + ii;
@@ -526,36 +586,8 @@ void solve( long int task )
                       a = jlocal;
                       b = ilocal;
                     }
-                    array_member( (long int *) inz[a], b, nnz[a], index );
-                    if ( index<0 ) {
-                      index = nnz[a];
-                      nnz[a]++;
-                      if ( nnz[a]>length_inz[a] ) {
-                        int_ptr = get_new_int_short( length_inz[a] );
-                        dbl_ptr = get_new_dbl( length_inz[a] );
-                        for ( i=0; i<length_inz[a]; i++ ) {
-                          int_ptr[i] = inz[a][i];
-                          dbl_ptr[i] = solve_A[a][i];
-                        }
-                        delete[] inz[a];
-                        delete[] solve_A[a];
-                        inz[a] = get_new_int_short( 2*length_inz[a] );
-                        solve_A[a] = get_new_dbl( 2*length_inz[a] );
-                        for ( i=0; i<2*length_inz[a]; i++ ) {
-                          inz[a][i] = 0;
-                          solve_A[a][i] = 0.;
-                        }
-                        for ( i=0; i<length_inz[a]; i++ ) {
-                          inz[a][i] = int_ptr[i];
-                          solve_A[a][i] = dbl_ptr[i];
-                        }
-                        length_inz[a] *= 2;
-                        delete[] int_ptr;
-                        delete[] dbl_ptr;
-                      }
-                      inz[a][index] = b;
-                    }
-                    solve_A[a][index] += element_matrix_values[imat];
+                    sparse_list_add( inz, solve_A, nnz, length_inz, a, b,
+                      element_matrix_values[imat] );
                   }
                 }
               }
@@ -580,7 +612,7 @@ void solve( long int task )
               if ( mat_dense && use_node_lhside )
                 mat_dense[ilocal*solve_nlocal+ilocal] +=
                   node_lhside[ipuknwn];
-              if ( mat ) {
+              if ( mat && !petsc_solver && !superlu_solver ) {
                 ii = kl + ku + 1 + (ilocal+1) - (jlocal+1);
                 jj = jlocal + 1;
                 indx = (jj-1)*ldmat + ii;
@@ -605,39 +637,9 @@ void solve( long int task )
                   assert( superlu_solver );
                   a = jlocal;
                   b = ilocal;
-                }              
-                array_member( (long int *) inz[a], b, nnz[a], index );
-                if ( index<0 ) {
-                  index = nnz[a];
-                  nnz[a]++;
-                  if ( nnz[a]>length_inz[a] ) {
-                    int_ptr = get_new_int_short( length_inz[a] );
-                    dbl_ptr = get_new_dbl( length_inz[a] );
-                    for ( i=0; i<length_inz[a]; i++ ) {
-                      int_ptr[i] = inz[a][i];
-                      dbl_ptr[i] = solve_A[a][i];
-                    }
-                    delete[] inz[a];
-                    delete[] solve_A[a];
-                    inz[a] = get_new_int_short( 2*length_inz[a] );
-                    solve_A[a] = get_new_dbl( 2*length_inz[a] );
-                    for ( i=0; i<2*length_inz[a]; i++ ) {
-                      inz[a][i] = 0;
-                      solve_A[a][i] = 0.;
-                    }
-                    for ( i=0; i<length_inz[a]; i++ ) {
-                      inz[a][i] = int_ptr[i];
-                      solve_A[a][i] = dbl_ptr[i];
-                    }
-                    length_inz[a] *= 2;
-                    delete[] int_ptr;
-                    delete[] dbl_ptr;
-                  }
-                  inz[a][index] = b;
                 }
-                if ( use_node_lhside ) {
-                  solve_A[a][index] += node_lhside[ipuknwn];
-                }
+                index = sparse_list_add( inz, solve_A, nnz, length_inz,
+                  a, b, use_node_lhside ? node_lhside[ipuknwn] : 0. );
                 if ( a==b && scalar_dabs(solve_A[a][index])<EPS_MAT ) {
                   solve_A[a][index] = EPS_MAT;
                 }
@@ -867,10 +869,14 @@ if (band_solver)
       }
     }
 
-    if   ( band_solver ) 
-	{
+    // the band workspace is allocated in every route (the Bi-CG path
+    // needs it for the direct-LU retry); free it whenever it was used
+    if ( mat )
+    {
       delete[] mat;
       delete[] ipiv;
+      mat = NULL;
+      ipiv = NULL;
     }
     if ( mat_dense )
     {
