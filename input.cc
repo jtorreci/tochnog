@@ -33,7 +33,7 @@ std::ifstream include_file_stream;
 long int include_reading=0;
 long int input_abaqus_switch_global=0;
 char *define_words[MDEFINE], *define_strings[MDEFINE][MSTRING];
-long int reading_arithmetic=0, using_arithmetic=0, iarithmetic=0, narithmetic=0, using_if=0;
+long int reading_arithmetic=0, using_arithmetic=0, iarithmetic=0, narithmetic=0, using_if=0, using_if_not=0;
 double arithmetic_values[MARITHMETIC];
 char *arithmetic_words[MARITHMETIC];
 
@@ -485,6 +485,19 @@ void input( )
       array_set( &dof_type[sph_indx], -MATERI_STRESS_PRESSURE_HISTORY, n*nder );
       array_set( &dof_scal_vec_mat[unknown_indx], -SCALAR, n*nder );
     }
+    else if ( !strcmp(str,"materi_acceleration") ) {
+      // manual Professional 4.11: the accelerations are added to the
+      // node_dof records. The GNU dynamics scheme solves velocities;
+      // the acceleration dofs are derived records updated at the end of
+      // each step as a = (v_new - v_old)/dt (parallel_new_dof_diagonal
+      // in dof.cc). Prescribing -accx in bounda_dof imposes the
+      // velocity bound v_new = v_old + a*dt (bounda.cc).
+      materi_acceleration = 1;
+      acc_indx = unknown_indx;
+      n = ndim;
+      array_set( &dof_type[acc_indx], -MATERI_ACCELERATION, n*nder );
+      array_set( &dof_scal_vec_mat[unknown_indx], -VECTOR, n*nder );
+    }
     else if ( !strcmp(str,"materi_velocity") ) {
       materi_velocity = 1;
       vel_indx = unknown_indx;
@@ -855,7 +868,8 @@ void input( )
       }
       else if ( !strcmp(str,"end_data") )
         last_data_value = 1;
-      else if ( !strcmp(str,"start_if") )
+      else if ( !strcmp(str,"start_if") || !strcmp(str,"start_if_not") ||
+                !strcmp(str,"end_if") || !strcmp(str,"end_if_not") )
         last_data_value = 1;
       else if ( !d_is_set ) 
        last_data_value = ( db_number(str)>=0 );
@@ -1295,12 +1309,17 @@ void input_read_string( long int echo, char str[], double &d, long int &d_is_set
     }
     goto start_of_input_read_string;
   }
-  else if ( !strcmp(str,"start_if") ) {
+  else if ( !strcmp(str,"start_if") || !strcmp(str,"start_if_not") ) {
+    // conditional blocks start_if ... end_if and
+    // start_if_not ... end_if_not (manual Professional 5.x): the
+    // records of the block are applied only when the start_define
+    // word is set to true (start_if) or false (start_if_not).
     if ( using_if ) {
       pri( "Error, start_if cannot be nested." );
       exit(TN_EXIT_STATUS);
     }
     using_if = 1;
+    using_if_not = ( str[9]=='n' );
     if ( !(cin >> str) ) {
       pri( "\nError in data part." );
       pri( "Unexpected end of input (internal location g)." );
@@ -1335,6 +1354,7 @@ void input_read_string( long int echo, char str[], double &d, long int &d_is_set
       pri( "\n\nError, start_if cannot find", str );
       exit(TN_EXIT_STATUS);
     }
+    if ( using_if_not ) apply_if = !apply_if;
     if ( apply_if ) {
       input_read_string( echo, str, d, d_is_set );
       input_skip_comment( str );
@@ -1353,18 +1373,21 @@ void input_read_string( long int echo, char str[], double &d, long int &d_is_set
         pri( "Error, comment not allowed inside start_if ... end_if" );
         exit(TN_EXIT_STATUS);
       }
-      if ( strcmp(str,"end_if") ) {
+      if ( strcmp(str,"end_if") && strcmp(str,"end_if_not") ) {
         goto loop_if;
       }
       else {
         using_if = 0;
+        using_if_not = 0;
         input_read_string( echo, str, d, d_is_set );
         input_skip_comment( str );
       }
     }
   }
-  else if ( !strcmp(str,"end_if") && using_if ) {
+  else if ( ( !strcmp(str,"end_if") || !strcmp(str,"end_if_not") ) &&
+            using_if ) {
     using_if = 0;
+    using_if_not = 0;
     input_read_string( echo, str, d, d_is_set );
     input_skip_comment( str );
   }

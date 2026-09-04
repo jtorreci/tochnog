@@ -394,6 +394,26 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   data_length[BOUNDA_TIME_USER] = 1;
   data_class[BOUNDA_TIME_USER] = BOUNDA;
 
+  // bounda_time_smc/_offset/_units (manual Professional 6.42/6.43/6.44):
+  // base acceleration read from an SMC (Strong Motion CD) file. The
+  // records are REGISTERED and PARSED; the SMC file reader is not yet
+  // implemented (PENDING). bounda_time_smc index -yes would need the
+  // file <index>.smc next to the input file.
+  strcpy(name[BOUNDA_TIME_SMC],"bounda_time_smc");
+  type[BOUNDA_TIME_SMC] = INTEGER;
+  data_length[BOUNDA_TIME_SMC] = 1;
+  data_class[BOUNDA_TIME_SMC] = BOUNDA;
+
+  strcpy(name[BOUNDA_TIME_SMC_OFFSET],"bounda_time_smc_offset");
+  type[BOUNDA_TIME_SMC_OFFSET] = DOUBLE_PRECISION;
+  data_length[BOUNDA_TIME_SMC_OFFSET] = 1;
+  data_class[BOUNDA_TIME_SMC_OFFSET] = BOUNDA;
+
+  strcpy(name[BOUNDA_TIME_SMC_UNITS],"bounda_time_smc_units");
+  type[BOUNDA_TIME_SMC_UNITS] = DOUBLE_PRECISION;
+  data_length[BOUNDA_TIME_SMC_UNITS] = 2;
+  data_class[BOUNDA_TIME_SMC_UNITS] = BOUNDA;
+
   strcpy(name[BOUNDA_WATER],"bounda_water");
   type[BOUNDA_WATER] = INTEGER;
   data_length[BOUNDA_WATER] = 1;
@@ -1633,6 +1653,16 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   type[CONTROL_PRINT_DATABASE] = INTEGER;
   data_length[CONTROL_PRINT_DATABASE] = 1;
   data_class[CONTROL_PRINT_DATABASE] = CONTROL;
+
+  strcpy(name[CONTROL_DATA_SAVE],"control_data_save");
+  type[CONTROL_DATA_SAVE] = INTEGER;
+  data_length[CONTROL_DATA_SAVE] = 1;
+  data_class[CONTROL_DATA_SAVE] = CONTROL;
+
+  strcpy(name[CONTROL_PRINT_GID_SAVE_DIFFERENCE],"control_print_gid_save_difference");
+  type[CONTROL_PRINT_GID_SAVE_DIFFERENCE] = INTEGER;
+  data_length[CONTROL_PRINT_GID_SAVE_DIFFERENCE] = 1;
+  data_class[CONTROL_PRINT_GID_SAVE_DIFFERENCE] = CONTROL;
 
   strcpy(name[CONTROL_PRINT_DATABASE_METHOD],"control_print_database_method");
   type[CONTROL_PRINT_DATABASE_METHOD] = INTEGER;
@@ -4412,9 +4442,15 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   data_class[CONTROL_MATERI_DAMAGE_APPLY] = CONTROL;
 
   strcpy(name[CONTROL_MATERI_DYNAMIC],"control_materi_dynamic");
-  type[CONTROL_MATERI_DYNAMIC] = INTEGER;
+  type[CONTROL_MATERI_DYNAMIC] = DOUBLE_PRECISION;
   data_length[CONTROL_MATERI_DYNAMIC] = 1;
   data_class[CONTROL_MATERI_DYNAMIC] = CONTROL;
+
+  strcpy(name[MATERI_DYNAMIC],"materi_dynamic");
+  type[MATERI_DYNAMIC] = DOUBLE_PRECISION;
+  data_length[MATERI_DYNAMIC] = 1;
+  data_class[MATERI_DYNAMIC] = CONTROL;
+  no_index[MATERI_DYNAMIC] = 1;
 
   strcpy(name[CONTROL_MATERI_ELASTI_K0],"control_materi_elasti_k0");
   type[CONTROL_MATERI_ELASTI_K0] = INTEGER;
@@ -7217,6 +7253,13 @@ void db_initialize( long int dof_type[], long int dof_label[] )
     }
     else if ( dof_type[iuknwn]==-MATERI_STRESS_PRESSURE_HISTORY )
       strcpy( basename, "sph" );
+    else if ( dof_type[iuknwn]==-MATERI_ACCELERATION ) {
+      if ( iuknwn==acc_indx ) n = 0;
+      n++;
+      if      ( n==1 ) strcpy( basename, "accx"  );
+      else if ( n==2 ) strcpy( basename, "accy"  );
+      else if ( n==3 ) strcpy( basename, "accz"  );
+    }
     else if ( dof_type[iuknwn]==-MATERI_VELOCITY ) {
       if ( iuknwn==vel_indx ) n = 0;
       n++;

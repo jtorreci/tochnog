@@ -290,6 +290,7 @@ enum {
   CONTROL_MATERI_DAMAGE_APPLY,
   CONTROL_MATERI_DIFFUSION,
   CONTROL_MATERI_DYNAMIC,
+  MATERI_DYNAMIC,
   CONTROL_MATERI_ELASTI_K0,
   CONTROL_MATERI_ELASTI_YOUNG_POWER_APPLY,
   CONTROL_MATERI_FAILURE_APPLY,
@@ -1032,6 +1033,7 @@ enum {
   MATERI_STRAIN_TOTAL,
   MATERI_STRESS,
   MATERI_STRESS_PRESSURE_HISTORY,
+  MATERI_ACCELERATION,
   MATERI_VELOCITY,
   MATERI_VELOCITY_INTEGRATED,
   MATERI_VOID_FRACTION,
@@ -1416,6 +1418,11 @@ enum {
   POST_STRAIN_VOLUME_RELATIVE,
   STRAIN_VOLUME_ABSOLUTE_TIME,
   STRAIN_VOLUME_ELEMENT,
+  CONTROL_DATA_SAVE,
+  CONTROL_PRINT_GID_SAVE_DIFFERENCE,
+  BOUNDA_TIME_SMC,
+  BOUNDA_TIME_SMC_OFFSET,
+  BOUNDA_TIME_SMC_UNITS,
   LAST_DUMMY }; // keep LAST_DUMMY always the last one
 
 #define MDAT LAST_DUMMY+DATA_ITEM_SIZE  // reserve space for unknowns
@@ -1440,6 +1447,7 @@ extern long int echo, ndim, derivatives,
   materi_strain_intergranular, materi_plasti_rho, materi_strainenergy,
   materi_strain_elasti, materi_strain_plasti, materi_strain_total, 
   materi_stress, materi_stress_pressure_history,
+  materi_acceleration,
   materi_velocity, materi_velocity_integrated,
   materi_void_fraction, materi_work, 
   maxwell_e, maxwell_fe,
@@ -1498,6 +1506,7 @@ extern long int
   svnonloc_indx, // index stating start of materi_plasti_softvar_nonlocal in node_dof
   temp_indx, // index stating start of condif_temperature in node_dof
   vel_indx, // index stating start of materi_velocity in node_dof
+  acc_indx, // index stating start of materi_acceleration in node_dof
   veli_indx, // index stating start of materi_velocity in node_dof
   void_indx, // index stating start of materi_void_fraction in node_dof
   work_indx; // index stating start of materi_work in node_dof

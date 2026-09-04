@@ -215,6 +215,20 @@ void parallel_new_dof_diagonal( void )
             node_dof_new[stres_indx+5*nder] ) / 3. );
           if ( node_dof_new[iuknwn] < tmp ) node_dof_new[iuknwn] = tmp;
         }
+        if ( materi_acceleration ) {
+          // acceleration records (manual Professional 4.11): the GNU
+          // scheme solves velocities, so a = (v_new - v_old)/dt of the
+          // step. For nodes whose acceleration is prescribed via
+          // bounda_dof -accx the velocity bound is v_new = v_old + a*dt
+          // (bounda.cc), so the derived value equals the prescribed
+          // acceleration automatically.
+          for ( idim=0; idim<ndim; idim++ ) {
+            iuknwn = acc_indx + idim * nder;
+            ind = vel_indx+idim*nder;
+            node_dof_new[iuknwn] =
+              ( node_dof_new[ind] - node_dof[ind] ) / dtime;
+          }
+        }
         if ( materi_velocity_integrated ) {
           for ( idim=0; idim<ndim; idim++ ) {
             iuknwn = veli_indx + idim * nder;

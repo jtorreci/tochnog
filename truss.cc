@@ -35,7 +35,7 @@ void truss( long int element, long int element_group,
     group_truss_young=0., group_truss_area=0., 
     group_truss_density=0., group_truss_plasti=1.e20,
     truss_stiffness=0., incremental_length=0., 
-    old_truss_force=0., new_truss_force=0., fac=0., tmp=0., 
+    old_truss_force=0., new_truss_force=0., new_truss_force_mix=0., fac=0., tmp=0., 
     old_length=0., new_length=0., initial_length=0., ddum[1],
     work[MDIM], truss_direction[MDIM], initial_coord[MNOL*MDIM], 
     old_coord[MNOL*MDIM], new_coord[MNOL*MDIM], diff_coord[MDIM],
@@ -156,6 +156,31 @@ void truss( long int element, long int element_group,
     else if ( new_truss_force<-group_truss_plasti*group_truss_area )
       new_truss_force = -group_truss_plasti*group_truss_area;
     if ( group_truss_rope==-YES && new_truss_force<0. ) new_truss_force = 0.;
+    // materi_dynamic (manual Professional 6.800) / control_materi_dynamic
+    // (6.141): the momentum carries the blend of the force at time t
+    // (old_truss_force) and at time t+dt (new_truss_force of the
+    // current iterate): F = (1-factor)*F_t + factor*F_{t+dt}, and the
+    // momentum stiffness is scaled by factor. Default factor 1 (fully
+    // implicit); lower factors reduce numerical damping in dynamics.
+    // The force STATE (ELEMENT_TRUSS_FORCE) keeps the full update.
+    {
+      double materi_dynamic_factor = 1.;
+      db( MATERI_DYNAMIC, 0, idum, &materi_dynamic_factor, ldum,
+        VERSION_NORMAL, GET_IF_EXISTS );
+      if ( db_active_index( CONTROL_MATERI_DYNAMIC, icontrol,
+          VERSION_NORMAL ) )
+        db( CONTROL_MATERI_DYNAMIC, icontrol, idum,
+          &materi_dynamic_factor, ldum, VERSION_NORMAL, GET );
+      if ( materi_dynamic_factor<0. || materi_dynamic_factor>1. )
+        db_error( MATERI_DYNAMIC, 0 );
+      if ( materi_dynamic_factor<1. ) {
+        new_truss_force_mix = old_truss_force + materi_dynamic_factor *
+          ( new_truss_force - old_truss_force );
+        truss_stiffness *= materi_dynamic_factor;
+      }
+      else
+        new_truss_force_mix = new_truss_force;
+    }
     for ( idim=0; idim<ndim; idim++ ) {
       iuknwn = vel_indx + idim*nder;
       ipuknwn = iuknwn/nder;
@@ -165,7 +190,7 @@ void truss( long int element, long int element_group,
         else
           fac = -1.;
         indx = inol*npuknwn+ipuknwn;
-        tmp = fac*truss_direction[idim]*new_truss_force;
+        tmp = fac*truss_direction[idim]*new_truss_force_mix;
         element_rhside[indx] += tmp + (0.5*mass*force_gravity[idim]);
         if ( options_inertia==-YES ) {
           element_rhside[indx] += - (0.5*mass)*

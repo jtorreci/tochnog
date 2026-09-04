@@ -46,6 +46,7 @@ void materi( long int element, long int gr, long int name, long int nnol,
     old_cap1pc=0., new_cap1pc=0.,
     old_f=0., new_f=0., void_fraction=0., new_pres=0., old_substeps=0., new_substeps=0.,
     softvar_nonl=0, softvar_l=0, 
+    md_factor=1., // materi_dynamic/control_materi_dynamic momentum factor
     static_pressure=0., total_pressure=0., location=0.,
     J=0., ddum[1], direct_normal[MDIM], *force_gravity=NULL, 
     activation_factor=1., activation_stiff=1.,
@@ -566,6 +567,41 @@ void materi( long int element, long int gr, long int name, long int nnol,
         ddsdde_total[4*MSTRAIN+4] = 0.;
       }
     }
+    // materi_dynamic (manual Professional 6.800) / control_materi_dynamic
+    // (6.141): blend the stress at time t (old_sig, previous converged
+    // step at this integration point) with the stress at time t+dt
+    // (sigvec of the current iterate): sigma = (1-factor)*sigma_t +
+    // factor*sigma_{t+dt}. Default factor = 1 (fully implicit, the
+    // historic GNU scheme). A factor < 1 makes the scheme less
+    // implicit and thus reduces numerical damping (dynamics); factor 0
+    // freezes the internal force at the old stress (forward-Euler-like
+    // momentum). The momentum stiffness is scaled by the same factor
+    // (the tangent of factor*sigma_{t+dt}).
+    {
+      double materi_dynamic_factor = 1.;
+      db( MATERI_DYNAMIC, 0, idum, &materi_dynamic_factor, ldum,
+        VERSION_NORMAL, GET_IF_EXISTS );
+      long int icontrol_md = 0;
+      db( ICONTROL, 0, &icontrol_md, ddum, ldum, VERSION_NORMAL,
+        GET_IF_EXISTS );
+      if ( db_active_index( CONTROL_MATERI_DYNAMIC, icontrol_md,
+          VERSION_NORMAL ) )
+        db( CONTROL_MATERI_DYNAMIC, icontrol_md, idum,
+          &materi_dynamic_factor, ldum, VERSION_NORMAL, GET );
+      md_factor = materi_dynamic_factor;
+      if ( materi_dynamic_factor<1. ) {
+        if ( materi_dynamic_factor<0. || materi_dynamic_factor>1. )
+          db_error( MATERI_DYNAMIC, 0 );
+        for ( idim=0; idim<MDIM; idim++ ) {
+          for ( jdim=idim; jdim<MDIM; jdim++ ) {
+            long int indx_md = stress_indx(idim,jdim);
+            sigvec[indx_md] = (1.-materi_dynamic_factor) *
+              old_sig[idim*MDIM+jdim] +
+              materi_dynamic_factor * sigvec[indx_md];
+          }
+        }
+      }
+    }
     matrix_atb( new_b, sigvec, force, MSTRAIN, nnol*ndim, 1 );
     matrix_atba( new_b, ddsdde_total, stiffness, work, MSTRAIN, nnol*ndim );
     if ( swit ) {
@@ -744,7 +780,7 @@ void materi( long int element, long int gr, long int name, long int nnol,
                 new_dof[jnol*nuknwn + vel_indx + jdim*nder];
             }
           }
-          element_rhside[indx] -= dtime * v_shear / npoint;
+          element_rhside[indx] -= dtime * v_shear / npoint * md_factor;
         }
         for ( jdim=0; jdim<ndim; jdim++ ) {
           iuknwn = stres_indx+stress_indx(idim,jdim)*nder;
@@ -778,7 +814,7 @@ void materi( long int element, long int gr, long int name, long int nnol,
             indx2 = jnol*ndim + jdim;
             jpuknwn = vel_indx/nder + jdim;
             indxj = jnol*npuknwn + jpuknwn;
-            tmp = volume * dtime * stiffness[indx1*nnol*ndim+indx2];
+            tmp = volume * dtime * stiffness[indx1*nnol*ndim+indx2] * md_factor;
             element_matrix[indxi*nnol*npuknwn+indxj] += tmp;
             if ( indxi==indxj ) element_lhside[indx] += fac * tmp;
             if ( sri_on ) {
@@ -786,7 +822,8 @@ void materi( long int element, long int gr, long int name, long int nnol,
               // centroid) is added scaled by 1/npoint because materi()
               // is called once per integration point; the npoint calls
               // sum exactly to the full reduced integral.
-              tmp = dtime * stiffness_shear[indx1*nnol*ndim+indx2] / npoint;
+              tmp = dtime * stiffness_shear[indx1*nnol*ndim+indx2] / npoint
+                * md_factor;
               element_matrix[indxi*nnol*npuknwn+indxj] += tmp;
               if ( indxi==indxj ) element_lhside[indx] += fac * tmp;
             }

@@ -129,6 +129,15 @@ void bounda( )
       else if ( bounda_time_user==-YES ) {
         ninc = 2;
         user = 1;
+      }
+      else if ( db_active_index( BOUNDA_TIME_SMC, iboun, VERSION_NORMAL ) ) {
+        // bounda_time_smc (manual Professional 6.42): base acceleration
+        // from an SMC (Strong Motion CD) file. PENDING: the SMC reader
+        // is not implemented; fail loudly instead of running with a
+        // silent zero acceleration.
+        pri( "Error: bounda_time_smc (SMC accelerogram reading) is not "
+             "implemented in this build (PENDING)." );
+        exit(TN_EXIT_STATUS);
       }          
       else if ( db_active_index( BOUNDA_TIME_FILE, iboun, VERSION_NORMAL ) ) {
         db( BOUNDA_TIME_FILE, iboun, &bounda_time_file, ddum, ldum, 
@@ -717,6 +726,24 @@ void bounda( )
                         }
                         else
                           new_node_dof[iuknwn] = factor * load * load_factor;
+                        // bounda_dof -accx/-accy/-accz (manual
+                        // Professional 4.11/6.800): prescribing the
+                        // acceleration does NOT constrain the derived
+                        // acceleration record; it imposes the velocity
+                        // bound v_new = v_old + a*dt so the prescribed
+                        // acceleration integrates into velocity and
+                        // displacement (a = (v_new - v_old)/dt). The
+                        // record acc* of the bounded node then derives
+                        // to exactly the prescribed acceleration in
+                        // parallel_new_dof_diagonal (dof.cc).
+                        if ( materi_acceleration && iuknwn>=acc_indx &&
+                             iuknwn<acc_indx+ndim*nder ) {
+                          long int idim_a = ( iuknwn - acc_indx ) / nder;
+                          long int iuknwn_vel = vel_indx + idim_a*nder;
+                          node_bounded[vel_indx/nder+idim_a] = 1;
+                          new_node_dof[iuknwn_vel] = node_dof[iuknwn_vel]
+                            + factor * load * load_factor * dtime;
+                        }
                         // bounda_dof_radial: prescribe velocity radial to a point
                         if ( (bounda_dof_radial[0]!=0. || bounda_dof_radial[1]!=0.
                               || bounda_dof_radial[2]!=0.) &&
