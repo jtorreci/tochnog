@@ -321,3 +321,10 @@ input parameters it accepts.
 ## Records *_sig del post_calcul -materi_stress -force
 
 - [post_calcul_materi_stress_force_sig_records](post_calcul_materi_stress_force_sig_records.md) — the output item names of the -force family used as target_item value numbers (`-norx_sig`, `-nory_sig`, `-nors_sig`, the shear `-she*_sig`, the moments `-mom*_sig`/`-mom1*_sig`/`-mom2*_sig`; manual 6.913): the x/y(/z) components are the global plot vectors in the structure thickness direction, the `s` items are the signed physical sizes. Unlocks the corpus force7-13 family.
+
+## Dinamica: materi_acceleration / materi_dynamic / condicionales / registros
+
+- [materi_acceleration](materi_acceleration.md) - los dofs de aceleracion (manual 4.11): records derivados acc = (v_new - v_old)/dt; bounda_dof -accx impone el bound de velocidad v_new = v_old + a*dt (base excitation). Unlocks dynamic3/dynamic4 (rc=0) y el parse de dynamic2/5/6/7/8, earthquake_1/2/3, smc_1/2.
+- [materi_dynamic](materi_dynamic.md) - el factor de mezcla temporal sigma = (1-f)*sigma(t) + f*sigma(t+dt) (6.800) y control_materi_dynamic (6.141). Implementado en materi() y truss(); f=1 = esquema historico byte-identico. Los tests dynamic1/2/5/8 siguen RUNFAIL por el esquema de velocidades del GNU (bloqueador de solver, no de parse).
+- [start_if_not](start_if_not.md) - bloques condicionales start_if_not ... end_if_not del data part (con start_if ... end_if ya existente).
+- [bounda_time_smc](bounda_time_smc.md) - familia de acelerogramas SMC registrada y parseada; el lector esta PENDIENTE (fallo honesto en runtime).

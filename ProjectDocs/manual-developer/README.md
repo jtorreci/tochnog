@@ -319,3 +319,10 @@ Each file corresponds to the same feature in the [User Manual](../manual-user/).
 ## Records *_sig del post_calcul -materi_stress -force
 
 - [post_calcul_materi_stress_force_sig_records](post_calcul_materi_stress_force_sig_records.md) — the name registration (tochnog.h/tochnog-mod.h/database.cc), the exit_tn resolution through post_calcul_names, the 2D plot direction fix (face tangent, not reference direction), the validate pre-step gate, post_element_force_normal (INTEGER + centroid-side filter), the quad9->hex27 extrusion (mesh.cc) and the npointmax 9->27 default; verified against the Professional .dbs (force7-13).
+
+## Dinamica: materi_acceleration / materi_dynamic / condicionales / registros
+
+- [materi_acceleration](materi_acceleration.md) - enum MATERI_ACCELERATION + acc_indx, handler de initia (input.cc), basenames accx/accy/accz (database.cc), update derivado en parallel_new_dof_diagonal (dof.cc), caso especial -accx en bounda.cc. Verificado contra el binario Professional (dynamic3/4 rc=0).
+- [materi_dynamic](materi_dynamic.md) - registro global MATERI_DYNAMIC (double, no_index) + control_materi_dynamic a double; blend del sigvec del momento con old_sig y escalado f de la rigidez del momento en materi.cc y truss.cc. A/B contra el Professional documentado (f=1 byte-identico; f=0 estable solo dentro del CFL del esquema GNU).
+- [start_if_not](start_if_not.md) - extension de input_read_string(): start_if_not/end_if_not con using_if_not; parada del value-loop en los 4 tokens.
+- [bounda_time_smc](bounda_time_smc.md) - registros BOUNDA_TIME_SMC(_OFFSET/_UNITS) registrados; el lector del formato SMC queda PENDIENTE; bounda() falla con mensaje honesto.
