@@ -343,3 +343,23 @@ input parameters it accepts.
 - [to_pres](to_pres.md) - items del post_calcul groundflow: -to_pres/-st_pres/-dy_pres como nombres de target_item sobre post_point_dof_calcul (labels Professional). Resolucion de slots extendida en exit_tn.
 - [control_groundflow_seepage_apply](control_groundflow_seepage_apply.md) - gate por control step de las seepage faces (6.105); arreglado el combination check de los 3 controls groundflow por timestep.
 - [slide_plasti_friction](slide_plasti_friction.md) - familia slide IMPLEMENTADA: ley elastoplastica kn/kt + cap c+Fn*tan(phi) sobre desplazamientos totales (patron support_edge_normal); records de salida node_slide_force/node_slide_f/node_slide_direction; forma sin indice axisymmetric -yes (6.17) aceptada; print_debug parseado. Unlocks slide1/slide3 (rc=0); slide2 (split axisym del elemento GNU) y slide4 (iteracion del slider rigido con drag rapido) PENDIENTES con diagnostico.
+
+## KEYWORDS BATCH C (2026-09-04) — clusters pequeños de keywords del corpus
+
+- [group_spring_memory](group_spring_memory.md) — memory model of springs (6.765); accepted (GNU spring = -updated_linear; -total_linear coincides in 1D). Unlocks spring1 (rc=0).
+- [group_spring_stiffness_nonlinear](group_spring_stiffness_nonlinear.md) — nonlinear spring stiffness diagram (6.768); midpoint-strain integration EXACT for linear diagrams. Unlocks spring6 (rc=0).
+- [element_spring_strain](element_spring_strain.md) — output record: total spring elongation per element.
+- [dependency_apply](dependency_apply.md) — global switch of the dependency_item/dependency_diagram machinery (6.125).
+- [control_dependency_apply](control_dependency_apply.md) — per-timestep dependency switch (6.126); gate in get_group_data.
+- [geometry_element_group](geometry_element_group.md) — restrict a geometry to nodes of listed element groups (6.524). Unlocks merge2/force12 (rc=0).
+- [geometry_element_group_method](geometry_element_group_method.md) — -all/-any/-only of the group filter (6.525).
+- [group_materi_plasti_element_group](group_materi_plasti_element_group.md) — frictional slip of granular soils on other materials (6.698); registered, consumption PENDING.
+- [group_materi_plasti_element_group_factor](group_materi_plasti_element_group_factor.md) — factor override of the neighbor reduction (6.699); PENDING consumption.
+- [post_calcul_static_pressure_height](post_calcul_static_pressure_height.md) — reference-height static pressure (6.921). Unlocks ground13 target st_pres (further blockers: -topres bounda).
+- [post_calcul_static_pressure_height_element_group](post_calcul_static_pressure_height_element_group.md) — element group restriction of the height regions (6.922).
+- [post_calcul_safety_method](post_calcul_safety_method.md) — -vertical/-prival/-global of the piping/lifting safety factors (6.919); labels measured vs Professional; computation PENDING.
+- [post_calcul_safety_maximum](post_calcul_safety_maximum.md) — cap of the safety factors (6.918).
+- [group_groundflow_expansion](group_groundflow_expansion.md) — thermal expansion coefficient of the fluid/soil (6.614); parse-only.
+- [control_print_gid_contact_spring2](control_print_gid_contact_spring2.md) — GiD rendering of contact_spring2 (6.297, alias spelling accepted).
+- [control_mesh_macro_concentrate](control_mesh_macro_concentrate.md) — rectangle macro mesh concentration (6.207); parse-only.
+- [control_mesh_generate_truss_beam](control_mesh_generate_truss_beam.md) — Professional spelling of control_mesh_generate_trussbeam.

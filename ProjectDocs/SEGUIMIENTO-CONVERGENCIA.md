@@ -20,6 +20,7 @@ suite sfnet, o un test propio. El registro completo:
 
 | Feature | Commit | Fecha | Verificación |
 |---------|--------|-------|--------------|
+| **KEYWORDS BATCH C (2026-09-04): clústeres pequeños (springs, geometry_element_group, dependency gates, post_calcul estático/seguridad, registros parse-only)** | (commits feat/docs de este lote, 2026-09-04) | 2026-09-04 | **springs**: `group_spring_memory` (6.765; el muelle GNU es incremental en config actual = -updated_linear; parse) + `group_spring_stiffness_nonlinear` (6.768, diagrama eps/k con la k del incremento en la strain MEDIA: integración EXACTA para diagramas lineales — spring6 F=0.5±1e-8) + `element_spring_strain` (elongación total por elemento; version_all+pre-alloc en top.cc). **spring1 y spring6 rc=0**. **geometry_element_group/method** (6.524/6.525): filtro de geometrías por grupos de elementos DENTRO de geometry() (helper nuevo node_attached_element_groups en group.cc que lee ELEMENT_GROUP — el primer valor del record ELEMENT es el TIPO, no el grupo); reglas: -all = attached==listado; default/-any/-only = attached⊆listado (la exclusión de nodos con elementos fuera de la lista en TODO método reproduce el binario Pro 25-10-2023 medido en merge2). **merge2 y force12 rc=0**. **FIXES asociados**: (a) area.cc — la dirección de las cargas/flujos de arista es SIEMPRE la normal FÍSICA de la cara calculada de las coordenadas (con geometry_point la normal acumulada de geometry() es RADIAL y tilts la carga: force12 medía disy 1.179 vs 1.0); (b) elem.cc — los elementos de grupos puros -empty/-none NO integran area() (la cara compartida entre un elemento material y uno -empty no se carga dos veces). **dependency gates**: `dependency_apply` + `control_dependency_apply` (6.125/6.126) — gate global/per-control en get_group_data() (group.cc; el control_ NO lleva data_required: el combination-check por mismo índice exigiría dependency_item en el índice del control, que ground11 no tiene). ground11 avanza al solve (singular inicial: siguiente blocker). **post_calcul**: `post_calcul_static_pressure_height`+`_element_group` (6.921/6.922) — regiones (coord_min,coord_max,height_ref) consumidas en groundflow_phreatic_coord (p_static = ρg(height_ref−y), total = pres+static); **ground13 target st_pres −1220 EXACTO** (sigue RUNFAIL por bounda_dof -topres). `post_calcul_safety_method`/`_maximum` (6.919/6.918) + operadores -safety_piping/-safety_lifting + selectores puros VERTICAL/GLOBAL; **labels medidos contra el .dbs del Pro en ground15/16** (vertical: safety_piping 1 valor; prival: _prival_0..2; global: _global_x/y/z; fórmulas lifting=(σ_i+p_total)/p_total, piping=(σ_i+p_dyn)/p_dyn calibradas: 2.0/2.3333); cálculo PENDIENTE (familia convenciones de presión). **Parse-only registrados**: group_materi_plasti_element_group/_factor (6.698/6.699), group_groundflow_expansion (6.614), control_print_gid_contact_spring2 (6.297 + alias sin control_ — no_index: el corpus lo escribe con el valor solo), control_mesh_macro_concentrate (6.207), alias control_mesh_generate_truss_beam→trussbeam. **Corpus: 159 → 163 PASS / 192 RUNFAIL / 8 PARSE** (4 nuevos: spring1, spring6, merge2, force12; diff per-test: 0 regresiones). Blast-radius: springs 2-5 y force/edge-load/merge/interface sin cambios; suite build_safe 16/16. PENDIENTES documentados con diagnóstico: ground11 (monitor de dependency sobre -to_pres no-dof + solve), heat_exchanger_* (parse completo; macro concentration + física termo + singular/timeout), tutorial_3 (parse completo; modelo beam/excavation pesado), ground13/15/16 (bounda_dof -topres + convenciones de presión), undrained1/2/ground17 (group_materi_undrained_capacity), relax1/2 (control_bounda_relax: almacenar RHS nodal + relajación). |
 | **Lote 3D cuadrático (L3 + L4)**: keyword `-hex20` registrada (enum HEX20 + name; el GNU no tiene hex20 real — el Pro lo maneja NATIVO y conserva `-hex20` en su .dbs) → `mesh_convert_hex20()` en mesh.cc eleva cada volumen serendipity hex20 al Lagrange hex27: permutación explícita al orden tensorial GNU verificada contra el .dbs del Pro (su conversión automática de interface_quad8_hex20 escribe EXACTAMENTE el layout tensorial GNU: planos base/mid/top quad9-tensor; esquinas el[1..4]/el[5..8] → slots 1,3,7,9 / 19,21,25,27; aristas BM,LM,RM,TM base/top (el[9..16]) → slots 2,4,6,8 / 20,22,24,26; verticales (x0,y0),(x1,y0),(x0,y1),(x1,y1) (el[17..20]) → slots 10,12,16,18; 6 centros de cara NUEVOS (media de las 4 esquinas de la cara) en slots 5,11,13,15,17,23 + centro de cuerpo (media de las 8) en 14); centros DEDUPLICADOS por coordenadas (EPS 1e-10) entre vecinos (hex20.dat apilado z=0..2: la cara compartida z=1 tiene UN solo centro en ambos hex27; sin dedup la malla se rompe); hook en step_start TODOS los pasos (idempotente), ANTES de extrude() e interface_convert(). **L4 interfaz 3D cuadrática**: `-hex18` (2 caras quad9, ns1=9) en interface_element() — frame con esquinas de cara 0,2,6 (el nodo 1 = BM es colineal → cruz degenerado), pesos por par = producto Lobatto 2D (1,4,16)/36 (interface3 carga la cara top con −1/−4/−16 y TODOS los intpnts reportan −9 uniforme; con pesos uniformes el intpnt de esquina daría −20.25), medida de cara desde las esquinas 0,2,6,8 del quad9 (orden tensorial = bowtie, fan de triángulos); cara `-quad8` de grupo de interfaz → `-hex18` en interface_convert() (el 9º nodo del lado 1 = centro de cara = media de las 4 esquinas, buscado por coordenadas — el nodo que mesh_convert_hex20 creó deduplicado en la cara compartida del hex27; si no existe se crea; lado 1 reescrito al orden tensorial con la misma permutación de slots del quad8; 9 duplicados desplazados 0.01 en la normal; reconexión del sólido del otro lado por TODOS los 9 nodos + test de centroide). **Records de interfaz**: los historias/output son arrays planos de db_data_length() y el PUT rechaza longitud mayor (defaults para ns1≤4): el bloque any_interface de step_start los ELEVA (monótono, solo si el modelo los excede — bajar el stride corrompe TODO el record, regresión expuesta por interface2/10/patch) al mayor elemento de interfaz del modelo (hex18: ns1=9, intpnt 9·3=27); buffers de reset en data.cc ampliados 4→9. | `529b383` (feat mesh) + `4af8739` (feat interface) | 2026-09-04 | **Contra el binario del Professional (user-supplied 25-10-2023, .dbs)**: (1) hex20 rc=0 — node_dof IDÉNTICOS al Pro en los 32 nodos comunes (worst 3.8e-10 en desplazamientos, 2.1e-8 en σzz; los 13 nodos interiores del GNU no tienen contraparte Pro porque el Pro conserva hex20); el run auto-convertido es bit-igual (1.5e-15) al mismo mesh escrito como `-hex27` explícito; (2) interface3 rc=0 — `element_interface_intpnt_stress` = −9 EXACTO en los 9 intpnts (target −9±1e-5); (3) interface_quad8_hex20 rc=0 — elemento convertido `-hex18 5 13 6 14 57 15 7 16 8 | dups` = MISMO layout del Pro (`-hex18 5 13 6 14 55 15 7 16 8 | 68..76`; 57/55 = el centro de cara compartido); sigzz post_point −1.005025 vs target −1.0±1e-2 = el MISMO offset 0.5 % de la familia hex8 establecida (interface_quad4_hex8: −1.005025 — la convención GNU desplaza los duplicados 0.01 al +normal, el Pro los crea coincidentes; física equivalente). **Corpus: 156 → 159 PASS / 196 RUNFAIL / 8 PARSE** (3 nuevos: hex20, interface3, interface_quad8_hex20 — todos RUNFAIL→PASS; diff per-test: 0 regresiones). Blast-radius: interface1-15/patch/bar2_quad4/quad4_hex8/many/tria3_prism6/bar2_hex8/conspr1-7/quad8/elasti6/interface_bar3_quad8/patch1 rc=0; suite build_safe 16/16. |
 | Auto-conversión de mallas cuadráticas 2D (lote L1+L2 del sprint 2D): keyword `-quad8` registrada (enum + name; el GNU no tiene quad8 real, como el Pro lo auto-convierte) → `mesh_convert_quad8()` en mesh.cc inserta el nodo CENTRO (media de las 4 esquinas) y reescribe el elemento en el orden tensorial del quad9 GNU con la permutación `quad9 = {q8[1],q8[5],q8[2],q8[6],C,q8[7],q8[3],q8[8],q8[4]}` (corpus [BL,BR,TL,TR,BM,LM,RM,TM] → GNU [BL,BM,BR,LM,C,RM,TL,TM,TR]); hook en step_start TODOS los pasos (un `control_mesh_convert` en índice < timestep evalúa post_point en un paso intermedio contra el quad8 crudo → assert; idempotente), ANTES de extrude() (quad8→quad9→hex27) e interface_convert(); los `-quad8` de grupo de interfaz NO se convierten (cara 3D, lote futuro). **Extensión de `control_mesh_convert`**: `-bar3` → `-quad6` (2D cuadrático, 3+3 nodos; ns1=3; reconexión por TODOS los nodos del lado 1 + test de centroide; el quad6 de interface_element() ya existía con Lobatto 1/6,4/6,1/6). **Nuevo item `-post_force_edge_summed`** (manual Pro 6.936: total de la fuerza de los force_edge integrada sobre las aristas, ndim valores, record plano no_index): cálculo on-demand (target_item/control_print) en post() espejando la integración de area() (cuadratura Lobatto × largo/área de cara, load temporal sine/time/time_file, factor espacial, restricciones de elemento/grupo/lado/nodo/geometry). | commit feat de este lote (2026-09-04) | 2026-09-04 | **Contra el binario del Professional (user-supplied 25-10-2023, .dbs)**: (1) quad8 rc=0 — node_dof del patch test IDÉNTICOS al Pro (sigxx 0.1, disx 1.0/2.0, ruido 1e-16); (2) elasti6 rc=0 — elemento convertido `-quad9 1 5 2 6 9 7 3 8 4` = misma permutación de slots del Pro; sigyy node 8 = 1.00000008274 vs Pro 0.9999998606958 (target ±1e-4), disy 1e-8 idéntico; post_force_edge_summed = (0, 10) EXACTO (Pro: 0. 1.000000000000e+01); (3) interface_bar3_quad8 rc=0 (sigyy −1.0 ±1e-2; Pro rc=0); (4) NOTA Pro: crea los duplicados de interfaz con coordenadas coincidentes en el bloque −normal; el GNU los desplaza 0.01 al +normal — física equivalente, solo cambia el layout del .dbs. **Corpus: 153 → 156 PASS / 199 RUNFAIL / 8 PARSE** (3 nuevos; diff per-test: 0 regresiones; ground19_water_under_dam flaky por el timeout 45 s del corpus — PASS en los runs previos y en este). Blast-radius: interface1-15/patch/bar2_quad4/quad4_hex8/many/tria3_prism6/bar2_hex8/conspr1-7/force7/8 rc=0; suite build_safe 16/16. |
 | Familia slide (`slide_geometry` law, manual 6.1041-6.1047 + 6.370-6.372 + 6.893): ley elastoplástica kn/kt sobre desplazamientos TOTALES (patrón support_edge_normal; slide.cc `slide_spring`, legacy penalty conservada para slides sin `slide_stiffness` — examp14): spring normal bidireccional con cap de tracción `slide_plasti_tension` sig_t, cap de fricción `c + Fn·tan(phi)` con retorno al cap en slip (matriz tangencial = solo fracción residual, el kt elástico sesga los pasos de 2 iteraciones), factor axisym 2·pi·r (record `slide_axisymmetric` o `group_axisymmetric`), records de salida `node_slide_force`/`node_slide_f`/`node_slide_direction`; FIX de parse de la forma sin índice `axisymmetric -yes/-no` (manual 6.17) con pushback de un token (input.cc); `print_debug` registrado parse-only | `f79ea82` | 2026-09-04 | **Contra el binario del Professional (user-supplied 25-10-2023, .dbs)**: (1) slide1 rc=0 — estado final IDÉNTICO al .dbs del Pro: node_slide_force nodo 1 (−2.1148e-3, −1.2210e-3) vs (−2.1129e-3, −1.2199e-3), nodo 2 (−7.8802e-3, −4.5496e-3) vs (−7.8821e-3, −4.5507e-3), reacciones top +0.009995/−0.0057707 (targets +0.01/−0.005773): Fn = kn·penetración EXACTA por nodo (sin factor L/2) y fricción = μ·Fn al cap (node_slide_f = 0); la redistribución vertical por el par del drag (S1 = 2.11e-3/S2 = 7.88e-3 en x=0/x=1) se reproduce. (2) slide3 rc=0 (parse de `axisymmetric -no` + `print_debug`). (3) axisym1 rescatado por el parse sin índice. (4) slide2 RUNFAIL: σyy −6.447e-4 vs target −6.666666e-4 (tol 1e-9) — blocker PREEXISTENTE del elemento axisym del GNU: reparto de fuerzas nodales del anillo comprimido IGUAL (2πr en el punto medio: probe columna fija GNU 4.712/4.712) vs el Pro con lobatto ∝ radio del nodo (3.142/6.283) → los springs se asientan con u1 ≠ u2; la ley slide queda verificada contra el elemento GNU (u1 = (2/3)σ, u2 = (5/12)σ exactos). (5) slide4 RUNFAIL: drag a vx = 1 (100× el de slide1): la iteración del slider rígido oscila al arrancar el drag (2..40 iteraciones/paso sin converger; el nodo x=0 deriva a lift-off) — requiere slip plástico INCREMENTAL con historia + tangente consistente (PENDIENTE). **Corpus: 147 → 150 PASS** (205 RUNFAIL / 8 PARSE). Suite propia 16/16 + blast-radius 16/16 sin regresiones. |
@@ -495,7 +496,7 @@ marcado `PENDIENTE` puede estar cubierto en el GNU bajo otro nombre:
 
 ### control_dependency (0/1)
 
-- [ ] `control_dependency_apply` — PENDIENTE
+- [x] `control_dependency_apply` — KEYWORDS BATCH C (2026-09-04): gate por icontrol en get_group_data (group.cc), precedencia sobre dependency_apply; registro 2026-09-04 (consumo: gate; monitor de items no-dof PENDIENTE)
 
 ### control_distribute (6/6)
 
@@ -604,7 +605,7 @@ marcado `PENDIENTE` puede estar cubierto en el GNU bajo otro nombre:
 - [x] `control_mesh_keep_geometry` — presente en el GNU
 - [x] `control_mesh_keep_node` — implementada (commit `415d26f`, 2026-08-05)
 - [x] `control_mesh_macro` — presente en el GNU
-- [ ] `control_mesh_macro_concentrate` — PENDIENTE
+- [x] `control_mesh_macro_concentrate` — registrada parse-only (KEYWORDS BATCH C 2026-09-04); generacion graduada del macro PENDIENTE
 - [x] `control_mesh_macro_element` — presente en el GNU
 - [x] `control_mesh_macro_parameters` — presente en el GNU
 - [ ] `control_mesh_map` — PENDIENTE
@@ -697,7 +698,7 @@ marcado `PENDIENTE` puede estar cubierto en el GNU bajo otro nombre:
 - [ ] `control_print_gid_batch` — DESCARTADO
 - [ ] `control_print_gid_beam_vectors` — DESCARTADO
 - [ ] `control_print_gid_beam_vectors_normal` — DESCARTADO
-- [ ] `control_print_gid_contact_spring2` — DESCARTADO
+- [x] `control_print_gid_contact_spring2` — registrada parse-only (KEYWORDS BATCH C 2026-09-04, alias sin control_ aceptado); switch de dibujado GiD, sin consumo
 - [ ] `control_print_gid_coord` — DESCARTADO
 - [ ] `control_print_gid_dof` — DESCARTADO
 - [ ] `control_print_gid_dof_calcul` — DESCARTADO
@@ -814,7 +815,7 @@ marcado `PENDIENTE` puede estar cubierto en el GNU bajo otro nombre:
 
 ### dependency_apply (0/1)
 
-- [ ] `dependency_apply` — PENDIENTE
+- [x] `dependency_apply` — registrada + gate global en get_group_data (KEYWORDS BATCH C 2026-09-04)
 
 ### dependency_diagram (1/1)
 
@@ -1071,8 +1072,8 @@ fallan TODOS en el PARSE del layout, no del nombre:
 
 - [ ] `geometry_element_geometry` — PENDIENTE
 - [ ] `geometry_element_geometry_method` — PENDIENTE
-- [ ] `geometry_element_group` — PENDIENTE
-- [ ] `geometry_element_group_method` — PENDIENTE
+- [x] `geometry_element_group` — KEYWORDS BATCH C (2026-09-04): filtro de geometria por grupos de elementos dentro de geometry(); merge2/force12 rc=0; nota empirica Pro (excluye nodos con elementos fuera de la lista en todo metodo)
+- [x] `geometry_element_group_method` — KEYWORDS BATCH C (2026-09-04): -all/-any/-only; default = regla "solo grupos listados" (medida contra Pro)
 
 ### geometry_ellipse (1/1)
 
@@ -1336,8 +1337,8 @@ Nota: `group_interface_ground` del checklist anterior NUNCA existió (artefacto 
 - [x] `group_materi_plasti_diprisco` — presente en el GNU
 - [ ] `group_materi_plasti_diprisco_density` — PENDIENTE (evaluado en Sprint 10 lote 9: NO implementado. Razones: (1) la ley de interpolacion entre los dos juegos de parametros (loose l / dense d, 22 params: gamma_l beta_hat_ld b/c/t_p theta_hat_c/e xi_c/e beta_f0_l/d + e_l e_d) NO esta documentada en el manual — solo dice "the actually used data will be interpolated... using the current density" y remite a papers externos; sin la formula no hay implementacion verificable (regla de verificacion de AGENTS.md); (2) exigiria reescribir el bloque diprisco de plasti.cc con interpolacion inventada, arriesgando el diprisc1.dat validado; (3) la 12ª variable de historia (densidad relativa) no tiene ley de evolucion en el manual. La initia `materi_plasti_diprisco_history 12` SI se acepta (alias de materi_history_variables). La keyword queda registrada en database.cc? NO — sin implementacion no se registra el record (evita inputs que pasen el parseo y fallen en runtime)
 - [x] `group_materi_plasti_druck_prag` — Sprint 10 (alias del legacy druckprag; VALIDACIÓN ANALÍTICA: cizalla φ=0 → σxy=2c/√3, 0.014% error)
-- [ ] `group_materi_plasti_element_group` — PENDIENTE
-- [ ] `group_materi_plasti_element_group_factor` — PENDIENTE
+- [x] `group_materi_plasti_element_group` — registrada (KEYWORDS BATCH C 2026-09-04); consumo (reduccion 2/3 por vecindad) PENDIENTE
+- [x] `group_materi_plasti_element_group_factor` — registrada (KEYWORDS BATCH C 2026-09-04); consumo PENDIENTE
 - [ ] `group_materi_plasti_generalised_non_associate_cam_clay_for_bonded_soils` — PENDIENTE
 - [x] `group_materi_plasti_gurson` — presente en el GNU
 - [x] `group_materi_plasti_hardsoil` — Sprint 10 (lote 8; f = q/(E50(1-q/qa)) - 2q/Eur - γp, qa = qf/Rf con qf = 2·sinφ·(sig3+c·cotφ)/(1-sinφ) derivado de MC en falla; γp = kappa + extra del control; flujo asociativo; validado con la familia de relajacion `mhardsoil_gp0_off`/`mhardsoil_plast`: el estado final queda SOBRE la superficie (f ~ 0 verificada) y kappa escala con q inicial (0.000293 -> 0.0006 para σxx -2 -> -4)
@@ -1411,7 +1412,7 @@ Nota: `group_interface_ground` del checklist anterior NUNCA existió (artefacto 
 ### group_spring (2/4)
 
 - [x] `group_spring_direction` — presente en el GNU
-- [ ] `group_spring_memory` — PENDIENTE
+- [x] `group_spring_memory` — registrada (KEYWORDS BATCH C 2026-09-04); el muelle GNU es incremental en configuracion actual (= -updated_linear); spring1 rc=0
 - [x] `group_spring_plasti` — presente en el GNU
 - [ ] `group_spring_sti` — PENDIENTE
 
@@ -1724,11 +1725,11 @@ Nota: `group_interface_ground` del checklist anterior NUNCA existió (artefacto 
 - [x] Records `*_sig` de `post_calcul -materi_stress -force` (-norx_sig -nory_sig -norz_sig -nors_sig, shear, mom1/mom2; manual 6.913) — 2026-09-01; los nombres de los items node_dof_calcul como VALOR de target_item (target_item N -node_dof_calcul <nodo> -nory_sig): enums + tabla de nombres (19), resolución en exit_tn vía post_calcul_names; dirección de plot 2D = TANGENTE de la cara orientada al reference point (antes ref−centroid, inclinado); gate de la validación de tipos en bloques sin timestep; desbloquea force7/8/9/10/13 (ver registro de verificación)
 - [ ] `post_calcul_multiply` — PENDIENTE
 - [ ] `post_calcul_safety_default` — PENDIENTE
-- [ ] `post_calcul_safety_maximum` — PENDIENTE
-- [ ] `post_calcul_safety_method` — PENDIENTE
+- [x] `post_calcul_safety_maximum` — registrada parse-only (KEYWORDS BATCH C 2026-09-04)
+- [x] `post_calcul_safety_method` — registrada (KEYWORDS BATCH C 2026-09-04) + selectores VERTICAL/GLOBAL puros + operadores -safety_piping/-safety_lifting; labels medidos vs Pro (prival_0..2/global_x/y/z/vertical); calculo PENDIENTE
 - [ ] `post_calcul_static_pressure` — PENDIENTE
-- [ ] `post_calcul_static_pressure_height` — PENDIENTE
-- [ ] `post_calcul_static_pressure_height_element_group` — PENDIENTE
+- [x] `post_calcul_static_pressure_height` — KEYWORDS BATCH C (2026-09-04): regiones (coord_min,coord_max,height_ref) en groundflow_phreatic_coord; ground13 target st_pres -1220 EXACTO
+- [x] `post_calcul_static_pressure_height_element_group` — KEYWORDS BATCH C (2026-09-04): restriccion por grupo (-all); consumo junto al height record
 
 ### post_count (0/1)
 
@@ -1852,7 +1853,7 @@ Nota: `group_interface_ground` del checklist anterior NUNCA existió (artefacto 
 ### print_gid (0/10)
 
 - [ ] `print_gid_calculation` — PENDIENTE
-- [ ] `print_gid_contact_spring2` — PENDIENTE
+- [x] `print_gid_contact_spring2` — alias db_number de control_print_gid_contact_spring2 (KEYWORDS BATCH C 2026-09-04)
 - [ ] `print_gid_coord` — PENDIENTE
 - [ ] `print_gid_de` — PENDIENTE
 - [ ] `print_gid_group` — PENDIENTE

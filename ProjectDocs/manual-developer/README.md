@@ -341,3 +341,23 @@ Each file corresponds to the same feature in the [User Manual](../manual-user/).
 - [to_pres](to_pres.md) - nombres puros TO_PRES/ST_PRES/DY_PRES; generacion to_pres/st_pres/dy_pres en calcul.cc; resolucion de slots de target_item ampliada a POST_*_DOF_CALCUL en miscel.cc.
 - [control_groundflow_seepage_apply](control_groundflow_seepage_apply.md) - enum + registro; FIX del data_required=GROUNDFLOW roto de los 3 controles groundflow por timestep (check.cc); consumo del gate PENDIENTE.
 - [slide_plasti_friction](slide_plasti_friction.md) - ley elastoplastica del slide implementada en slide.cc (slide_spring/slide_penalty_law): springs kn/kt sobre desplazamientos totales, cap c+Fn*tan(phi), spring normal bidireccional con cap sig_t, salidas node_slide_force/f/direction, factor axisym 2*pi*r; FIX parse axisymmetric sin indice (input.cc) + print_debug. Bloqueadores slide2 (split axisym del elemento GNU, preexistente) y slide4 (dinamica de iteracion del slider rigido, drag vx=1) documentados con numeros.
+
+## KEYWORDS BATCH C (2026-09-04) — clusters pequeños de keywords del corpus
+
+- [group_spring_memory](group_spring_memory.md) — enum + registro; parse-only.
+- [group_spring_stiffness_nonlinear](group_spring_stiffness_nonlinear.md) — consumo en spring.cc (k del diagrama en la strain media del incremento).
+- [element_spring_strain](element_spring_strain.md) — enum + registro version_all + pre-alloc en top.cc + PUT en spring.cc.
+- [dependency_apply](dependency_apply.md) — gate global en get_group_data (group.cc).
+- [control_dependency_apply](control_dependency_apply.md) — gate por icontrol (sin data_required: el combination check por mismo indice no aplica).
+- [geometry_element_group](geometry_element_group.md) — filtro dentro de geometry() + helper node_attached_element_groups (group.cc, ELEMENT_GROUP); nota empirica Pro (merge2) + FIX area.cc normal fisica de cara + gate area() para grupos -empty (force12).
+- [geometry_element_group_method](geometry_element_group_method.md) — metodo del filtro (default -any con la regla "solo grupos listados" medida).
+- [group_materi_plasti_element_group](group_materi_plasti_element_group.md) — registro; consumo PENDIENTE.
+- [group_materi_plasti_element_group_factor](group_materi_plasti_element_group_factor.md) — registro; consumo PENDIENTE.
+- [post_calcul_static_pressure_height](post_calcul_static_pressure_height.md) — consumo en groundflow_phreatic_coord (groundfl.cc); verificado vs Pro (ground13).
+- [post_calcul_static_pressure_height_element_group](post_calcul_static_pressure_height_element_group.md) — restriccion por grupo en la busqueda de regiones.
+- [post_calcul_safety_method](post_calcul_safety_method.md) — selectores VERTICAL/GLOBAL puros + operadores SAFETY_PIPING/LIFTING; labels medidos vs Pro; calculo PENDIENTE.
+- [post_calcul_safety_maximum](post_calcul_safety_maximum.md) — registro; consumo PENDIENTE.
+- [group_groundflow_expansion](group_groundflow_expansion.md) — registro parse-only.
+- [control_print_gid_contact_spring2](control_print_gid_contact_spring2.md) — no_index + alias sin prefijo control_.
+- [control_mesh_macro_concentrate](control_mesh_macro_concentrate.md) — registro parse-only (4 valores).
+- [control_mesh_generate_truss_beam](control_mesh_generate_truss_beam.md) — alias db_number al registro canonico.
