@@ -360,3 +360,32 @@ pending solver work, same root as interface_bar2_hex8.
 6.201): generating interface elements by intersecting a triangulated
 plane with a tet4 mesh — not registered, real mesh-generation feature
 (out of sprint scope, documented).
+
+## Convergence record 2026-09-04 — the interface element measure (patch1)
+
+The assembled per-pair spring force and stiffness must carry the element
+MEASURE: `force = w_i * L * sigma` and `stiffness = w_i * L * kn` with
+L = the element length (2D line) or the face area (3D surface). The
+historical assembly used the bare Lobatto/even weights (sum 1 = the
+UNIT-measure element), which is exact only for the unit-length interfaces
+(interface1: length 1) and silently under-integrates every other element.
+
+patch1 of the corpus (two inclined quad6 interfaces of length 1.677/0.559
+between loaded quad9 blocks) converged to sigma_n = 1610/1073/536 per
+intpnt (mean 1431) instead of the Professional's uniform 960: without the
+length the discrete force system loses the load-path moment arm (the
+length-weighted centroid of the pairs = the load line only WITH the
+measure) and the uniform traction cannot balance the applied edge load.
+The fix (2026-09-04): `iface_measure` in `interface_element()` — the 2D
+chord between the first and the last side-1 node (reference geometry per
+the memory branch: -total_linear → NODE_START_REFINED), the 3D face area
+by the triangle fan (the tochnog hex8/quad4 face numbering is a bowtie
+order — the crossed-diagonals formula gives 0). With the measure the
+per-IP sigma_n = 960.0000000 with the direct solver (rc=0); the
+unit-length validations are unchanged (rc=0).
+
+PENDING (same lote): the mpc_linear_quadratic tying (mpc3/4: 0.299/0.350
+vs 1/3 — the generated ties constrain the velocity dofs but the mixed
+σ-dofs of the tied nodes stay free → non-homogeneous field), the
+phreatic-multiple + mechanics coupling (ground8), the materi_dynamic
+explicit limit (dynamic1/2/5/8).

@@ -979,3 +979,73 @@ equilibrated; the L5 kinematics amplified it.
   section moments now read the free-body statics P·L = 0.08 for both
   SRI and OFF (the SRI discriminator is the deflection, not the
   section moment).
+
+---
+
+## 14. Fix F (2026-09-04) — the interface element MEASURE (corpus patch1)
+
+**Status**: DONE. The staggered scheme's fixed point for the interface
+elements was the element solution of a system whose assembled interface
+forces/stiffness were missing the element LENGTH (2D) / AREA (3D).
+
+### 14.1 The measured mechanism (patch1 of the corpus)
+
+patch1 = two inclined quad6 interfaces (length 1.677 and 0.559) between
+two loaded quad9 blocks. The Professional gives sigma_n = 960 uniform per
+intpnt (the rotated traction of the sigma_xx = 1200 patch); the GNU
+converged (any solver: Bi-CG ≡ band LU ≡ SuperLU, 1-40 equilibrium
+iterations, 1 or 2 steps — identical) to sigma_n = (1610, 1610, 1073,
+536, 536) per intpnt, mean 1431.08, with the whole right block shifted
+~1e-7 (rotated ~7e-8 rad): the σn record = kn·(jump of the elastic
+field), and the elastic field itself was wrong.
+
+The root: the assembled nodal force of a closed interface pair was
+`w_i * sigma` and the pair stiffness `w_i * kn` with the Lobatto/even
+weights w_i (sum = 1) — the integral over the UNIT-length element. The
+physical integral is `w_i * L * sigma` / `w_i * L * kn` with L = the
+element length (2D) or the face area (3D). The unit-length validations
+(interface1-15, conspr1-7, interface_quad4_hex8, ...) never
+discriminated the missing measure (L = 1); patch1 did. Without the L the
+discrete force system of the interface loses the load-path moment arm:
+the length-weighted centroid of the pairs is y = 0 (the load's line of
+action) only WITH the measure — the bare Lobatto weights of the unequal
+elements 5/6 give a spurious centroid offset, so a uniform traction
+cannot balance the applied edge load and the equilibrium sigma_n becomes
+the non-uniform pattern above (its weighted sum balances the 2400 load
+exactly — verified numerically). With the measure the uniform traction
+960 equilibrates (the per-IP sigma_n = 959.99999999-960.00000001, the
+node displacements match the Professional's to the 10th digit).
+
+The 3D face area must use a triangle fan (triangle 0-1-2 + triangle
+0-2-3): the tochnog hex8/quad4 face numbering (e.g. 5,6,7,8 of the unit
+hex8) is a bowtie order — the crossed-diagonals formula gives 0 (the
+diagonals coincide). The 2D length = the chord between the first and the
+last side-1 node of the reference geometry (the same memory branch as the
+interface frame: -total_linear → NODE_START_REFINED).
+
+### 14.2 The solver residual (patch1's ±1e-3 targets)
+
+With the measure the residual of the patch1's sigma_n is the Bi-CG
+accuracy on the penalty-conditioned mixed system (kn/E = 1e4): the old
+relative criterion (bicg_error 1e-10 → |r|/|r0| < 1e-5) left the
+interface jumps noisy at ~1e-2 (sigma_n 960.01). The defaults were
+tightened (bicg_error 1e-14, floor 1e-16): the penalty systems now fail
+honestly (the CG breakdown — the flat-residual-plane identity of the
+symmetric structures) and the existing Bi-CG → direct-LU retry resolves
+them exactly (sigma_n = 960.0000000). Well-conditioned systems converge
+tighter without the retry; the groundflow large models (ground19) still
+converge (18.8 s, no retry). Corpus: 153 PASS (patch1 in; the only
+per-test change vs the 141-baseline: validation_2 now fails honestly at
+-0.688985 — the same value with the pure direct solver — its -0.63
+target was a loose-CG trajectory artifact of the inertia/consolidation
+transient; taylor3 = the 45-s timeout marginal, flaky in either binary).
+
+### 14.3 What this does NOT change
+
+- The mpc3/4 tying (0.299/0.350 vs 1/3), ground8 (phreatic_multiple +
+  mechanics), dynamic1/2/5/8 (materi_dynamic), ground15/16, mpc5/6:
+  different mechanisms (the mpc generation ties the velocity dofs but
+  the mixed σ-dofs of the tied nodes stay free → non-homogeneous field;
+  the ground8 = the phreatic-multiple/mechanics coupling; the
+  dynamic* = the explicit limit of the staggered scheme) — PENDIENTE
+  with the fine diagnosis of the next lote.

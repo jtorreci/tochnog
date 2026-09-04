@@ -216,3 +216,13 @@ precision is not enough; the SuperLU path segfaults — pending).
   lado).
 - **Pendiente**: `group_interface_materi_memory`, conductivity/groundflow,
   y el post-proceso de interfaz. See `ProjectDocs/DESIGN-INTERFACES.md`.
+
+## Convergence note (2026-09-04): the element measure
+
+The interface forces and stiffnesses are integrated over the PHYSICAL
+element length (2D) or face area (3D). Earlier versions used the bare
+quadrature weights, which is exact only for unit-length interfaces;
+non-unit-length interfaces under load (e.g. the inclined patch1 of the
+corpus) converged to a non-uniform traction instead of the equilibrium
+`sigma_n = n·sigma·n`. The Professional-validated unit-length behaviour
+is unchanged.
