@@ -467,6 +467,115 @@ void mesh_rotate_3d( long int nrot )
   mesh_has_changed( VERSION_NORMAL );
 }
 
+// mesh_convert_quad8 - auto-convert the Professional 8-node serendipity
+// quad8 volume elements to the GNU 9-node Lagrange quad9.
+//
+// The GNU has NO real quad8: the Professional auto-converts them (its
+// own corpus .dat files state it textually - interface_bar3_quad8.dat:
+// "The bar3 and quad8 will be automatically converted to quad6
+// interface and quad9 surface elements"). The conversion inserts the
+// CENTRE node (the average of the 4 corners) and rewrites the
+// connectivity from the Professional quad8 ordering to the GNU tensor
+// quad9 ordering.
+//
+//   quad8 (Professional, every -quad8 record of the suite):
+//     corners  (BL, BR, TL, TR) then mid-edge nodes (BM, LM, RM, TM)
+//     -> record slots 1..8
+//   quad9 (GNU, xi fastest / eta slowest: -1 -> 0 -> +1 per axis):
+//     BL, BM, BR | LM, CENTRE, RM | TL, TM, TR  -> record slots 1..9
+//     (border_nodes_quad9 of area.cc: corners 0,2,8,6, mid-edge nodes
+//     1,3,5,7, centre 4 - the same ordering of every -quad9 record of
+//     the suite, e.g. patch1.dat element 1)
+//
+// so the permutation is:
+//     quad9 = { q8[1], q8[5], q8[2], q8[6], centre, q8[7], q8[3],
+//               q8[8], q8[4] }.
+//
+// The hook runs at EVERY step_start (see top.cc step_start: not only
+// task==YES - a quad8 is not a native element, so an intermediate
+// control step below the timestep would evaluate the raw quad8), BEFORE
+// extrude() (a quad8 mesh extrudes to hex27 like a quad9 one) and
+// BEFORE interface_convert() (the interface split sees the quad9
+// bulk). It is idempotent: converted elements are -quad9 and skipped
+// on later steps. -quad8 elements of an INTERFACE group are skipped:
+// there the quad8 is a FACIAL element (3D interface_quad8_hex20
+// family) converted by the interface machinery, not a volume.
+void mesh_convert_quad8( void )
+
+{
+  long int element=0, max_element=0, max_node=0, length=0, ldum=0,
+    swit=0, element_group=0, inol=0, i=0, nconv=0, idum[1];
+  double ddum[1], coord[MDIM], centre[MDIM];
+  long int el[1+MNOL], q9[1+9];
+
+  swit = set_swit(-1,-1,"mesh_convert_quad8");
+  if ( swit ) pri( "In routine MESH_CONVERT_QUAD8" );
+
+  db_highest_index( ELEMENT, max_element, VERSION_NORMAL );
+  db_highest_index( NODE, max_node, VERSION_NORMAL );
+  if ( max_element<0 ) return;
+
+  for ( element=0; element<=max_element; element++ ) {
+    if ( !db_active_index( ELEMENT, element, VERSION_NORMAL ) ) continue;
+    db( ELEMENT, element, el, ddum, length, VERSION_NORMAL, GET );
+    if ( el[0]!=-QUAD8 ) continue;
+    if ( length!=1+8 ) db_error( ELEMENT, element );
+    // interface-group quad8: a facial interface element (the 3D
+    // quad8-interface family), NOT a volume - leave it to the
+    // interface conversion lot.
+    element_group = 0;
+    db( ELEMENT_GROUP, element, &element_group, ddum, ldum,
+      VERSION_NORMAL, GET_IF_EXISTS );
+    if ( db_active_index( GROUP_INTERFACE, element_group, VERSION_NORMAL ) )
+      continue;
+    // centre node: average of the 4 corners (quad8 slots 1..4)
+    array_set( centre, 0., MDIM );
+    for ( inol=0; inol<4; inol++ ) {
+      db( NODE, el[1+inol], idum, coord, ndim, VERSION_NORMAL, GET );
+      for ( i=0; i<ndim; i++ ) centre[i] += coord[i];
+    }
+    for ( i=0; i<ndim; i++ ) centre[i] /= 4.;
+    max_node++;
+    db( NODE, max_node, idum, centre, ndim, VERSION_NORMAL, PUT );
+    db( NODE_START_REFINED, max_node, idum, centre, ndim,
+      VERSION_NORMAL, PUT );
+    // the new node carries the full dof state of the corners (zeros at
+    // first step; same pattern as interface_convert/extrude)
+    for ( int idat=0; idat<MDAT; idat++ ) {
+      if ( idat!=NODE && idat!=NODE_START_REFINED &&
+           db_data_class(idat)==NODE &&
+           db_active_index( idat, el[1], VERSION_NORMAL ) ) {
+        long int ndata_len = db_len( idat, el[1], VERSION_NORMAL );
+        if ( db_type(idat)==DOUBLE_PRECISION ) {
+          double *dold = db_dbl( idat, el[1], VERSION_NORMAL );
+          db( idat, max_node, idum, dold, ndata_len, VERSION_NORMAL, PUT );
+        }
+        else {
+          long int *iold = db_int( idat, el[1], VERSION_NORMAL );
+          db( idat, max_node, iold, ddum, ndata_len, VERSION_NORMAL, PUT );
+        }
+      }
+    }
+    // rewrite the connectivity in the GNU quad9 tensor ordering
+    q9[0] = -QUAD9;
+    q9[1] = el[1];
+    q9[2] = el[5];
+    q9[3] = el[2];
+    q9[4] = el[6];
+    q9[5] = max_node;
+    q9[6] = el[7];
+    q9[7] = el[3];
+    q9[8] = el[8];
+    q9[9] = el[4];
+    length = 1+9;
+    db( ELEMENT, element, q9, ddum, length, VERSION_NORMAL, PUT );
+    nconv++;
+  }
+  if ( nconv>0 ) mesh_has_changed( VERSION_NORMAL );
+
+  if ( swit ) pri( "Out function MESH_CONVERT_QUAD8" );
+}
+
 void mesh_extrude( double z_layer[], long int n_layer, long int quad9_layers )
 
 {

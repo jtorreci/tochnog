@@ -1221,6 +1221,7 @@ enum {
   POST_ERROR_MESH1,
   POST_ERROR_MESH2,
   POST_ERROR_RESULT,
+  POST_FORCE_EDGE_SUMMED,
   POST_GLOBAL,
   POST_INTEGRATE,
   POST_INTEGRATE_RESULT,
@@ -1280,6 +1281,7 @@ enum {
   QUAD16,
   QUAD4,
   QUAD6,
+  QUAD8,
   QUAD9,
   RA,
   RECTANGLE,
@@ -1927,6 +1929,7 @@ void      mesh_mirror( long int axis );
 void      mesh_copy( double move_coords[] );
 void      mesh_rotate_2d( double angle_deg );
 void      mesh_rotate_3d( long int nrot );
+void      mesh_convert_quad8( void );
 void      mesh_extrude( double z_layer[], long int n_layer,
             long int quad9_layers );
 void      mesh_delete_keep( long int icontrol );
@@ -1983,6 +1986,7 @@ void      pol( long int element, long int element_group,
 void      post( long int task );
 void      post_global( void );
 void      post_integrate( void );
+void      post_force_edge_summed_calculate( void );
 void      post_node_rhside_fixed_free( void );
 void      pri( const char *s );
 void      pri( const char *s, const char *st );

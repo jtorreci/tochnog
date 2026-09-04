@@ -6125,6 +6125,12 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   data_length[POST_ERROR_RESULT] = 1;
   data_class[POST_ERROR_RESULT] = POST;
 
+  strcpy(name[POST_FORCE_EDGE_SUMMED],"post_force_edge_summed");
+  type[POST_FORCE_EDGE_SUMMED] = DOUBLE_PRECISION;
+  data_length[POST_FORCE_EDGE_SUMMED] = ndim;
+  data_class[POST_FORCE_EDGE_SUMMED] = POST;
+  no_index[POST_FORCE_EDGE_SUMMED] = 1;
+
   strcpy(name[POST_GLOBAL],"post_global");
   type[POST_GLOBAL] = INTEGER;
   data_length[POST_GLOBAL] = DATA_ITEM_SIZE;
@@ -6346,6 +6352,7 @@ void db_initialize( long int dof_type[], long int dof_label[] )
 
   strcpy(name[QUAD4],"quad4");
   strcpy(name[QUAD6],"quad6");
+  strcpy(name[QUAD8],"quad8");
 
   strcpy(name[QUAD9],"quad9");
 

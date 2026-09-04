@@ -41,6 +41,12 @@ void post( long int task )
 
   if ( nuknwn>0 ) {
 
+    // -post_force_edge_summed (manual Professional 6.936): total force
+    // following from the -force_edge records, integrated over the edges.
+    // Computed on demand (target_item / control_print) at every
+    // step_close, BEFORE the control_print section prints the record.
+    post_force_edge_summed_calculate();
+
     db( POST_POINT_MOVE, 0, &post_point_move, ddum, ldum, 
       VERSION_NORMAL, GET_IF_EXISTS );
 
@@ -525,6 +531,311 @@ void post_global( void )
                                                       &global_strainenergy, length, VERSION_NORMAL, PUT );
         }
     }
+}
+
+// post_force_edge_summed_calculate - the Professional post_global item
+// -post_force_edge_summed (manual 6.936): "total force following from
+// -force_edge integrated over edges in x,y,z directions",
+// number_of_space_dimensions values, stored in the flat record
+// post_force_edge_summed (no index). The Professional computes it when
+// post_global is -yes (the default); the GNU computes it ON DEMAND -
+// when a target_item or a control_print asks for it (the corpus
+// elasti6 checks target_item -post_force_edge_summed 0 1 = 10: the
+// total vertical force 1.0*10 on the top edge).
+//
+// The integration mirrors the load assembly of area()
+// (force_element_edge): for every element side whose nodes ALL lie on
+// the record's geometry entity (or in its node list) and that passes
+// the element/group/side/node restrictions, the total force vector
+// accumulates, per side node,
+//     w_lobatto * ar * load * factor * node_factor * values[dir]
+// with the SAME quadrature that distributes the traction to the nodes
+// (2D: side length x Lobatto; 3D: face area via triangle fan x tensor
+// Lobatto) - so the summed value is exactly the total force the
+// record applies. time/load factor: force_element_edge_time /
+// _sine / _time_file, default 1; spatial factor:
+// force_element_edge_factor (multi_linear_factor_x included via
+// force_factor()).
+static long int post_fee_border_tria3[] = { 0, 1,  1, 2,  2, 0 };
+static long int post_fee_border_tria6[] = { 0, 1, 2,  2, 4, 5,  5, 3, 0 };
+static long int post_fee_border_quad4[] = { 0, 1,  1, 3,  3, 2,  2, 0 };
+static long int post_fee_border_quad9[] = { 0, 1, 2,  2, 5, 8,  8, 7, 6,  6, 3, 0 };
+static long int post_fee_border_quad16[] =
+  { 0, 1, 2, 3,  3, 7, 11, 15,  15, 14, 13, 12,  12, 8, 4, 0 };
+static long int post_fee_border_tet4[] =
+  { 0, 1, 2,  0, 1, 3,  0, 2, 3,  1, 2, 3 };
+static long int post_fee_border_hex8[] =
+  { 0, 1, 2, 3,  4, 5, 6, 7,  0, 1, 4, 5,  1, 3, 5, 7,
+    2, 3, 6, 7,  0, 2, 4, 6 };
+static long int post_fee_border_hex27[] =
+  { 0, 1, 2, 3, 4, 5, 6, 7, 8,  18, 19, 20, 21, 22, 23, 24, 25, 26,
+    0, 1, 2, 9, 10, 11, 18, 19, 20,  2, 5, 8, 11, 14, 17, 20, 23, 26,
+    6, 7, 8, 15, 16, 17, 24, 25, 26,  0, 3, 6, 9, 12, 15, 18, 21, 24 };
+
+void post_force_edge_summed_calculate( void )
+
+{
+  long int i=0, j=0, inod=0, inol=0, iside=0, nside=0, nnol_side=0,
+    inol_side=0, ind=0, imax=0, element=0, max_element=0, length=0,
+    ldum=0, nnod=0, nnol=0, name=0, requested=0, found=0, swit=0,
+    nfreq=0, ifreq=0, idum[1], el[1+MNOL], nodes[MNOL],
+    *area_int=NULL, *sides=NULL, *target=NULL, *cpr=NULL,
+    dof_principal[MUKNWN];
+  double ddum[1], values[DATA_ITEM_SIZE], total[MDIM], coord[MDIM],
+    load=0., factor=0., node_factor=0., ar=0., time_start=0.,
+    time_current=0., dtime=0., time_total=0., frequency=0., amplitude=0.,
+    w[MNOL], normal_tmp[MDIM], rdum=0., ddum2[1], geom_work[MDIM], tmp=0.,
+    iso_l[MNOL],
+    wt_l[MNOL], *force_time_tab=NULL, *sine_tab=NULL, *force_vals=NULL,
+    vec[MDIM];
+  long int geometry_entity[DATA_ITEM_SIZE];
+
+  swit = set_swit(-1,-1,"post_force_edge_summed_calculate");
+  if ( swit ) pri( "In routine POST_FORCE_EDGE_SUMMED_CALCULATE" );
+
+  // on demand: any target_item or control_print asking for the item
+  db_max_index( TARGET_ITEM, imax, VERSION_NORMAL, GET );
+  for ( ind=0; ind<=imax && !requested; ind++ ) {
+    if ( !db_active_index( TARGET_ITEM, ind, VERSION_NORMAL ) ) continue;
+    target = db_int( TARGET_ITEM, ind, VERSION_NORMAL );
+    if ( labs(target[0])==POST_FORCE_EDGE_SUMMED ) requested = 1;
+  }
+  if ( !requested ) {
+    db_max_index( CONTROL_PRINT, imax, VERSION_NORMAL, GET );
+    for ( ind=0; ind<=imax && !requested; ind++ ) {
+      if ( !db_active_index( CONTROL_PRINT, ind, VERSION_NORMAL ) ) continue;
+      length = db_len( CONTROL_PRINT, ind, VERSION_NORMAL );
+      cpr = db_int( CONTROL_PRINT, ind, VERSION_NORMAL );
+      for ( i=0; i<length; i++ )
+        if ( cpr[i]==-POST_FORCE_EDGE_SUMMED ) requested = 1;
+    }
+  }
+  if ( !requested ) return;
+
+  array_set( total, 0., MDIM );
+  db( DOF_PRINCIPAL, 0, dof_principal, ddum, ldum, VERSION_NORMAL,
+    GET_IF_EXISTS );
+  db( TIME_CURRENT, 0, idum, &time_current, ldum, VERSION_NORMAL,
+    GET_IF_EXISTS );
+  db( DTIME, 0, idum, &dtime, ldum, VERSION_NEW, GET_IF_EXISTS );
+  time_total = time_current + dtime;
+
+  db_highest_index( ELEMENT, max_element, VERSION_NORMAL );
+
+  db_max_index( FORCE_ELEMENT_EDGE, imax, VERSION_NORMAL, GET );
+  for ( ind=0; ind<=imax; ind++ ) {
+    if ( !db_active_index( FORCE_ELEMENT_EDGE, ind, VERSION_NORMAL ) )
+      continue;
+    force_vals = db_dbl( FORCE_ELEMENT_EDGE, ind, VERSION_NORMAL );
+    length = db_len( FORCE_ELEMENT_EDGE, ind, VERSION_NORMAL );
+    if ( length>DATA_ITEM_SIZE ) length = DATA_ITEM_SIZE;
+    for ( i=0; i<length; i++ ) values[i] = force_vals[i];
+
+    // the "area" record: node list (area[0]>0) or geometry entity
+    area_int = db_int( FORCE_ELEMENT_EDGE_GEOMETRY, ind, VERSION_NORMAL );
+    nnod = db_len( FORCE_ELEMENT_EDGE_GEOMETRY, ind, VERSION_NORMAL );
+    if ( area_int[0]>0 ) {
+      // node list: the load applies to the element sides whose nodes
+      // are all members of the list
+      geometry_entity[0] = 0;
+    }
+    else {
+      geometry_entity[0] = area_int[0];
+      geometry_entity[1] = area_int[1];
+      if ( geometry_entity[0]>=0 ||
+           db_data_class(geometry_entity[0])!=GEOMETRY ) continue;
+    }
+
+    // load factor over time (same resolution order as area(): sine,
+    // time table, time file, default 1)
+    load = 1.;
+    if ( db_active_index( FORCE_ELEMENT_EDGE_SINE, ind, VERSION_NORMAL ) ) {
+      sine_tab = db_dbl( FORCE_ELEMENT_EDGE_SINE, ind, VERSION_NORMAL );
+      nfreq = ( db_len( FORCE_ELEMENT_EDGE_SINE, ind, VERSION_NORMAL ) - 1 ) / 2;
+      time_start = sine_tab[0];
+      load = 0.;
+      if ( time_total>time_start ) {
+        for ( ifreq=0; ifreq<nfreq; ifreq++ ) {
+          frequency = sine_tab[1+ifreq*2+0];
+          amplitude  = sine_tab[1+ifreq*2+1];
+          load += amplitude * sin( 2. * PIRAD * frequency * time_total );
+        }
+      }
+    }
+    else if ( db_active_index( FORCE_ELEMENT_EDGE_TIME, ind, VERSION_NORMAL ) ) {
+      force_time_tab = db_dbl( FORCE_ELEMENT_EDGE_TIME, ind, VERSION_NORMAL );
+      length = db_len( FORCE_ELEMENT_EDGE_TIME, ind, VERSION_NORMAL );
+      load = 0.;
+      force_time( force_time_tab, "FORCE_ELEMENT_EDGE_TIME", length, load );
+    }
+    else if ( db_active_index( FORCE_ELEMENT_EDGE_TIME_FILE, ind,
+        VERSION_NORMAL ) ) {
+      long int force_time_file = 0;
+      db( FORCE_ELEMENT_EDGE_TIME_FILE, ind, &force_time_file, ddum,
+        ldum, VERSION_NORMAL, GET_IF_EXISTS );
+      if ( force_time_file==-YES ) {
+        load = 0.;
+        force_time_file_apply( ind, FORCE_ELEMENT_EDGE_TIME_FILE, load );
+      }
+    }
+
+    for ( element=0; element<=max_element; element++ ) {
+      if ( !db_active_index( ELEMENT, element, VERSION_NORMAL ) ) continue;
+      db( ELEMENT, element, el, ddum, length, VERSION_NORMAL, GET );
+      name = el[0]; nnol = length - 1;
+      for ( inol=0; inol<nnol; inol++ ) nodes[inol] = el[1+inol];
+      nside = 0; sides = NULL;
+      if      ( name==-TRIA3 ) { nside = 3; nnol_side = 2; sides = post_fee_border_tria3; }
+      else if ( name==-TRIA6 ) { nside = 3; nnol_side = 3; sides = post_fee_border_tria6; }
+      else if ( name==-QUAD4 ) { nside = 4; nnol_side = 2; sides = post_fee_border_quad4; }
+      else if ( name==-QUAD9 ) { nside = 4; nnol_side = 3; sides = post_fee_border_quad9; }
+      else if ( name==-QUAD16 ){ nside = 4; nnol_side = 4; sides = post_fee_border_quad16; }
+      else if ( name==-TET4  ) { nside = 4; nnol_side = 3; sides = post_fee_border_tet4; }
+      else if ( name==-HEX8  ) { nside = 6; nnol_side = 4; sides = post_fee_border_hex8; }
+      else if ( name==-HEX27 ) { nside = 6; nnol_side = 9; sides = post_fee_border_hex27; }
+      if ( !sides ) continue;
+
+      // element-level restrictions (same companion order as area.cc)
+      long int grp = 0;
+      db( ELEMENT_GROUP, element, &grp, ddum, ldum, VERSION_NORMAL,
+        GET_IF_EXISTS );
+      if ( db_active_index( FORCE_ELEMENT_EDGE_ELEMENT, ind, VERSION_NORMAL ) ) {
+        long int elt[DATA_ITEM_SIZE], length_elt = 0;
+        db( FORCE_ELEMENT_EDGE_ELEMENT, ind, elt, ddum, length_elt,
+          VERSION_NORMAL, GET );
+        if ( !array_member( elt, element, length_elt, ldum ) ) continue;
+      }
+      if ( db_active_index( FORCE_ELEMENT_EDGE_ELEMENT_GROUP, ind,
+          VERSION_NORMAL ) ) {
+        long int gl[DATA_ITEM_SIZE], length_gl = 0;
+        db( FORCE_ELEMENT_EDGE_ELEMENT_GROUP, ind, gl, ddum, length_gl,
+          VERSION_NORMAL, GET );
+        if ( !array_member( gl, grp, length_gl, ldum ) ) continue;
+      }
+
+      for ( iside=0; iside<nside; iside++ ) {
+        // side in the geometry / node list: EVERY side node must match
+        found = 1;
+        for ( inol_side=0; inol_side<nnol_side && found; inol_side++ ) {
+          inol = sides[iside*nnol_side + inol_side];
+          inod = nodes[inol];
+          if ( geometry_entity[0]==0 ) {
+            if ( !array_member( area_int, inod, nnod, ldum ) ) found = 0;
+          }
+          else {
+            geometry( inod, geom_work, geometry_entity, found, rdum,
+              normal_tmp, rdum, geom_work, NODE_START_REFINED, PROJECT_EXACT,
+              VERSION_NORMAL );
+          }
+        }
+        if ( !found ) continue;
+        if ( db_active_index( FORCE_ELEMENT_EDGE_ELEMENT_SIDE, ind,
+            VERSION_NORMAL ) ) {
+          long int ss[DATA_ITEM_SIZE], length_ss = 0, ok_side = 0;
+          db( FORCE_ELEMENT_EDGE_ELEMENT_SIDE, ind, ss, ddum, length_ss,
+            VERSION_NORMAL, GET );
+          for ( i=0; i+1<length_ss; i+=2 )
+            if ( ss[i]==element && ss[i+1]==iside+1 ) ok_side = 1;
+          if ( !ok_side ) continue;
+        }
+
+        // edge/face measure of the side (same quadrature as area())
+        ar = 0.;
+        array_set( w, 0., MNOL );
+        if ( ndim==2 ) {
+          double *c0 = db_dbl( NODE, nodes[sides[iside*nnol_side+0]],
+            VERSION_NORMAL );
+          double *c1 = db_dbl( NODE, nodes[sides[iside*nnol_side+nnol_side-1]],
+            VERSION_NORMAL );
+          for ( i=0; i<ndim; i++ ) vec[i] = c1[i] - c0[i];
+          ar = array_size( vec, ndim );
+          integration_lobatto( nnol_side, iso_l, w );
+        }
+        else {
+          assert( ndim==3 );
+          if ( name==-TET4 ) {
+            double *c0 = db_dbl( NODE, nodes[sides[iside*3+0]], VERSION_NORMAL );
+            double *c1 = db_dbl( NODE, nodes[sides[iside*3+1]], VERSION_NORMAL );
+            double *c2 = db_dbl( NODE, nodes[sides[iside*3+2]], VERSION_NORMAL );
+            double a=0., b=0., c=0.;
+            for ( i=0; i<3; i++ ) {
+              vec[i] = c1[i]-c0[i]; a += vec[i]*vec[i];
+              vec[i] = c2[i]-c0[i]; b += vec[i]*vec[i];
+              vec[i] = c2[i]-c1[i]; c += vec[i]*vec[i];
+            }
+            a = sqrt(a); b = sqrt(b); c = sqrt(c);
+            ar = sqrt( (a+b+c)*(a+b-c)*(a-b+c)*(-a+b+c)/16 );
+            w[0] = w[1] = w[2] = 1./3.;
+          }
+          else {
+            long int ind1 = ( name==-HEX8 ) ? 1 : 2;
+            long int ind2 = ( name==-HEX8 ) ? 2 : 6;
+            long int nq  = ( name==-HEX8 ) ? 2 : 3;
+            double *f0 = db_dbl( NODE, nodes[sides[iside*nnol_side+0]], VERSION_NORMAL );
+            double *f1 = db_dbl( NODE, nodes[sides[iside*nnol_side+ind1]], VERSION_NORMAL );
+            double *f2 = db_dbl( NODE, nodes[sides[iside*nnol_side+ind2]], VERSION_NORMAL );
+            double *f3 = db_dbl( NODE, nodes[sides[iside*nnol_side+nnol_side-1]], VERSION_NORMAL );
+            ar = triangle_area( f0, f1, f2 ) + triangle_area( f1, f2, f3 );
+            integration_lobatto( nq, iso_l, wt_l );
+            for ( j=0; j<nq; j++ )
+              for ( i=0; i<nq; i++ ) w[j*nq+i] = wt_l[i]*wt_l[j];
+          }
+        }
+
+        for ( inol_side=0; inol_side<nnol_side; inol_side++ ) {
+          inol = sides[iside*nnol_side + inol_side];
+          inod = nodes[inol];
+          // node-level restriction + factor + per-node factor
+          if ( db_active_index( FORCE_ELEMENT_EDGE_NODE, ind,
+              VERSION_NORMAL ) ) {
+            long int nds[DATA_ITEM_SIZE], length_nds = 0;
+            db( FORCE_ELEMENT_EDGE_NODE, ind, nds, ddum, length_nds,
+              VERSION_NORMAL, GET );
+            if ( !array_member( nds, inod, length_nds, ldum ) ) continue;
+          }
+          if ( db_active_index( FORCE_ELEMENT_EDGE_ELEMENT_NODE, ind,
+              VERSION_NORMAL ) ) {
+            long int en[DATA_ITEM_SIZE], length_en = 0, ok_en = 0;
+            db( FORCE_ELEMENT_EDGE_ELEMENT_NODE, ind, en, ddum, length_en,
+              VERSION_NORMAL, GET );
+            if ( en[0]==element )
+              for ( i=1; i<length_en; i++ )
+                if ( en[i]==inol ) ok_en = 1;
+            if ( !ok_en ) continue;
+          }
+          db( NODE, inod, idum, coord, ndim, VERSION_NORMAL, GET );
+          node_factor = 1.;
+          if ( db_active_index( FORCE_ELEMENT_EDGE_NODE_FACTOR, ind,
+              VERSION_NORMAL ) ) {
+            long int length_nf = 0;
+            double nf_vals[DATA_ITEM_SIZE];
+            db( FORCE_ELEMENT_EDGE_NODE_FACTOR, ind, idum, nf_vals,
+              length_nf, VERSION_NORMAL, GET );
+            if ( (long int)nf_vals[0]==element )
+              for ( j=0; j+1<length_nf; j++ )
+                if ( j==inol ) node_factor = nf_vals[j+1];
+          }
+          force_factor( FORCE_ELEMENT_EDGE_FACTOR, ind, coord, factor );
+          // map the record values onto the space directions via the
+          // principal unknowns (the same loop as the area() assembly)
+          long int iprinc = 0;
+          double nf = w[inol_side] * ar * load * factor * node_factor;
+          for ( long int ipuknwn=0; ipuknwn<npuknwn && iprinc<length;
+              ipuknwn++ ) {
+            long int iuknwn = ipuknwn*nder;
+            if ( dof_principal[iuknwn]>=0 ) {
+              if ( iprinc<ndim ) total[iprinc] += nf * values[iprinc];
+              iprinc++;
+            }
+          }
+        }
+      }
+    }
+  }
+  length = ndim;
+  db( POST_FORCE_EDGE_SUMMED, 0, idum, total, length, VERSION_NORMAL, PUT );
+
+  if ( swit ) pri( "Out function POST_FORCE_EDGE_SUMMED_CALCULATE" );
 }
 
 void post_integrate( void )

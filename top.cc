@@ -683,6 +683,15 @@ void step_start( long int task, long int options_solver[], double dtime, double 
   // Both only on the first step (task==YES): re-running them on later
   // steps duplicates the mesh. They must run BEFORE data()/merge() so
   // those phases see the final 3D elements.
+  // mesh_convert_quad8 runs on EVERY step_start (not only task==YES):
+  // a -quad8 is not a native element, so any evaluation in between
+  // control steps (e.g. a post_point at an intermediate control index
+  // below the timestep) would hit the raw quad8. Idempotent (converted
+  // elements are -quad9 and skipped). It runs BEFORE extrude (a quad8
+  // mesh must become quad9 first so the quadratic extrusion can lift it
+  // to hex27) and before interface_convert (the interface split must
+  // see the quad9 bulk).
+  mesh_convert_quad8();
   if ( task==YES ) extrude();
   if ( task==YES ) interface_convert( icontrol );
 

@@ -1123,6 +1123,11 @@ void interface_element( long int element, long int name,
 //   {a,b,a',b'}. Neighbouring isoparametric elements on the OTHER side
 //   of the interface (i.e. not in the groups listed by
 //   control_mesh_convert_element_group) are reconnected to {a',b'}.
+//   -bar3 -> -quad6 (2D quadratic): the same split with 3 nodes per
+//   side (the Professional auto-converts the quadratic interfaces;
+//   interface_bar3_quad8.dat of the corpus states it textually). The
+//   interface_element() routine already supports the -quad6 (3+3
+//   nodes, Lobatto weights 1/6,4/6,1/6).
 //
 // See ProjectDocs/DESIGN-INTERFACES.md for the full algorithm.
 void interface_convert( long int icontrol )
@@ -1177,14 +1182,17 @@ void interface_convert( long int icontrol )
     element_group = 0;
     db( ELEMENT_GROUP, element, &element_group, ddum, ldum,
       VERSION_NORMAL, GET_IF_EXISTS );
-    if ( name!=-BAR2 && name!=-TRIA3 && name!=-QUAD4 ) continue;
+    if ( name!=-BAR2 && name!=-BAR3 && name!=-TRIA3 && name!=-QUAD4 )
+      continue;
     if ( !db_active_index( GROUP_INTERFACE, element_group, VERSION_NORMAL ) )
       continue;
 
-    // side 1 nodes: for 2D bar2 = {a,b}; for 3D tria3 = 3 nodes,
-    // quad4 = 4 nodes. They form the base of the interface element.
+    // side 1 nodes: for 2D bar2 = {a,b} / bar3 = {a,b,c}; for 3D
+    // tria3 = 3 nodes, quad4 = 4 nodes. They form the base of the
+    // interface element.
     long int ns1 = 0;
-    if      ( name==-BAR2  ) ns1 = 2;
+    if      ( name==-BAR2 ) ns1 = 2;
+    else if ( name==-BAR3 ) ns1 = 3;
     else if ( name==-TRIA3 ) ns1 = 3;
     else                     ns1 = 4;
 
@@ -1199,14 +1207,14 @@ void interface_convert( long int icontrol )
       normal[0] = -tangent[1];
       normal[1] =  tangent[0];
     }
-    else if ( name==-BAR2 ) {
-      // 3D bar2: a LINE (only 2 nodes) - the normal cannot come from a
-      // cross product of two edges. Verified against the Professional
-      // .dbs of interface_bar2_hex8: the extruded quad4 interface has
-      // normal (0,1,0) for a bar2 along +x in the xy-plane, which is
-      // z_hat x tangent (the extrusion direction is z). The converted
-      // quad4 lives in the xy-plane; later control_mesh_convert lifts it
-      // to the hex8 interface.
+    else if ( name==-BAR2 || name==-BAR3 ) {
+      // 3D bar2/bar3: a LINE (only 2/3 collinear nodes) - the normal
+      // cannot come from a cross product of two edges. Verified against
+      // the Professional .dbs of interface_bar2_hex8: the extruded
+      // quad4 interface has normal (0,1,0) for a bar2 along +x in the
+      // xy-plane, which is z_hat x tangent (the extrusion direction is
+      // z). The converted quad4 lives in the xy-plane; later
+      // control_mesh_convert lifts it to the hex8 interface.
       ca = db_dbl( NODE, el[1], VERSION_NORMAL );
       cb = db_dbl( NODE, el[2], VERSION_NORMAL );
       for ( i=0; i<3; i++ ) tangent[i] = cb[i] - ca[i];
@@ -1265,9 +1273,11 @@ void interface_convert( long int icontrol )
       el[1+ns1+j] = dst;
     }
 
-    // rewrite the element: bar2->quad4, tria3->prism6, quad4->hex8.
-    // el[0]=name, el[1..ns1]=side1, el[ns1+1..2*ns1]=side2 (already filled).
-    if ( name==-BAR2 )      el[0] = -QUAD4;
+    // rewrite the element: bar2->quad4, bar3->quad6, tria3->prism6,
+    // quad4->hex8. el[0]=name, el[1..ns1]=side1,
+    // el[ns1+1..2*ns1]=side2 (already filled).
+    if      ( name==-BAR2  ) el[0] = -QUAD4;
+    else if ( name==-BAR3  ) el[0] = -QUAD6;
     else if ( name==-TRIA3 ) el[0] = -PRISM6;
     else                     el[0] = -HEX8;
     length = 1 + 2*ns1;
