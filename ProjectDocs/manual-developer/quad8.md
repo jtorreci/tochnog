@@ -1,5 +1,28 @@
 # quad8
 
+## Design rationale: Lagrange upgrade over plain serendipity
+
+`-quad8`/`-hex20` are accepted as INPUT (conventional serendipity
+formats, standard in Abaqus/GiD/most mesh generators) but are never
+assembled as serendipity elements. They are upgraded internally to the
+complete Lagrange `-quad9`/`-hex27`, which is a deliberate improvement
+over a plain 8/20-node serendipity implementation:
+
+- Serendipity elements drop the interior nodes, so their polynomial is
+  incomplete (they miss the `xi^2*eta^2`-type bubble term of the full
+  quadratic); the Lagrange upgrade adds those interior degrees of
+  freedom and restores the complete quadratic field on the same input
+  mesh.
+- This mirrors Tochnog Professional: the corpus suite itself states that
+  quad8/hex20 "will be automatically converted to quad9 ... / hex27
+  volume elements". GNU node_dof agrees with the Professional `.dbs` to
+  ~1e-7/1e-16 on the patch tests, which confirms the Professional
+  follows the same conversion path rather than a serendipity kernel.
+- The alternative (implementing real serendipity shape functions) would
+  touch ~20 files (pol(), point_el, area border tables, exporters,
+  split/refine) for a strictly weaker element, with no benefit over the
+  reference binary.
+
 ## Implementación
 
 - **Keyword**: `quad8` registered in `database.cc` (name table only,
@@ -46,6 +69,10 @@
 
 ## Pendiente
 
-- `-hex20` (3D serendipity volume, auto-converted to hex27 by the
-  Professional) and the 3D `-quad8` interface -> hex18 conversion
-  (`interface_quad8_hex20` of the corpus).
+- `-hex20` (3D serendipity volume, same improvement: auto-converted to
+  the complete Lagrange hex27 by the Professional) and the 3D `-quad8`
+  interface -> hex18 conversion (`interface_quad8_hex20` of the corpus).
+  Planned conversion: bulk hex20 -> hex27 by inserting the 6 face-centre
+  nodes (deduplicated by coordinates between neighbouring elements) plus
+  the body-centre node, with an explicit hex20 -> tensor-order
+  permutation.
