@@ -700,6 +700,62 @@ void geometry( long int inod, double co[], long int geometry_entity[],
     }
   }
 
+  // geometry_element_group (manual Professional 6.524/6.525): restrict
+  // the geometry with the same index to nodes that are also a node of
+  // elements of one of the specified element groups. Only node tests
+  // (inod>=0) can be filtered; coordinate-only tests have no element
+  // membership and ignore the record. Method from
+  // geometry_element_group_method (-all: the node must be attached to
+  // ALL the listed groups; default/-any/-only: the node must be
+  // attached to elements of the listed groups ONLY). Empirically the
+  // Professional binary (25-10-2023) excludes nodes that are attached
+  // to elements OUTSIDE the listed groups under EVERY method (measured
+  // on merge2.dat of the corpus), so the GNU applies the "no element
+  // outside the listed groups" rule to the default/-any/-only methods
+  // as well (see the manual-user page for the divergence note).
+  if ( in_geometry && inod>=0 ) {
+    long int igroup=0, method=-ANY, kset=0,
+      nel_groups[DATA_ITEM_SIZE], ngroup_vals=0, nattached=0,
+      nfilter=0, *filter_ival=NULL;
+    for ( kset=0; kset<nset; kset++ ) {
+      entity = geometry_set[kset*2];
+      index  = geometry_set[kset*2+1];
+      if ( !db_active_index( GEOMETRY_ELEMENT_GROUP, index, VERSION_NORMAL ) )
+        continue;
+      // found a filter for this geometry index: node must satisfy it
+      filter_ival = db_int( GEOMETRY_ELEMENT_GROUP, index, VERSION_NORMAL );
+      nfilter = db_len( GEOMETRY_ELEMENT_GROUP, index, VERSION_NORMAL );
+      if ( db_active_index( GEOMETRY_ELEMENT_GROUP_METHOD, index,
+           VERSION_NORMAL ) ) {
+        db( GEOMETRY_ELEMENT_GROUP_METHOD, index, &method, ddum, ldum,
+          VERSION_NORMAL, GET );
+      }
+      // attached groups of the node (scans the active elements; the
+      // record is opt-in and the filter models are small)
+      nattached = 0;
+      node_attached_element_groups( inod, nel_groups, nattached );
+      if ( nattached==0 ) {
+        in_geometry = 0;
+        break;
+      }
+      // rule -all: every listed group must be attached (and no extra);
+      // other methods: all attached groups must be listed.
+      if ( method==-ALL ) {
+        for ( igroup=0; igroup<nfilter; igroup++ ) {
+          for ( ngroup_vals=0; ngroup_vals<nattached; ngroup_vals++ )
+            if ( nel_groups[ngroup_vals]==filter_ival[igroup] ) break;
+          if ( ngroup_vals==nattached ) { in_geometry = 0; break; }
+        }
+      }
+      for ( igroup=0; igroup<nattached && in_geometry; igroup++ ) {
+        for ( ngroup_vals=0; ngroup_vals<nfilter; ngroup_vals++ )
+          if ( nel_groups[igroup]==filter_ival[ngroup_vals] ) break;
+        if ( ngroup_vals==nfilter ) { in_geometry = 0; break; }
+      }
+      break;
+    }
+  }
+
 }
 
 void interpolate_geometry( long int geometry_entity[],

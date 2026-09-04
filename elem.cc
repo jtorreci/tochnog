@@ -842,9 +842,22 @@ void elem( long int element, long int ithread )
     }
   }
 
-    // area integrals
-  area( element, name, element_group, nnol, nodes, new_coord, new_dof, 
-    element_lhside, element_matrix, element_rhside );
+    // area integrals. Elements of groups with type -empty/-none only
+    // (group_type X -empty) carry no loads: skipping them keeps edge
+    // loads (force_element_edge* and friends) from being applied TWICE
+    // on a face shared by a material element and an -empty element
+    // (corpus force12: face between group 1 and group 2).
+  {
+    long int itype_empty=0, any_material_type=0;
+    for ( itype_empty=0; itype_empty<len_type; itype_empty++ ) {
+      if ( types[itype_empty]!=-EMPTY && types[itype_empty]!=-NONE )
+        any_material_type = 1;
+    }
+    if ( any_material_type ) {
+      area( element, name, element_group, nnol, nodes, new_coord, new_dof, 
+        element_lhside, element_matrix, element_rhside );
+    }
+  }
 
     // residue
   if ( residue ) {

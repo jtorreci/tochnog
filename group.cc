@@ -343,6 +343,23 @@ long int get_group_data( long int idat, long int gr, long int element,
     val_left=0., val_right=0., ddum[1], element_distribute_values[DATA_ITEM_SIZE], 
     *dependency_diagram=NULL;
 
+  // dependency_apply (manual Professional 6.125, global) and
+  // control_dependency_apply (manual Professional 6.126, per timestep
+  // index): when the switch is -no the dependency_item/dependency_diagram
+  // machinery is disabled. Precedence: control_* (same index as the
+  // current timestep) overrides the global record; default -yes.
+  {
+    long int icontrol=0, dependency_apply=-YES;
+    db( ICONTROL, 0, &icontrol, ddum, ldum, VERSION_NORMAL, GET );
+    db( DEPENDENCY_APPLY, 0, &dependency_apply, ddum, ldum,
+      VERSION_NORMAL, GET_IF_EXISTS );
+    db( CONTROL_DEPENDENCY_APPLY, icontrol, &dependency_apply, ddum, ldum,
+      VERSION_NORMAL, GET_IF_EXISTS );
+    if ( dependency_apply==-NO ) {
+      return db( idat, gr, idum, values, nvalue, VERSION_NORMAL, task );
+    }
+  }
+
   db_max_index( DEPENDENCY_ITEM, max_dep, VERSION_NORMAL, GET );
   if ( max_dep>=0 ) {
     db( DOF_LABEL, 0, dof_label, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
@@ -483,4 +500,40 @@ void group_materi_plasti_boundary_evaluate( long int nodes[], long int nnol,
      }
    }
 
+}
+
+long int node_attached_element_groups( long int inod, long int groups[],
+  long int &n )
+
+// Fills groups[0..n) with the distinct element groups of the elements
+// the node belongs to (unsorted). Returns 1 when the node is a node of
+// at least one active element, 0 otherwise. Used by the
+// geometry_element_group filter (geometry.cc) and by the region/group
+// restriction of post_calcul_static_pressure_height (groundfl.cc).
+
+{
+  long int ielem=0, max_element=0, inol=0, length=0, igroup=0, k=0,
+    ldum=0, idum[1];
+  double ddum[1];
+  long int *el=NULL;
+
+  n = 0;
+  db_max_index( ELEMENT, max_element, VERSION_NORMAL, GET );
+  for ( ielem=0; ielem<=max_element; ielem++ ) {
+    if ( !db_active_index( ELEMENT, ielem, VERSION_NORMAL ) ) continue;
+    el = db_int( ELEMENT, ielem, VERSION_NORMAL );
+    length = db_len( ELEMENT, ielem, VERSION_NORMAL );
+    for ( inol=0; inol+1<length; inol++ ) {
+      if ( el[inol+1]==inod ) {
+        igroup = 0;
+        db( ELEMENT_GROUP, ielem, &igroup, ddum, ldum,
+          VERSION_NORMAL, GET_IF_EXISTS );
+        for ( k=0; k<n; k++ )
+          if ( groups[k]==igroup ) break;
+        if ( k==n ) groups[n++] = igroup;
+        break;
+      }
+    }
+  }
+  return ( n>0 );
 }

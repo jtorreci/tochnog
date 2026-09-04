@@ -334,6 +334,65 @@ long int groundflow_phreatic_coord( long int inod, double coord[], double dof[],
   if ( total_pressure>=pressure_atmospheric ) total_pressure = pressure_atmospheric;
   total_pressure += addtopressure;
 
+  // post_calcul_static_pressure_height (manual Professional 6.921/6.922):
+  // when no groundwater level applies to the node, the static pressure
+  // is determined relative to a reference height instead: regions of
+  // the vertical coordinate (coord_min, coord_max) each with their own
+  // height_ref; p_static = rho*g*(height_ref - coord_vertical). The
+  // post_calcul_static_pressure_height_element_group record restricts
+  // each region to an element group (-all = every group). total =
+  // pres_dof + static like in the phreatic-level branch.
+  if ( !found && groundflow_pressure &&
+       db_active_index( POST_CALCUL_STATIC_PRESSURE_HEIGHT, 0,
+         VERSION_NORMAL ) ) {
+    long int iregion=0, height_length=0, ngroups=0, igroup_ok=0, k=0,
+      node_groups[DATA_ITEM_SIZE], group_allowed=-ALL, nnode_groups=0,
+      *group_ival=NULL;
+    double *height_rec = NULL;
+    height_rec = db_dbl( POST_CALCUL_STATIC_PRESSURE_HEIGHT, 0,
+      VERSION_NORMAL );
+    height_length = db_len( POST_CALCUL_STATIC_PRESSURE_HEIGHT, 0,
+      VERSION_NORMAL );
+    if ( height_length%3!=0 )
+      db_error( POST_CALCUL_STATIC_PRESSURE_HEIGHT, 0 );
+    if ( db_active_index( POST_CALCUL_STATIC_PRESSURE_HEIGHT_ELEMENT_GROUP,
+         0, VERSION_NORMAL ) ) {
+      group_ival = db_int( POST_CALCUL_STATIC_PRESSURE_HEIGHT_ELEMENT_GROUP,
+        0, VERSION_NORMAL );
+      ngroups = db_len( POST_CALCUL_STATIC_PRESSURE_HEIGHT_ELEMENT_GROUP,
+        0, VERSION_NORMAL );
+    }
+    for ( iregion=0; iregion*3+2<height_length && !found; iregion++ ) {
+      if ( coord[ndim-1]>=height_rec[iregion*3+0]-EPS_COORD &&
+           coord[ndim-1]<=height_rec[iregion*3+1]+EPS_COORD ) {
+        group_allowed = -ALL;
+        if ( ngroups>0 ) {
+          if ( iregion>=ngroups )
+            db_error( POST_CALCUL_STATIC_PRESSURE_HEIGHT_ELEMENT_GROUP, 0 );
+          group_allowed = group_ival[iregion];
+        }
+        igroup_ok = ( group_allowed==-ALL );
+        if ( !igroup_ok ) {
+          nnode_groups = 0;
+          node_attached_element_groups( inod, node_groups, nnode_groups );
+          for ( k=0; k<nnode_groups; k++ ) {
+            if ( node_groups[k]==group_allowed ) { igroup_ok = 1; break; }
+          }
+        }
+        if ( igroup_ok ) {
+          location = height_rec[iregion*3+2];
+          static_pressure = force_gravity[ndim-1] * dens *
+            ( location - coord[ndim-1] );
+          total_pressure = dof[pres_indx] + static_pressure;
+          found = 1;
+        }
+      }
+    }
+  }
+  if ( static_pressure>=pressure_atmospheric ) static_pressure = pressure_atmospheric;
+  if ( total_pressure>=pressure_atmospheric ) total_pressure = pressure_atmospheric;
+  total_pressure += addtopressure;
+
   return found;
 }
 

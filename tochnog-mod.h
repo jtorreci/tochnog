@@ -1448,6 +1448,29 @@ enum {
   BOUNDA_TIME_SMC,
   BOUNDA_TIME_SMC_OFFSET,
   BOUNDA_TIME_SMC_UNITS,
+  // KEYWORDS BATCH C (2026-09-04): small keyword clusters blocking
+  // corpus tests. Appended at the end of the enum to keep existing
+  // values stable (tochnog.h and tochnog-mod.h stay in sync).
+  GROUP_SPRING_MEMORY,
+  GROUP_SPRING_STIFFNESS_NONLINEAR,
+  ELEMENT_SPRING_STRAIN,
+  DEPENDENCY_APPLY,
+  CONTROL_DEPENDENCY_APPLY,
+  GEOMETRY_ELEMENT_GROUP,
+  GEOMETRY_ELEMENT_GROUP_METHOD,
+  GROUP_MATERI_PLASTI_ELEMENT_GROUP,
+  GROUP_MATERI_PLASTI_ELEMENT_GROUP_FACTOR,
+  POST_CALCUL_STATIC_PRESSURE_HEIGHT,
+  POST_CALCUL_STATIC_PRESSURE_HEIGHT_ELEMENT_GROUP,
+  POST_CALCUL_SAFETY_METHOD,
+  POST_CALCUL_SAFETY_MAXIMUM,
+  SAFETY_PIPING,
+  SAFETY_LIFTING,
+  VERTICAL,
+  GLOBAL,
+  GROUP_GROUNDFLOW_EXPANSION,
+  CONTROL_PRINT_GID_CONTACT_SPRING2,
+  CONTROL_MESH_MACRO_CONCENTRATE,
   LAST_DUMMY }; // keep LAST_DUMMY always the last one
 
 #define MDAT LAST_DUMMY+DATA_ITEM_SIZE  // reserve space for unknowns
@@ -1758,6 +1781,8 @@ void      get_element_matrix_unknowns( long int element,
             long int element_matrix_unknowns[] );
 long int  get_group_data( long int idat, long int group, long int element,
             double new_unknowns[], double values[], long int &nvalue, long int task );
+long int  node_attached_element_groups( long int inod, long int groups[],
+            long int &n );
 double    get_materi_density( long int element, long int element_group, 
             long int nnol, long int nodes[], double new_unknowns[] );
 char     *get_new_char( long int n );

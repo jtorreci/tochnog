@@ -7498,6 +7498,206 @@ void db_initialize( long int dof_type[], long int dof_label[] )
     }
   }
 
+  // ------------------------------------------------------------------
+  // KEYWORDS BATCH C (2026-09-04): small keyword clusters blocking
+  // corpus tests. All records appended at the END of the enum (see
+  // tochnog.h); registration blocks below stay at the end of
+  // db_initialize so the enumeration order is irrelevant.
+  // ------------------------------------------------------------------
+
+  // spring memory/nonlinear-stiffness records (family group_type
+  // springs; spring1/spring6 of the corpus). group_spring_memory:
+  // memory model -updated_linear/-total_linear/-updated (manual
+  // Professional 6.765); parse-consumed by the spring element only for
+  // the diagram variant, the memory model itself is accepted (the GNU
+  // spring law is incremental on the current configuration, which
+  // equals -updated_linear; -total_linear coincides in the 1D corpus
+  // tests).
+  strcpy(name[GROUP_SPRING_MEMORY],"group_spring_memory");
+  type[GROUP_SPRING_MEMORY] = INTEGER;
+  data_length[GROUP_SPRING_MEMORY] = 1;
+  data_class[GROUP_SPRING_MEMORY] = SPRING;
+  data_required[GROUP_SPRING_MEMORY] = GROUP_TYPE;
+
+  // group_spring_stiffness_nonlinear (manual Professional 6.768):
+  // diagram epsilon0 k0 epsilon1 k1 ... of the spring stiffness vs the
+  // total spring elongation (strain). Consumed in spring.cc when the
+  // linear group_spring_stiffness record is absent.
+  strcpy(name[GROUP_SPRING_STIFFNESS_NONLINEAR],"group_spring_stiffness_nonlinear");
+  type[GROUP_SPRING_STIFFNESS_NONLINEAR] = DOUBLE_PRECISION;
+  data_length[GROUP_SPRING_STIFFNESS_NONLINEAR] = DATA_ITEM_SIZE;
+  fixed_length[GROUP_SPRING_STIFFNESS_NONLINEAR] = 0;
+  data_class[GROUP_SPRING_STIFFNESS_NONLINEAR] = SPRING;
+  data_required[GROUP_SPRING_STIFFNESS_NONLINEAR] = GROUP_TYPE;
+
+  // element_spring_strain (manual Professional spring family): total
+  // spring strain (= total elongation of the spring) written per
+  // element, sibling of element_spring_force.
+  strcpy(name[ELEMENT_SPRING_STRAIN],"element_spring_strain");
+  type[ELEMENT_SPRING_STRAIN] = DOUBLE_PRECISION;
+  data_length[ELEMENT_SPRING_STRAIN] = 1;
+  version_all[ELEMENT_SPRING_STRAIN] = 1;
+  print_only[ELEMENT_SPRING_STRAIN] = 1;
+  data_class[ELEMENT_SPRING_STRAIN] = ELEMENT;
+  data_required[ELEMENT_SPRING_STRAIN] = ELEMENT;
+
+  // dependency_apply / control_dependency_apply (manual Professional
+  // 6.126/6.125): global/per-timestep switches that enable or disable
+  // the dependency_item/dependency_diagram machinery (get_group_data in
+  // group.cc). Precedence: control_* overrides the global record;
+  // default -yes.
+  strcpy(name[DEPENDENCY_APPLY],"dependency_apply");
+  type[DEPENDENCY_APPLY] = INTEGER;
+  data_length[DEPENDENCY_APPLY] = 1;
+  no_index[DEPENDENCY_APPLY] = 1;
+  data_class[DEPENDENCY_APPLY] = DEPENDENCY;
+
+  strcpy(name[CONTROL_DEPENDENCY_APPLY],"control_dependency_apply");
+  type[CONTROL_DEPENDENCY_APPLY] = INTEGER;
+  data_length[CONTROL_DEPENDENCY_APPLY] = 1;
+  data_class[CONTROL_DEPENDENCY_APPLY] = CONTROL;
+
+  // geometry_element_group (manual Professional 6.524/6.525): restrict
+  // the geometry record with the same index to nodes that are also a
+  // node of elements of one of the specified element groups. Method
+  // (geometry_element_group_method) -all/-any/-only; the GNU consumes
+  // the filter inside geometry() for node tests (see geometry.cc).
+  strcpy(name[GEOMETRY_ELEMENT_GROUP],"geometry_element_group");
+  type[GEOMETRY_ELEMENT_GROUP] = INTEGER;
+  data_length[GEOMETRY_ELEMENT_GROUP] = DATA_ITEM_SIZE;
+  fixed_length[GEOMETRY_ELEMENT_GROUP] = 0;
+  data_class[GEOMETRY_ELEMENT_GROUP] = GEOMETRY;
+
+  strcpy(name[GEOMETRY_ELEMENT_GROUP_METHOD],"geometry_element_group_method");
+  type[GEOMETRY_ELEMENT_GROUP_METHOD] = INTEGER;
+  data_length[GEOMETRY_ELEMENT_GROUP_METHOD] = 1;
+  data_class[GEOMETRY_ELEMENT_GROUP_METHOD] = GEOMETRY;
+  data_required[GEOMETRY_ELEMENT_GROUP_METHOD] = GEOMETRY_ELEMENT_GROUP;
+
+  // group_materi_plasti_element_group/_factor (manual Professional
+  // 6.698/6.699): model frictional slip of granular materials on other
+  // materials (concrete/steel): phi/c/phiflow (and the equivalents of
+  // the other plasticity models) of the granular element_group are
+  // reduced with a factor (default 2./3., group_materi_plasti_element_
+  // group_factor overrides per neighbor group) for granular elements
+  // which are a DIRECT NEIGHBOR of an element of one of the listed
+  // groups group_0 group_1 ...
+  strcpy(name[GROUP_MATERI_PLASTI_ELEMENT_GROUP],"group_materi_plasti_element_group");
+  type[GROUP_MATERI_PLASTI_ELEMENT_GROUP] = INTEGER;
+  data_length[GROUP_MATERI_PLASTI_ELEMENT_GROUP] = DATA_ITEM_SIZE;
+  fixed_length[GROUP_MATERI_PLASTI_ELEMENT_GROUP] = 0;
+  data_class[GROUP_MATERI_PLASTI_ELEMENT_GROUP] = MATERI;
+  data_required[GROUP_MATERI_PLASTI_ELEMENT_GROUP] = GROUP_TYPE;
+
+  strcpy(name[GROUP_MATERI_PLASTI_ELEMENT_GROUP_FACTOR],"group_materi_plasti_element_group_factor");
+  type[GROUP_MATERI_PLASTI_ELEMENT_GROUP_FACTOR] = DOUBLE_PRECISION;
+  data_length[GROUP_MATERI_PLASTI_ELEMENT_GROUP_FACTOR] = DATA_ITEM_SIZE;
+  fixed_length[GROUP_MATERI_PLASTI_ELEMENT_GROUP_FACTOR] = 0;
+  data_class[GROUP_MATERI_PLASTI_ELEMENT_GROUP_FACTOR] = MATERI;
+  data_required[GROUP_MATERI_PLASTI_ELEMENT_GROUP_FACTOR] = GROUP_MATERI_PLASTI_ELEMENT_GROUP;
+
+  // post_calcul_static_pressure_height (manual Professional 6.921/6.922):
+  // determine the static pressure (post_calcul -groundflow_pressure
+  // -static_pressure) relative to a reference height instead of a
+  // groundwater level. Record values: region triples (coord_min,
+  // coord_max, height_ref) along the vertical coordinate; the
+  // post_calcul_static_pressure_height_element_group record restricts
+  // each region to an element group (-all = any group).
+  strcpy(name[POST_CALCUL_STATIC_PRESSURE_HEIGHT],"post_calcul_static_pressure_height");
+  type[POST_CALCUL_STATIC_PRESSURE_HEIGHT] = DOUBLE_PRECISION;
+  data_length[POST_CALCUL_STATIC_PRESSURE_HEIGHT] = DATA_ITEM_SIZE;
+  fixed_length[POST_CALCUL_STATIC_PRESSURE_HEIGHT] = 0;
+  no_index[POST_CALCUL_STATIC_PRESSURE_HEIGHT] = 1;
+  data_class[POST_CALCUL_STATIC_PRESSURE_HEIGHT] = POST;
+
+  strcpy(name[POST_CALCUL_STATIC_PRESSURE_HEIGHT_ELEMENT_GROUP],"post_calcul_static_pressure_height_element_group");
+  type[POST_CALCUL_STATIC_PRESSURE_HEIGHT_ELEMENT_GROUP] = INTEGER;
+  data_length[POST_CALCUL_STATIC_PRESSURE_HEIGHT_ELEMENT_GROUP] = DATA_ITEM_SIZE;
+  fixed_length[POST_CALCUL_STATIC_PRESSURE_HEIGHT_ELEMENT_GROUP] = 0;
+  no_index[POST_CALCUL_STATIC_PRESSURE_HEIGHT_ELEMENT_GROUP] = 1;
+  data_class[POST_CALCUL_STATIC_PRESSURE_HEIGHT_ELEMENT_GROUP] = POST;
+  data_required[POST_CALCUL_STATIC_PRESSURE_HEIGHT_ELEMENT_GROUP] =
+    POST_CALCUL_STATIC_PRESSURE_HEIGHT;
+
+  // post_calcul_safety_method (manual Professional 6.919): how the
+  // hydraulic piping/lifting safety factors of post_calcul
+  // -materi_stress -safety_piping/-safety_lifting are determined:
+  // -vertical (default, one value) / -prival (three values, principal
+  // stresses) / -global (three values, global normal stresses).
+  // post_calcul_safety_maximum (6.918) caps the factor.
+  strcpy(name[POST_CALCUL_SAFETY_METHOD],"post_calcul_safety_method");
+  type[POST_CALCUL_SAFETY_METHOD] = INTEGER;
+  data_length[POST_CALCUL_SAFETY_METHOD] = 1;
+  no_index[POST_CALCUL_SAFETY_METHOD] = 1;
+  data_class[POST_CALCUL_SAFETY_METHOD] = POST;
+
+  strcpy(name[POST_CALCUL_SAFETY_MAXIMUM],"post_calcul_safety_maximum");
+  type[POST_CALCUL_SAFETY_MAXIMUM] = DOUBLE_PRECISION;
+  data_length[POST_CALCUL_SAFETY_MAXIMUM] = 1;
+  no_index[POST_CALCUL_SAFETY_MAXIMUM] = 1;
+  data_class[POST_CALCUL_SAFETY_MAXIMUM] = POST;
+
+  // post_calcul operator values -safety_piping/-safety_lifting (manual
+  // Professional 6.9xx post_calcul command): the operators resolve as
+  // INTEGER data items (like -force/-total_pressure) so the input
+  // parser accepts them in the post_calcul record. Pure name entries.
+  strcpy(name[SAFETY_PIPING],"safety_piping");
+  type[SAFETY_PIPING] = INTEGER;
+  data_length[SAFETY_PIPING] = 1;
+
+  strcpy(name[SAFETY_LIFTING],"safety_lifting");
+  type[SAFETY_LIFTING] = INTEGER;
+  data_length[SAFETY_LIFTING] = 1;
+
+  // safety method selector values -vertical/-global (pure name entries,
+  // the same resolution pattern as -prival; manual Professional 6.919).
+  strcpy(name[VERTICAL],"vertical");
+  type[VERTICAL] = INTEGER;
+  data_length[VERTICAL] = 1;
+
+  strcpy(name[GLOBAL],"global");
+  type[GLOBAL] = INTEGER;
+  data_length[GLOBAL] = 1;
+
+  // group_groundflow_expansion (manual Professional 6.614): thermal
+  // expansion coefficient of the pore fluid/soil used by the
+  // heat-exchanger groundflow analyses (corpus heat_exchanger_pile_dt
+  // and _load_dt). Registered parse-only in this batch (consumption
+  // belongs to the coupled thermo-groundflow sprint).
+  strcpy(name[GROUP_GROUNDFLOW_EXPANSION],"group_groundflow_expansion");
+  type[GROUP_GROUNDFLOW_EXPANSION] = DOUBLE_PRECISION;
+  data_length[GROUP_GROUNDFLOW_EXPANSION] = 1;
+  data_class[GROUP_GROUNDFLOW_EXPANSION] = GROUNDFLOW;
+  data_required[GROUP_GROUNDFLOW_EXPANSION] = GROUP_TYPE;
+
+  // control_print_gid_contact_spring2 (manual Professional 6.297):
+  // number of nodes (1 or 2) used to draw the contact_spring2 elements
+  // in the GiD output. Pure rendering switch - registered parse-only
+  // (the GNU GiD printer draws the contact springs with the element
+  // nodes of the model).
+  // control_print_gid_contact_spring2 (manual Professional 6.297):
+  // number of nodes (1 or 2) used to draw the contact_spring2 elements
+  // in the GiD output. Pure rendering switch - registered parse-only
+  // (the GNU GiD printer draws the contact springs with the element
+  // nodes of the model). no_index: the corpus spelling
+  // "print_gid_contact_spring2 1" (tutorial_3) carries the node count
+  // as the only value; the manual "index" behaves as a run-wide switch.
+  strcpy(name[CONTROL_PRINT_GID_CONTACT_SPRING2],"control_print_gid_contact_spring2");
+  type[CONTROL_PRINT_GID_CONTACT_SPRING2] = INTEGER;
+  data_length[CONTROL_PRINT_GID_CONTACT_SPRING2] = 1;
+  no_index[CONTROL_PRINT_GID_CONTACT_SPRING2] = 1;
+  data_class[CONTROL_PRINT_GID_CONTACT_SPRING2] = CONTROL;
+
+  // control_mesh_macro_concentrate (manual Professional 6.207): mesh
+  // fineness concentration factors of the -rectangle macro (two factors
+  // per direction: at the beginning and at the end). Registered
+  // parse-only in this batch (the graded-macro generation belongs to
+  // the mesh macro sprint).
+  strcpy(name[CONTROL_MESH_MACRO_CONCENTRATE],"control_mesh_macro_concentrate");
+  type[CONTROL_MESH_MACRO_CONCENTRATE] = DOUBLE_PRECISION;
+  data_length[CONTROL_MESH_MACRO_CONCENTRATE] = 4;
+  data_class[CONTROL_MESH_MACRO_CONCENTRATE] = CONTROL;
+
 }
 
 long int db( long int idat, long int index, long int *ival,
@@ -8254,6 +8454,14 @@ long int db_number( char str[] )
     }
     else if ( !strcmp( str, "control_print_dof_rhside" ) )
       return CONTROL_PRINT_UNKNOWNSRHSIDE;
+    else if ( !strcmp( str, "print_gid_contact_spring2" ) )
+      // Professional short alias (tutorial_3 of the corpus) of
+      // control_print_gid_contact_spring2 (manual Professional 6.297)
+      return CONTROL_PRINT_GID_CONTACT_SPRING2;
+    else if ( !strcmp( str, "control_mesh_generate_truss_beam" ) )
+      // Professional spelling (with underscores) of the GNU canonical
+      // control_mesh_generate_trussbeam (tutorial_3 of the corpus)
+      return CONTROL_MESH_GENERATE_TRUSSBEAM;
     else if ( !strcmp( str, "size_tot" ) )
       // Professional spelling (manual 6.266) of the GNU switch "sizetot".
       return SIZETOT;

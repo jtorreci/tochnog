@@ -833,6 +833,7 @@ void step_start( long int task, long int options_solver[], double dtime, double 
     if ( any_spring ) {
       db_allocate( ELEMENT_SPRING_DIRECTION, max_element, VERSION_NEW, MINIMAL );
       db_allocate( ELEMENT_SPRING_FORCE, max_element, VERSION_NEW, MINIMAL );
+      db_allocate( ELEMENT_SPRING_STRAIN, max_element, VERSION_NEW, MINIMAL );
     }
     if ( any_interface ) {
       // interface history/output records are sized by the number of

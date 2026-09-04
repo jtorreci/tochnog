@@ -622,24 +622,31 @@ void area( long int element, long int name,
             array_multiply( average_side_coord, average_side_coord, 1./nnol_side, ndim );
             array_subtract( average_side_coord, average_element_coord, vec, ndim );
             if ( ok ) {
-              if ( !use_geom ) {
-                if ( ndim==2 ) {
-                  inol = sides[iside * nnol_side + 0];
-                  jnol = sides[iside * nnol_side + 1];
-                  array_subtract( &new_coord[inol*ndim], &new_coord[jnol*ndim],
-                    vec01, ndim );
-                  array_outproduct_2D( vec01, normal );
-                }
-                else {
-                  inol = sides[iside * nnol_side + 0];
-                  jnol = sides[iside * nnol_side + 1];
-                  knol = sides[iside * nnol_side + 2];
-                  array_subtract( &new_coord[inol*ndim], &new_coord[jnol*ndim],
-                    vec01, ndim );
-                  array_subtract( &new_coord[inol*ndim], &new_coord[knol*ndim],
-                    vec02, ndim );
-                  array_outproduct_3D( vec01, vec02, normal );
-                }
+              // The load/flux direction of the edge families is the
+              // PHYSICAL side normal, computed from the side node
+              // coordinates (not from the selector geometry: a
+              // geometry_point selector returns the RADIAL normal of
+              // each side node, which for a side not aligned with the
+              // point tilts the accumulated normal away from the true
+              // face normal - corpus force12 loads the face between
+              // group 1 and group 2 via geometry_point with a huge
+              // tolerance).
+              if ( ndim==2 ) {
+                inol = sides[iside * nnol_side + 0];
+                jnol = sides[iside * nnol_side + 1];
+                array_subtract( &new_coord[inol*ndim], &new_coord[jnol*ndim],
+                  vec01, ndim );
+                array_outproduct_2D( vec01, normal );
+              }
+              else {
+                inol = sides[iside * nnol_side + 0];
+                jnol = sides[iside * nnol_side + 1];
+                knol = sides[iside * nnol_side + 2];
+                array_subtract( &new_coord[inol*ndim], &new_coord[jnol*ndim],
+                  vec01, ndim );
+                array_subtract( &new_coord[inol*ndim], &new_coord[knol*ndim],
+                  vec02, ndim );
+                array_outproduct_3D( vec01, vec02, normal );
               }
               if ( array_inproduct( normal, vec, ndim ) < 0. )
                 array_multiply( normal, normal, -1., ndim );
