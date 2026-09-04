@@ -31,7 +31,7 @@ version over treating `-quad8` with its plain 8-node formulation:
   cost to the user.
 - The same upgrade applies to the 3D counterpart `-hex20` (serendipity
   20-node hexahedron): it is elevated to the complete 27-node Lagrange
-  `-hex27`. `-hex20` support is pending (see Notes).
+  `-hex27` (see [hex20](hex20.md)).
 - The numerical results are verified identical to Tochnog Professional,
   which follows the same auto-conversion approach (its own suite states
   textually that "the quad8 ... will be automatically converted to quad9
@@ -61,12 +61,14 @@ left, right, top.
 - `-quad8` used as an INTERFACE element (group with
   `group_interface -yes`, the 3D `interface_quad8_hex20` family) is NOT
   converted to quad9: those are facial elements handled by the interface
-  conversion.
-- `-hex20` (3D serendipity, elevated to `-hex27`) is not implemented yet
-  (pending).
+  conversion (lifted to the quadratic 3D interface, see [hex18](hex18.md)).
+- `-hex20` (3D serendipity, elevated to `-hex27`) is implemented by the
+  same Lagrange upgrade: see [hex20](hex20.md).
 
 ## Related
 
 - `control_mesh_convert` — conversion of quadratic interfaces
-  (`-bar3` -> `-quad6`).
+  (`-bar3` -> `-quad6`, and the 3D `-quad8` face -> `-hex18`).
 - `control_mesh_extrude` — quadratic extrusion quad9 -> hex27.
+- `hex20` — the 3D serendipity element elevated to hex27.
+- `hex18` — the quadratic 3D interface element.

@@ -50,6 +50,8 @@ Each file corresponds to the same feature in the [User Manual](../manual-user/).
 - [post_force_edge_summed](post_force_edge_summed.md) — total force of the force_edge records, integrated over the edges.
 
 - [quad8](quad8.md) — auto-conversion of quad8 to quad9 for quadratic solids (Professional compatibility).
+- [hex20](hex20.md) — auto-conversion of hex20 to hex27 (mesh_convert_hex20 slot permutation).
+- [hex18](hex18.md) — quadratic 3D interface element + quad8-face auto-conversion in interface_convert.
 
 - [control_mesh_generate_interface](control_mesh_generate_interface.md) — generate interface elements between element groups sharing a face.
 - [control_print_interface_stress](control_print_interface_stress.md) — print interface stresses along a cut line.

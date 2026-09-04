@@ -58,8 +58,9 @@ over a plain 8/20-node serendipity implementation:
   first step) like `interface_convert`/`mesh_extrude`. Node numbering
   continues from the highest existing node.
 - **Skip**: `-quad8` elements of an INTERFACE group are left alone (the
-  3D `-quad8` interface family is a facial element for a future lot;
-  `interface_quad8_hex20` still PARSE-fails on `-hex20`).
+  3D `-quad8` interface family is a facial element: it is lifted to the
+  `-hex18` quadratic 3D interface by `interface_convert()`, see
+  [hex18](hex18.md)).
 - **Tests**: corpus `quad8.dat` (2 quad8, patch test sigxx = 0.1),
   `elasti6.dat` (1 quad8 vertical, force_edge top, targets sigyy(node 8)
   = 1.0 ± 1e-4 and post_force_edge_summed = 10), `interface_bar3_quad8`
@@ -69,10 +70,7 @@ over a plain 8/20-node serendipity implementation:
 
 ## Pendiente
 
-- `-hex20` (3D serendipity volume, same improvement: auto-converted to
-  the complete Lagrange hex27 by the Professional) and the 3D `-quad8`
-  interface -> hex18 conversion (`interface_quad8_hex20` of the corpus).
-  Planned conversion: bulk hex20 -> hex27 by inserting the 6 face-centre
-  nodes (deduplicated by coordinates between neighbouring elements) plus
-  the body-centre node, with an explicit hex20 -> tensor-order
-  permutation.
+- None: `-hex20` (3D serendipity volume, the same Lagrange upgrade
+  auto-converted to hex27 by `mesh_convert_hex20`) and the 3D `-quad8`
+  interface -> hex18 conversion are implemented (see [hex20](hex20.md)
+  and [hex18](hex18.md)).

@@ -16,6 +16,14 @@ adjacent volume elements to be quadratic too (the Professional suite
 uses `-quad8` solids, which are auto-converted to `-quad9`; the
 interface bar3 sits on the shared edge).
 
+3D: `-tria3` -> `-prism6`, `-quad4` -> `-hex8` (linear interfaces
+between 3D solids) and `-quad8` -> `-hex18` (quadratic facial
+interface: a `-quad8` face between two `-hex20`/`-hex27` solids, e.g.
+the `interface_quad8_hex20` family, is lifted to the 18-node interface
+with 2 quad9 sides; see [hex18](hex18.md)). The `-hex20` solids are
+auto-converted to `-hex27` first, so the shared face centre node exists
+when the quad8 face is converted.
+
 ## Uso
 
 Place it in the data part, with the same `icontrol` index as the
@@ -36,7 +44,7 @@ control_mesh_convert_element_group 0  0 1
 | Parameter | Meaning |
 |-----------|---------|
 | `0`       | Index of the control record. Must match the `control_timestep` index. |
-| `-yes`    | Convert interface elements (`-bar2` -> `-quad4`, `-bar3` -> `-quad6`). |
+| `-yes`    | Convert interface elements (`-bar2` -> `-quad4`, `-bar3` -> `-quad6`, `-tria3` -> `-prism6`, `-quad4` -> `-hex8`, 3D `-quad8` -> `-hex18`). |
 
 ## Related
 

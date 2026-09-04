@@ -51,20 +51,17 @@ el layout de numeración del .dbs.
   ensamblaje sin conversión. El `-quad6` (3+3, pesos Lobatto 1/6,4/6,1/6,
   historias por IP) ya existía en `interface_element()`.
 - La conversión es idempotente: en pasos posteriores el elemento ya es
-  `-quad4`/`-quad6`, no se re-convierte.
+  `-quad4`/`-quad6`/`-prism6`/`-hex8`/`-hex18`, no se re-convierte.
 - El bar3 2D necesita que los sólidos adyacentes sean cuadráticos: los
   `-quad8` del input se convierten a `-quad9` ANTES (mesh_convert_quad8,
   ver manual quad8.md) — el orden en step_start es convert quad8 ->
-  extrude -> interface_convert.
+  convert hex20 -> extrude -> interface_convert.
 - En 3D un `-bar3` de interfaz se trataría como línea (rama bar2 3D de la
   normal), pero no hay caso de corpus; el elemento cuadrático facial 3D es
-  la familia `-quad8` interface (pendiente, lotes 3D).
+  la familia `-quad8` interface -> `-hex18` (implementado, ver
+  hex18.md).
 
 ## Pendiente
 
-- Los casos 3D (`-tria3` -> `-prism6`, `-quad4` -> `-hex8`) siguen sin
-  caso de conversión desde elementos cuadráticos; `-quad8` (cara) ->
-  `-hex18` y `-hex20` -> `-hex27` no están implementados
-  (interface_quad8_hex20 del corpus, PARSE por -hex20).
 - `control_mesh_convert_quad9_quad6` y `_tria6_tria3` no están
   implementados.
