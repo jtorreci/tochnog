@@ -881,8 +881,8 @@ void data( long int task, double dtime, double time_current )
           // strain starts from 0).
           if ( strain_reset || full_reset ) {
             long int ns1_r = ( length_el_i-1 )/2;
-            double zero_arr[4];
-            for ( inol_i=0; inol_i<ns1_r && inol_i<4; inol_i++ )
+            double zero_arr[9];
+            for ( inol_i=0; inol_i<ns1_r && inol_i<9; inol_i++ )
               zero_arr[inol_i] = 0.;
             db( ELEMENT_INTERFACE_STRAIN_NORMAL, iel_i, idum, zero_arr,
               ns1_r, VERSION_NORMAL, PUT );
@@ -891,8 +891,8 @@ void data( long int task, double dtime, double time_current )
           }
           if ( full_reset ) {
             long int ns1_r = ( length_el_i-1 )/2;
-            double zero_arr[4];
-            for ( inol_i=0; inol_i<ns1_r && inol_i<4; inol_i++ )
+            double zero_arr[9];
+            for ( inol_i=0; inol_i<ns1_r && inol_i<9; inol_i++ )
               zero_arr[inol_i] = 0.;
             db( ELEMENT_INTERFACE_FORCE_NORM, iel_i, idum, zero_arr,
               ns1_r, VERSION_NORMAL, PUT );
@@ -1146,8 +1146,8 @@ void data( long int task, double dtime, double time_current )
                 }
                 {
                   long int ns1_r = ( length_el_r-1 )/2;
-                  double strain_r[4], force_norm_r[4];
-                  for ( inol_r=0; inol_r<ns1_r; inol_r++ ) {
+                  double strain_r[9], force_norm_r[9];
+                  for ( inol_r=0; inol_r<ns1_r && inol_r<9; inol_r++ ) {
                     strain_r[inol_r] = reset_value_constant / kn_r;
                     // ELEMENT_INTERFACE_FORCE_NORM stores the accumulated
                     // contact normal STRESS the interface record and

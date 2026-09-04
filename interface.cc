@@ -184,6 +184,12 @@ void interface_element( long int element, long int name,
   else if ( name==-PRISM6 ) {
     nnol = 6;
   }
+  else if ( name==-HEX18 ) {
+    // the quadratic 3D interface (a converted -quad8 facial element of
+    // the interface_quad8_hex20 family, or a native -hex18 of the suite
+    // like interface3): two -quad9 sides of 9 nodes each (ns1 = 9)
+    nnol = 18;
+  }
   else {
     assert( name==-HEX8 );
     nnol = 8;
@@ -229,12 +235,18 @@ void interface_element( long int element, long int name,
     array_set( tangent2, 0., MDIM );
   }
   else {
-    // 3D: the two side-1 edges define the surface plane.
+    // 3D: the two side-1 edges define the surface plane. For the hex18
+    // the side-1 nodes are the 9 nodes of a -quad9 face in tensor order
+    // (BL,BM,BR,LM,C,RM,TL,TM,TR): the surface corners are the side-1
+    // nodes 0, 2 and 6 (BL, BR, TL) - nodes 1 (BM) is a mid-edge node
+    // collinear with BL/BR and would give a degenerate cross product.
+    long int ic1 = 1, ic2 = 2;
+    if ( name==-HEX18 ) { ic1 = 2; ic2 = 6; }
     double *c0, *c1, *c2;
     if ( memory==-TOTAL_LINEAR ) {
       c0 = db_dbl( NODE_START_REFINED, nodes[0], VERSION_NORMAL );
-      c1 = db_dbl( NODE_START_REFINED, nodes[1], VERSION_NORMAL );
-      c2 = db_dbl( NODE_START_REFINED, nodes[2], VERSION_NORMAL );
+      c1 = db_dbl( NODE_START_REFINED, nodes[ic1], VERSION_NORMAL );
+      c2 = db_dbl( NODE_START_REFINED, nodes[ic2], VERSION_NORMAL );
     }
     else {
       c0 = &coord[0*ndim];
@@ -338,7 +350,20 @@ void interface_element( long int element, long int name,
   //  surface; the Professional distributes the face traction evenly -
   //  interface_quad4_hex8: uniform 1/4 gives sigzz=-1.0 exactly, while
   //  the 1D Lobatto weights would give -0.2475).
-  if ( ndim==3 ) {
+  //  3D hex18 (ns1=9): the -quad9 face is quadratic, and the
+  //  Professional distributes the face traction with the 2D product of
+  //  the 1D Lobatto rule (interface3 of the corpus loads the top side
+  //  with -1 on the corners, -4 on the mid-edge nodes and -16 on the
+  //  centre = (1,4,16)/36 per tensor slot; the uniform weights would
+  //  give a NON-uniform per-intpnt stress field, e.g. sigma = -20.25 on
+  //  the corner intpnt instead of -9).
+  if ( ndim==3 && ns1==9 ) {
+    static const double lobatto_2d[9] = { 1., 4., 1., 4., 16., 4.,
+      1., 4., 1. };
+    for ( inol=0; inol<ns1; inol++ )
+      w_ip[inol] = lobatto_2d[inol]/36.;
+  }
+  else if ( ndim==3 ) {
     for ( inol=0; inol<ns1; inol++ ) w_ip[inol] = 1./(double)ns1;
   }
   else if ( ns1==1 ) { w_ip[0] = 1.; }
@@ -387,26 +412,36 @@ void interface_element( long int element, long int name,
       // (nnol=4, ns1=2: the "glue" quad4 between two solids, e.g.
       // interface_quad4_hex8 of the corpus) has its FOUR nodes as the
       // face corners (0,1,2,3), not ns1 nodes per side.
-      long int i3 = ns1-1;
-      if ( ns1==2 ) i3 = 3;
+      // The hex18 side-1 is a -quad9 face in tensor order: its 4 face
+      // corners are the side-1 nodes 0, 2, 6 and 8 (BL, BR, TL, TR; the
+      // nodes 1,3,5,7 are mid-edge nodes and 4 the centre - the corner
+      // polygon read in record order would be a bowtie).
+      long int inol_c[4];
+      if ( nnol==18 ) { inol_c[0]=0; inol_c[1]=2; inol_c[2]=6; inol_c[3]=8; }
+      else {
+        inol_c[0]=0; inol_c[1]=1; inol_c[2]=2;
+        long int i3 = ns1-1;
+        if ( ns1==2 ) i3 = 3;
+        inol_c[3]=i3;
+      }
       double x0[MDIM], x1[MDIM], x2[MDIM], x3[MDIM];
       for ( idim=0; idim<3; idim++ ) {
         double *cn;
         cn = ( memory==-TOTAL_LINEAR ) ?
-          db_dbl( NODE_START_REFINED, nodes[0], VERSION_NORMAL ) :
-          &coord[0*ndim];
+          db_dbl( NODE_START_REFINED, nodes[inol_c[0]], VERSION_NORMAL ) :
+          &coord[inol_c[0]*ndim];
         x0[idim] = cn[idim];
         cn = ( memory==-TOTAL_LINEAR ) ?
-          db_dbl( NODE_START_REFINED, nodes[1], VERSION_NORMAL ) :
-          &coord[1*ndim];
+          db_dbl( NODE_START_REFINED, nodes[inol_c[1]], VERSION_NORMAL ) :
+          &coord[inol_c[1]*ndim];
         x1[idim] = cn[idim];
         cn = ( memory==-TOTAL_LINEAR ) ?
-          db_dbl( NODE_START_REFINED, nodes[2], VERSION_NORMAL ) :
-          &coord[2*ndim];
+          db_dbl( NODE_START_REFINED, nodes[inol_c[2]], VERSION_NORMAL ) :
+          &coord[inol_c[2]*ndim];
         x2[idim] = cn[idim];
         cn = ( memory==-TOTAL_LINEAR ) ?
-          db_dbl( NODE_START_REFINED, nodes[i3], VERSION_NORMAL ) :
-          &coord[i3*ndim];
+          db_dbl( NODE_START_REFINED, nodes[inol_c[3]], VERSION_NORMAL ) :
+          &coord[inol_c[3]*ndim];
         x3[idim] = cn[idim];
       }
       double e1[MDIM], e2[MDIM], nrm[MDIM];
@@ -1133,7 +1168,7 @@ void interface_element( long int element, long int name,
 void interface_convert( long int icontrol )
 
 {
-  long int element=0, max_element=0, max_element_c=0, i=0, j=0,
+  long int element=0, max_element=0, max_element_c=0, i=0, j=0, jnod=0,
     name=0, length=0, ldum=0, swit=0, element_group=0,
     max_node=0, max_node_old=0, length_convert_groups=0, found=0, nconv=0,
     idum[1], *el=NULL, *convert_groups=NULL, *node_element=NULL;
@@ -1182,10 +1217,180 @@ void interface_convert( long int icontrol )
     element_group = 0;
     db( ELEMENT_GROUP, element, &element_group, ddum, ldum,
       VERSION_NORMAL, GET_IF_EXISTS );
-    if ( name!=-BAR2 && name!=-BAR3 && name!=-TRIA3 && name!=-QUAD4 )
+    if ( name!=-BAR2 && name!=-BAR3 && name!=-TRIA3 && name!=-QUAD4 &&
+         !( name==-QUAD8 && ndim==3 ) )
       continue;
     if ( !db_active_index( GROUP_INTERFACE, element_group, VERSION_NORMAL ) )
       continue;
+
+    // -quad8 (3D): quadratic FACIAL interface element (the
+    // interface_quad8_hex20 family: a -quad8 face between two -hex20 /
+    // -hex27 volumes, converted to the -hex18 interface, 9+9 nodes).
+    // The quad8 record carries only 8 nodes (corners BL,BR,TL,TR then
+    // mid-edge BM,LM,RM,TM - no centre): the 9th side-1 node of the
+    // hex18 is the FACE CENTRE, the node the mesh_convert_hex20
+    // auto-conversion created (deduplicated) on the shared face of the
+    // hex27 volumes - looked up by coordinates, created if the mesh has
+    // no hex20. The side-1 ordering is rewritten to the GNU -quad9
+    // tensor order [BL,BM,BR,LM,C,RM,TL,TM,TR] (the Professional .dbs
+    // of the corpus interface_quad8_hex20 shows exactly this layout).
+    if ( name==-QUAD8 ) {
+      if ( length!=1+8 ) db_error( ELEMENT, element );
+      long int q8[1+8], ns1q = 9;
+      for ( j=0; j<=8; j++ ) q8[j] = el[j];
+      // face centre = average of the 4 corners (q8[1..4])
+      double centre[MDIM];
+      array_set( centre, 0., MDIM );
+      for ( j=0; j<4; j++ ) {
+        double *cq = db_dbl( NODE, q8[1+j], VERSION_NORMAL );
+        for ( i=0; i<3; i++ ) centre[i] += cq[i];
+      }
+      for ( i=0; i<3; i++ ) centre[i] /= 4.;
+      long int cn = -1;
+      for ( jnod=0; jnod<=max_node; jnod++ ) {
+        if ( !db_active_index( NODE, jnod, VERSION_NORMAL ) ) continue;
+        double *cq = db_dbl( NODE, jnod, VERSION_NORMAL );
+        long int ok = 1;
+        for ( i=0; i<3 && ok; i++ )
+          if ( fabs( cq[i]-centre[i] )>1.e-10 ) ok = 0;
+        if ( ok ) { cn = jnod; break; }
+      }
+      if ( cn<0 ) {
+        cn = ++max_node;
+        db( NODE, cn, idum, centre, ndim, VERSION_NORMAL, PUT );
+        db( NODE_START_REFINED, cn, idum, centre, ndim,
+          VERSION_NORMAL, PUT );
+        double *ndof = db_dbl( NODE_DOF, q8[1], VERSION_NORMAL );
+        long int ln = db_len( NODE_DOF, q8[1], VERSION_NORMAL );
+        db( NODE_DOF, cn, idum, ndof, ln, VERSION_NORMAL, PUT );
+        double *ndof_sr = db_dbl( NODE_DOF_START_REFINED, q8[1],
+          VERSION_NORMAL );
+        long int ln_sr = db_len( NODE_DOF_START_REFINED, q8[1],
+          VERSION_NORMAL );
+        db( NODE_DOF_START_REFINED, cn, idum, ndof_sr, ln_sr,
+          VERSION_NORMAL, PUT );
+        length = 1;
+        db( NODE_MACRO_GENERATE, cn, &icontrol, ddum, length,
+          VERSION_NORMAL, PUT );
+      }
+      // side-1 nodes in the hex18 (quad9 tensor) order
+      long int s1[9];
+      s1[0]=q8[1]; s1[1]=q8[5]; s1[2]=q8[2]; s1[3]=q8[6]; s1[4]=cn;
+      s1[5]=q8[7]; s1[6]=q8[3]; s1[7]=q8[8]; s1[8]=q8[4];
+      // normal = cross product of two side-1 face edges (corners
+      // BL,BR,TL of the quad8), tangent = the first edge
+      {
+        ca = db_dbl( NODE, q8[1], VERSION_NORMAL );
+        cb = db_dbl( NODE, q8[2], VERSION_NORMAL );
+        double *cc = db_dbl( NODE, q8[3], VERSION_NORMAL );
+        double e1[MDIM], e2[MDIM];
+        for ( i=0; i<3; i++ ) {
+          e1[i] = cb[i] - ca[i];
+          e2[i] = cc[i] - ca[i];
+        }
+        normal[0] = e1[1]*e2[2] - e1[2]*e2[1];
+        normal[1] = e1[2]*e2[0] - e1[0]*e2[2];
+        normal[2] = e1[0]*e2[1] - e1[1]*e2[0];
+        array_normalize( normal, 3 );
+        tangent[0] = e1[0]; tangent[1] = e1[1]; tangent[2] = e1[2];
+        array_normalize( tangent, 3 );
+      }
+      double len9 = 0.;
+      for ( i=0; i<3; i++ ) len9 += tangent[i]*tangent[i];
+      shift = 0.01 * sqrt( len9 );
+      // create the 9 side-2 nodes: copies of side 1 shifted along n
+      for ( j=0; j<ns1q; j++ ) {
+        long int src = s1[j];
+        long int dst = ++max_node;
+        db( NODE, src, idum, coord, ldum, VERSION_NORMAL, GET );
+        for ( i=0; i<3; i++ ) coord[i] += shift*normal[i];
+        db( NODE, dst, idum, coord, ldum, VERSION_NORMAL, PUT );
+        db( NODE_START_REFINED, src, idum, coord, ldum,
+          VERSION_NORMAL, GET );
+        for ( i=0; i<3; i++ ) coord[i] += shift*normal[i];
+        db( NODE_START_REFINED, dst, idum, coord, ldum,
+          VERSION_NORMAL, PUT );
+        double *ndof = db_dbl( NODE_DOF, src, VERSION_NORMAL );
+        long int ln = db_len( NODE_DOF, src, VERSION_NORMAL );
+        db( NODE_DOF, dst, idum, ndof, ln, VERSION_NORMAL, PUT );
+        double *ndof_sr = db_dbl( NODE_DOF_START_REFINED, src,
+          VERSION_NORMAL );
+        long int ln_sr = db_len( NODE_DOF_START_REFINED, src,
+          VERSION_NORMAL );
+        db( NODE_DOF_START_REFINED, dst, idum, ndof_sr, ln_sr,
+          VERSION_NORMAL, PUT );
+        length = 1;
+        db( NODE_MACRO_GENERATE, dst, &icontrol, ddum, length,
+          VERSION_NORMAL, PUT );
+        el[1+ns1q+j] = dst;
+      }
+      // rewrite: -hex18, side 1 = tensor order, side 2 = the dups
+      el[0] = -HEX18;
+      for ( j=0; j<ns1q; j++ ) el[1+j] = s1[j];
+      length = 1 + 2*ns1q;
+      db( ELEMENT, element, el, ddum, length, VERSION_NORMAL, PUT );
+      // reconnect the neighbours on the other side (same logic as the
+      // linear conversions below: all 9 side-1 nodes shared + centroid
+      // on the +normal side)
+      {
+        long int *nel_neigh = get_new_int(MAXIMUM_NODE+1);
+        for ( long int iel=0; iel<=max_element_c; iel++ ) {
+          if ( !db_active_index( ELEMENT, iel, VERSION_NORMAL ) ) continue;
+          long int gr = 0;
+          db( ELEMENT_GROUP, iel, &gr, ddum, ldum,
+            VERSION_NORMAL, GET_IF_EXISTS );
+          found = 0;
+          for ( long int ig=0; ig<length_convert_groups; ig++ )
+            if ( convert_groups[ig]==gr ) { found = 1; break; }
+          if ( found ) continue;
+          if ( iel==element ) continue;
+          long int ln_n = 0;
+          db( ELEMENT, iel, nel_neigh, ddum, ln_n, VERSION_NORMAL, GET );
+          long int shared = 0;
+          for ( long int jj2=0; jj2<ns1q; jj2++ ) {
+            long int s2 = el[1+jj2];
+            for ( long int k2=1; k2<ln_n; k2++ )
+              if ( nel_neigh[k2]==s2 ) { shared++; break; }
+          }
+          if ( shared!=ns1q ) continue;   // NOT on the other side
+          {
+            double icx = 0., icy = 0., icz = 0., ncx = 0., ncy = 0.,
+              ncz = 0.;
+            long int nshared_nodes = 0;
+            for ( long int k2=1; k2<ln_n; k2++ ) {
+              double *cn2 = db_dbl( NODE, nel_neigh[k2], VERSION_NORMAL );
+              ncx += cn2[0]; ncy += cn2[1]; ncz += cn2[2];
+              nshared_nodes++;
+            }
+            if ( nshared_nodes>0 ) {
+              ncx /= nshared_nodes; ncy /= nshared_nodes;
+              ncz /= nshared_nodes;
+              icx = 0.; icy = 0.; icz = 0.;
+              for ( long int jj2=0; jj2<ns1q; jj2++ ) {
+                double *cn1 = db_dbl( NODE, el[1+jj2],
+                  VERSION_NORMAL );
+                icx += cn1[0]; icy += cn1[1]; icz += cn1[2];
+              }
+              icx /= ns1q; icy /= ns1q; icz /= ns1q;
+              double ddx = ncx-icx, ddy = ncy-icy, ddz = ncz-icz;
+              double dot = ddx*normal[0] + ddy*normal[1] +
+                ddz*normal[2];
+              if ( dot<=0. ) continue;
+            }
+          }
+          for ( long int jj2=0; jj2<ns1q; jj2++ ) {
+            long int src2 = el[1+jj2];
+            long int dst2 = el[1+ns1q+jj2];
+            for ( long int k2=1; k2<ln_n; k2++ )
+              if ( nel_neigh[k2]==src2 ) nel_neigh[k2] = dst2;
+          }
+          db( ELEMENT, iel, nel_neigh, ddum, ln_n, VERSION_NORMAL, PUT );
+        }
+        delete[] nel_neigh;
+      }
+      nconv++;
+      continue;
+    }
 
     // side 1 nodes: for 2D bar2 = {a,b} / bar3 = {a,b,c}; for 3D
     // tria3 = 3 nodes, quad4 = 4 nodes. They form the base of the

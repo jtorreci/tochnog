@@ -835,6 +835,61 @@ void step_start( long int task, long int options_solver[], double dtime, double 
       db_allocate( ELEMENT_SPRING_FORCE, max_element, VERSION_NEW, MINIMAL );
     }
     if ( any_interface ) {
+      // interface history/output records are sized by the number of
+      // integration points of the interface (ns1 = nnol/2 nodes per
+      // side). The database defaults fit ns1<=4 (bar2=1, quad4/quad6=
+      // 2/3, hex8=4); the db() PUT rejects a larger length ("Length too
+      // small of element_interface_*"), so the quadratic 3D interface
+      // (-hex18, ns1=9, intpnt records 9*3=27 values) must raise the
+      // record lengths to the largest interface element OF THIS MODEL
+      // before the records are allocated/assembled. Only raised when
+      // the model actually exceeds the database defaults: shrinking the
+      // default-sized records (e.g. 2D quad6 models, whose intpnt
+      // record default is 12 and needs only 6) would change the flat
+      // record stride and corrupt every read/write of the item.
+      long int iface_nnol_max = 0;
+      db_max_index( ELEMENT, max_element, VERSION_NORMAL, GET );
+      for ( element=0; element<=max_element; element++ ) {
+        if ( !db_active_index( ELEMENT, element, VERSION_NORMAL ) ) continue;
+        db( ELEMENT, element, el, ddum, length, VERSION_NORMAL, GET );
+        element_group = 0;
+        db( ELEMENT_GROUP, element, &element_group, ddum, ldum,
+          VERSION_NORMAL, GET_IF_EXISTS );
+        if ( db_active_index( GROUP_INTERFACE, element_group,
+            VERSION_NORMAL ) && length-1>iface_nnol_max )
+          iface_nnol_max = length - 1;
+      }
+      if ( iface_nnol_max>0 ) {
+        long int ns1_max = iface_nnol_max/2;
+        if ( ns1_max<1 ) ns1_max = 1;
+        long int nval_iface = ( ndim==3 ) ? 3 : 2;
+        if ( ns1_max>db_data_length( ELEMENT_INTERFACE_STRAIN_NORMAL ) )
+          db_data_length_put( ELEMENT_INTERFACE_STRAIN_NORMAL, ns1_max );
+        if ( ns1_max>db_data_length( ELEMENT_INTERFACE_FORCE_NORM ) )
+          db_data_length_put( ELEMENT_INTERFACE_FORCE_NORM, ns1_max );
+        if ( ns1_max>db_data_length( ELEMENT_INTERFACE_FORCE_TANG ) )
+          db_data_length_put( ELEMENT_INTERFACE_FORCE_TANG, ns1_max );
+        if ( ns1_max>db_data_length( ELEMENT_INTERFACE_FORCE_TANG2 ) )
+          db_data_length_put( ELEMENT_INTERFACE_FORCE_TANG2, ns1_max );
+        if ( ns1_max>db_data_length(
+            ELEMENT_INTERFACE_INTPNT_MATERI_TENSION_STATUS ) )
+          db_data_length_put( ELEMENT_INTERFACE_INTPNT_MATERI_TENSION_STATUS,
+            ns1_max );
+        if ( ns1_max*nval_iface>db_data_length(
+            ELEMENT_INTERFACE_INTPNT_STRESS ) )
+          db_data_length_put( ELEMENT_INTERFACE_INTPNT_STRESS,
+            ns1_max*nval_iface );
+        if ( ns1_max*nval_iface>db_data_length(
+            ELEMENT_INTERFACE_INTPNT_STRAIN ) )
+          db_data_length_put( ELEMENT_INTERFACE_INTPNT_STRAIN,
+            ns1_max*nval_iface );
+        if ( nval_iface>db_data_length( ELEMENT_INTERFACE_STRESS_AVERAGE ) )
+          db_data_length_put( ELEMENT_INTERFACE_STRESS_AVERAGE,
+            nval_iface );
+        if ( nval_iface>db_data_length( ELEMENT_INTERFACE_STRAIN_AVERAGE ) )
+          db_data_length_put( ELEMENT_INTERFACE_STRAIN_AVERAGE,
+            nval_iface );
+      }
       db_allocate( ELEMENT_INTERFACE_STRAIN_NORMAL, max_element, VERSION_NEW, MINIMAL );
       db_allocate( ELEMENT_INTERFACE_FORCE_TANG, max_element, VERSION_NEW, MINIMAL );
       db_allocate( ELEMENT_INTERFACE_FORCE_TANG2, max_element, VERSION_NEW, MINIMAL );
