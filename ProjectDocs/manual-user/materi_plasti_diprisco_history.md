@@ -6,8 +6,11 @@
 Professional 4.18) adds the history variables of the di Prisco
 plasticity models to the `node_dof` records. It is the per-model name
 of [`materi_history_variables`](materi_history_variables.md): the same
-mechanism, the same shared history dof (basenames `hisv0 .. hisvN-1`).
-The manual prescribes:
+mechanism, the same shared history dof. When the record is declared
+with the di Prisco alias the dofs are named `dipriscohis0 ..
+dipriscohisN-1` (Professional node_dof naming, manual 4.18); declared
+as plain `materi_history_variables` they keep the generic `hisv0 ..`
+basenames. The manual prescribes:
 
 - `materi_plasti_diprisco_history 11` for
   `group_materi_plasti_diprisco` (the chi tensor 9 values + beta + rc);
@@ -35,7 +38,7 @@ rc = sqrt(3) times the mean pressure).
 ## Validation
 
 - `mdiprisco_hist` (diprisc1 rig with the alias initia instead of
-  `materi_history_variables 11`): the target `hisv10 = -152.795`
+  `materi_history_variables 11`): the target `dipriscohis10 = -152.795`
   matches diprisc1 EXACTLY (same physics, same history dof).
 - `mstrain_diprisco` also uses the alias and keeps the diprisco
-  history target `hisv10 = -152.795`.
+  history target `dipriscohis10 = -152.795`.

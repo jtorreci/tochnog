@@ -326,3 +326,12 @@ Each file corresponds to the same feature in the [User Manual](../manual-user/).
 - [materi_dynamic](materi_dynamic.md) - registro global MATERI_DYNAMIC (double, no_index) + control_materi_dynamic a double; blend del sigvec del momento con old_sig y escalado f de la rigidez del momento en materi.cc y truss.cc. A/B contra el Professional documentado (f=1 byte-identico; f=0 estable solo dentro del CFL del esquema GNU).
 - [start_if_not](start_if_not.md) - extension de input_read_string(): start_if_not/end_if_not con using_if_not; parada del value-loop en los 4 tokens.
 - [bounda_time_smc](bounda_time_smc.md) - registros BOUNDA_TIME_SMC(_OFFSET/_UNITS) registrados; el lector del formato SMC queda PENDIENTE; bounda() falla con mensaje honesto.
+
+## Lote keywords baratas (camclay / beam / groundflow / slide) — convergencia
+
+- [materi_plasti_camclay_history](materi_plasti_camclay_history.md) - initia en input.cc (dof tipo MATERI_PLASTI_CAMCLAY_HISTORY, basenames cchis0/cchis1 en db_initialize), p0 como historia en plasti.cc con fallback legacy N; group_materi_plasti_camclay variable 3..4; checks camclay aceptan ambos nombres.
+- [group_beam_inertia](group_beam_inertia.md) - registro variable 1..3 + consumo Izz en beam.cc; alias 2D rotx/roty -> rotz en db_number(); beam_memory -total_linear -> updated_without_rotation.
+- [groundflow_pressure_gradient](groundflow_pressure_gradient.md) - dof GROUNDFLOW_PRESSURE_GRADIENT (input.cc/database.cc); relleno del dof PENDIENTE (groundfl.cc).
+- [to_pres](to_pres.md) - nombres puros TO_PRES/ST_PRES/DY_PRES; generacion to_pres/st_pres/dy_pres en calcul.cc; resolucion de slots de target_item ampliada a POST_*_DOF_CALCUL en miscel.cc.
+- [control_groundflow_seepage_apply](control_groundflow_seepage_apply.md) - enum + registro; FIX del data_required=GROUNDFLOW roto de los 3 controles groundflow por timestep (check.cc); consumo del gate PENDIENTE.
+- [slide_plasti_friction](slide_plasti_friction.md) - registros de la familia slide en database.cc; diagnostico del bloqueo de slide1/4 (la slide() legacy no constrine; falta la ley elastoplastica kn/kt + cap).

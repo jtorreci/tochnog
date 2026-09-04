@@ -328,3 +328,12 @@ input parameters it accepts.
 - [materi_dynamic](materi_dynamic.md) - el factor de mezcla temporal sigma = (1-f)*sigma(t) + f*sigma(t+dt) (6.800) y control_materi_dynamic (6.141). Implementado en materi() y truss(); f=1 = esquema historico byte-identico. Los tests dynamic1/2/5/8 siguen RUNFAIL por el esquema de velocidades del GNU (bloqueador de solver, no de parse).
 - [start_if_not](start_if_not.md) - bloques condicionales start_if_not ... end_if_not del data part (con start_if ... end_if ya existente).
 - [bounda_time_smc](bounda_time_smc.md) - familia de acelerogramas SMC registrada y parseada; el lector esta PENDIENTE (fallo honesto en runtime).
+
+## Lote keywords baratas (camclay / beam / groundflow / slide) — convergencia
+
+- [materi_plasti_camclay_history](materi_plasti_camclay_history.md) - history de Modified Cam Clay (manual 4.16): dofs node_dof cchis0 (void ratio e) y cchis1 (preconsolidacion p0); group_materi_plasti_camclay = M kappa lambda. Unlocks validation_13 (rc=0).
+- [group_beam_inertia](group_beam_inertia.md) - layout Professional Iyy Izz J (6.590); el beam 2D del GNU consume Izz (2o valor); admite la forma legacy de 1 valor; beam_memory -total_linear aceptado. Unlocks trubea1/trubea4 (rc=0); trubea2/3 PENDIENTE (beam 3D).
+- [groundflow_pressure_gradient](groundflow_pressure_gradient.md) - dof vectorial pres_gradx/pres_grady/pres_gradz (4.7). Registrado; el relleno del dof queda PENDIENTE.
+- [to_pres](to_pres.md) - items del post_calcul groundflow: -to_pres/-st_pres/-dy_pres como nombres de target_item sobre post_point_dof_calcul (labels Professional). Resolucion de slots extendida en exit_tn.
+- [control_groundflow_seepage_apply](control_groundflow_seepage_apply.md) - gate por control step de las seepage faces (6.105); arreglado el combination check de los 3 controls groundflow por timestep.
+- [slide_plasti_friction](slide_plasti_friction.md) - familia slide registrada: slide_plasti_friction (phi c), slide_plasti_tension, slide_stiffness, slide_plasti_residual_stiffness, control_slide_plasti_apply, control_slide_stiffness_apply. Consumo PENDIENTE (slide1/4 corren pero no constrenen).

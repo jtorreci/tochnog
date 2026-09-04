@@ -6,8 +6,13 @@
   accepts BOTH strings (`materi_history_variables` and
   `materi_plasti_diprisco_history`, manual Professional 4.18): same
   parser branch, same `materi_history_variables` value, same shared
-  `hisv_indx` dof (`dof_type = -MATERI_HISTORY_VARIABLES`, basenames
-  `hisv0 .. hisvN-1`). Using the alias sets the flag
+  `hisv_indx` dof (`dof_type = -MATERI_HISTORY_VARIABLES`). With the
+  di Prisco alias flag set the dof basenames become `dipriscohis0 ..
+  dipriscohisN-1` (db_initialize branch on
+  `materi_plasti_diprisco_history`), matching the Professional
+  node_dof names used by its tests (diprisc1 resets and targets
+  `-dipriscohis0/4/8/9/10`); plain `materi_history_variables` keeps
+  `hisv0 .. hisvN-1`. Using the alias sets the flag
   `materi_plasti_diprisco_history` (initia.cc).
 - **Enum**: `MATERI_PLASTI_DIPRISCO_HISTORY` in `tochnog.h` /
   `tochnog-mod.h`; name registered in `database.cc`.
