@@ -43,7 +43,11 @@ input parameters it accepts.
 - [control_reset_dof](control_reset_dof.md) — reset a nodal dof to a constant value or one depending on another dof.
 - [slide_axisymmetric](slide_axisymmetric.md) — axisymmetric scaling of the slide friction.
 - [group_interface](group_interface.md) — interface elements (joints between blocks).
-- [control_mesh_convert](control_mesh_convert.md) — automatic conversion of bar2 to quad4 for interfaces.
+- [control_mesh_convert](control_mesh_convert.md) — automatic conversion of bar2 to quad4 (and bar3 to quad6) for interfaces.
+- [post_force_edge_summed](post_force_edge_summed.md) — total force of the force_edge records, integrated over the edges.
+
+- [quad8](quad8.md) — auto-conversion of quad8 to quad9 for quadratic solids (Professional compatibility).
+
 - [control_mesh_generate_interface](control_mesh_generate_interface.md) — generate interface elements between element groups sharing a face.
 - [control_print_interface_stress](control_print_interface_stress.md) — print interface stresses along a cut line.
 - [control_change_dataitem_apply](control_change_dataitem_apply.md) — enable or disable change_dataitem for a control index.

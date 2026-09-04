@@ -10,7 +10,11 @@ soil): generate a mesh with `-bar2` elements in the interface (with a
 preprocessor like GID), add the interface group data, and use
 `control_mesh_convert` to generate the interface elements.
 
-Currently implemented (2D): `-bar2` -> `-quad4`.
+Currently implemented (2D): `-bar2` -> `-quad4` (linear) and
+`-bar3` -> `-quad6` (quadratic, 3+3 nodes). The quadratic case needs the
+adjacent volume elements to be quadratic too (the Professional suite
+uses `-quad8` solids, which are auto-converted to `-quad9`; the
+interface bar3 sits on the shared edge).
 
 ## Uso
 
@@ -32,7 +36,7 @@ control_mesh_convert_element_group 0  0 1
 | Parameter | Meaning |
 |-----------|---------|
 | `0`       | Index of the control record. Must match the `control_timestep` index. |
-| `-yes`    | Convert interface elements (`-bar2` -> `-quad4`). |
+| `-yes`    | Convert interface elements (`-bar2` -> `-quad4`, `-bar3` -> `-quad6`). |
 
 ## Related
 
