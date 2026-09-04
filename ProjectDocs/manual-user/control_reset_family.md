@@ -17,12 +17,19 @@ them, all nodes are treated — previous GNU behaviour):
 Interface resets (independent records):
 
 - `control_reset_interface index -<geometry_entity> <index>` — reset ALL
-  accumulated interface data (normal strain + tangential forces) of the
-  interface elements in the geometry.
+  accumulated interface data (strains + stresses + tangential forces) of
+  the interface elements in the geometry.
 - `control_reset_interface_strain index -<geometry_entity> <index>` —
-  reset ONLY the normal strain; the tangential force history (the
-  "remembered" stresses) is kept: new strains start at 0 and new
-  stresses grow from the remembered ones through the stiffness.
+  reset the accumulated strains to 0 but REMEMBER the stresses (manual
+  Professional 6.355: "the interface stresses at this moment of
+  resetting will be remembered... the new interface stresses are
+  calculated from the interface stresses at this moment of resetting
+  plus stress due to additional deformation"). The accumulated normal
+  stress lives in its own history (`element_interface_force_norm`,
+  internal), so the reset zeroes the strains only: a constant load does
+  NOT re-compress the interface after the reset (interface10 of the
+  corpus: displacement −6e-4 and sigma_n −6 stay, strain record ≈ 0 —
+  identical to the Professional).
 - `control_reset_element_dof index <-yes|-no>` — registered; -yes (only
   element_dof/element_intpnt_dof, not node_dof) is not yet wired
   (documented partial).

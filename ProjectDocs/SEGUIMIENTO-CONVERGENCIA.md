@@ -207,6 +207,7 @@ en el apartado 'Diferencias con la versión Professional' del manual correspondi
 
 | Feature | Razón del descarte |
 |---------|--------------------|
+| `interface13` del corpus (target 1.11803) | **BUG DEL PROPIO TEST, validado contra el binario Pro 25-10-2023** (2026-09-04): el Pro escribe `element_interface_intpnt_strain` (shear) = 0.67082 = du_tang/2 = (3/√5)/2 y su propio tochnog.log reporta "Target value ... is 1.11803. The actual value is 0.67082. Error detected for input file interface13.dat". El GNU produce EXACTAMENTE el mismo 0.67082. El target 1.11803 = √5/2 = |du|/2 asume que el desplazamiento (2,−1) es tangencial puro, pero el tangente de la interfaz es (2,1)/√5 y hay componente normal (−4/√5). Ambos códigos fallan el target; el test está mal escrito. |
 | `control_print_gid_*` (familia ~20) | Único formato propietario contemplado; `print_gid_6` del GNU es de 1998 (anterior a cambios recientes); GiD puede importar formatos no nativos (VTK, Gmsh, CSV). Ver plan sección 6c. |
 | `control_data_save` | Descarte de la FEATURE (único consumidor: `control_print_gid_save_difference`, familia GiD descartada; el análisis de diferencias se hace en post-proceso con la exportación SQLite/CSV de P5-T). El 2026-09-04 se registró parse-only (INTEGER, class CONTROL) porque los tests dynamic6/7 del corpus lo declaran; el registro sigue sin comportamiento. |
 | `control_print_interface_stress*` | Requiere elementos de interfaz/contacto, que el GNU no tiene (ni enums). Depende del Carril A. |
@@ -1251,7 +1252,7 @@ fallan TODOS en el PARSE del layout, no del nombre:
 
 - [x] `group_interface` — Fase 1 implementada (commit `a82cbc7`, 2026-08-13)
 - [x] `group_interface_condif_conductivity` — Sprint 8 (2026-08-24)
-- [x] `group_interface_gap` — Fase 3 implementada (commit `9c2f4c8`, 2026-08-14; cerrada si strain > gap, default -1e20, hueco físico = gap negativo; validada con iface_mc_gap)
+- [x] `group_interface_gap` — Fase 3 implementada (commit `9c2f4c8`, 2026-08-14; cerrada si strain > gap, default -1e20, hueco físico = gap negativo; validada con iface_mc_gap). SEMÁNTICA CORREGIDA 2026-09-04 (`6f2e940`, manual Pro 6.625 + verificación paso a paso contra el Pro): cerrada si strain <= gap (la condición estaba INVERTIDA), default +1e20, abierta = SIN tensiones (solo rigidez residual), la tensión acumula SOLO la deformación de los pasos cerrados (history `element_interface_force_norm`; interface2 rc=0: −101 = kn·(−101·1e-3), no kn·(−0.2)).
 - [x] `group_interface_groundflow_capacity` — P6 (2026-08-20)
 - [x] `group_interface_groundflow_permeability` — P6 (2026-08-20)
 - [x] `group_interface_groundflow_total_pressure_tension` — P6 (2026-08-20)
@@ -2342,3 +2343,30 @@ del orden de parseo.
 |---------|-------------|
 | -updated_area (valor de memoria) | hypo2 con -updated_area rc=0 y salida/targets IDÉNTICOS a -updated_linear (A/B); parseo del corpus avanza de `-updated_area` a `incremental_driver` (diagnóstico corregido) |
 | corpus | 140 PASS / 201 RUNFAIL / 22 PARSE (sin regresión); suite propia 16/16 |
+
+### Familia interfaz: gap multi-paso + reset strain + térmica — corpus 153 (2026-09-04) — `feat(interface)` `6f2e940` + docs
+
+**Tests objetivo cerrados** (familia interfaz, rama documentation-improvement):
+- `interface2` — gap multi-paso (PENDIENTE histórico): **rc=0**. Tres correcciones en interface.cc, todas verificadas paso a paso contra el binario Pro 25-10-2023 (probe con prints por step: 200 pasos de −1e-3, abierta con σ=0 y strain acumulando durante el recorrido libre del gap, cierre en el paso 100, σ final −101):
+  1. **Condición de gap INVERTIDA** (manual Pro 6.625): el GNU abría con `strain <= gap` (default −1e20); el Pro CIERRA cuando la deformación normal acumulada baja del gap (`strain <= gap` = cerrada, `> gap` = abierta; default +1e20 = siempre cerrada, "para permitir siempre tensiones pon gap a 1.e20"). Consecuencia colateral: `patch1` (gap explícito 1.e20) estaba SIEMPRE ABIERTO — ahora cerrado (sigxx 1199.49 → 1200.01).
+  2. **La tensión normal acumula SOLO la deformación de los pasos cerrados** (history interna nueva `element_interface_force_norm` por IP, cerrada: `+= kn·(Δn − αΔT)`, abierta: = 0). La fase abierta del gap (recorrido libre 0.1) no genera tensión; el record σ = 0 abierta / kn·(deformación cerrada) cerrada. Sin gap = siempre cerrada = comportamiento idéntico al anterior (bit-igual salvo redondeo) — sin regresión en los 13 tests de interfaz que ya pasaban + conspr1-7.
+  3. **Térmica de interfaz** (expans3, bono): la contracción térmica se resta a lo largo de la NORMAL (antes solo en x → cortante espuria −αΔT/√2 en interfaz a 45°) y entra en la tensión (σ = kn·strain_eff: bloque fijo calentado → σn = −kn·α·T). expans3 **rc=0**.
+- `interface10` (control_reset_interface_strain): **rc=0**. Manual Pro 6.355: el reset de strain pone las deformaciones a 0 pero **RECUERDA las tensiones** ("the interface stresses at this moment of resetting will be remembered... the new interface stresses are calculated from the interface stresses at this moment of resetting plus stress due to additional deformation"). El GNU zeroeaba el history de strain y la interfaz se re-comprimía en el paso siguiente (dis −6e-4 → −1.2e-3, strain −6e-4 vs target 0). Ahora la tensión normal vive en `element_interface_force_norm` y el reset _strain solo zeroea `element_interface_strain_normal`; el full reset (control_reset_interface, interface7) zeroea también force_norm (+force_tang). El pre-stress `control_reset_dof -sigxx/...` (direct4) fija también force_norm := valor.
+- `interface13`: **DESCARTE VALIDADO** contra el binario Pro: el Pro produce 0.67082 (target 1.11803) y su propio log dice "Error detected" — bug del propio test (ver tabla de descartes). GNU produce el MISMO 0.67082.
+- `interface11`: PENDIENTE documentado — familia `mesh_interface_triangle_*` (manual 6.854/6.855/6.201): generación de elementos de interfaz cortando un plano triangulado contra una malla tet4 (el elemento 4 del target NO existe en el input; lo crea el corte). No registrado en el GNU; feature de generación de malla, fuera de alcance de sprint.
+
+**Pendientes de la familia con diagnóstico afilado**:
+- `patch1`: gap arreglado (sigxx 1199.49 → 1200.01, la interfaz ya transmite en vez de abrirse) pero los targets ±1e-3 ABSOLUTOS sobre un sistema de penalización kn=1e11 (E=1e6, cond ~1e5) exigen precisión de solver DIRECTO: el Bi-CG por defecto deja la solución a ~1e-6 relativo, que kn=1e11 amplifica a errores de σn de cientos de kPa (σn GNU 1431 vs Pro 960, σn por intpnt no uniforme); la senda SuperLU (so_suplu.c) hace SEGFAULT en este modelo — trabajo de solver pendiente (misma raíz que interface_bar2_hex8).
+- `interface_bar2_hex8`: solver (Bi-CG diverge + dgbsv info≠0) — mismo bloqueador SuperLU.
+- `interface_bar3_quad8` / `interface_quad8_hex20`: interfaces 3D cuadráticas (Carril B).
+- `interface3`: PARSE — elemento `-hex18` no registrado en el GNU.
+
+**Registro de verificación**:
+| Feature | Verificación |
+|---------|-------------|
+| gap: condición + default + σ de fase cerrada | interface2 rc=0: σ final −101 = kn·(−101·1e-3) con gap 0.1 y 200 pasos de −1e-3, verificado paso a paso contra prints del Pro (abierta σ=0 hasta el paso 99, cerrada desde el 100) |
+| reset_interface_strain recuerda tensiones | interface10 rc=0: dis −6e-4 y σn −6 se mantienen tras el reset, strain record ≈ 0 (Pro: idéntico); contra-prueba manual 6.355 |
+| expansión normal a lo largo de la normal + σ = kn·strain_eff | expans3 rc=0: interfaz a 45° entre bloques fijos calentados → σn −1, cortante 0 (antes 0/−0.707) |
+| pre-stress sig → force_norm | mohr_coul_direct3 rc=0 sin regresión; direct4 sigue en su blocker documentado |
+| blast radius familia | interface1/7/8/9/12/14/15/patch/bar2_quad4/quad4_hex8/many/tria3_prism6 rc=0 (sin regresión); conspr1-7 rc=0; suite propia 16/16 |
+| corpus | 150 → **153 PASS / 202 RUNFAIL / 8 PARSE** (interface2, interface10, expans3; run completo de los 363; sin regresión) |

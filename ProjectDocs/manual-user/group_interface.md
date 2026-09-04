@@ -15,13 +15,20 @@ implemented:
 - `group_interface_materi_elasti_stiffness kn kt,first kt,second`:
   `stress_normal = kn * strain_normal`,
   `stress_shear = kt * 2 * strain_shear`.
-- `group_interface_gap gap`: physical gap of the interface. Sign
-  convention: **compression = positive normal strain**. The interface is
-  CLOSED (full stiffness) when the accumulated normal strain
-  `strain_normal > gap`, OPEN (residual stiffness) when
-  `strain_normal <= gap`. A **negative** gap is a real gap: the interface
-  stays open until compression exceeds |gap|. Without the record the
-  interface is always closed.
+- `group_interface_gap gap`: initial empty space between the sides
+  (manual Professional 6.625). The interface is CLOSED (builds
+  stresses) when the accumulated normal strain `<= gap` and OPEN
+  ("does not have stresses") when `strain_normal > gap`. A **negative**
+  gap is a real gap: the interface stays open (stress exactly 0, only
+  the residual stiffness keeps the matrix regularized) until the
+  compression brings the accumulated strain below |gap|. Without the
+  record the interface is always closed (default gap = +1e20 — "if you
+  want to allow always tension stresses set gap to, by example,
+  1.e20"). The stress of the closed phase accumulates ONLY the normal
+  strain of the steps that end closed: the free travel of the open
+  phase never builds stress (`interface2` of the corpus: gap 0.1, 200
+  steps of −1e-3 → the gap closes at step 100 and the final stress is
+  −101 = kn·(−101·1e-3), NOT kn·(−0.2)).
 - `group_interface_materi_residual_stiffness factor`: stiffness fraction
   used when the interface is open (default 0.01).
 - `group_interface_materi_plasti_tension_direct tension_limit`: tensile
@@ -85,12 +92,12 @@ group_interface_materi_elasti_stiffness 10  1000.0  0.0  0.0
 
 | Record | Parameters | Meaning |
 |--------|------------|---------|
-| `group_interface_gap` | `gap` | Physical gap (negative = real gap, closes under compression). Closed when strain > gap, open (residual) when strain <= gap. Default without record: always closed. |
+| `group_interface_gap` | `gap` | Physical gap (negative = real gap; the interface stays open — no stress — until compression brings the accumulated strain below |gap|). Closed when strain <= gap, open when strain > gap (manual 6.625). Default without the record: always closed (+1e20). The stress counts only the strain of the closed steps (interface2: −101, not kn·total). |
 | `group_interface_materi_residual_stiffness` | `factor` | Stiffness fraction of an open interface (default 0.01). |
 | `group_interface_materi_plasti_tension_direct` | `tension_limit` | Opens in traction when the total normal force `\|kn*strain_normal\|` exceeds the limit (and the interface was closed). |
 | `group_interface_materi_plasti_mohr_coul_direct` | `phi c phi_flow` | phi = friction angle (rad), c = cohesion, phi_flow = dilatancy angle (rad). The record's presence activates the cumulative Mohr-Coulomb law on the TOTAL accumulated tangential force (`trial = kt*gamma_total` clamped to `\|c + Fn*tan(phi)\|`, Fn = accumulated normal force, positive under compression); phi=0,c=0 gives free sliding. |
 | `group_interface_materi_memory` | `memory_type` | `-updated_linear` (default) or `-total_linear`. Memory model of the interface law; `-total_linear` fixes the normal/tangent to the time-0 geometry. |
-| `control_reset_interface` / `control_reset_interface_strain` | `index geometry` | Reset the accumulated normal strain (and, for `_interface`, the tangential force histories) of the interface elements located in the geometry. Fires in the control step of its own index. |
+| `control_reset_interface` / `control_reset_interface_strain` | `index geometry` | Reset the accumulated strains of the interface elements located in the geometry. `_interface` resets strains AND stresses (all accumulated data); `_interface_strain` resets the strains to 0 but REMEMBERS the stresses (manual 6.355): the new stresses = the remembered ones + kn times the additional deformation (interface10: after the reset the interface keeps sigma_n and stays in equilibrium — no extra compression under a constant load). Fires in the control step of its own index. |
 
 ## Convergence record (2026-09-03, interface Mohr-Coulomb direct)
 
@@ -134,6 +141,52 @@ PASS. `mohr_coul_direct4` remains RUNFAIL (GNU 0.251052 vs target
 a PERSISTENT pre-stress on the blocks and the interface (the stress-dof
 state is held for 100 s), which the GNU's kinematic interface normal
 stress cannot sustain — see the developer manual.
+
+## Convergence record (2026-09-04, gap multi-step + reset semantics)
+
+Closed `interface2` (gap 0.1, multi-step) and `interface10`
+(`control_reset_interface_strain`), bonus `expans3` (interface thermal
+stress). The Professional semantics were re-derived from the manual
+(6.625 gap, 6.355 reset) and verified step-by-step against the
+Professional per-step prints and `.dbs`:
+
+1. **Gap condition inverted (was a bug)**: the manual 6.625 closes the
+   interface when the accumulated normal strain becomes LOWER than the
+   gap value. The old code opened when `strain <= gap` and defaulted to
+   −1e20, which left interfaces with an explicit positive gap
+   (`patch1`: gap = 1.e20) ALWAYS OPEN and made the closed phase of a
+   physical gap carry only the residual stress. Now: closed when
+   `strain <= gap`, default gap = +1e20 (always closed).
+2. **Stress accumulates over the CLOSED steps only**: `stress,normal` =
+   kn times the normal strain of the steps that end closed (a new
+   internal history `element_interface_force_norm`), zero while open
+   ("an opened interface does not have stresses", manual 6.628).
+   `interface2` verified step by step: open during the 0.1 free travel
+   (stress 0, status -opened), closed from step 100 on, final stress
+   −101 = kn·(−101·1e-3) — the target −100±2 of the corpus test.
+3. **`control_reset_interface_strain` keeps the stress** (manual 6.355):
+   it zeroes the accumulated strains but REMEMBERS the accumulated
+   normal stress, so a constant load does NOT re-compress the interface
+   after the reset (`interface10`: displacement stays −6e-4, strain
+   record ≈ 0, stress −6 — identical to the Professional). The old code
+   zeroed the strain history and the interface re-compressed one extra
+   increment in the next step (strain −6e-4 instead of 0).
+4. **Interface thermal stress** (`group_interface_materi_expansion_normal`):
+   the thermal contraction is along the interface NORMAL (the expansion
+   is in the thickness direction, manual 6.629) and enters the stress
+   directly (`stress = kn · strain_eff`, strain_eff = mechanical −
+   alpha·T). The old pseudo-load subtracted the increment from the x
+   component only, which gave a spurious tangential stress of
+   −kt·alpha·dT/sqrt(2) on the 45-degree interface of `expans3` and no
+   normal thermal stress at all in the constrained case.
+
+Result: `interface2`, `interface10`, `expans3` rc=0 (corpus 150 → 153
+PASS); `interface13` re-validated as a corpus-test bug (the Professional
+itself reports "Error detected" on its target: it computes 0.67082 =
+du_tang/2, the target wrongly demands 1.11803 = |du|/2); `patch1`
+improved 50x (sigxx 1199.49 → 1200.01) but its ±1e-3-absolute targets on
+a kn=1e11 penalty system need a direct solver (the GNU default Bi-CG
+precision is not enough; the SuperLU path segfaults — pending).
 
 ## Related
 

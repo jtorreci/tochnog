@@ -14,7 +14,15 @@ Two effects:
 - The thermal expansion INCREMENT of each step acts as a pseudo-load on
   the normal force (the same incremental pattern as the material
   thermal strains in stress.cc): a temperature rise reduces the
-  compressive force / generates tension at constant opening.
+  compressive force / generates tension at constant opening. The
+  contraction is applied along the interface NORMAL (the expansion is
+  in the interface thickness direction, manual Professional 6.629).
+
+Since 2026-09-04 the interface stress itself follows the effective
+strain: `stress,normal = kn * (strain,mechanical - alpha*T)` (expans3 of
+the corpus: two fixed blocks with an interface at 45 degrees, heated to
+T=1 with alpha=1 and kn=1 → sigma_n = -1, shear = 0, identical to the
+Professional).
 
 Only meaningful with `condif_temperature` (and
 `group_interface_materi_memory` `-updated_linear`/`-total_linear`, both

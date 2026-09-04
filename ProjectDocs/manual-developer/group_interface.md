@@ -44,23 +44,49 @@
   compare magnitudes/signs consistently within one element. The yield
   limit uses `max_fric = |c - kn*strain_normal*tan(phi)|` so that the
   normal FORCE is positive under compression regardless of the numbering.
-- **Gap** (`group_interface_gap`): the interface is OPEN (residual
-  stiffness only) when the accumulated normal strain `strain_normal <= gap`,
-  CLOSED (full stiffness) when `strain_normal > gap`. Compression
-  (strain > 0) always closes. A physical gap is a NEGATIVE value: the
-  interface stays open until compression exceeds |gap|. The accumulated
-  strain is stored in `ELEMENT_INTERFACE_STRAIN_NORMAL`. If no record is
-  given the interface is always closed (default gap = -1e20; the old +1e20
-  default with the inverted condition left the interface always open).
-- **Residual stiffness** (`group_interface_materi_residual_stiffness`):
-  fraction of the original stiffness used when the interface is open
-  (default 0.01).
+- **Gap** (`group_interface_gap`, CONVERGENCE 2026-09-04): the
+  interface is CLOSED when the accumulated normal strain `<= gap` and
+  OPEN when `strain_normal > gap` (manual Professional 6.625: "Only
+  when the sides displacements are such that the normal strain becomes
+  lower then the specified gap value the interface will be closed and
+  start to generate stresses"). An opened interface "does not have
+  stresses" (6.628): the stress record/rhs are exactly 0 and only the
+  residual stiffness (`group_interface_materi_residual_stiffness`,
+  default 0.01) stays in the matrix for regularization. A physical gap
+  is a NEGATIVE gap value; the default without the record is +1e20
+  (always closed — "if you want to allow always tension stresses set
+  gap to, by example, 1.e20"). The accumulated strain is stored in
+  `ELEMENT_INTERFACE_STRAIN_NORMAL`. NOTE (2026-09-04): the pre-fix code
+  inverted the condition (open when `strain <= gap`) with a −1e20
+  default — correct for tests without a gap record, but it left
+  interfaces with an explicit positive gap (patch1: 1.e20) ALWAYS open
+  and the closed phase of a physical gap carried only the residual
+  stress.
+- **Closed-phase stress accumulation** (`ELEMENT_INTERFACE_FORCE_NORM`,
+  new internal history per integration point, registered in
+  `database.cc`, allocated in `top.cc` for every interface group):
+  `stress,normal` is NOT `kn * strain,normal_total`; it is kn times the
+  normal strain of the steps that END CLOSED (the free travel of an
+  open gap never builds stress). Per step and per IP:
+  `force_norm += kn * (delta_mechanical_strain - thermal_increment)`
+  when the step ends closed, `force_norm = 0` when it ends open (an
+  opened interface does not have stresses; a later re-closure rebuilds
+  the stress from the penetration of the closing step). Verified
+  step-by-step against the Professional per-step prints of `interface2`
+  (gap 0.1, 200 steps of −1e-3: open with stress 0 during the free
+  travel, stress −1 at the closing step 100 and −101 = kn·(−101·1e-3)
+  at step 200 — NOT kn·(−0.2)). Without a gap record the interface is
+  always closed and `force_norm` equals `kn*strain,normal` (all the
+  non-gap corpus tests are bit-identical up to FP round-off).
 - **Tension limit** (`group_interface_materi_plasti_tension_direct`): the
   interface opens in TRACTION when the accumulated TOTAL normal force
   `|Fn_total| = |kn*strain_normal| > tension_limit` (requires
-  `strain_normal < 0`) and only if it was still closed
-  (`stiff_normal == kn`). On opening: residual stiffness and `force_norm`
-  capped at `±tension_limit` (signed by the opening direction).
+  `strain_normal < 0`) and only if it was still closed. On opening the
+  state becomes OPEN (stress 0, residual stiffness), the same handling
+  as the gap-open state.
+- **Residual stiffness** (`group_interface_materi_residual_stiffness`):
+  fraction of the original stiffness used as matrix regularization when
+  the interface is open (default 0.01; no corpus test sets it).
 - **Cumulative Mohr-Coulomb** (`group_interface_materi_plasti_mohr_coul_direct
   phi c phi_flow`, manual Professional 6.632 — angles in RADIANS): active
   by the PRESENCE of the record (D2). With phi=0,c=0 the limit is 0 →
@@ -272,3 +298,65 @@ the whole 100 s run (its stress-dof state persists; u3 relaxes to
 0.10244). Reproducing it requires the reset to act as a PERSISTENT
 pre-stress on the block + interface stress-dof mechanics, not just an
 initial condition — out of scope of the interface family.
+
+## Convergence record 2026-09-04 — gap multi-step, reset semantics, thermal (interface2/10/expans3)
+
+Changes in `interface_element()` (interface.cc), `data()` (data.cc,
+resets), `print_interface_stress.cc` and the new history
+`ELEMENT_INTERFACE_FORCE_NORM` (tochnog.h/tochnog-mod.h enum sync,
+database.cc registration with the FORCE_TANG pattern: DOUBLE, length 4,
+fixed_length 0, version_all 1, print_only 1, class/required ELEMENT;
+top.cc db_allocate VERSION_NEW under `any_interface`). Verified against
+the Professional per-step prints and `.dbs` (25-10-2023):
+
+1. **Gap condition inverted** (interface.cc): closed when the
+   accumulated normal strain `<= gap`, open when `> gap` (manual 6.625);
+   default gap +1e20. Pre-fix code opened when `strain <= gap` with a
+   −1e20 default (correct only for tests without a gap record). patch1
+   (gap 1.e20) was stuck ALWAYS OPEN → now closed.
+2. **Closed-phase stress history** `ELEMENT_INTERFACE_FORCE_NORM`: per
+   IP, per step: closed → `+= kn*(delta_n - thermal_inc_step)` (delta_n
+   measured against the pre-step stored strain, so the dilatancy opening
+   of the MC block is included); open → `= 0`. `stress,normal_ip` (record
+   + rhs) = this history. Equals `kn*strain,normal` for the always-closed
+   tests (bit-identical up to FP round-off) and reproduces the
+   Professional `interface2` trajectory exactly (−1 at the closing step
+   100, −101 at 200).
+3. **`control_reset_interface_strain` semantics** (data.cc): per manual
+   6.355 it zeroes the accumulated STRAINS but REMEMBERS the stresses.
+   The stress lives in `ELEMENT_INTERFACE_FORCE_NORM`, so the strain
+   reset now zeroes `ELEMENT_INTERFACE_STRAIN_NORMAL` only and leaves
+   FORCE_NORM untouched (pre-fix the code zeroed the strain history and
+   the next step re-compressed the interface — interface10: displacement
+   −6e-4 → −1.2e-3, strain −6e-4 instead of 0). `control_reset_interface`
+   (full) additionally zeroes FORCE_NORM + FORCE_TANG(_2). The
+   `control_reset_dof -sigxx/-sigyy/-sigzz` pre-stress additionally sets
+   FORCE_NORM := the reset stress value.
+4. **Thermal expansion along the normal + into the stress**
+   (interface.cc): the thermal pseudo-load subtracts the increment along
+   the interface NORMAL (`du_ip -= alpha*dT*n_hat`, pre-fix: x component
+   only → spurious tangential slip −alpha*dT/sqrt(2) on a 45-degree
+   interface); the closed-phase stress accumulates `kn*(delta_n −
+   alpha*dT)` so a heated constrained interface carries
+   `kn*(-alpha*T)` (expans3: sigma_n = −1 = 1*(−1)). The strain history
+   stays purely mechanical; `strain_eff = n − alpha*T_total` keeps
+   driving the gap/tension/MC state.
+5. **Tension status record** (interface.cc output block): CLOSED when
+   `strain_eff <= gap`, OPENED otherwise (was inverted).
+
+Blast radius (corpus 363): 150 → 153 PASS (interface2, interface10,
+expans3 rc=0; interface13 stays RUNFAIL as a corpus-test bug, see the
+user manual — both codes compute 0.67082 while the target demands
+1.11803 = |du|/2 and the Professional itself reports "Error detected");
+interface1/7/8/9/12/14/15/patch + conspr1-7 rc=0 unchanged.
+`patch1` = RUNFAIL blocker sharpened: gap fixed (sigxx 1199.49 →
+1200.01, the interface transmits again) but its ±1e-3 ABSOLUTE targets
+on a kn=1e11 penalty system need direct-solver precision: the default
+Bi-CG leaves ~1e-6 relative solution error, which kn=1e11 amplifies to
+hundreds of kPa in sigma_n (GNU 1431 per-intpnt vs Pro 960 uniform),
+and the SuperLU sparse path segfaults on this model (so_suplu.c) —
+pending solver work, same root as interface_bar2_hex8.
+`interface11` = mesh_interface_triangle_* family (manual 6.854/6.855/
+6.201): generating interface elements by intersecting a triangulated
+plane with a tet4 mesh — not registered, real mesh-generation feature
+(out of sprint scope, documented).
