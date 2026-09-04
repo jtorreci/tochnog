@@ -5736,6 +5736,36 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   data_class[NODE_SLIDE] = NODE;
   data_required[NODE_SLIDE] = NODE;
 
+  // Output records of the elastic-plastic slide law (slide.cc, manual
+  // Professional 6.1042-6.1047): node_slide_direction = the local slide
+  // frame (3 values normal + 3 values tangential), node_slide_f = the
+  // plastic yield function value and node_slide_force = the slide forces
+  // (first value = force on the slide geometry along the normal, second
+  // = force on the slide geometry along the tangential direction; scaled
+  // by 2*pi*r in axisymmetric problems). Computed per slide node at every
+  // equilibrium iteration; the target_item tests (slide2) read them at
+  // the end of the calculation.
+  strcpy(name[NODE_SLIDE_DIRECTION],"node_slide_direction");
+  type[NODE_SLIDE_DIRECTION] = DOUBLE_PRECISION;
+  data_length[NODE_SLIDE_DIRECTION] = 6;
+  version_all[NODE_SLIDE_DIRECTION] = 1;
+  data_class[NODE_SLIDE_DIRECTION] = NODE;
+  data_required[NODE_SLIDE_DIRECTION] = NODE;
+
+  strcpy(name[NODE_SLIDE_F],"node_slide_f");
+  type[NODE_SLIDE_F] = DOUBLE_PRECISION;
+  data_length[NODE_SLIDE_F] = 1;
+  version_all[NODE_SLIDE_F] = 1;
+  data_class[NODE_SLIDE_F] = NODE;
+  data_required[NODE_SLIDE_F] = NODE;
+
+  strcpy(name[NODE_SLIDE_FORCE],"node_slide_force");
+  type[NODE_SLIDE_FORCE] = DOUBLE_PRECISION;
+  data_length[NODE_SLIDE_FORCE] = ndim;
+  version_all[NODE_SLIDE_FORCE] = 1;
+  data_class[NODE_SLIDE_FORCE] = NODE;
+  data_required[NODE_SLIDE_FORCE] = NODE;
+
   strcpy(name[NODE_STATIC_PRESSURE],"node_static_pressure");
   type[NODE_STATIC_PRESSURE] = DOUBLE_PRECISION;
   data_length[NODE_STATIC_PRESSURE] = 1;
@@ -6234,6 +6264,15 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   type[PRINT_DEFINE] = INTEGER;
   data_length[PRINT_DEFINE] = 1;
   no_index[PRINT_DEFINE] = 1;
+
+  // print_debug -yes/-no (Professional input of slide3): switches the
+  // routine-level debug prints (set_swit) on/off. Parsed for
+  // compatibility; the GNU's debug output is driven by print_where.
+  strcpy(name[PRINT_DEBUG],"print_debug");
+  type[PRINT_DEBUG] = INTEGER;
+  data_length[PRINT_DEBUG] = 1;
+  data_class[PRINT_DEBUG] = PRINT;
+  no_index[PRINT_DEBUG] = 1;
 
   strcpy(name[PRINT_FAILURE],"print_failure");
   type[PRINT_FAILURE] = INTEGER;

@@ -36,6 +36,12 @@ char *define_words[MDEFINE], *define_strings[MDEFINE][MSTRING];
 long int reading_arithmetic=0, using_arithmetic=0, iarithmetic=0, narithmetic=0, using_if=0, using_if_not=0;
 double arithmetic_values[MARITHMETIC];
 char *arithmetic_words[MARITHMETIC];
+// one-token pushback for the Professional no-index spelling
+// "axisymmetric -yes"/-no (manual 6.17): the switch token is read where
+// the parser expects the record index and is re-injected as the first
+// data value (group 0), see the data part parser in input().
+static char saved_first_value[MCHAR];
+static long int has_saved_first_value = 0;
 
 void input( )
 
@@ -865,11 +871,25 @@ void input( )
          range_scan( echo, d, d_is_set, range, range_length );
       else {
         if ( !string_isinteger(str) ) {
-          pri( "\nError in data part." );
-          pri( "Illegal index ", str );
-          exit(TN_EXIT_STATUS);
+          // Professional spelling "axisymmetric -yes/-no" WITHOUT an
+          // index (manual 6.17: the switch makes the whole calculation
+          // axi-symmetrical; a per-group group_axisymmetric overrules
+          // it). The GNU data model is per-group: the switch is stored
+          // on group 0 (the default group of the elements). The -yes/-no
+          // token becomes the first data value of the record.
+          if ( idat==GROUP_AXISYMMETRIC && str[0]=='-' ) {
+            strcpy( saved_first_value, str );
+            has_saved_first_value = 1;
+            range[0] = 0;
+          }
+          else {
+            pri( "\nError in data part." );
+            pri( "Illegal index ", str );
+            exit(TN_EXIT_STATUS);
+          }
         }
-        range[0] = atoi(str);
+        else
+          range[0] = atoi(str);
       }
     }
 
@@ -878,7 +898,13 @@ void input( )
     length = last_data_value = istr = nstr = 0;
     for ( iv=0; !last_data_value; iv++ ) {
       if ( istr>=nstr ) {
-        input_read_string( echo, str_total, d, d_is_set );
+        if ( has_saved_first_value && iv==0 ) {
+          // re-inject the index-position token (axisymmetric -yes/-no)
+          strcpy( str_total, saved_first_value );
+          has_saved_first_value = 0;
+        }
+        else
+          input_read_string( echo, str_total, d, d_is_set );
         istr = 0;
         nstr = strlen(str_total);
       }
