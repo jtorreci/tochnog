@@ -346,6 +346,98 @@ void interface_element( long int element, long int name,
   else if ( ns1==3 ) { w_ip[0] = 1./6.; w_ip[1] = 4./6.; w_ip[2] = 1./6.; }
   else               { w_ip[0] = 1./12.; w_ip[1] = 5./12.;
                        w_ip[2] = 5./12.; w_ip[3] = 1./12.; }
+  // CONVERGENCE (2026-09-04, corpus patch1): the assembled per-pair spring
+  // force and stiffness must carry the element MEASURE - the physical
+  // integral over the interface is the Lobatto/even sum times the element
+  // length (2D line) or face area (3D surface). The historical assembly
+  // used the bare weights (sum = 1 = the UNIT-measure element), which is
+  // exact only for unit-length/unit-area interfaces (interface1 of the
+  // suite: length 1) and silently under-integrates every other element.
+  // patch1 exposed it: the inclined interface (quad6 elements of length
+  // 1.677 and 0.559 between two loaded quad9 blocks) converges to a
+  // NON-UNIFORM equilibrium traction (sigma_n = 1610/1073/536 per intpnt,
+  // mean 1431) instead of the Professional's uniform 960: without the
+  // length the discrete force system loses the load-path moment arm, so a
+  // uniform traction cannot balance the applied edge load (the sum
+  // w_i*sigma_i balances 2400 = the load only with the non-uniform field).
+  // With the measure, the pair stiffness kn*w_i*L is the spring constant
+  // of the tributary length w_i*L and the uniform traction 960 equilibrates
+  // (verified: the Pro's nodal loads of interface1 are w_i*6 = w_i*L*sigma
+  // with L = 1, so the unit-length validations are untouched).
+  double iface_measure = 1.;
+  if ( ns1>1 ) {
+    if ( ndim==2 ) {
+      // side length between the first and the last side-1 node (reference
+      // geometry: same memory branch as the interface frame above)
+      double *ca, *cb;
+      if ( memory==-TOTAL_LINEAR ) {
+        ca = db_dbl( NODE_START_REFINED, nodes[0], VERSION_NORMAL );
+        cb = db_dbl( NODE_START_REFINED, nodes[ns1-1], VERSION_NORMAL );
+      }
+      else {
+        ca = &coord[0*ndim];
+        cb = &coord[(ns1-1)*ndim];
+      }
+      double dx = cb[0]-ca[0], dy = cb[1]-ca[1];
+      iface_measure = sqrt( dx*dx + dy*dy );
+    }
+    else {
+      // face area of the (flat) side-1 polygon: triangle = |e1xe2|/2,
+      // quad = |d1xd2|/2 with the diagonals. NOTE the quad4-in-3D
+      // (nnol=4, ns1=2: the "glue" quad4 between two solids, e.g.
+      // interface_quad4_hex8 of the corpus) has its FOUR nodes as the
+      // face corners (0,1,2,3), not ns1 nodes per side.
+      long int i3 = ns1-1;
+      if ( ns1==2 ) i3 = 3;
+      double x0[MDIM], x1[MDIM], x2[MDIM], x3[MDIM];
+      for ( idim=0; idim<3; idim++ ) {
+        double *cn;
+        cn = ( memory==-TOTAL_LINEAR ) ?
+          db_dbl( NODE_START_REFINED, nodes[0], VERSION_NORMAL ) :
+          &coord[0*ndim];
+        x0[idim] = cn[idim];
+        cn = ( memory==-TOTAL_LINEAR ) ?
+          db_dbl( NODE_START_REFINED, nodes[1], VERSION_NORMAL ) :
+          &coord[1*ndim];
+        x1[idim] = cn[idim];
+        cn = ( memory==-TOTAL_LINEAR ) ?
+          db_dbl( NODE_START_REFINED, nodes[2], VERSION_NORMAL ) :
+          &coord[2*ndim];
+        x2[idim] = cn[idim];
+        cn = ( memory==-TOTAL_LINEAR ) ?
+          db_dbl( NODE_START_REFINED, nodes[i3], VERSION_NORMAL ) :
+          &coord[i3*ndim];
+        x3[idim] = cn[idim];
+      }
+      double e1[MDIM], e2[MDIM], nrm[MDIM];
+      // fan of triangles from the node 0: the triangle (0,1,2) plus, for
+      // the quad, the triangle (0,2,3). The crossed-diagonals formula
+      // needs the CYCLIC corner order, which the tochnog hex8/quad4 face
+      // numbering does not follow (the face 5,6,7,8 of the unit hex8 is a
+      // bowtie order: the diagonals coincide and the area would be 0);
+      // the triangle fan is order-robust and exact for planar faces.
+      for ( idim=0; idim<3; idim++ ) {
+        e1[idim] = x1[idim]-x0[idim];
+        e2[idim] = x2[idim]-x0[idim];
+      }
+      nrm[0] = e1[1]*e2[2] - e1[2]*e2[1];
+      nrm[1] = e1[2]*e2[0] - e1[0]*e2[2];
+      nrm[2] = e1[0]*e2[1] - e1[1]*e2[0];
+      iface_measure = 0.5 * sqrt( nrm[0]*nrm[0] + nrm[1]*nrm[1] +
+        nrm[2]*nrm[2] );
+      if ( ns1!=3 ) {
+        for ( idim=0; idim<3; idim++ ) {
+          e1[idim] = x2[idim]-x0[idim];
+          e2[idim] = x3[idim]-x0[idim];
+        }
+        nrm[0] = e1[1]*e2[2] - e1[2]*e2[1];
+        nrm[1] = e1[2]*e2[0] - e1[0]*e2[2];
+        nrm[2] = e1[0]*e2[1] - e1[1]*e2[0];
+        iface_measure += 0.5 * sqrt( nrm[0]*nrm[0] + nrm[1]*nrm[1] +
+          nrm[2]*nrm[2] );
+      }
+    }
+  }
   double *du_ip = get_new_dbl( ns1 * MDIM );
   array_set( du_ip, 0., ns1 * MDIM );
   if ( name==-BAR2 ) {
@@ -736,7 +828,7 @@ void interface_element( long int element, long int name,
   // The Professional nodal force is weight_i * sigma_i (interface1:
   // loads -1,-4,-1 = (1/6,4/6,1/6)*(-6)).
   for ( inol=0; inol<ns1; inol++ ) {
-    double w_i = w_ip[inol];
+    double w_i = w_ip[inol] * iface_measure;
     double s_normal_i = stress_normal_ip[inol];
     double s_shear_i  = rhs_shear_ip[inol];
     double s_shear2_i = rhs_shear2_ip[inol];

@@ -37,8 +37,8 @@ long int solve_iterative_bicg( void )
     max_node=0, succesful=1, print_solver=-NO, length=0, ldum=0, 
     swit=0, idum[1], bicg_stop=-YES, icontrol_bicg=0, ldum_bs=0;
   double error=0., alpha=0., beta=0., dAd=0., check_error=0.,
-   bicg_error_minimum=1.e-12, size_r1r2=0., initial_error=0., 
-   bicg_error=1.e-10, ddum[1], ddum_bs[1], norm_b=0., real_residual=0.,
+   bicg_error_minimum=1.e-16, size_r1r2=0., initial_error=0., 
+   bicg_error=1.e-14, ddum[1], ddum_bs[1], norm_b=0., real_residual=0.,
    *r1=NULL, *r2=NULL, *Ad1=NULL, *Ad2=NULL, *p_tmp=NULL, *residue=NULL;
 
   swit = set_swit(-1,-1,"solve_iterative_bicg");
