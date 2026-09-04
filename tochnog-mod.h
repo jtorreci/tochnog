@@ -284,6 +284,7 @@ enum {
   CONTROL_DISTRIBUTE_VALUES,
   CONTROL_GROUNDFLOW_CONSOLIDATION_APPLY,
   CONTROL_GROUNDFLOW_NONSATURATED_APPLY,
+  CONTROL_GROUNDFLOW_SEEPAGE_APPLY,
   CONTROL_EIGEN,
   CONTROL_EIGEN_SCALE,
   CONTROL_EIGEN_VALUES,
@@ -719,6 +720,8 @@ enum {
   GROUNDFLOW_PHREATICLEVEL_MULTIPLE_STATIC,
   GROUNDFLOW_PRESSURE,
   GROUNDFLOW_PRESSURE_ATMOSPHERIC,
+  GROUNDFLOW_PRESSURE_GRADIENT,
+
   GROUNDFLOW_PRESSURE_FACTOR,
   GROUNDFLOW_SATURATION,
   GROUNDFLOW_SEEPAGE_EPS,
@@ -1012,6 +1015,8 @@ enum {
   MATERI_PLASTI_HYPO_HISTORY,
   MATERI_PLASTI_DIPRISCO_HISTORY,
   MATERI_PLASTI_HARDSOIL_HISTORY,
+  MATERI_PLASTI_CAMCLAY_HISTORY,
+
   MATERI_PLASTI_F,
   MATERI_PLASTI_F_NONLOCAL,
   MATERI_PLASTI_INCREMENTAL_SUBSTEPS,
@@ -1198,6 +1203,10 @@ enum {
   MOM2Y_SIG,
   MOM2Z_SIG,
   MOM2S_SIG,
+  TO_PRES,
+  ST_PRES,
+  DY_PRES,
+
   POST_CALCUL_SCAL_VEC_MAT,
   POST_CALCUL_UNKNOWN_OPERAT,
   POST_ERROR_ITEM,
@@ -1288,6 +1297,13 @@ enum {
   SLIDE_FRICTION,
   SLIDE_GEOMETRY,
   SLIDE_PENALTY,
+  SLIDE_PLASTI_FRICTION,
+  SLIDE_PLASTI_TENSION,
+  SLIDE_STIFFNESS,
+  SLIDE_PLASTI_RESIDUAL_STIFFNESS,
+  CONTROL_SLIDE_PLASTI_APPLY,
+  CONTROL_SLIDE_STIFFNESS_APPLY,
+
   SOLVER,
   SOLVER_BICG_ERROR,
   SOLVER_BICG_RESTART,
@@ -1430,11 +1446,13 @@ enum {
   // see initialization part in manual
 extern long int echo, ndim, derivatives, 
   beam_rotation, condif_temperature, 
-  groundflow_velocity, groundflow_pressure, groundflow_saturation, materi_history_variables,
+  gsat_indx, // index stating start of groundflow_saturation in node_dof
+  pres_grad_indx, // index stating start of groundflow_pressure_gradient in node_dof
   materi_damage, materi_density, 
   materi_diffusion, materi_displacement, materi_displacement_relative, 
   materi_maxwell_stress, materi_plasti_kappa, 
   materi_plasti_cap1_history,
+  materi_plasti_camclay_history,
   materi_plasti_diprisco_history,
   materi_plasti_hypo_history, materi_plasti_kappa_shear,
   materi_plasti_hardsoil_history,
@@ -1484,6 +1502,7 @@ extern long int
   fscal_indx, // index stating start of wave_fscalar in node_dof
   gvel_indx, // index stating start of groundflow_velocity in node_dof
   gsat_indx, // index stating start of groundflow_saturation in node_dof
+  pres_grad_indx, // index stating start of groundflow_pressure_gradient in node_dof
   hisv_indx, // index stating start of materi_history_variables in node_dof
   mstres_indx, // index stating start of materi_maxwell stress in node_dof
   pres_indx, // index stating start of groundflow_pressure in node_dof

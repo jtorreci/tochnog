@@ -138,12 +138,32 @@ void plasti_rule( long int element, long int gr,
       m = plasti_data[0];
       kappa = plasti_data[1];
       lambda = plasti_data[2];
-      N = plasti_data[3];
       if ( scalar_dabs(lambda-kappa)==0. ) db_error( GROUP_MATERI_PLASTI_CAMCLAY, gr );
       e = old_hisv[0];
-      //p0 = old_hisv[1];
+      // p0 is the stored preconsolidation pressure (cchis1). The GNU
+      // legacy closure derived p0 from the void ratio e and the current
+      // pressure p through the 4th material parameter N
+      // (p0 = exp((N-kappa*ln(p)-(1+e))/(lambda-kappa))); the
+      // Professional layout (manual 2.2.x, group_materi_plasti_camclay
+      // 6.689 = M kappa lambda) tracks p0 EXPLICITLY as a history
+      // variable (materi_plasti_camclay_history / node_dof -cchis1) and
+      // derives N from the initial state. Fall back to the N-based
+      // closure only for legacy inputs that still give 4 values AND have
+      // no initialized p0.
       p = -sigm;
-      p0 = exp((N-kappa*log(p)-(1+e))/(lambda-kappa));
+      p0 = old_hisv[1];
+      if ( p0<=0. ) {
+        if ( ldum>=4 ) {
+          N = plasti_data[3];
+          p0 = exp((N-kappa*log(p)-(1+e))/(lambda-kappa));
+        }
+        else {
+          pri( "\nError: GROUP_MATERI_PLASTI_CAMCLAY needs initial p0."
+               "\nSpecify initia 'materi_plasti_camclay_history' and initialize"
+               " -cchis1 (p0) with control_reset_dof." );
+          exit(1);
+        }
+      }
       if ( swit ) {
         pri( "e", e );
         pri( "p0", p0 );

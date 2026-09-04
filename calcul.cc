@@ -372,7 +372,9 @@ void calculate( void )
       }
       else if ( unknown==-GROUNDFLOW_PRESSURE && labs(calcul_operat)==TOTAL &&
                 groundflow_pressure ) {
-        strcpy( outname, "to" );
+        // manual Professional 6.913 area: the item label is -to_pres
+        // (post_calcul_label -to_pres in the .dbs of the Professional)
+        strcpy( outname, "to_" );
         strcat( outname, unknown_name );
         ncalcul++;
         strcpy( post_calcul_names[ncalcul-1], outname );
@@ -383,7 +385,8 @@ void calculate( void )
       }             
       else if ( unknown==-GROUNDFLOW_PRESSURE && labs(calcul_operat)==STATIC &&
                 groundflow_pressure ) {
-        strcpy( outname, "st" );
+        // item label -st_pres (Professional post_calcul_label naming)
+        strcpy( outname, "st_" );
         strcat( outname, unknown_name );
         ncalcul++;
         strcpy( post_calcul_names[ncalcul-1], outname );
@@ -394,7 +397,8 @@ void calculate( void )
       }                
       else if ( unknown==-GROUNDFLOW_PRESSURE && labs(calcul_operat)==DYNAMIC &&
                 groundflow_pressure ) {
-        strcpy( outname, "dy" );
+        // item label -dy_pres (Professional post_calcul_label naming)
+        strcpy( outname, "dy_" );
         strcat( outname, unknown_name );
         ncalcul++;
         strcpy( post_calcul_names[ncalcul-1], outname );

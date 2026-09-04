@@ -528,13 +528,19 @@ void exit_tn( long int print_database_type )
           length = db_len( data_item_name, data_item_index, VERSION_NORMAL );
           if ( target_item[2]<0 ) {
             array_member(dof_label,target_item[2],nuknwn,number);
-            if ( number<0 && data_item_name==NODE_DOF_CALCUL ) {
-              // post_calcul -materi_stress -force (manual Professional
-              // 6.913): the item names (-norx_sig, -nory_sig, ...,
-              // -mom2s_sig) name the SLOTS of the flat NODE_DOF_CALCUL
-              // record. The slot is the position of the generated item
-              // name in post_calcul_names (calcul.cc calculate());
-              // not found -> number stays -1 -> db_error below.
+            if ( number<0 &&
+                 ( data_item_name==NODE_DOF_CALCUL ||
+                   data_item_name==POST_POINT_DOF_CALCUL ||
+                   data_item_name==POST_LINE_DOF_CALCUL ||
+                   data_item_name==POST_QUADRILATERAL_DOF_CALCUL ) ) {
+              // Item names of the post_calcul output slots: -norx_sig,
+              // -nory_sig, ... (post_calcul -materi_stress -force) and
+              // -to_pres/-st_pres/-dy_pres (post_calcul
+              // -groundflow_pressure -total_pressure/-static_pressure/
+              // -dynamic_pressure). The slot is the position of the
+              // generated item name in post_calcul_names (calcul.cc
+              // calculate()); not found -> number stays -1 ->
+              // db_error below.
               long int icalc=0;
               const char *item_name = db_name(labs(target_item[2]));
               for ( icalc=0; icalc<DATA_ITEM_SIZE; icalc++ ) {

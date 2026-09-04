@@ -142,6 +142,13 @@ void general( long int element, long int name, long int nnol, long int element_g
         unknown_belongs_to_type = 1;
         inertia = 1.;
       }
+      else if ( dof_type[iuknwn]==-MATERI_PLASTI_CAMCLAY_HISTORY ) {
+        // manual Professional 4.16: the 2 camclay history vars
+        // (cchis0 = void ratio, cchis1 = preconsolidation pressure)
+        // are integrated like the generic history variables
+        unknown_belongs_to_type = 1;
+        inertia = 1.;
+      }
       else if ( dof_type[iuknwn]==-MATERI_PLASTI_F ) {
         unknown_belongs_to_type = 1;
         inertia = 1.;
@@ -312,6 +319,8 @@ void general( long int element, long int name, long int nnol, long int element_g
           else if ( dof_type[iuknwn]==-MATERI_HISTORY_VARIABLES && type==-MATERI )
             conv_part = 1.;
           else if ( dof_type[iuknwn]==-MATERI_PLASTI_HYPO_HISTORY && type==-MATERI )
+            conv_part = 1.;
+          else if ( dof_type[iuknwn]==-MATERI_PLASTI_CAMCLAY_HISTORY && type==-MATERI )
             conv_part = 1.;
           else if ( dof_type[iuknwn]==-MATERI_MAXWELL_STRESS && type==-MATERI )
             conv_part = 1.;

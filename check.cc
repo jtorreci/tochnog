@@ -356,6 +356,15 @@ long int check( long int idat, long int task )
     ok = check_unknown( "groundflow_pressure", YES, task );
   if ( data_number==GROUNDFLOW_CONSOLIDATION_APPLY )
     ok = check_unknown( "groundflow_pressure", YES, task );
+  // per-timestep gates (manual Professional 6.105/6.136/6.141 area):
+  // they require a groundflow pressure analysis like their global
+  // (no_index) counterparts. The former data_required=GROUNDFLOW
+  // pairing was broken (group-type marker records are never stored at
+  // the control index) and rejected every legitimate per-step usage.
+  if ( data_number==CONTROL_GROUNDFLOW_CONSOLIDATION_APPLY ||
+       data_number==CONTROL_GROUNDFLOW_NONSATURATED_APPLY ||
+       data_number==CONTROL_GROUNDFLOW_SEEPAGE_APPLY )
+    ok = check_unknown( "groundflow_pressure", YES, task );
   if ( data_number==GROUNDFLOW_FLUX_EDGE_NORMAL ) {
     ok = check_unknown( "groundflow_pressure", YES, task );
     ok = ok && check_ndim( 2, 3, task );
@@ -507,17 +516,22 @@ long int check( long int idat, long int task )
   }
   if ( data_number==GROUP_MATERI_ELASTI_CAMCLAY_G ) {
     ok = check_unknown( "materi_stress", YES, task );
-    ok = ok && check_unknown( "materi_history_variables", YES, task );
+    // the camclay histories can be declared with the legacy
+    // materi_history_variables or with materi_plasti_camclay_history
+    ok = ok && check_unknown_atleastone( "materi_history_variables",
+      "materi_plasti_camclay_history", task );
   }
   if ( data_number==GROUP_MATERI_ELASTI_CAMCLAY_POISSON ) {
     ok = check_unknown( "materi_stress", YES, task );
-    ok = ok && check_unknown( "materi_history_variables", YES, task );
+    ok = ok && check_unknown_atleastone( "materi_history_variables",
+      "materi_plasti_camclay_history", task );
   }
   if ( data_number==GROUP_MATERI_ELASTI_CAMCLAY_PRESSURE_MIN ) {
     // manual Professional 6.647: modifier of the camclay bulk modulus
     // (needs the same state as the camclay elastic records)
     ok = check_unknown( "materi_stress", YES, task );
-    ok = ok && check_unknown( "materi_history_variables", YES, task );
+    ok = ok && check_unknown_atleastone( "materi_history_variables",
+      "materi_plasti_camclay_history", task );
   }
   if ( data_number==GROUP_MATERI_ELASTI_COMPRESSIBILITY ) {
     ok = check_unknown( "materi_stress", YES, task );
@@ -640,7 +654,8 @@ long int check( long int idat, long int task )
     ok = check_unknown( "materi_stress", YES, task );
   if ( data_number==GROUP_MATERI_PLASTI_CAMCLAY ) {
     ok = check_unknown( "materi_stress", YES, task );
-    ok = ok && check_unknown( "materi_history_variables", YES, task );
+    ok = ok && check_unknown_atleastone( "materi_history_variables",
+      "materi_plasti_camclay_history", task );
     ok = ok && check_unknown( "materi_strain_plasti", YES, task );
   }
   if ( data_number==GROUP_MATERI_PLASTI_CAP ) {

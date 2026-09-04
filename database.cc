@@ -1044,13 +1044,20 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   type[CONTROL_GROUNDFLOW_CONSOLIDATION_APPLY] = INTEGER;
   data_length[CONTROL_GROUNDFLOW_CONSOLIDATION_APPLY] = 1;
   data_class[CONTROL_GROUNDFLOW_CONSOLIDATION_APPLY] = CONTROL;
-  data_required[CONTROL_GROUNDFLOW_CONSOLIDATION_APPLY] = GROUNDFLOW;
 
   strcpy(name[CONTROL_GROUNDFLOW_NONSATURATED_APPLY],"control_groundflow_nonsaturated_apply");
   type[CONTROL_GROUNDFLOW_NONSATURATED_APPLY] = INTEGER;
   data_length[CONTROL_GROUNDFLOW_NONSATURATED_APPLY] = 1;
   data_class[CONTROL_GROUNDFLOW_NONSATURATED_APPLY] = CONTROL;
-  data_required[CONTROL_GROUNDFLOW_NONSATURATED_APPLY] = GROUNDFLOW;
+
+  // control_groundflow_seepage_apply (manual Professional 6.105): per
+  // control step switch of the seepage faces (groundflow_seepage_*).
+  // The seepage machinery lives in bounda.cc; the control record gates
+  // it per timestep (consumption in bounda.cc seepage branch).
+  strcpy(name[CONTROL_GROUNDFLOW_SEEPAGE_APPLY],"control_groundflow_seepage_apply");
+  type[CONTROL_GROUNDFLOW_SEEPAGE_APPLY] = INTEGER;
+  data_length[CONTROL_GROUNDFLOW_SEEPAGE_APPLY] = 1;
+  data_class[CONTROL_GROUNDFLOW_SEEPAGE_APPLY] = CONTROL;
 
   strcpy(name[CONTROL_EIGEN],"control_eigen");
   type[CONTROL_EIGEN] = INTEGER;
@@ -3525,6 +3532,8 @@ void db_initialize( long int dof_type[], long int dof_label[] )
 
   strcpy(name[GROUNDFLOW_PRESSURE],"groundflow_pressure");
 
+  strcpy(name[GROUNDFLOW_PRESSURE_GRADIENT],"groundflow_pressure_gradient");
+
   strcpy(name[GROUNDFLOW_PRESSURE_ATMOSPHERIC],"groundflow_pressure_atmospheric");
   type[GROUNDFLOW_PRESSURE_ATMOSPHERIC] = DOUBLE_PRECISION;
   data_length[GROUNDFLOW_PRESSURE_ATMOSPHERIC] = 1;
@@ -3576,7 +3585,11 @@ void db_initialize( long int dof_type[], long int dof_label[] )
 
   strcpy(name[GROUP_BEAM_INERTIA],"group_beam_inertia");
   type[GROUP_BEAM_INERTIA] = DOUBLE_PRECISION;
-  data_length[GROUP_BEAM_INERTIA] = 1;
+  // manual Professional 6.590: index Iyy Izz J (3 values). The GNU beam
+  // (2D x-y bending about the local z axis) consumes Izz = value 2; the
+  // legacy GNU single-value form (1 value, used as Izz) is still read.
+  data_length[GROUP_BEAM_INERTIA] = 3;
+  fixed_length[GROUP_BEAM_INERTIA] = 0;
   data_class[GROUP_BEAM_INERTIA] = BEAM;
   data_required[GROUP_BEAM_INERTIA] = GROUP_TYPE;
 
@@ -4248,7 +4261,13 @@ void db_initialize( long int dof_type[], long int dof_label[] )
 
   strcpy(name[GROUP_MATERI_PLASTI_CAMCLAY],"group_materi_plasti_camclay");
   type[GROUP_MATERI_PLASTI_CAMCLAY] = DOUBLE_PRECISION;
-  data_length[GROUP_MATERI_PLASTI_CAMCLAY] = 4;
+  // manual Professional 6.689: index M kappa lambda (3 values). The
+  // preconsolidation pressure p0 is a HISTORY variable
+  // (materi_plasti_camclay_history / node_dof cchis0/cchis1), NOT a
+  // fourth material parameter (the GNU legacy 4th value N is derived
+  // from the initial state instead).
+  data_length[GROUP_MATERI_PLASTI_CAMCLAY] = 3;
+  fixed_length[GROUP_MATERI_PLASTI_CAMCLAY] = 0;
   data_class[GROUP_MATERI_PLASTI_CAMCLAY] = MATERI;
   data_required[GROUP_MATERI_PLASTI_CAMCLAY] = GROUP_TYPE;
 
@@ -5266,6 +5285,8 @@ void db_initialize( long int dof_type[], long int dof_label[] )
 
   strcpy(name[MATERI_PLASTI_HARDSOIL_HISTORY],"materi_plasti_hardsoil_history");
 
+  strcpy(name[MATERI_PLASTI_CAMCLAY_HISTORY],"materi_plasti_camclay_history");
+
   strcpy(name[MATERI_PLASTI_RHO],"materi_plasti_rho");
 
   strcpy(name[MATERI_PLASTI_SOFTVAR_LOCAL],"materi_plasti_softvar_local");
@@ -6018,6 +6039,15 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   strcpy(name[MOM2Z_SIG],"mom2z_sig");
   strcpy(name[MOM2S_SIG],"mom2s_sig");
 
+  // item names of the groundflow pressure split (manual Professional
+  // 6.913 area): post_calcul -groundflow_pressure -total_pressure/
+  // -static_pressure/-dynamic_pressure generate the item names -to_pres,
+  // -st_pres, -dy_pres (target_item N -post_point_dof_calcul <post> -to_pres).
+  // Pure name entries, same resolution as the *_sig family.
+  strcpy(name[TO_PRES],"to_pres");
+  strcpy(name[ST_PRES],"st_pres");
+  strcpy(name[DY_PRES],"dy_pres");
+
   strcpy(name[POST_CALCUL_SCAL_VEC_MAT],"post_calcul_scal_vec_mat");
   type[POST_CALCUL_SCAL_VEC_MAT] = INTEGER;
   data_length[POST_CALCUL_SCAL_VEC_MAT] = DATA_ITEM_SIZE;
@@ -6341,6 +6371,54 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   type[SLIDE_PENALTY] = DOUBLE_PRECISION;
   data_length[SLIDE_PENALTY] = 1;
   data_class[SLIDE_PENALTY] = SLIDE;
+
+  // slide_plasti_friction (manual Professional 6.1042): phi c — friction
+  // angle in RADIANS + cohesion of the slide (slide_geometry) law.
+  // Maximum slide friction force = c + Fn*tan(phi).
+  strcpy(name[SLIDE_PLASTI_FRICTION],"slide_plasti_friction");
+  type[SLIDE_PLASTI_FRICTION] = DOUBLE_PRECISION;
+  data_length[SLIDE_PLASTI_FRICTION] = 2;
+  data_class[SLIDE_PLASTI_FRICTION] = SLIDE;
+  data_required[SLIDE_PLASTI_FRICTION] = SLIDE_GEOMETRY;
+
+  // slide_plasti_tension (manual Professional 6.1043): maximum tensile
+  // (pull-off) force of the slide connection.
+  strcpy(name[SLIDE_PLASTI_TENSION],"slide_plasti_tension");
+  type[SLIDE_PLASTI_TENSION] = DOUBLE_PRECISION;
+  data_length[SLIDE_PLASTI_TENSION] = 1;
+  data_class[SLIDE_PLASTI_TENSION] = SLIDE;
+  data_required[SLIDE_PLASTI_TENSION] = SLIDE_GEOMETRY;
+
+  // slide_stiffness (manual Professional 6.1046): stiffness_n
+  // stiffness_t of the elastic slide connection (per node).
+  strcpy(name[SLIDE_STIFFNESS],"slide_stiffness");
+  type[SLIDE_STIFFNESS] = DOUBLE_PRECISION;
+  data_length[SLIDE_STIFFNESS] = 2;
+  data_class[SLIDE_STIFFNESS] = SLIDE;
+  data_required[SLIDE_STIFFNESS] = SLIDE_GEOMETRY;
+
+  // slide_plasti_residual_stiffness (manual Professional 6.1047 area):
+  // residual stiffness fraction after plastification; the Professional
+  // writes default 1e-2 1e-2 into its .dbs when the record is absent.
+  strcpy(name[SLIDE_PLASTI_RESIDUAL_STIFFNESS],"slide_plasti_residual_stiffness");
+  type[SLIDE_PLASTI_RESIDUAL_STIFFNESS] = DOUBLE_PRECISION;
+  data_length[SLIDE_PLASTI_RESIDUAL_STIFFNESS] = 2;
+  data_class[SLIDE_PLASTI_RESIDUAL_STIFFNESS] = SLIDE;
+  data_required[SLIDE_PLASTI_RESIDUAL_STIFFNESS] = SLIDE_GEOMETRY;
+
+  // control_slide_plasti_apply (manual Professional 6.371): -no turns
+  // the slide plasti law off (keeps the elastic slide).
+  strcpy(name[CONTROL_SLIDE_PLASTI_APPLY],"control_slide_plasti_apply");
+  type[CONTROL_SLIDE_PLASTI_APPLY] = INTEGER;
+  data_length[CONTROL_SLIDE_PLASTI_APPLY] = 1;
+  data_class[CONTROL_SLIDE_PLASTI_APPLY] = CONTROL;
+
+  // control_slide_stiffness_apply (manual Professional 6.372): -no turns
+  // the elastic slide stiffness off.
+  strcpy(name[CONTROL_SLIDE_STIFFNESS_APPLY],"control_slide_stiffness_apply");
+  type[CONTROL_SLIDE_STIFFNESS_APPLY] = INTEGER;
+  data_length[CONTROL_SLIDE_STIFFNESS_APPLY] = 1;
+  data_class[CONTROL_SLIDE_STIFFNESS_APPLY] = CONTROL;
 
   strcpy(name[SOR],"sor");
 
@@ -7055,6 +7133,17 @@ void db_initialize( long int dof_type[], long int dof_label[] )
     }
     else if ( dof_type[iuknwn]==-GROUNDFLOW_SATURATION ) 
       strcpy( basename, "gsat" );
+    else if ( dof_type[iuknwn]==-GROUNDFLOW_PRESSURE_GRADIENT ) {
+      // manual Professional 4.7: the gradient of the hydraulic pressure
+      // head dh/dx, dh/dy, dh/dz added to the node_dof records
+      // (Professional basenames pres_gradx/pres_grady/pres_gradz)
+      if ( iuknwn==pres_grad_indx ) n = 0;
+      n++;
+      strcpy( basename, "pres_grad" );
+      if      ( n==1 ) strcat( basename, "x" );
+      else if ( n==2 ) strcat( basename, "y" );
+      else if ( n==3 ) strcat( basename, "z" );
+    }
     else if ( dof_type[iuknwn]==-MATERI_DAMAGE ) 
       strcpy( basename, "dam" );
     else if ( dof_type[iuknwn]==-MATERI_DENSITY ) 
@@ -7077,7 +7166,13 @@ void db_initialize( long int dof_type[], long int dof_label[] )
     }
     else if ( dof_type[iuknwn]==-MATERI_HISTORY_VARIABLES ) {
       if ( iuknwn==hisv_indx ) n = 0;
-      strcpy( basename, "hisv" );
+      // manual Professional 4.18: materi_plasti_diprisco_history declares
+      // n history variables named dipriscohis0..dipriscohis(n-1) in the
+      // node_dof records (the generic name is hisv<n>)
+      if ( materi_plasti_diprisco_history )
+        strcpy( basename, "dipriscohis" );
+      else
+        strcpy( basename, "hisv" );
       long_to_a( n, str );
       strcat( basename, str );
       n++;
@@ -7088,6 +7183,15 @@ void db_initialize( long int dof_type[], long int dof_label[] )
       // structure s, OCR, density index, intergranular rho)
       if ( iuknwn==hisv_indx ) n = 0;
       strcpy( basename, "hyhis" );
+      long_to_a( n, str );
+      strcat( basename, str );
+      n++;
+    }
+    else if ( dof_type[iuknwn]==-MATERI_PLASTI_CAMCLAY_HISTORY ) {
+      // manual Professional 4.16: cchis0 = void ratio e0 and
+      // cchis1 = preconsolidation pressure p0 of the camclay model
+      if ( iuknwn==hisv_indx ) n = 0;
+      strcpy( basename, "cchis" );
       long_to_a( n, str );
       strcat( basename, str );
       n++;
@@ -8010,6 +8114,10 @@ long int db_number( char str[] )
       return OPTIONS_MESH;
     else if ( !strcmp( str, "groundflow_phreatic_level" ) )
       return GROUNDFLOW_PHREATICLEVEL;
+    else if ( !strcmp( str, "group_porosity" ) )
+      // Professional short name (6.637 area) of the GNU canonical
+      // group_groundflow_porosity record
+      return GROUP_GROUNDFLOW_POROSITY;
     else if ( !strcmp( str, "size_dev" ) )
       return SIZEDEV;
     else if ( !strcmp( str, "contact_spring" ) )
@@ -8105,6 +8213,16 @@ long int db_number( char str[] )
       // Professional short name of options_processors: number of
       // solver threads (consumed in area.cc/elem.cc).
       return OPTIONS_PROCESSORS;
+    else if ( ndim==2 && ( !strcmp( str, "rotx" ) || !strcmp( str, "roty" ) ) ) {
+      // 2D beam_rotation declares a SINGLE rotation unknown named rotz
+      // (the in-plane rotation). The Professional beam inputs prescribe
+      // all three of -rotx -roty -rotz (its 2D beam model keeps the
+      // three rotation dofs); map the two out-of-plane names onto the
+      // same unknown so the bounda_dof records parse.
+      long int idat_tmp=0;
+      for ( idat_tmp=0; idat_tmp<MDAT; idat_tmp++ )
+        if ( !strcmp( name[idat_tmp], "rotz" ) ) return idat_tmp;
+    }
   }
 
   return found;

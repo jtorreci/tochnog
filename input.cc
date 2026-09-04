@@ -213,6 +213,19 @@ void input( )
       array_set( &dof_type[gsat_indx], -GROUNDFLOW_SATURATION, n*nder );
       array_set( &dof_scal_vec_mat[unknown_indx], -SCALAR, n*nder );
     }
+    else if ( !strcmp(str,"groundflow_pressure_gradient") ) {
+      // manual Professional 4.7: the gradient of the hydraulic pressure
+      // head dh/dx dh/dy dh/dz is added to the node_dof records (names
+      // pres_gradx..). The groundflow element (groundfl.cc) computes the
+      // pressure gradient at the integration points; the dof is filled
+      // there by recovery when declared.
+      groundflow_pressure_gradient = 1;
+      pres_grad_indx = unknown_indx;
+      n = ndim;
+      array_set( &dof_type[pres_grad_indx], -GROUNDFLOW_PRESSURE_GRADIENT,
+        n*nder );
+      array_set( &dof_scal_vec_mat[unknown_indx], -VECTOR, n*nder );
+    }
     else if ( !strcmp(str,"materi_damage") ) {
       materi_damage = 1;
       dam_indx = unknown_indx;
@@ -250,7 +263,8 @@ void input( )
     }
     else if ( !strcmp(str,"materi_history_variables") ||
               !strcmp(str,"materi_plasti_diprisco_history") ||
-              !strcmp(str,"materi_plasti_hypo_history") ) {
+              !strcmp(str,"materi_plasti_hypo_history") ||
+              !strcmp(str,"materi_plasti_camclay_history") ) {
       // materi_plasti_diprisco_history (manual Professional 4.18) is
       // the per-model name of materi_history_variables: same mechanism,
       // same shared hisv dof (basenames hisv0..hisv(n-1)). The manual
@@ -267,7 +281,27 @@ void input( )
         materi_plasti_diprisco_history = 1;
       if ( !strcmp(str,"materi_plasti_hypo_history") )
         materi_plasti_hypo_history = 1;
-      if ( materi_plasti_hypo_history ) {
+      if ( !strcmp(str,"materi_plasti_camclay_history") )
+        materi_plasti_camclay_history = 1;
+      if ( materi_plasti_camclay_history ) {
+        // materi_plasti_camclay_history (manual Professional 4.16): the
+        // history variables e0 (void ratio) and p0 (preconsolidation
+        // pressure) of the camclay model are added to the node_dof
+        // records with the basenames cchis0/cchis1. Two fixed history
+        // variables; no number follows the keyword. The camclay law
+        // (plasti.cc/stress.cc) reads them through the shared hisv
+        // mechanism (hisv_indx = this dof, like the hypo hyhis dofs).
+        materi_plasti_camclay_history = 1;
+        materi_history_variables = 2;
+        if ( echo ) cout << materi_history_variables;
+        initialization_values[ninitia-1] = materi_history_variables;
+        hisv_indx = unknown_indx;
+        n = materi_history_variables;
+        array_set( &dof_type[hisv_indx], -MATERI_PLASTI_CAMCLAY_HISTORY,
+          materi_history_variables*nder );
+        array_set( &dof_scal_vec_mat[unknown_indx], -SCALAR, n*nder );
+      }
+      else if ( materi_plasti_hypo_history ) {
         // fixed 8 history variables, no number follows the keyword
         materi_history_variables = 8;
         if ( echo ) cout << materi_history_variables;

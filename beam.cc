@@ -235,7 +235,8 @@ void beam_2d( long int element, long int element_group, double coord[],
     ipuknwn=0, jpuknwn=0, idof=0, jdof=0, indx=0, swit=0, ldum=0, 
     displacement_indx=0, memory=-UPDATED, options_convection=-YES,
     length=0, icontrol=0, idum[1], options_mesh[MDIM];
-  double E=0., I=0., initial_L=0., dtime=0., ddum[NDIM], 
+  double E=0., I=0., initial_L=0., dtime=0., ddum[NDIM],
+    beam_inertia[3]={0.,0.,0.},
     old_beam_direction[NDIM], new_beam_direction[NDIM],
     old_beam_dof[NNOL*NDOF], new_beam_dof[NNOL*NDOF], 
     incremental_beam_dof[NNOL*NDOF], incremental_beam_moment[NNOL*NDOF], 
@@ -253,10 +254,26 @@ void beam_2d( long int element, long int element_group, double coord[],
   db( ICONTROL, 0, &icontrol, ddum, ldum, VERSION_NORMAL, GET );
   db( GROUP_BEAM_YOUNG, element_group, idum, &E, 
     ldum, VERSION_NORMAL, GET_IF_EXISTS );
-  db( GROUP_BEAM_INERTIA, element_group, idum, &I, 
-    ldum, VERSION_NORMAL, GET_IF_EXISTS );
+  // group_beam_inertia (manual Professional 6.590): index Iyy Izz J.
+  // The GNU beam is the 2D x-y beam bending about the LOCAL z axis, so
+  // it consumes Izz = value 2. The legacy GNU single-value form (only
+  // Izz given) is still read for backward compatibility.
+  {
+    long int inertia_length=0;
+    if ( db( GROUP_BEAM_INERTIA, element_group, idum, beam_inertia,
+        inertia_length, VERSION_NORMAL, GET_IF_EXISTS ) ) {
+      if ( inertia_length==1 ) I = beam_inertia[0];
+      else if ( inertia_length>=2 ) I = beam_inertia[1];
+      else db_error( GROUP_BEAM_INERTIA, element_group );
+    }
+  }
   if ( db( GROUP_BEAM_MEMORY, element_group, &memory, ddum,
       ldum, VERSION_NORMAL, GET_IF_EXISTS ) ) {
+    // manual Professional 6.591: group_beam_memory accepts
+    // -updated, -updated_without_rotation and -total_linear. The GNU
+    // beam integrates a geometrically linear law; -total_linear is
+    // mapped onto -updated_without_rotation (initial coordinates fixed).
+    if ( memory==-TOTAL_LINEAR ) memory = -UPDATED_WITHOUT_ROTATION;
     if ( memory!=-UPDATED && memory!=-UPDATED_WITHOUT_ROTATION )
       db_error( GROUP_BEAM_MEMORY, element_group );
   }
