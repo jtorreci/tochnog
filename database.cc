@@ -2666,6 +2666,15 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   data_class[ELEMENT_INTERFACE_FORCE_TANG2] = ELEMENT;
   data_required[ELEMENT_INTERFACE_FORCE_TANG2] = ELEMENT;
 
+  strcpy(name[ELEMENT_INTERFACE_FORCE_NORM],"element_interface_force_norm");
+  type[ELEMENT_INTERFACE_FORCE_NORM] = DOUBLE_PRECISION;
+  data_length[ELEMENT_INTERFACE_FORCE_NORM] = 4;
+  fixed_length[ELEMENT_INTERFACE_FORCE_NORM] = 0;
+  version_all[ELEMENT_INTERFACE_FORCE_NORM] = 1;
+  print_only[ELEMENT_INTERFACE_FORCE_NORM] = 1;
+  data_class[ELEMENT_INTERFACE_FORCE_NORM] = ELEMENT;
+  data_required[ELEMENT_INTERFACE_FORCE_NORM] = ELEMENT;
+
   strcpy(name[ELEMENT_STRAINENERGY],"element_strainenergy");
   type[ELEMENT_STRAINENERGY] = DOUBLE_PRECISION;
   data_length[ELEMENT_STRAINENERGY] = 1;

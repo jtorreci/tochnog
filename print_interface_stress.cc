@@ -105,11 +105,22 @@ void print_interface_stress( long int icontrol, long int task )
       ddum3, ldum, VERSION_NORMAL, GET_IF_EXISTS );
     kn = ddum3[0];
 
-    // accumulated normal strain -> normal stress (total normal force)
-    strain_normal = 0.;
-    db( ELEMENT_INTERFACE_STRAIN_NORMAL, element, idum, &strain_normal,
-      ldum, VERSION_NORMAL, GET_IF_EXISTS );
-    sign = kn * strain_normal;
+    // accumulated contact normal stress -> normal stress (total normal
+    // force). CONVERGENCE (2026-09-04): the interface stress lives in the
+    // ELEMENT_INTERFACE_FORCE_NORM history (kn times the strain of the
+    // CLOSED steps only - an open gap does not build stress); fall back
+    // to kn * strain,normal when the history is not there yet.
+    sign = 0.;
+    {
+      long int has_fn = db( ELEMENT_INTERFACE_FORCE_NORM, element, idum,
+        &sign, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+      if ( !has_fn ) {
+        strain_normal = 0.;
+        db( ELEMENT_INTERFACE_STRAIN_NORMAL, element, idum, &strain_normal,
+          ldum, VERSION_NORMAL, GET_IF_EXISTS );
+        sign = kn * strain_normal;
+      }
+    }
     // accumulated total tangential force (history ELEMENT_INTERFACE_FORCE_TANG,
     // Fase 3): cumulative Mohr-Coulomb or elastic total. Same accumulated
     // semantics as sign -> consistent sigt. 3D: two tangential components.

@@ -863,6 +863,22 @@ void data( long int task, double dtime, double time_current )
           // 2026-09-03: the old PUT passed a leftover length and a
           // single value, so the reset never cleared the whole record
           // and the accumulated strain survived the reset).
+          //
+          // control_reset_interface_strain (manual Professional 6.355):
+          // resets the accumulated STRAINS to 0 but REMEMBERS the
+          // stresses: "the interface stresses at this moment of resetting
+          // will be remembered by Tochnog. In the next time steps the new
+          // interface strains start with 0, and change when the
+          // interfaces deform further. And in the next time steps the new
+          // interface stresses are calculated from the interface stresses
+          // at this moment of resetting plus stress due to additional
+          // deformation". The normal stress lives in its own history
+          // (ELEMENT_INTERFACE_FORCE_NORM), so the strain reset zeroes
+          // ELEMENT_INTERFACE_STRAIN_NORMAL only and leaves FORCE_NORM
+          // untouched (interface10 of the corpus: after the reset the
+          // interface keeps sigma_n = -6 and stays in equilibrium - no
+          // extra compression in the next step - while the reported
+          // strain starts from 0).
           if ( strain_reset || full_reset ) {
             long int ns1_r = ( length_el_i-1 )/2;
             double zero_arr[4];
@@ -878,6 +894,10 @@ void data( long int task, double dtime, double time_current )
             double zero_arr[4];
             for ( inol_i=0; inol_i<ns1_r && inol_i<4; inol_i++ )
               zero_arr[inol_i] = 0.;
+            db( ELEMENT_INTERFACE_FORCE_NORM, iel_i, idum, zero_arr,
+              ns1_r, VERSION_NORMAL, PUT );
+            db( ELEMENT_INTERFACE_FORCE_NORM, iel_i, idum, zero_arr,
+              ns1_r, VERSION_NEW, PUT );
             db( ELEMENT_INTERFACE_FORCE_TANG, iel_i, idum, zero_arr,
               ns1_r, VERSION_NORMAL, PUT );
             db( ELEMENT_INTERFACE_FORCE_TANG, iel_i, idum, zero_arr,
@@ -1126,13 +1146,23 @@ void data( long int task, double dtime, double time_current )
                 }
                 {
                   long int ns1_r = ( length_el_r-1 )/2;
-                  double strain_r[4];
-                  for ( inol_r=0; inol_r<ns1_r; inol_r++ )
+                  double strain_r[4], force_norm_r[4];
+                  for ( inol_r=0; inol_r<ns1_r; inol_r++ ) {
                     strain_r[inol_r] = reset_value_constant / kn_r;
+                    // ELEMENT_INTERFACE_FORCE_NORM stores the accumulated
+                    // contact normal STRESS the interface record and
+                    // assembly carry; it starts from the pre-stress value
+                    // (stress,normal = kn * eps with eps = value/kn).
+                    force_norm_r[inol_r] = reset_value_constant;
+                  }
                   ldum = ns1_r;
                   db( ELEMENT_INTERFACE_STRAIN_NORMAL, iel_r, idum, strain_r,
                     ldum, VERSION_NORMAL, PUT );
                   db( ELEMENT_INTERFACE_STRAIN_NORMAL, iel_r, idum, strain_r,
+                    ldum, VERSION_NEW, PUT );
+                  db( ELEMENT_INTERFACE_FORCE_NORM, iel_r, idum, force_norm_r,
+                    ldum, VERSION_NORMAL, PUT );
+                  db( ELEMENT_INTERFACE_FORCE_NORM, iel_r, idum, force_norm_r,
                     ldum, VERSION_NEW, PUT );
                 }
               }

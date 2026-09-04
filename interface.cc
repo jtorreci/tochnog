@@ -32,11 +32,24 @@
 //       group_interface_materi_elasti_stiffness kn kt,first kt,second
 //       stress_normal = kn * strain_normal
 //       stress_shear  = kt * 2 * strain_shear
-//   - gap (Fase 3, RF-3): the interface is OPEN when the accumulated
-//       normal strain <= gap (only residual stiffness acts), CLOSED when
-//       strain_normal > gap. Compression (strain_normal > 0) always closes;
-//       a physical gap is a NEGATIVE gap value. Default gap = 1.e20
-//       (always closed).
+//   - gap (Fase 3, RF-3, CONVERGENCE 2026-09-04): the interface is
+//       CLOSED when the accumulated normal strain <= gap, OPEN when
+//       strain_normal > gap (manual Professional 6.625: "Only when the
+//       sides displacements are such that the normal strain becomes lower
+//       then the specified gap value the interface will be closed and
+//       start to generate stresses"; an opened interface "does not have
+//       stresses"). A physical gap is a NEGATIVE gap value: the interface
+//       stays open (no stress) until compression brings the accumulated
+//       strain below |gap|. Default without the record = +1.e20 (always
+//       closed - "if you want to allow always tension stresses set gap
+//       to, by example, 1.e20"). The stress of the closed phase
+//       accumulates ONLY the normal strain of the steps that end closed
+//       (ELEMENT_INTERFACE_FORCE_NORM history): the free travel of the
+//       open phase never enters the stress (interface2 of the corpus:
+//       gap 0.1, 200 steps of -1e-3 -> final stress -101 = kn*(-0.101),
+//       the 101 closed steps only, NOT kn*(-0.2)). While open the stress
+//       is zero and only the residual stiffness keeps the matrix
+//       regularized.
 //   - tension limit (Fase 3, RF-2): the interface opens in traction when
 //       the TOTAL accumulated normal force |kn*strain_normal| exceeds the
 //       limit: group_interface_materi_plasti_tension_direct tension_limit
@@ -363,27 +376,58 @@ void interface_element( long int element, long int name,
   du_tang2 = ( ndim==3 ) ? array_inproduct( du, tangent2, ndim ) : 0.;
 
   // accumulated normal strain per integration point (history arrays).
-  // Sign convention: compression is POSITIVE (verified empirically). The
-  // history is read BEFORE adding the current step's increment so that
+  // Sign convention: compression gives a NEGATIVE normal strain (the
+  // normal is oriented so the compressed interface strain stays negative
+  // - verified against the Professional .dbs of interface1/8/13/14/15).
+  // The history is read BEFORE adding the current step's increment so that
   // gap / tension / Mohr-Coulomb decisions see the accumulated total.
   // (2026-08-30: the Professional stores one value per integration point
   //  - the .dbs of interface1 shows intpnt_strain with 3 entries for the
   //  quad6 - so the histories are arrays of ns1 now.)
   double *strain_normal_ip = get_new_dbl( ns1 );
   double *strain_eff_ip    = get_new_dbl( ns1 );
+  double *strain_normal_old_ip = get_new_dbl( ns1 ); // pre-step value
   array_set( strain_normal_ip, 0., ns1 );
   array_set( strain_eff_ip, 0., ns1 );
+  array_set( strain_normal_old_ip, 0., ns1 );
   {
     long int ln = ns1;
     double *hist = get_new_dbl( ns1 );
     array_set( hist, 0., ns1 );
     if ( db( ELEMENT_INTERFACE_STRAIN_NORMAL, element, idum, hist,
         ln, VERSION_NORMAL, GET_IF_EXISTS ) && ln>0 ) {
-      for ( inol=0; inol<ns1; inol++ ) strain_normal_ip[inol] = hist[inol];
+      for ( inol=0; inol<ns1; inol++ ) {
+        strain_normal_ip[inol] = hist[inol];
+        strain_normal_old_ip[inol] = hist[inol];
+      }
     }
     delete[] hist;
     for ( inol=0; inol<ns1; inol++ )
       strain_normal_ip[inol] += array_inproduct( &du_ip[inol*MDIM], normal, ndim );
+  }
+
+  // accumulated contact normal STRESS per integration point (history
+  // ELEMENT_INTERFACE_FORCE_NORM). CONVERGENCE (2026-09-04, interface2 +
+  // control_reset_interface_strain): the stress the interface records and
+  // assembles is NOT kn * (total accumulated strain) but kn times the
+  // normal strain accumulated over the steps that end CLOSED (the free
+  // travel of an open gap never builds stress; while open the stress is
+  // exactly zero). control_reset_interface_strain (manual 6.355) resets
+  // the strains but REMEMBERS this stress ("the interface stresses at
+  // this moment of resetting will be remembered... the new interface
+  // stresses are calculated from the interface stresses at this moment of
+  // resetting plus stress due to additional deformation").
+  double *force_norm_ip = get_new_dbl( ns1 );
+  array_set( force_norm_ip, 0., ns1 );
+  {
+    long int ln = ns1;
+    double *hist = get_new_dbl( ns1 );
+    array_set( hist, 0., ns1 );
+    if ( db( ELEMENT_INTERFACE_FORCE_NORM, element, idum, hist,
+        ln, VERSION_NORMAL, GET_IF_EXISTS ) && ln>0 ) {
+      for ( inol=0; inol<ns1; inol++ ) force_norm_ip[inol] = hist[inol];
+    }
+    delete[] hist;
   }
 
   // group_interface_materi_expansion_normal (manual Professional 6.630):
@@ -392,7 +436,12 @@ void interface_element( long int element, long int name,
   // MECHANICAL strain seen by gap / tension / Mohr-Coulomb is the
   // accumulated strain minus the thermal expansion; the stored history
   // stays purely mechanical (no thermal re-counting per step). Only
-  // meaningful with condif_temperature.
+  // meaningful with condif_temperature. The thermal strain INCREMENT of
+  // this step (alpha * dT) is kept in thermal_inc_step: it belongs to the
+  // stress accumulation (the Professional stress = kn * strain_eff, so a
+  // heated constrained interface carries kn*(-alpha*T) - expans3 of the
+  // corpus: interface sigma_n = -1 = 1*(-1) with alpha=1, T=1, u=0).
+  double thermal_inc_step = 0.;
   for ( inol=0; inol<ns1; inol++ ) strain_eff_ip[inol] = strain_normal_ip[inol];
   if ( condif_temperature ) {
     double alpha_n = 0., t_side1 = 0., t_side2 = 0.;
@@ -406,13 +455,21 @@ void interface_element( long int element, long int name,
         t2_old   += old_dof[(inol+ns1)*nuknwn+temp_indx];
       }
       t_side1 /= ns1; t_side2 /= ns1; t1_old /= ns1; t2_old /= ns1;
+      thermal_inc_step = alpha_n *
+        ( 0.5*(t_side1+t_side2) - 0.5*(t1_old+t2_old) );
       for ( inol=0; inol<ns1; inol++ ) {
         // total thermal expansion (for gap / tension / Mohr-Coulomb state)
         strain_eff_ip[inol] = strain_normal_ip[inol] -
           alpha_n * 0.5*(t_side1+t_side2);
-        // incremental thermal expansion acts as a pseudo-load this step
-        du_ip[inol*MDIM] -= alpha_n *
-          ( 0.5*(t_side1+t_side2) - 0.5*(t1_old+t2_old) );
+        // incremental thermal expansion acts as a pseudo-load this step.
+        // The contraction is along the interface NORMAL (the expansion is
+        // in the interface thickness direction, manual 6.629): subtracting
+        // the increment from the x component only (pre-2026-09-04) gave a
+        // spurious tangential slip of -alpha*dT*normal_x on inclined
+        // interfaces (expans3: interface at 45 degrees got a shear stress
+        // -0.707 = kt * alpha*dT/sqrt(2) instead of 0).
+        for ( idim=0; idim<ndim; idim++ )
+          du_ip[inol*MDIM+idim] -= thermal_inc_step * normal[idim];
       }
     }
   }
@@ -452,17 +509,25 @@ void interface_element( long int element, long int name,
     }
   }
 
-  // gap (FIX 3, RF-3): the interface is OPEN when strain_normal <= gap
-  // (only residual stiffness acts), CLOSED when strain_normal > gap.
-  // Compression (strain_normal > 0) always closes the interface. A physical
-  // gap is a NEGATIVE gap value: the interface stays open until compression
-  // exceeds |gap|. If no gap is specified the interface is always closed:
-  // default gap = -1e20 (the OLD code used +1e20, valid only for the old
-  // condition strain >= gap; with the inverted condition strain <= gap a
-  // positive default would leave the interface ALWAYS open).
+  // gap (CONVERGENCE 2026-09-04, manual Professional 6.625): the
+  // interface is CLOSED when the accumulated normal strain <= gap and
+  // OPEN when strain_normal > gap ("Only when the sides displacements are
+  // such that the normal strain becomes lower then the specified gap
+  // value the interface will be closed and start to generate stresses").
+  // An opened interface "does not have stresses" (6.628) and keeps only
+  // the residual stiffness for the matrix. A physical gap is a NEGATIVE
+  // gap value (open until compression exceeds |gap|); the DEFAULT without
+  // the record is +1e20 = always closed (allows tension stresses, 6.625:
+  // "If you want to allow always tension stresses in an interface set gap
+  // to, by example, 1.e20"). NOTE: the OLD code (before 2026-09-04)
+  // inverted the condition (open when strain <= gap) with default -1e20:
+  // it worked for the tests without a gap record but left interfaces with
+  // an explicit positive gap (patch1: gap 1.e20) ALWAYS OPEN and let the
+  // closed phase of a physical gap (interface2) carry only the residual
+  // stress.
   if ( !db( GROUP_INTERFACE_GAP, element_group, idum, &gap, ldum,
       VERSION_NORMAL, GET_IF_EXISTS ) )
-    gap = -1.e20;
+    gap = 1.e20;
 
   // per-IP constitutive state
   // Mohr-Coulomb (FIX 1, RF-1): friction limit on the TOTAL tangential
@@ -486,19 +551,24 @@ void interface_element( long int element, long int name,
   double *stiff_tang2_ip   = get_new_dbl( ns1 );
   long int *plastified_ip  = get_new_int( ns1 );
   for ( inol=0; inol<ns1; inol++ ) {
-    double du_norm_i  = array_inproduct( &du_ip[inol*MDIM], normal, ndim );
     double du_tang_i  = array_inproduct( &du_ip[inol*MDIM], tangent, ndim );
     double du_tang2_i = ( ndim==3 ) ?
       array_inproduct( &du_ip[inol*MDIM], tangent2, ndim ) : 0.;
     double stiff_normal_i = kn;
-    if ( strain_eff_ip[inol] <= gap ) stiff_normal_i = kn * residual_factor;
+    // state after this step's increment: CLOSED when the accumulated
+    // normal strain <= gap, OPEN otherwise (manual 6.625; the strain_eff
+    // history was accumulated with this step's du above)
+    long int iface_open_i = ( strain_eff_ip[inol] > gap );
+    if ( iface_open_i ) stiff_normal_i = kn * residual_factor;
     // tension limit (FIX 2, RF-2): opens in traction when the TOTAL
     // accumulated normal force |Fn_total| exceeds the limit, and only if
-    // it was still closed.
+    // it was still closed. An interface opened by the tension limit has
+    // no normal stress either (same handling as the gap-open state).
     double fn_total_i = kn * strain_eff_ip[inol];
     if ( tension_limit>0. && strain_normal_ip[inol]<0. &&
-        fabs(fn_total_i)>tension_limit && stiff_normal_i==kn ) {
+        fabs(fn_total_i)>tension_limit && !iface_open_i ) {
       stiff_normal_i = kn * residual_factor;
+      iface_open_i = 1;
     }
     stiff_normal_ip[inol] = stiff_normal_i;
 
@@ -577,11 +647,42 @@ void interface_element( long int element, long int name,
     plastified_ip[inol] = plast_i;
     stiff_tang_ip[inol]  = ( mc_active && plast_i ) ? 0. : kt1;
     stiff_tang2_ip[inol] = ( mc_active && plast_i ) ? 0. : kt2;
-    // FULL accumulated normal force (spring.cc pattern): stress,normal =
-    // kn * strain,normal (accumulated incl. this step's du and the
-    // dilatancy opening). stress_normal_ip is set AFTER the plastic block
-    // so the record/assembly carry the post-dilatancy value.
-    stress_normal_ip[inol] = stiff_normal_i * strain_normal_ip[inol];
+    // stress,normal (spring.cc pattern, CONVERGENCE 2026-09-04): the
+    // accumulated contact stress of the CLOSED phase only (history
+    // ELEMENT_INTERFACE_FORCE_NORM, read before the step). Each closed
+    // step adds kn * (normal strain increment of this step - the relative
+    // displacement du plus the dilatancy opening added above), so after n
+    // closed steps the stress = kn * (sum of their strain increments).
+    // Steps ending OPEN zero the history: an opened interface does not
+    // have stresses (manual 6.628) and a later re-closure rebuilds the
+    // stress from the penetration of the closing step (interface2 of the
+    // corpus: gap 0.1 closes at step 100 of 200 and the final stress is
+    // -101 = kn * (-101 * 1e-3), NOT kn * (-0.2) which would count the
+    // 0.1 free gap travel; verified step-by-step against the Professional
+    // per-step prints). Without a gap record the interface is always
+    // closed and the history equals kn * strain,normal (the behavior of
+    // all non-gap corpus tests, bit-identical up to FP round-off).
+    // control_reset_interface_strain (manual 6.355) keeps this history
+    // untouched: "the interface stresses at this moment of resetting will
+    // be remembered... the new interface stresses are calculated from the
+    // interface stresses at this moment of resetting plus stress due to
+    // additional deformation" (interface10 of the corpus). stress_normal_ip
+    // is set AFTER the plastic block so the record/assembly carry the
+    // post-dilatancy value.
+    double force_norm_new_i = force_norm_ip[inol];
+    if ( iface_open_i ) {
+      force_norm_new_i = 0.;
+    }
+    else {
+      // the closed-phase stress increment: kn times the effective normal
+      // strain increment of this step (relative displacement du + plastic
+      // dilatancy opening - thermal contraction alpha*dT, expans3)
+      force_norm_new_i += kn *
+        ( strain_normal_ip[inol] - strain_normal_old_ip[inol] -
+          thermal_inc_step );
+    }
+    force_norm_ip[inol] = force_norm_new_i;
+    stress_normal_ip[inol] = force_norm_new_i;
     // stress,shear = the accumulated tangential force clamped to the
     // yield limit (WITH Mohr-Coulomb) or the accumulated elastic trial
     // kt*gamma_total (WITHOUT: elastic, single- and multi-step alike -
@@ -703,6 +804,11 @@ void interface_element( long int element, long int name,
     long int ln = ns1;
     db( ELEMENT_INTERFACE_STRAIN_NORMAL, element, idum, strain_normal_ip,
       ln, VERSION_NEW, PUT );
+    // the accumulated contact normal stress of the closed phase (see the
+    // per-IP block); zeroed while open, remembered by
+    // control_reset_interface_strain (data.cc)
+    db( ELEMENT_INTERFACE_FORCE_NORM, element, idum, force_norm_ip,
+      ln, VERSION_NEW, PUT );
     // the history holds the ELASTIC trial (kt*gamma_total) so the
     // accumulated tangential strain keeps growing after plastic slip
     // (the clamped force is rebuilt from it every step)
@@ -727,9 +833,12 @@ void interface_element( long int element, long int name,
   //   - strain,shear = du_tang/2 (interface13: du=(2,-1), tangent=(2,1)/|..|
   //     -> du_tang=3/sqrt(5)=1.34164, gamma=0.67082 EXACT; the manual:
   //     shear,gamma = 2*strain,shear so strain,shear = du_tang/2);
-  //   - stress,normal = kn * strain,normal_eff (the dilatancy opening is
-  //     INCLUDED: interface15 sigma_n = -1730.48 = 1e4 * (-0.17305) where
-  //     -0.17305 is the implicit dilatancy opening);
+  //   - stress,normal = the accumulated contact stress (FORCE_NORM
+  //     history): kn times the strain accumulated over CLOSED steps only,
+  //     dilatancy opening INCLUDED (interface15 sigma_n = -1730.48 =
+  //     1e4 * (-0.17305)); zero while the interface is open (interface2:
+  //     the gap closes at step 100/200 and the stress grows from there to
+  //     -101 = kn * (-0.101));
   //   - stress,shear = F_t - F_t,old (the incremental tangential force,
   //     == kt*du_tang elastic, == clamped increment plastic);
   //   - stress_average/strain_average = mean over the intpnts.
@@ -763,7 +872,7 @@ void interface_element( long int element, long int name,
           array_inproduct( &du_ip[i_intpnt*MDIM], tangent2, ndim ) / 2.;
       }
       rec_status[i_intpnt] =
-        ( strain_eff_ip[i_intpnt] <= gap ) ? OPENED : CLOSED;
+        ( strain_eff_ip[i_intpnt] <= gap ) ? CLOSED : OPENED;
       for ( iv=0; iv<nval; iv++ ) {
         avg_stress[iv] += rec_stress[i_intpnt*nval+iv] / n_intpnt;
         avg_strain[iv] += rec_strain[i_intpnt*nval+iv] / n_intpnt;
@@ -801,6 +910,7 @@ void interface_element( long int element, long int name,
   // release per-IP work arrays
   delete[] w_ip; delete[] du_ip;
   delete[] strain_normal_ip; delete[] strain_eff_ip;
+  delete[] strain_normal_old_ip; delete[] force_norm_ip;
   delete[] f_t_old_ip; delete[] f_t_ip;
   delete[] f_t2_old_ip; delete[] f_t2_ip;
   delete[] stiff_normal_ip; delete[] stress_normal_ip;

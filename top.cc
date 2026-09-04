@@ -823,6 +823,7 @@ void step_start( long int task, long int options_solver[], double dtime, double 
       db_allocate( ELEMENT_INTERFACE_STRAIN_NORMAL, max_element, VERSION_NEW, MINIMAL );
       db_allocate( ELEMENT_INTERFACE_FORCE_TANG, max_element, VERSION_NEW, MINIMAL );
       db_allocate( ELEMENT_INTERFACE_FORCE_TANG2, max_element, VERSION_NEW, MINIMAL );
+      db_allocate( ELEMENT_INTERFACE_FORCE_NORM, max_element, VERSION_NEW, MINIMAL );
       // output records (Professional compatibility): allocated BEFORE the
       // parallel element loop (db_allocate cannot run inside it), both
       // versions so print_database / target checker (VERSION_NORMAL) and
