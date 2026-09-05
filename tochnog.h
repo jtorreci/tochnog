@@ -1472,6 +1472,27 @@ enum {
   SAFETY_LIFTING,
   VERTICAL,
   GLOBAL,
+  // item names of the hydraulic piping/lifting safety factors (manual
+  // Professional 6.919 + post_calcul_label of the .dbs): method
+  // -vertical generates the plain names safety_piping/safety_lifting
+  // (one value, the vertical normal stress), -prival generates
+  // safety_piping_prival_0..2 / safety_lifting_prival_0..2 (three
+  // values, the principal stresses) and -global generates
+  // safety_piping_global_x/y/z / safety_lifting_global_x/y/z (three
+  // values, the global normal stresses). Pure name entries resolved by
+  // target_item like the -to_pres/-st_pres family.
+  SAFETY_PIPING_PRIVAL_0,
+  SAFETY_PIPING_PRIVAL_1,
+  SAFETY_PIPING_PRIVAL_2,
+  SAFETY_LIFTING_PRIVAL_0,
+  SAFETY_LIFTING_PRIVAL_1,
+  SAFETY_LIFTING_PRIVAL_2,
+  SAFETY_PIPING_GLOBAL_X,
+  SAFETY_PIPING_GLOBAL_Y,
+  SAFETY_PIPING_GLOBAL_Z,
+  SAFETY_LIFTING_GLOBAL_X,
+  SAFETY_LIFTING_GLOBAL_Y,
+  SAFETY_LIFTING_GLOBAL_Z,
   GROUP_GROUNDFLOW_EXPANSION,
   CONTROL_PRINT_GID_CONTACT_SPRING2,
   CONTROL_MESH_MACRO_CONCENTRATE,

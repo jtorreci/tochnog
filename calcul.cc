@@ -407,6 +407,66 @@ void calculate( void )
         post_calcul_unknown_operat[(ncalcul-1)*2+0] = unknown;
         post_calcul_unknown_operat[(ncalcul-1)*2+1] = calcul_operat;           
       }
+      else if ( unknown==-MATERI_STRESS && groundflow_pressure &&
+                ( labs(calcul_operat)==SAFETY_PIPING ||
+                  labs(calcul_operat)==SAFETY_LIFTING ) ) {
+        // post_calcul -materi_stress -safety_piping/-safety_lifting
+        // (manual Professional 6.919): hydraulic piping/lifting safety
+        // factors. The generated item names follow the
+        // post_calcul_safety_method: -vertical (default) one value with
+        // the plain name safety_piping/safety_lifting, -prival three
+        // values safety_*_prival_0..2 and -global three values
+        // safety_*_global_x/y/z (post_calcul_label naming measured on
+        // the Professional .dbs of ground15/16).
+        long int safety_method=-VERTICAL, sm_idum[1];
+        double sm_ddum[1];
+        long int sm_ldum=0;
+        db( POST_CALCUL_SAFETY_METHOD, 0, &safety_method, sm_ddum,
+          sm_ldum, VERSION_NORMAL, GET_IF_EXISTS );
+        char safety_stem[MCHAR];
+        strcpy( safety_stem,
+          ( labs(calcul_operat)==SAFETY_PIPING ) ?
+          "safety_piping" : "safety_lifting" );
+        if ( safety_method==-PRIVAL ) {
+          for ( idim=0; idim<MDIM; idim++ ) {
+            strcpy( outname, safety_stem );
+            strcat( outname, "_prival_" );
+            long_to_a( idim, str );
+            strcat( outname, str );
+            ncalcul++;
+            strcpy( post_calcul_names[ncalcul-1], outname );
+            strcpy( post_calcul_names_without_extension[ncalcul-1], outname );
+            post_calcul_scal_vec_mat[ncalcul-1] = -SCALAR;
+            post_calcul_unknown_operat[(ncalcul-1)*2+0] = unknown;
+            post_calcul_unknown_operat[(ncalcul-1)*2+1] = calcul_operat;
+          }
+        }
+        else if ( safety_method==-GLOBAL ) {
+          for ( idim=0; idim<MDIM; idim++ ) {
+            strcpy( outname, safety_stem );
+            strcat( outname, "_global_" );
+            if      ( idim==0 ) strcat( outname, "x" );
+            else if ( idim==1 ) strcat( outname, "y" );
+            else                strcat( outname, "z" );
+            ncalcul++;
+            strcpy( post_calcul_names[ncalcul-1], outname );
+            strcpy( post_calcul_names_without_extension[ncalcul-1], outname );
+            post_calcul_scal_vec_mat[ncalcul-1] = -SCALAR;
+            post_calcul_unknown_operat[(ncalcul-1)*2+0] = unknown;
+            post_calcul_unknown_operat[(ncalcul-1)*2+1] = calcul_operat;
+          }
+        }
+        else {
+          assert( safety_method==-VERTICAL );
+          ncalcul++;
+          strcpy( post_calcul_names[ncalcul-1], safety_stem );
+          strcpy( post_calcul_names_without_extension[ncalcul-1],
+            safety_stem );
+          post_calcul_scal_vec_mat[ncalcul-1] = -SCALAR;
+          post_calcul_unknown_operat[(ncalcul-1)*2+0] = unknown;
+          post_calcul_unknown_operat[(ncalcul-1)*2+1] = calcul_operat;
+        }
+      }
       else if ( unknown==-MATERI_STRESS && labs(calcul_operat)==FORCE ) {
         long int iforce=0, icomp=0, nforce_stems=0, nforce_comp=0;
         char force_stem[MCHAR], force_comp[MCHAR];
@@ -718,6 +778,67 @@ void calculate_operat( double unknown_values[], long int inod,
       GET_IF_EXISTS );
     result[0] = pres;
     length_result = 1;
+  }
+  else if ( groundflow_pressure && calcul_matrix &&
+            ( labs(calcul_operat)==SAFETY_PIPING ||
+              labs(calcul_operat)==SAFETY_LIFTING ) ) {
+    // post_calcul -materi_stress -safety_piping/-safety_lifting
+    // (manual Professional 6.919): hydraulic safety factors
+    //   safety_piping  = (sigma_i + p_dynamic)/p_dynamic
+    //   safety_lifting = (sigma_i + p_total)/p_total
+    // evaluated for the stress of the method of
+    // post_calcul_safety_method (-vertical: the vertical normal stress,
+    // one value; -prival: the three principal stresses; -global: the
+    // three global normal stresses). p_dynamic = p_total - p_static with
+    // p_total/p_static from groundflow_phreatic_coord(). Measured
+    // against the Professional on ground15/16: the principal values are
+    // listed from the MOST compressive (prival_0 = the minimum), while
+    // the GNU prival sort is descending, hence the reversed indexing;
+    // when the pressure denominator is zero the factor is set to 0
+    // (post_calcul_safety_default eps very small, value 0).
+    long int safety_method=-VERTICAL, sm_idum[1], ipipe=0, nres=1;
+    double sm_ddum[1], safety_pipe=0., p_div=0., safety_max=0.;
+    long int sm_ldum=0, safety_maximum_set=0, res_idum[1];
+    double res_ddum[1];
+    db( POST_CALCUL_SAFETY_METHOD, 0, &safety_method, sm_ddum,
+      sm_ldum, VERSION_NORMAL, GET_IF_EXISTS );
+    safety_maximum_set = db( POST_CALCUL_SAFETY_MAXIMUM, 0, res_idum,
+      &safety_max, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+    groundflow_phreatic_coord( inod, coord, dof, total_pres,
+      static_pres, location );
+    if ( labs(calcul_operat)==SAFETY_PIPING )
+      p_div = total_pres - static_pres;   // p_dynamic
+    else
+      p_div = total_pres;                  // p_total
+    if ( safety_method==-PRIVAL ) nres = MDIM;
+    else if ( safety_method==-GLOBAL ) nres = MDIM;
+    else assert( safety_method==-VERTICAL );
+    for ( ipipe=0; ipipe<nres; ipipe++ ) {
+      if ( safety_method==-VERTICAL ) {
+        // vertical normal stress: 1D sigma_xx, 2D sigma_yy, 3D sigma_zz
+        indx = (ndim-1)*MDIM + (ndim-1);
+        safety_pipe = unknown_values[indx];
+      }
+      else if ( safety_method==-PRIVAL ) {
+        // principal stresses, most compressive first (the GNU prival
+        // is sorted descending, reversed here)
+        safety_pipe = prival[MDIM-1-ipipe];
+      }
+      else {
+        // global normal stresses sigma_xx/sigma_yy/sigma_zz
+        assert( safety_method==-GLOBAL );
+        indx = ipipe*MDIM + ipipe;
+        safety_pipe = unknown_values[indx];
+      }
+      if ( scalar_dabs(p_div)<TINY )
+        result[ipipe] = 0.;
+      else {
+        result[ipipe] = ( safety_pipe + p_div ) / p_div;
+        if ( safety_maximum_set && result[ipipe]>safety_max )
+          result[ipipe] = safety_max;
+      }
+    }
+    length_result = nres;
   }
   else if ( labs(calcul_operat)==FORCE ) {
     // post_calcul -materi_stress -force (manual Professional 6.913):

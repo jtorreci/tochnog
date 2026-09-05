@@ -44,7 +44,7 @@ void bounda( )
     *node_dof=NULL, *bounda_sine=NULL, *node_rhside=NULL;
   long int bounda_on_off=0, bounda_until_force=0, bounda_constant=0,
     bounda_geometry_method=0, bounda_alternate_list[DATA_ITEM_SIZE],
-    bounda_alternate_n=0, iteration=0, bounda_water=0;
+    bounda_alternate_n=0, iteration=0, bounda_water=0, topres_bounda=0;
   double bounda_normal_vec[3], bounda_dof_radial[3],
     bounda_dof_cylindrical[6];
   double bounda_time_increment=0., bounda_time_offset=0.;
@@ -303,7 +303,8 @@ void bounda( )
           db( BOUNDA_UNKNOWN, iboun, val, ddum, bounda_length, 
             VERSION_NORMAL, GET );
         if ( bounda_length<2 ) db_error( BOUNDA_UNKNOWN, iboun );
-        rotate = 0; rotate_axis = val[bounda_length-1];
+        rotate = 0; topres_bounda = 0;
+        rotate_axis = val[bounda_length-1];
         if      ( rotate_axis==-ROTATION_X_AXIS ) {
           rotate = 1;
           val[bounda_length-1] = dof_label[vel_indx+1*nder];
@@ -495,12 +496,29 @@ void bounda( )
                 swit = set_swit(-1,inod,"bounda");
                 if ( swit ) pri( "inod", inod );
                 for ( iu=iu_start; iu<=iu_end; iu++ ) {
-                  array_member( dof_label, val[iu], nuknwn, iuknwn );
-                  if ( iuknwn<0 ) {
-                    if ( unknown ) 
-                      db_error( BOUNDA_UNKNOWN, iboun );
-                    else 
-                      db_error( BOUNDA_FORCE, iboun );
+                  // bounda_dof ... -topres (manual Professional 2.4.1
+                  // groundflow): prescribe the TOTAL pore pressure
+                  // (p_total = h - rho*g*z with h the hydraulic head
+                  // dof). The parser resolves "-topres" to the
+                  // groundflow_pressure KEYWORD enum (not to the dof
+                  // label, which is what "-pres" resolves to), so it is
+                  // mapped here onto the pres dof and the prescribed
+                  // load is converted to the dof value in the load
+                  // application below (topres_bounda). Only valid when
+                  // the groundflow pressure dof is active.
+                  if ( unknown && groundflow_pressure &&
+                       val[iu]==-GROUNDFLOW_PRESSURE ) {
+                    iuknwn = pres_indx;
+                    topres_bounda = 1;
+                  }
+                  else {
+                    array_member( dof_label, val[iu], nuknwn, iuknwn );
+                    if ( iuknwn<0 ) {
+                      if ( unknown ) 
+                        db_error( BOUNDA_UNKNOWN, iboun );
+                      else 
+                        db_error( BOUNDA_FORCE, iboun );
+                    }
                   }
                   ipuknwn = iuknwn / nder;
                   if ( unknown ) {
@@ -723,6 +741,48 @@ void bounda( )
                           }
                           sp = fg[ndim-1] * dens * ( wl - coords_w[ndim-1] );
                           new_node_dof[iuknwn] = factor * sp;
+                        }
+                        else if ( topres_bounda && iuknwn==pres_indx &&
+                                  groundflow_pressure && !force ) {
+                          // bounda_dof ... -topres (manual Professional
+                          // 2.4.1): the bounda_time load is a TOTAL pore
+                          // pressure (p_total), not the hydraulic head
+                          // that the pres dof solves. The dof value is
+                          // set per node so that the total pressure that
+                          // groundflow_phreatic_coord() evaluates at the
+                          // node equals the prescribed load: with a
+                          // phreatic level / static height the total is
+                          // pres_dof + static (invert: pres_dof = load -
+                          // static), without any level the total is
+                          // pres_dof - rho*g*z (invert: pres_dof = load +
+                          // rho*g*z). addtopressure is subtracted on both
+                          // branches (it is added by phreatic_coord after
+                          // the pressure split).
+                          double coords_tp[MDIM], total_tp=0., static_tp=0.,
+                            location_tp=0., dens_tp=0., addtop=0., fg_tp[MDIM];
+                          long int found_tp=0;
+                          db( NODE, inod, idum, coords_tp, ndim,
+                            VERSION_NORMAL, GET );
+                          if ( materi_displacement ) {
+                            for ( idim=0; idim<ndim; idim++ )
+                              coords_tp[idim] +=
+                                node_dof[dis_indx+idim*nder];
+                          }
+                          db( GROUNDFLOW_DENSITY, 0, idum, &dens_tp, ldum,
+                            VERSION_NORMAL, GET_IF_EXISTS );
+                          db( GROUNDFLOW_ADDTOPRESSURE, 0, idum, &addtop,
+                            ldum, VERSION_NORMAL, GET_IF_EXISTS );
+                          force_gravity_calculate( fg_tp );
+                          found_tp = groundflow_phreatic_coord( inod,
+                            coords_tp, node_dof, total_tp, static_tp,
+                            location_tp );
+                          if ( found_tp )
+                            new_node_dof[iuknwn] =
+                              factor * ( load - static_tp - addtop );
+                          else
+                            new_node_dof[iuknwn] = factor * ( load
+                              + dens_tp * fg_tp[ndim-1] *
+                                coords_tp[ndim-1] - addtop );
                         }
                         else
                           new_node_dof[iuknwn] = factor * load * load_factor;

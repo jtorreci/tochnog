@@ -7659,6 +7659,26 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   type[GLOBAL] = INTEGER;
   data_length[GLOBAL] = 1;
 
+  // item names of the hydraulic safety factors in the post_calcul_label
+  // of the .dbs (manual Professional 6.919): with method -prival the
+  // names are <safety>_prival_0..2 and with -global <safety>_global_x/y/z;
+  // the -vertical method reuses the plain names safety_piping/
+  // safety_lifting (one value). Pure name entries so target_item
+  // records parse and resolve the generated slots (same resolution
+  // pattern as -to_pres/-st_pres/-dy_pres).
+  strcpy(name[SAFETY_PIPING_PRIVAL_0],"safety_piping_prival_0");
+  strcpy(name[SAFETY_PIPING_PRIVAL_1],"safety_piping_prival_1");
+  strcpy(name[SAFETY_PIPING_PRIVAL_2],"safety_piping_prival_2");
+  strcpy(name[SAFETY_LIFTING_PRIVAL_0],"safety_lifting_prival_0");
+  strcpy(name[SAFETY_LIFTING_PRIVAL_1],"safety_lifting_prival_1");
+  strcpy(name[SAFETY_LIFTING_PRIVAL_2],"safety_lifting_prival_2");
+  strcpy(name[SAFETY_PIPING_GLOBAL_X],"safety_piping_global_x");
+  strcpy(name[SAFETY_PIPING_GLOBAL_Y],"safety_piping_global_y");
+  strcpy(name[SAFETY_PIPING_GLOBAL_Z],"safety_piping_global_z");
+  strcpy(name[SAFETY_LIFTING_GLOBAL_X],"safety_lifting_global_x");
+  strcpy(name[SAFETY_LIFTING_GLOBAL_Y],"safety_lifting_global_y");
+  strcpy(name[SAFETY_LIFTING_GLOBAL_Z],"safety_lifting_global_z");
+
   // group_groundflow_expansion (manual Professional 6.614): thermal
   // expansion coefficient of the pore fluid/soil used by the
   // heat-exchanger groundflow analyses (corpus heat_exchanger_pile_dt

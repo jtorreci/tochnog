@@ -451,6 +451,73 @@ void groundflow_phreatic_apply( void )
     }
   }
 
+  // Single groundflow_phreatic_level: free-surface condition of the
+  // saturated zone. Nodes at or above the phreatic line are dry and
+  // carry no water pressure (p_total = 0). In the GNU pressure
+  // convention (p_total = pres_dof + static_pressure, with the static
+  // part clamped to the atmospheric pressure 0 above the level) that
+  // bounds the pres dof to 0 there, which confines the saturated flow
+  // domain below the level. Measured against the Professional
+  // (ground15/16 of the corpus): its hydraulic head on/above the
+  // phreatic line is h = rho*g*z_L (p_total = 0), i.e. p_dynamic = 0 in
+  // the GNU split. Explicit bounda_dof records win over this default
+  // (bounda() applies them afterwards).
+  if ( groundflow_pressure &&
+       db_active_index( GROUNDFLOW_PHREATICLEVEL, 0, VERSION_NORMAL ) &&
+       !db_active_index( GROUNDFLOW_PHREATICLEVEL_MULTIPLE, 0,
+         VERSION_NORMAL ) ) {
+    long int level_len=0, gfound=0, number2[2];
+    double water_level2=0., *groundflow_phreatic2=NULL;
+    level_len = db_len( GROUNDFLOW_PHREATICLEVEL, 0, VERSION_NORMAL );
+    groundflow_phreatic2 = db_dbl( GROUNDFLOW_PHREATICLEVEL, 0,
+      VERSION_NORMAL );
+    db_max_index( NODE, max_node, VERSION_NORMAL, GET );
+    for ( inod=0; inod<=max_node; inod++ ) {
+      if ( db_active_index( NODE_START_REFINED, inod, VERSION_NORMAL ) ) {
+        coord = db_dbl( NODE_START_REFINED, inod, VERSION_NORMAL );
+        if      ( ndim==1 ) {
+          if ( level_len!=1 ) db_error( GROUNDFLOW_PHREATICLEVEL, 0 );
+          water_level2 = groundflow_phreatic2[0];
+          gfound = 1;
+        }
+        else if ( ndim==2 ) {
+          if ( level_len==1 ) {
+            water_level2 = groundflow_phreatic2[0];
+            gfound = 1;
+          }
+          else {
+            gfound = table_xy( groundflow_phreatic2,
+              "GROUNDFLOW_PHREATICLEVEL", level_len, coord[0],
+              water_level2 );
+          }
+        }
+        else {
+          assert( ndim==3 );
+          if ( level_len==1 ) {
+            water_level2 = groundflow_phreatic2[0];
+            gfound = 1;
+          }
+          else {
+            db( GROUNDFLOW_PHREATICLEVEL_N, 0, number2, ddum, ldum,
+              VERSION_NORMAL, GET );
+            if ( number2[0]*number2[1]*3 != level_len )
+              db_error( GROUNDFLOW_PHREATICLEVEL, 0 );
+            gfound = table_xyz( groundflow_phreatic2, number2, coord,
+              water_level2 );
+          }
+        }
+        if ( gfound && coord[ndim-1]>=water_level2-EPS_COORD ) {
+          node_dof = db_dbl( NODE_DOF, inod, VERSION_NEW );
+          iuknwn = pres_indx;
+          ipuknwn = iuknwn / nder;
+          node_dof[iuknwn] = 0.;
+          node_bounded = db_int( NODE_BOUNDED, inod, VERSION_NORMAL );
+          node_bounded[ipuknwn] = 1;
+        }
+      }
+    }
+  }
+
   // groundflow_phreatic_level_multiple_static: for the nodes of a multiple
   // phreatic level with _static -yes, set the total pressure (pore pressure)
   // equal to the static pressure. Convenient when the phreatic line is located
