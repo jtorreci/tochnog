@@ -66,7 +66,8 @@ For groundflow models (`groundflow_pressure` initialized) the dof `-pres` is
 the hydraulic head solved by the storage equation. If you want to prescribe
 directly the TOTAL pore pressure (`p_total`, the pore pressure of the
 geotechnical total-stress split) instead of the head, use the dof label
-`-topres` (manual Professional 2.4.1):
+`-topres` (manual Professional 2.4.1; the corpus spelling `-tpres` is
+accepted as an alias):
 
 ```
 bounda_dof 10  -geometry_line 10 -topres
@@ -74,15 +75,27 @@ bounda_time 10  -20.
 ```
 
 The value of `bounda_time` is interpreted as the total pore pressure and
-converted per node to the head value the groundflow machinery needs: with a
-phreatic level (or a `post_calcul_static_pressure_height` region) covering
-the node, `pres_dof = p_total - p_static`; without any level,
-`pres_dof = p_total + rho*g*z` (tochnog sign conventions: g and z negative
-below the datum). The total pressure that the post-processing reports at the
-node then equals the prescribed value.
+converted per node to the dof value (the DYNAMIC pressure) the groundflow
+machinery needs. The conversion depends on the source of the static
+pressure at the node (measured against the Professional binary 25-10-2023):
+
+- `post_calcul_static_pressure_height` region covering the node:
+  `pres_dof = p_total - p_static` (the head follows the reference height).
+- `groundflow_phreatic_level` covering the node:
+  `pres_dof = p_total - rho*g*level` (uniform under a constant level; the
+  head keeps the load and the reported total pressure follows
+  `p_total = h - rho*g*z`, the profile of the manual 2.2.7 undrained
+  strategy).
+- without any level: `pres_dof = p_total + rho*g*z`.
+
+tochnog sign conventions: g and z negative below the datum.
 
 Example (ground13 of the corpus): bottom nodes `-topres -20` at z=0 and top
 nodes `-topres -10` at z=1 with `force_gravity 0. -10.` and
 `groundflow_density 1.` give the hydraulic head -20 everywhere (hydrostatic,
 no flow) and `-to_pres` = -20/-10 on the bottom/top rows — identical to the
+Professional. Example with a phreatic level above the mesh (undrained1 of
+the corpus): `-topres` load 0 on `-all` with `groundflow_phreatic_level 1.`
+over a mesh at z in [-1,0] gives pres_dof = +10 everywhere (the dynamic
+pressure) and `-to_pres` = 0 at z=0 / -10 at z=-1, exactly the
 Professional.

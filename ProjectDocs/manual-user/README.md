@@ -364,3 +364,10 @@ input parameters it accepts.
 - [control_print_gid_contact_spring2](control_print_gid_contact_spring2.md) — GiD rendering of contact_spring2 (6.297, alias spelling accepted).
 - [control_mesh_macro_concentrate](control_mesh_macro_concentrate.md) — rectangle macro mesh concentration (6.207); parse-only.
 - [control_mesh_generate_truss_beam](control_mesh_generate_truss_beam.md) — Professional spelling of control_mesh_generate_trussbeam.
+
+## UNDRAINED-CAPACITY FAMILY (2026-09-05) — undrained soil analyses without the coupled flow dof
+
+- [group_materi_undrained_capacity](group_materi_undrained_capacity.md) — capacity C of the undrained groundwater analysis (6.760 + theory 2.2.7): C*p_dot = div(v) solved element-wise; p_u = dvol/C per step joins the fixed flow pressure in the total stress; momentum tangent + 1/C volumetric stiffness. Unlocks ground17/undrained1/undrained2 (rc=0).
+- [element_intpnt_materi_undrained_pressure](group_materi_undrained_capacity.md) — output record of the undrained pressure per element/IP (6.441).
+- [control_materi_undrained_apply](group_materi_undrained_capacity.md) — per-step switch of the undrained analysis (6.153).
+- [bounda_dof](bounda_dof.md) — -topres conversion refined (phreatic-level branch: pres = p_total - rho*g*level) + alias -tpres.

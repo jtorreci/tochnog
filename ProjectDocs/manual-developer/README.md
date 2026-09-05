@@ -362,3 +362,7 @@ Each file corresponds to the same feature in the [User Manual](../manual-user/).
 - [control_print_gid_contact_spring2](control_print_gid_contact_spring2.md) — no_index + alias sin prefijo control_.
 - [control_mesh_macro_concentrate](control_mesh_macro_concentrate.md) — registro parse-only (4 valores).
 - [control_mesh_generate_truss_beam](control_mesh_generate_truss_beam.md) — alias db_number al registro canonico.
+
+## UNDRAINED-CAPACITY FAMILY (2026-09-05)
+
+- [group_materi_undrained_capacity](group_materi_undrained_capacity.md) — enum + registros (version_all/fixed_length 0) + p_u por IP en materi.cc (total_new_sig + rigidez volumetrica dt/C) + pre-alloc top()/step_start + record read-modify-write por IP (p_old NORMAL / buffer NEW) + apparents young/poisson (calcul.cc + snapshot node_dof_previous_step) + -tpres alias + conversion -topres phreatic (nivel por encima del mesh, medido vs Pro).
