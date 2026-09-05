@@ -605,7 +605,7 @@ void area( long int element, long int name,
               if ( !ok_tmp ) ok = 0;
               if ( type[itype]==FORCE_ELEMENT_EDGE_WATER ) {
                 if ( groundflow_phreatic_coord( inod, &new_coord[inol*ndim], 
-                    ddum, ddum[0], ddum[0], water_level ) ) {
+                    ddum, ddum[0], ddum[0], water_level, NULL ) ) {
                   db( FORCE_ELEMENT_EDGE_WATER, ind, idum, values, 
                     ldum, VERSION_NORMAL, GET );
                   if ( new_coord[inol*ndim+ndim-1]>=water_level+EPS_COORD ) 
@@ -1532,7 +1532,7 @@ void area( long int element, long int name,
                     force_factor( FORCE_ELEMENT_EDGE_WATER_FACTOR, ind,
                       &new_coord[inol*ndim], water_factor );
                     groundflow_phreatic_coord( inod, &new_coord[inol*ndim],
-                      ddum, ddum[0], ddum[0], water_level );
+                      ddum, ddum[0], ddum[0], water_level, NULL );
                     db( FORCE_ELEMENT_EDGE_WATER, ind, idum, values,
                       ldum, VERSION_NORMAL, GET );
                     array_normalize( &values[2], ndim );

@@ -37,7 +37,8 @@ void materi( long int element, long int gr, long int name, long int nnol,
     inol=0, jnol=0, m=0, n=0, indx=0, ipuknwn=0, iuknwn=0, jpuknwn=0, 
     swit=0, indxi=0, indxj=0, indx1=0, indx2=0, memory=-UPDATED, 
     ind_ddsdde=0, ldum=0, idum[1],
-    sri=-NO, sri_on=0;
+    sri=-NO, sri_on=0,
+    undr_active=0, undr_apply=-YES, undr_icontrol=0, undr_len=0, undr_len2=0, undr_k=0;
   double rdum=0., dens=0., dtime=0., materi_expansion_linear=0., 
     materi_expansion_volume=0., temp=0., tmp=0., damping=0., fac=0, 
     plasti_heatgeneration=0., viscosity_heatgeneration=0.,
@@ -49,6 +50,7 @@ void materi( long int element, long int gr, long int name, long int nnol,
     md_factor=1., // materi_dynamic/control_materi_dynamic momentum factor
     static_pressure=0., total_pressure=0., location=0.,
     J=0., ddum[1], direct_normal[MDIM], *force_gravity=NULL, 
+    undr_p=0., undr_C=0., undr_buf[MPOINT],
     activation_factor=1., activation_stiff=1.,
     sri_g=0., sri_g2=0., sri_g3=0., sri_volfac=1., sri_detj_weight=0.,
     sri_coord_center[MDIM],
@@ -304,6 +306,72 @@ void materi( long int element, long int gr, long int name, long int nnol,
     old_deften, new_deften, old_ept, inc_ept, new_ept, 
     old_rot, inc_rot, new_rot );
 
+  // group_materi_undrained_capacity (manual Professional 6.760 + theory
+  // 2.2.7): UNDRAINED groundwater analysis WITHOUT the groundwater dof
+  // in the system matrix. When the element group carries the capacity C
+  // (and control_materi_undrained_apply, 6.153, is not -no), the total
+  // groundwater pressure change of the element follows from the
+  // groundflow storage equation without permeability, solved on the
+  // element level: C * p_dot = div(v_material). Per integration point
+  // the pressure increment of this step is the volumetric strain
+  // increment divided by C, accumulated over the steps in the record
+  // element_intpnt_materi_undrained_pressure (6.441, one value per
+  // integration point; the record lives in both db versions like
+  // ELEMENT_DOF, so VERSION_NORMAL holds the converged value of the
+  // previous step and VERSION_NEW the current iterate - the step-end
+  // version copy promotes it). The pressure acts isotropically on the
+  // skeleton: the TOTAL stress for the momentum equilibrium is the
+  // effective constitutive stress plus (groundflow total pressure +
+  // undrained pressure)*I (manual 2.2.7: "the fixed total pressure from
+  // the hydraulic pressure heads plus the excessive undrained pressure
+  // ... as the full total pressure"), while the stress DOFs keep the
+  // EFFECTIVE value. The momentum stiffness gains the volumetric term
+  // dt/C*(div w)*(div v) so the linear system carries the undrained
+  // stiffness (drained + 1/C, measured on undrained2 of the corpus:
+  // sigma = E*eps + eps/C balances the applied force).
+  undr_active = 0;
+  if ( !find_local_softvar &&
+       db_active_index( GROUP_MATERI_UNDRAINED_CAPACITY, gr,
+         VERSION_NORMAL ) ) {
+    undr_C = db_dbl( GROUP_MATERI_UNDRAINED_CAPACITY, gr,
+      VERSION_NORMAL )[0];
+    if ( undr_C>0. && materi_stress ) {
+      db( ICONTROL, 0, &undr_icontrol, ddum, ldum, VERSION_NORMAL, GET );
+      db( CONTROL_MATERI_UNDRAINED_APPLY, undr_icontrol, &undr_apply,
+        ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+      if ( undr_apply!=-NO ) {
+        undr_active = 1;
+        undr_p = 0.;
+        undr_len = 0;
+        // p_old basis of THIS integration point: the value at the step
+        // start (VERSION_NORMAL; VERSION_NEW already holds the current
+        // iterate of the other integration points of this element pass)
+        if ( db( ELEMENT_INTPNT_MATERI_UNDRAINED_PRESSURE, element, idum,
+            undr_buf, undr_len, VERSION_NORMAL, GET_IF_EXISTS ) &&
+            ipoint<undr_len )
+          undr_p = undr_buf[ipoint];
+        undr_p += ( inc_ept[0*MDIM+0] + inc_ept[1*MDIM+1] +
+          inc_ept[2*MDIM+2] ) / undr_C;
+        // store the iterate: the record is read-modify-written per
+        // integration point, so the buffer must preserve the slots
+        // written by the other integration points of this element pass
+        // (VERSION_NEW) and only the current slot is replaced (the
+        // step-end version copy promotes the converged values of the
+        // last iteration to VERSION_NORMAL).
+        undr_len2 = 0;
+        if ( db( ELEMENT_INTPNT_MATERI_UNDRAINED_PRESSURE, element, idum,
+            undr_buf, undr_len2, VERSION_NEW, GET_IF_EXISTS ) ) {
+          for ( undr_k=0; undr_k<npoint && undr_k<MPOINT; undr_k++ ) {
+            if ( undr_k==ipoint ) undr_buf[undr_k] = undr_p;
+            else if ( undr_k>=(long int)undr_len2 ) undr_buf[undr_k] = 0.;
+          }
+          db( ELEMENT_INTPNT_MATERI_UNDRAINED_PRESSURE, element, idum,
+            undr_buf, npoint, VERSION_NEW, PUT );
+        }
+      }
+    }
+  }
+
     // back rotate to old configuration
   if      ( memory==-TOTAL || memory==-TOTAL_PIOLA ) {
     if ( !matrix_inverse( old_rot, inv_rot, rdum, MDIM ) ) {
@@ -481,7 +549,7 @@ void materi( long int element, long int gr, long int name, long int nnol,
         VERSION_NORMAL, GET_IF_EXISTS );
       new_pres = new_unknowns[pres_indx];
       if ( groundflow_phreatic_coord( -1, coord_ip, new_unknowns, 
-        total_pressure, static_pressure, location ) ) new_pres = total_pressure;
+        total_pressure, static_pressure, location, NULL ) ) new_pres = total_pressure;
       // group_groundflow_total_pressure_tension: if the largest eigenvalue of
       // materi_strain_plastic_tension exceeds plastic_tension_minimum, use the
       // static water pore pressure determined from water_height (when it is
@@ -516,6 +584,14 @@ void materi( long int element, long int gr, long int name, long int nnol,
       }
       new_pres *= gpf;
       for ( idim=0; idim<MDIM; idim++ ) total_new_sig[idim*MDIM+idim] += new_pres;
+    }
+    if ( undr_active ) {
+      // undrained capacity: the excessive undrained pressure of this
+      // step joins the fixed groundflow pressure as the full total
+      // pressure acting on the skeleton (manual 2.2.7); the stress DOFs
+      // keep the effective value (they are written from new_sig below).
+      for ( idim=0; idim<MDIM; idim++ )
+        total_new_sig[idim*MDIM+idim] += undr_p;
     }
     for ( idim=0; idim<MDIM; idim++ ) {
       for ( jdim=idim; jdim<MDIM; jdim++ ) {
@@ -817,6 +893,18 @@ void materi( long int element, long int gr, long int name, long int nnol,
             tmp = volume * dtime * stiffness[indx1*nnol*ndim+indx2] * md_factor;
             element_matrix[indxi*nnol*npuknwn+indxj] += tmp;
             if ( indxi==indxj ) element_lhside[indx] += fac * tmp;
+            // undrained capacity volumetric stiffness: the excessive
+            // pressure p = p_old + (div u)/C depends on the displacement
+            // of the iterate, so the momentum tangent gains
+            // dt/C * (dN_i/dx_idim)*(dN_j/dx_jdim) (measured: the total
+            // response is drained stiffness + 1/C on the volumetric
+            // part, undrained1/undrained2 of the corpus).
+            if ( undr_active ) {
+              tmp = volume * dtime * (1./undr_C) *
+                new_d[idim*nnol+inol] * new_d[jdim*nnol+jnol] * md_factor;
+              element_matrix[indxi*nnol*npuknwn+indxj] += tmp;
+              if ( indxi==indxj ) element_lhside[indx] += fac * tmp;
+            }
             if ( sri_on ) {
               // SRI: the reduced-integrated shear stiffness (1x1 at the
               // centroid) is added scaled by 1/npoint because materi()

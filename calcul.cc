@@ -467,6 +467,28 @@ void calculate( void )
           post_calcul_unknown_operat[(ncalcul-1)*2+1] = calcul_operat;
         }
       }
+      else if ( unknown==-MATERI_STRESS &&
+                ( labs(calcul_operat)==YOUNG_APPARENT ||
+                  labs(calcul_operat)==POISSON_APPARENT ) ) {
+        // post_calcul -materi_stress -young_apparent/-poisson_apparent
+        // (manual Professional 6.903): apparent Young modulus and
+        // Poisson ratio from the INCREMENTAL strains and INCREMENTAL
+        // stresses of the last time step. One scalar value per node with
+        // the plain operator name (the .dbs post_calcul_label of the
+        // Professional is "-young_apparent -poisson_apparent", measured
+        // on ground17). The value itself is computed in
+        // calculate_operat() from the node dofs and the internal
+        // node_dof_previous_step snapshot.
+        ncalcul++;
+        strcpy( post_calcul_names[ncalcul-1],
+          ( labs(calcul_operat)==YOUNG_APPARENT ) ?
+          "young_apparent" : "poisson_apparent" );
+        strcpy( post_calcul_names_without_extension[ncalcul-1],
+          post_calcul_names[ncalcul-1] );
+        post_calcul_scal_vec_mat[ncalcul-1] = -SCALAR;
+        post_calcul_unknown_operat[(ncalcul-1)*2+0] = unknown;
+        post_calcul_unknown_operat[(ncalcul-1)*2+1] = calcul_operat;
+      }
       else if ( unknown==-MATERI_STRESS && labs(calcul_operat)==FORCE ) {
         long int iforce=0, icomp=0, nforce_stems=0, nforce_comp=0;
         char force_stem[MCHAR], force_comp[MCHAR];
@@ -737,7 +759,7 @@ void calculate_operat( double unknown_values[], long int inod,
   }
   else if ( labs(calcul_operat)==TOTAL ) {
     groundflow_phreatic_coord( inod, coord, dof, total_pres,
-       static_pres, location );
+       static_pres, location, NULL );
     pres = total_pres;
     // node_total_pressure: user override of the calculated total pressure
     // (manual Professional 6.898)
@@ -760,7 +782,7 @@ void calculate_operat( double unknown_values[], long int inod,
   else if ( labs(calcul_operat)==STATIC ) {
     pres = 0.;
     if ( groundflow_phreatic_coord( inod, coord, dof, total_pres,
-        static_pres, location ) )
+        static_pres, location, NULL ) )
       pres = static_pres;
     // node_static_pressure: user override (manual Professional 6.894)
     db( NODE_STATIC_PRESSURE, inod, idum, &pres, ldum, VERSION_NORMAL,
@@ -771,7 +793,7 @@ void calculate_operat( double unknown_values[], long int inod,
   else if ( labs(calcul_operat)==DYNAMIC ) {
     pres = dof[pres_indx];
     if ( groundflow_phreatic_coord( inod, coord, dof, total_pres,
-        static_pres, location ) )
+        static_pres, location, NULL ) )
       pres = total_pres - static_pres;
     // node_dynamic_pressure: user override (manual Professional 6.886)
     db( NODE_DYNAMIC_PRESSURE, inod, idum, &pres, ldum, VERSION_NORMAL,
@@ -805,7 +827,7 @@ void calculate_operat( double unknown_values[], long int inod,
     safety_maximum_set = db( POST_CALCUL_SAFETY_MAXIMUM, 0, res_idum,
       &safety_max, ldum, VERSION_NORMAL, GET_IF_EXISTS );
     groundflow_phreatic_coord( inod, coord, dof, total_pres,
-      static_pres, location );
+      static_pres, location, NULL );
     if ( labs(calcul_operat)==SAFETY_PIPING )
       p_div = total_pres - static_pres;   // p_dynamic
     else
@@ -847,6 +869,85 @@ void calculate_operat( double unknown_values[], long int inod,
     // numerical integration lands in L2/L3).
     post_calcul_materi_stress_force( unknown_values, inod, coord, dof,
       result, length_result );
+  }
+  else if ( labs(calcul_operat)==YOUNG_APPARENT ||
+            labs(calcul_operat)==POISSON_APPARENT ) {
+    // post_calcul -materi_stress -young_apparent/-poisson_apparent
+    // (manual Professional 6.903): apparent Young modulus and Poisson
+    // ratio determined from the INCREMENTAL strains and INCREMENTAL
+    // stresses of the last time step (0 when the determination is not
+    // possible, e.g. almost zero incremental strains). The increment is
+    // the difference between the converged node dofs and the internal
+    // node_dof_previous_step snapshot (captured by top() at the start
+    // of the step). K = dp/deps_v and G = dq/(3*deps_q) from the mean
+    // and deviatoric parts; E = 9KG/(3K+G), nu = (3K-2G)/(2(3K+G)).
+    // Verified against the Professional .dbs of ground17 (E = 1e7,
+    // nu = 0 EXACT from the incremental uniaxial compression).
+    if ( calcul_matrix ) {
+      double d_sig[MDIM*MDIM], d_ept[MDIM*MDIM];
+      double sig_prev[MDIM*MDIM], ept_prev[MDIM*MDIM];
+      double p_now=0., p_prev=0., d_p=0., d_vol=0.;
+      double dev_s[MDIM*MDIM], dev_e[MDIM*MDIM];
+      double q=0., e_q=0., K_app=0., G_app=0.;
+      long int have_prev=0, prev_idum[1], prev_len=0;
+      double prev_dof[MUKNWN];
+      long int ept_present = ( ept_indx>=0 );
+      array_set( d_sig, 0., MDIM*MDIM );
+      array_set( d_ept, 0., MDIM*MDIM );
+      if ( db( NODE_DOF_PREVIOUS_STEP, inod, prev_idum, prev_dof, prev_len,
+          VERSION_NORMAL, GET_IF_EXISTS ) && prev_len>0 )
+        have_prev = 1;
+      if ( have_prev && ept_present ) {
+        for ( idim=0; idim<MDIM; idim++ ) {
+          for ( jdim=0; jdim<MDIM; jdim++ ) {
+            indx = idim*MDIM + jdim;
+            long int sidx = stress_indx(idim,jdim);
+            d_sig[indx] = unknown_values[indx] -
+              prev_dof[stres_indx + sidx*nder];
+            d_ept[indx] = dof[ept_indx + sidx*nder] -
+              prev_dof[ept_indx + sidx*nder];
+          }
+        }
+        d_p = ( d_sig[0] + d_sig[4] + d_sig[8] ) / 3.;
+        d_vol = d_ept[0] + d_ept[4] + d_ept[8];
+        for ( idim=0; idim<MDIM; idim++ ) {
+          for ( jdim=0; jdim<MDIM; jdim++ ) {
+            indx = idim*MDIM + jdim;
+            dev_s[indx] = d_sig[indx];
+            dev_e[indx] = d_ept[indx];
+            if ( idim==jdim ) {
+              dev_s[indx] -= d_p;
+              dev_e[indx] -= d_vol/3.;
+            }
+          }
+        }
+        // incremental bulk and shear modulus (q = sqrt(1.5 s:s),
+        // eps_q = sqrt(2/3 e:e), G = dq/(3*deps_q))
+        q = sqrt( 1.5 * array_inproduct( dev_s, dev_s, MDIM*MDIM ) );
+        e_q = sqrt( (2./3.) * array_inproduct( dev_e, dev_e,
+          MDIM*MDIM ) );
+        K_app = ( scalar_dabs(d_vol)>TINY ) ? d_p/d_vol : 0.;
+        G_app = ( q>1.e-20 && e_q>1.e-20 ) ? q/(3.*e_q) : 0.;
+        if ( K_app==0. || G_app==0. ) {
+          result[0] = 0.;
+        }
+        else if ( labs(calcul_operat)==YOUNG_APPARENT ) {
+          // E = 9KG/(3K+G)
+          result[0] = 9.*K_app*G_app/( 3.*K_app + G_app );
+        }
+        else {
+          // nu = (3K-2G)/(2(3K+G))
+          result[0] = ( 3.*K_app - 2.*G_app ) /
+            ( 2.*( 3.*K_app + G_app ) );
+        }
+      }
+      else {
+        result[0] = 0.;
+      }
+      length_result = 1;
+    }
+    else
+      db_error( POST_CALCUL, 0 );
   }
   else
     db_error( POST_CALCUL, 0 );

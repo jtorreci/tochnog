@@ -750,17 +750,37 @@ void bounda( )
                           // that the pres dof solves. The dof value is
                           // set per node so that the total pressure that
                           // groundflow_phreatic_coord() evaluates at the
-                          // node equals the prescribed load: with a
-                          // phreatic level / static height the total is
-                          // pres_dof + static (invert: pres_dof = load -
-                          // static), without any level the total is
-                          // pres_dof - rho*g*z (invert: pres_dof = load +
-                          // rho*g*z). addtopressure is subtracted on both
-                          // branches (it is added by phreatic_coord after
-                          // the pressure split).
+                          // node equals the prescribed load. The dof is
+                          // the DYNAMIC pressure (p_total - p_static), so
+                          // the conversion depends on the source of the
+                          // static pressure (level_source):
+                          //  - post_calcul_static_pressure_height region
+                          //    (level_source 2): the head bound follows
+                          //    the reference height: pres_dof = load -
+                          //    static (invert of total = pres + static;
+                          //    ground13 verified digit-by-digit vs the
+                          //    Professional .dbs);
+                          //  - groundflow_phreatic_level (level_source 1):
+                          //    MEASURED on the Professional binary
+                          //    (probes undrained1/groundflow): the head h
+                          //    keeps the load (h = load) and the total
+                          //    pressure follows p_total = h - rho*g*z, so
+                          //    pres_dof = p_dynamic = load - rho*g*level
+                          //    (uniform under a constant level; the
+                          //    static-pressure option of the manual 2.2.7
+                          //    undrained strategy). When the level lies
+                          //    above the whole mesh the static profile of
+                          //    to_pres = -rho*g*z reproduces the
+                          //    Professional .dbs of undrained1.
+                          //  - no level (level_source 0): total = pres -
+                          //    rho*g*z (invert: pres_dof = load +
+                          //    rho*g*z).
+                          // addtopressure is subtracted on all branches
+                          // (it is added by phreatic_coord after the
+                          // pressure split).
                           double coords_tp[MDIM], total_tp=0., static_tp=0.,
                             location_tp=0., dens_tp=0., addtop=0., fg_tp[MDIM];
-                          long int found_tp=0;
+                          long int found_tp=0, level_source_tp=0;
                           db( NODE, inod, idum, coords_tp, ndim,
                             VERSION_NORMAL, GET );
                           if ( materi_displacement ) {
@@ -775,8 +795,12 @@ void bounda( )
                           force_gravity_calculate( fg_tp );
                           found_tp = groundflow_phreatic_coord( inod,
                             coords_tp, node_dof, total_tp, static_tp,
-                            location_tp );
-                          if ( found_tp )
+                            location_tp, &level_source_tp );
+                          if ( found_tp && level_source_tp==1 )
+                            new_node_dof[iuknwn] = factor * ( load
+                              - dens_tp * fg_tp[ndim-1] * location_tp
+                              - addtop );
+                          else if ( found_tp )
                             new_node_dof[iuknwn] =
                               factor * ( load - static_tp - addtop );
                           else

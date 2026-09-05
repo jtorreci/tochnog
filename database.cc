@@ -4530,6 +4530,57 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   data_length[CONTROL_MATERI_UNDRAINED_APPLY] = 1;
   data_class[CONTROL_MATERI_UNDRAINED_APPLY] = CONTROL;
 
+  // UNDRAINED-CAPACITY FAMILY (2026-09-05, manual Professional 6.760,
+  // 6.441, 6.153 + theory 2.2.7): group_materi_undrained_capacity C
+  // models an undrained groundwater analysis without adding the
+  // groundwater equation to the system matrix: the total groundwater
+  // pressure change of an element follows from C * p_dot =
+  // div(v_material), solved on the element level. The pressure is stored
+  // per element (one slot per integration point; the average record
+  // holds the mean over the integration points). control_materi_
+  // undrained_apply (registered above) switches the analysis on/off
+  // (default -yes).
+  strcpy(name[GROUP_MATERI_UNDRAINED_CAPACITY],"group_materi_undrained_capacity");
+  type[GROUP_MATERI_UNDRAINED_CAPACITY] = DOUBLE_PRECISION;
+  data_length[GROUP_MATERI_UNDRAINED_CAPACITY] = 1;
+  data_class[GROUP_MATERI_UNDRAINED_CAPACITY] = MATERI;
+  data_required[GROUP_MATERI_UNDRAINED_CAPACITY] = GROUP_TYPE;
+
+  strcpy(name[ELEMENT_INTPNT_MATERI_UNDRAINED_PRESSURE],
+    "element_intpnt_materi_undrained_pressure");
+  type[ELEMENT_INTPNT_MATERI_UNDRAINED_PRESSURE] = DOUBLE_PRECISION;
+  data_length[ELEMENT_INTPNT_MATERI_UNDRAINED_PRESSURE] = npointmax;
+  data_class[ELEMENT_INTPNT_MATERI_UNDRAINED_PRESSURE] = ELEMENT;
+  data_required[ELEMENT_INTPNT_MATERI_UNDRAINED_PRESSURE] = ELEMENT;
+  // version_all like ELEMENT_DOF: the step-end version copy promotes
+  // the converged per-step value to VERSION_NORMAL (materi() reads the
+  // previous step value from VERSION_NORMAL and stores the current
+  // iterate in VERSION_NEW). fixed_length 0: the record holds one slot
+  // per integration point of the element (variable record length).
+  version_all[ELEMENT_INTPNT_MATERI_UNDRAINED_PRESSURE] = 1;
+  fixed_length[ELEMENT_INTPNT_MATERI_UNDRAINED_PRESSURE] = 0;
+
+  strcpy(name[ELEMENT_INTPNT_MATERI_UNDRAINED_PRESSURE_AVERAGE],
+    "element_intpnt_materi_undrained_pressure_average");
+  type[ELEMENT_INTPNT_MATERI_UNDRAINED_PRESSURE_AVERAGE] = DOUBLE_PRECISION;
+  data_length[ELEMENT_INTPNT_MATERI_UNDRAINED_PRESSURE_AVERAGE] = 1;
+  data_class[ELEMENT_INTPNT_MATERI_UNDRAINED_PRESSURE_AVERAGE] = ELEMENT;
+  data_required[ELEMENT_INTPNT_MATERI_UNDRAINED_PRESSURE_AVERAGE] = ELEMENT;
+
+  // post_calcul operator values -young_apparent/-poisson_apparent
+  // (manual Professional 6.903): the apparent Young modulus and Poisson
+  // ratio from the INCREMENTAL strains and INCREMENTAL stresses of the
+  // last time step (0 when the determination is not possible, e.g.
+  // almost zero incremental strains). Resolved like -safety_piping as
+  // INTEGER name entries of the post_calcul record.
+  strcpy(name[YOUNG_APPARENT],"young_apparent");
+  type[YOUNG_APPARENT] = INTEGER;
+  data_length[YOUNG_APPARENT] = 1;
+
+  strcpy(name[POISSON_APPARENT],"poisson_apparent");
+  type[POISSON_APPARENT] = INTEGER;
+  data_length[POISSON_APPARENT] = 1;
+
   strcpy(name[CONTROL_MATERI_UPDATED_APPLY],"control_materi_updated_apply");
   type[CONTROL_MATERI_UPDATED_APPLY] = INTEGER;
   data_length[CONTROL_MATERI_UPDATED_APPLY] = 1;
@@ -5590,6 +5641,22 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   version_all[NODE_DOF_START_REFINED] = 1;
   data_class[NODE_DOF_START_REFINED] = NODE;
   data_required[NODE_DOF_START_REFINED] = NODE;
+
+  // node_dof_previous_step: INTERNAL snapshot of the node dofs at the
+  // START of the current time step (captured by top() before the
+  // equilibrium iterations, one copy per step). Consumed by the
+  // post_calcul operators -materi_stress -young_apparent and
+  // -poisson_apparent (manual Professional 6.903): the apparent E and
+  // Poisson ratio are determined from the INCREMENTAL strains and
+  // stresses of the last time step, i.e. the difference between the
+  // converged node dofs (VERSION_NORMAL at step_close) and this
+  // snapshot. Not printed to the .dbs (external 0) and not versioned.
+  strcpy(name[NODE_DOF_PREVIOUS_STEP],"node_dof_previous_step");
+  type[NODE_DOF_PREVIOUS_STEP] = DOUBLE_PRECISION;
+  data_length[NODE_DOF_PREVIOUS_STEP] = nuknwn;
+  external[NODE_DOF_PREVIOUS_STEP] = 0;
+  data_class[NODE_DOF_PREVIOUS_STEP] = NODE;
+  data_required[NODE_DOF_PREVIOUS_STEP] = NODE;
 
   strcpy(name[NODE_DOF_TMP],"node_dof_tmp");
   type[NODE_DOF_TMP] = DOUBLE_PRECISION;
@@ -8434,6 +8501,10 @@ long int db_number( char str[] )
     else if ( !strcmp( str, "dynamic_pressure" ) )
       return DYNAMIC;
     else if ( !strcmp( str, "topres" ) )
+      return GROUNDFLOW_PRESSURE;
+    else if ( !strcmp( str, "tpres" ) )
+      // corpus spelling (undrained1/2 of the sfnet suite) of the same
+      // total-pressure dof of bounda_dof (manual Professional 2.4.1)
       return GROUNDFLOW_PRESSURE;
     else if ( !strcmp( str, "inertia_apply" ) )
       return OPTIONS_INERTIA;

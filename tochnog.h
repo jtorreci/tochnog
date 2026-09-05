@@ -1496,6 +1496,20 @@ enum {
   GROUP_GROUNDFLOW_EXPANSION,
   CONTROL_PRINT_GID_CONTACT_SPRING2,
   CONTROL_MESH_MACRO_CONCENTRATE,
+  // UNDRAINED-CAPACITY FAMILY (2026-09-05): group_materi_undrained_capacity
+  // (manual Professional 6.760, theory 2.2.7 - undrained groundwater
+  // analysis without a coupled flow dof) + element_intpnt_materi_
+  // undrained_pressure (6.441, the element total-pressure change of the
+  // undrained analysis) + its average + the -young_apparent/-poisson_
+  // apparent post_calcul operators (6.903, apparent E/nu from the last
+  // incremental stresses/strains). Appended at the end of the enum to
+  // keep existing values stable (tochnog.h and tochnog-mod.h stay in sync).
+  GROUP_MATERI_UNDRAINED_CAPACITY,
+  ELEMENT_INTPNT_MATERI_UNDRAINED_PRESSURE,
+  ELEMENT_INTPNT_MATERI_UNDRAINED_PRESSURE_AVERAGE,
+  YOUNG_APPARENT,
+  POISSON_APPARENT,
+  NODE_DOF_PREVIOUS_STEP,
   LAST_DUMMY }; // keep LAST_DUMMY always the last one
 
 #define MDAT LAST_DUMMY+DATA_ITEM_SIZE  // reserve space for unknowns
@@ -1853,7 +1867,7 @@ void      groundflow_phreatic_apply( void );
 void      groundflow_total_pressure_limit_apply( void );
 long int  groundflow_phreatic_coord( long int inod, double coord[], double dof[], 
             double &total_pressure, double &static_pressure,
-            double &location );
+            double &location, long int *level_source );
 void      group_materi_plasti_boundary_evaluate( long int nodes[], long int nnol,
             long int element_group, long int &plasti_on_boundary );
 void      hypoplasticity( long int element, long int gr,

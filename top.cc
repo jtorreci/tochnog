@@ -192,6 +192,32 @@ void top( void )
           &dzero, one, VERSION_NORMAL, PUT );
         dzero = 0.;
       }
+      // element_intpnt_materi_undrained_pressure (manual Professional
+      // 6.441, undrained-capacity family 2.2.7): pre-allocate the
+      // record (zeros) for the elements of the groups that carry
+      // group_materi_undrained_capacity. materi() writes the per-step
+      // undrained pressure into it inside the parallel element loop
+      // (allocation not allowed there), and the step-end version copy
+      // promotes the converged value to VERSION_NORMAL (the record is
+      // version_all like ELEMENT_DOF).
+      if ( db_active_index( ELEMENT, ielem, VERSION_NORMAL ) &&
+           db_max_index( GROUP_MATERI_UNDRAINED_CAPACITY, max,
+             VERSION_NORMAL, GET )>=0 ) {
+        long int gr_undr = 0;
+        double ddum_undr[1];
+        db( ELEMENT_GROUP, ielem, &gr_undr, ddum_undr, ldum,
+          VERSION_NORMAL, GET_IF_EXISTS );
+        if ( db_active_index( GROUP_MATERI_UNDRAINED_CAPACITY, gr_undr,
+             VERSION_NORMAL ) &&
+             !db_active_index( ELEMENT_INTPNT_MATERI_UNDRAINED_PRESSURE,
+               ielem, VERSION_NORMAL ) ) {
+          double undr_zero[MPOINT];
+          for ( long int kz=0; kz<MPOINT; kz++ ) undr_zero[kz] = 0.;
+          long int undr_zero_len = MPOINT;
+          db( ELEMENT_INTPNT_MATERI_UNDRAINED_PRESSURE, ielem, idum,
+            undr_zero, undr_zero_len, VERSION_NORMAL, PUT );
+        }
+      }
     }
   }
 
@@ -401,6 +427,46 @@ void top( void )
                       db( DTIME, 0, idum, &dtime, length, VERSION_NEW, PUT );
                       db( TIME_CURRENT, 0, idum, &time_current, length,
                         VERSION_NEW, PUT );
+                      // node_dof_previous_step: snapshot of the node dofs
+                      // at the START of this step (the converged state the
+                      // element loop of the step will advance from, after
+                      // the control data of this step - resets, data_put -
+                      // have been applied). Consumed at step_close by the
+                      // post_calcul -materi_stress -young_apparent /
+                      // -poisson_apparent operators (6.903), which need the
+                      // INCREMENT of the last time step. Only captured when
+                      // one of those operators is active (the copy costs a
+                      // full dof sweep per step).
+                      {
+                        long int capture_apparent = 0;
+                        if ( db_active_index( POST_CALCUL, 0,
+                            VERSION_NORMAL ) ) {
+                          long int pc_len = 0, pc_i = 0;
+                          double pc_ddum[1];
+                          long int pc_ival[DATA_ITEM_SIZE];
+                          db( POST_CALCUL, 0, pc_ival, pc_ddum, pc_len,
+                            VERSION_NORMAL, GET );
+                          for ( pc_i=1; pc_i<pc_len; pc_i += 2 ) {
+                            if ( labs(pc_ival[pc_i])==YOUNG_APPARENT ||
+                                 labs(pc_ival[pc_i])==POISSON_APPARENT )
+                              capture_apparent = 1;
+                          }
+                        }
+                        if ( capture_apparent ) {
+                          long int prev_max = 0;
+                          db_max_index( NODE, prev_max, VERSION_NORMAL, GET );
+                          for ( long int prev_inod=0; prev_inod<=prev_max;
+                              prev_inod++ ) {
+                            if ( db_active_index( NODE_DOF, prev_inod,
+                                VERSION_NORMAL ) ) {
+                              double *prev_dof = db_dbl( NODE_DOF, prev_inod,
+                                VERSION_NORMAL );
+                              db( NODE_DOF_PREVIOUS_STEP, prev_inod, idum,
+                                prev_dof, nuknwn, VERSION_NORMAL, PUT );
+                            }
+                          }
+                        }
+                      }
                         // equilibrium loop
 
                       {
@@ -585,7 +651,7 @@ void step_start( long int task, long int options_solver[], double dtime, double 
     name=0, any_beam=0, any_truss=0, any_spring=0, any_contactspring=0,
     any_interface=0,
     ldum=0, options_matrix_group=-NO, options_matrix_length=0, 
-    element_group=0, max_group=0, exit_tochnog=0,
+    element_group=0, max_group=0, exit_tochnog=0, max=0, idum[1],
     el[1+MNOL], control_adjust_geometry[4];
   double ddum[1];
 
@@ -913,6 +979,36 @@ void step_start( long int task, long int options_solver[], double dtime, double 
     if ( any_truss ) {
       db_allocate( ELEMENT_TRUSS_DIRECTION, max_element, VERSION_NEW, MINIMAL );
       db_allocate( ELEMENT_TRUSS_FORCE, max_element, VERSION_NEW, MINIMAL );
+    }
+
+    // element_intpnt_materi_undrained_pressure (manual Professional
+    // 6.441, undrained-capacity family 2.2.7): ensure the record exists
+    // (zeros) for every element of a group that carries
+    // group_materi_undrained_capacity BEFORE the parallel element loop
+    // of this step (materi() writes it inside the loop, where
+    // allocation is not allowed; the step-end version copy promotes the
+    // converged value to VERSION_NORMAL). Re-checked every step because
+    // macro-created meshes (control_mesh_macro) appear after the top()
+    // initialization.
+    if ( db_max_index( GROUP_MATERI_UNDRAINED_CAPACITY, max,
+        VERSION_NORMAL, GET )>=0 ) {
+      db_max_index( ELEMENT, max_element, VERSION_NORMAL, GET );
+      for ( element=0; element<=max_element; element++ ) {
+        if ( !db_active_index( ELEMENT, element, VERSION_NORMAL ) ) continue;
+        element_group = 0;
+        db( ELEMENT_GROUP, element, &element_group, ddum, ldum,
+          VERSION_NORMAL, GET_IF_EXISTS );
+        if ( db_active_index( GROUP_MATERI_UNDRAINED_CAPACITY,
+            element_group, VERSION_NORMAL ) &&
+             !db_active_index( ELEMENT_INTPNT_MATERI_UNDRAINED_PRESSURE,
+               element, VERSION_NORMAL ) ) {
+          double undr_zero[MPOINT];
+          for ( long int kz=0; kz<MPOINT; kz++ ) undr_zero[kz] = 0.;
+          long int undr_zero_len = MPOINT;
+          db( ELEMENT_INTPNT_MATERI_UNDRAINED_PRESSURE, element, idum,
+            undr_zero, undr_zero_len, VERSION_NORMAL, PUT );
+        }
+      }
     }
 
   }

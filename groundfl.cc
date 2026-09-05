@@ -221,16 +221,24 @@ long int groundflow_phreatic_level_multiple_find( long int inod )
 }
 
 long int groundflow_phreatic_coord( long int inod, double coord[], double dof[],
-  double &total_pressure, double &static_pressure, double &location )
+  double &total_pressure, double &static_pressure, double &location,
+  long int *level_source )
 
-// inod only in arguments for test printing
+// inod only in arguments for test printing. When level_source is not
+// NULL it receives the source of the static pressure at the node:
+// 0 = no level found, 1 = groundflow_phreatic_level(_multiple),
+// 2 = post_calcul_static_pressure_height region. Callers that convert
+// a prescribed TOTAL pressure into the pres dof (bounda_dof -topres)
+// need the distinction: the head-to-dof conversion differs between the
+// phreatic level (dynamic pressure uniform below the level) and the
+// static-pressure-height reference (per-node static subtraction).
 
 {
-
   long int length=0, found=0, ldum=0, idum[1], number[2], imult=0;
   double water_level=0., dens=0., pressure_atmospheric=0., addtopressure=0.,
     ddum[1], force_gravity[MDIM], *groundflow_phreatic=NULL;
 
+  if ( level_source ) *level_source = 0;
   force_gravity_calculate( force_gravity );
   db( GROUNDFLOW_DENSITY, 0, idum, &dens, ldum, VERSION_NORMAL, GET_IF_EXISTS );
   db( GROUNDFLOW_PRESSURE_ATMOSPHERIC, 0, idum, &pressure_atmospheric, 
@@ -280,6 +288,7 @@ long int groundflow_phreatic_coord( long int inod, double coord[], double dof[],
       }
       if ( found ) {
         location = water_level;
+        if ( level_source ) *level_source = 1;
         if ( groundflow_pressure ) {
           static_pressure = 
             force_gravity[ndim-1] * dens * ( water_level - coord[ndim-1] );
@@ -322,6 +331,7 @@ long int groundflow_phreatic_coord( long int inod, double coord[], double dof[],
     }
     if ( found ) {
       location = water_level;
+      if ( level_source ) *level_source = 1;
       if ( groundflow_pressure ) {
       	static_pressure = 
         force_gravity[ndim-1] * dens * ( water_level - coord[ndim-1] );
@@ -381,6 +391,7 @@ long int groundflow_phreatic_coord( long int inod, double coord[], double dof[],
         }
         if ( igroup_ok ) {
           location = height_rec[iregion*3+2];
+          if ( level_source ) *level_source = 2;
           static_pressure = force_gravity[ndim-1] * dens *
             ( location - coord[ndim-1] );
           total_pressure = dof[pres_indx] + static_pressure;
@@ -417,7 +428,7 @@ void groundflow_phreatic_apply( void )
         coord = db_dbl( NODE_START_REFINED, inod, VERSION_NORMAL );
         node_dof = db_dbl( NODE_DOF, inod, VERSION_NEW );
         if ( groundflow_phreatic_coord( inod, coord, node_dof, total_pressure,
-            static_pressure, location ) ) {
+            static_pressure, location, NULL ) ) {
           iuknwn = pres_indx;
           ipuknwn = iuknwn / nder;
           if ( groundflow_phreaticlevel_bounda==-METHOD1 ) {
@@ -544,7 +555,7 @@ void groundflow_phreatic_apply( void )
               coord = db_dbl( NODE_START_REFINED, inod, VERSION_NORMAL );
               node_dof = db_dbl( NODE_DOF, inod, VERSION_NEW );
               if ( groundflow_phreatic_coord( inod, coord, node_dof, total_pressure,
-                  static_pressure, location ) ) {
+                  static_pressure, location, NULL ) ) {
                 iuknwn = pres_indx;
                 ipuknwn = iuknwn / nder;
                 node_dof[iuknwn] = static_pressure;
