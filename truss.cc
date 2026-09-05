@@ -28,7 +28,8 @@ void truss( long int element, long int element_group,
 {
   long int idim=0, jdim=0, ipuknwn=0, iuknwn=0, jpuknwn=0, juknwn=0,
     inol=0, jnol=0, indx=0, nnol=2, swit=0, length=0,
-    options_inertia=-YES, group_truss_rope=-NO, 
+    // inertia_apply default -no (Professional semantics, see general.cc)
+    options_inertia=-NO, group_truss_rope=-NO, 
     memory=-UPDATED, options_convection=-YES,
     icontrol=0, ldum=0, idum[1], options_mesh[MDIM];
   double mass=0., dtime=0., 

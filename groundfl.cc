@@ -34,9 +34,26 @@ void groundflow( long int element, long int gr, long int nnol, long int nodes[],
 {
   long int swit=0, inol=0, jnol=0, jdim=0, ipuknwn=0, iuknwn=0, jpuknwn=0,
     indx=0, indxi=0, indxj=0, icontrol=0, options_skip_groundflow_materidivergence=-NO,
-    groundflow_consolidation_apply=-YES, control_groundflow_consolidation_apply=-YES,
-    group_groundflow_consolidation_apply=-YES,
-    materidivergence=-YES, total_pressure_limit_set=0, ldum=0, idum[1];
+    // groundflow_consolidation_apply family (manual Professional 6.556,
+    // 6.613): the material divergence (consolidation coupling) part in the
+    // groundflow equation is included only when a switch is set to -yes.
+    // Default (record absent) is -no, matching the Professional ("Default
+    // switch is -no"). The GNU legacy default -yes coupled every materi +
+    // groundflow model into a consolidation transient; the corpus safety
+    // tests (ground14/15/16, no consolidation requested) reach the drained
+    // steady state within their 1 s window only without the coupling,
+    // exactly like the Professional binary does.
+    // Measured on the Professional (ground14 A/B): only the GLOBAL or the
+    // per-timestep CONTROL record can ACTIVATE the coupling; a group-level
+    // -yes alone does not (safety stays at the drained value). The
+    // group-level records can only EXCLUDE (-no) the elements of the group
+    // from a globally/control-activated coupling (manual 6.613).
+    groundflow_consolidation_apply=-NO, control_groundflow_consolidation_apply=-NO,
+    group_groundflow_consolidation_apply=-NO,
+    materidivergence=-NO, group_materidivergence=-NO,
+    total_pressure_limit_set=0, group_consolidation_found=0,
+    global_consolidation_found=0, control_consolidation_found=0,
+    group_materidivergence_found=0, ldum=0, idum[1];
   double tmp=0., C=0., dtime=0., divergence=0., dens=0., limit=0., ddum[1], pe[MDIM];
 
   swit = set_swit(element,-1,"groundflow");
@@ -50,23 +67,38 @@ void groundflow( long int element, long int gr, long int nnol, long int nodes[],
          
   db( DTIME, 0, idum, &dtime, ldum, VERSION_NEW, GET );
   db( GROUNDFLOW_DENSITY, 0, idum, &dens, ldum, VERSION_NORMAL, GET_IF_EXISTS );
-  db( GROUP_GROUNDFLOW_MATERIDIVERGENCE, gr, &materidivergence, ddum, ldum,
-    VERSION_NORMAL, GET_IF_EXISTS );
-  db( GROUP_GROUNDFLOW_CONSOLIDATION_APPLY, gr, &group_groundflow_consolidation_apply,
-    ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
-  db( GROUNDFLOW_CONSOLIDATION_APPLY, 0, &groundflow_consolidation_apply,
-    ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
-  db( OPTIONS_SKIP_GROUNDFLOW_MATERIDIVERGENCE, 0, &options_skip_groundflow_materidivergence, 
-    ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+  group_materidivergence_found = db( GROUP_GROUNDFLOW_MATERIDIVERGENCE, gr,
+    &group_materidivergence, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+  group_consolidation_found = db( GROUP_GROUNDFLOW_CONSOLIDATION_APPLY, gr,
+    &group_groundflow_consolidation_apply, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+  global_consolidation_found = db( GROUNDFLOW_CONSOLIDATION_APPLY, 0,
+    &groundflow_consolidation_apply, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+  db( OPTIONS_SKIP_GROUNDFLOW_MATERIDIVERGENCE, 0,
+    &options_skip_groundflow_materidivergence, ddum, ldum, VERSION_NORMAL,
+    GET_IF_EXISTS );
   db( ICONTROL, 0, &icontrol, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
-  db( CONTROL_GROUNDFLOW_CONSOLIDATION_APPLY, icontrol,
-    &control_groundflow_consolidation_apply, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+  control_consolidation_found = db( CONTROL_GROUNDFLOW_CONSOLIDATION_APPLY,
+    icontrol, &control_groundflow_consolidation_apply, ddum, ldum,
+    VERSION_NORMAL, GET_IF_EXISTS );
   db( CONTROL_OPTIONS_SKIP_GROUNDFLOW_MATERIDIVERGENCE, icontrol, 
     &options_skip_groundflow_materidivergence, ddum, ldum, 
     VERSION_NORMAL, GET_IF_EXISTS );
-  if ( group_groundflow_consolidation_apply==-NO ) materidivergence = -NO;
-  if ( groundflow_consolidation_apply==-NO ) materidivergence = -NO;
-  if ( control_groundflow_consolidation_apply==-NO ) materidivergence = -NO;
+  // Activation: the per-timestep CONTROL record (if present) wins, then the
+  // global record; otherwise the coupling stays off (-no default).
+  if ( control_consolidation_found )
+    materidivergence = control_groundflow_consolidation_apply;
+  else if ( global_consolidation_found )
+    materidivergence = groundflow_consolidation_apply;
+  else
+    materidivergence = -NO;
+  // Group-level exclusion: the legacy GROUP_GROUNDFLOW_MATERIDIVERGENCE and
+  // the new GROUP_GROUNDFLOW_CONSOLIDATION_APPLY records only switch the
+  // coupling OFF for the elements of the group (a group -yes cannot activate
+  // it - measured on the Professional).
+  if ( ( group_consolidation_found &&
+         group_groundflow_consolidation_apply==-NO ) ||
+       ( group_materidivergence_found && group_materidivergence==-NO ) )
+    materidivergence = -NO;
   if ( options_skip_groundflow_materidivergence==-YES ) materidivergence = -NO;
 
   // groundflow_total_pressure_limit: with limit 0 and a total pressure of 0

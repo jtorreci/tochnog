@@ -36,7 +36,16 @@ void general( long int element, long int name, long int nnol, long int element_g
   long int inol=0, inod=0, jnol=0, jdim=0, ipuknwn=0, iuknwn=0,
     swit=0, icontrol=0, unknown_belongs_to_type=0,
     indx=0, indxi=0, indxj=0, options_stabilization=0,
-    options_inertia=-YES, options_convection=-YES, options_axisymmetric=0,
+    // inertia_apply (manual Professional 6.785): the inertia terms of the
+    // principal dofs (material mass, heat capacity, water storage) are
+    // included only when the record is set to -yes. Default (record
+    // absent) is -no, matching the Professional ("Default, if
+    // inertia_apply is not specified, then each of switch_0, switch_1
+    // etc. is set to -no"). The GNU legacy default -yes made every
+    // analysis with a material density pseudo-dynamic; the corpus
+    // safety/groundflow tests (ground14/15/16) run static in the
+    // Professional within the same 1 s window.
+    options_inertia=-NO, options_convection=-YES, options_axisymmetric=0,
     lagrange=0, stokes=-NO, principal_unknown=0, ldum=0, 
     idum[1], options_mesh[MDIM], dof_type[MUKNWN], dof_principal[MUKNWN];
   double condif_conductivity=0., dens=0.,
