@@ -1110,6 +1110,17 @@ fallan TODOS en el PARSE del layout, no del nombre:
 
 ### geometry_moving (0/6)
 
+Diagnóstico de `geometry_moving1` (corpus, RUNFAIL de parse en los 6
+records + `control_geometry_moving`): excavaciones MÓVILES (manual Pro
+6.533-6.538 + 6.135) — una entidad geométrica (punto/área/volumen) se
+traslada por la malla con velocidad constante entre un start/end time y
+"excava" los elementos que atraviesa, PROPORCIONALMENTE a la fracción
+del elemento dentro de la entidad en cada instante (ntime×nspace puntos
+de muestreo por elemento). Requiere la eliminación parcial de elementos
+con factor volumétrico por paso + el barrido temporal de
+geometría-elemento; feature de malla grande, fuera de alcance de sprint
+(su familia geometry() ya tiene las ramas delete/cut/extrude/merge).
+
 - [ ] `geometry_moving` — PENDIENTE
 - [ ] `geometry_moving_n` — PENDIENTE
 - [ ] `geometry_moving_operat` — PENDIENTE
