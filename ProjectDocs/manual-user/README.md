@@ -371,3 +371,10 @@ input parameters it accepts.
 - [element_intpnt_materi_undrained_pressure](group_materi_undrained_capacity.md) — output record of the undrained pressure per element/IP (6.441).
 - [control_materi_undrained_apply](group_materi_undrained_capacity.md) — per-step switch of the undrained analysis (6.153).
 - [bounda_dof](bounda_dof.md) — -topres conversion refined (phreatic-level branch: pres = p_total - rho*g*level) + alias -tpres.
+
+## MESH-CUT + BOUNDA-RELAX FAMILIES (2026-09-05)
+
+- [control_mesh_cut_geometry](control_mesh_cut_geometry.md) — cut away the mesh part inside a geometry and substitute it by the nodal forces of the removed elements (manual 6.163; excavation/dynamic family): elements whose nodes all lie in the geometry are deleted, the force the removed part exerted on the surviving boundary nodes is stored as node_force and the remaining mesh keeps the pre-cut equilibrium. Unlocks mesh_cut_1 (1D real cut, sigxx = 1 sustained) and mesh_cut_2 (2D, cut line out of the node tolerance = no-op) rc=0.
+- [control_mesh_cut_node_force](control_mesh_cut_geometry.md) — per-direction switches of the substituted nodal forces (manual 6.164; the manual spelling control_mesh_cut_force is accepted as an alias).
+- [control_bounda_relax](control_bounda_relax.md) — store the nodal right-hand-sides of prescribed dofs for later relaxation of the boundary conditions (manual 6.108). Registered; relax1 rc=0 (the relaxation observable in the corpus tests is driven by the bounda_force time function alone, A/B on the Professional); relax2 RUNFAIL on an orthogonal velocity-only kinematics divergence (documented).
+- [control_bounda_relax_geometry](control_bounda_relax.md) — geometry restriction of the storing (manual 6.109).

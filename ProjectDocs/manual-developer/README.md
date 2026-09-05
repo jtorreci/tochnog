@@ -366,3 +366,8 @@ Each file corresponds to the same feature in the [User Manual](../manual-user/).
 ## UNDRAINED-CAPACITY FAMILY (2026-09-05)
 
 - [group_materi_undrained_capacity](group_materi_undrained_capacity.md) — enum + registros (version_all/fixed_length 0) + p_u por IP en materi.cc (total_new_sig + rigidez volumetrica dt/C) + pre-alloc top()/step_start + record read-modify-write por IP (p_old NORMAL / buffer NEW) + apparents young/poisson (calcul.cc + snapshot node_dof_previous_step) + -tpres alias + conversion -topres phreatic (nivel por encima del mesh, medido vs Pro).
+
+## MESH-CUT + BOUNDA-RELAX FAMILIES (2026-09-05)
+
+- [control_mesh_cut_geometry](control_mesh_cut_geometry.md) — enums + registros + mesh_cut() en delete.cc (activacion por icontrol, membresia delete_geometry, fuerzas = -f_elem desde ELEMENT_DOF con integracion replica de pol(); poda nod_nod via mesh_has_changed; NODE_FORCE con negacion por la divergencia de signo del consumo node_force en dof.cc — PENDIENTE dedicado) + geometry.cc (proyeccion tipo cut = delete, 8 ramas) + alias control_mesh_cut_force en db_number. Verificado vs Pro 25-10-2023 (mesh_cut_1/2 + probe 2D de corte real: 1/9 y 1/18 por nodo exactos).
+- [control_bounda_relax](control_bounda_relax.md) — enums + registros parse-only; semantica de almacenamiento PENDIENTE (no observable en relax1/2: A/B Pro con/sin los records identico). relax2 RUNFAIL por la divergencia ORTOGONAL velocity-only follow-material (options_mesh default del GNU; locate() mueve la malla de referencia -> cinematica logaritmica ln(1+u); A/B con -fixed_in_space reproduce el Pro EXACTO 1.0/0.0/1.0; PENDIENTE con blast-radius de corpus).
