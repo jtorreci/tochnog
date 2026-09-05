@@ -371,3 +371,15 @@ Each file corresponds to the same feature in the [User Manual](../manual-user/).
 
 - [control_mesh_cut_geometry](control_mesh_cut_geometry.md) — enums + registros + mesh_cut() en delete.cc (activacion por icontrol, membresia delete_geometry, fuerzas = -f_elem desde ELEMENT_DOF con integracion replica de pol(); poda nod_nod via mesh_has_changed; NODE_FORCE con negacion por la divergencia de signo del consumo node_force en dof.cc — PENDIENTE dedicado) + geometry.cc (proyeccion tipo cut = delete, 8 ramas) + alias control_mesh_cut_force en db_number. Verificado vs Pro 25-10-2023 (mesh_cut_1/2 + probe 2D de corte real: 1/9 y 1/18 por nodo exactos).
 - [control_bounda_relax](control_bounda_relax.md) — enums + registros parse-only; semantica de almacenamiento PENDIENTE (no observable en relax1/2: A/B Pro con/sin los records identico). relax2 RUNFAIL por la divergencia ORTOGONAL velocity-only follow-material (options_mesh default del GNU; locate() mueve la malla de referencia -> cinematica logaritmica ln(1+u); A/B con -fixed_in_space reproduce el Pro EXACTO 1.0/0.0/1.0; PENDIENTE con blast-radius de corpus).
+
+## SMALL FAMILIES BATCH (2026-09-05)
+
+- [group_truss_expansion](group_truss_expansion.md) — enum + registro; resta termica del incremento de longitud en truss() (todas las memorias); verificado vs Pro (truss11: -2 EXACTO).
+- [group_truss_initial_force](group_truss_initial_force.md) — enum + registro; siembra de la fuerza en el nacimiento del elemento (sin estado previo); verificado vs Pro (truss12: rhside ±1; el Pro renumería el truss en su .dbs).
+- [post_calcul_k0](post_calcul_k0.md) — enums K0/K0_SIG (name entries) + slot k0_sig en calculate() + branch K0 en calculate_operat (2D/3D/fallback 1D); verificado vs Pro (k0: 0.1111111111 EXACTO).
+- [element_dof_initial](element_dof_initial.md) — registro ELEMENT_DOF_INITIAL + marker ELEMENT_DOF_INITIAL_APPLIED (version_all=1) escrito por step_close tras converger el paso de nacimiento; sustitucion del old dof en la inercia lumped de general(); verificado vs Pro (phase1 + probe 2 pasos).
+- [geometry_node_type](geometry_node_type.md) — registros por-geometria + overrides en geometry() por miembro del set (re-lectura de coords + flag project_inside en las 8 ramas); verificado vs Pro (node_type_1, validation_14).
+- [node_geometry_present](node_geometry_present.md) — fill en step_start (coords del paso previo, calibrado con barrido temporal vs Pro) + registro NODE_GEOMETRY_PRESENT version_all; diana target (1,1)=3.
+- [print_database_calculation](print_database_calculation.md) — gates de exit_tn (miscel.cc) del volcado .dbs/.flavia final.
+- [post_apply](post_apply.md) — registro parse-only (gating -no PENDIENTE).
+- [print_group_data](print_group_data.md) — registro parse-only (escritura GiD/element_print_group_data PENDIENTE).

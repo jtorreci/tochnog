@@ -378,3 +378,17 @@ input parameters it accepts.
 - [control_mesh_cut_node_force](control_mesh_cut_geometry.md) — per-direction switches of the substituted nodal forces (manual 6.164; the manual spelling control_mesh_cut_force is accepted as an alias).
 - [control_bounda_relax](control_bounda_relax.md) — store the nodal right-hand-sides of prescribed dofs for later relaxation of the boundary conditions (manual 6.108). Registered; relax1 rc=0 (the relaxation observable in the corpus tests is driven by the bounda_force time function alone, A/B on the Professional); relax2 RUNFAIL on an orthogonal velocity-only kinematics divergence (documented).
 - [control_bounda_relax_geometry](control_bounda_relax.md) — geometry restriction of the storing (manual 6.109).
+
+## SMALL FAMILIES BATCH (2026-09-05) — truss thermal/prestress, geometry per-node overrides, -k0, initial dofs, output gates
+
+- [group_truss_expansion](group_truss_expansion.md) — thermal expansion of trusses (manual 6.775): the mechanical stretch subtracts the free thermal increment alpha*dT*L0. Unlocks truss11 (force -2 EXACT) and truss15 rc=0.
+- [group_truss_initial_force](group_truss_initial_force.md) — pre-tension of truss elements from the moment they come to life (manual 6.776); no initial strain. Unlocks truss12 rc=0.
+- [post_calcul_k0](post_calcul_k0.md) — post_calcul -materi_stress -k0 (manual 6.901): ratio horizontal/vertical stress; output item -k0_sig. Unlocks k0 rc=0.
+- [element_dof_initial](element_dof_initial.md) — past dofs of an element at its birth step (manual 6.422); the transient inertia integrates from them. Unlocks phase1 rc=0.
+- [geometry_node_type](geometry_node_type.md) — per-geometry override of the coordinates used to check nodes on the geometry (6.540: -node/-node_start_refined/-plus_displacement).
+- [geometry_projection_type](geometry_node_type.md) — per-geometry projection semantics (6.543: -project_inside filled interior vs -project_exact edge).
+- [node_geometry_present](node_geometry_present.md) — per-node list of present geometries (6.886) filled per step when print_node_geometry_present -yes (6.995/6.996). Unlocks node_type_1 rc=0.
+- [print_database_calculation](print_database_calculation.md) — switch of the final .dbs output (6.972); consumed at exit_tn. large1 parses (RUNFAIL remains solver-bound, see SEGUIMIENTO).
+- [print_gid_calculation](print_database_calculation.md) — switch of the final GiD output (same gate).
+- [post_apply](post_apply.md) — global switch of the post-processing commands (6.900); registered, -no gating pending.
+- [print_group_data](print_group_data.md) — GiD plot of group_* data (6.990); registered parse-only. Unlocks the parse of distri3 (runtime pending).
