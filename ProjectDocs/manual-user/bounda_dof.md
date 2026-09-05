@@ -59,3 +59,30 @@ bounda_time 0  0. 0. 1. 1.
 **Note:** `bounda_dof` and `bounda_unknown` are aliases of the same mechanism;
 only one of `bounda_dof`/`bounda_unknown` or `bounda_force` may be used per
 boundary index.
+
+## Prescribing the total pore pressure: `-topres`
+
+For groundflow models (`groundflow_pressure` initialized) the dof `-pres` is
+the hydraulic head solved by the storage equation. If you want to prescribe
+directly the TOTAL pore pressure (`p_total`, the pore pressure of the
+geotechnical total-stress split) instead of the head, use the dof label
+`-topres` (manual Professional 2.4.1):
+
+```
+bounda_dof 10  -geometry_line 10 -topres
+bounda_time 10  -20.
+```
+
+The value of `bounda_time` is interpreted as the total pore pressure and
+converted per node to the head value the groundflow machinery needs: with a
+phreatic level (or a `post_calcul_static_pressure_height` region) covering
+the node, `pres_dof = p_total - p_static`; without any level,
+`pres_dof = p_total + rho*g*z` (tochnog sign conventions: g and z negative
+below the datum). The total pressure that the post-processing reports at the
+node then equals the prescribed value.
+
+Example (ground13 of the corpus): bottom nodes `-topres -20` at z=0 and top
+nodes `-topres -10` at z=1 with `force_gravity 0. -10.` and
+`groundflow_density 1.` give the hydraulic head -20 everywhere (hydrostatic,
+no flow) and `-to_pres` = -20/-10 on the bottom/top rows — identical to the
+Professional.

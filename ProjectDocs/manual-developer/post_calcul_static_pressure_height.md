@@ -11,5 +11,8 @@ total_pressure = pres_dof + static_pressure (same pattern as the
 phreatic-level branch), found = 1. Group check uses
 node_attached_element_groups() (group.cc); -ALL values pass any node.
 Verified against the Professional .dbs: ground13 st_pres = -1220 EXACT.
-Remaining corpus blocker of ground13: bounda_dof -topres (total pressure
-prescription) conventions.
+ground13 now passes entirely: the bounda_dof -topres prescription (total
+pressure) converts the prescribed p_total into the pres dof value through
+the SAME static the machinery adds here (pres_dof = load - static when the
+node is inside a level/height region), so the resulting to_pres matches the
+Professional (see manual-developer/bounda_dof.md).

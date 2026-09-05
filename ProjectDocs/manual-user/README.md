@@ -153,6 +153,7 @@ input parameters it accepts.
 - [group_interface_groundflow_permeability](group_interface_groundflow_permeability.md) — water flow across the interface q = pe*(p1-p2).
 - [group_interface_groundflow_total_pressure_tension](group_interface_groundflow_total_pressure_tension.md) — forced static pressure when the interface normal strain opens.
 - [groundflow_flux_edge_normal](groundflow_flux_edge_normal.md) — distributed water flux normal to an edge (11-keyword family).
+- [groundflow_phreatic_level](groundflow_phreatic_level.md) — single groundwater level (phreatic line): static pressure split + free-surface dry zone (p_total = 0 at/above the level).
 - [groundflow_phreatic_level_multiple](groundflow_phreatic_level_multiple.md) — several indexed phreatic levels, each owning part of the domain (7-keyword family).
 - [groundflow_seepage_eps](groundflow_seepage_eps.md) — tolerance of the seepage (outflow-only) boundary condition.
 - [groundflow_seepage_geometry](groundflow_seepage_geometry.md) — seepage edge selected by geometry entity.
@@ -355,9 +356,9 @@ input parameters it accepts.
 - [geometry_element_group_method](geometry_element_group_method.md) — -all/-any/-only of the group filter (6.525).
 - [group_materi_plasti_element_group](group_materi_plasti_element_group.md) — frictional slip of granular soils on other materials (6.698); registered, consumption PENDING.
 - [group_materi_plasti_element_group_factor](group_materi_plasti_element_group_factor.md) — factor override of the neighbor reduction (6.699); PENDING consumption.
-- [post_calcul_static_pressure_height](post_calcul_static_pressure_height.md) — reference-height static pressure (6.921). Unlocks ground13 target st_pres (further blockers: -topres bounda).
+- [post_calcul_static_pressure_height](post_calcul_static_pressure_height.md) — reference-height static pressure (6.921). Unlocks ground13 st_pres (rc=0 with bounda_dof -topres).
 - [post_calcul_static_pressure_height_element_group](post_calcul_static_pressure_height_element_group.md) — element group restriction of the height regions (6.922).
-- [post_calcul_safety_method](post_calcul_safety_method.md) — -vertical/-prival/-global of the piping/lifting safety factors (6.919); labels measured vs Professional; computation PENDING.
+- [post_calcul_safety_method](post_calcul_safety_method.md) — -vertical/-prival/-global of the piping/lifting safety factors (6.919): naming + formulas verified against the Professional (ground15/16).
 - [post_calcul_safety_maximum](post_calcul_safety_maximum.md) — cap of the safety factors (6.918).
 - [group_groundflow_expansion](group_groundflow_expansion.md) — thermal expansion coefficient of the fluid/soil (6.614); parse-only.
 - [control_print_gid_contact_spring2](control_print_gid_contact_spring2.md) — GiD rendering of contact_spring2 (6.297, alias spelling accepted).

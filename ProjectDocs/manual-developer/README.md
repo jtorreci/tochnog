@@ -157,6 +157,7 @@ Each file corresponds to the same feature in the [User Manual](../manual-user/).
 - [group_interface_groundflow_permeability](group_interface_groundflow_permeability.md) — across-interface flow q=pe*(p1-p2) with symmetric tangent (interface.cc).
 - [group_interface_groundflow_total_pressure_tension](group_interface_groundflow_total_pressure_tension.md) — forced static pressure on opening interfaces (interface.cc).
 - [groundflow_flux_edge_normal](groundflow_flux_edge_normal.md) — nodal flux from edge-normal water flux (area.cc area(), type[5]).
+- [groundflow_phreatic_level](groundflow_phreatic_level.md) — single level: static split en groundflow_phreatic_coord + free-surface dry zone (pres_dof = 0 at/above the level, groundflow_phreatic_apply).
 - [groundflow_phreatic_level_multiple](groundflow_phreatic_level_multiple.md) — multiple phreatic levels (groundfl.cc _find/_coord + phreatic_apply _static).
 - [groundflow_seepage](groundflow_seepage.md) — seepage boundary in bounda.cc (Darcy flow projection on the outward normal).
 - [groundflow_pressure_atmospheric](groundflow_pressure_atmospheric.md) — static/total pressure cap in groundfl.cc groundflow_phreatic_coord (GNU-inherited keyword, documented + verified 2026-08-24).
@@ -355,8 +356,8 @@ Each file corresponds to the same feature in the [User Manual](../manual-user/).
 - [group_materi_plasti_element_group_factor](group_materi_plasti_element_group_factor.md) — registro; consumo PENDIENTE.
 - [post_calcul_static_pressure_height](post_calcul_static_pressure_height.md) — consumo en groundflow_phreatic_coord (groundfl.cc); verificado vs Pro (ground13).
 - [post_calcul_static_pressure_height_element_group](post_calcul_static_pressure_height_element_group.md) — restriccion por grupo en la busqueda de regiones.
-- [post_calcul_safety_method](post_calcul_safety_method.md) — selectores VERTICAL/GLOBAL puros + operadores SAFETY_PIPING/LIFTING; labels medidos vs Pro; calculo PENDIENTE.
-- [post_calcul_safety_maximum](post_calcul_safety_maximum.md) — registro; consumo PENDIENTE.
+- [post_calcul_safety_method](post_calcul_safety_method.md) — selectores VERTICAL/GLOBAL puros + operadores SAFETY_PIPING/LIFTING; naming por metodo + formulas lifting/piping en calculate_operat (calcul.cc); orden prival invertido vs sort() GNU.
+- [post_calcul_safety_maximum](post_calcul_safety_maximum.md) — cap del factor en el branch safety de calculate_operat.
 - [group_groundflow_expansion](group_groundflow_expansion.md) — registro parse-only.
 - [control_print_gid_contact_spring2](control_print_gid_contact_spring2.md) — no_index + alias sin prefijo control_.
 - [control_mesh_macro_concentrate](control_mesh_macro_concentrate.md) — registro parse-only (4 valores).

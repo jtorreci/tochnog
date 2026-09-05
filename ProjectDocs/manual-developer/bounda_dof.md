@@ -40,15 +40,38 @@ routine for geometry-based selection.
 
 ## Hardcoded parameters / pending refactorings
 
-- PENDING: error reporting still references the GNU name — the check
-  `if ( bounda_length<2 ) db_error( BOUNDA_UNKNOWN, iboun );` (line 189) and
-  the dof lookup error `db_error( BOUNDA_UNKNOWN, iboun );` (line 355) fire
-  even when the input used `bounda_dof`. Messages may confuse users of the
-  professional keyword.
+- The dof lookup error `db_error( BOUNDA_UNKNOWN, iboun );` fires even when
+  the input used `bounda_dof` (messages may confuse users of the
+  professional keyword).
 - The alias duplicates the `bounda_unknown` registration pattern in
   `database.cc`; the two records could share a single registration helper to
   avoid drift between `BOUNDA_DOF` and `BOUNDA_UNKNOWN`.
 - `data_required` is unset for `BOUNDA_DOF`, so `bounda_dof` works standalone
-  (like `bounda_unknown`); keep `BOUNDA_CONSTANT`'s
-  `data_required = BOUNDA_UNKNOWN` (database.cc:204) in mind if records ever
-  need to require either name.
+  (like `bounda_unknown`).
+
+## bounda_dof -topres (total pore pressure prescription)
+
+- `db_number("topres")` resolves to the `GROUNDFLOW_PRESSURE` keyword enum
+  (NOT to the dynamic dof label that `-pres` resolves to), so a `-topres`
+  token stored in the BOUNDA_DOF record does not match `dof_label[]`.
+- `bounda.cc` `bounda()`: the per-dof resolution loop special-cases
+  `val[iu] == -GROUNDFLOW_PRESSURE` when `groundflow_pressure` is active:
+  it maps the token onto the pres dof (`iuknwn = pres_indx`) and sets the
+  per-record flag `topres_bounda` (reset per iboun next to `rotate`).
+- The load application (`else` branch of the value setting) converts the
+  prescribed total pressure `load` into the head value per node by INVERTING
+  `groundflow_phreatic_coord()`:
+  - `found` (phreatic level / static height covers the node):
+    `new_node_dof = load - static_pressure - addtopressure`;
+  - otherwise (no level): `new_node_dof = load + dens*g*z - addtopressure`
+    (the no-level total is `pres_dof - rho*g*z`).
+  The node coordinate is the current one (NODE + materi displacement).
+- GOTCHA: the inversion uses the SAME static the machinery adds, so it is
+  exact for whatever covers the node — including a
+  `post_calcul_static_pressure_height` region (ground13: bottom/top rows lie
+  inside the region height_ref=123, so the prescribed -20/-10 become the
+  uniform head +1210, and `-to_pres` = -20/-10 / `-dy_pres` = 1210 match the
+  Professional .dbs digit by digit).
+- Explicit bounds always win over automatic defaults: `bounda()` zeroes
+  `NODE_BOUNDED`, then `groundflow_phreatic_apply()` applies the phreatic
+  conditions and finally the bounda_dof records overwrite their nodes.

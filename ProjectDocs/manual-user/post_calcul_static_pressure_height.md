@@ -16,5 +16,5 @@ post_calcul -groundflow_pressure -total_pressure -groundflow_pressure -static_pr
 post_calcul_static_pressure_height 0. 1. 123.
 post_calcul_static_pressure_height_element_group -all
 ```
-Unlocks ground13 (st_pres = -1220 EXACT; further corpus blockers of the
-family: bounda_dof -topres conventions, see SEGUIMIENTO).
+Unlocks ground13 (st_pres = -1220 EXACT; the corpus test now passes fully
+with the `bounda_dof -topres` total-pressure prescription, see bounda_dof).
