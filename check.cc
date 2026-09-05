@@ -913,6 +913,12 @@ long int check( long int idat, long int task )
   if ( data_number==GROUP_TRUSS_YOUNG )
     ok = check_unknown_atleastone( "materi_velocity_integrated", 
       "materi_displacement", task );
+  if ( data_number==GROUP_TRUSS_EXPANSION )
+    ok = check_unknown_atleastone( "materi_velocity_integrated", 
+      "materi_displacement", task );
+  if ( data_number==GROUP_TRUSS_INITIAL_FORCE )
+    ok = check_unknown_atleastone( "materi_velocity_integrated", 
+      "materi_displacement", task );
   if ( data_number==GROUP_TYPE )
     ok = check_unknowns_are_specified( task );
   if ( data_number==GROUP_USER_DATA )

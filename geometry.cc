@@ -31,7 +31,8 @@ void geometry( long int inod, double co[], long int geometry_entity[],
   int i=0, level=0;
   long j=0, itest=0, idim=0, index=0, ind=0, length_geometry_bounda_factor=0,
     entity=0, itriangle=0, ntriangle=0, length=0, iset=0, nset=0,
-    ok=0, ldum=0, idum[1], geometry_set[DATA_ITEM_SIZE];
+    ok=0, ldum=0, idum[1], geometry_set[DATA_ITEM_SIZE],
+    project_inside=0;
   double xi=0., tolerance=0., tmp=0., tmp1=0., a=0., b=0.,
     xyint[2], ellilength=0.,
     l0=0., l1=0., l2=0., x0=0., x1=0., y0=0., y1=0., l=0.,
@@ -47,12 +48,13 @@ void geometry( long int inod, double co[], long int geometry_entity[],
     geometry_circle_smallsegment[MDIM+1+2*MDIM+1], geometry_quadrilateral[4*MDIM+1], 
     geometry_sphere[MDIM+2], geometry_sphere_segment[MDIM+1+MDIM+1], 
     geometry_cylinder[2*MDIM+2], geometry_cylinder_segment[MDIM+MDIM+1+MDIM+1], 
-    geometry_ellipse[MDIM+3], geometry_bounda_factor[4], 
+    geometry_ellipse[MDIM+3],     geometry_bounda_factor[4], 
     geometry_brick[2*MDIM+1], work[MDIM], 
     *node_dof=NULL, *geometry_polynomial=NULL;
 
   factor = 1.;
   in_geometry = 0;
+  project_inside = 0;
   array_set( normal, 0., MDIM );
   array_set( vec01, 0., MDIM );
   array_set( vec02, 0., MDIM );
@@ -87,6 +89,45 @@ void geometry( long int inod, double co[], long int geometry_entity[],
   for ( iset=0; iset<nset && !in_geometry; iset++ ) {
     entity = geometry_set[iset*2];
     index  = geometry_set[iset*2+1];
+    // per-geometry overrides (manual Professional 6.540/6.543):
+    // geometry_node_type selects the coordinates used to evaluate the
+    // geometry (-node current coordinates, -node_start_refined the
+    // initial ones, -plus_displacement node plus displacements) and
+    // geometry_projection_type selects the filled interior of the
+    // geometry (-project_inside) instead of its exact edge
+    // (-project_exact, the default). Absent records keep the
+    // caller-provided node_type/projection_type.
+    project_inside = ( projection_type==CONTROL_MESH_DELETE_GEOMETRY ||
+      projection_type==CONTROL_MESH_CUT_GEOMETRY ||
+      projection_type==PROJECT_INSIDE );
+    if ( inod>=0 ) {
+      long int geometry_override = 0;
+      if ( db( GEOMETRY_NODE_TYPE, index, &geometry_override, ddum, ldum,
+          VERSION_NORMAL, GET_IF_EXISTS ) && geometry_override!=0 ) {
+        // the record stores the keyword values negated (-node etc.)
+        geometry_override = -geometry_override;
+        if ( geometry_override!=node_type ) {
+          node_type = geometry_override;
+          if ( node_type==PLUS_DISPLACEMENT ) {
+            db( NODE, inod, idum, coord, ldum, version, GET );
+            if ( materi_displacement ) {
+              node_dof = db_dbl( NODE_DOF, inod, version );
+              for ( idim=0; idim<ndim; idim++ )
+                coord[idim] += node_dof[dis_indx+idim*nder];
+            }
+          }
+          else
+            db( node_type, inod, idum, coord, ldum, version, GET );
+        }
+      }
+      if ( db( GEOMETRY_PROJECTION_TYPE, index, &geometry_override, ddum,
+          ldum, VERSION_NORMAL, GET_IF_EXISTS ) && geometry_override!=0 ) {
+        projection_type = -geometry_override;
+        project_inside = ( projection_type==CONTROL_MESH_DELETE_GEOMETRY ||
+          projection_type==CONTROL_MESH_CUT_GEOMETRY ||
+          projection_type==PROJECT_INSIDE );
+      }
+    }
     if ( entity==-GEOMETRY_BRICK ) {
       db( GEOMETRY_BRICK, index, idum, geometry_brick, 
         ldum, VERSION_NORMAL, GET );
@@ -117,8 +158,7 @@ void geometry( long int inod, double co[], long int geometry_entity[],
       tolerance = geometry_circle[ndim+1];
       array_subtract( coord, centre, tmp_vec1, ndim );
       tmp = array_size( tmp_vec1, ndim );
-      if ( ( projection_type==CONTROL_MESH_DELETE_GEOMETRY ||
-             projection_type==CONTROL_MESH_CUT_GEOMETRY ) ) {
+      if ( project_inside ) {
         if ( tmp<=(radius+tolerance+EPS_COORD) ) in_geometry = 1;
       }
       else {
@@ -147,8 +187,7 @@ void geometry( long int inod, double co[], long int geometry_entity[],
       array_subtract( coord, centre, tmp_vec1, ndim );
       tmp = array_size( tmp_vec1, ndim );
       ok = 0;
-      if ( ( projection_type==CONTROL_MESH_DELETE_GEOMETRY ||
-             projection_type==CONTROL_MESH_CUT_GEOMETRY ) ) {
+      if ( project_inside ) {
         if ( tmp<=(radius+tolerance+EPS_COORD) )
           ok = 1;
       }
@@ -184,8 +223,7 @@ void geometry( long int inod, double co[], long int geometry_entity[],
       array_subtract( coord, centre, tmp_vec1, ndim );
       tmp = array_size( tmp_vec1, ndim );
       ok = 0;
-      if ( ( projection_type==CONTROL_MESH_DELETE_GEOMETRY ||
-             projection_type==CONTROL_MESH_CUT_GEOMETRY ) ) {
+      if ( project_inside ) {
         if ( tmp<=(radius+tolerance+EPS_COORD) )
           ok = 1;
       }
@@ -227,8 +265,7 @@ void geometry( long int inod, double co[], long int geometry_entity[],
       array_subtract( tmp_vec1, tmp_vec0, tmp_vec2, ndim );
       tmp = array_size( tmp_vec2, ndim );
       if ( l>=-EPS_COORD && l<=cylinder_length+EPS_COORD ) {
-        if ( ( projection_type==CONTROL_MESH_DELETE_GEOMETRY ||
-             projection_type==CONTROL_MESH_CUT_GEOMETRY ) ) {
+        if ( project_inside ) {
           if ( tmp<=(radius+tolerance+EPS_COORD) )
             in_geometry = 1;
         }
@@ -270,8 +307,7 @@ void geometry( long int inod, double co[], long int geometry_entity[],
       tmp = array_size( tmp_vec2, ndim );
       if ( l>=-EPS_COORD && l<=cylinder_length+EPS_COORD ) {
         ok = 0;
-        if ( ( projection_type==CONTROL_MESH_DELETE_GEOMETRY ||
-             projection_type==CONTROL_MESH_CUT_GEOMETRY ) ) {
+        if ( project_inside ) {
           if ( tmp<=(radius+tolerance+EPS_COORD) )
             ok = 1;
         }
@@ -327,8 +363,7 @@ void geometry( long int inod, double co[], long int geometry_entity[],
         array_subtract( xyint, centre, tmp_vec11, ndim );
         tmp1 = array_size( tmp_vec1, ndim );
         
-      if ( ( projection_type==CONTROL_MESH_DELETE_GEOMETRY ||
-             projection_type==CONTROL_MESH_CUT_GEOMETRY ) ) {
+      if ( project_inside ) {
         if ( tmp<=(tmp1+tolerance +EPS_COORD) ) in_geometry = 1;
       }
       else {
@@ -516,8 +551,7 @@ void geometry( long int inod, double co[], long int geometry_entity[],
       array_move( geometry_sphere, centre, ndim );
       array_subtract( coord, centre, tmp_vec1, ndim );
       tmp = array_size( tmp_vec1, ndim );
-      if ( ( projection_type==CONTROL_MESH_DELETE_GEOMETRY ||
-             projection_type==CONTROL_MESH_CUT_GEOMETRY ) ) {
+      if ( project_inside ) {
         if ( tmp<=(radius+tolerance+EPS_COORD) )
           in_geometry = 1;
       }
@@ -549,8 +583,7 @@ void geometry( long int inod, double co[], long int geometry_entity[],
       array_subtract( coord, centre, tmp_vec1, ndim );
       tmp = array_size( tmp_vec1, ndim );
       ok = 0;
-      if ( ( projection_type==CONTROL_MESH_DELETE_GEOMETRY ||
-             projection_type==CONTROL_MESH_CUT_GEOMETRY ) ) {
+      if ( project_inside ) {
         if ( tmp<=(radius+tolerance+EPS_COORD) )
           ok = 1;
       }
@@ -841,4 +874,74 @@ void parallel_geometry( void )
   }
 
   if ( swit ) pri( "Out routine PARALLEL_GEOMETRY" );
+}
+
+void node_geometry_present_calculate( void )
+
+{
+  // node_geometry_present (manual Professional 6.886): for every node
+  // the list of geometries in which the node is present, stored as
+  // (geometry name value, geometry index) pairs. Filled once per step
+  // (hook in step_start, top.cc) when print_node_geometry_present is
+  // -yes; every step OVERWRITES the previous list (measured on the
+  // Professional 25-10-2023: the record of the last step wins, and a
+  // step without any present geometry leaves the record empty).
+  // print_node_geometry_present_node_type (6.996) selects the default
+  // node coordinates of the check (-node_start_refined by default);
+  // the per-geometry geometry_node_type records (6.540) override it
+  // inside geometry().
+  long int inod=0, igeom=0, idum[1], ldum=0, ient=0, nent=0,
+    entity=0, found=0, node_type=NODE_START_REFINED, print_ngp=-NO,
+    print_ngp_node_type=0, nvalue=0, max_geom=0, max_node=0,
+    one=1;
+  const long int geometry_entities[] = {
+    GEOMETRY_BRICK, GEOMETRY_CIRCLE, GEOMETRY_CIRCLE_SEGMENT,
+    GEOMETRY_CIRCLE_SMALLSEGMENT, GEOMETRY_CYLINDER, GEOMETRY_CYLINDER_SEGMENT,
+    GEOMETRY_ELLIPSE, GEOMETRY_LINE, GEOMETRY_POINT, GEOMETRY_POLYNOMIAL,
+    GEOMETRY_QUADRILATERAL, GEOMETRY_SPHERE, GEOMETRY_SPHERE_SEGMENT,
+    GEOMETRY_TRIANGLE };
+  double rdum=0., ddum[MDIM];
+  long int geometry_entity[2];
+  long int *present_list=NULL;
+
+  db( PRINT_NODE_GEOMETRY_PRESENT, 0, &print_ngp, ddum, ldum,
+    VERSION_NORMAL, GET_IF_EXISTS );
+  if ( print_ngp!=-YES ) return;
+
+  db( PRINT_NODE_GEOMETRY_PRESENT_NODE_TYPE, 0, &print_ngp_node_type, ddum,
+    ldum, VERSION_NORMAL, GET_IF_EXISTS );
+  if ( print_ngp_node_type!=0 ) node_type = -print_ngp_node_type;
+
+  nent = sizeof(geometry_entities)/sizeof(geometry_entities[0]);
+  present_list = get_new_int( DATA_ITEM_SIZE );
+  db_max_index( NODE, max_node, VERSION_NORMAL, GET );
+
+  for ( inod=0; inod<=max_node; inod++ ) {
+    if ( !db_active_index( NODE, inod, VERSION_NORMAL ) ) continue;
+    nvalue = 0;
+    for ( ient=0; ient<nent; ient++ ) {
+      entity = geometry_entities[ient];
+      db_max_index( entity, max_geom, VERSION_NORMAL, GET );
+      if ( max_geom<0 ) continue;
+      for ( igeom=0; igeom<=max_geom; igeom++ ) {
+        if ( !db_active_index( entity, igeom, VERSION_NORMAL ) ) continue;
+        geometry_entity[0] = -entity;
+        geometry_entity[1] = igeom;
+        geometry( inod, ddum, geometry_entity, found, rdum, ddum, rdum,
+          ddum, node_type, PROJECT_EXACT, VERSION_NORMAL );
+        if ( found ) {
+          if ( nvalue+2>DATA_ITEM_SIZE )
+            db_error( NODE_GEOMETRY_PRESENT, inod );
+          present_list[nvalue++] = -entity;
+          present_list[nvalue++] = igeom;
+        }
+      }
+    }
+    if ( nvalue>0 )
+      db( NODE_GEOMETRY_PRESENT, inod, present_list, ddum, nvalue,
+        VERSION_NORMAL, PUT );
+    else
+      db_delete_index( NODE_GEOMETRY_PRESENT, inod, VERSION_NORMAL );
+  }
+  delete[] present_list;
 }

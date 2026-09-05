@@ -47,6 +47,8 @@ void general( long int element, long int name, long int nnol, long int element_g
     artificial_diffusion=0., tmp=0., D=0., diffusion=1.,
     element_lhside_add = 0., element_rhside_add=0.,
     ddum[1], pe[MDIM], node_remesh_velocity[MDIM], condif_flow[MDIM];
+  long int element_dof_initial_active=0, edi_idum[1], edi_n=0;
+  double edi_vals[DATA_ITEM_SIZE], element_dof_initial_values[MUKNWN];
 
   if ( type==-MAXWELL_FREQUENCY || type==-MAXWELL_TIME ) return;
 
@@ -95,6 +97,28 @@ void general( long int element, long int name, long int nnol, long int element_g
       &visc, ldum, GET_IF_EXISTS );
     db( GROUP_MATERI_STOKES, 0, &stokes, ddum, ldum, 
       VERSION_NORMAL, GET_IF_EXISTS );
+  }
+
+  // element_dof_initial (manual Professional 6.422): when an element
+  // comes the first time to live it assumes it had in the past the dofs
+  // of this record; the transient inertia of the birth step then
+  // integrates from these initial dofs instead of the step-old ones
+  // (the phased-analysis initial field, e.g. an initial temperature).
+  // One value per element dof (the same for all element nodes); a
+  // single value is used for all dofs. Applied only during the birth
+  // step: the marker ELEMENT_DOF_INITIAL_APPLIED is written by
+  // step_close (top.cc) once the step converged, so every iteration of
+  // the birth step sees the same initial field.
+  element_dof_initial_active = 0;
+  if ( db( ELEMENT_DOF_INITIAL, element, edi_idum, edi_vals, edi_n,
+      VERSION_NORMAL, GET_IF_EXISTS ) && edi_n>0 ) {
+    if ( !db_active_index( ELEMENT_DOF_INITIAL_APPLIED, element,
+        VERSION_NORMAL ) ) {
+      element_dof_initial_active = 1;
+      for ( iuknwn=0; iuknwn<nuknwn; iuknwn++ )
+        element_dof_initial_values[iuknwn] =
+          edi_vals[ ( iuknwn<edi_n ) ? iuknwn : edi_n-1 ];
+    }
   }
 
   for ( ipuknwn=0; ipuknwn<npuknwn; ipuknwn++ ) {
@@ -287,9 +311,11 @@ void general( long int element, long int name, long int nnol, long int element_g
               weight = sri_stress_recovery_weight( nnol, inol, npoint,
                 ipoint, h[inol], 1 );
           }
+          double past_dof = old_dof[inol*nuknwn+ipuknwn*nder];
+          if ( element_dof_initial_active && ipuknwn<nuknwn )
+            past_dof = element_dof_initial_values[ipuknwn];
           tmp = weight * inertia *
-            ( new_dof[inol*nuknwn+ipuknwn*nder] -
-              old_dof[inol*nuknwn+ipuknwn*nder] ) / dtime;
+            ( new_dof[inol*nuknwn+ipuknwn*nder] - past_dof ) / dtime;
           element_rhside_add -= volume * tmp;
           element_lhside_add += volume * weight * inertia / dtime;
           if ( residue && dof_principal[iuknwn]>=0 ) element_residue[indx] -= tmp;

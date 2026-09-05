@@ -919,6 +919,124 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   data_class[CONTROL_BOUNDA_RELAX_GEOMETRY] = CONTROL;
   data_required[CONTROL_BOUNDA_RELAX_GEOMETRY] = CONTROL_BOUNDA_RELAX;
 
+  // SMALL-FAMILY BATCH (2026-09-05): see the enum comment block.
+  // post_calcul operator -k0 (manual Professional 6.901: ratio of the
+  // average horizontal stress over the vertical stress) and its output
+  // item name -k0_sig (post_calcul_label of the .dbs). Pure name
+  // entries (INTEGER, resolved by the input reader like -force).
+  strcpy(name[K0],"k0");
+  type[K0] = INTEGER;
+  data_length[K0] = 1;
+
+  strcpy(name[K0_SIG],"k0_sig");
+  type[K0_SIG] = INTEGER;
+  data_length[K0_SIG] = 1;
+
+  // element_dof_initial (manual Professional 6.422): the dofs the
+  // element assumes it had in the past when it comes the first time to
+  // live; consumed by the inertia terms of the transient integration
+  // (general.cc). Per element index, one value per element dof.
+  strcpy(name[ELEMENT_DOF_INITIAL],"element_dof_initial");
+  type[ELEMENT_DOF_INITIAL] = DOUBLE_PRECISION;
+  data_length[ELEMENT_DOF_INITIAL] = DATA_ITEM_SIZE;
+  fixed_length[ELEMENT_DOF_INITIAL] = 0;
+  data_class[ELEMENT_DOF_INITIAL] = ELEMENT;
+
+  // internal marker: set at the element's birth step so the initial
+  // field is only used once (versioned like the element state records).
+  strcpy(name[ELEMENT_DOF_INITIAL_APPLIED],"element_dof_initial_applied");
+  type[ELEMENT_DOF_INITIAL_APPLIED] = INTEGER;
+  data_length[ELEMENT_DOF_INITIAL_APPLIED] = 1;
+  fixed_length[ELEMENT_DOF_INITIAL_APPLIED] = 1;
+  version_all[ELEMENT_DOF_INITIAL_APPLIED] = 1;
+  external[ELEMENT_DOF_INITIAL_APPLIED] = 0;
+  data_class[ELEMENT_DOF_INITIAL_APPLIED] = ELEMENT;
+
+  // post_apply (manual Professional 6.900): global switch of the post
+  // processing commands (post_* records evaluated per step). Default
+  // -yes; only the post_node_rhside_ratio is exempt. Registered with
+  // the -no consumption pending (no corpus test uses -no).
+  strcpy(name[POST_APPLY],"post_apply");
+  type[POST_APPLY] = INTEGER;
+  data_length[POST_APPLY] = 1;
+  no_index[POST_APPLY] = 1;
+
+  // print_database_calculation (6.972) / print_gid_calculation: global
+  // switches of the final .dbs/.flavia output at the end of the run.
+  // Consumed in exit_tn (miscel.cc): -no skips the final database/gid
+  // dump (large1 uses it to keep the huge 3D run lean).
+  strcpy(name[PRINT_DATABASE_CALCULATION],"print_database_calculation");
+  type[PRINT_DATABASE_CALCULATION] = INTEGER;
+  data_length[PRINT_DATABASE_CALCULATION] = 1;
+  no_index[PRINT_DATABASE_CALCULATION] = 1;
+
+  strcpy(name[PRINT_GID_CALCULATION],"print_gid_calculation");
+  type[PRINT_GID_CALCULATION] = INTEGER;
+  data_length[PRINT_GID_CALCULATION] = 1;
+  no_index[PRINT_GID_CALCULATION] = 1;
+
+  // print_group_data (manual Professional 6.990): plot group_* data
+  // items in the GiD output for isoparametric elements (and fill the
+  // element_print_group_data records). Registered parse-only in this
+  // batch (the GiD group-data writing is pending; distri3 only lists
+  // the young modulus distribution without a target on it).
+  strcpy(name[PRINT_GROUP_DATA],"print_group_data");
+  type[PRINT_GROUP_DATA] = INTEGER;
+  data_length[PRINT_GROUP_DATA] = 1;
+  fixed_length[PRINT_GROUP_DATA] = 1;
+  no_index[PRINT_GROUP_DATA] = 1;
+
+  // geometry_node_type (manual Professional 6.540) / geometry_
+  // projection_type (6.543): per-geometry records (same index as the
+  // geometry entity) overriding the coordinates used to check nodes on
+  // the geometry (-node / -node_start_refined / -plus_displacement,
+  // default -node_start_refined) and the projection semantics
+  // (-project_inside / -project_exact, default -project_exact).
+  // Consumed in geometry() (geometry.cc).
+  strcpy(name[GEOMETRY_NODE_TYPE],"geometry_node_type");
+  type[GEOMETRY_NODE_TYPE] = INTEGER;
+  data_length[GEOMETRY_NODE_TYPE] = 1;
+  fixed_length[GEOMETRY_NODE_TYPE] = 1;
+  data_class[GEOMETRY_NODE_TYPE] = GEOMETRY;
+
+  strcpy(name[GEOMETRY_PROJECTION_TYPE],"geometry_projection_type");
+  type[GEOMETRY_PROJECTION_TYPE] = INTEGER;
+  data_length[GEOMETRY_PROJECTION_TYPE] = 1;
+  fixed_length[GEOMETRY_PROJECTION_TYPE] = 1;
+  data_class[GEOMETRY_PROJECTION_TYPE] = GEOMETRY;
+
+  // -project_inside keyword value (6.543): everything inside the
+  // geometry is used (the "filled" semantics of the delete/cut family)
+  strcpy(name[PROJECT_INSIDE],"project_inside");
+  type[PROJECT_INSIDE] = INTEGER;
+  data_length[PROJECT_INSIDE] = 1;
+
+  // print_node_geometry_present (6.995) + _node_type (6.996): switch on
+  // the filling of the per-node node_geometry_present record (6.886:
+  // the list of geometries in which each node is present) and the
+  // default node_type of that check. Filled in step_start (top.cc).
+  strcpy(name[PRINT_NODE_GEOMETRY_PRESENT],"print_node_geometry_present");
+  type[PRINT_NODE_GEOMETRY_PRESENT] = INTEGER;
+  data_length[PRINT_NODE_GEOMETRY_PRESENT] = 1;
+  no_index[PRINT_NODE_GEOMETRY_PRESENT] = 1;
+
+  strcpy(name[PRINT_NODE_GEOMETRY_PRESENT_NODE_TYPE],
+    "print_node_geometry_present_node_type");
+  type[PRINT_NODE_GEOMETRY_PRESENT_NODE_TYPE] = INTEGER;
+  data_length[PRINT_NODE_GEOMETRY_PRESENT_NODE_TYPE] = 1;
+  no_index[PRINT_NODE_GEOMETRY_PRESENT_NODE_TYPE] = 1;
+
+  // node_geometry_present (6.886): per node index, the list of
+  // geometries in which the node is present, stored as pairs
+  // (geometry name value, geometry index). Fill on/off with
+  // print_node_geometry_present.
+  strcpy(name[NODE_GEOMETRY_PRESENT],"node_geometry_present");
+  type[NODE_GEOMETRY_PRESENT] = INTEGER;
+  data_length[NODE_GEOMETRY_PRESENT] = DATA_ITEM_SIZE;
+  fixed_length[NODE_GEOMETRY_PRESENT] = 0;
+  version_all[NODE_GEOMETRY_PRESENT] = 1;
+  data_class[NODE_GEOMETRY_PRESENT] = NODE;
+
   strcpy(name[CONTROL_CONTACT_APPLY],"control_contact_apply");
   type[CONTROL_CONTACT_APPLY] = INTEGER;
   data_length[CONTROL_CONTACT_APPLY] = 1;
@@ -5077,6 +5195,18 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   data_class[GROUP_TRUSS_YOUNG] = TRUSS;
   data_required[GROUP_TRUSS_YOUNG] = GROUP_TYPE;
 
+  strcpy(name[GROUP_TRUSS_EXPANSION],"group_truss_expansion");
+  type[GROUP_TRUSS_EXPANSION] = DOUBLE_PRECISION;
+  data_length[GROUP_TRUSS_EXPANSION] = 1;
+  data_class[GROUP_TRUSS_EXPANSION] = TRUSS;
+  data_required[GROUP_TRUSS_EXPANSION] = GROUP_TYPE;
+
+  strcpy(name[GROUP_TRUSS_INITIAL_FORCE],"group_truss_initial_force");
+  type[GROUP_TRUSS_INITIAL_FORCE] = DOUBLE_PRECISION;
+  data_length[GROUP_TRUSS_INITIAL_FORCE] = 1;
+  data_class[GROUP_TRUSS_INITIAL_FORCE] = TRUSS;
+  data_required[GROUP_TRUSS_INITIAL_FORCE] = GROUP_TYPE;
+
   strcpy(name[GROUP_TYPE],"group_type");
   type[GROUP_TYPE] = INTEGER;
   data_length[GROUP_TYPE] = MTYPE;
@@ -7211,6 +7341,20 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   fixed_length[CONTROL_MESH_TRUSS_DISTRIBUTE_MPC_EXACT] = 1;
   data_class[CONTROL_MESH_TRUSS_DISTRIBUTE_MPC_EXACT] = CONTROL;
 
+  // control_mesh_truss_distribute_mpc_element_group_truss (manual
+  // Professional 6.248): the truss element groups whose nodes are
+  // coupled to the isoparametric elements. Consumption PENDING
+  // (same family as the parent record above; registered so the truss
+  // distribute corpus tests parse - the target physics of truss11/12
+  // is unaffected: all nodes are prescribed/fixed there).
+  strcpy(name[CONTROL_MESH_TRUSS_DISTRIBUTE_MPC_ELEMENT_GROUP_TRUSS],
+    "control_mesh_truss_distribute_mpc_element_group_truss");
+  type[CONTROL_MESH_TRUSS_DISTRIBUTE_MPC_ELEMENT_GROUP_TRUSS] = INTEGER;
+  data_length[CONTROL_MESH_TRUSS_DISTRIBUTE_MPC_ELEMENT_GROUP_TRUSS] = 1;
+  fixed_length[CONTROL_MESH_TRUSS_DISTRIBUTE_MPC_ELEMENT_GROUP_TRUSS] = 1;
+  data_class[CONTROL_MESH_TRUSS_DISTRIBUTE_MPC_ELEMENT_GROUP_TRUSS] =
+    CONTROL;
+
   // strain_volume_* (manual Professional 6.96x): prescribed volume
   // strain and its element. Consumption PENDING.
   strcpy(name[STRAIN_VOLUME_ABSOLUTE_TIME],"strain_volume_absolute_time");
@@ -8467,6 +8611,14 @@ long int db_number( char str[] )
       return CONTROL_OPTIONS_SOLVER;
     else if ( !strcmp( str, "group_truss_elasti_young" ) )
       return GROUP_TRUSS_YOUNG;
+    else if ( !strcmp( str, "control_mesh_delete_geometry_move_node" ) )
+      // Professional spelling (manual 6.19x) of the GNU canonical
+      // control_mesh_delete_geometry_movenodes record
+      return CONTROL_MESH_DELETE_GEOMETRY_MOVENODES;
+    else if ( !strcmp( str, "repeat_save_calculate_result" ) )
+      // Professional name of the GNU canonical repeat_calculate_result
+      // record (the average/variance analysis of control_repeat_save)
+      return REPEAT_CALCULATE_RESULT;
     else if ( !strcmp( str, "group_materi_plasti_hypo_wolffersdorff" ) )
       // Professional spelling (double f); GNU canonical is wolfersdorff
       return GROUP_MATERI_PLASTI_HYPO_WOLFERSDORFF;

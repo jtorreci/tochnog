@@ -34,6 +34,8 @@ void truss( long int element, long int element_group,
   double mass=0., dtime=0., 
     group_truss_young=0., group_truss_area=0., 
     group_truss_density=0., group_truss_plasti=1.e20,
+    group_truss_expansion=0., group_truss_initial_force=0.,
+    inc_temperature=0.,
     truss_stiffness=0., incremental_length=0., 
     old_truss_force=0., new_truss_force=0., new_truss_force_mix=0., fac=0., tmp=0., 
     old_length=0., new_length=0., initial_length=0., ddum[1],
@@ -75,6 +77,10 @@ void truss( long int element, long int element_group,
       ldum, VERSION_NORMAL, GET_IF_EXISTS );
     db( GROUP_TRUSS_ROPE, element_group, &group_truss_rope, ddum,
        ldum, VERSION_NORMAL, GET_IF_EXISTS );
+    db( GROUP_TRUSS_EXPANSION, element_group, idum, &group_truss_expansion,
+      ldum, VERSION_NORMAL, GET_IF_EXISTS );
+    db( GROUP_TRUSS_INITIAL_FORCE, element_group, idum,
+      &group_truss_initial_force, ldum, VERSION_NORMAL, GET_IF_EXISTS );
     db( GROUP_TRUSS_MEMORY, element_group, &memory, ddum,
        ldum, VERSION_NORMAL, GET_IF_EXISTS );
     db( OPTIONS_INERTIA, 0, &options_inertia, ddum, 
@@ -144,12 +150,31 @@ void truss( long int element, long int element_group,
       truss_stiffness = group_truss_young * group_truss_area / initial_length;
     }
 
+      // thermal expansion (manual Professional 6.775): a temperature
+      // increment dT causes a free thermal incremental length
+      // alpha*dT*initial_length; the mechanical stretch that remains
+      // after subtracting it is what builds the truss force.
+    if ( condif_temperature && group_truss_expansion!=0. ) {
+      inc_temperature = 0.;
+      for ( inol=0; inol<nnol; inol++ )
+        inc_temperature += new_dof[inol*nuknwn+temp_indx] -
+          old_dof[inol*nuknwn+temp_indx];
+      inc_temperature /= nnol;
+      incremental_length -= group_truss_expansion * inc_temperature *
+        initial_length;
+    }
+
       // mass
     mass = initial_length * group_truss_area * group_truss_density;
 
       // forces
-    db( ELEMENT_TRUSS_FORCE, element, idum, &old_truss_force, 
-      length, VERSION_NORMAL, GET_IF_EXISTS );
+    if ( db_active_index( ELEMENT_TRUSS_FORCE, element, VERSION_NORMAL ) )
+      db( ELEMENT_TRUSS_FORCE, element, idum, &old_truss_force,
+        length, VERSION_NORMAL, GET );
+    else
+      // element born now: it carries group_truss_initial_force (manual
+      // Professional 6.776) from the start of its life
+      old_truss_force = group_truss_initial_force;
     new_truss_force = old_truss_force + truss_stiffness * incremental_length;
     if      ( new_truss_force>group_truss_plasti*group_truss_area )
       new_truss_force = group_truss_plasti*group_truss_area;

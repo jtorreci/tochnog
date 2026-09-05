@@ -657,6 +657,12 @@ void step_start( long int task, long int options_solver[], double dtime, double 
 
   db( ICONTROL, 0, &icontrol, ddum, ldum, VERSION_NORMAL, GET );
 
+  // node_geometry_present (manual Professional 6.886): fill the
+  // per-node list of present geometries at the START of every step,
+  // when the node coordinates still hold the converged state of the
+  // previous step (measured on the Professional: the last step wins).
+  node_geometry_present_calculate();
+
   input_runtime();
 
   if ( db_active_index( EXIT_TOCHNOG, 0, VERSION_NORMAL )  ) {
@@ -1141,6 +1147,22 @@ void step_close( long int task, long int ipar, long int npar, long int ipar_i, l
   ival = get_new_int(DATA_ITEM_SIZE);
 
   db( ICONTROL, 0, &icontrol, ddum, ldum, VERSION_NORMAL, GET );
+
+  // element_dof_initial (manual Professional 6.422): an element that
+  // carries an initial past-dof field applies it during its birth step
+  // (general.cc); once that step has converged the marker is set so the
+  // following steps integrate from the regular step-old dofs.
+  if ( task==YES ) {
+    long int ielem=0, max_elem_edi=0, len_one=1, one=1;
+    db_max_index( ELEMENT_DOF_INITIAL, max_elem_edi, VERSION_NORMAL, GET );
+    for ( ielem=0; ielem<=max_elem_edi; ielem++ ) {
+      if ( db_active_index( ELEMENT_DOF_INITIAL, ielem, VERSION_NORMAL ) &&
+           !db_active_index( ELEMENT_DOF_INITIAL_APPLIED, ielem,
+             VERSION_NORMAL ) )
+        db( ELEMENT_DOF_INITIAL_APPLIED, ielem, &one, ddum, len_one,
+          VERSION_NORMAL, PUT );
+    }
+  }
 
   if ( db_active_index( CONTROL_MESH_RENUMBER, icontrol, VERSION_NORMAL ) ) {
     db( CONTROL_MESH_RENUMBER, icontrol, renumber, ddum, ldum, VERSION_NORMAL, GET );

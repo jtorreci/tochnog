@@ -489,6 +489,20 @@ void calculate( void )
         post_calcul_unknown_operat[(ncalcul-1)*2+0] = unknown;
         post_calcul_unknown_operat[(ncalcul-1)*2+1] = calcul_operat;
       }
+      else if ( unknown==-MATERI_STRESS && labs(calcul_operat)==K0 ) {
+        // post_calcul -materi_stress -k0 (manual Professional 6.901):
+        // the ratio of the average horizontal stress over the vertical
+        // one (the earth-pressure coefficient at rest of the resolved
+        // state). One scalar per node/point; the .dbs post_calcul_label
+        // of the Professional is "-k0_sig" (measured on k0.dat).
+        ncalcul++;
+        strcpy( post_calcul_names[ncalcul-1], "k0_sig" );
+        strcpy( post_calcul_names_without_extension[ncalcul-1],
+          post_calcul_names[ncalcul-1] );
+        post_calcul_scal_vec_mat[ncalcul-1] = -SCALAR;
+        post_calcul_unknown_operat[(ncalcul-1)*2+0] = unknown;
+        post_calcul_unknown_operat[(ncalcul-1)*2+1] = calcul_operat;
+      }
       else if ( unknown==-MATERI_STRESS && labs(calcul_operat)==FORCE ) {
         long int iforce=0, icomp=0, nforce_stems=0, nforce_comp=0;
         char force_stem[MCHAR], force_comp[MCHAR];
@@ -944,6 +958,32 @@ void calculate_operat( double unknown_values[], long int inod,
       else {
         result[0] = 0.;
       }
+      length_result = 1;
+    }
+    else
+      db_error( POST_CALCUL, 0 );
+  }
+  else if ( labs(calcul_operat)==K0 ) {
+    // post_calcul -materi_stress -k0 (manual Professional 6.901): the
+    // ratio of the average horizontal stress over the vertical one,
+    // 0.5*(sigxx+sigzz)/sigyy in 2D and 0.5*(sigxx+sigyy)/sigzz in 3D.
+    // Verified against the Professional .dbs of k0.dat (0.1111111111 =
+    // nu/(1-nu) of the laterally confined column at every node).
+    if ( calcul_matrix ) {
+      double sig_h = 0., sig_v = 0.;
+      if ( ndim==2 ) {
+        sig_h = 0.5 * ( unknown_values[0] + unknown_values[8] );
+        sig_v = unknown_values[4];
+      }
+      else if ( ndim==3 ) {
+        sig_h = 0.5 * ( unknown_values[0] + unknown_values[4] );
+        sig_v = unknown_values[8];
+      }
+      else {
+        sig_h = 0.5 * ( unknown_values[4] + unknown_values[8] );
+        sig_v = unknown_values[0];
+      }
+      result[0] = ( scalar_dabs(sig_v)>TINY ) ? sig_h/sig_v : 0.;
       length_result = 1;
     }
     else

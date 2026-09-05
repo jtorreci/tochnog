@@ -503,10 +503,22 @@ void exit_tn( long int print_database_type )
   }
   else {
     assert( print_database_type==-YES );
-    print_database( -1, VERSION_NORMAL, -YES );
+    // print_database_calculation (manual Professional 6.972): switch of
+    // the final .dbs output at the end of the run; -no skips it (the
+    // large1 performance test keeps the huge 3D dump away). Default -yes.
+    long int print_database_calculation = -YES;
+    db( PRINT_DATABASE_CALCULATION, 0, &print_database_calculation, ddum,
+      ldum, VERSION_NORMAL, GET_IF_EXISTS );
+    if ( print_database_calculation!=-NO )
+      print_database( -1, VERSION_NORMAL, -YES );
   }
 
-  print_gid( -YES );
+  // print_gid_calculation: switch of the final GiD (.flavia) output.
+  long int print_gid_calculation = -YES;
+  db( PRINT_GID_CALCULATION, 0, &print_gid_calculation, ddum, ldum,
+    VERSION_NORMAL, GET_IF_EXISTS );
+  if ( print_gid_calculation!=-NO )
+    print_gid( -YES );
   if ( db_partialname_any("control_print_dx") ) print_dx( -YES );
 
   db( DOF_LABEL, 0, dof_label, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );

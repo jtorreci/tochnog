@@ -950,6 +950,8 @@ enum {
   GROUP_TRUSS_MEMORY,
   GROUP_TRUSS_PLASTI,
   GROUP_TRUSS_YOUNG,
+  GROUP_TRUSS_EXPANSION,
+  GROUP_TRUSS_INITIAL_FORCE,
   GROUP_TYPE,
   GROUP_USER_DATA,
   GROUP_USER_UMAT,
@@ -1429,6 +1431,7 @@ enum {
   CHANGE_DATAITEM_TIME_UNTIL_VALUE,
   CONTROL_MESH_TRUSS_DISTRIBUTE_MPC,
   CONTROL_MESH_TRUSS_DISTRIBUTE_MPC_EXACT,
+  CONTROL_MESH_TRUSS_DISTRIBUTE_MPC_ELEMENT_GROUP_TRUSS,
   MPC_ELEMENT_GROUP,
   MPC_ELEMENT_GROUP_DOF,
   MPC_ELEMENT_GROUP_GEOMETRY,
@@ -1522,6 +1525,33 @@ enum {
   CONTROL_MESH_CUT_NODE_FORCE,
   CONTROL_BOUNDA_RELAX,
   CONTROL_BOUNDA_RELAX_GEOMETRY,
+  // SMALL-FAMILY BATCH (2026-09-05): truss thermal expansion + initial
+  // force consumption (group_truss_expansion/group_truss_initial_force),
+  // the post_calcul -k0 operator (manual Professional 6.901, the ratio
+  // of the average horizontal stress over the vertical one) and its
+  // output item -k0_sig, the element_dof_initial past-dof field
+  // (6.422) + its applied marker, the post_apply/print_database_
+  // calculation/print_gid_calculation global switches (6.900/6.972/
+  // 6.99x), the per-geometry geometry_node_type (6.540)/geometry_
+  // projection_type (6.543) records and the node_geometry_present
+  // (6.886) + print_node_geometry_present (6.995) machinery with the
+  // -project_inside keyword value. Appended at the end of the enum to
+  // keep existing values stable (tochnog.h and tochnog-mod.h stay in
+  // sync).
+  K0,
+  K0_SIG,
+  ELEMENT_DOF_INITIAL,
+  ELEMENT_DOF_INITIAL_APPLIED,
+  POST_APPLY,
+  PRINT_DATABASE_CALCULATION,
+  PRINT_GID_CALCULATION,
+  GEOMETRY_NODE_TYPE,
+  GEOMETRY_PROJECTION_TYPE,
+  PROJECT_INSIDE,
+  PRINT_NODE_GEOMETRY_PRESENT,
+  PRINT_NODE_GEOMETRY_PRESENT_NODE_TYPE,
+  NODE_GEOMETRY_PRESENT,
+  PRINT_GROUP_DATA,
   LAST_DUMMY }; // keep LAST_DUMMY always the last one
 
 #define MDAT LAST_DUMMY+DATA_ITEM_SIZE  // reserve space for unknowns
@@ -1849,10 +1879,11 @@ void      general( long int element, long int name, long int nnol, long int gr,
 void      generate_beam_truss( long int icontrol, long int task );
 void      generate_spring( long int icontrol );
 void      generate_interface( long int icontrol );
-void      geometry( long int inod, double co[], long int geometry_entity[],
+ void      geometry( long int inod, double co[], long int geometry_entity[],
             long int &found, double &factor, double normal[],
             double &penetration, double projection[],
             long int node_type, long int projection_type, long int version );
+ void      node_geometry_present_calculate( void );
 void      get_element_matrix_unknowns( long int element,
             long int element_matrix_unknowns[] );
 long int  get_group_data( long int idat, long int group, long int element,
