@@ -1043,9 +1043,23 @@ transient; taylor3 = the 45-s timeout marginal, flaky in either binary).
 ### 14.3 What this does NOT change
 
 - The mpc3/4 tying (0.299/0.350 vs 1/3), ground8 (phreatic_multiple +
-  mechanics), dynamic1/2/5/8 (materi_dynamic), ground15/16, mpc5/6:
+  mechanics), dynamic1/2/5/8 (materi_dynamic), mpc5/6:
   different mechanisms (the mpc generation ties the velocity dofs but
   the mixed σ-dofs of the tied nodes stay free → non-homogeneous field;
   the ground8 = the phreatic-multiple/mechanics coupling; the
   dynamic* = the explicit limit of the staggered scheme) — PENDIENTE
   with the fine diagnosis of the next lote.
+
+### 14.4 ground14/15/16 are NOT solver blockers (u-p sprint, 2026-09-05)
+
+The safety piping/lifting tests (artesian column, ground14/15/16) were
+listed above as pending mixed-solve cases. The u-p consolidation sprint
+closed them with a DIFFERENT root cause, outside the solver: the GNU
+legacy defaults made the model pseudo-dynamic (`inertia_apply` default
+-yes with density) and consolidation-coupled (`groundflow_consolidation_
+apply` default -yes), while the Professional runs these tests static and
+without the material-divergence coupling (defaults -no). With both
+defaults aligned (commit `0560dcf`) the drained steady state is reached
+in the first step and ground14/15/16 are rc=0 — see the SEGUIMIENTO
+registry row of that sprint. The Bi-CG breakdown seen at step 1 was the
+honest failure of the legacy pseudo-dynamic system, not a solver defect.

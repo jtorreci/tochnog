@@ -22,8 +22,10 @@
 
 - Indexed by the timestep control index (`icontrol`), so different timesteps
   can switch consolidation independently.
-- `GET_IF_EXISTS`: absent record keeps the default `-YES`, so the global
-  `groundflow_consolidation_apply` (or the default `-YES`) governs.
+- `GET_IF_EXISTS`: absent record keeps the default `-NO`, so the global
+  `groundflow_consolidation_apply` (or the default `-NO`) governs. The default
+  is `-NO` since the u-p consolidation sprint (commit `0560dcf`); the GNU
+  legacy initializer was `-YES`.
 - Same precedence chain as `groundflow_consolidation_apply`; this record sits
   above the global one but below the legacy `CONTROL_OPTIONS_SKIP_...`.
 
@@ -33,4 +35,4 @@
 
 ## Hardcoded parameters / pending refactorings
 
-- Default `-YES` is implicit in the variable initializer in `groundflow()`.
+- Default `-NO` is implicit in the variable initializer in `groundflow()`.

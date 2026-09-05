@@ -145,9 +145,9 @@ Each file corresponds to the same feature in the [User Manual](../manual-user/).
 
 ## P6 — groundflow family (2026-08-20) and inherited GNU keywords
 
-- [groundflow_consolidation_apply](groundflow_consolidation_apply.md) — consolidation term gating in groundfl.cc (group > global > control precedence; database.cc duplicate-registration fix).
+- [groundflow_consolidation_apply](groundflow_consolidation_apply.md) — consolidation term gating in groundfl.cc (activation by global/control -yes only; group-level -no excludes; database.cc duplicate-registration fix). Default -no (Professional); the u-p sprint measured the Professional semantics on ground14 A/B.
 - [control_groundflow_consolidation_apply](control_groundflow_consolidation_apply.md) — per-timestep consolidation switch.
-- [group_groundflow_consolidation_apply](group_groundflow_consolidation_apply.md) — per-group consolidation switch.
+- [group_groundflow_consolidation_apply](group_groundflow_consolidation_apply.md) — per-group consolidation switch (exclusion only).
 - [groundflow_nonsaturated_apply](groundflow_nonsaturated_apply.md) — global gate of the unsaturated model.
 - [control_groundflow_nonsaturated_apply](control_groundflow_nonsaturated_apply.md) — per-timestep gate of the unsaturated model.
 - [group_groundflow_nonsaturated_vangenuchten](group_groundflow_nonsaturated_vangenuchten.md) — van Genuchten law in groundda.cc groundflow_data (analytic dS/dphi, Mualem krel, groundflow_saturation dof).
@@ -329,6 +329,7 @@ Each file corresponds to the same feature in the [User Manual](../manual-user/).
 
 ## Dinamica: materi_acceleration / materi_dynamic / condicionales / registros
 
+- [inertia_apply](inertia_apply.md) - OPTIONS_INERTIA / CONTROL_OPTIONS_INERTIA gating the lumped transient term of the principal dofs in general.cc/truss.cc; default flipped -yes -> -no (Professional, manual 6.785). Measured on ground14: the legacy default oscillated the momentum around the drained state (sigma' -9.53 at t=1 s vs -10).
 - [materi_acceleration](materi_acceleration.md) - enum MATERI_ACCELERATION + acc_indx, handler de initia (input.cc), basenames accx/accy/accz (database.cc), update derivado en parallel_new_dof_diagonal (dof.cc), caso especial -accx en bounda.cc. Verificado contra el binario Professional (dynamic3/4 rc=0).
 - [materi_dynamic](materi_dynamic.md) - registro global MATERI_DYNAMIC (double, no_index) + control_materi_dynamic a double; blend del sigvec del momento con old_sig y escalado f de la rigidez del momento en materi.cc y truss.cc. A/B contra el Professional documentado (f=1 byte-identico; f=0 estable solo dentro del CFL del esquema GNU).
 - [start_if_not](start_if_not.md) - extension de input_read_string(): start_if_not/end_if_not con using_if_not; parada del value-loop en los 4 tokens.

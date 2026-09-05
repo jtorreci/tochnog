@@ -22,7 +22,9 @@
 
 - Indexed by element group (`gr`); the group resolution follows the standard
   `group_type ... -groundflow` mechanism.
-- `GET_IF_EXISTS`: absent record keeps default `-YES`.
+- `GET_IF_EXISTS`: absent record keeps default `-NO` (since the u-p
+  consolidation sprint, commit `0560dcf`; the GNU legacy initializer was
+  `-YES`, aligned with the Professional default `-no`).
 - Lowest precedence of the three consolidation switches: if the global or
   timestep switch sets `-NO`, the group cannot re-enable it (only `-NO` is
   propagated to `materidivergence`).

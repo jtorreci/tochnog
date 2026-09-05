@@ -141,9 +141,9 @@ input parameters it accepts.
 
 ## P6 — groundflow family (2026-08-20) and inherited GNU keywords
 
-- [groundflow_consolidation_apply](groundflow_consolidation_apply.md) — global -yes/-no switch for the consolidation (material divergence) term.
+- [groundflow_consolidation_apply](groundflow_consolidation_apply.md) — global -yes/-no switch for the consolidation (material divergence) term. Default -no (Professional); legacy GNU default -yes changed in the u-p sprint (ground14/15/16 rc=0).
 - [control_groundflow_consolidation_apply](control_groundflow_consolidation_apply.md) — per-timestep switch for the consolidation term.
-- [group_groundflow_consolidation_apply](group_groundflow_consolidation_apply.md) — per-group switch for the consolidation term.
+- [group_groundflow_consolidation_apply](group_groundflow_consolidation_apply.md) — per-group switch for the consolidation term (-no excludes the group from an activated coupling; a group -yes alone cannot activate it, measured on the Professional).
 - [groundflow_nonsaturated_apply](groundflow_nonsaturated_apply.md) — global gate for the unsaturated (van Genuchten) model.
 - [control_groundflow_nonsaturated_apply](control_groundflow_nonsaturated_apply.md) — per-timestep gate for the unsaturated model.
 - [group_groundflow_nonsaturated_vangenuchten](group_groundflow_nonsaturated_vangenuchten.md) — van Genuchten unsaturated soil model (retention, capacity, Mualem krel).
@@ -331,6 +331,7 @@ input parameters it accepts.
 
 ## Dinamica: materi_acceleration / materi_dynamic / condicionales / registros
 
+- [inertia_apply](inertia_apply.md) - global switch of the principal-dof inertia terms (material mass, heat capacity, groundflow storage). Default -no (Professional semantics, manual 6.785); the GNU legacy -yes default made density-bearing models pseudo-dynamic. Unlocks ground14/15/16 (rc=0, drained state in the 1 s window).
 - [materi_acceleration](materi_acceleration.md) - los dofs de aceleracion (manual 4.11): records derivados acc = (v_new - v_old)/dt; bounda_dof -accx impone el bound de velocidad v_new = v_old + a*dt (base excitation). Unlocks dynamic3/dynamic4 (rc=0) y el parse de dynamic2/5/6/7/8, earthquake_1/2/3, smc_1/2.
 - [materi_dynamic](materi_dynamic.md) - el factor de mezcla temporal sigma = (1-f)*sigma(t) + f*sigma(t+dt) (6.800) y control_materi_dynamic (6.141). Implementado en materi() y truss(); f=1 = esquema historico byte-identico. Los tests dynamic1/2/5/8 siguen RUNFAIL por el esquema de velocidades del GNU (bloqueador de solver, no de parse).
 - [start_if_not](start_if_not.md) - bloques condicionales start_if_not ... end_if_not del data part (con start_if ... end_if ya existente).

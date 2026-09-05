@@ -24,13 +24,34 @@
 
 - `no_index`: the database accessor is called with the fixed index `0`.
 - Read with `GET_IF_EXISTS`: when the record is absent, the variable keeps its
-  default `-YES` and nothing changes.
+  default `-NO` and nothing changes. The default is `-NO` (aligned with the
+  Professional manual 6.556; the GNU legacy initializer was `-YES`, changed in
+  the u-p consolidation sprint, commit `0560dcf`).
 - Precedence (from lowest to highest): `GROUP_GROUNDFLOW_MATERIDIVERGENCE`,
   `GROUP_GROUNDFLOW_CONSOLIDATION_APPLY` (group), `GROUNDFLOW_CONSOLIDATION_APPLY`
   (global), `CONTROL_GROUNDFLOW_CONSOLIDATION_APPLY` (timestep),
   `OPTIONS_SKIP_GROUNDFLOW_MATERIDIVERGENCE` /
   `CONTROL_OPTIONS_SKIP_GROUNDFLOW_MATERIDIVERGENCE` (legacy skip switches).
-  Any `-NO`/`-YES`-skip forces `materidivergence = -NO`.
+  Any `-NO`/`-YES`-skip forces `materidivergence = -NO`; any explicit `-yes`
+  record activates the coupling unless a higher-precedence record turns it off.
+
+## Why the default changed (measured)
+
+- Ground14/15/16 of the corpus (safety piping/lifting of an artesian column,
+  manual Pro 2.4.1/6.919) do NOT request consolidation. The Professional
+  binary (25-10-2023) with the record absent reaches the drained steady state
+  inside the 1 s window: sigma'(0) = -10.000 exact at t = 0.5 s (its default
+  `groundflow_consolidation_apply` is `-no`, so no skeleton-volume source in
+  the pressure equation and no u-p transient).
+- The GNU legacy default `-yes` ran the true consolidation transient of the
+  model (excess pore pressure dissipating over ~10^2 s: sigma'(0) = -9.53 at
+  t = 1 s) and the corpus targets failed.
+- With the coupling OFF, the GNU reproduces the Professional drained state to
+  8 digits in the same two 0.5 s steps: ground14/15/16 rc = 0.
+- Cross-check with the coupling FORCED on both binaries (`-yes`): the GNU and
+  the Professional transients agree within a few % (sigma'(0) -9.53 vs -9.29
+  at t = 1 s), so the GNU coupling itself was never the problem — only the
+  default.
 
 ## External dependencies
 
