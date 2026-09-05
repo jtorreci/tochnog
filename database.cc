@@ -908,6 +908,17 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   data_length[CONTROL_CHANGE_DATAITEM_APPLY] = 1;
   data_class[CONTROL_CHANGE_DATAITEM_APPLY] = CONTROL;
 
+  strcpy(name[CONTROL_BOUNDA_RELAX],"control_bounda_relax");
+  type[CONTROL_BOUNDA_RELAX] = INTEGER;
+  data_length[CONTROL_BOUNDA_RELAX] = 1;
+  data_class[CONTROL_BOUNDA_RELAX] = CONTROL;
+
+  strcpy(name[CONTROL_BOUNDA_RELAX_GEOMETRY],"control_bounda_relax_geometry");
+  type[CONTROL_BOUNDA_RELAX_GEOMETRY] = INTEGER;
+  data_length[CONTROL_BOUNDA_RELAX_GEOMETRY] = 2;
+  data_class[CONTROL_BOUNDA_RELAX_GEOMETRY] = CONTROL;
+  data_required[CONTROL_BOUNDA_RELAX_GEOMETRY] = CONTROL_BOUNDA_RELAX;
+
   strcpy(name[CONTROL_CONTACT_APPLY],"control_contact_apply");
   type[CONTROL_CONTACT_APPLY] = INTEGER;
   data_length[CONTROL_CONTACT_APPLY] = 1;
@@ -1146,6 +1157,18 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   data_length[CONTROL_MESH_COPY] = DATA_ITEM_SIZE;
   fixed_length[CONTROL_MESH_COPY] = 0;
   data_class[CONTROL_MESH_COPY] = CONTROL;
+
+  strcpy(name[CONTROL_MESH_CUT_GEOMETRY],"control_mesh_cut_geometry");
+  type[CONTROL_MESH_CUT_GEOMETRY] = INTEGER;
+  data_length[CONTROL_MESH_CUT_GEOMETRY] = 2;
+  data_class[CONTROL_MESH_CUT_GEOMETRY] = CONTROL;
+
+  strcpy(name[CONTROL_MESH_CUT_NODE_FORCE],"control_mesh_cut_node_force");
+  type[CONTROL_MESH_CUT_NODE_FORCE] = INTEGER;
+  data_length[CONTROL_MESH_CUT_NODE_FORCE] = MDIM;
+  fixed_length[CONTROL_MESH_CUT_NODE_FORCE] = 0;
+  data_class[CONTROL_MESH_CUT_NODE_FORCE] = CONTROL;
+  data_required[CONTROL_MESH_CUT_NODE_FORCE] = CONTROL_MESH_CUT_GEOMETRY;
 
   strcpy(name[CONTROL_MESH_EXTRUDE],"control_mesh_extrude");
   type[CONTROL_MESH_EXTRUDE] = DOUBLE_PRECISION;
@@ -8406,6 +8429,12 @@ long int db_number( char str[] )
   // control_mesh_merge_geometry_not (manual 6.215)
   if ( !strcmp( str, "control_mesh_merge_not" ) )
     return CONTROL_MESH_MERGE_NOT;
+  // control_mesh_cut_force (manual Professional 6.164): the manual
+  // name of the record the corpus/Professional write as
+  // control_mesh_cut_node_force (6.163 companion; the .dbs of the
+  // Professional 25-10-2023 stores control_mesh_cut_node_force).
+  if ( !strcmp( str, "control_mesh_cut_force" ) )
+    return CONTROL_MESH_CUT_NODE_FORCE;
   // control_mesh_merge_eps_coord (manual 6.212): Professional spelling
   // of the legacy control_mesh_merge_epscoord
   if ( !strcmp( str, "control_mesh_merge_eps_coord" ) )

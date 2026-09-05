@@ -117,7 +117,8 @@ void geometry( long int inod, double co[], long int geometry_entity[],
       tolerance = geometry_circle[ndim+1];
       array_subtract( coord, centre, tmp_vec1, ndim );
       tmp = array_size( tmp_vec1, ndim );
-      if ( projection_type==CONTROL_MESH_DELETE_GEOMETRY ) {
+      if ( ( projection_type==CONTROL_MESH_DELETE_GEOMETRY ||
+             projection_type==CONTROL_MESH_CUT_GEOMETRY ) ) {
         if ( tmp<=(radius+tolerance+EPS_COORD) ) in_geometry = 1;
       }
       else {
@@ -146,7 +147,8 @@ void geometry( long int inod, double co[], long int geometry_entity[],
       array_subtract( coord, centre, tmp_vec1, ndim );
       tmp = array_size( tmp_vec1, ndim );
       ok = 0;
-      if ( projection_type==CONTROL_MESH_DELETE_GEOMETRY ) {
+      if ( ( projection_type==CONTROL_MESH_DELETE_GEOMETRY ||
+             projection_type==CONTROL_MESH_CUT_GEOMETRY ) ) {
         if ( tmp<=(radius+tolerance+EPS_COORD) )
           ok = 1;
       }
@@ -182,7 +184,8 @@ void geometry( long int inod, double co[], long int geometry_entity[],
       array_subtract( coord, centre, tmp_vec1, ndim );
       tmp = array_size( tmp_vec1, ndim );
       ok = 0;
-      if ( projection_type==CONTROL_MESH_DELETE_GEOMETRY ) {
+      if ( ( projection_type==CONTROL_MESH_DELETE_GEOMETRY ||
+             projection_type==CONTROL_MESH_CUT_GEOMETRY ) ) {
         if ( tmp<=(radius+tolerance+EPS_COORD) )
           ok = 1;
       }
@@ -224,7 +227,8 @@ void geometry( long int inod, double co[], long int geometry_entity[],
       array_subtract( tmp_vec1, tmp_vec0, tmp_vec2, ndim );
       tmp = array_size( tmp_vec2, ndim );
       if ( l>=-EPS_COORD && l<=cylinder_length+EPS_COORD ) {
-        if ( projection_type==CONTROL_MESH_DELETE_GEOMETRY ) {
+        if ( ( projection_type==CONTROL_MESH_DELETE_GEOMETRY ||
+             projection_type==CONTROL_MESH_CUT_GEOMETRY ) ) {
           if ( tmp<=(radius+tolerance+EPS_COORD) )
             in_geometry = 1;
         }
@@ -266,7 +270,8 @@ void geometry( long int inod, double co[], long int geometry_entity[],
       tmp = array_size( tmp_vec2, ndim );
       if ( l>=-EPS_COORD && l<=cylinder_length+EPS_COORD ) {
         ok = 0;
-        if ( projection_type==CONTROL_MESH_DELETE_GEOMETRY ) {
+        if ( ( projection_type==CONTROL_MESH_DELETE_GEOMETRY ||
+             projection_type==CONTROL_MESH_CUT_GEOMETRY ) ) {
           if ( tmp<=(radius+tolerance+EPS_COORD) )
             ok = 1;
         }
@@ -322,7 +327,8 @@ void geometry( long int inod, double co[], long int geometry_entity[],
         array_subtract( xyint, centre, tmp_vec11, ndim );
         tmp1 = array_size( tmp_vec1, ndim );
         
-      if ( projection_type==CONTROL_MESH_DELETE_GEOMETRY ) {
+      if ( ( projection_type==CONTROL_MESH_DELETE_GEOMETRY ||
+             projection_type==CONTROL_MESH_CUT_GEOMETRY ) ) {
         if ( tmp<=(tmp1+tolerance +EPS_COORD) ) in_geometry = 1;
       }
       else {
@@ -510,7 +516,8 @@ void geometry( long int inod, double co[], long int geometry_entity[],
       array_move( geometry_sphere, centre, ndim );
       array_subtract( coord, centre, tmp_vec1, ndim );
       tmp = array_size( tmp_vec1, ndim );
-      if ( projection_type==CONTROL_MESH_DELETE_GEOMETRY ) {
+      if ( ( projection_type==CONTROL_MESH_DELETE_GEOMETRY ||
+             projection_type==CONTROL_MESH_CUT_GEOMETRY ) ) {
         if ( tmp<=(radius+tolerance+EPS_COORD) )
           in_geometry = 1;
       }
@@ -542,7 +549,8 @@ void geometry( long int inod, double co[], long int geometry_entity[],
       array_subtract( coord, centre, tmp_vec1, ndim );
       tmp = array_size( tmp_vec1, ndim );
       ok = 0;
-      if ( projection_type==CONTROL_MESH_DELETE_GEOMETRY ) {
+      if ( ( projection_type==CONTROL_MESH_DELETE_GEOMETRY ||
+             projection_type==CONTROL_MESH_CUT_GEOMETRY ) ) {
         if ( tmp<=(radius+tolerance+EPS_COORD) )
           ok = 1;
       }

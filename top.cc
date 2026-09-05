@@ -787,6 +787,8 @@ void step_start( long int task, long int options_solver[], double dtime, double 
 
   delete_geom( time_current ); 
 
+  mesh_cut( time_current );
+
   failure( time_current ); 
 
   distribute();

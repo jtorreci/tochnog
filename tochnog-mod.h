@@ -1506,6 +1506,18 @@ enum {
   YOUNG_APPARENT,
   POISSON_APPARENT,
   NODE_DOF_PREVIOUS_STEP,
+  // MESH-CUT + BOUNDA-RELAX FAMILIES (2026-09-05): control_mesh_cut_geometry
+  // + control_mesh_cut_node_force (manual Professional 6.163/6.164 - cut
+  // away the mesh part inside a geometry and substitute it by the nodal
+  // forces of the removed elements) and control_bounda_relax (+ _geometry,
+  // manual 6.108/6.109 - store the nodal RHS of prescribed nodes on a
+  // geometry for later relaxation of the boundary conditions). Appended at
+  // the end of the enum to keep existing values stable (tochnog.h and
+  // tochnog-mod.h stay in sync).
+  CONTROL_MESH_CUT_GEOMETRY,
+  CONTROL_MESH_CUT_NODE_FORCE,
+  CONTROL_BOUNDA_RELAX,
+  CONTROL_BOUNDA_RELAX_GEOMETRY,
   LAST_DUMMY }; // keep LAST_DUMMY always the last one
 
 #define MDAT LAST_DUMMY+DATA_ITEM_SIZE  // reserve space for unknowns
@@ -1766,6 +1778,7 @@ void      db_set_dbl( long int idat, long int version );
 long int  db_type( long int idat );
 void      delete_element( long int element, long int version );
 void      delete_geom( double time_current );
+void      mesh_cut( double time_current );
 void      delete_node( long int inod, long int version );
 void      distribute( void );
 void      elem( long int element, long int ithread );
