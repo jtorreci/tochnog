@@ -34,7 +34,7 @@ extern "C"
     double *old_epi, double *new_epi,
     long int *use_pres, long int *use_epi, long int *hypo_type,
     double *softvar_nonloc, double *softvar_loc,
-    int *find_local_sv, int *options_nonlocal );
+    long int *find_local_sv, long int *options_nonlocal );
 
 extern "C" 
   void masin_umat( double *stress, double *statev, double *ddsdde,
@@ -71,7 +71,7 @@ void hypoplasticity( long int element, long int gr,
     length_lowangles=0, length_wolfersdorff=0, length_intergranularstrain=0, 
     pressure_dependent_void_ratio=0, idum[1],
     ndata[1], nhis[1], use_epi[1], use_pres[1], hypo_type[1];
-  int find_local_sv[1], options_nonlocal[1];
+  long int find_local_sv[1], options_nonlocal[1];
   double ddum[1], cohesion[1], epi_R[1], epi_mr[1], 
     epi_mt[1], epi_betar[1], epi_chi[1], time[1], dtime[1],
     softvar_nonloc[1], softvar_loc[1],
