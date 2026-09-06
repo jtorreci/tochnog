@@ -8,6 +8,11 @@ Objetivo: Reducir riesgos de memoria, desbordes de cadena y condiciones de carre
 2) Sanitizers y warnings
 - Añadir objetivos make: audit/asan/ubsan con: -fsanitize=address,undefined -fno-omit-frame-pointer -g -O1, y -Wall -Wextra -Wpedantic.
 - Documentar ejecución y exclusiones cuando faltan dependencias opcionales.
+- ESTADO (2026-09-06): implementado. `make audit` / `make asan` / `make ubsan`
+  en el makefile (sección linux-gcc) + workflow `.github/workflows/ci.yml`
+  (jobs build-test y sanitize). Documentación y verificación: QUALITY-CI.md.
+  Pendiente del punto 2: correr los ejemplos representativos bajo ASan y
+  registrar reportes (punto 5 abajo).
 
 3) Paralelismo
 - Revisar funciones invocadas dentro de parallel_sys_routine: calcul, contact, elem, post, map, geometry. Catalogar escrituras compartidas y envolver en locks o usar buffers por hilo si aplica.
@@ -20,7 +25,8 @@ Objetivo: Reducir riesgos de memoria, desbordes de cadena y condiciones de carre
 - Medir overhead y evaluar trade-offs.
 
 Hitos
-- Semana 1: strings + objetivo make audit.
+- Semana 1: strings + objetivo make audit. (2026-09-06: objetivo make audit
+  + asan/ubsan + CI implementados; el endurecimiento de cadenas continúa)
 - Semana 2: revisión de paralelismo crítico (contact, elem, post) y fixes.
 - Semana 3: validación con sanitizers y reporte final.
 

@@ -13,6 +13,7 @@ Paralelismo
 
 Build/Calidad
 - Objetivos con sanitizers y warnings estrictos obligatorios en CI. Permitir desactivar via flags cuando dependencias de terceros no soportan.
+- Implementado 2026-09-06: make audit/asan/ubsan + workflow CI (ver QUALITY-CI.md). Terceros entran precompilados (no requieren exclusión de sanitize); escape: apuntar SUPERLU_A a una lib sin sanitize.
 
 Registro
 - Mantener informes de auditoría bajo ProjectDocs/ con fecha y alcance.
