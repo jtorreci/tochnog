@@ -69,6 +69,26 @@ starts after the highest ACTIVE user `mpc_node_number` index
 
 ## Pending
 
+- `mpc3`/`mpc4` stay RUNFAIL with the tie GENERATION verified but the
+  SOLVE semantics open. Diagnosis 2026-09-07 (DIAG-SOLVE-MIXTO.md §15):
+  the GNU tie consumption (`mpc_node_apply`, bounda pre-solve +
+  top.cc re-sync) is the VALUE-CONSTRAINED formulation — the slave dof
+  is bounded to sum(factor*master) of the PREVIOUS iteration and its
+  row is dropped WITHOUT the energy-consistent redistribution of its
+  internal force to the masters. On the non-conforming quadratic
+  interface the tied mid-edge node carries 2/3 of the edge traction
+  (corners L/6): dropping the row loses it, the interface equilibrium
+  is violated and the staggered fixed point is 0.454 (mpc3 refined)
+  instead of the homogeneous 1/3. The earlier hypothesis (the mixed
+  σ-dofs of the tied nodes stay free) is REFUTED by measurement: with
+  the slaves pinned to their EXACT homogeneous velocities the free
+  field is still polluted. The Professional is exact at ONE iteration
+  (implicit). The complete fix = the implicit energy-consistent slave
+  elimination inside the staggered solve (prototype implemented and
+  measured in 2026-09-07: fixes the fixed point to 1/3 but does not
+  converge within the 2-iteration corpus default and perturbs the
+  mpc7 ±1e-8 target by 2.4e-8 → reverted; family §8 C of
+  DIAG-SOLVE-MIXTO.md).
 - `mpc5` stays RUNFAIL: it also needs the
   `control_mesh_delete_geometry_factor` family (element half-deletion +
   the stress RESET semantics: the GNU's staggered u-sigma update

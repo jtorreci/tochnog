@@ -1044,11 +1044,10 @@ transient; taylor3 = the 45-s timeout marginal, flaky in either binary).
 
 - The mpc3/4 tying (0.299/0.350 vs 1/3), ground8 (phreatic_multiple +
   mechanics), dynamic1/2/5/8 (materi_dynamic), mpc5/6:
-  different mechanisms (the mpc generation ties the velocity dofs but
-  the mixed σ-dofs of the tied nodes stay free → non-homogeneous field;
-  the ground8 = the phreatic-multiple/mechanics coupling; the
-  dynamic* = the explicit limit of the staggered scheme) — PENDIENTE
-  with the fine diagnosis of the next lote.
+  different mechanisms (see §15 for the measured mpc3/4 mechanism —
+  the "free σ-dofs of the tied nodes" hypothesis of §14.3 is REFUTED
+  there; the ground8 = the phreatic-multiple/mechanics coupling; the
+  dynamic* = the explicit limit of the staggered scheme).
 
 ### 14.4 ground14/15/16 are NOT solver blockers (u-p sprint, 2026-09-05)
 
@@ -1063,3 +1062,119 @@ defaults aligned (commit `0560dcf`) the drained steady state is reached
 in the first step and ground14/15/16 are rc=0 — see the SEGUIMIENTO
 registry row of that sprint. The Bi-CG breakdown seen at step 1 was the
 honest failure of the legacy pseudo-dynamic system, not a solver defect.
+
+---
+
+## 15. The mpc tying of the non-conforming quad9/quad4 interfaces (2026-09-07) — value-constrained ≠ energy-consistent
+
+**Status**: DIAGNOSED. The mpc3/mpc4 "free σ-dofs of the tied nodes"
+hypothesis of §14.3 is REFUTED by the measurements below. The real
+mechanism is the master-slave elimination semantics of the tie, and
+closing mpc3/4 needs the implicit (energy-consistent) slave treatment
+inside the staggered solve — a work unit of the "monolithic/implicit"
+family, NOT a minimal tying patch. No code change landed (the corpus
+stays at the 193-PASS HEAD state).
+
+### 15.1 Measured evidence (repros in /tmp/opencode/mpc_pro)
+
+Test bed: the corpus mpc3 (2D, quad9+quad4 refined with
+`mpc_linear_quadratic`, ties at the x=2/y=2 interfaces) and the coarse
+15-node version, run against the Professional binary (25-10-2023,
+ASCII .dbs) and the GNU HEAD build.
+
+| Experiment | Result at y=1 (disy, post_point (0,1)) | Reading |
+|---|---|---|
+| Pro refined mpc3 (default / 2 / 1 iterations) | **1/3 EXACT** (σyy = 1/3 at every node, 1e-17 noise) | the Pro solves the tie fully implicitly: one iteration suffices |
+| GNU refined mpc3, 2 iterations (corpus default) | 0.2992 | RUNFAIL (the corpus number) |
+| GNU refined mpc3, fixed point (96 it) | 0.4540 | converges to a WRONG fixed point |
+| GNU refined mpc3 WITHOUT ties (dangling free) | 0.2762 | the free-dangling (non-conforming) solution |
+| GNU refined mpc3 with the 4 slaves PINNED to their exact homogeneous velocities (bounda, no mpc records) | 0.3510 (one-pass) | **even with EXACT slave values the field is not homogeneous** → the failure is NOT the tie lag, NOT the σ-dofs |
+| GNU uniform conforming quad4 patch (0.5 grid) / quad9 patch (1x1) | 1/3 EXACT at 1 iteration | the staggered momentum solve is one-pass exact on conforming meshes |
+| GNU mpc1 (1D tie, master = Dirichlet known value) | disx = 2 EXACT at 1 iteration | ties whose value is KNOWN at iteration 1 are one-pass |
+
+Key sub-measurements:
+- With the slaves pinned at their exact values, the σ dofs of the slaves
+  and the free field are still wrong (n7 y=1: 0.351, n21 y=2: 0.782 vs
+  2/3) while the σ-dofs never feed the momentum solve (they are updated
+  by the lumped diagonal in `parallel_new_dof_diagonal` from the
+  element_rhside σ rows; the momentum RHS uses the FRESH constitutive
+  IP stress). The pinned slaves' own σ dofs read 0.27-0.38 (not 1/3):
+  they follow the (polluted) local strain — the σ pollution is a
+  CONSEQUENCE of the wrong velocity field, not a cause.
+- The only non-conforming degrees of freedom in the corpus mesh are the
+  quadratic mid-edge/mid-face nodes tied to the linear elements. In a
+  uniform traction state the consistent internal force of the quadratic
+  edge's MIDDLE node is (2/3)·t·L (the corners carry L/6 each). The
+  mpc semantics implemented in mpc.cc (bound the slave value to
+  Σ factor·master, drop its row from the solve, no condensation, no
+  force redistribution — verified against the Pro on mpc1 in the
+  2026-09-01 lot) is the standard *value-constrained* formulation: the
+  slave's equation is replaced by the constraint AND its internal force
+  is lost. For a CONFORMING tie the slave carries no residual force at
+  the solution and the two formulations coincide; for the NON-CONFORMING
+  quadratic edge the slave force (2/3 of the traction) is dropped →
+  the interface equilibrium is violated by exactly that share → the
+  staggered fixed point is the value-constrained solution (0.454),
+  not the homogeneous field (1/3). The Pro reproduces the homogeneous
+  field → its tie is the *energy-consistent* elimination (the slave row
+  redistributed to the masters with the tie weights) or equivalent.
+- The map converges over ~50 iterations even in the best variant: at
+  iteration k the slave value is Cᵀ·(masters of iteration k−1) (set by
+  the pre-solve `bounda()`/`mpc_node_apply`, re-synced post-solve), so
+  the σ-feedback of every solve carries the slave values one solve
+  behind. Pure-Dirichlet models are one-pass because their bounded
+  values are known before the first solve.
+
+### 15.2 The energy-consistent elimination (implemented, measured, REVERTED)
+
+A prototype of the full master-slave elimination was implemented in
+so.cc (2026-09-07, then reverted): the slave dofs (solve_global_local
+= -NO) were eliminated from the energy with the tie weights —
+matrix rows/columns redistributed to the master rows/columns
+(K_red = K_FF + K_FS·Cᵀ + Cᵀ·K_SF + Cᵀ·K_SS·C) and the slave right-hand
+side added to the master rows. Results:
+
+- The FIXED POINT becomes the homogeneous field: the coarse mpc3 mesh
+  converges to disy = 1/3 EXACT (5 digits) at 96 iterations (vs 0.454
+  pre-fix). The mechanism is confirmed.
+- The corpus default of 2 equilibrium iterations is NOT reached: the
+  coarse model still reads 0.270 at iteration 2 (the wave of the slave
+  values propagates ~1 element row per iteration), and the refined
+  model develops a growing odd/even 2-cycle (it2 0.238, it4 0.312,
+  it6 0.335 → it96 −0.31): the reduced matrix combined with the
+  slave-lagged σ-feedback residual is mildly unstable.
+- mpc7 (element_group patch, tolerance ±1e-8) shifts from 1.0 to
+  0.999999976 (2.4e-8): the changed assembly perturbs the solve at the
+  roundoff level, breaking the ultra-tight target → corpus regression.
+
+The map analysis shows why no slave-value scheme can reach the Pro's
+one-shot exactness: the Pro is exact at 1 iteration, i.e. its first
+solve already contains the tie constraint. Reaching that inside the
+GNU staggered loop requires the slave values to enter the momentum
+residual of the SAME solve that produces the masters (implicit), which
+the current iteration structure cannot express: the residual is always
+evaluated from the stored velocities of the previous iterate.
+
+### 15.3 What a complete fix needs (documented, NOT attempted)
+
+1. The energy-consistent elimination of the tied dofs IN the assembly
+   (the prototype above), so the reduced system is the one the Pro
+   solves.
+2. The σ-feedback residual must be evaluated with the slave values
+   consistent with the CURRENT master iterate of the same solve — i.e.
+   the slave velocities must not appear as stored inputs of the
+   momentum residual. Concretely: substitute v_slave = Cᵀ·v_master in
+   the element strain evaluation (the strain at the IPs near a tied
+   quadratic edge must be built from the master values only) or
+   restructure the equilibrium iteration so the first solve is exact
+   (the "implicit/monolithic" family of §8 C). This is a substantial
+   change to the mixed solve with corpus-wide blast radius, out of
+   scope for a minimal tying patch.
+3. Re-validate the ultra-tight mpc7 target (±1e-8) and the mpc
+   family against the Professional .dbs.
+
+mpc5 and mpc6 do NOT share this mechanism: mpc5 fails at
+`control_mesh_delete_geometry_factor` + stress reset (sigyy 0 vs 0.5,
+same root as delete3); mpc6 is a condif model (mpc_element_group tying
+the `temp` dof — a single-field diffusion, not the mixed u-σ
+stagger); its node-3 temp = 0 vs 0.5 needs its own diagnosis.

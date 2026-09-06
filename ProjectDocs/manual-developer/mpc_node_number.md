@@ -61,5 +61,5 @@ records (also when there are no bounda records: the call sits after the
 - `mpc_apply` consumption.
 - `mpc_geometry` family (mpc2 passes by coincidence: rigid translation
   of a single quad4 tied by geometry).
-- `mpc_element_group` family (mpc6/mpc7 RUNFAIL).
+- `mpc_element_group` family (mpc7 rc=0 since 2026-09-02; mpc6 stays RUNFAIL — a condif single-field model whose node-3 temp reads 0 vs 0.5, own diagnosis pending).
 - `mpc_geometry_method`/`mpc_geometry_tolerance` keyword registration.
