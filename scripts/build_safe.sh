@@ -13,6 +13,12 @@
 #
 # Uso: ./scripts/build_safe.sh [--clean]
 #   --clean  borra *.o y recompila todo desde cero (lento, ~6-8 min).
+#
+# Builds de calidad (ver makefile): make audit / asan / ubsan los invocan
+# con las variables TN_EXTRA_FLAGS / TN_BIN / TN_MEMLIMIT_KB. Ejemplos:
+#   make audit   # -Wall -Wextra -Wpedantic -> build/tochnog-audit
+#   make asan    # -fsanitize=address,undefined -> build/tochnog-asan
+#   make ubsan   # -fsanitize=undefined -> build/tochnog-ubsan
 
 set -uo pipefail
 
@@ -21,6 +27,28 @@ set -uo pipefail
 # ',' decimal (p.ej. es_ES.UTF-8) "0.5" se convierte en 0 y los checks
 # fallan espuriamente. Fijar el locale C hace el parseo deterministico.
 export LC_ALL=C
+
+# ---------------------------------------------------------------------------
+# Quality/CI hooks (ADITIVOS: con los defaults este script es byte-identico
+# al build canonico). Los usan los targets `make audit/asan/ubsan` y el
+# workflow de GitHub Actions (.github/workflows/ci.yml):
+#   TN_EXTRA_FLAGS  flags EXTRA anadidos a cada compilacion gcc/g++ Y al
+#                   link final (los sanitizers necesitan sus flags al link).
+#   TN_BIN          nombre del binario de salida bajo build/ (default tochnog).
+#                   Targets de calidad: build/tochnog-audit|asan|ubsan, asi el
+#                   build/tochnog por defecto nunca se pisa.
+#   TN_MEMLIMIT_KB  tope de memoria virtual por proceso (compiladores y runs
+#                   de tests). Los binarios sanitizados NECESITAN "unlimited":
+#                   ASan reserva TB de shadow address space y aborta bajo
+#                   RLIMIT_AS ("ReserveShadowMemoryRange failed... ulimit -v").
+#   TN_SKIP_SUITE   =1 compila + check f2c y SALTA la suite interna (lo usa
+#                   CI: validation-suite/ no esta versionado en el repo; CI
+#                   corre sus propios smoke inputs en .github/ci/smoke).
+# ---------------------------------------------------------------------------
+TN_EXTRA_FLAGS="${TN_EXTRA_FLAGS:-}"
+TN_BIN="${TN_BIN:-tochnog}"
+TN_MEMLIMIT_KB="${TN_MEMLIMIT_KB:-4000000}"
+TN_SKIP_SUITE="${TN_SKIP_SUITE:-0}"
 
 REPO_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$REPO_DIR"
@@ -76,13 +104,13 @@ fi
 
 MAKE_FLAGS=( "SYS_FILE=sysposix" "OBJ=o" "BCPP=" "VCPP="
   "COMPILER_C=gcc" "COMPILER_CPP=g++"
-  "COMPILER_FLAGS=-c -O1 -Wall -D_REENTRANT $SUPERLU_INC $SQLITE_INC"
+  "COMPILER_FLAGS=-c -O1 -Wall -D_REENTRANT $SUPERLU_INC $SQLITE_INC $TN_EXTRA_FLAGS"
   "LINK_FLAGS_BEFORE=" )
 
-LINK_FLAGS_AFTER="$NUMLIB_LINK -Wl,--start-group $SUPERLU_A -l:liblapack.so.3 -l:libblas.so.3 $NUMLIB_FORTRAN -Wl,--end-group $SQLITE_LIB -lm -lpthread -o build/tochnog"
+LINK_FLAGS_AFTER="$NUMLIB_LINK -Wl,--start-group $SUPERLU_A -l:liblapack.so.3 -l:libblas.so.3 $NUMLIB_FORTRAN -Wl,--end-group $SQLITE_LIB -lm -lpthread $TN_EXTRA_FLAGS -o build/$TN_BIN"
 
-echo "==> Limite de memoria por proceso: 4 GB"
-ulimit -v 4000000 2>/dev/null || echo "    (no se pudo aplicar ulimit, continuando)"
+echo "==> Limite de memoria por proceso: $TN_MEMLIMIT_KB"
+ulimit -v "$TN_MEMLIMIT_KB" 2>/dev/null || echo "    (no se pudo aplicar ulimit, continuando)"
 
 if [ "${1:-}" = "--clean" ]; then
   echo "==> Build limpio: borrando *.o"
@@ -98,13 +126,24 @@ if [ $RC -ne 0 ]; then
   tail -30 /tmp/tn_build_safe.log
   exit 1
 fi
-echo "==> Compilacion y link OK. Binario: $(ls -la build/tochnog | awk '{print $5}') bytes"
+echo "==> Compilacion y link OK. Binario: $(ls -la build/$TN_BIN | awk '{print $5}') bytes"
+if [ -n "$TN_EXTRA_FLAGS" ]; then
+  echo "==> Flags extra aplicados: $TN_EXTRA_FLAGS"
+  NWARN=$(grep -ciE "warning:" /tmp/tn_build_safe.log || true)
+  echo "==> Warnings en el log de compilacion: $NWARN (log: /tmp/tn_build_safe.log)"
+fi
 
 echo "==> Verificando ausencia de f2c en el binario..."
-F2C_SYM=$(nm build/tochnog 2>/dev/null | grep -cE "s_wsle|pow_dd|s_stop|do_lio")
+F2C_SYM=$(nm build/$TN_BIN 2>/dev/null | grep -cE "s_wsle|pow_dd|s_stop|do_lio")
 echo "    simbolos f2c: $F2C_SYM (debe ser 0)"
 if [ "$F2C_SYM" != "0" ]; then
   echo "!! OJO: el binario aun referencia runtime f2c"
+fi
+
+if [ "$TN_SKIP_SUITE" = "1" ]; then
+  echo "==> TN_SKIP_SUITE=1: suite interna omitida (solo compilacion)."
+  echo "==> Log de compilacion completo en /tmp/tn_build_safe.log"
+  exit 0
 fi
 
 echo "==> Ejecutando tests hypo con limites de memoria..."
@@ -581,8 +620,8 @@ for t in hypo1 hypo2 hypo3 hypo4 \
          tsup_damp tsup_auto tsup_init tsup_dens; do
   HIPO_TOTAL=$((HIPO_TOTAL+1))
   ( cd validation-suite/test-2014 &&
-    ulimit -v 4000000 &&
-    timeout 120 "$REPO_DIR/build/tochnog" "$t.dat" > "/tmp/${t}_safe.out" 2>&1 )
+    ulimit -v "$TN_MEMLIMIT_KB" &&
+    timeout 120 "$REPO_DIR/build/$TN_BIN" "$t.dat" > "/tmp/${t}_safe.out" 2>&1 )
   RC=$?
   if [ $RC -eq 0 ]; then
     HIPO_OK=$((HIPO_OK+1))
@@ -643,6 +682,15 @@ if [ ! -f "$T2014/msf_beam2d.dat" ]; then
     echo "==> MODO REDUCIDO: TODOS los checks de los tests recuperados OK (16 tests)"
   else
     echo "==> MODO REDUCIDO: ALGUNOS CHECKS FALLARON"; exit 1
+  fi
+  # Gate honesto de runs: un run con rc!=0 (crash, timeout, ASan abort) es
+  # un fallo aunque sus file-checks pasen. Con el build canonico la suite
+  # esta 16/16; bajo sanitizers un run abortado debe hacer fallar el build
+  # (p.ej. make asan -> hypo1-4 abortan por el OOB de hypo.c, ver
+  # ProjectDocs/QUALITY-CI.md seccion "Hallazgo conocido").
+  if [ "$HIPO_OK" != "$HIPO_TOTAL" ]; then
+    echo "!! MODO REDUCIDO: runs fallidos $HIPO_OK/$HIPO_TOTAL (detalle en /tmp/*_safe.out)"
+    exit 1
   fi
   echo "==> Log de compilacion completo en /tmp/tn_build_safe.log"
   exit 0
@@ -1235,8 +1283,8 @@ fi
 msf_error_ok() {
   local t="$1" msg="$2"
   ( cd validation-suite/test-2014 &&
-    ulimit -v 4000000 &&
-    timeout 60 "$REPO_DIR/build/tochnog" "$t.dat" > "/tmp/${t}_safe.out" 2>&1 )
+    ulimit -v "$TN_MEMLIMIT_KB" &&
+    timeout 60 "$REPO_DIR/build/$TN_BIN" "$t.dat" > "/tmp/${t}_safe.out" 2>&1 )
   local rc=$?
   if [ "$rc" = "1" ] && grep -q "$msg" "/tmp/${t}_safe.out"; then
     check_ok "$t (rc=1 + '$msg')"
@@ -1806,7 +1854,7 @@ fi
 # tslv_zip: corrida AISLADA - el .dbs.gz aparece y no hay warning
 ZDIR="/tmp/tslv_zip_isolated"
 rm -rf "$ZDIR" && mkdir -p "$ZDIR" && cp "$T2014/tslv_zip.dat" "$ZDIR/" && \
-  ( cd "$ZDIR" && ulimit -v 4000000 && timeout 120 "$REPO_DIR/build/tochnog" tslv_zip.dat > run.out 2>&1 )
+  ( cd "$ZDIR" && ulimit -v "$TN_MEMLIMIT_KB" && timeout 120 "$REPO_DIR/build/$TN_BIN" tslv_zip.dat > run.out 2>&1 )
 if [ -f "$ZDIR/tslv_zip.dbs.gz" ] && ! rg -q "gzipping.*failed" "$ZDIR/run.out" 2>/dev/null; then
   check_ok "tslv_zip (zip -yes: .dbs.gz creado al final, sin warning)"
 else

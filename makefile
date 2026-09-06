@@ -208,6 +208,46 @@ linux_insure:
 	"LINK_FLAGS_BEFORE=" \
 	"LINK_FLAGS_AFTER= $(PROFILE) $(ALL_LIB) -static -lm -o tochnog"
 
+#  ***********  quality/CI targets (linux; gnu gcc) ******************
+# Objetivos de calidad del PLAN.md (auditoria y endurecimiento):
+#   make audit   -> compila TODO con -Wall -Wextra -Wpedantic (sin
+#                   sanitizers) para revisar warnings. Legacy C-style:
+#                   MUCHOS warnings esperables; NO se corrigen aqui.
+#   make asan    -> compila y linka con -fsanitize=address,undefined
+#                   -fno-omit-frame-pointer -g -O1 (ASan + UBSan juntos,
+#                   decision PLAN.md) y corre la suite interna con
+#                   ASAN_OPTIONS=detect_leaks=0 (los leaks son un
+#                   ejercicio aparte; aqui se cazan errores de memoria).
+#   make ubsan   -> variante undefined-only (-fsanitize=undefined).
+#
+# Implementacion: cada target delega en scripts/build_safe.sh (la misma
+# resolucion de dependencias y el mismo runner de la suite) y SOLO anade
+# flags via TN_EXTRA_FLAGS. El binario sale en build/tochnog-<modo>, asi
+# el build/tochnog por defecto no se pisa. Cada build de calidad es LIMPIO
+# (recompila todos los .o con los flags nuevos); los .o resultantes quedan
+# en el arbol, asi que para volver al build por defecto corre
+# ./scripts/build_safe.sh --clean (solo las builds limpias son fiables en
+# este arbol, ver AGENTS.md).
+.PHONY: audit asan ubsan
+
+audit:
+	TN_EXTRA_FLAGS="-Wall -Wextra -Wpedantic" \
+	TN_BIN=tochnog-audit \
+	./scripts/build_safe.sh --clean
+
+asan:
+	TN_EXTRA_FLAGS="-fsanitize=address,undefined -fno-omit-frame-pointer -g -O1" \
+	TN_BIN=tochnog-asan \
+	TN_MEMLIMIT_KB=unlimited \
+	ASAN_OPTIONS=detect_leaks=0 \
+	./scripts/build_safe.sh --clean
+
+ubsan:
+	TN_EXTRA_FLAGS="-fsanitize=undefined -fno-omit-frame-pointer -g -O1" \
+	TN_BIN=tochnog-ubsan \
+	TN_MEMLIMIT_KB=unlimited \
+	./scripts/build_safe.sh --clean
+
 # single processor hp unix; hp CC compiler
 hp: 
 	make tochnog \
