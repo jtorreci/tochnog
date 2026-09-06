@@ -134,6 +134,18 @@
     No numeric reference exists (theory-only implementation); the test pins
     the value and guards against regressions of the creep formulation.
 - Regression: hypo1-4 still pass (wolfersdorff unaffected).
+- Corpus vs the Professional (re-measured 2026-09-06 after the hypo_ ABI
+  fix of hypoplas.cc; values unchanged by the fix — the deviations are
+  genuine kernel-level gaps, not memory contamination): hypo7/8/9
+  (masin clay) `sigyy` -224.08/-216.29/-224.08 vs Professional
+  -231.81/-230.59/-231.81 (3-6 %, targets tol 0.1, rc=1); hypo12 (masin
+  visco JM, probe sin `print_apply -no` para volcar .dbs) `sigyy`
+  -282.46 vs Professional -143.49 con "iterative solver broke down" en el
+  camino (hyhis0 0.5906 estable); hypo13 (Niemunis visco) aborta con
+  "severe error in Masin hypoplasticity" tras desbordar la razón de vacíos
+  (hyhis0 ~1.86e14) — calibración visco PENDIENTE (no recalibrada en este
+  lote). Los targets Pro de hypo12/13 son -143.495635 (tol 1e-3) y
+  -144.49 (tol 1e-2).
 
 ## External dependencies
 

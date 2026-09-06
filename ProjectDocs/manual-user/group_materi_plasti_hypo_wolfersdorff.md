@@ -90,3 +90,10 @@ compression, `sigyy=-863` at the end).
 - Regression tests: `hypo1.dat` (wolfersdorff), `hypo2/3/4.dat`
   (intergranular strain), `hypo_cohesion.dat`, `hypo_lowangles.dat`,
   `hypo_pdvr.dat` (pressure-dependent void ratio).
+- Convergence status vs the Professional (measured 2026-09-06 against the
+  Professional binary 25-10-2023, corpus `hypo1-4`): hypo1 reproduces the
+  Professional at 0.019 % (`sigyy` -862.77 vs -862.93, target tolerance
+  0.1 not met) and hypo3 (anisotropic initial state `K0`) deviates 36 %
+  (`sigxx` -0.104 vs -0.163) — the remaining deviation is kernel
+  calibration (hypo.c), pending a dedicated calibration work unit; hypo2
+  and hypo4 meet their Professional targets (rc=0).

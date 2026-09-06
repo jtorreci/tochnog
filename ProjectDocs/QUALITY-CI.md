@@ -51,30 +51,43 @@ Los tres targets corren la suite interna completa (16 tests recuperados
 del modo reducido: hypo1-4, gforce7, tsup_*) con su binario. `make asan`
 pasa a los tests `TN_MEMLIMIT_KB=unlimited` y `ASAN_OPTIONS=detect_leaks=0`.
 
-## Hallazgo conocido (ASan): OOB de lectura en el path hypo (NO corregido)
+## Hallazgo conocido (ASan): OOB de lectura en el path hypo — CORREGIDO (2026-09-06)
 
-`make asan` compila y corre la suite, pero la suite NO pasa completa:
-**hypo1-4 abortan con `stack-buffer-overflow`** (el resto, 12/16, corre
+`make asan` compilaba y corría la suite, pero la suite NO pasaba completa:
+**hypo1-4 abortaban con `stack-buffer-overflow`** (el resto, 12/16, corría
 limpio bajo ASan+UBSan; sin reportes UBSan en la suite). El gate honesto
-del modo reducido hace fallar el build con "runs fallidos 12/16".
+del modo reducido hacía fallar el build con "runs fallidos 12/16".
 
-Causa raíz (bug pre-existente, fuera del alcance de esta infraestructura;
-NO se toca código fuente aquí):
+Causa raíz (bug de ABI pre-existente del fork, corregido en
+`<FIX_COMMIT>`):
 
-- `hypoplas.cc` declara `int find_local_sv[1], options_nonlocal[1]`
-  (4 bytes) y los pasa a `hypo_`.
+- `hypoplas.cc` declaraba `int find_local_sv[1], options_nonlocal[1]`
+  (4 bytes) y los pasaba a `hypo_`; el resto de argumentos INTEGER del
+  f2c-port (nhis, ndata, use_pres, use_epi, hypo_type) ya eran
+  `long int *` (la convención f2c del árbol: `typedef long int integer`
+  en tochnog.h; hypo.c es un port f2c→C puro).
 - `hypo.c` (port puro C) declara los parámetros como
   `long int *find_local_sv, *options_nonlocal` (8 bytes en LP64) y lee
-  `options_nonlocal[0]` como load de 8 bytes (hypo.c:165) → lee 4 bytes
-  más allá del objeto en el stack.
+  `options_nonlocal[0]` como load de 8 bytes (hypo.c:165) → leía 4 bytes
+  más allá del objeto en el stack (READ OOB determinista, expuesto por
+  ASan; también sigma_ lee ambos flags en hypo.c:620-621).
 
-En el build normal la lectura OOB cae en el layout del stack y "funciona
-de casualidad" (puede incluso leer basura en el flag, cambiando la rama
-`if(options_nonlocal[0] && !find_local_sv[0])`); ASan la expone. Fix
-natural (para un work unit de código): declarar los parámetros de hypo.c
-como `int *` (o pasar `long options_nonlocal[1]` desde hypoplas.cc).
-Ver: `/tmp/hypo1_safe.out` (reporte completo) y hypo.c:165 +
-hypoplas.cc:180.
+En el build normal la lectura OOB caía en el layout del stack y
+"funcionaba de casualidad" (podía incluso leer basura en el flag,
+cambiando la rama `if(options_nonlocal[0] && !find_local_sv[0])`); ASan
+la exponía. Fix aplicado: declarar los dos flags como `long int` en
+hypoplas.cc (declaración extern y locales), consistente con los demás
+argumentos INTEGER del port y con hypo.c — hypo.c NO se tocó.
+
+**Verificación post-fix**: `make asan` → suite **16/16** (hypo1-4 ya no
+abortan); corrida directa del hypo1 del corpus y del suite bajo
+`build/tochnog-asan` sin NINGÚN reporte AddressSanitizer; la suite del
+build normal 16/16 y los .dbs de hypo1-4/7-9/12 byte-idénticos antes y
+después del fix (la basura que leía el OOB era padding a cero en el build
+-O1: el bug NO contaminaba resultados, pero era UB determinista y mataba
+los builds sanitizados; además PODRÍA dispararse con otras flags/layouts).
+Detalle del fix y re-medición hypo vs el Professional:
+ProjectDocs/SEGUIMIENTO-CONVERGENCIA.md (registro 2026-09-06).
 
 ## Variables de hooks en scripts/build_safe.sh (aditivas)
 
