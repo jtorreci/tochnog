@@ -146,6 +146,20 @@
   (hyhis0 ~1.86e14) — calibración visco PENDIENTE (no recalibrada en este
   lote). Los targets Pro de hypo12/13 son -143.495635 (tol 1e-3) y
   -144.49 (tol 1e-2).
+- **Diag 2026-09-07 (see hypoplasticity_kernels.md): the hypo7/8/9 corpus
+  gap is upstream of the kernel.** Truncation series of the SAME .dat
+  (axisym + materi_velocity_integrated + group_materi_memory
+  -updated_linear) show the codes accumulate different strain states:
+  Professional eptyy = -0.300000000000 exactly (linear strain increments)
+  vs GNU eptyy = -0.35657 = -ln(1-0.3) (strain increments evaluated in the
+  current geometry -> logarithmic accumulation). The void ratio integrated
+  by the masin kernel is consistent with each imposed path (Professional e
+  1.03->1.1107, GNU 1.03->1.1263 with a deeper dip 0.941 vs 1.006), and
+  the 3-6% sigyy deviation follows from the different paths. The masin.c
+  kernel itself is not at fault (validated vs umat_hcea.for to 5e-7 at
+  driver level; removing materi_strain_plasti changes nothing). The
+  -updated_linear strain accumulation lives upstream of the
+  hypoplasticity dispatch and must be aligned there (kinematics owner).
 
 ## External dependencies
 

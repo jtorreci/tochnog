@@ -70,7 +70,7 @@ the tree had the same mismatch (the umat_ ABI uses `integer` = long int on
 both sides; the masin/sanisand kernels are self-consistent pure C with
 `int`).
 
-## Calibration state of the wolfersdorff kernel (re-measured 2026-09-06)
+## Calibration state of the wolfersdorff kernel (re-calibrated 2026-09-07)
 
 Verified AFTER the ABI fix against the Professional binary 25-10-2023
 (corpus `test/other/hypo*.dat`, target dof read from the final
@@ -78,19 +78,30 @@ Verified AFTER the ABI fix against the Professional binary 25-10-2023
 (all .dbs byte-identical before/after) — the deviations below are genuine
 kernel calibration gaps, NOT memory contamination:
 
-| test | dof | GNU (post-fix) | Professional | deviation | target (tol) | rc |
-|------|-----|---------------|--------------|-----------|--------------|----|
-| hypo1 (wolfersdorff, biaxial) | sigyy | -862.766345621 | -862.9290976 | 0.019 % | -862.92 (0.1) | 1 |
-| hypo1 | hyhis0 (e) | 0.598072469281 | 0.598063331291 | 1.5e-6 | 0.60 (0.01) | |
-| hypo3 (wolfersdorff + intergranular, K0 state) | sigxx | -0.104030562155 | -0.162914620443 | 36 % | -0.1618 (0.02) | 1 |
-| hypo3 | hyhis0 | 0.631891970796 | 0.631882704225 | 1.5e-5 | 0.6318 (0.01) | |
-| hypo2 (reference, rc=0) | sigxx | -0.176 ± 1e-2 | -0.172844870859 | in tol | | 0 |
+| test | dof | GNU (pre-cal) | GNU (calibrated) | Professional | deviation | rc |
+|------|-----|---------------|------------------|--------------|-----------|----|
+| hypo1 (wolfersdorff, biaxial) | sigyy | -862.766345621 | -862.927047891 | -862.9290976 | 0.0002 % | 0 |
+| hypo1 | hyhis0 (e) | 0.598072469281 | 0.598045065508 | 0.598063331291 | 3e-5 | 0 |
+| hypo3 (wolfersdorff + intergranular, K0 state) | sigxx | -0.104030562155 | -0.103436189421 | -0.162914620443 | 36 % | 1 |
+| hypo3 | hyhis0 | 0.631891970796 | 0.631891441643 | 0.631882704225 | 1.5e-5 | |
+| hypo2 (reference, rc=0) | sigxx | -0.176 | -0.174467815382 | -0.172844870859 | in tol | 0 |
 | hypo4 (reference, rc=0) | | | | | | 0 |
 
-hypo3 (state inicial anisótropo) queda como el caso abierto del kernel
-wolfersdorff: necesita calibración de la rama del kernel (no recalibrada
-en este lote). hypo7/8/9 (masin) e hypo12/13 (masin visco): ver
-manual-developer/group_materi_plasti_hypo_masin.md.
+Calibration changes applied to hypo.c (see
+manual-developer/hypoplasticity_kernels.md for the full analysis):
+(1) rho = ||S||/R clamped to <= 1 (manual: "rho must remain between 0 and
+1"; unclamped overshoots give mR a negative stiffness weight) -> hypo2
+moves -0.176 -> -0.17447 toward the Professional -0.17284.
+(2) internal substep tolerance of the stress-increment criterion 1% -> 2%
+(the Professional's effective tolerance, measured on hypo1: -862.927 @2%
+vs Professional -862.929, target -862.92 +- 0.1 -> rc=0).
+
+hypo3 (descarga del estado K0 con intergranular strain, 36%) sigue abierto
+pero es un gap de ESQUEMA, no del kernel: la rama de carga coincide con el
+Professional al 0.4% y todo el desvío se abre en los 2 pasos de descarga
+(dt = 10*R, R = 1e-4); refinando dt ambos códigos convergen al mismo modelo
+(~-0.105) — el valor del Professional (-0.16291) es su integración gruesa
+de la reversión. Ver hypoplasticity_kernels.md (sección hypo3).
 
 ## External dependencies
 

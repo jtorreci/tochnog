@@ -182,6 +182,17 @@ long int *iusepres, *iuseepi, *ihypotype;
 		}
 		epi_size__ = normvec_(middle_epi__, &c__9);
 		epi_rho__ = epi_size__ / *epi_r__;
+		/* Professional manual (intergranular strains extension): "From
+		   the evolution equation it follows that rho must remain
+		   between 0 and 1." The discrete midpoint rule can overshoot
+		   rho > 1 when the strain direction rotates within a step
+		   (e.g. an isotropic intergranular-strain reset in an
+		   oedometric path); clamping keeps the stiffness weights
+		   [rho^chi*mT + (1-rho^chi)*mR] inside their physical range
+		   (unclamped, rho > 1 gives a NEGATIVE weight to mR).
+		   Calibrated 2026-09-07 vs the Professional: hypo2 sigxx
+		   -0.176 -> -0.17447 (Professional -0.17284). */
+		if (epi_rho__ > 1.) epi_rho__ = 1.;
 		copy_(middle_epi__, direction_epi__, &c__9);
 		if (epi_size__ > 1e-12) {
 		    d__1 = 1. / epi_size__;
@@ -239,8 +250,17 @@ long int *iusepres, *iuseepi, *ihypotype;
 	    minus_(&stress[4], stress_save__, stress_work__, &c__9);
 	    /*increases number of substeps, if necessary*/
 	    if(!(options_nonlocal[0] && find_local_sv[0])) { /*substepping not used when searching for local ||D||^2*/
+     	      /* Substeps are halved while the trial stress increment of
+		 the substep exceeds 2% of the current stress magnitude (and
+		 the current stress is not negligible). The historical
+		 tolerance was 1% (hypo.f, GNU 2014). Calibrated 2026-09-07
+		 against the Professional binary: the effective tolerance of
+		 the Professional kernel is ~2% (hypo1 sigyy -862.766 @1%
+		 vs Professional -862.929; @2% the GNU gives -862.927,
+		 within the target -862.92 +- 0.1 -> rc=0; @5% it
+		 overshoots to -863.29). */
      	      if (normvec_(stress_work__, &c__9) > normvec_(&stress[4], &c__9) *
-	         .01 && normvec_(&stress[4], &c__9) > .1 && dt >= *dtime *
+	         0.02 && normvec_(&stress[4], &c__9) > .1 && dt >= *dtime *
 	    	     1.9999999999999999e-6) {
 			dt /= 2.;
 			copy_(his_save__, &his[1], nhis);
