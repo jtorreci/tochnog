@@ -341,7 +341,7 @@ long int get_group_data( long int idat, long int gr, long int element,
     idum[1], element_distribute[DATA_ITEM_SIZE], dof_label[MUKNWN], *dependency_item=NULL;
   double tmp=0., time_current=0., dtime=0., time_left=0., time_right=0,
     val_left=0., val_right=0., ddum[1], element_distribute_values[DATA_ITEM_SIZE], 
-    *dependency_diagram=NULL;
+    *dependency_diagram=NULL, *node_dof=NULL, *coord=NULL;
 
   // dependency_apply (manual Professional 6.125, global) and
   // control_dependency_apply (manual Professional 6.126, per timestep
@@ -375,6 +375,50 @@ long int get_group_data( long int idat, long int gr, long int element,
               ldum, VERSION_NORMAL, GET_IF_EXISTS );
             go_ahead = 1;
             tmp = time_current + dtime;
+          }
+          else if ( groundflow_pressure &&
+              ( labs(dependency_item[2])==TO_PRES ||
+                labs(dependency_item[2])==ST_PRES ||
+                labs(dependency_item[2])==DY_PRES ) ) {
+            // The dependency monitors a GROUNDFLOW PRESSURE POST item
+            // (-to_pres/-st_pres/-dy_pres, the post_calcul_label names of
+            // the groundflow_pressure -total_pressure/-static_pressure/
+            // -dynamic_pressure operators): the pressure convention of
+            // groundflow_phreatic_coord (total = pres_dof + the static of
+            // the phreatic level that covers the point), averaged over the
+            // element nodes. manual Professional 6.406: the dependency dof
+            // can be a dof_label name OR a post_calcul_label name - the
+            // corpus groundflow tests (ground11_nonsaturated) make the
+            // permeability k depend on the total pressure to model the
+            // non-saturated zone (k collapses above the phreatic surface).
+            // The GNU dof_label list has no entry for the post items, so
+            // the old code raised db_error(DEPENDENCY_ITEM) here.
+            long int length_el_dep = 0, inol_dep = 0, inod_dep = 0,
+              el_dep[MNOL+1], nnol_dep = 0;
+            double total_dep = 0., static_dep = 0., location_dep = 0.,
+              coord_dep[MDIM], sum_dep = 0.;
+            db( ELEMENT, element, el_dep, ddum, length_el_dep,
+              VERSION_NORMAL, GET_IF_EXISTS );
+            nnol_dep = length_el_dep - 1;
+            if ( nnol_dep<1 ) db_error( DEPENDENCY_ITEM, idep );
+            for ( inol_dep=0; inol_dep<nnol_dep; inol_dep++ ) {
+              inod_dep = el_dep[inol_dep+1];
+              node_dof = db_dbl( NODE_DOF, inod_dep, VERSION_NEW );
+              coord = db_dbl( NODE, inod_dep, VERSION_NORMAL );
+              for ( long int idim_dep=0; idim_dep<ndim; idim_dep++ )
+                coord_dep[idim_dep] = coord[idim_dep];
+              total_dep = static_dep = location_dep = 0.;
+              groundflow_phreatic_coord( inod_dep, coord_dep, node_dof,
+                total_dep, static_dep, location_dep, NULL );
+              if      ( labs(dependency_item[2])==TO_PRES )
+                sum_dep += total_dep;
+              else if ( labs(dependency_item[2])==ST_PRES )
+                sum_dep += static_dep;
+              else
+                sum_dep += total_dep - static_dep;
+            }
+            tmp = sum_dep / (double)nnol_dep;
+            go_ahead = 1;
           }
           else {
             array_member(dof_label,dependency_item[2],nuknwn,iuknwn);
