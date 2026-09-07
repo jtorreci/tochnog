@@ -559,9 +559,30 @@ void materi( long int element, long int gr, long int name, long int nnol,
       // and destabilizes the coupled system (Bi-CG breakdown). The
       // multiple-level mechanics coupling is pending calibration (see
       // SEGUIMIENTO ground8 row).
-      if ( !groundflow_phreatic_level_multiple_active() &&
-           groundflow_phreatic_coord( -1, coord_ip, new_unknowns, 
-             total_pressure, static_pressure, location, NULL ) ) new_pres = total_pressure;
+      // Measured on ground11_nonsaturated against the Professional
+      // 25-10-2023: when NO phreatic level / static-pressure-height
+      // machinery exists at all, the total pressure of the Professional
+      // is p_total = h - rho*g*z (the reference datum at z=0) and the
+      // effective-stress equilibrium of the gravity-loaded column needs
+      // that hydrostatic part: with the raw pres dof (0 at the start)
+      // the skeleton carries the FULL saturated weight while the reset
+      // stress covers only the buoyant part -> instantaneous collapse
+      // (veliy -0.39 at t=1 vs ~0 in the Professional) and a zero hypo
+      // tangent at zero confining stress. With the substitution the
+      // first step is in equilibrium like the Professional (the step-1
+      // velocity ~0). The dry zone above a phreatic level keeps the raw
+      // dof: there phreatic_coord clamps the static to the atmospheric
+      // and the saturated part below the level gets the hydrostatic.
+      if ( !groundflow_phreatic_level_multiple_active() ) {
+        long int level_found = groundflow_phreatic_coord( -1, coord_ip,
+          new_unknowns, total_pressure, static_pressure, location, NULL );
+        if ( !db_active_index( GROUNDFLOW_PHREATICLEVEL, 0,
+              VERSION_NORMAL ) &&
+             !db_active_index( POST_CALCUL_STATIC_PRESSURE_HEIGHT, 0,
+               VERSION_NORMAL ) )
+          level_found = 1;   // no reference records: total = h - rho*g*z
+        if ( level_found ) new_pres = total_pressure;
+      }
       // group_groundflow_total_pressure_tension: if the largest eigenvalue of
       // materi_strain_plastic_tension exceeds plastic_tension_minimum, use the
       // static water pore pressure determined from water_height (when it is
