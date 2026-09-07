@@ -1571,6 +1571,19 @@ enum {
   // is self-contained (no method dispatch). Enum append keeps existing
   // values stable (tochnog.h and tochnog-mod.h stay in sync).
   CONTROL_PRINT_GID_METHOD,
+  // -veln FAMILY (2026-09-07, DEV-2 sprint -veln): bounda_dof/-veln
+  // (manual Professional 6.22 - prescribe zero velocity NORMAL to a
+  // plane; internally Tochnog generates mpc records to impose the
+  // condition) + MPC_FROM_BOUNDA, the marker record (index k = -yes)
+  // written beside the mpc_node_number/mpc_node_factor records that a
+  // -veln bounda generated (regeneration bookkeeping), +
+  // BOUNDA_VELN_MESH_FINGERPRINT (INTERNAL, indexed by bounda record:
+  // [mesh fingerprint, start index, count] of the generated records).
+  // Enum append keeps existing values stable (tochnog.h and
+  // tochnog-mod.h stay in sync).
+  VELN,
+  MPC_FROM_BOUNDA,
+  BOUNDA_VELN_MESH_FINGERPRINT,
   LAST_DUMMY }; // keep LAST_DUMMY always the last one
 
 #define MDAT LAST_DUMMY+DATA_ITEM_SIZE  // reserve space for unknowns

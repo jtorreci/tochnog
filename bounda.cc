@@ -22,6 +22,181 @@
 
 #define EPS_ATAN 1.e-10
 
+// normal component below this size is treated as zero when the -veln
+// mpc slave axis is selected (axis-aligned walls have an EXACT zero
+// component: the line normal is the cross product of its endpoints)
+#define EPS_VELN_ZERO 1.e-12
+
+// ---------------------------------------------------------------------------
+// bounda_dof/bounda_unknown ... -veln (manual Professional 6.22):
+// prescribe that nodes do not move in the direction NORMAL to a plane
+// (zero normal velocity). Internally Tochnog generates mpc records to
+// impose the condition (the Professional writes mpc_node_number/
+// mpc_node_factor + mpc_from_bounda -yes records to its .dbs).
+//
+// Semantics measured against the Professional binary (25-10-2023) on
+// validation_8 and dedicated oblique/vertical wall probes (slopes -2
+// .. +2, vertical line, node sets on the horizontal/oblique walls):
+//  - the plane normal of a node selected through a geometry entity is
+//    the normal of the FIRST entity of the record (a geometry_set is
+//    scanned in record order) that contains the node - the geometry()
+//    first-match normal; nodes selected through a node range use the
+//    bounda_normal vector of the same bounda index (manual 6.22: the
+//    normal has to be given when no geometrical entity is used);
+//  - one mpc record per boundary node, slave dof = the FIRST velocity
+//    axis whose normal component is non-zero (x, y, z order), masters
+//    = the remaining axes with a non-zero component and factor
+//    -n_master/n_slave. A zero-component master is OMITTED, so an
+//    axis-aligned wall collapses to a masterless record bounding the
+//    remaining normal dof to zero. Measured records: oblique wall of
+//    slope -0.1 -> [node -velx node -vely] with factor -10 (slope +0.1
+//    -> +10, slope +2 -> +0.5, slope -1.5 -> -0.667), vertical wall ->
+//    [node -velx] alone, horizontal wall -> [node -vely] alone;
+//  - the generated records are marked with mpc_from_bounda <index>
+//    -yes and are regenerated when the mesh changes (per-bounda-record
+//    mesh fingerprint, the mpc_linear_quadratic pattern).
+// ---------------------------------------------------------------------------
+static void bounda_veln_mpc( long int iboun, long int val[],
+  long int use_geom, long int use_range, long int use_all,
+  long int use_node_set, long int integer_range[], long int range_length,
+  long int bounda_geometry_method, double bounda_normal_vec[] )
+
+{
+  long int ldum=0, idum[1], stored_len=0, length_put=0, max_node=0,
+    inod=0, found=0, in=0, ready=0, i=0, count=0, start_index=0,
+    islave=-1, im=0, nmaster=0, node_type=0;
+  double ddum[MDIM], rdum=0., nvec[MDIM];
+
+  // per-bounda-record fingerprint: (re)generate only when the mesh
+  // changed (same fingerprint the mpc_linear_quadratic /
+  // mpc_element_group generators use)
+  long int fingerprint = mpc_mesh_fingerprint_get();
+  long int stored[3] = { -1, -1, 0 };
+  db( BOUNDA_VELN_MESH_FINGERPRINT, iboun, stored, ddum, stored_len,
+    VERSION_NORMAL, GET_IF_EXISTS );
+  if ( stored_len>=3 && stored[0]==fingerprint ) return;
+
+  // remove the records generated for the previous mesh state
+  if ( stored_len>=3 && stored[2]>0 ) {
+    for ( i=0; i<stored[2]; i++ ) {
+      db_delete_index( MPC_NODE_NUMBER, stored[1]+i, VERSION_NORMAL );
+      db_delete_index( MPC_NODE_FACTOR, stored[1]+i, VERSION_NORMAL );
+      db_delete_index( MPC_FROM_BOUNDA, stored[1]+i, VERSION_NORMAL );
+    }
+  }
+
+  db_max_index( NODE, max_node, VERSION_NORMAL, GET );
+  if ( max_node<0 ) {
+    // nothing to constrain; remember the fingerprint so the empty
+    // state is not regenerated on every iteration
+    stored[0] = fingerprint; stored[1] = -1; stored[2] = 0;
+    stored_len = 3;
+    db( BOUNDA_VELN_MESH_FINGERPRINT, iboun, stored, ddum, stored_len,
+      VERSION_NORMAL, PUT );
+    return;
+  }
+
+  long int dof_label[MUKNWN];
+  db( DOF_LABEL, 0, dof_label, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+
+  // generated records start after the highest ACTIVE mpc record (the
+  // mpc_linear_quadratic/mpc_element_group convention)
+  db_highest_index( MPC_NODE_NUMBER, start_index, VERSION_NORMAL );
+  start_index++;
+  count = 0;
+
+  long int vals[DATA_ITEM_SIZE];
+  double weights[MUKNWN];
+
+  // node iteration mirrors the selector logic of the bounda() node
+  // loop (ascending node order, matching the record order the
+  // Professional writes to its .dbs)
+  for ( in=0, ready=0; !ready; in++ ) {
+    inod = -1;
+    if      ( use_range ) {
+      if ( in>=range_length ) ready = 1;
+      else inod = integer_range[in];
+    }
+    else if ( use_all ) {
+      if ( in>max_node ) ready = 1;
+      else if ( db_active_index( NODE, in, VERSION_NORMAL ) ) inod = in;
+    }
+    else if ( use_geom ) {
+      if ( in>max_node ) ready = 1;
+      else if ( nodes_in_geometry[in] ) {
+        node_type = NODE_START_REFINED;
+        if ( bounda_geometry_method!=0 ) node_type = bounda_geometry_method;
+        geometry( in, ddum, val, found, rdum, nvec, rdum, ddum,
+          node_type, PROJECT_EXACT, VERSION_NORMAL );
+        if ( found ) inod = in;
+      }
+    }
+    else if ( use_node_set ) {
+      if ( in>max_node ) ready = 1;
+      else if ( db_active_index( NODE_SET, in, VERSION_NORMAL ) ) inod = in;
+    }
+    else {
+      inod = val[0];
+      ready = 1;
+    }
+    if ( ready ) break;
+    if ( inod<0 ) continue;
+    if ( !db_active_index( NODE, inod, VERSION_NORMAL ) ) continue;
+    if ( !use_geom ) {
+      // node ranges: the normal is the bounda_normal of the record
+      // (required; a zero vector cannot define the plane)
+      array_move( bounda_normal_vec, nvec, ndim );
+      if ( scalar_dabs(nvec[0])<=EPS_VELN_ZERO &&
+           scalar_dabs(nvec[1])<=EPS_VELN_ZERO &&
+           scalar_dabs(nvec[2])<=EPS_VELN_ZERO ) {
+        pri( "Error: -veln in bounda record ", iboun );
+        pri( "requires a geometry entity or a bounda_normal." );
+        exit(TN_EXIT_STATUS);
+      }
+    }
+    // slave axis: the FIRST axis with a non-zero normal component
+    islave = -1;
+    for ( im=0; im<ndim; im++ ) {
+      if ( scalar_dabs( nvec[im] )>EPS_VELN_ZERO ) { islave = im; break; }
+    }
+    if ( islave<0 ) continue;
+    nmaster = 0;
+    long int iv = 0;
+    vals[iv++] = inod;
+    vals[iv++] = dof_label[vel_indx + islave*nder];
+    for ( im=0; im<ndim; im++ ) {
+      if ( im==islave ) continue;
+      if ( scalar_dabs( nvec[im] )>EPS_VELN_ZERO ) {
+        vals[iv++] = inod;
+        vals[iv++] = dof_label[vel_indx + im*nder];
+        weights[nmaster] = -nvec[im]/nvec[islave];
+        nmaster++;
+      }
+    }
+    length_put = iv;
+    db( MPC_NODE_NUMBER, start_index+count, vals, ddum, length_put,
+      VERSION_NORMAL, PUT );
+    if ( nmaster>0 ) {
+      length_put = nmaster;
+      db( MPC_NODE_FACTOR, start_index+count, idum, weights, length_put,
+        VERSION_NORMAL, PUT );
+    }
+    {
+      long int yes_value = -YES;
+      length_put = 1;
+      db( MPC_FROM_BOUNDA, start_index+count, &yes_value, ddum, length_put,
+        VERSION_NORMAL, PUT );
+    }
+    count++;
+  }
+
+  stored[0] = fingerprint; stored[1] = start_index; stored[2] = count;
+  stored_len = 3;
+  db( BOUNDA_VELN_MESH_FINGERPRINT, iboun, stored, ddum, stored_len,
+    VERSION_NORMAL, PUT );
+
+}
+
 void bounda( )
 
 {
@@ -453,6 +628,22 @@ void bounda( )
           else
             iu_start = 1;
 
+          // bounda_dof/bounda_unknown ... -veln (manual Professional
+          // 6.22): generate the mpc records that impose the zero
+          // normal-velocity condition on the nodes of this record. The
+          // bounda_time of the record is irrelevant (manual 6.22); the
+          // generator runs once per mesh state (fingerprint guard).
+          if ( unknown ) {
+            long int veln_bounda = 0, iu_scan = 0;
+            for ( iu_scan=iu_start; iu_scan<=iu_end; iu_scan++ )
+              if ( val[iu_scan]==-VELN ) veln_bounda = 1;
+            if ( veln_bounda ) {
+              bounda_veln_mpc( iboun, val, use_geom, use_range, use_all,
+                use_node_set, integer_range, range_length,
+                bounda_geometry_method, bounda_normal_vec );
+            }
+          }
+
           for ( in=0, ready=0; !ready; in++ ) {
             found = 0;
             if      ( use_range ) {
@@ -496,6 +687,12 @@ void bounda( )
                 swit = set_swit(-1,inod,"bounda");
                 if ( swit ) pri( "inod", inod );
                 for ( iu=iu_start; iu<=iu_end; iu++ ) {
+                  // bounda_dof ... -veln (manual Professional 6.22):
+                  // the zero normal-velocity condition is imposed by
+                  // the mpc records of bounda_veln_mpc() (generated
+                  // once per mesh state above); the token prescribes
+                  // no dof by itself.
+                  if ( unknown && val[iu]==-VELN ) continue;
                   // bounda_dof ... -topres (manual Professional 2.4.1
                   // groundflow): prescribe the TOTAL pore pressure
                   // (p_total = h - rho*g*z with h the hydraulic head
