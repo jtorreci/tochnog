@@ -35,6 +35,8 @@ long int check( long int idat, long int task )
     return 0;
   if ( data_number==TET10 )
     return 0;
+  if ( data_number==PRISM15 )
+    return 0;
   if ( data_number==QUAD4 )
     return 0;
   if ( data_number==QUAD9 )

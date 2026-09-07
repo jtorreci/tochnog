@@ -24,6 +24,44 @@
 #define MITER 10000
 #define DELTA 1.e-4
 
+// prism15_shape: evaluate the 15 shape functions of the serendipity
+// quadratic prism at the natural point (L1,L2,zeta) and return the
+// interpolated element coordinate. The formulas and the node order
+// (base corners 1-3, top corners 4-6, vertical-edge mids 7-9, base
+// triangle edge mids 10-12, top triangle edge mids 13-15; zeta in
+// [-1,1]) are identical to the pol() PRISM15 branch in polynom.cc and
+// reproduce the Professional element_intpnt_h of the corpus
+// prism15.dat (dev-checked).
+static void prism15_shape( double L1, double L2, double zz,
+  double coords[], long int nnol, double element_coord[] )
+{
+  long int inol=0, idim=0;
+  double L3 = 1. - L1 - L2, N[MNOL];
+
+  for ( inol=0; inol<nnol; inol++ ) N[inol] = 0.;
+  {
+    double Lk[3] = { L1, L2, L3 };
+    for ( long int k=0; k<3; k++ )
+      N[k] = 0.5*Lk[k]*(1.-zz)*(2.*Lk[k]-2.-zz);
+    for ( long int k=0; k<3; k++ )
+      N[3+k] = 0.5*Lk[k]*(1.+zz)*(2.*Lk[k]-2.+zz);
+    for ( long int k=0; k<3; k++ )
+      N[6+k] = Lk[k]*(1.-zz*zz);
+  }
+  N[9] = 2.*L1*L2*(1.-zz);
+  N[10] = 2.*L2*L3*(1.-zz);
+  N[11] = 2.*L3*L1*(1.-zz);
+  N[12] = 2.*L1*L2*(1.+zz);
+  N[13] = 2.*L2*L3*(1.+zz);
+  N[14] = 2.*L3*L1*(1.+zz);
+
+  array_set( element_coord, 0., ndim );
+  for ( inol=0; inol<nnol; inol++ ) {
+    for ( idim=0; idim<ndim; idim++ )
+      element_coord[idim] += N[inol]*coords[inol*ndim+idim];
+  }
+}
+
 long int point_el( double point[], double coords[], double weight[],
   long int name, long int nnol, double eps_iso )
 
@@ -150,6 +188,99 @@ long int point_el( double point[], double coords[], double weight[],
            ( scalar_dabs(point[1]-work[1]) > EPS_SIZE ) ||
            ( scalar_dabs(point[2]-work[2]) > EPS_SIZE )
          ) found = 0;
+    }
+  }
+  else if ( name==-PRISM15 ) {
+    // parametric localization for the 15-node quadratic prism: Newton
+    // over the natural coordinates (L1, L2, zeta in [-1,1], L3 =
+    // 1-L1-L2) minimizing the distance to the point. Mirrors the
+    // generic hex/quad Newton of the branch below with the prism15
+    // shape functions of prism15_shape().
+    array_set( element_coord, 0., ndim );
+    for ( inol=0; inol<nnol; inol++ ) {
+      for ( idim=0; idim<ndim; idim++ )
+        element_coord[idim] += coords[inol*ndim+idim]/nnol;
+    }
+    element_largest_size = -1.;
+    for ( inol=0; inol<nnol; inol++ ) {
+      tmp = array_distance( element_coord, &coords[inol*ndim], work, ndim );
+      if ( tmp>element_largest_size ) element_largest_size = tmp;
+    }
+    point_distance = array_distance( element_coord, point, work, ndim );
+    if ( point_distance>(1.+EPS_SIZE)*element_largest_size )
+      found = 0;
+    else {
+      converged = 0;
+      array_set( iso_old, 0., MDIM );
+      array_set( iso_new, 0., MDIM );
+      iso_old[0] = 1./3.;
+      iso_old[1] = 1./3.;
+      for ( iter=0; iter<=MITER; iter++ ) {
+        prism15_shape( iso_old[0], iso_old[1], iso_old[2], coords, nnol,
+          element_coord );
+        if ( converged )
+          break;
+        else {
+          dist_old = array_distance( element_coord, point, work, ndim );
+          // use new iso-parametric coordinates if distance decreases
+          if ( iter>0 && dist_old>dist_tmp ) {
+            step = step / 2.;
+            dist_old = dist_tmp;
+            array_move( iso_tmp, iso_old, ndim );
+          }
+          else
+            step = 1.;
+          converged = 1;
+          for ( iiso=0; iiso<ndim; iiso++ ) {
+            // central differences of the distance wrt the natural coord
+            array_move( iso_old, iso, MDIM );
+            iso[iiso] = iso_old[iiso] + DELTA;
+            prism15_shape( iso[0], iso[1], iso[2], coords, nnol,
+              element_coord );
+            dist_high = array_distance( element_coord, point, work, ndim );
+            array_move( iso_old, iso, MDIM );
+            iso[iiso] = iso_old[iiso] - DELTA;
+            prism15_shape( iso[0], iso[1], iso[2], coords, nnol,
+              element_coord );
+            dist_low = array_distance( element_coord, point, work, ndim );
+            iso_new[iiso] = iso_old[iiso];
+            if ( scalar_dabs(dist_high-dist_low)>
+                EPS_SIZE*element_largest_size ) {
+              tmp = step*dist_old*2.*DELTA/(ndim*(dist_low-dist_high));
+              iso_new[iiso] += tmp;
+              if ( scalar_dabs(tmp)>EPS_SIZE ) converged = 0;
+            }
+          }
+          dist_tmp = dist_old;
+          array_move( iso_old, iso_tmp, MDIM );
+          array_move( iso_new, iso_old, MDIM );
+        }
+      }
+      L1 = iso_old[0];
+      L2 = iso_old[1];
+      L3 = 1. - L1 - L2;
+      if ( L1<(-eps_iso) || L1>(1.+eps_iso) ||
+           L2<(-eps_iso) || L2>(1.+eps_iso) ||
+           L3<(-eps_iso) || L3>(1.+eps_iso) ||
+           iso_old[2]<(-(1.+eps_iso)) || iso_old[2]>(1.+eps_iso) ||
+           dist_old>element_largest_size*eps_iso || !converged )
+        found = 0;
+      else {
+        // final shape values for the caller (dof interpolation)
+        double Lk[3] = { L1, L2, L3 }, zz = iso_old[2];
+        for ( inol=0; inol<nnol; inol++ ) weight[inol] = 0.;
+        for ( long int k=0; k<3; k++ ) {
+          weight[k] = 0.5*Lk[k]*(1.-zz)*(2.*Lk[k]-2.-zz);
+          weight[3+k] = 0.5*Lk[k]*(1.+zz)*(2.*Lk[k]-2.+zz);
+          weight[6+k] = Lk[k]*(1.-zz*zz);
+        }
+        weight[9] = 2.*L1*L2*(1.-zz);
+        weight[10] = 2.*L2*L3*(1.-zz);
+        weight[11] = 2.*L3*L1*(1.-zz);
+        weight[12] = 2.*L1*L2*(1.+zz);
+        weight[13] = 2.*L2*L3*(1.+zz);
+        weight[14] = 2.*L3*L1*(1.+zz);
+      }
     }
   }
   else {

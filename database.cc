@@ -7392,6 +7392,12 @@ void db_initialize( long int dof_type[], long int dof_label[] )
 
   strcpy(name[ANGLE],"angle");
 
+  // PRISM15 element type (DEV-B prism15 sprint): the 15-node quadratic
+  // prism of the Professional (corpus prism15.dat). Registered at the
+  // end like the appended enum value (see tochnog.h): only the name is
+  // needed, the ELEMENT record machinery is name-generic.
+  strcpy(name[PRISM15],"prism15");
+
   for ( idat=0; idat<MDAT; idat++ ) {
     if ( data_length[idat]<1 ) data_length[idat] = 1;
   }

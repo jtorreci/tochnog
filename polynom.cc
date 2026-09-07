@@ -223,6 +223,151 @@ void pol( long int element, long int element_group,
       }
     }
   }
+  else if ( name==-PRISM15 ) {
+    // 15-node serendipity quadratic prism (wedge). Node order (verified
+    // against the Professional .dbs of the corpus prism15.dat):
+    //   1-3  base triangle corners (area coords L1,L2,L3), zeta=-1
+    //   4-6  top triangle corners (L1,L2,L3), zeta=+1
+    //   7-9  mid nodes of the vertical edges above corners 1-3, zeta=0
+    //   10-12 base triangle edge mids (1-2),(2-3),(3-1), zeta=-1
+    //   13-15 top triangle edge mids (1-2),(2-3),(3-1), zeta=+1
+    // with L3 = 1-L1-L2 and zeta in [-1,1] (z_phys = (1+zeta)/2 for a
+    // unit-height prism). In-plane interpolation is the quadratic
+    // 6-node triangle; along z the interpolation is quadratic Lagrange
+    // on the vertical edges (serendipity: the zeta^2 vertical-mid term
+    // corrects the corner/mid functions, there are no mid nodes on the
+    // rectangular side faces - that would be the 18-node prism).
+    //   corner base/top:  N = L_i (1-/+zeta) (2L_i - 2 -/+ zeta)/2
+    //   vertical mid:     N = L_i (1-zeta^2)
+    //   base edge mid:    N = 2 L_i L_j (1-zeta)   (i,j the edge corners)
+    //   top edge mid:     N = 2 L_i L_j (1+zeta)
+    // Integration rule (matches the Professional, measured from its
+    // element_intpnt_coord): 3-point Gauss in zeta x the 7-point
+    // degree-5 triangle rule (Dunavant) = 21 points. The shape
+    // functions and rule reproduce the Professional element_intpnt_h
+    // of prism15.dat exactly (dev-checked). The natural-domain measure
+    // (triangle area 1/2 x zeta in [-1,1]) is 1, so volume[] uses the
+    // plain weight*detj factor (see the volume chain below).
+    nnol = 15;
+    npoint = 21;
+    {
+      double sqrt15 = sqrt( 15. );
+      double zeta_pt[3] = { -sqrt(0.6), 0., sqrt(0.6) };
+      double zeta_w[3]  = { 5./9., 8./9., 5./9. };
+      double a = (6.+sqrt15)/21., b = (9.-2.*sqrt15)/21.;
+      double c = (6.-sqrt15)/21., d = (9.+2.*sqrt15)/21.;
+      double tri_pt[7][2] = { {1./3.,1./3.}, {a,b}, {b,a}, {b,b},
+        {c,d}, {d,c}, {d,d} };
+      double tri_w[7] = { 9./80., (155.+sqrt15)/2400., (155.+sqrt15)/2400.,
+        (155.+sqrt15)/2400., (155.-sqrt15)/2400., (155.-sqrt15)/2400.,
+        (155.-sqrt15)/2400. };
+      for ( ipoint=0; ipoint<npoint; ipoint++ ) {
+        double zz = zeta_pt[ipoint/7];
+        L1 = tri_pt[ipoint%7][0];
+        L2 = tri_pt[ipoint%7][1];
+        L3 = 1. - L1 - L2;
+        weight[ipoint] = tri_w[ipoint%7]*zeta_w[ipoint/7];
+        for ( inol=0; inol<nnol; inol++ )
+          h[ipoint*nnol+inol] = 0.;
+        array_set( &p[ipoint*ndim*nnol], 0., ndim*nnol );
+        // base corners (inol 0-2): N = L_i (1-zz) (2L_i-2-zz) / 2
+        if ( true ) {
+          double Lk[3] = { L1, L2, L3 };
+          for ( long int k=0; k<3; k++ ) {
+            long int i = k;
+            double f = 0.5*(1.-zz)*(2.*Lk[k]-2.-zz);
+            double g = 0.5*(1.-zz)*(4.*Lk[k]-2.-zz);
+            double dh = 0.5*Lk[k]*(1.-2.*Lk[k]+2.*zz);
+            h[ipoint*nnol+i] = Lk[k]*f;
+            if ( k==0 ) {
+              p[ipoint*ndim*nnol+0*nnol+i] = g;
+              p[ipoint*ndim*nnol+1*nnol+i] = 0.;
+            }
+            else if ( k==1 ) {
+              p[ipoint*ndim*nnol+0*nnol+i] = 0.;
+              p[ipoint*ndim*nnol+1*nnol+i] = g;
+            }
+            else {
+              p[ipoint*ndim*nnol+0*nnol+i] = -g;
+              p[ipoint*ndim*nnol+1*nnol+i] = -g;
+            }
+            p[ipoint*ndim*nnol+2*nnol+i] = dh;
+          }
+        }
+        // top corners (inol 3-5): N = L_i (1+zz) (2L_i-2+zz) / 2
+        if ( true ) {
+          double Lk[3] = { L1, L2, L3 };
+          for ( long int k=0; k<3; k++ ) {
+            long int i = 3+k;
+            double f = 0.5*(1.+zz)*(2.*Lk[k]-2.+zz);
+            double g = 0.5*(1.+zz)*(4.*Lk[k]-2.+zz);
+            double dh = 0.5*Lk[k]*(2.*Lk[k]-1.+2.*zz);
+            h[ipoint*nnol+i] = Lk[k]*f;
+            if ( k==0 ) {
+              p[ipoint*ndim*nnol+0*nnol+i] = g;
+              p[ipoint*ndim*nnol+1*nnol+i] = 0.;
+            }
+            else if ( k==1 ) {
+              p[ipoint*ndim*nnol+0*nnol+i] = 0.;
+              p[ipoint*ndim*nnol+1*nnol+i] = g;
+            }
+            else {
+              p[ipoint*ndim*nnol+0*nnol+i] = -g;
+              p[ipoint*ndim*nnol+1*nnol+i] = -g;
+            }
+            p[ipoint*ndim*nnol+2*nnol+i] = dh;
+          }
+        }
+        // vertical edge mids (inol 6-8): N = L_i (1-zz^2)
+        if ( true ) {
+          double Lk[3] = { L1, L2, L3 };
+          for ( long int k=0; k<3; k++ ) {
+            long int i = 6+k;
+            h[ipoint*nnol+i] = Lk[k]*(1.-zz*zz);
+            if ( k==0 ) {
+              p[ipoint*ndim*nnol+0*nnol+i] = 1.-zz*zz;
+              p[ipoint*ndim*nnol+1*nnol+i] = 0.;
+            }
+            else if ( k==1 ) {
+              p[ipoint*ndim*nnol+0*nnol+i] = 0.;
+              p[ipoint*ndim*nnol+1*nnol+i] = 1.-zz*zz;
+            }
+            else {
+              p[ipoint*ndim*nnol+0*nnol+i] = -(1.-zz*zz);
+              p[ipoint*ndim*nnol+1*nnol+i] = -(1.-zz*zz);
+            }
+            p[ipoint*ndim*nnol+2*nnol+i] = -2.*zz*Lk[k];
+          }
+        }
+        // base triangle edge mids (inol 9-11): edges (1,2),(2,3),(3,1)
+        h[ipoint*nnol+9] = 2.*L1*L2*(1.-zz);
+        p[ipoint*ndim*nnol+0*nnol+9] = 2.*L2*(1.-zz);
+        p[ipoint*ndim*nnol+1*nnol+9] = 2.*L1*(1.-zz);
+        p[ipoint*ndim*nnol+2*nnol+9] = -2.*L1*L2;
+        h[ipoint*nnol+10] = 2.*L2*L3*(1.-zz);
+        p[ipoint*ndim*nnol+0*nnol+10] = -2.*L2*(1.-zz);
+        p[ipoint*ndim*nnol+1*nnol+10] = 2.*(L3-L2)*(1.-zz);
+        p[ipoint*ndim*nnol+2*nnol+10] = -2.*L2*L3;
+        h[ipoint*nnol+11] = 2.*L3*L1*(1.-zz);
+        p[ipoint*ndim*nnol+0*nnol+11] = 2.*(L3-L1)*(1.-zz);
+        p[ipoint*ndim*nnol+1*nnol+11] = -2.*L1*(1.-zz);
+        p[ipoint*ndim*nnol+2*nnol+11] = -2.*L3*L1;
+        // top triangle edge mids (inol 12-14): edges (1,2),(2,3),(3,1)
+        h[ipoint*nnol+12] = 2.*L1*L2*(1.+zz);
+        p[ipoint*ndim*nnol+0*nnol+12] = 2.*L2*(1.+zz);
+        p[ipoint*ndim*nnol+1*nnol+12] = 2.*L1*(1.+zz);
+        p[ipoint*ndim*nnol+2*nnol+12] = 2.*L1*L2;
+        h[ipoint*nnol+13] = 2.*L2*L3*(1.+zz);
+        p[ipoint*ndim*nnol+0*nnol+13] = -2.*L2*(1.+zz);
+        p[ipoint*ndim*nnol+1*nnol+13] = 2.*(L3-L2)*(1.+zz);
+        p[ipoint*ndim*nnol+2*nnol+13] = 2.*L2*L3;
+        h[ipoint*nnol+14] = 2.*L3*L1*(1.+zz);
+        p[ipoint*ndim*nnol+0*nnol+14] = 2.*(L3-L1)*(1.+zz);
+        p[ipoint*ndim*nnol+1*nnol+14] = -2.*L1*(1.+zz);
+        p[ipoint*ndim*nnol+2*nnol+14] = 2.*L3*L1;
+      }
+    }
+  }
   else if ( name==-TET4 ) {
     db( GROUP_INTEGRATION_POINTS, element_group, &integration_points, ddum, 
       ldum, VERSION_NORMAL, GET_IF_EXISTS );
@@ -517,6 +662,7 @@ void pol( long int element, long int element_group,
     else if ( name==-TRIA6 ) volume[ipoint] = weight[ipoint]*detj/2.;
     else if ( name==-TET4  ) volume[ipoint] = weight[ipoint]*detj/6.;
     else if ( name==-TET10 ) volume[ipoint] = weight[ipoint]*detj/6.;
+    else if ( name==-PRISM15 ) volume[ipoint] = weight[ipoint]*detj;
     else if ( ndim==1  )     volume[ipoint] = weight[ipoint]*2.*detj;
     else if ( ndim==2 )      volume[ipoint] = weight[ipoint]*4.*detj;
     else                     volume[ipoint] = weight[ipoint]*8.*detj;

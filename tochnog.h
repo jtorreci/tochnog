@@ -1552,6 +1552,12 @@ enum {
   PRINT_NODE_GEOMETRY_PRESENT_NODE_TYPE,
   NODE_GEOMETRY_PRESENT,
   PRINT_GROUP_DATA,
+  // PRISM15 (DEV-B prism15 sprint): 15-node serendipity quadratic
+  // prism (wedge) element type - the quadratic upgrade of PRISM6 that
+  // the Professional supports (corpus prism15.dat). Appended at the
+  // end of the enum to keep existing values stable (tochnog.h and
+  // tochnog-mod.h stay in sync).
+  PRISM15,
   LAST_DUMMY }; // keep LAST_DUMMY always the last one
 
 #define MDAT LAST_DUMMY+DATA_ITEM_SIZE  // reserve space for unknowns
