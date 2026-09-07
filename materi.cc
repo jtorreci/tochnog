@@ -1622,18 +1622,58 @@ double get_materi_density( long int element, long int element_group, long int nn
   else if ( db_active_index( GROUP_MATERI_DENSITY_GROUNDFLOW, element_group, VERSION_NORMAL ) ) {
     db( GROUP_MATERI_DENSITY_GROUNDFLOW, element_group, idum, 
       group_materi_density_groundflow, ldum, VERSION_NORMAL, GET_IF_EXISTS );
-    all_below = 1;
-    for ( inol=0; inol<nnol; inol++ ) {
-      inod = nodes[inol];
-      node_phreaticlevel = -BELOW;
-      db( NODE_PHREATICLEVEL, inod, &node_phreaticlevel, ddum, 
-        ldum, VERSION_NORMAL, GET_IF_EXISTS );
-      if ( node_phreaticlevel==-ABOVE ) all_below = 0;
+    // Wet/dry selection of the groundflow density pair (manual
+    // Professional 6.641: "If the element is filled with groundwater the
+    // density_wet will be used and otherwise the density_dry"). When total
+    // pressures are available (groundflow_pressure on: the pore pressure
+    // acting on the skeleton of materi.cc, i.e. the groundflow_phreatic_coord
+    // total = pres_dof + static, atmospheric-clamped at 0) the element is
+    // wet when its representative total pressure is negative (submerged:
+    // below the phreatic line / below the static-pressure-height reference
+    // / below the implicit phreatic of a no-reference model) and dry when
+    // the total is zero (drained zone, pressure clamped to the
+    // atmospheric). Measured against the Professional 25-10-2023 on
+    // ground11 (cycling water line): the reference keeps the DRY density
+    // above the phreatic line while the GNU used the wet density there
+    // (NODE_PHREATICLEVEL is only written by
+    // groundflow_phreaticlevel_bounda, absent in the ground11 family), so
+    // the drained zone of the GNU carried an extra
+    // (rho_wet - rho_dry)*g*h of effective stress and over-settled on
+    // drying and rebounded on re-wetting. The per-node totals are averaged
+    // over the element nodes like the -to_pres dependency monitor of
+    // group.cc (element representative value).
+    if ( groundflow_pressure ) {
+      double total_dens = 0., static_dens = 0., location_dens = 0.,
+        coord_dens[MDIM], sum_dens = 0.;
+      double *node_dof_dens = NULL, *coord_db_dens = NULL;
+      for ( inol=0; inol<nnol; inol++ ) {
+        inod = nodes[inol];
+        node_dof_dens = db_dbl( NODE_DOF, inod, VERSION_NEW );
+        coord_db_dens = db_dbl( NODE, inod, VERSION_NORMAL );
+        for ( long int idim_dens=0; idim_dens<ndim; idim_dens++ )
+          coord_dens[idim_dens] = coord_db_dens[idim_dens];
+        total_dens = static_dens = location_dens = 0.;
+        groundflow_phreatic_coord( inod, coord_dens, node_dof_dens,
+          total_dens, static_dens, location_dens, NULL );
+        sum_dens += total_dens;
+      }
+      if ( sum_dens/(double)nnol < 0. ) materi_dens = group_materi_density_groundflow[0]; // wet
+      else                            materi_dens = group_materi_density_groundflow[1]; // dry
     }
-    if ( all_below ) 
-      materi_dens = group_materi_density_groundflow[0]; // wet
-    else 
-      materi_dens = group_materi_density_groundflow[1]; // dry
+    else {
+      all_below = 1;
+      for ( inol=0; inol<nnol; inol++ ) {
+        inod = nodes[inol];
+        node_phreaticlevel = -BELOW;
+        db( NODE_PHREATICLEVEL, inod, &node_phreaticlevel, ddum, 
+          ldum, VERSION_NORMAL, GET_IF_EXISTS );
+        if ( node_phreaticlevel==-ABOVE ) all_below = 0;
+      }
+      if ( all_below ) 
+        materi_dens = group_materi_density_groundflow[0]; // wet
+      else 
+        materi_dens = group_materi_density_groundflow[1]; // dry
+    }
   }
   else {
     get_group_data( GROUP_MATERI_DENSITY, element_group, element, new_unknowns, 
