@@ -540,9 +540,28 @@ static void msf_element_rule( long int element, long int element_group,
     axisymmetric=-NO, ldum=0, idim=0;
   double ddum[1];
 
+  // the per-direction point counts: pol() integrates the directions
+  // idim>=ndim with ONE point (no extent), so the untouched directions
+  // must read 1 instead of uninitialized stack garbage (the 1D bar
+  // section family crashed on npoint_ip = nper[0]*nper[1] before this
+  // initialization existed)
+  nper[0] = 1;
+  nper[1] = 1;
+  nper[2] = 1;
+
   db( GROUP_AXISYMMETRIC, element_group, &axisymmetric, ddum, ldum,
     VERSION_NORMAL, GET_IF_EXISTS );
-  if ( name!=-BAR2 ) integration_points = -MAXIMAL;
+  // pol() integrates the -bar2 with the MINIMAL 1-point rule (the other
+  // tensor-product elements with the MAXIMAL one); replicating the rule
+  // the element really used is what makes the ELEMENT_DOF section
+  // stresses integrate to the right forces (measured: the -bar2 with the
+  // MAXIMAL rule comes out at half the force - the second Lobatto point
+  // reads an all-zero ELEMENT_DOF block). Same default as the mesh_cut
+  // mc_element_rule of delete.cc.
+  if ( name==-BAR2 )
+    integration_points = -MINIMAL;
+  else
+    integration_points = -MAXIMAL;
   if ( axisymmetric==-YES && materi_velocity ) {
     integration_method = -GAUSS;
     integration_points = -MINIMAL;
@@ -2322,6 +2341,166 @@ void post_element_force_calculate( void )
       db( POST_ELEMENT_FORCE_GROUP, ipef, grp_list, ddum,
         length_grp, VERSION_NORMAL, GET );
       ngrp = length_grp;
+    }
+
+    // -----------------------------------------------------------------
+    // 1D sections (manual Professional 6.929: the partial record
+    // dir_normal_x middle_x; 6.937: the single normal force). Measured
+    // against the Professional binary (2026-09-07) on the corpus 1D
+    // section family (force16/force17, mpc8/mpc9, post7) and on a static
+    // probe: the result is the AXIAL FORCE of the element at the section
+    // (N = sigma*A, tension positive), NOT a per-node -f_elem sum: at a
+    // node shared by two elements the -f_elem of both neighbours cancel
+    // (the interior post7 section would read 0 instead of -2), and at a
+    // mesh end the axial force of the single adjacent element carries
+    // the sign of the stress (post7 fixed end -1.81 = +f_elem of the
+    // last element). Per section node the element on the +dir_n side of
+    // the node is used when present (its -f_elem at the node = its axial
+    // force), the element on the -dir_n side otherwise (+f_elem at the
+    // node = the same axial force); the axial force itself is
+    // orientation-independent (f_elem at the element's high-coordinate
+    // end node = +N always, delete.cc 1D kinematics). The
+    // post_element_force_force/_inertia switches (manual 6.930/6.933)
+    // are parse-only in the GNU fork: the pure elastic axial force is
+    // reported (force17 stays a documented RUNFAIL for that reason).
+    if ( ndim==1 ) {
+
+      double nx=0., center=0., axial=0., x_hi=0., fb_axial=0.;
+      long int found_plus=0, node_in=-1, fb_ielem=-1, ixi=0, jnol=0;
+      double hx[MPOINT], px[MPOINT];
+
+      db_max_index( ELEMENT, max_elem, VERSION_NORMAL, GET );
+
+      for ( i=0; i<5; i++ ) res[i] = 0.;
+      for ( inod=0; inod<=max_node; inod++ ) {
+
+        if ( !db_active_index( NODE, inod, VERSION_NORMAL ) )
+          continue;
+
+        // the geometry restriction (manual 6.929): the INITIAL node
+        // location on the geometry (same call as the 2D/3D branch)
+        ok_node = 1;
+        if ( db_active_index( POST_ELEMENT_FORCE_GEOMETRY, ipef,
+             VERSION_NORMAL ) ) {
+          long int ge[DATA_ITEM_SIZE], ldum2=0, ok_g=0;
+          double factor_d=0.;
+          db( POST_ELEMENT_FORCE_GEOMETRY, ipef, ge, ddum,
+            ldum2, VERSION_NORMAL, GET );
+          geometry( inod, ddum3, ge, ok_g, factor_d, ddum3, rdum,
+            ddum3, NODE_START_REFINED, PROJECT_EXACT, VERSION_NORMAL );
+          if ( !ok_g ) ok_node = 0;
+        }
+        if ( !ok_node ) continue;
+
+        coord = db_dbl( NODE, inod, VERSION_NORMAL );
+        nx = coord[0];
+
+        // the adjacent restricted element of the section node: first
+        // pass looks for the element on the +dir_n side of the node
+        // (its -f_elem there = the axial force), the fallback for the
+        // -dir_n side (its +f_elem there = the same axial force)
+        found_plus = 0;
+        fb_ielem = -1;
+        for ( ielem=0; ielem<=max_elem && !found_plus; ielem++ ) {
+
+          if ( !db_active_index( ELEMENT, ielem, VERSION_NORMAL ) )
+            continue;
+
+          // the element number restriction (manual 6.932)
+          if ( db_active_index( POST_ELEMENT_FORCE_NUMBER, ipef,
+               VERSION_NORMAL ) ) {
+            long int nums[DATA_ITEM_SIZE], length_nums=0, ok_num=0;
+            db( POST_ELEMENT_FORCE_NUMBER, ipef, nums, ddum,
+              length_nums, VERSION_NORMAL, GET );
+            for ( i=0; i<length_nums; i++ )
+              if ( nums[i]==ielem ) ok_num = 1;
+            if ( !ok_num ) continue;
+          }
+
+          // the element group restriction (manual 6.931)
+          db( ELEMENT_GROUP, ielem, &element_group, ddum, ldum,
+            VERSION_NORMAL, GET_IF_EXISTS );
+          if ( ngrp>0 ) {
+            long int ok_grp = 0;
+            for ( igroup=0; igroup<ngrp; igroup++ )
+              if ( grp_list[igroup]==element_group ) ok_grp = 1;
+            if ( !ok_grp ) continue;
+          }
+
+          el = get_new_int(DATA_ITEM_SIZE);
+          db( ELEMENT, ielem, el, ddum, length_el, VERSION_NORMAL,
+            GET );
+          nnol = length_el - 1;
+          name = el[0];
+          node_in = -1;
+          center = 0.;
+          for ( inol=0; inol<nnol; inol++ ) {
+            node = el[1+inol];
+            coord = db_dbl( NODE, node, VERSION_NORMAL );
+            center += coord[0];
+            if ( node==inod ) node_in = inol;
+            coords[inol*MDIM+0] = coord[0];
+          }
+          center /= nnol;
+          delete[] el;
+          if ( node_in<0 ) continue;
+
+          // post_element_force_normal -yes (manual 6.935): only the
+          // elements on the positive side of the section plane through
+          // the middle contribute
+          if ( pef_normal==-YES && ( center-mid[0] )*dir_n[0]<0. )
+            continue;
+
+          if ( !( options_element_dof==-YES && stres_indx>=0 &&
+               db_active_index( ELEMENT_DOF, ielem, VERSION_NORMAL ) ) )
+            continue;
+          edof = db_dbl( ELEMENT_DOF, ielem, VERSION_NORMAL );
+
+          // the axial force of the element = its internal force at the
+          // high-coordinate end node (+f_elem = +N): the delete.cc 1D
+          // kinematics (f_elem = int B^T*sigma dV with the ELEMENT_DOF
+          // integration-point stress and the rule the element itself
+          // integrated with, msf_element_rule)
+          npol = ( name==-BAR2 ? 2 : 3 );
+          msf_element_rule( ielem, element_group, name, npol, nnol,
+            nper, iso, wrule );
+          x_hi = -1.e30;
+          for ( inol=0; inol<nnol; inol++ )
+            if ( coords[inol*MDIM+0]>x_hi ) x_hi = coords[inol*MDIM+0];
+          axial = 0.;
+          for ( inol=0; inol<nnol; inol++ ) {
+            if ( coords[inol*MDIM+0]!=x_hi ) continue;
+            for ( ixi=0; ixi<nper[0]; ixi++ ) {
+              double jac=0., sig=0.;
+              interpolation_polynomial( iso[0][ixi], npol, hx, px );
+              for ( jnol=0; jnol<nnol; jnol++ )
+                jac += px[jnol]*coords[jnol*MDIM+0];
+              if ( scalar_dabs( jac )<1.e-20 ) continue;
+              sig = edof[ixi*nuknwn + stres_indx];
+              // dN/dx = (dN/dxi)/J with the SIGNED Jacobian (the 1D
+              // element may be oriented either way, delete.cc:439)
+              axial += wrule[0][ixi]*2.*scalar_dabs( jac )*sig
+                * px[inol]/jac;
+            }
+          }
+
+          if ( ( center-nx )*dir_n[0]>0. ) {
+            res[0] += axial;
+            found_plus = 1;
+          }
+          else if ( fb_ielem<0 ) {
+            fb_ielem = ielem;
+            fb_axial = axial;
+          }
+        }
+        if ( !found_plus && fb_ielem>=0 ) res[0] += fb_axial;
+      }
+
+      for ( i=0; i<5; i++ ) res[i] *= fac;
+      length = 5;
+      db( POST_ELEMENT_FORCE_RESULT, ipef, idum, res, length,
+        VERSION_NORMAL, PUT );
+      continue;
     }
 
     // scan the elements and accumulate the internal nodal forces
