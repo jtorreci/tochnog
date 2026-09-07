@@ -351,7 +351,8 @@ long int groundflow_phreatic_coord( long int inod, double coord[], double dof[],
 // static-pressure-height reference (per-node static subtraction).
 
 {
-  long int length=0, found=0, ldum=0, idum[1], number[2], imult=0;
+  long int length=0, found=0, ldum=0, idum[1], number[2], imult=0,
+    static_switch=-NO;
   double water_level=0., dens=0., pressure_atmospheric=0., addtopressure=0.,
     ddum[1], force_gravity[MDIM], *groundflow_phreatic=NULL;
 
@@ -378,6 +379,12 @@ long int groundflow_phreatic_coord( long int inod, double coord[], double dof[],
     else
       imult = groundflow_phreatic_level_multiple_find_coord( coord );
     if ( imult>=0 ) {
+      static_switch = -NO;
+      if ( db_active_index( GROUNDFLOW_PHREATICLEVEL_MULTIPLE_STATIC, imult,
+          VERSION_NORMAL ) ) {
+        db( GROUNDFLOW_PHREATICLEVEL_MULTIPLE_STATIC, imult, &static_switch,
+          ddum, ldum, VERSION_NORMAL, GET );
+      }
       length = db_len( GROUNDFLOW_PHREATICLEVEL_MULTIPLE, imult, VERSION_NORMAL );
       groundflow_phreatic = db_dbl( GROUNDFLOW_PHREATICLEVEL_MULTIPLE, imult, VERSION_NORMAL );
       if      ( ndim==1 ) {
@@ -417,6 +424,17 @@ long int groundflow_phreatic_coord( long int inod, double coord[], double dof[],
             force_gravity[ndim-1] * dens * ( water_level - coord[ndim-1] );
           total_pressure = dof[pres_indx] + static_pressure;
         }
+        else if ( static_switch==-YES ) {
+          // groundflow_phreatic_level_multiple_static without a
+          // pressure unknown (mechanics-only static groundflow, manual
+          // Professional 6.574 + 6.573): the total (pore) pressure of
+          // the level is the static pressure itself
+          // rho*g*(z_level - z), clamped to the atmospheric pressure
+          // above the level by the common cap below the branches.
+          static_pressure =
+            force_gravity[ndim-1] * dens * ( water_level - coord[ndim-1] );
+          total_pressure = static_pressure;
+        }
       }
     }
   }
@@ -424,6 +442,11 @@ long int groundflow_phreatic_coord( long int inod, double coord[], double dof[],
 
     length = db_len( GROUNDFLOW_PHREATICLEVEL, 0, VERSION_NORMAL );
     groundflow_phreatic = db_dbl( GROUNDFLOW_PHREATICLEVEL, 0, VERSION_NORMAL ); 
+    static_switch = -NO;
+    if ( db_active_index( GROUNDFLOW_PHREATICLEVEL_STATIC, 0, VERSION_NORMAL ) ) {
+      db( GROUNDFLOW_PHREATICLEVEL_STATIC, 0, &static_switch, ddum, ldum,
+        VERSION_NORMAL, GET );
+    }
 
     if      ( ndim==1 ) {
       if ( length!=1 ) db_error( GROUNDFLOW_PHREATICLEVEL, 0 );
@@ -459,6 +482,16 @@ long int groundflow_phreatic_coord( long int inod, double coord[], double dof[],
       	static_pressure = 
         force_gravity[ndim-1] * dens * ( water_level - coord[ndim-1] );
   	total_pressure = dof[pres_indx] + static_pressure; // added -> bug 
+      }
+      else if ( static_switch==-YES ) {
+        // groundflow_phreatic_level_static without a pressure unknown
+        // (corpus ground18/excavate1, manual Professional 6.573: the
+        // total pressures of the nodes for which the level holds are
+        // set equal to the static pressure; the phreatic line may lie
+        // above the mesh part and the hydraulic heads are not solved).
+        static_pressure =
+          force_gravity[ndim-1] * dens * ( water_level - coord[ndim-1] );
+        total_pressure = static_pressure;
       }
     }
   }

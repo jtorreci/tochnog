@@ -26,6 +26,37 @@
 #define NTYPE 3
 #define EPS_PRI 1.e-12
 
+// Mechanics-only static groundflow (corpus ground18/excavate1, manual
+// Professional 6.573): a groundflow_phreatic_level_static switch (or a
+// groundflow_phreatic_level_multiple_static -yes level) materializes the
+// phreatic total pressure without a pressure unknown. The post_calcul
+// pressure monitors (-total_pressure/-static_pressure/-dynamic_pressure)
+// are then meaningful without groundflow_pressure; registration below and
+// the per-post-point coordinate lookup use this flag.
+long int groundflow_static_pressure_active( void )
+
+{
+  long int ldum=0, switch_value=-NO, imult=0, max_multiple=0;
+  double ddum[1];
+
+  if ( db_active_index( GROUNDFLOW_PHREATICLEVEL_STATIC, 0, VERSION_NORMAL ) ) {
+    db( GROUNDFLOW_PHREATICLEVEL_STATIC, 0, &switch_value, ddum, ldum,
+      VERSION_NORMAL, GET );
+    if ( switch_value==-YES ) return 1;
+  }
+  db_max_index( GROUNDFLOW_PHREATICLEVEL_MULTIPLE, max_multiple, VERSION_NORMAL,
+    GET );
+  for ( imult=0; imult<=max_multiple; imult++ ) {
+    if ( db_active_index( GROUNDFLOW_PHREATICLEVEL_MULTIPLE_STATIC, imult,
+         VERSION_NORMAL ) ) {
+      db( GROUNDFLOW_PHREATICLEVEL_MULTIPLE_STATIC, imult, &switch_value,
+        ddum, ldum, VERSION_NORMAL, GET );
+      if ( switch_value==-YES ) return 1;
+    }
+  }
+  return 0;
+}
+
 void calculate( void )
 
 {
@@ -181,6 +212,13 @@ void calculate( void )
                 exit(TN_EXIT_STATUS);
               }
             }
+            else if ( groundflow_static_pressure_active() &&
+                      type_post_dof[itype]==POST_POINT_DOF ) {
+              // mechanics-only static groundflow (ground18 of the
+              // corpus): the pressure monitors evaluate the phreatic
+              // level at the post point coordinates
+              coord = db_dbl( POST_POINT, ipost, VERSION_NORMAL );
+            }
             else
               coord = ddum;
             if      ( calcul_ecomplex ) {
@@ -202,7 +240,8 @@ void calculate( void )
               }
             }
             else
-              unknown_values[0] = post_dof[calcul_scalar_indx];
+              unknown_values[0] = ( calcul_scalar_indx>=0 ?
+                post_dof[calcul_scalar_indx] : 0. );
             calculate_operat( unknown_values, -1, coord, post_dof, result, length_result );
             db( type_post_dof_calcul[itype], ipost, idum, dof_calcul, 
               length, VERSION_NORMAL, GET_IF_EXISTS );
@@ -371,7 +410,7 @@ void calculate( void )
         }
       }
       else if ( unknown==-GROUNDFLOW_PRESSURE && labs(calcul_operat)==TOTAL &&
-                groundflow_pressure ) {
+                ( groundflow_pressure || groundflow_static_pressure_active() ) ) {
         // manual Professional 6.913 area: the item label is -to_pres
         // (post_calcul_label -to_pres in the .dbs of the Professional)
         strcpy( outname, "to_" );
@@ -384,7 +423,7 @@ void calculate( void )
         post_calcul_unknown_operat[(ncalcul-1)*2+1] = calcul_operat;
       }             
       else if ( unknown==-GROUNDFLOW_PRESSURE && labs(calcul_operat)==STATIC &&
-                groundflow_pressure ) {
+                ( groundflow_pressure || groundflow_static_pressure_active() ) ) {
         // item label -st_pres (Professional post_calcul_label naming)
         strcpy( outname, "st_" );
         strcat( outname, unknown_name );
@@ -396,7 +435,7 @@ void calculate( void )
         post_calcul_unknown_operat[(ncalcul-1)*2+1] = calcul_operat;
       }                
       else if ( unknown==-GROUNDFLOW_PRESSURE && labs(calcul_operat)==DYNAMIC &&
-                groundflow_pressure ) {
+                ( groundflow_pressure || groundflow_static_pressure_active() ) ) {
         // item label -dy_pres (Professional post_calcul_label naming)
         strcpy( outname, "dy_" );
         strcat( outname, unknown_name );
@@ -603,7 +642,8 @@ void parallel_calcul_node( void )
           }
         }
         else
-           unknown_values[0] = node_dof[calcul_scalar_indx];
+           unknown_values[0] = ( calcul_scalar_indx>=0 ?
+             node_dof[calcul_scalar_indx] : 0. );
         calculate_operat( unknown_values, inod, coord, node_dof, result, length_result );
         db( NODE_DOF_CALCUL, inod, idum, dof_calcul, length, 
           VERSION_NORMAL, GET_IF_EXISTS );
@@ -805,7 +845,7 @@ void calculate_operat( double unknown_values[], long int inod,
     length_result = 1;
   }
   else if ( labs(calcul_operat)==DYNAMIC ) {
-    pres = dof[pres_indx];
+    pres = ( groundflow_pressure ? dof[pres_indx] : 0. );
     if ( groundflow_phreatic_coord( inod, coord, dof, total_pres,
         static_pres, location, NULL ) )
       pres = total_pres - static_pres;
