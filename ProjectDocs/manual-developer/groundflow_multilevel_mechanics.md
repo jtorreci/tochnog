@@ -93,6 +93,67 @@ van Genuchten in groundda.cc) would be required to close the numeric targets;
 that is a constitutive kernel work unit (hypo family, see the hypo1-13
 calibration records), outside the pressure-convention scope of this batch.
 
+## 2026-09-07 follow-up (dev/g11): wet/dry groundflow density switch
+
+### Symptom re-measured (A/B 25-10-2023, ground11_phreatic_level)
+
+At t = 1e6 (water line at z = -50) the GNU and the Professional carry the
+SAME pore-pressure field but DIFFERENT effective stress in the drained zone:
+with the reset buoyant profile as reference the GNU shows sigma'_yy(z=-50) =
+-1003 (gradient 20.15/m above the line = rho_sat 2.015) while the
+Professional shows -816 (gradient 16.3/m = rho_dry 1.630). The GNU used the
+WET density in the drained zone: NODE_PHREATICLEVEL is only written by
+groundflow_phreaticlevel_bounda, which the ground11 family does not use, so
+get_materi_density never selected the dry density and the skeleton of the
+drained zone carried an extra (rho_wet - rho_dry)*g*h of effective stress
+(187 kPa at the level depth at t = 1e6).
+
+### Fix (materi.cc, get_materi_density)
+
+Manual Professional 6.641: "If the element is filled with groundwater the
+density_wet will be used and otherwise the density_dry... In case total
+pressures are calculated [post_calcul -groundflow_pressure -total_pressure]:
+density_wet if the total pressure is smaller than 0, density_dry if larger
+or equal to 0". The element decision now uses the average of the
+groundflow_phreatic_coord totals over the element nodes on the current
+iterate (NODE_DOF VERSION_NEW), exactly like the -to_pres dependency monitor
+of group.cc; wet iff the average is < 0. Below the phreatic line / below a
+static-pressure-height reference / below the implicit phreatic of a
+no-reference model the total is negative (submerged); above it the total is
+atmospheric-clamped to 0 -> dry. The old NODE_PHREATICLEVEL path is kept for
+the non-groundflow case. After the fix the GNU sigma'_yy profile matches the
+Professional within 0.3 % at every measured phase of both ground11 variants.
+
+### Residual gap (still rc=1 on the numeric targets)
+
+The density fix aligns the STRESS fields but does NOT close the settlement
+targets (measured post-fix, full transient):
+- ground11_phreatic_level: GNU veliy(t=2e6) = -0.431 vs -0.355 +- 0.02.
+- ground11_nonsaturated: GNU = +0.00086 vs -0.366 +- 0.01.
+At the SAME effective stress state (sigma'_yy within 0.3 %) the GNU column
+has accumulated 6-8 % more local vertical strain and 11-21 % more settlement
+than the Professional through the whole draining phase (ratio ~1.12 from
+t = 1e3 to t = 1e6, independent of the permeability 1e-2..1e0, of the
+autotimestep tolerance 1e-2..1e-6 and of the step count). Isolation probes
+(single quad4 wolffersdorff oedometer, plane and axisymmetric, strain- and
+step-count-independent, 10 vs 1000 steps) match the Professional to 0.7 %,
+so the residual is NOT the raw wolffersdorff kernel response on standard
+paths. It is a path-level difference of the coupled multi-element column
+(the lateral stress response of the column is ~frozen, Delta-sigma_h ~ 0 for
+Delta-sigma_v = -311 kPa, in BOTH binaries - an artifact of the axisymmetric
+stress-dof formulation shared by the reference - while the single-element
+oedometer gives the constitutive K0 increment 0.38; on that frozen-lateral
+path the hypo accumulation differs by ~6-8 %), which needs a dedicated
+constitutive/coupling work unit (hypo family) to close.
+
+### Side effect measured
+
+ground4 of the corpus (phreatic level at -50 with rho_wet/rho_dry 2.0/1.5)
+goes rc=1 -> rc=0 with the wet/dry density selection (its target checks the
+buoyancy of the drained zone). No regression on ground6/8/14/15/16/19,
+undrained1/2, large2/3, reset1, hypo1/2/4/7/8/9 and the internal suite
+16/16.
+
 ## External dependencies
 
 - `groundflow_phreatic_coord`, `db_active_index`, db accessors, globals
