@@ -393,3 +393,8 @@ input parameters it accepts.
 - [print_gid_calculation](print_database_calculation.md) — switch of the final GiD output (same gate).
 - [post_apply](post_apply.md) — global switch of the post-processing commands (6.900); registered, -no gating pending.
 - [print_group_data](print_group_data.md) — GiD plot of group_* data (6.990); registered parse-only. Unlocks the parse of distri3 (runtime pending).
+
+## PARALLEL PILOT BATCH (2026-09-07) — 4 developers in isolated worktrees, merged by orchestrator
+
+- [prism15](prism15.md) — 15-node serendipity quadratic prism (wedge) element, the quadratic upgrade of PRISM6 (corpus prism15.dat): 6 corners + 3 vertical mid-edge + 6 triangle mid-edge nodes. Integrated with 21 points = Gauss 3 (axis) x Dunavant 7-point degree-5 (triangle), the rule measured from the Professional .dbs. Unlocks prism15 rc=0 (sigzz = 1.000000261 vs Pro 1.000000000).
+- [mesh_interface_triangle](mesh_interface_triangle.md) — generate zero-thickness interface elements by cutting the tet4 mesh with a triangulated plane (manual 6.856/6.857/6.201): interface prism6/hex8 numbered first, retessellated halves after. Structure verified element-by-element vs the Professional .dbs; interface11 physics blocked by a pre-existing triangular 3D interface force distribution bug (see SEGUIMIENTO).

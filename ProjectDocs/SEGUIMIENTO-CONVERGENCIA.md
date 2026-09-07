@@ -2422,3 +2422,16 @@ del orden de parseo.
 - CERRADO 2026-09-04 (lote 3D L3+L4, fila del registro): `-hex20` → hex27 (mesh_convert_hex20) y la cara `-quad8` de interfaz 3D → hex18 (interface_convert). interface_quad8_hex20 rc=0.
 - Familia `post_*_summed` del post_global del Pro (bounda/element/node/...) no implementada (solo post_force_edge_summed, on-demand).
 - NOTA de convergencia (verificada contra .dbs del Pro): el Pro crea los duplicados de interfaz con coordenadas COINCIDENTES y los asigna al bloque −normal; el GNU los desplaza 0.01 al bloque +normal. Física de penalización por pares equivalente (targets rc=0, valores ~1e-7); difiere solo el layout de numeración del .dbs.
+
+### PILOTO PARALELO 2026-09-07 — 4 developers en worktrees aislados, integrados por el orquestador (rama documentation-improvement)
+
+**Método**: 4 worktrees (`/tmp/opencode/tn-dev-{a,b,c,d}`) sobre ramas propias desde bd80648, propiedad de archivos disjunta por developer, appends de enums SOLO antes de LAST_DUMMY, registro de keywords en database.cc append-only, docs en archivos propios (índices/SEGUIMIENTO integrados por el orquestador). Integración secuencial por merge con resolución manual del único conflicto esperado (append de enums A+B antes de LAST_DUMMY). Compilación integrada + suite 16/16 OK.
+
+| Resultado | Rama | Tests |
+|---|---|---|
+| **prism15 rc=0** (+1) | dev/b-prism15 (443fdcd+e9b9d73) | elemento PRISM15 completo: formas serendipity 15-nodo + integración 3×7 medida del Pro + point_el. corpus: prism15 RUNFAIL→PASS. |
+| **hypo1 rc=0, hypo2 mejorado** (+1) | dev/c-hypo-kernel (32cb40c+d2b910e) | calibración wolfersdorff: tolerancia substepping 1%→2% (medida del Pro) + clamp ρ≤1. corpus: hypo1 RUNFAIL→PASS. |
+| **reset1 rc=0, ground11 avanzado** (+1) | dev/d-ground8-mech (64e43d2+741a490+1ae997c) | reset combina constante+espaciales (6.350); dependency -to_pres como post item; presión mecánica sin nivel = p_total. corpus: reset1 RUNFAIL→PASS; ground11 corre el transitorio completo (rc=0 pendiente por gap constitutivo de re-mojado). |
+| **interface11: estructura ✓, física bloqueada** (0) | dev/a-interface11 (3408f6a+b55d9b3) | generate_interface_triangle() completa y verificada elemento-a-elemento vs .dbs del Pro. Blocker NUEVO destapado: bug PREEXISTENTE de la interfaz triangular 3D (σ −24 vs −1.0 con prism6; hex8 exacto; también afecta a interface_tria3_prism6 que pasa por tolerancia de volumen). Sprint de continuación sobre interface.cc. |
+
+**Corpus esperado integrado: 196 → 199 PASS** (prism15, hypo1, reset1; verificación con run completo pendiente en el registro del orquestador).
