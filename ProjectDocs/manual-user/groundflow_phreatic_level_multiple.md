@@ -60,3 +60,27 @@ Two independent groundwater levels: group 0 under a level at height 3 and group
 of each level is set to the static pressure `dens*g*(water_level - coord)`
 (e.g. -3 and -1 at the bottom with density 1 and gravity (0,-1)), without
 solving the hydraulic heads.
+
+## Behaviour notes (2026-09-07, ground8 verification)
+
+- The level records may use ANY index (e.g. 10/20); the family is not
+  restricted to index 0.
+- A level WITHOUT `groundflow_phreatic_level_multiple_static -yes` applies the
+  free-surface condition of a single `groundflow_phreaticlevel` to the nodes of
+  its own domain: nodes of the domain at or above the phreatic line are dry and
+  get their hydraulic-pressure dof bounded to 0 (total pressure 0 there), which
+  confines the saturated flow domain below the level. Below the level the total
+  pressure evaluates to the hydrostatic profile `dens*g*(water_level - coord)`
+  (capped to the atmospheric pressure above the level), matching the
+  Professional .dbs of ground8 of the corpus (hydrostatic under each level,
+  0 elsewhere and in the dry zones).
+- Post points inside a level domain resolve the level of the element that
+  contains the point, so `post_point_dof_calcul ... -to_pres` etc. reproduce
+  the same profile as the nodes.
+
+## Verified with
+
+- ground8 of the corpus (two levels at y=-50 and y=-10 over two element
+  groups, mechanics + flow): post-point total pressures -10 at both targets,
+  rc=0; profile digit-consistent with the Professional binary .dbs
+  (25-10-2023). See the SEGUIMIENTO-CONVERGENCIA.md register.
