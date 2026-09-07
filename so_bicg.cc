@@ -586,7 +586,7 @@ void parallel_solve_iterative_bicg_element( void )
 void solve_iterative_bicg_element( long int element, long int ithread )
 
 {
-  register long int i=0, iglobal=0, ilocal=0, jglobal=0, jlocal=0,
+  long int i=0, iglobal=0, ilocal=0, jglobal=0, jlocal=0,
      indx1=0, indx2=0, element_group=0, ldum=0, element_matrix_values_length=0, 
      use_element_matrix=0, use_group_matrix=0;
   long int *element_matrix_unknowns=NULL;

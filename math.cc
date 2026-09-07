@@ -25,7 +25,7 @@
 void array_add( double a[], double b[], double c[], long int n )
 
 {
-  register long int i=0;
+  long int i=0;
 
   for ( i=0; i<n; i++ ) c[i] = a[i] + b[i];
 
@@ -41,7 +41,7 @@ double array_distance( double a[], double b[], double work[], long int n )
 double array_inproduct( double a[], double b[], long int n )
 
 {
-  register long int i=0;
+  long int i=0;
   double result=0.;
 
   for ( i=0; i<n; i++ ) result += a[i]*b[i];
@@ -52,7 +52,7 @@ double array_inproduct( double a[], double b[], long int n )
 long int array_member( long int list[], long int i, long int n, long int &indx )
 
 {
-  register long int j=0, found=0;
+  long int j=0, found=0;
 
   indx = -1;
 
@@ -80,7 +80,7 @@ void array_move( long int from[], long int to[], long int n )
 void array_move( double from[], double to[], long int n )
 
 {
-  register long int i=0;
+  long int i=0;
 
   for ( i=0; i<n; i++ ) to[i] = from[i];
 
@@ -89,7 +89,7 @@ void array_move( double from[], double to[], long int n )
 void array_set( double *ptr, double value, long int n )
 
 {
- register long int i=0;
+ long int i=0;
 
  for ( i=0; i<n; i++ ) *(ptr+i) = value;
 }
@@ -97,7 +97,7 @@ void array_set( double *ptr, double value, long int n )
 void array_set( long int *ptr, long int value, long int n )
 
 {
- register long int i=0;
+ long int i=0;
 
  for ( i=0; i<n; i++ ) *(ptr+i) = value;
 
@@ -107,7 +107,7 @@ void array_set( long int *ptr, long int value, long int n )
 void array_multiply( double a[], double b[], double c, long int n )
 
 {
-  register long int i=0;
+  long int i=0;
 
   for ( i=0; i<n; i++ ) b[i] = c * a[i];
 
@@ -161,7 +161,7 @@ void array_outproduct_3D( double a[], double b[], double c[] )
 void array_subtract( double a[], double b[], double c[], long int n )
 
 {
-  register long int i=0;
+  long int i=0;
 
   for ( i=0; i<n; i++ ) c[i] = a[i] - b[i];
 
@@ -390,7 +390,7 @@ void matrix_ab( double *a, double *b, double *c, long int n, long int m,
   // c[n][k] = a[n][m] * b[m][k]
 
 {
-    register long int i=0, j=0, l=0;
+    long int i=0, j=0, l=0;
 
   for ( i=0; i<n; i++ ) {
     for ( j=0; j<k; j++ ) {
@@ -423,7 +423,7 @@ void matrix_abt( double *a, double *b, double *c, long int n, long int m,
   // c[n][k] = a[n][m] * b[k][m]Transposed
 
 {
-  register long int i=0, j=0, l=0;
+  long int i=0, j=0, l=0;
 
   for ( i=0; i<n; i++ ) {
     for ( j=0; j<k; j++ ) {
@@ -443,7 +443,7 @@ void matrix_atb( double *a, double *b, double *c, long int n, long int m,
   // c[m][k] = a[n][m]Transposed * b[n][k]
 
 {
-  register long int i=0, j=0, l=0;
+  long int i=0, j=0, l=0;
 
   for ( i=0; i<m; i++ ) {
     for ( j=0; j<k; j++ ) {
@@ -470,7 +470,7 @@ void matrix_atba( double a[], double b[], double c[],
 void matrix_a4b( double a[3][3][3][3], double b[], double c[] )
 
 {
-  register long int i=0, j=0, k=0, l=0;
+  long int i=0, j=0, k=0, l=0;
 
   for ( i=0; i<3; i++ ) {
     for ( j=0; j<3; j++ ) {
@@ -1167,7 +1167,7 @@ double tetrahedron_volume( double c0[], double c1[], double c2[], double c3[] )
 
 void matrix_inverse_general(double *matr, double *inv, int P) {
 	int N=int(sqrt((double)P));
-        register long int i=0, j=0 ;
+        long int i=0, j=0 ;
 	Matrix matice(N,N);
 	Matrix img(N,N);
 	Matrix imginv(N,N);
@@ -1194,7 +1194,7 @@ void make_dev(double tnz[9], double dev[9]) {
 
 
 void matrix4_ab( double a[], double b[], double c[3][3][3][3] ) {
-  register long int i=0, j=0, k=0, l=0;
+  long int i=0, j=0, k=0, l=0;
 
   for ( i=0; i<3; i++ ) {
     for ( j=0; j<3; j++ ) {
@@ -1209,7 +1209,7 @@ void matrix4_ab( double a[], double b[], double c[3][3][3][3] ) {
 }
 
 void matrix_a_contr_b( double a[], double b[], double &c ) {
-  register long int i=0, j=0 ;
+  long int i=0, j=0 ;
   c=0;	
 
   for ( i=0; i<3; i++ ) {
@@ -1221,7 +1221,7 @@ void matrix_a_contr_b( double a[], double b[], double &c ) {
 }
 
 void matrix_ab4( double a[], double b[3][3][3][3], double c[] ) {
-  register long int i=0, j=0, k=0, l=0;
+  long int i=0, j=0, k=0, l=0;
 
   for ( i=0; i<3; i++ ) {
     for ( j=0; j<3; j++ ) {
