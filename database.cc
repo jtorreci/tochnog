@@ -8611,7 +8611,7 @@ long int db_no_index( long int idat )
   return no_index[data_number];
 }
 
-long int db_number( char str[] )
+long int db_number( const char str[] )
 
 {
   long int data_number=0, found=-1;

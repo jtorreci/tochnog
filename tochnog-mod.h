@@ -1817,7 +1817,7 @@ long int  db_max_index( long int idat, long int &max, long int version,
             long int task );
 char     *db_name( long int idat );
 long int  db_no_index( long int idat );
-long int  db_number( char name[] );
+long int  db_number( const char name[] );
 long int  db_partialname( long int idat, char *str );
 long int  db_partialname_any( const char *str );
 long int  db_partialname_any_index( const char *str, long int index );
