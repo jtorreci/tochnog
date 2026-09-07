@@ -93,36 +93,62 @@ Per control index, over the element set present BEFORE the call (pattern
   (side 1 = -normal side, CCW+ ordering, side 2 = +normal side) makes
   compression give a NEGATIVE normal stress, like the Professional.
 
-## State of the physics (interface11, NOT closed)
+## State of the physics (interface11, CLOSED 2026-09-07)
 
 The cut routine generates the structure that matches the Professional
 .dbs of interface11 (element types, numbering, groups, node duplication
-— verified element by element), but the target
-`element_interface_stress_average 4 0 = -1` is NOT reached (GNU gives
-about -13.7 with kn=1e11). Root cause measured: the GNU interface
-element is NOT consistent with `-prism6`/`-tet4` volume neighbours. The
-bug is PRE-EXISTING (independent of this cut routine) and was never
-caught because the corpus tests that involve triangular interfaces
-(`interface_tria3_prism6`) only target a BULK stress with a loose
-tolerance. Minimal reproductions (GNU vs Professional 25-10-2023):
+— verified element by element) AND the physics now converges:
+`element_interface_stress_average 4 0` = −1.00000008 (target −1.0,
+tol 1e-2, rc=0; the Professional solves −0.99999954).
+
+The blocker was a PRE-EXISTING bug of the GNU volume integration of the
+`-prism6` wedge in polynom.cc (independent of this cut routine). It was
+never caught because the corpus tests that involve triangular interfaces
+only targeted bulk stresses with a loose tolerance or prescribed fields
+(the stress reads C·B·u and never exercises the volume integral).
+Root cause and fix are documented in polynom.cc (PRISM6 branch and the
+volume[] branch): the wedge fell through to the hex8 integration
+(weight*8*detj) with weights summing to 1.5, i.e. 24x the physical
+reference volume 0.5 — every volume integral of the wedge (stiffness,
+mass, gravity, nodal face forces) was 24x too large, so the nodal force
+a compressed wedge exerts on its triangular faces was 24x the
+consistent load (measured: u=−z, E=1, σ=−1 → reactions ±4 per node
+instead of ±A/3 = ±1/6). Zero-thickness prism6 interfaces against
+`-prism6`/`-tet4` volume neighbours therefore converged to σ_iface =
+−24 instead of −1 (minimal model), while hex8-neighbour interfaces were
+exact. The rewrite uses the degree-2 triangle rule × 2-point Gauss in
+zeta (weights summing to the reference volume 1/2), the layout the
+Professional integrates (its element_intpnt_coord of the wedge
+elements shows zeta = 0.2113/0.7887 = 1/2 ± 1/(2√3)), which also fixes
+the OBLIQUE wedges of the interface11 cut (their Jacobian varies along
+zeta; the old rule with both z-levels in the upper half bent the field
+away from u=−z: node_dof of the cut plane −0.626..−0.758 instead of
+−0.6 and per-pair σ_iface −0.32..−0.88 instead of uniform −1).
+
+Minimal reproductions (GNU post-fix vs Professional 25-10-2023):
 
 - Two stacked `-prism6` wedges (triangular cross-section, height 0.5
-  each) + one zero-thickness `-prism6` interface, top displaced -1,
-  bottom fixed: exact answer sigma = -1 (the Professional solves -1.0);
-  the GNU solves sigma = -24, i.e. an interface jump 24x the
-  equilibrium one, for every kn (asymptotic). With `-hex8` blocks the
-  same setup is exact (-1) in the GNU.
+  each) + one zero-thickness `-prism6` interface, top displaced −1,
+  bottom fixed: GNU σ_iface = −1.00000008, reactions ±0.1666664/
+  +0.1666669 per node (the consistent ±1/6); the Professional solves
+  −1.0 with reactions ±1/6. Before the fix the GNU solved σ = −24 with
+  reactions ±4 (24x), invariant to the side sign.
+- `interface11` of the corpus (3 tets cut by the plane z=0.6): the
+  three generated interfaces (elements 4/5/6, the target element 4 is
+  the prism6 one) give σ = −1.00000008 / −1.00000286 / −1.00000748
+  (Pro −0.99999954 / −0.99999830 / −1.00000026) and the cut-plane
+  node_dof is −0.6000014 (u=−z within the solver tolerance; before the
+  fix −0.626..−0.758 and σ_el4 = −13.74). rc=0.
 - `interface_tria3_prism6` of the corpus (prism6 interfaces converted
-  from tria3 on the shared quad face of two hex8 blocks): the GNU
-  interface stress is +1.51 where the Professional gives -1.0 (the
-  corpus test passes because its target is a bulk post_point stress).
-
-The interface element machinery (interface.cc) was calibrated on
-quadrilateral (hex8-face) interfaces (uniform per-pair weights 1/ns1,
-face-area measure). With triangular sides the assembled equilibrium of
-the interface + wedge/tet pieces is off by a geometry-dependent factor
-(24 in the minimal model). Closing interface11 needs the interface
-element to be made consistent with `-prism6`/`-tet4` neighbours (and a
-re-validation of the whole interface family: interface1-15, conspr1-7,
-patch1, tria3_prism6, quad4_hex8) — that is the natural continuation
-sprint; the present cut routine is ready and verified structurally.
+  from tria3 on the shared quad face of two hex8 blocks) is UNCHANGED
+  by this fix (its interface elements do not go through the volume
+  integration of pol()); rc=0 kept. NOTE its own latent bug is still
+  open: the GNU interface stress is +1.51 where the Professional gives
+  −1.0 — the triangulated quad face (two prism6 interfaces sharing the
+  diagonal) distributes the contact force 1/6-1/3-1/3-1/6 over the
+  four face nodes while the consistent quad load is 1/4 each, and the
+  orientation of the converted zero-thickness interface reports
+  compression with the opposite sign. It passes rc=0 only because its
+  target checks a bulk post_point stress. Fixing it requires touching
+  the tria3→prism6 interface conversion / orientation (out of scope of
+  the volume-integration fix of this sprint).

@@ -389,3 +389,58 @@ vs 1/3 — the generated ties constrain the velocity dofs but the mixed
 σ-dofs of the tied nodes stay free → non-homogeneous field), the
 phreatic-multiple + mechanics coupling (ground8), the materi_dynamic
 explicit limit (dynamic1/2/5/8).
+
+## Convergence record 2026-09-07 — prism6 volume integration 24x bug (interface11)
+
+interface11 of the corpus (3 tets cut by a triangulated plane, generated
+zero-thickness prism6/hex8 interfaces, target el4 σ = −1) was blocked by
+a PRE-EXISTING bug of the `-prism6` VOLUME integration in polynom.cc
+(the interface element itself was consistent; the wedge neighbour was
+not). Minimal model: two stacked wedges + zero-thickness prism6
+interface gave GNU σ_iface = −24 (asymptotic) vs Pro −1.0; with hex8
+neighbours the same setup was exact.
+
+Mechanism (measured): the PRISM6 branch of pol() used 6 integration
+weights of 0.25 (sum 1.5) and its volume[] fell through to the hex8
+branch `weight*8*detj` — but the wedge reference cell (standard triangle
+area 1/2 × zeta∈[0,1]) has volume 1/2, so every volume integral came out
+`8*1.5/0.5 = 24x` the physical one. The stiffness, mass, gravity loads
+and the nodal forces on the triangular faces scaled by 24: a single
+wedge with the exact field u=−z, E=1, σ=−1 gave nodal reactions ±4
+instead of the consistent ±A/3 = ±1/6 (measured pr1.dat). The
+zero-thickness interface (whose per-pair force w_i·A·kn·du is the
+physical consistent one) then had to carry σ 24x larger to balance the
+wedge → σ_iface = −24. The old z-levels (0.5 and 0.75, both in the upper
+half) additionally mis-integrate OBLIQUE wedges (the interface11 cut
+pieces connect the z=0.6 face to the z=1 face; their Jacobian varies
+along zeta), which bent the field away from u=−z (cut-plane node_dof
+−0.626..−0.758 instead of −0.6, per-pair σ_iface −0.32..−0.88).
+
+Fix (polynom.cc, PRISM6 branch + volume[]): rewrite the rule as the
+degree-2 triangle rule (weights 1/6, sum 1/2) × 2-point Gauss in zeta
+(weights 1/2) → 6 points of weight 1/12 (sum 1/2 = the reference
+volume), volume = weight*detj (PRISM15 pattern). This is the layout the
+Professional integrates (its wedge element_intpnt_coord shows zeta =
+0.2113/0.7887 = 1/2 ± 1/(2√3)). Results: minimal model σ_iface =
+−1.00000008 with reactions ±0.1666664 (Pro −1.0, ±1/6); interface11 el4
+= −1.00000008, el5 = −1.00000286, el6 = −1.00000748, cut-plane node_dof
+−0.6000014 (u=−z within solver tolerance), rc=0 (was −13.74). The wedge
+element itself is now exact on the constant-stress patch test (faces
+carry the consistent load) for straight and oblique prisms alike.
+
+Blast radius (family, rc=0 kept): interface1/2/3/7/8/9/10/11/12/14/15,
+interface_patch, interface_bar2_quad4, interface_bar3_quad8,
+interface_quad4_hex8(_many), interface_quad8_hex20,
+interface_tria3_prism6, conspr1-7, patch1, mohr_coul_direct3, expans3,
+elasti6. NOTE interface_tria3_prism6 keeps its own latent bug (its
+converted prism6 interfaces do not go through the pol() volume
+integration): GNU interface σ +1.51 vs Pro −1.0, from the triangulated
+quad face distributing the contact 1/6-1/3-1/3-1/6 over the 4 face nodes
+instead of the consistent 1/4 each, plus a sign inversion of the
+converted zero-thickness interface orientation; rc=0 is kept by its bulk
+post_point target only. Fixing it means touching the tria3→prism6
+interface conversion/orientation (open, out of this sprint scope).
+interface13 remains the known corpus-test bug (the Professional itself
+reports "Error detected"; both codes compute 0.67082 vs target 1.11803).
+Full corpus blast-radius measured on the sprint binary (see the commit
+docs).
