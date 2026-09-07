@@ -57,12 +57,13 @@ Corpus tests: `mpc3`, `mpc4`.
 ## Tests
 
 The generated records are verified byte-for-byte against the
-Professional (mpc3/mpc4/mpc5). The corpus tests `mpc3`/`mpc4` still
-report RUNFAIL: the GNU's staggered mixed u-sigma solve does not reach
-the exact homogeneous field (within +-1e-3) that these tying tests
-require (mpc3 0.299 vs 0.333, mpc4 0.350 vs 0.333; the no-tie fields are
-also off) — the remaining gap is the solver family (DIAG-SOLVE-MIXTO),
-not the tie generation. `mpc5` additionally needs the
+Professional (mpc3/mpc4/mpc5). The corpus tests `mpc3`/`mpc4` are
+rc=0 (2026-09-07): the tied non-conforming interface is solved with the
+energy-consistent slave elimination inside the staggered solve (the
+slave constraint enters the same solve that produces the masters), so
+the homogeneous field 1/3 is reached at the default 2 equilibrium
+iterations — exact against the Professional .dbs (see
+DIAG-SOLVE-MIXTO.md §16). `mpc5` additionally needs the
 `control_mesh_delete_geometry_factor` deletion family (element
 half-deletion + stress reset semantics) — documented as PENDING, see
 SEGUIMIENTO-CONVERGENCIA.md.

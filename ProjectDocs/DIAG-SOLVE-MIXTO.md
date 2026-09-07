@@ -1178,3 +1178,95 @@ mpc5 and mpc6 do NOT share this mechanism: mpc5 fails at
 same root as delete3); mpc6 is a condif model (mpc_element_group tying
 the `temp` dof — a single-field diffusion, not the mixed u-σ
 stagger); its node-3 temp = 0 vs 0.5 needs its own diagnosis.
+## 16. The implicit tie inside the staggered solve (2026-09-07) — mpc3/4 CLOSED
+
+**Status**: DONE (fix G: energy-consistent slave elimination inside the
+staggered solve). The corpus mpc3 (2D quad9/quad4) and mpc4 (3D
+hex27/hex8) non-conforming ties converge to the homogeneous field (1/3)
+in ONE solve, no 2-cycle, no drift — verified against the Professional
+25-10-2023 .dbs. The §15 conclusion ("closing mpc3/4 needs the implicit
+treatment inside the staggered solve, a separate work unit") is executed.
+
+### 16.1 The mechanism (measured)
+
+The §15.2 prototype (assemble the energy-consistent reduced system
+K_red = K_FF + K_FS·Cᵀ + C·K_SF + C·K_SS·Cᵀ) moved the fixed point to
+1/3 but did NOT converge in 2 iterations (slow wave / odd-even 2-cycle
+on the refined meshes). The missing piece was the slave ROW of the
+momentum RIGHT-HAND SIDE — the slave equilibrium content
+(−B_Sᵀ·σ + loads, the element internal force of the tied node) — which
+must be redistributed to the masters with the tie weights (C·R_S), and
+the slave row/column of the matrix that the ITERATIVE solver actually
+iterates on (the per-element matvec of so_bicg.cc), not only the band/
+dense fill used by the direct-LU retry. With the full, consistent
+reduction the staggered momentum map collapses algebraically:
+
+```
+v_S^(k) := Cᵀ·v_master^(k)     (the slave value stored entering the
+                                element loop k+1 is re-synced to the
+                                masters of solve k — already the code
+                                behaviour: mpc_node_apply pre-element-
+                                loop and post-solve)
+RHS(v^k) = loads − (B_Fᵀ + C·B_Sᵀ)·[σ_old + dt·C:D·B·v^k]
+         = C0 − dt·K_red·v_F^k           (affine, slope = K_red)
+M·v^{k+1} = RHS(v^k) + M·v^k = C0        →  v^1 = v^2 = ...  (one pass)
+```
+
+Measured:
+
+| case | value-constrained (HEAD) it2 / fp | energy-consistent it1 / it2 / it96 |
+|---|---|---|
+| mpc3 refined (corpus) | 0.2992 / 0.4540 (96 it) | 0.3333332979 / 0.3333333311 / 0.3333333311 |
+| mpc4 3D (corpus) | 0.350 (it2) | 0.3333333280 / 0.3333333296 / 0.3333333296 |
+
+Both rc=0 at the corpus default of 2 equilibrium iterations (targets
+±1e-3). The field is homogeneous: disy = y/3 and σyy = 1/3 at every
+node to ~1e-8 (mpc3, GNU) vs the Professional's exact 1/3 (1e-17
+noise) — 8-9 significant digits. mpc4: disz = z/3, σzz = 1/3 at all
+143 nodes to ~1e-6 (worst at the tied interface, decaying away).
+
+### 16.2 The 3D duplicate-tie gotcha (measured)
+
+On the refined mpc4 the mid-edge nodes of the hex27 top face at z=2 are
+shared by TWO adjacent hex27 sub-elements. mpc_linear_quadratic_generate
+ties each dangling node once PER containing quadratic element → two
+IDENTICAL mpc_node_number records for the same slave dof. The value-
+constrained consumer is idempotent (both records set the same value),
+but the energy-consistent elimination must register the slave exactly
+ONCE: with the duplicate, the slave row RHS was added to the masters
+twice (matrix once) → inconsistent system → the map converged to a
+wrong fixed point (0.311, it≥16, and it2 0.307). The tie map keeps the
+first registration (measured fix). The duplicate RECORDS remain in the
+database (harmless: value-constrained application is idempotent) — the
+generator itself could dedupe in a future cleanup.
+
+### 16.3 Scope of the elimination (blast radius containment)
+
+The elimination is active ONLY when mpc_node_number records generated
+by mpc_linear_quadratic exist (index range tracked in
+MPC_LINEAR_QUADRATIC_MESH_FINGERPRINT) — i.e. the NON-CONFORMING
+quadratic/linear interfaces (corpus: mpc3, mpc4, mpc5). Explicit user
+mpc_node_number records (mpc1 semantics: value-constrained, verified
+2026-09-01) and the conforming mpc_element_group ties (mpc7: patch
+test, rc=0 at ±1e-8) are NOT eliminated → mpc1/2/7 byte-identical.
+mpc5/6 keep their documented separate mechanisms (mesh-delete reset /
+condif single-field). All other corpus tests exercise the unchanged
+(inactive) code path.
+
+### 16.4 Files
+
+- mpc.cc: the tie map (slave dof → masters + weights, index range of
+  the generated records), built by mpc_node_apply each iteration;
+  accessors mpc_tie_* consumed by the solver.
+- so_bicg.cc: solve_iterative_bicg_element — the matvec operator of the
+  CG/Bi-CG now runs on the REDUCED system (slave rows/columns expanded
+  to their masters).
+- so.cc: solve() — the slave momentum rows added to the master rows of
+  the RHS (C·R_S), and the band/dense/LU + SuperLU/PETSc fills expanded
+  to the reduced system (consistency for the direct-LU retry and the
+  direct solvers).
+- The value constraint (mpc_node_apply bounding + re-sync) is
+  UNCHANGED: the slave dofs stay bounded, and their stored values
+  (which feed the constitutive σ feedback of the next element loop)
+  keep being re-synced to Cᵀ·masters — the condition for the one-pass
+  collapse of §16.1.
