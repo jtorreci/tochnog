@@ -1912,6 +1912,7 @@ void      groundflow_total_pressure_limit_apply( void );
 long int  groundflow_phreatic_coord( long int inod, double coord[], double dof[], 
             double &total_pressure, double &static_pressure,
             double &location, long int *level_source );
+long int  groundflow_phreatic_level_multiple_active( void );
 void      group_materi_plasti_boundary_evaluate( long int nodes[], long int nnol,
             long int element_group, long int &plasti_on_boundary );
 void      hypoplasticity( long int element, long int gr,

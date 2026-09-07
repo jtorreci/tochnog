@@ -548,8 +548,20 @@ void materi( long int element, long int gr, long int name, long int nnol,
       db( GROUNDFLOW_PRESSURE_FACTOR, 0, idum, &gpf, ldum,
         VERSION_NORMAL, GET_IF_EXISTS );
       new_pres = new_unknowns[pres_indx];
-      if ( groundflow_phreatic_coord( -1, coord_ip, new_unknowns, 
-        total_pressure, static_pressure, location, NULL ) ) new_pres = total_pressure;
+      // groundflow_phreatic_coord total-pressure substitution: pore
+      // pressure acting on the skeleton becomes the TOTAL pressure when a
+      // single groundflow_phreatic_level covers the integration point
+      // (calibrated on ground15/16). NOT applied when
+      // groundflow_phreatic_level_multiple records exist: their domains
+      // are often combined with head-prescribing bounda_dof -pres loads
+      // (the reservoir statics of ground19 of the corpus), where adding
+      // the level static to the solved head double counts rho*g*z_level
+      // and destabilizes the coupled system (Bi-CG breakdown). The
+      // multiple-level mechanics coupling is pending calibration (see
+      // SEGUIMIENTO ground8 row).
+      if ( !groundflow_phreatic_level_multiple_active() &&
+           groundflow_phreatic_coord( -1, coord_ip, new_unknowns, 
+             total_pressure, static_pressure, location, NULL ) ) new_pres = total_pressure;
       // group_groundflow_total_pressure_tension: if the largest eigenvalue of
       // materi_strain_plastic_tension exceeds plastic_tension_minimum, use the
       // static water pore pressure determined from water_height (when it is
