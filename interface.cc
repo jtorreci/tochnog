@@ -1210,6 +1210,104 @@ void interface_convert( long int icontrol )
   db( CONTROL_MESH_CONVERT_ELEMENT_GROUP, icontrol, convert_groups,
     ddum, length_convert_groups, VERSION_NORMAL, GET_IF_EXISTS );
   nconv = 0;
+
+  // PRE-PASS (2026-09-07, interface_tria3_prism6): per interface element
+  // to convert, record on which side of its normal the element-record
+  // side 1 sits. Professional layout of the converted family (verified
+  // against its .dbs of interface_tria3_prism6 / interface_quad4_hex8 /
+  // interface_bar2_quad4 and variants with swapped element numbers):
+  // side 1 of the record is the block of the LOWEST-numbered volume
+  // element that shares the whole interface face. side1_minus[e] = 1 when
+  // that block lies on the -normal side of the element, 0 when it lies on
+  // the +normal side (a clockwise triangle of a triangulated quad keeps
+  // its exclusive corner on the opposite block than the counter-clockwise
+  // one: interface_tria3_prism6 - bottom hex8 1 2 3 4 5 6 7 22 with the
+  // COPY of node 8, top hex8 19 20 21 8 ... with the ORIGINAL 8).
+  // Only the 3D surface conversions need it (the 2D orientation is the
+  // numbering heuristic of interface_element(); there the record keeps
+  // side 1 = the originals = the -normal side, like the old code).
+  long int *side1_minus = get_new_int( max_element+1 );
+  long int nconv_total = 0;
+  long int *nel_pre = get_new_int( MAXIMUM_NODE+1 );
+  for ( long int e2=0; e2<=max_element; e2++ ) {
+    side1_minus[e2] = 1;
+    if ( !db_active_index( ELEMENT, e2, VERSION_NORMAL ) ) continue;
+    db( ELEMENT, e2, el, ddum, length, VERSION_NORMAL, GET );
+    name = el[0];
+    long int gr2 = 0;
+    db( ELEMENT_GROUP, e2, &gr2, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+    if ( name!=-BAR2 && name!=-BAR3 && name!=-TRIA3 && name!=-QUAD4 &&
+         !( name==-QUAD8 && ndim==3 ) ) continue;
+    if ( !db_active_index( GROUP_INTERFACE, gr2, VERSION_NORMAL ) ) continue;
+    nconv_total++;
+    if ( !( ndim==3 && ( name==-TRIA3 || name==-QUAD4 ) ) ) continue;
+    long int ns1p = ( name==-TRIA3 ) ? 3 : 4;
+    // element normal (same formulas as the conversion below)
+    double np[MDIM], e1p[MDIM], e2p[MDIM];
+    double *cap = db_dbl( NODE, el[1], VERSION_NORMAL );
+    double *cbp = db_dbl( NODE, el[2], VERSION_NORMAL );
+    double *ccp = db_dbl( NODE, el[3], VERSION_NORMAL );
+    for ( i=0; i<3; i++ ) { e1p[i] = cbp[i]-cap[i]; e2p[i] = ccp[i]-cap[i]; }
+    np[0] = e1p[1]*e2p[2] - e1p[2]*e2p[1];
+    np[1] = e1p[2]*e2p[0] - e1p[0]*e2p[2];
+    np[2] = e1p[0]*e2p[1] - e1p[1]*e2p[0];
+    array_normalize( np, 3 );
+    // face centroid of the interface element
+    double fcp[MDIM]; array_set( fcp, 0., MDIM );
+    for ( j=0; j<ns1p; j++ ) {
+      double *cnp = db_dbl( NODE, el[1+j], VERSION_NORMAL );
+      for ( i=0; i<3; i++ ) fcp[i] += cnp[i]/(double)ns1p;
+    }
+    long int min_minus = -1, min_plus = -1;
+    for ( long int iel2=0; iel2<=max_element; iel2++ ) {
+      if ( iel2==e2 ) continue;
+      if ( !db_active_index( ELEMENT, iel2, VERSION_NORMAL ) ) continue;
+      long int lnp = 0, grp = 0;
+      db( ELEMENT_GROUP, iel2, &grp, ddum, ldum, VERSION_NORMAL,
+        GET_IF_EXISTS );
+      if ( db_active_index( GROUP_INTERFACE, grp, VERSION_NORMAL ) ) continue;
+      db( ELEMENT, iel2, nel_pre, ddum, lnp, VERSION_NORMAL, GET );
+      long int shared = 0;
+      for ( long int jj=0; jj<ns1p; jj++ ) {
+        long int s2p = el[1+jj];
+        for ( long int k2=1; k2<lnp; k2++ )
+          if ( nel_pre[k2]==s2p ) { shared++; break; }
+      }
+      if ( shared!=ns1p ) continue;   // not sharing the whole face
+      double cx = 0., cy = 0., cz = 0.;
+      long int nn2 = ( lnp>1 ) ? lnp-1 : 1;
+      for ( long int k2=1; k2<lnp; k2++ ) {
+        double *cn2 = db_dbl( NODE, nel_pre[k2], VERSION_NORMAL );
+        cx += cn2[0]; cy += cn2[1]; cz += cn2[2];
+      }
+      cx /= nn2; cy /= nn2; cz /= nn2;
+      double dot = (cx-fcp[0])*np[0] + (cy-fcp[1])*np[1] +
+        (cz-fcp[2])*np[2];
+      if ( dot<0. && ( min_minus<0 || iel2<min_minus ) ) min_minus = iel2;
+      if ( dot>0. && ( min_plus<0 || iel2<min_plus ) ) min_plus = iel2;
+    }
+    if ( min_minus<0 && min_plus>=0 ) side1_minus[e2] = 0;
+    else if ( min_minus>=0 && min_plus>=0 && min_plus<min_minus )
+      side1_minus[e2] = 0;
+    // else: side 1 = the -normal side (default; also when only the
+    // -normal side has volumes or none was found)
+  }
+  delete[] nel_pre;
+  // per-node pair state of the conversion: every interface node is
+  // duplicated at most once. node_s1/s2 hold the record side-1/side-2
+  // node of the pair (original or duplicate) once the node is classified.
+  long int node_buf = max_node + 10*nconv_total + 8;
+  long int *node_done = get_new_int( node_buf+1 );
+  long int *node_dup  = get_new_int( node_buf+1 );
+  long int *node_s1   = get_new_int( node_buf+1 );
+  long int *node_s2   = get_new_int( node_buf+1 );
+  // get_new_int does NOT zero the memory (plain new[]): the pair state
+  // must start all-zero (node 0 is never a valid duplicate target).
+  for ( long int kz=0; kz<=node_buf; kz++ ) {
+    node_done[kz] = 0; node_dup[kz] = 0;
+    node_s1[kz] = 0;   node_s2[kz] = 0;
+  }
+
   for ( element=0; element<=max_element; element++ ) {
     if ( !db_active_index( ELEMENT, element, VERSION_NORMAL ) ) continue;
     db( ELEMENT, element, el, ddum, length, VERSION_NORMAL, GET );
@@ -1295,10 +1393,14 @@ void interface_convert( long int icontrol )
         tangent[0] = e1[0]; tangent[1] = e1[1]; tangent[2] = e1[2];
         array_normalize( tangent, 3 );
       }
-      double len9 = 0.;
-      for ( i=0; i<3; i++ ) len9 += tangent[i]*tangent[i];
-      shift = 0.01 * sqrt( len9 );
-      // create the 9 side-2 nodes: copies of side 1 shifted along n
+      // CONVERGENCE (2026-09-07): zero-thickness side-2 copies. The
+      // Professional .dbs of interface_quad8_hex20 duplicates the 9
+      // side-1 nodes AT THE SAME COORDINATES; the old 0.01 shift put
+      // side 2 beyond side 1 along +n, interface_element() then flipped
+      // the normal (dir = n.(cm1-cm2) < 0) and the interface reported
+      // COMPRESSION WITH POSITIVE STRESS (+1.005 vs Professional -1.0).
+      shift = 0.;
+      // create the 9 side-2 nodes: coincident copies of side 1
       for ( j=0; j<ns1q; j++ ) {
         long int src = s1[j];
         long int dst = ++max_node;
@@ -1451,111 +1553,147 @@ void interface_convert( long int icontrol )
       array_normalize( tangent, 3 );
     }
 
-    // shift: small fraction of the first side length (interface thickness)
-    double len = 0.;
-    for ( i=0; i<ndim; i++ ) len += tangent[i]*tangent[i];
-    shift = 0.01 * sqrt( len );
+    // CONVERGENCE (2026-09-07, interface_tria3_prism6): the side-2
+    // copies are created COINCIDENT with side 1 (zero-thickness
+    // interface) and ONCE PER INTERFACE NODE (per-corner pairs shared by
+    // every interface element that contains the node). The Professional
+    // .dbs of the whole converted family (bar2_quad4, bar3_quad8,
+    // tria3_prism6, quad4_hex8, quad8_hex20) shows coincident copies; the
+    // old code shifted them 0.01 along +n and duplicated the diagonal
+    // nodes of a triangulated quad a second time, reconnecting them to
+    // the opposite block - the originals ended up attached to nothing but
+    // the interface elements, and the converged interface stress was
+    // +1.51 (compression POSITIVE, flipped normal) with a 1/6-1/3-1/3-1/6
+    // nodal split instead of the Professional -1.0 with 1/4 per node.
+    // Per-corner rule (Professional layout): the ORIGINAL node stays with
+    // the block on the -normal side of the FIRST interface element that
+    // contains it (lowest element number); the DUPLICATE goes to the
+    // +normal side. Both blocks share the node at the input; the
+    // reconnection below moves the duplicate into every volume element on
+    // the +normal side that still references the original.
+    shift = 0.;
 
-    // create ns1 new nodes: copies of the side-1 nodes shifted along n
+    // face centroid of the element (side-1 nodes)
+    double fc[MDIM];
+    array_set( fc, 0., MDIM );
     for ( j=0; j<ns1; j++ ) {
-      long int src = el[1+j];
-      long int dst = ++max_node;
-      db( NODE, src, idum, coord, ldum, VERSION_NORMAL, GET );
-      for ( i=0; i<ndim; i++ ) coord[i] += shift*normal[i];
-      db( NODE, dst, idum, coord, ldum, VERSION_NORMAL, PUT );
-      db( NODE_START_REFINED, src, idum, coord, ldum, VERSION_NORMAL, GET );
-      for ( i=0; i<ndim; i++ ) coord[i] += shift*normal[i];
-      db( NODE_START_REFINED, dst, idum, coord, ldum, VERSION_NORMAL, PUT );
-      double *ndof = db_dbl( NODE_DOF, src, VERSION_NORMAL );
-      long int ln = db_len( NODE_DOF, src, VERSION_NORMAL );
-      db( NODE_DOF, dst, idum, ndof, ln, VERSION_NORMAL, PUT );
-      double *ndof_sr = db_dbl( NODE_DOF_START_REFINED, src, VERSION_NORMAL );
-      long int ln_sr = db_len( NODE_DOF_START_REFINED, src, VERSION_NORMAL );
-      db( NODE_DOF_START_REFINED, dst, idum, ndof_sr, ln_sr, VERSION_NORMAL, PUT );
-      length = 1;
-      db( NODE_MACRO_GENERATE, dst, &icontrol, ddum, length, VERSION_NORMAL, PUT );
-      // side 2 node (same ordering as side 1)
-      el[1+ns1+j] = dst;
+      double *ccf = db_dbl( NODE, el[1+j], VERSION_NORMAL );
+      for ( i=0; i<ndim; i++ ) fc[i] += ccf[i]/(double)ns1;
+    }
+    long int new_name = ( name==-BAR2 ) ? -QUAD4 :
+      ( name==-BAR3 ) ? -QUAD6 : ( name==-TRIA3 ) ? -PRISM6 : -HEX8;
+    long int *nel_neigh = get_new_int(MAXIMUM_NODE+1);
+    for ( j=0; j<ns1; j++ ) {
+      long int c = el[1+j];
+      if ( !node_done[c] ) {
+        node_done[c] = 1;
+        long int dst = ++max_node;
+        node_dup[c] = dst;
+        db( NODE, c, idum, coord, ldum, VERSION_NORMAL, GET );
+        db( NODE, dst, idum, coord, ldum, VERSION_NORMAL, PUT );
+        db( NODE_START_REFINED, c, idum, coord, ldum, VERSION_NORMAL, GET );
+        db( NODE_START_REFINED, dst, idum, coord, ldum, VERSION_NORMAL, PUT );
+        double *ndof = db_dbl( NODE_DOF, c, VERSION_NORMAL );
+        long int ln = db_len( NODE_DOF, c, VERSION_NORMAL );
+        db( NODE_DOF, dst, idum, ndof, ln, VERSION_NORMAL, PUT );
+        double *ndof_sr = db_dbl( NODE_DOF_START_REFINED, c, VERSION_NORMAL );
+        long int ln_sr = db_len( NODE_DOF_START_REFINED, c, VERSION_NORMAL );
+        db( NODE_DOF_START_REFINED, dst, idum, ndof_sr, ln_sr,
+          VERSION_NORMAL, PUT );
+        length = 1;
+        db( NODE_MACRO_GENERATE, dst, &icontrol, ddum, length,
+          VERSION_NORMAL, PUT );
+        // record sides of the pair (side 1 = lowest-numbered volume side)
+        if ( side1_minus[element] ) { node_s1[c] = c;  node_s2[c] = dst; }
+        else                        { node_s1[c] = dst; node_s2[c] = c;  }
+        // reconnect the volumes on the +normal side of THIS element that
+        // still contain the original node (other interface elements keep
+        // their original records - they are rewritten by their own
+        // conversion with the same per-node pairs)
+        for ( long int iel=0; iel<=max_element_c; iel++ ) {
+          if ( !db_active_index( ELEMENT, iel, VERSION_NORMAL ) ) continue;
+          long int gr = 0;
+          db( ELEMENT_GROUP, iel, &gr, ddum, ldum,
+            VERSION_NORMAL, GET_IF_EXISTS );
+          if ( db_active_index( GROUP_INTERFACE, gr, VERSION_NORMAL ) )
+            continue;
+          found = 0;
+          for ( long int ig=0; ig<length_convert_groups; ig++ )
+            if ( convert_groups[ig]==gr ) { found = 1; break; }
+          if ( found ) continue;      // keep-side group of the control
+          long int ln_n = 0;
+          db( ELEMENT, iel, nel_neigh, ddum, ln_n, VERSION_NORMAL, GET );
+          long int has_c = 0;
+          for ( long int k2=1; k2<ln_n; k2++ )
+            if ( nel_neigh[k2]==c ) { has_c = 1; break; }
+          if ( !has_c ) continue;
+          // centroid side test: only the +normal-side volumes move to the
+          // duplicate (the -normal side keeps the original node)
+          double ncx = 0., ncy = 0., ncz = 0.;
+          long int nsh = ( ln_n>1 ) ? ln_n-1 : 1;
+          for ( long int k2=1; k2<ln_n; k2++ ) {
+            double *cn2 = db_dbl( NODE, nel_neigh[k2], VERSION_NORMAL );
+            ncx += cn2[0]; ncy += cn2[1]; ncz += cn2[2];
+          }
+          ncx /= nsh; ncy /= nsh; ncz /= nsh;
+          double dot = (ncx-fc[0])*normal[0] + (ncy-fc[1])*normal[1] +
+            (ncz-fc[2])*normal[2];
+          if ( dot<=0. ) continue;
+          for ( long int k2=1; k2<ln_n; k2++ )
+            if ( nel_neigh[k2]==c ) nel_neigh[k2] = dst;
+          db( ELEMENT, iel, nel_neigh, ddum, ln_n, VERSION_NORMAL, PUT );
+        }
+      }
+      // record slot of the corner: (side-1 node, side-2 node) of the pair
+      el[1+j]     = node_s1[c];
+      el[1+ns1+j] = node_s2[c];
+    }
+    delete[] nel_neigh;
+
+    // 3D surface conversions only: order side 1 counter-clockwise around
+    // the interface normal pointing from the side-1 block to the side-2
+    // block. interface_element() derives the normal of a zero-thickness
+    // interface as the cross product of the first three side-1 nodes (the
+    // geometric dir-flip of a thick interface never triggers: dir=0), so
+    // the record must encode the orientation. A transposition of slots 0
+    // and 1 reverses the cross and preserves the per-slot pairs (the
+    // integration weights of the side are uniform 1/ns1 in 3D).
+    if ( ndim==3 && ( name==-TRIA3 || name==-QUAD4 ) ) {
+      double *c0 = db_dbl( NODE, el[1], VERSION_NORMAL );
+      double *c1 = db_dbl( NODE, el[2], VERSION_NORMAL );
+      double *c2 = db_dbl( NODE, el[3], VERSION_NORMAL );
+      double e1c[MDIM], e2c[MDIM], ncross[MDIM];
+      for ( i=0; i<3; i++ ) { e1c[i] = c1[i]-c0[i]; e2c[i] = c2[i]-c0[i]; }
+      ncross[0] = e1c[1]*e2c[2] - e1c[2]*e2c[1];
+      ncross[1] = e1c[2]*e2c[0] - e1c[0]*e2c[2];
+      ncross[2] = e1c[0]*e2c[1] - e1c[1]*e2c[0];
+      // side 1 = the -normal side (side1_minus=1): the normal points
+      // along +n; otherwise it points along -n
+      double sgn = side1_minus[element] ? 1. : -1.;
+      double dot = sgn * ( ncross[0]*normal[0] + ncross[1]*normal[1] +
+        ncross[2]*normal[2] );
+      if ( dot<0. ) {
+        long int t;
+        t = el[1]; el[1] = el[2]; el[2] = t;
+        t = el[1+ns1]; el[1+ns1] = el[2+ns1]; el[2+ns1] = t;
+      }
     }
 
     // rewrite the element: bar2->quad4, bar3->quad6, tria3->prism6,
     // quad4->hex8. el[0]=name, el[1..ns1]=side1,
-    // el[ns1+1..2*ns1]=side2 (already filled).
-    if      ( name==-BAR2  ) el[0] = -QUAD4;
-    else if ( name==-BAR3  ) el[0] = -QUAD6;
-    else if ( name==-TRIA3 ) el[0] = -PRISM6;
-    else                     el[0] = -HEX8;
+    // el[ns1+1..2*ns1]=side2.
+    el[0] = new_name;
     length = 1 + 2*ns1;
     db( ELEMENT, element, el, ddum, length, VERSION_NORMAL, PUT );
-
-    // reconnect neighbours on the OTHER side: elements sharing a side-1
-    // node that are NOT in convert_groups get that node replaced by its
-    // new duplicate. FIX (2026-08-31, interface_bar2_hex8): only the
-    // neighbours on the OTHER side - those containing ALL the side-1
-    // nodes of the converted element - are reconnected. The old code
-    // replaced src in EVERY neighbour sharing a side-1 node, which
-    // corrupted the solid on the SAME side (elem 1 = quad4 1 2 3 4
-    // shared node 3 with the bar2 and got 3->7, destroying it).
-    long int *nel_neigh = get_new_int(MAXIMUM_NODE+1);
-    for ( long int iel=0; iel<=max_element_c; iel++ ) {
-      if ( !db_active_index( ELEMENT, iel, VERSION_NORMAL ) ) continue;
-      long int gr = 0;
-      db( ELEMENT_GROUP, iel, &gr, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
-      found = 0;
-      for ( long int ig=0; ig<length_convert_groups; ig++ )
-        if ( convert_groups[ig]==gr ) { found = 1; break; }
-      if ( found ) continue;
-      if ( iel==element ) continue;
-      long int ln_n = 0;
-      db( ELEMENT, iel, nel_neigh, ddum, ln_n, VERSION_NORMAL, GET );
-      // count how many side-1 nodes of the converted element this
-      // neighbour contains
-      long int shared = 0;
-      for ( long int jj2=0; jj2<ns1; jj2++ ) {
-        long int s2 = el[1+jj2];
-        for ( long int k2=1; k2<ln_n; k2++ )
-          if ( nel_neigh[k2]==s2 ) { shared++; break; }
-      }
-      if ( shared!=ns1 ) continue;   // NOT on the other side
-      // ONLY the neighbours on the +normal side are reconnected: their
-      // centroid lies in the direction of the interface normal from the
-      // interface centroid. The solid on the -normal side keeps the
-      // original nodes (interface_bar2_hex8: elem 2 (3 4 5 6, +y) is
-      // reconnected, elem 1 (1 2 3 4, -y) keeps 3,4).
-      {
-        double icx = 0., icy = 0., icz = 0., ncx = 0., ncy = 0., ncz = 0.;
-        long int nshared_nodes = 0;
-        for ( long int k2=1; k2<ln_n; k2++ ) {
-          double *cn2 = db_dbl( NODE, nel_neigh[k2], VERSION_NORMAL );
-          ncx += cn2[0]; ncy += cn2[1]; ncz += cn2[2]; nshared_nodes++;
-        }
-        if ( nshared_nodes>0 ) {
-          ncx /= nshared_nodes; ncy /= nshared_nodes; ncz /= nshared_nodes;
-          icx = 0.; icy = 0.; icz = 0.;
-          for ( long int jj2=0; jj2<ns1; jj2++ ) {
-            double *cn1 = db_dbl( NODE, el[1+jj2], VERSION_NORMAL );
-            icx += cn1[0]; icy += cn1[1]; icz += cn1[2];
-          }
-          icx /= ns1; icy /= ns1; icz /= ns1;
-          double ddx = ncx-icx, ddy = ncy-icy, ddz = ncz-icz;
-          double dot = ddx*normal[0] + ddy*normal[1] + ddz*normal[2];
-          if ( dot<=0. ) continue;   // same side as the interface normal base
-        }
-      }
-      // reconnect: replace every side-1 src by its dst
-      for ( long int jj2=0; jj2<ns1; jj2++ ) {
-        long int src2 = el[1+jj2];
-        long int dst2 = el[1+ns1+jj2];
-        for ( long int k2=1; k2<ln_n; k2++ )
-          if ( nel_neigh[k2]==src2 ) nel_neigh[k2] = dst2;
-      }
-      db( ELEMENT, iel, nel_neigh, ddum, ln_n, VERSION_NORMAL, PUT );
-    }
-    delete[] nel_neigh;
     nconv++;
   }
   delete[] el;
   delete[] convert_groups;
+  delete[] side1_minus;
+  delete[] node_done;
+  delete[] node_dup;
+  delete[] node_s1;
+  delete[] node_s2;
   // mesh_has_changed: ALWAYS called after a conversion (the 3D extrude
   // now runs BEFORE the convert, so by the time the convert lifts the
   // extruded quad4 interface to hex8 the solids are already 3D and
