@@ -404,6 +404,37 @@ void solve( long int task )
   }
   if ( band>solve_nlocal ) band = solve_nlocal;
 
+    // energy-consistent slave elimination (DIAG-SOLVE-MIXTO §16): the
+    // slave momentum rows (their element internal forces, including the
+    // -B^T*sigma constitutive feedback of the current iterate) are added
+    // to the tie master rows with the tie weights - the master equations
+    // then carry the slave equilibrium of the SAME solve. Without this
+    // redistribution the slave internal force share of the non-conforming
+    // interface is lost and the fixed point is value-constrained.
+    // (Regular Dirichlet rows are NOT redistributed - the mpc_linear_
+    // quadratic ties are the only eliminated dofs.)
+  if ( mpc_tie_elimination_active() ) {
+    long int ntie = mpc_tie_count_get();
+    for ( long int tie=0; tie<ntie; tie++ ) {
+      long int sgl = mpc_tie_slave_dof( tie );
+      long int snod = sgl / npuknwn;
+      long int spuk = sgl % npuknwn;
+      if ( snod>=0 && snod<=max_node &&
+           db_active_index( NODE, snod, VERSION_NORMAL ) ) {
+        node_rhside = db_dbl( NODE_RHSIDE, snod, VERSION_NORMAL );
+        for ( long int im=0; im<mpc_tie_nmaster( tie ); im++ ) {
+          long int mgl = mpc_tie_master_dof( tie, im );
+          long int mlocal = solve_global_local[mgl];
+          if ( mlocal>=0 ) {
+            double w = mpc_tie_master_factor( tie, im );
+            solve_b[mlocal] += w * node_rhside[spuk];
+            solve_b_temp[mlocal+1] += w * node_rhside[spuk];
+          }
+        }
+      }
+    }
+  }
+
   if ( swit )
   {
     pri( "solve_nlocal", solve_nlocal );
@@ -540,54 +571,79 @@ void solve( long int task )
               }
             }
             get_element_matrix_unknowns( element, element_matrix_unknowns );
+            // energy-consistent slave elimination (DIAG §16): hoisted per
+            // element so the (inactive) path costs one local test/entry
+            long int mpc_tie_on =
+              mpc_tie_elimination_active();
             for ( imat=0; imat<length; imat++ ) {
               iglobal = element_matrix_unknowns[imat*2+0];
               jglobal = element_matrix_unknowns[imat*2+1];
-              ilocal = solve_global_local[iglobal];
-              jlocal = solve_global_local[jglobal];
-              if ( ilocal!=-NO && jlocal!=-NO ) {
-                // dense LU fill (always, for the Bi-CG retry): A direct
-                if ( mat_dense )
-                  mat_dense[ilocal*solve_nlocal+jlocal] +=
-                    element_matrix_values[imat];
-                // the band fill feeds the dgbsv direct-LU retry after a
-                // Bi-CG failure (and the -matrix_lapack route). The
-                // sparse fill below feeds SuperLU/PETSc: it must run
-                // whenever those solvers are active even though the band
-                // workspace is also allocated (since 5b7bb8b the always-
-                // allocated mat made this sparse branch dead code and the
-                // SuperLU path received an EMPTY matrix -> segfault).
-                if ( mat && !petsc_solver && !superlu_solver ) {
-                  ii = kl + ku + 1 + (ilocal+1) - (jlocal+1);
-                  jj = jlocal + 1;
-                  indx = (jj-1)*ldmat + ii;
-                  mat[indx-1] += element_matrix_values[imat];
-                  if ( neigen>0 && jlocal>=ilocal ) {
-                    ii = ku + 1 + (ilocal+1) - (jlocal+1);
+              // expand a slave row/column to its tie masters with the tie
+              // weights (the identity when no mpc tie involves either
+              // dof). The direct-LU retry matrices must match the REDUCED
+              // system the iterative solver runs on.
+              long int nt = 1, it2 = 0;
+              long int row_t[MPC_TIE_MAX_TARGETS], col_t[MPC_TIE_MAX_TARGETS];
+              double fac_t[MPC_TIE_MAX_TARGETS];
+              if ( mpc_tie_on &&
+                   ( mpc_tie_of_dof(iglobal)>=0 ||
+                     mpc_tie_of_dof(jglobal)>=0 ) )
+                nt = mpc_tie_targets( iglobal, jglobal, row_t, col_t,
+                  fac_t );
+              else {
+                row_t[0] = iglobal; col_t[0] = jglobal; fac_t[0] = 1.;
+              }
+              for ( it2=0; it2<nt; it2++ ) {
+                ilocal = solve_global_local[row_t[it2]];
+                jlocal = solve_global_local[col_t[it2]];
+                if ( ilocal!=-NO && jlocal!=-NO ) {
+                  double val = element_matrix_values[imat] * fac_t[it2];
+                  // dense LU fill (always, for the Bi-CG retry): A direct
+                  if ( mat_dense )
+                    mat_dense[ilocal*solve_nlocal+jlocal] += val;
+                  // the band fill feeds the dgbsv direct-LU retry after a
+                  // Bi-CG failure (and the -matrix_lapack route). The
+                  // sparse fill below feeds SuperLU/PETSc: it must run
+                  // whenever those solvers are active even though the band
+                  // workspace is also allocated (since 5b7bb8b the always-
+                  // allocated mat made this sparse branch dead code and the
+                  // SuperLU path received an EMPTY matrix -> segfault).
+                  if ( mat && !petsc_solver && !superlu_solver ) {
+                    ii = kl + ku + 1 + (ilocal+1) - (jlocal+1);
                     jj = jlocal + 1;
-                    indx = (jj-1)*ldmatlin + ii;
-                    matlin[indx-1] += element_matrix_values[imat];
-                    if ( control_eigen[0]==-GENERALIZED ) {
-                      matss[indx-1] -= element_matrix_second_values[imat];
+                    indx = (jj-1)*ldmat + ii;
+                    mat[indx-1] += val;
+                    if ( neigen>0 && jlocal>=ilocal ) {
+                      double val2 = 0.;
+                      if ( element_matrix_second_values!=NULL )
+                        val2 = element_matrix_second_values[imat] *
+                          fac_t[it2];
+                      ii = ku + 1 + (ilocal+1) - (jlocal+1);
+                      jj = jlocal + 1;
+                      indx = (jj-1)*ldmatlin + ii;
+                      matlin[indx-1] += val;
+                      if ( control_eigen[0]==-GENERALIZED ) {
+                        matss[indx-1] -= val2;
 // prevent small negative diagonals due to limited numerical accuracy
-                      if ( jlocal==ilocal ) matss[indx-1] += EPS_EIGEN; 
+                        if ( jlocal==ilocal ) matss[indx-1] += EPS_EIGEN; 
+                      }
                     }
                   }
-                }
-                else {
-                  assert( petsc_solver || superlu_solver );
-                  if ( element_matrix_values[imat]!=0. ) {
-                    if ( petsc_solver ) {
-                      a = ilocal;
-                      b = jlocal;
+                  else {
+                    assert( petsc_solver || superlu_solver );
+                    if ( val!=0. ) {
+                      if ( petsc_solver ) {
+                        a = ilocal;
+                        b = jlocal;
+                      }
+                      else {
+                        assert( superlu_solver );
+                        a = jlocal;
+                        b = ilocal;
+                      }
+                      sparse_list_add( inz, solve_A, nnz, length_inz, a, b,
+                        val );
                     }
-                    else {
-                      assert( superlu_solver );
-                      a = jlocal;
-                      b = ilocal;
-                    }
-                    sparse_list_add( inz, solve_A, nnz, length_inz, a, b,
-                      element_matrix_values[imat] );
                   }
                 }
               }

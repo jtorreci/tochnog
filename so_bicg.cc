@@ -620,11 +620,47 @@ void solve_iterative_bicg_element( long int element, long int ithread )
       element_matrix_values_length =
         db_len( GROUP_MATRIX_VALUES, element_group, VERSION_NORMAL );
     }
+    // energy-consistent slave elimination: hoisted per element so the
+    // (inactive) hot path costs one local test per entry, not a call
+    long int mpc_tie_on = mpc_tie_elimination_active();
     for ( i=0; i<element_matrix_values_length; i++ ) {
       iglobal = element_matrix_unknowns[i*2+0];
       jglobal = element_matrix_unknowns[i*2+1];
       ilocal = solve_global_local[iglobal];
       jlocal = solve_global_local[jglobal];
+      if ( mpc_tie_on &&
+           ( mpc_tie_of_dof(iglobal)>=0 || mpc_tie_of_dof(jglobal)>=0 ) ) {
+          // energy-consistent slave elimination (DIAG-SOLVE-MIXTO §16):
+          // the operator the iterative solver runs on is the REDUCED
+          // system - every slave row/column of the element matrix is
+          // redistributed to its tie masters with the tie weights
+          // (K_red = K_FF + K_FS*C^T + C*K_SF + C*K_SS*C^T). The slave
+          // dofs are not unknowns of the solve (value-constrained), so
+          // their matrix couplings cannot be dropped: dropping them would
+          // lose the slave consistent force share of the non-conforming
+          // interface and the fixed point would be value-constrained
+          // (0.454 on mpc3) instead of the homogeneous field (1/3).
+        long int row_t[MPC_TIE_MAX_TARGETS], col_t[MPC_TIE_MAX_TARGETS],
+          it2=0;
+        double fac_t[MPC_TIE_MAX_TARGETS];
+        long int nt = mpc_tie_targets( iglobal, jglobal, row_t, col_t,
+          fac_t );
+        for ( it2=0; it2<nt; it2++ ) {
+          long int il = solve_global_local[row_t[it2]];
+          long int jl = solve_global_local[col_t[it2]];
+          if ( il!=-NO && jl!=-NO ) {
+            double v = element_matrix_values[i] * fac_t[it2];
+            indx1 = ithread*solve_nlocal + il;
+            indx2 = ithread*solve_nlocal + jl;
+            Ad1_thread[indx1] += v * d1[jl] * ( p[il] * p[jl] );
+            if ( !solve_iterative_bicg_use_cg )
+              Ad2_thread[indx2] += v * d2[il] * ( p[il] * p[jl] );
+            residue_thread[indx1] -= v * solve_x[jl] * ( p[il] * p[jl] );
+            if ( il==jl ) p_thread[indx1] += v;
+          }
+        }
+        continue;
+      }
       if ( ilocal!=-NO && jlocal!=-NO ) {
         indx1 = ithread*solve_nlocal + ilocal;
         indx2 = ithread*solve_nlocal + jlocal;

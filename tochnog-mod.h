@@ -2041,6 +2041,16 @@ long int  point_el( double point[], double coord[], double weight[],
             long int name, long int nnol,
             double eps_iso = 1.e-3 );
 void      mpc_node_apply( void );
+long int  mpc_tie_elimination_active( void );
+long int  mpc_tie_count_get( void );
+long int  mpc_tie_slave_dof( long int tie );
+long int  mpc_tie_of_dof( long int iglobal );
+long int  mpc_tie_nmaster( long int tie );
+long int  mpc_tie_master_dof( long int tie, long int im );
+double    mpc_tie_master_factor( long int tie, long int im );
+long int  mpc_tie_targets( long int iglobal, long int jglobal,
+            long int row_t[], long int col_t[], double fac_t[] );
+#define MPC_TIE_MAX_TARGETS 25
 void      pol( long int element, long int element_group,
             long int name, long int nnol, double old_coord[], 
             double new_coord[], long int &npoint, double h[], 
