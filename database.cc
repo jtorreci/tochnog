@@ -3163,6 +3163,13 @@ void db_initialize( long int dof_type[], long int dof_label[] )
     data_length[FORCE_ELEMENT_EDGE_WATER] = 4;
   else if ( ndim==3 )
     data_length[FORCE_ELEMENT_EDGE_WATER] = 5;
+  else
+    data_length[FORCE_ELEMENT_EDGE_WATER] = 3;
+  // variable length: legacy GNU layout (rho g dirx [diry dirz]) or the
+  // single Professional switch force_edge_water index -yes (auto
+  // hydrostatic; manual 6.489). The parser stores -yes as the negative
+  // YES enum value (see input.cc).
+  fixed_length[FORCE_ELEMENT_EDGE_WATER] = 0;
   data_class[FORCE_ELEMENT_EDGE_WATER] = FORCE;
 
   strcpy(name[FORCE_ELEMENT_EDGE_WATER_ELEMENT],"force_element_edge_water_element");
@@ -3679,6 +3686,17 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   data_length[GROUNDFLOW_PHREATICLEVEL_MULTIPLE_STATIC] = 1;
   data_class[GROUNDFLOW_PHREATICLEVEL_MULTIPLE_STATIC] = GROUNDFLOW;
   data_required[GROUNDFLOW_PHREATICLEVEL_MULTIPLE_STATIC] = GROUNDFLOW_PHREATICLEVEL_MULTIPLE;
+
+  // Professional groundflow_phreatic_level_static (manual 6.57x, single
+  // level): total pressures at the phreatic-level nodes are set to the
+  // static pressure (record of the corpus excavate1; consumed by the
+  // groundflow family).
+  strcpy(name[GROUNDFLOW_PHREATICLEVEL_STATIC],"groundflow_phreatic_level_static");
+  type[GROUNDFLOW_PHREATICLEVEL_STATIC] = INTEGER;
+  data_length[GROUNDFLOW_PHREATICLEVEL_STATIC] = 1;
+  no_index[GROUNDFLOW_PHREATICLEVEL_STATIC] = 1;
+  data_class[GROUNDFLOW_PHREATICLEVEL_STATIC] = GROUNDFLOW;
+  data_required[GROUNDFLOW_PHREATICLEVEL_STATIC] = GROUNDFLOW_PHREATICLEVEL;
 
   strcpy(name[GROUNDFLOW_PRESSURE],"groundflow_pressure");
 

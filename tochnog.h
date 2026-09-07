@@ -723,6 +723,12 @@ enum {
   GROUNDFLOW_PHREATICLEVEL_MULTIPLE_N,
   GROUNDFLOW_PHREATICLEVEL_MULTIPLE_NODE,
   GROUNDFLOW_PHREATICLEVEL_MULTIPLE_STATIC,
+  // Professional groundflow_phreatic_level_static (manual 6.57x): the
+  // single-level counterpart of _multiple_static - total pressures at the
+  // phreatic-level nodes are set to the static pressure. Parsed by the
+  // mechanics-only water-load models of the corpus (excavate1); the flow
+  // semantics is consumed by the groundflow family (groundfl.cc).
+  GROUNDFLOW_PHREATICLEVEL_STATIC,
   GROUNDFLOW_PRESSURE,
   GROUNDFLOW_PRESSURE_ATMOSPHERIC,
   GROUNDFLOW_PRESSURE_GRADIENT,

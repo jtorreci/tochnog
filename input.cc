@@ -970,14 +970,35 @@ void input( )
             dval[iv] = d;
           else {
             if ( !string_isdouble(str) ) {
-              pri( "\n\nError in data part." );
-              pri( "Problem reading ", db_name(idat) );
-              pri( "I don't know what to do with ", str );
-              if ( db_fixed_length(idat) )
-                pri( "Number of data values expected ", db_data_length(idat) );
-              exit(TN_EXIT_STATUS);
+              // force_element_edge_water (manual Professional 6.489):
+              // the Professional record is a pure switch
+              // (force_edge_water index -yes). A DOUBLE record cannot
+              // hold the token through the generic path: store the
+              // negative YES/NO enum as the single value, the layout
+              // discriminator used by area() (legacy GNU: rho g dirs).
+              if ( idat==FORCE_ELEMENT_EDGE_WATER && str[0]=='-' ) {
+                long int swit_word = db_number( &str[1] );
+                if ( swit_word==YES || swit_word==NO ) {
+                  dval[iv] = -(double)swit_word;
+                }
+                else {
+                  pri( "\n\nError in data part." );
+                  pri( "Problem reading ", db_name(idat) );
+                  pri( "I don't know what to do with ", str );
+                  exit(TN_EXIT_STATUS);
+                }
+              }
+              else {
+                pri( "\n\nError in data part." );
+                pri( "Problem reading ", db_name(idat) );
+                pri( "I don't know what to do with ", str );
+                if ( db_fixed_length(idat) )
+                  pri( "Number of data values expected ", db_data_length(idat) );
+                exit(TN_EXIT_STATUS);
+              }
             }
-            dval[iv] = atof(str);
+            else
+              dval[iv] = atof(str);
           }
         }
         length = iv + 1;
