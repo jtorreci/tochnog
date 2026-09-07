@@ -1270,3 +1270,134 @@ condif single-field). All other corpus tests exercise the unchanged
   (which feed the constitutive σ feedback of the next element loop)
   keep being re-synced to Cᵀ·masters — the condition for the one-pass
   collapse of §16.1.
+## 17. The materi_dynamic f=0 dynamics family (2026-09-07) — scheme-level gap, measured
+
+**Status**: DIAGNOSIS (no code change). dynamic1/2/5/8 stay RUNFAIL with a
+measured root cause: the GNU velocity/staggered f=0 map is NOT the
+Professional f=0 map. The mpc3/4 precedent (§16) does NOT transfer — there
+the tie elimination was an algebraic consistency gap *inside* the solve;
+here the whole time-marching semantics differ (velocity-staggered with
+updated kinematics vs displacement-primary with reference-configuration
+measures and an unconditionally-stable semi-implicit map). All numbers
+below measured on the GNU HEAD binary (d68db76) and the Professional
+25-10-2023 binary (.dbs/.his + stdout state series).
+
+### 17.1 What the Professional f=0 actually is (measured)
+
+The corpus dynamic1/2 are a 1-DOF oscillator in disguise: bar/truss
+L=1, EA=1, ρ=2, load "bounda_force 20 2 -velx / bounda_time 20 1." = a
+CONSTANT load F=1 (single-value bounda_time = the load magnitude, active
+for the whole run — measured: a_n + u_{n−1} = 1.0000 to 1e-4 at EVERY
+sample including t=100). m = ρAL/2 = 1, k = EA/L = 1, F = 1 → the exact
+response u(t) = 1 − cos(t), bounded in [0,2]; the corpus target
+0.095889 = u(100) of THIS discrete oscillator.
+
+State series extracted from the Professional stdout (node_dof per step,
+both nodes, 9 dofs) satisfy EXACTLY (1e-12/1e-13):
+
+```
+u_n = u_{n−1} + dt·v_n          (displacement at the NEW velocity)
+v_n = v_{n−1} + dt·a_n          (Euler velocity update)
+a_n = α(s)·(F − k·u_{n−1})/m   (internal force at the START of the
+                                step = σ_t frozen; α(s) ≈ 1 for ω·dt≪1)
+```
+
+i.e. symplectic-Euler kinematics with the f=0 blend semantics (σ_used =
+σ_t). Measured α(s) = first-step u₁/s²: s=0.1 → 0.999902 (NOT 1), s=1 →
+0.75, s=2.5 → 0.2568, s=4 → 0.1142, s=6 → 0.0533; u₁(s) → 2, so
+ω_eff·dt = s·√α(s) → √2 — UNCONDITIONALLY stable. Verified directly:
+the Professional runs dynamic2 with dt=2.5/4/6 (ω·dt up to 6) bounded
+(u max ≈ 2.29), and dynamic8 with dt=1e-2 (≈20× the corpus dt, ω·dt ≫ 2)
+rc=0. The free flight (t≥40) is a PURE sinusoid ω=1.000368, amplitude
+1.00125, least-squares rmse 2e-13 — energy-neutral, no dissipation.
+
+The mass is CONSTANT (evaluated on the reference configuration): the
+same trajectory is measured for the truss (dynamic1) and the bar2
+(dynamic2) — identical final states (disx 0.0958890, velx −0.4748621).
+The load F=1 = EA exactly, yet the Professional oscillator stays clean
+because its internal force is LINEAR in the reference stretch.
+
+### 17.2 What the GNU f=0 actually is (measured)
+
+Velocity-staggered (§1): the momentum matrix at f=0 carries ONLY the
+lumped mass M/dt (stiffness × md_factor = 0; measured in the assembled
+1×1 system of dynamic2: diag 10 = m/dt, b = 1). Two equilibrium
+iterations per step (two solves measured per step). σ_t semantics are
+the same blend (sigvec = old_sig). The differences:
+
+1. **Mass on the ITERATE-deformed geometry.** The continuum inertia
+   integrates ρ over the CURRENT configuration (constant ρ). Assembled
+   diagonal of the free dof: step 1 it.1 = 10, it.2 = 10.1, step 2 it.1
+   = 10.198 — the mass follows the stretch u (m ≈ ρ·V(u)). For the
+   corpus loads F = EA the bar stretches to u ~ 2-3 (L up to 4×!) and
+   the swinging mass parametrically drives the oscillator. The truss
+   uses the initial length (constant mass) but its internal force uses
+   UPDATED kinematics (k = EA/L_new, incremental ΔL: σ ~ E·ln(L/L₀)
+   accumulation), which has NO finite equilibrium at F = EA → secular
+   drift (dynamic1: 6.44767 at t=100, target 0.095889 ±1e-4).
+2. **Explicit stability limit ω·dt < 2.** With the matrix = M/dt only,
+   the f=0 map is the explicit Euler-on-v; dynamic8 (mesh c·dt/h_max ≫ 2)
+   diverges: GNU value 704490 vs target −0.000998525 ±1e-7. Measured on
+   the 1-DOF bar too: GNU dynamic2 at dt=2.5 (ω·dt = 2.5) diverges to
+   −2678 in 50 steps where the Professional is bounded at u ≈ 2.25.
+3. **The staggered map ≠ symplectic.** Even at small strain (dynamic5,
+   quad4 plate, u ~ 1e-4 — the mass/geometry effects are ~1e-8 and the
+   updated kinematics reduce to the linear ones) the GNU trajectory
+   still deviates: −8.47308e-5 vs target −8.58577e-5 ±1e-7 (1.3%).
+   Amplitude t≥4: 9.601e-5 (GNU) vs 9.678e-5 (Pro) — the GNU retains a
+   small dissipation (0.8%) plus a phase component. dt-refinement is
+   first-order and does NOT close the gap: dt=2.5e-4 gives −8.4979e-5,
+   and the dt→0 extrapolation (−8.52e-5) still misses the target → the
+   GNU's SEMI-DISCRETE response (mass distribution/iteration structure)
+   differs from the Professional's, not only the integrator.
+
+### 17.3 Why the targets cannot be closed by a small closure
+
+- dynamic1/2: target = the Professional's discrete trajectory sampled
+  at t=100 (17.7 periods) with tolerance ±1e-4. The value moves ~4e-2
+  when dt halves → the integrator's discrete frequency must match the
+  Professional's to ~1e-6 RELATIVE. Even a python replica of the
+  nominal symplectic map (m=k=F=1, α=1) misses the Professional by
+  0.0021 at t=100 (21× tolerance) purely because α(0.1) = 0.999902 ≠ 1.
+  Reproducing the target = reproducing the Professional's exact map,
+  α(s) included.
+- dynamic5/8: targets at ±1e-7 = 0.1% of the response. dynamic5 needs
+  the dissipation-free semi-discrete response (its own staggered map
+  dissipates ~1%/5 s); dynamic8 needs the unconditional stability that
+  only an implicit-capable solve provides (α(s)-relaxed or
+  displacement-primary).
+- The §16 mpc3/4 closure worked because the GNU already assembled the
+  energy-consistent system and only dropped the slave rows; here the
+  missing piece is the FORMULATION of the transient momentum (constant
+  reference-configuration mass + linear reference stretch + one-pass
+  σ_t-explicit semi-implicit update), i.e. displacement-primary
+  kinematics/time integration for materi_velocity + materi_displacement
+  + materi_dynamic — a scheme-level work unit with a large blast radius
+  (every dynamic continuum test, earthquake_*, dynamic6/7).
+
+### 17.4 What a complete fix would need (documented, NOT attempted)
+
+A displacement-primary (or map-equivalent) transient branch for
+`materi_displacement + materi_velocity + inertia_apply` when
+`materi_dynamic < 1`:
+1. solve u_{n+1} from M·a + f·K·u_{n+1} = F − (1−f)·Bᵀσ_t with
+   Newmark-family parameters that reproduce the measured α(s) of the
+   Professional (≈ symplectic at s≪1, unconditionally stable at large
+   s — the σ_t stays explicit, the STABILITY comes from the solve);
+2. mass and internal force on the REFERENCE configuration (constant
+   m = ρV₀, linear E·ΔL/L₀) for the momentum;
+3. v and a as derived dofs (u_n − u_{n−1})/dt, (v_n − v_{n−1})/dt —
+   the Professional prints/consumes them consistently.
+Validated by matching the Professional .his series step-by-step
+(dynamic1/2: u(100) = 0.0958890 ±1e-4; dynamic5/8 at ±1e-7), then a
+corpus-wide blast-radius (every materi_velocity test).
+
+### 17.5 Files / evidence
+
+- Scratch data: /tmp/opencode/dyn_pro*, dyn_probes, dyn5 (series .his,
+  state extractions, assembly dumps).
+- GNU assembled-system dump (temporary so.cc instrumentation, reverted;
+  env-gated, not committed): 2 solves/step, diag 10 → 10.1 → 10.198.
+- The repo's materi_dynamic feature (f516a03) semantics are confirmed
+  correct (f=0 freezes σ_t in the momentum); the blocker is the scheme,
+  not the record. See manual-developer/materi_dynamic.md.
