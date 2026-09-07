@@ -7343,6 +7343,31 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   no_index[MPC_ELEMENT_GROUP_MESH_FINGERPRINT] = 1;
   data_class[MPC_ELEMENT_GROUP_MESH_FINGERPRINT] = CONTROL;
 
+  // -veln family (manual Professional 6.22): VELN is the keyword a
+  // bounda_dof/bounda_unknown record lists as dof to prescribe the
+  // zero velocity NORMAL to a plane (geometry normal or the bounda_normal
+  // of the same index). MPC_FROM_BOUNDA marks the mpc_node_number/
+  // mpc_node_factor records that the -veln bounda generated (index k =
+  // -yes beside the generated record k; the Professional .dbs stores the
+  // same marker). BOUNDA_VELN_MESH_FINGERPRINT is the INTERNAL
+  // bookkeeping record of the generator (indexed by bounda record,
+  // [mesh fingerprint, start_index, count] - the mpc_linear_quadratic
+  // pattern). See bounda.cc::bounda_veln_mpc().
+  strcpy(name[VELN],"veln");
+
+  strcpy(name[MPC_FROM_BOUNDA],"mpc_from_bounda");
+  type[MPC_FROM_BOUNDA] = INTEGER;
+  data_length[MPC_FROM_BOUNDA] = 1;
+  fixed_length[MPC_FROM_BOUNDA] = 0;
+  data_class[MPC_FROM_BOUNDA] = CONTROL;
+
+  strcpy(name[BOUNDA_VELN_MESH_FINGERPRINT],"bounda_veln_mesh_fingerprint");
+  type[BOUNDA_VELN_MESH_FINGERPRINT] = INTEGER;
+  data_length[BOUNDA_VELN_MESH_FINGERPRINT] = 3;
+  fixed_length[BOUNDA_VELN_MESH_FINGERPRINT] = 3;
+  external[BOUNDA_VELN_MESH_FINGERPRINT] = 0;
+  data_class[BOUNDA_VELN_MESH_FINGERPRINT] = CONTROL;
+
   // control_mesh_truss_distribute_mpc (manual Professional 6.245) and
   // the _exact variant (6.250): distribute truss nodes over the
   // isoparametric elements with multi point constraints. Consumption

@@ -1100,6 +1100,13 @@ long int check( long int idat, long int task )
     ok = check_unknown( "materi_velocity", YES, task );
     ok = ok && check_ndim( 2, 3, task );
   }
+  if ( data_number==VELN ) {
+    // bounda_dof ... -veln (manual Professional 6.22): the normal
+    // velocity to a plane is prescribed 0 with generated mpc records.
+    // The constraint lives on the velocity dofs, so materi_velocity
+    // must be active.
+    ok = check_unknown( "materi_velocity", YES, task );
+  }
   if ( data_number==SLIDE_GEOMETRY )
     ok = check_unknown( "materi_velocity", YES, task );
   if ( data_number==SLIDE_PENALTY )

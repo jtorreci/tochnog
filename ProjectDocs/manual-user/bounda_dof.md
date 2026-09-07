@@ -99,3 +99,80 @@ the corpus): `-topres` load 0 on `-all` with `groundflow_phreatic_level 1.`
 over a mesh at z in [-1,0] gives pres_dof = +10 everywhere (the dynamic
 pressure) and `-to_pres` = 0 at z=0 / -10 at z=-1, exactly the
 Professional.
+
+## Zero velocity normal to a wall: `-veln`
+
+For velocity dofs, `-veln` prescribes that the nodes do NOT move in the
+direction NORMAL to a plane (no-penetration / frictionless-wall condition:
+the normal component of the velocity is zero, the tangential components
+stay free). Manual Professional 6.22.
+
+```
+bounda_dof <index> -geometry_set 1 -veln
+```
+
+The normal direction comes from:
+
+- the geometry entity of the record when the nodes are selected through one
+  (a `geometry_line` for a wall; for a `geometry_set`, each node uses the
+  normal of the FIRST entity of the set that contains it — geometry() first
+  match, verified against the Professional binary on validation_8 corner
+  nodes lying on two entities);
+- a `bounda_normal <index> ...` record when the nodes are selected through a
+  node range (the manual 6.22 requires the normal in that case).
+
+`materi_velocity` must be active (`-veln` needs the velocity dofs; validated
+at input). The `bounda_time` of the record is irrelevant (manual 6.22).
+
+Internally Tochnog generates multi point constraint records
+(`mpc_node_number`/`mpc_node_factor`, marked `mpc_from_bounda -yes`) that
+impose the condition:
+
+- one mpc record per boundary node;
+- slave dof = the FIRST velocity axis with a non-zero normal component
+  (x, y, z order), masters = the remaining axes with a non-zero component,
+  factor = `-n_master/n_slave` with `n` the (unit) normal: the record
+  `mpc_node_number k <node> -velx <node> -vely` + `mpc_node_factor k <f>`
+  imposes `velx = f*vely`, i.e. `n_x*velx + n_y*vely = 0`;
+- a zero-component master is omitted: on an axis-aligned wall the record
+  degenerates to `mpc_node_number k <node> -vel?` alone (the normal dof
+  bounded to zero, e.g. `-vely` on a horizontal wall, `-velx` on a vertical
+  one);
+- the tie is eliminated inside the system solve (energy-consistent slave
+  elimination, the mpc_linear_quadratic mechanism) and the generated
+  records are re-created when the mesh changes (refinement, ...).
+
+Record layout measured against the Professional binary (25-10-2023):
+validation_8 oblique wall of slope -0.1 generates
+`mpc_node_number k <node> -velx <node> -vely` with factor -10; a wall of
+slope +0.1 gives factor +10, slope +2 factor +0.5, a vertical wall the
+masterless `-velx`, a horizontal wall the masterless `-vely`.
+
+Example (validation_8 of the corpus — continuous extrusion through a
+stepped die with frictionless walls):
+
+```
+start_define
+  lower_edge geometry_line 3
+end_define
+lower_edge  -1. 0. 2. 0. 1.e-4
+...
+geometry_set 1  -lower_edge -upper_left_edge -upper_oblique_edge -upper_right_edge
+
+bounda_dof 2 -geometry_set 1 -veln
+```
+
+The nodes of the horizontal wall portions get `vely = 0` bounded; the nodes
+of the oblique portion `(0,1) -> (1,0.9)` get the tie `velx = -10*vely` (the
+flow slides along the wall). A node whose dof is ALSO prescribed by an
+explicit `bounda_dof`/`bounda_time` record keeps the direct prescription
+(the generated tie is inert there — measured on the Professional binary at
+the inflow corner of the wall).
+
+Implementation notes (developer): `bounda.cc::bounda_veln_mpc()` generates
+the records (fingerprint bookkeeping per bounda record index, the
+mpc_linear_quadratic pattern); `mpc.cc` consumes them (masterless records
+bound the slave to zero; the marked records register for the energy
+consistent elimination and the direct-bounda slave protection).
+
+## See also
