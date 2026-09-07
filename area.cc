@@ -475,7 +475,7 @@ void area( long int element, long int name,
                 length, load );
             }
             else if ( db_active_index( FORCE_ELEMENT_EDGE_TIME_FILE, ind, VERSION_NORMAL ) ) {
-	      long int force_time_file=0, ninc=0;
+	      long int force_time_file=0;
               db( FORCE_ELEMENT_EDGE_TIME_FILE, ind, &force_time_file, ddum, ldum, 
                  VERSION_NORMAL, GET_IF_EXISTS );
               if ( force_time_file==-YES ) force_time_file_apply( ind, FORCE_ELEMENT_EDGE_TIME_FILE, load );
@@ -1014,8 +1014,7 @@ void area( long int element, long int name,
                       double un = 0., vn = 0., an = 0., f0 = 0.,
                         sup_nodal[MDIM], old_dof_node[MDIM+MUKNWN];
                       double cn = 0., ct = 0., fac_k = 1.;
-                      long int idim2 = 0;
-                      // the spatial factor scales the STIFFNESSES only
+                                            // the spatial factor scales the STIFFNESSES only
                       // (manual 6.1075: "for the support stiffnesses
                       // and not the force")
                       force_factor( SUPPORT_EDGE_NORMAL_FACTOR, ind,
@@ -1187,8 +1186,7 @@ void area( long int element, long int name,
                           VERSION_NORMAL );
                         sw_pt = *ptr2;
                         {
-                        const char *sw_str = (const char *)ptr2;
-                        // the parser stores -yes/-no as ival = -YES (the
+                                                // the parser stores -yes/-no as ival = -YES (the
                         // NEGATIVE of the YES enum ordinal); check the
                         // matching pattern
                         if ( sw_pt == -YES ) pt_gap = 1;
@@ -1327,16 +1325,6 @@ void area( long int element, long int name,
                         if ( !ok_side_l || !ok_node_l ) continue;
                       }
                       for ( idim=0; idim<ndim; idim++ ) {
-                        double ut_idim =
-                          new_dof[inol*nuknwn+dis_indx+idim*nder]
-                          - un*normal[idim];
-                        double vt_idim =
-                          new_dof[inol*nuknwn+vel_indx+idim*nder]
-                          - vn*normal[idim];
-                        double at_idim =
-                          ( new_dof[inol*nuknwn+vel_indx+idim*nder]
-                          - old_dof_node[vel_indx+idim*nder] )
-                          /dtime - an*normal[idim];
                         // fidim uses the CAPPED fn and ft_raw_local
                         // (the gap/tension-cap branch zeros ft_raw_local
                         // and the per-side prefactor ft_raw_local is
@@ -1636,7 +1624,6 @@ void area( long int element, long int name,
                     &new_coord[inol*ndim], factor );
                   {
                     double pdata[16], ph=0., pv=0., fn=1., ft=0.;
-                    long int idir;
                     double vd[MDIM], hd[MDIM], tang[MDIM], n2=0., t2=0.;
                     db( FORCE_ELEMENT_EDGE_PROJECTED, ind, idum, pdata,
                       ldum, VERSION_NORMAL, GET );

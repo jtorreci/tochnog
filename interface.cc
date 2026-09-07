@@ -86,13 +86,13 @@ void interface_element( long int element, long int name,
 
 {
   long int idim=0, jdim=0, inol=0, jnol=0, knol=0, indx=0, swit=0, ldum=0, 
-    nnol=4, ns1=2, mc_active=0, plastified=0, memory=-UPDATED_LINEAR, idum[1],
+    nnol=4, ns1=2, mc_active=0, memory=-UPDATED_LINEAR, idum[1],
     axisymmetric=-NO;
-  double radius_ip=1., damping_iface=0.;
+  double damping_iface=0.;
   double dtime=0., kn=0., kt1=0., kt2=0., tmp=0., ddum[1],
     normal[MDIM], tangent[MDIM], tangent2[MDIM], du[MDIM],
     du_norm=0., du_tang=0., du_tang2=0., stress_normal=0., stress_shear=0.,
-    stress_shear2=0., strain_normal=0., strain_eff=0., force_norm=0.,
+    stress_shear2=0., strain_normal=0., strain_eff=0.,
     gap=0., tension_limit=0.,
     residual_factor=0.01, phi=0., c=0., phi_flow=0.,
     ddum3[3],
@@ -1170,8 +1170,8 @@ void interface_convert( long int icontrol )
 {
   long int element=0, max_element=0, max_element_c=0, i=0, j=0, jnod=0,
     name=0, length=0, ldum=0, swit=0, element_group=0,
-    max_node=0, max_node_old=0, length_convert_groups=0, found=0, nconv=0,
-    idum[1], *el=NULL, *convert_groups=NULL, *node_element=NULL;
+    max_node=0, length_convert_groups=0, found=0, nconv=0,
+    idum[1], *el=NULL, *convert_groups=NULL;
   double ddum[1], coord[MDIM], normal[MDIM], tangent[MDIM], shift=0.,
     *ca=NULL, *cb=NULL;
 
@@ -1202,7 +1202,6 @@ void interface_convert( long int icontrol )
   db_highest_index( ELEMENT, max_element, VERSION_NORMAL );
   max_element_c = max_element;
   db_highest_index( NODE, max_node, VERSION_NORMAL );
-  max_node_old = max_node;
 
   // element groups located on ONE side of the interfaces; neighbours in
   // these groups keep the original nodes, the others get the new ones

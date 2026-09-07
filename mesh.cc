@@ -628,8 +628,8 @@ void mesh_convert_quad8( void )
 void mesh_convert_hex20( void )
 
 {
-  long int element=0, max_element=0, max_node=0, length=0, ldum=0,
-    swit=0, i=0, inol=0, nconv=0, jnod=0, d=0, idum[1];
+  long int element=0, max_element=0, max_node=0, length=0,
+    swit=0, i=0, nconv=0, jnod=0, d=0, idum[1];
   double ddum[1], coord[MDIM], centre[MDIM];
   long int el[1+MNOL], h27[1+27];
 
@@ -1021,8 +1021,8 @@ double mesh_activate_gravity_factor( long int element, long int element_group,
   long int nnol, long int nodes[], double *stiff_factor )
 
 {
-  long int i=0, idim=0, inod=0, icontrol=0, length=0, ldum=0, in_geometry=0,
-    found=0, method=-METHOD1, idum[1], *mesh_act=NULL, *gr_list=NULL;
+  long int i=0, inod=0, length=0, ldum=0, in_geometry=0,
+    method=-METHOD1, idum[1], *mesh_act=NULL, *gr_list=NULL;
   double factor=1., time_start=0., time_end=0., time_current=0., dtime=0.,
     coord_min=0., coord_max=0., t_start_el=0., t_end_el=0., ddum[MDIM],
     rdum=0., *coord=NULL, stiff=1.;

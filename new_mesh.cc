@@ -371,8 +371,8 @@ void new_mesh_version( long int version, double delta )
   }
   mesh_has_changed( VERSION_NEW_MESH_TMP );
 
-  if ( ndim==2 && control_new_mesh_element==-TRIA3 ||
-       ndim==3 && control_new_mesh_element==-TET4 ) {
+  if ( ( ndim==2 && control_new_mesh_element==-TRIA3 ) ||
+       ( ndim==3 && control_new_mesh_element==-TET4 ) ) {
     if ( swit ) pri( "Split into simplex elements." );
     mesh_split( VERSION_NEW_MESH_TMP ); 
   }

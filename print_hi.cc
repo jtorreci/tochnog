@@ -119,8 +119,7 @@ void print_history_smooth( long int ival[], long int nval )
 {
   long int data_item_name=0, data_item_index=0, iset=0, nset=0,
     number=0, len=0, icontrol=0, swit=0, ldum=0, smooth=1, nsmooth=0,
-    smooth_size=0, idum[1], *idat=NULL, *dof_label=NULL, *smooth_d=NULL,
-    *history_d=NULL;
+    idum[1], *idat=NULL, *dof_label=NULL, *smooth_d=NULL;
   double time_current=0., ddum[1], *ddat=NULL;
   char str[MCHAR], filename[MCHAR];
 
@@ -166,7 +165,6 @@ void print_history_smooth( long int ival[], long int nval )
     if ( smooth_d ) delete[] smooth_d;
     return;
   }
-  smooth_size = ( nsmooth>=nset ) ? nset : nsmooth;
 
   if ( !smooth_buf_init ) {
     for ( long int k=0; k<DATA_ITEM_SIZE; k++ ) {
@@ -268,7 +266,7 @@ void print_history_smooth( long int ival[], long int nval )
 // values instead of the raw node_dof values. Nodes without an active
 // NODE_DOF record are not smoothed (value 0.0; in practice every node
 // has one).
-static long int print_dof_smooth_apply( long int icontrol, long int max_node,
+static long int print_dof_smooth_apply( long int icontrol, long int /*max_node*/,
   long int nuknwn_, double *smooth_field )
 
 {

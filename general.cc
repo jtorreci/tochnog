@@ -50,7 +50,7 @@ void general( long int element, long int name, long int nnol, long int element_g
     idum[1], options_mesh[MDIM], dof_type[MUKNWN], dof_principal[MUKNWN];
   double condif_conductivity=0., dens=0.,
     condif_capacity=0., visc=0., vel=0.,
-    C=0., dtime=0., inertia=0., radius=0., mat_diff=1.,
+    C=0., dtime=0., inertia=0., radius=0.,
     conv_part=0., diff_part=0., peclet=0., peclet_factor=0., 
     val=0., val_max=0., val_min=0., val_new=0.,
     artificial_diffusion=0., tmp=0., D=0., diffusion=1.,
@@ -512,7 +512,7 @@ void general( long int element, long int name, long int nnol, long int element_g
 // (feature active).
 long int control_materi_gate_off( long int control_item )
 {
-  long int icontrol=0, swit=-YES, ldum=0, idum[1], max_index=-1;
+  long int icontrol=0, swit=-YES, ldum=0, max_index=-1;
   double ddum[1];
   db_max_index( control_item, max_index, VERSION_NORMAL, GET );
   if ( max_index>=0 ) {

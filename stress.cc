@@ -49,9 +49,9 @@ void materi_compression_cutoff( long int element, long int gr,
   double dtime, double new_sig[] )
 
 {
-  long int ldum=0, idum[1], idim=0, jdim=0, kdim=0, nrot=0;
+  long int ldum=0, idim=0, jdim=0, kdim=0, nrot=0;
   double sigy=0., tm=0., factor=1., sig_work[MDIM*MDIM],
-    d[MDIM], v[MDIM*MDIM], ddum[MDIM], plasti_data[DATA_ITEM_SIZE];
+    d[MDIM], v[MDIM*MDIM], plasti_data[DATA_ITEM_SIZE];
 
   if ( !get_group_data( GROUP_MATERI_PLASTI_COMPRESSION_DIRECT, gr,
       element, new_sig, plasti_data, ldum, GET_IF_EXISTS ) )
@@ -111,14 +111,14 @@ void materi_compression_cutoff( long int element, long int gr,
 // is attached to a wall.
 void materi_direct_full_mc( long int element, long int gr,
   long int plasti_on_boundary, double dtime,
-  double new_sig[], double ddsdde[] )
+  double new_sig[], double /*ddsdde*/[] )
 
 {
   long int idim=0, jdim=0, kdim=0, nrot=0, mc_present=0, ten_present=0,
-    ldum=0, idum[1];
+    ldum=0;
   double phi=0., c=0., phi_flow=0., sigy=0., factor=1., tm=0., young=0.,
     poisson=0., lambda_lame=0., gmod=0.,
-    sig_work[MDIM*MDIM], d[MDIM], v[MDIM*MDIM], ddum[MDIM],
+    sig_work[MDIM*MDIM], d[MDIM], v[MDIM*MDIM],
     plasti_data[DATA_ITEM_SIZE], ten_data[DATA_ITEM_SIZE];
 
   // elastic constants for the one-shot return (the C projection on the
@@ -277,15 +277,14 @@ void materi_direct_full_mc( long int element, long int gr,
 // part is scaled to the limit).
 void materi_direct_cutoff( long int element, long int gr,
   long int plasti_on_boundary, double dtime,
-  double new_sig[], double ddsdde[], double direct_normal[] )
+  double new_sig[], double /*ddsdde*/[], double direct_normal[] )
 
 {
-  long int idim=0, jdim=0, kdim=0, ldim=0, ind=0, mc_active=0, ten_active=0,
+  long int idim=0, jdim=0, mc_active=0, ten_active=0,
     visco_mc=0, visco_ten=0, ldum=0, idum[1];
-  double phi=0., c=0., phi_flow=0., sigy=0., sig_n=0., tau_norm=0.,
-    max_fric=0., scale=0., factor=0., normal[MDIM], tau[MDIM], ddum[MDIM],
+  double phi=0., c=0., sigy=0., sig_n=0., tau_norm=0.,
+    max_fric=0., scale=0., factor=0., normal[MDIM], tau[MDIM],
     plasti_data[DATA_ITEM_SIZE], tm=0.;
-  static const long int MSTRAIN_LOCAL=6;
 
   array_set( normal, 0., MDIM );
   array_move( direct_normal, normal, MDIM );
@@ -293,12 +292,12 @@ void materi_direct_cutoff( long int element, long int gr,
 
   mc_active = get_group_data( GROUP_MATERI_PLASTI_MOHR_COUL_DIRECT, gr,
     element, new_sig, plasti_data, ldum, GET_IF_EXISTS );
-  if ( mc_active ) { phi = plasti_data[0]; c = plasti_data[1]; phi_flow = plasti_data[2]; }
+  if ( mc_active ) { phi = plasti_data[0]; c = plasti_data[1]; }
   // wall values (element attached to a wall) and visco relaxation time
   if ( mc_active && plasti_on_boundary ) {
     if ( get_group_data( GROUP_MATERI_PLASTI_MOHR_COUL_DIRECT_WALL, gr,
         element, new_sig, plasti_data, ldum, GET_IF_EXISTS ) ) {
-      phi = plasti_data[0]; c = plasti_data[1]; phi_flow = plasti_data[2];
+      phi = plasti_data[0]; c = plasti_data[1];
     }
   }
   if ( mc_active ) {

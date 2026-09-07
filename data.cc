@@ -31,7 +31,7 @@ static void data_copy_apply( long int idat_from, long int index_from,
   long int idat_to, long int index_to, double factor,
   long int idat_control, long int icontrol )
 {
-  long int ldum=0, idum[1], length_from=0, i=0;
+  long int idum[1], length_from=0, i=0;
   double ddum[1], *dval_copy=NULL;
   long int *ival_copy=NULL;
 
@@ -65,7 +65,7 @@ void data( long int task, double dtime, double time_current )
   long int idat=0, in=0, iv=0, index=0, range_length=0, icontrol=0, length=0, 
     swit=0, max_index=0, inod=0, max_node=0, found=0, 
     ichange=0, max_change=0, idim=0, operat=0, ldum=0, 
-    ireset=0, max_reset=0, idof_reset=0, idof_value=0, ireset_val=0,
+    ireset=0, max_reset=0, idof_reset=0, idof_value=0,
     length_diagram=0, change_dataitem_apply=-YES,
     reset_method=-USE,
     data_item_name=0, data_item_index=0, data_item_number=0,
@@ -398,7 +398,7 @@ void data( long int task, double dtime, double time_current )
   {
     static long int print_mesh_dof_done = 0;
     long int *pmd_dofs = NULL, length_pmd = 0, pmd_geometry[2] = {0,0},
-      in_geometry_pmd = 0, idof_pmd = 0, indx_pmd = 0;
+      in_geometry_pmd = 0, indx_pmd = 0;
     double *coord_pmd = NULL, *node_dof_pmd = NULL, rdum_pmd = 0.;
 
     if ( !print_mesh_dof_done &&
@@ -822,7 +822,7 @@ void data( long int task, double dtime, double time_current )
   {
     long int ireset_i = 0, iel_i = 0, max_element_i = 0,
       inol_i = 0, length_el_i = 0, all_in_i = 0, in_geom_i = 0,
-      geometry_i[2], zero_one = 0;
+      geometry_i[2];
     double rdum_i = 0.;
     db_max_index( ELEMENT, max_element_i, VERSION_NORMAL, GET );
     for ( ireset_i=0; ireset_i<=1000; ireset_i++ ) {
@@ -857,7 +857,6 @@ void data( long int task, double dtime, double time_current )
           if ( !in_geom_i ) all_in_i = 0;
         }
         if ( all_in_i ) {
-          zero_one = 0;
           // per-integration-point histories (one value per facing pair,
           // ns1 = nnol/2); zero ALL slots in BOTH versions (FIX
           // 2026-09-03: the old PUT passed a leftover length and a

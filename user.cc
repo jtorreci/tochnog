@@ -19,7 +19,7 @@
 
 #include "tochnog.h"
 
-void  user_bounda_time( long int index, double time_current, double &val )
+void  user_bounda_time( long int /*index*/, double /*time_current*/, double &/*val*/ )
  
   /* Purpose: user supplied routine for time table for
        bounda_unknown index.
@@ -39,7 +39,7 @@ void  user_bounda_time( long int index, double time_current, double &val )
   exit(0);
 }               
 
-void  user_change_dataitem_time( long int index, double time_current, double &val )
+void  user_change_dataitem_time( long int /*index*/, double /*time_current*/, double &/*val*/ )
 
   /* Purpose: user supplied routine for time table for
        change_dataitem index.
@@ -57,7 +57,7 @@ void  user_change_dataitem_time( long int index, double time_current, double &va
   exit(0);
 }
 
-void  user_change_geometry_time( long int index, double time_current, double &val )
+void  user_change_geometry_time( long int /*index*/, double /*time_current*/, double &/*val*/ )
 
   /* Purpose: user supplied routine for time table for
        change_geometry index.
@@ -75,8 +75,8 @@ void  user_change_geometry_time( long int index, double time_current, double &va
   exit(0);
 }
 
-void user_plasti( long int task, double user_data[], double new_unknowns[], 
-  double old_hisv[], double new_hisv[], double new_stress[], double &f )
+void user_plasti( long int /*task*/, double /*user_data*/[], double /*new_unknowns*/[], 
+  double /*old_hisv*/[], double /*new_hisv*/[], double /*new_stress*/[], double &/*f*/ )
 
   /* Purpose: user supplied routine for calculation of plasticity yield 
        function and flow rule function.
@@ -121,10 +121,10 @@ void user_plasti( long int task, double user_data[], double new_unknowns[],
 }
 
 
-void user_sigma( double user_data[], double new_unknowns[], 
-  double inc_epe[], double old_hisv[],
-  double new_hisv[], double old_stress[], double new_stress[], 
-  double Cuser[3][3][3][3] )
+void user_sigma( double /*user_data*/[], double /*new_unknowns*/[], 
+  double /*inc_epe*/[], double /*old_hisv*/[],
+  double /*new_hisv*/[], double /*old_stress*/[], double /*new_stress*/[], 
+  double /*Cuser*/[3][3][3][3] )
 
   /* Purpose: user supplied routine for adding incremental stresses 
      (stress increments over dt).
@@ -164,7 +164,7 @@ void user_sigma( double user_data[], double new_unknowns[],
 {
 }
 
-void user_viscosity( double user_data[], double new_unknowns[], double &visc )
+void user_viscosity( double /*user_data*/[], double /*new_unknowns*/[], double &/*visc*/ )
 
   /* Purpose: user supplied routine for calculation of viscosity.
 
@@ -189,8 +189,8 @@ void user_viscosity( double user_data[], double new_unknowns[], double &visc )
   exit(0);
 }
 
-void user_condif_heat_volume( long int ind, double time, double coord[],
-  double &heat )
+void user_condif_heat_volume( long int /*ind*/, double /*time*/, double /*coord*/[],
+  double &/*heat*/ )
 
   /* condif_heat_volume_user -yes: distributed volume heat source defined
      by the user.

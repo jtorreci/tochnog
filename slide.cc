@@ -66,9 +66,9 @@ void slide_penalty_law( long int inod, long int islide, double *new_node_dof,
 void slide( void )
 
 {
-  long int inod=0, max_node=0, idim=0, swit=0, islide=0, max_slide=0,
+  long int inod=0, max_node=0, swit=0, islide=0, max_slide=0,
     in_geometry=0, ldum=0, icontrol=0, idum[1], slide_geometry[2];
-  double dtime=0., tmp=0., rdum=0., radius=0., ddum[MDIM], 
+  double dtime=0., rdum=0., ddum[MDIM], 
     *new_node_dof=NULL, *node_lhside=NULL, *node_rhside=NULL;
 
   if ( db_max_index( SLIDE_GEOMETRY, max_slide, VERSION_NORMAL, GET ) >= 0 ) {
@@ -288,7 +288,7 @@ void slide_spring( long int inod, long int islide, double *new_node_dof,
 // geometries WITHOUT the Professional slide_stiffness record.
 void slide_penalty_law( long int inod, long int islide, double *new_node_dof,
   double *node_lhside, double *node_rhside, double normal[MDIM],
-  double dtime, long int swit )
+  double dtime, long int /*swit*/ )
 
 {
   long int idim=0, ldum=0, idum[1], slide_axisymmetric=-NO;

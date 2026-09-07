@@ -753,8 +753,9 @@ void solve( long int task )
           ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS ) ) {
         pctype = db_name( control_options_solver_petsc_pctype );
       }
+      (void)ksptype; (void)pctype;
       if ( db( CONTROL_OPTIONS_SOLVER_PETSC_MG, icontrol, &mg, 
-          ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS ) );
+          ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS ) ) { }
 #if PETSC_USE
       succesful = solve_iterative_petsc( solve_A, solve_b, solve_nlocal, 
         nnz, inz, ksptype, pctype, mg, iter );

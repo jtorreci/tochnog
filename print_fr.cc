@@ -30,7 +30,7 @@ void print_frd( long int icontrol, long int task )
 
 {
   long int inod=0, element=0, max_node=0, max_element=0, nnol=0, name=0,
-    length=0, idim=0, jdim=0, ipuknwn=0, nuknwn_=0, nder_=0,
+    length=0, ipuknwn=0, nuknwn_=0, nder_=0,
     element_group=0, swit=0, ldum=0, first=1, nstep=0;
   long int idum[1], *dof_label=NULL, *dof_type=NULL, *dof_scal_vec_mat=NULL,
     *nodes=NULL, *el=NULL;
@@ -174,7 +174,7 @@ void print_frd( long int icontrol, long int task )
       }
       for ( long int k=0; k<nout; k++ ) {
         if ( k%10==0 && k>0 ) out << "\n -2";
-        char tmp[20];
+        char tmp[32];
         sprintf( tmp, "%10ld", order[k]+1 );
         out << tmp;
       }
@@ -187,7 +187,7 @@ void print_frd( long int icontrol, long int task )
   // 1PSTEP header, layout of CalculiX frdheader.c:
   // "    1PSTEP" (11) + 13 spaces (cols 12-24) + %12ld counter (25-36) +
   // %12ld increment (37-48) + %12ld step (49-60) + space (61)
-  char pstep[80];
+  char pstep[96];
   nstep++;
   sprintf( pstep, "    1PSTEP%13s%12ld%12ld%12ld \n",
     "", (long)nstep, icontrol, icontrol );
@@ -200,8 +200,8 @@ void print_frd( long int icontrol, long int task )
   {
     char cl[80];
     for ( int k=0; k<80; k++ ) cl[k] = ' ';
-    char field[16];
-    strncpy( cl, "  100CL", 7 );
+    char field[24];
+    memcpy( cl, "  100CL", 7 );
     sprintf( field, "%5ld", 100L+nstep );            // cols 8-12
     strncpy( &cl[7], field, 5 );
     char tval[13];
@@ -215,7 +215,7 @@ void print_frd( long int icontrol, long int task )
     strncpy( &cl[12], tval, 12 );                    // cols 13-24
     sprintf( field, "%12ld", (long)max_node+1 );     // cols 25-36
     strncpy( &cl[24], field, 12 );
-    strncpy( &cl[36], "STATIC", 6 );                 // description 37-42
+    memcpy( &cl[36], "STATIC", 6 );                 // description 37-42
     sprintf( field, "%2ld", 0L );                    // ictype 57-58
     strncpy( &cl[56], field, 2 );
     sprintf( field, "%5ld", icontrol );              // kode 59-63
@@ -231,7 +231,7 @@ void print_frd( long int icontrol, long int task )
          dof_scal_vec_mat[ipuknwn]!=-VECTOR &&
          dof_scal_vec_mat[ipuknwn]!=-MATRIX ) continue;
     long int base_indx = ipuknwn*nder_;
-    long int ncomp=0, irtype=1, ictype=0;
+    long int ncomp=0, ictype=0;
     char dname[9];
     // FRD result name mapping
     long int dt = dof_type[ipuknwn];
@@ -245,7 +245,7 @@ void print_frd( long int icontrol, long int task )
       strncpy( dname, db_name(dof_label[ipuknwn]), 8 );
       dname[8] = '\0';
     }
-    char compnames[6][9];
+    char compnames[6][12];
     long int compidx[6] = {0,0,0,0,0,0};
     if      ( dof_scal_vec_mat[ipuknwn]==-SCALAR ) {
       ncomp = 1; ictype = 1;
@@ -292,7 +292,7 @@ void print_frd( long int icontrol, long int task )
     sprintf( r1, " -4  %-8s%4ld    1\n", dname, ncomp );
     out << r1;
     for ( long int k=0; k<ncomp; k++ ) {
-      char r2[80];
+      char r2[160];
       long int icind1=0, icind2=0;
       if      ( ictype==2 )      { icind1 = k+1; icind2 = 0; }
       else if ( ictype==4 ) {
@@ -309,9 +309,8 @@ void print_frd( long int icontrol, long int task )
     // nodal data
     for ( inod=0; inod<=max_node; inod++ ) {
       node_dof = db_dbl( NODE_DOF, inod, VERSION_PRINT );
-      char r3[200];
       std::string line;
-      char tmp[20];
+      char tmp[32];
       sprintf( tmp, " -1%10ld", inod+1 );
       line += tmp;
       for ( long int k=0; k<ncomp; k++ ) {

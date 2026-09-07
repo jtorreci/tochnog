@@ -32,6 +32,7 @@ void hyperelasticity( long int gr, long int element,
   double ddum[1], new_stress[MDIM*MDIM];
 
   swit = set_swit(element,-1,"hyperelasticity");
+  (void)swit;
   array_set( sig, 0., MDIM*MDIM );
 
   if ( hyper_stress( gr, element, memory, unknowns, epe, new_stress ) ) {

@@ -39,7 +39,7 @@ void geometry( long int inod, double co[], long int geometry_entity[],
     radius=0., cylinder_length=0., x=0., y=0., z=0., eps_iso=EPS_ISO,
     side[MDIM], geometry_bounda_sine_x[2], geometry_bounda_sine_y[2],
     geometry_bounda_sine_z[2], coord[MDIM], dydx[MDIM], 
-    ddum[1], weight[MNOL], tmp_vec[MDIM], point_first[MDIM], point_second[MDIM],
+    ddum[1], weight[MNOL], point_first[MDIM], point_second[MDIM],
     tmp_vec0[MDIM], tmp_vec1[MDIM], tmp_vec2[MDIM], tmp_vec11[MDIM],
     tmp_vec3[MDIM], centre[MDIM], vec01[MDIM], vec02[MDIM], coord0[MDIM],
     coord1[MDIM], coord2[MDIM], geometry_point[1*MDIM+1], 
@@ -49,7 +49,7 @@ void geometry( long int inod, double co[], long int geometry_entity[],
     geometry_sphere[MDIM+2], geometry_sphere_segment[MDIM+1+MDIM+1], 
     geometry_cylinder[2*MDIM+2], geometry_cylinder_segment[MDIM+MDIM+1+MDIM+1], 
     geometry_ellipse[MDIM+3],     geometry_bounda_factor[4], 
-    geometry_brick[2*MDIM+1], work[MDIM], 
+    geometry_brick[2*MDIM+1], 
     *node_dof=NULL, *geometry_polynomial=NULL;
 
   factor = 1.;
@@ -890,10 +890,9 @@ void node_geometry_present_calculate( void )
   // node coordinates of the check (-node_start_refined by default);
   // the per-geometry geometry_node_type records (6.540) override it
   // inside geometry().
-  long int inod=0, igeom=0, idum[1], ldum=0, ient=0, nent=0,
+  long int inod=0, igeom=0, ldum=0, ient=0, nent=0,
     entity=0, found=0, node_type=NODE_START_REFINED, print_ngp=-NO,
-    print_ngp_node_type=0, nvalue=0, max_geom=0, max_node=0,
-    one=1;
+    print_ngp_node_type=0, nvalue=0, max_geom=0, max_node=0;
   const long int geometry_entities[] = {
     GEOMETRY_BRICK, GEOMETRY_CIRCLE, GEOMETRY_CIRCLE_SEGMENT,
     GEOMETRY_CIRCLE_SMALLSEGMENT, GEOMETRY_CYLINDER, GEOMETRY_CYLINDER_SEGMENT,

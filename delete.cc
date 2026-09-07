@@ -536,7 +536,7 @@ static void mc_element_internal_forces( long int element, long int name,
   }
 }
 
-void mesh_cut( double time_current )
+void mesh_cut( double /*time_current*/ )
 
 {
   long int element=0, max_element=0, max_node=0, inol=0, nnol=0, inod=0,

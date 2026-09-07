@@ -22,17 +22,16 @@
 
 void groundflow_data( long int element, long int gr, long int nodes[],
   double old_unknowns[], double new_unknowns[], double coord_ip[],
-  double pe[], double &C, double h[], long int nnol )
+  double pe[], double &C, double /*h*/[], long int nnol )
 
 {
-  long int ldum=0, idum[1], inol=0, idim=0, vert=0, nuknwn=0, inod=0,
+  long int ldum=0, idum[1], inol=0, idim=0, vert=0, inod=0,
     icontrol=0, nonsaturated_apply=-YES, permeability_length=0;
   double ddum[1], pvs[5], vg[5], sigv=0., tmp=0., sig=0., pres=0., vertmax=0.,
     *node_dof=NULL, por=0., head=0., S=0., Se=0., krel=0., dS=0., dens=0.,
     gravity=0., eps_permeability=0.;
   double force_gravity[MDIM];
 
-  nuknwn = npuknwn * nder;
 
   get_group_data( GROUP_GROUNDFLOW_PERMEABILITY, gr, element, new_unknowns,
     pe, permeability_length, GET_IF_EXISTS );

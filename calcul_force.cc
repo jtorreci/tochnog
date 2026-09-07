@@ -2217,12 +2217,12 @@ static void msf_calculate_node_3d( long int inod, double result[] )
 // element behind such records to integrate over).
 // 2D (quad4/quad9): the LOT 2 integration (msf_calculate_node_2d).
 // 3D (hex8/hex27): the LOT 3 integration (msf_calculate_node_3d).
-void post_calcul_materi_stress_force( double unknown_values[],
-  long int inod, double coord[], double dof[], double result[],
+void post_calcul_materi_stress_force( double /*unknown_values*/[],
+  long int inod, double /*coord*/[], double /*dof*/[], double result[],
   long int &length_result )
 
 {
-  long int nitems=0, i=0;
+  long int nitems=0;
 
   if ( inod<0 ) {
     pri( "Error: post_calcul -materi_stress -force is a NODAL calculation; "

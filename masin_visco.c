@@ -72,48 +72,6 @@ static void matmul(const double *a, const double *b, double *c,
 }
 
 /* ------------------------------------------------------------------ */
-/* invariants of a strain tensor (Voigt)                               */
-/* ------------------------------------------------------------------ */
-static void inv_eps(double *eps, double *eps_v, double *eps_s, double *sin3t)
-{
-  int i;
-  double edev[6], edev2[6], ev3, norm2, numer, denom, tredev3;
-  double onethird = 1.0 / 3.0, twothirds = 2.0 / 3.0, sqrt6 = sqrt(6.0);
-
-  *eps_v = eps[0] + eps[1] + eps[2];
-  ev3 = onethird * (*eps_v);
-
-  edev[0] = eps[0] - ev3;
-  edev[1] = eps[1] - ev3;
-  edev[2] = eps[2] - ev3;
-  edev[3] = eps[3] / 2.0;
-  edev[4] = eps[4] / 2.0;
-  edev[5] = eps[5] / 2.0;
-
-  norm2 = edev[0]*edev[0] + edev[1]*edev[1] + edev[2]*edev[2] +
-    2.0 * (edev[3]*edev[3] + edev[4]*edev[4] + edev[5]*edev[5]);
-  *eps_s = sqrt(twothirds * norm2);
-
-  edev2[0] = edev[0]*edev[0] + edev[3]*edev[3] + edev[4]*edev[4];
-  edev2[1] = edev[3]*edev[3] + edev[1]*edev[1] + edev[5]*edev[5];
-  edev2[2] = edev[5]*edev[5] + edev[4]*edev[4] + edev[2]*edev[2];
-  edev2[3] = 2.0*(edev[0]*edev[3] + edev[3]*edev[1] + edev[5]*edev[4]);
-  edev2[4] = 2.0*(edev[4]*edev[0] + edev[5]*edev[3] + edev[2]*edev[4]);
-  edev2[5] = 2.0*(edev[3]*edev[4] + edev[1]*edev[5] + edev[5]*edev[2]);
-
-  if (*eps_s == 0.0) {
-    *sin3t = -1.0;
-  } else {
-    tredev3 = 0.0;
-    for (i = 0; i < 6; i++) tredev3 += edev[i] * edev2[i];
-    numer = sqrt6 * tredev3;
-    denom = pow(sqrt(norm2), 3.0);
-    *sin3t = numer / denom;
-    if (fabs(*sin3t) > 1.0) *sin3t = *sin3t / fabs(*sin3t);
-  }
-}
-
-/* ------------------------------------------------------------------ */
 /* invariants of a stress tensor (Voigt)                               */
 /* ------------------------------------------------------------------ */
 static void inv_sig(double *sig, double *pp, double *qq, double *cos3t,
@@ -266,6 +224,7 @@ static void get_tan(double *deps, double *sig, double *q, int nasv,
   double norm_del, norm_del2, norm_deps, norm_deps2;
   double pp, qq, cos3t, cos3t_rot, I1, I2, I3, I1rot, I2rot, I3rot;
   double a, a2, alpha, fd, fs, fdsbs, fddivfdA;
+  (void)istrain;
   double H_del[36], H_e[6], IU[36], AAhce[36], NNvec[6];
   double krondelta[6], hypo_Dsom_rot[6];
   double load, rho, N_par, Stf, kparam, Aparam, sfparam;
@@ -527,6 +486,8 @@ static void get_tan(double *deps, double *sig, double *q, int nasv,
 
   /* LD approach */
   trace_sig = sig[0]+sig[1]+sig[2];
+  (void)eta_dev; (void)eta_delta; (void)eta_eps; (void)H_del; (void)IU;
+  (void)Aparam; (void)kap_star; (void)G0; (void)trace_sig;
   gama = gama_deg*3.14159265358979323846/180.0;
 
   tr_Dsom_rot = hypo_Dsom_rot[0]+hypo_Dsom_rot[1]+hypo_Dsom_rot[2];
@@ -687,6 +648,7 @@ static void norm_res(double *y_til, double *y_hat, int ny, int nasv,
   double *norm_R)
 {
   int i;
+  (void)nasv;
   double sig_hat[6], sig_til[6], del_sig[6];
   double q_hat[8], q_til[8], del_q[8];
   double void_hat, void_til, del_void;
@@ -1192,7 +1154,6 @@ void masin_niemunis_visco_umat(double *stress, double *statev,
   double pe, pe0, peplus, eta, M, betaR, kappa, lambda;
   double OCR, creep_rate, Lhat[36], L[36], Ldeps[6];
   int i, j;
-  double vnu;
 
   (void)testing; (void)nprops;
 

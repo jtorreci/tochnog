@@ -584,7 +584,7 @@ void post_force_edge_summed_calculate( void )
   double ddum[1], values[DATA_ITEM_SIZE], total[MDIM], coord[MDIM],
     load=0., factor=0., node_factor=0., ar=0., time_start=0.,
     time_current=0., dtime=0., time_total=0., frequency=0., amplitude=0.,
-    w[MNOL], normal_tmp[MDIM], rdum=0., ddum2[1], geom_work[MDIM], tmp=0.,
+    w[MNOL], normal_tmp[MDIM], rdum=0., geom_work[MDIM],
     iso_l[MNOL],
     wt_l[MNOL], *force_time_tab=NULL, *sine_tab=NULL, *force_vals=NULL,
     vec[MDIM];

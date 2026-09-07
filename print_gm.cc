@@ -290,7 +290,7 @@ void print_gmsh( long int icontrol, long int task )
 
 {
   long int inod=0, element=0, max_node=0, max_element=0, nnol=0, name=0,
-    length=0, idim=0, jdim=0, kdim=0, ldim=0, ipuknwn=0, iuknwn=0,
+    length=0, idim=0, ipuknwn=0,
     nder_=0, nuknwn_=0, element_group=0, swit=0, ldum=0, first=1,
     dummy=-YES, element_data=-YES, node_method=-NODE;
   long int idum[1], *dof_label=NULL, *dof_scal_vec_mat=NULL, *nodes=NULL,

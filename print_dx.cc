@@ -29,7 +29,7 @@ void print_dx( long int final_call )
   long int n=0, indx=0, nnol=0, inod=0, max_node=0, idim=0, jdim=0, 
     nval=0, ready=0, icalcul=0, element=0, max_element=0, 
     swit=0, itype=0, ntype=0, ldum=0, length=0, name=0, 
-    element_name=0, ipuknwn=0, iuknwn=0, old_name=0,
+    element_name=0, ipuknwn=0, iuknwn=0,
     rank=0, ifield=0, nfield=0, length_post_calcul_scal_vec_mat=0, 
     itime=0, length_control_print_dx_time=0,
     element_group=0, length_max=0, idum[1], type_nnol[MAX_ELEMENT_TYPE], 
@@ -112,7 +112,6 @@ void print_dx( long int final_call )
   for ( element=0; element<=max_element; element++ ) {
     db( ELEMENT, element, el, ddum, ldum, VERSION_PRINT, GET );
     name = el[0];
-    if ( element==0 ) old_name = name;
     element_group = 0; db( ELEMENT_GROUP, element, &element_group, ddum, 
       ldum, VERSION_PRINT, GET_IF_EXISTS );
     if ( !array_member(type_group,element_group,ntype,itype) ) {

@@ -748,7 +748,7 @@ void groundflow_total_pressure_limit_apply( void )
 {
   long int inod=0, max_node=0, iuknwn=0, ipuknwn=0, ldum=0, idum[1],
     *node_bounded=NULL;
-  double limit=0., ddum[1], *node_dof=NULL;
+  double limit=0., *node_dof=NULL;
 
   if ( !db_active_index( GROUNDFLOW_TOTAL_PRESSURE_LIMIT, 0, VERSION_NORMAL ) )
     return;

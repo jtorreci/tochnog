@@ -135,12 +135,12 @@ enum Integration_scheme {
 struct Plasti_rule {         							
 	double df[9];
 	Plasti_rule() {};
-	virtual void give_f(double sig[MDIM*MDIM], double epp[9], double d_epp[9],
-		 double &f, double &g, bool recount_hisv) {};
-	virtual void give_matrix(bool only_f, bool elpl_matrix) 
+	virtual void give_f(double /*sig*/[MDIM*MDIM], double /*epp*/[9], double /*d_epp*/[9],
+		 double &/*f*/, double &/*g*/, bool /*recount_hisv*/) {};
+	virtual void give_matrix(bool /*only_f*/, bool /*elpl_matrix*/) 
 		{cout<<"Plasti doesn't work virtually ";};					
 	virtual void make_matrix_Cep (double df[], double dg[], double H, bool elpl_matrix);
-	virtual void inic_hisv(double hisv[], bool only_substep) {};
+	virtual void inic_hisv(double /*hisv*/[], bool /*only_substep*/) {};
 	virtual void erase_rec_hist() {};
 };
 
@@ -271,8 +271,8 @@ void Variable::recount() {
 }
 
 
-void plasti_incr( double rotated_old_sig[], double inc_ept[], double old_epp[], 
-	    double new_ept[], double C[3][3][3][3], double old_hisv[], long int plasti_type, 
+void plasti_incr( double rotated_old_sig[], double inc_ept[], double /*old_epp*/[], 
+	    double /*new_ept*/[], double C[3][3][3][3], double old_hisv[], long int plasti_type, 
 	    double plasti_dt[], long lenght_pl, long int gr, long int element, 
 	    double softvar_nonl, double &softvar_l,
             double new_sigv[], double inc_epp[], double new_hisv[], double &new_f, double &new_substeps,
@@ -690,13 +690,13 @@ void Plasti_rule :: make_matrix_Cep (double df[], double dg[], double H,
 /***************************MODELS***********************************************/
 /******** Cam-Clay -- incremental solution for comparison with iterative ********/
 
-void Camclay_incremental::inic_hisv(double hisv[], bool only_substep) {
+void Camclay_incremental::inic_hisv(double hisv[], bool /*only_substep*/) {
 	array_set(df, 0, 9);
 	vari.hisv.push_back(hisv[0]);
 	vari.hisv.push_back(hisv[1]);
 }
 
-void Camclay_incremental :: give_f(double sig[MDIM*MDIM], double epp[9], double d_epp[9],
+void Camclay_incremental :: give_f(double sig[MDIM*MDIM], double /*epp*/[9], double d_epp[9],
 		 double &f, double &g, bool recount_hisv) {
 		 
 	double geo_sigd[9], d_eppd[9];
@@ -837,7 +837,7 @@ void Tskh_general_plasti::inic_hisv(double hisv[], bool only_substep) {
 	sig_b[8]=vari.hisv[13];
 }
 
-void Tskh_general_plasti :: give_f(double sig[MDIM*MDIM], double epp[9], double d_epp[9],
+void Tskh_general_plasti :: give_f(double sig[MDIM*MDIM], double /*epp*/[9], double d_epp[9],
 		 double &f, double &g, bool recount_hisv) {
 		 
 	double geo_sig[9], d_geo_epp[9];

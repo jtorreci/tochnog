@@ -339,7 +339,7 @@ long int stress_indx( long int idim, long int jdim )
   return indx;
 }
 
-long int sri_active( long int element, long int element_group,
+long int sri_active( long int /*element*/, long int element_group,
   long int name, long int nnol )
 
   // group_element_selective_reduced_integration (SRI, Hughes): opt-in

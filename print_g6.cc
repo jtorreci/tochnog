@@ -556,6 +556,7 @@ for (int igroup=0; igroup<=max_group; igroup++)
             nval = 6;
             data_type = 3;
             desc_comp = 1;
+            (void)load_type; (void)data_type; (void)data_loc; (void)desc_comp;
             strcpy( descr_menu, outname );
             string_shorten( descr_menu, 15 );
             outres <<"Result  \""<<descr_menu<<"\"     \""<<"Load Analysis"<< "\"\t"<<step_val<<" Matrix OnNodes"<<endl;

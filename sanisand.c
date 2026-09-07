@@ -24,7 +24,6 @@
 #define NASV_HH 14
 
 
-static void pp_kk_set(const double *y, double *pp_kk);
 #define nz_unused 0
 
 static const double PI_SANISAND = 3.14159265358979323846264338327950288;
@@ -240,7 +239,7 @@ static double yf_DM(const double *y, int ny, const double *parms, int nparms)
   double mm, sqrt23, norm2;
   double sig[6], s[6], trace, p, alpha[6], sbar[6];
   int i;
-  (void)nparms;
+  (void)ny; (void)nparms;
   sqrt23 = sqrt(2.0 / 3.0);
   mm = parms[6];
   for (i = 0; i < 6; i++) {
@@ -261,6 +260,7 @@ static void el_stiff_DM(const double *y, int n, const double *parms,
   int drcor, double p_thres, int plastic)
 {
   double p_a, G0, nu, ratio;
+  (void)nparms;
   double sig1, sig2, sig3, p, void_ratio, pp;
   double coeff1, coeff2, Kt, Gt, fe;
   double Id[36], IxI[36];
@@ -419,6 +419,7 @@ static void grad_f_DM(const double *y, int ny, const double *parms,
   onethird = one/three;
   pzero(n, 6);
   mm = parms[6];
+  (void)mm;
   for (i = 0; i < 6; i++) {
     sig[i] = y[i];
     alpha[i] = y[6+i];
@@ -556,6 +557,7 @@ static void plast_mod_DM(const double *y, int ny, const double *z, int nz,
   void_ratio = y[12];
   for (i = 0; i < 6; i++) Fab[i] = y[13+i];
   for (i = 0; i < 6; i++) alpha_sr[i] = z[i];
+  (void)Fab;
 
   deviator(sig, s, &I1, &p);
   for (i = 0; i < 6; i++) tau[i] = s[i] - p*alpha[i];
@@ -634,6 +636,7 @@ static void get_tan_DM(const double *y, int ny, int nasvy, const double *z,
   m[0]=1; m[1]=1; m[2]=1; m[3]=0; m[4]=0; m[5]=0;
   *switch2 = 0;
   onethird = one/three;
+  (void)onethird;
   twothird = two/three;
   half = one/two;
 
@@ -1082,7 +1085,7 @@ static void trial_state(const double *y_k, int n, const double *parms,
   int nparms, const double *deps, double *y_tr, int *error, double tol_f,
   int check_ff, int drcor, double p_thres, int plastic)
 {
-  double y_2[NYDIM], y_3[NYDIM];
+  double y_2[NYDIM] = {0.0}, y_3[NYDIM] = {0.0};
   double kRK_1[NYDIM], kRK_2[NYDIM], kRK_3[NYDIM];
   double DT_k = 1.0, DTk05, DTk2, DTk6, DTk23;
   int mode = 1, i;
@@ -1213,6 +1216,7 @@ static void rkf23_upd_DM(double *y, double *z, int n, int nasvy, int nasvz,
       DT_k = (one - xi);
       ksubst = 0;
       kreject = 0;
+      (void)kreject;
       *nfev = 0;
       attempt = 1;
       maxnint_1 = maxnint;
@@ -1386,11 +1390,6 @@ static void rkf23_upd_DM(double *y, double *z, int n, int nasvy, int nasvz,
   (void)mario2; (void)p_thres2; (void)tol_ff1; (void)nparms;
 }
 
-static void pp_kk_set(const double *y, double *pp_kk)
-{
-  *pp_kk = (y[0]+y[1]+y[2])/3.0;
-}
-
 /* ------------------------------------------------------------------ */
 /* tangent stiffness DD                                                */
 /* ------------------------------------------------------------------ */
@@ -1405,41 +1404,6 @@ static void tang_stiff(const double *y, const double *z, int n, int nasvy,
   get_tan_DM(y, n, nasvy, z, nasvz, parms, nparms, DD, HH, &switch2,
     mario_DT_test, error, tol_f, check_ff, drcor, p_thres, *plastic);
   (void)cons_lin;
-}
-
-/* ------------------------------------------------------------------ */
-/* numerically consistent tangent via perturbation                     */
-/* ------------------------------------------------------------------ */
-static void pert_DM(double *y_n, double *y_np1, double *z, int n, int nasvy,
-  int nasvz, double err_tol, int maxnint, double DTmin, double *deps_np1,
-  double *parms, int nparms, int *nfev, int elprsw, double theta,
-  int ntens, double *DD, int *error, double tol_f, int check_ff, int drcor,
-  double p_thres, int *plastic)
-{
-  double y_star[NYDIM], deps_star[6], dsig[6];
-  double zero = 0.0;
-  int jj, kk, mario_DT_test = 0;
-
-  if (*plastic == 0) {
-    /* elastic: use el_stiff directly (tangent already DD) */
-    el_stiff_DM(y_n, n, parms, nparms, DD, error, tol_f, check_ff, drcor,
-      p_thres, *plastic);
-  } else {
-    for (jj = 0; jj < 6; jj++) deps_star[jj] = deps_np1[jj];
-    for (jj = 0; jj < ntens; jj++) {
-      deps_star[jj] = deps_star[jj] + theta;
-      if (*error != 10) {
-        rkf23_upd_DM(y_n, z, n, nasvy, nasvz, err_tol, maxnint, DTmin,
-          deps_star, parms, nparms, nfev, elprsw, &mario_DT_test, error,
-          tol_f, check_ff, drcor, p_thres, plastic);
-      }
-      for (kk = 0; kk < ntens; kk++) {
-        dsig[kk] = y_star[kk] - y_np1[kk];
-        DD[kk*6+jj] = dsig[kk]/theta;
-      }
-    }
-    (void)zero;
-  }
 }
 
 /* ------------------------------------------------------------------ */
@@ -1526,6 +1490,7 @@ void sanisand_umat(double *stress, double *statev, double *ddsdde,
 
   norm_D2 = dot_vect(2, deps_np1, deps_np1, 6);
   norm_D = sqrt(norm_D2);
+  (void)norm_D;
 
   if (statev[6] < 0.001) {
     double ddum;

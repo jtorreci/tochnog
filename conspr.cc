@@ -20,7 +20,7 @@
 
 #include "tochnog.h"
 
-void contactspring( long int element, long int name, long int element_group, 
+void contactspring( long int element, long int /*name*/, long int element_group, 
   long int nnol, long int nodes[], double coord[], double old_dof[], double new_dof[], 
   double element_lhside[], double element_matrix[],
   double element_rhside[] )

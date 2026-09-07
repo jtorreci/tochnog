@@ -6,7 +6,7 @@
 
 #include "tochnog.h"
 
-void materi_diffusion_calculate( long int task )
+void materi_diffusion_calculate( long int /*task*/ )
 
 {
   pri( "Error: materi_diffusion_calculate is not available." );
@@ -41,8 +41,8 @@ void materi_diffusion_temperature( void )
   exit(TN_EXIT_STATUS);
 }
 
-void materi_diffusion_adjust_geom( long int geometry_entity[], 
-  long int geometry_entity_edge[] )
+void materi_diffusion_adjust_geom( long int /*geometry_entity*/[], 
+  long int /*geometry_entity_edge*/[] )
 
 {
   pri( "Error: materi_diffusion_adjust_geom is not available." );

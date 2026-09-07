@@ -19,9 +19,9 @@
 
 #include "tochnog.h"
 
-void visco_elastiticity_nonlinear( long int m, long int gr, long int element, 
-  double new_unknowns[], double new_sig[], double new_msig[], 
-  double em, double tm )
+void visco_elastiticity_nonlinear( long int /*m*/, long int /*gr*/, long int /*element*/, 
+  double /*new_unknowns*/[], double /*new_sig*/[], double /*new_msig*/[], 
+  double /*em*/, double /*tm*/ )
 
 {
 }

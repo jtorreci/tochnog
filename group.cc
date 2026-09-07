@@ -557,7 +557,7 @@ long int node_attached_element_groups( long int inod, long int groups[],
 
 {
   long int ielem=0, max_element=0, inol=0, length=0, igroup=0, k=0,
-    ldum=0, idum[1];
+    ldum=0;
   double ddum[1];
   long int *el=NULL;
 

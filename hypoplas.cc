@@ -58,7 +58,7 @@ extern "C"
 
 void hypoplasticity( long int element, long int gr,
   long int formulation, double old_hisv[], double new_hisv[], 
-  double old_unknowns[], double new_unknowns[], 
+  double /*old_unknowns*/[], double /*new_unknowns*/[], 
   double inc_ept[], double old_epi[], double new_epi[], 
   double rotated_old_sig[], double new_sig[], 
   double *Chypo, double softvar_nonl, double &softvar_l )

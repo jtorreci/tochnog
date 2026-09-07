@@ -229,7 +229,7 @@ void top( void )
 
   // debug: dump node 1 stress dofs after the input parse
   if ( db_active_index( NODE, 1, VERSION_NORMAL ) ) {
-    double *ndof1 = db_dbl( NODE_DOF, 1, VERSION_NORMAL );
+    db_dbl( NODE_DOF, 1, VERSION_NORMAL );
   }
 
     // determine the highest index of timestep, print, etc..

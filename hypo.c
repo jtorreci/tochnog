@@ -329,7 +329,7 @@ long int *iuseepi, *ihypotype;
     double lwork[81]	/* was [3][3][3][3] */, tcohesion[9]	/* 
 	    was [3][3] */;
     extern /* Subroutine */ int addfac_();
-    double cos3th, ec, ed, fd, fe, fb, ei, hs, c1, c2, xi, re, powxi;
+    double cos3th, ec, ed, fd, fe, fb, ei, hs, c1=0., c2=0., xi, re, powxi;
     extern /* Subroutine */ int unity4_();
     double eigval[3];
     extern /* Subroutine */ int pridbl_();

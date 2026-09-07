@@ -418,7 +418,7 @@ void calculate( void )
         // values safety_*_prival_0..2 and -global three values
         // safety_*_global_x/y/z (post_calcul_label naming measured on
         // the Professional .dbs of ground15/16).
-        long int safety_method=-VERTICAL, sm_idum[1];
+        long int safety_method=-VERTICAL;
         double sm_ddum[1];
         long int sm_ldum=0;
         db( POST_CALCUL_SAFETY_METHOD, 0, &safety_method, sm_ddum,
@@ -832,10 +832,9 @@ void calculate_operat( double unknown_values[], long int inod,
     // the GNU prival sort is descending, hence the reversed indexing;
     // when the pressure denominator is zero the factor is set to 0
     // (post_calcul_safety_default eps very small, value 0).
-    long int safety_method=-VERTICAL, sm_idum[1], ipipe=0, nres=1;
+    long int safety_method=-VERTICAL, ipipe=0, nres=1;
     double sm_ddum[1], safety_pipe=0., p_div=0., safety_max=0.;
     long int sm_ldum=0, safety_maximum_set=0, res_idum[1];
-    double res_ddum[1];
     db( POST_CALCUL_SAFETY_METHOD, 0, &safety_method, sm_ddum,
       sm_ldum, VERSION_NORMAL, GET_IF_EXISTS );
     safety_maximum_set = db( POST_CALCUL_SAFETY_MAXIMUM, 0, res_idum,
@@ -899,8 +898,7 @@ void calculate_operat( double unknown_values[], long int inod,
     // nu = 0 EXACT from the incremental uniaxial compression).
     if ( calcul_matrix ) {
       double d_sig[MDIM*MDIM], d_ept[MDIM*MDIM];
-      double sig_prev[MDIM*MDIM], ept_prev[MDIM*MDIM];
-      double p_now=0., p_prev=0., d_p=0., d_vol=0.;
+      double d_p=0., d_vol=0.;
       double dev_s[MDIM*MDIM], dev_e[MDIM*MDIM];
       double q=0., e_q=0., K_app=0., G_app=0.;
       long int have_prev=0, prev_idum[1], prev_len=0;

@@ -20,13 +20,13 @@
 
 #include "tochnog.h"
 
-void maxwell( long int type, long int element, 
-  long int gr, long int nnol, double volume,
-  double new_unknowns[], 
-  double old_dof[], double new_dof[],
-  double h[], double d[], double element_lhside[],
-  double element_matrix[], double element_matrix_second[],
-  double element_rhside[] )         
+void maxwell( long int /*type*/, long int /*element*/, 
+  long int /*gr*/, long int /*nnol*/, double /*volume*/,
+  double /*new_unknowns*/[], 
+  double /*old_dof*/[], double /*new_dof*/[],
+  double /*h*/[], double /*d*/[], double /*element_lhside*/[],
+  double /*element_matrix*/[], double /*element_matrix_second*/[],
+  double /*element_rhside*/[] )         
 
 {
   pri( "maxwell is not available." );
