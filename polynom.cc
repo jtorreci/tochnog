@@ -145,75 +145,84 @@ void pol( long int element, long int element_group,
   }
   else if ( name==-PRISM6 ) {
     // 6-noded prism (wedge): triangular base (nodes 1-3) at z=0 and
-    // triangular top (nodes 4-6) at z=1.
-    // shape functions: N_i = (1-z)*L_i for base, z*L_i for top,
-    // with L1,L2,L3 area coordinates of the triangle.
-    db( GROUP_INTEGRATION_POINTS, element_group, &integration_points, ddum, 
+    // triangular top (nodes 4-6) at z=1 of the REFERENCE cell: the
+    // standard triangle (area coords L1,L2,L3, area 1/2) times
+    // zeta in [0,1] (volume 1/2). Shape functions: N_i = (1-z)*L_i
+    // for the base, z*L_i for the top.
+    //
+    // CONVERGENCE (2026-09-07, interface-vs-wedge/tet4 bug, sprint
+    // dev/iface-tri3d): the OLD rule of this branch was broken in two
+    // ways. (1) The 6 integration weights were 0.25 each (sum 1.5 = 3x
+    // the reference volume 0.5) AND the volume[] assembly below fell
+    // through to the hex8 branch (weight*8*detj, the cube volume 8), so
+    // every volume integral of the wedge came out 24x the physical one
+    // (8*1.5/0.5): the stiffness, the mass, the gravity loads and the
+    // nodal forces on the triangular faces (measured: a single wedge
+    // with the exact field u=-z, E=1, sigma=-1 gives nodal reactions
+    // +-4 instead of the consistent +-A/3 = +-1/6). Zero-thickness
+    // prism6 interfaces against -prism6/-tet4 neighbours therefore
+    // converged to sigma_iface = -24 instead of -1 (minimal model
+    // zw.dat; interface11 el4 = -13.74 vs Pro -1). Hex8 neighbours
+    // were exact because the hex8 branch is correct. (2) The old
+    // z-levels (z=0.5 and z=0.75, both in the upper half) do NOT
+    // integrate the zeta direction: the wedge of interface11 is an
+    // OBLIQUE prism (the cut pieces connect a z=0.6 face to the z=1
+    // face) whose Jacobian varies with zeta, and the mis-integrated
+    // stiffness bends the field away from u=-z (interface11 node_dof
+    // of the cut plane: -0.626..-0.758 instead of -0.6, per-pair
+    // sigma_iface -0.32..-0.88 instead of uniform -1).
+    //
+    // New rule: 3-point degree-2 triangle rule (weights 1/6, sum 1/2
+    // = the triangle area) x 2-point Gauss in zeta in [0,1] (weights
+    // 1/2), i.e. 6 points of weight 1/12 (sum 1/2 = the reference
+    // volume). This is the layout the Professional integrates (its
+    // element_intpnt_coord of the zw.dbs prism elements shows zeta =
+    // 0.2113248654 / 0.7886751346 = 1/2 +- 1/(2*sqrt(3))). With
+    // sum(weight) = 1/2 the volume[] branch below integrates
+    // weight*detj (no extra factor), exactly like the PRISM15 branch.
+    db( GROUP_INTEGRATION_POINTS, element_group, &integration_points, ddum,
       ldum, VERSION_NORMAL, GET_IF_EXISTS );
     nnol = 6;
-    npoint = 6;   // 2 z-levels x 3 area points
-    for ( ipoint=0; ipoint<npoint; ipoint++ ) {
-      if      ( ipoint<3 ) { double zc = 0.25;
-        if ( ipoint==0 ) { L1 = 2./3.; L2 = 1./6.; }
-        else if ( ipoint==1 ) { L1 = 1./6.; L2 = 2./3.; }
-        else { L1 = 1./6.; L2 = 1./6.; }
-        L3 = 1. - L1 - L2;
-        weight[ipoint] = zc;
-        // base: h = (1-z)*L
-        h[ipoint*nnol+0] = (1.-0.5)*L1;
-        h[ipoint*nnol+1] = (1.-0.5)*L2;
-        h[ipoint*nnol+2] = (1.-0.5)*L3;
-        h[ipoint*nnol+3] = 0.5*L1;
-        h[ipoint*nnol+4] = 0.5*L2;
-        h[ipoint*nnol+5] = 0.5*L3;
-        // derivatives: d/dxi (area coord), d/dz
-        // x-direction (xi): dL/dL1
-        p[ipoint*ndim*nnol+0*nnol+0] = (1.-0.5)*1.;
-        p[ipoint*ndim*nnol+0*nnol+1] = (1.-0.5)*0.;
-        p[ipoint*ndim*nnol+0*nnol+2] = (1.-0.5)*(-1.);
-        p[ipoint*ndim*nnol+0*nnol+3] = 0.5*1.;
-        p[ipoint*ndim*nnol+0*nnol+4] = 0.5*0.;
-        p[ipoint*ndim*nnol+0*nnol+5] = 0.5*(-1.);
-        // y-direction (eta)
-        p[ipoint*ndim*nnol+1*nnol+0] = (1.-0.5)*0.;
-        p[ipoint*ndim*nnol+1*nnol+1] = (1.-0.5)*1.;
-        p[ipoint*ndim*nnol+1*nnol+2] = (1.-0.5)*(-1.);
-        p[ipoint*ndim*nnol+1*nnol+3] = 0.5*0.;
-        p[ipoint*ndim*nnol+1*nnol+4] = 0.5*1.;
-        p[ipoint*ndim*nnol+1*nnol+5] = 0.5*(-1.);
-        // z-direction: d/dz of (1-z)*L = -L (base), z*L = +L (top)
-        p[ipoint*ndim*nnol+2*nnol+0] = -L1;
-        p[ipoint*ndim*nnol+2*nnol+1] = -L2;
-        p[ipoint*ndim*nnol+2*nnol+2] = -L3;
-        p[ipoint*ndim*nnol+2*nnol+3] =  L1;
-        p[ipoint*ndim*nnol+2*nnol+4] =  L2;
-        p[ipoint*ndim*nnol+2*nnol+5] =  L3;
-      }
-      else {
-        if ( ipoint==3 ) { L1 = 2./3.; L2 = 1./6.; }
-        else if ( ipoint==4 ) { L1 = 1./6.; L2 = 2./3.; }
-        else { L1 = 1./6.; L2 = 1./6.; }
-        L3 = 1. - L1 - L2;
-        weight[ipoint] = 0.25;
-        // z=0.75 level
-        h[ipoint*nnol+0] = 0.25*L1;
-        h[ipoint*nnol+1] = 0.25*L2;
-        h[ipoint*nnol+2] = 0.25*L3;
-        h[ipoint*nnol+3] = 0.75*L1;
-        h[ipoint*nnol+4] = 0.75*L2;
-        h[ipoint*nnol+5] = 0.75*L3;
-        p[ipoint*ndim*nnol+0*nnol+0] = 0.25*1.;
-        p[ipoint*ndim*nnol+0*nnol+1] = 0.25*0.;
-        p[ipoint*ndim*nnol+0*nnol+2] = 0.25*(-1.);
-        p[ipoint*ndim*nnol+0*nnol+3] = 0.75*1.;
-        p[ipoint*ndim*nnol+0*nnol+4] = 0.75*0.;
-        p[ipoint*ndim*nnol+0*nnol+5] = 0.75*(-1.);
-        p[ipoint*ndim*nnol+1*nnol+0] = 0.25*0.;
-        p[ipoint*ndim*nnol+1*nnol+1] = 0.25*1.;
-        p[ipoint*ndim*nnol+1*nnol+2] = 0.25*(-1.);
-        p[ipoint*ndim*nnol+1*nnol+3] = 0.75*0.;
-        p[ipoint*ndim*nnol+1*nnol+4] = 0.75*1.;
-        p[ipoint*ndim*nnol+1*nnol+5] = 0.75*(-1.);
+    npoint = 6;   // 2 Gauss zeta-levels x 3 area points
+    {
+      // Gauss-Legendre 2 points mapped to zeta in [0,1]
+      double zeta_pt[2], zeta_w[2];
+      zeta_pt[0] = 0.5 - 0.5/sqrt(3.);   // 0.211324865405187
+      zeta_pt[1] = 0.5 + 0.5/sqrt(3.);   // 0.788675134594813
+      zeta_w[0] = 0.5; zeta_w[1] = 0.5;
+      // degree-2 triangle rule: (2/3,1/6,1/6) permutations, weights 1/6
+      double tri_L1[3] = { 2./3., 1./6., 1./6. };
+      double tri_L2[3] = { 1./6., 2./3., 1./6. };
+      double tri_w[3]  = { 1./6., 1./6., 1./6. };
+      for ( ipoint=0; ipoint<npoint; ipoint++ ) {
+        long int iz = ipoint/3, it = ipoint%3;
+        double zz = zeta_pt[iz];
+        L1 = tri_L1[it]; L2 = tri_L2[it]; L3 = 1. - L1 - L2;
+        weight[ipoint] = zeta_w[iz]*tri_w[it]; // 1/12 each, sum 1/2
+        double zbase = 1.-zz, ztop = zz;
+        // shape functions at zz: (1-z)*L on the base, z*L on the top
+        h[ipoint*nnol+0] = zbase*L1;
+        h[ipoint*nnol+1] = zbase*L2;
+        h[ipoint*nnol+2] = zbase*L3;
+        h[ipoint*nnol+3] = ztop*L1;
+        h[ipoint*nnol+4] = ztop*L2;
+        h[ipoint*nnol+5] = ztop*L3;
+        // derivatives d/d(L1) (x-direction of the reference triangle):
+        // base d/dxi of (1-z)*L1 = (1-z), etc.; top = z
+        p[ipoint*ndim*nnol+0*nnol+0] = zbase;
+        p[ipoint*ndim*nnol+0*nnol+1] = 0.;
+        p[ipoint*ndim*nnol+0*nnol+2] = -zbase;
+        p[ipoint*ndim*nnol+0*nnol+3] = ztop;
+        p[ipoint*ndim*nnol+0*nnol+4] = 0.;
+        p[ipoint*ndim*nnol+0*nnol+5] = -ztop;
+        // derivatives d/d(L2) (y-direction of the reference triangle)
+        p[ipoint*ndim*nnol+1*nnol+0] = 0.;
+        p[ipoint*ndim*nnol+1*nnol+1] = zbase;
+        p[ipoint*ndim*nnol+1*nnol+2] = -zbase;
+        p[ipoint*ndim*nnol+1*nnol+3] = 0.;
+        p[ipoint*ndim*nnol+1*nnol+4] = ztop;
+        p[ipoint*ndim*nnol+1*nnol+5] = -ztop;
+        // derivatives d/d(zeta): d/dz of (1-z)*L = -L (base), z*L = +L
         p[ipoint*ndim*nnol+2*nnol+0] = -L1;
         p[ipoint*ndim*nnol+2*nnol+1] = -L2;
         p[ipoint*ndim*nnol+2*nnol+2] = -L3;
@@ -663,6 +672,27 @@ void pol( long int element, long int element_group,
     else if ( name==-TET4  ) volume[ipoint] = weight[ipoint]*detj/6.;
     else if ( name==-TET10 ) volume[ipoint] = weight[ipoint]*detj/6.;
     else if ( name==-PRISM15 ) volume[ipoint] = weight[ipoint]*detj;
+    else if ( name==-PRISM6 ) {
+      // CONVERGENCE (2026-09-07, interface-vs-wedge/tet4 bug, sprint
+      // dev/iface-tri3d): the wedge FELL THROUGH to the hex8 branch
+      // below (weight*8*detj), but its reference cell is the standard
+      // triangle (area 1/2) x zeta in [0,1] (volume 1/2), NOT the hex8
+      // cube of volume 8; the old PRISM6 branch weights also summed to
+      // 1.5 = 3x the reference volume. The assembled element volume
+      // (and with it the stiffness, gravity loads, mass and every
+      // nodal force derived from volume[]) came out 24x the physical
+      // one (8*1.5/0.5 = 24), so the nodal force a compressed wedge
+      // exerts on its triangular faces was 24x the consistent load
+      // (measured: u=-z, E=1, sigma=-1 -> reactions +-4 per node
+      // instead of +-A/3 = +-1/6) - the exact factor seen in the
+      // zero-thickness prism6 interface minimal model (sigma_iface
+      // -24 vs Professional -1) and in interface11 (sigma_el4 -13.74
+      // vs -1). Hex8-neighbour interfaces were exact because the hex8
+      // integration is correct. The rewritten PRISM6 branch above uses
+      // weights summing to 1/2 (the reference volume), so here the
+      // integral is the plain weight*detj (PRISM15 pattern).
+      volume[ipoint] = weight[ipoint]*detj;
+    }
     else if ( ndim==1  )     volume[ipoint] = weight[ipoint]*2.*detj;
     else if ( ndim==2 )      volume[ipoint] = weight[ipoint]*4.*detj;
     else                     volume[ipoint] = weight[ipoint]*8.*detj;
