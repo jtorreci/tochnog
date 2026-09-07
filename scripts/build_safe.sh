@@ -112,6 +112,9 @@ LINK_FLAGS_AFTER="$NUMLIB_LINK -Wl,--start-group $SUPERLU_A -l:liblapack.so.3 -l
 echo "==> Limite de memoria por proceso: $TN_MEMLIMIT_KB"
 ulimit -v "$TN_MEMLIMIT_KB" 2>/dev/null || echo "    (no se pudo aplicar ulimit, continuando)"
 
+# build/ puede no existir en un checkout fresco (CI, clon nuevo)
+mkdir -p build
+
 if [ "${1:-}" = "--clean" ]; then
   echo "==> Build limpio: borrando *.o"
   rm -f *.o
