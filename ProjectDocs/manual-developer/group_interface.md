@@ -432,15 +432,77 @@ Blast radius (family, rc=0 kept): interface1/2/3/7/8/9/10/11/12/14/15,
 interface_patch, interface_bar2_quad4, interface_bar3_quad8,
 interface_quad4_hex8(_many), interface_quad8_hex20,
 interface_tria3_prism6, conspr1-7, patch1, mohr_coul_direct3, expans3,
-elasti6. NOTE interface_tria3_prism6 keeps its own latent bug (its
-converted prism6 interfaces do not go through the pol() volume
-integration): GNU interface σ +1.51 vs Pro −1.0, from the triangulated
-quad face distributing the contact 1/6-1/3-1/3-1/6 over the 4 face nodes
-instead of the consistent 1/4 each, plus a sign inversion of the
-converted zero-thickness interface orientation; rc=0 is kept by its bulk
-post_point target only. Fixing it means touching the tria3→prism6
-interface conversion/orientation (open, out of this sprint scope).
-interface13 remains the known corpus-test bug (the Professional itself
-reports "Error detected"; both codes compute 0.67082 vs target 1.11803).
-Full corpus blast-radius measured on the sprint binary (see the commit
-docs).
+elasti6.
+
+## Conversión tria3→prism6 / quad4→hex8: bug latente del reparto y del
+## signo (CLOSED 2026-09-07, sprint interface_tria3_prism6)
+
+The converted-interface family (control_mesh_convert: bar2→quad4,
+bar3→quad6, tria3→prism6, quad4→hex8, quad8→hex18) carried TWO coupled
+defects that only the interface STRESS records expose (the corpus
+targets are bulk post_point stresses, so every test passed rc=0 while
+reporting compression as POSITIVE):
+
+- **Sign inversion (whole 3D converted family)**: interface_convert()
+  created the side-2 copies SHIFTED 0.01 along the element normal. The
+  copies therefore sat beyond side 1 along +n, and interface_element()
+  oriented the 3D normal with the geometric flip `dir = n.(cm1-cm2)`:
+  dir < 0 → the normal was flipped to point from side 2 to side 1 →
+  compression (du = u(side2)-u(side1) < 0) reported POSITIVE stress.
+  Measured on the Professional 25-10-2023 .dbs the copies are
+  COINCIDENT (zero-thickness), so dir = 0, no flip, and the record
+  normal = cross(side-1 face) points from the side-1 block to the
+  side-2 block → compression NEGATIVE. GNU measured before the fix:
+  interface_tria3_prism6 +1.51, interface_quad4_hex8 +1.005,
+  interface_quad4_hex8_many +1.005, interface_bar2_hex8 +1.005,
+  interface_quad8_hex20 +1.005 vs Pro −1.0 everywhere (the 2D family was
+  not inverted: its orientation is the numbering heuristic, independent
+  of the shift).
+- **1/6-1/3-1/3-1/6 reparto (tria3→prism6)**: each tria3 of a
+  triangulated quad was converted independently, creating a FRESH
+  duplicate set per element and reconnecting the +normal-side neighbours
+  per element. The two triangles of the shared quad have OPPOSITE
+  windings (GiD/hex8-face order: e3 = (5,6,7) CCW+, e4 = (6,7,8) CW), so
+  e4's raw normal points the other way: the diagonal nodes 6,7 got a
+  second duplicate on the wrong block and their ORIGINALS ended attached
+  to nothing but the interface elements. The discrete system cannot
+  transfer the consistent quad nodal load 1/4 per node: it converges to
+  a ~uniform per-IP σ (+1.51) whose nodal split is 1/6-1/3-1/3-1/6
+  (per triangle 1/3 to its own nodes). The Professional mesh splits the
+  four face nodes ONCE (bottom block = originals 5,6,7 + copy of 8, top
+  block = copies 19,20,21 + original 8) and its discrete system
+  rebalances to per-node 1/4 through the emergent per-IP pattern
+  −1.5/−0.75/−0.75 (corner pairs carry k = kn/6, diagonal pairs
+  k = kn/3 → du_corner = 2·du_diag → equal nodal forces).
+
+Fix (interface.cc, interface_convert()): (a) side-2 copies are created
+COINCIDENT (zero-thickness, shift = 0 — matches every Professional .dbs
+of the family); (b) per-corner pair bookkeeping: every interface node is
+duplicated EXACTLY ONCE; the original stays with the block on the
+-normal side of the FIRST interface element (lowest number) that
+contains the corner, the duplicate goes to the +normal side (per-node
+reconnection by the centroid test — other interface elements are never
+reconnected); (c) the element-record side 1 = the block of the
+LOWEST-numbered volume element sharing the whole face (verified on Pro
+variants with swapped element numbers), so the record slots are
+(side-1-block node, side-2-block node) per corner in input order;
+(d) the side-1 face is ordered counter-clockwise around the normal that
+points from the side-1 block to the side-2 block (transposition of slots
+0 and 1 when the cross product points the other way; interface_element()
+derives the zero-thickness normal as cross(side-1 first three nodes)).
+A pre-pass classifies the side-1 sign per element BEFORE any node is
+duplicated (a lazy scan mid-conversion would miss the already-reconnected
+volumes).
+
+Results vs Professional 25-10-2023 (interface stress average): tria3_prism6
+e3/e4 −1.00000008/−1.00000008 (Pro −0.99999936/−0.99999988), per-IP
+−1.5/−0.75/−0.75 and −0.75/−0.75/−1.5 IDENTICAL to the Pro layout, nodal
+forces exactly 1/4 per node; quad4_hex8 −1.00000036 (Pro −1.0);
+quad4_hex8_many −1.00000008..−1.00000036 with element records
+BYTE-IDENTICAL to the Pro (10-13); bar2_quad4 −1.00000008 (Pro
+−1.00000095); bar3_quad8 −0.99999934 (Pro −0.99999936); quad8_hex20
+−1.00000206 (Pro −1.00000085). rc=0 in all 29 family tests, corpus
+200 PASS / 150 RUNFAIL / 5 SEGV / 8 PARSE (no regressions), build_safe
+suite 16/16. interface13 stays the documented corpus bug (its own
+record semantics 0.67082 vs the target 1.11803 = |du|/2 — pre-existing
+and identical on both codes).

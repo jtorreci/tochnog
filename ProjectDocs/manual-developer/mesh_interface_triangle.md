@@ -141,14 +141,15 @@ Minimal reproductions (GNU post-fix vs Professional 25-10-2023):
   fix −0.626..−0.758 and σ_el4 = −13.74). rc=0.
 - `interface_tria3_prism6` of the corpus (prism6 interfaces converted
   from tria3 on the shared quad face of two hex8 blocks) is UNCHANGED
-  by this fix (its interface elements do not go through the volume
-  integration of pol()); rc=0 kept. NOTE its own latent bug is still
-  open: the GNU interface stress is +1.51 where the Professional gives
-  −1.0 — the triangulated quad face (two prism6 interfaces sharing the
-  diagonal) distributes the contact force 1/6-1/3-1/3-1/6 over the
-  four face nodes while the consistent quad load is 1/4 each, and the
-  orientation of the converted zero-thickness interface reports
-  compression with the opposite sign. It passes rc=0 only because its
-  target checks a bulk post_point stress. Fixing it requires touching
-  the tria3→prism6 interface conversion / orientation (out of scope of
-  the volume-integration fix of this sprint).
+  by that fix (its interface elements do not go through the volume
+  integration of pol()); rc=0 kept. Its own latent bug (the triangulated
+  quad face distributing the contact force 1/6-1/3-1/3-1/6 over the
+  four face nodes instead of the consistent 1/4 each + the sign
+  inversion of the converted zero-thickness interface) was CLOSED on
+  2026-09-07 in the conversion itself (interface_convert, control_mesh_
+  convert): zero-thickness coincident copies + per-node pairs + CCW
+  record orientation. The GNU interface stress is now −1.00000008
+  (Professional −0.99999936) with the same per-IP pattern and rc=0 kept;
+  mechanism and fix are documented in
+  manual-developer/group_interface.md ("Conversión tria3→prism6 /
+  quad4→hex8: bug latente del reparto y del signo").
