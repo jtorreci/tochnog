@@ -64,14 +64,15 @@ void data( long int task, double dtime, double time_current )
 {
   long int idat=0, in=0, iv=0, index=0, range_length=0, icontrol=0, length=0, 
     swit=0, max_index=0, inod=0, max_node=0, found=0, 
-    ichange=0, max_change=0, idim=0, operat=0, ldum=0, 
+    ichange=0, max_change=0, idim=0, operat=0, ldum=0, ipos=0,
     ireset=0, max_reset=0, idof_reset=0, idof_value=0,
     length_diagram=0, change_dataitem_apply=-YES,
     reset_method=-USE,
     data_item_name=0, data_item_index=0, data_item_number=0,
+    change_dataitem_length=0,
     change_dataitem_time_discrete=-NO, change_dataitem_time_user=0,
     change_dataitem_time_method=0, change_dataitem_geometry[2]={0,0},
-    idum[1], change_dataitem[4], *dof_label=NULL, *integer_range=NULL, 
+    idum[1], change_dataitem[DATA_ITEM_SIZE], *dof_label=NULL, *integer_range=NULL, 
     *data_delete=NULL, *data_put=NULL, *reset_dof=NULL, *reset_value_dof=NULL;
   double rdum=0., val=0., ddum[MDIM], *change_dataitem_time=NULL, 
     *dval=NULL, *coord=NULL, *node_dof=NULL, *reset_value_diagram=NULL,
@@ -619,10 +620,17 @@ void data( long int task, double dtime, double time_current )
     for ( ichange=0; ichange<=max_change; ichange++ ) {
       if ( db_active_index( CHANGE_DATAITEM, ichange, VERSION_NORMAL ) ) {
         db( CHANGE_DATAITEM, ichange, change_dataitem, ddum, ldum, VERSION_NORMAL, GET );
+        change_dataitem_length = ldum;
         data_item_name = change_dataitem[0];
         data_item_index = change_dataitem[1];
-        data_item_number = change_dataitem[2];
-        operat = change_dataitem[3];
+        // The record is variable length (database.cc CHANGE_DATAITEM):
+        // the last stored value is the operat (-use/-add), the middle
+        // values are the number positions the time-table value applies
+        // to. The Professional allows several positions in one record
+        // (manual 6.47 "you can change multiple numbers at once");
+        // excavate1 of the corpus changes the y levels at positions 5
+        // and 7 of a 4-point groundflow_phreatic_level in one record.
+        operat = change_dataitem[change_dataitem_length-1];
         change_dataitem_time_user = -NO;
         found = 0;
         db( CHANGE_DATAITEM_TIME_USER, ichange, &change_dataitem_time_user, ddum, ldum, 
@@ -765,21 +773,26 @@ void data( long int task, double dtime, double time_current )
         }
         if ( found && db_active_index( data_item_name, data_item_index, VERSION_NORMAL ) ) {
           length = db_len( data_item_name, data_item_index, VERSION_NORMAL );
-          if ( data_item_number<0 ) {
-            db( DOF_LABEL, 0, dof_label, ddum, ldum, VERSION_NORMAL, GET );
-            array_member( dof_label, data_item_number, nuknwn, data_item_number );
-            if ( length==npuknwn ) data_item_number /= nder;
-          }
-          if ( data_item_number<0 || data_item_number>length ) 
-            db_error( CHANGE_DATAITEM, ichange );
           if ( db_type(data_item_name)==INTEGER ) db_error( CHANGE_DATAITEM, ichange );
           db( data_item_name, data_item_index, idum, dval, ldum, VERSION_NORMAL, GET );
-          if      ( operat==-USE )
-            dval[data_item_number] = val;
-          else if ( operat==-ADD && task==-YES )
-            dval[data_item_number] += val*dtime;
-          else
-            db_error( CHANGE_DATAITEM, ichange );
+          // apply the time-table value to every number position of the
+          // record (positions 2 .. length-2, the last value is operat)
+          for ( ipos=2; ipos<change_dataitem_length-1; ipos++ ) {
+            data_item_number = change_dataitem[ipos];
+            if ( data_item_number<0 ) {
+              db( DOF_LABEL, 0, dof_label, ddum, ldum, VERSION_NORMAL, GET );
+              array_member( dof_label, data_item_number, nuknwn, data_item_number );
+              if ( length==npuknwn ) data_item_number /= nder;
+            }
+            if ( data_item_number<0 || data_item_number>length )
+              db_error( CHANGE_DATAITEM, ichange );
+            if      ( operat==-USE )
+              dval[data_item_number] = val;
+            else if ( operat==-ADD && task==-YES )
+              dval[data_item_number] += val*dtime;
+            else
+              db_error( CHANGE_DATAITEM, ichange );
+          }
           db( data_item_name, data_item_index, idum, dval, ldum, VERSION_NORMAL, PUT );
         }
       }

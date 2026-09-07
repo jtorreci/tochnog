@@ -166,3 +166,95 @@ undrained1/2, large2/3, reset1, hypo1/2/4/7/8/9 and the internal suite
   validation_13, spring1/6, merge2, force12, truss1, mohrcou4 rc=0;
   reset1 new PASS; internal suite 16/16. mohr_coul_direct4 rc=1 both at HEAD
   and with the changes (pre-existing).
+
+## 2026-09-07 follow-up (dev/excv): mechanics-only static phreatic level +
+  change_dataitem range + excavate1/ground18
+
+Scope: the leftover of the groundflow family, `excavate1` of the corpus (a
+2-level excavation in a wall-retained soil, `force_edge_water -yes`
+hydrostatic water loads + dewatering through `change_dataitem
+-groundflow_phreatic_level` + element deletion per excavation stage), and
+its sibling `ground18` (the canonical single-level
+`groundflow_phreatic_level_static -yes` test, manual Professional 6.573:
+total pressures = static pressure without solving the hydraulic heads).
+
+### Files and functions
+
+- `database.cc` — `CHANGE_DATAITEM` becomes a variable-length record like
+  `change_dataitem_time` (the Professional allows several number positions
+  in one record, manual 6.47 "you can change multiple numbers at once";
+  excavate1 changes the y levels at positions 5 and 7 of a 4-point
+  `groundflow_phreatic_level` in ONE record). The old fixed 4-slot layout
+  (name, index, one number, operat) rejected the extra numbers
+  ("I do not know : -use" once the record overflowed).
+- `data.cc` — `data()` applies the time-table value to EVERY middle number
+  position of the record (positions 2..length-2, last value = operat),
+  keeping the per-position dof-label translation and range checks.
+- `check.cc` — three gates relaxed for the mechanics-only static models
+  (ground18/excavate1 run WITHOUT `groundflow_pressure`):
+  - the `-groundflow` marker in `group_type` (was: pressure unknown
+    required; now: at least one of materi_stress/groundflow_pressure —
+    manual 6.573: "In the group_type for elements which should get the
+    static groundflow pressure you need to add -groundflow");
+  - `groundflow_pressure` as an operand name (post_calcul source dof,
+    bounda_dof -pres/-topres): at least one of materi_stress/pressure;
+  - `group_materi_density_groundflow` (wet/dry pair, manual 6.641): at
+    least one of materi_stress/pressure.
+- `groundfl.cc` — `groundflow_phreatic_coord()` returns the static/total
+  pressure of the level even WITHOUT a pressure unknown when the level is
+  static: single `groundflow_phreatic_level_static -yes` and per-level
+  `groundflow_phreatic_level_multiple_static -yes` (mechanics-only static
+  groundflow: total = static = rho*g*(z_level - z), atmospheric clamp at 0
+  above the level through the common cap). The pressure dof branch is
+  untouched.
+- `calcul.cc` — registration + evaluation of the post_calcul pressure
+  monitors (-total_pressure/-static_pressure/-dynamic_pressure) in the
+  mechanics-only static mode: `groundflow_static_pressure_active()`
+  (single or any multiple _static -yes) relaxes the registration gates,
+  the POST_POINT coordinate lookup uses the post coordinates (instead of
+  the dummy) and the scalar unknown read and the DYNAMIC dof access are
+  guarded when `pres_indx` is not active.
+
+### Measured evidence (A/B vs the Professional 25-10-2023)
+
+- ground18 (corpus): rc=1 -> rc=0 (new PASS). Its target checks the static
+  total pressure -500 at (0.5,-100) for the constant level -50,
+  rho_wet/rho_dry 2.0/1.5 and NO pressure unknown: the to_pres monitor now
+  evaluates p_total = rho*g*(z_level - z) = -500 exactly.
+- excavate1: the three blockers above were the parse/registration layer of
+  the test. With them, the analysis runs end-to-end with the SAME loads as
+  the Professional: the dewatering change applies (final level stored
+  (0,3)(1,3)(2,2)(3,2) identical to the .dbs of the reference) and the
+  total water load at t=4 equals the Professional's
+  post_force_edge_water_summed (-5,-10) (floor -10 uniform on the y=1 face
+  + the wall face triangle -5). The target node 13 vely = -0.0025327 vs
+  -0.00210987 +- 1e-6 (rc=1, documented below).
+
+### Pending (documented blocker of excavate1)
+
+The residual of excavate1 is NOT in the phreatic/static/dewatering layer:
+- Direct-delete A/B (emulate `control_mesh_delete_geometry_direct` by a
+  delete-geometry factor that fires at the first step of the control
+  block): the GNU dev response at node 13 is -0.0020731 vs the
+  Professional's -0.0019181 (8 %, uniform per-step increments in both),
+  and the Professional's final displacement is the SAME with the slow and
+  the direct deletion while the GNU slow-delete path accumulates ~11 %
+  more (dev -0.0023025 slow vs -0.0020721 direct). The slow-delete
+  (ELEMENT_DELETE_FACTOR/ELEMENT_RHSIDE_DELETE) of the excavated element
+  therefore does not reproduce the Professional release path; the family
+  signature matches the pre-existing RUNFAIL delete2/3 (same
+  control_mesh_delete_geometry_factor targets) — a mesh-deletion work
+  unit, outside the phreatic/change scope of this note.
+- Wall-face edge water loads (element group 1, the retaining wall):
+  computed but measured neutra (identical responses with/without a face at
+  the phreatic level), consistent with the deleted element carrying the
+  opposite face load in the slow-delete process.
+- ground11_phreatic_level target stays rc=1 (path-level coupled-column
+  gap of the hypo family, see the pending section above).
+
+### Regression notes
+
+- New PASS: ground18. No regression on ground1/2/3/4/6/8/10/12_dupuit/
+  13_static_pressure_height/14/15/16/17/19, large2/3, undrained1/2, reset1
+  and the internal suite 16/16; ground11_phreatic_level rc=1 both at HEAD
+  and with the changes (pre-existing gap).

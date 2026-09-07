@@ -439,6 +439,20 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   strcpy(name[CHANGE_DATAITEM],"change_dataitem");
   type[CHANGE_DATAITEM] = INTEGER;
   data_length[CHANGE_DATAITEM] = 4;
+  // change_dataitem with several number positions (excavate1 of the
+  // corpus, manual Professional 6.47: "Notice that you can change
+  // multiple numbers at once"): the record is
+  //   change_dataitem index data_item_name data_item_index
+  //     number_0 number_1 ... -use/-add
+  // (excavate1 changes the two y levels 5 and 7 of a 4-point
+  // groundflow_phreatic_level at once). The fixed 4-slot layout
+  // (name, index, one number, operat) rejected the extra numbers with
+  // "I do not know : -use" once the record overflowed. The record
+  // becomes variable length like change_dataitem_time: the last stored
+  // value is the operat, the values in the middle are the number
+  // positions; data.cc applies the time-table value to each of them.
+  data_length[CHANGE_DATAITEM] = DATA_ITEM_SIZE;
+  fixed_length[CHANGE_DATAITEM] = 0;
 
   strcpy(name[CHANGE_DATAITEM_GEOMETRY],"change_dataitem_geometry");
   type[CHANGE_DATAITEM_GEOMETRY] = INTEGER;

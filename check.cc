@@ -351,7 +351,16 @@ long int check( long int idat, long int task )
   if ( data_number==GEOMETRY_TRIANGLE )
     ok = check_ndim( 2, 3, task );
   if ( data_number==GROUNDFLOW ) {
-    ok = check_unknown( "groundflow_pressure", YES, task );
+    // -groundflow in group_type marks the flow elements of a
+    // groundflow_pressure analysis, OR the elements that receive the
+    // static groundflow pressure of a mechanics-only model
+    // (groundflow_phreatic_level_static, manual Professional 6.573:
+    // "In the group_type for elements which should get the static
+    // groundflow pressure you need to add -groundflow"; corpus
+    // excavate1/ground18 run without initialising groundflow_pressure).
+    // Demanding the pressure unknown rejected those static models.
+    ok = check_unknown_atleastone( "materi_stress",
+      "groundflow_pressure", task );
     ok = check_unknown( "wave_scalar", NO, task );
   }
   // groundflow_density is also consumed by the mechanics-only
@@ -396,8 +405,17 @@ long int check( long int idat, long int task )
     ok = check_unknown( "groundflow_pressure", YES, task );
     ok = ok && check_ndim( 3, 3, task );
   }
-  if ( data_number==GROUNDFLOW_PRESSURE )
-    ok = check_unknown( "groundflow_pressure", YES, task );
+  if ( data_number==GROUNDFLOW_PRESSURE ) {
+    // the name appears as the source dof of post_calcul monitors
+    // (post_calcul -groundflow_pressure -total_pressure) and in
+    // bounda_dof -pres/-topres. In the mechanics-only static models
+    // (ground18 of the corpus: groundflow_phreatic_level_static -yes
+    // without a pressure unknown) the post monitor evaluates the
+    // static total pressure of the level, so the unknown itself is
+    // not required there.
+    ok = check_unknown_atleastone( "materi_stress",
+      "groundflow_pressure", task );
+  }
   if ( data_number==GROUNDFLOW_SATURATION )
     ok = check_unknown( "groundflow_pressure", YES, task );
   if ( data_number==GROUNDFLOW_SEEPAGE_GEOMETRY )
@@ -520,7 +538,13 @@ long int check( long int idat, long int task )
     ok = check_unknown( "materi_velocity", YES, task );
   if ( data_number==GROUP_MATERI_DENSITY_GROUNDFLOW ) {
     ok = check_unknown( "materi_velocity", YES, task );
-    ok = ok && check_unknown( "groundflow_pressure", YES, task );
+    // the wet/dry density pair also feeds the mechanics-only static
+    // groundflow models (ground18 of the corpus: group_type -groundflow
+    // + groundflow_phreatic_level_static without a pressure unknown,
+    // manual Professional 6.641) - the pressure unknown is not required
+    // there
+    ok = ok && check_unknown_atleastone( "materi_stress",
+      "groundflow_pressure", task );
   }
   if ( data_number==GROUP_MATERI_ELASTI_CAMCLAY_G ) {
     ok = check_unknown( "materi_stress", YES, task );
