@@ -516,6 +516,11 @@ static void get_tan(double *deps, double *sig, double *q, int nasv,
 
   if (fabs(norm_Dsom) > 0.00000001)
     norm_tr_hypo_Dsom_rot = (hypo_Dsom_rot[0]+hypo_Dsom_rot[1]+hypo_Dsom_rot[2])/norm_Dsom;
+  else
+    /* degenerate direction (norm ~ 0): the normalized trace is undefined;
+       the consistent limit is 0 -> wyfact=1 -> wy=1 -> acorrwy=0, i.e. the
+       directional correction of the LD formulation vanishes. */
+    norm_tr_hypo_Dsom_rot = 0.0;
 
   wyfact = sqrt(one/three)*norm_tr_hypo_Dsom_rot + 1;
   if (wyfact > 1) wyfact = 1;

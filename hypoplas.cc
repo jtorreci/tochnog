@@ -165,11 +165,18 @@ void hypoplasticity( long int element, long int gr,
     if(find_local_softvar) {
     	find_local_sv[0]=1;
         long int length_nei=1+npointmax*ndim+npointmax+2;
-        double nonloc_info[length_nei-2];
+        // NONLOCAL_ELEMENT_INFO is a length_nei record (database.cc and all
+        // other users: elem.cc, nonloc.cc, top.cc). Slot length_nei-2 is the
+        // "element used for nonlocal calculation" flag (top.cc resets it at
+        // step end; nonloc.cc reads it as jelem_nonloc). The local buffer
+        // must therefore hold the full record (heap, same pattern as the
+        // other NONLOCAL_ELEMENT_INFO users).
+        double *nonloc_info = get_new_dbl(length_nei);
         array_set(nonloc_info, 0., length_nei);
         db( NONLOCAL_ELEMENT_INFO, element, idum, nonloc_info, length_nei, VERSION_NORMAL, GET );		
 	nonloc_info[1+npointmax*ndim+npointmax]=1.;
         db( NONLOCAL_ELEMENT_INFO, element, idum, nonloc_info, length_nei, VERSION_NORMAL, PUT );		
+        delete[] nonloc_info;
     }
     options_nonlocal[0]=0;	
     if (scalar_dabs(options_nonlocal_softvar)>TINY) options_nonlocal[0]=1;

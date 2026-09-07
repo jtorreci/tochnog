@@ -604,7 +604,14 @@ static void plast_mod_DM(const double *y, int ny, const double *z, int nz,
   } else {
     if (LDeR <= zero) { *switch2 = 1; return; }
   }
-  if (Kp < zero) { *error = 3; return; }
+  if (Kp < zero) {
+    /* Kp<0 in the mario (last-resort) branch: signal error=3 like the
+       switch2-free path expects. Write Kpm1 = 1/Kp so the caller guard
+       (one/Kpm1 <= 0) detects the invalid plastic modulus instead of
+       reading an unwritten value. */
+    *Kpm1 = one/Kp;
+    *error = 3; return;
+  }
 
   *Kpm1 = one/Kp;
 }
@@ -904,7 +911,10 @@ static void drift_corr_DM(double *y, int n, double *z, int nasvz,
 {
   double y0[NYDIM], y1[NYDIM];
   double gradf[6], gradf1[6], gradg[6], gradg1[6];
-  double DDe[36], UU[6], VV[6], h_alpha[6], Kpm1, p1, pp1;
+  double DDe[36], UU[6], VV[6], h_alpha[6], Kpm1 = 0.0, p1, pp1;
+  /* Kpm1 is initialized only to satisfy -Wmaybe-uninitialized: every path
+     that reaches the one/Kpm1 read below has plast_mod_DM() write it
+     (switch2==0 and error!=3 imply *Kpm1 = one/Kp was stored). */
   double f0, fnm1, denom, factor, f1;
   double zero=0.0, one=1.0, three=3.0, onethird;
   int n_drift, switch_state, max_ndrift;
@@ -934,6 +944,10 @@ static void drift_corr_DM(double *y, int n, double *z, int nasvz,
       switch2, mario_DT_test, error, tol_f, check_ff, drcor, p_thres,
       plastic);
     if (*switch2 > 0) return;
+    /* plast_mod_DM flags Kp<0 in the mario (last-resort) branch by setting
+       error=3 with switch2==0; abort the drift correction here instead of
+       proceeding with a plastic modulus that was never meant to be used. */
+    if (*error == 3) return;
     if (one/Kpm1 <= zero) { *error = 3; return; }
 
     if (switch_state == 0) {

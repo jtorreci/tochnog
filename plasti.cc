@@ -1103,7 +1103,7 @@ void plasti_rule( long int element, long int gr,
     test6 = task==GET_FLOW_RULE&&plasti_type==GROUP_MATERI_PLASTI_MOHRCOUL_01;
     test7 = task==GET_FLOW_RULE&&plasti_type==GROUP_MATERI_PLASTI_MOHRCOUL_12;
     test8 = task==GET_FLOW_RULE&&plasti_type==GROUP_MATERI_PLASTI_MOHRCOUL_20;
-    test9 = GET_FLOW_RULE&&plasti_type==GROUP_MATERI_PLASTI_MOHRCOUL_APEX;
+    test9 = task==GET_FLOW_RULE&&plasti_type==GROUP_MATERI_PLASTI_MOHRCOUL_APEX;
     if ( test1 || test2 || test3 || test4 || test5 || test6 || test7 || test8 || test9 ) {
       if ( swit ) pri( "check plasti_mohrcoul" );
       if ( get_group_data( GROUP_MATERI_PLASTI_MOHRCOUL_SOFTENING, gr, element, 
