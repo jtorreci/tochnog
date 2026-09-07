@@ -354,8 +354,14 @@ long int check( long int idat, long int task )
     ok = check_unknown( "groundflow_pressure", YES, task );
     ok = check_unknown( "wave_scalar", NO, task );
   }
+  // groundflow_density is also consumed by the mechanics-only
+  // force_edge_water -yes hydrostatic edge load (manual Professional
+  // 6.489: density of the water; models without a groundflow pressure
+  // unknown, e.g. force5/excavate1, must parse) - the flow routines
+  // that need the pressure unknown gate on it themselves.
   if ( data_number==GROUNDFLOW_DENSITY )
-    ok = check_unknown( "groundflow_pressure", YES, task );
+    ok = check_unknown_atleastone( "materi_stress",
+      "groundflow_pressure", task );
   if ( data_number==GROUNDFLOW_CONSOLIDATION_APPLY )
     ok = check_unknown( "groundflow_pressure", YES, task );
   // per-timestep gates (manual Professional 6.105/6.136/6.141 area):

@@ -181,6 +181,14 @@ static long int border_nodes_tet4[] =  {
     0, 2, 3,
     1, 2, 3};
 
+// 1D bar2 (number_of_space_dimensions 1): the two "edges" of the bar are
+// its two end nodes (in axisymmetric 1D models each end is a ring of
+// radius x; a force_edge/water edge load on such a ring is applied as a
+// nodal force on the end node). Each side has a single node.
+static long int border_nodes_bar2[] = {
+    0,
+    1};
+
 static long int border_nodes_hex8[] =  {
     0, 1, 2, 3,
     4, 5, 6, 7,
@@ -309,7 +317,13 @@ void area( long int element, long int name,
 
     array_set( ddum, 0., MDIM+MUKNWN );
 
-    if      ( name==-TRIA3 ) {
+    if      ( name==-BAR2 ) {
+      // 1D edge loads: the bar ends are the sides (border_nodes_bar2).
+      nside = 2;
+      nnol_side = 1;
+      sides = border_nodes_bar2;
+    }
+    else if ( name==-TRIA3 ) {
       nside = 3;
       nnol_side = 2;
       sides = border_nodes_tria3;
@@ -622,6 +636,16 @@ void area( long int element, long int name,
             array_multiply( average_side_coord, average_side_coord, 1./nnol_side, ndim );
             array_subtract( average_side_coord, average_element_coord, vec, ndim );
             if ( ok ) {
+              if ( ndim==1 ) {
+                // 1D bar2 edge: the degenerate side is the bar end node.
+                // The "edge length" is 1 (the ring circumference 2*pi*r
+                // is added per node when group_axisymmetric is on), so a
+                // force_edge value acts as a direct nodal force on the
+                // end node (axisymmetric: on the ring).
+                ar = 1.;
+                weight[0] = 1.;
+              }
+              else {
               // The load/flux direction of the edge families is the
               // PHYSICAL side normal, computed from the side node
               // coordinates (not from the selector geometry: a
@@ -705,6 +729,7 @@ void area( long int element, long int name,
                   }
                 }
               }
+              }
               if ( swit ) {
                 pri( "ar", ar );
                 pri( "weight", weight, nnol_side );
@@ -718,63 +743,52 @@ void area( long int element, long int name,
                 }
                 else
                   area_size = ar;
+                if ( force_edge_is_master(type[itype]) ) {
+                  // element-level restrictions for the force_element_edge
+                  // families (Professional force_edge_*): _element,
+                  // _element_group and _element_side companions. The
+                  // _node and _element_node companions are checked again
+                  // per type in the load application below.
+                  if ( force_edge_companion(type[itype],0)>=0 &&
+                       db_active_index( force_edge_companion(type[itype],0),
+                           ind, VERSION_NORMAL ) ) {
+                    long int elt[DATA_ITEM_SIZE], length_elt=0;
+                    db( force_edge_companion(type[itype],0), ind, elt, ddum,
+                      length_elt, VERSION_NORMAL, GET );
+                    if ( !array_member( elt, element, length_elt, ldum ) )
+                      continue;
+                  }
+                  if ( force_edge_companion(type[itype],1)>=0 &&
+                       db_active_index( force_edge_companion(type[itype],1),
+                           ind, VERSION_NORMAL ) ) {
+                    long int grp[DATA_ITEM_SIZE], length_grp=0;
+                    db( force_edge_companion(type[itype],1), ind, grp, ddum,
+                      length_grp, VERSION_NORMAL, GET );
+                    if ( !array_member( grp, gr, length_grp, ldum ) )
+                      continue;
+                  }
+                  if ( force_edge_companion(type[itype],2)>=0 &&
+                       db_active_index( force_edge_companion(type[itype],2),
+                           ind, VERSION_NORMAL ) ) {
+                    long int side_sel[DATA_ITEM_SIZE], length_side=0;
+                    db( force_edge_companion(type[itype],2), ind, side_sel,
+                      ddum, length_side, VERSION_NORMAL, GET );
+                    long int ok_side = 0;
+                    // element_side i  side_0 element_1 side_1...:
+                    // BOTH the element AND the (1-based local) side
+                    // must match for the side to be selected
+                    for ( i=0; i+1<length_side; i+=2 )
+                      if ( side_sel[i]==element &&
+                           side_sel[i+1]==iside+1 ) ok_side = 1;
+                    if ( !ok_side ) continue;
+                  }
+                }
                 if ( type[itype]==CONDIF_RADIATION ||
                      type[itype]==CONDIF_CONVECTION ||
                      type[itype]==CONDIF_RADIATION_EDGE_NORMAL ||
                      type[itype]==CONDIF_CONVECTION_EDGE_NORMAL ) {
                   // node restrictions for the Professional-name masters
                   long int use_it = 1;
-          if ( force_edge_is_master(type[itype]) ) {
-            // element-level restrictions for the force_element_edge
-            // families (Professional force_edge_*)
-            if ( force_edge_companion(type[itype],0)>=0 &&
-                 db_active_index( force_edge_companion(type[itype],0),
-                     ind, VERSION_NORMAL ) ) {
-              long int elt[DATA_ITEM_SIZE], length_elt=0;
-              db( force_edge_companion(type[itype],0), ind, elt, ddum,
-                length_elt, VERSION_NORMAL, GET );
-              if ( !array_member( elt, element, length_elt, ldum ) ) continue;
-            }
-            if ( force_edge_companion(type[itype],1)>=0 &&
-                 db_active_index( force_edge_companion(type[itype],1),
-                     ind, VERSION_NORMAL ) ) {
-              long int grp[DATA_ITEM_SIZE], length_grp=0;
-              db( force_edge_companion(type[itype],1), ind, grp, ddum,
-                length_grp, VERSION_NORMAL, GET );
-              if ( !array_member( grp, gr, length_grp, ldum ) ) continue;
-            }
-            if ( force_edge_companion(type[itype],2)>=0 &&
-                 db_active_index( force_edge_companion(type[itype],2),
-                     ind, VERSION_NORMAL ) ) {
-              long int side_sel[DATA_ITEM_SIZE], length_side=0;
-              db( force_edge_companion(type[itype],2), ind, side_sel, ddum,
-                length_side, VERSION_NORMAL, GET );
-              long int ok_side = 0;
-              // element_side i  side_0 element_1 side_1...:
-              // BOTH the element AND the (1-based local) side must
-              // match for the side to be selected
-              for ( i=0; i+1<length_side; i+=2 )
-                if ( side_sel[i]==element &&
-                     side_sel[i+1]==iside+1 ) ok_side = 1;
-              if ( !ok_side ) continue;
-            }
-            // element_node (Professional manual 6.1072): node-level
-            // restriction by (element, local node indices)
-            if ( force_edge_companion(type[itype],4)>=0 &&
-                 db_active_index( force_edge_companion(type[itype],4),
-                     ind, VERSION_NORMAL ) ) {
-              long int en[DATA_ITEM_SIZE], length_en=0;
-              db( force_edge_companion(type[itype],4), ind, en, ddum,
-                length_en, VERSION_NORMAL, GET );
-              long int ok_en = 0;
-              // element_node i en_0 en_1...:
-              for ( i=0; i+1<length_en; i+=2 )
-                if ( en[i]==element &&
-                     array_member( &en[i+1], inol, length_en-i-1, ldum ) )
-                  ok_en = 1;
-              if ( !ok_en ) use_it = 0;
-            }
-          }
           if ( conv_rad_is_master(type[itype]) ) {
                     if ( db_active_index( conv_rad_companion(type[itype],3),
                         ind, VERSION_NORMAL ) ) {
@@ -1535,14 +1549,43 @@ void area( long int element, long int name,
                       ddum, ddum[0], ddum[0], water_level, NULL );
                     db( FORCE_ELEMENT_EDGE_WATER, ind, idum, values,
                       ldum, VERSION_NORMAL, GET );
-                    array_normalize( &values[2], ndim );
                     delta_z = water_level - new_coord[inol*ndim+ndim-1];
-                    pressure = values[0] * values[1] * delta_z;
-                    for ( idim=0; idim<ndim; idim++ ) {
-                      ipuknwn = vel_indx/nder + idim;
-                      tmp = load * weight[inol_side] * area_size *
-                        pressure * values[2+idim] * water_factor;
-                      element_rhside[inol*npuknwn+ipuknwn] += tmp;
+                    if ( ldum==1 && (long int)values[0]==-YES ) {
+                      // Professional form (force_edge_water index -yes,
+                      // manual 6.489): the hydrostatic pressure is
+                      // computed automatically as rho*g*delta_z with
+                      //   rho = groundflow_density (default water 1.0),
+                      //   g   = the vertical component of force_gravity
+                      // (signed; negative downward), delta_z the depth
+                      // below the phreatic level; it acts normal to the
+                      // element edge in INWARD direction, i.e. along
+                      // -outward_normal. The outward side normal is the
+                      // accumulated `normal` vector of the side.
+                      double dens = 1.;
+                      double grav[MDIM];
+                      force_gravity_calculate( grav );
+                      db( GROUNDFLOW_DENSITY, 0, idum, &dens, ldum,
+                        VERSION_NORMAL, GET_IF_EXISTS );
+                      if ( delta_z>0. && ndim>1 ) {
+                        pressure = dens * grav[ndim-1] * delta_z;
+                        for ( idim=0; idim<ndim; idim++ ) {
+                          ipuknwn = vel_indx/nder + idim;
+                          tmp = load * weight[inol_side] * area_size *
+                            pressure * normal[idim] * water_factor;
+                          element_rhside[inol*npuknwn+ipuknwn] += tmp;
+                        }
+                      }
+                    }
+                    else {
+                      // legacy GNU layout: rho g dirx [diry dirz]
+                      array_normalize( &values[2], ndim );
+                      pressure = values[0] * values[1] * delta_z;
+                      for ( idim=0; idim<ndim; idim++ ) {
+                        ipuknwn = vel_indx/nder + idim;
+                        tmp = load * weight[inol_side] * area_size *
+                          pressure * values[2+idim] * water_factor;
+                        element_rhside[inol*npuknwn+ipuknwn] += tmp;
+                      }
                     }
                   }
                 }

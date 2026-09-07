@@ -68,3 +68,57 @@ AND adds the Professional bounda semantics (6.231): when a listed value
 matches an ACTIVE `bounda_dof` record, the element is on the wall when one
 of its nodes is bounded (`node_bounded`) on the velocity/displacement
 parts.
+
+## Verificación runtime de la reducción de pared (2026-09-07, direct8)
+
+La semántica de pared (6.231/6.232) está ACTIVA y es correcta en runtime:
+A/B discriminante con el material directo de plano (normal (0,1)) en
+`-total_linear` con COMPRESIÓN + cortante simultáneos (el estado puro de
+cortante de direct8 no discrimina: con c=0 y sig_n=0 el límite de
+fricción es 0 con o sin factor):
+
+- elástico: sigxy = 2500 (E=1e4, nu=0, vx=0.5), sigyy = -1e4.
+- ley directa SIN plasti_bounda: sigxy = 2500 SIN corte — la fricción
+  aguanta: max_fric = c - sig_n*tan(phi) = 0 + 1e4*0.4228 = 4228 > 2500
+  (la compresión AUMENTA el límite, física correcta).
+- ley directa CON `group_materi_plasti_bounda 0 10` (10 = el índice del
+  record bounda_dof 10 que fija los nodos 1-2) y
+  `group_materi_plasti_bounda_factor 0 0.0`: sigxy = 0 — el factor 0
+  anula la fricción de pared (max_fric = 0).
+
+La detección de pared (group.cc `group_materi_plasti_boundary_evaluate`,
+mecanismo bounda_dof: el elemento está en la pared cuando un valor del
+record coincide con un bounda_dof ACTIVO y uno de sus nodos está bounded
+en las partes de velocidad/desplazamiento) y la reducción del factor en
+`materi_direct_cutoff` (stress.cc, phi y c por el factor) funcionan.
+
+### mohr_coul_direct8 (corpus): estado y blocker
+
+direct8 parsea y corre; la reducción de pared se aplica (ver A/B); el
+test queda RUNFAIL por la CINEMÁTICA del elemento, no por la ley: el .dat
+NO lleva `group_materi_memory` → default GNU `-updated` (deformación
+finita con rotación polar). Con el incremento único de cortante 100 %
+(vx=1 durante 1 s sobre altura 1, γ=1) la rotación incremental (~26.57°)
+reintroduce la cizalla espacial: el cutoff anula sigxy en el frame
+material, pero al rotar el tensor al frame espacial σxy = 1788.85 ≠ 0
+(target 0). Con `-total_linear` (A/B, añadiendo materi_displacement) el
+test PASA (sigxy = 0, rc=0). Es el mismo blocker de cinemática de
+direct6/7 (γ=1, default -updated vs la respuesta lineal del
+Professional). El Professional resuelve este modelo sin rotación (sus
+nodos no se mueven y su σyy queda congelada en el reset −30), lo que
+apunta a que su default para modelos velocity-only sin desplazamiento no
+rota — decisión de cinemática del elemento, fuera del alcance de la ley.
+
+## mohr_coul_direct5 (force_edge sobre bar2 axisimétrico 1D)
+
+direct5 necesita cargas de borde (force_edge) sobre una malla 1D de
+elementos bar2 axisimétrica generada por `control_mesh_macro -bar`
+(1000 barras radiales entre r=1 y r=41). Ver el manual
+force_element_edge_water.md / el cambio en area.cc: los bar2 ahora tienen
+2 "lados" degenerados (cada extremo = un nodo), el área del lado = 1 y la
+carga nodal del anillo axisimétrico = value*2*pi*r. El parse y el
+análisis completo funcionan; los targets quedan RUNFAIL por el
+acoplamiento de la mecánica mixta 1D (la tensión transversal σyy del GNU
+se relaja vía Poisson hasta −12.6 mientras el Professional la mantiene
+congelada en el reset −30, y la integración temporal acumula ~1.58× el
+desplazamiento del Pro) — diagnóstico fino en el reporte del sprint.
