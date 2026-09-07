@@ -1044,24 +1044,177 @@ void data( long int task, double dtime, double time_current )
           reset_dof_node_filter = reset_nodes_list;
         }
 
-        if ( db_active_index( CONTROL_RESET_VALUE_CONSTANT, ireset, VERSION_NORMAL ) ) {
-          db( CONTROL_RESET_VALUE_CONSTANT, ireset, idum, &reset_value_constant,
-            ldum, VERSION_NORMAL, GET );
-          for ( inod=0; inod<=max_node; inod++ ) {
-            if ( db_active_index( NODE, inod, VERSION_NORMAL ) &&
-                 ( !reset_dof_node_filter || reset_dof_node_filter[inod] ) ) {
-              node_dof = db_dbl( NODE_DOF, inod, VERSION_NORMAL );
-              length = db_len( NODE_DOF, inod, VERSION_NORMAL );
-              long int indx = idof_reset;
-              if ( indx<0 ) {
-                array_member( dof_label, indx, nuknwn, indx );
-                if ( length==npuknwn ) indx /= nder;
+        // reset value = CONTROL_RESET_VALUE_CONSTANT + the active spatial
+        // distributions (+ the CONTROL_RESET_VALUE_DOF diagram when the
+        // record pair is present). manual Professional 6.350: "The records
+        // control_reset_value_constant, control_reset_value_linear etc.
+        // can be arbitrarily combined so that complex dependency of the
+        // value of space coordinates is possible." The legacy GNU chain
+        // treated the value records as MUTUALLY EXCLUSIVE: with a constant
+        // record at the index the spatial (and dof) records were skipped,
+        // so a geostatic reset written as constant 0. + linear 0. 10.15
+        // (ground11_nonsaturated / ground11_phreatic_level of the corpus)
+        // applied only the constant and left the stress dofs at 0 - the
+        // hypoplasticity tangent at zero confining stress vanishes and the
+        // coupled solve is singular. reset1 of the corpus pins the
+        // combination: temp = constant 1. + linear 1.23*x = 2.23 at x=1.
+        // The reset method (-USE/-ADD/-MULTIPLY) applies to the combined
+        // value.
+        {
+          long int reset_value_constant_found =
+            db_active_index( CONTROL_RESET_VALUE_CONSTANT, ireset,
+              VERSION_NORMAL );
+          long int reset_value_dof_found = db_active_index(
+            CONTROL_RESET_VALUE_DOF, ireset, VERSION_NORMAL );
+          long int spatial_data[7] = { CONTROL_RESET_VALUE_LINEAR,
+            CONTROL_RESET_VALUE_EXPONENT, CONTROL_RESET_VALUE_POWER,
+            CONTROL_RESET_VALUE_SQUARE_ROOT, CONTROL_RESET_VALUE_LOGARITHMIC,
+            CONTROL_RESET_VALUE_LOGARITHMIC_SECOND,
+            CONTROL_RESET_VALUE_MULTI_LINEAR };
+          long int spatial_active[7], spatial_nl[7], sdat = 0,
+            nspatial = 0;
+          for ( sdat=0; sdat<7; sdat++ ) {
+            spatial_active[sdat] = db_active_index( spatial_data[sdat],
+              ireset, VERSION_NORMAL );
+            spatial_nl[sdat] = 0;
+            if ( spatial_active[sdat] ) {
+              if ( spatial_data[sdat]==CONTROL_RESET_VALUE_LINEAR )
+                spatial_nl[sdat] = ndim;
+              else if ( spatial_data[sdat]==CONTROL_RESET_VALUE_POWER )
+                spatial_nl[sdat] = 2*ndim;
+              else if ( spatial_data[sdat]==CONTROL_RESET_VALUE_SQUARE_ROOT )
+                spatial_nl[sdat] = 3*ndim;
+              else if ( spatial_data[sdat]==CONTROL_RESET_VALUE_EXPONENT )
+                spatial_nl[sdat] = 5*ndim;
+              else if ( spatial_data[sdat]==CONTROL_RESET_VALUE_LOGARITHMIC )
+                spatial_nl[sdat] = 5*ndim;
+              else if ( spatial_data[sdat]==CONTROL_RESET_VALUE_LOGARITHMIC_SECOND )
+                spatial_nl[sdat] = 7*ndim;
+              else if ( spatial_data[sdat]==CONTROL_RESET_VALUE_MULTI_LINEAR )
+                spatial_nl[sdat] = 0;
+              nspatial++;
+            }
+          }
+          if ( reset_value_constant_found ) {
+            db( CONTROL_RESET_VALUE_CONSTANT, ireset, idum,
+              &reset_value_constant, ldum, VERSION_NORMAL, GET );
+          }
+          else
+            reset_value_constant = 0.;
+          if ( reset_value_dof_found ) {
+            db( CONTROL_RESET_VALUE_DOF, ireset, &idof_value, ddum, ldum,
+              VERSION_NORMAL, GET );
+            db( CONTROL_RESET_VALUE_DOF_DIAGRAM, ireset, idum,
+              reset_value_diagram, length_diagram, VERSION_NORMAL, GET );
+          }
+          if ( reset_value_constant_found || reset_value_dof_found ||
+               nspatial>0 ) {
+            for ( inod=0; inod<=max_node; inod++ ) {
+              if ( db_active_index( NODE, inod, VERSION_NORMAL ) &&
+                   ( !reset_dof_node_filter ||
+                     reset_dof_node_filter[inod] ) ) {
+                node_dof = db_dbl( NODE_DOF, inod, VERSION_NORMAL );
+                length = db_len( NODE_DOF, inod, VERSION_NORMAL );
+                long int indx_reset = idof_reset;
+                if ( indx_reset<0 ) {
+                  array_member( dof_label, indx_reset, nuknwn, indx_reset );
+                  if ( length==npuknwn ) indx_reset /= nder;
+                }
+                if ( indx_reset<0 || indx_reset>length-1 )
+                  db_error( CONTROL_RESET_DOF, ireset );
+                val = reset_value_constant;
+                if ( reset_value_dof_found ) {
+                  long int indx_val = idof_value;
+                  if ( indx_val<0 ) {
+                    array_member( dof_label, indx_val, nuknwn, indx_val );
+                    if ( length==npuknwn ) indx_val /= nder;
+                  }
+                  if ( indx_val<0 || indx_val>length-1 )
+                    db_error( CONTROL_RESET_DOF, ireset );
+                  table_xy( reset_value_diagram,
+                    "CONTROL_RESET_VALUE_DOF_DIAGRAM", length_diagram,
+                    node_dof[indx_val], val );
+                }
+                for ( sdat=0; sdat<7; sdat++ ) {
+                  if ( !spatial_active[sdat] ) continue;
+                  coord = db_dbl( NODE, inod, VERSION_NORMAL );
+                  for ( idim=0; idim<ndim; idim++ )
+                    coords[idim] = coord[idim];
+                  db( spatial_data[sdat], ireset, idum, reset_value_diagram,
+                    ldum, VERSION_NORMAL, GET );
+                  if ( spatial_data[sdat]==CONTROL_RESET_VALUE_LINEAR ) {
+                    // ax x + ay y + az z
+                    for ( idim=0; idim<ndim; idim++ )
+                      val += reset_value_diagram[idim] * coords[idim];
+                  }
+                  else if ( spatial_data[sdat]==CONTROL_RESET_VALUE_POWER ) {
+                    // ax x^bx + ay y^by + az z^bz
+                    for ( idim=0; idim<ndim; idim++ )
+                      val += reset_value_diagram[2*idim] *
+                        scalar_power( coords[idim],
+                          reset_value_diagram[2*idim+1] );
+                  }
+                  else if ( spatial_data[sdat]==CONTROL_RESET_VALUE_SQUARE_ROOT ) {
+                    // ax sqrt( bx x + cx x^2 ) ... (3 coefs per dim)
+                    for ( idim=0; idim<ndim; idim++ ) {
+                      double b = reset_value_diagram[3*idim+1];
+                      double c = reset_value_diagram[3*idim+2];
+                      val += reset_value_diagram[3*idim] *
+                        sqrt( scalar_dabs( b*coords[idim] +
+                          c*coords[idim]*coords[idim] ) );
+                    }
+                  }
+                  else if ( spatial_data[sdat]==CONTROL_RESET_VALUE_EXPONENT ) {
+                    // ax e^(bx + cx x dx + ex x) (5 coefs per dim)
+                    for ( idim=0; idim<ndim; idim++ ) {
+                      double a = reset_value_diagram[5*idim+0];
+                      double b = reset_value_diagram[5*idim+1];
+                      double c = reset_value_diagram[5*idim+2];
+                      double d = reset_value_diagram[5*idim+3];
+                      double e = reset_value_diagram[5*idim+4];
+                      val += a * exp( b + c * coords[idim] * d +
+                        e * coords[idim] );
+                    }
+                  }
+                  else if ( spatial_data[sdat]==CONTROL_RESET_VALUE_LOGARITHMIC ) {
+                    // ax ln( bx + cx x dx + ex x ) (5 coefs per dim)
+                    for ( idim=0; idim<ndim; idim++ ) {
+                      double a = reset_value_diagram[5*idim+0];
+                      double b = reset_value_diagram[5*idim+1];
+                      double c = reset_value_diagram[5*idim+2];
+                      double d = reset_value_diagram[5*idim+3];
+                      double e = reset_value_diagram[5*idim+4];
+                      val += a * log( scalar_dabs( b + c * coords[idim] *
+                        d + e * coords[idim] ) );
+                    }
+                  }
+                  else if ( spatial_data[sdat]==CONTROL_RESET_VALUE_LOGARITHMIC_SECOND ) {
+                    // (ax + bx) e^(cx ln(dx (x+ex)/fx)) + gx (7 per dim)
+                    for ( idim=0; idim<ndim; idim++ ) {
+                      double a = reset_value_diagram[7*idim+0];
+                      double b = reset_value_diagram[7*idim+1];
+                      double c = reset_value_diagram[7*idim+2];
+                      double d = reset_value_diagram[7*idim+3];
+                      double e = reset_value_diagram[7*idim+4];
+                      double f = reset_value_diagram[7*idim+5];
+                      double g = reset_value_diagram[7*idim+6];
+                      val += (a+b) * exp( c * log( scalar_dabs(
+                        d*(coords[idim]+e)/f ) ) ) + g;
+                    }
+                  }
+                  else if ( spatial_data[sdat]==CONTROL_RESET_VALUE_MULTI_LINEAR ) {
+                    // table (z0 value0 z1 value1 ...); vertical coord:
+                    // 1D -> x, 2D -> y, 3D -> z
+                    long int vdim = ( ndim==1 ) ? 0 : ( ndim==2 ) ? 1 : 2;
+                    table_xy( reset_value_diagram,
+                      "CONTROL_RESET_VALUE_MULTI_LINEAR",
+                      spatial_nl[sdat]/2, coords[vdim], val );
+                  }
+                }
+                if      ( reset_method==-ADD ) node_dof[indx_reset] += val;
+                else if ( reset_method==-MULTIPLY ) node_dof[indx_reset] *= val;
+                else                             node_dof[indx_reset] = val;
               }
-              if ( indx<0 || indx>length-1 )
-                db_error( CONTROL_RESET_DOF, ireset );
-              if      ( reset_method==-ADD ) node_dof[indx] += reset_value_constant;
-              else if ( reset_method==-MULTIPLY ) node_dof[indx] *= reset_value_constant;
-              else                            node_dof[indx] = reset_value_constant;
             }
           }
           // CONVERGENCE (2026-09-03, mohr_coul_direct4): a reset of a
@@ -1073,8 +1226,11 @@ void data( long int task, double dtime, double time_current )
           // -sigyy to -1 and the horizontal interface carries
           // sigma_n = -1 (eps_n = -1e-6 with kn = 1e6) through the whole
           // run, so the yield limit sees c + |Fn|*tan(phi) = 1.20271
-          // instead of the unconfined cohesion c.
-          if ( reset_method!=-ADD && reset_method!=-MULTIPLY ) {
+          // instead of the unconfined cohesion c. (Only the CONSTANT part
+          // seeds the interface pre-stress: the interface strain is a
+          // single value per interface, not a spatial field.)
+          if ( reset_value_constant_found && reset_method!=-ADD &&
+               reset_method!=-MULTIPLY ) {
             long int reset_axis = -1;
             const char *reset_name = db_name( labs( idof_reset ) );
             if ( reset_name && !strcmp( reset_name, "sigxx" ) ) reset_axis = 0;
@@ -1169,147 +1325,6 @@ void data( long int task, double dtime, double time_current )
             }
           }
         }
-        else if ( db_active_index( CONTROL_RESET_VALUE_DOF, ireset, VERSION_NORMAL ) ) {
-          db( CONTROL_RESET_VALUE_DOF, ireset, &idof_value, ddum, ldum,
-            VERSION_NORMAL, GET );
-          db( CONTROL_RESET_VALUE_DOF_DIAGRAM, ireset, idum, reset_value_diagram,
-            length_diagram, VERSION_NORMAL, GET );
-          for ( inod=0; inod<=max_node; inod++ ) {
-            if ( db_active_index( NODE, inod, VERSION_NORMAL ) &&
-                 ( !reset_dof_node_filter || reset_dof_node_filter[inod] ) ) {
-              node_dof = db_dbl( NODE_DOF, inod, VERSION_NORMAL );
-              length = db_len( NODE_DOF, inod, VERSION_NORMAL );
-              long int indx_reset = idof_reset, indx_val = idof_value;
-              if ( indx_reset<0 ) {
-                array_member( dof_label, indx_reset, nuknwn, indx_reset );
-                if ( length==npuknwn ) indx_reset /= nder;
-              }
-              if ( indx_val<0 ) {
-                array_member( dof_label, indx_val, nuknwn, indx_val );
-                if ( length==npuknwn ) indx_val /= nder;
-              }
-              if ( indx_reset<0 || indx_reset>length-1 )
-                db_error( CONTROL_RESET_DOF, ireset );
-              if ( indx_val<0 || indx_val>length-1 )
-                db_error( CONTROL_RESET_DOF, ireset );
-               table_xy( reset_value_diagram, "CONTROL_RESET_VALUE_DOF_DIAGRAM",
-                 length_diagram, node_dof[indx_val], val );
-               if      ( reset_method==-ADD ) node_dof[indx_reset] += val;
-               else if ( reset_method==-MULTIPLY ) node_dof[indx_reset] *= val;
-               else                             node_dof[indx_reset] = val;
-             }
-           }
-         }
-         // spatial distributions: the reset value depends on the node
-         // coordinates (x, y, z). Variants: _linear, _exponent, _power,
-         // _square_root, _logarithmic, _logarithmic_second, _multi_linear.
-         else if ( db_active_index( CONTROL_RESET_VALUE_LINEAR, ireset, VERSION_NORMAL ) ||
-             db_active_index( CONTROL_RESET_VALUE_EXPONENT, ireset, VERSION_NORMAL ) ||
-             db_active_index( CONTROL_RESET_VALUE_POWER, ireset, VERSION_NORMAL ) ||
-             db_active_index( CONTROL_RESET_VALUE_SQUARE_ROOT, ireset, VERSION_NORMAL ) ||
-             db_active_index( CONTROL_RESET_VALUE_LOGARITHMIC, ireset, VERSION_NORMAL ) ||
-             db_active_index( CONTROL_RESET_VALUE_LOGARITHMIC_SECOND, ireset, VERSION_NORMAL ) ||
-             db_active_index( CONTROL_RESET_VALUE_MULTI_LINEAR, ireset, VERSION_NORMAL ) ) {
-           long int spatial_data[7] = { CONTROL_RESET_VALUE_LINEAR,
-             CONTROL_RESET_VALUE_EXPONENT, CONTROL_RESET_VALUE_POWER,
-             CONTROL_RESET_VALUE_SQUARE_ROOT, CONTROL_RESET_VALUE_LOGARITHMIC,
-             CONTROL_RESET_VALUE_LOGARITHMIC_SECOND, CONTROL_RESET_VALUE_MULTI_LINEAR };
-           long int sdat = 0, spatial_active = -1;
-           for ( sdat=0; sdat<7; sdat++ )
-             if ( db_active_index( spatial_data[sdat], ireset, VERSION_NORMAL ) )
-               spatial_active = spatial_data[sdat];
-           long int nl = 0;
-           if ( spatial_active==CONTROL_RESET_VALUE_LINEAR ) nl = ndim;
-           else if ( spatial_active==CONTROL_RESET_VALUE_POWER ) nl = 2*ndim;
-           else if ( spatial_active==CONTROL_RESET_VALUE_SQUARE_ROOT ) nl = 3*ndim;
-           else if ( spatial_active==CONTROL_RESET_VALUE_EXPONENT ) nl = 5*ndim;
-           else if ( spatial_active==CONTROL_RESET_VALUE_LOGARITHMIC ) nl = 5*ndim;
-           else if ( spatial_active==CONTROL_RESET_VALUE_LOGARITHMIC_SECOND ) nl = 7*ndim;
-           for ( inod=0; inod<=max_node; inod++ ) {
-             if ( db_active_index( NODE, inod, VERSION_NORMAL ) &&
-                  ( !reset_dof_node_filter || reset_dof_node_filter[inod] ) ) {
-               node_dof = db_dbl( NODE_DOF, inod, VERSION_NORMAL );
-               length = db_len( NODE_DOF, inod, VERSION_NORMAL );
-               long int indx_reset = idof_reset;
-               if ( indx_reset<0 ) {
-                 array_member( dof_label, indx_reset, nuknwn, indx_reset );
-                 if ( length==npuknwn ) indx_reset /= nder;
-               }
-               if ( indx_reset<0 || indx_reset>length-1 )
-                 db_error( CONTROL_RESET_DOF, ireset );
-               coord = db_dbl( NODE, inod, VERSION_NORMAL );
-               for ( idim=0; idim<ndim; idim++ ) coords[idim] = coord[idim];
-               db( spatial_active, ireset, idum, reset_value_diagram, ldum,
-                 VERSION_NORMAL, GET );
-               val = 0.;
-               if ( spatial_active==CONTROL_RESET_VALUE_LINEAR ) {
-                 // ax x + ay y + az z
-                 for ( idim=0; idim<ndim; idim++ )
-                   val += reset_value_diagram[idim] * coords[idim];
-               }
-               else if ( spatial_active==CONTROL_RESET_VALUE_POWER ) {
-                 // ax x^bx + ay y^by + az z^bz
-                 for ( idim=0; idim<ndim; idim++ )
-                   val += reset_value_diagram[2*idim] *
-                     scalar_power( coords[idim], reset_value_diagram[2*idim+1] );
-               }
-               else if ( spatial_active==CONTROL_RESET_VALUE_SQUARE_ROOT ) {
-                 // ax sqrt( bx x + cx x^2 ) ... (3 coefs per dim)
-                 for ( idim=0; idim<ndim; idim++ ) {
-                   double b = reset_value_diagram[3*idim+1];
-                   double c = reset_value_diagram[3*idim+2];
-                   val += reset_value_diagram[3*idim] *
-                     sqrt( scalar_dabs( b*coords[idim] + c*coords[idim]*coords[idim] ) );
-                 }
-               }
-               else if ( spatial_active==CONTROL_RESET_VALUE_EXPONENT ) {
-                 // ax e^(bx + cx x dx + ex x) (5 coefs per dim)
-                 for ( idim=0; idim<ndim; idim++ ) {
-                   double a = reset_value_diagram[5*idim+0];
-                   double b = reset_value_diagram[5*idim+1];
-                   double c = reset_value_diagram[5*idim+2];
-                   double d = reset_value_diagram[5*idim+3];
-                   double e = reset_value_diagram[5*idim+4];
-                   val += a * exp( b + c * coords[idim] * d + e * coords[idim] );
-                 }
-               }
-               else if ( spatial_active==CONTROL_RESET_VALUE_LOGARITHMIC ) {
-                 // ax ln( bx + cx x dx + ex x ) (5 coefs per dim)
-                 for ( idim=0; idim<ndim; idim++ ) {
-                   double a = reset_value_diagram[5*idim+0];
-                   double b = reset_value_diagram[5*idim+1];
-                   double c = reset_value_diagram[5*idim+2];
-                   double d = reset_value_diagram[5*idim+3];
-                   double e = reset_value_diagram[5*idim+4];
-                   val += a * log( scalar_dabs( b + c * coords[idim] * d + e * coords[idim] ) );
-                 }
-               }
-               else if ( spatial_active==CONTROL_RESET_VALUE_LOGARITHMIC_SECOND ) {
-                 // (ax + bx) e^(cx ln(dx (x+ex)/fx)) + gx  (7 coefs per dim)
-                 for ( idim=0; idim<ndim; idim++ ) {
-                   double a = reset_value_diagram[7*idim+0];
-                   double b = reset_value_diagram[7*idim+1];
-                   double c = reset_value_diagram[7*idim+2];
-                   double d = reset_value_diagram[7*idim+3];
-                   double e = reset_value_diagram[7*idim+4];
-                   double f = reset_value_diagram[7*idim+5];
-                   double g = reset_value_diagram[7*idim+6];
-                   val += (a+b) * exp( c * log( scalar_dabs( d*(coords[idim]+e)/f ) ) ) + g;
-                 }
-               }
-               else if ( spatial_active==CONTROL_RESET_VALUE_MULTI_LINEAR ) {
-                 // table (z0 value0 z1 value1 ...); vertical coordinate:
-                 // 1D -> x, 2D -> y, 3D -> z
-                 long int vdim = ( ndim==1 ) ? 0 : ( ndim==2 ) ? 1 : 2;
-                 table_xy( reset_value_diagram, "CONTROL_RESET_VALUE_MULTI_LINEAR",
-                   nl/2, coords[vdim], val );
-               }
-                if      ( reset_method==-ADD ) node_dof[indx_reset] += val;
-                else if ( reset_method==-MULTIPLY ) node_dof[indx_reset] *= val;
-                else                             node_dof[indx_reset] = val;
-              }
-            }
-          }
         }
         }   // end dof list loop
       }
