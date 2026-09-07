@@ -2435,3 +2435,11 @@ del orden de parseo.
 | **interface11: estructura ✓, física bloqueada** (0) | dev/a-interface11 (3408f6a+b55d9b3) | generate_interface_triangle() completa y verificada elemento-a-elemento vs .dbs del Pro. Blocker NUEVO destapado: bug PREEXISTENTE de la interfaz triangular 3D (σ −24 vs −1.0 con prism6; hex8 exacto; también afecta a interface_tria3_prism6 que pasa por tolerancia de volumen). Sprint de continuación sobre interface.cc. |
 
 **Corpus esperado integrado: 196 → 199 PASS** (prism15, hypo1, reset1; verificación con run completo pendiente en el registro del orquestador).
+
+### SPRINT INTERFAZ TRIANGULAR 3D (2026-09-07) — el bug era del sólido prism6 (rama dev/iface-tri3d, d092a89+e2eeece)
+
+**Causa raíz**: interface11 daba σ(el4) −13.74 vs −1.0 no por la interfaz sino por el ELEMENTO SÓLIDO `-prism6`: la rama PRISM6 de pol() (polynom.cc) usaba 6 pesos de 0.25 (suma 1.5) y `volume = weight*8*detj` (rama del hex8) sobre una celda de referencia de volumen 0.5 → TODA integral de volumen ×24. La interfaz de espesor cero (consistente) tenía que equilibrar un sólido que pedía 24× → σ_iface −24 (−13.74 en interface11). Nunca se detectó: los tests de cuñas usan campos prescritos (σ = C·B·u, no ejercita la integral de volumen) o gravedad pura (K y gravedad se cancelan en u).
+
+**Fix** (polynom.cc): regla triángulo grado-2 (1/6) × Gauss-2 en zeta = 6 puntos de peso 1/12, `volume = weight*detj` (layout del Pro medido de element_intpnt_coord: zeta 0.2113/0.7887). Resultados: caso mínimo 2 cuñas+interfaz σ −24 → **−1.00000008** (Pro −1.0); interface11 rc=0 (el4 −1.00000008 vs Pro −0.99999954). Blast-radius familia 29/29 rc=0. **Corpus: 199 → 200 PASS / 0 regresiones** (los 5 SEGV mpc8/9/post7/force16/17 preexistentes, verificados contra HEAD puro).
+
+**Descubrimiento adicional**: interface_tria3_prism6 tiene un bug latente SEPARADO (prismas de interfaz convertidos: reparto 1/6-1/3-1/3-1/6 vs consistente 1/4 por nodo + inversión de signo de la conversión; rc=0 solo por target de volumen) — PENDIENTE documentado (conversión tria3→prism6).
