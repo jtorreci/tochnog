@@ -1554,6 +1554,22 @@ enum {
   // end of the enum to keep existing values stable (tochnog.h and
   // tochnog-mod.h stay in sync).
   PRISM15,
+  // MESH_INTERFACE_TRIANGLE FAMILY (2026-09-07): mesh_interface_triangle_
+  // coordinate (manual Professional 6.856, SINGULAR spelling used by the
+  // Professional binary and the corpus) + mesh_interface_triangle_
+  // element_group (6.857) + control_mesh_interface_triangle (6.201):
+  // generate zero-thickness interface elements by cutting the tet4 mesh
+  // with the triangulated plane. Appended at the end of the enum to keep
+  // existing values stable (tochnog.h and tochnog-mod.h stay in sync).
+  MESH_INTERFACE_TRIANGLE_COORDINATE,
+  MESH_INTERFACE_TRIANGLE_ELEMENT_GROUP,
+  CONTROL_MESH_INTERFACE_TRIANGLE,
+  // control_print_gid_method (manual Professional 6.29x): GiD output
+  // method selector (-element / -all_nodes). Registered parse-only: the
+  // corpus test interface11 carries the record and the GNU GiD printer
+  // is self-contained (no method dispatch). Enum append keeps existing
+  // values stable (tochnog.h and tochnog-mod.h stay in sync).
+  CONTROL_PRINT_GID_METHOD,
   LAST_DUMMY }; // keep LAST_DUMMY always the last one
 
 #define MDAT LAST_DUMMY+DATA_ITEM_SIZE  // reserve space for unknowns
@@ -1857,6 +1873,7 @@ void      general( long int element, long int name, long int nnol, long int gr,
             double element_lhside[], double element_matrix[] );
 void      generate_beam_truss( long int icontrol, long int task );
 void      generate_spring( long int icontrol );
+void      generate_interface_triangle( long int icontrol );
 void      geometry( long int inod, double co[], long int geometry_entity[],
             long int &found, double &factor, double normal[],
             double &penetration, double projection[],

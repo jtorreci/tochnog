@@ -813,6 +813,13 @@ void step_start( long int task, long int options_solver[], double dtime, double 
 
   // generate interface elements BEFORE scanning any_interface so the
   // interface histories are allocated for the generated elements too.
+  // mesh_interface_triangle family (manual Professional 6.856/6.857/
+  // 6.201): cut the tet4 mesh with the triangulated plane at the control
+  // index (control_mesh_interface_triangle index -yes). Dispatched the
+  // same way: the family only fires when its control record is active at
+  // this icontrol, and the elements must exist before the any_interface
+  // scan of the first task==YES step.
+  generate_interface_triangle( icontrol );
   generate_interface( icontrol );
 
   if ( task==YES ) {

@@ -919,3 +919,689 @@ void generate_interface( long int icontrol )
   mesh_has_changed( VERSION_NORMAL );
   if ( swit ) pri( "Out routine GENERATE_INTERFACE." );
 }
+
+// cut_create_node - create a mesh node at a point of an existing edge.
+//
+// Pattern of mesh_extrude/mesh_convert_quad8 (mesh.cc): the NODE-class
+// records of the source node are copied to the new node and the four
+// canonical records are overwritten - NODE/NODE_START_REFINED with the
+// cut coordinates and NODE_DOF/NODE_DOF_START_REFINED INTERPOLATED
+// between the two edge endpoints at the edge parameter (the cut node of
+// a deformed mesh must inherit the interpolated kinematic state, not a
+// copy of one endpoint).
+static void cut_create_node( long int inod_a, long int inod_b, double tpar,
+  double x[MDIM], long int new_node )
+
+{
+  long int idat=0, d=0, length=0, idum[1];
+  double ddum[1];
+
+  for ( idat=0; idat<MDAT; idat++ ) {
+    if ( idat==NODE || idat==NODE_START_REFINED || idat==NODE_DOF ||
+         idat==NODE_DOF_START_REFINED || idat==NODE_ELEMENT ||
+         idat==NODE_NODE || idat==NODE_GEOMETRY_PRESENT )
+      continue;
+    if ( db_data_class(idat)==NODE &&
+         db_active_index( idat, inod_a, VERSION_NORMAL ) ) {
+      length = db_len( idat, inod_a, VERSION_NORMAL );
+      if ( db_type(idat)==DOUBLE_PRECISION ) {
+        double *dold = db_dbl( idat, inod_a, VERSION_NORMAL );
+        db( idat, new_node, idum, dold, length, VERSION_NORMAL, PUT );
+      }
+      else {
+        long int *iold = db_int( idat, inod_a, VERSION_NORMAL );
+        db( idat, new_node, iold, ddum, length, VERSION_NORMAL, PUT );
+      }
+    }
+  }
+
+  length = ndim;
+  db( NODE, new_node, idum, x, length, VERSION_NORMAL, PUT );
+  db( NODE_START_REFINED, new_node, idum, x, length, VERSION_NORMAL, PUT );
+
+  // interpolated dof state along the edge
+  if ( db_active_index( NODE_DOF, inod_a, VERSION_NORMAL ) &&
+       db_active_index( NODE_DOF, inod_b, VERSION_NORMAL ) ) {
+    double *da = db_dbl( NODE_DOF, inod_a, VERSION_NORMAL );
+    double *db2 = db_dbl( NODE_DOF, inod_b, VERSION_NORMAL );
+    long int nlen = db_len( NODE_DOF, inod_a, VERSION_NORMAL );
+    double *dnew = get_new_dbl( nlen );
+    for ( d=0; d<nlen; d++ ) dnew[d] = da[d] + tpar*(db2[d]-da[d]);
+    db( NODE_DOF, new_node, idum, dnew, nlen, VERSION_NORMAL, PUT );
+    delete[] dnew;
+  }
+  if ( db_active_index( NODE_DOF_START_REFINED, inod_a, VERSION_NORMAL ) &&
+       db_active_index( NODE_DOF_START_REFINED, inod_b, VERSION_NORMAL ) ) {
+    double *da = db_dbl( NODE_DOF_START_REFINED, inod_a, VERSION_NORMAL );
+    double *db2 = db_dbl( NODE_DOF_START_REFINED, inod_b, VERSION_NORMAL );
+    long int nlen = db_len( NODE_DOF_START_REFINED, inod_a, VERSION_NORMAL );
+    double *dnew = get_new_dbl( nlen );
+    for ( d=0; d<nlen; d++ ) dnew[d] = da[d] + tpar*(db2[d]-da[d]);
+    db( NODE_DOF_START_REFINED, new_node, idum, dnew, nlen,
+      VERSION_NORMAL, PUT );
+    delete[] dnew;
+  }
+}
+
+// cut_fix_prism_orientation - mirror the two end triangles of a generated
+// prism6 when its reference volume is negative. The generated wedges are
+// straight-edged frusta between an original tet face and its homothetic
+// cut section: never twisted, but the reference can be mirrored depending
+// on the input tet node order. Mirroring BOTH end triangles ((b,c) and
+// (e,f)) restores the positive orientation without changing the physical
+// element.
+static void cut_fix_prism_orientation( long int element )
+
+{
+  long int d=0, length=0, eln[1+MNOL];
+  double ddum[1];
+  db( ELEMENT, element, eln, ddum, length, VERSION_NORMAL, GET );
+  if ( eln[0]!=-PRISM6 || length!=1+6 ) return;
+  double *ca = db_dbl( NODE_START_REFINED, eln[1], VERSION_NORMAL );
+  double *cb = db_dbl( NODE_START_REFINED, eln[2], VERSION_NORMAL );
+  double *cc = db_dbl( NODE_START_REFINED, eln[3], VERSION_NORMAL );
+  double *cd = db_dbl( NODE_START_REFINED, eln[4], VERSION_NORMAL );
+  double e1v[3], e2v[3], cr[3], dv[3];
+  for ( d=0; d<3; d++ ) {
+    e1v[d] = cb[d]-ca[d];
+    e2v[d] = cc[d]-ca[d];
+    dv[d]  = cd[d]-ca[d];
+  }
+  cr[0] = e1v[1]*e2v[2] - e1v[2]*e2v[1];
+  cr[1] = e1v[2]*e2v[0] - e1v[0]*e2v[2];
+  cr[2] = e1v[0]*e2v[1] - e1v[1]*e2v[0];
+  if ( cr[0]*dv[0]+cr[1]*dv[1]+cr[2]*dv[2] < 0. ) {
+    long int tmpn;
+    tmpn = eln[2]; eln[2] = eln[3]; eln[3] = tmpn;
+    tmpn = eln[5]; eln[5] = eln[6]; eln[6] = tmpn;
+    length = 1+6;
+    db( ELEMENT, element, eln, ddum, length, VERSION_NORMAL, PUT );
+  }
+}
+
+// generate_interface_triangle - control_mesh_interface_triangle family
+// (manual Professional 6.856/6.857/6.201; corpus test interface11).
+//
+// Cuts a 3D tet4 mesh with the triangulated plane given by
+//
+//   mesh_interface_triangle_coordinate  index  x0 y0 z0  x1 y1 z1  x2 y2 z2
+//     [ ... more triangles ... ]
+//   mesh_interface_triangle_element_group index element_group
+//   control_mesh_interface_triangle index -yes
+//
+// and inserts zero-thickness interface elements along the intersection.
+// The Professional spelling is the SINGULAR "coordinate" (the manual TOC
+// writes "coordinates"; the 25-10-2023 binary and the corpus interface11
+// use the singular form). Record structure measured on the Professional
+// .dbs of interface11 (3 input tets -> 9 elements, 18 nodes):
+//
+//   (a) every tet crossed by the plane gets its cut points on the crossed
+//       edges, DUPLICATED (one node per side of the interface, SAME
+//       coordinate: node 7 = (0,0,0.6) and its duplicate 15);
+//   (b) the zero-thickness interface element is numbered FIRST (4,5,6),
+//       element_group = the mesh_interface_triangle_element_group record:
+//       triangular cut -> -prism6 {side1 x3, side2 x3},
+//       quadrilateral cut -> -hex8 {side1 x4, side2 x4};
+//   (c) the two halves are re-tessellated and REPLACE the original tet
+//       (1 vertex on a side: tet4 + prism6; 2+2: two prism6) and are
+//       numbered AFTER the interfaces (7..12 in the .dbs), keeping the
+//       element_group of the original element.
+//
+// Element/node numbering of the GNU implementation mirrors the .dbs
+// layout of the Professional: the base cut nodes are created first (edge
+// scan over the crossed tets in element order, canonical tet4 edge
+// order, deduplicated by coordinates for shared edges), then the
+// interface elements in tet order (the duplicate nodes are created on
+// demand, in the order each interface references its second side), then
+// the tet4 halves in tet order, then the prism6 halves in tet order
+// (Professional .dbs order: interfaces 4,5,6 ; tet4 pieces 7,8 ;
+// prism6 pieces 9..12).
+//
+// Connectivity conventions (GNU interface_element semantics, verified
+// against the Professional values of interface11): the cut polygon of
+// each tet is ordered counter-clockwise seen from the +normal of the cut
+// plane (normal = (P1-P0)x(P2-P0) of the cutting triangle). The
+// interface side 1 carries the nodes of the -normal side of the plane
+// (the duplicate copies) and side 2 the +normal side (the base copies),
+// paired coincident per slot. With coincident sides the GNU frame
+// e1xe2 (no orientation flip possible: dir = normal.(cm1-cm2) = 0)
+// points from side 2 towards side 1, and compression (the +side
+// material pushed towards the -side) gives a NEGATIVE normal strain and
+// stress, like the Professional (interface11:
+// element_interface_stress_average 4 = -1.0 = kn * (-1e-11) with
+// kn = 1e11 and the column shortened by -1 at E=1).
+//
+// The generation only fires when control_mesh_interface_triangle is
+// active at the current icontrol with value -yes; the dispatch lives in
+// step_start() (top.cc) next to generate_interface(), BEFORE the
+// any_interface scan so the interface histories are allocated for the
+// generated elements at the first task==YES step.
+//
+// Scope of this implementation: linear -tet4 volumes only. Each tet is
+// cut at most once, by the first triangle of the record whose interior
+// contains the centroid of the tet cut polygon (the Professional cuts
+// with the union of all triangles of the plane). Tets with a vertex ON
+// the plane and polygons crossing a triangle boundary are not cut
+// (documented limitation; the corpus test has a single triangle
+// covering the whole model).
+void generate_interface_triangle( long int icontrol )
+
+{
+  long int i=0, j=0, k=0, d=0, iv=0, iel=0, ivert=0, jvert=0, ii=0,
+    len1=1,
+    max_element_old=0, max_node=0, length=0, ldum=0, swit=0,
+    iface_group=0, switch_value=0, ntri=0, ngp=0, ncut=0, n_tet_cuts=0,
+    nplus=0, nminus=0, iso=0, nel=0, new_element=0, zero=0,
+    idum[1], el[1+MNOL], eln[1+MNOL];
+  double ddum[1], nrm[3], pol_nrm[3];
+  long int mnolnuknwn=npointmax*nuknwn,
+    length_nei=1+npointmax*ndim+npointmax+2;
+  double *tmp_element_dof=NULL, *dworknei=NULL;
+  long int *cut_iel=NULL, *cut_ncut=NULL, *cut_nplus=NULL, *cut_iso=NULL,
+    *cut_gid=NULL, *cut_tri=NULL, *gp_base=NULL, *gp_dup=NULL;
+  double *cut_nrm=NULL;
+
+  swit = set_swit(-1,-1,"generate_interface_triangle");
+  if ( swit ) pri( "In routine GENERATE_INTERFACE_TRIANGLE." );
+
+  if ( !db_active_index( CONTROL_MESH_INTERFACE_TRIANGLE, icontrol,
+      VERSION_NORMAL ) )
+    return;
+  db( CONTROL_MESH_INTERFACE_TRIANGLE, icontrol, &switch_value,
+    ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+  if ( switch_value!=-YES ) return;
+  if ( ndim!=3 ) {
+    pri( "Error: mesh_interface_triangle only works with 3 space dimensions." );
+    exit(TN_EXIT_STATUS);
+  }
+
+  tmp_element_dof = get_new_dbl(mnolnuknwn);
+  dworknei = get_new_dbl(length_nei);
+  array_set( dworknei, 0, length_nei );
+
+  // element_group attributed to the generated interfaces (default 0)
+  iface_group = 0;
+  if ( db_active_index( MESH_INTERFACE_TRIANGLE_ELEMENT_GROUP, icontrol,
+      VERSION_NORMAL ) )
+    db( MESH_INTERFACE_TRIANGLE_ELEMENT_GROUP, icontrol, &iface_group,
+      ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+
+  // plane coordinates: 9 doubles (one triangle) per block
+  length = 0;
+  double *plane = get_new_dbl( DATA_ITEM_SIZE );
+  db( MESH_INTERFACE_TRIANGLE_COORDINATE, icontrol, idum, plane, length,
+    VERSION_NORMAL, GET_IF_EXISTS );
+  ntri = length / 9;
+  if ( ntri<1 ) {
+    delete[] plane; delete[] tmp_element_dof; delete[] dworknei;
+    return;
+  }
+
+  // snapshot of the original elements: only these are cut (the generated
+  // elements are never rescanned, pattern generate_interface)
+  db_highest_index( ELEMENT, max_element_old, VERSION_NORMAL );
+  if ( max_element_old<0 ) max_element_old = 0;
+  db_highest_index( NODE, max_node, VERSION_NORMAL );
+  if ( max_node<0 ) max_node = 0;
+  nel = max_element_old + 1;
+  long int max_gp = 6*nel + 8;
+
+  cut_iel   = get_new_int( nel );
+  cut_ncut  = get_new_int( nel );
+  cut_nplus = get_new_int( nel );
+  cut_iso   = get_new_int( nel );
+  cut_gid   = get_new_int( nel*4 );
+  cut_tri   = get_new_int( nel );
+  cut_nrm   = get_new_dbl( nel*3 );
+  for ( i=0; i<nel; i++ ) cut_iel[i] = -1;
+  gp_base = get_new_int( max_gp );
+  gp_dup  = get_new_int( max_gp );
+  double *gp_x = get_new_dbl( max_gp*3 );
+  double *gp_t = get_new_dbl( max_gp );
+  long int *gp_ea = get_new_int( max_gp );
+  long int *gp_eb = get_new_int( max_gp );
+  for ( i=0; i<max_gp; i++ ) { gp_base[i] = -1; gp_dup[i] = -1; }
+
+  // classify the tets against every triangle; a tet is cut at most once
+  // (the first triangle whose interior contains the cut polygon centroid)
+  for ( iv=0; iv<ntri; iv++ ) {
+    double *tri = &plane[9*iv];
+    double c0[3];
+    for ( d=0; d<3; d++ ) c0[d] = tri[d];
+    double e1[3], e2[3];
+    for ( d=0; d<3; d++ ) { e1[d] = tri[3+d]-tri[d]; e2[d] = tri[6+d]-tri[d]; }
+    nrm[0] = e1[1]*e2[2] - e1[2]*e2[1];
+    nrm[1] = e1[2]*e2[0] - e1[0]*e2[2];
+    nrm[2] = e1[0]*e2[1] - e1[1]*e2[0];
+    double nlen = sqrt( nrm[0]*nrm[0]+nrm[1]*nrm[1]+nrm[2]*nrm[2] );
+    if ( nlen < 1.e-12 ) {
+      pri( "Warning: degenerate triangle in mesh_interface_triangle_coordinate." );
+      continue;
+    }
+    for ( d=0; d<3; d++ ) nrm[d] /= nlen;
+    // in-plane basis u,v with v = n x u (right-handed, +n)
+    double uvec[3], vvec[3];
+    for ( d=0; d<3; d++ ) uvec[d] = e1[d];
+    array_normalize( uvec, 3 );
+    vvec[0] = nrm[1]*uvec[2] - nrm[2]*uvec[1];
+    vvec[1] = nrm[2]*uvec[0] - nrm[0]*uvec[2];
+    vvec[2] = nrm[0]*uvec[1] - nrm[1]*uvec[0];
+
+    for ( iel=0; iel<=max_element_old; iel++ ) {
+      if ( !db_active_index( ELEMENT, iel, VERSION_NORMAL ) ) continue;
+      if ( cut_iel[iel]>=0 ) continue;              // already cut
+      db( ELEMENT, iel, el, ddum, length, VERSION_NORMAL, GET );
+      if ( el[0]!=-TET4 || length!=1+4 ) continue;
+
+      // signed distance of each vertex to the plane (+1/-1)
+      double cside[4];
+      long int any_on_plane = 0;
+      nplus = 0; nminus = 0;
+      for ( ivert=0; ivert<4; ivert++ ) {
+        double *cpt = db_dbl( NODE_START_REFINED, el[1+ivert],
+          VERSION_NORMAL );
+        cside[ivert] = 0.;
+        for ( d=0; d<3; d++ ) cside[ivert] += nrm[d]*(cpt[d]-c0[d]);
+        if ( fabs(cside[ivert]) < 1.e-9 ) any_on_plane = 1;
+        if ( cside[ivert]>0. ) nplus++; else nminus++;
+      }
+      if ( any_on_plane ) continue;                 // vertex on the plane
+          if ( nplus==0 || nminus==0 ) continue;        // not crossed
+      ncut = nplus*nminus;                          // 3 (1+3) or 4 (2+2)
+
+      // cut points on the crossed edges (canonical tet4 edge order)
+      long int gid_list[4], ncut_local = 0;
+      for ( ivert=0; ivert<4; ivert++ ) {
+        for ( jvert=ivert+1; jvert<4; jvert++ ) {
+          if ( (cside[ivert]>0.)==(cside[jvert]>0.) ) continue;
+          double tpar = cside[ivert]/(cside[ivert]-cside[jvert]);
+          double *cA = db_dbl( NODE_START_REFINED, el[1+ivert],
+            VERSION_NORMAL );
+          double *cB = db_dbl( NODE_START_REFINED, el[1+jvert],
+            VERSION_NORMAL );
+          double xpt[3];
+          for ( d=0; d<3; d++ )
+            xpt[d] = cA[d] + tpar*(cB[d]-cA[d]);
+          long int gid = -1;
+          for ( i=0; i<ngp; i++ ) {
+            double dist = 0.;
+            for ( d=0; d<3; d++ ) {
+              double dif = gp_x[3*i+d]-xpt[d];
+              dist += dif*dif;
+            }
+            if ( dist<1.e-20 ) { gid = i; break; }
+          }
+          if ( gid<0 ) {
+            if ( ngp>=max_gp ) {
+              pri( "Error: too many cut points in generate_interface_triangle." );
+              exit(TN_EXIT_STATUS);
+            }
+            gid = ngp++;
+            for ( d=0; d<3; d++ ) gp_x[3*gid+d] = xpt[d];
+            gp_t[gid] = tpar;
+            gp_ea[gid] = el[1+ivert];
+            gp_eb[gid] = el[1+jvert];
+          }
+          gid_list[ncut_local++] = gid;
+        }
+      }
+      if ( ncut_local!=ncut ) continue;
+
+      // polygon centroid must lie inside the current triangle (barycentric
+      // test in the (u,v) plane; the boundary counts as inside)
+      double pol_c[3];
+      array_set( pol_c, 0., 3 );
+      for ( i=0; i<ncut; i++ )
+        for ( d=0; d<3; d++ ) pol_c[d] += gp_x[3*gid_list[i]+d]/ncut;
+      {
+        double pu = 0., pv = 0., t0u = 0., t0v = 0., t1u = 0., t1v = 0.,
+          t2u = 0., t2v = 0.;
+        for ( d=0; d<3; d++ ) {
+          pu += uvec[d]*pol_c[d]; pv += vvec[d]*pol_c[d];
+          t0u += uvec[d]*tri[d];  t0v += vvec[d]*tri[d];
+          t1u += uvec[d]*tri[3+d]; t1v += vvec[d]*tri[3+d];
+          t2u += uvec[d]*tri[6+d]; t2v += vvec[d]*tri[6+d];
+        }
+        double det = (t1u-t0u)*(t2v-t0v) - (t1v-t0v)*(t2u-t0u);
+        if ( fabs(det) < 1.e-24 ) continue;
+        // barycentric weights: P = t0 + wa*(t1-t0) + wb*(t2-t0)
+        double wa = ((pu-t0u)*(t2v-t0v) - (pv-t0v)*(t2u-t0u))/det;
+        double wb = ((t1u-t0u)*(pv-t0v) - (t1v-t0v)*(pu-t0u))/det;
+        double tol = 1.e-8;
+        if ( wa < -tol || wb < -tol || wa+wb > 1.+tol ) continue;
+      }
+
+      // register the cut tet for the deferred generation passes
+      cut_iel[n_tet_cuts] = iel;
+      cut_ncut[n_tet_cuts] = ncut;
+      cut_nplus[n_tet_cuts] = nplus;
+      cut_iso[n_tet_cuts] = -1;
+      if ( nplus==1 || nplus==3 ) {
+        for ( ivert=0; ivert<4; ivert++ ) {
+          if ( (nplus==1 && cside[ivert]>0.) ||
+               (nplus==3 && cside[ivert]<0.) ) { iso = ivert; break; }
+        }
+        cut_iso[n_tet_cuts] = iso;
+      }
+      for ( i=0; i<ncut; i++ ) cut_gid[n_tet_cuts*4+i] = gid_list[i];
+      for ( d=0; d<3; d++ ) cut_nrm[n_tet_cuts*3+d] = nrm[d];
+      cut_tri[n_tet_cuts] = iv;
+      n_tet_cuts++;
+    }
+  }
+  delete[] plane;
+
+  if ( n_tet_cuts==0 ) {
+    delete[] cut_iel; delete[] cut_ncut; delete[] cut_nplus; delete[] cut_iso;
+    delete[] cut_gid; delete[] cut_tri; delete[] cut_nrm;
+    delete[] gp_base; delete[] gp_dup; delete[] gp_x; delete[] gp_t;
+    delete[] gp_ea; delete[] gp_eb; delete[] tmp_element_dof; delete[] dworknei;
+    if ( swit ) pri( "Out routine GENERATE_INTERFACE_TRIANGLE." );
+    return;
+  }
+
+  // create the BASE node of every geometric cut point
+  for ( i=0; i<ngp; i++ ) {
+    max_node++;
+    gp_base[i] = max_node;
+    cut_create_node( gp_ea[i], gp_eb[i], gp_t[i], &gp_x[3*i], max_node );
+  }
+
+  // order a cut polygon counter-clockwise seen from +n (angle sort around
+  // the centroid, in the in-plane basis of its cutting triangle)
+  long int order[4];
+
+  // ---------- element generation passes (pattern generate_interface) ----
+  new_element = max_element_old;
+
+  // PASS 1: the zero-thickness interface elements (numbered first, tet order)
+  for ( i=0; i<n_tet_cuts; i++ ) {
+    long int ncut_i = cut_ncut[i];
+    long int *gids = &cut_gid[4*i];
+    for ( d=0; d<3; d++ ) pol_nrm[d] = cut_nrm[3*i+d];
+    // centroid
+    double pc[3]; array_set( pc, 0., 3 );
+    for ( ii=0; ii<ncut_i; ii++ )
+      for ( d=0; d<3; d++ ) pc[d] += gp_x[3*gids[ii]+d]/ncut_i;
+    // in-plane basis of THIS polygon (the order result is invariant under
+    // rotations of the basis, so any triangle of the plane works)
+    double uu[3], vv[3];
+    for ( d=0; d<3; d++ ) uu[d] = gp_x[3*gids[0]+d]-pc[d];
+    array_normalize( uu, 3 );
+    vv[0] = pol_nrm[1]*uu[2] - pol_nrm[2]*uu[1];
+    vv[1] = pol_nrm[2]*uu[0] - pol_nrm[0]*uu[2];
+    vv[2] = pol_nrm[0]*uu[1] - pol_nrm[1]*uu[0];
+    double ang[4];
+    for ( ii=0; ii<ncut_i; ii++ ) {
+      double pu = 0., pv = 0.;
+      for ( d=0; d<3; d++ ) {
+        pu += uu[d]*(gp_x[3*gids[ii]+d]-pc[d]);
+        pv += vv[d]*(gp_x[3*gids[ii]+d]-pc[d]);
+      }
+      ang[ii] = atan2( pv, pu );
+    }
+    for ( ii=0; ii<ncut_i; ii++ ) {
+      long int best = -1;
+      for ( j=0; j<ncut_i; j++ ) {
+        long int used = 0;
+        for ( k=0; k<ii; k++ ) if ( order[k]==j ) used = 1;
+        if ( !used && ( best<0 || ang[j]<ang[best] ) ) best = j;
+      }
+      order[ii] = best;
+    }
+
+    // ensure the duplicate node of every polygon point exists (created on
+    // demand, in the order the interface references its second side)
+    for ( ii=0; ii<ncut_i; ii++ ) {
+      long int gid = gids[order[ii]];
+      if ( gp_dup[gid]<0 ) {
+        max_node++;
+        gp_dup[gid] = max_node;
+        cut_create_node( gp_ea[gid], gp_eb[gid], gp_t[gid],
+          &gp_x[3*gid], max_node );
+      }
+    }
+
+    new_element++;
+    eln[0] = ( ncut_i==3 ) ? -PRISM6 : -HEX8;
+    length = 1 + 2*ncut_i;
+    for ( ii=0; ii<ncut_i; ii++ ) {
+      eln[1+ii]         = gp_dup[ gids[order[ii]] ];   // side 1 (-normal)
+      eln[1+ncut_i+ii]  = gp_base[ gids[order[ii]] ];  // side 2 (+normal)
+    }
+    db( ELEMENT, new_element, eln, ddum, length, VERSION_NORMAL, PUT );
+    db( ELEMENT_GROUP, new_element, &iface_group, ddum, len1,
+      VERSION_NORMAL, PUT );
+    db( ELEMENT_MACRO_GENERATE, new_element, &icontrol, ddum, len1,
+      VERSION_NORMAL, PUT );
+    db( ELEMENT_DOF, new_element, idum, tmp_element_dof, mnolnuknwn,
+      VERSION_NORMAL, PUT );
+    db( ELEMENT_DOF_INITIALISED, new_element, &zero, ddum, len1,
+      VERSION_NORMAL, PUT );
+    db( NONLOCAL_ELEMENT_INFO, new_element, idum, dworknei, length_nei,
+      VERSION_NORMAL, PUT );
+  }
+
+  // PASS 2: the tet4 halves (1+3 cuts; the piece at the isolated vertex)
+  for ( i=0; i<n_tet_cuts; i++ ) {
+    long int nplus_i = cut_nplus[i];
+    if ( nplus_i!=1 && nplus_i!=3 ) continue;
+    long int iso_i = cut_iso[i];
+    long int iel2 = cut_iel[i];
+    db( ELEMENT, iel2, el, ddum, length, VERSION_NORMAL, GET );
+    long int nn[4];
+    for ( ivert=0; ivert<4; ivert++ ) nn[ivert] = el[1+ivert];
+    // CCW+ ordering of the 3 cut points around the polygon centroid
+    long int o3[3];
+    {
+      double pc[3]; array_set( pc, 0., 3 );
+      for ( ii=0; ii<3; ii++ )
+        for ( d=0; d<3; d++ ) pc[d] += gp_x[3*cut_gid[i*4+ii]+d]/3.;
+      for ( d=0; d<3; d++ ) pol_nrm[d] = cut_nrm[3*i+d];
+      double uu[3], vv[3];
+      for ( d=0; d<3; d++ ) uu[d] = gp_x[3*cut_gid[i*4+0]+d]-pc[d];
+      array_normalize( uu, 3 );
+      vv[0] = pol_nrm[1]*uu[2] - pol_nrm[2]*uu[1];
+      vv[1] = pol_nrm[2]*uu[0] - pol_nrm[0]*uu[2];
+      vv[2] = pol_nrm[0]*uu[1] - pol_nrm[1]*uu[0];
+      double ang[3];
+      for ( ii=0; ii<3; ii++ ) {
+        double pu = 0., pv = 0.;
+        for ( d=0; d<3; d++ ) {
+          pu += uu[d]*(gp_x[3*cut_gid[i*4+ii]+d]-pc[d]);
+          pv += vv[d]*(gp_x[3*cut_gid[i*4+ii]+d]-pc[d]);
+        }
+        ang[ii] = atan2( pv, pu );
+      }
+      for ( ii=0; ii<3; ii++ ) {
+        long int best = -1;
+        for ( j=0; j<3; j++ ) {
+          long int used = 0;
+          for ( k=0; k<ii; k++ ) if ( o3[k]==j ) used = 1;
+          if ( !used && ( best<0 || ang[j]<ang[best] ) ) best = j;
+        }
+        o3[ii] = best;
+      }
+    }
+    long int element_group_old = 0;
+    db( ELEMENT_GROUP, iel2, &element_group_old, ddum, ldum,
+      VERSION_NORMAL, GET_IF_EXISTS );
+
+    // piece at the isolated vertex = tet4 { cut face, apex }. The face is
+    // ordered so its e1xe2 points TOWARDS the apex: CCW+ (base copies)
+    // when the isolated vertex is on the + side, reversed (dup copies)
+    // when on the - side. Positive reference volume by construction.
+    new_element++;
+    eln[0] = -TET4;
+    if ( nplus_i==1 ) {           // isolated vertex on the + side: base copies
+      eln[1] = gp_base[ cut_gid[i*4+o3[0]] ];
+      eln[2] = gp_base[ cut_gid[i*4+o3[1]] ];
+      eln[3] = gp_base[ cut_gid[i*4+o3[2]] ];
+    }
+    else {                        // isolated vertex on the - side: dup copies
+      eln[1] = gp_dup[ cut_gid[i*4+o3[2]] ];
+      eln[2] = gp_dup[ cut_gid[i*4+o3[1]] ];
+      eln[3] = gp_dup[ cut_gid[i*4+o3[0]] ];
+    }
+    eln[4] = nn[iso_i];
+    length = 1+4;
+    db( ELEMENT, new_element, eln, ddum, length, VERSION_NORMAL, PUT );
+    db( ELEMENT_GROUP, new_element, &element_group_old, ddum, len1,
+      VERSION_NORMAL, PUT );
+    db( ELEMENT_MACRO_GENERATE, new_element, &icontrol, ddum, len1,
+      VERSION_NORMAL, PUT );
+    db( ELEMENT_DOF, new_element, idum, tmp_element_dof, mnolnuknwn,
+      VERSION_NORMAL, PUT );
+    db( ELEMENT_DOF_INITIALISED, new_element, &zero, ddum, len1,
+      VERSION_NORMAL, PUT );
+    db( NONLOCAL_ELEMENT_INFO, new_element, idum, dworknei, length_nei,
+      VERSION_NORMAL, PUT );
+  }
+
+  // PASS 3: the prism6 halves (per tet: -side piece first, then +side)
+  for ( i=0; i<n_tet_cuts; i++ ) {
+    long int nplus_i = cut_nplus[i];
+    long int iel2 = cut_iel[i];
+    db( ELEMENT, iel2, el, ddum, length, VERSION_NORMAL, GET );
+    long int nn[4], side4[4];
+    // signed sides of the tet vertices; any cut point of the tet lies ON
+    // the plane and serves as the plane origin
+    double *porig = &gp_x[3*cut_gid[i*4+0]];
+    for ( ivert=0; ivert<4; ivert++ ) {
+      nn[ivert] = el[1+ivert];
+      double *cpt = db_dbl( NODE_START_REFINED, nn[ivert], VERSION_NORMAL );
+      double sd = 0.;
+      for ( d=0; d<3; d++ ) sd += cut_nrm[3*i+d]*(cpt[d]-porig[d]);
+      side4[ivert] = ( sd>0. ) ? +1 : -1;
+    }
+    long int element_group_old = 0;
+    db( ELEMENT_GROUP, iel2, &element_group_old, ddum, ldum,
+      VERSION_NORMAL, GET_IF_EXISTS );
+
+    // gid of the cut point per crossing edge (canonical edge scan order)
+    long int gid_e[4][4];
+    for ( ivert=0; ivert<4; ivert++ )
+      for ( jvert=0; jvert<4; jvert++ ) gid_e[ivert][jvert] = -1;
+    {
+      long int used = 0;
+      for ( ivert=0; ivert<4; ivert++ )
+        for ( jvert=ivert+1; jvert<4; jvert++ ) {
+          if ( side4[ivert]==side4[jvert] ) continue;
+          gid_e[ivert][jvert] = gid_e[jvert][ivert] = cut_gid[i*4+used];
+          used++;
+        }
+    }
+
+    if ( nplus_i==1 || nplus_i==3 ) {
+      // one prism6: the 3-vertex side of the split. prism =
+      // [ original face | cut tri ] when the isolated vertex is on the +
+      // side (the original face is the - side: dup cut tri), or
+      // [ cut tri | original face ] when the isolated vertex is on the -
+      // side (the original face is the + side: base cut tri). The slots
+      // connect each vertex to the cut point of ITS edge (straight-edged
+      // frustum: never twisted, possibly mirrored - fixed below).
+      long int iso_i2 = cut_iso[i];
+      long int oth[3]; long int noth = 0;
+      for ( ivert=0; ivert<4; ivert++ )
+        if ( ivert!=iso_i2 ) oth[noth++] = ivert;
+      new_element++;
+      eln[0] = -PRISM6;
+      if ( nplus_i==1 ) {
+        eln[1] = nn[oth[0]];
+        eln[2] = nn[oth[1]];
+        eln[3] = nn[oth[2]];
+        eln[4] = gp_dup[ gid_e[iso_i2][oth[0]] ];
+        eln[5] = gp_dup[ gid_e[iso_i2][oth[1]] ];
+        eln[6] = gp_dup[ gid_e[iso_i2][oth[2]] ];
+      }
+      else {
+        eln[1] = gp_base[ gid_e[iso_i2][oth[0]] ];
+        eln[2] = gp_base[ gid_e[iso_i2][oth[1]] ];
+        eln[3] = gp_base[ gid_e[iso_i2][oth[2]] ];
+        eln[4] = nn[oth[0]];
+        eln[5] = nn[oth[1]];
+        eln[6] = nn[oth[2]];
+      }
+      length = 1+6;
+      db( ELEMENT, new_element, eln, ddum, length, VERSION_NORMAL, PUT );
+      db( ELEMENT_GROUP, new_element, &element_group_old, ddum, len1,
+        VERSION_NORMAL, PUT );
+      db( ELEMENT_MACRO_GENERATE, new_element, &icontrol, ddum, len1,
+        VERSION_NORMAL, PUT );
+      db( ELEMENT_DOF, new_element, idum, tmp_element_dof, mnolnuknwn,
+        VERSION_NORMAL, PUT );
+      db( ELEMENT_DOF_INITIALISED, new_element, &zero, ddum, len1,
+        VERSION_NORMAL, PUT );
+      db( NONLOCAL_ELEMENT_INFO, new_element, idum, dworknei, length_nei,
+        VERSION_NORMAL, PUT );
+      cut_fix_prism_orientation( new_element );
+    }
+    else {
+      // 2+2 split: two prism6 pieces (-side piece first, then +side)
+      long int neg[2], pos[2], nneg = 0, npos = 0;
+      for ( ivert=0; ivert<4; ivert++ ) {
+        if ( side4[ivert]==-1 ) neg[nneg++] = ivert;
+        else                    pos[npos++] = ivert;
+      }
+      // -side piece: end triangles at the - vertices, dup cut points
+      new_element++;
+      eln[0] = -PRISM6;
+      eln[1] = nn[neg[0]];
+      eln[2] = gp_dup[ gid_e[neg[0]][pos[0]] ];
+      eln[3] = gp_dup[ gid_e[neg[0]][pos[1]] ];
+      eln[4] = nn[neg[1]];
+      eln[5] = gp_dup[ gid_e[neg[1]][pos[0]] ];
+      eln[6] = gp_dup[ gid_e[neg[1]][pos[1]] ];
+      length = 1+6;
+      db( ELEMENT, new_element, eln, ddum, length, VERSION_NORMAL, PUT );
+      db( ELEMENT_GROUP, new_element, &element_group_old, ddum, len1,
+        VERSION_NORMAL, PUT );
+      db( ELEMENT_MACRO_GENERATE, new_element, &icontrol, ddum, len1,
+        VERSION_NORMAL, PUT );
+      db( ELEMENT_DOF, new_element, idum, tmp_element_dof, mnolnuknwn,
+        VERSION_NORMAL, PUT );
+      db( ELEMENT_DOF_INITIALISED, new_element, &zero, ddum, len1,
+        VERSION_NORMAL, PUT );
+      db( NONLOCAL_ELEMENT_INFO, new_element, idum, dworknei, length_nei,
+        VERSION_NORMAL, PUT );
+      cut_fix_prism_orientation( new_element );
+      // +side piece: end triangles at the + vertices, base cut points
+      new_element++;
+      eln[0] = -PRISM6;
+      eln[1] = nn[pos[0]];
+      eln[2] = gp_base[ gid_e[pos[0]][neg[0]] ];
+      eln[3] = gp_base[ gid_e[pos[0]][neg[1]] ];
+      eln[4] = nn[pos[1]];
+      eln[5] = gp_base[ gid_e[pos[1]][neg[0]] ];
+      eln[6] = gp_base[ gid_e[pos[1]][neg[1]] ];
+      length = 1+6;
+      db( ELEMENT, new_element, eln, ddum, length, VERSION_NORMAL, PUT );
+      db( ELEMENT_GROUP, new_element, &element_group_old, ddum, len1,
+        VERSION_NORMAL, PUT );
+      db( ELEMENT_MACRO_GENERATE, new_element, &icontrol, ddum, len1,
+        VERSION_NORMAL, PUT );
+      db( ELEMENT_DOF, new_element, idum, tmp_element_dof, mnolnuknwn,
+        VERSION_NORMAL, PUT );
+      db( ELEMENT_DOF_INITIALISED, new_element, &zero, ddum, len1,
+        VERSION_NORMAL, PUT );
+      db( NONLOCAL_ELEMENT_INFO, new_element, idum, dworknei, length_nei,
+        VERSION_NORMAL, PUT );
+      cut_fix_prism_orientation( new_element );
+    }
+  }
+
+  // replace the originals: delete the cut tets
+  for ( i=0; i<n_tet_cuts; i++ ) {
+    long int iel2 = cut_iel[i];
+    if ( db_active_index( ELEMENT, iel2, VERSION_NORMAL ) )
+      delete_element( iel2, VERSION_NORMAL );
+  }
+
+  delete[] cut_iel; delete[] cut_ncut; delete[] cut_nplus; delete[] cut_iso;
+  delete[] cut_gid; delete[] cut_tri; delete[] cut_nrm;
+  delete[] gp_base; delete[] gp_dup; delete[] gp_x; delete[] gp_t;
+  delete[] gp_ea; delete[] gp_eb; delete[] tmp_element_dof; delete[] dworknei;
+
+  mesh_has_changed( VERSION_NORMAL );
+  if ( swit ) pri( "Out routine GENERATE_INTERFACE_TRIANGLE." );
+}
