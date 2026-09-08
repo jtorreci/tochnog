@@ -13,7 +13,9 @@
 4. Blast radius check: hypo1/2/4 byte-identical; corpus families unchanged.
 
 ## State
-- Milestone 1 (measurement): worktree build OK (suite 16/16 green). GNU baseline reproduced documented numbers. Pro re-measured for all 6 targets.
+- Milestone FINAL: 3 fixes landed (hypoplas.cc state feeding + epi write-back + structure gate; masin_visco.c e-update). hypo12 −282.46→−143.393 (Pro −143.4948, target ±0.001 — 94% closed); hypo7/9 −224.08→−230.79 (Pro −231.81, 0.44%); hypo8 −216.29→−217.67 (5.6%); hypo13 still crashes (visco kernel closure — full diagnosis in doc); hypo3 + hypo1-4 byte-identical; suite 16/16 after every change.
+- Full per-test table + remaining-residual diagnosis:
+  ProjectDocs/manual-developer/hypo_masin_convergence_devc.md
 
 ## Findings
 1. GNU baseline (worktree build, rc=1 all): hypo3 sigxx=−0.103436189421; hypo7 sigyy=−224.076947603; hypo8 sigyy=−216.29249576; hypo9 sigyy=−224.076947603; hypo12 sigyy=−282.457704737 (e=0.5906, physical); hypo13 crash 'iterative solver broke down' at t≈10390 with e→1.9375e14 (matches documented 1.9e14 overflow).
@@ -25,6 +27,12 @@
 6. ROOT CAUSE hypo12/13 (measured, categorical): the masin dispatch in hypoplas.cc feeds the kernel the NEWTON ITERATE (new_hisv[e/s], new_epi delta) instead of the step-start state (old_hisv/old_epi). Every extra Newton iteration re-integrates the state: measured step-1 void ratio GNU = 0.6 + trial-strain increment (−1.6e-4) + converged-strain increment (−1.19e-4) = 0.59972066, while Pro = one integration of the converged increment = 0.59987997 (= (1+e)*tr(deps_converged) exactly, with Pro's own eptxx=2.498e-5). Same for the intergranular delta: GNU's epi dof NEVER evolves (stuck at reset −1e-5, kernel-returned delta discarded), Pro's evolves (−1e-5 → +5.67e-6 in step 1). hypo12's frozen endgame (sigyy=−282.457704737 to 12 digits from t=0.004 on) is a downstream rigid-motion degenerate equilibrium of the corrupted state.
 7. ocr_apply gate (control_materi_plasti_hypo_masin_clay_ocr_apply) is DEAD in GNU (v4 probe: -yes identical to -no) but WORKS in Pro (v4: e0 recalculated via OCR 0.5999->0.805). Not exercised by the corpus targets (they run -no). Documented, not fixed.
 8. wolfersdorff hypo_() also reads new_hisv in place, but hypo1-4 are byte-identical targets calibrated to Pro 0.0002% — wolfersdorff path stays UNTOUCHED (neutrality).
+
+## Next (for the next dev on this family)
+- hypo13: obtain the Niemunis visco reference (umat_ab_visco-class) or probe-series the Pro creep closure; the pe/peplus degeneracy at eta=0 makes OCR a pure function of e with a ~100-power feedback.
+- hypo12/7/9 residue: compare RKF tolerance + perturbation tangent against Pro; wire group_materi_plasti_hypo_strain_intergranular into the basic masin kernel.
+- Fix the dead control_materi_plasti_hypo_masin_clay_ocr_apply gate (Pro honours it; measured).
+- hypo3: discard verification NOT re-run this sprint (time); documented coarse-step claim still stands unverified-by-Pro-refinement.
 
 ## Evidence paths
 - /tmp/opencode/tn-dev-hypok-probes/base/{hypo3,hypo7,hypo8,hypo9,hypo12,hypo13} (GNU baseline runs)
