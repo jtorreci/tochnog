@@ -7582,10 +7582,18 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   data_required[GROUP_MATERI_PLASTI_MOHR_COUL_DIRECT_INCREMENTAL_DRIVER_PSI] =
     GROUP_TYPE;
 
-  // Professional ISA initialisation records. They are stored as DOF metadata
-  // only; GNU has no ISA/Niemunis material implementation.
+  // Professional ISA records. They are stored as metadata only; GNU has no
+  // ISA/Niemunis material implementation.
   strcpy(name[MATERI_STRAIN_ISA_C], "materi_strain_isa_c");
   strcpy(name[MATERI_STRAIN_ISA_EACC], "materi_strain_isa_eacc");
+  strcpy(name[GROUP_MATERI_PLASTI_HYPO_STRAIN_ISA],
+    "group_materi_plasti_hypo_strain_isa");
+  type[GROUP_MATERI_PLASTI_HYPO_STRAIN_ISA] = DOUBLE_PRECISION;
+  // The Professional syntax fixture stores exactly two values (20., .017).
+  // Their constitutive meaning is deliberately not inferred here.
+  data_length[GROUP_MATERI_PLASTI_HYPO_STRAIN_ISA] = 2;
+  data_class[GROUP_MATERI_PLASTI_HYPO_STRAIN_ISA] = MATERI;
+  data_required[GROUP_MATERI_PLASTI_HYPO_STRAIN_ISA] = GROUP_TYPE;
 
   for ( idat=0; idat<MDAT; idat++ ) {
     if ( data_length[idat]<1 ) data_length[idat] = 1;

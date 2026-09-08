@@ -1626,9 +1626,10 @@ enum {
   GROUP_MATERI_PLASTI_MOHR_COUL_DIRECT_INCREMENTAL_DRIVER_C,
   GROUP_MATERI_PLASTI_MOHR_COUL_DIRECT_INCREMENTAL_DRIVER_PHI,
   GROUP_MATERI_PLASTI_MOHR_COUL_DIRECT_INCREMENTAL_DRIVER_PSI,
-  // Professional ISA initialisation records; GNU registration is parse-only.
+  // Professional ISA records; GNU registration is parse-only.
   MATERI_STRAIN_ISA_C,
   MATERI_STRAIN_ISA_EACC,
+  GROUP_MATERI_PLASTI_HYPO_STRAIN_ISA,
   LAST_DUMMY }; // keep LAST_DUMMY always the last one
 
 #define MDAT LAST_DUMMY+DATA_ITEM_SIZE  // reserve space for unknowns

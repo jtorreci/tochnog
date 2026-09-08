@@ -165,9 +165,12 @@ GOTCHAS (measured):
 
 ## 8. ISA syntax boundary (parse-only)
 
-`materi_strain_isa_c` and `materi_strain_isa_eacc` are registered so the
-Professional syntax input can be parsed and its declared DOFs can be stored.
-The GNU incremental driver does not read either record. This is intentionally
-not ISA/Niemunis constitutive support: no ISA state evolution, material dispatch,
-or execution behavior has been added. See
-`incremental_driver_isa_parse_only.md` for the measured Professional layout.
+`materi_strain_isa_c`, `materi_strain_isa_eacc`, and
+`group_materi_plasti_hypo_strain_isa` are registered so the Professional syntax
+input can be parsed and its declared DOFs/data can be stored. The group record is
+an indexed two-double MATERI record; the syntax fixture stores `20.0 0.017`, and
+no constitutive semantics are inferred from those values. The GNU incremental
+driver does not read any ISA record. This is intentionally not ISA/Niemunis
+constitutive support: no ISA state evolution, material dispatch, or execution
+behavior has been added. See `incremental_driver_isa_parse_only.md` for the
+measured Professional layout.

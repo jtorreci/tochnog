@@ -3,9 +3,11 @@
 Sprint: 4-dev parallel convergence (GNU tochnog vs Tochnog Professional 25-10-2023).
 Branch: `dev/incdrv` (from 19e995a). Worktree: /tmp/opencode/tn-dev-incdrv.
 
-## State (updated: ISA parse-only registration)
+## State (updated: complete ISA parse-only registration)
 - [x] Worktree verified clean @ 19e995a; HANDOFF created first (c12ad22).
-- [x] Registered `materi_strain_isa_c` and `materi_strain_isa_eacc` for
+- [x] Registered `materi_strain_isa_c`, `materi_strain_isa_eacc`, and
+          `group_materi_plasti_hypo_strain_isa` (two doubles: `20.0 0.017`,
+          with no inferred constitutive semantics) for
       Professional-compatible parsing and DOF storage only. This does **not**
       implement ISA/Niemunis constitutive behavior; the incremental driver
       deliberately leaves both records unused.
