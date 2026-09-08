@@ -17,6 +17,17 @@ tochnog.h, tochnog-mod.h) + HANDOFF.md + ProjectDocs/DIAG-SOLVE-MIXTO.md (append
       dyn8 704490 (all rc=1; target check exits even w/o check_target).
       Professional probes in /tmp/tn_dyn_pro/sweep (1-dof dt sweep + 2-elem bar
       x 3 load patterns). SEE §SCHEME below.
+- [x] M2b dynamic5/8 python replicas MATCH PRO to machine precision:
+      d5rep.py: node(0.5,0) disy t=5: -8.587735697e-05 == Pro print (10 digits).
+      NOTE: dynamic5.dat target band (-8.58577e-5+-1e-7) is STALE vs Pro 25-10-2023:
+      Pro's own value misses the band by 1.97e-7 (Pro only logs, exits 0; GNU exits 1).
+      dynamic8: sine = 1e-3*sin(2*pi*10*t) bottom disx; PRESCRIBED-u update happens
+      AFTER the solve (RHS uses u_p(t_n), not u_p(t_{n+1})); replica d8rep.py:
+      top(0.5,0) disx t=1: -9.985253776e-04 == Pro -9.985253775e-04 (target met, +-1e-7).
+      Mesh dynamic5/8: 5x5 NODES (4x4 quad4), x=0..1 step .25, y=0..-5 step 1.25,
+      1-based numbering bottom-row-first; loaded/target node = 1-based 23 (0.5,0).
+      Plane stress nu=0 (2D default, membrane=-NO -> nu=0 default => same as p.strain).
+      Lumped mass = row-sum of consistent (edge node 3.125 for rho=20).
 - [ ] M3 Implementation in allowed surfaces, targets green.
 - [ ] M4 Blast radius: ground*/undrained/large/matrix families identical.
 - [ ] M5 Docs (§17 append + manual-developer/dynamic_displacement_primary.md),
