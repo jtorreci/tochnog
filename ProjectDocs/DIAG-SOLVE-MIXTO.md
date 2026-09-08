@@ -1519,3 +1519,74 @@ Therefore dynamic8 is an observed solver/operator blocker, not a tolerance
 or target-file discrepancy. Any continuation must preserve DEV-C's
 hypoplas/masin-specific material paths and first establish a converged
 auxiliary continuum solve.
+
+## 20. Regression fix (2026-09-09, dev/fix-regressions) — the `-NO` truthiness bug in the DEV-B reference-configuration markers
+
+After integrating dev/{fmpc,hypok,dyn,incdrv} (merge d4afe0e) three stable
+corpus tests regressed with a STRUCTURALLY shifted sigma field
+(corpus run3, vs baseline 19e995a):
+
+- total1: `node_dof index 1 sigxx` target 0, actual 1 (`-total` memory,
+  RU decomposition: the initial sigxx=1 must rotate to sigyy).
+- update1: same signature (`-updated` lagrange with `mesh -follow_material`).
+- mpc7: `post_point_dof 10 sigxx` target 1 +-1e-8, actual 2.22e-16
+  (conforming patch tied with mpc_element_group; default memory -UPDATED).
+
+Attribution was done by binary A/B: the dev/dyn worktree binary (c7884da,
+pre-merge, clean tree except build time 9 min before the commit) reproduces
+ALL THREE failures byte-identically, while the dev/fmpc corpus result
+(/tmp/tn-dev-fmpc-corpus_result.txt) shows them PASSING. The cause is
+therefore exclusively the DEV-B reference-configuration content.
+
+Root cause (one bug, five sites): the new flag variables
+`disp_primary_reference` (general.cc), `disp_primary_ref` (elem.cc) and
+`truss_reference` (truss.cc) follow the Tochnog `-YES/-NO` keyword
+convention (`-NO` = -1001, `-YES` = -1002), but the new code tested them
+with C truthiness instead of comparison:
+
+- elem.cc: `if ( disp_primary_reference || ... )` — `-NO` (-1001) is a
+  truthy value, so the disjunction was ALWAYS true and `memory` was forced
+  to `-TOTAL_LINEAR` for every element of every model.
+- elem.cc: `if ( disp_primary_ref )` (reference-geometry `array_move`) —
+  always true: the current coordinates were always overwritten by
+  VERSION_NEW coordinates.
+- materi.cc: same always-true forcing of the constitutive `memory`.
+- truss.cc: same always-true `truss_reference = -YES` forcing, and
+  `if ( memory==-UPDATED && !truss_reference )` — `!(-1001)` is false, so
+  the `-UPDATED` direction update was never taken.
+
+Because `group_materi_memory` defaults to `-UPDATED` semantics in
+elem()/materi() when the record is absent, every model without an explicit
+`-total_linear` memory had its element assembly silently switched to the
+`-TOTAL_LINEAR` operator: initial-stress rotation (total1), updated
+lagrange (update1) and the mpc7 patch field (mpc7) all collapsed to the
+observed structural shifts. Models that DO declare `-total_linear`
+(default in practice for the linear corpus) were unaffected, which is why
+the blast radius stayed small.
+
+Fix (minimal, 5 comparisons across elem.cc/materi.cc/truss.cc): test the
+flags the way the rest of the code base does (`==-YES` / `!=-YES`):
+
+- elem.cc: `disp_primary_reference==-YES ||` and `disp_primary_ref==-YES`.
+- materi.cc: `disp_primary_reference==-YES ||`.
+- truss.cc: `disp_primary_reference==-YES ||` and
+  `memory==-UPDATED && truss_reference!=-YES`.
+
+so.cc's `disp_primary_gate()` needed no change: its booleans
+(materi_velocity/condif_temperature/... family) are 0/1 integers set in
+input.cc, and its keyword-flag comparisons already use `!=-YES`.
+
+Validation (build/tochnog after the fix, canonical sequential build):
+- total1, update1, mpc7: rc=0 (targets met).
+- Sprint gains preserved: dynamic1, dynamic2, mpc9, force17,
+  incremental_driver_syntax, oedometric_drained_mohr_coulomb,
+  triaxial_compression_drained_mohr_coulomb,
+  triaxial_compression_undrained_mohr_coulomb,
+  triaxial_compression_drained_hypo_intergranular_isa: all rc=0.
+- Focused blast radius: mpc8 rc=0; mpc6, dynamic5, dynamic8 keep their
+  PRE-EXISTING failures byte-identically to the pre-fix dev/dyn binary
+  (documented in §19: stale targets / auxiliary-solve breakdown — not
+  regressions of this fix).
+- scripts/build_safe.sh internal suite: 16/16 runs OK, rc=0.
+- Spot parity with run3: truss1/5/11, total3, large2, dynamic3/4 PASS;
+  update2/3 keep their pre-existing RUNFAIL.

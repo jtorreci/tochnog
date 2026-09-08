@@ -184,7 +184,7 @@ void materi( long int element, long int gr, long int name, long int nnol,
   // auxiliary pass explicitly, so it uses this same operator.
   db( MATERI_DYNAMIC, 0, idum, &disp_primary_factor, ldum,
     VERSION_NORMAL, GET_IF_EXISTS );
-  if ( disp_primary_reference ||
+  if ( disp_primary_reference==-YES ||
        ( materi_velocity && materi_displacement &&
          disp_primary_factor>=0. && disp_primary_factor<1. ) ) {
     memory = -TOTAL_LINEAR;
