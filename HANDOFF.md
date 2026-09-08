@@ -9,13 +9,46 @@ tochnog.h, tochnog-mod.h) + HANDOFF.md + ProjectDocs/DIAG-SOLVE-MIXTO.md (append
 ## State (update at every milestone)
 
 - [x] M0 Worktree verified clean @19e995a, branch dev/dyn. HANDOFF.md created.
-- [ ] M1 Build green (build_safe 16/16), baseline GNU runs of targets captured.
-- [ ] M2 Professional probes: α(s) dt-sweep re-derived; map variants discriminated
-      on multi-DOF probes; dynamic5/8 series replication check.
+- [x] M1 Build green (build_safe 16/16, rc=0, 4.9s incremental).
+      Needed: ln -s <mainrepo>/validation-suite validation-suite (gitignored).
+      GNU binary needs LD_LIBRARY_PATH=<wt>/external-downloads/numlib-runtime.
+- [x] M2 Professional scheme REVERSE-ENGINEERED (machine precision):
+      baseline GNU re-verified: dyn1 6.44767, dyn2 0.582799, dyn5 -8.47308e-5,
+      dyn8 704490 (all rc=1; target check exits even w/o check_target).
+      Professional probes in /tmp/tn_dyn_pro/sweep (1-dof dt sweep + 2-elem bar
+      x 3 load patterns). SEE §SCHEME below.
 - [ ] M3 Implementation in allowed surfaces, targets green.
 - [ ] M4 Blast radius: ground*/undrained/large/matrix families identical.
 - [ ] M5 Docs (§17 append + manual-developer/dynamic_displacement_primary.md),
       Engram observation, final commit.
+
+## THE SCHEME (definitive, machine-verified vs Professional binary)
+
+Prior findings PARTIALLY WRONG: doc §17.1 map (a_n = alpha(F-ku_{n-1})/m, u_n =
+u_{n-1}+dt v_n) is EXACT only for single-dof; the general scheme is:
+
+    r  = F_n - B^T sigma_t            (sigma frozen at start of step, f=0)
+    w1 = (M + dt^2 K)^-1 r
+    w2 = (M + dt^2 K)^-1 (M w1)
+    a  = 2 w1 - w2
+    v += dt a
+    u += dt v
+
+with M = lumped mass (row-sum), K = linear elastic stiffness (reference config).
+Equivalent: a = alpha(dt^2 M^-1 K) M^-1 r with alpha(x) = (1+2x)/(1+x)^2
+(the prior 16-point closed form CONFIRMED EXACT as the 1-dof case: alpha(s^2)
+with s^2 = dt^2 lambda of the generalized eigenproblem K phi = lambda M phi).
+alpha = 2 beta - beta^2 with beta = (I + dt^2 M^-1 K)^-1 -> the two solves.
+Eigenvalues of a_op M match alpha(dt^2 lambda_m) to 2e-5 (fit precision);
+commutator [a_op M, M^-1 K] = 3e-14 (machine zero); full-series simulation
+matches ALL probes at 5e-13 for dt in {0.05,0.1,0.2,0.5,1.0}, 3 load patterns.
+Stability: alpha in (0,1], alpha->1/2 as x->inf, spectral radius = 1
+(det=1 exactly): unconditionally stable, zero dissipation.
+node_dof print columns (1D, records dis/vel/acc/stress): [disx velx accx sigxx...].
+Prior /tmp/run_dynamic2.log was a GNU run (not Pro) - it poisoned the s=0.1 alpha
+point (0.990099 is GNU beta=1 map; Pro gives 0.99990197 = closed form).
+Evidence: /tmp/tn_dyn_pro/sweep/ (analyze/pooled/hyp/gamma_scan/mapfit/wq/
+modaltest .py + probe dirs), /tmp/tn_dyn_base/ (GNU baselines).
 
 ## Key measured facts (to re-verify, source §17 + /tmp/run_dynamic*.log)
 
