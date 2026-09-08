@@ -7582,6 +7582,11 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   data_required[GROUP_MATERI_PLASTI_MOHR_COUL_DIRECT_INCREMENTAL_DRIVER_PSI] =
     GROUP_TYPE;
 
+  // Professional ISA initialisation records. They are stored as DOF metadata
+  // only; GNU has no ISA/Niemunis material implementation.
+  strcpy(name[MATERI_STRAIN_ISA_C], "materi_strain_isa_c");
+  strcpy(name[MATERI_STRAIN_ISA_EACC], "materi_strain_isa_eacc");
+
   for ( idat=0; idat<MDAT; idat++ ) {
     if ( data_length[idat]<1 ) data_length[idat] = 1;
   }
@@ -7751,6 +7756,21 @@ void db_initialize( long int dof_type[], long int dof_label[] )
       else if ( n==5 ) strcpy( basename, "epiyz" );
       else if ( n==6 ) strcpy( basename, "epizz" );
     }
+    else if ( dof_type[iuknwn]==-MATERI_STRAIN_ISA_C ) {
+      // No global ISA index exists: this parse-only record is not consumed by
+      // a GNU material model, so reset from the preceding primary DOF type.
+      if ( ipuknwn==0 ||
+           dof_type[iuknwn-nder]!=-MATERI_STRAIN_ISA_C ) n = 0;
+      n++;
+      if      ( n==1 ) strcpy( basename, "episa_cxx" );
+      else if ( n==2 ) strcpy( basename, "episa_cxy" );
+      else if ( n==3 ) strcpy( basename, "episa_cxz" );
+      else if ( n==4 ) strcpy( basename, "episa_cyy" );
+      else if ( n==5 ) strcpy( basename, "episa_cyz" );
+      else if ( n==6 ) strcpy( basename, "episa_czz" );
+    }
+    else if ( dof_type[iuknwn]==-MATERI_STRAIN_ISA_EACC )
+      strcpy( basename, "episa_eacc" );
     else if ( dof_type[iuknwn]==-MATERI_STRAIN_PLASTI ) {
       if ( iuknwn==epp_indx ) n = 0;
       n++;

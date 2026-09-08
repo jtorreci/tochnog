@@ -3,8 +3,12 @@
 Sprint: 4-dev parallel convergence (GNU tochnog vs Tochnog Professional 25-10-2023).
 Branch: `dev/incdrv` (from 19e995a). Worktree: /tmp/opencode/tn-dev-incdrv.
 
-## State (updated: measurement milestone COMPLETE)
+## State (updated: ISA parse-only registration)
 - [x] Worktree verified clean @ 19e995a; HANDOFF created first (c12ad22).
+- [x] Registered `materi_strain_isa_c` and `materi_strain_isa_eacc` for
+      Professional-compatible parsing and DOF storage only. This does **not**
+      implement ISA/Niemunis constitutive behavior; the incremental driver
+      deliberately leaves both records unused.
 - [x] DECISIONES.md + SEGUIMIENTO notes read (updated_area context, family diagnosis).
 - [x] Pro algorithm enumerated from binary symbols (NOT just the old asm dumps —
       full re-disassembly with the Pro name-table extracted from initialise():
@@ -31,6 +35,7 @@ Branch: `dev/incdrv` (from 19e995a). Worktree: /tmp/opencode/tn-dev-incdrv.
 
 ## Evidence paths
 - Spec: ProjectDocs/manual-developer/incremental_driver.md
+- ISA parse-only boundary: ProjectDocs/manual-developer/incremental_driver_isa_parse_only.md
 - Disassembly: /tmp/incdrv_dis_v2/ (entry/orch/deformation/mcd/gflow/calcdef/deften
   + *_annot.txt annotated; pro_name_map.json = Pro record index->name)
 - Pro reference results: /tmp/incdrv_pro/{oedo,syntax}/, /tmp/incdrv_probes/

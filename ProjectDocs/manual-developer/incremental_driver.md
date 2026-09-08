@@ -162,3 +162,12 @@ GOTCHAS (measured):
 - psi/phi default from group_materi_plasti_mohr_coul_direct (phi, c, psi); the
   _incremental_driver_{c,phi,psi} tables are OPTIONAL overrides (none of the 4
   targets uses them).
+
+## 8. ISA syntax boundary (parse-only)
+
+`materi_strain_isa_c` and `materi_strain_isa_eacc` are registered so the
+Professional syntax input can be parsed and its declared DOFs can be stored.
+The GNU incremental driver does not read either record. This is intentionally
+not ISA/Niemunis constitutive support: no ISA state evolution, material dispatch,
+or execution behavior has been added. See
+`incremental_driver_isa_parse_only.md` for the measured Professional layout.

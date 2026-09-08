@@ -378,6 +378,20 @@ void input( )
         -MATERI_STRAIN_INTERGRANULAR, n*nder );
       array_set( &dof_scal_vec_mat[unknown_indx], -MATRIX, n*nder );
     }
+    else if ( !strcmp(str,"materi_strain_isa_c") ) {
+      // Professional syntax layout: six symmetric back-strain components.
+      // Registration is parse/storage only; no material law reads this DOF.
+      n = 6;
+      array_set( &dof_type[unknown_indx], -MATERI_STRAIN_ISA_C, n*nder );
+      array_set( &dof_scal_vec_mat[unknown_indx], -MATRIX, n*nder );
+    }
+    else if ( !strcmp(str,"materi_strain_isa_eacc") ) {
+      // Professional syntax layout: one accumulated-strain scalar.
+      // Registration is parse/storage only; no material law reads this DOF.
+      n = 1;
+      array_set( &dof_type[unknown_indx], -MATERI_STRAIN_ISA_EACC, n*nder );
+      array_set( &dof_scal_vec_mat[unknown_indx], -SCALAR, n*nder );
+    }
     else if ( !strcmp(str,"materi_plasti_incremental_substeps") ) {
       materi_plasti_incremental_substeps = 1;
       substeps_indx = unknown_indx;
