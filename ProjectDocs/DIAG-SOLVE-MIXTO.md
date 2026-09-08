@@ -1498,3 +1498,24 @@ two-line change in mpc.cc (the in_eg_range test, kept in the code).
   from 19e995a in /tmp/tn-dev-fmpc-base.
 - Blast radius (base vs new, value lines): mpc1-8, force1-15/18,
   post1-7 byte-identical; mpc9/force17 rc 1→0; force16 rc=1 both.
+
+## 19. Displacement-primary reference-configuration checkpoint (2026-09-08)
+
+The gated implementation described in §17 was linked from the six updated
+objects into `build/tochnog` and run against the saved Professional corpus
+outputs. It closes the one-degree-of-freedom references: dynamic1 and
+dynamic2 both return rc=0 with final `disx=0.0958890141894` (dynamic2 also
+has `velx=-0.474862109541`, `accx=0.856540800268`). This confirms that the
+reference truss force/tangent and the two-solve map execute as intended for
+that reduced case.
+
+The continuum cases remain incomplete. dynamic5 returns rc=1 with
+`disy=-8.500245769e-05`, only `8.74899278e-07` above the saved Professional
+value `-8.587735696826e-05`; the corpus target itself is stale as documented
+in §17/HANDOFF. dynamic8 returns rc=1 with `disx=-3.38705737383e-04` versus
+Professional `-9.985253775e-04`. Its auxiliary second Bi-CG solve repeatedly
+reports a non-converged breakdown and uses the deliberate `x2=0` fallback.
+Therefore dynamic8 is an observed solver/operator blocker, not a tolerance
+or target-file discrepancy. Any continuation must preserve DEV-C's
+hypoplas/masin-specific material paths and first establish a converged
+auxiliary continuum solve.

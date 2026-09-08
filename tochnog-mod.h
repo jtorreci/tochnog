@@ -1706,6 +1706,9 @@ extern long int eigen_active;
 extern long int *solve_global_local, solve_nlocal, solve_options_matrix_group;
 extern double *solve_b, *solve_x;
 
+// true only during the displacement-primary auxiliary reassembly (so.cc)
+extern long int disp_primary_reference;
+
   // for swit
 extern long int swit_element_stack, swit_node_stack;
 extern char swit_routine_stack[MSTACK][MCHAR]; // routines called

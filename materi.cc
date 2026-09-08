@@ -47,7 +47,7 @@ void materi( long int element, long int gr, long int name, long int nnol,
     old_cap1pc=0., new_cap1pc=0.,
     old_f=0., new_f=0., void_fraction=0., new_pres=0., old_substeps=0., new_substeps=0.,
     softvar_nonl=0, softvar_l=0, 
-    md_factor=1., // materi_dynamic/control_materi_dynamic momentum factor
+    md_factor=1., disp_primary_factor=1., // materi_dynamic/control_materi_dynamic momentum factor
     static_pressure=0., total_pressure=0., location=0.,
     J=0., ddum[1], direct_normal[MDIM], *force_gravity=NULL, 
     undr_p=0., undr_C=0., undr_buf[MPOINT],
@@ -179,6 +179,16 @@ void materi( long int element, long int gr, long int name, long int nnol,
     new_unknowns, &plasti_heatgeneration, ldum, GET_IF_EXISTS );
   db( GROUP_MATERI_MEMORY, gr, &memory, ddum, ldum,
     VERSION_NORMAL, GET_IF_EXISTS );
+  // Keep the elastic stress and tangent in the reference configuration for
+  // the f=0 displacement-primary map. solve() marks the temporary f=1
+  // auxiliary pass explicitly, so it uses this same operator.
+  db( MATERI_DYNAMIC, 0, idum, &disp_primary_factor, ldum,
+    VERSION_NORMAL, GET_IF_EXISTS );
+  if ( disp_primary_reference ||
+       ( materi_velocity && materi_displacement &&
+         disp_primary_factor>=0. && disp_primary_factor<1. ) ) {
+    memory = -TOTAL_LINEAR;
+  }
   dens = get_materi_density( element, gr, nnol, nodes, new_unknowns );
   force_gravity_calculate( force_gravity );
 
