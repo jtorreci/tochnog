@@ -1401,3 +1401,100 @@ corpus-wide blast-radius (every materi_velocity test).
 - The repo's materi_dynamic feature (f516a03) semantics are confirmed
   correct (f=0 freezes σ_t in the momentum); the blocker is the scheme,
   not the record. See manual-developer/materi_dynamic.md.
+
+## 18. The force16/force17/mpc9 residuals (2026-09-08, dev/fmpc) — mpc9/force17 CLOSED, force16 measured and bounded
+
+**Status**: mpc9 CLOSED (explicit-user-tie condensation), force17 CLOSED
+(_force/_inertia consumption), force16 DIAGNOSED (the Pro mechanism is
+measured exactly; the closure is blocked by the §16 map inconsistency at
+the mpc7-class targets). All numbers measured on the Professional
+25-10-2023 binary and the GNU 19e995a build.
+
+### 18.1 mpc9 — the explicit user tie is CONDENSED by the Professional (CLOSED)
+
+The corpus mpc9 (1D, bars k1 = 1 / k2 = 5/6, v1 = 0 and v4 = 1 Dirichlet,
+`mpc_node_number 10 3 -velx 2 -velx` factor 1) measured on the Pro:
+v = [0, 5/11, 5/11, 1], sigma = 5/11 at ALL nodes, reactions
++5/11 at node 1 and −5/11 at node 4 (the `bounda_time 20 1.` record is a
+Dirichlet velocity, not a force). That state is EXACTLY the static
+condensation of the tie: folding the slave row into the master row with
+the constraint substituted gives (k1+k2)·v2 − k2·v4 = b2 + b3 →
+(11/6)·v2 = 5/6 → v2 = 5/11, condensed diagonal K22+K33 = 11/6 = 1.833333
+(the killed prior attempt's number, confirmed). The GNU value-constrained
+semantics (slave row dropped) leaves v2 = 0, sigma = [0, 5/6] → RUNFAIL.
+
+FIX (mpc.cc only): the §16 tie-map eligibility gains the EXPLICIT USER
+mpc_node_number records whose slave dof AND all master dofs are free
+unknowns. Ties touching a directly bounded dof keep the value-constrained
+semantics — mpc1 (Dirichlet master) and mpc8 (bounda'd slave) measured
+byte-identical before/after. The eligible tie slaves join the per-pass
+bounded-flag clearing list (the list formerly reserved to the -veln
+records): without the clearing, the bounded flag set by pass k would
+disqualify the tie at pass k+1 and the elimination would be lost after
+the first iteration. Result: mpc9 rc=0, all four node_dof = 5/11 = the
+Pro (target ±1e-5).
+
+### 18.2 force17 — post_element_force_force/_inertia consumption (CLOSED)
+
+The force17 velocities already matched the Pro exactly
+([0.07447243528581, 0.06208101510514, 0]); the gap was the parse-only
+_force/_inertia switches. Measured Pro semantics: with either switch -yes
+the result is the sum over the group's elements of the LUMPED body-force
+shares of their nodes — share_i = dens·sum_ip wrule·2|jac|·N_ip(i)
+(initial geometry; = rho·L/2 per bar2 node) — with _force gating the
+gravity share (force_gravity_calculate) and _inertia the acceleration
+share (a from the previous-step velocity snapshot; post runs AFTER the
+step-close version copy, so the snapshot is kept across it; first call =
+zero initial velocities). force17: 10 − (0.5·v1 + 0.5·v2) =
+9.931723274805 = the Pro to 13 digits (and = node_rhside(3): the test
+design "all forces of element 1 collected as reaction in node 3"). The
+elastic internal forces of a complete element are self-equilibrated, so
+the result carries no elastic term. FIX (calcul_force.cc 1D branch only;
+force17 is the only corpus user of the switches): rc=0, both targets hit.
+
+### 18.3 force16 — the Pro condenses the mpc_element_group ties; bounded by the §16 map inconsistency (DIAGNOSIS)
+
+force16 (1D, two bars k = 1, rho = 1, gravity 9.81, inertia_apply,
+v1 = 1 Dirichlet, `mpc_element_group 10 2 1` generating the tie
+v3 = 1·v2) measured closed form on both binaries (momentum matrix
+M/dt + K, dt = 1, lumped m = 0.5 per node, gravity +4.905 per node):
+
+- GNU value-constrained (slave row dropped): 1.5·v2 = G + 1 →
+  v = [1, 3.93667, 3.93667, 5.89444], post = 2.93667.
+- Pro: 3·v2 − v4 = 2G + 1, 1.5·v4 − v2 = G →
+  v = [1, 6.0342857, 6.0342857, 7.2928571] (= 1056/175 in closed form),
+  post = sigma·A = 5.0342857.
+
+So the Professional CONDENSES the mpc_element_group-generated ties (like
+the explicit ones and the §16 mpc_linear_quadratic ones). A prototype of
+the eg-range condensation reproduced the Pro field EXACTLY (force16 rc=0,
+post = 5.03429) — and also closed mpc6 (rc=0; its target = the Pro's
+node-3 temp) and reproduced the Pro's mpc7 FIELD (sigma = 1 uniform,
+velx ~ 0) — but BROKE the mpc7 corpus target: the GNU staggered map with
+the elimination carries an intrinsic ~1e-8/iteration inconsistency
+(pre-existing §16 behaviour: mpc3 reaches 3e-9 after its 2 equilibrium
+iterations, 8-9 digits vs the Pro's 1e-17), the mpc7 target sits at
+±1e-8 with the same 2-iteration cap, and the condensed mpc7 misses by
+1.9e-9 (velx = −1.18944e-08 vs the Pro's 2.8e-17, post_node_rhside_ratio
+stagnated at 1). The §16 mpc3/4 closure tolerated the inconsistency
+(±1e-3 targets); mpc7 cannot.
+
+DECISION (sprint boundary): the mpc_element_group generated records are
+EXCLUDED from the elimination (they carry no marker, so the exclusion
+must be explicit — the explicit-user class would otherwise absorb them,
+measured). mpc7/mpc6 byte-identical, corpus clean; force16 stays RUNFAIL
+identical to the base. The closure needs the map inconsistency fixed
+FIRST (solve/element interplay: so.cc/materi.cc territory — the slave-s
+sigma feedback lag of the folded row), then the eg-range activation is a
+two-line change in mpc.cc (the in_eg_range test, kept in the code).
+
+### 18.4 Files / evidence
+
+- mpc.cc: the explicit-user eligibility (+slave-free/masters-free),
+  the eg-range exclusion, the generalized per-pass clearing list.
+- calcul_force.cc: the 1D _force/_inertia consumption (lumped shares).
+- Pro/GNU probes: /tmp/tn-dev-fmpc-pro (mpc9v, force16p, force17p,
+  mpc7q), /tmp/tn-dev-fmpc-gnu/{base,fix1,blast}, the base binary built
+  from 19e995a in /tmp/tn-dev-fmpc-base.
+- Blast radius (base vs new, value lines): mpc1-8, force1-15/18,
+  post1-7 byte-identical; mpc9/force17 rc 1→0; force16 rc=1 both.
