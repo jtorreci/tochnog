@@ -227,7 +227,7 @@ void hypoplasticity( long int element, long int gr,
     double mstress[6], mdstran[6], mstatev[16], mddsdde[36], mprops[29];
     double ocr=0., e0=0., mdt=0.;
     int merror=0, mtesting=0, i2, j2;
-    long int ocr_apply=-NO, hypo_masin_clay=0, hypo_masin_visco=0, diri=0;
+    long int ocr_apply=-NO, hypo_masin_clay=0, hypo_masin_visco=0, diri=0, struct_active=0;
     long int hypo_masin_visco_jm=0;
 
     if ( db_active_index( GROUP_MATERI_PLASTI_HYPO_MASIN_CLAY, gr, VERSION_NORMAL ) )
@@ -292,7 +292,9 @@ void hypoplasticity( long int element, long int gr,
       if ( db_active_index( GROUP_MATERI_PLASTI_HYPO_MASIN_CLAY_STRUCTURE, gr, VERSION_NORMAL ) ) {
         length_intergranularstrain = 3;
         db( GROUP_MATERI_PLASTI_HYPO_MASIN_CLAY_STRUCTURE, gr, idum, &mprops[7], length_intergranularstrain, VERSION_NORMAL, GET_AND_CHECK );
-      }
+        }
+        if ( db_active_index( GROUP_MATERI_PLASTI_HYPO_MASIN_CLAY_STRUCTURE, gr, VERSION_NORMAL ) )
+          struct_active = 1;
     }
     else {
         // basic model: optional structure
@@ -300,7 +302,9 @@ void hypoplasticity( long int element, long int gr,
         length_intergranularstrain = 3;
         db( GROUP_MATERI_PLASTI_HYPO_MASIN_STRUCTURE, gr, idum, &mprops[7], length_intergranularstrain, VERSION_NORMAL, GET_AND_CHECK );
           // mprops[7,8,9] = k, A, s_f
-      }
+        }
+        if ( db_active_index( GROUP_MATERI_PLASTI_HYPO_MASIN_STRUCTURE, gr, VERSION_NORMAL ) )
+          struct_active = 1;
     }
       // intergranular strain masin clay: R Ag ng mrat beta_r chi [theta]
       //   -> props[10]=R, [13]=A_g(G0), [14]=n_g, [15]=m_rat,
@@ -398,24 +402,34 @@ void hypoplasticity( long int element, long int gr,
       // intergranular strain delta for the masin kernels: statev[0..5]
       // (Voigt6). With the hyhis layout the delta lives in the epi dof
       // (materi_strain_intergranular), not in the history slots.
-      if ( materi_plasti_hypo_history && materi_strain_intergranular ) {
-        if ( new_epi ) {
-          mstatev[0] = new_epi[0*MDIM+0];
-          mstatev[1] = new_epi[1*MDIM+1];
-          mstatev[2] = new_epi[2*MDIM+2];
-          mstatev[3] = new_epi[0*MDIM+1];
-          mstatev[4] = new_epi[0*MDIM+2];
-          mstatev[5] = new_epi[1*MDIM+2];
-        }
-      }
-      else {
-        for ( i=0; i<6; i++ ) mstatev[i] = new_hisv[i];
-      }
-      mstatev[6]  = new_hisv[e_slot];   // void ratio
-      mstatev[7]  = 0.;                 // excess pore pressure
-      mstatev[12] = 0.;                 // dtsub (suggested substep, recomputed)
-      mstatev[13] = new_hisv[s_slot];   // sensitivity / structure
-      mstatev[15] = 0.;
+          if ( materi_plasti_hypo_history && materi_strain_intergranular ) {
+            // hyhis layout (hyhis0..7 = e, substep, ..., structure, ...):
+            // the delta lives in the epi dof (materi_strain_intergranular).
+            if ( old_epi ) {
+              mstatev[0] = old_epi[0*MDIM+0];
+              mstatev[1] = old_epi[1*MDIM+1];
+              mstatev[2] = old_epi[2*MDIM+2];
+              mstatev[3] = old_epi[0*MDIM+1];
+              mstatev[4] = old_epi[0*MDIM+2];
+              mstatev[5] = old_epi[1*MDIM+2];
+            }
+          }
+          else if ( materi_plasti_hypo_history ) {
+            // hyhis layout without intergranular dofs: there is no delta
+            // slot (hyhis0 is the void ratio, not delta[0]); intergranular
+            // strains are off for these groups (A_g=0).
+            for ( i=0; i<6; i++ ) mstatev[i] = 0.;
+          }
+          else {
+            // legacy materi_history_variables layout: hisv[0..5] = delta,
+            // hisv[6] = e, hisv[7] = sensitivity.
+            for ( i=0; i<6; i++ ) mstatev[i] = old_hisv[i];
+          }
+          mstatev[6]  = old_hisv[e_slot];   // void ratio
+          mstatev[7]  = 0.;                 // excess pore pressure
+          mstatev[12] = 0.;                 // dtsub (suggested substep, recomputed)
+          mstatev[13] = struct_active ? old_hisv[s_slot] : 0.;   // sensitivity / structure
+          mstatev[15] = 0.;
 
       db( DTIME, 0, idum, &mdt, ldum, VERSION_NEW, GET );
       // stress contribution by Masin hypoplasticity
@@ -435,7 +449,31 @@ void hypoplasticity( long int element, long int gr,
 
       // statev -> hisv (only e and s; the delta stays in the epi dof)
       new_hisv[e_slot] = mstatev[6];
-      new_hisv[s_slot] = mstatev[13];
+          if ( struct_active )
+            new_hisv[s_slot] = mstatev[13];
+          // write the integrated intergranular strain delta back to the dof
+          // the kernel input came from, so the (new-old)/dtime rate assembly
+          // and the next increment see the evolved delta (previously the
+          // kernel-returned delta was discarded and the epi dof stayed at its
+          // initial value forever).
+          if ( materi_plasti_hypo_history && materi_strain_intergranular ) {
+            // hyhis layout: write the integrated delta back to the epi dof.
+            if ( new_epi ) {
+              new_epi[0*MDIM+0] = mstatev[0];
+              new_epi[1*MDIM+1] = mstatev[1];
+              new_epi[2*MDIM+2] = mstatev[2];
+              new_epi[0*MDIM+1] = mstatev[3];
+              new_epi[1*MDIM+0] = mstatev[3];
+              new_epi[0*MDIM+2] = mstatev[4];
+              new_epi[2*MDIM+0] = mstatev[4];
+              new_epi[1*MDIM+2] = mstatev[5];
+              new_epi[2*MDIM+1] = mstatev[5];
+            }
+          }
+          else if ( !materi_plasti_hypo_history ) {
+            // legacy layout: delta lives in hisv[0..5].
+            for ( i=0; i<6; i++ ) new_hisv[i] = mstatev[i];
+          }
     }
 
       // Voigt6 -> 3x3 (row-major), symmetric

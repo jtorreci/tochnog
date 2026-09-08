@@ -1279,13 +1279,18 @@ void masin_niemunis_visco_umat(double *stress, double *statev,
     stress[i] += (Ldeps[i] - Lm*creep_rate)*dtime;
   }
 
-  /* void ratio evolution: de = (1+e)*tr(D) - visco volumetric part */
-  {
-    double trD = (deps[0]+deps[1]+deps[2])*dtime;
-    double trm_vis = (mhat[0]+mhat[1]+mhat[2])*creep_rate*dtime;
-    evoid += (1.0+evoid)*(trD - trm_vis);
-  }
-  statev[6] = evoid;
+      /* void ratio evolution: the total strain rate dstran/dtime already
+         contains the creep part (Niemunis: D = Dmech + Dvis), so the void
+         ratio tracks the total volume change. Subtracting the visco part
+         here double-counted it and, through pe = pe0*((1+e0)/(1+e))^(1/lambda)
+         with creep_rate = Dr*(1/OCR)^(1/Iv), built an exponential feedback
+         that ran e away (measured hypo13: e -> 1.9e14 with dt=10; the
+         Professional keeps e ~ 0.60 over the same t=1e5 run). */
+      {
+        double trD = (deps[0]+deps[1]+deps[2])*dtime;
+        evoid += (1.0+evoid)*trD;
+      }
+      statev[6] = evoid;
 
   /* tangent: use L (elastic-like), scaled by (1 - creep sensitivity) */
   for (i = 0; i < 36; i++) ddsdde[i] = L[i];
