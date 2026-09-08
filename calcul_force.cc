@@ -2271,6 +2271,17 @@ void post_element_force_calculate( void )
     *node_force=NULL, ddum3[MDIM];
   long int pef_normal=0;
 
+  // previous-step velocity dofs for the post_element_force _inertia
+  // share (a = (v - v_prev)/dtime). post_element_force_calculate runs
+  // AFTER the step-close db_version_copy (VERSION_NEW -> VERSION_NORMAL),
+  // so the begin-of-step values are no longer in the database: keep the
+  // last snapshot here. First call: zero initial velocities (the corpus
+  // _force/_inertia family starts from rest; force17 measured against
+  // the Professional 25-10-2023).
+  static double *pef_vel_prev = NULL;
+  static long int pef_vel_prev_len = 0;
+  static long int pef_vel_prev_init = 0;
+
   db_max_index( POST_ELEMENT_FORCE, max_pef, VERSION_NORMAL, GET );
   if ( max_pef<0 ) return;
   db_max_index( NODE, max_node, VERSION_NORMAL, GET );
@@ -2359,10 +2370,20 @@ void post_element_force_calculate( void )
     // force), the element on the -dir_n side otherwise (+f_elem at the
     // node = the same axial force); the axial force itself is
     // orientation-independent (f_elem at the element's high-coordinate
-    // end node = +N always, delete.cc 1D kinematics). The
-    // post_element_force_force/_inertia switches (manual 6.930/6.933)
-    // are parse-only in the GNU fork: the pure elastic axial force is
-    // reported (force17 stays a documented RUNFAIL for that reason).
+    // end node = +N always, delete.cc 1D kinematics).
+    // post_element_force_force/_inertia switches (manual 6.930/6.933):
+    // MEASURED consumption (Professional 25-10-2023, dev/fmpc): with
+    // either switch -yes the result is the sum over the group's elements
+    // of the LUMPED body-force shares of their nodes
+    //   share_i = dens * sum_ip wrule*2*|jac|*N_ip(i)  (= rho*L/2 for a
+    // bar2: the initial-geometry lumped mass the momentum assembles)
+    //   result += share_i * force_gravity.n   (_force)
+    //   result -= share_i * acceleration.n    (_inertia)
+    // force17 measures 10 - (0.5*v1 + 0.5*v2) = 9.931723274805 (13 digits
+    // exact). The elastic internal forces of a complete element are
+    // self-equilibrated (they cancel in the per-element nodal sum), so
+    // the Professional result carries no elastic term and the section
+    // device is not combined with the switches.
     if ( ndim==1 ) {
 
       double nx=0., center=0., axial=0., x_hi=0., fb_axial=0.;
@@ -2370,6 +2391,146 @@ void post_element_force_calculate( void )
       double hx[MPOINT], px[MPOINT];
 
       db_max_index( ELEMENT, max_elem, VERSION_NORMAL, GET );
+
+      // the _force/_inertia switches (measured consumption, see the
+      // branch comment): the lumped body-force shares of the group's
+      // elements replace the elastic section device
+      long int pef_force = 0, pef_inertia = 0;
+      db( POST_ELEMENT_FORCE_FORCE, ipef, &pef_force, ddum, ldum,
+        VERSION_NORMAL, GET_IF_EXISTS );
+      db( POST_ELEMENT_FORCE_INERTIA, ipef, &pef_inertia, ddum, ldum,
+        VERSION_NORMAL, GET_IF_EXISTS );
+      if ( pef_force==-YES || pef_inertia==-YES ) {
+
+        double dtime=1., fg[MDIM], g_n=0., share[MNOL];
+        long int geometry_given = 0;
+
+        force_gravity_calculate( fg );
+        g_n = fg[0]*dir_n[0];
+        db( DTIME, 0, idum, &dtime, ldum, VERSION_NORMAL,
+          GET_IF_EXISTS );
+        if ( dtime<=0. ) dtime = 1.;
+        geometry_given = db_active_index( POST_ELEMENT_FORCE_GEOMETRY,
+          ipef, VERSION_NORMAL );
+
+        for ( i=0; i<5; i++ ) res[i] = 0.;
+        for ( ielem=0; ielem<=max_elem; ielem++ ) {
+
+          if ( !db_active_index( ELEMENT, ielem, VERSION_NORMAL ) )
+            continue;
+
+          // the element number restriction (manual 6.932)
+          if ( db_active_index( POST_ELEMENT_FORCE_NUMBER, ipef,
+               VERSION_NORMAL ) ) {
+            long int nums[DATA_ITEM_SIZE], length_nums=0, ok_num=0;
+            db( POST_ELEMENT_FORCE_NUMBER, ipef, nums, ddum,
+              length_nums, VERSION_NORMAL, GET );
+            for ( i=0; i<length_nums; i++ )
+              if ( nums[i]==ielem ) ok_num = 1;
+            if ( !ok_num ) continue;
+          }
+
+          // the element group restriction (manual 6.931)
+          db( ELEMENT_GROUP, ielem, &element_group, ddum, ldum,
+            VERSION_NORMAL, GET_IF_EXISTS );
+          if ( ngrp>0 ) {
+            long int ok_grp = 0;
+            for ( igroup=0; igroup<ngrp; igroup++ )
+              if ( grp_list[igroup]==element_group ) ok_grp = 1;
+            if ( !ok_grp ) continue;
+          }
+
+          el = get_new_int(DATA_ITEM_SIZE);
+          db( ELEMENT, ielem, el, ddum, length_el, VERSION_NORMAL,
+            GET );
+          nnol = length_el - 1;
+          name = el[0];
+          center = 0.;
+          for ( inol=0; inol<nnol; inol++ ) {
+            node = el[1+inol];
+            coord = db_dbl( NODE, node, VERSION_NORMAL );
+            center += coord[0];
+            coords[inol*MDIM+0] = coord[0];
+          }
+          center /= nnol;
+
+          // post_element_force_normal -yes (manual 6.935)
+          if ( pef_normal==-YES && ( center-mid[0] )*dir_n[0]<0. ) {
+            delete[] el;
+            continue;
+          }
+
+          // the lumped mass share of each node: the same quadrature the
+          // element momentum integrated with (initial geometry,
+          // delete.cc kinematics: dV_ip = wrule*2*|jac|)
+          npol = ( name==-BAR2 ? 2 : 3 );
+          msf_element_rule( ielem, element_group, name, npol, nnol,
+            nper, iso, wrule );
+          array_set( share, 0., MNOL );
+          for ( ixi=0; ixi<nper[0]; ixi++ ) {
+            double jac=0.;
+            interpolation_polynomial( iso[0][ixi], npol, hx, px );
+            for ( jnol=0; jnol<nnol; jnol++ )
+              jac += px[jnol]*coords[jnol*MDIM+0];
+            if ( scalar_dabs( jac )<1.e-20 ) continue;
+            for ( inol=0; inol<nnol; inol++ )
+              share[inol] += wrule[0][ixi]*2.*scalar_dabs( jac )
+                * hx[inol];
+          }
+
+          // the density of the element (the same getter as the momentum
+          // assembly; dof array from the copied post-close state)
+          double *unkn = get_new_dbl( nnol*nuknwn );
+          for ( inol=0; inol<nnol; inol++ ) {
+            node = el[1+inol];
+            double *ndof = db_dbl( NODE_DOF, node, VERSION_NORMAL );
+            for ( i=0; i<nuknwn; i++ )
+              unkn[inol*nuknwn+i] = ndof[i];
+          }
+          double dens = get_materi_density( ielem, element_group, nnol,
+            &el[1], unkn );
+          delete[] unkn;
+
+          for ( inol=0; inol<nnol; inol++ ) {
+            node = el[1+inol];
+
+            // the geometry restriction (manual 6.929)
+            if ( geometry_given ) {
+              long int ge[DATA_ITEM_SIZE], ldum2=0, ok_g=0;
+              double factor_d=0.;
+              db( POST_ELEMENT_FORCE_GEOMETRY, ipef, ge, ddum,
+                ldum2, VERSION_NORMAL, GET );
+              geometry( node, ddum3, ge, ok_g, factor_d, ddum3, rdum,
+                ddum3, NODE_START_REFINED, PROJECT_EXACT,
+                VERSION_NORMAL );
+              if ( !ok_g ) continue;
+            }
+
+            double contrib = 0.;
+            if ( pef_force==-YES ) contrib += dens*g_n;
+            if ( pef_inertia==-YES ) {
+              double accel = 0.;
+              double *ndof = db_dbl( NODE_DOF, node, VERSION_NORMAL );
+              for ( idim=0; idim<ndim; idim++ ) {
+                long int iv = vel_indx + idim*nder;
+                double vprev = 0.;
+                if ( pef_vel_prev!=NULL && node*nuknwn+iv<pef_vel_prev_len )
+                  vprev = pef_vel_prev[node*nuknwn+iv];
+                accel += dir_n[idim] * ( ndof[iv] - vprev ) / dtime;
+              }
+              contrib -= dens*accel;
+            }
+            res[0] += share[inol]*contrib;
+          }
+          delete[] el;
+        }
+
+        for ( i=0; i<5; i++ ) res[i] *= fac;
+        length = 5;
+        db( POST_ELEMENT_FORCE_RESULT, ipef, idum, res, length,
+          VERSION_NORMAL, PUT );
+        continue;
+      }
 
       for ( i=0; i<5; i++ ) res[i] = 0.;
       for ( inod=0; inod<=max_node; inod++ ) {
@@ -2651,6 +2812,28 @@ void post_element_force_calculate( void )
     length = 5;
     db( POST_ELEMENT_FORCE_RESULT, ipef, idum, res, length,
       VERSION_NORMAL, PUT );
+  }
+
+  // refresh the previous-step velocity snapshot for the _inertia shares of
+  // the NEXT step (the current values become the previous ones when the
+  // next step closes; the first call keeps the zero initial state)
+  {
+    long int need = ( max_node+1 )*nuknwn;
+    if ( need>pef_vel_prev_len ) {
+      delete[] pef_vel_prev;
+      pef_vel_prev = get_new_dbl( need );
+      pef_vel_prev_len = need;
+    }
+    if ( !pef_vel_prev_init ) {
+      array_set( pef_vel_prev, 0., pef_vel_prev_len );
+      pef_vel_prev_init = 1;
+    }
+    for ( inod=0; inod<=max_node; inod++ ) {
+      if ( !db_active_index( NODE, inod, VERSION_NORMAL ) ) continue;
+      double *ndof = db_dbl( NODE_DOF, inod, VERSION_NORMAL );
+      for ( long int i2=0; i2<nuknwn; i2++ )
+        pef_vel_prev[inod*nuknwn+i2] = ndof[i2];
+    }
   }
 
   delete[] node_force;
