@@ -12,13 +12,31 @@ Started: 2026-02-06 (sprint slot 45 min corpus window; commands <10 min).
 - [x] Pro reference values measured (see Findings; evidence /tmp/tn-dev-fmpc-pro/).
 - [x] GNU baselines (all 3 rc=1; /tmp/tn-dev-fmpc-gnu/base/).
 - [x] Root causes decoded EXACTLY (closed-form matches, see Findings).
-- [ ] Implement mpc.cc eligibility extension (fixes force16 + mpc9).
-- [ ] Implement calcul_force.cc _force/_inertia consumption (fixes force17).
-- [ ] Blast radius: mpc*/force*/post* families before/after; mpc1/2/7/8 byte-identical.
-- [ ] build_safe suite 16/16 green.
-- [ ] Final commit + Engram observation.
+- [x] IMPLEMENTED mpc.cc: explicit-user-tie condensation (slave-free + all-masters-free) + per-pass clearing list + eg-range EXCLUSION (see the mpc7 note).
+- [x] IMPLEMENTED calcul_force.cc: _force/_inertia lumped-share consumption (1D branch).
+- [x] mpc9 rc=0 (5/11 at all nodes = Pro). force17 rc=0 (9.93172 = Pro to 13 digits; gravity-only probe = 10, inertia-only = −0.0682767).
+- [x] force16: stays RUNFAIL **byte-identical to base** — DIAGNOSED: the Pro condenses the mpc_element_group tie (closed form 1056/175; prototype reproduced the Pro field exactly and closed mpc6 too) but the GNU staggered map has a pre-existing ~1e-8/iteration inconsistency (mpc3 shows it; accepted at ±1e-3) and mpc7's ±1e-8 target with the same 2-iteration cap misses by 1.9e-9. The eg range is explicitly EXCLUDED (mpc7/mpc6 byte-identical); the future closure = fix the map inconsistency (so.cc/materi.cc) + activate in_eg_range (kept in mpc.cc).
+- [x] Blast radius: mpc1-8, force1-15/18, post1-7 byte-identical (base binary from 19e995a rebuilt in /tmp/tn-dev-fmpc-base; "CPU time" lines excluded as wall-clock noise); only mpc9/force17 rc 1→0.
+- [x] build_safe suite 16/16 (run manually against the main repo's validation-suite/test-2014 inputs — the worktree lacks the suite dir; command in the log below).
+- [x] Full corpus with the new binary: see /tmp/tn-dev-fmpc-corpus_result.txt (final summary line).
+- [x] Docs: DIAG-SOLVE-MIXTO §18 + manual-developer/force_mpc_residuals.md (new).
+- [ ] Engram observation (before returning).
 
-## Findings (measured, Pro 25-10-2023 vs GNU 19e995a)
+## Commits (dev/fmpc)
+
+1. e11f153 docs(dev-fmpc): initial HANDOFF
+2. 032c42e docs(dev-fmpc): measured Pro semantics + plan
+3. 3e91abd mpc(fmpc): condense explicit user ties with free slave/masters + clearing list
+4. e50e938 force(fmpc): consume post_element_force_force/_inertia (1D)
+5. docs(diag): §18 + 6. docs(dev): force_mpc_residuals.md
+6. (pending) final HANDOFF + any mpc.cc comment fixups
+
+## Next step (for the orchestrator)
+
+- Merge dev/fmpc. mpc9/force17 close; force16 documented (needs the
+  §16-map inconsistency fix in so.cc/materi.cc — DEV-B territory — then
+  the in_eg_range activation in mpc.cc; prototype measured: force16 rc=0,
+  mpc6 rc=0, mpc7 field = the Pro's).
 
 ### mpc9 (target post_element_force_result = 5/11 = 0.4545454545455)
 Pro state (full-dof probe): v=[0, 5/11, 5/11, 1], sigma=5/11 all nodes,
@@ -72,20 +90,6 @@ device applied at both ends).
   untouched. Only force17.dat uses post_element_force_force/_inertia in the
   whole corpus (grepped).
 
-## Next step
-
-Implement: (1) mpc.cc - extend tie-map eligibility to (a) the
-mpc_element_group generated range (index-range only, mirroring the lq class)
-and (b) explicit user records with slave-free AND all-masters-free; eligible
-user-tie slaves join the per-pass bounded-flag clearing list (list renamed
-mpc_veln_applied -> mpc_applied). (2) calcul_force.cc 1D branch - consume
-post_element_force_force/_inertia: accumulate the lumped gravity/inertia
-shares (share_i = sum_ip wrule*2|jac|*N_ip(i), initial coords; gravity via
-force_gravity_calculate + get_materi_density; inertia via cached previous-
-step velocity dofs, first call = zero initial velocities; dtime from db
-DTIME VERSION_NEW), flags gate the two contributions, elastic section
-device skipped when either flag active. Then build + A/B + blast radius.
-
 ## Evidence paths
 
 - Pro binary: /tmp/opencode/tn_prof/prof25/linux_64_bit_user_supplied/tochnog_user_supplied
@@ -96,9 +100,10 @@ device skipped when either flag active. Then build + A/B + blast radius.
 - Build log: /tmp/tn-dev-fmpc-build.log (binary OK; suite needs
   validation-suite/test-2014 which the worktree lacks - run the suite
   against another worktree's suite dir with MY binary).
-
-## Evidence paths
-
-- Pro binary: /tmp/opencode/tn_prof/prof25/linux_64_bit_user_supplied/tochnog_user_supplied
-- Corpus: /tmp/opencode/tn_prof/tochnog_version_02-08-2026/test/
-- Scratch: /tmp/tn-dev-fmpc-*
+- Suite 16/16 run: cd <main-repo>/validation-suite/test-2014 && timeout 120
+  <worktree>/build/tochnog t.dat for the 16 build_safe tests (log
+  /tmp/tn-dev-fmpc-suite_*.out).
+- Blast A/B: /tmp/tn-dev-fmpc-gnu/blast/{base,new} (base binary rebuilt
+  from 19e995a in /tmp/tn-dev-fmpc-base).
+- Corpus result: /tmp/tn-dev-fmpc-corpus_result.txt (harness
+  /tmp/tn-dev-fmpc-run_corpus.sh).
