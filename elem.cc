@@ -196,7 +196,7 @@ void elem( long int element, long int ithread )
   // auxiliary f=1 pass is marked by solve() while it is reassembled.
   db( MATERI_DYNAMIC, 0, idum, &disp_primary_factor, ldum,
     VERSION_NORMAL, GET_IF_EXISTS );
-  if ( disp_primary_reference ||
+  if ( disp_primary_reference==-YES ||
        ( materi_velocity && materi_displacement &&
          disp_primary_factor>=0. && disp_primary_factor<1. ) ) {
     disp_primary_ref = -YES;
@@ -452,7 +452,7 @@ void elem( long int element, long int ithread )
     db( NODE, inod, idum, &coord[inol*ndim], ldum, VERSION_NORMAL, GET );
     db( NODE, inod, idum, &new_coord[inol*ndim], ldum, VERSION_NEW, GET );
   }
-  if ( disp_primary_ref )
+  if ( disp_primary_ref==-YES )
     array_move( coord, new_coord, nnol*ndim );
 
   if ( db_active_index( OPTIONS_RESIDUEFACTOR, 0, VERSION_NORMAL ) )

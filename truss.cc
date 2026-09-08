@@ -94,7 +94,7 @@ void truss( long int element, long int element_group,
     // marked by solve() so it preserves this same operator.
     db( MATERI_DYNAMIC, 0, idum, &materi_dynamic_factor, ldum,
       VERSION_NORMAL, GET_IF_EXISTS );
-    if ( disp_primary_reference ||
+    if ( disp_primary_reference==-YES ||
          ( materi_velocity && materi_displacement &&
            materi_dynamic_factor>=0. && materi_dynamic_factor<1. ) )
       truss_reference = -YES;
@@ -132,7 +132,7 @@ void truss( long int element, long int element_group,
 
       // direction + deformations + stiffness
     initial_length = array_distance( &initial_coord[ndim], &initial_coord[0], work, ndim );
-    if      ( memory==-UPDATED && !truss_reference ) {
+    if      ( memory==-UPDATED && truss_reference!=-YES ) {
       array_subtract( &new_coord[ndim], &new_coord[0], truss_direction, ndim );
       if ( !array_normalize( truss_direction, ndim ) ) {
          pri( "Error: truss length zero for element ", element );
