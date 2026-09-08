@@ -1593,6 +1593,43 @@ enum {
   VELN,
   MPC_FROM_BOUNDA,
   BOUNDA_VELN_MESH_FINGERPRINT,
+  // INCREMENTAL_DRIVER FAMILY (DEV-A sprint, manual Professional 6.784):
+  // single-material-point constitutive driver (oedometric/triax/
+  // direct_shear/hydrostatic/pure_shear experiments). When the record is
+  // active the driver replaces the FEM analysis entirely (measured in the
+  // Professional 25-10-2023 binary: top() calls incremental_driver() right
+  // after easy(); it writes incremental_driver_result.txt and exits). The
+  // -incremental_driver_* experiment values below are name-only records
+  // (like -yes/-no). Ground truth + probes:
+  // ProjectDocs/manual-developer/incremental_driver.md. Enum append keeps
+  // existing values stable (tochnog.h and tochnog-mod.h stay in sync).
+  INCREMENTAL_NTIME,
+  INCREMENTAL_DRIVER,
+  INCREMENTAL_DRIVER_COMBINED,
+  INCREMENTAL_DRIVER_ELEMENT_GROUP,
+  INCREMENTAL_DRIVER_EXPERIMENT_FORCE_CONTROLLED,
+  INCREMENTAL_DRIVER_EXPERIMENT_TIME,
+  INCREMENTAL_DRIVER_INTERGRANULAR_STRAIN,
+  INCREMENTAL_DRIVER_ISA_STRAIN,
+  INCREMENTAL_DRIVER_LENGTH_X,
+  INCREMENTAL_DRIVER_LENGTH_Y,
+  INCREMENTAL_DRIVER_LENGTH_Z,
+  INCREMENTAL_DRIVER_OEDOMETRIC,
+  INCREMENTAL_DRIVER_PRESSURE,
+  INCREMENTAL_DRIVER_PURE_SHEAR,
+  INCREMENTAL_DRIVER_STRESS,
+  INCREMENTAL_DRIVER_DIRECT_SHEAR,
+  INCREMENTAL_DRIVER_TRIAX,
+  INCREMENTAL_DRIVER_VOID_RATIO,
+  INCREMENTAL_DRIVER_VOLUME_CONSTANT,
+  INCREMENTAL_DRIVER_HYDROSTATIC,
+  GROUP_MATERI_PLASTI_MOHR_COUL_DIRECT_INCREMENTAL_DRIVER_C,
+  GROUP_MATERI_PLASTI_MOHR_COUL_DIRECT_INCREMENTAL_DRIVER_PHI,
+  GROUP_MATERI_PLASTI_MOHR_COUL_DIRECT_INCREMENTAL_DRIVER_PSI,
+  // Professional ISA records; GNU registration is parse-only.
+  MATERI_STRAIN_ISA_C,
+  MATERI_STRAIN_ISA_EACC,
+  GROUP_MATERI_PLASTI_HYPO_STRAIN_ISA,
   LAST_DUMMY }; // keep LAST_DUMMY always the last one
 
 #define MDAT LAST_DUMMY+DATA_ITEM_SIZE  // reserve space for unknowns
@@ -1895,6 +1932,7 @@ void      equations_solve( long int n, double **a, long int *p, double *x,
             double *b, long int *f );
 void      error( long int task );
 void      exit_tn( long int print_database_type );
+void      incremental_driver_run( void );
 void      exit_tn_on_error( void );
 void      extrude( void );
 void      failure( double time_current );
