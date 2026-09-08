@@ -40,6 +40,10 @@ CALCUL_FORCE_OBJ=calcul_force.o
 DERIVED_SRC=derived.cc
 DERIVED_OBJ=derived.o
 
+#  ***********  INCREMENTAL_DRIVER (manual Professional 6.784) ******
+INCRE_SRC=incremental.cc
+INCRE_OBJ=incremental.o
+
 #  ***********  SANISAND (Dafalias & Manzari 2004) ******************
 SANISAND_SRC=sanisand.c
 SANISAND_OBJ=sanisand.o
@@ -371,6 +375,7 @@ tochnog: adjust.$(OBJ) area.$(OBJ) \
 	so.$(OBJ) so_bicg.$(OBJ) so_suplu.$(OBJ) \
 	   split.$(OBJ) \
 	spring.$(OBJ) stress.$(OBJ) interface.$(OBJ) \
+	$(INCRE_OBJ) \
 	$(SYS_FILE).$(OBJ) tendon.$(OBJ) time.$(OBJ) tn.$(OBJ) \
 	top.$(OBJ) truss.$(OBJ) \
 	umat.$(OBJ) unknown.$(OBJ) user.$(OBJ) \
@@ -698,6 +703,9 @@ spring.$(OBJ): spring.$(SRC_CPP) tochnog.h
 
 interface.$(OBJ): interface.$(SRC_CPP) tochnog.h
 	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)interface.$(SRC_CPP)
+
+incremental.$(OBJ): incremental.$(SRC_CPP) tochnog.h
+	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)incremental.$(SRC_CPP)
 
 stress.$(OBJ): stress.$(SRC_CPP) tochnog.h
 	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)stress.$(SRC_CPP)

@@ -7455,6 +7455,133 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   // needed, the ELEMENT record machinery is name-generic.
   strcpy(name[PRISM15],"prism15");
 
+  // INCREMENTAL_DRIVER FAMILY (DEV-A sprint, manual Professional 6.784).
+  // Registered at the end like the appended enum values (see tochnog.h).
+  // Ground truth + probes: ProjectDocs/manual-developer/incremental_driver.md.
+  strcpy(name[INCREMENTAL_NTIME],"incremental_ntime");
+  type[INCREMENTAL_NTIME] = INTEGER;
+  data_length[INCREMENTAL_NTIME] = 1;
+  no_index[INCREMENTAL_NTIME] = 1;
+
+  strcpy(name[INCREMENTAL_DRIVER],"incremental_driver");
+  type[INCREMENTAL_DRIVER] = INTEGER;
+  data_length[INCREMENTAL_DRIVER] = 1;
+
+  strcpy(name[INCREMENTAL_DRIVER_COMBINED],"incremental_driver_combined");
+  type[INCREMENTAL_DRIVER_COMBINED] = INTEGER;
+  data_length[INCREMENTAL_DRIVER_COMBINED] = DATA_ITEM_SIZE;
+  fixed_length[INCREMENTAL_DRIVER_COMBINED] = 0;
+
+  strcpy(name[INCREMENTAL_DRIVER_ELEMENT_GROUP],
+    "incremental_driver_element_group");
+  type[INCREMENTAL_DRIVER_ELEMENT_GROUP] = INTEGER;
+  data_length[INCREMENTAL_DRIVER_ELEMENT_GROUP] = 1;
+
+  strcpy(name[INCREMENTAL_DRIVER_EXPERIMENT_FORCE_CONTROLLED],
+    "incremental_driver_experiment_force_controlled");
+  type[INCREMENTAL_DRIVER_EXPERIMENT_FORCE_CONTROLLED] = INTEGER;
+  data_length[INCREMENTAL_DRIVER_EXPERIMENT_FORCE_CONTROLLED] = 1;
+
+  strcpy(name[INCREMENTAL_DRIVER_EXPERIMENT_TIME],
+    "incremental_driver_experiment_time");
+  type[INCREMENTAL_DRIVER_EXPERIMENT_TIME] = DOUBLE_PRECISION;
+  data_length[INCREMENTAL_DRIVER_EXPERIMENT_TIME] = DATA_ITEM_SIZE;
+  fixed_length[INCREMENTAL_DRIVER_EXPERIMENT_TIME] = 0;
+
+  strcpy(name[INCREMENTAL_DRIVER_INTERGRANULAR_STRAIN],
+    "incremental_driver_intergranular_strain");
+  type[INCREMENTAL_DRIVER_INTERGRANULAR_STRAIN] = DOUBLE_PRECISION;
+  data_length[INCREMENTAL_DRIVER_INTERGRANULAR_STRAIN] = 6;
+  fixed_length[INCREMENTAL_DRIVER_INTERGRANULAR_STRAIN] = 1;
+
+  strcpy(name[INCREMENTAL_DRIVER_ISA_STRAIN],"incremental_driver_isa_strain");
+  type[INCREMENTAL_DRIVER_ISA_STRAIN] = DOUBLE_PRECISION;
+  data_length[INCREMENTAL_DRIVER_ISA_STRAIN] = 6;
+  fixed_length[INCREMENTAL_DRIVER_ISA_STRAIN] = 1;
+
+  strcpy(name[INCREMENTAL_DRIVER_LENGTH_X],"incremental_driver_length_x");
+  type[INCREMENTAL_DRIVER_LENGTH_X] = DOUBLE_PRECISION;
+  data_length[INCREMENTAL_DRIVER_LENGTH_X] = 1;
+
+  strcpy(name[INCREMENTAL_DRIVER_LENGTH_Y],"incremental_driver_length_y");
+  type[INCREMENTAL_DRIVER_LENGTH_Y] = DOUBLE_PRECISION;
+  data_length[INCREMENTAL_DRIVER_LENGTH_Y] = 1;
+
+  strcpy(name[INCREMENTAL_DRIVER_LENGTH_Z],"incremental_driver_length_z");
+  type[INCREMENTAL_DRIVER_LENGTH_Z] = DOUBLE_PRECISION;
+  data_length[INCREMENTAL_DRIVER_LENGTH_Z] = 1;
+
+  strcpy(name[INCREMENTAL_DRIVER_OEDOMETRIC],"incremental_driver_oedometric");
+
+  strcpy(name[INCREMENTAL_DRIVER_PRESSURE],"incremental_driver_pressure");
+  type[INCREMENTAL_DRIVER_PRESSURE] = DOUBLE_PRECISION;
+  data_length[INCREMENTAL_DRIVER_PRESSURE] = 1;
+
+  strcpy(name[INCREMENTAL_DRIVER_PURE_SHEAR],"incremental_driver_pure_shear");
+
+  strcpy(name[INCREMENTAL_DRIVER_STRESS],"incremental_driver_stress");
+  type[INCREMENTAL_DRIVER_STRESS] = DOUBLE_PRECISION;
+  data_length[INCREMENTAL_DRIVER_STRESS] = 6;
+  fixed_length[INCREMENTAL_DRIVER_STRESS] = 1;
+
+  strcpy(name[INCREMENTAL_DRIVER_DIRECT_SHEAR],
+    "incremental_driver_direct_shear");
+
+  strcpy(name[INCREMENTAL_DRIVER_TRIAX],"incremental_driver_triax");
+
+  strcpy(name[INCREMENTAL_DRIVER_VOID_RATIO],"incremental_driver_void_ratio");
+  type[INCREMENTAL_DRIVER_VOID_RATIO] = DOUBLE_PRECISION;
+  data_length[INCREMENTAL_DRIVER_VOID_RATIO] = 1;
+
+  strcpy(name[INCREMENTAL_DRIVER_VOLUME_CONSTANT],
+    "incremental_driver_volume_constant");
+  type[INCREMENTAL_DRIVER_VOLUME_CONSTANT] = INTEGER;
+  data_length[INCREMENTAL_DRIVER_VOLUME_CONSTANT] = 1;
+
+  strcpy(name[INCREMENTAL_DRIVER_HYDROSTATIC],
+    "incremental_driver_hydrostatic");
+
+  // group_materi_plasti_mohr_coul_direct_incremental_driver_{c,phi,psi}
+  // (manual Professional 6.726 companion records): piecewise (gamma,value)
+  // tables for the driver's mohr_coul_direct. Registered for parsing; the
+  // driver reads the base group_materi_plasti_mohr_coul_direct values
+  // (none of the corpus incremental_driver targets uses the tables).
+  strcpy(name[GROUP_MATERI_PLASTI_MOHR_COUL_DIRECT_INCREMENTAL_DRIVER_C],
+    "group_materi_plasti_mohr_coul_direct_incremental_driver_c");
+  type[GROUP_MATERI_PLASTI_MOHR_COUL_DIRECT_INCREMENTAL_DRIVER_C] =
+    DOUBLE_PRECISION;
+  data_length[GROUP_MATERI_PLASTI_MOHR_COUL_DIRECT_INCREMENTAL_DRIVER_C] =
+    DATA_ITEM_SIZE;
+  fixed_length[GROUP_MATERI_PLASTI_MOHR_COUL_DIRECT_INCREMENTAL_DRIVER_C] = 0;
+  data_class[GROUP_MATERI_PLASTI_MOHR_COUL_DIRECT_INCREMENTAL_DRIVER_C] =
+    MATERI;
+  data_required[GROUP_MATERI_PLASTI_MOHR_COUL_DIRECT_INCREMENTAL_DRIVER_C] =
+    GROUP_TYPE;
+
+  strcpy(name[GROUP_MATERI_PLASTI_MOHR_COUL_DIRECT_INCREMENTAL_DRIVER_PHI],
+    "group_materi_plasti_mohr_coul_direct_incremental_driver_phi");
+  type[GROUP_MATERI_PLASTI_MOHR_COUL_DIRECT_INCREMENTAL_DRIVER_PHI] =
+    DOUBLE_PRECISION;
+  data_length[GROUP_MATERI_PLASTI_MOHR_COUL_DIRECT_INCREMENTAL_DRIVER_PHI] =
+    DATA_ITEM_SIZE;
+  fixed_length[GROUP_MATERI_PLASTI_MOHR_COUL_DIRECT_INCREMENTAL_DRIVER_PHI] = 0;
+  data_class[GROUP_MATERI_PLASTI_MOHR_COUL_DIRECT_INCREMENTAL_DRIVER_PHI] =
+    MATERI;
+  data_required[GROUP_MATERI_PLASTI_MOHR_COUL_DIRECT_INCREMENTAL_DRIVER_PHI] =
+    GROUP_TYPE;
+
+  strcpy(name[GROUP_MATERI_PLASTI_MOHR_COUL_DIRECT_INCREMENTAL_DRIVER_PSI],
+    "group_materi_plasti_mohr_coul_direct_incremental_driver_psi");
+  type[GROUP_MATERI_PLASTI_MOHR_COUL_DIRECT_INCREMENTAL_DRIVER_PSI] =
+    DOUBLE_PRECISION;
+  data_length[GROUP_MATERI_PLASTI_MOHR_COUL_DIRECT_INCREMENTAL_DRIVER_PSI] =
+    DATA_ITEM_SIZE;
+  fixed_length[GROUP_MATERI_PLASTI_MOHR_COUL_DIRECT_INCREMENTAL_DRIVER_PSI] = 0;
+  data_class[GROUP_MATERI_PLASTI_MOHR_COUL_DIRECT_INCREMENTAL_DRIVER_PSI] =
+    MATERI;
+  data_required[GROUP_MATERI_PLASTI_MOHR_COUL_DIRECT_INCREMENTAL_DRIVER_PSI] =
+    GROUP_TYPE;
+
   for ( idat=0; idat<MDAT; idat++ ) {
     if ( data_length[idat]<1 ) data_length[idat] = 1;
   }

@@ -25,6 +25,7 @@
 void top( void )
 {
 
+  long int incdrv_max=-1;
   long int inod=0, ielem=0, max=0, max_node=0, max_control=0, 
     start_control=0, length=0, iinc=0, ninc=0, 
     timestep_iterations=1, swit=0, swit_timestep=0, idat=0, 
@@ -86,6 +87,19 @@ void top( void )
     }
     length = 3;
     db( TOCHNOG_VERSION, 0, version, ddum, length, VERSION_NORMAL, PUT );
+  }
+
+  // incremental_driver (manual Professional 6.784): a constitutive driver
+  // that replaces the FEM analysis entirely. Measured in the Professional
+  // 25-10-2023 binary: top() calls incremental_driver() right after
+  // easy(); the driver writes incremental_driver_result.txt and the
+  // program exits (exit_tn inside). Mirror: run it and return; tn()
+  // proceeds to the normal exit_tn() cleanup (.dbs dump, target check).
+  // Ground truth: ProjectDocs/manual-developer/incremental_driver.md.
+  db_max_index( INCREMENTAL_DRIVER, incdrv_max, VERSION_NORMAL, GET );
+  if ( incdrv_max >= 0 ) {
+    incremental_driver_run();
+    return;
   }
 
   if ( materi_velocity ) {
