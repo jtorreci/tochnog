@@ -22,11 +22,17 @@
 4. hypo12: imposed eptyy identical (−t, vely=−1, 1000 steps×1e-4 to t=0.1); GNU e=0.5906/sigyy=−282.46 vs Pro e=0.5997/sigyy=−143.49 → integration/model-path divergence, not boundary-condition difference.
 5. hypo13: control_timestep 10./1e5 (end time 1e5); GNU dies at t≈10390 (10%) when e blows up → solver breakdown. Pro completes t=1e5 physically.
 
+6. ROOT CAUSE hypo12/13 (measured, categorical): the masin dispatch in hypoplas.cc feeds the kernel the NEWTON ITERATE (new_hisv[e/s], new_epi delta) instead of the step-start state (old_hisv/old_epi). Every extra Newton iteration re-integrates the state: measured step-1 void ratio GNU = 0.6 + trial-strain increment (−1.6e-4) + converged-strain increment (−1.19e-4) = 0.59972066, while Pro = one integration of the converged increment = 0.59987997 (= (1+e)*tr(deps_converged) exactly, with Pro's own eptxx=2.498e-5). Same for the intergranular delta: GNU's epi dof NEVER evolves (stuck at reset −1e-5, kernel-returned delta discarded), Pro's evolves (−1e-5 → +5.67e-6 in step 1). hypo12's frozen endgame (sigyy=−282.457704737 to 12 digits from t=0.004 on) is a downstream rigid-motion degenerate equilibrium of the corrupted state.
+7. ocr_apply gate (control_materi_plasti_hypo_masin_clay_ocr_apply) is DEAD in GNU (v4 probe: -yes identical to -no) but WORKS in Pro (v4: e0 recalculated via OCR 0.5999->0.805). Not exercised by the corpus targets (they run -no). Documented, not fixed.
+8. wolfersdorff hypo_() also reads new_hisv in place, but hypo1-4 are byte-identical targets calibrated to Pro 0.0002% — wolfersdorff path stays UNTOUCHED (neutrality).
+
 ## Evidence paths
 - /tmp/opencode/tn-dev-hypok-probes/base/{hypo3,hypo7,hypo8,hypo9,hypo12,hypo13} (GNU baseline runs)
 - /tmp/opencode/tn-dev-hypok-probes/mine/h12gnu,h13gnu (fresh GNU 12/13)
 - /tmp/opencode/tn-dev-hypok-probes/mine/h12pro2,h13pro2 (Pro 12/13, print_apply removed — measurement-only .dat edit)
 - prior complete Pro runs: /tmp/opencode/tn-dev-hypok-probes/{hypo3,hypo7,hypo8,hypo9}/pro/*.dbs
+
+- 1-step isolation probes: /tmp/opencode/tn-dev-hypok-probes/mine/p12/{v0,v1,v2,v4} x {gnu,pro}; debug dump p12/dbg (TOCHNOG_DEBUG=yes) showing 8 materi calls/step with trial+converged strains
 
 ## Next
 - hypo7/8/9: verify updated_linear strain-increment mechanism (GNU log strain vs Pro linear increments); minimal guarded fix in materi.cc if possible, else document elem.cc need.
