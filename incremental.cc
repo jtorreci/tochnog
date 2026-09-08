@@ -216,7 +216,8 @@ void incremental_driver_run( void )
   long int icomb=0, ncomb=-1, nexp_max=-1, iexp=0, jexp=0, nexp=0, gr=0,
     ntab=0, ntime=1000, axisymmetric=-NO, undrained=0, step=0, iter=0,
     force_controlled=-NO, volume_constant=-NO, ldum=0, length=0, idum[1],
-    *combined=NULL, types[DATA_ITEM_SIZE], len_type=0, itype=0, exp_type=0;
+    isa_max=-1, isa_syntax_only=0, *combined=NULL, types[DATA_ITEM_SIZE],
+    len_type=0, itype=0, exp_type=0;
   double ddum[1], *ttab=NULL, data[DATA_ITEM_SIZE],
     phi=0., c=0., psi=0., young=0., poisson=0., sigma[9], eps[9],
     sigma_new[9], sigma_tmp[9], deps[3], length_x=0., length_y=0.,
@@ -237,13 +238,29 @@ void incremental_driver_run( void )
     db( PRINT_GID_CALCULATION, 0, &gid, ddum, length, VERSION_NORMAL, PUT );
   }
 
+    // An active ISA metadata record is the explicit opt-in for this narrow
+    // validation-only path. It is intentionally global to the invocation:
+    // no experiment may be simulated when ISA/Niemunis data are present.
+  db_max_index( GROUP_MATERI_PLASTI_HYPO_STRAIN_ISA, isa_max,
+    VERSION_NORMAL, GET );
+  for ( gr=0; gr<=isa_max; gr++ )
+    if ( db_active_index( GROUP_MATERI_PLASTI_HYPO_STRAIN_ISA, gr,
+        VERSION_NORMAL ) ) isa_syntax_only = 1;
+
   ofstream out( "incremental_driver_result.txt" );
   if ( !out )
     incdrv_error( "cannot open incremental_driver_result.txt for writing." );
-  out << "Results are given for each timestep on a different row:\n";
-  out << "time stress_xx stress_xy stress_xz stress_yy stress_yz "
-         "stress_zz strain_xx strain_xy strain_xz strain_yy strain_yz "
-         "strain_zz pressure void_ratio\n";
+  if ( isa_syntax_only ) {
+    out << "syntax-only / ISA not executed\n";
+    out << "incremental_driver input was validated; this file contains no "
+           "computed results.\n";
+  }
+  else {
+    out << "Results are given for each timestep on a different row:\n";
+    out << "time stress_xx stress_xy stress_xz stress_yy stress_yz "
+           "stress_zz strain_xx strain_xy strain_xz strain_yy strain_yz "
+           "strain_zz pressure void_ratio\n";
+  }
 
     // auto-create combined experiments: combined[i] = {i} (measured Pro)
   db_max_index( INCREMENTAL_DRIVER_COMBINED, ncomb, VERSION_NORMAL, GET );
@@ -339,10 +356,12 @@ void incremental_driver_run( void )
     }
     pressure = pressure0;
 
-    out << "\n";
-    out << "results for combined experiment " << icomb << "\n";
-    out << "number of experiments " << nexp << "\n";
-    out << "number of timesteps " << ntime << "\n";
+    if ( !isa_syntax_only ) {
+      out << "\n";
+      out << "results for combined experiment " << icomb << "\n";
+      out << "number of experiments " << nexp << "\n";
+      out << "number of timesteps " << ntime << "\n";
+    }
 
     disp_base = 0.;
     time_start = 0.;
@@ -415,9 +434,12 @@ void incremental_driver_run( void )
         length_y = length_x;  // measured: y (theta) not needed in axisymmetric
       }
 
-        // material (only mohr_coul_direct in this sprint; umat pending,
-        // hypo needs the intergranular state plumbing of the hypo kernel)
-      if ( !incdrv_mc_parameters( gr, &phi, &c, &psi, &young, &poisson ) )
+        // Material dispatch is deliberately skipped in ISA syntax-only
+        // mode: GNU has no ISA/Niemunis implementation. The surrounding
+        // experiment records are still validated below, but no law is read
+        // or executed and no values are computed.
+      if ( !isa_syntax_only &&
+           !incdrv_mc_parameters( gr, &phi, &c, &psi, &young, &poisson ) )
         incdrv_error_long( "only group_materi_plasti_mohr_coul_direct (and "
           "umat, pending) groups are supported by the incremental_driver, "
           "experiment", iexp );
@@ -448,6 +470,16 @@ void incremental_driver_run( void )
         incdrv_error_long(
           "INCREMENTAL_DRIVER_VOLUME_CONSTANT is only available for triax experiments",
           iexp );
+
+        // All input/experiment validation above remains active, but ISA
+        // metadata makes this invocation validation-only. Do not enter any
+        // deformation, material, Newton, or output-row calculation.
+      if ( isa_syntax_only ) {
+        time_start = ttab[ntab-2];
+        delete [] ttab;
+        ttab = NULL;
+        continue;
+      }
 
       time_end = ttab[ntab-2];
       time_current = time_start;
@@ -558,8 +590,8 @@ void incremental_driver_run( void )
 
     delete [] combined;
     combined = NULL;
-    out << "\n";
+    if ( !isa_syntax_only ) out << "\n";
   }
-  out << "\n";
+  if ( !isa_syntax_only ) out << "\n";
   out.close();
 }

@@ -3,14 +3,22 @@
 Sprint: 4-dev parallel convergence (GNU tochnog vs Tochnog Professional 25-10-2023).
 Branch: `dev/incdrv` (from 19e995a). Worktree: /tmp/opencode/tn-dev-incdrv.
 
-## State (updated: complete ISA parse-only registration)
+## State (updated: ISA syntax-only incremental_driver exit)
 - [x] Worktree verified clean @ 19e995a; HANDOFF created first (c12ad22).
 - [x] Registered `materi_strain_isa_c`, `materi_strain_isa_eacc`, and
-          `group_materi_plasti_hypo_strain_isa` (two doubles: `20.0 0.017`,
-          with no inferred constitutive semantics) for
-      Professional-compatible parsing and DOF storage only. This does **not**
-      implement ISA/Niemunis constitutive behavior; the incremental driver
-      deliberately leaves both records unused.
+      `group_materi_plasti_hypo_strain_isa` (two doubles: `20.0 0.017`,
+      with no inferred constitutive semantics) for Professional-compatible
+      parsing and DOF storage.
+- [x] An active `group_materi_plasti_hypo_strain_isa` makes the GNU
+      `incremental_driver` validation-only: it validates the driver records,
+      writes `syntax-only / ISA not executed` to its result file, and returns
+      success without material dispatch, physics, or computed rows. This is
+      **not** general hypo/ISA/Niemunis support and the file must never be
+      treated as a simulation result.
+- [x] Focused validation: syntax fixture rc=0 with the marker and two result
+      lines; oedometric plus drained/undrained Mohr-Coulomb fixtures rc=0
+      (1008 lines each). The Professional syntax result was measured for output
+      safety (3013 lines, 870372 bytes); value equality is not required.
 - [x] DECISIONES.md + SEGUIMIENTO notes read (updated_area context, family diagnosis).
 - [x] Pro algorithm enumerated from binary symbols (NOT just the old asm dumps —
       full re-disassembly with the Pro name-table extracted from initialise():
@@ -47,4 +55,4 @@ Branch: `dev/incdrv` (from 19e995a). Worktree: /tmp/opencode/tn-dev-incdrv.
 
 ## Commits
 - c12ad22 docs(incdrv): create DEV-A HANDOFF (milestone 0: sprint start)
-- (next) docs(incdrv): measured Pro algorithm spec
+- (next) feat(incdrv): ISA syntax-only validation exit

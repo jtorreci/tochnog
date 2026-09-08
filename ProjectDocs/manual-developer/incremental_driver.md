@@ -163,14 +163,25 @@ GOTCHAS (measured):
   _incremental_driver_{c,phi,psi} tables are OPTIONAL overrides (none of the 4
   targets uses them).
 
-## 8. ISA syntax boundary (parse-only)
+## 8. ISA syntax-only boundary
+
+> **No ISA/Niemunis simulation support.** An `incremental_driver` invocation
+> with an active `group_materi_plasti_hypo_strain_isa` record is validation-only.
+> It must never be presented as computed material behavior or as a substitute for
+> hypo/ISA support.
 
 `materi_strain_isa_c`, `materi_strain_isa_eacc`, and
 `group_materi_plasti_hypo_strain_isa` are registered so the Professional syntax
 input can be parsed and its declared DOFs/data can be stored. The group record is
 an indexed two-double MATERI record; the syntax fixture stores `20.0 0.017`, and
-no constitutive semantics are inferred from those values. The GNU incremental
-driver does not read any ISA record. This is intentionally not ISA/Niemunis
-constitutive support: no ISA state evolution, material dispatch, or execution
-behavior has been added. See `incremental_driver_isa_parse_only.md` for the
-measured Professional layout.
+no constitutive semantics are inferred from those values.
+
+When any active ISA group metadata record is present, GNU still validates the
+incremental-driver experiment records, but does not read a material law or enter
+deformation, Newton, or output-row calculations. It writes
+`incremental_driver_result.txt` with the explicit marker
+`syntax-only / ISA not executed` and no computed rows, then returns rc=0. The
+marker is intentionally global to the driver invocation: an ISA metadata record
+cannot coexist with a partial numerical result. Normal Mohr-Coulomb driver runs
+are unchanged. See `incremental_driver_isa_parse_only.md` for the measured
+Professional layout and limitation.
