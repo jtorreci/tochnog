@@ -24,6 +24,12 @@
 #define EPS_LHSIDE 1.e-8
 #define EPS_PECLET 1.e-10
 
+// Set only while solve() reassembles the full-stiffness auxiliary system of
+// the displacement-primary transient. Element code also recognizes f<1 on
+// the normal pass; this marker preserves that reference configuration while
+// solve() temporarily sets MATERI_DYNAMIC to 1 for the auxiliary pass.
+long int disp_primary_reference = -NO;
+
 void general( long int element, long int name, long int nnol, long int element_group, 
   long int type, long int nodes[], double coord_ip[], double old_dof[], double new_dof[], 
   double old_unknowns[], double new_unknowns[], 

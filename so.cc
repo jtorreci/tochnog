@@ -112,6 +112,51 @@ static long int sparse_list_add( int **inz, double **solve_A,
 #define EPS_SOL 1.e15
 #define INITIAL_SIZE 100
 
+// DEV-B displacement-primary gate (materi_dynamic < 1): deliberately
+// conservative. Only the plain mechanical transient of the dynamic corpus
+// family (elastic material, inertia_apply -yes, displacement+velocity
+// dofs, iterative Bi-CG solver) may take the new scheme; any nonlinear or
+// multi-physics extra keeps the historic f-blended path untouched. The
+// Professional was measured to run exactly this branch for
+// materi_dynamic < 1 (see manual-developer/dynamic_displacement_primary.md).
+static long int disp_primary_gate( long int task )
+{
+  long int ldum_gate = 0, idum_gate[1], maxg = -1;
+  double f_gate = 0., ddum_gate[1];
+  if ( task!=-MATRIX_ITERATIVE_BICG ) return 0;
+  if ( !db_active_index( MATERI_DYNAMIC, 0, VERSION_NORMAL ) ) return 0;
+  db( MATERI_DYNAMIC, 0, idum_gate, &f_gate, ldum_gate,
+    VERSION_NORMAL, GET_IF_EXISTS );
+  if ( f_gate<0. || f_gate>=1. ) return 0;
+  // the per-control-step factor variant is kept on the historic path
+  if ( db_active_index( CONTROL_MATERI_DYNAMIC, 0, VERSION_NORMAL ) ) return 0;
+  if ( !materi_velocity || !materi_displacement ) return 0;
+  {
+    long int options_inertia_gate = -NO;
+    db( OPTIONS_INERTIA, 0, &options_inertia_gate, ddum_gate, ldum_gate,
+      VERSION_NORMAL, GET_IF_EXISTS );
+    if ( options_inertia_gate!=-YES ) return 0;
+  }
+  // multi-physics / nonlinear exclusions
+  if ( condif_temperature || groundflow_pressure || materi_damage ||
+       materi_diffusion || materi_maxwell_stress || materi_history_variables ||
+       wave_scalar || wave_fscalar || beam_rotation ) return 0;
+  if ( materi_strain_plasti || materi_plasti_kappa ||
+       materi_plasti_hypo_history || materi_plasti_camclay_history ||
+       materi_strain_plasti_hardsoil || materi_strain_plasti_cap ||
+       materi_strain_plasti_compression || materi_strain_plasti_diprisco ||
+       materi_strain_plasti_druckprag || materi_plasti_f ||
+       materi_plasti_f_nonlocal || materi_plasti_softvar_local ||
+       materi_plasti_softvar_nonlocal ) return 0;
+  db_highest_index( GROUP_MATERI_VISCOSITY, maxg, VERSION_NORMAL );
+  if ( maxg>=0 ) return 0;
+  db_highest_index( GROUP_MATERI_DAMPING, maxg, VERSION_NORMAL );
+  if ( maxg>=0 ) return 0;
+  db_highest_index( MPC_NODE_NUMBER, maxg, VERSION_NORMAL );
+  if ( maxg>=0 ) return 0;
+  return 1;
+}
+
 void solve( long int task )
 
 {
@@ -245,6 +290,171 @@ void solve( long int task )
           }
           bicg_solver = 1;
 	}
+
+  // ---------------------------------------------------------------------
+  // DEV-B displacement-primary transient branch (materi_dynamic < 1,
+  // sprint 2026-09-08; design ProjectDocs/DIAG-SOLVE-MIXTO.md section 18
+  // and manual-developer/dynamic_displacement_primary.md).
+  //
+  // MEASURED Professional semantics for materi_dynamic < 1 (reverse-
+  // engineered from the 25-10-2023 binary, validated to machine precision
+  // on 1-DOF dt-sweeps and 2D quad4 probes):
+  //   r  = F - B^T sigma_t            (stress frozen at t for f = 0)
+  //   w1 = (M + dt^2 K)^-1 r
+  //   w2 = (M + dt^2 K)^-1 (M w1)
+  //   a  = 2 w1 - w2                  (= alpha(dt^2 M^-1 K) M^-1 r with
+  //                                    alpha(x) = (1+2x)/(1+x)^2)
+  //   v += dt a;  u += dt v           (symplectic kinematics)
+  // The momentum matrix keeps the FULL elastic stiffness (M/dt + dt*K)
+  // while the right-hand-side stress keeps the (1-f)*sigma_t +
+  // f*sigma_{t+dt} blend. The two solves implement the alpha operator
+  // without an eigendecomposition (alpha = 2b - b^2 with
+  // b = (I + dt^2 M^-1 K)^-1).
+  //
+  // Implementation: at iteration 1 of a gated step the MATERI_DYNAMIC
+  // record is temporarily flipped to 1 and element_loop() re-assembles
+  // the momentum system with the full stiffness; solving that system
+  // gives x1 = w1 (the equilibrium loop solves for the CORRECTION to the
+  // iterate: node_dof_new += solve_b). A second solve with right-hand
+  // side M*x1 gives x2, and the returned correction is
+  //   dv = 2*x1 - x2   (= dt * a).
+  // At iterations >= 2 the scheme is a one-shot map: solve() returns
+  // without a correction. The gate (disp_primary_gate) is deliberately
+  // conservative: only the plain mechanical transient (elastic,
+  // inertia_apply -yes, Bi-CG, no plasticity/damping/viscosity/flow/
+  // heat/damage extras) takes the new branch; everything else keeps the
+  // historic path untouched.
+  // ---------------------------------------------------------------------
+  long int disp_primary_pass = 0;
+  double disp_primary_f = 1.;
+  double dtime_disp = 0.;
+  double *disp_mass_dt = NULL, *disp_rhside = NULL, *disp_x1 = NULL,
+    *disp_x2 = NULL;
+  if ( disp_primary_gate( task ) ) {
+    long int it_dp = 0, len_dp = 0, idum_dp[1];
+    double ddum_dp[1];
+    db( NUMBER_ITERATIONS, 0, idum_dp, ddum_dp, len_dp, VERSION_NEW, GET );
+    it_dp = idum_dp[0];
+    if ( it_dp>=2 ) {
+      // The displacement-primary scheme is a ONE-SHOT map per step: the
+      // full correction was applied at iteration 1. Later equilibrium
+      // iterations must not add anything (their rhside is the frozen-
+      // sigma residual of the NON-equilibrated scheme state, which the
+      // map deliberately does not reduce).
+      return;
+    }
+    disp_primary_pass = 1;
+    db( MATERI_DYNAMIC, 0, idum, &disp_primary_f, ldum,
+      VERSION_NORMAL, GET );
+    db( DTIME, 0, idum, &dtime_disp, ldum, VERSION_NEW, GET );
+    // save the assembled A0 diagonal (= M/dt) and the momentum rhside
+    disp_mass_dt = get_new_dbl( (1+max_node)*npuknwn );
+    disp_rhside = get_new_dbl( (1+max_node)*npuknwn );
+    array_set( disp_mass_dt, 0., (1+max_node)*npuknwn );
+    array_set( disp_rhside, 0., (1+max_node)*npuknwn );
+    for ( long int inod_dp=0; inod_dp<=max_node; inod_dp++ ) {
+      if ( !db_active_index( NODE, inod_dp, VERSION_NORMAL ) ) continue;
+      if ( db_active_index( NODE_LHSIDE, inod_dp, VERSION_NORMAL ) ) {
+        double *lh_dp = db_dbl( NODE_LHSIDE, inod_dp, VERSION_NORMAL );
+        for ( long int ipuk_dp=0; ipuk_dp<npuknwn; ipuk_dp++ )
+          disp_mass_dt[inod_dp*npuknwn+ipuk_dp] = lh_dp[ipuk_dp];
+      }
+      if ( db_active_index( NODE_RHSIDE, inod_dp, VERSION_NORMAL ) ) {
+        double *rh_dp = db_dbl( NODE_RHSIDE, inod_dp, VERSION_NORMAL );
+        for ( long int ipuk_dp=0; ipuk_dp<npuknwn; ipuk_dp++ )
+          disp_rhside[inod_dp*npuknwn+ipuk_dp] = rh_dp[ipuk_dp];
+      }
+    }
+    // The mass is held in ELEMENT_MATRIX_VALUES for principal Bi-CG
+    // velocity dofs (NODE_LHSIDE is only the diagonal-solver auxiliary and
+    // is therefore zero here).  Extract the f=0 matrix diagonal, which is
+    // exactly M/dt, before replacing the assembly with M/dt + dt*K.
+    array_set( disp_mass_dt, 0., (1+max_node)*npuknwn );
+    for ( long int elem_dp=0; elem_dp<=max_element; elem_dp++ ) {
+          long int element_group_dp = 0, matrix_len_dp = 0;
+          if ( db_active_index( ELEMENT_MATRIX_VALUES, elem_dp,
+            VERSION_NORMAL ) ) continue;
+          db( ELEMENT_GROUP, elem_dp, &element_group_dp, ddum_dp, len_dp,
+            VERSION_NORMAL, GET_IF_EXISTS );
+          if ( !db_active_index( GROUP_MATRIX_VALUES, element_group_dp,
+            VERSION_NORMAL ) ) continue;
+          matrix_len_dp = db_len( GROUP_MATRIX_VALUES, element_group_dp,
+            VERSION_NORMAL );
+          long int *unknowns_dp = get_new_int( 2*matrix_len_dp );
+          get_element_matrix_unknowns( elem_dp, unknowns_dp );
+          db( ELEMENT_MATRIX_VALUES, elem_dp, idum,
+            db_dbl( GROUP_MATRIX_VALUES, element_group_dp, VERSION_NORMAL ),
+            matrix_len_dp, VERSION_NORMAL, PUT );
+          matrix_len_dp *= 2;
+              db( ELEMENT_MATRIX_UNKNOWNS, elem_dp, unknowns_dp, ddum_dp,
+            matrix_len_dp, VERSION_NORMAL, PUT );
+          delete[] unknowns_dp;
+        }
+        for ( long int elem_dp=0; elem_dp<=max_element; elem_dp++ ) {
+      long int element_group_dp = 0;
+          long int matrix_len_dp = 0;
+          double *matrix_dp = NULL;
+          long int *unknowns_dp = NULL;
+          if ( !db_active_index( ELEMENT_MATRIX_VALUES, elem_dp,
+        VERSION_NORMAL ) ) continue;
+      matrix_len_dp = db_len( ELEMENT_MATRIX_VALUES, elem_dp,
+        VERSION_NORMAL );
+      matrix_dp = db_dbl( ELEMENT_MATRIX_VALUES, elem_dp,
+        VERSION_NORMAL );
+      unknowns_dp = db_int( ELEMENT_MATRIX_UNKNOWNS, elem_dp,
+        VERSION_NORMAL );
+      for ( long int imat_dp=0; imat_dp<matrix_len_dp; imat_dp++ ) {
+        long int row_dp = unknowns_dp[2*imat_dp];
+        long int col_dp = unknowns_dp[2*imat_dp+1];
+        if ( row_dp==col_dp && row_dp>=0 &&
+          row_dp<(1+max_node)*npuknwn )
+          disp_mass_dt[row_dp] += matrix_dp[imat_dp];
+      }
+    }
+    // mass capture is complete; reassemble the implicit matrix.
+        /*
+          (1+max_node)*npuknwn );
+        */
+        // zero the nodal system and re-assemble with the flipped factor:
+    // element_loop() ACCUMULATES into the db records, so a clean
+    // re-assembly needs zeroed records first
+    {
+      double *zeros_dp = get_new_dbl( npuknwn );
+      array_set( zeros_dp, 0., npuknwn );
+      for ( long int inod_dp=0; inod_dp<=max_node; inod_dp++ ) {
+        if ( !db_active_index( NODE, inod_dp, VERSION_NORMAL ) ) continue;
+        db( NODE_LHSIDE, inod_dp, idum, zeros_dp, npuknwn,
+          VERSION_NORMAL, PUT );
+        db( NODE_RHSIDE, inod_dp, idum, zeros_dp, npuknwn,
+          VERSION_NORMAL, PUT );
+      }
+      delete[] zeros_dp;
+    }
+    {
+      double f_one = 1.;
+      db( MATERI_DYNAMIC, 0, idum, &f_one, ldum, VERSION_NORMAL, PUT );
+    }
+    // The Professional auxiliary system uses the same reference mass and
+    // elastic operator as the f=0 pass. Keep that selection while the
+    // temporary factor supplies its full tangent.
+    disp_primary_reference = -YES;
+    element_loop();
+    disp_primary_reference = -NO;
+    {
+      double f_back = disp_primary_f;
+      db( MATERI_DYNAMIC, 0, idum, &f_back, ldum, VERSION_NORMAL, PUT );
+    }
+    // restore the momentum rhside of THIS iteration (the extra pass's
+    // own right-hand side is discarded: only the matrix is taken)
+    for ( long int inod_dp=0; inod_dp<=max_node; inod_dp++ ) {
+      if ( !db_active_index( NODE, inod_dp, VERSION_NORMAL ) ) continue;
+      if ( db_active_index( NODE_RHSIDE, inod_dp, VERSION_NORMAL ) ) {
+        double *rh_dp = db_dbl( NODE_RHSIDE, inod_dp, VERSION_NORMAL );
+        for ( long int ipuk_dp=0; ipuk_dp<npuknwn; ipuk_dp++ )
+          rh_dp[ipuk_dp] = disp_rhside[inod_dp*npuknwn+ipuk_dp];
+      }
+    }
+  }
 
   array_set( control_eigen, 0, 2 );
   if ( task==-CONTROL_EIGEN )
@@ -743,6 +953,50 @@ void solve( long int task )
         }
         succesful = 1;
       }
+      // DEV-B displacement-primary second solve: x1 is the first velocity
+      // correction dt*w1.  Therefore x2 solves the SAME (M/dt + dt*K)
+      // system with right-hand side (M/dt)*x1 = M*w1; the returned
+      // correction is dv = 2*x1 - x2 = dt*a with
+      // a = alpha(dt^2 M^-1 K) M^-1 r (see the block comment above).
+      // Only taken when the FIRST Bi-CG solve of the gated iteration-1
+      // system converged; otherwise the plain solve above is kept
+      // (graceful degradation to the historic f=0 semantics).
+      if ( disp_primary_pass && succesful ) {
+        disp_x1 = get_new_dbl( solve_nlocal );
+        disp_x2 = get_new_dbl( solve_nlocal );
+        array_move( solve_b, disp_x1, solve_nlocal );
+        for ( long int inod_dp=0; inod_dp<=max_node; inod_dp++ ) {
+          if ( !db_active_index( NODE, inod_dp, VERSION_NORMAL ) ) continue;
+          for ( long int ipuk_dp=0; ipuk_dp<npuknwn; ipuk_dp++ ) {
+            long int ig_dp = inod_dp*npuknwn + ipuk_dp;
+            long int il_dp = solve_global_local[ig_dp];
+            if ( il_dp!=-NO && il_dp>=0 )
+              solve_b[il_dp] = disp_mass_dt[ig_dp] * disp_x1[il_dp];
+          }
+        }
+        // The second right-hand side is M*x1.
+            // solve_iterative_bicg() retains its iterate in solve_x between
+            // calls. The second independent system must start at x=0.
+            array_set( solve_x, 0., solve_nlocal );
+            for ( long int i_dp=0; i_dp<solve_nlocal; i_dp++ )
+              solve_b_temp[i_dp+1] = solve_b[i_dp];
+            if (
+            solve_iterative_bicg( )==1 ) {
+          array_move( solve_b, disp_x2, solve_nlocal );
+        }
+        else {
+          // second solve failed: keep the first solve only (x2 = 0
+          // degrades the correction to 2*x1, still far closer to the
+          // Professional map than the historic explicit update)
+          array_set( disp_x2, 0., solve_nlocal );
+          pri( "Warning: displacement-primary second solve did not "
+            "converge - using the first solve only" );
+        }
+        for ( long int i_dp=0; i_dp<solve_nlocal; i_dp++ ) {
+          solve_b[i_dp] = 2.*disp_x1[i_dp] - disp_x2[i_dp];
+          solve_b_temp[i_dp+1] = solve_b[i_dp];
+        }
+      }
     }
     else if ( petsc_solver ) {
       if ( db( CONTROL_OPTIONS_SOLVER_PETSC_KSPTYPE, icontrol, &control_options_solver_petsc_ksptype, 
@@ -935,6 +1189,11 @@ if (band_solver)
       mat = NULL;
       ipiv = NULL;
     }
+        // DEV-B displacement-primary scratch
+        if ( disp_mass_dt!=NULL ) { delete[] disp_mass_dt; disp_mass_dt = NULL; }
+        if ( disp_rhside!=NULL ) { delete[] disp_rhside; disp_rhside = NULL; }
+        if ( disp_x1!=NULL ) { delete[] disp_x1; disp_x1 = NULL; }
+        if ( disp_x2!=NULL ) { delete[] disp_x2; disp_x2 = NULL; }
     if ( mat_dense )
     {
       delete[] mat_dense;

@@ -30,13 +30,13 @@ void truss( long int element, long int element_group,
     inol=0, jnol=0, indx=0, nnol=2, swit=0, length=0,
     // inertia_apply default -no (Professional semantics, see general.cc)
     options_inertia=-NO, group_truss_rope=-NO, 
-    memory=-UPDATED, options_convection=-YES,
+    memory=-UPDATED, truss_reference=-NO, options_convection=-YES,
     icontrol=0, ldum=0, idum[1], options_mesh[MDIM];
   double mass=0., dtime=0., 
     group_truss_young=0., group_truss_area=0., 
     group_truss_density=0., group_truss_plasti=1.e20,
     group_truss_expansion=0., group_truss_initial_force=0.,
-    inc_temperature=0.,
+    inc_temperature=0., materi_dynamic_factor=1.,
     truss_stiffness=0., incremental_length=0., 
     old_truss_force=0., new_truss_force=0., new_truss_force_mix=0., fac=0., tmp=0., 
     old_length=0., new_length=0., initial_length=0., ddum[1],
@@ -89,6 +89,15 @@ void truss( long int element, long int element_group,
     db( CONTROL_OPTIONS_INERTIA, icontrol, &options_inertia, ddum, 
       ldum, VERSION_NORMAL, GET_IF_EXISTS );
     force_gravity_calculate( force_gravity );
+    // f=0 displacement-primary dynamics holds its mass and elastic force
+    // in the reference configuration. The f=1 auxiliary reassembly is
+    // marked by solve() so it preserves this same operator.
+    db( MATERI_DYNAMIC, 0, idum, &materi_dynamic_factor, ldum,
+      VERSION_NORMAL, GET_IF_EXISTS );
+    if ( disp_primary_reference ||
+         ( materi_velocity && materi_displacement &&
+           materi_dynamic_factor>=0. && materi_dynamic_factor<1. ) )
+      truss_reference = -YES;
       // geometry
     for ( idim=0; idim<ndim; idim++ ) {
       if      ( materi_velocity_integrated ) {
@@ -123,7 +132,7 @@ void truss( long int element, long int element_group,
 
       // direction + deformations + stiffness
     initial_length = array_distance( &initial_coord[ndim], &initial_coord[0], work, ndim );
-    if      ( memory==-UPDATED ) {
+    if      ( memory==-UPDATED && !truss_reference ) {
       array_subtract( &new_coord[ndim], &new_coord[0], truss_direction, ndim );
       if ( !array_normalize( truss_direction, ndim ) ) {
          pri( "Error: truss length zero for element ", element );

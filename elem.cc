@@ -150,7 +150,7 @@ void elem( long int element, long int ithread )
     iprinc=0, jnol=0, jnod=0, len_type=0, indxi=0, indxj=0,
     idim=0, type=0, swit=0, itype=0, ipoint=0, length=0, npoint=0,
     nnol=0, name=0, icontrol=0, element_group=0,  element_empty=0,
-    indx=0, max_node=0, memory=-UPDATED, options_solver=-MATRIX_ITERATIVE_BICG,
+    indx=0, max_node=0, memory=-UPDATED, disp_primary_ref=-NO, options_solver=-MATRIX_ITERATIVE_BICG,
     options_matrix_group=-NO, options_matrix_length=0, mnolnuknwn=npointmax*nuknwn,
     length_element_matrix_values=0, filled=0, membrane=-NO, test1=0, test2=0,
     ldum=0, n=0, axisymmetric=0, plasti_on_boundary=0, idum[1], *types=NULL, 
@@ -165,7 +165,7 @@ void elem( long int element, long int ithread )
     control_relaxation_materi_velocity=0., control_relaxation_condif_temperature=0.,
     control_relaxation_groundflow_pressure=0., control_relaxation_wave_fscalar=0.,
     control_relaxation_maxwell_e=0., element_strainenergy=0.,
-    element_volume=0., time_current=0., time_total=0., 
+    element_volume=0., time_current=0., time_total=0., disp_primary_factor=1.,
     ddum[1], group_time[2], *coord=NULL, *new_coord=NULL, 
     *h=NULL, *coord_ip=NULL, *old_dof=NULL, *new_dof=NULL, 
     *old_unknowns=NULL, *new_unknowns=NULL, 
@@ -190,6 +190,18 @@ void elem( long int element, long int ithread )
     VERSION_NORMAL, GET_IF_EXISTS );
   db( GROUP_MATERI_MEMORY, element_group, &memory, ddum, ldum,
     VERSION_NORMAL, GET_IF_EXISTS );
+
+  // The measured f=0 displacement-primary map has a fixed reference mass
+  // and elastic operator. The normal f<1 pass identifies it directly; the
+  // auxiliary f=1 pass is marked by solve() while it is reassembled.
+  db( MATERI_DYNAMIC, 0, idum, &disp_primary_factor, ldum,
+    VERSION_NORMAL, GET_IF_EXISTS );
+  if ( disp_primary_reference ||
+       ( materi_velocity && materi_displacement &&
+         disp_primary_factor>=0. && disp_primary_factor<1. ) ) {
+    disp_primary_ref = -YES;
+    memory = -TOTAL_LINEAR;
+  }
 
   db( DTIME, 0, idum, &dtime, ldum, VERSION_NEW, GET );
 
@@ -440,6 +452,8 @@ void elem( long int element, long int ithread )
     db( NODE, inod, idum, &coord[inol*ndim], ldum, VERSION_NORMAL, GET );
     db( NODE, inod, idum, &new_coord[inol*ndim], ldum, VERSION_NEW, GET );
   }
+  if ( disp_primary_ref )
+    array_move( coord, new_coord, nnol*ndim );
 
   if ( db_active_index( OPTIONS_RESIDUEFACTOR, 0, VERSION_NORMAL ) )
     db( OPTIONS_RESIDUEFACTOR, 0, idum, residue_factor, ldum, VERSION_NORMAL, GET );

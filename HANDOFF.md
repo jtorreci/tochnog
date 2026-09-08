@@ -29,6 +29,17 @@ tochnog.h, tochnog-mod.h) + HANDOFF.md + ProjectDocs/DIAG-SOLVE-MIXTO.md (append
       Plane stress nu=0 (2D default, membrane=-NO -> nu=0 default => same as p.strain).
       Lumped mass = row-sum of consistent (edge node 3.125 for rho=20).
 - [ ] M3 Implementation in allowed surfaces, targets green.
+  Validation continuation (2026-09-08, uncommitted WIP): GNU rc=1 values:
+  dynamic1 6.44799; dynamic2 0.522727; dynamic5 -8.49935e-05;
+  dynamic8 -3.63544e-04. Professional rc=0 for all four (its target values
+  are recorded above). The f=0 element-matrix diagonal supplies M/dt, not
+  NODE_LHSIDE; the WIP captures that diagonal and resets the Bi-CG iterate
+  for the independent second solve. This does not close the target tolerances.
+  BLOCKER: a correct closure needs unowned `truss.cc` (reference-length,
+  linear truss force/tangent for dynamic1) and `materi.cc`/`elem.cc`
+  (reference-configuration continuum stress, stiffness, and mass geometry
+  for dynamic2/5/8). Those files are explicitly outside DEV-B's edit surface,
+  so they were not changed.
 - [ ] M4 Blast radius: ground*/undrained/large/matrix families identical.
 - [ ] M5 Docs (§17 append + manual-developer/dynamic_displacement_primary.md),
       Engram observation, final commit.
@@ -84,4 +95,47 @@ modaltest .py + probe dirs), /tmp/tn_dyn_base/ (GNU baselines).
 
 ## Next step
 
-M1: verify build infra + build_safe; baseline GNU target runs.
+M1: unblock the required reference-configuration implementation by extending
+DEV-B ownership to `truss.cc`, `materi.cc`, and `elem.cc`, or explicitly
+accept the present target failures as a documented partial.
+
+## Validation continuation — 2026-09-08 (uncommitted durable checkpoint)
+
+The reference-configuration implementation is now present in the extended
+surfaces (`truss.cc`, `materi.cc`, and `elem.cc`) and its six objects linked
+successfully into `build/tochnog`. The host has no system `-lsuperlu`; a first
+focused link with that flag returned rc=1, while the final link with
+`external-downloads/superlu-6.0.1/lib/libsuperlu.a` returned rc=0. The runtime
+needs `LD_LIBRARY_PATH=external-downloads/numlib-runtime`.
+
+Focused target runs from `/tmp/tn_dyn_validation/`:
+
+- dynamic1: rc=0; `node_dof 2 disx=0.0958890141894`, matching the saved
+  Professional value `0.09588901418936` within the printed `4e-14` difference.
+- dynamic2: rc=0; `node_dof 2 disx=0.0958890141894`, with the same final
+  velocity `-0.474862109541` and acceleration `0.856540800268` as the
+  measured Professional map.
+- dynamic5: rc=1; `post_point_dof 10 disy=-8.500245769e-05`. This is closer
+  than the preceding WIP value `-8.49935e-05`, but remains
+  `+8.74899278e-07` from the saved Professional `-8.587735696826e-05`
+  (`+8.55242310e-07` from the stale corpus target).
+- dynamic8: rc=1; `post_point_dof 20 disx=-3.38705737383e-04`, improved from
+  `-3.63544e-04` but still `+6.59819640e-04` from the Professional value
+  `-9.985253775e-04`. The auxiliary second Bi-CG solve repeatedly breaks down
+  and takes its documented `x2=0` fallback, so this is not a closing result.
+
+Focused blast-radius smoke (Professional `test/other` inputs, all generated
+outputs under `/tmp/tn_dyn_validation/blast`): ground 14/19 rc=0,
+undrained 2/2 rc=0, large 2/3 rc=0 (`large1` timed out at 120 s, rc=124), and
+matrix 9/9 rc=0. The five nonzero ground cases were `ground7`/`ground9`
+(input-record errors) and `ground11_nonsaturated`, `ground11_phreatic_level`,
+and `ground19_water_under_dam`; this run has no retained pre-WIP GNU binary,
+so it is a smoke result, not evidence of byte-identical baseline behavior.
+
+## Next step
+
+M1: retain this checkpoint; dynamic1/2 are closed. Before changing the
+f=0 gate further, diagnose why the dynamic8 auxiliary Bi-CG system repeatedly
+breaks down and why the continuum operator remains far from the measured
+reference-configuration response. Do not change DEV-C's hypoplas/masin
+material paths.
