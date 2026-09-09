@@ -80,7 +80,9 @@ void C_matrix( double young, double poisson,
       }
       else {
       	cout<<"Transverse isotropy grahoul not implemented for 1D"<<endl;
-	exit_tn(-NO);
+		// exit_tn contract (miscel.cc): -RESTART or -YES only; -NO
+		// violated the assert / silently dumped the full database.
+		exit_tn(-YES);
       }
   }
   else {
