@@ -94,3 +94,14 @@ Statev contract with hypoplas.cc unchanged: [6]=e, [13]=sensitivity,
    GNU (Pro honours it) - untouched this sprint.
 4. hypo3 (wolfersdorff) discard verification not exercised; the
    wolfersdorff path was not modified.
+
+## DEV-MASIN3 addendum (2026-09-09)
+
+The "Pro visco activation law" open item is superseded: the corpus
+visco run's zero-activation is confirmed, and the hypo13 final-value
+gap is now attributed to the Professional's equilibrium-loop path
+(frozen elastic lateral prediction) plus a first-step visco void
+quirk (`de = 10 x (1+e) tr(deps)` at dtime = 10, startup only), NOT
+to the visco closure itself. The kernel-side cutoff implemented here
+remains correct and corpus-neutral. See
+`masin3_response_curve_fit.md` sections 1 and 3.
