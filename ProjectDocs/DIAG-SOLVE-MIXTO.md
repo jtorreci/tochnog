@@ -1734,3 +1734,20 @@ different mechanism; the §16 elimination does not transfer).
   probe/ mpc3 traces pre/post, run_focused summaries base/step1/final),
   /tmp/opencode/mpc_batch/pro/mpc3.dbs (the Professional's exact 0.5
   factors).
+
+## 22. The equilibrium-loop check (2026-09-09, dev/eqloop) — the loop does NOT explain dynamic8's auxiliary-solve breakdown
+
+The DEV-EQLOOP sprint falsified the Professional-loop-difference
+hypothesis for the quasi-static corpus (full evidence:
+`manual-developer/eqloop_semantics.md`): the Professional's default
+equilibrium loop is 2 passes per step with the kernel-returned
+consistent tangent — semantically the SAME loop GNU already runs — and
+GNU's loop is fully converged at its default (iteration sweeps N=2..20
+change nothing on hypo12/13). Since the f=0 auxiliary second solve of
+§19 executes INSIDE that same loop structure, the loop semantics cannot
+be the mechanism behind dynamic8's repeated Bi-CG breakdown: the
+Professional's loop offers no different pass structure, tangent
+treatment, or state-update order to reproduce. The §19 verdict stands
+unchanged: dynamic8 is an observed solver/operator blocker (the
+auxiliary continuum solve itself), and any continuation must work the
+operator/preconditioner side, not the equilibrium-loop side.

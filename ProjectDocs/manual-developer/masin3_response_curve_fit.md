@@ -168,3 +168,36 @@ binaries: hypo7/8/9/12/13 `.his` byte-identical; suite 16/16.
    `/tmp/masin3_validation/probes` is the fitting data set.
 3. Optional fidelity extras: sensit=2 state feed (with the loop
    semantics, not alone), visco first-step void quirk.
+
+# DEV-EQLOOP addendum (2026-09-09): the loop hypothesis falsified, mechanisms relocated
+
+Follow-up sprint (`dev/eqloop`, same base 40fa51e) with solver-layer
+edit permission. Full evidence: `eqloop_semantics.md` (same directory);
+probe matrix in `/tmp/eqloop_validation/probes/`.
+
+1. **Section 1's "equilibrium-loop semantics" mechanism is
+   FALSIFIED.** The Professional's default loop is 2 passes per step
+   (proved by `control_timestep_iterations` A/B: N=1/2/3 give ratio
+   1.9e-4/1.7e-6/1.4e-8 and finals -143.49497/-143.49485/-143.49482 on
+   hypo12 — default == N=2) with the kernel-returned consistent tangent;
+   GNU's 2-pass loop is already at its fixed point (N=2 == N=20 on both
+   corpus tests). A converged fixed point is tangent-independent: no
+   loop-side change can move GNU toward the Professional.
+2. **Section 2's state-feed mechanism is FALSIFIED.** The Professional's
+   stress response on imposed paths is IDENTICAL (10 digits) with
+   `hyhis4` reset to 0 vs 2 — the stored sensit value does not reach the
+   kernel response without a structure record. Item 3 of "What closing
+   the targets requires" is void.
+3. **The real mechanisms are kernel-route differences**, measured with
+   fully imposed strain paths (no free dofs): (a) the `_visco` route is
+   ACTIVE in the Professional at corpus parameters — an exactly
+   isotropic stress rate -0.008732 kPa/step at the corpus state
+   (dtime-exact, Dr/Iv-independent at 1e-6..2e-6, ~p²/peast scaling),
+   which pins dsigxx=0 on the elastic-poisson lateral path and produces
+   the section-1 "frozen prediction" fingerprint; GNU's visco route is
+   inert. (b) the intergranular `istrain=1` route differs by ~1%/step in
+   dsigyy at the corpus12 state in BOTH geometries.
+4. **DEV-MASIN2 correction:** its "corpus-param Pro visco run
+   bit-identical to no-visco" entry is contradicted by the archived
+   `corpus13_p/run.log` itself (step-1 dsigyy -0.0515678 = the
+   active-visco value, not the no-visco -0.0428).
