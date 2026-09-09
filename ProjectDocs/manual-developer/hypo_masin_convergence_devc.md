@@ -237,3 +237,35 @@ a time: p, e, eta, deps direction) and fit the closure differences.
 Fresh directory per run; Pro with `print_apply -no` writes nothing
 (run a print variant for .dbs/.his - printing does not affect results:
 the Pro print-variant full run reproduces the bare-run finals exactly).
+
+---
+
+# DEV-MASIN3 continuation (2026-09-09, worktree dev/masin3 from 40fa51e)
+
+The hcea kernel-level residue hypothesised above is RESOLVED as follows
+(full evidence in `masin3_response_curve_fit.md`):
+
+- For `-masin_clay` the Professional's kernel stress response is the
+  public hcea formulation (<= 1e-4 relative over ~50 imposed-strain
+  probes: p 25..400, e sweeps, K0 starts, both geometries, both
+  istrain branches, 100x increment range).
+- The corpus residuals are FE-LOOP differences: the Professional's
+  lateral strain per step is the frozen plane-strain elastic
+  prediction (`depsx = -nu/(1-nu) * depsy` = 2.5e-6 in hypo13 for
+  1000+ steps) while GNU's 2-iteration loop converges to the true
+  lateral-neutral strain (0.96e-6). The two loops use different
+  tangents (measured Pro/GNU: 0.384 for hypo13, 0.984 for hypo12).
+- The Professional feeds `hyhis4 = 2` (sensitivity) into its kernel
+  without a structure record; with `kparam = 0` that halves `fd` via
+  `N* = N + lambda* ln 2` (softmodel branch, `Stf = 1`).
+- The Professional's visco route shows a first-step void-ratio quirk
+  (`de = 10 x (1+e) tr(deps)` at dtime = 10).
+- The basic `-masin` record IS a different kernel in the Professional
+  (r-parameterised, isotropic; coincides with hcea at isotropic states
+  only under `nu_eff(r)`: 0.2->0.054, 0.4->0.243, 0.6->0.315; breaks
+  at K0 states). The 1.79x "kernel gap" of DEV-C is this record-level
+  difference, not a clay-kernel residue.
+
+Consequence: closing hypo12/13 within +-0.001/+-0.01 requires the
+Professional's loop semantics (solver layer), and hypo7/8/9 the
+basic-masin formulation — neither is a masin-kernel delta.
