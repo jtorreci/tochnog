@@ -92,16 +92,65 @@ long int solve_iterative_bicg( void )
   initial_error = array_inproduct( residue, residue, solve_nlocal );
 
     // relative check error
+  long int mpc_elim_tighten = 0;
+  double eps_stop = EPS_TMP;
+  if ( mpc_tie_elimination_active() && solve_nlocal<=MPC_TIE_TIGHT_NMAX &&
+       !db_active_index( CONTROL_OPTIONS_SOLVER_BICG_ERROR, icontrol,
+         VERSION_NORMAL ) &&
+       !db_active_index( SOLVER_BICG_ERROR, 0, VERSION_NORMAL ) &&
+       !db_active_index( CONTROL_OPTIONS_SOLVER_BICG_ERROR_MINIMUM, icontrol,
+         VERSION_NORMAL ) &&
+       !db_active_index( OPTIONS_SOLVER_BICG_ERROR_MINIMUM, 0,
+         VERSION_NORMAL ) )
+    mpc_elim_tighten = 1;
   db( CONTROL_OPTIONS_SOLVER_BICG_ERROR, icontrol, idum, &bicg_error,
 	  ldum, VERSION_NORMAL, GET_IF_EXISTS );
   // solver_bicg_error (manual Professional 6.1048): the global record
   // overwrites the per-control one
   db( SOLVER_BICG_ERROR, 0, idum, &bicg_error,
 	  ldum, VERSION_NORMAL, GET_IF_EXISTS );
+
+  // DIAG-SOLVE-MIXTO §21 (dev/solve-map): the §16 energy-consistent tie
+  // elimination turns the staggered momentum iteration into a map whose
+  // fixed point carries EXACTLY the error of the first inner solve: the
+  // outer step v += A^-1*(b(v)) contracts the previous error and then
+  // STALLS at the absolute floor bicg_error_minimum (the next correction
+  // rhs is already below it and the solver returns x = 0). The default
+  // bicg_error = 1e-14 is a 1e-7 RELATIVE residual: measured on mpc3
+  // (probe, print_solver -yes), the first solve stopped at
+  // |b-Ax|/|b| = 4.28546e-08 -> ~1e-8 velocity noise, the second solve
+  // was floor-limited at 9.3% of its (tiny) correction, and the map
+  // stalled with disy = 1/3 - 2.2e-9. That is the intrinsic
+  // ~1e-8/iteration inconsistency of the eliminated staggered map
+  // (DIAG-SOLVE-MIXTO §18.3). For ELIMINATED systems both defaults are
+  // therefore tightened: bicg_error = 1e-24 (a 1e-12 relative residual)
+  // and bicg_error_minimum = 1e-26 (the floor only binds on the LATER
+  // correction solves whose rhs is already ~1e-12 scaled; it stays far
+  // above the recomputed-residual recursion noise (eps*|A|*|x|)^2 for any
+  // realistic conditioning, and a system that truly cannot reach it still
+  // has the honest max_iter exit icw the direct-LU retry of so.cc). The
+  // genuine-convergence floor of the loop drops from EPS_TMP (1e-16, the
+  // effective stop for every other solve) to the same 1e-26. The
+  // eliminated map then converges to the precision of its first inner
+  // solve (~1e-12 relative), which is Professional-grade for every corpus
+  // target. The tightening is capped at MPC_TIE_TIGHT_NMAX equations: the
+  // corpus eliminated systems (mpc3/4/5/6/7/9, force16) are small, while a
+  // large eliminated system does not need the deep precision (its targets
+  // are orders looser) and must not pay the breakdown-then-direct-LU-retry
+  // cost on a big band matrix (measured: ground19 3min6s uncapped vs 14.6s
+  // baseline). Non-eliminated paths are untouched: the gate is the active
+  // tie map, and explicit user solver_bicg_error records always win.
+  if ( mpc_elim_tighten ) {
+    bicg_error = 1.e-24;
+    bicg_error_minimum = 1.e-26;
+    eps_stop = 1.e-26;
+  }
+
   check_error = bicg_error * initial_error;
   if ( swit ) pri( "check_error", check_error );
 
     // minimum check error
+  if ( !mpc_elim_tighten )
   db( CONTROL_OPTIONS_SOLVER_BICG_ERROR_MINIMUM, icontrol, idum, &bicg_error_minimum,
 	  ldum, VERSION_NORMAL, GET_IF_EXISTS );
   if ( check_error<bicg_error_minimum ) check_error = bicg_error_minimum;
@@ -195,9 +244,10 @@ long int solve_iterative_bicg( void )
       cout << iter << " " << error << "\n";
       cout << flush;
     }
-    if ( error<check_error || error<EPS_TMP ) {
+    if ( error<check_error || error<eps_stop ) {
         // genuine convergence: residual below the (relative) tolerance,
-        // or at machine-zero level
+        // or at machine-zero level (eps_stop = EPS_TMP, except for the
+        // §21 eliminated systems which may go deeper)
       ready = 1;
       break;
     }

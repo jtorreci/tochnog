@@ -46,6 +46,13 @@
 // DIRECTLY bounded dof stay value-constrained (mpc1: Dirichlet master,
 // mpc8: bounda'd slave - both byte-identical before/after).
 //
+// dev/solve-map (DIAG §21): the eg-generated ties join the condensation
+// (they were excluded in dev/fmpc pending the map-precision fix) and the
+// generated FACTORS are polished to machine precision - point_el's
+// finite-difference descent left ~2.4e-8 of factor error (the Professional
+// writes exact 0.5 on the same input), which was the true intrinsic
+// inconsistency of the eliminated staggered map.
+//
 // mpc_linear_quadratic (6.873): when a quadratic element (quad9, hex27,
 // ...) borders a linear element (quad4, hex8, ...) at a common interface,
 // the extra nodes of the quadratic element (mid-edge, mid-face) dangle:
@@ -167,10 +174,26 @@ static void mpc_applied_add( long int iglobal )
 
 // 1 = the energy-consistent slave elimination is active for this solve
 // (there are mpc_linear_quadratic ties to eliminate)
+// DIAG \u00a721: solve-size cap. On a large eliminated system the folded
+// rows destabilize the iterative solve (measured: ground19, 6479 nodes, CG
+// breakdown at 4.5e-6 relative + direct-LU retries, 13x runtime) while the
+// condensed field is not needed there (targets orders looser than the small
+// eliminated systems). solve() reports its size once per solve; beyond
+// MPC_TIE_TIGHT_NMAX the elimination switches off and the ties keep the
+// value-constrained semantics (the map bookkeeping below is unaffected).
+static long int mpc_tie_solve_nlocal = 0;
+
+void mpc_tie_solve_size( long int solve_nlocal )
+
+{
+  mpc_tie_solve_nlocal = solve_nlocal;
+}
+
 long int mpc_tie_elimination_active( void )
 
 {
-  return ( mpc_tie_count>0 && mpc_tie_mark!=NULL );
+  return ( mpc_tie_count>0 && mpc_tie_mark!=NULL &&
+           mpc_tie_solve_nlocal<=MPC_TIE_TIGHT_NMAX );
 }
 
 long int mpc_tie_count_get( void )
@@ -243,6 +266,214 @@ long int mpc_tie_targets( long int iglobal, long int jglobal,
     }
   }
   return n;
+}
+
+// ---------------------------------------------------------------------------
+// Machine-precision tie weights (DIAG-SOLVE-MIXTO §21, dev/solve-map).
+// point_el() locates a point inside a tensor-product element with a
+// finite-difference descent whose final accepted step is ~DELTA/2^12 =
+// 2.44e-8 iso units: on the refined mpc3 mesh every generated factor comes
+// out 0.499999975586 where the Professional writes 0.5 (measured, both
+// .dbs of the corpus input). The factor error enters the tie CONSTRAINT
+// itself and is the intrinsic ~1e-8 inconsistency of the eliminated (and
+// equally of the value-constrained) staggered map: the momentum solves then
+// converge exactly to a fixed point that is ~1e-8 away from the true
+// condensed solution, no matter how tightly they converge. The Gauss-Newton
+// polish below recomputes the tensor-product weights with the analytic
+// derivatives of the same interpolation_polynomial bases point_el uses, so
+// the generated records carry machine-precision factors. Non-tensor-product
+// masters stay untouched: tria/tet factors are closed-form barycentric in
+// point_el (exact), bar2 masters reduce to the single-node weight 1 (exact).
+// ---------------------------------------------------------------------------
+
+static void mpc_polish_dims( long int name, long int *nnx, long int *nny,
+  long int *nnz )
+
+{
+  *nnz = 1;
+  if      ( name==-QUAD4 )  { *nnx=2; *nny=2; }
+  else if ( name==-QUAD9 )  { *nnx=3; *nny=3; }
+  else if ( name==-QUAD16 ) { *nnx=4; *nny=4; }
+  else if ( name==-HEX8 )   { *nnx=2; *nny=2; *nnz=2; }
+  else if ( name==-HEX27 )  { *nnx=3; *nny=3; *nnz=3; }
+  else if ( name==-HEX64 )  { *nnx=4; *nny=4; *nnz=4; }
+  else                      { *nnx=0; *nny=0; *nnz=0; }
+}
+
+// solve the (small, symmetric positive) normal equations a*x = b by Gaussian
+// elimination with partial pivoting; returns 0 on a singular system
+static long int mpc_polish_solve( long int n, double a[], double b[] )
+
+{
+  for ( long int k=0; k<n; k++ ) {
+    long int piv = k;
+    for ( long int i=k+1; i<n; i++ )
+      if ( scalar_dabs(a[i*n+k])>scalar_dabs(a[piv*n+k]) ) piv = i;
+    if ( scalar_dabs(a[piv*n+k])<1.e-300 ) return 0;
+    if ( piv!=k ) {
+      for ( long int j=0; j<n; j++ ) {
+        double t = a[k*n+j]; a[k*n+j] = a[piv*n+j]; a[piv*n+j] = t;
+      }
+      double t = b[k]; b[k] = b[piv]; b[piv] = t;
+    }
+    for ( long int i=k+1; i<n; i++ ) {
+      double f = a[i*n+k]/a[k*n+k];
+      for ( long int j=k; j<n; j++ ) a[i*n+j] -= f*a[k*n+j];
+      b[i] -= f*b[k];
+    }
+  }
+  for ( long int i=n-1; i>=0; i-- ) {
+    double s = b[i];
+    for ( long int j=i+1; j<n; j++ ) s -= a[i*n+j]*b[j];
+    b[i] = s/a[i*n+i];
+  }
+  return 1;
+}
+
+// rebuild the weights of a tensor-product master at the isoparametric
+// coordinates iso[] (same xi-inner/eta/zeta-outer node order as point_el)
+static void mpc_polish_weights( double iso[], long int nnx, long int nny,
+  long int nnz, double weight[] )
+
+{
+  double h_xi[MPOINT], p_xi[MPOINT], h_eta[MPOINT], p_eta[MPOINT],
+    h_zeta[MPOINT], p_zeta[MPOINT];
+  interpolation_polynomial( iso[0], nnx, h_xi, p_xi );
+  interpolation_polynomial( iso[1], nny, h_eta, p_eta );
+  interpolation_polynomial( iso[2], nnz, h_zeta, p_zeta );
+  long int inol = 0;
+  for ( long int iz=0; iz<nnz; iz++ )
+    for ( long int iy=0; iy<nny; iy++ )
+      for ( long int ix=0; ix<nnx; ix++ )
+        weight[inol++] = h_xi[ix]*h_eta[iy]*h_zeta[iz];
+}
+
+// Gauss-Newton polish of the isoparametric inversion x(iso) = point for a
+// tensor-product master; on success weight[] holds the machine-precision
+// shape functions, on any failure the point_el weights are restored
+static void mpc_weights_polish( double point[], double coords[],
+  double weight[], long int name, long int nnol )
+
+{
+  long int nnx=0, nny=0, nnz=0;
+  mpc_polish_dims( name, &nnx, &nny, &nnz );
+  long int niso = ( nnx>1 ) + ( nny>1 ) + ( nnz>1 );
+  if ( niso<1 || niso>ndim ) return;
+
+  double h_xi[MPOINT], p_xi[MPOINT], h_eta[MPOINT], p_eta[MPOINT],
+    h_zeta[MPOINT], p_zeta[MPOINT], iso[3], iso_best[3], weight_in[MPOINT],
+    resid[MDIM], jac[MDIM*3], normal[9], rhside[3], delta[3];
+  for ( long int i=0; i<nnol; i++ ) weight_in[i] = weight[i];
+
+  // element scale for the convergence test
+  double scale = 0.;
+  for ( long int inol=0; inol<nnol; inol++ ) {
+    double d2 = 0.;
+    for ( long int idim=0; idim<ndim; idim++ ) {
+      double d = coords[inol*ndim+idim];
+      d2 += d*d;
+    }
+    if ( d2>scale ) scale = d2;
+  }
+  scale = sqrt( scale );
+  if ( scale<=0. ) return;
+  double tol = 1.e-14*scale;
+
+  iso[0] = iso[1] = iso[2] = 0.;
+  iso_best[0] = iso_best[1] = iso_best[2] = 0.;
+  double err_best = 0.;
+  for ( long int iter=0; iter<60; iter++ ) {
+    interpolation_polynomial( iso[0], nnx, h_xi, p_xi );
+    interpolation_polynomial( iso[1], nny, h_eta, p_eta );
+    interpolation_polynomial( iso[2], nnz, h_zeta, p_zeta );
+    for ( long int idim=0; idim<ndim; idim++ ) resid[idim] = 0.;
+    for ( long int j=0; j<niso*ndim; j++ ) jac[j] = 0.;
+    long int inol = 0;
+    for ( long int iz=0; iz<nnz; iz++ ) {
+      for ( long int iy=0; iy<nny; iy++ ) {
+        for ( long int ix=0; ix<nnx; ix++ ) {
+          double w    = h_xi[ix]*h_eta[iy]*h_zeta[iz];
+          double der[3];
+          der[0] = p_xi[ix]*h_eta[iy]*h_zeta[iz];
+          der[1] = h_xi[ix]*p_eta[iy]*h_zeta[iz];
+          der[2] = h_xi[ix]*h_eta[iy]*p_zeta[iz];
+          for ( long int idim=0; idim<ndim; idim++ ) {
+            double x = coords[inol*ndim+idim];
+            resid[idim] += w*x;
+            for ( long int j=0; j<niso; j++ )
+              jac[idim*niso+j] += der[j]*x;
+          }
+          inol++;
+        }
+      }
+    }
+    double err = 0.;
+    for ( long int idim=0; idim<ndim; idim++ ) {
+      resid[idim] -= point[idim];
+      err += resid[idim]*resid[idim];
+    }
+    err = sqrt( err );
+    if ( iter==0 || err<err_best ) {
+      err_best = err;
+      for ( long int j=0; j<3; j++ ) iso_best[j] = iso[j];
+    }
+    if ( err<=tol ) break;
+    // normal equations  (J^T J) delta = -J^T resid
+    for ( long int j=0; j<niso*niso; j++ ) normal[j] = 0.;
+    for ( long int j=0; j<niso; j++ ) rhside[j] = 0.;
+    for ( long int idim=0; idim<ndim; idim++ ) {
+      for ( long int j=0; j<niso; j++ ) {
+        rhside[j] -= jac[idim*niso+j]*resid[idim];
+        for ( long int k=0; k<niso; k++ )
+          normal[j*niso+k] += jac[idim*niso+j]*jac[idim*niso+k];
+      }
+    }
+    if ( !mpc_polish_solve( niso, normal, rhside ) ) {
+      array_move( weight_in, weight, nnol );
+      return;
+    }
+    double dnorm = 0.;
+    for ( long int j=0; j<niso; j++ ) {
+      delta[j] = rhside[j];
+      dnorm += delta[j]*delta[j];
+    }
+    if ( sqrt( dnorm )*scale<1.e-16 && err>tol ) {
+      array_move( weight_in, weight, nnol );
+      return;   // GN stalled short of machine precision: keep point_el
+    }
+    // damped update: halve the step while it does not reduce the residual
+    double step = 1.;
+    long int ih = 0;
+    for ( ; ih<30; ih++ ) {
+      double iso_new[3], weight_new[MPOINT];
+      for ( long int j=0; j<3; j++ )
+        iso_new[j] = iso[j] + step*delta[j];
+      mpc_polish_weights( iso_new, nnx, nny, nnz, weight_new );
+      double err_new = 0.;
+      for ( long int idim=0; idim<ndim; idim++ ) {
+        double x = 0.;
+        for ( long int inol2=0; inol2<nnol; inol2++ )
+          x += weight_new[inol2]*coords[inol2*ndim+idim];
+        double d = x - point[idim];
+        err_new += d*d;
+      }
+      err_new = sqrt( err_new );
+      if ( err_new<=err ) {
+        for ( long int j=0; j<3; j++ ) iso[j] = iso_new[j];
+        break;
+      }
+      step *= 0.5;
+    }
+    if ( ih==30 ) {
+      array_move( weight_in, weight, nnol );
+      return;   // no progress: keep the point_el weights
+    }
+  }
+  if ( err_best>tol ) {
+    array_move( weight_in, weight, nnol );
+    return;
+  }
+  mpc_polish_weights( iso_best, nnx, nny, nnz, weight );
 }
 
 static long int mpc_element_is_linear( long int name )
@@ -398,6 +629,10 @@ static void mpc_linear_quadratic_generate( void )
           }
           if ( point_el( coord, coords_el, weight, name_lin, nnol_lin,
               MPC_EPS_ISO ) ) {
+            // machine-precision factors (DIAG §21): point_el's
+            // finite-difference descent stops ~2.4e-8 short
+            mpc_weights_polish( coord, coords_el, weight, name_lin,
+              nnol_lin );
             // tie the node to the linear element: one mpc record per
             // principal dof, master weights = the linear shape functions
             // evaluated at the node position
@@ -616,6 +851,10 @@ static void mpc_element_group_generate( void )
           }
           if ( point_el( coord, coords_m, weight, name_m, nnol_m,
               MPC_EPS_ISO ) ) {
+            // machine-precision factors (DIAG §21): point_el's
+            // finite-difference descent stops ~2.4e-8 short
+            mpc_weights_polish( coord, coords_m, weight, name_m,
+              nnol_m );
             // masters: the master element nodes with non-zero shape
             // function weight at the node position
             nmaster = 0;
@@ -865,14 +1104,13 @@ void mpc_node_apply( void )
       // slave row would be added twice to the master right-hand side).
       // Eligible classes (measured on the Professional binary 25-10-2023):
       // - the mpc_linear_quadratic generated range (DIAG §16),
+      // - the mpc_element_group generated range with a free slave and free
+      //   masters (DIAG §21 step 2; force16 1056/175, mpc6),
       // - the -veln generated free ties (from_bounda, validation_8),
       // - explicit user records with a free slave and free masters
       //   (mpc9; condensed diagonal K22+K33 = 11/6, v2 = 5/11).
-      // The mpc_element_group generated range is explicitly EXCLUDED from
-      // the explicit-user class (see the NOTE in mpc_node_apply: the
-      // Professional condenses those ties too — force16/mpc7 measured —
-      // but the GNU staggered map carries a pre-existing ~1e-8/iteration
-      // inconsistency and the mpc7 target sits exactly at that level).
+      // Ties touching a DIRECTLY bounded dof (mpc7's bounded master, mpc1's
+      // master, mpc8's slave) stay value-constrained in every class.
       {
         long int already = 0, ig0 = node_0*npuknwn + ipuknwn_0;
         for ( long int it=0; it<mpc_tie_count; it++ )
@@ -880,9 +1118,15 @@ void mpc_node_apply( void )
         long int in_lq_range = ( impc>=mpc_tie_elim_lo &&
           impc<=mpc_tie_elim_hi );
         long int in_eg_range = ( impc>=mpc_eg_lo && impc<=mpc_eg_hi );
+        // DIAG §21 step 2: the mpc_element_group range is activated
+        // (the exclusion of the pre-§21 state is removed): the generated
+        // factors are machine-precision now and the momentum solves converge
+        // to the condensed fixed point, so the eg ties condense exactly like
+        // the explicit user ties (the Professional behaviour measured on
+        // force16/mpc7).
         long int eligible = in_lq_range ||
           ( from_bounda==-YES && slave_free && nmaster>0 ) ||
-          ( from_bounda!=-YES && !in_lq_range && !in_eg_range &&
+          ( ( in_eg_range || from_bounda!=-YES ) && !in_lq_range &&
             slave_free && masters_free && nmaster>0 );
         if ( eligible && !already &&
              db_active_index( NODE, node_0, VERSION_NORMAL ) ) {
