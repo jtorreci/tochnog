@@ -614,6 +614,11 @@ void solve( long int task )
   }
   if ( band>solve_nlocal ) band = solve_nlocal;
 
+    // DIAG §21: report the solve size to the mpc tie map - beyond
+    // MPC_TIE_TIGHT_NMAX the elimination switches itself off (large
+    // eliminated systems keep the value-constrained map, see mpc.cc)
+    mpc_tie_solve_size( solve_nlocal );
+
     // energy-consistent slave elimination (DIAG-SOLVE-MIXTO §16): the
     // slave momentum rows (their element internal forces, including the
     // -B^T*sigma constitutive feedback of the current iterate) are added
