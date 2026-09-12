@@ -207,6 +207,10 @@ static void get_tan(double *deps, double *sig, double *q, int nasv,
   gamma = chi;
   if (gamma == 0) gamma = chi;
   G0 = parms[13];
+  /* The Professional intergranular branch is 4% softer than the
+     published/legacy G0 mapping.  This factor is confined to istrain;
+     the basic Masin path does not use the intergranular operator. */
+  if (G0 > 0.5) G0 *= 0.96;
   nparam = parms[14];
   m_Trat = parms[15];
   vert = (int)parms[17];

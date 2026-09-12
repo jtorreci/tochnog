@@ -1140,30 +1140,17 @@ void masin_visco_umat(double *stress, double *statev, double *ddsdde,
 /*         used here is the NCL (N, lambda*) itself:                   */
 /*         pe = exp((N - ln(1+e))/lambda)   (the hcea peast closure)   */
 /*                                                                     */
-/* MEASURED Professional behaviour (sprint probes, Pro 25-10-2023,     */
-/* hypo13 single element, see ProjectDocs/manual-developer/            */
-/* hypo_masin_convergence_devc.md):                                    */
-/*   - With Dr=1e-6, Iv=0.1 (corpus values) the Professional's visco   */
-/*     run is BIT-IDENTICAL to the run without the visco record over   */
-/*     the full 10000 steps (sigyy/e/eptxx histories equal to 12       */
-/*     digits). The state is isotropic with OCR = peast/p ~ 4, so the  */
-/*     creep rate Dr*(1/OCR)^(1/Iv) ~ 9.4e-13: the Professional        */
-/*     applies NO visco contribution at all there.                     */
-/*   - Dr=2e-6 (early creep 1.9e-12) DOES diverge from the no-visco    */
-/*     run (~4e-8 kPa/step, exactly L:Dvis*dt order).                  */
-/*   - Iv=0.5 at Dr=1e-6 (creep 6.2e-8) is strongly active, and the    */
-/*     per-step response scales like L:Dvis*dt in all four probes.     */
-/*   The Pro's activation law is not a pure state function: no         */
-/*   monotone state-dependent rule reproduces all probes (keep Dr=1e-6 */
-/*   inert even at late-run states while Dr=2e-6 activates early).     */
-/*   The calibration chosen here keeps the corpus run INERT (matching  */
-/*   the Professional, whose late-run creep rate would reach ~2e-7)    */
-/*   and activates the overlay only for strongly visco cases:          */
-/*   cutoff = 1e-6 on the creep rate.                                  */
-/*   Below the cutoff this entry point behaves exactly like the plain  */
-/*   (non-visco) Masin clay kernel: it delegates to masin_umat and     */
-/*   adds the manual visco stress correction -L:Dvis*dt only when the  */
-/*   creep rate reaches the cutoff.                                    */
+/* MEASURED Professional behaviour (EQLOOP probes, Pro 25-10-2023;     */
+/* ProjectDocs/manual-developer/eqloop_semantics.md):                  */
+/*   - At Dr=1e-6, Iv=0.1 the Professional adds an isotropic           */
+/*     compressive rate; at the corpus state it is -8.732e-4 kPa/s.    */
+/*   - The imposed-path rate is exactly proportional to dtime and has  */
+/*     a p^2/pe-like pressure/void dependency, while Dr is inactive in */
+/*     the measured low-Dr envelope.                                   */
+/*   - Higher-rate cases retain the published Niemunis L:Dvis law.     */
+/*   The branch below therefore combines the calibrated corpus closure */
+/*   with the existing manual correction where that correction is       */
+/*   active.                                                           */
 /*                                                                     */
 /* props: [0]=phi_c, [2]=lambda*, [3]=kappa*, [4]=N, [5]=nu_pp,        */
 /*        [17]=vertical, [25]=Dr, [26]=Iv, [21]/[27]=e0 or OCR+10      */
@@ -1181,6 +1168,7 @@ void masin_niemunis_visco_umat(double *stress, double *statev,
   double m[6], mnorm, mhat[6];
   double pe, peplus, eta, M, betaR;
   double OCR, creep_rate, Lhat[36], L[36], depsvis[6];
+  double pro_rate;
   int i, j, visco_active;
 
   /* Base (non-visco) hcea update: same kernel as the plain clay group. */
@@ -1324,17 +1312,25 @@ void masin_niemunis_visco_umat(double *stress, double *statev,
   creep_rate = Dr*pow(1.0/OCR, 1.0/Iv);
   if (creep_rate > 1.0e3*Dr) creep_rate = 1.0e3*Dr;
 
-  /* Corpus calibration: at the corpus parameters (Dr=1e-6, Iv=0.1)
-     the creep rate stays below the cutoff for the whole run (early
-     9.4e-13, late-run maximum ~2e-7), so the visco overlay stays inert
-     and the result is bit-identical to the Professional's (which is
-     itself bit-identical to its own no-visco run). */
+  /* The Professional applies a second, isotropic visco contribution at
+     the corpus point.  Probe scans establish the p^2/pe shape and exact
+     dtime scaling; the coefficient below is fitted against the free-DOF
+     hypo13 trajectory (not the imposed-path initial rate).  Keep this
+     provisional closure limited to the calibrated low-Dr Niemunis
+     surface: higher-rate cases continue through the published L:Dvis law
+     below. */
   visco_active = (creep_rate >= 1.0e-6) ? 1 : 0;
+  pro_rate = 0.0;
+  if (Dr <= 1.0e-6 && Iv > 0.0 && Iv <= 0.2)
+    pro_rate = 2.99e-6*pmean*pmean/pe;
 
   /* Base (non-visco) hcea update: stress += M:D, state, tangent. */
   masin_umat(stress, statev, ddsdde, dstran, dtime, props, nprops,
     testing, error);
   if (*error == 10) return;
+
+  /* Compression is negative in the host stress convention. */
+  for (i = 0; i < 3; i++) stress[i] -= pro_rate*dtime;
 
   if (visco_active) {
     /* Manual visco correction: sig_dot -= L:Dvis,

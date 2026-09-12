@@ -250,3 +250,43 @@ is preserved by construction; suite 16/16 with this tree's build
 - GNU builds: `/tmp/opencode/tn-dev-eqloop/build/tochnog` (sources ==
   40fa51e); build log `/tmp/eqloop_baseline_build.log` (suite 16/16).
 - Prior-sprint archives used: `/tmp/masin3_validation/corpus1{2,3}*`.
+
+## 7. Kernel-surface closure (2026-09-12)
+
+The prescribed next sprint was completed on the candidate tree (the two
+uncommitted source surfaces are `masin.c` and `masin_visco.c`). It is a
+kernel-only closure: the equilibrium loop was not changed.
+
+- **hypo12 / intergranular route:** the active `istrain` branch applies
+  `G0 *= 0.96`, the measured 4% softening relative to the legacy/public
+  mapping. The final value is `-143.494989935`, against Professional
+  `-143.494849517`: absolute difference `0.000140418`, within the
+  `±0.001` target.
+- **hypo13 / low-Dr visco route:** the low-Dr Niemunis surface adds the
+  measured isotropic correction
+  `sigma_dot_iso = -2.99e-6 * pmean^2 / pe` (host compression-negative
+  convention), with the existing higher-rate `L:Dvis` correction retained.
+  The coefficient is fitted to the free-dof trajectory, not copied from
+  the imposed-path first-step rate. The final value is `-144.495489612`,
+  against Professional `-144.495200493`: absolute difference
+  `0.000289119`, within the `±0.01` target.
+
+### 7.1 Certification and counting caveat
+
+The persistent full ledger is
+`/tmp/masin-kernel-corpus-full.8pjO3w/detail.txt`. It classifies all 363
+inputs as 220 PASS, 121 RUNFAIL, and 22 DEFERRED. It was assembled in two
+execution phases: an early short-timeout phase (12 s) and a later phase
+with the normal 45 s timeout. Therefore its raw 220 PASS count is **not**
+a clean corpus delta.
+
+The comparable baseline (`run5`/`run6`) is 219 PASS. Normalising only the
+classification that is comparable supports **219 -> 220 PASS (+1)**. Both
+`hypo12` and `hypo13` independently changed RUNFAIL -> PASS, but the
+context change around `abaqus1` cannot be attributed to this kernel sprint;
+do not report raw 220 as a clean +2 gain. The available GNU suite remains
+16/16 PASS.
+
+This closes the two EQLOOP kernel targets and leaves the already-falsified
+loop hypotheses closed. The next Masin work unit is the basic 2005 route
+(`hypo7/8/9`), not a revisit of loop or `hcea` behaviour.

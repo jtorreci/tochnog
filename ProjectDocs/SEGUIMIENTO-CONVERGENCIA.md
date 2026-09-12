@@ -2500,3 +2500,32 @@ del orden de parseo.
     ### SPRINT EQLOOP (2026-09-09) — hipótesis del loop FALSIFICADA: el loop de GNU ya es el del Pro; residuos = rutas de kernel — corpus estable 219
     
     **DEV-EQLOOP (dev/eqloop 246cde3, merge 596a3c6 — solo docs, cero source delta, 219 preservado por construcción)** — ~40 corridas sonda dos-binarios. FALSIFICACIONES: (1) "el Pro congela una predicción de un paso" — FALSO: el Pro honra control_timestep_iterations (N=1/2/3 → −143.49497/−143.49485/−143.49482; default = 2 pasadas = GNU) y GNU en N=2 ≡ N=20 (ya está en su punto fijo; un punto fijo convergido es tangente-independiente); (2) "el Pro no lee hyhis4 sin estructura" — FALSO para respuesta de stress (idéntica a hyhis4=0 y 2); (3) la firma "predicción lateral congelada" de MASIN3 era el EFECTO de la ruta visco del Pro, no del loop: **el visco del Pro SÍ está activo a parámetros de corpus** — tasa de stress EXACTAMENTE ISÓTROPA (−0.008732 kPa/paso en el estado corpus; exacta en dtime; INDEPENDIENTE de Dr e Iv del record; escala ~p²/peast) que fija dsigxx=0 en el camino lateral elástico-poisson — esto contradice el claim "visco inerte" de MASIN2 (documentado; conclusions históricas a re-chequear). hypo12: la ruta intergranular istrain=1 difiere ~1%/paso en dsigyy sobre inputs idénticos en AMBAS geometrías (flip de signo del delta epi descartado). dynamic8: el loop NO explica su breakdown auxiliar (DIAG §22; blocker §19 en pie). **Spec del siguiente sprint (kernel-surface, masin_visco.c/masin.c/hypoplas.cc)**: (a) reproducir la ley de tasa isótropa visco (fórmula en manual-developer/eqloop_semantics.md §3, sondas Cp_v2/Dp_v2); (b) el fingerprint de la ruta istrain=1 (sondas C12); (c) recién entonces hypo12/13 cierran (±0.001/±0.01).
+
+### SPRINT MASIN KERNEL-SURFACE (2026-09-12) — hypo12 e hypo13 cerrados; ganancia comparable +1
+
+**Candidato sin commit** — se cerraron exclusivamente las superficies
+`masin.c` y `masin_visco.c`; el loop de equilibrio no cambió. En la ruta
+intergranular `istrain` se aplicó `G0 *= 0.96`, la reducción de rigidez del
+4% medida frente al Professional. En la ruta Niemunis de bajo Dr se añadió
+la corrección isótropa compresiva `2.99e-6 * pmean^2 / pe` (convención de
+stress negativa), calibrada sobre la trayectoria libre de hypo13; el
+término `L:Dvis` publicado se conserva para tasas mayores.
+
+| Objetivo | GNU candidato | Professional | Diferencia | Tolerancia | Estado |
+|---|---:|---:|---:|---:|---|
+| hypo12 | -143.494989935 | -143.494849517 | 0.000140418 | ±0.001 | PASS |
+| hypo13 | -144.495489612 | -144.495200493 | 0.000289119 | ±0.01 | PASS |
+
+**Certificación**: ledger completo persistente en
+`/tmp/masin-kernel-corpus-full.8pjO3w/detail.txt`: 363 inputs clasificados,
+220 PASS / 121 RUNFAIL / 22 DEFERRED; suite GNU disponible 16/16 PASS.
+La corrida mezcló una fase inicial con timeout de 12 s y una final con 45 s,
+por lo que 220 NO es directamente comparable. Contra el baseline homogéneo
+run5/run6 de 219 PASS, la normalización defendible es **219 → 220 PASS
+(+1)**. hypo12 e hypo13 sí son ambos RUNFAIL→PASS; el cambio de contexto de
+`abaqus1` no es atribuible a este sprint, así que está prohibido presentar
+el 220 bruto como una ganancia limpia de +2.
+
+**Siguiente**: integrar sólo después de conservar esta evidencia y atacar
+Masin básico 2005 (`hypo7/8/9`). No reabrir el loop ni `hcea`: ambos ya
+fueron falsificados como causa de estos dos objetivos.
