@@ -536,7 +536,7 @@ static void msf_element_rule( long int element, long int element_group,
   double iso[][MPOINT], double weight[][MPOINT] )
 
 {
-  long int integration_method=-LOBATTO, integration_points=-MAXIMAL,
+  long int integration_method=-GAUSS, integration_points=-MAXIMAL,
     axisymmetric=-NO, ldum=0, idim=0;
   double ddum[1];
 

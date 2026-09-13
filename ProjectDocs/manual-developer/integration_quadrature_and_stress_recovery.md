@@ -1,0 +1,168 @@
+# Integration quadrature and nodal stress recovery (Professional alignment)
+
+Reference for **which quadrature each operation uses** in Tochnog
+Professional and in this GNU version, and for **how the Professional
+recovers the nodal stresses** from the integration-point stresses. This is
+the developer reference behind the 2026-09-13 alignment (branch
+`quad/pro-integration-recovery`).
+
+The task that produced this document: map the quadrature PER OPERATION
+(not a single global default) and determine whether GNU can match the
+Professional by choosing the method per operation.
+
+## 1. Per-operation quadrature map
+
+The key finding: the quadrature is a property of the **element integral**
+(stiffness, mass, internal force, body load), and the **nodal stress
+recovery is a separate operator** that is NOT tied to the quadrature. The
+Professional uses interior Gauss for the element integral and a
+least-squares extrapolation for the recovery; GNU historically conflated
+the two by using the shape function `h` of the same quadrature for the
+recovery.
+
+| operation | Professional (binary 2-8-2026) | GNU (before) | GNU (aligned) | evidence |
+|---|---|---|---|---|
+| element stiffness, quad4 / hex8 | 2x2 / 2x2x2 **Gauss** | 2x2 / 2x2x2 Lobatto (`-minimal` default) | Gauss | static probes, 12 digits (prior sprint) |
+| element stiffness, quad9 / hex27 | 3x3 / 3x3x3 **Gauss** | Lobatto | Gauss | `.dbs element_intpnt_method -gauss`, `npoint` 9/27 |
+| mass matrix | **row-sum lumped** (quadrature-invariant) | row-sum lumped | unchanged | distorted-element dynamic probe |
+| internal force vector | same rule as the stiffness (one `pol()` rule) | Lobatto | Gauss | — |
+| body / gravity load | same rule | Lobatto | Gauss | — |
+| edge / surface load | boundary integration; interface elements keep nodal (Lobatto) | boundary integration | unchanged | GNU `area.cc`; interfaces do not call `pol()` |
+| stress recovery (IP -> node) | **per-element least-squares fit + arithmetic mean** (section 2) | `h`-weighted lumped average | Professional operator | `.dbs element_intpnt_dof -> element_dof -> node_dof` |
+| post-processing / nodal averaging | arithmetic mean over the adjacent elements (`node_lhside` = element count) | volume-weighted | arithmetic mean | `.dbs node_lhside` |
+
+Professional manual 6.623 says `-minimal`/`-maximal` use Gauss and "in case
+inertia is applied then lobatto". The 2-8-2026 binary contradicts this for
+the STIFFNESS with inertia (dynamic8 matches Gauss to 6e-11). The clause
+most plausibly describes the MASS, and the row-sum lumped mass is
+quadrature-invariant, so GNU needs no change there.
+
+## 2. The Professional's nodal stress recovery
+
+The Professional `.dbs` dump exposes everything needed to identify the
+operator:
+
+- `element_intpnt_dof` — the stress at each integration point;
+- `element_dof` — the per-element nodal value;
+- `node_dof` — the assembled nodal value;
+- `element_intpnt_h` — the shape functions at the integration points;
+- `node_lhside` — the assembled weight.
+
+Measured on the Professional's own `beam2d_1.dbs` (quad9, 45 elements),
+`q4b.dbs` (quad4) and `static_hex8cube.dbs` (hex8):
+
+| element | points | operator | residual vs `element_dof` |
+|---|---|---|---|
+| quad4 | 4 | **bilinear interpolation** `1,x,y,xy` (4 terms) | 1.4e-7 |
+| quad9 | 9 | **uniform-weight linear least squares** `1,x,y` (3 terms) | 1.2e-12 |
+| hex8 | 8 | **uniform-weight linear least squares** `1,x,y,z` (4 terms) | 1.0e-8 |
+| hex27 | 27 | uniform-weight linear least squares `1,x,y,z` (assumed) | not independently verified |
+
+The operator is FIXED in the element natural coordinates (the same 9x9
+matrix fits all 45 beam2d_1 elements of different geometry to 1e-9). The
+least-squares fit uses UNIFORM weights (the Gauss weights give a different
+operator). The order rule is not a single clean formula: quad4 uses the
+full 4-term interpolation while quad9 and hex8 use the linear fit. The
+operators above were determined empirically and are the discriminating
+data; hex27/quad16 were not independently exercised.
+
+Assembly: `node_dof` = **arithmetic mean** of the adjacent elements'
+`element_dof` (e.g. beam2d_1 node 3: `node_lhside` = 2 and
+`node_dof = (54.022562 + 52.586786)/2 = 53.304674`). The Professional's
+per-element value has `sum_points F = 1`, so each element contributes
+weight 1.
+
+## 3. GNU implementation
+
+- `miscel.cc` — `sri_stress_recovery_weight(sri, name, nnol, inol, npoint,
+  ipoint, h_inol, volume)`. Two paths:
+  - `sri == 1`: the GNU-specific SRI feature, unchanged (Lagrange
+    extrapolation of the quad4/hex8 normal components, volume-weighted
+    assembly).
+  - `sri == 0`: the Professional alignment. Returns the operator factor
+    divided by the point volume. The lumped sigma-dof equation multiplies
+    the weight by the volume again (`volume * weight`), so
+    `volume * F/volume = F`, each element contributes `sum_points F = 1`
+    and the assembly becomes the arithmetic mean. Without the volume
+    cancellation the quadrature weights bias the average (measured on a
+    controlled quad9 patch: the exact `sigxx = 1000` came out 1333 = 4/3).
+- `polynom.cc` — `stress_recovery_gauss` (global) is 1 when the resolved
+  quadrature is interior Gauss and 0 for Lobatto. `pol()` sets it; the
+  recovery returns `h` for every case that is not the aligned Gauss rule.
+- `general.cc` / `materi.cc` — apply the recovery to ALL stress components
+  (normal and shear), exactly as the Professional's `element_dof`; the
+  SRI path keeps its normal-only recovery. The `materi.cc` stress block
+  was moved out of the `|h| > EPS_H` guard because the linear
+  least-squares operator is dense (some `(node, point)` pairs have `h = 0`
+  but a non-zero factor, e.g. the mid-edge nodes of quad9 at the centre
+  Gauss point).
+- `tochnog.h` / `tochnog-mod.h` — the new signature and the
+  `stress_recovery_gauss` global.
+
+## 4. force5 (phreatic level)
+
+`area.cc` looked up the phreatic level for the FIRST node of a
+non-selected side before the enclosing loop's `ok` guard skipped the
+side. With the Gauss solution the boundary node at x=2 deforms to
+x = 2.000000000358, just outside the phreatic table [0,2], and
+`table_xy` (`math.cc`) has no upper tolerance, so the run aborted
+("no valid phreatic level for FORCE_ELEMENT_EDGE_WATER"). Fix: skip the
+phreatic lookup for nodes that are not on the selected edge geometry
+(`ok_tmp`); a non-selected side carries no water force. With the fix
+force5 completes and gives `sigxx = -9.80718`, the Professional's value.
+
+## 5. Validation (branch `quad/pro-integration-recovery`, abf9c29 + this diff)
+
+| test | result | Professional |
+|---|---|---|
+| dynamic8 final disx20 | -9.98525437506e-4 | -9.985253775415e-4 (abs 6.0e-11) |
+| post4 moment | 0.666667 | n/a |
+| beam2d / beam2d_1 corner sigxx | 59.5766 | 59.5710 |
+| force5 post_point sigxx | -9.8071801515 | -9.80718 |
+| examp16 | PASS | — |
+| sfnet 197 corpus | **155 PASS / 42 RUNFAIL** | baseline Lobatto 160; prior Gauss+fixA 152 |
+
+Corpus regressions vs the Lobatto baseline (5, all outside the aligned
+operations):
+
+| test | GNU aligned | classification |
+|---|---|---|
+| condif10 | 17.5904 | STALE: Pro ships 18.4151 on the equivalent h-refined mesh; GNU-Gauss with h-refinement = 18.4151 |
+| examp5 | 1.03522 | STALE: inverse target calibrated to the Lobatto forward value |
+| ho_mech1 | 1.32827 | STALE: Pro ships the same test as `pressed_rubber_cylinder` with target 1.32791; GNU-Gauss = 1.327915 |
+| strconv1 | 0.983386 | stale transient: converges to 1.0 exactly at 200 steps (20-step target calibrated to the Lobatto convection operator); no Professional reference (keyword set differs) |
+| examp8 | 0.132011 | unknown: ~10% transient conduction shift, no Professional reference in the distribution |
+
+## 6. Pending refactorings / limitations
+
+- The recovery operators are empirically matched to the Professional
+  binary; hex27 and quad16 were not independently verified (assumed linear
+  least squares). A second element type would need a discriminating
+  `.dbs` dump.
+- The fit basis differs between quad4 (bilinear) and quad9/hex8 (linear);
+  the underlying rule in the Professional was not identified, only the
+  operators.
+- The 3 stale targets (condif10, examp5, ho_mech1) should be recalibrated
+  in the same work unit that promotes the alignment to the default;
+  strconv1 needs a longer transient or a recalibrated target; examp8 needs
+  a Professional reference.
+- The `tsup_solve` internal test uses a folded quad4 connectivity
+  (`1 2 3 4` on (0,0)(1,0)(1,1)(0,1), detJ = -0.25*eta); Gauss samples the
+  fold, Lobatto did not. The corrected connectivity `1 2 4 3` passes.
+  Test-input issue, not a code regression.
+- The force5 fix is a general correctness fix for `force_element_edge_water`
+  (independent of the quadrature): a non-selected side must not require a
+  phreatic level.
+
+## 7. Files and functions
+
+- `polynom.cc` — `pol()`, `stress_recovery_gauss`.
+- `miscel.cc` — `sri_stress_recovery_weight()`.
+- `general.cc` — `general()`, the lumped sigma-dof inertia weight.
+- `materi.cc` — `materi()`, the stress-dof RHS.
+- `area.cc` — `area()`, the `force_element_edge_water` phreatic lookup.
+- `so_bicg.cc` — `solve_iterative_bicg()`, the scale-relative CG breakdown
+  test (fix A) required for dynamic8.
+- `calcul_force.cc`, `delete.cc` — the replicated tensor-product default
+  (`msf_element_rule`, `mc_element_rule`), switched to Gauss with the
+  element default.

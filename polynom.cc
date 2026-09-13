@@ -21,6 +21,13 @@
 
 #define EPS_TRIANGLE 1.e-6
 
+// Stress recovery (see sri_stress_recovery_weight in miscel.cc): 1 when
+// the quadrature resolved by the current pol() call is interior GAUSS.
+// Read by general()/materi() while they loop over the integration points
+// of the element just integrated by pol(), so it is the single source of
+// truth for the rule actually in use.
+long int stress_recovery_gauss = 0;
+
 void pol( long int element, long int element_group,
   long int name, long int nnol, double old_coord[], 
   double new_coord[], double ref_coord[], long int &npoint, double h[], 
@@ -32,7 +39,7 @@ void pol( long int element, long int element_group,
     ipoint=0, npol=0, length=0, axisymmetric=-NO, npoint_per_dir=0,
     inol_xi=0, inol_eta=0, inol_zeta=0, nnol_xi=1, nnol_eta=1, nnol_zeta=1, 
     inol=0, istrain=0, indx=0, ldum=0,
-    integration_method=-LOBATTO, integration_points=-MINIMAL;
+    integration_method=-GAUSS, integration_points=-MINIMAL;
   double detj=0., radius=0., fac=0., L1=0., L2=0., L3=0., L4=0.,
     ddum[1], iso[MPOINT], xi[MPOINT], 
     eta[MPOINT], zeta[MPOINT], weight_iso[MPOINT], 
@@ -41,6 +48,8 @@ void pol( long int element, long int element_group,
     h_eta[MNOL], p_eta[MNOL], h_zeta[MNOL], p_zeta[MNOL], 
     p[MPOINT*MDIM*MNOL], 
     xj_inv[MPOINT*MDIM*MDIM], weight[MPOINT], coord_ip[MDIM];
+
+  stress_recovery_gauss = 0;
 
   db( GROUP_AXISYMMETRIC, element_group, &axisymmetric, ddum, ldum, 
     VERSION_NORMAL, GET_IF_EXISTS );
@@ -587,14 +596,22 @@ void pol( long int element, long int element_group,
       else
         db_error( GROUP_INTEGRATION_POINTS, element_group );
       npoint *= npoint_per_dir;
-      if      ( integration_method==-GAUSS )
+      if      ( integration_method==-GAUSS ) {
         integration_gauss( npoint_per_dir, iso, weight_iso );
-      else if ( integration_method==-LOBATTO )
+        stress_recovery_gauss = 1;
+      }
+      else if ( integration_method==-LOBATTO ) {
         integration_lobatto( npoint_per_dir, iso, weight_iso );
-      else if ( npoint_per_dir<npol )
+        stress_recovery_gauss = 0;
+      }
+      else if ( npoint_per_dir<npol ) {
         integration_gauss( npoint_per_dir, iso, weight_iso );
-      else
+        stress_recovery_gauss = 1;
+      }
+      else {
         integration_lobatto( npoint_per_dir, iso, weight_iso );
+        stress_recovery_gauss = 0;
+      }
       if ( idim==0 ) {
         nxi = npoint_per_dir;
         array_move( iso, xi, nxi );

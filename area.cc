@@ -629,7 +629,17 @@ void area( long int element, long int name,
                 ok_tmp = array_member( area, inod, nnod, ldum );
               }
               if ( !ok_tmp ) ok = 0;
-              if ( type[itype]==FORCE_ELEMENT_EDGE_WATER ) {
+              // The phreatic level is only defined for the nodes that are
+              // actually on the selected edge geometry. The `ok` guard of
+              // the enclosing for-loop is tested at the TOP of the next
+              // iteration, so without the ok_tmp test the FIRST node of a
+              // non-selected side (e.g. the x=2 boundary of an element
+              // whose wet edge is the x=1 interface) is looked up too; a
+              // node just outside the phreatic table then aborts the run
+              // ("no valid phreatic level for FORCE_ELEMENT_EDGE_WATER",
+              // area.cc). A side that is not on the geometry carries no
+              // water force, so the lookup must be skipped for it.
+              if ( type[itype]==FORCE_ELEMENT_EDGE_WATER && ok_tmp ) {
                 if ( groundflow_phreatic_coord( inod, &new_coord[inol*ndim], 
                     ddum, ddum[0], ddum[0], water_level, NULL ) ) {
                   db( FORCE_ELEMENT_EDGE_WATER, ind, idum, values, 
@@ -642,7 +652,7 @@ void area( long int element, long int name,
                   exit(TN_EXIT_STATUS);
                 }
               }
-              else
+              else if ( type[itype]!=FORCE_ELEMENT_EDGE_WATER )
                 all_under_phreatic_level = 0;
             }
             array_multiply( average_side_coord, average_side_coord, 1./nnol_side, ndim );

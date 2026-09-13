@@ -1755,6 +1755,12 @@ extern double *solve_b, *solve_x;
 // true only during the displacement-primary auxiliary reassembly (so.cc)
 extern long int disp_primary_reference;
 
+  // stress recovery (pol() -> general()/materi()): 1 when the last pol()
+  // call resolved the element quadrature to interior GAUSS points, so the
+  // nodal stress recovery must use the Professional's per-element
+  // least-squares fit instead of the (diluted) shape-function weight.
+extern long int stress_recovery_gauss;
+
   // for swit
 extern long int swit_element_stack, swit_node_stack;
 extern char swit_routine_stack[MSTACK][MCHAR]; // routines called
@@ -2335,9 +2341,9 @@ void      spring( long int element, long int name, long int element_group,
 long int  stress_indx( long int idim, long int jdim );
 long int  sri_active( long int element, long int element_group,
             long int name, long int nnol );
-double    sri_stress_recovery_weight( long int nnol, long int inol,
-            long int npoint, long int ipoint, double h_inol,
-            long int sri_active );
+double    sri_stress_recovery_weight( long int sri, long int name,
+            long int nnol, long int inol, long int npoint, long int ipoint,
+            double h_inol, double volume );
 void      stress_umat( long int element, long int gr, long int formulation,
             long int nuser_data, double user_data[], double coord_ip[],
             double old_hisv[], double new_hisv[], 
