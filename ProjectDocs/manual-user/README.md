@@ -315,7 +315,7 @@ input parameters it accepts.
 - [control_reset_dof_scoping](control_reset_dof_scoping.md) — the reset runs ONCE at its own control index (the Professional rejects a reset at the timestep index) and multi-dof records reset EVERY listed dof.
 - [area_element_group_sequence_no_selectors](area_element_group_sequence_no_selectors.md) — the sequence without geometry/element selectors: group_(i-1) elements become group_i at time_i (dam_building).
 - [mesh](mesh.md) — the short alias of options_mesh (mesh -fixed_in_space ...).
-- [group_materi_memory_updated_linear](group_materi_memory_updated_linear.md) — the -updated_linear memory: updated Lagrange with linear engineering strains.
+- [group_materi_memory_updated_linear](group_materi_memory_updated_linear.md) — the -updated_linear memory: updated Lagrange with linear engineering strains referred to the undeformed (reference) mesh, independent of -follow_material.
 - [group_materi_memory_updated_area](group_materi_memory_updated_area.md) — the -updated_area memory (incremental_driver, 6.784): small deformation WITH the area change of the loaded surface (driver-scoped; blocked by the incremental_driver family in the GNU).
 - [nonlocal](nonlocal.md) — the short `nonlocal` radius record + `nonlocal_name` model selector (6.897/6.898).
 - [geometry_factor](geometry_factor.md) — the Professional name (6.527) of geometry_bounda_factor: spatial weighting factors of bounda_dof/bounda_force/force_edge_* on a geometry entity (2 = linear, 3 = parabolic on a line).
