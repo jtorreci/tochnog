@@ -1003,31 +1003,43 @@ void materi( long int element, long int gr, long int name, long int nnol,
         tmp = volume * h[inol] * ( new_damage - old_damage ) / dtime;
         element_rhside[indx] += tmp;
       }
-      
-      if ( materi_stress ) {
+
+    }
+    // Stress recovery (2026-09-13, Professional alignment): the recovery
+    // weights are NON-zero at (node,point) pairs where the shape function
+    // h vanishes (the mid-edge/face nodes of quad9/hex27 at the interior
+    // Gauss points; the linear least-squares operator is dense), so the
+    // stress block must run for those pairs too. Every other block under
+    // the h>EPS_H guard multiplies by h[inol] and therefore contributes
+    // zero for such pairs, so only the stress block is taken out.
+    if ( materi_stress &&
+         ( scalar_dabs(h[inol])>EPS_H || stress_recovery_gauss ) ) {
         ipuknwn = stres_indx/nder;
-        // stress dof recovery weight (DIAG lot C/D, fix D-b): with the
-        // SRI quad4 (2x2 Gauss) the lumped h-weighted average dilutes
-        // the corner nodal stresses; the consistent recovery is the
-        // Lagrange extrapolation of the Gauss-point values to the nodes
-        // (the "same B at the node"), which for every other quadrature
-        // (node-containing rules) reduces to h. The momentum feedback
-        // does NOT read these dofs (it uses the fresh constitutive
-        // stress), so this changes only the OUTPUT stress field used by
-        // the section-force integration and the prints. The NORMAL
-        // stresses of the bilinear are superconvergent at the Gauss
-        // points (the extrapolation is the exact nodal recovery); the
-        // SHEAR stress is not (the interpolation error dominates), so
-        // its dofs keep the h-weighting (the centroid-biased average,
-        // the same estimate the SRI's reduced point provides).
-        double weight = h[inol];
-        if ( sri_on )
-          weight = sri_stress_recovery_weight( nnol, inol, npoint,
-            ipoint, h[inol], 1 );
+        // Nodal stress recovery weight (2026-09-13, Professional
+        // alignment): sri_stress_recovery_weight returns the per-element
+        // least-squares fit identified against the Professional binary,
+        // divided by the point volume (the lumped equation multiplies by
+        // the volume again), applied to ALL stress components exactly as
+        // the Professional's element_dof does. For the node-containing
+        // Lobatto rules and the non-tensor elements it reduces to h. The
+        // SRI feature (GNU-specific) keeps its own recovery: Lagrange for
+        // the normal (diagonal) components, h for the shear. The momentum
+        // feedback does NOT read these dofs (it uses the fresh
+        // constitutive stress), so this changes only the OUTPUT stress
+        // field used by the section-force integration and the prints.
+        double weight_normal = h[inol], weight_shear = h[inol];
+        if ( sri_on ) {
+          weight_normal = sri_stress_recovery_weight( 1, name, nnol, inol,
+            npoint, ipoint, h[inol], volume );
+        }
+        else {
+          weight_normal = weight_shear = sri_stress_recovery_weight( 0,
+            name, nnol, inol, npoint, ipoint, h[inol], volume );
+        }
         for ( idim=0; idim<MDIM; idim++ ) {
           for ( jdim=idim; jdim<MDIM; jdim++ ) {
             indx = inol*npuknwn + ipuknwn;
-            tmp = volume * ( (idim==jdim) ? weight : h[inol] ) *
+            tmp = volume * ( (idim==jdim) ? weight_normal : weight_shear ) *
               ( new_sig[idim*MDIM+jdim] - old_sig[idim*MDIM+jdim] ) / dtime;
             element_rhside[indx] += tmp;
             if ( jdim==1 && idim==1 ) {
@@ -1051,6 +1063,7 @@ void materi( long int element, long int gr, long int name, long int nnol,
           }
         }
       }
+    if ( scalar_dabs(h[inol])>EPS_H ) {
       if ( materi_plasti_f ) {
         ipuknwn = f_indx/nder;
         indx = inol*npuknwn + ipuknwn;
