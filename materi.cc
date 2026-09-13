@@ -1571,7 +1571,22 @@ void set_deften_etc( long int element, long int gr, long int nnol, double h[],
     array_subtract( new_ept, old_ept, inc_ept, MDIM*MDIM );
   }
   else if ( memory==-TOTAL_LINEAR ) {
-      // linear engineering strains
+      // linear engineering strains (manual Professional 2.2.1): the total
+      // deformation gradient F refers to time 0 and the incremental strain
+      // is the difference of the linear engineering strains at the two time
+      // points. old_ept is only loaded from the solved dof when
+      // materi_strain_total is present; without it old_ept stays zero and
+      // inc_ept would collapse to the TOTAL strain. Derive the old total
+      // strain from the old deformation gradient so inc_ept is a true
+      // increment (this is what makes the incremental stress update of
+      // -total_linear consistent with the TOTAL recomputation).
+    if ( !materi_strain_total ) {
+      for ( idim=0; idim<MDIM; idim++ ) {
+        for ( jdim=0; jdim<MDIM; jdim++ ) old_ept[idim*MDIM+jdim] =
+          0.5*(old_deften[idim*MDIM+jdim]+old_deften[jdim*MDIM+idim]);
+      }
+      for ( idim=0; idim<MDIM; idim++ ) old_ept[idim*MDIM+idim] -= 1.;
+    }
     for ( idim=0; idim<MDIM; idim++ ) {
       for ( jdim=0; jdim<MDIM; jdim++ ) new_ept[idim*MDIM+jdim] = 
         0.5*(new_deften[idim*MDIM+jdim]+new_deften[jdim*MDIM+idim]);

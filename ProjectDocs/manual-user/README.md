@@ -317,6 +317,7 @@ input parameters it accepts.
 - [mesh](mesh.md) — the short alias of options_mesh (mesh -fixed_in_space ...).
 - [group_materi_memory_updated_linear](group_materi_memory_updated_linear.md) — the -updated_linear memory: updated Lagrange with linear engineering strains referred to the undeformed (reference) mesh, independent of -follow_material.
 - [group_materi_memory_updated_area](group_materi_memory_updated_area.md) — the -updated_area memory (incremental_driver, 6.784): small deformation WITH the area change of the loaded surface (driver-scoped; blocked by the incremental_driver family in the GNU).
+- [group_materi_memory_total_linear](group_materi_memory_total_linear.md) — the -total_linear memory (6.685, theory 2.2.1): total Lagrange with linear engineering strains; the stress is the previous stress plus the incremental-strain stress, so a control_reset_dof pre-stress survives the next solve (delete3/mpc5 family).
 - [nonlocal](nonlocal.md) — the short `nonlocal` radius record + `nonlocal_name` model selector (6.897/6.898).
 - [geometry_factor](geometry_factor.md) — the Professional name (6.527) of geometry_bounda_factor: spatial weighting factors of bounda_dof/bounda_force/force_edge_* on a geometry entity (2 = linear, 3 = parabolic on a line).
 - [convection_apply](convection_apply.md) — the convection switches of eulerian flows: convection_apply (6.395), control_convection_apply (6.113) and convection_stabilization (6.396), aliases of options_convection/options_stabilization. Unlocks condif2/condif3/tube1.
