@@ -212,7 +212,7 @@ void bounda( )
     *dof_label=NULL, *dof_type=NULL, *node_bounded=NULL;
   double load=0., time0=0., time1=0., load0=0., load1=0., factor=0.,
     time_current=0., time_total=0., dtime=0., amplitude=0., frequency=0.,
-    time_start=0., radius=0., angle_start=0., on_time=0., off_time=0.,
+    time_start=0., time_end=0., radius=0., angle_start=0., on_time=0., off_time=0.,
     until_force=0., until_factor=1., reaction=0.,
     angle_total=0., rdum=0., ddum[MDIM], coord_start[MDIM], coord_total[MDIM],
     *bounda_time=NULL, *new_node_dof=NULL, 
@@ -296,8 +296,14 @@ void bounda( )
       time =  sine = user = 0; ninc = 2;
       if      ( db_active_index( BOUNDA_SINE, iboun, VERSION_NORMAL ) ) {
         bounda_sine = db_dbl( BOUNDA_SINE, iboun, VERSION_NORMAL );
+        // Professional manual 6.34: bounda_sine index start_time end_time
+        // freq_0 amp_0 freq_1 amp_1 ... The record layout therefore starts
+        // with start_time AND end_time before the (frequency, amplitude)
+        // pairs. GNU previously assumed [start_time, freq, amp, ...], which
+        // shifted every pair by one slot (freq/amp mis-parameterized).
         time_start = bounda_sine[0];
-        nfreq = ( db_len( BOUNDA_SINE, iboun, VERSION_NORMAL ) - 1 ) / 2;
+        time_end   = bounda_sine[1];
+        nfreq = ( db_len( BOUNDA_SINE, iboun, VERSION_NORMAL ) - 2 ) / 2;
         ninc = 2;
         sine = 1;
       }
@@ -568,7 +574,10 @@ void bounda( )
           user_bounda_time( iboun, time_total, load );
         }
         else if ( sine ) 
-          found = time_current>=time_start;
+          // Professional manual 6.34: the sine is imposed only from
+          // start_time up to and including end_time; after end_time the
+          // dof is no longer prescribed and becomes free again.
+          found = time_current>=time_start && time_current<=time_end;
         else {
           load = 0.;
           found = 1;
@@ -790,8 +799,9 @@ void bounda( )
                     if ( sine ) {
                       new_node_dof[iuknwn] = new_node_dof[ind1] = 0.;
                       for ( ifreq=0; ifreq<nfreq; ifreq++ ) {
-                        frequency = bounda_sine[1+ifreq*2+0];
-                        amplitude = bounda_sine[1+ifreq*2+1];
+                        // offset 2: skip start_time and end_time (manual 6.34)
+                        frequency = bounda_sine[2+ifreq*2+0];
+                        amplitude = bounda_sine[2+ifreq*2+1];
                         new_node_dof[iuknwn] += factor * amplitude *
                           sin( 2. * PIRAD * frequency * time_total );
                         if ( derivatives ) new_node_dof[ind1] += 
@@ -1164,8 +1174,9 @@ void bounda( )
                     if ( sine ) {
                       node_rhside[indx] = 0.;
                       for ( ifreq=0; ifreq<nfreq; ifreq++ ) { 
-                        frequency = bounda_sine[1+ifreq*2+0];
-                        amplitude = bounda_sine[1+ifreq*2+1];
+                        // offset 2: skip start_time and end_time (manual 6.34)
+                        frequency = bounda_sine[2+ifreq*2+0];
+                        amplitude = bounda_sine[2+ifreq*2+1];
                         node_rhside[indx] += factor*amplitude*
                           sin(2.*PIRAD*frequency*time_total);
                       }
