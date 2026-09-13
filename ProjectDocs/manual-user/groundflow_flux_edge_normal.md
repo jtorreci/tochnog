@@ -31,7 +31,7 @@ groundflow_flux_edge_normal_time <index> <time load time load ...>
 | `groundflow_flux_edge_normal` | Distributed flux value (index + value).            |
 | `groundflow_flux_edge_normal_geometry` | Area where the flux applies (2D: `-geometry_line`, 3D: `-geometry_surface`). |
 | `groundflow_flux_edge_normal_time` | Time diagram scaling the flux (linear interpolation, factor 0 outside). |
-| `groundflow_flux_edge_normal_sine` | Sinusoidal time load (start_time end_time freq_0 amp_0 ...). |
+| `groundflow_flux_edge_normal_sine` | Sinusoidal time load (`index start_time end_time freq_0 amp_0 ...`, Professional 6.567; see [sine_load_layout](sine_load_layout.md)). |
 | `groundflow_flux_edge_normal_factor` | Polynomial in space scaling the flux (`a0 a1 ...`, a0+a1x in 1D, etc.). |
 
 ## Restriction records

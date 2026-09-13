@@ -15,8 +15,10 @@
   `_element_group` (array_member) and `_geometry` (all element nodes in
   the geometry via `geometry()`, NODE_START_REFINED); heat from the
   record or from `user_condif_heat_volume` when `_user -yes`; load from
-  `_sine` (start_time + freq/amp pairs, area.cc pattern) or `_time`
-  (`force_time`); spatial `factor` via `force_factor` at `coord_ip`;
+  `_sine` (Professional 6.88 layout `start_time end_time freq/amp pairs`,
+  gated to the window; see [sine_load_layout](sine_load_layout.md)) or
+  `_time` (`force_time`); spatial `factor` via `force_factor` at
+  `coord_ip`;
   contribution `element_rhside[i] += volume * h[i] * heat * load *
   factor`.
 - `elem.cc` — call site updated with `coord_ip` (per-integration-point

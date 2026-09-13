@@ -16,7 +16,9 @@ Companions (same index):
 - `condif_heat_volume_factor` — spatial polynomial
   `a0 + a1*x + a2*x^2 + ...` at the integration point.
 - `condif_heat_volume_time` — `time load` pairs (linear interpolation).
-- `condif_heat_volume_sine` — `start_time freq_0 amp_0 freq_1 amp_1...`.
+- `condif_heat_volume_sine` — `start_time end_time freq_0 amp_0
+  freq_1 amp_1...` (Professional 6.88 layout; see
+  [sine_load_layout](sine_load_layout.md)).
 - `condif_heat_volume_user` + `condif_heat_volume_user_parameters` —
   heat defined by the user routine `user_condif_heat_volume`
   (edit user.cc; enabling `-yes` without programming it is an error).

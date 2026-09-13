@@ -65,7 +65,7 @@ void condif( long int element, long int gr, long int nnol, double h[],
       heat_volume_user=0, nfreq=0, ifreq=0, all_in=0, in_geometry=0,
       inod=0, i=0, el[MNOL+1], geometry_entity[2];
     double ddum[1], heat=0., load=1., factor=1., time_current=0., dtime=0.,
-      time_total=0., time_start=0., frequency=0., amplitude=0.,
+      time_total=0., time_start=0., time_end=0., frequency=0., amplitude=0.,
       values[DATA_ITEM_SIZE], coord[MDIM], rdum=0.;
     long int *heat_element=NULL, *heat_group=NULL;
     double *heat_sine=NULL, *heat_time=NULL;
@@ -131,14 +131,17 @@ void condif( long int element, long int gr, long int nnol, double h[],
             VERSION_NORMAL ) ) {
           heat_sine = db_dbl( CONDIF_HEAT_VOLUME_SINE, iheat,
             VERSION_NORMAL );
+          // Professional manual 6.88 (condif_heat_volume_sine): index
+          // start_time end_time freq_0 amp_0 ... (same as force_edge_sine).
           nfreq = ( db_len( CONDIF_HEAT_VOLUME_SINE, iheat,
-            VERSION_NORMAL ) - 1 ) / 2;
+            VERSION_NORMAL ) - 2 ) / 2;
           time_start = heat_sine[0];
+          time_end = heat_sine[1];
           load = 0.;
-          if ( time_total>time_start ) {
+          if ( time_total>time_start && time_total<=time_end ) {
             for ( ifreq=0; ifreq<nfreq; ifreq++ ) {
-              frequency = heat_sine[1+ifreq*2+0];
-              amplitude = heat_sine[1+ifreq*2+1];
+              frequency = heat_sine[2+ifreq*2+0];
+              amplitude = heat_sine[2+ifreq*2+1];
               load += amplitude * sin( 2. * PIRAD * frequency * time_total );
             }
           }

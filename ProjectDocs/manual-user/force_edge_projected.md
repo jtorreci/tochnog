@@ -32,7 +32,9 @@ applied as `factor_normal*sig_radial*n + factor_tangential*sig_tangential*t`
 Horizontal stress along the tunnel axis is not included.
 
 Companions (same index): `_geometry` (required; the excavation edge),
-`_time`/`_sine` (temporal factor), `_factor` (spatial polynomial),
+`_time`/`_sine` (temporal factor, `index start_time end_time freq_0 amp_0
+...`, Professional 6.487; see [sine_load_layout](sine_load_layout.md)),
+`_factor` (spatial polynomial),
 `_element`, `_element_group`, `_element_side`, `_node`,
 `_element_node`, `_node_factor` — same semantics as the other
 force_edge families.

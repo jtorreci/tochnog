@@ -223,7 +223,7 @@ void area( long int element, long int name,
   double alpha=0., temp=0., env_temp=0., ar=0., 
     frequency=0., amplitude=0., area_size=0., heat_flux=0.,
     a=0., b=0., c=0., radius=0., pressure=0.,
-    dtime=0., time_start=0., time_current=0., time_total=0.,
+    dtime=0., time_start=0., time_end=0., time_current=0., time_total=0.,
     heat_flux_stiffness=0., load=0., delta_z=0., rdum=0., 
     factor=0., water_level=0., tmp=0., ddum[MDIM+MUKNWN],
     iso[MNOL], average_element_coord[MDIM], average_side_coord[MDIM],
@@ -456,13 +456,16 @@ void area( long int element, long int name,
           if      ( type[itype]==FORCE_ELEMENT_EDGE ) {
             if      ( db_active_index( FORCE_ELEMENT_EDGE_SINE, ind, VERSION_NORMAL ) ) {
               force_element_edge_sine = db_dbl( FORCE_ELEMENT_EDGE_SINE, ind, VERSION_NORMAL );
-              nfreq = ( db_len( FORCE_ELEMENT_EDGE_SINE, ind, VERSION_NORMAL ) - 1 ) / 2;
+              // Professional manual 6.465 (force_edge_sine): index start_time
+              // end_time freq_0 amp_0 ... (same layout as bounda_sine 6.34).
+              nfreq = ( db_len( FORCE_ELEMENT_EDGE_SINE, ind, VERSION_NORMAL ) - 2 ) / 2;
               time_start = force_element_edge_sine[0];
+              time_end = force_element_edge_sine[1];
               load = 0.;
-              if ( time_total>time_start ) {
+              if ( time_total>time_start && time_total<=time_end ) {
                 for ( ifreq=0; ifreq<nfreq; ifreq++ ) {
-                  frequency = force_element_edge_sine[1+ifreq*2+0];
-                  amplitude = force_element_edge_sine[1+ifreq*2+1];
+                  frequency = force_element_edge_sine[2+ifreq*2+0];
+                  amplitude = force_element_edge_sine[2+ifreq*2+1];
                   load += amplitude * sin( 2. * PIRAD * frequency * time_total );
                 }
               }
@@ -487,13 +490,16 @@ void area( long int element, long int name,
           else if ( type[itype]==FORCE_ELEMENT_EDGE_NORMAL ) {
             if      ( db_active_index( FORCE_ELEMENT_EDGE_NORMAL_SINE, ind, VERSION_NORMAL ) ) {
               force_element_edge_normal_sine = db_dbl( FORCE_ELEMENT_EDGE_NORMAL_SINE, ind, VERSION_NORMAL );
-              nfreq = ( db_len( FORCE_ELEMENT_EDGE_NORMAL_SINE, ind, VERSION_NORMAL ) - 1 ) / 2;
+              // Professional manual 6.476 (force_edge_normal_sine): index
+              // start_time end_time freq_0 amp_0 ... (same as 6.465).
+              nfreq = ( db_len( FORCE_ELEMENT_EDGE_NORMAL_SINE, ind, VERSION_NORMAL ) - 2 ) / 2;
               time_start = force_element_edge_normal_sine[0];
+              time_end = force_element_edge_normal_sine[1];
               load = 0.;
-              if ( time_total>time_start ) {
+              if ( time_total>time_start && time_total<=time_end ) {
                 for ( ifreq=0; ifreq<nfreq; ifreq++ ) {
-                  frequency = force_element_edge_normal_sine[1+ifreq*2+0];
-                  amplitude = force_element_edge_normal_sine[1+ifreq*2+1];
+                  frequency = force_element_edge_normal_sine[2+ifreq*2+0];
+                  amplitude = force_element_edge_normal_sine[2+ifreq*2+1];
                   load += amplitude * sin( 2. * PIRAD * frequency * time_total );
                 }
               }
@@ -526,14 +532,17 @@ void area( long int element, long int name,
                 ind, VERSION_NORMAL ) ) {
               groundflow_flux_edge_normal_sine = db_dbl(
                 FORCE_ELEMENT_EDGE_PROJECTED_SINE, ind, VERSION_NORMAL );
+              // Professional manual 6.487 (force_edge_projected_sine): index
+              // start_time end_time freq_0 amp_0 ... (same as 6.465).
               nfreq = ( db_len( FORCE_ELEMENT_EDGE_PROJECTED_SINE, ind,
-                VERSION_NORMAL ) - 1 ) / 2;
+                VERSION_NORMAL ) - 2 ) / 2;
               time_start = groundflow_flux_edge_normal_sine[0];
+              time_end = groundflow_flux_edge_normal_sine[1];
               load = 0.;
-              if ( time_total>time_start ) {
+              if ( time_total>time_start && time_total<=time_end ) {
                 for ( ifreq=0; ifreq<nfreq; ifreq++ ) {
-                  frequency = groundflow_flux_edge_normal_sine[1+ifreq*2+0];
-                  amplitude = groundflow_flux_edge_normal_sine[1+ifreq*2+1];
+                  frequency = groundflow_flux_edge_normal_sine[2+ifreq*2+0];
+                  amplitude = groundflow_flux_edge_normal_sine[2+ifreq*2+1];
                   load += amplitude * sin( 2. * PIRAD * frequency * time_total );
                 }
               }
@@ -555,14 +564,17 @@ void area( long int element, long int name,
                 ind, VERSION_NORMAL ) ) {
               groundflow_flux_edge_normal_sine = db_dbl(
                 flux_edge_companion(type[itype],3), ind, VERSION_NORMAL );
+              // Professional manual 6.567 (groundflow_flux_edge_normal_sine):
+              // index start_time end_time freq_0 amp_0 ... (same as 6.465).
               nfreq = ( db_len( flux_edge_companion(type[itype],3), ind,
-                VERSION_NORMAL ) - 1 ) / 2;
+                VERSION_NORMAL ) - 2 ) / 2;
               time_start = groundflow_flux_edge_normal_sine[0];
+              time_end = groundflow_flux_edge_normal_sine[1];
               load = 0.;
-              if ( time_total>time_start ) {
+              if ( time_total>time_start && time_total<=time_end ) {
                 for ( ifreq=0; ifreq<nfreq; ifreq++ ) {
-                  frequency = groundflow_flux_edge_normal_sine[1+ifreq*2+0];
-                  amplitude = groundflow_flux_edge_normal_sine[1+ifreq*2+1];
+                  frequency = groundflow_flux_edge_normal_sine[2+ifreq*2+0];
+                  amplitude = groundflow_flux_edge_normal_sine[2+ifreq*2+1];
                   load += amplitude * sin( 2. * PIRAD * frequency * time_total );
                 }
               }
