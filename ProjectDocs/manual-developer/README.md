@@ -139,7 +139,7 @@ Each file corresponds to the same feature in the [User Manual](../manual-user/).
 - [group_materi_elasti_stress_pressure_history_factor](group_materi_elasti_stress_pressure_history_factor.md) — C/Cmem scale in set_stress() on unloading (p_est vs old_unknowns[sph]); scalar_dabs(-0.0) and matrix_a4b in-place gotchas.
 - [materi_stress_pressure_history](materi_stress_pressure_history.md) — initia dof sph: running max |p| updated in dof.cc parallel_new_dof_diagonal; no equation in general.cc (veli pattern).
 - [materi_elasti_young_power_apply](materi_elasti_young_power_apply.md) — control_materi gate in the young_power block; db_number alias for the manual name.
-- [group_materi_plasti_hypo_masin](group_materi_plasti_hypo_masin.md) — Masin clay hypoplasticity (masin.c pure-C port of umat_hcea.for, validated to 5e-7; hypoplas.cc dispatch).
+- [group_materi_plasti_hypo_masin](group_materi_plasti_hypo_masin.md) — Masin clay hypoplasticity: masin_basic.c pure-C kernel (Masin 2005 Appendix C, source-grounded Eq.15/ts3 fixes + Masin 2007 structure evolution Eq.21/Eq.8) for the basic route and masin.c pure-C port of umat_hcea.for (validated to 5e-7) for the `_clay` route; hypoplas.cc dispatch.
 - [group_materi_plasti_sanisand](group_materi_plasti_sanisand.md) — SANISAND (sanisand.c port of the Dafalias-Manzari UMAT; functional ~8% vs Fortran, integrator tightening pending in P4-E1b).
 - [group_materi_plasti_hypo_wolfersdorff](group_materi_plasti_hypo_wolfersdorff.md) — hypoplasticity kernel (hypo.c pure-C, all 5 variants verified).
 
@@ -313,7 +313,7 @@ Each file corresponds to the same feature in the [User Manual](../manual-user/).
 - [control_reset_dof_scoping](control_reset_dof_scoping.md) — icontrol==ireset gate + multi-dof iteration in data.cc; verified against the Professional binary.
 - [area_element_group_sequence_no_selectors](area_element_group_sequence_no_selectors.md) — previous-group matching in group.cc.
 - [mesh](mesh.md) — db_number routing to OPTIONS_MESH (dead MESH placeholder avoided).
-- [group_materi_memory_updated_linear](group_materi_memory_updated_linear.md) — the UPDATED_LINEAR branches in materi.cc/set_deften_etc/stress.cc + the explicit-memory-only displacement check.
+- [group_materi_memory_updated_linear](group_materi_memory_updated_linear.md) — the UPDATED_LINEAR branches in materi.cc/set_deften_etc/stress.cc + the explicit-memory-only displacement check + the reference-geometry strain increments (NODE_START_REFINED -> ref_d, gated on -UPDATED_LINEAR).
 - [group_materi_memory_updated_area](group_materi_memory_updated_area.md) — the UPDATED_AREA enum/name + linear branches (identical kinematics to UPDATED_LINEAR); the load-area term needs the pending incremental_driver machinery.
 - [nonlocal](nonlocal.md) — nonlocal alias + NONLOCAL_NAME enum; classic-path nonlocal_set() call restored (top.cc iteration loop, mesh-change flag); legacy nonlocal buffer bug documented as pending.
 - [geometry_factor](geometry_factor.md) — db_number alias to GEOMETRY_BOUNDA_FACTOR (geometry.cc linear/parabolic interpolation); verified against the Professional .dbs (matrix2).

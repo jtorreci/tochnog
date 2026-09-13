@@ -17,6 +17,8 @@ HYPO_OBJ=hypo.o
 # masin_visco.c is the visco extension (Jerman & Masin 2020, umat_visco.f).
 MASIN_SRC=masin.c
 MASIN_OBJ=masin.o
+MASIN_BASIC_SRC=masin_basic.c
+MASIN_BASIC_OBJ=masin_basic.o
 MASIN_VISCO_SRC=masin_visco.c
 MASIN_VISCO_OBJ=masin_visco.o
 
@@ -349,7 +351,7 @@ tochnog: adjust.$(OBJ) area.$(OBJ) \
 	filter.$(OBJ) force.$(OBJ) general.$(OBJ) \
 	geometry.$(OBJ) generate.$(OBJ) \
 	groundda.$(OBJ) groundfl.$(OBJ) group.$(OBJ) \
-        hyperela.$(OBJ) $(HYPO_OBJ) $(MASIN_OBJ) $(MASIN_VISCO_OBJ) $(SANISAND_OBJ) $(SQLITE_OBJ) \
+        hyperela.$(OBJ) $(HYPO_OBJ) $(MASIN_OBJ) $(MASIN_BASIC_OBJ) $(MASIN_VISCO_OBJ) $(SANISAND_OBJ) $(SQLITE_OBJ) \
 	hypoplas.$(OBJ) initia.$(OBJ) \
 	input.$(OBJ) integra.$(OBJ) intersec.$(OBJ) \
 	inverse.$(OBJ) locate.$(OBJ) \
@@ -490,6 +492,9 @@ $(HYPO_OBJ): $(HYPO_SRC)
 
 $(MASIN_OBJ): $(MASIN_SRC)
 	$(COMPILER_C) $(COMPILER_FLAGS) $(MASIN_SRC)
+
+$(MASIN_BASIC_OBJ): $(MASIN_BASIC_SRC)
+	$(COMPILER_C) $(COMPILER_FLAGS) $(MASIN_BASIC_SRC)
 
 $(MASIN_VISCO_OBJ): $(MASIN_VISCO_SRC)
 	$(COMPILER_C) $(COMPILER_FLAGS) $(MASIN_VISCO_SRC)

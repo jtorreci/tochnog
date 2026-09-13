@@ -2,10 +2,20 @@
 
 ## Description
 
-Clay hypoplasticity model of Masin (Masin 2014, *Géotechnique* 64(3):232-238)
-for fine-grained soils. It is a rate-independent hypoplastic model based on
-critical state soil mechanics with an explicit asymptotic state boundary
-surface, extended with stiffness anisotropy.
+Clay hypoplasticity models of Masin. The keyword family has two independent
+routes with different kernels:
+
+- **basic route** — `group_materi_plasti_hypo_masin` with the kernel
+  `masin_basic.c`: the five-parameter Masin (2005) clay hypoplasticity model
+  (Appendix C of Masin, D. (2005), *Géotechnique* 55(6):457-464).
+- **_clay route** — `group_materi_plasti_hypo_masin_clay` with the kernel
+  `masin.c`: the Masin (2014) HCEA formulation (*Géotechnique*
+  64(3):232-238), a rate-independent hypoplastic model based on critical
+  state soil mechanics with an explicit asymptotic state boundary surface,
+  extended with stiffness anisotropy.
+
+The rest of this document describes the `_clay` route unless stated
+otherwise; the basic route has its own section below.
 
 The law is formulated in kPa; the rest of the input file must be consistent
 with those units.
@@ -18,6 +28,91 @@ The model uses **8 history variables** (`materi_history_variables 8`):
 Requires `materi_stress`, `materi_strain_total`, a velocity formulation, and
 `group_materi_memory -updated_without_rotation` (or another updated
 formulation; `-total` is not supported for hypoplasticity).
+
+## Basic route (Masin 2005)
+
+The basic route implements the five-parameter Masin (2005) model from its
+Appendix C rate equation in `masin_basic.c`. It is dispatched for
+`group_materi_plasti_hypo_masin` when the group is neither `_clay` nor a
+visco variant.
+
+```
+group_materi_plasti_hypo_masin <element_group>
+                        phi_c lambda* kappa* N r
+```
+
+| Parameter | Meaning |
+|-----------|---------|
+| `phi_c` | Critical state friction angle, in degrees. |
+| `lambda*` | Slope of the normal compression line (dimensionless). |
+| `kappa*` | Slope of the swelling/loading line (dimensionless, `< lambda*`). |
+| `N` | Position of the normal compression line (void ratio at 1 kPa). |
+| `r` | Parameter controlling the asymptotic state boundary surface shape. |
+
+The void ratio is stored in `hisv[6]` (hyhis0). The dispatch requires
+`materi_history_variables >= 8`, `materi_stress` and `materi_strain_total`;
+`group_materi_memory -total` is rejected.
+
+### Structure (sensitivity) extension
+
+The optional `group_materi_plasti_hypo_masin_structure k A s_f` record adds
+the meta-stable structure model of Masin (2007) *Canadian Geotechnical
+Journal* 44(5):530-540 (manual reference [12], "Masin law" theory Eqs.
+12-21). The current sensitivity `s` is the history variable `hyhis4`
+(initialised through `control_reset_dof ... -hyhis4`, or `node_dof`); it must
+be `>= 1`. The three parameters are:
+
+| Parameter | Meaning |
+|-----------|---------|
+| `k` | Rate of structure degradation (`>= 0`). |
+| `A` | Relative weight of volumetric vs shear damage strain, `0 <= A < 1`. |
+| `s_f` | Final (fully destructured) sensitivity, `>= 1` (typically 1). |
+
+The structure enters the model in two ways:
+
+1. **Barotropy / shape** — the sensitivity factor
+   `Si = (s - k(s - s_f))/s` multiplies the barotropy factor `fs`, divides the
+   `9 r` denominator of `c1`, and replaces `kappa*` by `kappa* Si` in the
+   exponent `alpha` (manual Eqs. 12, 18, 19).
+2. **Pyknotropy** — the Hvorslev equivalent pressure `p*_e` is replaced by
+   `s p*_e`, i.e. `fd = (2p/(s p*_e))^alpha` (Masin 2007 Eq. 8). The
+   manual Eq. (12) prints the reference (`s = 1`) form.
+
+The sensitivity evolves with the accumulated damage strain (manual Eq. 21):
+
+```
+sdot = -(k/lambda*) (s - s_f) sqrt( (eps_v_dot)^2 + (A/(1-A)) (eps_s_dot)^2 )
+```
+
+with `eps_v_dot = tr D` and `eps_s_dot = sqrt(2/3)||dev D||`. A basic model
+without structure effects is recovered with `s = s_f = 1`; the kernel also
+treats `s < 1` (e.g. no structure record, `hyhis4 = 0`) as inactive, so the
+five-parameter model is bit-identical.
+
+**Example.** The corpus test `hypo7.dat` (drained axisymmetric triaxial,
+`-updated_linear`) is the reference case:
+
+```
+group_materi_memory             0  -updated_linear
+group_materi_plasti_hypo_masin  0
+                        22.56    (phic deg)
+                        0.11     (lambda*)
+                        0.016    (kappa*)
+                        1.375    (N)
+                        0.4      (r)
+```
+
+With the reference-geometry strain increments for `-updated_linear` (R2),
+the reported `eptyy` is `-0.300000000` and the final `sigyy` is `-231.789`
+(Professional `-231.809`, target `±0.1`).
+
+The structure variant is exercised by `hypo8.dat` (Pisa clay, `k=0.4`,
+`A=0.1`, `s_f=1`, `e0=1.03`, `s0=2`): the final `sigyy` is `-230.534`
+(Professional `-230.588`, target `-230.58 ±0.1`) with `s` degrading from
+`2.0` to `1.609`.
+
+**Limitations.** The intergranular-strain extension is not available for the
+basic route; see the developer manual.
 
 ## Usage
 
@@ -117,12 +212,15 @@ intergranular-strain variant (`hypomasin3.dat`) are also regression-tested.
 
 ## Notes
 
-- `group_materi_plasti_hypo_masin` (basic law, 5 params) and
-  `group_materi_plasti_hypo_masin_clay` (anisotropic law, 5 params) share the
-  same integration kernel; the clay variant additionally accepts the
+- The basic route (`group_materi_plasti_hypo_masin`) uses `masin_basic.c`
+  (Masin 2005 Appendix C); the `_clay` route uses `masin.c` (HCEA). They do
+  NOT share a kernel. The `_clay` variant additionally accepts the
   `_advanced_parameters`, `_avanced_direction`, `_clay_ocr` and
   `_clay_structure` records.
-- The structure record is optional; without it the basic model is used.
+- The `_clay` structure record is optional; without it the clay model is
+  used. For the basic route the `group_materi_plasti_hypo_masin_structure`
+  record activates the Masin (2007) structure model; without it (or with
+  `s < 1`) the five-parameter model is used.
 - The OCR records require the matching `control_*_ocr_apply -yes`; they
   compute `e0 = exp(N - lambda* ln|OCR| - lambda* ln|p/pr|) - 1`.
 - The intergranular-strain record activates the small-strain stiffness

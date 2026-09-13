@@ -41,6 +41,11 @@ extern "C"
     double *dstran, double dtime, double *props, int nprops, int testing,
     int *error );
 
+extern "C"
+  void masin_basic_umat( double *stress, double *statev, double *ddsdde,
+    double *dstran, double dtime, double *props, int nprops, int testing,
+    int *error );
+
 extern "C" 
   void masin_visco_umat( double *stress, double *statev, double *ddsdde,
     double *dstran, double dtime, double *props, int nprops, int testing,
@@ -212,7 +217,8 @@ void hypoplasticity( long int element, long int gr,
   if ( db_active_index( GROUP_MATERI_PLASTI_HYPO_MASIN, gr, VERSION_NORMAL ) ||
        db_active_index( GROUP_MATERI_PLASTI_HYPO_MASIN_CLAY, gr, VERSION_NORMAL ) ) {
 
-      // Masin clay hypoplasticity (masin.c, port of umat_hcea.for)
+      // Masin hypoplasticity.  The _clay route uses masin.c (HCEA); the
+      // five-parameter basic route uses masin_basic.c (Mašín 2005 Appendix C).
       // ------------------------------------------------------------------
       // Conventions:
       //   tochnog stores 3x3 tensors row-major (sig[i*MDIM+j]); masin uses
@@ -248,7 +254,8 @@ void hypoplasticity( long int element, long int gr,
       exit(TN_EXIT_STATUS);
     }
 
-      // material parameters (29 props, raw layout of umat_hcea.for)
+      // material parameters.  The basic route receives r in props[5]; the
+      // HCEA/clay route retains its raw umat_hcea.for layout.
       // group_materi_plasti_hypo_masin        = phi_c lambda* kappa* N r
       // group_materi_plasti_hypo_masin_clay   = phi_c lambda* kappa* N nu_pp
       //   -> props[0]=phi_c, props[2]=lambda*, props[3]=kappa*,
@@ -438,6 +445,9 @@ void hypoplasticity( long int element, long int gr,
           mprops, 29, mtesting, &merror );
       else if ( hypo_masin_visco_jm )
         masin_visco_umat( mstress, mstatev, mddsdde, mdstran, mdt, mprops, 29,
+          mtesting, &merror );
+      else if ( !hypo_masin_clay )
+        masin_basic_umat( mstress, mstatev, mddsdde, mdstran, mdt, mprops, 29,
           mtesting, &merror );
       else
         masin_umat( mstress, mstatev, mddsdde, mdstran, mdt, mprops, 29,

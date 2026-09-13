@@ -135,7 +135,7 @@ input parameters it accepts.
 - [group_materi_elasti_stress_pressure_history_factor](group_materi_elasti_stress_pressure_history_factor.md) — stiffness multiplier while unloading/reloading (|p| below the historical maximum).
 - [materi_stress_pressure_history](materi_stress_pressure_history.md) — initia: running maximum of |pressure| in the node_dof records (sph dof).
 - [materi_elasti_young_power_apply](materi_elasti_young_power_apply.md) — -no: ignore the young_power law and use the constant E0 at all times.
-- [group_materi_plasti_hypo_masin](group_materi_plasti_hypo_masin.md) — Masin clay hypoplasticity (critical state model for fine-grained soils).
+- [group_materi_plasti_hypo_masin](group_materi_plasti_hypo_masin.md) — Masin clay hypoplasticity: Masin (2005) five-parameter basic route (masin_basic.c, with the optional Masin 2007 structure/sensitivity evolution Eq.21 via group_materi_plasti_hypo_masin_structure) and Masin (2014) HCEA `_clay` route (critical state model for fine-grained soils).
 - [group_materi_plasti_sanisand](group_materi_plasti_sanisand.md) — SANISAND (Dafalias & Manzari 2004, sand with fabric effects).
 - [group_materi_plasti_hypo_wolfersdorff](group_materi_plasti_hypo_wolfersdorff.md) — hypoplasticity (wolfersdorff, lowangles, cohesion, intergranular strain, pressure-dependent void ratio).
 
@@ -315,7 +315,7 @@ input parameters it accepts.
 - [control_reset_dof_scoping](control_reset_dof_scoping.md) — the reset runs ONCE at its own control index (the Professional rejects a reset at the timestep index) and multi-dof records reset EVERY listed dof.
 - [area_element_group_sequence_no_selectors](area_element_group_sequence_no_selectors.md) — the sequence without geometry/element selectors: group_(i-1) elements become group_i at time_i (dam_building).
 - [mesh](mesh.md) — the short alias of options_mesh (mesh -fixed_in_space ...).
-- [group_materi_memory_updated_linear](group_materi_memory_updated_linear.md) — the -updated_linear memory: updated Lagrange with linear engineering strains.
+- [group_materi_memory_updated_linear](group_materi_memory_updated_linear.md) — the -updated_linear memory: updated Lagrange with linear engineering strains referred to the undeformed (reference) mesh, independent of -follow_material.
 - [group_materi_memory_updated_area](group_materi_memory_updated_area.md) — the -updated_area memory (incremental_driver, 6.784): small deformation WITH the area change of the loaded surface (driver-scoped; blocked by the incremental_driver family in the GNU).
 - [nonlocal](nonlocal.md) — the short `nonlocal` radius record + `nonlocal_name` model selector (6.897/6.898).
 - [geometry_factor](geometry_factor.md) — the Professional name (6.527) of geometry_bounda_factor: spatial weighting factors of bounda_dof/bounda_force/force_edge_* on a geometry entity (2 = linear, 3 = parabolic on a line).

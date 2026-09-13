@@ -23,11 +23,12 @@
 
 void materi( long int element, long int gr, long int name, long int nnol, 
   long int npoint, long int nodes[], long int plasti_on_boundary,
-  double coord_ip[], double old_coord[], long int ipoint,
+  double coord_ip[], double old_coord[], double ref_coord[], long int ipoint,
   double new_dof[], double h[], double new_d[], double new_b[],
   double volume, double old_unknowns[], 
   double new_unknowns[], double old_grad_old_unknowns[], 
-  double old_grad_new_unknowns[], double new_grad_new_unknowns[],
+  double old_grad_new_unknowns[], double old_grad_ref_new_unknowns[],
+  double new_grad_new_unknowns[],
   double element_lhside[], double element_matrix[],
   double element_rhside[], double element_residue[], 
   double tendon_element_rhside[])
@@ -311,8 +312,9 @@ void materi( long int element, long int gr, long int name, long int nnol,
     softvar_l = new_unknowns[iuknwn];
   }
   
-  set_deften_etc( element, gr, nnol, h, old_coord, old_unknowns, 
+  set_deften_etc( element, gr, nnol, h, old_coord, ref_coord, old_unknowns, 
     new_unknowns, old_grad_old_unknowns, old_grad_new_unknowns, 
+    old_grad_ref_new_unknowns,
     old_deften, new_deften, old_ept, inc_ept, new_ept, 
     old_rot, inc_rot, new_rot );
 
@@ -1426,8 +1428,9 @@ void strain_settlement_creep( long int element, long int gr, long int nnol,
 }
 
 void set_deften_etc( long int element, long int gr, long int nnol, double h[], 
-  double old_coord[], double old_unknowns[], double new_unknowns[], 
+  double old_coord[], double ref_coord[], double old_unknowns[], double new_unknowns[], 
   double old_grad_old_unknowns[], double old_grad_new_unknowns[], 
+  double old_grad_ref_new_unknowns[],
   double old_deften[], double new_deften[], 
   double old_ept[], double inc_ept[], double new_ept[], 
   double old_rot[], double inc_rot[], double new_rot[] )
@@ -1435,7 +1438,7 @@ void set_deften_etc( long int element, long int gr, long int nnol, double h[],
 {
   long int idim=0, jdim=0, indx=0, swit=0, memory=-UPDATED, 
     axisymmetric=-NO, ind=0, ldum=0, idum[1];
-  double dtime=0., radius=0., ddum[1], 
+  double dtime=0., radius=0., radius_inc=0., ddum[1], 
     uTu[MDIM*MDIM], old_u[MDIM*MDIM], new_u[MDIM*MDIM], 
     inc_u[MDIM*MDIM], inc_deften[MDIM*MDIM], coord_ip[MDIM];
 
@@ -1470,11 +1473,28 @@ void set_deften_etc( long int element, long int gr, long int nnol, double h[],
     }
   }
   inc_deften[0] = inc_deften[4] = inc_deften[8] = 1.;
-  for ( idim=0; idim<ndim; idim++ ) {
-    for ( jdim=0; jdim<ndim; jdim++ ) {
-      indx = idim*MDIM+jdim;
-      ind = jdim*nuknwn+vel_indx+idim*nder;
-      inc_deften[indx] += old_grad_new_unknowns[ind]*dtime;
+  // For -UPDATED_LINEAR the accumulated total must be the LINEAR
+  // engineering strain referred to the undeformed (reference) geometry, so
+  // the velocity gradient uses the reference shape derivatives supplied by
+  // elem()/pol() (built on NODE_START_REFINED). Every other memory option
+  // keeps the current-geometry gradient. The pointer is NULL when the
+  // caller did not build the reference gradient.
+  if ( memory==-UPDATED_LINEAR && old_grad_ref_new_unknowns!=NULL ) {
+    for ( idim=0; idim<ndim; idim++ ) {
+      for ( jdim=0; jdim<ndim; jdim++ ) {
+        indx = idim*MDIM+jdim;
+        ind = jdim*nuknwn+vel_indx+idim*nder;
+        inc_deften[indx] += old_grad_ref_new_unknowns[ind]*dtime;
+      }
+    }
+  }
+  else {
+    for ( idim=0; idim<ndim; idim++ ) {
+      for ( jdim=0; jdim<ndim; jdim++ ) {
+        indx = idim*MDIM+jdim;
+        ind = jdim*nuknwn+vel_indx+idim*nder;
+        inc_deften[indx] += old_grad_new_unknowns[ind]*dtime;
+      }
     }
   }
   if ( axisymmetric==-YES ) {
@@ -1491,8 +1511,18 @@ void set_deften_etc( long int element, long int gr, long int nnol, double h[],
         old_deften[8] += old_unknowns[ind]/radius;
         new_deften[8] += new_unknowns[ind]/radius;
       }
+      // The hoop strain increment of -UPDATED_LINEAR is the engineering
+      // increment dr/R_ref, so it uses the reference radius (same reference
+      // geometry as the gradient above). Other options keep the current
+      // radius; old/new_deften keep it in all cases.
+      radius_inc = radius;
+      if ( memory==-UPDATED_LINEAR && ref_coord!=NULL ) {
+        matrix_ab( h, ref_coord, coord_ip, 1, nnol, ndim );
+        if ( scalar_dabs(coord_ip[0])!=0. )
+          radius_inc = scalar_dabs(coord_ip[0]);
+      }
       ind = vel_indx;
-      inc_deften[8] += new_unknowns[ind]*dtime/radius;              
+      inc_deften[8] += new_unknowns[ind]*dtime/radius_inc;              
     }
   }
 
