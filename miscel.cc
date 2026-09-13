@@ -396,61 +396,165 @@ long int sri_active( long int /*element*/, long int element_group,
   return 1;
 }
 
-double sri_stress_recovery_weight( long int nnol, long int inol,
-  long int npoint, long int ipoint, double h_inol, long int sri_active )
+double sri_stress_recovery_weight( long int sri, long int name, long int nnol,
+  long int inol, long int npoint, long int ipoint, double h_inol, double volume )
 
-  // Nodal stress recovery weight of the lumped sigma-dof update
-  // (DIAG-SOLVE-MIXTO lot C/D, fix D-b). The sigma dofs are advanced by
-  // the lumped "inertia" equation (general.cc) with the shape function
-  // h as the weight: sigma_node = sum_gp h*sigma_gp / sum_gp h. With
-  // the NODE-CONTAINING quadratures (the default 2x2 Lobatto corners of
-  // the quad4, the 2x2x2 Lobatto corners of the hex8, the quad9/hex27
-  // Lobatto rules) h is the Kronecker delta and the recovery is exact.
-  // With the interior GAUSS rules (2x2 for the SRI quad4, 2x2x2 for the
-  // SRI hex8) the h-weighted average DILUTES the nodal values at the
-  // corners (measured: 0.577x of the exact value for the bilinear), so
-  // the section moments of the materi_stress_force integration read
-  // systematically low values even when the displacement field is
-  // correct (SRI quad4: mom = 0.29x instead of the element's 93.75%).
+  // Nodal stress recovery weight of the lumped sigma-dof update.
   //
-  // The consistent recovery is the evaluation of the element's stress
-  // field at the nodes - the bilinear/trilinear Lagrange extrapolation
-  // of the Gauss-point values (the "same B at the node"). For the
-  // 2-point 1D rules the extrapolation weight of the node iso
-  // coordinate xi_n in {+1,-1} for the Gauss point xi_g in
-  // {+1/sqrt(3), -1/sqrt(3)} is
-  //   w(xi_n, xi_g) = prod_{g' != g} (xi_n - xi_g')/(xi_g - xi_g')
-  // which for the corner Lobatto rule (xi_g = +-1) reduces to the
-  // Kronecker delta, i.e. w = h (the node IS the integration point).
-  // Returns the 2D tensor product w_xi * w_eta for the bilinear quad4
-  // with the 2x2 rule and the 3D tensor product w_xi*w_eta*w_zeta for
-  // the trilinear hex8 with the 2x2x2 rule (row-major-from-bottom
-  // ordering of nodes and points, the same convention as pol() and the
-  // SRI centroid B), and h_inol for every other case (quad9/hex27/
-  // 1-point rules: unchanged).
+  // The Professional (binary 2-8-2026) recovers the nodal stress from the
+  // integration-point stresses with a per-element least-squares fit and
+  // assembles a node by the ARITHMETIC MEAN of the adjacent elements'
+  // per-element nodal values (its node_lhside for a stress dof equals the
+  // number of adjacent elements). The per-element fit was identified from
+  // the Professional's own .dbs dumps (element_intpnt_dof -> element_dof)
+  // and is, per element type:
+  //   quad4   4 pts  bilinear interpolation  1,x,y,xy  (4 terms)
+  //   quad9   9 pts  linear least squares    1,x,y     (3 terms)
+  //   hex8    8 pts  linear least squares    1,x,y,z   (4 terms)
+  //   hex27  27 pts  linear least squares    1,x,y,z   (4 terms)
+  // Every other element/rule returns h_inol. The node-containing Lobatto
+  // rules already have h as the exact weight (h is the Kronecker delta at
+  // the nodes), and the non-tensor elements (bar/tria/tet) keep the
+  // historic h weighting.
+  //
+  // The lumped sigma-dof equation (general.cc/materi.cc) multiplies the
+  // weight by the integration-point volume, so the assembled average is
+  // sum(volume_g*w_g*sigma_g)/sum(volume_g*w_g). The Professional's
+  // per-element value is the plain interpolation sum(F_g*sigma_g) with
+  // sum_g F_g = 1, and its assembly is unweighted. Returning F_g/volume_g
+  // makes volume_g*weight_g = F_g, so each element contributes weight 1
+  // and the assembled node is the arithmetic mean, exactly as the
+  // Professional. Without the volume cancellation the quadrature weights
+  // bias the average (measured on a controlled quad9 linear patch: the
+  // exact sigxx = 1000 came out 1333 = 4/3).
 
 {
-  if ( !( sri_active && ( ( nnol==4 && npoint==4 ) ||
-                          ( nnol==8 && npoint==8 ) ) ) )
-    return h_inol;
+  long int nterm=0, npol=0, nxi=1, neta=1, nzeta=1, ixi=0, ieta=0, izeta=0,
+    inol_xi=0, inol_eta=0, inol_zeta=0, k=0, l=0, d=0, p=0, m=0, pmax=0;
+  long int expo[4][MDIM];
+  double xg[MPOINT], wg[MPOINT], node[MDIM], ipc[MDIM], pc[MDIM],
+    phn[4], phi[4], M[4][4], aug[4][8], piv=0., fac=0., F=0.;
 
-  // node iso coordinates (+-1, row-major from bottom): quad4 inol 0 =
-  // (-1,-1), 1 = (+1,-1), 2 = (-1,+1), 3 = (+1,+1); hex8 inol 0 =
-  // (-1,-1,-1), 1 = (+1,-1,-1), ..., 7 = (+1,+1,+1). Point iso
-  // coordinates (+-1/sqrt(3)): ipoint = izeta*nxi*neta + ieta*nxi +
-  // ixi (the pol() izeta->ieta->ixi loop with nxi = neta = nzeta = 2).
-  double xi_n  = ( inol%2   == 0 ? -1. : 1. );
-  double eta_n = ( (inol/2)%2 == 0 ? -1. : 1. );
-  double xi_g  = ( ipoint%2 == 0 ? -1. : 1. ) / sqrt(3.);
-  double eta_g = ( (ipoint/2)%2 == 0 ? -1. : 1. ) / sqrt(3.);
-  double w_xi  = ( xi_n  + xi_g  ) / ( 2.*xi_g  );
-  double w_eta = ( eta_n + eta_g ) / ( 2.*eta_g );
-  if ( nnol==4 ) return w_xi * w_eta;
+  // SRI path (GNU-specific feature, unchanged 2026-09-13): the classic
+  // selective reduced integration of the quad4/hex8 uses the Lagrange
+  // extrapolation of the Gauss-point values for the NORMAL stress
+  // components (the caller only invokes this for those; the shear keeps
+  // h). The volume-weighted assembly is kept (no volume cancellation)
+  // so the SRI results are byte-identical to the pre-alignment build.
+  if ( sri ) {
+    if ( !( ( nnol==4 && npoint==4 ) || ( nnol==8 && npoint==8 ) ) )
+      return h_inol;
+    double xi_n  = ( inol%2   == 0 ? -1. : 1. );
+    double eta_n = ( (inol/2)%2 == 0 ? -1. : 1. );
+    double xi_g  = ( ipoint%2 == 0 ? -1. : 1. ) / sqrt(3.);
+    double eta_g = ( (ipoint/2)%2 == 0 ? -1. : 1. ) / sqrt(3.);
+    double w_xi  = ( xi_n  + xi_g  ) / ( 2.*xi_g  );
+    double w_eta = ( eta_n + eta_g ) / ( 2.*eta_g  );
+    if ( nnol==4 ) return w_xi * w_eta;
+    double zeta_n = ( inol/4 == 0 ? -1. : 1. );
+    double zeta_g = ( ipoint/4 == 0 ? -1. : 1. ) / sqrt(3.);
+    double w_zeta = ( zeta_n + zeta_g ) / ( 2.*zeta_g  );
+    return w_xi * w_eta * w_zeta;
+  }
 
-  double zeta_n = ( inol/4 == 0 ? -1. : 1. );
-  double zeta_g = ( ipoint/4 == 0 ? -1. : 1. ) / sqrt(3.);
-  double w_zeta = ( zeta_n + zeta_g ) / ( 2.*zeta_g );
-  return w_xi * w_eta * w_zeta;
+  if ( !stress_recovery_gauss ) return h_inol;
+
+  for ( k=0; k<4; k++ )
+    for ( d=0; d<MDIM; d++ ) expo[k][d] = 0;
+
+  if ( name==-QUAD4 && nnol==4 && npoint==4 && ndim==2 ) {
+    npol = 2; nterm = 4;               // bilinear 1,x,y,xy
+    expo[1][0]=1; expo[2][1]=1; expo[3][0]=1; expo[3][1]=1;
+  }
+  else if ( name==-QUAD9 && nnol==9 && npoint==9 && ndim==2 ) {
+    npol = 3; nterm = 3;               // linear 1,x,y
+    expo[1][0]=1; expo[2][1]=1;
+  }
+  else if ( name==-HEX8 && nnol==8 && npoint==8 && ndim==3 ) {
+    npol = 2; nterm = 4;               // linear 1,x,y,z
+    expo[1][0]=1; expo[2][1]=1; expo[3][2]=1;
+  }
+  else if ( name==-HEX27 && nnol==27 && npoint==27 && ndim==3 ) {
+    npol = 3; nterm = 4;               // linear 1,x,y,z
+    expo[1][0]=1; expo[2][1]=1; expo[3][2]=1;
+  }
+  else return h_inol;
+
+  if ( ndim>=1 ) nxi = npol;
+  if ( ndim>=2 ) neta = npol;
+  if ( ndim==3 ) nzeta = npol;
+
+  inol_xi = inol % nxi; inol_eta = (inol/nxi) % neta;
+  inol_zeta = inol/(nxi*neta);
+  node[0] = ( nxi>1 ) ? -1. + 2.*inol_xi/(nxi-1) : 0.;
+  if ( ndim>=2 ) node[1] = ( neta>1 ) ? -1. + 2.*inol_eta/(neta-1) : 0.;
+  if ( ndim==3 ) node[2] = ( nzeta>1 ) ? -1. + 2.*inol_zeta/(nzeta-1) : 0.;
+
+  ixi = ipoint % nxi; ieta = (ipoint/nxi) % neta; izeta = ipoint/(nxi*neta);
+  integration_gauss( npol, xg, wg );
+  ipc[0] = xg[ixi];
+  if ( ndim>=2 ) ipc[1] = xg[ieta];
+  if ( ndim==3 ) ipc[2] = xg[izeta];
+
+  // normal matrix M = sum_p phi(p) phi(p)^T (UNIFORM weights, as measured)
+  for ( k=0; k<nterm; k++ )
+    for ( l=0; l<nterm; l++ ) M[k][l] = 0.;
+  for ( p=0; p<npoint; p++ ) {
+    long int pxi = p % nxi, peta = (p/nxi) % neta, pzeta = p/(nxi*neta);
+    pc[0] = xg[pxi];
+    if ( ndim>=2 ) pc[1] = xg[peta];
+    if ( ndim==3 ) pc[2] = xg[pzeta];
+    for ( k=0; k<nterm; k++ ) {
+      phi[k] = 1.;
+      for ( d=0; d<ndim; d++ )
+        for ( long int e=0; e<expo[k][d]; e++ ) phi[k] *= pc[d];
+    }
+    for ( k=0; k<nterm; k++ )
+      for ( l=0; l<nterm; l++ ) M[k][l] += phi[k]*phi[l];
+  }
+
+  // invert M (nterm <= 4) by Gauss-Jordan with partial pivoting
+  for ( k=0; k<nterm; k++ ) {
+    for ( l=0; l<nterm; l++ ) aug[k][l] = M[k][l];
+    for ( l=0; l<nterm; l++ ) aug[k][nterm+l] = ( k==l ) ? 1. : 0.;
+  }
+  for ( k=0; k<nterm; k++ ) {
+    pmax = k;
+    for ( l=k+1; l<nterm; l++ )
+      if ( scalar_dabs(aug[l][k])>scalar_dabs(aug[pmax][k]) ) pmax = l;
+    if ( pmax!=k ) {
+      for ( l=0; l<2*nterm; l++ ) {
+        double tmp = aug[k][l]; aug[k][l] = aug[pmax][l]; aug[pmax][l] = tmp;
+      }
+    }
+    piv = aug[k][k];
+    if ( scalar_dabs(piv)<TINY ) return h_inol;
+    for ( l=0; l<2*nterm; l++ ) aug[k][l] /= piv;
+    for ( l=0; l<nterm; l++ ) {
+      if ( l!=k ) {
+        fac = aug[l][k];
+        for ( m=0; m<2*nterm; m++ ) aug[l][m] -= fac*aug[k][m];
+      }
+    }
+  }
+
+  // F = phi(node)^T M^{-1} phi(ipoint)
+  for ( k=0; k<nterm; k++ ) {
+    phn[k] = 1.;
+    for ( d=0; d<ndim; d++ )
+      for ( long int e=0; e<expo[k][d]; e++ ) phn[k] *= node[d];
+  }
+  for ( k=0; k<nterm; k++ ) {
+    phi[k] = 1.;
+    for ( d=0; d<ndim; d++ )
+      for ( long int e=0; e<expo[k][d]; e++ ) phi[k] *= ipc[d];
+  }
+  F = 0.;
+  for ( k=0; k<nterm; k++ )
+    for ( l=0; l<nterm; l++ ) F += phn[k]*aug[k][nterm+l]*phi[l];
+
+  if ( scalar_dabs(volume)>TINY ) return F/volume;
+  return h_inol;
 }
 
 char *long_to_a( long int n, char s[] )

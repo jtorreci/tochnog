@@ -22,6 +22,15 @@
 double *d1, *d2, *p, *Ad1_thread, *Ad2_thread, *p_thread, *residue_thread;
 long int solve_iterative_bicg_use_cg = 0;
 #define EPS_dAd 1.e-16
+// FIX A (2026-09-13): scale-relative breakdown test. |d^T A d| is compared
+// against the CURRENT residual energy error = ||residue||^2 instead of the
+// absolute 1e-16. The CG search direction is built from the residual, so
+// |d^T A d|/error is the Rayleigh quotient of the unit-diagonal
+// preconditioned operator: O(1) for a well-conditioned system and -> 0 only
+// when the residual lies in a numerical null space. The old absolute test
+// fired near convergence (error itself ~1e-16) on perfectly solvable
+// systems (dynamic8 second DEV-B solve: dAd ~ 5e-17, error ~ 2e-16).
+#define EPS_dAd_REL 1.e-14
 #define EPS_TMP 1.e-16
 #define EPS_P 1.e-10
 #define EPS_SYMMETRY 1.e-8
@@ -282,11 +291,12 @@ long int solve_iterative_bicg( void )
         // iterate on the next pass, which corrects rounding drift.
       dAd = array_inproduct( d1, Ad1, solve_nlocal );
       if ( swit ) pri( "dAd", dAd );
-      if ( scalar_dabs(dAd)<EPS_dAd ) {
-          // genuine breakdown: d^T A d ~ 0 with a non-converged residual.
-          // For a symmetric matrix this means the system is (numerically)
-          // singular or not positive definite - a real failure, not a
-          // "success with x = 0" as in the old code.
+      if ( scalar_dabs(dAd)<EPS_dAd_REL*error ) {
+          // genuine breakdown: d^T A d ~ 0 relative to the current residual
+          // energy with a non-converged residual. For a symmetric matrix
+          // this means the system is (numerically) singular or not positive
+          // definite - a real failure, not a "success with x = 0" as in the
+          // old code.
         real_residual = solve_iterative_bicg_real_residual( residue, norm_b );
         if ( bicg_stop==-NO ) {
           pri( "Warning: the iterative solver broke down (d^T A d ~ 0, continuing)." );

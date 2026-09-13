@@ -306,25 +306,28 @@ void general( long int element, long int name, long int nnol, long int element_g
 
           // inertia (lumped)
         if ( options_inertia==-YES || !principal_unknown ) {
-          // stress dof recovery weight (DIAG lot C/D, fix D-b): for the
-          // SRI quad4 (2x2 Gauss points) the h-weighted lumped average
-          // dilutes the corner nodal stresses; the consistent recovery
-          // is the Lagrange extrapolation of the Gauss-point values to
-          // the nodes (the "same B at the node"). Applied to the NORMAL
-          // stress components only (superconvergent at the Gauss
-          // points); the SHEAR components keep h (the Q4 shear is not
-          // superconvergent - the interpolation error dominates). For
-          // every other quadrature the weight reduces to h
-          // (node-containing rules).
+          // Nodal stress recovery weight (2026-09-13, Professional
+          // alignment): the Professional recovers the nodal stress with a
+          // per-element least-squares fit of the Gauss-point stresses and
+          // assembles the node by the arithmetic mean over the adjacent
+          // elements; sri_stress_recovery_weight returns that fit divided
+          // by the point volume (the lumped equation multiplies by the
+          // volume again), applied to ALL stress components. For the
+          // node-containing Lobatto rules and the non-tensor elements it
+          // reduces to h (the node IS the integration point). The SRI
+          // feature (GNU-specific) keeps its own recovery: Lagrange for
+          // the normal components, h for the shear.
           double weight = h[inol];
-          if ( dof_type[iuknwn]==-MATERI_STRESS && sri_active(
-              element, element_group, name, nnol ) ) {
-            // normal components: stress_indx(0,0)=0, (1,1)=3, (2,2)=5
-            // (times nder for the derivative slots)
+          if ( dof_type[iuknwn]==-MATERI_STRESS ) {
             long int kcomp = iuknwn - stres_indx;
-            if ( kcomp==0 || kcomp==3*nder || kcomp==5*nder )
-              weight = sri_stress_recovery_weight( nnol, inol, npoint,
-                ipoint, h[inol], 1 );
+            if ( sri_active( element, element_group, name, nnol ) ) {
+              if ( kcomp==0 || kcomp==3*nder || kcomp==5*nder )
+                weight = sri_stress_recovery_weight( 1, name, nnol, inol,
+                  npoint, ipoint, h[inol], volume );
+            }
+            else
+              weight = sri_stress_recovery_weight( 0, name, nnol, inol,
+                npoint, ipoint, h[inol], volume );
           }
           double past_dof = old_dof[inol*nuknwn+ipuknwn*nder];
           if ( element_dof_initial_active && ipuknwn<nuknwn )
