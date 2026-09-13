@@ -582,7 +582,7 @@ void post_force_edge_summed_calculate( void )
     *area_int=NULL, *sides=NULL, *target=NULL, *cpr=NULL,
     dof_principal[MUKNWN];
   double ddum[1], values[DATA_ITEM_SIZE], total[MDIM], coord[MDIM],
-    load=0., factor=0., node_factor=0., ar=0., time_start=0.,
+    load=0., factor=0., node_factor=0., ar=0., time_start=0., time_end=0.,
     time_current=0., dtime=0., time_total=0., frequency=0., amplitude=0.,
     w[MNOL], normal_tmp[MDIM], rdum=0., geom_work[MDIM],
     iso_l[MNOL],
@@ -651,13 +651,16 @@ void post_force_edge_summed_calculate( void )
     load = 1.;
     if ( db_active_index( FORCE_ELEMENT_EDGE_SINE, ind, VERSION_NORMAL ) ) {
       sine_tab = db_dbl( FORCE_ELEMENT_EDGE_SINE, ind, VERSION_NORMAL );
-      nfreq = ( db_len( FORCE_ELEMENT_EDGE_SINE, ind, VERSION_NORMAL ) - 1 ) / 2;
+      // Professional manual 6.465 (force_edge_sine): index start_time
+      // end_time freq_0 amp_0 ... (mirror of the area() consumer).
+      nfreq = ( db_len( FORCE_ELEMENT_EDGE_SINE, ind, VERSION_NORMAL ) - 2 ) / 2;
       time_start = sine_tab[0];
+      time_end = sine_tab[1];
       load = 0.;
-      if ( time_total>time_start ) {
+      if ( time_total>time_start && time_total<=time_end ) {
         for ( ifreq=0; ifreq<nfreq; ifreq++ ) {
-          frequency = sine_tab[1+ifreq*2+0];
-          amplitude  = sine_tab[1+ifreq*2+1];
+          frequency = sine_tab[2+ifreq*2+0];
+          amplitude  = sine_tab[2+ifreq*2+1];
           load += amplitude * sin( 2. * PIRAD * frequency * time_total );
         }
       }

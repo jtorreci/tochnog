@@ -28,7 +28,10 @@
     (0,1,2)+(1,2,last) x tensor Lobatto 2x2 / 3x3.
   Border tables: local copies of the `border_nodes_*` of `area.cc`.
 - **load/factor**: `force_element_edge_sine` / `_time` / `_time_file`
-  resolved in the same order as `area()` (default load = 1); spatial
+  resolved in the same order as `area()` (default load = 1). The `_sine`
+  record uses the Professional 6.465 layout
+  `start_time end_time freq_0 amp_0 ...` with the `end_time` gate
+  (see [sine_load_layout](sine_load_layout.md)); spatial
   factor via `force_factor()` (`force_element_edge_factor` incl. the
   multi_linear_factor_x); per-node `force_element_edge_node_factor`.
 - **Direction mapping**: the record values map onto the space directions

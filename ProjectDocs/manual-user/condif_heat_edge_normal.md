@@ -6,8 +6,10 @@ Distributed prescribed heat flux normal to the edge of an element
 (manual Professional 6.72). The distributed heat is translated into
 equivalent nodal heat on the temperature degrees of freedom of the edge
 nodes. Also specify `condif_heat_edge_normal_geometry` to select the
-edge; optionally `condif_heat_edge_normal_time` (or `_sine`) for a
-temporal load.
+edge; optionally `condif_heat_edge_normal_time` (or
+`condif_heat_edge_normal_sine`, layout
+`index start_time end_time freq_0 amp_0 ...`, Professional 6.81; see
+[sine_load_layout](sine_load_layout.md)) for a temporal load.
 
 Restriction variants (same index):
 
