@@ -39,20 +39,32 @@
   (2005) basic route, from Appendix C, Eqs. (73)-(85). Deliberately separate
   from `masin.c` (HCEA) and `masin_visco.c`.
   - `masin_basic_umat()` — Abaqus-style update: `stress[6]`,
-    `statev[6]` = void ratio `e`, `ddsdde[36]`, `dstran[6]`, `props[29]`.
-    The kernel reads `props[0]=phi_c, [2]=lambda*, [3]=kappa*, [4]=N,
-    [5]=r`; the remaining slots are ignored (including the structure
-    `props[7..9]`).
+    `statev[6]` = void ratio `e`, `statev[13]` = sensitivity `s`, `ddsdde[36]`,
+    `dstran[6]`, `props[29]`. The kernel reads `props[0]=phi_c, [2]=lambda*,
+    [3]=kappa*, [4]=N, [5]=r` and the structure parameters
+    `props[7]=k, [8]=A, [9]=s_f`.
   - Internal: `mb_dot()`/`mb_det()` (Voigt6 metric with the factor 2 on the
-    shear slots), `mb_rate()` (the Appendix C rate law), `mb_integrate()`
-    (fixed 32-substep third-order Runge-Kutta), and a numerical algorithmic
-    tangent (central difference, `eps=1e-7`).
+    shear slots), `mb_rate()` (the Appendix C rate law plus the structure
+    terms), `mb_integrate()` (fixed 32-substep third-order Runge-Kutta, now
+    integrating `e` and `s`), and a numerical algorithmic tangent (central
+    difference, `eps=1e-7`).
   - Source-grounded fixes: (1) the m-tensor Eq. (15) uses `T_hat:T_hat` in
     the numerator and denominator (`that2 = mb_dot(that, that)`), not the
     `T_hat*` variants; (2) the `cos3theta` invariant `tr(T_hat^3)`
     (Eq. 82 / manual Eq. 17) expands its cross terms with coefficient 3
     (`3*a12^2*(a11+a22) + 3*a13^2*(a11+a33) + 3*a23^2*(a22+a33) +
     6*a12*a13*a23`), not 2.
+  - **Structure (sensitivity) extension** (manual "Masin law" Eqs. 12-21 +
+    Masin 2007 CGJ 44(5) Eq. 8): `structure_on = (s >= 1.0)`. When active,
+    `mb_rate()` computes `Si = (s - k(s - s_f))/s` (manual Eq. 13), uses
+    `kappa* Si` in `alpha` (Eq. 18), divides `c1` by `Si` (Eq. 19), multiplies
+    `fs` by `Si` (Eq. 12) and divides the `fd` bracket by `s`
+    (`fd = (2p/(s p*_e))^alpha`, 2007 Eq. 8; the manual prints the reference
+    `s=1` form). `mb_integrate()` carries `s` through the same RK3 stages with
+    `sdot = -(k/lambda*)(s - s_f) sqrt((trD)^2 + (A/(1-A))(2/3)||devD||^2)`
+    (manual Eq. 21). When `structure_on` is false the code path is the exact
+    original expression (`si = 1`, reference `alpha`/`c1`/`fs`/`fd`,
+    `sdot = 0`), so the non-structure route is bit-identical.
   - `hypoplas.cc` dispatches the basic route
     (`!hypo_masin_clay && !hypo_masin_visco && !hypo_masin_visco_jm`) to
     `masin_basic_umat()`; `makefile` adds `MASIN_BASIC_SRC=masin_basic.c`
@@ -161,14 +173,20 @@
   triaxial, `-updated_linear`) reproduce the Professional within the target
   tolerance. `sigyy` / `e`: hypo7 `-231.789` / `1.110832` vs Professional
   `-231.809` / `1.110746`; hypo9 `-231.789` / `1.110832` vs `-231.811` /
-  `1.110740`; target `±0.1` → both PASS. `hypo8` (with structure) is short:
-  `-227.984` vs target `-230.588` (`rc=1`), because the structure evolution
-  Eq. (21) is not implemented — `hyhis4` stays at 2.0 and never enters the
-  stress. The `ts3` cross-term fix is inert for the axisymmetric tests (zero
-  shear): the constitutive state of hypo7/8/9 is unchanged. Regression:
-  sfnet 197-test classification identical to the a02e7c2 baseline
-  (160 PASS / 37 RUNFAIL / 0 PARSE); hypo1-4 `.dbs` byte-identical;
-  internal suite 16/16.
+  `1.110740`; target `±0.1` → both PASS. The `ts3` cross-term fix is inert
+  for the axisymmetric tests (zero shear).
+- **Structure (sensitivity) evolution Eq. (21)** (`5a98958`, 2026-09-13):
+  `hypo8` (Pisa clay, structure `k=0.4 A=0.1 s_f=1`, `e0=1.03`, `s0=2`)
+  now passes: `rc=0`, `sigyy=-230.534`, `e=1.284535`, `s=1.609220` vs
+  Professional `-230.588` / `1.284286` (target `-230.58 ±0.1`). Before the
+  fix `s` stayed at `2.0` and `sigyy=-227.984`. The modification is gated on
+  `s >= 1`, so `hypo7`/`hypo9` (no structure record, `hyhis4=0`) are
+  numerically unchanged (`.dbs` identical except the nondeterministic
+  `time_calculation`). Regression: sfnet 197-test classification identical
+  to the a02e7c2 baseline (160 PASS / 37 RUNFAIL / 0 PARSE); hypo1-4 `.dbs`
+  byte-identical to both the integrated and the a02e7c2 identity baselines;
+  internal suite 16/16 (clean build). Evidence:
+  `evidence/structure-eq21/`.
 - Corpus vs the Professional (re-measured 2026-09-06 after the hypo_ ABI
   fix of hypoplas.cc; values unchanged by the fix — the deviations are
   genuine kernel-level gaps, not memory contamination): hypo7/8/9
@@ -230,9 +248,9 @@
   kernel interpolates with chi).
 - `masin.c` uses fixed `props[29]` and `statev[16]` sizes; refactor to
   structs if more variants (strength reduction, visco) are ported.
-- **Basic route pending**: the structure evolution Masin (2005) Eq. (21) is
-  NOT implemented in `masin_basic.c` — the sensitivity `hyhis4` is never
-  evolved and never enters the stress, so `hypo8` stays short of the target.
-  The `group_materi_plasti_hypo_masin_structure` record is parsed by
-  `hypoplas.cc` (`props[7..9]`) but `masin_basic.c` ignores it. Intergranular
-  strain is likewise not available for the basic route.
+- **Basic route**: the structure evolution Eq. (21) is implemented
+  (`5a98958`). Intergranular strain is still not available for the basic
+  route (the basic kernel has no `istrain` branch). The manual Eq. (12) does
+  NOT print the pyknotropy modification of Masin (2007) Eq. (8); it was
+  taken from the paper referenced by the manual ([12]) and validated
+  end-to-end against `hypo8`.

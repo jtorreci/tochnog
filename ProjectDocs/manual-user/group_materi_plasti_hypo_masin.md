@@ -49,17 +49,45 @@ group_materi_plasti_hypo_masin <element_group>
 | `N` | Position of the normal compression line (void ratio at 1 kPa). |
 | `r` | Parameter controlling the asymptotic state boundary surface shape. |
 
-The void ratio is stored in `hisv[6]`; the remaining history slots are not
-used by the basic kernel. The dispatch still requires
+The void ratio is stored in `hisv[6]` (hyhis0). The dispatch requires
 `materi_history_variables >= 8`, `materi_stress` and `materi_strain_total`;
 `group_materi_memory -total` is rejected.
 
-**Limitations (partially implemented).** The structure evolution of Masin
-(2005) Eq. (21) is NOT implemented: the
-`group_materi_plasti_hypo_masin_structure k A s_f` record is parsed but has
-no effect on the stress (the structure variable stays at its initial value).
-The intergranular-strain extension is also not available for the basic
-route. Both are pending work; see the developer manual.
+### Structure (sensitivity) extension
+
+The optional `group_materi_plasti_hypo_masin_structure k A s_f` record adds
+the meta-stable structure model of Masin (2007) *Canadian Geotechnical
+Journal* 44(5):530-540 (manual reference [12], "Masin law" theory Eqs.
+12-21). The current sensitivity `s` is the history variable `hyhis4`
+(initialised through `control_reset_dof ... -hyhis4`, or `node_dof`); it must
+be `>= 1`. The three parameters are:
+
+| Parameter | Meaning |
+|-----------|---------|
+| `k` | Rate of structure degradation (`>= 0`). |
+| `A` | Relative weight of volumetric vs shear damage strain, `0 <= A < 1`. |
+| `s_f` | Final (fully destructured) sensitivity, `>= 1` (typically 1). |
+
+The structure enters the model in two ways:
+
+1. **Barotropy / shape** — the sensitivity factor
+   `Si = (s - k(s - s_f))/s` multiplies the barotropy factor `fs`, divides the
+   `9 r` denominator of `c1`, and replaces `kappa*` by `kappa* Si` in the
+   exponent `alpha` (manual Eqs. 12, 18, 19).
+2. **Pyknotropy** — the Hvorslev equivalent pressure `p*_e` is replaced by
+   `s p*_e`, i.e. `fd = (2p/(s p*_e))^alpha` (Masin 2007 Eq. 8). The
+   manual Eq. (12) prints the reference (`s = 1`) form.
+
+The sensitivity evolves with the accumulated damage strain (manual Eq. 21):
+
+```
+sdot = -(k/lambda*) (s - s_f) sqrt( (eps_v_dot)^2 + (A/(1-A)) (eps_s_dot)^2 )
+```
+
+with `eps_v_dot = tr D` and `eps_s_dot = sqrt(2/3)||dev D||`. A basic model
+without structure effects is recovered with `s = s_f = 1`; the kernel also
+treats `s < 1` (e.g. no structure record, `hyhis4 = 0`) as inactive, so the
+five-parameter model is bit-identical.
 
 **Example.** The corpus test `hypo7.dat` (drained axisymmetric triaxial,
 `-updated_linear`) is the reference case:
@@ -77,6 +105,14 @@ group_materi_plasti_hypo_masin  0
 With the reference-geometry strain increments for `-updated_linear` (R2),
 the reported `eptyy` is `-0.300000000` and the final `sigyy` is `-231.789`
 (Professional `-231.809`, target `±0.1`).
+
+The structure variant is exercised by `hypo8.dat` (Pisa clay, `k=0.4`,
+`A=0.1`, `s_f=1`, `e0=1.03`, `s0=2`): the final `sigyy` is `-230.534`
+(Professional `-230.588`, target `-230.58 ±0.1`) with `s` degrading from
+`2.0` to `1.609`.
+
+**Limitations.** The intergranular-strain extension is not available for the
+basic route; see the developer manual.
 
 ## Usage
 
@@ -182,8 +218,9 @@ intergranular-strain variant (`hypomasin3.dat`) are also regression-tested.
   `_advanced_parameters`, `_avanced_direction`, `_clay_ocr` and
   `_clay_structure` records.
 - The `_clay` structure record is optional; without it the clay model is
-  used. For the basic route the structure record is accepted but currently
-  ignored (see the limitations above).
+  used. For the basic route the `group_materi_plasti_hypo_masin_structure`
+  record activates the Masin (2007) structure model; without it (or with
+  `s < 1`) the five-parameter model is used.
 - The OCR records require the matching `control_*_ocr_apply -yes`; they
   compute `e0 = exp(N - lambda* ln|OCR| - lambda* ln|p/pr|) - 1`.
 - The intergranular-strain record activates the small-strain stiffness
