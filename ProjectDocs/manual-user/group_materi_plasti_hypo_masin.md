@@ -2,10 +2,20 @@
 
 ## Description
 
-Clay hypoplasticity model of Masin (Masin 2014, *Géotechnique* 64(3):232-238)
-for fine-grained soils. It is a rate-independent hypoplastic model based on
-critical state soil mechanics with an explicit asymptotic state boundary
-surface, extended with stiffness anisotropy.
+Clay hypoplasticity models of Masin. The keyword family has two independent
+routes with different kernels:
+
+- **basic route** — `group_materi_plasti_hypo_masin` with the kernel
+  `masin_basic.c`: the five-parameter Masin (2005) clay hypoplasticity model
+  (Appendix C of Masin, D. (2005), *Géotechnique* 55(6):457-464).
+- **_clay route** — `group_materi_plasti_hypo_masin_clay` with the kernel
+  `masin.c`: the Masin (2014) HCEA formulation (*Géotechnique*
+  64(3):232-238), a rate-independent hypoplastic model based on critical
+  state soil mechanics with an explicit asymptotic state boundary surface,
+  extended with stiffness anisotropy.
+
+The rest of this document describes the `_clay` route unless stated
+otherwise; the basic route has its own section below.
 
 The law is formulated in kPa; the rest of the input file must be consistent
 with those units.
@@ -18,6 +28,55 @@ The model uses **8 history variables** (`materi_history_variables 8`):
 Requires `materi_stress`, `materi_strain_total`, a velocity formulation, and
 `group_materi_memory -updated_without_rotation` (or another updated
 formulation; `-total` is not supported for hypoplasticity).
+
+## Basic route (Masin 2005)
+
+The basic route implements the five-parameter Masin (2005) model from its
+Appendix C rate equation in `masin_basic.c`. It is dispatched for
+`group_materi_plasti_hypo_masin` when the group is neither `_clay` nor a
+visco variant.
+
+```
+group_materi_plasti_hypo_masin <element_group>
+                        phi_c lambda* kappa* N r
+```
+
+| Parameter | Meaning |
+|-----------|---------|
+| `phi_c` | Critical state friction angle, in degrees. |
+| `lambda*` | Slope of the normal compression line (dimensionless). |
+| `kappa*` | Slope of the swelling/loading line (dimensionless, `< lambda*`). |
+| `N` | Position of the normal compression line (void ratio at 1 kPa). |
+| `r` | Parameter controlling the asymptotic state boundary surface shape. |
+
+The void ratio is stored in `hisv[6]`; the remaining history slots are not
+used by the basic kernel. The dispatch still requires
+`materi_history_variables >= 8`, `materi_stress` and `materi_strain_total`;
+`group_materi_memory -total` is rejected.
+
+**Limitations (partially implemented).** The structure evolution of Masin
+(2005) Eq. (21) is NOT implemented: the
+`group_materi_plasti_hypo_masin_structure k A s_f` record is parsed but has
+no effect on the stress (the structure variable stays at its initial value).
+The intergranular-strain extension is also not available for the basic
+route. Both are pending work; see the developer manual.
+
+**Example.** The corpus test `hypo7.dat` (drained axisymmetric triaxial,
+`-updated_linear`) is the reference case:
+
+```
+group_materi_memory             0  -updated_linear
+group_materi_plasti_hypo_masin  0
+                        22.56    (phic deg)
+                        0.11     (lambda*)
+                        0.016    (kappa*)
+                        1.375    (N)
+                        0.4      (r)
+```
+
+With the reference-geometry strain increments for `-updated_linear` (R2),
+the reported `eptyy` is `-0.300000000` and the final `sigyy` is `-231.789`
+(Professional `-231.809`, target `±0.1`).
 
 ## Usage
 
@@ -117,12 +176,14 @@ intergranular-strain variant (`hypomasin3.dat`) are also regression-tested.
 
 ## Notes
 
-- `group_materi_plasti_hypo_masin` (basic law, 5 params) and
-  `group_materi_plasti_hypo_masin_clay` (anisotropic law, 5 params) share the
-  same integration kernel; the clay variant additionally accepts the
+- The basic route (`group_materi_plasti_hypo_masin`) uses `masin_basic.c`
+  (Masin 2005 Appendix C); the `_clay` route uses `masin.c` (HCEA). They do
+  NOT share a kernel. The `_clay` variant additionally accepts the
   `_advanced_parameters`, `_avanced_direction`, `_clay_ocr` and
   `_clay_structure` records.
-- The structure record is optional; without it the basic model is used.
+- The `_clay` structure record is optional; without it the clay model is
+  used. For the basic route the structure record is accepted but currently
+  ignored (see the limitations above).
 - The OCR records require the matching `control_*_ocr_apply -yes`; they
   compute `e0 = exp(N - lambda* ln|OCR| - lambda* ln|p/pr|) - 1`.
 - The intergranular-strain record activates the small-strain stiffness
