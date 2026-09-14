@@ -419,3 +419,7 @@ input parameters it accepts.
 ## NODE_DOF FAMILY (2026-09-14)
 
 - [node_dof_family](node_dof_family.md) — spurious `node_dof` requests aborted mesh-only models (global h-refinement / split: `examp7`, `refine4`, `examp15`) and eigenvalue analyses (`eigen1`, `eigen3`, `ho_heat1`). A leftover debug request on node 1 was removed; the `control_eigen` path no longer writes node dofs (GNU-only feature, no Professional reference). Corpus 167/30/0 -> 173/24/0, 0 regressions.
+
+## GROUNDFLOW VELOCITY SIGN (2026-09-14)
+
+- [groundflow_velocity_sign](groundflow_velocity_sign.md) — the groundflow (Darcy) velocity is now `v_i = k_ij dh/dx_j` (positive head gradient), the Professional manual 8.2 convention, instead of the negated `-k grad(h)` of the sfnet 2013 change. In a `-groundflow -condif` model this restores the Professional upwind direction: `condif5` middle-node temperature is `1.0` (was `1.1e-16`). Corpus 173/24/0 -> 174/23/0, 0 regressions.

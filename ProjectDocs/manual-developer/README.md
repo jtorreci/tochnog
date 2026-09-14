@@ -441,3 +441,7 @@ Each file corresponds to the same feature in the [User Manual](../manual-user/).
 ## NODE_DOF FAMILY (2026-09-14)
 
 - [node_dof_family](node_dof_family.md) — two call sites: `top.cc` `top()` (discarded debug `db_dbl(NODE_DOF,1,VERSION_NORMAL)`, introduced `6ab35cb`, call left by `db6876c`) and `so.cc` `solve()` (commit `5b7bb8b` added `|| band_solver` to the fill-dofs condition, which fires during `solve(-CONTROL_EIGEN)` after `top.cc:613` deleted `VERSION_NEW`; the jan-2014 source deliberately excluded `band_solver`). Fix: delete the debug block; guard both fill-dofs conditions with `task!=-CONTROL_EIGEN`. Corpus 167/30/0 -> 173/24/0, 0 regressions; suite 16/16.
+
+## GROUNDFLOW VELOCITY SIGN (2026-09-14)
+
+- [groundflow_velocity_sign](groundflow_velocity_sign.md) — `groundfl.cc` `groundflow()`, the `-GROUNDFLOW_VELOCITY` dof equation: `-pe[jdim]*grad(pres)` (F. Lorenzo 2013) restored to `+pe[jdim]*grad(pres)` (Professional manual 8.2: `v_i = k_ij dh/dx_j`). `general.cc` consumes the velocity for the `-groundflow -condif` convection (manual 8.3). Unlocks `condif5` rc=0 (middle temp 1.0 = Pro, was 1.1e-16). Corpus 173/24/0 -> 174/23/0, 0 regressions; suite 16/16.
