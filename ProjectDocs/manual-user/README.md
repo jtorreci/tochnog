@@ -415,3 +415,7 @@ input parameters it accepts.
 ## DELETE-FACTOR ELEMENT MATRIX SCALING (2026-09-14)
 
 - [delete_factor_element_matrix_scaling](delete_factor_element_matrix_scaling.md) — a partially deleted element (`control_mesh_delete_geometry_factor`, or the failure-based delete) now keeps contributing its full element matrix scaled by the delete factor with the frozen released-stress right-hand side, matching the Professional. Intermediate factors let a deleted region relax its load progressively; `delete3` now settles at `0.6` times the initial stress (sigyy 0.6000023).
+
+## NODE_DOF FAMILY (2026-09-14)
+
+- [node_dof_family](node_dof_family.md) — spurious `node_dof` requests aborted mesh-only models (global h-refinement / split: `examp7`, `refine4`, `examp15`) and eigenvalue analyses (`eigen1`, `eigen3`, `ho_heat1`). A leftover debug request on node 1 was removed; the `control_eigen` path no longer writes node dofs (GNU-only feature, no Professional reference). Corpus 167/30/0 -> 173/24/0, 0 regressions.

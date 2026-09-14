@@ -437,3 +437,7 @@ Each file corresponds to the same feature in the [User Manual](../manual-user/).
 ## MPC5 STAGGERED STRESS LAG (SCHEDULED WORK UNIT, 2026-09-14)
 
 - [mpc5_staggered_stress_lag](mpc5_staggered_stress_lag.md) — design note for the scheduled (not implemented) mpc5 work unit. The GNU mixed u-sigma fixed point has spectral radius exactly 0.5 for mpc5 because the `materi_stress` dofs are non-principal (`input.cc:525-529`): they update after the solve from the pre-solve `element_rhside` (`materi.cc:1042-1044`, `dof.cc parallel_new_dof_diagonal`), so the stress lags the velocity by one iteration; the Professional is one-pass (0.5 at k=1). Candidate fixes: (a) the DIAG-SOLVE-MIXTO §8 C monolithic mixed system `[0 Bᵀ; B −C⁻¹]` with MINRES/SuperLU (large, corpus-wide); (b) a post-solve constitutive re-evaluation. Scope: weeks. Acceptance: mpc5 rc=0 sigyy 0.5 at its own iteration count + corpus no regression.
+
+## NODE_DOF FAMILY (2026-09-14)
+
+- [node_dof_family](node_dof_family.md) — two call sites: `top.cc` `top()` (discarded debug `db_dbl(NODE_DOF,1,VERSION_NORMAL)`, introduced `6ab35cb`, call left by `db6876c`) and `so.cc` `solve()` (commit `5b7bb8b` added `|| band_solver` to the fill-dofs condition, which fires during `solve(-CONTROL_EIGEN)` after `top.cc:613` deleted `VERSION_NEW`; the jan-2014 source deliberately excluded `band_solver`). Fix: delete the debug block; guard both fill-dofs conditions with `task!=-CONTROL_EIGEN`. Corpus 167/30/0 -> 173/24/0, 0 regressions; suite 16/16.
