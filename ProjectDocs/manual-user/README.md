@@ -411,3 +411,7 @@ input parameters it accepts.
 ## SINE LOAD LAYOUT (`*_sine` FAMILY, 2026-09-13)
 
 - [sine_load_layout](sine_load_layout.md) — the same `[start_time, freq, amp, ...]` vs Professional `[start_time, end_time, freq_0, amp_0, ...]` mismatch existed in the rest of the `*_sine` family. Fixed for `force_edge_sine` (6.465), `force_edge_normal_sine` (6.476), `force_edge_projected_sine` (6.487), `groundflow_flux_edge_normal_sine` (6.567), `condif_heat_edge_normal_sine` (6.81) and `condif_heat_volume_sine` (6.88). `force_volume_sine` (6.507) has NO `end_time` in its Professional signature and is correct as-is. No GNU input uses any `*_sine` keyword, so no compatibility shim was needed. Verified per keyword against the Professional binary; see the doc and SEGUIMIENTO.
+
+## DELETE-FACTOR ELEMENT MATRIX SCALING (2026-09-14)
+
+- [delete_factor_element_matrix_scaling](delete_factor_element_matrix_scaling.md) — a partially deleted element (`control_mesh_delete_geometry_factor`, or the failure-based delete) now keeps contributing its full element matrix scaled by the delete factor with the frozen released-stress right-hand side, matching the Professional. Intermediate factors let a deleted region relax its load progressively; `delete3` now settles at `0.6` times the initial stress (sigyy 0.6000023).
