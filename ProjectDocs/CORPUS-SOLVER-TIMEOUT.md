@@ -165,3 +165,118 @@ dir under `originals/`.
 - Fixed: `b83d907` + `refine_l.cc` fix + corpus copy with the `incnav3` edit.
 - Per-test classification files: `corpus-baseline2.txt`, `corpus-fixed.txt`.
 - Suite: `scripts/build_safe.sh` clean build + internal suite, 16/16.
+
+## 6. Revisit of the four out-of-scope tests (2026-09-14)
+
+Branch: `dev/solver-timeout-revisit` (from `6eb399d`, docs only).
+Scratch worktree: `/tmp/opencode/solverrevisit-20260914-184856/wt`.
+Evidence: `/tmp/opencode/solverrevisit-20260914-184856/evidence/`.
+Clean `build_safe.sh --clean` build from `6eb399d`, suite **16/16 runs OK**.
+Corpus re-verified: **187 PASS / 10 RUNFAIL / 0 PARSE** (197). All runs
+`LC_ALL=C`, 45 s corpus timeout. Reference binaries: 2014 GNU
+`/tmp/opencode/tn2014/build/tochnog`, Professional 02-08-2026
+`/tmp/opencode/tn_prof/tochnog_version_02-08-2026/src/tochnog`.
+
+**Result: all four re-confirmed OUT-OF-SCOPE. No source fix. The `examp24`
+root cause in section 2 is corrected (mesh MAPPING, not mesh generation).**
+
+### 6.1 `examp14` — reference/target mismatch + honest-solver runtime
+
+Measured with a 120 s budget so the target check is reached (the 45 s corpus
+timeout kills it first):
+
+| binary | wall | rc | `post_point_dof_calcul 1 0` | stored target |
+|--------|------|----|------------------------------|---------------|
+| current `6eb399d` | 47.59 s | 1 (target) | 9.71887788387 | 15.131 ± 1 |
+| 2014 GNU reference | 19.85 s | 1 (target) | 9.61289226266 | 15.131 ± 1 |
+
+The stored target `15.131` is **not reproducible by any GNU build** (difference
+> 50 %). It is the ORIGINAL target, not a recent edit: the corpus file is
+byte-identical to the 2014 `test-2014.zip` copy (both dated 2000-08-21), and the
+whole Professional tree has no `examp14.dat`. The Pro binary cannot run the GNU
+input either: it rejects the dialect (`bounda_unknown` → "I do not know") and
+then segfaults on the GNU mesh-refinement path (`Error detected for data item :
+node_start_refined`). So the honest GNU value is **9.71888** (current) /
+9.61289 (2014); whether `15.131` reflects the original Roddeman code or the
+Professional cannot be certified without a runnable Pro input. This is a
+**reference mismatch, not a fixable source defect** — recalibrating the target
+to the GNU value would be a corpus edit, and even then the 45 s timeout still
+cuts the 47.59 s run. The extra runtime is the honest Bi-CG converging to
+machine zero (`error` 9.9e-17) instead of the removed 2014 stagnation exit
+(8 iterations, error 9.4e-13).
+
+The targeted value is `-materi_stress -sizedev` (= 0.5 s:s); the second calcul
+`-materi_strain_plasti -sizetot` (= 0.5 ep:ep) is 0.12084, so the stored target
+is on the deviatoric-STRESS measure, not the plastic strain the manual plots.
+
+### 6.2 `examp24` — O(N²) mesh MAPPING (corrected), not mesh generation
+
+Per-phase measurement of one `control_mesh_new_mesh` cycle (repeat=1):
+
+| phase | current `6eb399d` | 2014 GNU |
+|-------|-------------------|----------|
+| mesh generation only (4860 tet4) | 2.20 s | 1.51 s |
+| mesh + 1 step (1 cycle) | 16.09 s | 7.79 s |
+| 150 cycles (extrapolated) | ~40 min | ~20 min |
+
+Section 2 attributed the cost to mesh generation; that is **wrong**. The remesh
+is only 2.2 s. The dominant cost is the mesh-to-mesh MAPPING
+(`new_mesh_version` → `parallel_map_element/node` → `map_element`/`map_node` →
+`point_el` → `tetrahedron_volume` → `matrix_ab`): a brute-force
+O(N_new × N_old) point-in-element scan with almost no early exit.
+
+Instrumented call counters (one cycle, contact removed):
+
+- `point_el`: 29,065,922 calls (23,686,584 from `map_element`, 5,364,788 from
+  `map_node`); only 22,778 found (0.08 %).
+- `matrix_ab`: 231,655,010 calls without contact, 308,068,274 with contact;
+  99.8 % of them called from `tetrahedron_volume`.
+- `matrix_ab` = 51.4 % of the sampled runtime; `map.cc` is **byte-identical**
+  to the 2014 reference source, so the O(N²) is inherited, not a regression.
+- `-O2` does not change the cycle time (16.06 s).
+
+No minimal source fix exists: a spatial index / bounding-box pre-filter would
+be needed, and even then the test remains ~20 min. **OUT-OF-SCOPE stands.**
+
+### 6.3 `ho_mech3` — divergence present in the reference GNU
+
+| binary | wall | rc | `post_node_result 1 -vely` |
+|--------|------|----|-----------------------------|
+| current `6eb399d` | 260.23 s | 1 (diverge) | 1.15306e15 |
+| 2014 GNU reference | 145.93 s | 1 (diverge) | 1.92248e15 |
+
+Both GNU builds abort in the same `so.cc` guard (`EPS_SOL 1e15`) while
+computing `vely` inside `hyperelasticity`/`plasti_rule`. The Pro cannot run the
+model: it rejects `bounda_unknown` ("I do not know : bounda_unknown") and the
+whole Pro tree has no `control_mesh_new_mesh` test. Cycle sweep of the current
+binary:
+
+| cycles | value | rc |
+|--------|-------|----|
+| 1 | 20250.2 | 1 (below target) |
+| 2 | 21926.3 | 0 (PASS) |
+| 5 | 21653.5 | 0 (PASS) |
+| 10 | 29276.1 | 1 |
+| 40 (input) | 1.15e15 | 1 (diverge) |
+
+The stored target 22000 is transiently reached at 2-5 cycles; the 40-cycle model
+is unstable in BOTH GNU builds. **Not a GNU regression; no Pro reference; no
+minimal fix.** OUT-OF-SCOPE stands.
+
+### 6.4 `petsc1` — infrastructure
+
+`tnpetsc.h` has `#define PETSC_USE 0`; `so_petsc.c` is entirely inside
+`#if PETSC_USE`; the error is the deliberate stub. No `libpetsc*` / `petsc.h`
+in the environment; the Pro 02-08-2026 tree ships no `tnpetsc.h`. Enabling
+PETSc costs an MPI+PETSc install plus build-system changes (the current build
+already links SuperLU as the direct solver) for one 3-node 1-D heat test.
+**Cost >> benefit; do not enable.** OUT-OF-SCOPE stands.
+
+### 6.5 Reproducibility (revisit)
+
+- Corpus runner: `corpus-run.sh <binary> <corpusdir> <out> <work> 45`.
+- Baseline classification: `evidence/baseline/corpus-baseline.txt`
+  (`187/10/0`); no fix was applied, so the A/B diff is identity.
+- Per-test evidence: `evidence/baseline/`, `evidence/examp24/`,
+  `evidence/ho_mech3/`, `evidence/prof/`.
+- Suite: clean `build_safe.sh --clean`, **16/16 runs OK**.
