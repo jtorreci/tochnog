@@ -312,8 +312,8 @@ Each file corresponds to the same feature in the [User Manual](../manual-user/).
 - [materi_plasti_hypo_history](materi_plasti_hypo_history.md) — hyhis0..hyhis7 registration, unknown handling, Masin kernel slot mapping (e = slot 0, s = slot 4 with the hyhis layout).
 - [materi_plasti_kappa_shear](materi_plasti_kappa_shear.md) — kapsh dof registration + deviatoric plastic strain accumulation in set_stress + element RHS + hardening read in plasti_rule.
 - [group_materi_plasti_mohr_coul_direct_hardening_softening](group_materi_plasti_mohr_coul_direct_hardening_softening.md) — degrees conversion (PIRAD/180) in plasti_rule before the interpolation block.
-- [control_timestep_iterations_automatic](control_timestep_iterations_automatic.md) — data_length 2->3; [1]=minimal (registered, not consumed), [2]=maximum.
-- [group_materi_plasti_hypo_intergranularstrain](group_materi_plasti_hypo_intergranularstrain.md) — data_length 5->6 + LENGTH_INTERGRANULARSTRAIN 6; theta has no kernel slot (kernel uses chi).
+- [control_timestep_iterations_automatic](control_timestep_iterations_automatic.md) — variable-length (`data_length=3`, `fixed_length=0`); length-aware mapping [2]=maximum (3-value) / [1]=maximum (legacy 2-value); [1]=minimal registered, not consumed.
+- [group_materi_plasti_hypo_intergranularstrain](group_materi_plasti_hypo_intergranularstrain.md) — variable-length (`data_length=6`, `fixed_length=0`) + `LENGTH_INTERGRANULARSTRAIN` 6; consumer reads with GET (5 or 6 values); theta has no kernel slot (kernel uses chi).
 - [control_reset_dof_scoping](control_reset_dof_scoping.md) — icontrol==ireset gate + multi-dof iteration in data.cc; verified against the Professional binary.
 - [area_element_group_sequence_no_selectors](area_element_group_sequence_no_selectors.md) — previous-group matching in group.cc.
 - [mesh](mesh.md) — db_number routing to OPTIONS_MESH (dead MESH placeholder avoided).

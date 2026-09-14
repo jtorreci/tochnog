@@ -127,9 +127,15 @@ void hypoplasticity( long int element, long int gr,
     use_epi[0] = 0;
     epi_R[0] = epi_mr[0] = epi_mt[0] = epi_betar[0] = epi_chi[0] = 0.;
     if ( materi_strain_intergranular ) {
+      // The record is variable-length (manual 6.715 6-value form R mR mT
+      // beta_r chi theta; the Professional corpus omits theta -> 5
+      // values). GET returns the stored length in
+      // length_intergranularstrain; theta has no dedicated kernel slot
+      // (the kernel evaluates the rho^theta term with chi), so the first
+      // five values are all the consumer needs.
       db( GROUP_MATERI_PLASTI_HYPO_INTERGRANULARSTRAIN, gr, idum,
         hypo_intergranularstrain, length_intergranularstrain, 
-        VERSION_NORMAL, GET_AND_CHECK );
+        VERSION_NORMAL, GET );
       use_epi[0] = 1;
       epi_R[0] = hypo_intergranularstrain[0];
       epi_mr[0] = hypo_intergranularstrain[1];

@@ -2379,9 +2379,14 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   strcpy(name[CONTROL_TIMESTEP_ITERATIONS_AUTOMATIC],"control_timestep_iterations_automatic");
   type[CONTROL_TIMESTEP_ITERATIONS_AUTOMATIC] = DOUBLE_PRECISION;
   // manual Professional 6.386: ratio_criterium minimal_timestep
-  // maximum_timestep (3 values). The GNU used 2 (ratio, maximum) -
-  // the corpus slope tests give all three.
+  // maximum_timestep (3 values). The Professional parser accepts a
+  // variable list (its corpus files give 2 values), so the record is
+  // registered variable-length with 3 as the maximum: a short 2-value
+  // list stops at the next keyword instead of swallowing it. The
+  // consumer (top.cc) maps [2] as maximum for the 3-value form and [1]
+  // as maximum for the legacy GNU 2-value form.
   data_length[CONTROL_TIMESTEP_ITERATIONS_AUTOMATIC] = 3;
+  fixed_length[CONTROL_TIMESTEP_ITERATIONS_AUTOMATIC] = 0;
   data_class[CONTROL_TIMESTEP_ITERATIONS_AUTOMATIC] = CONTROL;
   data_required[CONTROL_TIMESTEP_ITERATIONS_AUTOMATIC] = CONTROL_TIMESTEP;
 
@@ -4602,7 +4607,13 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   // theta is the exponent of the rho^theta f_d N S_hat term in the
   // stiffness; for monotonic loading the manual recommends theta=chi,
   // and the GNU kernel evaluates that term with chi, so both coincide.
+  // The Professional parser accepts a variable list (its corpus files
+  // give 5 values, omitting theta), so the record is registered
+  // variable-length with 6 as the maximum: a short 5-value list stops at
+  // the next keyword instead of swallowing it. The consumer
+  // (hypoplas.cc) reads with GET, so it accepts 5 or 6 values.
   data_length[GROUP_MATERI_PLASTI_HYPO_INTERGRANULARSTRAIN] = 6;
+  fixed_length[GROUP_MATERI_PLASTI_HYPO_INTERGRANULARSTRAIN] = 0;
   data_class[GROUP_MATERI_PLASTI_HYPO_INTERGRANULARSTRAIN] = MATERI;
   data_required[GROUP_MATERI_PLASTI_HYPO_INTERGRANULARSTRAIN] = GROUP_TYPE;
 

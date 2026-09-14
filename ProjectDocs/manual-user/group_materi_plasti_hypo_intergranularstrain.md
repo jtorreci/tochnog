@@ -1,13 +1,18 @@
-# group_materi_plasti_hypo_intergranularstrain (6 parameters)
+# group_materi_plasti_hypo_intergranularstrain (variable 5-6 parameters)
 
 ## Description
 
 `group_materi_plasti_hypo_intergranularstrain` (manual Professional
-6.715) takes **six parameters**:
+6.715) sets the intergranular strain parameters of the hypoplastic law.
+The record is **variable-length**: the Professional parser accepts a
+short list and stops at the next keyword, so both of these forms are
+valid:
 
 ```
 group_materi_plasti_hypo_intergranularstrain <index>
   R  m_R  m_T  beta_r  chi  theta
+group_materi_plasti_hypo_intergranularstrain <index>
+  R  m_R  m_T  beta_r  chi
 ```
 
 | Param | Meaning |
@@ -17,21 +22,28 @@ group_materi_plasti_hypo_intergranularstrain <index>
 | m_T | stiffness factor on transverse loading |
 | beta_r | interpolation exponent |
 | chi | exponent of the rho^chi factor of the stiffness |
-| theta | exponent of the rho^theta f_d N S_hat term |
+| theta | exponent of the rho^theta f_d N S_hat term (optional) |
 
-The GNU previously accepted five values; the corpus tests (hypo2,
-hypo10, triaxial_compression_drained_hypo_intergranular_isa) give all
-six. The sixth value (`theta`) is the exponent of the
-`rho^theta f_d N S_hat` term of the stiffness; for monotonic loading the
-manual recommends `theta = chi`, and the GNU kernel evaluates that term
-with `chi`, so both coincide for the corpus inputs.
+When `theta` is omitted (the sfnet corpus form, 5 values) the GNU kernel
+uses `chi` for the `rho^theta f_d N S_hat` term, which the manual
+recommends for monotonic loading (`theta = chi`).
 
 ## Usage
+
+Six values (Professional manual form):
 
 ```
 group_materi_plasti_hypo_strain_intergranular 0
                        1.e-4 5.0 2.0 0.50 6.0 6.0
                        (R m_R m_T beta_r chi theta)
+```
+
+Five values (sfnet corpus form):
+
+```
+group_materi_plasti_hypo_intergranularstrain 0
+                       1.e-4 5.0 2.0 0.50 6.0
+                       (R m_R m_T beta_r chi)
 ```
 
 (The Professional spelling of the record is
@@ -42,4 +54,6 @@ the GNU canonical name `group_materi_plasti_hypo_intergranularstrain`.)
 
 - Requires `materi_strain_intergranular` in the initialization part and
   `materi_plasti_hypo_history` (or `materi_history_variables`).
-- hypo2/hypo3 use this record with 6 values and pass their targets.
+- `hypo2`/`hypo3`/`hypo4` of the sfnet corpus use the 5-value form and
+  pass their targets; the validation suite uses the 6-value form.
+- `R` must be positive.

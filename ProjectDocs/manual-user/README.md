@@ -314,8 +314,8 @@ input parameters it accepts.
 - [materi_plasti_hypo_history](materi_plasti_hypo_history.md) — the 8 hypoplasticity history variables hyhis0..hyhis7 (manual Professional 4.23); fixed count, Professional basenames, shared hisv dof.
 - [materi_plasti_kappa_shear](materi_plasti_kappa_shear.md) — the kapsh dof (manual 4.25): size of the SHEAR plastic strain, hardening variable of the Mohr-Coulomb hardening-softening family.
 - [group_materi_plasti_mohr_coul_direct_hardening_softening](group_materi_plasti_mohr_coul_direct_hardening_softening.md) — the direct (degrees) variant of the hardening-softening record (7 values; dam_building).
-- [control_timestep_iterations_automatic](control_timestep_iterations_automatic.md) — THREE values: ratio_criterium minimal_timestep maximum_timestep (manual 6.386).
-- [group_materi_plasti_hypo_intergranularstrain](group_materi_plasti_hypo_intergranularstrain.md) — SIX parameters: R m_R m_T beta_r chi theta (manual 6.715).
+- [control_timestep_iterations_automatic](control_timestep_iterations_automatic.md) — VARIABLE 2-3 values: the 3-value Professional form is ratio_criterium minimal_timestep maximum_timestep (6.386); the legacy 2-value form is ratio_criterium maximum_timestep (used by the whole sfnet corpus).
+- [group_materi_plasti_hypo_intergranularstrain](group_materi_plasti_hypo_intergranularstrain.md) — VARIABLE 5-6 parameters: R m_R m_T beta_r chi [theta] (6.715); the 5-value corpus form omits theta (defaults to chi).
 - [control_reset_dof_scoping](control_reset_dof_scoping.md) — the reset runs ONCE at its own control index (the Professional rejects a reset at the timestep index) and multi-dof records reset EVERY listed dof.
 - [area_element_group_sequence_no_selectors](area_element_group_sequence_no_selectors.md) — the sequence without geometry/element selectors: group_(i-1) elements become group_i at time_i (dam_building).
 - [mesh](mesh.md) — the short alias of options_mesh (mesh -fixed_in_space ...).

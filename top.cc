@@ -325,16 +325,23 @@ void top( void )
                     db( CONTROL_TIMESTEP_ITERATIONS_AUTOMATIC, icontrol, 
                       idum, control_timestep_iterations_automatic, ldum, 
                       VERSION_NORMAL, GET );
+                    // manual Professional 6.386: [1]=minimal_timestep,
+                    // [2]=maximum_timestep. The record is variable-length
+                    // (the Professional parser accepts 2 values); the
+                    // legacy GNU 2-value form is [1]=maximum_timestep.
+                    // Capture the mapping before ldum is reused by the
+                    // next GET_IF_EXISTS call.
+                    ratio_criterium = control_timestep_iterations_automatic[0];
+                    if ( ldum>=3 )
+                      maximum_timestep = control_timestep_iterations_automatic[2];
+                    else
+                      maximum_timestep = control_timestep_iterations_automatic[1];
                     db( CONTROL_TIMESTEP_ITERATIONS_AUTOMATIC_STOP, icontrol, 
                       &control_timestep_iterations_automatic_stop, ddum, ldum, 
                       VERSION_NORMAL, GET_IF_EXISTS );
                     iteration_min = 2;
                     iteration_max = 20;
                     use_control_timestep_iterations_automatic = 1;
-                    ratio_criterium = control_timestep_iterations_automatic[0];
-                    // manual Professional 6.386: [1]=minimal_timestep,
-                    // [2]=maximum_timestep
-                    maximum_timestep = control_timestep_iterations_automatic[2];
                   }
                   else if ( db_active_index( CONTROL_TIMESTEP_ITERATIONS, 
                       icontrol, VERSION_NORMAL ) ) {
