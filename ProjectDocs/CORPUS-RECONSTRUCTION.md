@@ -2,8 +2,17 @@
 
 Recovery of the 194 validation-suite tests whose `.dat` inputs were lost on
 2026-08-29 (`rm -f *.dat`). Reconstructed from the archived `.dbs` database
-dumps with the current binary (`build/tochnog`, HEAD `6eb399d`, branch
+dumps with the current binary (`build/tochnog`, HEAD `e983be8`, branch
 `dev/masin-kernel-surface`).
+
+> **Update (2026-09-14, third pass — doc-grounded).** The 8 UNRECOVERABLE
+> and the 38 PARTIAL were revisited against `ProjectDocs/manual-user` /
+> `manual-developer`. Five of the 8 are now recovered (three by a
+> reconstruction fix, two by the current documented syntax); three PARTIAL
+> were reclassified as reconstruction issues and recovered; four genuine
+> binary bugs were isolated (one already reported here, three new). See
+> **Third pass** at the end of this document. Evidence:
+> `/tmp/opencode/docrecover-20260914-233512/`.
 
 Evidence directories:
 
@@ -317,3 +326,115 @@ expected and not recoverable from the input.
 - The derivation requires the `dof_label` record; all 72 targets and all 41
   known pairs have it. If a future dump lacks it, fall back to the K-probe
   cross-check (which needs a runnable reconstruction).
+
+---
+
+# Third pass (2026-09-14) — doc-grounded recovery and classification
+
+Method: for each remaining test the matching `ProjectDocs/manual-user` /
+`manual-developer` feature page was read; the reconstructed input was
+compared with the documented **current** syntax and with the archived
+`.dbs`. Acceptance uses the concrete values the docs give. All runs use
+`build/tochnog` (HEAD `e983be8`), `LC_ALL=C`,
+`LD_LIBRARY_PATH=<repo>/external-downloads/numlib-runtime`. Evidence:
+`/tmp/opencode/docrecover-20260914-233512/` (`runs2/`, `evidence/`).
+
+## 1. UNRECOVERABLE-8 — result
+
+| test | doc used | reconstructed input | run |
+| --- | --- | --- | --- |
+| dbmeth21 | `control_print_database_method.md` | not a test: output of `dbmeth.dat` (`control_print_database_method 21 -sizetot`, base `dbmeth` → `dbmeth21.dbs`) | `dbmeth.dat` rc=0; `dbmeth21.dbs` 58 `Size of` + `Total size is` + system matrix |
+| dbmeth22 | `control_print_database_method.md` | same `dbmeth.dat`, index 22 `-size_tot_large` | `dbmeth22.dbs` exactly 1 `Size of` (system matrix) |
+| groundflow_interface | `group_interface_groundflow_*.md`, `group_interface.md` | input is faithful (no missing record) | **BLOCKED by bug** (see §4.1): `interface_element()` aborts |
+| iface_condif | `group_interface_condif_conductivity.md` | input is faithful | **BLOCKED by bug** §4.1; adding a dummy `group_interface_materi_elasti_stiffness 10 1 1` makes it rc=0 |
+| mc_pressure_min | `group_materi_elasti_camclay_pressure_min.md`, `materi_plasti_camclay_history.md` | 3-value camclay `group_materi_plasti_camclay 0 0.8 0.02 0.2` (drop the legacy 4th `N=3`) | **RECOVERED** rc=0; sigxx `-0.0093333`, sigyy `-0.2093333` (doc targets, exact) |
+| mc_pressure_min_off | same | same 3-value fix | **RECOVERED** rc=0 |
+| mdiprisco_hist | `materi_plasti_diprisco_history.md` | `-hisv10` → `-dipriscohis10` (documented Professional naming) | **RECOVERED** rc=0; dipriscohis10 `-152.79537` (target `-152.795±1`) |
+| mstrain_diprisco | `materi_strain_plasti_diprisco.md` | same rename | **RECOVERED** rc=0; eppdipyy `-0.0105714`, eppdipxx `0.00350735`, dipriscohis10 `-152.79537` (targets met) |
+
+Recovered `.dat` written to `validation-suite/test-2014/`:
+`mc_pressure_min.dat`, `mc_pressure_min_off.dat`, `mdiprisco_hist.dat`,
+`mstrain_diprisco.dat` (the 4-value camclay / `hisv` forms were the stale
+archive-era syntax). `dbmeth21`/`dbmeth22` need no own `.dat`.
+
+## 2. PARTIAL-38 — classification
+
+Buckets: **R** reconstruction (input defect, fixed here), **B** bug
+(doc says X, binary gives Y), **D** expected drift (archived target is
+stale and the doc supports the new behaviour).
+
+### 2.1 Reconstruction issues (fixed → now rc=0)
+
+| test | defect | doc | fix / result |
+| --- | --- | --- | --- |
+| cda_arith | input `group_materi_elasti_young 0 2500` is the **post-run** value; the dump stores the mutated record | `manual-developer/control_data_arithmetic.md` ("young 1000 … final 2500") | initial 1000 → rc=0, target 2500 |
+| cda_copy | initial young 500/1000 are the post-run values | `manual-developer/control_data_copy.md` ("young 1000 / 500 … final 500 / 1000") | initial 1000/500 → rc=0, targets 500/1000 |
+| node_force_inertia | `node_inertia` is an **output** record but was seeded with the post-run value; `node_mass` was dropped | `node_force.md` ("declare node_inertia 0 0 … fills to -19.83") | `node_inertia 3 0 0` + `node_mass 3 0 2` → rc=0, -19.7515 (target -19.83±0.2) |
+| numit | `-follow_material` reference geometry lost: the dump `node` is the **deformed** geometry (`node_start_refined` is the input reference) | `control_print_number_iterations.md` | primary feature OK (exactly 16 monitor lines); the secondary `-node_dof 2 -velix` target (`-0.123 = 0.877-1`) not reproducible — **unresolved** (see §3) |
+| elmethod | same `-follow_material` reference loss | `control_print_element_method.md` | primary A/B OK (`-middle` 2 lines / `-node` 4 lines, `2*mid == x_node2`); secondary `-node_dof 3 -velix` (`-0.369`) not reproducible — **unresolved** (§3) |
+
+### 2.2 Genuine bugs (doc contradicts the binary)
+
+| test | doc | observed | source |
+| --- | --- | --- | --- |
+| creset_geom | `control_reset_family.md`: hisv0 `0.5 → 0` inside the brick (node 1 = 0, node 5 = 0.5) | node 1..4 = **-1**; the written value follows `3*value - 1` (verified: value 0.123 → -0.631, 1 → 2, 2 → 5). The 2026-08-28 binary gives the correct 0/0.5 | `data.cc` `data()` control_reset_dof value block (~1059-1228); suspect commit `64e43d2` |
+| groundflow_total_pressure_limit | `groundflow_total_pressure_limit.md`: free nodes capped to 0.5 (else ~1.67) | free-node `pres = 0` — the pressure never develops, **with or without** the limit record | groundflow coupling / `0838457` sign path (follow-up) |
+| creset_iface | `control_reset_family.md`: `element_interface_strain_normal ≈ 0` after `control_reset_interface_strain` | `-0.00050005` (target `0 ± 1e-6`) | `control_reset_interface_strain` timing/value (follow-up) |
+| gen1 | `control_mesh_generate_truss.md`: generates trusses on the geometry | 0 elements / 0 nodes generated (archived: 2/2). The doc example needs an existing isoparametric element; the geometry-only path generates nothing | `generate.cc` mesh generation (follow-up) |
+
+Plus the two bugs found while recovering the 8 (§4).
+
+### 2.3 Expected drift (archived target stale, doc supports the new value)
+
+| test(s) | doc / commit | archived | fresh |
+| --- | --- | --- | --- |
+| bt_factor | `integration_quadrature_and_stress_recovery.md` §"When a stored reference value changes"; commit `06e175d` (Lobatto → Gauss) | sigyy 20 | 34.641 (= 20·√3) |
+| iface_expansion | `group_interface_materi_expansion_normal.md` + `group_interface.md` 2026-09-04 thermal fix | sigxx 1.984 | 0.998004 |
+| iface_mc_dil, iface_mc_dil_1step | `group_interface.md` 2026-09-03 incremental-dilatancy fix | -2.8065 / -2.82675 | -1.39435 / -1.39338 |
+| iface_mc_num, iface_mc_slip, iface_mc_slip_1step | `group_interface.md`: `ELEMENT_INTERFACE_FORCE_TANG` now stores the **elastic trial** (`interface.cc:711/942`), not the clamped force | 50 / 0 / 0 | 1e6 / 5000 / 5000 |
+| iface_mc_gap | `group_interface.md` 2026-09-04 gap-condition inversion | velix 0 | -100.125 |
+| iface_mc_tension | `group_interface.md` tension-limit fix | velix 3.88 | 100.102 |
+| iface_mc, iface_mc_mem | `group_interface.md` (full-force assembly + solver honesty) | vely 0 | 3.59e9 |
+| iface_3d, iface_3d_slip, iface_3d_stress, iface_tangref | `group_interface.md`, `control_print_interface_stress.md`; solver `solve_iterative_bicg.md` | converged | solver divergence |
+| iface_gen, iface_gen_geom, iface_gen_geom_off, iface_gen_method, iface_gen_method_gen, iface_gen_quad9 | `control_mesh_generate_interface.md`; solver honesty | converged | solver divergence (1e13-1e14) |
+| contact_block, contact_ctrl_apply, contact_heatgen | `control_contact_apply.md`, `contact_heat_generation.md`; solver honesty | converged | solver divergence |
+| cmat_gate, gforce10, mesh_act_grav, qsri3d_beam_off | quadrature `06e175d` + solver honesty | converged | solver divergence / target drift |
+| groundflow_total_pressure_tension | `groundflow_velocity_sign.md` (commit `0838457`) | -4.147 | -4.2896 |
+
+The solver-divergence group is drift rather than a bug: `solve_iterative_bicg.md`
+§1 documents that the old loop reported success on three non-convergence exits;
+the current honest criteria report the true residual. The archived targets were
+met only by that dishonest success.
+
+## 3. Unresolved
+
+- `numit`, `elmethod`: the `-follow_material` reference geometry
+  (`node_start_refined`) is lost by the reconstruction (the dump `node` is
+  the deformed geometry). Re-inserting `node_start_refined` as input did not
+  reproduce the archived `-0.123 / -0.369` (neither the current nor the
+  2026-08-28 binary); the primary features (16 monitor lines; 2/4 element
+  lines) pass. Needs the original input form.
+- `gen1`: geometry-only `control_mesh_generate_truss` generates nothing.
+
+## 4. Bug list for follow-up (source-grounded, not fixed here)
+
+1. **`interface.cc` `interface_element()`** — `db_len(GROUP_INTERFACE_MATERI_ELASTI_STIFFNESS, element_group, VERSION_NORMAL)` aborts when the record is absent (non-elastic interfaces: `group_interface_condif_conductivity`, `group_interface_groundflow_*`). Blocks `iface_condif`, `groundflow_interface` (both doc-validated). Backtrace: `parallel_element_loop → elem → interface_element → db_max_index → db_error`. Fix: guard the `db_len` with `db_active_index(...)` (the line above already zeroes `ddum3` and the intent is a 3-value default).
+2. **`database.cc:4456` `data_length[GROUP_MATERI_PLASTI_CAMCLAY] = 3`** — the developer manual (`materi_plasti_camclay_history.md`: "variable-length 3..4") and the user manual ("the legacy … four values … still accepted") document the 4-value form, but the parse PUT rejects length 4 (`Length too small … should become at least 4`). `plasti.cc` still reads `plasti_data[3]` for `ldum>=4`, so the legacy path is unreachable. Test is recoverable with 3 values, but the doc/binary mismatch is real.
+3. **`data.cc` `data()` control_reset_dof value block** — the reset value is written as `3*value - 1` instead of `value` (creset_geom, regression after 2026-08-28; suspect `64e43d2`).
+4. **`control_reset_interface_strain`** — leaves `element_interface_strain_normal = -5.0e-4` instead of ≈0 (creset_iface).
+5. **groundflow pressure / `groundflow_total_pressure_limit`** — the free-node pressure does not develop (0 instead of 0.5/~1.67) with a faithful input.
+6. **`control_mesh_generate_truss`** — geometry-only generation produces no elements (gen1).
+
+## 5. Updated counts
+
+| class | before 3rd pass | after 3rd pass |
+| --- | --- | --- |
+| RECOVERED | 148 | **155** (+4 from the 8: mc_pressure_min, mc_pressure_min_off, mdiprisco_hist, mstrain_diprisco; +3 from the 38: cda_arith, cda_copy, node_force_inertia) |
+| PARTIAL | 38 | **35** (2 unresolved reconstruction + 4 bug + 29 drift) |
+| UNRECOVERABLE | 8 | **4** (groundflow_interface, iface_condif blocked by bug #1; dbmeth21/dbmeth22 resolved as outputs of `dbmeth`, no own `.dat`) |
+
+Classification of the 38: 5 reconstruction (3 fixed + 2 unresolved), 4 bug, 29 drift.
+
+> Note: `dbmeth21`/`dbmeth22` were never separate tests; they are the
+> `-sizetot` / `-size_tot_large` dumps of the `dbmeth` test. The
+> `UNRECOVERABLE (8)` section above predates this finding.
