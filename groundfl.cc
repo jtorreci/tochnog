@@ -127,8 +127,15 @@ void groundflow( long int element, long int gr, long int nnol, long int nodes[],
         iuknwn = (gvel_indx + jdim*nder);
         ipuknwn = iuknwn/nder;
         indx = inol*npuknwn + ipuknwn;
-// made change in line above to correct for right sign of velocity
-        tmp = h[inol] * (-pe[jdim]*grad_new_unknowns[jdim*nuknwn+pres_indx] -
+// Groundflow velocity sign (Professional manual 8.2, "Groundflow
+// velocities"): v_i^g = k_ip * dh/dx_i, i.e. the velocity follows from
+// the permeability times the POSITIVE head gradient. The 2013 F. Lorenzo
+// change negated this term, which inverts the convection direction in the
+// coupled condif+groundflow tests (condif5: the middle node was driven to
+// the downstream temperature 0 instead of the Professional's upwind 1).
+// Restored to the Professional sign so that the heat convection follows
+// the same upwind direction as the Professional.
+        tmp = h[inol] * ( pe[jdim]*grad_new_unknowns[jdim*nuknwn+pres_indx] -
           old_unknowns[iuknwn] ) / dtime;
         element_rhside[indx] += volume * tmp;
       }
