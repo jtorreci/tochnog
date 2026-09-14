@@ -1120,8 +1120,17 @@ void set_stress( long int element, long int gr,
 
 /*****************************************************************************/
 
-  if ( memory==-TOTAL || memory==-TOTAL_PIOLA  || memory==-TOTAL_LINEAR ) {
+  if ( memory==-TOTAL || memory==-TOTAL_PIOLA ) {
     if ( !materi_strain_total  ) formulation = TOTAL;
+  }
+  if ( memory==-TOTAL || memory==-TOTAL_PIOLA  || memory==-TOTAL_LINEAR ) {
+    // -total_linear (manual Professional 2.2.1): the stress at the new time
+    // point is the previous stress plus the extra stress from the
+    // INCREMENTAL strain, so formulation keeps its INCREMENTAL default.
+    // Forcing TOTAL here recomputed the stress from the total strain and
+    // discarded a stress set by control_reset_dof (delete3/mpc5). The
+    // incremental strain increment is computed in set_deften_etc from the
+    // old/new total deformation gradients (materi.cc).
     check_unknown( "materi_velocity", YES, CHECK_USAGE_AND_ERROR );
     check_unknown( "materi_displacement", YES, CHECK_USAGE_AND_ERROR );
     check_unknown( "materi_stress", YES, CHECK_USAGE_AND_ERROR );

@@ -321,6 +321,7 @@ input parameters it accepts.
 - [mesh](mesh.md) — the short alias of options_mesh (mesh -fixed_in_space ...).
 - [group_materi_memory_updated_linear](group_materi_memory_updated_linear.md) — the -updated_linear memory: updated Lagrange with linear engineering strains referred to the undeformed (reference) mesh, independent of -follow_material.
 - [group_materi_memory_updated_area](group_materi_memory_updated_area.md) — the -updated_area memory (incremental_driver, 6.784): small deformation WITH the area change of the loaded surface (driver-scoped; blocked by the incremental_driver family in the GNU).
+- [group_materi_memory_total_linear](group_materi_memory_total_linear.md) — the -total_linear memory (6.685, theory 2.2.1): total Lagrange with linear engineering strains; the stress is the previous stress plus the incremental-strain stress, so a control_reset_dof pre-stress survives the next solve (delete3/mpc5 family).
 - [nonlocal](nonlocal.md) — the short `nonlocal` radius record + `nonlocal_name` model selector (6.897/6.898).
 - [geometry_factor](geometry_factor.md) — the Professional name (6.527) of geometry_bounda_factor: spatial weighting factors of bounda_dof/bounda_force/force_edge_* on a geometry entity (2 = linear, 3 = parabolic on a line).
 - [convection_apply](convection_apply.md) — the convection switches of eulerian flows: convection_apply (6.395), control_convection_apply (6.113) and convection_stabilization (6.396), aliases of options_convection/options_stabilization. Unlocks condif2/condif3/tube1.
@@ -410,3 +411,7 @@ input parameters it accepts.
 ## SINE LOAD LAYOUT (`*_sine` FAMILY, 2026-09-13)
 
 - [sine_load_layout](sine_load_layout.md) — the same `[start_time, freq, amp, ...]` vs Professional `[start_time, end_time, freq_0, amp_0, ...]` mismatch existed in the rest of the `*_sine` family. Fixed for `force_edge_sine` (6.465), `force_edge_normal_sine` (6.476), `force_edge_projected_sine` (6.487), `groundflow_flux_edge_normal_sine` (6.567), `condif_heat_edge_normal_sine` (6.81) and `condif_heat_volume_sine` (6.88). `force_volume_sine` (6.507) has NO `end_time` in its Professional signature and is correct as-is. No GNU input uses any `*_sine` keyword, so no compatibility shim was needed. Verified per keyword against the Professional binary; see the doc and SEGUIMIENTO.
+
+## DELETE-FACTOR ELEMENT MATRIX SCALING (2026-09-14)
+
+- [delete_factor_element_matrix_scaling](delete_factor_element_matrix_scaling.md) — a partially deleted element (`control_mesh_delete_geometry_factor`, or the failure-based delete) now keeps contributing its full element matrix scaled by the delete factor with the frozen released-stress right-hand side, matching the Professional. Intermediate factors let a deleted region relax its load progressively; `delete3` now settles at `0.6` times the initial stress (sigyy 0.6000023).

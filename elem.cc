@@ -349,29 +349,17 @@ void elem( long int element, long int ithread )
   db( OPTIONS_MATRIX_LENGTH, 0, &options_matrix_length, ddum, ldum, 
     VERSION_NORMAL, GET_IF_EXISTS );
 
-  if ( db_active_index( ELEMENT_RHSIDE_DELETE, element, VERSION_NORMAL ) ) {
-    db( ELEMENT_MATRIX_DELETE, element, idum, element_matrix_delete, ldum, 
-      VERSION_NORMAL, GET );
-    db( ELEMENT_RHSIDE_DELETE, element, idum, element_rhside_delete, ldum, 
-      VERSION_NORMAL, GET );
-    db( ELEMENT_DELETE_FACTOR, element, idum, &element_delete_factor, ldum, 
-      VERSION_NORMAL, GET );
-    for ( inol=0; inol<nnol; inol++ ) {
-      for ( ipuknwn=0; ipuknwn<npuknwn; ipuknwn++ ) {
-        iuknwn = ipuknwn*nder;
-        if ( dof_principal[iuknwn]>=0 ) {
-          indx = inol*npuknwn+ipuknwn;
-          element_matrix[indx*nnol*npuknwn+indx] = 
-            element_delete_factor * element_matrix_delete[indx];
-          element_rhside[indx] = 
-            element_delete_factor * element_rhside_delete[indx];
-	  
-        }
-      }
-    }
-    if(find_nonlocal_weights && scalar_dabs(options_nonlocal_softvar)>TINY) return;
-    goto add_to_system_vectors;
-  }
+    // Deleted elements (ELEMENT_DELETE_FACTOR active): the Professional
+    // stores only the delete factor and the frozen released-stress RHS
+    // (element_rhside_delete); it does NOT store a matrix-delete record.
+    // The old GNU code restored a diagonal-only snapshot of the element
+    // matrix here, which under-relaxed the deleted element. Now the element
+    // matrix is recomputed each iteration and scaled in full by the delete
+    // factor at add_to_system_vectors (see below). The nonlocal-softvar
+    // search still returns early.
+  if ( db_active_index( ELEMENT_RHSIDE_DELETE, element, VERSION_NORMAL ) &&
+       find_nonlocal_weights && scalar_dabs(options_nonlocal_softvar)>TINY )
+    return;
     // get dof of element
   for ( inol=0; inol<nnol; inol++ ) {
     inod = nodes[inol];
@@ -941,7 +929,30 @@ void elem( long int element, long int ithread )
   }//Not used when searching for local values of softening variable - end
   
   add_to_system_vectors:
-  
+
+    // Deleted-element semantics (Professional): scale the FULL element matrix
+    // by element_delete_factor and use the frozen released-stress RHS. On the
+    // first iteration in which the factor is active, store the freshly
+    // computed RHS as the frozen one (element_rhside_delete); on later
+    // iterations reuse it. The Professional's .dbs stores
+    // element_delete_factor + element_rhside_delete but no matrix-delete
+    // record, i.e. the matrix is scaled, not frozen diagonal-only.
+  if ( db_active_index( ELEMENT_DELETE_FACTOR, element, VERSION_NORMAL ) ) {
+    db( ELEMENT_DELETE_FACTOR, element, idum, &element_delete_factor, ldum,
+      VERSION_NORMAL, GET );
+    if ( !db_active_index( ELEMENT_RHSIDE_DELETE, element, VERSION_NORMAL ) ) {
+      length = nnol*npuknwn;
+      db( ELEMENT_RHSIDE_DELETE, element, idum, element_rhside,
+        length, VERSION_NORMAL, PUT );
+    }
+    db( ELEMENT_RHSIDE_DELETE, element, idum, element_rhside_delete,
+      ldum, VERSION_NORMAL, GET );
+    for ( inol=0; inol<nnol*npuknwn; inol++ )
+      element_rhside[inol] = element_delete_factor * element_rhside_delete[inol];
+    for ( inol=0; inol<nnol*npuknwn*nnol*npuknwn; inol++ )
+      element_matrix[inol] *= element_delete_factor;
+  }
+
   if(!find_local_softvar) {//Not used when searching for local values of softening variable 
 
     // store element matrices sparse
@@ -1041,30 +1052,9 @@ void elem( long int element, long int ithread )
       &node_dof_tmp[indx], nuknwn );
   }
 
-    // store for failure/delete options
-  if ( db_active_index( ELEMENT_DELETE_FACTOR, element, VERSION_NORMAL ) && 
-       !db_active_index( ELEMENT_RHSIDE_DELETE, element, VERSION_NORMAL ) ) {
-    for ( inol=0; inol<nnol; inol++ ) {
-      for ( ipuknwn=0; ipuknwn<npuknwn; ipuknwn++ ) {
-        iuknwn = ipuknwn*nder;
-        if ( dof_principal[iuknwn]>=0 ) {
-          indx = inol*npuknwn+ipuknwn;
-          element_rhside_delete[indx] = element_rhside[indx];
-          element_matrix_delete[indx] = element_matrix[indx*nnol*npuknwn+indx];
-        }
-      }
-    }
-    length = nnol*npuknwn;
-    db( ELEMENT_RHSIDE_DELETE, element, idum, element_rhside_delete, 
-      length, VERSION_NORMAL, PUT );
-
-    db( ELEMENT_MATRIX_DELETE, element, idum, element_matrix_delete, 
-      length, VERSION_NORMAL, PUT );
-    if ( swit ) {
-      pri( "element_rhside_delete", element_rhside_delete, nnol, npuknwn );
-      pri( "element_matrix_delete", element_matrix_delete, nnol, npuknwn );
-    }
-  }
+    // The frozen released-stress RHS (ELEMENT_RHSIDE_DELETE) is stored and
+    // applied at add_to_system_vectors above; no matrix-delete snapshot is
+    // kept (the Professional has no element_matrix_delete record).
 
     // some final printing
   if ( swit ) {
