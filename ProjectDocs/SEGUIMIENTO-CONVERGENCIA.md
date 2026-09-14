@@ -2539,3 +2539,55 @@ el 220 bruto como una ganancia limpia de +2.
 **Siguiente**: integrar sólo después de conservar esta evidencia y atacar
 Masin básico 2005 (`hypo7/8/9`). No reabrir el loop ni `hcea`: ambos ya
 fueron falsificados como causa de estos dos objetivos.
+
+### FAMILIA PARSE/ARITY — registros de longitud variable (2026-09-14) — corpus 160 → 167 PASS, 0 regresiones
+
+**Commit `8d70054`** (`fix(parse): variable-length control_timestep_iterations_automatic and hypo_intergranularstrain`).
+
+**Root class**: un registro de longitud variable registrado con
+`data_length = <máximo>` pero con `fixed_length` en su default de 1
+(record fijo) obliga al parser a leer exactamente `data_length` valores y
+traga el keyword siguiente. El commit `22801c3` (batch hypo, 2026-09-01)
+subió `data_length` a los conteos del manual Professional (3 y 6) sin
+tocar `fixed_length`, rompiendo los registros cortos del corpus.
+
+**Diagnóstico (tabla)**:
+
+| keyword | firma Professional | GNU (pre-fix) | registro del test | consumidor |
+|---|---|---|---|---|
+| `control_timestep_iterations_automatic` | index ratio_criterium minimal_timestep maximum_timestep (6.386) | data_length=3, fixed_length=1 (lee 3) | corpus: index + 2 valores (`ratio`, `maximum`) | `top.cc` rama `CONTROL_TIMESTEP` |
+| `group_materi_plasti_hypo_intergranularstrain` | index R m_R m_T beta_r chi theta (6.715) | data_length=6, fixed_length=1 (lee 6) | sfnet corpus: index + 5 valores (sin theta); validation-suite: index + 6 | `hypoplas.cc` (buffer `LENGTH_INTERGRANULARSTRAIN`) |
+| `group_condif_flow` | index beta1 beta2 beta3 (6.600), ndim valores | data_length=ndim, fixed_length=1 | pruebavel: `-velx -vely` (nombres de dof, no numérico) | `general.cc` `get_group_data` |
+| `control_data_put_double` | index . . . (6.123, lista variable) | data_length=DATA_ITEM_SIZE, **fixed_length=0** (correcto) | ho_mech2/taylor3/dataput1 | `data.cc` |
+
+**Fix**: ambos registros pasan a longitud variable (`fixed_length=0`)
+manteniendo el conteo del manual como máximo. El parser se detiene en el
+keyword siguiente para las listas cortas. `top.cc` mapea de forma
+consciente de la longitud: `[2]=maximum` (forma de 3 valores) y
+`[1]=maximum` (forma legacy de 2 valores de todo el corpus); la captura
+se hace antes de reutilizar `ldum`. `hypoplas.cc` lee con `GET` en vez de
+`GET_AND_CHECK`, aceptando 5 o 6 valores (theta es opcional; el kernel
+usa chi). `control_data_put_double` ya era variable y no requería cambio.
+
+**Verificación A/B (corpus sfnet 197, binario baseline `95092ed` vs fix)**:
+
+| test | baseline | fix |
+|---|---|---|
+| condif8, delete1, disk1, hypo2, hypo3, hypo4, truss7 | RUNFAIL | **PASS** |
+| ho_mech2 | RUNFAIL | RUNFAIL (parsea; Bi-CG se rompe, sistema numéricamente singular — familia mesh-refine) |
+| taylor3 | RUNFAIL | RUNFAIL (parsea; `kap`=0 — bloqueo de modelo, no de aridad) |
+| pruebavel | RUNFAIL | RUNFAIL (parse; `group_condif_flow 0 -velx -vely` no es sintaxis documentada — ver descarte) |
+
+Totales: **160 → 167 PASS, 37 → 30 RUNFAIL, 0 PARSE, 0 regresiones**.
+Suite `build_safe`: **16/16** (incluye hypo2/3/4 con la forma de 6 valores
+de validation-suite, que un registro fijo de 5 rompería).
+
+**Descarte — `pruebavel` (`group_condif_flow` con nombres de dof)**:
+`group_condif_flow 0 -velx -vely` usa un nombre de dof como componente del
+vector de flujo. La firma del manual Professional 6.600 es numérica
+(`beta1 beta2 beta3`, ndim valores) y la fuente GNU original jan-2014
+registra `data_length=ndim`, `DOUBLE_PRECISION`; el binario de referencia
+de F. Lorenzo (2014) y el Professional 02-08-2026 rechazan el registro
+igual que el GNU. No es un bug de aridad de esta familia: requeriría una
+feature nueva (resolver el flujo por nombres de dof). `pruebavel` queda
+RUNFAIL y su copia en validation-suite está vacía (0 bytes).
