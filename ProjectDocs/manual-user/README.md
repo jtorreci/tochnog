@@ -427,3 +427,7 @@ input parameters it accepts.
 ## REFINE LOCALLY ON BAR2 (2026-09-14)
 
 - [refine_locally_bar2](refine_locally_bar2.md) — `control_mesh_refine_locally` no longer aborts on `-bar2` elements. The element-shape dispatch in `refine_l.cc` treated `-bar2` with a standalone `if`, so a bar element fell through to the final `assert(name==-TET10)` and the calculation aborted (rc=134). The sfnet `refine5` test now completes and reaches its target. Corpus 184/13/0 -> 186/11/0 (together with the `incnav3` corpus-input alignment), 0 regressions.
+
+## BI-CG DIRECT-LU RETRY BAND WIDTH (2026-09-14)
+
+- [solver_bicg_band_width](solver_bicg_band_width.md) — the band width of the direct-LU retry after a Bi-CG breakdown was short by `nprinc-1` unknowns per coupled node pair, so the band fill wrote outside the matrix and the retry returned a wrong solution. Fixed to the same `(1+diff)*nprinc` bound the ordering path already used. `examp2` (coupled consolidation, `inertia_apply -yes` + `groundflow_consolidation_apply -yes`) now gives the exact `-0.634519741323` = Professional `-0.6345197413352` (was `-0.7206`). Corpus 186/11/0 -> 187/10/0, 0 regressions.

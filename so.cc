@@ -523,7 +523,19 @@ void solve( long int task )
           jnod = labs(node_node[jj]);
           if ( db_active_index( NODE, jnod, VERSION_NORMAL ) ) {
             long int diff = ( inod>jnod ) ? inod-jnod : jnod-inod;
-            if ( diff*nprinc > band ) band = diff*nprinc;
+            // Band width in local dofs: two nodes separated by `diff` node
+            // numbers span diff*nprinc + (nprinc-1) consecutive local
+            // indices (from the last dof of one node to the first of the
+            // other). Use (1+diff)*nprinc, the same bound as the
+            // Cuthill-McKee branch below (line ~556). The old diff*nprinc
+            // was short by nprinc-1, so the band fill wrote OUT of
+            // mat/ldmat for the first-to-last dof coupling of adjacent
+            // nodes (e.g. the pressure<->velocity consolidation term:
+            // nprinc=2, dof distance 3 > band 2), corrupting the direct-LU
+            // retry after a Bi-CG breakdown (examp2: pres -0.7206 instead
+            // of the exact -0.6345, which LAPACK/SuperLU and the
+            // Professional produce).
+            if ( (1+diff)*nprinc > band ) band = (1+diff)*nprinc;
           }
         }
       }

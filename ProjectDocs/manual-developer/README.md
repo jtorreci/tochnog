@@ -449,3 +449,7 @@ Each file corresponds to the same feature in the [User Manual](../manual-user/).
 ## REFINE LOCALLY ON BAR2 (2026-09-14)
 
 - [refine_locally_bar2](refine_locally_bar2.md) — `refine_l.cc` `refine_locally()`, the element-shape dispatch that sets `nside`/`nnol_side`. The `if (name==-BAR2)` branch was a standalone `if`, and the `if (name==-BAR3)` chain that follows was therefore evaluated for a BAR2 element too: it fell through to the final `assert(name==-TET10)` and aborted (`refine5`, rc=134; the jan-2014 reference GNU aborts identically). Fix: `else if (name==-BAR3)`. A second copy-paste defect at `refine_l.cc:249` (`else if (name==-BAR2)`, unreachable, should be `-BAR3`) is left untouched (not exercised by any corpus test). Corpus 184/13/0 -> 186/11/0, 0 regressions; suite 16/16.
+
+## BI-CG DIRECT-LU RETRY BAND WIDTH (2026-09-14)
+
+- [solver_bicg_band_width](solver_bicg_band_width.md) — `so.cc` `solve()`, the `bicg_solver` band-width computation from `NODE_NODE`. It used `diff*nprinc`; the correct bound is `(1+diff)*nprinc` (two nodes `diff` apart span `diff*nprinc + nprinc-1` consecutive local dofs), the same bound the Cuthill-McKee branch already used. With the old bound the first-to-last dof coupling of adjacent nodes (pressure<->velocity consolidation term, `nprinc=2`, dof distance 3 > band 2) wrote out of `mat`/`ldmat` and corrupted the `dgbsv` retry. Bisected to `6cafafe` (tighter Bi-CG defaults exposed the latent band bug). `examp2` -0.7206 -> -0.634519741323 = Pro. Corpus 186/11/0 -> 187/10/0, 0 regressions; suite 16/16.
