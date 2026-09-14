@@ -241,11 +241,6 @@ void top( void )
     db( TIME_CURRENT, 0, idum, &time_current, length, VERSION_NORMAL, PUT );
   }
 
-  // debug: dump node 1 stress dofs after the input parse
-  if ( db_active_index( NODE, 1, VERSION_NORMAL ) ) {
-    db_dbl( NODE_DOF, 1, VERSION_NORMAL );
-  }
-
     // determine the highest index of timestep, print, etc..
   for ( idat=0; idat<MDAT; idat++ ) {
     if ( db_data_class(idat)==CONTROL ) {

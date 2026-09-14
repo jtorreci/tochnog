@@ -1144,8 +1144,14 @@ if (band_solver)
 // fill dofs
     for ( inod=0; inod<=max_node; inod++ ) {
       if ( db_active_index( NODE, inod, VERSION_NORMAL ) ) {
-        if ( bicg_solver || petsc_solver || superlu_solver || lapack_solver
-             || band_solver )
+        // CONTROL_EIGEN is invoked from step_close() AFTER the end-of-step
+        // db_version_delete(VERSION_NEW): node_dof at VERSION_NEW does not
+        // exist in that call. The eigen task only fills NODE_EIGEN (the
+        // historic jan-2014 behaviour, where band_solver - set by the eigen
+        // task - was deliberately NOT part of this condition).
+        if ( task!=-CONTROL_EIGEN &&
+             ( bicg_solver || petsc_solver || superlu_solver || lapack_solver
+               || band_solver ) )
           node_dof_new = db_dbl( NODE_DOF, inod, VERSION_NEW );
         for ( i=0; i<neigen_positive*nuknwn; i++ ) node_eigen[i] = 0.;
         iprinc=0;
@@ -1155,8 +1161,9 @@ if (band_solver)
           if ( solve_global_local[iglobal]>=0 ) {
             ilocal = solve_global_local[iglobal];
             if ( ilocal!=-NO ) {
-              if ( bicg_solver || petsc_solver || superlu_solver || lapack_solver
-                   || band_solver ) {
+              if ( task!=-CONTROL_EIGEN &&
+                   ( bicg_solver || petsc_solver || superlu_solver
+                     || lapack_solver || band_solver ) ) {
                 tmp = solve_b[ilocal];
                 if ( dof_principal[iuknwn]>=0 ) tmp *= options_relaxation[iprinc];
                 node_dof_new[iuknwn] += tmp;
