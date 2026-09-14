@@ -445,3 +445,7 @@ Each file corresponds to the same feature in the [User Manual](../manual-user/).
 ## GROUNDFLOW VELOCITY SIGN (2026-09-14)
 
 - [groundflow_velocity_sign](groundflow_velocity_sign.md) — `groundfl.cc` `groundflow()`, the `-GROUNDFLOW_VELOCITY` dof equation: `-pe[jdim]*grad(pres)` (F. Lorenzo 2013) restored to `+pe[jdim]*grad(pres)` (Professional manual 8.2: `v_i = k_ij dh/dx_j`). `general.cc` consumes the velocity for the `-groundflow -condif` convection (manual 8.3). Unlocks `condif5` rc=0 (middle temp 1.0 = Pro, was 1.1e-16). Corpus 173/24/0 -> 174/23/0, 0 regressions; suite 16/16.
+
+## REFINE LOCALLY ON BAR2 (2026-09-14)
+
+- [refine_locally_bar2](refine_locally_bar2.md) — `refine_l.cc` `refine_locally()`, the element-shape dispatch that sets `nside`/`nnol_side`. The `if (name==-BAR2)` branch was a standalone `if`, and the `if (name==-BAR3)` chain that follows was therefore evaluated for a BAR2 element too: it fell through to the final `assert(name==-TET10)` and aborted (`refine5`, rc=134; the jan-2014 reference GNU aborts identically). Fix: `else if (name==-BAR3)`. A second copy-paste defect at `refine_l.cc:249` (`else if (name==-BAR2)`, unreachable, should be `-BAR3`) is left untouched (not exercised by any corpus test). Corpus 184/13/0 -> 186/11/0, 0 regressions; suite 16/16.

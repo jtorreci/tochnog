@@ -423,3 +423,7 @@ input parameters it accepts.
 ## GROUNDFLOW VELOCITY SIGN (2026-09-14)
 
 - [groundflow_velocity_sign](groundflow_velocity_sign.md) — the groundflow (Darcy) velocity is now `v_i = k_ij dh/dx_j` (positive head gradient), the Professional manual 8.2 convention, instead of the negated `-k grad(h)` of the sfnet 2013 change. In a `-groundflow -condif` model this restores the Professional upwind direction: `condif5` middle-node temperature is `1.0` (was `1.1e-16`). Corpus 173/24/0 -> 174/23/0, 0 regressions.
+
+## REFINE LOCALLY ON BAR2 (2026-09-14)
+
+- [refine_locally_bar2](refine_locally_bar2.md) — `control_mesh_refine_locally` no longer aborts on `-bar2` elements. The element-shape dispatch in `refine_l.cc` treated `-bar2` with a standalone `if`, so a bar element fell through to the final `assert(name==-TET10)` and the calculation aborted (rc=134). The sfnet `refine5` test now completes and reaches its target. Corpus 184/13/0 -> 186/11/0 (together with the `incnav3` corpus-input alignment), 0 regressions.

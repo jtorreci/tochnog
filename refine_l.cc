@@ -197,7 +197,10 @@ void refine_locally( void )
               nside = 1;
               nnol_side = 2;
             }
-            if ( name==-BAR3 ) {
+            // The BAR2 branch above is a standalone `if`; this chain must be
+            // an `else if` so that a BAR2 element does not fall through to the
+            // final `assert(name==-TET10)` (refine5 aborted here, rc=134).
+            else if ( name==-BAR3 ) {
               if ( do_the_refining ) {
                 nside = 2;
                 nnol_side = 2;
