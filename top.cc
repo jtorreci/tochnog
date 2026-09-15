@@ -1171,6 +1171,14 @@ void step_close( long int task, long int ipar, long int npar, long int ipar_i, l
 
   db( ICONTROL, 0, &icontrol, ddum, ldum, VERSION_NORMAL, GET );
 
+  // control_reset_interface / _interface_strain (manual Professional
+  // 6.355) fire at step CLOSE, after the element loop promoted
+  // VERSION_NEW to VERSION_NORMAL: the reset defines the new strain zero
+  // "at this moment of resetting" and the NEXT steps accumulate from it,
+  // so the reset step's own deformation must not be re-added. See
+  // control_reset_interface() in data.cc.
+  control_reset_interface( icontrol );
+
   // element_dof_initial (manual Professional 6.422): an element that
   // carries an initial past-dof field applies it during its birth step
   // (general.cc); once that step has converged the marker is set so the
