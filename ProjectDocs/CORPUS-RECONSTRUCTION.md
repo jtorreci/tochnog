@@ -345,7 +345,7 @@ compared with the documented **current** syntax and with the archived
 | --- | --- | --- | --- |
 | dbmeth21 | `control_print_database_method.md` | not a test: output of `dbmeth.dat` (`control_print_database_method 21 -sizetot`, base `dbmeth` → `dbmeth21.dbs`) | `dbmeth.dat` rc=0; `dbmeth21.dbs` 58 `Size of` + `Total size is` + system matrix |
 | dbmeth22 | `control_print_database_method.md` | same `dbmeth.dat`, index 22 `-size_tot_large` | `dbmeth22.dbs` exactly 1 `Size of` (system matrix) |
-| groundflow_interface | `group_interface_groundflow_*.md`, `group_interface.md` | input is faithful (no missing record) | **BLOCKED by bug** (see §4.1): `interface_element()` aborts |
+| groundflow_interface | `group_interface_groundflow_*.md`, `group_interface.md` | was missing `inertia_apply -yes` (see §5) | **RECOVERED** (fifth pass): rc=0, node5 pres `1.99999894661` |
 | iface_condif | `group_interface_condif_conductivity.md` | input is faithful | **BLOCKED by bug** §4.1; adding a dummy `group_interface_materi_elasti_stiffness 10 1 1` makes it rc=0 |
 | mc_pressure_min | `group_materi_elasti_camclay_pressure_min.md`, `materi_plasti_camclay_history.md` | 3-value camclay `group_materi_plasti_camclay 0 0.8 0.02 0.2` (drop the legacy 4th `N=3`) | **RECOVERED** rc=0; sigxx `-0.0093333`, sigyy `-0.2093333` (doc targets, exact) |
 | mc_pressure_min_off | same | same 3-value fix | **RECOVERED** rc=0 |
@@ -514,3 +514,70 @@ The source change is the `data_length` bump. Full sfnet 197 corpus with the
 fixed binary vs the stored baseline: **187 PASS / 10 RUNFAIL / 0 PARSE**,
 classification byte-identical to the baseline (no per-test change). Suite
 build_safe **16/16**.
+
+---
+
+# Fifth pass (2026-09-15) — `groundflow_interface` free-node pressure
+
+Investigated on a scratch worktree from `2b369ca` (branch
+`dev/groundflow-free-node`). Evidence:
+`/tmp/opencode/gflow-20260915-102441/evidence/`.
+
+## `groundflow_interface` — reconstruction defect, not a bug
+
+Symptom (after the `interface_element()` abort guard of `f142bdf`): rc=1.
+The four Dirichlet nodes 1-4 hold `pres = 2` but the free nodes 5-8 stay at
+`pres = -8.88e-14`. The archived Professional `.dbs` (2026-08-29) has
+`node_dof 5 pres = 1.9999990002` and `node_dof 6 pres = 0.00039496033343`,
+i.e. the right block does fill from the interface flux.
+
+Cause: the reconstructed input relied on the pre-`0560dcf` default
+`inertia_apply -yes`. `0560dcf` aligned the default with the Professional
+(manual 6.785: absent → `-no`). The test declares explicit water-storage
+records (`group_groundflow_capacity 0 1`,
+`group_interface_groundflow_capacity 10 1`) that are meaningless without the
+storage term: `general.cc:308` gates the lumped principal-dof term — `C` for
+`-GROUNDFLOW_PRESSURE` (`general.cc:159`) — behind
+`options_inertia==-YES || !principal_unknown`. Without it the transient
+equation carries no capacity term, so the free nodes never fill through the
+interface permeability.
+
+The third pass had classified the input as "faithful (no missing record)",
+but that verdict was made while the test was BLOCKED by the
+`interface_element()` abort (bug list §4.1): it could not run, so the missing
+record was invisible. `f142bdf` removed the abort and exposed it.
+`inertia_apply` is never echoed in any `.dbs` (0 of 430 dumps contain an
+`^inertia_apply` record), so its absence from the archived dump is not
+counter-evidence.
+
+Fix (test input): add `inertia_apply   -yes` after `end_initia` (the
+Professional placement used by the corpus alignment).
+
+Validation (current binary `2b369ca`, LC_ALL=C):
+
+| node | fixed input | archived `.dbs` | target |
+| --- | --- | --- | --- |
+| 5 | pres `1.99999894661` | `1.9999990002` | 2 ± 0.01 → PASS |
+| 6 | pres `0.000379049027744` | `0.00039496033343` | (not targeted) |
+
+`rc=0`. A/B: without the record rc=1 and node5 pres `-8.88e-14`; with it
+rc=0 and node5 pres matches the Professional dump to 5.4e-8.
+
+Residual (out of scope, not fixed): the `gvelx` dof sign differs from the
+archived dump (`-1.9996159999e-06` vs `+1.99960004065e-06`). It is a
+velocity-sign convention issue unrelated to the pressure target and to this
+reconstruction (the pressure field is identical); it is not part of this
+work unit.
+
+## Corpus A/B
+
+No source change (test-input fix only). Full sfnet 197 corpus with the
+current binary vs the stored baseline: **187 PASS / 10 RUNFAIL / 0 PARSE**,
+classification byte-identical to the baseline. Suite build_safe **16/16**.
+Related groundflow tests re-checked: `groundflow_total_pressure_limit`,
+`groundflow_total_pressure_limit_dry`, `groundflow_consolidate_off`,
+`groundflow_vangenuchten`, `groundflow_nonsaturated_off`,
+`groundflow_flux_edge`, `groundflow_phreatic_multiple`,
+`groundflow_seepage`, `groundflow_pressure_atm(_def)` all rc=0;
+`groundflow_total_pressure_tension` remains rc=1 (pre-existing target miss
+`-4.2896` vs `-4.147`, unchanged by this work unit).
