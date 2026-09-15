@@ -953,21 +953,31 @@ void data( long int task, double dtime, double time_current )
     long int *reset_dof_node_filter = NULL, reset_dof_length = 0, idof_list = 0;
     for ( ireset=0; ireset<=max_reset; ireset++ ) {
       if ( db_active_index( CONTROL_RESET_DOF, ireset, VERSION_NORMAL ) ) {
-        // CONVERGENCE (2026-09-15): the per-index gate (icontrol==ireset,
-        // added in 22801c3) is a REGRESSION. It broke creset_geom: the
-        // test resets index 0 (constant 0.5, all nodes) and index 1
-        // (constant 0, brick nodes) at the SAME indices as its two
-        // timesteps. With the gate, at step 0 only index 0 fires, so the
-        // brick nodes keep 0.5 and the ELEMENT_DOF IP history is stored
-        // as 0.5. At step 1 the index-1 reset sets the brick NODE_DOF to
-        // 0, but the material history equation still sees the stale
-        // ELEMENT_DOF (0.5) as old_hisv and drives the solved value to
-        // -1 (the reported "3*value-1"). The archived GNU reference
-        // (b6e1f70, 2026-08-29 .dbs) applies the reset on every data()
-        // call, so index 1 also fires at step 0 and the ELEMENT_DOF
-        // follows the node (0). Removing the gate restores that behaviour
-        // and the full sfnet-197 classification is byte-identical to the
-        // 187/10/0 baseline; hypo2/3/4 and mohrcou4 still pass.
+        // CONVERGENCE (2026-09-15, delete3-vs-creset_geom reconciliation):
+        // a reset at a NON-timestep control index is a ONE-SHOT
+        // initialisation: it fires only in its own control step
+        // (icontrol==ireset), like every control record (manual
+        // Professional 6.350). This is required by delete3: the reset
+        // -sigyy at index 5 (timestep at index 10) initialises sigma=1
+        // ONCE; re-applying it at every timestep re-injects sigma=1 and
+        // moves the fixed point from 0.6 to 0.920015.
+        //
+        // A reset whose index ALSO carries a control_timestep is
+        // step-scoped: the legacy GNU applies it at every data() call
+        // (archived b6e1f70 reference), and creset_geom relies on that.
+        // There reset index 1 (constant 0, geometry brick) shares the
+        // timestep index 1; it must also fire at step 0 so the brick
+        // ELEMENT_DOF IP history follows the node. With the strict gate
+        // the brick IP keeps 0.5, and at step 1 the material equation
+        // solves -1 instead of 0. The Professional REJECTS a reset
+        // sharing a timestep index ("Error detected for data item :
+        // control_reset_dof, record : 20" - measured), so this branch is
+        // only reachable for legacy/GNU-only inputs; Professional-aligned
+        // corpus tests (sfnet-197: hypo2/3/4, mohrcou4, ...) keep the
+        // one-shot behaviour.
+        if ( ireset!=icontrol &&
+             !db_active_index( CONTROL_TIMESTEP, ireset, VERSION_NORMAL ) )
+          continue;
         db( CONTROL_RESET_DOF, ireset, reset_dof, ddum, ldum, VERSION_NORMAL, GET );
         // the record may list SEVERAL dofs (-sigxx -sigyy -sigzz ...);
         // every listed dof gets the reset value.
