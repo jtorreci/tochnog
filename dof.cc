@@ -158,7 +158,20 @@ void parallel_new_dof_diagonal( void )
             if ( options_solver==-DIAGONAL || dof_principal[iuknwn]<0 ) {
               tmp = node_rhside[ipuknwn] / node_lhside[ipuknwn];
               if ( dof_principal[iuknwn]>=0 ) tmp *= options_relaxation[iprinc];
-              node_dof_new[iuknwn] += tmp;
+              // Nodal stress recovery (2026-09-15, Professional
+              // alignment): the Professional ASSIGNS the absolute
+              // weighted average of the per-element nodal stresses
+              // (node_rhside = sum(volume*weight*new_sig),
+              // node_lhside = sum(volume*weight)); it does not
+              // accumulate the element stress increments. The stress
+              // dofs are non-principal, so this is a post-solve update.
+              // Every other non-principal dof keeps the incremental
+              // (+=) form.
+              if ( stress_recovery_absolute && stres_indx>=0 &&
+                   iuknwn>=stres_indx && iuknwn<stres_indx+6*nder )
+                node_dof_new[iuknwn] = tmp;
+              else
+                node_dof_new[iuknwn] += tmp;
               if ( iuknwn==stres_indx+0*nder ) {
               }
               if ( iuknwn==stres_indx+3*nder ) {
