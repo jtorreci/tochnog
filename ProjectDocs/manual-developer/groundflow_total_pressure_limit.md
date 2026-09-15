@@ -40,15 +40,27 @@
 ## Verification
 
 Tests `groundflow_total_pressure_limit` and `_dry`
-(validation-suite/test-2014, build_safe.sh 59/59):
+(validation-suite/test-2014):
 
-- Same model as `groundflow_consolidate_off`: prescribed velocity field
+- Same mesh as `groundflow_consolidate_off`: prescribed velocity field
   with divergence 2, pres=0 Dirichlet at the bottom, free top nodes.
-  Without the limit the free nodes reach ~1.67.
+- **The pressure only develops when the consolidation coupling and the
+  capacity storage term are active**, which is not the default since
+  `0560dcf` aligned both switches with the Professional (manual 6.557:
+  "Default switch is -no"). The tests therefore carry the explicit
+  records `groundflow_consolidation_apply -yes` and `inertia_apply -yes`
+  (the same convention documented in `groundflow_consolidation_apply.md`
+  and used by the corpus consolidation examples `large2`/`large3`). With
+  both records the uncapped free-node pressure is `1.6667` (the ~1.67 of
+  the manual), i.e. `C·dp/dt = div(v_solid)` at `dt=1`, `C=1`.
+  Without them the free nodes stay at 0 and the limit record has nothing
+  to clamp — this was the stale reconstruction (see
+  `CORPUS-RECONSTRUCTION.md`, fourth pass).
 - `groundflow_total_pressure_limit`: `limit 0.5` → free nodes cut to 0.5
   (targets 0.5), Dirichlet nodes unaffected.
 - `groundflow_total_pressure_limit_dry`: `limit 0.` → elements are dry,
-  the consolidation term is skipped and the pressure stays 0 (targets 0).
+  the consolidation term is skipped and the pressure stays 0 (targets 0),
+  even with consolidation + inertia active.
 
 ## Related
 
