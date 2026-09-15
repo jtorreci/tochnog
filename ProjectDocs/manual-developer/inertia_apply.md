@@ -40,6 +40,15 @@
 - The Professional record is multi-valued (one switch per principal dof);
   the GNU registration stores a single value that applies to every principal
   dof (the Pro manual allows the single-value form explicitly).
+- Reconstruction gotcha (validation-suite `groundflow_interface`, 2026-09-15):
+  a transient groundflow model that declares `group_groundflow_capacity` /
+  `group_interface_groundflow_capacity` but relies on the legacy GNU default
+  silently loses its storage term after `0560dcf`, and the free nodes do not
+  fill from the interface flux. Adding `inertia_apply -yes` restores the
+  Professional `.dbs` pressure field (node5 pres `1.99999894661` vs the
+  archived `1.9999990002`). The reconstructed test had been labelled
+  "faithful" only because the `interface_element()` abort kept it from
+  running.
 
 ## External dependencies
 
