@@ -1875,6 +1875,7 @@ void      damage( long int gr, double new_epe[], double new_sig[],
 void      damage_mazars( double materi_damage_mazars[], double new_epe[], double new_sig[], 
             double old_damage, double &new_damage );
 void      data( long int task, double dtime, double time_current );
+void      control_reset_interface( long int icontrol );
 void      post_element_force_calculate( void );
 void      date( void );
 long int  db( long int idat, long int index, long int *ival,

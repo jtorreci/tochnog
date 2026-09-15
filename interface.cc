@@ -124,12 +124,23 @@ void interface_element( long int element, long int name,
     // variable-length: 2D tests give 2 values (kn, kt), 3D give 3
     // (kn, kt1, kt2) - read only what the record carries (manual
     // Professional: "kn kt,first kt,second" with kt,second omitted
-    // in 2D)
-    long int length_stiff = db_len(
-      GROUP_INTERFACE_MATERI_ELASTI_STIFFNESS, element_group,
-      VERSION_NORMAL );
-    if ( length_stiff>3 ) length_stiff = 3;
-    if ( length_stiff<2 ) length_stiff = 3; // default: read 3 (zeroed)
+    // in 2D).
+    // The record is OPTIONAL: a non-elastic interface group (condif
+    // conductivity, groundflow permeability, ...) carries no elastic
+    // stiffness, so it must not be read. db_len() aborts (db_error)
+    // when the record is absent, so guard it with db_active_index:
+    // without the record the zeroed ddum3 default (kn=kt=0) is used and
+    // the mechanical part of interface_element() contributes nothing
+    // (the condif/groundflow blocks below carry the physics).
+    long int length_stiff = 3; // default: read 3 (zeroed)
+    if ( db_active_index( GROUP_INTERFACE_MATERI_ELASTI_STIFFNESS,
+        element_group, VERSION_NORMAL ) ) {
+      length_stiff = db_len(
+        GROUP_INTERFACE_MATERI_ELASTI_STIFFNESS, element_group,
+        VERSION_NORMAL );
+      if ( length_stiff>3 ) length_stiff = 3;
+      if ( length_stiff<2 ) length_stiff = 3; // default: read 3 (zeroed)
+    }
     db( GROUP_INTERFACE_MATERI_ELASTI_STIFFNESS, element_group, idum,
       ddum3, length_stiff, VERSION_NORMAL, GET_IF_EXISTS );
   }

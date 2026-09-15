@@ -59,6 +59,123 @@ static void data_copy_apply( long int idat_from, long int index_from,
     db_error( idat_control, icontrol );
 }
 
+// control_reset_interface / control_reset_interface_strain: reset the
+// accumulated histories of the interface elements located in the
+// geometry. _interface resets ALL interface data (strains + tangential
+// forces); _interface_strain resets only the normal strain, keeping
+// the tangential force history (the stresses are "remembered": new
+// strains start at 0 and new stresses grow from the remembered ones
+// through the stiffness). Control records fire in the control step of
+// their own index (same rule as control_reset_dof, manual Professional
+// 6.350): interface7 resets at index 15 between the control 10/20
+// phases.
+//
+// CONVERGENCE (2026-09-15, creset_iface): this runs at step CLOSE
+// (after the element loop promoted VERSION_NEW to VERSION_NORMAL),
+// NOT at step start. The manual Professional 6.355 says the strains
+// are reset "at this moment of resetting" and that "in the NEXT time
+// steps the new interface strains start with 0". Zeroing the
+// accumulated strain BEFORE the reset step's element loop let that
+// step's deformation increment be added again, so the target read
+// -5e-4 (the per-IP normal increment of the constant-velocity test)
+// instead of 0. Applying it after the step leaves the recorded
+// strain at exactly 0 and the remembered FORCE_NORM untouched.
+void control_reset_interface( long int icontrol )
+
+{
+  long int idum[1], ldum = 0;
+  double ddum[1];
+    long int ireset_i = 0, iel_i = 0, max_element_i = 0,
+      inol_i = 0, length_el_i = 0, all_in_i = 0, in_geom_i = 0,
+      geometry_i[2];
+    double rdum_i = 0.;
+    db_max_index( ELEMENT, max_element_i, VERSION_NORMAL, GET );
+    for ( ireset_i=0; ireset_i<=1000; ireset_i++ ) {
+      long int full_reset = 0, strain_reset = 0;
+      if ( db_active_index( CONTROL_RESET_INTERFACE, ireset_i,
+           VERSION_NORMAL ) ) full_reset = 1;
+      if ( db_active_index( CONTROL_RESET_INTERFACE_STRAIN, ireset_i,
+           VERSION_NORMAL ) ) strain_reset = 1;
+      if ( !full_reset && !strain_reset ) continue;
+      if ( ireset_i!=icontrol ) continue;
+      {
+        long int geometry_src[2];
+        if ( full_reset )
+          db( CONTROL_RESET_INTERFACE, ireset_i, geometry_src, ddum,
+            ldum, VERSION_NORMAL, GET );
+        else
+          db( CONTROL_RESET_INTERFACE_STRAIN, ireset_i, geometry_src, ddum,
+            ldum, VERSION_NORMAL, GET );
+        geometry_i[0] = geometry_src[0];
+        geometry_i[1] = geometry_src[1];
+      }
+      for ( iel_i=0; iel_i<=max_element_i; iel_i++ ) {
+        long int el_i[MNOL+1];
+        if ( !db_active_index( ELEMENT, iel_i, VERSION_NORMAL ) )
+          continue;
+        db( ELEMENT, iel_i, el_i, ddum, length_el_i, VERSION_NORMAL, GET );
+        all_in_i = 1;
+        for ( inol_i=1; inol_i<length_el_i; inol_i++ ) {
+          geometry( el_i[inol_i], ddum, geometry_i, in_geom_i, rdum_i,
+            ddum, rdum_i, ddum, NODE_START_REFINED,
+            CONTROL_RESET_INTERFACE, VERSION_NORMAL );
+          if ( !in_geom_i ) all_in_i = 0;
+        }
+        if ( all_in_i ) {
+          // per-integration-point histories (one value per facing pair,
+          // ns1 = nnol/2); zero ALL slots in BOTH versions (FIX
+          // 2026-09-03: the old PUT passed a leftover length and a
+          // single value, so the reset never cleared the whole record
+          // and the accumulated strain survived the reset).
+          //
+          // control_reset_interface_strain (manual Professional 6.355):
+          // resets the accumulated STRAINS to 0 but REMEMBERS the
+          // stresses: "the interface stresses at this moment of resetting
+          // will be remembered by Tochnog. In the next time steps the new
+          // interface strains start with 0, and change when the
+          // interfaces deform further. And in the next time steps the new
+          // interface stresses are calculated from the interface stresses
+          // at this moment of resetting plus stress due to additional
+          // deformation". The normal stress lives in its own history
+          // (ELEMENT_INTERFACE_FORCE_NORM), so the strain reset zeroes
+          // ELEMENT_INTERFACE_STRAIN_NORMAL only and leaves FORCE_NORM
+          // untouched (interface10 of the corpus: after the reset the
+          // interface keeps sigma_n = -6 and stays in equilibrium - no
+          // extra compression in the next step - while the reported
+          // strain starts from 0).
+          if ( strain_reset || full_reset ) {
+            long int ns1_r = ( length_el_i-1 )/2;
+            double zero_arr[9];
+            for ( inol_i=0; inol_i<ns1_r && inol_i<9; inol_i++ )
+              zero_arr[inol_i] = 0.;
+            db( ELEMENT_INTERFACE_STRAIN_NORMAL, iel_i, idum, zero_arr,
+              ns1_r, VERSION_NORMAL, PUT );
+            db( ELEMENT_INTERFACE_STRAIN_NORMAL, iel_i, idum, zero_arr,
+              ns1_r, VERSION_NEW, PUT );
+          }
+          if ( full_reset ) {
+            long int ns1_r = ( length_el_i-1 )/2;
+            double zero_arr[9];
+            for ( inol_i=0; inol_i<ns1_r && inol_i<9; inol_i++ )
+              zero_arr[inol_i] = 0.;
+            db( ELEMENT_INTERFACE_FORCE_NORM, iel_i, idum, zero_arr,
+              ns1_r, VERSION_NORMAL, PUT );
+            db( ELEMENT_INTERFACE_FORCE_NORM, iel_i, idum, zero_arr,
+              ns1_r, VERSION_NEW, PUT );
+            db( ELEMENT_INTERFACE_FORCE_TANG, iel_i, idum, zero_arr,
+              ns1_r, VERSION_NORMAL, PUT );
+            db( ELEMENT_INTERFACE_FORCE_TANG, iel_i, idum, zero_arr,
+              ns1_r, VERSION_NEW, PUT );
+            db( ELEMENT_INTERFACE_FORCE_TANG2, iel_i, idum, zero_arr,
+              ns1_r, VERSION_NORMAL, PUT );
+            db( ELEMENT_INTERFACE_FORCE_TANG2, iel_i, idum, zero_arr,
+              ns1_r, VERSION_NEW, PUT );
+          }
+        }
+      }
+    }
+}
+
 void data( long int task, double dtime, double time_current )
 
 {
@@ -832,110 +949,25 @@ void data( long int task, double dtime, double time_current )
   // their own index (same rule as control_reset_dof, manual Professional
   // 6.350): interface7 resets at index 15 between the control 10/20
   // phases.
-  {
-    long int ireset_i = 0, iel_i = 0, max_element_i = 0,
-      inol_i = 0, length_el_i = 0, all_in_i = 0, in_geom_i = 0,
-      geometry_i[2];
-    double rdum_i = 0.;
-    db_max_index( ELEMENT, max_element_i, VERSION_NORMAL, GET );
-    for ( ireset_i=0; ireset_i<=1000; ireset_i++ ) {
-      long int full_reset = 0, strain_reset = 0;
-      if ( db_active_index( CONTROL_RESET_INTERFACE, ireset_i,
-           VERSION_NORMAL ) ) full_reset = 1;
-      if ( db_active_index( CONTROL_RESET_INTERFACE_STRAIN, ireset_i,
-           VERSION_NORMAL ) ) strain_reset = 1;
-      if ( !full_reset && !strain_reset ) continue;
-      if ( ireset_i!=icontrol ) continue;
-      {
-        long int geometry_src[2];
-        if ( full_reset )
-          db( CONTROL_RESET_INTERFACE, ireset_i, geometry_src, ddum,
-            ldum, VERSION_NORMAL, GET );
-        else
-          db( CONTROL_RESET_INTERFACE_STRAIN, ireset_i, geometry_src, ddum,
-            ldum, VERSION_NORMAL, GET );
-        geometry_i[0] = geometry_src[0];
-        geometry_i[1] = geometry_src[1];
-      }
-      for ( iel_i=0; iel_i<=max_element_i; iel_i++ ) {
-        long int el_i[MNOL+1];
-        if ( !db_active_index( ELEMENT, iel_i, VERSION_NORMAL ) )
-          continue;
-        db( ELEMENT, iel_i, el_i, ddum, length_el_i, VERSION_NORMAL, GET );
-        all_in_i = 1;
-        for ( inol_i=1; inol_i<length_el_i; inol_i++ ) {
-          geometry( el_i[inol_i], ddum, geometry_i, in_geom_i, rdum_i,
-            ddum, rdum_i, ddum, NODE_START_REFINED,
-            CONTROL_RESET_INTERFACE, VERSION_NORMAL );
-          if ( !in_geom_i ) all_in_i = 0;
-        }
-        if ( all_in_i ) {
-          // per-integration-point histories (one value per facing pair,
-          // ns1 = nnol/2); zero ALL slots in BOTH versions (FIX
-          // 2026-09-03: the old PUT passed a leftover length and a
-          // single value, so the reset never cleared the whole record
-          // and the accumulated strain survived the reset).
-          //
-          // control_reset_interface_strain (manual Professional 6.355):
-          // resets the accumulated STRAINS to 0 but REMEMBERS the
-          // stresses: "the interface stresses at this moment of resetting
-          // will be remembered by Tochnog. In the next time steps the new
-          // interface strains start with 0, and change when the
-          // interfaces deform further. And in the next time steps the new
-          // interface stresses are calculated from the interface stresses
-          // at this moment of resetting plus stress due to additional
-          // deformation". The normal stress lives in its own history
-          // (ELEMENT_INTERFACE_FORCE_NORM), so the strain reset zeroes
-          // ELEMENT_INTERFACE_STRAIN_NORMAL only and leaves FORCE_NORM
-          // untouched (interface10 of the corpus: after the reset the
-          // interface keeps sigma_n = -6 and stays in equilibrium - no
-          // extra compression in the next step - while the reported
-          // strain starts from 0).
-          if ( strain_reset || full_reset ) {
-            long int ns1_r = ( length_el_i-1 )/2;
-            double zero_arr[9];
-            for ( inol_i=0; inol_i<ns1_r && inol_i<9; inol_i++ )
-              zero_arr[inol_i] = 0.;
-            db( ELEMENT_INTERFACE_STRAIN_NORMAL, iel_i, idum, zero_arr,
-              ns1_r, VERSION_NORMAL, PUT );
-            db( ELEMENT_INTERFACE_STRAIN_NORMAL, iel_i, idum, zero_arr,
-              ns1_r, VERSION_NEW, PUT );
-          }
-          if ( full_reset ) {
-            long int ns1_r = ( length_el_i-1 )/2;
-            double zero_arr[9];
-            for ( inol_i=0; inol_i<ns1_r && inol_i<9; inol_i++ )
-              zero_arr[inol_i] = 0.;
-            db( ELEMENT_INTERFACE_FORCE_NORM, iel_i, idum, zero_arr,
-              ns1_r, VERSION_NORMAL, PUT );
-            db( ELEMENT_INTERFACE_FORCE_NORM, iel_i, idum, zero_arr,
-              ns1_r, VERSION_NEW, PUT );
-            db( ELEMENT_INTERFACE_FORCE_TANG, iel_i, idum, zero_arr,
-              ns1_r, VERSION_NORMAL, PUT );
-            db( ELEMENT_INTERFACE_FORCE_TANG, iel_i, idum, zero_arr,
-              ns1_r, VERSION_NEW, PUT );
-            db( ELEMENT_INTERFACE_FORCE_TANG2, iel_i, idum, zero_arr,
-              ns1_r, VERSION_NORMAL, PUT );
-            db( ELEMENT_INTERFACE_FORCE_TANG2, iel_i, idum, zero_arr,
-              ns1_r, VERSION_NEW, PUT );
-          }
-        }
-      }
-    }
-  }
 
     long int *reset_dof_node_filter = NULL, reset_dof_length = 0, idof_list = 0;
     for ( ireset=0; ireset<=max_reset; ireset++ ) {
       if ( db_active_index( CONTROL_RESET_DOF, ireset, VERSION_NORMAL ) ) {
-        // manual Professional 6.350: control_reset_dof is indexed like
-        // every control; it is applied only in the control steps of ITS
-        // own index (icontrol==ireset). The corpus tests (hypo2/3,
-        // mohrcou4, ...) reset -hyhis0/-epixx/-sigxx with indices 1..3
-        // while the timestep runs at index 20. The Professional REJECTS
-        // a reset sharing the timestep index ("Error detected for data
-        // item : control_reset_dof, record : 20" - measured), so the
-        // reset runs ONCE in its own (timeless) control step.
-        if ( ireset!=icontrol ) continue;
+        // CONVERGENCE (2026-09-15): the per-index gate (icontrol==ireset,
+        // added in 22801c3) is a REGRESSION. It broke creset_geom: the
+        // test resets index 0 (constant 0.5, all nodes) and index 1
+        // (constant 0, brick nodes) at the SAME indices as its two
+        // timesteps. With the gate, at step 0 only index 0 fires, so the
+        // brick nodes keep 0.5 and the ELEMENT_DOF IP history is stored
+        // as 0.5. At step 1 the index-1 reset sets the brick NODE_DOF to
+        // 0, but the material history equation still sees the stale
+        // ELEMENT_DOF (0.5) as old_hisv and drives the solved value to
+        // -1 (the reported "3*value-1"). The archived GNU reference
+        // (b6e1f70, 2026-08-29 .dbs) applies the reset on every data()
+        // call, so index 1 also fires at step 0 and the ELEMENT_DOF
+        // follows the node (0). Removing the gate restores that behaviour
+        // and the full sfnet-197 classification is byte-identical to the
+        // 187/10/0 baseline; hypo2/3/4 and mohrcou4 still pass.
         db( CONTROL_RESET_DOF, ireset, reset_dof, ddum, ldum, VERSION_NORMAL, GET );
         // the record may list SEVERAL dofs (-sigxx -sigyy -sigzz ...);
         // every listed dof gets the reset value.
