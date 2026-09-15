@@ -72,6 +72,7 @@ Each file corresponds to the same feature in the [User Manual](../manual-user/).
 - [control_mesh_mirror](control_mesh_mirror.md) — mirror the mesh.
 - [control_mesh_copy](control_mesh_copy.md) — copy the mesh displaced.
 - [control_mesh_delete_element](control_mesh_delete_element.md) — delete specific elements.
+- [control_mesh_delete_geometry_stop](control_mesh_delete_geometry_stop.md) — stop/reactivate (delete.cc) + frozen deleted-element ELEMENT_DOF (elem.cc); residual node_dof recovery lag.
 - [control_mesh_keep_element](control_mesh_keep_element.md) — keep only the listed elements.
 - [control_mesh_keep_element_group](control_mesh_keep_element_group.md) — keep only the elements of the listed groups.
 - [control_mesh_change_element_group](control_mesh_change_element_group.md) — change the element group.
