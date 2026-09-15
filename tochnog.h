@@ -1776,6 +1776,7 @@ extern long int stress_recovery_gauss;
   // incremental lumped update is kept, because the absolute assignment
   // would discard the transport terms.
 extern long int stress_recovery_absolute;
+extern long int stress_recovery_post_pass;
 
   // for swit
 extern long int swit_element_stack, swit_node_stack;

@@ -860,6 +860,10 @@ void materi( long int element, long int gr, long int name, long int nnol,
   for ( inol=0; inol<nnol; inol++ ) {
 
       // velocity
+    // Stress-only pass (stress_recovery_post_pass): the momentum/damping/
+    // gravity/stiffness assembly is skipped so the pass contributes ONLY the
+    // stress recovery entries below.
+    if ( !stress_recovery_post_pass ) {
     for ( idim=0; idim<ndim; idim++ ) {
       ipuknwn = vel_indx/nder+idim;
       indx = inol*npuknwn + ipuknwn;
@@ -975,7 +979,8 @@ void materi( long int element, long int gr, long int name, long int nnol,
         }
       }
     }
-    if ( scalar_dabs(h[inol])>EPS_H ) {
+    }
+    if ( !stress_recovery_post_pass && scalar_dabs(h[inol])>EPS_H ) {
 
       if ( materi_history_variables ) {
         for ( i=0; i<materi_history_variables; i++ ) {
@@ -1083,6 +1088,9 @@ void materi( long int element, long int gr, long int name, long int nnol,
           }
         }
       }
+    // Stress-only pass: the stress recovery above is the ONLY assembly; skip
+    // every other dof block below.
+    if ( stress_recovery_post_pass ) continue;
     if ( scalar_dabs(h[inol])>EPS_H ) {
       if ( materi_plasti_f ) {
         ipuknwn = f_indx/nder;

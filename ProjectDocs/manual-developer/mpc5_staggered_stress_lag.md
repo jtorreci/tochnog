@@ -1,16 +1,23 @@
 # mpc5 — staggered u-sigma stress lag (scheduled work unit)
 
-Status: **PARTIALLY CLOSED 2026-09-15** — the RECOVERY FORM is aligned
-(`nodal_stress_recovery.md`: the nodal stress is now the Professional's
+Status: **CLOSED 2026-09-15** — the one-iteration REPORTING lag is fixed by
+`nodal_stress_post_solve_sync.md`: after `solve()`, the nodal stress recovery
+is re-evaluated from the SOLVED velocity with a stress-only element pass, so
+`mpc5` reports `sigyy = 0.5` at `k=1` (and `k=2,3,5`), matching the
+Professional (one-pass). Candidate (b) below is the implemented mechanism. The
+recovery FORM was already aligned (`nodal_stress_recovery.md`, commit
+`0b23957`: the absolute weighted average); candidate (a) (the monolithic
+saddle-point solve) was refuted as structurally inconsistent for shared nodes
+in the current tie scheme. The rest of this note is the original design record.
+
+Status (2026-09-15, earlier): **PARTIALLY CLOSED** — the RECOVERY FORM is
+aligned (`nodal_stress_recovery.md`: the nodal stress is now the Professional's
 absolute weighted average; the full `mpc5` `node_dof` field matches the Pro
 to 5e-17 and the target `post_point_dof 10 -sigyy = 0.5` passes at the
-test's own 2 iterations). The one-iteration REPORTING lag remains: `mpc5`
-still gives `1.0` at `k=1` and `0.5` at `k=2` while the Professional gives
-`0.5` at `k=1`, because the stress dofs are non-principal and are updated
-after the solve from the PRE-solve constitutive stress. Closing it needs
-candidate (b) below (post-solve constitutive re-evaluation); the recovery
-weight is no longer the blocker. The rest of this note is the original
-design record.
+test's own 2 iterations). The one-iteration REPORTING lag remained: `mpc5`
+still gave `1.0` at `k=1` and `0.5` at `k=2` while the Professional gives
+`0.5` at `k=1`, because the stress dofs are non-principal and were updated
+after the solve from the PRE-solve constitutive stress.
 
 Status (original): **SCHEDULED / BLOCKED** (not implemented). This note
 records the precise blocker, the candidate fixes, the estimated scope and
@@ -86,15 +93,27 @@ pivoting (`-matrix_superlu` is already linked and working).
 
 ### (b) Post-solve constitutive re-evaluation
 
-After the solve, recompute the stress from the solved velocity (a second
-element pass) so the momentum equation of the next outer iteration sees a
-stress consistent with the current velocity. This is effectively what
-iteration 2 does today; making it an explicit, always-on pass would collapse
-the fixed point.
+**IMPLEMENTED 2026-09-15** as `nodal_stress_post_solve_sync.md`. After the
+solve, recompute the stress from the solved velocity (a second element pass)
+so the reported stress is in sync with the velocity. This is effectively what
+iteration 2 did before; making it an explicit, always-on pass collapses the
+reporting lag.
 
 - Scope: medium; touches the element pass ordering and the RHS assembly.
 - Risk: the second pass is not free; it must not double-count the
-  `element_rhside` or the deleted-element frozen RHS.
+  `element_rhside` or the deleted-element frozen RHS. Addressed with a
+  stress-only pass (momentum/non-stress blocks and the sparse store skipped)
+  plus a save/restore of the non-stress nodal RHS/LHS (structural elements
+  bypass the `materi()` gate).
+- Measured: `mpc5` `sigyy = 0.5` at `k=1` (and `k=2,3,5`); corpus sfnet 197
+  and validation-suite 233 classification diff = 0; suite 16/16.
+- Note on "identical to iteration k+1": the reported VALUE at iteration `k`
+  equals the unmodified scheme's value at `k+1`, but the mechanism adds only a
+  constitutive evaluation (no solve), so it syncs the `k=1` report. The
+  earlier "not viable" verdict was measured at commit `388a221`, when the
+  `k=2` value was still `0.7` (incremental recovery); the absolute recovery
+  fix (`0b23957`) made `k=2 = 0.5`, which is exactly the value candidate (b)
+  reports at `k=1`.
 
 ## Estimated scope
 

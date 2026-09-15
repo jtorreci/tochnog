@@ -32,6 +32,11 @@ long int stress_recovery_gauss = 0;
 // convection of the stress dofs). Set by general() from the same condition
 // that computes its local lagrange flag; see tochnog.h.
 long int stress_recovery_absolute = 1;
+// Stress-only element pass flag (2026-09-15, mpc5 reporting sync): when set,
+// elem()/materi() assemble ONLY the nodal stress recovery (from the solved
+// velocity) into element_rhside/element_lhside, leaving every other dof
+// untouched. Set by top() around a second element_loop() after solve().
+long int stress_recovery_post_pass = 0;
 
 void pol( long int element, long int element_group,
   long int name, long int nnol, double old_coord[], 
