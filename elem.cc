@@ -984,6 +984,22 @@ void elem( long int element, long int ithread )
       element_rhside[inol] = element_delete_factor * element_rhside_delete[inol];
       element_lhside[inol] = 0.;
     }
+    // A currently deleted element is EXCLUDED from the nodal stress
+    // recovery: its stress slots contribute neither numerator nor
+    // denominator, so a node whose only adjacent element is deleted keeps
+    // its previous stress and a shared node is recovered from the active
+    // elements alone (measured on delete3: the Professional's node_lhside
+    // for the stress dofs is 1 on the shared nodes and 0 on the nodes
+    // exclusive to the deleted element, node_dof = 0.6/1.0). The frozen
+    // released load (element_rhside_delete) is a MOMENTUM right-hand side;
+    // leaving it in the stress slots would pollute the absolute average
+    // (the reverted 2026-09-15 naive attempt: delete3 0.6 -> 0.12).
+    if ( stress_recovery_absolute && stres_indx>=0 ) {
+      long int ip0 = stres_indx/nder;
+      for ( inol=0; inol<nnol; inol++ )
+        for ( ipuknwn=ip0; ipuknwn<ip0+6; ipuknwn++ )
+          element_rhside[inol*npuknwn+ipuknwn] = 0.;
+    }
     for ( inol=0; inol<nnol*npuknwn*nnol*npuknwn; inol++ )
       element_matrix[inol] = 0.;
   }

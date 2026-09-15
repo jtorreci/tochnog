@@ -432,3 +432,7 @@ input parameters it accepts.
 ## BI-CG DIRECT-LU RETRY BAND WIDTH (2026-09-14)
 
 - [solver_bicg_band_width](solver_bicg_band_width.md) — the band width of the direct-LU retry after a Bi-CG breakdown was short by `nprinc-1` unknowns per coupled node pair, so the band fill wrote outside the matrix and the retry returned a wrong solution. Fixed to the same `(1+diff)*nprinc` bound the ordering path already used. `examp2` (coupled consolidation, `inertia_apply -yes` + `groundflow_consolidation_apply -yes`) now gives the exact `-0.634519741323` = Professional `-0.6345197413352` (was `-0.7206`). Corpus 186/11/0 -> 187/10/0, 0 regressions.
+
+## NODAL STRESS RECOVERY (2026-09-15)
+
+- [nodal_stress_recovery](nodal_stress_recovery.md) — the stress reported at a node is the absolute weighted average of the adjacent elements' nodal stresses (Professional convention). Visible with partially deleted/reactivated elements: `delete2.dat` shared node 2 `sigxx` is now `0.8` (was `0.6`); a currently deleted element is excluded from the recovery (`delete3.dat` `sigyy = 0.6` on the shared nodes).

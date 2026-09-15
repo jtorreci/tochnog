@@ -99,6 +99,26 @@ weight 1.
 - `tochnog.h` / `tochnog-mod.h` — the new signature and the
   `stress_recovery_gauss` global.
 
+### 3.1 Absolute assignment (2026-09-15)
+
+The 2026-09-13 alignment fixed the WEIGHTS but the recovery still
+ACCUMULATED the increments (`node_dof_new += node_rhside/node_lhside`), so
+at a node whose elements' increments cancel the reported stress kept its
+step-start value. The 2026-09-15 work unit (`nodal_stress_recovery.md`)
+makes the stress dofs ASSIGN the ratio:
+
+```c
+node_dof_new[stress] = node_rhside / node_lhside;   // dof.cc
+node_rhside[stress] += volume*weight*new_sig;       // materi.cc
+node_lhside[stress] += volume*weight;               // materi.cc
+```
+
+A currently deleted element contributes neither term (`elem.cc` zeroes its
+stress slots), matching the Professional's `node_lhside = 0` on the nodes
+exclusive to a deleted element. The absolute assignment is applied only when
+the stress dofs are a pure recovered field (gate in `general.cc`:
+`!materi_strain_total` and the stress dof not convected).
+
 ## 4. force5 (phreatic level)
 
 `area.cc` looked up the phreatic level for the FIRST node of a

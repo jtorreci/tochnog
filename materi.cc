@@ -1039,8 +1039,28 @@ void materi( long int element, long int gr, long int name, long int nnol,
         for ( idim=0; idim<MDIM; idim++ ) {
           for ( jdim=idim; jdim<MDIM; jdim++ ) {
             indx = inol*npuknwn + ipuknwn;
-            tmp = volume * ( (idim==jdim) ? weight_normal : weight_shear ) *
-              ( new_sig[idim*MDIM+jdim] - old_sig[idim*MDIM+jdim] ) / dtime;
+            // Absolute weighted average (2026-09-15, Professional
+            // alignment): the numerator is volume*weight*new_sig and the
+            // denominator is volume*weight, both assembled per
+            // (element,node,ipoint). dof.cc then ASSIGNS
+            // node_dof = node_rhside/node_lhside, so the reported node
+            // stress is the absolute weighted average of the current
+            // constitutive stress (the Professional's element_dof), not
+            // an accumulation of stress increments. A currently deleted
+            // element contributes neither term (elem.cc zeroes both).
+            double rec_w = (idim==jdim) ? weight_normal : weight_shear;
+            if ( stress_recovery_absolute ) {
+              // Absolute weighted average: numerator volume*weight*new_sig
+              // and denominator volume*weight; dof.cc assigns the ratio.
+              tmp = volume * rec_w * new_sig[idim*MDIM+jdim];
+              element_lhside[indx] += volume * rec_w;
+            }
+            else {
+              // Convected stress dof: keep the historic increment; the
+              // denominator/inertia come from general().
+              tmp = volume * rec_w *
+                ( new_sig[idim*MDIM+jdim] - old_sig[idim*MDIM+jdim] ) / dtime;
+            }
             element_rhside[indx] += tmp;
             if ( jdim==1 && idim==1 ) {
             }

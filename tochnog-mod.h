@@ -1759,6 +1759,15 @@ extern long int disp_primary_reference;
   // least-squares fit instead of the (diluted) shape-function weight.
 extern long int stress_recovery_gauss;
 
+  // Nodal stress recovery (2026-09-15, Professional alignment): 1 when the
+  // stress dofs are a PURE recovered field (Lagrangian: no convection of
+  // the stress dofs, i.e. the general() lagrange flag is set). Then
+  // dof.cc ASSIGNS the absolute weighted average. When the stress dof is
+  // convected (materi_strain_total transport, strconv1), the historic
+  // incremental lumped update is kept, because the absolute assignment
+  // would discard the transport terms.
+extern long int stress_recovery_absolute;
+
   // for swit
 extern long int swit_element_stack, swit_node_stack;
 extern char swit_routine_stack[MSTACK][MCHAR]; // routines called

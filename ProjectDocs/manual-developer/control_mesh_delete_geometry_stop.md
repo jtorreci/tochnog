@@ -64,11 +64,13 @@ stop reactivates it.
 `delete2.dat` (1D, two `bar2` in series, `control_reset_dof -sigxx 1`,
 delete the right bar 40 %, stop, continue) now parses and runs. The
 element integration-point stress matches the Professional
-(`element_dof = 0.8` in both elements after the stop). The `node_dof`
-target (`node 2 sigxx = 0.8`) is still `0.6`: the GNU nodal stress recovery
-(`dof.cc parallel_new_dof_diagonal`) accumulates the element stress
-INCREMENTS, so at a node shared by two elements whose increments cancel the
-reported stress keeps its pre-step value, while the Professional assigns
-the absolute weighted average. Closing that recovery is a separate work
-unit (see `mpc5_staggered_stress_lag.md`); it is orthogonal to the
-delete-geometry family.
+(`element_dof = 0.8` in both elements after the stop), and the `node_dof`
+target (`node 2 sigxx = 0.8`) is CLOSED: the nodal stress recovery was
+aligned with the Professional's absolute weighted average in the
+2026-09-15 work unit (see `nodal_stress_recovery.md`). Before that change
+the GNU recovery accumulated the element stress INCREMENTS, so at a node
+shared by two elements whose increments cancel the reported stress kept
+its pre-step value (`0.6`); the Professional assigns the absolute average
+(`node_rhside 1.6 / node_lhside 2.0 = 0.8`). `delete2.dat` is now `rc=0`,
+`delete3.dat` is unchanged (`sigyy = 0.6`) and the full `node_dof` field of
+the delete family matches the Professional exactly.

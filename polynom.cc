@@ -28,6 +28,11 @@
 // truth for the rule actually in use.
 long int stress_recovery_gauss = 0;
 
+// 1 when the stress dofs are a pure recovered field (Lagrangian, no
+// convection of the stress dofs). Set by general() from the same condition
+// that computes its local lagrange flag; see tochnog.h.
+long int stress_recovery_absolute = 1;
+
 void pol( long int element, long int element_group,
   long int name, long int nnol, double old_coord[], 
   double new_coord[], double ref_coord[], long int &npoint, double h[], 

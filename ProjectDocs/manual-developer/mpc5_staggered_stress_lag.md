@@ -1,9 +1,21 @@
 # mpc5 — staggered u-sigma stress lag (scheduled work unit)
 
-Status: **SCHEDULED / BLOCKED** (not implemented). This note records the
-precise blocker, the candidate fixes, the estimated scope and the acceptance
-criteria so the convergence line can be planned. It is a design note, not a
-description of landed behaviour.
+Status: **PARTIALLY CLOSED 2026-09-15** — the RECOVERY FORM is aligned
+(`nodal_stress_recovery.md`: the nodal stress is now the Professional's
+absolute weighted average; the full `mpc5` `node_dof` field matches the Pro
+to 5e-17 and the target `post_point_dof 10 -sigyy = 0.5` passes at the
+test's own 2 iterations). The one-iteration REPORTING lag remains: `mpc5`
+still gives `1.0` at `k=1` and `0.5` at `k=2` while the Professional gives
+`0.5` at `k=1`, because the stress dofs are non-principal and are updated
+after the solve from the PRE-solve constitutive stress. Closing it needs
+candidate (b) below (post-solve constitutive re-evaluation); the recovery
+weight is no longer the blocker. The rest of this note is the original
+design record.
+
+Status (original): **SCHEDULED / BLOCKED** (not implemented). This note
+records the precise blocker, the candidate fixes, the estimated scope and
+the acceptance criteria so the convergence line can be planned. It is a
+design note, not a description of landed behaviour.
 
 ## Symptom
 

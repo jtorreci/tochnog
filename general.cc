@@ -79,6 +79,20 @@ void general( long int element, long int name, long int nnol, long int element_g
   db( OPTIONS_CONVECTION, 0, &options_convection, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
   db( CONTROL_OPTIONS_CONVECTION, icontrol, &options_convection, 
     ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+  // Nodal stress recovery (2026-09-15): the absolute weighted average is
+  // only valid when the stress dofs are a PURE recovered field. Two cases
+  // keep the historic incremental lumped update:
+  //   - the stress dof is CONVECTED (the local lagrange flag below is 0,
+  //     e.g. strconv1): the absolute assignment would discard the
+  //     transport terms;
+  //   - an INDEPENDENT strain unknown exists (materi_strain_total and the
+  //     plasti/elasti strain variants): the stress dof evolves with that
+  //     unknown (measured: examp9/10/23, where the Pro cannot validate the
+  //     model - unsupported bounda_unknown/options_mesh/contact_geometry -
+  //     and the absolute form changes the adaptive-remesh path).
+  stress_recovery_absolute = ( !materi_strain_total &&
+    ( options_convection==-NO || materi_displacement ||
+      ( materi_velocity && options_mesh[0]==-FOLLOW_MATERIAL ) ) );
   db( OPTIONS_INERTIA, 0, &options_inertia, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
   db( CONTROL_OPTIONS_INERTIA, icontrol, &options_inertia, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
   db( OPTIONS_STABILIZATION, 0, &options_stabilization, ddum, ldum, VERSION_NORMAL, GET );
@@ -305,20 +319,25 @@ void general( long int element, long int name, long int nnol, long int element_g
           array_set( node_remesh_velocity, 0., ndim );
 
           // inertia (lumped)
-        if ( options_inertia==-YES || !principal_unknown ) {
-          // Nodal stress recovery weight (2026-09-13, Professional
-          // alignment): the Professional recovers the nodal stress with a
-          // per-element least-squares fit of the Gauss-point stresses and
-          // assembles the node by the arithmetic mean over the adjacent
-          // elements; sri_stress_recovery_weight returns that fit divided
-          // by the point volume (the lumped equation multiplies by the
-          // volume again), applied to ALL stress components. For the
-          // node-containing Lobatto rules and the non-tensor elements it
-          // reduces to h (the node IS the integration point). The SRI
-          // feature (GNU-specific) keeps its own recovery: Lagrange for
-          // the normal components, h for the shear.
+          //
+          // Nodal stress recovery (2026-09-15, Professional alignment):
+          // the MATERI_STRESS dofs are handled ENTIRELY by materi.cc as an
+          // absolute weighted average
+          // (sum(volume*weight*new_sig) / sum(volume*weight)), so the
+          // historic incremental inertia term
+          // (-volume*weight*(new_dof-past_dof)/dtime) is skipped here. The
+          // 2026-09-13 least-squares weight (sri_stress_recovery_weight,
+          // F/volume) is still used by materi.cc for the numerator and the
+          // denominator, so the node remains the per-element arithmetic
+          // mean. Every other lumped dof keeps the incremental form.
+        if ( ( options_inertia==-YES || !principal_unknown ) &&
+             !( dof_type[iuknwn]==-MATERI_STRESS &&
+                stress_recovery_absolute ) ) {
           double weight = h[inol];
           if ( dof_type[iuknwn]==-MATERI_STRESS ) {
+            // Convected stress dof (stress_recovery_absolute==0): keep the
+            // 2026-09-13 least-squares recovery weight for the incremental
+            // lumped update.
             long int kcomp = iuknwn - stres_indx;
             if ( sri_active( element, element_group, name, nnol ) ) {
               if ( kcomp==0 || kcomp==3*nder || kcomp==5*nder )
