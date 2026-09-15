@@ -4453,7 +4453,16 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   // (materi_plasti_camclay_history / node_dof cchis0/cchis1), NOT a
   // fourth material parameter (the GNU legacy 4th value N is derived
   // from the initial state instead).
-  data_length[GROUP_MATERI_PLASTI_CAMCLAY] = 3;
+  // The record is VARIABLE-LENGTH 3..4 (manual-developer
+  // materi_plasti_camclay_history.md): the Professional layout is
+  // M kappa lambda, and the legacy GNU form appends the NCL parameter N
+  // (M kappa lambda N). data_length is the MAXIMUM stride; with
+  // fixed_length=0 a 3-value record stores the DBL_MAX sentinel in slot
+  // 3 and db_len() returns 3, while a 4-value record returns 4 and
+  // plasti.cc reads plasti_data[3] (the legacy N fallback). A
+  // data_length of 3 rejected the documented 4-value form at parse time
+  // ("Length too small ... should become at least 4").
+  data_length[GROUP_MATERI_PLASTI_CAMCLAY] = 4;
   fixed_length[GROUP_MATERI_PLASTI_CAMCLAY] = 0;
   data_class[GROUP_MATERI_PLASTI_CAMCLAY] = MATERI;
   data_required[GROUP_MATERI_PLASTI_CAMCLAY] = GROUP_TYPE;

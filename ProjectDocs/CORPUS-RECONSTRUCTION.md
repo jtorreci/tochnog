@@ -419,11 +419,11 @@ met only by that dishonest success.
 ## 4. Bug list for follow-up (source-grounded, not fixed here)
 
 1. **`interface.cc` `interface_element()`** — `db_len(GROUP_INTERFACE_MATERI_ELASTI_STIFFNESS, element_group, VERSION_NORMAL)` aborts when the record is absent (non-elastic interfaces: `group_interface_condif_conductivity`, `group_interface_groundflow_*`). Blocks `iface_condif`, `groundflow_interface` (both doc-validated). Backtrace: `parallel_element_loop → elem → interface_element → db_max_index → db_error`. Fix: guard the `db_len` with `db_active_index(...)` (the line above already zeroes `ddum3` and the intent is a 3-value default).
-2. **`database.cc:4456` `data_length[GROUP_MATERI_PLASTI_CAMCLAY] = 3`** — the developer manual (`materi_plasti_camclay_history.md`: "variable-length 3..4") and the user manual ("the legacy … four values … still accepted") document the 4-value form, but the parse PUT rejects length 4 (`Length too small … should become at least 4`). `plasti.cc` still reads `plasti_data[3]` for `ldum>=4`, so the legacy path is unreachable. Test is recoverable with 3 values, but the doc/binary mismatch is real.
+2. **`database.cc:4456` `data_length[GROUP_MATERI_PLASTI_CAMCLAY] = 3`** — the developer manual (`materi_plasti_camclay_history.md`: "variable-length 3..4") and the user manual ("the legacy … four values … still accepted") document the 4-value form, but the parse PUT rejects length 4 (`Length too small … should become at least 4`). `plasti.cc` still reads `plasti_data[3]` for `ldum>=4`, so the legacy path is unreachable. Test is recoverable with 3 values, but the doc/binary mismatch is real. **FIXED in source** (fourth pass, §1: `data_length = 4`).
 3. **`data.cc` `data()` control_reset_dof value block** — the reset value is written as `3*value - 1` instead of `value` (creset_geom, regression after 2026-08-28; suspect `64e43d2`).
 4. **`control_reset_interface_strain`** — leaves `element_interface_strain_normal = -5.0e-4` instead of ≈0 (creset_iface).
-5. **groundflow pressure / `groundflow_total_pressure_limit`** — the free-node pressure does not develop (0 instead of 0.5/~1.67) with a faithful input.
-6. **`control_mesh_generate_truss`** — geometry-only generation produces no elements (gen1).
+5. **groundflow pressure / `groundflow_total_pressure_limit`** — the free-node pressure does not develop (0 instead of 0.5/~1.67) with a faithful input. **Reclassified (fourth pass, §2): reconstruction defect, not a binary bug** — the input was missing the `groundflow_consolidation_apply -yes` + `inertia_apply -yes` records (defaults changed in `0560dcf`).
+6. **`control_mesh_generate_truss`** — geometry-only generation produces no elements (gen1). **Reclassified (fourth pass, §3): reconstruction defect, not a binary bug** — the base `node`/`element 1 -bar2` (an INPUT mesh, not generated) was dropped, so `NODE_NODE` was empty.
 
 ## 5. Updated counts
 
@@ -438,3 +438,79 @@ Classification of the 38: 5 reconstruction (3 fixed + 2 unresolved), 4 bug, 29 d
 > Note: `dbmeth21`/`dbmeth22` were never separate tests; they are the
 > `-sizetot` / `-size_tot_large` dumps of the `dbmeth` test. The
 > `UNRECOVERABLE (8)` section above predates this finding.
+
+---
+
+# Fourth pass (2026-09-15) — materi/mesh/groundflow follow-up
+
+Three items of the §4 bug list were investigated on a scratch worktree from
+`5c80b60` (branch `dev/materi-mesh-groundflow-fixes`). Evidence:
+`/tmp/opencode/matmesh-20260915-074922/evidence/`.
+
+## 1. `group_materi_plasti_camclay` — REAL bug, fixed in source
+
+Cause: `database.cc:4456` set `data_length[GROUP_MATERI_PLASTI_CAMCLAY] = 3`
+(maximum stride 3) with `fixed_length = 0`. The parser PUTs the record
+length it read, so a 4-value record aborted at parse time (`Length too small
+of : group_materi_plasti_camclay … should become at least: 4`) and the
+legacy GNU branch in `plasti.cc:156` (`if (ldum>=4) N = plasti_data[3]`) was
+unreachable.
+
+Fix: `data_length = 4` (maximum stride; `fixed_length` stays 0, so the
+record is variable-length 3..4). A 3-value record keeps the `DBL_MAX`
+sentinel in slot 3 and `db_len()` returns 3; a 4-value record returns 4.
+
+Validation (fixed binary):
+
+- `mc_pressure_min`, `mc_pressure_min_off` (3-value): rc=0, sigxx
+  `-0.0093333`, sigyy `-0.2093333` (documented targets, exact).
+- `mc_pressure_min` with a 4th value `N=3`: rc=0, same sigxx/sigyy.
+- The legacy closure is now reachable: with the p0 history zeroed, the
+  4-value form derives p0 from N and runs rc=0; the 3-value form correctly
+  errors "needs initial p0".
+
+## 2. `groundflow_total_pressure_limit` — reconstruction defect, not a bug
+
+Cause: the reconstructed test relied on the pre-`0560dcf` defaults
+(`groundflow_consolidation_apply -yes`, `inertia_apply -yes`). Since
+`0560dcf` aligned both with the Professional (manual 6.557: "Default switch
+is -no"), a faithful input without the records gives pres=0: there is no
+material-divergence source and no capacity term, so the limit record has
+nothing to clamp.
+
+Fix (test input): add `groundflow_consolidation_apply -yes` and
+`inertia_apply -yes`.
+
+Validation (fixed binary):
+
+- `groundflow_total_pressure_limit` (limit 0.5): rc=0, free nodes pres=0.5,
+  Dirichlet nodes 0.
+- Without the limit record: free nodes pres=1.6667 (the ~1.67 of the
+  manual), target 0.5 correctly missed.
+- `groundflow_total_pressure_limit_dry` (limit 0): rc=0, pres=0 (the dry
+  check skips the consolidation term even with both switches active).
+
+The developer manual `groundflow_total_pressure_limit.md` was corrected
+accordingly.
+
+## 3. `control_mesh_generate_truss` (gen1) — reconstruction defect, not a bug
+
+Cause: `generate_beam_truss()` (`generate.cc:491`) generates trusses between
+nodes connected by an existing isoparametric element (it reads `NODE_NODE`
+and `NODE_START_REFINED`). The reconstruction dropped the whole `node` /
+`element` / `element_group` set for this test, including the base
+`element 1 -bar2 1 2` (an INPUT element, not generated), so `NODE_NODE` was
+empty and nothing could be generated. The manual's own example shows the
+required base mesh.
+
+Fix (test input): restore `node 1 0`, `node 2 1`, `element 1 -bar2 1 2`.
+
+Validation (fixed binary): rc=0; `element 2 -truss 1 2` generated,
+`node_dof 2 disx = 0.5` (target 0.5).
+
+## Corpus A/B (bug 1 only)
+
+The source change is the `data_length` bump. Full sfnet 197 corpus with the
+fixed binary vs the stored baseline: **187 PASS / 10 RUNFAIL / 0 PARSE**,
+classification byte-identical to the baseline (no per-test change). Suite
+build_safe **16/16**.
