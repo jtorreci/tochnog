@@ -860,7 +860,23 @@ void elem( long int element, long int ithread )
   if(!find_local_softvar) {//Not used when searching for local values of softening variable 
 
   //added for options_element_dof 
-  if(options_element_dof==-YES) 
+  // Partially deleted element (ELEMENT_DELETE_FACTOR active): its
+  // integration-point state is FROZEN at the value of the FIRST delete
+  // iteration (manual Professional 6.174: the reactivated element takes
+  // its strains/stresses from the moment just before being deleted;
+  // global_element_dof_apply defaults to -yes in the Professional, so
+  // the element remembers its own IP values). The frozen released load
+  // (ELEMENT_RHSIDE_DELETE) is captured in the same first iteration; from
+  // then on the stored ELEMENT_DOF must NOT follow the recomputed
+  // constitutive value (measured on delete2.dat: the recompute drifts to
+  // 1.4 while the Professional freezes the pre-deletion 1.0, which then
+  // changes the reactivated element's equilibrium to 1.0 instead of the
+  // documented 0.8). ELEMENT_DOF VERSION_NEW is a copy of VERSION_NORMAL
+  // at the step start, so skipping the PUT keeps the frozen value across
+  // the step-end version copy.
+  if ( options_element_dof==-YES &&
+       !( db_active_index( ELEMENT_DELETE_FACTOR, element, VERSION_NORMAL ) &&
+          db_active_index( ELEMENT_RHSIDE_DELETE, element, VERSION_NORMAL ) ) )
     db( ELEMENT_DOF, element, idum, element_dof_npoint, mnolnuknwn, VERSION_NEW, PUT );		
   
   array_multiply( tendon_element_rhside, tendon_element_rhside,

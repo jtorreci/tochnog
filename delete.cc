@@ -69,10 +69,12 @@ void delete_geom( double time_current )
     control_mesh_delete_geometry_movenodes=-YES, 
     length_control_mesh_delete_geometry_elementgroup=0,
     length_control_mesh_delete_geometry_element=0,
+    stop_switch=-NO, stop_geometry_active=0,
     name=0, ldum=0, idum[1], control_mesh_delete_geometry[2], 
     control_mesh_delete_geometry_elementgroup[DATA_ITEM_SIZE],
     control_mesh_delete_geometry_element[DATA_ITEM_SIZE], 
-    nodes[MNOL], el[MNOL+1], *node_in_geometry=NULL;
+    stop_geometry[2], nodes[MNOL], el[MNOL+1], *node_in_geometry=NULL,
+    *node_in_geometry_stop=NULL;
   double element_volume=0., old_element_volume=0., 
     element_delete_factor=0., time_old=0., 
     time_new=0., rdum=0., f0=0., f1=0., 
@@ -81,6 +83,68 @@ void delete_geom( double time_current )
     control_mesh_delete_geometry_factor[2]; 
 
   db( ICONTROL, 0, &icontrol, ddum, ldum, VERSION_NORMAL, GET );
+
+    // control_mesh_delete_geometry_stop (manual Professional 6.174):
+    // if the switch is -yes, destroy all remaining
+    // control_mesh_delete_geometry_factor records and reactivate the
+    // partially deleted elements (their ELEMENT_DELETE_FACTOR and frozen
+    // ELEMENT_RHSIDE_DELETE are removed, so they resume normal assembly).
+    // Elements deleted completely by factor_1 > 1-1.e-10 have their
+    // ELEMENT record removed (manual 6.170) and are NOT reactivated.
+    // control_mesh_delete_geometry_stop_geometry (6.175) restricts the
+    // stop to the elements whose nodes ALL lie in the given geometry
+    // (the same membership test as control_mesh_delete_geometry).
+  if ( db_active_index( CONTROL_MESH_DELETE_GEOMETRY_STOP, icontrol,
+      VERSION_NORMAL ) ) {
+    db( CONTROL_MESH_DELETE_GEOMETRY_STOP, icontrol, &stop_switch, ddum,
+      ldum, VERSION_NORMAL, GET );
+    if ( stop_switch==-YES ) {
+      stop_geometry_active = 0;
+      stop_geometry[0] = -ALL; stop_geometry[1] = 0;
+      if ( db_active_index( CONTROL_MESH_DELETE_GEOMETRY_STOP_GEOMETRY,
+          icontrol, VERSION_NORMAL ) ) {
+        db( CONTROL_MESH_DELETE_GEOMETRY_STOP_GEOMETRY, icontrol,
+          stop_geometry, ddum, ldum, VERSION_NORMAL, GET );
+        stop_geometry_active = 1;
+      }
+      if ( stop_geometry_active ) {
+        db_max_index( NODE, max_node, VERSION_NORMAL, GET );
+        length = 1+max_node;
+        node_in_geometry_stop = get_new_int( length );
+        array_set( node_in_geometry_stop, 0, length );
+        for ( inod=0; inod<=max_node; inod++ ) {
+          if ( db_active_index( NODE, inod, VERSION_NORMAL ) ) {
+            geometry( inod, ddum, stop_geometry, in_geometry, rdum, ddum,
+              rdum, ddum, NODE_START_REFINED, CONTROL_MESH_DELETE_GEOMETRY,
+              VERSION_NORMAL );
+            if ( in_geometry ) node_in_geometry_stop[inod] = 1;
+          }
+        }
+      }
+      db_max_index( ELEMENT, max_element, VERSION_NORMAL, GET );
+      for ( element=0; element<=max_element; element++ ) {
+        if ( !db_active_index( ELEMENT_DELETE_FACTOR, element,
+            VERSION_NORMAL ) ) continue;
+        if ( stop_geometry_active ) {
+          db( ELEMENT, element, el, ddum, length, VERSION_NORMAL, GET );
+          nnol = length - 1; array_move( &el[1], nodes, nnol );
+          all_in_geometry = 1;
+          for ( inol=0; inol<nnol; inol++ )
+            if ( !node_in_geometry_stop[nodes[inol]] ) all_in_geometry = 0;
+          if ( !all_in_geometry ) continue;
+        }
+        db_delete_index( ELEMENT_DELETE_FACTOR, element, VERSION_NORMAL );
+        if ( db_active_index( ELEMENT_RHSIDE_DELETE, element,
+            VERSION_NORMAL ) )
+          db_delete_index( ELEMENT_RHSIDE_DELETE, element, VERSION_NORMAL );
+      }
+      if ( node_in_geometry_stop!=NULL ) {
+        delete[] node_in_geometry_stop;
+        node_in_geometry_stop = NULL;
+      }
+    }
+  }
+
   if ( db_active_index( CONTROL_MESH_DELETE_GEOMETRY, 
       icontrol, VERSION_NORMAL )  ) {
 

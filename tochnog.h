@@ -1630,6 +1630,13 @@ enum {
   MATERI_STRAIN_ISA_C,
   MATERI_STRAIN_ISA_EACC,
   GROUP_MATERI_PLASTI_HYPO_STRAIN_ISA,
+  // control_mesh_delete_geometry family (manual Professional 6.174/6.175):
+  // _stop destroys the remaining delete factors and reactivates the
+  // partially deleted elements; _stop_geometry restricts the stop to a
+  // geometry entity. Enum append keeps existing values stable
+  // (tochnog.h and tochnog-mod.h stay in sync).
+  CONTROL_MESH_DELETE_GEOMETRY_STOP,
+  CONTROL_MESH_DELETE_GEOMETRY_STOP_GEOMETRY,
   LAST_DUMMY }; // keep LAST_DUMMY always the last one
 
 #define MDAT LAST_DUMMY+DATA_ITEM_SIZE  // reserve space for unknowns
