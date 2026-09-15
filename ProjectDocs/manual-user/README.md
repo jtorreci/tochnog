@@ -414,7 +414,7 @@ input parameters it accepts.
 
 ## DELETE-FACTOR ELEMENT MATRIX SCALING (2026-09-14)
 
-- [delete_factor_element_matrix_scaling](delete_factor_element_matrix_scaling.md) — a partially deleted element (`control_mesh_delete_geometry_factor`, or the failure-based delete) now keeps contributing its full element matrix scaled by the delete factor with the frozen released-stress right-hand side, matching the Professional. Intermediate factors let a deleted region relax its load progressively; `delete3` now settles at `0.6` times the initial stress (sigyy 0.6000023).
+- [delete_factor_element_matrix_scaling](delete_factor_element_matrix_scaling.md) — a partially deleted element (`control_mesh_delete_geometry_factor`, or the failure-based delete) applies its frozen released-stress right-hand side and contributes nothing else (stiffness and nodal-stress weight zeroed), matching the Professional. Intermediate factors let a deleted region relax its load progressively; `delete3` settles at `0.6` times the initial stress and `mpc5` at `0.5` at the test's own 2 iterations.
 
 ## NODE_DOF FAMILY (2026-09-14)
 

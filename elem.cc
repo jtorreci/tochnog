@@ -930,13 +930,30 @@ void elem( long int element, long int ithread )
   
   add_to_system_vectors:
 
-    // Deleted-element semantics (Professional): scale the FULL element matrix
-    // by element_delete_factor and use the frozen released-stress RHS. On the
-    // first iteration in which the factor is active, store the freshly
-    // computed RHS as the frozen one (element_rhside_delete); on later
-    // iterations reuse it. The Professional's .dbs stores
-    // element_delete_factor + element_rhside_delete but no matrix-delete
-    // record, i.e. the matrix is scaled, not frozen diagonal-only.
+    // Deleted-element semantics (Professional): the deleted element applies
+    // its FROZEN released-stress internal force as a nodal load and contributes
+    // NOTHING else. On the first iteration in which the factor is active the
+    // freshly computed element RHS is stored as the frozen released load
+    // (element_rhside_delete); on later iterations the frozen value is reused
+    // (scaled by element_delete_factor).
+    //
+    // The frozen RHS is a CONSTANT, so the element's tangent contribution to
+    // the staggered momentum residual must vanish: the historic "scale the
+    // full element matrix by element_delete_factor" left the deleted element's
+    // stiffness in the solve while its internal force was frozen, so the
+    // Newton cancellation A = dt*K = dt*B^T*C*B no longer held and the
+    // staggered u-sigma map relaxed geometrically instead of solving in one
+    // pass (mpc5 contracted at rate 0.5, reaching sigyy=0.5 only at k~12
+    // instead of at the test's own 2 iterations). Zeroing the matrix (and the
+    // lumped lhside used by the nodal stress projection) restores the
+    // Jacobian consistency; the released load keeps carrying the delete.
+    //
+    // Measured against the Professional binary (02-08-2026): the full node_dof
+    // field of mpc5 and delete3 is reproduced exactly for every delete factor
+    // tested (mpc5 post_point sigyy=0.5 at the test's 2 iterations, delete3
+    // sigyy=0.6). The GNU nodal-stress projection is a post-solve lumped update
+    // of the pre-solve residual, so the reported stress trails the velocity by
+    // one iteration (the Professional reports it in sync).
   if ( db_active_index( ELEMENT_DELETE_FACTOR, element, VERSION_NORMAL ) ) {
     db( ELEMENT_DELETE_FACTOR, element, idum, &element_delete_factor, ldum,
       VERSION_NORMAL, GET );
@@ -947,10 +964,12 @@ void elem( long int element, long int ithread )
     }
     db( ELEMENT_RHSIDE_DELETE, element, idum, element_rhside_delete,
       ldum, VERSION_NORMAL, GET );
-    for ( inol=0; inol<nnol*npuknwn; inol++ )
+    for ( inol=0; inol<nnol*npuknwn; inol++ ) {
       element_rhside[inol] = element_delete_factor * element_rhside_delete[inol];
+      element_lhside[inol] = 0.;
+    }
     for ( inol=0; inol<nnol*npuknwn*nnol*npuknwn; inol++ )
-      element_matrix[inol] *= element_delete_factor;
+      element_matrix[inol] = 0.;
   }
 
   if(!find_local_softvar) {//Not used when searching for local values of softening variable 
