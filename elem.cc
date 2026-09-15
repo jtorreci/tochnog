@@ -82,7 +82,7 @@ void element_loop( void )
         array_add( node_dof_tmp_ptr, &node_dof_tmp[indx], 
           node_dof_tmp_ptr, nuknwn );
       }
-      if ( derivatives && node_nel_ptr[0]>0 ) {
+      if ( derivatives && node_nel_ptr[0]>0 && !stress_recovery_post_pass ) {
         for ( idim=0; idim<ndim; idim++ ) {
           for ( ipuknwn=0; ipuknwn<npuknwn; ipuknwn++ ) {
             iuknwn = ipuknwn*nder + idim + 1;
@@ -765,24 +765,32 @@ void elem( long int element, long int ithread )
       // loop over differential operators
     for ( itype=0; itype<len_type; itype++ ) {
       type = types[itype];
-      general( element, name, nnol, element_group, type, 
+      // Stress-only pass (stress_recovery_post_pass): only the MATERI block
+      // (stress recovery) is assembled; the lumped/momentum operator and the
+      // other physics are left untouched.
+      if ( !stress_recovery_post_pass )
+        general( element, name, nnol, element_group, type, 
         nodes, coord_ip, old_dof, new_dof, 
         old_unknowns, new_unknowns, 
         new_grad_new_unknowns, &h[ipoint*nnol], 
         &new_d[ipoint*ndim*nnol], volumeip, npoint, ipoint,
         grad_massflow, element_rhside, element_residue, 
         element_lhside, element_matrix );
-      if      ( type==-CONDIF )
+      if      ( type==-CONDIF ) {
+        if ( !stress_recovery_post_pass )
         condif( element, element_group, nnol,
           &h[ipoint*nnol], coord_ip, volumeip,
           new_unknowns, element_lhside, element_matrix, element_rhside,
           element_residue );
-      else if ( type==-GROUNDFLOW )
+      }
+      else if ( type==-GROUNDFLOW ) {
+        if ( !stress_recovery_post_pass )
         groundflow( element, element_group, nnol, nodes,
           coord_ip, &h[ipoint*nnol], 
           &new_d[ipoint*ndim*nnol], volumeip, old_unknowns, 
           new_unknowns, new_grad_new_unknowns,
           element_matrix, element_rhside, element_residue );
+      }
       else if ( type==-MATERI ) 
         materi( element, element_group, name, nnol, npoint, 
           nodes, plasti_on_boundary, coord_ip, coord, 
@@ -796,18 +804,22 @@ void elem( long int element, long int ithread )
           new_grad_new_unknowns,
           element_lhside, element_matrix,
           element_rhside, element_residue, tendon_element_rhside );
-      else if ( type==-MAXWELL_FREQUENCY ||  type==-MAXWELL_TIME )
+      else if ( type==-MAXWELL_FREQUENCY ||  type==-MAXWELL_TIME ) {
+        if ( !stress_recovery_post_pass )
         maxwell( type, element, element_group, nnol, volumeip,
           new_unknowns, old_dof, new_dof,
           &h[ipoint*nnol], &new_d[ipoint*ndim*nnol], 
           element_lhside, element_matrix, element_matrix_second,
           element_rhside );
-      else if ( type==-WAVE )
+      }
+      else if ( type==-WAVE ) {
+        if ( !stress_recovery_post_pass )
           wave( element, element_group, nnol, 
           &h[ipoint*nnol], &new_d[ipoint*ndim*nnol],
           volumeip, new_unknowns, new_grad_new_unknowns, 
           element_lhside, element_matrix, 
           element_rhside, element_residue );
+      }
       else if ( type!=-EMPTY && type!=-NONE ) {
         pri( "Error detected for element ", element );
         pri( "Illegal group_type  ", type );
@@ -815,7 +827,7 @@ void elem( long int element, long int ithread )
       }
     }
 
-    if(!find_local_softvar) {//Not used when searching for local values of softening variable 
+  if(!find_local_softvar && !stress_recovery_post_pass) {//Not used when searching for local values of softening variable 
     
       // contribution to unknown gradients in nodes
     if ( derivatives ) {
@@ -857,7 +869,7 @@ void elem( long int element, long int ithread )
   }
   //end loop over integration points
 
-  if(!find_local_softvar) {//Not used when searching for local values of softening variable 
+  if(!find_local_softvar && !stress_recovery_post_pass) {//Not used when searching for local values of softening variable 
 
   //added for options_element_dof 
   // Partially deleted element (ELEMENT_DELETE_FACTOR active): its
@@ -971,6 +983,10 @@ void elem( long int element, long int ithread )
     // of the pre-solve residual, so the reported stress trails the velocity by
     // one iteration (the Professional reports it in sync).
   if ( db_active_index( ELEMENT_DELETE_FACTOR, element, VERSION_NORMAL ) ) {
+    // Stress-only pass: the frozen released load is already stored and must
+    // NOT be re-applied (it would double the momentum RHS); only the stress
+    // exclusion below is needed.
+    if ( !stress_recovery_post_pass ) {
     db( ELEMENT_DELETE_FACTOR, element, idum, &element_delete_factor, ldum,
       VERSION_NORMAL, GET );
     if ( !db_active_index( ELEMENT_RHSIDE_DELETE, element, VERSION_NORMAL ) ) {
@@ -983,6 +999,7 @@ void elem( long int element, long int ithread )
     for ( inol=0; inol<nnol*npuknwn; inol++ ) {
       element_rhside[inol] = element_delete_factor * element_rhside_delete[inol];
       element_lhside[inol] = 0.;
+    }
     }
     // A currently deleted element is EXCLUDED from the nodal stress
     // recovery: its stress slots contribute neither numerator nor
@@ -997,8 +1014,10 @@ void elem( long int element, long int ithread )
     if ( stress_recovery_absolute && stres_indx>=0 ) {
       long int ip0 = stres_indx/nder;
       for ( inol=0; inol<nnol; inol++ )
-        for ( ipuknwn=ip0; ipuknwn<ip0+6; ipuknwn++ )
+        for ( ipuknwn=ip0; ipuknwn<ip0+6; ipuknwn++ ) {
           element_rhside[inol*npuknwn+ipuknwn] = 0.;
+          element_lhside[inol*npuknwn+ipuknwn] = 0.;
+        }
     }
     for ( inol=0; inol<nnol*npuknwn*nnol*npuknwn; inol++ )
       element_matrix[inol] = 0.;
@@ -1007,7 +1026,8 @@ void elem( long int element, long int ithread )
   if(!find_local_softvar) {//Not used when searching for local values of softening variable 
 
     // store element matrices sparse
-  if ( options_solver!=-DIAGONAL && options_solver!=-NONE ) {
+  if ( !stress_recovery_post_pass &&
+       options_solver!=-DIAGONAL && options_solver!=-NONE ) {
 
     length_element_matrix_values = 0;
     for ( inol=0; inol<nnol; inol++ ) {

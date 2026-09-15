@@ -543,6 +543,67 @@ void top( void )
                           solve( options_solver );
                           groundflow_total_pressure_limit_apply();
                           if ( print_where==-YES ) pri( "Where: after solver." ); 
+                          // Post-solve constitutive re-evaluation (2026-09-15,
+                          // mpc5 reporting sync): the materi_stress dofs are
+                          // NON-principal and are updated by
+                          // parallel_new_dof_diagonal from the PRE-solve
+                          // constitutive stress, so the reported nodal stress
+                          // trails the solved velocity by one iteration (the
+                          // Professional reports it in sync). Re-evaluate the
+                          // constitutive stress from the SOLVED velocity and
+                          // refresh the recovery entries before the update.
+                          // Only the stress slots of the nodal RHS/LHS are
+                          // zeroed and re-assembled (a stress-only element
+                          // pass); every other dof keeps the pre-solve
+                          // assembly, so the momentum/convergence state is
+                          // untouched.
+                          if ( stress_recovery_absolute && materi_stress &&
+                               stres_indx>=0 && !find_local_softvar ) {
+                            long int max_node_ps=0;
+                            db_max_index( NODE, max_node_ps, VERSION_NORMAL, GET );
+                            long int ip0_ps = stres_indx/nder;
+                            long int len_ps = (1+max_node_ps)*npuknwn;
+                            double *save_lh_ps = get_new_dbl( len_ps );
+                            double *save_rh_ps = get_new_dbl( len_ps );
+                            array_set( save_lh_ps, 0., len_ps );
+                            array_set( save_rh_ps, 0., len_ps );
+                            for ( inod=0; inod<=max_node_ps; inod++ ) {
+                              if ( !db_active_index( NODE, inod, VERSION_NORMAL ) )
+                                continue;
+                              double *lh_ps = db_dbl( NODE_LHSIDE, inod, VERSION_NORMAL );
+                              double *rh_ps = db_dbl( NODE_RHSIDE, inod, VERSION_NORMAL );
+                              for ( long int iu_ps=0; iu_ps<npuknwn; iu_ps++ ) {
+                                long int ix_ps = inod*npuknwn+iu_ps;
+                                save_lh_ps[ix_ps] = lh_ps[iu_ps];
+                                save_rh_ps[ix_ps] = rh_ps[iu_ps];
+                                if ( iu_ps>=ip0_ps && iu_ps<ip0_ps+6 ) {
+                                  lh_ps[iu_ps] = 0.;
+                                  rh_ps[iu_ps] = 0.;
+                                }
+                              }
+                            }
+                            stress_recovery_post_pass = 1;
+                            element_loop();
+                            stress_recovery_post_pass = 0;
+                            // Restore every NON-stress entry: structural
+                            // elements (truss/beam/spring/contactspring/
+                            // interface) bypass the materi() gate, so their
+                            // first-pass contributions would be doubled.
+                            for ( inod=0; inod<=max_node_ps; inod++ ) {
+                              if ( !db_active_index( NODE, inod, VERSION_NORMAL ) )
+                                continue;
+                              double *lh_ps = db_dbl( NODE_LHSIDE, inod, VERSION_NORMAL );
+                              double *rh_ps = db_dbl( NODE_RHSIDE, inod, VERSION_NORMAL );
+                              for ( long int iu_ps=0; iu_ps<npuknwn; iu_ps++ ) {
+                                if ( iu_ps>=ip0_ps && iu_ps<ip0_ps+6 ) continue;
+                                long int ix_ps = inod*npuknwn+iu_ps;
+                                lh_ps[iu_ps] = save_lh_ps[ix_ps];
+                                rh_ps[iu_ps] = save_rh_ps[ix_ps];
+                              }
+                            }
+                            delete[] save_lh_ps;
+                            delete[] save_rh_ps;
+                          }
                           parallel_sys_routine( &parallel_new_dof_diagonal );
                           // multi point constraints: re-sync the slave
                           // dofs with the freshly solved master values

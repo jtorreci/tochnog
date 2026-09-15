@@ -436,3 +436,7 @@ input parameters it accepts.
 ## NODAL STRESS RECOVERY (2026-09-15)
 
 - [nodal_stress_recovery](nodal_stress_recovery.md) — the stress reported at a node is the absolute weighted average of the adjacent elements' nodal stresses (Professional convention). Visible with partially deleted/reactivated elements: `delete2.dat` shared node 2 `sigxx` is now `0.8` (was `0.6`); a currently deleted element is excluded from the recovery (`delete3.dat` `sigyy = 0.6` on the shared nodes).
+
+## NODAL STRESS POST-SOLVE SYNC (2026-09-15)
+
+- [nodal_stress_post_solve_sync](nodal_stress_post_solve_sync.md) — the nodal stress field is re-evaluated from the solved velocity at the end of every equilibrium iteration, so the reported stress is in sync with the velocity (Professional convention) instead of trailing it by one iteration. No keyword: automatic with `materi_stress` and the absolute recovery. Visible in `mpc5.dat`, which now reports `sigyy = 0.5` at one iteration (was `1.0`).
