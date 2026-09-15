@@ -13,6 +13,17 @@ Two refinements of `control_reset_dof` (manual Professional 6.350):
    binary), so the reset runs ONCE in its own (timeless) control step
    before the timesteps.
 
+   **Reconciliation with legacy GNU inputs (2026-09-15)**: the
+   one-shot rule is exact for resets at a NON-timestep index. A reset
+   whose index ALSO carries a `control_timestep` (a configuration the
+   Professional rejects) keeps the legacy GNU behavior and is applied
+   at every `data()` call, i.e. at every step. This is what the
+   reconstructed `creset_geom` needs (reset index 1 shares the timestep
+   index 1 and must also fire at step 0 so the brick `element_dof` IP
+   history follows the node). See
+   `manual-developer/control_reset_dof_scoping.md` for the mechanism and
+   the delete3/creset_geom trade-off.
+
 2. **Multi-dof records**: a single record may list several dofs
    (`-sigxx -sigyy -sigzz`); EVERY listed dof receives the reset value.
    Previously only the first dof of the record was reset (a latent bug:

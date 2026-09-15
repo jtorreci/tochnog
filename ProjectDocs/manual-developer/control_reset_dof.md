@@ -43,8 +43,10 @@
   are implemented. The other `control_reset_value_*` distributions
   (exponent, linear, logarithmic, power, square root, multi_linear) are
   not.
-- The reset applies on every call to `data()` (every time step); there is
-  no time gate (Professional may apply it once).
+- Timing: the reset is gated per index (see
+  `control_reset_dof_scoping.md`). A reset at a non-timestep index fires
+  once, at its own control step; a reset whose index also carries a
+  `control_timestep` keeps the legacy every-step behavior.
 
 ## Sprint 8 additions (2026-08-24): region filters + interface resets
 

@@ -314,7 +314,7 @@ Each file corresponds to the same feature in the [User Manual](../manual-user/).
 - [group_materi_plasti_mohr_coul_direct_hardening_softening](group_materi_plasti_mohr_coul_direct_hardening_softening.md) — degrees conversion (PIRAD/180) in plasti_rule before the interpolation block.
 - [control_timestep_iterations_automatic](control_timestep_iterations_automatic.md) — variable-length (`data_length=3`, `fixed_length=0`); length-aware mapping [2]=maximum (3-value) / [1]=maximum (legacy 2-value); [1]=minimal registered, not consumed.
 - [group_materi_plasti_hypo_intergranularstrain](group_materi_plasti_hypo_intergranularstrain.md) — variable-length (`data_length=6`, `fixed_length=0`) + `LENGTH_INTERGRANULARSTRAIN` 6; consumer reads with GET (5 or 6 values); theta has no kernel slot (kernel uses chi).
-- [control_reset_dof_scoping](control_reset_dof_scoping.md) — icontrol==ireset gate + multi-dof iteration in data.cc; verified against the Professional binary.
+- [control_reset_dof_scoping](control_reset_dof_scoping.md) — icontrol==ireset gate (relaxed for resets sharing a timestep index, to reconcile delete3 with creset_geom) + multi-dof iteration in data.cc; verified against the Professional binary.
 - [area_element_group_sequence_no_selectors](area_element_group_sequence_no_selectors.md) — previous-group matching in group.cc.
 - [mesh](mesh.md) — db_number routing to OPTIONS_MESH (dead MESH placeholder avoided).
 - [group_materi_memory_updated_linear](group_materi_memory_updated_linear.md) — the UPDATED_LINEAR branches in materi.cc/set_deften_etc/stress.cc + the explicit-memory-only displacement check + the reference-geometry strain increments (NODE_START_REFINED -> ref_d, gated on -UPDATED_LINEAR).
