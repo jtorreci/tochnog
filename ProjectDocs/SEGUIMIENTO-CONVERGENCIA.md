@@ -2661,3 +2661,41 @@ está versionado; las ediciones exactas y la evidencia per-test están en
 | residual `iface_tangref` | onset **`bf74f28`** (ensamblaje de interfaz por pares con pesos Lobatto): `element_interface_force_tang2` pasó de escalar (10.3533) a array por IP (4.9998); el target `10.4025±0.2` está atado a la semántica escalar previa. No se fuerza el pase; candidato: recalibrar el target (decisión de corpus) |
 | residual `iface_gen_method_gen` | defecto de reconstrucción: la drop-list descartó los `element_geometry` de entrada (1=20, 2=30, 3=10); sin ellos el target `element_geometry 3` no existe. Reinsertarlos + `inertia_apply -yes` da rc=0 (variante A), pero haría pasar el target por la etiqueta de entrada y no por la generación -> documentado para follow-up |
 | fuente versionada | sin cambios de código; `git status` de `dev/masin-kernel-surface` intacto |
+
+### RESIDUALES de reconstrucción — validation-suite 233 = 231/2 (2026-09-16) — rama `dev/reconstruction-residuals`
+
+**Contexto**: quedaban 2 residuales tras la reconstrucción `inertia_apply -yes`:
+`iface_tangref` (target atado a la semántica escalar previa de
+`element_interface_force_tang2`) y `iface_gen_method_gen` (el elemento de
+interfaz GENERADO se había reconstruido como elemento de entrada, y se habían
+descartado los `element_geometry` de entrada).
+
+**Fix (solo corpus, sin cambios de código)**:
+
+- `iface_tangref.dat`: `target_value 2 10.4025 0.2` -> `4.9998 0.2`. El valor
+  honesto por IP del ensamblaje por pares actual es `4.9998`: la interfaz es el
+  único camino de la carga (`fy=5` sobre el elemento 3; cara x=1 de elementos
+  2/4/6/8 fija en y), el frame es normal `-x` / `t1=+z` / `t2=+y` y `sum w_ip=1`
+  -> el valor por IP iguala la carga aplicada. El `10.3533` archivado (y el
+  `50.8`/`49.5` del bisect) proceden del ensamblaje escalar previo a `bf74f28` /
+  pre-`6cafafe`.
+- `iface_gen_method_gen.dat`: eliminar `element 3` (GENERADO) y restaurar
+  `element_geometry 1 20` / `2 30` (entrada). Evidencia: el `.dbs` archivado
+  tiene 3 elementos pero solo 2 registros `element_group` (1 y 2) y
+  `element_geometry 3 10` -> el elemento 3 lo genera
+  `control_mesh_generate_interface_method 0 -element_group -element_geometry`
+  (escribe `element_geometry` en vez de `element_group`). Resultado: rc=0 y el
+  target `element_geometry 3 = 10` lee el registro GENERADO (el test ejercita la
+  generación, no la etiqueta de entrada).
+
+**Registro de verificación**:
+
+| Acción | Verificación |
+|--------|-------------|
+| `iface_tangref` target recalibrado | `rc=1 -> rc=0`; `element_interface_force_tang2 2` = `4.99979673431` (4 IPs ≈5.0), target `4.9998±0.2` |
+| `iface_gen_method_gen` reconstrucción corregida | `rc=1 -> rc=0`; `element_geometry` = `1 20 / 2 30 / 3 10` idéntico al archivo; `element_group 1 0 / 2 0`; elemento 3 generado (`quad4 2 4 5 7`) |
+| corpus validation-suite 234 | **229 -> 231 PASS / 5 -> 3 RUNFAIL / 0 PARSE**; diff per-test: 2 RUNFAIL->PASS, **0 regresiones** |
+| corpus validation-suite 233 (tests reales) | **231 / 2 / 0**; RUNFAIL restantes: `elmethod`, `numit` (preexistentes, no tocados) |
+| corpus sfnet 197 | **187 / 9 / 1**, clasificación byte-idéntica al baseline (0 regresiones) |
+| nota de familia (no tocada) | el mismo defecto de la drop-list convirtió el/los elemento(s) generado(s) en entrada en `iface_gen`, `iface_gen_method`, `iface_gen_geom` y `iface_gen_quad9`; sus targets son `node_dof` y pasan igualmente, pero no ejercitan la generación -> follow-up |
+| fuente versionada | sin cambios de código; `git status` de `dev/masin-kernel-surface` intacto |
