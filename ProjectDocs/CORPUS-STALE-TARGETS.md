@@ -139,3 +139,193 @@ No source file was modified. Every deliberate alignment commit (`06e175d`,
   `full-sfnet197/sfnet.tsv`.
 - The source dir for the 233 run excludes `print_mesh_dof.dat`, which is a
   generated mesh dump (first line `1 0 0`), not a test input.
+
+---
+
+# Inertia-apply reconstruction — the 15 solver-divergence tests (2026-09-16)
+
+Date: 2026-09-16
+Branch: `dev/inertia-apply-reconstruction` (from `dev/masin-kernel-surface` @ `4a22824`)
+Binary: `build/tochnog` @ `4a22824` (unchanged; no source edit)
+Corpus: `validation-suite/test-2014/*.dat` (**untracked** — the exact edits are
+recorded verbatim in §4).
+Evidence: `/tmp/opencode/inertia-recon-20260916/` (`originals/`,
+`baseline-runs/`, `fixed-runs/`, `full-vs234/`, `full-sfnet197/`,
+`residual-iface_tangref-bisect/`, `residual-iface_gen_method_gen-variantA/`,
+`work/`).
+
+This closes the 15 solver-divergence RUNFAIL of `RUNFAIL-BREAKDOWN.md`
+(2026-09-16) and **corrects that document's attribution**: the cause is not
+the honest Bi-CG criteria and not the `06e175d` quadrature — it is the
+removed legacy `inertia_apply -yes` default (`0560dcf`, 2026-09-05). The
+diagnosis and bisect were first recorded in
+`/tmp/opencode/solverdiv-20260916-091608/REPORT.md`; this document applies the
+corpus fix, validates it end-to-end and records the two residuals.
+
+> Archive caveat: the in-tree `validation-suite/test-2014/*.dbs` were
+> overwritten on 2026-09-16 07:46 by an earlier in-place run (the version line
+> reads `tochnog_version 0 16 9 2026`). All comparisons below use the **pristine
+> 2026-08-29 archive** preserved at
+> `/tmp/opencode/evidence-archive/masin-rescue-20260913-120727/masin-rescue-20260913-120727/repo/validation-suite/test-2014/`.
+
+## Result
+
+| corpus | PASS | RUNFAIL | PARSE | total |
+|---|---|---|---|---|
+| validation-suite 234 (before) | 216 | 18 | 0 | 234 |
+| validation-suite 234 (after)  | **229** | **5** | **0** | 234 |
+| validation-suite 233 (after, real tests) | **229** | **4** | **0** | 233 |
+| sfnet 197 (before / after)    | 187 | 9 | 1 | 197 |
+
+Per-test diff vs `stale-recalib-20260916-evidence/full-vs233/vs.tsv`:
+**13 RUNFAIL -> PASS, 0 regressions**. The remaining 4 real RUNFAIL are the two
+residuals (`iface_tangref`, `iface_gen_method_gen`, §3) plus the pre-existing
+reconstruction artifacts `elmethod` and `numit` (untouched). The 5th non-PASS
+file is the generated mesh dump `print_mesh_dof.dat`. sfnet 197 is byte-identical
+to the baseline (187 / 9 / 1).
+
+## 1. Root cause
+
+`0560dcf` ("feat(up): align inertia_apply and consolidation defaults with the
+Professional") changed `general.cc` `options_inertia=-YES` -> `-NO`, matching
+Professional manual 6.785 ("Default, if inertia_apply is not specified, then
+each of switch_0, switch_1 etc. is set to -no"). The 15 models have a material
+density but **no `inertia_apply` record** (0 occurrences in all 15 `.dat` and
+in all 15 archive `.dbs`) and insufficient Dirichlet constraints (e.g.
+`contact_block` has no `bounda`; `iface_3d` never prescribes `velz`). The legacy
+`-yes` supplied a `rho/dtime` lumped mass diagonal that regularized an otherwise
+**singular** static system. Without it the matrix has genuine rigid-body modes
+(`d^T A d ~ 0`) -> Bi-CG breakdown -> direct-LU retry diverges.
+
+Onset bisect (clean builds, `LC_ALL=C`): `b6e1f70` (08-29) PASS, `47adc2c`
+(09-05 05:58) PASS, **`0560dcf` (09-05 07:06) FAIL all 15**; `abf9c29`
+(parent of `06e175d`, still Lobatto) already FAILs, so the quadrature commit is
+not the cause. Forcing the old default back by adding `inertia_apply -yes`
+restores convergence.
+
+Fix: insert `inertia_apply -yes` immediately after the `end_initia` line in the
+15 inputs (the Professional placement used by `CORPUS-STALE-ALIGNMENT.md`).
+
+## 2. Per-test result
+
+`base` = rc without the record; `fixed` = rc with it. `archive` = value in the
+pristine 2026-08-29 `.dbs`; `fixed-value` = value in the post-fix run (fresh
+cwd, LC_ALL=C, `build/tochnog` @ `4a22824`).
+
+| test | base | fixed | target | archive | fixed value | class |
+|---|---|---|---|---|---|---|
+| `iface_3d` | 1 | **0** | `node_dof 10 -vely` 0 ±1 | 0.00623029147559 | -1.14783726323e-05 | PASS |
+| `iface_3d_slip` | 1 | **0** | `node_dof 10 -vely` 4.6 ±1 | 4.52511180647 | 4.60193073791 | PASS |
+| `iface_3d_stress` | 1 | **0** | `node_dof 10 -vely` 0 ±1 | 0.00623029147559 | -1.14783726323e-05 | PASS |
+| `iface_gen` | 1 | **0** | `node_dof 6 -vely` 0 ±1 | 0.0247258830082 | 0.629172048867 | PASS |
+| `iface_gen_geom` | 1 | **0** | `node_dof 6 -vely` 0 ±1 | 0.0247258830082 | 0.629172048867 | PASS |
+| `iface_gen_geom_off` | 1 | **0** | `node_dof 6 -vely` 5 ±1 | 5 | 5 | PASS |
+| `iface_gen_method` | 1 | **0** | `node_dof 6 -vely` 0 ±1 | 0.0247258830082 | -0.00183499143657 | PASS |
+| `iface_gen_quad9` | 1 | **0** | `node_dof 12 -vely` 0 ±1 | 0.0121890565737 | -0.00041074040208 | PASS |
+| `iface_mc` | 1 | **0** | `node_dof 6 -vely` 0 ±1 | 0.0125000145358 | -1.1478499439e-05 | PASS |
+| `iface_mc_mem` | 1 | **0** | `node_dof 6 -vely` 0 ±1 | 0.0125000145358 | -1.1478499439e-05 | PASS |
+| `contact_block` | 1 | **0** | `node_dof 1 -disy` -0.003 ±0.008 | -5.50310410413e-05 | -3.26031019901e-05 | PASS |
+| `contact_ctrl_apply` | 1 | **0** | `node_dof 1 -disy` -0.055 ±0.001 | -0.055 | -0.055 | PASS |
+| `contact_heatgen` | 1 | **0** | `node_dof 1 -disy` -0.003 ±0.007 | -9.04344876557e-05 | -5.1066459026e-05 | PASS |
+| `iface_tangref` | 1 | 1 | `element_interface_force_tang 2` 0 ±0.001 | 3.17767217898e-06 | -1.74860247609e-14 | **RESIDUAL** (tang ok) |
+| `iface_tangref` | 1 | 1 | `element_interface_force_tang2 2` 10.4025 ±0.2 | 10.3532842167 | 4.99979673431 | **RESIDUAL** (§3.1) |
+| `iface_gen_method_gen` | 1 | 1 | `element_geometry 3` 10 ±1 | 10 | NA (no record) | **RESIDUAL** (§3.2) |
+
+The fixed values meet every stored target; they are not bit-identical to the
+2026-08-29 archive (solver/quadrature drift between the archive-era binary and
+HEAD), except `contact_ctrl_apply` (-0.055 exact). The test-level criterion is
+the stored `target_value`, which the binary enforces in `exit_tn`
+(`miscel.cc:592-725`).
+
+## 3. The two residuals (separate causes — not papered over)
+
+### 3.1 `iface_tangref` — `element_interface_force_tang2` semantics changed
+
+With `inertia_apply -yes` the solver converges (rc=1 only because of the second
+target). `element_interface_force_tang` = -1.75e-14 meets `0 ±0.001`. The
+residual is `element_interface_force_tang2`:
+
+| binary | rc | `element_interface_force_tang2 2` |
+|---|---|---|
+| `7823d27` (09-01, good) | 0 | `10.3532842167` (scalar, 1 value) |
+| **`bf74f28` (08-30, onset)** | 1 | `50.8249501592 48.8822629247 49.4795580607 51.4257625679` |
+| `40d640d` | 1 | same 4-value form |
+| `4b6548a` | 1 | `49.5050047633` (per-IP) |
+| `6cafafe` (= task's "c0904") | 1 | `4.99979673356` (per-IP) |
+| `4a22824` (HEAD) | 1 | `4.99979673431` (per-IP, 4 values) |
+
+Onset: **`bf74f28`** ("feat(interface): ensamblaje POR PARES con pesos Lobatto
++ fix fallback pardiso->bicg"), not `c0904`/`6cafafe` as first suspected. That
+commit deliberately replaced the old "side average, all-against-all" interface
+assembly with a **per-integration-point** facing-pair assembly with Lobatto
+weights, and changed the history records (`element_interface_strain_normal`,
+`..._force_tang`, `..._force_tang2`) from a scalar to a length-4 per-IP array
+(validated against the Professional `.dbs` for the interface family). The
+stored target `10.4025 ±0.2` is tied to the **old scalar** semantics; HEAD
+returns the first IP value `4.9998` (all four IPs agree). `c0904`/`6cafafe`
+only moved the value further (50.8 -> 5.0) via the interface element
+length/area measure.
+
+Source-grounded candidate fix (not implemented): recalibrate the
+`element_interface_force_tang2` target to the current honest per-IP value
+(4.9998) — a corpus-target decision like the 14 recalibrations of §1, since the
+record is now per-IP by design. Alternatively add an explicit
+`group_interface`-level assembly selector if the old scalar is still wanted
+(new feature, not a bug fix).
+
+### 3.2 `iface_gen_method_gen` — reconstruction dropped the input `element_geometry`
+
+The target is `element_geometry 3 = 10 ±1`. The archived `.dbs` contains
+`element_geometry 1 20`, `2 30`, `3 10` — **input** records that tag each of the
+three input elements. The reconstruction's drop-list classified
+`element_geometry` as a run-produced record (`CORPUS-RECONSTRUCTION.md` §Method,
+step 2), so the three input records were dropped. Without them there is no
+`element_geometry 3` and `exit_tn` reports "Error in calculation".
+
+Empirical check (variant A, evidence
+`residual-iface_gen_method_gen-variantA/`): re-inserting the three records plus
+`inertia_apply -yes` gives **rc=0**; the generated interfaces still get
+`element_geometry 4 10`, `5 10` (the generator numbers the new elements after
+the input ones), but the target reads element 3, which is the input tag 10.
+
+The same drop affects the sibling `iface_gen_method` (archive
+`element_geometry 1 20`, `2 30`), but its target is a `node_dof`, so it is
+harmless there.
+
+Candidate fix (not implemented, per "do NOT force a pass"): restore the three
+`element_geometry` input records — trivial and faithful to the archive. It is
+**not applied here** because it would make the target pass via the input tag
+rather than via the generation feature, masking the real divergence (the
+archive has no generated elements; HEAD generates elements 4 and 5). The
+correct follow-up is a decision on the test's intent plus a target that
+exercises the generation, not just the input tag.
+
+## 4. What changed (exact corpus edits)
+
+The corpus directory is gitignored/untracked, so the edits are recorded here
+verbatim. Originals are preserved in the evidence dir under `originals/`
+(sha256 in `work/originals.sha256`).
+
+15 files — one line inserted immediately after the `end_initia` line:
+
+```
+inertia_apply -yes
+```
+
+Files: `iface_3d`, `iface_3d_slip`, `iface_3d_stress`, `iface_gen`,
+`iface_gen_geom`, `iface_gen_geom_off`, `iface_gen_method`,
+`iface_gen_method_gen`, `iface_gen_quad9`, `iface_mc`, `iface_mc_mem`,
+`iface_tangref`, `contact_block`, `contact_ctrl_apply`, `contact_heatgen`.
+
+No `target_value` was changed and no other RUNFAIL test was touched. No source
+file was modified.
+
+## 5. Reproducibility
+
+- Baseline (no record): `0 PASS / 15 RUNFAIL` (`baseline-runs/`).
+- After the edits: `13 PASS / 2 RUNFAIL` (`fixed-runs/`, `full-vs234/`).
+- Full validation-suite 234: **229 / 5 / 0**; 233 real tests: **229 / 4 / 0**.
+  `full-vs234/vs.tsv`.
+- sfnet 197: **187 / 9 / 1**, classification byte-identical to the stored
+  baseline. `full-sfnet197/sfnet.tsv`.
+- Per-test values: `work/final-report.txt`.

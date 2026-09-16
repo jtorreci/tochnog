@@ -49,6 +49,22 @@
   archived `1.9999990002`). The reconstructed test had been labelled
   "faithful" only because the `interface_element()` abort kept it from
   running.
+- Reconstruction gotcha (the 15 solver-divergence validation-suite tests,
+  2026-09-16): `iface_3d`, `iface_3d_slip`, `iface_3d_stress`, `iface_gen`,
+  `iface_gen_geom`, `iface_gen_geom_off`, `iface_gen_method`,
+  `iface_gen_method_gen`, `iface_gen_quad9`, `iface_mc`, `iface_mc_mem`,
+  `iface_tangref`, `contact_block`, `contact_ctrl_apply`, `contact_heatgen`
+  have a material density but no `inertia_apply` record and no complete
+  Dirichlet set. After `0560dcf` their assembled matrix is genuinely singular
+  (rigid-body modes -> `d^T A d ~ 0` -> Bi-CG breakdown -> LU retry diverges),
+  which had been misattributed to the honest Bi-CG criteria. Adding
+  `inertia_apply -yes` restores the `rho/dtime` diagonal and makes 13/15
+  converge to their stored targets. Two residuals remain and are **not**
+  solved by the record: `iface_tangref`
+  (`element_interface_force_tang2` became a per-IP array in `bf74f28`; the
+  target is tied to the old scalar) and `iface_gen_method_gen` (the
+  reconstruction drop-list dropped the input `element_geometry` records).
+  Details: `CORPUS-STALE-TARGETS.md` §"Inertia-apply reconstruction".
 
 ## External dependencies
 
