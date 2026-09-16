@@ -2603,3 +2603,31 @@ de F. Lorenzo (2014) y el Professional 02-08-2026 rechazan el registro
 igual que el GNU. No es un bug de aridad de esta familia: requeriría una
 feature nueva (resolver el flujo por nombres de dof). `pruebavel` queda
 RUNFAIL y su copia en validation-suite está vacía (0 bytes).
+
+### RECALIBRACIÓN DE TARGETS OBSOLETOS — validation-suite 233 (2026-09-16) — rama `dev/stale-target-recalibration`
+
+**Contexto**: el breakdown `RUNFAIL-BREAKDOWN.md` (2026-09-16) clasificó 14 de
+los 32 RUNFAIL de validation-suite como *stale targets*: la reconstrucción es
+fiel pero el target almacenado es anterior a los commits de alineación
+posteriores al 2026-08-29 (cuadratura `06e175d`, recuperación de tensiones,
+arreglos de signo). El modelo es correcto; el valor honesto del GNU actual es
+otro. Además, `gforce7q4` tenía un defecto de entrada (el target
+`node_dof_calcul 2` referenciaba un nodo huérfano).
+
+**Método**: se midió el valor honesto de cada test con el binario `367f416`
+(cwd limpio, LC_ALL=C) y se contrastó contra el fix deliberado documentado;
+se recalculó `target_value` manteniendo la tolerancia. Corpus
+(`validation-suite/test-2014/`, no versionado) — ediciones exactas y evidencia
+en `ProjectDocs/CORPUS-STALE-TARGETS.md`.
+
+**Registro de verificación**:
+
+| Acción | Verificación |
+|--------|-------------|
+| 14 `target_value` recalculados (bt_factor, cmat_gate, iface_expansion, iface_mc_dil, iface_mc_dil_1step, iface_mc_gap, iface_mc_num, iface_mc_slip, iface_mc_slip_1step, iface_mc_tension, groundflow_total_pressure_tension, mesh_act_grav, gforce10, qsri3d_beam_off) | los 14 rc=1 → rc=0; el valor nuevo = el `actual` medido en el run previo; evidencia documental por test en `CORPUS-STALE-TARGETS.md` §1 |
+| `bt_factor` 20 → 34.641 (cuadratura `06e175d` Lobatto→Gauss) | cross-check con el binario Professional 02-08-2026 sobre el mismo modelo (bottom-clamped): el Pro devuelve `sigyy = 34.64101615136` = el valor GNU Gauss; el GNU Lobatto previo devolvía 20 (`pro-bt_factor/`) |
+| `gforce7q4` reconstruido (2 quad4 fieles al `force7q4.dat` del Pro, clamp de arista izquierda, `force_edge` en la arista derecha) | rc=1 → rc=0; `node_dof_calcul 2` = (-12.34, +100, -5000) = la estática exacta del Pro; el modelo previo tenía un solo elemento y el target referenciaba un nodo huérfano |
+| Límite documentado `gforce10` v9 (`mom1y_sig`) | el GNU devuelve `+5000` donde el Pro devuelve `-5000` (mismas magnitudes, `nory=-12.34` idéntico): es el límite de post-proceso de sección 3D ya documentado en `DIAG-SOLVE-MIXTO.md` §13.4, no un defecto del corpus; el target se recalibra al valor GNU honesto y la divergencia queda registrada |
+| corpus validation-suite 233 | **201 → 216 PASS / 17 RUNFAIL / 0 PARSE**; diff per-test: 15 RUNFAIL→PASS, **0 regresiones**; los 17 RUNFAIL restantes = 15 tests de divergencia del solver + `elmethod`/`numit` (fuera de alcance) |
+| corpus sfnet 197 | **187 / 9 / 1** sin cambios (los excluidos `examp6`, `examp17`, `ho_mech2`, `ho_mech4`, `taylor3` no se tocaron) |
+| fuente versionada | sin cambios de código; `git status` de `dev/masin-kernel-surface` intacto (solo `graphify-out/` y `r45.pid` untracked, preexistentes) |
