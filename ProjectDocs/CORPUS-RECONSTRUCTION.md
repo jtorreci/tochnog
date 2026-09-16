@@ -5,6 +5,20 @@ Recovery of the 194 validation-suite tests whose `.dat` inputs were lost on
 dumps with the current binary (`build/tochnog`, HEAD `e983be8`, branch
 `dev/masin-kernel-surface`).
 
+> **Update (2026-09-16 — the 15 solver-divergence tests are a reconstruction
+> defect, not solver drift).** The 15 tests listed below under "Solver
+> divergence" (9 with a derived IP + 10 without) do not fail because of the
+> honest Bi-CG criteria or the `06e175d` quadrature. They lack
+> `inertia_apply -yes` and relied on the legacy GNU `options_inertia=-YES`
+> default removed by `0560dcf` (2026-09-05). Adding the record makes **13/15
+> converge to their stored targets**; the remaining two (`iface_tangref`,
+> `iface_gen_method_gen`) carry separate causes (interface-record semantics
+> changed by `bf74f28`; input `element_geometry` records dropped by the
+> reconstruction drop-list). Full evidence, per-test values and the exact
+> corpus edits: `CORPUS-STALE-TARGETS.md` §"Inertia-apply reconstruction".
+> The `-no` default is a deliberate Professional alignment and is **not**
+> reverted.
+
 > **Update (2026-09-14, third pass — doc-grounded).** The 8 UNRECOVERABLE
 > and the 38 PARTIAL were revisited against `ProjectDocs/manual-user` /
 > `manual-developer`. Five of the 8 are now recovered (three by a

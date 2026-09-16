@@ -2631,3 +2631,32 @@ en `ProjectDocs/CORPUS-STALE-TARGETS.md`.
 | corpus validation-suite 233 | **201 → 216 PASS / 17 RUNFAIL / 0 PARSE**; diff per-test: 15 RUNFAIL→PASS, **0 regresiones**; los 17 RUNFAIL restantes = 15 tests de divergencia del solver + `elmethod`/`numit` (fuera de alcance) |
 | corpus sfnet 197 | **187 / 9 / 1** sin cambios (los excluidos `examp6`, `examp17`, `ho_mech2`, `ho_mech4`, `taylor3` no se tocaron) |
 | fuente versionada | sin cambios de código; `git status` de `dev/masin-kernel-surface` intacto (solo `graphify-out/` y `r45.pid` untracked, preexistentes) |
+
+### RECONSTRUCCIÓN `inertia_apply -yes` — 15 tests de divergencia del solver (2026-09-16) — rama `dev/inertia-apply-reconstruction`
+
+**Contexto**: el breakdown `RUNFAIL-BREAKDOWN.md` (2026-09-16) dejaba 15 RUNFAIL
+de validation-suite como "divergencia del solver", atribuida a los criterios
+honestos de Bi-CG y a la cuadratura `06e175d`. La causa real es otra: `0560dcf`
+(2026-09-05) alineó `options_inertia` con el Professional (manual 6.785:
+ausente -> `-no`) y los 15 modelos dependían del default legacy GNU `-yes`, que
+aportaba una diagonal de masa `rho/dtime` que regularizaba un sistema estático
+singular. Sin ella aparecen modos de cuerpo rígido (`d^T A d ~ 0`) -> ruptura de
+Bi-CG -> el reintento LU diverge.
+
+**Fix**: insertar `inertia_apply -yes` justo después de `end_initia` en los 15
+inputs (colocación Professional de `CORPUS-STALE-ALIGNMENT.md`). El corpus no
+está versionado; las ediciones exactas y la evidencia per-test están en
+`ProjectDocs/CORPUS-STALE-TARGETS.md` §"Inertia-apply reconstruction".
+
+**Registro de verificación**:
+
+| Acción | Verificación |
+|--------|-------------|
+| 15 inputs + `inertia_apply -yes` | 13 rc=1 -> rc=0 con los targets almacenados (`exit_tn`, `miscel.cc:592-725`); tabla per-test en `CORPUS-STALE-TARGETS.md` §2 |
+| bisect de onset (builds limpios, LC_ALL=C) | `b6e1f70` (08-29) PASS, `47adc2c` (09-05 05:58) PASS, **`0560dcf` (09-05 07:06) FAIL los 15**; `abf9c29` (padre de `06e175d`, aún Lobatto) ya falla -> no es la cuadratura |
+| corpus validation-suite 234 | **216 -> 229 PASS / 18 -> 5 RUNFAIL / 0 PARSE**; diff per-test: 13 RUNFAIL->PASS, **0 regresiones** |
+| corpus validation-suite 233 (tests reales) | **229 / 4 / 0**; RUNFAIL restantes: `iface_tangref`, `iface_gen_method_gen` (residuales) + `elmethod`, `numit` (preexistentes, no tocados) |
+| corpus sfnet 197 | **187 / 9 / 1**, clasificación byte-idéntica al baseline (0 regresiones) |
+| residual `iface_tangref` | onset **`bf74f28`** (ensamblaje de interfaz por pares con pesos Lobatto): `element_interface_force_tang2` pasó de escalar (10.3533) a array por IP (4.9998); el target `10.4025±0.2` está atado a la semántica escalar previa. No se fuerza el pase; candidato: recalibrar el target (decisión de corpus) |
+| residual `iface_gen_method_gen` | defecto de reconstrucción: la drop-list descartó los `element_geometry` de entrada (1=20, 2=30, 3=10); sin ellos el target `element_geometry 3` no existe. Reinsertarlos + `inertia_apply -yes` da rc=0 (variante A), pero haría pasar el target por la etiqueta de entrada y no por la generación -> documentado para follow-up |
+| fuente versionada | sin cambios de código; `git status` de `dev/masin-kernel-surface` intacto |
