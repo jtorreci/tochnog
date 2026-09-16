@@ -1,0 +1,971 @@
+% ---------------------------------------------------------------------------
+% GNU Tochnog -> Tochnog Professional convergence: cycle report and plan.
+% Build:  pdflatex convergence-report.tex   (run twice for the TOC)
+% ---------------------------------------------------------------------------
+\documentclass[11pt,a4paper]{report}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{xcolor}
+\usepackage{hyperref}
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=blue!60!black,
+  urlcolor=blue!60!black,
+  citecolor=blue!60!black,
+  pdftitle={GNU Tochnog to Tochnog Professional Convergence},
+  pdfsubject={Convergence cycle report and post-convergence improvement plan},
+  pdfauthor={[Author name]}
+}
+
+% Literal monospace for record/keyword/file names (handles underscores safely).
+\newcommand{\code}[1]{\texttt{#1}}
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
+\renewcommand{\arraystretch}{1.12}
+\setlength{\parskip}{2pt}
+\setlength{\emergencystretch}{2em}
+
+\begin{document}
+
+% ---------------------------------------------------------------------------
+\begin{titlepage}
+\centering
+\vspace*{2.2cm}
+{\Huge\bfseries GNU Tochnog $\rightarrow$ Tochnog Professional\\[0.3em]
+Convergence\par}
+\vspace{0.9cm}
+{\Large\bfseries Cycle Report and Post-Convergence\\[0.2em] Improvement Plan\par}
+\vspace{1.8cm}
+{\large Prepared for the original Tochnog GNU authors\par}
+\vspace{0.4cm}
+{\large \today\par}
+\vfill
+{\large [Author name]\par}
+\vspace{1.2cm}
+{\small
+\begin{tabular}{@{}ll@{}}
+\textbf{Branch:}   & \code{dev/\allowbreak masin-kernel-surface} at \code{a1362ef} \\[0.25em]
+\textbf{Corpora:}  & sfnet 197, validation-suite 233, internal suite 16 \\[0.25em]
+\textbf{Sources:}  & \code{ProjectDocs/\allowbreak CONVERGENCE-CYCLE-REPORT.md}, \\
+                   & \code{ProjectDocs/\allowbreak IMPROVEMENT-ANALYSIS.md}, \\
+                   & \code{ProjectDocs/\allowbreak BACKLOG-OPEN-ISSUES.md}, \\
+                   & \code{ProjectDocs/\allowbreak CORPUS-RECONSTRUCTION.md} \\
+\end{tabular}
+}
+\end{titlepage}
+
+% ---------------------------------------------------------------------------
+\chapter*{Executive summary}
+\addcontentsline{toc}{chapter}{Executive summary}
+
+This report documents a convergence cycle whose goal was to align the behaviour
+of the GNU fork of Tochnog (the sfnet 2014 sources) with Tochnog Professional,
+which served as the behavioural reference. The work was driven entirely by
+measurement: every candidate fix began from a reproduced symptom and a reproduced
+root cause, and was accepted only after a full A/B run of both test corpora
+showed exactly the intended classification change with zero regressions.
+
+The cycle closed 21 work items, fixed a set of genuine defects in the GNU fork,
+and---equally important---refuted a number of plausible hypotheses before any
+speculative edit was made. It also recovered a deleted validation corpus from
+archived \code{.dbs} database dumps, using a derivation that was validated
+against every known ground-truth pair.
+
+The measured result is \textbf{416 of 430 corpus tests passing (96.7\%)}: sfnet
+197 is at \textbf{187 PASS / 9 RUNFAIL / 1 PARSE}, and the reconstructed
+validation-suite 233 is at \textbf{229 PASS / 4 RUNFAIL}. The internal build suite
+remains \textbf{16/16}. No open issue is rated CRITICAL or HIGH: every remaining
+failure is a stale or malformed test input, an out-of-scope model or
+infrastructure limit, a narrow post-processing divergence, or a performance
+cost.
+
+The report is organised in five parts. Part~I states the context and the method.
+Part~II presents the 21 closed items with their commits and acceptance evidence,
+the mechanisms discovered, and the hypotheses that were refuted. Part~III reports
+the results and the current status. Part~IV summarises the open backlog by
+severity. Part~V presents the post-convergence improvement plan with its effort
+and benefit. The appendices document the corpus-reconstruction method and the
+reproducibility notes.
+
+% ---------------------------------------------------------------------------
+\tableofcontents
+
+% ===========================================================================
+\part{Context and Method}
+
+\chapter{Context}
+\label{ch:context}
+
+\section{The GNU fork and the Professional reference}
+
+The project under work is a GNU fork of Tochnog, derived from the sfnet 2014
+sources. A separate Tochnog Professional distribution (maintained on the
+Professional side) provides a well-defined behavioural reference. The fork and
+the Professional share the same input language and the same physical models, but
+they have drifted in a number of behaviours over time.
+
+The convergence cycle did not aim at bit-identity. Its target was
+\emph{behavioural convergence}: to close the corpus tests that the GNU fork
+fails, and, for every remaining failure, to establish an evidence-backed
+classification (source defect, deliberate divergence, stale input or target, or
+out-of-scope) rather than leaving the failure unattributed.
+
+\section{Corpora}
+
+The measurement basis is three test sets:
+
+\begin{itemize}
+  \item \textbf{sfnet 197} --- the in-repo sfnet test set
+        (\code{external-downloads/\allowbreak sfnet/\allowbreak extracted/\allowbreak test}).
+  \item \textbf{validation-suite 233} --- a reconstructed validation suite
+        (\code{validation-suite/\allowbreak test-2014}); the original \code{.dat} inputs had
+        been deleted and were recovered from archived \code{.dbs} dumps
+        (Appendix~\ref{app:reconstruction}).
+  \item \textbf{internal suite 16} --- the repository's own build smoke suite.
+\end{itemize}
+
+Both corpus directories are untracked/ignored in the repository. The frequently
+cited ``363'' corpus exists only in ephemeral \code{/\allowbreak tmp} and is not reproducible
+in-repo; ``\textasciitilde207'' was a PASS count, not a corpus size. The honest,
+reproducible denominators are therefore \textbf{197} and \textbf{233}, for a
+combined \textbf{430}.
+
+\section{What convergence means here}
+\label{sec:convergence-def}
+
+Convergence is measured by the corpus classification plus the internal suite:
+
+\begin{description}
+  \item[PASS] the process exits with \code{rc=0} \emph{and} the test's own
+        \code{target\_\allowbreak value} is met. The binary enforces this in \code{exit\_\allowbreak tn}
+        (\code{miscel.cc}).
+  \item[RUNFAIL] the process runs but does not meet the target, or times out.
+  \item[PARSE] the input is rejected at parse time (e.g.\ an unknown record).
+\end{description}
+
+This is a behavioural metric. It is \emph{not} a claim of bit-identity: for the
+reconstructed tests, \code{rc=0} does not imply bit-identity with the
+pre-incident archive, because the archive-era binary predates many later physics
+commits.
+
+\chapter{Method}
+\label{ch:method}
+
+The cycle ran as a sequence of narrow, ordered work units under five invariant
+rules.
+
+\begin{enumerate}
+  \item \textbf{Evidence before change.} Every candidate fix started from a
+        measured symptom and a measured root cause. Source changes were made only
+        after the cause was reproduced, ideally against both the Professional
+        binary and the reference GNU 2014 build.
+  \item \textbf{Falsify before change.} A hypothesis was treated as refuted
+        unless the measurement supported it. Several scheduled work units were
+        \emph{not} implemented because the evidence refuted them
+        (Chapter~\ref{ch:refuted}).
+  \item \textbf{Per-family, not per-test.} Fixes were grouped by root cause (a
+        parser family, a solver path, a quadrature rule) and then validated by a
+        full corpus A/B, so that the per-test classification diff could be shown
+        to be exactly the intended set with zero regressions.
+  \item \textbf{Clean builds only.} All measurements used clean
+        \code{build\_\allowbreak safe.sh} builds (\code{--clean} where the filesystem
+        required it), with \code{LC\_\allowbreak ALL=C} and a 45\,s per-test corpus timeout;
+        scratch worktrees were kept out of the main tree.
+  \item \textbf{Documentation in the same work unit.} Each change updated
+        \code{SEGUIMIENTO-\allowbreak CONVERGENCIA.md} and the relevant
+        \code{manual-user}/\code{manual-developer} pages, per the project's
+        mandatory convention.
+\end{enumerate}
+
+% ===========================================================================
+\part{The Work Done}
+
+\chapter{Closed items}
+\label{ch:closed}
+
+The cycle closed 21 work items. Each row below gives the item, its commit(s) on
+\code{dev/\allowbreak masin-kernel-surface} (ancestors of \code{a1362ef}), and the acceptance
+evidence that was recorded when the item was closed.
+
+\begin{longtable}{@{}r L{5.0cm} L{2.6cm} L{5.6cm}@{}}
+\toprule
+\# & Item & Commit(s) & Acceptance evidence \\
+\midrule
+\endfirsthead
+\toprule
+\# & Item & Commit(s) & Acceptance evidence \\
+\midrule
+\endhead
+\bottomrule
+\endlastfoot
+1 & Masin-basic 2005 rescue: separate basic kernel (hypo7/8/9), Eq.~(15)
+    m-tensor, \code{ts3} cross-term coefficient, Eq.~(21) structure evolution
+    plus the Masin-2007 Eq.~(8) pyknotropy modification
+  & \code{d25906f}, \code{5a98958}, \code{c945833}
+  & hypo7 \code{sigyy=-231.789} (Pro $-231.809$), hypo9 $-231.789$ (Pro
+    $-231.811$), hypo8 $-230.534$ / $s=1.609$ (Pro $-230.588$; target
+    $-230.58 \pm 0.1$); all \code{rc=0}; hypo1--4 \code{.dbs} byte-identical
+    (gated). \\
+2 & \code{dynamic8}: \code{bounda\_\allowbreak sine} layout (\code{end\_\allowbreak time}), \code{*\_\allowbreak sine}
+    consumers, per-operation quadrature, Professional nodal recovery,
+    scale-relative Bi-CG breakdown test
+  & \code{6888875}, \code{814c9ee}, \code{06e175d}, \code{abf9c29}
+  & final \code{disx20 = -9.98525437506e-4} vs Pro $-9.985253775415e-4$ (abs
+    $6.0e-11$); prescribed sine matches the Pro series to $3.3e-11$. \\
+3 & \code{mpc5}: deleted-element matrix / \code{lhside} zeroing
+    (energy-consistent released load) + absolute nodal-stress recovery +
+    post-solve stress sync
+  & \code{7687e0a}, \code{fa71193}, \code{0b23957}, \code{dae06a3}
+  & \code{post\_\allowbreak point\_\allowbreak dof 10 -sigyy = 0.5} at $k=1,2,3,5$ (target $0.5 \pm
+    1e-3$); full \code{node\_\allowbreak dof} field $=$ Pro to $\sim 5e-17$. \\
+4 & \code{delete1-4} + \code{control\_\allowbreak mesh\_\allowbreak delete\_\allowbreak geometry\_\allowbreak stop} family:
+    full-matrix delete-factor scaling, frozen deleted-element IP state,
+    stop/\code{\_\allowbreak stop\_\allowbreak geometry} keywords
+  & \code{7687e0a}, \code{0735028}, \code{a548415}
+  & \code{delete2} \code{rc=0} node 2 \code{sigxx=0.8} (Pro $0.8$);
+    \code{delete3} \code{rc=0} \code{sigyy=0.600002285218} (target $0.6 \pm
+    1e-4$); family field $=$ Pro. \\
+5 & \code{validation\_\allowbreak 2} (Professional's own suite): coupled 1-D consolidation
+  & \code{6eb399d} (ancestor)
+  & \code{post\_\allowbreak point\_\allowbreak dof 1 -pres = -0.634519741323} vs Pro $-0.6345197413352$
+    (10 digits); target $-0.63 \pm 0.05$. \\
+6 & \code{validation\_\allowbreak 8}: \code{-veln} normal-velocity \code{bounda\_\allowbreak dof} with
+    generated mpc ties
+  & \code{f244ac5} (ancestor)
+  & 50/50 \code{mpc\_\allowbreak node\_\allowbreak number} + 8/8 \code{mpc\_\allowbreak node\_\allowbreak factor} records
+    byte-identical to the Pro; \code{rc=0}. \\
+7 & Per-operation quadrature + Professional nodal stress recovery
+  & \code{06e175d}
+  & \code{dynamic8} $6e-11$; \code{beam2d\_\allowbreak 1} corner \code{sigxx=59.5766} (Pro
+    $59.5710$); \code{force5} $-9.8071801515$ (Pro $-9.80718$); \code{post4}
+    moment $0.666667$. \\
+8 & \code{-total\_\allowbreak linear} incremental formulation (manual Pro 2.2.1): reset
+    survives the solve
+  & \code{f045d04}
+  & reset-only probe \code{sigyy=1} $=$ Pro; \code{total3} (the only sfnet
+    \code{-total\_\allowbreak linear} test) \code{rc=0} \code{disx=0.5}. \\
+9 & Parse/arity family: variable-length
+    \code{control\_\allowbreak timestep\_\allowbreak iterations\_\allowbreak automatic} and
+    \code{hypo\_\allowbreak intergranularstrain}
+  & \code{8d70054}
+  & 7 tests closed (family); full corpus A/B. \\
+10 & \code{node\_\allowbreak dof} family: spurious \code{node\_\allowbreak dof} requests in \code{top.cc}
+     parse and the \code{so.cc} eigen path
+  & \code{ddc9a5b}
+  & 6 tests closed (examp7/refine4/examp15, eigen1/eigen3/ho\_heat1); 167
+    $\rightarrow$ 173 PASS, 0 regressions. \\
+11 & Groundflow velocity sign: restore $v = +k\,\mathrm{grad}(h)$ (manual Pro
+     8.2)
+  & \code{0838457}
+  & \code{condif5} \code{rc=0} \code{node\_\allowbreak dof 2 temp = 1.0} (target $1.0$);
+    full node vector $=$ Pro (\code{gvelx=+10}). \\
+12 & \code{refine\_\allowbreak l} BAR2 fall-through: missing \code{else if} in the
+     element-shape dispatch
+  & \code{0d0ad0c}
+  & \code{refine5} \code{rc=0} \code{post\_\allowbreak point\_\allowbreak dof 0 -temp = 1} (target $1 \pm
+    5e-2$); the 2014 reference aborts at the same assert. \\
+13 & Bi-CG direct-LU retry band width: \code{diff*nprinc} $\rightarrow$
+     \code{(1+diff)*nprinc}
+  & \code{6eb399d}
+  & \code{examp2} $-0.634519741323$ $=$ Pro (was $-0.7206$); \code{validation\_\allowbreak 2}
+    closed. \\
+14 & Corpus reconstruction from archived \code{.dbs}: 192 \code{.dat} recovered
+  & \code{e983be8}, \code{5c80b60}
+  & 148 recovered first pass, plus doc-grounded recoveries; derivation validated
+    11/11 known pairs, 72/72 IP counts. \\
+15 & Stale sfnet input/target alignment: 8 \code{inertia\_\allowbreak apply -yes},
+     \code{matrix8} sign, \code{incnav5} target
+  & \code{b83d907} (docs)
+  & 174 $\rightarrow$ 184 PASS, 10 RUNFAIL $\rightarrow$ PASS, 0 regressions. \\
+16 & Interface stiffness guard + reset scoping/timing: guard the optional
+     \code{group\_\allowbreak interface\_\allowbreak materi\_\allowbreak elasti\_\allowbreak stiffness}; reset at its own index;
+     reset after the state update
+  & \code{f142bdf}, \code{a548415}
+  & \code{iface\_\allowbreak condif}, \code{groundflow\_\allowbreak interface}, \code{creset\_\allowbreak geom} closed;
+    \code{delete3} reconciled. \\
+17 & \code{group\_\allowbreak materi\_\allowbreak plasti\_\allowbreak camclay} variable length 3..4: the legacy 4-value
+     form was unreachable
+  & \code{91676ab}
+  & \code{mc\_\allowbreak pressure\_\allowbreak min}/\code{\_\allowbreak off} \code{rc=0} exact doc targets; 4-value
+    form now reachable; corpus classification byte-identical. \\
+18 & \code{delete3} regression reconciliation: refine the
+     \code{control\_\allowbreak reset\_\allowbreak dof} per-index gate (one-shot vs step-scoped)
+  & \code{a548415}
+  & \code{delete3} \code{rc=0} \code{0.600002285218}; \code{creset\_\allowbreak geom}
+    preserved; sfnet A/B byte-identical. \\
+19 & Absolute nodal-stress recovery: the Pro assigns the weighted average, GNU
+     accumulated increments
+  & \code{0b23957}
+  & \code{delete2} $0.8$; delete family + mpc1--6 field $=$ Pro; all 191 sfnet
+    \code{.dbs} dumps byte-identical. \\
+20 & Stale validation-suite target recalibration + \code{gforce7q4} rebuild
+  & \code{c592843}
+  & 14 targets recalibrated + \code{gforce7q4} rebuilt as the faithful 2-quad4
+    Pro model; 201 $\rightarrow$ 216 PASS, 15 RUNFAIL $\rightarrow$ PASS, 0
+    regressions. \\
+21 & \code{inertia\_\allowbreak apply -yes} reconstruction of the 15 solver-divergence tests
+  & \code{c2f7f6c}
+  & 13/15 converge to their stored targets; validation-suite 216 $\rightarrow$
+    229 PASS; the 2 residuals carry separate causes (Chapter~\ref{ch:backlog}). \\
+\end{longtable}
+
+\chapter{Key mechanisms discovered}
+\label{ch:mechanisms}
+
+\section{The .dbs reconstruction method}
+\label{sec:dbs-method}
+
+The validation-suite \code{.dat} inputs were lost to a too-wide \code{rm -f
+*.dat} (2026-08-29) and the directory is not under version control. They were
+recovered from the archived \code{.dbs} database dumps, which the binary writes
+at the end of a run and which mix the parsed input records (canonicalised,
+comment-free, reordered) with run-produced records.
+
+The method keeps the input records and drops the derived ones. The core of the
+drop-list is the 45 record names that appear in the 41 known \code{.dat}/\code{.dbs}
+pairs in \emph{no} \code{.dat} (state/results such as \code{node\_\allowbreak dof*},
+\code{element\_\allowbreak dof*}, \code{node\_\allowbreak rhside*}, \code{element\_\allowbreak matrix*}, \code{dof\_\allowbreak *},
+\code{time\_\allowbreak *}, \code{global\_\allowbreak solver\_\allowbreak *}, \code{post\_\allowbreak *}), extended with the
+run-produced records seen in the wider dump set; 103 names are dropped in total.
+The input \code{node\_\allowbreak dof} is recovered from \code{node\_\allowbreak dof\_\allowbreak start\_\allowbreak refined}. The
+one lost scalar is derived rather than invented (Appendix~\ref{app:reconstruction}).
+
+A critical corollary: \code{inertia\_\allowbreak apply} is never echoed in a \code{.dbs} (0 of
+430 dumps). Its absence from an archived dump is therefore \emph{not} evidence
+that the input lacked it. This directly enabled the recovery of the 15
+solver-divergence tests.
+
+\section{Per-operation quadrature}
+\label{sec:quadrature}
+
+The Professional does not use a single global quadrature. The quadrature is a
+property of the element integral, and the nodal stress recovery is a separate
+operator:
+
+\begin{center}
+\begin{tabular}{@{}L{6.2cm}L{4.4cm}L{4.0cm}@{}}
+\toprule
+Operation & Professional & GNU (aligned) \\
+\midrule
+Element stiffness, internal force, body load (quad4/hex8) & $2\times2$ / $2\times2\times2$ Gauss & Gauss \\
+Element stiffness (quad9/hex27) & $3\times3$ / $3\times3\times3$ Gauss & Gauss \\
+Mass matrix & row-sum lumped (quadrature-invariant) & unchanged \\
+Edge / surface load, interfaces & boundary integration; interfaces keep nodal (Lobatto) & unchanged \\
+Stress recovery (IP $\rightarrow$ node) & per-element least-squares fit + arithmetic mean & Professional operator \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+The historical GNU default was Lobatto for the element integral plus an
+\code{h}-weighted lumped recovery, which conflated the two. Manual 6.623's
+``inertia $\Rightarrow$ lobatto'' clause was measured to describe the
+\emph{mass} (which is row-sum lumped and quadrature-invariant), not the
+stiffness; the 02-08-2026 binary contradicts it for the stiffness. The alignment
+is in \code{06e175d}.
+
+\section{The Professional's nodal stress recovery}
+\label{sec:stress-recovery}
+
+The \code{.dbs} dumps expose the operator chain
+\code{element\_\allowbreak intpnt\_\allowbreak dof} $\rightarrow$ \code{element\_\allowbreak dof} $\rightarrow$
+\code{node\_\allowbreak dof}, with \code{node\_\allowbreak lhside} as the assembled weight. The measured
+operators are:
+
+\begin{itemize}
+  \item quad4: bilinear interpolation $1, x, y, xy$ (residual vs
+        \code{element\_\allowbreak dof} $1.4e-7$);
+  \item quad9: uniform-weight linear least squares $1, x, y$ ($1.2e-12$);
+  \item hex8: uniform-weight linear least squares $1, x, y, z$ ($1.0e-8$);
+  \item hex27: assumed linear least squares (not independently verified).
+\end{itemize}
+
+The operator is fixed in the element natural coordinates and uses \emph{uniform}
+weights (the Gauss weights give a different operator). Assembly is the
+\emph{arithmetic mean} of the adjacent elements' \code{element\_\allowbreak dof}.
+
+The 2026-09-13 alignment fixed the weights, but the GNU still \emph{accumulated}
+increments (\code{node\_\allowbreak dof\_\allowbreak new += node\_\allowbreak rhside/\allowbreak node\_\allowbreak lhside}). At a node shared by
+two elements whose increments cancel, the reported stress stayed at its
+step-start value (\code{delete2} reported $0.6$ where the Pro reports $0.8$). The
+Professional \emph{assigns} the absolute weighted average; the fix
+(\code{0b23957}) makes the stress dofs assign the ratio, with a gate that keeps
+the historic incremental update for convected stress dofs and for models with an
+independent strain unknown.
+
+\section{The mpc5 / delete energy consistency}
+\label{sec:mpc5}
+
+Two distinct mechanisms closed the delete/mpc family.
+
+\textbf{Delete-factor scaling} (\code{7687e0a} $\rightarrow$ \code{fa71193}). A
+partially deleted element stores \code{element\_\allowbreak delete\_\allowbreak factor} plus a frozen
+\code{element\_\allowbreak rhside\_\allowbreak delete} (the released-stress internal force). The
+Professional stores \emph{no} \code{element\_\allowbreak matrix\_\allowbreak delete} record. The first fix
+scaled the full matrix by the factor; the final fix recognises that the frozen
+released load is a \emph{constant}, so its tangent is zero: with
+\code{ELEMENT\_\allowbreak DELETE\_\allowbreak FACTOR} active the element matrix and \code{element\_\allowbreak lhside}
+are set to \emph{zero} (not scaled). This restores the one-pass Newton
+cancellation $A = dt\,K = dt\,B^{\mathsf{T}} C B$ of the staggered scheme. The
+historic $\mathit{factor}\cdot K$ left a residual stiffness that responded to
+strain while the internal force was frozen, so the released load relaxed
+geometrically (\code{mpc5} contracted at rate exactly $0.5$, reaching the target
+only at $\sim$12 iterations instead of 2).
+
+\textbf{Post-solve stress sync} (\code{dae06a3}). The \code{materi\_\allowbreak stress} dofs
+are non-principal: they are updated \emph{after} the solve from the \emph{pre-solve}
+constitutive stress, so the reported nodal stress trailed the solved velocity by
+one iteration (\code{mpc5} reported $1.0$ at $k=1$; the Pro reports $0.5$). The
+fix adds a stress-only \code{element\_\allowbreak loop()} pass after \code{solve()} and before
+\code{parallel\_\allowbreak new\_\allowbreak dof\_\allowbreak diagonal()}, re-evaluating the constitutive stress from
+the solved velocity. This is \emph{not} algebraically the same as iteration
+$k+1$: it adds a constitutive evaluation, not a second momentum solve.
+
+\section{The inertia-apply default gotcha}
+\label{sec:inertia}
+
+Commit \code{0560dcf} aligned the GNU \code{options\_\allowbreak inertia} default with the
+Professional: an absent \code{inertia\_\allowbreak apply} now means \code{-no} (manual Pro
+6.785), where the historic GNU default was \code{-yes}. This deliberate alignment
+fixed 13 static corpus tests but silently changed the behaviour of legacy models
+that relied on the old default:
+
+\begin{itemize}
+  \item 8 sfnet inputs plus \code{incnav3} and \code{examp2} needed an explicit
+        \code{inertia\_\allowbreak apply -yes} (the Pro's own copies carry it);
+  \item 15 validation-suite models needed it too. Those models have a material
+        density but insufficient Dirichlet constraints, so the legacy \code{-yes}
+        supplied a \code{rho/\allowbreak dtime} lumped mass diagonal that regularised an
+        otherwise \emph{singular} static system. Without it the matrix has
+        genuine rigid-body modes, the Bi-CG breaks down and the direct-LU retry
+        diverges.
+\end{itemize}
+
+The onset was isolated by a clean-build bisect: \code{0560dcf} (09-05 07:06)
+fails all 15, while its predecessor and the quadrature commit \code{06e175d} do
+not. The \code{-no} default is a deliberate Professional alignment and was
+\emph{not} reverted; the fix is the explicit record in the reconstructed inputs.
+
+\section{The honest solver as an explanation for ``divergences''}
+\label{sec:honest-solver}
+
+\code{so\_\allowbreak bicg.cc} previously reported success on three non-convergence exits. The
+current honest criteria report the true residual, so several tests that ``passed''
+on the archive-era binary now correctly report divergence. This is a deliberate
+improvement, and it is why some archived targets were met only by a dishonest
+success. It also exposed a latent defect: the direct-LU retry band width used
+\code{diff*nprinc} instead of \code{(1+diff)*nprinc}, so the first-to-last dof
+coupling of adjacent nodes wrote outside \code{mat}/\code{ldmat} and silently
+corrupted the retry (\code{6eb399d}).
+
+\chapter{Refuted hypotheses}
+\label{ch:refuted}
+
+The cycle's discipline was to treat every scheduled fix as a hypothesis and to
+record the refutations as first-class results. The following hypotheses were
+refuted or corrected, and several of them were load-bearing: acting on any of
+them without the measurement would have introduced a regression.
+
+\begin{itemize}
+  \item \textbf{Masin-basic R2 (``reference geometry refuted'')} was a \emph{false
+        negative}: the parked kernel had a transcription defect (Eq.~15 used
+        $T_{\mathrm{hat}}{:}T_{\mathrm{hat}}^{*}$ instead of
+        $T_{\mathrm{hat}}{:}T_{\mathrm{hat}}$), so the earlier ``R2 does not
+        improve the residual'' verdict was measured with the wrong kernel. With
+        the kernel fixed, R2 is part of the hypo7/8/9 closure.
+  \item \textbf{``\code{updated\_\allowbreak linear} log vs linear''} as the cause of the Masin
+        stress residual was refuted by the R2 measurement: the strain measure
+        matches the Pro (\code{eptyy = -0.300000000}) but the stress residual
+        does not improve systematically.
+  \item \textbf{Monolithic saddle-point mixed solve} (\code{mpc5} candidate (a))
+        was refuted as structurally inconsistent for shared nodes in the current
+        tie scheme (mpc1's shared $\sigma_2$ cancels to $1.667$, not $2.0$).
+        Candidate (b)---post-solve re-evaluation---was implemented instead.
+  \item \textbf{``Candidate (b) is algebraically identical to iteration $k+1$''}
+        was corrected: the \emph{value} sequence coincides, but the
+        \emph{mechanism} (a constitutive evaluation, not a solve) is distinct and
+        does sync the $k=1$ report.
+  \item \textbf{``\code{examp6} is pre-existing''} was corrected to a regression
+        from the \code{ELEMENT\_\allowbreak DOF} stress-slot fix \code{8f16dc0}, compounded by
+        \code{0560dcf}; still out-of-scope because the target is tied to a
+        residue-driven adaptive-remesh node numbering.
+  \item \textbf{``\code{examp24} cost is mesh generation''} was corrected to
+        $O(N^2)$ mesh \emph{mapping} (\code{map.cc} \code{point\_\allowbreak el}/\code{matrix\_\allowbreak ab},
+        29M \code{point\_\allowbreak el} calls per cycle).
+  \item \textbf{\code{validation\_\allowbreak 2}'s $-0.688985$} was refuted as a corrupt-retry
+        artifact; the honest value is $-0.634519741323 = $ Pro.
+  \item \textbf{\code{validation\_\allowbreak 8}'s ``not deducible without more data''} was
+        refuted: \code{-veln} was implemented and reproduces the Pro's 50/50 +
+        8/8 MPC records.
+  \item \textbf{The 15 validation-suite solver divergences} were first attributed
+        to the honest Bi-CG criteria and the quadrature commit; both were refuted
+        by the bisect, and the true cause (\code{inertia\_\allowbreak apply}) was found.
+  \item \textbf{The corpus basis itself} was corrected: ``363'' is ephemeral
+        \code{/\allowbreak tmp}, ``\textasciitilde207'' was a PASS count; the reproducible
+        denominators are 197 and 233.
+\end{itemize}
+
+The pattern is consistent: the fixes that survived were the ones whose root cause
+had been measured against a reference binary, and the refutations prevented
+speculative edits that would have regressed the corpora.
+
+% ===========================================================================
+\part{Results and Current Status}
+
+\chapter{Metrics}
+\label{ch:metrics}
+
+\section{Start and end of the cycle}
+
+\begin{center}
+\begin{tabular}{@{}L{3.6cm}L{4.4cm}L{4.4cm}r@{}}
+\toprule
+Corpus & Start of cycle (PASS) & End of cycle (PASS) & Net \\
+\midrule
+sfnet 197 & 160 / 197 & \textbf{187 / 197} & $+27$ \\
+validation-suite 233 & 201 / 233\textsuperscript{\dag} & \textbf{229 / 233} & $+28$ \\
+Combined 430 & 361 / 430 (84.0\%)\textsuperscript{\ddag} & \textbf{416 / 430 (96.7\%)} & $+55$ \\
+Internal suite & 16 / 16 & \textbf{16 / 16} & --- \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\textsuperscript{\dag}~The validation-suite start figure is the first full
+classification after the corpus was reconstructed from the archived \code{.dbs}
+dumps (the \code{.dat} inputs had been deleted; Appendix~\ref{app:reconstruction}).
+Before reconstruction the corpus was effectively 0 runnable tests.
+
+\textsuperscript{\ddag}~Sum of the per-corpus start figures (160 and 201). The
+source document's combined-start cell reads 388 (90.2\%), which equals the sfnet
+\emph{end} (187) plus the validation start (201); the per-corpus starts sum to
+361. The combined \emph{end} of 416/430 (96.7\%) is consistent with both corpora's
+ends.
+
+\section{Convergence table}
+
+\begin{center}
+\begin{tabular}{@{}L{4.4cm}rrrrr@{}}
+\toprule
+Corpus & Size & PASS & RUNFAIL & PARSE & PASS rate \\
+\midrule
+sfnet 197 & 197 & 187 & 9 & 1 & 94.9\% \\
+validation-suite 233 & 233 & 229 & 4 & 0 & 98.3\% \\
+\textbf{Combined} & \textbf{430} & \textbf{416} & \textbf{13} & \textbf{1} & \textbf{96.7\%} \\
+Internal suite & 16 & 16 & 0 & 0 & 100\% \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\section{Classification caveats}
+
+\begin{itemize}
+  \item \code{PASS} is \code{rc=0} with the test's own \code{target\_\allowbreak value} met,
+        which the binary enforces in \code{exit\_\allowbreak tn} (\code{miscel.cc}).
+  \item For the reconstructed tests, \code{rc=0} does not imply bit-identity with
+        the pre-incident archive: the archive-era binary predates many later
+        physics commits, so a faithful reconstruction can still drift
+        numerically.
+  \item The final sfnet bucket is \code{9 RUNFAIL /\allowbreak  1 PARSE} rather than
+        \code{10 RUNFAIL /\allowbreak  0} only because \code{pruebavel} is classified as
+        \code{PARSE} (unknown-record error); the PASS count is unchanged.
+\end{itemize}
+
+% ===========================================================================
+\part{Open Issues}
+
+\chapter{Backlog}
+\label{ch:backlog}
+
+Every remaining non-PASS corpus test and every residual found during the cycle is
+enumerated in \code{ProjectDocs/\allowbreak BACKLOG-OPEN-ISSUES.md}, with symptom, root
+cause, evidence, severity, proposed fix and estimated effort.
+
+\section{Severity and effort scales}
+
+\begin{center}
+\begin{tabular}{@{}L{2.2cm}L{11.4cm}@{}}
+\toprule
+Level & Meaning \\
+\midrule
+\textbf{CRITICAL} & silently corrupts results on common models, crashes on valid input, or blocks a whole feature family with no workaround \\
+\textbf{HIGH} & a documented feature diverges from the Professional on a reproducible model a plausible user would hit \\
+\textbf{MEDIUM} & a narrow or legacy divergence, a coverage gap, or a performance cost that affects a common configuration \\
+\textbf{LOW} & a single test artifact, a stale/malformed input, or a cosmetic/documentation issue \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\begin{center}
+\begin{tabular}{@{}L{2.2cm}L{11.4cm}@{}}
+\toprule
+Level & Meaning \\
+\midrule
+\textbf{cheap} & under a day, isolated change \\
+\textbf{medium} & days, one subsystem, needs an A/B corpus run \\
+\textbf{large} & weeks, cross-cutting refactor or new infrastructure \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\section{Open issues by severity}
+
+\begin{longtable}{@{}r L{2.5cm} L{7.4cm} L{1.7cm} L{2.2cm}@{}}
+\toprule
+Id & Corpus & Item & Severity & Effort \\
+\midrule
+\endfirsthead
+\toprule
+Id & Corpus & Item & Severity & Effort \\
+\midrule
+\endhead
+\bottomrule
+\endlastfoot
+A1 & validation & \code{iface\_\allowbreak tangref} target vs per-IP semantics & MEDIUM & cheap/medium \\
+A2 & validation & \code{iface\_\allowbreak gen\_\allowbreak method\_\allowbreak gen} dropped input records & LOW & cheap \\
+A3 & validation & \code{elmethod} lost reference geometry & LOW & medium \\
+A4 & validation & \code{numit} lost reference geometry & LOW & medium \\
+B1 & sfnet & \code{examp6} remesh node numbering & MEDIUM & cheap/large \\
+B2 & sfnet & \code{examp14} stale target + runtime & LOW & cheap \\
+B3 & sfnet & \code{examp17} stale target & LOW & medium \\
+B4 & sfnet & \code{examp24} $O(N^2)$ mesh mapping & LOW & large \\
+B5 & sfnet & \code{ho\_\allowbreak mech2} stale p-refinement input & LOW & medium \\
+B6 & sfnet & \code{ho\_\allowbreak mech3} model divergence & LOW & large \\
+B7 & sfnet & \code{ho\_\allowbreak mech4} missing strain record & LOW & medium \\
+B8 & sfnet & \code{petsc1} PETSc infrastructure & LOW & large \\
+B9 & sfnet & \code{taylor3} stale input + solver & LOW & medium \\
+C1 & sfnet & \code{pruebavel} dead/malformed & LOW & cheap \\
+C2 & validation & \code{groundflow\_\allowbreak interface} \code{gvelx} sign & LOW & medium \\
+C3 & sfnet & \code{gforce10} 3D section sign & MEDIUM & medium \\
+C4 & all & post-solve stress pass cost & MEDIUM & cheap/medium \\
+C5 & --- & \code{contact\_\allowbreak target\_\allowbreak geometry} index-0 alias & MEDIUM & medium \\
+\end{longtable}
+
+\section{Summary}
+
+No open issue is CRITICAL or HIGH. Every remaining failure is a stale or
+malformed test, an out-of-scope model or infrastructure limit, a narrow
+post-processing divergence, or a performance cost. The source defects found
+during the cycle were fixed and validated against the corpora.
+
+The validation-suite failures are two reconstruction residuals
+(\code{iface\_\allowbreak tangref}, \code{iface\_\allowbreak gen\_\allowbreak method\_\allowbreak gen}) and two lost-reference-geometry
+tests (\code{elmethod}, \code{numit}). The sfnet failures are the stale or
+malformed inputs, the $O(N^2)$ mesh-mapping runtime, the PETSc build
+infrastructure, and two post-processing divergences (\code{gforce10}'s 3D section
+sign, and the interface \code{gvelx} convention residual).
+
+% ===========================================================================
+\part{Future Plans}
+
+\chapter{Improvement plan}
+\label{ch:improvements}
+
+The improvements below were identified during the cycle. Each states the problem,
+the proposed change, the expected benefit, the risk and the estimated effort.
+These are proposals, not commitments; none is required for the cycle's results.
+The full analysis is in \code{ProjectDocs/\allowbreak IMPROVEMENT-ANALYSIS.md}.
+
+\section{Summary}
+
+\begin{longtable}{@{}r L{5.2cm} L{3.4cm} L{2.2cm} L{2.2cm}@{}}
+\toprule
+Id & Improvement & Benefit & Risk & Effort \\
+\midrule
+\endfirsthead
+\toprule
+Id & Improvement & Benefit & Risk & Effort \\
+\midrule
+\endhead
+\bottomrule
+\endlastfoot
+a  & Hoist the post-solve stress pass & Halve added assembly cost & low--moderate & cheap--medium \\
+b  & Preconditioner; revisit the mixed solve & Robustness; structural fix & medium--high & medium/large \\
+c  & Clean the \code{build\_\allowbreak safe.sh} full-mode file checks & A clean CI gate & moderate & medium \\
+d  & Reproducible corpora + stable runner + recalibration tooling & Reproducibility, CI & low--moderate & medium \\
+e  & Promote the \code{.dbs} reconstruction tooling & Re-runnable, self-checking recovery & low & medium \\
+f1 & Single quadrature-rule helper & One place to change & low & cheap \\
+f2 & Principal stress dofs (mixed solve) & Structural correctness & high & large \\
+f3 & Reset scoping & One clear semantic & low & cheap \\
+f4 & Retire \code{ELEMENT\_\allowbreak MATRIX\_\allowbreak DELETE} & Less dead code & low & cheap \\
+f5 & Fix the \code{-BAR3} refine branch & Correct, tested path & low & cheap \\
+f6 & Exact band width / bounds assertion & Tighter band; loud failure & low & cheap/medium \\
+f7 & Document \code{control\_\allowbreak eigen} as GNU-only & Avoid a phantom work unit & none & cheap \\
+\end{longtable}
+
+\section{Item narratives}
+
+\begin{description}
+  \item[(a) Post-solve stress pass cost.] The post-solve nodal-stress sync
+        (\code{dae06a3}) runs a stress-only \code{element\_\allowbreak loop()} after
+        \emph{every} equilibrium iteration for models with \code{materi\_\allowbreak stress}
+        and the absolute recovery, roughly doubling the element-assembly cost for
+        those models. The proposal is to hoist the pass out of the iteration
+        loop: after the equilibrium loop converges, run the stress-only pass
+        \emph{once} and update the stress dofs (directly, or via a stress-only
+        variant of \code{parallel\_\allowbreak new\_\allowbreak dof\_\allowbreak diagonal}). The in-loop pass exists
+        only so that per-iteration printing stays in sync; if per-iteration
+        printing is not required, the once-per-step form is equivalent for the
+        final report. Risk: low-to-moderate, because the pass ordering interacts
+        with \code{parallel\_\allowbreak new\_\allowbreak dof\_\allowbreak diagonal} and with the structural-element
+        bypass; mitigation is a full corpus A/B plus the delete/mpc family field.
+
+  \item[(b) Solver robustness.] The solver is honest but not robust on the
+        genuinely hard systems. Two effects: the honest Bi-CG criteria (correct,
+        but ill-conditioned systems fall to the direct-LU retry), and the
+        genuinely hard systems (consolidation coupling, the singular static
+        systems that relied on the legacy inertia default, and the eulerian
+        convection/plasticity family). Two directions, in order of cost: a simple
+        diagonal (Jacobi) or block-Jacobi preconditioner to reduce the iteration
+        count without changing the equations; and, as a long-term principled fix,
+        MINRES or a mixed solve for the staggered family. The latter was refuted
+        as structurally inconsistent for shared nodes in the current tie scheme,
+        and remains valid only \emph{if} the tie scheme is made
+        energy-consistent for shared nodes first (the current
+        energy-consistent tie work is the precondition for revisiting it).
+
+  \item[(c) \code{build\_\allowbreak safe.sh} full-mode file-check layer.] After the corpus
+        reconstruction the canary \code{msf\_\allowbreak beam2d.dat} exists, so the script
+        runs in \textbf{full mode} and executes the Sprint~11 file-check layer.
+        That layer asserts expected outputs of files generated during the
+        pre-incident sprints; many are stale relative to the current binary, so
+        the script exits non-zero even though the FALLO list is identical to the
+        baseline. The proposal is to update the stale expected outputs to the
+        current honest values (with the same A/B discipline used for the corpus
+        target recalibrations), or to move the file-check expectations into a
+        maintained golden-file set generated from a known-good binary and
+        reviewed like any other target. Keep the \code{rc}-based internal suite
+        (16/16) as the primary gate.
+
+  \item[(d) Corpus tooling.] The measurement basis is not reproducible from the
+        repository: the ``363'' corpus lives only in ephemeral \code{/\allowbreak tmp}; the
+        runner is a \code{/\allowbreak tmp} shell script with ad-hoc classification output;
+        and target recalibration is manual. Three pieces are proposed: a
+        \code{corpus/\allowbreak } manifest with checksums plus a fetch/extract script (the
+        third-party test data has licensing implications, so a fetch script with
+        pinned checksums is safer than committing the data); a stable runner at
+        \code{scripts/\allowbreak run-corpus.sh} with machine-readable output
+        (\code{name}, tab, \code{PASS|RUNFAIL|PARSE}, tab, \code{value}); and
+        target-recalibration tooling that proposes the edit while leaving the
+        human decision explicit.
+
+  \item[(e) Reusability of the reconstruction method.] The \code{.dbs}
+        reconstruction method is well documented but implemented in ad-hoc
+        \code{/\allowbreak tmp} scripts. It should be promoted to
+        \code{scripts/\allowbreak reconstruct\_\allowbreak dbs.py}: the drop-list as a versioned data file
+        (name $\rightarrow$ reason); the \code{number\_\allowbreak of\_\allowbreak integration\_\allowbreak points}
+        derivation with the exact-division check; a \textbf{validation mode} that
+        runs the derivation against the known \code{.dat}/\code{.dbs} pairs (the
+        11/11 exact check) so a regression in the method is caught immediately;
+        and a RECOVERED / PARTIAL / UNRECOVERABLE report matching the documented
+        classification.
+
+  \item[(f1) Three replicated quadrature defaults.] The element-integral
+        quadrature default is replicated in three places: the element default,
+        \code{msf\_\allowbreak element\_\allowbreak rule} (\code{calcul\_\allowbreak force.cc}) and \code{mc\_\allowbreak element\_\allowbreak rule}
+        (\code{delete.cc}). They were switched to Gauss together in
+        \code{06e175d}, but a future change must keep them in sync manually.
+        Resolve the rule from a single helper (e.g.\
+        \code{element\_\allowbreak quadrature\_\allowbreak rule()}), with the two call sites reading it.
+
+  \item[(f2) Non-principal stress dofs.] The \code{materi\_\allowbreak stress} dofs are
+        non-principal (\code{input.cc} sets no \code{dof\_\allowbreak principal}), so they are
+        updated after the solve from the pre-solve constitutive stress. The
+        one-iteration lag was closed by a post-solve pass (\code{dae06a3}), which
+        is a workaround, not the structural fix, and which carries the
+        performance cost of item~(a). Revisit the monolithic saddle-point mixed
+        solve \emph{after} making the tie scheme energy-consistent for shared
+        nodes. If that is not pursued, keep the post-solve pass as the documented
+        mechanism and apply item~(a).
+
+  \item[(f3) Reset scoping legacy branch.] \code{control\_\allowbreak reset\_\allowbreak dof} keeps a
+        legacy every-step behaviour for resets whose index also carries a
+        \code{control\_\allowbreak timestep}. The Professional rejects such inputs, so the
+        branch is unreachable for Professional-aligned models, but it is a
+        GNU-only semantic that can surprise a user. Either reject
+        reset+timestep at the same index (matching the Professional) or document
+        the branch prominently as a GNU extension and add a warning.
+
+  \item[(f4) \code{ELEMENT\_\allowbreak MATRIX\_\allowbreak DELETE} dead record.]
+        \code{ELEMENT\_\allowbreak MATRIX\_\allowbreak DELETE} and its allocation in \code{top.cc}/
+        \code{database.cc} remain registered but are now unused (the
+        Professional has no equivalent). Retire the record and its allocation,
+        and the enum slot if a renumbering of the database enum is acceptable
+        (the headers \code{tochnog.h}/\code{tochnog-mod.h} must stay in sync).
+
+  \item[(f5) \code{refine\_\allowbreak l.cc} unreachable BAR3 branch.] A second copy-paste
+        defect in \code{refine\_\allowbreak locally()}: the side-node list inside the
+        \code{for (iside=...)} loop has \code{else if (name==-BAR2)} where
+        \code{-BAR3} was intended (\code{refine\_\allowbreak l.cc:249}), so the branch is
+        unreachable and the \code{-BAR3} local-refinement path would use a stale
+        \code{ilist}. It is not exercised by any corpus test. Change the branch
+        to \code{-BAR3} and add a focused \code{-bar3} local-refinement test.
+
+  \item[(f6) Band width derived from \code{NODE\_\allowbreak NODE}.] The Bi-CG direct-LU
+        retry band width is derived from the \code{NODE\_\allowbreak NODE} connectivity with
+        an identity ordering (\code{(1+diff)*nprinc}). It is correct but
+        conservative; a tighter exact bound could be derived from the element
+        matrix unknown pairs, or a debug-build bounds assertion could be added in
+        the band fill to catch any future out-of-band write.
+
+  \item[(f7) \code{control\_\allowbreak eigen} is GNU-only.] \code{control\_\allowbreak eigen} /
+        \code{node\_\allowbreak eigen} have no Professional equivalent (neither the
+        25-10-2023 nor the 02-08-2026 binary contains the strings), so the eigen
+        path has no convergence reference; the \code{ddc9a5b} fix restored the
+        original GNU semantics, not a Professional alignment. Keep it documented
+        as GNU-only and add an explicit note in the manual-user page.
+\end{description}
+
+\section{Recommendation}
+
+Highest value for the least risk: \textbf{(c)} (a clean build gate),
+\textbf{(d)} (a reproducible corpus), and \textbf{(a)} (the performance cost).
+The principled long-term fix is \textbf{(b)/(f2)}, but it depends on the
+shared-node tie consistency and is a corpus-wide refactor.
+
+% ===========================================================================
+\appendix
+
+\chapter{Corpus reconstruction method}
+\label{app:reconstruction}
+
+\code{tochnog} dumps the whole external database at the end of a run
+(\code{print.cc} / \code{print\_\allowbreak db.cc}, \code{data\_\allowbreak number=-DATABASE}). The dump
+mixes the parsed input records (canonicalised, comment-free, reordered) with
+records the run itself produced, plus a few lost scalars.
+
+\begin{enumerate}
+  \item \textbf{Parser grounding.} The input grammar was read from
+        \code{input.cc} (the init-section keyword list and the data-part
+        \code{db\_\allowbreak number()} lookup). Input records are stored verbatim; the dump
+        line format (\code{keyword [index] values}) already matches what the
+        parser expects, so kept lines are emitted as-is.
+  \item \textbf{Derived drop-list.} 103 record names are dropped. The core is
+        the 45 names that appear in the 41 known \code{.dat}/\code{.dbs} pairs in
+        \emph{no} \code{.dat} (state/results such as \code{node\_\allowbreak dof*},
+        \code{element\_\allowbreak dof*}, \code{node\_\allowbreak rhside*}, \code{node\_\allowbreak start\_\allowbreak refined},
+        \code{element\_\allowbreak matrix*}, \code{dof\_\allowbreak *}, \code{time\_\allowbreak *},
+        \code{global\_\allowbreak solver\_\allowbreak *}, \code{post\_\allowbreak *}, \code{tochnog\_\allowbreak version},
+        \code{Size}, \code{Total}), extended with the run-produced records seen
+        in the wider dump set (\code{element\_\allowbreak beam\_\allowbreak *}, \code{element\_\allowbreak interface\_\allowbreak *},
+        \code{element\_\allowbreak mass/\allowbreak volume}, \code{element\_\allowbreak geometry},
+        \code{crack\_\allowbreak stressintensityfactor}, \code{inverse\_\allowbreak *}). Output provenance
+        was confirmed in the source.
+  \item \textbf{Initial-state recovery.} \code{node\_\allowbreak dof\_\allowbreak start\_\allowbreak refined} is the
+        dump's copy of the start-of-run DOF (it holds the input \code{node\_\allowbreak dof}).
+        It is re-emitted as \code{node\_\allowbreak dof}, otherwise hypoplasticity tests abort
+        with ``Illegal porosity''. For full-mesh-generation tests
+        (\code{control\_\allowbreak mesh\_\allowbreak macro}, \code{control\_\allowbreak mesh\_\allowbreak generate\_\allowbreak beam},
+        \code{control\_\allowbreak mesh\_\allowbreak generate\_\allowbreak truss}) the generated
+        \code{node}/\code{element}/\code{element\_\allowbreak group}/\code{node\_\allowbreak start\_\allowbreak refined}
+        are dropped instead.
+  \item \textbf{Lost scalars---derived, not invented.} The init-section
+        \code{number\_\allowbreak of\_\allowbreak integration\_\allowbreak points} is stored bare in the dump (its
+        value is never written). The value is recovered from the archived
+        \code{element\_\allowbreak dof} record length and re-inserted into the reconstructed
+        input.
+\end{enumerate}
+
+\section*{Derivation of the lost integration-point count}
+
+In \code{elem.cc} the element state vector is allocated with a fixed stride
+
+\begin{center}
+\code{mnolnuknwn = npointmax * nuknwn}
+\end{center}
+
+and \code{db(ELEMENT\_\allowbreak DOF, ..., mnolnuknwn, ...)} dumps exactly that many values.
+Here \code{npointmax} is the input \code{number\_\allowbreak of\_\allowbreak integration\_\allowbreak points} and
+\code{nuknwn} is the number of element unknowns per integration point (a
+function of the \code{derivatives} init set and \code{ndim} only, independent of
+\code{npointmax}). The dump also contains the \code{dof\_\allowbreak label} record, whose
+length is \code{nuknwn - 1} (the label array has one unused trailing slot).
+Therefore:
+
+\begin{center}
+\code{nuknwn = len(dof\_\allowbreak label) + 1}\\
+\code{number\_\allowbreak of\_\allowbreak integration\_\allowbreak points = len(element\_\allowbreak dof) /\allowbreak  nuknwn}
+\end{center}
+
+Both inputs are read from the archived \code{.dbs}; no fresh run is required and
+no value is invented. The result is accepted only when the division is exact and
+the element types are consistent with the resulting count.
+
+\textbf{Cross-check with a fresh probe.} The reconstructed \code{.dat} (which
+lacks the record) is re-run with an explicit
+\code{number\_\allowbreak of\_\allowbreak integration\_\allowbreak points K} ($K=27$). Then
+\code{len(element\_\allowbreak dof) = K * nuknwn}, so \code{nuknwn} can be measured on the
+current binary. The two estimates agree on \textbf{72/72} tests, and the derived
+counts agree on \textbf{72/72}.
+
+\textbf{Validation on the known pairs.} 11 of the 41 known \code{.dat}/\code{.dbs}
+pairs carry the record; for these the true value is known, and the archived-only
+derivation reproduces it exactly in \textbf{11/11} cases (e.g.\ \code{gforce7}:
+true 9, \code{dof\_\allowbreak label} 71, \code{nuknwn} 72, \code{element\_\allowbreak dof} 648, derived 9;
+\code{msf\_\allowbreak cant3d\_\allowbreak hex27}: true 27, \code{dof\_\allowbreak label} 104, \code{nuknwn} 105,
+\code{element\_\allowbreak dof} 2835, derived 27). The remaining 30 known pairs have no
+\code{number\_\allowbreak of\_\allowbreak integration\_\allowbreak points} record in either file; applying the formula
+there returns the archived binary's \emph{default} count, not an input value, so
+those are correctly left untouched.
+
+\section*{Caveats}
+
+\begin{itemize}
+  \item The archived \code{.dbs} were produced on 2026-08-29; the current binary
+        contains many later physics commits, so even a perfect reconstruction
+        need not reproduce the archived numbers.
+  \item Records the run overwrites with its final value cannot be recovered as
+        input (\code{node\_\allowbreak support\_\allowbreak edge\_\allowbreak normal\_\allowbreak force}). \code{node\_\allowbreak dof} is handled
+        through \code{node\_\allowbreak dof\_\allowbreak start\_\allowbreak refined}.
+  \item Inputs that are never echoed (\code{control\_\allowbreak solver}, \code{include},
+        \code{support\_\allowbreak edge\_\allowbreak normal\_\allowbreak element\_\allowbreak node}, Abaqus/Gmsh/Feflow import
+        records) are lost.
+  \item \code{dbmeth21}/\code{dbmeth22} are \code{-size\_\allowbreak tot} dumps and contain no
+        input.
+  \item The derivation requires the \code{dof\_\allowbreak label} record; all 72 targets and
+        all 41 known pairs have it. If a future dump lacks it, fall back to the
+        K-probe cross-check.
+\end{itemize}
+
+\chapter{Reproducibility notes}
+\label{app:repro}
+
+\textbf{Corpus availability.} The sfnet 197
+(\code{external-downloads/\allowbreak sfnet/\allowbreak extracted/\allowbreak test}) and validation-suite 233
+(\code{validation-suite/\allowbreak test-2014}) directories are untracked/gitignored. The
+honest denominators are 197 and 233; ``363'' was ephemeral and ``\textasciitilde207''
+was a PASS count.
+
+\textbf{Runner.} The corpus runner is a \code{/\allowbreak tmp} shell script
+(\code{corpus-run.sh} / \code{run-corpus.sh} / \code{final-corpus-run.sh}
+variants) with ad-hoc classification output. Target recalibration is manual: the
+current value is measured, the \code{target\_\allowbreak value} line is edited by hand, and
+the change is recorded verbatim in the docs (because git does not track the
+corpus).
+
+\textbf{Build and run discipline.} All measurements used clean
+\code{build\_\allowbreak safe.sh} builds with \code{LC\_\allowbreak ALL=C} and a 45\,s per-test timeout.
+Only clean builds are reliable on the current filesystem; incremental builds mix
+old/new enums and corrupt the binary. The headers \code{tochnog.h} and
+\code{tochnog-mod.h} must stay in sync (same enum, same order).
+
+\textbf{Internal suite.} The \code{rc}-based internal suite is 16/16 and is the
+primary gate. The \code{build\_\allowbreak safe.sh} full-mode file-check layer currently exits
+non-zero on stale expected outputs (see improvement~(c)); its FALLO list is
+documented to be identical to the baseline, i.e.\ it is not a regression.
+
+\textbf{Reference binaries.} The behavioural reference is the Tochnog
+Professional binary (build of 02-08-2026, with the 25-10-2023 build for older
+paths), together with a build of the reference GNU 2014 sources.
+
+\textbf{Documentation convention.} Each change updated
+\code{SEGUIMIENTO-\allowbreak CONVERGENCIA.md} and the relevant
+\code{manual-user}/\code{manual-developer} pages in the same work unit, per the
+project's mandatory convention.
+
+\end{document}
