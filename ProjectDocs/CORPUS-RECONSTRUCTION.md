@@ -11,13 +11,18 @@ dumps with the current binary (`build/tochnog`, HEAD `e983be8`, branch
 > honest Bi-CG criteria or the `06e175d` quadrature. They lack
 > `inertia_apply -yes` and relied on the legacy GNU `options_inertia=-YES`
 > default removed by `0560dcf` (2026-09-05). Adding the record makes **13/15
-> converge to their stored targets**; the remaining two (`iface_tangref`,
-> `iface_gen_method_gen`) carry separate causes (interface-record semantics
-> changed by `bf74f28`; input `element_geometry` records dropped by the
-> reconstruction drop-list). Full evidence, per-test values and the exact
-> corpus edits: `CORPUS-STALE-TARGETS.md` §"Inertia-apply reconstruction".
-> The `-no` default is a deliberate Professional alignment and is **not**
-> reverted.
+> converge to their stored targets**; the remaining two carried separate causes
+> (interface-record semantics changed by `bf74f28`; input `element_geometry`
+> records dropped by the reconstruction drop-list). Both are now **closed**
+> (`dev/reconstruction-residuals`, 2026-09-16): `iface_tangref`'s target was
+> recalibrated to the honest per-IP value `4.9998`, and `iface_gen_method_gen`
+> was corrected to the archive's input/generated split (`element_geometry 1 20
+> / 2 30` input; element 3 and `element_geometry 3 10` generated).
+> validation-suite 233 is now **231 PASS / 2 RUNFAIL** (only `elmethod`/`numit`
+> remain). Full evidence, per-test values and the exact corpus edits:
+> `CORPUS-STALE-TARGETS.md` §"Inertia-apply reconstruction" and
+> §"Reconstruction residuals". The `-no` default is a deliberate Professional
+> alignment and is **not** reverted.
 
 > **Update (2026-09-14, third pass — doc-grounded).** The 8 UNRECOVERABLE
 > and the 38 PARTIAL were revisited against `ProjectDocs/manual-user` /
@@ -58,6 +63,14 @@ produced, plus a few lost scalars.
    Output provenance was confirmed in the source (e.g. `elem.cc` PUTs
    `ELEMENT_VOLUME`/`ELEMENT_MASS`, `crack.cc` PUTs
    `CRACK_STRESSINTENSITYFACTOR`).
+   **Correction (2026-09-16)**: `element_geometry` is BOTH an input record
+   (`element_geometry index geometry_set`, manual-user
+   `control_mesh_generate_interface.md`) and a generated one
+   (`method_generate = -element_geometry`). Classifying it wholesale as
+   run-produced dropped genuine input tags (`iface_gen_method`,
+   `iface_gen_method_gen`) — see `CORPUS-STALE-TARGETS.md`
+   §"Reconstruction residuals" §2. Provenance must be decided per record, not
+   per keyword.
 3. **Initial-state recovery.** `node_dof_start_refined` is the dump's copy of
    the start-of-run DOF (it holds the input `node_dof`). It is re-emitted as
    `node_dof`, otherwise hypoplasticity tests abort with "Illegal porosity".

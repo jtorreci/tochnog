@@ -329,3 +329,154 @@ file was modified.
 - sfnet 197: **187 / 9 / 1**, classification byte-identical to the stored
   baseline. `full-sfnet197/sfnet.tsv`.
 - Per-test values: `work/final-report.txt`.
+
+---
+
+# Reconstruction residuals — validation-suite 233 (2026-09-16)
+
+Date: 2026-09-16
+Branch: `dev/reconstruction-residuals` (from `dev/masin-kernel-surface` @ `640855a`)
+Binary: `build/tochnog` @ `640855a` (unchanged; no source edit)
+Corpus: `validation-suite/test-2014/*.dat` (**untracked** — the exact edits are
+recorded verbatim in §3)
+Evidence: `/tmp/opencode/recon-residuals-20260916-161957/` (`evidence/originals/`,
+`evidence/*.diff`, `runs/`, `full-vs234/`, `full-sfnet197/`, `work/`)
+
+This closes the two residuals left open by the inertia-apply reconstruction
+(§"Inertia-apply reconstruction", §3): `iface_tangref` (target tied to the
+pre-`bf74f28` scalar record semantics) and `iface_gen_method_gen` (the
+reconstruction had turned the GENERATED interface element into an input element
+and dropped the genuine input `element_geometry` tags).
+
+## Result
+
+| corpus | PASS | RUNFAIL | PARSE | total |
+|---|---|---|---|---|
+| validation-suite 234 (before) | 229 | 5 | 0 | 234 |
+| validation-suite 234 (after)  | **231** | **3** | **0** | 234 |
+| validation-suite 233 (after, real tests) | **231** | **2** | **0** | 233 |
+| sfnet 197 (before / after)    | 187 | 9 | 1 | 197 |
+
+Per-test diff vs `inertia-recon-20260916/full-vs234/vs.tsv`: exactly two
+RUNFAIL -> PASS (`iface_tangref`, `iface_gen_method_gen`), **0 regressions**.
+The remaining 2 real RUNFAIL are the pre-existing reconstruction artifacts
+`elmethod` and `numit` (lost `-follow_material` reference geometry; untouched,
+as instructed). The 3rd non-PASS file is the generated mesh dump
+`print_mesh_dof.dat` (first line `1 0 0`, not a test input). sfnet 197 is
+byte-identical to the stored baseline (187 / 9 / 1).
+
+## 1. `iface_tangref` — honest per-IP value and target recalibration
+
+Since `bf74f28` the history `element_interface_force_tang2` is a length-4
+per-integration-point array: `interface.cc` PUTs `f_t2_el_ip`, the elastic trial
+`kt2*gamma2_total` of each facing pair (the `ELEMENT_INTERFACE_FORCE_TANG2`
+record, `data_length = 4`). The stored target `10.4025 ±0.2` was set at
+`7b414fa` (2026-08-24) from the pre-`bf74f28` **scalar** "side-average,
+all-against-all" assembly; the pristine 2026-08-29 `.dbs` reads the scalar
+`element_interface_force_tang2 2 10.3532842167`.
+
+Honest-value evidence (HEAD `640855a`, LC_ALL=C, fresh cwd, `runs/fixed-tangref/`):
+
+- HEAD returns `4.99979673431 4.99979673115 4.99979673431 4.99979673115` —
+  the four facing pairs agree to 4e-9.
+- The model has a single load path. `force_element_volume 0 0 5 0` applies
+  `fy = 5` to element 3 only (`force_element_volume_geometry 0 3` is an
+  element-number list, `force.cc:66-71`), the unit cube `hex8 9..16`
+  (volume 1). Element 2 is the interface (group 10); it is the only bridge
+  between element 1 and element 3, and element 1's `x=1` face (nodes 2,4,6,8)
+  is fully fixed in y (`bounda_unknown 1`/`2`). The interface therefore carries
+  the whole `5` in y.
+- The frame is normal `-x`, `t1 = +z` (reference point `1 0.5 5`), `t2 = +y`
+  (manual-user `group_interface_tangential_reference_point.md`), so the y-load
+  lands entirely in `_tang2`; `_tang` is `-1.75e-14` (target `0 ±0.001`, met).
+- The stored per-IP value equals the interface total because the IP weights are
+  normalised (`sum w_ip = 1`; uniform `1/4` for the 3D `hex8`,
+  `interface.cc:373-374`): `sum w_i * f_i = 4.9998`. Equilibrium with the
+  applied `5` confirms `4.9998` is the honest per-IP value.
+- The intermediate per-IP values of the bisect (`bf74f28` ~50.8, `4b6548a`
+  ~49.5) predate the `6cafafe` interface-measure + honest-Bi-CG changes; they
+  are not the converged equilibrium of the current per-pair assembly. Only the
+  post-`6cafafe` `4.9998` matches the applied load.
+
+Recalibration: `target_value  2  10.4025 0.2` -> `target_value  2  4.9998 0.2`
+(tolerance kept). `rc=0`; the first-IP value `4.99979673431` meets the target.
+
+## 2. `iface_gen_method_gen` — the generated element was mis-classified as input
+
+The reconstruction's drop-list (`CORPUS-RECONSTRUCTION.md` §Method step 2)
+classified `element_geometry` as a run-produced record and dropped all of them,
+while keeping every `element` record of the dump as input. For this test that
+produced a runnable-looking input with the GENERATED interface element 3 as an
+input `quad4` and no `element_geometry` at all -> the target `element_geometry 3`
+does not exist -> "Error in calculation".
+
+Discriminator from the archived `.dbs`: the **`element_group` record count**.
+The archive has three elements but only two `element_group` records:
+
+```
+element  1  -quad4 1 2 3 4
+element  2  -quad4 5 6 7 8
+element  3  -quad4 2 4 5 7        <- generated: NO element_group
+element_group  1  0
+element_group  2  0
+element_geometry  1  20
+element_geometry  2  30
+element_geometry  3  10           <- generated: method_generate = -element_geometry
+```
+
+`control_mesh_generate_interface_method 0 -element_group -element_geometry`
+selects by `element_group` and, for the generated element, writes an
+`element_geometry` record INSTEAD of an `element_group` one (manual-user
+`control_mesh_generate_interface.md` §"Selección y generación por
+`element_geometry`"). Element 3 has no `element_group` and carries
+`element_geometry 3 10` (= the interface group 10), so it is generated.
+`element_geometry 1 20` / `2 30` are genuine **input** tags of the two blocks
+(the generator only touches the generated element). The sibling
+`iface_gen_method` confirms the pattern: its archive has `element_geometry 1 20
+/ 2 30` as input and `element_group 3 10` for its generated interface.
+
+Fix: remove the input `element 3` line and restore the input `element_geometry 1
+20` / `2 30` lines. Result (`runs/fixed-gengen/`): `rc=0`; the generator
+produces element 3 (`quad4 2 4 5 7`) with `element_geometry 3 10`, and the
+target `element_geometry 3 = 10` now reads the **generated** record. The run's
+`element_geometry` set is byte-identical to the archive (`1 20 / 2 30 / 3 10`,
+`element_group 1 0 / 2 0`), so the test exercises the intended generation
+feature, not the input tag.
+
+Family note (NOT changed here — five currently-passing tests would be touched):
+the same drop-list defect turned the generated interface element(s) into input
+elements in `iface_gen` (element 3), `iface_gen_method` (element 3),
+`iface_gen_geom` (element 3) and `iface_gen_quad9` (elements 3 and 4). Their
+targets are `node_dof` values, so they pass either way, but their reconstructed
+input does not exercise the generation feature. Correcting them is a separate
+work unit and is recorded here for follow-up.
+
+## 3. What changed (exact corpus edits)
+
+The corpus directory is gitignored/untracked, so the edits are recorded here
+verbatim. Originals are preserved under `evidence/originals/` (sha256 in
+`evidence/originals.sha256`; unified diffs in `evidence/*.diff`).
+
+```
+iface_tangref.dat:        target_value  2  10.4025 0.2   ->  target_value  2  4.9998 0.2
+iface_gen_method_gen.dat: - element  3  -quad4 2 4 5 7
+                          + element_geometry  1  20
+                          + element_geometry  2  30
+```
+
+No other line of either file changed. No source file was modified and no other
+RUNFAIL test was touched.
+
+## 4. Reproducibility
+
+- Baseline (`640855a`, before edits): validation-suite 234 `229 / 5 / 0`
+  (`inertia-recon-20260916/full-vs234/vs.tsv`); both residuals `rc=1`
+  (`runs/base-tangref/`, `runs/base-gengen/`).
+- After the edits, same runner and binary: validation-suite 234
+  `231 / 3 / 0`; 233 real tests `231 / 2 / 0` (`full-vs234/vs.tsv`).
+- sfnet 197: `187 / 9 / 1`, classification byte-identical to the baseline
+  (`full-sfnet197/sfnet.tsv`).
+- Candidate A/B for `iface_gen_method_gen` (`work/candidates/`):
+  `C1` = element 3 removed, no input geometry tags -> `rc=0`, generated
+  `element_geometry 3 10`; `C2` = C1 + restored `element_geometry 1 20 / 2 30`
+  -> `rc=0`, byte-identical `element_geometry` set to the archive (chosen).
