@@ -386,6 +386,15 @@ Plus the two bugs found while recovering the 8 (§4).
 
 ### 2.3 Expected drift (archived target stale, doc supports the new value)
 
+> **Applied 2026-09-16** (`dev/stale-target-recalibration`): the 14
+> validation-suite targets listed below were recalibrated to the fresh GNU
+> values (tolerance kept) and `gforce7q4` was rebuilt as the faithful
+> Professional two-quad4 model. validation-suite 233: **201 → 216 PASS /
+> 17 RUNFAIL / 0 PARSE**, 15 RUNFAIL→PASS, 0 regressions; sfnet 197 unchanged
+> (187/9/1). Full per-test evidence, exact edits and the `bt_factor`
+> Professional cross-check: `CORPUS-STALE-TARGETS.md`. `gforce10`'s 3D
+> section sign divergence vs the Pro is recorded there (§3).
+
 | test(s) | doc / commit | archived | fresh |
 | --- | --- | --- | --- |
 | bt_factor | `integration_quadrature_and_stress_recovery.md` §"When a stored reference value changes"; commit `06e175d` (Lobatto → Gauss) | sigyy 20 | 34.641 (= 20·√3) |
