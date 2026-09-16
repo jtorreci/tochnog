@@ -349,7 +349,7 @@ non-existent reference.
 
 | id | improvement | benefit | risk | effort |
 |---|---|---|---|---|
-| a | hoist the post-solve stress pass | halve added assembly cost | low–moderate | cheap–medium |
+| a | hoist the post-solve stress pass — **DONE** | halve added assembly cost | low–moderate | cheap–medium |
 | b | preconditioner; revisit the mixed solve | robustness; structural fix | medium–high | medium/large |
 | c | clean the `build_safe.sh` full-mode file-checks | a clean CI gate | moderate | medium |
 | d | reproducible corpora + stable runner + recalibration tooling | reproducibility, CI | low–moderate | medium |

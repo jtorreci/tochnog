@@ -1,7 +1,7 @@
 # Backlog — open issues after the convergence cycle
 
 Date: 2026-09-16
-Branch: `dev/masin-kernel-surface` @ `a1362ef`
+Branch: `dev/masin-kernel-surface` @ `e9c40c9`
 
 Every remaining non-PASS corpus test and every residual found during the
 GNU→Professional convergence cycle, with its symptom, root cause, evidence,
@@ -27,83 +27,78 @@ to `CONVERGENCE-CYCLE-REPORT.md`.
 
 ---
 
-## A. validation-suite 233 — the 4 RUNFAIL
+## Resolved since the cycle snapshot
 
-### A1. `iface_tangref` — interface tangential-force record semantics changed
+These items were open when the cycle snapshot (`a1362ef`) was taken and have
+since been closed. They are recorded here so the history is complete; the full
+acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
+`SEGUIMIENTO-CONVERGENCIA.md`.
 
-- **Corpus**: validation-suite 233.
-- **Symptom**: target `element_interface_force_tang2 2 = 10.4025 ±0.2`; the
-  current binary returns `4.99979673431` (four per-IP values, all ≈5.0).
-  The first target `element_interface_force_tang 2 = 0 ±0.001` is met
-  (`-1.75e-14`).
-- **Root cause**: commit `bf74f28` replaced the old "side average,
-  all-against-all" interface assembly with a per-integration-point
-  facing-pair assembly with Lobatto weights, and changed the history records
-  (`element_interface_strain_normal`, `..._force_tang`, `..._force_tang2`)
-  from a scalar to a length-4 per-IP array. The stored target `10.4025 ±0.2`
-  is tied to the old scalar semantics; HEAD returns the per-IP value.
-  Onset bisect: `7823d27` (good, scalar `10.3532842167`) → `bf74f28` (first
-  4-value form) → `6cafafe`/HEAD (per-IP `4.9998`).
-- **Evidence**: `CORPUS-STALE-TARGETS.md` §"Inertia-apply reconstruction" §3.1;
-  `residual-iface_tangref-bisect/`.
-- **Severity**: **MEDIUM** — a test-target/semantics mismatch, not a source
-  defect; the per-IP record is the validated Professional-aligned behaviour.
-- **Proposed fix**: recalibrate the target to the current honest per-IP value
-  (`4.9998`), a corpus decision like the 14 recalibrations already applied.
-  Alternatively, add an explicit `group_interface`-level assembly selector if
-  the old scalar aggregate is still wanted (a new feature, not a bug fix).
-- **Effort**: **cheap** (target recalibration); **medium** (assembly selector).
-
-### A2. `iface_gen_method_gen` — reconstruction dropped the input `element_geometry` records
+### R1. `iface_tangref` — target recalibrated to the honest per-IP value
 
 - **Corpus**: validation-suite 233.
-- **Symptom**: target `element_geometry 3 = 10 ±1`; `exit_tn` reports
-  "Error in calculation" because `element_geometry 3` does not exist.
-- **Root cause**: the reconstruction's drop-list classified `element_geometry`
-  as a run-produced record, so the three **input** records
-  (`element_geometry 1 20`, `2 30`, `3 10`) were dropped. The archive has
-  them; HEAD generates elements 4 and 5 instead.
-- **Evidence**: `CORPUS-STALE-TARGETS.md` §3.2; variant-A re-insertion test
-  (`residual-iface_gen_method_gen-variantA/`) gives rc=0.
-- **Severity**: **LOW** — a reconstruction artifact affecting one test; the
-  sibling `iface_gen_method` is harmless because its target is a `node_dof`.
-- **Proposed fix**: restore the three input records (trivial, faithful to the
-  archive) **or**, preferably, redesign the target to exercise the generation
-  feature rather than the input tag (the archive has no generated elements,
-  HEAD generates 4 and 5). The second option is the honest one and is why the
-  record restore was deliberately not applied in the cycle.
-- **Effort**: **cheap**.
+- **Was**: target `element_interface_force_tang2 2 = 10.4025 ±0.2` (pre-`bf74f28`
+  scalar "side average, all-against-all" semantics).
+- **Resolution**: since `bf74f28` the record is a length-4 per-integration-point
+  array; the honest converged per-IP value is `4.9998` (the interface carries the
+  applied load 5; all four IPs agree to 4e-9). The target was recalibrated to
+  `4.9998 ±0.2` (tolerance kept), a corpus decision like the 14 earlier
+  recalibrations.
+- **Commit**: `fbcf144`.
+- **Evidence**: `CORPUS-STALE-TARGETS.md` §1 (validation-suite 234: 229/5 →
+  231/3; the 233 real tests 229/4 → 231/2; sfnet byte-identical).
 
-### A3. `elmethod` — lost `-follow_material` reference geometry (secondary target)
+### R2. `iface_gen_method_gen` — generated element mis-classified as input
 
 - **Corpus**: validation-suite 233.
-- **Symptom**: the primary A/B passes (`-middle` 2 lines / `-node` 4 lines,
-  `2*mid == x_node2`); the secondary `node_dof 3 -velix` target (`-0.369`) is
-  not reproducible.
-- **Root cause**: the `-follow_material` reference geometry
-  (`node_start_refined`) is lost by the reconstruction; the dump `node` is the
-  **deformed** geometry. Re-inserting `node_start_refined` as input did not
-  reproduce the archived `-0.369` on either the current or the 2026-08-28
-  binary.
-- **Evidence**: `CORPUS-RECONSTRUCTION.md` §2.1, §3.
-- **Severity**: **LOW** — the feature under test (`control_print_element_method`)
-  works; only the secondary velocity target is unrecoverable.
-- **Proposed fix**: recover the original input form (e.g. the exact
-  `control_mesh`/geometry records that produced the reference configuration)
-  or recalibrate the secondary target to the honest current value.
-- **Effort**: **medium**.
+- **Was**: the reconstruction's drop-list turned the **generated** interface
+  element 3 into an input element and dropped the genuine input
+  `element_geometry` records, so the target `element_geometry 3 = 10` did not
+  exist ("Error in calculation").
+- **Resolution**: remove the input `element 3` line and restore the input
+  `element_geometry 1 20` / `2 30`; the generator now produces element 3 with
+  `element_geometry 3 10`, so the target reads the **generated** record (the run's
+  `element_geometry` set is byte-identical to the archive).
+- **Commit**: `fbcf144`.
+- **Evidence**: `CORPUS-STALE-TARGETS.md` §2.
 
-### A4. `numit` — lost `-follow_material` reference geometry (secondary target)
+### R3. `elmethod` / `numit` — lost `-follow_material` reference geometry + initial truss force
 
 - **Corpus**: validation-suite 233.
-- **Symptom**: the primary feature passes (exactly 16 monitor lines); the
-  secondary `node_dof 2 -velix` target (`-0.123 = 0.877 - 1`) is not
-  reproducible.
-- **Root cause**: same as A3 — the deformed geometry is what the dump stored.
-- **Evidence**: `CORPUS-RECONSTRUCTION.md` §2.1, §3.
-- **Severity**: **LOW**.
-- **Proposed fix**: same as A3.
-- **Effort**: **medium**.
+- **Was**: the reconstruction used the dump `node` (the **deformed** geometry
+  under `-follow_material`) as input, and the drop-list removed the initial
+  `element_truss_force` self-stress (the dump keeps only the relaxed final value
+  ≈0). The secondary velocity targets were therefore unrecoverable.
+- **Resolution**: restore the reference geometry (`node_start_refined` is the
+  input reference; `top.cc:269`) and derive the initial forces from the
+  documented relaxation law `F_init = k·(L_init − L_final)`, `k = E·A/L_init`
+  (elmethod 0.123 / 0.246, numit 0.123). The reconstructed inputs reproduce the
+  archived `.dbs` byte-for-byte (state and prints).
+- **Commit**: `c8ee32e`.
+- **Evidence**: `CORPUS-STALE-TARGETS.md` §"`-follow_material` reference geometry
+  + initial truss force" (validation-suite 234: 231/3 → 233/1; the 233 real
+  tests 233/233; sfnet unchanged).
+
+### R4. Post-solve stress pass cost (old C4) — hoisted out of the loop
+
+- **Corpus**: all models with `materi_stress` + the absolute recovery (e.g. the
+  delete/mpc family).
+- **Was**: the post-solve stress sync (`dae06a3`) ran a stress-only
+  `element_loop()` after every equilibrium iteration, roughly doubling the
+  element-assembly cost for those models.
+- **Resolution**: the pass was hoisted out of the equilibrium loop (`3957809`,
+  docs `e0a3997`): it now runs once per step and assigns the stress dofs directly
+  via a stress-only variant of `parallel_new_dof_diagonal`. Measured speedups:
+  `large3` 1.23–1.25×, `dynamic8` 1.12–1.21×, `delete3` ~1.14× (small tests are
+  startup-dominated). This is improvement item (a) in `IMPROVEMENT-ANALYSIS.md`,
+  now marked **DONE**.
+- **Acceptance**: mpc5 `sigyy=0.5` at k=1,2,3,5, delete2 `sigxx=0.8`, delete3
+  `sigyy=0.6` unchanged; sfnet 197 and validation-suite 233 classification diff
+  0; internal suite 16/16. Two non-target derived-dof changes are documented
+  (`contact_heatgen` `xsigyy`; `mpc8` `sigxx`, which now matches the Professional
+  better).
+- **Evidence**: `manual-developer/nodal_stress_post_solve_sync.md`
+  §Cost / §Verification.
 
 ---
 
@@ -316,26 +311,6 @@ to `CONVERGENCE-CYCLE-REPORT.md`.
   post-processing, then restore the Professional-aligned target (`-5000`).
 - **Effort**: **medium** (post-processing subsystem).
 
-### C4. Post-solve stress pass cost
-
-- **Corpus**: all models with `materi_stress` + the absolute recovery (e.g.
-  the delete/mpc family).
-- **Symptom**: the element pass runs twice per equilibrium iteration
-  (`nodal_stress_post_solve_sync`), roughly doubling the element-assembly cost
-  for those models. No corpus timeout or classification changed.
-- **Root cause**: the post-solve stress sync (`dae06a3`) is implemented as a
-  full stress-only `element_loop()` after every solve, because the stress dofs
-  are non-principal and must be refreshed from the solved velocity.
-- **Evidence**: `manual-developer/nodal_stress_post_solve_sync.md` §Cost,
-  §Pending refactorings.
-- **Severity**: **MEDIUM** — a performance cost in a common configuration
-  (any model reporting `materi_stress`).
-- **Proposed fix**: hoist the pass after the equilibrium loop and update the
-  stress dofs once (manually or via a stress-only variant of
-  `parallel_new_dof_diagonal`), halving the added cost. See
-  `IMPROVEMENT-ANALYSIS.md` §a.
-- **Effort**: **cheap**–**medium**.
-
 ### C5. `contact_target_geometry` alias only reads index 0
 
 - **Corpus**: not exercised by the corpus (all corpus tests use the GNU name
@@ -352,16 +327,33 @@ to `CONVERGENCE-CYCLE-REPORT.md`.
   and handle all indices.
 - **Effort**: **medium**.
 
+### C6. `iface_gen*` — reconstructed inputs do not exercise interface generation
+
+- **Corpus**: validation-suite 233 (`iface_gen`, `iface_gen_method`,
+  `iface_gen_geom`, `iface_gen_quad9`).
+- **Symptom**: the same drop-list defect that produced R2 turned the
+  **generated** interface element(s) into input elements in these four tests as
+  well (`iface_gen` element 3, `iface_gen_method` element 3, `iface_gen_geom`
+  element 3, `iface_gen_quad9` elements 3 and 4). Their targets are `node_dof`
+  values, so they pass either way, but the reconstructed input does not exercise
+  the generation feature.
+- **Root cause**: `element_geometry` was classified as a run-produced record and
+  dropped; the generator's output element was kept as an input element.
+- **Evidence**: `CORPUS-STALE-TARGETS.md` §2 "Family note".
+- **Severity**: **MEDIUM** — a corpus-coverage gap: a future regression in
+  interface generation would not be caught by these tests.
+- **Proposed fix**: apply the R2 correction to the four siblings (remove the
+  generated input element, restore the input `element_geometry` tags) and confirm
+  the targets still pass; five currently-passing tests are touched, so it is a
+  separate work unit with a full A/B.
+- **Effort**: **cheap**.
+
 ---
 
 ## D. Summary
 
 | id | corpus | item | severity | effort |
 |---|---|---|---|---|
-| A1 | validation-suite | `iface_tangref` target vs per-IP semantics | MEDIUM | cheap/medium |
-| A2 | validation-suite | `iface_gen_method_gen` dropped input records | LOW | cheap |
-| A3 | validation-suite | `elmethod` lost reference geometry | LOW | medium |
-| A4 | validation-suite | `numit` lost reference geometry | LOW | medium |
 | B1 | sfnet | `examp6` remesh node numbering | MEDIUM | cheap/large |
 | B2 | sfnet | `examp14` stale target + runtime | LOW | cheap |
 | B3 | sfnet | `examp17` stale target | LOW | medium |
@@ -374,10 +366,14 @@ to `CONVERGENCE-CYCLE-REPORT.md`.
 | C1 | sfnet | `pruebavel` dead/malformed | LOW | cheap |
 | C2 | validation-suite | `groundflow_interface` `gvelx` sign | LOW | medium |
 | C3 | sfnet | `gforce10` 3D section sign | MEDIUM | medium |
-| C4 | all | post-solve stress pass cost | MEDIUM | cheap/medium |
 | C5 | — | `contact_target_geometry` index-0 alias | MEDIUM | medium |
+| C6 | validation-suite | `iface_gen*` generation-coverage gap | MEDIUM | cheap |
 
-No open issue is CRITICAL or HIGH: every remaining failure is a stale/malformed
-test, an out-of-scope model or infrastructure limit, a narrow post-processing
-divergence, or a performance cost. The source defects found during the cycle
-were fixed and validated against the corpora.
+Fourteen items remain open: four MEDIUM and ten LOW. No open issue is CRITICAL or
+HIGH. The validation-suite corpus has no open failure — its 233 real tests all
+pass. Every remaining failure is a stale or malformed test, an out-of-scope model
+or infrastructure limit, a narrow post-processing divergence, a corpus-coverage
+gap, or a performance cost. The source defects found during the cycle were fixed
+and validated against the corpora. The remaining post-convergence improvements
+(items b–f7) are proposals in `IMPROVEMENT-ANALYSIS.md`; item (a), the post-solve
+stress pass hoist, is the only one already implemented.

@@ -51,15 +51,106 @@ Convergence\par}
 \vspace{1.2cm}
 {\small
 \begin{tabular}{@{}ll@{}}
-\textbf{Branch:}   & \code{dev/\allowbreak masin-kernel-surface} at \code{a1362ef} \\[0.25em]
+\textbf{Branch:}   & \code{dev/\allowbreak masin-kernel-surface} at \code{e9c40c9} \\[0.25em]
 \textbf{Corpora:}  & sfnet 197, validation-suite 233, internal suite 16 \\[0.25em]
+\textbf{Result:}   & \textbf{420/430 combined (97.7\%)}; validation-suite 233/233 \\[0.25em]
 \textbf{Sources:}  & \code{ProjectDocs/\allowbreak CONVERGENCE-CYCLE-REPORT.md}, \\
                    & \code{ProjectDocs/\allowbreak IMPROVEMENT-ANALYSIS.md}, \\
                    & \code{ProjectDocs/\allowbreak BACKLOG-OPEN-ISSUES.md}, \\
-                   & \code{ProjectDocs/\allowbreak CORPUS-RECONSTRUCTION.md} \\
+                   & \code{ProjectDocs/\allowbreak CORPUS-RECONSTRUCTION.md}, \\
+                   & \code{ProjectDocs/\allowbreak CORPUS-STALE-TARGETS.md} \\
 \end{tabular}
 }
 \end{titlepage}
+
+% ---------------------------------------------------------------------------
+\chapter*{How to read this report}
+\addcontentsline{toc}{chapter}{How to read this report}
+
+This report has two audiences: the original Tochnog GNU authors, who know the
+code and the physics, and readers who have never seen the project and need the
+story before the detail. The technical body is unchanged in substance; the
+front matter, the background, and the glossary were added so that a newcomer
+can follow it.
+
+\begin{itemize}
+  \item \textbf{In a hurry?} Read \emph{Key results in one page} (next page)
+        and the \emph{Executive summary}. That is the whole outcome in two
+        pages.
+  \item \textbf{New to the project?} Read Part~I: the introduction explains
+        what Tochnog is, why there are two versions, and what ``convergence''
+        means; the glossary defines the domain terms; the context and method
+        chapters state the precise scope and rules.
+  \item \textbf{Looking for a specific change?} Part~II lists the closed work
+        items with their commits and acceptance evidence. Part~III has the
+        metrics; Part~IV the open backlog; Part~V the improvement plan.
+  \item \textbf{Want the evidence?} The appendices document the corpus
+        reconstruction and the reproducibility setup. The per-test ledger is
+        \code{ProjectDocs/\allowbreak SEGUIMIENTO-\allowbreak CONVERGENCIA.md}.
+\end{itemize}
+
+\textbf{Conventions.} \code{PASS} means the process exited with \code{rc=0}
+\emph{and} met the test's own \code{target\_\allowbreak value}; \code{RUNFAIL} means it ran
+but missed the target (or timed out); \code{PARSE} means the input was rejected
+at parse time. File, record and keyword names are set in \code{monospace}.
+Commit hashes identify the exact change on the branch named on the title page.
+``The Professional'' always means the Tochnog Professional binary used as the
+behavioural reference; ``the fork'' means the GNU line under work.
+
+% ---------------------------------------------------------------------------
+\chapter*{Key results in one page}
+\addcontentsline{toc}{chapter}{Key results in one page}
+
+\textbf{The question.} The GNU fork of Tochnog and Tochnog Professional share
+the same input language and the same physical models, but over the years they
+drifted: the same input can give different answers on the two. This cycle asked
+\emph{why}, fixed the GNU side where the difference was a genuine defect, and
+proved each fix against the Professional binary.
+
+\textbf{The result.} On the two reproducible test corpora:
+
+\begin{center}
+\begin{tabular}{@{}L{5.4cm}rrrr@{}}
+\toprule
+Corpus & Tests & PASS & RUNFAIL & PARSE \\
+\midrule
+sfnet 197 (in-repo test set)          & 197 & 187 & 9 & 1 \\
+validation-suite 233 (reconstructed)  & 233 & \textbf{233} & 0 & 0 \\
+\textbf{Combined}                     & \textbf{430} & \textbf{420 (97.7\%)} & \textbf{9} & \textbf{1} \\
+Internal build suite                  & 16 & 16 & 0 & 0 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\textbf{What was fixed.} A set of genuine defects in the GNU fork, each
+validated against the corpora: the Bi-CG direct-LU retry band width (which
+silently corrupted coupled consolidation), a missing \code{else} in the
+local-refinement dispatch, spurious \code{node\_\allowbreak dof} requests that aborted
+mesh-only models, an inverted groundflow velocity sign, a record-length limit
+that made a documented camclay form unreachable, and the nodal-stress recovery
+operator (the Professional assigns an absolute weighted average; the fork
+accumulated increments). The full list is in Part~II.
+
+\textbf{What it means.} A user can now run the same input on the GNU fork and
+expect the same behaviour as the Professional on the great majority of models.
+No remaining failure is a known source defect: every one is a stale or
+malformed test input, an out-of-scope model or infrastructure limit, a narrow
+post-processing divergence, or a performance cost (Part~IV).
+
+\textbf{How it was done.} Evidence before change: every fix started from a
+reproduced symptom and a reproduced root cause, and was accepted only after a
+full corpus A/B showed exactly the intended change with zero regressions.
+Hypotheses that the measurements refuted were recorded and \emph{not} acted on
+(Part~II, \emph{Refuted hypotheses}).
+
+\textbf{A recovered corpus.} The validation suite's inputs had been deleted;
+they were reconstructed from archived \code{.dbs} database dumps, with the
+recovery validated against every known ground-truth pair
+(Appendix~\ref{app:reconstruction}).
+
+\textbf{Where to go next.} Part~V is the post-convergence improvement plan:
+solver robustness, reproducible corpora, and the remaining performance work.
+These are proposals, not commitments.
 
 % ---------------------------------------------------------------------------
 \chapter*{Executive summary}
@@ -72,22 +163,24 @@ measurement: every candidate fix began from a reproduced symptom and a reproduce
 root cause, and was accepted only after a full A/B run of both test corpora
 showed exactly the intended classification change with zero regressions.
 
-The cycle closed 21 work items, fixed a set of genuine defects in the GNU fork,
+The cycle closed 24 work items, fixed a set of genuine defects in the GNU fork,
 and---equally important---refuted a number of plausible hypotheses before any
 speculative edit was made. It also recovered a deleted validation corpus from
 archived \code{.dbs} database dumps, using a derivation that was validated
 against every known ground-truth pair.
 
-The measured result is \textbf{416 of 430 corpus tests passing (96.7\%)}: sfnet
+The measured result is \textbf{420 of 430 corpus tests passing (97.7\%)}: sfnet
 197 is at \textbf{187 PASS / 9 RUNFAIL / 1 PARSE}, and the reconstructed
-validation-suite 233 is at \textbf{229 PASS / 4 RUNFAIL}. The internal build suite
-remains \textbf{16/16}. No open issue is rated CRITICAL or HIGH: every remaining
-failure is a stale or malformed test input, an out-of-scope model or
-infrastructure limit, a narrow post-processing divergence, or a performance
-cost.
+validation-suite 233 is at \textbf{233 PASS / 0 RUNFAIL / 0 PARSE}. The internal
+build suite remains \textbf{16/16}. No open issue is rated CRITICAL or HIGH:
+every remaining failure is a stale or malformed test input, an out-of-scope
+model or infrastructure limit, a narrow post-processing divergence, or a
+performance cost.
 
-The report is organised in five parts. Part~I states the context and the method.
-Part~II presents the 21 closed items with their commits and acceptance evidence,
+The report is organised in five parts. Part~I states the background (what
+Tochnog is and what convergence means), a glossary for newcomers, the context,
+and the method.
+Part~II presents the 24 closed items with their commits and acceptance evidence,
 the mechanisms discovered, and the hypotheses that were refuted. Part~III reports
 the results and the current status. Part~IV summarises the open backlog by
 severity. Part~V presents the post-convergence improvement plan with its effort
@@ -98,7 +191,174 @@ reproducibility notes.
 \tableofcontents
 
 % ===========================================================================
-\part{Context and Method}
+\part{Background and Method}
+
+\chapter{Introduction and background}
+\label{ch:intro}
+
+\section{What Tochnog is}
+
+Tochnog is a finite-element program: it solves differential equations over a
+mesh by dividing the domain into elements, evaluating the governing physics at
+integration points inside each element, assembling a global system, and solving
+it for the unknown degrees of freedom. Tochnog's home ground is solid and
+geotechnical mechanics (elasticity, plasticity, hypoplasticity, consolidation,
+contact and interfaces), with heat conduction, groundwater flow, and coupled
+thermo-hydro-mechanical problems alongside. A model is described in a
+plain-text input file made of keyword records, so the same input language
+drives every problem.
+
+\section{Two lines of the same code}
+\label{sec:two-lines}
+
+The program exists in two lines that share a common ancestry and the same input
+language:
+
+\begin{itemize}
+  \item \textbf{The GNU fork} --- the open-source line, whose last SourceForge
+        (sf.net) release is from January 2014. This is the line under work. Its
+        test inputs are the ``sfnet'' corpus referred to throughout.
+  \item \textbf{Tochnog Professional} --- the proprietary line, maintained on
+        the Professional side, which documents a much larger keyword set and
+        serves here as the \emph{behavioural reference}.
+\end{itemize}
+
+Because the two share the input language and the physics, a user should be able
+to take a model written for one, run it on the other, and get the same answer.
+Over the years the two lines drifted apart in a number of behaviours, and that
+drift is the problem this report is about.
+
+\section{What ``convergence'' means here}
+\label{sec:intro-convergence}
+
+Convergence in this report is \emph{behavioural}: close the tests the GNU fork
+fails, and for every failure that remains, establish an evidence-backed reason
+(source defect, deliberate divergence, stale input or target, or out of scope)
+instead of leaving it unexplained. It is \emph{not} a claim that the two
+binaries produce bit-identical numbers; the goal is that the same input
+produces the same physical behaviour, within the tolerance each test declares.
+
+The Professional binary is the arbiter: where the GNU result differs, the
+question is whether the GNU behaviour is a defect relative to the reference.
+If it is, the GNU side is fixed and the fix is proved by running both corpora
+before and after; if it is not, the difference is documented and classified
+rather than patched away.
+
+\section{Why this matters}
+
+For a user, the value is portability and trust: an input written for Tochnog
+can be moved between the GNU and Professional lines without silently changing
+the answer, and a result obtained with the GNU fork can be checked against the
+Professional reference. For the project, the value is a clean, honest baseline:
+the remaining failures are known and classified, so future work starts from
+evidence rather than from a list of unexplained red tests. The cycle also
+recovered a validation suite whose inputs had been deleted, turning an
+un-runnable set into a reproducible one.
+
+\section{How the problem was attacked, in plain terms}
+
+The effort was evidence-led. For each failing test, the first step was to
+reproduce the symptom and then reproduce the \emph{cause} --- ideally by
+comparing the GNU run, the reference GNU 2014 build, and the Professional
+binary. A change was made only once the cause was measured. It was then kept
+only if a full run of both corpora showed that exactly the intended tests
+changed and nothing else regressed. Many plausible explanations were measured
+and \emph{refuted} before any speculative edit was made; those refutations are
+recorded as results in their own right, because acting on them would have
+introduced regressions.
+
+The technical chapters that follow state the same scope and method precisely,
+for readers who want the exact definitions and rules.
+
+\chapter{Glossary}
+\label{ch:glossary}
+
+This chapter defines the terms a reader coming to the project for the first
+time is likely not to know. The definitions are deliberately short; the
+technical chapters give the precise usage.
+
+\section*{The project and its versions}
+\begin{description}
+  \item[Finite-element method (FEM)] A numerical method that solves a
+        differential equation by splitting the domain into small pieces
+        (elements) and approximating the solution within each.
+  \item[Tochnog] A finite-element program for solid and geotechnical
+        mechanics, heat and groundwater flow, and coupled problems, driven by a
+        keyword-based text input.
+  \item[GNU fork] The open-source line of Tochnog; its last sf.net release is
+        from January 2014. The line under work.
+  \item[Tochnog Professional] The proprietary line, used here as the
+        behavioural reference.
+  \item[sfnet 197] The in-repo test set taken from the sf.net release: 197 test
+        inputs.
+  \item[validation-suite 233] A reconstructed suite of 233 test inputs; the
+        originals had been deleted and were recovered from \code{.dbs} dumps.
+  \item[internal suite 16] The repository's own build smoke tests (16).
+  \item[Corpus] A collection of test inputs run together as a measurement
+        basis; ``combined 430'' is sfnet 197 plus validation-suite 233.
+\end{description}
+
+\section*{Running a test}
+\begin{description}
+  \item[\code{.dat} (input file)] The plain-text model a user writes, as a
+        sequence of keyword records.
+  \item[\code{.dbs} (database dump)] The file the binary writes at the end of a
+        run. It mixes the parsed input records with run-produced state; this is
+        what made the lost inputs recoverable.
+  \item[PASS / RUNFAIL / PARSE] The three classifications. \code{PASS}: the
+        process exits with \code{rc=0} \emph{and} the test's own
+        \code{target\_\allowbreak value} is met. \code{RUNFAIL}: it runs but misses
+        the target, or times out. \code{PARSE}: the input is rejected while
+        being read.
+  \item[\code{target\_\allowbreak value}] The expected value declared inside a test;
+        the binary checks it and sets the exit code accordingly.
+  \item[\code{rc}] The process exit code; \code{rc=0} means success.
+  \item[Work unit] One self-contained change: the code, its verification, and
+        its documentation, committed together.
+  \item[A/B] Running a corpus before and after a change and diffing the
+        per-test classification, to prove that only the intended tests moved.
+  \item[Regression] A test that passed before a change and fails after it.
+\end{description}
+
+\section*{Numerics and mechanics}
+\begin{description}
+  \item[Degree of freedom (dof)] An unknown of the discrete problem, attached
+        to a node or an element (displacement, temperature, pressure, ...).
+  \item[Integration point (IP)] A sampling point inside an element where the
+        material response is evaluated; the element integral is built from
+        these points.
+  \item[Quadrature] The numerical rule (a set of points and weights) used to
+        integrate over an element. \textbf{Gauss} and \textbf{Lobatto} are two
+        such rules with different point placement and accuracy. The
+        Professional uses Gauss for the element integral; the historic GNU
+        default was Lobatto.
+  \item[Bi-CG (biconjugate gradient)] An iterative solver for the linear
+        system. On ill-conditioned systems it may fail to converge; Tochnog
+        then retries with a direct solver.
+  \item[Direct LU / \code{dgbsv}] A banded direct factorisation used as the
+        retry when the iterative solver breaks down.
+  \item[Preconditioner] A transformation applied to make an iterative solver
+        converge faster (for example, a diagonal/Jacobi scaling).
+  \item[mpc / tie] A multi-point constraint: a linear relation between two or
+        more degrees of freedom (for example, tying two nodes together at an
+        interface).
+  \item[Nodal stress recovery] Converting stresses computed at integration
+        points into smooth values at nodes, typically by a least-squares fit
+        per element followed by an average over the adjacent elements.
+  \item[Hypoplasticity / Ma\v{s}in models] A family of soil constitutive models
+        (Ma\v{s}in 2005/2007) implemented in the fork and validated in this
+        cycle.
+  \item[Refuted hypothesis] A candidate cause that measurement disproved. It is
+        recorded so that it is not acted on later.
+\end{description}
+
+\section*{Severity and effort}
+The backlog (Part~IV) rates each open issue by severity
+(CRITICAL / HIGH / MEDIUM / LOW) and by effort (cheap / medium / large); the
+scales are defined at the head of that part. In short: CRITICAL would corrupt
+common results, HIGH a documented feature diverges on a plausible model, MEDIUM
+a narrow or legacy divergence, and LOW a single test artifact or a cosmetic
+issue.
 
 \chapter{Context}
 \label{ch:context}
@@ -190,8 +450,13 @@ rules.
 \chapter{Closed items}
 \label{ch:closed}
 
-The cycle closed 21 work items. Each row below gives the item, its commit(s) on
-\code{dev/\allowbreak masin-kernel-surface} (ancestors of \code{a1362ef}), and the acceptance
+This part is the record of what was actually changed. A reader new to the
+project does not need every row: the point of the table is that each change is
+traceable to a commit and to the evidence that accepted it. The rows are in
+chronological order of closure.
+
+The cycle closed 24 work items. Each row below gives the item, its commit(s) on
+\code{dev/\allowbreak masin-kernel-surface} (ancestors of \code{e9c40c9}), and the acceptance
 evidence that was recorded when the item was closed.
 
 \begin{longtable}{@{}r L{5.0cm} L{2.6cm} L{5.6cm}@{}}
@@ -311,9 +576,26 @@ evidence that was recorded when the item was closed.
     Pro model; 201 $\rightarrow$ 216 PASS, 15 RUNFAIL $\rightarrow$ PASS, 0
     regressions. \\
 21 & \code{inertia\_\allowbreak apply -yes} reconstruction of the 15 solver-divergence tests
-  & \code{c2f7f6c}
-  & 13/15 converge to their stored targets; validation-suite 216 $\rightarrow$
-    229 PASS; the 2 residuals carry separate causes (Chapter~\ref{ch:backlog}). \\
+   & \code{c2f7f6c}
+   & 13/15 converge to their stored targets; validation-suite 216 $\rightarrow$
+     229 PASS; the 2 residuals carry separate causes (Chapter~\ref{ch:backlog}). \\
+22 & Reconstruction residuals: \code{iface\_\allowbreak tangref} target recalibrated to
+     the honest per-IP value (4.9998), and \code{iface\_\allowbreak gen\_\allowbreak method\_\allowbreak gen} restored
+     to the archive's input/generated element split
+   & \code{fbcf144}
+   & 2 RUNFAIL $\rightarrow$ PASS; validation-suite 229 $\rightarrow$ 231 PASS, 0
+     regressions; sfnet byte-identical. \\
+23 & Post-solve stress pass hoisted out of the equilibrium loop (performance;
+     improvement~(a))
+   & \code{3957809}
+   & 1.12--1.25$\times$ on \code{large3}/\code{dynamic8}; mpc5/delete2/delete3
+     targets unchanged; corpus classification diff 0; internal 16/16. \\
+24 & \code{-follow\_\allowbreak material} reference geometry + initial
+     \code{element\_\allowbreak truss\_\allowbreak force} self-stress (\code{elmethod}, \code{numit})
+   & \code{c8ee32e}
+   & validation-suite 231 $\rightarrow$ 233 real tests \textbf{233/233};
+     reconstructed inputs byte-identical to the archived \code{.dbs}; sfnet
+     unchanged. \\
 \end{longtable}
 
 \chapter{Key mechanisms discovered}
@@ -464,6 +746,24 @@ success. It also exposed a latent defect: the direct-LU retry band width used
 coupling of adjacent nodes wrote outside \code{mat}/\code{ldmat} and silently
 corrupted the retry (\code{6eb399d}).
 
+\section{The \code{-follow\_\allowbreak material} reference geometry}
+\label{sec:follow-material}
+
+Under \code{-follow\_\allowbreak material} the mesh follows the material, so the
+\code{node} record in a \code{.dbs} dump is the \emph{deformed} geometry, while
+the input reference is preserved in \code{node\_\allowbreak start\_\allowbreak refined}
+(\code{top.cc} copies the input \code{NODE} there at the start of the run). The
+reconstruction had used the deformed \code{node} as input, which is why
+\code{elmethod} and \code{numit} would not reproduce their archived targets. The
+second lost record was the initial \code{element\_\allowbreak truss\_\allowbreak force}
+self-stress, which the dump stores only in its relaxed final state
+($\approx 0$). With the reference geometry restored and the initial force
+derived from the documented relaxation law
+($F_{\mathrm{init}} = k\,(L_{\mathrm{init}} - L_{\mathrm{final}})$, with
+$k = EA/L_{\mathrm{init}}$), the reconstructed inputs reproduce the archived
+\code{.dbs} byte-for-byte. This is a corpus-reconstruction mechanism, not a
+source change.
+
 \chapter{Refuted hypotheses}
 \label{ch:refuted}
 
@@ -529,8 +829,8 @@ speculative edits that would have regressed the corpora.
 Corpus & Start of cycle (PASS) & End of cycle (PASS) & Net \\
 \midrule
 sfnet 197 & 160 / 197 & \textbf{187 / 197} & $+27$ \\
-validation-suite 233 & 201 / 233\textsuperscript{\dag} & \textbf{229 / 233} & $+28$ \\
-Combined 430 & 361 / 430 (84.0\%)\textsuperscript{\ddag} & \textbf{416 / 430 (96.7\%)} & $+55$ \\
+validation-suite 233 & 201 / 233\textsuperscript{\dag} & \textbf{233 / 233} & $+32$ \\
+Combined 430 & 361 / 430 (84.0\%)\textsuperscript{\ddag} & \textbf{420 / 430 (97.7\%)} & $+59$ \\
 Internal suite & 16 / 16 & \textbf{16 / 16} & --- \\
 \bottomrule
 \end{tabular}
@@ -544,8 +844,8 @@ Before reconstruction the corpus was effectively 0 runnable tests.
 \textsuperscript{\ddag}~Sum of the per-corpus start figures (160 and 201). The
 source document's combined-start cell reads 388 (90.2\%), which equals the sfnet
 \emph{end} (187) plus the validation start (201); the per-corpus starts sum to
-361. The combined \emph{end} of 416/430 (96.7\%) is consistent with both corpora's
-ends.
+361. The combined \emph{end} of 420/430 (97.7\%) is consistent with both corpora's
+ends (187 + 233).
 
 \section{Convergence table}
 
@@ -555,8 +855,8 @@ ends.
 Corpus & Size & PASS & RUNFAIL & PARSE & PASS rate \\
 \midrule
 sfnet 197 & 197 & 187 & 9 & 1 & 94.9\% \\
-validation-suite 233 & 233 & 229 & 4 & 0 & 98.3\% \\
-\textbf{Combined} & \textbf{430} & \textbf{416} & \textbf{13} & \textbf{1} & \textbf{96.7\%} \\
+validation-suite 233 & 233 & \textbf{233} & 0 & 0 & 100\% \\
+\textbf{Combined} & \textbf{430} & \textbf{420} & \textbf{9} & \textbf{1} & \textbf{97.7\%} \\
 Internal suite & 16 & 16 & 0 & 0 & 100\% \\
 \bottomrule
 \end{tabular}
@@ -574,6 +874,10 @@ Internal suite & 16 & 16 & 0 & 0 & 100\% \\
   \item The final sfnet bucket is \code{9 RUNFAIL /\allowbreak  1 PARSE} rather than
         \code{10 RUNFAIL /\allowbreak  0} only because \code{pruebavel} is classified as
         \code{PARSE} (unknown-record error); the PASS count is unchanged.
+  \item The validation-suite directory holds one generated dump file
+        (\code{print\_\allowbreak mesh\_\allowbreak dof.dat}) that is not a test input. The 233
+        real tests are all \code{PASS}; the dump is excluded from the
+        denominator.
 \end{itemize}
 
 % ===========================================================================
@@ -615,6 +919,13 @@ Level & Meaning \\
 
 \section{Open issues by severity}
 
+The table below is the current open backlog. Four validation-suite residuals
+and the performance cost that were still open at the cycle snapshot have since
+been closed (see \emph{Resolved since the cycle snapshot} below); the
+validation-suite corpus now has no open failure. The remaining entries are all
+sfnet, plus the unexercised alias, the interface sign residual, and the
+interface-generation coverage gap.
+
 \begin{longtable}{@{}r L{2.5cm} L{7.4cm} L{1.7cm} L{2.2cm}@{}}
 \toprule
 Id & Corpus & Item & Severity & Effort \\
@@ -626,10 +937,6 @@ Id & Corpus & Item & Severity & Effort \\
 \endhead
 \bottomrule
 \endlastfoot
-A1 & validation & \code{iface\_\allowbreak tangref} target vs per-IP semantics & MEDIUM & cheap/medium \\
-A2 & validation & \code{iface\_\allowbreak gen\_\allowbreak method\_\allowbreak gen} dropped input records & LOW & cheap \\
-A3 & validation & \code{elmethod} lost reference geometry & LOW & medium \\
-A4 & validation & \code{numit} lost reference geometry & LOW & medium \\
 B1 & sfnet & \code{examp6} remesh node numbering & MEDIUM & cheap/large \\
 B2 & sfnet & \code{examp14} stale target + runtime & LOW & cheap \\
 B3 & sfnet & \code{examp17} stale target & LOW & medium \\
@@ -642,23 +949,50 @@ B9 & sfnet & \code{taylor3} stale input + solver & LOW & medium \\
 C1 & sfnet & \code{pruebavel} dead/malformed & LOW & cheap \\
 C2 & validation & \code{groundflow\_\allowbreak interface} \code{gvelx} sign & LOW & medium \\
 C3 & sfnet & \code{gforce10} 3D section sign & MEDIUM & medium \\
-C4 & all & post-solve stress pass cost & MEDIUM & cheap/medium \\
 C5 & --- & \code{contact\_\allowbreak target\_\allowbreak geometry} index-0 alias & MEDIUM & medium \\
+C6 & validation & \code{iface\_\allowbreak gen*} generation-coverage gap & MEDIUM & cheap \\
 \end{longtable}
+
+\section{Resolved since the cycle snapshot}
+
+These items were open when the first version of this report was written and
+have since been closed; they are listed here so the history is complete.
+
+\begin{itemize}
+  \item \textbf{A1 \code{iface\_\allowbreak tangref}} --- the target was recalibrated to the
+        honest per-IP value (4.9998); the archived 10.3533 came from the
+        pre-\code{bf74f28} scalar interface assembly. Closed by \code{fbcf144}.
+  \item \textbf{A2 \code{iface\_\allowbreak gen\_\allowbreak method\_\allowbreak gen}} --- the reconstruction was
+        corrected to the archive's input/generated element split, so the target
+        now reads the \emph{generated} \code{element\_\allowbreak geometry} record rather than
+        an input tag. Closed by \code{fbcf144}.
+  \item \textbf{A3 \code{elmethod} / A4 \code{numit}} --- the \code{-follow\_\allowbreak material}
+        reference geometry and the initial \code{element\_\allowbreak truss\_\allowbreak force}
+        self-stress were recovered; the reconstructed inputs now reproduce the
+        archived \code{.dbs} byte-for-byte. Closed by \code{c8ee32e}
+        (Section~\ref{sec:follow-material}).
+  \item \textbf{C4 post-solve stress pass cost} --- the stress pass was hoisted
+        out of the equilibrium loop, removing the duplicated element pass
+        (1.12--1.25$\times$ measured). Closed by \code{3957809}
+        (improvement~(a)).
+\end{itemize}
 
 \section{Summary}
 
-No open issue is CRITICAL or HIGH. Every remaining failure is a stale or
-malformed test, an out-of-scope model or infrastructure limit, a narrow
-post-processing divergence, or a performance cost. The source defects found
-during the cycle were fixed and validated against the corpora.
+No open issue is CRITICAL or HIGH, and the validation-suite corpus has no open
+failure: its 233 tests all pass. Fourteen items remain open: four MEDIUM and ten
+LOW. Every remaining failure is a stale or malformed test, an out-of-scope model
+or infrastructure limit, a narrow post-processing divergence, a coverage gap, or
+a performance cost. The source defects found during the cycle were fixed and
+validated against the corpora.
 
-The validation-suite failures are two reconstruction residuals
-(\code{iface\_\allowbreak tangref}, \code{iface\_\allowbreak gen\_\allowbreak method\_\allowbreak gen}) and two lost-reference-geometry
-tests (\code{elmethod}, \code{numit}). The sfnet failures are the stale or
-malformed inputs, the $O(N^2)$ mesh-mapping runtime, the PETSc build
-infrastructure, and two post-processing divergences (\code{gforce10}'s 3D section
-sign, and the interface \code{gvelx} convention residual).
+The remaining sfnet failures are the stale or malformed inputs, the $O(N^2)$
+mesh-mapping runtime, the PETSc build infrastructure, and two post-processing
+divergences (\code{gforce10}'s 3D section sign, and the interface \code{gvelx}
+convention residual). The cross-corpus items left are the unexercised
+\code{contact\_\allowbreak target\_\allowbreak geometry} index-0 alias and the
+\code{iface\_\allowbreak gen*} generation-coverage gap (the reconstructed inputs
+pass via \code{node\_\allowbreak dof} but do not exercise interface generation).
 
 % ===========================================================================
 \part{Future Plans}
@@ -684,7 +1018,7 @@ Id & Improvement & Benefit & Risk & Effort \\
 \endhead
 \bottomrule
 \endlastfoot
-a  & Hoist the post-solve stress pass & Halve added assembly cost & low--moderate & cheap--medium \\
+a  & Hoist the post-solve stress pass & \textbf{DONE} (1.12--1.25$\times$) & low--moderate & cheap--medium \\
 b  & Preconditioner; revisit the mixed solve & Robustness; structural fix & medium--high & medium/large \\
 c  & Clean the \code{build\_\allowbreak safe.sh} full-mode file checks & A clean CI gate & moderate & medium \\
 d  & Reproducible corpora + stable runner + recalibration tooling & Reproducibility, CI & low--moderate & medium \\
@@ -701,19 +1035,20 @@ f7 & Document \code{control\_\allowbreak eigen} as GNU-only & Avoid a phantom wo
 \section{Item narratives}
 
 \begin{description}
-  \item[(a) Post-solve stress pass cost.] The post-solve nodal-stress sync
-        (\code{dae06a3}) runs a stress-only \code{element\_\allowbreak loop()} after
-        \emph{every} equilibrium iteration for models with \code{materi\_\allowbreak stress}
-        and the absolute recovery, roughly doubling the element-assembly cost for
-        those models. The proposal is to hoist the pass out of the iteration
-        loop: after the equilibrium loop converges, run the stress-only pass
-        \emph{once} and update the stress dofs (directly, or via a stress-only
-        variant of \code{parallel\_\allowbreak new\_\allowbreak dof\_\allowbreak diagonal}). The in-loop pass exists
-        only so that per-iteration printing stays in sync; if per-iteration
-        printing is not required, the once-per-step form is equivalent for the
-        final report. Risk: low-to-moderate, because the pass ordering interacts
-        with \code{parallel\_\allowbreak new\_\allowbreak dof\_\allowbreak diagonal} and with the structural-element
-        bypass; mitigation is a full corpus A/B plus the delete/mpc family field.
+  \item[(a) Post-solve stress pass cost --- \textbf{DONE}.] The post-solve
+        nodal-stress sync (\code{dae06a3}) ran a stress-only
+        \code{element\_\allowbreak loop()} after \emph{every} equilibrium iteration for
+        models with \code{materi\_\allowbreak stress} and the absolute recovery, roughly
+        doubling the element-assembly cost for those models. Only the final
+        state of a step is reported, so the pass was hoisted out of the
+        equilibrium loop (\code{3957809}): it now runs once per step, after the
+        loop, and assigns the stress dofs directly via a stress-only variant of
+        \code{parallel\_\allowbreak new\_\allowbreak dof\_\allowbreak diagonal}. Measured speedups:
+        \code{large3} (784 elements, 220 iterations) 1.23--1.25$\times$,
+        \code{dynamic8} (16 elements, 4000 iterations) 1.12--1.21$\times$; the
+        small delete/mpc tests are startup-dominated. Targets unchanged
+        (mpc5 \code{sigyy=0.5}, delete2 \code{sigxx=0.8}, delete3
+        \code{sigyy=0.6}); corpus classification diff 0; internal suite 16/16.
 
   \item[(b) Solver robustness.] The solver is honest but not robust on the
         genuinely hard systems. Two effects: the honest Bi-CG criteria (correct,
@@ -823,10 +1158,11 @@ f7 & Document \code{control\_\allowbreak eigen} as GNU-only & Avoid a phantom wo
 
 \section{Recommendation}
 
-Highest value for the least risk: \textbf{(c)} (a clean build gate),
-\textbf{(d)} (a reproducible corpus), and \textbf{(a)} (the performance cost).
-The principled long-term fix is \textbf{(b)/(f2)}, but it depends on the
-shared-node tie consistency and is a corpus-wide refactor.
+The performance cost \textbf{(a)} is already addressed. Highest value for the
+least risk among the remaining proposals: \textbf{(c)} (a clean build gate) and
+\textbf{(d)} (a reproducible corpus). The principled long-term fix is
+\textbf{(b)/(f2)}, but it depends on the shared-node tie consistency and is a
+corpus-wide refactor.
 
 % ===========================================================================
 \appendix

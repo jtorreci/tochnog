@@ -1,7 +1,7 @@
 # GNU → Professional convergence cycle — recapitulation
 
 Date: 2026-09-16
-Branch: `dev/masin-kernel-surface` @ `a1362ef`
+Branch: `dev/masin-kernel-surface` @ `e9c40c9`
 Corpus basis: sfnet 197 (`external-downloads/sfnet/extracted/test`, untracked)
 and validation-suite 233 (`validation-suite/test-2014`, untracked); internal
 suite 16/16.
@@ -71,14 +71,20 @@ PASS count, not a corpus size. The honest, reproducible denominators are
 | corpus | start of cycle | end of cycle | net |
 |---|---|---|---|
 | sfnet 197 | 160 PASS / 37 RUNFAIL / 0 PARSE | **187 PASS / 9 RUNFAIL / 1 PARSE** | +27 PASS |
-| validation-suite 233 | 201 PASS / 32 RUNFAIL / 0 PARSE¹ | **229 PASS / 4 RUNFAIL / 0 PARSE** | +28 PASS |
-| combined 430 | 388 PASS (90.2%) | **416 PASS (96.7%)** | +28 PASS |
+| validation-suite 233 | 201 PASS / 32 RUNFAIL / 0 PARSE¹ | **233 PASS / 0 RUNFAIL / 0 PARSE** | +32 PASS |
+| combined 430 | 361 PASS (84.0%)² | **420 PASS (97.7%)** | +59 PASS |
 | internal suite | 16/16 | **16/16** | — |
 
 ¹ The validation-suite start figure is the first full classification after the
 corpus was reconstructed from the archived `.dbs` dumps (the `.dat` inputs had
 been deleted; see §5.1). Before reconstruction the corpus was effectively 0
 runnable tests.
+
+² Sum of the per-corpus start figures (160 and 201). An earlier draft of this
+table showed 388 (90.2%) for the combined start, which equals the sfnet *end*
+(187) plus the validation start (201); the per-corpus starts sum to 361. The
+combined end of 420/430 (97.7%) is consistent with both corpora's ends
+(187 + 233).
 
 Classification caveat (honest): `PASS` is `rc=0` with the test's own
 `target_value` met, which the binary enforces in `exit_tn`
@@ -87,14 +93,16 @@ with the pre-incident archive: the archive-era binary predates many later
 physics commits, so a faithful reconstruction can still drift numerically. The
 final sfnet bucket is `9 RUNFAIL / 1 PARSE` rather than `10 RUNFAIL / 0` only
 because `pruebavel` is classified as `PARSE` (unknown-record error); the PASS
-count is unchanged.
+count is unchanged. The validation-suite directory holds one generated dump
+file (`print_mesh_dof.dat`) that is not a test input; the 233 real tests are all
+`PASS` and the dump is excluded from the denominator.
 
 ---
 
 ## 4. Closed items
 
 Each row: the item, its commit(s), and the acceptance evidence. Commits are on
-`dev/masin-kernel-surface` (ancestors of `a1362ef`).
+`dev/masin-kernel-surface` (ancestors of `e9c40c9`).
 
 | # | item | commit(s) | acceptance evidence |
 |---|---|---|---|
@@ -119,6 +127,9 @@ Each row: the item, its commit(s), and the acceptance evidence. Commits are on
 | 19 | **Absolute nodal-stress recovery** — the Pro assigns the weighted average, GNU accumulated increments | `0b23957` | delete2 `0.8`; delete family + mpc1-6 field = Pro; all 191 sfnet `.dbs` dumps byte-identical |
 | 20 | **Stale validation-suite target recalibration + `gforce7q4` rebuild** | `c592843` | 14 targets recalibrated + `gforce7q4` rebuilt as the faithful 2-quad4 Pro model; 201→216 PASS, 15 RUNFAIL→PASS, 0 regressions |
 | 21 | **`inertia_apply -yes` reconstruction of the 15 solver-divergence tests** | `c2f7f6c` | 13/15 converge to their stored targets; validation-suite 216→229 PASS; the 2 residuals carry separate causes (BACKLOG-OPEN-ISSUES.md) |
+| 22 | **Reconstruction residuals** — `iface_tangref` target recalibrated to the honest per-IP value (`4.9998`); `iface_gen_method_gen` restored to the archive's input/generated element split | `fbcf144` | 2 RUNFAIL → PASS; validation-suite 229 → 231 PASS, 0 regressions; sfnet byte-identical |
+| 23 | **Post-solve stress pass hoisted** out of the equilibrium loop (performance; improvement item (a)) | `3957809` (+ `e0a3997` docs) | 1.12–1.25× on `large3`/`dynamic8` (large3 1.23–1.25×, dynamic8 1.12–1.21×, delete3 ~1.14×; small tests startup-dominated); mpc5/delete2/delete3 targets unchanged; corpus classification diff 0; internal 16/16 |
+| 24 | **`-follow_material` reference geometry + initial `element_truss_force` self-stress** (`elmethod`, `numit`) | `c8ee32e` | validation-suite 231 → 233 real tests **233/233**; reconstructed inputs byte-identical to the archived `.dbs`; sfnet unchanged |
 
 ---
 
@@ -258,6 +269,28 @@ success. It also exposed a latent bug: the direct-LU retry band width used
 adjacent nodes wrote outside `mat`/`ldmat` and silently corrupted the retry
 (`6eb399d`).
 
+### 5.7 The `-follow_material` reference geometry
+
+Under `-follow_material` the mesh follows the material, so the `node` record in
+a `.dbs` dump is the **deformed** geometry, while the input reference is
+preserved in `node_start_refined` (`top.cc` copies the input `NODE` there at the
+start of the run). The reconstruction had used the deformed `node` as input,
+which is why `elmethod` and `numit` would not reproduce their archived targets.
+The second lost record was the initial `element_truss_force` self-stress, which
+the dump stores only in its relaxed final state (≈0). With the reference
+geometry restored and the initial force derived from the documented relaxation
+law (`F_init = k·(L_init − L_final)`, with `k = E·A/L_init`), the reconstructed
+inputs reproduce the archived `.dbs` byte-for-byte. This is a
+corpus-reconstruction mechanism, not a source change.
+
+The decisive evidence was a surviving original `.dat`/`.dbs` pair that uses
+`-follow_material`, `dpline_method`: the input `node 3 0 0.98` becomes
+`node 3 0 0.96` (deformed) in the dump, while `node_start_refined 3 0 0.98`
+preserves the input. The reconstructed `elmethod`/`numit` had used the deformed
+`node` (`0.877` / `1.631`) as input; the correct input is the reference
+(`0` / `1` / `2`). The initial truss forces are fully determined by the archived
+geometry and the relaxation law: elmethod 0.123 / 0.246, numit 0.123.
+
 ---
 
 ## 6. What made it work — and the refuted hypotheses
@@ -310,11 +343,15 @@ The remaining non-PASS tests are enumerated and triaged in
 `BACKLOG-OPEN-ISSUES.md`; the follow-on opportunities are in
 `IMPROVEMENT-ANALYSIS.md`. In summary:
 
-- sfnet 197: 9 RUNFAIL (all out-of-scope: contact/refinement, solver/timeout,
-  stale/dead input, PETSc) + 1 PARSE (`pruebavel`, dead/malformed).
-- validation-suite 233: 4 RUNFAIL — 2 reconstruction residuals
-  (`iface_tangref`, `iface_gen_method_gen`) and 2 lost-reference-geometry tests
-  (`elmethod`, `numit`).
+- sfnet 197: 9 RUNFAIL + 1 PARSE (`pruebavel`, dead/malformed). The 9 RUNFAIL
+  are all out-of-scope: 4 stale targets (`examp17`, `ho_mech2`, `ho_mech4`,
+  `taylor3`), 3 solver/timeout (`examp14`, `examp24`, `ho_mech3`), 1
+  contact/refinement (`examp6`) and 1 infrastructure (`petsc1`).
+- validation-suite 233: 0 RUNFAIL — all 233 real tests pass. The directory's
+  remaining non-PASS file is the generated dump `print_mesh_dof.dat`, not a test
+  input. The four residuals open at the cycle snapshot (`iface_tangref`,
+  `iface_gen_method_gen`, `elmethod`, `numit`) were closed by `fbcf144` and
+  `c8ee32e`; see the resolved section of `BACKLOG-OPEN-ISSUES.md`.
 
 ## 8. Sources
 
