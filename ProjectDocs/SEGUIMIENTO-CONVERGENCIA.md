@@ -2699,3 +2699,61 @@ descartado los `element_geometry` de entrada).
 | corpus sfnet 197 | **187 / 9 / 1**, clasificación byte-idéntica al baseline (0 regresiones) |
 | nota de familia (no tocada) | el mismo defecto de la drop-list convirtió el/los elemento(s) generado(s) en entrada en `iface_gen`, `iface_gen_method`, `iface_gen_geom` y `iface_gen_quad9`; sus targets son `node_dof` y pasan igualmente, pero no ejercitan la generación -> follow-up |
 | fuente versionada | sin cambios de código; `git status` de `dev/masin-kernel-surface` intacto |
+
+---
+
+## Cierre de `elmethod` y `numit` — geometría de referencia `-follow_material` + pretensado inicial (2026-09-16)
+
+Cierra los **dos últimos RUNFAIL** de validation-suite. **233/233 tests reales
+PASS** (el fichero 234, `print_mesh_dof.dat`, es un volcado generado, no un
+test). Sin cambios de código: solo edición de corpus (gitignored).
+
+**Causa raíz (dos registros de entrada perdidos, no uno)**:
+
+1. **Geometría de referencia.** En un modelo `-follow_material` el `node` del
+   volcado es la geometría **deformada**; la referencia es `node_start_refined`
+   (`top.cc:269` copia el `NODE` de entrada a `NODE_START_REFINED` al inicio).
+   La reconstrucción usó el `node` deformado (`0.877` / `1.631`) como entrada.
+   Evidencia directa: el par original `dpline_method.dat`/`.dbs` usa
+   `-follow_material`; su `.dat` tiene `node 3 0 0.98` y su `.dbs` guarda
+   `node 3 0 0.96` (deformado) + `node_start_refined 3 0 0.98` (la entrada).
+2. **Pretensado inicial.** `element_truss_force` es un data item de entrada
+   (`database.cc:2918`, clase ELEMENT) que la drop-list de la reconstrucción
+   descartó (`reconstruct.py:46`). El volcado guarda el valor final ya relajado
+   (`≈0`), por lo que la fuerza inicial se perdió. El manual-developer de
+   `control_print_element_method` documenta el mecanismo (self-stress que se
+   relaja: `new_force = old_force + k*dL`, en equilibrio queda 0).
+
+**Derivación del pretensado (única, a partir del archivo)**: con
+`-updated_without_rotation` la rigidez es `k = E*A/initial_length`
+(`truss.cc:160`) y en equilibrio `new_truss_force = 0`, luego
+`F_init = k*(L_init − L_final)`. Con `E=A=1`, `L_init=1`: `elmethod` elem 1 =
+`0.123`, elem 2 = `0.246`; `numit` elem 1 = `0.123`. Un único
+`group_truss_initial_force` no puede dar la relación 1:3 observada
+(`-0.123`/`-0.369`), por lo que son registros por elemento.
+
+**Fix (solo corpus)**:
+
+```
+elmethod.dat: - node 2 0.877 / node 3 1.631  ->  + node 2 1 / node 3 2
+              + element_truss_force 1 0.123
+              + element_truss_force 2 0.246
+numit.dat:    - node 2 0.877                 ->  + node 2 1
+              + element_truss_force 1 0.123
+```
+
+**Hipótesis descartadas** (registradas): añadir solo `node_start_refined`
+manteniendo el `node` deformado (deja el target en `0`); sembrar
+`node_dof -velix` con el target (circular y contradice `node_start_refined`).
+
+**Registro de verificación**:
+
+| Acción | Verificación |
+|--------|-------------|
+| `elmethod` reconstruido | `rc=1 -> rc=0`; `node_dof 3 -velix = -0.369` EXACTO; `node` = `0/0.877/1.631`, `node_start_refined` = `0/1/2`, `element_truss_force ≈ 0`: estado **byte-idéntico** al `.dbs` archivado (incluido el ruido `-2.22e-15`/`-4.44e-16`); impresos `.20`/`.21` = archivo |
+| `numit` reconstruido | `rc=1 -> rc=0`; `node_dof 2 -velix = -0.123` EXACTO; `node_dof` idéntico al `.dbs`; 16 líneas de monitor (feature primaria intacta) |
+| feature primaria `elmethod` | `-middle` 2 líneas vs `-node` 4 líneas, `2*mid == x_node2` (sin cambios) |
+| corpus validation-suite 234 | **231 -> 233 PASS / 3 -> 1 RUNFAIL / 0 PARSE**; 233 tests reales = **233/233**; único no-PASS = volcado generado `print_mesh_dof` |
+| corpus sfnet 197 | **187 / 9 / 1**, clasificación byte-idéntica al baseline (0 regresiones) |
+| binario | `build/tochnog` reconstruido con `scripts/build_safe.sh --clean` (HEAD `92518b8`); suite build_safe 16/16 runs OK |
+| fuente versionada | sin cambios de código; `git status` de `dev/masin-kernel-surface` intacto |

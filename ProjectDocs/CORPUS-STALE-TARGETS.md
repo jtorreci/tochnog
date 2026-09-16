@@ -480,3 +480,168 @@ RUNFAIL test was touched.
   `C1` = element 3 removed, no input geometry tags -> `rc=0`, generated
   `element_geometry 3 10`; `C2` = C1 + restored `element_geometry 1 20 / 2 30`
   -> `rc=0`, byte-identical `element_geometry` set to the archive (chosen).
+
+---
+
+# `-follow_material` reference geometry + initial truss force — the last two RUNFAIL (2026-09-16)
+
+Closes `elmethod` and `numit`, the two remaining validation-suite RUNFAIL.
+validation-suite 233 real tests: **233 / 0 / 0**; the 234th file
+(`print_mesh_dof.dat`) is a generated dump, not a test. sfnet 197 unchanged.
+
+## Result
+
+| corpus | PASS | RUNFAIL | PARSE | total |
+|---|---|---|---|---|
+| validation-suite 234 (before) | 231 | 3 | 0 | 234 |
+| validation-suite 234 (after)  | **233** | **1** | **0** | 234 |
+| validation-suite 233 (real tests) | **233** | **0** | **0** | 233 |
+| sfnet 197 | 187 | 9 | 1 | 197 |
+
+`elmethod` / `numit` RUNFAIL -> PASS, 0 regressions; the single non-PASS file
+is the generated dump `print_mesh_dof.dat`.
+
+## 1. Two independent input records were lost, not one
+
+The previous note (`CORPUS-RECONSTRUCTION.md` §3) said only the
+`-follow_material` reference geometry (`node_start_refined`) was lost and that
+re-inserting it did not help. That attempt was **wrong in two ways**:
+
+1. it *added* a `node_start_refined` record while keeping the deformed dump
+   `node` as the input geometry — so the truss was already at its final shape
+   and nothing moved;
+2. it missed the second, decisive record: the **initial `element_truss_force`
+   self-stress**, dropped by the reconstruction drop-list.
+
+### 1a. The dump `node` is the DEFORMED geometry; `node_start_refined` is the input reference
+
+Direct evidence from a surviving original `.dat`/`.dbs` pair that uses
+`-follow_material`, `dpline_method`:
+
+```
+dpline_method.dat (input)      : node 3 0 0.98      node 4 1 0.98
+dpline_method.dbs (dump)       : node 3 0 0.96      node 4 1 0.96   <- deformed
+dpline_method.dbs (dump)       : node_start_refined 3 0 0.98
+                                 node_start_refined 4 1 0.98       <- the input
+```
+
+`top.cc:269` copies the input `NODE` into `NODE_START_REFINED` at the start of
+the run (`if ( max<0 ) db_copy( NODE, NODE_START_REFINED, ... )`), and under
+`-FOLLOW_MATERIAL` the mesh then moves (`truss.cc:107`, `locate.cc:47`), so the
+final `node` record is deformed while `node_start_refined` keeps the reference.
+The reconstructed `elmethod`/`numit` used the **deformed** `node`
+(`0.877` / `1.631`) as input; the correct input is the reference
+(`0` / `1` / `2`), i.e. the values the dump stores in `node_start_refined`.
+
+### 1b. `element_truss_force` is a genuine INPUT record and was dropped
+
+- It is a registered data item (`database.cc:2918`: `ELEMENT`, `DOUBLE_PRECISION`,
+  `data_length = 1`), so it is parseable in the data part.
+- It is in the reconstruction drop-list (`reconstruct.py:46`), so the
+  reconstruction removed it from every test.
+- The dump stores the **final** (relaxed) value, `element_truss_force ≈ 0`, so
+  the input self-stress is not visible in the `.dbs` — it must be derived.
+- `ProjectDocs/manual-developer/control_print_element_method.md` §Detalles
+  documents the mechanism: *"la fuerza de un `element_truss_force` inicial es un
+  self-stress que SE RELAXA con la deformación (`new_force = old_force + k*dL`;
+  en equilibrio final queda 0)"*.
+
+### 1c. Derivation of the lost initial forces (evidence-led, unique)
+
+`truss.cc:181-188`: `new_truss_force = old_truss_force + truss_stiffness *
+incremental_length`. With `group_truss_memory 0 -updated_without_rotation` the
+`else` branch runs (`memory==-UPDATED` is a different enum), so
+`truss_stiffness = group_truss_young * group_truss_area / initial_length`
+(`truss.cc:160`). Here `E = A = 1`, `initial_length = 1` (the reference
+geometry), so `k = 1`. At the archived equilibrium `new_truss_force = 0`, hence
+
+```
+F_init = k * (initial_length - final_length)
+```
+
+The archived geometry (`node` final, `node_start_refined` reference) gives the
+final lengths, so the initial forces are fully determined:
+
+| test | element | L_ref | L_final | F_init |
+|---|---|---|---|---|
+| elmethod | 1 (nodes 1-2) | 1 | 0.877 | **0.123** |
+| elmethod | 2 (nodes 2-3) | 1 | 1.631 - 0.877 = 0.754 | **0.246** |
+| numit | 1 (nodes 1-2) | 1 | 0.877 | **0.123** |
+
+A single `group_truss_initial_force` cannot produce this: the same group value
+would give `disp(node2) = -F0` and `disp(node3) = -2*F0`, i.e. a ratio of 2,
+whereas the archive has `-0.123` / `-0.369` (ratio 3). The forces are
+per-element `element_truss_force` records (both elements are in group 0: the
+archive has no `element_group` record).
+
+## 2. Verification — the reconstruction reproduces the archive exactly
+
+`elmethod` (fixed input, current binary, fresh cwd, `LC_ALL=C`):
+
+```
+node  1  0          node_dof  2  -2.22044604925e-15 -0.123 0 0 0 0 0 0
+node  2  0.877      node_dof  3  -4.4408920985e-16 -0.369 0 0 0 0 0 0
+node  3  1.631      element_truss_force  1  -1.11022302463e-16
+node_start_refined  1 0 / 2 1 / 3 2       2  1.11022302463e-16
+```
+
+This is **byte-identical** to the archived `.dbs` (including the solver noise
+`-2.22e-15` / `-4.44e-16`), and the print files match too:
+`element_truss_force_0.20` = `0.4385 1.11022302463e-16 / 1.254 -1.11e-16`,
+`element_truss_force_0.21` = `0 -1.11e-16 / 0.877 -1.11e-16 / 0.877 1.11e-16 /
+1.631 1.11e-16`. `numit` likewise gives `node_dof 2 = 0 -0.123 ...` exactly as
+the archive, with exactly 16 `control_print_number_iterations` monitor lines.
+
+The primary features are unaffected: `elmethod` still discriminates
+`-middle` (2 lines) vs `-node` (4 lines) with `2*mid == x_node2`; `numit` still
+prints 16 monitor lines. The target is met (`rc=0`) for both.
+
+## 3. What changed (exact corpus edits)
+
+The corpus directory is gitignored/untracked, so the edits are recorded here
+verbatim. Originals are preserved under `evidence/originals/` (sha256 in
+`evidence/originals.sha256`; unified diffs in `evidence/*.diff`).
+
+```
+elmethod.dat: - node  2  0.877
+              - node  3  1.631
+              + node  2  1
+              + node  3  2
+              + element_truss_force  1  0.123
+              + element_truss_force  2  0.246
+
+numit.dat:    - node  2  0.877
+              + node  2  1
+              + element_truss_force  1  0.123
+```
+
+The `element_truss_force` lines are inserted right after the `element` records
+(their canonical position in the dump order). No other line changed, no source
+file was modified, and no other test was touched.
+
+## 4. Rejected hypotheses (recorded, not applied)
+
+- **Add `node_start_refined` only** (the previous attempt): keeps the deformed
+  `node`, so `initial_coord = coord - old_dof = coord` and the truss is already
+  at rest -> target still `0` (`runs/C3-*`).
+- **Seed `node_dof -velix` with the target** (`-0.123` / `-0.369` as an initial
+  condition): makes `rc=0` but is circular (it seeds the answer) and leaves
+  `node_start_refined` = the deformed geometry, contradicting the archive
+  (`runs/C4-*`).
+- **`group_truss_initial_force`**: cannot produce the observed 1:3 displacement
+  ratio (see §1c).
+
+## 5. Reproducibility
+
+- Binary: `build/tochnog` rebuilt with `scripts/build_safe.sh --clean`
+  (HEAD `92518b8`, after the `top.cc` stress-pass hoist `3957809`); suite
+  build_safe 16/16 runs OK.
+- Env: `LC_ALL=C`, `LD_LIBRARY_PATH=<repo>/external-downloads/numlib-runtime`,
+  fresh cwd per test, `timeout 45` (runner `work/run-corpus.sh`).
+- validation-suite 234 after: `233 / 1 / 0` (`full-vs234/vs.tsv`); the only
+  RUNFAIL is `print_mesh_dof` (generated dump).
+- sfnet 197: `187 / 9 / 1`, classification byte-identical to the baseline
+  (`full-sfnet197/sfnet.tsv`).
+- Candidates: `runs/baseline-*` (deformed node, target `0`), `runs/fixed-*`
+  (reference node only, target `0`), `runs/C3-*`, `runs/C4-*`, `runs/C5-*`
+  (reference node + initial force = the archive).
