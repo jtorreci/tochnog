@@ -543,67 +543,14 @@ void top( void )
                           solve( options_solver );
                           groundflow_total_pressure_limit_apply();
                           if ( print_where==-YES ) pri( "Where: after solver." ); 
-                          // Post-solve constitutive re-evaluation (2026-09-15,
-                          // mpc5 reporting sync): the materi_stress dofs are
-                          // NON-principal and are updated by
-                          // parallel_new_dof_diagonal from the PRE-solve
-                          // constitutive stress, so the reported nodal stress
-                          // trails the solved velocity by one iteration (the
-                          // Professional reports it in sync). Re-evaluate the
-                          // constitutive stress from the SOLVED velocity and
-                          // refresh the recovery entries before the update.
-                          // Only the stress slots of the nodal RHS/LHS are
-                          // zeroed and re-assembled (a stress-only element
-                          // pass); every other dof keeps the pre-solve
-                          // assembly, so the momentum/convergence state is
-                          // untouched.
-                          if ( stress_recovery_absolute && materi_stress &&
-                               stres_indx>=0 && !find_local_softvar ) {
-                            long int max_node_ps=0;
-                            db_max_index( NODE, max_node_ps, VERSION_NORMAL, GET );
-                            long int ip0_ps = stres_indx/nder;
-                            long int len_ps = (1+max_node_ps)*npuknwn;
-                            double *save_lh_ps = get_new_dbl( len_ps );
-                            double *save_rh_ps = get_new_dbl( len_ps );
-                            array_set( save_lh_ps, 0., len_ps );
-                            array_set( save_rh_ps, 0., len_ps );
-                            for ( inod=0; inod<=max_node_ps; inod++ ) {
-                              if ( !db_active_index( NODE, inod, VERSION_NORMAL ) )
-                                continue;
-                              double *lh_ps = db_dbl( NODE_LHSIDE, inod, VERSION_NORMAL );
-                              double *rh_ps = db_dbl( NODE_RHSIDE, inod, VERSION_NORMAL );
-                              for ( long int iu_ps=0; iu_ps<npuknwn; iu_ps++ ) {
-                                long int ix_ps = inod*npuknwn+iu_ps;
-                                save_lh_ps[ix_ps] = lh_ps[iu_ps];
-                                save_rh_ps[ix_ps] = rh_ps[iu_ps];
-                                if ( iu_ps>=ip0_ps && iu_ps<ip0_ps+6 ) {
-                                  lh_ps[iu_ps] = 0.;
-                                  rh_ps[iu_ps] = 0.;
-                                }
-                              }
-                            }
-                            stress_recovery_post_pass = 1;
-                            element_loop();
-                            stress_recovery_post_pass = 0;
-                            // Restore every NON-stress entry: structural
-                            // elements (truss/beam/spring/contactspring/
-                            // interface) bypass the materi() gate, so their
-                            // first-pass contributions would be doubled.
-                            for ( inod=0; inod<=max_node_ps; inod++ ) {
-                              if ( !db_active_index( NODE, inod, VERSION_NORMAL ) )
-                                continue;
-                              double *lh_ps = db_dbl( NODE_LHSIDE, inod, VERSION_NORMAL );
-                              double *rh_ps = db_dbl( NODE_RHSIDE, inod, VERSION_NORMAL );
-                              for ( long int iu_ps=0; iu_ps<npuknwn; iu_ps++ ) {
-                                if ( iu_ps>=ip0_ps && iu_ps<ip0_ps+6 ) continue;
-                                long int ix_ps = inod*npuknwn+iu_ps;
-                                lh_ps[iu_ps] = save_lh_ps[ix_ps];
-                                rh_ps[iu_ps] = save_rh_ps[ix_ps];
-                              }
-                            }
-                            delete[] save_lh_ps;
-                            delete[] save_rh_ps;
-                          }
+                          // The post-solve constitutive re-evaluation is
+                          // HOISTED after the equilibrium loop (2026-09-16):
+                          // only the LAST iteration's report is observed, so
+                          // the stress-only pass and the nodal stress update
+                          // run once after the loop instead of once per
+                          // iteration, roughly halving the added
+                          // element-assembly cost. See
+                          // manual-developer/nodal_stress_post_solve_sync.md.
                           parallel_sys_routine( &parallel_new_dof_diagonal );
                           // multi point constraints: re-sync the slave
                           // dofs with the freshly solved master values
@@ -616,6 +563,110 @@ void top( void )
                           db( POST_NODE_RHSIDE_RATIO, 0, idum, &post_node_rhside_ratio, 
                             ldum, VERSION_NORMAL, GET );
                         }
+                      }
+                      // Hoisted post-solve stress sync (2026-09-16): the
+                      // stress-only re-evaluation used to run inside the
+                      // equilibrium loop; only the LAST iteration's report is
+                      // observed, so it now runs once here, after the loop.
+                      // It refreshes the stress slots of the nodal RHS/LHS
+                      // from the solved velocity (a stress-only element pass)
+                      // and then assigns the stress dofs exactly as
+                      // dof.cc parallel_new_dof_diagonal does for the stress
+                      // block. Only the stress slots are assigned: re-running
+                      // the whole function would double the += accumulation
+                      // of the other non-principal dofs.
+                      if ( nuknwn>0 && stress_recovery_absolute && materi_stress &&
+                           stres_indx>=0 && !find_local_softvar ) {
+                        long int max_node_ps=0;
+                        db_max_index( NODE, max_node_ps, VERSION_NORMAL, GET );
+                        long int ip0_ps = stres_indx/nder;
+                        long int len_ps = (1+max_node_ps)*npuknwn;
+                        double *save_lh_ps = get_new_dbl( len_ps );
+                        double *save_rh_ps = get_new_dbl( len_ps );
+                        array_set( save_lh_ps, 0., len_ps );
+                        array_set( save_rh_ps, 0., len_ps );
+                        for ( inod=0; inod<=max_node_ps; inod++ ) {
+                          if ( !db_active_index( NODE, inod, VERSION_NORMAL ) )
+                            continue;
+                          double *lh_ps = db_dbl( NODE_LHSIDE, inod, VERSION_NORMAL );
+                          double *rh_ps = db_dbl( NODE_RHSIDE, inod, VERSION_NORMAL );
+                          for ( long int iu_ps=0; iu_ps<npuknwn; iu_ps++ ) {
+                            long int ix_ps = inod*npuknwn+iu_ps;
+                            save_lh_ps[ix_ps] = lh_ps[iu_ps];
+                            save_rh_ps[ix_ps] = rh_ps[iu_ps];
+                            if ( iu_ps>=ip0_ps && iu_ps<ip0_ps+6 ) {
+                              lh_ps[iu_ps] = 0.;
+                              rh_ps[iu_ps] = 0.;
+                            }
+                          }
+                        }
+                        stress_recovery_post_pass = 1;
+                        element_loop();
+                        stress_recovery_post_pass = 0;
+                        // Restore every NON-stress entry: structural
+                        // elements (truss/beam/spring/contactspring/
+                        // interface) bypass the materi() gate, so their
+                        // first-pass contributions would be doubled.
+                        for ( inod=0; inod<=max_node_ps; inod++ ) {
+                          if ( !db_active_index( NODE, inod, VERSION_NORMAL ) )
+                            continue;
+                          double *lh_ps = db_dbl( NODE_LHSIDE, inod, VERSION_NORMAL );
+                          double *rh_ps = db_dbl( NODE_RHSIDE, inod, VERSION_NORMAL );
+                          for ( long int iu_ps=0; iu_ps<npuknwn; iu_ps++ ) {
+                            if ( iu_ps>=ip0_ps && iu_ps<ip0_ps+6 ) continue;
+                            long int ix_ps = inod*npuknwn+iu_ps;
+                            lh_ps[iu_ps] = save_lh_ps[ix_ps];
+                            rh_ps[iu_ps] = save_rh_ps[ix_ps];
+                          }
+                        }
+                        // Update the stress dofs from the refreshed recovery
+                        // (the stress-only variant of dof.cc
+                        // parallel_new_dof_diagonal lines 155-179 plus the
+                        // materi_stress_pressure_history and derivatives
+                        // blocks).
+                        double dtime_ps = 0.;
+                        db( DTIME, 0, idum, &dtime_ps, ldum, VERSION_NEW, GET );
+                        for ( inod=0; inod<=max_node_ps; inod++ ) {
+                          if ( !db_active_index( NODE, inod, VERSION_NORMAL ) )
+                            continue;
+                          double *node_dof_ps = db_dbl( NODE_DOF, inod, VERSION_NEW );
+                          double *node_dof_old_ps =
+                            db_dbl( NODE_DOF, inod, VERSION_NORMAL );
+                          long int *node_bounded_ps =
+                            db_int( NODE_BOUNDED, inod, VERSION_NORMAL );
+                          double *lh_ps = db_dbl( NODE_LHSIDE, inod, VERSION_NORMAL );
+                          double *rh_ps = db_dbl( NODE_RHSIDE, inod, VERSION_NORMAL );
+                          for ( long int k_ps=0; k_ps<6; k_ps++ ) {
+                            long int ipu_ps = ip0_ps + k_ps;
+                            if ( !node_bounded_ps[ipu_ps] && lh_ps[ipu_ps]!=0. )
+                              node_dof_ps[stres_indx + k_ps*nder] =
+                                rh_ps[ipu_ps]/lh_ps[ipu_ps];
+                          }
+                          if ( ( materi_stress_pressure_history ||
+                                 materi_plasti_hardsoil_history ) &&
+                               materi_stress ) {
+                            double p_ps = scalar_dabs( -( node_dof_ps[stres_indx] +
+                              node_dof_ps[stres_indx+3*nder] +
+                              node_dof_ps[stres_indx+5*nder] ) / 3. );
+                            if ( node_dof_ps[sph_indx] < p_ps )
+                              node_dof_ps[sph_indx] = p_ps;
+                          }
+                          // derivatives (dof.cc): refresh the stress-rate
+                          // slots from the NEW stress; otherwise they keep the
+                          // lagged value the last iteration produced.
+                          if ( derivatives ) {
+                            for ( long int k_ps=0; k_ps<6; k_ps++ ) {
+                              long int ipu_ps = ip0_ps + k_ps;
+                              long int iu_ps = stres_indx + k_ps*nder;
+                              if ( !node_bounded_ps[ipu_ps] )
+                                node_dof_ps[iu_ps+nder-1] =
+                                  ( node_dof_ps[iu_ps] -
+                                    node_dof_old_ps[iu_ps] ) / dtime_ps;
+                            }
+                          }
+                        }
+                        delete[] save_lh_ps;
+                        delete[] save_rh_ps;
                       }
                       }
 

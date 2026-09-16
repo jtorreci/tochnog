@@ -10,7 +10,7 @@ required for the cycle's results.
 
 ---
 
-## a. Post-solve stress pass cost
+## a. Post-solve stress pass cost — **DONE 2026-09-16** (branch `dev/stress-pass-hoist`)
 
 **Problem.** The post-solve nodal-stress sync (`dae06a3`) runs a stress-only
 `element_loop()` after **every** equilibrium iteration for models with
@@ -38,6 +38,19 @@ inside the iteration loop would change output. Mitigation: A/B the full sfnet
 
 **Effort.** **cheap–medium** (localised to `top.cc`/`dof.cc`, but needs a careful
 A/B).
+
+**Implemented.** Only `top.cc` changed: the save/zero/`element_loop()`/restore
+block moved from inside the equilibrium loop to a single block after it, with
+the stress dofs assigned directly (stress-only variant of
+`parallel_new_dof_diagonal`, including the `materi_stress_pressure_history`
+and `derivatives` stress-rate slots). Measured speedups: `large3` (784
+elements, 220 iterations) **1.23-1.25x**, `dynamic8` (16 elements, 4000
+iterations) **1.12-1.21x**; the small delete/mpc tests are startup-dominated.
+Targets unchanged: mpc5 `sigyy=0.5` at `k=1,2,3,5`, delete2 node 2 `sigxx=0.8`,
+delete3 `sigyy=0.6`; sfnet 197 and validation-suite 233 classification diff
+= 0; internal suite 16/16. Two non-target derived-dof changes are documented
+(`contact_heatgen` `xsigyy`, `mpc8` `sigxx`). Detail:
+`manual-developer/nodal_stress_post_solve_sync.md` §Cost / §Verification.
 
 ---
 
