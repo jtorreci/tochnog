@@ -6,8 +6,13 @@ Status: **active since 2026-09-15**.
 
 When a model uses the nodal stress field (`materi_stress`), the stress
 reported at a node is re-evaluated from the **solved** velocity at the end of
-every equilibrium iteration. The reported stress is therefore in sync with the
-velocity of the same iteration instead of trailing it by one.
+the time step (after the equilibrium iterations have finished). The reported
+stress is therefore in sync with the final solved velocity instead of trailing
+it by one iteration.
+
+Only the final state of a step is reported, so the re-evaluation runs once per
+step (since 2026-09-16); earlier it ran once per equilibrium iteration, which
+cost an extra element pass on every iteration for no observable benefit.
 
 This matches the Tochnog Professional convention: the Professional reports the
 nodal stress consistently with the converged (or current) velocity in the same
