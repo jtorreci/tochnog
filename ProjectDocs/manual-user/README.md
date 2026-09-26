@@ -444,3 +444,10 @@ input parameters it accepts.
 ## GEOMETRY LIST (2026-09-26)
 
 - [geometry_list](geometry_list.md) — `geometry_list <index> <node> ...` (manual Professional 6.531 / 9.5): a list of node numbers usable as a geometry entity (`-geometry_list <index>`) in boundary conditions, mesh deletion, data_put/data_delete, geometry_set, ... A node is in the geometry iff its number is in the list; elements are selected by node membership (no element-number interpretation). Verified against the Professional 02-08-2026.
+
+## MATERIAL APPLY SWITCHES (2026-09-27)
+
+- [materi_damage_apply](materi_damage_apply.md) — `materi_damage_apply switch` (manual Professional 6.798): global form of `control_materi_damage_apply`; `-no` ignores the damage data (dam frozen). The control record of the current timestep overrules it. Verified against the Professional 02-08-2026.
+- [materi_failure_apply](materi_failure_apply.md) — `materi_failure_apply switch` (6.801): global form of `control_materi_failure_apply`; `-no` ignores the `group_materi_failure_*` criteria (no element failure/deletion). The failure switches no longer freeze damage (Professional behaviour).
+- [plasti_apply](plasti_apply.md) — `plasti_apply switch` (6.899): `-no` ignores any plasticity data (yield-surface laws, direct cut-offs, camclay, hardsoil, hypoplasticity, incremental models, slide caps by default) for all timesteps. Verified against the Professional 02-08-2026.
+- [control_plasti_apply](control_plasti_apply.md) — `control_plasti_apply index switch` (6.257): per-timestep form of `plasti_apply`, overrules it for its index.

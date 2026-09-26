@@ -138,7 +138,11 @@ void slide_spring( long int inod, long int islide, double *new_node_dof,
 
   if ( !materi_velocity ) return;
   // control gates (manual Professional 6.371/6.372): -no disables the
-  // plastic caps respectively the slide_stiffness springs.
+  // plastic caps respectively the slide_stiffness springs. Without a
+  // control_slide_plasti_apply record the general plasti_apply /
+  // control_plasti_apply switches (6.899/6.257) are used (manual 6.371).
+  if ( materi_apply_gate_off( PLASTI_APPLY, CONTROL_PLASTI_APPLY ) )
+    plasti_apply = -NO;
   db( CONTROL_SLIDE_PLASTI_APPLY, icontrol, &plasti_apply, ddum, ldum,
     VERSION_NORMAL, GET_IF_EXISTS );
   db( CONTROL_SLIDE_STIFFNESS_APPLY, icontrol, &stiffness_apply, ddum, ldum,

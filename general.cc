@@ -551,3 +551,21 @@ long int control_materi_gate_off( long int control_item )
   }
   return 0;
 }
+
+// materi_*_apply switch helper with a global (no index) record and its
+// per-timestep control_* record, e.g. materi_damage_apply (manual
+// Professional 6.798) and control_materi_damage_apply (6.140). Returns 1
+// when the feature should be IGNORED for the current timestep.
+// Precedence (measured on the Professional 02-08-2026): the control_*
+// record with the index of the current timestep (ICONTROL) overrules the
+// global record; default (no record): feature active.
+long int materi_apply_gate_off( long int global_item, long int control_item )
+{
+  long int icontrol=0, swit=-YES, ldum=0;
+  double ddum[1];
+  db( global_item, 0, &swit, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+  db( ICONTROL, 0, &icontrol, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+  db( control_item, icontrol, &swit, ddum, ldum, VERSION_NORMAL,
+    GET_IF_EXISTS );
+  return swit==-NO;
+}

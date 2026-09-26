@@ -45,11 +45,11 @@ report measures the lower bound of the gap.
 | Metric | Value |
 |--------|-------|
 | Professional keywords (chapters 4–6) | 1154 |
-| Accepted by GNU parser | 827 (71.7 %) |
-| Missing | 327 |
+| Accepted by GNU parser | 831 (72.0 %) |
+| Missing | 323 |
 | Missing but already discarded (GiD) | 63 |
-| Missing and not discarded | **264** |
-| Coverage excluding the GiD discard | 75.8 % |
+| Missing and not discarded | **260** |
+| Coverage excluding the GiD discard | 76.2 % |
 
 The "Métrica global" header of `SEGUIMIENTO-CONVERGENCIA.md` (309/1094, 28 %)
 is stale and should be replaced with these figures.
@@ -58,6 +58,12 @@ Full list: `ProjectDocs/keyword-gap-2026-09-26.txt`.
 
 Update 2026-09-26: `geometry_list` implemented; the figures above and the
 full list already reflect it (826 → 827 accepted, 265 → 264 pending).
+
+Update 2026-09-27: `materi_damage_apply`, `materi_failure_apply`,
+`plasti_apply` and `control_plasti_apply` implemented (verified against the
+Professional binary 02-08-2026; see `manual-user/<name>.md`). Probe re-run on
+the clean build: 827 → 831 accepted, 264 → 260 pending; the four names were
+removed from the full list.
 
 ## Gap by family
 
@@ -70,7 +76,7 @@ full list already reflect it (826 → 827 accepted, 265 → 264 pending).
 | Geometry | 22 | `geometry_moving*` (6) + `control_geometry_moving` + `mesh_delete_geometry_moving`, `geometry_hexahedral`, `geometry_tetrahedral`, `geometry_boundary`, `geometry_exclude`, `geometry_method`, `geometry_*_part`, `*_eps_iso`, `geometry_element_geometry*`, `geometry_mpc` |
 | Post (`post_*`, `control_post*`) | 21 | post_calcul options (7), post_data (3), post_count, post_node/point options |
 | Element records (`element_*`) | 20 | mostly print/output records: element_intpnt_* (5), element_interface_intpnt_* (4), truss strain, beam direction/force, geometry_present, normal, boundary |
-| `*_apply` switches | 18 | plasti_apply, materi_damage_apply, materi_failure_apply, interface_gap_apply, linear_calculation_apply, element_group_apply, truss_rope_apply, ... and their `control_*` forms |
+| `*_apply` switches | 14 | interface_gap_apply, linear_calculation_apply, element_group_apply, truss_rope_apply, group_plasti_apply, ... and their `control_*` forms (plasti_apply, control_plasti_apply, materi_damage_apply, materi_failure_apply done 2026-09-27) |
 | Print (`print_*`) | 14 | print_vtk_* (4), print_gmsh_* (3), print_frd_freecad/prepomax, print_precision, print_data_name, print_element_geometry_present* |
 | Initialisation dofs (`materi_*`) | 11 | materi_strain_plasti_* (5), materi_strain_total_*kappa (4), materi_strain_energy, materi_history_variable |
 | MPC | 8 | mpc_element_group_* (5), mpc_geometry_method/tolerance, control_mpc_element_group |
