@@ -462,3 +462,7 @@ Each file corresponds to the same feature in the [User Manual](../manual-user/).
 ## NODAL STRESS POST-SOLVE SYNC (2026-09-15)
 
 - [nodal_stress_post_solve_sync](nodal_stress_post_solve_sync.md) — `top.cc` `top()`, `elem.cc` `elem()`/`element_loop()`, `materi.cc` `materi()`, `polynom.cc` (global `stress_recovery_post_pass`): after `solve()` and before `parallel_new_dof_diagonal()`, the nodal stress recovery is re-evaluated from the SOLVED velocity with a stress-only element pass (momentum/non-stress blocks and the sparse store are skipped; structural elements keep their first-pass entries via a save/restore of the non-stress RHS/LHS). Closes the last `mpc5` residual: `sigyy = 0.5` at `k=1` (and `k=2,3,5`) like the Professional 02-08-2026, was `1.0` at `k=1`. Candidate (b) verified: the value equals the unmodified scheme at `k+1`, but the mechanism adds no solve. Corpus sfnet 197 and validation-suite 233 classification diff = 0; suite 16/16.
+
+## GEOMETRY LIST (2026-09-26)
+
+- [geometry_list](geometry_list.md) — `database.cc` record `GEOMETRY_LIST` (INTEGER, variable length, class GEOMETRY; enum after `GEOMETRY_LINE` in `tochnog.h`/`tochnog-mod.h`); `geometry.cc` `geometry()` branch (node membership, projection = node, coordinate-only calls never inside) and `node_geometry_present_calculate()` scan; `change.cc` refusal for lists. Verified against the Professional 02-08-2026 (bounda_dof, control_mesh_delete_geometry, node_geometry_present); `-node` as geometry entity documented as unsupported in both binaries.
