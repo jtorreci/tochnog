@@ -440,3 +440,7 @@ input parameters it accepts.
 ## NODAL STRESS POST-SOLVE SYNC (2026-09-15)
 
 - [nodal_stress_post_solve_sync](nodal_stress_post_solve_sync.md) — the nodal stress field is re-evaluated from the solved velocity at the end of every equilibrium iteration, so the reported stress is in sync with the velocity (Professional convention) instead of trailing it by one iteration. No keyword: automatic with `materi_stress` and the absolute recovery. Visible in `mpc5.dat`, which now reports `sigyy = 0.5` at one iteration (was `1.0`).
+
+## GEOMETRY LIST (2026-09-26)
+
+- [geometry_list](geometry_list.md) — `geometry_list <index> <node> ...` (manual Professional 6.531 / 9.5): a list of node numbers usable as a geometry entity (`-geometry_list <index>`) in boundary conditions, mesh deletion, data_put/data_delete, geometry_set, ... A node is in the geometry iff its number is in the list; elements are selected by node membership (no element-number interpretation). Verified against the Professional 02-08-2026.

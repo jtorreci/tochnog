@@ -3395,6 +3395,14 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   data_length[GEOMETRY_LINE] = 2*ndim+1;
   data_class[GEOMETRY_LINE] = GEOMETRY;
 
+  // geometry_list (manual Professional 6.531 / 9.5): a list of node
+  // numbers usable as geometry entity (-geometry_list index)
+  strcpy(name[GEOMETRY_LIST],"geometry_list");
+  type[GEOMETRY_LIST] = INTEGER;
+  data_length[GEOMETRY_LIST] = DATA_ITEM_SIZE;
+  fixed_length[GEOMETRY_LIST] = 0;
+  data_class[GEOMETRY_LIST] = GEOMETRY;
+
   strcpy(name[GEOMETRY_NUMBER],"geometry_number");
   type[GEOMETRY_NUMBER] = INTEGER;
   data_length[GEOMETRY_NUMBER] = 1;

@@ -709,6 +709,26 @@ void geometry( long int inod, double co[], long int geometry_entity[],
         }
       }
     }
+    else if ( entity==-GEOMETRY_LIST ) {
+      // geometry_list (manual Professional 6.531 / 9.5): the list holds
+      // node numbers; a node is in the geometry iff its number is in
+      // the list. Coordinate-only tests (inod<0) have no node number
+      // and are never in the geometry. Verified against the
+      // Professional binary 02-08-2026: element selections (e.g.
+      // control_mesh_delete_geometry) use node membership as for any
+      // other geometry, there is no element-number interpretation.
+      // The projection is the node itself (no geometric surface).
+      in_geometry = 0;
+      if ( inod>=0 ) {
+        long int *geometry_list = db_int( GEOMETRY_LIST, index, VERSION_NORMAL );
+        length = db_len( GEOMETRY_LIST, index, VERSION_NORMAL );
+        for ( j=0; j<length && !in_geometry; j++ ) {
+          if ( geometry_list[j]==inod ) in_geometry = 1;
+        }
+      }
+      penetration = 0.;
+      array_move( coord, projection, ndim );
+    }
     else if ( entity==-NODE_BOUNDARY ) {
       area_node_dataitem();
       if ( db_active_index( NODE_BOUNDARY, inod, version ) )
@@ -890,15 +910,18 @@ void node_geometry_present_calculate( void )
   // node coordinates of the check (-node_start_refined by default);
   // the per-geometry geometry_node_type records (6.540) override it
   // inside geometry().
+  // geometry_list (6.531) is part of the scan: measured on the
+  // Professional 02-08-2026, a node in a list reports -geometry_list
+  // <index> in alphabetical record order (before -geometry_point).
   long int inod=0, igeom=0, ldum=0, ient=0, nent=0,
     entity=0, found=0, node_type=NODE_START_REFINED, print_ngp=-NO,
     print_ngp_node_type=0, nvalue=0, max_geom=0, max_node=0;
   const long int geometry_entities[] = {
     GEOMETRY_BRICK, GEOMETRY_CIRCLE, GEOMETRY_CIRCLE_SEGMENT,
     GEOMETRY_CIRCLE_SMALLSEGMENT, GEOMETRY_CYLINDER, GEOMETRY_CYLINDER_SEGMENT,
-    GEOMETRY_ELLIPSE, GEOMETRY_LINE, GEOMETRY_POINT, GEOMETRY_POLYNOMIAL,
-    GEOMETRY_QUADRILATERAL, GEOMETRY_SPHERE, GEOMETRY_SPHERE_SEGMENT,
-    GEOMETRY_TRIANGLE };
+    GEOMETRY_ELLIPSE, GEOMETRY_LINE, GEOMETRY_LIST, GEOMETRY_POINT,
+    GEOMETRY_POLYNOMIAL, GEOMETRY_QUADRILATERAL, GEOMETRY_SPHERE,
+    GEOMETRY_SPHERE_SEGMENT, GEOMETRY_TRIANGLE };
   double rdum=0., ddum[MDIM];
   long int geometry_entity[2];
   long int *present_list=NULL;
