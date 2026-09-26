@@ -30,11 +30,14 @@ void damage( long int gr, double new_epe[], double new_sig[],
 
   swit = set_swit(-1,-1,"damage");
 
-  // control_materi_damage_apply / control_materi_failure_apply -no
-  // (manual Professional 6.141/6.143): ignore any damage/failure data
-  // in the input file for these timesteps (new_damage stays old_damage)
-  if ( control_materi_gate_off( CONTROL_MATERI_DAMAGE_APPLY ) ||
-       control_materi_gate_off( CONTROL_MATERI_FAILURE_APPLY ) ) {
+  // materi_damage_apply (manual Professional 6.798, global) and
+  // control_materi_damage_apply (6.140, per timestep index) -no: ignore
+  // any damage data in the input file for these timesteps (new_damage
+  // stays old_damage). The failure switches do NOT gate damage: measured
+  // on the Professional 02-08-2026, materi_failure_apply -no leaves the
+  // damage evolution unchanged (they gate failure(), see failure.cc).
+  if ( materi_apply_gate_off( MATERI_DAMAGE_APPLY,
+       CONTROL_MATERI_DAMAGE_APPLY ) ) {
     new_damage = old_damage;
     return;
   }

@@ -412,7 +412,7 @@ void set_stress( long int element, long int gr,
   // Solid materials.
 
 {
-  long int i=0, j=0, ind_ddsdde=0, plasti_found=0, 
+  long int i=0, j=0, ind_ddsdde=0, plasti_found=0, plasti_off=0, 
     plasti_iter=0, membrane_found=0, membrane_iter=0,
     swit=0, length=0, membrane=-NO, viscoplasti=0, 
     viscoplasti_always=-NO, plasti_type=-NONE, volumetric_young_order=0,
@@ -1200,6 +1200,18 @@ void set_stress( long int element, long int gr,
     }
   }
 
+  // plasti_apply (manual Professional 6.899, global) and
+  // control_plasti_apply (6.257, per timestep index) -no: any plasticity
+  // data is ignored for these timesteps (the control record of the
+  // current timestep overrules the global one). Scope measured on the
+  // Professional 02-08-2026 (see manual-developer/plasti_apply.md): the
+  // yield-surface models evaluated by plasti_rule (mohr_coul, vonmises,
+  // druck_prag, tension, camclay, hardsoil, ...), the direct cut-offs
+  // (mohr_coul_direct, tension_direct, compression_direct) and the
+  // incremental models (tskh, aitskh, camclay_incremental) fall back to
+  // the elastic response; plastic strains of earlier timesteps are kept.
+  plasti_off = materi_apply_gate_off( PLASTI_APPLY, CONTROL_PLASTI_APPLY );
+
   /*********added for explicit time integration*******************************************/
 
   array_move(old_epi, new_epi, MDIM*MDIM);
@@ -1226,6 +1238,7 @@ void set_stress( long int element, long int gr,
   	plasti_type=GROUP_MATERI_PLASTI_CAMCLAY_INCREMENTAL;
 	plasti_incremental=true;
   }	
+  if ( plasti_off ) plasti_incremental = false;
   if(plasti_incremental) {
         if (db_active_index( GROUP_INTEGRATION_POINTS, gr, VERSION_NORMAL) ) 
 	    db( GROUP_INTEGRATION_POINTS, gr, &i_points, &tmp, tmp2, VERSION_NORMAL, GET );
@@ -1440,8 +1453,9 @@ void set_stress( long int element, long int gr,
         old_deften, new_deften, inc_rot, ddsdde );
       if ( swit ) pri( "stress after user supplied", new_sig, MDIM, MDIM );
 
-        // hypoplasticity
-      hypoplasticity( element, gr, formulation,
+        // hypoplasticity (ignored with plasti_apply -no: measured on the
+        // Professional 02-08-2026 the hypoplastic stress stays frozen)
+      if ( !plasti_off ) hypoplasticity( element, gr, formulation,
         old_hisv, new_hisv, old_unknowns, new_unknowns,
         inc_ept, old_epi, new_epi, rotated_old_sig, 
         new_sig, &Chypo[0][0][0][0], softvar_nonl, softvar_l );
@@ -1552,7 +1566,7 @@ void set_stress( long int element, long int gr,
       double pressure_now = -(
         new_sig[0] + new_sig[4] + new_sig[8] ) / 3.;
       double limit_gate = 0.;
-      long int gate_off = 0;
+      long int gate_off = plasti_off;
       if ( db( GROUP_MATERI_PLASTI_PRESSURE_LIMIT, gr, idum,
           &limit_gate, ldum, VERSION_NORMAL, GET_IF_EXISTS ) )
         if ( pressure_now>limit_gate ) gate_off = 1;
@@ -1586,6 +1600,12 @@ void set_stress( long int element, long int gr,
     array_move( new_sig, test_sig, MDIM*MDIM );
     if ( materi_plasti_rho ) 
       array_subtract( test_sig, new_rho, test_sig, MDIM*MDIM );
+      // plasti_apply / control_plasti_apply -no: no yield test, the
+      // elastic trial state is the solution
+    if ( plasti_off ) {
+      plasti_found = 1;
+      continue;
+    }
       // new lambda
     if ( plasti_iter==1 ) {
       plasti_type = -NONE; plasti_rule( element, gr, plasti_on_boundary, user_data, 

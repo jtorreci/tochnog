@@ -289,12 +289,16 @@ enum {
   CONTROL_EIGEN_SCALE,
   CONTROL_EIGEN_VALUES,
   CONTROL_MATERI_DAMAGE_APPLY,
+  MATERI_DAMAGE_APPLY,
   CONTROL_MATERI_DIFFUSION,
   CONTROL_MATERI_DYNAMIC,
   MATERI_DYNAMIC,
   CONTROL_MATERI_ELASTI_K0,
   CONTROL_MATERI_ELASTI_YOUNG_POWER_APPLY,
   CONTROL_MATERI_FAILURE_APPLY,
+  MATERI_FAILURE_APPLY,
+  CONTROL_PLASTI_APPLY,
+  PLASTI_APPLY,
   CONTROL_MATERI_PLASTI_HARDSOIL_GAMMAP_INITIAL,
   CONTROL_MATERI_PLASTI_HYPO_NIEMUNIS_VISCO_OCR_APPLY,
   CONTROL_MATERI_PLASTI_HYPO_PRESSURE_DEPENDENT_VOID_RATIO,
@@ -2274,6 +2278,7 @@ void      set_stress( long int element, long int gr,
             double &viscosity, double &viscosity_heat_generation, 
 	    double &softvar_nonl, double &softvar_l );
 long int  control_materi_gate_off( long int control_item );
+long int  materi_apply_gate_off( long int global_item, long int control_item );
 long int  set_swit( long int element, long int inod, const char *routine
  );
 void      slide( void );

@@ -28,7 +28,7 @@ void failure( double time_current )
   long int element=0, max_element=0, any_element_deleted=0, length=0, 
     inol=0, idim=0, jdim=0, indx=0, nnol=0, inod=0, swit=0, swit_element=0, 
     element_group=0, max_dependency_item=0, any_failure=0, idep=0, 
-    print_failure=-NO, ldum=0, idum[1], el[MNOL+1], nodes[MNOL], *dependency_item=NULL;
+    print_failure=-NO, failure_off=0, ldum=0, idum[1], el[MNOL+1], nodes[MNOL], *dependency_item=NULL;
   double tmp=0., threshold=0., delete_time=0., element_delete_factor=0., 
     ddum[1], element_delete_times[2], dval[2], 
     strain[MDIM*MDIM], workval[MDIM], workvec[MDIM*MDIM],
@@ -55,6 +55,14 @@ void failure( double time_current )
     if ( any_failure ) {
       swit = set_swit(-1,-1,"failure");
       if ( swit ) pri( "In routine FAILURE" );
+
+        // materi_failure_apply (manual Professional 6.801, global) and
+        // control_materi_failure_apply (6.143, per timestep index) -no:
+        // any failure data is ignored for these timesteps, so no new
+        // element failure is detected. Elements that already failed in an
+        // earlier timestep keep their deletion schedule.
+      failure_off = materi_apply_gate_off( MATERI_FAILURE_APPLY,
+        CONTROL_MATERI_FAILURE_APPLY );
 
       db( PRINT_FAILURE, 0, &print_failure, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
 
@@ -117,7 +125,7 @@ void failure( double time_current )
           }
           threshold = dval[0];
           delete_time = dval[1];
-          if ( tmp>threshold && 
+          if ( !failure_off && tmp>threshold && 
                !db_active_index( ELEMENT_DELETE_TIMES, element, VERSION_NORMAL ) ) {
             if ( print_failure==-YES ) pri( "Failure for element ", element );
             element_delete_times[0] = time_current;

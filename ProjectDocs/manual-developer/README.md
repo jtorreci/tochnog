@@ -466,3 +466,10 @@ Each file corresponds to the same feature in the [User Manual](../manual-user/).
 ## GEOMETRY LIST (2026-09-26)
 
 - [geometry_list](geometry_list.md) — `database.cc` record `GEOMETRY_LIST` (INTEGER, variable length, class GEOMETRY; enum after `GEOMETRY_LINE` in `tochnog.h`/`tochnog-mod.h`); `geometry.cc` `geometry()` branch (node membership, projection = node, coordinate-only calls never inside) and `node_geometry_present_calculate()` scan; `change.cc` refusal for lists. Verified against the Professional 02-08-2026 (bounda_dof, control_mesh_delete_geometry, node_geometry_present); `-node` as geometry entity documented as unsupported in both binaries.
+
+## MATERIAL APPLY SWITCHES (2026-09-27)
+
+- [materi_damage_apply](materi_damage_apply.md) — records `MATERI_DAMAGE_APPLY` (INTEGER, no_index, class CONTROL) in `database.cc`; new helper `materi_apply_gate_off( global, control )` in `general.cc` (control at ICONTROL overrules global, default -yes); consumer `damage()` in `damage.cc` (the failure switch test was removed there).
+- [materi_failure_apply](materi_failure_apply.md) — record `MATERI_FAILURE_APPLY`; consumer `failure()` in `failure.cc` (detection of new failures skipped). Professional 02-08-2026 quirk: `control_materi_failure_apply` registered without index there.
+- [plasti_apply](plasti_apply.md) — records `CONTROL_PLASTI_APPLY` / `PLASTI_APPLY`; `set_stress()` in `stress.cc` (`plasti_off`: skip `plasti_incr`, `hypoplasticity()`, direct cut-offs and the `plasti_rule` yield test), `slide_spring()` default in `slide.cc`. Truss/spring/interface/beam plasticity left out.
+- [control_plasti_apply](control_plasti_apply.md) — per-timestep form, see plasti_apply.

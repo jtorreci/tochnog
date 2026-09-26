@@ -41,7 +41,6 @@ control_mesh_truss_distribute_mpc_exact_minimal_length_connect
 control_mesh_truss_distribute_mpc_geometry_isoparametric
 control_mesh_truss_distribute_mpc_geometry_truss
 control_mpc_element_group
-control_plasti_apply
 control_post
 control_post_apply
 control_post_element_force
@@ -173,8 +172,6 @@ group_time_fill
 group_truss_elasti_elongation_force_diagram
 interface_gap_apply
 linear_calculation_apply
-materi_damage_apply
-materi_failure_apply
 materi_history_variable
 materi_plasti_generalised_non_associate_cam_clay_for_bonded_soils_history
 materi_plasti_hypo_substepping
@@ -244,7 +241,6 @@ mpc_geometry_tolerance
 mrange
 mstring
 node_bounded_index
-plasti_apply
 post_calcul_absolute
 post_calcul_apparent_total
 post_calcul_label

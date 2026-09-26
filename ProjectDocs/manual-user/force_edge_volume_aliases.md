@@ -35,8 +35,12 @@ For the three edge families (`force_edge`, `force_edge_normal`,
   tension-plasticity data (the Mohr-Coulomb direct cutoff stays).
 - `control_materi_plasti_visco_apply index -no` — ignore any
   visco-plasticity data.
-- `control_materi_damage_apply` / `control_materi_failure_apply index
-  -no` — ignore any damage data (the damage stays at its old value).
+- `control_materi_damage_apply index -no` — ignore any damage data (the
+  damage stays at its old value); global form `materi_damage_apply`.
+- `control_materi_failure_apply index -no` — ignore any failure data (no
+  new element failure); global form `materi_failure_apply`. Since
+  2026-09-27 it no longer freezes damage (Professional behaviour, see
+  `materi_failure_apply.md`).
 - `control_materi_updated_apply index -no` — any -updated material
   memory is set to -updated_linear for these timesteps. (The -yes
   direction — defaulting UNSPECIFIED memory to -updated — is not wired:

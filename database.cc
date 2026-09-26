@@ -4681,6 +4681,14 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   data_length[CONTROL_MATERI_DAMAGE_APPLY] = 1;
   data_class[CONTROL_MATERI_DAMAGE_APPLY] = CONTROL;
 
+  // materi_damage_apply (manual Professional 6.798): global form of
+  // control_materi_damage_apply, no index
+  strcpy(name[MATERI_DAMAGE_APPLY],"materi_damage_apply");
+  type[MATERI_DAMAGE_APPLY] = INTEGER;
+  data_length[MATERI_DAMAGE_APPLY] = 1;
+  data_class[MATERI_DAMAGE_APPLY] = CONTROL;
+  no_index[MATERI_DAMAGE_APPLY] = 1;
+
   strcpy(name[CONTROL_MATERI_DYNAMIC],"control_materi_dynamic");
   type[CONTROL_MATERI_DYNAMIC] = DOUBLE_PRECISION;
   data_length[CONTROL_MATERI_DYNAMIC] = 1;
@@ -4706,6 +4714,28 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   type[CONTROL_MATERI_FAILURE_APPLY] = INTEGER;
   data_length[CONTROL_MATERI_FAILURE_APPLY] = 1;
   data_class[CONTROL_MATERI_FAILURE_APPLY] = CONTROL;
+
+  // materi_failure_apply (manual Professional 6.801): global form of
+  // control_materi_failure_apply, no index
+  strcpy(name[MATERI_FAILURE_APPLY],"materi_failure_apply");
+  type[MATERI_FAILURE_APPLY] = INTEGER;
+  data_length[MATERI_FAILURE_APPLY] = 1;
+  data_class[MATERI_FAILURE_APPLY] = CONTROL;
+  no_index[MATERI_FAILURE_APPLY] = 1;
+
+  // control_plasti_apply (manual Professional 6.257, per timestep index)
+  // and plasti_apply (6.899, global, no index): -no ignores any
+  // plasticity data (consumed in set_stress, stress.cc)
+  strcpy(name[CONTROL_PLASTI_APPLY],"control_plasti_apply");
+  type[CONTROL_PLASTI_APPLY] = INTEGER;
+  data_length[CONTROL_PLASTI_APPLY] = 1;
+  data_class[CONTROL_PLASTI_APPLY] = CONTROL;
+
+  strcpy(name[PLASTI_APPLY],"plasti_apply");
+  type[PLASTI_APPLY] = INTEGER;
+  data_length[PLASTI_APPLY] = 1;
+  data_class[PLASTI_APPLY] = CONTROL;
+  no_index[PLASTI_APPLY] = 1;
 
   strcpy(name[CONTROL_MATERI_PLASTI_HARDSOIL_GAMMAP_INITIAL],"control_materi_plasti_hardsoil_gammap_initial");
   type[CONTROL_MATERI_PLASTI_HARDSOIL_GAMMAP_INITIAL] = INTEGER;
