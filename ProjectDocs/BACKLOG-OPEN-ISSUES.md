@@ -454,6 +454,8 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
   (2.2.1: incremental strain = difference of the linear strains) and the
   analytic answer.
 - **Proposed fix**: none in the GNU; report to the Professional maintainers.
+- **Decision**: divergence accepted by the project owner on 2026-09-29
+  (merge `93966ef`); to be investigated further before reporting upstream.
 - **Effort**: **cheap**.
 
 ---
