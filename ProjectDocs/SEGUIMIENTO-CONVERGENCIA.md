@@ -966,7 +966,7 @@ marcado `PENDIENTE` puede estar cubierto en el GNU bajo otro nombre:
 
 ### element_normal (1/1)
 
-- [x] `element_normal` — commit pending, 2026-09-30: generated record (manual 6.445), rule measured on the Professional 02-08-2026 (normalized sum of the consistent boundary node normals); consumed by `*_direct_normal_automatic`; tests `validation-suite/test-2026/element_normal*` (5)
+- [x] `element_normal` — commit `b81d050`, 2026-09-30: generated record (manual 6.445), rule measured on the Professional 02-08-2026 (normalized sum of the consistent boundary node normals); consumed by `*_direct_normal_automatic`; tests `validation-suite/test-2026/element_normal*` (5)
 
 ### element_print (0/1)
 
