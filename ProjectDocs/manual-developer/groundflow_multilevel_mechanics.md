@@ -258,3 +258,18 @@ The residual of excavate1 is NOT in the phreatic/static/dewatering layer:
   13_static_pressure_height/14/15/16/17/19, large2/3, undrained1/2, reset1
   and the internal suite 16/16; ground11_phreatic_level rc=1 both at HEAD
   and with the changes (pre-existing gap).
+
+## 2026-09-29 follow-up (audit K22): static pore pressure on the skeleton
+
+The dev/excv work above only made the static level visible to the output
+monitors. The skeleton still got no pore pressure and every element the
+wet density, so `ground18` passed its pressure target while its stresses
+were wrong (bottom sigyy -1995 vs -1247.5 in the Professional). Fixed in
+`materi.cc` (`materi()` forces and `get_materi_density()`), gated by the
+new `groundflow_static_pressure_group()` of `groundfl.cc`. Details,
+measured Professional variants and the `excavate1` target consequence:
+`groundflow_phreatic_level_static.md`. The excavate1 notes above were
+measured before this change (and before later delete fixes): the pre-fix
+GNU matched the excavate1 target exactly, because the Professional applies
+the static pore pressure only with `post_calcul -groundflow_pressure
+-total_pressure`, which excavate1 lacks.

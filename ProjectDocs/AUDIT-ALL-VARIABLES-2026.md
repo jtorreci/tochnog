@@ -38,7 +38,8 @@ The clusters below hold the differences. The main GNU-suspect findings are:
    section 5.1.
 2. With a static phreatic level and no pressure dof, the GNU builds the initial
    gravity stress with the wet density everywhere: −1995 against the analytic
-   −1250.
+   −1250. **Fixed 2026-09-29** (wet/dry density + static pore pressure on the
+   skeleton); see section 5.2.
 3. A set of feature bugs found by the Professional's analytic tests:
    - edge heat flux doubled
    - `force_point` sign flipped
@@ -364,7 +365,7 @@ The priority list in section 6 re-orders by judgement.
 | 13 | K06 | Power-law elasticity semantics | 4 | 0.56 | **GNU-suspect (semantic)** | `myoung6_e2` (E clamped to 3000): **GNU −4.0385 (E=3000)** vs Pro −5.3846 (E = 1000 + 3000). `myoung6_e3`: GNU E=800 vs Pro 1800. The Pro adds `group_materi_elasti_young` to the power law. The GNU implementation notes attribute "the law IS the modulus" to the Pro; the binary refutes this. `mpower` (`poisson_power`) behaves the same way. |
 | 14 | K21 | Viscous fluid / Navier-Stokes | 9 | 0.68 | UNKNOWN | `incnav1/4/5`, `tube1`, `examp1`: the stresses differ 6-100 %. The sfnet and Pro variants disagree with each other. |
 | 15 | K07 | Positional `node_dof` initial state over different dof layouts | 6 | 1.0 | INPUT-artifact | `mhardsoil_gp0`: the initial `-2` sits at slot 72, which is `sigxx` in the GNU but another dof in the Pro (the GNU has `sph`/`epphs*`, the Pro has `hshis`). |
-| 16 | K22 | Phreatic level: wet/dry density in the gravity stress | 2 | 1.0 | **GNU-suspect** | `ground18` (= `ground4` with `groundflow_phreatic_level_static` and no pressure dof). Analytic total `sigyy` at the bottom = −750 − 500 = −1250 (the `ground4` comment). **Pro −1247.5, GNU −1995**, which is the wet density over the whole column. With the pressure dof (`ground4`) the GNU is right. `ground8` (multiple phreatic levels): `sigyy` differs 19 %. |
+| 16 | K22 | Phreatic level: wet/dry density in the gravity stress | 2 | 1.0 | **GNU-suspect** | `ground18` (= `ground4` with `groundflow_phreatic_level_static` and no pressure dof). Analytic total `sigyy` at the bottom = −750 − 500 = −1250 (the `ground4` comment). **Pro −1247.5, GNU −1995**, which is the wet density over the whole column. With the pressure dof (`ground4`) the GNU is right. `ground8` (multiple phreatic levels): `sigyy` differs 19 %. **2026-09-29: `ground18` fixed, GNU −1247.5 = Pro (section 5.2); `ground8` unchanged (it has a pressure dof, other mechanism).** |
 | 17 | K10 | Groundflow velocity | 5 | 1.0 | PRO-suspect | `ground1`: manual v = k ∂h/∂y = 0.1·(−0.5) = −0.05. **GNU −0.05, Pro 0**, at the nodes and at the integration points. This is post-processing only. |
 | 18 | K11 | Nodal recovery of total strain | 19 | 0.12 | **GNU-suspect** | `tslv_part`: the velocities and stresses are equal to 1e-6. At the clamped edge, where v ≡ 0, the Pro gives `eptyy` = 0 (exact) and the GNU −2.35e-6; `eptxy` differs by a factor of 3. The GNU recovers the stress with the Pro operator (`06e175d`) but still recovers the strain with the old one. |
 | 19 | K18 | Refinement, higher-order and special elements | 8 | 0.27 | UNKNOWN | `disk1`, `force6`, `interface_patch`, `validation_11` (GNU fails the Pro target: 6.09e7 vs 8.59e7 ± 3e6). |
@@ -494,6 +495,60 @@ machinery. Worst node per variable:
   through the converted text. The conversion-neutrality count of section 1.1
   (32 changed approximations) was not re-measured.
 
+### 5.2 K22 resolution (2026-09-29)
+
+`ground18` is `ground4` with `groundflow_phreatic_level_static -yes` and no
+`groundflow_pressure`. The stress dofs hold the effective stress, so the
+analytic bottom `sigyy` is −1.5·10·50 − (2.0−1.0)·10·50 = −1250 (the
+comment of `ground4` calls it total, but its numbers are effective). The
+nodal value is the bottom element centre value, −1247.5.
+
+Two gaps in `materi.cc`, both fixed in the working tree on top of `886d582`
+(commit pending):
+
+1. `get_materi_density()` chose wet/dry from `NODE_PHREATICLEVEL`, which is
+   written only with a pressure dof, so every element was wet. The rule of
+   the pressure-dof branch (average nodal total pressure of
+   `groundflow_phreatic_coord()` < 0) now also serves the static groups.
+2. The pore pressure was added to the force stress only with a pressure
+   dof. A new branch adds the static total pressure at the integration
+   point (times `groundflow_pressure_factor`).
+
+Both apply to groups with `-groundflow` in `group_type`
+(`groundflow_static_pressure_group()` in `groundfl.cc`), as the Pro does.
+
+| test | variable | analytic | Pro | GNU before | GNU after |
+|---|---|---|---|---|---|
+| Pro `ground18` | `sigyy` bottom | −1250 (−1247.5 discrete) | −1247.5 | −1995 | −1247.5 |
+| | `sigyy` at the level | −750 (−749.375) | −749.375 | −1000 | −749.375 |
+| | `disy` top | — | −0.06875 | −0.1 | −0.06875 |
+| | total pressure bottom | −500 | −500 | −500 | −500 |
+| Pro `ground4` (pressure dof) | `sigyy` bottom | −1250 | −1247.5 | −1247.5 | −1247.5 |
+| test-2026 `phreatic_static1` | `sigyy` bottom / level | −1247.5 / −749.375 | same | −1995 / −1000 | same as Pro |
+| test-2026 `phreatic_static_submerged1` | `sigyy` bottom / y=−50 | −997.5 / −500 | same | −2095 / −1100 | same as Pro |
+| Pro `excavate1` | `vely` node 13 (target) | — | −0.00210987 | −0.00210987 | −0.00253891 |
+
+- `ground18` after the fix equals the Pro in every `node_dof` and
+  `node_dof_calcul` value (worst `sigyy` difference 1e-9).
+- **`excavate1`: new divergence (BACKLOG C10).** The Pro applies the
+  static pore pressure only when `post_calcul -groundflow_pressure
+  -total_pressure` is present. `excavate1` has no such record, so the Pro
+  (and the pre-fix GNU) carry no pore pressure there. With the record
+  added, the Pro gives −0.00253891, the GNU value. Other probes on
+  `ground18`: without the record Pro −1745 (density only), GNU −1247.5.
+  The GNU follows manual 6.574; the decision is left to the project owner.
+- `ground8` (multiple levels with a pressure dof) is not touched by this
+  fix: its `.dbs` is identical before and after. Its 19 % `sigyy`
+  difference belongs to the multiple-level coupling
+  (`groundflow_multilevel_mechanics.md`).
+- **Regression.** Clean build: suite 16/16, the same 70 file-check failures
+  by name. validation-suite 233 PASS / 1 RUNFAIL, sfnet 187/10, test-2026
+  19/19 (the 17 earlier inputs + `phreatic_static1`,
+  `phreatic_static_submerged1`); every `.dbs` identical to the pre-fix
+  binary after masking timestamps and denormals (sfnet `examp14` times out
+  at 45 s in both). No corpus test uses the static switch without a
+  pressure dof.
+
 ## 6. Recommended next fixes (priority by judgement)
 
 1. **K01, `-updated_linear` in the GNU.** DONE 2026-09-29 (section 5.1).
@@ -502,7 +557,7 @@ machinery. Worst node per variable:
      `-UPDATED_WITHOUT_ROTATION` paths in `materi.cc`/`stress.cc`, with the
      compressibility material first.
    - This affects any model on the Pro's recommended memory.
-2. **K22, phreatic level without a pressure dof.**
+2. **K22, phreatic level without a pressure dof.** DONE 2026-09-29 (section 5.2).
    - The wet/dry density split in the initial gravity stress; use the analytic
      −1250 of `ground4`/`ground18` as the check.
    - This is basic geotechnical initial state.

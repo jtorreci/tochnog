@@ -717,6 +717,31 @@ void materi( long int element, long int gr, long int name, long int nnol,
       new_pres *= gpf;
       for ( idim=0; idim<MDIM; idim++ ) total_new_sig[idim*MDIM+idim] += new_pres;
     }
+    else if ( groundflow_static_pressure_group( gr ) ) {
+      // Mechanics-only static groundflow (manual Professional 6.574
+      // groundflow_phreatic_level_static -yes, group_type -groundflow,
+      // no groundflow_pressure unknown): the pore pressure acting on the
+      // skeleton is the static total pressure of the phreatic level at
+      // the integration point, rho_w*g*(z_level - z), clamped to the
+      // atmospheric pressure above the level (groundflow_phreatic_coord).
+      // It is a prescribed load: no pressure unknown, so no coupling
+      // term in the element matrix. The stress dofs keep the effective
+      // value. Checked on ground18 of the corpus against the
+      // Professional 02-08-2026 (bottom sigyy -1247.5, the same as the
+      // pressure-dof twin ground4); without it the column carried no
+      // buoyancy (-1995).
+      double gpf = 1.;
+      long int level_source = 0;
+      db( GROUNDFLOW_PRESSURE_FACTOR, 0, idum, &gpf, ldum,
+        VERSION_NORMAL, GET_IF_EXISTS );
+      total_pressure = static_pressure = location = 0.;
+      groundflow_phreatic_coord( -1, coord_ip, new_unknowns, total_pressure,
+        static_pressure, location, &level_source );
+      if ( level_source==1 ) {
+        new_pres = gpf * total_pressure;
+        for ( idim=0; idim<MDIM; idim++ ) total_new_sig[idim*MDIM+idim] += new_pres;
+      }
+    }
     if ( undr_active ) {
       // undrained capacity: the excessive undrained pressure of this
       // step joins the fixed groundflow pressure as the full total
@@ -1825,7 +1850,15 @@ double get_materi_density( long int element, long int element_group, long int nn
     // drying and rebounded on re-wetting. The per-node totals are averaged
     // over the element nodes like the -to_pres dependency monitor of
     // group.cc (element representative value).
-    if ( groundflow_pressure ) {
+    // The same rule serves the mechanics-only static groundflow
+    // (groundflow_phreatic_level_static -yes, group_type -groundflow, no
+    // pressure unknown; manual Professional 6.574): groundflow_phreatic_coord
+    // then returns the static total pressure of the level. The
+    // NODE_PHREATICLEVEL branch below cannot serve these models (its
+    // record needs the pressure unknown), so it chose the wet density
+    // over the whole column (ground18 of the corpus: bottom sigyy -1995
+    // vs -1247.5 in the Professional 02-08-2026).
+    if ( groundflow_pressure || groundflow_static_pressure_group( element_group ) ) {
       double total_dens = 0., static_dens = 0., location_dens = 0.,
         coord_dens[MDIM], sum_dens = 0.;
       double *node_dof_dens = NULL, *coord_db_dens = NULL;

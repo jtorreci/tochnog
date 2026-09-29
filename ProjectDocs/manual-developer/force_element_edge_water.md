@@ -103,4 +103,4 @@ elementos), así que el registro parse-only es suficiente para el test.
 - `force_edge_water -no` se parsea pero no tiene semántica de apagado
   (nunca se usa en el corpus).
 - La semántica de flujo de `groundflow_phreatic_level_static` (familia
-  groundflow).
+  groundflow). Done 2026-09-29: see `groundflow_phreatic_level_static.md`.
