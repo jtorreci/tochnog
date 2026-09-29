@@ -1205,6 +1205,9 @@ void iteration_start( void )
   db_set_dbl( NODE_LHSIDE, VERSION_NORMAL );
   db_set_dbl( NODE_RHSIDE, VERSION_NORMAL );
   db_set_dbl( ELEMENT_VOLUME, VERSION_NORMAL );
+    // element_normal (6.445): generated here, outside the parallel
+    // element loop, when a group needs it and the record is absent
+  element_normal_set();
 }
 
 // control_print_frequency gate (manual Professional 6.291/6.292).

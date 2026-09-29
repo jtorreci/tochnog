@@ -52,7 +52,11 @@ With a plane normal the records limit the traction on that SPECIFIC plane
 - `tension_direct sigy` + `_normal nx ny nz`: the normal traction on the
   plane is capped at sigy.
 
-`_normal_automatic -yes` takes the plane normal from the element normal.
+`_normal_automatic -yes` takes the plane normal from the element normal
+`element_normal` (inward normal of the mesh boundary, see
+`element_normal.md`; before 2026-09-30 the GNU used the cross product of
+two element edges, which is out of plane in 2D and made the cut-off
+inert).
 
 ## Uso
 

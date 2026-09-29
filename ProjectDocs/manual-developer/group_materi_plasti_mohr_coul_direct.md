@@ -30,6 +30,9 @@ The direct records have TWO modes selected by the presence of a plane normal:
    `max_fric = max(c - sig_n*tan(phi), 0)` on the plane with the given
    normal). NEW: `group_materi_plasti_bounda/_factor` (Professional 6.231/
    6.232) now reduce phi and c by the factor for the elements on the wall.
+   `_normal_automatic` reads the generated `ELEMENT_NORMAL` record
+   (2026-09-30, `element_normal.md`; it replaced a cross product of two
+   element edges that was out of plane in 2D).
 
 ## Física
 

@@ -45,11 +45,11 @@ report measures the lower bound of the gap.
 | Metric | Value |
 |--------|-------|
 | Professional keywords (chapters 4–6) | 1154 |
-| Accepted by GNU parser | 831 (72.0 %) |
-| Missing | 323 |
+| Accepted by GNU parser | 832 (72.1 %) |
+| Missing | 322 |
 | Missing but already discarded (GiD) | 63 |
-| Missing and not discarded | **260** |
-| Coverage excluding the GiD discard | 76.2 % |
+| Missing and not discarded | **259** |
+| Coverage excluding the GiD discard | 76.3 % |
 
 The "Métrica global" header of `SEGUIMIENTO-CONVERGENCIA.md` (309/1094, 28 %)
 is stale and should be replaced with these figures.
@@ -65,6 +65,12 @@ Professional binary 02-08-2026; see `manual-user/<name>.md`). Probe re-run on
 the clean build: 827 → 831 accepted, 264 → 260 pending; the four names were
 removed from the full list.
 
+Update 2026-09-30: `element_normal` implemented (generated record used by
+`*_direct_normal_automatic`, rule measured on the Professional 02-08-2026;
+see `manual-user/element_normal.md`). Probe re-run on the clean build:
+831 → 832 accepted, 260 → 259 pending; the name was removed from the full
+list.
+
 ## Gap by family
 
 | Family | Missing | Notes |
@@ -75,7 +81,7 @@ removed from the full list.
 | Material groups (`group_materi_*`, `materi_plasti_*`) | 29 | umat (3), stress_null (3), hypo niemunis_visco / wolffersdorff_niemunis / minimum_void_ratio, generalised cam clay for bonded soils, hyper reduced_polynomial / simo_taylor, elasti borja_tamagnini / c / young_user, history_variable_user, visco_power, residual_stiffness, mpc, diprisco_density, `materi_plasti_maximum_iterations` (only the `group_` form exists) |
 | Geometry | 22 | `geometry_moving*` (6) + `control_geometry_moving` + `mesh_delete_geometry_moving`, `geometry_hexahedral`, `geometry_tetrahedral`, `geometry_boundary`, `geometry_exclude`, `geometry_method`, `geometry_*_part`, `*_eps_iso`, `geometry_element_geometry*`, `geometry_mpc` |
 | Post (`post_*`, `control_post*`) | 21 | post_calcul options (7), post_data (3), post_count, post_node/point options |
-| Element records (`element_*`) | 20 | mostly print/output records: element_intpnt_* (5), element_interface_intpnt_* (4), truss strain, beam direction/force, geometry_present, normal, boundary |
+| Element records (`element_*`) | 19 | mostly print/output records: element_intpnt_* (5), element_interface_intpnt_* (4), truss strain, beam direction/force, geometry_present, boundary (element_normal done 2026-09-30) |
 | `*_apply` switches | 14 | interface_gap_apply, linear_calculation_apply, element_group_apply, truss_rope_apply, group_plasti_apply, ... and their `control_*` forms (plasti_apply, control_plasti_apply, materi_damage_apply, materi_failure_apply done 2026-09-27) |
 | Print (`print_*`) | 14 | print_vtk_* (4), print_gmsh_* (3), print_frd_freecad/prepomax, print_precision, print_data_name, print_element_geometry_present* |
 | Initialisation dofs (`materi_*`) | 11 | materi_strain_plasti_* (5), materi_strain_total_*kappa (4), materi_strain_energy, materi_history_variable |

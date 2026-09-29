@@ -1640,6 +1640,12 @@ enum {
   // Enum append keeps existing values stable (tochnog.h and
   // tochnog-mod.h stay in sync).
   ELEMENT_INTPNT_MATERI_STRESS_EFFECTIVE,
+  // element_normal (manual Professional 6.445, 2026-09-30): inward normal
+  // of an element with respect to the mesh boundary, generated when a
+  // group needs it (group_materi_plasti_*_direct_normal_automatic).
+  // Enum append keeps existing values stable (tochnog.h and
+  // tochnog-mod.h stay in sync).
+  ELEMENT_NORMAL,
   LAST_DUMMY }; // keep LAST_DUMMY always the last one
 
 #define MDAT LAST_DUMMY+DATA_ITEM_SIZE  // reserve space for unknowns
@@ -1799,6 +1805,8 @@ void      area_element_group( long int version );
 long int  area_element_group_time_active( void );
 void      area_element_group_sequence( );
 void      area_node_dataitem( void );
+void      element_normal_set( void );
+long int  element_normal_needed( void );
 void      array_add( double a[], double b[], double c[], long int n );
 double    array_distance( double a[], double b[], double work[], long int n );
 double    array_inproduct( double a[], double b[], long int n );

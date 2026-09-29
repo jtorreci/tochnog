@@ -96,7 +96,6 @@ element_intpnt_h
 element_intpnt_iso_coord
 element_intpnt_method
 element_intpnt_npoint
-element_normal
 element_print_group_data_values
 element_truss_strain
 element_truss_strain_temperature

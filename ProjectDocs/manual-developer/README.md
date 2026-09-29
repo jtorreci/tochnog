@@ -478,3 +478,7 @@ Each file corresponds to the same feature in the [User Manual](../manual-user/).
 ## DAMAGE EFFECTIVE STRESS (2026-09-29)
 
 - [materi_damage_effective_stress](materi_damage_effective_stress.md) — legacy 2014 defect: `set_stress()` multiplied the carried (already damaged) stress by (1-d) every step, compounding the damage (`damage1` bar 1436.83 instead of 85598.32). Fix: internal per-integration-point record `ELEMENT_INTPNT_MATERI_STRESS_EFFECTIVE` (`database.cc`, `external` 0, `version_all`, `MSTRESS_EFF_SLOTS` = flag + 6 stresses; pre-allocated in `top.cc` `top()`/`step_start()`), read/rotated/written in `materi.cc` `materi()`, new `set_stress( ..., new_sig_eff, ... )` output; damaged stress = (1-d) effective, never divided. Yield test stays on the damaged stress and gated steps (`materi_damage_apply -no`) skip the scaling (both measured on the Professional 02-08-2026). Mazars gamma checked, left unchanged.
+
+## ELEMENT NORMAL (2026-09-30)
+
+- [element_normal](element_normal.md) — record `ELEMENT_NORMAL` (`database.cc`, DOUBLE ndim, external, VERSION_NORMAL only; enum appended in `tochnog.h`/`tochnog-mod.h`); `area.cc` `element_normal_set()` (boundary sides from the `border_nodes_*` tables, consistent nodal side normals, element = normalized sum of node normals), called from `top.cc` `iteration_start()` outside the parallel loop, deleted in `mesh.cc` `mesh_has_changed()`; `materi.cc` reads it for `_normal_automatic` (replaces the 2D-inert cross product and its out-of-bounds reads). Rule measured on the Professional 02-08-2026.
