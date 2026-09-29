@@ -45,6 +45,11 @@ otherwise it is first loading and `E50`/`nu50` apply. The `dp` estimate
 catches the first unloading step (same decision logic as
 `group_materi_elasti_stress_pressure_history_factor`).
 
+With `group_materi_elasti_k0` and `control_materi_elasti_k0 -yes` for the
+current control index, both `nu50` and `nuur` are replaced by the K0
+Poisson ratio `K0/(1+K0)` (manual 6.650, measured on the Professional;
+see [group_materi_elasti_k0](group_materi_elasti_k0.md)).
+
 ## Uso
 
 ```

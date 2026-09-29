@@ -1,66 +1,73 @@
-# group_materi_elasti_k0 (+ hook de control_materi_elasti_k0)
+# group_materi_elasti_k0 (+ control_materi_elasti_k0 hook)
 
-## Implementación
+## Implementation
 
-- **Enum nuevo**: `GROUP_MATERI_ELASTI_K0` en tochnog.h y tochnog-mod.h
-  (en sync, orden alfabético entre `ELASTI_COMPRESSIBILITY` y
-  `ELASTI_LADE`).
-- **Registro** (database.cc): DOUBLE_PRECISION, length 1, data_class
-  MATERI, data_required GROUP_TYPE: `K0`. El control
-  `CONTROL_MATERI_ELASTI_K0` (INTEGER, length 1, CONTROL) YA existía
-  como parcial de Sprint 9 (sin hook); se conecta ahora.
-- **Hook en `set_stress()`** (stress.cc), ANTES del bloque young:
+- **Enum**: `GROUP_MATERI_ELASTI_K0` in tochnog.h and tochnog-mod.h (in
+  sync, alphabetical between `ELASTI_COMPRESSIBILITY` and `ELASTI_LADE`).
+- **Record** (database.cc): DOUBLE_PRECISION, length 1, data_class MATERI,
+  data_required GROUP_TYPE: `K0`. `CONTROL_MATERI_ELASTI_K0` (INTEGER,
+  length 1, CONTROL) is the per-timestep-index switch.
+- **Hook in `set_stress()`** (stress.cc), before the young block:
   ```c
   k0_active = 0;
-  if ( db_active_index( CONTROL_MATERI_ELASTI_K0, 0, VERSION_NORMAL ) ) {
-    idum[0] = 0;
-    db( ICONTROL, 0, idum, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
-    db( CONTROL_MATERI_ELASTI_K0, idum[0], &k0_control_swit, ddum, ldum,
-      VERSION_NORMAL, GET_IF_EXISTS );
-    if ( k0_control_swit==-YES &&
-         get_group_data( GROUP_MATERI_ELASTI_K0, gr, element,
-           new_unknowns, &k0_elasti, ldum, GET_IF_EXISTS ) ) {
-      if ( k0_elasti>0.95 ) k0_elasti = 0.95;
-      k0_active = 1;
-    }
+  k0_control_swit = 0;
+  idum[0] = 0;
+  db( ICONTROL, 0, idum, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+  db( CONTROL_MATERI_ELASTI_K0, idum[0], &k0_control_swit, ddum, ldum,
+    VERSION_NORMAL, GET_IF_EXISTS );
+  if ( k0_control_swit==-YES &&
+       get_group_data( GROUP_MATERI_ELASTI_K0, gr, element, new_unknowns,
+         &k0_elasti, ldum, GET_IF_EXISTS ) ) {
+    if ( k0_elasti>0.95 ) k0_elasti = 0.95;
+    k0_active = 1;
   }
   ```
-  Y en los bloques young y young_power, tras leer el poisson:
-  ```c
-  if ( get_group_data( GROUP_MATERI_ELASTI_POISSON, gr, element,
-      new_unknowns, &poisson, ldum, GET_IF_EXISTS ) && k0_active )
-    poisson = k0_elasti/(1.+k0_elasti);
-  ```
-- **Guarda estricta**: el override aplica SOLO con
-  young/young_power Y poisson presentes (el return de get_group_data del
-  poisson se captura) Y control -yes Y record k0 existente — la
-  combinación exacta del manual 6.650.
-- **check.cc**: `GROUP_MATERI_ELASTI_K0` requiere `materi_stress` +
+- **young / young_power blocks**: the poisson record is read (if present)
+  and then `if ( k0_active ) poisson = k0_elasti/(1.+k0_elasti);` — the
+  override no longer depends on the poisson record being present.
+- **hardsoil block**: right after reading the 7 hardsoil parameters,
+  `if ( k0_active )` sets `nu50 = nuur = K0/(1+K0)`, so the trial C of the
+  loading/unloading decision and the final C both use the K0 Poisson.
+- **check.cc**: `GROUP_MATERI_ELASTI_K0` requires `materi_stress` +
   `materi_velocity`.
 
-## Física
+## History of fixes (2026-09-29)
 
-Manual 6.650: con K0 + control -yes, `nu = K0/(1+K0)` (derivado de
-`K0 = nu/(1-nu)`), K0 > 0.95 truncado a 0.95. En un oedometro
-lateralmente confinado el ratio sigma_lateral/sigma_axial =
-`nu/(1-nu) = K0` — "K0 stresses".
+1. **Index guard**: the hook was wrapped in
+   `if ( db_active_index( CONTROL_MATERI_ELASTI_K0, 0, VERSION_NORMAL ) )`.
+   `db_active_index` tests that EXACT index, so a switch given for any
+   control index other than 0 (Professional test `elasti7`: index 20) was
+   silently ignored (sigxx 0 instead of -0.05). The record is now read
+   directly at the ICONTROL index with GET_IF_EXISTS (`k0_control_swit`
+   reset to 0 because GET_IF_EXISTS does not write when absent). Inputs
+   with index 0 are byte-identical.
+2. **Poisson record not required**: measured on Professional 02-08-2026:
+   young + K0 without `group_materi_elasti_poisson`, and young_power + K0
+   with and without poisson, all give sigxx = K0*sigyy = -0.05.
+3. **hardsoil**: the old comment claimed hardsoil was NOT affected; the
+   manual (6.650) lists it and the Professional confirms it: hardsoil
+   (`nu50 = nuur = 0` or `0.2`) + K0 0.1 gives sigxx -0.05, and without the
+   control switch 0 / -0.125.
+4. K0 > 0.95 clamp verified: K0 = 2 gives sigxx/sigyy = 0.95 on both
+   binaries.
 
-## Validación
+## Validation
 
-- `mk0.dat` (control -yes, K0=0.5): oedometro `E=1000`, `eps_zz=-0.001`:
-  nu = 1/3 -> sigma_xx = -0.75, sigma_yy = -1.5 EXACTOS
-  (sigma_xx/sigma_yy = 0.5 = K0).
-- `mk0_off.dat` (control -no): nu base 0.3 -> sigma_xx = -0.5769,
-  sigma_yy = -1.3462 — A/B discrimina.
+| Test | Before | After | Professional |
+|------|--------|-------|--------------|
+| `elasti7` (index 20) sigxx / sigyy / top disy | 0 / -0.5 / -5e-7 | -0.05 / -0.5 / -4.9090909e-7 | -0.04999999884 / -0.5 / -4.909090913e-7 |
+| `elasti_k0_index1` (test-2026) | rc 1 (sigxx 0) | PASS | -0.05 |
+| `elasti_k0_nopoisson1` (young_power, no poisson) | rc 1 (sigxx 0) | PASS | -0.05 |
+| `elasti_k0_hardsoil1` (hardsoil nu 0.2) | rc 1 (sigxx -0.125) | PASS | -0.05 |
+| `mk0` / `mk0_off` (index 0) | -0.75 / -0.5769 | unchanged | — |
 
-## Gotchas
+All elasti7 variables (node_dof, post_point_dof, node_rhside) agree with
+the Professional within 2.4e-8 relative after the fix.
 
-- El control se lee con el patrón de `control_materi_gate_off`
-  (general.cc): ICONTROL + índice del control (idu m[0] inicializado a 0
-  porque GET_IF_EXISTS no escribe si el record falta).
-- El control es INTEGER (swit -yes/-no): el buffer del valor debe ser
-  long int, NO double (error de compilación corregido en el desarrollo).
-- La combinación con `group_materi_elasti_hardsoil` del manual NO está
-  implementada (hardsoil no existe en el GNU) — pendiente documentado.
-- young_polynomial NO recibe el override (el manual solo lista
-  young/young_power) — decisión deliberada.
+## Pending / notes
+
+- young_polynomial does not receive the override (the manual only lists
+  young/young_power/hardsoil) — not measured on the Professional.
+- The GNU input check requires `materi_strain_total` for
+  `group_materi_elasti_young_power`; the Professional runs without it
+  (separate legacy check, not changed here).

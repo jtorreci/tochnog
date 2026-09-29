@@ -39,10 +39,14 @@ Since the A+B solver fix (2026-08-28) this also covers the breakdown
 exits (the solver no longer reports breakdown/stagnation as success —
 see the solver note in the developer manual): a non-converging or
 breakdown solve stops the calculation with RC≠0 by default, and
-continues with the current solution (warning) with `-no`. The `index`
-must match the control index of the `control_timestep` block of the
-model (e.g. `control_solver_bicg_stop 5 -no` for `control_timestep 5
-...`); with a non-matching index the record is silently ignored.
+continues with the current solution (warning) with `-no`. Index
+semantics measured on the Professional 02-08-2026 (and followed by the
+GNU since 2026-09-29): ONLY the record with index 0 is used, and it acts
+on every timestep whatever its control index (e.g. `control_solver_bicg_stop
+0 -no` also covers `control_timestep 5 ...`); a record with any other
+index (even the one of the running `control_timestep`) is ignored. The
+control record overrules the global `solver_bicg_stop` when both are given
+(manual 6.376).
 Registered without behaviour (documented): `control_solver_bicg_restart`
 (no restart in the GNU bicg), `control_solver_matrix_save`,
 `control_solver_pardiso_ordering`/`_out_of_core` (PARDISO not compiled

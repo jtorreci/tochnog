@@ -131,7 +131,7 @@ input parameters it accepts.
 - [group_materi_failure_void_fraction](group_materi_failure_void_fraction.md) — element failure on the void fraction (Professional spelling; GNU name kept as alias).
 - [group_materi_elasti_poisson_power](group_materi_elasti_poisson_power.md) — pressure-dependent power-law Poisson ratio nu = nu0 + nu1*(p/p1)^alpha (nu <= nu2).
 - [group_materi_elasti_shear_factor](group_materi_elasti_shear_factor.md) — multiply the shear stiffness from young+poisson by a factor.
-- [group_materi_elasti_k0](group_materi_elasti_k0.md) — K0 data; with control_materi_elasti_k0 -yes the poisson becomes K0/(1+K0).
+- [group_materi_elasti_k0](group_materi_elasti_k0.md) — K0 data; with control_materi_elasti_k0 -yes (same control index as the timestep) the poisson becomes K0/(1+K0) for young, young_power and hardsoil.
 - [group_materi_elasti_young_power](group_materi_elasti_young_power.md) — power-law Young modulus E = E0 + E1*(p/p1)^alpha (E >= E2, E <= E3); 6-parameter Professional form (GNU 3-parameter form no longer accepted).
 - [group_materi_elasti_stress_pressure_history_factor](group_materi_elasti_stress_pressure_history_factor.md) — stiffness multiplier while unloading/reloading (|p| below the historical maximum).
 - [materi_stress_pressure_history](materi_stress_pressure_history.md) — initia: running maximum of |pressure| in the node_dof records (sph dof).

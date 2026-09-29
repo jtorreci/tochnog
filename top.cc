@@ -25,7 +25,7 @@
 void top( void )
 {
 
-  long int incdrv_max=-1;
+  long int incdrv_max=-1, gp_initial_max=-1;
   long int inod=0, ielem=0, max=0, max_node=0, max_control=0, 
     start_control=0, length=0, iinc=0, ninc=0, 
     timestep_iterations=1, swit=0, swit_timestep=0, idat=0, 
@@ -181,6 +181,13 @@ void top( void )
     array_set( dworknei, 0, length_nei );
     dworknei[length_nei-1]=1;
 
+    // control_materi_plasti_hardsoil_gammap_initial may be given for any
+    // control index (the switch is read at the current index in
+    // set_stress): pre-allocate when it is specified for ANY index
+    // (a check on index 0 only crashed for a non-zero index with "Data
+    // is allocated in a parallel loop").
+    db_highest_index( CONTROL_MATERI_PLASTI_HARDSOIL_GAMMAP_INITIAL,
+      gp_initial_max, VERSION_NORMAL );
     for ( ielem=0; ielem<=max_elem; ielem++ ) {
       if ( db_active_index( ELEMENT, ielem, VERSION_NORMAL ) && 
            !db_active_index( ELEMENT_DOF, ielem, VERSION_NORMAL ) ) 
@@ -197,8 +204,7 @@ void top( void )
       // the parallel element loop, where allocation is not allowed).
       // Sentinel -1: the first-timestep initialization in set_stress
       // overwrites it with gamma_p_extra >= 0.
-      if ( db_active_index( CONTROL_MATERI_PLASTI_HARDSOIL_GAMMAP_INITIAL,
-           0, VERSION_NORMAL ) && db_active_index( ELEMENT, ielem, VERSION_NORMAL ) && 
+      if ( gp_initial_max>=0 && db_active_index( ELEMENT, ielem, VERSION_NORMAL ) && 
            !db_active_index( ELEMENT_INTPNT_MATERI_PLASTI_HARDSOIL_GAMMAP_INITIAL,
              ielem, VERSION_NORMAL ) ) {
         dzero = -1.;
