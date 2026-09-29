@@ -168,18 +168,23 @@ long int solve_iterative_bicg( void )
     // control_solver_bicg_stop (6.376): -no does NOT stop the
     // calculation when the iterative solver does not converge (continue
     // with the current solution); -yes (and the default) stops.
-    // Measured on Professional (singular bicg system, see
-    // manual-developer/solve_iterative_bicg.md):
-    //  - the control record overrules the global one (as the manual
-    //    says; the GNU used to apply the global one last);
-    //  - only the control record with index 0 is used, whatever the
-    //    control index of the current timestep (a record with the
-    //    timestep's non-zero index is ignored, a record with index 0
-    //    also acts on timesteps with another index).
+    // Precedence (project decision 2026-09-29, see
+    // manual-developer/solve_iterative_bicg.md): the global record, then
+    // the control record with index 0, then the control record of the
+    // current timestep index (last read wins).
+    // Measured on Professional: the control record overrules the global
+    // one (as the manual says), but ONLY the index-0 control record is
+    // read, for every timestep. The manual documents a per-timestep
+    // index, so a record with the timestep's own index is honoured here
+    // (deliberate divergence); the index-0 fallback keeps Professional
+    // inputs that rely on `control_solver_bicg_stop 0 ...` unchanged.
   db( SOLVER_BICG_STOP, 0, &bicg_stop,
     ddum_bs, ldum_bs, VERSION_NORMAL, GET_IF_EXISTS );
   db( CONTROL_SOLVER_BICG_STOP, 0, &bicg_stop,
     ddum_bs, ldum_bs, VERSION_NORMAL, GET_IF_EXISTS );
+  if ( icontrol!=0 )
+    db( CONTROL_SOLVER_BICG_STOP, icontrol, &bicg_stop,
+      ddum_bs, ldum_bs, VERSION_NORMAL, GET_IF_EXISTS );
 
     // the velocity/temperature/pressure system assembled by the GNU is
     // symmetric when every element matrix is symmetric (the diagonal

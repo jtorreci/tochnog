@@ -33,8 +33,11 @@ Sprint 12 lot 3. The Professional's global solver family (manual
   `CONTROL_OPTIONS_SOLVER_BICG_ERROR`, overwriting it.
 
 - **`solver_bicg_stop`**: read in `so_bicg.cc` BEFORE
-  `control_solver_bicg_stop` (index 0), which overrules it (manual
-  6.376; measured on the Professional, see solve_iterative_bicg.md).
+  `control_solver_bicg_stop`, which overrules it (manual 6.376): first
+  the index-0 control record, then the record of the timestep's control
+  index (last read wins). The Professional reads only index 0; honouring
+  the timestep index is a deliberate divergence (project decision
+  2026-09-29, BACKLOG C13; table in solve_iterative_bicg.md).
 
 - **`solver_matrix_symmetric -yes`**: in `so_bicg.cc`, replaces the
   per-solve measurement `solve_iterative_bicg_symmetric()` with the
