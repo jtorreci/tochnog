@@ -32,8 +32,9 @@ Sprint 12 lot 3. The Professional's global solver family (manual
 - **`solver_bicg_error`**: read in `so_bicg.cc` right after
   `CONTROL_OPTIONS_SOLVER_BICG_ERROR`, overwriting it.
 
-- **`solver_bicg_stop`**: read in `so_bicg.cc` after the
-  `CONTROL_SOLVER_BICG_STOP` block, overwriting it.
+- **`solver_bicg_stop`**: read in `so_bicg.cc` BEFORE
+  `control_solver_bicg_stop` (index 0), which overrules it (manual
+  6.376; measured on the Professional, see solve_iterative_bicg.md).
 
 - **`solver_matrix_symmetric -yes`**: in `so_bicg.cc`, replaces the
   per-solve measurement `solve_iterative_bicg_symmetric()` with the

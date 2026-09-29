@@ -44,7 +44,7 @@ long int solve_iterative_bicg( void )
 {
   long int icontrol=0, iter=0, max_iter=0, ilocal=0, nthread=0, ready=0, 
     max_node=0, succesful=1, print_solver=-NO, length=0, ldum=0, 
-    swit=0, idum[1], bicg_stop=-YES, icontrol_bicg=0, ldum_bs=0;
+    swit=0, idum[1], bicg_stop=-YES, ldum_bs=0;
   double error=0., alpha=0., beta=0., dAd=0., check_error=0.,
    bicg_error_minimum=1.e-16, size_r1r2=0., initial_error=0., 
    bicg_error=1.e-14, ddum[1], ddum_bs[1], norm_b=0., real_residual=0.,
@@ -164,20 +164,21 @@ long int solve_iterative_bicg( void )
 	  ldum, VERSION_NORMAL, GET_IF_EXISTS );
   if ( check_error<bicg_error_minimum ) check_error = bicg_error_minimum;
 
-    // control_solver_bicg_stop -no (manual Professional 6.376):
-    // do NOT stop the calculation when the iterative solver does not
-    // converge (continue with the current solution); -yes (and the
-    // default) stops as before
-  if ( db_active_index( CONTROL_SOLVER_BICG_STOP, 0,
-       VERSION_NORMAL ) ) {
-    db( ICONTROL, 0, &icontrol_bicg, ddum_bs, ldum_bs,
-      VERSION_NORMAL, GET_IF_EXISTS );
-    db( CONTROL_SOLVER_BICG_STOP, icontrol_bicg, &bicg_stop,
-      ddum_bs, ldum_bs, VERSION_NORMAL, GET_IF_EXISTS );
-  }
-  // solver_bicg_stop (manual Professional 6.1050): the global record
-  // overwrites the per-control one
+    // solver_bicg_stop (manual Professional 6.1051) and
+    // control_solver_bicg_stop (6.376): -no does NOT stop the
+    // calculation when the iterative solver does not converge (continue
+    // with the current solution); -yes (and the default) stops.
+    // Measured on Professional (singular bicg system, see
+    // manual-developer/solve_iterative_bicg.md):
+    //  - the control record overrules the global one (as the manual
+    //    says; the GNU used to apply the global one last);
+    //  - only the control record with index 0 is used, whatever the
+    //    control index of the current timestep (a record with the
+    //    timestep's non-zero index is ignored, a record with index 0
+    //    also acts on timesteps with another index).
   db( SOLVER_BICG_STOP, 0, &bicg_stop,
+    ddum_bs, ldum_bs, VERSION_NORMAL, GET_IF_EXISTS );
+  db( CONTROL_SOLVER_BICG_STOP, 0, &bicg_stop,
     ddum_bs, ldum_bs, VERSION_NORMAL, GET_IF_EXISTS );
 
     // the velocity/temperature/pressure system assembled by the GNU is

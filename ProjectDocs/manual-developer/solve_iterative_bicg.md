@@ -44,11 +44,35 @@ The failure messages print the initial error, the final error, the
 
 `control_solver_bicg_stop -no` (manual Professional 6.376) now also covers
 the breakdown exits (continue with a warning + the current solution),
-consistent with its max_iter semantics. Note: the record lookup follows the
-legacy pattern (active-index check at 0, read at the current control
-index) — for a model whose `control_timestep` uses a non-zero control
-index, write `control_solver_bicg_stop <index> -no` with the same index
-(the `iface_3d_slip` test documents this).
+consistent with its max_iter semantics.
+
+Record lookup (so_bicg.cc, 2026-09-29): `solver_bicg_stop` is read first
+and `control_solver_bicg_stop` with index **0** is read last, so the
+control record overrules the global one (manual 6.376) and only index 0
+counts, whatever the control index of the running timestep. Measured on
+the Professional 02-08-2026 with a singular bicg system (elasti7 mesh
+without supports, `solver -matrix_iterative_bicg`, timestep index 20);
+"stops" = Professional "Error: the BICG solver did not converge":
+
+| control_solver_bicg_stop | solver_bicg_stop | Professional | GNU before | GNU after |
+|---|---|---|---|---|
+| 20 -no | — | stops | stops | stops |
+| 0 -no | — | continues | stops | continues |
+| 10 -no | — | stops | stops | stops |
+| 0 -yes, 20 -no | — | stops | continues | stops |
+| 0 -no, 20 -yes | — | continues | stops | continues |
+| 0 -no (timestep 0) | -yes | continues | stops | continues |
+| 0 -yes (timestep 0) | -no | stops | continues | stops |
+| 0 -no (timestep 0) | — | continues | continues | continues |
+| — | — | stops | stops | stops |
+
+The old code (active-index check at 0, then a read at the current control
+index, then the global record overwriting it) matched none of the mixed
+rows. This contradicts the per-timestep wording of the manual; the
+Professional behavior was followed (convergence target). Scratch inputs
+only (the GNU "stop" in this singular case does not abort the run — it
+prints the error and continues with rc 0 — so no self-checking target
+distinguishes both paths; see BACKLOG-OPEN-ISSUES).
 
 ### 2. CG for the symmetric system (B)
 
@@ -145,7 +169,8 @@ The symmetry check is one serial pass over the element matrices
   `materi.cc:619` vs `groundfl.cc:116`) has a sign mismatch between the
   off-diagonal blocks (measured `max_rel_asym` up to 1.0) — the coupled
   system is non-symmetric by construction and takes the Bi-CG path.
-- `control_solver_bicg_stop` record-index quirk (see above).
+- `control_solver_bicg_stop`: index-0-only semantics copied from the
+  Professional (see above).
 - The staggered fixed point (`0.2315×` 2D, `0.143×` road) is the scheme's;
   the monolithic mixed solve (fix C) or a regularized staggered update
   (fix D) is the definitive repair for the user case.

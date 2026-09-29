@@ -36,7 +36,7 @@ record overwrites the per-control one.
 |---|---|---|
 | `solver_bicg_error <error>` | termination error ratio of the bicg iterations (6.1048) | wired (overwrites `control_solver_bicg_error`) |
 | `solver_bicg_restart <n>` | number of bicg restarts (6.1049) | PARTIAL: registered and accepted; the GNU bicg has no restart mechanism |
-| `solver_bicg_stop <sw>` | stop the calculation when bicg does not converge (6.1050) | wired (overwrites `control_solver_bicg_stop`; `-no` continues with a warning) |
+| `solver_bicg_stop <sw>` | stop the calculation when bicg does not converge (6.1050) | wired (`control_solver_bicg_stop` with index 0 overrules it; `-no` continues with a warning) |
 | `solver_matrix_save <sw>` | save and reuse the decomposed matrix (6.1051) | PARTIAL: registered and accepted; decomposition caching is direct-solver functionality not present in the GNU. `-always` is pardiso-only in the Professional |
 | `solver_matrix_symmetric <sw>` | treat the matrix as symmetric (6.1052) | wired, see below |
 | `solver_pardiso_ordering <o>` | pardiso ordering (6.1053) | PARTIAL: registered; PARDISO is not compiled in the GNU |
