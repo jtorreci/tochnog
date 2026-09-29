@@ -72,6 +72,7 @@ enum {
 #define NONLOCAL_ITEM_SIZE 160 // maximum number of integration points for nonlocal calculation
 #define TN_PRECISION 12  // precision in writing output file
 #define MPOINT MNOL      // maximum number of integration points in an element, always MNOL
+#define MSTRESS_EFF_SLOTS 7 // slots per integration point in element_intpnt_materi_stress_effective (flag + 6 stresses)
 #define MUKNWN DATA_ITEM_SIZE // maximum number of unknowns, always DATA_ITEM_SIZE
 #define MPUKNWN MUKNWN   // maximum number of primary unknowns, always MUKNWN
 #define MPRINC 10        // maximum number of principal unknowns
@@ -1633,6 +1634,12 @@ enum {
   // (tochnog.h and tochnog-mod.h stay in sync).
   CONTROL_MESH_DELETE_GEOMETRY_STOP,
   CONTROL_MESH_DELETE_GEOMETRY_STOP_GEOMETRY,
+  // damage effective stress (2026-09-29): INTERNAL per-integration-point
+  // record holding the effective (undamaged) stress of materi_damage
+  // (no Professional counterpart; not readable from the input file).
+  // Enum append keeps existing values stable (tochnog.h and
+  // tochnog-mod.h stay in sync).
+  ELEMENT_INTPNT_MATERI_STRESS_EFFECTIVE,
   LAST_DUMMY }; // keep LAST_DUMMY always the last one
 
 #define MDAT LAST_DUMMY+DATA_ITEM_SIZE  // reserve space for unknowns

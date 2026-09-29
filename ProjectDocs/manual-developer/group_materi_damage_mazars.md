@@ -90,6 +90,16 @@ Target `dam = 0.471973` (tolerance 1e-5):
 
 `damage1.dat` and all P4 family tests still pass unchanged with the fix.
 
+## Effective stress and gamma (2026-09-29)
+
+- `damage()` is now called with the EFFECTIVE (undamaged) stress; the
+  (1-d) compounding defect of the stress update is fixed, see
+  `materi_damage_effective_stress.md`.
+- `gamma` reads `new_sig[0..2]` = xx, xy, xz (not principal stresses). It
+  is not objective, but the Professional 02-08-2026 is not either and
+  matches no candidate form (GNU form, principal-stress gamma, gamma = 1);
+  probes and values in `materi_damage_effective_stress.md`. Left unchanged.
+
 ## External dependencies
 
 - Core `db()`/`get_group_data()` accessors; `matrix_jacobi()`; the

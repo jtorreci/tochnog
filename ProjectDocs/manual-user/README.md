@@ -451,3 +451,7 @@ input parameters it accepts.
 - [materi_failure_apply](materi_failure_apply.md) — `materi_failure_apply switch` (6.801): global form of `control_materi_failure_apply`; `-no` ignores the `group_materi_failure_*` criteria (no element failure/deletion). The failure switches no longer freeze damage (Professional behaviour).
 - [plasti_apply](plasti_apply.md) — `plasti_apply switch` (6.899): `-no` ignores any plasticity data (yield-surface laws, direct cut-offs, camclay, hardsoil, hypoplasticity, incremental models, slide caps by default) for all timesteps. Verified against the Professional 02-08-2026.
 - [control_plasti_apply](control_plasti_apply.md) — `control_plasti_apply index switch` (6.257): per-timestep form of `plasti_apply`, overrules it for its index.
+
+## DAMAGE EFFECTIVE STRESS (2026-09-29)
+
+- [materi_damage_effective_stress](materi_damage_effective_stress.md) — damage stress behaviour: `materi_stress` = (1 - d) x effective stress (manual Professional 2.2.5), constant at constant strain. Fixes the legacy compounding of the damage (a bar at eps 6e-4 gave 1436.83 instead of 85598.32). Verified against the Professional 02-08-2026.

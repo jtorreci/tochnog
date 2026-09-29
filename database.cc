@@ -4802,6 +4802,27 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   version_all[ELEMENT_INTPNT_MATERI_UNDRAINED_PRESSURE] = 1;
   fixed_length[ELEMENT_INTPNT_MATERI_UNDRAINED_PRESSURE] = 0;
 
+  // damage effective stress (2026-09-29): the effective (undamaged)
+  // stress of materi_damage per integration point (manual Professional
+  // 2.2.5: sigma_damaged = (1-d) sigma_undamaged; the stress dofs keep
+  // the damaged stress). MSTRESS_EFF_SLOTS values per integration point:
+  // a flag (1 = stored) and the 6 stresses in stress_indx order. INTERNAL
+  // record (external 0: not in the input file nor in the printed
+  // database; the Professional has no such record). version_all like
+  // element_intpnt_materi_undrained_pressure: materi() reads the previous
+  // step from VERSION_NORMAL and writes the iterate to VERSION_NEW; the
+  // step-end version copy promotes it. Pre-allocated in top().
+  strcpy(name[ELEMENT_INTPNT_MATERI_STRESS_EFFECTIVE],
+    "element_intpnt_materi_stress_effective");
+  type[ELEMENT_INTPNT_MATERI_STRESS_EFFECTIVE] = DOUBLE_PRECISION;
+  data_length[ELEMENT_INTPNT_MATERI_STRESS_EFFECTIVE] =
+    MPOINT*MSTRESS_EFF_SLOTS;
+  data_class[ELEMENT_INTPNT_MATERI_STRESS_EFFECTIVE] = ELEMENT;
+  data_required[ELEMENT_INTPNT_MATERI_STRESS_EFFECTIVE] = ELEMENT;
+  external[ELEMENT_INTPNT_MATERI_STRESS_EFFECTIVE] = 0;
+  version_all[ELEMENT_INTPNT_MATERI_STRESS_EFFECTIVE] = 1;
+  fixed_length[ELEMENT_INTPNT_MATERI_STRESS_EFFECTIVE] = 0;
+
   strcpy(name[ELEMENT_INTPNT_MATERI_UNDRAINED_PRESSURE_AVERAGE],
     "element_intpnt_materi_undrained_pressure_average");
   type[ELEMENT_INTPNT_MATERI_UNDRAINED_PRESSURE_AVERAGE] = DOUBLE_PRECISION;

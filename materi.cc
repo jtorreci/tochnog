@@ -39,7 +39,8 @@ void materi( long int element, long int gr, long int name, long int nnol,
     swit=0, indxi=0, indxj=0, indx1=0, indx2=0, memory=-UPDATED, 
     ind_ddsdde=0, ldum=0, idum[1],
     sri=-NO, sri_on=0,
-    undr_active=0, undr_apply=-YES, undr_icontrol=0, undr_len=0, undr_len2=0, undr_k=0;
+    undr_active=0, undr_apply=-YES, undr_icontrol=0, undr_len=0, undr_len2=0, undr_k=0,
+    dam_eff=0, dam_eff_len=0;
   double rdum=0., dens=0., dtime=0., materi_expansion_linear=0., 
     materi_expansion_volume=0., temp=0., tmp=0., damping=0., fac=0, 
     plasti_heatgeneration=0., viscosity_heatgeneration=0.,
@@ -55,6 +56,8 @@ void materi( long int element, long int gr, long int name, long int nnol,
     activation_factor=1., activation_stiff=1.,
     sri_g=0., sri_g2=0., sri_g3=0., sri_volfac=1., sri_detj_weight=0.,
     sri_coord_center[MDIM],
+    old_sig_eff[MDIM*MDIM], new_sig_eff[MDIM*MDIM],
+    dam_eff_buf[MPOINT*MSTRESS_EFF_SLOTS],
     *old_deften=NULL, *new_deften=NULL, *inv_deften=NULL,
     *old_epe=NULL, *inc_epe=NULL, *new_epe=NULL,
     *old_epp=NULL, *inc_epp=NULL, 
@@ -295,6 +298,44 @@ void materi( long int element, long int gr, long int name, long int nnol,
     old_damage = old_unknowns[iuknwn];
     new_damage = new_unknowns[iuknwn];
   }
+
+  // damage effective stress (manual Professional 2.2.5: sigma_damaged =
+  // (1-d) sigma_undamaged). The stress dofs hold the DAMAGED stress; the
+  // constitutive update (set_stress) runs on the EFFECTIVE (undamaged)
+  // stress, which is carried per integration point in the internal
+  // record element_intpnt_materi_stress_effective (MSTRESS_EFF_SLOTS
+  // per integration point: a flag 1 and the 6 stresses in stress_indx
+  // order; VERSION_NORMAL holds the converged previous step, VERSION_NEW
+  // the current iterate, the step-end version copy promotes it). Without
+  // a stored value (flag 0: first step, new element) the effective
+  // stress starts from the stress dofs (d is 0 at the start). The damaged
+  // stress is never divided by (1-d). In a step with the damage gated off
+  // (materi_damage_apply / control_materi_damage_apply -no, see
+  // set_stress) the update runs on the damaged stress itself, as without
+  // damage data, and that stress is stored as the effective one.
+  array_set( old_sig_eff, 0., MDIM*MDIM );
+  array_set( new_sig_eff, 0., MDIM*MDIM );
+  if ( materi_damage && materi_stress && ipoint<MPOINT ) {
+    dam_eff = 1;
+    array_move( old_sig, old_sig_eff, MDIM*MDIM );
+    dam_eff_len = 0;
+    if ( !materi_apply_gate_off( MATERI_DAMAGE_APPLY,
+         CONTROL_MATERI_DAMAGE_APPLY ) &&
+         db( ELEMENT_INTPNT_MATERI_STRESS_EFFECTIVE, element, idum,
+        dam_eff_buf, dam_eff_len, VERSION_NORMAL, GET_IF_EXISTS ) &&
+        (ipoint+1)*MSTRESS_EFF_SLOTS<=dam_eff_len &&
+        dam_eff_buf[ipoint*MSTRESS_EFF_SLOTS]>0.5 ) {
+      for ( idim=0; idim<MDIM; idim++ ) {
+        for ( jdim=0; jdim<MDIM; jdim++ ) {
+          old_sig_eff[idim*MDIM+jdim] =
+            dam_eff_buf[ipoint*MSTRESS_EFF_SLOTS+1+stress_indx(idim,jdim)];
+        }
+      }
+    }
+      // stress-dependent material data in set_stress see the effective
+      // stress too
+    array_move( old_sig_eff, new_sig, MDIM*MDIM );
+  }
   if ( materi_plasti_f ) {
     iuknwn = f_indx;
     old_f = old_unknowns[iuknwn];
@@ -435,6 +476,20 @@ void materi( long int element, long int gr, long int name, long int nnol,
   else {
     array_set( rotated_old_sig, 0., MDIM*MDIM );
   }
+    // damage: set_stress updates the EFFECTIVE stress, rotated like the
+    // stress itself
+  if ( dam_eff ) {
+    if      ( memory==-TOTAL_PIOLA ) {
+      matrix_abat( inv_deften, old_sig_eff, rotated_old_sig, work, MDIM );
+      array_multiply( rotated_old_sig, rotated_old_sig, J, MDIM*MDIM );
+    }
+    else if ( memory==-TOTAL )
+      matrix_abat( inv_rot, old_sig_eff, rotated_old_sig, work, MDIM );
+    else if ( memory==-UPDATED || memory==-TOTAL_LINEAR ||
+        memory==-UPDATED_WITHOUT_ROTATION || memory==-UPDATED_LINEAR ||
+        memory==-UPDATED_AREA )
+      array_move( old_sig_eff, rotated_old_sig, MDIM*MDIM );
+  }
   if ( swit ) {
     if ( materi_stress ) pri( "rotated_old_sig", rotated_old_sig, MDIM, MDIM );
   }
@@ -477,7 +532,7 @@ void materi( long int element, long int gr, long int name, long int nnol,
     set_stress( element, gr, plasti_on_boundary, coord_ip,
       old_unknowns, new_unknowns,
       old_grad_old_unknowns, new_grad_new_unknowns, 
-      rotated_old_sig, new_sig, 
+      rotated_old_sig, new_sig, new_sig_eff,
       rotated_old_msig, new_msig, inc_ept, new_ept,
       old_epe, inc_epe, old_epp, inc_epp, old_rho, new_rho, 
       old_epi, new_epi, old_hisv, new_hisv, 
@@ -549,6 +604,36 @@ void materi( long int element, long int gr, long int name, long int nnol,
         matrix_abat( rot, &new_msig[indx], &rotated_new_msig[indx], work, MDIM );
       }
       array_move( rotated_new_msig, new_msig, materi_maxwell_stress*MDIM*MDIM );
+    }
+    if ( dam_eff ) {
+      if ( memory==-TOTAL_PIOLA ) {
+        matrix_abat( new_deften, new_sig_eff, rotated_new_sig, work, MDIM );
+        array_multiply( rotated_new_sig, rotated_new_sig, 1./J, MDIM*MDIM );
+      }
+      else
+        matrix_abat( rot, new_sig_eff, rotated_new_sig, work, MDIM );
+      array_move( rotated_new_sig, new_sig_eff, MDIM*MDIM );
+    }
+  }
+
+    // damage: store the effective stress of this integration point
+    // (read-modify-write of the VERSION_NEW record: the slots of the
+    // other integration points of this element pass are preserved; the
+    // record is pre-allocated in top(), no allocation here)
+  if ( dam_eff ) {
+    dam_eff_len = 0;
+    if ( db( ELEMENT_INTPNT_MATERI_STRESS_EFFECTIVE, element, idum,
+        dam_eff_buf, dam_eff_len, VERSION_NEW, GET_IF_EXISTS ) &&
+        (ipoint+1)*MSTRESS_EFF_SLOTS<=dam_eff_len ) {
+      dam_eff_buf[ipoint*MSTRESS_EFF_SLOTS] = 1.;
+      for ( idim=0; idim<MDIM; idim++ ) {
+        for ( jdim=idim; jdim<MDIM; jdim++ ) {
+          dam_eff_buf[ipoint*MSTRESS_EFF_SLOTS+1+stress_indx(idim,jdim)] =
+            new_sig_eff[idim*MDIM+jdim];
+        }
+      }
+      db( ELEMENT_INTPNT_MATERI_STRESS_EFFECTIVE, element, idum,
+        dam_eff_buf, dam_eff_len, VERSION_NEW, PUT );
     }
   }
 

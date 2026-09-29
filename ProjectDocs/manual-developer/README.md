@@ -473,3 +473,7 @@ Each file corresponds to the same feature in the [User Manual](../manual-user/).
 - [materi_failure_apply](materi_failure_apply.md) — record `MATERI_FAILURE_APPLY`; consumer `failure()` in `failure.cc` (detection of new failures skipped). Professional 02-08-2026 quirk: `control_materi_failure_apply` registered without index there.
 - [plasti_apply](plasti_apply.md) — records `CONTROL_PLASTI_APPLY` / `PLASTI_APPLY`; `set_stress()` in `stress.cc` (`plasti_off`: skip `plasti_incr`, `hypoplasticity()`, direct cut-offs and the `plasti_rule` yield test), `slide_spring()` default in `slide.cc`. Truss/spring/interface/beam plasticity left out.
 - [control_plasti_apply](control_plasti_apply.md) — per-timestep form, see plasti_apply.
+
+## DAMAGE EFFECTIVE STRESS (2026-09-29)
+
+- [materi_damage_effective_stress](materi_damage_effective_stress.md) — legacy 2014 defect: `set_stress()` multiplied the carried (already damaged) stress by (1-d) every step, compounding the damage (`damage1` bar 1436.83 instead of 85598.32). Fix: internal per-integration-point record `ELEMENT_INTPNT_MATERI_STRESS_EFFECTIVE` (`database.cc`, `external` 0, `version_all`, `MSTRESS_EFF_SLOTS` = flag + 6 stresses; pre-allocated in `top.cc` `top()`/`step_start()`), read/rotated/written in `materi.cc` `materi()`, new `set_stress( ..., new_sig_eff, ... )` output; damaged stress = (1-d) effective, never divided. Yield test stays on the damaged stress and gated steps (`materi_damage_apply -no`) skip the scaling (both measured on the Professional 02-08-2026). Mazars gamma checked, left unchanged.
