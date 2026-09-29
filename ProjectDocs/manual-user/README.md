@@ -155,6 +155,7 @@ input parameters it accepts.
 - [group_interface_groundflow_total_pressure_tension](group_interface_groundflow_total_pressure_tension.md) — forced static pressure when the interface normal strain opens.
 - [groundflow_flux_edge_normal](groundflow_flux_edge_normal.md) — distributed water flux normal to an edge (11-keyword family).
 - [groundflow_phreatic_level](groundflow_phreatic_level.md) — single groundwater level (phreatic line): static pressure split + free-surface dry zone (p_total = 0 at/above the level).
+- [groundflow_phreatic_level_static](groundflow_phreatic_level_static.md) — static pore pressures and wet/dry density from the phreatic level without a pressure unknown (`-groundflow` groups).
 - [groundflow_phreatic_level_multiple](groundflow_phreatic_level_multiple.md) — several indexed phreatic levels, each owning part of the domain (7-keyword family).
 - [groundflow_seepage_eps](groundflow_seepage_eps.md) — tolerance of the seepage (outflow-only) boundary condition.
 - [groundflow_seepage_geometry](groundflow_seepage_geometry.md) — seepage edge selected by geometry entity.

@@ -570,6 +570,34 @@ long int groundflow_phreatic_coord( long int inod, double coord[], double dof[],
   return found;
 }
 
+long int groundflow_static_pressure_group( long int element_group )
+
+// Mechanics-only static groundflow (manual Professional 6.574
+// groundflow_phreatic_level_static): without a groundflow_pressure
+// unknown, the elements of a group whose group_type holds -groundflow
+// get the static pore pressure of the phreatic level. Returns 1 when
+// that applies to element_group: no pressure unknown, a static level
+// switch set to -yes, and -groundflow in the group_type. Both the pore
+// pressure on the skeleton (materi.cc) and the wet/dry density choice
+// (get_materi_density) use it. Measured on the Professional 02-08-2026
+// (ground18 of the corpus with group_type -materi only): without
+// -groundflow the group keeps the wet density everywhere and gets no
+// pore pressure (bottom sigyy -1995, like the uncorrected GNU).
+
+{
+  long int itype=0, len_type=0, types[DATA_ITEM_SIZE];
+  double ddum[1];
+
+  if ( groundflow_pressure ) return 0;
+  if ( !groundflow_static_pressure_active() ) return 0;
+  db( GROUP_TYPE, element_group, types, ddum, len_type,
+    VERSION_NORMAL, GET_IF_EXISTS );
+  for ( itype=0; itype<len_type; itype++ ) {
+    if ( types[itype]==-GROUNDFLOW ) return 1;
+  }
+  return 0;
+}
+
 void groundflow_phreatic_apply( void )
  
 {

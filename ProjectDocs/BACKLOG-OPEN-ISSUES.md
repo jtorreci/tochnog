@@ -148,6 +148,27 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
 - **Evidence**: `manual-developer/group_materi_memory_updated_linear.md` §5,
   `AUDIT-ALL-VARIABLES-2026.md` K01.
 
+### R7. Static phreatic level without a pressure unknown (2026-09-29)
+
+- **Corpus**: audit cluster K22, Pro `ground18` (`ground8` of the same
+  cluster has a pressure unknown and is not affected; see the audit).
+- **Was**: with `groundflow_phreatic_level_static -yes` and no
+  `groundflow_pressure`, `get_materi_density()` chose the wet density for
+  every element (the `NODE_PHREATICLEVEL` record needs the pressure
+  unknown) and `materi()` added no pore pressure to the skeleton. Bottom
+  sigyy -1995 instead of -1247.5 (analytic -1250).
+- **Resolution**: for groups with `-groundflow`
+  (`groundflow_static_pressure_group()`), the static total pressure of
+  `groundflow_phreatic_coord()` drives the wet/dry choice and acts on the
+  skeleton (scaled by `groundflow_pressure_factor`). Commit pending.
+- **Acceptance**: `ground18` equals the Professional in every variable;
+  `validation-suite/test-2026/phreatic_static1.dat` and
+  `phreatic_static_submerged1.dat` pass on the GNU and the Professional
+  (rc=1 on the pre-fix binary); validation-suite, sfnet and test-2026
+  `.dbs` identical to the pre-fix binary apart from the 2 new tests.
+- **Evidence**: `manual-developer/groundflow_phreatic_level_static.md`,
+  `AUDIT-ALL-VARIABLES-2026.md` §5.2. Side effect: C10.
+
 ---
 
 ## B. sfnet 197 — the 9 RUNFAIL (all out-of-scope)
@@ -458,6 +479,31 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
   (merge `93966ef`); to be investigated further before reporting upstream.
 - **Effort**: **cheap**.
 
+### C10. Static pore pressure: the Professional couples it to a post_calcul request
+
+- **Corpus**: Pro `test/other/excavate1` (target node 13 `vely`
+  -0.00210987 +- 1e-6).
+- **Symptom**: after R7 the GNU gives -0.00253891 (the pre-fix GNU gave
+  the target exactly). The Professional gives -0.00253891 too when
+  `post_calcul -groundflow_pressure -total_pressure` is added to the input.
+- **Root cause**: measured on the Professional 02-08-2026, it applies the
+  static pore pressure of `groundflow_phreatic_level_static` to the
+  skeleton only when that post_calcul record exists (`-static_pressure`
+  does not trigger it). `ground18` without the record: Pro -1745 (no pore
+  pressure, wet/dry density still chosen), GNU -1247.5. `excavate1` has
+  no such record; its target was produced without the pore pressure.
+- **Severity**: **MEDIUM** — one Pro corpus target flips to fail; any
+  static-level input without the post_calcul record differs from the
+  Professional.
+- **Proposed fix**: none by default; the GNU follows the manual (6.574: the
+  pore pressures are set to the static pressure; an output request should
+  not change the physics). Alternative if exact Pro parity is preferred:
+  apply the R7 pore-pressure branch only when that post_calcul record is
+  present (one extra check in `groundflow_static_pressure_group()`, for
+  the pressure part only).
+- **Decision**: pending (project owner).
+- **Effort**: **cheap**.
+
 ---
 
 ## D. Summary
@@ -481,8 +527,9 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
 | C7 | — | Mazars gamma with shear; damage + early plasticity path | MEDIUM | medium |
 | C8 | — | default `mesh` `-follow_material` vs Pro `-fixed_in_space` | MEDIUM | large |
 | C9 | — | `-total_linear` + compressibility: Pro time-step dependent (deliberate divergence) | LOW | cheap |
+| C10 | Pro `other` | static pore pressure tied to `post_calcul -total_pressure` in the Pro (`excavate1` target) | MEDIUM | cheap |
 
-Seventeen items remain open: six MEDIUM and eleven LOW. No open issue is CRITICAL or
+Eighteen items remain open: seven MEDIUM and eleven LOW. No open issue is CRITICAL or
 HIGH. The validation-suite corpus has no open failure — its 233 real tests all
 pass. Every remaining failure is a stale or malformed test, an out-of-scope model
 or infrastructure limit, a narrow post-processing divergence, a corpus-coverage

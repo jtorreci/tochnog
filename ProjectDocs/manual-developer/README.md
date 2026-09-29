@@ -159,6 +159,7 @@ Each file corresponds to the same feature in the [User Manual](../manual-user/).
 - [group_interface_groundflow_total_pressure_tension](group_interface_groundflow_total_pressure_tension.md) — forced static pressure on opening interfaces (interface.cc).
 - [groundflow_flux_edge_normal](groundflow_flux_edge_normal.md) — nodal flux from edge-normal water flux (area.cc area(), type[5]).
 - [groundflow_phreatic_level](groundflow_phreatic_level.md) — single level: static split en groundflow_phreatic_coord + free-surface dry zone (pres_dof = 0 at/above the level, groundflow_phreatic_apply).
+- [groundflow_phreatic_level_static](groundflow_phreatic_level_static.md) — mechanics-only static groundflow: `groundflow_static_pressure_group` gate, pore pressure in materi() forces, wet/dry in get_materi_density (audit K22).
 - [groundflow_phreatic_level_multiple](groundflow_phreatic_level_multiple.md) — multiple phreatic levels (groundfl.cc _find/_coord + phreatic_apply _static).
 - [groundflow_seepage](groundflow_seepage.md) — seepage boundary in bounda.cc (Darcy flow projection on the outward normal).
 - [groundflow_pressure_atmospheric](groundflow_pressure_atmospheric.md) — static/total pressure cap in groundfl.cc groundflow_phreatic_coord (GNU-inherited keyword, documented + verified 2026-08-24).
