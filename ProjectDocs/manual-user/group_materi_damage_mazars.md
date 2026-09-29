@@ -26,8 +26,12 @@ d  = dt*alpha^beta + dc*(1-alpha)^beta
 ```
 
 `d` never decreases (`new_damage = max(new_damage, old_damage)`), and the
-stresses are scaled by `(1-d)` in the material update (see
-`materi.cc` `materi_damage` block).
+stress is `(1-d)` times the effective (undamaged) stress, which is kept per
+integration point (manual Professional 2.2.5; before 2026-09-29 the damage
+compounded every step, see `materi_damage_effective_stress.md`). `gamma` is
+evaluated with the effective stress components xx, xy, xz (not the
+principal stresses); with a compressive xx combined with a same-sign xy or
+xz shear the damage differs from the Professional.
 
 Useful for cracking/failure of concrete, mortar, rock and other quasi-brittle
 materials.

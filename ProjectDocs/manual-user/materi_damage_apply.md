@@ -31,7 +31,9 @@ on the Professional 02-08-2026, same rule as `interface_gap_apply` /
 `dependency_apply`). Without any record damage is applied.
 
 With `-no` in a later timestep the damage reached so far is kept (frozen);
-it is not reset.
+it is not reset. In such a timestep the damage data is ignored: the stress
+increments are added without the (1 - d) factor (as in the Professional
+02-08-2026; `materi_damage_apply2.dat`: `sigxx` 1.0872657685e7 in both).
 
 ## Example
 
@@ -52,7 +54,7 @@ damage) and `materi_damage_apply2.dat` (global `-no` overruled in timestep
 
 - The damage switches do not affect the element failure criteria and vice
   versa (same as the Professional).
-- The damaged stress level itself differs between GNU and Professional
-  (pre-existing, independent of this switch: e.g. `sigxx` 1436.83 vs
-  85598.3 at the end of the `damage1` bar with damage active); `dam` is
-  identical.
+- None known for the switch. (The damaged stress level differed before
+  2026-09-29 because of a legacy defect, e.g. `sigxx` 1436.83 vs 85598.3 at
+  the end of the `damage1` bar; fixed, see
+  `materi_damage_effective_stress.md`.)

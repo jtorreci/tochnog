@@ -392,7 +392,7 @@ void set_stress( long int element, long int gr,
   long int plasti_on_boundary, double coord_ip[],
   double old_unknowns[], double new_unknowns[], 
   double old_grad_old_unknowns[], double new_grad_new_unknowns[], 
-  double rotated_old_sig[], double new_sig[],
+  double rotated_old_sig[], double new_sig[], double new_sig_eff[],
   double rotated_old_msig[], double new_msig[], 
   double inc_ept[], double new_ept[], 
   double old_epe[], double inc_epe[], 
@@ -421,7 +421,8 @@ void set_stress( long int element, long int gr,
     nuser_data=0, idim=0, jdim=0, kdim=0, ldim=0, k0_active=0, 
     k0_control_swit=0,
     formulation=INCREMENTAL, ldum=0, idum[1], task[2],
-    hs_gp_swit=-NO, icontrol_hs=0, hs_plasti_present=0, hs_len=1;
+    hs_gp_swit=-NO, icontrol_hs=0, hs_plasti_present=0, hs_len=1,
+    damage_done=0;
   double lambda=0., deps_size=0., lambda_new=0., lambda_previous=0., 
     tmp=0., tmp_old=0., tmp_inc=0., tmp_new=0., 
     f=0., f_previous=0, f_ref=0., materi_expansion_linear=0., 
@@ -1539,11 +1540,34 @@ void set_stress( long int element, long int gr,
         rotated_old_msig, new_sig, new_msig, memmat );
       if ( swit ) pri( "stress after visco elasticity", new_sig, MDIM, MDIM );
 
-        // damage
-      if ( materi_damage ) {
-        damage( gr, new_epe, new_sig, old_damage, new_damage );
-        array_multiply( new_sig, new_sig, 1.-new_damage, MDIM*MDIM );
+        // damage (manual Professional 2.2.5: sigma_damaged =
+        // (1-d) sigma_undamaged). With materi_damage, materi() passes the
+        // EFFECTIVE (undamaged) stress of the previous step in
+        // rotated_old_sig (record element_intpnt_materi_stress_effective),
+        // so new_sig is here the effective stress: keep it in new_sig_eff
+        // (materi() stores it for the next step), evaluate the damage with
+        // it and derive the damaged stress. Before 2026-09-29 the old
+        // DAMAGED stress was carried and multiplied again by (1-d) every
+        // step (sigma_n = (1-d_n)(sigma_n-1 + C deps)), so the damage
+        // compounded over the steps (legacy defect, also in the 2014
+        // source). The membrane stiffness is scaled like the stress. The
+        // plastic yield test below keeps acting on the DAMAGED stress
+        // (measured on the Professional 02-08-2026: von Mises yield
+        // stress above the damaged peak stress gives no plastic strain).
+        // materi_damage_apply / control_materi_damage_apply -no: the
+        // damage data is ignored for the step (manual Professional
+        // 6.799): d stays, no (1-d) scaling, and materi() passes the
+        // damaged stress itself (measured on the Professional 02-08-2026:
+        // the increments of a gated step are added undamaged).
+      if ( materi_damage && materi_apply_gate_off( MATERI_DAMAGE_APPLY,
+           CONTROL_MATERI_DAMAGE_APPLY ) )
+        new_damage = old_damage;
+      else if ( materi_damage ) {
+        array_move( new_sig, new_sig_eff, MDIM*MDIM );
+        damage( gr, new_epe, new_sig_eff, old_damage, new_damage );
+        array_multiply( new_sig_eff, new_sig, 1.-new_damage, MDIM*MDIM );
         array_multiply( &memmat[0][0], &memmat[0][0], 1.-new_damage, MDIM*MDIM );
+        damage_done = 1;
         if ( swit ) pri( "stress after damage", new_sig, MDIM, MDIM );
       }
 
@@ -1730,6 +1754,11 @@ void set_stress( long int element, long int gr,
     }
   }
 
+  // effective stress without damage (no damage model, damage switched
+  // off, or the incremental plasticity branch that never applies damage):
+  // the stress itself
+  if ( !damage_done ) array_move( new_sig, new_sig_eff, MDIM*MDIM );
+
   // group_materi_factor (manual Professional 6.666): multiplication
   // factor for the material stresses AND stiffness (unit conversion of
   // a stress law specified in other units than the calculation).
@@ -1739,6 +1768,7 @@ void set_stress( long int element, long int gr,
         new_unknowns, &materi_factor, ldum, GET_IF_EXISTS ) ) {
       if ( scalar_dabs(materi_factor-1.)>TINY ) {
         array_multiply( new_sig, new_sig, materi_factor, MDIM*MDIM );
+        array_multiply( new_sig_eff, new_sig_eff, materi_factor, MDIM*MDIM );
         array_multiply( ddsdde, ddsdde, materi_factor, MSTRAIN*MSTRAIN );
       }
     }

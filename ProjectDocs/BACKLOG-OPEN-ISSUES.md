@@ -100,6 +100,28 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
 - **Evidence**: `manual-developer/nodal_stress_post_solve_sync.md`
   §Cost / §Verification.
 
+### R5. Damage stress compounding — legacy 2014 defect (2026-09-29)
+
+- **Corpus**: sfnet `damage1` (target checks `dam` only, so it never failed);
+  found by the keyword convergence cycle (`materi_damage_apply` measurements
+  of 2026-09-27: `dam` identical to the Professional, `sigxx` not).
+- **Was**: `set_stress()` multiplied the carried, already damaged stress by
+  (1-d) every step (`sigma_n = (1-d_n)(sigma_{n-1} + C deps)`): the `damage1`
+  bar gave `sigxx` 1436.83 instead of (1-d)E eps = 85598.32 (Professional
+  85598.32); at constant strain the stress decayed to ~0. Present in
+  `Sources-2014.zip`.
+- **Resolution**: the effective (undamaged) stress is carried per
+  integration point in the internal record
+  `element_intpnt_materi_stress_effective`; the damaged stress is
+  (1-d) x effective, never divided. Yield test on the damaged stress and
+  gated-step semantics measured on the Professional 02-08-2026. Commit
+  pending.
+- **Acceptance**: `validation-suite/test-2026/damage_stress1.dat`,
+  `damage_stress_hold1.dat`, `damage_stress_3d1.dat` pass on the GNU and the
+  Professional; validation-suite 233 and sfnet 187/10 classification diff 0;
+  the only real `.dbs` change is sfnet `damage1` `sigxx`.
+- **Evidence**: `manual-developer/materi_damage_effective_stress.md`.
+
 ---
 
 ## B. sfnet 197 — the 9 RUNFAIL (all out-of-scope)
@@ -348,6 +370,26 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
   separate work unit with a full A/B.
 - **Effort**: **cheap**.
 
+### C7. Mazars damage: gamma with shear, and damage + early plasticity
+
+- **Corpus**: none (own hex8 / bar probes, `materi_damage_effective_stress.md`).
+- **Symptom**: (a) with a compressive `sigxx` and a same-sign `sigxy`/`sigxz`
+  the Mazars `dam` differs from the Professional 02-08-2026 (e.g. 0.10809 vs
+  0.18752; with the opposite shear sign 0.26351 vs 0.39352); (b) a bar with
+  `group_materi_plasti_vonmises` yielding before the damage threshold gives a
+  different plastic strain path (`eppxx` 1.879e-4 vs 1.368e-4).
+- **Root cause**: (a) `damage_mazars()` builds gamma from xx, xy, xz (not
+  objective); the Professional is not objective either and matches none of
+  the candidate forms tried (GNU form, principal-stress gamma, gamma = 1).
+  (b) not established (iteration order of plasticity and damage); both codes
+  satisfy sigma = (1-d) C eps_e for their own strains.
+- **Severity**: **MEDIUM** — damage in shear-compression states and
+  damage+plasticity models diverge from the Professional.
+- **Proposed fix**: identify the Professional gamma with more probes (vary
+  each stress component separately), then (b) with a trace of the plastic
+  iterations.
+- **Effort**: **medium**.
+
 ---
 
 ## D. Summary
@@ -368,8 +410,9 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
 | C3 | sfnet | `gforce10` 3D section sign | MEDIUM | medium |
 | C5 | — | `contact_target_geometry` index-0 alias | MEDIUM | medium |
 | C6 | validation-suite | `iface_gen*` generation-coverage gap | MEDIUM | cheap |
+| C7 | — | Mazars gamma with shear; damage + early plasticity path | MEDIUM | medium |
 
-Fourteen items remain open: four MEDIUM and ten LOW. No open issue is CRITICAL or
+Fifteen items remain open: five MEDIUM and ten LOW. No open issue is CRITICAL or
 HIGH. The validation-suite corpus has no open failure — its 233 real tests all
 pass. Every remaining failure is a stale or malformed test, an out-of-scope model
 or infrastructure limit, a narrow post-processing divergence, a corpus-coverage

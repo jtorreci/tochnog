@@ -16,9 +16,12 @@
   other `control_materi_*_apply` gates).
 - **Consumer** (`damage.cc`, `damage()`): `materi_apply_gate_off(
   MATERI_DAMAGE_APPLY, CONTROL_MATERI_DAMAGE_APPLY )` -> `new_damage =
-  old_damage` and return (damage frozen, not reset). The caller in
-  `set_stress` (stress.cc) still scales the stress by `1-new_damage`, so a
-  damage reached in an earlier timestep keeps acting.
+  old_damage` and return (damage frozen, not reset). Since 2026-09-29
+  `set_stress` (stress.cc) also tests the gate: in a gated step it skips
+  the (1-d) scaling and `materi()` runs the update on the damaged stress
+  itself (the damage data is ignored for the step, measured on the
+  Professional 02-08-2026: `materi_damage_apply2` `sigxx` 1.0872657685e7 in
+  both), see `materi_damage_effective_stress.md`.
 - **Behaviour change**: the previous gate also tested
   `CONTROL_MATERI_FAILURE_APPLY`; it was removed because the Professional
   02-08-2026 does not stop damage with the failure switch (see
@@ -51,6 +54,9 @@ value makes the GNU return rc=1.
 
 ## Pending
 
-- The damaged stress (`(1-d)` scaling path) differs from the Professional
-  independently of this switch (e.g. at 3e-4: GNU sigxx 1.68071e6, Pro
-  3.85266e6 with the same dam 0.451188); not addressed here.
+- RESOLVED 2026-09-29 (`materi_damage_effective_stress.md`): the damaged
+  stress differed from the Professional independently of this switch (e.g.
+  at 3e-4: GNU sigxx 1.68071e6, Pro 3.85266e6 with the same dam 0.451188;
+  1436.83 vs 85598.3 in case (a)) because the legacy code compounded the
+  damage every step. The GNU sigxx column of the table above is the pre-fix
+  value; after the fix it equals the Professional in every row.

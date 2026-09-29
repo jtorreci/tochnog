@@ -232,6 +232,21 @@ void top( void )
             undr_zero, undr_zero_len, VERSION_NORMAL, PUT );
         }
       }
+      // element_intpnt_materi_stress_effective (internal, damage
+      // effective stress, see materi()): pre-allocate the record (flags
+      // 0 = not yet stored) before the parallel element loop, where
+      // allocation is not allowed; the step-end version copy promotes
+      // the converged value to VERSION_NORMAL.
+      if ( materi_damage && materi_stress &&
+           db_active_index( ELEMENT, ielem, VERSION_NORMAL ) &&
+           !db_active_index( ELEMENT_INTPNT_MATERI_STRESS_EFFECTIVE,
+             ielem, VERSION_NORMAL ) ) {
+        double eff_zero[MPOINT*MSTRESS_EFF_SLOTS];
+        long int eff_zero_len = MPOINT*MSTRESS_EFF_SLOTS;
+        array_set( eff_zero, 0., eff_zero_len );
+        db( ELEMENT_INTPNT_MATERI_STRESS_EFFECTIVE, ielem, idum,
+          eff_zero, eff_zero_len, VERSION_NORMAL, PUT );
+      }
     }
   }
 
@@ -1151,6 +1166,25 @@ void step_start( long int task, long int options_solver[], double dtime, double 
           db( ELEMENT_INTPNT_MATERI_UNDRAINED_PRESSURE, element, idum,
             undr_zero, undr_zero_len, VERSION_NORMAL, PUT );
         }
+      }
+    }
+
+    // element_intpnt_materi_stress_effective (internal, damage effective
+    // stress, see materi()): ensure the record exists (flags 0 = not yet
+    // stored) for every element BEFORE the parallel element loop of this
+    // step. Re-checked every step for the elements created after the
+    // top() initialization (control_mesh_macro, refinement).
+    if ( materi_damage && materi_stress ) {
+      db_max_index( ELEMENT, max_element, VERSION_NORMAL, GET );
+      for ( element=0; element<=max_element; element++ ) {
+        if ( !db_active_index( ELEMENT, element, VERSION_NORMAL ) ) continue;
+        if ( db_active_index( ELEMENT_INTPNT_MATERI_STRESS_EFFECTIVE,
+            element, VERSION_NORMAL ) ) continue;
+        double eff_zero[MPOINT*MSTRESS_EFF_SLOTS];
+        long int eff_zero_len = MPOINT*MSTRESS_EFF_SLOTS;
+        array_set( eff_zero, 0., eff_zero_len );
+        db( ELEMENT_INTPNT_MATERI_STRESS_EFFECTIVE, element, idum,
+          eff_zero, eff_zero_len, VERSION_NORMAL, PUT );
       }
     }
 
