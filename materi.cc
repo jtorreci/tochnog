@@ -564,10 +564,12 @@ void materi( long int element, long int gr, long int name, long int nnol,
 
   array_move( new_sig, new_sig_nonrot, MDIM*MDIM );
     // rotate to new configuration
-  if ( memory==-UPDATED || memory==-UPDATED_LINEAR || memory==-UPDATED_AREA ||
-       memory==-TOTAL || memory==-TOTAL_PIOLA ) {
-    if      ( memory==-UPDATED || memory==-UPDATED_LINEAR ||
-              memory==-UPDATED_AREA )
+    // -updated_linear and -updated_area neglect rigid body rotations
+    // (manual Professional 2.2.1: extra stresses are added to the previous
+    // stresses, no rotation by R). inc_rot is NOT the identity for them
+    // (set_deften_u_rot overwrites it), so they must stay out of this list.
+  if ( memory==-UPDATED || memory==-TOTAL || memory==-TOTAL_PIOLA ) {
+    if      ( memory==-UPDATED )
       array_move( inc_rot, rot, MDIM*MDIM );
     else {
       assert( memory==-TOTAL || memory==-TOTAL_PIOLA );

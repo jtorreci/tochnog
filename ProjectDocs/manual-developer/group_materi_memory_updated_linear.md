@@ -14,8 +14,18 @@ The `-UPDATED_LINEAR` memory type is handled in three places:
      ...
    }
    ```
-   and the stress-rotation block treats `-UPDATED_LINEAR` like
-   `-UPDATED` (`inc_rot` applied).
+   The stress-rotation block ("rotate to new configuration") does NOT
+   rotate `-UPDATED_LINEAR` (fixed 2026-09-29, audit cluster K01): only
+   `-UPDATED` (by `inc_rot`) and `-TOTAL`/`-TOTAL_PIOLA` (by `new_rot`)
+   rotate. Commit `22801c3` (2026-09-01) had added `-UPDATED_LINEAR` to
+   that list on the assumption that `inc_rot` is the identity for it; it
+   is not, because `set_deften_etc()` overwrites the identity with
+   `set_deften_u_rot(inc_deften, inc_u, inc_rot)` (called for every
+   memory). The stress was rotated by the real incremental rotation. The
+   Professional manual 2.2.1 defines `-updated_linear` as "add the extra
+   stresses to the stresses of the previous time point" with no rotation
+   step (only `-updated` rotates by R); the 2014 source also rotated only
+   `-updated`/`-total`/`-total_piola`. See section 5.
 
 2. **materi.cc, `set_deften_etc()`**: `-UPDATED_LINEAR` gets the
    identity rotation matrices and the LINEAR engineering strains
@@ -34,8 +44,20 @@ The `-UPDATED_LINEAR` memory type is handled in three places:
 3. **stress.cc, `set_stress()`**: the compressibility block treats
    `-UPDATED_LINEAR` like `-TOTAL_LINEAR` (linear strain measures):
    ```c
-   if ( memory==-TOTAL_LINEAR || memory==-UPDATED_LINEAR ) { ... }
+   if ( memory==-TOTAL_LINEAR || memory==-UPDATED_LINEAR ||
+        memory==-UPDATED_AREA ) {
+     tmp_new = ( new_epe[0] + new_epe[4] + new_epe[8] ) / compressibility;
+     tmp_inc = ( inc_epe[0] + inc_epe[4] + inc_epe[8] ) / compressibility;
+   }
    ```
+   Until 2026-09-29 `tmp_inc` was `tr(new_epe - old_epe)/compressibility`.
+   `old_epe` is loaded only when `materi_strain_elasti` is initialized
+   (materi.cc, the `old_epe` load from the dof); without it `old_epe` is 0
+   and the TOTAL elastic strain was added to the stress every step, so a
+   compressibility-only material became far too stiff (Pro `interac1`:
+   element 2 strain ~0 with stress -0.01 instead of -0.005 / -0.005).
+   Legacy from the 2014 source. `tmp_new` is only used with
+   `formulation==TOTAL`.
 
 Additionally the UPDATED memory self-check (stress.cc) only rejects
 `materi_displacement` when the updated formulation is EXPLICITLY
@@ -126,3 +148,59 @@ fix.
 - hypo12/13 (no memory record, default): the displacement restriction no
   longer fires; the models run (the masin visco kernel overflows the
   void ratio - pending kernel calibration).
+
+5. **Audit cluster K01 fix (2026-09-29): no rotation + compressibility
+   increment.** Both changes above (materi.cc rotation list, stress.cc
+   `tmp_inc`). Evidence against the Professional 02-08-2026 (all 13 K01
+   tests re-run, every variable compared; table in
+   `ProjectDocs/AUDIT-ALL-VARIABLES-2026.md`):
+
+   | model | variable | Pro | GNU before | GNU after |
+   |---|---|---|---|---|
+   | Pro `interac1` (2 bars, compressibility, analytic -0.005) | sigxx n1 / n3, eptxx n3 | -0.005 / -0.005 / -0.005 | -0.01 / -0.01 / ~0 | -0.005 / -0.005 / -0.005 |
+   | sfnet `druckpr1` (simple shear gamma 1, DP c 0.1, analytic 0.11547) | sigxx / sigxy / sigyy | 0 / 0.11547 / 0 | 0.0924 / 0.0693 / -0.0924 | 0 / 0.11547 / 0 |
+   | same, 10 steps | sigxx / sigxy | 0 / 0.11547 | 0.0365 / 0.1096 | 0 / 0.11547 |
+
+   The pre-fix `druckpr1` answer is the correct stress rotated by
+   atan(gamma/2) = 26.57 deg; a smaller time step did not remove it. With
+   `-updated_without_rotation` the pre-fix GNU was already exact.
+   Self-checking inputs: `validation-suite/test-2026/updated_linear_compress1.dat`,
+   `updated_linear_shear1.dat` (pass on the fixed GNU and the Professional,
+   rc=1 on the pre-fix binary).
+
+6. **Reference vs current gradient: what the Professional does
+   (measured 2026-09-29, NOT changed).** The manual says "the linear
+   engineering strains in the DEFORMED configuration are used as incremental
+   strain", while section 4 (commit `c945833`) builds the `-UPDATED_LINEAR`
+   increment with the REFERENCE gradient. Discriminating probe: one `bar2`,
+   E = 1, left end fixed, right end velx = 1 for t in [0, 0.5], dt 0.01
+   (50% extension; reference gradient gives eps = 0.5, current gradient
+   gives sum(du/l) ~ ln(1.5) = 0.405):
+
+   | mesh record | memory | Pro | GNU |
+   |---|---|---|---|
+   | none (Pro default `-fixed_in_space`, GNU default `-follow_material`) | `-updated_linear` | 0.5 | 0.5 |
+   | none | `-updated` | 0.5 | 0.40714 |
+   | `mesh -follow_material` | `-updated_linear` | **0.40714** | **0.5** |
+   | `mesh -follow_material` | `-updated` | 0.40714 | 0.40714 |
+   | `mesh -fixed_in_space` | `-updated_linear` | 0.5 | 0.50003 |
+
+   Reading: the Professional uses the CURRENT-geometry gradient for
+   `-updated_linear` (as its manual says); on a mesh that follows the
+   material it gives exactly the GNU `-updated` value. Its engineering
+   0.5 without a mesh record comes from its DEFAULT mesh, which is
+   `-fixed_in_space` (manual 6.806: "Default each specifier is set to
+   -fixed_in_space"), so the geometry never moves. The GNU defaults to
+   `-FOLLOW_MATERIAL` whenever `materi_velocity` is initialized without
+   `materi_displacement` (`top.cc`, the `options_mesh` default), and the
+   reference-gradient path of `c945833` emulates the Professional's fixed
+   mesh for `-updated_linear` only. Consequence: on an explicit
+   `-follow_material` mesh the GNU `-updated_linear` differs from the
+   Professional (0.5 vs 0.40714). The underlying divergence is the mesh
+   default, not the memory; tracked as BACKLOG C8. The same mesh default
+   explains the `interac1` `-updated` residual (GNU -0.0050117, Pro
+   -0.005): with an explicit `mesh -follow_material` both give -0.0050117,
+   with `mesh -fixed_in_space` Pro -0.005 and GNU -0.0050000474. The GNU
+   `-updated` value is the one consistent with the manual's `-updated`
+   definition (incremental stretch in the current configuration, so the
+   accumulated strain is logarithmic-like: ln(1/(1-0.005)) = 0.0050125).

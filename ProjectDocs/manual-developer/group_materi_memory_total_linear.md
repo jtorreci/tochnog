@@ -20,7 +20,8 @@ equals the reset value.
 
 ## Implementation
 
-Two loci, both required:
+Two loci, both required (item 3 is a later, separate fix of the
+compressibility increment):
 
 1. **stress.cc, `set_stress()`** — the formulation selection used to force
    `formulation = TOTAL` for `-TOTAL`/`-TOTAL_PIOLA`/`-TOTAL_LINEAR`. The
@@ -46,6 +47,29 @@ Two loci, both required:
    `inc_ept` is a true increment independent of the strain dof. The
    subsequent `array_add(old_ept, inc_ept, new_ept)` (materi.cc:1600) then
    reconstructs the same total as before.
+
+3. **stress.cc, `set_stress()`, compressibility (2026-09-29)** — the
+   linear-memory branch (`-TOTAL_LINEAR`/`-UPDATED_LINEAR`/`-UPDATED_AREA`)
+   now takes the incremental volumetric stress from `inc_epe`
+   (`tr(inc_epe)/compressibility`) instead of `tr(new_epe - old_epe)`.
+   `old_epe` is 0 unless `materi_strain_elasti` is initialized, so the old
+   form added the TOTAL elastic strain every step. **Deliberate divergence
+   from the Professional**: the Professional 02-08-2026 shows the same
+   defect for `-total_linear`. Probe = Pro `interac1` (2 bars in series,
+   bar 2 compressibility 1, analytic -0.005) with `-total_linear` and
+   `materi_displacement`, loading to t = 0.02:
+
+   | dt | Pro sigxx | GNU before | GNU after |
+   |---|---|---|---|
+   | 1e-2 | -0.0075 | -0.0075 | -0.005 |
+   | 1e-3 | -0.0099002 | -0.0099002 | -0.005 |
+   | 1e-4 | -0.009999 | -0.009999 | -0.005 |
+
+   The Professional (and the pre-fix GNU, to all digits) is time-step
+   dependent and tends to -0.01 (bar 2 rigid, its strain ~0), which is the
+   signature of the accumulated total strain. The Professional's own
+   `-updated_linear` gives the analytic -0.005 on the same model. No corpus
+   test combines `-total_linear` with compressibility. See BACKLOG C9.
 
 ## Why not just switch to INCREMENTAL
 

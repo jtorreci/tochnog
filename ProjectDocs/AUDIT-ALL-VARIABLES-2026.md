@@ -34,6 +34,8 @@ The clusters below hold the differences. The main GNU-suspect findings are:
 1. `-updated_linear` gives wrong answers in the GNU. It breaks the analytic
    2-material bar (−0.010 vs −0.005). The same model with `-updated` or
    `-updated_without_rotation` is right. The defect predates `c945833`.
+   **Fixed 2026-09-29** (stress rotation + compressibility increment); see
+   section 5.1.
 2. With a static phreatic level and no pressure dof, the GNU builds the initial
    gravity stress with the wet density everywhere: −1995 against the analytic
    −1250.
@@ -347,7 +349,7 @@ The priority list in section 6 re-orders by judgement.
 
 | # | id | cluster | tests | median magnitude | verdict | representative: evidence |
 |---|---|---|---|---|---|---|
-| 1 | K01 | GNU `-updated_linear` memory model | 13 | 0.80 | **GNU-suspect** | `interac1`: 2-material 1D bar, analytic σ = −0.005. **Pro −0.00500** (exact). The GNU gives −0.0100 with `-updated_linear`: element 2 has strain 0 but stress −0.01, so equilibrium is broken. The GNU gives −0.00501 with `-updated` or `-updated_without_rotation`. Same result on the `c945833^` build, so the defect is older. Other cases: `druckpr1` target 0.11547 (GNU `-updated_without_rotation` 0.11547, Pro 0.11547, GNU `-updated_linear` 0.0693); `mdp_shear` DP analytic 34.64 (Pro 34.641, GNU `-updated_linear` 34.145). |
+| 1 | K01 | GNU `-updated_linear` memory model | 13 | 0.80 | **GNU-suspect → FIXED 2026-09-29** (section 5.1) | `interac1`: 2-material 1D bar, analytic σ = −0.005. **Pro −0.00500** (exact). The GNU gives −0.0100 with `-updated_linear`: element 2 has strain 0 but stress −0.01, so equilibrium is broken. The GNU gives −0.00501 with `-updated` or `-updated_without_rotation`. Same result on the `c945833^` build, so the defect is older. Other cases: `druckpr1` target 0.11547 (GNU `-updated_without_rotation` 0.11547, Pro 0.11547, GNU `-updated_linear` 0.0693); `mdp_shear` DP analytic 34.64 (Pro 34.641, GNU `-updated_linear` 34.145). |
 | 2 | K09 | Groundflow `-pres` dof datum | 11 | 1.0 | BOTH-plausible / INPUT-artifact | `ground4`: GNU `pres` 0 vs **Pro 500**. The Pro stores the head h, as its manual says ("Primary dof is the hydraulic pressure head h"). The total pore pressure (−500) and `sigyy` (−1247.5) are identical. `ground14`: safety factors identical (2.3333 / 2.0). Also in this cluster: the GNU-only `groundflow_total_pressure_limit` and `pressure_atmospheric`, which the Pro ignores. |
 | 3 | K14 | Hypoplasticity: history slots and stress path | 8 | 1.0 | UNKNOWN (partly GNU-suspect) | `hypo7/8/9` (Masin): stress equal to 1e-4, but the GNU leaves `hyhis1..5` = 0 where the Pro fills them (e.g. `hyhis3` 22519). `hypo3`: Pro target −0.1618±0.02, **GNU −0.1034**, Pro −0.1629. `hypo10`: `disx` GNU 4.3e-9 vs target 9.84e-8. |
 | 4 | K15 | Other plasticity (MC, DP+refine, von Mises+refine) | 8 | 1.0 | UNKNOWN (pre-existing MC difference) | `validation_14` (DP, refine, delete): `velx` differs 48 %, `eppxx` 25 %. `validation_3` (von Mises plate): `kap` 11 %. `mohrcou2`: GNU −6.932 (its target) vs Pro 0. `mmc_tension`: `sigzz` 2 %. |
@@ -410,9 +412,91 @@ Known backlog items seen in this audit:
 - **The force7 crash on the Pro** did not reproduce: `force7` ran and matched
   on both binaries.
 
+### 5.1 K01 resolution (2026-09-29)
+
+Two defects, both fixed in the working tree on top of `5568fb3` (commit
+pending):
+
+1. **Spurious stress rotation.** `materi.cc` "rotate to new configuration"
+   listed `-UPDATED_LINEAR` (since `22801c3`) and `-UPDATED_AREA` (since
+   `a1d9d12`) and rotated the stress by `inc_rot`. `set_deften_etc()` sets
+   `inc_rot` to the identity for the linear memories and then overwrites it
+   with `set_deften_u_rot(inc_deften, inc_u, inc_rot)`, so the stress was
+   rotated by the real incremental rotation. Manual Pro 2.2.1:
+   `-updated_linear` adds the extra stresses to the previous ones with no
+   rotation step. Both memories removed from the list.
+2. **Compressibility increment.** `stress.cc` used `tr(new_epe - old_epe)`
+   for the linear memories; `old_epe` is 0 unless `materi_strain_elasti` is
+   initialized, so the total strain was added every step (legacy 2014). Now
+   `tr(inc_epe)`.
+
+All 13 K01 tests re-run on the Professional, the pre-fix GNU (`5568fb3`) and
+the fixed GNU, same converted text, every variable compared with the audit
+machinery. Worst node per variable:
+
+| test | variable | Pro | GNU before | GNU after |
+|---|---|---|---|---|
+| Pro `interac1` / sfnet `interac1` | sigxx n1 | -0.005 | -0.01 | -0.005 |
+| | eptxx n3 | -0.005 | 9.7e-11 | -0.005 |
+| | sigyy/sigzz n3 | -0.005 | -0.01 | -0.005 |
+| Pro `matrix7` / sfnet `matrix7` | sigxy | 1 | 0.26593 | 1 |
+| | sigyy | 0 | -2.0802 | 0 |
+| | velx n5 | 0.5 | 0.31837 | 0.5 |
+| sfnet `druckpr1` | sigxx / sigxy / sigyy | 0 / 0.11547 / 0 | 0.092376 / 0.069282 / -0.092376 | 0 / 0.11547 / 0 |
+| sfnet `mohrcou1` | sigxx / sigxy | 0 / 0.1 | 0.08 / 0.06 | 0 / 0.1 |
+| sfnet `tria6` | sigyy n8 | 1 | 1.8211 | 1 |
+| | vely n5 | 0.5 | 0.67788 | 0.5 (all 13 nodes match) |
+| vs `mshf` | sigxy / sigxx | 50 / 0 | 48.312 / 7.0268 | 50 / 0 |
+| vs `mshf_nof` | sigxy / sigxx | 33.333 / 0 | 33.384 / 4.3608 | 33.333 / 0 |
+| vs `mdp_shear`, `mstrain_druckprag` | sigxy | 34.641 | 34.145 | 34.640 |
+| | sigxx | 34.631 | 45.824 | 34.654 |
+| | sigyy | 34.643 | 34.031 | 34.538 |
+| vs `mstrain_druckprag_elast` | sigxx | 0 | 823.50 | 0 |
+| | sigxy | 666.67 | 356.56 | 666.93 |
+| | eptyy | 0.66667 | 1.1746 | 0.66335 |
+| vs `mesh_act_grav` | sigxx | 0 | 850.60 | 0.11 |
+| | sigxy | 200 | -104.89 | 211.94 |
+| | sigyy | 600 | 368.66 | 439.48 |
+| | vel x/y | 1.2 / 0.2 | 2.0199 / 1.3988 | 1.2 / 0.2 |
+
+- **9 of 13 now match in every `node_dof` and `post_point_dof` variable**
+  (`interac1` x2, `matrix7` x2, `druckpr1`, `mohrcou1`, `tria6`, `mshf`,
+  `mshf_nof`). Only exception: `interac1` `velx` at the middle node,
+  1.2e-7 (GNU) vs 5.6e-14 (Pro), a solver-tolerance artifact on a value that
+  should be 0 (pre-fix it was -5.1e-8).
+- **The residual of the 4 other validation-suite tests is not the memory.**
+  They all use `mesh -fixed_in_space` (convected). The fixed GNU with
+  `-updated_linear` and the fixed GNU with the original
+  `-updated_without_rotation` give the same dump for all four, so the
+  remaining difference (0.07–0.3% on `mdp_shear`/`mstrain_druckprag*`,
+  larger on `mesh_act_grav`) lives in the fixed-in-space/convection path
+  and belongs to another cluster.
+- **Other memories.** `-updated_area`: same fix; the Professional rejects
+  it in an ordinary `group_materi_memory` (only accepted with
+  `incremental_driver`), so there is no oracle. `-total_linear` +
+  compressibility: the fix makes the GNU analytic (-0.005 for every dt)
+  while the Professional is time-step dependent (-0.0075 / -0.0099 /
+  -0.009999 for dt 1e-2 / 1e-3 / 1e-4, the pre-fix GNU digits): deliberate
+  divergence, BACKLOG C9. `-updated`, `-total`: unchanged.
+- **Reference vs current gradient.** With an explicit `mesh
+  -follow_material` the Professional builds the `-updated_linear` increment
+  on the current geometry (1D bar +50%: Pro 0.40714 = its `-updated` value;
+  GNU 0.5 via the `c945833` reference gradient). The match without a mesh
+  record comes from the different mesh defaults (Pro `-fixed_in_space`, GNU
+  `-follow_material`), which also explains the `interac1` `-updated` residual
+  (-0.0050117 vs -0.005). Recorded as BACKLOG C8, not changed.
+- **Regression.** validation-suite 233 PASS / 1 RUNFAIL, sfnet 187/10,
+  test-2026 17/17 (with the 2 new self-checking inputs
+  `updated_linear_compress1.dat`, `updated_linear_shear1.dat`);
+  classification identical to the pre-fix binary; every `.dbs` identical
+  after masking uninitialized `element_dof` denormals and timestamps. The
+  GNU-dialect corpora use `-updated_without_rotation`, so the fix only shows
+  through the converted text. The conversion-neutrality count of section 1.1
+  (32 changed approximations) was not re-measured.
+
 ## 6. Recommended next fixes (priority by judgement)
 
-1. **K01, `-updated_linear` in the GNU.**
+1. **K01, `-updated_linear` in the GNU.** DONE 2026-09-29 (section 5.1).
    - Use the analytic `interac1` bar as the regression test: 2 materials, −0.005.
    - Start from the difference between the `-UPDATED_LINEAR` and
      `-UPDATED_WITHOUT_ROTATION` paths in `materi.cc`/`stress.cc`, with the

@@ -122,6 +122,32 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
   the only real `.dbs` change is sfnet `damage1` `sigxx`.
 - **Evidence**: `manual-developer/materi_damage_effective_stress.md`.
 
+### R6. `-updated_linear` / `-updated_area` stress rotation and compressibility (2026-09-29)
+
+- **Corpus**: audit cluster K01 (13 tests: Pro `interac1`, `matrix7`; sfnet
+  `druckpr1`, `interac1`, `matrix7`, `mohrcou1`, `tria6`; validation-suite
+  `mdp_shear`, `mesh_act_grav`, `mshf`, `mshf_nof`, `mstrain_druckprag`,
+  `mstrain_druckprag_elast`, all on the converted `-updated_linear` input).
+- **Was**: (1) `materi.cc` rotated the `-updated_linear`/`-updated_area`
+  stress by `inc_rot`, which `set_deften_etc()` overwrites with the real
+  incremental rotation (added by `22801c3`/`a1d9d12`); simple shear
+  `druckpr1` gave sigxy 0.0693, sigxx 0.0924 instead of 0.11547 / 0.
+  (2) `stress.cc` compressibility of the linear memories used
+  `tr(new_epe-old_epe)` with `old_epe` = 0 unless `materi_strain_elasti` is
+  initialized, so the total strain was added every step (legacy 2014):
+  `interac1` -0.01 instead of -0.005.
+- **Resolution**: the linear memories are removed from the rotation list
+  (manual Pro 2.2.1: no rotation step); the volumetric increment is
+  `tr(inc_epe)/compressibility`. Commit pending.
+- **Acceptance**: `validation-suite/test-2026/updated_linear_compress1.dat`,
+  `updated_linear_shear1.dat` pass on the GNU and the Professional (rc=1 on the
+  pre-fix binary); 9 of the 13 K01 tests now match the Professional in every
+  variable, the 4 `-fixed_in_space` validation-suite tests keep a residual
+  identical to `-updated_without_rotation`; validation-suite 233 and sfnet
+  187/10 classification diff 0, no physical `.dbs` change.
+- **Evidence**: `manual-developer/group_materi_memory_updated_linear.md` §5,
+  `AUDIT-ALL-VARIABLES-2026.md` K01.
+
 ---
 
 ## B. sfnet 197 — the 9 RUNFAIL (all out-of-scope)
@@ -390,6 +416,46 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
   iterations.
 - **Effort**: **medium**.
 
+### C8. Default `mesh`: GNU `-follow_material`, Professional `-fixed_in_space`
+
+- **Corpus**: none directly; explains the `interac1` `-updated` residual
+  (GNU -0.0050117, Pro -0.005) and why the `c945833` reference gradient of
+  `-updated_linear` matches the Professional only without a `mesh` record.
+- **Symptom**: with `materi_velocity` and no `materi_displacement` the GNU
+  moves the nodes with the material by default (`top.cc`, `options_mesh`
+  default `-FOLLOW_MATERIAL`); the Professional manual 6.806 says "Default
+  each specifier is set to -fixed_in_space", and the Professional keeps the
+  nodes in place. 1D bar stretched 50% (dt 0.01): `-updated` Pro 0.5 / GNU
+  0.40714 without a mesh record, both 0.40714 with `mesh -follow_material`.
+  With `mesh -follow_material` the Professional `-updated_linear` gives the
+  current-geometry value 0.40714 while the GNU (reference gradient, `c945833`)
+  gives 0.5.
+- **Root cause**: different mesh default; the GNU `-updated_linear` reference
+  gradient emulates the Professional's fixed mesh for that one memory only.
+- **Severity**: **MEDIUM** — any `-updated`/velocity-only model without a
+  `mesh` record differs at large strain; an explicit `mesh -follow_material`
+  with `-updated_linear` differs too.
+- **Proposed fix**: align the default mesh with the Professional (then drop
+  the reference-gradient special case of `-updated_linear`); needs a full
+  corpus A/B, because many GNU tests rely on the moving mesh.
+- **Effort**: **large**.
+
+### C9. `-total_linear` + compressibility: the Professional is time-step dependent
+
+- **Corpus**: none (no corpus test combines them); probe = Pro `interac1` with
+  `-total_linear` and `materi_displacement`.
+- **Symptom**: analytic sigxx -0.005. Professional 02-08-2026: -0.0075 /
+  -0.0099 / -0.009999 for dt 1e-2 / 1e-3 / 1e-4 (the pre-fix GNU gave the
+  same digits); the GNU after R6 gives -0.005 for every dt.
+- **Root cause**: the Professional appears to keep the legacy
+  `tr(new_epe-old_epe)` increment for `-total_linear` (its `-updated_linear`
+  gives -0.005 on the same model).
+- **Severity**: **LOW** — deliberate divergence; the GNU follows the manual
+  (2.2.1: incremental strain = difference of the linear strains) and the
+  analytic answer.
+- **Proposed fix**: none in the GNU; report to the Professional maintainers.
+- **Effort**: **cheap**.
+
 ---
 
 ## D. Summary
@@ -411,8 +477,10 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
 | C5 | — | `contact_target_geometry` index-0 alias | MEDIUM | medium |
 | C6 | validation-suite | `iface_gen*` generation-coverage gap | MEDIUM | cheap |
 | C7 | — | Mazars gamma with shear; damage + early plasticity path | MEDIUM | medium |
+| C8 | — | default `mesh` `-follow_material` vs Pro `-fixed_in_space` | MEDIUM | large |
+| C9 | — | `-total_linear` + compressibility: Pro time-step dependent (deliberate divergence) | LOW | cheap |
 
-Fifteen items remain open: five MEDIUM and ten LOW. No open issue is CRITICAL or
+Seventeen items remain open: six MEDIUM and eleven LOW. No open issue is CRITICAL or
 HIGH. The validation-suite corpus has no open failure — its 233 real tests all
 pass. Every remaining failure is a stale or malformed test, an out-of-scope model
 or infrastructure limit, a narrow post-processing divergence, a corpus-coverage

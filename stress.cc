@@ -1466,9 +1466,12 @@ void set_stress( long int element, long int gr,
       if ( compressibility!=0. ) {
         if      ( memory==-TOTAL_LINEAR || memory==-UPDATED_LINEAR ||
                   memory==-UPDATED_AREA ) {
-          tmp_old = ( old_epe[0] + old_epe[4] + old_epe[8] ) / compressibility;
+          // linear volumetric stress: the increment comes from inc_epe,
+          // which is valid whether or not materi_strain_elasti is
+          // initialized (old_epe is 0 without it, so new_epe-old_epe
+          // would add the total strain every step)
           tmp_new = ( new_epe[0] + new_epe[4] + new_epe[8] ) / compressibility;
-          tmp_inc = tmp_new - tmp_old;
+          tmp_inc = ( inc_epe[0] + inc_epe[4] + inc_epe[8] ) / compressibility;
         }
         else if ( memory==-TOTAL ) {
           array_move( old_epe, work, MDIM*MDIM );
