@@ -501,7 +501,8 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
   apply the R7 pore-pressure branch only when that post_calcul record is
   present (one extra check in `groundflow_static_pressure_group()`, for
   the pressure part only).
-- **Decision**: pending (project owner).
+- **Decision**: divergence accepted by the project owner on 2026-09-29
+  (merge `ad3437e`); excavate1 keeps a documented target mismatch.
 - **Effort**: **cheap**.
 
 ---
