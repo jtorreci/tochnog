@@ -30,13 +30,14 @@ an automatic retry with the direct band LU when the Bi-CG fails).
 
 These plain records are the global counterparts of the per-control
 `control_solver_*` records of Sprint 9. When both exist, the global
-record overwrites the per-control one.
+record overwrites the per-control one, except `solver_bicg_stop`, which
+the control record overrules (manual 6.376, see the table).
 
 | record | meaning | GNU status |
 |---|---|---|
 | `solver_bicg_error <error>` | termination error ratio of the bicg iterations (6.1048) | wired (overwrites `control_solver_bicg_error`) |
 | `solver_bicg_restart <n>` | number of bicg restarts (6.1049) | PARTIAL: registered and accepted; the GNU bicg has no restart mechanism |
-| `solver_bicg_stop <sw>` | stop the calculation when bicg does not converge (6.1050) | wired (overwrites `control_solver_bicg_stop`; `-no` continues with a warning) |
+| `solver_bicg_stop <sw>` | stop the calculation when bicg does not converge (6.1050) | wired (`control_solver_bicg_stop` overrules it: the index-0 record, then the record of the timestep's own index; `-no` continues with a warning) |
 | `solver_matrix_save <sw>` | save and reuse the decomposed matrix (6.1051) | PARTIAL: registered and accepted; decomposition caching is direct-solver functionality not present in the GNU. `-always` is pardiso-only in the Professional |
 | `solver_matrix_symmetric <sw>` | treat the matrix as symmetric (6.1052) | wired, see below |
 | `solver_pardiso_ordering <o>` | pardiso ordering (6.1053) | PARTIAL: registered; PARDISO is not compiled in the GNU |
@@ -75,3 +76,21 @@ solver_bicg_stop -no
 The `tslv_override` test of the validation suite proves the override:
 with `control_solver` asking for bicg and `solver -matrix_superlu`,
 the SuperLU banner appears in the output (the direct solver ran).
+
+## Differences with the Professional version
+
+- `control_solver_bicg_stop` / `solver_bicg_stop` precedence. The GNU
+  reads, last one wins: `solver_bicg_stop`, then
+  `control_solver_bicg_stop 0 ...`, then `control_solver_bicg_stop` with
+  the control index of the running timestep. The Professional
+  (02-08-2026, measured) reads only the index-0 control record, for every
+  timestep, and ignores a record with the timestep's own non-zero index,
+  although the manual (6.376) documents a per-timestep index. The GNU
+  follows the manual here (project decision 2026-09-29): inputs with
+  only `control_solver_bicg_stop 0 ...` and/or `solver_bicg_stop` behave
+  as in the Professional; an input with a record at a non-zero timestep
+  index behaves differently. Example, a timestep with index 20:
+  `control_solver_bicg_stop 20 -no` continues in the GNU and stops in
+  the Professional; `control_solver_bicg_stop 0 -no` plus
+  `control_solver_bicg_stop 20 -yes` stops in the GNU and continues in
+  the Professional.

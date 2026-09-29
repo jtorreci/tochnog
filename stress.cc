@@ -521,31 +521,32 @@ void set_stress( long int element, long int gr,
   // group_materi_elasti_k0 (manual Professional 6.650): when this record
   // is specified AND control_materi_elasti_k0 is set to -yes, the poisson
   // coefficient consistent with K0, nu = K0/(1+K0) (from K0 = nu/(1-nu)),
-  // replaces group_materi_elasti_poisson in the elastic stress law with
-  // group_materi_elasti_young or group_materi_elasti_young_power. For
-  // K0 > 0.95 Tochnog takes 0.95. (The group_materi_elasti_hardsoil
-  // combination uses its own nu50/nuur from the hardsoil record and is
-  // NOT affected by this switch: the manual lists the k0 record for
-  // young/young_power only.)
+  // is used in the elastic stress law with group_materi_elasti_young or
+  // group_materi_elasti_young_power (replacing group_materi_elasti_poisson,
+  // also when that record is absent) and with group_materi_elasti_hardsoil
+  // (replacing both nu50 and nuur). For K0 > 0.95 Tochnog takes 0.95.
+  // All three combinations measured on Professional (sigxx = K0*sigyy
+  // under gravity, see manual-developer).
+  // The switch is read for the index of the current timestep (ICONTROL);
+  // a previous guard on index 0 skipped it for any other index (elasti7).
   k0_active = 0;
-  if ( db_active_index( CONTROL_MATERI_ELASTI_K0, 0, VERSION_NORMAL ) ) {
-    idum[0] = 0;
-    db( ICONTROL, 0, idum, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
-    db( CONTROL_MATERI_ELASTI_K0, idum[0], &k0_control_swit, ddum, ldum,
-      VERSION_NORMAL, GET_IF_EXISTS );
-    if ( k0_control_swit==-YES &&
-         get_group_data( GROUP_MATERI_ELASTI_K0, gr, element, new_unknowns,
-           &k0_elasti, ldum, GET_IF_EXISTS ) ) {
-      if ( k0_elasti>0.95 ) k0_elasti = 0.95;
-      k0_active = 1;
-    }
+  k0_control_swit = 0;
+  idum[0] = 0;
+  db( ICONTROL, 0, idum, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+  db( CONTROL_MATERI_ELASTI_K0, idum[0], &k0_control_swit, ddum, ldum,
+    VERSION_NORMAL, GET_IF_EXISTS );
+  if ( k0_control_swit==-YES &&
+       get_group_data( GROUP_MATERI_ELASTI_K0, gr, element, new_unknowns,
+         &k0_elasti, ldum, GET_IF_EXISTS ) ) {
+    if ( k0_elasti>0.95 ) k0_elasti = 0.95;
+    k0_active = 1;
   }
 
   if ( get_group_data( GROUP_MATERI_ELASTI_YOUNG, gr, element, new_unknowns, 
       &young, ldum, GET_IF_EXISTS ) ) {
-    if ( get_group_data( GROUP_MATERI_ELASTI_POISSON, gr, element,
-        new_unknowns, &poisson, ldum, GET_IF_EXISTS ) && k0_active )
-      poisson = k0_elasti/(1.+k0_elasti);
+    get_group_data( GROUP_MATERI_ELASTI_POISSON, gr, element,
+      new_unknowns, &poisson, ldum, GET_IF_EXISTS );
+    if ( k0_active ) poisson = k0_elasti/(1.+k0_elasti);
     task[1] = -NO;
     C_matrix( young, poisson, elasti_transverse_isotropy, C, task );
     task[1] = membrane;
@@ -574,9 +575,9 @@ void set_stress( long int element, long int gr,
     // manual-developer.)
     array_set( &C[0][0][0][0], 0., MDIM*MDIM*MDIM*MDIM );
     array_set( &Cmem[0][0][0][0], 0., MDIM*MDIM*MDIM*MDIM );
-    if ( get_group_data( GROUP_MATERI_ELASTI_POISSON, gr, element,
-        new_unknowns, &poisson, ldum, GET_IF_EXISTS ) && k0_active )
-      poisson = k0_elasti/(1.+k0_elasti);
+    get_group_data( GROUP_MATERI_ELASTI_POISSON, gr, element,
+      new_unknowns, &poisson, ldum, GET_IF_EXISTS );
+    if ( k0_active ) poisson = k0_elasti/(1.+k0_elasti);
     // manual Professional 6.662 / theory 2.2.2: E = E0 + E1*(p/p1)^alpha
     // with the conditions E >= E2 and E <= E3, where p is the pressure
     // (p = -(sig11+sig22+sig33)/3, positive in compression; compression
@@ -642,6 +643,12 @@ void set_stress( long int element, long int gr,
     hs_Erefur = hs_elasti[4];
     hs_sigrefur = hs_elasti[5];
     nuur = hs_elasti[6];
+    if ( k0_active ) {
+      // group_materi_elasti_k0 with control_materi_elasti_k0 -yes: the K0
+      // consistent poisson replaces nu50 and nuur (manual 6.650)
+      nu50 = k0_elasti/(1.+k0_elasti);
+      nuur = nu50;
+    }
     if ( hs_Eref50<=0. || hs_Erefur<=0. )
       db_error( GROUP_MATERI_ELASTI_HARDSOIL, gr );
     // cohesion term c*cot(phi) comes from the plastic group; without it

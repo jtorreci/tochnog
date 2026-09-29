@@ -169,6 +169,34 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
 - **Evidence**: `manual-developer/groundflow_phreatic_level_static.md`,
   `AUDIT-ALL-VARIABLES-2026.md` §5.2. Side effect: C10.
 
+### R8. Control records honored for index 0 only (2026-09-29)
+
+- **Corpus**: audit cluster K04, Pro `elasti7` (`control_materi_elasti_k0
+  20 -yes`).
+- **Was**: `db_active_index( CONTROL_xxx, 0, ... )` tests that exact
+  index. `control_materi_elasti_k0` was ignored for any other control
+  index (elasti7 sigxx 0 instead of -0.05);
+  `control_materi_plasti_hardsoil_gammap_initial` with a non-zero index
+  aborted ("Data is allocated in a parallel loop");
+  `control_solver_bicg_stop` followed neither the manual nor the
+  Professional for mixed indices / with `solver_bicg_stop`.
+- **Resolution**: K0 switch read at ICONTROL, and (measured on the
+  Professional) applied without a poisson record and to hardsoil
+  nu50/nuur; gammap pre-allocation when the record exists at any index;
+  bicg stop = control record index 0 overruling the global one (the
+  Professional's measured semantics, `47b6fda`), then extended to the
+  combined precedence of C13 (commit pending).
+- **Acceptance**: elasti7 equals the Professional in every variable;
+  `validation-suite/test-2026/elasti_k0_index1`, `elasti_k0_nopoisson1`,
+  `elasti_k0_hardsoil1`, `hardsoil_gammap_initial_index1` pass (rc=1 on
+  the pre-fix binary); 9/9 bicg-stop probes matched the Professional
+  with `47b6fda` (5/9 before; 6/9 with the C13 combined precedence);
+  validation-suite, sfnet and test-2026 `.dbs` identical to the pre-fix
+  binary apart from the 4 new tests.
+- **Evidence**: `manual-developer/group_materi_elasti_k0.md`,
+  `solve_iterative_bicg.md`, `AUDIT-ALL-VARIABLES-2026.md` §5.3. Found on
+  the way: C11, C12.
+
 ---
 
 ## B. sfnet 197 — the 9 RUNFAIL (all out-of-scope)
@@ -505,6 +533,74 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
   (merge `ad3437e`); excavate1 keeps a documented target mismatch.
 - **Effort**: **cheap**.
 
+### C11. `control_materi_dynamic` / truss dynamics without `materi_dynamic` diverge from the Professional
+
+- **Corpus**: none; probes = Pro `test/other/dynamic1` (truss, `materi_dynamic
+  0.`, control index 10) with extra records (2026-09-29, scratch inputs).
+- **Symptom** (node 2 `disx` at t = 100, Pro 02-08-2026 vs GNU):
+  `control_materi_dynamic 10 0.` added: Pro 0.0958890 (= dynamic1), GNU
+  0.0937873; the same record with index 0: same numbers; only
+  `control_materi_dynamic 10 0.` (no global record): Pro 0.0958890, GNU
+  6.4477; `control_materi_dynamic 10 0.5`: Pro 0.932818, GNU 0.932764;
+  no dynamic record at all (fully implicit): Pro 0.995505, GNU 1.91225
+  (with `control_materi_dynamic 10 1.` both give 0.995505).
+- **Root cause**: the displacement-primary gate (`so.cc`
+  `disp_primary_gate`) keys on the GLOBAL `materi_dynamic` only and sends
+  any input with `control_materi_dynamic` at index 0 to the historic path;
+  the auxiliary f = 1 reassembly is then overridden by the per-control
+  factor read in `truss.cc`/`materi.cc`. The literal index 0 in
+  `so.cc:132` is NOT the cause (index 0 and index 10 give identical GNU
+  results). The plain implicit truss case (no record) is a separate gap.
+- **Severity**: **MEDIUM** — dynamic inputs that use the per-step factor
+  or no factor at all differ from the Professional.
+- **Proposed fix**: an effective factor per control index (control record
+  at ICONTROL, else global) used by the gate, `elem.cc`, `truss.cc` and
+  `materi.cc`, with the auxiliary pass protected from the control
+  override; then re-verify dynamic1/2/5/8.
+- **Effort**: **medium**.
+
+### C12. bicg "stop" does not abort the GNU run on a singular system
+
+- **Corpus**: none; probe = elasti7 mesh without supports, `solver
+  -matrix_iterative_bicg` (2026-09-29, scratch).
+- **Symptom**: without `-no` the Professional prints "the BICG solver did
+  not converge" and stops without a `.dbs`; the GNU prints the breakdown
+  error ("That is not good enough") once per iteration and still finishes
+  with rc 0 and a `.dbs` (garbage displacements).
+- **Severity**: **LOW** — the error is printed; only the exit status and the
+  output differ.
+- **Proposed fix**: check the return path of `solve_iterative_bicg()`
+  failure in `solve()`/`top.cc` for this breakdown exit.
+- **Effort**: **cheap**.
+
+### C13. `control_solver_bicg_stop` at the timestep's index: the Professional ignores it
+
+- **Corpus**: none; probes = elasti7 mesh without supports, `solver
+  -matrix_iterative_bicg` (2026-09-29, scratch; same probes as R8).
+- **Symptom**: the Professional 02-08-2026 reads only the index-0
+  `control_solver_bicg_stop` record, for every timestep; a record with the
+  timestep's own non-zero index is ignored (`control_solver_bicg_stop 20
+  -no` on a timestep with index 20 still stops). The GNU reads, last one
+  wins, `solver_bicg_stop`, the index-0 control record, then the control
+  record at the timestep index: 6/9 probes equal the Professional, the 3
+  that differ are exactly those with a record at the timestep's non-zero
+  index (`20 -no`; `0 -yes, 20 -no`; `0 -no, 20 -yes`).
+- **Root cause**: the Professional uses a literal index 0 where the manual
+  (6.376) documents a per-timestep index — the same bug class as the
+  index-0 `control_materi_elasti_k0` guard fixed in the GNU (R8).
+- **Severity**: **LOW** — deliberate divergence; only inputs with a
+  non-zero-index `control_solver_bicg_stop` record behave differently, and
+  only when the iterative solver fails.
+- **Proposed fix**: none in the GNU (the index-0 fallback keeps every
+  Professional input that relies on `control_solver_bicg_stop 0 ...`
+  unchanged); report to the Professional maintainers.
+- **Decision**: divergence accepted by the project owner on 2026-09-29
+  (commit pending).
+- **Evidence**: `manual-developer/solve_iterative_bicg.md` (3-column
+  table), `manual-user/solver.md` (Differences with the Professional
+  version).
+- **Effort**: **cheap**.
+
 ---
 
 ## D. Summary
@@ -529,8 +625,11 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
 | C8 | — | default `mesh` `-follow_material` vs Pro `-fixed_in_space` | MEDIUM | large |
 | C9 | — | `-total_linear` + compressibility: Pro time-step dependent (deliberate divergence) | LOW | cheap |
 | C10 | Pro `other` | static pore pressure tied to `post_calcul -total_pressure` in the Pro (`excavate1` target) | MEDIUM | cheap |
+| C11 | — | `control_materi_dynamic` and implicit truss dynamics vs Pro | MEDIUM | medium |
+| C12 | — | bicg stop does not abort the GNU on a singular system | LOW | cheap |
+| C13 | — | `control_solver_bicg_stop` at the timestep index: Pro reads index 0 only (deliberate divergence) | LOW | cheap |
 
-Eighteen items remain open: seven MEDIUM and eleven LOW. No open issue is CRITICAL or
+Twenty-one items remain open: eight MEDIUM and thirteen LOW. No open issue is CRITICAL or
 HIGH. The validation-suite corpus has no open failure — its 233 real tests all
 pass. Every remaining failure is a stale or malformed test, an out-of-scope model
 or infrastructure limit, a narrow post-processing divergence, a corpus-coverage

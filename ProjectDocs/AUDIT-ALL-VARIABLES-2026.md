@@ -383,7 +383,7 @@ and target):
 |---|---|---|---|
 | `condif7` | T(0), 1D edge heat flux; analytic T = 10 − x | **20** (flux doubled) | 10 |
 | `force18` | `force_point` at 0.8 | **`velx` −0.8** | +0.8 |
-| `elasti7` | K0 = 0.1 → `sigxx` | **0** | −0.05 |
+| `elasti7` | K0 = 0.1 → `sigxx` | **0** → −0.0500000000025 after the 2026-09-29 fix (§5.3) | −0.05 (Pro −0.04999999884) |
 | `tension_direct1` | `sigyy` with `…_normal_automatic` | **0.667** | 0 |
 | `mohr_coul_direct8` | `sigxy` with `plasti_bounda_factor` 0 | **1788.9** | 0 |
 | `mohr_coul_direct4` | `disx` | **0.3007** | 0.1024 |
@@ -549,6 +549,45 @@ Both apply to groups with `-groundflow` in `group_type`
   at 45 s in both). No corpus test uses the static switch without a
   pressure dof.
 
+### 5.3 K04 `elasti7` resolution (2026-09-29)
+
+`elasti7` sets `control_materi_elasti_k0 20 -yes`. The hook in
+`set_stress()` was guarded by `db_active_index( CONTROL_MATERI_ELASTI_K0,
+0, ... )`, which tests that exact index, so the switch was ignored. The
+record is now read at the ICONTROL index (fix in the working tree on top
+of `28fde5d`, commit pending). Probes on the Professional 02-08-2026 also
+showed that K0 applies without `group_materi_elasti_poisson` and to
+`group_materi_elasti_hardsoil` (nu50/nuur); both are implemented.
+
+| test | variable | Pro | GNU before | GNU after |
+|---|---|---|---|---|
+| Pro `elasti7` | `post_point` `sigxx` = `sigzz` | −0.04999999884 | 0 | −0.0500000000025 |
+| | `post_point` `sigyy` | −0.4999999999521 | −0.499999999959 | −0.500000000025 |
+| | top `disy` (nodes 3, 4) | −4.909090913e-7 | −5e-7 | −4.90909090909e-7 |
+| | `node_rhside` `velx` | −0.025 | ~1e-17 | −0.0250000000012 |
+| K0 without poisson (young / young_power) | `sigxx` | −0.05 | 0 | −0.05 |
+| hardsoil nu50 = nuur = 0.2 + K0 | `sigxx` | −0.05 | −0.125 | −0.05 |
+| K0 = 2 (clamp 0.95) | `sigxx` | −0.475 | 0 | −0.475 |
+
+- After the fix every `elasti7` variable agrees with the Pro within 2.4e-8
+  relative.
+- The same literal-index-0 pattern was reviewed at every
+  `db_active_index( CONTROL_xxx, 0, ... )` site:
+  `control_materi_plasti_hardsoil_gammap_initial` (`top.cc`, crash for a
+  non-zero index) and `control_solver_bicg_stop` (`so_bicg.cc`, the Pro
+  uses index 0 only and lets it overrule `solver_bicg_stop`) were fixed;
+  `control_materi_dynamic` in `so.cc` is not the cause of its divergence
+  (BACKLOG C11); the other sites use internal records declared
+  `no_index` (index 0 by design).
+- **Regression.** Clean build: suite 16/16, the same 70 file-check failures
+  by name. validation-suite 233 PASS / 1 RUNFAIL, sfnet 187/10, test-2026
+  23/23 (19 + `elasti_k0_index1`, `elasti_k0_nopoisson1`,
+  `elasti_k0_hardsoil1`, `hardsoil_gammap_initial_index1`, all rc=1 on
+  the pre-fix binary); every other `.dbs` identical to the pre-fix binary
+  after masking timestamps, `time_calculation` and denormals. The Pro
+  `heat_exchanger_pile_dt` / `_load_dt` (K0 at index 45) time out at 45 s
+  on both binaries, so they are not compared.
+
 ## 6. Recommended next fixes (priority by judgement)
 
 1. **K01, `-updated_linear` in the GNU.** DONE 2026-09-29 (section 5.1).
@@ -565,7 +604,8 @@ Both apply to groups with `-groundflow` in `group_type`
    with exact answers, in order:
    - `condif_heat_edge_normal` doubled with `_geometry` + `_node`
    - `force_point` sign
-   - `group_materi_elasti_k0` in the `-total_linear` + gravity path
+   - `group_materi_elasti_k0` in the `-total_linear` + gravity path —
+     DONE 2026-09-29 (§5.3: the switch was read for control index 0 only)
    - `plasti_tension_direct_normal_automatic`
    - `group_materi_plasti_bounda_factor`
    - `mohr_coul_direct4`

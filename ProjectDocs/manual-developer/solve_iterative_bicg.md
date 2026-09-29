@@ -44,11 +44,61 @@ The failure messages print the initial error, the final error, the
 
 `control_solver_bicg_stop -no` (manual Professional 6.376) now also covers
 the breakdown exits (continue with a warning + the current solution),
-consistent with its max_iter semantics. Note: the record lookup follows the
-legacy pattern (active-index check at 0, read at the current control
-index) — for a model whose `control_timestep` uses a non-zero control
-index, write `control_solver_bicg_stop <index> -no` with the same index
-(the `iface_3d_slip` test documents this).
+consistent with its max_iter semantics.
+
+Record lookup (so_bicg.cc, 2026-09-29): combined precedence, last read
+wins:
+
+1. `solver_bicg_stop` (global);
+2. `control_solver_bicg_stop` with index **0**;
+3. `control_solver_bicg_stop` with the control index of the running
+   timestep (`ICONTROL`, skipped when it is 0).
+
+Measured on the Professional 02-08-2026 with a singular bicg system
+(elasti7 mesh without supports, `solver -matrix_iterative_bicg`,
+timestep index 20 unless stated): the control record overrules the global
+one (manual 6.376), but ONLY the index-0 control record is read, for
+every timestep; a record with the timestep's own non-zero index is
+ignored. The manual documents a per-timestep index, so the project owner
+judged this a Professional bug (same class as the index-0
+`control_materi_elasti_k0` guard fixed in the GNU, R8) and chose the
+combined precedence (decision 2026-09-29): the index-0 record keeps its
+Professional meaning (inputs that rely on `control_solver_bicg_stop 0
+...` behave the same), and a record at the timestep's own index is
+honoured on top of it. This is a deliberate divergence from the
+Professional only when such a non-zero index record exists (BACKLOG
+C13). "stops" = Professional "Error: the BICG solver did not converge" /
+GNU "Error: the iterative solver ..."; "continues" = no error (Pro) /
+"Warning: ... continuing" (GNU):
+
+| control_solver_bicg_stop | solver_bicg_stop | Professional | GNU `47b6fda` (index 0 only) | GNU combined |
+|---|---|---|---|---|
+| 20 -no | — | stops | stops | **continues** (divergence) |
+| 0 -no | — | continues | continues | continues |
+| 10 -no | — | stops | stops | stops |
+| 0 -yes, 20 -no | — | stops | stops | **continues** (divergence) |
+| 0 -no, 20 -yes | — | continues | continues | **stops** (divergence) |
+| 0 -no (timestep 0) | -yes | continues | continues | continues |
+| 0 -yes (timestep 0) | -no | stops | stops | stops |
+| 0 -no (timestep 0) | — | continues | continues | continues |
+| — | — | stops | stops | stops |
+
+Extra probes, identical on the three binaries: `0 -no, 20 -no` →
+continues; global `-no` only (timestep 20) → continues; nothing at
+timestep 0 → stops. The GNU before `47b6fda` (active-index check at 0,
+then a read at the current control index, then the global record
+overwriting it) matched none of the mixed rows. Scratch inputs only (the
+GNU "stop" in this singular case does not abort the run — it prints the
+error and continues with rc 0 — so no self-checking target distinguishes
+both paths; see BACKLOG C12).
+
+Regression of the combined precedence (clean build, vs the `47b6fda`
+binary): build suite 16/16 runs OK with the same 70 file-check failures
+by name; validation-suite 233 PASS / 1 RUNFAIL, sfnet 187/10, test-2026
+23/23; every `.dbs` identical after masking timestamps and denormals
+(`examp14` hit the 45 s timeout under load — 46 s when run alone, rc 1 as
+before, `.dbs` identical). No corpus input has a non-zero-index
+`control_solver_bicg_stop` record.
 
 ### 2. CG for the symmetric system (B)
 
@@ -145,7 +195,10 @@ The symmetry check is one serial pass over the element matrices
   `materi.cc:619` vs `groundfl.cc:116`) has a sign mismatch between the
   off-diagonal blocks (measured `max_rel_asym` up to 1.0) — the coupled
   system is non-symmetric by construction and takes the Bi-CG path.
-- `control_solver_bicg_stop` record-index quirk (see above).
+- `control_solver_bicg_stop`: combined precedence (global, index 0,
+  timestep index); diverges from the Professional's index-0-only reading
+  when a record with the timestep's non-zero index exists (see above,
+  BACKLOG C13).
 - The staggered fixed point (`0.2315×` 2D, `0.143×` road) is the scheme's;
   the monolithic mixed solve (fix C) or a regularized staggered update
   (fix D) is the definitive repair for the user case.

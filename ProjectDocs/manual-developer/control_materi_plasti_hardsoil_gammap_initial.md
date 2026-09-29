@@ -22,9 +22,14 @@
   (the initial state is already inside) it clamps to 0.
 - **Pre-allocation**: `top.cc` (before the time loop, pattern of
   `NONLOCAL_ELEMENT_INFO`) allocates the element record for every
-  element with the sentinel `-1.` when the control record exists — the
-  first-timestep PUT runs inside the PARALLEL element loop, where db
-  allocation is forbidden ("Data is allocated in a parallel loop").
+  element with the sentinel `-1.` when the control record exists for ANY
+  control index (`db_highest_index`) — the first-timestep PUT runs inside
+  the PARALLEL element loop, where db allocation is forbidden ("Data is
+  allocated in a parallel loop"). Until 2026-09-29 the check was
+  `db_active_index(..., 0, ...)`, so a switch given only for a non-zero
+  control index aborted the run with that error (test-2026
+  `hardsoil_gammap_initial_index1`: mhardsoil_gp0 with index 1; the
+  Professional runs both indices).
 - **Consumption**: the hardsoil plastic block in `plasti_rule()`
   (`plasti.cc`) reads the record (`GET_IF_EXISTS`, buffer initialized to
   0, negative values treated as 0) and adds it to gamma_p in the yield
