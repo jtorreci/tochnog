@@ -43,10 +43,21 @@ group_materi_memory                  0  -updated_area
 
 ## Notes
 
-- The kinematic part (strains, rotations) of `-updated_area` is IDENTICAL
-  to `-updated_linear`: identity rotation handling and linear engineering
-  strains (verified: the GNU runs `-updated_area` and `-updated_linear`
-  through the same code path and produces identical results).
+- The rotation handling (no rotation of the stress), the strain measure
+  (linear engineering strains) and the compressibility block of
+  `-updated_area` are the same as `-updated_linear`. One kinematic
+  difference: `-updated_area` builds the strain increment on the CURRENT
+  geometry, `-updated_linear` on the reference geometry, so on a mesh that
+  follows the material the accumulated strains differ slightly (1D bar
+  compressed 0.5%: -0.0050117 vs -0.005).
+- The Professional 02-08-2026 accepts `-updated_area` only in the
+  `incremental_driver` context: in an ordinary `group_materi_memory` it
+  stops with "Error detected for data item : group_materi_memory". The GNU
+  accepts it everywhere; outside the incremental driver there is no
+  Professional reference.
+- 2026-09-29: the stress is no longer rotated by the incremental rotation
+  and the compressibility increment uses the incremental strain (same fix
+  as `-updated_linear`, audit cluster K01).
 - The difference with `-updated_linear` (area update of the loaded
   surface) only becomes observable through the `incremental_driver`
   experiment machinery (force-controlled experiments on a deforming

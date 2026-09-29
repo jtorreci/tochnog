@@ -44,3 +44,11 @@ zero when the displacements do not change).
 - The reported stress in these problems converges with the number of
   `control_timestep_iterations`; the Professional's default is 3, the GNU
   default is 1.
+- `group_materi_elasti_compressibility` adds `tr(incremental elastic
+  strain)/compressibility` per step (since 2026-09-29). Before, the GNU
+  added the TOTAL strain every step unless `materi_strain_elasti` was
+  initialized, which made the result depend on the time step. The
+  Professional 02-08-2026 still shows that behaviour with `-total_linear`
+  (two bars in series, analytic -0.005: Pro -0.0075 / -0.0099 / -0.009999
+  for dt 1e-2 / 1e-3 / 1e-4; GNU -0.005 for every dt). This is a deliberate
+  difference with the Professional.
