@@ -65,7 +65,8 @@ except the curved quadratic sides (see below).
 
 - `tochnog.h` / `tochnog-mod.h`: enum `ELEMENT_NORMAL` appended before
   `LAST_DUMMY` (both headers in sync); prototypes `element_normal_set()`,
-  `element_normal_needed()` next to `area_node_dataitem()`.
+  `element_normal_needed()`, `element_normal_automatic()` next to
+  `area_node_dataitem()`.
 - `database.cc` (after `ELEMENT_MIDDLE`): `element_normal`,
   DOUBLE_PRECISION, `data_length` = ndim, `external` 1 (printed in the
   database and accepted in an input/restart file), `version_all` 0
@@ -99,9 +100,58 @@ except the curved quadratic sides (see below).
   discards input values at the start (top() calls mesh_has_changed).
 - `materi.cc` `materi()`: the `_normal_automatic` branch reads
   `ELEMENT_NORMAL` (GET_IF_EXISTS) into `direct_normal`; the cross product
-  and the out-of-bounds reads are gone. A zero normal leaves
-  `direct_normal` zero, so `set_stress()` takes the full principal-stress
-  cut-off (`materi_direct_full_mc`).
+  and the out-of-bounds reads are gone. A zero normal in a `-yes` group
+  cannot reach this point any more (input error below); a zero normal in
+  a `-no` group still leaves `direct_normal` zero, so `set_stress()` takes
+  the full principal-stress cut-off (`materi_direct_full_mc`).
+
+## Zero-normal input error (2026-10-01)
+
+- `area.cc` `element_normal_automatic( gr )` (prototype in both headers):
+  returns the `_normal_automatic` record of group `gr` that is switched
+  `-YES` and actually defines the plane, i.e. 0 when the group has an
+  explicit `GROUP_MATERI_PLASTI_MOHR_COUL_DIRECT_NORMAL` or
+  `..._TENSION_DIRECT_NORMAL` (they take precedence in `materi()`).
+  Tension is tested before mohr_coul.
+- `area.cc` `element_normal_set()`: when the normalized element normal is
+  zero, the element has a side table (`element_normal_sides()`, i.e. an
+  isoparametric element that reaches `materi()`) and
+  `element_normal_automatic( element_group )` is nonzero, it prints the
+  message with `pri()` and stops with `db_error( automatic_record, gr )`
+  (the usual input-error idiom: "Error detected for data item/record",
+  exit `TN_EXIT_STATUS`). The explicit-record name in the two hint lines
+  (`explicit_normal`) matches the triggering automatic record. Because
+  the check sits in the generator, it also fires after
+  `mesh_has_changed()` (element deletion, ...), and after a restart
+  (the record is always regenerated).
+- Message (single row of 3 quad4, `element_normal2d_row_error1`):
+
+```
+Error: element_normal is zero for element : 2
+Error: element_group of that element is : 0
+The element is not on the mesh boundary (interior element,
+or its opposite boundary sides cancel), so its normal cannot
+define the direct cut-off plane of : group_materi_plasti_tension_direct_normal_automatic
+Restrict the element group to the boundary interface layer,
+or give the normal explicitly with : group_materi_plasti_tension_direct_normal
+If the element rests on a supported face (e.g. a single row
+of elements on a support), give that face normal with : group_materi_plasti_tension_direct_normal
+Error detected for data item : group_materi_plasti_tension_direct_normal_automatic
+Error detected for record : 0
+```
+
+- Professional 02-08-2026 on the same inputs: "Program error, assertion
+  failed ... Error for: : !array_null( directions, MDIM*MDIM )" (rc 0,
+  "Error detected for input file" in `tochnog.log`). Same outcome (the
+  calculation stops), readable message in the GNU.
+- Tests: `validation-suite/test-2014/materi_direct_auto.dat` (single hex8,
+  now an expected-error test) and `validation-suite/test-2026/
+  element_normal2d_row_error1.dat` carry an `EXPECTED_ERROR: <text>` line
+  in their leading comment; `scripts/build_safe.sh`
+  `expected_error_ok()` passes them only on rc=1 + that text. Companions
+  `element_normal2d_row_explicit1` (explicit normal 0 1) and
+  `element_normal2d_row_layer1` (automatic group only on the end
+  elements) run on both binaries with identical `.dbs` values.
 
 ## Hardcoded parameters
 
@@ -112,9 +162,19 @@ except the curved quadratic sides (see below).
 
 ## Pending / differences
 
-- Zero element normal with `_normal_automatic`: the Professional aborts
-  with an assertion, the GNU falls back to the full cut-off (kept on
-  purpose, documented in the user manual).
+- Zero element normal with `_normal_automatic -yes`: the Professional
+  aborts with an assertion, the GNU stops with a readable input error
+  (same outcome; see above).
+- OPEN (pending, unchanged): `materi()` uses `ELEMENT_NORMAL` whenever a
+  `_normal_automatic` record exists, also with the switch `-no`. Probe
+  2026-10-01 (column of 2 quad4 of `element_normal2d_column1`, upper
+  element `tension_direct 0`, pulled sideways in x): with `-yes` both
+  give `sigxx` 1 in the upper element (plane cut-off with normal (0,-1)
+  does not limit sigxx); with `-no` the Professional gives `sigxx` 0 (full
+  principal-stress cut-off, as without the record) while the GNU still
+  gives 1 (plane cut-off). Fix candidate: use `element_normal_automatic(
+  gr )` in the `materi()` branch instead of `db_active_index`. The record
+  itself is still generated with `-no` on both.
 - Curved quad9/tria6 sides: the Professional does not follow the
   consistent rule (probe `q9d_2x2`/`t6d_2x2`: some node normals come out
   axis-aligned, e.g. (0,-1) on a side whose normal is (-0.6,0.8)); not

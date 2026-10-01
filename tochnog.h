@@ -1827,6 +1827,7 @@ void      area_element_group_sequence( );
 void      area_node_dataitem( void );
 void      element_normal_set( void );
 long int  element_normal_needed( void );
+long int  element_normal_automatic( long int gr );
 void      array_add( double a[], double b[], double c[], long int n );
 double    array_distance( double a[], double b[], double work[], long int n );
 double    array_inproduct( double a[], double b[], long int n );

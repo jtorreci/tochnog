@@ -1997,6 +1997,32 @@ long int element_normal_needed( void )
   return 0;
 }
 
+long int element_normal_automatic( long int gr )
+
+  // the _normal_automatic record of group gr that is switched -yes and
+  // actually defines the direct cut-off plane (an explicit
+  // group_materi_plasti_*_direct_normal takes precedence in materi());
+  // 0 when the group does not use the automatic element normal
+
+{
+  long int swit=-NO, ldum=0, i=0;
+  double ddum[1];
+  long int automatic[2] = { GROUP_MATERI_PLASTI_TENSION_DIRECT_NORMAL_AUTOMATIC,
+    GROUP_MATERI_PLASTI_MOHR_COUL_DIRECT_NORMAL_AUTOMATIC };
+
+  if ( db_active_index( GROUP_MATERI_PLASTI_MOHR_COUL_DIRECT_NORMAL, gr,
+      VERSION_NORMAL ) ) return 0;
+  if ( db_active_index( GROUP_MATERI_PLASTI_TENSION_DIRECT_NORMAL, gr,
+      VERSION_NORMAL ) ) return 0;
+  for ( i=0; i<2; i++ ) {
+    if ( !db_active_index( automatic[i], gr, VERSION_NORMAL ) ) continue;
+    swit = -NO;
+    db( automatic[i], gr, &swit, ddum, ldum, VERSION_NORMAL, GET );
+    if ( swit==-YES ) return automatic[i];
+  }
+  return 0;
+}
+
 void element_normal_set( void )
 
   // called before the parallel element loop (iteration_start, top.cc):
@@ -2006,11 +2032,12 @@ void element_normal_set( void )
   long int element=0, other=0, max_element=0, max_node=0, max=0, length=0,
     other_length=0, nnol=0, inol=0, jnol=0, inod=0, idim=0, iside=0,
     nside=0, nnol_side=0, kind=0, a=0, j=0, shared=0, ldum=0,
-    swit=0, total=0, idum[1], el[1+MNOL], nodes[MNOL], *sides=NULL,
+    swit=0, total=0, gr=0, automatic=0, idum[1], el[1+MNOL], nodes[MNOL], *sides=NULL,
     *other_el=NULL, *count=NULL, *list=NULL, *fill=NULL;
   double l=0., coord[MNOL*MDIM], side_coord[MNOL*MDIM], w[MNOL*MDIM],
     centre[MDIM], side_centre[MDIM], vec[MDIM], tot[MDIM], normal[MDIM],
     ddum[1], *node_normal=NULL, *node_scale=NULL;
+  const char *explicit_normal=NULL;
 
   if ( !element_normal_needed() ) return;
   if ( db_max_index( ELEMENT_NORMAL, max, VERSION_NORMAL, GET )>=0 ) return;
@@ -2124,7 +2151,35 @@ void element_normal_set( void )
       if ( inod>=0 && inod<=max_node )
         array_add( &node_normal[inod*MDIM], normal, normal, ndim );
     }
-    if ( !array_normalize( normal, ndim ) ) array_set( normal, 0., MDIM );
+    if ( !array_normalize( normal, ndim ) ) {
+      array_set( normal, 0., MDIM );
+        // a zero normal cannot define the direct cut-off plane: input
+        // error for an isoparametric element of a group that uses the
+        // automatic normal (the Professional aborts on an assertion)
+      if ( element_normal_sides( el[0], nside, nnol_side, kind, sides ) ) {
+        gr = 0;
+        db( ELEMENT_GROUP, element, &gr, ddum, ldum, VERSION_NORMAL,
+          GET_IF_EXISTS );
+        automatic = element_normal_automatic( gr );
+        if ( automatic ) {
+          pri( "Error: element_normal is zero for element ", element );
+          pri( "Error: element_group of that element is ", gr );
+          pri( "The element is not on the mesh boundary (interior element," );
+          pri( "or its opposite boundary sides cancel), so its normal cannot" );
+          pri( "define the direct cut-off plane of ", db_name(automatic) );
+          explicit_normal =
+            automatic==GROUP_MATERI_PLASTI_TENSION_DIRECT_NORMAL_AUTOMATIC ?
+            "group_materi_plasti_tension_direct_normal" :
+            "group_materi_plasti_mohr_coul_direct_normal";
+          pri( "Restrict the element group to the boundary interface layer," );
+          pri( "or give the normal explicitly with ", explicit_normal );
+          pri( "If the element rests on a supported face (e.g. a single row" );
+          pri( "of elements on a support), give that face normal with ",
+            explicit_normal );
+          db_error( automatic, gr );
+        }
+      }
+    }
       // print +0 instead of -0 (as the Professional does)
     for ( idim=0; idim<ndim; idim++ )
       if ( normal[idim]==0. ) normal[idim] = 0.;

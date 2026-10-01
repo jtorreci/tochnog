@@ -58,6 +58,20 @@ With a plane normal the records limit the traction on that SPECIFIC plane
 two element edges, which is out of plane in 2D and made the cut-off
 inert).
 
+An element of a `_normal_automatic -yes` group whose `element_normal` is
+zero (interior element, single element, middle element of a single row)
+stops the calculation with an input error that names the element and the
+group and suggests the remedies: restrict the group to the boundary
+interface layer, or give the normal explicitly with
+`group_materi_plasti_tension_direct_normal` /
+`group_materi_plasti_mohr_coul_direct_normal` (for an element resting on
+a supported face, the normal of that face). See `element_normal.md` for
+the full message. The Professional also stops on such an element, with an
+internal assertion (`!array_null( directions, MDIM*MDIM )`) instead of a
+readable message. In 2D give the explicit normal with two values
+(`group_materi_plasti_tension_direct_normal 0  0. 1.`): the Professional
+rejects a third value in 2D.
+
 ## Uso
 
 Place the records in the data part, in the element group definition:

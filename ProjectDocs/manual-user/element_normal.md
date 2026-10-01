@@ -96,14 +96,58 @@ all stresses 0).
 Self-checking inputs in `validation-suite/test-2026/`:
 `element_normal2d_column1.dat`, `element_normal2d_corner1.dat`,
 `element_normal2d_mesh_change1.dat`, `element_normal3d_column1.dat`,
-`element_normal3d_distorted1.dat`. All pass on the Professional 02-08-2026.
+`element_normal3d_distorted1.dat`, `element_normal2d_row_explicit1.dat`,
+`element_normal2d_row_layer1.dat`. All pass on the Professional 02-08-2026.
+
+## Zero element normal: input error
+
+A zero `element_normal` cannot define a cut-off plane. When an element of
+a group with `group_materi_plasti_tension_direct_normal_automatic -yes` or
+`group_materi_plasti_mohr_coul_direct_normal_automatic -yes` (and no
+explicit `_direct_normal` for that group) gets a zero normal, the
+calculation stops with an input error, for example (single row of three
+quad4, `validation-suite/test-2026/element_normal2d_row_error1.dat`):
+
+```
+Error: element_normal is zero for element : 2
+Error: element_group of that element is : 0
+The element is not on the mesh boundary (interior element,
+or its opposite boundary sides cancel), so its normal cannot
+define the direct cut-off plane of : group_materi_plasti_tension_direct_normal_automatic
+Restrict the element group to the boundary interface layer,
+or give the normal explicitly with : group_materi_plasti_tension_direct_normal
+If the element rests on a supported face (e.g. a single row
+of elements on a support), give that face normal with : group_materi_plasti_tension_direct_normal
+Error detected for data item : group_materi_plasti_tension_direct_normal_automatic
+Error detected for record : 0
+```
+
+The message names the explicit record matching the automatic one that
+triggered it (`_tension_direct_normal` or `_mohr_coul_direct_normal`).
+Typical cases: a group that covers the whole mesh (interior elements), a
+single element (all sides are boundary sides and cancel), the middle
+elements of a single row. Remedies:
+
+- restrict the `_normal_automatic` group to the boundary layer, e.g. only
+  the end elements of a row (`element_normal2d_row_layer1.dat`);
+- or give the normal explicitly, e.g. the normal of the supported face of
+  a row on a support (`element_normal2d_row_explicit1.dat`):
+  `group_materi_plasti_tension_direct_normal 0  0. 1.`
+
+The check runs whenever the record is (re)generated, so it also fires
+after a mesh change (for example element deletion) that leaves such an
+element with a zero normal. Groups with the switch `-no`, elements of
+other groups and non-isoparametric elements (trusses, beams, springs) are
+not checked.
 
 ## Differences with the Professional version
 
-- An element with a zero `element_normal` that uses `_normal_automatic`:
-  the Professional aborts ("Program error, assertion failed ...
-  !array_null( directions, MDIM*MDIM )"); the GNU applies the full
-  principal-stress cut-off of the direct law (the mode without a plane).
+- An element with a zero `element_normal` that uses `_normal_automatic
+  -yes`: both versions stop. The Professional aborts on an internal
+  assertion ("Program error, assertion failed ... !array_null( directions,
+  MDIM*MDIM )"); the GNU gives the readable input error above (element,
+  group, remedies). Until 2026-10-01 the GNU silently applied the full
+  principal-stress cut-off instead.
 - Quadratic elements with **curved** sides (quad9/tria6 whose mid-side
   nodes are off the chord): the Professional gives values that do not
   follow any consistent rule found (some node normals are axis-aligned),

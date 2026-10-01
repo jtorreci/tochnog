@@ -501,9 +501,11 @@ void materi( long int element, long int gr, long int name, long int nnol,
     // element_normal (manual Professional 6.445/6.728/6.740: inward
     // normal with respect to the mesh boundary, generated before the
     // element loop by element_normal_set, area.cc). A zero element normal
-    // (interior element) leaves direct_normal zero: set_stress then
-    // applies the full spectral cut-off (the Professional aborts with an
-    // assertion for such an element).
+    // in a group switched -yes is an input error raised there (the
+    // Professional aborts with an assertion), so it never reaches this
+    // point. PENDING: a group switched -no still uses the element normal
+    // here, the Professional then takes the full cut-off (probe in
+    // ProjectDocs/manual-developer/element_normal.md).
     array_set( direct_normal, 0., MDIM );
     if ( db_active_index( GROUP_MATERI_PLASTI_MOHR_COUL_DIRECT_NORMAL, gr,
         VERSION_NORMAL ) ) {
