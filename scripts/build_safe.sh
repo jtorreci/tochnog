@@ -202,7 +202,8 @@ rm -f validation-suite/test-2014/dof.* \
 # + iface_gen/iface_gen_geom/iface_gen_geom_off (control_mesh_generate_interface)
 # + iface_gen_method/iface_gen_method_gen (control_mesh_generate_interface_method)
 # + iface_gen_quad9 (subdivision de caras cuadraticas 2D)
-# + materi_direct/materi_direct_mc/materi_direct_auto (plasti directo normal)
+# + materi_direct/materi_direct_mc/materi_direct_auto (plasti directo normal;
+#   materi_direct_auto is an EXPECTED_ERROR test since 2026-10-01)
 # + materi_direct_visco/materi_direct_wall (_visco/_wall del plasti directo)
 # + mat_rel/mat_rel_reset (materi_displacement_relative)
 # + slide_axi (slide_axisymmetric)
@@ -1301,6 +1302,53 @@ msf_error_ok msf_errors_3dnodir  "requires either"
 msf_error_ok msf_errors_3dnoref  "requires.*reference_point"
 msf_error_ok msf_errors_refcount "reference_point needs one point"
 msf_error_ok msf_errors_posttype "NODAL calculation"
+
+# ---------------------------------------------------------------------
+# Expected-error tests (generic marker, 2026-10-01). A .dat whose comment
+# holds a line "EXPECTED_ERROR: <text>" PASSES only when the run stops
+# with rc=1 AND its output contains <text> (fixed string); a clean run
+# or another error FAILS. Corpus classifiers must treat these .dat the
+# same way (PASS = rc=1 + marker text), not as RUNFAIL.
+#   materi_direct_auto (test-2014): single hex8 with
+#     _direct_normal_automatic -yes -> zero element_normal input error
+#     (Pro aborts on an assertion).
+#   element_normal2d_row_error1 (test-2026): single row of 3 quad4,
+#     middle element normal zero -> input error naming element 2.
+# The two companions of the row test (explicit normal, automatic group
+# only on the end elements) must run with rc=0 (targets met).
+# ---------------------------------------------------------------------
+expected_error_ok() {
+  local dir="$1" t="$2" msg
+  msg=$(sed -n 's/^[[:space:]]*EXPECTED_ERROR:[[:space:]]*\(.*[^ )]\)[[:space:]]*)*[[:space:]]*$/\1/p' \
+    "$dir/$t.dat" | head -1)
+  if [ -z "$msg" ]; then
+    check_fail "$t" "no EXPECTED_ERROR marker in $t.dat"
+    return
+  fi
+  ( cd "$dir" &&
+    ulimit -v "$TN_MEMLIMIT_KB" &&
+    timeout 60 "$REPO_DIR/build/$TN_BIN" "$t.dat" > "/tmp/${t}_safe.out" 2>&1 )
+  local rc=$?
+  if [ "$rc" = "1" ] && grep -qF "$msg" "/tmp/${t}_safe.out"; then
+    check_ok "$t (expected error: rc=1 + '$msg')"
+  else
+    check_fail "$t" "rc=$rc, expected error '$msg' not found"
+  fi
+}
+run_ok() {
+  local dir="$1" t="$2"
+  ( cd "$dir" &&
+    ulimit -v "$TN_MEMLIMIT_KB" &&
+    timeout 60 "$REPO_DIR/build/$TN_BIN" "$t.dat" > "/tmp/${t}_safe.out" 2>&1 )
+  local rc=$?
+  if [ "$rc" = "0" ]; then check_ok "$t (rc=0, targets met)";
+  else check_fail "$t" "rc=$rc"; fi
+}
+T2026="$REPO_DIR/validation-suite/test-2026"
+expected_error_ok "$T2014" materi_direct_auto
+expected_error_ok "$T2026" element_normal2d_row_error1
+run_ok "$T2026" element_normal2d_row_explicit1
+run_ok "$T2026" element_normal2d_row_layer1
 
 # ---------------------------------------------------------------------
 # Sub-sprint materi_stress_force, lote 2 (integracion 2D quad4/quad9):

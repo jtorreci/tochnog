@@ -1807,3 +1807,391 @@ void area_node_dataitem( )
   delete[] area_node_dataitem_double;
 
 }
+
+// ---------------------------------------------------------------------------
+// element_normal (manual Professional 6.445): "the normal of an element in
+// the inward normal direction of the mesh boundary. The side of an
+// element is on the mesh boundary if no other element is connected to
+// that side." Consumed by group_materi_plasti_*_direct_normal_automatic
+// (6.728/6.740, materi.cc).
+//
+// Rule measured on the Professional (2026-09-30, see
+// ProjectDocs/manual-developer/element_normal.md for the probe evidence):
+//   1. boundary side: a side of an isoparametric element (the side tables
+//      above) whose nodes are not all nodes of another isoparametric
+//      element of the same dimension (element groups do not matter;
+//      trusses/beams/springs do not close a side);
+//   2. node normal: sum over the boundary sides of the node of the
+//      consistent nodal side normal  integral( N_node * n dA )  (the
+//      side normal weighted by the side shape function of the node;
+//      linear sides: area/nnol_side * n), oriented towards the element
+//      centre, then normalized (zero for a node without boundary side);
+//   3. element normal: normalized sum of the (unit) node normals of the
+//      element nodes, zero when the sum vanishes (interior elements,
+//      elements whose boundary sides cancel).
+// Computed from the current node coordinates when the record is absent
+// and a group needs it; mesh_has_changed() deletes the record, so it is
+// recomputed after every mesh change only (not for deformation).
+// ---------------------------------------------------------------------------
+
+  // 4-point Gauss rule on [-1,1] (full precision; exact up to degree 7,
+  // enough for the side integrands of quad16 lines and hex27 faces)
+static double element_normal_gauss_iso[4] = {
+  -0.861136311594052575224, -0.339981043584856264803,
+  +0.339981043584856264803, +0.861136311594052575224 };
+static double element_normal_gauss_weight[4] = {
+  0.347854845137453857373, 0.652145154862546142627,
+  0.652145154862546142627, 0.347854845137453857373 };
+
+  // side table of an element type for element_normal
+  // kind: 0 end point (1D), 1 line of nnol_side equally spaced nodes (2D),
+  //       2 linear triangle (3D), 3 k x k lexicographic face (3D)
+static long int element_normal_sides( long int name, long int &nside,
+  long int &nnol_side, long int &kind, long int *&sides )
+
+{
+  nside = nnol_side = kind = 0;
+  sides = NULL;
+  if      ( ndim==1 ) {
+    if ( name==-BAR2 ) {
+      nside = 2; nnol_side = 1; kind = 0; sides = border_nodes_bar2;
+    }
+  }
+  else if ( ndim==2 ) {
+    kind = 1;
+    if      ( name==-TRIA3 ) {
+      nside = 3; nnol_side = 2; sides = border_nodes_tria3;
+    }
+    else if ( name==-TRIA6 ) {
+      nside = 3; nnol_side = 3; sides = border_nodes_tria6;
+    }
+    else if ( name==-QUAD4 ) {
+      nside = 4; nnol_side = 2; sides = border_nodes_quad4;
+    }
+    else if ( name==-QUAD9 ) {
+      nside = 4; nnol_side = 3; sides = border_nodes_quad9;
+    }
+    else if ( name==-QUAD16 ) {
+      nside = 4; nnol_side = 4; sides = border_nodes_quad16;
+    }
+  }
+  else if ( ndim==3 ) {
+    if      ( name==-TET4 ) {
+      nside = 4; nnol_side = 3; kind = 2; sides = border_nodes_tet4;
+    }
+    else if ( name==-HEX8 ) {
+      nside = 6; nnol_side = 4; kind = 3; sides = border_nodes_hex8;
+    }
+    else if ( name==-HEX27 ) {
+      nside = 6; nnol_side = 9; kind = 3; sides = border_nodes_hex27;
+    }
+  }
+  return nside>0;
+}
+
+  // 1D Lagrange shape functions (n equally spaced nodes on [-1,1]) and
+  // their derivatives at xi
+static void element_normal_lagrange( long int n, double xi, double N[],
+  double dN[] )
+
+{
+  long int i=0, j=0, k=0;
+  double xs[MNOL], term=0.;
+
+  for ( i=0; i<n; i++ ) xs[i] = -1. + 2.*i/(n-1);
+  for ( i=0; i<n; i++ ) {
+    N[i] = 1.;
+    dN[i] = 0.;
+    for ( j=0; j<n; j++ ) {
+      if ( j!=i ) N[i] *= ( xi-xs[j] ) / ( xs[i]-xs[j] );
+    }
+    for ( k=0; k<n; k++ ) {
+      if ( k==i ) continue;
+      term = 1. / ( xs[i]-xs[k] );
+      for ( j=0; j<n; j++ ) {
+        if ( j!=i && j!=k ) term *= ( xi-xs[j] ) / ( xs[i]-xs[j] );
+      }
+      dN[i] += term;
+    }
+  }
+}
+
+  // consistent nodal normals of one side: w[a*MDIM+idim] =
+  // integral( N_a n dA ) (not yet oriented)
+static void element_normal_side_weights( long int kind, long int nnol_side,
+  double side_coord[], double w[] )
+
+{
+  long int a=0, b=0, iu=0, iv=0, ig=0, jg=0, k=0, idim=0;
+  double N[MNOL], dN[MNOL], Nv[MNOL], dNv[MNOL], tng[MDIM],
+    xu[MDIM], xv[MDIM], n[MDIM], vec1[MDIM], vec2[MDIM], wg=0.;
+
+  array_set( w, 0., nnol_side*MDIM );
+  if      ( kind==0 ) {
+    w[0] = 1.;
+  }
+  else if ( kind==1 ) {
+    for ( ig=0; ig<4; ig++ ) {
+      element_normal_lagrange( nnol_side, element_normal_gauss_iso[ig], N, dN );
+      array_set( tng, 0., MDIM );
+      for ( b=0; b<nnol_side; b++ ) {
+        for ( idim=0; idim<2; idim++ ) tng[idim] += dN[b]*side_coord[b*MDIM+idim];
+      }
+      n[0] = -tng[1];
+      n[1] = +tng[0];
+      wg = element_normal_gauss_weight[ig];
+      for ( a=0; a<nnol_side; a++ ) {
+        for ( idim=0; idim<2; idim++ ) w[a*MDIM+idim] += wg*N[a]*n[idim];
+      }
+    }
+  }
+  else if ( kind==2 ) {
+    array_subtract( &side_coord[1*MDIM], &side_coord[0*MDIM], vec1, 3 );
+    array_subtract( &side_coord[2*MDIM], &side_coord[0*MDIM], vec2, 3 );
+    array_outproduct_3D( vec1, vec2, n );
+    for ( a=0; a<3; a++ ) {
+      for ( idim=0; idim<3; idim++ ) w[a*MDIM+idim] = n[idim]/6.;
+    }
+  }
+  else {
+    assert( kind==3 );
+    k = ( nnol_side==4 ) ? 2 : 3;
+    for ( ig=0; ig<4; ig++ ) {
+      for ( jg=0; jg<4; jg++ ) {
+        element_normal_lagrange( k, element_normal_gauss_iso[ig], N, dN );
+        element_normal_lagrange( k, element_normal_gauss_iso[jg], Nv, dNv );
+        array_set( xu, 0., MDIM );
+        array_set( xv, 0., MDIM );
+        for ( iv=0; iv<k; iv++ ) {
+          for ( iu=0; iu<k; iu++ ) {
+            b = iv*k + iu;
+            for ( idim=0; idim<3; idim++ ) {
+              xu[idim] += dN[iu]*Nv[iv]*side_coord[b*MDIM+idim];
+              xv[idim] += N[iu]*dNv[iv]*side_coord[b*MDIM+idim];
+            }
+          }
+        }
+        array_outproduct_3D( xu, xv, n );
+        wg = element_normal_gauss_weight[ig]*element_normal_gauss_weight[jg];
+        for ( iv=0; iv<k; iv++ ) {
+          for ( iu=0; iu<k; iu++ ) {
+            a = iv*k + iu;
+            for ( idim=0; idim<3; idim++ )
+              w[a*MDIM+idim] += wg*N[iu]*Nv[iv]*n[idim];
+          }
+        }
+      }
+    }
+  }
+}
+
+long int element_normal_needed( void )
+
+{
+  long int max=0;
+
+  if ( db_max_index( GROUP_MATERI_PLASTI_TENSION_DIRECT_NORMAL_AUTOMATIC,
+      max, VERSION_NORMAL, GET )>=0 ) return 1;
+  if ( db_max_index( GROUP_MATERI_PLASTI_MOHR_COUL_DIRECT_NORMAL_AUTOMATIC,
+      max, VERSION_NORMAL, GET )>=0 ) return 1;
+  return 0;
+}
+
+long int element_normal_automatic( long int gr )
+
+  // the _normal_automatic record of group gr that is switched -yes and
+  // actually defines the direct cut-off plane (an explicit
+  // group_materi_plasti_*_direct_normal takes precedence in materi());
+  // 0 when the group does not use the automatic element normal
+
+{
+  long int swit=-NO, ldum=0, i=0;
+  double ddum[1];
+  long int automatic[2] = { GROUP_MATERI_PLASTI_TENSION_DIRECT_NORMAL_AUTOMATIC,
+    GROUP_MATERI_PLASTI_MOHR_COUL_DIRECT_NORMAL_AUTOMATIC };
+
+  if ( db_active_index( GROUP_MATERI_PLASTI_MOHR_COUL_DIRECT_NORMAL, gr,
+      VERSION_NORMAL ) ) return 0;
+  if ( db_active_index( GROUP_MATERI_PLASTI_TENSION_DIRECT_NORMAL, gr,
+      VERSION_NORMAL ) ) return 0;
+  for ( i=0; i<2; i++ ) {
+    if ( !db_active_index( automatic[i], gr, VERSION_NORMAL ) ) continue;
+    swit = -NO;
+    db( automatic[i], gr, &swit, ddum, ldum, VERSION_NORMAL, GET );
+    if ( swit==-YES ) return automatic[i];
+  }
+  return 0;
+}
+
+void element_normal_set( void )
+
+  // called before the parallel element loop (iteration_start, top.cc):
+  // db allocation is not allowed inside that loop
+
+{
+  long int element=0, other=0, max_element=0, max_node=0, max=0, length=0,
+    other_length=0, nnol=0, inol=0, jnol=0, inod=0, idim=0, iside=0,
+    nside=0, nnol_side=0, kind=0, a=0, j=0, shared=0, ldum=0,
+    swit=0, total=0, gr=0, automatic=0, idum[1], el[1+MNOL], nodes[MNOL], *sides=NULL,
+    *other_el=NULL, *count=NULL, *list=NULL, *fill=NULL;
+  double l=0., coord[MNOL*MDIM], side_coord[MNOL*MDIM], w[MNOL*MDIM],
+    centre[MDIM], side_centre[MDIM], vec[MDIM], tot[MDIM], normal[MDIM],
+    ddum[1], *node_normal=NULL, *node_scale=NULL;
+  const char *explicit_normal=NULL;
+
+  if ( !element_normal_needed() ) return;
+  if ( db_max_index( ELEMENT_NORMAL, max, VERSION_NORMAL, GET )>=0 ) return;
+
+  swit = set_swit(-1,-1,"element_normal_set");
+  if ( swit ) pri( "In routine ELEMENT_NORMAL_SET" );
+
+  db_max_index( NODE, max_node, VERSION_NORMAL, GET );
+  db_max_index( ELEMENT, max_element, VERSION_NORMAL, GET );
+  if ( max_node<0 || max_element<0 ) return;
+
+    // node -> side-bearing elements (compressed lists)
+  count = get_new_int( max_node+2 );
+  array_set( count, 0, max_node+2 );
+  for ( element=0; element<=max_element; element++ ) {
+    if ( !db_active_index( ELEMENT, element, VERSION_NORMAL ) ) continue;
+    db( ELEMENT, element, el, ddum, length, VERSION_NORMAL, GET );
+    if ( !element_normal_sides( el[0], nside, nnol_side, kind, sides ) )
+      continue;
+    for ( inol=1; inol<length; inol++ ) count[el[inol]+1]++;
+  }
+  for ( inod=0; inod<=max_node; inod++ ) count[inod+1] += count[inod];
+  total = count[max_node+1];
+  list = get_new_int( scalar_imax( 1, total ) );
+  fill = get_new_int( max_node+1 );
+  array_move( count, fill, max_node+1 );
+  for ( element=0; element<=max_element; element++ ) {
+    if ( !db_active_index( ELEMENT, element, VERSION_NORMAL ) ) continue;
+    db( ELEMENT, element, el, ddum, length, VERSION_NORMAL, GET );
+    if ( !element_normal_sides( el[0], nside, nnol_side, kind, sides ) )
+      continue;
+    for ( inol=1; inol<length; inol++ ) list[fill[el[inol]]++] = element;
+  }
+
+    // node normals: consistent side normals of the boundary sides
+  node_normal = get_new_dbl( (max_node+1)*MDIM );
+  node_scale = get_new_dbl( max_node+1 );
+  array_set( node_normal, 0., (max_node+1)*MDIM );
+  array_set( node_scale, 0., max_node+1 );
+  for ( element=0; element<=max_element; element++ ) {
+    if ( !db_active_index( ELEMENT, element, VERSION_NORMAL ) ) continue;
+    db( ELEMENT, element, el, ddum, length, VERSION_NORMAL, GET );
+    if ( !element_normal_sides( el[0], nside, nnol_side, kind, sides ) )
+      continue;
+    nnol = length - 1;
+    array_move( &el[1], nodes, nnol );
+    array_set( centre, 0., MDIM );
+    for ( inol=0; inol<nnol; inol++ ) {
+      array_set( &coord[inol*MDIM], 0., MDIM );
+      db( NODE, nodes[inol], idum, &coord[inol*MDIM], ldum, VERSION_NORMAL,
+        GET );
+      array_add( &coord[inol*MDIM], centre, centre, ndim );
+    }
+    array_multiply( centre, centre, 1./nnol, ndim );
+    for ( iside=0; iside<nside; iside++ ) {
+        // shared side: another side-bearing element holds all side nodes
+      inod = nodes[sides[iside*nnol_side]];
+      shared = 0;
+      for ( j=count[inod]; j<count[inod+1] && !shared; j++ ) {
+        other = list[j];
+        if ( other==element ) continue;
+        other_el = db_int( ELEMENT, other, VERSION_NORMAL );
+        other_length = db_len( ELEMENT, other, VERSION_NORMAL );
+        shared = 1;
+        for ( a=0; a<nnol_side && shared; a++ ) {
+          if ( !array_member( &other_el[1],
+              nodes[sides[iside*nnol_side+a]], other_length-1, ldum ) )
+            shared = 0;
+        }
+      }
+      if ( shared ) continue;
+      array_set( side_centre, 0., MDIM );
+      for ( a=0; a<nnol_side; a++ ) {
+        inol = sides[iside*nnol_side+a];
+        array_move( &coord[inol*MDIM], &side_coord[a*MDIM], MDIM );
+        array_add( &coord[inol*MDIM], side_centre, side_centre, ndim );
+      }
+      array_multiply( side_centre, side_centre, 1./nnol_side, ndim );
+      element_normal_side_weights( kind, nnol_side, side_coord, w );
+        // inward: towards the element centre
+      array_set( tot, 0., MDIM );
+      for ( a=0; a<nnol_side; a++ ) array_add( &w[a*MDIM], tot, tot, ndim );
+      array_subtract( centre, side_centre, vec, ndim );
+      if ( array_inproduct( tot, vec, ndim )<0. )
+        array_multiply( w, w, -1., nnol_side*MDIM );
+      for ( a=0; a<nnol_side; a++ ) {
+        inod = nodes[sides[iside*nnol_side+a]];
+        array_add( &w[a*MDIM], &node_normal[inod*MDIM],
+          &node_normal[inod*MDIM], ndim );
+        node_scale[inod] += array_size( &w[a*MDIM], ndim );
+      }
+    }
+  }
+  for ( inod=0; inod<=max_node; inod++ ) {
+    l = array_size( &node_normal[inod*MDIM], ndim );
+    if ( l>0. && l>1.e-12*node_scale[inod] )
+      array_multiply( &node_normal[inod*MDIM], &node_normal[inod*MDIM],
+        1./l, ndim );
+    else
+      array_set( &node_normal[inod*MDIM], 0., MDIM );
+  }
+
+    // element normals: normalized sum of the node normals (all elements)
+  for ( element=0; element<=max_element; element++ ) {
+    if ( !db_active_index( ELEMENT, element, VERSION_NORMAL ) ) continue;
+    db( ELEMENT, element, el, ddum, length, VERSION_NORMAL, GET );
+    nnol = length - 1;
+    array_set( normal, 0., MDIM );
+    for ( jnol=0; jnol<nnol; jnol++ ) {
+      inod = el[1+jnol];
+      if ( inod>=0 && inod<=max_node )
+        array_add( &node_normal[inod*MDIM], normal, normal, ndim );
+    }
+    if ( !array_normalize( normal, ndim ) ) {
+      array_set( normal, 0., MDIM );
+        // a zero normal cannot define the direct cut-off plane: input
+        // error for an isoparametric element of a group that uses the
+        // automatic normal (the Professional aborts on an assertion)
+      if ( element_normal_sides( el[0], nside, nnol_side, kind, sides ) ) {
+        gr = 0;
+        db( ELEMENT_GROUP, element, &gr, ddum, ldum, VERSION_NORMAL,
+          GET_IF_EXISTS );
+        automatic = element_normal_automatic( gr );
+        if ( automatic ) {
+          pri( "Error: element_normal is zero for element ", element );
+          pri( "Error: element_group of that element is ", gr );
+          pri( "The element is not on the mesh boundary (interior element," );
+          pri( "or its opposite boundary sides cancel), so its normal cannot" );
+          pri( "define the direct cut-off plane of ", db_name(automatic) );
+          explicit_normal =
+            automatic==GROUP_MATERI_PLASTI_TENSION_DIRECT_NORMAL_AUTOMATIC ?
+            "group_materi_plasti_tension_direct_normal" :
+            "group_materi_plasti_mohr_coul_direct_normal";
+          pri( "Restrict the element group to the boundary interface layer," );
+          pri( "or give the normal explicitly with ", explicit_normal );
+          pri( "If the element rests on a supported face (e.g. a single row" );
+          pri( "of elements on a support), give that face normal with ",
+            explicit_normal );
+          db_error( automatic, gr );
+        }
+      }
+    }
+      // print +0 instead of -0 (as the Professional does)
+    for ( idim=0; idim<ndim; idim++ )
+      if ( normal[idim]==0. ) normal[idim] = 0.;
+    length = ndim;
+    db( ELEMENT_NORMAL, element, idum, normal, length, VERSION_NORMAL, PUT );
+  }
+
+  delete[] count;
+  delete[] list;
+  delete[] fill;
+  delete[] node_normal;
+  delete[] node_scale;
+
+  if ( swit ) pri( "Out routine ELEMENT_NORMAL_SET" );
+}

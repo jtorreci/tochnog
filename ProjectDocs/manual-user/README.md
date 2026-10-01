@@ -456,3 +456,7 @@ input parameters it accepts.
 ## DAMAGE EFFECTIVE STRESS (2026-09-29)
 
 - [materi_damage_effective_stress](materi_damage_effective_stress.md) — damage stress behaviour: `materi_stress` = (1 - d) x effective stress (manual Professional 2.2.5), constant at constant strain. Fixes the legacy compounding of the damage (a bar at eps 6e-4 gave 1436.83 instead of 85598.32). Verified against the Professional 02-08-2026.
+
+## ELEMENT NORMAL (2026-09-30)
+
+- [element_normal](element_normal.md) — `element_normal index nx ny nz` (manual Professional 6.445): generated inward normal of an element with respect to the mesh boundary (normalized sum of the boundary node normals), used by `group_materi_plasti_mohr_coul_direct_normal_automatic` / `group_materi_plasti_tension_direct_normal_automatic`. Fixes the inert automatic cut-off in 2D (`tension_direct1`). A zero normal in a `_normal_automatic -yes` group is a readable input error (Pro: assertion). Verified against the Professional 02-08-2026.

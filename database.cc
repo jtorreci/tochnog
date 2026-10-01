@@ -2744,6 +2744,20 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   data_class[ELEMENT_MIDDLE] = ELEMENT;
   data_required[ELEMENT_MIDDLE] = ELEMENT;
 
+  // element_normal (manual Professional 6.445): generated record, the
+  // inward normal of the element with respect to the mesh boundary
+  // (element_normal_set, area.cc). Printed in the database like the
+  // Professional (ndim values); accepted in an input file (a restart
+  // .dbs) but always regenerated: mesh_has_changed() deletes it.
+  // VERSION_NORMAL only (materi() reads it there).
+  strcpy(name[ELEMENT_NORMAL],"element_normal");
+  type[ELEMENT_NORMAL] = DOUBLE_PRECISION;
+  data_length[ELEMENT_NORMAL] = ndim;
+  external[ELEMENT_NORMAL] = 1;
+  version_all[ELEMENT_NORMAL] = 0;
+  data_class[ELEMENT_NORMAL] = ELEMENT;
+  data_required[ELEMENT_NORMAL] = ELEMENT;
+
   strcpy(name[ELEMENT_INTPNT_MATERI_PLASTI_HARDSOIL_GAMMAP_INITIAL],
     "element_intpnt_materi_plasti_hardsoil_gammap_initial");
   type[ELEMENT_INTPNT_MATERI_PLASTI_HARDSOIL_GAMMAP_INITIAL] = DOUBLE_PRECISION;

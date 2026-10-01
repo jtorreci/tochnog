@@ -30,6 +30,16 @@ The direct records have TWO modes selected by the presence of a plane normal:
    `max_fric = max(c - sig_n*tan(phi), 0)` on the plane with the given
    normal). NEW: `group_materi_plasti_bounda/_factor` (Professional 6.231/
    6.232) now reduce phi and c by the factor for the elements on the wall.
+   `_normal_automatic` reads the generated `ELEMENT_NORMAL` record
+   (2026-09-30, `element_normal.md`; it replaced a cross product of two
+   element edges that was out of plane in 2D). A zero `ELEMENT_NORMAL` in
+   a `-yes` group without explicit `_normal` is an input error raised in
+   `element_normal_set()` (`area.cc`, 2026-10-01, helper
+   `element_normal_automatic()`); the old silent fallback to the full
+   cut-off for that case is gone (Pro: assertion
+   `!array_null( directions, MDIM*MDIM )`). Pending: the branch still uses
+   the element normal with the switch `-no`, where the Professional takes
+   the full cut-off (probe in `element_normal.md`).
 
 ## Física
 

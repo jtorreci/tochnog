@@ -197,6 +197,36 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
   `solve_iterative_bicg.md`, `AUDIT-ALL-VARIABLES-2026.md` §5.3. Found on
   the way: C11, C12.
 
+### R9. `_direct_normal_automatic` inert in 2D — `element_normal` (2026-09-30)
+
+- **Corpus**: audit cluster K04, Pro `other/tension_direct1`
+  (`group_materi_plasti_tension_direct_normal_automatic`).
+- **Was**: `materi()` took the "automatic" plane normal as the cross
+  product of two element edges: (0,0,+-1) in 2D, a direction with no
+  stress, so the cut-off never acted (`tension_direct1`: GNU elastic,
+  `disy` 0.42 at the middle nodes, `sigyy` 0.667; Pro `disy` 0, all
+  stresses 0). The loop also read `NODE` coordinate 2 of 2D nodes (out of
+  bounds). The GNU had no `element_normal` record (keyword gap).
+- **Resolution**: new generated record `element_normal` (manual 6.445)
+  with the rule measured on the Professional (boundary side = side not
+  shared with another isoparametric element; node normal = normalized sum
+  of the consistent side normals; element normal = normalized sum of its
+  node normals; regenerated after mesh changes only), computed in
+  `iteration_start()` before the parallel element loop and read by
+  `materi()` (commit pending).
+- **Acceptance**: `tension_direct1` equals the Professional in every
+  variable except `eptyy` at the middle nodes (0.667 vs 0.5, nodal strain
+  recovery, audit K11); element_normal equal to the Professional to print
+  precision on ~30 probe meshes; 5 new `validation-suite/test-2026/
+  element_normal*` inputs pass on the Professional and the GNU (the
+  pre-fix binary rejects `-element_normal`; without those targets it
+  fails `disy`); validation-suite 233 PASS, sfnet 187 PASS / 10 RUNFAIL
+  and test-2026 23/23 unchanged (28/28 with the new inputs), all
+  `.dbs` identical to the pre-fix binary except `materi_direct_auto`
+  (single hex8: new zero `element_normal` record, results changed at
+  round-off level only, 2.8e-14).
+- **Evidence**: `manual-developer/element_normal.md`. Residuals: C14.
+
 ---
 
 ## B. sfnet 197 — the 9 RUNFAIL (all out-of-scope)
@@ -601,6 +631,32 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
   version).
 - **Effort**: **cheap**.
 
+### C14. `element_normal` residual differences with the Professional
+
+- **Symptom**: (1) an element whose `element_normal` is zero (interior
+  element, single element, middle of a single row) and that uses
+  `_normal_automatic`: the Professional aborts with an assertion
+  (`!array_null( directions, MDIM*MDIM )`), the GNU applies the full
+  principal-stress cut-off. (2) quad9/tria6 with curved sides: the
+  Professional node normals do not follow the consistent rule (some come
+  out axis-aligned); the GNU keeps the rule. (3) the Professional also
+  prints `node_normal`, `node_boundary` and `element_boundary`, and
+  accepts `global_normal -yes`; the GNU does not. (4) Not a normal issue
+  but found with it: `mohr_coul_direct 0 0 0` + `_normal_automatic` on the
+  upper element of the 2-quad4 column, top sheared by 1 (100
+  iterations): both binaries use the normal (0,-1), the shear moves to the
+  upper element in both, but the states differ (middle node `disx` GNU
+  0.057 vs Pro -0.029; top node `sigxy` 0.036 vs 0, `sigxx` -0.168 vs
+  0.043). Pre-fix GNU: `disx` 0.416 (cut-off inert). The plane
+  Mohr-Coulomb return (`materi_direct_cutoff`) needs its own comparison;
+  no corpus test uses `mohr_coul_direct_normal_automatic`.
+- **Evidence**: probes `q_3x3`, `q_row3`, `q9d_2x2`, `t6d_2x2`
+  (`manual-developer/element_normal.md`).
+- **Proposed fix**: (1) keep (a documented, safer behaviour) or turn it
+  into an input error; (2) none until the Professional rule is known;
+  (3) add the records if a user needs them.
+- **Effort**: **cheap**.
+
 ---
 
 ## D. Summary
@@ -628,8 +684,9 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
 | C11 | — | `control_materi_dynamic` and implicit truss dynamics vs Pro | MEDIUM | medium |
 | C12 | — | bicg stop does not abort the GNU on a singular system | LOW | cheap |
 | C13 | — | `control_solver_bicg_stop` at the timestep index: Pro reads index 0 only (deliberate divergence) | LOW | cheap |
+| C14 | — | `element_normal`: zero normal (Pro assertion), curved quadratic sides, `node_normal`/`element_boundary`/`global_normal` not implemented; plane MC direct return differs from Pro | LOW | cheap/medium |
 
-Twenty-one items remain open: eight MEDIUM and thirteen LOW. No open issue is CRITICAL or
+Twenty-two items remain open: eight MEDIUM and fourteen LOW. No open issue is CRITICAL or
 HIGH. The validation-suite corpus has no open failure — its 233 real tests all
 pass. Every remaining failure is a stale or malformed test, an out-of-scope model
 or infrastructure limit, a narrow post-processing divergence, a corpus-coverage

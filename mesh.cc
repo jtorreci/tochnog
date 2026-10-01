@@ -30,6 +30,10 @@ void mesh_has_changed( long int version )
   db_delete( CONTROL_PRINT_TECPLOT_MESH, VERSION_NORMAL );
   db_delete( NODE_ELEMENT, version );
   db_delete( NODE_NODE, version );
+    // element_normal depends on the mesh boundary: regenerated on demand
+    // (element_normal_set) after every mesh change (measured on the
+    // Professional: control_mesh_delete_element regenerates it)
+  if ( version==VERSION_NORMAL ) db_delete( ELEMENT_NORMAL, version );
 
   if ( version==VERSION_NORMAL ) {
     for ( idat=0; idat<MDAT; idat++ ) {
