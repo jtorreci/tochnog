@@ -5075,7 +5075,12 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   type[GROUP_MATERI_PLASTI_TENSION_DIRECT_NORMAL] = DOUBLE_PRECISION;
   data_length[GROUP_MATERI_PLASTI_TENSION_DIRECT_NORMAL] = 3;
   data_class[GROUP_MATERI_PLASTI_TENSION_DIRECT_NORMAL] = MATERI;
-  data_required[GROUP_MATERI_PLASTI_TENSION_DIRECT_NORMAL] = GROUP_MATERI_PLASTI_TENSION_DIRECT;
+  // no tension_direct prerequisite (Professional 02-08-2026 accepts the
+  // normal alone: with mohr_coul_direct the tension law then cuts at
+  // sigy = 0 on this plane, manual 6.738; without either direct law the
+  // record has no effect). The _automatic switch keeps its prerequisite
+  // (the Professional rejects it without tension_direct).
+  data_required[GROUP_MATERI_PLASTI_TENSION_DIRECT_NORMAL] = GROUP_TYPE;
   // ndim-flexible plane normal (manual Professional 6.739)
   fixed_length[GROUP_MATERI_PLASTI_TENSION_DIRECT_NORMAL] = 0;
 
