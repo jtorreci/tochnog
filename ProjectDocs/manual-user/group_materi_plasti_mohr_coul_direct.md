@@ -11,7 +11,7 @@ makes them very stable.
 The record has TWO modes, selected by the presence of the plane-normal
 records:
 
-### 1. Full principal-stress cut-off (no `_normal` / `_normal_automatic`)
+### 1. Full principal-stress cut-off (no `_normal`, no `_normal_automatic -yes`)
 
 `group_materi_plasti_mohr_coul_direct phi c phi_flow` caps the PRINCIPAL
 STRESS DIFFERENCES with the Mohr-Coulomb criterion
@@ -41,7 +41,7 @@ The material counterpart of the incremental
 `group_materi_plasti_mohr_coul` law: same surface, "alternative programming
 of the mohr-coulomb law, which tends to be very stable" (6.726).
 
-### 2. Plane traction cut-off (with `_normal` / `_normal_automatic`)
+### 2. Plane traction cut-off (with `_normal` / `_normal_automatic -yes`)
 
 With a plane normal the records limit the traction on that SPECIFIC plane
 (manual 6.727/6.739, the "i.c.w." interface semantics):
@@ -56,7 +56,9 @@ With a plane normal the records limit the traction on that SPECIFIC plane
 `element_normal` (inward normal of the mesh boundary, see
 `element_normal.md`; before 2026-09-30 the GNU used the cross product of
 two element edges, which is out of plane in 2D and made the cut-off
-inert).
+inert). `_normal_automatic -no` means no automatic normal: the group
+stays in the full principal-stress mode, as in the Professional (until
+2026-10-02 the GNU still used the element normal with `-no`).
 
 An element of a `_normal_automatic -yes` group whose `element_normal` is
 zero (interior element, single element, middle element of a single row)
@@ -100,12 +102,12 @@ The normal record accepts ndim values (1 value in 1D, 2 in 2D, 3 in 3D).
 |--------|------------|---------|
 | `group_materi_plasti_mohr_coul_direct` | `phi c phi_flow` | Friction angle (rad), cohesion, dilatancy angle (rad). |
 | `group_materi_plasti_mohr_coul_direct_normal` | `nx ny nz` | Plane normal (explicit; ndim values). Selects the plane mode. |
-| `group_materi_plasti_mohr_coul_direct_normal_automatic` | `-yes` | Take the normal from the element normal. |
+| `group_materi_plasti_mohr_coul_direct_normal_automatic` | `-yes`/`-no` | `-yes`: take the normal from the element normal. `-no`: no plane normal (full cut-off). |
 | `group_materi_plasti_mohr_coul_direct_visco` | `tm` | Visco relaxation time. |
 | `group_materi_plasti_mohr_coul_direct_wall` | `phi c phi_flow` | Values used when the element is attached to a wall. |
 | `group_materi_plasti_tension_direct` | `sigy` | Tensile limit on the principal stresses (full mode) or on the plane normal traction (plane mode). |
 | `group_materi_plasti_tension_direct_normal` | `nx ny nz` | Plane normal (explicit). |
-| `group_materi_plasti_tension_direct_normal_automatic` | `-yes` | Take the normal from the element normal. |
+| `group_materi_plasti_tension_direct_normal_automatic` | `-yes`/`-no` | `-yes`: take the normal from the element normal. `-no`: no plane normal (full cut-off). |
 | `group_materi_plasti_tension_direct_visco` | `tm` | Visco relaxation time. |
 | `group_materi_plasti_tension_direct_wall` | `sigy` | Tensile limit used when the element is attached to a wall. |
 

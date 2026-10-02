@@ -37,9 +37,10 @@ The direct records have TWO modes selected by the presence of a plane normal:
    `element_normal_set()` (`area.cc`, 2026-10-01, helper
    `element_normal_automatic()`); the old silent fallback to the full
    cut-off for that case is gone (Pro: assertion
-   `!array_null( directions, MDIM*MDIM )`). Pending: the branch still uses
-   the element normal with the switch `-no`, where the Professional takes
-   the full cut-off (probe in `element_normal.md`).
+   `!array_null( directions, MDIM*MDIM )`). The `materi()` branch is
+   gated by `element_normal_automatic( gr )` (2026-10-02): a group
+   switched `-no` keeps `direct_normal` zero and takes the full cut-off,
+   as the Professional (test `element_normal2d_column_switch_no1`).
 
 ## Física
 

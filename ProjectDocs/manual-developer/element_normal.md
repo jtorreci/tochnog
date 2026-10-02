@@ -50,7 +50,7 @@ rule directly observable:
    (trusses get one too), not only for the elements of the automatic
    groups;
 4. generated only when some group has a `_normal_automatic` record (any
-   switch value: with `-no` the Professional still uses it); otherwise the
+   switch value: with `-no` the Professional still generates it); otherwise the
    record is absent, even if the input file gave one;
 5. computed from the current node coordinates, once, and again after a mesh
    change (`control_mesh_delete_element` probe: element 5 goes from (0,0) to
@@ -98,12 +98,14 @@ except the curved quadratic sides (see below).
   VERSION_NORMAL )` (only for VERSION_NORMAL: the record has no other
   version). This is what regenerates the record after mesh changes and
   discards input values at the start (top() calls mesh_has_changed).
-- `materi.cc` `materi()`: the `_normal_automatic` branch reads
-  `ELEMENT_NORMAL` (GET_IF_EXISTS) into `direct_normal`; the cross product
-  and the out-of-bounds reads are gone. A zero normal in a `-yes` group
-  cannot reach this point any more (input error below); a zero normal in
-  a `-no` group still leaves `direct_normal` zero, so `set_stress()` takes
-  the full principal-stress cut-off (`materi_direct_full_mc`).
+- `materi.cc` `materi()`: the automatic branch, gated by
+  `element_normal_automatic( gr )` (only a `-yes` record without an
+  explicit `_normal`), reads `ELEMENT_NORMAL` (GET_IF_EXISTS) into
+  `direct_normal`; the cross product and the out-of-bounds reads are gone.
+  A zero normal in a `-yes` group cannot reach this point any more (input
+  error below). A `-no` group never reads the record (2026-10-02): its
+  `direct_normal` stays zero, so `set_stress()` takes the full
+  principal-stress cut-off (`materi_direct_full_mc`), as the Professional.
 
 ## Zero-normal input error (2026-10-01)
 
@@ -165,16 +167,18 @@ Error detected for record : 0
 - Zero element normal with `_normal_automatic -yes`: the Professional
   aborts with an assertion, the GNU stops with a readable input error
   (same outcome; see above).
-- OPEN (pending, unchanged): `materi()` uses `ELEMENT_NORMAL` whenever a
-  `_normal_automatic` record exists, also with the switch `-no`. Probe
-  2026-10-01 (column of 2 quad4 of `element_normal2d_column1`, upper
-  element `tension_direct 0`, pulled sideways in x): with `-yes` both
-  give `sigxx` 1 in the upper element (plane cut-off with normal (0,-1)
-  does not limit sigxx); with `-no` the Professional gives `sigxx` 0 (full
-  principal-stress cut-off, as without the record) while the GNU still
-  gives 1 (plane cut-off). Fix candidate: use `element_normal_automatic(
-  gr )` in the `materi()` branch instead of `db_active_index`. The record
-  itself is still generated with `-no` on both.
+- RESOLVED 2026-10-02: `materi()` used `ELEMENT_NORMAL` whenever a
+  `_normal_automatic` record existed, also with the switch `-no`. The
+  branch now uses `element_normal_automatic( gr )` instead of
+  `db_active_index`. Tests `validation-suite/test-2026/
+  element_normal2d_column_switch_{yes,no}1` (column of 2 quad4 of
+  `element_normal2d_column1`, upper element `tension_direct 0`, stretched
+  in x): `-yes` gives `sigxx` 1 at nodes 1/3/5/6 on GNU and Pro (plane
+  cut-off with normal (0,-1) does not limit sigxx); `-no` gives `sigxx`
+  1 / 0.5 / 0 / 0 at nodes 1/3/5/6 on GNU and Pro (full principal-stress
+  cut-off in the upper element). The old binary gave 1 at nodes 5/6 with
+  `-no` (target failure). The record itself is still generated with `-no`
+  on both.
 - Curved quad9/tria6 sides: the Professional does not follow the
   consistent rule (probe `q9d_2x2`/`t6d_2x2`: some node normals come out
   axis-aligned, e.g. (0,-1) on a side whose normal is (-0.6,0.8)); not
