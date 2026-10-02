@@ -294,6 +294,34 @@ void materi_direct_full_mc( long int element, long int gr,
   }
 }
 
+// direct_flow_factor - M/G for the plane-mode phi_flow return of
+// materi_direct_cutoff: M = n_i n_j C_ijkl n_k n_l (constrained modulus
+// normal to the plane) and G = 0.5 t_i n_j C_ijkl (t_k n_l + n_k t_l)
+// (shear modulus for a slip along t = tau/|tau| on the plane), from the
+// 4th-order elastic stiffness C (MDIM^4, row-major, as Cmem in
+// set_stress). Returns 2 (the Professional constant, M/G at poisson = 0)
+// when C gives no positive M and G.
+double direct_flow_factor( double C[], double n[], double tau[],
+  double tau_norm )
+
+{
+  long int i=0, j=0, k=0, l=0;
+  double M=0., G=0., t[MDIM], cijkl=0.;
+
+  for ( i=0; i<MDIM; i++ ) t[i] = ( i<ndim ) ? tau[i]/tau_norm : 0.;
+  for ( i=0; i<MDIM; i++ )
+    for ( j=0; j<MDIM; j++ )
+      for ( k=0; k<MDIM; k++ )
+        for ( l=0; l<MDIM; l++ ) {
+          cijkl = C[((i*MDIM+j)*MDIM+k)*MDIM+l];
+          if ( cijkl==0. ) continue;
+          M += n[i]*n[j]*cijkl*n[k]*n[l];
+          G += 0.5*t[i]*n[j]*cijkl*( t[k]*n[l] + n[k]*t[l] );
+        }
+  if ( M>0. && G>0. ) return M/G;
+  return 2.;
+}
+
 // materi_direct_cutoff - group_materi_plasti_mohr_coul_direct(_normal[_
 // automatic]) + group_materi_plasti_tension_direct(_normal[_automatic]),
 // plane mode (at least one of the two laws has a plane normal; manual
@@ -312,19 +340,34 @@ void materi_direct_full_mc( long int element, long int gr,
 //    mohr_coul_direct is given (manual 6.738). With its own normal the
 //    tension law caps sig_n <= sigy on that plane; without it the
 //    principal stresses are capped at sigy.
-// 2) Then Mohr-Coulomb on the MC plane with the updated stress: the
-//    tangential traction is capped at max(c - sig_n tan(phi), 0). Without
-//    an MC normal the MC law is the full principal cut-off
+// 2) Then Mohr-Coulomb on the MC plane with the updated stress (sn, tau
+//    = |tau|). When tau > max(c - sn tan(phi), 0) the state returns along
+//    the non-associative flow direction (phi_flow = psi), changing ONLY
+//    sn and tau:
+//      k       = (M/G) tan(psi)
+//      tau_new = max( (c - sn tan(phi) + k tan(phi) tau) / (1 + k tan(phi)), 0 )
+//      sn_new  = sn - k (tau - tau_new)
+//    M = n.C.n.n.n is the constrained (oedometric) modulus and G the
+//    shear modulus on the plane, both from the elastic stiffness C of
+//    the element (elastic_stiffness, built in set_stress); the ratio
+//    M/G is the consistent elastic return of the slip plastic strain
+//    (shear slip gives dtau = -G dlambda, dilatancy gives dsn = -M
+//    tan(psi) dlambda). Without usable elastic data (M or G <= 0, e.g.
+//    a umat law) k = 2 tan(psi), the Professional constant (equal to
+//    M/G only for poisson = 0). Documented divergence: the Professional
+//    always uses k = 2 tan(psi). The floor tau_new = 0 keeps sn_new =
+//    sn - k tau (verified against the Professional beyond the apex).
+//    Without an MC normal the MC law is the full principal cut-off
 //    (materi_direct_full_mc without its tension step).
 void materi_direct_cutoff( long int element, long int gr,
   long int plasti_on_boundary, double dtime,
   double new_sig[], double ddsdde[], double mc_normal[],
-  double ten_normal[] )
+  double ten_normal[], double elastic_stiffness[] )
 
 {
   long int idim=0, jdim=0, mc_active=0, ten_record=0, ten_active=0,
     mc_plane=0, ten_plane=0, ldum=0, idum[1];
-  double phi=0., c=0., sigy=0., sig_n=0., tau_norm=0.,
+  double phi=0., c=0., phi_flow=0., sigy=0., sig_n=0., tau_norm=0.,
     max_fric=0., scale=0., factor_mc=1., factor_ten=1., n_mc[MDIM],
     n_ten[MDIM], tau[MDIM], t[MDIM], plasti_data[DATA_ITEM_SIZE];
 
@@ -335,12 +378,14 @@ void materi_direct_cutoff( long int element, long int gr,
 
   mc_active = get_group_data( GROUP_MATERI_PLASTI_MOHR_COUL_DIRECT, gr,
     element, new_sig, plasti_data, ldum, GET_IF_EXISTS );
-  if ( mc_active ) { phi = plasti_data[0]; c = plasti_data[1]; }
+  if ( mc_active ) {
+    phi = plasti_data[0]; c = plasti_data[1]; phi_flow = plasti_data[2];
+  }
   // wall values (element attached to a wall) and visco relaxation time
   if ( mc_active && plasti_on_boundary ) {
     if ( get_group_data( GROUP_MATERI_PLASTI_MOHR_COUL_DIRECT_WALL, gr,
         element, new_sig, plasti_data, ldum, GET_IF_EXISTS ) ) {
-      phi = plasti_data[0]; c = plasti_data[1];
+      phi = plasti_data[0]; c = plasti_data[1]; phi_flow = plasti_data[2];
     }
   }
   // visco factor: f = 1 - exp(-dt/tm); f->0 elastic (dt<<tm), f->1 full cut
@@ -433,14 +478,25 @@ void materi_direct_cutoff( long int element, long int gr,
   max_fric = c - sig_n * tan( phi );
   if ( max_fric < 0. ) max_fric = 0.;
   if ( tau_norm > max_fric && tau_norm > 0. ) {
-    scale = max_fric / tau_norm;
+    double tan_phi = tan( phi ), k_flow = 0., tau_new = 0., dsig_n = 0.;
+    if ( phi_flow!=0. )
+      k_flow = direct_flow_factor( elastic_stiffness, n_mc, tau,
+        tau_norm ) * tan( phi_flow );
+    if ( 1.+k_flow*tan_phi < 1.e-12 ) k_flow = 0.;   // degenerate data
+    tau_new = ( c - sig_n*tan_phi + k_flow*tan_phi*tau_norm ) /
+      ( 1. + k_flow*tan_phi );
+    if ( tau_new < 0. ) tau_new = 0.;
+    dsig_n = - k_flow * ( tau_norm - tau_new ) * factor_mc;
+    scale = tau_new / tau_norm;
     scale = 1. - factor_mc*(1.-scale);   // visco: partial
     // new_sig -= (1-scale)*(tau x n + n x tau)  (symmetric correction)
+    // new_sig += dsig_n n x n                   (dilatant normal shift)
     for ( idim=0; idim<ndim; idim++ ) {
       for ( jdim=0; jdim<ndim; jdim++ ) {
         double corr = (1.-scale) * ( tau[idim]*n_mc[jdim] +
           n_mc[idim]*tau[jdim] );
         new_sig[idim*MDIM+jdim] -= corr;
+        new_sig[idim*MDIM+jdim] += dsig_n * n_mc[idim] * n_mc[jdim];
       }
     }
   }
@@ -1684,9 +1740,25 @@ void set_stress( long int element, long int gr,
                !array_normalize( ten_test, MDIM ) )
             materi_direct_full_mc( element, gr, plasti_on_boundary, dtime,
               new_sig, ddsdde, 1 );
-          else
+          else {
+            // elastic stiffness of the element for the phi_flow return
+            // (the same linear stiffness that fills ddsdde below)
+            double Cel[MDIM][MDIM][MDIM][MDIM];
+            for ( idim=0; idim<MDIM; idim++ )
+              for ( jdim=0; jdim<MDIM; jdim++ )
+                for ( kdim=0; kdim<MDIM; kdim++ )
+                  for ( ldim=0; ldim<MDIM; ldim++ ) {
+                    Cel[idim][jdim][kdim][ldim] =
+                      Cmem[idim][jdim][kdim][ldim] +
+                      Cuser[idim][jdim][kdim][ldim] +
+                      Chyper[idim][jdim][kdim][ldim] +
+                      Chypo[idim][jdim][kdim][ldim];
+                    if ( compressibility!=0. && idim==jdim && kdim==ldim )
+                      Cel[idim][jdim][kdim][ldim] += 1./compressibility;
+                  }
             materi_direct_cutoff( element, gr, plasti_on_boundary, dtime,
-              new_sig, ddsdde, mc_normal, ten_normal );
+              new_sig, ddsdde, mc_normal, ten_normal, &Cel[0][0][0][0] );
+          }
         }
         materi_compression_cutoff( element, gr, dtime, new_sig );
       }
