@@ -59,6 +59,15 @@ is regenerated after every mesh change (for example
 The record is printed in the database. A value given in the input file is
 discarded and recomputed (as in the Professional).
 
+Only a `_normal_automatic` record switched `-yes` makes the direct
+cut-off use the element normal. With the switch `-no` the record is still
+generated (and printed), but the cut-off ignores it: the group keeps the
+full principal-stress cut-off, exactly as without the `_normal_automatic`
+record (as in the Professional; test
+`validation-suite/test-2026/element_normal2d_column_switch_no1.dat`, a
+column of two quad4 stretched in x: `sigxx` 0 in the upper element with
+`-no`, 1 with `-yes` in `element_normal2d_column_switch_yes1.dat`).
+
 ## Usage
 
 The user does not set `element_normal`; it appears in the `.dbs` file:
@@ -148,6 +157,9 @@ not checked.
   MDIM*MDIM )"); the GNU gives the readable input error above (element,
   group, remedies). Until 2026-10-01 the GNU silently applied the full
   principal-stress cut-off instead.
+- `_normal_automatic -no`: both versions take the full principal-stress
+  cut-off (no plane). Until 2026-10-02 the GNU still used the element
+  normal with `-no` (plane cut-off).
 - Quadratic elements with **curved** sides (quad9/tria6 whose mid-side
   nodes are off the chord): the Professional gives values that do not
   follow any consistent rule found (some node normals are axis-aligned),

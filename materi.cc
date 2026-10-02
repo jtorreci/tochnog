@@ -503,9 +503,8 @@ void materi( long int element, long int gr, long int name, long int nnol,
     // element loop by element_normal_set, area.cc). A zero element normal
     // in a group switched -yes is an input error raised there (the
     // Professional aborts with an assertion), so it never reaches this
-    // point. PENDING: a group switched -no still uses the element normal
-    // here, the Professional then takes the full cut-off (probe in
-    // ProjectDocs/manual-developer/element_normal.md).
+    // point. A group switched -no keeps a zero normal and takes the full
+    // principal-stress cut-off, as the Professional does.
     array_set( direct_normal, 0., MDIM );
     if ( db_active_index( GROUP_MATERI_PLASTI_MOHR_COUL_DIRECT_NORMAL, gr,
         VERSION_NORMAL ) ) {
@@ -517,10 +516,7 @@ void materi( long int element, long int gr, long int name, long int nnol,
       db( GROUP_MATERI_PLASTI_TENSION_DIRECT_NORMAL, gr, idum,
         direct_normal, ldum, VERSION_NORMAL, GET );
     }
-    else if ( db_active_index( GROUP_MATERI_PLASTI_MOHR_COUL_DIRECT_NORMAL_AUTOMATIC,
-        gr, VERSION_NORMAL ) ||
-              db_active_index( GROUP_MATERI_PLASTI_TENSION_DIRECT_NORMAL_AUTOMATIC,
-        gr, VERSION_NORMAL ) ) {
+    else if ( element_normal_automatic( gr ) ) {
       db( ELEMENT_NORMAL, element, idum, direct_normal, ldum,
         VERSION_NORMAL, GET_IF_EXISTS );
     }
