@@ -41,16 +41,48 @@ The material counterpart of the incremental
 `group_materi_plasti_mohr_coul` law: same surface, "alternative programming
 of the mohr-coulomb law, which tends to be very stable" (6.726).
 
-### 2. Plane traction cut-off (with `_normal` / `_normal_automatic -yes`)
+### 2. Plane traction cut-off (a law with `_normal` / `_normal_automatic -yes`)
 
-With a plane normal the records limit the traction on that SPECIFIC plane
-(manual 6.727/6.739, the "i.c.w." interface semantics):
+As soon as one of the two laws has a plane normal, each law works on its
+OWN plane (manual 6.727/6.739; rule verified against the Professional
+02-08-2026 on 2026-10-02, C14). The tension law is applied first, then
+the Mohr-Coulomb law:
 
-- `mohr_coul_direct phi c phi_flow` + `_normal nx ny nz`: the shear traction
-  on the plane is capped at `max_fric = max(c - sig_n*tan(phi), 0)` where
-  `sig_n` is the normal traction (compression increases the limit).
-- `tension_direct sigy` + `_normal nx ny nz`: the normal traction on the
-  plane is capped at sigy.
+1. **Tension.** `sigy` is the `tension_direct` value, or 0 when only
+   `mohr_coul_direct` is given (6.738). If the tension law has its own
+   normal (`group_materi_plasti_tension_direct_normal`, or
+   `_tension_direct_normal_automatic -yes`) the normal traction on that
+   plane is capped: `sig_n <= sigy`. Otherwise the PRINCIPAL stresses are
+   capped at `sigy`, exactly as in the full mode. Consequence: an input
+   with `mohr_coul_direct_normal` and no `tension_direct` now cuts the
+   principal tension at 0 (before 2026-10-02 the GNU applied no tension
+   cut at all in that case).
+2. **Mohr-Coulomb.** On the MC plane (`_mohr_coul_direct_normal` or
+   `_normal_automatic -yes`), with the normal traction `sn` and the shear
+   traction `tau = |tau|` of the stress after the tension step: when
+   `tau > max(c - sn*tan(phi), 0)` the state returns along the
+   non-associative flow direction (`phi_flow` = psi). Only `sn` and `tau`
+   change:
+
+       k       = (M/G) tan(psi)
+       tau_new = max( (c - sn tan(phi) + k tan(phi) tau) / (1 + k tan(phi)), 0 )
+       sn_new  = sn - k (tau - tau_new)
+
+   `M` is the constrained (oedometric) modulus normal to the plane and `G`
+   the shear modulus on the plane, both from the elastic stiffness of the
+   element (isotropic: `M = E(1-nu)/((1+nu)(1-2nu))`, `G = E/(2(1+nu))`;
+   plane stress and the other elasticity laws are taken from the actual
+   stiffness). With `phi_flow = 0` the normal traction is unchanged and the
+   shear is simply capped. Beyond the apex (`c - sn tan(phi) < 0`) the
+   shear goes to 0 and `sn_new = sn - k tau`. If the MC law has no normal
+   while the tension law has one, the MC law is the full principal cut-off
+   of mode 1 (without its tension cap, already applied on the plane).
+
+`group_materi_plasti_tension_direct_normal` may be given without
+`group_materi_plasti_tension_direct` (as in the Professional): with
+`mohr_coul_direct` the tension plane then uses `sigy = 0`; without either
+direct law the record has no effect. `_tension_direct_normal_automatic`
+still requires `tension_direct` (the Professional rejects it too).
 
 `_normal_automatic -yes` takes the plane normal from the element normal
 `element_normal` (inward normal of the mesh boundary, see
@@ -94,19 +126,28 @@ group_materi_plasti_mohr_coul_direct 10  0.785398  1.0  0.0
 group_materi_plasti_mohr_coul_direct_normal 10  0. 1. 0.
 ```
 
+Tension and friction on two different planes (2D; tension plane x, MC
+plane y; sigy = 0 because `tension_direct` is absent):
+
+```
+group_materi_plasti_mohr_coul_direct 10  0.  1.e-4  0.
+group_materi_plasti_mohr_coul_direct_normal 10  0. 1.
+group_materi_plasti_tension_direct_normal 10  1. 0.
+```
+
 The normal record accepts ndim values (1 value in 1D, 2 in 2D, 3 in 3D).
 
 ## Parámetros
 
 | Record | Parameters | Meaning |
 |--------|------------|---------|
-| `group_materi_plasti_mohr_coul_direct` | `phi c phi_flow` | Friction angle (rad), cohesion, dilatancy angle (rad). |
+| `group_materi_plasti_mohr_coul_direct` | `phi c phi_flow` | Friction angle (rad), cohesion, dilatancy angle (rad; in the plane mode it shifts sn by k(tau - tau_new), k = (M/G) tan(phi_flow)). |
 | `group_materi_plasti_mohr_coul_direct_normal` | `nx ny nz` | Plane normal (explicit; ndim values). Selects the plane mode. |
 | `group_materi_plasti_mohr_coul_direct_normal_automatic` | `-yes`/`-no` | `-yes`: take the normal from the element normal. `-no`: no plane normal (full cut-off). |
 | `group_materi_plasti_mohr_coul_direct_visco` | `tm` | Visco relaxation time. |
 | `group_materi_plasti_mohr_coul_direct_wall` | `phi c phi_flow` | Values used when the element is attached to a wall. |
 | `group_materi_plasti_tension_direct` | `sigy` | Tensile limit on the principal stresses (full mode) or on the plane normal traction (plane mode). |
-| `group_materi_plasti_tension_direct_normal` | `nx ny nz` | Plane normal (explicit). |
+| `group_materi_plasti_tension_direct_normal` | `nx ny nz` | Plane normal of the tension law (explicit). Allowed without `tension_direct` (sigy = 0 with `mohr_coul_direct`). |
 | `group_materi_plasti_tension_direct_normal_automatic` | `-yes`/`-no` | `-yes`: take the normal from the element normal. `-no`: no plane normal (full cut-off). |
 | `group_materi_plasti_tension_direct_visco` | `tm` | Visco relaxation time. |
 | `group_materi_plasti_tension_direct_wall` | `sigy` | Tensile limit used when the element is attached to a wall. |
@@ -129,11 +170,33 @@ The normal record accepts ndim values (1 value in 1D, 2 in 2D, 3 in 3D).
   verified on mohr_coul_direct8 (factor 0 -> zero friction stress on the
   wall elements).
 
+## Differences with the Professional version
+
+- **phi_flow factor in the plane mode (deliberate, BACKLOG C15).** The
+  Professional 02-08-2026 uses the constant `k = 2 tan(phi_flow)`; the GNU
+  uses `k = (M/G) tan(phi_flow)`, the consistent elastic return of the
+  slip plastic strain. Both are equal for `poisson = 0` (M/G = 2). Example
+  (plane strain, E = 1, nu = 0.25, phi 0.5, c 0, phi_flow 0.3, MC normal
+  (0,1), trial sxy 8e-4, syy -1.2e-3): GNU sxy 7.04154e-4, syy
+  -1.28895e-3; Professional sxy 6.92049e-4, syy -1.26679e-3
+  (`validation-suite/test-2026/direct_cutoff_plane_phi_flow2.dat`). When
+  no elastic stiffness is available (e.g. a `umat` law) the GNU falls back
+  to the Professional constant 2.
+- **Stale target `materi_direct_mc` (validation-suite).** Its two free
+  y-nodes plus the principal tension cap make the element collapse at
+  t = 0.7 (sigxy 0.13 -> 0.06); the Professional collapses at the same
+  step with the same constraints (sigxy ~0), so its target 1 +- 0.3 only
+  held with the pre-2026-10-02 rule.
+
 ## Estado de implementación
 
 - **Implementado**: the full principal-stress mode (spectral tension cap +
   MC difference cut with the non-associative flow) and the plane mode
-  (`_normal`, `_normal_automatic`, `_visco`, `_wall`).
+  (`_normal`, `_normal_automatic`, `_visco`, `_wall`; separate tension and
+  MC planes, tension first with the default sigy = 0, phi_flow return,
+  2026-10-02). Dedicated tests:
+  `validation-suite/test-2026/direct_cutoff_plane_*.dat` (9, closed form;
+  8 equal the Professional, `_phi_flow2` documents the divergence).
 - **Validación**: mohr_coul_direct1/2 pass; the single-increment shear-only
   states (mohr_coul_direct6/7) reproduce the Professional EXACTLY when the
   element kinematics are the linear ones (`group_materi_memory -total_linear`);

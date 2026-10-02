@@ -633,15 +633,24 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
 
 ### C14. `element_normal` residual differences with the Professional
 
-- **Symptom**: (1) an element whose `element_normal` is zero (interior
-  element, single element, middle of a single row) and that uses
-  `_normal_automatic`: the Professional aborts with an assertion
-  (`!array_null( directions, MDIM*MDIM )`), the GNU applies the full
-  principal-stress cut-off. (2) quad9/tria6 with curved sides: the
+- **Symptom**: (1) **RESOLVED** (commit `a8d6452`, 2026-10-01): an
+  element whose `element_normal` is zero (interior element, single
+  element, middle of a single row) and that uses `_normal_automatic`: the
+  Professional aborts with an assertion
+  (`!array_null( directions, MDIM*MDIM )`); the GNU now stops with a
+  readable input error (it used to apply the full principal-stress
+  cut-off). (2) quad9/tria6 with curved sides: the
   Professional node normals do not follow the consistent rule (some come
   out axis-aligned); the GNU keeps the rule. (3) the Professional also
   prints `node_normal`, `node_boundary` and `element_boundary`, and
-  accepts `global_normal -yes`; the GNU does not. (4) Not a normal issue
+  accepts `global_normal -yes`; the GNU does not. (4) **RESOLVED**
+  (commits `d17461e` + `77f9282`, 2026-10-02): the plane direct cut-off
+  now follows the Professional rule (separate tension and MC planes,
+  tension first with sigy = 0 by default and a principal cap when the
+  tension law has no normal, phi_flow return changing only sn and tau),
+  reproduced to 4-5 digits on probes c01-c25; the phi_flow factor is a
+  deliberate divergence (C15) and the remaining large-strain difference
+  of the column is C16. Original note: not a normal issue
   but found with it: `mohr_coul_direct 0 0 0` + `_normal_automatic` on the
   upper element of the 2-quad4 column, top sheared by 1 (100
   iterations): both binaries use the normal (0,-1), the shear moves to the
@@ -652,9 +661,63 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
   no corpus test uses `mohr_coul_direct_normal_automatic`.
 - **Evidence**: probes `q_3x3`, `q_row3`, `q9d_2x2`, `t6d_2x2`
   (`manual-developer/element_normal.md`).
-- **Proposed fix**: (1) keep (a documented, safer behaviour) or turn it
-  into an input error; (2) none until the Professional rule is known;
-  (3) add the records if a user needs them.
+- **Proposed fix**: (1) done (input error); (2) none until the
+  Professional rule is known; (3) add the records if a user needs them;
+  (4) done.
+- **Effort**: **cheap**.
+
+### C15. Plane direct cut-off: phi_flow factor M/G instead of the Professional 2 (deliberate divergence)
+
+- **Symptom**: `group_materi_plasti_mohr_coul_direct` with a plane normal
+  and `phi_flow != 0`: the Professional 02-08-2026 shifts the normal
+  traction by `k (tau - tau_new)` with the constant `k = 2 tan(phi_flow)`;
+  the GNU uses `k = (M/G) tan(phi_flow)` (M constrained modulus normal to
+  the plane, G shear modulus on it, from the element elastic stiffness).
+  Equal at `poisson = 0`. Plane strain, nu 0.25, phi 0.5, c 0, psi 0.3,
+  trial sxy 8e-4 / syy -1.2e-3: GNU sxy 7.04154e-4, syy -1.28895e-3;
+  Professional 6.92049e-4, -1.26679e-3.
+- **Decision**: project owner, 2026-10-02: keep the consistent elastic
+  return M/G. Fallback to the Professional constant when no elastic
+  stiffness is available (umat).
+- **Evidence**: `validation-suite/test-2026/direct_cutoff_plane_phi_flow2.dat`
+  (GNU target; the Professional fails it), `_phi_flow1` (nu 0, equal),
+  `manual-developer/group_materi_plasti_mohr_coul_direct.md`.
+- **Effort**: **cheap** (switch to the constant if convergence is
+  preferred).
+
+### C16. Large-strain elastic response of the default memory differs from the Professional
+
+- **Symptom**: column of 2 quad4 (the `element_normal2d_column1` mesh),
+  top sheared by 1, purely elastic: the GNU response is nonlinear even
+  with a fixed mesh, the Professional stays linear. Node 5 `sigxy` GNU
+  0.19 vs Pro 0.25; node 3 `disx` 0.537 vs 0.5. Found while comparing the
+  plane direct cut-off (C14 item 4); small-strain probes (strain 1e-3)
+  show the same family at 0.1-0.2 % (e.g. sxy 6.38305e-4 vs 6.39622e-4),
+  and vanish with `group_materi_memory -total_linear`.
+- **Evidence**: probes `col/elas`, `col/big` (C14 scratch, 2026-10-02);
+  related: mohr_coul_direct6/7/8 (single 100 % shear increment, default
+  `-updated` element kinematics, `manual-developer/group_materi_plasti_mohr_coul_direct.md`).
+- **Proposed fix**: measure the Professional default kinematics for
+  velocity-driven models (linear vs updated) and align the GNU default
+  or document it; overlaps C8.
+- **Effort**: **medium**.
+
+### C17. `materi_direct_mc` (validation-suite) target stale after C14
+
+- **Symptom**: since `d17461e` the plane MC cut-off without
+  `tension_direct` caps the principal tension at 0 (Professional rule).
+  `materi_direct_mc` constrains `vely` only at nodes 1 and 4
+  (`-ra 1 4 -ra` is a list, not a range), so the accumulated compression
+  plus the free nodes collapse the element at t = 0.7: `sigxy` 1 for
+  t <= 0.6, then 0.129, 0.031, 0.043, 0.057 (target 1 +- 0.3, rc 1). The
+  Professional with the same constraints collapses at the same step
+  (sigxy 1 then ~0); with all four nodes constrained both binaries keep
+  sigxy 1 (sxx = syy -100.87 GNU vs -100.90 Pro with `-updated_linear`),
+  and with `-updated` the GNU history follows the Professional
+  (1.916..12.06 vs old GNU 2.95..18.69).
+- **Proposed fix**: corpus decision — constrain nodes 2 and 3 (the
+  probable intent) or recalibrate the target; not done in C14 (the
+  validation-suite was outside its edit surface).
 - **Effort**: **cheap**.
 
 ---
@@ -684,11 +747,14 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
 | C11 | — | `control_materi_dynamic` and implicit truss dynamics vs Pro | MEDIUM | medium |
 | C12 | — | bicg stop does not abort the GNU on a singular system | LOW | cheap |
 | C13 | — | `control_solver_bicg_stop` at the timestep index: Pro reads index 0 only (deliberate divergence) | LOW | cheap |
-| C14 | — | `element_normal`: zero normal (Pro assertion), curved quadratic sides, `node_normal`/`element_boundary`/`global_normal` not implemented; plane MC direct return differs from Pro | LOW | cheap/medium |
+| C14 | — | `element_normal`: curved quadratic sides, `node_normal`/`element_boundary`/`global_normal` not implemented (zero normal and plane MC direct return resolved) | LOW | cheap |
+| C15 | — | plane direct cut-off phi_flow factor M/G vs Pro 2 (deliberate divergence) | LOW | cheap |
+| C16 | — | large-strain elastic response of the default memory vs Pro (shear 1 column) | MEDIUM | medium |
+| C17 | validation-suite | `materi_direct_mc` stale target after the C14 tension cap | LOW | cheap |
 
-Twenty-two items remain open: eight MEDIUM and fourteen LOW. No open issue is CRITICAL or
-HIGH. The validation-suite corpus has no open failure — its 233 real tests all
-pass. Every remaining failure is a stale or malformed test, an out-of-scope model
+Twenty-five items remain open: nine MEDIUM and sixteen LOW. No open issue is CRITICAL or
+HIGH. The validation-suite corpus has one open failure — `materi_direct_mc`
+(C17, stale target after the C14 rule); its other 232 real tests pass. Every remaining failure is a stale or malformed test, an out-of-scope model
 or infrastructure limit, a narrow post-processing divergence, a corpus-coverage
 gap, or a performance cost. The source defects found during the cycle were fixed
 and validated against the corpora. The remaining post-convergence improvements

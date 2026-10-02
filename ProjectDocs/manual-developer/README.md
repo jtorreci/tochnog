@@ -115,7 +115,7 @@ Each file corresponds to the same feature in the [User Manual](../manual-user/).
 - [group_materi_expansion_linear](group_materi_expansion_linear.md) — thermal expansion (stress.cc:437, materi.cc:166).
 - [group_materi_plasti_visco_exponential](group_materi_plasti_visco_exponential.md) — viscoplasticity (stress.cc:100-115, 737-755; EPS_VISCO hardcoded).
 - [group_materi_plasti_visco_power](group_materi_plasti_visco_power.md) — power viscoplasticity: dual layout (Professional eta p / legacy eta p f_ref), f_ref=1 implicit, lambda = eta*(f/f_ref)^p times dtime.
-- [group_materi_plasti_mohr_coul_direct](group_materi_plasti_mohr_coul_direct.md) — direct stress cut-off (materi_direct_cutoff in stress.cc).
+- [group_materi_plasti_mohr_coul_direct](group_materi_plasti_mohr_coul_direct.md) — direct stress cut-off (materi_direct_full_mc / materi_direct_cutoff in stress.cc; per-law normals via direct_normal_get in materi.cc; phi_flow M/G from the element stiffness, direct_flow_factor).
 - [group_materi_plasti_mohr_coul_hardening_softening](group_materi_plasti_mohr_coul_hardening_softening.md) — classic MC with linear c/phi hardening-softening vs kappa (plasti.cc plasti_rule block).
 - [group_materi_plasti_cap2](group_materi_plasti_cap2.md) — db_number alias of GROUP_MATERI_PLASTI_CAP (same physics, plasti.cc untouched).
 - [group_materi_plasti_cap1](group_materi_plasti_cap1.md) — cap1 yield/flow block in plasti_rule() (f = q^2/M^2 + p*(p* - p*c)); pc hardening in set_stress() (kappa pattern) + RHS in materi(); initia dof with basename pc.
