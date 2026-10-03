@@ -702,7 +702,13 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
   or document it; overlaps C8.
 - **Effort**: **medium**.
 
-### C17. `materi_direct_mc` (validation-suite) target stale after C14
+### C17. `materi_direct_mc` (validation-suite) target stale after C14 — RESOLVED 2026-10-03
+
+- **Resolution**: input corrected to constrain `vely` at all four nodes
+  (`bounda_unknown 0 -ra 1 2 3 4 -ra -vely`, the probable intent). The
+  target `sigxy` 1 +- 0.3 holds again on the GNU (rc 0), as on the
+  Professional with the same constraints. The validation-suite is
+  gitignored, so the input change lives in the working tree only.
 
 - **Symptom**: since `d17461e` the plane MC cut-off without
   `tension_direct` caps the principal tension at 0 (Professional rule).
@@ -750,11 +756,10 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
 | C14 | — | `element_normal`: curved quadratic sides, `node_normal`/`element_boundary`/`global_normal` not implemented (zero normal and plane MC direct return resolved) | LOW | cheap |
 | C15 | — | plane direct cut-off phi_flow factor M/G vs Pro 2 (deliberate divergence) | LOW | cheap |
 | C16 | — | large-strain elastic response of the default memory vs Pro (shear 1 column) | MEDIUM | medium |
-| C17 | validation-suite | `materi_direct_mc` stale target after the C14 tension cap | LOW | cheap |
 
-Twenty-five items remain open: nine MEDIUM and sixteen LOW. No open issue is CRITICAL or
-HIGH. The validation-suite corpus has one open failure — `materi_direct_mc`
-(C17, stale target after the C14 rule); its other 232 real tests pass. Every remaining failure is a stale or malformed test, an out-of-scope model
+Twenty-four items remain open: nine MEDIUM and fifteen LOW. No open issue is CRITICAL or
+HIGH. The validation-suite corpus has no open failure — its 233 real tests
+pass (`materi_direct_mc` input corrected, C17 resolved). Every remaining failure is a stale or malformed test, an out-of-scope model
 or infrastructure limit, a narrow post-processing divergence, a corpus-coverage
 gap, or a performance cost. The source defects found during the cycle were fixed
 and validated against the corpora. The remaining post-convergence improvements
