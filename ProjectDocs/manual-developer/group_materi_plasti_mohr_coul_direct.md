@@ -93,12 +93,12 @@ The direct records have TWO modes selected by the presence of a plane normal:
      `element_normal_automatic()`; Pro: assertion). A group switched `-no`
      keeps the law's normal zero (test
      `element_normal2d_column_switch_no1`).
-   - **Pending**: `element_normal_automatic()` (area.cc) still returns 0
-     as soon as ANY explicit `_normal` exists in the group, so a group
-     with an explicit MC normal plus `tension_direct_normal_automatic -yes`
-     on an element with a zero `element_normal` is not reported as an
-     input error (the tension law silently takes the principal cap). The
-     per-law check belongs in area.cc (outside the C14 edit surface).
+   - The zero-normal check is per law since `b7f3522`:
+     `element_normal_automatic()` (area.cc) skips a law only when that
+     same law has an explicit `_normal`, so an explicit MC normal plus
+     `tension_direct_normal_automatic -yes` on a zero `element_normal` is
+     an input error (test `element_normal2d_row_mixed_error1`; Pro:
+     assertion).
      Anisotropic coupling terms (normal strain -> shear stress) are not
      included in the return, which uses only M and G.
 
