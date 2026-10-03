@@ -110,14 +110,15 @@ Self-checking inputs in `validation-suite/test-2026/`:
 `element_normal2d_column1.dat`, `element_normal2d_corner1.dat`,
 `element_normal2d_mesh_change1.dat`, `element_normal3d_column1.dat`,
 `element_normal3d_distorted1.dat`, `element_normal2d_row_explicit1.dat`,
-`element_normal2d_row_layer1.dat`. All pass on the Professional 02-08-2026.
+`element_normal2d_row_layer1.dat`, `element_normal2d_row_mixed1.dat`. All
+pass on the Professional 02-08-2026.
 
 ## Zero element normal: input error
 
 A zero `element_normal` cannot define a cut-off plane. When an element of
 a group with `group_materi_plasti_tension_direct_normal_automatic -yes` or
 `group_materi_plasti_mohr_coul_direct_normal_automatic -yes` (and no
-explicit `_direct_normal` for that group) gets a zero normal, the
+explicit `_direct_normal` of that SAME law) gets a zero normal, the
 calculation stops with an input error, for example (single row of three
 quad4, `validation-suite/test-2026/element_normal2d_row_error1.dat`):
 
@@ -137,6 +138,13 @@ Error detected for record : 0
 
 The message names the explicit record matching the automatic one that
 triggered it (`_tension_direct_normal` or `_mohr_coul_direct_normal`).
+The check is made per law: an explicit normal of the OTHER law does not
+define this law's plane, so it does not suppress the error. For example
+`group_materi_plasti_mohr_coul_direct_normal 0  0. 1.` together with
+`group_materi_plasti_tension_direct_normal_automatic 0  -yes` still stops
+on a zero element normal, naming the tension records
+(`element_normal2d_row_mixed_error1.dat`); the swapped case on elements
+with a nonzero normal runs (`element_normal2d_row_mixed1.dat`).
 Typical cases: a group that covers the whole mesh (interior elements), a
 single element (all sides are boundary sides and cancel), the middle
 elements of a single row. Remedies:
@@ -160,7 +168,9 @@ not checked.
   assertion ("Program error, assertion failed ... !array_null( directions,
   MDIM*MDIM )"); the GNU gives the readable input error above (element,
   group, remedies). Until 2026-10-01 the GNU silently applied the full
-  principal-stress cut-off instead.
+  principal-stress cut-off instead. Until 2026-10-03 an explicit normal of
+  the other law also suppressed the error (the law then silently took the
+  principal cap); the Professional also aborts in that mixed case.
 - `_normal_automatic -no`: both versions take the full principal-stress
   cut-off (no plane). Until 2026-10-02 the GNU still used the element
   normal with `-no` (plane cut-off).

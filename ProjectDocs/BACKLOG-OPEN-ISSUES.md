@@ -639,7 +639,9 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
   Professional aborts with an assertion
   (`!array_null( directions, MDIM*MDIM )`); the GNU now stops with a
   readable input error (it used to apply the full principal-stress
-  cut-off). (2) quad9/tria6 with curved sides: the
+  cut-off). Since 2026-10-03 (commit `b7f3522`) the check is per law: an
+  explicit normal of the other law no longer suppresses it
+  (`element_normal2d_row_mixed_error1`; Pro: same assertion). (2) quad9/tria6 with curved sides: the
   Professional node normals do not follow the consistent rule (some come
   out axis-aligned); the GNU keeps the rule. (3) the Professional also
   prints `node_normal`, `node_boundary` and `element_boundary`, and

@@ -1349,6 +1349,8 @@ expected_error_ok "$T2014" materi_direct_auto
 expected_error_ok "$T2026" element_normal2d_row_error1
 run_ok "$T2026" element_normal2d_row_explicit1
 run_ok "$T2026" element_normal2d_row_layer1
+expected_error_ok "$T2026" element_normal2d_row_mixed_error1
+run_ok "$T2026" element_normal2d_row_mixed1
 
 # ---------------------------------------------------------------------
 # Sub-sprint materi_stress_force, lote 2 (integracion 2D quad4/quad9):
