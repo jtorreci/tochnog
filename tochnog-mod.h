@@ -1808,6 +1808,8 @@ void      area_node_dataitem( void );
 void      element_normal_set( void );
 long int  element_normal_needed( void );
 long int  element_normal_automatic( long int gr );
+void      direct_normal_get( long int element, long int gr,
+            long int explicit_key, long int automatic_key, double normal[] );
 void      array_add( double a[], double b[], double c[], long int n );
 double    array_distance( double a[], double b[], double work[], long int n );
 double    array_inproduct( double a[], double b[], long int n );

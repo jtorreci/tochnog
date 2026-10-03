@@ -25,22 +25,82 @@ The direct records have TWO modes selected by the presence of a plane normal:
    - `_visco tm` relaxes the whole correction with `1-exp(-dt/tm)`; `_wall`
      replaces phi/c/sigy when `plasti_on_boundary`.
 
-2. **Plane traction mode** (with `_normal` / `_normal_automatic`):
-   `materi_direct_cutoff()` in `stress.cc` (the pre-existing plane cut-off:
-   `max_fric = max(c - sig_n*tan(phi), 0)` on the plane with the given
-   normal). NEW: `group_materi_plasti_bounda/_factor` (Professional 6.231/
-   6.232) now reduce phi and c by the factor for the elements on the wall.
-   `_normal_automatic` reads the generated `ELEMENT_NORMAL` record
-   (2026-09-30, `element_normal.md`; it replaced a cross product of two
-   element edges that was out of plane in 2D). A zero `ELEMENT_NORMAL` in
-   a `-yes` group without explicit `_normal` is an input error raised in
-   `element_normal_set()` (`area.cc`, 2026-10-01, helper
-   `element_normal_automatic()`); the old silent fallback to the full
-   cut-off for that case is gone (Pro: assertion
-   `!array_null( directions, MDIM*MDIM )`). The `materi()` branch is
-   gated by `element_normal_automatic( gr )` (2026-10-02): a group
-   switched `-no` keeps `direct_normal` zero and takes the full cut-off,
-   as the Professional (test `element_normal2d_column_switch_no1`).
+2. **Plane traction mode** (a law with `_normal` / `_normal_automatic`):
+   `materi_direct_cutoff()` in `stress.cc`. Rewritten 2026-10-02 (C14,
+   commits `d17461e` + `77f9282`) to the rule measured on the
+   Professional 02-08-2026:
+   - **Normals.** `materi()` (`materi.cc`) builds one normal PER LAW with
+     `direct_normal_get()` (end of `materi.cc`, prototype in `tochnog.h`
+     and `tochnog-mod.h`): explicit `_normal` record, else `ELEMENT_NORMAL`
+     when that law's own `_normal_automatic` is `-yes`, else zero. Both go
+     through `set_stress()` (`mc_normal`, `ten_normal`); when both are
+     zero `set_stress()` calls `materi_direct_full_mc(..., 1)` (mode 1),
+     otherwise `materi_direct_cutoff()`. Before C14 a single
+     `direct_normal` (MC normal, else tension normal, else element
+     normal) served both laws.
+   - **Tension step first.** `sigy` = `tension_direct` (wall value when
+     `plasti_on_boundary`), else 0 when `mohr_coul_direct` exists (6.738;
+     same logic as `materi_direct_full_mc`, including the
+     `control_materi_plasti_tension_apply -no` gate, which drops the
+     record but keeps the default 0). With a tension normal: cap
+     `sig_n = n.sig.n <= sigy` with `sig -= (sig_n - sigy) f_ten n x n`.
+     Without it: `materi_direct_principal_cap()` (jacobi + the shared
+     helper `direct_cap_principal_values()`, which is also step 1 of
+     `materi_direct_full_mc`; no visco factor there, as in mode 1).
+   - **MC step.** With an MC normal: traction `t = sig.n`, `sn = n.t`,
+     `tau = t - sn n` from the stress AFTER the tension step. If
+     `|tau| > max(c - sn tan(phi), 0)`:
+     `k = direct_flow_factor(C, n, tau, |tau|) * tan(phi_flow)` (0 when
+     phi_flow = 0), `tau_new = max((c - sn tan(phi) + k tan(phi) |tau|) /
+     (1 + k tan(phi)), 0)`, `dsn = -k (|tau| - tau_new)`; the stress gets
+     the tangential scaling `-(1-scale)(tau x n + n x tau)` with
+     `scale = 1 - f_mc (1 - tau_new/|tau|)` and `+ f_mc dsn n x n`. Only sn
+     and tau change (the Professional does not update the other
+     components). Without an MC normal (tension plane only):
+     `materi_direct_full_mc(..., 0)`, the full MC cut without its tension
+     cap (verified: Pro probes c21/c21b/c21d equal mode 1 for the MC part).
+   - **M/G source.** `direct_flow_factor()` (`stress.cc`) evaluates
+     `M = n_i n_j C_ijkl n_k n_l` and
+     `G = 0.5 t_i n_j C_ijkl (t_k n_l + n_k t_l)` (t = tau/|tau|; the
+     symmetrised form is independent of how C stores the shear minor
+     symmetry: `C_matrix()` sets `C_0101 = 2G`, `C_0110 = 0`). `C` is
+     built in `set_stress()` at the call site as
+     `Cmem + Cuser + Chyper + Chypo` plus `1/compressibility` on the
+     `C_iikk` terms: the same linear stiffness that fills `ddsdde` at the
+     end of `set_stress()`, so plane stress (`group_materi_membrane`),
+     transverse isotropy, `shear_factor`, hardsoil/young_power stiffness
+     (computed into Cmem before the cut) are all honoured. Chosen over
+     reading young/poisson again (the approach of `materi_direct_full_mc`)
+     because it is general and needs no per-law branch. `group_materi_factor`
+     scales C after the cut and does not change the ratio.
+   - **Hardcoded**: fallback `M/G = 2` (the Professional constant) when
+     `M <= 0` or `G <= 0` (umat writes `ddsdde` directly, not a C tensor);
+     guard `1 + k tan(phi) < 1e-12 -> k = 0`; visco factors now separate
+     per law (`f_mc`, `f_ten`; before C14 one `tm` was shared and the
+     tension value won).
+   - `group_materi_plasti_bounda/_factor` (6.231/6.232) reduce phi and c
+     (not phi_flow) on the wall.
+   - **Input**: `GROUP_MATERI_PLASTI_TENSION_DIRECT_NORMAL` no longer
+     requires `GROUP_MATERI_PLASTI_TENSION_DIRECT` (`database.cc`,
+     `data_required = GROUP_TYPE`; the Professional accepts the normal
+     alone and applies nothing without either law, probe c20). The
+     `_automatic` switch keeps the prerequisite (the Professional rejects
+     it, probe c23).
+   - `_normal_automatic` reads the generated `ELEMENT_NORMAL` record
+     (2026-09-30, `element_normal.md`). A zero `ELEMENT_NORMAL` in a
+     `-yes` group without any explicit `_normal` is an input error raised
+     in `element_normal_set()` (`area.cc`, helper
+     `element_normal_automatic()`; Pro: assertion). A group switched `-no`
+     keeps the law's normal zero (test
+     `element_normal2d_column_switch_no1`).
+   - **Pending**: `element_normal_automatic()` (area.cc) still returns 0
+     as soon as ANY explicit `_normal` exists in the group, so a group
+     with an explicit MC normal plus `tension_direct_normal_automatic -yes`
+     on an element with a zero `element_normal` is not reported as an
+     input error (the tension law silently takes the principal cap). The
+     per-law check belongs in area.cc (outside the C14 edit surface).
+     Anisotropic coupling terms (normal strain -> shear stress) are not
+     included in the return, which uses only M and G.
 
 ## Física
 
@@ -51,7 +111,40 @@ The direct records have TWO modes selected by the presence of a plane normal:
   flow ratio `(1+sin psi)/(1-sin psi)` of the max/min corrections; for
   psi=0 the cut is the mean-preserving difference cut).
 - Plane mode (6.727/6.739): limits the friction/tension stress on the
-  specific plane (interface semantics).
+  specific plane (interface semantics). phi_flow: the slip plastic strain
+  `deps = dlambda (sym(t x n) + tan(psi) n x n)` gives `dtau = -G dlambda`
+  and `dsn = -M tan(psi) dlambda`, hence `dsn = (M/G) tan(psi) dtau`. The
+  Professional uses 2 (= M/G at nu = 0): deliberate divergence, BACKLOG
+  C15.
+
+## Validación del modo plano (Professional 02-08-2026, C14)
+
+Probes (single quad4, E 1, homogeneous velocity, 1 step; scratch driver
+`c14/run.py`): closed form vs Professional vs old GNU vs new GNU, node 1
+stresses (sxx, sxy, syy). The new GNU differs from the closed form by
+0.1-0.2 % with the default memory (C16) and reproduces it exactly with
+`-total_linear` (dedicated tests).
+
+| probe | closed form | Professional | old GNU | new GNU |
+|---|---|---|---|---|
+| c01 MC c 1e-4, no ten | -2.5e-4, 1e-4, -2.5e-4 | same | -2.5e-8, 1e-4, 2.75e-7 | -2.49962e-4, 1e-4, -2.49913e-4 |
+| c04 MC c 1e-2, syy tension | -2.45145e-4, 2.00971e-4, -1.64757e-4 | same | 3.7e-7, 5.0005e-4, 1.99875e-4 | -2.44970e-4, 2.00930e-4, -1.64807e-4 |
+| c13 ten 1e-4, no ten normal | -2e-4, 3e-4, -2e-4 | same | 3.75e-7, 5e-4, -1.25e-7 | -1.99788e-4, 2.99937e-4, -2.00087e-4 |
+| c16 ten 0 + ten normal | 3e-4, 0, 0 | same | same | same |
+| c17 ten normal only | 3e-4, 0, 0 | same | input error | 3e-4, 0, 0 |
+| c19 psi 0.3, nu 0 | 0, 6.60909e-4, -1.20979e-3 | same | 5.9e-7, 5.44483e-4, -9.99590e-4 | 8.2e-7, 6.59212e-4, -1.21022e-3 |
+| c15 psi 0.3, nu 0.25 (M/G 3) | -4e-4, 7.04154e-4, -1.28895e-3 | -4e-4, 6.92049e-4, -1.26679e-3 | -3.98691e-4, 6.53888e-4, -1.19971e-3 | -3.98593e-4, 7.02818e-4, -1.28954e-3 |
+| c22 beyond apex, nu 0 | 0, 0, 9.38133e-4 | same | 0, 1e-7, 1.00001e-3 | 0, 9.4e-8, 9.38179e-4 |
+| c24 ten plane x, MC plane y | 0, 1e-4, 0 | same | input error | 1e-7, 1e-4, 2.7e-7 |
+| c21b MC no normal + ten normal x | full MC (Pro -6.69503e-4, 1.69503e-4, -3.30497e-4) | — | plane MC on x | -6.69250e-4, 1.69545e-4, -3.30500e-4 |
+
+Dedicated tests `validation-suite/test-2026/direct_cutoff_plane_*.dat`
+(`-total_linear`, targets at 1e-8 from the closed form): shear1,
+tension_principal1, tension_value1, tension_normal1, tension_normal2,
+two_normals1, phi_flow1, phi_flow2, phi_flow_floor1. Old binary: 8 RED
+(tension_normal1 passes on both, non-regression); after `d17461e`: the
+three phi_flow tests RED; after `77f9282`: 9/9 GREEN. The Professional
+passes all except phi_flow2 (C15).
 
 ## Validación (Professional 25-10-2023)
 

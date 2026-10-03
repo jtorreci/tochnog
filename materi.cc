@@ -51,7 +51,7 @@ void materi( long int element, long int gr, long int name, long int nnol,
     softvar_nonl=0, softvar_l=0, 
     md_factor=1., disp_primary_factor=1., // materi_dynamic/control_materi_dynamic momentum factor
     static_pressure=0., total_pressure=0., location=0.,
-    J=0., ddum[1], direct_normal[MDIM], *force_gravity=NULL, 
+    J=0., ddum[1], mc_normal[MDIM], ten_normal[MDIM], *force_gravity=NULL, 
     undr_p=0., undr_C=0., undr_buf[MPOINT],
     activation_factor=1., activation_stiff=1.,
     sri_g=0., sri_g2=0., sri_g3=0., sri_volfac=1., sri_detj_weight=0.,
@@ -496,30 +496,23 @@ void materi( long int element, long int gr, long int name, long int nnol,
 
     // set stress, strain
   if ( materi_stress ) {
-    // direct-normal plane (group_materi_plasti_*_direct_normal[_automatic]):
-    // explicit normal from the keyword, or the element normal
-    // element_normal (manual Professional 6.445/6.728/6.740: inward
-    // normal with respect to the mesh boundary, generated before the
-    // element loop by element_normal_set, area.cc). A zero element normal
-    // in a group switched -yes is an input error raised there (the
+    // direct-normal planes (group_materi_plasti_*_direct_normal[_automatic]),
+    // one per law (manual Professional 6.727/6.739; verified against the
+    // Professional 02-08-2026: the tension and the Mohr-Coulomb laws cut
+    // on their own planes). Each law takes its explicit normal from the
+    // keyword, else the element normal element_normal when its own
+    // _normal_automatic is switched -yes (manual 6.445/6.728/6.740:
+    // inward normal with respect to the mesh boundary, generated before
+    // the element loop by element_normal_set, area.cc). A zero element
+    // normal in a group switched -yes is an input error raised there (the
     // Professional aborts with an assertion), so it never reaches this
-    // point. A group switched -no keeps a zero normal and takes the full
-    // principal-stress cut-off, as the Professional does.
-    array_set( direct_normal, 0., MDIM );
-    if ( db_active_index( GROUP_MATERI_PLASTI_MOHR_COUL_DIRECT_NORMAL, gr,
-        VERSION_NORMAL ) ) {
-      db( GROUP_MATERI_PLASTI_MOHR_COUL_DIRECT_NORMAL, gr, idum,
-        direct_normal, ldum, VERSION_NORMAL, GET );
-    }
-    else if ( db_active_index( GROUP_MATERI_PLASTI_TENSION_DIRECT_NORMAL, gr,
-        VERSION_NORMAL ) ) {
-      db( GROUP_MATERI_PLASTI_TENSION_DIRECT_NORMAL, gr, idum,
-        direct_normal, ldum, VERSION_NORMAL, GET );
-    }
-    else if ( element_normal_automatic( gr ) ) {
-      db( ELEMENT_NORMAL, element, idum, direct_normal, ldum,
-        VERSION_NORMAL, GET_IF_EXISTS );
-    }
+    // point. A law without a normal (or switched -no) keeps a zero normal:
+    // the tension law then caps the principal stresses, the Mohr-Coulomb
+    // law takes the full principal-stress cut-off (set_stress).
+    direct_normal_get( element, gr, GROUP_MATERI_PLASTI_MOHR_COUL_DIRECT_NORMAL,
+      GROUP_MATERI_PLASTI_MOHR_COUL_DIRECT_NORMAL_AUTOMATIC, mc_normal );
+    direct_normal_get( element, gr, GROUP_MATERI_PLASTI_TENSION_DIRECT_NORMAL,
+      GROUP_MATERI_PLASTI_TENSION_DIRECT_NORMAL_AUTOMATIC, ten_normal );
     set_stress( element, gr, plasti_on_boundary, coord_ip,
       old_unknowns, new_unknowns,
       old_grad_old_unknowns, new_grad_new_unknowns, 
@@ -532,7 +525,7 @@ void materi( long int element, long int gr, long int name, long int nnol,
       new_f, new_substeps,
       old_deften, new_deften, inc_rot,
       ddsdde, viscosity, viscosity_heatgeneration, softvar_nonl, softvar_l,
-      direct_normal);
+      mc_normal, ten_normal);
     tendons( element, gr, nnol, npoint, volume, new_d, old_unknowns, new_unknowns,
       new_rot, inc_ept, tendon_element_rhside, ddsdde_tendon );
     array_add( ddsdde, ddsdde_tendon, ddsdde_total, MSTRAIN*MSTRAIN );
@@ -1888,4 +1881,29 @@ double get_materi_density( long int element, long int element_group, long int nn
   }
   return materi_dens;
 
+}
+
+void direct_normal_get( long int element, long int gr, long int explicit_key,
+  long int automatic_key, double normal[] )
+
+  // plane normal of ONE direct plasticity law of group gr (explicit_key:
+  // group_materi_plasti_mohr_coul_direct_normal or _tension_direct_normal;
+  // automatic_key: the matching _normal_automatic switch). The explicit
+  // normal wins; otherwise the element normal when the switch is -yes;
+  // otherwise zero (no plane: principal-stress cut-off).
+
+{
+  long int swit=-NO, ldum=0, idum[1];
+  double ddum[1];
+
+  array_set( normal, 0., MDIM );
+  if ( db_active_index( explicit_key, gr, VERSION_NORMAL ) ) {
+    db( explicit_key, gr, idum, normal, ldum, VERSION_NORMAL, GET );
+  }
+  else if ( db_active_index( automatic_key, gr, VERSION_NORMAL ) ) {
+    db( automatic_key, gr, &swit, ddum, ldum, VERSION_NORMAL, GET );
+    if ( swit==-YES )
+      db( ELEMENT_NORMAL, element, idum, normal, ldum, VERSION_NORMAL,
+        GET_IF_EXISTS );
+  }
 }

@@ -14,6 +14,10 @@ plane normal is taken automatically:
 - `group_materi_plasti_mohr_coul_direct_normal_automatic` (6.728)
 - `group_materi_plasti_tension_direct_normal_automatic` (6.740)
 
+Each law uses its own switch: the tension law and the Mohr-Coulomb law
+may have different planes (one explicit, one automatic), see
+`group_materi_plasti_mohr_coul_direct.md`.
+
 Typical use: a layer of isoparametric elements along a boundary (a soil
 interface layer, a crack band) that should only carry a limited normal or
 shear traction on the plane parallel to that boundary.

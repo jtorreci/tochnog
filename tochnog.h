@@ -1828,6 +1828,8 @@ void      area_node_dataitem( void );
 void      element_normal_set( void );
 long int  element_normal_needed( void );
 long int  element_normal_automatic( long int gr );
+void      direct_normal_get( long int element, long int gr,
+            long int explicit_key, long int automatic_key, double normal[] );
 void      array_add( double a[], double b[], double c[], long int n );
 double    array_distance( double a[], double b[], double work[], long int n );
 double    array_inproduct( double a[], double b[], long int n );
@@ -2356,7 +2358,8 @@ void      set_stress( long int element, long int gr,
             double &new_f, double &new_substeps, double old_deften[], double new_deften[],
             double inc_rot[], double ddsdde[],
             double &viscosity, double &viscosity_heat_generation, 
-	    double &softvar_nonl, double &softvar_l, double direct_normal[] );
+	    double &softvar_nonl, double &softvar_l, double mc_normal[],
+            double ten_normal[] );
 long int  control_materi_gate_off( long int control_item );
 long int  materi_apply_gate_off( long int global_item, long int control_item );
 long int  set_swit( long int element, long int inod, const char *routine

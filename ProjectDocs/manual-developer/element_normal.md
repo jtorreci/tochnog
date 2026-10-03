@@ -98,14 +98,17 @@ except the curved quadratic sides (see below).
   VERSION_NORMAL )` (only for VERSION_NORMAL: the record has no other
   version). This is what regenerates the record after mesh changes and
   discards input values at the start (top() calls mesh_has_changed).
-- `materi.cc` `materi()`: the automatic branch, gated by
-  `element_normal_automatic( gr )` (only a `-yes` record without an
-  explicit `_normal`), reads `ELEMENT_NORMAL` (GET_IF_EXISTS) into
-  `direct_normal`; the cross product and the out-of-bounds reads are gone.
-  A zero normal in a `-yes` group cannot reach this point any more (input
-  error below). A `-no` group never reads the record (2026-10-02): its
-  `direct_normal` stays zero, so `set_stress()` takes the full
-  principal-stress cut-off (`materi_direct_full_mc`), as the Professional.
+- `materi.cc` `materi()`: since C14 (2026-10-02, `d17461e`) each direct
+  law gets its own normal through `direct_normal_get()`: the law's
+  explicit `_normal`, else `ELEMENT_NORMAL` (GET_IF_EXISTS) when that
+  law's own `_normal_automatic` is `-yes`, else zero (`mc_normal`,
+  `ten_normal`). The cross product and the out-of-bounds reads are gone.
+  A `-no` law never reads the record: with both normals zero
+  `set_stress()` takes the full principal-stress cut-off
+  (`materi_direct_full_mc`), as the Professional. The zero-normal input
+  error below still uses the group-level `element_normal_automatic()`,
+  so it does not fire when the OTHER law has an explicit normal
+  (pending, see `group_materi_plasti_mohr_coul_direct.md`).
 
 ## Zero-normal input error (2026-10-01)
 

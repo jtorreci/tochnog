@@ -87,6 +87,45 @@ void materi_compression_cutoff( long int element, long int gr,
     }
 }
 
+// direct_cap_principal_values - step 1 of the direct cut-offs: principal
+// stresses higher than sigy are cut off (manual Professional 6.738).
+// Shared by the full principal cut-off (materi_direct_full_mc) and by the
+// plane mode when the tension law has no plane normal of its own
+// (materi_direct_principal_cap). Returns 1 when a value was capped.
+long int direct_cap_principal_values( double w[], double sigy )
+
+{
+  long int i=0, any_cut=0;
+
+  for ( i=0; i<3; i++ ) {
+    if ( w[i]>sigy ) { w[i] = sigy; any_cut = 1; }
+  }
+  return any_cut;
+}
+
+// materi_direct_principal_cap - plane-mode tension step when the tension
+// law has no own normal: cap the principal stresses at sigy (verified
+// against the Professional 02-08-2026: mohr_coul_direct_normal without a
+// tension normal cuts the principal tension first, then the MC plane).
+void materi_direct_principal_cap( double new_sig[], double sigy )
+
+{
+  long int idim=0, jdim=0, kdim=0, nrot=0;
+  double sig_work[MDIM*MDIM], d[MDIM], v[MDIM*MDIM];
+
+  array_move( new_sig, sig_work, MDIM*MDIM );
+  matrix_jacobi( sig_work, 3, d, v, &nrot );
+  if ( !direct_cap_principal_values( d, sigy ) ) return;
+  // sigma = V diag(d) V^T  (V columns are eigenvectors)
+  for ( idim=0; idim<MDIM; idim++ )
+    for ( jdim=0; jdim<MDIM; jdim++ ) {
+      double tmp = 0.;
+      for ( kdim=0; kdim<MDIM; kdim++ )
+        tmp += v[idim*MDIM+kdim] * d[kdim] * v[jdim*MDIM+kdim];
+      new_sig[idim*MDIM+jdim] = tmp;
+    }
+}
+
 // materi_direct_full_mc - group_materi_plasti_mohr_coul_direct +
 // group_materi_plasti_tension_direct WITHOUT a plane normal (the manual
 // Professional 6.726/6.738). This is the FULL Mohr-Coulomb "direct"
@@ -108,10 +147,14 @@ void materi_compression_cutoff( long int element, long int gr,
 // capped shear). When sigy is not given but mohr_coul_direct is
 // available, sigy = 0 (6.738). _visco tm relaxes the cut with the factor
 // 1-exp(-dtime/tm); _wall provides the parameters used when the element
-// is attached to a wall.
+// is attached to a wall. tension_cap = 0 skips the principal tension cap
+// (step 1): used when the tension law has its own plane normal and was
+// already applied on that plane (materi_direct_cutoff), while the
+// Mohr-Coulomb law has no normal (verified against the Professional
+// 02-08-2026: the MC law then stays the full principal cut-off).
 void materi_direct_full_mc( long int element, long int gr,
   long int plasti_on_boundary, double dtime,
-  double new_sig[], double /*ddsdde*/[] )
+  double new_sig[], double /*ddsdde*/[], long int tension_cap )
 
 {
   long int idim=0, jdim=0, kdim=0, nrot=0, mc_present=0, ten_present=0,
@@ -176,9 +219,7 @@ void materi_direct_full_mc( long int element, long int gr,
           tmp = order[i]; order[i] = order[j]; order[j] = (long int)tmp;
         }
     // 1) tension cap: principal stresses higher than sigy are cut off
-    for ( i=0; i<3; i++ ) {
-      if ( w[i]>sigy ) { w[i] = sigy; any_cut = 1; }
-    }
+    if ( tension_cap && direct_cap_principal_values( w, sigy ) ) any_cut = 1;
     // re-sort after the cap (capping the maximum can change the order)
     for ( i=0; i<3; i++ )
       for ( j=i+1; j<3; j++ )
@@ -253,58 +294,106 @@ void materi_direct_full_mc( long int element, long int gr,
   }
 }
 
+// direct_flow_factor - M/G for the plane-mode phi_flow return of
+// materi_direct_cutoff: M = n_i n_j C_ijkl n_k n_l (constrained modulus
+// normal to the plane) and G = 0.5 t_i n_j C_ijkl (t_k n_l + n_k t_l)
+// (shear modulus for a slip along t = tau/|tau| on the plane), from the
+// 4th-order elastic stiffness C (MDIM^4, row-major, as Cmem in
+// set_stress). Returns 2 (the Professional constant, M/G at poisson = 0)
+// when C gives no positive M and G.
+double direct_flow_factor( double C[], double n[], double tau[],
+  double tau_norm )
+
+{
+  long int i=0, j=0, k=0, l=0;
+  double M=0., G=0., t[MDIM], cijkl=0.;
+
+  for ( i=0; i<MDIM; i++ ) t[i] = ( i<ndim ) ? tau[i]/tau_norm : 0.;
+  for ( i=0; i<MDIM; i++ )
+    for ( j=0; j<MDIM; j++ )
+      for ( k=0; k<MDIM; k++ )
+        for ( l=0; l<MDIM; l++ ) {
+          cijkl = C[((i*MDIM+j)*MDIM+k)*MDIM+l];
+          if ( cijkl==0. ) continue;
+          M += n[i]*n[j]*cijkl*n[k]*n[l];
+          G += 0.5*t[i]*n[j]*cijkl*( t[k]*n[l] + n[k]*t[l] );
+        }
+  if ( M>0. && G>0. ) return M/G;
+  return 2.;
+}
+
 // materi_direct_cutoff - group_materi_plasti_mohr_coul_direct(_normal[_
-// automatic]) + group_materi_plasti_tension_direct(_normal[_automatic]).
+// automatic]) + group_materi_plasti_tension_direct(_normal[_automatic]),
+// plane mode (at least one of the two laws has a plane normal; manual
+// Professional 6.725-6.740, verified against the Professional 02-08-2026).
 //
 // The "_direct" plastic laws are DIRECT STRESS CUT-OFFS (no plastic
 // strains; the manual: "cut off by Tochnog", tension_direct "does not use
-// plastic strains"). They limit the traction on a SPECIFIC PLANE with
-// normal vector n:
+// plastic strains"). Each law has its OWN plane (mc_normal, ten_normal;
+// zero when the law has no normal). On a plane with normal n:
 //   traction    t  = sig . n
 //   normal      sig_n = n . t
 //   tangential  tau  = t - sig_n n
+// (tochnog stress convention: tension POSITIVE).
 //
-//   tension_direct sigy:          if sig_n > sigy -> sig_n = sigy
-//   mohr_coul_direct phi c phi_flow: if |tau| > c - sig_n*tan(phi)
-//                                  -> |tau| scaled to the limit
-//   (tochnog stress convention: traction POSITIVE. Compression sig_n<0
-//   increases the friction limit, floor at 0.)
-//
-// The normal is either given explicitly (_normal nx ny nz) or taken from
-// the element normal (_normal_automatic -yes). The correction modifies
-// sig and the consistent tangent ddsdde via the projection operator
-// P = I - n tensor n (the normal component is capped; the tangential
-// part is scaled to the limit).
+// 1) Tension first. sigy = tension_direct, or 0 when only
+//    mohr_coul_direct is given (manual 6.738). With its own normal the
+//    tension law caps sig_n <= sigy on that plane; without it the
+//    principal stresses are capped at sigy.
+// 2) Then Mohr-Coulomb on the MC plane with the updated stress (sn, tau
+//    = |tau|). When tau > max(c - sn tan(phi), 0) the state returns along
+//    the non-associative flow direction (phi_flow = psi), changing ONLY
+//    sn and tau:
+//      k       = (M/G) tan(psi)
+//      tau_new = max( (c - sn tan(phi) + k tan(phi) tau) / (1 + k tan(phi)), 0 )
+//      sn_new  = sn - k (tau - tau_new)
+//    M = n.C.n.n.n is the constrained (oedometric) modulus and G the
+//    shear modulus on the plane, both from the elastic stiffness C of
+//    the element (elastic_stiffness, built in set_stress); the ratio
+//    M/G is the consistent elastic return of the slip plastic strain
+//    (shear slip gives dtau = -G dlambda, dilatancy gives dsn = -M
+//    tan(psi) dlambda). Without usable elastic data (M or G <= 0, e.g.
+//    a umat law) k = 2 tan(psi), the Professional constant (equal to
+//    M/G only for poisson = 0). Documented divergence: the Professional
+//    always uses k = 2 tan(psi). The floor tau_new = 0 keeps sn_new =
+//    sn - k tau (verified against the Professional beyond the apex).
+//    Without an MC normal the MC law is the full principal cut-off
+//    (materi_direct_full_mc without its tension step).
 void materi_direct_cutoff( long int element, long int gr,
   long int plasti_on_boundary, double dtime,
-  double new_sig[], double /*ddsdde*/[], double direct_normal[] )
+  double new_sig[], double ddsdde[], double mc_normal[],
+  double ten_normal[], double elastic_stiffness[] )
 
 {
-  long int idim=0, jdim=0, mc_active=0, ten_active=0,
-    visco_mc=0, visco_ten=0, ldum=0, idum[1];
-  double phi=0., c=0., sigy=0., sig_n=0., tau_norm=0.,
-    max_fric=0., scale=0., factor=0., normal[MDIM], tau[MDIM],
-    plasti_data[DATA_ITEM_SIZE], tm=0.;
+  long int idim=0, jdim=0, mc_active=0, ten_record=0, ten_active=0,
+    mc_plane=0, ten_plane=0, ldum=0, idum[1];
+  double phi=0., c=0., phi_flow=0., sigy=0., sig_n=0., tau_norm=0.,
+    max_fric=0., scale=0., factor_mc=1., factor_ten=1., n_mc[MDIM],
+    n_ten[MDIM], tau[MDIM], t[MDIM], plasti_data[DATA_ITEM_SIZE];
 
-  array_set( normal, 0., MDIM );
-  array_move( direct_normal, normal, MDIM );
-  if ( !array_normalize( normal, MDIM ) ) return;
+  array_move( mc_normal, n_mc, MDIM );
+  array_move( ten_normal, n_ten, MDIM );
+  mc_plane = array_normalize( n_mc, MDIM ) ? 1 : 0;
+  ten_plane = array_normalize( n_ten, MDIM ) ? 1 : 0;
 
   mc_active = get_group_data( GROUP_MATERI_PLASTI_MOHR_COUL_DIRECT, gr,
     element, new_sig, plasti_data, ldum, GET_IF_EXISTS );
-  if ( mc_active ) { phi = plasti_data[0]; c = plasti_data[1]; }
+  if ( mc_active ) {
+    phi = plasti_data[0]; c = plasti_data[1]; phi_flow = plasti_data[2];
+  }
   // wall values (element attached to a wall) and visco relaxation time
   if ( mc_active && plasti_on_boundary ) {
     if ( get_group_data( GROUP_MATERI_PLASTI_MOHR_COUL_DIRECT_WALL, gr,
         element, new_sig, plasti_data, ldum, GET_IF_EXISTS ) ) {
-      phi = plasti_data[0]; c = plasti_data[1];
+      phi = plasti_data[0]; c = plasti_data[1]; phi_flow = plasti_data[2];
     }
   }
+  // visco factor: f = 1 - exp(-dt/tm); f->0 elastic (dt<<tm), f->1 full cut
   if ( mc_active ) {
     if ( get_group_data( GROUP_MATERI_PLASTI_MOHR_COUL_DIRECT_VISCO, gr,
         element, new_sig, plasti_data, ldum, GET_IF_EXISTS ) ) {
-      visco_mc = 1;
-      tm = plasti_data[0];
+      double tm = plasti_data[0];
+      factor_mc = 1. - exp( -dtime / ( (tm>0.) ? tm : 1. ) );
     }
   }
   // group_materi_plasti_bounda/_factor (Professional 6.231/6.232 aliases
@@ -324,65 +413,90 @@ void materi_direct_cutoff( long int element, long int gr,
 
   // control_materi_plasti_tension_apply -no (manual Professional
   // 6.150): ignore any tension-plasticity data for these timesteps
-  // (the Mohr-Coulomb direct cutoff stays active)
-  ten_active = !control_materi_gate_off( CONTROL_MATERI_PLASTI_TENSION_APPLY ) &&
+  // (the Mohr-Coulomb direct cutoff stays active, with its default
+  // sigy = 0 as in materi_direct_full_mc)
+  ten_record = !control_materi_gate_off( CONTROL_MATERI_PLASTI_TENSION_APPLY ) &&
     get_group_data( GROUP_MATERI_PLASTI_TENSION_DIRECT, gr,
     element, new_sig, plasti_data, ldum, GET_IF_EXISTS );
-  if ( ten_active ) { sigy = plasti_data[0]; }
-  if ( ten_active && plasti_on_boundary ) {
-    if ( get_group_data( GROUP_MATERI_PLASTI_TENSION_DIRECT_WALL, gr,
-        element, new_sig, plasti_data, ldum, GET_IF_EXISTS ) ) {
-      sigy = plasti_data[0];
+  if ( ten_record ) {
+    sigy = plasti_data[0];
+    if ( plasti_on_boundary ) {
+      if ( get_group_data( GROUP_MATERI_PLASTI_TENSION_DIRECT_WALL, gr,
+          element, new_sig, plasti_data, ldum, GET_IF_EXISTS ) ) {
+        sigy = plasti_data[0];
+      }
     }
-  }
-  if ( ten_active ) {
     if ( get_group_data( GROUP_MATERI_PLASTI_TENSION_DIRECT_VISCO, gr,
         element, new_sig, plasti_data, ldum, GET_IF_EXISTS ) ) {
-      visco_ten = 1;
-      tm = plasti_data[0];
+      double tm = plasti_data[0];
+      factor_ten = 1. - exp( -dtime / ( (tm>0.) ? tm : 1. ) );
     }
   }
-  // visco factor: f = 1 - exp(-dt/tm); f->0 elastic (dt<<tm), f->1 plastic
-  factor = 1. - exp( -dtime / ( (tm>0.) ? tm : 1. ) );
+  // 6.738: if tension_direct is not specified, sigy is set to 0 when the
+  // mohr_coul_direct is available for the group
+  ten_active = ten_record || mc_active;
 
-  // traction t = sig . n  (3x3 stress stored row-major; only ndim used)
-  double t[MDIM];
+  // 1) tension step
+  if ( ten_active ) {
+    if ( ten_plane ) {
+      // cap the normal traction on the tension plane
+      sig_n = 0.;
+      for ( idim=0; idim<ndim; idim++ )
+        for ( jdim=0; jdim<ndim; jdim++ )
+          sig_n += n_ten[idim] * new_sig[idim*MDIM+jdim] * n_ten[jdim];
+      if ( sig_n > sigy ) {
+        double corr = ( sig_n - sigy ) * factor_ten;
+        for ( idim=0; idim<ndim; idim++ )
+          for ( jdim=0; jdim<ndim; jdim++ )
+            new_sig[idim*MDIM+jdim] -= corr * n_ten[idim] * n_ten[jdim];
+      }
+    }
+    else
+      materi_direct_principal_cap( new_sig, sigy );
+  }
+
+  // 2) Mohr-Coulomb step
+  if ( !mc_active ) return;
+  if ( !mc_plane ) {
+    materi_direct_full_mc( element, gr, plasti_on_boundary, dtime,
+      new_sig, ddsdde, 0 );
+    return;
+  }
+  // traction on the MC plane, from the stress after the tension step
   for ( idim=0; idim<ndim; idim++ ) {
     t[idim] = 0.;
     for ( jdim=0; jdim<ndim; jdim++ )
-      t[idim] += new_sig[idim*MDIM+jdim] * normal[jdim];
+      t[idim] += new_sig[idim*MDIM+jdim] * n_mc[jdim];
   }
   sig_n = 0.;
-  for ( idim=0; idim<ndim; idim++ ) sig_n += normal[idim] * t[idim];
-  for ( idim=0; idim<ndim; idim++ ) tau[idim] = t[idim] - sig_n*normal[idim];
+  for ( idim=0; idim<ndim; idim++ ) sig_n += n_mc[idim] * t[idim];
+  for ( idim=0; idim<ndim; idim++ ) tau[idim] = t[idim] - sig_n*n_mc[idim];
   tau_norm = 0.;
   for ( idim=0; idim<ndim; idim++ ) tau_norm += tau[idim]*tau[idim];
   tau_norm = sqrt( tau_norm );
 
-  // tension cut-off: cap the normal traction
-  if ( ten_active && sig_n > sigy ) {
-    double corr = sig_n - sigy;   // reduce sig_n to sigy
-    if ( visco_ten ) corr *= factor;   // visco: partial relaxation
-    for ( idim=0; idim<ndim; idim++ )
-      for ( jdim=0; jdim<ndim; jdim++ )
-        new_sig[idim*MDIM+jdim] -= corr * normal[idim] * normal[jdim];
-    sig_n = sigy;
-  }
-
-  // Mohr-Coulomb cut-off on the plane: cap |tau| at the friction limit
-  if ( mc_active ) {
-    max_fric = c - sig_n * tan( phi );
-    if ( max_fric < 0. ) max_fric = 0.;
-    if ( tau_norm > max_fric && tau_norm > 0. ) {
-      scale = max_fric / tau_norm;
-      if ( visco_mc ) scale = 1. - factor*(1.-scale);   // visco: partial
-      // new_sig -= (1-scale)*(tau x n + n x tau)  (symmetric correction)
-      for ( idim=0; idim<ndim; idim++ ) {
-        for ( jdim=0; jdim<ndim; jdim++ ) {
-          double corr = (1.-scale) * ( tau[idim]*normal[jdim] +
-            normal[idim]*tau[jdim] );
-          new_sig[idim*MDIM+jdim] -= corr;
-        }
+  max_fric = c - sig_n * tan( phi );
+  if ( max_fric < 0. ) max_fric = 0.;
+  if ( tau_norm > max_fric && tau_norm > 0. ) {
+    double tan_phi = tan( phi ), k_flow = 0., tau_new = 0., dsig_n = 0.;
+    if ( phi_flow!=0. )
+      k_flow = direct_flow_factor( elastic_stiffness, n_mc, tau,
+        tau_norm ) * tan( phi_flow );
+    if ( 1.+k_flow*tan_phi < 1.e-12 ) k_flow = 0.;   // degenerate data
+    tau_new = ( c - sig_n*tan_phi + k_flow*tan_phi*tau_norm ) /
+      ( 1. + k_flow*tan_phi );
+    if ( tau_new < 0. ) tau_new = 0.;
+    dsig_n = - k_flow * ( tau_norm - tau_new ) * factor_mc;
+    scale = tau_new / tau_norm;
+    scale = 1. - factor_mc*(1.-scale);   // visco: partial
+    // new_sig -= (1-scale)*(tau x n + n x tau)  (symmetric correction)
+    // new_sig += dsig_n n x n                   (dilatant normal shift)
+    for ( idim=0; idim<ndim; idim++ ) {
+      for ( jdim=0; jdim<ndim; jdim++ ) {
+        double corr = (1.-scale) * ( tau[idim]*n_mc[jdim] +
+          n_mc[idim]*tau[jdim] );
+        new_sig[idim*MDIM+jdim] -= corr;
+        new_sig[idim*MDIM+jdim] += dsig_n * n_mc[idim] * n_mc[jdim];
       }
     }
   }
@@ -407,7 +521,7 @@ void set_stress( long int element, long int gr,
   double &new_f, double &new_substeps, double old_deften[], double new_deften[],
   double inc_rot[], double ddsdde[],
    double &viscosity, double &viscosity_heat_generation, double &softvar_nonl,
-   double &softvar_l, double direct_normal[] )
+   double &softvar_l, double mc_normal[], double ten_normal[] )
 
   // Solid materials.
 
@@ -1616,17 +1730,35 @@ void set_stress( long int element, long int gr,
           // Without a plane normal (_normal / _normal_automatic) the
           // direct records are the FULL Mohr-Coulomb / tension spectral
           // cut-offs on the principal stresses (manual Professional
-          // 6.726/6.738); with a plane normal they limit the traction on
-          // that specific plane (6.727/6.739, handled by
-          // materi_direct_cutoff).
-          double normal_test[MDIM];
-          array_move( direct_normal, normal_test, MDIM );
-          if ( !array_normalize( normal_test, MDIM ) )
+          // 6.726/6.738); when either law has a plane normal, each law
+          // with a normal limits the traction on its own plane
+          // (6.727/6.739, handled by materi_direct_cutoff).
+          double mc_test[MDIM], ten_test[MDIM];
+          array_move( mc_normal, mc_test, MDIM );
+          array_move( ten_normal, ten_test, MDIM );
+          if ( !array_normalize( mc_test, MDIM ) &&
+               !array_normalize( ten_test, MDIM ) )
             materi_direct_full_mc( element, gr, plasti_on_boundary, dtime,
-              new_sig, ddsdde );
-          else
+              new_sig, ddsdde, 1 );
+          else {
+            // elastic stiffness of the element for the phi_flow return
+            // (the same linear stiffness that fills ddsdde below)
+            double Cel[MDIM][MDIM][MDIM][MDIM];
+            for ( idim=0; idim<MDIM; idim++ )
+              for ( jdim=0; jdim<MDIM; jdim++ )
+                for ( kdim=0; kdim<MDIM; kdim++ )
+                  for ( ldim=0; ldim<MDIM; ldim++ ) {
+                    Cel[idim][jdim][kdim][ldim] =
+                      Cmem[idim][jdim][kdim][ldim] +
+                      Cuser[idim][jdim][kdim][ldim] +
+                      Chyper[idim][jdim][kdim][ldim] +
+                      Chypo[idim][jdim][kdim][ldim];
+                    if ( compressibility!=0. && idim==jdim && kdim==ldim )
+                      Cel[idim][jdim][kdim][ldim] += 1./compressibility;
+                  }
             materi_direct_cutoff( element, gr, plasti_on_boundary, dtime,
-              new_sig, ddsdde, direct_normal );
+              new_sig, ddsdde, mc_normal, ten_normal, &Cel[0][0][0][0] );
+          }
         }
         materi_compression_cutoff( element, gr, dtime, new_sig );
       }
