@@ -106,18 +106,21 @@ except the curved quadratic sides (see below).
   A `-no` law never reads the record: with both normals zero
   `set_stress()` takes the full principal-stress cut-off
   (`materi_direct_full_mc`), as the Professional. The zero-normal input
-  error below still uses the group-level `element_normal_automatic()`,
-  so it does not fire when the OTHER law has an explicit normal
-  (pending, see `group_materi_plasti_mohr_coul_direct.md`).
+  error below applies the same per-law rule (2026-10-03).
 
 ## Zero-normal input error (2026-10-01)
 
 - `area.cc` `element_normal_automatic( gr )` (prototype in both headers):
-  returns the `_normal_automatic` record of group `gr` that is switched
-  `-YES` and actually defines the plane, i.e. 0 when the group has an
-  explicit `GROUP_MATERI_PLASTI_MOHR_COUL_DIRECT_NORMAL` or
-  `..._TENSION_DIRECT_NORMAL` (they take precedence in `materi()`).
-  Tension is tested before mohr_coul.
+  returns the first `_normal_automatic` record of group `gr` that is
+  switched `-YES` and actually defines the plane of ITS OWN law, i.e. a
+  law is skipped only when that same law has an explicit
+  `GROUP_MATERI_PLASTI_TENSION_DIRECT_NORMAL` /
+  `..._MOHR_COUL_DIRECT_NORMAL` (same precedence as `direct_normal_get()`
+  in `materi.cc`); the explicit normal of the other law does not count.
+  Tension is tested before mohr_coul. Until 2026-10-03 the check was
+  group-level (any explicit normal returned 0), so explicit MC normal +
+  `tension_direct_normal_automatic -yes` on a zero-normal element ran
+  silently with the tension principal cap.
 - `area.cc` `element_normal_set()`: when the normalized element normal is
   zero, the element has a side table (`element_normal_sides()`, i.e. an
   isoparametric element that reaches `materi()`) and
@@ -157,6 +160,14 @@ Error detected for record : 0
   `element_normal2d_row_explicit1` (explicit normal 0 1) and
   `element_normal2d_row_layer1` (automatic group only on the end
   elements) run on both binaries with identical `.dbs` values.
+- Per-law tests (2026-10-03): `element_normal2d_row_mixed_error1`
+  (explicit MC normal 0 1 + `tension_direct_normal_automatic -yes`, same
+  row; expected error naming element 2 and the tension records; old
+  binary rc 0, Professional assertion `!array_null( directions,
+  MDIM*MDIM )`) and `element_normal2d_row_mixed1` (explicit tension
+  normal + `mohr_coul_direct_normal_automatic -yes` on the end elements
+  only, nonzero normals; runs, elastic values equal to the
+  Professional).
 
 ## Hardcoded parameters
 

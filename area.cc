@@ -2000,21 +2000,21 @@ long int element_normal_needed( void )
 long int element_normal_automatic( long int gr )
 
   // the _normal_automatic record of group gr that is switched -yes and
-  // actually defines the direct cut-off plane (an explicit
-  // group_materi_plasti_*_direct_normal takes precedence in materi());
-  // 0 when the group does not use the automatic element normal
+  // actually defines the plane of its OWN law (the explicit normal of the
+  // same law takes precedence, as in direct_normal_get, materi.cc; the
+  // explicit normal of the other law does not); 0 when no law of the
+  // group uses the automatic element normal
 
 {
   long int swit=-NO, ldum=0, i=0;
   double ddum[1];
   long int automatic[2] = { GROUP_MATERI_PLASTI_TENSION_DIRECT_NORMAL_AUTOMATIC,
     GROUP_MATERI_PLASTI_MOHR_COUL_DIRECT_NORMAL_AUTOMATIC };
+  long int explicit_normal[2] = { GROUP_MATERI_PLASTI_TENSION_DIRECT_NORMAL,
+    GROUP_MATERI_PLASTI_MOHR_COUL_DIRECT_NORMAL };
 
-  if ( db_active_index( GROUP_MATERI_PLASTI_MOHR_COUL_DIRECT_NORMAL, gr,
-      VERSION_NORMAL ) ) return 0;
-  if ( db_active_index( GROUP_MATERI_PLASTI_TENSION_DIRECT_NORMAL, gr,
-      VERSION_NORMAL ) ) return 0;
   for ( i=0; i<2; i++ ) {
+    if ( db_active_index( explicit_normal[i], gr, VERSION_NORMAL ) ) continue;
     if ( !db_active_index( automatic[i], gr, VERSION_NORMAL ) ) continue;
     swit = -NO;
     db( automatic[i], gr, &swit, ddum, ldum, VERSION_NORMAL, GET );
