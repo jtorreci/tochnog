@@ -47,3 +47,9 @@ feature in `ProjectDocs/SEGUIMIENTO-CONVERGENCIA.md`:
   Incremental builds mix old/new enums and corrupt the binary.
 - Linking to `/tmp` and copying the binary to `build/` avoids I/O failures.
 - `tochnog.h` and `tochnog-mod.h` must stay in sync (same enum, same order).
+- When copying the source to a scratch directory for a build, exclude
+  `.codegraph/` (and `.git/`): rsync exits with code 24 on the live index
+  files and, under `set -e`, the build silently never starts.
+- Running `build/tochnog` outside `scripts/build_safe.sh` needs
+  `LD_LIBRARY_PATH=external-downloads/numlib-runtime` (no system
+  `liblapack.so.3`).
