@@ -227,6 +227,28 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
   round-off level only, 2.8e-14).
 - **Evidence**: `manual-developer/element_normal.md`. Residuals: C14.
 
+### R10. Default material memory: `-updated` instead of the Professional `-updated_linear` (old C16, 2026-10-04)
+
+- **Was**: with no `group_materi_memory` record the GNU used `-updated`
+  (hard-coded at five places), the Professional behaves as
+  `-updated_linear`: single quad4 simple shear gamma 1, GNU
+  0.2311 / 0.4207 / -0.2286 vs Pro 0 / 0.5 / 0 (sxx / sxy / syy); the
+  2-quad4 column of C14 sheared by 1 was nonlinear in the GNU only.
+- **Resolution**: `materi_memory_default()` (general.cc) gives
+  `-updated_linear`, or `-updated` with `control_materi_updated_apply
+  -yes` at the current timestep (manual 6.152); assigned before every
+  memory read (materi, set_deften_etc, stress, elem, tendon); the
+  reference-geometry gradient stays limited to an explicit
+  `-updated_linear` (`d8117aa`).
+- **Acceptance**: `validation-suite/test-2026/materi_memory_default_shear1`
+  (= Pro; rc=1 on the pre-fix binary), `materi_memory_default_stretch1`
+  (= Pro 0.695653), `materi_memory_default_updated_apply1` (manual
+  semantics, see C21); validation-suite 233/1, test-2026, sfnet 187
+  unchanged; Pro `other` mohr_coul_direct6/8 now pass, `hypo12` becomes
+  a marginal miss (C22).
+- **Evidence**: `manual-developer/group_materi_memory_default.md`,
+  `control_materi_updated_apply.md`. Residuals: C18-C22.
+
 ---
 
 ## B. sfnet 197 — the 9 RUNFAIL (all out-of-scope)
@@ -652,7 +674,7 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
   tension law has no normal, phi_flow return changing only sn and tau),
   reproduced to 4-5 digits on probes c01-c25; the phi_flow factor is a
   deliberate divergence (C15) and the remaining large-strain difference
-  of the column is C16. Original note: not a normal issue
+  of the column is C18 (was C16). Original note: not a normal issue
   but found with it: `mohr_coul_direct 0 0 0` + `_normal_automatic` on the
   upper element of the 2-quad4 column, top sheared by 1 (100
   iterations): both binaries use the normal (0,-1), the shear moves to the
@@ -687,23 +709,6 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
 - **Effort**: **cheap** (switch to the constant if convergence is
   preferred).
 
-### C16. Large-strain elastic response of the default memory differs from the Professional
-
-- **Symptom**: column of 2 quad4 (the `element_normal2d_column1` mesh),
-  top sheared by 1, purely elastic: the GNU response is nonlinear even
-  with a fixed mesh, the Professional stays linear. Node 5 `sigxy` GNU
-  0.19 vs Pro 0.25; node 3 `disx` 0.537 vs 0.5. Found while comparing the
-  plane direct cut-off (C14 item 4); small-strain probes (strain 1e-3)
-  show the same family at 0.1-0.2 % (e.g. sxy 6.38305e-4 vs 6.39622e-4),
-  and vanish with `group_materi_memory -total_linear`.
-- **Evidence**: probes `col/elas`, `col/big` (C14 scratch, 2026-10-02);
-  related: mohr_coul_direct6/7/8 (single 100 % shear increment, default
-  `-updated` element kinematics, `manual-developer/group_materi_plasti_mohr_coul_direct.md`).
-- **Proposed fix**: measure the Professional default kinematics for
-  velocity-driven models (linear vs updated) and align the GNU default
-  or document it; overlaps C8.
-- **Effort**: **medium**.
-
 ### C17. `materi_direct_mc` (validation-suite) target stale after C14 — RESOLVED 2026-10-03
 
 - **Resolution**: input corrected to constrain `vely` at all four nodes
@@ -726,6 +731,64 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
 - **Proposed fix**: corpus decision — constrain nodes 2 and 3 (the
   probable intent) or recalibrate the target; not done in C14 (the
   validation-suite was outside its edit surface).
+- **Effort**: **cheap**.
+
+### C18. Default memory with `materi_displacement`: the Professional behaves as `-total_linear`
+
+- **Symptom**: after R10 the GNU default is `-updated_linear` for every
+  kinematics. With `materi_displacement` and no memory record the
+  Professional responds as `-total_linear` (no coordinate update). The
+  C14 column (2 quad4, top sheared by 1) still differs: node 3 `disx`
+  GNU 0.472 vs Pro 0.5. The GNU updates the coordinates for every memory
+  except `-TOTAL_LINEAR` (`elem.cc`, around line 569).
+- **Rejected**: mapping the default to `-total_linear` when
+  `materi_displacement` is initialized (variant A2) breaks Pro
+  `mohr_coul_direct7` and sfnet `temp5`.
+- **Proposed fix**: resolve together with the mesh default (C8).
+- **Effort**: **large** (tied to C8).
+
+### C19. Explicit `-updated_linear` on a `-follow_material` mesh: reference vs current gradient
+
+- **Symptom**: uniaxial stretch to twice the length, explicit
+  `group_materi_memory -updated_linear` and `mesh -follow_material`:
+  the Professional builds the increment on the current geometry
+  (sigxx 0.69565), the GNU on the reference geometry (`NODE_START_REFINED`,
+  sigxx 1.0). The default memory already uses the current geometry
+  (R10). Measured as a bar in
+  `manual-developer/group_materi_memory_updated_linear.md` section 6.
+- **Proposed fix**: drop the reference path once the mesh default (C8)
+  matches the Professional `-fixed_in_space`.
+- **Effort**: **medium**.
+
+### C20. `-updated_jaumann` memory not implemented
+
+- **Symptom**: manual Professional 6.685 lists `-updated_jaumann`; the GNU
+  does not accept it.
+- **Proposed fix**: add the value with a Jaumann stress rate; verify
+  against the Professional in simple shear.
+- **Effort**: **medium**.
+
+### C21. `control_materi_updated_apply -yes`: the Professional ignores its manual (deliberate divergence)
+
+- **Symptom**: manual 6.152: `-yes` makes any non-specified memory
+  `-updated`. The Professional 02-08-2026 binary ignores it (simple shear
+  stays 0 / 0.5 / 0 for displacement, `-follow_material` and
+  `-fixed_in_space` kinematics, index 0 and 1). The GNU follows the
+  manual: 0.231098 / 0.420739 / -0.228598.
+- **Decision**: project owner, 2026-10-04: follow the manual.
+- **Evidence**: `validation-suite/test-2026/materi_memory_default_updated_apply1.dat`
+  (the Professional fails its targets); no corpus input uses `-yes`.
+- **Effort**: **cheap** (drop the `-yes` branch of
+  `materi_memory_default()` if the binary behaviour is preferred).
+
+### C22. `hypo12` (Pro `other`) marginal target miss after R10
+
+- **Symptom**: Masin model without a memory record; with the
+  `-updated_linear` default `sigyy` misses its target by 1.02e-3 for a
+  tolerance of 1e-3 (passed with the old `-updated` default). The file
+  belongs to the Professional distribution; its target is not edited.
+- **Proposed fix**: none required; revisit with the Masin kernel
+  calibration.
 - **Effort**: **cheap**.
 
 ---
@@ -757,9 +820,13 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
 | C13 | — | `control_solver_bicg_stop` at the timestep index: Pro reads index 0 only (deliberate divergence) | LOW | cheap |
 | C14 | — | `element_normal`: curved quadratic sides, `node_normal`/`element_boundary`/`global_normal` not implemented (zero normal and plane MC direct return resolved) | LOW | cheap |
 | C15 | — | plane direct cut-off phi_flow factor M/G vs Pro 2 (deliberate divergence) | LOW | cheap |
-| C16 | — | large-strain elastic response of the default memory vs Pro (shear 1 column) | MEDIUM | medium |
+| C18 | — | default memory with `materi_displacement`: Pro behaves as `-total_linear` (column disx 0.472 vs 0.5) | MEDIUM | large |
+| C19 | — | explicit `-updated_linear` on `-follow_material`: GNU reference gradient vs Pro current | LOW | medium |
+| C20 | — | `-updated_jaumann` not implemented | LOW | medium |
+| C21 | — | `control_materi_updated_apply -yes`: Pro ignores its manual (deliberate divergence) | LOW | cheap |
+| C22 | Pro `other` | `hypo12` marginal sigyy target miss after the default-memory change | LOW | cheap |
 
-Twenty-four items remain open: nine MEDIUM and fifteen LOW. No open issue is CRITICAL or
+Twenty-eight items remain open: nine MEDIUM and nineteen LOW. No open issue is CRITICAL or
 HIGH. The validation-suite corpus has no open failure — its 233 real tests
 pass (`materi_direct_mc` input corrected, C17 resolved). Every remaining failure is a stale or malformed test, an out-of-scope model
 or infrastructure limit, a narrow post-processing divergence, a corpus-coverage

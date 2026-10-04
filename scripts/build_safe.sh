@@ -1353,6 +1353,26 @@ expected_error_ok "$T2026" element_normal2d_row_mixed_error1
 run_ok "$T2026" element_normal2d_row_mixed1
 
 # ---------------------------------------------------------------------
+# C16 default group_materi_memory (2026-10-04): an unspecified memory
+# behaves as -updated_linear, as in the Professional 02-08-2026.
+#   materi_memory_default_shear1: single quad4 simple shear gamma=1,
+#     no memory record -> sigxy 0.5, sigxx = sigyy = 0 (= Pro; before
+#     C16 GNU gave the -updated values 0.2311/0.4207/-0.2286).
+#   materi_memory_default_stretch1: -follow_material uniaxial stretch
+#     to twice the length, no memory record -> sigxx 0.695653 (= Pro):
+#     the default must keep the current-geometry gradient (the explicit
+#     -updated_linear reference gradient would give 1).
+#   materi_memory_default_updated_apply1: same shear, no memory record,
+#     control_materi_updated_apply 0 -yes -> -updated values sigxx
+#     0.231098, sigxy 0.420739, sigyy -0.228598 (manual Professional
+#     6.152). DOCUMENTED DIVERGENCE: the Professional 02-08-2026 binary
+#     ignores -yes for a non-specified memory (0 / 0.5 / 0).
+# ---------------------------------------------------------------------
+run_ok "$T2026" materi_memory_default_shear1
+run_ok "$T2026" materi_memory_default_stretch1
+run_ok "$T2026" materi_memory_default_updated_apply1
+
+# ---------------------------------------------------------------------
 # Sub-sprint materi_stress_force, lote 2 (integracion 2D quad4/quad9):
 # verificacion ANALITICA por estatica. Decisiones de diseno (manual-
 # developer/post_calcul_materi_stress_force.md): caras extremas = las
