@@ -1,0 +1,37 @@
+(materi_damage stress, load then hold: eps = 6e-4 in 60 steps, then 60 steps
+ at constant strain (d constant). The damaged stress must stay
+ (1-d)*E*eps = 85598.32178 (Pro 02-08-2026: 85598.32178). Before the
+ 2026-09-29 fix the GNU multiplied the carried damaged stress again by (1-d)
+ every step: the stress decayed to ~0 during the hold)
+
+echo -no
+number_of_space_dimensions 1
+materi_velocity
+materi_displacement
+materi_strain_elasti
+materi_strain_total
+materi_stress
+materi_damage
+end_initia
+
+node 1  0
+node 2  1
+element 1  -bar2 1 2
+
+group_type 0  -materi
+group_materi_elasti_young 0  23400.e6
+group_materi_damage_mazars 0  2.6e-4 1. 15000. 1.2 649. 1.05
+group_materi_memory 0  -total_linear
+
+bounda_dof 0  1 -velx
+bounda_time    0  0. 0. 100. 0.
+bounda_dof 1  2 -velx
+bounda_time    1  0. 1.  6.e-4 1.  6.0001e-4 0.  1. 0.
+
+control_timestep            0  1.e-5 1.2e-3
+
+target_item 0 -node_dof 2 -sigxx
+target_value 0 85598.32178 1.e-2
+target_item 1 -node_dof 2 -dam
+target_value 1 0.9939032534 1.e-8
+end_data

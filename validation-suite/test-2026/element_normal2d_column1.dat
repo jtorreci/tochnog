@@ -1,0 +1,68 @@
+( element_normal, manual Professional 6.445, with
+  group_materi_plasti_tension_direct_normal_automatic (6.740).
+  2D column of two quad4 in series, the upper element has a zero
+  tension cut-off on the plane of its element_normal; the top is pulled
+  up by 1. The element_normal is the normalized sum of the inward node
+  normals of the mesh boundary: lower element (0,1), upper element (0,-1).
+  The upper element opens freely: disy 0 at nodes 3/4, 1 at nodes 5/6,
+  all stresses 0. Pro 02-08-2026 gives exactly these values.
+  Before the 2026-09-30 fix the GNU took the cross product of two
+  element edges, (0,0,1) in 2D, and the cut-off never acted:
+  disy 0.5099 at nodes 3/4, sigyy 0.48. )
+
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_displacement
+materi_strain_total
+materi_stress
+end_initia
+
+node 1  0 0
+node 2  1 0
+node 3  0 1
+node 4  1 1
+node 5  0 2
+node 6  1 2
+element 1  -quad4 1 2 3 4
+element 2  -quad4 3 4 5 6
+
+element_group 1 1
+element_group 2 2
+
+group_type 1  -materi
+group_materi_elasti_young 1  1.0
+
+group_type 2  -materi
+group_materi_elasti_young 2  1.0
+group_materi_plasti_tension_direct 2  0.0
+group_materi_plasti_tension_direct_normal_automatic 2  -yes
+
+bounda_dof  0  -ra 1 2 -ra -velx -vely
+bounda_dof  1  -ra 5 6 -ra -vely
+bounda_time 1  1.
+
+control_timestep 0  1. 1.
+control_timestep_iterations 0 5
+
+target_item    0  -element_normal 1 1
+target_value   0  1. 1.e-10
+target_item    1  -element_normal 2 1
+target_value   1  -1. 1.e-10
+target_item    2  -element_normal 1 0
+target_value   2  0. 1.e-10
+target_item    3  -node_dof 3 -disy
+target_value   3  0. 1.e-8
+target_item    4  -node_dof 4 -disy
+target_value   4  0. 1.e-8
+target_item    5  -node_dof 5 -disy
+target_value   5  1. 1.e-8
+target_item    6  -node_dof 1 -sigyy
+target_value   6  0. 1.e-8
+target_item    7  -node_dof 3 -sigyy
+target_value   7  0. 1.e-8
+target_item    8  -node_dof 6 -sigyy
+target_value   8  0. 1.e-8
+target_item    9  -node_dof 3 -sigxx
+target_value   9  0. 1.e-8
+end_data

@@ -1,0 +1,77 @@
+( element_normal, manual Professional 6.445, 3D, with
+  group_materi_plasti_tension_direct_normal_automatic (6.740).
+  Column of two hex8 in series (the 3D analogue of the Professional test
+  tension_direct1): the upper element has a zero tension cut-off on the
+  plane of its element_normal, the top face is pulled up by 1. The four
+  lateral faces of each element cancel, the free bottom/top face remains:
+  element_normal of the lower element (0,0,1), of the upper element
+  (0,0,-1). The upper element opens freely: disz 0 at the middle nodes
+  5-8, 1 at the top nodes 9-12, sigzz 0 everywhere (the lateral
+  displacements are suppressed; the equilibrium iterations converge
+  linearly, hence 200 iterations and a 1.e-6 tolerance).
+  Pro 02-08-2026 gives these values (to 1.e-13). Before the 2026-09-30 fix
+  the GNU took the cross product of two edges of the first element face,
+  (0,0,1) for this numbering, which happens to be the right plane here
+  but the wrong one for general meshes (see element_normal3d_distorted1). )
+
+echo -no
+number_of_space_dimensions 3
+materi_velocity
+materi_displacement
+materi_strain_total
+materi_stress
+end_initia
+
+node  1  0 0 0
+node  2  1 0 0
+node  3  0 1 0
+node  4  1 1 0
+node  5  0 0 1
+node  6  1 0 1
+node  7  0 1 1
+node  8  1 1 1
+node  9  0 0 2
+node 10  1 0 2
+node 11  0 1 2
+node 12  1 1 2
+element 1  -hex8 1 2 3 4 5 6 7 8
+element 2  -hex8 5 6 7 8 9 10 11 12
+
+element_group 1 1
+element_group 2 2
+
+group_type 1  -materi
+group_materi_elasti_young 1  1.0
+
+group_type 2  -materi
+group_materi_elasti_young 2  1.0
+group_materi_plasti_tension_direct 2  0.0
+group_materi_plasti_tension_direct_normal_automatic 2  -yes
+
+bounda_dof  0  -ra 1 4 -ra -velx -vely -velz
+bounda_dof  1  -ra 9 12 -ra -velz
+bounda_time 1  1.
+bounda_dof  2  -ra 5 12 -ra -velx -vely
+
+control_timestep 0  1. 1.
+control_timestep_iterations 0 200
+
+target_item    0  -element_normal 1 2
+target_value   0  1. 1.e-10
+target_item    1  -element_normal 2 2
+target_value   1  -1. 1.e-10
+target_item    2  -element_normal 2 0
+target_value   2  0. 1.e-10
+target_item    3  -node_dof 5 -disz
+target_value   3  0. 1.e-6
+target_item    4  -node_dof 8 -disz
+target_value   4  0. 1.e-6
+target_item    5  -node_dof 12 -disz
+target_value   5  1. 1.e-6
+target_item    6  -node_dof 1 -sigzz
+target_value   6  0. 1.e-6
+target_item    7  -node_dof 5 -sigzz
+target_value   7  0. 1.e-6
+target_item    8  -node_dof 9 -sigzz
+target_value   8  0. 1.e-6
+end_data

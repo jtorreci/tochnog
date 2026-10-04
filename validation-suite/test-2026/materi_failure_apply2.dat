@@ -1,0 +1,42 @@
+(materi_failure_apply -no overruled by control_materi_failure_apply 0 -yes:
+ failure active. GNU only: the Pro 02-08-2026 accepts control_materi_failure_apply
+ only without index and stops with a program error when an element fails)
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_displacement
+materi_strain_total
+materi_stress
+end_initia
+node 1 0 0
+node 2 1 0
+node 3 0 1
+node 4 1 1
+node 5 0 2
+node 6 1 2
+element 1 -quad4 1 2 3 4
+element 2 -quad4 3 4 5 6
+element_group 1 0
+element_group 2 1
+group_type 0 -materi
+group_type 1 -materi
+group_materi_elasti_young 0 1000
+group_materi_elasti_poisson 0 0.3
+group_materi_elasti_young 1 1000
+group_materi_elasti_poisson 1 0.3
+group_materi_memory 0 -total_linear
+group_materi_memory 1 -total_linear
+group_materi_failure_rupture 0 0.005 0.2
+geometry_line 1 0 0 0 2 0.01
+geometry_line 2 1 0 1 2 0.01
+bounda_dof 0 -geometry_line 1 -velx
+bounda_dof 1 -geometry_line 1 -vely
+bounda_dof 3 -geometry_line 2 -vely
+bounda_dof 2 -geometry_line 2 -velx
+bounda_time 2 0 0.02 100 0.02
+control_timestep 0 0.05 0.5
+materi_failure_apply -no
+control_materi_failure_apply 0 -yes
+target_item 1 -node_dof 1 -sigxx
+target_value 1 8.07692 1.e-3
+end_data

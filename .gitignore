@@ -9,7 +9,11 @@ __MACOSX/
 
 # Downloads y suites de terceros (no se versionan)
 external-downloads/
-validation-suite/
+validation-suite/*
+# own 2026 regression inputs ARE versioned (outputs are not)
+!validation-suite/test-2026/
+validation-suite/test-2026/*
+!validation-suite/test-2026/*.dat
 
 # Estado local de herramientas (opencode)
 .atl/

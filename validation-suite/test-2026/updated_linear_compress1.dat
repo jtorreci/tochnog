@@ -1,0 +1,40 @@
+( -updated_linear compressibility increment, audit cluster K01.
+  Two bars in series (Pro test other/interac1): bar 1 elastic E=1,
+  bar 2 only group_materi_elasti_compressibility 1. The left node is
+  displaced over 0.01, the right node is fixed. Analytic: both bars
+  take strain -0.005 and stress -0.005.
+  The volumetric increment must come from inc_epe; with new_epe-old_epe
+  and no materi_strain_elasti the total strain was added every step
+  (pre-fix GNU: sigxx -0.01, eptxx node 3 ~ 0).
+  Pro 02-08-2026: sigxx -0.005, eptxx -0.005 at every node. )
+echo -no
+number_of_space_dimensions 1
+materi_velocity
+materi_strain_total
+materi_stress
+end_initia
+node 1  0
+node 2  1
+node 3  2
+element 1  -bar2 1 2
+element 2  -bar2 2 3
+element_group 1 1
+element_group 2 2
+group_type 1  -materi
+group_materi_elasti_young 1  1.
+group_materi_memory 1  -updated_linear
+group_type 2  -materi
+group_materi_elasti_compressibility 2  1.
+group_materi_memory 2  -updated_linear
+bounda_dof 1  1 -velx
+bounda_time 1  0. 0. 1.e-2 1. 2.e-2 0. 1000. 0.
+bounda_dof 2  3 -velx
+bounda_time 2  0. 0. 1000. 0.
+control_timestep 0  1.e-3 1.e-1
+target_item 0  -node_dof 1 -sigxx
+target_value 0  -0.005 1.e-6
+target_item 1  -node_dof 3 -sigxx
+target_value 1  -0.005 1.e-6
+target_item 2  -node_dof 3 -eptxx
+target_value 2  -0.005 1.e-6
+end_data
