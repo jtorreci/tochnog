@@ -569,3 +569,24 @@ long int materi_apply_gate_off( long int global_item, long int control_item )
     GET_IF_EXISTS );
   return swit==-NO;
 }
+
+// Default group_materi_memory when the record is absent (C16). Single
+// source of truth for every GROUP_MATERI_MEMORY reader (materi, stress,
+// elem, tendon): the Professional default behaves as -updated_linear
+// (linear in simple shear, measured on Professional 02-08-2026).
+// control_materi_updated_apply -yes with the index of the current timestep
+// (ICONTROL) makes an unspecified memory -updated (manual Professional
+// 6.152). An explicit group_materi_memory always overrides this default.
+long int materi_memory_default( void )
+{
+  long int icontrol=0, swit=0, ldum=0, max_index=-1;
+  double ddum[1];
+  db_max_index( CONTROL_MATERI_UPDATED_APPLY, max_index, VERSION_NORMAL, GET );
+  if ( max_index>=0 ) {
+    db( ICONTROL, 0, &icontrol, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+    db( CONTROL_MATERI_UPDATED_APPLY, icontrol, &swit, ddum, ldum,
+      VERSION_NORMAL, GET_IF_EXISTS );
+    if ( swit==-YES ) return -UPDATED;
+  }
+  return -UPDATED_LINEAR;
+}

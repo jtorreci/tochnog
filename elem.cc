@@ -189,6 +189,7 @@ void elem( long int element, long int ithread )
 
   db( ELEMENT_GROUP, element, &element_group, ddum, ldum, 
     VERSION_NORMAL, GET_IF_EXISTS );
+  memory = materi_memory_default();
   db( GROUP_MATERI_MEMORY, element_group, &memory, ddum, ldum,
     VERSION_NORMAL, GET_IF_EXISTS );
 
@@ -456,7 +457,8 @@ void elem( long int element, long int ithread )
     // -FOLLOW_MATERIAL. Loaded only for that one memory option; every other
     // option keeps the current-geometry behavior untouched.
   ref_active = 0;
-  if ( memory==-UPDATED_LINEAR ) {
+  if ( memory==-UPDATED_LINEAR &&
+       db_active_index( GROUP_MATERI_MEMORY, element_group, VERSION_NORMAL ) ) {
     for ( inol=0; inol<nnol; inol++ ) {
       inod = nodes[inol];
       if ( db_active_index( NODE_START_REFINED, inod, VERSION_NORMAL ) )

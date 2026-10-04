@@ -2361,6 +2361,7 @@ void      set_stress( long int element, long int gr,
 	    double &softvar_nonl, double &softvar_l, double mc_normal[],
             double ten_normal[] );
 long int  control_materi_gate_off( long int control_item );
+long int  materi_memory_default( void );
 long int  materi_apply_gate_off( long int global_item, long int control_item );
 long int  set_swit( long int element, long int inod, const char *routine
  );

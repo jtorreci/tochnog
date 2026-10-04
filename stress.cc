@@ -602,11 +602,12 @@ void set_stress( long int element, long int gr,
     viscoplasti = 0;
   db( GROUP_MATERI_PLASTI_VISCO_ALWAYS, gr, &viscoplasti_always,
     ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+  memory = materi_memory_default();
   db( GROUP_MATERI_MEMORY, gr, &memory, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
-  // control_materi_updated_apply -no (manual Professional 6.152): any
-  // -updated material memory is set to -updated_linear for these
-  // timesteps (the -yes direction — defaulting unspecified memory to
-  // -updated — is not wired: see manual-developer)
+  // control_materi_updated_apply (manual Professional 6.152): the -yes
+  // direction (unspecified memory becomes -updated) lives in
+  // materi_memory_default(); the -no direction below sets any -updated
+  // material memory to -updated_linear for these timesteps.
   if ( control_materi_gate_off( CONTROL_MATERI_UPDATED_APPLY ) ) {
     if ( memory==-UPDATED || memory==-UPDATED_WITHOUT_ROTATION )
       memory = -UPDATED_LINEAR;

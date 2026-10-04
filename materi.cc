@@ -181,6 +181,7 @@ void materi( long int element, long int gr, long int name, long int nnol,
   // name wins when both exist.
   get_group_data( GROUP_MATERI_PLASTI_HEAT_GENERATION, gr, element,
     new_unknowns, &plasti_heatgeneration, ldum, GET_IF_EXISTS );
+  memory = materi_memory_default();
   db( GROUP_MATERI_MEMORY, gr, &memory, ddum, ldum,
     VERSION_NORMAL, GET_IF_EXISTS );
   // Keep the elastic stress and tangent in the reference configuration for
@@ -1584,6 +1585,7 @@ void set_deften_etc( long int element, long int gr, long int nnol, double h[],
 
     // initialize
   db( DTIME, 0, idum, &dtime, ldum, VERSION_NEW, GET );
+  memory = materi_memory_default();
   db( GROUP_MATERI_MEMORY, gr, &memory, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
   db( GROUP_AXISYMMETRIC, gr, &axisymmetric, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
   array_set( old_deften, 0., MDIM*MDIM ); 
