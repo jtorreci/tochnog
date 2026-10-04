@@ -2,6 +2,12 @@
 
 ## Implementation
 
+Since 2026-10-04 (C16) `-UPDATED_LINEAR` is also the default memory
+(`materi_memory_default()` in general.cc, see
+`group_materi_memory_default.md`); the `NODE_START_REFINED` reference
+gradient of section 4 is gated on an EXPLICIT record
+(`db_active_index(GROUP_MATERI_MEMORY, element_group, VERSION_NORMAL)`).
+
 The `-UPDATED_LINEAR` memory type is handled in three places:
 
 1. **materi.cc, `materi()`**: the UPDATED branch (rotated old stress

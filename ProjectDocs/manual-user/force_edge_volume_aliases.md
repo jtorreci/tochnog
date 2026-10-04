@@ -42,10 +42,9 @@ For the three edge families (`force_edge`, `force_edge_normal`,
   2026-09-27 it no longer freezes damage (Professional behaviour, see
   `materi_failure_apply.md`).
 - `control_materi_updated_apply index -no` — any -updated material
-  memory is set to -updated_linear for these timesteps. (The -yes
-  direction — defaulting UNSPECIFIED memory to -updated — is not wired:
-  the GNU cannot distinguish unspecified from explicitly-set after
-  input; documented difference.)
+  memory is set to -updated_linear for these timesteps. Since 2026-10-04
+  the -yes direction (an UNSPECIFIED memory becomes -updated) is wired
+  too; see `control_materi_updated_apply.md`.
 
 Registered and parsed, behaviour NOT wired (documented partials):
 `control_materi_dynamic`, `control_materi_elasti_k0`,

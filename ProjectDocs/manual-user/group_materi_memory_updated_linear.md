@@ -14,6 +14,12 @@ memory type (the corpus hypoplasticity tests, e.g. hypo7/8, use it).
 | `-total_linear` | total Lagrange, linear strains |
 | `-total` | total Lagrange, finite strains |
 
+`-updated_linear` is also the DEFAULT memory when a group has no
+`group_materi_memory` record (since 2026-10-04, as the Professional); see
+[group_materi_memory_default](group_materi_memory_default.md). The
+reference-geometry strain path described below applies only when
+`-updated_linear` is given EXPLICITLY.
+
 ## Usage
 
 ```
