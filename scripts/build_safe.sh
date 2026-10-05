@@ -1345,6 +1345,16 @@ run_ok "$T2026" materi_memory_default_stretch1
 run_ok "$T2026" materi_memory_default_updated_apply1
 
 # ---------------------------------------------------------------------
+# K03 (2026-10-06): default convection_apply -no (manual Professional
+# 6.395, = Professional 02-08-2026). sfnet condif2 model in the Pro
+# dialect: without the record the heat is not convected by the material
+# velocity, middle temp = 0.5 (pure diffusion); with -yes temp = 1.
+# Before K03 the GNU default -yes gave 1 for both.
+# ---------------------------------------------------------------------
+run_ok "$T2026" convection_apply_default1
+run_ok "$T2026" convection_apply_yes1
+
+# ---------------------------------------------------------------------
 # C24 (2026-10-05): control_print_frd / control_print_gmsh loop over the
 # PRIMARY unknowns (as print_vt.cc and print_dof after C23). Single quad4
 # with derivatives: the FRD must hold exactly VELO DISP STRESS TOSTRAIN

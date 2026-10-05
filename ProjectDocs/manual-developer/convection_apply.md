@@ -11,8 +11,8 @@
   - `"convection_stabilization"` -> `OPTIONS_STABILIZATION`
     (manual 6.396)
 - `general.cc` — `general()` already consumes the targets: it reads
-  `OPTIONS_CONVECTION` / `CONTROL_OPTIONS_CONVECTION` per element
-  (default `-YES`), computes the convective velocity from the materi
+  the switch through `convection_apply_switch()` (default `-NO`, K03),
+  computes the convective velocity from the materi
   velocity dofs / `condif_flow` / groundflow velocity and assembles the
   convective + artificial-diffusion terms; `OPTIONS_STABILIZATION`
   switches the peclet-based upwind (`-NO` disables it, `-MAXIMAL` also
@@ -29,13 +29,42 @@ were missing. Both data items are INTEGER no-index switches whose values
 (`-yes`/`-no`/`-maximal`) resolve through the generic value reader
 (input.cc: `db_number(&str[1])`).
 
-Defaults: `OPTIONS_CONVECTION` is `-YES` in the GNU element integration
-(an eulerian `-fixed_in_space` analysis convects unless the switch says
-`-no`; with a follow-material mesh the convection is suppressed anyway by
-the `lagrange` flag). `OPTIONS_STABILIZATION` defaults to `-STATIC`
+Defaults: `OPTIONS_CONVECTION` defaults to `-NO` (K03, 2026-10-06; it
+was `-YES`). See the K03 section below. `OPTIONS_STABILIZATION` defaults to `-STATIC`
 (top.cc), which in general.cc behaves as the minimal-peclet stabilization
 (`-yes` of the Professional); only `-NO` and `-MAXIMAL` are
 special-cased.
+
+## K03: default -no and scope (2026-10-06)
+
+- `general.cc` `convection_apply_switch()`: single source of truth for
+  every reader (`general()`, `beam.cc`, `truss.cc`, `spring.cc`,
+  `conspr.cc`; prototype in `tochnog.h` / `tochnog-mod.h`). Returns
+  `OPTIONS_CONVECTION` overruled by `CONTROL_OPTIONS_CONVECTION` at the
+  current `ICONTROL`; default `-NO` (manual 6.395). The local defaults of
+  the readers were `-YES` (hardcoded in five places).
+- `general()`: the `lagrange` flag (`options_convection==-NO ||
+  materi_displacement || (materi_velocity && -follow_material)`) now
+  gates only the material-velocity part of the convective velocity. The
+  `condif_flow` and groundflow-velocity part of the temperature
+  convection uses `lagrange_flow` (same condition WITHOUT the switch).
+  Measured on the Professional 02-08-2026: sfnet condif1
+  (`group_condif_flow`) and condif5 (groundflow velocity) give temp 1
+  with `convection_apply` `-no`, `-yes` and absent; condif2 (material
+  velocity) gives 0.5 absent/`-no` and 1 with `-yes`.
+- Side effect: `stress_recovery_absolute` (nodal stress recovery) uses
+  the same switch, so inputs without the record on a `-fixed_in_space`
+  mesh with velocity unknowns switch to the absolute recovery and no
+  longer convect the stress/strain dofs (validation-suite: ~57 tests
+  change outputs, mostly round-off, a few by 1-13 %; where the
+  Professional runs them - cmat_gate, mesh_act_grav, mdirect_comp - the
+  new values are closer to it).
+- The beam/truss/spring/contact-spring checks ("set OPTIONS_CONVECTION
+  to -NO") now only fire with an explicit `-yes` on a `-fixed_in_space`
+  mesh.
+- Tests: `test-2026/convection_apply_default1.dat` (RED with the old
+  binary: temp 1, target 0.5 fails; GREEN 0.5 = Professional) and
+  `convection_apply_yes1.dat` (1 = Professional), run by `build_safe.sh`.
 
 ## Verification
 

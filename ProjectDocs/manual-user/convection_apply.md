@@ -8,6 +8,12 @@ the convective transport terms of the transported fields (velocity,
 temperature, stress, history variables, ...) are assembled; if set to
 `-no` they are suppressed.
 
+Scope (measured on the Professional 02-08-2026): the switch only governs
+the convection of the MATERIAL with respect to the mesh, i.e. the
+transport by the material velocity. The heat transport by a prescribed
+`group_condif_flow` and by the groundflow velocity (`groundflow_velocity`
+dof) is always applied, whatever the value of `convection_apply`.
+
 The record applies for ALL timesteps. The per-timestep form is
 `control_convection_apply` (manual Professional 6.113), which applies for
 the timestep records with the same index and overrides the global switch.
@@ -24,8 +30,12 @@ convection_apply -yes
 convection_apply -no
 ```
 
-The value is a switch: `-yes` (default in the GNU element integration)
-or `-no`. No index is used.
+The value is a switch: `-yes` or `-no`. No index is used.
+
+Default, if neither `convection_apply` nor `control_convection_apply` is
+set: `-no` (manual Professional 6.395; changed 2026-10-06, K03). An
+eulerian (`mesh -fixed_in_space`) analysis whose material should be
+convected therefore needs an explicit `convection_apply -yes`.
 
 ## Example
 
@@ -81,6 +91,23 @@ control_convection_apply 10 -no
   their manuals.
 
 ## Tests
+
+`validation-suite/test-2026/convection_apply_default1.dat` (the condif2
+model without the record: middle temperature 0.5, pure diffusion, as the
+Professional) and `convection_apply_yes1.dat` (same model with `-yes`:
+1). The validation-suite inputs `cmat_gate`, `cd_method` and
+`materi_direct_wall` carry an explicit `convection_apply -yes` since
+their targets were calibrated on the old default.
+
+## Differences with older GNU versions
+
+Before 2026-10-06 the GNU default was `-yes`, and `-no` also switched off
+the `group_condif_flow` and groundflow-velocity heat transport. Old
+inputs that relied on the default (sfnet `condif2`, `condif3`, `examp1`,
+`incnav5`, `strconv1`) now give the Professional results instead of
+their legacy targets (BACKLOG B10).
+
+Legacy corpus notes:
 
 Corpus tests that pass with these aliases: `condif2`, `condif3`
 (node 2 temperature 0.992028 vs target 1.0 +/- 2e-2; the Professional

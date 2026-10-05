@@ -51,7 +51,7 @@ void general( long int element, long int name, long int nnol, long int element_g
     // analysis with a material density pseudo-dynamic; the corpus
     // safety/groundflow tests (ground14/15/16) run static in the
     // Professional within the same 1 s window.
-    options_inertia=-NO, options_convection=-YES, options_axisymmetric=0,
+    options_inertia=-NO, options_convection=-NO, options_axisymmetric=0,
     lagrange=0, stokes=-NO, principal_unknown=0, ldum=0, 
     idum[1], options_mesh[MDIM], dof_type[MUKNWN], dof_principal[MUKNWN];
   double condif_conductivity=0., dens=0.,
@@ -76,9 +76,7 @@ void general( long int element, long int name, long int nnol, long int element_g
   db( ICONTROL, 0, &icontrol, ddum, ldum, VERSION_NORMAL, GET );
 
   db( OPTIONS_MESH, 0, options_mesh, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
-  db( OPTIONS_CONVECTION, 0, &options_convection, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
-  db( CONTROL_OPTIONS_CONVECTION, icontrol, &options_convection, 
-    ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+  options_convection = convection_apply_switch();
   // Nodal stress recovery (2026-09-15): the absolute weighted average is
   // only valid when the stress dofs are a PURE recovered field. Two cases
   // keep the historic incremental lumped update:
@@ -431,10 +429,18 @@ void general( long int element, long int name, long int nnol, long int element_g
              lagrange = 0;
 
 // convection velocity with respect to mesh-Need to check logic below.
+          // K03: convection_apply only governs the convection of the
+          // MATERIAL with respect to the mesh (manual 6.395). The heat
+          // transport by group_condif_flow and by the groundflow velocity
+          // is applied whatever convection_apply is (measured on the
+          // Professional 02-08-2026: sfnet condif1 / condif5 give the
+          // convected temp = 1 with convection_apply -no, -yes or absent).
+          long int lagrange_flow = ( materi_displacement ||
+            ( materi_velocity && options_mesh[jdim]==-FOLLOW_MATERIAL ) );
           vel = 0.;
-          if ( !lagrange ) {
-            if ( materi_velocity ) 
-              vel += new_dof[inol*nuknwn+vel_indx+jdim*nder];
+          if ( !lagrange && materi_velocity )
+            vel += new_dof[inol*nuknwn+vel_indx+jdim*nder];
+          if ( !lagrange_flow ) {
             if ( dof_type[iuknwn]==-CONDIF_TEMPERATURE ) {
               		vel += condif_flow[jdim];
               		if ( groundflow_velocity )
@@ -568,6 +574,27 @@ long int materi_apply_gate_off( long int global_item, long int control_item )
   db( control_item, icontrol, &swit, ddum, ldum, VERSION_NORMAL,
     GET_IF_EXISTS );
   return swit==-NO;
+}
+
+// convection_apply switch (K03). Single source of truth for every
+// OPTIONS_CONVECTION reader (general, beam, truss, spring, conspr):
+// convection_apply (manual Professional 6.395, GNU options_convection)
+// overruled by control_convection_apply (6.113, GNU
+// control_options_convection) with the index of the current timestep
+// (ICONTROL). Default, if neither record is set: -no (manual 6.395
+// "Default switch is set to -no"; measured on the Professional
+// 02-08-2026: condif2 T = 0.5 without the record, 1 with -yes). The GNU
+// legacy default was -yes.
+long int convection_apply_switch( void )
+{
+  long int icontrol=0, swit=-NO, ldum=0;
+  double ddum[1];
+  db( OPTIONS_CONVECTION, 0, &swit, ddum, ldum, VERSION_NORMAL,
+    GET_IF_EXISTS );
+  db( ICONTROL, 0, &icontrol, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+  db( CONTROL_OPTIONS_CONVECTION, icontrol, &swit, ddum, ldum,
+    VERSION_NORMAL, GET_IF_EXISTS );
+  return swit;
 }
 
 // Default group_materi_memory when the record is absent (C16). Single

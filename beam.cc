@@ -233,7 +233,7 @@ void beam_2d( long int element, long int element_group, double coord[],
 {
   long int idim=0, jdim=0, inol=0, jnol=0, nnol=2, iuknwn=0, juknwn=0,
     ipuknwn=0, jpuknwn=0, idof=0, jdof=0, indx=0, swit=0, ldum=0, 
-    displacement_indx=0, memory=-UPDATED, options_convection=-YES,
+    displacement_indx=0, memory=-UPDATED, options_convection=-NO,
     length=0, icontrol=0, idum[1], options_mesh[MDIM];
   double E=0., I=0., initial_L=0., dtime=0., ddum[NDIM],
     beam_inertia[3]={0.,0.,0.},
@@ -279,9 +279,7 @@ void beam_2d( long int element, long int element_group, double coord[],
   }
 
   if ( materi_velocity_integrated ) {
-    db( OPTIONS_CONVECTION, 0, &options_convection, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
-    db( CONTROL_OPTIONS_CONVECTION, icontrol, &options_convection, 
-      ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+    options_convection = convection_apply_switch();
     db( OPTIONS_MESH, 0, options_mesh, ddum, ldum, VERSION_NORMAL, GET );
     for ( idim=0; idim<ndim; idim++ ) {
       if ( options_mesh[idim]==-FIXED_IN_SPACE ) {

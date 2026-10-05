@@ -409,6 +409,29 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
   re-evaluate the residual as a solver/model work unit.
 - **Effort**: **medium**.
 
+### B10. sfnet targets calibrated on the legacy `convection_apply` default -yes (K03, 2026-10-06)
+
+- **Corpus**: sfnet 197 (external, not edited). Since K03 the GNU default
+  `convection_apply` is `-no` (manual Professional 6.395 and the
+  Professional 02-08-2026). Five inputs without the record relied on the
+  legacy GNU default `-yes` and now miss their targets (sfnet 187/10 ->
+  182/15):
+
+  | test | target | GNU old (-yes) | GNU new (-no) | Professional |
+  |---|---|---|---|---|
+  | `condif2` | node 2 temp 1 +/- 0.02 | 1 | 0.5 | 0.5 |
+  | `condif3` | node 2 temp 1 +/- 0.02 | 1 | 0.5 | 0.5 |
+  | `examp1` | post-point velx -0.041 +/- 0.1 | -0.04873 | 0.1391 | 0.1391 |
+  | `incnav5` | post-point velx 0.389082 +/- 0.01 | 0.3891 | 0.4919 | 0.4919 |
+  | `strconv1` | node 5 sigxx 1 +/- 0.01 | 1 | 0 | RUNFAIL (pardiso error) |
+
+- **Root cause**: stale targets (input dialect), not a GNU defect: the
+  new values equal the Professional on the same (converted) input.
+- **Proposed fix**: none in the GNU; a versioned copy of these inputs
+  would need an explicit `convection_apply -yes` to keep testing the
+  convection.
+- **Severity**: **LOW**. **Effort**: **cheap**.
+
 ---
 
 ## C. Additional residuals
@@ -926,6 +949,7 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
 | B7 | sfnet | `ho_mech4` missing strain record | LOW | medium |
 | B8 | sfnet | `petsc1` PETSc infrastructure | LOW | large |
 | B9 | sfnet | `taylor3` stale input + solver | LOW | medium |
+| B10 | sfnet | `condif2/3`, `examp1`, `incnav5`, `strconv1` targets calibrated on the legacy `convection_apply -yes` default (K03) | LOW | cheap |
 | C1 | sfnet | `pruebavel` dead/malformed | LOW | cheap |
 | C2 | validation-suite | `groundflow_interface` `gvelx` sign | LOW | medium |
 | C3 | sfnet | `gforce10` 3D section sign | MEDIUM | medium |
@@ -949,7 +973,7 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
 | C26 | — | `control_print_dof -separate_index`: Pro writes one file per dof, GNU one `dof.N` | LOW | cheap/medium |
 | C27 | — | FRD/gmsh layout vs Pro (PSTEP per block, `ALL` component, names, extra blocks/fields, multi-component gmsh fields) | LOW | medium |
 
-Thirty-one items remain open: nine MEDIUM and twenty-two LOW (C23 and C24 resolved 2026-10-05; C25, C26 and C27 added). No open issue is CRITICAL or
+Thirty-two items remain open: nine MEDIUM and twenty-three LOW (C23 and C24 resolved 2026-10-05; C25, C26, C27 and B10 added). No open issue is CRITICAL or
 HIGH. The validation-suite corpus has no open failure — its 233 real tests
 pass (`materi_direct_mc` input corrected, C17 resolved). Every remaining failure is a stale or malformed test, an out-of-scope model
 or infrastructure limit, a narrow post-processing divergence, a corpus-coverage

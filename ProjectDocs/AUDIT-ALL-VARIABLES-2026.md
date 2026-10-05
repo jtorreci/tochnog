@@ -370,7 +370,7 @@ The priority list in section 6 re-orders by judgement.
 | 18 | K11 | Nodal recovery of total strain | 19 | 0.12 | **GNU-suspect** | `tslv_part`: the velocities and stresses are equal to 1e-6. At the clamped edge, where v ≡ 0, the Pro gives `eptyy` = 0 (exact) and the GNU −2.35e-6; `eptxy` differs by a factor of 3. The GNU recovers the stress with the Pro operator (`06e175d`) but still recovers the strain with the old one. |
 | 19 | K18 | Refinement, higher-order and special elements | 8 | 0.27 | UNKNOWN | `disk1`, `force6`, `interface_patch`, `validation_11` (GNU fails the Pro target: 6.09e7 vs 8.59e7 ± 3e6). |
 | 20 | K23 | Round-off in zero fields | 3 | 1.0 | BOTH-plausible (false positive) | `dpoint1`: stresses 6e-8 vs 5e-14 in a rigid motion. |
-| 21 | K03 | Default `convection_apply` | 2 | 0.5 | **GNU-suspect** | `condif2`: GNU T = 1, Pro T = 0.5. With an explicit `convection_apply -yes`, **both give 1**. The GNU default is `-YES` (`general.cc:54`); the Pro manual 6.395 says the default is `-no`. |
+| 21 | K03 | Default `convection_apply` | 2 | 0.5 | **GNU-suspect** | `condif2`: GNU T = 1, Pro T = 0.5. With an explicit `convection_apply -yes`, **both give 1**. The GNU default is `-YES` (`general.cc:54`); the Pro manual 6.395 says the default is `-no`. **Resolved 2026-10-06 (F1 T2)**: default `-no`, see recommendation 6. |
 | 22 | K08 | `bounda_time_increment` tables | 2 | 1.0 | PRO-suspect | `mcap1_elast`: the Pro prescribes −1.4 on dofs whose table is all zero. The GNU follows manual 6.146. |
 | 23 | K20 | Axisymmetric hoop (zz) nodal values | 5 | 0.05 | BOTH-plausible | `axisym2` (Akin ring, analytic e_t(ID) = 9.964e-4, S_t = 10910): GNU 1.000e-3 / 10000 (element-constant), Pro 1.0498e-3 / 10498 (linear). |
 | 24 | K24 | 3D coupled consolidation | 1 | 0.05 | UNKNOWN (high relevance) | `large2`: pore pressure differs 4.5 %, displacements 4 %. The 1D consolidation (`validation_2`) matches to 1e-11. |
@@ -623,6 +623,15 @@ showed that K0 applies without `group_materi_elasti_poisson` and to
 6. **K03.** Align the `convection_apply` default to `-no` (Pro manual 6.395),
    the same deliberate alignment as `inertia_apply` in `0560dcf`. Audit the
    corpus inputs that relied on the old default.
+   **Done 2026-10-06 (F1 T2):** default `-no` via `convection_apply_switch()`
+   (general.cc, one source for general/beam/truss/spring/conspr). The Pro
+   applies the switch only to MATERIAL convection wrt the mesh: the
+   `group_condif_flow` and groundflow-velocity heat transport stay on (sfnet
+   condif1/condif5 give temp 1 in the Pro with `-no`, `-yes` or absent), and
+   the GNU now does the same. condif2 now equals the Pro (0.5). Inputs that
+   relied on the old default: validation-suite `cmat_gate`, `cd_method`,
+   `materi_direct_wall` got an explicit `convection_apply -yes`; sfnet
+   `condif2/3`, `examp1`, `incnav5`, `strconv1` are BACKLOG B10.
 7. **K11 and K02, output state.**
    - Recover the strain dofs with the same operator as the stress.
    - Extend the post-solve sync to every non-principal dof: strain, plastic
