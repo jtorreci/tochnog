@@ -672,11 +672,15 @@ else
   check_fail "dof.20" "esperaba 4 columnas por linea (x y dof node)"
 fi
 
-# dofid_no: control_print_dof_id -no -> dof.21 con 3 columnas (x y dof)
-if awk 'NF!=3{exit 1}' "$T2014/dof.21" 2>/dev/null; then
-  check_ok "dof.21 (control_print_dof_id -no: lineas x y dof)"
+# dofid_no: control_print_dof_id -no -> dof.21 con 3 columnas (x y dof).
+# C23: 48 lineas = 12 componentes (vel 2, velint 2, dis 2, sig 6) x 4
+# nodos, una por componente, y sin basura del heap (denormales e-3xx).
+if awk 'NF!=3{exit 1}' "$T2014/dof.21" 2>/dev/null && \
+   [ "$(wc -l < "$T2014/dof.21")" = "48" ] && \
+   ! rg -q 'e-3[0-9][0-9]' "$T2014/dof.21"; then
+  check_ok "dof.21 (control_print_dof_id -no: 48 lineas x y dof, sin basura e-3xx)"
 else
-  check_fail "dof.21" "esperaba 3 columnas por linea (x y dof)"
+  check_fail "dof.21" "esperaba 48 lineas de 3 columnas (x y dof) sin denormales"
 fi
 
 # dbmeth: -all sin tamanos; -size_tot con tamanos + matriz del sistema;
@@ -778,17 +782,20 @@ else
   check_fail "freq_timeint" "esperaba 3 prints en 0.16/0.32/0.41, hay $NFRD_TI frd con tiempos $FTI0/$FTI1/$FTI2"
 fi
 
-# freq_timeint: dof.0..dof.2 = 3 archivos de 176 lineas (3 prints gated);
+# freq_timeint: dof.0..dof.2 = 3 archivos de 40 lineas (3 prints gated;
+# 10 componentes velx vely velintx velinty + 6 sig x 4 nodos - eran 176
+# hasta el fix C23 del bucle de print_dof, que repetia bloques y leia
+# node_dof fuera del record);
 # el bloque 11 sin frecuencia escribe dof.3..dof.12 (10 archivos) ->
 # 13 archivos en total. Sin el gate habria 13 archivos solo de dof.0..12
 # con los MISMO conteos... el discriminator real es 3 vs 10 por bloque.
 NDF_TI=$(ls "$T2014"/dof.[0-9] "$T2014"/dof.1[0-2] 2>/dev/null | wc -l)
 L0_TI=$(wc -l < "$T2014/dof.0" 2>/dev/null || echo 0)
 L12_TI=$(wc -l < "$T2014/dof.12" 2>/dev/null || echo 0)
-if [ "$NDF_TI" = "13" ] && [ "$L0_TI" = "176" ] && [ "$L12_TI" = "176" ]; then
-  check_ok "freq_timeint (dof.0..dof.12 = $NDF_TI archivos: 3 gated + 10 sin frecuencia, 176 lineas/print)"
+if [ "$NDF_TI" = "13" ] && [ "$L0_TI" = "40" ] && [ "$L12_TI" = "40" ]; then
+  check_ok "freq_timeint (dof.0..dof.12 = $NDF_TI archivos: 3 gated + 10 sin frecuencia, 40 lineas/print)"
 else
-  check_fail "freq_timeint dof.*" "esperaba 13 archivos de 176 lineas (3 gated + 10), hay $NDF_TI archivos"
+  check_fail "freq_timeint dof.*" "esperaba 13 archivos de 40 lineas (3 gated + 10), hay $NDF_TI archivos (dof.0=$L0_TI dof.12=$L12_TI lineas)"
 fi
 
 # freq_timestep: 3 prints SOLO en t=0.20, 0.40, 0.41 (ejemplo del manual

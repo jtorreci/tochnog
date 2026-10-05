@@ -466,3 +466,7 @@ input parameters it accepts.
 ## GENERATED ELEMENT_DOF INIT (2026-10-05)
 
 - [generated_element_dof_init](generated_element_dof_init.md) — elements created by the mesh generators (`control_mesh_generate_*`, `control_mesh_interface_triangle`) start with a zero `element_dof` record instead of random memory content: the printed database is reproducible run to run. Results unchanged.
+
+## PRINT_DOF COMPONENT LOOP (2026-10-05)
+
+- [print_dof_component_loop](print_dof_component_loop.md) — `control_print_dof` files now hold each dof component once per node and print (vector/stress blocks were repeated and some lines carried random `e-3xx` values); `dof.*` files are shorter than with older binaries.

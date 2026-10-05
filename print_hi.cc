@@ -526,22 +526,30 @@ void print_dof( long int icontrol, long int task )
     }
   }
 
-  for ( ipuknwn=0; ipuknwn<nuknwn_; ipuknwn++ ) {
-    if ( dof_scal_vec_mat[ipuknwn]!=-SCALAR &&
-         dof_scal_vec_mat[ipuknwn]!=-VECTOR &&
-         dof_scal_vec_mat[ipuknwn]!=-MATRIX ) continue;
+  // one block per PRIMARY unknown (the print_vt.cc loop): the primary
+  // unknown ipuknwn starts at iuknwn = ipuknwn*nder_, dof_scal_vec_mat is
+  // indexed by iuknwn (it is set for every value AND derivative of the
+  // dof), and a vector/matrix dof spans nval primary unknowns. Looping
+  // ipuknwn over nuknwn_ (BACKLOG C23) printed every component block once
+  // per value/derivative entry and, with derivatives, read node_dof past
+  // the end of the record (heap garbage ~1e-310 for the last nodes).
+  long int npuknwn_ = nder_>0 ? nuknwn_/nder_ : 0;
+  for ( ipuknwn=0; ipuknwn<npuknwn_; ipuknwn+=nval ) {
     iuknwn = ipuknwn*nder_;
     nval = 1;
-    if      ( dof_scal_vec_mat[ipuknwn]==-VECTOR ) nval = ndim;
-    else if ( dof_scal_vec_mat[ipuknwn]==-MATRIX ) nval = 6;
+    if ( dof_scal_vec_mat[iuknwn]!=-SCALAR &&
+         dof_scal_vec_mat[iuknwn]!=-VECTOR &&
+         dof_scal_vec_mat[iuknwn]!=-MATRIX ) continue;
+    if      ( dof_scal_vec_mat[iuknwn]==-VECTOR ) nval = ndim;
+    else if ( dof_scal_vec_mat[iuknwn]==-MATRIX ) nval = 6;
     for ( long int k=0; k<nval; k++ ) {
       for ( inod=0; inod<=max_node; inod++ ) {
         db( NODE, inod, idum, coord, ldum, VERSION_PRINT, GET );
         node_dof = db_dbl( NODE_DOF, inod, VERSION_PRINT );
         long int indx = iuknwn;
-        if      ( dof_scal_vec_mat[ipuknwn]==-VECTOR )
+        if      ( dof_scal_vec_mat[iuknwn]==-VECTOR )
           indx = iuknwn + k*nder_;
-        else if ( dof_scal_vec_mat[ipuknwn]==-MATRIX ) {
+        else if ( dof_scal_vec_mat[iuknwn]==-MATRIX ) {
           long int kk, ll;
           if      ( k==0 ) { kk=0; ll=0; }
           else if ( k==1 ) { kk=1; ll=1; }

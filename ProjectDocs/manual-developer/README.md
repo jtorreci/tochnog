@@ -492,3 +492,7 @@ Each file corresponds to the same feature in the [User Manual](../manual-user/).
 ## BUILD_SAFE SUITE (2026-10-05)
 
 - [build_safe_suite](build_safe_suite.md) — `scripts/build_safe.sh` + `scripts/build_safe_tests.txt`: full run loop restored (226 test-2014 runs, list in a file), reduced post-incident mode and duplicate broken tsup checks removed, run-rc gate, `TN_CHECK_ONLY=1` (no build); `dpline_move` / `dpline_method` inputs restored to their pre-run state. Result: runs 226/226, checks 92 OK / 9 FALLO (the 9 lost G2 inputs).
+
+## PRINT_DOF COMPONENT LOOP (2026-10-05)
+
+- [print_dof_component_loop](print_dof_component_loop.md) — `print_hi.cc` `print_dof()`: the dof write loop iterated `ipuknwn` over all `nuknwn` value/derivative entries, repeating every vector/matrix block and reading `node_dof` past the end of the record (heap garbage `e-3xx` in `dof.*`, BACKLOG C23); now loops over the primary unknowns (`npuknwn = nuknwn/nder`, step `nval`, type from `dof_scal_vec_mat[iuknwn]`) as `print_vt.cc`. Same pattern pending in `print_fr.cc`/`print_gm.cc` (C24).
