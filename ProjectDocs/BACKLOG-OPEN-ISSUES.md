@@ -790,6 +790,90 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
 - **Proposed fix**: none required; revisit with the Masin kernel
   calibration.
 - **Effort**: **cheap**.
+### C23. `dofid_no` — uninitialized values in the `dof.21` print — RESOLVED 2026-10-05
+
+- **Resolution**: the root cause was NOT an uninitialized `get_new_dbl()`
+  buffer but the dof loop of `print_dof()` (`print_hi.cc`): it iterated
+  `ipuknwn` over all `nuknwn` value/derivative entries, printed each
+  vector/stress block once per entry (shifted into the next dof) and read
+  `node_dof[ipuknwn*nder+...]` past the end of the `NODE_DOF` record
+  (the next nodes' values and, for the last nodes, heap memory past the
+  database array). The loop now runs over the primary unknowns as
+  `print_vt.cc` does. `dof.21` 768 lines (20 garbage) -> 48 lines, two
+  runs byte-identical; every `dof.*` file is now one line per node per
+  component (the documented layout). F0 T6, docs
+  `manual-*/print_dof_component_loop.md`. The same loop pattern in the
+  FRD/gmsh printers is C24; the uninitialized-buffer audit is C25.
+
+
+- **Symptom**: `control_print_dof_id -no` (validation-suite `dofid_no`)
+  writes 20 of 768 lines of `dof.21` with heap garbage (`6.9e-310`,
+  different on every run) at node (1,1). Found by the F0 T4 old/new A/B
+  (2026-10-05); present in both binaries, unrelated to the
+  `generate.cc` `element_dof` fix. The run and its file check (3
+  columns) pass.
+- **Proposed fix**: find the uninitialized buffer in the `print_dof()`
+  path for the `-no` id layout (same pattern as the generated
+  `element_dof`: a `get_new_dbl()` without `array_set()`).
+- **Severity**: **LOW**. **Effort**: **cheap**.
+
+### C24. `print_frd` / `print_gmsh` — repeated blocks and out-of-record reads
+
+- **Symptom**: `print_fr.cc` (`print_frd`, result blocks, line ~229) and
+  `print_gm.cc` (`print_gmsh`, node data, line ~442) use the same loop as
+  the old `print_dof()` (C23): `for ( ipuknwn=0; ipuknwn<nuknwn_;
+  ipuknwn++ )` with `dof_scal_vec_mat[ipuknwn]` and `base_indx =
+  ipuknwn*nder_`. Each vector/stress result block is written once per
+  stored value/derivative entry, and the indices run past the end of the
+  `NODE_DOF` record (garbage for the last nodes, worse with
+  `derivatives`).
+- **Proposed fix**: the primary-unknown loop of `print_vt.cc` /
+  `print_dof()` (`npuknwn = nuknwn/nder`, step `nval`, type from
+  `dof_scal_vec_mat[iuknwn]`). Changes the number of FRD/gmsh blocks: the
+  `freq_*` and gmsh checks of `build_safe.sh` need review.
+- **Severity**: **LOW** (output files only). **Effort**: **cheap**.
+
+### C25. Uninitialized-buffer audit follow-ups (F0 T6)
+
+- **Audit**: every `get_new_dbl(` / `new double[` site in `*.cc` was
+  checked for the `a32ea74` pattern (buffer partly assigned, then PUT or
+  printed): none confirmed. Uncertain or related items, not fixed:
+  1. `calcul_force.cc` ~2824: `pef_vel_prev` is reallocated larger
+     without zeroing (only the first allocation is zeroed); a node
+     inactive at refresh and active later would read garbage `vprev`
+     into the `post_element_force` inertia share. Fix:
+     `array_set( pef_vel_prev, 0., need )` after the reallocation.
+  2. `print_te.cc` ~151 and `print_pl.cc` ~436: `NODE_EIGEN` read with
+     `GET_IF_EXISTS` into a reused buffer; a node without the record
+     prints the previous node's values (so.cc writes it for every active
+     node, so probably unreachable).
+  3. `split.cc` ~55-68: the zeroed `ddum` is also the output array of
+     `geometry()`, so the "zero" fallback passed to `create_node` may hold
+     geometry results (contamination, not uninitialized memory).
+  4. Side findings: `print_beam_force_moment.cc` ~282 passes a
+     one-element `ddum` as the 3-element work array of `array_distance`
+     (stack overflow); `interface.cc` ~1044 `free()`s `new[]` memory;
+     `mpc.cc` ~1050 reads `MPC_NODE_FACTOR` into an `nmaster` buffer
+     before clamping its length; `nonloc.cc` ~326 PUTs a stale
+     `ielem_dof` when `ielem_nonloc==0`.
+- **Severity**: **LOW** (edge cases, none observed in the corpora).
+  **Effort**: **cheap** each.
+
+### C26. `control_print_dof -separate_index` file layout differs from the Professional
+
+- **Symptom**: `dofid_no` (converted to the Pro dialect) with
+  `control_print_dof 21 -separate_index`: the Professional 02-08-2026
+  writes one file per dof (`disx.21`, `disy.21`, `sigxx.21`, ...,
+  `coord_0.21`, `coord_1.21`), each line `x y value` in `%e` with 12
+  digits; the GNU writes one `dof.21` with the components one after
+  another (`x y value`, short `%g`). The values per component agree
+  (e.g. `disy` 0.002 at the top nodes) after `f22ba98` (C23); before it
+  the GNU file also repeated blocks and read past the record.
+- **Proposed fix**: follow the Professional layout (one file per dof name,
+  Pro number format) or document the GNU layout as a divergence;
+  check `control_print_dof_id` interplay and the build_safe `dof.*`
+  checks.
+- **Severity**: **LOW**. **Effort**: **cheap/medium**.
 
 ---
 
@@ -825,8 +909,11 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
 | C20 | — | `-updated_jaumann` not implemented | LOW | medium |
 | C21 | — | `control_materi_updated_apply -yes`: Pro ignores its manual (deliberate divergence) | LOW | cheap |
 | C22 | Pro `other` | `hypo12` marginal sigyy target miss after the default-memory change | LOW | cheap |
+| C24 | — | `print_frd`/`print_gmsh` repeated blocks and out-of-record reads (C23 pattern) | LOW | cheap |
+| C25 | — | uninitialized-buffer audit follow-ups (`pef_vel_prev` realloc, NODE_EIGEN print, split/beam/interface/mpc/nonloc side findings) | LOW | cheap |
+| C26 | — | `control_print_dof -separate_index`: Pro writes one file per dof, GNU one `dof.N` | LOW | cheap/medium |
 
-Twenty-eight items remain open: nine MEDIUM and nineteen LOW. No open issue is CRITICAL or
+Thirty-one items remain open: nine MEDIUM and twenty-two LOW (C23 resolved 2026-10-05; C24, C25 and C26 added). No open issue is CRITICAL or
 HIGH. The validation-suite corpus has no open failure — its 233 real tests
 pass (`materi_direct_mc` input corrected, C17 resolved). Every remaining failure is a stale or malformed test, an out-of-scope model
 or infrastructure limit, a narrow post-processing divergence, a corpus-coverage

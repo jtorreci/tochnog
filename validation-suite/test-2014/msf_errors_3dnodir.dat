@@ -1,0 +1,43 @@
+( msf_errors_3dnodir: rewritten on 2026-10-05 after the rm incident.
+  3D hex8 WITHOUT direction_exclude and WITHOUT
+  direction_include. Expected: rc=1 and the error 'requires either'
+  exclude or include, manual 6.909/6.911.
+  EXPECTED_ERROR: requires either )
+
+echo -no
+number_of_space_dimensions 3
+derivatives
+materi_velocity
+materi_velocity_integrated
+materi_strain_total
+materi_stress
+number_of_integration_points 8
+end_initia
+
+bounda_time  0  0 0 100 0
+bounda_unknown  0  -ra 1 8 -ra -velx -vely -velz
+control_print_materi_stress_force  200  -all
+control_timestep  2  0.05 0.05
+element  1  -hex8 1 2 3 4 5 6 7 8
+element_group  1  0
+group_materi_density  0  1
+group_materi_elasti_poisson  0  0
+group_materi_elasti_young  0  1000
+group_materi_memory  0  -updated_without_rotation
+group_type  0  -materi
+node  1  0 0 0
+node  2  1 0 0
+node  3  0 1 0
+node  4  1 1 0
+node  5  0 0 1
+node  6  1 0 1
+node  7  0 1 1
+node  8  1 1 1
+options_convection   -no
+options_mesh   -fixed_in_space -fixed_in_space -fixed_in_space
+options_processors   1
+options_stabilization   -static
+post_calcul   -materi_stress -force
+post_calcul_materi_stress_force_element_group   0
+post_calcul_materi_stress_force_reference_point   0.5 0.5 0.5
+end_data

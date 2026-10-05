@@ -1,0 +1,56 @@
+( tsup_init: force_initial 6.1076 + time 6.1084. The support on the
+  bottom edge, nodes 1 and 2 both at y=0. F0 = a0 + a1*y = 0.1 at
+  y=0. The time diagram factor is 2 at t=1. With prescribed zero
+  velocities the force is only the preload: per node fy = time*F0*L/2
+  = 2*0.1*0.5 = 0.1 EXACT for both nodes. )
+
+echo -no
+number_of_space_dimensions 2
+derivatives
+materi_velocity
+materi_velocity_integrated
+materi_displacement
+materi_strain_total
+materi_stress
+end_initia
+
+options_mesh -fixed_in_space -fixed_in_space
+options_convection -no
+options_inertia -no
+
+node 1  0. 0.
+node 2  1. 0.
+node 3  1. 1.
+node 4  0. 1.
+
+element 1  -quad4 1 2 3 4
+element_group 1 0
+
+group_type 0  -materi
+group_materi_elasti_young 0  1.e7
+group_materi_elasti_poisson 0  0.0
+group_materi_memory 0  -total_linear
+
+node_support_edge_normal_force 1  0. 0.
+node_support_edge_normal_force 2  0. 0.
+node_support_edge_normal_plasti_tension_status 1  0
+node_support_edge_normal_plasti_tension_status 2  0
+
+support_edge_normal 1  1000. 100.
+support_edge_normal_geometry 1  1 2
+support_edge_normal_element_side 1  1 1
+support_edge_normal_force_initial 1  0.1 0.2
+support_edge_normal_time 1  0. 0. 1. 2.
+
+bounda_unknown 0  -ra 1 2 -ra -velx
+bounda_time    0  0. 0. 100. 0.
+bounda_unknown 1  -ra 1 2 -ra -vely
+bounda_time    1  0. 0. 100. 0.
+
+control_timestep 1  1. 1.0
+
+target_item 10  -node_support_edge_normal_force 1 1
+target_value 10  0.1 1.e-4
+target_item 20  -node_support_edge_normal_force 2 1
+target_value 20  0.1 1.e-4
+end_data

@@ -1,0 +1,39 @@
+( -updated_linear neglects rigid body rotations, audit cluster K01.
+  Simple shear of one quad4 (sfnet druckpr1), gamma = 1 in one step,
+  Drucker-Prager phi = 0, c = 0.1: the shear stress is capped at
+  0.11547 and the normal stresses stay 0.
+  Manual Professional 2.2.1: -updated_linear adds the extra stresses to
+  the previous stresses with NO rotation by R. The pre-fix GNU rotated
+  the stress by the incremental rotation (atan(gamma/2) = 26.57 deg):
+  sigxx 0.0924, sigxy 0.0693, sigyy -0.0924.
+  Pro 02-08-2026: sigxx 0, sigxy 0.11547, sigyy 0. )
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_strain_total
+materi_strain_plasti
+materi_stress
+end_initia
+node 1  0  0
+node 2  1  0
+node 3  0  1
+node 4  1  1
+element 1  -quad4 1 2 3 4
+bounda_dof 0  -ra 1 2 -ra -velx -vely
+bounda_time 0  0. 0. 100. 0.
+bounda_dof 1  -ra 3 4 -ra -vely
+bounda_time 1  0. 0. 100. 0.
+bounda_dof 2  -ra 3 4 -ra -velx
+bounda_time 2  0. 1. 100. 1.
+group_type 0  -materi
+group_materi_elasti_young 0  1.
+group_materi_memory 0  -updated_linear
+group_materi_plasti_druck_prag 0  0. 0.1 0.
+control_timestep 0  1. 1.
+target_item 0  -node_dof 1 -sigxy
+target_value 0  0.11547 1.e-5
+target_item 1  -node_dof 1 -sigxx
+target_value 1  0. 1.e-6
+target_item 2  -node_dof 4 -sigyy
+target_value 2  0. 1.e-6
+end_data

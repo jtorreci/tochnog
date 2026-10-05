@@ -260,6 +260,7 @@ void generate_spring( long int icontrol )
   	length_nei=1+npointmax*ndim+npointmax+2;
   double *tmp_element_dof=NULL, *dworknei=NULL;
   tmp_element_dof = get_new_dbl(mnolnuknwn);
+  array_set( tmp_element_dof, 0, mnolnuknwn );
   dworknei = get_new_dbl(length_nei);
 
   array_set( control_mesh_generate_contactspring_element, -ALL, 2 );
@@ -502,6 +503,7 @@ void generate_beam_truss( long int icontrol, long int task )
   long int zero=0, mnolnuknwn=npointmax*nuknwn, length_nei=1+npointmax*ndim+npointmax+2;
   double *tmp_element_dof=NULL, *dworknei=NULL;
   tmp_element_dof = get_new_dbl(mnolnuknwn);
+  array_set( tmp_element_dof, 0, mnolnuknwn );
   dworknei = get_new_dbl(length_nei);
   array_set(dworknei, 0, length_nei);
 
@@ -746,6 +748,7 @@ void generate_interface( long int icontrol )
     return;
 
   tmp_element_dof = get_new_dbl(mnolnuknwn);
+  array_set( tmp_element_dof, 0, mnolnuknwn );
   dworknei = get_new_dbl(length_nei);
   array_set( dworknei, 0, length_nei );
 
@@ -1116,6 +1119,7 @@ void generate_interface_triangle( long int icontrol )
   }
 
   tmp_element_dof = get_new_dbl(mnolnuknwn);
+  array_set( tmp_element_dof, 0, mnolnuknwn );
   dworknei = get_new_dbl(length_nei);
   array_set( dworknei, 0, length_nei );
 

@@ -1,0 +1,624 @@
+( msf_sheet3d - sub-sprint materi_stress_force, lote 3 (integracion 3D hex27):
+  SHEET PILE 3D - placa vertical de 4 elementos -hex27 (1 en espesor x=[0,1],
+  4 en altura y=[0,4], 1 en ancho z=[0,2]). GOTCHA del GNU (documentado en
+  manual-developer): el solve mixto 3D materi_stress + BiCG del GNU es
+  degenerado para cargas de flexion (el cantilever con carga en punta da A*b~0
+  y el solver se detiene en la iteracion 0 con x=0, o diverge con hex27) - por
+  eso el test usa DEFORMACION PRESCRITA (Dirichlet puro, sin solve): el campo
+  de FLEXION PURA u_y = kappa*(x-0.5)*y, u_x = -kappa*y^2/2, u_z = 0 (nu=0):
+  sigma_yy = E*kappa*(x-0.5) EXACTO (el hex27 lo integra exacto) -> mom1 =
+  E*kappa/12 = 0.0833333 const en cada seccion (+-y), nor = 0, she = 0.
+  direction_include = altura (0 1 0): caras extremas +-y (|n*t_hat| minima,
+  t_hat = normalizado(centroide - reference_point (1000,2,1)) ~ -x).
+  Archivos materi_stress_force.500 (-all) y .501 (-primary). )
+
+echo -no
+number_of_space_dimensions 3
+derivatives
+materi_velocity
+materi_velocity_integrated
+materi_strain_total
+materi_stress
+number_of_integration_points 27
+end_initia
+
+options_mesh -fixed_in_space -fixed_in_space -fixed_in_space
+options_convection -no
+options_inertia -no
+
+node 1 0.000 0.000 0.000
+node 2 0.000 0.000 1.000
+node 3 0.000 0.000 2.000
+node 4 0.000 0.500 0.000
+node 5 0.000 0.500 1.000
+node 6 0.000 0.500 2.000
+node 7 0.000 1.000 0.000
+node 8 0.000 1.000 1.000
+node 9 0.000 1.000 2.000
+node 10 0.000 1.500 0.000
+node 11 0.000 1.500 1.000
+node 12 0.000 1.500 2.000
+node 13 0.000 2.000 0.000
+node 14 0.000 2.000 1.000
+node 15 0.000 2.000 2.000
+node 16 0.000 2.500 0.000
+node 17 0.000 2.500 1.000
+node 18 0.000 2.500 2.000
+node 19 0.000 3.000 0.000
+node 20 0.000 3.000 1.000
+node 21 0.000 3.000 2.000
+node 22 0.000 3.500 0.000
+node 23 0.000 3.500 1.000
+node 24 0.000 3.500 2.000
+node 25 0.000 4.000 0.000
+node 26 0.000 4.000 1.000
+node 27 0.000 4.000 2.000
+node 28 0.500 0.000 0.000
+node 29 0.500 0.000 1.000
+node 30 0.500 0.000 2.000
+node 31 0.500 0.500 0.000
+node 32 0.500 0.500 1.000
+node 33 0.500 0.500 2.000
+node 34 0.500 1.000 0.000
+node 35 0.500 1.000 1.000
+node 36 0.500 1.000 2.000
+node 37 0.500 1.500 0.000
+node 38 0.500 1.500 1.000
+node 39 0.500 1.500 2.000
+node 40 0.500 2.000 0.000
+node 41 0.500 2.000 1.000
+node 42 0.500 2.000 2.000
+node 43 0.500 2.500 0.000
+node 44 0.500 2.500 1.000
+node 45 0.500 2.500 2.000
+node 46 0.500 3.000 0.000
+node 47 0.500 3.000 1.000
+node 48 0.500 3.000 2.000
+node 49 0.500 3.500 0.000
+node 50 0.500 3.500 1.000
+node 51 0.500 3.500 2.000
+node 52 0.500 4.000 0.000
+node 53 0.500 4.000 1.000
+node 54 0.500 4.000 2.000
+node 55 1.000 0.000 0.000
+node 56 1.000 0.000 1.000
+node 57 1.000 0.000 2.000
+node 58 1.000 0.500 0.000
+node 59 1.000 0.500 1.000
+node 60 1.000 0.500 2.000
+node 61 1.000 1.000 0.000
+node 62 1.000 1.000 1.000
+node 63 1.000 1.000 2.000
+node 64 1.000 1.500 0.000
+node 65 1.000 1.500 1.000
+node 66 1.000 1.500 2.000
+node 67 1.000 2.000 0.000
+node 68 1.000 2.000 1.000
+node 69 1.000 2.000 2.000
+node 70 1.000 2.500 0.000
+node 71 1.000 2.500 1.000
+node 72 1.000 2.500 2.000
+node 73 1.000 3.000 0.000
+node 74 1.000 3.000 1.000
+node 75 1.000 3.000 2.000
+node 76 1.000 3.500 0.000
+node 77 1.000 3.500 1.000
+node 78 1.000 3.500 2.000
+node 79 1.000 4.000 0.000
+node 80 1.000 4.000 1.000
+node 81 1.000 4.000 2.000
+
+element 1 -hex27 1 28 55 4 31 58 7 34 61 2 29 56 5 32 59 8 35 62 3 30 57 6 33 60 9 36 63
+element_group 1 0
+element 2 -hex27 7 34 61 10 37 64 13 40 67 8 35 62 11 38 65 14 41 68 9 36 63 12 39 66 15 42 69
+element_group 2 0
+element 3 -hex27 13 40 67 16 43 70 19 46 73 14 41 68 17 44 71 20 47 74 15 42 69 18 45 72 21 48 75
+element_group 3 0
+element 4 -hex27 19 46 73 22 49 76 25 52 79 20 47 74 23 50 77 26 53 80 21 48 75 24 51 78 27 54 81
+element_group 4 0
+
+group_type 0 -materi
+group_materi_density 0 1.0
+group_materi_elasti_young 0 1000
+group_materi_elasti_poisson 0 0.0
+group_materi_memory 0 -updated_without_rotation
+
+bounda_unknown 0 1 -velx
+bounda_time 0 0. -0.000000000e+00 100. -0.000000000e+00
+bounda_unknown 2000 1 -vely
+bounda_time 2000 0. -0.000000000e+00 100. -0.000000000e+00
+bounda_unknown 4000 1 -velz
+bounda_time 4000 0. 0. 100. 0.
+bounda_unknown 1 2 -velx
+bounda_time 1 0. -0.000000000e+00 100. -0.000000000e+00
+bounda_unknown 2001 2 -vely
+bounda_time 2001 0. -0.000000000e+00 100. -0.000000000e+00
+bounda_unknown 4001 2 -velz
+bounda_time 4001 0. 0. 100. 0.
+bounda_unknown 2 3 -velx
+bounda_time 2 0. -0.000000000e+00 100. -0.000000000e+00
+bounda_unknown 2002 3 -vely
+bounda_time 2002 0. -0.000000000e+00 100. -0.000000000e+00
+bounda_unknown 4002 3 -velz
+bounda_time 4002 0. 0. 100. 0.
+bounda_unknown 3 4 -velx
+bounda_time 3 0. -1.250000000e-03 100. -1.250000000e-03
+bounda_unknown 2003 4 -vely
+bounda_time 2003 0. -2.500000000e-03 100. -2.500000000e-03
+bounda_unknown 4003 4 -velz
+bounda_time 4003 0. 0. 100. 0.
+bounda_unknown 4 5 -velx
+bounda_time 4 0. -1.250000000e-03 100. -1.250000000e-03
+bounda_unknown 2004 5 -vely
+bounda_time 2004 0. -2.500000000e-03 100. -2.500000000e-03
+bounda_unknown 4004 5 -velz
+bounda_time 4004 0. 0. 100. 0.
+bounda_unknown 5 6 -velx
+bounda_time 5 0. -1.250000000e-03 100. -1.250000000e-03
+bounda_unknown 2005 6 -vely
+bounda_time 2005 0. -2.500000000e-03 100. -2.500000000e-03
+bounda_unknown 4005 6 -velz
+bounda_time 4005 0. 0. 100. 0.
+bounda_unknown 6 7 -velx
+bounda_time 6 0. -5.000000000e-03 100. -5.000000000e-03
+bounda_unknown 2006 7 -vely
+bounda_time 2006 0. -5.000000000e-03 100. -5.000000000e-03
+bounda_unknown 4006 7 -velz
+bounda_time 4006 0. 0. 100. 0.
+bounda_unknown 7 8 -velx
+bounda_time 7 0. -5.000000000e-03 100. -5.000000000e-03
+bounda_unknown 2007 8 -vely
+bounda_time 2007 0. -5.000000000e-03 100. -5.000000000e-03
+bounda_unknown 4007 8 -velz
+bounda_time 4007 0. 0. 100. 0.
+bounda_unknown 8 9 -velx
+bounda_time 8 0. -5.000000000e-03 100. -5.000000000e-03
+bounda_unknown 2008 9 -vely
+bounda_time 2008 0. -5.000000000e-03 100. -5.000000000e-03
+bounda_unknown 4008 9 -velz
+bounda_time 4008 0. 0. 100. 0.
+bounda_unknown 9 10 -velx
+bounda_time 9 0. -1.125000000e-02 100. -1.125000000e-02
+bounda_unknown 2009 10 -vely
+bounda_time 2009 0. -7.500000000e-03 100. -7.500000000e-03
+bounda_unknown 4009 10 -velz
+bounda_time 4009 0. 0. 100. 0.
+bounda_unknown 10 11 -velx
+bounda_time 10 0. -1.125000000e-02 100. -1.125000000e-02
+bounda_unknown 2010 11 -vely
+bounda_time 2010 0. -7.500000000e-03 100. -7.500000000e-03
+bounda_unknown 4010 11 -velz
+bounda_time 4010 0. 0. 100. 0.
+bounda_unknown 11 12 -velx
+bounda_time 11 0. -1.125000000e-02 100. -1.125000000e-02
+bounda_unknown 2011 12 -vely
+bounda_time 2011 0. -7.500000000e-03 100. -7.500000000e-03
+bounda_unknown 4011 12 -velz
+bounda_time 4011 0. 0. 100. 0.
+bounda_unknown 12 13 -velx
+bounda_time 12 0. -2.000000000e-02 100. -2.000000000e-02
+bounda_unknown 2012 13 -vely
+bounda_time 2012 0. -1.000000000e-02 100. -1.000000000e-02
+bounda_unknown 4012 13 -velz
+bounda_time 4012 0. 0. 100. 0.
+bounda_unknown 13 14 -velx
+bounda_time 13 0. -2.000000000e-02 100. -2.000000000e-02
+bounda_unknown 2013 14 -vely
+bounda_time 2013 0. -1.000000000e-02 100. -1.000000000e-02
+bounda_unknown 4013 14 -velz
+bounda_time 4013 0. 0. 100. 0.
+bounda_unknown 14 15 -velx
+bounda_time 14 0. -2.000000000e-02 100. -2.000000000e-02
+bounda_unknown 2014 15 -vely
+bounda_time 2014 0. -1.000000000e-02 100. -1.000000000e-02
+bounda_unknown 4014 15 -velz
+bounda_time 4014 0. 0. 100. 0.
+bounda_unknown 15 16 -velx
+bounda_time 15 0. -3.125000000e-02 100. -3.125000000e-02
+bounda_unknown 2015 16 -vely
+bounda_time 2015 0. -1.250000000e-02 100. -1.250000000e-02
+bounda_unknown 4015 16 -velz
+bounda_time 4015 0. 0. 100. 0.
+bounda_unknown 16 17 -velx
+bounda_time 16 0. -3.125000000e-02 100. -3.125000000e-02
+bounda_unknown 2016 17 -vely
+bounda_time 2016 0. -1.250000000e-02 100. -1.250000000e-02
+bounda_unknown 4016 17 -velz
+bounda_time 4016 0. 0. 100. 0.
+bounda_unknown 17 18 -velx
+bounda_time 17 0. -3.125000000e-02 100. -3.125000000e-02
+bounda_unknown 2017 18 -vely
+bounda_time 2017 0. -1.250000000e-02 100. -1.250000000e-02
+bounda_unknown 4017 18 -velz
+bounda_time 4017 0. 0. 100. 0.
+bounda_unknown 18 19 -velx
+bounda_time 18 0. -4.500000000e-02 100. -4.500000000e-02
+bounda_unknown 2018 19 -vely
+bounda_time 2018 0. -1.500000000e-02 100. -1.500000000e-02
+bounda_unknown 4018 19 -velz
+bounda_time 4018 0. 0. 100. 0.
+bounda_unknown 19 20 -velx
+bounda_time 19 0. -4.500000000e-02 100. -4.500000000e-02
+bounda_unknown 2019 20 -vely
+bounda_time 2019 0. -1.500000000e-02 100. -1.500000000e-02
+bounda_unknown 4019 20 -velz
+bounda_time 4019 0. 0. 100. 0.
+bounda_unknown 20 21 -velx
+bounda_time 20 0. -4.500000000e-02 100. -4.500000000e-02
+bounda_unknown 2020 21 -vely
+bounda_time 2020 0. -1.500000000e-02 100. -1.500000000e-02
+bounda_unknown 4020 21 -velz
+bounda_time 4020 0. 0. 100. 0.
+bounda_unknown 21 22 -velx
+bounda_time 21 0. -6.125000000e-02 100. -6.125000000e-02
+bounda_unknown 2021 22 -vely
+bounda_time 2021 0. -1.750000000e-02 100. -1.750000000e-02
+bounda_unknown 4021 22 -velz
+bounda_time 4021 0. 0. 100. 0.
+bounda_unknown 22 23 -velx
+bounda_time 22 0. -6.125000000e-02 100. -6.125000000e-02
+bounda_unknown 2022 23 -vely
+bounda_time 2022 0. -1.750000000e-02 100. -1.750000000e-02
+bounda_unknown 4022 23 -velz
+bounda_time 4022 0. 0. 100. 0.
+bounda_unknown 23 24 -velx
+bounda_time 23 0. -6.125000000e-02 100. -6.125000000e-02
+bounda_unknown 2023 24 -vely
+bounda_time 2023 0. -1.750000000e-02 100. -1.750000000e-02
+bounda_unknown 4023 24 -velz
+bounda_time 4023 0. 0. 100. 0.
+bounda_unknown 24 25 -velx
+bounda_time 24 0. -8.000000000e-02 100. -8.000000000e-02
+bounda_unknown 2024 25 -vely
+bounda_time 2024 0. -2.000000000e-02 100. -2.000000000e-02
+bounda_unknown 4024 25 -velz
+bounda_time 4024 0. 0. 100. 0.
+bounda_unknown 25 26 -velx
+bounda_time 25 0. -8.000000000e-02 100. -8.000000000e-02
+bounda_unknown 2025 26 -vely
+bounda_time 2025 0. -2.000000000e-02 100. -2.000000000e-02
+bounda_unknown 4025 26 -velz
+bounda_time 4025 0. 0. 100. 0.
+bounda_unknown 26 27 -velx
+bounda_time 26 0. -8.000000000e-02 100. -8.000000000e-02
+bounda_unknown 2026 27 -vely
+bounda_time 2026 0. -2.000000000e-02 100. -2.000000000e-02
+bounda_unknown 4026 27 -velz
+bounda_time 4026 0. 0. 100. 0.
+bounda_unknown 27 28 -velx
+bounda_time 27 0. -0.000000000e+00 100. -0.000000000e+00
+bounda_unknown 2027 28 -vely
+bounda_time 2027 0. 0.000000000e+00 100. 0.000000000e+00
+bounda_unknown 4027 28 -velz
+bounda_time 4027 0. 0. 100. 0.
+bounda_unknown 28 29 -velx
+bounda_time 28 0. -0.000000000e+00 100. -0.000000000e+00
+bounda_unknown 2028 29 -vely
+bounda_time 2028 0. 0.000000000e+00 100. 0.000000000e+00
+bounda_unknown 4028 29 -velz
+bounda_time 4028 0. 0. 100. 0.
+bounda_unknown 29 30 -velx
+bounda_time 29 0. -0.000000000e+00 100. -0.000000000e+00
+bounda_unknown 2029 30 -vely
+bounda_time 2029 0. 0.000000000e+00 100. 0.000000000e+00
+bounda_unknown 4029 30 -velz
+bounda_time 4029 0. 0. 100. 0.
+bounda_unknown 30 31 -velx
+bounda_time 30 0. -1.250000000e-03 100. -1.250000000e-03
+bounda_unknown 2030 31 -vely
+bounda_time 2030 0. 0.000000000e+00 100. 0.000000000e+00
+bounda_unknown 4030 31 -velz
+bounda_time 4030 0. 0. 100. 0.
+bounda_unknown 31 32 -velx
+bounda_time 31 0. -1.250000000e-03 100. -1.250000000e-03
+bounda_unknown 2031 32 -vely
+bounda_time 2031 0. 0.000000000e+00 100. 0.000000000e+00
+bounda_unknown 4031 32 -velz
+bounda_time 4031 0. 0. 100. 0.
+bounda_unknown 32 33 -velx
+bounda_time 32 0. -1.250000000e-03 100. -1.250000000e-03
+bounda_unknown 2032 33 -vely
+bounda_time 2032 0. 0.000000000e+00 100. 0.000000000e+00
+bounda_unknown 4032 33 -velz
+bounda_time 4032 0. 0. 100. 0.
+bounda_unknown 33 34 -velx
+bounda_time 33 0. -5.000000000e-03 100. -5.000000000e-03
+bounda_unknown 2033 34 -vely
+bounda_time 2033 0. 0.000000000e+00 100. 0.000000000e+00
+bounda_unknown 4033 34 -velz
+bounda_time 4033 0. 0. 100. 0.
+bounda_unknown 34 35 -velx
+bounda_time 34 0. -5.000000000e-03 100. -5.000000000e-03
+bounda_unknown 2034 35 -vely
+bounda_time 2034 0. 0.000000000e+00 100. 0.000000000e+00
+bounda_unknown 4034 35 -velz
+bounda_time 4034 0. 0. 100. 0.
+bounda_unknown 35 36 -velx
+bounda_time 35 0. -5.000000000e-03 100. -5.000000000e-03
+bounda_unknown 2035 36 -vely
+bounda_time 2035 0. 0.000000000e+00 100. 0.000000000e+00
+bounda_unknown 4035 36 -velz
+bounda_time 4035 0. 0. 100. 0.
+bounda_unknown 36 37 -velx
+bounda_time 36 0. -1.125000000e-02 100. -1.125000000e-02
+bounda_unknown 2036 37 -vely
+bounda_time 2036 0. 0.000000000e+00 100. 0.000000000e+00
+bounda_unknown 4036 37 -velz
+bounda_time 4036 0. 0. 100. 0.
+bounda_unknown 37 38 -velx
+bounda_time 37 0. -1.125000000e-02 100. -1.125000000e-02
+bounda_unknown 2037 38 -vely
+bounda_time 2037 0. 0.000000000e+00 100. 0.000000000e+00
+bounda_unknown 4037 38 -velz
+bounda_time 4037 0. 0. 100. 0.
+bounda_unknown 38 39 -velx
+bounda_time 38 0. -1.125000000e-02 100. -1.125000000e-02
+bounda_unknown 2038 39 -vely
+bounda_time 2038 0. 0.000000000e+00 100. 0.000000000e+00
+bounda_unknown 4038 39 -velz
+bounda_time 4038 0. 0. 100. 0.
+bounda_unknown 39 40 -velx
+bounda_time 39 0. -2.000000000e-02 100. -2.000000000e-02
+bounda_unknown 2039 40 -vely
+bounda_time 2039 0. 0.000000000e+00 100. 0.000000000e+00
+bounda_unknown 4039 40 -velz
+bounda_time 4039 0. 0. 100. 0.
+bounda_unknown 40 41 -velx
+bounda_time 40 0. -2.000000000e-02 100. -2.000000000e-02
+bounda_unknown 2040 41 -vely
+bounda_time 2040 0. 0.000000000e+00 100. 0.000000000e+00
+bounda_unknown 4040 41 -velz
+bounda_time 4040 0. 0. 100. 0.
+bounda_unknown 41 42 -velx
+bounda_time 41 0. -2.000000000e-02 100. -2.000000000e-02
+bounda_unknown 2041 42 -vely
+bounda_time 2041 0. 0.000000000e+00 100. 0.000000000e+00
+bounda_unknown 4041 42 -velz
+bounda_time 4041 0. 0. 100. 0.
+bounda_unknown 42 43 -velx
+bounda_time 42 0. -3.125000000e-02 100. -3.125000000e-02
+bounda_unknown 2042 43 -vely
+bounda_time 2042 0. 0.000000000e+00 100. 0.000000000e+00
+bounda_unknown 4042 43 -velz
+bounda_time 4042 0. 0. 100. 0.
+bounda_unknown 43 44 -velx
+bounda_time 43 0. -3.125000000e-02 100. -3.125000000e-02
+bounda_unknown 2043 44 -vely
+bounda_time 2043 0. 0.000000000e+00 100. 0.000000000e+00
+bounda_unknown 4043 44 -velz
+bounda_time 4043 0. 0. 100. 0.
+bounda_unknown 44 45 -velx
+bounda_time 44 0. -3.125000000e-02 100. -3.125000000e-02
+bounda_unknown 2044 45 -vely
+bounda_time 2044 0. 0.000000000e+00 100. 0.000000000e+00
+bounda_unknown 4044 45 -velz
+bounda_time 4044 0. 0. 100. 0.
+bounda_unknown 45 46 -velx
+bounda_time 45 0. -4.500000000e-02 100. -4.500000000e-02
+bounda_unknown 2045 46 -vely
+bounda_time 2045 0. 0.000000000e+00 100. 0.000000000e+00
+bounda_unknown 4045 46 -velz
+bounda_time 4045 0. 0. 100. 0.
+bounda_unknown 46 47 -velx
+bounda_time 46 0. -4.500000000e-02 100. -4.500000000e-02
+bounda_unknown 2046 47 -vely
+bounda_time 2046 0. 0.000000000e+00 100. 0.000000000e+00
+bounda_unknown 4046 47 -velz
+bounda_time 4046 0. 0. 100. 0.
+bounda_unknown 47 48 -velx
+bounda_time 47 0. -4.500000000e-02 100. -4.500000000e-02
+bounda_unknown 2047 48 -vely
+bounda_time 2047 0. 0.000000000e+00 100. 0.000000000e+00
+bounda_unknown 4047 48 -velz
+bounda_time 4047 0. 0. 100. 0.
+bounda_unknown 48 49 -velx
+bounda_time 48 0. -6.125000000e-02 100. -6.125000000e-02
+bounda_unknown 2048 49 -vely
+bounda_time 2048 0. 0.000000000e+00 100. 0.000000000e+00
+bounda_unknown 4048 49 -velz
+bounda_time 4048 0. 0. 100. 0.
+bounda_unknown 49 50 -velx
+bounda_time 49 0. -6.125000000e-02 100. -6.125000000e-02
+bounda_unknown 2049 50 -vely
+bounda_time 2049 0. 0.000000000e+00 100. 0.000000000e+00
+bounda_unknown 4049 50 -velz
+bounda_time 4049 0. 0. 100. 0.
+bounda_unknown 50 51 -velx
+bounda_time 50 0. -6.125000000e-02 100. -6.125000000e-02
+bounda_unknown 2050 51 -vely
+bounda_time 2050 0. 0.000000000e+00 100. 0.000000000e+00
+bounda_unknown 4050 51 -velz
+bounda_time 4050 0. 0. 100. 0.
+bounda_unknown 51 52 -velx
+bounda_time 51 0. -8.000000000e-02 100. -8.000000000e-02
+bounda_unknown 2051 52 -vely
+bounda_time 2051 0. 0.000000000e+00 100. 0.000000000e+00
+bounda_unknown 4051 52 -velz
+bounda_time 4051 0. 0. 100. 0.
+bounda_unknown 52 53 -velx
+bounda_time 52 0. -8.000000000e-02 100. -8.000000000e-02
+bounda_unknown 2052 53 -vely
+bounda_time 2052 0. 0.000000000e+00 100. 0.000000000e+00
+bounda_unknown 4052 53 -velz
+bounda_time 4052 0. 0. 100. 0.
+bounda_unknown 53 54 -velx
+bounda_time 53 0. -8.000000000e-02 100. -8.000000000e-02
+bounda_unknown 2053 54 -vely
+bounda_time 2053 0. 0.000000000e+00 100. 0.000000000e+00
+bounda_unknown 4053 54 -velz
+bounda_time 4053 0. 0. 100. 0.
+bounda_unknown 54 55 -velx
+bounda_time 54 0. -0.000000000e+00 100. -0.000000000e+00
+bounda_unknown 2054 55 -vely
+bounda_time 2054 0. 0.000000000e+00 100. 0.000000000e+00
+bounda_unknown 4054 55 -velz
+bounda_time 4054 0. 0. 100. 0.
+bounda_unknown 55 56 -velx
+bounda_time 55 0. -0.000000000e+00 100. -0.000000000e+00
+bounda_unknown 2055 56 -vely
+bounda_time 2055 0. 0.000000000e+00 100. 0.000000000e+00
+bounda_unknown 4055 56 -velz
+bounda_time 4055 0. 0. 100. 0.
+bounda_unknown 56 57 -velx
+bounda_time 56 0. -0.000000000e+00 100. -0.000000000e+00
+bounda_unknown 2056 57 -vely
+bounda_time 2056 0. 0.000000000e+00 100. 0.000000000e+00
+bounda_unknown 4056 57 -velz
+bounda_time 4056 0. 0. 100. 0.
+bounda_unknown 57 58 -velx
+bounda_time 57 0. -1.250000000e-03 100. -1.250000000e-03
+bounda_unknown 2057 58 -vely
+bounda_time 2057 0. 2.500000000e-03 100. 2.500000000e-03
+bounda_unknown 4057 58 -velz
+bounda_time 4057 0. 0. 100. 0.
+bounda_unknown 58 59 -velx
+bounda_time 58 0. -1.250000000e-03 100. -1.250000000e-03
+bounda_unknown 2058 59 -vely
+bounda_time 2058 0. 2.500000000e-03 100. 2.500000000e-03
+bounda_unknown 4058 59 -velz
+bounda_time 4058 0. 0. 100. 0.
+bounda_unknown 59 60 -velx
+bounda_time 59 0. -1.250000000e-03 100. -1.250000000e-03
+bounda_unknown 2059 60 -vely
+bounda_time 2059 0. 2.500000000e-03 100. 2.500000000e-03
+bounda_unknown 4059 60 -velz
+bounda_time 4059 0. 0. 100. 0.
+bounda_unknown 60 61 -velx
+bounda_time 60 0. -5.000000000e-03 100. -5.000000000e-03
+bounda_unknown 2060 61 -vely
+bounda_time 2060 0. 5.000000000e-03 100. 5.000000000e-03
+bounda_unknown 4060 61 -velz
+bounda_time 4060 0. 0. 100. 0.
+bounda_unknown 61 62 -velx
+bounda_time 61 0. -5.000000000e-03 100. -5.000000000e-03
+bounda_unknown 2061 62 -vely
+bounda_time 2061 0. 5.000000000e-03 100. 5.000000000e-03
+bounda_unknown 4061 62 -velz
+bounda_time 4061 0. 0. 100. 0.
+bounda_unknown 62 63 -velx
+bounda_time 62 0. -5.000000000e-03 100. -5.000000000e-03
+bounda_unknown 2062 63 -vely
+bounda_time 2062 0. 5.000000000e-03 100. 5.000000000e-03
+bounda_unknown 4062 63 -velz
+bounda_time 4062 0. 0. 100. 0.
+bounda_unknown 63 64 -velx
+bounda_time 63 0. -1.125000000e-02 100. -1.125000000e-02
+bounda_unknown 2063 64 -vely
+bounda_time 2063 0. 7.500000000e-03 100. 7.500000000e-03
+bounda_unknown 4063 64 -velz
+bounda_time 4063 0. 0. 100. 0.
+bounda_unknown 64 65 -velx
+bounda_time 64 0. -1.125000000e-02 100. -1.125000000e-02
+bounda_unknown 2064 65 -vely
+bounda_time 2064 0. 7.500000000e-03 100. 7.500000000e-03
+bounda_unknown 4064 65 -velz
+bounda_time 4064 0. 0. 100. 0.
+bounda_unknown 65 66 -velx
+bounda_time 65 0. -1.125000000e-02 100. -1.125000000e-02
+bounda_unknown 2065 66 -vely
+bounda_time 2065 0. 7.500000000e-03 100. 7.500000000e-03
+bounda_unknown 4065 66 -velz
+bounda_time 4065 0. 0. 100. 0.
+bounda_unknown 66 67 -velx
+bounda_time 66 0. -2.000000000e-02 100. -2.000000000e-02
+bounda_unknown 2066 67 -vely
+bounda_time 2066 0. 1.000000000e-02 100. 1.000000000e-02
+bounda_unknown 4066 67 -velz
+bounda_time 4066 0. 0. 100. 0.
+bounda_unknown 67 68 -velx
+bounda_time 67 0. -2.000000000e-02 100. -2.000000000e-02
+bounda_unknown 2067 68 -vely
+bounda_time 2067 0. 1.000000000e-02 100. 1.000000000e-02
+bounda_unknown 4067 68 -velz
+bounda_time 4067 0. 0. 100. 0.
+bounda_unknown 68 69 -velx
+bounda_time 68 0. -2.000000000e-02 100. -2.000000000e-02
+bounda_unknown 2068 69 -vely
+bounda_time 2068 0. 1.000000000e-02 100. 1.000000000e-02
+bounda_unknown 4068 69 -velz
+bounda_time 4068 0. 0. 100. 0.
+bounda_unknown 69 70 -velx
+bounda_time 69 0. -3.125000000e-02 100. -3.125000000e-02
+bounda_unknown 2069 70 -vely
+bounda_time 2069 0. 1.250000000e-02 100. 1.250000000e-02
+bounda_unknown 4069 70 -velz
+bounda_time 4069 0. 0. 100. 0.
+bounda_unknown 70 71 -velx
+bounda_time 70 0. -3.125000000e-02 100. -3.125000000e-02
+bounda_unknown 2070 71 -vely
+bounda_time 2070 0. 1.250000000e-02 100. 1.250000000e-02
+bounda_unknown 4070 71 -velz
+bounda_time 4070 0. 0. 100. 0.
+bounda_unknown 71 72 -velx
+bounda_time 71 0. -3.125000000e-02 100. -3.125000000e-02
+bounda_unknown 2071 72 -vely
+bounda_time 2071 0. 1.250000000e-02 100. 1.250000000e-02
+bounda_unknown 4071 72 -velz
+bounda_time 4071 0. 0. 100. 0.
+bounda_unknown 72 73 -velx
+bounda_time 72 0. -4.500000000e-02 100. -4.500000000e-02
+bounda_unknown 2072 73 -vely
+bounda_time 2072 0. 1.500000000e-02 100. 1.500000000e-02
+bounda_unknown 4072 73 -velz
+bounda_time 4072 0. 0. 100. 0.
+bounda_unknown 73 74 -velx
+bounda_time 73 0. -4.500000000e-02 100. -4.500000000e-02
+bounda_unknown 2073 74 -vely
+bounda_time 2073 0. 1.500000000e-02 100. 1.500000000e-02
+bounda_unknown 4073 74 -velz
+bounda_time 4073 0. 0. 100. 0.
+bounda_unknown 74 75 -velx
+bounda_time 74 0. -4.500000000e-02 100. -4.500000000e-02
+bounda_unknown 2074 75 -vely
+bounda_time 2074 0. 1.500000000e-02 100. 1.500000000e-02
+bounda_unknown 4074 75 -velz
+bounda_time 4074 0. 0. 100. 0.
+bounda_unknown 75 76 -velx
+bounda_time 75 0. -6.125000000e-02 100. -6.125000000e-02
+bounda_unknown 2075 76 -vely
+bounda_time 2075 0. 1.750000000e-02 100. 1.750000000e-02
+bounda_unknown 4075 76 -velz
+bounda_time 4075 0. 0. 100. 0.
+bounda_unknown 76 77 -velx
+bounda_time 76 0. -6.125000000e-02 100. -6.125000000e-02
+bounda_unknown 2076 77 -vely
+bounda_time 2076 0. 1.750000000e-02 100. 1.750000000e-02
+bounda_unknown 4076 77 -velz
+bounda_time 4076 0. 0. 100. 0.
+bounda_unknown 77 78 -velx
+bounda_time 77 0. -6.125000000e-02 100. -6.125000000e-02
+bounda_unknown 2077 78 -vely
+bounda_time 2077 0. 1.750000000e-02 100. 1.750000000e-02
+bounda_unknown 4077 78 -velz
+bounda_time 4077 0. 0. 100. 0.
+bounda_unknown 78 79 -velx
+bounda_time 78 0. -8.000000000e-02 100. -8.000000000e-02
+bounda_unknown 2078 79 -vely
+bounda_time 2078 0. 2.000000000e-02 100. 2.000000000e-02
+bounda_unknown 4078 79 -velz
+bounda_time 4078 0. 0. 100. 0.
+bounda_unknown 79 80 -velx
+bounda_time 79 0. -8.000000000e-02 100. -8.000000000e-02
+bounda_unknown 2079 80 -vely
+bounda_time 2079 0. 2.000000000e-02 100. 2.000000000e-02
+bounda_unknown 4079 80 -velz
+bounda_time 4079 0. 0. 100. 0.
+bounda_unknown 80 81 -velx
+bounda_time 80 0. -8.000000000e-02 100. -8.000000000e-02
+bounda_unknown 2080 81 -vely
+bounda_time 2080 0. 2.000000000e-02 100. 2.000000000e-02
+bounda_unknown 4080 81 -velz
+bounda_time 4080 0. 0. 100. 0.
+
+post_calcul_materi_stress_force_element_group 0
+post_calcul_materi_stress_force_direction_include 0. 1. 0.
+post_calcul_materi_stress_force_reference_point 1000. 2. 1.
+post_calcul -materi_stress -force
+
+control_timestep 1 0.1 0.1
+control_print_materi_stress_force 500 -all
+control_print_materi_stress_force 501 -primary
+
+target_item 0 -node_dof 53 -velx
+target_value 0 -8.000000000e-02 1.e-4
+end_data

@@ -484,3 +484,15 @@ Each file corresponds to the same feature in the [User Manual](../manual-user/).
 ## ELEMENT NORMAL (2026-09-30)
 
 - [element_normal](element_normal.md) — record `ELEMENT_NORMAL` (`database.cc`, DOUBLE ndim, external, VERSION_NORMAL only; enum appended in `tochnog.h`/`tochnog-mod.h`); `area.cc` `element_normal_set()` (boundary sides from the `border_nodes_*` tables, consistent nodal side normals, element = normalized sum of node normals), called from `top.cc` `iteration_start()` outside the parallel loop, deleted in `mesh.cc` `mesh_has_changed()`; `materi.cc` reads it for `_normal_automatic` (replaces the 2D-inert cross product and its out-of-bounds reads); zero normal in a `-yes` group -> input error (`element_normal_automatic()`, `db_error`), expected-error tests via the `EXPECTED_ERROR:` marker of `build_safe.sh`; `-no` switch = no automatic normal (full cut-off, `materi()` gated by `element_normal_automatic()`, as the Professional). Rule measured on the Professional 02-08-2026.
+
+## GENERATED ELEMENT_DOF INIT (2026-10-05)
+
+- [generated_element_dof_init](generated_element_dof_init.md) — `generate.cc` `generate_spring()`, `generate_beam_truss()`, `generate_interface()`, `generate_interface_triangle()`: the `tmp_element_dof` template written as the `ELEMENT_DOF` record of every generated element came from the uninitialized `get_new_dbl()`; now zeroed with `array_set()` as `create.cc` `create_element()` does. Removes the run-to-run `e-3xx` garbage in the printed `element_dof` (gen1, genbeam1, iface_gen*, conspr3, genera1/2, ho_othr1, spring2/3/5); results unchanged (A/B: only `element_dof` lines differ).
+
+## BUILD_SAFE SUITE (2026-10-05)
+
+- [build_safe_suite](build_safe_suite.md) — `scripts/build_safe.sh` + `scripts/build_safe_tests.txt`: full run loop restored (226 test-2014 runs, list in a file), reduced post-incident mode and duplicate broken tsup checks removed, run-rc gate, `TN_CHECK_ONLY=1` (no build); `dpline_move` / `dpline_method` inputs restored to their pre-run state. Result: runs 226/226, checks 92 OK / 9 FALLO (the 9 lost G2 inputs).
+
+## PRINT_DOF COMPONENT LOOP (2026-10-05)
+
+- [print_dof_component_loop](print_dof_component_loop.md) — `print_hi.cc` `print_dof()`: the dof write loop iterated `ipuknwn` over all `nuknwn` value/derivative entries, repeating every vector/matrix block and reading `node_dof` past the end of the record (heap garbage `e-3xx` in `dof.*`, BACKLOG C23); now loops over the primary unknowns (`npuknwn = nuknwn/nder`, step `nval`, type from `dof_scal_vec_mat[iuknwn]`) as `print_vt.cc`. Same pattern pending in `print_fr.cc`/`print_gm.cc` (C24).

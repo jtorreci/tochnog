@@ -462,3 +462,11 @@ input parameters it accepts.
 ## ELEMENT NORMAL (2026-09-30)
 
 - [element_normal](element_normal.md) — `element_normal index nx ny nz` (manual Professional 6.445): generated inward normal of an element with respect to the mesh boundary (normalized sum of the boundary node normals), used by `group_materi_plasti_mohr_coul_direct_normal_automatic` / `group_materi_plasti_tension_direct_normal_automatic`. Fixes the inert automatic cut-off in 2D (`tension_direct1`). A zero normal in a `_normal_automatic -yes` group is a readable input error (Pro: assertion); with `-no` the normal is not used (full cut-off, as Pro). Verified against the Professional 02-08-2026.
+
+## GENERATED ELEMENT_DOF INIT (2026-10-05)
+
+- [generated_element_dof_init](generated_element_dof_init.md) — elements created by the mesh generators (`control_mesh_generate_*`, `control_mesh_interface_triangle`) start with a zero `element_dof` record instead of random memory content: the printed database is reproducible run to run. Results unchanged.
+
+## PRINT_DOF COMPONENT LOOP (2026-10-05)
+
+- [print_dof_component_loop](print_dof_component_loop.md) — `control_print_dof` files now hold each dof component once per node and print (vector/stress blocks were repeated and some lines carried random `e-3xx` values); `dof.*` files are shorter than with older binaries.

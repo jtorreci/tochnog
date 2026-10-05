@@ -18,7 +18,10 @@
 - **Layout**: for each time step (each call appends), for each dof
   component (in `node_dof` order via `dof_scal_vec_mat`), for each node,
   write `x y z <value>`. Matrices (stress) use `stress_indx(kk,ll)` to map
-  the 6 Voigt components xx,yy,zz,xy,xz,yz.
+  the 6 Voigt components xx,yy,zz,xy,xz,yz. The loop runs over the
+  PRIMARY unknowns (`ipuknwn < nuknwn/nder`, step `nval`, type from
+  `dof_scal_vec_mat[ipuknwn*nder]`), see
+  [print_dof_component_loop](print_dof_component_loop.md) (C23 fix).
 
 ## Diseño / decisiones
 

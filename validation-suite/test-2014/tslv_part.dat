@@ -1,0 +1,90 @@
+( tslv_part: the PARTIAL records of the Professional's global solver
+  family accepted and verified behavior-neutral on the known-good
+  msf_nor physics: solver_bicg_restart, manual 6.1049, the GNU bicg
+  has no restart; solver_matrix_save, 6.1051, matrix decomposition
+  caching is pardiso/direct-solver functionality; the four
+  solver_pardiso_* records, 6.1053-6.1056, PARDISO is not compiled in
+  the GNU; timestep_predict_velocity, 6.1089, the GNU's staggered
+  scheme always starts the iterative solve from zero and accumulates
+  the result as an increment, so a previous-velocity initial guess
+  does not map, documented partial. The targets are the msf_nor
+  values: tip velx 1.589e-3 measured on this mesh. )
+
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_velocity_integrated
+materi_strain_total
+materi_stress
+end_initia
+
+options_mesh -fixed_in_space -fixed_in_space
+options_convection -no
+options_inertia -no
+
+node 1   0. 0.
+node 2   1. 0.
+node 3   2. 0.
+node 4   3. 0.
+node 5   4. 0.
+node 6   5. 0.
+node 7   6. 0.
+node 8   7. 0.
+node 9   8. 0.
+node 10  0. 1.
+node 11  1. 1.
+node 12  2. 1.
+node 13  3. 1.
+node 14  4. 1.
+node 15  5. 1.
+node 16  6. 1.
+node 17  7. 1.
+node 18  8. 1.
+
+element 1   -quad4 1 2 10 11
+element 2   -quad4 2 3 11 12
+element 3   -quad4 3 4 12 13
+element 4   -quad4 4 5 13 14
+element 5   -quad4 5 6 14 15
+element 6   -quad4 6 7 15 16
+element 7   -quad4 7 8 16 17
+element 8   -quad4 8 9 17 18
+
+element_group 1 0
+element_group 2 0
+element_group 3 0
+element_group 4 0
+element_group 5 0
+element_group 6 0
+element_group 7 0
+element_group 8 0
+
+group_type 0  -materi
+group_materi_density 0  1.0
+group_materi_elasti_young 0  1000.0
+group_materi_elasti_poisson 0  0.3
+group_materi_membrane 0  -yes
+group_materi_memory 0  -updated_without_rotation
+
+bounda_unknown 0  1 -velx -vely
+bounda_time    0  0. 0. 100. 0.
+bounda_unknown 1  10 -velx -vely
+bounda_time    1  0. 0. 100. 0.
+bounda_force   2  -ra 9 18 -ra -velx
+bounda_time    2  0. 1.e-2 100. 1.e-2
+
+solver_bicg_restart 10
+solver_matrix_save -yes
+solver_pardiso_ordering 0
+solver_pardiso_out_of_core -no
+solver_pardiso_processors 1
+solver_pardiso_processors_maximum -no
+timestep_predict_velocity -yes
+
+control_timestep 1  0.1 0.1
+
+target_item 0  -node_dof 1 -vely
+target_value 0  0. 1.e-8
+target_item 10  -node_dof 9 -velx
+target_value 10  1.589e-3 2.e-4
+end_data

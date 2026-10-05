@@ -1,0 +1,20 @@
+echo -no
+number_of_space_dimensions 3
+materi_velocity
+materi_velocity_integrated
+beam_rotation
+end_initia
+
+control_mesh_delete_geometry  30  -geometry_line 1
+control_mesh_delete_geometry  40  -geometry_line 2
+control_mesh_generate_beam  50  2 -geometry_set 1
+control_mesh_macro  10  -brick 1 5 10 10
+control_mesh_macro_parameters  10  0 0 0.5 1 1 1
+control_mesh_split  20  -yes
+geometry_line  1  -1 0 0.5 1 0 0.5 0.3
+geometry_line  2  0 -1 0.5 0 1 0.5 0.3
+geometry_set  1  -geometry_line 1 -geometry_line 2
+options_mesh   -follow_material -follow_material -follow_material
+options_processors   1
+options_stabilization   -static
+end_data

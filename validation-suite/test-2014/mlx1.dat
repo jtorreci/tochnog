@@ -1,0 +1,38 @@
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_strain_total
+materi_stress
+end_initia
+
+bounda_time  2  0 0 100 0
+bounda_unknown  2  -geometry_line 2 -vely
+control_timestep  10  1 1
+element  1  -quad4 1 2 3 4
+force_element_edge  0  1000 0
+force_element_edge_multi_linear_factor_x  0  9 1 11 1
+force_element_edge_geometry  0  -geometry_line 1
+force_element_edge_time  0  0 1 1 1
+geometry_line  1  10 0 10 1 0.0001
+geometry_line  2  10 0 11 0 0.0001
+group_axisymmetric  0  -yes
+group_materi_elasti_young  0  10000000
+group_materi_memory  0  -updated_without_rotation
+group_type  0  -materi
+node  1  10 0
+node  2  11 0
+node  3  10 1
+node  4  11 1
+options_convection   -no
+options_mesh   -fixed_in_space -fixed_in_space
+options_processors   1
+options_stabilization   -static
+post_point  1  10 0
+print_filter  1  -post_point_dof -all -velx -sigxx -sigzz
+target_item  1  -post_point_dof 1 -sigzz
+target_value  1  10910 2000
+node_dof  1  0 0 0 0 0 0 0 0 0 0 0 0 0 0
+node_dof  2  0 0 0 0 0 0 0 0 0 0 0 0 0 0
+node_dof  3  0 0 0 0 0 0 0 0 0 0 0 0 0 0
+node_dof  4  0 0 0 0 0 0 0 0 0 0 0 0 0 0
+end_data

@@ -1,0 +1,51 @@
+(geometry_list: node lists as geometry entity, manual 6.531 / 9.5)
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_displacement
+materi_stress
+condif_temperature
+end_initia
+
+node 1 0 0
+node 2 1 0
+node 3 2 0
+node 4 3 0
+node 5 0 1
+node 6 1 1
+node 7 2 1
+node 8 3 1
+element 1 -quad4 1 2 5 6
+element 2 -quad4 2 3 6 7
+element 3 -quad4 3 4 7 8
+
+group_type 0 -materi -condif
+group_materi_elasti_young 0 1000.
+group_materi_elasti_poisson 0 0.
+group_condif_density 0 1.
+group_condif_capacity 0 1.
+group_condif_conductivity 0 1.
+
+geometry_list 1 1 5
+geometry_list 2 1 2 3 4
+geometry_list 3 4 8
+geometry_list 6 8
+
+bounda_dof 0 -geometry_list 1 -velx
+bounda_dof 1 -geometry_list 2 -vely
+bounda_dof 2 -geometry_list 3 -velx
+bounda_time 2 0. 0. 1. 0.03
+bounda_dof 3 -geometry_list 6 -temp
+bounda_time 3 0. 0. 1. 10.
+bounda_dof 4 -geometry_list 1 -temp
+
+geometry_list 7 3 4 7 8
+control_mesh_delete_geometry 0 -geometry_list 7
+control_timestep 0 1. 1.
+control_print 0 -node_dof
+
+target_item 0 -node_dof 7 -disx
+target_value 0 0. 1.e-8
+target_item 1 -node_dof 7 -temp
+target_value 1 0. 1.e-8
+end_data

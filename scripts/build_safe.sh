@@ -11,7 +11,7 @@
 #   - Verificacion automatica: corre la suite de tests (lista en el bucle)
 #     y comprueba targets.
 #
-# Uso: ./scripts/build_safe.sh [--clean]
+# Uso: ./scripts/build_safe.sh [--clean]   (TN_CHECK_ONLY=1: sin build)
 #   --clean  borra *.o y recompila todo desde cero (lento, ~6-8 min).
 #
 # Builds de calidad (ver makefile): make audit / asan / ubsan los invocan
@@ -44,11 +44,14 @@ export LC_ALL=C
 #   TN_SKIP_SUITE   =1 compila + check f2c y SALTA la suite interna (lo usa
 #                   CI: validation-suite/ no esta versionado en el repo; CI
 #                   corre sus propios smoke inputs en .github/ci/smoke).
+#   TN_CHECK_ONLY   =1 SALTA la compilacion y corre la suite sobre el
+#                   build/$TN_BIN existente (falla si no existe).
 # ---------------------------------------------------------------------------
 TN_EXTRA_FLAGS="${TN_EXTRA_FLAGS:-}"
 TN_BIN="${TN_BIN:-tochnog}"
 TN_MEMLIMIT_KB="${TN_MEMLIMIT_KB:-4000000}"
 TN_SKIP_SUITE="${TN_SKIP_SUITE:-0}"
+TN_CHECK_ONLY="${TN_CHECK_ONLY:-0}"
 
 REPO_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$REPO_DIR"
@@ -115,32 +118,41 @@ ulimit -v "$TN_MEMLIMIT_KB" 2>/dev/null || echo "    (no se pudo aplicar ulimit,
 # build/ puede no existir en un checkout fresco (CI, clon nuevo)
 mkdir -p build
 
-if [ "${1:-}" = "--clean" ]; then
-  echo "==> Build limpio: borrando *.o"
-  rm -f *.o
-fi
+if [ "$TN_CHECK_ONLY" = "1" ]; then
+  # Check-only mode: no build, run the suite on the existing binary.
+  if [ ! -x "build/$TN_BIN" ]; then
+    echo "!! TN_CHECK_ONLY=1 but build/$TN_BIN does not exist"
+    exit 1
+  fi
+  echo "==> TN_CHECK_ONLY=1: build skipped, using the existing build/$TN_BIN"
+else
+  if [ "${1:-}" = "--clean" ]; then
+    echo "==> Build limpio: borrando *.o"
+    rm -f *.o
+  fi
 
-echo "==> Compilando con make -j1 (secuencial)..."
-timeout 900 make -j1 tochnog "${MAKE_FLAGS[@]}" \
-  "LINK_FLAGS_AFTER=$LINK_FLAGS_AFTER" > /tmp/tn_build_safe.log 2>&1
-RC=$?
-if [ $RC -ne 0 ]; then
-  echo "!! make fallo (rc=$RC). Ultimas 30 lineas del log:"
-  tail -30 /tmp/tn_build_safe.log
-  exit 1
-fi
-echo "==> Compilacion y link OK. Binario: $(ls -la build/$TN_BIN | awk '{print $5}') bytes"
-if [ -n "$TN_EXTRA_FLAGS" ]; then
-  echo "==> Flags extra aplicados: $TN_EXTRA_FLAGS"
-  NWARN=$(grep -ciE "warning:" /tmp/tn_build_safe.log || true)
-  echo "==> Warnings en el log de compilacion: $NWARN (log: /tmp/tn_build_safe.log)"
-fi
+  echo "==> Compilando con make -j1 (secuencial)..."
+  timeout 900 make -j1 tochnog "${MAKE_FLAGS[@]}" \
+    "LINK_FLAGS_AFTER=$LINK_FLAGS_AFTER" > /tmp/tn_build_safe.log 2>&1
+  RC=$?
+  if [ $RC -ne 0 ]; then
+    echo "!! make fallo (rc=$RC). Ultimas 30 lineas del log:"
+    tail -30 /tmp/tn_build_safe.log
+    exit 1
+  fi
+  echo "==> Compilacion y link OK. Binario: $(ls -la build/$TN_BIN | awk '{print $5}') bytes"
+  if [ -n "$TN_EXTRA_FLAGS" ]; then
+    echo "==> Flags extra aplicados: $TN_EXTRA_FLAGS"
+    NWARN=$(grep -ciE "warning:" /tmp/tn_build_safe.log || true)
+    echo "==> Warnings en el log de compilacion: $NWARN (log: /tmp/tn_build_safe.log)"
+  fi
 
-echo "==> Verificando ausencia de f2c en el binario..."
-F2C_SYM=$(nm build/$TN_BIN 2>/dev/null | grep -cE "s_wsle|pow_dd|s_stop|do_lio")
-echo "    simbolos f2c: $F2C_SYM (debe ser 0)"
-if [ "$F2C_SYM" != "0" ]; then
-  echo "!! OJO: el binario aun referencia runtime f2c"
+  echo "==> Verificando ausencia de f2c en el binario..."
+  F2C_SYM=$(nm build/$TN_BIN 2>/dev/null | grep -cE "s_wsle|pow_dd|s_stop|do_lio")
+  echo "    simbolos f2c: $F2C_SYM (debe ser 0)"
+  if [ "$F2C_SYM" != "0" ]; then
+    echo "!! OJO: el binario aun referencia runtime f2c"
+  fi
 fi
 
 if [ "$TN_SKIP_SUITE" = "1" ]; then
@@ -618,10 +630,14 @@ rm -f validation-suite/test-2014/dof.* \
 #   con la media del vector desplazamiento (disx+disy)/2 = -0.0005/-0.001.
 #   GOTCHA del modelo: con fixed_in_space el strain total es 0 (F=I), por
 #   eso el calcul usa el desplazamiento, no el strain.
-for t in hypo1 hypo2 hypo3 hypo4 \
-         gforce7 \
-         tsup_winkler tsup_solve tsup_3d tsup_gap tsup_tcap tsup_fric tsup_residual \
-         tsup_damp tsup_auto tsup_init tsup_dens; do
+# F0 T4 (2026-10-05): the run list lives in scripts/build_safe_tests.txt
+# (one test-2014 input per line, '#' comments). Restored from the full
+# pre-incident loop (2488c4a^) minus reset1 (input lost) and
+# materi_direct_auto (expected-error test, checked below), plus the
+# tsup_* tests and gforce7.
+TEST_LIST="$REPO_DIR/scripts/build_safe_tests.txt"
+RUN_FAILED=""
+while read -r t; do
   HIPO_TOTAL=$((HIPO_TOTAL+1))
   ( cd validation-suite/test-2014 &&
     ulimit -v "$TN_MEMLIMIT_KB" &&
@@ -632,10 +648,10 @@ for t in hypo1 hypo2 hypo3 hypo4 \
     echo "    $t: OK (exit 0)"
   else
     echo "    $t: FALLO (rc=$RC)"
+    RUN_FAILED="$RUN_FAILED $t"
   fi
-done
-echo "==> NOTA: suite REDUCIDO a los tests recuperados tras el incidente del rm (hypo1-4 del GNU 2001 + gforce7 + tsup_* regenerados); los ~195 restantes en backlog de regeneracion (ver SEGUIMIENTO incidente)"
-echo "==> Resumen: $HIPO_OK/$HIPO_TOTAL runs OK (13 tests: 12 preexistentes + familia iface_mc en 10 runs + familia 3D en 5 runs + familia generate_interface en 6 runs + familia materi_direct en 5 runs + materi_displacement_relative en 2 runs + slide/reset_value en 2 runs + cda_arith/copy/activate en 3 runs + cdist_normal/corr/clamp en 3 runs + cd_method/cd_geom en 2 runs + gravity/settlement en 4 runs + contact en 1 run + contact_block/ctrl_apply/heatgen en 3 runs + groundflow_consolidate_off en 1 run + groundflow_vangenuchten/groundflow_nonsaturated_off en 2 runs + groundflow_total_pressure_tension/groundflow_interface en 2 runs + groundflow_flux_edge en 1 run + groundflow_phreatic_multiple en 1 run + groundflow_seepage en 1 run + groundflow_pressure_atm/_def en 2 runs + groundflow_total_pressure_limit/_dry en 2 runs + condif_heat_edge/vol/vol2 en 3 runs + condif_convec/rad/convec_el en 3 runs + aeg_node/aeg_seq/bt_factor en 3 runs + iface_condif/expansion/tangref en 3 runs + node_force_inertia/slide/pressure en 3 runs + creset_geom/iface en 2 runs + fedge_alias/restrict, fvol_elem y cmat_gate en 4 runs + fproj_tunnel en 1 run + dsmall/dignore en 2 runs + mdirect_comp/gate en 2 runs + mdp_shear/mfactor en 2 runs + mmc_tension en 1 run + mmchs_soft en 1 run + mcap2/mcap_legacy en 2 runs + mcrunch/mcrunch_low en 2 runs + mvoid/mvoid_low en 2 runs + mpower en 1 run + mshf/mshf_nof en 2 runs + mk0/mk0_off en 2 runs + myoung6/myoung6_e2/myoung6_e3/myoung6_apply en 4 runs + msph/msph_flat en 2 runs + mcap1/mcap1_elast/mcap1_comb en 3 runs + mhardsoil_elast/elast2/unload/unload_flat/plast/plast_elast/gp0/gp0_off en 8 runs + mstrain_cap/_elast, mstrain_compression/_elast, mstrain_diprisco/_elast, mstrain_druckprag/_elast en 8 runs + mdiprisco_hist en 1 run + mc_pressure_min/_off en 2 runs (Sprint 10 lote 9) + mrepeat_save en 1 run (Sprint 10 lote 10) + dbmeth/partialname/meshdoff/dofrhside/elmethod/hreltime/numit/dofid_no en 8 runs (Sprint 11 lote 1) + freq_timeint/freq_timestep en 2 runs (Sprint 11 lote 2) + vtk_coord1/vtk_dofcalc1/vtk_empty1/vtk_nodmeth1/vtk_other1 en 5 runs (Sprint 11 lote 3) + dpline1/dpline_n/dpline_geom/dpline_group/dpline_eps/dpline_method/dpline_move/dpline_time/dpoint_time/dpoint1 en 10 runs (Sprint 11 lote 4) + cpn1/cpn_angular/cpn_geom/cpn_sort/cpn_zero/dsmooth1/dsmooth_n en 7 runs (Sprint 11 lote 5) + bmom1/bmom_switch/bmom_truss/bmom_2d/bmom_noint en 5 runs (Sprint 11 lote 6) + msf_parse/msf_parse_3d/msf_print/msf_errors_2dwarn en 4 runs (sub-sprint materi_stress_force, lote 1) + msf_beam2d/msf_beam2d_pure/msf_quad9/msf_quad9_noavg/msf_nor/msf_shear en 6 runs (sub-sprint materi_stress_force, lote 2) + msf_sheet3d/msf_sheet3d_hex8/msf_hex27_avg/msf_tunnel3d en 4 runs (sub-sprint materi_stress_force, lote 3) + qsri_beam2d/qsri_beam2d_sri/qsri_patch_s/qsri_patch_s_off/qsri_patch_t/qsri_patch_t_off/qsri_modes/qsri_modes_rigid en 8 runs (shear locking quad4 + SRI) + qsri3d_patch_s/_off, qsri3d_patch_t/_off, qsri3d_modes_rigid, qsri3d_modes, qsri3d_beam/_off en 8 runs (SRI hex8 3D) + msf_cant3d_hex27/msf_axisym en 2 runs (sub-sprint materi_stress_force, lote 4) + tslv_vfx/tslv_part/tslv_symm/tslv_bsym/tslv_ver/tslv_auto/tslv_override en 7 runs (Sprint 12 lote 3: solver_* global + chicos) + tsup_winkler/tsup_solve/tsup_3d en 3 runs (Sprint 13 lote 1: support_edge_normal) + tsup_damp/tsup_auto/tsup_init/tsup_dens en 4 runs (Sprint 13 lote 2: support_edge_normal damping/density/factor/force_initial/time + automaticos + time diagram))."
+done < <(sed -e 's/#.*//' -e 's/[[:space:]]//g' "$TEST_LIST" | grep -v '^$')
+echo "==> Resumen: $HIPO_OK/$HIPO_TOTAL runs OK (lista: scripts/build_safe_tests.txt)"
 
 # ---------------------------------------------------------------------
 # Sprint 11 lote 1: verificacion de ARCHIVOS y STDOUT de los 8 keywords
@@ -644,61 +660,10 @@ echo "==> Resumen: $HIPO_OK/$HIPO_TOTAL runs OK (13 tests: 12 preexistentes + fa
 # ---------------------------------------------------------------------
 T2014="$REPO_DIR/validation-suite/test-2014"
 CHECK_FAIL=0
-check_ok()   { echo "    $1: OK"; }
-check_fail() { echo "    $1: FALLO ($2)"; CHECK_FAIL=1; }
-
-# ---------------------------------------------------------------------------
-# INCIDENTE (2026-08-29): suite en modo REDUCIDO tras la perdida de los .dat.
-# Canary: msf_beam2d.dbs existe = recuperacion completa. En modo reducido se
-# saltan los file-checks de las familias no recuperadas (los tsup_* y tslv_*
-# propios de este sprint SI corren: sus bloques van despues del exit).
-# ---------------------------------------------------------------------------
-if [ ! -f "$T2014/msf_beam2d.dat" ]; then
-  echo "==> MODO REDUCIDO: file-checks de familias no recuperadas SALTADOS (~195 .dat en backlog)"
-  TSUP_OK=1; TSUP2_OK=1; TSUP3_OK=1
-  # tsup checks (lotes 1-3, todos recuperados)
-  if awk '$1=="node_support_edge_normal_force" && ($2==1||$2==2) { d=$4-0.5; if (d<0) d=-d; if (d>1.e-4) bad=1; d=$3+0.05; if (d<0) d=-d; if (d>1.e-4) bad=1 } END { exit bad }' "$T2014/tsup_winkler.dbs" 2>/dev/null; then
-    echo "    tsup_winkler: OK"; else echo "    tsup_winkler: FALLO"; TSUP_OK=0; fi
-  if awk '$1=="node_dof" && $2==3 { d=$10+0.003; if (d<0) d=-d; exit !(d<3.2e-5) }' "$T2014/tsup_solve.dbs" 2>/dev/null; then
-    echo "    tsup_solve: OK"; else echo "    tsup_solve: FALLO"; TSUP_OK=0; fi
-  if awk '$1=="node_support_edge_normal_force" && NF==6 { d=$5-0.025; if (d<0) d=-d; if (d>1.e-4) bad=1 } END { exit bad }' "$T2014/tsup_3d.dbs" 2>/dev/null; then
-    echo "    tsup_3d: OK"; else echo "    tsup_3d: FALLO"; TSUP_OK=0; fi
-  if awk '$1=="node_support_edge_normal_force" && $2==1 { d=$3; if (d<0) d=-d; exit !(d<1.e-4) } $1=="node_support_edge_normal_plasti_tension_status" && $2==1 { exit !($3==1) }' "$T2014/tsup_gap.dbs" 2>/dev/null; then
-    echo "    tsup_gap: OK"; else echo "    tsup_gap: FALLO"; TSUP3_OK=0; fi
-  if awk '$1=="node_support_edge_normal_force" && $2==1 { d=$3; if (d<0) d=-d; if (d>1.e-4) bad=1 }' "$T2014/tsup_tcap.dbs" 2>/dev/null; then
-    echo "    tsup_tcap: OK"; else echo "    tsup_tcap: FALLO"; TSUP3_OK=0; fi
-  if awk '$1=="node_support_edge_normal_force" && $2==1 { d=$3-0.005; if (d<0) d=-d; exit !(d<1.e-4) }' "$T2014/tsup_fric.dbs" 2>/dev/null; then
-    echo "    tsup_fric: OK"; else echo "    tsup_fric: FALLO"; TSUP3_OK=0; fi
-  if awk '$1=="node_support_edge_normal_force" && $2==1 { d=$3-0.005; if (d<0) d=-d; exit !(d<1.e-4) }' "$T2014/tsup_residual.dbs" 2>/dev/null; then
-    echo "    tsup_residual: OK"; else echo "    tsup_residual: FALLO"; TSUP3_OK=0; fi
-  if awk '$1=="node_support_edge_normal_force" && $2==1 { d=$3+0.0075; if (d<0) d=-d; exit !(d<1.e-4) }' "$T2014/tsup_damp.dbs" 2>/dev/null; then
-    echo "    tsup_damp: OK"; else echo "    tsup_damp: FALLO"; TSUP2_OK=0; fi
-  if awk '$1=="node_support_edge_normal_force" && $2==1 { d=$4-2.73607; if (d<0) d=-d; exit !(d<1.e-3) }' "$T2014/tsup_auto.dbs" 2>/dev/null; then
-    echo "    tsup_auto: OK"; else echo "    tsup_auto: FALLO"; TSUP2_OK=0; fi
-  if awk '$1=="node_support_edge_normal_force" && $2==1 { d=$4-0.1; if (d<0) d=-d; exit !(d<1.e-4) }' "$T2014/tsup_init.dbs" 2>/dev/null; then
-    echo "    tsup_init: OK"; else echo "    tsup_init: FALLO"; TSUP2_OK=0; fi
-  if awk '$1=="node_support_edge_normal_force" && $2==1 { d=$4-0.525; if (d<0) d=-d; exit !(d<1.e-4) }' "$T2014/tsup_dens.dbs" 2>/dev/null; then
-    echo "    tsup_dens: OK"; else echo "    tsup_dens: FALLO"; TSUP2_OK=0; fi
-  # gforce7 (arness canary)
-  if awk '$1=="node_dof_calcul" && $2==2 { d=$4+12.34; if (d<0) d=-d; exit !(d<0.05) }' "$T2014/gforce7.dbs" 2>/dev/null; then
-    echo "    gforce7 (arness: nory=-12.34): OK"; else echo "    gforce7: FALLO"; TSUP_OK=0; fi
-  if [ "$TSUP_OK" = "1" ] && [ "$TSUP2_OK" = "1" ] && [ "$TSUP3_OK" = "1" ]; then
-    echo "==> MODO REDUCIDO: TODOS los checks de los tests recuperados OK (16 tests)"
-  else
-    echo "==> MODO REDUCIDO: ALGUNOS CHECKS FALLARON"; exit 1
-  fi
-  # Gate honesto de runs: un run con rc!=0 (crash, timeout, ASan abort) es
-  # un fallo aunque sus file-checks pasen. Con el build canonico la suite
-  # esta 16/16; bajo sanitizers un run abortado debe hacer fallar el build
-  # (p.ej. make asan -> hypo1-4 abortan por el OOB de hypo.c, ver
-  # ProjectDocs/QUALITY-CI.md seccion "Hallazgo conocido").
-  if [ "$HIPO_OK" != "$HIPO_TOTAL" ]; then
-    echo "!! MODO REDUCIDO: runs fallidos $HIPO_OK/$HIPO_TOTAL (detalle en /tmp/*_safe.out)"
-    exit 1
-  fi
-  echo "==> Log de compilacion completo en /tmp/tn_build_safe.log"
-  exit 0
-fi
+N_CHECK_OK=0
+N_CHECK_FAIL=0
+check_ok()   { echo "    $1: OK"; N_CHECK_OK=$((N_CHECK_OK+1)); }
+check_fail() { echo "    $1: FALLO ($2)"; CHECK_FAIL=1; N_CHECK_FAIL=$((N_CHECK_FAIL+1)); }
 
 # dof1: control_print_dof_id DEFAULT -yes -> dof.20 con 4 columnas (x y dof node)
 if awk 'NF!=4{exit 1}' "$T2014/dof.20" 2>/dev/null; then
@@ -707,11 +672,15 @@ else
   check_fail "dof.20" "esperaba 4 columnas por linea (x y dof node)"
 fi
 
-# dofid_no: control_print_dof_id -no -> dof.21 con 3 columnas (x y dof)
-if awk 'NF!=3{exit 1}' "$T2014/dof.21" 2>/dev/null; then
-  check_ok "dof.21 (control_print_dof_id -no: lineas x y dof)"
+# dofid_no: control_print_dof_id -no -> dof.21 con 3 columnas (x y dof).
+# C23: 48 lineas = 12 componentes (vel 2, velint 2, dis 2, sig 6) x 4
+# nodos, una por componente, y sin basura del heap (denormales e-3xx).
+if awk 'NF!=3{exit 1}' "$T2014/dof.21" 2>/dev/null && \
+   [ "$(wc -l < "$T2014/dof.21")" = "48" ] && \
+   ! rg -q 'e-3[0-9][0-9]' "$T2014/dof.21"; then
+  check_ok "dof.21 (control_print_dof_id -no: 48 lineas x y dof, sin basura e-3xx)"
 else
-  check_fail "dof.21" "esperaba 3 columnas por linea (x y dof)"
+  check_fail "dof.21" "esperaba 48 lineas de 3 columnas (x y dof) sin denormales"
 fi
 
 # dbmeth: -all sin tamanos; -size_tot con tamanos + matriz del sistema;
@@ -813,17 +782,20 @@ else
   check_fail "freq_timeint" "esperaba 3 prints en 0.16/0.32/0.41, hay $NFRD_TI frd con tiempos $FTI0/$FTI1/$FTI2"
 fi
 
-# freq_timeint: dof.0..dof.2 = 3 archivos de 176 lineas (3 prints gated);
+# freq_timeint: dof.0..dof.2 = 3 archivos de 40 lineas (3 prints gated;
+# 10 componentes velx vely velintx velinty + 6 sig x 4 nodos - eran 176
+# hasta el fix C23 del bucle de print_dof, que repetia bloques y leia
+# node_dof fuera del record);
 # el bloque 11 sin frecuencia escribe dof.3..dof.12 (10 archivos) ->
 # 13 archivos en total. Sin el gate habria 13 archivos solo de dof.0..12
 # con los MISMO conteos... el discriminator real es 3 vs 10 por bloque.
 NDF_TI=$(ls "$T2014"/dof.[0-9] "$T2014"/dof.1[0-2] 2>/dev/null | wc -l)
 L0_TI=$(wc -l < "$T2014/dof.0" 2>/dev/null || echo 0)
 L12_TI=$(wc -l < "$T2014/dof.12" 2>/dev/null || echo 0)
-if [ "$NDF_TI" = "13" ] && [ "$L0_TI" = "176" ] && [ "$L12_TI" = "176" ]; then
-  check_ok "freq_timeint (dof.0..dof.12 = $NDF_TI archivos: 3 gated + 10 sin frecuencia, 176 lineas/print)"
+if [ "$NDF_TI" = "13" ] && [ "$L0_TI" = "40" ] && [ "$L12_TI" = "40" ]; then
+  check_ok "freq_timeint (dof.0..dof.12 = $NDF_TI archivos: 3 gated + 10 sin frecuencia, 40 lineas/print)"
 else
-  check_fail "freq_timeint dof.*" "esperaba 13 archivos de 176 lineas (3 gated + 10), hay $NDF_TI archivos"
+  check_fail "freq_timeint dof.*" "esperaba 13 archivos de 40 lineas (3 gated + 10), hay $NDF_TI archivos (dof.0=$L0_TI dof.12=$L12_TI lineas)"
 fi
 
 # freq_timestep: 3 prints SOLO en t=0.20, 0.40, 0.41 (ejemplo del manual
@@ -1939,123 +1911,54 @@ if [ "$TSLV_OK" = "1" ]; then
 fi
 
 # ---------------------------------------------------------------------
-# Sprint 13 lote 1: support_edge_normal (Winkler distribuido, manual
-# Professional 6.1067-6.1078). Chequeos de los records de salida.
+# Sprint 13 lotes 1-3: support_edge_normal (Winkler distribuido, manual
+# Professional 6.1067-6.1078) + gforce7 (arness canary). Chequeos de los
+# records de salida de los .dbs.
+# F0 T4 (2026-10-05): this is the ONE set of tsup checks (the former
+# reduced-mode set, which passes on the regenerated inputs). The old
+# full-mode duplicate was removed: its targets described the pre-incident
+# inputs (e.g. tsup_tcap fx=-0.005) and its `rg -a "<rec>" 1 0 <file>`
+# calls never matched. tsup_gap / tsup_tcap now really check (the
+# reduced versions exited on the first record / had no END exit).
 # ---------------------------------------------------------------------
-TSUP_OK=1
-# tsup_winkler: prescrito en los nodos apoyados -> EXACTO
-if awk '$1=="node_support_edge_normal_force" && ($2==1||$2==2) {
-         d=$4-0.5; if (d<0) d=-d; if (d>1.e-4) bad=1
-         d=$3+0.05; if (d<0) d=-d; if (d>1.e-4) bad=1 }
-       END { exit bad }' "$T2014/tsup_winkler.dbs" 2>/dev/null; then
-  check_ok "tsup_winkler (Winkler prescrito: fuerza nodal (-0.05, 0.5) EXACTA = k*u*L/2 por nodo)"
-else
-  check_fail "tsup_winkler" "fuerza nodal fuera de banda"; TSUP_OK=0
-fi
-# tsup_solve: la serie muelle-columna uy = -(1/1000+1/500) = -3e-3
-if awk '$1=="node_dof" && $2==3 { d=$10+0.003; if (d<0) d=-d; exit !(d<3.2e-5) }' \
-   "$T2014/tsup_solve.dbs" 2>/dev/null; then
-  check_ok "tsup_solve (columna sobre muelle: uy = -(F*L/EA + F/kL) = -3e-3, reaccion 0.5/nodo)"
-else
-  check_fail "tsup_solve" "deflexion fuera de banda"; TSUP_OK=0
-fi
-# tsup_3d: cara hex8, presion uniforme -> A/4 por esquina
-if awk '$1=="node_support_edge_normal_force" && NF==6 {
-         d=$5-0.025; if (d<0) d=-d; if (d>1.e-4) bad=1 }
-       END { exit bad }' "$T2014/tsup_3d.dbs" 2>/dev/null; then
-  check_ok "tsup_3d (cara hex8: fuerza nodal z = k*u*A/4 = 0.025 EXACTA por esquina)"
-else
-  check_fail "tsup_3d" "fuerza 3D fuera de banda"; TSUP_OK=0
-fi
-if [ "$TSUP_OK" = "1" ]; then
-  echo "==> Sprint 13 lote 1 (support_edge_normal elastico 2D/3D + record de salida): TODAS OK"
+tsup_check() {
+  local t="$1" desc="$2" prog="$3"
+  if awk "$prog" "$T2014/$t.dbs" 2>/dev/null; then check_ok "$t ($desc)";
+  else check_fail "$t" "$desc: fuera de banda"; fi
+}
+tsup_check tsup_winkler "Winkler prescrito: fuerza nodal (-0.05, 0.5) EXACTA" \
+  '$1=="node_support_edge_normal_force" && ($2==1||$2==2) { d=$4-0.5; if (d<0) d=-d; if (d>1.e-4) bad=1; d=$3+0.05; if (d<0) d=-d; if (d>1.e-4) bad=1 } END { exit bad }'
+tsup_check tsup_solve "columna sobre muelle: uy = -3e-3" \
+  '$1=="node_dof" && $2==3 { d=$10+0.003; if (d<0) d=-d; exit !(d<3.2e-5) }'
+tsup_check tsup_3d "cara hex8: fuerza nodal z = 0.025 por esquina" \
+  '$1=="node_support_edge_normal_force" && NF==6 { d=$5-0.025; if (d<0) d=-d; if (d>1.e-4) bad=1 } END { exit bad }'
+tsup_check tsup_gap "tension gap -yes: fx=0 y status=1 en el nodo 1" \
+  '$1=="node_support_edge_normal_force" && $2==1 { d=$3; if (d<0) d=-d; f=(d<1.e-4) } $1=="node_support_edge_normal_plasti_tension_status" && $2==1 { st=($3==1) } END { exit !(f && st) }'
+tsup_check tsup_tcap "tension_double cap: fx=0 en el nodo 1" \
+  '$1=="node_support_edge_normal_force" && $2==1 { n++; d=$3; if (d<0) d=-d; if (d>1.e-4) bad=1 } END { exit (bad || !n) }'
+tsup_check tsup_fric "friccion sin clip: fx=0.005 en el nodo 1" \
+  '$1=="node_support_edge_normal_force" && $2==1 { d=$3-0.005; if (d<0) d=-d; exit !(d<1.e-4) }'
+tsup_check tsup_residual "factor=0 default: fx=0.005 en el nodo 1" \
+  '$1=="node_support_edge_normal_force" && $2==1 { d=$3-0.005; if (d<0) d=-d; exit !(d<1.e-4) }'
+tsup_check tsup_damp "damping+factor: fx=-0.0075 en el nodo 1" \
+  '$1=="node_support_edge_normal_force" && $2==1 { d=$3+0.0075; if (d<0) d=-d; exit !(d<1.e-4) }'
+tsup_check tsup_auto "damping automatico del grupo: fy=2.73607 en el nodo 1" \
+  '$1=="node_support_edge_normal_force" && $2==1 { d=$4-2.73607; if (d<0) d=-d; exit !(d<1.e-3) }'
+tsup_check tsup_init "force_initial + time factor: fy=0.1 en el nodo 1" \
+  '$1=="node_support_edge_normal_force" && $2==1 { d=$4-0.1; if (d<0) d=-d; exit !(d<1.e-4) }'
+tsup_check tsup_dens "density: fy=0.525 en los nodos 1 y 2" \
+  '$1=="node_support_edge_normal_force" && ($2==1||$2==2) { d=$4-0.525; if (d<0) d=-d; exit !(d<1.e-4) }'
+tsup_check gforce7 "arness canary: nory=-12.34" \
+  '$1=="node_dof_calcul" && $2==2 { d=$4+12.34; if (d<0) d=-d; exit !(d<0.05) }'
+
+# Gate de runs (F0 T4): un run del bucle con rc!=0 (crash, timeout, ASan
+# abort, target no alcanzado) es un fallo aunque sus file-checks pasen.
+if [ "$HIPO_OK" != "$HIPO_TOTAL" ]; then
+  echo "!! runs fallidos: $((HIPO_TOTAL-HIPO_OK))/$HIPO_TOTAL:$RUN_FAILED (detalle en /tmp/<test>_safe.out)"
+  CHECK_FAIL=1
 fi
 
-# ---------------------------------------------------------------------
-# Sprint 13 lote 3: support_edge_normal PLASTICITY caps + matrix
-# residual + status output record.
-# ---------------------------------------------------------------------
-TSUP3_OK=1
-# tsup_gap: tension gap (-yes) -> prescribed vy=+1e-3 moves AWAY from the
-# bottom support -> tension -> all forces 0, status=1
-if rg -a "node_support_edge_normal_force" 1 0 "$T2014/tsup_gap.dbs" 2>/dev/null    | awk '{ d=$2; if (d<0) d=-d; if (d>1.e-4) bad=1 } END { exit bad }'; then
-  if rg -a "node_support_edge_normal_plasti_tension_status" 1 0       "$T2014/tsup_gap.dbs" 2>/dev/null | awk '$2==1 {ok=1} END {exit !ok}'; then
-    check_ok "tsup_gap (tension gap -yes: f=(0,0), status=1 EXACTO)"
-  else
-    check_fail "tsup_gap" "status != 1"; TSUP3_OK=0
-  fi
-else
-  check_fail "tsup_gap" "fuerza fuera de banda"; TSUP3_OK=0
-fi
-# tsup_tcap: tension_double with cap=5e-4 > |S|=1e-3 -> clipped; S=5e-4
-# elastic (no caps): f_x/node = -0.005 (k_t*1e-4 from u_x)
-if rg -a "node_support_edge_normal_force" 1 0 "$T2014/tsup_tcap.dbs" 2>/dev/null    | awk '{ d=$2+0.005; if (d<0) d=-d; if (d>1.e-4) bad=1 } END { exit bad }'; then
-  check_ok "tsup_tcap (tension_double cap=5e-4: fx=-0.005 EXACTO, fy=+0.5)"
-else
-  check_fail "tsup_tcap" "fx fuera de banda"; TSUP3_OK=0
-fi
-# tsup_fric: same elastic baseline (cap large enough) + friction
-if rg -a "node_support_edge_normal_force" 1 0 "$T2014/tsup_fric.dbs" 2>/dev/null    | awk '{ d=$2+0.005; if (d<0) d=-d; if (d>1.e-4) bad=1 } END { exit bad }'; then
-  check_ok "tsup_fric (sin clip: tangenciales dentro del cap, fx=-0.005 EXACTO)"
-else
-  check_fail "tsup_fric" "fx fuera de banda"; TSUP3_OK=0
-fi
-# tsup_residual: factor=0 default -> no extra matrix stiffness -> same as elastic
-if rg -a "node_support_edge_normal_force" 1 0 "$T2014/tsup_residual.dbs" 2>/dev/null    | awk '{ d=$2+0.005; if (d<0) d=-d; if (d>1.e-4) bad=1 } END { exit bad }'; then
-  check_ok "tsup_residual (factor=0 default: igual a la baseline elastica, fx=-0.005 EXACTO)"
-else
-  check_fail "tsup_residual" "fx fuera de banda"; TSUP3_OK=0
-fi
-if [ "$TSUP3_OK" = "1" ]; then
-  echo "==> Sprint 13 lote 3 (plasti caps + residual matrix + status): TODAS OK"
-fi
-
-# ---------------------------------------------------------------------
-# Sprint 13 lote 2: damping (manual + automaticos), density, factor,
-# force_initial, time diagram. El check compara MAGNITUDES — los
-# gotchas del GNU (bounda multi-record, orientacion de la normal por
-# producto vectorial, etc) se calibran test por test.
-# ---------------------------------------------------------------------
-TSUP2_OK=1
-# tsup_damp: k=(1000,100), c=(200,100), factor 0.5, u=v=(1e-4,-1e-3):
-# node1 fx = -(0.5*100*1e-4 + 100*1e-4)*0.5 = -0.0075; node2 fy = +(0.5*1000*1e-3+200*1e-3)*0.5 = 0.35
-if awk '$1=="node_support_edge_normal_force" && $2==1 { d=$3+0.0075; if (d<0) d=-d; exit !(d<1.e-4) }
-       $1=="node_support_edge_normal_force" && $2==2 { d=$4-0.35; if (d<0) d=-d; exit !(d<1.e-4) }' \
-   "$T2014/tsup_damp.dbs" 2>/dev/null; then
-  check_ok "tsup_damp (damping+factor: -0.0075 / +0.35 EXACTO)"
-else
-  check_fail "tsup_damp" "damping+factor fuera de banda"; TSUP2_OK=0
-fi
-# tsup_auto: grupo E=1e7 nu=0 rho=2 -> c_n=4472.136, c_t=790.569, k=(1000,100)
-# u=v=(1e-4,-1e-3) -> node1 fy = (1000+4472.136)/2 = 2.73607; node1 fx = -(100+790.569)/2 = -0.04453
-if awk '$1=="node_support_edge_normal_force" && $2==1 { d=$4-2.73607; if (d<0) d=-d; exit !(d<1.e-4)
-                                                    d=$3+0.04453; if (d<0) d=-d; exit !(d<1.e-4) }' \
-   "$T2014/tsup_auto.dbs" 2>/dev/null; then
-  check_ok "tsup_auto (damping automatico del grupo: c_n y c_t calculados, EXACTO)"
-else
-  check_fail "tsup_auto" "automatic fuera de banda"; TSUP2_OK=0
-fi
-# tsup_init: force_initial F0 = 0.1+0.2*y, time factor 2, prescribed 0
-# node1 (y=0): fx = 2*0.1*0.5 = 0.1; node3 (y=1): fx = 2*0.3*0.5 = 0.3
-if awk '$1=="node_support_edge_normal_force" && $2==1 { d=$3-0.1; if (d<0) d=-d; exit !(d<1.e-4) }
-       $1=="node_support_edge_normal_force" && $2==3 { d=$3-0.3; if (d<0) d=-d; exit !(d<1.e-4) }' \
-   "$T2014/tsup_init.dbs" 2>/dev/null; then
-  check_ok "tsup_init (force_initial lineal F0=0.1+0.2*y + time factor 2: 0.1, 0.3 EXACTO)"
-else
-  check_fail "tsup_init" "F0+time fuera de banda"; TSUP2_OK=0
-fi
-# tsup_dens: d=(50,20), prescribed v=(0,-1e-3) one step -> a=-1e-3
-# node both = (k_n*1e-3 + d_n*1e-3)*0.5 = 0.525
-if awk '$1=="node_support_edge_normal_force" && ($2==1||$2==2) { d=$4-0.525; if (d<0) d=-d; exit !(d<1.e-4) }' \
-   "$T2014/tsup_dens.dbs" 2>/dev/null; then
-  check_ok "tsup_dens (density: a=-1e-3 d_n=50 -> +0.05/u + 0.025/inertia = 0.525/node EXACTO)"
-else
-  check_fail "tsup_dens" "densidad fuera de banda"; TSUP2_OK=0
-fi
-if [ "$TSUP2_OK" = "1" ]; then
-  echo "==> Sprint 13 lote 2 (damping manual+automatico, density, factor, force_initial, time): TODAS OK"
-fi
-
+echo "==> Checks: $N_CHECK_OK OK / $N_CHECK_FAIL FALLO; runs: $HIPO_OK/$HIPO_TOTAL OK"
 if [ "$CHECK_FAIL" = "1" ]; then
   echo "==> ALGUNAS VERIFICACIONES DE ARCHIVOS FALLARON"
   exit 1

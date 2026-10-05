@@ -1,0 +1,47 @@
+( tslv_bsym: solver_matrix_symmetric -yes on a measured NON-symmetric
+  system - the beam, whose translation-rotation blocks carry different
+  dtime factors, manual Professional 6.1052 plus the documented GNU
+  behavior: the Professional symmetrizes the matrix, the GNU runs CG
+  on the as-assembled matrix and prints a warning that the measurement
+  disagrees with the assertion. solver_bicg_stop -no keeps the
+  calculation alive when the forced CG struggles. The build_safe check
+  greps the warning line. Trivial target: the clamped node does not
+  move laterally. )
+
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_velocity_integrated
+beam_rotation
+end_initia
+
+options_mesh -fixed_in_space -fixed_in_space
+options_convection -no
+
+node 1  0. 0.
+node 2  0.5 0.
+node 3  1. 0.
+element 1  -beam 1 2
+element 2  -beam 2 3
+
+group_type 0  -beam
+group_beam_young 0  1.0
+group_beam_inertia 0  1.0
+
+bounda_unknown 0  1 -velx -vely -rotz
+bounda_time    0  0. 0. 100. 0.
+bounda_unknown 2  2 -velx
+bounda_time    2  0. 0. 100. 0.
+bounda_unknown 3  3 -velx
+bounda_time    3  0. 0. 100. 0.
+bounda_force   1  3 -vely
+bounda_time    1  0. 1.e-2 100. 1.e-2
+
+solver_matrix_symmetric -yes
+solver_bicg_stop -no
+
+control_timestep 8  1.e-1 1.e-1
+
+target_item 0  -node_dof 1 -vely
+target_value 0  0. 1.e-8
+end_data

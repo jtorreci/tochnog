@@ -1,0 +1,55 @@
+( msf_errors_3drefcount: rewritten on 2026-10-05 after the rm incident.
+  3D, two hex8 in TWO element groups but only ONE
+  reference point, 3 values instead of 6. Expected: rc=1 and the error
+  'reference_point needs one point' per element group.
+  EXPECTED_ERROR: 6 values expected, 3 given )
+
+echo -no
+number_of_space_dimensions 3
+derivatives
+materi_velocity
+materi_velocity_integrated
+materi_strain_total
+materi_stress
+number_of_integration_points 8
+end_initia
+
+bounda_time  0  0 0 100 0
+bounda_unknown  0  -ra 1 12 -ra -velx -vely -velz
+control_print_materi_stress_force  200  -all
+control_timestep  2  0.05 0.05
+element  1  -hex8 1 2 3 4 5 6 7 8
+element  2  -hex8 2 9 4 10 6 11 8 12
+element_group  1  0
+element_group  2  1
+group_materi_density  0  1
+group_materi_elasti_poisson  0  0
+group_materi_elasti_young  0  1000
+group_materi_memory  0  -updated_without_rotation
+group_type  0  -materi
+group_materi_density  1  1
+group_materi_elasti_poisson  1  0
+group_materi_elasti_young  1  1000
+group_materi_memory  1  -updated_without_rotation
+group_type  1  -materi
+node  1  0 0 0
+node  2  1 0 0
+node  3  0 1 0
+node  4  1 1 0
+node  5  0 0 1
+node  6  1 0 1
+node  7  0 1 1
+node  8  1 1 1
+node  9  2 0 0
+node  10  2 1 0
+node  11  2 0 1
+node  12  2 1 1
+options_convection   -no
+options_mesh   -fixed_in_space -fixed_in_space -fixed_in_space
+options_processors   1
+options_stabilization   -static
+post_calcul   -materi_stress -force
+post_calcul_materi_stress_force_direction_include   1 0 0
+post_calcul_materi_stress_force_element_group   0 1
+post_calcul_materi_stress_force_reference_point   0.5 0.5 0.5
+end_data

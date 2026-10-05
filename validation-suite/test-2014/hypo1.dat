@@ -1,0 +1,79 @@
+( Biaxial compression test on Karlsruher sand.
+  Constant lateral stress [200 kPa].
+  Hypoplasticity.
+  1 element, small deformations. 
+  Results compared with special purpose program Herle.)
+
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_velocity_integrated
+materi_stress
+materi_strain_total
+materi_history_variables 4
+end_initia
+
+options_mesh          -fixed_in_space -fixed_in_space
+options_convection    -no
+
+node 1  0.00 0.00
+node 2  1.00 0.00
+node 3  0.00 1.00
+node 4  1.00 1.00
+
+node_dof -ra -from 1 -to 4 -ra
+         0. 0.
+         0. 0.
+         -200. 0. 0. -200. 0. -200.  (kPa)
+         0. 0. 0. 0. 0. 0.
+         0.6 0.0 0.0 0.0
+
+element 1 -quad4 1 2 3 4
+
+(left edge)
+geometry_line 0  0.00 0.00 0.00 1.00 1.e-5
+(lower edge)
+geometry_line 1  0.00 0.00 1.00 0.00 1.e-5
+(upper edge)
+geometry_line 2  0.00 1.00 1.00 1.00 1.e-5
+(right edge)
+geometry_line 3  1.00 0.00 1.00 1.00 1.e-5
+
+force_element_edge_normal_geometry   0  -geometry_line 3
+force_element_edge_normal            0  -200.
+
+bounda_unknown 0  -geometry_line 0 -velx
+bounda_time    0  0. 0. 1.e10 0.
+bounda_unknown 1  -geometry_line 1 -vely
+bounda_time    1  0. 0. 1.e10 0.
+bounda_unknown 2  -geometry_line 2 -vely
+bounda_time    2  0. -1. 1.e10 -1.
+
+group_type           0  -materi
+group_materi_memory  0  -updated_without_rotation
+group_materi_plasti_hypo_wolfersdorff 0  
+                        30.   (deg)
+                        5800.e3 (kPa)
+                        0.28 
+                        0.84
+                        0.53 
+                        1.00 
+                        0.13 
+                        1.05 
+
+post_point 1 0.05 0.05
+
+control_timestep                        20  0.001 0.04
+(
+control_print                           20  -time_current
+control_print_data_versus_data          20  -post_point_dof 1 -eptyy
+				            -post_point_dof 1 -sigyy
+				            -post_point_dof 1 -sigxx
+				            -post_point_dof 1 -hisv0
+)
+
+target_item 1   -post_point_dof 1 -sigyy
+target_value 1   -863.0 1.0
+target_item 2   -post_point_dof 1 -hisv0
+target_value 2   0.60 0.01
+end_data

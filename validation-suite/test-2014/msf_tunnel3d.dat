@@ -1,0 +1,1076 @@
+( msf_tunnel3d - sub-sprint materi_stress_force, lote 3 (integracion 3D hex27):
+  TUNEL - anillo circular de 8 elementos -hex27 (1 en espesor radial r=[1.0,1.1],
+  8 en circunferencia 45 grados, 1 en axial z=[0,0.5]). GOTCHA del GNU (documentado
+  en manual-developer): el solve mixto 3D materi_stress + BiCG del GNU converge mal
+  con las cargas de presion consistentes sobre la cara interior (la matriz v-v del
+  hex27 es degenerada y el residuo se estanca en una meseta ~1e-12 -> el campo de
+  tensiones sale contaminado) - por eso el test usa DEFORMACION PRESCRITA (Dirichlet
+  puro, sin solve): u_r = u0*r/R (expansion radial proporcional, u0=1e-3), u_z = 0,
+  nu = 0 -> sigma_theta = E*u0/R = 1.0 const sobre el espesor EXACTO -> nor =
+  E*u0*t/R = 0.1 (= p*R con la presion equivalente p = E*u0*t/R^2 = 0.1, vaso de
+  presion), mom1 = 0, she = 0. direction_exclude = eje del tunel (0 0 1): las 2
+  caras de extremo (+-z) descartadas; caras extremas = las 2 +-circunferenciales
+  (|n*t_hat| minima entre las 4 restantes; t_hat = normalizado(centroide -
+  reference_point (0,0,0.25)) = radial). Plano medio (average -yes default): los 9
+  nodos del plano theta=cte central reciben la media EXACTA; -primary (511) los
+  omite. Archivos materi_stress_force.510 (-all) y .511 (-primary). )
+
+echo -no
+number_of_space_dimensions 3
+derivatives
+materi_velocity
+materi_velocity_integrated
+materi_strain_total
+materi_stress
+number_of_integration_points 27
+end_initia
+
+options_mesh -fixed_in_space -fixed_in_space -fixed_in_space
+options_convection -no
+options_inertia -no
+
+node 1 1.000000000 0.000000000 0.000000000
+node 49 1.000000000 0.000000000 0.250000000
+node 97 1.000000000 0.000000000 0.500000000
+node 17 1.050000000 0.000000000 0.000000000
+node 65 1.050000000 0.000000000 0.250000000
+node 113 1.050000000 0.000000000 0.500000000
+node 33 1.100000000 0.000000000 0.000000000
+node 81 1.100000000 0.000000000 0.250000000
+node 129 1.100000000 0.000000000 0.500000000
+node 2 0.923879533 0.382683432 0.000000000
+node 50 0.923879533 0.382683432 0.250000000
+node 98 0.923879533 0.382683432 0.500000000
+node 18 0.970073509 0.401817604 0.000000000
+node 66 0.970073509 0.401817604 0.250000000
+node 114 0.970073509 0.401817604 0.500000000
+node 34 1.016267486 0.420951776 0.000000000
+node 82 1.016267486 0.420951776 0.250000000
+node 130 1.016267486 0.420951776 0.500000000
+node 3 0.707106781 0.707106781 0.000000000
+node 51 0.707106781 0.707106781 0.250000000
+node 99 0.707106781 0.707106781 0.500000000
+node 19 0.742462120 0.742462120 0.000000000
+node 67 0.742462120 0.742462120 0.250000000
+node 115 0.742462120 0.742462120 0.500000000
+node 35 0.777817459 0.777817459 0.000000000
+node 83 0.777817459 0.777817459 0.250000000
+node 131 0.777817459 0.777817459 0.500000000
+node 4 0.382683432 0.923879533 0.000000000
+node 52 0.382683432 0.923879533 0.250000000
+node 100 0.382683432 0.923879533 0.500000000
+node 20 0.401817604 0.970073509 0.000000000
+node 68 0.401817604 0.970073509 0.250000000
+node 116 0.401817604 0.970073509 0.500000000
+node 36 0.420951776 1.016267486 0.000000000
+node 84 0.420951776 1.016267486 0.250000000
+node 132 0.420951776 1.016267486 0.500000000
+node 5 0.000000000 1.000000000 0.000000000
+node 53 0.000000000 1.000000000 0.250000000
+node 101 0.000000000 1.000000000 0.500000000
+node 21 0.000000000 1.050000000 0.000000000
+node 69 0.000000000 1.050000000 0.250000000
+node 117 0.000000000 1.050000000 0.500000000
+node 37 0.000000000 1.100000000 0.000000000
+node 85 0.000000000 1.100000000 0.250000000
+node 133 0.000000000 1.100000000 0.500000000
+node 6 -0.382683432 0.923879533 0.000000000
+node 54 -0.382683432 0.923879533 0.250000000
+node 102 -0.382683432 0.923879533 0.500000000
+node 22 -0.401817604 0.970073509 0.000000000
+node 70 -0.401817604 0.970073509 0.250000000
+node 118 -0.401817604 0.970073509 0.500000000
+node 38 -0.420951776 1.016267486 0.000000000
+node 86 -0.420951776 1.016267486 0.250000000
+node 134 -0.420951776 1.016267486 0.500000000
+node 7 -0.707106781 0.707106781 0.000000000
+node 55 -0.707106781 0.707106781 0.250000000
+node 103 -0.707106781 0.707106781 0.500000000
+node 23 -0.742462120 0.742462120 0.000000000
+node 71 -0.742462120 0.742462120 0.250000000
+node 119 -0.742462120 0.742462120 0.500000000
+node 39 -0.777817459 0.777817459 0.000000000
+node 87 -0.777817459 0.777817459 0.250000000
+node 135 -0.777817459 0.777817459 0.500000000
+node 8 -0.923879533 0.382683432 0.000000000
+node 56 -0.923879533 0.382683432 0.250000000
+node 104 -0.923879533 0.382683432 0.500000000
+node 24 -0.970073509 0.401817604 0.000000000
+node 72 -0.970073509 0.401817604 0.250000000
+node 120 -0.970073509 0.401817604 0.500000000
+node 40 -1.016267486 0.420951776 0.000000000
+node 88 -1.016267486 0.420951776 0.250000000
+node 136 -1.016267486 0.420951776 0.500000000
+node 9 -1.000000000 0.000000000 0.000000000
+node 57 -1.000000000 0.000000000 0.250000000
+node 105 -1.000000000 0.000000000 0.500000000
+node 25 -1.050000000 0.000000000 0.000000000
+node 73 -1.050000000 0.000000000 0.250000000
+node 121 -1.050000000 0.000000000 0.500000000
+node 41 -1.100000000 0.000000000 0.000000000
+node 89 -1.100000000 0.000000000 0.250000000
+node 137 -1.100000000 0.000000000 0.500000000
+node 10 -0.923879533 -0.382683432 0.000000000
+node 58 -0.923879533 -0.382683432 0.250000000
+node 106 -0.923879533 -0.382683432 0.500000000
+node 26 -0.970073509 -0.401817604 0.000000000
+node 74 -0.970073509 -0.401817604 0.250000000
+node 122 -0.970073509 -0.401817604 0.500000000
+node 42 -1.016267486 -0.420951776 0.000000000
+node 90 -1.016267486 -0.420951776 0.250000000
+node 138 -1.016267486 -0.420951776 0.500000000
+node 11 -0.707106781 -0.707106781 0.000000000
+node 59 -0.707106781 -0.707106781 0.250000000
+node 107 -0.707106781 -0.707106781 0.500000000
+node 27 -0.742462120 -0.742462120 0.000000000
+node 75 -0.742462120 -0.742462120 0.250000000
+node 123 -0.742462120 -0.742462120 0.500000000
+node 43 -0.777817459 -0.777817459 0.000000000
+node 91 -0.777817459 -0.777817459 0.250000000
+node 139 -0.777817459 -0.777817459 0.500000000
+node 12 -0.382683432 -0.923879533 0.000000000
+node 60 -0.382683432 -0.923879533 0.250000000
+node 108 -0.382683432 -0.923879533 0.500000000
+node 28 -0.401817604 -0.970073509 0.000000000
+node 76 -0.401817604 -0.970073509 0.250000000
+node 124 -0.401817604 -0.970073509 0.500000000
+node 44 -0.420951776 -1.016267486 0.000000000
+node 92 -0.420951776 -1.016267486 0.250000000
+node 140 -0.420951776 -1.016267486 0.500000000
+node 13 -0.000000000 -1.000000000 0.000000000
+node 61 -0.000000000 -1.000000000 0.250000000
+node 109 -0.000000000 -1.000000000 0.500000000
+node 29 -0.000000000 -1.050000000 0.000000000
+node 77 -0.000000000 -1.050000000 0.250000000
+node 125 -0.000000000 -1.050000000 0.500000000
+node 45 -0.000000000 -1.100000000 0.000000000
+node 93 -0.000000000 -1.100000000 0.250000000
+node 141 -0.000000000 -1.100000000 0.500000000
+node 14 0.382683432 -0.923879533 0.000000000
+node 62 0.382683432 -0.923879533 0.250000000
+node 110 0.382683432 -0.923879533 0.500000000
+node 30 0.401817604 -0.970073509 0.000000000
+node 78 0.401817604 -0.970073509 0.250000000
+node 126 0.401817604 -0.970073509 0.500000000
+node 46 0.420951776 -1.016267486 0.000000000
+node 94 0.420951776 -1.016267486 0.250000000
+node 142 0.420951776 -1.016267486 0.500000000
+node 15 0.707106781 -0.707106781 0.000000000
+node 63 0.707106781 -0.707106781 0.250000000
+node 111 0.707106781 -0.707106781 0.500000000
+node 31 0.742462120 -0.742462120 0.000000000
+node 79 0.742462120 -0.742462120 0.250000000
+node 127 0.742462120 -0.742462120 0.500000000
+node 47 0.777817459 -0.777817459 0.000000000
+node 95 0.777817459 -0.777817459 0.250000000
+node 143 0.777817459 -0.777817459 0.500000000
+node 16 0.923879533 -0.382683432 0.000000000
+node 64 0.923879533 -0.382683432 0.250000000
+node 112 0.923879533 -0.382683432 0.500000000
+node 32 0.970073509 -0.401817604 0.000000000
+node 80 0.970073509 -0.401817604 0.250000000
+node 128 0.970073509 -0.401817604 0.500000000
+node 48 1.016267486 -0.420951776 0.000000000
+node 96 1.016267486 -0.420951776 0.250000000
+node 144 1.016267486 -0.420951776 0.500000000
+
+element 1 -hex27 1 2 3 17 18 19 33 34 35 49 50 51 65 66 67 81 82 83 97 98 99 113 114 115 129 130 131
+element_group 1 0
+element 2 -hex27 3 4 5 19 20 21 35 36 37 51 52 53 67 68 69 83 84 85 99 100 101 115 116 117 131 132 133
+element_group 2 0
+element 3 -hex27 5 6 7 21 22 23 37 38 39 53 54 55 69 70 71 85 86 87 101 102 103 117 118 119 133 134 135
+element_group 3 0
+element 4 -hex27 7 8 9 23 24 25 39 40 41 55 56 57 71 72 73 87 88 89 103 104 105 119 120 121 135 136 137
+element_group 4 0
+element 5 -hex27 9 10 11 25 26 27 41 42 43 57 58 59 73 74 75 89 90 91 105 106 107 121 122 123 137 138 139
+element_group 5 0
+element 6 -hex27 11 12 13 27 28 29 43 44 45 59 60 61 75 76 77 91 92 93 107 108 109 123 124 125 139 140 141
+element_group 6 0
+element 7 -hex27 13 14 15 29 30 31 45 46 47 61 62 63 77 78 79 93 94 95 109 110 111 125 126 127 141 142 143
+element_group 7 0
+element 8 -hex27 15 16 1 31 32 17 47 48 33 63 64 49 79 80 65 95 96 81 111 112 97 127 128 113 143 144 129
+element_group 8 0
+
+group_type 0 -materi
+group_materi_density 0 1.0
+group_materi_elasti_young 0 1000
+group_materi_elasti_poisson 0 0.0
+group_materi_memory 0 -updated_without_rotation
+
+bounda_unknown 0 1 -velx
+bounda_time 0 0. 1.000000000e-02 100. 1.000000000e-02
+bounda_unknown 2000 1 -vely
+bounda_time 2000 0. 0.000000000e+00 100. 0.000000000e+00
+bounda_unknown 4000 1 -velz
+bounda_time 4000 0. 0. 100. 0.
+bounda_unknown 1 49 -velx
+bounda_time 1 0. 1.000000000e-02 100. 1.000000000e-02
+bounda_unknown 2001 49 -vely
+bounda_time 2001 0. 0.000000000e+00 100. 0.000000000e+00
+bounda_unknown 4001 49 -velz
+bounda_time 4001 0. 0. 100. 0.
+bounda_unknown 2 97 -velx
+bounda_time 2 0. 1.000000000e-02 100. 1.000000000e-02
+bounda_unknown 2002 97 -vely
+bounda_time 2002 0. 0.000000000e+00 100. 0.000000000e+00
+bounda_unknown 4002 97 -velz
+bounda_time 4002 0. 0. 100. 0.
+bounda_unknown 3 17 -velx
+bounda_time 3 0. 1.050000000e-02 100. 1.050000000e-02
+bounda_unknown 2003 17 -vely
+bounda_time 2003 0. 0.000000000e+00 100. 0.000000000e+00
+bounda_unknown 4003 17 -velz
+bounda_time 4003 0. 0. 100. 0.
+bounda_unknown 4 65 -velx
+bounda_time 4 0. 1.050000000e-02 100. 1.050000000e-02
+bounda_unknown 2004 65 -vely
+bounda_time 2004 0. 0.000000000e+00 100. 0.000000000e+00
+bounda_unknown 4004 65 -velz
+bounda_time 4004 0. 0. 100. 0.
+bounda_unknown 5 113 -velx
+bounda_time 5 0. 1.050000000e-02 100. 1.050000000e-02
+bounda_unknown 2005 113 -vely
+bounda_time 2005 0. 0.000000000e+00 100. 0.000000000e+00
+bounda_unknown 4005 113 -velz
+bounda_time 4005 0. 0. 100. 0.
+bounda_unknown 6 33 -velx
+bounda_time 6 0. 1.100000000e-02 100. 1.100000000e-02
+bounda_unknown 2006 33 -vely
+bounda_time 2006 0. 0.000000000e+00 100. 0.000000000e+00
+bounda_unknown 4006 33 -velz
+bounda_time 4006 0. 0. 100. 0.
+bounda_unknown 7 81 -velx
+bounda_time 7 0. 1.100000000e-02 100. 1.100000000e-02
+bounda_unknown 2007 81 -vely
+bounda_time 2007 0. 0.000000000e+00 100. 0.000000000e+00
+bounda_unknown 4007 81 -velz
+bounda_time 4007 0. 0. 100. 0.
+bounda_unknown 8 129 -velx
+bounda_time 8 0. 1.100000000e-02 100. 1.100000000e-02
+bounda_unknown 2008 129 -vely
+bounda_time 2008 0. 0.000000000e+00 100. 0.000000000e+00
+bounda_unknown 4008 129 -velz
+bounda_time 4008 0. 0. 100. 0.
+bounda_unknown 9 2 -velx
+bounda_time 9 0. 9.238795325e-03 100. 9.238795325e-03
+bounda_unknown 2009 2 -vely
+bounda_time 2009 0. 3.826834324e-03 100. 3.826834324e-03
+bounda_unknown 4009 2 -velz
+bounda_time 4009 0. 0. 100. 0.
+bounda_unknown 10 50 -velx
+bounda_time 10 0. 9.238795325e-03 100. 9.238795325e-03
+bounda_unknown 2010 50 -vely
+bounda_time 2010 0. 3.826834324e-03 100. 3.826834324e-03
+bounda_unknown 4010 50 -velz
+bounda_time 4010 0. 0. 100. 0.
+bounda_unknown 11 98 -velx
+bounda_time 11 0. 9.238795325e-03 100. 9.238795325e-03
+bounda_unknown 2011 98 -vely
+bounda_time 2011 0. 3.826834324e-03 100. 3.826834324e-03
+bounda_unknown 4011 98 -velz
+bounda_time 4011 0. 0. 100. 0.
+bounda_unknown 12 18 -velx
+bounda_time 12 0. 9.700735091e-03 100. 9.700735091e-03
+bounda_unknown 2012 18 -vely
+bounda_time 2012 0. 4.018176040e-03 100. 4.018176040e-03
+bounda_unknown 4012 18 -velz
+bounda_time 4012 0. 0. 100. 0.
+bounda_unknown 13 66 -velx
+bounda_time 13 0. 9.700735091e-03 100. 9.700735091e-03
+bounda_unknown 2013 66 -vely
+bounda_time 2013 0. 4.018176040e-03 100. 4.018176040e-03
+bounda_unknown 4013 66 -velz
+bounda_time 4013 0. 0. 100. 0.
+bounda_unknown 14 114 -velx
+bounda_time 14 0. 9.700735091e-03 100. 9.700735091e-03
+bounda_unknown 2014 114 -vely
+bounda_time 2014 0. 4.018176040e-03 100. 4.018176040e-03
+bounda_unknown 4014 114 -velz
+bounda_time 4014 0. 0. 100. 0.
+bounda_unknown 15 34 -velx
+bounda_time 15 0. 1.016267486e-02 100. 1.016267486e-02
+bounda_unknown 2015 34 -vely
+bounda_time 2015 0. 4.209517756e-03 100. 4.209517756e-03
+bounda_unknown 4015 34 -velz
+bounda_time 4015 0. 0. 100. 0.
+bounda_unknown 16 82 -velx
+bounda_time 16 0. 1.016267486e-02 100. 1.016267486e-02
+bounda_unknown 2016 82 -vely
+bounda_time 2016 0. 4.209517756e-03 100. 4.209517756e-03
+bounda_unknown 4016 82 -velz
+bounda_time 4016 0. 0. 100. 0.
+bounda_unknown 17 130 -velx
+bounda_time 17 0. 1.016267486e-02 100. 1.016267486e-02
+bounda_unknown 2017 130 -vely
+bounda_time 2017 0. 4.209517756e-03 100. 4.209517756e-03
+bounda_unknown 4017 130 -velz
+bounda_time 4017 0. 0. 100. 0.
+bounda_unknown 18 3 -velx
+bounda_time 18 0. 7.071067812e-03 100. 7.071067812e-03
+bounda_unknown 2018 3 -vely
+bounda_time 2018 0. 7.071067812e-03 100. 7.071067812e-03
+bounda_unknown 4018 3 -velz
+bounda_time 4018 0. 0. 100. 0.
+bounda_unknown 19 51 -velx
+bounda_time 19 0. 7.071067812e-03 100. 7.071067812e-03
+bounda_unknown 2019 51 -vely
+bounda_time 2019 0. 7.071067812e-03 100. 7.071067812e-03
+bounda_unknown 4019 51 -velz
+bounda_time 4019 0. 0. 100. 0.
+bounda_unknown 20 99 -velx
+bounda_time 20 0. 7.071067812e-03 100. 7.071067812e-03
+bounda_unknown 2020 99 -vely
+bounda_time 2020 0. 7.071067812e-03 100. 7.071067812e-03
+bounda_unknown 4020 99 -velz
+bounda_time 4020 0. 0. 100. 0.
+bounda_unknown 21 19 -velx
+bounda_time 21 0. 7.424621202e-03 100. 7.424621202e-03
+bounda_unknown 2021 19 -vely
+bounda_time 2021 0. 7.424621202e-03 100. 7.424621202e-03
+bounda_unknown 4021 19 -velz
+bounda_time 4021 0. 0. 100. 0.
+bounda_unknown 22 67 -velx
+bounda_time 22 0. 7.424621202e-03 100. 7.424621202e-03
+bounda_unknown 2022 67 -vely
+bounda_time 2022 0. 7.424621202e-03 100. 7.424621202e-03
+bounda_unknown 4022 67 -velz
+bounda_time 4022 0. 0. 100. 0.
+bounda_unknown 23 115 -velx
+bounda_time 23 0. 7.424621202e-03 100. 7.424621202e-03
+bounda_unknown 2023 115 -vely
+bounda_time 2023 0. 7.424621202e-03 100. 7.424621202e-03
+bounda_unknown 4023 115 -velz
+bounda_time 4023 0. 0. 100. 0.
+bounda_unknown 24 35 -velx
+bounda_time 24 0. 7.778174593e-03 100. 7.778174593e-03
+bounda_unknown 2024 35 -vely
+bounda_time 2024 0. 7.778174593e-03 100. 7.778174593e-03
+bounda_unknown 4024 35 -velz
+bounda_time 4024 0. 0. 100. 0.
+bounda_unknown 25 83 -velx
+bounda_time 25 0. 7.778174593e-03 100. 7.778174593e-03
+bounda_unknown 2025 83 -vely
+bounda_time 2025 0. 7.778174593e-03 100. 7.778174593e-03
+bounda_unknown 4025 83 -velz
+bounda_time 4025 0. 0. 100. 0.
+bounda_unknown 26 131 -velx
+bounda_time 26 0. 7.778174593e-03 100. 7.778174593e-03
+bounda_unknown 2026 131 -vely
+bounda_time 2026 0. 7.778174593e-03 100. 7.778174593e-03
+bounda_unknown 4026 131 -velz
+bounda_time 4026 0. 0. 100. 0.
+bounda_unknown 27 4 -velx
+bounda_time 27 0. 3.826834324e-03 100. 3.826834324e-03
+bounda_unknown 2027 4 -vely
+bounda_time 2027 0. 9.238795325e-03 100. 9.238795325e-03
+bounda_unknown 4027 4 -velz
+bounda_time 4027 0. 0. 100. 0.
+bounda_unknown 28 52 -velx
+bounda_time 28 0. 3.826834324e-03 100. 3.826834324e-03
+bounda_unknown 2028 52 -vely
+bounda_time 2028 0. 9.238795325e-03 100. 9.238795325e-03
+bounda_unknown 4028 52 -velz
+bounda_time 4028 0. 0. 100. 0.
+bounda_unknown 29 100 -velx
+bounda_time 29 0. 3.826834324e-03 100. 3.826834324e-03
+bounda_unknown 2029 100 -vely
+bounda_time 2029 0. 9.238795325e-03 100. 9.238795325e-03
+bounda_unknown 4029 100 -velz
+bounda_time 4029 0. 0. 100. 0.
+bounda_unknown 30 20 -velx
+bounda_time 30 0. 4.018176040e-03 100. 4.018176040e-03
+bounda_unknown 2030 20 -vely
+bounda_time 2030 0. 9.700735091e-03 100. 9.700735091e-03
+bounda_unknown 4030 20 -velz
+bounda_time 4030 0. 0. 100. 0.
+bounda_unknown 31 68 -velx
+bounda_time 31 0. 4.018176040e-03 100. 4.018176040e-03
+bounda_unknown 2031 68 -vely
+bounda_time 2031 0. 9.700735091e-03 100. 9.700735091e-03
+bounda_unknown 4031 68 -velz
+bounda_time 4031 0. 0. 100. 0.
+bounda_unknown 32 116 -velx
+bounda_time 32 0. 4.018176040e-03 100. 4.018176040e-03
+bounda_unknown 2032 116 -vely
+bounda_time 2032 0. 9.700735091e-03 100. 9.700735091e-03
+bounda_unknown 4032 116 -velz
+bounda_time 4032 0. 0. 100. 0.
+bounda_unknown 33 36 -velx
+bounda_time 33 0. 4.209517756e-03 100. 4.209517756e-03
+bounda_unknown 2033 36 -vely
+bounda_time 2033 0. 1.016267486e-02 100. 1.016267486e-02
+bounda_unknown 4033 36 -velz
+bounda_time 4033 0. 0. 100. 0.
+bounda_unknown 34 84 -velx
+bounda_time 34 0. 4.209517756e-03 100. 4.209517756e-03
+bounda_unknown 2034 84 -vely
+bounda_time 2034 0. 1.016267486e-02 100. 1.016267486e-02
+bounda_unknown 4034 84 -velz
+bounda_time 4034 0. 0. 100. 0.
+bounda_unknown 35 132 -velx
+bounda_time 35 0. 4.209517756e-03 100. 4.209517756e-03
+bounda_unknown 2035 132 -vely
+bounda_time 2035 0. 1.016267486e-02 100. 1.016267486e-02
+bounda_unknown 4035 132 -velz
+bounda_time 4035 0. 0. 100. 0.
+bounda_unknown 36 5 -velx
+bounda_time 36 0. 6.123233996e-19 100. 6.123233996e-19
+bounda_unknown 2036 5 -vely
+bounda_time 2036 0. 1.000000000e-02 100. 1.000000000e-02
+bounda_unknown 4036 5 -velz
+bounda_time 4036 0. 0. 100. 0.
+bounda_unknown 37 53 -velx
+bounda_time 37 0. 6.123233996e-19 100. 6.123233996e-19
+bounda_unknown 2037 53 -vely
+bounda_time 2037 0. 1.000000000e-02 100. 1.000000000e-02
+bounda_unknown 4037 53 -velz
+bounda_time 4037 0. 0. 100. 0.
+bounda_unknown 38 101 -velx
+bounda_time 38 0. 6.123233996e-19 100. 6.123233996e-19
+bounda_unknown 2038 101 -vely
+bounda_time 2038 0. 1.000000000e-02 100. 1.000000000e-02
+bounda_unknown 4038 101 -velz
+bounda_time 4038 0. 0. 100. 0.
+bounda_unknown 39 21 -velx
+bounda_time 39 0. 6.429395696e-19 100. 6.429395696e-19
+bounda_unknown 2039 21 -vely
+bounda_time 2039 0. 1.050000000e-02 100. 1.050000000e-02
+bounda_unknown 4039 21 -velz
+bounda_time 4039 0. 0. 100. 0.
+bounda_unknown 40 69 -velx
+bounda_time 40 0. 6.429395696e-19 100. 6.429395696e-19
+bounda_unknown 2040 69 -vely
+bounda_time 2040 0. 1.050000000e-02 100. 1.050000000e-02
+bounda_unknown 4040 69 -velz
+bounda_time 4040 0. 0. 100. 0.
+bounda_unknown 41 117 -velx
+bounda_time 41 0. 6.429395696e-19 100. 6.429395696e-19
+bounda_unknown 2041 117 -vely
+bounda_time 2041 0. 1.050000000e-02 100. 1.050000000e-02
+bounda_unknown 4041 117 -velz
+bounda_time 4041 0. 0. 100. 0.
+bounda_unknown 42 37 -velx
+bounda_time 42 0. 6.735557395e-19 100. 6.735557395e-19
+bounda_unknown 2042 37 -vely
+bounda_time 2042 0. 1.100000000e-02 100. 1.100000000e-02
+bounda_unknown 4042 37 -velz
+bounda_time 4042 0. 0. 100. 0.
+bounda_unknown 43 85 -velx
+bounda_time 43 0. 6.735557395e-19 100. 6.735557395e-19
+bounda_unknown 2043 85 -vely
+bounda_time 2043 0. 1.100000000e-02 100. 1.100000000e-02
+bounda_unknown 4043 85 -velz
+bounda_time 4043 0. 0. 100. 0.
+bounda_unknown 44 133 -velx
+bounda_time 44 0. 6.735557395e-19 100. 6.735557395e-19
+bounda_unknown 2044 133 -vely
+bounda_time 2044 0. 1.100000000e-02 100. 1.100000000e-02
+bounda_unknown 4044 133 -velz
+bounda_time 4044 0. 0. 100. 0.
+bounda_unknown 45 6 -velx
+bounda_time 45 0. -3.826834324e-03 100. -3.826834324e-03
+bounda_unknown 2045 6 -vely
+bounda_time 2045 0. 9.238795325e-03 100. 9.238795325e-03
+bounda_unknown 4045 6 -velz
+bounda_time 4045 0. 0. 100. 0.
+bounda_unknown 46 54 -velx
+bounda_time 46 0. -3.826834324e-03 100. -3.826834324e-03
+bounda_unknown 2046 54 -vely
+bounda_time 2046 0. 9.238795325e-03 100. 9.238795325e-03
+bounda_unknown 4046 54 -velz
+bounda_time 4046 0. 0. 100. 0.
+bounda_unknown 47 102 -velx
+bounda_time 47 0. -3.826834324e-03 100. -3.826834324e-03
+bounda_unknown 2047 102 -vely
+bounda_time 2047 0. 9.238795325e-03 100. 9.238795325e-03
+bounda_unknown 4047 102 -velz
+bounda_time 4047 0. 0. 100. 0.
+bounda_unknown 48 22 -velx
+bounda_time 48 0. -4.018176040e-03 100. -4.018176040e-03
+bounda_unknown 2048 22 -vely
+bounda_time 2048 0. 9.700735091e-03 100. 9.700735091e-03
+bounda_unknown 4048 22 -velz
+bounda_time 4048 0. 0. 100. 0.
+bounda_unknown 49 70 -velx
+bounda_time 49 0. -4.018176040e-03 100. -4.018176040e-03
+bounda_unknown 2049 70 -vely
+bounda_time 2049 0. 9.700735091e-03 100. 9.700735091e-03
+bounda_unknown 4049 70 -velz
+bounda_time 4049 0. 0. 100. 0.
+bounda_unknown 50 118 -velx
+bounda_time 50 0. -4.018176040e-03 100. -4.018176040e-03
+bounda_unknown 2050 118 -vely
+bounda_time 2050 0. 9.700735091e-03 100. 9.700735091e-03
+bounda_unknown 4050 118 -velz
+bounda_time 4050 0. 0. 100. 0.
+bounda_unknown 51 38 -velx
+bounda_time 51 0. -4.209517756e-03 100. -4.209517756e-03
+bounda_unknown 2051 38 -vely
+bounda_time 2051 0. 1.016267486e-02 100. 1.016267486e-02
+bounda_unknown 4051 38 -velz
+bounda_time 4051 0. 0. 100. 0.
+bounda_unknown 52 86 -velx
+bounda_time 52 0. -4.209517756e-03 100. -4.209517756e-03
+bounda_unknown 2052 86 -vely
+bounda_time 2052 0. 1.016267486e-02 100. 1.016267486e-02
+bounda_unknown 4052 86 -velz
+bounda_time 4052 0. 0. 100. 0.
+bounda_unknown 53 134 -velx
+bounda_time 53 0. -4.209517756e-03 100. -4.209517756e-03
+bounda_unknown 2053 134 -vely
+bounda_time 2053 0. 1.016267486e-02 100. 1.016267486e-02
+bounda_unknown 4053 134 -velz
+bounda_time 4053 0. 0. 100. 0.
+bounda_unknown 54 7 -velx
+bounda_time 54 0. -7.071067812e-03 100. -7.071067812e-03
+bounda_unknown 2054 7 -vely
+bounda_time 2054 0. 7.071067812e-03 100. 7.071067812e-03
+bounda_unknown 4054 7 -velz
+bounda_time 4054 0. 0. 100. 0.
+bounda_unknown 55 55 -velx
+bounda_time 55 0. -7.071067812e-03 100. -7.071067812e-03
+bounda_unknown 2055 55 -vely
+bounda_time 2055 0. 7.071067812e-03 100. 7.071067812e-03
+bounda_unknown 4055 55 -velz
+bounda_time 4055 0. 0. 100. 0.
+bounda_unknown 56 103 -velx
+bounda_time 56 0. -7.071067812e-03 100. -7.071067812e-03
+bounda_unknown 2056 103 -vely
+bounda_time 2056 0. 7.071067812e-03 100. 7.071067812e-03
+bounda_unknown 4056 103 -velz
+bounda_time 4056 0. 0. 100. 0.
+bounda_unknown 57 23 -velx
+bounda_time 57 0. -7.424621202e-03 100. -7.424621202e-03
+bounda_unknown 2057 23 -vely
+bounda_time 2057 0. 7.424621202e-03 100. 7.424621202e-03
+bounda_unknown 4057 23 -velz
+bounda_time 4057 0. 0. 100. 0.
+bounda_unknown 58 71 -velx
+bounda_time 58 0. -7.424621202e-03 100. -7.424621202e-03
+bounda_unknown 2058 71 -vely
+bounda_time 2058 0. 7.424621202e-03 100. 7.424621202e-03
+bounda_unknown 4058 71 -velz
+bounda_time 4058 0. 0. 100. 0.
+bounda_unknown 59 119 -velx
+bounda_time 59 0. -7.424621202e-03 100. -7.424621202e-03
+bounda_unknown 2059 119 -vely
+bounda_time 2059 0. 7.424621202e-03 100. 7.424621202e-03
+bounda_unknown 4059 119 -velz
+bounda_time 4059 0. 0. 100. 0.
+bounda_unknown 60 39 -velx
+bounda_time 60 0. -7.778174593e-03 100. -7.778174593e-03
+bounda_unknown 2060 39 -vely
+bounda_time 2060 0. 7.778174593e-03 100. 7.778174593e-03
+bounda_unknown 4060 39 -velz
+bounda_time 4060 0. 0. 100. 0.
+bounda_unknown 61 87 -velx
+bounda_time 61 0. -7.778174593e-03 100. -7.778174593e-03
+bounda_unknown 2061 87 -vely
+bounda_time 2061 0. 7.778174593e-03 100. 7.778174593e-03
+bounda_unknown 4061 87 -velz
+bounda_time 4061 0. 0. 100. 0.
+bounda_unknown 62 135 -velx
+bounda_time 62 0. -7.778174593e-03 100. -7.778174593e-03
+bounda_unknown 2062 135 -vely
+bounda_time 2062 0. 7.778174593e-03 100. 7.778174593e-03
+bounda_unknown 4062 135 -velz
+bounda_time 4062 0. 0. 100. 0.
+bounda_unknown 63 8 -velx
+bounda_time 63 0. -9.238795325e-03 100. -9.238795325e-03
+bounda_unknown 2063 8 -vely
+bounda_time 2063 0. 3.826834324e-03 100. 3.826834324e-03
+bounda_unknown 4063 8 -velz
+bounda_time 4063 0. 0. 100. 0.
+bounda_unknown 64 56 -velx
+bounda_time 64 0. -9.238795325e-03 100. -9.238795325e-03
+bounda_unknown 2064 56 -vely
+bounda_time 2064 0. 3.826834324e-03 100. 3.826834324e-03
+bounda_unknown 4064 56 -velz
+bounda_time 4064 0. 0. 100. 0.
+bounda_unknown 65 104 -velx
+bounda_time 65 0. -9.238795325e-03 100. -9.238795325e-03
+bounda_unknown 2065 104 -vely
+bounda_time 2065 0. 3.826834324e-03 100. 3.826834324e-03
+bounda_unknown 4065 104 -velz
+bounda_time 4065 0. 0. 100. 0.
+bounda_unknown 66 24 -velx
+bounda_time 66 0. -9.700735091e-03 100. -9.700735091e-03
+bounda_unknown 2066 24 -vely
+bounda_time 2066 0. 4.018176040e-03 100. 4.018176040e-03
+bounda_unknown 4066 24 -velz
+bounda_time 4066 0. 0. 100. 0.
+bounda_unknown 67 72 -velx
+bounda_time 67 0. -9.700735091e-03 100. -9.700735091e-03
+bounda_unknown 2067 72 -vely
+bounda_time 2067 0. 4.018176040e-03 100. 4.018176040e-03
+bounda_unknown 4067 72 -velz
+bounda_time 4067 0. 0. 100. 0.
+bounda_unknown 68 120 -velx
+bounda_time 68 0. -9.700735091e-03 100. -9.700735091e-03
+bounda_unknown 2068 120 -vely
+bounda_time 2068 0. 4.018176040e-03 100. 4.018176040e-03
+bounda_unknown 4068 120 -velz
+bounda_time 4068 0. 0. 100. 0.
+bounda_unknown 69 40 -velx
+bounda_time 69 0. -1.016267486e-02 100. -1.016267486e-02
+bounda_unknown 2069 40 -vely
+bounda_time 2069 0. 4.209517756e-03 100. 4.209517756e-03
+bounda_unknown 4069 40 -velz
+bounda_time 4069 0. 0. 100. 0.
+bounda_unknown 70 88 -velx
+bounda_time 70 0. -1.016267486e-02 100. -1.016267486e-02
+bounda_unknown 2070 88 -vely
+bounda_time 2070 0. 4.209517756e-03 100. 4.209517756e-03
+bounda_unknown 4070 88 -velz
+bounda_time 4070 0. 0. 100. 0.
+bounda_unknown 71 136 -velx
+bounda_time 71 0. -1.016267486e-02 100. -1.016267486e-02
+bounda_unknown 2071 136 -vely
+bounda_time 2071 0. 4.209517756e-03 100. 4.209517756e-03
+bounda_unknown 4071 136 -velz
+bounda_time 4071 0. 0. 100. 0.
+bounda_unknown 72 9 -velx
+bounda_time 72 0. -1.000000000e-02 100. -1.000000000e-02
+bounda_unknown 2072 9 -vely
+bounda_time 2072 0. 1.224646799e-18 100. 1.224646799e-18
+bounda_unknown 4072 9 -velz
+bounda_time 4072 0. 0. 100. 0.
+bounda_unknown 73 57 -velx
+bounda_time 73 0. -1.000000000e-02 100. -1.000000000e-02
+bounda_unknown 2073 57 -vely
+bounda_time 2073 0. 1.224646799e-18 100. 1.224646799e-18
+bounda_unknown 4073 57 -velz
+bounda_time 4073 0. 0. 100. 0.
+bounda_unknown 74 105 -velx
+bounda_time 74 0. -1.000000000e-02 100. -1.000000000e-02
+bounda_unknown 2074 105 -vely
+bounda_time 2074 0. 1.224646799e-18 100. 1.224646799e-18
+bounda_unknown 4074 105 -velz
+bounda_time 4074 0. 0. 100. 0.
+bounda_unknown 75 25 -velx
+bounda_time 75 0. -1.050000000e-02 100. -1.050000000e-02
+bounda_unknown 2075 25 -vely
+bounda_time 2075 0. 1.285879139e-18 100. 1.285879139e-18
+bounda_unknown 4075 25 -velz
+bounda_time 4075 0. 0. 100. 0.
+bounda_unknown 76 73 -velx
+bounda_time 76 0. -1.050000000e-02 100. -1.050000000e-02
+bounda_unknown 2076 73 -vely
+bounda_time 2076 0. 1.285879139e-18 100. 1.285879139e-18
+bounda_unknown 4076 73 -velz
+bounda_time 4076 0. 0. 100. 0.
+bounda_unknown 77 121 -velx
+bounda_time 77 0. -1.050000000e-02 100. -1.050000000e-02
+bounda_unknown 2077 121 -vely
+bounda_time 2077 0. 1.285879139e-18 100. 1.285879139e-18
+bounda_unknown 4077 121 -velz
+bounda_time 4077 0. 0. 100. 0.
+bounda_unknown 78 41 -velx
+bounda_time 78 0. -1.100000000e-02 100. -1.100000000e-02
+bounda_unknown 2078 41 -vely
+bounda_time 2078 0. 1.347111479e-18 100. 1.347111479e-18
+bounda_unknown 4078 41 -velz
+bounda_time 4078 0. 0. 100. 0.
+bounda_unknown 79 89 -velx
+bounda_time 79 0. -1.100000000e-02 100. -1.100000000e-02
+bounda_unknown 2079 89 -vely
+bounda_time 2079 0. 1.347111479e-18 100. 1.347111479e-18
+bounda_unknown 4079 89 -velz
+bounda_time 4079 0. 0. 100. 0.
+bounda_unknown 80 137 -velx
+bounda_time 80 0. -1.100000000e-02 100. -1.100000000e-02
+bounda_unknown 2080 137 -vely
+bounda_time 2080 0. 1.347111479e-18 100. 1.347111479e-18
+bounda_unknown 4080 137 -velz
+bounda_time 4080 0. 0. 100. 0.
+bounda_unknown 81 10 -velx
+bounda_time 81 0. -9.238795325e-03 100. -9.238795325e-03
+bounda_unknown 2081 10 -vely
+bounda_time 2081 0. -3.826834324e-03 100. -3.826834324e-03
+bounda_unknown 4081 10 -velz
+bounda_time 4081 0. 0. 100. 0.
+bounda_unknown 82 58 -velx
+bounda_time 82 0. -9.238795325e-03 100. -9.238795325e-03
+bounda_unknown 2082 58 -vely
+bounda_time 2082 0. -3.826834324e-03 100. -3.826834324e-03
+bounda_unknown 4082 58 -velz
+bounda_time 4082 0. 0. 100. 0.
+bounda_unknown 83 106 -velx
+bounda_time 83 0. -9.238795325e-03 100. -9.238795325e-03
+bounda_unknown 2083 106 -vely
+bounda_time 2083 0. -3.826834324e-03 100. -3.826834324e-03
+bounda_unknown 4083 106 -velz
+bounda_time 4083 0. 0. 100. 0.
+bounda_unknown 84 26 -velx
+bounda_time 84 0. -9.700735091e-03 100. -9.700735091e-03
+bounda_unknown 2084 26 -vely
+bounda_time 2084 0. -4.018176040e-03 100. -4.018176040e-03
+bounda_unknown 4084 26 -velz
+bounda_time 4084 0. 0. 100. 0.
+bounda_unknown 85 74 -velx
+bounda_time 85 0. -9.700735091e-03 100. -9.700735091e-03
+bounda_unknown 2085 74 -vely
+bounda_time 2085 0. -4.018176040e-03 100. -4.018176040e-03
+bounda_unknown 4085 74 -velz
+bounda_time 4085 0. 0. 100. 0.
+bounda_unknown 86 122 -velx
+bounda_time 86 0. -9.700735091e-03 100. -9.700735091e-03
+bounda_unknown 2086 122 -vely
+bounda_time 2086 0. -4.018176040e-03 100. -4.018176040e-03
+bounda_unknown 4086 122 -velz
+bounda_time 4086 0. 0. 100. 0.
+bounda_unknown 87 42 -velx
+bounda_time 87 0. -1.016267486e-02 100. -1.016267486e-02
+bounda_unknown 2087 42 -vely
+bounda_time 2087 0. -4.209517756e-03 100. -4.209517756e-03
+bounda_unknown 4087 42 -velz
+bounda_time 4087 0. 0. 100. 0.
+bounda_unknown 88 90 -velx
+bounda_time 88 0. -1.016267486e-02 100. -1.016267486e-02
+bounda_unknown 2088 90 -vely
+bounda_time 2088 0. -4.209517756e-03 100. -4.209517756e-03
+bounda_unknown 4088 90 -velz
+bounda_time 4088 0. 0. 100. 0.
+bounda_unknown 89 138 -velx
+bounda_time 89 0. -1.016267486e-02 100. -1.016267486e-02
+bounda_unknown 2089 138 -vely
+bounda_time 2089 0. -4.209517756e-03 100. -4.209517756e-03
+bounda_unknown 4089 138 -velz
+bounda_time 4089 0. 0. 100. 0.
+bounda_unknown 90 11 -velx
+bounda_time 90 0. -7.071067812e-03 100. -7.071067812e-03
+bounda_unknown 2090 11 -vely
+bounda_time 2090 0. -7.071067812e-03 100. -7.071067812e-03
+bounda_unknown 4090 11 -velz
+bounda_time 4090 0. 0. 100. 0.
+bounda_unknown 91 59 -velx
+bounda_time 91 0. -7.071067812e-03 100. -7.071067812e-03
+bounda_unknown 2091 59 -vely
+bounda_time 2091 0. -7.071067812e-03 100. -7.071067812e-03
+bounda_unknown 4091 59 -velz
+bounda_time 4091 0. 0. 100. 0.
+bounda_unknown 92 107 -velx
+bounda_time 92 0. -7.071067812e-03 100. -7.071067812e-03
+bounda_unknown 2092 107 -vely
+bounda_time 2092 0. -7.071067812e-03 100. -7.071067812e-03
+bounda_unknown 4092 107 -velz
+bounda_time 4092 0. 0. 100. 0.
+bounda_unknown 93 27 -velx
+bounda_time 93 0. -7.424621202e-03 100. -7.424621202e-03
+bounda_unknown 2093 27 -vely
+bounda_time 2093 0. -7.424621202e-03 100. -7.424621202e-03
+bounda_unknown 4093 27 -velz
+bounda_time 4093 0. 0. 100. 0.
+bounda_unknown 94 75 -velx
+bounda_time 94 0. -7.424621202e-03 100. -7.424621202e-03
+bounda_unknown 2094 75 -vely
+bounda_time 2094 0. -7.424621202e-03 100. -7.424621202e-03
+bounda_unknown 4094 75 -velz
+bounda_time 4094 0. 0. 100. 0.
+bounda_unknown 95 123 -velx
+bounda_time 95 0. -7.424621202e-03 100. -7.424621202e-03
+bounda_unknown 2095 123 -vely
+bounda_time 2095 0. -7.424621202e-03 100. -7.424621202e-03
+bounda_unknown 4095 123 -velz
+bounda_time 4095 0. 0. 100. 0.
+bounda_unknown 96 43 -velx
+bounda_time 96 0. -7.778174593e-03 100. -7.778174593e-03
+bounda_unknown 2096 43 -vely
+bounda_time 2096 0. -7.778174593e-03 100. -7.778174593e-03
+bounda_unknown 4096 43 -velz
+bounda_time 4096 0. 0. 100. 0.
+bounda_unknown 97 91 -velx
+bounda_time 97 0. -7.778174593e-03 100. -7.778174593e-03
+bounda_unknown 2097 91 -vely
+bounda_time 2097 0. -7.778174593e-03 100. -7.778174593e-03
+bounda_unknown 4097 91 -velz
+bounda_time 4097 0. 0. 100. 0.
+bounda_unknown 98 139 -velx
+bounda_time 98 0. -7.778174593e-03 100. -7.778174593e-03
+bounda_unknown 2098 139 -vely
+bounda_time 2098 0. -7.778174593e-03 100. -7.778174593e-03
+bounda_unknown 4098 139 -velz
+bounda_time 4098 0. 0. 100. 0.
+bounda_unknown 99 12 -velx
+bounda_time 99 0. -3.826834324e-03 100. -3.826834324e-03
+bounda_unknown 2099 12 -vely
+bounda_time 2099 0. -9.238795325e-03 100. -9.238795325e-03
+bounda_unknown 4099 12 -velz
+bounda_time 4099 0. 0. 100. 0.
+bounda_unknown 100 60 -velx
+bounda_time 100 0. -3.826834324e-03 100. -3.826834324e-03
+bounda_unknown 2100 60 -vely
+bounda_time 2100 0. -9.238795325e-03 100. -9.238795325e-03
+bounda_unknown 4100 60 -velz
+bounda_time 4100 0. 0. 100. 0.
+bounda_unknown 101 108 -velx
+bounda_time 101 0. -3.826834324e-03 100. -3.826834324e-03
+bounda_unknown 2101 108 -vely
+bounda_time 2101 0. -9.238795325e-03 100. -9.238795325e-03
+bounda_unknown 4101 108 -velz
+bounda_time 4101 0. 0. 100. 0.
+bounda_unknown 102 28 -velx
+bounda_time 102 0. -4.018176040e-03 100. -4.018176040e-03
+bounda_unknown 2102 28 -vely
+bounda_time 2102 0. -9.700735091e-03 100. -9.700735091e-03
+bounda_unknown 4102 28 -velz
+bounda_time 4102 0. 0. 100. 0.
+bounda_unknown 103 76 -velx
+bounda_time 103 0. -4.018176040e-03 100. -4.018176040e-03
+bounda_unknown 2103 76 -vely
+bounda_time 2103 0. -9.700735091e-03 100. -9.700735091e-03
+bounda_unknown 4103 76 -velz
+bounda_time 4103 0. 0. 100. 0.
+bounda_unknown 104 124 -velx
+bounda_time 104 0. -4.018176040e-03 100. -4.018176040e-03
+bounda_unknown 2104 124 -vely
+bounda_time 2104 0. -9.700735091e-03 100. -9.700735091e-03
+bounda_unknown 4104 124 -velz
+bounda_time 4104 0. 0. 100. 0.
+bounda_unknown 105 44 -velx
+bounda_time 105 0. -4.209517756e-03 100. -4.209517756e-03
+bounda_unknown 2105 44 -vely
+bounda_time 2105 0. -1.016267486e-02 100. -1.016267486e-02
+bounda_unknown 4105 44 -velz
+bounda_time 4105 0. 0. 100. 0.
+bounda_unknown 106 92 -velx
+bounda_time 106 0. -4.209517756e-03 100. -4.209517756e-03
+bounda_unknown 2106 92 -vely
+bounda_time 2106 0. -1.016267486e-02 100. -1.016267486e-02
+bounda_unknown 4106 92 -velz
+bounda_time 4106 0. 0. 100. 0.
+bounda_unknown 107 140 -velx
+bounda_time 107 0. -4.209517756e-03 100. -4.209517756e-03
+bounda_unknown 2107 140 -vely
+bounda_time 2107 0. -1.016267486e-02 100. -1.016267486e-02
+bounda_unknown 4107 140 -velz
+bounda_time 4107 0. 0. 100. 0.
+bounda_unknown 108 13 -velx
+bounda_time 108 0. -1.836970199e-18 100. -1.836970199e-18
+bounda_unknown 2108 13 -vely
+bounda_time 2108 0. -1.000000000e-02 100. -1.000000000e-02
+bounda_unknown 4108 13 -velz
+bounda_time 4108 0. 0. 100. 0.
+bounda_unknown 109 61 -velx
+bounda_time 109 0. -1.836970199e-18 100. -1.836970199e-18
+bounda_unknown 2109 61 -vely
+bounda_time 2109 0. -1.000000000e-02 100. -1.000000000e-02
+bounda_unknown 4109 61 -velz
+bounda_time 4109 0. 0. 100. 0.
+bounda_unknown 110 109 -velx
+bounda_time 110 0. -1.836970199e-18 100. -1.836970199e-18
+bounda_unknown 2110 109 -vely
+bounda_time 2110 0. -1.000000000e-02 100. -1.000000000e-02
+bounda_unknown 4110 109 -velz
+bounda_time 4110 0. 0. 100. 0.
+bounda_unknown 111 29 -velx
+bounda_time 111 0. -1.928818709e-18 100. -1.928818709e-18
+bounda_unknown 2111 29 -vely
+bounda_time 2111 0. -1.050000000e-02 100. -1.050000000e-02
+bounda_unknown 4111 29 -velz
+bounda_time 4111 0. 0. 100. 0.
+bounda_unknown 112 77 -velx
+bounda_time 112 0. -1.928818709e-18 100. -1.928818709e-18
+bounda_unknown 2112 77 -vely
+bounda_time 2112 0. -1.050000000e-02 100. -1.050000000e-02
+bounda_unknown 4112 77 -velz
+bounda_time 4112 0. 0. 100. 0.
+bounda_unknown 113 125 -velx
+bounda_time 113 0. -1.928818709e-18 100. -1.928818709e-18
+bounda_unknown 2113 125 -vely
+bounda_time 2113 0. -1.050000000e-02 100. -1.050000000e-02
+bounda_unknown 4113 125 -velz
+bounda_time 4113 0. 0. 100. 0.
+bounda_unknown 114 45 -velx
+bounda_time 114 0. -2.020667219e-18 100. -2.020667219e-18
+bounda_unknown 2114 45 -vely
+bounda_time 2114 0. -1.100000000e-02 100. -1.100000000e-02
+bounda_unknown 4114 45 -velz
+bounda_time 4114 0. 0. 100. 0.
+bounda_unknown 115 93 -velx
+bounda_time 115 0. -2.020667219e-18 100. -2.020667219e-18
+bounda_unknown 2115 93 -vely
+bounda_time 2115 0. -1.100000000e-02 100. -1.100000000e-02
+bounda_unknown 4115 93 -velz
+bounda_time 4115 0. 0. 100. 0.
+bounda_unknown 116 141 -velx
+bounda_time 116 0. -2.020667219e-18 100. -2.020667219e-18
+bounda_unknown 2116 141 -vely
+bounda_time 2116 0. -1.100000000e-02 100. -1.100000000e-02
+bounda_unknown 4116 141 -velz
+bounda_time 4116 0. 0. 100. 0.
+bounda_unknown 117 14 -velx
+bounda_time 117 0. 3.826834324e-03 100. 3.826834324e-03
+bounda_unknown 2117 14 -vely
+bounda_time 2117 0. -9.238795325e-03 100. -9.238795325e-03
+bounda_unknown 4117 14 -velz
+bounda_time 4117 0. 0. 100. 0.
+bounda_unknown 118 62 -velx
+bounda_time 118 0. 3.826834324e-03 100. 3.826834324e-03
+bounda_unknown 2118 62 -vely
+bounda_time 2118 0. -9.238795325e-03 100. -9.238795325e-03
+bounda_unknown 4118 62 -velz
+bounda_time 4118 0. 0. 100. 0.
+bounda_unknown 119 110 -velx
+bounda_time 119 0. 3.826834324e-03 100. 3.826834324e-03
+bounda_unknown 2119 110 -vely
+bounda_time 2119 0. -9.238795325e-03 100. -9.238795325e-03
+bounda_unknown 4119 110 -velz
+bounda_time 4119 0. 0. 100. 0.
+bounda_unknown 120 30 -velx
+bounda_time 120 0. 4.018176040e-03 100. 4.018176040e-03
+bounda_unknown 2120 30 -vely
+bounda_time 2120 0. -9.700735091e-03 100. -9.700735091e-03
+bounda_unknown 4120 30 -velz
+bounda_time 4120 0. 0. 100. 0.
+bounda_unknown 121 78 -velx
+bounda_time 121 0. 4.018176040e-03 100. 4.018176040e-03
+bounda_unknown 2121 78 -vely
+bounda_time 2121 0. -9.700735091e-03 100. -9.700735091e-03
+bounda_unknown 4121 78 -velz
+bounda_time 4121 0. 0. 100. 0.
+bounda_unknown 122 126 -velx
+bounda_time 122 0. 4.018176040e-03 100. 4.018176040e-03
+bounda_unknown 2122 126 -vely
+bounda_time 2122 0. -9.700735091e-03 100. -9.700735091e-03
+bounda_unknown 4122 126 -velz
+bounda_time 4122 0. 0. 100. 0.
+bounda_unknown 123 46 -velx
+bounda_time 123 0. 4.209517756e-03 100. 4.209517756e-03
+bounda_unknown 2123 46 -vely
+bounda_time 2123 0. -1.016267486e-02 100. -1.016267486e-02
+bounda_unknown 4123 46 -velz
+bounda_time 4123 0. 0. 100. 0.
+bounda_unknown 124 94 -velx
+bounda_time 124 0. 4.209517756e-03 100. 4.209517756e-03
+bounda_unknown 2124 94 -vely
+bounda_time 2124 0. -1.016267486e-02 100. -1.016267486e-02
+bounda_unknown 4124 94 -velz
+bounda_time 4124 0. 0. 100. 0.
+bounda_unknown 125 142 -velx
+bounda_time 125 0. 4.209517756e-03 100. 4.209517756e-03
+bounda_unknown 2125 142 -vely
+bounda_time 2125 0. -1.016267486e-02 100. -1.016267486e-02
+bounda_unknown 4125 142 -velz
+bounda_time 4125 0. 0. 100. 0.
+bounda_unknown 126 15 -velx
+bounda_time 126 0. 7.071067812e-03 100. 7.071067812e-03
+bounda_unknown 2126 15 -vely
+bounda_time 2126 0. -7.071067812e-03 100. -7.071067812e-03
+bounda_unknown 4126 15 -velz
+bounda_time 4126 0. 0. 100. 0.
+bounda_unknown 127 63 -velx
+bounda_time 127 0. 7.071067812e-03 100. 7.071067812e-03
+bounda_unknown 2127 63 -vely
+bounda_time 2127 0. -7.071067812e-03 100. -7.071067812e-03
+bounda_unknown 4127 63 -velz
+bounda_time 4127 0. 0. 100. 0.
+bounda_unknown 128 111 -velx
+bounda_time 128 0. 7.071067812e-03 100. 7.071067812e-03
+bounda_unknown 2128 111 -vely
+bounda_time 2128 0. -7.071067812e-03 100. -7.071067812e-03
+bounda_unknown 4128 111 -velz
+bounda_time 4128 0. 0. 100. 0.
+bounda_unknown 129 31 -velx
+bounda_time 129 0. 7.424621202e-03 100. 7.424621202e-03
+bounda_unknown 2129 31 -vely
+bounda_time 2129 0. -7.424621202e-03 100. -7.424621202e-03
+bounda_unknown 4129 31 -velz
+bounda_time 4129 0. 0. 100. 0.
+bounda_unknown 130 79 -velx
+bounda_time 130 0. 7.424621202e-03 100. 7.424621202e-03
+bounda_unknown 2130 79 -vely
+bounda_time 2130 0. -7.424621202e-03 100. -7.424621202e-03
+bounda_unknown 4130 79 -velz
+bounda_time 4130 0. 0. 100. 0.
+bounda_unknown 131 127 -velx
+bounda_time 131 0. 7.424621202e-03 100. 7.424621202e-03
+bounda_unknown 2131 127 -vely
+bounda_time 2131 0. -7.424621202e-03 100. -7.424621202e-03
+bounda_unknown 4131 127 -velz
+bounda_time 4131 0. 0. 100. 0.
+bounda_unknown 132 47 -velx
+bounda_time 132 0. 7.778174593e-03 100. 7.778174593e-03
+bounda_unknown 2132 47 -vely
+bounda_time 2132 0. -7.778174593e-03 100. -7.778174593e-03
+bounda_unknown 4132 47 -velz
+bounda_time 4132 0. 0. 100. 0.
+bounda_unknown 133 95 -velx
+bounda_time 133 0. 7.778174593e-03 100. 7.778174593e-03
+bounda_unknown 2133 95 -vely
+bounda_time 2133 0. -7.778174593e-03 100. -7.778174593e-03
+bounda_unknown 4133 95 -velz
+bounda_time 4133 0. 0. 100. 0.
+bounda_unknown 134 143 -velx
+bounda_time 134 0. 7.778174593e-03 100. 7.778174593e-03
+bounda_unknown 2134 143 -vely
+bounda_time 2134 0. -7.778174593e-03 100. -7.778174593e-03
+bounda_unknown 4134 143 -velz
+bounda_time 4134 0. 0. 100. 0.
+bounda_unknown 135 16 -velx
+bounda_time 135 0. 9.238795325e-03 100. 9.238795325e-03
+bounda_unknown 2135 16 -vely
+bounda_time 2135 0. -3.826834324e-03 100. -3.826834324e-03
+bounda_unknown 4135 16 -velz
+bounda_time 4135 0. 0. 100. 0.
+bounda_unknown 136 64 -velx
+bounda_time 136 0. 9.238795325e-03 100. 9.238795325e-03
+bounda_unknown 2136 64 -vely
+bounda_time 2136 0. -3.826834324e-03 100. -3.826834324e-03
+bounda_unknown 4136 64 -velz
+bounda_time 4136 0. 0. 100. 0.
+bounda_unknown 137 112 -velx
+bounda_time 137 0. 9.238795325e-03 100. 9.238795325e-03
+bounda_unknown 2137 112 -vely
+bounda_time 2137 0. -3.826834324e-03 100. -3.826834324e-03
+bounda_unknown 4137 112 -velz
+bounda_time 4137 0. 0. 100. 0.
+bounda_unknown 138 32 -velx
+bounda_time 138 0. 9.700735091e-03 100. 9.700735091e-03
+bounda_unknown 2138 32 -vely
+bounda_time 2138 0. -4.018176040e-03 100. -4.018176040e-03
+bounda_unknown 4138 32 -velz
+bounda_time 4138 0. 0. 100. 0.
+bounda_unknown 139 80 -velx
+bounda_time 139 0. 9.700735091e-03 100. 9.700735091e-03
+bounda_unknown 2139 80 -vely
+bounda_time 2139 0. -4.018176040e-03 100. -4.018176040e-03
+bounda_unknown 4139 80 -velz
+bounda_time 4139 0. 0. 100. 0.
+bounda_unknown 140 128 -velx
+bounda_time 140 0. 9.700735091e-03 100. 9.700735091e-03
+bounda_unknown 2140 128 -vely
+bounda_time 2140 0. -4.018176040e-03 100. -4.018176040e-03
+bounda_unknown 4140 128 -velz
+bounda_time 4140 0. 0. 100. 0.
+bounda_unknown 141 48 -velx
+bounda_time 141 0. 1.016267486e-02 100. 1.016267486e-02
+bounda_unknown 2141 48 -vely
+bounda_time 2141 0. -4.209517756e-03 100. -4.209517756e-03
+bounda_unknown 4141 48 -velz
+bounda_time 4141 0. 0. 100. 0.
+bounda_unknown 142 96 -velx
+bounda_time 142 0. 1.016267486e-02 100. 1.016267486e-02
+bounda_unknown 2142 96 -vely
+bounda_time 2142 0. -4.209517756e-03 100. -4.209517756e-03
+bounda_unknown 4142 96 -velz
+bounda_time 4142 0. 0. 100. 0.
+bounda_unknown 143 144 -velx
+bounda_time 143 0. 1.016267486e-02 100. 1.016267486e-02
+bounda_unknown 2143 144 -vely
+bounda_time 2143 0. -4.209517756e-03 100. -4.209517756e-03
+bounda_unknown 4143 144 -velz
+bounda_time 4143 0. 0. 100. 0.
+
+post_calcul_materi_stress_force_element_group 0
+post_calcul_materi_stress_force_direction_exclude 0. 0. 1.
+post_calcul_materi_stress_force_reference_point 0. 0. 0.25
+post_calcul -materi_stress -force
+
+control_timestep 1 0.1 0.1
+control_print_materi_stress_force 520 -all
+control_print_materi_stress_force 521 -primary
+
+target_item 0 -node_dof 65 -velx
+target_value 0 1.050000000e-02 1.e-4
+end_data

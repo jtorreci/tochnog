@@ -1,0 +1,32 @@
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_velocity_integrated
+beam_rotation
+end_initia
+
+bounda_force  1  2 -vely
+bounda_time  0  0 0 100 0
+bounda_time  1  0 0.01 100 0.01
+bounda_time  2  0 0 100 0
+bounda_unknown  0  1 -velx -vely -rotz
+bounda_unknown  2  2 -velx
+control_print_beam_force_moment  6  -separate_sequential
+control_print_beam_force_moment_coordinates  6  0.25 -0.5 0.25 0.5
+control_print_beam_force_moment_switch  6  -yes
+control_timestep  6  0.1 0.1
+element  1  -beam 1 2
+group_beam_young  0  1
+group_beam_inertia  0  1
+group_type  0  -beam
+node  1  0 0
+node  2  1 0
+options_convection   -no
+options_mesh   -fixed_in_space -fixed_in_space
+options_processors   1
+options_stabilization   -static
+target_item  0  -node_rhside 1 -rotz
+target_value  0  0.01 1e-05
+node_dof  1  0 0 0 0 0
+node_dof  2  0 0 0 0 0
+end_data

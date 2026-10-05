@@ -1,0 +1,79 @@
+( Static phreatic level without a pressure unknown, audit cluster K22.
+  Pro test other/ground18: a 1 x 100 soil column (top y=0, bottom
+  y=-100), gravity 10, groundflow_density 1, wet/dry densities 2.0/1.5,
+  groundflow_phreatic_level -50 with groundflow_phreatic_level_static
+  -yes and group_type -materi -groundflow, NO groundflow_pressure
+  unknown (manual Professional 6.574).
+  Analytic effective sigyy (the stress dofs hold the effective stress):
+    above the level (dry):  -1.5*10*(0-y)
+    below the level:        -750 - (2.0-1.0)*10*(-50-y)
+  so -1250 at the bottom. The element stresses are constant per element
+  and the nodal value is the average of the adjacent elements, so the
+  bottom node holds the value of the bottom element centre y=-99.75:
+  -750 - 10*49.75 = -1247.5 (exact for this mesh), and the node on the
+  level holds (-746.25 - 752.5)/2 = -749.375. Static total pressure at
+  the bottom: 1*(-10)*(-50+100) = -500.
+  Pro 02-08-2026: -1247.5, -749.375, -500. Pre-fix GNU: bottom -1995
+  (wet density over the whole column, no pore pressure). Without the
+  pore pressure only: -1745; without the wet/dry choice only: -1497.5.
+  The post_calcul -total_pressure record is also needed by the
+  Professional, which applies the static pore pressure to the skeleton
+  only when that record is present. )
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_displacement
+materi_stress
+end_initia
+
+start_define
+  eps_geometry  1.e-5
+end_define
+
+start_define
+  right_edge geometry_line 1
+end_define
+right_edge 1. -100. 1. 0. eps_geometry
+
+start_define
+  left_edge geometry_line 2
+end_define
+left_edge 0. -100. 0. 0. eps_geometry
+
+start_define
+  lower_edge geometry_line 3
+end_define
+lower_edge 0. -100. 1. -100. eps_geometry
+
+bounda_dof  10  -left_edge -velx
+bounda_dof  20  -right_edge -velx
+bounda_dof  30  -lower_edge -velx -vely
+
+control_mesh_macro              0 -rectangle 0 2 201
+control_mesh_macro_parameters   0  0.5 -50. 1. 100.
+
+force_gravity 0. -10.
+
+groundflow_density 1.
+groundflow_phreatic_level   -50.
+groundflow_phreatic_level_static   -yes
+
+group_type 0  -materi -groundflow
+group_materi_density_groundflow 0  2.0 1.5
+group_materi_elasti_young 0  1.0e6
+group_materi_memory 0  -total_linear
+
+post_calcul -groundflow_pressure -total_pressure
+post_point  1  0.5 -100.
+post_point  2  0.5 -50.
+
+control_timestep   10  1. 1.
+control_timestep_iterations 10 5
+
+target_item  0   -post_point_dof 1 -sigyy
+target_value 0   -1247.5 1.e-2
+target_item  1   -post_point_dof 2 -sigyy
+target_value 1   -749.375 1.e-2
+target_item  2   -post_point_dof_calcul 1 0
+target_value 2   -500.0 1.e-2
+end_data

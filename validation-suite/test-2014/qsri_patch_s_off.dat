@@ -1,0 +1,50 @@
+( qsri_patch_s_off - PATCH TEST de estado CONSTANTE, A/B (lado OFF):
+  MISMO modelo que qsri_patch_s.dat (un quad4, corte simple prescrito,
+  gamma = 1e-3) SIN el keyword group_element_selective_reduced_integration.
+  Referencia: she = G*gamma = 0.384615 EXACTO; con SRI los resultados
+  son identicos (qsri_patch_s). Archivo materi_stress_force.443. )
+
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_velocity_integrated
+materi_strain_total
+materi_stress
+end_initia
+
+options_mesh -fixed_in_space -fixed_in_space
+options_convection -no
+options_inertia -no
+
+node 1  0. 0.
+node 2  1. 0.
+node 3  0. 1.
+node 4  1. 1.
+
+element 1  -quad4 1 2 3 4
+element_group 1 0
+
+group_type 0  -materi
+group_materi_density 0  1.0
+group_materi_elasti_young 0  1000.0
+group_materi_elasti_poisson 0  0.3
+group_materi_membrane 0  -yes
+group_materi_memory 0  -updated_without_rotation
+
+bounda_unknown 0  -ra 1 2 -ra -velx -vely
+bounda_time    0  0. 0. 100. 0.
+bounda_unknown 1  -ra 3 4 -ra -vely
+bounda_time    1  0. 0. 100. 0.
+bounda_unknown 2  -ra 3 4 -ra -velx
+bounda_time    2  0. 1.e-2 100. 1.e-2
+
+post_calcul_materi_stress_force_element_group 0
+post_calcul_materi_stress_force_reference_point 0.5 1000.0
+post_calcul -materi_stress -force
+
+control_timestep 1  0.1 0.1
+control_print_materi_stress_force 443 -all
+
+target_item 0  -node_dof 4 -velx
+target_value 0  1.e-2 1.e-8
+end_data
