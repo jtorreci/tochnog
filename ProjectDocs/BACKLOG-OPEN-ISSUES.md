@@ -971,6 +971,61 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
 - **Proposed fix**: accept ndim values, isotropic when one value.
 - **Severity**: **LOW**. **Effort**: **cheap/medium**.
 
+### C30. `mohr_coul_direct4` (Pro `other`): the Professional does not enforce the interface Mohr-Coulomb strength
+
+- **Symptom** (F1 T3, audit K04): interface shear test (phi 0.2 rad,
+  c 1, normal stress -1, top displaced 1 at t = 1 and held to t = 100).
+  Manual Professional 6.632: maximum friction c + |Fn| tan(phi) = 1.2027.
+  The GNU returns to it at once (sigxy 1.2027 from t = 1, `disx(3)`
+  0.3007, status plastic). The Professional 02-08-2026 stays at the
+  elastic 2.0 with status `-plastic` (t = 1: 1.99994, t = 5: 1.9911,
+  t = 20: 1.8283, t = 50: 1.0953) and ends below the strength at
+  t = 100 (0.40976, status `-elastic`, target `disx` 0.10244).
+- **Root cause**: Professional behaviour (no immediate return, slow
+  drift), PRO-suspect; the GNU follows the manual.
+- **Proposed fix**: none in the GNU unless the user decides to imitate the
+  Professional; keep as a documented divergence.
+- **Severity**: **LOW**. **Effort**: —.
+
+### C31. `tet10` integration rule is only degree 1 (Pro `tet10_2` under gravity)
+
+- **Symptom** (F1 T3, audit K04): `tet10_2` (hex8 -> h -> p -> split into
+  48 tet10, gravity): GNU post-point sigzz -0.894 (nodal sigzz at z = 0
+  between -0.94 and -0.88, top disz -0.48..-0.56), Professional exact -1
+  / -0.5. A single hex27 (no split) is exact in the GNU; `tet10_1`
+  (prescribed strain, no body force) passes.
+- **Root cause**: `polynom.cc` TET10 branch: nodal quadrature with weight
+  ~0 (EPS_TRIANGLE) at the corners and 1/6 at the 6 mid-edge nodes. On a
+  tetrahedron this rule is exact only for linear integrands (the
+  triangle analog, mid-edge 1/3, is degree 2): the quadratic stiffness
+  and the consistent body load (corner share -V/20, mid-edge V/5) are
+  wrong.
+- **Experiment** (scratch build, not committed): the degree-2 nodal rule
+  (corners -1/20, mid-edge 1/5) makes `tet10_2` exact (-1.0000000058),
+  `tet10_1` stays exact.
+- **Options**: (a) that nodal rule: exact, but NEGATIVE corner weights,
+  so the lumped inertia/capacity (general.cc, h = delta at nodal points)
+  becomes negative at the corners; (b) a 4/5-point Gauss rule: breaks
+  the npoint == nnol assumption of the element_dof storage; (c) (a) for
+  the stiffness/loads plus a separate positive lumping (HRZ) for the
+  inertia. Needs a design decision and an A/B on the sfnet tet10 inputs
+  (`tet10`, `refine4`, `ho_othr1/2`, `examp*`).
+- **Severity**: **MEDIUM** (wrong quadratic-tet results under body
+  loads/bending). **Effort**: **medium**.
+
+### C32. K04 targets that are not GNU defects (`axisym9`, `distri2`)
+
+- `axisym9` (post_point sigxx 0.00158902 vs 0.0015915 +/- 1e-6): the field
+  is uniform in both binaries; the GNU total ring force is 0.16 % low
+  because `polynom.cc` forces 1-point Gauss for axisymmetric
+  `materi_velocity` quad4 (element-constant hoop term, audit K20). Not the
+  `post_point_dof` convention. Decision belongs to K20.
+- `distri2` (post_point temp 0.998933 vs 0.999774 +/- 1e-4):
+  `control_distribute -normal` random field; both binaries draw a valid
+  N(1, 2e-3) (GNU mean 0.99995 / std 0.00203, Pro 0.99997 / 0.00201)
+  from different random generators. The target encodes the Professional
+  random sequence; no fix.
+
 ---
 
 ## D. Summary
@@ -1012,8 +1067,11 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
 | C27 | — | FRD/gmsh layout vs Pro (PSTEP per block, `ALL` component, names, extra blocks/fields, multi-component gmsh fields) | LOW | medium |
 | C28 | — | `node_force` opposite sign (+ doubled in a 1D probe) vs Pro | MEDIUM | cheap/medium |
 | C29 | Pro `other` | `group_condif_conductivity` per-direction values (condif11) not parsed | LOW | cheap/medium |
+| C30 | Pro `other` | `mohr_coul_direct4`: Pro does not enforce the interface MC strength (PRO-suspect) | LOW | — |
+| C31 | Pro `other` | `tet10` nodal quadrature only degree 1 (`tet10_2` gravity) | MEDIUM | medium |
+| C32 | Pro `other` | `axisym9` (K20 1-point axisymmetric rule), `distri2` (random generator): not GNU defects | LOW | — |
 
-Thirty-two items remain open: nine MEDIUM and twenty-three LOW (C23 and C24 resolved 2026-10-05; C25, C26, C27 and B10 added). No open issue is CRITICAL or
+Thirty-eight items remain open: eleven MEDIUM and twenty-seven LOW (C23 and C24 resolved 2026-10-05; C25, C26, C27 and B10 added; F1 T3 / K04 2026-10-06 added B11, C28-C32). No open issue is CRITICAL or
 HIGH. The validation-suite corpus has no open failure — its 233 real tests
 pass (`materi_direct_mc` input corrected, C17 resolved). Every remaining failure is a stale or malformed test, an out-of-scope model
 or infrastructure limit, a narrow post-processing divergence, a corpus-coverage

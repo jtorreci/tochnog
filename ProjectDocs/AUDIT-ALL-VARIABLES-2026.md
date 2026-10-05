@@ -385,14 +385,14 @@ and target):
 | `force18` | `force_point` at 0.8 | **`velx` −0.8** → +0.8 after the 2026-10-06 fix (F1 T3: the force was subtracted from `node_rhside`) | +0.8 |
 | `elasti7` | K0 = 0.1 → `sigxx` | **0** → −0.0500000000025 after the 2026-09-29 fix (§5.3) | −0.05 (Pro −0.04999999884) |
 | `tension_direct1` | `sigyy` with `…_normal_automatic` | **0.667** → 0 after the 2026-09-30 fix (new `element_normal` record; `disy` middle nodes 0.42 → 0, top 1; every variable = Pro except the nodal `eptyy` recovery 0.667 vs 0.5, K11) | 0 |
-| `mohr_coul_direct8` | `sigxy` with `plasti_bounda_factor` 0 | **1788.9** | 0 |
-| `mohr_coul_direct4` | `disx` | **0.3007** | 0.1024 |
+| `mohr_coul_direct8` | `sigxy` with `plasti_bounda_factor` 0 | **1788.9** → 0 (PASS on the 2026-10-06 re-run, fixed by the C14/C16 work) | 0 |
+| `mohr_coul_direct4` | `disx` | **0.3007** (GNU = manual 6.632 strength c + |Fn| tan phi; the Pro stays elastic at t = 1 and drifts below the strength by t = 100: PRO-suspect, BACKLOG C30) | 0.1024 |
 | `stress_pressure_factor` | `sigxx` | **−3.10** → −3.05 after the 2026-10-06 fix (F1 T3: factored trial pressure, strict tie, = Pro rule) | −3.05 |
 | `incnav3` | `tvely` (`expansion_volume` effect) | **−2.49** → −4.9904 after the 2026-10-06 fix (F1 T3: rho(1 − beta T) in the inertia too; sfnet copy target −2.5 stale, BACKLOG B11) | −5 |
-| `tet10_2` | `sigzz` | **−0.894** | −1 |
+| `tet10_2` | `sigzz` | **−0.894** (TET10 nodal quadrature only degree 1, `polynom.cc`; needs design, BACKLOG C31) | −1 |
 | `ground9` | interface groundflow `pres` | **0.333** → 0.5 after the 2026-10-06 fix (F1 T3: interface permeability/capacity/conductivity per unit length, capacity implicit) | 0.5 |
-| `axisym9` | `post_point_dof 10 -sigxx` | 0.00158902 | 0.0015915 (±1e-6) |
-| `distri2` | `post_point_dof 1 -temp` | 0.998933 | 0.999774 (±1e-4) |
+| `axisym9` | `post_point_dof 10 -sigxx` | 0.00158902 (uniform field; 1-point axisymmetric quad4 rule = K20, not the `post_point_dof` convention; BACKLOG C32) | 0.0015915 (±1e-6) |
+| `distri2` | `post_point_dof 1 -temp` | 0.998933 (different random generator, both valid N(1, 2e-3); not a defect, BACKLOG C32) | 0.999774 (±1e-4) |
 
 The `post_point_dof` of recovered fields follows a different convention in the
 two binaries. It accounts for part of the 20 tests whose `node_dof` agree while
