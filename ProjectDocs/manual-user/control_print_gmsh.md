@@ -46,9 +46,13 @@ File structure (Gmsh 2.2):
 
 - `$Nodes` / `$Elements` — the mesh (only written the first time for
   `-yes`). Element types: line, triangle, quad, tetra, hexa (linear).
-- `$NodeData` blocks — one per dof component, named `node_<dof>` (scalar),
-  `node_<dof>_0`, `node_<dof>_1`, ... (vector), `node_<dof>_xx`,
-  `node_<dof>_yy`, ... (matrix/stress Voigt components).
+- `$NodeData` blocks — one per dof component, named after the dof type:
+  `node_<dof_type>` (scalar, e.g. `node_condif_temperature`),
+  `node_<dof_type>_0`, `node_<dof_type>_1`, ... (vector, e.g.
+  `node_materi_velocity_0`), `node_<dof_type>_xx`, `node_<dof_type>_yy`,
+  ... (matrix/stress Voigt components). Each component is written once
+  per print (fixed 2026-10-05, BACKLOG C24; see
+  `print_dof_component_loop.md`).
 - `$ElementData` / `$ElementNodeData` blocks — one per dof component,
   named `element_<dof>...` (see `control_print_gmsh_element_data`).
 

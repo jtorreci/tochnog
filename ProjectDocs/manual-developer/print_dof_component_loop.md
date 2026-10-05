@@ -53,9 +53,44 @@ fix, F0 T6, 2026-10-05).
   `indx`, so it is fixed by the same loop change.
 - No new records, enums or hardcoded parameters.
 
+## FRD and gmsh printers (BACKLOG C24, F1 T1, 2026-10-05)
+
+- Files `print_fr.cc` (`print_frd()`, result blocks) and `print_gm.cc`
+  (`print_gmsh()`, `$NodeData` / `$ElementData` / `$ElementNodeData`
+  blocks) had the same `ipuknwn<nuknwn_` loop. Both now loop over the
+  primary unknowns (`npuknwn_ = nuknwn_/nder_`, step `nval`, `iuknwn =
+  ipuknwn*nder_`, type, label and dof type read at `iuknwn`).
+- `print_frd()`: an FRD vector block always has 3 components; in 2D the
+  third (`D3`, `V3`, ...) is now written as 0 instead of reading
+  `iuknwn + 2*nder_` (the next dof). Result names and component names
+  are unchanged (`VELO`, `DISP`, `STRESS`/`SXX..`, `TOSTRAIN`/`EXX..`,
+  `NDTEMP`; other dofs: dof label truncated to 8 characters).
+- `print_gmsh()`: the field names are now built from the dof TYPE
+  (`DOF_TYPE`, newly read): `node_materi_velocity_0`,
+  `node_materi_stress_xx`, `node_condif_temperature`, ... (same base
+  names as the Professional). Before, they used `dof_label[ipuknwn]`
+  with the wrong index (`node_velx_1` for the y velocity, `node_sigxx_yy`
+  ...).
+- Verification: `validation-suite/test-2026/print_frd_gmsh_dof_loop1.dat`
+  (single quad4 with `derivatives`, velocity, displacement, stress,
+  total strain, temperature). Old binary: 68 FRD `-4` blocks and 324
+  gmsh `node_` fields; new: 5 FRD blocks (`VELO DISP STRESS TOSTRAIN
+  NDTEMP`) and 17 `node_` fields, no `e-3xx` garbage. Checked by
+  `scripts/build_safe.sh` (the `.frd` is appended to when it exists, so
+  the check removes it before the run). The values equal the FIRST block
+  of each dof of the Professional 02-08-2026 (`velx` 0.01, `disx`
+  0.01, `sigxx` 10, `epsxx` 0.01, `temp` 0/1).
+- Remaining layout differences with the Professional (BACKLOG C27, not
+  redesigned here): the Professional writes one `1PSTEP`/`100CL` header
+  per result block, vector blocks with an extra `ALL` component, the
+  names `VELOCITY`, `S11..S13`, `T11..T13`, extra non-dof blocks
+  (`BOUNDA_*`, `BOUNDARY`, `REACTION`) and, with `derivatives`, one
+  block per value AND derivative entry (whose values are themselves
+  shifted, the same defect class as C24). Its gmsh file writes vector
+  and tensor fields as one 3/9-component field (`node_materi_velocity`,
+  `node_materi_stress`) plus bounda/boundary/rhside/group/flux fields;
+  the GNU writes one scalar field per component.
+
 ## Pending
 
-- The same `ipuknwn<nuknwn_` loop pattern exists in `print_fr.cc`
-  (`print_frd`, result blocks) and `print_gm.cc` (`print_gmsh`, node
-  data): BACKLOG C24, not fixed here because the change alters the
-  block structure of those formats and their checks.
+- BACKLOG C27: FRD/gmsh layout differences listed above.

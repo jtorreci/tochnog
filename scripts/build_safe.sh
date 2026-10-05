@@ -1345,6 +1345,32 @@ run_ok "$T2026" materi_memory_default_stretch1
 run_ok "$T2026" materi_memory_default_updated_apply1
 
 # ---------------------------------------------------------------------
+# C24 (2026-10-05): control_print_frd / control_print_gmsh loop over the
+# PRIMARY unknowns (as print_vt.cc and print_dof after C23). Single quad4
+# with derivatives: the FRD must hold exactly VELO DISP STRESS TOSTRAIN
+# NDTEMP (once each), node 2 D1 = 1e-2 and D3 = 0 (2D), SXX = 10; the
+# gmsh file 17 node_ fields (2+2+6+6+1 components), no heap garbage.
+# Before C24: 68 FRD blocks and 324 node_ fields (shifted duplicates).
+# The .frd is appended to when it exists, so both outputs are removed
+# before the run.
+# ---------------------------------------------------------------------
+rm -f "$T2026/print_frd_gmsh_dof_loop1.frd" "$T2026/print_frd_gmsh_dof_loop1.msh"
+run_ok "$T2026" print_frd_gmsh_dof_loop1
+FRDL="$T2026/print_frd_gmsh_dof_loop1.frd"
+MSHL="$T2026/print_frd_gmsh_dof_loop1.msh"
+if [ "$(awk '$1=="-4"{printf "%s ", $2}' "$FRDL" 2>/dev/null)" = "VELO DISP STRESS TOSTRAIN NDTEMP " ] && \
+   awk '$1=="-4"{b=$2} b=="DISP" && $1=="-1" && $2==2 { if ($3!="1.00000E-02" || $5!="0.00000E+00") bad=1; n++ }
+        b=="STRESS" && $1=="-1" && $2==2 { if ($3!="1.00000E+01") bad=1; n++ }
+        END { exit (bad || n!=2) }' "$FRDL" && \
+   [ "$(grep -c '^"node_' "$MSHL" 2>/dev/null)" = "17" ] && \
+   [ "$(grep '^"node_' "$MSHL" | sort -u | wc -l)" = "17" ] && \
+   ! rg -q 'e-3[0-9][0-9]' "$FRDL" "$MSHL"; then
+  check_ok "print_frd_gmsh_dof_loop1 (C24: 5 FRD blocks, 17 gmsh node_ fields, D3=0, SXX=10)"
+else
+  check_fail "print_frd_gmsh_dof_loop1" "FRD/gmsh blocks not one per primary dof (C24)"
+fi
+
+# ---------------------------------------------------------------------
 # Sub-sprint materi_stress_force, lote 2 (integracion 2D quad4/quad9):
 # verificacion ANALITICA por estatica. Decisiones de diseno (manual-
 # developer/post_calcul_materi_stress_force.md): caras extremas = las

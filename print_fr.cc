@@ -225,16 +225,27 @@ void print_frd( long int icontrol, long int task )
     out << cl << "\n";
   }
 
-  // result blocks: one per dof (scalar/vector/matrix)
-  for ( ipuknwn=0; ipuknwn<nuknwn_; ipuknwn++ ) {
-    if ( dof_scal_vec_mat[ipuknwn]!=-SCALAR &&
-         dof_scal_vec_mat[ipuknwn]!=-VECTOR &&
-         dof_scal_vec_mat[ipuknwn]!=-MATRIX ) continue;
-    long int base_indx = ipuknwn*nder_;
+  // result blocks: one per dof (scalar/vector/matrix). The loop runs
+  // over PRIMARY unknowns as in print_vt.cc and print_dof (BACKLOG
+  // C23/C24): the primary unknown ipuknwn starts at iuknwn =
+  // ipuknwn*nder_, the dof_* arrays are indexed by iuknwn (they are set
+  // for every value AND derivative of the dof) and a vector/matrix dof
+  // spans nval primary unknowns. Looping ipuknwn over nuknwn_ wrote every
+  // component (and derivative) as its own shifted block and, with
+  // derivatives, read node_dof past the end of the record.
+  long int npuknwn_ = nder_>0 ? nuknwn_/nder_ : 0, nval=1;
+  for ( ipuknwn=0; ipuknwn<npuknwn_; ipuknwn+=nval ) {
+    long int iuknwn = ipuknwn*nder_;
+    long int dsvm = dof_scal_vec_mat[iuknwn];
+    nval = 1;
+    if ( dsvm!=-SCALAR && dsvm!=-VECTOR && dsvm!=-MATRIX ) continue;
+    if      ( dsvm==-VECTOR ) nval = ndim;
+    else if ( dsvm==-MATRIX ) nval = 6;
+    long int base_indx = iuknwn;
     long int ncomp=0, ictype=0;
     char dname[9];
     // FRD result name mapping
-    long int dt = dof_type[ipuknwn];
+    long int dt = dof_type[iuknwn];
     if      ( dt==-MATERI_DISPLACEMENT ||
               dt==-MATERI_VELOCITY_INTEGRATED ) strcpy( dname, "DISP" );
     else if ( dt==-MATERI_VELOCITY )             strcpy( dname, "VELO" );
@@ -242,17 +253,17 @@ void print_frd( long int icontrol, long int task )
     else if ( dt==-MATERI_STRAIN_TOTAL )         strcpy( dname, "TOSTRAIN" );
     else if ( dt==-CONDIF_TEMPERATURE )          strcpy( dname, "NDTEMP" );
     else {
-      strncpy( dname, db_name(dof_label[ipuknwn]), 8 );
+      strncpy( dname, db_name(dof_label[iuknwn]), 8 );
       dname[8] = '\0';
     }
     char compnames[6][12];
     long int compidx[6] = {0,0,0,0,0,0};
-    if      ( dof_scal_vec_mat[ipuknwn]==-SCALAR ) {
+    if      ( dsvm==-SCALAR ) {
       ncomp = 1; ictype = 1;
       strncpy( compnames[0], "V", 8 ); compnames[0][8]='\0';
-      sprintf( compnames[0], "%s", db_name(dof_label[ipuknwn]) );
+      sprintf( compnames[0], "%s", db_name(dof_label[iuknwn]) );
     }
-    else if ( dof_scal_vec_mat[ipuknwn]==-VECTOR ) {
+    else if ( dsvm==-VECTOR ) {
       ncomp = 3; ictype = 2;
       if ( strcmp(dname,"DISP")==0 ) {
         strcpy( compnames[0], "D1" ); strcpy( compnames[1], "D2" );
@@ -315,11 +326,19 @@ void print_frd( long int icontrol, long int task )
       line += tmp;
       for ( long int k=0; k<ncomp; k++ ) {
         long int indx = base_indx;
-        if      ( dof_scal_vec_mat[ipuknwn]==-VECTOR )
+        double val = 0.;
+        if      ( dsvm==-VECTOR ) {
+          // FRD vectors always have 3 components; in 2D the third one is
+          // 0 (it is not part of the dof: k*nder_ would be the next dof)
           indx = base_indx + k*nder_;
-        else if ( dof_scal_vec_mat[ipuknwn]==-MATRIX )
+          val = ( k<ndim ) ? node_dof[indx] : 0.;
+        }
+        else if ( dsvm==-MATRIX ) {
           indx = base_indx + compidx[k]*nder_;
-        sprintf( tmp, "%12.5E", node_dof[indx] );
+          val = node_dof[indx];
+        }
+        else val = node_dof[indx];
+        sprintf( tmp, "%12.5E", val );
         line += tmp;
       }
       out << line << "\n";

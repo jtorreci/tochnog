@@ -469,4 +469,4 @@ input parameters it accepts.
 
 ## PRINT_DOF COMPONENT LOOP (2026-10-05)
 
-- [print_dof_component_loop](print_dof_component_loop.md) — `control_print_dof` files now hold each dof component once per node and print (vector/stress blocks were repeated and some lines carried random `e-3xx` values); `dof.*` files are shorter than with older binaries.
+- [print_dof_component_loop](print_dof_component_loop.md) — `control_print_dof` files now hold each dof component once per node and print (vector/stress blocks were repeated and some lines carried random `e-3xx` values); `dof.*` files are shorter than with older binaries. Same fix for the `control_print_frd` / `control_print_gmsh` files (one block per dof; gmsh fields named after the dof type, e.g. `node_materi_velocity_0`).

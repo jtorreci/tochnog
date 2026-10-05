@@ -817,7 +817,20 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
   `element_dof`: a `get_new_dbl()` without `array_set()`).
 - **Severity**: **LOW**. **Effort**: **cheap**.
 
-### C24. `print_frd` / `print_gmsh` — repeated blocks and out-of-record reads
+### C24. `print_frd` / `print_gmsh` — repeated blocks and out-of-record reads — RESOLVED 2026-10-05
+
+- **Resolution** (F1 T1): `print_frd()` and `print_gmsh()` now loop over
+  the primary unknowns like `print_vt.cc` / `print_dof()` (type, label
+  and dof type at `iuknwn = ipuknwn*nder`, step `nval`). FRD 2D vector
+  blocks write 0 as third component (it read the next dof); gmsh field
+  names are built from the dof type (`node_materi_velocity_0`, Pro base
+  names). Test `test-2026/print_frd_gmsh_dof_loop1` (quad4, `derivatives`):
+  68 -> 5 FRD blocks, 324 -> 17 gmsh `node_` fields, values equal to the
+  first block of each dof of the Professional 02-08-2026; checked in
+  `build_safe.sh`. The existing `freq_timeint`/`freq_timestep` FRD checks
+  only read the `100CL` time and are unaffected. Remaining layout
+  differences: C27. Docs `manual-*/print_dof_component_loop.md`.
+
 
 - **Symptom**: `print_fr.cc` (`print_frd`, result blocks, line ~229) and
   `print_gm.cc` (`print_gmsh`, node data, line ~442) use the same loop as
@@ -875,6 +888,29 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
   checks.
 - **Severity**: **LOW**. **Effort**: **cheap/medium**.
 
+### C27. FRD / gmsh file layout differs from the Professional
+
+- **Symptom** (found by F1 T1, `print_frd_gmsh_dof_loop1` converted and
+  run on the Professional 02-08-2026): the dof values agree, the layout
+  does not. FRD: the Professional writes a `1PSTEP` + `100CL` header per
+  result block, vector blocks with 4 components (`V1 V2 V3 ALL`, all
+  with `icind1 = 1`), the names `VELOCITY` (GNU `VELO`), `S11..S13`
+  (GNU `SXX..SZX`), `T11..T13` (GNU `EXX..EZX`), extra non-dof blocks
+  (`BOUNDA_X/Y/D`, `BOUNDARY`, `REACTION`), its own header lines
+  (`1UDATE`, `1UTIME`, `1UPGM CalculiX`), and with `derivatives` one
+  block per value AND derivative entry, whose values are shifted into
+  other dofs (the C24 defect class, in the Professional). gmsh: the
+  Professional writes vectors/tensors as ONE 3/9-component field
+  (`node_materi_velocity`, `node_materi_stress`), element fields from
+  the integration points (`element_materi_stress`), plus
+  `node_bounda_dof_*`, `node_boundary`, `*_rhside`, `element_group`,
+  `element_flux_temperature`; the GNU writes one scalar field per
+  component (`node_materi_velocity_0`) and nodal averages per element.
+- **Proposed fix**: decide per format which Professional conventions to
+  follow (post-processors: CalculiX cgx, PrePoMax, FreeCAD, gmsh); do NOT
+  copy the derivative-block defect.
+- **Severity**: **LOW** (output files only). **Effort**: **medium**.
+
 ---
 
 ## D. Summary
@@ -909,11 +945,11 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
 | C20 | — | `-updated_jaumann` not implemented | LOW | medium |
 | C21 | — | `control_materi_updated_apply -yes`: Pro ignores its manual (deliberate divergence) | LOW | cheap |
 | C22 | Pro `other` | `hypo12` marginal sigyy target miss after the default-memory change | LOW | cheap |
-| C24 | — | `print_frd`/`print_gmsh` repeated blocks and out-of-record reads (C23 pattern) | LOW | cheap |
 | C25 | — | uninitialized-buffer audit follow-ups (`pef_vel_prev` realloc, NODE_EIGEN print, split/beam/interface/mpc/nonloc side findings) | LOW | cheap |
 | C26 | — | `control_print_dof -separate_index`: Pro writes one file per dof, GNU one `dof.N` | LOW | cheap/medium |
+| C27 | — | FRD/gmsh layout vs Pro (PSTEP per block, `ALL` component, names, extra blocks/fields, multi-component gmsh fields) | LOW | medium |
 
-Thirty-one items remain open: nine MEDIUM and twenty-two LOW (C23 resolved 2026-10-05; C24, C25 and C26 added). No open issue is CRITICAL or
+Thirty-one items remain open: nine MEDIUM and twenty-two LOW (C23 and C24 resolved 2026-10-05; C25, C26 and C27 added). No open issue is CRITICAL or
 HIGH. The validation-suite corpus has no open failure — its 233 real tests
 pass (`materi_direct_mc` input corrected, C17 resolved). Every remaining failure is a stale or malformed test, an out-of-scope model
 or infrastructure limit, a narrow post-processing divergence, a corpus-coverage
