@@ -790,6 +790,18 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
 - **Proposed fix**: none required; revisit with the Masin kernel
   calibration.
 - **Effort**: **cheap**.
+### C23. `dofid_no` — uninitialized values in the `dof.21` print
+
+- **Symptom**: `control_print_dof_id -no` (validation-suite `dofid_no`)
+  writes 20 of 768 lines of `dof.21` with heap garbage (`6.9e-310`,
+  different on every run) at node (1,1). Found by the F0 T4 old/new A/B
+  (2026-10-05); present in both binaries, unrelated to the
+  `generate.cc` `element_dof` fix. The run and its file check (3
+  columns) pass.
+- **Proposed fix**: find the uninitialized buffer in the `print_dof()`
+  path for the `-no` id layout (same pattern as the generated
+  `element_dof`: a `get_new_dbl()` without `array_set()`).
+- **Severity**: **LOW**. **Effort**: **cheap**.
 
 ---
 
@@ -825,6 +837,7 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
 | C20 | — | `-updated_jaumann` not implemented | LOW | medium |
 | C21 | — | `control_materi_updated_apply -yes`: Pro ignores its manual (deliberate divergence) | LOW | cheap |
 | C22 | Pro `other` | `hypo12` marginal sigyy target miss after the default-memory change | LOW | cheap |
+| C23 | validation-suite | `dofid_no` uninitialized values in the `dof.21` print | LOW | cheap |
 
 Twenty-eight items remain open: nine MEDIUM and nineteen LOW. No open issue is CRITICAL or
 HIGH. The validation-suite corpus has no open failure — its 233 real tests
