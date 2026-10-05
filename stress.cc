@@ -982,13 +982,26 @@ void set_stress( long int element, long int gr,
       // source inc_ept is untouched (matrix_a4b must not be in-place)
       matrix_a4b( C, inc_ept, work );
       dp = -( work[0] + work[4] + work[8] ) / 3.;
+      // K04 stress_pressure_factor (2026-10-06), rule measured on the
+      // Professional 02-08-2026 (Pro test stress_pressure_factor at dt
+      // 0.1 / 0.15 / 0.3 / 0.4): a step that STARTS below the history
+      // estimates its end pressure with the FACTORED (unloading/
+      // reloading) stiffness, the stiffness it uses while it stays
+      // below the history; it stays unloading/reloading only when that
+      // estimate is strictly below the history (a step that would end
+      // exactly at the history, up to round-off, is first loading).
+      // Before: the first-loading dp, so a reloading step switched to
+      // first loading one step early (dt 0.1: final sigxx -3.10 vs
+      // -3.05; dt 0.3: -2.45 vs -2.3 at disx -2.2).
+      if ( scalar_dabs(p) < old_unknowns[sph_indx] ) dp *= sph_factor;
       p += dp;
     }
     // normalize IEEE -0.0: scalar_dabs(-0.0) returns -0.0 (the branch
     // a<0. is false for -0.0), and -0.0 < sph is TRUE for any sph,
     // which would apply the factor from the very first load step.
     if ( p==0. ) p = 0.;
-    if ( scalar_dabs(p) < old_unknowns[sph_indx] ) {
+    if ( scalar_dabs(p) < old_unknowns[sph_indx] *
+         ( 1. - 1.e-10 ) ) {
       for ( idim=0; idim<MDIM; idim++ )
         for ( jdim=0; jdim<MDIM; jdim++ )
           for ( kdim=0; kdim<MDIM; kdim++ )

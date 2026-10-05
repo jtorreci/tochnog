@@ -387,7 +387,7 @@ and target):
 | `tension_direct1` | `sigyy` with `…_normal_automatic` | **0.667** → 0 after the 2026-09-30 fix (new `element_normal` record; `disy` middle nodes 0.42 → 0, top 1; every variable = Pro except the nodal `eptyy` recovery 0.667 vs 0.5, K11) | 0 |
 | `mohr_coul_direct8` | `sigxy` with `plasti_bounda_factor` 0 | **1788.9** | 0 |
 | `mohr_coul_direct4` | `disx` | **0.3007** | 0.1024 |
-| `stress_pressure_factor` | `sigxx` | **−3.10** | −3.05 |
+| `stress_pressure_factor` | `sigxx` | **−3.10** → −3.05 after the 2026-10-06 fix (F1 T3: factored trial pressure, strict tie, = Pro rule) | −3.05 |
 | `incnav3` | `tvely` (`expansion_volume` effect) | **−2.49** | −5 |
 | `tet10_2` | `sigzz` | **−0.894** | −1 |
 | `ground9` | interface groundflow `pres` | **0.333** → 0.5 after the 2026-10-06 fix (F1 T3: interface permeability/capacity/conductivity per unit length, capacity implicit) | 0.5 |

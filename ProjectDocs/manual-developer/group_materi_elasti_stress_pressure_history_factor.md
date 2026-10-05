@@ -107,3 +107,20 @@ runaway (observado: sph 0.3333 -> 0.5 y stress 6x en el paso del pico).
   la estimación se autocorrige en el paso siguiente.
 - El target del dof usa el basename `-sph` (patrón del GOTCHA -kap del
   lote 4).
+
+## K04 fix (2026-10-06): factored trial, strict tie
+
+`stress.cc` `set_stress()` (elastic stiffness block): `dp` (pressure
+increment of `C:inc_ept`) is multiplied by `sph_factor` when the step
+starts below the history (`|p_old| < sph_old`), and the factor applies
+when `|p_old + dp| < sph_old*(1 - 1e-10)` (the tolerance makes a tie
+first loading deterministically). Measured on the Professional
+02-08-2026: `stress_pressure_factor` at dt 0.1/0.15/0.3/0.4 and a partial
+unload/reload path with factors 0.5 and 3 at dt 0.1/0.25/0.3/0.35/0.4: all
+equal except the truncated last step of factor 3, dt 0.4 (Pro applies the
+factor on a step starting on the loading curve; GNU does not). Before:
+unfactored `dp` and strict `<` with no tolerance (one step early at
+dt 0.1, −3.10).
+Not changed: the hardsoil E50/Eur switch (`GROUP_MATERI_ELASTI_HARDSOIL`
+block above) uses the same one-step estimate with the first-loading
+tangent; no Professional evidence collected for it.

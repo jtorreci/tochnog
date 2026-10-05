@@ -1417,6 +1417,17 @@ run_ok "$T2026" interface_flux_measure_condif1
 run_ok "$T2026" interface_capacity_transient1
 
 # ---------------------------------------------------------------------
+# K04 stress_pressure_factor (2026-10-06): a step starting below the
+# pressure history estimates its end pressure with the FACTORED stiffness
+# and stays unloading/reloading only strictly below the history (rule
+# measured on the Professional 02-08-2026, dt 0.1/0.15/0.25/0.3/0.35/0.4,
+# factors 0.5 and 3). reload1 = Pro test (sigxx -3.05; before -3.10),
+# reload2 = factor 3, partial unloading, dt 0.3 (-2.8; before -3.4).
+# ---------------------------------------------------------------------
+run_ok "$T2026" stress_pressure_factor_reload1
+run_ok "$T2026" stress_pressure_factor_reload2
+
+# ---------------------------------------------------------------------
 # Sub-sprint materi_stress_force, lote 2 (integracion 2D quad4/quad9):
 # verificacion ANALITICA por estatica. Decisiones de diseno (manual-
 # developer/post_calcul_materi_stress_force.md): caras extremas = las
