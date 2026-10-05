@@ -1,0 +1,14 @@
+( tslv_zip: rewritten on 2026-10-05 after the rm incident.
+  zip -yes, manual Professional 6.1095: at the end of the calculation
+  the output files, here the .dbs, are gzipped. Run in an ISOLATED
+  directory by build_safe.sh: expected tslv_zip.dbs.gz and no gzip
+  warning. Model: the tslv_ver one-dimensional dummy calculation. )
+
+echo -no
+number_of_space_dimensions 1
+materi_velocity
+end_initia
+
+control_timestep 1  1. 1.0
+zip -yes
+end_data
