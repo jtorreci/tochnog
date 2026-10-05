@@ -120,6 +120,18 @@ void general( long int element, long int name, long int nnol, long int element_g
   }
   else if ( type==-MATERI ) {
     dens = get_materi_density( element, element_group, nnol, nodes, new_unknowns );
+    // group_materi_expansion_volume (manual Professional 6.665): the
+    // density follows rho = rho0*(1 - beta*T) in the momentum INERTIA
+    // too, as materi.cc already does for the gravity force (K04
+    // incnav3, 2026-10-06: tvely -2.4976 with the mass of rho0, the
+    // Professional 02-08-2026 and the test's analytic value -5 with
+    // rho = 0.5)
+    if ( condif_temperature ) {
+      double expansion_volume = 0.;
+      get_group_data( GROUP_MATERI_EXPANSION_VOLUME, element_group, element,
+        new_unknowns, &expansion_volume, ldum, GET_IF_EXISTS );
+      dens *= 1. - expansion_volume * new_unknowns[temp_indx];
+    }
     get_group_data( GROUP_MATERI_VISCOSITY, element_group, element, new_unknowns, 
       &visc, ldum, GET_IF_EXISTS );
     db( GROUP_MATERI_STOKES, 0, &stokes, ddum, ldum, 

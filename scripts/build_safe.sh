@@ -1428,6 +1428,13 @@ run_ok "$T2026" stress_pressure_factor_reload1
 run_ok "$T2026" stress_pressure_factor_reload2
 
 # ---------------------------------------------------------------------
+# K04 incnav3 (2026-10-06): group_materi_expansion_volume reduces the
+# density in the momentum inertia (general.cc) as in the gravity force
+# (materi.cc): Pro incnav3 tvely -4.990415335 (= Pro; before -2.4976).
+# ---------------------------------------------------------------------
+run_ok "$T2026" expansion_volume_inertia1
+
+# ---------------------------------------------------------------------
 # Sub-sprint materi_stress_force, lote 2 (integracion 2D quad4/quad9):
 # verificacion ANALITICA por estatica. Decisiones de diseno (manual-
 # developer/post_calcul_materi_stress_force.md): caras extremas = las

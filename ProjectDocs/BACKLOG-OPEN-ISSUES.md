@@ -432,6 +432,20 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
   convection.
 - **Severity**: **LOW**. **Effort**: **cheap**.
 
+### B11. sfnet `incnav3` target predates the `expansion_volume` inertia density (K04, 2026-10-06)
+
+- **Corpus**: sfnet 197 (external, not edited). Since F1 T3 the GNU uses
+  rho = rho0*(1 - beta*T) of `group_materi_expansion_volume` in the
+  momentum inertia too (Professional 02-08-2026; its own `incnav3` states
+  "the density gets value rho = initial_rho*{1-expansion*T} = 0.5 ... the
+  total rate is -5"). The legacy sfnet copy keeps the old comment and
+  target `tvely` -2.5 +/- 0.01: GNU old -2.4976, GNU new -4.9904, the
+  Professional on the converted sfnet input -4.9904 (sfnet 181/16 ->
+  180/17 with the audit runner).
+- **Root cause**: stale target, not a GNU defect.
+- **Proposed fix**: none in the GNU.
+- **Severity**: **LOW**. **Effort**: **cheap**.
+
 ---
 
 ## C. Additional residuals
@@ -973,6 +987,7 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
 | B8 | sfnet | `petsc1` PETSc infrastructure | LOW | large |
 | B9 | sfnet | `taylor3` stale input + solver | LOW | medium |
 | B10 | sfnet | `condif2/3`, `examp1`, `incnav5`, `strconv1` targets calibrated on the legacy `convection_apply -yes` default (K03) | LOW | cheap |
+| B11 | sfnet | `incnav3` target predates the `expansion_volume` inertia density (K04) | LOW | cheap |
 | C1 | sfnet | `pruebavel` dead/malformed | LOW | cheap |
 | C2 | validation-suite | `groundflow_interface` `gvelx` sign | LOW | medium |
 | C3 | sfnet | `gforce10` 3D section sign | MEDIUM | medium |
