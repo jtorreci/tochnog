@@ -488,3 +488,7 @@ Each file corresponds to the same feature in the [User Manual](../manual-user/).
 ## GENERATED ELEMENT_DOF INIT (2026-10-05)
 
 - [generated_element_dof_init](generated_element_dof_init.md) — `generate.cc` `generate_spring()`, `generate_beam_truss()`, `generate_interface()`, `generate_interface_triangle()`: the `tmp_element_dof` template written as the `ELEMENT_DOF` record of every generated element came from the uninitialized `get_new_dbl()`; now zeroed with `array_set()` as `create.cc` `create_element()` does. Removes the run-to-run `e-3xx` garbage in the printed `element_dof` (gen1, genbeam1, iface_gen*, conspr3, genera1/2, ho_othr1, spring2/3/5); results unchanged (A/B: only `element_dof` lines differ).
+
+## BUILD_SAFE SUITE (2026-10-05)
+
+- [build_safe_suite](build_safe_suite.md) — `scripts/build_safe.sh` + `scripts/build_safe_tests.txt`: full run loop restored (226 test-2014 runs, list in a file), reduced post-incident mode and duplicate broken tsup checks removed, run-rc gate, `TN_CHECK_ONLY=1` (no build); `dpline_move` / `dpline_method` inputs restored to their pre-run state. Result: runs 226/226, checks 92 OK / 9 FALLO (the 9 lost G2 inputs).

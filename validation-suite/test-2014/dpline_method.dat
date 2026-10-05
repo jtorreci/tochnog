@@ -29,8 +29,12 @@ group_materi_memory  0  -updated_without_rotation
 group_type  0  -materi
 node  1  0 0
 node  2  1 0
-node  3  0 0.98
-node  4  1 0.98
+node  3  0 1
+node  4  1 1
+node_start_refined  1  0 0
+node_start_refined  2  1 0
+node_start_refined  3  0 1
+node_start_refined  4  1 1
 options_convection   -no
 options_inertia   -no
 options_mesh   -follow_material -follow_material

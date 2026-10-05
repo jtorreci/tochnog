@@ -11,7 +11,7 @@ bounda_unknown  0  -ra 1 4 -ra -vely
 bounda_unknown  1  -ra 1 4 -ra -velx
 control_print_dof_line  40  -separate_index
 control_print_dof_line  41  -separate_index
-control_print_dof_line_coordinates  40  0.500000000055 0.497999999992 0.500000000055 0.597999999992
+control_print_dof_line_coordinates  40  0.5 0.5 0.5 0.6
 control_print_dof_line_coordinates  41  0.5 0.5 0.5 0.6
 control_print_dof_line_move  40  -yes
 control_print_dof_line_n  40  2
