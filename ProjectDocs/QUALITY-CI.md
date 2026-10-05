@@ -30,7 +30,7 @@ canónico ya compila con `-Wall` (base de `build_safe.sh`); `audit` añade
 ### Verificación
 
 ```bash
-# 1) Build de calidad + suite interna (16 tests recuperados):
+# 1) Build de calidad + suite interna (226 runs, scripts/build_safe_tests.txt):
 make audit        # resumen de warnings al final; log en /tmp/tn_build_safe.log
 make asan         # rc=0 cuando la suite pasa; HOY rc=1 esperado: hypo1-4
                   # abortan por el OOB de hypo.c (ver "Hallazgo conocido")
@@ -44,11 +44,14 @@ grep -iE "warning:" /tmp/tn_build_safe.log
 .github/ci/run_smoke.sh build/tochnog-ubsan
 
 # 3) No-regresión (build por defecto intacto):
-./scripts/build_safe.sh --clean                # 16/16, rc=0
+./scripts/build_safe.sh --clean                # runs 226/226; rc=0 cuando no hay FALLO
+TN_CHECK_ONLY=1 ./scripts/build_safe.sh        # sin rebuild, con build/tochnog
 ```
 
-Los tres targets corren la suite interna completa (16 tests recuperados
-del modo reducido: hypo1-4, gforce7, tsup_*) con su binario. `make asan`
+Los tres targets corren la suite interna completa (lista única en
+`scripts/build_safe_tests.txt`, 226 runs desde `365ec1e`; el modo reducido
+de 16 tests y su conmutador por `msf_beam2d.dat` se eliminaron) con su
+binario. Detalle: `manual-developer/build_safe_suite.md`. `make asan`
 pasa a los tests `TN_MEMLIMIT_KB=unlimited` y `ASAN_OPTIONS=detect_leaks=0`.
 
 ## Hallazgo conocido (ASan): OOB de lectura en el path hypo — CORREGIDO (2026-09-06)
@@ -139,10 +142,10 @@ workflow_dispatch.
 
 ### Por qué CI corre un "smoke" y no la suite propia
 
-`validation-suite/` y `external-downloads/` NO están versionados
-(.gitignore: "Downloads y suites de terceros (no se versionan)"), así que
-un checkout limpio de CI no tiene los `.dat` de la suite ni el SuperLU
-local. La suite propia (16 tests recuperados del modo reducido) se corre
+`external-downloads/` NO está versionado y de `validation-suite/` solo se
+versionan los `.dat` de `test-2014` y `test-2026` (desde `2b6938c` y
+`b147ee4`; las salidas siguen ignoradas), así que un checkout limpio de CI
+no tiene sfnet ni el SuperLU local. La suite propia (226 runs) se corre
 localmente con `./scripts/build_safe.sh`; en CI se corre el subset
 commitado `.github/ci/smoke/` (2 inputs cuad4 elásticos: 1 y 4 elementos)
 que ejercita el pipeline core: parse → malla → materi elástico → bounda →
