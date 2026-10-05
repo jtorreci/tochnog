@@ -474,3 +474,4 @@ input parameters it accepts.
 ## K04 AUDIT FIXES (2026-10-06)
 
 - [edge_node_restriction](edge_node_restriction.md) — the `_node` / `_element_node` records of the edge loads (heat/groundflow flux, convection/radiation, force_edge*, support_edge_normal) select the element SIDES whose nodes are all listed, as the Professional (K04 condif7: a corner node no longer loads the adjacent side).
+- [force_point](force_point.md) — sign fixed 2026-10-06 (K04 force18): a positive force component pushes towards +x/+y/+z, as the Professional.

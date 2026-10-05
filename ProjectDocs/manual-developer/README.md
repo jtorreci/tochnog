@@ -500,3 +500,4 @@ Each file corresponds to the same feature in the [User Manual](../manual-user/).
 ## K04 AUDIT FIXES (2026-10-06)
 
 - [edge_node_restriction](edge_node_restriction.md) — `area.cc` `side_node_restriction_ok()`: side-level `_node` / `_element_node` test in the `area()` side loop for every edge family (flux, force_edge*, conv/rad, support); before, nodes were checked one by one (K04 condif7, flux doubled at corner nodes).
+- [force_point](force_point.md) — `force.cc` `force_point_calculate()`: `node_rhside += weight*force` over the ndim velocity equations (was `-=` over every principal unknown; K04 force18).

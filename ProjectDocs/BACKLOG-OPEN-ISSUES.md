@@ -934,6 +934,20 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
   copy the derivative-block defect.
 - **Severity**: **LOW** (output files only). **Effort**: **medium**.
 
+### C28. `node_force` applied with the opposite sign (and doubled in a 1D probe)
+
+- **Symptom** (found by F1 T3, K04 `force18` probes on the Professional
+  02-08-2026): Pro `force18` with `node_force 2 1.0` instead of the
+  `force_point`: Pro node 2 `velx` +1, GNU −2. `dof.cc`
+  `parallel_new_dof_before()` does `node_rhside -= node_force` (the
+  `force_point` had the same sign error, fixed in F1 T3), and the
+  magnitude is doubled in this 1D bar2 model (cause not traced).
+  `delete.cc` (mesh_cut node forces) negates the stored value to
+  compensate the sign (documented there).
+- **Proposed fix**: add the force (`+=`), drop the `delete.cc`
+  negation, trace the factor 2, A/B the corpus inputs with `node_force`.
+- **Severity**: **MEDIUM** (wrong load direction). **Effort**: **cheap/medium**.
+
 ---
 
 ## D. Summary
@@ -972,6 +986,7 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
 | C25 | — | uninitialized-buffer audit follow-ups (`pef_vel_prev` realloc, NODE_EIGEN print, split/beam/interface/mpc/nonloc side findings) | LOW | cheap |
 | C26 | — | `control_print_dof -separate_index`: Pro writes one file per dof, GNU one `dof.N` | LOW | cheap/medium |
 | C27 | — | FRD/gmsh layout vs Pro (PSTEP per block, `ALL` component, names, extra blocks/fields, multi-component gmsh fields) | LOW | medium |
+| C28 | — | `node_force` opposite sign (+ doubled in a 1D probe) vs Pro | MEDIUM | cheap/medium |
 
 Thirty-two items remain open: nine MEDIUM and twenty-three LOW (C23 and C24 resolved 2026-10-05; C25, C26, C27 and B10 added). No open issue is CRITICAL or
 HIGH. The validation-suite corpus has no open failure — its 233 real tests

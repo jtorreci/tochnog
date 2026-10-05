@@ -26,11 +26,17 @@
      el[0], nnol )`; break on first hit (`force.cc:252-261`).
   4. If no element contains the point → error + `exit(TN_EXIT_STATUS)`
      (`force.cc:264-267`).
-  5. Distribute: for each node of the found element,
-     `node_rhside[ipuknwn] -= weight[inol]*force_point[ndim+ipuknwn]`
-     for each non-zero force component (`force.cc:269-276`). The force is
-     subtracted because it is written directly into `NODE_RHSIDE`.
-- Data layout: array is `[ndim coordinates][MUKNWN force components]`.
+  5. Distribute: for each node of the found element and each direction
+     `idim<ndim`, `node_rhside[vel_indx/nder+idim] +=
+     weight[inol]*force_point[ndim+idim]` (guarded by the record length).
+     `node_rhside` holds external − internal, so an external load is
+     ADDED (same sign as the `force_element_edge` loads in `area.cc`).
+     K04 `force18` fix (2026-10-06): the old code subtracted the force
+     (velx −0.8 vs Pro +0.8) and looped over every principal unknown
+     (`nuknwn/nder`), reading past the ndim forces of the record and
+     assuming the velocity is the first principal unknown.
+- Data layout: array is `[ndim coordinates][ndim force components]`
+  (`data_length = ndim + MUKNWN` is only the storage size).
 
 ## Dependencias externas
 
@@ -46,10 +52,12 @@
 - `point_el()` has known pre-existing bugs for truss/beam elements and for
   some quad4 positions; a point force located in such an element may be
   misdistributed or not found. Fixing `point_el()` fixes this feature too.
-- Writes directly into `NODE_RHSIDE` (as `db_dbl` then in-place
-  subtraction) — works for the explicit formulation, but the sign and the
-  `nuknwn/nder` loop are implicit. Document or abstract the
-  "apply nodal rhs contribution" pattern shared with other load types.
+- Writes directly into `NODE_RHSIDE`. `node_force` (`dof.cc`
+  `parallel_new_dof_before()`) still SUBTRACTS its value (opposite to the
+  Professional; `delete.cc` compensates for mesh_cut, BACKLOG) — the
+  "apply nodal rhs contribution" pattern should be one helper.
+- `point_el()` locates the point iteratively (EPS_SIZE 1e-6): nodal
+  weights accurate to ~1e-7 (Pro exact).
 - If the force point sits exactly on a node the force is still routed
   through shape functions (weight 1 on that node) — fine, but a direct
   node path would be cheaper and clearer.

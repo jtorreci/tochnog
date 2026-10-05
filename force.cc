@@ -287,7 +287,7 @@ void force_point_calculate( void )
   // in space, also not on a node.
   long int iforce=0, max_force=0, length=0, inol=0, nnol=0, inod=0, 
     element=0, max_element=0, ldum=0, idum[1], el[1+MNOL], nodes[MNOL], 
-    ipuknwn=0;
+    ipuknwn=0, idim=0;
   double ddum[1], coords[MNOL*MDIM], weight[MNOL], *force_point=NULL, 
     *node_rhside=NULL;
 
@@ -318,13 +318,22 @@ void force_point_calculate( void )
         pri( "Error: force_point not in any element." );
         exit(TN_EXIT_STATUS);
       }
-      // distribute the force to the nodes of the found element
+      // distribute the force to the nodes of the found element. The
+      // record is coord_0..coord_ndim-1 force_0..force_ndim-1 (manual
+      // Professional 6.501): the forces act on the velocity equations
+      // as an EXTERNAL load, +force along +x (node_rhside holds
+      // external - internal; the force_element_edge loads are added
+      // with the same sign in area.cc). K04 force18 (2026-10-06): the
+      // old "-=" pushed the node the wrong way (velx -0.8, Pro +0.8),
+      // and the loop ran over every principal unknown, reading past
+      // the ndim forces of the record.
+      length = db_len( FORCE_POINT, iforce, VERSION_NORMAL );
       for ( inol=0; inol<nnol; inol++ ) {
         inod = nodes[inol];
         node_rhside = db_dbl( NODE_RHSIDE, inod, VERSION_NORMAL );
-        for ( ipuknwn=0; ipuknwn<nuknwn/nder; ipuknwn++ ) {
-          if ( force_point[ndim+ipuknwn]!=0. )
-            node_rhside[ipuknwn] -= weight[inol]*force_point[ndim+ipuknwn];
+        for ( idim=0; idim<ndim && ndim+idim<length; idim++ ) {
+          ipuknwn = vel_indx/nder + idim;
+          node_rhside[ipuknwn] += weight[inol]*force_point[ndim+idim];
         }
       }
     }

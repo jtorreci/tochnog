@@ -382,7 +382,7 @@ and target):
 | test | quantity | GNU | Pro / target |
 |---|---|---|---|
 | `condif7` | T(0), 1D edge heat flux; analytic T = 10 − x | **20** (flux doubled) → 10 after the 2026-10-06 fix (F1 T3: the `_node` restriction now selects whole sides, `area.cc` `side_node_restriction_ok()`) | 10 |
-| `force18` | `force_point` at 0.8 | **`velx` −0.8** | +0.8 |
+| `force18` | `force_point` at 0.8 | **`velx` −0.8** → +0.8 after the 2026-10-06 fix (F1 T3: the force was subtracted from `node_rhside`) | +0.8 |
 | `elasti7` | K0 = 0.1 → `sigxx` | **0** → −0.0500000000025 after the 2026-09-29 fix (§5.3) | −0.05 (Pro −0.04999999884) |
 | `tension_direct1` | `sigyy` with `…_normal_automatic` | **0.667** → 0 after the 2026-09-30 fix (new `element_normal` record; `disy` middle nodes 0.42 → 0, top 1; every variable = Pro except the nodal `eptyy` recovery 0.667 vs 0.5, K11) | 0 |
 | `mohr_coul_direct8` | `sigxy` with `plasti_bounda_factor` 0 | **1788.9** | 0 |

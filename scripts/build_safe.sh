@@ -1395,6 +1395,14 @@ run_ok "$T2026" edge_node_restriction_heat1
 run_ok "$T2026" edge_node_restriction_force1
 
 # ---------------------------------------------------------------------
+# K04 force18 (2026-10-06): force_point is an external load along
+# +force (manual Professional 6.501, = Professional 02-08-2026). Unit
+# quad4 bar, force_point (1, 0.5) force (2, 0) -> disx(2) = disx(4) = 2
+# (before: -2, the force was subtracted from node_rhside).
+# ---------------------------------------------------------------------
+run_ok "$T2026" force_point_sign1
+
+# ---------------------------------------------------------------------
 # Sub-sprint materi_stress_force, lote 2 (integracion 2D quad4/quad9):
 # verificacion ANALITICA por estatica. Decisiones de diseno (manual-
 # developer/post_calcul_materi_stress_force.md): caras extremas = las
