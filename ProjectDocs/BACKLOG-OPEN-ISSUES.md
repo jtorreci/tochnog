@@ -859,6 +859,22 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
 - **Severity**: **LOW** (edge cases, none observed in the corpora).
   **Effort**: **cheap** each.
 
+### C26. `control_print_dof -separate_index` file layout differs from the Professional
+
+- **Symptom**: `dofid_no` (converted to the Pro dialect) with
+  `control_print_dof 21 -separate_index`: the Professional 02-08-2026
+  writes one file per dof (`disx.21`, `disy.21`, `sigxx.21`, ...,
+  `coord_0.21`, `coord_1.21`), each line `x y value` in `%e` with 12
+  digits; the GNU writes one `dof.21` with the components one after
+  another (`x y value`, short `%g`). The values per component agree
+  (e.g. `disy` 0.002 at the top nodes) after `f22ba98` (C23); before it
+  the GNU file also repeated blocks and read past the record.
+- **Proposed fix**: follow the Professional layout (one file per dof name,
+  Pro number format) or document the GNU layout as a divergence;
+  check `control_print_dof_id` interplay and the build_safe `dof.*`
+  checks.
+- **Severity**: **LOW**. **Effort**: **cheap/medium**.
+
 ---
 
 ## D. Summary
@@ -895,8 +911,9 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
 | C22 | Pro `other` | `hypo12` marginal sigyy target miss after the default-memory change | LOW | cheap |
 | C24 | — | `print_frd`/`print_gmsh` repeated blocks and out-of-record reads (C23 pattern) | LOW | cheap |
 | C25 | — | uninitialized-buffer audit follow-ups (`pef_vel_prev` realloc, NODE_EIGEN print, split/beam/interface/mpc/nonloc side findings) | LOW | cheap |
+| C26 | — | `control_print_dof -separate_index`: Pro writes one file per dof, GNU one `dof.N` | LOW | cheap/medium |
 
-Thirty items remain open: nine MEDIUM and twenty-one LOW (C23 resolved 2026-10-05; C24 and C25 added; the table has 30 rows, the earlier text said 28 for its 29 rows). No open issue is CRITICAL or
+Thirty-one items remain open: nine MEDIUM and twenty-two LOW (C23 resolved 2026-10-05; C24, C25 and C26 added). No open issue is CRITICAL or
 HIGH. The validation-suite corpus has no open failure — its 233 real tests
 pass (`materi_direct_mc` input corrected, C17 resolved). Every remaining failure is a stale or malformed test, an out-of-scope model
 or infrastructure limit, a narrow post-processing divergence, a corpus-coverage
