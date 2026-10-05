@@ -1,0 +1,56 @@
+( qsri_patch_t - PATCH TEST de estado CONSTANTE con SRI (lado ON):
+  UN quad4 [0,1]x[0,1] en TRACCION UNIAXIAL con deformacion
+  PRESCRITA: columna izquierda con velx = 0, derecha con velx = 1e-2,
+  y TODOS los nodos con vely = 0 -> campo lineal u_x = eps*x con
+  eps = 1e-2*dt/L = 1e-3 CONSTANTE (eyy = 0 prescrito). Con
+  nu = 0.3 (plane stress, membrana): sigma_xx = E'*eps = 1098.9*1e-3
+  = 1.0989 CONSTANTE -> nor = sigma_xx*h = 1.0989 EXACTO, she = 0,
+  mom = 0. El estado constante se integra exactamente con la regla
+  reducida selectiva (el SRI integra constantes exactamente). A/B
+  contra qsri_patch_t_off. Archivo materi_stress_force.444. )
+
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_velocity_integrated
+materi_strain_total
+materi_stress
+end_initia
+
+options_mesh -fixed_in_space -fixed_in_space
+options_convection -no
+options_inertia -no
+
+node 1  0. 0.
+node 2  1. 0.
+node 3  0. 1.
+node 4  1. 1.
+
+element 1  -quad4 1 2 3 4
+element_group 1 0
+
+group_type 0  -materi
+group_materi_density 0  1.0
+group_materi_elasti_young 0  1000.0
+group_materi_elasti_poisson 0  0.3
+group_materi_membrane 0  -yes
+group_materi_memory 0  -updated_without_rotation
+group_element_selective_reduced_integration 0  -yes
+
+bounda_unknown 0  -ra 1 3 -ra -velx
+bounda_time    0  0. 0. 100. 0.
+bounda_unknown 1  -ra 1 4 -ra -vely
+bounda_time    1  0. 0. 100. 0.
+bounda_unknown 2  -ra 2 4 -ra -velx
+bounda_time    2  0. 1.e-2 100. 1.e-2
+
+post_calcul_materi_stress_force_element_group 0
+post_calcul_materi_stress_force_reference_point 0.5 1000.0
+post_calcul -materi_stress -force
+
+control_timestep 1  0.1 0.1
+control_print_materi_stress_force 444 -all
+
+target_item 0  -node_dof 4 -velx
+target_value 0  1.e-2 1.e-8
+end_data

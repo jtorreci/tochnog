@@ -1,0 +1,60 @@
+( qsri_modes - SRI sin modos hourglass (modo 4 con energia POSITIVA):
+  UN quad4 [0,1]x[0,1] con SRI y deformacion PRESCRITA en el modo
+  hourglass u_y = a*x*y (a = 1e-3, solo el nodo 4 (1,1) con
+  vely = 1e-2): el modo espurio del quad4 con integracion reducida
+  TOTAL (1x1 en todo) tiene cizalla nula en el punto reducido -> modo
+  de energia cero. Con la integracion REDUCIDA SELECTIVA los terminos
+  normales (2x2 Gauss) estabilizan el modo: la cizalla del modo
+  hourglass en el centroide gamma_c = a*y_c = 5e-4 NO es nula ->
+  sigma_xy = G*gamma_c = 384.615*5e-4 = 0.1923 -> she = 0.1923 != 0
+  (el modo tiene energia positiva: NO es un modo espurio). El
+  analisis de eigenvalues documentado (manual-developer) confirma:
+  exactamente 3 modos cero (los rigidos, verificados en
+  qsri_modes_rigid) y el 4o con energia positiva. Archivo
+  materi_stress_force.448. )
+
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_velocity_integrated
+materi_strain_total
+materi_stress
+end_initia
+
+options_mesh -fixed_in_space -fixed_in_space
+options_convection -no
+options_inertia -no
+
+node 1  0. 0.
+node 2  1. 0.
+node 3  0. 1.
+node 4  1. 1.
+
+element 1  -quad4 1 2 3 4
+element_group 1 0
+
+group_type 0  -materi
+group_materi_density 0  1.0
+group_materi_elasti_young 0  1000.0
+group_materi_elasti_poisson 0  0.3
+group_materi_membrane 0  -yes
+group_materi_memory 0  -updated_without_rotation
+group_element_selective_reduced_integration 0  -yes
+
+bounda_unknown 0  -ra 1 3 -ra -velx -vely
+bounda_time    0  0. 0. 100. 0.
+bounda_unknown 1  4 -velx
+bounda_time    1  0. 0. 100. 0.
+bounda_unknown 2  4 -vely
+bounda_time    2  0. 1.e-2 100. 1.e-2
+
+post_calcul_materi_stress_force_element_group 0
+post_calcul_materi_stress_force_reference_point 0.5 1000.0
+post_calcul -materi_stress -force
+
+control_timestep 1  0.1 0.1
+control_print_materi_stress_force 448 -all
+
+target_item 0  -node_dof 4 -vely
+target_value 0  1.e-2 1.e-8
+end_data

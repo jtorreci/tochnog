@@ -1,0 +1,16 @@
+( tslv_ver: tochnog_version, manual Professional 6.1091. The record
+  carries the build date, day month year, parsed from the compiler
+  __DATE__ so it always matches the binary. Targeted by index: value 3
+  is the build YEAR of this binary, 2026. )
+
+echo -no
+number_of_space_dimensions 1
+materi_velocity
+end_initia
+
+
+control_timestep 1  1. 1.0
+
+target_item 10  -tochnog_version 0 2
+target_value 10  2026. 0.5
+end_data

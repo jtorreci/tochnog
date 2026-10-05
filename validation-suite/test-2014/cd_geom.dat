@@ -1,0 +1,67 @@
+echo -no
+number_of_space_dimensions 2
+derivatives
+materi_velocity
+materi_velocity_integrated
+materi_strain_total
+materi_stress
+number_of_integration_points 4
+end_initia
+
+bounda_time  0  0 0 100 0
+bounda_time  1  0 -1 100 -1
+bounda_time  2  0 1 100 1
+bounda_unknown  0  -ra 1 4 5 8 -ra -vely
+bounda_unknown  1  -ra 1 2 5 6 -ra -velx
+bounda_unknown  2  -ra 3 4 7 8 -ra -velx
+change_dataitem  10  -group_materi_plasti_mohr_coul_direct 0 1 -use
+change_dataitem_geometry  10  -geometry_brick 1
+change_dataitem_time  10  0 1 0.05 0 100 0
+control_timestep  0  0.1 0.2
+element  1  -quad4 1 2 3 4
+element  2  -quad4 5 6 7 8
+element_group  1  2
+element_group  2  0
+geometry_brick  1  0.5 0.5 0 1.5 1.5 3 0.01
+group_materi_density  0  1
+group_materi_density  2  1
+group_materi_elasti_poisson  0  0
+group_materi_elasti_poisson  2  0
+group_materi_elasti_young  0  1000
+group_materi_elasti_young  2  1000
+group_materi_memory  0  -updated_without_rotation
+group_materi_memory  2  -updated_without_rotation
+group_materi_plasti_mohr_coul_direct  0  0 1 0
+group_materi_plasti_mohr_coul_direct  2  0 0 0
+group_materi_plasti_mohr_coul_direct_normal  0  0 1 0
+group_materi_plasti_mohr_coul_direct_normal  2  0 1 0
+group_type  0  -materi
+group_type  2  -materi
+node  1  0 0
+node  2  1 0
+node  3  1 1
+node  4  0 1
+node  5  25 0
+node  6  26 0
+node  7  26 1
+node  8  25 1
+options_mesh   -fixed_in_space -fixed_in_space
+options_processors   1
+options_stabilization   -static
+post_point  1  0.5 0.5
+post_point  2  25.5 0.5
+target_item  1  -post_point_dof 1 -sigxy
+target_item  2  -post_point_dof 2 -sigxy
+target_item  3  -group_materi_plasti_mohr_coul_direct 0 1
+target_value  1  0 0.3
+target_value  2  1 0.3
+target_value  3  1 0.001
+node_dof  1  0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+node_dof  2  0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+node_dof  3  0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+node_dof  4  0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+node_dof  5  0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+node_dof  6  0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+node_dof  7  0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+node_dof  8  0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+end_data

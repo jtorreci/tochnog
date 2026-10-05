@@ -1,0 +1,47 @@
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_velocity_integrated
+materi_stress
+materi_strain_total
+materi_history_variables 4
+end_initia
+
+bounda_time  0  0 0 10000000000 0
+bounda_time  1  0 0 10000000000 0
+bounda_time  2  0 -1 10000000000 -1
+bounda_unknown  0  -geometry_line 0 -velx
+bounda_unknown  1  -geometry_line 1 -vely
+bounda_unknown  2  -geometry_line 2 -vely
+change_dataitem  20  -geometry_line 0 1 -use
+change_dataitem_time  20  0 5 100 5
+control_change_dataitem_apply  20  -no
+control_timestep  20  0.001 0.04
+element  1  -quad4 1 2 3 4
+force_element_edge_normal  0  -200
+force_element_edge_normal_geometry  0  -geometry_line 3
+geometry_line  0  0 0 0 1 1e-05
+geometry_line  1  0 0 1 0 1e-05
+geometry_line  2  0 1 1 1 1e-05
+geometry_line  3  1 0 1 1 1e-05
+group_materi_memory  0  -updated_without_rotation
+group_materi_plasti_hypo_wolfersdorff  0  30 5800000 0.28 0.84 0.53 1 0.13 1.05
+group_type  0  -materi
+node  1  0 0
+node  2  1 0
+node  3  0 1
+node  4  1 1
+options_convection   -no
+options_mesh   -fixed_in_space -fixed_in_space
+options_processors   1
+options_stabilization   -static
+post_point  1  0.05 0.05
+target_item  1  -post_point_dof 1 -sigyy
+target_item  2  -post_point_dof 1 -hisv0
+target_value  1  -863 1
+target_value  2  0.6 0.01
+node_dof  1  0 0 0 0 -200 0 0 -200 0 -200 0 0 0 0 0 0 0.6 0 0 0
+node_dof  2  0 0 0 0 -200 0 0 -200 0 -200 0 0 0 0 0 0 0.6 0 0 0
+node_dof  3  0 0 0 0 -200 0 0 -200 0 -200 0 0 0 0 0 0 0.6 0 0 0
+node_dof  4  0 0 0 0 -200 0 0 -200 0 -200 0 0 0 0 0 0 0.6 0 0 0
+end_data

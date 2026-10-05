@@ -1,0 +1,52 @@
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+condif_temperature
+end_initia
+
+bounda_time  0  0 2 100 2
+bounda_unknown  0  -ra 1 2 3 4 -ra -temp
+control_timestep  0  1 100
+element  1  -quad4 1 2 3 4
+element  2  -quad4 2 4 5 7
+element  3  -quad4 5 6 7 8
+element_group  1  0
+element_group  2  10
+element_group  3  20
+group_condif_capacity  0  0
+group_condif_capacity  20  0
+group_condif_conductivity  0  0.1
+group_condif_conductivity  20  1e-06
+group_condif_density  0  1
+group_condif_density  20  1
+group_condif_flow  0  0 0
+group_condif_flow  20  0 0
+group_interface  10  -yes
+group_interface_condif_conductivity  10  1
+group_type  0  -condif
+group_type  10  -condif
+group_type  20  -condif
+node  1  0 0
+node  2  1 0
+node  3  0 1
+node  4  1 1
+node  5  2 0
+node  6  3 0
+node  7  2 1
+node  8  3 1
+options_convection   -no
+options_mesh   -fixed_in_space -fixed_in_space
+options_processors   1
+options_stabilization   -static
+print_filter  0  -node_dof -all -temp
+target_item  0  -node_dof 5 -temp
+target_value  0  2 0.01
+node_dof  1  0 0 0
+node_dof  2  0 0 0
+node_dof  3  0 0 0
+node_dof  4  0 0 0
+node_dof  5  0 0 0
+node_dof  6  0 0 0
+node_dof  7  0 0 0
+node_dof  8  0 0 0
+end_data

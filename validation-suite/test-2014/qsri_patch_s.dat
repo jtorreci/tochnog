@@ -1,0 +1,59 @@
+( qsri_patch_s - PATCH TEST de estado CONSTANTE con SRI (lado ON):
+  UN quad4 [0,1]x[0,1] en CORTE SIMPLE con deformacion PRESCRITA
+  (patron msf_shear): borde inferior fijo, superior con velx = v0 =
+  1e-2 (vely = 0) -> campo lineal u_x = gamma*y con gamma = v0*dt/h =
+  1e-3, EXACTO para el bilineal. sigma_xy = G*gamma =
+  (E/(2(1+nu)))*1e-3 = 384.615*1e-3 = 0.384615 CONSTANTE.
+  La regla reducida selectiva (1 punto Gauss en el centroide para el
+  cortante + 2x2 Gauss para lo normal) integra exactamente el estado
+  constante: she = sigma_xy*h = 0.384615 EXACTO, nor = 0, mom = 0.
+  A/B contra qsri_patch_s_off (sin SRI, igualmente EXACTO: los
+  estados constantes son exactos para cualquier cuadratura
+  consistente; el SRI no los degrada). Archivo
+  materi_stress_force.442. )
+
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_velocity_integrated
+materi_strain_total
+materi_stress
+end_initia
+
+options_mesh -fixed_in_space -fixed_in_space
+options_convection -no
+options_inertia -no
+
+node 1  0. 0.
+node 2  1. 0.
+node 3  0. 1.
+node 4  1. 1.
+
+element 1  -quad4 1 2 3 4
+element_group 1 0
+
+group_type 0  -materi
+group_materi_density 0  1.0
+group_materi_elasti_young 0  1000.0
+group_materi_elasti_poisson 0  0.3
+group_materi_membrane 0  -yes
+group_materi_memory 0  -updated_without_rotation
+group_element_selective_reduced_integration 0  -yes
+
+bounda_unknown 0  -ra 1 2 -ra -velx -vely
+bounda_time    0  0. 0. 100. 0.
+bounda_unknown 1  -ra 3 4 -ra -vely
+bounda_time    1  0. 0. 100. 0.
+bounda_unknown 2  -ra 3 4 -ra -velx
+bounda_time    2  0. 1.e-2 100. 1.e-2
+
+post_calcul_materi_stress_force_element_group 0
+post_calcul_materi_stress_force_reference_point 0.5 1000.0
+post_calcul -materi_stress -force
+
+control_timestep 1  0.1 0.1
+control_print_materi_stress_force 442 -all
+
+target_item 0  -node_dof 4 -velx
+target_value 0  1.e-2 1.e-8
+end_data

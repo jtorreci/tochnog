@@ -1,0 +1,70 @@
+( mcap1_elast - elastic A/B twin of mcap1 (Sprint 10 lote 7): the SAME
+  isotropic compression rig (hex8, v = -0.04, dt 0.05, 40 load steps +
+  5 unload steps) WITHOUT the cap1 record. Elastic: p = K*deps_vol*40 =
+  833.3*0.006*40 = 200 at the end of loading, drops 25 during unloading
+  -> p = 175 -> sigxx = -175 (isotropic). The cap1 twin ends at
+  sigxx = -85.6 (cap limits p at pc ~ 111): the A/B discriminates the
+  surface. )
+
+echo -no
+number_of_space_dimensions 3
+derivatives
+materi_velocity
+materi_velocity_integrated
+materi_strain_total
+materi_strain_plasti
+materi_strain_plasti_cap
+materi_stress
+number_of_integration_points 8
+end_initia
+
+options_mesh -fixed_in_space -fixed_in_space -fixed_in_space
+
+node 1   0 0 0
+node 2   1 0 0
+node 3   0 1 0
+node 4   1 1 0
+node 5   0 0 1
+node 6   1 0 1
+node 7   0 1 1
+node 8   1 1 1
+
+element 1  -hex8 1 2 3 4 5 6 7 8
+
+element_group 1  0
+
+group_type 0  -materi
+group_materi_density 0  1.0
+group_materi_elasti_young 0  1000.0
+group_materi_elasti_poisson 0  0.3
+group_materi_memory 0  -updated_without_rotation
+
+bounda_unknown 0  -ra 1 3 5 7 -ra -velx
+bounda_time    0  0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0.
+bounda_time_increment 0  0.05
+bounda_unknown 1  -ra 2 4 6 8 -ra -velx
+bounda_time    1  -0.04 -0.04 -0.04 -0.04 -0.04 -0.04 -0.04 -0.04 -0.04 -0.04 -0.04 -0.04 -0.04 -0.04 -0.04 -0.04 -0.04 -0.04 -0.04 -0.04 -0.04 -0.04 -0.04 -0.04 -0.04 -0.04 -0.04 -0.04 -0.04 -0.04 -0.04 -0.04 -0.04 -0.04 -0.04 -0.04 -0.04 -0.04 -0.04 -0.04 -0.04 0.04 0.04 0.04 0.04 0.04
+bounda_time_increment 1  0.05
+bounda_unknown 2  -ra 1 2 5 6 -ra -vely
+bounda_time    2  0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0.
+bounda_time_increment 2  0.05
+bounda_unknown 3  -ra 3 4 7 8 -ra -vely
+bounda_time    3  -0.04 -0.04 -0.04 -0.04 -0.04 -0.04 -0.04 -0.04 -0.04 -0.04 -0.04 -0.04 -0.04 -0.04 -0.04 -0.04 -0.04 -0.04 -0.04 -0.04 -0.04 -0.04 -0.04 -0.04 -0.04 -0.04 -0.04 -0.04 -0.04 -0.04 -0.04 -0.04 -0.04 -0.04 -0.04 -0.04 -0.04 -0.04 -0.04 -0.04 -0.04 0.04 0.04 0.04 0.04 0.04
+bounda_time_increment 3  0.05
+bounda_unknown 4  -ra 1 2 3 4 -ra -velz
+bounda_time    4  0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0. 0.
+bounda_time_increment 4  0.05
+bounda_unknown 5  -ra 5 6 7 8 -ra -velz
+bounda_time    5  -0.04 -0.04 -0.04 -0.04 -0.04 -0.04 -0.04 -0.04 -0.04 -0.04 -0.04 -0.04 -0.04 -0.04 -0.04 -0.04 -0.04 -0.04 -0.04 -0.04 -0.04 -0.04 -0.04 -0.04 -0.04 -0.04 -0.04 -0.04 -0.04 -0.04 -0.04 -0.04 -0.04 -0.04 -0.04 -0.04 -0.04 -0.04 -0.04 -0.04 -0.04 0.04 0.04 0.04 0.04 0.04
+bounda_time_increment 5  0.05
+
+post_point 1  0.5 0.5 0.5
+
+control_timestep 0  0.05 2.25
+control_timestep_iterations 0  8
+
+target_item  1  -post_point_dof 1 -sigxx
+target_value 1  -175.0 5.0
+target_item  2  -post_point_dof 1 -eppcapzz
+target_value 2  0.0 0.0001
+end_data

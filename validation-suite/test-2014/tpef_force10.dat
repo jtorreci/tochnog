@@ -1,0 +1,88 @@
+( tpef_force10: post_element_force (manual Professional 6.927) on the
+  force10 cantilever - the exact same model as the arness gforce10:
+  2 hex8 10x10x50, fixed at z=0, total load (0,1000,-123.4) at the
+  top face, section at z=0 (the fixed face) with normal=(0,0,1),
+  shear0=(1,0,0), shear1=(0,1,0), middle=(5,5,0). The geometry
+  restricts to the z=0 nodes (the quadrilateral at z=0). Expected
+  (the Professional's own result): normal=-123.4, shear0~0,
+  shear1=1000, moment0~0, moment1=-100000. )
+
+echo -no
+number_of_space_dimensions 3
+derivatives
+materi_velocity
+materi_velocity_integrated
+materi_displacement
+materi_strain_total
+materi_stress
+number_of_integration_points 8
+end_initia
+
+options_mesh -fixed_in_space -fixed_in_space -fixed_in_space
+options_convection -no
+options_inertia -no
+
+node 1  0. 0. 0.
+node 2  10. 0. 0.
+node 3  0. 10. 0.
+node 4  10. 10. 0.
+node 5  0. 0. 50.
+node 6  10. 0. 50.
+node 7  0. 10. 50.
+node 8  10. 10. 50.
+node 9  0. 0. 100.
+node 10 10. 0. 100.
+node 11 0. 10. 100.
+node 12 10. 10. 100.
+
+element 1  -hex8 1 2 3 4 5 6 7 8
+element_group 1 0
+element 2  -hex8 5 6 7 8 9 10 11 12
+element_group 2 0
+
+group_type 0  -materi
+group_materi_elasti_young 0  1.e7
+group_materi_elasti_poisson 0  0.0
+group_materi_memory 0  -total_linear
+
+( the z=0 face quadrilateral for the section geometry )
+geometry_quadrilateral 1  0. 0. 0.  10. 0. 0.  0. 10. 0.  10. 10. 0.  1.e-5
+
+( the cross-section definition )
+post_element_force 10  0. 0. 1.  1. 0. 0.  0. 1. 0.  5. 5. 0.
+post_element_force_geometry 10  -geometry_quadrilateral 1
+
+bounda_unknown 0  -ra 1 2 3 4 -ra -velx -vely -velz
+bounda_time    0  0. 0. 100. 0.
+
+( the top face load: consistent nodal loads of the uniform face
+  traction (0,10,-1.234)/unit area on the 10x10 face: total
+  (0,1000,-123.4), 4 corner nodes -> (0,250,-30.85) each )
+bounda_force 2  9 -vely
+bounda_time  2  0. 250. 100. 250.
+bounda_force 3  9 -velz
+bounda_time  3  0. -30.85 100. -30.85
+bounda_force 4  10 -vely
+bounda_time  4  0. 250. 100. 250.
+bounda_force 5  10 -velz
+bounda_time  5  0. -30.85 100. -30.85
+bounda_force 6  11 -vely
+bounda_time  6  0. 250. 100. 250.
+bounda_force 7  11 -velz
+bounda_time  7  0. -30.85 100. -30.85
+bounda_force 8  12 -vely
+bounda_time  8  0. 250. 100. 250.
+bounda_force 9  12 -velz
+bounda_time  9  0. -30.85 100. -30.85
+
+control_timestep 30  1.  1.0
+
+( targets: the Professional's own values (positional: 0=normal,
+  1=shear0, 2=shear1, 3=moment0, 4=moment1) )
+target_item 40  -post_element_force_result 10 0
+target_value 40  -123.4 1.5
+target_item 60  -post_element_force_result 10 2
+target_value 60  1000. 15.
+target_item 80  -post_element_force_result 10 4
+target_value 80  -100000. 1500.
+end_data

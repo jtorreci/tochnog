@@ -1,0 +1,70 @@
+( tquad6_iface: minimal quad6 interface test. Two quad9 elements
+  stacked with duplicated nodes on the shared face. The quad6
+  interface connects them. A downward push at the top must transmit
+  through: sigyy at the bottom ~ -0.5. )
+
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_displacement
+materi_stress
+materi_strain_total
+number_of_integration_points 9
+end_initia
+
+options_mesh -fixed_in_space -fixed_in_space
+options_convection -no
+options_inertia -no
+
+node 1  0. 0.
+node 2  0.5 0.
+node 3  1. 0.
+node 4  0. 0.5
+node 5  0.5 0.5
+node 6  1. 0.5
+node 7  0. 1.
+node 8  0.5 1.
+node 9  1. 1.
+
+node 10 0. 1.
+node 11 0.5 1.
+node 12 1. 1.
+node 13 0. 1.5
+node 14 0.5 1.5
+node 15 1. 1.5
+node 16 0. 2.
+node 17 0.5 2.
+node 18 1. 2.
+
+element 1  -quad9 1 2 3 4 5 6 7 8 9
+element_group 1 0
+element 2  -quad9 10 11 12 13 14 15 16 17 18
+element_group 2 0
+
+element 3  -quad6 9 8 7 10 11 12
+element_group 3 1
+
+group_type 0  -materi
+group_materi_elasti_young 0  1.e6
+group_materi_elasti_poisson 0  0.0
+group_materi_memory 0  -total_linear
+
+group_type 1  -materi
+group_interface 1  -yes
+group_interface_materi_elasti_stiffness 1  1.e8 1.e8
+
+bounda_unknown 0  -ra 1 2 3 -ra -velx -vely
+bounda_time    0  0. 0. 100. 0.
+
+bounda_force 1  16 -vely
+bounda_time  1  0. -0.0833333 100. -0.0833333
+bounda_force 2  17 -vely
+bounda_time  2  0. -0.3333333 100. -0.3333333
+bounda_force 3  18 -vely
+bounda_time  3  0. -0.0833333 100. -0.0833333
+
+control_timestep 10  1.  1.0
+
+target_item 10  -node_dof 2 -sigyy
+target_value 10  -0.5 0.1
+end_data

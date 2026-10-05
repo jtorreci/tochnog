@@ -14,6 +14,12 @@ validation-suite/*
 !validation-suite/test-2026/
 validation-suite/test-2026/*
 !validation-suite/test-2026/*.dat
+# test-2014 regression inputs (build_safe.sh suite) ARE versioned too
+!validation-suite/test-2014/
+validation-suite/test-2014/*
+!validation-suite/test-2014/*.dat
+# ...except the dump written by the meshdoff run (an output, not an input)
+validation-suite/test-2014/print_mesh_dof.dat
 
 # Estado local de herramientas (opencode)
 .atl/

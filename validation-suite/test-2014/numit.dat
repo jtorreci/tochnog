@@ -1,0 +1,28 @@
+echo -no
+number_of_space_dimensions 1
+materi_velocity
+materi_velocity_integrated
+materi_stress
+end_initia
+
+bounda_time  0  0 0 100 0
+bounda_unknown  0  1 -velx
+control_print_number_iterations  20  -yes
+control_timestep  20  0.1 0.2
+control_timestep_iterations  20  8
+element  1  -truss 1 2
+element_truss_force  1  0.123
+group_truss_area  0  1
+group_truss_memory  0  -updated_without_rotation
+group_truss_young  0  1
+group_type  0  -truss
+node  1  0
+node  2  1
+options_mesh   -follow_material
+options_processors   1
+options_stabilization   -static
+target_item  0  -node_dof 2 -velix
+target_value  0  -0.123 1e-08
+node_dof  1  0 0 0 0 0 0 0 0
+node_dof  2  0 0 0 0 0 0 0 0
+end_data
