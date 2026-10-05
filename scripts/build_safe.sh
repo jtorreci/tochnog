@@ -1403,6 +1403,20 @@ run_ok "$T2026" edge_node_restriction_force1
 run_ok "$T2026" force_point_sign1
 
 # ---------------------------------------------------------------------
+# K04 ground9 (2026-10-06): group_interface_groundflow_permeability and
+# group_interface_condif_conductivity are per unit length/area (manual
+# Professional 6.628/6.625): each facing pair carries w_i*L (as the
+# mechanical interface springs); the interface capacity likewise. Middle pres/temp 0.5 (= Pro 02-08-2026);
+# before: 0.6 (ground9 3 wide) and 1/3 (thermal ground9).
+# ---------------------------------------------------------------------
+run_ok "$T2026" interface_flux_measure_ground1
+run_ok "$T2026" interface_flux_measure_condif1
+# interface capacity: per unit length, split over the pair, implicit;
+# groundflow_interface at t = 3 -> pres(5) 1.75 (Pro 1.749998578),
+# before 0.8146.
+run_ok "$T2026" interface_capacity_transient1
+
+# ---------------------------------------------------------------------
 # Sub-sprint materi_stress_force, lote 2 (integracion 2D quad4/quad9):
 # verificacion ANALITICA por estatica. Decisiones de diseno (manual-
 # developer/post_calcul_materi_stress_force.md): caras extremas = las

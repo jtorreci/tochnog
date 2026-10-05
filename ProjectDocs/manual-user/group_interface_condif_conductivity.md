@@ -33,3 +33,10 @@ Left block with prescribed T=2, right block thermally isolated
 (conductivity 1e-6): the interface heat flux alone drives the right
 block to T=2 in steady state (test `iface_condif`; without the record
 it stays at 0).
+
+## Per unit length (fixed 2026-10-06, audit K04)
+
+`k` is per unit length (2D) / area (3D) (manual Professional 6.625): each
+facing node pair carries its tributary length. Thermal `ground9` analog
+(and Pro `condif11`): middle temperature 0.5 = Professional (GNU before
+1/3). Test: `validation-suite/test-2026/interface_flux_measure_condif1.dat`.

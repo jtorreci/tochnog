@@ -37,3 +37,9 @@
 ## Hardcoded parameters / pending refactorings
 
 - Lumped storage; a consistent (mass-matrix) formulation is not implemented.
+
+## K04 fix (2026-10-06)
+
+See `group_interface_groundflow_permeability.md`: `C_i = 0.5*C*w_i*L` per
+node, implicit (matrix + element_lhside `C_i/dt`), = Professional
+02-08-2026 on `groundflow_interface`.

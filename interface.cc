@@ -1045,8 +1045,9 @@ void interface_element( long int element, long int name,
     free( avg_stress ); free( avg_strain );
   }
 
-  // release per-IP work arrays
-  delete[] w_ip; delete[] du_ip;
+  // release per-IP work arrays (w_ip is kept for the groundflow /
+  // condif interface flux below)
+  delete[] du_ip;
   delete[] strain_normal_ip; delete[] strain_eff_ip;
   delete[] strain_normal_old_ip; delete[] force_norm_ip;
   delete[] f_t_old_ip; delete[] f_t_ip;
@@ -1077,12 +1078,24 @@ void interface_element( long int element, long int name,
         GROUP_INTERFACE_GROUNDFLOW_TOTAL_PRESSURE_TENSION, element_group,
         VERSION_NORMAL ) ) {
       // storage term on the pressure dofs of the interface nodes (lumped)
+      // (K04 ground9, 2026-10-06): per unit length/area like the
+      // permeability, the storage C*w_i*L of a facing pair split evenly
+      // over its two nodes, and IMPLICIT like the continuum capacity
+      // (general.cc: C/dt on the matrix diagonal and element_lhside).
+      // Measured on the Professional 02-08-2026 (groundflow_interface
+      // first step, interface capacity 0 / 1 / 2: node storage 0.25*C
+      // on a unit-length quad4 interface; the response does not depend on
+      // the interface length). The old explicit, unweighted term
+      // diverged once the permeability got its measure.
       if ( has_C ) {
         for ( inol=0; inol<nnol; inol++ ) {
           long int jndx = inol*npuknwn + pres_indx/nder;
+          double C_i = 0.5 * C_iface * w_ip[inol%ns1] * iface_measure;
           double dpres = ( new_dof[inol*nuknwn+pres_indx] -
             old_dof[inol*nuknwn+pres_indx] ) / dtime;
-          element_rhside[jndx] -= C_iface * dpres;
+          element_rhside[jndx] -= C_i * dpres;
+          element_matrix[jndx*nnol*npuknwn+jndx] += C_i / dtime;
+          element_lhside[jndx] += C_i / dtime;
         }
       }
       // through-interface flux coupling the facing node pairs
@@ -1093,13 +1106,19 @@ void interface_element( long int element, long int name,
           long int jn2 = (inol+ns1)*npuknwn + pres_indx/nder;
           double pres1 = new_dof[inol*nuknwn+pres_indx];
           double pres2 = new_dof[(inol+ns1)*nuknwn+pres_indx];
-          double q = pe_iface * ( pres1 - pres2 );
+          // pe is per unit length (2D) / area (3D) (manual 6.628): the
+          // pair carries its tributary measure w_i*L, as the mechanical
+          // springs above (K04 ground9, 2026-10-06: the bare pair
+          // conductance pe gave 2*pe on a unit-length quad4 interface,
+          // middle pressure 1/3 instead of the Professional 0.5)
+          double pe_i = pe_iface * w_ip[inol] * iface_measure;
+          double q = pe_i * ( pres1 - pres2 );
           element_rhside[jn1] -= q;
           element_rhside[jn2] += q;
-          element_matrix[jn1*nnol*npuknwn+jn1] += pe_iface;
-          element_matrix[jn1*nnol*npuknwn+jn2] -= pe_iface;
-          element_matrix[jn2*nnol*npuknwn+jn1] -= pe_iface;
-          element_matrix[jn2*nnol*npuknwn+jn2] += pe_iface;
+          element_matrix[jn1*nnol*npuknwn+jn1] += pe_i;
+          element_matrix[jn1*nnol*npuknwn+jn2] -= pe_i;
+          element_matrix[jn2*nnol*npuknwn+jn1] -= pe_i;
+          element_matrix[jn2*nnol*npuknwn+jn2] += pe_i;
         }
       }
       // crack pressure: static water pressure on an opened interface
@@ -1142,17 +1161,21 @@ void interface_element( long int element, long int name,
         long int jn2 = (inol+ns1)*npuknwn + temp_indx/nder;
         double temp1 = new_dof[inol*nuknwn+temp_indx];
         double temp2 = new_dof[(inol+ns1)*nuknwn+temp_indx];
-        double q = k_iface * ( temp1 - temp2 );
+        // k per unit length (2D) / area (3D) (manual 6.625): tributary
+        // measure w_i*L per facing pair, as the groundflow flux above
+        double k_i = k_iface * w_ip[inol] * iface_measure;
+        double q = k_i * ( temp1 - temp2 );
         element_rhside[jn1] -= q;
         element_rhside[jn2] += q;
-        element_matrix[jn1*nnol*npuknwn+jn1] += k_iface;
-        element_matrix[jn1*nnol*npuknwn+jn2] -= k_iface;
-        element_matrix[jn2*nnol*npuknwn+jn1] -= k_iface;
-        element_matrix[jn2*nnol*npuknwn+jn2] += k_iface;
+        element_matrix[jn1*nnol*npuknwn+jn1] += k_i;
+        element_matrix[jn1*nnol*npuknwn+jn2] -= k_i;
+        element_matrix[jn2*nnol*npuknwn+jn1] -= k_i;
+        element_matrix[jn2*nnol*npuknwn+jn2] += k_i;
       }
     }
   }
 
+  delete[] w_ip;
   delete[] el;
   delete[] nodes;
 

@@ -390,7 +390,7 @@ and target):
 | `stress_pressure_factor` | `sigxx` | **−3.10** | −3.05 |
 | `incnav3` | `tvely` (`expansion_volume` effect) | **−2.49** | −5 |
 | `tet10_2` | `sigzz` | **−0.894** | −1 |
-| `ground9` | interface groundflow `pres` | **0.333** | 0.5 |
+| `ground9` | interface groundflow `pres` | **0.333** → 0.5 after the 2026-10-06 fix (F1 T3: interface permeability/capacity/conductivity per unit length, capacity implicit) | 0.5 |
 | `axisym9` | `post_point_dof 10 -sigxx` | 0.00158902 | 0.0015915 (±1e-6) |
 | `distri2` | `post_point_dof 1 -temp` | 0.998933 | 0.999774 (±1e-4) |
 

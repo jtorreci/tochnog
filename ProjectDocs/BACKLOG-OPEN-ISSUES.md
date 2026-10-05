@@ -948,6 +948,15 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
   negation, trace the factor 2, A/B the corpus inputs with `node_force`.
 - **Severity**: **MEDIUM** (wrong load direction). **Effort**: **cheap/medium**.
 
+### C29. `group_condif_conductivity` with one value per direction not accepted
+
+- **Symptom** (F1 T3, Pro test `condif11`): `group_condif_conductivity 0
+  0.1 0.1` is a PARSE error in the GNU ("I do not know : 0.1"); the
+  Professional accepts it (anisotropic conductivity, as
+  `group_groundflow_permeability`).
+- **Proposed fix**: accept ndim values, isotropic when one value.
+- **Severity**: **LOW**. **Effort**: **cheap/medium**.
+
 ---
 
 ## D. Summary
@@ -987,6 +996,7 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
 | C26 | — | `control_print_dof -separate_index`: Pro writes one file per dof, GNU one `dof.N` | LOW | cheap/medium |
 | C27 | — | FRD/gmsh layout vs Pro (PSTEP per block, `ALL` component, names, extra blocks/fields, multi-component gmsh fields) | LOW | medium |
 | C28 | — | `node_force` opposite sign (+ doubled in a 1D probe) vs Pro | MEDIUM | cheap/medium |
+| C29 | Pro `other` | `group_condif_conductivity` per-direction values (condif11) not parsed | LOW | cheap/medium |
 
 Thirty-two items remain open: nine MEDIUM and twenty-three LOW (C23 and C24 resolved 2026-10-05; C25, C26, C27 and B10 added). No open issue is CRITICAL or
 HIGH. The validation-suite corpus has no open failure — its 233 real tests
