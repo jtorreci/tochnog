@@ -496,3 +496,7 @@ Each file corresponds to the same feature in the [User Manual](../manual-user/).
 ## PRINT_DOF COMPONENT LOOP (2026-10-05)
 
 - [print_dof_component_loop](print_dof_component_loop.md) — `print_hi.cc` `print_dof()`: the dof write loop iterated `ipuknwn` over all `nuknwn` value/derivative entries, repeating every vector/matrix block and reading `node_dof` past the end of the record (heap garbage `e-3xx` in `dof.*`, BACKLOG C23); now loops over the primary unknowns (`npuknwn = nuknwn/nder`, step `nval`, type from `dof_scal_vec_mat[iuknwn]`) as `print_vt.cc`. Same fix in `print_fr.cc` `print_frd()` and `print_gm.cc` `print_gmsh()` (C24, 2026-10-05; FRD 2D vector third component 0, gmsh field names from the dof type); remaining FRD/gmsh layout differences with the Professional: C27.
+
+## K04 AUDIT FIXES (2026-10-06)
+
+- [edge_node_restriction](edge_node_restriction.md) — `area.cc` `side_node_restriction_ok()`: side-level `_node` / `_element_node` test in the `area()` side loop for every edge family (flux, force_edge*, conv/rad, support); before, nodes were checked one by one (K04 condif7, flux doubled at corner nodes).

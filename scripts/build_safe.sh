@@ -1381,6 +1381,20 @@ else
 fi
 
 # ---------------------------------------------------------------------
+# K04 condif7 (2026-10-06): the _node / _element_node restriction of the
+# edge families (condif heat/convection/radiation, groundflow flux,
+# force_edge*, support_edge_normal) selects the SIDES whose nodes are
+# all in the list (= Professional 02-08-2026). Before: node by node, so
+# a corner node also loaded the adjacent side (condif7 flux doubled).
+#   edge_node_restriction_heat1: nodes 1 3 4 -> temp 12 / 18 (Pro);
+#     before 20 / 20.
+#   edge_node_restriction_force1: force_edge_node 1 3 -> disx 1 / 1
+#     (Pro); before 2 / 2.
+# ---------------------------------------------------------------------
+run_ok "$T2026" edge_node_restriction_heat1
+run_ok "$T2026" edge_node_restriction_force1
+
+# ---------------------------------------------------------------------
 # Sub-sprint materi_stress_force, lote 2 (integracion 2D quad4/quad9):
 # verificacion ANALITICA por estatica. Decisiones de diseno (manual-
 # developer/post_calcul_materi_stress_force.md): caras extremas = las
