@@ -50,6 +50,9 @@ feature in `ProjectDocs/SEGUIMIENTO-CONVERGENCIA.md`:
 - When copying the source to a scratch directory for a build, exclude
   `.codegraph/` (and `.git/`): rsync exits with code 24 on the live index
   files and, under `set -e`, the build silently never starts.
+- On the NAS, `git merge` right after `git switch` often fails with
+  "no se pudo escribir índice / stash falló" (stale index stat data).
+  Run `git update-index --refresh` before the merge; it then succeeds.
 - Running `build/tochnog` outside `scripts/build_safe.sh` needs
   `LD_LIBRARY_PATH=external-downloads/numlib-runtime` (no system
   `liblapack.so.3`).
