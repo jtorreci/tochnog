@@ -5,13 +5,14 @@ Close the medium-size GNU-suspect clusters of the all-variables audit, each
 verified against the Professional 02-08-2026 or an analytic value.
 
 ## Tasks
-- [ ] T1 K06: power-law elasticity semantics (`myoung6_e2`: GNU E=3000 → −4.0385 vs Pro E=1000+3000 → −5.3846; `myoung6_e3`; `mpower` poisson_power). Pro adds `group_materi_elasti_young` to the power law.
+- [x] T1 K06: power-law elasticity semantics (`myoung6_e2`: GNU E=3000 → −4.0385 vs Pro E=1000+3000 → −5.3846; `myoung6_e3`; `mpower` poisson_power). Pro adds `group_materi_elasti_young` to the power law.
   - [x] T1a `poisson_power` replaces nu (stress.cc clears C before the rebuild) — `a270264`.
-  - [ ] T1b `young_power` + `young` additive in Pro — NEEDS OWNER DECISION (BACKLOG C36), not implemented.
+  - [x] T1b `young_power` + `young` additive in Pro — owner decision 2026-10-06: deliberate divergence (GNU = manual 2.2.2/6.661), no code change; docs `5f7c10c`.
 - [ ] T2 K17: truss / beam / support_edge_normal divergence on Pro inputs (`trubea2/3` disz 2e5 vs 0.00333; `support_edge_normal_3` disy 124.75 vs 5.01e-4; `truss8`; `dynamic3`; `truss2/3/14`, `update2` ERRDUMP).
   - [x] T2a `support_edge_normal_3`: damping/density missing from the iteration matrix (area.cc) — `0b9ca9a`.
   - [x] T2b `truss14` / `truss2/3`: truss `-total` linear + no geometric stiffness (truss.cc) — `40567ff`.
-  - [ ] T2c PARKED: `trubea2/3` planar GNU beam vs Pro 3D beam (design, BACKLOG C37); `truss8` inactive-element node (both plausible), `update2` (not a truss, -updated robustness), `truss13` (truss_distribute_mpc not implemented), zero-force first iteration (C12) → C39; `dynamic3` → C11; support `_stiffness_freeze` → C38.
+  - [x] T2d `truss8` (C39): owner decision 2026-10-06 follow the Pro; nodes whose elements are all inactive by group_time are not driven by bounda_dof (bounda.cc) — `4ceed88`.
+  - [ ] T2c PARKED: `trubea2/3` planar GNU beam vs Pro 3D beam (design, BACKLOG C37); `truss8` death-velocity reset (C39 residual), `update2` (not a truss, -updated robustness), `truss13` (truss_distribute_mpc not implemented), zero-force first iteration (C12) → C39; `dynamic3` → C11; support `_stiffness_freeze` → C38.
 - [ ] T3 K05 + C5: contact (`contac1` no interaction, GNU node 2 velx 0.03 vs Pro 0.02/0.01; `validation_10` sigyy ≈0 vs −21031; `contact_target_geometry` alias aborts "Data is allocated in a parallel loop" in 6 runs and drops an index-0 contact in examp9).
 
 ## Rules
@@ -85,3 +86,31 @@ docs + SEGUIMIENTO + AUDIT/BACKLOG. Time-box ~1.5 h per root cause.
   181/16 (no rc change); Pro `other` 231/99 → 234/96 (support_edge_normal_3,
   truss2, truss3 now pass; no regression).
 - Open decision: T1b (C36). T3 not started (separate agent).
+
+### User decisions applied (2026-10-06/07)
+- T1b / C36: deliberate divergence, the GNU keeps law = modulus; code and
+  `myoung6*` targets unchanged. BACKLOG C36 decided, SEGUIMIENTO
+  "Descarte de features" row, "Differences with the Professional" in the
+  young_power user/dev pages. Commit `5f7c10c` (docs).
+- `mpower` retarget (-0.4389/-1.4101 +/- 0.02, `a270264`): APPROVED by
+  the owner; recorded in the SEGUIMIENTO poisson_power row (`5f7c10c`).
+- T2d / C39 truss8, route inline (bounda.cc + shared helper in group.cc,
+  elem.cc reuses it): root cause `bounda()` applied `bounda_dof` to every
+  node regardless of element activity, while `elem()` skipped the unborn
+  truss -> node 1 driven 0.05/0.1 before birth. Fix: static
+  `bounda_node_dormant()` (NULL when no group_time record) + skip of the
+  prescribed-dof branch for dormant nodes. Pro truss8 node 1 disx
+  0/0/0.05/0.1 = GNU after (before 0.05/0.1/0.15/0.2). Test
+  `group_time_bounda_dormant1` RED rc 1 old / GREEN rc 0 new, Pro rc 0.
+  Death probe (`group_time 0 0. 1.`): Pro zeroes the node velocities after
+  death, GNU unchanged (keeps the old velocity) -> C39 residual, not done.
+  Corpus A/B (plain rc runner, timeout 60 s, -P 6, old = b042128 build):
+  validation-suite 233/10 -> 233/10; test-2026 68/3 -> 69/2 (only the
+  new test); sfnet 181/16 -> 181/16; Pro `other` 237/93 -> 237/93 (truss8
+  rc 0 both). Stdout identical except timeouts/peak-memory noise. Only
+  truss8 and the new test contain `group_time` in all corpora. Commit
+  `4ceed88`.
+- Final clean build of `4ceed88` (`git archive`, `build_safe.sh
+  --clean`) copied to `build/tochnog`; `TN_CHECK_ONLY=1
+  ./scripts/build_safe.sh`: 226/226 runs, 126 OK / 0 FALLO, rc 0.
+- Next: T3 (contact) not started.
