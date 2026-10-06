@@ -6,11 +6,12 @@ verified against the Professional 02-08-2026 or an analytic value.
 
 ## Tasks
 - [ ] T1 K06: power-law elasticity semantics (`myoung6_e2`: GNU E=3000 → −4.0385 vs Pro E=1000+3000 → −5.3846; `myoung6_e3`; `mpower` poisson_power). Pro adds `group_materi_elasti_young` to the power law.
-  - [x] T1a `poisson_power` replaces nu (stress.cc clears C before the rebuild) — `fix(stress)` (hash below).
+  - [x] T1a `poisson_power` replaces nu (stress.cc clears C before the rebuild) — `a270264`.
   - [ ] T1b `young_power` + `young` additive in Pro — NEEDS OWNER DECISION (BACKLOG C36), not implemented.
 - [ ] T2 K17: truss / beam / support_edge_normal divergence on Pro inputs (`trubea2/3` disz 2e5 vs 0.00333; `support_edge_normal_3` disy 124.75 vs 5.01e-4; `truss8`; `dynamic3`; `truss2/3/14`, `update2` ERRDUMP).
-  - [x] T2a `support_edge_normal_3`: damping/density missing from the iteration matrix (area.cc) — `fix(area)` (hash below).
-  - [x] T2b `truss14` / `truss2/3`: truss `-total` linear + no geometric stiffness (truss.cc) — `fix(truss)` (hash below).
+  - [x] T2a `support_edge_normal_3`: damping/density missing from the iteration matrix (area.cc) — `0b9ca9a`.
+  - [x] T2b `truss14` / `truss2/3`: truss `-total` linear + no geometric stiffness (truss.cc) — `40567ff`.
+  - [ ] T2c PARKED: `trubea2/3` planar GNU beam vs Pro 3D beam (design, BACKLOG C37); `truss8` inactive-element node (both plausible), `update2` (not a truss, -updated robustness), `truss13` (truss_distribute_mpc not implemented), zero-force first iteration (C12) → C39; `dynamic3` → C11; support `_stiffness_freeze` → C38.
 - [ ] T3 K05 + C5: contact (`contac1` no interaction, GNU node 2 velx 0.03 vs Pro 0.02/0.01; `validation_10` sigyy ≈0 vs −21031; `contact_target_geometry` alias aborts "Data is allocated in a parallel loop" in 6 runs and drops an index-0 contact in examp9).
 
 ## Rules
@@ -70,3 +71,17 @@ docs + SEGUIMIENTO + AUDIT/BACKLOG. Time-box ~1.5 h per root cause.
   3.6e-7; sfnet truss2/3 2.9e-5, truss7 3e-5). First iteration of a
   zero-force straight truss still prints "iterative solver broke down"
   (C12) and continues.
+
+### Closure evidence (2026-10-06)
+- Commits: `a270264` fix(stress) T1a, `0b9ca9a` fix(area) T2a, `40567ff`
+  fix(truss) T2b; parking docs in the chore commit with this update.
+- Final clean build of HEAD (`git archive`, `build_safe.sh --clean`) is
+  byte-identical to the A/B "new" binary; copied to `build/tochnog`.
+  `TN_CHECK_ONLY=1 ./scripts/build_safe.sh`: 226/226 runs, 125 OK / 0
+  FALLO, rc 0 (baseline 121 OK + 4 new tests).
+- Corpus A/B (same plain rc runner, timeout 60 s, old = d0fbe86 build):
+  validation-suite 232/11 → 233/10 (mpower with the new target); test-2026
+  64/6 → 68/2 (the 4 new tests; 2 expected-error remain); sfnet 181/16 →
+  181/16 (no rc change); Pro `other` 231/99 → 234/96 (support_edge_normal_3,
+  truss2, truss3 now pass; no regression).
+- Open decision: T1b (C36). T3 not started (separate agent).

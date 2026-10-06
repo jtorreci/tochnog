@@ -664,6 +664,9 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
   `materi.cc`, with the auxiliary pass protected from the control
   override; then re-verify dynamic1/2/5/8.
 - **Effort**: **medium**.
+- **Corpus probe** (F2 T2, 2026-10-06): Pro `other/dynamic3` (implicit truss,
+  prescribed acceleration, no `materi_dynamic`) is the same gap: node 2
+  disx GNU 32.66 vs Pro 60.44 (the target node 1 passes in both).
 
 ### C12. bicg "stop" does not abort the GNU run on a singular system
 
@@ -1169,6 +1172,51 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
   per-node stiffness force `k u` (normal and tangential) and use it
   instead of `k u` (and drop `k*dt` from the matrix) while frozen.
 - **Severity**: **LOW**. **Effort**: **cheap/medium**.
+
+### C37. 3D beam: the GNU beam is planar, the Professional beam is a full 3D frame element (audit K17 `trubea2/3`) — PARKED, design
+
+- **Symptom** (F2 T2, Pro `other/trubea2`, `trubea3`): a truss-beam along x
+  loaded in z (x-z plane) or in the y-z plane: GNU bicg breakdown, disz
+  2e5; Professional 02-08-2026 disz 0.00333 and roty/rotx reactions
+  exact. `trubea1` (x-y plane) and `trubea4` agree.
+- **Root cause**: `beam_3d()` (`beam.cc`) maps a 2D beam into ONE plane
+  given by the GNU-only `group_beam_plane` (default -x -y); out-of-plane
+  bending has no stiffness. The Professional (manual 6.590-6.592) has a
+  3D beam with local axes: `group_beam_inertia Iyy Izz J` (two bending
+  planes + torsion), `group_beam_direction_z` (default: an arbitrary
+  normal in 3D), output `element_beam_direction`.
+- **Why parked**: a new 12-dof 3D frame element (local triad, torsion,
+  both bending planes, -updated large rotations, beam force/moment output
+  in local axes, `print_beam_force_moment`), not an isolated fix.
+- **Severity**: **MEDIUM** (any 3D beam out of the x-y plane). **Effort**:
+  **large**.
+
+### C39. K17 residuals: inactive-element nodes, `update2`, `truss13` (audit K17)
+
+- **`truss8`** (Pro `other`): a truss born at t = 1 (`group_time`), node 1
+  driven by a constant velocity 0.1 from t = 0. Node 2 disx 0.1 in both
+  (target); node 1 disx GNU 0.2, Professional 0.1: the Professional does
+  not move a node that has no active element (manual 6.769 is silent).
+  BOTH-plausible; a decision on free nodes is needed before any change.
+- **`dynamic3`** (Pro `other`): implicit truss dynamics without
+  `materi_dynamic`; the target node passes, node 2 disx GNU 32.66 vs Pro
+  60.44. Same gap as C11 ("plain implicit truss case"); tracked there.
+- **`update2`** (Pro `other`): NOT a truss case (misclassified in K17): a
+  -updated quad cantilever 100 x 10, E = 1e7, edge force 1e6 with
+  `force_edge_normal_factor`, p-refinement. GNU "solution seems to
+  diverge" (veliy -86434), Professional veliy 12.243 (target 12.24).
+  Without p-refinement or with -updated_linear both stop. Large-rotation
+  robustness of the -updated material, related to K19; not investigated
+  further.
+- **`truss13`** (Pro `other`): `control_mesh_truss_distribute_mpc` is not
+  implemented (SEGUIMIENTO "PENDIENTE"); the truss across an interface
+  carries no force in the GNU (Pro 5.0).
+- **Zero-force straight truss**: the first iteration of a straight truss
+  under a transverse load is still singular (no force, so no geometric
+  stiffness); the GNU prints "iterative solver broke down" and continues
+  (C12), then converges (Pro `truss2/3/14` equal after F2 T2).
+- **Severity**: **LOW**. **Effort**: **cheap** (truss8 decision) to
+  **large** (update2).
 ---
 
 ## D. Summary
@@ -1216,9 +1264,11 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
 | C34 | — | direct cut shear plastic strain: Pro twice the tensor value (deliberate divergence) | LOW | — |
 | C35 | — | one-iteration lag of the whole material state (K02, `spring4` 1 iteration) — parked, design; F4 | MEDIUM | medium/large |
 | C36 | validation-suite | `young_power` + `young`: Pro adds both stiffnesses, manual says law = modulus (K06) — needs decision | LOW | cheap |
+| C37 | Pro `other` | planar GNU beam vs Pro 3D frame beam (`trubea2/3`, K17) — parked, design | MEDIUM | large |
 | C38 | Pro `other` | `control_support_edge_normal_stiffness_freeze` parse-only (support_edge_normal_3, 1e-9 effect) | LOW | cheap/medium |
+| C39 | Pro `other` | K17 residuals: `truss8` inactive-element node (both plausible), `update2` -updated robustness, `truss13` truss_distribute_mpc, zero-force truss first iteration | LOW | cheap/large |
 
-Thirty-nine items remain open: eleven MEDIUM and twenty-eight LOW (C23 and C24 resolved 2026-10-05; C25, C26, C27 and B10 added; F1 T3 / K04 2026-10-06 added B11, C28-C32; F1 T6 resolved C28, added and resolved B12; F2 T1 added C36; F2 T2 added C38). No open issue is CRITICAL or
+Forty-one items remain open: twelve MEDIUM and twenty-nine LOW (C23 and C24 resolved 2026-10-05; C25, C26, C27 and B10 added; F1 T3 / K04 2026-10-06 added B11, C28-C32; F1 T6 resolved C28, added and resolved B12; F2 T1 added C36; F2 T2 added C37, C38, C39). No open issue is CRITICAL or
 HIGH. The validation-suite corpus has no open failure — its 233 real tests
 pass (`materi_direct_mc` input corrected, C17 resolved). Every remaining failure is a stale or malformed test, an out-of-scope model
 or infrastructure limit, a narrow post-processing divergence, a corpus-coverage
