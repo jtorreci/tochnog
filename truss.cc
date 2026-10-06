@@ -31,7 +31,8 @@ void truss( long int element, long int element_group,
     // inertia_apply default -no (Professional semantics, see general.cc)
     options_inertia=-NO, group_truss_rope=-NO, 
     memory=-UPDATED, truss_reference=-NO, options_convection=-NO,
-    icontrol=0, ldum=0, idum[1], options_mesh[MDIM];
+    icontrol=0, ldum=0, idum[1], options_mesh[MDIM],
+    geometric_nonlinear=0;
   double mass=0., dtime=0., 
     group_truss_young=0., group_truss_area=0., 
     group_truss_density=0., group_truss_plasti=1.e20,
@@ -140,6 +141,27 @@ void truss( long int element, long int element_group,
       old_length = array_distance( &old_coord[0], &old_coord[ndim], work, ndim );
       incremental_length = new_length - old_length;
       truss_stiffness = group_truss_young * group_truss_area / new_length;
+      geometric_nonlinear = 1;
+    }
+    else if ( memory==-TOTAL && truss_reference!=-YES ) {
+      // -total: geometrically nonlinear in the reference configuration
+      // (Professional 02-08-2026, test/other/truss14; the manual 6.777
+      // lists only -updated_linear/-updated/-total_linear). The axis
+      // follows the CURRENT nodes and the force is the engineering
+      // strain of the reference length, N = N0 + EA*(L - L0)/L0, so a
+      // truss loaded along x and then along y rotates to the resultant
+      // (truss14: disx 0.7071, disy 1.7071, N = sqrt(2)). Before, -total
+      // fell into the linear branch below.
+      array_subtract( &new_coord[ndim], &new_coord[0], truss_direction, ndim );
+      if ( !array_normalize( truss_direction, ndim ) ) {
+         pri( "Error: truss length zero for element ", element );
+         exit(TN_EXIT_STATUS);
+      }
+      new_length = array_distance( &new_coord[0], &new_coord[ndim], work, ndim );
+      old_length = array_distance( &old_coord[0], &old_coord[ndim], work, ndim );
+      incremental_length = new_length - old_length;
+      truss_stiffness = group_truss_young * group_truss_area / initial_length;
+      geometric_nonlinear = 1;
     }
     else {
       array_subtract( &initial_coord[ndim], &initial_coord[0], truss_direction, ndim );
@@ -242,6 +264,20 @@ void truss( long int element, long int element_group,
               jnol*npuknwn+jpuknwn;
             tmp = fac*truss_stiffness*dtime*
               truss_direction[idim]*truss_direction[jdim];
+            // geometric (initial-force) stiffness of the nonlinear
+            // memories: the force acts along the CURRENT axis, so a
+            // transverse velocity rotates it, d(N n)/dv = N/L (I - n n)
+            // dt. Iteration matrix only (the equilibrium lives in the
+            // RHS). Tension only: a compressive N would lower the
+            // transverse stiffness of a free node below zero and break
+            // the iterative solver. Without it a straight truss under
+            // a transverse load has a zero pivot (truss14: bicg
+            // broke down).
+            if ( geometric_nonlinear && new_truss_force_mix>0. &&
+                 new_length>0. )
+              tmp += fac*dtime*(new_truss_force_mix/new_length)*
+                ( (idim==jdim?1.:0.) -
+                  truss_direction[idim]*truss_direction[jdim] );
             if ( options_inertia==-YES ) {
               if ( jdim==idim && jnol==inol ) tmp += (mass/2) / dtime;
             }

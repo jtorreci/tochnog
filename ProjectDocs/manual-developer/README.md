@@ -386,6 +386,7 @@ Each file corresponds to the same feature in the [User Manual](../manual-user/).
 
 - [group_truss_expansion](group_truss_expansion.md) — enum + registro; resta termica del incremento de longitud en truss() (todas las memorias); verificado vs Pro (truss11: -2 EXACTO).
 - [group_truss_initial_force](group_truss_initial_force.md) — enum + registro; siembra de la fuerza en el nacimiento del elemento (sin estado previo); verificado vs Pro (truss12: rhside ±1; el Pro renumería el truss en su .dbs).
+- [group_truss_memory](group_truss_memory.md) — truss.cc memory branches: new -total branch (current axis, EA/L0) and the tension-only geometric stiffness N/L (I - n n) for -updated/-total (K17 2026-10-06; Pro truss2/truss14).
 - [post_calcul_k0](post_calcul_k0.md) — enums K0/K0_SIG (name entries) + slot k0_sig en calculate() + branch K0 en calculate_operat (2D/3D/fallback 1D); verificado vs Pro (k0: 0.1111111111 EXACTO).
 - [element_dof_initial](element_dof_initial.md) — registro ELEMENT_DOF_INITIAL + marker ELEMENT_DOF_INITIAL_APPLIED (version_all=1) escrito por step_close tras converger el paso de nacimiento; sustitucion del old dof en la inercia lumped de general(); verificado vs Pro (phase1 + probe 2 pasos).
 - [geometry_node_type](geometry_node_type.md) — registros por-geometria + overrides en geometry() por miembro del set (re-lectura de coords + flag project_inside en las 8 ramas); verificado vs Pro (node_type_1, validation_14).

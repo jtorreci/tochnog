@@ -1488,6 +1488,17 @@ run_ok "$T2026" elasti_poisson_power_replace1
 run_ok "$T2026" support_edge_normal_damping_tangent1
 
 # ---------------------------------------------------------------------
+# K17 truss14 / truss2 (2026-10-06): truss -total is geometrically
+# nonlinear (current axis, N = EA (L-L0)/L0) and the nonlinear truss
+# memories carry the tension geometric stiffness N/L (I - n n) in the
+# matrix (truss.cc). truss_total_rotation1 (= Pro truss14): disx
+# 0.707107, disy 1.707107; truss_updated_transverse1 (= Pro truss2):
+# reactions 0.1/0.1, veliy 0.82358. Before: solver breakdown, rc 1.
+# ---------------------------------------------------------------------
+run_ok "$T2026" truss_total_rotation1
+run_ok "$T2026" truss_updated_transverse1
+
+# ---------------------------------------------------------------------
 # Sub-sprint materi_stress_force, lote 2 (integracion 2D quad4/quad9):
 # verificacion ANALITICA por estatica. Decisiones de diseno (manual-
 # developer/post_calcul_materi_stress_force.md): caras extremas = las
