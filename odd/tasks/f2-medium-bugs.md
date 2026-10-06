@@ -9,6 +9,7 @@ verified against the Professional 02-08-2026 or an analytic value.
   - [x] T1a `poisson_power` replaces nu (stress.cc clears C before the rebuild) — `fix(stress)` (hash below).
   - [ ] T1b `young_power` + `young` additive in Pro — NEEDS OWNER DECISION (BACKLOG C36), not implemented.
 - [ ] T2 K17: truss / beam / support_edge_normal divergence on Pro inputs (`trubea2/3` disz 2e5 vs 0.00333; `support_edge_normal_3` disy 124.75 vs 5.01e-4; `truss8`; `dynamic3`; `truss2/3/14`, `update2` ERRDUMP).
+  - [x] T2a `support_edge_normal_3`: damping/density missing from the iteration matrix (area.cc) — `fix(area)` (hash below).
 - [ ] T3 K05 + C5: contact (`contac1` no interaction, GNU node 2 velx 0.03 vs Pro 0.02/0.01; `validation_10` sigyy ≈0 vs −21031; `contact_target_geometry` alias aborts "Data is allocated in a parallel loop" in 6 runs and drops an index-0 contact in examp9).
 
 ## Rules
@@ -40,3 +41,20 @@ docs + SEGUIMIENTO + AUDIT/BACKLOG. Time-box ~1.5 h per root cause.
   runs, 125 OK / 0 FALLO, rc 0. Corpus A/B (plain rc runner, old = HEAD
   build, new = all F2 fixes): validation-suite old 232/11 (mpower, new
   target) → new 233/10; test-2026 only the 4 new F2 tests change.
+
+### T2 (K17) — 2026-10-06, route: inline per root cause (one source file each)
+- Re-run before (GNU HEAD build vs Pro 02-08-2026, Pro inputs as distributed):
+  `trubea2/3` GNU bicg breakdown, disz 2e5 (Pro 0.00333 exact);
+  `support_edge_normal_3` GNU rc 1 disy 124.751 (Pro 5.00999e-4);
+  `truss2/3` GNU solver breakdown, reaction velx −0.99997 (Pro 0.1/0.1);
+  `truss14` GNU breakdown, disy 1e10 (Pro 0.70711/1.70711); `truss8` target
+  passes both, only node 1 disx GNU 0.2 vs Pro 0.1; `dynamic3` target passes
+  both, node 2 disx GNU 32.66 vs Pro 60.44; `truss13` GNU rc 1, node 9/10
+  disx 0 (Pro 0.25/0.75); `update2` GNU diverges (Pro veliy 12.243).
+- T2a support: bisection — without the damping step both agree (5.0e-4);
+  without the freeze record Pro 5.00998e-4, GNU still 124.75 → damping.
+  area.cc matrix carried only k*dt; c = 1e6 vs k*dt = 1e3 → overshoot.
+  Fix: k*dt + c + d/dt. GNU now 5.00998004e-4 = Pro (no freeze); with the
+  freeze record Pro 5.00999e-4 (freeze parse-only in GNU, BACKLOG C38).
+  Test `support_edge_normal_damping_tangent1` RED rc 1 / GREEN rc 0 (Pro
+  passes). Corpus: no rc change; tsup_* dumps identical.

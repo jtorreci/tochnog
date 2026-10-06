@@ -1527,10 +1527,23 @@ void area( long int element, long int name,
                               sides[iside*nnol_side+inol_j];
                             for ( ia=0; ia<ndim; ia++ ) {
                               for ( ib=0; ib<ndim; ib++ ) {
-                                double kterm = dtime *
-                                  ( values[0]*normal[ia]*normal[ib]
-                                    + values[1]*( (ia==ib?1.:0.)
-                                      - normal[ia]*normal[ib] ) ) *
+                                // d(force)/d(velocity) of the support:
+                                // stiffness k*dt (u = u_old + v*dt),
+                                // damping c (manual 6.1068) and
+                                // density d/dt (6.1071, a = (v -
+                                // v_old)/dt). Without the damping and
+                                // density terms the iteration matrix
+                                // misses c/(k*dt) times the support
+                                // tangent and the Newton update
+                                // overshoots: Pro support_edge_normal_3
+                                // (c = 1e6, k*dt = 1e3) diverged to
+                                // disy 124.75 (Pro 5.01e-4).
+                                double nn = normal[ia]*normal[ib];
+                                double tt = (ia==ib?1.:0.) - nn;
+                                double kterm =
+                                  ( dtime*( values[0]*nn + values[1]*tt )
+                                    + cn*nn + ct*tt
+                                    + ( dn*nn + dt_*tt )/dtime ) *
                                   cij[inol_i*nnol_side+inol_j];
                                 long int indxi = node_i*npuknwn
                                   + vel_indx/nder + ia;

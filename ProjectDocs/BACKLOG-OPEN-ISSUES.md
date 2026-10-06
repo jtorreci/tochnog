@@ -1154,6 +1154,21 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
   there the Pro replaces the poisson ratio (fixed in F2 T1).
 - **Severity**: **LOW** (input with both records only). **Effort**:
   **cheap** either way.
+
+### C38. `control_support_edge_normal_stiffness_freeze` is parse-only
+
+- **Manual** 6.381: with `-yes` the stiffness FORCES of
+  `support_edge_normal` are frozen at their present value (gravity with
+  support stiffness first, then vibration with damping only).
+- **GNU**: parsed and accepted, no effect (the earlier note "meaningful
+  only with plasticity" misread the manual).
+- **Measured** (F2 T2, Pro `support_edge_normal_3`): Professional disy
+  5.00999e-4 with the record, 5.00998e-4 without; GNU 5.00998e-4 (after the
+  damping-tangent fix). The target (tolerance 1e-6) passes either way.
+- **Proposed fix**: at the control index with the record, store the
+  per-node stiffness force `k u` (normal and tangential) and use it
+  instead of `k u` (and drop `k*dt` from the matrix) while frozen.
+- **Severity**: **LOW**. **Effort**: **cheap/medium**.
 ---
 
 ## D. Summary
@@ -1201,8 +1216,9 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
 | C34 | — | direct cut shear plastic strain: Pro twice the tensor value (deliberate divergence) | LOW | — |
 | C35 | — | one-iteration lag of the whole material state (K02, `spring4` 1 iteration) — parked, design; F4 | MEDIUM | medium/large |
 | C36 | validation-suite | `young_power` + `young`: Pro adds both stiffnesses, manual says law = modulus (K06) — needs decision | LOW | cheap |
+| C38 | Pro `other` | `control_support_edge_normal_stiffness_freeze` parse-only (support_edge_normal_3, 1e-9 effect) | LOW | cheap/medium |
 
-Thirty-eight items remain open: eleven MEDIUM and twenty-seven LOW (C23 and C24 resolved 2026-10-05; C25, C26, C27 and B10 added; F1 T3 / K04 2026-10-06 added B11, C28-C32; F1 T6 resolved C28, added and resolved B12; F2 T1 added C36). No open issue is CRITICAL or
+Thirty-nine items remain open: eleven MEDIUM and twenty-eight LOW (C23 and C24 resolved 2026-10-05; C25, C26, C27 and B10 added; F1 T3 / K04 2026-10-06 added B11, C28-C32; F1 T6 resolved C28, added and resolved B12; F2 T1 added C36; F2 T2 added C38). No open issue is CRITICAL or
 HIGH. The validation-suite corpus has no open failure — its 233 real tests
 pass (`materi_direct_mc` input corrected, C17 resolved). Every remaining failure is a stale or malformed test, an out-of-scope model
 or infrastructure limit, a narrow post-processing divergence, a corpus-coverage

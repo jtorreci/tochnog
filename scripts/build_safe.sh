@@ -1481,6 +1481,13 @@ run_ok "$T2026" mesh_cut_node_force_sign1
 run_ok "$T2026" elasti_poisson_power_replace1
 
 # ---------------------------------------------------------------------
+# K17 support_edge_normal_3 (2026-10-06): support damping c and density
+# d/dt enter the iteration matrix (area.cc). Pro support_edge_normal_3
+# without the freeze record: disy 5.00998004e-4 (= Pro); before 124.75.
+# ---------------------------------------------------------------------
+run_ok "$T2026" support_edge_normal_damping_tangent1
+
+# ---------------------------------------------------------------------
 # Sub-sprint materi_stress_force, lote 2 (integracion 2D quad4/quad9):
 # verificacion ANALITICA por estatica. Decisiones de diseno (manual-
 # developer/post_calcul_materi_stress_force.md): caras extremas = las

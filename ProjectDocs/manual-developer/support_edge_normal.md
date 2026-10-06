@@ -130,3 +130,29 @@ plasti_residual_stiffness` (matrix term) and the other caps are
 deferred to a follow-up that includes the structural fix; tests
 `tsup_gap`/`tsup_tcap`/`tsup_fric`/`tsup_residual` exist and are
 ready in `validation-suite/test-2014/`.
+
+## K17 fix (2026-10-06): damping and density in the iteration matrix
+
+- **Where**: `area.cc`, `type[10]` branch, the consistent side matrix
+  block (`kterm`) after the RHS support force.
+- **Defect**: the RHS force is `-(k u + c v + d a + f0)` (normal and
+  tangential parts), but the matrix carried only `dt*k`. With the velocity
+  as unknown, `d(force)/dv = k*dt + c + d/dt`; a damper with `c >> k*dt`
+  made each Newton update overshoot by `c/(k*dt)`. Pro
+  `support_edge_normal_3` (k = c = 1e6, dt = 1e-3): GNU diverged to disy
+  124.75 (rc 1); now 5.00998004e-4 = Professional 02-08-2026 without the
+  freeze record.
+- **Fix**: `kterm = (dt*(k_n nn + k_t tt) + c_n nn + c_t tt + (d_n nn +
+  d_t tt)/dt) * cij` with `nn = n_a n_b`, `tt = delta_ab - nn`; `c` and `d`
+  are the values already read for the RHS (so `damping_apply -no`, the
+  automatic and apparent variants and the density are consistent). The
+  equilibrium (RHS) is unchanged, so converged results do not move: the
+  `tsup_*` tests and the corpus give identical dumps.
+- **Hardcoded / pending**: the matrix still ignores the spatial
+  `support_edge_normal_factor` (`fac_k`) and the plastic caps (as before);
+  `control_support_edge_normal_stiffness_freeze` is still parse-only (the
+  manual 6.381 semantics is "freeze the stiffness FORCES at their present
+  value", not a plastic-only switch; BACKLOG C38).
+- **Test**: `validation-suite/test-2026/support_edge_normal_damping_tangent1.dat`
+  (Pro `support_edge_normal_3` without the freeze record; RED rc 1 disy
+  124.75, GREEN disy 5.00998e-4 +/- 1e-9; Pro passes).
