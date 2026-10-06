@@ -409,9 +409,63 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
   re-evaluate the residual as a solver/model work unit.
 - **Effort**: **medium**.
 
+### B10. sfnet targets calibrated on the legacy `convection_apply` default -yes (K03, 2026-10-06)
+
+- **Corpus**: sfnet 197 (external, not edited). Since K03 the GNU default
+  `convection_apply` is `-no` (manual Professional 6.395 and the
+  Professional 02-08-2026). Five inputs without the record relied on the
+  legacy GNU default `-yes` and now miss their targets (sfnet 187/10 ->
+  182/15):
+
+  | test | target | GNU old (-yes) | GNU new (-no) | Professional |
+  |---|---|---|---|---|
+  | `condif2` | node 2 temp 1 +/- 0.02 | 1 | 0.5 | 0.5 |
+  | `condif3` | node 2 temp 1 +/- 0.02 | 1 | 0.5 | 0.5 |
+  | `examp1` | post-point velx -0.041 +/- 0.1 | -0.04873 | 0.1391 | 0.1391 |
+  | `incnav5` | post-point velx 0.389082 +/- 0.01 | 0.3891 | 0.4919 | 0.4919 |
+  | `strconv1` | node 5 sigxx 1 +/- 0.01 | 1 | 0 | RUNFAIL (pardiso error) |
+
+- **Root cause**: stale targets (input dialect), not a GNU defect: the
+  new values equal the Professional on the same (converted) input.
+- **Proposed fix**: none in the GNU; a versioned copy of these inputs
+  would need an explicit `convection_apply -yes` to keep testing the
+  convection.
+- **Severity**: **LOW**. **Effort**: **cheap**.
+
+### B11. sfnet `incnav3` target predates the `expansion_volume` inertia density (K04, 2026-10-06)
+
+- **Corpus**: sfnet 197 (external, not edited). Since F1 T3 the GNU uses
+  rho = rho0*(1 - beta*T) of `group_materi_expansion_volume` in the
+  momentum inertia too (Professional 02-08-2026; its own `incnav3` states
+  "the density gets value rho = initial_rho*{1-expansion*T} = 0.5 ... the
+  total rate is -5"). The legacy sfnet copy keeps the old comment and
+  target `tvely` -2.5 +/- 0.01: GNU old -2.4976, GNU new -4.9904, the
+  Professional on the converted sfnet input -4.9904 (sfnet 181/16 ->
+  180/17 with the audit runner).
+- **Root cause**: stale target, not a GNU defect.
+- **Proposed fix**: none in the GNU.
+- **Severity**: **LOW**. **Effort**: **cheap**.
+
 ---
 
 ## C. Additional residuals
+
+### B12. validation-suite `node_force_inertia` target calibrated on the reversed `node_force` sign (C28, 2026-10-06) — RESOLVED 2026-10-06
+
+- **Corpus**: validation-suite test-2014 (run by `build_safe.sh`). Its
+  `node_inertia 3` target -19.83 +/- 0.2 was calibrated when the GNU
+  applied `node_force` in the opposite direction (the -30 force pushed
+  node 3 UP: -19.75). Since C28 the force pushes down, adding to the
+  gravity of the node mass and of the element: -20.109 (outside the
+  tolerance by 0.08). The Professional cannot run the input (`node_mass`
+  rejected, `node_inertia` wants one value per dof).
+- **Root cause**: stale target, not a GNU defect.
+- **Proposed fix**: target -20.11 +/- 0.2 (one line in
+  `validation-suite/test-2014/node_force_inertia.dat`).
+- **Resolution** (project owner go-ahead, 2026-10-06): target retargeted
+  to -20.11 +/- 0.2 with a comment in the input, together with the C28
+  fix on `dev/f1-cheap-bugs` (F1 T6).
+- **Severity**: **LOW**. **Effort**: **cheap**.
 
 ### C1. `pruebavel` — dead/malformed test (the 1 PARSE)
 
@@ -817,7 +871,20 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
   `element_dof`: a `get_new_dbl()` without `array_set()`).
 - **Severity**: **LOW**. **Effort**: **cheap**.
 
-### C24. `print_frd` / `print_gmsh` — repeated blocks and out-of-record reads
+### C24. `print_frd` / `print_gmsh` — repeated blocks and out-of-record reads — RESOLVED 2026-10-05
+
+- **Resolution** (F1 T1): `print_frd()` and `print_gmsh()` now loop over
+  the primary unknowns like `print_vt.cc` / `print_dof()` (type, label
+  and dof type at `iuknwn = ipuknwn*nder`, step `nval`). FRD 2D vector
+  blocks write 0 as third component (it read the next dof); gmsh field
+  names are built from the dof type (`node_materi_velocity_0`, Pro base
+  names). Test `test-2026/print_frd_gmsh_dof_loop1` (quad4, `derivatives`):
+  68 -> 5 FRD blocks, 324 -> 17 gmsh `node_` fields, values equal to the
+  first block of each dof of the Professional 02-08-2026; checked in
+  `build_safe.sh`. The existing `freq_timeint`/`freq_timestep` FRD checks
+  only read the `100CL` time and are unaffected. Remaining layout
+  differences: C27. Docs `manual-*/print_dof_component_loop.md`.
+
 
 - **Symptom**: `print_fr.cc` (`print_frd`, result blocks, line ~229) and
   `print_gm.cc` (`print_gmsh`, node data, line ~442) use the same loop as
@@ -875,6 +942,191 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
   checks.
 - **Severity**: **LOW**. **Effort**: **cheap/medium**.
 
+### C27. FRD / gmsh file layout differs from the Professional
+
+- **Symptom** (found by F1 T1, `print_frd_gmsh_dof_loop1` converted and
+  run on the Professional 02-08-2026): the dof values agree, the layout
+  does not. FRD: the Professional writes a `1PSTEP` + `100CL` header per
+  result block, vector blocks with 4 components (`V1 V2 V3 ALL`, all
+  with `icind1 = 1`), the names `VELOCITY` (GNU `VELO`), `S11..S13`
+  (GNU `SXX..SZX`), `T11..T13` (GNU `EXX..EZX`), extra non-dof blocks
+  (`BOUNDA_X/Y/D`, `BOUNDARY`, `REACTION`), its own header lines
+  (`1UDATE`, `1UTIME`, `1UPGM CalculiX`), and with `derivatives` one
+  block per value AND derivative entry, whose values are shifted into
+  other dofs (the C24 defect class, in the Professional). gmsh: the
+  Professional writes vectors/tensors as ONE 3/9-component field
+  (`node_materi_velocity`, `node_materi_stress`), element fields from
+  the integration points (`element_materi_stress`), plus
+  `node_bounda_dof_*`, `node_boundary`, `*_rhside`, `element_group`,
+  `element_flux_temperature`; the GNU writes one scalar field per
+  component (`node_materi_velocity_0`) and nodal averages per element.
+- **Proposed fix**: decide per format which Professional conventions to
+  follow (post-processors: CalculiX cgx, PrePoMax, FreeCAD, gmsh); do NOT
+  copy the derivative-block defect.
+- **Severity**: **LOW** (output files only). **Effort**: **medium**.
+
+### C28. `node_force` applied with the opposite sign (and doubled in a 1D probe) — RESOLVED 2026-10-06 (F1 T6)
+
+- **Symptom** (found by F1 T3, K04 `force18` probes on the Professional
+  02-08-2026): Pro `force18` with `node_force 2 1.0` instead of the
+  `force_point`: Pro node 2 `velx` +1, GNU −2. `dof.cc`
+  `parallel_new_dof_before()` does `node_rhside -= node_force` (the
+  `force_point` had the same sign error, fixed in F1 T3), and the
+  magnitude is doubled in this 1D bar2 model (cause not traced).
+  `delete.cc` (mesh_cut node forces) negates the stored value to
+  compensate the sign (documented there).
+- **Proposed fix**: add the force (`+=`), drop the `delete.cc`
+  negation, trace the factor 2, A/B the corpus inputs with `node_force`.
+- **Resolution** (F1 T6): `dof.cc` adds the force; `delete.cc` stores the
+  mesh_cut substitute without the negation (mesh_cut_1 `node_force 6` +1
+  = Pro). The factor 2 is not a double application: the reversed load
+  compressed the unit bar by exactly its length (singular zero-length
+  element; `node_force 2 -1.0` still gives GNU -2 / Pro -1, `-0.5` both
+  -0.5). Probes 1D/2D/3D = Pro. Corpus A/B: only `node_force_inertia`
+  changes (stale target, B12, retargeted to -20.11).
+- **Severity**: **MEDIUM** (wrong load direction). **Effort**: **cheap/medium**.
+
+### C29. `group_condif_conductivity` with one value per direction not accepted
+
+- **Symptom** (F1 T3, Pro test `condif11`): `group_condif_conductivity 0
+  0.1 0.1` is a PARSE error in the GNU ("I do not know : 0.1"); the
+  Professional accepts it (anisotropic conductivity, as
+  `group_groundflow_permeability`).
+- **Proposed fix**: accept ndim values, isotropic when one value.
+- **Severity**: **LOW**. **Effort**: **cheap/medium**.
+
+### C30. `mohr_coul_direct4` (Pro `other`): the Professional does not enforce the interface Mohr-Coulomb strength (deliberate divergence)
+
+- **Symptom** (F1 T3, audit K04): interface shear test (phi 0.2 rad,
+  c 1, normal stress -1, top displaced 1 at t = 1 and held to t = 100).
+  Manual Professional 6.632: maximum friction c + |Fn| tan(phi) = 1.2027.
+  The GNU returns to it at once (sigxy 1.2027 from t = 1, `disx(3)`
+  0.3007, status plastic). The Professional 02-08-2026 stays at the
+  elastic 2.0 with status `-plastic` (t = 1: 1.99994, t = 5: 1.9911,
+  t = 20: 1.8283, t = 50: 1.0953) and ends below the strength at
+  t = 100 (0.40976, status `-elastic`, target `disx` 0.10244).
+- **Root cause**: Professional behaviour (no immediate return, slow
+  drift), PRO-suspect; the GNU follows the manual.
+- **Decision** (project owner, 2026-10-06): deliberate divergence. The GNU
+  keeps the manual 6.632 immediate return to the strength; the
+  Professional's slow drift looks like an artefact of its own integration
+  and is not imitated. Recorded in "Differences with the Professional
+  version" of `manual-user/` and `manual-developer/group_materi_plasti_mohr_coul_direct.md`.
+- **Severity**: **LOW** — deliberate divergence; the GNU follows the manual.
+  **Effort**: —.
+
+### C31. `tet10` integration rule is only degree 1 (Pro `tet10_2` under gravity)
+
+- **Symptom** (F1 T3, audit K04): `tet10_2` (hex8 -> h -> p -> split into
+  48 tet10, gravity): GNU post-point sigzz -0.894 (nodal sigzz at z = 0
+  between -0.94 and -0.88, top disz -0.48..-0.56), Professional exact -1
+  / -0.5. A single hex27 (no split) is exact in the GNU; `tet10_1`
+  (prescribed strain, no body force) passes.
+- **Root cause**: `polynom.cc` TET10 branch: nodal quadrature with weight
+  ~0 (EPS_TRIANGLE) at the corners and 1/6 at the 6 mid-edge nodes. On a
+  tetrahedron this rule is exact only for linear integrands (the
+  triangle analog, mid-edge 1/3, is degree 2): the quadratic stiffness
+  and the consistent body load (corner share -V/20, mid-edge V/5) are
+  wrong.
+- **Experiment** (scratch build, not committed): the degree-2 nodal rule
+  (corners -1/20, mid-edge 1/5) makes `tet10_2` exact (-1.0000000058),
+  `tet10_1` stays exact.
+- **Options**: (a) that nodal rule: exact, but NEGATIVE corner weights,
+  so the lumped inertia/capacity (general.cc, h = delta at nodal points)
+  becomes negative at the corners; (b) a 4/5-point Gauss rule: breaks
+  the npoint == nnol assumption of the element_dof storage; (c) (a) for
+  the stiffness/loads plus a separate positive lumping (HRZ) for the
+  inertia. Needs a design decision and an A/B on the sfnet tet10 inputs
+  (`tet10`, `refine4`, `ho_othr1/2`, `examp*`).
+- **Decision** (project owner, 2026-10-06): moved to **F4** (design +
+  corpus A/B); not part of F1.
+- **Severity**: **MEDIUM** (wrong quadratic-tet results under body
+  loads/bending). **Effort**: **medium**.
+
+### C32. K04 targets that are not GNU defects (`axisym9`, `distri2`)
+
+- `axisym9` (post_point sigxx 0.00158902 vs 0.0015915 +/- 1e-6): the field
+  is uniform in both binaries; the GNU total ring force is 0.16 % low
+  because `polynom.cc` forces 1-point Gauss for axisymmetric
+  `materi_velocity` quad4 (element-constant hoop term, audit K20). Not the
+  `post_point_dof` convention. Decision belongs to K20, moved to **F4**
+  (design + corpus A/B; project owner, 2026-10-06).
+- `distri2` (post_point temp 0.998933 vs 0.999774 +/- 1e-4):
+  `control_distribute -normal` random field; both binaries draw a valid
+  N(1, 2e-3) (GNU mean 0.99995 / std 0.00203, Pro 0.99997 / 0.00201)
+  from different random generators. The target encodes the Professional
+  random sequence; no fix.
+
+
+### C33. `_visco` direct cut-offs: one-step-lagged relaxation time step and no visco on the principal tension cap
+
+- **Symptom** (F1 T4, K13 probes on the Professional 02-08-2026, single
+  quad4, E 1, nu 0.25, tension_direct 1e-3, `_visco` tm 2, eps_xx 2e-3 in
+  one step dt 1): Professional sigxx 1.84914e-3 (= 2.4e-3 - (1 -
+  exp(-0.5)) 1.4e-3), GNU 1e-3 (full cut). `compression_direct_visco`
+  (same data, compression): Professional -1.84914e-3, GNU -2.4e-3 (no
+  cut at all); `mohr_coul_direct_visco` full and plane mode: GNU no cut
+  in the first step (sigxy 2.4e-3, Professional 1.7575e-3 / 1.7996e-3).
+- **Root cause**: `stress.cc` `set_stress()` reads `DTIME` from
+  `VERSION_NORMAL` (the previous step; 0 in the first step, so the
+  factor 1 - exp(-dt/tm) is 0), every other module reads `VERSION_NEW`;
+  and the principal tension cap (`direct_cap_principal_values`, full mode
+  and plane mode without a tension normal) ignores the `_visco` factor.
+  `visc_pl4` (1D, 200 steps) still ends at the target 1 in both.
+- **Proposed fix**: `VERSION_NEW` in `set_stress()` (also used by the
+  incremental viscoplastic laws: `lambda*dtime`, needs its own corpus
+  A/B) and the visco factor on the principal cap.
+- **Decision** (project owner, 2026-10-06): scheduled for **F4** (the
+  `VERSION_NEW` change also touches the incremental viscoplastic laws and
+  needs a corpus A/B); not part of F1.
+- **Severity**: **MEDIUM** (`_visco` direct laws relax with the wrong
+  time step). **Effort**: **cheap/medium**.
+
+### C34. Direct cut-off shear plastic strain: the Professional writes twice the tensor value (deliberate divergence)
+
+- **Symptom** (F1 T4, K13): since K13 the GNU stores the direct cut as
+  plastic strain C^-1 (sigma_trial - sigma). Normal components and the
+  yield value equal the Professional; the shear components differ by a
+  factor 2: full MC cut `direct_plastic_strain_mc1` GNU eppxy
+  2.04114892e-3 = dsig_xy / 2G (tensor), Professional 4.08229785e-3 =
+  dsig_xy / G. The Professional's own total strain (eptxy) and its
+  incremental-law plastic strain (von Mises shear probe: eppxy
+  2.27831e-3 in both) are tensor components, and its epexy = eptxy -
+  eppxy then violates sigma_xy = 2G epe_xy.
+- **Decision** (project owner, 2026-10-06): **deliberate divergence**.
+  The Professional writes the shear plastic strain of a direct cut as
+  dsig / G (twice the tensor component) while its total strain uses
+  tensor components; the GNU keeps the tensor value so that
+  sigma = C (eps - eps_p) holds. Documented in "Differences with the
+  Professional version" of `direct_plastic_strain.md` (user and
+  developer manuals) and in the SEGUIMIENTO "Descarte de features"
+  table.
+- **Severity**: **LOW** (output only). **Effort**: —.
+
+### C35. One-equilibrium-iteration lag of the whole material state (audit K02) — PARKED, design, scheduled for F4
+
+- **Symptom** (F1 T5, Professional 02-08-2026, sfnet `spring4` converted:
+  rigid translation velx 1, `materi_strain_total`, one equilibrium
+  iteration): GNU node and integration-point eptxx = sigxx = -0.01,
+  element_dof velx 0.5; Professional 0 / 0 / velx 1. With 3 iterations
+  both give 0.
+- **Root cause**: the constitutive evaluation (and the stored
+  integration-point state ELEMENT_DOF) of an iteration uses the
+  PRE-solve velocity; the hoisted post-solve pass of `top.cc` only
+  re-assembles the nodal STRESS and only with `stress_recovery_absolute`
+  (off with `materi_strain_total`), so the strain/stress state of the
+  last iteration lags the solved velocity. The Professional evaluates the
+  material on the post-solve velocity (ip velx 1).
+- **Why parked**: a fix is a post-solve material pass that also updates
+  the integration-point history (ELEMENT_DOF) and the incremental
+  non-principal dofs (general() denominator/inertia), i.e. a change of
+  the iteration scheme for every model with few iterations; needs a
+  design decision and a full corpus A/B (the audit counted 6 tests that
+  vanish at 5 iterations and 10 that improve).
+- **Decision** (project owner, 2026-10-06): scheduled for **F4** (design +
+  full corpus A/B); not part of F1.
+- **Severity**: **MEDIUM** (one-iteration models report a lagged state).
+  **Effort**: **medium/large**.
 ---
 
 ## D. Summary
@@ -890,6 +1142,8 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
 | B7 | sfnet | `ho_mech4` missing strain record | LOW | medium |
 | B8 | sfnet | `petsc1` PETSc infrastructure | LOW | large |
 | B9 | sfnet | `taylor3` stale input + solver | LOW | medium |
+| B10 | sfnet | `condif2/3`, `examp1`, `incnav5`, `strconv1` targets calibrated on the legacy `convection_apply -yes` default (K03) | LOW | cheap |
+| B11 | sfnet | `incnav3` target predates the `expansion_volume` inertia density (K04) | LOW | cheap |
 | C1 | sfnet | `pruebavel` dead/malformed | LOW | cheap |
 | C2 | validation-suite | `groundflow_interface` `gvelx` sign | LOW | medium |
 | C3 | sfnet | `gforce10` 3D section sign | MEDIUM | medium |
@@ -909,11 +1163,18 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
 | C20 | — | `-updated_jaumann` not implemented | LOW | medium |
 | C21 | — | `control_materi_updated_apply -yes`: Pro ignores its manual (deliberate divergence) | LOW | cheap |
 | C22 | Pro `other` | `hypo12` marginal sigyy target miss after the default-memory change | LOW | cheap |
-| C24 | — | `print_frd`/`print_gmsh` repeated blocks and out-of-record reads (C23 pattern) | LOW | cheap |
 | C25 | — | uninitialized-buffer audit follow-ups (`pef_vel_prev` realloc, NODE_EIGEN print, split/beam/interface/mpc/nonloc side findings) | LOW | cheap |
 | C26 | — | `control_print_dof -separate_index`: Pro writes one file per dof, GNU one `dof.N` | LOW | cheap/medium |
+| C27 | — | FRD/gmsh layout vs Pro (PSTEP per block, `ALL` component, names, extra blocks/fields, multi-component gmsh fields) | LOW | medium |
+| C29 | Pro `other` | `group_condif_conductivity` per-direction values (condif11) not parsed | LOW | cheap/medium |
+| C30 | Pro `other` | `mohr_coul_direct4`: Pro does not enforce the interface MC strength (deliberate divergence, GNU = manual 6.632) | LOW | — |
+| C31 | Pro `other` | `tet10` nodal quadrature only degree 1 (`tet10_2` gravity); F4 (design + corpus A/B) | MEDIUM | medium |
+| C32 | Pro `other` | `axisym9` (K20 1-point axisymmetric rule, F4), `distri2` (random generator): not GNU defects | LOW | — |
+| C33 | — | `_visco` direct cut-offs: `DTIME` from the previous step, no visco on the principal tension cap; F4 | MEDIUM | cheap/medium |
+| C34 | — | direct cut shear plastic strain: Pro twice the tensor value (deliberate divergence) | LOW | — |
+| C35 | — | one-iteration lag of the whole material state (K02, `spring4` 1 iteration) — parked, design; F4 | MEDIUM | medium/large |
 
-Thirty-one items remain open: nine MEDIUM and twenty-two LOW (C23 resolved 2026-10-05; C24, C25 and C26 added). No open issue is CRITICAL or
+Thirty-seven items remain open: eleven MEDIUM and twenty-six LOW (C23 and C24 resolved 2026-10-05; C25, C26, C27 and B10 added; F1 T3 / K04 2026-10-06 added B11, C28-C32; F1 T6 resolved C28, added and resolved B12). No open issue is CRITICAL or
 HIGH. The validation-suite corpus has no open failure — its 233 real tests
 pass (`materi_direct_mc` input corrected, C17 resolved). Every remaining failure is a stale or malformed test, an out-of-scope model
 or infrastructure limit, a narrow post-processing divergence, a corpus-coverage

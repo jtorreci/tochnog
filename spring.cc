@@ -28,7 +28,7 @@ void spring( long int element, long int name, long int element_group,
 {
   long int idim=0, jdim=0, ipuknwn=0, iuknwn=0, jpuknwn=0, juknwn=0, inol=0, jnol=0,
     indx=0, nnol=0, swit=0, length=0, ldum=0, 
-    icontrol=0, options_convection=-YES, idum[1], options_mesh[MDIM];
+    icontrol=0, options_convection=-NO, idum[1], options_mesh[MDIM];
   double dtime=0., group_spring_stiffness=0., 
     group_spring_plasti=1.e20, spring_force=0.,
     fac=0., tmp=0., old_length=0., new_length=0., incremental_length=0.,
@@ -71,9 +71,7 @@ void spring( long int element, long int name, long int element_group,
     }
 
     if ( materi_velocity_integrated ) {
-      db( OPTIONS_CONVECTION, 0, &options_convection, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
-      db( CONTROL_OPTIONS_CONVECTION, icontrol, &options_convection, ddum, 
-        ldum, VERSION_NORMAL, GET_IF_EXISTS );
+      options_convection = convection_apply_switch();
       db( OPTIONS_MESH, 0, options_mesh, ddum, ldum, VERSION_NORMAL, GET );
       for ( idim=0; idim<ndim; idim++ ) {
         if ( options_mesh[idim]==-FIXED_IN_SPACE ) {

@@ -18,7 +18,9 @@
   TET10=6, HEX8=1, HEX27=4. Connectivity reuses the same node order as
   `print_vtk` / `print_gmsh` (QUAD4 = 0,1,3,2; HEX8 = 0,1,3,2,4,5,7,6).
 - **Result blocks**: per dof, `-4`/`-5` records with FRD names (DISP,
-  VELO, STRESS, TOSTRAIN, NDTEMP or Tochnog name truncated to 8 chars).
+  VELO, STRESS, TOSTRAIN, NDTEMP or Tochnog name truncated to 8 chars),
+  one block per primary dof (C24, 2026-10-05, see
+  `print_dof_component_loop.md`); 2D vectors write 0 as third component.
   Tensor components use CalculiX indices: SXX(1,1) SYY(2,2) SZZ(3,3)
   SXY(1,2) SYZ(2,3) SZX(3,1).
 - **Time in 100CL**: formatted like CalculiX (up to 9 decimals, else

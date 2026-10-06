@@ -29,7 +29,7 @@ void contactspring( long int element, long int /*name*/, long int element_group,
   long int idim=0, jdim=0, kdim=0, ipuknwn=0, iuknwn=0, jpuknwn=0, juknwn=0,
     inol=0, jnol=0, indx=0, inod=0, swit=0, length=0, memory=-UPDATED,
     group_contactspring_friction_automatic=-NO, iel=0, elnum=0, nel=0, gr=0,
-    found=0, icontrol=0, ldum=0, options_convection=-YES, 
+    found=0, icontrol=0, ldum=0, options_convection=-NO, 
     options_skip_plasticity=-NO, idum[1], options_mesh[MDIM], *node_element=NULL;
   double k_n=0., k_t=0., f=0., cohesion=1.e20, dtime=0., 
     fac=0., gamma=0., phi_approximate=0.,
@@ -51,11 +51,8 @@ void contactspring( long int element, long int /*name*/, long int element_group,
     ldum, VERSION_NORMAL, GET_IF_EXISTS );
 
   array_set( options_mesh, -FOLLOW_MATERIAL, ndim );
-  db( OPTIONS_CONVECTION, 0, &options_convection, ddum,
-    ldum, VERSION_NORMAL, GET_IF_EXISTS );
   db( ICONTROL, 0, &icontrol, ddum, ldum, VERSION_NORMAL, GET );
-  db( CONTROL_OPTIONS_CONVECTION, icontrol, &options_convection, ddum,
-    ldum, VERSION_NORMAL, GET_IF_EXISTS );
+  options_convection = convection_apply_switch();
   db( OPTIONS_MESH, 0, options_mesh, ddum,
     ldum, VERSION_NORMAL, GET_IF_EXISTS );
   // The OPTIONS_CONVECTION -no restriction applies ONLY to the

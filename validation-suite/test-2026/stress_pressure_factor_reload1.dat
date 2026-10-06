@@ -1,0 +1,40 @@
+(
+K04 stress_pressure_factor (2026-10-06): Pro test stress_pressure_factor
+(1D bar, E = 1, group_materi_elasti_stress_pressure_history_factor 0.5,
+disx 0 -> -1 (t 1) -> 0 (t 2) -> -3 (t 5), dt 0.1). A step that starts
+below the pressure history estimates its end pressure with the factored
+stiffness and stays unloading/reloading only when the estimate is
+strictly below the history (rule measured on the Professional
+02-08-2026). Final sigxx -3.05 = Professional (the analytic -3 needs the
+reloading step that ends exactly at the history to stay reloading; the
+Professional takes it as first loading). GNU before K04: -3.10 (the
+first-loading estimate switched one step early: -1.0 at t = 2.9).
+)
+echo -no
+number_of_space_dimensions 1
+materi_velocity
+materi_displacement
+materi_stress
+materi_stress_pressure_history
+end_initia
+
+node 1  0
+node 2  1
+element 1  -bar2 1 2
+
+group_type 0  -materi
+group_materi_memory 0  -total_linear
+group_materi_elasti_young 0  1.0
+group_materi_elasti_stress_pressure_history_factor 0  0.5
+
+bounda_dof    0  1 -velx
+bounda_time   0  0.
+
+bounda_dof    1  2 -disx
+bounda_time   1  0. 0. 1. -1. 2. 0. 102. -100.
+
+control_timestep 0  0.1 5.
+
+target_item    0  -node_dof 2 -sigxx
+target_value   0  -3.05 1.e-8
+end_data

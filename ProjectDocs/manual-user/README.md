@@ -328,7 +328,7 @@ input parameters it accepts.
 - [group_materi_memory_total_linear](group_materi_memory_total_linear.md) — the -total_linear memory (6.685, theory 2.2.1): total Lagrange with linear engineering strains; the stress is the previous stress plus the incremental-strain stress, so a control_reset_dof pre-stress survives the next solve (delete3/mpc5 family).
 - [nonlocal](nonlocal.md) — the short `nonlocal` radius record + `nonlocal_name` model selector (6.897/6.898).
 - [geometry_factor](geometry_factor.md) — the Professional name (6.527) of geometry_bounda_factor: spatial weighting factors of bounda_dof/bounda_force/force_edge_* on a geometry entity (2 = linear, 3 = parabolic on a line).
-- [convection_apply](convection_apply.md) — the convection switches of eulerian flows: convection_apply (6.395), control_convection_apply (6.113) and convection_stabilization (6.396), aliases of options_convection/options_stabilization. Unlocks condif2/condif3/tube1.
+- [convection_apply](convection_apply.md) — the convection switches of eulerian flows: convection_apply (6.395), control_convection_apply (6.113) and convection_stabilization (6.396), aliases of options_convection/options_stabilization. Unlocks condif2/condif3/tube1. Default `-no` since 2026-10-06 (K03, as the Professional); the switch only governs material convection wrt the mesh (condif_flow and groundflow-velocity heat transport always apply).
 - [processors](processors.md) — the Professional short name of options_processors: number of solver threads.
 - [mpc_node_number](mpc_node_number.md) — multi point constraint on nodal dofs (6.874/6.875): the slave dof = sum(factor x master dof), slave treated as a known (bounded) quantity; mpc_node_factor gives the factors (default 1). Unlocks mpc1 (tie verified on mohr_coul_direct2/4/7; those stay RUNFAIL on the direct material family).
 - [mpc_linear_quadratic](mpc_linear_quadratic.md) — automatic tying (6.873) of the dangling quadratic-element nodes to the adjacent linear element with its shape functions (mid-edge 0.5/0.5, mid-face 0.25 each). Records verified byte-for-byte on mpc3/4/5; the tests stay RUNFAIL on the staggered-solver field (DIAG-SOLVE-MIXTO).
@@ -469,4 +469,21 @@ input parameters it accepts.
 
 ## PRINT_DOF COMPONENT LOOP (2026-10-05)
 
-- [print_dof_component_loop](print_dof_component_loop.md) — `control_print_dof` files now hold each dof component once per node and print (vector/stress blocks were repeated and some lines carried random `e-3xx` values); `dof.*` files are shorter than with older binaries.
+- [print_dof_component_loop](print_dof_component_loop.md) — `control_print_dof` files now hold each dof component once per node and print (vector/stress blocks were repeated and some lines carried random `e-3xx` values); `dof.*` files are shorter than with older binaries. Same fix for the `control_print_frd` / `control_print_gmsh` files (one block per dof; gmsh fields named after the dof type, e.g. `node_materi_velocity_0`).
+
+## K11 NODAL STRAIN RECOVERY (2026-10-06)
+
+- [nodal_strain_recovery](nodal_strain_recovery.md) — the nodal total/elastic/plastic strains are recovered with the same operator as the stress (Professional least-squares fit): clamped-edge eptyy 0 exact, strain and stress fields consistent, = Professional.
+
+## K13 DIRECT PLASTICITY STATE OUTPUT (2026-10-06)
+
+- [direct_plastic_strain](direct_plastic_strain.md) — the direct cut-offs (tension/Mohr-Coulomb/compression, full and plane mode) write their cut as `materi_strain_plasti` (C^-1 (sigma_trial - sigma)) and the direct-law yield value in `materi_plasti_f` (0 after a cut), as the Professional (shear components: tensor value, the Professional writes twice it).
+
+## K04 AUDIT FIXES (2026-10-06)
+
+- [edge_node_restriction](edge_node_restriction.md) — the `_node` / `_element_node` records of the edge loads (heat/groundflow flux, convection/radiation, force_edge*, support_edge_normal) select the element SIDES whose nodes are all listed, as the Professional (K04 condif7: a corner node no longer loads the adjacent side).
+- [force_point](force_point.md) — sign fixed 2026-10-06 (K04 force18): a positive force component pushes towards +x/+y/+z, as the Professional.
+- [node_force](node_force.md) — sign fixed 2026-10-06 (BACKLOG C28): a positive `node_force` component pushes the node towards +x/+y/+z, as the Professional; `control_mesh_cut_node_force` stores its substitute with that sign.
+- [group_interface_groundflow_permeability](group_interface_groundflow_permeability.md) / [group_interface_groundflow_capacity](group_interface_groundflow_capacity.md) / [group_interface_condif_conductivity](group_interface_condif_conductivity.md) — per unit length/area since 2026-10-06 (K04 ground9: middle pressure 1/3 -> 0.5 as the Professional); the interface capacity is implicit.
+- [group_materi_elasti_stress_pressure_history_factor](group_materi_elasti_stress_pressure_history_factor.md) — 2026-10-06 (K04): the per-step loading/reloading decision follows the Professional (factored estimate, strict tie); Pro test stress_pressure_factor −3.10 -> −3.05.
+- [group_materi_expansion_volume](group_materi_expansion_volume.md) — volume expansion: rho = rho0*(1 - beta*T) for gravity and, since 2026-10-06 (K04 incnav3), for the inertia (mass), as the Professional.

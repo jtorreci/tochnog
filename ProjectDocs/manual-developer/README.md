@@ -326,7 +326,7 @@ Each file corresponds to the same feature in the [User Manual](../manual-user/).
 - [group_materi_memory_total_linear](group_materi_memory_total_linear.md) — the -TOTAL_LINEAR incremental stress update: stress.cc no longer forces formulation=TOTAL for it, and set_deften_etc derives old_ept from old_deften when materi_strain_total is absent so inc_ept is a true increment; verified against the Professional reset (delete3/mpc5).
 - [nonlocal](nonlocal.md) — nonlocal alias + NONLOCAL_NAME enum; classic-path nonlocal_set() call restored (top.cc iteration loop, mesh-change flag); legacy nonlocal buffer bug documented as pending.
 - [geometry_factor](geometry_factor.md) — db_number alias to GEOMETRY_BOUNDA_FACTOR (geometry.cc linear/parabolic interpolation); verified against the Professional .dbs (matrix2).
-- [convection_apply](convection_apply.md) — db_number aliases convection_apply/control_convection_apply/convection_stabilization to OPTIONS_CONVECTION/CONTROL_OPTIONS_CONVECTION/OPTIONS_STABILIZATION (general.cc consumers); eulerian-NS transient divergence of validation_1 documented as pending.
+- [convection_apply](convection_apply.md) — db_number aliases convection_apply/control_convection_apply/convection_stabilization to OPTIONS_CONVECTION/CONTROL_OPTIONS_CONVECTION/OPTIONS_STABILIZATION (general.cc consumers); eulerian-NS transient divergence of validation_1 documented as pending. K03 (2026-10-06): `convection_apply_switch()` in general.cc, default -NO, single source for general/beam/truss/spring/conspr; condif_flow/groundflow-velocity convection no longer gated by the switch.
 - [processors](processors.md) — db_number alias to OPTIONS_PROCESSORS (elem.cc thread buffers); exact-match only, processors_used NOT translated.
 - [mpc_node_number](mpc_node_number.md) — mpc.cc::mpc_node_apply() called from bounda.cc: slave bounded + value = sum(factor*master) each iteration, no condensation/force transfer (verified vs Professional .dbs); mpc_apply/control_mpc_apply gates wired, mpc_geometry family PENDING.
 - [mpc_linear_quadratic](mpc_linear_quadratic.md) — tie generation for dangling quadratic nodes via point_el() (linear shape functions), mesh fingerprint record MPC_LINEAR_QUADRATIC_MESH_FINGERPRINT (external=0), regeneration on mesh change; verified byte-for-byte vs the Professional .dbs (mpc3/4/5). mpc5 blocked on the delete-factor family.
@@ -379,7 +379,7 @@ Each file corresponds to the same feature in the [User Manual](../manual-user/).
 
 ## MESH-CUT + BOUNDA-RELAX FAMILIES (2026-09-05)
 
-- [control_mesh_cut_geometry](control_mesh_cut_geometry.md) — enums + registros + mesh_cut() en delete.cc (activacion por icontrol, membresia delete_geometry, fuerzas = -f_elem desde ELEMENT_DOF con integracion replica de pol(); poda nod_nod via mesh_has_changed; NODE_FORCE con negacion por la divergencia de signo del consumo node_force en dof.cc — PENDIENTE dedicado) + geometry.cc (proyeccion tipo cut = delete, 8 ramas) + alias control_mesh_cut_force en db_number. Verificado vs Pro 25-10-2023 (mesh_cut_1/2 + probe 2D de corte real: 1/9 y 1/18 por nodo exactos).
+- [control_mesh_cut_geometry](control_mesh_cut_geometry.md) — enums + registros + mesh_cut() en delete.cc (activacion por icontrol, membresia delete_geometry, fuerzas = -f_elem desde ELEMENT_DOF con integracion replica de pol(); poda nod_nod via mesh_has_changed; NODE_FORCE con el signo de la carga externa, como el Pro, desde C28 2026-10-06) + geometry.cc (proyeccion tipo cut = delete, 8 ramas) + alias control_mesh_cut_force en db_number. Verificado vs Pro 25-10-2023 (mesh_cut_1/2 + probe 2D de corte real: 1/9 y 1/18 por nodo exactos).
 - [control_bounda_relax](control_bounda_relax.md) — enums + registros parse-only; semantica de almacenamiento PENDIENTE (no observable en relax1/2: A/B Pro con/sin los records identico). relax2 RUNFAIL por la divergencia ORTOGONAL velocity-only follow-material (options_mesh default del GNU; locate() mueve la malla de referencia -> cinematica logaritmica ln(1+u); A/B con -fixed_in_space reproduce el Pro EXACTO 1.0/0.0/1.0; PENDIENTE con blast-radius de corpus).
 
 ## SMALL FAMILIES BATCH (2026-09-05)
@@ -495,4 +495,21 @@ Each file corresponds to the same feature in the [User Manual](../manual-user/).
 
 ## PRINT_DOF COMPONENT LOOP (2026-10-05)
 
-- [print_dof_component_loop](print_dof_component_loop.md) — `print_hi.cc` `print_dof()`: the dof write loop iterated `ipuknwn` over all `nuknwn` value/derivative entries, repeating every vector/matrix block and reading `node_dof` past the end of the record (heap garbage `e-3xx` in `dof.*`, BACKLOG C23); now loops over the primary unknowns (`npuknwn = nuknwn/nder`, step `nval`, type from `dof_scal_vec_mat[iuknwn]`) as `print_vt.cc`. Same pattern pending in `print_fr.cc`/`print_gm.cc` (C24).
+- [print_dof_component_loop](print_dof_component_loop.md) — `print_hi.cc` `print_dof()`: the dof write loop iterated `ipuknwn` over all `nuknwn` value/derivative entries, repeating every vector/matrix block and reading `node_dof` past the end of the record (heap garbage `e-3xx` in `dof.*`, BACKLOG C23); now loops over the primary unknowns (`npuknwn = nuknwn/nder`, step `nval`, type from `dof_scal_vec_mat[iuknwn]`) as `print_vt.cc`. Same fix in `print_fr.cc` `print_frd()` and `print_gm.cc` `print_gmsh()` (C24, 2026-10-05; FRD 2D vector third component 0, gmsh field names from the dof type); remaining FRD/gmsh layout differences with the Professional: C27.
+
+## K11 NODAL STRAIN RECOVERY (2026-10-06)
+
+- [nodal_strain_recovery](nodal_strain_recovery.md) — `miscel.cc` `strain_recovery_weight()`; `materi.cc` strain numerators and `general.cc` lumped denominator/inertia with the stress recovery weight (sri_stress_recovery_weight, h for SRI).
+
+## K13 DIRECT PLASTICITY STATE OUTPUT (2026-10-06)
+
+- [direct_plastic_strain](direct_plastic_strain.md) — `stress.cc` `set_stress()` + `direct_plastic_strain()`: deps_p = C^-1 (sig_before - sig_after) of the direct cut-offs added to `inc_epp`; `f_direct` output of `materi_direct_full_mc()` / `materi_direct_cutoff()` / `materi_compression_cutoff()` -> `new_f`.
+
+## K04 AUDIT FIXES (2026-10-06)
+
+- [edge_node_restriction](edge_node_restriction.md) — `area.cc` `side_node_restriction_ok()`: side-level `_node` / `_element_node` test in the `area()` side loop for every edge family (flux, force_edge*, conv/rad, support); before, nodes were checked one by one (K04 condif7, flux doubled at corner nodes).
+- [force_point](force_point.md) — `force.cc` `force_point_calculate()`: `node_rhside += weight*force` over the ndim velocity equations (was `-=` over every principal unknown; K04 force18).
+- [node_additions](node_additions.md) — `dof.cc` `parallel_new_dof_before()`: `node_rhside += node_force` (was `-=`, C28); `delete.cc` `mesh_cut()` stores the substitute without the compensating negation.
+- [group_interface_groundflow_permeability](group_interface_groundflow_permeability.md) — `interface.cc` `interface_element()`: pair conductance/capacity weighted by `w_ip*iface_measure` (capacity split over the pair, implicit `C/dt`), same for `group_interface_condif_conductivity` (K04 ground9).
+- [group_materi_elasti_stress_pressure_history_factor](group_materi_elasti_stress_pressure_history_factor.md) — `stress.cc` `set_stress()`: trial `dp` factored when the step starts below the history, factor only when strictly below `sph*(1-1e-10)` (K04 stress_pressure_factor).
+- [group_materi_expansion_volume](group_materi_expansion_volume.md) — `general.cc` `general()`: the MATERI density is reduced by (1 - beta*T) as in `materi.cc` (inertia and convection now consistent with gravity; K04 incnav3).

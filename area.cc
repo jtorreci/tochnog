@@ -147,6 +147,61 @@ static long int force_edge_is_master( long int item )
     item==FORCE_ELEMENT_EDGE_WATER || item==FORCE_ELEMENT_EDGE_PROJECTED;
 }
 
+// Side-level node restriction of the edge families (_node and
+// _element_node companions). A side is selected only when ALL its nodes
+// are in the list: the Professional 02-08-2026 applies the edge load to
+// the sides whose nodes are all selected, like the _geometry rule "the
+// total edge of an element must be inside the geometry" (measured for
+// condif_heat_edge_normal, groundflow_flux_edge_normal,
+// condif_convection_edge_normal, force_edge, force_edge_normal and
+// support_edge_normal; Pro test condif7). Checking the nodes one by one
+// also loaded the sides that share a single node with the list (the
+// adjacent sides of a corner node), which doubled the condif7 flux.
+static long int side_node_restriction_ok( long int master, long int ind,
+  long int element, long int nodes[], long int sides[], long int iside,
+  long int nnol_side )
+{
+  long int node_item=-1, element_node_item=-1, k=0, inol=0, ldum=0,
+    list[DATA_ITEM_SIZE], length=0;
+  double ddum[MDIM];
+
+  if      ( flux_edge_is_master(master) ) {
+    node_item = flux_edge_companion( master, 6 );
+    element_node_item = flux_edge_companion( master, 7 );
+  }
+  else if ( force_edge_is_master(master) ) {
+    node_item = force_edge_companion( master, 3 );
+    element_node_item = force_edge_companion( master, 4 );
+  }
+  else if ( conv_rad_is_master(master) ) {
+    node_item = conv_rad_companion( master, 3 );
+    element_node_item = conv_rad_companion( master, 4 );
+  }
+  else if ( master==SUPPORT_EDGE_NORMAL ) {
+    node_item = support_edge_companion( 3 );
+    element_node_item = support_edge_companion( 4 );
+  }
+
+  if ( node_item>=0 && db_active_index( node_item, ind, VERSION_NORMAL ) ) {
+    db( node_item, ind, list, ddum, length, VERSION_NORMAL, GET );
+    for ( k=0; k<nnol_side; k++ ) {
+      inol = sides[iside*nnol_side+k];
+      if ( !array_member( list, nodes[inol], length, ldum ) ) return 0;
+    }
+  }
+  if ( element_node_item>=0 &&
+       db_active_index( element_node_item, ind, VERSION_NORMAL ) ) {
+    // list[0]=element, list[1..]=local node numbers
+    db( element_node_item, ind, list, ddum, length, VERSION_NORMAL, GET );
+    if ( list[0]!=element ) return 0;
+    for ( k=0; k<nnol_side; k++ ) {
+      inol = sides[iside*nnol_side+k];
+      if ( !array_member( &list[1], inol, length-1, ldum ) ) return 0;
+    }
+  }
+  return 1;
+}
+
 static long int border_nodes_tria3[] = {
     0, 1,
     1, 2,
@@ -657,6 +712,8 @@ void area( long int element, long int name,
             }
             array_multiply( average_side_coord, average_side_coord, 1./nnol_side, ndim );
             array_subtract( average_side_coord, average_element_coord, vec, ndim );
+            if ( ok && !side_node_restriction_ok( type[itype], ind, element,
+                nodes, sides, iside, nnol_side ) ) ok = 0;
             if ( ok ) {
               if ( ndim==1 ) {
                 // 1D bar2 edge: the degenerate side is the bar end node.

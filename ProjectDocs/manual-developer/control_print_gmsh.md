@@ -19,7 +19,7 @@
   Dummy point elements use type 15 and group 1234.
 - **Data**: `$NodeData` / `$ElementData` / `$ElementNodeData` blocks, one
   per dof component. Names follow `node_` / `element_` prefixes (Gmsh
-  convention). Uses `dof_label` + `dof_scal_vec_mat` (same detection as
+  convention) built from `dof_type` (C24, 2026-10-05: loop over the primary unknowns, see `print_dof_component_loop.md`). Uses `dof_type` + `dof_scal_vec_mat` (same detection as
   `print_vtk` / `print_tb`).
 
 ## Diseño / decisiones

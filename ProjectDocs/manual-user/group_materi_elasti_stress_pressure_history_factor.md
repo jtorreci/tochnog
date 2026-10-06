@@ -74,3 +74,24 @@ when fully unloaded with a large factor).
   (e.g. `target_item 1 -post_point_dof 1 -sph`).
 - Requires `materi_stress`, `materi_velocity` and
   `materi_stress_pressure_history` in the initialization part.
+
+## Loading / reloading decision per step (fixed 2026-10-06, audit K04)
+
+The decision is made per time step, with the pressure the step is
+estimated to reach. Since 2026-10-06 (as the Professional 02-08-2026): a
+step that starts below the history pressure estimates its end pressure
+with the factored stiffness, and stays unloading/reloading only when that
+estimate is strictly below the history; otherwise it is first loading.
+Pro test `stress_pressure_factor` (dt 0.1): final `sigxx` −3.05 (before
+−3.10). With coarse steps the switch point is accurate to one step (the
+analytic −3 needs the transition exactly at the history, which the
+Professional takes as first loading). Tests:
+`validation-suite/test-2026/stress_pressure_factor_reload1.dat`,
+`stress_pressure_factor_reload2.dat`.
+
+### Differences with the Professional version
+
+A truncated last time step (end time not a multiple of the step) that
+starts exactly on the first-loading curve: the Professional applies the
+factor in that step (factor 3, dt 0.4 to t = 4.2: −3.2), the GNU does
+not (−2.8, the analytic first-loading value).

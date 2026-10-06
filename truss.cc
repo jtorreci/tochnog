@@ -30,7 +30,7 @@ void truss( long int element, long int element_group,
     inol=0, jnol=0, indx=0, nnol=2, swit=0, length=0,
     // inertia_apply default -no (Professional semantics, see general.cc)
     options_inertia=-NO, group_truss_rope=-NO, 
-    memory=-UPDATED, truss_reference=-NO, options_convection=-YES,
+    memory=-UPDATED, truss_reference=-NO, options_convection=-NO,
     icontrol=0, ldum=0, idum[1], options_mesh[MDIM];
   double mass=0., dtime=0., 
     group_truss_young=0., group_truss_area=0., 
@@ -51,10 +51,7 @@ void truss( long int element, long int element_group,
 
     db( ICONTROL, 0, &icontrol, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
     if ( materi_velocity_integrated ) {
-      db( OPTIONS_CONVECTION, 0, &options_convection, ddum,
-        ldum, VERSION_NORMAL, GET_IF_EXISTS );
-      db( CONTROL_OPTIONS_CONVECTION, icontrol, &options_convection, ddum,
-        ldum, VERSION_NORMAL, GET_IF_EXISTS );
+      options_convection = convection_apply_switch();
       db( OPTIONS_MESH, 0, options_mesh, ddum,
         ldum, VERSION_NORMAL, GET );
       for ( idim=0; idim<ndim; idim++ ) {

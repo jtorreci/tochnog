@@ -293,8 +293,8 @@ void print_gmsh( long int icontrol, long int task )
     length=0, idim=0, ipuknwn=0,
     nder_=0, nuknwn_=0, element_group=0, swit=0, ldum=0, first=1,
     dummy=-YES, element_data=-YES, node_method=-NODE;
-  long int idum[1], *dof_label=NULL, *dof_scal_vec_mat=NULL, *nodes=NULL,
-    *el=NULL;
+  long int idum[1], *dof_label=NULL, *dof_type=NULL, *dof_scal_vec_mat=NULL,
+    *nodes=NULL, *el=NULL;
   double ddum[1], time_current=0., coord[MDIM], *node_dof=NULL;
   char filename[MCHAR], str[MCHAR];
 
@@ -321,10 +321,12 @@ void print_gmsh( long int icontrol, long int task )
   nuknwn_ = nuknwn;
 
   dof_label = get_new_int(MUKNWN);
+  dof_type = get_new_int(MUKNWN);
   dof_scal_vec_mat = get_new_int(MUKNWN);
   nodes = get_new_int(MAXIMUM_NODE);
   el = get_new_int(MAXIMUM_NODE+1);
   db( DOF_LABEL, 0, dof_label, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+  db( DOF_TYPE, 0, dof_type, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
   db( DOF_SCAL_VEC_MAT, 0, dof_scal_vec_mat, ddum, ldum, VERSION_NORMAL,
     GET_IF_EXISTS );
 
@@ -438,26 +440,37 @@ void print_gmsh( long int icontrol, long int task )
   }
 
   // node / element data for each exported dof (append per time step)
-  if ( nuknwn_>0 ) {
-    for ( ipuknwn=0; ipuknwn<nuknwn_; ipuknwn++ ) {
-      if ( dof_scal_vec_mat[ipuknwn]!=-SCALAR &&
-           dof_scal_vec_mat[ipuknwn]!=-VECTOR &&
-           dof_scal_vec_mat[ipuknwn]!=-MATRIX ) continue;
-      long int nval = 1;
-      if      ( dof_scal_vec_mat[ipuknwn]==-VECTOR ) nval = ndim;
-      else if ( dof_scal_vec_mat[ipuknwn]==-MATRIX ) nval = 6;
-      long int base_indx = ipuknwn*nder_;
+  // One set of node_/element_ blocks per component of each PRIMARY
+  // unknown, as in print_vt.cc and print_dof (BACKLOG C23/C24): the
+  // primary unknown ipuknwn starts at iuknwn = ipuknwn*nder_, the dof_*
+  // arrays are indexed by iuknwn (set for every value AND derivative of
+  // the dof) and a vector/matrix dof spans nval primary unknowns. Looping
+  // ipuknwn over nuknwn_ wrote shifted duplicate blocks and, with
+  // derivatives, read node_dof past the end of the record. Field names
+  // use the dof type (materi_velocity, condif_temperature, ...) as the
+  // Professional does; components get _0/_1/_2 (vector) or _xx.. (matrix).
+  long int npuknwn_ = nder_>0 ? nuknwn_/nder_ : 0;
+  if ( npuknwn_>0 ) {
+    long int nval = 1;
+    for ( ipuknwn=0; ipuknwn<npuknwn_; ipuknwn+=nval ) {
+      long int iuknwn = ipuknwn*nder_;
+      long int dsvm = dof_scal_vec_mat[iuknwn];
+      nval = 1;
+      if ( dsvm!=-SCALAR && dsvm!=-VECTOR && dsvm!=-MATRIX ) continue;
+      if      ( dsvm==-VECTOR ) nval = ndim;
+      else if ( dsvm==-MATRIX ) nval = 6;
+      long int base_indx = iuknwn;
       for ( idim=0; idim<nval; idim++ ) {
         char label[MCHAR];
-        if      ( dof_scal_vec_mat[ipuknwn]==-SCALAR )
-          strcpy( label, db_name(dof_label[ipuknwn]) );
-        else if ( dof_scal_vec_mat[ipuknwn]==-VECTOR ) {
-          sprintf( label, "%s_%ld", db_name(dof_label[ipuknwn]), idim );
+        if      ( dsvm==-SCALAR )
+          strcpy( label, db_name(dof_type[iuknwn]) );
+        else if ( dsvm==-VECTOR ) {
+          sprintf( label, "%s_%ld", db_name(dof_type[iuknwn]), idim );
         }
         else {
           // matrix: idim 0..5 = xx,yy,zz,xy,xz,yz (Voigt)
           const char* comp[6] = { "xx","yy","zz","xy","xz","yz" };
-          sprintf( label, "%s_%s", db_name(dof_label[ipuknwn]), comp[idim] );
+          sprintf( label, "%s_%s", db_name(dof_type[iuknwn]), comp[idim] );
         }
         // node_* data
         out << "$NodeData\n";
@@ -466,9 +479,9 @@ void print_gmsh( long int icontrol, long int task )
         for ( inod=0; inod<=max_node; inod++ ) {
           node_dof = db_dbl( NODE_DOF, inod, VERSION_PRINT );
           long int indx = base_indx;
-          if      ( dof_scal_vec_mat[ipuknwn]==-VECTOR )
+          if      ( dsvm==-VECTOR )
             indx = base_indx + idim*nder_;
-          else if ( dof_scal_vec_mat[ipuknwn]==-MATRIX ) {
+          else if ( dsvm==-MATRIX ) {
             long int kk, ll;
             if      ( idim==0 ) { kk=0; ll=0; }
             else if ( idim==1 ) { kk=1; ll=1; }
@@ -500,9 +513,9 @@ void print_gmsh( long int icontrol, long int task )
           for ( inod=0; inod<nnol; inod++ ) {
             node_dof = db_dbl( NODE_DOF, nodes[inod], VERSION_PRINT );
             long int indx = base_indx;
-            if      ( dof_scal_vec_mat[ipuknwn]==-VECTOR )
+            if      ( dsvm==-VECTOR )
               indx = base_indx + idim*nder_;
-            else if ( dof_scal_vec_mat[ipuknwn]==-MATRIX ) {
+            else if ( dsvm==-MATRIX ) {
               long int kk, ll;
               if      ( idim==0 ) { kk=0; ll=0; }
               else if ( idim==1 ) { kk=1; ll=1; }
@@ -520,9 +533,9 @@ void print_gmsh( long int icontrol, long int task )
             for ( inod=0; inod<nnol; inod++ ) {
               node_dof = db_dbl( NODE_DOF, nodes[inod], VERSION_PRINT );
               long int indx = base_indx;
-              if      ( dof_scal_vec_mat[ipuknwn]==-VECTOR )
+              if      ( dsvm==-VECTOR )
                 indx = base_indx + idim*nder_;
-              else if ( dof_scal_vec_mat[ipuknwn]==-MATRIX ) {
+              else if ( dsvm==-MATRIX ) {
                 long int kk, ll;
                 if      ( idim==0 ) { kk=0; ll=0; }
                 else if ( idim==1 ) { kk=1; ll=1; }
@@ -550,6 +563,7 @@ void print_gmsh( long int icontrol, long int task )
 
   db_version_delete( VERSION_PRINT );
   delete[] dof_label;
+  delete[] dof_type;
   delete[] dof_scal_vec_mat;
   delete[] nodes;
   delete[] el;

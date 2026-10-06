@@ -79,8 +79,8 @@ left half stays at its pre-cut value.
   the cut geometry abort with a clear message (no deletion without the
   equilibrium substitution). Axisymmetric groups are not supported by
   the cut integration.
-- The Professional stores the substituted `node_force` with the sign of
-  the external load it applies; this GNU version stores the negated
-  value (its `node_force` consumption applies a stored `+F` as a `-x`
-  load — see the developer manual; the equilibrium after the cut is
-  identical).
+- The substituted `node_force` is stored with the sign of the external
+  load it applies, as the Professional (mesh_cut_1: `node_force 6` = +1
+  in both). Before 2026-10-06 (BACKLOG C28) the GNU stored the negated
+  value to compensate its reversed `node_force` consumption; the
+  equilibrium after the cut was already identical.

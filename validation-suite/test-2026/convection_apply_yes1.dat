@@ -1,0 +1,37 @@
+( K03 companion: the same model as convection_apply_default1 with an
+  explicit convection_apply -yes. The heat is convected downstream and
+  the middle node gets temp = 1 (convection dominated, Peclet 100).
+  Professional 02-08-2026 gives 1. )
+echo -no
+number_of_space_dimensions 1
+condif_temperature
+materi_velocity
+materi_strain_total
+materi_stress
+end_initia
+mesh -fixed_in_space
+inertia_apply -no
+node 1  0
+node 2  1
+node 3  2
+element 1  -bar2 1 2
+element 2  -bar2 2 3
+bounda_dof 0  1 -temp
+bounda_time 0  0. 1. 100. 1.
+bounda_dof 1  3 -temp
+bounda_time 1  0. 0. 100. 0.
+bounda_dof 2  -ra -from 1 -to 3 -ra -velx
+bounda_time 2  0. 10. 100. 10.
+group_type 0  -materi -condif
+group_materi_density 0  1.
+group_materi_viscosity 0  10.
+group_materi_elasti_compressibility 0  1.
+group_materi_memory 0  -updated_linear
+group_condif_density 0  1.
+group_condif_capacity 0  1.
+group_condif_conductivity 0  0.1
+control_timestep 0  1. 2.
+convection_apply -yes
+target_item 0  -node_dof 2 -temp
+target_value 0  1. 1.e-6
+end_data

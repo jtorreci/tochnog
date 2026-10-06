@@ -1188,11 +1188,57 @@ void materi( long int element, long int gr, long int name, long int nnol,
     // Stress-only pass: the stress recovery above is the ONLY assembly; skip
     // every other dof block below.
     if ( stress_recovery_post_pass ) continue;
+    // Nodal recovery of the strain tensors (K11, 2026-10-06): total,
+    // elastic and plastic strain use the SAME recovery weight as the
+    // stress (sri_stress_recovery_weight, the Professional per-element
+    // least-squares fit; h for the Lobatto/non-tensor elements and for
+    // SRI elements), in the incremental lumped form whose denominator
+    // and inertia term general.cc builds with the same weight
+    // (strain_recovery_weight). Before, the strain kept the h weight:
+    // Professional tslv_part clamped edge eptyy 0, GNU -2.35e-6.
+    if ( materi_strain_total || materi_strain_elasti || materi_strain_plasti ) {
+      double w_rec = strain_recovery_weight( sri_on, name, nnol, inol,
+        npoint, ipoint, h[inol], volume );
+      if ( scalar_dabs(w_rec)>EPS_H || scalar_dabs(h[inol])>EPS_H ) {
+        long int iblk=0, blk_indx=0;
+        double *blk_old=NULL, *blk_inc=NULL;
+        for ( iblk=0; iblk<3; iblk++ ) {
+          if      ( iblk==0 && materi_strain_elasti ) {
+            blk_indx = epe_indx; blk_old = old_epe; blk_inc = inc_epe;
+          }
+          else if ( iblk==1 && materi_strain_plasti ) {
+            blk_indx = epp_indx; blk_old = old_epp; blk_inc = inc_epp;
+          }
+          else if ( iblk==2 && materi_strain_total ) {
+            blk_indx = ept_indx; blk_old = old_ept; blk_inc = inc_ept;
+          }
+          else continue;
+          ipuknwn = blk_indx/nder;
+          for ( idim=0; idim<MDIM; idim++ ) {
+            for ( jdim=idim; jdim<MDIM; jdim++ ) {
+              indx = inol*npuknwn + ipuknwn;
+              tmp = volume * w_rec * blk_inc[idim*MDIM+jdim] / dtime;
+              element_rhside[indx] += tmp;
+              // added for options_element_dof
+              if ( options_element_dof==-YES )
+                new_unknowns[ipuknwn] = blk_old[idim*MDIM+jdim] +
+                  blk_inc[idim*MDIM+jdim];
+              ipuknwn++;
+            }
+          }
+        }
+      }
+    }
     if ( scalar_dabs(h[inol])>EPS_H ) {
       if ( materi_plasti_f ) {
         ipuknwn = f_indx/nder;
         indx = inol*npuknwn + ipuknwn;
-        tmp = volume * h[inol] * ( new_f - old_f ) / dtime;
+        // an element without a yield law reports f = 0, not the internal
+        // NO_YIELD_F = -1e10 (K13 follow-up, measured on the Professional
+        // 02-08-2026: tension_direct1 with materi_plasti_f gives f 0 at
+        // the nodes of the elastic element; the GNU averaged -1e10 in)
+        tmp = volume * h[inol] *
+          ( ( new_f==NO_YIELD_F ? 0. : new_f ) - old_f ) / dtime;
         element_rhside[indx] += tmp;
       }
 
@@ -1265,34 +1311,7 @@ void materi( long int element, long int gr, long int name, long int nnol,
         }
       }
 
-      if ( materi_strain_elasti ) {
-        ipuknwn = epe_indx/nder;
-        for ( idim=0; idim<MDIM; idim++ ) {
-          for ( jdim=idim; jdim<MDIM; jdim++ ) {
-            indx = inol*npuknwn + ipuknwn;
-            tmp = volume * h[inol] * inc_epe[idim*MDIM+jdim] / dtime;
-            element_rhside[indx] += tmp;
-		//added for options_element_dof
-            if(options_element_dof==-YES) 
-	      new_unknowns[ipuknwn] = old_epe[idim*MDIM+jdim] + inc_epe[idim*MDIM+jdim];
-            ipuknwn++;
-          }
-        }
-      }
-
       if ( materi_strain_plasti ) {
-        ipuknwn = epp_indx/nder;
-        for ( idim=0; idim<MDIM; idim++ ) {
-          for ( jdim=idim; jdim<MDIM; jdim++ ) {
-            indx = inol*npuknwn + ipuknwn;
-            tmp = volume * h[inol] * inc_epp[idim*MDIM+jdim] / dtime;
-            element_rhside[indx] += tmp;
-	      // added for options_element_dof
-            if(options_element_dof==-YES) 
-	      new_unknowns[ipuknwn] = old_epp[idim*MDIM+jdim] + inc_epp[idim*MDIM+jdim];
-            ipuknwn++;
-          }
-        }
         if ( condif_temperature ) {
           ipuknwn = temp_indx/nder;
           indx = inol*npuknwn + ipuknwn;
@@ -1351,21 +1370,6 @@ void materi( long int element, long int gr, long int name, long int nnol,
         element_rhside[indx] += tmp;
         element_residue[indx] -= tmp;
       }                    
-
-      if ( materi_strain_total ) {
-        ipuknwn = ept_indx/nder;
-        for ( idim=0; idim<MDIM; idim++ ) {
-          for ( jdim=idim; jdim<MDIM; jdim++ ) {
-            indx = inol*npuknwn + ipuknwn;
-            tmp = volume * h[inol] * inc_ept[idim*MDIM+jdim] / dtime;
-            element_rhside[indx] += tmp;
-	      //added for options_element_dof
-            if(options_element_dof==-YES) 
-	      new_unknowns[ipuknwn] = old_ept[idim*MDIM+jdim] + inc_ept[idim*MDIM+jdim];
-            ipuknwn++;
-          }
-        }
-      }
 
       if ( materi_maxwell_stress ) {
         ipuknwn = mstres_indx/nder;

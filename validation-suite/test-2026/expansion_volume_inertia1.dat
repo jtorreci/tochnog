@@ -1,0 +1,46 @@
+(
+K04 incnav3 (2026-10-06): group_materi_expansion_volume reduces the
+density rho = rho0*(1 - beta*T) in the momentum inertia as well as in the
+gravity force (Pro test incnav3: T = 0.5, beta = 1 -> rho = 0.5; the
+expansion and gravity forces give a velocity rate of -2.5/rho = -5).
+One step of 0.01: tvely(2) = -4.990415335 = Professional 02-08-2026
+(-4.990415335463). GNU before K04: -2.4976 (inertia with rho0).
+The legacy sfnet incnav3 (target -2.5) predates this Professional
+convention (BACKLOG B11).
+)
+echo -no
+number_of_space_dimensions 2
+derivatives
+condif_temperature
+materi_velocity
+materi_stress
+end_initia
+
+mesh -fixed_in_space -fixed_in_space
+inertia_apply -yes
+
+node 1  0  0
+node 2  1  0
+node 3  1  1
+node 4  0  1
+element 1  -quad4  1 2 4 3
+
+bounda_dof 0  -ra 1 2 3 4 -ra -temp
+bounda_time    0  0.0 0.5 100. 0.5
+
+force_gravity 0. 1.
+
+group_type 0  -materi
+group_materi_density 0  1.0
+group_materi_expansion_linear 0  1.
+group_materi_expansion_volume 0  1.
+group_materi_elasti_compressibility 0  1.0
+group_materi_memory 0  -updated_linear
+
+print_filter 0  -node_dof -all -tvely
+
+control_timestep 0  0.01 0.01
+
+target_item 0  -node_dof 2 -tvely
+target_value   0  -4.990415335 1.e-6
+end_data

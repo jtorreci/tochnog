@@ -50,3 +50,24 @@
 
 - No gap dependence: the flux is applied even for an opened interface. A
   refinement would scale `pe` with the opening (crack width).
+
+## K04 fix (2026-10-06): tributary measure
+
+`interface.cc` `interface_element()`, groundflow block: the pair
+conductance is `pe_i = pe * w_ip[inol] * iface_measure` (the Lobatto/even
+weights and the side length/face area computed for the mechanical springs;
+`w_ip` is now released at the end of the function). The same weighting in
+the `group_interface_condif_conductivity` block (`k_i`). The capacity
+block (`group_interface_groundflow_capacity`): `C_i = 0.5 * C * w_ip[inol %
+ns1] * iface_measure` per node (pair storage split over its two nodes),
+`element_rhside -= C_i * dp/dt`, `element_matrix` diagonal and
+`element_lhside += C_i/dt` (implicit, as `general.cc` for the continuum
+capacity). Evidence (Professional 02-08-2026): `ground9` 1/3 -> 0.5, the
+same model 2 and 3 wide 0.5; thermal analog 1/3 -> 0.5;
+`groundflow_interface` transient 1.0/1.75/1.998 at t = 1/3/10 and
+interface capacity 0/2 (1.3333/0.8) all equal, and independent of the
+interface length (2 x tall model). Without the implicit capacity the
+weighted permeability made `groundflow_interface` diverge (the explicit
+storage term was stable only with the doubled conductance).
+Pending: `group_interface_groundflow_total_pressure_tension` still adds an
+explicit `static_pres - pres` residual without a matrix term (unchanged).

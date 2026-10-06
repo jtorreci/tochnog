@@ -1,0 +1,49 @@
+( C24: control_print_frd / control_print_gmsh write ONE block per
+  primary dof. Single quad4, uniaxial stretch with derivatives: velx =
+  0.01 on the right edge for one step of 1 (disx = epsxx = 0.01), young
+  1000, poisson 0 -> sigxx = 10; temp 0 on the left edge and 1 on the
+  right edge. The FRD file must hold exactly the blocks VELO, DISP,
+  STRESS, TOSTRAIN, NDTEMP (once each; D3 = 0 in 2D) and the gmsh file
+  one node_ field per dof component (17), with no heap garbage. Before
+  C24 every component and derivative was written as its own shifted
+  block and node_dof was read past the end of the record. Values match
+  the first block of each dof of the Professional 02-08-2026. Checked
+  in scripts/build_safe.sh. )
+echo -no
+number_of_space_dimensions 2
+derivatives
+materi_velocity
+materi_displacement
+materi_stress
+materi_strain_total
+condif_temperature
+end_initia
+node 1  0 0
+node 2  1 0
+node 3  0 1
+node 4  1 1
+element 1  -quad4 1 2 3 4
+group_type 0  -materi -condif
+group_materi_elasti_young 0  1000.
+group_materi_elasti_poisson 0  0.
+group_materi_memory 0  -total_linear
+group_condif_density 0  1.
+group_condif_capacity 0  1.
+group_condif_conductivity 0  1.
+bounda_dof 0  -ra 1 3 -ra -velx
+bounda_dof 1  -ra 1 -ra -vely
+bounda_dof 2  -ra 2 4 -ra -velx
+bounda_time 2  0. 0.01 1. 0.01
+bounda_dof 3  -ra 1 3 -ra -temp
+bounda_dof 4  -ra 2 4 -ra -temp
+bounda_time 4  0. 1. 1. 1.
+control_timestep 0  1. 1.
+control_print_frd 0  -yes
+control_print_gmsh 0  -yes
+target_item 0  -node_dof 4 -sigxx
+target_value 0  10. 1.e-6
+target_item 1  -node_dof 4 -disx
+target_value 1  0.01 1.e-8
+target_item 2  -node_dof 4 -temp
+target_value 2  1. 1.e-8
+end_data

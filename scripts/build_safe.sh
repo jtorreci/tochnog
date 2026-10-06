@@ -298,7 +298,8 @@ rm -f validation-suite/test-2014/dof.* \
 #   t1 rota a z, la cortante en y pasa a f_t2=10.4 y f_t~0 (frame por
 #   defecto daria f_t=la cortante)).
 # + node_force_inertia/slide/pressure (node_force discreto en dof.cc +
-#   node_inertia calculado m*a+m*g PUT en VERSION_NEW: -19.83 ~= m*g=-20
+#   node_inertia calculado m*a+m*g PUT en VERSION_NEW: -20.11 ~= m*g=-20
+#   (target -19.83 until C28 2026-10-06, calibrated on the reversed sign)
 #   con node_force -30 actuando; node_pressure overrides de calcul -static:
 #   node_static_pressure 7.5 -> post_calcul -static da 7.5 exacto vs -2
 #   calculado; node_slide smoke clone de slide_axi con la geometria
@@ -1343,6 +1344,130 @@ run_ok "$T2026" element_normal2d_row_mixed1
 run_ok "$T2026" materi_memory_default_shear1
 run_ok "$T2026" materi_memory_default_stretch1
 run_ok "$T2026" materi_memory_default_updated_apply1
+
+# ---------------------------------------------------------------------
+# K03 (2026-10-06): default convection_apply -no (manual Professional
+# 6.395, = Professional 02-08-2026). sfnet condif2 model in the Pro
+# dialect: without the record the heat is not convected by the material
+# velocity, middle temp = 0.5 (pure diffusion); with -yes temp = 1.
+# Before K03 the GNU default -yes gave 1 for both.
+# ---------------------------------------------------------------------
+run_ok "$T2026" convection_apply_default1
+run_ok "$T2026" convection_apply_yes1
+
+# ---------------------------------------------------------------------
+# C24 (2026-10-05): control_print_frd / control_print_gmsh loop over the
+# PRIMARY unknowns (as print_vt.cc and print_dof after C23). Single quad4
+# with derivatives: the FRD must hold exactly VELO DISP STRESS TOSTRAIN
+# NDTEMP (once each), node 2 D1 = 1e-2 and D3 = 0 (2D), SXX = 10; the
+# gmsh file 17 node_ fields (2+2+6+6+1 components), no heap garbage.
+# Before C24: 68 FRD blocks and 324 node_ fields (shifted duplicates).
+# The .frd is appended to when it exists, so both outputs are removed
+# before the run.
+# ---------------------------------------------------------------------
+rm -f "$T2026/print_frd_gmsh_dof_loop1.frd" "$T2026/print_frd_gmsh_dof_loop1.msh"
+run_ok "$T2026" print_frd_gmsh_dof_loop1
+FRDL="$T2026/print_frd_gmsh_dof_loop1.frd"
+MSHL="$T2026/print_frd_gmsh_dof_loop1.msh"
+if [ "$(awk '$1=="-4"{printf "%s ", $2}' "$FRDL" 2>/dev/null)" = "VELO DISP STRESS TOSTRAIN NDTEMP " ] && \
+   awk '$1=="-4"{b=$2} b=="DISP" && $1=="-1" && $2==2 { if ($3!="1.00000E-02" || $5!="0.00000E+00") bad=1; n++ }
+        b=="STRESS" && $1=="-1" && $2==2 { if ($3!="1.00000E+01") bad=1; n++ }
+        END { exit (bad || n!=2) }' "$FRDL" && \
+   [ "$(grep -c '^"node_' "$MSHL" 2>/dev/null)" = "17" ] && \
+   [ "$(grep '^"node_' "$MSHL" | sort -u | wc -l)" = "17" ] && \
+   ! rg -q 'e-3[0-9][0-9]' "$FRDL" "$MSHL"; then
+  check_ok "print_frd_gmsh_dof_loop1 (C24: 5 FRD blocks, 17 gmsh node_ fields, D3=0, SXX=10)"
+else
+  check_fail "print_frd_gmsh_dof_loop1" "FRD/gmsh blocks not one per primary dof (C24)"
+fi
+
+# ---------------------------------------------------------------------
+# K04 condif7 (2026-10-06): the _node / _element_node restriction of the
+# edge families (condif heat/convection/radiation, groundflow flux,
+# force_edge*, support_edge_normal) selects the SIDES whose nodes are
+# all in the list (= Professional 02-08-2026). Before: node by node, so
+# a corner node also loaded the adjacent side (condif7 flux doubled).
+#   edge_node_restriction_heat1: nodes 1 3 4 -> temp 12 / 18 (Pro);
+#     before 20 / 20.
+#   edge_node_restriction_force1: force_edge_node 1 3 -> disx 1 / 1
+#     (Pro); before 2 / 2.
+# ---------------------------------------------------------------------
+run_ok "$T2026" edge_node_restriction_heat1
+run_ok "$T2026" edge_node_restriction_force1
+
+# ---------------------------------------------------------------------
+# K04 force18 (2026-10-06): force_point is an external load along
+# +force (manual Professional 6.501, = Professional 02-08-2026). Unit
+# quad4 bar, force_point (1, 0.5) force (2, 0) -> disx(2) = disx(4) = 2
+# (before: -2, the force was subtracted from node_rhside).
+# ---------------------------------------------------------------------
+run_ok "$T2026" force_point_sign1
+
+# ---------------------------------------------------------------------
+# K04 ground9 (2026-10-06): group_interface_groundflow_permeability and
+# group_interface_condif_conductivity are per unit length/area (manual
+# Professional 6.628/6.625): each facing pair carries w_i*L (as the
+# mechanical interface springs); the interface capacity likewise. Middle pres/temp 0.5 (= Pro 02-08-2026);
+# before: 0.6 (ground9 3 wide) and 1/3 (thermal ground9).
+# ---------------------------------------------------------------------
+run_ok "$T2026" interface_flux_measure_ground1
+run_ok "$T2026" interface_flux_measure_condif1
+# interface capacity: per unit length, split over the pair, implicit;
+# groundflow_interface at t = 3 -> pres(5) 1.75 (Pro 1.749998578),
+# before 0.8146.
+run_ok "$T2026" interface_capacity_transient1
+
+# ---------------------------------------------------------------------
+# K04 stress_pressure_factor (2026-10-06): a step starting below the
+# pressure history estimates its end pressure with the FACTORED stiffness
+# and stays unloading/reloading only strictly below the history (rule
+# measured on the Professional 02-08-2026, dt 0.1/0.15/0.25/0.3/0.35/0.4,
+# factors 0.5 and 3). reload1 = Pro test (sigxx -3.05; before -3.10),
+# reload2 = factor 3, partial unloading, dt 0.3 (-2.8; before -3.4).
+# ---------------------------------------------------------------------
+run_ok "$T2026" stress_pressure_factor_reload1
+run_ok "$T2026" stress_pressure_factor_reload2
+
+# ---------------------------------------------------------------------
+# K04 incnav3 (2026-10-06): group_materi_expansion_volume reduces the
+# density in the momentum inertia (general.cc) as in the gravity force
+# (materi.cc): Pro incnav3 tvely -4.990415335 (= Pro; before -2.4976).
+# ---------------------------------------------------------------------
+run_ok "$T2026" expansion_volume_inertia1
+
+# ---------------------------------------------------------------------
+# K13 (2026-10-06): the direct cut-offs (tension/MC/compression, full and
+# plane mode) store their cut as plastic strain C^-1 (sig_trial - sig)
+# and the direct-law yield value (0 after a cut; = Pro 02-08-2026, except
+# the shear plastic strain: tensor value, Pro twice it).
+# ---------------------------------------------------------------------
+run_ok "$T2026" direct_plastic_strain_tension1
+run_ok "$T2026" direct_plastic_strain_mc1
+run_ok "$T2026" direct_yield_value1
+
+# ---------------------------------------------------------------------
+# K13 follow-up (2026-10-06): an element without a yield law reports
+# materi_plasti_f 0 (Pro), not -1e10 (plasti_f_no_law1, from Pro
+# tension_direct1).
+# ---------------------------------------------------------------------
+run_ok "$T2026" plasti_f_no_law1
+
+# ---------------------------------------------------------------------
+# K11 (2026-10-06): the strain tensors are recovered with the stress
+# operator (strain_recovery_clamped1: clamped-edge eptyy 0 exact = Pro;
+# before -8.6e-5).
+# ---------------------------------------------------------------------
+run_ok "$T2026" strain_recovery_clamped1
+
+# ---------------------------------------------------------------------
+# C28 (2026-10-06): node_force is an external load along +force (dof.cc
+# adds it, as force_point): node_force_sign1 disx 2 (= Pro; before -2);
+# control_mesh_cut_node_force stores the substitute with that sign
+# (delete.cc): mesh_cut_node_force_sign1 node_force 6 = +1 (= Pro mesh_cut_1;
+# before -1), remaining bar sigxx 1.
+# ---------------------------------------------------------------------
+run_ok "$T2026" node_force_sign1
+run_ok "$T2026" mesh_cut_node_force_sign1
 
 # ---------------------------------------------------------------------
 # Sub-sprint materi_stress_force, lote 2 (integracion 2D quad4/quad9):

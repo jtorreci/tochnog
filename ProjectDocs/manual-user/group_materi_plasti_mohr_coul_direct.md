@@ -172,6 +172,12 @@ The normal record accepts ndim values (1 value in 1D, 2 in 2D, 3 in 3D).
 
 ## Differences with the Professional version
 
+- **Plastic strain of the cut (deliberate for the shear components,
+  K13).** Since 2026-10-06 the cut is stored in `materi_strain_plasti`
+  as C^-1 (sigma_trial - sigma) and `materi_plasti_f` holds the direct-law
+  yield value (0 after a cut), as the Professional; the Professional
+  writes the shear components as twice the tensor value, the GNU keeps
+  the tensor value. See `direct_plastic_strain.md`.
 - **phi_flow factor in the plane mode (deliberate, BACKLOG C15).** The
   Professional 02-08-2026 uses the constant `k = 2 tan(phi_flow)`; the GNU
   uses `k = (M/G) tan(phi_flow)`, the consistent elastic return of the
@@ -187,6 +193,15 @@ The normal record accepts ndim values (1 value in 1D, 2 in 2D, 3 in 3D).
   t = 0.7 (sigxy 0.13 -> 0.06); the Professional collapses at the same
   step with the same constraints (sigxy ~0), so its target 1 +- 0.3 only
   held with the pre-2026-10-02 rule.
+- **Interface strength `mohr_coul_direct4` (deliberate, BACKLOG C30).**
+  Interface shear test (phi 0.2 rad, c 1, normal stress -1, top displaced
+  1 at t = 1 and held to t = 100). The manual 6.632 limits the friction
+  to c + |Fn| tan(phi) = 1.2027; the GNU returns to it at once (sigxy
+  1.2027 from t = 1, `disx` 0.3007, status plastic). The Professional
+  02-08-2026 stays at the elastic 2.0 (status `-plastic`) and drifts down
+  slowly (t = 5: 1.991, t = 50: 1.095) to 0.410 `-elastic` at t = 100
+  (its target `disx` 0.1024). The drift looks like an artefact of the
+  Professional; the GNU follows the manual (project decision 2026-10-06).
 
 ## Estado de implementación
 
@@ -207,7 +222,8 @@ The normal record accepts ndim values (1 value in 1D, 2 in 2D, 3 in 3D).
 - **Pendiente**: softening via dependency_diagram on
   `materi_strain_total_shear_kappa`; the interface variant
   (`group_interface_materi_plasti_mohr_coul_direct`) reaction magnitude
-  (mohr_coul_direct3/4).
+  (mohr_coul_direct3; mohr_coul_direct4 is a deliberate divergence, see
+  above).
 
 ## Sprint 10 additions: compression_direct + pressure/coord limits
 

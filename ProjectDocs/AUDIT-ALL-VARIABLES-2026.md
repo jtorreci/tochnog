@@ -356,8 +356,8 @@ The priority list in section 6 re-orders by judgement.
 | 4 | K15 | Other plasticity (MC, DP+refine, von Mises+refine) | 8 | 1.0 | UNKNOWN (pre-existing MC difference) | `validation_14` (DP, refine, delete): `velx` differs 48 %, `eppxx` 25 %. `validation_3` (von Mises plate): `kap` 11 %. `mohrcou2`: GNU −6.932 (its target) vs Pro 0. `mmc_tension`: `sigzz` 2 %. |
 | 5 | K12 | post_calcul item conventions | 22 | 1.0 | BOTH-plausible | `calcul1`: the sfnet target (GNU) is [1, 0, 0.707, 0.577] and the Pro's own `calcul1` target is [0, 1, 1, 0.816]. Each binary passes its own. `examp10`/`validation_5`: the order or sign of the `-prival` principal values (0.002 vs −0.00402). Also here: `force10`/`force13`/`gforce10` (known C3), the `msf_*` section forces, and the `qsri` patch calcul records. |
 | 6 | K05 | Contact | 8 | 1.0 | **GNU-suspect** | `contac1` (1D contact): **GNU node 2 keeps `velx` 0.03**, so there is no interaction. The Pro gives 0.02/0.01 (momentum exchange). `validation_10`: GNU `sigyy` ≈ 0 vs Pro −21031 (target −20538 ± 1e4). The `contact_target_geometry` alias aborts with "Program error… contact_geometry. Data is allocated in a parallel loop" in 6 runs (`vs/contact*`, `examp6/9/24`). In `examp9` it silently drops an index-0 contact. This is the known backlog item C5, which only documents index > 0. |
-| 7 | K13 | Direct / visco plasticity output | 7 | 1.0 | **GNU-suspect** (state output) | `visc_pl4`: the stress is 1 in both (the target). The **GNU `eppxx` = 0 and `f` = −1e10**, while the Pro stores `eppxx` 0.49998 = ε − σ/E. So the GNU output violates σ = E(ε − εp). |
-| 8 | K02 | One-iteration lag of non-principal dofs | 6 | 1.0 | **GNU-suspect** | `spring4` (rigid translation `velx`=1): with 1 iteration the **GNU gives `eptxx` = `sigxx` = −0.01**, while the Pro gives 0 (exact). With 3 iterations both give 0. The post-solve sync in `top.cc` refreshes only the stress slots, and only when `stress_recovery_absolute` is on, so it misses the strain dofs and models with a strain unknown. 6 tests vanish at 5 iterations and 10 improve. |
+| 7 | K13 | Direct / visco plasticity output | 7 | 1.0 | **GNU-suspect** (state output) | `visc_pl4`: the stress is 1 in both (the target). The **GNU `eppxx` = 0 and `f` = −1e10**, while the Pro stores `eppxx` 0.49998 = ε − σ/E. So the GNU output violates σ = E(ε − εp). **2026-10-06 (F1 T4): fixed, the direct cut-offs store C⁻¹(σ_trial − σ) and the direct-law f (`visc_pl4` eppxx 0.5, f 0); shear components tensor (Pro twice, BACKLOG C34); `_visco` stress path C33.** |
+| 8 | K02 | One-iteration lag of non-principal dofs | 6 | 1.0 | **GNU-suspect** | `spring4` (rigid translation `velx`=1): with 1 iteration the **GNU gives `eptxx` = `sigxx` = −0.01**, while the Pro gives 0 (exact). With 3 iterations both give 0. The post-solve sync in `top.cc` refreshes only the stress slots, and only when `stress_recovery_absolute` is on, so it misses the strain dofs and models with a strain unknown. 6 tests vanish at 5 iterations and 10 improve. **2026-10-06 (F1 T5): parked as design (BACKLOG C35): the integration-point state itself lags (GNU ip velx 0.5, eptxx -0.01; Pro ip velx 1, 0), so the fix is a post-solve material pass, not a nodal sync.** |
 | 9 | K16 | GNU extensions the Pro ignores | 12 | 1.0 | INPUT-artifact | `strain_settle`, `mfactor`, `mdirect_gate`, `transv1`, `temp4/5` (`-empty` group: the Pro does not move its nodes), `mvoid*`, `cmat_gate`. The GNU meets its own analytic targets; the Pro returns the unmodified state. |
 | 10 | K17 | Truss / beam / support divergence on Pro inputs | 6 | 1.0 | **GNU-suspect** | `trubea2/3`: `disz` **GNU 2e5** vs target 0.00333 (Pro exact). `support_edge_normal_3`: `disy` **GNU 124.75** vs 5.01e-4. `truss8`: `disx` 0.2 vs 0.1. `dynamic3`: `disx` 32.7 vs 60.4. `truss2/3/14` and `update2` also diverge (ERRDUMP) in the GNU. |
 | 11 | K04 | Pro analytic targets the GNU misses | 11 | 0.5 | **GNU-suspect** | See the list below the table. |
@@ -367,12 +367,12 @@ The priority list in section 6 re-orders by judgement.
 | 15 | K07 | Positional `node_dof` initial state over different dof layouts | 6 | 1.0 | INPUT-artifact | `mhardsoil_gp0`: the initial `-2` sits at slot 72, which is `sigxx` in the GNU but another dof in the Pro (the GNU has `sph`/`epphs*`, the Pro has `hshis`). |
 | 16 | K22 | Phreatic level: wet/dry density in the gravity stress | 2 | 1.0 | **GNU-suspect** | `ground18` (= `ground4` with `groundflow_phreatic_level_static` and no pressure dof). Analytic total `sigyy` at the bottom = −750 − 500 = −1250 (the `ground4` comment). **Pro −1247.5, GNU −1995**, which is the wet density over the whole column. With the pressure dof (`ground4`) the GNU is right. `ground8` (multiple phreatic levels): `sigyy` differs 19 %. **2026-09-29: `ground18` fixed, GNU −1247.5 = Pro (section 5.2); `ground8` unchanged (it has a pressure dof, other mechanism).** |
 | 17 | K10 | Groundflow velocity | 5 | 1.0 | PRO-suspect | `ground1`: manual v = k ∂h/∂y = 0.1·(−0.5) = −0.05. **GNU −0.05, Pro 0**, at the nodes and at the integration points. This is post-processing only. |
-| 18 | K11 | Nodal recovery of total strain | 19 | 0.12 | **GNU-suspect** | `tslv_part`: the velocities and stresses are equal to 1e-6. At the clamped edge, where v ≡ 0, the Pro gives `eptyy` = 0 (exact) and the GNU −2.35e-6; `eptxy` differs by a factor of 3. The GNU recovers the stress with the Pro operator (`06e175d`) but still recovers the strain with the old one. |
+| 18 | K11 | Nodal recovery of total strain | 19 | 0.12 | **GNU-suspect** | `tslv_part`: the velocities and stresses are equal to 1e-6. At the clamped edge, where v ≡ 0, the Pro gives `eptyy` = 0 (exact) and the GNU −2.35e-6; `eptxy` differs by a factor of 3. The GNU recovers the stress with the Pro operator (`06e175d`) but still recovers the strain with the old one. **2026-10-06 (F1 T5): fixed, the strain tensors use the stress recovery weight; `tslv_part` strains = Pro within 4e-11 (`manual-developer/nodal_strain_recovery.md`).** |
 | 19 | K18 | Refinement, higher-order and special elements | 8 | 0.27 | UNKNOWN | `disk1`, `force6`, `interface_patch`, `validation_11` (GNU fails the Pro target: 6.09e7 vs 8.59e7 ± 3e6). |
 | 20 | K23 | Round-off in zero fields | 3 | 1.0 | BOTH-plausible (false positive) | `dpoint1`: stresses 6e-8 vs 5e-14 in a rigid motion. |
-| 21 | K03 | Default `convection_apply` | 2 | 0.5 | **GNU-suspect** | `condif2`: GNU T = 1, Pro T = 0.5. With an explicit `convection_apply -yes`, **both give 1**. The GNU default is `-YES` (`general.cc:54`); the Pro manual 6.395 says the default is `-no`. |
+| 21 | K03 | Default `convection_apply` | 2 | 0.5 | **GNU-suspect** | `condif2`: GNU T = 1, Pro T = 0.5. With an explicit `convection_apply -yes`, **both give 1**. The GNU default is `-YES` (`general.cc:54`); the Pro manual 6.395 says the default is `-no`. **Resolved 2026-10-06 (F1 T2)**: default `-no`, see recommendation 6. |
 | 22 | K08 | `bounda_time_increment` tables | 2 | 1.0 | PRO-suspect | `mcap1_elast`: the Pro prescribes −1.4 on dofs whose table is all zero. The GNU follows manual 6.146. |
-| 23 | K20 | Axisymmetric hoop (zz) nodal values | 5 | 0.05 | BOTH-plausible | `axisym2` (Akin ring, analytic e_t(ID) = 9.964e-4, S_t = 10910): GNU 1.000e-3 / 10000 (element-constant), Pro 1.0498e-3 / 10498 (linear). |
+| 23 | K20 | Axisymmetric hoop (zz) nodal values | 5 | 0.05 | BOTH-plausible | `axisym2` (Akin ring, analytic e_t(ID) = 9.964e-4, S_t = 10910): GNU 1.000e-3 / 10000 (element-constant), Pro 1.0498e-3 / 10498 (linear). Moved to F4 (design + corpus A/B), user decision 2026-10-06. |
 | 24 | K24 | 3D coupled consolidation | 1 | 0.05 | UNKNOWN (high relevance) | `large2`: pore pressure differs 4.5 %, displacements 4 %. The 1D consolidation (`validation_2`) matches to 1e-11. |
 | — | K99 | Unclassified | 10 | 0.23 | UNKNOWN | `axisym2`/`axisym5`/`force17`/`relax2`/`silo1`/`slide2-4`/`strain_volume1`/`interface_bar2_hex8` |
 
@@ -381,18 +381,18 @@ and target):
 
 | test | quantity | GNU | Pro / target |
 |---|---|---|---|
-| `condif7` | T(0), 1D edge heat flux; analytic T = 10 − x | **20** (flux doubled) | 10 |
-| `force18` | `force_point` at 0.8 | **`velx` −0.8** | +0.8 |
+| `condif7` | T(0), 1D edge heat flux; analytic T = 10 − x | **20** (flux doubled) → 10 after the 2026-10-06 fix (F1 T3: the `_node` restriction now selects whole sides, `area.cc` `side_node_restriction_ok()`) | 10 |
+| `force18` | `force_point` at 0.8 | **`velx` −0.8** → +0.8 after the 2026-10-06 fix (F1 T3: the force was subtracted from `node_rhside`) | +0.8 |
 | `elasti7` | K0 = 0.1 → `sigxx` | **0** → −0.0500000000025 after the 2026-09-29 fix (§5.3) | −0.05 (Pro −0.04999999884) |
-| `tension_direct1` | `sigyy` with `…_normal_automatic` | **0.667** → 0 after the 2026-09-30 fix (new `element_normal` record; `disy` middle nodes 0.42 → 0, top 1; every variable = Pro except the nodal `eptyy` recovery 0.667 vs 0.5, K11) | 0 |
-| `mohr_coul_direct8` | `sigxy` with `plasti_bounda_factor` 0 | **1788.9** | 0 |
-| `mohr_coul_direct4` | `disx` | **0.3007** | 0.1024 |
-| `stress_pressure_factor` | `sigxx` | **−3.10** | −3.05 |
-| `incnav3` | `tvely` (`expansion_volume` effect) | **−2.49** | −5 |
-| `tet10_2` | `sigzz` | **−0.894** | −1 |
-| `ground9` | interface groundflow `pres` | **0.333** | 0.5 |
-| `axisym9` | `post_point_dof 10 -sigxx` | 0.00158902 | 0.0015915 (±1e-6) |
-| `distri2` | `post_point_dof 1 -temp` | 0.998933 | 0.999774 (±1e-4) |
+| `tension_direct1` | `sigyy` with `…_normal_automatic` | **0.667** → 0 after the 2026-09-30 fix (new `element_normal` record; `disy` middle nodes 0.42 → 0, top 1; every variable = Pro except the nodal `eptyy` recovery 0.667 vs 0.5, K11; that residual is gone since F1 T5, 2026-10-06) | 0 |
+| `mohr_coul_direct8` | `sigxy` with `plasti_bounda_factor` 0 | **1788.9** → 0 (PASS on the 2026-10-06 re-run, fixed by the C14/C16 work) | 0 |
+| `mohr_coul_direct4` | `disx` | **0.3007** (GNU = manual 6.632 strength c + |Fn| tan phi; the Pro stays elastic at t = 1 and drifts below the strength by t = 100: deliberate divergence, user decision 2026-10-06, BACKLOG C30) | 0.1024 |
+| `stress_pressure_factor` | `sigxx` | **−3.10** → −3.05 after the 2026-10-06 fix (F1 T3: factored trial pressure, strict tie, = Pro rule) | −3.05 |
+| `incnav3` | `tvely` (`expansion_volume` effect) | **−2.49** → −4.9904 after the 2026-10-06 fix (F1 T3: rho(1 − beta T) in the inertia too; sfnet copy target −2.5 stale, BACKLOG B11) | −5 |
+| `tet10_2` | `sigzz` | **−0.894** (TET10 nodal quadrature only degree 1, `polynom.cc`; needs design, moved to F4 (design + corpus A/B), BACKLOG C31) | −1 |
+| `ground9` | interface groundflow `pres` | **0.333** → 0.5 after the 2026-10-06 fix (F1 T3: interface permeability/capacity/conductivity per unit length, capacity implicit) | 0.5 |
+| `axisym9` | `post_point_dof 10 -sigxx` | 0.00158902 (uniform field; 1-point axisymmetric quad4 rule = K20, moved to F4 (design + corpus A/B), not the `post_point_dof` convention; BACKLOG C32) | 0.0015915 (±1e-6) |
+| `distri2` | `post_point_dof 1 -temp` | 0.998933 (different random generator, both valid N(1, 2e-3); not a defect, BACKLOG C32) | 0.999774 (±1e-4) |
 
 The `post_point_dof` of recovered fields follows a different convention in the
 two binaries. It accounts for part of the 20 tests whose `node_dof` agree while
@@ -608,7 +608,7 @@ showed that K0 applies without `group_materi_elasti_poisson` and to
      DONE 2026-09-29 (§5.3: the switch was read for control index 0 only)
    - `plasti_tension_direct_normal_automatic`
    - `group_materi_plasti_bounda_factor`
-   - `mohr_coul_direct4`
+   - `mohr_coul_direct4` — deliberate divergence (GNU = manual 6.632, BACKLOG C30)
    - `stress_pressure_history` switch
    - `expansion_volume`
 4. **K05, contact.**
@@ -623,13 +623,28 @@ showed that K0 applies without `group_materi_elasti_poisson` and to
 6. **K03.** Align the `convection_apply` default to `-no` (Pro manual 6.395),
    the same deliberate alignment as `inertia_apply` in `0560dcf`. Audit the
    corpus inputs that relied on the old default.
+   **Done 2026-10-06 (F1 T2):** default `-no` via `convection_apply_switch()`
+   (general.cc, one source for general/beam/truss/spring/conspr). The Pro
+   applies the switch only to MATERIAL convection wrt the mesh: the
+   `group_condif_flow` and groundflow-velocity heat transport stay on (sfnet
+   condif1/condif5 give temp 1 in the Pro with `-no`, `-yes` or absent), and
+   the GNU now does the same. condif2 now equals the Pro (0.5). Inputs that
+   relied on the old default: validation-suite `cmat_gate`, `cd_method`,
+   `materi_direct_wall` got an explicit `convection_apply -yes`; sfnet
+   `condif2/3`, `examp1`, `incnav5`, `strconv1` are BACKLOG B10.
 7. **K11 and K02, output state.**
    - Recover the strain dofs with the same operator as the stress.
+     **Done 2026-10-06 (F1 T5, `nodal_strain_recovery.md`).**
    - Extend the post-solve sync to every non-principal dof: strain, plastic
-     strain, and models with a strain unknown.
+     strain, and models with a strain unknown. **Parked 2026-10-06
+     (BACKLOG C35): the integration-point state lags too; design item,
+     scheduled for F4 (project decision 2026-10-06).**
    - Cheap, and it removes about 25 tests of noise from future audits.
 8. **K13.** Store `materi_strain_plasti` and `plasti_f` for the direct and visco
-   cut-off models.
+   cut-off models. **Done 2026-10-06 (F1 T4)**, see
+   `manual-developer/direct_plastic_strain.md`; follow-ups C33 (visco
+   time step, scheduled for F4) and C34 (shear convention, deliberate
+   divergence, project decision 2026-10-06).
 9. **K17.** Truss / beam / `support_edge_normal` divergence on the Pro inputs
    (`trubea2/3`, `truss2/3/14`, `support_edge_normal_3`).
 10. **Investigate before touching code.** These are UNKNOWN with high

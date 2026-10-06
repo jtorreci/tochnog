@@ -1,0 +1,44 @@
+(
+K11 (2026-10-06): the nodal total strain is recovered with the same
+operator as the stress (the Professional per-element least-squares fit;
+bilinear interpolation of the 2x2 Gauss values for quad4). Two quad4,
+E 1, nu 0.3, left edge clamped, right edge pulled 1e-3. On the clamped
+edge uy = 0, so eptyy(node 1) = 0 exactly; eptxy(1) 6.44824708e-5,
+eptyy(2) -2.57929883e-4 (= Professional 02-08-2026). GNU before K11
+(h-weighted average): eptyy(1) -8.59766e-5, eptxy(1) 2.14942e-5,
+eptyy(2) -2.07012e-4. The stress is unchanged.
+)
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_displacement
+materi_strain_total
+materi_stress
+end_initia
+node 1 0 0
+node 2 1 0
+node 3 2 0
+node 4 0 1
+node 5 1 1
+node 6 2 1
+element 1 -quad4 1 2 4 5
+element 2 -quad4 2 3 5 6
+group_type 0 -materi
+group_materi_elasti_young 0 1.
+group_materi_elasti_poisson 0 0.3
+group_materi_memory 0 -total_linear
+bounda_dof 0 -ra 1 4 -ra -velx -vely
+bounda_time 0 0 0 1 0
+bounda_dof 1 -ra 3 6 -ra -velx
+bounda_time 1 0 0 1 1.e-3
+control_timestep 0 1 1
+
+target_item 0 -node_dof 1 -eptyy
+target_value 0 0. 1.e-12
+target_item 1 -node_dof 1 -eptxy
+target_value 1 6.44824708e-05 1.e-12
+target_item 2 -node_dof 2 -eptyy
+target_value 2 -2.57929883e-04 1.e-12
+target_item 3 -node_dof 1 -sigxx
+target_value 3 6.42737896e-04 1.e-12
+end_data

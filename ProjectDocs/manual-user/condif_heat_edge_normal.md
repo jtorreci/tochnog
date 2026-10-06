@@ -17,7 +17,8 @@ Restriction variants (same index):
 - `condif_heat_edge_normal_element_group` — restrict to elements of the
   listed element groups.
 - `condif_heat_edge_normal_element_side` — pairs element/side.
-- `condif_heat_edge_normal_node` — apply only on the listed global nodes.
+- `condif_heat_edge_normal_node` — apply only on the sides whose nodes are
+  ALL listed (global node numbers; see `edge_node_restriction.md`).
 - `condif_heat_edge_normal_element_node` — element + local node numbers.
 - `condif_heat_edge_normal_element_node_factor` — per-local-node factors
   (first value = element number).

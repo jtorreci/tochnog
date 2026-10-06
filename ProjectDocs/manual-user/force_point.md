@@ -28,7 +28,7 @@ force_point 0 x y fx fy
 |-----------|---------------------------------------------------------------------------|
 | `0`       | Index of the point force record.                                          |
 | `x y z`   | Coordinates of the point (ndim values: 2 in 2D, 3 in 3D).                 |
-| `fx fy fz` | Force components, one per degree of freedom. A zero component is skipped. |
+| `fx fy fz` | Force components (ndim values), external load along +x/+y/+z: a positive `fx` pushes the point towards +x. |
 
 The point must lie inside some element of the mesh, otherwise the run stops
 with an error.
@@ -57,3 +57,17 @@ materi_velocity
 force_point
    0 1.0 0.5 100. 0.
 ```
+
+## Sign (fixed 2026-10-06, audit K04 `force18`)
+
+Before 2026-10-06 the GNU applied the force with the opposite sign (a
+positive `fx` moved the point towards −x). Now the force is an external
+load along its components, as the Professional (manual 6.501). Pro test
+`force18` (1D bar, force 1 at x = 0.8, node 1 fixed): node 2 `velx`
++0.8. Test `validation-suite/test-2026/force_point_sign1.dat`.
+
+## Differences with the Professional version
+
+The point is located iteratively (`point_el`, tolerance 1e-6), so the
+nodal shares can differ from the exact shape-function values by ~1e-7
+(`force_point_sign1`: disx 1.999999902 vs Pro 2).
