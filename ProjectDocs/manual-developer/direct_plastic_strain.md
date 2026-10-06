@@ -21,8 +21,11 @@
   `materi_direct_cutoff()` was restructured (no early returns) so the
   tension and MC-plane values are evaluated after both steps.
 - `materi.cc` stores `inc_epp` / `new_f` exactly as for the incremental
-  laws (no change): the nodal `eppxx` / `f` are the recovered element
-  values.
+  laws: the nodal `eppxx` / `f` are the recovered element values. Follow-up
+  (same day): the `f` block writes 0 instead of `NO_YIELD_F` (-1e10) for
+  an element without any yield law (Professional `tension_direct1` +
+  `materi_plasti_f`: f 0 at every node; GNU before -1e10 / -3.3e9 at the
+  shared nodes); test `test-2026/plasti_f_no_law1` RED/GREEN.
 
 ## Verification (Professional 02-08-2026, single quad4 probes, E 1, nu 0.25)
 

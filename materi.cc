@@ -1192,7 +1192,12 @@ void materi( long int element, long int gr, long int name, long int nnol,
       if ( materi_plasti_f ) {
         ipuknwn = f_indx/nder;
         indx = inol*npuknwn + ipuknwn;
-        tmp = volume * h[inol] * ( new_f - old_f ) / dtime;
+        // an element without a yield law reports f = 0, not the internal
+        // NO_YIELD_F = -1e10 (K13 follow-up, measured on the Professional
+        // 02-08-2026: tension_direct1 with materi_plasti_f gives f 0 at
+        // the nodes of the elastic element; the GNU averaged -1e10 in)
+        tmp = volume * h[inol] *
+          ( ( new_f==NO_YIELD_F ? 0. : new_f ) - old_f ) / dtime;
         element_rhside[indx] += tmp;
       }
 

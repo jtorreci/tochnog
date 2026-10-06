@@ -23,6 +23,11 @@ Professional does:
 Before, the GNU left `eppxx` = 0 and `f` = -1e10 (the "no yield law"
 value), so the output violated sigma = E (eps - eps_p).
 
+An element WITHOUT any yield law (elastic group in a model that declares
+`materi_plasti_f`) reports `f` = 0, as the Professional; before, the GNU
+wrote -1e10 there and averaged it into the nodes shared with plastic
+elements (-3.3e9). Test `validation-suite/test-2026/plasti_f_no_law1.dat`.
+
 ## Why it is useful
 
 Plastic-strain contour plots, plastic-zone detection (`f` = 0) and

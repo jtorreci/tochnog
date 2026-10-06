@@ -1445,6 +1445,13 @@ run_ok "$T2026" direct_plastic_strain_mc1
 run_ok "$T2026" direct_yield_value1
 
 # ---------------------------------------------------------------------
+# K13 follow-up (2026-10-06): an element without a yield law reports
+# materi_plasti_f 0 (Pro), not -1e10 (plasti_f_no_law1, from Pro
+# tension_direct1).
+# ---------------------------------------------------------------------
+run_ok "$T2026" plasti_f_no_law1
+
+# ---------------------------------------------------------------------
 # Sub-sprint materi_stress_force, lote 2 (integracion 2D quad4/quad9):
 # verificacion ANALITICA por estatica. Decisiones de diseno (manual-
 # developer/post_calcul_materi_stress_force.md): caras extremas = las
