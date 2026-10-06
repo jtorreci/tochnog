@@ -394,6 +394,7 @@ input parameters it accepts.
 - [group_truss_expansion](group_truss_expansion.md) — thermal expansion of trusses (manual 6.775): the mechanical stretch subtracts the free thermal increment alpha*dT*L0. Unlocks truss11 (force -2 EXACT) and truss15 rc=0.
 - [group_truss_initial_force](group_truss_initial_force.md) — pre-tension of truss elements from the moment they come to life (manual 6.776); no initial strain. Unlocks truss12 rc=0.
 - [group_truss_memory](group_truss_memory.md) — truss kinematics: -updated / -total (geometrically nonlinear; -total = Pro truss14, N = EA (L-L0)/L0) / -updated_linear / -total_linear; tension geometric stiffness in the matrix (K17, 2026-10-06).
+- [group_time](group_time.md) — element group birth/death times; since 2026-10-06 (C39, Pro truss8) a node whose elements are all inactive is not driven by its bounda_dof and stays at rest.
 - [post_calcul_k0](post_calcul_k0.md) — post_calcul -materi_stress -k0 (manual 6.901): ratio horizontal/vertical stress; output item -k0_sig. Unlocks k0 rc=0.
 - [element_dof_initial](element_dof_initial.md) — past dofs of an element at its birth step (manual 6.422); the transient inertia integrates from them. Unlocks phase1 rc=0.
 - [geometry_node_type](geometry_node_type.md) — per-geometry override of the coordinates used to check nodes on the geometry (6.540: -node/-node_start_refined/-plus_displacement).

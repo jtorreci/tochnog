@@ -1203,7 +1203,16 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
   driven by a constant velocity 0.1 from t = 0. Node 2 disx 0.1 in both
   (target); node 1 disx GNU 0.2, Professional 0.1: the Professional does
   not move a node that has no active element (manual 6.769 is silent).
-  BOTH-plausible; a decision on free nodes is needed before any change.
+  **RESOLVED 2026-10-06** (project decision: follow the Professional;
+  F2 T2c, hash in `odd/tasks/f2-medium-bugs.md`): `bounda.cc`
+  `bounda_node_dormant()` skips `bounda_dof`/`bounda_unknown` on a node
+  whose elements are all inactive by `group_time`; truss8 node 1 disx
+  0.1 = Pro at every step; test `group_time_bounda_dormant1`. **Still
+  open (LOW)**: after the DEATH of a group the Professional brings its
+  nodes to rest (velocity 0, also the free ones; probe `group_time 0 0.
+  1.`), the GNU keeps their old velocity (no equation); and only
+  `group_time` makes a node dormant (mesh_activate_gravity method 1 and
+  mesh_delete not measured).
 - **`dynamic3`** (Pro `other`): implicit truss dynamics without
   `materi_dynamic`; the target node passes, node 2 disx GNU 32.66 vs Pro
   60.44. Same gap as C11 ("plain implicit truss case"); tracked there.
@@ -1272,7 +1281,7 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
 | C36 | validation-suite | `young_power` + `young`: Pro adds both stiffnesses, manual says law = modulus (K06) — decided 2026-10-06: deliberate divergence (GNU = manual), no code change | LOW | cheap |
 | C37 | Pro `other` | planar GNU beam vs Pro 3D frame beam (`trubea2/3`, K17) — parked, design | MEDIUM | large |
 | C38 | Pro `other` | `control_support_edge_normal_stiffness_freeze` parse-only (support_edge_normal_3, 1e-9 effect) | LOW | cheap/medium |
-| C39 | Pro `other` | K17 residuals: `truss8` inactive-element node (both plausible), `update2` -updated robustness, `truss13` truss_distribute_mpc, zero-force truss first iteration | LOW | cheap/large |
+| C39 | Pro `other` | K17 residuals: `truss8` birth node resolved 2026-10-06 (death velocity reset open), `update2` -updated robustness, `truss13` truss_distribute_mpc, zero-force truss first iteration | LOW | cheap/large |
 
 Forty-one items remain open: twelve MEDIUM and twenty-nine LOW (C23 and C24 resolved 2026-10-05; C25, C26, C27 and B10 added; F1 T3 / K04 2026-10-06 added B11, C28-C32; F1 T6 resolved C28, added and resolved B12; F2 T1 added C36; F2 T2 added C37, C38, C39). No open issue is CRITICAL or
 HIGH. The validation-suite corpus has no open failure — its 233 real tests

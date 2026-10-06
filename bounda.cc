@@ -28,6 +28,54 @@
 #define EPS_VELN_ZERO 1.e-12
 
 // ---------------------------------------------------------------------------
+// group_time (manual 6.769 is silent here; measured on the Professional
+// 02-08-2026 with Pro test/other/truss8 and birth/death probes): a node
+// whose elements are ALL inactive at time_total (group not yet born or
+// already dead) is not driven by bounda_dof/bounda_unknown; it stays at
+// rest like any node without stiffness. Returns NULL when no group_time
+// record exists (nothing to do), else an array [0..max_node] with 1 for
+// a dormant node. Nodes that belong to no element at all are NOT marked
+// (old behaviour kept; the Professional refuses such a model).
+// ---------------------------------------------------------------------------
+static long int *bounda_node_dormant( long int max_node, double time_total )
+{
+  long int max_group_time=-1, max_element=-1, element=0, element_group=0,
+    length=0, inol=0, inod=0, alive=0, ldum=0, *el=NULL, *has_element=NULL,
+    *dormant=NULL;
+  double ddum[1];
+
+  db_max_index( GROUP_TIME, max_group_time, VERSION_NORMAL, GET );
+  if ( max_group_time<0 ) return NULL;
+  db_max_index( ELEMENT, max_element, VERSION_NORMAL, GET );
+  if ( max_element<0 ) return NULL;
+
+  has_element = get_new_int( 1+max_node );
+  dormant = get_new_int( 1+max_node );
+  array_set( has_element, 0, 1+max_node );
+  array_set( dormant, 1, 1+max_node );
+  for ( element=0; element<=max_element; element++ ) {
+    if ( !db_active_index( ELEMENT, element, VERSION_NORMAL ) ) continue;
+    element_group = 0;
+    db( ELEMENT_GROUP, element, &element_group, ddum, ldum,
+      VERSION_NORMAL, GET_IF_EXISTS );
+    alive = group_time_alive( element_group, time_total );
+    length = db_len( ELEMENT, element, VERSION_NORMAL );
+    el = db_int( ELEMENT, element, VERSION_NORMAL );
+    for ( inol=1; inol<length; inol++ ) {
+      inod = el[inol];
+      if ( inod<0 || inod>max_node ) continue;
+      has_element[inod] = 1;
+      if ( alive ) dormant[inod] = 0;
+    }
+  }
+  for ( inod=0; inod<=max_node; inod++ )
+    if ( !has_element[inod] ) dormant[inod] = 0;
+  delete[] has_element;
+
+  return dormant;
+}
+
+// ---------------------------------------------------------------------------
 // bounda_dof/bounda_unknown ... -veln (manual Professional 6.22):
 // prescribe that nodes do not move in the direction NORMAL to a plane
 // (zero normal velocity). Internally Tochnog generates mpc records to
@@ -209,7 +257,7 @@ void bounda( )
     use_range=0, use_all=0, use_node_set=0, ifreq=0, nfreq=0, indx=0, max_node=0,
     bounda_time_file=0, length_bounda_time=0, ldum=0, idum[1], 
     *val=NULL, *integer_range=NULL, 
-    *dof_label=NULL, *dof_type=NULL, *node_bounded=NULL;
+    *dof_label=NULL, *dof_type=NULL, *node_bounded=NULL, *node_dormant=NULL;
   double load=0., time0=0., time1=0., load0=0., load1=0., factor=0.,
     time_current=0., time_total=0., dtime=0., amplitude=0., frequency=0.,
     time_start=0., time_end=0., radius=0., angle_start=0., on_time=0., off_time=0.,
@@ -263,6 +311,7 @@ void bounda( )
     VERSION_NORMAL, GET_IF_EXISTS );
   time_total = time_current + dtime;
   if ( swit ) pri( "time_total", time_total );
+  node_dormant = bounda_node_dormant( max_node, time_total );
   db( NUMBER_ITERATIONS, 0, &iteration, ddum, ldum, VERSION_NEW, GET_IF_EXISTS );
 
   if ( max_bounda_unknown>max_bounda ) max_bounda = max_bounda_unknown;
@@ -691,7 +740,8 @@ void bounda( )
               found = 1;
             }
             if ( found ) {
-              if ( db_active_index( NODE, inod, VERSION_NORMAL ) ) {
+              if ( db_active_index( NODE, inod, VERSION_NORMAL ) &&
+                   !( unknown && node_dormant!=NULL && node_dormant[inod] ) ) {
                 swit_node = swit;
                 swit = set_swit(-1,inod,"bounda");
                 if ( swit ) pri( "inod", inod );
@@ -1206,6 +1256,7 @@ void bounda( )
   }
 
   delete[] nodes_in_geometry;
+  if ( node_dormant!=NULL ) delete[] node_dormant;
 
   end_of_bounda:
 

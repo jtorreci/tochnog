@@ -1499,6 +1499,13 @@ run_ok "$T2026" truss_total_rotation1
 run_ok "$T2026" truss_updated_transverse1
 
 # ---------------------------------------------------------------------
+# C39 truss8 (2026-10-06): a node whose elements are all inactive by
+# group_time is not driven by its bounda_dof (bounda.cc
+# bounda_node_dormant). Node 1 disx 0.1 (= Pro truss8); before 0.2.
+# ---------------------------------------------------------------------
+run_ok "$T2026" group_time_bounda_dormant1
+
+# ---------------------------------------------------------------------
 # Sub-sprint materi_stress_force, lote 2 (integracion 2D quad4/quad9):
 # verificacion ANALITICA por estatica. Decisiones de diseno (manual-
 # developer/post_calcul_materi_stress_force.md): caras extremas = las

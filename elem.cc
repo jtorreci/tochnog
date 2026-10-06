@@ -161,12 +161,12 @@ void elem( long int element, long int ithread )
   double dtime=0., volfac=0., volumeip=0., tmp=0., tmp1=0., tmp2=0.,
     element_delete_factor=0., dens=0., vel=0., materi_dens=0.,
     materi_density_minimum=0., materi_diffusion_minimum=0.,
-    element_mass=0., res=0., radius=0., birth=0., death=0.,
+    element_mass=0., res=0., radius=0.,
     control_relaxation_materi_velocity=0., control_relaxation_condif_temperature=0.,
     control_relaxation_groundflow_pressure=0., control_relaxation_wave_fscalar=0.,
     control_relaxation_maxwell_e=0., element_strainenergy=0.,
     element_volume=0., time_current=0., time_total=0., disp_primary_factor=1.,
-    ddum[1], group_time[2], *coord=NULL, *new_coord=NULL, *ref_coord=NULL,
+    ddum[1], *coord=NULL, *new_coord=NULL, *ref_coord=NULL,
     *h=NULL, *coord_ip=NULL, *old_dof=NULL, *new_dof=NULL, 
     *old_unknowns=NULL, *new_unknowns=NULL, 
     *old_grad_old_unknowns=NULL, *old_grad_new_unknowns=NULL, 
@@ -207,18 +207,10 @@ void elem( long int element, long int ithread )
 
   db( DTIME, 0, idum, &dtime, ldum, VERSION_NEW, GET );
 
-  if ( db( GROUP_TIME, element_group, idum, group_time, ldum, 
-      VERSION_NORMAL, GET_IF_EXISTS ) ) {
-    birth = group_time[0];
-    death = group_time[1];
+  if ( db_active_index( GROUP_TIME, element_group, VERSION_NORMAL ) ) {
     db( TIME_CURRENT, 0, idum, &time_current, ldum, VERSION_NORMAL, GET_IF_EXISTS );
     time_total = time_current + dtime;
-    if      ( time_total==0. && birth==0. ) 
-      ;
-    else if ( time_total>birth && time_total<=death ) 
-      ;
-    else
-      return;
+    if ( !group_time_alive( element_group, time_total ) ) return;
   }
 
   swit = set_swit(element,-1,"elem");
