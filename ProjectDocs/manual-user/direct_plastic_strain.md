@@ -60,7 +60,8 @@ visco): eppxx 0.5 = eps - sigma/E.
 
 ## Differences with the Professional version
 
-- **Shear components (deliberate).** The Professional writes the shear
+- **Shear components (deliberate divergence, project decision
+  2026-10-06, BACKLOG C34).** The Professional writes the shear
   plastic strain of a direct cut as `dsig_xy / G`, twice the tensor
   value, although its own total and incremental-law plastic strains are
   tensor components (von Mises shear: both binaries store the tensor
@@ -70,5 +71,5 @@ visco): eppxx 0.5 = eps - sigma/E.
   4.08229785e-3; every normal component and `f` are equal.
 - **Visco stress path.** With `_visco` the GNU cut differs from the
   Professional (BACKLOG C33: the relaxation factor uses the previous
-  time step, and the principal tension cap ignores `_visco`); the stored
-  plastic strain follows each binary's own stress.
+  time step, and the principal tension cap ignores `_visco`; scheduled
+  for F4); the stored plastic strain follows each binary's own stress.

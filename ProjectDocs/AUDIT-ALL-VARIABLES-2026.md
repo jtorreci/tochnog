@@ -637,12 +637,14 @@ showed that K0 applies without `group_materi_elasti_poisson` and to
      **Done 2026-10-06 (F1 T5, `nodal_strain_recovery.md`).**
    - Extend the post-solve sync to every non-principal dof: strain, plastic
      strain, and models with a strain unknown. **Parked 2026-10-06
-     (BACKLOG C35): the integration-point state lags too; design item.**
+     (BACKLOG C35): the integration-point state lags too; design item,
+     scheduled for F4 (project decision 2026-10-06).**
    - Cheap, and it removes about 25 tests of noise from future audits.
 8. **K13.** Store `materi_strain_plasti` and `plasti_f` for the direct and visco
    cut-off models. **Done 2026-10-06 (F1 T4)**, see
    `manual-developer/direct_plastic_strain.md`; follow-ups C33 (visco
-   time step) and C34 (shear convention).
+   time step, scheduled for F4) and C34 (shear convention, deliberate
+   divergence, project decision 2026-10-06).
 9. **K17.** Truss / beam / `support_edge_normal` divergence on the Pro inputs
    (`trubea2/3`, `truss2/3/14`, `support_edge_normal_3`).
 10. **Investigate before touching code.** These are UNKNOWN with high

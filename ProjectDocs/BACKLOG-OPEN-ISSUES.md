@@ -1076,6 +1076,9 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
 - **Proposed fix**: `VERSION_NEW` in `set_stress()` (also used by the
   incremental viscoplastic laws: `lambda*dtime`, needs its own corpus
   A/B) and the visco factor on the principal cap.
+- **Decision** (project owner, 2026-10-06): scheduled for **F4** (the
+  `VERSION_NEW` change also touches the incremental viscoplastic laws and
+  needs a corpus A/B); not part of F1.
 - **Severity**: **MEDIUM** (`_visco` direct laws relax with the wrong
   time step). **Effort**: **cheap/medium**.
 
@@ -1090,12 +1093,17 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
   incremental-law plastic strain (von Mises shear probe: eppxy
   2.27831e-3 in both) are tensor components, and its epexy = eptxy -
   eppxy then violates sigma_xy = 2G epe_xy.
-- **Decision**: the GNU keeps sigma = C (eps - eps_p) (tensor
-  convention); documented in `direct_plastic_strain.md`. Pending owner
-  confirmation.
+- **Decision** (project owner, 2026-10-06): **deliberate divergence**.
+  The Professional writes the shear plastic strain of a direct cut as
+  dsig / G (twice the tensor component) while its total strain uses
+  tensor components; the GNU keeps the tensor value so that
+  sigma = C (eps - eps_p) holds. Documented in "Differences with the
+  Professional version" of `direct_plastic_strain.md` (user and
+  developer manuals) and in the SEGUIMIENTO "Descarte de features"
+  table.
 - **Severity**: **LOW** (output only). **Effort**: —.
 
-### C35. One-equilibrium-iteration lag of the whole material state (audit K02) — PARKED, design
+### C35. One-equilibrium-iteration lag of the whole material state (audit K02) — PARKED, design, scheduled for F4
 
 - **Symptom** (F1 T5, Professional 02-08-2026, sfnet `spring4` converted:
   rigid translation velx 1, `materi_strain_total`, one equilibrium
@@ -1115,6 +1123,8 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
   the iteration scheme for every model with few iterations; needs a
   design decision and a full corpus A/B (the audit counted 6 tests that
   vanish at 5 iterations and 10 that improve).
+- **Decision** (project owner, 2026-10-06): scheduled for **F4** (design +
+  full corpus A/B); not part of F1.
 - **Severity**: **MEDIUM** (one-iteration models report a lagged state).
   **Effort**: **medium/large**.
 ---
@@ -1160,9 +1170,9 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
 | C30 | Pro `other` | `mohr_coul_direct4`: Pro does not enforce the interface MC strength (deliberate divergence, GNU = manual 6.632) | LOW | — |
 | C31 | Pro `other` | `tet10` nodal quadrature only degree 1 (`tet10_2` gravity); F4 (design + corpus A/B) | MEDIUM | medium |
 | C32 | Pro `other` | `axisym9` (K20 1-point axisymmetric rule, F4), `distri2` (random generator): not GNU defects | LOW | — |
-| C33 | — | `_visco` direct cut-offs: `DTIME` from the previous step, no visco on the principal tension cap | MEDIUM | cheap/medium |
+| C33 | — | `_visco` direct cut-offs: `DTIME` from the previous step, no visco on the principal tension cap; F4 | MEDIUM | cheap/medium |
 | C34 | — | direct cut shear plastic strain: Pro twice the tensor value (deliberate divergence) | LOW | — |
-| C35 | — | one-iteration lag of the whole material state (K02, `spring4` 1 iteration) — parked, design | MEDIUM | medium/large |
+| C35 | — | one-iteration lag of the whole material state (K02, `spring4` 1 iteration) — parked, design; F4 | MEDIUM | medium/large |
 
 Thirty-seven items remain open: eleven MEDIUM and twenty-six LOW (C23 and C24 resolved 2026-10-05; C25, C26, C27 and B10 added; F1 T3 / K04 2026-10-06 added B11, C28-C32; F1 T6 resolved C28, added and resolved B12). No open issue is CRITICAL or
 HIGH. The validation-suite corpus has no open failure — its 233 real tests

@@ -50,12 +50,15 @@ convention).
 ## Hardcoded / pending
 
 - Shear components: tensor convention (Professional: twice) — deliberate
-  divergence, see the user page.
+  divergence (project decision 2026-10-06, BACKLOG C34): the Professional
+  writes `dsig_xy / G` while its total strain uses tensor components; the
+  GNU keeps the tensor value so sigma = C (eps - eps_p) holds. See the
+  user page, section "Differences with the Professional version".
 - C33 (BACKLOG): `set_stress()` reads `DTIME` from `VERSION_NORMAL` (the
   previous step: the first step of a `_visco` direct law does not cut,
   later steps use the old dt) and the principal tension cap
   (`direct_cap_principal_values`) ignores `_visco`; not changed here
-  (stress path, own A/B).
+  (stress path, own A/B); scheduled for F4 (project decision 2026-10-06).
 - With formulation TOTAL (`-total` memory without `materi_strain_total`)
   the stored plastic strain now enters `new_epe` of the next step, so a
   `_visco` direct cut persists instead of being re-derived from the
