@@ -1208,6 +1208,9 @@ void iteration_start( void )
     // element_normal (6.445): generated here, outside the parallel
     // element loop, when a group needs it and the record is absent
   element_normal_set();
+    // node_boundary for the element-target contact (6.105/6.875):
+    // generated here, outside the parallel contact loop
+  contact_node_boundary_set();
 }
 
 // control_print_frequency gate (manual Professional 6.291/6.292).

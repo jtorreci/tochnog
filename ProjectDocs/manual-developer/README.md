@@ -39,6 +39,7 @@ Each file corresponds to the same feature in the [User Manual](../manual-user/).
 - [strain_settlement_parameters](strain_settlement_parameters.md) — settlement creep strain (materi.cc).
 - [contact_apply](contact_apply.md) — contact algorithm records (contact.cc).
 - [contact_target_geometry](contact_target_geometry.md) — read-only dual lookup `contact_geometry_get()` in contact.cc (no alias PUT in the parallel loop; every index; K05/C5).
+- [contact_target_element_group](contact_target_element_group.md) — `area.cc` `contact_node_boundary_set()` from `iteration_start()` (node_boundary of unshared sides; K05).
 - [control_print_history_factor](control_print_history_factor.md) — multiply history output.
 - [control_print_history_smooth](control_print_history_smooth.md) — moving-average smoothing of history output.
 - [control_print_dof](control_print_dof.md) — print primary dofs with coordinates to plain ASCII files.

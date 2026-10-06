@@ -1,0 +1,67 @@
+(
+K05 (2026-10-07): element-target contact in 2D (contact_target_element_group,
+manual Professional 6.105). The target is a 3 x 2 block of quad4
+(group 2); the generated node_boundary holds every node except the two
+interior ones (6, 7), as the Professional. A quad4 contacter (group 1)
+with its lower nodes 13, 14 at y = 1.99 moves down at vely -0.03 into
+the top side of the middle target element: the penalty exchanges
+momentum with the side nodes 10, 11: after one step vely = -0.01 (13, 14)
+and -0.02 (10, 11) (Professional 02-08-2026 the same).
+GNU before: no node_boundary, no contact (vely -0.03 / 0).
+)
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+end_initia
+mesh -follow_material -follow_material
+timestep_predict_velocity -yes
+node 1  0. 0.
+node 2  1. 0.
+node 3  2. 0.
+node 4  3. 0.
+node 5  0. 1.
+node 6  1. 1.
+node 7  2. 1.
+node 8  3. 1.
+node 9  0. 2.
+node 10  1. 2.
+node 11  2. 2.
+node 12  3. 2.
+node 13  1.25 1.99
+node 14  1.75 1.99
+node 15  1.25 2.5
+node 16  1.75 2.5
+element 1  -quad4 1 2 5 6
+element_group 1  2
+element 2  -quad4 2 3 6 7
+element_group 2  2
+element 3  -quad4 3 4 7 8
+element_group 3  2
+element 4  -quad4 5 6 9 10
+element_group 4  2
+element 5  -quad4 6 7 10 11
+element_group 5  2
+element 6  -quad4 7 8 11 12
+element_group 6  2
+element 7  -quad4 13 14 15 16
+element_group 7  1
+group_type 1  -materi
+group_materi_density 1  1.e6
+group_type 2  -materi
+group_materi_density 2  1.e6
+node_dof 13  0. -0.03
+node_dof 14  0. -0.03
+contact_target_element_group  2
+contact_penalty_velocity  1.e10
+control_timestep   10  1. 1.
+target_item  1  -node_dof 13 -vely
+target_value 1  -0.01 1.e-6
+target_item  2  -node_dof 14 -vely
+target_value 2  -0.01 1.e-6
+target_item  3  -node_dof 10 -vely
+target_value 3  -0.02 1.e-6
+target_item  4  -node_dof 11 -vely
+target_value 4  -0.02 1.e-6
+target_item  5  -node_dof 7 -vely
+target_value 5  0. 1.e-6
+end_data

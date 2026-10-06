@@ -1807,6 +1807,7 @@ long int  group_time_alive( long int element_group, double time_total );
 void      area_element_group_sequence( );
 void      area_node_dataitem( void );
 void      element_normal_set( void );
+void      contact_node_boundary_set( void );
 long int  element_normal_needed( void );
 long int  element_normal_automatic( long int gr );
 void      direct_normal_get( long int element, long int gr,

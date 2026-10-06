@@ -13,9 +13,9 @@ verified against the Professional 02-08-2026 or an analytic value.
   - [x] T2b `truss14` / `truss2/3`: truss `-total` linear + no geometric stiffness (truss.cc) — `40567ff`.
   - [x] T2d `truss8` (C39): owner decision 2026-10-06 follow the Pro; nodes whose elements are all inactive by group_time are not driven by bounda_dof (bounda.cc) — `4ceed88`.
   - [ ] T2c PARKED: `trubea2/3` planar GNU beam vs Pro 3D beam (design, BACKLOG C37); `truss8` death-velocity reset (C39 residual), `update2` (not a truss, -updated robustness), `truss13` (truss_distribute_mpc not implemented), zero-force first iteration (C12) → C39; `dynamic3` → C11; support `_stiffness_freeze` → C38.
-- [ ] T3 K05 + C5: contact (`contac1` no interaction, GNU node 2 velx 0.03 vs Pro 0.02/0.01; `validation_10` sigyy ≈0 vs −21031; `contact_target_geometry` alias aborts "Data is allocated in a parallel loop" in 6 runs and drops an index-0 contact in examp9).
-  - [x] T3a `contact_target_geometry`/`_switch` alias: db PUT inside the parallel contact loop (index 0 abort) + index > 0 dropped (contact.cc) — commit `fix(contact)` T3a (hash recorded below).
-  - [ ] T3b element-target contact (`contact_target_element_group`) without node_boundary: no mesh boundary generated → no interaction (`contac1/4`, `axisym3`).
+- [x] T3 K05 + C5: contact (`contac1` no interaction, GNU node 2 velx 0.03 vs Pro 0.02/0.01; `validation_10` sigyy ≈0 vs −21031; `contact_target_geometry` alias aborts "Data is allocated in a parallel loop" in 6 runs and drops an index-0 contact in examp9).
+  - [x] T3a `contact_target_geometry`/`_switch` alias: db PUT inside the parallel contact loop (index 0 abort) + index > 0 dropped (contact.cc) — `3cef926`.
+  - [x] T3b element-target contact (`contact_target_element_group`) without node_boundary: no mesh boundary generated → no interaction (`contac1/4`, `axisym3`) (area.cc + top.cc) — commit `fix(contact)` T3b (hash in the next chore commit). Residuals → BACKLOG C40.
 
 ## Rules
 Principle: manual/analytic decides; Pro is the oracle when the manual is
@@ -145,4 +145,28 @@ docs + SEGUIMIENTO + AUDIT/BACKLOG. Time-box ~1.5 h per root cause.
   this run was concurrent). dbs identical except those two (filtering
   time stamps and the pre-existing uninitialized `node_node` /
   `element_interface_intpnt_materi_tension_status` garbage).
+- T3a commit `3cef926`.
+- T3b root cause: `contact.cc` `parallel_contact()` loops element targets
+  only when `db_max_index(NODE_BOUNDARY) >= 0` and uses a side only when
+  its nodes are node_boundary; the GNU generates node_boundary only in
+  macro/adjust/delete (or by hand in GNU 2014 inputs), the Professional
+  computes it in every run. Fix: `area.cc` `contact_node_boundary_set()`
+  (nodes of unshared sides, `element_normal_sides` table) called from
+  `top.cc` `iteration_start()`, only with `contact_target_element_group`
+  and no node_boundary record. node_boundary sets = Pro (contac1 1,2,3,5;
+  2D 3x2 quad4 block all but the 2 interior nodes). contac1 velx
+  0.02/0.01 = Pro (before 0.03/0); contac4 = Pro exactly; axisym3 velx
+  -9.99981e-4 = Pro. Tests `contact_element_target_boundary1` (1D) and
+  `_boundary2d1` (2D) RED rc 1 old / GREEN rc 0 new; Pro passes both.
+  build_safe check-only (RC2 binary): 226/226 runs, 131 OK / 0 FALLO,
+  rc 0. Corpus A/B (same runner, old = T3a build): validation-suite
+  233/10 → 233/10; test-2026 69/2 → 74/2 (the 5 new T3 tests); sfnet
+  181/16 → 181/16 (examp14 124 → 1 = load noise, stale target B2);
+  Pro `other` 235/95 → 242/88: `axisym3`, `contac1`, `contac4` rc 1 → 0,
+  plus `dynamic5`, `large1`, `large3`, `taylor3` 124 → 0 (timeouts of
+  the concurrent old run; this run was alone). dbs identical except the
+  three contact inputs. Net vs the F2 baseline (Pro other 237/93): +5
+  (contac1/2/4, axisym3, pressed_rubber_cylinder), no regression.
+- Not done (BACKLOG C40): Pro error for single-layer targets, hex8 sides
+  (`number_of_side_boundary_nodes==ndim`), element_boundary record.
 

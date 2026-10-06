@@ -536,7 +536,8 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
   index, GNU name wins on the same index); no record is created. Tests
   `contact_target_geometry_index1/_index0/_switch1`; validation_10 sigyy
   -21232 (Pro -21031). Element-target contact (`contact_target_element_group`)
-  had a second, separate root cause (no mesh boundary): see C5b.
+  had a second, separate root cause (no mesh boundary): fixed in F2 T3b,
+  residuals in C40.
 
 ### C6. `iface_gen*` — reconstructed inputs do not exercise interface generation
 
@@ -1240,6 +1241,29 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
   (C12), then converges (Pro `truss2/3/14` equal after F2 T2).
 - **Severity**: **LOW**. **Effort**: **cheap** (truss8 decision) to
   **large** (update2).
+
+### C40. Element-target contact residuals (audit K05, after F2 T3b)
+
+- **Fixed in F2 T3b (2026-10-07)**: with `contact_target_element_group`
+  (manual 6.105) the target sides need `node_boundary` (6.875); the GNU
+  never generated it (only `control_mesh_macro`, `adjust`, `delete` and
+  hand-written input did), so the Professional inputs `contac1`, `contac4`
+  and `axisym3` had no contact. `area.cc` `contact_node_boundary_set()`
+  now generates it (nodes of unshared sides) when the group record is
+  given and no node_boundary exists; contac1/contac4 = Pro exactly,
+  axisym3 velx -9.99981e-4 (= Pro), 2D quad4 probe = Pro.
+- **Open**: (1) the Professional refuses a target element whose nodes are
+  all on the mesh boundary ("Error, a target element has all nodes on the
+  boundary of the mesh", manual 6.105 "more than 1 layer"); the GNU runs
+  it and gives a non-physical result (single-column probe: the far nodes
+  move). (2) `parallel_contact` accepts a target side when
+  `number_of_side_boundary_nodes==ndim`: a hex8 side has 4 nodes, so hex8
+  targets are never detected (code reading, not measured on the Pro). (3) The
+  Professional writes `node_boundary`/`element_boundary` in every run
+  (also without `mesh_boundary`, against its manual 6.815 default -no);
+  the GNU generates node_boundary only for element-target contact and has
+  no `element_boundary` record.
+- **Severity**: **LOW**. **Effort**: **cheap** (1, 2) to **medium** (3).
 ---
 
 ## D. Summary
@@ -1260,7 +1284,7 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
 | C1 | sfnet | `pruebavel` dead/malformed | LOW | cheap |
 | C2 | validation-suite | `groundflow_interface` `gvelx` sign | LOW | medium |
 | C3 | sfnet | `gforce10` 3D section sign | MEDIUM | medium |
-| C5 | — | `contact_target_geometry` index-0 alias | MEDIUM | medium |
+| C5 | — | `contact_target_geometry` index-0 alias — resolved 2026-10-07 (F2 T3a) | MEDIUM | medium |
 | C6 | validation-suite | `iface_gen*` generation-coverage gap | MEDIUM | cheap |
 | C7 | — | Mazars gamma with shear; damage + early plasticity path | MEDIUM | medium |
 | C8 | — | default `mesh` `-follow_material` vs Pro `-fixed_in_space` | MEDIUM | large |
@@ -1290,8 +1314,9 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
 | C37 | Pro `other` | planar GNU beam vs Pro 3D frame beam (`trubea2/3`, K17) — parked, design | MEDIUM | large |
 | C38 | Pro `other` | `control_support_edge_normal_stiffness_freeze` parse-only (support_edge_normal_3, 1e-9 effect) | LOW | cheap/medium |
 | C39 | Pro `other` | K17 residuals: `truss8` birth node resolved 2026-10-06 (death velocity reset open), `update2` -updated robustness, `truss13` truss_distribute_mpc, zero-force truss first iteration | LOW | cheap/large |
+| C40 | Pro `other` | element-target contact residuals after F2 T3b: no Pro check "target element has all nodes on the boundary", hex8 target sides never detected, node_boundary generated only for element-target contact | LOW | cheap/medium |
 
-Forty-one items remain open: twelve MEDIUM and twenty-nine LOW (C23 and C24 resolved 2026-10-05; C25, C26, C27 and B10 added; F1 T3 / K04 2026-10-06 added B11, C28-C32; F1 T6 resolved C28, added and resolved B12; F2 T1 added C36; F2 T2 added C37, C38, C39). No open issue is CRITICAL or
+Forty-one items remain open: eleven MEDIUM and thirty LOW (C23 and C24 resolved 2026-10-05; C25, C26, C27 and B10 added; F1 T3 / K04 2026-10-06 added B11, C28-C32; F1 T6 resolved C28, added and resolved B12; F2 T1 added C36; F2 T2 added C37, C38, C39; F2 T3 resolved C5 and added C40). No open issue is CRITICAL or
 HIGH. The validation-suite corpus has no open failure — its 233 real tests
 pass (`materi_direct_mc` input corrected, C17 resolved). Every remaining failure is a stale or malformed test, an out-of-scope model
 or infrastructure limit, a narrow post-processing divergence, a corpus-coverage

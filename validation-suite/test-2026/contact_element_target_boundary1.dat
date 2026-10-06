@@ -1,0 +1,41 @@
+(
+K05 (2026-10-07): element-target contact (contact_target_element_group,
+manual Professional 6.105) needs the mesh boundary (node_boundary,
+6.875); the GNU now generates it when it is not given. Test
+other/contac1 of the Professional 02-08-2026: node 2 (element 1,
+group 1, velx 0.03) runs into element 2 (group 2, target). The
+penalty exchanges momentum between the equal masses of node 2 and
+node 3: after one step velx = 0.02 / 0.01 (Professional 0.02 / 0.01).
+GNU before: no node_boundary, the element targets were skipped and
+node 2 kept velx 0.03.
+)
+echo -no
+number_of_space_dimensions 1
+materi_velocity
+end_initia
+mesh -follow_material
+timestep_predict_velocity -yes
+node 1  0.
+node 2  0.99
+node 3  1
+node 4  2
+node 5  3
+element 1  -bar2 1 2
+element 2  -bar2 3 4
+element 3  -bar2 4 5
+element_group 1 1
+element_group 2 2
+element_group 3 2
+node_dof 2 +0.03
+group_type 1  -materi
+group_materi_density 1  1.e6
+group_type 2  -materi
+group_materi_density 2  1.e6
+contact_target_element_group  2
+contact_penalty_velocity  1.e10
+control_timestep   10  1. 1.
+target_item  1  -node_dof 2 -velx
+target_value 1  0.02 1.e-6
+target_item  2  -node_dof 3 -velx
+target_value 2  0.01 1.e-6
+end_data
