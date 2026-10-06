@@ -1070,6 +1070,29 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
   convention); documented in `direct_plastic_strain.md`. Pending owner
   confirmation.
 - **Severity**: **LOW** (output only). **Effort**: —.
+
+### C35. One-equilibrium-iteration lag of the whole material state (audit K02) — PARKED, design
+
+- **Symptom** (F1 T5, Professional 02-08-2026, sfnet `spring4` converted:
+  rigid translation velx 1, `materi_strain_total`, one equilibrium
+  iteration): GNU node and integration-point eptxx = sigxx = -0.01,
+  element_dof velx 0.5; Professional 0 / 0 / velx 1. With 3 iterations
+  both give 0.
+- **Root cause**: the constitutive evaluation (and the stored
+  integration-point state ELEMENT_DOF) of an iteration uses the
+  PRE-solve velocity; the hoisted post-solve pass of `top.cc` only
+  re-assembles the nodal STRESS and only with `stress_recovery_absolute`
+  (off with `materi_strain_total`), so the strain/stress state of the
+  last iteration lags the solved velocity. The Professional evaluates the
+  material on the post-solve velocity (ip velx 1).
+- **Why parked**: a fix is a post-solve material pass that also updates
+  the integration-point history (ELEMENT_DOF) and the incremental
+  non-principal dofs (general() denominator/inertia), i.e. a change of
+  the iteration scheme for every model with few iterations; needs a
+  design decision and a full corpus A/B (the audit counted 6 tests that
+  vanish at 5 iterations and 10 that improve).
+- **Severity**: **MEDIUM** (one-iteration models report a lagged state).
+  **Effort**: **medium/large**.
 ---
 
 ## D. Summary
@@ -1116,6 +1139,7 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
 | C32 | Pro `other` | `axisym9` (K20 1-point axisymmetric rule, F4), `distri2` (random generator): not GNU defects | LOW | — |
 | C33 | — | `_visco` direct cut-offs: `DTIME` from the previous step, no visco on the principal tension cap | MEDIUM | cheap/medium |
 | C34 | — | direct cut shear plastic strain: Pro twice the tensor value (deliberate divergence) | LOW | — |
+| C35 | — | one-iteration lag of the whole material state (K02, `spring4` 1 iteration) — parked, design | MEDIUM | medium/large |
 
 Thirty-eight items remain open: eleven MEDIUM and twenty-seven LOW (C23 and C24 resolved 2026-10-05; C25, C26, C27 and B10 added; F1 T3 / K04 2026-10-06 added B11, C28-C32). No open issue is CRITICAL or
 HIGH. The validation-suite corpus has no open failure — its 233 real tests

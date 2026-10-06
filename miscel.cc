@@ -396,6 +396,21 @@ long int sri_active( long int /*element*/, long int element_group,
   return 1;
 }
 
+// strain_recovery_weight - K11 (2026-10-06): nodal recovery weight of the
+// strain tensors (materi_strain_total / _elasti / _plasti): the stress
+// recovery weight (Professional per-element least-squares fit) except for
+// SRI elements, which keep h (their stress recovery mixes Lagrange and h).
+// Used for the numerator (materi.cc) and the lumped denominator and
+// inertia term (general.cc) of the incremental strain update.
+double strain_recovery_weight( long int sri_on, long int name, long int nnol,
+  long int inol, long int npoint, long int ipoint, double h_inol, double volume )
+
+{
+  if ( sri_on ) return h_inol;
+  return sri_stress_recovery_weight( 0, name, nnol, inol, npoint, ipoint,
+    h_inol, volume );
+}
+
 double sri_stress_recovery_weight( long int sri, long int name, long int nnol,
   long int inol, long int npoint, long int ipoint, double h_inol, double volume )
 

@@ -497,6 +497,10 @@ Each file corresponds to the same feature in the [User Manual](../manual-user/).
 
 - [print_dof_component_loop](print_dof_component_loop.md) — `print_hi.cc` `print_dof()`: the dof write loop iterated `ipuknwn` over all `nuknwn` value/derivative entries, repeating every vector/matrix block and reading `node_dof` past the end of the record (heap garbage `e-3xx` in `dof.*`, BACKLOG C23); now loops over the primary unknowns (`npuknwn = nuknwn/nder`, step `nval`, type from `dof_scal_vec_mat[iuknwn]`) as `print_vt.cc`. Same fix in `print_fr.cc` `print_frd()` and `print_gm.cc` `print_gmsh()` (C24, 2026-10-05; FRD 2D vector third component 0, gmsh field names from the dof type); remaining FRD/gmsh layout differences with the Professional: C27.
 
+## K11 NODAL STRAIN RECOVERY (2026-10-06)
+
+- [nodal_strain_recovery](nodal_strain_recovery.md) — `miscel.cc` `strain_recovery_weight()`; `materi.cc` strain numerators and `general.cc` lumped denominator/inertia with the stress recovery weight (sri_stress_recovery_weight, h for SRI).
+
 ## K13 DIRECT PLASTICITY STATE OUTPUT (2026-10-06)
 
 - [direct_plastic_strain](direct_plastic_strain.md) — `stress.cc` `set_stress()` + `direct_plastic_strain()`: deps_p = C^-1 (sig_before - sig_after) of the direct cut-offs added to `inc_epp`; `f_direct` output of `materi_direct_full_mc()` / `materi_direct_cutoff()` / `materi_compression_cutoff()` -> `new_f`.

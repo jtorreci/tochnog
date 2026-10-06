@@ -2328,6 +2328,9 @@ long int  sri_active( long int element, long int element_group,
 double    sri_stress_recovery_weight( long int sri, long int name,
             long int nnol, long int inol, long int npoint, long int ipoint,
             double h_inol, double volume );
+double    strain_recovery_weight( long int sri_on, long int name,
+            long int nnol, long int inol, long int npoint, long int ipoint,
+            double h_inol, double volume );
 void      stress_umat( long int element, long int gr, long int formulation,
             long int nuser_data, double user_data[], double coord_ip[],
             double old_hisv[], double new_hisv[], 

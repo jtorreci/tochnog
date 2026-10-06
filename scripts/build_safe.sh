@@ -1452,6 +1452,13 @@ run_ok "$T2026" direct_yield_value1
 run_ok "$T2026" plasti_f_no_law1
 
 # ---------------------------------------------------------------------
+# K11 (2026-10-06): the strain tensors are recovered with the stress
+# operator (strain_recovery_clamped1: clamped-edge eptyy 0 exact = Pro;
+# before -8.6e-5).
+# ---------------------------------------------------------------------
+run_ok "$T2026" strain_recovery_clamped1
+
+# ---------------------------------------------------------------------
 # Sub-sprint materi_stress_force, lote 2 (integracion 2D quad4/quad9):
 # verificacion ANALITICA por estatica. Decisiones de diseno (manual-
 # developer/post_calcul_materi_stress_force.md): caras extremas = las

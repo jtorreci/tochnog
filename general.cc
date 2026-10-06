@@ -344,6 +344,15 @@ void general( long int element, long int name, long int nnol, long int element_g
              !( dof_type[iuknwn]==-MATERI_STRESS &&
                 stress_recovery_absolute ) ) {
           double weight = h[inol];
+          // K11 (2026-10-06): the strain tensors use the recovery weight
+          // of materi.cc (strain_recovery_weight), so numerator and
+          // denominator of the lumped update match
+          if ( dof_type[iuknwn]==-MATERI_STRAIN_TOTAL ||
+               dof_type[iuknwn]==-MATERI_STRAIN_ELASTI ||
+               dof_type[iuknwn]==-MATERI_STRAIN_PLASTI )
+            weight = strain_recovery_weight(
+              sri_active( element, element_group, name, nnol ), name, nnol,
+              inol, npoint, ipoint, h[inol], volume );
           if ( dof_type[iuknwn]==-MATERI_STRESS ) {
             // Convected stress dof (stress_recovery_absolute==0): keep the
             // 2026-09-13 least-squares recovery weight for the incremental
