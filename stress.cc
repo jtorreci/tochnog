@@ -1028,6 +1028,16 @@ void set_stress( long int element, long int gr,
     p = - ( new_sig[0] + new_sig[4] + new_sig[8] ) / 3.;
     poisson = nu0 + nu1 * scalar_power(scalar_dabs(p/p1),alpha);
     if ( poisson>nu2 ) poisson = nu2;
+    // The power law REPLACES the poisson ratio of the elastic C built
+    // above (manual 6.652: "the poisson ratio is made a function of the
+    // average stress state"; Professional 02-08-2026 mpower = one
+    // C(young, nu(p))). C_matrix ACCUMULATES into its target, so the C
+    // of group_materi_elasti_young (or _young_power) is cleared first;
+    // `young` keeps the modulus of that block. Without the clear the
+    // stiffness was C(young,poisson) + C(young,nu(p)), about twice the
+    // Professional one (audit K06, mpower sigyy -3.29 vs -1.41).
+    array_set( &C[0][0][0][0], 0., MDIM*MDIM*MDIM*MDIM );
+    array_set( &Cmem[0][0][0][0], 0., MDIM*MDIM*MDIM*MDIM );
     task[1] = -NO;
     C_matrix( young, poisson, elasti_transverse_isotropy, C, task );
     task[1] = membrane;

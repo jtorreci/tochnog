@@ -129,7 +129,7 @@ input parameters it accepts.
 - [control_materi_plasti_hardsoil_gammap_initial](control_materi_plasti_hardsoil_gammap_initial.md) — -yes creates the extra initial gamma_p so f = 0 at the initial deviatoric stress (element_intpnt_materi_plasti_hardsoil_gammap_initial).
 - [group_materi_failure_crunching](group_materi_failure_crunching.md) — element failure on the compression strain (Professional spelling; GNU typo kept as alias).
 - [group_materi_failure_void_fraction](group_materi_failure_void_fraction.md) — element failure on the void fraction (Professional spelling; GNU name kept as alias).
-- [group_materi_elasti_poisson_power](group_materi_elasti_poisson_power.md) — pressure-dependent power-law Poisson ratio nu = nu0 + nu1*(p/p1)^alpha (nu <= nu2).
+- [group_materi_elasti_poisson_power](group_materi_elasti_poisson_power.md) — pressure-dependent power-law Poisson ratio nu = nu0 + nu1*(p/p1)^alpha (nu <= nu2); replaces the constant poisson (K06 fix 2026-10-06: before, both stiffnesses were added).
 - [group_materi_elasti_shear_factor](group_materi_elasti_shear_factor.md) — multiply the shear stiffness from young+poisson by a factor.
 - [group_materi_elasti_k0](group_materi_elasti_k0.md) — K0 data; with control_materi_elasti_k0 -yes (same control index as the timestep) the poisson becomes K0/(1+K0) for young, young_power and hardsoil.
 - [group_materi_elasti_young_power](group_materi_elasti_young_power.md) — power-law Young modulus E = E0 + E1*(p/p1)^alpha (E >= E2, E <= E3); 6-parameter Professional form (GNU 3-parameter form no longer accepted).

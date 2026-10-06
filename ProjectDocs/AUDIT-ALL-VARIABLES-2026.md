@@ -362,7 +362,7 @@ The priority list in section 6 re-orders by judgement.
 | 10 | K17 | Truss / beam / support divergence on Pro inputs | 6 | 1.0 | **GNU-suspect** | `trubea2/3`: `disz` **GNU 2e5** vs target 0.00333 (Pro exact). `support_edge_normal_3`: `disy` **GNU 124.75** vs 5.01e-4. `truss8`: `disx` 0.2 vs 0.1. `dynamic3`: `disx` 32.7 vs 60.4. `truss2/3/14` and `update2` also diverge (ERRDUMP) in the GNU. |
 | 11 | K04 | Pro analytic targets the GNU misses | 11 | 0.5 | **GNU-suspect** | See the list below the table. |
 | 12 | K19 | Nonlinear kinematics residual | 4 | 1.0 | BOTH-plausible / UNKNOWN | `elasti1` (tria3 stretched 300 %): `eptyy` 3.4375 vs 3.0, a finite-strain measure. `incnav2`: GNU σ −0.142 vs Pro 0. `update1`: initial stress in the `-ra -from -to` form, rotated 90°. |
-| 13 | K06 | Power-law elasticity semantics | 4 | 0.56 | **GNU-suspect (semantic)** | `myoung6_e2` (E clamped to 3000): **GNU −4.0385 (E=3000)** vs Pro −5.3846 (E = 1000 + 3000). `myoung6_e3`: GNU E=800 vs Pro 1800. The Pro adds `group_materi_elasti_young` to the power law. The GNU implementation notes attribute "the law IS the modulus" to the Pro; the binary refutes this. `mpower` (`poisson_power`) behaves the same way. |
+| 13 | K06 | Power-law elasticity semantics | 4 | 0.56 | **GNU-suspect (semantic)** | `myoung6_e2` (E clamped to 3000): **GNU −4.0385 (E=3000)** vs Pro −5.3846 (E = 1000 + 3000). `myoung6_e3`: GNU E=800 vs Pro 1800. The Pro adds `group_materi_elasti_young` to the power law. The GNU implementation notes attribute "the law IS the modulus" to the Pro; the binary refutes this. `mpower` (`poisson_power`) behaves the same way. **2026-10-06 (F2 T1): `mpower` was the opposite case, the Pro REPLACES the poisson ratio and the GNU added C(young,0.3) + C(young,nu(p)); fixed, GNU -0.4389/-1.4101 vs Pro -0.4417/-1.4123. `young_power`: without the `young` record Pro = GNU; with it the Pro adds C(young) + C(E_law) while its history variable reports E_law (3000 on `myoung6_e2`) and the manual says the law is the modulus: needs a decision (BACKLOG C36).** |
 | 14 | K21 | Viscous fluid / Navier-Stokes | 9 | 0.68 | UNKNOWN | `incnav1/4/5`, `tube1`, `examp1`: the stresses differ 6-100 %. The sfnet and Pro variants disagree with each other. |
 | 15 | K07 | Positional `node_dof` initial state over different dof layouts | 6 | 1.0 | INPUT-artifact | `mhardsoil_gp0`: the initial `-2` sits at slot 72, which is `sigxx` in the GNU but another dof in the Pro (the GNU has `sph`/`epphs*`, the Pro has `hshis`). |
 | 16 | K22 | Phreatic level: wet/dry density in the gravity stress | 2 | 1.0 | **GNU-suspect** | `ground18` (= `ground4` with `groundflow_phreatic_level_static` and no pressure dof). Analytic total `sigyy` at the bottom = −750 − 500 = −1250 (the `ground4` comment). **Pro −1247.5, GNU −1995**, which is the wet density over the whole column. With the pressure dof (`ground4`) the GNU is right. `ground8` (multiple phreatic levels): `sigyy` differs 19 %. **2026-09-29: `ground18` fixed, GNU −1247.5 = Pro (section 5.2); `ground8` unchanged (it has a pressure dof, other mechanism).** |
@@ -620,6 +620,10 @@ showed that K0 applies without `group_materi_elasti_poisson` and to
    - Decide the semantics against the Pro binary: the Pro adds the base
      `young`/`poisson`.
    - The current GNU choice was justified by a claim the binary refutes.
+   **2026-10-06 (F2 T1):** `poisson_power` fixed (the Pro replaces nu;
+   the GNU added both stiffnesses). `young_power` + `young`: the Pro adds
+   both stiffnesses, against its manual and its own history variable;
+   parked for an owner decision (BACKLOG C36).
 6. **K03.** Align the `convection_apply` default to `-no` (Pro manual 6.395),
    the same deliberate alignment as `inertia_apply` in `0560dcf`. Audit the
    corpus inputs that relied on the old default.

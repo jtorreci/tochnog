@@ -1127,6 +1127,33 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
   full corpus A/B); not part of F1.
 - **Severity**: **MEDIUM** (one-iteration models report a lagged state).
   **Effort**: **medium/large**.
+
+### C36. `group_materi_elasti_young_power` next to `group_materi_elasti_young`: the Professional adds both stiffnesses — NEEDS DECISION (audit K06)
+
+- **Symptom** (F2 T1, Professional 02-08-2026, validation-suite `myoung6*`
+  converted): `myoung6_e2` (law clamped to E2 = 3000, `young` 1000) Pro
+  sigyy -5.3846 (stiffness 4000), GNU -4.0385 (3000); `myoung6_e3` (law
+  clamped to 800) Pro 1800, GNU 800; `myoung6` Pro -3.3485, GNU -1.6657.
+- **Measured**: without the `group_materi_elasti_young` record the Pro
+  equals the GNU on all three (-4.0385, -1.0769, -1.6742 vs -1.6657).
+  With `materi_history_variable 1` the Pro reports the "calculated young"
+  (manual 6.661) as 3000 on `myoung6_e2` while its stress needs 4000: the
+  Professional builds C(young) + C(E_law), the same accumulation the GNU
+  2014 code had (removed in Sprint 10).
+- **Manual**: theory 2.2.2 "the young's stiffness modulus is made a
+  function of the average stress state: E = E0 + E1 (p/p1)^alpha" and the
+  history variable of 6.661 both say the law IS the modulus; the manual
+  is silent on combining it with a separate `group_materi_elasti_young`.
+- **Options**: (a) keep the GNU (law = modulus, manual reading; the
+  `myoung6*` targets stay; documented divergence from the binary);
+  (b) follow the binary (add C(young) when both records exist; retarget
+  `myoung6`, `myoung6_e2`, `myoung6_e3`; `myoung6_apply` with
+  `materi_elasti_young_power_apply -no` must then be re-measured on Pro).
+  Only the validation-suite `myoung6*` family and Pro `validation_14_mesh`
+  use the record. `group_materi_elasti_poisson_power` is NOT affected:
+  there the Pro replaces the poisson ratio (fixed in F2 T1).
+- **Severity**: **LOW** (input with both records only). **Effort**:
+  **cheap** either way.
 ---
 
 ## D. Summary
@@ -1173,8 +1200,9 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
 | C33 | — | `_visco` direct cut-offs: `DTIME` from the previous step, no visco on the principal tension cap; F4 | MEDIUM | cheap/medium |
 | C34 | — | direct cut shear plastic strain: Pro twice the tensor value (deliberate divergence) | LOW | — |
 | C35 | — | one-iteration lag of the whole material state (K02, `spring4` 1 iteration) — parked, design; F4 | MEDIUM | medium/large |
+| C36 | validation-suite | `young_power` + `young`: Pro adds both stiffnesses, manual says law = modulus (K06) — needs decision | LOW | cheap |
 
-Thirty-seven items remain open: eleven MEDIUM and twenty-six LOW (C23 and C24 resolved 2026-10-05; C25, C26, C27 and B10 added; F1 T3 / K04 2026-10-06 added B11, C28-C32; F1 T6 resolved C28, added and resolved B12). No open issue is CRITICAL or
+Thirty-eight items remain open: eleven MEDIUM and twenty-seven LOW (C23 and C24 resolved 2026-10-05; C25, C26, C27 and B10 added; F1 T3 / K04 2026-10-06 added B11, C28-C32; F1 T6 resolved C28, added and resolved B12; F2 T1 added C36). No open issue is CRITICAL or
 HIGH. The validation-suite corpus has no open failure — its 233 real tests
 pass (`materi_direct_mc` input corrected, C17 resolved). Every remaining failure is a stale or malformed test, an out-of-scope model
 or infrastructure limit, a narrow post-processing divergence, a corpus-coverage

@@ -1,0 +1,45 @@
+(
+K06 (2026-10-06): group_materi_elasti_poisson_power REPLACES the
+poisson ratio (manual Professional 6.652, theory: "the poisson ratio is
+made a function of the average stress state", nu = nu0 + nu1*(p/p1)^alpha,
+nu <= nu2). Plane strain oedometer: unit quad4, young 1000, poisson 0.3
+(overridden), nu0 0.2 nu1 0.1 nu2 0.5 p1 1 alpha 1, vertical strain
+-0.0012 in 100 steps. An explicit incremental update with C(1000, nu(p))
+of the previous stress gives sigxx -0.43887, sigyy -1.41012; the
+Professional 02-08-2026 gives -0.44173 / -1.41230.
+GNU before K06: -1.43887 / -3.29236, the stiffness C(1000, 0.3) +
+C(1000, nu(p)) because C_matrix accumulates and the block did not clear
+the C of group_materi_elasti_young.
+)
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_velocity_integrated
+materi_stress
+end_initia
+node 1 0 0
+node 2 1 0
+node 3 0 1
+node 4 1 1
+element 1 -quad4 1 2 3 4
+group_type 0 -materi
+group_materi_elasti_young 0 1000
+group_materi_elasti_poisson 0 0.3
+group_materi_elasti_poisson_power 0 0.2 0.1 0.5 1 1
+group_materi_memory 0 -updated_linear
+bounda_dof 0 -ra 1 3 -ra -velx
+bounda_dof 1 -ra 2 4 -ra -velx
+bounda_dof 2 -ra 1 2 -ra -vely
+bounda_dof 3 -ra 3 4 -ra -vely
+bounda_time 0 0 0 100 0
+bounda_time 1 0 0 100 0
+bounda_time 2 0 0 100 0
+bounda_time 3 0 -0.0024 100 -0.0024
+control_timestep 0 0.005 0.5
+control_timestep_iterations 0 8
+post_point 1 0.5 0.5
+target_item    1  -post_point_dof 1 -sigxx
+target_value   1  -0.4389 0.005
+target_item    2  -post_point_dof 1 -sigyy
+target_value   2  -1.4101 0.005
+end_data

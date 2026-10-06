@@ -384,10 +384,12 @@ rm -f validation-suite/test-2014/dof.* \
 # + mpower (group_materi_elasti_poisson_power, manual 6.653: nu =
 #   nu0+nu1*(p/p1)^alpha, nu<=nu2, p=-sig_mean. Oedometro con nu0=0.2
 #   nu1=0.1 p1=1 alpha=1 y E*eps=1.2: punto fijo analitico nu=0.4, p=2,
-#   sigxx=-1.7143/sigyy=-2.5714; el codigo incremental (C evaluada con la
-#   tension del paso previo) aterriza en nu~0.43, p~2.06 -> sigxx -1.4389
-#   y sigyy -3.2924 (84% del analitico; ventana que discrimina la base
-#   nu=0.3 -> -0.5769). control_timestep_iterations 8).
+#   sigxx=-1.7143/sigyy=-2.5714. K06 (2026-10-06): the block REPLACES the
+#   poisson ratio (before it added C(1000,0.3) + C(1000,nu(p)) ->
+#   -1.4389/-3.2924); the incremental update (C from the previous step's
+#   stress) gives sigxx -0.4389 / sigyy -1.4101 (Pro 02-08-2026
+#   -0.4417/-1.4123); window 0.02, which excludes the constant nu=0.3
+#   base (-0.692/-1.615). control_timestep_iterations 8).
 # + mshf/mshf_nof (group_materi_elasti_shear_factor, manual 6.654:
 #   multiplica la rigidez cortante de young+poisson. Cizalla pura 1 paso
 #   con factor 2: sigxy 50 vs 33.33 sin factor; factor 0 -> sigxy 0
@@ -1468,6 +1470,15 @@ run_ok "$T2026" strain_recovery_clamped1
 # ---------------------------------------------------------------------
 run_ok "$T2026" node_force_sign1
 run_ok "$T2026" mesh_cut_node_force_sign1
+
+# ---------------------------------------------------------------------
+# K06 (2026-10-06): group_materi_elasti_poisson_power replaces the
+# poisson ratio of the elastic C (stress.cc clears the C of
+# group_materi_elasti_young first). Oedometer sigxx -0.4389 / sigyy
+# -1.4101 (Pro 02-08-2026 -0.4417 / -1.4123); before -1.4389 / -3.2924
+# (C(young,0.3) + C(young,nu(p)), twice the stiffness).
+# ---------------------------------------------------------------------
+run_ok "$T2026" elasti_poisson_power_replace1
 
 # ---------------------------------------------------------------------
 # Sub-sprint materi_stress_force, lote 2 (integracion 2D quad4/quad9):

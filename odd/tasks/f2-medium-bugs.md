@@ -6,6 +6,8 @@ verified against the Professional 02-08-2026 or an analytic value.
 
 ## Tasks
 - [ ] T1 K06: power-law elasticity semantics (`myoung6_e2`: GNU E=3000 → −4.0385 vs Pro E=1000+3000 → −5.3846; `myoung6_e3`; `mpower` poisson_power). Pro adds `group_materi_elasti_young` to the power law.
+  - [x] T1a `poisson_power` replaces nu (stress.cc clears C before the rebuild) — `fix(stress)` (hash below).
+  - [ ] T1b `young_power` + `young` additive in Pro — NEEDS OWNER DECISION (BACKLOG C36), not implemented.
 - [ ] T2 K17: truss / beam / support_edge_normal divergence on Pro inputs (`trubea2/3` disz 2e5 vs 0.00333; `support_edge_normal_3` disy 124.75 vs 5.01e-4; `truss8`; `dynamic3`; `truss2/3/14`, `update2` ERRDUMP).
 - [ ] T3 K05 + C5: contact (`contac1` no interaction, GNU node 2 velx 0.03 vs Pro 0.02/0.01; `validation_10` sigyy ≈0 vs −21031; `contact_target_geometry` alias aborts "Data is allocated in a parallel loop" in 6 runs and drops an index-0 contact in examp9).
 
@@ -19,3 +21,22 @@ docs + SEGUIMIENTO + AUDIT/BACKLOG. Time-box ~1.5 h per root cause.
 
 ## Progress
 - Branch `dev/f2-medium-bugs` from `e693018`.
+
+### T1 (K06) — 2026-10-06, route: inline (one file, stress.cc, plus tests/docs)
+- Re-run before (GNU build = HEAD d0fbe86, Pro 02-08-2026, converted inputs):
+  `myoung6_e2` GNU −1.7308/−4.0385, Pro −2.3077/−5.3846; `myoung6_e3` GNU
+  −0.4615/−1.0769, Pro −1.0385/−2.4231; `myoung6` GNU −0.7139/−1.6657, Pro
+  −1.4351/−3.3485; `mpower` GNU −1.4389/−3.2924, Pro −0.4417/−1.4123.
+- Without `group_materi_elasti_young`: Pro = GNU for all `myoung6*`; Pro
+  history variable (calculated young) = 3000 on `myoung6_e2` while the
+  stress needs 4000 → the Pro sums C(young)+C(E_law); manual 2.2.2/6.661
+  say the law is the modulus → T1b decision (C36).
+- `mpower`: the GNU summed C(young,0.3)+C(young,nu(p)) (forward-Euler replay
+  reproduces −1.43887/−3.29236); Pro replaces nu (replay −0.43887/−1.41012).
+  Fix stress.cc; GNU now −0.438872/−1.410125.
+- Evidence: test-2026 `elasti_poisson_power_replace1` RED (old rc 1) /
+  GREEN (new rc 0, Pro passes too); `mpower` retargeted −0.4389/−1.4101 ±0.02
+  (only target change of T1). build_safe check-only (all F2 fixes): 226/226
+  runs, 125 OK / 0 FALLO, rc 0. Corpus A/B (plain rc runner, old = HEAD
+  build, new = all F2 fixes): validation-suite old 232/11 (mpower, new
+  target) → new 233/10; test-2026 only the 4 new F2 tests change.
