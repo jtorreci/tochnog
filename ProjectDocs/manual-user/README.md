@@ -471,6 +471,10 @@ input parameters it accepts.
 
 - [print_dof_component_loop](print_dof_component_loop.md) — `control_print_dof` files now hold each dof component once per node and print (vector/stress blocks were repeated and some lines carried random `e-3xx` values); `dof.*` files are shorter than with older binaries. Same fix for the `control_print_frd` / `control_print_gmsh` files (one block per dof; gmsh fields named after the dof type, e.g. `node_materi_velocity_0`).
 
+## K13 DIRECT PLASTICITY STATE OUTPUT (2026-10-06)
+
+- [direct_plastic_strain](direct_plastic_strain.md) — the direct cut-offs (tension/Mohr-Coulomb/compression, full and plane mode) write their cut as `materi_strain_plasti` (C^-1 (sigma_trial - sigma)) and the direct-law yield value in `materi_plasti_f` (0 after a cut), as the Professional (shear components: tensor value, the Professional writes twice it).
+
 ## K04 AUDIT FIXES (2026-10-06)
 
 - [edge_node_restriction](edge_node_restriction.md) — the `_node` / `_element_node` records of the edge loads (heat/groundflow flux, convection/radiation, force_edge*, support_edge_normal) select the element SIDES whose nodes are all listed, as the Professional (K04 condif7: a corner node no longer loads the adjacent side).

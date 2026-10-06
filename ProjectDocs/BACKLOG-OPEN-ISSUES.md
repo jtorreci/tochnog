@@ -1033,6 +1033,43 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
   from different random generators. The target encodes the Professional
   random sequence; no fix.
 
+
+### C33. `_visco` direct cut-offs: one-step-lagged relaxation time step and no visco on the principal tension cap
+
+- **Symptom** (F1 T4, K13 probes on the Professional 02-08-2026, single
+  quad4, E 1, nu 0.25, tension_direct 1e-3, `_visco` tm 2, eps_xx 2e-3 in
+  one step dt 1): Professional sigxx 1.84914e-3 (= 2.4e-3 - (1 -
+  exp(-0.5)) 1.4e-3), GNU 1e-3 (full cut). `compression_direct_visco`
+  (same data, compression): Professional -1.84914e-3, GNU -2.4e-3 (no
+  cut at all); `mohr_coul_direct_visco` full and plane mode: GNU no cut
+  in the first step (sigxy 2.4e-3, Professional 1.7575e-3 / 1.7996e-3).
+- **Root cause**: `stress.cc` `set_stress()` reads `DTIME` from
+  `VERSION_NORMAL` (the previous step; 0 in the first step, so the
+  factor 1 - exp(-dt/tm) is 0), every other module reads `VERSION_NEW`;
+  and the principal tension cap (`direct_cap_principal_values`, full mode
+  and plane mode without a tension normal) ignores the `_visco` factor.
+  `visc_pl4` (1D, 200 steps) still ends at the target 1 in both.
+- **Proposed fix**: `VERSION_NEW` in `set_stress()` (also used by the
+  incremental viscoplastic laws: `lambda*dtime`, needs its own corpus
+  A/B) and the visco factor on the principal cap.
+- **Severity**: **MEDIUM** (`_visco` direct laws relax with the wrong
+  time step). **Effort**: **cheap/medium**.
+
+### C34. Direct cut-off shear plastic strain: the Professional writes twice the tensor value (deliberate divergence)
+
+- **Symptom** (F1 T4, K13): since K13 the GNU stores the direct cut as
+  plastic strain C^-1 (sigma_trial - sigma). Normal components and the
+  yield value equal the Professional; the shear components differ by a
+  factor 2: full MC cut `direct_plastic_strain_mc1` GNU eppxy
+  2.04114892e-3 = dsig_xy / 2G (tensor), Professional 4.08229785e-3 =
+  dsig_xy / G. The Professional's own total strain (eptxy) and its
+  incremental-law plastic strain (von Mises shear probe: eppxy
+  2.27831e-3 in both) are tensor components, and its epexy = eptxy -
+  eppxy then violates sigma_xy = 2G epe_xy.
+- **Decision**: the GNU keeps sigma = C (eps - eps_p) (tensor
+  convention); documented in `direct_plastic_strain.md`. Pending owner
+  confirmation.
+- **Severity**: **LOW** (output only). **Effort**: —.
 ---
 
 ## D. Summary
@@ -1077,6 +1114,8 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
 | C30 | Pro `other` | `mohr_coul_direct4`: Pro does not enforce the interface MC strength (deliberate divergence, GNU = manual 6.632) | LOW | — |
 | C31 | Pro `other` | `tet10` nodal quadrature only degree 1 (`tet10_2` gravity); F4 (design + corpus A/B) | MEDIUM | medium |
 | C32 | Pro `other` | `axisym9` (K20 1-point axisymmetric rule, F4), `distri2` (random generator): not GNU defects | LOW | — |
+| C33 | — | `_visco` direct cut-offs: `DTIME` from the previous step, no visco on the principal tension cap | MEDIUM | cheap/medium |
+| C34 | — | direct cut shear plastic strain: Pro twice the tensor value (deliberate divergence) | LOW | — |
 
 Thirty-eight items remain open: eleven MEDIUM and twenty-seven LOW (C23 and C24 resolved 2026-10-05; C25, C26, C27 and B10 added; F1 T3 / K04 2026-10-06 added B11, C28-C32). No open issue is CRITICAL or
 HIGH. The validation-suite corpus has no open failure — its 233 real tests

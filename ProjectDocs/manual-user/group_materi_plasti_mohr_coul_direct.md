@@ -172,6 +172,12 @@ The normal record accepts ndim values (1 value in 1D, 2 in 2D, 3 in 3D).
 
 ## Differences with the Professional version
 
+- **Plastic strain of the cut (deliberate for the shear components,
+  K13).** Since 2026-10-06 the cut is stored in `materi_strain_plasti`
+  as C^-1 (sigma_trial - sigma) and `materi_plasti_f` holds the direct-law
+  yield value (0 after a cut), as the Professional; the Professional
+  writes the shear components as twice the tensor value, the GNU keeps
+  the tensor value. See `direct_plastic_strain.md`.
 - **phi_flow factor in the plane mode (deliberate, BACKLOG C15).** The
   Professional 02-08-2026 uses the constant `k = 2 tan(phi_flow)`; the GNU
   uses `k = (M/G) tan(phi_flow)`, the consistent elastic return of the

@@ -1,0 +1,52 @@
+(
+K13 (2026-10-06): yield value of the direct laws in an elastic state =
+the largest law value on the stress: tension sig_max - sigy and
+compression sigy_c - sig_min. Single quad4, E 1, nu 0.25, trial
+sigxx 0.28e-3, sigyy 0.2e-3, sigxy 0.08e-3, sigzz 0.12e-3 (sig_max
+0.329443e-3): tension_direct 1e-3 gives -0.6705572809e-3, compression
+-1e-3 gives -1.12e-3; f = -0.6705572809e-3 (= Professional 02-08-2026),
+no plastic strain. GNU before K13: f -1e10.
+)
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_displacement
+materi_strain_total
+materi_strain_elasti
+materi_strain_plasti
+materi_plasti_f
+materi_stress
+end_initia
+node 1 0 0
+node 2 1 0
+node 3 0 1
+node 4 1 1
+element 1 -quad4 1 2 3 4
+group_type 0 -materi
+group_materi_elasti_young 0 1.
+group_materi_elasti_poisson 0 0.25
+group_materi_memory 0 -total_linear
+group_materi_plasti_tension_direct 0 1.e-3
+group_materi_plasti_compression_direct 0 -1.e-3
+bounda_dof 0 1 -velx
+bounda_time 0 0 0 1 0.0 100 0.0
+bounda_dof 1 1 -vely
+bounda_time 1 0 0 1 0.0 100 0.0
+bounda_dof 2 2 -velx
+bounda_time 2 0 0 1 0.0002 100 0.0002
+bounda_dof 3 2 -vely
+bounda_time 3 0 0 1 0.0001 100 0.0001
+bounda_dof 4 3 -velx
+bounda_time 4 0 0 1 0.0001 100 0.0001
+bounda_dof 5 3 -vely
+bounda_time 5 0 0 1 0.0001 100 0.0001
+bounda_dof 6 4 -velx
+bounda_time 6 0 0 1 0.00030000000000000003 100 0.00030000000000000003
+bounda_dof 7 4 -vely
+bounda_time 7 0 0 1 0.0002 100 0.0002
+control_timestep 0 1.0 1.
+target_item 0 -node_dof 1 -f
+target_value 0 -6.705572809e-04 1.e-12
+target_item 1 -node_dof 1 -eppxx
+target_value 1 0. 1.e-14
+end_data

@@ -356,7 +356,7 @@ The priority list in section 6 re-orders by judgement.
 | 4 | K15 | Other plasticity (MC, DP+refine, von Mises+refine) | 8 | 1.0 | UNKNOWN (pre-existing MC difference) | `validation_14` (DP, refine, delete): `velx` differs 48 %, `eppxx` 25 %. `validation_3` (von Mises plate): `kap` 11 %. `mohrcou2`: GNU −6.932 (its target) vs Pro 0. `mmc_tension`: `sigzz` 2 %. |
 | 5 | K12 | post_calcul item conventions | 22 | 1.0 | BOTH-plausible | `calcul1`: the sfnet target (GNU) is [1, 0, 0.707, 0.577] and the Pro's own `calcul1` target is [0, 1, 1, 0.816]. Each binary passes its own. `examp10`/`validation_5`: the order or sign of the `-prival` principal values (0.002 vs −0.00402). Also here: `force10`/`force13`/`gforce10` (known C3), the `msf_*` section forces, and the `qsri` patch calcul records. |
 | 6 | K05 | Contact | 8 | 1.0 | **GNU-suspect** | `contac1` (1D contact): **GNU node 2 keeps `velx` 0.03**, so there is no interaction. The Pro gives 0.02/0.01 (momentum exchange). `validation_10`: GNU `sigyy` ≈ 0 vs Pro −21031 (target −20538 ± 1e4). The `contact_target_geometry` alias aborts with "Program error… contact_geometry. Data is allocated in a parallel loop" in 6 runs (`vs/contact*`, `examp6/9/24`). In `examp9` it silently drops an index-0 contact. This is the known backlog item C5, which only documents index > 0. |
-| 7 | K13 | Direct / visco plasticity output | 7 | 1.0 | **GNU-suspect** (state output) | `visc_pl4`: the stress is 1 in both (the target). The **GNU `eppxx` = 0 and `f` = −1e10**, while the Pro stores `eppxx` 0.49998 = ε − σ/E. So the GNU output violates σ = E(ε − εp). |
+| 7 | K13 | Direct / visco plasticity output | 7 | 1.0 | **GNU-suspect** (state output) | `visc_pl4`: the stress is 1 in both (the target). The **GNU `eppxx` = 0 and `f` = −1e10**, while the Pro stores `eppxx` 0.49998 = ε − σ/E. So the GNU output violates σ = E(ε − εp). **2026-10-06 (F1 T4): fixed, the direct cut-offs store C⁻¹(σ_trial − σ) and the direct-law f (`visc_pl4` eppxx 0.5, f 0); shear components tensor (Pro twice, BACKLOG C34); `_visco` stress path C33.** |
 | 8 | K02 | One-iteration lag of non-principal dofs | 6 | 1.0 | **GNU-suspect** | `spring4` (rigid translation `velx`=1): with 1 iteration the **GNU gives `eptxx` = `sigxx` = −0.01**, while the Pro gives 0 (exact). With 3 iterations both give 0. The post-solve sync in `top.cc` refreshes only the stress slots, and only when `stress_recovery_absolute` is on, so it misses the strain dofs and models with a strain unknown. 6 tests vanish at 5 iterations and 10 improve. |
 | 9 | K16 | GNU extensions the Pro ignores | 12 | 1.0 | INPUT-artifact | `strain_settle`, `mfactor`, `mdirect_gate`, `transv1`, `temp4/5` (`-empty` group: the Pro does not move its nodes), `mvoid*`, `cmat_gate`. The GNU meets its own analytic targets; the Pro returns the unmodified state. |
 | 10 | K17 | Truss / beam / support divergence on Pro inputs | 6 | 1.0 | **GNU-suspect** | `trubea2/3`: `disz` **GNU 2e5** vs target 0.00333 (Pro exact). `support_edge_normal_3`: `disy` **GNU 124.75** vs 5.01e-4. `truss8`: `disx` 0.2 vs 0.1. `dynamic3`: `disx` 32.7 vs 60.4. `truss2/3/14` and `update2` also diverge (ERRDUMP) in the GNU. |
@@ -638,7 +638,9 @@ showed that K0 applies without `group_materi_elasti_poisson` and to
      strain, and models with a strain unknown.
    - Cheap, and it removes about 25 tests of noise from future audits.
 8. **K13.** Store `materi_strain_plasti` and `plasti_f` for the direct and visco
-   cut-off models.
+   cut-off models. **Done 2026-10-06 (F1 T4)**, see
+   `manual-developer/direct_plastic_strain.md`; follow-ups C33 (visco
+   time step) and C34 (shear convention).
 9. **K17.** Truss / beam / `support_edge_normal` divergence on the Pro inputs
    (`trubea2/3`, `truss2/3/14`, `support_edge_normal_3`).
 10. **Investigate before touching code.** These are UNKNOWN with high

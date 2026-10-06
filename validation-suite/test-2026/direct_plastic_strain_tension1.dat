@@ -1,0 +1,59 @@
+(
+K13 (2026-10-06): a direct cut-off stores its cut as plastic strain,
+deps_p = C^-1 (sig_trial - sig), and the yield value of the direct laws
+(0 after a cut). Single quad4, plane strain, E 1, nu 0.25, uniaxial
+eps_xx 2e-3 (trial sigxx 2.4e-3, sigyy = sigzz 0.8e-3), full principal
+tension cut-off sigy 1e-3: sigxx 1e-3, eppxx 1.4e-3, eppyy = eppzz
+-0.35e-3, epexx 0.6e-3, f 0 (all = Professional 02-08-2026). GNU before
+K13: epp 0, epe = eps, f -1e10.
+)
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_displacement
+materi_strain_total
+materi_strain_elasti
+materi_strain_plasti
+materi_plasti_f
+materi_stress
+end_initia
+node 1 0 0
+node 2 1 0
+node 3 0 1
+node 4 1 1
+element 1 -quad4 1 2 3 4
+group_type 0 -materi
+group_materi_elasti_young 0 1.
+group_materi_elasti_poisson 0 0.25
+group_materi_memory 0 -total_linear
+group_materi_plasti_tension_direct 0 1.e-3
+bounda_dof 0 1 -velx
+bounda_time 0 0 0 1 0.0 100 0.0
+bounda_dof 1 1 -vely
+bounda_time 1 0 0 1 0 100 0
+bounda_dof 2 2 -velx
+bounda_time 2 0 0 1 0.002 100 0.002
+bounda_dof 3 2 -vely
+bounda_time 3 0 0 1 0 100 0
+bounda_dof 4 3 -velx
+bounda_time 4 0 0 1 0.0 100 0.0
+bounda_dof 5 3 -vely
+bounda_time 5 0 0 1 0 100 0
+bounda_dof 6 4 -velx
+bounda_time 6 0 0 1 0.002 100 0.002
+bounda_dof 7 4 -vely
+bounda_time 7 0 0 1 0 100 0
+control_timestep 0 1.0 1.
+target_item 0 -node_dof 1 -sigxx
+target_value 0 1.e-3 1.e-12
+target_item 1 -node_dof 1 -eppxx
+target_value 1 1.4e-3 1.e-12
+target_item 2 -node_dof 1 -eppyy
+target_value 2 -3.5e-4 1.e-12
+target_item 3 -node_dof 1 -eppzz
+target_value 3 -3.5e-4 1.e-12
+target_item 4 -node_dof 1 -epexx
+target_value 4 6.e-4 1.e-12
+target_item 5 -node_dof 1 -f
+target_value 5 0. 1.e-12
+end_data

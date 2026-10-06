@@ -119,6 +119,9 @@ The direct records have TWO modes selected by the presence of a plane normal:
 
 ## Differences with the Professional version
 
+- State output (K13, 2026-10-06): `set_stress()` stores the cut as
+  plastic strain and the yield value (`direct_plastic_strain.md`);
+  shear components in tensor form (Professional: twice).
 - phi_flow factor of the plane mode: M/G instead of the Professional
   constant 2 (deliberate, BACKLOG C15; see Física).
 - Interface strength (`mohr_coul_direct4`, deliberate, BACKLOG C30,

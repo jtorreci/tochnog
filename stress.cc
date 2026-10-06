@@ -46,7 +46,7 @@ extern "C"
 // up towards sigy with the visco factor 1-exp(-dtime/tm) (full cut when
 // no visco record: factor 1).
 void materi_compression_cutoff( long int element, long int gr,
-  double dtime, double new_sig[] )
+  double dtime, double new_sig[], double &f_direct )
 
 {
   long int ldum=0, idim=0, jdim=0, kdim=0, nrot=0;
@@ -73,8 +73,13 @@ void materi_compression_cutoff( long int element, long int gr,
   matrix_jacobi( sig_work, 3, d, v, &nrot );
   {
     long int any_cut = 0, i=0;
+    double d_min = DBL_MAX;
     for ( i=0; i<3; i++ )
       if ( d[i]<sigy ) { d[i] += factor*(sigy-d[i]); any_cut = 1; }
+    // yield value sigy - sig_min on the final stress (K13, Professional
+    // 02-08-2026: -0.76e-3 for sigy -1e-3, sig_min -0.24e-3)
+    for ( i=0; i<3; i++ ) if ( d[i]<d_min ) d_min = d[i];
+    if ( sigy-d_min > f_direct ) f_direct = sigy - d_min;
     if ( !any_cut ) return;
   }
   // sigma = V diag(d) V^T  (V columns are eigenvectors)
@@ -154,7 +159,7 @@ void materi_direct_principal_cap( double new_sig[], double sigy )
 // 02-08-2026: the MC law then stays the full principal cut-off).
 void materi_direct_full_mc( long int element, long int gr,
   long int plasti_on_boundary, double dtime,
-  double new_sig[], double /*ddsdde*/[], long int tension_cap )
+  double new_sig[], double /*ddsdde*/[], long int tension_cap, double &f_direct )
 
 {
   long int idim=0, jdim=0, kdim=0, nrot=0, mc_present=0, ten_present=0,
@@ -276,6 +281,20 @@ void materi_direct_full_mc( long int element, long int gr,
         for ( i=0; i<3; i++ ) w[i] = w_new[i];
       }
     }
+    // yield value on the final principal stresses (K13): the tension
+    // cap sig_max - sigy and the MC function, the largest one
+    {
+      double w_max = w[0], w_min = w[0], fv = 0.;
+      for ( i=1; i<3; i++ ) {
+        if ( w[i]>w_max ) w_max = w[i];
+        if ( w[i]<w_min ) w_min = w[i];
+      }
+      if ( tension_cap && w_max-sigy > f_direct ) f_direct = w_max - sigy;
+      if ( mc_present ) {
+        fv = 0.5*(w_max-w_min) + 0.5*(w_max+w_min)*sin(phi) - c*cos(phi);
+        if ( fv > f_direct ) f_direct = fv;
+      }
+    }
     if ( any_cut ) {
       // rebuild sigma = V diag(w) V^T (V columns are eigenvectors;
       // w[k] belongs to the column order[k] of v)
@@ -329,7 +348,8 @@ double direct_flow_factor( double C[], double n[], double tau[],
 //
 // The "_direct" plastic laws are DIRECT STRESS CUT-OFFS (no plastic
 // strains; the manual: "cut off by Tochnog", tension_direct "does not use
-// plastic strains"). Each law has its OWN plane (mc_normal, ten_normal;
+// plastic strains"). set_stress stores the cut afterwards as the plastic
+// strain C^-1 (sig_before - sig_after) and the yield value f (K13). Each law has its OWN plane (mc_normal, ten_normal;
 // zero when the law has no normal). On a plane with normal n:
 //   traction    t  = sig . n
 //   normal      sig_n = n . t
@@ -362,7 +382,7 @@ double direct_flow_factor( double C[], double n[], double tau[],
 void materi_direct_cutoff( long int element, long int gr,
   long int plasti_on_boundary, double dtime,
   double new_sig[], double ddsdde[], double mc_normal[],
-  double ten_normal[], double elastic_stiffness[] )
+  double ten_normal[], double elastic_stiffness[], double &f_direct )
 
 {
   long int idim=0, jdim=0, mc_active=0, ten_record=0, ten_active=0,
@@ -456,50 +476,142 @@ void materi_direct_cutoff( long int element, long int gr,
   }
 
   // 2) Mohr-Coulomb step
-  if ( !mc_active ) return;
-  if ( !mc_plane ) {
+  if ( mc_active && !mc_plane )
     materi_direct_full_mc( element, gr, plasti_on_boundary, dtime,
-      new_sig, ddsdde, 0 );
-    return;
-  }
-  // traction on the MC plane, from the stress after the tension step
-  for ( idim=0; idim<ndim; idim++ ) {
-    t[idim] = 0.;
-    for ( jdim=0; jdim<ndim; jdim++ )
-      t[idim] += new_sig[idim*MDIM+jdim] * n_mc[jdim];
-  }
-  sig_n = 0.;
-  for ( idim=0; idim<ndim; idim++ ) sig_n += n_mc[idim] * t[idim];
-  for ( idim=0; idim<ndim; idim++ ) tau[idim] = t[idim] - sig_n*n_mc[idim];
-  tau_norm = 0.;
-  for ( idim=0; idim<ndim; idim++ ) tau_norm += tau[idim]*tau[idim];
-  tau_norm = sqrt( tau_norm );
-
-  max_fric = c - sig_n * tan( phi );
-  if ( max_fric < 0. ) max_fric = 0.;
-  if ( tau_norm > max_fric && tau_norm > 0. ) {
-    double tan_phi = tan( phi ), k_flow = 0., tau_new = 0., dsig_n = 0.;
-    if ( phi_flow!=0. )
-      k_flow = direct_flow_factor( elastic_stiffness, n_mc, tau,
-        tau_norm ) * tan( phi_flow );
-    if ( 1.+k_flow*tan_phi < 1.e-12 ) k_flow = 0.;   // degenerate data
-    tau_new = ( c - sig_n*tan_phi + k_flow*tan_phi*tau_norm ) /
-      ( 1. + k_flow*tan_phi );
-    if ( tau_new < 0. ) tau_new = 0.;
-    dsig_n = - k_flow * ( tau_norm - tau_new ) * factor_mc;
-    scale = tau_new / tau_norm;
-    scale = 1. - factor_mc*(1.-scale);   // visco: partial
-    // new_sig -= (1-scale)*(tau x n + n x tau)  (symmetric correction)
-    // new_sig += dsig_n n x n                   (dilatant normal shift)
+      new_sig, ddsdde, 0, f_direct );
+  if ( mc_active && mc_plane ) {
+    // traction on the MC plane, from the stress after the tension step
     for ( idim=0; idim<ndim; idim++ ) {
-      for ( jdim=0; jdim<ndim; jdim++ ) {
-        double corr = (1.-scale) * ( tau[idim]*n_mc[jdim] +
-          n_mc[idim]*tau[jdim] );
-        new_sig[idim*MDIM+jdim] -= corr;
-        new_sig[idim*MDIM+jdim] += dsig_n * n_mc[idim] * n_mc[jdim];
+      t[idim] = 0.;
+      for ( jdim=0; jdim<ndim; jdim++ )
+        t[idim] += new_sig[idim*MDIM+jdim] * n_mc[jdim];
+    }
+    sig_n = 0.;
+    for ( idim=0; idim<ndim; idim++ ) sig_n += n_mc[idim] * t[idim];
+    for ( idim=0; idim<ndim; idim++ ) tau[idim] = t[idim] - sig_n*n_mc[idim];
+    tau_norm = 0.;
+    for ( idim=0; idim<ndim; idim++ ) tau_norm += tau[idim]*tau[idim];
+    tau_norm = sqrt( tau_norm );
+
+    max_fric = c - sig_n * tan( phi );
+    if ( max_fric < 0. ) max_fric = 0.;
+    if ( tau_norm > max_fric && tau_norm > 0. ) {
+      double tan_phi = tan( phi ), k_flow = 0., tau_new = 0., dsig_n = 0.;
+      if ( phi_flow!=0. )
+        k_flow = direct_flow_factor( elastic_stiffness, n_mc, tau,
+          tau_norm ) * tan( phi_flow );
+      if ( 1.+k_flow*tan_phi < 1.e-12 ) k_flow = 0.;   // degenerate data
+      tau_new = ( c - sig_n*tan_phi + k_flow*tan_phi*tau_norm ) /
+        ( 1. + k_flow*tan_phi );
+      if ( tau_new < 0. ) tau_new = 0.;
+      dsig_n = - k_flow * ( tau_norm - tau_new ) * factor_mc;
+      scale = tau_new / tau_norm;
+      scale = 1. - factor_mc*(1.-scale);   // visco: partial
+      // new_sig -= (1-scale)*(tau x n + n x tau)  (symmetric correction)
+      // new_sig += dsig_n n x n                   (dilatant normal shift)
+      for ( idim=0; idim<ndim; idim++ ) {
+        for ( jdim=0; jdim<ndim; jdim++ ) {
+          double corr = (1.-scale) * ( tau[idim]*n_mc[jdim] +
+            n_mc[idim]*tau[jdim] );
+          new_sig[idim*MDIM+jdim] -= corr;
+          new_sig[idim*MDIM+jdim] += dsig_n * n_mc[idim] * n_mc[jdim];
+        }
       }
     }
   }
+
+  // yield value of the direct laws on the final stress (K13, measured on
+  // the Professional 02-08-2026): tension sig_n - sigy on its plane (or
+  // sig_max - sigy without a tension normal), Mohr-Coulomb |tau| - (c -
+  // sig_n tan(phi)) on its plane; the full MC value comes from
+  // materi_direct_full_mc. The largest one is kept.
+  if ( ten_active ) {
+    double fv = 0.;
+    if ( ten_plane ) {
+      for ( idim=0; idim<ndim; idim++ )
+        for ( jdim=0; jdim<ndim; jdim++ )
+          fv += n_ten[idim] * new_sig[idim*MDIM+jdim] * n_ten[jdim];
+    }
+    else {
+      long int nrot=0;
+      double sig_work[MDIM*MDIM], d[MDIM], v[MDIM*MDIM];
+      array_move( new_sig, sig_work, MDIM*MDIM );
+      matrix_jacobi( sig_work, 3, d, v, &nrot );
+      fv = d[0];
+      for ( idim=1; idim<3; idim++ ) if ( d[idim]>fv ) fv = d[idim];
+    }
+    if ( fv-sigy > f_direct ) f_direct = fv - sigy;
+  }
+  if ( mc_active && mc_plane ) {
+    double fv = 0.;
+    for ( idim=0; idim<ndim; idim++ ) {
+      t[idim] = 0.;
+      for ( jdim=0; jdim<ndim; jdim++ )
+        t[idim] += new_sig[idim*MDIM+jdim] * n_mc[jdim];
+    }
+    sig_n = 0.;
+    for ( idim=0; idim<ndim; idim++ ) sig_n += n_mc[idim] * t[idim];
+    tau_norm = 0.;
+    for ( idim=0; idim<ndim; idim++ )
+      tau_norm += ( t[idim] - sig_n*n_mc[idim] ) *
+        ( t[idim] - sig_n*n_mc[idim] );
+    fv = sqrt( tau_norm ) - ( c - sig_n * tan( phi ) );
+    if ( fv > f_direct ) f_direct = fv;
+  }
+}
+
+// direct_plastic_strain - K13: the tensor strain deps with C : deps =
+// dsig for the elastic stiffness C = Cmem + Cuser + Chyper + Chypo (+
+// 1/compressibility on the volumetric part), solved in the 6-component
+// tensor form (shear columns 2 C_ijkl). Returns 0 when C is singular.
+long int direct_plastic_strain( double dsig[],
+  double Cmem[MDIM][MDIM][MDIM][MDIM], double Cuser[MDIM][MDIM][MDIM][MDIM],
+  double Chyper[MDIM][MDIM][MDIM][MDIM], double Chypo[MDIM][MDIM][MDIM][MDIM],
+  double compressibility, double deps[] )
+
+{
+  const long int ii[6] = { 0, 1, 2, 0, 0, 1 }, jj[6] = { 0, 1, 2, 1, 2, 2 };
+  long int r=0, q=0, k=0, piv=0;
+  double a[6][7], cijkl=0., tmp=0., amax=0.;
+
+  for ( r=0; r<6; r++ ) {
+    for ( q=0; q<6; q++ ) {
+      long int i=ii[r], j=jj[r], kk=ii[q], l=jj[q];
+      cijkl = Cmem[i][j][kk][l] + Cuser[i][j][kk][l] + Chyper[i][j][kk][l] +
+        Chypo[i][j][kk][l];
+      if ( compressibility!=0. && i==j && kk==l ) cijkl += 1./compressibility;
+      if ( kk!=l ) {
+        cijkl += Cmem[i][j][l][kk] + Cuser[i][j][l][kk] + Chyper[i][j][l][kk] +
+          Chypo[i][j][l][kk];
+      }
+      a[r][q] = cijkl;
+      if ( scalar_dabs(cijkl)>amax ) amax = scalar_dabs(cijkl);
+    }
+    a[r][6] = dsig[ii[r]*MDIM+jj[r]];
+  }
+  if ( amax<=0. ) return 0;
+  // Gauss-Jordan elimination with partial pivoting; a singular C (no
+  // usable elastic stiffness) stores no plastic strain
+  for ( k=0; k<6; k++ ) {
+    piv = k;
+    for ( r=k+1; r<6; r++ )
+      if ( scalar_dabs(a[r][k])>scalar_dabs(a[piv][k]) ) piv = r;
+    if ( scalar_dabs(a[piv][k])<=1.e-12*amax ) return 0;
+    if ( piv!=k )
+      for ( q=0; q<7; q++ ) { tmp = a[k][q]; a[k][q] = a[piv][q]; a[piv][q] = tmp; }
+    for ( r=0; r<6; r++ ) {
+      if ( r==k || a[r][k]==0. ) continue;
+      tmp = a[r][k] / a[k][k];
+      for ( q=k; q<7; q++ ) a[r][q] -= tmp*a[k][q];
+    }
+  }
+  array_set( deps, 0., MDIM*MDIM );
+  for ( r=0; r<6; r++ ) {
+    tmp = a[r][6] / a[r][r];
+    deps[ii[r]*MDIM+jj[r]] = tmp;
+    deps[jj[r]*MDIM+ii[r]] = tmp;
+  }
+  return 1;
 }
 
 void set_stress( long int element, long int gr, 
@@ -536,7 +648,7 @@ void set_stress( long int element, long int gr,
     k0_control_swit=0,
     formulation=INCREMENTAL, ldum=0, idum[1], task[2],
     hs_gp_swit=-NO, icontrol_hs=0, hs_plasti_present=0, hs_len=1,
-    damage_done=0;
+    damage_done=0, direct_on=0;
   double lambda=0., deps_size=0., lambda_new=0., lambda_previous=0., 
     tmp=0., tmp_old=0., tmp_inc=0., tmp_new=0., 
     f=0., f_previous=0, f_ref=0., materi_expansion_linear=0., 
@@ -552,6 +664,7 @@ void set_stress( long int element, long int gr,
     group_materi_elasti_lade[3], sig_dev[MDIM*MDIM], ddum[MDIM*MDIM], ddumarray[MDIM][MDIM], 
     sig_princ[MDIM],
     hs_elasti[7], hs_plasti[4],
+    direct_f=NO_YIELD_F, direct_sig_before[MDIM*MDIM],
     hs_sig3=0., hs_base=0., hs_E50=0., hs_Eur=0., hs_Eref50=0., hs_sigref50=0.,
     hs_Erefur=0., hs_sigrefur=0., hs_m=0., hs_ccot=0., hs_qf=0.,
     hs_qa=0., hs_gp_extra=0., hs_phi=0., hs_c=0.,
@@ -1736,6 +1849,12 @@ void set_stress( long int element, long int gr,
            db( GROUP_MATERI_PLASTI_COORD_LIMIT, gr, idum,
           &limit_gate, ldum, VERSION_NORMAL, GET_IF_EXISTS ) )
         if ( coord_ip[ndim-1]>limit_gate ) gate_off = 1;
+      // K13: keep the stress before the direct cut-offs (their plastic
+      // strain is C^-1 (sig_before - sig_after), stored after the loop)
+      // and the yield value of the direct laws on the final stress
+      direct_on = 0;
+      direct_f = NO_YIELD_F;
+      array_move( new_sig, direct_sig_before, MDIM*MDIM );
       if ( !gate_off ) {
         if ( db_active_index( GROUP_MATERI_PLASTI_MOHR_COUL_DIRECT, gr,
             VERSION_NORMAL ) ||
@@ -1753,7 +1872,7 @@ void set_stress( long int element, long int gr,
           if ( !array_normalize( mc_test, MDIM ) &&
                !array_normalize( ten_test, MDIM ) )
             materi_direct_full_mc( element, gr, plasti_on_boundary, dtime,
-              new_sig, ddsdde, 1 );
+              new_sig, ddsdde, 1, direct_f );
           else {
             // elastic stiffness of the element for the phi_flow return
             // (the same linear stiffness that fills ddsdde below)
@@ -1771,10 +1890,12 @@ void set_stress( long int element, long int gr,
                       Cel[idim][jdim][kdim][ldim] += 1./compressibility;
                   }
             materi_direct_cutoff( element, gr, plasti_on_boundary, dtime,
-              new_sig, ddsdde, mc_normal, ten_normal, &Cel[0][0][0][0] );
+              new_sig, ddsdde, mc_normal, ten_normal, &Cel[0][0][0][0],
+              direct_f );
           }
         }
-        materi_compression_cutoff( element, gr, dtime, new_sig );
+        materi_compression_cutoff( element, gr, dtime, new_sig, direct_f );
+        direct_on = ( direct_f!=NO_YIELD_F );
       }
     }
     array_move( new_sig, test_sig, MDIM*MDIM );
@@ -1886,6 +2007,33 @@ void set_stress( long int element, long int gr,
       }
     }
   }
+  }
+
+  // K13: plastic strain and yield value of the direct cut-offs. The
+  // direct laws cut the stress without an incremental plastic strain;
+  // the cut is stored as the plastic strain that the elastic law needs
+  // for sig = C (eps - eps_p): deps_p = C^-1 (sig_before - sig_after),
+  // with C the elastic stiffness (Cmem + Cuser + Chyper + Chypo +
+  // compressibility, as the phi_flow return). The Professional 02-08-2026
+  // stores the same normal components (tension cut: eppxx 1.4e-3,
+  // eppyy = eppzz -0.35e-3 for E 1, nu 0.25, trial 2.4e-3 -> 1e-3) but
+  // twice the tensor value in the shear components (Delta sig_xy / G);
+  // the GNU keeps the tensor convention of every other plastic strain
+  // (deliberate divergence, BACKLOG). The yield value is the largest
+  // direct-law value on the final stress, 0 when a law cut (also a
+  // partial visco cut, as the Professional).
+  if ( direct_on ) {
+    double dsig[MDIM*MDIM], deps[MDIM*MDIM];
+    array_subtract( direct_sig_before, new_sig, dsig, MDIM*MDIM );
+    if ( array_size( dsig, MDIM*MDIM )>0. &&
+         direct_plastic_strain( dsig, Cmem, Cuser, Chyper, Chypo,
+           compressibility, deps ) ) {
+      array_add( inc_epp, deps, inc_epp, MDIM*MDIM );
+      array_subtract( inc_epe, deps, inc_epe, MDIM*MDIM );
+      array_subtract( new_epe, deps, new_epe, MDIM*MDIM );
+    }
+    if ( direct_f>0. ) direct_f = 0.;
+    if ( new_f==NO_YIELD_F || direct_f>new_f ) new_f = direct_f;
   }
 
     // fill material stiffness, we use the linear stiffness

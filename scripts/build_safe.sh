@@ -1435,6 +1435,16 @@ run_ok "$T2026" stress_pressure_factor_reload2
 run_ok "$T2026" expansion_volume_inertia1
 
 # ---------------------------------------------------------------------
+# K13 (2026-10-06): the direct cut-offs (tension/MC/compression, full and
+# plane mode) store their cut as plastic strain C^-1 (sig_trial - sig)
+# and the direct-law yield value (0 after a cut; = Pro 02-08-2026, except
+# the shear plastic strain: tensor value, Pro twice it).
+# ---------------------------------------------------------------------
+run_ok "$T2026" direct_plastic_strain_tension1
+run_ok "$T2026" direct_plastic_strain_mc1
+run_ok "$T2026" direct_yield_value1
+
+# ---------------------------------------------------------------------
 # Sub-sprint materi_stress_force, lote 2 (integracion 2D quad4/quad9):
 # verificacion ANALITICA por estatica. Decisiones de diseno (manual-
 # developer/post_calcul_materi_stress_force.md): caras extremas = las

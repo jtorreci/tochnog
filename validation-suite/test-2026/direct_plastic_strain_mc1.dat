@@ -1,0 +1,59 @@
+(
+K13 (2026-10-06): full Mohr-Coulomb direct cut-off (phi 0.5, c 0, tension
+cap 1) of a plane-strain shear + compression state (E 1, nu 0.25):
+sigxy 2.4e-3 -> 0.767081e-3. The cut is stored as the plastic strain
+C^-1 (sig_trial - sig): eppxx = eppyy -8.22978456e-6, eppzz
+3.29191382e-5 (= Professional 02-08-2026) and the TENSOR shear component
+eppxy = dsigxy / 2G = 2.04114892e-3 (the Professional stores dsigxy / G
+= 4.08229785e-3, twice the tensor value: deliberate divergence, the GNU
+keeps sig = C (eps - eps_p)); f 0. GNU before K13: epp 0, f -1e10.
+)
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_displacement
+materi_strain_total
+materi_strain_elasti
+materi_strain_plasti
+materi_plasti_f
+materi_stress
+end_initia
+node 1 0 0
+node 2 1 0
+node 3 0 1
+node 4 1 1
+element 1 -quad4 1 2 3 4
+group_type 0 -materi
+group_materi_elasti_young 0 1.
+group_materi_elasti_poisson 0 0.25
+group_materi_memory 0 -total_linear
+group_materi_plasti_mohr_coul_direct 0 0.5 0. 0.
+group_materi_plasti_tension_direct 0 1.
+bounda_dof 0 1 -velx
+bounda_time 0 0 0 1 0.0 100 0.0
+bounda_dof 1 1 -vely
+bounda_time 1 0 0 1 0.0 100 0.0
+bounda_dof 2 2 -velx
+bounda_time 2 0 0 1 -0.001 100 -0.001
+bounda_dof 3 2 -vely
+bounda_time 3 0 0 1 0.003 100 0.003
+bounda_dof 4 3 -velx
+bounda_time 4 0 0 1 0.003 100 0.003
+bounda_dof 5 3 -vely
+bounda_time 5 0 0 1 -0.001 100 -0.001
+bounda_dof 6 4 -velx
+bounda_time 6 0 0 1 0.002 100 0.002
+bounda_dof 7 4 -vely
+bounda_time 7 0 0 1 0.002 100 0.002
+control_timestep 0 1.0 1.
+target_item 0 -node_dof 1 -eppxx
+target_value 0 -8.22978456e-06 1.e-13
+target_item 1 -node_dof 1 -eppzz
+target_value 1 3.29191382e-05 1.e-13
+target_item 2 -node_dof 1 -eppxy
+target_value 2 2.04114892e-03 1.e-11
+target_item 3 -node_dof 1 -epexx
+target_value 3 -9.91770215e-04 1.e-12
+target_item 4 -node_dof 1 -f
+target_value 4 0. 1.e-12
+end_data
