@@ -298,7 +298,8 @@ rm -f validation-suite/test-2014/dof.* \
 #   t1 rota a z, la cortante en y pasa a f_t2=10.4 y f_t~0 (frame por
 #   defecto daria f_t=la cortante)).
 # + node_force_inertia/slide/pressure (node_force discreto en dof.cc +
-#   node_inertia calculado m*a+m*g PUT en VERSION_NEW: -19.83 ~= m*g=-20
+#   node_inertia calculado m*a+m*g PUT en VERSION_NEW: -20.11 ~= m*g=-20
+#   (target -19.83 until C28 2026-10-06, calibrated on the reversed sign)
 #   con node_force -30 actuando; node_pressure overrides de calcul -static:
 #   node_static_pressure 7.5 -> post_calcul -static da 7.5 exacto vs -2
 #   calculado; node_slide smoke clone de slide_axi con la geometria
@@ -1457,6 +1458,16 @@ run_ok "$T2026" plasti_f_no_law1
 # before -8.6e-5).
 # ---------------------------------------------------------------------
 run_ok "$T2026" strain_recovery_clamped1
+
+# ---------------------------------------------------------------------
+# C28 (2026-10-06): node_force is an external load along +force (dof.cc
+# adds it, as force_point): node_force_sign1 disx 2 (= Pro; before -2);
+# control_mesh_cut_node_force stores the substitute with that sign
+# (delete.cc): mesh_cut_node_force_sign1 node_force 6 = +1 (= Pro mesh_cut_1;
+# before -1), remaining bar sigxx 1.
+# ---------------------------------------------------------------------
+run_ok "$T2026" node_force_sign1
+run_ok "$T2026" mesh_cut_node_force_sign1
 
 # ---------------------------------------------------------------------
 # Sub-sprint materi_stress_force, lote 2 (integracion 2D quad4/quad9):

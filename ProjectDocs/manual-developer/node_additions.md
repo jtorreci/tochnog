@@ -14,8 +14,17 @@
   node_damping/stiffness correctly use ndim): node_mass in 2D/3D
   consumed only the first component and the parser choked on the rest —
   node_mass was unusable since the GNU origins.
-- dof.cc `parallel_new_dof_before()`: node_force applied to the node
-  rhs (force_point sign convention); node_inertia filled per step with
+- dof.cc `parallel_new_dof_before()`: node_force ADDED to the node
+  rhs of the ndim velocity equations (`node_rhside += node_force`:
+  node_rhside holds external - internal; same convention as
+  `force_point_calculate()` and the force_element_edge loads). C28
+  (2026-10-06): it was subtracted (Pro 1D probe velx +1, GNU -2). The
+  "factor 2" is not a double application: the reversed load compressed
+  the unit bar (E = 1) by exactly its length, a singular zero-length
+  state (now: `node_force 2 -1.0` GNU -2 / Pro -1, `-0.5` both -0.5,
+  `force_point` at the node -1 both -1; out of scope, degenerate). `delete.cc` `mesh_cut()`
+  dropped its compensating negation in the same work unit (the stored
+  substitute now equals the Professional's record). node_inertia filled per step with
   m*(a+g). GOTCHA: the PUT must go to VERSION_NEW — the end-of-step
   db_version_copy(NEW->NORMAL) overwrites NORMAL with the input values
   (a NORMAL write was silently lost; found with a debug pri). The PUT
@@ -31,8 +40,17 @@
 
 ## Verification / limitations (suite 85/85)
 
-- node_force_inertia: inertia record -19.83 ~ m*g (node_force -30
-  active; m=2, g=-10). node_mass fix exercised (2D values parse).
+- node_force_inertia: inertia record ~ m*g (node_force -30 active;
+  m=2, g=-10): -19.75 with the old reversed sign (target -19.83 +- 0.2
+  calibrated on it), -20.109 since C28 (the downward force adds a
+  downward acceleration; the Professional cannot run the input:
+  `node_mass` rejected, `node_inertia` wants one value per dof). The
+  stale target (BACKLOG B12) was retargeted to -20.11 +- 0.2 on
+  2026-10-06. node_mass fix exercised (2D values parse).
+- C28 sign (2026-10-06): `test-2026/node_force_sign1` (quad4 bar, disx
+  2; old -2) and `test-2026/mesh_cut_node_force_sign1` (Pro mesh_cut_1 +
+  target `node_force 6` = +1; old -1): RED old / GREEN new. Probes 1D
+  bar2 / 2D quad4 / 3D hex8 equal the Professional 02-08-2026.
 - node_pressure: static override 7.5 exact vs calculated -2.0 (A/B).
 - node_slide: smoke test (clone of slide_axi with the geometry shifted
   off the node and membership by record). LIMITATION (documented): the

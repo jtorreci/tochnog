@@ -1,0 +1,60 @@
+(
+C28 (2026-10-06): control_mesh_cut_node_force stores the substitute
+force with the sign of the external load it represents (node_force is
+applied as +F along +x). Derived from the Professional test
+mesh_cut_1 (1D bar pulled to sigxx = 1, right half cut away): the
+boundary node 6 gets node_force +1 (= Professional 02-08-2026) and the
+remaining bar keeps sigxx = 1. GNU before C28: node_force -1 (negated
+to compensate the reversed node_force sign of dof.cc), sigxx 1.
+)
+echo -no
+number_of_space_dimensions 1
+materi_velocity
+materi_displacement
+materi_stress
+end_initia
+
+
+start_define
+  left_edge geometry_point 10
+end_define
+left_edge 0. 1.e-6
+
+start_define
+  right_edge geometry_point 20
+end_define
+right_edge 1. 1.e-6
+
+start_define
+  right_half geometry_line 10
+end_define
+right_half 0.5 1.0 1.e-4
+
+group_type 0  -materi
+group_materi_memory 0  -total_linear
+group_materi_elasti_young 0  1.0
+
+bounda_dof    10  -left_edge -disx
+bounda_time   10  0.
+
+bounda_dof    20  -right_edge -disx
+bounda_time   20  0.0 0.0 1.0 1.0 1.e8 1.0
+
+post_point 10  0.25
+
+control_mesh_macro            10  -bar 0 10
+control_mesh_macro_parameters 10  0.5 1.0
+
+control_timestep              20  1.e-1 2
+
+control_mesh_cut_geometry     30  -right_half
+control_mesh_cut_node_force   30  -yes
+
+control_timestep              40  1.e-1 1
+
+check_target -yes
+target_item  1   -node_force 6 0
+target_value 1   1.0 1.e-8
+target_item  0   -post_point_dof 10 -sigxx
+target_value 0   1.0 1.e-3
+end_data

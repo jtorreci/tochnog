@@ -450,6 +450,23 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
 
 ## C. Additional residuals
 
+### B12. validation-suite `node_force_inertia` target calibrated on the reversed `node_force` sign (C28, 2026-10-06) — RESOLVED 2026-10-06
+
+- **Corpus**: validation-suite test-2014 (run by `build_safe.sh`). Its
+  `node_inertia 3` target -19.83 +/- 0.2 was calibrated when the GNU
+  applied `node_force` in the opposite direction (the -30 force pushed
+  node 3 UP: -19.75). Since C28 the force pushes down, adding to the
+  gravity of the node mass and of the element: -20.109 (outside the
+  tolerance by 0.08). The Professional cannot run the input (`node_mass`
+  rejected, `node_inertia` wants one value per dof).
+- **Root cause**: stale target, not a GNU defect.
+- **Proposed fix**: target -20.11 +/- 0.2 (one line in
+  `validation-suite/test-2014/node_force_inertia.dat`).
+- **Resolution** (project owner go-ahead, 2026-10-06): target retargeted
+  to -20.11 +/- 0.2 with a comment in the input, together with the C28
+  fix on `dev/f1-cheap-bugs` (F1 T6).
+- **Severity**: **LOW**. **Effort**: **cheap**.
+
 ### C1. `pruebavel` — dead/malformed test (the 1 PARSE)
 
 - **Corpus**: sfnet 197.
@@ -948,7 +965,7 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
   copy the derivative-block defect.
 - **Severity**: **LOW** (output files only). **Effort**: **medium**.
 
-### C28. `node_force` applied with the opposite sign (and doubled in a 1D probe)
+### C28. `node_force` applied with the opposite sign (and doubled in a 1D probe) — RESOLVED 2026-10-06 (F1 T6)
 
 - **Symptom** (found by F1 T3, K04 `force18` probes on the Professional
   02-08-2026): Pro `force18` with `node_force 2 1.0` instead of the
@@ -960,6 +977,13 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
   compensate the sign (documented there).
 - **Proposed fix**: add the force (`+=`), drop the `delete.cc`
   negation, trace the factor 2, A/B the corpus inputs with `node_force`.
+- **Resolution** (F1 T6): `dof.cc` adds the force; `delete.cc` stores the
+  mesh_cut substitute without the negation (mesh_cut_1 `node_force 6` +1
+  = Pro). The factor 2 is not a double application: the reversed load
+  compressed the unit bar by exactly its length (singular zero-length
+  element; `node_force 2 -1.0` still gives GNU -2 / Pro -1, `-0.5` both
+  -0.5). Probes 1D/2D/3D = Pro. Corpus A/B: only `node_force_inertia`
+  changes (stale target, B12, retargeted to -20.11).
 - **Severity**: **MEDIUM** (wrong load direction). **Effort**: **cheap/medium**.
 
 ### C29. `group_condif_conductivity` with one value per direction not accepted
@@ -1132,7 +1156,6 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
 | C25 | — | uninitialized-buffer audit follow-ups (`pef_vel_prev` realloc, NODE_EIGEN print, split/beam/interface/mpc/nonloc side findings) | LOW | cheap |
 | C26 | — | `control_print_dof -separate_index`: Pro writes one file per dof, GNU one `dof.N` | LOW | cheap/medium |
 | C27 | — | FRD/gmsh layout vs Pro (PSTEP per block, `ALL` component, names, extra blocks/fields, multi-component gmsh fields) | LOW | medium |
-| C28 | — | `node_force` opposite sign (+ doubled in a 1D probe) vs Pro | MEDIUM | cheap/medium |
 | C29 | Pro `other` | `group_condif_conductivity` per-direction values (condif11) not parsed | LOW | cheap/medium |
 | C30 | Pro `other` | `mohr_coul_direct4`: Pro does not enforce the interface MC strength (deliberate divergence, GNU = manual 6.632) | LOW | — |
 | C31 | Pro `other` | `tet10` nodal quadrature only degree 1 (`tet10_2` gravity); F4 (design + corpus A/B) | MEDIUM | medium |
@@ -1141,7 +1164,7 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
 | C34 | — | direct cut shear plastic strain: Pro twice the tensor value (deliberate divergence) | LOW | — |
 | C35 | — | one-iteration lag of the whole material state (K02, `spring4` 1 iteration) — parked, design | MEDIUM | medium/large |
 
-Thirty-eight items remain open: eleven MEDIUM and twenty-seven LOW (C23 and C24 resolved 2026-10-05; C25, C26, C27 and B10 added; F1 T3 / K04 2026-10-06 added B11, C28-C32). No open issue is CRITICAL or
+Thirty-seven items remain open: eleven MEDIUM and twenty-six LOW (C23 and C24 resolved 2026-10-05; C25, C26, C27 and B10 added; F1 T3 / K04 2026-10-06 added B11, C28-C32; F1 T6 resolved C28, added and resolved B12). No open issue is CRITICAL or
 HIGH. The validation-suite corpus has no open failure — its 233 real tests
 pass (`materi_direct_mc` input corrected, C17 resolved). Every remaining failure is a stale or malformed test, an out-of-scope model
 or infrastructure limit, a narrow post-processing divergence, a corpus-coverage

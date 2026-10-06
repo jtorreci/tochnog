@@ -56,9 +56,13 @@ void parallel_new_dof_before( void )
             VERSION_NORMAL, GET_IF_EXISTS );
           db( NODE_MASS, inod, idum, node_mass, ldum,
             VERSION_NORMAL, GET_IF_EXISTS );
-          // node_force: discrete nodal force (manual Professional 6.887);
-          // same sign convention as force_point/force_element_edge
-          // (node_rhside -= force)
+          // node_force: discrete nodal force (manual Professional 6.887),
+          // an EXTERNAL load, +force along +x: node_rhside holds
+          // external - internal, so the force is ADDED (same convention
+          // as force_point and force_element_edge). C28 (2026-10-06):
+          // the old "-=" pushed the node the wrong way (1D probe Pro
+          // velx +1, GNU -2: the reversed load compressed the bar to
+          // exactly zero length, a singular state, hence the "-2").
           {
             double node_force[MDIM];
             array_set( node_force, 0., MDIM );
@@ -66,7 +70,7 @@ void parallel_new_dof_before( void )
                 VERSION_NORMAL, GET_IF_EXISTS ) ) {
               for ( idim=0; idim<ndim; idim++ ) {
                 ipuknwn = vel_indx/nder + idim;
-                node_rhside[ipuknwn] -= node_force[idim];
+                node_rhside[ipuknwn] += node_force[idim];
               }
             }
           }

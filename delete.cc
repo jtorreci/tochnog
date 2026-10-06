@@ -327,12 +327,8 @@ void delete_geom( double time_current )
 // within): NO element deleted (no-op, same as the Professional); a 2D
 // area cut (geometry_quadrilateral over the top rows, probe): the
 // boundary row forces 1/9 (interior nodes) / 1/18 (edge nodes) equal
-// to the Professional's (the record SIGN differs: our node_force
-// consumption in dof.cc applies a stored +F as a -x load while the
-// Professional applies it as +x; mesh_cut stores the negated value so
-// the equilibrium matches - PENDING: align the node_force record sign
-// with the Professional in a dedicated work unit and drop the
-// negation).
+// to the Professional's, record sign included (node_force is applied
+// as an external load, +F along +x, since C28 2026-10-06).
 // Supported elements for the force integration: the tensor-product
 // isoparametric family (-bar2/-bar3/-quad4/-quad9/-hex8/-hex27). The
 // stress source is the element integration-point record (ELEMENT_DOF),
@@ -707,19 +703,14 @@ void mesh_cut( double /*time_current*/ )
       array_set( node_force_exist, 0., MDIM );
       db( NODE_FORCE, inod, idum, node_force_exist, ldum,
         VERSION_NORMAL, GET_IF_EXISTS );
-      // NOTE (measured, mesh_cut_1.dat + a 2D area-cut probe A/B on
-      // the Professional 25-10-2023): the Professional applies a
-      // stored node_force +F as a +x external load, our
-      // parallel_new_dof_before (dof.cc) applies it as -x
-      // (node_rhside -= node_force, opposite sign). The NEGATION below
-      // makes the substituted load reproduce the Professional
-      // equilibrium (mesh_cut_1: node_force 6 = -1 here, +1 there,
-      // both keep the remaining bar at sigxx = +1). PENDING: align the
-      // node_force record sign with the Professional in a dedicated
-      // work unit and drop this negation.
+      // node_force is an external load (+F along +x, dof.cc, as the
+      // Professional): store the substitute as is (mesh_cut_1:
+      // node_force 6 = +1 in both binaries, remaining bar sigxx = +1).
+      // C28 (2026-10-06) dropped the old negation that compensated the
+      // reversed node_force sign of parallel_new_dof_before.
       for ( imax=0; imax<ndim; imax++ )
         if ( node_force_switches[imax]==-YES )
-          node_force_exist[imax] -= node_force_acc[inod*MDIM+imax];
+          node_force_exist[imax] += node_force_acc[inod*MDIM+imax];
       length = ndim;
       db( NODE_FORCE, inod, idum, node_force_exist, length,
         VERSION_NORMAL, PUT );

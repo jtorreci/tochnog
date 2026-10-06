@@ -30,7 +30,8 @@ options_mesh   -fixed_in_space -fixed_in_space
 options_processors   1
 options_stabilization   -static
 target_item  1  -node_inertia 3 1
-target_value  1  -19.83 0.2
+( Target retargeted on 2026-10-06 from -19.83 to -20.11 after the node_force sign fix, BACKLOG B12 and C28. The old value was calibrated on the reversed node_force sign. )
+target_value  1  -20.11 0.2
 node_dof  1  0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
 node_dof  2  0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
 node_dof  3  0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
