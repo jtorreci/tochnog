@@ -117,6 +117,17 @@ The direct records have TWO modes selected by the presence of a plane normal:
   Professional uses 2 (= M/G at nu = 0): deliberate divergence, BACKLOG
   C15.
 
+## Differences with the Professional version
+
+- phi_flow factor of the plane mode: M/G instead of the Professional
+  constant 2 (deliberate, BACKLOG C15; see Física).
+- Interface strength (`mohr_coul_direct4`, deliberate, BACKLOG C30,
+  project decision 2026-10-06): the GNU returns the interface friction
+  at once to the manual 6.632 strength c + |Fn| tan(phi) (1.2027 in that
+  test); the Professional 02-08-2026 keeps the elastic trial (2.0) and
+  drifts slowly below the strength (0.410 at t = 100). Not imitated: no
+  code change, the manual decides.
+
 ## Validación del modo plano (Professional 02-08-2026, C14)
 
 Probes (single quad4, E 1, homogeneous velocity, 1 step; scratch driver

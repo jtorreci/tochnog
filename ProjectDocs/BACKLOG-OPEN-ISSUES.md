@@ -971,7 +971,7 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
 - **Proposed fix**: accept ndim values, isotropic when one value.
 - **Severity**: **LOW**. **Effort**: **cheap/medium**.
 
-### C30. `mohr_coul_direct4` (Pro `other`): the Professional does not enforce the interface Mohr-Coulomb strength
+### C30. `mohr_coul_direct4` (Pro `other`): the Professional does not enforce the interface Mohr-Coulomb strength (deliberate divergence)
 
 - **Symptom** (F1 T3, audit K04): interface shear test (phi 0.2 rad,
   c 1, normal stress -1, top displaced 1 at t = 1 and held to t = 100).
@@ -983,9 +983,13 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
   t = 100 (0.40976, status `-elastic`, target `disx` 0.10244).
 - **Root cause**: Professional behaviour (no immediate return, slow
   drift), PRO-suspect; the GNU follows the manual.
-- **Proposed fix**: none in the GNU unless the user decides to imitate the
-  Professional; keep as a documented divergence.
-- **Severity**: **LOW**. **Effort**: —.
+- **Decision** (project owner, 2026-10-06): deliberate divergence. The GNU
+  keeps the manual 6.632 immediate return to the strength; the
+  Professional's slow drift looks like an artefact of its own integration
+  and is not imitated. Recorded in "Differences with the Professional
+  version" of `manual-user/` and `manual-developer/group_materi_plasti_mohr_coul_direct.md`.
+- **Severity**: **LOW** — deliberate divergence; the GNU follows the manual.
+  **Effort**: —.
 
 ### C31. `tet10` integration rule is only degree 1 (Pro `tet10_2` under gravity)
 
@@ -1010,6 +1014,8 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
   the stiffness/loads plus a separate positive lumping (HRZ) for the
   inertia. Needs a design decision and an A/B on the sfnet tet10 inputs
   (`tet10`, `refine4`, `ho_othr1/2`, `examp*`).
+- **Decision** (project owner, 2026-10-06): moved to **F4** (design +
+  corpus A/B); not part of F1.
 - **Severity**: **MEDIUM** (wrong quadratic-tet results under body
   loads/bending). **Effort**: **medium**.
 
@@ -1019,7 +1025,8 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
   is uniform in both binaries; the GNU total ring force is 0.16 % low
   because `polynom.cc` forces 1-point Gauss for axisymmetric
   `materi_velocity` quad4 (element-constant hoop term, audit K20). Not the
-  `post_point_dof` convention. Decision belongs to K20.
+  `post_point_dof` convention. Decision belongs to K20, moved to **F4**
+  (design + corpus A/B; project owner, 2026-10-06).
 - `distri2` (post_point temp 0.998933 vs 0.999774 +/- 1e-4):
   `control_distribute -normal` random field; both binaries draw a valid
   N(1, 2e-3) (GNU mean 0.99995 / std 0.00203, Pro 0.99997 / 0.00201)
@@ -1067,9 +1074,9 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
 | C27 | — | FRD/gmsh layout vs Pro (PSTEP per block, `ALL` component, names, extra blocks/fields, multi-component gmsh fields) | LOW | medium |
 | C28 | — | `node_force` opposite sign (+ doubled in a 1D probe) vs Pro | MEDIUM | cheap/medium |
 | C29 | Pro `other` | `group_condif_conductivity` per-direction values (condif11) not parsed | LOW | cheap/medium |
-| C30 | Pro `other` | `mohr_coul_direct4`: Pro does not enforce the interface MC strength (PRO-suspect) | LOW | — |
-| C31 | Pro `other` | `tet10` nodal quadrature only degree 1 (`tet10_2` gravity) | MEDIUM | medium |
-| C32 | Pro `other` | `axisym9` (K20 1-point axisymmetric rule), `distri2` (random generator): not GNU defects | LOW | — |
+| C30 | Pro `other` | `mohr_coul_direct4`: Pro does not enforce the interface MC strength (deliberate divergence, GNU = manual 6.632) | LOW | — |
+| C31 | Pro `other` | `tet10` nodal quadrature only degree 1 (`tet10_2` gravity); F4 (design + corpus A/B) | MEDIUM | medium |
+| C32 | Pro `other` | `axisym9` (K20 1-point axisymmetric rule, F4), `distri2` (random generator): not GNU defects | LOW | — |
 
 Thirty-eight items remain open: eleven MEDIUM and twenty-seven LOW (C23 and C24 resolved 2026-10-05; C25, C26, C27 and B10 added; F1 T3 / K04 2026-10-06 added B11, C28-C32). No open issue is CRITICAL or
 HIGH. The validation-suite corpus has no open failure — its 233 real tests

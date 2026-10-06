@@ -271,6 +271,7 @@ en el apartado 'Diferencias con la versión Professional' del manual correspondi
 | `control_print_gid_*` (familia ~20) | Único formato propietario contemplado; `print_gid_6` del GNU es de 1998 (anterior a cambios recientes); GiD puede importar formatos no nativos (VTK, Gmsh, CSV). Ver plan sección 6c. |
 | `control_data_save` | Descarte de la FEATURE (único consumidor: `control_print_gid_save_difference`, familia GiD descartada; el análisis de diferencias se hace en post-proceso con la exportación SQLite/CSV de P5-T). El 2026-09-04 se registró parse-only (INTEGER, class CONTROL) porque los tests dynamic6/7 del corpus lo declaran; el registro sigue sin comportamiento. |
 | `control_print_interface_stress*` | Requiere elementos de interfaz/contacto, que el GNU no tiene (ni enums). Depende del Carril A. |
+| Professional behaviour of `mohr_coul_direct4` (interface Mohr-Coulomb strength not enforced at once, slow drift below it) | **Deliberate divergence** (project decision 2026-10-06, F1 T7, BACKLOG C30): the GNU keeps the manual 6.632 immediate return to c + \|Fn\| tan(phi) (sigxy 1.2027, `disx` 0.3007); the Professional 02-08-2026 stays at 2.0 and drifts to 0.410 at t = 100 (target `disx` 0.1024), which looks like an artefact. Documented in 'Differences with the Professional version' of `manual-user/` and `manual-developer/group_materi_plasti_mohr_coul_direct.md`. |
 ## Equivalencias de nomenclatura Professional vs GNU
 
 Algunas familias tienen nombres distintos entre Professional y el GNU
