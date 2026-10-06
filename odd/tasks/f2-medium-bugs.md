@@ -15,7 +15,7 @@ verified against the Professional 02-08-2026 or an analytic value.
   - [ ] T2c PARKED: `trubea2/3` planar GNU beam vs Pro 3D beam (design, BACKLOG C37); `truss8` death-velocity reset (C39 residual), `update2` (not a truss, -updated robustness), `truss13` (truss_distribute_mpc not implemented), zero-force first iteration (C12) → C39; `dynamic3` → C11; support `_stiffness_freeze` → C38.
 - [x] T3 K05 + C5: contact (`contac1` no interaction, GNU node 2 velx 0.03 vs Pro 0.02/0.01; `validation_10` sigyy ≈0 vs −21031; `contact_target_geometry` alias aborts "Data is allocated in a parallel loop" in 6 runs and drops an index-0 contact in examp9).
   - [x] T3a `contact_target_geometry`/`_switch` alias: db PUT inside the parallel contact loop (index 0 abort) + index > 0 dropped (contact.cc) — `3cef926`.
-  - [x] T3b element-target contact (`contact_target_element_group`) without node_boundary: no mesh boundary generated → no interaction (`contac1/4`, `axisym3`) (area.cc + top.cc) — commit `fix(contact)` T3b (hash in the next chore commit). Residuals → BACKLOG C40.
+  - [x] T3b element-target contact (`contact_target_element_group`) without node_boundary: no mesh boundary generated → no interaction (`contac1/4`, `axisym3`) (area.cc + top.cc) — `50683a2`. Residuals → BACKLOG C40.
 
 ## Rules
 Principle: manual/analytic decides; Pro is the oracle when the manual is
@@ -169,4 +169,8 @@ docs + SEGUIMIENTO + AUDIT/BACKLOG. Time-box ~1.5 h per root cause.
   (contac1/2/4, axisym3, pressed_rubber_cylinder), no regression.
 - Not done (BACKLOG C40): Pro error for single-layer targets, hex8 sides
   (`number_of_side_boundary_nodes==ndim`), element_boundary record.
+- T3b commit `50683a2`. Final clean build of `50683a2` (`git archive`,
+  `build_safe.sh --clean`) is byte-identical to the A/B RC2 binary;
+  copied to `build/tochnog`; check-only 226/226 runs, 131 OK / 0 FALLO.
+- Next: F2 closed except the parked T2c items; no open T3 decision.
 
