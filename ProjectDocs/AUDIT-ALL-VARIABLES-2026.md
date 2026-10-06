@@ -616,6 +616,10 @@ showed that K0 applies without `group_materi_elasti_poisson` and to
      handle every index (C5).
    - Investigate why the 1D `-follow_material` contact (`contac1/2/4`,
      `axisym3`) transfers no momentum.
+   **2026-10-07 (F2 T3a):** the `contact_target_geometry` alias is fixed
+   (read-only lookup of both names for every index, `contact.cc`): no more
+   parallel-loop abort, validation_10 sigyy -21232 (Pro -21031),
+   pressed_rubber_cylinder = Pro to 6e-7, contac2 = Pro.
 5. **K06, power-law elastic moduli.**
    - Decide the semantics against the Pro binary: the Pro adds the base
      `young`/`poisson`.

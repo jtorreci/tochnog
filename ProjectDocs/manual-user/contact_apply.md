@@ -23,7 +23,8 @@ following records complete the family (manual 6.99-6.107):
 - **`contact_target_element_group g_0 g_1 ...`** — restricts the target
   elements to the listed element groups.
 - **`contact_target_geometry` / `contact_target_geometry_switch`** — alias
-  of `contact_geometry`/`contact_geometry_switch` (the manual names).
+  of `contact_geometry`/`contact_geometry_switch` (the manual names), for
+  every index; see [contact_target_geometry](contact_target_geometry.md).
 
 ## Uso
 

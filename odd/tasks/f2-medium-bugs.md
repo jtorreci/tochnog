@@ -14,6 +14,8 @@ verified against the Professional 02-08-2026 or an analytic value.
   - [x] T2d `truss8` (C39): owner decision 2026-10-06 follow the Pro; nodes whose elements are all inactive by group_time are not driven by bounda_dof (bounda.cc) — `4ceed88`.
   - [ ] T2c PARKED: `trubea2/3` planar GNU beam vs Pro 3D beam (design, BACKLOG C37); `truss8` death-velocity reset (C39 residual), `update2` (not a truss, -updated robustness), `truss13` (truss_distribute_mpc not implemented), zero-force first iteration (C12) → C39; `dynamic3` → C11; support `_stiffness_freeze` → C38.
 - [ ] T3 K05 + C5: contact (`contac1` no interaction, GNU node 2 velx 0.03 vs Pro 0.02/0.01; `validation_10` sigyy ≈0 vs −21031; `contact_target_geometry` alias aborts "Data is allocated in a parallel loop" in 6 runs and drops an index-0 contact in examp9).
+  - [x] T3a `contact_target_geometry`/`_switch` alias: db PUT inside the parallel contact loop (index 0 abort) + index > 0 dropped (contact.cc) — commit `fix(contact)` T3a (hash recorded below).
+  - [ ] T3b element-target contact (`contact_target_element_group`) without node_boundary: no mesh boundary generated → no interaction (`contac1/4`, `axisym3`).
 
 ## Rules
 Principle: manual/analytic decides; Pro is the oracle when the manual is
@@ -114,3 +116,33 @@ docs + SEGUIMIENTO + AUDIT/BACKLOG. Time-box ~1.5 h per root cause.
   --clean`) copied to `build/tochnog`; `TN_CHECK_ONLY=1
   ./scripts/build_safe.sh`: 226/226 runs, 126 OK / 0 FALLO, rc 0.
 - Next: T3 (contact) not started.
+
+### T3 (K05 + C5) — 2026-10-07, route: inline per root cause
+- Re-run before (GNU = build/tochnog of `841f6f3`, Pro 02-08-2026): Pro
+  dialect `contac1` GNU rc 1 node 2 velx 0.03 (Pro 0.02/0.01);
+  `contac4`, `axisym3` GNU rc 1 (no contact); `contac2` GNU rc 1 x 1.02
+  (Pro 1.0); `validation_10` GNU rc 1 sigyy ~0 (Pro -21031);
+  `pressed_rubber_cylinder` max |dof - Pro| 0.10; renamed GNU inputs
+  (`contact`, `contact_block`, `contact_heatgen`, `examp6/9/24`) abort
+  "Program error ... contact_geometry. Data is allocated in a parallel
+  loop". Two root causes: (a) the alias, (b) no node_boundary.
+- T3a root cause: `contact.cc` `parallel_contact()` start (old lines
+  71-86) copied `CONTACT_TARGET_GEOMETRY 0` with `db(...PUT)` while
+  `parallel_active` (called via `parallel_sys_routine`, top.cc:560) →
+  `db_allocate` abort; indices > 0 never read. Fix: read-only
+  `contact_geometry_get()` (both names, every index, GNU name wins).
+  After: validation_10 sigyy -21232 (Pro -21031, target passes);
+  pressed_rubber_cylinder |dof - Pro| 6e-7; contac2 1.0 = Pro; renamed
+  inputs byte-identical `node_dof` to the GNU-name originals.
+  Tests `contact_target_geometry_index1/_index0/_switch1` RED rc 1 old
+  (1.02 free flight / parallel abort) / GREEN rc 0 new; Pro passes all 3.
+  build_safe check-only (RC1 binary): 226/226 runs, 129 OK / 0 FALLO,
+  rc 0. Corpus A/B (plain rc runner `corpus.py`, timeout 60 s, 6
+  workers, old = `841f6f3` build, new = T3a): validation-suite 233/10 →
+  233/10; test-2026 69/2 → 69/2 (new tests not in the old run); sfnet
+  181/16 → 181/16; Pro `other` 233/97 → 235/95 (`contac2`,
+  `pressed_rubber_cylinder` rc 1 → 0; 18 timeouts identical both sides,
+  this run was concurrent). dbs identical except those two (filtering
+  time stamps and the pre-existing uninitialized `node_node` /
+  `element_interface_intpnt_materi_tension_status` garbage).
+

@@ -529,6 +529,14 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
   (`parallel_contact` runs through `parallel_sys_routine`; the `PUT` allocates)
   and handle all indices.
 - **Effort**: **medium**.
+- **Status**: **DONE 2026-10-07 (F2 T3a)**. Broader than first documented
+  (audit K05): index 0 aborted with "Data is allocated in a parallel loop"
+  (the alias PUT ran inside `parallel_contact`), index > 0 was dropped. Fix:
+  read-only `contact_geometry_get()` in `contact.cc` (both names, every
+  index, GNU name wins on the same index); no record is created. Tests
+  `contact_target_geometry_index1/_index0/_switch1`; validation_10 sigyy
+  -21232 (Pro -21031). Element-target contact (`contact_target_element_group`)
+  had a second, separate root cause (no mesh boundary): see C5b.
 
 ### C6. `iface_gen*` — reconstructed inputs do not exercise interface generation
 

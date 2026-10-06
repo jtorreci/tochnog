@@ -1506,6 +1506,19 @@ run_ok "$T2026" truss_updated_transverse1
 run_ok "$T2026" group_time_bounda_dormant1
 
 # ---------------------------------------------------------------------
+# K05 / C5 (2026-10-07): contact_target_geometry/_switch (manual
+# Professional 6.106/6.107) is read for every index, read-only inside
+# the parallel contact loop (contact_geometry_get, contact.cc). Before:
+# index 0 was copied to contact_geometry with a db PUT inside the
+# parallel loop (abort "Data is allocated in a parallel loop"), index
+# > 0 was dropped. 1D Pro other/contac2: node 2 x = 1.0 (index 1 and
+# index 0), 1.02 with the switch -yes (all = Professional 02-08-2026).
+# ---------------------------------------------------------------------
+run_ok "$T2026" contact_target_geometry_index1
+run_ok "$T2026" contact_target_geometry_index0
+run_ok "$T2026" contact_target_geometry_switch1
+
+# ---------------------------------------------------------------------
 # Sub-sprint materi_stress_force, lote 2 (integracion 2D quad4/quad9):
 # verificacion ANALITICA por estatica. Decisiones de diseno (manual-
 # developer/post_calcul_materi_stress_force.md): caras extremas = las
