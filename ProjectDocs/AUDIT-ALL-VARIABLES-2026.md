@@ -623,7 +623,9 @@ showed that K0 applies without `group_materi_elasti_poisson` and to
    **2026-10-06 (F2 T1):** `poisson_power` fixed (the Pro replaces nu;
    the GNU added both stiffnesses). `young_power` + `young`: the Pro adds
    both stiffnesses, against its manual and its own history variable;
-   parked for an owner decision (BACKLOG C36).
+   **decided 2026-10-06: deliberate divergence, the GNU keeps the manual
+   semantics (BACKLOG C36, SEGUIMIENTO "Descarte de features").** The
+   `mpower` retarget of T1 was approved the same day.
 6. **K03.** Align the `convection_apply` default to `-no` (Pro manual 6.395),
    the same deliberate alignment as `inertia_apply` in `0560dcf`. Audit the
    corpus inputs that relied on the old default.

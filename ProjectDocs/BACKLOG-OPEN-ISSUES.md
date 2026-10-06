@@ -1131,7 +1131,7 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
 - **Severity**: **MEDIUM** (one-iteration models report a lagged state).
   **Effort**: **medium/large**.
 
-### C36. `group_materi_elasti_young_power` next to `group_materi_elasti_young`: the Professional adds both stiffnesses — NEEDS DECISION (audit K06)
+### C36. `group_materi_elasti_young_power` next to `group_materi_elasti_young`: the Professional adds both stiffnesses — DECIDED 2026-10-06: deliberate divergence, option (a) (audit K06)
 
 - **Symptom** (F2 T1, Professional 02-08-2026, validation-suite `myoung6*`
   converted): `myoung6_e2` (law clamped to E2 = 3000, `young` 1000) Pro
@@ -1155,6 +1155,12 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
   Only the validation-suite `myoung6*` family and Pro `validation_14_mesh`
   use the record. `group_materi_elasti_poisson_power` is NOT affected:
   there the Pro replaces the poisson ratio (fixed in F2 T1).
+- **Decision (project owner, 2026-10-06)**: option (a), deliberate
+  divergence. The GNU follows the manual (theory 2.2.2, 6.661: the power
+  law IS the modulus); the code and the `myoung6*` targets stay. Recorded
+  in SEGUIMIENTO "Descarte de features" and in "Differences with the
+  Professional version" of `manual-user/` and
+  `manual-developer/group_materi_elasti_young_power.md`. No code change.
 - **Severity**: **LOW** (input with both records only). **Effort**:
   **cheap** either way.
 
@@ -1263,7 +1269,7 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
 | C33 | — | `_visco` direct cut-offs: `DTIME` from the previous step, no visco on the principal tension cap; F4 | MEDIUM | cheap/medium |
 | C34 | — | direct cut shear plastic strain: Pro twice the tensor value (deliberate divergence) | LOW | — |
 | C35 | — | one-iteration lag of the whole material state (K02, `spring4` 1 iteration) — parked, design; F4 | MEDIUM | medium/large |
-| C36 | validation-suite | `young_power` + `young`: Pro adds both stiffnesses, manual says law = modulus (K06) — needs decision | LOW | cheap |
+| C36 | validation-suite | `young_power` + `young`: Pro adds both stiffnesses, manual says law = modulus (K06) — decided 2026-10-06: deliberate divergence (GNU = manual), no code change | LOW | cheap |
 | C37 | Pro `other` | planar GNU beam vs Pro 3D frame beam (`trubea2/3`, K17) — parked, design | MEDIUM | large |
 | C38 | Pro `other` | `control_support_edge_normal_stiffness_freeze` parse-only (support_edge_normal_3, 1e-9 effect) | LOW | cheap/medium |
 | C39 | Pro `other` | K17 residuals: `truss8` inactive-element node (both plausible), `update2` -updated robustness, `truss13` truss_distribute_mpc, zero-force truss first iteration | LOW | cheap/large |

@@ -81,3 +81,19 @@ the CURRENT stress state each time the elastic stiffness is computed.
   in the initialization part (same check as the GNU record).
 - The base `group_materi_elasti_young` record is read as a fallback and
   is replaced when the power record exists.
+
+## Differences with the Professional version
+
+- **`group_materi_elasti_young_power` together with
+  `group_materi_elasti_young`** (deliberate divergence, project decision
+  2026-10-06, BACKLOG C36): in the GNU the power law IS the Young's
+  modulus (theory 2.2.2 and the "calculated young" history variable of
+  manual 6.661); a separate `group_materi_elasti_young` record of the
+  same group is ignored while the power law applies. The Professional
+  02-08-2026 adds both stiffnesses, C(young) + C(E_law): on `myoung6_e2`
+  (law capped at 3000, `young` 1000) it gives `sigma_yy = -5.3846`
+  (stiffness 4000) where the GNU gives `-4.0385` (3000), although its own
+  history variable reports 3000. Without the `group_materi_elasti_young`
+  record both programs agree. To reproduce a Professional input with
+  both records in the GNU, add the `young` value to `E0`, `E2` and `E3`
+  of the power law.

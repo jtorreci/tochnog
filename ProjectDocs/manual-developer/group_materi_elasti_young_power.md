@@ -87,3 +87,19 @@ sustituye a `group_materi_elasti_young` (no se suma).
   corregido.
 - `control_timestep_iterations` > 1 NO cambia el resultado (la ley se
   evalúa con el stress del paso previo en todas las iteraciones).
+
+## Differences with the Professional version
+
+- **young + young_power (BACKLOG C36, deliberate divergence, project
+  decision 2026-10-06)**: `stress.cc` `set_stress()` clears `C`/`Cmem`
+  before `C_matrix()` in the young_power block, so the law replaces the
+  `group_materi_elasti_young` stiffness (manual theory 2.2.2, history
+  variable 6.661). The Professional 02-08-2026 keeps the accumulation
+  C(young) + C(E_law) (measured in F2 T1: `myoung6_e2` Pro -2.3077 /
+  -5.3846 vs GNU -1.7308 / -4.0385; `myoung6_e3` Pro -1.0385 / -2.4231
+  vs GNU -0.4615 / -1.0769; `myoung6` Pro -1.4351 / -3.3485 vs GNU
+  -0.7139 / -1.6657; without the young record Pro = GNU). Kept: the
+  code and the `myoung6*` targets do not change. The decision is
+  recorded in SEGUIMIENTO "Descarte de features". Note that
+  `group_materi_elasti_poisson_power` is not affected: there the
+  Professional also replaces the poisson ratio (F2 T1, `a270264`).
