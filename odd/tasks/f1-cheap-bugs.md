@@ -10,7 +10,12 @@ analytic value.
 - [x] T2 K03: default `convection_apply` (GNU `-yes`, general.cc:54; Pro manual 6.395 `-no`; `condif2` GNU T=1 vs Pro 0.5).
 - [ ] T3 K04 (5 fixed, 3 not GNU defects / already fixed, 2 parked for decision: mohr_coul_direct4 C30, tet10_2 C31): Pro analytic targets the GNU misses (AUDIT §K04 table): condif7, force18, mohr_coul_direct8, mohr_coul_direct4, stress_pressure_factor, incnav3, tet10_2, ground9, axisym9, distri2 (elasti7 and tension_direct1 already fixed). Investigate one by one; fix the isolated ones, escalate the rest.
 - [ ] T4 K13: direct/visco plasticity state output (`visc_pl4`: GNU eppxx 0 and f −1e10, Pro eppxx = ε − σ/E).
+- [ ] T6 C28: `node_force` sign/doubling (1D probe Pro +1, GNU −2), sibling of force18 (`fb2cf78`).
+- [ ] T7 C30 docs: record `mohr_coul_direct4` as a deliberate divergence (GNU follows manual 6.632).
 - [ ] T5 K02/K11: one-iteration lag of non-principal dofs (`spring4`) and nodal recovery of total strain (`tslv_part`).
+
+## Decisions
+- 2026-10-06 user: C30 deliberate divergence (GNU = manual 6.632); C31 (tet10 nodal quadrature) and K20 (axisymmetric 1-point rule) moved to F4 (design + corpus A/B).
 
 ## Rules
 Principle: manual/analytic decides; Pro is the oracle when the manual is
