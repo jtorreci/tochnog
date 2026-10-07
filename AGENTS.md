@@ -35,6 +35,8 @@ feature in `ProjectDocs/SEGUIMIENTO-CONVERGENCIA.md`:
 - When deciding NOT to implement a feature: add it to the "Descarte de
   features" table with the reason, and mention it in the "Differences with
   the Professional version" section of the relevant manual.
+- Every divergence with the Professional (deliberate, known or pending)
+  must also be listed in `ProjectDocs/DIVERGENCES-PROFESSIONAL.md`.
 - Verification rule: before implementing a feature, search for a usage
   example — in the Professional manual, in its repo/Google Drive (links on
   the Professional website), or in the sfnet test suite. Verify against
