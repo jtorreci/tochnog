@@ -198,3 +198,17 @@ when a compressive xx is combined with a same-sign xy or xz. Open item in
   unchanged): convergence rate only, not the converged stress.
 - Remeshing/renumbering move element records; an element whose record is
   missing restarts from its stress dofs.
+
+## Differences with the Professional version
+
+- **Mazars damage: gamma with shear; damage + early plasticity** (known
+  difference, not decided; BACKLOG C7). GNU: gamma from xx, xy, xz (e.g. dam
+  0.10809); plastic path eppxx 1.879e-4. Professional 02-08-2026: dam
+  0.18752; eppxx 1.368e-4 (Pro gamma matches none of the tried forms).
+  Status: Open, MEDIUM; needs more probes. Index:
+  [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).
+- **`-updated` without `materi_displacement`: total strain (damage bar)**
+  (known difference, not decided; AUDIT section 5 (known items)). GNU:
+  5.99823e-4. Professional 02-08-2026: 6.0e-4 (dam and stress differ ~0.2
+  %). Status: Pre-existing, not decided. Index:
+  [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).

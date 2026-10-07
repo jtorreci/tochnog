@@ -50,3 +50,12 @@
 - No time column: reconstructing the time of a block requires knowing the
   step sequence.
 - `-separate_sequential` numbering uses a static counter (resets per run).
+
+## Differences with the Professional version
+
+- **`control_print_dof -separate_index` file layout** (known difference, not
+  decided; BACKLOG C26). GNU: One `dof.N` file, components one after
+  another, short `%g`. Professional 02-08-2026: One file per dof (`disx.21`,
+  `sigxx.21`, ...), `%e` with 12 digits. Status: Open, LOW; follow the Pro
+  layout or keep it documented. Index:
+  [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).

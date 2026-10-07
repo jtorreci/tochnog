@@ -237,3 +237,12 @@ intergranular-strain variant (`hypomasin3.dat`) are also regression-tested.
     manual documents only `Dr Iv` for `_clay_visco`; the JM variant is kept
     under its own keyword. Regression: `hypomasin4.dat`.
   Both require `materi_history_variables 10`.
+
+## Differences with the Professional version
+
+- **hypoplasticity history slots and stress path** (known difference, not
+  decided; AUDIT K14). GNU: Leaves `hyhis1..5` = 0 (`hypo7/8/9`); `hypo3`
+  -0.1034; `hypo10` disx 4.3e-9. Professional 02-08-2026: Fills the slots
+  (e.g. `hyhis3` 22519); `hypo3` -0.1629; `hypo10` 9.84e-8. Status: UNKNOWN
+  root cause (partly GNU-suspect); investigate before touching code. Index:
+  [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).

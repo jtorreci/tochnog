@@ -63,3 +63,12 @@ group_materi_memory   0  -updated_linear
   the increment on the current geometry (1D bar stretched 50%: strain
   0.40714, logarithmic-like) while the GNU still gives 0.5. Give the `mesh`
   record explicitly if the result must match in that case.
+
+## Differences with the Professional version
+
+- **explicit `-updated_linear` on a `mesh -follow_material`** (known
+  difference, not decided; BACKLOG C19). GNU: Increment on the reference
+  geometry (`NODE_START_REFINED`): bar x2 sigxx 1.0. Professional
+  02-08-2026: Increment on the current geometry: sigxx 0.69565. Status:
+  Open, LOW; drop the reference path after C8. Index:
+  [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).

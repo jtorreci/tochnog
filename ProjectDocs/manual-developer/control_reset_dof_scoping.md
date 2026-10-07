@@ -89,3 +89,12 @@ sfnet-197 classification is unchanged (A/B byte-identical to HEAD,
   steps before its own index (legacy GNU). The Professional does not
   accept such inputs; if a future input needs "start at step i" scoping
   the condition must be revisited.
+
+## Differences with the Professional version
+
+- **`control_reset_dof` at an index that also carries a `control_timestep`**
+  (GNU extension / input dialect; manual pages only). GNU: Legacy GNU
+  behaviour: applied at every step (needed by `creset_geom`). Professional
+  02-08-2026: Rejects the input ("Error detected for data item :
+  control_reset_dof"). Status: GNU backward compatibility; kept. Index:
+  [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).

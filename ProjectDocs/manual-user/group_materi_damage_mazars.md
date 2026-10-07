@@ -70,3 +70,12 @@ group_materi_memory 0 -updated_without_rotation
 ```
 
 This is the `damage1.dat` regression test (uniaxial extension, damage growth).
+
+## Differences with the Professional version
+
+- **Mazars damage: gamma with shear; damage + early plasticity** (known
+  difference, not decided; BACKLOG C7). GNU: gamma from xx, xy, xz (e.g. dam
+  0.10809); plastic path eppxx 1.879e-4. Professional 02-08-2026: dam
+  0.18752; eppxx 1.368e-4 (Pro gamma matches none of the tried forms).
+  Status: Open, MEDIUM; needs more probes. Index:
+  [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).

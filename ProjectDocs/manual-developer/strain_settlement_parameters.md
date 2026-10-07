@@ -25,3 +25,15 @@
   del nodo superior ≈ -0.000263 (el creep comprime la columna; sin el record
   disy=0).
 - `strain_settle_diag`: `_diagram` hace Ar=0.02 (el doble) → disy ≈ -0.000526.
+
+## Differences with the Professional version
+
+- **GNU extensions the Professional ignores** (GNU extension / input
+  dialect; AUDIT K16, K09). GNU: The GNU-only records exercised by the tests
+  `strain_settle`, `mfactor`, `mdirect_gate`, `transv1`, `-empty` groups
+  (`temp4/5`), `mvoid*`, `cmat_gate`, and the records
+  `groundflow_total_pressure_limit` and `groundflow_pressure_atmospheric`
+  act and meet the GNU analytic targets. Professional 02-08-2026: Returns
+  the unmodified state (cannot tell a Pro defect from a different Pro
+  syntax). Status: GNU extensions; kept. Index:
+  [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).

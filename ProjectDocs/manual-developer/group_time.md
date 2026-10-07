@@ -45,3 +45,12 @@
   an equation. Not implemented.
 - Nodes without any element are not marked dormant (the Professional
   aborts such a model with a singular-matrix message).
+
+## Differences with the Professional version
+
+- **nodes of a dead `group_time` group** (known difference, not decided;
+  BACKLOG C39). GNU: Keep their old velocity (no equation); only
+  `group_time` makes a node dormant. Professional 02-08-2026: Brings them to
+  rest (velocity 0, free nodes too). Status: Open, LOW (the birth case
+  follows the Pro since 2026-10-06). Index:
+  [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).

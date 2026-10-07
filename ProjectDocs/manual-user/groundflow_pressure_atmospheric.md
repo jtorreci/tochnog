@@ -47,3 +47,15 @@ Column with nodes at y=0,1,2 and phreatic level y=1: with `_static -yes`
 the imposed pressure at y=0 is the full compression `-1.0` (negative, not
 affected by the cap) and at y=2 the suction `+1.0` is capped to `+0.5`.
 Without the keyword (default 0) the suction node gets `0.0`.
+
+## Differences with the Professional version
+
+- **GNU extensions the Professional ignores** (GNU extension / input
+  dialect; AUDIT K16, K09). GNU: The GNU-only records exercised by the tests
+  `strain_settle`, `mfactor`, `mdirect_gate`, `transv1`, `-empty` groups
+  (`temp4/5`), `mvoid*`, `cmat_gate`, and the records
+  `groundflow_total_pressure_limit` and `groundflow_pressure_atmospheric`
+  act and meet the GNU analytic targets. Professional 02-08-2026: Returns
+  the unmodified state (cannot tell a Pro defect from a different Pro
+  syntax). Status: GNU extensions; kept. Index:
+  [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).

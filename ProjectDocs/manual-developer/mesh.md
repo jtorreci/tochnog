@@ -20,3 +20,12 @@
 - slope_classical_numerical parses `mesh -fixed_in_space
   -fixed_in_space` and runs (the collapse-time target is not met:
   physics, see SEGUIMIENTO).
+
+## Differences with the Professional version
+
+- **default `mesh` kinematics** (known difference, not decided; BACKLOG C8).
+  GNU: `-follow_material` (nodes move with `materi_velocity` and no
+  `materi_displacement`). Professional 02-08-2026: `-fixed_in_space` (manual
+  6.806); 1D bar +50% `-updated`: Pro 0.5, GNU 0.40714. Status: Open,
+  MEDIUM, effort large (corpus relies on the moving mesh); tied to C18/C19.
+  Index: [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).

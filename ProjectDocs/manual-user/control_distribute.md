@@ -61,3 +61,11 @@ across reruns (seed 7).
 
 See also the tests `cdist_normal`, `cdist_corr`, `cdist_clamp`
 (validation-suite).
+
+## Differences with the Professional version
+
+- **`control_distribute -normal` random sequence (`distri2`)** (GNU
+  extension / input dialect; BACKLOG C32). GNU: Valid N(1, 2e-3) from the
+  GNU generator (0.998933). Professional 02-08-2026: Its own generator
+  (0.999774); the target encodes it. Status: Not a defect; no fix. Index:
+  [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).

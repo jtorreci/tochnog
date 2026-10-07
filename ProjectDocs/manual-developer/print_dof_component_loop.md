@@ -94,3 +94,22 @@ fix, F0 T6, 2026-10-05).
 ## Pending
 
 - BACKLOG C27: FRD/gmsh layout differences listed above.
+
+## Differences with the Professional version
+
+- **`control_print_dof -separate_index` file layout** (known difference, not
+  decided; BACKLOG C26). GNU: One `dof.N` file, components one after
+  another, short `%g`. Professional 02-08-2026: One file per dof (`disx.21`,
+  `sigxx.21`, ...), `%e` with 12 digits. Status: Open, LOW; follow the Pro
+  layout or keep it documented. Index:
+  [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).
+- **FRD / gmsh output layout** (known difference, not decided; BACKLOG C27).
+  GNU: FRD: no PSTEP per block, 3-component vectors, names `VELO`, `SXX`..;
+  gmsh: one scalar field per component, nodal averages. Professional
+  02-08-2026: FRD: `1PSTEP` per block, `ALL` component,
+  `VELOCITY`/`S11`/`T11`, extra boundary/reaction blocks, and with
+  `derivatives` value AND derivative blocks shifted into other dofs (Pro
+  defect, not to be copied); gmsh: multi-component fields, integration-point
+  element fields. Status: Open, LOW; decide per format which Pro conventions
+  to follow. Index:
+  [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).

@@ -32,6 +32,16 @@ level is negative and suction is positive, so the limit caps the
   (free) nodes are cut. The manual text "any higher value resulting from
   the groundflow equations" is read literally.
 
+- **GNU extensions the Professional ignores** (GNU extension / input
+  dialect; AUDIT K16, K09). GNU: The GNU-only records exercised by the tests
+  `strain_settle`, `mfactor`, `mdirect_gate`, `transv1`, `-empty` groups
+  (`temp4/5`), `mvoid*`, `cmat_gate`, and the records
+  `groundflow_total_pressure_limit` and `groundflow_pressure_atmospheric`
+  act and meet the GNU analytic targets. Professional 02-08-2026: Returns
+  the unmodified state (cannot tell a Pro defect from a different Pro
+  syntax). Status: GNU extensions; kept. Index:
+  [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).
+
 ## Usage
 
 ```

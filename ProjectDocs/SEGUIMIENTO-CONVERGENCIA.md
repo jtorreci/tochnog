@@ -4,6 +4,10 @@
 Documento de control del proceso de convergencia entre Tochnog Professional
 (manual `UserManual-professional.txt`) y el GNU (fork de sfnet 2014).
 
+Índice único de TODAS las divergencias con el Professional (deliberadas,
+conocidas, pendientes, de dialecto y sospechosas del Pro):
+[DIVERGENCES-PROFESSIONAL.md](DIVERGENCES-PROFESSIONAL.md).
+
 ## Métrica global
 
 - **1094** keywords documentados en Professional (tras limpiar 1 keyword
@@ -273,16 +277,28 @@ implementadas por nosotros.
 
 Las features que decidimos NO implementar se anotan aquí con su razón, y además se reflejan
 en el apartado 'Diferencias con la versión Professional' del manual correspondiente.
+Todas las divergencias (también las no decididas) están en
+[DIVERGENCES-PROFESSIONAL.md](DIVERGENCES-PROFESSIONAL.md) con su clase (A deliberada,
+B conocida/pendiente, C extensión/dialecto GNU, D sospechosa del Pro).
 
 | Feature | Razón del descarte |
 |---------|--------------------|
 | `interface13` del corpus (target 1.11803) | **BUG DEL PROPIO TEST, validado contra el binario Pro 25-10-2023** (2026-09-04): el Pro escribe `element_interface_intpnt_strain` (shear) = 0.67082 = du_tang/2 = (3/√5)/2 y su propio tochnog.log reporta "Target value ... is 1.11803. The actual value is 0.67082. Error detected for input file interface13.dat". El GNU produce EXACTAMENTE el mismo 0.67082. El target 1.11803 = √5/2 = |du|/2 asume que el desplazamiento (2,−1) es tangencial puro, pero el tangente de la interfaz es (2,1)/√5 y hay componente normal (−4/√5). Ambos códigos fallan el target; el test está mal escrito. |
 | `control_print_gid_*` (familia ~20) | Único formato propietario contemplado; `print_gid_6` del GNU es de 1998 (anterior a cambios recientes); GiD puede importar formatos no nativos (VTK, Gmsh, CSV). Ver plan sección 6c. |
 | `control_data_save` | Descarte de la FEATURE (único consumidor: `control_print_gid_save_difference`, familia GiD descartada; el análisis de diferencias se hace en post-proceso con la exportación SQLite/CSV de P5-T). El 2026-09-04 se registró parse-only (INTEGER, class CONTROL) porque los tests dynamic6/7 del corpus lo declaran; el registro sigue sin comportamiento. |
-| `control_print_interface_stress*` | Requiere elementos de interfaz/contacto, que el GNU no tiene (ni enums). Depende del Carril A. |
+| `control_print_interface_stress*` | Requiere elementos de interfaz/contacto, que el GNU no tiene (ni enums). Depende del Carril A. **OBSOLETO (nota 2026-10-07)**: `control_print_interface_stress` se implementó después en el Carril A (`01f6c3e` 2D 2026-08-14, `b8804c6` 3D 2026-08-16; ver la familia control_print); el descarte ya no aplica a ese keyword. |
 | Professional behaviour of `mohr_coul_direct4` (interface Mohr-Coulomb strength not enforced at once, slow drift below it) | **Deliberate divergence** (project decision 2026-10-06, F1 T7, BACKLOG C30): the GNU keeps the manual 6.632 immediate return to c + \|Fn\| tan(phi) (sigxy 1.2027, `disx` 0.3007); the Professional 02-08-2026 stays at 2.0 and drifts to 0.410 at t = 100 (target `disx` 0.1024), which looks like an artefact. Documented in 'Differences with the Professional version' of `manual-user/` and `manual-developer/group_materi_plasti_mohr_coul_direct.md`. |
 | Professional shear plastic strain of the direct cut-offs (`dsig_xy / G`, twice the tensor component) | **Deliberate divergence** (project decision 2026-10-06, F1 T4, BACKLOG C34): the Professional 02-08-2026 writes the shear plastic strain of a direct cut (tension/Mohr-Coulomb/compression direct) as `dsig_xy / G` while its own total strain and incremental-law plastic strain use tensor components (its `epexy = eptxy - eppxy` then violates `sigma_xy = 2G epe_xy`); the GNU keeps the tensor value `dsig_xy / 2G` so `sigma = C (eps - eps_p)` holds (`direct_plastic_strain_mc1`: GNU eppxy 2.04114892e-3, Pro 4.08229785e-3; normal components and `f` equal). Documented in 'Differences with the Professional version' of `manual-user/direct_plastic_strain.md` and `manual-developer/direct_plastic_strain.md`. |
 | Professional sum C(young) + C(E_law) when `group_materi_elasti_young_power` and `group_materi_elasti_young` are both given | **Deliberate divergence** (project decision 2026-10-06, F2 T1b, BACKLOG C36): the GNU follows the manual (theory 2.2.2 "the young's stiffness modulus is made a function of the average stress state", history variable 6.661 = the calculated young): the power law IS the modulus and replaces the `young` record. The Professional 02-08-2026 adds both stiffnesses (`myoung6_e2` sigyy -5.3846 = stiffness 4000 vs GNU -4.0385 = 3000, while its history variable reports 3000); without the `young` record Pro = GNU. Code and `myoung6*` targets unchanged. Documented in 'Differences with the Professional version' of `manual-user/` and `manual-developer/group_materi_elasti_young_power.md`. |
+| Professional `-total_linear` + `group_materi_elasti_compressibility` (time-step dependent volumetric increment) | **Deliberate divergence** (project decision 2026-09-29, merge `93966ef`, BACKLOG C9): the GNU uses the increment `tr(inc_epe)` and gives the analytic sigxx -0.005 for every dt (manual 2.2.1); the Professional 02-08-2026 gives -0.0075 / -0.0099 / -0.009999 for dt 1e-2 / 1e-3 / 1e-4 (legacy `tr(new_epe-old_epe)`). Also Pro-suspect. Documented in 'Differences with the Professional version' of `manual-user/` and `manual-developer/group_materi_memory_total_linear.md`. |
+| Professional coupling of the static pore pressure of `groundflow_phreatic_level_static` to `post_calcul -groundflow_pressure -total_pressure` | **Deliberate divergence** (project decision 2026-09-29, merge `ad3437e`, BACKLOG C10): the GNU always applies the static pore pressure to the skeleton (manual 6.574; an output request must not change the physics); the Professional 02-08-2026 applies it only when that post_calcul record exists (`ground18` without it: Pro -1745, GNU -1247.5). Pro `excavate1` keeps a documented target mismatch. Documented in `manual-user/` and `manual-developer/groundflow_phreatic_level_static.md`. |
+| Professional index-0-only reading of `control_solver_bicg_stop` | **Deliberate divergence** (project decision 2026-09-29, BACKLOG C13): the GNU reads `solver_bicg_stop`, the index-0 control record and then the record at the running timestep index (manual 6.376); the Professional 02-08-2026 ignores a record at the timestep's non-zero index. Also Pro-suspect. Documented in `manual-user/solver.md` and `manual-developer/solve_iterative_bicg.md`. |
+| Professional constant phi_flow factor `2 tan(phi_flow)` of the plane direct cut-off | **Deliberate divergence** (project decision 2026-10-02, BACKLOG C15): the GNU keeps the consistent elastic return `(M/G) tan(phi_flow)` (equal for poisson 0; the Pro constant is the fallback without an elastic stiffness, umat). Test `test-2026/direct_cutoff_plane_phi_flow2` (the Pro fails it). Documented in `manual-user/` and `manual-developer/group_materi_plasti_mohr_coul_direct.md`. |
+| Professional binary ignoring `control_materi_updated_apply -yes` | **Deliberate divergence** (project decision 2026-10-04, BACKLOG C21): the GNU follows manual 6.152 (an unspecified memory becomes `-updated`; simple shear 0.231 / 0.421 / -0.229); the Professional 02-08-2026 stays linear (0 / 0.5 / 0). Also Pro-suspect. Test `test-2026/materi_memory_default_updated_apply1`. Documented in `manual-user/` and `manual-developer/control_materi_updated_apply.md`, `group_materi_memory_default.md`. |
+| Professional `bounda_time_increment` tables prescribing -1.4 on dofs whose table is all zero (`mcap1_elast`) | **Pro-suspect, not followed** (audit 2026-09-29, AUDIT K08): the GNU follows manual 6.146. **No project-owner decision recorded yet.** Documented in `manual-user/` and `manual-developer/bounda_time_increment.md`. |
+| Professional groundflow velocity output 0 in `ground1` | **Pro-suspect, not followed** (audit 2026-09-29, AUDIT K10): manual v = k dh/dy = -0.05; the GNU gives -0.05, the Professional 0 at nodes and integration points (post-processing only). **No project-owner decision recorded yet.** Documented in `manual-user/` and `manual-developer/groundflow_velocity_sign.md`. |
+| Professional `control_materi_failure_apply` accepted only without index | **Pro-suspect, not followed** (manual documents an index; the Professional 02-08-2026 rejects `control_materi_failure_apply 0 -no`): the GNU follows the manual (indexed). **Date and project-owner decision not recorded.** Documented in `manual-user/` and `manual-developer/materi_failure_apply.md`. |
+
 ## Equivalencias de nomenclatura Professional vs GNU
 
 Algunas familias tienen nombres distintos entre Professional y el GNU
@@ -296,6 +312,13 @@ marcado `PENDIENTE` puede estar cubierto en el GNU bajo otro nombre:
 | `condif_radiation_edge_normal` (+ `_geometry`) | `condif_radiation` (+ `condif_radiation_geometry`) | Misma física αr·(Tr⁴−T⁴). Ambos nombres conviven como arriba. |
 | `materi_plasti_maximum_iterations` | `group_materi_plasti_maximum_iterations` | Prefijo `group_` en el GNU. |
 | `control_mesh_convert` (interfaces) | — | Solo conversión de interfaz; el GNU no tiene elementos de interfaz (Carril A). |
+| `bounda_dof` | `bounda_unknown` | Grafía GNU 2014; el GNU acepta ambas, el Professional rechaza la GNU (AUDIT §1.1; DIVERGENCES `DIALECT`). |
+| `mesh`, `inertia_apply`, `convection_apply`, `convection_stabilization`, `processors` | `options_mesh`, `options_inertia`, `options_convection`, `options_stabilization`, `options_processors` | Ídem. Ojo: el default de `mesh` difiere (GNU `-follow_material`, Pro `-fixed_in_space`, BACKLOG C8). |
+| `control_solver` | `control_options_solver` | Ídem. |
+| `group_truss_elasti_young`, `-truss_beam` | `group_truss_young`, `-trussbeam` | Ídem. |
+| `groundflow_phreatic_level`, `group_porosity` | `groundflow_phreaticlevel`, `group_groundflow_porosity` | Ídem. |
+| `contact_target_geometry`, `contact_spring*` | `contact_geometry`, `contactspring*` | Ídem (alias de contacto corregido en F2 T3a, BACKLOG C5). |
+| `druck_prag`, `mohr_coul`, `…plasti_bounda`, `…plasti_cap2`, `-size_tot`/`-size_dev` | `druckprag`, `mohrcoul`, `…plasti_boundary`, `…plasti_cap`, `-sizetot`/`-sizedev` | Ídem. |
 
 ## Detalle por familia
 

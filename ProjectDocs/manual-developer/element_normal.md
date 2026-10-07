@@ -209,3 +209,21 @@ Error detected for record : 0
   the state (backlog C14 item 4, plane return `materi_direct_cutoff`).
 - Nodal strain recovery differs in `tension_direct1` (`eptyy` 0.667 vs
   0.5 at the middle nodes): audit cluster K11, unrelated to this record.
+
+## Differences with the Professional version
+
+- **`element_normal` residuals** (known difference, not decided; BACKLOG C14
+  (2)(3)). GNU: Consistent normal rule also on curved quad9/tria6 sides; no
+  `node_normal`, `element_boundary` output, no `global_normal`. Professional
+  02-08-2026: Some curved-side node normals come out axis-aligned; prints
+  `node_normal`, `node_boundary`, `element_boundary`; accepts `global_normal
+  -yes`. Status: Open, LOW; (2) none until the Pro rule is known, (3) add on
+  user demand. Index:
+  [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).
+- **zero `element_normal` with `_normal_automatic -yes`** (GNU extension /
+  input dialect; BACKLOG C14 (1)). GNU: Readable input error (element,
+  group, remedies), also for the mixed explicit/automatic case. Professional
+  02-08-2026: Aborts on an internal assertion (`!array_null( directions,
+  MDIM*MDIM )`). Both stop. Status: Diagnostic difference only (commits
+  `a8d6452`, `b7f3522`). Index:
+  [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).

@@ -41,3 +41,12 @@ None. Standard `floor` from the C library.
 - `bounda_time_increment` and `bounda_time_offset` share the same read pattern;
   the three modifier blocks (increment/offset, on_off, until_force) duplicate
   "read + validate + store" boilerplate that could be refactored.
+
+## Differences with the Professional version
+
+- **`bounda_time_increment` tables** (Professional-suspect, the GNU follows
+  the manual; AUDIT K08; SEGUIMIENTO Descarte). GNU: Follows manual 6.146
+  (audit verdict); does not prescribe the -1.4. Professional 02-08-2026:
+  Prescribes -1.4 on dofs whose table is all zero (`mcap1_elast`). Status:
+  Pro-suspect; GNU follows the manual. No project-owner decision recorded.
+  Index: [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).

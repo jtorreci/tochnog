@@ -6,6 +6,11 @@ features/libraries used, hardcoded parameters, and refactorings.
 
 Each file corresponds to the same feature in the [User Manual](../manual-user/).
 
+Every known difference with Tochnog Professional (deliberate, known,
+pending, dialect, Professional-suspect) is indexed in
+[DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md); each feature
+page lists its own in "Differences with the Professional version".
+
 ## Input of meshes and files (P0)
 
 - [include](include.md) — include external data files into the data part.
@@ -191,6 +196,7 @@ Each file corresponds to the same feature in the [User Manual](../manual-user/).
 
 - [condif_heat_edge_normal](condif_heat_edge_normal.md) — shared edge-normal machinery in area.cc (MTYPES 7, flux_edge_companion helper; temp_indx target).
 - [condif_heat_volume](condif_heat_volume.md) — volume source block in condif.cc (coord_ip signature extension; user_condif_heat_volume stub in user.cc).
+- [group_condif_conductivity](group_condif_conductivity.md) — scalar GROUP_CONDIF_CONDUCTIVITY read in general.cc (data_length 1; per-direction values pending, BACKLOG C29).
 - [condif_convection_radiation_edge_normal](condif_convection_radiation_edge_normal.md) — Professional masters as area.cc types 7/8 (MTYPES 9, conv_rad_companion helper; quad4 Z-node border gotcha documented).
 
 ## Sprint 8 — area_element_group + bounda_time_factor

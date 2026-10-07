@@ -56,3 +56,44 @@ target not edited); Pro `validation` unchanged.
   `elem.cc` (around line 569) and is tied to the mesh default (BACKLOG C8).
 - `control_materi_updated_apply -yes` follows the manual; the
   Professional binary ignores it (deliberate divergence).
+
+## Differences with the Professional version
+
+- **`control_materi_updated_apply -yes`** (deliberate divergence, project
+  decision 2026-10-04; BACKLOG C21; SEGUIMIENTO Descarte; test-2026
+  `materi_memory_default_updated_apply1`). GNU: Follows manual 6.152: an
+  unspecified memory becomes `-updated` (simple shear 0.231 / 0.421 /
+  -0.229). Professional 02-08-2026: Ignores `-yes` (stays 0 / 0.5 / 0 for
+  every kinematics and index). Status: Deliberate divergence, project owner:
+  follow the manual. Also Pro-suspect. Index:
+  [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).
+- **default memory with `materi_displacement`** (known difference, not
+  decided; BACKLOG C18). GNU: `-updated_linear` default updates the
+  coordinates (2-quad4 column node 3 disx 0.472). Professional 02-08-2026:
+  Behaves as `-total_linear` (0.5). Status: Open, MEDIUM; to be solved with
+  C8 (variant A2 rejected). Index:
+  [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).
+- **`-updated_jaumann` memory** (known difference, not decided; BACKLOG
+  C20). GNU: Not accepted. Professional 02-08-2026: Listed in manual 6.686
+  (6.685 in older numbering). Status: Open, LOW (not implemented). Index:
+  [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).
+- **Pro `hypo12` target after the default-memory change** (known difference,
+  not decided; BACKLOG C22). GNU: sigyy misses the target by 1.02e-3
+  (tolerance 1e-3). Professional 02-08-2026: Meets its own target. Status:
+  Open, LOW; revisit with the Masin kernel calibration. Index:
+  [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).
+- **`-updated` large-rotation robustness (`update2`)** (known difference,
+  not decided; BACKLOG C39). GNU: "solution seems to diverge" (veliy -86434)
+  with p-refinement. Professional 02-08-2026: veliy 12.243 (target 12.24).
+  Status: Open, LOW; not investigated (related to AUDIT K19). Index:
+  [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).
+- **`group_materi_memory -updated_without_rotation`** (GNU extension / input
+  dialect; AUDIT 1.1). GNU: GNU-only memory (legacy). Professional
+  02-08-2026: Not in manual 6.686; the Pro's own copies of these tests use
+  `-updated_linear` or `-total_linear`. Status: GNU extension; kept. Index:
+  [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).
+- **`group_materi_memory -total_piola`** (GNU extension / input dialect;
+  manual pages only). GNU: Accepted (2014 source; total formulation).
+  Professional 02-08-2026: Not listed in manual 6.686; binary behaviour NOT
+  measured. Status: GNU extension; Pro behaviour undetermined. Index:
+  [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).

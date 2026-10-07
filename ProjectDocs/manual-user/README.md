@@ -6,6 +6,11 @@ in addition to the original Tochnog GNU capabilities.
 Each file describes one feature: what it does, why it is useful, and the
 input parameters it accepts.
 
+Every known difference with Tochnog Professional (deliberate, known,
+pending, dialect, Professional-suspect) is indexed in
+[DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md); each feature
+page lists its own in "Differences with the Professional version".
+
 ## Input of meshes and files (P0)
 
 - [include](include.md) — include external data files into the data part.
@@ -190,6 +195,7 @@ input parameters it accepts.
 
 - [condif_heat_edge_normal](condif_heat_edge_normal.md) — distributed heat flux normal to element edges (11-keyword family: geometry, element/group/side/node restrictions, factor, time/sine).
 - [condif_heat_volume](condif_heat_volume.md) — distributed volume heat source (9-keyword family: element/group/geometry restrictions, factor, time/sine/user).
+- [group_condif_conductivity](group_condif_conductivity.md) — isotropic heat conductivity (legacy GNU record; the Professional per-direction form is BACKLOG C29).
 - [condif_convection_edge_normal](condif_convection_edge_normal.md) — convection BC q=h*(Tenv-T) on edges (Professional name of condif_convection; 7-keyword family with restrictions).
 - [condif_radiation_edge_normal](condif_radiation_edge_normal.md) — radiation BC q=alpha_r*(Tr^4-T^4) on edges (Professional name of condif_radiation; 7-keyword family).
 

@@ -186,3 +186,29 @@ operations):
 - `calcul_force.cc`, `delete.cc` — the replicated tensor-product default
   (`msf_element_rule`, `mc_element_rule`), switched to Gauss with the
   element default.
+
+## Differences with the Professional version
+
+- **`tet10` integration rule** (known difference, not decided; BACKLOG C31;
+  AUDIT K04). GNU: Nodal quadrature exact only for linear integrands
+  (`tet10_2` gravity sigzz -0.894). Professional 02-08-2026: Exact (-1).
+  Status: Scheduled for F4 (design + corpus A/B), project owner 2026-10-06.
+  Index: [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).
+- **axisymmetric hoop (zz) values, `materi_velocity` quad4 (`axisym2`,
+  `axisym9`)** (known difference, not decided; AUDIT K20; BACKLOG C32). GNU:
+  1-point Gauss for axisymmetric `materi_velocity` quad4: element-constant
+  hoop term (axisym2 1.000e-3; axisym9 0.00158902). Professional 02-08-2026:
+  Linear hoop field (1.0498e-3; axisym9 0.0015915). Status: Scheduled for F4
+  (design + corpus A/B), project owner 2026-10-06. Index:
+  [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).
+- **`post_point_dof` of recovered fields (stress/strain)** (known
+  difference, not decided; AUDIT section 5 (after the K04 table)). GNU:
+  Interpolates the averaged nodal field (`validation_2` -0.036558).
+  Professional 02-08-2026: Element-local recovered value from `element_dof`
+  (-0.036441). Status: Both legitimate; no decision. Targets on recovered
+  `post_point_dof` inherit the difference. Index:
+  [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).
+- **`number_of_integration_points`** (GNU extension / input dialect; AUDIT
+  1.1). GNU: GNU-only record. Professional 02-08-2026: Unknown record; uses
+  its per-operation default. Status: GNU extension; kept. Index:
+  [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).

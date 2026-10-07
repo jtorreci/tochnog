@@ -75,3 +75,19 @@ Result: `sigxy` 0.5, `sigxx` = `sigyy` = 0 (as the Professional). With
 - Corpus test `hypo12` (Professional distribution, no memory record)
   misses its sigyy target marginally since this change (off 1.02e-3 with
   tolerance 1e-3).
+
+- **`-updated` large-rotation robustness (`update2`)** (known difference,
+  not decided; BACKLOG C39). GNU: "solution seems to diverge" (veliy -86434)
+  with p-refinement. Professional 02-08-2026: veliy 12.243 (target 12.24).
+  Status: Open, LOW; not investigated (related to AUDIT K19). Index:
+  [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).
+- **`group_materi_memory -updated_without_rotation`** (GNU extension / input
+  dialect; AUDIT 1.1). GNU: GNU-only memory (legacy). Professional
+  02-08-2026: Not in manual 6.686; the Pro's own copies of these tests use
+  `-updated_linear` or `-total_linear`. Status: GNU extension; kept. Index:
+  [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).
+- **`group_materi_memory -total_piola`** (GNU extension / input dialect;
+  manual pages only). GNU: Accepted (2014 source; total formulation).
+  Professional 02-08-2026: Not listed in manual 6.686; binary behaviour NOT
+  measured. Status: GNU extension; Pro behaviour undetermined. Index:
+  [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).

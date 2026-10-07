@@ -63,3 +63,19 @@ convention).
   the stored plastic strain now enters `new_epe` of the next step, so a
   `_visco` direct cut persists instead of being re-derived from the
   total strain every step.
+
+## Differences with the Professional version
+
+- **shear plastic strain of the direct cut-offs** (deliberate divergence,
+  project decision 2026-10-06; BACKLOG C34; SEGUIMIENTO Descarte; AUDIT
+  K13). GNU: Tensor value `dsig_xy / 2G`, so sigma = C (eps - eps_p) holds.
+  Professional 02-08-2026: `dsig_xy / G` (twice the tensor value),
+  inconsistent with its own total strain. Status: Deliberate divergence,
+  project owner (F1 T4). Also Pro-suspect. Index:
+  [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).
+- **`_visco` direct cut-offs** (known difference, not decided; BACKLOG C33).
+  GNU: Relaxation factor uses the previous step's `DTIME` (no cut in the
+  first step); no visco on the principal tension cap. Professional
+  02-08-2026: 1 - exp(-dt/tm) with the current step (sigxx 1.84914e-3 vs GNU
+  1e-3). Status: Scheduled for F4, project owner 2026-10-06. Index:
+  [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).

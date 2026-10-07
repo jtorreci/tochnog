@@ -80,3 +80,9 @@ pore pressure (in the example above: -1745 instead of -1250). The GNU
 always applies the pore pressure, as the manual describes. With the
 `post_calcul` record, both give the same results. Test `excavate1` of the
 Professional has no such record, so its target differs in the GNU.
+
+- **`post_calcul -groundflow_pressure -total_pressure` with a pressure dof**
+  (GNU extension / input dialect; AUDIT 1.1; BACKLOG C10). GNU: Not
+  required. Professional 02-08-2026: Required when a pressure dof exists
+  (and couples the static pore pressure, C10). Status: Input dialect. Index:
+  [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).

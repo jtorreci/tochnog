@@ -119,3 +119,11 @@ eulerian velocity self-advection transient of the GNU diverges from the
 Professional (per-step post_point_dof trajectory and final .dbs differ;
 final state velx +0.0723 vs -0.0391). The eulerian NS transient needs a
 dedicated solver/physics sprint - see SEGUIMIENTO-CONVERGENCIA.md.
+
+## Differences with the Professional version
+
+- **explicit `convection_apply -no` next to `materi_displacement`** (GNU
+  extension / input dialect; AUDIT 1.1). GNU: Accepted (convection ignored
+  with `materi_displacement`). Professional 02-08-2026: Refuses the explicit
+  record (`-no` is its default). Status: Input dialect. Index:
+  [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).

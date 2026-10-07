@@ -61,3 +61,11 @@
 - If the force point sits exactly on a node the force is still routed
   through shape functions (weight 1 on that node) — fine, but a direct
   node path would be cheaper and clearer.
+
+## Differences with the Professional version
+
+- **`node_inertia` / `node_mass` layout** (GNU extension / input dialect;
+  BACKLOG B12). GNU: `node_inertia` holds ndim values (m (a + g));
+  `node_mass` accepted. Professional 02-08-2026: One value per dof; rejects
+  `node_mass` next to it. Status: Input dialect. Index:
+  [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).

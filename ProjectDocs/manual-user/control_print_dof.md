@@ -53,3 +53,12 @@ control_timestep                20  0.001 0.04
 Produces `dof.20` with, for each time step, one block of
 `x y <dof_value> <node_number>` lines for every nodal dof component, and
 `coord.20` with the coordinates.
+
+## Differences with the Professional version
+
+- **`control_print_dof -separate_index` file layout** (known difference, not
+  decided; BACKLOG C26). GNU: One `dof.N` file, components one after
+  another, short `%g`. Professional 02-08-2026: One file per dof (`disx.21`,
+  `sigxx.21`, ...), `%e` with 12 digits. Status: Open, LOW; follow the Pro
+  layout or keep it documented. Index:
+  [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).

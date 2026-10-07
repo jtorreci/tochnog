@@ -210,3 +210,12 @@ fix.
    `-updated` value is the one consistent with the manual's `-updated`
    definition (incremental stretch in the current configuration, so the
    accumulated strain is logarithmic-like: ln(1/(1-0.005)) = 0.0050125).
+
+## Differences with the Professional version
+
+- **explicit `-updated_linear` on a `mesh -follow_material`** (known
+  difference, not decided; BACKLOG C19). GNU: Increment on the reference
+  geometry (`NODE_START_REFINED`): bar x2 sigxx 1.0. Professional
+  02-08-2026: Increment on the current geometry: sigxx 0.69565. Status:
+  Open, LOW; drop the reference path after C8. Index:
+  [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).

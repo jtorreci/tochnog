@@ -90,3 +90,13 @@ change; the numbers below are the full measured mechanism):
 - Full displacement-primary transient branch for materi_dynamic < 1 with
   the Pro's measured map (scope in DIAG-SOLVE-MIXTO S17.4).
 - SMC reading (bounda_time_smc) — separate pending feature.
+
+## Differences with the Professional version
+
+- **`control_materi_dynamic` and implicit truss dynamics without
+  `materi_dynamic`** (known difference, not decided; BACKLOG C11, C39). GNU:
+  Displacement-primary gate keys on the global `materi_dynamic` only
+  (`dynamic1` variants 0.0938 / 6.45 / 1.91; `dynamic3` node 2 32.66).
+  Professional 02-08-2026: 0.0959 / 0.0959 / 0.9955; `dynamic3` 60.44.
+  Status: Open, MEDIUM; fix proposed (effective factor per control index).
+  Index: [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).

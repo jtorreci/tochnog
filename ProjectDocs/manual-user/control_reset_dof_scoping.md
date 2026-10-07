@@ -51,3 +51,12 @@ the timesteps run at index 20.
   ... -kapsh`); every listed dof is now reset.
 - hypo2/hypo4 of the corpus pass with the per-index + multi-dof
   behavior.
+
+## Differences with the Professional version
+
+- **`control_reset_dof` at an index that also carries a `control_timestep`**
+  (GNU extension / input dialect; manual pages only). GNU: Legacy GNU
+  behaviour: applied at every step (needed by `creset_geom`). Professional
+  02-08-2026: Rejects the input ("Error detected for data item :
+  control_reset_dof"). Status: GNU backward compatibility; kept. Index:
+  [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).

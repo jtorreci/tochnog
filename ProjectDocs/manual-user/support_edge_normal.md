@@ -103,3 +103,11 @@ damper now converges. Example: the Professional test
 times the stiffness term) gives node 1 disy 5.00998e-4 as the Professional
 02-08-2026; before this change the GNU diverged (disy 124.75, run aborted).
 Own test: `validation-suite/test-2026/support_edge_normal_damping_tangent1.dat`.
+
+## Differences with the Professional version
+
+- **`control_support_edge_normal_stiffness_freeze`** (known difference, not
+  decided; BACKLOG C38). GNU: Parse-only (no effect). Professional
+  02-08-2026: Freezes the stiffness forces (manual 6.381);
+  `support_edge_normal_3` 5.00999e-4 vs 5.00998e-4. Status: Open, LOW.
+  Index: [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).

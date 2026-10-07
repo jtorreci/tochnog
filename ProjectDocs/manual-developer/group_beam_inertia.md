@@ -33,3 +33,13 @@ system is singular).
 - Full 3D truss_beam (bending about both transverse axes + torsion) —
   blockers of trubea2/trubea3.
 - `group_beam_direction_z*` and shear-deformable options.
+
+## Differences with the Professional version
+
+- **3D beam** (known difference, not decided; BACKLOG C37; AUDIT K17). GNU:
+  Planar beam in the plane of the GNU-only `group_beam_plane` (default -x
+  -y); no out-of-plane bending (`trubea2/3` breakdown). Professional
+  02-08-2026: Full 3D frame element (`group_beam_inertia Iyy Izz J`,
+  `group_beam_direction_z`). Status: Parked, design (new 12-dof element),
+  MEDIUM. Index:
+  [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).

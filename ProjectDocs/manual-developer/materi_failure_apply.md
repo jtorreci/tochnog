@@ -49,3 +49,15 @@ Self-checking inputs `validation-suite/test-2026/materi_failure_apply1.dat`
 - The Professional's element deletion crashed in every small model tried
   (rupture, several delete_time values), so case (a) and the behaviour of
   elements that failed before a later `-no` timestep are unverified.
+
+## Differences with the Professional version
+
+- **`control_materi_failure_apply` index; element failure run**
+  (Professional-suspect, the GNU follows the manual; manual pages only).
+  GNU: Follows the manual: indexed record (`control_materi_failure_apply 0
+  -no`). Professional 02-08-2026: Accepts the record only WITHOUT index
+  (indexed form: "I do not know : -no"); stops with "Program error ...
+  element_rhside_delete" as soon as an element fails. Status: Pro-suspect
+  (contradicts its manual); GNU follows the manual. No project-owner
+  decision recorded. Index:
+  [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).

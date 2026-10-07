@@ -51,3 +51,12 @@ produces identical results, and so does this GNU version.
   stored value, so a dedicated verification example is needed.
 - Resolve the velocity-only follow-material default divergence
   (documented above).
+
+## Differences with the Professional version
+
+- **`control_bounda_relax` storing semantics** (known difference, not
+  decided; manual pages only). GNU: Records parsed; the per-node reaction
+  record is not stored (relax corpus reproduced through `bounda_force`).
+  Professional 02-08-2026: Stores a per-node record of the reaction of the
+  prescribed dofs. Status: Partial implementation; not decided. Index:
+  [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).

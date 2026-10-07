@@ -124,3 +124,12 @@ dt 0.1, −3.10).
 Not changed: the hardsoil E50/Eur switch (`GROUP_MATERI_ELASTI_HARDSOIL`
 block above) uses the same one-step estimate with the first-loading
 tangent; no Professional evidence collected for it.
+
+## Differences with the Professional version
+
+- **`group_materi_elasti_stress_pressure_history_factor`: truncated last
+  step** (known difference, not decided; manual pages only). GNU: Does not
+  apply the factor in a truncated last step that starts on the first-loading
+  curve (-2.8, analytic). Professional 02-08-2026: Applies it (-3.2).
+  Status: Known, not decided. Index:
+  [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).

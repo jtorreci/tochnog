@@ -54,3 +54,13 @@ beam).
 the Professional binary (25-10-2023): changing only `Izz` changes the
 tip deflection by 1/I (disy = 3.333e-3 with Izz=1, 3.333e-5 with
 Izz=100), confirming that the 2D bending consumes the second value.
+
+## Differences with the Professional version
+
+- **3D beam** (known difference, not decided; BACKLOG C37; AUDIT K17). GNU:
+  Planar beam in the plane of the GNU-only `group_beam_plane` (default -x
+  -y); no out-of-plane bending (`trubea2/3` breakdown). Professional
+  02-08-2026: Full 3D frame element (`group_beam_inertia Iyy Izz J`,
+  `group_beam_direction_z`). Status: Parked, design (new 12-dof element),
+  MEDIUM. Index:
+  [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).
