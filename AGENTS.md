@@ -58,3 +58,8 @@ feature in `ProjectDocs/SEGUIMIENTO-CONVERGENCIA.md`:
 - Running `build/tochnog` outside `scripts/build_safe.sh` needs
   `LD_LIBRARY_PATH=external-downloads/numlib-runtime` (no system
   `liblapack.so.3`).
+- Every tochnog run outside `scripts/build_safe.sh` (probes, corpus
+  runners, any binary, the Professional included) must use `ulimit -v
+  4000000` (4 GB) plus `timeout`, with at most 4 parallel jobs: an
+  uncapped run can grow to ~30 GB, trigger the global OOM killer and kill
+  the whole session.
