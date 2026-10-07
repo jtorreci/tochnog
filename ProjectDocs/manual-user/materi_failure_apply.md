@@ -53,7 +53,10 @@ record; with failure active the GNU gives 8.07692) and
   error "I do not know : -no"), although its manual documents an index.
   The GNU follows the manual (indexed), so an unindexed
   `control_materi_failure_apply -no` is not accepted by the GNU; use
-  `materi_failure_apply -no` for the global switch.
+  `materi_failure_apply -no` for the global switch. This is a deliberate divergence
+  decided by the project owner on 2026-10-07 (the GNU follows the manual;
+  SEGUIMIENTO Descarte; index
+  [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md)).
 - The Professional 02-08-2026 stops with "Program error detected for data
   item: element_rhside_delete" as soon as an element fails in the test
   model, so only the `-no` behaviour (identical to the model without
