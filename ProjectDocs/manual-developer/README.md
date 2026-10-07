@@ -38,6 +38,8 @@ Each file corresponds to the same feature in the [User Manual](../manual-user/).
 - [mesh_activate_gravity_time](mesh_activate_gravity_time.md) — gradual gravity activation (mesh.cc).
 - [strain_settlement_parameters](strain_settlement_parameters.md) — settlement creep strain (materi.cc).
 - [contact_apply](contact_apply.md) — contact algorithm records (contact.cc).
+- [contact_target_geometry](contact_target_geometry.md) — read-only dual lookup `contact_geometry_get()` in contact.cc (no alias PUT in the parallel loop; every index; K05/C5).
+- [contact_target_element_group](contact_target_element_group.md) — `area.cc` `contact_node_boundary_set()` from `iteration_start()` (node_boundary of unshared sides; K05).
 - [control_print_history_factor](control_print_history_factor.md) — multiply history output.
 - [control_print_history_smooth](control_print_history_smooth.md) — moving-average smoothing of history output.
 - [control_print_dof](control_print_dof.md) — print primary dofs with coordinates to plain ASCII files.
@@ -133,7 +135,7 @@ Each file corresponds to the same feature in the [User Manual](../manual-user/).
 - [control_materi_plasti_hardsoil_gammap_initial](control_materi_plasti_hardsoil_gammap_initial.md) — first-timestep gamma_p_extra (sentinel -1 pre-allocation in top.cc, parallel-loop safe) stored in element_intpnt_materi_plasti_hardsoil_gammap_initial and added to the yield.
 - [group_materi_failure_crunching](group_materi_failure_crunching.md) — name[] fixed to the Professional spelling + db_number alias for the GNU typo (failure.cc; negative-threshold semantics).
 - [group_materi_failure_void_fraction](group_materi_failure_void_fraction.md) — name[] fixed to the Professional spelling + db_number alias for the GNU name (failure.cc; node_dof -from/-to gotcha).
-- [group_materi_elasti_poisson_power](group_materi_elasti_poisson_power.md) — power-law nu block in set_stress() (stress.cc), young_power pattern; ~84% of the analytic fixed point (coupling gotcha).
+- [group_materi_elasti_poisson_power](group_materi_elasti_poisson_power.md) — power-law nu block in set_stress() (stress.cc), young_power pattern. K06 (2026-10-06): the block clears C/Cmem before the rebuild (C_matrix accumulates; before, the stiffness was C(young,poisson) + C(young,nu(p))), mpower = Pro within 0.6 %.
 - [group_materi_elasti_shear_factor](group_materi_elasti_shear_factor.md) — scales the shear entries of C/Cmem only (stress.cc); nonlinear post_point response (coupled stress formulation).
 - [group_materi_elasti_k0](group_materi_elasti_k0.md) — K0 record + control_materi_elasti_k0 hook read at the ICONTROL index: nu = K0/(1+K0) in the young/young_power blocks (poisson record optional) and for hardsoil nu50/nuur.
 - [group_materi_elasti_young_power](group_materi_elasti_young_power.md) — UPGRADE 3->6 params in set_stress() (stress.cc); C_matrix accumulation gotcha fixed (GNU doubled the stiffness with young+young_power); 72% of the secant fixed point (coupling gotcha).
@@ -306,7 +308,7 @@ Each file corresponds to the same feature in the [User Manual](../manual-user/).
 
 ## Sprint 13 lote 1 — soporte Winkler distribuido
 
-- [support_edge_normal](support_edge_normal.md) — area.cc type[10]: the RHS force from total displacements + the consistent dt-scaled side stiffness in the matrix (solvability), the output record with per-sweep re-zeroing (last-element detection), the bounda gotchas (-node no-op, shared bounda_time values, 3D two-record quirk).
+- [support_edge_normal](support_edge_normal.md) — area.cc type[10]: the RHS force from total displacements + the consistent dt-scaled side stiffness in the matrix (solvability), the output record with per-sweep re-zeroing (last-element detection), the bounda gotchas (-node no-op, shared bounda_time values, 3D two-record quirk). K17 (2026-10-06): the side matrix carries the damping c and density d/dt next to k*dt (support_edge_normal_3 converged = Pro).
   - the lot-2 additions: damping (manual record + automatic from group E/ν/ρ with Eoed/G), density (a from old NODE_DOF VERSION_NORMAL), factor (scales stiffnesses only), force_initial (compression preload), time diagram (scales the total force), the two control records; the "E from the attached element" gotcha; the 4 tests verified analytically.
 
 ## Batch hypo/mohr/kapsh (hyhis, kappa_shear, direct hardening, resets, updated_linear)
@@ -386,6 +388,8 @@ Each file corresponds to the same feature in the [User Manual](../manual-user/).
 
 - [group_truss_expansion](group_truss_expansion.md) — enum + registro; resta termica del incremento de longitud en truss() (todas las memorias); verificado vs Pro (truss11: -2 EXACTO).
 - [group_truss_initial_force](group_truss_initial_force.md) — enum + registro; siembra de la fuerza en el nacimiento del elemento (sin estado previo); verificado vs Pro (truss12: rhside ±1; el Pro renumería el truss en su .dbs).
+- [group_truss_memory](group_truss_memory.md) — truss.cc memory branches: new -total branch (current axis, EA/L0) and the tension-only geometric stiffness N/L (I - n n) for -updated/-total (K17 2026-10-06; Pro truss2/truss14).
+- [group_time](group_time.md) — group.cc `group_time_alive()` (shared by elem.cc and bounda.cc); bounda.cc `bounda_node_dormant()` skips bounda_dof/bounda_unknown on nodes whose elements are all inactive (C39 2026-10-06, Pro truss8).
 - [post_calcul_k0](post_calcul_k0.md) — enums K0/K0_SIG (name entries) + slot k0_sig en calculate() + branch K0 en calculate_operat (2D/3D/fallback 1D); verificado vs Pro (k0: 0.1111111111 EXACTO).
 - [element_dof_initial](element_dof_initial.md) — registro ELEMENT_DOF_INITIAL + marker ELEMENT_DOF_INITIAL_APPLIED (version_all=1) escrito por step_close tras converger el paso de nacimiento; sustitucion del old dof en la inercia lumped de general(); verificado vs Pro (phase1 + probe 2 pasos).
 - [geometry_node_type](geometry_node_type.md) — registros por-geometria + overrides en geometry() por miembro del set (re-lectura de coords + flag project_inside en las 8 ramas); verificado vs Pro (node_type_1, validation_14).

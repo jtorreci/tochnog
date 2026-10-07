@@ -50,16 +50,26 @@ controls the K0-like lateral stress growth with pressure.
   `alpha = 1`. The self-consistent analytic fixed point
   (`nu = 0.2 + 0.1*p`, `p = E*eps/(3(1-2*nu))` -> `E*eps = 1.2`) is
   `nu = 0.4`, `p = 2`, `sigma_yy = -2.5714`, `sigma_xx = -1.7143`.
-  The incremental code (the stiffness is evaluated with the previous-step
-  stress) lands at `nu ~ 0.43`, `p ~ 2.06` -> measured
-  `sigma_xx = -1.4389` and `sigma_yy = -3.2924` (84% of the fixed point;
-  window targets that exclude the constant-poisson base
-  `-0.5769/-1.3462`). `control_timestep_iterations 8` keeps the
-  within-step coupling tight.
+  The code is incremental (each step uses the stiffness of the previous
+  step's stress, starting from `nu = nu0` at zero stress), so the state
+  stays below the fixed point: `sigma_xx = -0.4389`,
+  `sigma_yy = -1.4101` (Professional 02-08-2026: -0.4417 / -1.4123).
+  `control_timestep_iterations 8`.
+- `elasti_poisson_power_replace1.dat` (validation-suite/test-2026): the
+  same model in the Professional dialect, targets -0.4389 / -1.4101.
+
+**Change 2026-10-06 (audit K06).** Before this date the power law did not
+replace the constant Poisson ratio: the stiffness was the SUM of the
+elastic matrix of `young`/`poisson` and the one of `young`/`nu(p)`, about
+twice the Professional stiffness (`mpower` gave -1.4389 / -3.2924; its
+targets were recalibrated). Results of inputs with this record change
+accordingly.
 
 ## Notas
 
 - Requires `materi_stress` and `materi_velocity` in the initialization
   part (same check as the other elastic records).
-- The base `group_materi_elasti_poisson` record is read only as a
-  fallback/default and is overridden when the power record exists.
+- The base `group_materi_elasti_poisson` record is overridden when the
+  power record exists (the elastic matrix is rebuilt with `nu(p)` only).
+- With `group_materi_elasti_young_power` the modulus is the power-law
+  modulus of that record.

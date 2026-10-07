@@ -135,6 +135,22 @@ long int area_element_group_time_active( void )
   return 0;
 }
 
+// group_time (manual 6.769): are the elements of element_group active at
+// time_total? Without a group_time record they always are. The birth time
+// itself is excluded and the death time included; at time 0 a group born
+// at 0 is active. Shared by elem() and bounda().
+long int group_time_alive( long int element_group, double time_total )
+{
+  long int ldum=0, idum[1];
+  double group_time[2];
+
+  if ( !db( GROUP_TIME, element_group, idum, group_time, ldum,
+      VERSION_NORMAL, GET_IF_EXISTS ) ) return 1;
+  if ( time_total==0. && group_time[0]==0. ) return 1;
+  if ( time_total>group_time[0] && time_total<=group_time[1] ) return 1;
+  return 0;
+}
+
 void area_element_group_sequence( void )
 
 {

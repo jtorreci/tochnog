@@ -1527,10 +1527,23 @@ void area( long int element, long int name,
                               sides[iside*nnol_side+inol_j];
                             for ( ia=0; ia<ndim; ia++ ) {
                               for ( ib=0; ib<ndim; ib++ ) {
-                                double kterm = dtime *
-                                  ( values[0]*normal[ia]*normal[ib]
-                                    + values[1]*( (ia==ib?1.:0.)
-                                      - normal[ia]*normal[ib] ) ) *
+                                // d(force)/d(velocity) of the support:
+                                // stiffness k*dt (u = u_old + v*dt),
+                                // damping c (manual 6.1068) and
+                                // density d/dt (6.1071, a = (v -
+                                // v_old)/dt). Without the damping and
+                                // density terms the iteration matrix
+                                // misses c/(k*dt) times the support
+                                // tangent and the Newton update
+                                // overshoots: Pro support_edge_normal_3
+                                // (c = 1e6, k*dt = 1e3) diverged to
+                                // disy 124.75 (Pro 5.01e-4).
+                                double nn = normal[ia]*normal[ib];
+                                double tt = (ia==ib?1.:0.) - nn;
+                                double kterm =
+                                  ( dtime*( values[0]*nn + values[1]*tt )
+                                    + cn*nn + ct*tt
+                                    + ( dn*nn + dt_*tt )/dtime ) *
                                   cij[inol_i*nnol_side+inol_j];
                                 long int indxi = node_i*npuknwn
                                   + vel_indx/nder + ia;
@@ -2251,4 +2264,97 @@ void element_normal_set( void )
   delete[] node_scale;
 
   if ( swit ) pri( "Out routine ELEMENT_NORMAL_SET" );
+}
+
+void contact_node_boundary_set( void )
+
+  // node_boundary (manual Professional 6.875) for the element-target
+  // contact (contact_target_element_group, 6.105): parallel_contact only
+  // accepts a target side whose nodes are all on the mesh boundary. The
+  // GNU 2014 inputs give node_boundary by hand; the Professional computes
+  // it (a node of a side that no other element shares). Generated here,
+  // outside the parallel loops (iteration_start, top.cc), only when
+  // contact_target_element_group is given and no node_boundary record
+  // exists, so hand-written node_boundary input keeps its meaning. A mesh
+  // change deletes node_boundary (mesh_has_changed), and the next
+  // iteration regenerates it for the new mesh.
+
+{
+  long int element=0, other=0, max_element=0, max_node=0, max=0, length=0,
+    other_length=0, inol=0, inod=0, iside=0, nside=0, nnol_side=0, kind=0,
+    a=0, j=0, shared=0, ldum=0, total=0, node_boundary=-YES, el[1+MNOL],
+    *sides=NULL, *other_el=NULL, *count=NULL, *list=NULL, *fill=NULL,
+    *on_boundary=NULL;
+  double ddum[1];
+
+  if ( !db_active_index( CONTACT_TARGET_ELEMENT_GROUP, 0, VERSION_NORMAL ) )
+    return;
+  if ( db_max_index( NODE_BOUNDARY, max, VERSION_NORMAL, GET )>=0 ) return;
+  db_max_index( NODE, max_node, VERSION_NORMAL, GET );
+  db_max_index( ELEMENT, max_element, VERSION_NORMAL, GET );
+  if ( max_node<0 || max_element<0 ) return;
+
+    // node -> side-bearing elements (compressed lists)
+  count = get_new_int( max_node+2 );
+  array_set( count, 0, max_node+2 );
+  for ( element=0; element<=max_element; element++ ) {
+    if ( !db_active_index( ELEMENT, element, VERSION_NORMAL ) ) continue;
+    db( ELEMENT, element, el, ddum, length, VERSION_NORMAL, GET );
+    if ( !element_normal_sides( el[0], nside, nnol_side, kind, sides ) )
+      continue;
+    for ( inol=1; inol<length; inol++ ) count[el[inol]+1]++;
+  }
+  for ( inod=0; inod<=max_node; inod++ ) count[inod+1] += count[inod];
+  total = count[max_node+1];
+  list = get_new_int( scalar_imax( 1, total ) );
+  fill = get_new_int( max_node+1 );
+  array_move( count, fill, max_node+1 );
+  for ( element=0; element<=max_element; element++ ) {
+    if ( !db_active_index( ELEMENT, element, VERSION_NORMAL ) ) continue;
+    db( ELEMENT, element, el, ddum, length, VERSION_NORMAL, GET );
+    if ( !element_normal_sides( el[0], nside, nnol_side, kind, sides ) )
+      continue;
+    for ( inol=1; inol<length; inol++ ) list[fill[el[inol]]++] = element;
+  }
+
+    // nodes of the sides that no other side-bearing element shares
+  on_boundary = get_new_int( max_node+1 );
+  array_set( on_boundary, 0, max_node+1 );
+  for ( element=0; element<=max_element; element++ ) {
+    if ( !db_active_index( ELEMENT, element, VERSION_NORMAL ) ) continue;
+    db( ELEMENT, element, el, ddum, length, VERSION_NORMAL, GET );
+    if ( !element_normal_sides( el[0], nside, nnol_side, kind, sides ) )
+      continue;
+    for ( iside=0; iside<nside; iside++ ) {
+      inod = el[1+sides[iside*nnol_side]];
+      shared = 0;
+      for ( j=count[inod]; j<count[inod+1] && !shared; j++ ) {
+        other = list[j];
+        if ( other==element ) continue;
+        other_el = db_int( ELEMENT, other, VERSION_NORMAL );
+        other_length = db_len( ELEMENT, other, VERSION_NORMAL );
+        shared = 1;
+        for ( a=0; a<nnol_side && shared; a++ ) {
+          if ( !array_member( &other_el[1], el[1+sides[iside*nnol_side+a]],
+              other_length-1, ldum ) )
+            shared = 0;
+        }
+      }
+      if ( shared ) continue;
+      for ( a=0; a<nnol_side; a++ )
+        on_boundary[el[1+sides[iside*nnol_side+a]]] = 1;
+    }
+  }
+  for ( inod=0; inod<=max_node; inod++ ) {
+    if ( on_boundary[inod] && db_active_index( NODE, inod, VERSION_NORMAL ) ) {
+      length = 1;
+      db( NODE_BOUNDARY, inod, &node_boundary, ddum, length, VERSION_NORMAL,
+        PUT );
+    }
+  }
+
+  delete[] count;
+  delete[] list;
+  delete[] fill;
+  delete[] on_boundary;
 }

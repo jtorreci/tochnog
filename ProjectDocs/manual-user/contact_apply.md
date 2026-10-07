@@ -22,8 +22,11 @@ following records complete the family (manual 6.99-6.107):
   (`contact_heatgeneration`).
 - **`contact_target_element_group g_0 g_1 ...`** — restricts the target
   elements to the listed element groups.
+  The mesh boundary they need is generated automatically; see
+  [contact_target_element_group](contact_target_element_group.md).
 - **`contact_target_geometry` / `contact_target_geometry_switch`** — alias
-  of `contact_geometry`/`contact_geometry_switch` (the manual names).
+  of `contact_geometry`/`contact_geometry_switch` (the manual names), for
+  every index; see [contact_target_geometry](contact_target_geometry.md).
 
 ## Uso
 

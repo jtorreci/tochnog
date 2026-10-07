@@ -35,6 +35,8 @@ input parameters it accepts.
 - [mesh_activate_gravity_time](mesh_activate_gravity_time.md) — gradual gravity activation (dams/dumping).
 - [strain_settlement_parameters](strain_settlement_parameters.md) — settlement creep strain model.
 - [contact_apply](contact_apply.md) — contact algorithm records (apply, plastic friction, targets).
+- [contact_target_geometry](contact_target_geometry.md) — Professional name of contact_geometry/_switch, every index (fixed 2026-10-07, K05/C5).
+- [contact_target_element_group](contact_target_element_group.md) — element-target contact; node_boundary generated automatically (fixed 2026-10-07, K05).
 - [control_print_history_factor](control_print_history_factor.md) — multiply history output values.
 - [control_print_history_smooth](control_print_history_smooth.md) — moving-average smoothing of history output.
 - [control_print_dof](control_print_dof.md) — print primary dofs with coordinates to plain ASCII files.
@@ -129,7 +131,7 @@ input parameters it accepts.
 - [control_materi_plasti_hardsoil_gammap_initial](control_materi_plasti_hardsoil_gammap_initial.md) — -yes creates the extra initial gamma_p so f = 0 at the initial deviatoric stress (element_intpnt_materi_plasti_hardsoil_gammap_initial).
 - [group_materi_failure_crunching](group_materi_failure_crunching.md) — element failure on the compression strain (Professional spelling; GNU typo kept as alias).
 - [group_materi_failure_void_fraction](group_materi_failure_void_fraction.md) — element failure on the void fraction (Professional spelling; GNU name kept as alias).
-- [group_materi_elasti_poisson_power](group_materi_elasti_poisson_power.md) — pressure-dependent power-law Poisson ratio nu = nu0 + nu1*(p/p1)^alpha (nu <= nu2).
+- [group_materi_elasti_poisson_power](group_materi_elasti_poisson_power.md) — pressure-dependent power-law Poisson ratio nu = nu0 + nu1*(p/p1)^alpha (nu <= nu2); replaces the constant poisson (K06 fix 2026-10-06: before, both stiffnesses were added).
 - [group_materi_elasti_shear_factor](group_materi_elasti_shear_factor.md) — multiply the shear stiffness from young+poisson by a factor.
 - [group_materi_elasti_k0](group_materi_elasti_k0.md) — K0 data; with control_materi_elasti_k0 -yes (same control index as the timestep) the poisson becomes K0/(1+K0) for young, young_power and hardsoil.
 - [group_materi_elasti_young_power](group_materi_elasti_young_power.md) — power-law Young modulus E = E0 + E1*(p/p1)^alpha (E >= E2, E <= E3); 6-parameter Professional form (GNU 3-parameter form no longer accepted).
@@ -307,7 +309,7 @@ input parameters it accepts.
 
 ## Sprint 13 lote 1 — soporte Winkler distribuido
 
-- [support_edge_normal](support_edge_normal.md) — the distributed edge support (manual 6.1067): normal+tangential stiffness per unit length (2D) / area (3D), displacement-driven force + consistent matrix stiffness; the 5 same-index side selectors; output `node_support_edge_normal_force`.
+- [support_edge_normal](support_edge_normal.md) — the distributed edge support (manual 6.1067): normal+tangential stiffness per unit length (2D) / area (3D), displacement-driven force + consistent matrix stiffness; the 5 same-index side selectors; output `node_support_edge_normal_force`. K17 (2026-10-06): the damping and density enter the iteration matrix (stiff dampers converge).
 
   - the additional records: `_damping`, `_damping_automatic`, `_damping_automatic_apparent`, `_density`, `_factor`, `_force_initial`, `_time` (the formula Eoed/G and the role of each term; the time diagram scales the FORCE only); the two control records (`_damping_apply` wired, `_stiffness_freeze` parsed-only for elastic).
 
@@ -393,6 +395,8 @@ input parameters it accepts.
 
 - [group_truss_expansion](group_truss_expansion.md) — thermal expansion of trusses (manual 6.775): the mechanical stretch subtracts the free thermal increment alpha*dT*L0. Unlocks truss11 (force -2 EXACT) and truss15 rc=0.
 - [group_truss_initial_force](group_truss_initial_force.md) — pre-tension of truss elements from the moment they come to life (manual 6.776); no initial strain. Unlocks truss12 rc=0.
+- [group_truss_memory](group_truss_memory.md) — truss kinematics: -updated / -total (geometrically nonlinear; -total = Pro truss14, N = EA (L-L0)/L0) / -updated_linear / -total_linear; tension geometric stiffness in the matrix (K17, 2026-10-06).
+- [group_time](group_time.md) — element group birth/death times; since 2026-10-06 (C39, Pro truss8) a node whose elements are all inactive is not driven by its bounda_dof and stays at rest.
 - [post_calcul_k0](post_calcul_k0.md) — post_calcul -materi_stress -k0 (manual 6.901): ratio horizontal/vertical stress; output item -k0_sig. Unlocks k0 rc=0.
 - [element_dof_initial](element_dof_initial.md) — past dofs of an element at its birth step (manual 6.422); the transient inertia integrates from them. Unlocks phase1 rc=0.
 - [geometry_node_type](geometry_node_type.md) — per-geometry override of the coordinates used to check nodes on the geometry (6.540: -node/-node_start_refined/-plus_displacement).

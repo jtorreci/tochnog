@@ -529,6 +529,15 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
   (`parallel_contact` runs through `parallel_sys_routine`; the `PUT` allocates)
   and handle all indices.
 - **Effort**: **medium**.
+- **Status**: **DONE 2026-10-07 (F2 T3a)**. Broader than first documented
+  (audit K05): index 0 aborted with "Data is allocated in a parallel loop"
+  (the alias PUT ran inside `parallel_contact`), index > 0 was dropped. Fix:
+  read-only `contact_geometry_get()` in `contact.cc` (both names, every
+  index, GNU name wins on the same index); no record is created. Tests
+  `contact_target_geometry_index1/_index0/_switch1`; validation_10 sigyy
+  -21232 (Pro -21031). Element-target contact (`contact_target_element_group`)
+  had a second, separate root cause (no mesh boundary): fixed in F2 T3b,
+  residuals in C40.
 
 ### C6. `iface_gen*` — reconstructed inputs do not exercise interface generation
 
@@ -664,6 +673,9 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
   `materi.cc`, with the auxiliary pass protected from the control
   override; then re-verify dynamic1/2/5/8.
 - **Effort**: **medium**.
+- **Corpus probe** (F2 T2, 2026-10-06): Pro `other/dynamic3` (implicit truss,
+  prescribed acceleration, no `materi_dynamic`) is the same gap: node 2
+  disx GNU 32.66 vs Pro 60.44 (the target node 1 passes in both).
 
 ### C12. bicg "stop" does not abort the GNU run on a singular system
 
@@ -1127,6 +1139,131 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
   full corpus A/B); not part of F1.
 - **Severity**: **MEDIUM** (one-iteration models report a lagged state).
   **Effort**: **medium/large**.
+
+### C36. `group_materi_elasti_young_power` next to `group_materi_elasti_young`: the Professional adds both stiffnesses — DECIDED 2026-10-06: deliberate divergence, option (a) (audit K06)
+
+- **Symptom** (F2 T1, Professional 02-08-2026, validation-suite `myoung6*`
+  converted): `myoung6_e2` (law clamped to E2 = 3000, `young` 1000) Pro
+  sigyy -5.3846 (stiffness 4000), GNU -4.0385 (3000); `myoung6_e3` (law
+  clamped to 800) Pro 1800, GNU 800; `myoung6` Pro -3.3485, GNU -1.6657.
+- **Measured**: without the `group_materi_elasti_young` record the Pro
+  equals the GNU on all three (-4.0385, -1.0769, -1.6742 vs -1.6657).
+  With `materi_history_variable 1` the Pro reports the "calculated young"
+  (manual 6.661) as 3000 on `myoung6_e2` while its stress needs 4000: the
+  Professional builds C(young) + C(E_law), the same accumulation the GNU
+  2014 code had (removed in Sprint 10).
+- **Manual**: theory 2.2.2 "the young's stiffness modulus is made a
+  function of the average stress state: E = E0 + E1 (p/p1)^alpha" and the
+  history variable of 6.661 both say the law IS the modulus; the manual
+  is silent on combining it with a separate `group_materi_elasti_young`.
+- **Options**: (a) keep the GNU (law = modulus, manual reading; the
+  `myoung6*` targets stay; documented divergence from the binary);
+  (b) follow the binary (add C(young) when both records exist; retarget
+  `myoung6`, `myoung6_e2`, `myoung6_e3`; `myoung6_apply` with
+  `materi_elasti_young_power_apply -no` must then be re-measured on Pro).
+  Only the validation-suite `myoung6*` family and Pro `validation_14_mesh`
+  use the record. `group_materi_elasti_poisson_power` is NOT affected:
+  there the Pro replaces the poisson ratio (fixed in F2 T1).
+- **Decision (project owner, 2026-10-06)**: option (a), deliberate
+  divergence. The GNU follows the manual (theory 2.2.2, 6.661: the power
+  law IS the modulus); the code and the `myoung6*` targets stay. Recorded
+  in SEGUIMIENTO "Descarte de features" and in "Differences with the
+  Professional version" of `manual-user/` and
+  `manual-developer/group_materi_elasti_young_power.md`. No code change.
+- **Severity**: **LOW** (input with both records only). **Effort**:
+  **cheap** either way.
+
+### C38. `control_support_edge_normal_stiffness_freeze` is parse-only
+
+- **Manual** 6.381: with `-yes` the stiffness FORCES of
+  `support_edge_normal` are frozen at their present value (gravity with
+  support stiffness first, then vibration with damping only).
+- **GNU**: parsed and accepted, no effect (the earlier note "meaningful
+  only with plasticity" misread the manual).
+- **Measured** (F2 T2, Pro `support_edge_normal_3`): Professional disy
+  5.00999e-4 with the record, 5.00998e-4 without; GNU 5.00998e-4 (after the
+  damping-tangent fix). The target (tolerance 1e-6) passes either way.
+- **Proposed fix**: at the control index with the record, store the
+  per-node stiffness force `k u` (normal and tangential) and use it
+  instead of `k u` (and drop `k*dt` from the matrix) while frozen.
+- **Severity**: **LOW**. **Effort**: **cheap/medium**.
+
+### C37. 3D beam: the GNU beam is planar, the Professional beam is a full 3D frame element (audit K17 `trubea2/3`) — PARKED, design
+
+- **Symptom** (F2 T2, Pro `other/trubea2`, `trubea3`): a truss-beam along x
+  loaded in z (x-z plane) or in the y-z plane: GNU bicg breakdown, disz
+  2e5; Professional 02-08-2026 disz 0.00333 and roty/rotx reactions
+  exact. `trubea1` (x-y plane) and `trubea4` agree.
+- **Root cause**: `beam_3d()` (`beam.cc`) maps a 2D beam into ONE plane
+  given by the GNU-only `group_beam_plane` (default -x -y); out-of-plane
+  bending has no stiffness. The Professional (manual 6.590-6.592) has a
+  3D beam with local axes: `group_beam_inertia Iyy Izz J` (two bending
+  planes + torsion), `group_beam_direction_z` (default: an arbitrary
+  normal in 3D), output `element_beam_direction`.
+- **Why parked**: a new 12-dof 3D frame element (local triad, torsion,
+  both bending planes, -updated large rotations, beam force/moment output
+  in local axes, `print_beam_force_moment`), not an isolated fix.
+- **Severity**: **MEDIUM** (any 3D beam out of the x-y plane). **Effort**:
+  **large**.
+
+### C39. K17 residuals: inactive-element nodes, `update2`, `truss13` (audit K17)
+
+- **`truss8`** (Pro `other`): a truss born at t = 1 (`group_time`), node 1
+  driven by a constant velocity 0.1 from t = 0. Node 2 disx 0.1 in both
+  (target); node 1 disx GNU 0.2, Professional 0.1: the Professional does
+  not move a node that has no active element (manual 6.769 is silent).
+  **RESOLVED 2026-10-06** (project decision: follow the Professional;
+  F2 T2c, hash in `odd/tasks/f2-medium-bugs.md`): `bounda.cc`
+  `bounda_node_dormant()` skips `bounda_dof`/`bounda_unknown` on a node
+  whose elements are all inactive by `group_time`; truss8 node 1 disx
+  0.1 = Pro at every step; test `group_time_bounda_dormant1`. **Still
+  open (LOW)**: after the DEATH of a group the Professional brings its
+  nodes to rest (velocity 0, also the free ones; probe `group_time 0 0.
+  1.`), the GNU keeps their old velocity (no equation); and only
+  `group_time` makes a node dormant (mesh_activate_gravity method 1 and
+  mesh_delete not measured).
+- **`dynamic3`** (Pro `other`): implicit truss dynamics without
+  `materi_dynamic`; the target node passes, node 2 disx GNU 32.66 vs Pro
+  60.44. Same gap as C11 ("plain implicit truss case"); tracked there.
+- **`update2`** (Pro `other`): NOT a truss case (misclassified in K17): a
+  -updated quad cantilever 100 x 10, E = 1e7, edge force 1e6 with
+  `force_edge_normal_factor`, p-refinement. GNU "solution seems to
+  diverge" (veliy -86434), Professional veliy 12.243 (target 12.24).
+  Without p-refinement or with -updated_linear both stop. Large-rotation
+  robustness of the -updated material, related to K19; not investigated
+  further.
+- **`truss13`** (Pro `other`): `control_mesh_truss_distribute_mpc` is not
+  implemented (SEGUIMIENTO "PENDIENTE"); the truss across an interface
+  carries no force in the GNU (Pro 5.0).
+- **Zero-force straight truss**: the first iteration of a straight truss
+  under a transverse load is still singular (no force, so no geometric
+  stiffness); the GNU prints "iterative solver broke down" and continues
+  (C12), then converges (Pro `truss2/3/14` equal after F2 T2).
+- **Severity**: **LOW**. **Effort**: **cheap** (truss8 decision) to
+  **large** (update2).
+
+### C40. Element-target contact residuals (audit K05, after F2 T3b)
+
+- **Fixed in F2 T3b (2026-10-07)**: with `contact_target_element_group`
+  (manual 6.105) the target sides need `node_boundary` (6.875); the GNU
+  never generated it (only `control_mesh_macro`, `adjust`, `delete` and
+  hand-written input did), so the Professional inputs `contac1`, `contac4`
+  and `axisym3` had no contact. `area.cc` `contact_node_boundary_set()`
+  now generates it (nodes of unshared sides) when the group record is
+  given and no node_boundary exists; contac1/contac4 = Pro exactly,
+  axisym3 velx -9.99981e-4 (= Pro), 2D quad4 probe = Pro.
+- **Open**: (1) the Professional refuses a target element whose nodes are
+  all on the mesh boundary ("Error, a target element has all nodes on the
+  boundary of the mesh", manual 6.105 "more than 1 layer"); the GNU runs
+  it and gives a non-physical result (single-column probe: the far nodes
+  move). (2) `parallel_contact` accepts a target side when
+  `number_of_side_boundary_nodes==ndim`: a hex8 side has 4 nodes, so hex8
+  targets are never detected (code reading, not measured on the Pro). (3) The
+  Professional writes `node_boundary`/`element_boundary` in every run
+  (also without `mesh_boundary`, against its manual 6.815 default -no);
+  the GNU generates node_boundary only for element-target contact and has
+  no `element_boundary` record.
+- **Severity**: **LOW**. **Effort**: **cheap** (1, 2) to **medium** (3).
 ---
 
 ## D. Summary
@@ -1147,7 +1284,7 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
 | C1 | sfnet | `pruebavel` dead/malformed | LOW | cheap |
 | C2 | validation-suite | `groundflow_interface` `gvelx` sign | LOW | medium |
 | C3 | sfnet | `gforce10` 3D section sign | MEDIUM | medium |
-| C5 | — | `contact_target_geometry` index-0 alias | MEDIUM | medium |
+| C5 | — | `contact_target_geometry` index-0 alias — resolved 2026-10-07 (F2 T3a) | MEDIUM | medium |
 | C6 | validation-suite | `iface_gen*` generation-coverage gap | MEDIUM | cheap |
 | C7 | — | Mazars gamma with shear; damage + early plasticity path | MEDIUM | medium |
 | C8 | — | default `mesh` `-follow_material` vs Pro `-fixed_in_space` | MEDIUM | large |
@@ -1173,8 +1310,13 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
 | C33 | — | `_visco` direct cut-offs: `DTIME` from the previous step, no visco on the principal tension cap; F4 | MEDIUM | cheap/medium |
 | C34 | — | direct cut shear plastic strain: Pro twice the tensor value (deliberate divergence) | LOW | — |
 | C35 | — | one-iteration lag of the whole material state (K02, `spring4` 1 iteration) — parked, design; F4 | MEDIUM | medium/large |
+| C36 | validation-suite | `young_power` + `young`: Pro adds both stiffnesses, manual says law = modulus (K06) — decided 2026-10-06: deliberate divergence (GNU = manual), no code change | LOW | cheap |
+| C37 | Pro `other` | planar GNU beam vs Pro 3D frame beam (`trubea2/3`, K17) — parked, design | MEDIUM | large |
+| C38 | Pro `other` | `control_support_edge_normal_stiffness_freeze` parse-only (support_edge_normal_3, 1e-9 effect) | LOW | cheap/medium |
+| C39 | Pro `other` | K17 residuals: `truss8` birth node resolved 2026-10-06 (death velocity reset open), `update2` -updated robustness, `truss13` truss_distribute_mpc, zero-force truss first iteration | LOW | cheap/large |
+| C40 | Pro `other` | element-target contact residuals after F2 T3b: no Pro check "target element has all nodes on the boundary", hex8 target sides never detected, node_boundary generated only for element-target contact | LOW | cheap/medium |
 
-Thirty-seven items remain open: eleven MEDIUM and twenty-six LOW (C23 and C24 resolved 2026-10-05; C25, C26, C27 and B10 added; F1 T3 / K04 2026-10-06 added B11, C28-C32; F1 T6 resolved C28, added and resolved B12). No open issue is CRITICAL or
+Forty-one items remain open: eleven MEDIUM and thirty LOW (C23 and C24 resolved 2026-10-05; C25, C26, C27 and B10 added; F1 T3 / K04 2026-10-06 added B11, C28-C32; F1 T6 resolved C28, added and resolved B12; F2 T1 added C36; F2 T2 added C37, C38, C39; F2 T3 resolved C5 and added C40). No open issue is CRITICAL or
 HIGH. The validation-suite corpus has no open failure — its 233 real tests
 pass (`materi_direct_mc` input corrected, C17 resolved). Every remaining failure is a stale or malformed test, an out-of-scope model
 or infrastructure limit, a narrow post-processing divergence, a corpus-coverage

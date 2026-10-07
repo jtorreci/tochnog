@@ -57,3 +57,29 @@ young_power (evita NaN para potencias fraccionarias con p negativo).
 - `control_timestep_iterations` > 1 NO cambia el resultado elástico
   (verificado: iter 1 == iter 8) — la no-linealidad residual es del
   acoplamiento, no de la convergencia del paso.
+
+## K06 fix (2026-10-06): the block replaces the C, it does not add to it
+
+- **Where**: `set_stress()` in `stress.cc`, the
+  `GROUP_MATERI_ELASTI_POISSON_POWER` block.
+- **Defect**: `C_matrix()` ACCUMULATES into its target (`array_add`). The
+  block called it on the `C`/`Cmem` already built by the
+  `GROUP_MATERI_ELASTI_YOUNG` block, so the stiffness was
+  `C(young, poisson) + C(young, nu(p))`. The "84 %" and "nu ~ 0.43" of the
+  validation notes above were artefacts of that double stiffness; a
+  forward-Euler replay of the oedometer with the summed matrix reproduces
+  the old GNU numbers to 1e-9 (-1.43887 / -3.29236).
+- **Fix**: `array_set()` clears `C` and `Cmem` before the rebuild, the
+  same pattern as the `_young_power` and `_hardsoil` blocks. `young` keeps
+  the modulus of the previous block (constant, polynomial or power law).
+- **Reference**: Professional 02-08-2026 on `mpower` (converted) gives
+  -0.44173 / -1.41230; the forward-Euler replay with `C(1000, nu(p))`
+  gives -0.43887 / -1.41012, the GNU now -0.438872 / -1.410125. The
+  residual 0.2-0.6 % is the Professional's pressure evaluation inside the
+  step (not identified; below the target window).
+- **Tests**: `validation-suite/test-2026/elasti_poisson_power_replace1.dat`
+  (RED -1.4389/-3.2924, GREEN -0.4389/-1.4101), `mpower` retargeted to
+  -0.4389 / -1.4101 +/- 0.02.
+- **Pending**: the `_young_polynomial` block still accumulates on top of
+  `group_materi_elasti_young` when both are given (not in any corpus); the
+  `_young_power` + `_young` combination is an open decision (BACKLOG C36).

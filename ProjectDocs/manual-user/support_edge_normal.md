@@ -77,7 +77,7 @@ the nodal force is exactly k·u·L/2 per corner node (test
 | record | meaning |
 |---|---|
 | `control_support_edge_normal_damping_apply <i> sw` | -no neglects every `support_edge_normal_damping`/`_automatic`/`_automatic_apparent` record (6.380) |
-| `control_support_edge_normal_stiffness_freeze <i> sw` | freeze the stiffness at its initial value (6.381) | PARTIAL in the GNU: parsed and accepted; for the elastic support the stiffness never changes (the freeze is meaningful only with plasticity, lot 3) |
+| `control_support_edge_normal_stiffness_freeze <i> sw` | freeze the stiffness FORCES of the supports at their present value (6.381; e.g. impose gravity with stiffness, then absorb vibrations with damping only) | NOT IMPLEMENTED in the GNU: parsed and accepted without effect (BACKLOG C38). On Pro `support_edge_normal_3` the effect is 1e-9 (disy 5.00999e-4 with, 5.00998e-4 without) |
 
 ## Plasticity (6.1079-6.1083)
 
@@ -91,3 +91,15 @@ residual_stiffness` (a fraction of the original elastic stiffness
 kept in the element matrix for stability), and the output
 `node_support_edge_normal_plasti_tension_status` (status of a node:
 opened/closed).
+
+## Iteration matrix with damping and density (2026-10-06, audit K17)
+
+The support also enters the iteration matrix with its damping and density:
+per unit length/area, `k*dt + c + d/dt` along the normal and the tangent
+(the unknown is the velocity; `u = u_old + v*dt`, `a = (v - v_old)/dt`).
+The converged state is the same as before; what changes is that a stiff
+damper now converges. Example: the Professional test
+`support_edge_normal_3` (k = c = 1e6, dt = 1e-3, so the damper is 1000
+times the stiffness term) gives node 1 disy 5.00998e-4 as the Professional
+02-08-2026; before this change the GNU diverged (disy 124.75, run aborted).
+Own test: `validation-suite/test-2026/support_edge_normal_damping_tangent1.dat`.

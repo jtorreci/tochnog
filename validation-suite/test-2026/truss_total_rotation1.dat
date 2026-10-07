@@ -1,0 +1,37 @@
+(
+K17 truss14 (2026-10-06): group_truss_memory -total is geometrically
+nonlinear (Professional 02-08-2026 test other/truss14; the manual 6.777
+lists only -updated_linear/-updated/-total_linear). Unit truss, EA = 1,
+node 1 fixed; force 1 along x at node 2 (step 20), then force 1 along y
+added (step 30). The truss rotates to the resultant: N = EA*(L - L0)/L0
+= sqrt(2), L = 1 + sqrt(2), node 2 disx = disy - 1 = 0.70711 (=
+Professional). GNU before K17: -total fell into the linear branch, no
+transverse stiffness, "iterative solver broke down", disy 1e10.
+)
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_displacement
+end_initia
+mesh -fixed_in_space -fixed_in_space
+node 1  0.0 0.0
+node 2  1.0 0.0
+element 1  -truss 1 2
+group_type 0  -truss
+group_truss_memory 0  -total
+group_truss_area 0  1.0
+group_truss_elasti_young 0  1.0
+bounda_dof   10  1 -velx -vely
+bounda_force 20  2 -velx
+bounda_time  20  1.
+bounda_force 30  2 -vely
+bounda_time  30  1.
+control_timestep             0  1. 1.
+control_timestep_iterations  0  100
+target_item    0  -node_dof 2 -disx
+target_value   0  0.707107 1.e-5
+target_item    1  -node_dof 2 -disy
+target_value   1  1.707107 1.e-5
+target_item    2  -element_truss_force 1 0
+target_value   2  1.414214 1.e-5
+end_data

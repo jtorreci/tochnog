@@ -23,6 +23,37 @@
 #define SLIP 1
 #define STICK 2
 
+// Contact target geometry with index itar: the GNU name contact_geometry
+// (and contact_geometry_switch) or the Professional name
+// contact_target_geometry (and contact_target_geometry_switch), manual
+// 6.106/6.107. If both names are given for the same index, the GNU name
+// wins. Read-only: this runs inside the parallel contact loop, where a db
+// PUT would allocate and abort ("Data is allocated in a parallel loop").
+// Returns 1 if a target geometry exists for itar; geom[0..1] then holds the
+// geometry entity and index, and swit the switch (-NO if absent).
+static long int contact_geometry_get( long int itar, long int geom[],
+  long int &swit )
+
+{
+  long int ldum=0;
+  double ddum[1];
+
+  swit = -NO;
+  if ( db_active_index( CONTACT_GEOMETRY, itar, VERSION_NORMAL ) ) {
+    db( CONTACT_GEOMETRY, itar, geom, ddum, ldum, VERSION_NORMAL, GET );
+    db( CONTACT_GEOMETRY_SWITCH, itar, &swit, ddum, ldum, VERSION_NORMAL,
+      GET_IF_EXISTS );
+    return 1;
+  }
+  if ( db_active_index( CONTACT_TARGET_GEOMETRY, itar, VERSION_NORMAL ) ) {
+    db( CONTACT_TARGET_GEOMETRY, itar, geom, ddum, ldum, VERSION_NORMAL, GET );
+    db( CONTACT_TARGET_GEOMETRY_SWITCH, itar, &swit, ddum, ldum,
+      VERSION_NORMAL, GET_IF_EXISTS );
+    return 1;
+  }
+  return 0;
+}
+
 void parallel_contact( void )
 
 {
@@ -68,29 +99,22 @@ void parallel_contact( void )
     if ( contact_apply==-NO || control_contact_apply==-NO ) return;
   }
 
-  // contact_target_geometry/_switch: alias of contact_geometry/_switch (the
-  // manual name). If the target-geometry records are used and the base ones
-  // are not, copy them so the existing algorithm sees them.
-  if ( db_active_index( CONTACT_TARGET_GEOMETRY, 0, VERSION_NORMAL ) &&
-       !db_active_index( CONTACT_GEOMETRY, 0, VERSION_NORMAL ) ) {
-    long int tgeom[2];
-    db( CONTACT_TARGET_GEOMETRY, 0, tgeom, ddum, ldum, VERSION_NORMAL, GET );
-    db( CONTACT_GEOMETRY, 0, tgeom, ddum, ldum, VERSION_NORMAL, PUT );
-    if ( db_active_index( CONTACT_TARGET_GEOMETRY_SWITCH, 0, VERSION_NORMAL ) ) {
-      long int tgswitch = -YES;
-      db( CONTACT_TARGET_GEOMETRY_SWITCH, 0, &tgswitch, ddum, ldum,
-        VERSION_NORMAL, GET );
-      db( CONTACT_GEOMETRY_SWITCH, 0, &tgswitch, ddum, ldum,
-        VERSION_NORMAL, PUT );
-    }
-  }
-
   db_max_index( NODE, max_node, VERSION_NORMAL, GET );
   if ( max_node >= 0 && any_contact_data ) {
 
     db_max_index( ELEMENT, max_element, VERSION_NORMAL, GET );
     db_max_index( NODE_BOUNDARY, max_node_boundary, VERSION_NORMAL, GET );
     db_max_index( CONTACT_GEOMETRY, max_contact_geometry, VERSION_NORMAL, GET );
+    // contact_target_geometry/_switch (manual 6.106/6.107) is the
+    // Professional name of contact_geometry/_switch: scan the union of
+    // both index ranges (see contact_geometry_get).
+    {
+      long int max_target_geometry = -1;
+      db_max_index( CONTACT_TARGET_GEOMETRY, max_target_geometry,
+        VERSION_NORMAL, GET );
+      if ( max_target_geometry>max_contact_geometry )
+        max_contact_geometry = max_target_geometry;
+    }
     max_total = 1;
     max_total += max_contact_geometry;
     if ( max_node_boundary>=0 ) max_total += max_element;
@@ -199,8 +223,8 @@ void parallel_contact( void )
             }
             if ( (use_element_target&&db_active_index(ELEMENT,itar, 
                   VERSION_NORMAL))||
-                 (use_contact_geometry&&db_active_index(CONTACT_GEOMETRY,itar, 
-                  VERSION_NORMAL)) ) {
+                 (use_contact_geometry&&contact_geometry_get(itar,
+                  contact_geometry,contact_geometry_switch)) ) {
               if ( use_element_target ) {
                 if ( swit ) pri( "itar", itar );
                 db( ELEMENT, itar, el, ddum, length, VERSION_NORMAL, GET );
@@ -497,20 +521,15 @@ void parallel_contact( void )
               }
               else {
                 assert( use_contact_geometry );
-                db( CONTACT_GEOMETRY, itar, contact_geometry, ddum, 
-                  ldum, VERSION_NORMAL, GET );
+                  // contact_geometry and its switch were read by
+                  // contact_geometry_get in the target test above
                 geometry( icont, ddum, contact_geometry, inside_target, rdum, 
                   normal_dir, penetration, ddum, PLUS_DISPLACEMENT, 
                   PROJECT_ON_EDGE, VERSION_NEW );
                 if ( inside_target ) {
-                  if ( db_active_index( CONTACT_GEOMETRY_SWITCH, 
-                    itar, VERSION_NORMAL ) ) {
-                    db( CONTACT_GEOMETRY_SWITCH, itar, 
-                      &contact_geometry_switch, ddum, ldum, VERSION_NORMAL, GET );
-                    if ( contact_geometry_switch==-YES ) {
-                      array_multiply( normal_dir, normal_dir, -1., ndim );
-                      penetration = -penetration;
-                    }
+                  if ( contact_geometry_switch==-YES ) {
+                    array_multiply( normal_dir, normal_dir, -1., ndim );
+                    penetration = -penetration;
                   }
                   if ( penetration<0. )
                     inside_target = 1;
