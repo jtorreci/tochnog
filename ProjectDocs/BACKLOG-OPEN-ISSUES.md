@@ -866,7 +866,12 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
   matches the Professional `-fixed_in_space`.
 - **Effort**: **medium**.
 
-### C20. `-updated_jaumann` memory not implemented
+### C20. `-updated_jaumann` memory not implemented — RESOLVED 2026-10-08 (F3 T2)
+
+- **Resolution**: `UPDATED_JAUMANN` implemented (linear incremental strain,
+  stress rotated with R = I + 0.5(F-F^T), manual 2.2.1); simple shear
+  identical to the Professional (tests
+  `materi_memory_updated_jaumann_shear1/2`).
 
 - **Symptom**: manual Professional 6.685 lists `-updated_jaumann`; the GNU
   does not accept it.
@@ -1353,7 +1358,7 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
 | C15 | — | plane direct cut-off phi_flow factor M/G vs Pro 2 (deliberate divergence) | LOW | cheap |
 | C18 | — | default memory with `materi_displacement`: Pro behaves as `-total_linear` — resolved 2026-10-07 (F3 T2) | MEDIUM | large |
 | C19 | — | explicit `-updated_linear` on `-follow_material`: GNU reference gradient vs Pro current — resolved 2026-10-07 (F3 T2) | LOW | medium |
-| C20 | — | `-updated_jaumann` not implemented | LOW | medium |
+| C20 | — | `-updated_jaumann` not implemented — resolved 2026-10-08 (F3 T2) | LOW | medium |
 | C21 | — | `control_materi_updated_apply -yes`: Pro ignores its manual (deliberate divergence) | LOW | cheap |
 | C22 | Pro `other` | `hypo12` marginal sigyy target miss after the default-memory change | LOW | cheap |
 | C25 | — | uninitialized-buffer audit follow-ups (`pef_vel_prev` realloc, NODE_EIGEN print, split/beam/interface/mpc/nonloc side findings) | LOW | cheap |
@@ -1373,7 +1378,7 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
 | C40 | Pro `other` | element-target contact residuals after F2 T3b: no Pro check "target element has all nodes on the boundary", hex8 target sides never detected, node_boundary generated only for element-target contact | LOW | cheap/medium |
 | C41 | Pro `other` | `mohr_coul_direct7`: `-total_linear` + velocity `mpc_node_number` tie misses sigxy (F3) | LOW | medium |
 
-Forty items remain open: nine MEDIUM and thirty-one LOW (C23 and C24 resolved 2026-10-05; C25, C26, C27 and B10 added; F1 T3 / K04 2026-10-06 added B11, C28-C32; F1 T6 resolved C28, added and resolved B12; F2 T1 added C36; F2 T2 added C37, C38, C39; F2 T3 resolved C5 and added C40; F3 T2 resolved C8, C18, C19 and added B13, C41). No open issue is CRITICAL or
+Thirty-nine items remain open: nine MEDIUM and thirty LOW (C23 and C24 resolved 2026-10-05; C25, C26, C27 and B10 added; F1 T3 / K04 2026-10-06 added B11, C28-C32; F1 T6 resolved C28, added and resolved B12; F2 T1 added C36; F2 T2 added C37, C38, C39; F2 T3 resolved C5 and added C40; F3 T2 resolved C8, C18, C19, C20 and added B13, C41). No open issue is CRITICAL or
 HIGH. The validation-suite corpus has no open failure — its 233 real tests
 pass (`materi_direct_mc` input corrected, C17 resolved). Every remaining failure is a stale or malformed test, an out-of-scope model
 or infrastructure limit, a narrow post-processing divergence, a corpus-coverage

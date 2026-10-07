@@ -1646,6 +1646,7 @@ enum {
   // Enum append keeps existing values stable (tochnog.h and
   // tochnog-mod.h stay in sync).
   ELEMENT_NORMAL,
+  UPDATED_JAUMANN,
   LAST_DUMMY }; // keep LAST_DUMMY always the last one
 
 #define MDAT LAST_DUMMY+DATA_ITEM_SIZE  // reserve space for unknowns

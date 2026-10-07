@@ -462,7 +462,7 @@ void materi( long int element, long int gr, long int name, long int nnol,
   }
   else if ( memory==-UPDATED || memory==-TOTAL_LINEAR ||
       memory==-UPDATED_WITHOUT_ROTATION || memory==-UPDATED_LINEAR ||
-      memory==-UPDATED_AREA ) {
+      memory==-UPDATED_AREA || memory==-UPDATED_JAUMANN ) {
     if ( materi_stress )
       array_move( old_sig, rotated_old_sig, MDIM*MDIM );
     if ( materi_plasti_rho ) 
@@ -486,7 +486,7 @@ void materi( long int element, long int gr, long int name, long int nnol,
       matrix_abat( inv_rot, old_sig_eff, rotated_old_sig, work, MDIM );
     else if ( memory==-UPDATED || memory==-TOTAL_LINEAR ||
         memory==-UPDATED_WITHOUT_ROTATION || memory==-UPDATED_LINEAR ||
-        memory==-UPDATED_AREA )
+        memory==-UPDATED_AREA || memory==-UPDATED_JAUMANN )
       array_move( old_sig_eff, rotated_old_sig, MDIM*MDIM );
   }
   if ( swit ) {
@@ -551,8 +551,11 @@ void materi( long int element, long int gr, long int name, long int nnol,
     // (manual Professional 2.2.1: extra stresses are added to the previous
     // stresses, no rotation by R). inc_rot is NOT the identity for them
     // (set_deften_u_rot overwrites it), so they must stay out of this list.
-  if ( memory==-UPDATED || memory==-TOTAL || memory==-TOTAL_PIOLA ) {
-    if      ( memory==-UPDATED )
+    // -updated_jaumann rotates the previous stress plus the extra stress
+    // with its first-order increment R = I + 0.5(F-F^T) (set_deften_etc).
+  if ( memory==-UPDATED || memory==-UPDATED_JAUMANN ||
+       memory==-TOTAL || memory==-TOTAL_PIOLA ) {
+    if      ( memory==-UPDATED || memory==-UPDATED_JAUMANN )
       array_move( inc_rot, rot, MDIM*MDIM );
     else {
       assert( memory==-TOTAL || memory==-TOTAL_PIOLA );
@@ -1644,7 +1647,8 @@ void set_deften_etc( long int element, long int gr, long int nnol, double h[],
 
     // rotation matrices
   if      ( memory==-UPDATED_WITHOUT_ROTATION || memory==-UPDATED_LINEAR ||
-            memory==-UPDATED_AREA || memory==-TOTAL_LINEAR ) {
+            memory==-UPDATED_AREA || memory==-TOTAL_LINEAR ||
+            memory==-UPDATED_JAUMANN ) {
     for ( idim=0; idim<MDIM; idim++ ) {
       old_rot[idim*MDIM+idim] = 1.;
       new_rot[idim*MDIM+idim] = 1.;
@@ -1655,11 +1659,21 @@ void set_deften_etc( long int element, long int gr, long int nnol, double h[],
     set_deften_u_rot( old_deften, old_u, old_rot );
     set_deften_u_rot( new_deften, new_u, new_rot );
   }
-  set_deften_u_rot( inc_deften, inc_u, inc_rot );
+  if ( memory==-UPDATED_JAUMANN ) {
+      // manual Professional 2.2.1: R = 0.5(F-F^T) + I, the first-order
+      // (Jaumann) rotation of the incremental deformation tensor F
+    for ( idim=0; idim<MDIM; idim++ ) {
+      for ( jdim=0; jdim<MDIM; jdim++ ) inc_rot[idim*MDIM+jdim] =
+        0.5*(inc_deften[idim*MDIM+jdim]-inc_deften[jdim*MDIM+idim]);
+      inc_rot[idim*MDIM+idim] += 1.;
+    }
+  }
+  else
+    set_deften_u_rot( inc_deften, inc_u, inc_rot );
 
       // strain matrices
   if ( memory==-UPDATED_WITHOUT_ROTATION || memory==-UPDATED_LINEAR ||
-       memory==-UPDATED_AREA ) {
+       memory==-UPDATED_AREA || memory==-UPDATED_JAUMANN ) {
       // linear engineering strains
     for ( idim=0; idim<MDIM; idim++ ) {
       for ( jdim=0; jdim<MDIM; jdim++ ) inc_ept[idim*MDIM+jdim] = 

@@ -1366,6 +1366,12 @@ run_ok "$T2026" mesh_default_fixed_in_space2
 run_ok "$T2026" materi_memory_default_displacement1
 run_ok "$T2026" materi_memory_updated_linear_current1
 run_ok "$T2026" materi_memory_updated_linear_current2
+# F3/C20: group_materi_memory -updated_jaumann (manual 2.2.1, 6.686),
+#   simple shear gamma 0.5: 1 step 0.125 / 0.234375 / -0.125, 100 steps
+#   0.0618335 / 0.2396333 / -0.0618335 (= Professional 02-08-2026; the
+#   old GNU rejected the value).
+run_ok "$T2026" materi_memory_updated_jaumann_shear1
+run_ok "$T2026" materi_memory_updated_jaumann_shear2
 
 # ---------------------------------------------------------------------
 # K03 (2026-10-06): default convection_apply -no (manual Professional
