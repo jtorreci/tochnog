@@ -21,26 +21,43 @@ level is negative and suction is positive, so the limit caps the
 
 ### Differences with the Professional version
 
-- In Professional the limit defaults to 0 even when the record is absent.
-  In the GNU the record is REQUIRED to activate the limit: without it
-  nothing is clamped. This keeps backwards compatibility with existing
-  GNU models that legitimately solve positive pressures (e.g. the
-  seepage example from the Professional manual itself, which develops
-  positive heads).
-- Nodes with a prescribed pressure (`bounda_dof`/`bounda_unknown`, or the
-  phreatic `_static` condition) keep their prescribed value; only solved
-  (free) nodes are cut. The manual text "any higher value resulting from
-  the groundflow equations" is read literally.
+Measured 2026-10-07 on the Professional 02-08-2026 (probe: one quad4,
+prescribed solid velocity with divergence 2, `groundflow_consolidation_apply
+-yes`, `inertia_apply -yes`, pres 0 prescribed at the bottom, free top
+nodes; uncapped free-node pres 1.6667). The Professional manual (6.587)
+says: "the maximum allowed total pressure value. Any higher value resulting
+from the groundflow equations will be cutoff to this value. Default the
+limit is set to 0."
 
-- **GNU extensions the Professional ignores** (GNU extension / input
-  dialect; AUDIT K16, K09). GNU: The GNU-only records exercised by the tests
-  `strain_settle`, `mfactor`, `mdirect_gate`, `transv1`, `-empty` groups
-  (`temp4/5`), `mvoid*`, `cmat_gate`, and the records
-  `groundflow_total_pressure_limit` and `groundflow_pressure_atmospheric`
-  act and meet the GNU analytic targets. Professional 02-08-2026: Returns
-  the unmodified state (cannot tell a Pro defect from a different Pro
-  syntax). Status: GNU extensions; kept. Index:
-  [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).
+| input | GNU free-node `pres` | Pro free-node `pres` | GNU total pressure (top / bottom) | Pro total pressure (top / bottom) | Pro `gvely` |
+|---|---|---|---|---|---|
+| no record | 1.6667 | 1.6667 | 0 / 0 | 0 / 0 | 0 |
+| limit 0 | 0 | 1.6667 | 0 / 0 | 0 / 0 | 0 |
+| limit 0.5 | 0.5 | 1.6667 | 0 / 0 | 0.5 / 0 | 0.16667 |
+| limit 100 | 1.6667 | 1.6667 | 0 / 0 | 1.6667 / 0 | 0.16667 |
+| limit -0.5 | -0.5 | 1.6667 | -0.5 / 0 | -0.5 / -0.5 | 0 |
+
+- **What is cut and the default** (known difference, pending project-owner
+  decision; DIVERGENCES TPL). The Professional reads the record (it is not
+  a GNU-only record). It caps the CALCULATED total pressure
+  (`post_calcul -groundflow_pressure -total_pressure`, which the
+  Professional requires whenever a pressure dof exists) at every node,
+  prescribed nodes included, and never cuts the `pres` dof itself; the
+  default limit is 0, so a positive total pressure is reported as 0 even
+  without the record. Where the total pressure reaches the limit the
+  Professional reports a zero groundflow velocity (the dry rule of manual
+  2.4.3); this is the cause of the `ground1` velocity difference (AUDIT
+  K10): with `groundflow_total_pressure_limit 1.e10` the Professional
+  gives -0.05 like the GNU. With limit 0 the Professional still develops
+  the free-node `pres` (1.6667).
+  The GNU needs the record to activate the limit (no record: nothing is
+  cut, kept for existing GNU models with positive heads), cuts the
+  SOLVED `pres` dof of the free nodes only, and with limit 0 + pres 0
+  skips the consolidation term (pres stays 0). Its post-processed total
+  pressure does not depend on this record: it is capped by
+  `groundflow_pressure_atmospheric` (default 0). For negative pressures
+  (below the limit) both programs agree (-1.6667).
+  Index: [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).
 
 ## Usage
 
@@ -63,3 +80,5 @@ groundflow_total_pressure_limit  0.
 With a velocity-divergence source that would drive the free-node pressure
 to ~1.67, the free nodes stay at 0 (dry, consolidation term skipped) and
 nodes with prescribed pressure keep their value.
+
+- **Decision 2026-10-07 (project owner):** align the GNU with manual 6.587 and the Professional on `groundflow_total_pressure_limit` (default 0, cap the calculated total pressure, zero the groundflow velocity where the limit is reached). This reverses the earlier K10 decision. Implementation scheduled for F4; see `ProjectDocs/DIVERGENCES-PROFESSIONAL.md` (TPL, K10).
