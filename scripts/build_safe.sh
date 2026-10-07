@@ -1335,8 +1335,8 @@ run_ok "$T2026" element_normal2d_row_mixed1
 #     C16 GNU gave the -updated values 0.2311/0.4207/-0.2286).
 #   materi_memory_default_stretch1: -follow_material uniaxial stretch
 #     to twice the length, no memory record -> sigxx 0.695653 (= Pro):
-#     the default must keep the current-geometry gradient (the explicit
-#     -updated_linear reference gradient would give 1).
+#     the default must keep the current-geometry gradient (a
+#     reference-geometry gradient would give 1).
 #   materi_memory_default_updated_apply1: same shear, no memory record,
 #     control_materi_updated_apply 0 -yes -> -updated values sigxx
 #     0.231098, sigxy 0.420739, sigyy -0.228598 (manual Professional
@@ -1346,6 +1346,26 @@ run_ok "$T2026" element_normal2d_row_mixed1
 run_ok "$T2026" materi_memory_default_shear1
 run_ok "$T2026" materi_memory_default_stretch1
 run_ok "$T2026" materi_memory_default_updated_apply1
+
+# ---------------------------------------------------------------------
+# F3 kinematics (C8, C18, C19), values = Professional 02-08-2026.
+#   mesh_default_fixed_in_space1/2: no mesh record -> -fixed_in_space
+#     (manual 6.806): velocity-only bar stretched 50% sigxx 0.5 (old GNU
+#     -follow_material default 0.407136); rigid rotation stresses 0 (old
+#     0.109567).
+#   materi_memory_default_displacement1: materi_displacement and no
+#     memory record -> -total_linear (manual 6.797): column node-3 disx
+#     0.5 (old 0.472222).
+#   materi_memory_updated_linear_current1/2: explicit -updated_linear on
+#     -follow_material uses the current geometry (manual 2.2.1): bar
+#     sigxx 0.407136 (old reference gradient 0.5); column velix 0.52093
+#     within 1.e-3 (GNU 0.52048, in-step geometry divergence; old 0.472).
+# ---------------------------------------------------------------------
+run_ok "$T2026" mesh_default_fixed_in_space1
+run_ok "$T2026" mesh_default_fixed_in_space2
+run_ok "$T2026" materi_memory_default_displacement1
+run_ok "$T2026" materi_memory_updated_linear_current1
+run_ok "$T2026" materi_memory_updated_linear_current2
 
 # ---------------------------------------------------------------------
 # K03 (2026-10-06): default convection_apply -no (manual Professional

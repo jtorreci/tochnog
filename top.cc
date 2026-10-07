@@ -102,8 +102,11 @@ void top( void )
     return;
   }
 
+    // Default mesh is -fixed_in_space (manual Professional 6.806); an
+    // explicit options_mesh overrides it, except that materi_displacement
+    // always forces -fixed_in_space.
   if ( materi_velocity ) {
-    array_set( options_mesh, -FOLLOW_MATERIAL, ndim );
+    array_set( options_mesh, -FIXED_IN_SPACE, ndim );
     db( OPTIONS_MESH, 0, options_mesh, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
     if ( materi_displacement ) array_set( options_mesh, -FIXED_IN_SPACE, ndim );
     db( OPTIONS_MESH, 0, options_mesh, ddum, ndim, VERSION_NORMAL, PUT );

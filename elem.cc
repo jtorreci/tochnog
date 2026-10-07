@@ -153,7 +153,7 @@ void elem( long int element, long int ithread )
     indx=0, max_node=0, memory=-UPDATED, disp_primary_ref=-NO, options_solver=-MATRIX_ITERATIVE_BICG,
     options_matrix_group=-NO, options_matrix_length=0, mnolnuknwn=npointmax*nuknwn,
     length_element_matrix_values=0, filled=0, membrane=-NO, test1=0, test2=0,
-    ldum=0, n=0, axisymmetric=0, plasti_on_boundary=0, ref_active=0, idum[1], *types=NULL, 
+    ldum=0, n=0, axisymmetric=0, plasti_on_boundary=0, idum[1], *types=NULL, 
     *el=NULL, *nodes=NULL, *dof_type=NULL, element_dof_initialised=0,
     *dof_principal=NULL, *element_matrix_unknowns=NULL, 
     *group_matrix_unknowns=NULL, *int_array=NULL, one=1,
@@ -166,11 +166,10 @@ void elem( long int element, long int ithread )
     control_relaxation_groundflow_pressure=0., control_relaxation_wave_fscalar=0.,
     control_relaxation_maxwell_e=0., element_strainenergy=0.,
     element_volume=0., time_current=0., time_total=0., disp_primary_factor=1.,
-    ddum[1], *coord=NULL, *new_coord=NULL, *ref_coord=NULL,
+    ddum[1], *coord=NULL, *new_coord=NULL,
     *h=NULL, *coord_ip=NULL, *old_dof=NULL, *new_dof=NULL, 
     *old_unknowns=NULL, *new_unknowns=NULL, 
     *old_grad_old_unknowns=NULL, *old_grad_new_unknowns=NULL, 
-    *old_grad_ref_new_unknowns=NULL,
     *new_grad_old_unknowns=NULL, *new_grad_new_unknowns=NULL, 
     *volume=NULL, *force_element_volume=NULL, 
     *tendon_element_rhside=NULL, 
@@ -182,7 +181,7 @@ void elem( long int element, long int ithread )
     *condif_flow=NULL, *element_matrix_values=NULL, *element_matrix=NULL, 
     *element_matrix_second_values=NULL, 
     *element_matrix_second=NULL, *new_b=NULL, 
-    *old_d=NULL, *new_d=NULL, *ref_d=NULL, 
+    *old_d=NULL, *new_d=NULL, 
     *massflow=NULL, *grad_massflow=NULL, 
     *dbl_array=NULL, *element_dof_npoint=NULL, *element_dof_npoint_new=NULL,
     *nonlocal_element_info=NULL;
@@ -241,16 +240,16 @@ void elem( long int element, long int ithread )
     pri( "nodes", nodes, nnol );
   }
 
-  n = nnol*ndim + nnol*ndim + nnol*ndim + MPOINT*nnol + 
+  n = nnol*ndim + nnol*ndim + MPOINT*nnol + 
     ndim + nnol*nuknwn +
     nnol*nuknwn + nuknwn + nuknwn + 
     ndim*nuknwn + ndim*nuknwn +
-    ndim*nuknwn + ndim*nuknwn + ndim*nuknwn + MPOINT + nprinc + nnol*npuknwn +
+    ndim*nuknwn + ndim*nuknwn + MPOINT + nprinc + nnol*npuknwn +
     nprinc + nnol*npuknwn + nnol + nnol*nuknwn + nnol*npuknwn +
     nnol*npuknwn + nnol*npuknwn + nnol*npuknwn + nnol*npuknwn + nnol*npuknwn +
     ndim + nnol*nprinc*nnol*nprinc + 
     nnol*npuknwn*nnol*npuknwn + MPOINT*MSTRAIN*nnol*ndim +
-    MPOINT*ndim*nnol + MPOINT*ndim*nnol + MPOINT*ndim*nnol +
+    MPOINT*ndim*nnol + MPOINT*ndim*nnol +
     nnol*ndim + ndim*ndim +
     nnol*nprinc*nnol*nprinc + nnol*npuknwn*nnol*npuknwn  + nnol +
     mnolnuknwn + mnolnuknwn + length_nei;
@@ -259,7 +258,6 @@ void elem( long int element, long int ithread )
   indx = 0;
   coord = &dbl_array[indx]; indx += nnol*ndim;
   new_coord = &dbl_array[indx]; indx += nnol*ndim;
-  ref_coord = &dbl_array[indx]; indx += nnol*ndim;
   h = &dbl_array[indx]; indx += MPOINT*nnol;
   coord_ip = &dbl_array[indx]; indx += ndim;
   old_dof = &dbl_array[indx]; indx += nnol*nuknwn;
@@ -268,7 +266,6 @@ void elem( long int element, long int ithread )
   new_unknowns = &dbl_array[indx]; indx += nuknwn;
   old_grad_old_unknowns = &dbl_array[indx]; indx += ndim*nuknwn;
   old_grad_new_unknowns = &dbl_array[indx]; indx += ndim*nuknwn;
-  old_grad_ref_new_unknowns = &dbl_array[indx]; indx += ndim*nuknwn;
   new_grad_old_unknowns = &dbl_array[indx]; indx += ndim*nuknwn;
   new_grad_new_unknowns = &dbl_array[indx]; indx += ndim*nuknwn;
   volume = &dbl_array[indx]; indx += MPOINT;
@@ -288,7 +285,6 @@ void elem( long int element, long int ithread )
   new_b = &dbl_array[indx]; indx += MPOINT*MSTRAIN*nnol*ndim;
   old_d = &dbl_array[indx]; indx += MPOINT*ndim*nnol;
   new_d = &dbl_array[indx]; indx += MPOINT*ndim*nnol;
-  ref_d = &dbl_array[indx]; indx += MPOINT*ndim*nnol;
   massflow = &dbl_array[indx]; indx += nnol*ndim;
   grad_massflow = &dbl_array[indx]; indx += ndim*ndim;
   element_matrix_second_values = &dbl_array[indx]; indx += nnol*nprinc*nnol*nprinc;
@@ -440,28 +436,6 @@ void elem( long int element, long int ithread )
   if ( disp_primary_ref==-YES )
     array_move( coord, new_coord, nnol*ndim );
 
-    // Reference-geometry coordinates for the -UPDATED_LINEAR strain
-    // increments: the accumulated total must be the LINEAR engineering
-    // strain referred to the undeformed mesh, so the velocity gradient has
-    // to be built with the reference shape derivatives. NODE_START_REFINED
-    // holds that reference (top.cc copies NODE into it before the time loop)
-    // and is NOT advanced by locate(), unlike NODE VERSION_NORMAL under
-    // -FOLLOW_MATERIAL. Loaded only for that one memory option; every other
-    // option keeps the current-geometry behavior untouched.
-  ref_active = 0;
-  if ( memory==-UPDATED_LINEAR &&
-       db_active_index( GROUP_MATERI_MEMORY, element_group, VERSION_NORMAL ) ) {
-    for ( inol=0; inol<nnol; inol++ ) {
-      inod = nodes[inol];
-      if ( db_active_index( NODE_START_REFINED, inod, VERSION_NORMAL ) )
-        db( NODE_START_REFINED, inod, idum, &ref_coord[inol*ndim], ldum,
-          VERSION_NORMAL, GET );
-      else
-        array_move( &coord[inol*ndim], &ref_coord[inol*ndim], ndim );
-    }
-    ref_active = 1;
-  }
-
   if ( db_active_index( OPTIONS_RESIDUEFACTOR, 0, VERSION_NORMAL ) )
     db( OPTIONS_RESIDUEFACTOR, 0, idum, residue_factor, ldum, VERSION_NORMAL, GET );
   else array_set( residue_factor, 1., nprinc );
@@ -592,8 +566,7 @@ void elem( long int element, long int ithread )
 
     // polynomials and integration point volumes
   pol( element, element_group, name, nnol, coord, new_coord, 
-    ref_active ? ref_coord : NULL, npoint, h, old_d, new_d, 
-    ref_active ? ref_d : NULL, new_b, volume );
+    npoint, h, old_d, new_d, new_b, volume );
   if ( swit ) {
     pri( "volume", volume, npoint );
     pri( "h", h, npoint, nnol );
@@ -691,9 +664,6 @@ void elem( long int element, long int ithread )
       ndim, nnol, nuknwn );
     matrix_ab( &old_d[ipoint*ndim*nnol], new_dof, old_grad_new_unknowns,
       ndim, nnol, nuknwn );
-    if ( ref_active )
-      matrix_ab( &ref_d[ipoint*ndim*nnol], new_dof, old_grad_ref_new_unknowns,
-        ndim, nnol, nuknwn );
     matrix_ab( &new_d[ipoint*ndim*nnol], old_dof, new_grad_old_unknowns,
       ndim, nnol, nuknwn );
     matrix_ab( &new_d[ipoint*ndim*nnol], new_dof, new_grad_new_unknowns,
@@ -787,15 +757,12 @@ void elem( long int element, long int ithread )
       }
       else if ( type==-MATERI ) 
         materi( element, element_group, name, nnol, npoint, 
-          nodes, plasti_on_boundary, coord_ip, coord, 
-          ref_active ? ref_coord : NULL, ipoint,
+          nodes, plasti_on_boundary, coord_ip, coord, ipoint,
           new_dof, &h[ipoint*nnol], &new_d[ipoint*ndim*nnol], 
           &new_b[ipoint*MSTRAIN*nnol*ndim], 
           volumeip, old_unknowns, new_unknowns,
           old_grad_old_unknowns, 
-          old_grad_new_unknowns, 
-          ref_active ? old_grad_ref_new_unknowns : NULL,
-          new_grad_new_unknowns,
+          old_grad_new_unknowns, new_grad_new_unknowns,
           element_lhside, element_matrix,
           element_rhside, element_residue, tendon_element_rhside );
       else if ( type==-MAXWELL_FREQUENCY ||  type==-MAXWELL_TIME ) {

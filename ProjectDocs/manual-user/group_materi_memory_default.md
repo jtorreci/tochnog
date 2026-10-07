@@ -9,6 +9,12 @@ strain, without rotation. Until 2026-10-04 the GNU used `-updated`
 (rotated stress, rate-of-deformation strains), which gives a nonlinear,
 Jaumann-like response in large shear where the Professional stays linear.
 
+With `materi_displacement` initialised the default is `-total_linear`
+instead (manual Professional 6.797, F3 2026-10-07): the stress follows
+from the linear strain of the total displacement and the coordinates are
+not updated (2-quad4 column sheared by 1: node 3 disx 0.5, as the
+Professional; the old GNU default gave 0.472).
+
 An explicit `group_materi_memory` record always wins over the default.
 
 The default can be switched to `-updated` for selected timesteps with
@@ -50,28 +56,23 @@ Result: `sigxy` 0.5, `sigxx` = `sigyy` = 0 (as the Professional). With
 
 ## Notes
 
-- On a `-follow_material` mesh the default keeps the CURRENT-geometry
+- On a `-follow_material` mesh the default uses the CURRENT-geometry
   gradient, as the Professional (uniaxial stretch to twice the length:
-  sigxx 0.695653 in both). The reference-geometry gradient that the GNU
-  uses for an EXPLICIT `-updated_linear` (see
-  [group_materi_memory_updated_linear](group_materi_memory_updated_linear.md))
-  is not applied to the default.
+  sigxx 0.695653 in both); since F3 an explicit `-updated_linear` does
+  the same.
 - Self-checking inputs: `validation-suite/test-2026/materi_memory_default_shear1.dat`,
   `materi_memory_default_stretch1.dat`,
-  `materi_memory_default_updated_apply1.dat`.
+  `materi_memory_default_updated_apply1.dat`,
+  `materi_memory_default_displacement1.dat` (F3, `materi_displacement`).
 
 ## Differences with the Professional version
 
-- With `materi_displacement` kinematics and no memory record the
-  Professional behaves as `-total_linear`; the GNU default
-  `-updated_linear` still updates the coordinates, so large deformations
-  differ (2-quad4 column sheared by 1: node 3 disx GNU 0.472, Pro 0.5).
-  Give `group_materi_memory -total_linear` explicitly if that response is
-  needed (BACKLOG).
+- With `materi_displacement` kinematics and no memory record (C18):
+  RESOLVED in F3 (2026-10-07), the default is `-total_linear` as in the
+  Professional.
 - `control_materi_updated_apply -yes`: the GNU follows the manual (an
   unspecified memory becomes `-updated`); the Professional 02-08-2026
   binary ignores `-yes` and stays linear.
-- `-updated_jaumann` (manual 6.685) is not implemented.
 - Corpus test `hypo12` (Professional distribution, no memory record)
   misses its sigyy target marginally since this change (off 1.02e-3 with
   tolerance 1e-3).

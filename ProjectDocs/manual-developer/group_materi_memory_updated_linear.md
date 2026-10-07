@@ -3,10 +3,11 @@
 ## Implementation
 
 Since 2026-10-04 (C16) `-UPDATED_LINEAR` is also the default memory
-(`materi_memory_default()` in general.cc, see
-`group_materi_memory_default.md`); the `NODE_START_REFINED` reference
-gradient of section 4 is gated on an EXPLICIT record
-(`db_active_index(GROUP_MATERI_MEMORY, element_group, VERSION_NORMAL)`).
+without `materi_displacement` (`materi_memory_default()` in general.cc,
+see `group_materi_memory_default.md`). Since F3 (2026-10-07) the
+`NODE_START_REFINED` reference gradient of section 4 is REMOVED: every
+memory, explicit `-UPDATED_LINEAR` included, uses the current-geometry
+gradient (section 7).
 
 The `-UPDATED_LINEAR` memory type is handled in three places:
 
@@ -44,8 +45,8 @@ The `-UPDATED_LINEAR` memory type is handled in three places:
      // linear engineering strains
    ```
    The velocity-gradient term that builds `inc_deften` (and hence
-   `inc_ept`) is REFERENCE-geometry based for `-UPDATED_LINEAR` only;
-   see section 4.
+   `inc_ept`) uses the current geometry (section 7; the reference path
+   of section 4 was removed in F3).
 
 3. **stress.cc, `set_stress()`**: the compressibility block treats
    `-UPDATED_LINEAR` like `-TOTAL_LINEAR` (linear strain measures):
@@ -72,7 +73,8 @@ default memory (record absent) the Professional accepts
 velocity+displacement together (the Masin clay corpus tests hypo12/13
 run without a memory record).
 
-4. **Reference-geometry strain increments (R2, 2026-09-13)**. The
+4. **Reference-geometry strain increments (R2, 2026-09-13; REMOVED in
+   F3 2026-10-07, see section 7 — kept here as history)**. The
    `-UPDATED_LINEAR` total must be the LINEAR engineering strain referred
    to the UNDEFORMED mesh, not to the current configuration. With the
    default velocity-integrated `-FOLLOW_MATERIAL` mesh (`top.cc:105-109`)
@@ -211,11 +213,43 @@ fix.
    definition (incremental stretch in the current configuration, so the
    accumulated strain is logarithmic-like: ln(1/(1-0.005)) = 0.0050125).
 
+7. **F3 (2026-10-07): reference path removed (C19).** With the default
+   mesh now `-FIXED_IN_SPACE` (top.cc, manual 6.806; see `mesh.md`) the
+   reference gradient of section 4 is no longer needed to obtain the
+   engineering strain without a mesh record, and on an explicit
+   `-follow_material` mesh it diverged from the Professional (section 6).
+   Removed cleanly: `ref_active`, `ref_coord`, `ref_d` and
+   `old_grad_ref_new_unknowns` in `elem()`; the `ref_coord`/`ref_d`
+   parameters and the extra gradient pass of `pol()` (polynom.cc); the
+   `ref_coord`/`old_grad_ref_new_unknowns` parameters of `materi()` and
+   `set_deften_etc()` and the reference hoop radius of the axisymmetric
+   increment (materi.cc); the prototypes in `tochnog.h`/`tochnog-mod.h`
+   (kept in sync). `set_deften_etc()` is back to the pre-`c945833` code.
+
+   | probe (Pro 02-08-2026) | GNU before F3 | GNU after | Professional |
+   |---|---|---|---|
+   | bar +50%, 50 steps, `-updated_linear`, `mesh -follow_material` (sigxx) | 0.5 | 0.4071364 | 0.4071364 |
+   | column, 100 steps, same (node 3 velix) | 0.472222 | 0.520480 | 0.520931 |
+   | column, 1 step, same (node 3 velix) | 0.472222 | 0.472222 | 0.5 |
+
+   The column residual is the in-step geometry divergence (GNU
+   end-of-step, Professional start-of-step geometry), listed in
+   DIVERGENCES-PROFESSIONAL.md. Tests:
+   `validation-suite/test-2026/materi_memory_updated_linear_current1/2`.
+
 ## Differences with the Professional version
 
-- **explicit `-updated_linear` on a `mesh -follow_material`** (known
-  difference, not decided; BACKLOG C19). GNU: Increment on the reference
-  geometry (`NODE_START_REFINED`): bar x2 sigxx 1.0. Professional
-  02-08-2026: Increment on the current geometry: sigxx 0.69565. Status:
-  Open, LOW; drop the reference path after C8. Index:
+- **explicit `-updated_linear` on a `mesh -follow_material`** (C19):
+  RESOLVED in F3 (2026-10-07). The increment is built on the current
+  geometry, as the Professional (bar +50%: 0.407136 in both).
+- **`-updated_linear` together with `materi_displacement`** (known
+  difference, documented in F3 2026-10-07). GNU: accepted (the
+  coordinates are updated, elem.cc). Professional 02-08-2026: rejects the
+  combination. Status: Open, LOW; GNU stays permissive. Index:
+  [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).
+- **explicit `-follow_material`: in-step geometry** (known difference).
+  GNU builds the increment on the END-of-step geometry, the Professional
+  on the START-of-step geometry: 2-quad4 column sheared by 1, node 3, one
+  step GNU 0.47222 / Pro 0.5, 100 steps GNU 0.52048 / Pro 0.52093.
+  Status: Open, LOW. Index:
   [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).

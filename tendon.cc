@@ -564,7 +564,8 @@ void tendons( long int element, long int gr, long int nnol,
         exit(TN_EXIT_STATUS);
       }
       else {
-        assert( memory==-UPDATED_WITHOUT_ROTATION || memory==-UPDATED_LINEAR );
+        assert( memory==-UPDATED_WITHOUT_ROTATION || memory==-UPDATED_LINEAR ||
+          memory==-TOTAL_LINEAR );
         array_move( direction, tmp_vec, MDIM );
       }
       for ( idim=0; idim<ndim; idim++ ) {
