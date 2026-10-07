@@ -14,7 +14,8 @@
     `NODE_DOF[pres]` (VERSION_NEW). Skips nodes bounded in `pres`
     (Dirichlet); cuts `pres > limit` down to `limit`. Early-returns unless
     the record exists (record-gated: without the record nothing is
-    clamped; difference with Professional, which defaults the limit to 0).
+    clamped; the Professional defaults the limit to 0 and caps the
+    calculated total pressure instead, see below).
   - `groundflow()` — dry check: when the record exists, `limit == 0` and
     the interpolated `new_unknowns[pres_indx]` is 0 (within TINY), the
     element is considered dry and `materidivergence` is forced to `-NO`
@@ -79,18 +80,27 @@ Tests `groundflow_total_pressure_limit` and `_dry`
 
 ## Differences with the Professional version
 
-- **GNU extensions the Professional ignores** (GNU extension / input
-  dialect; AUDIT K16, K09). GNU: The GNU-only records exercised by the tests
-  `strain_settle`, `mfactor`, `mdirect_gate`, `transv1`, `-empty` groups
-  (`temp4/5`), `mvoid*`, `cmat_gate`, and the records
-  `groundflow_total_pressure_limit` and `groundflow_pressure_atmospheric`
-  act and meet the GNU analytic targets. Professional 02-08-2026: Returns
-  the unmodified state (cannot tell a Pro defect from a different Pro
-  syntax). Status: GNU extensions; kept. Index:
-  [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).
-- **`groundflow_total_pressure_limit` default** (GNU extension / input
-  dialect; manual pages only). GNU: The record is required to activate the
-  limit; prescribed nodes are never cut. Professional 02-08-2026: Limit 0
-  even without the record. Status: GNU backward compatibility (positive
-  heads of existing models); owner decision not recorded. Index:
-  [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).
+- **What is cut and the default** (known difference, pending project-owner
+  decision; DIVERGENCES TPL; measured 2026-10-07). Professional 02-08-2026
+  (manual 6.587, "Default the limit is set to 0"): reads the record, caps
+  the calculated total pressure (`node_dof_calcul` of `post_calcul
+  -groundflow_pressure -total_pressure`) at every node including prescribed
+  ones, never cuts `NODE_DOF[pres]`, default limit 0; the groundflow
+  velocity is 0 where the total pressure reaches the limit (this explains
+  AUDIT K10 / `ground1`: limit 1.e10 gives -0.05 = GNU). GNU: record-gated
+  clamp of `NODE_DOF[pres]` on free nodes in
+  `groundflow_total_pressure_limit_apply()`; dry consolidation skip in
+  `groundflow()`; the post-processed total pressure comes from
+  `groundflow_phreatic_coord()` and is capped by `pressure_atmospheric`
+  (default 0), not by this record. Probe numbers (free-node pres GNU / Pro,
+  top total pressure GNU / Pro): no record 1.6667 / 1.6667, 0 / 0;
+  limit 0: 0 / 1.6667, 0 / 0; limit 0.5: 0.5 / 1.6667, 0 / 0.5;
+  limit 100: 1.6667 / 1.6667, 0 / 1.6667; limit -0.5: -0.5 / 1.6667,
+  -0.5 / -0.5 (Pro also -0.5 at the prescribed node). Probe inputs: the
+  `groundflow_total_pressure_limit` validation test in Professional
+  spelling (`bounda_dof`, `mesh`, `-updated_linear`, no positional
+  `node_dof`, plus `post_calcul -groundflow_pressure -total_pressure`,
+  without which the Professional stops with "Error: you need to include
+  post_calcul -groundflow_pressure -total_pressure"). The earlier
+  statement that the Professional ignores the record (AUDIT K09/K16) was
+  wrong. Index: [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).
