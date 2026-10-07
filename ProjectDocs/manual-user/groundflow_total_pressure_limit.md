@@ -80,3 +80,5 @@ groundflow_total_pressure_limit  0.
 With a velocity-divergence source that would drive the free-node pressure
 to ~1.67, the free nodes stay at 0 (dry, consolidation term skipped) and
 nodes with prescribed pressure keep their value.
+
+- **Decision 2026-10-07 (project owner):** align the GNU with manual 6.587 and the Professional on `groundflow_total_pressure_limit` (default 0, cap the calculated total pressure, zero the groundflow velocity where the limit is reached). This reverses the earlier K10 decision. Implementation scheduled for F4; see `ProjectDocs/DIVERGENCES-PROFESSIONAL.md` (TPL, K10).

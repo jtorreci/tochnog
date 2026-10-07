@@ -88,3 +88,5 @@ the middle temperature `1.1e-16`.
   Convention difference (audit BOTH-plausible); total pore pressure and
   stresses identical. No decision. Index:
   [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).
+
+- **Decision 2026-10-07 (project owner):** align the GNU with manual 6.587 and the Professional on `groundflow_total_pressure_limit` (default 0, cap the calculated total pressure, zero the groundflow velocity where the limit is reached). This reverses the earlier K10 decision. Implementation scheduled for F4; see `ProjectDocs/DIVERGENCES-PROFESSIONAL.md` (TPL, K10).

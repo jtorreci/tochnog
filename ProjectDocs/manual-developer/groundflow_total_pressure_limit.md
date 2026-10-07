@@ -104,3 +104,5 @@ Tests `groundflow_total_pressure_limit` and `_dry`
   post_calcul -groundflow_pressure -total_pressure"). The earlier
   statement that the Professional ignores the record (AUDIT K09/K16) was
   wrong. Index: [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).
+
+- **Decision 2026-10-07 (project owner):** align the GNU with manual 6.587 and the Professional on `groundflow_total_pressure_limit` (default 0, cap the calculated total pressure, zero the groundflow velocity where the limit is reached). This reverses the earlier K10 decision. Implementation scheduled for F4; see `ProjectDocs/DIVERGENCES-PROFESSIONAL.md` (TPL, K10).
