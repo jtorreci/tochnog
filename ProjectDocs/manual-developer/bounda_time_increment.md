@@ -44,9 +44,10 @@ None. Standard `floor` from the C library.
 
 ## Differences with the Professional version
 
-- **`bounda_time_increment` tables** (Professional-suspect, the GNU follows
-  the manual; AUDIT K08; SEGUIMIENTO Descarte). GNU: Follows manual 6.146
+- **`bounda_time_increment` tables** (deliberate divergence decided by the
+  project owner on 2026-10-07; AUDIT K08; SEGUIMIENTO Descarte). GNU: Follows manual 6.146
   (audit verdict); does not prescribe the -1.4. Professional 02-08-2026:
   Prescribes -1.4 on dofs whose table is all zero (`mcap1_elast`). Status:
-  Pro-suspect; GNU follows the manual. No project-owner decision recorded.
+  deliberate divergence (project decision 2026-10-07): the GNU follows
+  the manual; the Professional behaviour is also Pro-suspect.
   Index: [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).

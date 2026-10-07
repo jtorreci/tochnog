@@ -64,12 +64,13 @@ the middle temperature `1.1e-16`.
 
 ## Differences with the Professional version
 
-- **groundflow velocity output (`ground1`)** (Professional-suspect, the GNU
-  follows the manual; AUDIT K10; SEGUIMIENTO Descarte). GNU: v = k dh/dy =
+- **groundflow velocity output (`ground1`)** (deliberate divergence decided by
+  the project owner on 2026-10-07; AUDIT K10; SEGUIMIENTO Descarte). GNU: v = k dh/dy =
   -0.05 (manual), at the nodes and at the integration points. Professional
   02-08-2026: 0 at the nodes and at the integration points (post-processing
-  only; the pressure field agrees). Status: Pro-suspect; GNU follows the
-  manual. No project-owner decision recorded. Index:
+  only; the pressure field agrees). Status: deliberate divergence (project
+  decision 2026-10-07): the GNU follows the manual; the Professional
+  behaviour is also Pro-suspect. Index:
   [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).
 - **`gvelx` sign in the interface-coupled groundflow path
   (`groundflow_interface`)** (known difference, not decided; BACKLOG C2).

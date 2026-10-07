@@ -53,11 +53,13 @@ Self-checking inputs `validation-suite/test-2026/materi_failure_apply1.dat`
 ## Differences with the Professional version
 
 - **`control_materi_failure_apply` index; element failure run**
-  (Professional-suspect, the GNU follows the manual; manual pages only).
+  (deliberate divergence decided by the project owner on 2026-10-07;
+  SEGUIMIENTO Descarte).
   GNU: Follows the manual: indexed record (`control_materi_failure_apply 0
   -no`). Professional 02-08-2026: Accepts the record only WITHOUT index
   (indexed form: "I do not know : -no"); stops with "Program error ...
-  element_rhside_delete" as soon as an element fails. Status: Pro-suspect
-  (contradicts its manual); GNU follows the manual. No project-owner
-  decision recorded. Index:
+  element_rhside_delete" as soon as an element fails. Status: deliberate
+  divergence (project decision 2026-10-07): the GNU follows the manual;
+  the Professional behaviour is also Pro-suspect (contradicts its
+  manual). Index:
   [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).
