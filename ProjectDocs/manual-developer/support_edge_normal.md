@@ -156,3 +156,11 @@ ready in `validation-suite/test-2014/`.
 - **Test**: `validation-suite/test-2026/support_edge_normal_damping_tangent1.dat`
   (Pro `support_edge_normal_3` without the freeze record; RED rc 1 disy
   124.75, GREEN disy 5.00998e-4 +/- 1e-9; Pro passes).
+
+## Differences with the Professional version
+
+- **`control_support_edge_normal_stiffness_freeze`** (known difference, not
+  decided; BACKLOG C38). GNU: Parse-only (no effect). Professional
+  02-08-2026: Freezes the stiffness forces (manual 6.381);
+  `support_edge_normal_3` 5.00999e-4 vs 5.00998e-4. Status: Open, LOW.
+  Index: [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).

@@ -37,3 +37,14 @@ divergence). Test: `validation-suite/test-2026/materi_memory_default_updated_app
 
 - The `-no` conversion is applied only in `set_stress()`; the element
   kinematics (elem.cc / set_deften_etc) still see the original memory.
+
+## Differences with the Professional version
+
+- **`control_materi_updated_apply -yes`** (deliberate divergence, project
+  decision 2026-10-04; BACKLOG C21; SEGUIMIENTO Descarte; test-2026
+  `materi_memory_default_updated_apply1`). GNU: Follows manual 6.152: an
+  unspecified memory becomes `-updated` (simple shear 0.231 / 0.421 /
+  -0.229). Professional 02-08-2026: Ignores `-yes` (stays 0 / 0.5 / 0 for
+  every kinematics and index). Status: Deliberate divergence, project owner:
+  follow the manual. Also Pro-suspect. Index:
+  [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).

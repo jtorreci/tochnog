@@ -76,3 +76,21 @@ Tests `groundflow_total_pressure_limit` and `_dry`
   interface.cc): `db(..., GET_IF_EXISTS)` does not write `dval` when the
   record is missing — every buffer passed to GET_IF_EXISTS must be
   initialized before the call.
+
+## Differences with the Professional version
+
+- **GNU extensions the Professional ignores** (GNU extension / input
+  dialect; AUDIT K16, K09). GNU: The GNU-only records exercised by the tests
+  `strain_settle`, `mfactor`, `mdirect_gate`, `transv1`, `-empty` groups
+  (`temp4/5`), `mvoid*`, `cmat_gate`, and the records
+  `groundflow_total_pressure_limit` and `groundflow_pressure_atmospheric`
+  act and meet the GNU analytic targets. Professional 02-08-2026: Returns
+  the unmodified state (cannot tell a Pro defect from a different Pro
+  syntax). Status: GNU extensions; kept. Index:
+  [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).
+- **`groundflow_total_pressure_limit` default** (GNU extension / input
+  dialect; manual pages only). GNU: The record is required to activate the
+  limit; prescribed nodes are never cut. Professional 02-08-2026: Limit 0
+  even without the record. Status: GNU backward compatibility (positive
+  heads of existing models); owner decision not recorded. Index:
+  [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).

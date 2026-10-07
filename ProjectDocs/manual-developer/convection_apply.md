@@ -87,3 +87,11 @@ same input names (`convection_apply -yes`, `convection_stabilization
   pseudo-dof (normal-velocity MPC generation, manual 6.22) - not
   implemented in the GNU nor in the GNU-2014 lineage.
 - `node_convection_apply` (6.880) stays registered-without-behaviour.
+
+## Differences with the Professional version
+
+- **explicit `convection_apply -no` next to `materi_displacement`** (GNU
+  extension / input dialect; AUDIT 1.1). GNU: Accepted (convection ignored
+  with `materi_displacement`). Professional 02-08-2026: Refuses the explicit
+  record (`-no` is its default). Status: Input dialect. Index:
+  [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).

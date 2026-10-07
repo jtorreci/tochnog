@@ -119,3 +119,15 @@ Professional's full-matrix scaling). See
   `element_rhside_delete` (no `element_matrix_delete`) and scales the full
   matrix, which converges faster. The exact Professional scaling is not
   uniquely determined from the `.dbs` alone.
+
+## Differences with the Professional version
+
+- **`-total_linear` + `group_materi_elasti_compressibility`** (deliberate
+  divergence, project decision 2026-09-29; BACKLOG C9; SEGUIMIENTO
+  Descarte). GNU: Volumetric increment from `tr(inc_epe)`: sigxx -0.005 for
+  every time step (analytic, manual 2.2.1). Professional 02-08-2026:
+  Time-step dependent: -0.0075 / -0.0099 / -0.009999 for dt 1e-2 / 1e-3 /
+  1e-4 (keeps the legacy `tr(new_epe-old_epe)` increment). Status:
+  Deliberate divergence, project owner (merge `93966ef`); GNU follows manual
+  + analytic. Also Pro-suspect. Index:
+  [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).

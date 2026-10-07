@@ -528,3 +528,12 @@
   derivatives — valores previos eran el artefacto del restore parcial)
   y qsri3d_beam (mom1s = P·L = 0.08 para SRI/OFF — la estática del
   cuerpo libre; el discriminador SRI es la deflexión).
+
+## Differences with the Professional version
+
+- **3D section moment sign (`gforce10`, `mom1y_sig`)** (known difference,
+  not decided; BACKLOG C3; AUDIT K12). GNU: +5000 (target recalibrated to
+  the GNU value). Professional 02-08-2026: -5000 (magnitudes and `nory`
+  agree). Status: Open, MEDIUM; face/arm sign of the 3D section
+  post-processing. Index:
+  [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).

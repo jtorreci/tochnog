@@ -85,3 +85,11 @@ Evidence: `/tmp/opencode/dyn8-sine-fix-evidence/`.
 ## External dependencies
 
 None. `sin` from the C library, `PIRAD` the global pi constant.
+
+## Differences with the Professional version
+
+- **sine loads with frequency 0** (known difference, not decided; manual
+  pages only). GNU: Frequency 0 contributes 0. Professional 02-08-2026:
+  Imposes a constant static value equal to the amplitude. Status: PENDING
+  (not implemented). Index:
+  [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).

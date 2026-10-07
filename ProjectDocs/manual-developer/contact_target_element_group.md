@@ -46,3 +46,13 @@
 - `number_of_side_boundary_nodes==ndim` rejects hex8 sides (4 nodes).
 - No `element_boundary` record; node_boundary not generated for other
   analyses (the Pro prints both in every run).
+
+## Differences with the Professional version
+
+- **element-target contact residuals** (known difference, not decided;
+  BACKLOG C40; AUDIT K05). GNU: Runs a single-layer target (non-physical
+  result); hex8 target sides never detected; `node_boundary` only for
+  element-target contact, no `element_boundary`. Professional 02-08-2026:
+  Stops ("a target element has all nodes on the boundary"); writes
+  `node_boundary`/`element_boundary` in every run. Status: Open, LOW. Index:
+  [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).

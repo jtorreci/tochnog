@@ -116,3 +116,12 @@ Target `dam = 0.471973` (tolerance 1e-5):
 - The `epseq` accumulation bug (see "Bug report and fix") is FIXED. The
   upstream 2014 GNU sources still carry the buggy line; if the sources are ever
   re-imported the fix must be re-applied.
+
+## Differences with the Professional version
+
+- **Mazars damage: gamma with shear; damage + early plasticity** (known
+  difference, not decided; BACKLOG C7). GNU: gamma from xx, xy, xz (e.g. dam
+  0.10809); plastic path eppxx 1.879e-4. Professional 02-08-2026: dam
+  0.18752; eppxx 1.368e-4 (Pro gamma matches none of the tried forms).
+  Status: Open, MEDIUM; needs more probes. Index:
+  [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).

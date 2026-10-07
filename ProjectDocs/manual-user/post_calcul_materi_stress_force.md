@@ -219,3 +219,12 @@ average of the two adjacent sections.
   she = 0, mom = 0 (the exact free-body statics of the ring).
 - `outer -yes` and `plot_switch` are implemented in 2D (3 switches)
   and 3D (4 switches, manual 6.916).
+
+## Differences with the Professional version
+
+- **3D section moment sign (`gforce10`, `mom1y_sig`)** (known difference,
+  not decided; BACKLOG C3; AUDIT K12). GNU: +5000 (target recalibrated to
+  the GNU value). Professional 02-08-2026: -5000 (magnitudes and `nory`
+  agree). Status: Open, MEDIUM; face/arm sign of the 3D section
+  post-processing. Index:
+  [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).

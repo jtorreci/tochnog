@@ -36,3 +36,12 @@ bounda_time_increment 1  0.01
 At `t=0.` (k=0) the load is `1.`, at `t=0.01` (k=1) it is `2.` and at `t=0.02`
 (k=2) it is `3.`. The load stays at `3.` for any later time (k is clamped to the
 last index).
+
+## Differences with the Professional version
+
+- **`bounda_time_increment` tables** (Professional-suspect, the GNU follows
+  the manual; AUDIT K08; SEGUIMIENTO Descarte). GNU: Follows manual 6.146
+  (audit verdict); does not prescribe the -1.4. Professional 02-08-2026:
+  Prescribes -1.4 on dofs whose table is all zero (`mcap1_elast`). Status:
+  Pro-suspect; GNU follows the manual. No project-owner decision recorded.
+  Index: [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).

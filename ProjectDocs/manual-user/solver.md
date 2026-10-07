@@ -94,3 +94,9 @@ the SuperLU banner appears in the output (the direct solver ran).
   the Professional; `control_solver_bicg_stop 0 -no` plus
   `control_solver_bicg_stop 20 -yes` stops in the GNU and continues in
   the Professional.
+
+- **Bi-CG breakdown on a singular system** (known difference, not decided;
+  BACKLOG C12). GNU: Prints the breakdown error each iteration, finishes
+  with rc 0 and a `.dbs`. Professional 02-08-2026: Prints "the BICG solver
+  did not converge" and stops without a `.dbs`. Status: Open, LOW. Index:
+  [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).

@@ -89,3 +89,19 @@ the GNU return rc=1.
 - `group_materi_plasti_hardsoil` c*cot(phi) is still used by the hardsoil
   elastic stiffness with `-no` (cohesionless in the only Pro example, so
   not discriminated).
+
+## Differences with the Professional version
+
+- **plasticity return mapping (MC, DP + refine, von Mises + refine)** (known
+  difference, not decided; AUDIT K15). GNU: `validation_14` velx 48 % off;
+  `validation_3` kap 11 % off; `mohrcou2` -6.932; MC `plasti_apply` model
+  sigyy -3.487. Professional 02-08-2026: `mohrcou2` 0; MC sigyy -3.394.
+  Status: UNKNOWN root cause; investigate before touching code. Index:
+  [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).
+- **`linear_calculation_apply`; truss/spring/interface/beam plasticity
+  gating** (known difference, not decided; manual pages only). GNU:
+  `linear_calculation_apply` not implemented; `plasti_apply` does not gate
+  truss/spring/interface/beam plasticity. Professional 02-08-2026:
+  `linear_calculation_apply` sets `plasti_apply -no`; gating of the other
+  elements not measured. Status: Not implemented / not measured. Index:
+  [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).

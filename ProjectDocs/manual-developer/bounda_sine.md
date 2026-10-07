@@ -70,3 +70,11 @@ None. `sin` / `cos` from the C library.
   is inferred from `db_len`; there is no upper-bound check.
 - `time_end` is a local of `bounda()`, reset per boundary inside the
   `BOUNDA_SINE` branch; it is not persisted in the database.
+
+## Differences with the Professional version
+
+- **sine loads with frequency 0** (known difference, not decided; manual
+  pages only). GNU: Frequency 0 contributes 0. Professional 02-08-2026:
+  Imposes a constant static value equal to the amplitude. Status: PENDING
+  (not implemented). Index:
+  [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).

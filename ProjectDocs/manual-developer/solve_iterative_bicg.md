@@ -202,3 +202,20 @@ The symmetry check is one serial pass over the element matrices
 - The staggered fixed point (`0.2315×` 2D, `0.143×` road) is the scheme's;
   the monolithic mixed solve (fix C) or a regularized staggered update
   (fix D) is the definitive repair for the user case.
+
+## Differences with the Professional version
+
+- **`control_solver_bicg_stop` at the timestep's own index** (deliberate
+  divergence, project decision 2026-09-29; BACKLOG C13; SEGUIMIENTO
+  Descarte). GNU: Reads, last one wins: `solver_bicg_stop`, index-0 control
+  record, control record at the running timestep index (manual 6.376).
+  Professional 02-08-2026: Reads only the index-0 control record for every
+  timestep; a record at the timestep's non-zero index is ignored. Status:
+  Deliberate divergence, project owner; GNU follows the manual. Also
+  Pro-suspect. Index:
+  [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).
+- **Bi-CG breakdown on a singular system** (known difference, not decided;
+  BACKLOG C12). GNU: Prints the breakdown error each iteration, finishes
+  with rc 0 and a `.dbs`. Professional 02-08-2026: Prints "the BICG solver
+  did not converge" and stops without a `.dbs`. Status: Open, LOW. Index:
+  [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).

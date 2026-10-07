@@ -223,3 +223,12 @@ last iteration of each step.
   (`DIAG-SOLVE-MIXTO.md` §8 C), which would make the stress principal and
   remove the lag structurally; that remains refuted as structurally
   inconsistent for shared nodes in the current tie scheme.
+
+## Differences with the Professional version
+
+- **one-equilibrium-iteration lag of the material state (`spring4`)** (known
+  difference, not decided; BACKLOG C35; AUDIT K02). GNU: With 1 iteration
+  the state uses the pre-solve velocity (eptxx = sigxx = -0.01, ip velx
+  0.5). Professional 02-08-2026: Evaluates on the post-solve velocity (0 / 0
+  / 1). Status: Parked, design; scheduled for F4, project owner 2026-10-06.
+  Index: [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).

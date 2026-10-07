@@ -131,6 +131,20 @@ The direct records have TWO modes selected by the presence of a plane normal:
   drifts slowly below the strength (0.410 at t = 100). Not imitated: no
   code change, the manual decides.
 
+- **`_visco` direct cut-offs** (known difference, not decided; BACKLOG C33).
+  GNU: Relaxation factor uses the previous step's `DTIME` (no cut in the
+  first step); no visco on the principal tension cap. Professional
+  02-08-2026: 1 - exp(-dt/tm) with the current step (sigxx 1.84914e-3 vs GNU
+  1e-3). Status: Scheduled for F4, project owner 2026-10-06. Index:
+  [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).
+- **3 values in `group_materi_plasti_*_direct_normal` in 2D** (GNU extension
+  / input dialect; manual pages only). GNU: Accepts up to 3 values in any
+  dimension (`data_length` 3, `fixed_length` 0 in `database.cc`); the use of
+  a z value in 2D is not verified. Professional 02-08-2026: Manual 6.739:
+  ndim values ("In 1D only normal_x"); binary response to 3 values in 2D NOT
+  measured. Status: Input-dialect tolerance; Pro behaviour undetermined.
+  Index: [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).
+
 ## Validación del modo plano (Professional 02-08-2026, C14)
 
 Probes (single quad4, E 1, homogeneous velocity, 1 step; scratch driver

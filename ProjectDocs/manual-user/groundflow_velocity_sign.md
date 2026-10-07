@@ -76,3 +76,24 @@ group_condif_conductivity     0  0.1
 
 Result: node dofs `temp/gvelx/pres` = `1,10,-2` / `1,10,-1` / `0,10,0`,
 identical to the Professional binary.
+
+## Differences with the Professional version
+
+- **groundflow velocity output (`ground1`)** (Professional-suspect, the GNU
+  follows the manual; AUDIT K10; SEGUIMIENTO Descarte). GNU: v = k dh/dy =
+  -0.05 (manual), at the nodes and at the integration points. Professional
+  02-08-2026: 0 at the nodes and at the integration points (post-processing
+  only; the pressure field agrees). Status: Pro-suspect; GNU follows the
+  manual. No project-owner decision recorded. Index:
+  [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).
+- **`gvelx` sign in the interface-coupled groundflow path
+  (`groundflow_interface`)** (known difference, not decided; BACKLOG C2).
+  GNU: gvelx -1.99962e-6. Professional 02-08-2026: +1.99960e-6 (pressure
+  field identical). Status: Open, LOW; root cause not established. Index:
+  [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).
+- **groundflow `pres` dof datum** (known difference, not decided; AUDIT
+  K09). GNU: Stores the pressure (`ground4` pres 0). Professional
+  02-08-2026: Stores the head h (500), as its manual says. Status:
+  Convention difference (audit BOTH-plausible); total pore pressure and
+  stresses identical. No decision. Index:
+  [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).

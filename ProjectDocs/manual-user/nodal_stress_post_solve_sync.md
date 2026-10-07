@@ -70,3 +70,12 @@ With `control_timestep_iterations 20 1` the run now reports `sigyy = 0.5`
 The re-evaluation applies only to the absolute weighted-average recovery. A
 convected stress field (`materi_strain_total`) keeps the historic incremental
 update and is not re-evaluated.
+
+## Differences with the Professional version
+
+- **one-equilibrium-iteration lag of the material state (`spring4`)** (known
+  difference, not decided; BACKLOG C35; AUDIT K02). GNU: With 1 iteration
+  the state uses the pre-solve velocity (eptxx = sigxx = -0.01, ip velx
+  0.5). Professional 02-08-2026: Evaluates on the post-solve velocity (0 / 0
+  / 1). Status: Parked, design; scheduled for F4, project owner 2026-10-06.
+  Index: [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).
