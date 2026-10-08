@@ -52,3 +52,5 @@
   `-updated_linear`, node 3: one step GNU 0.47222 / Pro 0.5; 100 steps
   GNU 0.52048 / Pro 0.52093. Status: Open, LOW (F3, 2026-10-07). Index:
   [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).
+
+- **Deliberate divergence (decision 2026-10-08):** with an explicit `-follow_material` the GNU builds the step on the end-of-step geometry and the Professional on the start-of-step geometry (2-quad4 column: 0.47222 vs 0.5 in one step, 0.52048 vs 0.52093 in 100 steps). Kept on purpose; see `ProjectDocs/DIVERGENCES-PROFESSIONAL.md` (F3-INSTEP).
