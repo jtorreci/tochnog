@@ -4,8 +4,10 @@
 
 - **general.cc, `materi_memory_default()`**: single source of the default
   memory. Returns `-UPDATED` when `control_materi_updated_apply` exists
-  and its record at the current `ICONTROL` is `-YES`; otherwise
-  `-UPDATED_LINEAR`. Declared in `tochnog.h` and `tochnog-mod.h`.
+  and its record at the current `ICONTROL` is `-YES` (checked first);
+  otherwise `-TOTAL_LINEAR` when `materi_displacement` is initialised
+  (manual Professional 6.797, F3 2026-10-07, C18) and `-UPDATED_LINEAR`
+  else. Declared in `tochnog.h` and `tochnog-mod.h`.
 - Every reader of `GROUP_MATERI_MEMORY` assigns the default right before
   its `db(GROUP_MATERI_MEMORY, ..., GET_IF_EXISTS)` (an explicit record
   overwrites it):
@@ -13,15 +15,15 @@
   - `stress.cc` `set_stress()` (the `-no` gate of
     `control_materi_updated_apply` stays there, after the read);
   - `elem.cc` `elem()`;
-  - `tendon.cc` `tendons()`; its assert now accepts `-UPDATED_LINEAR`
-    (same no-rotation tendon direction as `-UPDATED_WITHOUT_ROTATION`).
-- **elem.cc, reference gradient**: the `NODE_START_REFINED`
-  reference-geometry gradient (`ref_active`) is loaded only when
-  `memory==-UPDATED_LINEAR` AND the group has an EXPLICIT record
-  (`db_active_index(GROUP_MATERI_MEMORY, element_group, VERSION_NORMAL)`).
-  The default keeps the current-geometry gradient, which matches the
-  Professional on `-follow_material` meshes (stretch probe 0.695653 in
-  both; the reference gradient gives 1).
+  - `tendon.cc` `tendons()`; its assert accepts `-UPDATED_LINEAR` and,
+    since F3, `-TOTAL_LINEAR` (same no-rotation tendon direction as
+    `-UPDATED_WITHOUT_ROTATION`).
+- `elem.cc` skips the coordinate update of `materi_displacement` for
+  `-TOTAL_LINEAR` (`if ( materi_displacement && memory!=-TOTAL_LINEAR )`),
+  so the `-TOTAL_LINEAR` default removes the C18 column difference.
+- The former elem.cc reference gradient (`ref_active`, explicit
+  `-updated_linear` only) was removed in F3; see
+  `group_materi_memory_updated_linear.md` section 7.
 - Previously the default `-UPDATED` was hard-coded as the initial value
   of `memory` at those five places.
 
@@ -48,12 +50,15 @@ target not edited); Pro `validation` unchanged.
 
 ## Hardcoded parameters / pending
 
-- `-updated_jaumann` (manual 6.685) is not implemented.
-- With `materi_displacement` the Professional default behaves as
-  `-total_linear`. A variant mapping the default to `-TOTAL_LINEAR` in
-  that case (A2) was rejected: it breaks `mohr_coul_direct7` and sfnet
-  `temp5`. The remaining difference comes from the coordinate update in
-  `elem.cc` (around line 569) and is tied to the mesh default (BACKLOG C8).
+- F3 (2026-10-07, design A): the `materi_displacement` -> `-TOTAL_LINEAR`
+  default (variant A2, rejected on 2026-10-04 alone) was adopted together
+  with the `-fixed_in_space` mesh default. Known consequences: Pro
+  `mohr_coul_direct7` (`-total_linear` with a velocity `mpc_node_number`
+  tie) now fails (separate GNU defect, BACKLOG C-item); sfnet `temp5` (and
+  seven other sfnet targets) were calibrated on the old GNU defaults
+  (BACKLOG B-item).
+- Test: `validation-suite/test-2026/materi_memory_default_displacement1`
+  (column node 3 disx 0.5 = Pro; old 0.472222).
 - `control_materi_updated_apply -yes` follows the manual; the
   Professional binary ignores it (deliberate divergence).
 
@@ -67,16 +72,8 @@ target not edited); Pro `validation` unchanged.
   every kinematics and index). Status: Deliberate divergence, project owner:
   follow the manual. Also Pro-suspect. Index:
   [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).
-- **default memory with `materi_displacement`** (known difference, not
-  decided; BACKLOG C18). GNU: `-updated_linear` default updates the
-  coordinates (2-quad4 column node 3 disx 0.472). Professional 02-08-2026:
-  Behaves as `-total_linear` (0.5). Status: Open, MEDIUM; to be solved with
-  C8 (variant A2 rejected). Index:
-  [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).
-- **`-updated_jaumann` memory** (known difference, not decided; BACKLOG
-  C20). GNU: Not accepted. Professional 02-08-2026: Listed in manual 6.686
-  (6.685 in older numbering). Status: Open, LOW (not implemented). Index:
-  [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).
+- **default memory with `materi_displacement`** (C18): RESOLVED in F3
+  (2026-10-07), `-total_linear` as in the Professional.
 - **Pro `hypo12` target after the default-memory change** (known difference,
   not decided; BACKLOG C22). GNU: sigyy misses the target by 1.02e-3
   (tolerance 1e-3). Professional 02-08-2026: Meets its own target. Status:

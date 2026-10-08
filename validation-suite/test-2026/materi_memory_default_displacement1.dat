@@ -1,0 +1,35 @@
+( F3/C18: default group_materi_memory with materi_displacement is
+  -total_linear (manual Professional 6.797). Two-quad4 column, bottom
+  fixed, top moved 1 in x in a single step, young 1, poisson 0, NO memory
+  record. -total_linear keeps the deformation linear: node 3 disx = 0.5
+  and sigxx = 0; Professional 02-08-2026 gives the same. Before F3 GNU
+  defaulted to -updated_linear and gave disx 0.472222, sigxx 0.055556. )
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_displacement
+materi_strain_total
+materi_stress
+end_initia
+node 1 0 0
+node 2 1 0
+node 3 0 1
+node 4 1 1
+node 5 0 2
+node 6 1 2
+element 1 -quad4 1 2 3 4
+element 2 -quad4 3 4 5 6
+group_type 0 -materi
+group_materi_elasti_young 0 1.0
+group_materi_elasti_poisson 0 0.0
+bounda_dof 0 -ra 1 2 -ra -velx -vely
+bounda_dof 1 -ra 5 6 -ra -velx
+bounda_dof 2 -ra 5 6 -ra -vely
+bounda_time 1 1.
+control_timestep 0 1.0 1.0
+control_timestep_iterations 0 100
+target_item 0  -node_dof 3 -disx
+target_value 0  0.5 1e-06
+target_item 1  -node_dof 3 -sigxx
+target_value 1  0.0 1e-06
+end_data

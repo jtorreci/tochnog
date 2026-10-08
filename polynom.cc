@@ -40,8 +40,8 @@ long int stress_recovery_post_pass = 0;
 
 void pol( long int element, long int element_group,
   long int name, long int nnol, double old_coord[], 
-  double new_coord[], double ref_coord[], long int &npoint, double h[], 
-  double old_d[], double new_d[], double ref_d[], double new_b[], 
+  double new_coord[], long int &npoint, double h[], 
+  double old_d[], double new_d[], double new_b[], 
   double volume[] )
 
 {
@@ -727,26 +727,6 @@ void pol( long int element, long int element_group,
       matrix_ab( &h[ipoint*nnol], new_coord, coord_ip, 1, nnol, ndim );
       radius = scalar_dabs(coord_ip[0]);
       volume[ipoint] *= 2. * PIRAD * radius;
-    }
-  }
-
-  // Reference-geometry shape function gradients. Only computed when the
-  // caller requests them (ref_d != NULL, i.e. group_materi_memory
-  // -updated_linear): the strain increment of that option must be the
-  // LINEAR engineering strain referred to the undeformed mesh
-  // (NODE_START_REFINED), not to the current/-FOLLOW_MATERIAL geometry.
-  // Kept in a separate pass so the current-geometry detj/volume above is
-  // not disturbed. Uses the same natural-coordinate derivatives p[] as
-  // old_d/new_d, so the reference and current bases share the integration
-  // points.
-  if ( ref_d!=NULL ) {
-    for ( ipoint=0; ipoint<npoint; ipoint++ ) {
-      matrix_ab( &p[ipoint*ndim*nnol], ref_coord, xj, ndim, nnol, ndim );
-      if ( !matrix_inverse( xj, &xj_inv[ipoint*ndim*ndim], detj, ndim ) ) {
-        array_set( &xj_inv[ipoint*ndim*ndim], 0., ndim*ndim );
-      }
-      matrix_ab( &xj_inv[ipoint*ndim*ndim], &p[ipoint*ndim*nnol], 
-        &ref_d[ipoint*ndim*nnol], ndim, ndim, nnol );
     }
   }
 

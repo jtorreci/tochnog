@@ -16,9 +16,8 @@ memory type (the corpus hypoplasticity tests, e.g. hypo7/8, use it).
 
 `-updated_linear` is also the DEFAULT memory when a group has no
 `group_materi_memory` record (since 2026-10-04, as the Professional); see
-[group_materi_memory_default](group_materi_memory_default.md). The
-reference-geometry strain path described below applies only when
-`-updated_linear` is given EXPLICITLY.
+[group_materi_memory_default](group_materi_memory_default.md); with
+`materi_displacement` the default is `-total_linear` instead (F3).
 
 ## Usage
 
@@ -42,33 +41,34 @@ group_materi_memory   0  -updated_linear
 - The rotation handling equals `-updated_without_rotation`; the strain
   measure (linear engineering strains) and the compressibility block equal
   `-total_linear`.
-- The accumulated strain is referred to the UNDEFORMED (reference) mesh,
-  so the reported total is the LINEAR engineering strain
-  (`eptyy = -0.3` for a 30% compression), matching the Professional.
-  This holds even with the default velocity-integrated mesh, where the
-  nodes follow the material: the strain increment is built with the
-  reference-geometry shape derivatives (`node_start_refined`), while the
-  reported mesh geometry still follows the material.
-- Only `-updated_linear` uses this reference-geometry path; the other
-  memory options (`-updated`, `-updated_without_rotation`,
-  `-updated_area`, `-total`, `-total_linear`) are unchanged.
-- hypo7/hypo8/hypo9 of the corpus use it (the strain measure now matches
-  the Professional exactly; the final stress still differs by the kernel
-  route, e.g. hypo7 sigyy -235.6 vs the Professional -231.8).
-- Difference with the Professional on a moving mesh: the Professional's
-  default mesh is `-fixed_in_space` (its manual 6.806), the GNU's default is
-  `-follow_material` when `materi_velocity` is used without
-  `materi_displacement`. Without a `mesh` record both give the engineering
-  strain. With an explicit `mesh -follow_material` the Professional builds
-  the increment on the current geometry (1D bar stretched 50%: strain
-  0.40714, logarithmic-like) while the GNU still gives 0.5. Give the `mesh`
-  record explicitly if the result must match in that case.
+- The strain increment is the linear engineering strain of the velocity
+  gradient on the CURRENT geometry (manual Professional 2.2.1). With the
+  default `-fixed_in_space` mesh the geometry does not move, so the
+  accumulated total is the engineering strain (`eptyy = -0.3` for a 30%
+  compression, hypo7/8/9). With an explicit `mesh -follow_material` the
+  increments are summed on the moving geometry (bar stretched by 50%:
+  0.407136, as the Professional).
+- Until F3 (2026-10-07) the GNU built the increment of an explicit
+  `-updated_linear` on the reference geometry (`node_start_refined`) to
+  emulate a fixed mesh under the old GNU `-follow_material` default; that
+  path was removed when the default mesh became `-fixed_in_space`.
+- Self-checking inputs: `validation-suite/test-2026/materi_memory_updated_linear_current1.dat`
+  (bar, sigxx 0.407136) and `materi_memory_updated_linear_current2.dat`
+  (column, 100 steps, node 3 velix 0.52093 within 1.e-3).
 
 ## Differences with the Professional version
 
-- **explicit `-updated_linear` on a `mesh -follow_material`** (known
-  difference, not decided; BACKLOG C19). GNU: Increment on the reference
-  geometry (`NODE_START_REFINED`): bar x2 sigxx 1.0. Professional
-  02-08-2026: Increment on the current geometry: sigxx 0.69565. Status:
-  Open, LOW; drop the reference path after C8. Index:
+- **explicit `-updated_linear` on a `mesh -follow_material`** (C19):
+  RESOLVED in F3 (2026-10-07). The increment is built on the current
+  geometry, as the Professional (bar +50%: 0.407136 in both).
+- **`-updated_linear` together with `materi_displacement`** (known
+  difference, documented in F3 2026-10-07). GNU: accepted (the
+  coordinates are updated, elem.cc). Professional 02-08-2026: rejects the
+  combination. Status: Open, LOW; GNU stays permissive. Index:
+  [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).
+- **explicit `-follow_material`: in-step geometry** (known difference).
+  GNU builds the increment on the END-of-step geometry, the Professional
+  on the START-of-step geometry: 2-quad4 column sheared by 1, node 3, one
+  step GNU 0.47222 / Pro 0.5, 100 steps GNU 0.52048 / Pro 0.52093.
+  Status: Open, LOW. Index:
   [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).

@@ -618,13 +618,15 @@ long int convection_apply_switch( void )
   return swit;
 }
 
-// Default group_materi_memory when the record is absent (C16). Single
+// Default group_materi_memory when the record is absent (C16, C18). Single
 // source of truth for every GROUP_MATERI_MEMORY reader (materi, stress,
-// elem, tendon): the Professional default behaves as -updated_linear
-// (linear in simple shear, measured on Professional 02-08-2026).
+// elem, tendon). Manual Professional 6.797: the default is -total_linear
+// when materi_displacement is initialised, else -updated_linear (linear in
+// simple shear, measured on Professional 02-08-2026).
 // control_materi_updated_apply -yes with the index of the current timestep
 // (ICONTROL) makes an unspecified memory -updated (manual Professional
-// 6.152). An explicit group_materi_memory always overrides this default.
+// 6.152) and takes precedence. An explicit group_materi_memory always
+// overrides this default.
 long int materi_memory_default( void )
 {
   long int icontrol=0, swit=0, ldum=0, max_index=-1;
@@ -636,5 +638,6 @@ long int materi_memory_default( void )
       VERSION_NORMAL, GET_IF_EXISTS );
     if ( swit==-YES ) return -UPDATED;
   }
+  if ( materi_displacement ) return -TOTAL_LINEAR;
   return -UPDATED_LINEAR;
 }

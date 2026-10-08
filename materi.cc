@@ -23,12 +23,11 @@
 
 void materi( long int element, long int gr, long int name, long int nnol, 
   long int npoint, long int nodes[], long int plasti_on_boundary,
-  double coord_ip[], double old_coord[], double ref_coord[], long int ipoint,
+  double coord_ip[], double old_coord[], long int ipoint,
   double new_dof[], double h[], double new_d[], double new_b[],
   double volume, double old_unknowns[], 
   double new_unknowns[], double old_grad_old_unknowns[], 
-  double old_grad_new_unknowns[], double old_grad_ref_new_unknowns[],
-  double new_grad_new_unknowns[],
+  double old_grad_new_unknowns[], double new_grad_new_unknowns[],
   double element_lhside[], double element_matrix[],
   double element_rhside[], double element_residue[], 
   double tendon_element_rhside[])
@@ -354,9 +353,8 @@ void materi( long int element, long int gr, long int name, long int nnol,
     softvar_l = new_unknowns[iuknwn];
   }
   
-  set_deften_etc( element, gr, nnol, h, old_coord, ref_coord, old_unknowns, 
+  set_deften_etc( element, gr, nnol, h, old_coord, old_unknowns, 
     new_unknowns, old_grad_old_unknowns, old_grad_new_unknowns, 
-    old_grad_ref_new_unknowns,
     old_deften, new_deften, old_ept, inc_ept, new_ept, 
     old_rot, inc_rot, new_rot );
 
@@ -464,7 +462,7 @@ void materi( long int element, long int gr, long int name, long int nnol,
   }
   else if ( memory==-UPDATED || memory==-TOTAL_LINEAR ||
       memory==-UPDATED_WITHOUT_ROTATION || memory==-UPDATED_LINEAR ||
-      memory==-UPDATED_AREA ) {
+      memory==-UPDATED_AREA || memory==-UPDATED_JAUMANN ) {
     if ( materi_stress )
       array_move( old_sig, rotated_old_sig, MDIM*MDIM );
     if ( materi_plasti_rho ) 
@@ -488,7 +486,7 @@ void materi( long int element, long int gr, long int name, long int nnol,
       matrix_abat( inv_rot, old_sig_eff, rotated_old_sig, work, MDIM );
     else if ( memory==-UPDATED || memory==-TOTAL_LINEAR ||
         memory==-UPDATED_WITHOUT_ROTATION || memory==-UPDATED_LINEAR ||
-        memory==-UPDATED_AREA )
+        memory==-UPDATED_AREA || memory==-UPDATED_JAUMANN )
       array_move( old_sig_eff, rotated_old_sig, MDIM*MDIM );
   }
   if ( swit ) {
@@ -553,8 +551,11 @@ void materi( long int element, long int gr, long int name, long int nnol,
     // (manual Professional 2.2.1: extra stresses are added to the previous
     // stresses, no rotation by R). inc_rot is NOT the identity for them
     // (set_deften_u_rot overwrites it), so they must stay out of this list.
-  if ( memory==-UPDATED || memory==-TOTAL || memory==-TOTAL_PIOLA ) {
-    if      ( memory==-UPDATED )
+    // -updated_jaumann rotates the previous stress plus the extra stress
+    // with its first-order increment R = I + 0.5(F-F^T) (set_deften_etc).
+  if ( memory==-UPDATED || memory==-UPDATED_JAUMANN ||
+       memory==-TOTAL || memory==-TOTAL_PIOLA ) {
+    if      ( memory==-UPDATED || memory==-UPDATED_JAUMANN )
       array_move( inc_rot, rot, MDIM*MDIM );
     else {
       assert( memory==-TOTAL || memory==-TOTAL_PIOLA );
@@ -1570,9 +1571,8 @@ void strain_settlement_creep( long int element, long int gr, long int nnol,
 }
 
 void set_deften_etc( long int element, long int gr, long int nnol, double h[], 
-  double old_coord[], double ref_coord[], double old_unknowns[], double new_unknowns[], 
+  double old_coord[], double old_unknowns[], double new_unknowns[], 
   double old_grad_old_unknowns[], double old_grad_new_unknowns[], 
-  double old_grad_ref_new_unknowns[],
   double old_deften[], double new_deften[], 
   double old_ept[], double inc_ept[], double new_ept[], 
   double old_rot[], double inc_rot[], double new_rot[] )
@@ -1580,7 +1580,7 @@ void set_deften_etc( long int element, long int gr, long int nnol, double h[],
 {
   long int idim=0, jdim=0, indx=0, swit=0, memory=-UPDATED, 
     axisymmetric=-NO, ind=0, ldum=0, idum[1];
-  double dtime=0., radius=0., radius_inc=0., ddum[1], 
+  double dtime=0., radius=0., ddum[1], 
     uTu[MDIM*MDIM], old_u[MDIM*MDIM], new_u[MDIM*MDIM], 
     inc_u[MDIM*MDIM], inc_deften[MDIM*MDIM], coord_ip[MDIM];
 
@@ -1616,28 +1616,14 @@ void set_deften_etc( long int element, long int gr, long int nnol, double h[],
     }
   }
   inc_deften[0] = inc_deften[4] = inc_deften[8] = 1.;
-  // For -UPDATED_LINEAR the accumulated total must be the LINEAR
-  // engineering strain referred to the undeformed (reference) geometry, so
-  // the velocity gradient uses the reference shape derivatives supplied by
-  // elem()/pol() (built on NODE_START_REFINED). Every other memory option
-  // keeps the current-geometry gradient. The pointer is NULL when the
-  // caller did not build the reference gradient.
-  if ( memory==-UPDATED_LINEAR && old_grad_ref_new_unknowns!=NULL ) {
-    for ( idim=0; idim<ndim; idim++ ) {
-      for ( jdim=0; jdim<ndim; jdim++ ) {
-        indx = idim*MDIM+jdim;
-        ind = jdim*nuknwn+vel_indx+idim*nder;
-        inc_deften[indx] += old_grad_ref_new_unknowns[ind]*dtime;
-      }
-    }
-  }
-  else {
-    for ( idim=0; idim<ndim; idim++ ) {
-      for ( jdim=0; jdim<ndim; jdim++ ) {
-        indx = idim*MDIM+jdim;
-        ind = jdim*nuknwn+vel_indx+idim*nder;
-        inc_deften[indx] += old_grad_new_unknowns[ind]*dtime;
-      }
+  // Velocity gradient on the current geometry for every memory option,
+  // -UPDATED_LINEAR included (manual Professional 2.2.1: the updated
+  // memories integrate on the current configuration).
+  for ( idim=0; idim<ndim; idim++ ) {
+    for ( jdim=0; jdim<ndim; jdim++ ) {
+      indx = idim*MDIM+jdim;
+      ind = jdim*nuknwn+vel_indx+idim*nder;
+      inc_deften[indx] += old_grad_new_unknowns[ind]*dtime;
     }
   }
   if ( axisymmetric==-YES ) {
@@ -1654,24 +1640,15 @@ void set_deften_etc( long int element, long int gr, long int nnol, double h[],
         old_deften[8] += old_unknowns[ind]/radius;
         new_deften[8] += new_unknowns[ind]/radius;
       }
-      // The hoop strain increment of -UPDATED_LINEAR is the engineering
-      // increment dr/R_ref, so it uses the reference radius (same reference
-      // geometry as the gradient above). Other options keep the current
-      // radius; old/new_deften keep it in all cases.
-      radius_inc = radius;
-      if ( memory==-UPDATED_LINEAR && ref_coord!=NULL ) {
-        matrix_ab( h, ref_coord, coord_ip, 1, nnol, ndim );
-        if ( scalar_dabs(coord_ip[0])!=0. )
-          radius_inc = scalar_dabs(coord_ip[0]);
-      }
       ind = vel_indx;
-      inc_deften[8] += new_unknowns[ind]*dtime/radius_inc;              
+      inc_deften[8] += new_unknowns[ind]*dtime/radius;              
     }
   }
 
     // rotation matrices
   if      ( memory==-UPDATED_WITHOUT_ROTATION || memory==-UPDATED_LINEAR ||
-            memory==-UPDATED_AREA || memory==-TOTAL_LINEAR ) {
+            memory==-UPDATED_AREA || memory==-TOTAL_LINEAR ||
+            memory==-UPDATED_JAUMANN ) {
     for ( idim=0; idim<MDIM; idim++ ) {
       old_rot[idim*MDIM+idim] = 1.;
       new_rot[idim*MDIM+idim] = 1.;
@@ -1682,11 +1659,21 @@ void set_deften_etc( long int element, long int gr, long int nnol, double h[],
     set_deften_u_rot( old_deften, old_u, old_rot );
     set_deften_u_rot( new_deften, new_u, new_rot );
   }
-  set_deften_u_rot( inc_deften, inc_u, inc_rot );
+  if ( memory==-UPDATED_JAUMANN ) {
+      // manual Professional 2.2.1: R = 0.5(F-F^T) + I, the first-order
+      // (Jaumann) rotation of the incremental deformation tensor F
+    for ( idim=0; idim<MDIM; idim++ ) {
+      for ( jdim=0; jdim<MDIM; jdim++ ) inc_rot[idim*MDIM+jdim] =
+        0.5*(inc_deften[idim*MDIM+jdim]-inc_deften[jdim*MDIM+idim]);
+      inc_rot[idim*MDIM+idim] += 1.;
+    }
+  }
+  else
+    set_deften_u_rot( inc_deften, inc_u, inc_rot );
 
       // strain matrices
   if ( memory==-UPDATED_WITHOUT_ROTATION || memory==-UPDATED_LINEAR ||
-       memory==-UPDATED_AREA ) {
+       memory==-UPDATED_AREA || memory==-UPDATED_JAUMANN ) {
       // linear engineering strains
     for ( idim=0; idim<MDIM; idim++ ) {
       for ( jdim=0; jdim<MDIM; jdim++ ) inc_ept[idim*MDIM+jdim] = 

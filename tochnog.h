@@ -1655,6 +1655,7 @@ enum {
   // Enum append keeps existing values stable (tochnog.h and
   // tochnog-mod.h stay in sync).
   ELEMENT_NORMAL,
+  UPDATED_JAUMANN,
   LAST_DUMMY }; // keep LAST_DUMMY always the last one
 
 #define MDAT LAST_DUMMY+DATA_ITEM_SIZE  // reserve space for unknowns
@@ -2105,12 +2106,11 @@ void      map_node( long int inod );
 void      materi( long int element, long int group, long int name, long int nnol, 
             long int npoint, long int nodes[], 
             long int plasti_on_boundary, double coord_ip[],
-            double old_coord[], double ref_coord[], long int ipoint, double new_dof[], 
+            double old_coord[], long int ipoint, double new_dof[], 
             double h[], double new_d[], 
             double new_b[], double volume,
             double old_unknowns[], double new_unknowns[],
             double old_grad_old_unknowns[], double old_grad_new_unknowns[], 
-            double old_grad_ref_new_unknowns[],
             double new_grad_new_unknowns[], double element_lhside[], 
             double element_matrix[], double element_rhside[], 
             double element_residue[], double tendon_element_rhside[] );
@@ -2240,8 +2240,8 @@ long int  mpc_mesh_fingerprint_get( void );
 #define MPC_TIE_TIGHT_NMAX 1000
 void      pol( long int element, long int element_group,
             long int name, long int nnol, double old_coord[], 
-            double new_coord[], double ref_coord[], long int &npoint, double h[], 
-            double old_d[], double new_d[], double ref_d[], double new_b[], 
+            double new_coord[], long int &npoint, double h[], 
+            double old_d[], double new_d[], double new_b[], 
             double volume[] );
 void      post( long int task );
 void      post_global( void );
@@ -2332,10 +2332,9 @@ double    scalar_ran_uniform( int &idum );
 double    scalar_sign( double a );
 double    scalar_square( double a );
 void      set_deften_etc( long int element, long int gr, long int nnol, 
-            double h[], double old_coord[], double ref_coord[],
+            double h[], double old_coord[],
             double old_unknowns[], double new_unknowns[], 
             double old_grad_old_unknowns[], double old_grad_new_unknowns[], 
-            double old_grad_ref_new_unknowns[],
             double old_deften[], double new_deften[], 
             double old_ept[], double inc_ept[], double new_ept[],
             double old_rot[], double inc_rot[], double new_rot[] );

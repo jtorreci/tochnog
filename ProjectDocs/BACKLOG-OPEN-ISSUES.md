@@ -446,6 +446,33 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
 - **Proposed fix**: none in the GNU.
 - **Severity**: **LOW**. **Effort**: **cheap**.
 
+### B13. sfnet targets calibrated on the old GNU mesh/memory defaults (F3, 2026-10-07)
+
+- **Corpus**: sfnet 197 (external, not edited). Since F3 the default mesh
+  is `-fixed_in_space` (manual 6.806) and the default memory with
+  `materi_displacement` is `-total_linear` (manual 6.797), as the
+  Professional. Eight inputs without a `mesh` record relied on the legacy
+  GNU moving mesh (`-follow_material`) and now miss their targets (sfnet
+  exit-code pass 180/181 -> 173):
+
+  | test | target | GNU old | GNU new | Professional 02-08-2026 |
+  |---|---|---|---|---|
+  | `axisym3` (`-updated`) | node 2 velx -1e-3 +/- 1e-4 | -0.000999951 | -0.00999896 | does not run the sfnet input (contact target record) |
+  | `axisym4` (`-updated`) | node 2 velx -1e-3 | -0.000999986 | -0.00199997 | does not run the sfnet input |
+  | `contac1` | node 2 x 1.01 +/- 1e-3 | 1.01 | 0.99 | does not run the sfnet input (contact target record) |
+  | `contac2` | node 2 x 1 | 1 | 0.99 | 0.99 (= GNU new) |
+  | `examp12` (`-updated`) | post-point sigxy -1.13905e-4 | -1.18897e-4 | -6.80231e-4 | does not run the sfnet input |
+  | `temp4` (`-empty` group, condif) | node 1 xtemp 0.5 | 0.5 | 1 | 0 (divergence, see DIVERGENCES-PROFESSIONAL.md) |
+  | `temp5` (`materi_displacement`, condif) | node 1 xtemp 0.5 | 0.5 | 1 | 0 (same) |
+  | `visc_pl2` (`-updated_without_rotation`) | node 1 sigxx 1.66666 | 1.66666 | 2 | does not run the sfnet input (parse error) |
+
+- **Root cause**: stale targets of the external corpus (they encode the
+  legacy GNU `-follow_material` default); not a GNU defect, except the
+  `temp4/5` condif difference listed in DIVERGENCES-PROFESSIONAL.md.
+- **Proposed fix**: none in the GNU; a versioned copy would need an
+  explicit `mesh -follow_material ...` record.
+- **Severity**: **LOW**. **Effort**: **cheap**.
+
 ---
 
 ## C. Additional residuals
@@ -580,7 +607,10 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
   iterations.
 - **Effort**: **medium**.
 
-### C8. Default `mesh`: GNU `-follow_material`, Professional `-fixed_in_space`
+### C8. Default `mesh`: GNU `-follow_material`, Professional `-fixed_in_space` — RESOLVED 2026-10-07 (F3 T2)
+
+- **Resolution**: top.cc default `-FIXED_IN_SPACE` (manual 6.806); tests
+  `mesh_default_fixed_in_space1/2` (= Pro). Corpus consequences in B13.
 
 - **Corpus**: none directly; explains the `interac1` `-updated` residual
   (GNU -0.0050117, Pro -0.005) and why the `c945833` reference gradient of
@@ -799,7 +829,12 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
   validation-suite was outside its edit surface).
 - **Effort**: **cheap**.
 
-### C18. Default memory with `materi_displacement`: the Professional behaves as `-total_linear`
+### C18. Default memory with `materi_displacement`: the Professional behaves as `-total_linear` — RESOLVED 2026-10-07 (F3 T2)
+
+- **Resolution**: `materi_memory_default()` returns `-TOTAL_LINEAR` with
+  `materi_displacement` (manual 6.797), adopted together with C8; test
+  `materi_memory_default_displacement1` (column disx 0.5 = Pro).
+  `mohr_coul_direct7` regression tracked as C41, sfnet `temp5` in B13.
 
 - **Symptom**: after R10 the GNU default is `-updated_linear` for every
   kinematics. With `materi_displacement` and no memory record the
@@ -813,7 +848,12 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
 - **Proposed fix**: resolve together with the mesh default (C8).
 - **Effort**: **large** (tied to C8).
 
-### C19. Explicit `-updated_linear` on a `-follow_material` mesh: reference vs current gradient
+### C19. Explicit `-updated_linear` on a `-follow_material` mesh: reference vs current gradient — RESOLVED 2026-10-07 (F3 T2)
+
+- **Resolution**: the `NODE_START_REFINED` reference-gradient path
+  (`c945833`) was removed; tests `materi_memory_updated_linear_current1/2`
+  (bar 0.407136 = Pro; column 0.52048 vs Pro 0.52093, in-step geometry
+  divergence, see DIVERGENCES-PROFESSIONAL.md).
 
 - **Symptom**: uniaxial stretch to twice the length, explicit
   `group_materi_memory -updated_linear` and `mesh -follow_material`:
@@ -826,7 +866,12 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
   matches the Professional `-fixed_in_space`.
 - **Effort**: **medium**.
 
-### C20. `-updated_jaumann` memory not implemented
+### C20. `-updated_jaumann` memory not implemented — RESOLVED 2026-10-08 (F3 T2)
+
+- **Resolution**: `UPDATED_JAUMANN` implemented (linear incremental strain,
+  stress rotated with R = I + 0.5(F-F^T), manual 2.2.1); simple shear
+  identical to the Professional (tests
+  `materi_memory_updated_jaumann_shear1/2`).
 
 - **Symptom**: manual Professional 6.685 lists `-updated_jaumann`; the GNU
   does not accept it.
@@ -1266,6 +1311,21 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
 - **Severity**: **LOW**. **Effort**: **cheap** (1, 2) to **medium** (3).
 ---
 
+### C41. `mohr_coul_direct7` (Pro `other`): `-total_linear` with a velocity `mpc_node_number` tie (F3, 2026-10-07)
+
+- **Corpus**: Pro `other` `mohr_coul_direct7` (exit-code pass before F3,
+  fail after). The input has `materi_displacement` and no memory record,
+  so since F3 (C18) the default memory is `-total_linear`, as in the
+  Professional. With `-total_linear` and the velocity `mpc_node_number`
+  tie of the input the GNU misses the target: node 1 sigxy GNU 0.102732
+  vs target 0.0998334 (Professional meets it; GNU before F3, default
+  `-updated_linear` with coordinate update: 0.0998328).
+- **Root cause**: not established; a separate GNU defect in the
+  `-total_linear` path with a velocity tie (the same input with an
+  explicit `-total_linear` already failed before F3).
+- **Severity**: **LOW**. **Effort**: **medium** (investigation).
+---
+
 ## D. Summary
 
 | id | corpus | item | severity | effort |
@@ -1281,13 +1341,14 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
 | B9 | sfnet | `taylor3` stale input + solver | LOW | medium |
 | B10 | sfnet | `condif2/3`, `examp1`, `incnav5`, `strconv1` targets calibrated on the legacy `convection_apply -yes` default (K03) | LOW | cheap |
 | B11 | sfnet | `incnav3` target predates the `expansion_volume` inertia density (K04) | LOW | cheap |
+| B13 | sfnet | `axisym3/4`, `contac1/2`, `examp12`, `temp4/5`, `visc_pl2` targets calibrated on the old GNU `-follow_material` default (F3) | LOW | cheap |
 | C1 | sfnet | `pruebavel` dead/malformed | LOW | cheap |
 | C2 | validation-suite | `groundflow_interface` `gvelx` sign | LOW | medium |
 | C3 | sfnet | `gforce10` 3D section sign | MEDIUM | medium |
 | C5 | — | `contact_target_geometry` index-0 alias — resolved 2026-10-07 (F2 T3a) | MEDIUM | medium |
 | C6 | validation-suite | `iface_gen*` generation-coverage gap | MEDIUM | cheap |
 | C7 | — | Mazars gamma with shear; damage + early plasticity path | MEDIUM | medium |
-| C8 | — | default `mesh` `-follow_material` vs Pro `-fixed_in_space` | MEDIUM | large |
+| C8 | — | default `mesh` `-follow_material` vs Pro `-fixed_in_space` — resolved 2026-10-07 (F3 T2) | MEDIUM | large |
 | C9 | — | `-total_linear` + compressibility: Pro time-step dependent (deliberate divergence) | LOW | cheap |
 | C10 | Pro `other` | static pore pressure tied to `post_calcul -total_pressure` in the Pro (`excavate1` target) | MEDIUM | cheap |
 | C11 | — | `control_materi_dynamic` and implicit truss dynamics vs Pro | MEDIUM | medium |
@@ -1295,9 +1356,9 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
 | C13 | — | `control_solver_bicg_stop` at the timestep index: Pro reads index 0 only (deliberate divergence) | LOW | cheap |
 | C14 | — | `element_normal`: curved quadratic sides, `node_normal`/`element_boundary`/`global_normal` not implemented (zero normal and plane MC direct return resolved) | LOW | cheap |
 | C15 | — | plane direct cut-off phi_flow factor M/G vs Pro 2 (deliberate divergence) | LOW | cheap |
-| C18 | — | default memory with `materi_displacement`: Pro behaves as `-total_linear` (column disx 0.472 vs 0.5) | MEDIUM | large |
-| C19 | — | explicit `-updated_linear` on `-follow_material`: GNU reference gradient vs Pro current | LOW | medium |
-| C20 | — | `-updated_jaumann` not implemented | LOW | medium |
+| C18 | — | default memory with `materi_displacement`: Pro behaves as `-total_linear` — resolved 2026-10-07 (F3 T2) | MEDIUM | large |
+| C19 | — | explicit `-updated_linear` on `-follow_material`: GNU reference gradient vs Pro current — resolved 2026-10-07 (F3 T2) | LOW | medium |
+| C20 | — | `-updated_jaumann` not implemented — resolved 2026-10-08 (F3 T2) | LOW | medium |
 | C21 | — | `control_materi_updated_apply -yes`: Pro ignores its manual (deliberate divergence) | LOW | cheap |
 | C22 | Pro `other` | `hypo12` marginal sigyy target miss after the default-memory change | LOW | cheap |
 | C25 | — | uninitialized-buffer audit follow-ups (`pef_vel_prev` realloc, NODE_EIGEN print, split/beam/interface/mpc/nonloc side findings) | LOW | cheap |
@@ -1315,8 +1376,9 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
 | C38 | Pro `other` | `control_support_edge_normal_stiffness_freeze` parse-only (support_edge_normal_3, 1e-9 effect) | LOW | cheap/medium |
 | C39 | Pro `other` | K17 residuals: `truss8` birth node resolved 2026-10-06 (death velocity reset open), `update2` -updated robustness, `truss13` truss_distribute_mpc, zero-force truss first iteration | LOW | cheap/large |
 | C40 | Pro `other` | element-target contact residuals after F2 T3b: no Pro check "target element has all nodes on the boundary", hex8 target sides never detected, node_boundary generated only for element-target contact | LOW | cheap/medium |
+| C41 | Pro `other` | `mohr_coul_direct7`: `-total_linear` + velocity `mpc_node_number` tie misses sigxy (F3) | LOW | medium |
 
-Forty-one items remain open: eleven MEDIUM and thirty LOW (C23 and C24 resolved 2026-10-05; C25, C26, C27 and B10 added; F1 T3 / K04 2026-10-06 added B11, C28-C32; F1 T6 resolved C28, added and resolved B12; F2 T1 added C36; F2 T2 added C37, C38, C39; F2 T3 resolved C5 and added C40). No open issue is CRITICAL or
+Thirty-nine items remain open: nine MEDIUM and thirty LOW (C23 and C24 resolved 2026-10-05; C25, C26, C27 and B10 added; F1 T3 / K04 2026-10-06 added B11, C28-C32; F1 T6 resolved C28, added and resolved B12; F2 T1 added C36; F2 T2 added C37, C38, C39; F2 T3 resolved C5 and added C40; F3 T2 resolved C8, C18, C19, C20 and added B13, C41). No open issue is CRITICAL or
 HIGH. The validation-suite corpus has no open failure — its 233 real tests
 pass (`materi_direct_mc` input corrected, C17 resolved). Every remaining failure is a stale or malformed test, an out-of-scope model
 or infrastructure limit, a narrow post-processing divergence, a corpus-coverage

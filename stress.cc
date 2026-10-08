@@ -1723,7 +1723,7 @@ void set_stress( long int element, long int gr,
         // compressibility
       if ( compressibility!=0. ) {
         if      ( memory==-TOTAL_LINEAR || memory==-UPDATED_LINEAR ||
-                  memory==-UPDATED_AREA ) {
+                  memory==-UPDATED_AREA || memory==-UPDATED_JAUMANN ) {
           // linear volumetric stress: the increment comes from inc_epe,
           // which is valid whether or not materi_strain_elasti is
           // initialized (old_epe is 0 without it, so new_epe-old_epe

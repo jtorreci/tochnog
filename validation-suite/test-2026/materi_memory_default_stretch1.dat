@@ -3,9 +3,9 @@
   velocity kinematics in 100 steps, young 1, poisson 0, NO memory record.
   The default memory uses the current-geometry deformation gradient,
   giving sigxx = 0.695653; Professional 02-08-2026 gives the same value.
-  The reference-configuration gradient that GNU uses for an EXPLICIT
-  -updated_linear on -follow_material, sigxx = 1, must NOT be used for
-  the default. Regression guard: GNU before C16 already gave 0.695653. )
+  The reference-configuration gradient (sigxx = 1) that GNU used for an
+  explicit -updated_linear until F3 was removed. Regression guard: GNU
+  before C16 already gave 0.695653. )
 echo -no
 number_of_space_dimensions 2
 materi_velocity
