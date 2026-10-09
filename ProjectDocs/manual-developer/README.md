@@ -524,3 +524,7 @@ page lists its own in "Differences with the Professional version".
 - [group_interface_groundflow_permeability](group_interface_groundflow_permeability.md) — `interface.cc` `interface_element()`: pair conductance/capacity weighted by `w_ip*iface_measure` (capacity split over the pair, implicit `C/dt`), same for `group_interface_condif_conductivity` (K04 ground9).
 - [group_materi_elasti_stress_pressure_history_factor](group_materi_elasti_stress_pressure_history_factor.md) — `stress.cc` `set_stress()`: trial `dp` factored when the step starts below the history, factor only when strictly below `sph*(1-1e-10)` (K04 stress_pressure_factor).
 - [group_materi_expansion_volume](group_materi_expansion_volume.md) — `general.cc` `general()`: the MATERI density is reduced by (1 - beta*T) as in `materi.cc` (inertia and convection now consistent with gravity; K04 incnav3).
+
+## SOLVER MEMORY (2026-10-09, F4 T7)
+
+- [solver_memory](solver_memory.md) — `so.cc` `solve()`: the dense `mat_dense` workspace added by `5b7bb8b` (allocated, zero-filled and filled on every solve; its only reader, the `dgesv_` branch of the Bi-CG retry, was dead because `mat` always existed) is removed. Corpus A/B: no result change.

@@ -175,13 +175,13 @@ void solve( long int task )
     control_options_solver_petsc_ksptype=-1, control_options_solver_petsc_pctype=-1,
     idum[1], control_eigen[2], *node_bounded=NULL, *dof_principal=NULL, 
     *node_node=NULL, *dof_label=NULL, *dof_type=NULL,
-    *element_matrix_unknowns=NULL, *ipiv=NULL, *ipiv_dense=NULL,
+    *element_matrix_unknowns=NULL, *ipiv=NULL,
     *ordered_global=NULL, *global_ordered=NULL, *ordering_has_been_done=NULL;
   int superlu_nnz=0, *nnz=NULL, **inz=NULL,  *length_inz=NULL,
     *superlu_asub=NULL, *superlu_xa=NULL;
   double max=0., tmp=0., control_eigen_scale=0., ddum[1],
     *node_eigen=NULL, *options_relaxation=NULL,
-    *mat=NULL, *mat_dense=NULL, *matlin=NULL, *matss=NULL, *w=NULL, *z=NULL, *work=NULL, 
+    *mat=NULL, *matlin=NULL, *matss=NULL, *w=NULL, *z=NULL, *work=NULL, 
     *node_lhside=NULL, *node_rhside=NULL, *element_matrix_values=NULL,  
     *element_matrix_second_values=NULL, *node_dof_new=NULL,
     **solve_A=NULL, *superlu_A=NULL, *solve_b_temp=NULL;
@@ -707,15 +707,6 @@ void solve( long int task )
       }
     }
 
-    // dense LU (dgesv) workspace: A(row,col) direct fill. Allocated
-    // ALWAYS (also for the Bi-CG path) so the retry after a Bi-CG
-    // failure can resolve with dgesv without re-filling.
-    if ( solve_nlocal>0 ) {
-      mat_dense = get_new_dbl( solve_nlocal*solve_nlocal );
-      array_set( mat_dense, 0., solve_nlocal*solve_nlocal );
-      ipiv_dense = get_new_int( solve_nlocal );
-      array_set( ipiv_dense, 0, solve_nlocal );
-    }
     // band LU workspace (dgbsv): allocated ALWAYS (also for the Bi-CG
     // path) so the retry after a Bi-CG failure can resolve with dgbsv
     // (the band pivoting handles the near-singular 3D interface systems
@@ -767,7 +758,7 @@ void solve( long int task )
     }
 
 // fill matrices in band format or profile format
-    // (also under bicg_solver: the direct-LU retry needs mat/mat_dense)
+    // (also under bicg_solver: the direct-LU retry needs mat)
     if ( band_solver || petsc_solver || superlu_solver || bicg_solver ) {
       for ( element=0; element<=max_element; element++ ) {
         if ( db_active_index( ELEMENT, element, VERSION_NORMAL ) ) {
@@ -825,9 +816,6 @@ void solve( long int task )
                 jlocal = solve_global_local[col_t[it2]];
                 if ( ilocal!=-NO && jlocal!=-NO ) {
                   double val = element_matrix_values[imat] * fac_t[it2];
-                  // dense LU fill (always, for the Bi-CG retry): A direct
-                  if ( mat_dense )
-                    mat_dense[ilocal*solve_nlocal+jlocal] += val;
                   // the band fill feeds the dgbsv direct-LU retry after a
                   // Bi-CG failure (and the -matrix_lapack route). The
                   // sparse fill below feeds SuperLU/PETSc: it must run
@@ -891,10 +879,6 @@ void solve( long int task )
             ilocal = solve_global_local[iglobal];
             jlocal = ilocal;
             if ( ilocal!=-NO ) {
-              // dense LU diagonal (always, for the Bi-CG retry)
-              if ( mat_dense && use_node_lhside )
-                mat_dense[ilocal*solve_nlocal+ilocal] +=
-                  node_lhside[ipuknwn];
               if ( mat && !petsc_solver && !superlu_solver ) {
                 ii = kl + ku + 1 + (ilocal+1) - (jlocal+1);
                 jj = jlocal + 1;
@@ -937,9 +921,9 @@ void solve( long int task )
     if      ( bicg_solver ) {
       succesful = solve_iterative_bicg( );
       // CONVERGENCE (2026-08-30): if the Bi-CG fails (3D interfaces
-      // with kn >> E, ratio 1e10), retry with the dense LU (dgesv).
-      // The dense matrix is filled alongside the band path.
-      if ( !succesful && ( mat_dense || mat ) ) {
+      // with kn >> E, ratio 1e10), retry with the band LU (dgbsv).
+      // The band matrix is filled before the iterative solve.
+      if ( !succesful && mat ) {
         static long int warned_dense = 0;
         if ( !warned_dense ) {
           pri( "Warning: Bi-CG did not converge - retrying with direct LU" );
@@ -949,20 +933,15 @@ void solve( long int task )
         // right-hand side from solve_b_temp before the direct solve
         for ( ii=0; ii<solve_nlocal; ii++ )
           solve_b[ii] = solve_b_temp[ii+1];
-        // try the band LU first (handles the near-singular 3D interface
-        // systems with pivoting); fall back to the dense LU
-        if ( mat ) {
-          n = solve_nlocal;
-          kl = band;
-          ku = band;
-          nrhs = 1;
-          dgbsv_( &n, &kl, &ku, &nrhs, mat, &ldmat, ipiv, solve_b, &n, &info );
-        }
-        else {
-          n = solve_nlocal;
-          nrhs = 1;
-          dgesv_( &n, &nrhs, mat_dense, &n, ipiv_dense, solve_b, &n, &info );
-        }
+        // band LU (handles the near-singular 3D interface systems with
+        // pivoting). The dense n*n dgesv copy that used to be filled on
+        // every solve was never read (mat always exists when n>0) and was
+        // removed in F4 T7.
+        n = solve_nlocal;
+        kl = band;
+        ku = band;
+        nrhs = 1;
+        dgbsv_( &n, &kl, &ku, &nrhs, mat, &ldmat, ipiv, solve_b, &n, &info );
         if ( info !=0 ) {
           pri( "Error with Lapack direct solver." );
           pri( "Try one of the other solver option:" );
@@ -1218,13 +1197,6 @@ if (band_solver)
         if ( disp_rhside!=NULL ) { delete[] disp_rhside; disp_rhside = NULL; }
         if ( disp_x1!=NULL ) { delete[] disp_x1; disp_x1 = NULL; }
         if ( disp_x2!=NULL ) { delete[] disp_x2; disp_x2 = NULL; }
-    if ( mat_dense )
-    {
-      delete[] mat_dense;
-      delete[] ipiv_dense;
-      mat_dense = NULL;
-      ipiv_dense = NULL;
-    }
     if ( petsc_solver ) 
 	{
       delete[] solve_solution;

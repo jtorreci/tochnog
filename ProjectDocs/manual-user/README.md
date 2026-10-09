@@ -498,3 +498,7 @@ page lists its own in "Differences with the Professional version".
 - [group_interface_groundflow_permeability](group_interface_groundflow_permeability.md) / [group_interface_groundflow_capacity](group_interface_groundflow_capacity.md) / [group_interface_condif_conductivity](group_interface_condif_conductivity.md) — per unit length/area since 2026-10-06 (K04 ground9: middle pressure 1/3 -> 0.5 as the Professional); the interface capacity is implicit.
 - [group_materi_elasti_stress_pressure_history_factor](group_materi_elasti_stress_pressure_history_factor.md) — 2026-10-06 (K04): the per-step loading/reloading decision follows the Professional (factored estimate, strict tie); Pro test stress_pressure_factor −3.10 -> −3.05.
 - [group_materi_expansion_volume](group_materi_expansion_volume.md) — volume expansion: rho = rho0*(1 - beta*T) for gravity and, since 2026-10-06 (K04 incnav3), for the inertia (mass), as the Professional.
+
+## SOLVER MEMORY (2026-10-09, F4 T7)
+
+- [solver_memory](solver_memory.md) — the default Bi-CG solver no longer allocates and zero-fills a dense n x n copy of the matrix on every solve (8 n² bytes, never read); results unchanged. `ground19_water_under_dam` (Professional `other`) now runs under a 4 GB cap.
