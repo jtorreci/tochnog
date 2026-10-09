@@ -501,4 +501,4 @@ page lists its own in "Differences with the Professional version".
 
 ## SOLVER MEMORY (2026-10-09, F4 T7)
 
-- [solver_memory](solver_memory.md) — the default Bi-CG solver no longer allocates and zero-fills a dense n x n copy of the matrix on every solve (8 n² bytes, never read); results unchanged. `ground19_water_under_dam` (Professional `other`) now runs under a 4 GB cap.
+- [solver_memory](solver_memory.md) — the default Bi-CG solver no longer allocates and zero-fills a dense n x n copy of the matrix on every solve (8 n² bytes, never read); results unchanged. `ground19_water_under_dam` (Professional `other`) now runs under a 4 GB cap. The band matrix of the direct-LU fallback is built only after a Bi-CG failure (F4 T7 B).
