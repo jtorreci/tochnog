@@ -8,7 +8,7 @@ through `scripts/remote_run.sh`.
 ## Tasks
 - [x] T1 TPL + K10: align `groundflow_total_pressure_limit` with manual 6.587 / Pro (default 0, cap the calculated total pressure, zero the groundflow velocity where reached, never cut the `pres` dof). Owner decision 2026-10-07. Route: delegated writer.
 - [x] T2 C41: `mohr_coul_direct7` (`-total_linear` + velocity `mpc_node_number` tie: unequal disy at tied nodes). Route: same writer after T1.
-- [ ] T3 C33: `set_stress` reads DTIME from VERSION_NORMAL (previous dt) → `_visco` direct law does not cut in the first step; principal tension cap ignores `_visco`. Route: same writer.
+- [x] T3 C33: `set_stress` reads DTIME from VERSION_NORMAL (previous dt) → `_visco` direct law does not cut in the first step; principal tension cap ignores `_visco`. Route: same writer.
 - [ ] T4 C31 + K20: quadrature design (TET10 nodal rule degree 1; axisymmetric quad4 forced 1-point rule). Route: read-only investigator + omen A/B, then decision.
 - [ ] T5 C35/K02: integration-point state one-iteration lag. Investigation.
 - [ ] T6 Open-cause clusters: K14 (hypoplasticity history/stress path), K15 (MC/DP/von Mises), K24 (3D consolidation `large2`), K21 (Navier-Stokes), C7 (Mazars), C11 (dynamics), C3 (3D section sign), C6 (iface_gen coverage). Investigations, one by one.
@@ -40,5 +40,12 @@ docs + SEGUIMIENTO + BACKLOG + DIVERGENCES.
   mohr_coul_direct7 sigxy 0.0998334 = Pro, tied nodes equal; residual
   disy/sigzz difference -> DIVERGENCES/BACKLOG C41. build_safe 144 OK /
   0 FALLO; A/B t1->t2: only mohr_coul_direct7 and the new test fixed
-  (ho_mech1 timeout flake).
+  (ho_mech1 timeout flake). Commit c4836d5.
+- T3 (route: same writer, inline stress.cc): DTIME VERSION_NEW in
+  set_stress (also the lambda*dtime of the incremental visco laws, Pro
+  confirmed), visco factor on the principal tension cap, separate
+  tension/MC factors in full mode (Pro probes mcstv/mcsboth). Evidence:
+  14 probes = Pro; build_safe 148 OK / 0 FALLO; A/B t2->t3 only the 4 new
+  tests change. No other dt mismatch in set_stress (dtime feeds only the
+  visco laws and the three direct cut-offs).
 

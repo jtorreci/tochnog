@@ -1115,7 +1115,14 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
   random sequence; no fix.
 
 
-### C33. `_visco` direct cut-offs: one-step-lagged relaxation time step and no visco on the principal tension cap
+### C33. `_visco` direct cut-offs: one-step-lagged relaxation time step and no visco on the principal tension cap — RESOLVED 2026-10-09 (F4 T3)
+
+- **Resolution**: `set_stress()` reads `DTIME` at `VERSION_NEW`; the
+  principal tension cap applies the tension `_visco` factor; in the full
+  principal mode each law relaxes with its own `_visco` record. 12 direct
+  probes and 2 incremental viscoplastic probes equal to the Professional
+  02-08-2026; tests `materi_direct_visco_first_step1/2`,
+  `materi_direct_visco_separate1`, `materi_plasti_visco_power_dt1`.
 
 - **Symptom** (F1 T4, K13 probes on the Professional 02-08-2026, single
   quad4, E 1, nu 0.25, tension_direct 1e-3, `_visco` tm 2, eps_xx 2e-3 in
@@ -1382,7 +1389,7 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
 | C30 | Pro `other` | `mohr_coul_direct4`: Pro does not enforce the interface MC strength (deliberate divergence, GNU = manual 6.632) | LOW | — |
 | C31 | Pro `other` | `tet10` nodal quadrature only degree 1 (`tet10_2` gravity); F4 (design + corpus A/B) | MEDIUM | medium |
 | C32 | Pro `other` | `axisym9` (K20 1-point axisymmetric rule, F4), `distri2` (random generator): not GNU defects | LOW | — |
-| C33 | — | `_visco` direct cut-offs: `DTIME` from the previous step, no visco on the principal tension cap; F4 | MEDIUM | cheap/medium |
+| C33 | — | `_visco` direct cut-offs: `DTIME` from the previous step, no visco on the principal tension cap — resolved 2026-10-09 (F4 T3) | MEDIUM | cheap/medium |
 | C34 | — | direct cut shear plastic strain: Pro twice the tensor value (deliberate divergence) | LOW | — |
 | C35 | — | one-iteration lag of the whole material state (K02, `spring4` 1 iteration) — parked, design; F4 | MEDIUM | medium/large |
 | C36 | validation-suite | `young_power` + `young`: Pro adds both stiffnesses, manual says law = modulus (K06) — decided 2026-10-06: deliberate divergence (GNU = manual), no code change | LOW | cheap |
@@ -1392,7 +1399,7 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
 | C40 | Pro `other` | element-target contact residuals after F2 T3b: no Pro check "target element has all nodes on the boundary", hex8 target sides never detected, node_boundary generated only for element-target contact | LOW | cheap/medium |
 | C41 | Pro `other` | `mohr_coul_direct7`: `-total_linear` + velocity `mpc_node_number` tie — tie resolved 2026-10-09 (F4 T2); residual disy/sigzz difference | LOW | medium |
 
-Thirty-nine items remain open: nine MEDIUM and thirty LOW (C23 and C24 resolved 2026-10-05; C25, C26, C27 and B10 added; F1 T3 / K04 2026-10-06 added B11, C28-C32; F1 T6 resolved C28, added and resolved B12; F2 T1 added C36; F2 T2 added C37, C38, C39; F2 T3 resolved C5 and added C40; F3 T2 resolved C8, C18, C19, C20 and added B13, C41). No open issue is CRITICAL or
+Thirty-eight items remain open: eight MEDIUM and thirty LOW (C23 and C24 resolved 2026-10-05; C25, C26, C27 and B10 added; F1 T3 / K04 2026-10-06 added B11, C28-C32; F1 T6 resolved C28, added and resolved B12; F2 T1 added C36; F2 T2 added C37, C38, C39; F2 T3 resolved C5 and added C40; F3 T2 resolved C8, C18, C19, C20 and added B13, C41; F4 T2 fixed the C41 tie and left a residual; F4 T3 resolved C33). No open issue is CRITICAL or
 HIGH. The validation-suite corpus has no open failure — its 233 real tests
 pass (`materi_direct_mc` input corrected, C17 resolved). Every remaining failure is a stale or malformed test, an out-of-scope model
 or infrastructure limit, a narrow post-processing divergence, a corpus-coverage

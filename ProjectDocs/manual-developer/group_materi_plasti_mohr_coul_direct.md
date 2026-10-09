@@ -131,12 +131,13 @@ The direct records have TWO modes selected by the presence of a plane normal:
   drifts slowly below the strength (0.410 at t = 100). Not imitated: no
   code change, the manual decides.
 
-- **`_visco` direct cut-offs** (known difference, not decided; BACKLOG C33).
-  GNU: Relaxation factor uses the previous step's `DTIME` (no cut in the
-  first step); no visco on the principal tension cap. Professional
-  02-08-2026: 1 - exp(-dt/tm) with the current step (sigxx 1.84914e-3 vs GNU
-  1e-3). Status: Scheduled for F4, project owner 2026-10-06. Index:
-  [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).
+- **`_visco` direct cut-offs**: resolved in F4 T3 (2026-10-09, BACKLOG
+  C33). The relaxation factor 1 - exp(-dt/tm) uses the time step of the
+  CURRENT step and each law relaxes with its own `_visco` record (tension
+  cap with `tension_direct_visco`, Mohr-Coulomb cut with
+  `mohr_coul_direct_visco`, compression with `compression_direct_visco`),
+  as in the Professional 02-08-2026 (12 probes equal, e.g. sigxx
+  1.849143e-3 in the first step). No known difference left.
 - **3 values in `group_materi_plasti_*_direct_normal` in 2D** (GNU extension
   / input dialect; manual pages only). GNU: Accepts up to 3 values in any
   dimension (`data_length` 3, `fixed_length` 0 in `database.cc`); the use of
@@ -254,3 +255,23 @@ acoplamiento de la mecánica mixta 1D (la tensión transversal σyy del GNU
 se relaja vía Poisson hasta −12.6 mientras el Professional la mantiene
 congelada en el reset −30, y la integración temporal acumula ~1.58× el
 desplazamiento del Pro) — diagnóstico fino en el reporte del sprint.
+
+## Visco relaxation (F4 T3, 2026-10-09)
+
+- `set_stress()` (stress.cc) reads `DTIME` at `VERSION_NEW`: the step from
+  t to t+dt (manual 6.728). The same `dtime` feeds the incremental
+  viscoplastic laws (`lambda*dtime`, `group_materi_plasti_visco_power` /
+  `_exponential`): Professional 02-08-2026 1D bar, tension 1, visco_power
+  0.1 1, dt 0.5 then 1: sigxx 2.666667 (old GNU 2.818182).
+- `direct_cap_principal_values( w, sigy, factor )`: w_i -= factor (w_i -
+  sigy). `materi_direct_full_mc()` keeps two factors: `factor_ten`
+  (`tension_direct_visco`, only when the tension record exists) for the
+  cap, `factor` (`mohr_coul_direct_visco`) for the MC cut;
+  `materi_direct_principal_cap()` gets `factor_ten` from
+  `materi_direct_cutoff()`. Verified on the Professional: MC visco only ->
+  full cap (sigxx -1.2e-3) + relaxed MC (sigxy 1.1213e-3); tension visco
+  only -> relaxed cap + full MC (sigxy 1e-3); both (tm 4 / 2) -> sigxx
+  -2.654391e-4, sigxy 1.688146e-3.
+- Tests: `test-2026/materi_direct_visco_first_step1/2`,
+  `materi_direct_visco_separate1`, `materi_plasti_visco_power_dt1`.
+

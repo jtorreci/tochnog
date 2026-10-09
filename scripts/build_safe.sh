@@ -1398,6 +1398,19 @@ run_ok "$T2026" groundflow_velocity_dry2
 #   sigxy 0.0998334 at nodes 1 and 2 (= Pro; old GNU 0.102732 /
 #   0.096935, the slave disy lagged one solve).
 run_ok "$T2026" mohr_coul_direct_mpc_total1
+# F4 T3 / C33 (2026-10-09): set_stress reads DTIME at VERSION_NEW and the
+#   principal tension cap honours _visco; each direct law relaxes with its
+#   own _visco record (values = Professional 02-08-2026):
+#   materi_direct_visco_first_step1: tension_direct, 1 step dt 1: sigxx
+#     1.849143e-3 (old 1e-3); _first_step2: compression_direct, dt 0.5
+#     then 1: -2.550147e-3 (old -3.024897e-3); _separate1: full MC + tension
+#     cap, tm 2 / 4: sigxx -2.654391e-4, sigxy 1.688146e-3 (old -1.2e-3 /
+#     1.2e-3); materi_plasti_visco_power_dt1: 1D visco_power, dt 0.5 then 1:
+#     sigxx 2.666667 (old 2.818182).
+run_ok "$T2026" materi_direct_visco_first_step1
+run_ok "$T2026" materi_direct_visco_first_step2
+run_ok "$T2026" materi_direct_visco_separate1
+run_ok "$T2026" materi_plasti_visco_power_dt1
 
 # ---------------------------------------------------------------------
 # K03 (2026-10-06): default convection_apply -no (manual Professional

@@ -1,0 +1,31 @@
+( F4 T3 / C33: tension_direct 1e-3 with _visco tm 2 on one plane-strain quad4,
+  E 1, nu 0.25, eps_xx 2e-3 in ONE step dt 1. The visco cut relaxes with
+  1-exp-dt/tm of the CURRENT step, manual 6.728, and the principal tension
+  cap honours the _visco factor: sigxx = 2.4e-3 - 0.393469 x 1.4e-3 =
+  1.849143e-3 = Professional 02-08-2026. Old GNU: 1e-3, full cut. )
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_stress
+end_initia
+node 1  0 0
+node 2  1 0
+node 3  0 1
+node 4  1 1
+element 1  -quad4 1 2 3 4
+group_type 0  -materi
+group_materi_elasti_young 0  1.
+group_materi_elasti_poisson 0  0.25
+group_materi_plasti_tension_direct 0  1.e-3
+group_materi_plasti_tension_direct_visco 0  2.
+mesh -fixed_in_space -fixed_in_space
+bounda_dof 0  -ra 1 3 -ra -velx
+bounda_time 0  0.
+bounda_dof 1  -ra 2 4 -ra -velx
+bounda_time 1  2.e-3
+bounda_dof 2  -ra 1 2 3 4 -ra -vely
+bounda_time 2  0.
+control_timestep 0  1. 1.
+target_item 0 -node_dof 1 -sigxx
+target_value 0 1.849143e-3 1.e-8
+end_data

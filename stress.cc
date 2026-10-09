@@ -97,13 +97,16 @@ void materi_compression_cutoff( long int element, long int gr,
 // Shared by the full principal cut-off (materi_direct_full_mc) and by the
 // plane mode when the tension law has no plane normal of its own
 // (materi_direct_principal_cap). Returns 1 when a value was capped.
-long int direct_cap_principal_values( double w[], double sigy )
+// factor is the _visco relaxation 1-exp(-dtime/tm) (1 = full cut; C33,
+// verified against the Professional 02-08-2026: tension_direct 1e-3 with
+// _visco tm 2, one step dt 1, sigxx 2.4e-3 -> 1.84914e-3).
+long int direct_cap_principal_values( double w[], double sigy, double factor )
 
 {
   long int i=0, any_cut=0;
 
   for ( i=0; i<3; i++ ) {
-    if ( w[i]>sigy ) { w[i] = sigy; any_cut = 1; }
+    if ( w[i]>sigy ) { w[i] -= factor*( w[i]-sigy ); any_cut = 1; }
   }
   return any_cut;
 }
@@ -112,7 +115,8 @@ long int direct_cap_principal_values( double w[], double sigy )
 // law has no own normal: cap the principal stresses at sigy (verified
 // against the Professional 02-08-2026: mohr_coul_direct_normal without a
 // tension normal cuts the principal tension first, then the MC plane).
-void materi_direct_principal_cap( double new_sig[], double sigy )
+void materi_direct_principal_cap( double new_sig[], double sigy,
+  double factor )
 
 {
   long int idim=0, jdim=0, kdim=0, nrot=0;
@@ -120,7 +124,7 @@ void materi_direct_principal_cap( double new_sig[], double sigy )
 
   array_move( new_sig, sig_work, MDIM*MDIM );
   matrix_jacobi( sig_work, 3, d, v, &nrot );
-  if ( !direct_cap_principal_values( d, sigy ) ) return;
+  if ( !direct_cap_principal_values( d, sigy, factor ) ) return;
   // sigma = V diag(d) V^T  (V columns are eigenvectors)
   for ( idim=0; idim<MDIM; idim++ )
     for ( jdim=0; jdim<MDIM; jdim++ ) {
@@ -164,8 +168,8 @@ void materi_direct_full_mc( long int element, long int gr,
 {
   long int idim=0, jdim=0, kdim=0, nrot=0, mc_present=0, ten_present=0,
     ldum=0;
-  double phi=0., c=0., phi_flow=0., sigy=0., factor=1., tm=0., young=0.,
-    poisson=0., lambda_lame=0., gmod=0.,
+  double phi=0., c=0., phi_flow=0., sigy=0., factor=1., factor_ten=1.,
+    tm=0., young=0., poisson=0., lambda_lame=0., gmod=0.,
     sig_work[MDIM*MDIM], d[MDIM], v[MDIM*MDIM],
     plasti_data[DATA_ITEM_SIZE], ten_data[DATA_ITEM_SIZE];
 
@@ -200,13 +204,22 @@ void materi_direct_full_mc( long int element, long int gr,
     if ( get_group_data( GROUP_MATERI_PLASTI_TENSION_DIRECT_WALL, gr,
         element, new_sig, ten_data, ldum, GET_IF_EXISTS ) )
       sigy = ten_data[0];
-  // visco relaxation: factor 1-exp(-dtime/tm); f->0 elastic, f->1 full cut
+  // visco relaxation: factor 1-exp(-dtime/tm); f->0 elastic, f->1 full
+  // cut. Each law relaxes with its OWN _visco record: the tension cap with
+  // tension_direct_visco, the Mohr-Coulomb cut with mohr_coul_direct_visco
+  // (C33, verified against the Professional 02-08-2026 on a sheared quad4,
+  // c 1e-3, phi 0: MC visco only -> full tension cap + relaxed MC; tension
+  // visco only -> relaxed cap + full MC; both with tm 4 / 2 -> sigxy
+  // 1.6881e-3).
   if ( get_group_data( GROUP_MATERI_PLASTI_MOHR_COUL_DIRECT_VISCO, gr,
-      element, new_sig, plasti_data, ldum, GET_IF_EXISTS ) ||
-       get_group_data( GROUP_MATERI_PLASTI_TENSION_DIRECT_VISCO, gr,
       element, new_sig, plasti_data, ldum, GET_IF_EXISTS ) ) {
     tm = plasti_data[0];
     factor = 1. - exp( -dtime / ( (tm>0.) ? tm : 1. ) );
+  }
+  if ( ten_present && get_group_data( GROUP_MATERI_PLASTI_TENSION_DIRECT_VISCO,
+      gr, element, new_sig, plasti_data, ldum, GET_IF_EXISTS ) ) {
+    tm = plasti_data[0];
+    factor_ten = 1. - exp( -dtime / ( (tm>0.) ? tm : 1. ) );
   }
 
   array_move( new_sig, sig_work, MDIM*MDIM );
@@ -224,7 +237,8 @@ void materi_direct_full_mc( long int element, long int gr,
           tmp = order[i]; order[i] = order[j]; order[j] = (long int)tmp;
         }
     // 1) tension cap: principal stresses higher than sigy are cut off
-    if ( tension_cap && direct_cap_principal_values( w, sigy ) ) any_cut = 1;
+    if ( tension_cap && direct_cap_principal_values( w, sigy, factor_ten ) )
+      any_cut = 1;
     // re-sort after the cap (capping the maximum can change the order)
     for ( i=0; i<3; i++ )
       for ( j=i+1; j<3; j++ )
@@ -472,7 +486,7 @@ void materi_direct_cutoff( long int element, long int gr,
       }
     }
     else
-      materi_direct_principal_cap( new_sig, sigy );
+      materi_direct_principal_cap( new_sig, sigy, factor_ten );
   }
 
   // 2) Mohr-Coulomb step
@@ -708,7 +722,13 @@ void set_stress( long int element, long int gr,
     assert( f_ref!=0. );
   }
 
-  db( DTIME, 0, idum, &dtime, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+  // time step of the CURRENT step (VERSION_NEW, as every other module):
+  // the _visco direct cut-offs relax with 1-exp(-dt/tm) over the step from
+  // t to t+dt (manual Professional 6.728) and the viscoplastic laws
+  // integrate lambda*dt over the same step. VERSION_NORMAL held the
+  // previous step's dt (0 in the first step: no visco relaxation at all;
+  // C33, verified against the Professional 02-08-2026).
+  db( DTIME, 0, idum, &dtime, ldum, VERSION_NEW, GET_IF_EXISTS );
   // control_materi_plasti_visco_apply -no (manual Professional 6.151):
   // ignore any visco-plasticity data for these timesteps
   if ( control_materi_gate_off( CONTROL_MATERI_PLASTI_VISCO_APPLY ) )
