@@ -1383,7 +1383,7 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
   the solution is unchanged). **Effort**: **medium** (the per-element
   physical fit, plus the `cd_method` analysis).
 
-### C43. Memory hogs of the default Bi-CG solver (F4 T7, 2026-10-09) — RESOLVED
+### C43. Memory hogs of the default Bi-CG solver (F4 T7, 2026-10-09) — memory RESOLVED; solver-speed residual open
 
 - **Symptom**: five Professional `other` inputs (`force11`, `large1`,
   `ground19_water_under_dam`, `mesh_activate1`,
@@ -1402,6 +1402,16 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
 - **Root cause C** (`mesh_activate1`): `control_mesh_macro` on the
   `control_timestep` index added a mesh copy per step. **Resolved** in
   F4 T7 C (C44).
+- **Measured** (omen, 12 GB cap, old -> new, Professional): `force11`
+  bad_alloc 7.8 GB -> 0.27 GB (Pro 0.27 GB); `large1` bad_alloc -> rc 0,
+  0.65 GB, 58 s (Pro 1.3 GB, 9 s); `ground19` 5.2 -> 0.12 GB (Pro 0.17);
+  `mesh_activate1` 11.9 GB bad_alloc -> 0.035 GB, 29 s (Pro 0.07 GB, 26 s);
+  `foundation_consolidation_settlement` bad_alloc -> 1.5 GB, timeout 600 s
+  (Pro timeout too). Table: `manual-developer/solver_memory.md`.
+- **Residual (open, solver speed, not memory)**: `force11` (one 3D solve)
+  does not converge with the Bi-CG within 600 s (Pro PARDISO 13 s);
+  `foundation_consolidation_settlement` breaks the Bi-CG down on every
+  solve and runs the band LU retry (1.5 GB).
 
 ### C44. One-shot mesh records re-applied on every time step (F4 T7, 2026-10-09) — RESOLVED
 

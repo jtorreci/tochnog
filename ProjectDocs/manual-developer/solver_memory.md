@@ -71,6 +71,37 @@ build) 158 OK / 0 FALLO; corpus A/B on omen (A -> A+B): only round-off in the re
 solves listed above, and `force11` now starts solving (bad_alloc ->
 Bi-CG over the 120 s corpus slot).
 
+## Measurements (omen, one input at a time, 12 GB cap, timeout 600 s)
+
+Professional `other` inputs; old = `225d536`, new = `ab99338` (A+B+C);
+Professional 02-08-2026 from the F4 T7 investigation (same script).
+Peak RSS from `/usr/bin/time -v` (new `force11` / `foundation...`: VmHWM
+sampled over 140 s, the runs hit the timeout).
+
+| input | old rc / RSS / wall | new rc / RSS / wall | Pro rc / RSS / wall |
+|---|---|---|---|
+| `force11` | 134 bad_alloc / 7.8 GB / 43 s | 124 timeout / 0.27 GB / >600 s | 0 / 0.27 GB / 13 s |
+| `large1` | 134 bad_alloc / 0.65 GB / 25 s | 0 / 0.65 GB / 58 s | 0 / 1.3 GB / 9 s |
+| `ground19_water_under_dam` | 0 / 5.2 GB / 20 s | 0 / 0.12 GB / 18 s | 0 / 0.17 GB / 3 s |
+| `mesh_activate1` | 134 bad_alloc / 11.9 GB / 279 s | 1 (target, node numbering) / 0.035 GB / 29 s | 0 / 0.07 GB / 26 s |
+| `foundation_consolidation_settlement` | 134 bad_alloc / 0.19 GB / 7 s | 124 timeout / 1.5 GB / >600 s | 124 timeout / - / >600 s |
+
+Results vs the Professional: `ground19` meets its target (rc 0) as the
+Professional; `mesh_activate1` 202 nodes and integrated `veliy` equal to
+5e-10 (its target names a node number of the Professional macro
+numbering; final `vely` differs, BACKLOG C46); `large1` has no target
+and no database. Open: `force11` (one 3D solve) and
+`foundation_consolidation_settlement` (Bi-CG breaks down, band LU retry
+on every solve) are now limited by the solver speed, not memory
+(BACKLOG C43).
+
+Corpus wall time (omen, 6 jobs, tests with rc 0 on both binaries), old
+-> new: Pro other 590.2 -> 552.8 s (250 tests), sfnet 182.9 -> 176.2 s
+(173), test-2026 35.6 -> 24.5 s (99, `mesh_macro_timestep1` 11 -> 0.9 s),
+validation-suite 29.9 -> 31.3 s (233, noise); total 838.6 -> 784.8 s
+(-6 %). Largest gains: `force5` 8.0 -> 3.0 s, `force9` 51 -> 46 s,
+`taylor3` 92 -> 84 s, `large2` 55 -> 50 s.
+
 ## External features / libraries
 
 - LAPACK `dgbsv_` (band LU).
