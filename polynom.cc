@@ -571,14 +571,12 @@ void pol( long int element, long int element_group,
       integration_points = -MINIMAL;
     else
       integration_points = -MAXIMAL;
-    if ( axisymmetric==-YES && materi_velocity ) {
-      if ( npol>2 ) {
-        pri( "Error, not available for axisymmetric analysis: ", name );
-        exit_tn_on_error();
-      }
-      integration_method = -GAUSS;
-      integration_points = -MINIMAL;
-    }
+    // K20 (F4 T4, 2026-10-09): no forced 1-point rule for axisymmetric
+    // materi_velocity and no refusal of the quadratic elements. The
+    // Professional 02-08-2026 integrates the axisymmetric quad4 with 2x2
+    // and the quad9 with 3x3 Gauss (the default rule below); the 1-point
+    // rule made the hoop term element-constant (axisym2 ring 1.000e-3 vs
+    // analytic/Pro 1.0498e-3) and left the quad4 hourglass modes free.
     db( GROUP_INTEGRATION_POINTS, element_group, &integration_points, ddum, 
       ldum, VERSION_NORMAL, GET_IF_EXISTS );
     db( GROUP_INTEGRATION_METHOD, element_group, &integration_method, ddum, 

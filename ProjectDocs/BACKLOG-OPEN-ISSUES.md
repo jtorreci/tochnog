@@ -1100,20 +1100,21 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
 - **Severity**: **MEDIUM** (wrong quadratic-tet results under body
   loads/bending). **Effort**: **medium**.
 
-### C32. K04 targets that are not GNU defects (`axisym9`, `distri2`)
+### C32. K04 targets that are not GNU defects (`axisym9`, `distri2`) — CLOSED 2026-10-09 (F4 T4)
 
-- `axisym9` (post_point sigxx 0.00158902 vs 0.0015915 +/- 1e-6): the field
-  is uniform in both binaries; the GNU total ring force is 0.16 % low
-  because `polynom.cc` forces 1-point Gauss for axisymmetric
-  `materi_velocity` quad4 (element-constant hoop term, audit K20). Not the
-  `post_point_dof` convention. Decision belongs to K20, moved to **F4**
-  (design + corpus A/B; project owner, 2026-10-06).
-- `distri2` (post_point temp 0.998933 vs 0.999774 +/- 1e-4):
-  `control_distribute -normal` random field; both binaries draw a valid
-  N(1, 2e-3) (GNU mean 0.99995 / std 0.00203, Pro 0.99997 / 0.00201)
-  from different random generators. The target encodes the Professional
-  random sequence; no fix.
-
+- **Closure (F4 T4)**: neither target is a GNU defect and nothing is left
+  to do here.
+  - `axisym9`: the row was stale. The GNU already gave post_point sigxx
+    0.00159154943 = Professional (0.001591549431; target 0.0015915 +/-
+    1e-6) before F4 T4; the 0.00158902 of F1 T3 predates the Gauss
+    alignment of the recovery. The forced 1-point axisymmetric rule
+    (audit K20) it was attributed to was removed in F4 T4 and the value
+    stays 0.00159154943.
+  - `distri2` (post_point temp 0.998933 vs 0.999774 +/- 1e-4):
+    `control_distribute -normal` random field; both binaries draw a valid
+    N(1, 2e-3) (GNU mean 0.99995 / std 0.00203, Pro 0.99997 / 0.00201)
+    from different random generators. The target encodes the
+    Professional random sequence; no fix (DIVERGENCES DISTRI, class C).
 
 ### C33. `_visco` direct cut-offs: one-step-lagged relaxation time step and no visco on the principal tension cap — RESOLVED 2026-10-09 (F4 T3)
 
@@ -1345,6 +1346,30 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
   `-total_linear` path with a velocity tie (the same input with an
   explicit `-total_linear` already failed before F3).
 - **Severity**: **LOW**. **Effort**: **medium** (investigation).
+### C42. quad4 nodal stress recovery: natural-coordinate bilinear interpolation (GNU) vs physical-coordinate linear least squares (Professional) (F4 T4, 2026-10-09)
+
+- **Symptom** (F4 T4 investigation, after the K20 fix): on rectangles in
+  plane analyses both programs agree; on distorted quad4 and on
+  axisymmetric rings the nodal stresses differ although the
+  displacements and the integration-point stresses are equal.
+  Distorted 4x4 axisymmetric patch `hg4d`: nodal stresses 3-7 % apart;
+  Akin ring (`axisym2`, test `test-2026/axisym_quad4_ring1`): inner sigzz
+  GNU 10760.09, Professional 10759.22 (disx equal to 1e-12).
+- **Root cause**: `sri_stress_recovery_weight()` (`miscel.cc`) recovers
+  the quad4 by the bilinear `1,xi,eta,xi*eta` interpolation of the 2x2
+  Gauss values in the natural coordinates (identified on a rectangle,
+  2026-09-13). The Professional fits `1,x,y` by uniform-weight least
+  squares in the PHYSICAL coordinates of the points and evaluates it at
+  the physical node (the two coincide on a rectangle up to the xy term).
+- **Experiment** (variant v4 of the F4 T4 investigation, scratch build):
+  the physical-coordinate fit reproduced the Professional `axisym2`
+  sigzz (10759.2155) and moved the distorted `hg4d` nodal stresses
+  towards the Professional, but changed the exit code of `cd_method`
+  (validation-suite, pass -> fail), so it was not adopted with K20.
+- **Severity**: **LOW** (post-processing of the nodal stress field only;
+  the solution is unchanged). **Effort**: **medium** (the per-element
+  physical fit, plus the `cd_method` analysis).
+
 ---
 
 ## D. Summary
@@ -1388,7 +1413,7 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
 | C29 | Pro `other` | `group_condif_conductivity` per-direction values (condif11) not parsed | LOW | cheap/medium |
 | C30 | Pro `other` | `mohr_coul_direct4`: Pro does not enforce the interface MC strength (deliberate divergence, GNU = manual 6.632) | LOW | — |
 | C31 | Pro `other` | `tet10` nodal quadrature only degree 1 (`tet10_2` gravity); F4 (design + corpus A/B) | MEDIUM | medium |
-| C32 | Pro `other` | `axisym9` (K20 1-point axisymmetric rule, F4), `distri2` (random generator): not GNU defects | LOW | — |
+| C32 | Pro `other` | `axisym9` (stale row, already = Pro), `distri2` (random generator): not GNU defects — closed 2026-10-09 (F4 T4) | LOW | — |
 | C33 | — | `_visco` direct cut-offs: `DTIME` from the previous step, no visco on the principal tension cap — resolved 2026-10-09 (F4 T3) | MEDIUM | cheap/medium |
 | C34 | — | direct cut shear plastic strain: Pro twice the tensor value (deliberate divergence) | LOW | — |
 | C35 | — | one-iteration lag of the whole material state (K02, `spring4` 1 iteration) — parked, design; F4 | MEDIUM | medium/large |
@@ -1398,8 +1423,9 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
 | C39 | Pro `other` | K17 residuals: `truss8` birth node resolved 2026-10-06 (death velocity reset open), `update2` -updated robustness, `truss13` truss_distribute_mpc, zero-force truss first iteration | LOW | cheap/large |
 | C40 | Pro `other` | element-target contact residuals after F2 T3b: no Pro check "target element has all nodes on the boundary", hex8 target sides never detected, node_boundary generated only for element-target contact | LOW | cheap/medium |
 | C41 | Pro `other` | `mohr_coul_direct7`: `-total_linear` + velocity `mpc_node_number` tie — tie resolved 2026-10-09 (F4 T2); residual disy/sigzz difference | LOW | medium |
+| C42 | Pro `other` | quad4 nodal stress recovery: natural bilinear (GNU) vs physical linear least squares (Pro); distorted/axisymmetric quad4 (`axisym2` sigzz 10760.09 vs 10759.22) | LOW | medium |
 
-Thirty-eight items remain open: eight MEDIUM and thirty LOW (C23 and C24 resolved 2026-10-05; C25, C26, C27 and B10 added; F1 T3 / K04 2026-10-06 added B11, C28-C32; F1 T6 resolved C28, added and resolved B12; F2 T1 added C36; F2 T2 added C37, C38, C39; F2 T3 resolved C5 and added C40; F3 T2 resolved C8, C18, C19, C20 and added B13, C41; F4 T2 fixed the C41 tie and left a residual; F4 T3 resolved C33). No open issue is CRITICAL or
+Thirty-eight items remain open: eight MEDIUM and thirty LOW (C23 and C24 resolved 2026-10-05; C25, C26, C27 and B10 added; F1 T3 / K04 2026-10-06 added B11, C28-C32; F1 T6 resolved C28, added and resolved B12; F2 T1 added C36; F2 T2 added C37, C38, C39; F2 T3 resolved C5 and added C40; F3 T2 resolved C8, C18, C19, C20 and added B13, C41; F4 T2 fixed the C41 tie and left a residual; F4 T3 resolved C33; F4 T4 closed C32 and added C42). No open issue is CRITICAL or
 HIGH. The validation-suite corpus has no open failure — its 233 real tests
 pass (`materi_direct_mc` input corrected, C17 resolved). Every remaining failure is a stale or malformed test, an out-of-scope model
 or infrastructure limit, a narrow post-processing divergence, a corpus-coverage

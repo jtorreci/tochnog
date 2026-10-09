@@ -1411,6 +1411,20 @@ run_ok "$T2026" materi_direct_visco_first_step1
 run_ok "$T2026" materi_direct_visco_first_step2
 run_ok "$T2026" materi_direct_visco_separate1
 run_ok "$T2026" materi_plasti_visco_power_dt1
+# F4 T4 / K20 (2026-10-09): no forced 1-point rule for axisymmetric
+#   materi_velocity (polynom.cc pol(), calcul_force.cc msf_element_rule);
+#   quad4 2x2 / quad9 3x3 Gauss as the Professional 02-08-2026:
+#   axisym_quad4_hourglass1: 4x4 quad4 ring patch, point load: post_point
+#     disx 2.657533803232e-4, disy -4.380511327008e-4 (= Pro; old GNU
+#     hourglass ~1e12, solver did not converge);
+#   axisym_quad4_ring1: Akin thick ring: disx 1.081776788020e-2 (= Pro),
+#     sigzz 10760.09 vs Pro 10759.22 +- 1 (quad4 recovery, BACKLOG C42;
+#     old GNU 1.08238e-2 / 10000);
+#   axisym_quad9_uniform1: quad9 no longer refused: sigxx = sigzz = 1000,
+#     disx 500 (analytic; old GNU "not available for axisymmetric").
+run_ok "$T2026" axisym_quad4_hourglass1
+run_ok "$T2026" axisym_quad4_ring1
+run_ok "$T2026" axisym_quad9_uniform1
 
 # ---------------------------------------------------------------------
 # K03 (2026-10-06): default convection_apply -no (manual Professional
@@ -1891,7 +1905,9 @@ fi
 # factor 2*PI*r pequeno - bug documentado; SIGNED desde el lote 1 del
 # sprint 12: la pared esta a compresion, nors = -0.5 con la convencion
 # tension-positiva del Professional - el check compara MAGNITUDES).
-# she = 0, mom ~ 0.
+# she = 0, mom ~ 0 (F4 T4 / K20: with the 2x2 rule the face moment is
+# 1/960 ~ 0.00104, the analytic value of the 2*PI*r-weighted section;
+# the former 1-point rule gave 0).
 MSF_AX_OK=1
 awk '!/^#/ && NF==10 { n=$4; if (n<0) n=-n; d=n-0.5; if (d<0) d=-d; m=$10; if (m<0) m=-m;
        if (d>0.005 || $7>1.e-6 || m>0.005) bad=1 }

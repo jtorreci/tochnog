@@ -15,7 +15,15 @@ one point per node direction:
 | quad4 / hex8 | 2x2 / 2x2x2 Gauss |
 | quad9 / hex27 | 3x3 / 3x3x3 Gauss |
 
-This matches the Tochnog Professional default. The `group_integration_method`
+This matches the Tochnog Professional default. Axisymmetric element groups
+(`group_axisymmetric -yes`) use the same default since F4 T4 (2026-10-09):
+the quad4 is integrated with 2x2 Gauss and the quad9 with 3x3 Gauss, as the
+Professional does. Before, the GNU forced a 1-point rule for axisymmetric
+`materi_velocity` and refused the quadratic elements ("not available for
+axisymmetric analysis"); the hoop term was then constant over the element
+and the quad4 hourglass modes were not restrained.
+
+The `group_integration_method`
 and `group_integration_points` records still override it per element group
 (`-gauss`, `-lobatto`, `-reduced`, and `-minimal` / `-maximal` / `-normal`).
 The reduced method and the SRI keyword are unchanged.
@@ -47,12 +55,14 @@ target if the new value matches the Professional.
   (`tet10_2` gravity sigzz -0.894). Professional 02-08-2026: Exact (-1).
   Status: Scheduled for F4 (design + corpus A/B), project owner 2026-10-06.
   Index: [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).
-- **axisymmetric hoop (zz) values, `materi_velocity` quad4 (`axisym2`,
-  `axisym9`)** (known difference, not decided; AUDIT K20; BACKLOG C32). GNU:
-  1-point Gauss for axisymmetric `materi_velocity` quad4: element-constant
-  hoop term (axisym2 1.000e-3; axisym9 0.00158902). Professional 02-08-2026:
-  Linear hoop field (1.0498e-3; axisym9 0.0015915). Status: Scheduled for F4
-  (design + corpus A/B), project owner 2026-10-06. Index:
+- **quad4 nodal stress recovery on distorted or axisymmetric elements**
+  (known difference, not decided; BACKLOG C42). GNU: bilinear fit
+  `1,xi,eta,xi*eta` in the natural coordinates (exact interpolation of the
+  4 Gauss points). Professional 02-08-2026: linear least squares `1,x,y`
+  in the physical coordinates. Equal on rectangles in plane analyses;
+  differs on distorted quad4 (3-7 %) and on axisymmetric rings
+  (`axisym2` inner sigzz GNU 10760.09, Professional 10759.22; the
+  displacements are equal). Status: open, LOW. Index:
   [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).
 - **`post_point_dof` of recovered fields (stress/strain)** (known
   difference, not decided; AUDIT section 5 (after the K04 table)). GNU:

@@ -372,7 +372,7 @@ The priority list in section 6 re-orders by judgement.
 | 20 | K23 | Round-off in zero fields | 3 | 1.0 | BOTH-plausible (false positive) | `dpoint1`: stresses 6e-8 vs 5e-14 in a rigid motion. |
 | 21 | K03 | Default `convection_apply` | 2 | 0.5 | **GNU-suspect** | `condif2`: GNU T = 1, Pro T = 0.5. With an explicit `convection_apply -yes`, **both give 1**. The GNU default is `-YES` (`general.cc:54`); the Pro manual 6.395 says the default is `-no`. **Resolved 2026-10-06 (F1 T2)**: default `-no`, see recommendation 6. |
 | 22 | K08 | `bounda_time_increment` tables | 2 | 1.0 | PRO-suspect | `mcap1_elast`: the Pro prescribes −1.4 on dofs whose table is all zero. The GNU follows manual 6.146. **Deliberate divergence, project decision 2026-10-07.** |
-| 23 | K20 | Axisymmetric hoop (zz) nodal values | 5 | 0.05 | BOTH-plausible | `axisym2` (Akin ring, analytic e_t(ID) = 9.964e-4, S_t = 10910): GNU 1.000e-3 / 10000 (element-constant), Pro 1.0498e-3 / 10498 (linear). Moved to F4 (design + corpus A/B), user decision 2026-10-06. |
+| 23 | K20 | Axisymmetric hoop (zz) nodal values | 5 | 0.05 | BOTH-plausible | `axisym2` (Akin ring, analytic e_t(ID) = 9.964e-4, S_t = 10910): GNU 1.000e-3 / 10000 (element-constant), Pro 1.0796e-3 / 10759.2 at the inner node (linear; the earlier 1.0498e-3 / 10498 was stale). RESOLVED 2026-10-09 (F4 T4): forced 1-point axisymmetric rule removed, GNU 1.0796e-3 / 10760.1 (residual = quad4 recovery, BACKLOG C42). |
 | 24 | K24 | 3D coupled consolidation | 1 | 0.05 | UNKNOWN (high relevance) | `large2`: pore pressure differs 4.5 %, displacements 4 %. The 1D consolidation (`validation_2`) matches to 1e-11. |
 | — | K99 | Unclassified | 10 | 0.23 | UNKNOWN | `axisym2`/`axisym5`/`force17`/`relax2`/`silo1`/`slide2-4`/`strain_volume1`/`interface_bar2_hex8` |
 
@@ -391,7 +391,7 @@ and target):
 | `incnav3` | `tvely` (`expansion_volume` effect) | **−2.49** → −4.9904 after the 2026-10-06 fix (F1 T3: rho(1 − beta T) in the inertia too; sfnet copy target −2.5 stale, BACKLOG B11) | −5 |
 | `tet10_2` | `sigzz` | **−0.894** (TET10 nodal quadrature only degree 1, `polynom.cc`; needs design, moved to F4 (design + corpus A/B), BACKLOG C31) | −1 |
 | `ground9` | interface groundflow `pres` | **0.333** → 0.5 after the 2026-10-06 fix (F1 T3: interface permeability/capacity/conductivity per unit length, capacity implicit) | 0.5 |
-| `axisym9` | `post_point_dof 10 -sigxx` | 0.00158902 (uniform field; 1-point axisymmetric quad4 rule = K20, moved to F4 (design + corpus A/B), not the `post_point_dof` convention; BACKLOG C32) | 0.0015915 (±1e-6) |
+| `axisym9` | `post_point_dof 10 -sigxx` | 0.00158902 at F1 T3; stale: 0.00159154943 = Pro before and after F4 T4 (K20 resolved 2026-10-09; BACKLOG C32 closed) | 0.0015915 (±1e-6) |
 | `distri2` | `post_point_dof 1 -temp` | 0.998933 (different random generator, both valid N(1, 2e-3); not a defect, BACKLOG C32) | 0.999774 (±1e-4) |
 
 The `post_point_dof` of recovered fields follows a different convention in the

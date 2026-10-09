@@ -119,6 +119,37 @@ exclusive to a deleted element. The absolute assignment is applied only when
 the stress dofs are a pure recovered field (gate in `general.cc`:
 `!materi_strain_total` and the stress dof not convected).
 
+### 3.2 Axisymmetric rule (K20, F4 T4, 2026-10-09)
+
+`pol()` (`polynom.cc`) used to force `-GAUSS -MINIMAL` (1 point) for
+every axisymmetric `materi_velocity` tensor-product element and to stop
+with "Error, not available for axisymmetric analysis" for `npol > 2`
+(quad9, quad16). `msf_element_rule()` (`calcul_force.cc`) replicated the
+forced rule. Both blocks were removed: the axisymmetric quad4/quad9 now
+use the default 2x2 / 3x3 Gauss rule (and any
+`group_integration_*` override), as the Professional 02-08-2026.
+
+Evidence (Professional 02-08-2026 probes, investigation of F4 T4):
+
+| case | old GNU | new GNU | Professional |
+|---|---|---|---|
+| Akin ring `axisym2` (1 quad4): inner disx | 1.08238e-2 | 1.081776788020e-2 | 1.081776788020e-2 |
+| same, inner sigzz (nodal) | 10000 (element-constant) | 10760.09 | 10759.22 |
+| 4x4 quad4 ring patch, point load (`hg4`): disy | ~1e12 (hourglass, no convergence) | -4.38051133e-4 | -4.380511327e-4 |
+| quad9 axisym (`axisym7`): sigxx / disx | refused | 1000 / 500.00004 | 1000 / 499.9988 |
+
+The 1-point rule left the quad4 hourglass modes free (the plane quad4 is
+saved by the 2x2 rule of the stiffness) and made the hoop strain u/r
+constant over the element. The remaining `axisym2` sigzz difference is
+the quad4 nodal recovery (natural-coordinate bilinear interpolation in
+the GNU, physical-coordinate linear least squares in the Professional;
+BACKLOG C42). `msf_axisym` (`post_calcul -materi_stress -force`): the
+section moment changes from 0 to 1/960, the analytic moment of the
+2*PI*r-weighted face (the build_safe tolerance 0.005 holds).
+`foundation_consolidation_settlement` (Pro `other`, axisymmetric) now
+runs past the point where the 1-point rule failed and needs more than
+4 GB (F4 T7 memory hogs).
+
 ## 4. force5 (phreatic level)
 
 `area.cc` looked up the phreatic level for the FIRST node of a
@@ -185,7 +216,8 @@ operations):
   test (fix A) required for dynamic8.
 - `calcul_force.cc`, `delete.cc` — the replicated tensor-product default
   (`msf_element_rule`, `mc_element_rule`), switched to Gauss with the
-  element default.
+  element default; `msf_element_rule` no longer forces the axisymmetric
+  1-point rule (K20).
 
 ## Differences with the Professional version
 
@@ -194,12 +226,16 @@ operations):
   (`tet10_2` gravity sigzz -0.894). Professional 02-08-2026: Exact (-1).
   Status: Scheduled for F4 (design + corpus A/B), project owner 2026-10-06.
   Index: [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).
-- **axisymmetric hoop (zz) values, `materi_velocity` quad4 (`axisym2`,
-  `axisym9`)** (known difference, not decided; AUDIT K20; BACKLOG C32). GNU:
-  1-point Gauss for axisymmetric `materi_velocity` quad4: element-constant
-  hoop term (axisym2 1.000e-3; axisym9 0.00158902). Professional 02-08-2026:
-  Linear hoop field (1.0498e-3; axisym9 0.0015915). Status: Scheduled for F4
-  (design + corpus A/B), project owner 2026-10-06. Index:
+- **quad4 nodal stress recovery on distorted or axisymmetric elements**
+  (known difference, not decided; BACKLOG C42). GNU: bilinear
+  interpolation `1,xi,eta,xi*eta` of the 2x2 Gauss values in the natural
+  coordinates (`sri_stress_recovery_weight`). Professional 02-08-2026:
+  uniform-weight linear least squares `1,x,y` in the physical
+  coordinates. Equal on plane rectangles; distorted quad4 3-7 %
+  (investigation probe `hg4d`), axisymmetric ring `axisym2` sigzz
+  10760.09 vs 10759.22 (displacements equal). A prototype (variant v4
+  of F4 T4) reproduced the Professional `axisym2` value but flips the
+  exit code of `cd_method`; not adopted. Index:
   [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).
 - **`post_point_dof` of recovered fields (stress/strain)** (known
   difference, not decided; AUDIT section 5 (after the K04 table)). GNU:

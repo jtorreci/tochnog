@@ -302,7 +302,7 @@ page lists its own in "Differences with the Professional version".
 
 ## Integration quadrature + nodal stress recovery (2026-09-13)
 
-- [integration_quadrature_and_stress_recovery](integration_quadrature_and_stress_recovery.md) — the default element integration is now the Gauss rule (2×2 quad4 / 2×2×2 hex8, 3×3 quad9 / 3×3×3 hex27), matching Tochnog Professional, and the nodal stresses are recovered with the Professional's per-element least-squares fit assembled as the arithmetic mean. The `group_integration_method` / `group_integration_points` records still override the rule. Stored reference values produced under the old Lobatto default can change; recalibrate them against the Professional.
+- [integration_quadrature_and_stress_recovery](integration_quadrature_and_stress_recovery.md) — the default element integration is now the Gauss rule (2×2 quad4 / 2×2×2 hex8, 3×3 quad9 / 3×3×3 hex27), matching Tochnog Professional, and the nodal stresses are recovered with the Professional's per-element least-squares fit assembled as the arithmetic mean. Axisymmetric groups use the same rule since F4 T4 (no forced 1-point rule; quad9 accepted). The `group_integration_method` / `group_integration_points` records still override the rule. Stored reference values produced under the old Lobatto default can change; recalibrate them against the Professional.
 
 ## Sprint 12 lote 3 — solver global + pequeños
 
