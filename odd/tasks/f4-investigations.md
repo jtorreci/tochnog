@@ -12,7 +12,7 @@ through `scripts/remote_run.sh`.
 - [x] T4 C31 + K20: quadrature design (TET10 nodal rule degree 1; axisymmetric quad4 forced 1-point rule). Route: read-only investigator + omen A/B, then decision (owner 2026-10-09: v2 + HRZ); implementation by a delegated writer.
 - [ ] T5 C35/K02: integration-point state one-iteration lag. Investigation.
 - [ ] T6 Open-cause clusters: K14 (hypoplasticity history/stress path), K15 (MC/DP/von Mises), K24 (3D consolidation `large2`), K21 (Navier-Stokes), C7 (Mazars), C11 (dynamics), C3 (3D section sign), C6 (iface_gen coverage). Investigations, one by one.
-- [ ] T7 Memory hogs (>4 GB with any binary): Pro `force11`, `large1`, `ground19_water_under_dam`, `mesh_activate1`, `foundation_consolidation_settlement` (runs since F4 T4 K20, bad_alloc under the 4 GB cap).
+- [x] T7 Memory hogs (>4 GB with any binary): Pro `force11`, `large1`, `ground19_water_under_dam`, `mesh_activate1`, `foundation_consolidation_settlement` (runs since F4 T4 K20, bad_alloc under the 4 GB cap). Route: read-only investigation, owner decision 2026-10-09 (fix A, B, C), then one delegated writer. Memory fixed; solver-speed residual of `force11`/`foundation...` open (BACKLOG C43).
 
 ## Rules
 Manual/analytic decides; Pro is the oracle when the manual is silent;
@@ -71,3 +71,32 @@ docs + SEGUIMIENTO + BACKLOG + DIVERGENCES.
   3 new K20 tests; the 3 tet10 tests were added after the push and were
   checked by build_safe), vs 233 -> 233 (slide_axi/node_slide now a rigid
   translation, targets still met). No retargets.
+- T7 (route: read-only investigation -> owner decision 2026-10-09: fix
+  A, B, C -> one delegated writer; scratch clean builds, omen A/B).
+  A `so.cc` dense n x n `mat_dense` (never read) removed, commit 3faf78e.
+  B `so.cc` `solve_band_retry()`: the Bi-CG direct-LU retry builds its
+  band matrix only after a failure, exact band, Cuthill-McKee ordering
+  when narrower, commit 5bfa165. C `top.cc` `step_start_control_entry`:
+  `control_mesh_macro`/`_copy`/`_mirror`/`_switch` once per control index
+  (Pro probes: once), tests `mesh_macro_timestep1` (202 nodes; old 4040)
+  and `mesh_switch_timestep1` RED old / GREEN new, commit ab99338.
+  Measurements + docs commit 587bc13; TET10-PPOINT -> class A (owner
+  decision 2026-10-09) docs commit b79afed.
+  Evidence: clean builds (final = A+B+C build, md5 identical, copied to
+  build/tochnog); build_safe 154 OK (A), 158 OK / 0 FALLO (A+B+C, +4 C
+  checks), rc 0. Corpus A/B on omen (f4t7fix_runs, 4 GB, timeout 120):
+  old -> A: only ground19 (runs) and foundation (bad_alloc -> timeout);
+  A -> A+B: force11 runs (timeout), round-off in retried solves only
+  (force9 4e-7, pressed_rubber_cylinder 1e-7, ho_mech1 8e-8; examp2
+  bit-identical); A+B -> A+B+C: only mesh_activate1 (runs, 202 nodes,
+  veliy = Pro 5e-10, final vely differs -> C46) and the 2 new tests.
+  Pro other 271 -> 273, sfnet 192 -> 192, t26 99 -> 99 (+2 new), vs
+  232 -> 232. Wall time (rc 0 on both) 838.6 -> 784.8 s (-6 %).
+  Hogs (12 GB, one at a time, old -> new; Pro): force11 7.8 GB bad_alloc
+  -> 0.27 GB, Bi-CG > 600 s (Pro 0.27 GB, 13 s); large1 bad_alloc -> rc 0
+  0.65 GB 58 s (Pro 1.3 GB 9 s); ground19 5.2 -> 0.12 GB, 20 -> 18 s
+  (Pro 0.17 GB 3 s, target met); mesh_activate1 11.9 GB bad_alloc ->
+  0.035 GB 29 s (Pro 0.07 GB 26 s); foundation bad_alloc -> 1.5 GB,
+  timeout (Pro timeout). New open items: C45 (copy/mirror after a time
+  step: node_dof_start_refined error), C46 (move no-op in Pro, copy/
+  switch order, rotate, mesh_activate1 vely).
