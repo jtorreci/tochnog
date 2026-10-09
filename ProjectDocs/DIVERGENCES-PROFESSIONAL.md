@@ -13,7 +13,7 @@ Single index of every known difference between the GNU version and Tochnog Profe
 
 | class | meaning | items |
 |---|---|---|
-| A | deliberate divergence decided by the project owner | 13 |
+| A | deliberate divergence decided by the project owner | 14 |
 | B | known difference, not decided yet or scheduled (F3/F4) | 36 |
 | C | GNU extension or input-dialect difference | 15 |
 | D | Professional-suspect: the Professional contradicts its own manual or the analytic answer | 1 |
@@ -42,6 +42,7 @@ Recorded in the SEGUIMIENTO "Descarte de features" table and in the "Differences
 | DSC-GID | `control_print_gid_*` family (~20 keywords) | Not implemented (GiD output discarded; VTK/Gmsh/CSV instead). | Writes GiD `.res`/`.msh` files. | Feature discarded (SEGUIMIENTO Descarte; plan section 6c). | not recorded | SEGUIMIENTO Descarte, family control_print |
 | DSC-DATASAVE | `control_data_save` | Parse-only (accepted, no behaviour). | Saves data for `control_print_gid_save_difference`. | Feature discarded (its only consumer is the discarded GiD family); parse-only since 2026-09-04. | 2026-09-04 | SEGUIMIENTO Descarte, family control_data |
 | F3-INSTEP | in-step geometry of an explicit `mesh -follow_material` step | The velocity gradient of the step is built on the END-of-step geometry (nodes advanced by the iteration): 2-quad4 column sheared by 1 with `-updated_linear`, node 3 velix 0.47222 in one step, 0.52048 in 100 steps; `-updated_jaumann` column one step sigxx 0.0207. | START-of-step geometry: 0.5 in one step, 0.52093 in 100 steps; `-updated_jaumann` -0.0216 (= its `-fixed_in_space` value). | Deliberate divergence, project owner decision 2026-10-08: keep the GNU end-of-step geometry (affects only an explicit `-follow_material`; the default mesh already matches; the gap converges with the step size). | 2026-10-07 | [user/mesh](manual-user/mesh.md); [dev/mesh](manual-developer/mesh.md); [user/group_materi_memory_updated_linear](manual-user/group_materi_memory_updated_linear.md); [user/group_materi_memory_updated_jaumann](manual-user/group_materi_memory_updated_jaumann.md) |
+| DRY-RULE | groundflow "dry rule" of manual 2.4.3 ("ley seca": total pressure limit 0 and pres 0 → no consolidation term) | Not applied since `3acce9d` (removed together with the old `pres` clamp). | Not applied either (free-node pres reaches 1.6667 with the default limit 0). | Deliberate divergence FROM THE MANUAL, project owner decision 2026-10-09: GNU = Professional. With the manual 6.587 default limit 0 the rule would switch consolidation off in every model that starts at pres 0. | 2026-10-09 | [user/groundflow_total_pressure_limit](manual-user/groundflow_total_pressure_limit.md); [dev/groundflow_total_pressure_limit](manual-developer/groundflow_total_pressure_limit.md) |
 
 ## D. Professional-suspect (the Professional contradicts its manual or the analytic answer)
 

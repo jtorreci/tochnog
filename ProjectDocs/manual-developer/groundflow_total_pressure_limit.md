@@ -100,3 +100,5 @@ manual 6.587 and the Professional after the project-owner decision of
   term; independent of this limit).
 - `groundflow_pressure_atmospheric` (GNU-only cap of the static pressure).
 - [groundflow_velocity_sign](groundflow_velocity_sign.md).
+
+- **Deliberate divergence from the manual (decision 2026-10-09, the "ley seca"):** the dry rule of manual 2.4.3 (limit 0 and pres 0 skip the consolidation term) is not applied, as in the Professional 02-08-2026. See `ProjectDocs/DIVERGENCES-PROFESSIONAL.md` (DRY-RULE).

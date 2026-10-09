@@ -89,3 +89,5 @@ decision 2026-10-07 (former DIVERGENCES TPL and K10). Note that manual
 2.4.3 says the consolidation part is skipped when the limit is 0 and the
 total pressure is 0; the Professional does not skip it (free-node `pres`
 1.6667 with the default limit), and the GNU follows the Professional.
+
+- **Deliberate divergence from the manual (decision 2026-10-09, the "ley seca"):** the dry rule of manual 2.4.3 (limit 0 and pres 0 skip the consolidation term) is not applied, as in the Professional 02-08-2026. See `ProjectDocs/DIVERGENCES-PROFESSIONAL.md` (DRY-RULE).
