@@ -1383,7 +1383,7 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
   the solution is unchanged). **Effort**: **medium** (the per-element
   physical fit, plus the `cd_method` analysis).
 
-### C43. Memory hogs of the default Bi-CG solver (F4 T7, 2026-10-09) — A, B RESOLVED
+### C43. Memory hogs of the default Bi-CG solver (F4 T7, 2026-10-09) — RESOLVED
 
 - **Symptom**: five Professional `other` inputs (`force11`, `large1`,
   `ground19_water_under_dam`, `mesh_activate1`,
@@ -1400,7 +1400,43 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
   band, Cuthill-McKee ordering when narrower; round-off changes in the
   retried solves only.
 - **Root cause C** (`mesh_activate1`): `control_mesh_macro` on the
-  `control_timestep` index adds a mesh copy per step. Open (F4 T7 C).
+  `control_timestep` index added a mesh copy per step. **Resolved** in
+  F4 T7 C (C44).
+
+### C44. One-shot mesh records re-applied on every time step (F4 T7, 2026-10-09) — RESOLVED
+
+- **Symptom**: `control_mesh_macro`, `_copy`, `_mirror`, `_switch` on the
+  same index as a multi-step `control_timestep` were applied on every
+  step (`mesh_activate1` 202 -> 4040 nodes in 20 steps; copy doubled the
+  mesh per step; switch swapped the axes back).
+- **Fix**: `top.cc` `step_start_control_entry` / `first_of_control`: run
+  them on the first step of the index (Professional probes: once per
+  index). Tests `mesh_macro_timestep1`, `mesh_switch_timestep1`.
+
+### C45. `control_mesh_copy` / `control_mesh_mirror` after the first time step stop with a `node_dof_start_refined` error
+
+- **Symptom** (F4 T7 probes): a copy or mirror on an index after a
+  `control_timestep` index stops with "Error detected for data item :
+  node_dof_start_refined / record : 8" (rc 1); the Professional runs it
+  (12 nodes). Pre-existing, independent of C44.
+- **Severity**: **LOW**. **Effort**: **cheap** (the duplicated node data
+  in `mesh.cc` `mesh_copy()` / `mesh_mirror()`).
+
+### C46. `step_start()` mesh-operation residuals vs the Professional (F4 T7)
+
+- `control_mesh_move` had no effect in the Professional probes (with or
+  without a `control_timestep`); the GNU moves the mesh, and on every
+  step of a `control_timestep` on the same index (not guarded: the
+  Professional semantics could not be measured).
+- With `control_mesh_copy` and `control_mesh_switch` on one index the
+  Professional copies first and then switches; the GNU switches first.
+- `control_mesh_rotate_angle` is only a parameter of `control_mesh_rotate`
+  in the Professional (GNU: standalone 2D rotation); the 3D
+  `control_mesh_rotate` probe did not run on either binary.
+- `mesh_activate1` (after C44): the final-step velocity `vely` is 0 in
+  the GNU and -9.95e-6 in the Professional at the top; the integrated
+  `veliy` agrees to 5e-10.
+- **Severity**: **LOW**. **Effort**: **cheap/medium**.
 
 ---
 
@@ -1456,7 +1492,10 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
 | C40 | Pro `other` | element-target contact residuals after F2 T3b: no Pro check "target element has all nodes on the boundary", hex8 target sides never detected, node_boundary generated only for element-target contact | LOW | cheap/medium |
 | C41 | Pro `other` | `mohr_coul_direct7`: `-total_linear` + velocity `mpc_node_number` tie — tie resolved 2026-10-09 (F4 T2); residual disy/sigzz difference | LOW | medium |
 | C42 | Pro `other` | quad4 nodal stress recovery: natural bilinear (GNU) vs physical linear least squares (Pro); distorted/axisymmetric quad4 (`axisym2` sigzz 10760.09 vs 10759.22) | LOW | medium |
-| C43 | Pro `other` | memory hogs of the Bi-CG solver (`force11`, `large1`, `ground19`, `mesh_activate1`, `foundation_consolidation_settlement`): dense n x n matrix and per-solve band workspace resolved 2026-10-09 (F4 T7 A, B); macro per step open | MEDIUM | cheap/medium |
+| C43 | Pro `other` | memory hogs of the Bi-CG solver (`force11`, `large1`, `ground19`, `mesh_activate1`, `foundation_consolidation_settlement`): resolved 2026-10-09 (F4 T7 A dense n x n matrix, B lazy band retry, C macro per step) | MEDIUM | cheap/medium |
+| C44 | Pro `other` | one-shot mesh records (`control_mesh_macro`/`_copy`/`_mirror`/`_switch`) re-applied on every time step — resolved 2026-10-09 (F4 T7 C) | MEDIUM | cheap |
+| C45 | — | `control_mesh_copy`/`_mirror` after the first time step: `node_dof_start_refined` error (Pro runs) | LOW | cheap |
+| C46 | Pro `other` | `step_start()` mesh residuals: `control_mesh_move` (no effect in Pro), copy/switch order, rotate not comparable, `mesh_activate1` final `vely` | LOW | cheap/medium |
 
 Thirty-seven items remain open: seven MEDIUM and thirty LOW (C23 and C24 resolved 2026-10-05; C25, C26, C27 and B10 added; F1 T3 / K04 2026-10-06 added B11, C28-C32; F1 T6 resolved C28, added and resolved B12; F2 T1 added C36; F2 T2 added C37, C38, C39; F2 T3 resolved C5 and added C40; F3 T2 resolved C8, C18, C19, C20 and added B13, C41; F4 T2 fixed the C41 tie and left a residual; F4 T3 resolved C33; F4 T4 closed C32, added C42 and resolved C31). No open issue is CRITICAL or
 HIGH. The validation-suite corpus has no open failure — its 233 real tests

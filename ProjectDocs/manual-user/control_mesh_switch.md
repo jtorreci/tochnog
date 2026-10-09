@@ -52,3 +52,10 @@ end_data
 ```
 
 After this record the model runs with x and y swapped.
+
+## Once per control index (F4 T7)
+
+Applied once per control index, on its first step, also when the same
+index carries a multi-step `control_timestep` (as the Professional; before
+F4 T7 the axes were swapped on every step). See
+[control_mesh_once_per_control](control_mesh_once_per_control.md).

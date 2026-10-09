@@ -37,3 +37,8 @@ del programa.
   solo permutaciones puras. Una rotación de 90° requiere extensión con signo.
 - El código de permutación de `NODE` y `NODE_START_REFINED` está duplicado; se
   podría extraer un helper `permute_node_coords(inod, order, item)`.
+
+## Once per control index (F4 T7)
+
+The call in `top.cc` `step_start()` is guarded by `first_of_control`
+(see [control_mesh_once_per_control](control_mesh_once_per_control.md)).

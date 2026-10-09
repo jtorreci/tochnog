@@ -1439,6 +1439,22 @@ run_ok "$T2026" axisym_quad9_uniform1
 run_ok "$T2026" tet10_body_load1
 run_ok "$T2026" tet10_mass_hrz1
 run_ok "$T2026" tet10_dynamic_gravity1
+# F4 T7 / C (2026-10-09): one-shot mesh operations (control_mesh_macro,
+#   _copy, _mirror, _switch) on the SAME index as control_timestep run on
+#   the first step of the control only (top.cc step_start_control_entry),
+#   as the Professional 02-08-2026:
+#   mesh_macro_timestep1: Pro mesh_activate1 with 20 steps: 202 nodes
+#     (= Pro; old GNU 4040, one macro copy per step);
+#   mesh_switch_timestep1: two steps, axes swapped once: node 3
+#     0.5 0 -> 0 0.5 (= Pro; old GNU swapped twice, node 3 unchanged).
+run_ok "$T2026" mesh_macro_timestep1
+n_nodes=$(grep -ac '^node ' "$T2026/mesh_macro_timestep1.dbs" 2>/dev/null)
+if [ "$n_nodes" = "202" ]; then check_ok "mesh_macro_timestep1 (202 nodes)";
+else check_fail "mesh_macro_timestep1" "nodes=$n_nodes, expected 202"; fi
+run_ok "$T2026" mesh_switch_timestep1
+if grep -aqE '^node +3 +0 +0\.5 *$' "$T2026/mesh_switch_timestep1.dbs" 2>/dev/null;
+then check_ok "mesh_switch_timestep1 (node 3 at 0 0.5)";
+else check_fail "mesh_switch_timestep1" "node 3 not at 0 0.5"; fi
 
 # ---------------------------------------------------------------------
 # K03 (2026-10-06): default convection_apply -no (manual Professional

@@ -528,3 +528,7 @@ page lists its own in "Differences with the Professional version".
 ## SOLVER MEMORY (2026-10-09, F4 T7)
 
 - [solver_memory](solver_memory.md) — `so.cc` `solve()`: the dense `mat_dense` workspace added by `5b7bb8b` (allocated, zero-filled and filled on every solve; its only reader, the `dgesv_` branch of the Bi-CG retry, was dead because `mat` always existed) is removed. Corpus A/B: no result change. B: the band LU retry workspace is built lazily in `solve_band_retry()` after a Bi-CG failure, with the exact band of the node-number or Cuthill-McKee ordering (round-off changes in retried solves only).
+
+## ONE-SHOT MESH OPERATIONS ONCE PER CONTROL INDEX (2026-10-09, F4 T7)
+
+- [control_mesh_once_per_control](control_mesh_once_per_control.md) — `top.cc`: `step_start_control_entry` set when the control loop enters an index, consumed by `step_start()` (`first_of_control`), guards `macro()`, `mesh_switch()`, `mesh_mirror()`, `mesh_copy()`. Professional probes: each applied once per index. Tests `mesh_macro_timestep1`, `mesh_switch_timestep1` (node checks in build_safe).

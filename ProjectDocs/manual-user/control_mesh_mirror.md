@@ -40,3 +40,11 @@ end_data
 ```
 
 After this record the model has 6 nodes and 2 elements, symmetric about x=0.
+
+## Once per control index (F4 T7)
+
+Applied once per control index, on its first step, also when the same
+index carries a multi-step `control_timestep` (as the Professional). See
+[control_mesh_once_per_control](control_mesh_once_per_control.md). On an
+index after the first time step the GNU currently stops with a
+`node_dof_start_refined` error (BACKLOG C45).
