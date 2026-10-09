@@ -47,5 +47,5 @@ docs + SEGUIMIENTO + BACKLOG + DIVERGENCES.
   tension/MC factors in full mode (Pro probes mcstv/mcsboth). Evidence:
   14 probes = Pro; build_safe 148 OK / 0 FALLO; A/B t2->t3 only the 4 new
   tests change. No other dt mismatch in set_stress (dtime feeds only the
-  visco laws and the three direct cut-offs).
+  visco laws and the three direct cut-offs). Commit 8a1fc75.
 
