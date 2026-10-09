@@ -6,7 +6,7 @@ Professional, diagnosing before changing code. Expensive runs go to omen
 through `scripts/remote_run.sh`.
 
 ## Tasks
-- [ ] T1 TPL + K10: align `groundflow_total_pressure_limit` with manual 6.587 / Pro (default 0, cap the calculated total pressure, zero the groundflow velocity where reached, never cut the `pres` dof). Owner decision 2026-10-07. Route: delegated writer.
+- [x] T1 TPL + K10: align `groundflow_total_pressure_limit` with manual 6.587 / Pro (default 0, cap the calculated total pressure, zero the groundflow velocity where reached, never cut the `pres` dof). Owner decision 2026-10-07. Route: delegated writer.
 - [ ] T2 C41: `mohr_coul_direct7` (`-total_linear` + velocity `mpc_node_number` tie: unequal disy at tied nodes). Route: same writer after T1.
 - [ ] T3 C33: `set_stress` reads DTIME from VERSION_NORMAL (previous dt) → `_visco` direct law does not cut in the first step; principal tension cap ignores `_visco`. Route: same writer.
 - [ ] T4 C31 + K20: quadrature design (TET10 nodal rule degree 1; axisymmetric quad4 forced 1-point rule). Route: read-only investigator + omen A/B, then decision.
@@ -24,3 +24,13 @@ docs + SEGUIMIENTO + BACKLOG + DIVERGENCES.
 
 ## Progress
 - Branch `dev/f4-investigations` from `af080b0`.
+- T1 (route: delegated writer; inline edits in groundfl.cc, top.cc, headers):
+  Pro rule implemented (default 0 via `groundflow_total_pressure_limit()`,
+  total-pressure cap in `groundflow_phreatic_coord()`, velocity 0 where the
+  IP total pressure reaches the limit, pres dof never cut). GNU dry
+  consolidation skip removed: it conflicts with the Pro (consolidation kept
+  with limit 0). Evidence: 8 gtpl probes + ground1 = Pro; build_safe
+  143 OK / 0 FALLO; corpus A/B vs 231→233, t26 82→86, sfnet 172→173
+  (ho_mech1 timeout flake), Pro other 242→242. Retargeted test-2014
+  groundflow_total_pressure_limit/_dry (Pro values). Commit: see below.
+

@@ -243,10 +243,10 @@ rm -f validation-suite/test-2014/dof.* \
 #   heredado del GNU: cap de la presion estatica en phreatic_coord. Con
 #   pa=0.5 la succion +1 se mantiene en 0.5 y la compresion -1 pasa intacta;
 #   con default 0 la succion se anula -> 0).
-# + groundflow_total_pressure_limit/_dry (manual Professional 6.588: cap del
-#   pres resuelto tras el solve; nodos Dirichlet exentos. Con limit 0.5 los
-#   nodos libres quedan en 0.5 (sin limit ~1.67); con limit 0 y pres 0 el
-#   elemento esta seco y se salta el termino de consolidacion -> pres 0).
+# + groundflow_total_pressure_limit/_dry (manual Professional 6.587; F4 T1
+#   retarget to the Professional 02-08-2026: the pres dof is never cut and
+#   the consolidation term is kept -> free-node pres 1.6667 with limit 0.5
+#   and 0; gvely 0.16667 with 0.5, 0 with 0 = limit reached, dry).
 # + contact_block/ctrl_apply/heatgen (remate P6 contacto: bloque en caida
 #   detenido por el penalty disy~-0.003 vs -0.055 libre; control_contact_apply
 #   0 -no = caida libre exacta; contact_heat_generation nombre Professional
@@ -1372,6 +1372,26 @@ run_ok "$T2026" materi_memory_updated_linear_current2
 #   old GNU rejected the value).
 run_ok "$T2026" materi_memory_updated_jaumann_shear1
 run_ok "$T2026" materi_memory_updated_jaumann_shear2
+
+# ---------------------------------------------------------------------
+# F4 T1 TPL + K10 (2026-10-09): groundflow_total_pressure_limit as in
+# manual 6.587 and the Professional 02-08-2026: default limit 0, the
+# CALCULATED total pressure is capped at every node (prescribed ones
+# included), the pres dof is never cut, and the groundflow velocity is 0
+# where the integration-point total pressure reaches the limit.
+#   groundflow_total_pressure_limit_default1/high1/negative1: one quad4,
+#     consolidation source, free-node pres 1.6667 always; total pressure
+#     / gvely: no record 0 / 0, limit 100 1.6667 / 0.16667, limit -0.5
+#     -0.5 at every node / 0 (old GNU: gvely 0.16667, total pressure 0,
+#     pres -0.5).
+#   groundflow_velocity_dry1/2: corpus ground1 (K10), gvely 0 without the
+#     record (old GNU -0.05), -0.05 with limit 1.e10.
+# ---------------------------------------------------------------------
+run_ok "$T2026" groundflow_total_pressure_limit_default1
+run_ok "$T2026" groundflow_total_pressure_limit_high1
+run_ok "$T2026" groundflow_total_pressure_limit_negative1
+run_ok "$T2026" groundflow_velocity_dry1
+run_ok "$T2026" groundflow_velocity_dry2
 
 # ---------------------------------------------------------------------
 # K03 (2026-10-06): default convection_apply -no (manual Professional

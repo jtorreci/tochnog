@@ -79,19 +79,6 @@ identical to the Professional binary.
 
 ## Differences with the Professional version
 
-- **groundflow velocity output (`ground1`)** (deliberate divergence decided by
-  the project owner on 2026-10-07; AUDIT K10; SEGUIMIENTO Descarte). GNU: v = k dh/dy =
-  -0.05 (manual), at the nodes and at the integration points. Professional
-  02-08-2026: 0 at the nodes and at the integration points (post-processing
-  only; the pressure field agrees). Status: deliberate divergence (project
-  decision 2026-10-07): the GNU follows the manual; the Professional
-  behaviour is also Pro-suspect. Root cause measured 2026-10-07: the
-  Professional zeroes the groundflow velocity where the calculated total
-  pressure reaches `groundflow_total_pressure_limit`, whose default is 0
-  (manual 6.587); with `groundflow_total_pressure_limit 1.e10` the
-  Professional gives -0.05 = GNU (see `groundflow_total_pressure_limit.md`,
-  DIVERGENCES TPL, pending owner decision). Index:
-  [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).
 - **`gvelx` sign in the interface-coupled groundflow path
   (`groundflow_interface`)** (known difference, not decided; BACKLOG C2).
   GNU: gvelx -1.99962e-6. Professional 02-08-2026: +1.99960e-6 (pressure
@@ -104,4 +91,10 @@ identical to the Professional binary.
   stresses identical. No decision. Index:
   [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).
 
-- **Decision 2026-10-07 (project owner):** align the GNU with manual 6.587 and the Professional on `groundflow_total_pressure_limit` (default 0, cap the calculated total pressure, zero the groundflow velocity where the limit is reached). This reverses the earlier K10 decision. Implementation scheduled for F4; see `ProjectDocs/DIVERGENCES-PROFESSIONAL.md` (TPL, K10).
+Resolved (F4 T1, 2026-10-09): the groundflow velocity is 0 where the
+calculated total pressure reaches `groundflow_total_pressure_limit`
+(default 0, manual 6.587), as in the Professional 02-08-2026. Corpus
+`ground1` now gives `gvely` 0 like the Professional (-0.05 with
+`groundflow_total_pressure_limit 1.e10`). The former deliberate divergence
+K10 rested on a wrong premise and was reversed by the project owner on
+2026-10-07. See [groundflow_total_pressure_limit](groundflow_total_pressure_limit.md).

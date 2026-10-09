@@ -2041,7 +2041,7 @@ void      groundflow( long int element, long int group, long int nnol,
             double element_matrix[], double element_rhside[],
             double element_residue[] );
 void      groundflow_phreatic_apply( void );
-void      groundflow_total_pressure_limit_apply( void );
+double    groundflow_total_pressure_limit( void );
 long int  groundflow_phreatic_coord( long int inod, double coord[], double dof[], 
             double &total_pressure, double &static_pressure,
             double &location, long int *level_source );

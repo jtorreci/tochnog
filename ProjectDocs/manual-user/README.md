@@ -167,8 +167,8 @@ page lists its own in "Differences with the Professional version".
 - [groundflow_seepage_eps](groundflow_seepage_eps.md) — tolerance of the seepage (outflow-only) boundary condition.
 - [groundflow_seepage_geometry](groundflow_seepage_geometry.md) — seepage edge selected by geometry entity.
 - [groundflow_seepage_node](groundflow_seepage_node.md) — seepage condition on explicit nodes.
-- [groundflow_pressure_atmospheric](groundflow_pressure_atmospheric.md) — cap on the static/total pore pressure from the phreatic level (GNU-inherited; default 0 removes suction).
-- [groundflow_total_pressure_limit](groundflow_total_pressure_limit.md) — cap on the solved pore pressure; limit 0 + pressure 0 marks dry elements (consolidation skipped).
+- [groundflow_pressure_atmospheric](groundflow_pressure_atmospheric.md) — GNU-only cap on the static pore pressure from the phreatic level (the total pressure is capped by groundflow_total_pressure_limit since F4).
+- [groundflow_total_pressure_limit](groundflow_total_pressure_limit.md) — maximum calculated total pressure (default 0, manual 6.587): caps the total pressure at every node and zeroes the groundflow velocity where it is reached; the `pres` dof is never cut.
 
 ## P6 — contact family remnant
 

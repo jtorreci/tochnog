@@ -565,7 +565,6 @@ void top( void )
                           slide(); 
                           if ( print_where==-YES ) pri( "Where: before solver." ); 
                           solve( options_solver );
-                          groundflow_total_pressure_limit_apply();
                           if ( print_where==-YES ) pri( "Where: after solver." ); 
                           // The post-solve constitutive re-evaluation is
                           // HOISTED after the equilibrium loop (2026-09-16):

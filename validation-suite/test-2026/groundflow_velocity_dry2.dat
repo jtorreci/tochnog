@@ -1,0 +1,31 @@
+( F4 T1 / K10: corpus ground1 with a groundflow_velocity target.
+  Two quad4 elements, permeability 0.1, pres 1 prescribed at the bottom
+  and 0 at the top: the middle node gets pres 0.5.
+  Limit 1.e10: the limit is never reached and the velocity is k dh/dy = -0.05, as in the Professional 02-08-2026. )
+echo -no
+number_of_space_dimensions 2
+groundflow_velocity
+groundflow_pressure
+end_initia
+node 1  0 0
+node 2  1 0
+node 3  0 1
+node 4  1 1
+node 5  0 2
+node 6  1 2
+element 1  -quad4 1 2 3 4
+element 2  -quad4 3 4 5 6
+bounda_dof 0  -ra 1 2 -ra -pres
+bounda_time    0  0.0 0.0 1. 1. 100. 1.
+bounda_dof 1  -ra 5 6 -ra -pres
+bounda_time    1  0.0 0.0 100.0 0.
+group_type 0  -groundflow
+group_groundflow_permeability 0  0.1 0.1
+groundflow_total_pressure_limit 1.e10
+post_calcul -groundflow_pressure -total_pressure
+control_timestep  0  1. 1.
+target_item 0   -node_dof 3 -pres
+target_value   0   0.5 1.e-4
+target_item 1   -node_dof 3 -gvely
+target_value   1   -0.05 1.e-6
+end_data

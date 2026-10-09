@@ -24,6 +24,11 @@
 
 #include "tochnog.h"
 
+// relative tolerance of the "total pressure reached the limit" test of
+// groundflow_total_pressure_limit (interpolated capped values)
+#define EPS_TOTAL_PRESSURE_LIMIT 1.e-10
+#define GROUNDFLOW_TOTAL_PRESSURE_LIMIT_DEFAULT 0.
+
 void groundflow( long int element, long int gr, long int nnol, long int nodes[],
   double coord_ip[], double h[], double d[], 
   double volume, double old_unknowns[], 
@@ -51,7 +56,7 @@ void groundflow( long int element, long int gr, long int nnol, long int nodes[],
     groundflow_consolidation_apply=-NO, control_groundflow_consolidation_apply=-NO,
     group_groundflow_consolidation_apply=-NO,
     materidivergence=-NO, group_materidivergence=-NO,
-    total_pressure_limit_set=0, group_consolidation_found=0,
+    dry=0, group_consolidation_found=0,
     global_consolidation_found=0, control_consolidation_found=0,
     group_materidivergence_found=0, ldum=0, idum[1];
   double tmp=0., C=0., dtime=0., divergence=0., dens=0., limit=0., ddum[1], pe[MDIM];
@@ -101,15 +106,37 @@ void groundflow( long int element, long int gr, long int nnol, long int nodes[],
     materidivergence = -NO;
   if ( options_skip_groundflow_materidivergence==-YES ) materidivergence = -NO;
 
-  // groundflow_total_pressure_limit: with limit 0 and a total pressure of 0
-  // the node/element is considered dry (no water), so the consolidation part
-  // (material divergence term) is skipped for this element (manual 2.4.3).
-  total_pressure_limit_set = db( GROUNDFLOW_TOTAL_PRESSURE_LIMIT, 0, idum,
-    &limit, ldum, VERSION_NORMAL, GET_IF_EXISTS );
-  if ( total_pressure_limit_set && groundflow_pressure &&
-       scalar_dabs(limit)<TINY &&
-       scalar_dabs(new_unknowns[pres_indx])<TINY )
-    materidivergence = -NO;
+  // groundflow_total_pressure_limit (manual Professional 6.587, default 0):
+  // where the calculated total pressure at the integration point reaches
+  // the limit the soil is dry and the groundflow velocity is 0 there
+  // (dry rule of manual 2.4.3). Measured on the Professional 02-08-2026
+  // (F4 T1 probes): the integration-point total pressure is interpolated
+  // from the nodal total pressures (already capped to the limit), the
+  // velocity is 0 where it is >= the limit, and neither the pres dof nor
+  // the consolidation (material divergence) term is affected: with the
+  // default limit 0 the free-node pres still develops (1.6667 in the
+  // probe), so the former GNU 'limit 0 + pres 0 -> skip the consolidation
+  // term' rule is not applied.
+  if ( groundflow_velocity && groundflow_pressure ) {
+    long int inod_tp=0, found_tp=0;
+    double tp_node=0., sp_node=0., loc_node=0., tp_ip=0.,
+      *coord_tp=NULL, *dof_tp=NULL;
+    limit = groundflow_total_pressure_limit();
+    found_tp = 1;
+    for ( inol=0; inol<nnol && found_tp; inol++ ) {
+      inod_tp = nodes[inol];
+      coord_tp = db_dbl( NODE, inod_tp, VERSION_NORMAL );
+      dof_tp = db_dbl( NODE_DOF, inod_tp, VERSION_NEW );
+      if ( !coord_tp || !dof_tp ) { found_tp = 0; break; }
+      tp_node = sp_node = 0.;
+      groundflow_phreatic_coord( inod_tp, coord_tp, dof_tp, tp_node,
+        sp_node, loc_node, NULL );
+      tp_ip += h[inol] * tp_node;
+    }
+    if ( found_tp &&
+         tp_ip >= limit - EPS_TOTAL_PRESSURE_LIMIT*(1.+scalar_dabs(limit)) )
+      dry = 1;
+  }
 
   groundflow_data( element, gr, nodes, old_unknowns, new_unknowns, coord_ip, pe, C, h, nnol );
 
@@ -135,8 +162,11 @@ void groundflow( long int element, long int gr, long int nnol, long int nodes[],
 // the downstream temperature 0 instead of the Professional's upwind 1).
 // Restored to the Professional sign so that the heat convection follows
 // the same upwind direction as the Professional.
-        tmp = h[inol] * ( pe[jdim]*grad_new_unknowns[jdim*nuknwn+pres_indx] -
-          old_unknowns[iuknwn] ) / dtime;
+        if ( dry )
+          tmp = h[inol] * ( 0. - old_unknowns[iuknwn] ) / dtime;
+        else
+          tmp = h[inol] * ( pe[jdim]*grad_new_unknowns[jdim*nuknwn+pres_indx] -
+            old_unknowns[iuknwn] ) / dtime;
         element_rhside[indx] += volume * tmp;
       }
     }
@@ -361,6 +391,7 @@ long int groundflow_phreatic_coord( long int inod, double coord[], double dof[],
   long int length=0, found=0, ldum=0, idum[1], number[2], imult=0,
     static_switch=-NO;
   double water_level=0., dens=0., pressure_atmospheric=0., addtopressure=0.,
+    total_pressure_limit=0.,
     ddum[1], force_gravity[MDIM], *groundflow_phreatic=NULL;
 
   if ( level_source ) *level_source = 0;
@@ -368,6 +399,11 @@ long int groundflow_phreatic_coord( long int inod, double coord[], double dof[],
   db( GROUNDFLOW_DENSITY, 0, idum, &dens, ldum, VERSION_NORMAL, GET_IF_EXISTS );
   db( GROUNDFLOW_PRESSURE_ATMOSPHERIC, 0, idum, &pressure_atmospheric, 
     ldum, VERSION_NORMAL, GET_IF_EXISTS );
+  // The calculated total pressure is capped by groundflow_total_pressure_limit
+  // (manual Professional 6.587, default 0) at every node, prescribed ones
+  // included; the GNU-only groundflow_pressure_atmospheric caps the static
+  // pressure only.
+  total_pressure_limit = groundflow_total_pressure_limit();
   db( GROUNDFLOW_ADDTOPRESSURE, 0, idum, &addtopressure, ldum, VERSION_NORMAL, GET_IF_EXISTS );
 
   if ( groundflow_pressure ) {
@@ -504,7 +540,7 @@ long int groundflow_phreatic_coord( long int inod, double coord[], double dof[],
   }
 
   if ( static_pressure>=pressure_atmospheric ) static_pressure = pressure_atmospheric;
-  if ( total_pressure>=pressure_atmospheric ) total_pressure = pressure_atmospheric;
+  if ( total_pressure>=total_pressure_limit ) total_pressure = total_pressure_limit;
   total_pressure += addtopressure;
 
   // post_calcul_static_pressure_height (manual Professional 6.921/6.922):
@@ -564,7 +600,7 @@ long int groundflow_phreatic_coord( long int inod, double coord[], double dof[],
     }
   }
   if ( static_pressure>=pressure_atmospheric ) static_pressure = pressure_atmospheric;
-  if ( total_pressure>=pressure_atmospheric ) total_pressure = pressure_atmospheric;
+  if ( total_pressure>=total_pressure_limit ) total_pressure = total_pressure_limit;
   total_pressure += addtopressure;
 
   return found;
@@ -803,41 +839,21 @@ void groundflow_phreatic_apply( void )
   
 }
 
-void groundflow_total_pressure_limit_apply( void )
+double groundflow_total_pressure_limit( void )
 
-// groundflow_total_pressure_limit: maximum allowed total pressure. Any
-// higher value resulting from the groundflow equations is cut off to this
-// value (manual Professional 6.588). Nodes with a prescribed pressure
-// (bounded/Dirichlet, e.g. from bounda_dof or phreatic _static) keep their
-// prescribed value; only solved values are cut. The record is required to
-// activate the limit: without it nothing is clamped (GNU difference with
-// Professional, which defaults the limit to 0).
+// groundflow_total_pressure_limit (manual Professional 6.587): the maximum
+// allowed total pressure. Any higher calculated total pressure is cut off
+// to this value; "Default the limit is set to 0". Single source of truth of
+// the limit and its default: the cap of the calculated total pressure in
+// groundflow_phreatic_coord() and the dry rule (groundflow velocity 0) in
+// groundflow() both read it here. The pres dof itself is never cut
+// (measured on the Professional 02-08-2026, F4 T1).
 
 {
-  long int inod=0, max_node=0, iuknwn=0, ipuknwn=0, ldum=0, idum[1],
-    *node_bounded=NULL;
-  double limit=0., *node_dof=NULL;
-
-  if ( !db_active_index( GROUNDFLOW_TOTAL_PRESSURE_LIMIT, 0, VERSION_NORMAL ) )
-    return;
-
-  if ( !groundflow_pressure ) return;
+  long int ldum=0, idum[1];
+  double limit=GROUNDFLOW_TOTAL_PRESSURE_LIMIT_DEFAULT;
 
   db( GROUNDFLOW_TOTAL_PRESSURE_LIMIT, 0, idum, &limit, ldum,
-    VERSION_NORMAL, GET );
-  db_max_index( NODE, max_node, VERSION_NORMAL, GET );
-
-  for ( inod=0; inod<=max_node; inod++ ) {
-    if ( !db_active_index( NODE_START_REFINED, inod, VERSION_NORMAL ) )
-      continue;
-    node_dof = db_dbl( NODE_DOF, inod, VERSION_NEW );
-    if ( !node_dof ) continue;
-    iuknwn = pres_indx;
-    ipuknwn = iuknwn / nder;
-    node_bounded = db_int( NODE_BOUNDED, inod, VERSION_NORMAL );
-    if ( node_bounded && node_bounded[ipuknwn] )
-      continue;
-    if ( node_dof[iuknwn] > limit ) node_dof[iuknwn] = limit;
-  }
-
+    VERSION_NORMAL, GET_IF_EXISTS );
+  return limit;
 }

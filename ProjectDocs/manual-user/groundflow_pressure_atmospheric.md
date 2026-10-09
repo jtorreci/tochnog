@@ -2,8 +2,13 @@
 
 ## Description
 
-Upper cap for the static and total pore pressure derived from the phreatic
-level in `groundflow_phreatic_coord()`. Any value more positive than the
+Upper cap for the static pore pressure derived from the phreatic level in
+`groundflow_phreatic_coord()` (the pressure imposed by
+`groundflow_phreatic_level_static` / `_multiple_static`). Since F4
+(2026-10-09) the calculated TOTAL pressure is capped by
+`groundflow_total_pressure_limit` (default 0, manual Professional 6.587)
+instead, so a cap above 0 here no longer lets a positive total pressure
+through unless the limit is raised too. Any value more positive than the
 cap is truncated to the cap. It is a cap, not a gauge conversion: nothing
 is subtracted from the pressure, values are simply clipped.
 
@@ -30,7 +35,7 @@ groundflow_pressure_atmospheric <pa>
 
 | Parameter | Meaning                                                       |
 |-----------|---------------------------------------------------------------|
-| `pa`      | Cap on the static/total pore pressure. Default `0`.           |
+| `pa`      | Cap on the static pore pressure. Default `0`.                 |
 
 ## Example
 
