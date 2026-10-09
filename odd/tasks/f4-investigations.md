@@ -7,7 +7,7 @@ through `scripts/remote_run.sh`.
 
 ## Tasks
 - [x] T1 TPL + K10: align `groundflow_total_pressure_limit` with manual 6.587 / Pro (default 0, cap the calculated total pressure, zero the groundflow velocity where reached, never cut the `pres` dof). Owner decision 2026-10-07. Route: delegated writer.
-- [ ] T2 C41: `mohr_coul_direct7` (`-total_linear` + velocity `mpc_node_number` tie: unequal disy at tied nodes). Route: same writer after T1.
+- [x] T2 C41: `mohr_coul_direct7` (`-total_linear` + velocity `mpc_node_number` tie: unequal disy at tied nodes). Route: same writer after T1.
 - [ ] T3 C33: `set_stress` reads DTIME from VERSION_NORMAL (previous dt) → `_visco` direct law does not cut in the first step; principal tension cap ignores `_visco`. Route: same writer.
 - [ ] T4 C31 + K20: quadrature design (TET10 nodal rule degree 1; axisymmetric quad4 forced 1-point rule). Route: read-only investigator + omen A/B, then decision.
 - [ ] T5 C35/K02: integration-point state one-iteration lag. Investigation.
@@ -32,5 +32,13 @@ docs + SEGUIMIENTO + BACKLOG + DIVERGENCES.
   with limit 0). Evidence: 8 gtpl probes + ground1 = Pro; build_safe
   143 OK / 0 FALLO; corpus A/B vs 231→233, t26 82→86, sfnet 172→173
   (ho_mech1 timeout flake), Pro other 242→242. Retargeted test-2014
-  groundflow_total_pressure_limit/_dry (Pro values). Commit: see below.
+  groundflow_total_pressure_limit/_dry (Pro values). Commit 3acce9d.
+- T2 (route: same writer, inline mpc.cc): root cause mpc_node_apply
+  re-synced the slave velocity after the displacement integration, so the
+  slave displacement lagged one solve (-total_linear sees it). Fix:
+  integrate the slave displacement with the slave velocity. Evidence:
+  mohr_coul_direct7 sigxy 0.0998334 = Pro, tied nodes equal; residual
+  disy/sigzz difference -> DIVERGENCES/BACKLOG C41. build_safe 144 OK /
+  0 FALLO; A/B t1->t2: only mohr_coul_direct7 and the new test fixed
+  (ho_mech1 timeout flake).
 

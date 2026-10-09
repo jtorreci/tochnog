@@ -70,9 +70,24 @@ family (mohr_coul_direct1/3/5/6/8 — no mpc — fail the same way).
 - Only principal dofs can be constrained (manual 6.875).
 - The slave value is recomputed every iteration from the CURRENT master
   values, so the constraint is exact at convergence.
+- A tied velocity also ties the integrated displacement
+  (`materi_displacement`): the slave displacement follows the slave
+  velocity of the same solve, so a `-total_linear` model (the default with
+  `materi_displacement`) keeps the tied nodes at the same displacement
+  (F4 T2, 2026-10-09; test `test-2026/mohr_coul_direct_mpc_total1`, values
+  of the Professional 02-08-2026).
 - `mpc_apply` (manual 6.859, switch `-yes`/`-no`, default `-yes`) is
   registered as a known keyword but NOT yet consumed: all mpc records
   are always active.
 - `mpc_geometry`/`mpc_element_group` (automatic generation of
   `mpc_node_number`/`mpc_node_factor` records) remain PENDING; see
   `mpc_linear_quadratic.md` for the implemented auto-generation case.
+
+## Differences with the Professional version
+
+- `mohr_coul_direct7` (tie + `-total_linear`): stresses sigxx, sigyy,
+  sigxy equal to the Professional 02-08-2026 and the tied nodes equal, but
+  disy -0.00175 vs -0.0018458 and sigzz -1.0084 vs -0.90785 (known
+  difference, not decided; BACKLOG C41; not caused by the tie). Index:
+  [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).
+

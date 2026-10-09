@@ -1392,6 +1392,12 @@ run_ok "$T2026" groundflow_total_pressure_limit_high1
 run_ok "$T2026" groundflow_total_pressure_limit_negative1
 run_ok "$T2026" groundflow_velocity_dry1
 run_ok "$T2026" groundflow_velocity_dry2
+# F4 T2 / C41 (2026-10-09): a tied VELOCITY slave carries its integrated
+#   displacement (mpc_node_apply). mohr_coul_direct_mpc_total1 = Pro
+#   other/mohr_coul_direct7 (-total_linear default + velocity tie):
+#   sigxy 0.0998334 at nodes 1 and 2 (= Pro; old GNU 0.102732 /
+#   0.096935, the slave disy lagged one solve).
+run_ok "$T2026" mohr_coul_direct_mpc_total1
 
 # ---------------------------------------------------------------------
 # K03 (2026-10-06): default convection_apply -no (manual Professional

@@ -1311,7 +1311,21 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
 - **Severity**: **LOW**. **Effort**: **cheap** (1, 2) to **medium** (3).
 ---
 
-### C41. `mohr_coul_direct7` (Pro `other`): `-total_linear` with a velocity `mpc_node_number` tie (F3, 2026-10-07)
+### C41. `mohr_coul_direct7` (Pro `other`): `-total_linear` with a velocity `mpc_node_number` tie (F3, 2026-10-07) — tie RESOLVED 2026-10-09 (F4 T2); residual open
+
+- **Resolution (F4 T2)**: root cause `mpc.cc` `mpc_node_apply()`: the
+  post-solve re-sync set the slave VELOCITY but not its integrated
+  displacement (`parallel_new_dof_diagonal` integrates `dis = dis_old +
+  vel*dt` before the re-sync), so the slave displacement lagged one solve;
+  with `-total_linear` the tied nodes 3/4 ended with disy -0.001808 /
+  -0.001692. The slave displacement is now integrated with the slave
+  velocity. Target met: sigxy 0.0998334 at every node (= Professional);
+  tied nodes equal. Test `test-2026/mohr_coul_direct_mpc_total1`.
+- **Residual (open, LOW)**: disy -0.00175 vs Professional -0.0018458 and
+  sigzz -1.0084 vs -0.90785 (sigxx, sigyy, sigxy equal). Not the tie (both
+  programs keep the tied nodes equal); belongs to the `mohr_coul_direct`
+  cut under `-total_linear`, possibly through the stored direct plastic
+  strain (C34), not verified. DIVERGENCES C41.
 
 - **Corpus**: Pro `other` `mohr_coul_direct7` (exit-code pass before F3,
   fail after). The input has `materi_displacement` and no memory record,
@@ -1376,7 +1390,7 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
 | C38 | Pro `other` | `control_support_edge_normal_stiffness_freeze` parse-only (support_edge_normal_3, 1e-9 effect) | LOW | cheap/medium |
 | C39 | Pro `other` | K17 residuals: `truss8` birth node resolved 2026-10-06 (death velocity reset open), `update2` -updated robustness, `truss13` truss_distribute_mpc, zero-force truss first iteration | LOW | cheap/large |
 | C40 | Pro `other` | element-target contact residuals after F2 T3b: no Pro check "target element has all nodes on the boundary", hex8 target sides never detected, node_boundary generated only for element-target contact | LOW | cheap/medium |
-| C41 | Pro `other` | `mohr_coul_direct7`: `-total_linear` + velocity `mpc_node_number` tie misses sigxy (F3) | LOW | medium |
+| C41 | Pro `other` | `mohr_coul_direct7`: `-total_linear` + velocity `mpc_node_number` tie — tie resolved 2026-10-09 (F4 T2); residual disy/sigzz difference | LOW | medium |
 
 Thirty-nine items remain open: nine MEDIUM and thirty LOW (C23 and C24 resolved 2026-10-05; C25, C26, C27 and B10 added; F1 T3 / K04 2026-10-06 added B11, C28-C32; F1 T6 resolved C28, added and resolved B12; F2 T1 added C36; F2 T2 added C37, C38, C39; F2 T3 resolved C5 and added C40; F3 T2 resolved C8, C18, C19, C20 and added B13, C41). No open issue is CRITICAL or
 HIGH. The validation-suite corpus has no open failure — its 233 real tests
