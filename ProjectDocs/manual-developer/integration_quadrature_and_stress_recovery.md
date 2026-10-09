@@ -273,12 +273,12 @@ operations):
   diverges to 5e8). Static results are unaffected. Code: `general.cc`
   `general()` (HRZ weight). Index:
   [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).
-- **`post_point_dof` inside a `tet10`** (known difference, pending
-  project-owner decision; DIVERGENCES TET10-PPOINT). GNU: interpolates
-  the nodal values with the quadratic `tet10` shape functions (all 10
-  nodes). Professional 02-08-2026: interpolates linearly from the 4
-  corner nodes. Recommendation: keep the GNU (the correct finite-element
-  interpolation). Code: `point_el.cc` (tet10 shape functions). Index:
+- **`post_point_dof` inside a `tet10`** (deliberate divergence, project
+  owner 2026-10-09; DIVERGENCES TET10-PPOINT). GNU: interpolates the
+  nodal values with the quadratic `tet10` shape functions (all 10
+  nodes), the consistent finite-element interpolation. Professional
+  02-08-2026: interpolates linearly from the 4 corner nodes (`tet10p`
+  post points differ by up to 2 %). Code: `point_el.cc` (tet10 shape functions). Index:
   [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).
 - **quad4 nodal stress recovery on distorted or axisymmetric elements**
   (known difference, not decided; BACKLOG C42). GNU: bilinear
