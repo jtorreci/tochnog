@@ -63,3 +63,8 @@ feature in `ProjectDocs/SEGUIMIENTO-CONVERGENCIA.md`:
   4000000` (4 GB) plus `timeout`, with at most 4 parallel jobs: an
   uncapped run can grow to ~30 GB, trigger the global OOM killer and kill
   the whole session.
+- Expensive runs (full corpus A/B, Pro sweeps) go to the "omen" machine
+  (WSL, 16 cores, 31 GB, Tailscale `100.118.34.119`, user `jtorreci`,
+  `~/tochnog-runs`) through `scripts/remote_run.sh` (bin / lib / push /
+  run / pull). `run` applies the same 4 GB `ulimit -v`; keep at most
+  `TN_REMOTE_JOBS` (6) parallel jobs. Builds stay local.
