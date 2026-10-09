@@ -24,7 +24,8 @@ recovery.
 |---|---|---|---|---|
 | element stiffness, quad4 / hex8 | 2x2 / 2x2x2 **Gauss** | 2x2 / 2x2x2 Lobatto (`-minimal` default) | Gauss | static probes, 12 digits (prior sprint) |
 | element stiffness, quad9 / hex27 | 3x3 / 3x3x3 **Gauss** | Lobatto | Gauss | `.dbs element_intpnt_method -gauss`, `npoint` 9/27 |
-| mass matrix | **row-sum lumped** (quadrature-invariant) | row-sum lumped | unchanged | distorted-element dynamic probe |
+| element stiffness, tet10 | **Keast 5-point** (centroid -4/5, (1/2,1/6,1/6,1/6) x4 9/20) | nodal rule (degree 1) | Keast 5-point (F4 T4) | `tet10_2` gravity sigzz -1; `.dbs` npoint 5 |
+| mass matrix | **row-sum lumped** (quadrature-invariant) | row-sum lumped | unchanged; tet10 HRZ (F4 T4, deliberate) | distorted-element dynamic probe; `mass10` |
 | internal force vector | same rule as the stiffness (one `pol()` rule) | Lobatto | Gauss | — |
 | body / gravity load | same rule | Lobatto | Gauss | — |
 | edge / surface load | boundary integration; interface elements keep nodal (Lobatto) | boundary integration | unchanged | GNU `area.cc`; interfaces do not call `pol()` |
@@ -57,6 +58,7 @@ Measured on the Professional's own `beam2d_1.dbs` (quad9, 45 elements),
 | quad9 | 9 | **uniform-weight linear least squares** `1,x,y` (3 terms) | 1.2e-12 |
 | hex8 | 8 | **uniform-weight linear least squares** `1,x,y,z` (4 terms) | 1.0e-8 |
 | hex27 | 27 | uniform-weight linear least squares `1,x,y,z` (assumed) | not independently verified |
+| tet10 | 5 | uniform-weight linear least squares `1,L1,L2,L3` (F4 T4 investigation) | `tet10_2` exact (-1); `tet10p` post points within 2 % of the Pro (its post_point interpolation differs, TET10-PPOINT) |
 
 The operator is FIXED in the element natural coordinates (the same 9x9
 matrix fits all 45 beam2d_1 elements of different geometry to 1e-9). The
@@ -150,6 +152,44 @@ section moment changes from 0 to 1/960, the analytic moment of the
 runs past the point where the 1-point rule failed and needs more than
 4 GB (F4 T7 memory hogs).
 
+### 3.3 tet10 rule, recovery and lumping (C31, F4 T4, 2026-10-09)
+
+- `polynom.cc` `pol()`, TET10 branch: `npoint = 5`, Keast rule (centroid
+  weight -4/5, the four points with one barycentric coordinate 1/2 and
+  the others 1/6, weight 9/20; normalised to 1 like every rule of
+  `pol()`), `stress_recovery_gauss = 1`. Degree 3: the quadratic
+  stiffness (degree 2) and the consistent body load (corner -V/20,
+  mid-edge V/5) are exact. The former nodal rule (weight EPS_TRIANGLE
+  at the corners, ~1/6 at the mid-edge nodes) was exact only for linear
+  integrands.
+- `miscel.cc` `sri_stress_recovery_weight()`: tet10 branch. The
+  Professional fits `1,L1,L2,L3` to the 5 point values with uniform
+  weights. In the barycentric basis the normal matrix is
+  `I/9 + (41/144) J`, so the factor is the closed form
+  `F = 9 L(node).L(point) - 41/20` (sums to 1 over the points); the
+  volume cancellation of section 3 applies (the centroid point volume is
+  negative, the cancellation still gives `volume*weight = F`).
+- `general.cc` `general()`, lumped inertia: for a 5-point tet10 and a
+  principal dof (`principal_unknown`: velocity, temperature, groundflow
+  pressure, density, wave) the weight is the HRZ mass fraction, corner
+  1/36 and mid-edge 4/27 (consistent-mass diagonal 6/420 and 32/420
+  scaled to the total; sum 1). The integration-point volumes sum to V,
+  so the node gets V/36 or 4V/27. The non-principal recovered dofs keep
+  `h`: their `materi.cc` numerators are `h`-weighted, so numerator and
+  denominator stay consistent (corner weights are all negative and
+  mid-edge all positive, both proper averages). The stress/strain dofs
+  keep the recovery weight. HRZ is a DELIBERATE DIVERGENCE (owner
+  2026-10-09): the Professional row sum gives the corner -V/20.
+- Probes (Professional 02-08-2026 vs GNU, F4 T4): `tet10_2` sigzz
+  -0.894 -> -1.00000000515 (Pro -1); `tet10_1` stays exact; `mass10`
+  (one tet10, unit point forces, dt 0.01): GNU velocities 2.16 corner /
+  0.405 mid-edge = dt/m with the HRZ masses (Pro -1.2 / 0.3, row sum);
+  `dyn10` (48 tet10 column, sudden gravity, inertia): GNU stable, top
+  disz -0.5286 at t 3 (analytic undamped -0.5), Pro solver failure,
+  GNU 5-point build with row sum 5e8.
+- Tests: `test-2026/tet10_body_load1`, `tet10_mass_hrz1`,
+  `tet10_dynamic_gravity1`.
+
 ## 4. force5 (phreatic level)
 
 `area.cc` looked up the phreatic level for the FIRST node of a
@@ -207,9 +247,11 @@ operations):
 
 ## 7. Files and functions
 
-- `polynom.cc` — `pol()`, `stress_recovery_gauss`.
+- `polynom.cc` — `pol()` (incl. the tet10 Keast rule, C31),
+  `stress_recovery_gauss`.
 - `miscel.cc` — `sri_stress_recovery_weight()`.
-- `general.cc` — `general()`, the lumped sigma-dof inertia weight.
+- `general.cc` — `general()`, the lumped sigma-dof inertia weight and the
+  tet10 HRZ lumping (C31).
 - `materi.cc` — `materi()`, the stress-dof RHS.
 - `area.cc` — `area()`, the `force_element_edge_water` phreatic lookup.
 - `so_bicg.cc` — `solve_iterative_bicg()`, the scale-relative CG breakdown
@@ -221,11 +263,23 @@ operations):
 
 ## Differences with the Professional version
 
-- **`tet10` integration rule** (known difference, not decided; BACKLOG C31;
-  AUDIT K04). GNU: Nodal quadrature exact only for linear integrands
-  (`tet10_2` gravity sigzz -0.894). Professional 02-08-2026: Exact (-1).
-  Status: Scheduled for F4 (design + corpus A/B), project owner 2026-10-06.
-  Index: [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).
+- **Lumped mass / capacity of the `tet10`** (deliberate divergence,
+  project owner 2026-10-09; DIVERGENCES TET10-HRZ). GNU: positive HRZ
+  lumping, corner V/36 and mid-edge 4V/27 (the diagonal of the
+  consistent mass scaled to the element total). Professional 02-08-2026:
+  row-sum lumping of its 5-point rule, corner -V/20 and mid-edge V/5;
+  the negative corner masses make dynamics unstable (sudden gravity on a
+  48-tet10 column: the Professional solver fails, a GNU row-sum build
+  diverges to 5e8). Static results are unaffected. Code: `general.cc`
+  `general()` (HRZ weight). Index:
+  [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).
+- **`post_point_dof` inside a `tet10`** (known difference, pending
+  project-owner decision; DIVERGENCES TET10-PPOINT). GNU: interpolates
+  the nodal values with the quadratic `tet10` shape functions (all 10
+  nodes). Professional 02-08-2026: interpolates linearly from the 4
+  corner nodes. Recommendation: keep the GNU (the correct finite-element
+  interpolation). Code: `point_el.cc` (tet10 shape functions). Index:
+  [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).
 - **quad4 nodal stress recovery on distorted or axisymmetric elements**
   (known difference, not decided; BACKLOG C42). GNU: bilinear
   interpolation `1,xi,eta,xi*eta` of the 2x2 Gauss values in the natural

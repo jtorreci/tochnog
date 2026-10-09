@@ -1,0 +1,48 @@
+( F4 T4 / C31: lumped masses of one tet10 [volume 1/6, density 1,
+  E 1e-9] read from the velocity after one step of a unit point force,
+  v = F dt / m with dt 0.01. HRZ lumping [GNU-specific, deliberate
+  divergence TET10-HRZ]: corner m = V/36 -> v 2.16 [nodes 1 and 10],
+  mid-edge m = 4V/27 -> v 0.405 [nodes 2 and 7]. The Professional
+  02-08-2026 row sum gives the corner -V/20 [v -1.2] and the mid-edge
+  V/5 [v 0.3]. Old GNU [nodal rule, corner weight ~0]: huge corner
+  velocities. )
+echo -no
+number_of_space_dimensions 3
+materi_velocity
+materi_displacement
+materi_stress
+end_initia
+inertia_apply -yes
+node 1 0. 0. 0.
+node 2 .5 0. 0.
+node 3 1. 0. 0.
+node 4 0. .5 0.
+node 5 .5 .5 0.
+node 6 0. 1. 0.
+node 7 0. 0. .5
+node 8 .5 0. .5
+node 9 0. .5 .5
+node 10 0. 0. 1.
+element 1 -tet10 1 2 3 4 5 6 7 8 9 10
+group_type 0 -materi
+group_materi_elasti_young 0 1.e-9
+group_materi_density 0 1.
+group_materi_memory 0 -total_linear
+bounda_force 1 1 -velx
+bounda_time 1 1.
+bounda_force 2 2 -vely
+bounda_time 2 1.
+bounda_force 3 10 -velz
+bounda_time 3 1.
+bounda_force 4 7 -velx
+bounda_time 4 1.
+control_timestep 10 1.e-2 1.e-2
+target_item 1 -node_dof 1 -velx
+target_value 1 2.16 1.e-4
+target_item 2 -node_dof 2 -vely
+target_value 2 0.405 1.e-4
+target_item 3 -node_dof 10 -velz
+target_value 3 2.16 1.e-4
+target_item 4 -node_dof 7 -velx
+target_value 4 0.405 1.e-4
+end_data

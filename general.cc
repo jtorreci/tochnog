@@ -344,6 +344,20 @@ void general( long int element, long int name, long int nnol, long int element_g
              !( dof_type[iuknwn]==-MATERI_STRESS &&
                 stress_recovery_absolute ) ) {
           double weight = h[inol];
+          // C31 (F4 T4, 2026-10-09): the tet10 5-point rule has h < 0 at
+          // the corners (consistent corner share -V/20), so the row-sum
+          // lumped inertia/capacity would be negative there (unstable
+          // dynamics). The principal dofs (velocity, temperature,
+          // pressure, ...) use the HRZ masses instead: the diagonal of the
+          // consistent mass scaled to the element total, corner V/36 and
+          // mid-edge 4V/27 (sum over the points of volume*weight = V).
+          // DELIBERATE DIVERGENCE (project owner 2026-10-09): the
+          // Professional keeps the negative row sum. The recovered
+          // (non-principal) dofs keep h, consistent with their materi.cc
+          // numerators.
+          if ( name==-TET10 && npoint==5 && principal_unknown )
+            weight = ( inol==0 || inol==2 || inol==5 || inol==9 ) ?
+              1./36. : 4./27.;
           // K11 (2026-10-06): the strain tensors use the recovery weight
           // of materi.cc (strain_recovery_weight), so numerator and
           // denominator of the lumped update match

@@ -1,0 +1,57 @@
+( F4 T4 / C31: unit cube split into 48 tet10, bottom fixed, sudden
+  gravity -1 with inertia, E 1, density 1, dt 0.05 up to t 3. The column
+  oscillates about the static top displacement -0.5; the analytic
+  undamped bar is back at the static value at t = 3 [a quarter of the
+  second period], the first peak is -1.0 at t = 2. HRZ lumping: top disz
+  -0.5286 at t 3, peak -0.949. The Professional row-sum lumping with
+  negative corner masses diverges [Pro: solver failure; GNU 5-point rule
+  with row sum: 5e8 at t 3]. )
+echo -no
+number_of_space_dimensions 3
+materi_velocity
+materi_displacement
+materi_strain_total
+materi_stress
+end_initia
+inertia_apply -yes
+
+node 1  0.0 0.0 0.0
+node 2  1.0 0.0 0.0
+node 3  0.0 1.0 0.0
+node 4  1.0 1.0 0.0
+node 5  0.0 0.0 1.0
+node 6  1.0 0.0 1.0
+node 7  0.0 1.0 1.0
+node 8  1.0 1.0 1.0
+element 1  -hex8 1 2 3 4 5 6 7 8
+
+start_define
+  lower_edge geometry_quadrilateral 1
+end_define
+start_define
+  upper_edge geometry_quadrilateral 2
+end_define
+
+lower_edge 0. 0. 0. 1. 0. 0. 0. 1. 0. 1. 1. 0. 1.e-5
+upper_edge 0. 0. 1. 1. 0. 1. 0. 1. 1. 1. 1. 1. 1.e-5
+
+group_type 0  -materi
+group_materi_elasti_young 0  1.0
+group_materi_density 0  1.0
+group_materi_memory 0  -total_linear
+
+bounda_dof   0   -lower_edge -velx -vely -velz
+
+post_point 1 0.5 0.5 1.0
+
+force_gravity 0. 0. -1.
+
+control_mesh_refine_globally 10  -h_refinement
+control_mesh_refine_globally 11  -p_refinement
+
+control_mesh_split           20  -yes
+
+control_timestep 30 0.05 3.
+target_item 1 -post_point_dof 1 -disz
+target_value 1 -0.5 0.05
+end_data

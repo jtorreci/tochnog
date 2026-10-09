@@ -1425,6 +1425,20 @@ run_ok "$T2026" materi_plasti_visco_power_dt1
 run_ok "$T2026" axisym_quad4_hourglass1
 run_ok "$T2026" axisym_quad4_ring1
 run_ok "$T2026" axisym_quad9_uniform1
+# F4 T4 / C31 (2026-10-09): tet10 Keast 5-point rule (polynom.cc), linear
+#   least-squares recovery 1,L1,L2,L3 (miscel.cc), HRZ lumping (general.cc):
+#   tet10_body_load1: 48 tet10 under gravity: sigzz -1 (= Pro tet10_2;
+#     old GNU -0.894);
+#   tet10_mass_hrz1: one tet10, unit point forces, dt 0.01: v = dt/m with
+#     the HRZ masses, corner 2.16, mid-edge 0.405 (GNU-specific target,
+#     deliberate divergence TET10-HRZ: Pro row sum -1.2 / 0.3; old GNU
+#     59999.99 / 0.36);
+#   tet10_dynamic_gravity1: 48 tet10 column, sudden gravity with inertia:
+#     stable, top disz -0.5286 at t 3 (analytic -0.5 +- 0.05; row sum with
+#     the 5-point rule diverges to 5e8, the Pro solver fails).
+run_ok "$T2026" tet10_body_load1
+run_ok "$T2026" tet10_mass_hrz1
+run_ok "$T2026" tet10_dynamic_gravity1
 
 # ---------------------------------------------------------------------
 # K03 (2026-10-06): default convection_apply -no (manual Professional

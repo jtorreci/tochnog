@@ -427,6 +427,7 @@ double sri_stress_recovery_weight( long int sri, long int name, long int nnol,
   //   quad9   9 pts  linear least squares    1,x,y     (3 terms)
   //   hex8    8 pts  linear least squares    1,x,y,z   (4 terms)
   //   hex27  27 pts  linear least squares    1,x,y,z   (4 terms)
+  //   tet10    5 pts  linear least squares    1,L1,L2,L3 (4 terms, C31)
   // Every other element/rule returns h_inol. The node-containing Lobatto
   // rules already have h as the exact weight (h is the Kronecker delta at
   // the nodes), and the non-tensor elements (bar/tria/tet) keep the
@@ -473,6 +474,27 @@ double sri_stress_recovery_weight( long int sri, long int name, long int nnol,
   }
 
   if ( !stress_recovery_gauss ) return h_inol;
+
+  // tet10 with the 5-point Keast rule (C31, F4 T4 2026-10-09): the
+  // Professional 02-08-2026 fits 1,L1,L2,L3 to the 5 point values by
+  // uniform-weight least squares and evaluates the fit at the node. With
+  // the barycentric basis the normal matrix is I/9 + (41/144) J, so the
+  // factor has the closed form F = 9 L(node).L(point) - 41/20 (it sums to
+  // 1 over the points). Same volume cancellation as below.
+  if ( name==-TET10 && nnol==10 && npoint==5 && ndim==3 ) {
+    static const double lnode[10][4] = {
+      {1.,0.,0.,0.}, {.5,.5,0.,0.}, {0.,1.,0.,0.}, {.5,0.,.5,0.},
+      {0.,.5,.5,0.}, {0.,0.,1.,0.}, {.5,0.,0.,.5}, {0.,.5,0.,.5},
+      {0.,0.,.5,.5}, {0.,0.,0.,1.} };
+    double dot = 0.;
+    for ( k=0; k<4; k++ ) {
+      double lp = ( ipoint==0 ) ? 0.25 : ( ( k==ipoint-1 ) ? 0.5 : 1./6. );
+      dot += lnode[inol][k] * lp;
+    }
+    F = 9.*dot - 41./20.;
+    if ( scalar_dabs(volume)>TINY ) return F/volume;
+    return h_inol;
+  }
 
   for ( k=0; k<4; k++ )
     for ( d=0; d<MDIM; d++ ) expo[k][d] = 0;

@@ -1072,7 +1072,20 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
 - **Severity**: **LOW** — deliberate divergence; the GNU follows the manual.
   **Effort**: —.
 
-### C31. `tet10` integration rule is only degree 1 (Pro `tet10_2` under gravity)
+### C31. `tet10` integration rule is only degree 1 (Pro `tet10_2` under gravity) — RESOLVED 2026-10-09 (F4 T4)
+
+- **Resolution (F4 T4, option (c), project owner 2026-10-09)**: the
+  Professional's Keast 5-point rule (`polynom.cc`), its linear
+  least-squares nodal recovery `1,L1,L2,L3` (`miscel.cc`) and a positive
+  HRZ lumping of the principal-dof inertia/capacity (`general.cc`,
+  corner V/36, mid-edge 4V/27; deliberate divergence TET10-HRZ: the
+  Professional row sum gives the corner -V/20 and its dynamics fail).
+  `tet10_2` sigzz -1.00000000515 (Pro -1); tests
+  `test-2026/tet10_body_load1`, `tet10_mass_hrz1`,
+  `tet10_dynamic_gravity1`. Found on the way: the Professional
+  `post_point_dof` inside a tet10 interpolates linearly from the corners
+  (DIVERGENCES TET10-PPOINT, pending decision).
+
 
 - **Symptom** (F1 T3, audit K04): `tet10_2` (hex8 -> h -> p -> split into
   48 tet10, gravity): GNU post-point sigzz -0.894 (nodal sigzz at z = 0
@@ -1412,7 +1425,7 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
 | C27 | — | FRD/gmsh layout vs Pro (PSTEP per block, `ALL` component, names, extra blocks/fields, multi-component gmsh fields) | LOW | medium |
 | C29 | Pro `other` | `group_condif_conductivity` per-direction values (condif11) not parsed | LOW | cheap/medium |
 | C30 | Pro `other` | `mohr_coul_direct4`: Pro does not enforce the interface MC strength (deliberate divergence, GNU = manual 6.632) | LOW | — |
-| C31 | Pro `other` | `tet10` nodal quadrature only degree 1 (`tet10_2` gravity); F4 (design + corpus A/B) | MEDIUM | medium |
+| C31 | Pro `other` | `tet10` nodal quadrature only degree 1 (`tet10_2` gravity) — resolved 2026-10-09 (F4 T4: Keast 5-point + LSQ recovery + HRZ lumping) | MEDIUM | medium |
 | C32 | Pro `other` | `axisym9` (stale row, already = Pro), `distri2` (random generator): not GNU defects — closed 2026-10-09 (F4 T4) | LOW | — |
 | C33 | — | `_visco` direct cut-offs: `DTIME` from the previous step, no visco on the principal tension cap — resolved 2026-10-09 (F4 T3) | MEDIUM | cheap/medium |
 | C34 | — | direct cut shear plastic strain: Pro twice the tensor value (deliberate divergence) | LOW | — |
@@ -1425,7 +1438,7 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
 | C41 | Pro `other` | `mohr_coul_direct7`: `-total_linear` + velocity `mpc_node_number` tie — tie resolved 2026-10-09 (F4 T2); residual disy/sigzz difference | LOW | medium |
 | C42 | Pro `other` | quad4 nodal stress recovery: natural bilinear (GNU) vs physical linear least squares (Pro); distorted/axisymmetric quad4 (`axisym2` sigzz 10760.09 vs 10759.22) | LOW | medium |
 
-Thirty-eight items remain open: eight MEDIUM and thirty LOW (C23 and C24 resolved 2026-10-05; C25, C26, C27 and B10 added; F1 T3 / K04 2026-10-06 added B11, C28-C32; F1 T6 resolved C28, added and resolved B12; F2 T1 added C36; F2 T2 added C37, C38, C39; F2 T3 resolved C5 and added C40; F3 T2 resolved C8, C18, C19, C20 and added B13, C41; F4 T2 fixed the C41 tie and left a residual; F4 T3 resolved C33; F4 T4 closed C32 and added C42). No open issue is CRITICAL or
+Thirty-seven items remain open: seven MEDIUM and thirty LOW (C23 and C24 resolved 2026-10-05; C25, C26, C27 and B10 added; F1 T3 / K04 2026-10-06 added B11, C28-C32; F1 T6 resolved C28, added and resolved B12; F2 T1 added C36; F2 T2 added C37, C38, C39; F2 T3 resolved C5 and added C40; F3 T2 resolved C8, C18, C19, C20 and added B13, C41; F4 T2 fixed the C41 tie and left a residual; F4 T3 resolved C33; F4 T4 closed C32, added C42 and resolved C31). No open issue is CRITICAL or
 HIGH. The validation-suite corpus has no open failure — its 233 real tests
 pass (`materi_direct_mc` input corrected, C17 resolved). Every remaining failure is a stale or malformed test, an out-of-scope model
 or infrastructure limit, a narrow post-processing divergence, a corpus-coverage

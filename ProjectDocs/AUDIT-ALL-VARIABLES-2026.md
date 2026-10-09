@@ -389,7 +389,7 @@ and target):
 | `mohr_coul_direct4` | `disx` | **0.3007** (GNU = manual 6.632 strength c + |Fn| tan phi; the Pro stays elastic at t = 1 and drifts below the strength by t = 100: deliberate divergence, user decision 2026-10-06, BACKLOG C30) | 0.1024 |
 | `stress_pressure_factor` | `sigxx` | **−3.10** → −3.05 after the 2026-10-06 fix (F1 T3: factored trial pressure, strict tie, = Pro rule) | −3.05 |
 | `incnav3` | `tvely` (`expansion_volume` effect) | **−2.49** → −4.9904 after the 2026-10-06 fix (F1 T3: rho(1 − beta T) in the inertia too; sfnet copy target −2.5 stale, BACKLOG B11) | −5 |
-| `tet10_2` | `sigzz` | **−0.894** (TET10 nodal quadrature only degree 1, `polynom.cc`; needs design, moved to F4 (design + corpus A/B), BACKLOG C31) | −1 |
+| `tet10_2` | `sigzz` | **−0.894** (TET10 nodal quadrature only degree 1, `polynom.cc`); RESOLVED 2026-10-09 (F4 T4, BACKLOG C31): −1.00000000515 | −1 |
 | `ground9` | interface groundflow `pres` | **0.333** → 0.5 after the 2026-10-06 fix (F1 T3: interface permeability/capacity/conductivity per unit length, capacity implicit) | 0.5 |
 | `axisym9` | `post_point_dof 10 -sigxx` | 0.00158902 at F1 T3; stale: 0.00159154943 = Pro before and after F4 T4 (K20 resolved 2026-10-09; BACKLOG C32 closed) | 0.0015915 (±1e-6) |
 | `distri2` | `post_point_dof 1 -temp` | 0.998933 (different random generator, both valid N(1, 2e-3); not a defect, BACKLOG C32) | 0.999774 (±1e-4) |
