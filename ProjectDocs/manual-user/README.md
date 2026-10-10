@@ -453,6 +453,7 @@ page lists its own in "Differences with the Professional version".
 
 ## NODAL STRESS POST-SOLVE SYNC (2026-09-15)
 
+- [post_solve_material_state_pass](post_solve_material_state_pass.md) — after the last equilibrium iteration of every step the material is evaluated once more on the solved velocity; that state (stress, strains, plastic strain, hardening) is the step output and the next step's history, as in the Professional (F4 T5, 2026-10-10). No keyword. Off (previous scheme) for inertia, slide and contact models.
 - [nodal_stress_post_solve_sync](nodal_stress_post_solve_sync.md) — the nodal stress field is re-evaluated from the solved velocity at the end of every equilibrium iteration, so the reported stress is in sync with the velocity (Professional convention) instead of trailing it by one iteration. No keyword: automatic with `materi_stress` and the absolute recovery. Visible in `mpc5.dat`, which now reports `sigyy = 0.5` at one iteration (was `1.0`).
 
 ## GEOMETRY LIST (2026-09-26)

@@ -1181,7 +1181,7 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
   table.
 - **Severity**: **LOW** (output only). **Effort**: —.
 
-### C35. One-equilibrium-iteration lag of the whole material state (audit K02) — PARKED, design, scheduled for F4
+### C35. One-equilibrium-iteration lag of the whole material state (audit K02) — RESOLVED 2026-10-10 (F4 T5), gated families open (C52, C53)
 
 - **Symptom** (F1 T5, Professional 02-08-2026, sfnet `spring4` converted:
   rigid translation velx 1, `materi_strain_total`, one equilibrium
@@ -1205,6 +1205,21 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
   full corpus A/B); not part of F1.
 - **Severity**: **MEDIUM** (one-iteration models report a lagged state).
   **Effort**: **medium/large**.
+- **Resolution** (F4 T5, project owner 2026-10-10): post-solve material
+  state pass as the default (`top.cc`, after the equilibrium loop:
+  `iteration_start(); element_loop(); parallel_new_dof_diagonal;
+  mpc_node_apply()`; `material_state_post_pass` makes `elem.cc` skip the
+  matrix store). It replaces the stress-only sync except for the gated
+  families: inertia, slide, contact (temporary divergence, DIVERGENCES
+  class B `POSTPASS-GATE`). Verified: probes = Professional (`spring4`
+  eptxx 0, plastic bars eppxx 0.01, stretch velx 0.5 every step); matrix
+  vs no-matrix byte-identical; corpus A/B: see SEGUIMIENTO F4 T5 row.
+  Exposed and fixed first: C51 (hardsoil kappa read). Docs:
+  `manual-*/post_solve_material_state_pass.md`.
+- **Widening criterion**: a gated family is enabled only after the pass
+  is extended to its physics (`slide()` / `parallel_contact` called
+  consistently, consistent inertia update) and the probes + full corpus
+  A/B on omen show no test moving away from the Professional.
 
 ### C36. `group_materi_elasti_young_power` next to `group_materi_elasti_young`: the Professional adds both stiffnesses — DECIDED 2026-10-06: deliberate divergence, option (a) (audit K06)
 
@@ -1511,7 +1526,7 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
   `calcul_force.cc`).
 - **Severity**: **LOW**. **Effort**: **medium**.
 
-### C48. Interface tension status written from the wrong buffer (F4 T9, 2026-10-10)
+### C48. Interface tension status written from the wrong buffer (F4 T9, 2026-10-10) — RESOLVED 2026-10-10 (F4 T10)
 
 - **Found by**: the F4 T9 ASan runs on the Professional
   `interface_bar2_hex8`, `interface_bar3_quad8`, `interface_quad8_hex20`
@@ -1528,6 +1543,26 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
   its own A/B.
 - **Severity**: **LOW** (status output only; stresses and strains are
   written correctly). **Effort**: **cheap**.
+- **Resolution** (F4 T10, commit `c06fa2d`): `long int` status array
+  (`-CLOSED` / `-OPENED`) PUT as integers, buffers released with
+  `delete[]`. The record is print-only (nothing reads it back), so only
+  that output changes. Values equal to the Professional 02-08-2026 on its
+  20 `interface*` inputs (all `-closed`; `interface_bar2_hex8` differs by
+  element numbering, see C50) and on the new
+  `test-2026/interface_tension_status1` (`-opened` case). Two GNU runs give
+  byte-identical `.dbs`.
+
+### C50. `interface_bar2_hex8`: extruded + converted interface mesh differs from the Professional (F4 T10, 2026-10-10)
+
+- **Found by**: the F4 T10 tension-status sweep (Professional `test/other`).
+- **Symptom**: after `control_mesh_extrude` (`_n 2 2`) and
+  `control_mesh_convert` of a 3D `-bar2` interface the GNU final mesh holds
+  element 3 as a `-quad4` (with interface output records of 2 integration
+  points) and `-hex8` elements 5-10 with interfaces 9 and 10; the
+  Professional has `-hex8` elements 1-6 with interfaces 3 and 6. Both end
+  rc 0 (target met).
+- **Root cause**: not investigated.
+- **Severity**: **LOW**. **Effort**: **medium** (unknown).
 
 ### C49. The build uses `-O1` (F4 T9, 2026-10-10)
 
@@ -1538,7 +1573,109 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
   the makefile flags; numerical reproducibility, a past miscompilation, or
   the incremental-build corruption on the NAS) before changing it; then a
   full corpus A/B (`-O2` may change round-off).
-- **Severity**: **LOW** (performance). **Effort**: **cheap/medium**.
+- **Study (F4 T11, 2026-10-10; default NOT changed, owner decision)**:
+  - **Why `-O1`**: no recorded reason. It comes from the 2026-08-02
+    modernisation build command (`VALIDACION-2026-08-02.md`) and was
+    copied into `build_safe.sh` when it was created (`73f0e70`, an
+    "anti-OOM WSL2" sequential build with a 4 GB `ulimit -v`). The
+    upstream makefile Linux targets use `-O2`. No commit or document
+    reports a miscompilation or a reproducibility problem at `-O2`;
+    `0c2f5e0` (uninitialised `ddum3`) shows UB surfacing with a compiler
+    change at `-O1`.
+  - **Build** (local, clean, `build_safe.sh` + `TN_EXTRA_FLAGS`, which
+    is appended after `-O1`): `-O1` 35 s / largest compiler process 137 MB,
+    9 warnings; `-O2` 44 s / 149 MB, 22 warnings; `-O2
+    -fno-strict-aliasing` 45 s / 151 MB; `-O3` 49 s / 158 MB, 33 warnings.
+    Far below the 4 GB cap.
+  - **Speed** (omen, one run at a time, 3 repetitions, medians):
+    `large1` 23.4 / 16.9 / 22.2 / 16.2 s and `force11` 14.5 / 8.4 /
+    14.0 / 7.7 s (O1 / O2 / O2 -fno-strict-aliasing / O3). Corpus wall
+    on the tests finished by both (Pro other, 6 jobs) 731 -> 623 s (O2),
+    695 s (O2 nsa), 593 s (O3); sfnet 221 -> 206 / 212 / 190 s. The gain
+    comes almost entirely from type-based (strict) aliasing.
+  - **Results**: every `.dbs` of the tests finished by both builds is
+    byte-identical to `-O1` (O2, O2 nsa, O3; the only difference is the
+    2-thread `bicg_csr_threads1`, run-to-run round-off). Peak memory the
+    same. Pro other `alternate1`, `cylinder_buckle` finish within the
+    120 s timeout at O2/O3.
+  - **Blockers**: at O2, O2 nsa and O3 the Pro `interface7`,
+    `interface10`, `mesh_cut_2` and the vs `creset_iface` stop with a
+    database error (`element_interface_strain_normal`,
+    `control_mesh_cut_node_force`), and build_safe gives 177 OK / 4 FALLO
+    (`creset_iface`, `bmom1`, `bmom_switch`, `bmom_truss`, `bmom_2d`:
+    the cut distance column comes out 0). These are latent stack
+    overflows of 1-element scratch buffers given to multi-value `db()` /
+    array calls, the C48 class, which the `-O1` stack layout happens to
+    tolerate: `print_beam_force_moment.cc` `array_distance(p1, p2, ddum,
+    3)` with `ddum[1]`; `print_interface_stress.cc` reads 4 coordinates
+    into `ddum[1]` (gcc -Warray-bounds at O2) and the per-intpnt
+    `ELEMENT_INTERFACE_FORCE_NORM` / `_STRAIN_NORMAL` into scalars;
+    `delete.cc` reads `CONTROL_MESH_CUT_NODE_FORCE` (up to 3 integers)
+    into `idum[1]`; `top.cc` reads up to 3 values of
+    `control_timestep_iterations_automatic` into an array of 2.
+  - **Recommendation**: keep `-O1` for now. First fix this buffer class
+    (audit of `db()` / array calls with `idum` / `ddum` scratch buffers,
+    then the suite and the corpus under the ASan build), then move to
+    `-O2` (not `-O3`: little extra gain, more warnings) with a full A/B.
+    Expected gain about 28 % (`large1`) to 42 % (`force11`).
+
+### C52. Post-solve material state pass for inertia models (`dynamic3`, F4 T5, 2026-10-10) — OPEN, investigation
+
+- **Symptom**: with the ungated pass (TN_C35 prototype) Pro `dynamic3`
+  (1D truss, `inertia_apply -yes`, prescribed acceleration 1.234,
+  analytic disx 61.7) moved away from the Professional (worst relative
+  difference 0.45 -> 0.74, disx).
+- **Status**: gated off (`post_solve_state_pass_gated()`: inertia).
+  Needed: a pass that updates the inertia terms consistently with the
+  final iterate (acceleration/velocity history of the truss), then probes
+  + full corpus A/B (widening criterion, C35).
+- **Severity**: LOW (gated, previous behaviour kept). **Effort**: medium.
+
+### C53. Post-solve material state pass for slide models (`slide4`, F4 T5, 2026-10-10) — OPEN, investigation
+
+- **Symptom**: with the ungated pass Pro `slide4` (quad4 on a frictional
+  `slide_geometry`, `slide_plasti_friction`, `slide_stiffness`) moved
+  away from the Professional (velocity 0.49 relative; before 0.024 sig).
+- **Cause (hypothesis)**: the slide forces and friction state are applied
+  in `slide()` outside the element loop; the pass re-evaluates the
+  material without re-applying them.
+- **Status**: gated off (slide and contact data). Needed: call `slide()`
+  (and `parallel_contact` for contact) consistently in the pass, then
+  probes + full corpus A/B (widening criterion, C35).
+- **Severity**: LOW (gated). **Effort**: medium.
+
+### C51. Hardsoil yield read the nodal kappa of the previous evaluation of the same step (F4 T5, 2026-10-10) — RESOLVED 2026-10-10
+
+- **Symptom**: test-2014 `mhardsoil_plast` (one quad4, zero total
+  strain, initial sigxx -4) alternated with the number of equilibrium
+  iterations: kap 0.0030 / sigxx -1.480 with 1 or 3 iterations, kap
+  0.0006 / sigxx -2.47 to -2.49 with 2, 4, 8, 20, 50 (`mhardsoil_gp0_off`
+  likewise 0.0015 / 0.00029). The F4 T5 post-solve material state pass
+  adds one evaluation and flipped both tests to the odd branch.
+- **Root cause**: `plasti.cc` `plasti_rule()` takes `gamma_p` from
+  `new_unknowns[kap_indx]`, the interpolated NODAL kappa written by the
+  previous material evaluation of the step, instead of the step-start
+  kappa plus the increment of its own return mapping.
+- **Fix**: `stress.cc` `set_stress()` passes the yield rules a copy of
+  the unknowns whose kappa and kappa_shear slots are `old + increment of
+  this return` (`pl_unknowns`). Also covers the kappa-hardened
+  Mohr-Coulomb variants and the von Mises Nadai hardening (same read).
+- **Verification**: no Professional oracle (zero field on the converted
+  inputs). Identical results for 1/2/3/4/8 iterations with and without
+  the post-solve pass; end state satisfies `sigma = sigma0 - C(E50,nu50)
+  eps_p` exactly (HEAD did not), `kap = sqrt(0.5 eps_p:eps_p)`, f ~ 1e-8.
+  New tests `test-2026/hardsoil_kappa_iterations1/2`. Retarget (project
+  owner 2026-10-10, GNU-calibrated, no Pro oracle): `mhardsoil_plast`
+  kap 0.00104991 / sigxx -3.11898 (was 0.0006 / -2.44),
+  `mhardsoil_gp0_off` kap 0.000494563 / sigxx -1.56781 (was 0.000293 /
+  -1.225).
+- **Open, same pattern (not changed)**: `plasti.cc` reads other history
+  dofs from `new_unknowns` inside the yield rules: the cap `epp_vol`
+  (~221), the cap1 `pc` (~282), the void fraction (~957/987). Each needs
+  its own probe (iteration-count sweep) before a change. The nonlocal `f`
+  (`fn_indx`) is nonlocal by design.
+- **Severity**: MEDIUM (iteration-count dependent results). **Effort**:
+  cheap.
 
 ---
 
@@ -1586,7 +1723,7 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
 | C32 | Pro `other` | `axisym9` (stale row, already = Pro), `distri2` (random generator): not GNU defects — closed 2026-10-09 (F4 T4) | LOW | — |
 | C33 | — | `_visco` direct cut-offs: `DTIME` from the previous step, no visco on the principal tension cap — resolved 2026-10-09 (F4 T3) | MEDIUM | cheap/medium |
 | C34 | — | direct cut shear plastic strain: Pro twice the tensor value (deliberate divergence) | LOW | — |
-| C35 | — | one-iteration lag of the whole material state (K02, `spring4` 1 iteration) — parked, design; F4 | MEDIUM | medium/large |
+| C35 | — | one-iteration lag of the whole material state (K02, `spring4` 1 iteration) — resolved 2026-10-10 (F4 T5, post-solve material state pass); inertia/slide/contact gated (C52, C53) | MEDIUM | medium/large |
 | C36 | validation-suite | `young_power` + `young`: Pro adds both stiffnesses, manual says law = modulus (K06) — decided 2026-10-06: deliberate divergence (GNU = manual), no code change | LOW | cheap |
 | C37 | Pro `other` | planar GNU beam vs Pro 3D frame beam (`trubea2/3`, K17) — parked, design | MEDIUM | large |
 | C38 | Pro `other` | `control_support_edge_normal_stiffness_freeze` parse-only (support_edge_normal_3, 1e-9 effect) | LOW | cheap/medium |
@@ -1599,10 +1736,13 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
 | C45 | — | `control_mesh_copy`/`_mirror` after the first time step: `node_dof_start_refined` error — resolved 2026-10-10 (F4 T8 `0ca144c`) | LOW | cheap |
 | C46 | Pro `other` | `step_start()` mesh residuals — F4 T8: order, move once, switch pair, `mesh_activate1` resolved; rotate sweep parked, not scheduled (C46c, large); move/switch `node_start_refined` deliberate divergences (A, 2026-10-10) | LOW | large (C46c) |
 | C47 | Pro `other` | `force11` 3D section moment `mom1y_sig` 5.80223 vs Pro 5.76460 (target miss, visible since F4 T9) | LOW | medium |
-| C48 | — | interface tension status record written from the wrong buffer (ASan, F4 T9) | LOW | cheap |
-| C49 | — | build at `-O1`: find why before moving to `-O2` (~25 % faster) | LOW | cheap/medium |
+| C49 | — | build at `-O1`: `-O2` 28-42 % faster, results identical, blocked by latent stack-buffer overflows (F4 T11 study) | LOW | medium |
+| C50 | Pro other | `interface_bar2_hex8` extruded/converted interface mesh numbering | LOW | medium |
+| C51 | validation-suite | hardsoil `gamma_p` read the nodal kappa of the previous evaluation (iteration-count oscillation, `mhardsoil_plast`) — resolved 2026-10-10 (F4 T5); cap/cap1/void reads open | MEDIUM | cheap |
+| C52 | Pro `other` | post-solve state pass for inertia models (`dynamic3`) — gated off, investigation | LOW | medium |
+| C53 | Pro `other` | post-solve state pass for slide/contact models (`slide4`) — gated off, investigation | LOW | medium |
 
-Thirty-seven items remain open: seven MEDIUM and thirty LOW (C23 and C24 resolved 2026-10-05; C25, C26, C27 and B10 added; F1 T3 / K04 2026-10-06 added B11, C28-C32; F1 T6 resolved C28, added and resolved B12; F2 T1 added C36; F2 T2 added C37, C38, C39; F2 T3 resolved C5 and added C40; F3 T2 resolved C8, C18, C19, C20 and added B13, C41; F4 T2 fixed the C41 tie and left a residual; F4 T3 resolved C33; F4 T4 closed C32, added C42 and resolved C31; F4 T7-T8 added C43-C46; F4 T9 resolved the C43 solver speed, decided C46b/C46e and added C47, C48, C49). No open issue is CRITICAL or
+Thirty-seven items remain open: seven MEDIUM and thirty LOW (C23 and C24 resolved 2026-10-05; C25, C26, C27 and B10 added; F1 T3 / K04 2026-10-06 added B11, C28-C32; F1 T6 resolved C28, added and resolved B12; F2 T1 added C36; F2 T2 added C37, C38, C39; F2 T3 resolved C5 and added C40; F3 T2 resolved C8, C18, C19, C20 and added B13, C41; F4 T2 fixed the C41 tie and left a residual; F4 T3 resolved C33; F4 T4 closed C32, added C42 and resolved C31; F4 T7-T8 added C43-C46; F4 T9 resolved the C43 solver speed, decided C46b/C46e and added C47, C48, C49; F4 T10 resolved C48 and added C50). No open issue is CRITICAL or
 HIGH. The validation-suite corpus has no open failure — its 233 real tests
 pass (`materi_direct_mc` input corrected, C17 resolved). Every remaining failure is a stale or malformed test, an out-of-scope model
 or infrastructure limit, a narrow post-processing divergence, a corpus-coverage

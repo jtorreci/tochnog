@@ -10,11 +10,21 @@ through `scripts/remote_run.sh`.
 - [x] T2 C41: `mohr_coul_direct7` (`-total_linear` + velocity `mpc_node_number` tie: unequal disy at tied nodes). Route: same writer after T1.
 - [x] T3 C33: `set_stress` reads DTIME from VERSION_NORMAL (previous dt) → `_visco` direct law does not cut in the first step; principal tension cap ignores `_visco`. Route: same writer.
 - [x] T4 C31 + K20: quadrature design (TET10 nodal rule degree 1; axisymmetric quad4 forced 1-point rule). Route: read-only investigator + omen A/B, then decision (owner 2026-10-09: v2 + HRZ); implementation by a delegated writer.
-- [ ] T5 C35/K02: integration-point state one-iteration lag. Investigation.
+- [x] T5 C35/K02: integration-point state one-iteration lag. Investigation, owner decision 2026-10-10 (post-solve material state pass, gate inertia/slide/contact; mhardsoil blocker: option 1, hardsoil kappa fix first). Done `8e4d080` + `e8e3f12`.
 - [ ] T6 Open-cause clusters: K14 (hypoplasticity history/stress path), K15 (MC/DP/von Mises), K24 (3D consolidation `large2`), K21 (Navier-Stokes), C7 (Mazars), C11 (dynamics), C3 (3D section sign), C6 (iface_gen coverage). Investigations, one by one.
 - [x] T7 Memory hogs (>4 GB with any binary): Pro `force11`, `large1`, `ground19_water_under_dam`, `mesh_activate1`, `foundation_consolidation_settlement` (runs since F4 T4 K20, bad_alloc under the 4 GB cap). Route: read-only investigation, owner decision 2026-10-09 (fix A, B, C), then one delegated writer. Memory fixed; solver-speed residual of `force11`/`foundation...` open (BACKLOG C43).
 - [x] T8 C45 + C46 (owner 2026-10-10: study, not only document): `control_mesh_copy`/`_mirror` after a time step stop with a `node_dof_start_refined` error (Pro runs); copy/switch order on the same index (Pro copies first); `control_mesh_move` has no effect in the Pro (Pro-suspect?); `mesh_activate1` final-step vely (GNU 0, Pro -9.95e-6). Route: delegated writer. Done except C46c (rotate sweep, parked: large) and two owner decisions (C46b, C46e class D).
 - [x] T9 C43: GNU Bi-CG converges far slower than the Pro (`force11` >600 s vs 13 s). Route: read-only investigator + omen, owner decisions 2026-10-10 (items 1-6), then one delegated writer. Done: SuperLU UAF, interface_convert UAF, recovery table, pardiso -> SuperLU, CSR operator, docs (C46b/C46e class A, C46c not scheduled).
+- [x] T10 C48: interface tension-status record written from a double buffer (`interface_element()` ~1031) → stack garbage. Route: delegated writer. Done `c06fa2d`.
+- [x] T11 C49: build optimisation `-O1` vs `-O2` — find why -O1 was chosen, measure -O2 (results + time) on omen; owner decision before changing the default. Study done (default unchanged); owner decision pending.
+- [ ] T12 C47: `force11` `mom1y_sig` 5.80223 vs Pro 5.76460 (0.65 %, model difference, solver excluded).
+- [ ] T13 C49 prerequisite: audit every `db()` / array call that receives a fixed-size scratch buffer (`idum[1]`, `ddum[1]`, small arrays) and can write more values; fix them; run build_safe + corpus under ASan; then switch the build to `-O2` with a full corpus A/B (owner 2026-10-10).
+Order (owner 2026-10-10): T10 → T11 → T5 → T13 → T12 → T6.
+
+## Later (owner 2026-10-10, after convergence with ALL divergences documented and accepted)
+- F6: exhaustive profiling and optimisation pass; special attention to the hot
+  helpers used everywhere (`db()`, `pri()`): leaks, per-call costs (e.g. `pri()`
+  flushes `cout` on every call), buffer contracts.
 
 ## Rules
 Manual/analytic decides; Pro is the oracle when the manual is silent;
@@ -181,4 +191,85 @@ docs + SEGUIMIENTO + BACKLOG + DIVERGENCES.
   Engram mirror: pending (writer subagent).
   Next: C47 (force11 3D moment), C48 (cheap fix + A/B), C49 (-O2),
   foundation_consolidation_settlement (Bi-CG breakdown + band retry).
-
+- T10 (route: delegated writer, inline single file interface.cc + test +
+  build_safe registration + docs; clean scratch build from `git archive`,
+  Pro probes local (4 GB, <=4 jobs), corpus A/B on omen `f4t10_runs`).
+  Trigger evidence: one non-trivial code file (inline), corpus on omen.
+  Root cause: `rec_status` was a `double*` over `get_new_int()` and the
+  PUT passed `idum[1]` as the integer array (length n_intpnt): stack
+  garbage (`2 -total_linear 9 0 1406...`, changing between runs). Fix
+  `c06fa2d`: `long int` array of `-CLOSED`/`-OPENED`, PUT as integers,
+  `delete[]` for the five output buffers. Nobody reads the record back
+  (`print_only`; top.cc only sizes/allocates it).
+  RED/GREEN: new test-2026 `interface_tension_status1` (two quad6
+  interfaces, one closed, one open behind a gap): Pro `-closed` x3 /
+  `-opened` x3; old GNU `2 -total_linear 3` (RED); new = Pro, two runs
+  byte-identical (GREEN). Pro sweep, 20 `interface*` inputs of Pro
+  `test/other`: all Pro records `-closed`, GNU line-equal except
+  `interface_bar2_hex8` (element numbering after extrude+convert: new
+  BACKLOG C50 / DIVERGENCES row). Determinism: two GNU runs identical
+  on all 20 apart from `time_calculation`.
+  Evidence: build_safe TN_CHECK_ONLY 181 OK / 0 FALLO, rc 0 (177 + 4
+  new checks); build md5 25040c72 (= build/tochnog = omen f4t10_new).
+  Corpus A/B old e84e554c -> new: classes unchanged (Pro other 276,
+  sfnet 192, t26 112, vs 232); only this record changes (28 + 25 + 4
+  files), plus 2-thread round-off in bicg_csr_threads1 (6.7e-11).
+  Docs: user/dev group_interface, SEGUIMIENTO (row + checklist),
+  BACKLOG C48 resolved + C50, DIVERGENCES C48 row removed / C50 added.
+  Engram mirror: pending (writer subagent).
+- T11 (route: delegated writer, study only; scratch clean builds with
+  `TN_EXTRA_FLAGS` (no repo script edit), corpus A/B and timing on omen
+  `f4t11_runs` / `f4t11_meas`). Builds from HEAD + T10 (O1 md5 25040c72,
+  O2 08720f95, O2 -fno-strict-aliasing 6316eb79, O3 1001a41c).
+  Why -O1: no recorded reason (2026-08-02 modernisation command copied
+  into build_safe.sh 73f0e70; upstream Linux targets use -O2).
+  Build: 35/44/45/49 s, largest compiler process 137/149/151/158 MB.
+  Times (median of 3): large1 23.4/16.9/22.2/16.2 s, force11
+  14.5/8.4/14.0/7.7 s. Corpus: all finished .dbs byte-identical to O1;
+  new RUNFAIL at O2/O2nsa/O3: Pro interface7, interface10, mesh_cut_2,
+  vs creset_iface; build_safe 177 OK / 4 FALLO (bmom* cut distance 0,
+  creset_iface). Cause: latent 1-element scratch-buffer overflows (C48
+  class) in print_beam_force_moment.cc, print_interface_stress.cc,
+  delete.cc, top.cc. Recommendation: keep -O1; fix the buffer class
+  (ASan), then -O2 with a full A/B. Details: BACKLOG C49.
+- T5 (route: delegated writer; inline top.cc/elem.cc/stress.cc/headers +
+  5 tests + build_safe registration + docs; clean scratch builds from
+  `git archive` / `git stash create`; probes local (4 GB, <=4 jobs),
+  corpus A/B on omen `f4t5w_runs`). Trigger evidence: few code files,
+  investigation already mapped (scratch prototype TN_C35).
+  Owner decision 2026-10-10: post-solve material state pass as the
+  default (no env), no matrix store, gated OFF for inertia / slide /
+  contact (temporary divergence class B `POSTPASS-GATE`, dynamic3 /
+  slide4; BACKLOG C52/C53), widening only after the pass covers that
+  physics + full A/B. Blocker found: test-2014 mhardsoil_plast /
+  _gp0_off moved (kap 0.0006 -> 0.0030) because the hardsoil yield read
+  the nodal kappa of the previous evaluation (period-2 oscillation in
+  the iteration count, already in HEAD). Owner 2026-10-10 option 1: fix
+  first.
+  Work unit 1 `8e4d080` fix(plasti) C51: set_stress passes pl_unknowns
+  (kappa / kappa_shear = step-start + own return increment) to the yield
+  rules (hardsoil, kappa-hardened MC, von Mises Nadai). Sweep 1/2/3/4/8
+  iterations, with and without the pass: identical (old 0.0030 odd /
+  0.0006 even). Hand check: sigma = sigma0 - C(E50,nu50) eps_p exact,
+  kap = sqrt(0.5 eps_p:eps_p), f 5e-9. Tests hardsoil_kappa_iterations1/2
+  RED (HEAD rc 1) / GREEN. Retarget (owner, GNU-calibrated, no Pro
+  oracle): mhardsoil_plast kap 0.00104991 / sigxx -3.11898,
+  mhardsoil_gp0_off kap 0.000494563 / sigxx -1.56781. build_safe (commit
+  1 tree) 183 OK / 0 FALLO, runs 226/226. Corpus head -> hsA: classes
+  unchanged, farther 0 (changes: tensile_instability, taylor3, examp19,
+  examp3, ho_mech2, examp14, mhardsoil x2; no Pro value or ~same). Same
+  pattern not changed (cap epp_vol, cap1 pc, void fraction): BACKLOG C51.
+  Work unit 2 `e8e3f12` feat(top): top.cc pass + post_solve_state_pass_gated,
+  elem.cc matrix-store skip, headers. Probes all = Pro; tests
+  post_solve_state_stretch1/_plastic1/_rigid1 RED (HEAD rc 1) / GREEN.
+  Matrix vs no-matrix: probes and 742 non-gated corpus tests identical
+  (bicg_csr_threads1 2-thread round-off aside). build_safe 187 OK /
+  0 FALLO, runs 226/226, rc 0 (final md5 2c825fe4 = build/tochnog = omen
+  f4t5w_fin2; HEAD 25040c72). Corpus HEAD -> final: closer 11, farther
+  0, 94 gated tests unchanged (dynamic3, slide4), classes unchanged
+  except ground11_nonsaturated OK -> TIMEOUT (84 -> 105 s alone; Pro
+  times out); wall +8.8 / +7.2 / +4.7 / +12.0 % (Pro other / sfnet / t26
+  / vs). Docs: manual-*/post_solve_material_state_pass.md (+ README),
+  nodal_stress_post_solve_sync notes, SEGUIMIENTO, BACKLOG C35 resolved
+  + C52/C53, DIVERGENCES POSTPASS-GATE (C35 row removed), AUDIT K02.
+  Engram mirror: see report.

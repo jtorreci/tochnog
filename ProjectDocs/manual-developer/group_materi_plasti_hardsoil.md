@@ -77,7 +77,44 @@ qf = 2*sin(phi)*(sig3 + c*cot(phi))/(1 - sin(phi))     (derived from Mohr-Coulom
   hardening through the relaxation A/B family; the loading-path
   validation is PENDING (would need the incremental driver or a
   reformulated stress update).
-- `mhardsoil_plast` (initial sigxx = -4) shows kappa = 0.0006 = 2x the
-  sigxx = -2 case: the hardening scales with the initial deviatoric
-  stress (the measured end states satisfy f ~ 0 on the expanding
-  surface).
+- `mhardsoil_plast` (initial sigxx = -4): kappa 0.00104991, sigxx
+  -3.11898 (after the F4 T5 kappa fix below; the old 0.0006 / -2.44 was
+  the even-iteration branch of an oscillation).
+
+## Kappa read inside the return mapping (F4 T5 follow-up, 2026-10-10)
+
+- **Defect**: `plasti.cc` `plasti_rule()` reads `gamma_p` from
+  `new_unknowns[kap_indx]` (hardsoil, line ~389). `new_unknowns` is the
+  interpolated NODAL kappa that the previous material evaluation of the
+  SAME step wrote through `parallel_new_dof_diagonal`. Each evaluation
+  therefore saw the plastic strain of the previous one as history: with
+  zero total strain `mhardsoil_plast` alternated kap 0.0030 (1 or 3
+  equilibrium iterations) / 0.0006 (2, 4, 8, 20, 50). The post-solve
+  material state pass (F4 T5) adds one evaluation and flipped the branch.
+- **Fix** (`stress.cc` `set_stress()`, plastic iterations): the yield
+  rules get `pl_unknowns`, a copy of `new_unknowns` whose `kap_indx` and
+  `kapsh_indx` slots hold the step-start value (`old_kappa`,
+  `old_kapsh`) and, after every local iteration, `old + increment` of
+  this return (the `new_kappa` / `new_kapsh` the driver already
+  computes). The four `plasti_rule()` calls of the loop use it (the
+  central-difference flow gradient passes it on).
+- **Scope**: every yield rule that reads kappa or kappa_shear through
+  that array: hardsoil `gamma_p`, the kappa-hardened Mohr-Coulomb
+  variants (`plasti.cc` ~774/776 and ~1118) and the von Mises Nadai
+  hardening (~1316).
+- **Same pattern, NOT changed** (listed in BACKLOG C51): the cap
+  `epp_vol` (`new_unknowns[epp_indx]`, ~221), the cap1 `pc`
+  (`new_unknowns[cap1_indx]`, ~282), the void fraction (~957/987) and
+  the nonlocal `f` (`fn_indx`, nonlocal by design).
+- **Verification** (no Professional oracle: it returns a zero field on
+  the converted `mhardsoil_*` inputs): results identical for 1, 2, 3, 4
+  and 8 equilibrium iterations, with and without the post-solve pass;
+  hand check of the end state of `mhardsoil_plast` / `_gp0_off`:
+  `sigma = sigma0 - C(E50, nu50) eps_p` exactly (zero total strain;
+  HEAD violated it: sigxx -2.4885 vs -3.4962 implied by its eps_p),
+  `kap = sqrt(0.5 eps_p:eps_p)`, `f = 5e-9` / `2e-7`. Tests
+  `test-2026/hardsoil_kappa_iterations1/2` (RED on the old code).
+  `mhardsoil_plast` (kap 0.00104991, sigxx -3.11898) and
+  `mhardsoil_gp0_off` (kap 0.000494563, sigxx -1.56781) were retargeted
+  as GNU-calibrated (project owner 2026-10-10).
+

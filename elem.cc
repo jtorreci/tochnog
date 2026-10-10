@@ -986,8 +986,11 @@ void elem( long int element, long int ithread )
 
   if(!find_local_softvar) {//Not used when searching for local values of softening variable 
 
-    // store element matrices sparse
-  if ( !stress_recovery_post_pass &&
+    // store element matrices sparse; not during the post-solve passes
+    // (stress-only sync and material state pass, top.cc): no solve
+    // follows them, so the stored matrices stay those of the last solve
+    // (also what a step-close control_eigen uses)
+  if ( !stress_recovery_post_pass && !material_state_post_pass &&
        options_solver!=-DIAGONAL && options_solver!=-NONE ) {
 
     length_element_matrix_values = 0;

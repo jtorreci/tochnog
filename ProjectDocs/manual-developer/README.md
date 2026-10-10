@@ -475,6 +475,7 @@ page lists its own in "Differences with the Professional version".
 
 ## NODAL STRESS POST-SOLVE SYNC (2026-09-15)
 
+- [post_solve_material_state_pass](post_solve_material_state_pass.md) — `top.cc` `top()` (after the equilibrium loop: `iteration_start(); element_loop(); parallel_new_dof_diagonal; mpc_node_apply()`), `post_solve_state_pass_gated()` (inertia/slide/contact gate), global `material_state_post_pass` (`elem.cc` skips the element matrix store). F4 T5 / BACKLOG C35 (2026-10-10): integration-point state and non-principal dofs no longer lag the solved velocity by one iteration; widening criterion for the gated families.
 - [nodal_stress_post_solve_sync](nodal_stress_post_solve_sync.md) — `top.cc` `top()`, `elem.cc` `elem()`/`element_loop()`, `materi.cc` `materi()`, `polynom.cc` (global `stress_recovery_post_pass`): after `solve()` and before `parallel_new_dof_diagonal()`, the nodal stress recovery is re-evaluated from the SOLVED velocity with a stress-only element pass (momentum/non-stress blocks and the sparse store are skipped; structural elements keep their first-pass entries via a save/restore of the non-stress RHS/LHS). Closes the last `mpc5` residual: `sigyy = 0.5` at `k=1` (and `k=2,3,5`) like the Professional 02-08-2026, was `1.0` at `k=1`. Candidate (b) verified: the value equals the unmodified scheme at `k+1`, but the mechanism adds no solve. Corpus sfnet 197 and validation-suite 233 classification diff = 0; suite 16/16.
 
 ## GEOMETRY LIST (2026-09-26)
