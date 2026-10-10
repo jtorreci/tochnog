@@ -46,3 +46,10 @@ with a linear term (x + 1*x) once as well. The GNU keeps the manual
 semantics (node and node_start_refined moved) and adopts the once per
 index measured on `node_start_refined`. Test `mesh_move_timestep1`.
 
+## Differences with the Professional version
+
+- **C46b** (class A, deliberate divergence, project owner 2026-10-10):
+  the GNU moves the nodes and `node_start_refined` (manual 6.217); the
+  Professional 02-08-2026 sets only `node_start_refined`. Index:
+  [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).
+

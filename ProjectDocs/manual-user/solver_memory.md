@@ -36,7 +36,17 @@ Any input that uses the default solver, for example the Professional
 `std::bad_alloc` under a 4 GB cap (5.2 GB RSS without the cap); it now
 runs.
 
+## Speed (F4 T9, 2026-10-10)
+
+Large models also run faster: the iterative solver multiplies with an
+assembled sparse matrix ([solver_bicg_csr_operator](solver_bicg_csr_operator.md)),
+the nodal stress recovery factors are computed once, and
+`-matrix_pardiso` is solved with SuperLU ([matrix_pardiso](matrix_pardiso.md)).
+Professional `large1`: 60 s -> 24 s (0.72 GB); `force11`: over an hour
+-> 15 s. The corpus runs 32 % faster.
+
 ## Differences with the Professional version
 
 None in the results. The Professional uses its own direct solver
-(PARDISO).
+(PARDISO) by default; the GNU default stays the iterative Bi-CG
+(DIVERGENCES SOLVER-DEFAULT, class B).

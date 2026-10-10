@@ -72,6 +72,8 @@ three entries). Three entries in 3D (`-z -y -x`, the new axis order) are a
 GNU extension; the Professional refuses them.
 
 The Professional leaves `node_start_refined` unswitched; the GNU switches
-it with the nodes (DIVERGENCES C46e, class D). Test
+it with the nodes (manual 6.244 "all nodal coordinates"): deliberate
+divergence decided by the project owner on 2026-10-10 (DIVERGENCES C46e,
+class A; SEGUIMIENTO "Descarte de features"). Test
 `validation-suite/test-2026/mesh_switch_pair1` (node 3 at 0 2).
 

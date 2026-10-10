@@ -14,7 +14,7 @@ through `scripts/remote_run.sh`.
 - [ ] T6 Open-cause clusters: K14 (hypoplasticity history/stress path), K15 (MC/DP/von Mises), K24 (3D consolidation `large2`), K21 (Navier-Stokes), C7 (Mazars), C11 (dynamics), C3 (3D section sign), C6 (iface_gen coverage). Investigations, one by one.
 - [x] T7 Memory hogs (>4 GB with any binary): Pro `force11`, `large1`, `ground19_water_under_dam`, `mesh_activate1`, `foundation_consolidation_settlement` (runs since F4 T4 K20, bad_alloc under the 4 GB cap). Route: read-only investigation, owner decision 2026-10-09 (fix A, B, C), then one delegated writer. Memory fixed; solver-speed residual of `force11`/`foundation...` open (BACKLOG C43).
 - [x] T8 C45 + C46 (owner 2026-10-10: study, not only document): `control_mesh_copy`/`_mirror` after a time step stop with a `node_dof_start_refined` error (Pro runs); copy/switch order on the same index (Pro copies first); `control_mesh_move` has no effect in the Pro (Pro-suspect?); `mesh_activate1` final-step vely (GNU 0, Pro -9.95e-6). Route: delegated writer. Done except C46c (rotate sweep, parked: large) and two owner decisions (C46b, C46e class D).
-- [ ] T9 C43: GNU Bi-CG converges far slower than the Pro (`force11` >600 s vs 13 s). Route: read-only investigator + omen.
+- [x] T9 C43: GNU Bi-CG converges far slower than the Pro (`force11` >600 s vs 13 s). Route: read-only investigator + omen, owner decisions 2026-10-10 (items 1-6), then one delegated writer. Done: SuperLU UAF, interface_convert UAF, recovery table, pardiso -> SuperLU, CSR operator, docs (C46b/C46e class A, C46c not scheduled).
 
 ## Rules
 Manual/analytic decides; Pro is the oracle when the manual is silent;
@@ -136,4 +136,49 @@ docs + SEGUIMIENTO + BACKLOG + DIVERGENCES.
   build/tochnog (md5 d8efb7e1).
   Next: owner decisions C46b/C46e; C46c rotate sweep (large); interface.cc
   UAF; per-IP gravity activation (C46d residual).
+- T9 (route: read-only investigation (scratch prototypes, omen) -> owner
+  decisions 2026-10-10 -> delegated writer; single writer, inline edits of
+  so_suplu.c, so.cc, interface.cc, miscel.cc, so_bicg.cc; clean scratch
+  builds per commit, omen A/B `f4t9w_runs`, hogs `f4t9w_meas`).
+  Trigger evidence: 5 code files + docs (writer trigger), corpus/hog runs
+  on omen (per-action workers not needed: scripted runs).
+  1 `681dc83` so_suplu.c: dQuerySpace after Destroy (UAF), L/U destroyed
+  when never created, Destroy_CompCol_Matrix free() of new[] arrays.
+  Test superlu_solve1 RED rc 139 (3/3) / GREEN rc 0; ASan old
+  alloc-dealloc-mismatch (superlu_solve1, sfnet examp9), new clean.
+  2 `789f8bf` interface.cc interface_copy_node_dbl (3 sites); ASan now
+  passes interface_convert on interface_bar2_hex8 / bar3_quad8 /
+  quad8_hex20; next report = new C48 (tension status written from the
+  stack; also visible as run-to-run garbage in the interface3 /
+  interface_quad8_hex20 .dbs).
+  5 `acfac40` miscel.cc recovery factor table (quad4/quad9/hex8/hex27/
+  tet10): bit-identical (297 suite .dbs, corpus old -> b1 identical apart
+  from C48); large1 37 -> 27 s.
+  3 `3349515` so.cc -matrix_pardiso -> SuperLU, Bi-CG fallback, RLIMIT_AS
+  memory guard (70 % of the room; TN_PARDISO_SUPERLU_MB), SuperLU off
+  after a failure. Tests pardiso_superlu1 / pardiso_bicg_fallback1 RED
+  (old: Bi-CG, no SuperLU) / GREEN. large1 forced to pardiso under 4 GB:
+  clean fallback rc 0. force11: TIMEOUT -> 20 s on omen (rc 1, mom1y_sig
+  5.80223 vs Pro 5.76460: new C47, same value from the band LU).
+  4 `b7009dd` so_bicg.cc CSR operator (threads, EBE fallback with mpc
+  ties / TN_BICG_EBE). Test bicg_csr_threads1 RED (no CSR line) / GREEN.
+  force11 ~5x iterations per second. RED/GREEN not applicable to the
+  speed itself (exception: performance; checked by corpus A/B).
+  6 docs commit: DIVERGENCES SOLVER-DEFAULT (B), C46b/C46e -> A, C47/C48
+  (B), C46c not scheduled; BACKLOG C43 resolved, C46 decisions, new C47,
+  C48, C49 (-O1 vs -O2); SEGUIMIENTO rows; solver pages; this file.
+  Evidence: build_safe 171 (old) -> 175 (pardiso) -> 177 OK / 0 FALLO,
+  rc 0 (main tree, final build md5 e84e554c = omen b4). Corpus A/B on
+  omen, old c62d28f -> final: Pro other OK 273 -> 276 (force11,
+  ground11_nonsaturated, ground11_phreatic_level finish), sfnet 192 ->
+  192, t26 110 -> 111 (+superlu_solve1), vs 232 -> 232; tests finished on
+  both 1180 -> 803 s (-32 %). node_dof changes: pardiso inputs <= 2.7e-6
+  (Bi-CG tolerance vs direct), CSR round-off <= 1e-5 except path-
+  dependent models (mesh_activate1 3.3e-3, distri3 1.8e-4, examp16
+  1.4e-2, examp10 2.8e-3) where a 2-thread run of the old build moves
+  them as much, or the absolute bicg_error_minimum floor binds (examp10).
+  Hogs (omen, 12 GB cap, one at a time): see solver_memory.md F4 T9.
+  Engram mirror: pending (writer subagent).
+  Next: C47 (force11 3D moment), C48 (cheap fix + A/B), C49 (-O2),
+  foundation_consolidation_settlement (Bi-CG breakdown + band retry).
 

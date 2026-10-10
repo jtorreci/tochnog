@@ -73,5 +73,6 @@ Professional: 14 nodes (axis nodes kept once, ring nodes numbered
 `number_of_space_dimensions` and of every ndim-sized record and dof list,
 the n-segment sweep with the angle, axis-node collapse to prism6, the
 data transfer/deletion of manual 6.238 and the `control_input` re-read.
-Large; parked with this diagnosis. `control_mesh_rotate_angle` is a
+Large; parked with this diagnosis (BACKLOG C46c, not scheduled: owner
+decision 2026-10-10). `control_mesh_rotate_angle` is a
 parameter of this sweep in the Professional, not a 2D rotation.

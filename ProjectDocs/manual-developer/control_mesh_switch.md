@@ -52,5 +52,6 @@ the GNU permutation meaning (3D extension, refused by the Professional).
 Professional probes (F4 T8): 2D `-x -y` swaps, 3D `-x -z` swaps x and z
 (nodes identical to the Professional), 3D three entries refused
 ("I do not know : -x"). The Professional does not switch
-`node_start_refined`; the GNU does (class D, DIVERGENCES C46e).
+`node_start_refined`; the GNU does (manual 6.244): deliberate divergence,
+project owner 2026-10-10 (class A, DIVERGENCES C46e).
 

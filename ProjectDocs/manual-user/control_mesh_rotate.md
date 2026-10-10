@@ -65,4 +65,5 @@ too small of : node ... should become at least: 3"): it cannot change
 one 90-degree copy only. The F4 T7 probe that "did not run on either
 binary" was an invalid input (a 3D model with a 2D quad4). Parked: the
 full sweep needs a run-time 2D -> 3D conversion of the whole database
-(DIVERGENCES C46c, class B).
+(DIVERGENCES C46c, class B; a BACKLOG item, not scheduled - owner
+decision 2026-10-10).
