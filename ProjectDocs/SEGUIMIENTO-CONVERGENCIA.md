@@ -24,6 +24,13 @@ suite sfnet, o un test propio. El registro completo:
 
 | Feature | Commit | Fecha | Verificación |
 |---------|--------|-------|--------------|
+| **F4 T8 C45 — `control_mesh_copy` / `_mirror` after a time step (node dofs and integration-point state duplicated)** | `0ca144c` (F4 T8) | 2026-10-10 | `mesh.cc` `mesh_duplicate_node_data()` / `mesh_duplicate_element_state()`: the new nodes lacked `node_dof_start_refined` (`renumber()` stopped: rc 1) and `create_element()` re-initialised the duplicates from the nodal values (1 % off). Element numbers `old + max + 1` as the Professional. Verified against the Professional 02-08-2026 with loaded 3x2-node probes (gravity, step on index 0, copy/mirror + two steps on index 1): all nodal dofs = Pro to 4e-10. Tests RED (rc 1) / GREEN `mesh_copy_timestep1`, `mesh_mirror_timestep1` (Pro post_point targets). Corpus A/B on omen for the whole F4 T8 series (old = HEAD `b4e09c1` = F4 T7 ABC binary, new = `7aeac4a`; 4 jobs, 4 GB, timeout 120): Pro other 273 -> 273 OK (`mesh_activate1` rc 1 -> 0, target met), sfnet 192 -> 192, t26 99 -> 107 (+8 new tests), vs 232 -> 232; no class change. The .dbs differences are explained: node/element renumbering of the macro meshes (values equal when matched by coordinates), round-off of near-zero quantities and iterative-solver tolerance from the new equation order (<= 5e-6 relative on non-zero values, e.g. `beam2d` 2.7e-6), new random realisations of `control_distribute` (`distri2`, `distri3`, `ho_othr4`: per-node/element sequence), and inputs already divergent before (`taylor3` B9, `update2` diverges in both, `tensile_instability`/`ho_mech2` 4e-5). |
+| **F4 T8 — buffered node-item copies in `mesh.cc` (heap-use-after-free)** | `fd477ff` (F4 T8) | 2026-10-10 | `mesh.cc` `mesh_copy_node_item()`: `mesh_convert_quad8`, `mesh_convert_hex20`, `mesh_extrude` (and copy/mirror/rotate_3d via `0ca144c`) passed a `db_dbl` pointer to a reallocating PUT (ASan, reported by the F4 T9 investigation). No result change: all 297 build_safe `.dbs` identical apart from timing lines; ASan clean on the copy/mirror tests and the Professional `quad8`/`hex20`. Same pattern still in `interface.cc` `interface_convert()` (out of scope). |
+| **F4 T8 C46d — `control_mesh_macro` `-bar`/`-rectangle`/`-brick` numbering (x fastest)** | `bc2235e` (F4 T8) | 2026-10-10 | `macro.cc`: the GNU numbered nodes, elements and local element nodes with x slowest. Professional probes (1D bar, 2D 3x3, 3D 3x2x2): x fastest, then y, then z; GNU `.dbs` now identical. Tests RED/GREEN `mesh_macro_numbering1/2`; `mesh_switch_timestep1` check retargeted to node 3 at 0 1 (the Pro node 3). Makes the Pro `mesh_activate1` target (`node_dof 5`) read the right node. |
+| **F4 T8 C46a — order of the one-shot mesh records on one index** | `e730052` (F4 T8) | 2026-10-10 | `top.cc` `step_start()`: copy, move, switch, mirror (was switch, move, mirror, copy). Professional probes: every pair plus copy+switch+mirror on index 1, record order swapped: nodes identical to the Pro. Test RED/GREEN `mesh_order_timestep1`. |
+| **F4 T8 C46b — `control_mesh_move` once per control index** | `c21b62e` (F4 T8) | 2026-10-10 | `top.cc`: `mesh_move()` guarded by `first_of_control`. Professional: applies it once (measured on `node_start_refined`) but does not move the nodes (Pro-suspect, DIVERGENCES C46b, class D, owner decision pending). GNU follows manual 6.217 (node and node_start_refined). Test RED (22 1) / GREEN (12 1) `mesh_move_timestep1`. |
+| **F4 T8 — `control_mesh_switch` two entries = swap (manual 6.244)** | `fb834c6` (F4 T8) | 2026-10-10 | `mesh.cc` `mesh_switch()`: `dir0 dir1` swaps the two axes (GNU read them as the new axis order: `-x -y` = identity, 3D needed three). Professional probes: 2D `-x -y` and 3D `-x -z` nodes identical; three entries refused by the Pro (kept as GNU extension, DIVERGENCES SWITCH-PERM); Pro does not switch `node_start_refined` (C46e, class D). Test RED (2 0) / GREEN (0 2) `mesh_switch_pair1`. |
+| **F4 T8 C46d — `mesh_activate_gravity_time` at its index, bottom to top, method 2 (Pro `mesh_activate1`)** | `7aeac4a` (F4 T8) | 2026-10-10 | `mesh.cc` `mesh_activate_gravity_factor()` + `materi.cc`: records read at their own index (the Pro input uses 10, the GNU read 0: full gravity at once, final vely 0), element window from its lowest/highest coordinate, default `-method2` (manual 6.810), no gravity before activation, the reduced stiffness scales the material tangent and the stress increment (scaling the assembled matrix made Newton diverge). Verified against the Professional `mesh_activate1` (1000 steps): vely/veliy/sigyy = Pro to 3e-4, target met (rc 0, was rc 1); at t 0.5 the front matches. Test RED (rc 1) / GREEN `mesh_activate_gravity_time1` (Pro targets; residual C46d class B). |
 | **F4 T7 C — `control_mesh_macro` / `_copy` / `_mirror` / `_switch` once per control index (BACKLOG C43 part C, C44)** | `ab99338` (F4 T7 C) | 2026-10-09 | `top.cc`: `step_start()` re-ran the one-shot mesh records on every step of a `control_timestep` on the same index (Pro `mesh_activate1`: 202 -> 4040 nodes in 20 steps, out of memory with its 1000 steps). A flag set when the control loop enters an index limits them to the first step. Verified against the Professional 02-08-2026 with probes on omen (3x2-node mesh, record + 2/3-step timestep on index 1): macro 12 nodes (GNU before 24), copy 12 (48), mirror 12 (48), switch once (GNU twice). `control_mesh_move` had no effect in the Professional, rotate not comparable: left unchanged (C46). Tests RED/GREEN `mesh_macro_timestep1` (202 nodes = Pro; old 4040) and `mesh_switch_timestep1` (node 3 at 0 0.5; old 0.5 0); build_safe 158 OK / 0 FALLO. Corpus A/B on omen (A+B -> A+B+C): only `mesh_activate1` (timeout -> runs in 42 s; 202 nodes; integrated displacement `veliy` = Pro to 5e-10; final-step `vely` 0 vs Pro -9.95e-6, C46) and the two new tests. |
 | **F4 T7 B — the Bi-CG direct-LU retry builds its band matrix only after a failure, in a Cuthill-McKee ordering when narrower (BACKLOG C43)** | `5bfa165` (F4 T7 B) | 2026-10-09 | `so.cc` `solve_band_retry()` / `solve_band_retry_entries()`: the band workspace (`(3 band+1) n` doubles with the raw node-number band) is no longer allocated and filled on every Bi-CG solve; after a failure the retry measures the exact band of the node-number and of a Cuthill-McKee ordering on the element matrix entries (with the mpc tie expansion), fills the narrower one (same `NODE_LHSIDE` + `EPS_MAT` diagonal), solves with `dgbsv_` and un-permutes. Verification: `examp2` (retry on every solve) bit-identical, pres -0.634519741323 = Pro; build_safe (A+B+C build) 158 OK / 0 FALLO; corpus A/B on omen (A -> A+B): class changes only `force11` (bad_alloc -> runs, Bi-CG beyond the 120 s slot); `.dbs` round-off in retried solves only (column-scaled: `force9` 4e-7, `pressed_rubber_cylinder` 1e-7, `ho_mech1` 8e-8, `force5` 1e-9, `excavate1` 4e-12; `bimet1` only in the identically-zero membrane sigzz, 7e-12 vs -3e-14). No retargets. |
 | **F4 T7 A — the default Bi-CG solver no longer allocates an unused dense n x n matrix (BACKLOG C43, memory hogs)** | `3faf78e` (F4 T7 A) | 2026-10-09 | `so.cc` `solve()`: `mat_dense`/`ipiv_dense` (allocated, zero-filled and filled on every solve since `5b7bb8b`; the only reader, the `dgesv_` branch of the Bi-CG retry, never ran because the band matrix `mat` always existed) removed with its fills and the dead branch. Verification: build_safe 154 OK / 0 FALLO; corpus A/B on omen (old `225d536` -> A, plain runner, 4 GB cap, timeout 120): Pro other 271 -> 272 (`ground19_water_under_dam` now runs; `foundation_consolidation_settlement` bad_alloc -> timeout), sfnet 192 -> 192, t26 99 -> 99, vs 232 -> 232, and no other `.dbs` difference (node/element/node_dof/post_point_dof records). No retargets. |
@@ -312,6 +319,8 @@ B conocida/pendiente, C extensión/dialecto GNU, D sospechosa del Pro).
 | Professional `bounda_time_increment` tables prescribing -1.4 on dofs whose table is all zero (`mcap1_elast`) | **Deliberate divergence** (project decision 2026-10-07, AUDIT K08; Pro-suspect, audit 2026-09-29): the GNU follows manual 6.146 and does not prescribe the -1.4. Documented in `manual-user/` and `manual-developer/bounda_time_increment.md`. |
 | Professional groundflow velocity output 0 in `ground1` | **REVERTIDA 2026-10-07** (decisión del propietario): la premisa 'Pro-suspect' era errónea; el Professional cumple el manual 6.587 (límite `groundflow_total_pressure_limit` 0 por defecto, que anula la velocidad donde se alcanza). **Cerrada en F4 T1 (2026-10-09)**: el GNU sigue al Professional (velocidad 0 donde la presión total calculada alcanza el límite; `ground1` gvely 0); filas K10/TPL eliminadas de `DIVERGENCES-PROFESSIONAL.md`. Tests `test-2026/groundflow_velocity_dry1/2`. |
 | Professional `control_materi_failure_apply` accepted only without index | **Deliberate divergence** (project decision 2026-10-07; Pro-suspect: the manual documents an index, the Professional 02-08-2026 rejects `control_materi_failure_apply 0 -no` and stops with "Program error ... element_rhside_delete" as soon as an element fails): the GNU follows the manual (indexed record, failed elements deleted). Documented in `manual-user/` and `manual-developer/materi_failure_apply.md`. |
+| Professional `control_mesh_move` moving only `node_start_refined` (nodes unmoved) | **Professional-suspect, NOT decided** (F4 T8, 2026-10-10, DIVERGENCES C46b, class D; owner decision pending): manual 6.217 says the mesh is moved; the GNU moves node and `node_start_refined` once per index. Recommendation: keep the GNU. |
+| Professional `control_mesh_switch` leaving `node_start_refined` unswitched | **Professional-suspect, NOT decided** (F4 T8, 2026-10-10, DIVERGENCES C46e, class D; owner decision pending): the GNU switches node and `node_start_refined` (manual 6.244 "all nodal coordinates"). Recommendation: keep the GNU. |
 
 ## Equivalencias de nomenclatura Professional vs GNU
 
@@ -664,7 +673,7 @@ marcado `PENDIENTE` puede estar cubierto en el GNU bajo otro nombre:
 - [x] `control_mesh_convert_element_group` — implementada (commit `490545b`, 2026-08-14)
 - [ ] `control_mesh_convert_quad9_quad6` — PENDIENTE
 - [ ] `control_mesh_convert_tria6_tria3` — PENDIENTE
-- [x] `control_mesh_copy` — implementada (commit `3e94dac`, 2026-08-05)
+- [x] `control_mesh_copy` — implementada (commit `3e94dac`, 2026-08-05); after a time step = Pro (F4 T8 `0ca144c`, 2026-10-10)
 - [x] `control_mesh_cut_force` — implementada (2026-09-05; alias db_number de control_mesh_cut_node_force — el nombre del corpus/.dbs del Pro)
 - [x] `control_mesh_cut_geometry` — implementada (2026-09-05; corte + sustitución por fuerzas nodales en delete.cc; ver registro)
 - [x] `control_mesh_delete_element` — implementada (commit `afc1dad`, 2026-08-05)
@@ -708,7 +717,7 @@ marcado `PENDIENTE` puede estar cubierto en el GNU bajo otro nombre:
 - [x] `control_mesh_keep_element_group` — implementada (commit `afc1dad`, 2026-08-05)
 - [x] `control_mesh_keep_geometry` — presente en el GNU
 - [x] `control_mesh_keep_node` — implementada (commit `415d26f`, 2026-08-05)
-- [x] `control_mesh_macro` — presente en el GNU
+- [x] `control_mesh_macro` — presente en el GNU; `-bar`/`-rectangle`/`-brick` numbering = Pro (F4 T8 `bc2235e`, 2026-10-10)
 - [x] `control_mesh_macro_concentrate` — registrada parse-only (KEYWORDS BATCH C 2026-09-04); generacion graduada del macro PENDIENTE
 - [x] `control_mesh_macro_element` — presente en el GNU
 - [x] `control_mesh_macro_parameters` — presente en el GNU
@@ -718,8 +727,8 @@ marcado `PENDIENTE` puede estar cubierto en el GNU bajo otro nombre:
 - [x] `control_mesh_merge_geometry` — 2026-09-02 (whitelist de geometrías del merge, merge.cc; merge2/tutorial_3 siguen RUNFAIL por otros blockers)
 - [x] `control_mesh_merge_geometry_not` — 2026-09-02 (blacklist; nombre Professional del legacy control_mesh_merge_not, alias conservado; ground19_water_under_dam)
 - [x] `control_mesh_merge_macro_generate` — presente en el GNU
-- [x] `control_mesh_mirror` — implementada (commit `3e94dac`, 2026-08-05)
-- [x] `control_mesh_move` — implementada (commit `3e94dac`, 2026-08-05)
+- [x] `control_mesh_mirror` — implementada (commit `3e94dac`, 2026-08-05); after a time step = Pro (F4 T8 `0ca144c`, 2026-10-10)
+- [x] `control_mesh_move` — implementada (commit `3e94dac`, 2026-08-05); once per control index (F4 T8 `c21b62e`, 2026-10-10; Pro moves only node_start_refined: DIVERGENCES C46b)
 - [x] `control_mesh_multiply` — presente en el GNU
 - [ ] `control_mesh_re` — PENDIENTE
 - [x] `control_mesh_remove` — implementada (commit `1e5b4b9`, 2026-08-05)
@@ -731,13 +740,13 @@ marcado `PENDIENTE` puede estar cubierto en el GNU bajo otro nombre:
 - [x] `control_mesh_renumber` — presente en el GNU
 - [ ] `control_mesh_renumber_element_geometry_o` — PENDIENTE
 - [ ] `control_mesh_renumber_element_group_o` — PENDIENTE
-- [x] `control_mesh_rotate` — implementada (commit `d8d3a72`, 2026-08-05)
-- [x] `control_mesh_rotate_angle` — implementada (commit `415d26f`, 2026-08-05)
+- [~] `control_mesh_rotate` — PARCIAL (commit `d8d3a72`, 2026-08-05): F4 T8 found that the manual 2D -> 3D sweep (Pro `rotate1.dat`) does not run in the GNU; parked (BACKLOG/DIVERGENCES C46c)
+- [~] `control_mesh_rotate_angle` — PARCIAL (commit `415d26f`, 2026-08-05): GNU 2D rotation, in the manual/Pro the sweep angle of `control_mesh_rotate` (C46c)
 - [x] `control_mesh_split` — presente en el GNU
 - [ ] `control_mesh_split_element_from` — PENDIENTE
 - [ ] `control_mesh_split_element_to` — PENDIENTE
 - [x] `control_mesh_split_only` — presente en el GNU
-- [x] `control_mesh_switch` — presente en el GNU
+- [x] `control_mesh_switch` — presente en el GNU; two entries = swap as manual 6.244 / Pro (F4 T8 `fb834c6`, 2026-10-10)
 - [ ] `control_mesh_truss_distribute_mpc` — PENDIENTE
 - [ ] `control_mesh_truss_distribute_mpc_air` — PENDIENTE
 - [ ] `control_mesh_truss_distribute_mpc_dof` — PENDIENTE
@@ -1702,7 +1711,7 @@ Nota: `group_interface_ground` del checklist anterior NUNCA existió (artefacto 
 - [x] `mesh_activate_gravity_geometry` — implementada (selección por geometría)
 - [x] `mesh_activate_gravity_method` — implementada (método 1 y 2; método 2 mantiene el elemento activo con rigidez reducida; validada con `mesh_act_grav2`)
 - [x] `mesh_activate_gravity_sti` — implementada (factor de rigidez aplicado a la matriz del elemento en materi.cc)
-- [x] `mesh_activate_gravity_time` — implementada (activación gradual de la gravedad; validada con `mesh_act_grav`)
+- [x] `mesh_activate_gravity_time` — implementada (activación gradual de la gravedad; validada con `mesh_act_grav`); indexed, bottom to top, method 2 default = Pro `mesh_activate1` (F4 T8 `7aeac4a`, 2026-10-10)
 - [x] `mesh_activate_gravity_time_initial` — implementada (time of birth)
 - [x] `mesh_activate_gravity_time_strain_settlement` — implementada (registrado)
 - [ ] `mesh_boundary` — PENDIENTE

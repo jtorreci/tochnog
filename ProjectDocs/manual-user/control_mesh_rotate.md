@@ -50,3 +50,19 @@ end_data
 
 After this record the `-quad4` becomes a `-hex8`: the original 4 nodes plus 4
 rotated copies (`x,y,z -> z,y,-x`), and the 2D source element is deleted.
+
+## Differences with the Professional version (F4 T8, BACKLOG C46c)
+
+PARTIAL implementation. Manual 6.238: a 2D mesh (`number_of_space_dimensions
+2`, typically axisymmetric) is swept around the y axis into a 3D mesh, `n`
+elements over 360 degrees (or over `control_mesh_rotate_angle`), the old y
+direction becoming z; quad4 -> hex8, quad4 with a side on the axis ->
+prism6; node_dof and element/node data are transferred and other data
+deleted. The Professional 02-08-2026 runs its own example
+`test/other/rotate1.dat` (14 nodes, 5 prism6). The GNU stops on it ("Length
+too small of : node ... should become at least: 3"): it cannot change
+`number_of_space_dimensions` at run time, and its `mesh_rotate_3d` makes
+one 90-degree copy only. The F4 T7 probe that "did not run on either
+binary" was an invalid input (a 3D model with a 2D quad4). Parked: the
+full sweep needs a run-time 2D -> 3D conversion of the whole database
+(DIVERGENCES C46c, class B).

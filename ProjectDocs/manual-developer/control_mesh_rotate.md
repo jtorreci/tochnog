@@ -60,3 +60,18 @@ if ( db_active_index( CONTROL_MESH_ROTATE, icontrol, VERSION_NORMAL ) ) {
 - The generic node-data copy loop could be factored out and reused by
   `mesh_mirror`/`mesh_copy`/`mesh_rotate_3d` (they currently each have their
   own copy logic).
+
+## Professional comparison (F4 T8, BACKLOG C46c, parked)
+
+Valid probe: the Professional example `test/other/rotate1.dat` (2D
+axisymmetric quad4 `1 3 2 4` with its side on the y axis,
+`control_mesh_rotate 10 10`, `control_mesh_rotate_angle 10 180.`).
+Professional: 14 nodes (axis nodes kept once, ring nodes numbered
+`old + 4 k`), 5 `-prism6`, y -> z. GNU: rc 1, "Length too small of : node
+... 2 ... at least 3" (`NODE` data length is `ndim`; `mesh_rotate_3d` writes
+3 coordinates in a 2D database). Missing: run-time switch of
+`number_of_space_dimensions` and of every ndim-sized record and dof list,
+the n-segment sweep with the angle, axis-node collapse to prism6, the
+data transfer/deletion of manual 6.238 and the `control_input` re-read.
+Large; parked with this diagnosis. `control_mesh_rotate_angle` is a
+parameter of this sweep in the Professional, not a 2D rotation.

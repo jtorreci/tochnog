@@ -30,3 +30,11 @@
 - The rotation is hardcoded as a planar rotation around the z-axis on the first two coordinates; the 2D to 3D `control_mesh_rotate` remains unimplemented.
 - When `ndim == 3` the rotation only affects `x`/`y` and leaves `z` untouched.
 - `rot_length` and `idum_r` are read but not validated.
+
+## Professional comparison (F4 T8)
+
+`top.cc` `step_start()` calls `mesh_rotate_2d()` for this record (2D
+rotation around z, every step of the index). Manual 6.239 and the
+Professional `rotate1.dat` use it as the sweep angle of
+`control_mesh_rotate`. To be redefined together with the rotate sweep
+(BACKLOG C46c).

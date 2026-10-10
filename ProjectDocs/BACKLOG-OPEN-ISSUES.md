@@ -1423,30 +1423,57 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
   them on the first step of the index (Professional probes: once per
   index). Tests `mesh_macro_timestep1`, `mesh_switch_timestep1`.
 
-### C45. `control_mesh_copy` / `control_mesh_mirror` after the first time step stop with a `node_dof_start_refined` error
+### C45. `control_mesh_copy` / `control_mesh_mirror` after the first time step stop with a `node_dof_start_refined` error (F4 T8, 2026-10-10) — RESOLVED
 
 - **Symptom** (F4 T7 probes): a copy or mirror on an index after a
-  `control_timestep` index stops with "Error detected for data item :
-  node_dof_start_refined / record : 8" (rc 1); the Professional runs it
-  (12 nodes). Pre-existing, independent of C44.
-- **Severity**: **LOW**. **Effort**: **cheap** (the duplicated node data
-  in `mesh.cc` `mesh_copy()` / `mesh_mirror()`).
+  `control_timestep` index stopped with "Error detected for data item :
+  node_dof_start_refined / record : 8" (rc 1); the Professional runs it.
+  Also on index 1 without an earlier time step.
+- **Root cause**: `mesh.cc` `mesh_copy()` / `mesh_mirror()` copied only
+  `NODE_DOF` to the new nodes; `renumber()` reads `NODE_DOF_START_REFINED`
+  of every node. With that fixed, `create_element()` reset the
+  integration-point state of the duplicates (1 % off the Professional on
+  a loaded block).
+- **Fix** `0ca144c`: `mesh_duplicate_node_data()` (all node-class items,
+  buffered PUT) and `mesh_duplicate_element_state()` (`ELEMENT_DOF`,
+  `ELEMENT_DOF_INITIALISED`); element numbers `old + max + 1` (Pro).
+  Loaded copy/mirror probes = Professional to 4e-10. Tests
+  `mesh_copy_timestep1`, `mesh_mirror_timestep1`.
 
-### C46. `step_start()` mesh-operation residuals vs the Professional (F4 T7)
+### C46. `step_start()` mesh-operation residuals vs the Professional (F4 T7; studied in F4 T8, 2026-10-10)
 
-- `control_mesh_move` had no effect in the Professional probes (with or
-  without a `control_timestep`); the GNU moves the mesh, and on every
-  step of a `control_timestep` on the same index (not guarded: the
-  Professional semantics could not be measured).
-- With `control_mesh_copy` and `control_mesh_switch` on one index the
-  Professional copies first and then switches; the GNU switches first.
-- `control_mesh_rotate_angle` is only a parameter of `control_mesh_rotate`
-  in the Professional (GNU: standalone 2D rotation); the 3D
-  `control_mesh_rotate` probe did not run on either binary.
-- `mesh_activate1` (after C44): the final-step velocity `vely` is 0 in
-  the GNU and -9.95e-6 in the Professional at the top; the integrated
-  `veliy` agrees to 5e-10.
-- **Severity**: **LOW**. **Effort**: **cheap/medium**.
+- **C46a order — RESOLVED** `e730052`: Professional order on one index
+  (pairwise probes, record order irrelevant): macro, copy, move, switch,
+  mirror (GNU was switch, move, mirror, copy). Test `mesh_order_timestep1`.
+- **C46b `control_mesh_move` — RESOLVED in the GNU, Professional-suspect**
+  `c21b62e`: the Professional does not move the nodes; it sets
+  `node_start_refined` to the moved current coordinates, once per index.
+  Manual 6.217: the mesh is moved. The GNU moves node and
+  `node_start_refined`, now once per index (was every step). DIVERGENCES
+  C46b, class D (owner decision pending).
+- **C46c `control_mesh_rotate` — PARKED**: the F4 T7 probe was an invalid
+  input. Valid probe = the Professional example `test/other/rotate1.dat`
+  (2D axisymmetric, swept 180 degrees into 5 prism6): Professional 14
+  nodes / 5 prism6; GNU rc 1 ("Length too small of : node"). The GNU has
+  no run-time 2D -> 3D conversion, its `mesh_rotate_3d` makes one
+  90-degree copy, and it reads `control_mesh_rotate_angle` as a 2D
+  rotation instead of the sweep angle. Effort **large**. DIVERGENCES C46c
+  (class B). Neither rotate record is guarded once per control yet.
+- **C46d `mesh_activate1` — RESOLVED** `7aeac4a` + `bc2235e`:
+  `mesh_activate_gravity_time` read index 0 only (the input uses 10: full
+  gravity from the first step, final vely 0), no bottom-to-top
+  interpolation, default method1, a method-2 element got full gravity on
+  the reduced stiffness, and the reduced stiffness scaled the assembled
+  matrix only (inconsistent Newton). Its target names node 5: the macro
+  numbering was transposed (x slowest) vs the Professional (x fastest).
+  Now final vely/veliy/sigyy = Pro to 3e-4 and the target passes. Residual
+  (partly activated element loaded uniformly): DIVERGENCES C46d (class B).
+  Tests `mesh_activate_gravity_time1`, `mesh_macro_numbering1/2`.
+- **C46e `control_mesh_switch`** `fb834c6`: two entries are a swap
+  (manual 6.244, Professional: `-x -y` swaps; GNU read them as the axis
+  order). The Professional leaves `node_start_refined` unswitched; the
+  GNU switches it (DIVERGENCES C46e, class D). Test `mesh_switch_pair1`.
+- **Severity**: **LOW** (open: C46c large; C46b/C46e owner decisions).
 
 ---
 
@@ -1504,8 +1531,8 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
 | C42 | Pro `other` | quad4 nodal stress recovery: natural bilinear (GNU) vs physical linear least squares (Pro); distorted/axisymmetric quad4 (`axisym2` sigzz 10760.09 vs 10759.22) | LOW | medium |
 | C43 | Pro `other` | memory hogs of the Bi-CG solver (`force11`, `large1`, `ground19`, `mesh_activate1`, `foundation_consolidation_settlement`): resolved 2026-10-09 (F4 T7 A dense n x n matrix, B lazy band retry, C macro per step) | MEDIUM | cheap/medium |
 | C44 | Pro `other` | one-shot mesh records (`control_mesh_macro`/`_copy`/`_mirror`/`_switch`) re-applied on every time step — resolved 2026-10-09 (F4 T7 C) | MEDIUM | cheap |
-| C45 | — | `control_mesh_copy`/`_mirror` after the first time step: `node_dof_start_refined` error (Pro runs) | LOW | cheap |
-| C46 | Pro `other` | `step_start()` mesh residuals: `control_mesh_move` (no effect in Pro), copy/switch order, rotate not comparable, `mesh_activate1` final `vely` | LOW | cheap/medium |
+| C45 | — | `control_mesh_copy`/`_mirror` after the first time step: `node_dof_start_refined` error — resolved 2026-10-10 (F4 T8 `0ca144c`) | LOW | cheap |
+| C46 | Pro `other` | `step_start()` mesh residuals — F4 T8: order, move once, switch pair, `mesh_activate1` resolved; rotate sweep parked (C46c, large); move/switch `node_start_refined` Pro-suspect (D) | LOW | large (C46c) |
 
 Thirty-seven items remain open: seven MEDIUM and thirty LOW (C23 and C24 resolved 2026-10-05; C25, C26, C27 and B10 added; F1 T3 / K04 2026-10-06 added B11, C28-C32; F1 T6 resolved C28, added and resolved B12; F2 T1 added C36; F2 T2 added C37, C38, C39; F2 T3 resolved C5 and added C40; F3 T2 resolved C8, C18, C19, C20 and added B13, C41; F4 T2 fixed the C41 tie and left a residual; F4 T3 resolved C33; F4 T4 closed C32, added C42 and resolved C31). No open issue is CRITICAL or
 HIGH. The validation-suite corpus has no open failure — its 233 real tests

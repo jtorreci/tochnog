@@ -536,3 +536,10 @@ page lists its own in "Differences with the Professional version".
 ## MESH OPERATIONS VS THE PROFESSIONAL (2026-10-10, F4 T8)
 
 - [control_mesh_macro](control_mesh_macro.md) — `macro.cc` tensor macros: node/element loops x fastest (Professional probes); `node_remesh_allowed` legacy mapping kept.
+- [control_mesh_copy](control_mesh_copy.md) / [control_mesh_mirror](control_mesh_mirror.md) — after a time step: node dofs and integration-point state duplicated, element numbers `old + max + 1` (C45, = Professional).
+- [control_mesh_once_per_control](control_mesh_once_per_control.md) — Professional order on one index: macro, copy, move, switch, mirror (C46a).
+- [control_mesh_move](control_mesh_move.md) — once per control index; Professional moves only `node_start_refined` (C46b, class D).
+- [control_mesh_switch](control_mesh_switch.md) — two entries swap the two axes (manual 6.244).
+- [control_mesh_rotate](control_mesh_rotate.md) / [control_mesh_rotate_angle](control_mesh_rotate_angle.md) — 2D -> 3D sweep missing, parked (C46c).
+- [mesh_activate_gravity_time](mesh_activate_gravity_time.md) — indexed records, bottom-to-top activation, method 2 default, consistent reduced stiffness (C46d, Pro `mesh_activate1`).
+

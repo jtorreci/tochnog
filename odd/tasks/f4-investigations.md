@@ -13,7 +13,7 @@ through `scripts/remote_run.sh`.
 - [ ] T5 C35/K02: integration-point state one-iteration lag. Investigation.
 - [ ] T6 Open-cause clusters: K14 (hypoplasticity history/stress path), K15 (MC/DP/von Mises), K24 (3D consolidation `large2`), K21 (Navier-Stokes), C7 (Mazars), C11 (dynamics), C3 (3D section sign), C6 (iface_gen coverage). Investigations, one by one.
 - [x] T7 Memory hogs (>4 GB with any binary): Pro `force11`, `large1`, `ground19_water_under_dam`, `mesh_activate1`, `foundation_consolidation_settlement` (runs since F4 T4 K20, bad_alloc under the 4 GB cap). Route: read-only investigation, owner decision 2026-10-09 (fix A, B, C), then one delegated writer. Memory fixed; solver-speed residual of `force11`/`foundation...` open (BACKLOG C43).
-- [ ] T8 C45 + C46 (owner 2026-10-10: study, not only document): `control_mesh_copy`/`_mirror` after a time step stop with a `node_dof_start_refined` error (Pro runs); copy/switch order on the same index (Pro copies first); `control_mesh_move` has no effect in the Pro (Pro-suspect?); `mesh_activate1` final-step vely (GNU 0, Pro -9.95e-6). Route: delegated writer.
+- [x] T8 C45 + C46 (owner 2026-10-10: study, not only document): `control_mesh_copy`/`_mirror` after a time step stop with a `node_dof_start_refined` error (Pro runs); copy/switch order on the same index (Pro copies first); `control_mesh_move` has no effect in the Pro (Pro-suspect?); `mesh_activate1` final-step vely (GNU 0, Pro -9.95e-6). Route: delegated writer. Done except C46c (rotate sweep, parked: large) and two owner decisions (C46b, C46e class D).
 - [ ] T9 C43: GNU Bi-CG converges far slower than the Pro (`force11` >600 s vs 13 s). Route: read-only investigator + omen.
 
 ## Rules
@@ -102,3 +102,38 @@ docs + SEGUIMIENTO + BACKLOG + DIVERGENCES.
   timeout (Pro timeout). New open items: C45 (copy/mirror after a time
   step: node_dof_start_refined error), C46 (move no-op in Pro, copy/
   switch order, rotate, mesh_activate1 vely).
+- T8 (route: delegated writer, inline single-threaded; local probes GNU vs
+  Pro 02-08-2026, scratch clean builds, omen A/B `f4t8_runs`).
+  C45 `0ca144c`: mesh.cc copy/mirror lacked node_dof_start_refined
+  (renumber() rc 1) and re-initialised the IP state (1 % off); now node
+  items + ELEMENT_DOF duplicated, element numbers old+max+1; loaded probes
+  = Pro to 4e-10. Tests mesh_copy/mirror_timestep1 RED rc 1 / GREEN.
+  C46d numbering `bc2235e`: macro -bar/-rectangle/-brick x fastest (Pro
+  .dbs identical); mesh_macro_numbering1/2 RED/GREEN, mesh_switch_timestep1
+  check retargeted (node 3 at 0 1 = Pro node 3).
+  C46a `e730052`: order copy, move, switch, mirror (pairwise Pro probes);
+  mesh_order_timestep1 RED (0 2 / 4 0) / GREEN (0 7 / -1 5).
+  C46b `c21b62e`: move once per index; Pro moves only node_start_refined
+  (Pro-suspect, class D, owner decision pending); mesh_move_timestep1 RED
+  22 1 / GREEN 12 1.
+  Switch `fb834c6`: two entries = swap (manual 6.244, Pro); 3 entries GNU
+  extension (class C); Pro leaves node_start_refined unswitched (C46e,
+  class D, owner decision pending); mesh_switch_pair1 RED 2 0 / GREEN 0 2.
+  C46d gravity `7aeac4a`: index-0-only read (input index 10), no
+  bottom-to-top window, default method1, inconsistent reduced stiffness
+  -> fixed; mesh_activate1 vely/veliy/sigyy = Pro to 3e-4, target met;
+  mesh_activate_gravity_time1 RED rc 1 / GREEN; residual class B.
+  UAF `fd477ff`: buffered node-item copies in mesh.cc (ASan, from T9);
+  outputs identical; interface.cc interface_convert still has it.
+  C46c parked: valid probe = Pro rotate1.dat (Pro 14 nodes/5 prism6, GNU
+  rc 1: no run-time 2D->3D); rotate_angle is the sweep angle in the Pro.
+  Evidence: build_safe 158 -> 160/164/166/168/170/171 OK, 0 FALLO, rc 0
+  per stage (final 171). Corpus A/B (old = F4 T7 ABC = HEAD, new =
+  7aeac4a): Pro other 273 -> 273 (mesh_activate1 rc 1 -> 0), sfnet 192 ->
+  192, t26 99 -> 107 (+8 new), vs 232 -> 232; dbs diffs = renumbering,
+  round-off / solver order (<= 5e-6), control_distribute realisations,
+  pre-divergent inputs. Docs commit: see git log. Final build copied to
+  build/tochnog (md5 d8efb7e1).
+  Next: owner decisions C46b/C46e; C46c rotate sweep (large); interface.cc
+  UAF; per-IP gravity activation (C46d residual).
+
