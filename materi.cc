@@ -525,6 +525,21 @@ void materi( long int element, long int gr, long int name, long int nnol,
       old_deften, new_deften, inc_rot,
       ddsdde, viscosity, viscosity_heatgeneration, softvar_nonl, softvar_l,
       mc_normal, ten_normal);
+    // mesh_activate_gravity -method2: an element that is not activated yet
+    // stays in the calculation with a REDUCED STIFFNESS (activation_stiff,
+    // mesh_activate_gravity_stiffness_factor): the material tangent and
+    // the stress increment are both scaled, as for a material with the
+    // reduced stiffness. The old code scaled the whole element matrix
+    // only: the internal force (and the stress-projection rows) no longer
+    // matched it, the Newton update was 1/factor too large, and the soft
+    // elements above the activation front stored full-stiffness stresses
+    // (F4 T8, Professional mesh_activate1).
+    if ( activation_stiff!=1. ) {
+      for ( idim=0; idim<MDIM*MDIM; idim++ )
+        new_sig[idim] = rotated_old_sig[idim] +
+          activation_stiff * ( new_sig[idim] - rotated_old_sig[idim] );
+      array_multiply( ddsdde, ddsdde, activation_stiff, MSTRAIN*MSTRAIN );
+    }
     tendons( element, gr, nnol, npoint, volume, new_d, old_unknowns, new_unknowns,
       new_rot, inc_ept, tendon_element_rhside, ddsdde_tendon );
     array_add( ddsdde, ddsdde_tendon, ddsdde_total, MSTRAIN*MSTRAIN );
@@ -1407,17 +1422,6 @@ void materi( long int element, long int gr, long int name, long int nnol,
 
     }
     }//Not used when searching for local values of softening variable -- end
-  }
-
-  // mesh_activate_gravity method 2: the element stays active but with a
-  // REDUCED STIFFNESS before/during activation (the reduced matrix keeps the
-  // not-yet-activated material from artificially stiffening the model).
-  if ( activation_stiff!=1. ) {
-    long int nmat = nnol*npuknwn*nnol*npuknwn;
-    for ( long int im=0; im<nmat; im++ )
-      element_matrix[im] *= activation_stiff;
-    for ( long int im=0; im<nnol*npuknwn; im++ )
-      element_lhside[im] *= activation_stiff;
   }
 
   if ( swit ) {

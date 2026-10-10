@@ -1497,6 +1497,11 @@ run_ok "$T2026" mesh_switch_pair1
 if grep -aqE '^node +3 +0 +2 *$' "$T2026/mesh_switch_pair1.dbs" 2>/dev/null;
 then check_ok "mesh_switch_pair1 (node 3 at 0 2)";
 else check_fail "mesh_switch_pair1" "node 3 not at 0 2"; fi
+# F4 T8 / C46d: mesh_activate_gravity_time read at its own index, bottom-
+#   to-top activation, default -method2, reduced tangent and stress
+#   increment (mesh.cc mesh_activate_gravity_factor, materi.cc). Targets =
+#   Professional values; old GNU: full gravity from the first step.
+run_ok "$T2026" mesh_activate_gravity_time1
 
 # ---------------------------------------------------------------------
 # K03 (2026-10-06): default convection_apply -no (manual Professional
