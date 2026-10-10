@@ -1,5 +1,12 @@
 # Bi-CG direct-LU retry band width — developer notes
 
+> **F4 T7 (2026-10-09):** the `NODE_NODE` band loop of the Bi-CG branch
+> described below no longer exists. The retry builds its matrix lazily in
+> `solve_band_retry()` with the EXACT band measured on the element matrix
+> entries (node-number or Cuthill-McKee ordering, whichever is narrower);
+> see [solver_memory](solver_memory.md). The history below is kept for the
+> examp2 diagnosis.
+
 ## Where it is implemented
 
 - `so.cc`, function `solve()`, the `bicg_solver` branch that computes the
@@ -58,8 +65,7 @@ None.
 
 ## Pending refactorings
 
-- The band width could be derived exactly from the element matrix unknown
-  pairs instead of the `NODE_NODE` approximation; the current bound is
-  conservative but correct.
+- Done in F4 T7: the retry band is derived exactly from the element matrix
+  unknown pairs (`solve_band_retry_entries`).
 - The out-of-bounds write was silent. A bounds assertion in the band fill
   (debug builds) would have caught it earlier.

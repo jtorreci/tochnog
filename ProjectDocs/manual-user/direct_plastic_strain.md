@@ -69,7 +69,5 @@ visco): eppxx 0.5 = eps - sigma/E.
   (eps - eps_p) holds component by component. Example
   (`direct_plastic_strain_mc1`): GNU eppxy 2.04114892e-3, Professional
   4.08229785e-3; every normal component and `f` are equal.
-- **Visco stress path.** With `_visco` the GNU cut differs from the
-  Professional (BACKLOG C33: the relaxation factor uses the previous
-  time step, and the principal tension cap ignores `_visco`; scheduled
-  for F4); the stored plastic strain follows each binary's own stress.
+- **Visco stress path.** Equal to the Professional since F4 T3
+  (2026-10-09, BACKLOG C33 resolved).

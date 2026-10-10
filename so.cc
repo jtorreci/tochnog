@@ -112,6 +112,204 @@ static long int sparse_list_add( int **inz, double **solve_A,
 #define EPS_SOL 1.e15
 #define INITIAL_SIZE 100
 
+// Visit the element matrix entries of the current solve, mapped to local
+// (solver) dof indices, with the mpc tie expansion of the energy-consistent
+// slave elimination (DIAG §16) - the same entries the Bi-CG products use.
+// mode 0: track the band width under the identity and the given ordering;
+// mode 1: add the entries to the band LU matrix in the given ordering.
+static void solve_band_retry_entries( long int mode, long int max_element,
+  long int *element_matrix_unknowns, long int *perm, long int &band_id,
+  long int &band_perm, double *mat, long int kl, long int ku,
+  long int ldmat )
+{
+  long int element=0, element_group=0, length=0, imat=0, iglobal=0,
+    jglobal=0, ilocal=0, jlocal=0, pi=0, pj=0, ii=0, jj=0, ldum=0;
+  double ddum[1], *element_matrix_values=NULL;
+
+  for ( element=0; element<=max_element; element++ ) {
+    if ( !db_active_index( ELEMENT, element, VERSION_NORMAL ) ) continue;
+    element_group = 0;
+    db( ELEMENT_GROUP, element, &element_group, ddum, ldum,
+      VERSION_NORMAL, GET_IF_EXISTS );
+    if ( !db_active_index( ELEMENT_MATRIX_VALUES, element, VERSION_NORMAL ) &&
+         !db_active_index( GROUP_MATRIX_VALUES, element_group, VERSION_NORMAL ) )
+      continue;
+    if ( solve_options_matrix_group==-YES ) {
+      length = db_len( GROUP_MATRIX_VALUES, element_group, VERSION_NORMAL );
+      element_matrix_values =
+        db_dbl( GROUP_MATRIX_VALUES, element_group, VERSION_NORMAL );
+    }
+    else {
+      length = db_len( ELEMENT_MATRIX_VALUES, element, VERSION_NORMAL );
+      element_matrix_values =
+        db_dbl( ELEMENT_MATRIX_VALUES, element, VERSION_NORMAL );
+    }
+    get_element_matrix_unknowns( element, element_matrix_unknowns );
+    long int mpc_tie_on = mpc_tie_elimination_active();
+    for ( imat=0; imat<length; imat++ ) {
+      iglobal = element_matrix_unknowns[imat*2+0];
+      jglobal = element_matrix_unknowns[imat*2+1];
+      long int nt = 1, it2 = 0;
+      long int row_t[MPC_TIE_MAX_TARGETS], col_t[MPC_TIE_MAX_TARGETS];
+      double fac_t[MPC_TIE_MAX_TARGETS];
+      if ( mpc_tie_on &&
+           ( mpc_tie_of_dof(iglobal)>=0 || mpc_tie_of_dof(jglobal)>=0 ) )
+        nt = mpc_tie_targets( iglobal, jglobal, row_t, col_t, fac_t );
+      else {
+        row_t[0] = iglobal; col_t[0] = jglobal; fac_t[0] = 1.;
+      }
+      for ( it2=0; it2<nt; it2++ ) {
+        ilocal = solve_global_local[row_t[it2]];
+        jlocal = solve_global_local[col_t[it2]];
+        if ( ilocal==-NO || jlocal==-NO ) continue;
+        pi = perm[ilocal];
+        pj = perm[jlocal];
+        if ( mode==0 ) {
+          if ( labs(ilocal-jlocal)>band_id ) band_id = labs(ilocal-jlocal);
+          if ( labs(pi-pj)>band_perm ) band_perm = labs(pi-pj);
+        }
+        else {
+          ii = kl + ku + 1 + (pi+1) - (pj+1);
+          jj = pj + 1;
+          mat[(jj-1)*ldmat + ii - 1] += element_matrix_values[imat] *
+            fac_t[it2];
+        }
+      }
+    }
+  }
+}
+
+// Direct band LU retry after a Bi-CG failure (F4 T7, memory). The band
+// matrix is built lazily, only here: the Bi-CG converges in nearly every
+// solve, and the old always-allocated workspace ((3*band+1)*n doubles with
+// the raw node-number band, plus a dense n*n copy) exhausted the memory of
+// large models although it was never read. The element matrices are still
+// in the database, so the fill reproduces the matrix of the iterative
+// solve. The band LU runs in a reverse-free Cuthill-McKee node ordering
+// (a Cuthill-McKee front, like the direct-solver ordering in solve()) when that
+// ordering gives a smaller exact band than the node-number ordering; the
+// Bi-CG ordering (solve_global_local) is not touched. The right-hand side
+// is the original one (solve_b_temp, 1-based); the correction is returned
+// in solve_b. Returns the dgbsv info.
+static long int solve_band_retry( long int max_node, long int max_element,
+  long int *element_matrix_unknowns, double *solve_b_orig )
+{
+  long int inod=0, jnod=0, nnod=0, jj=0, ipuknwn=0, ilocal=0, ldum=0,
+    new_node=0, ready=0, anything=0, k=0, band_id=0, band_perm=0,
+    *perm=NULL, *identity=NULL, *global_ordered=NULL, *ordered_global=NULL,
+    *done=NULL, *node_node=NULL, length=0;
+  integer n=0, kl=0, ku=0, ldmat=0, nrhs=1, info=0, *ipiv=NULL;
+  double ddum[1], *mat=NULL, *rhs=NULL, *node_lhside=NULL;
+
+  if ( solve_nlocal<=0 ) return 0;
+
+  // Cuthill-McKee front ordering of the active nodes
+  length = 1+max_node;
+  global_ordered = get_new_int( length );
+  ordered_global = get_new_int( length );
+  done = get_new_int( length );
+  array_set( global_ordered, -NO, length );
+  array_set( ordered_global, -NO, length );
+  array_set( done, 0, length );
+  node_node = get_new_int( db_data_length( NODE_NODE ) );
+  new_node = -1;
+  while ( !ready ) {
+    // start a new front at the first unordered active node
+    ready = 1;
+    for ( inod=0; ready && inod<=max_node; inod++ ) {
+      if ( db_active_index( NODE, inod, VERSION_NORMAL ) &&
+           global_ordered[inod]==-NO ) {
+        new_node++;
+        global_ordered[inod] = new_node;
+        ordered_global[new_node] = inod;
+        ready = 0;
+      }
+    }
+    anything = !ready;
+    while ( anything ) {
+      anything = 0;
+      for ( k=0; k<=new_node; k++ ) {
+        inod = ordered_global[k];
+        if ( done[inod] ) continue;
+        done[inod] = 1;
+        anything = 1;
+        nnod = 0;
+        db( NODE_NODE, inod, node_node, ddum, nnod, VERSION_NORMAL,
+          GET_IF_EXISTS );
+        for ( jj=0; jj<nnod; jj++ ) {
+          jnod = labs(node_node[jj]);
+          if ( jnod<=max_node && global_ordered[jnod]==-NO &&
+               db_active_index( NODE, jnod, VERSION_NORMAL ) ) {
+            new_node++;
+            global_ordered[jnod] = new_node;
+            ordered_global[new_node] = jnod;
+          }
+        }
+      }
+    }
+  }
+
+  // local dof -> band row in the Cuthill-McKee ordering
+  perm = get_new_int( solve_nlocal );
+  identity = get_new_int( solve_nlocal );
+  array_set( perm, -NO, solve_nlocal );
+  k = 0;
+  for ( jj=0; jj<=new_node; jj++ ) {
+    inod = ordered_global[jj];
+    for ( ipuknwn=0; ipuknwn<npuknwn; ipuknwn++ ) {
+      ilocal = solve_global_local[inod*npuknwn+ipuknwn];
+      if ( ilocal>=0 && ilocal<solve_nlocal && perm[ilocal]==-NO )
+        perm[ilocal] = k++;
+    }
+  }
+  for ( ilocal=0; ilocal<solve_nlocal; ilocal++ ) {
+    identity[ilocal] = ilocal;
+    if ( perm[ilocal]==-NO ) perm[ilocal] = k++;
+  }
+  assert( k==solve_nlocal );
+
+  // exact band of both orderings; keep the smaller one
+  solve_band_retry_entries( 0, max_element, element_matrix_unknowns, perm,
+    band_id, band_perm, NULL, 0, 0, 0 );
+  if ( band_id<=band_perm ) array_move( identity, perm, solve_nlocal );
+  kl = ku = ( band_id<=band_perm ) ? band_id : band_perm;
+  ldmat = 2*kl+ku+1;
+  n = solve_nlocal;
+  mat = get_new_dbl( ldmat*n );
+  array_set( mat, 0., ldmat*n );
+  ipiv = new integer[n];
+  rhs = get_new_dbl( n );
+
+  solve_band_retry_entries( 1, max_element, element_matrix_unknowns, perm,
+    band_id, band_perm, mat, kl, ku, ldmat );
+  for ( inod=0; inod<=max_node; inod++ ) {
+    if ( !db_active_index( NODE, inod, VERSION_NORMAL ) ) continue;
+    node_lhside = NULL;
+    if ( db_active_index( NODE_LHSIDE, inod, VERSION_NORMAL ) )
+      node_lhside = db_dbl( NODE_LHSIDE, inod, VERSION_NORMAL );
+    for ( ipuknwn=0; ipuknwn<npuknwn; ipuknwn++ ) {
+      ilocal = solve_global_local[inod*npuknwn+ipuknwn];
+      if ( ilocal==-NO ) continue;
+      double &diag = mat[ perm[ilocal]*ldmat + kl + ku ];
+      if ( node_lhside!=NULL ) diag += node_lhside[ipuknwn];
+      if ( scalar_dabs(diag)<EPS_MAT ) diag = EPS_MAT;
+    }
+  }
+  for ( ilocal=0; ilocal<solve_nlocal; ilocal++ )
+    rhs[perm[ilocal]] = solve_b_orig[ilocal+1];
+
+  dgbsv_( &n, &kl, &ku, &nrhs, mat, &ldmat, ipiv, rhs, &n, &info );
+
+  for ( ilocal=0; ilocal<solve_nlocal; ilocal++ )
+    solve_b[ilocal] = rhs[perm[ilocal]];
+
+  delete[] global_ordered; delete[] ordered_global; delete[] done;
+  delete[] node_node; delete[] perm; delete[] identity;
+  delete[] mat; delete[] ipiv; delete[] rhs;
+  (void)ldum;
+  return info;
+}
+
 // DEV-B displacement-primary gate (materi_dynamic < 1): deliberately
 // conservative. Only the plain mechanical transient of the dynamic corpus
 // family (elastic material, inertia_apply -yes, displacement+velocity
@@ -175,13 +373,13 @@ void solve( long int task )
     control_options_solver_petsc_ksptype=-1, control_options_solver_petsc_pctype=-1,
     idum[1], control_eigen[2], *node_bounded=NULL, *dof_principal=NULL, 
     *node_node=NULL, *dof_label=NULL, *dof_type=NULL,
-    *element_matrix_unknowns=NULL, *ipiv=NULL, *ipiv_dense=NULL,
+    *element_matrix_unknowns=NULL, *ipiv=NULL,
     *ordered_global=NULL, *global_ordered=NULL, *ordering_has_been_done=NULL;
   int superlu_nnz=0, *nnz=NULL, **inz=NULL,  *length_inz=NULL,
     *superlu_asub=NULL, *superlu_xa=NULL;
   double max=0., tmp=0., control_eigen_scale=0., ddum[1],
     *node_eigen=NULL, *options_relaxation=NULL,
-    *mat=NULL, *mat_dense=NULL, *matlin=NULL, *matss=NULL, *w=NULL, *z=NULL, *work=NULL, 
+    *mat=NULL, *matlin=NULL, *matss=NULL, *w=NULL, *z=NULL, *work=NULL, 
     *node_lhside=NULL, *node_rhside=NULL, *element_matrix_values=NULL,  
     *element_matrix_second_values=NULL, *node_dof_new=NULL,
     **solve_A=NULL, *superlu_A=NULL, *solve_b_temp=NULL;
@@ -512,34 +710,8 @@ void solve( long int task )
         ordered_global[inod] = inod;
       }
     }
-    // also compute the band width (needed by the direct-LU retry after
-    // a Bi-CG failure: dgbsv requires kl/ku/ldmat)
-    band = 0;
-    for ( inod=0; inod<=max_node; inod++ ) {
-      if ( db_active_index( NODE, inod, VERSION_NORMAL ) ) {
-        nnod = 0;
-        db( NODE_NODE, inod, node_node, ddum, nnod, VERSION_NORMAL, GET );
-        for ( jj=0; jj<nnod; jj++ ) {
-          jnod = labs(node_node[jj]);
-          if ( db_active_index( NODE, jnod, VERSION_NORMAL ) ) {
-            long int diff = ( inod>jnod ) ? inod-jnod : jnod-inod;
-            // Band width in local dofs: two nodes separated by `diff` node
-            // numbers span diff*nprinc + (nprinc-1) consecutive local
-            // indices (from the last dof of one node to the first of the
-            // other). Use (1+diff)*nprinc, the same bound as the
-            // Cuthill-McKee branch below (line ~556). The old diff*nprinc
-            // was short by nprinc-1, so the band fill wrote OUT of
-            // mat/ldmat for the first-to-last dof coupling of adjacent
-            // nodes (e.g. the pressure<->velocity consolidation term:
-            // nprinc=2, dof distance 3 > band 2), corrupting the direct-LU
-            // retry after a Bi-CG breakdown (examp2: pres -0.7206 instead
-            // of the exact -0.6345, which LAPACK/SuperLU and the
-            // Professional produce).
-            if ( (1+diff)*nprinc > band ) band = (1+diff)*nprinc;
-          }
-        }
-      }
-    }
+    // no band width here: the band LU retry after a Bi-CG failure
+    // builds its own ordering and band (solve_band_retry, F4 T7)
   }
   else
   {
@@ -707,24 +879,16 @@ void solve( long int task )
       }
     }
 
-    // dense LU (dgesv) workspace: A(row,col) direct fill. Allocated
-    // ALWAYS (also for the Bi-CG path) so the retry after a Bi-CG
-    // failure can resolve with dgesv without re-filling.
-    if ( solve_nlocal>0 ) {
-      mat_dense = get_new_dbl( solve_nlocal*solve_nlocal );
-      array_set( mat_dense, 0., solve_nlocal*solve_nlocal );
-      ipiv_dense = get_new_int( solve_nlocal );
-      array_set( ipiv_dense, 0, solve_nlocal );
-    }
-    // band LU workspace (dgbsv): allocated ALWAYS (also for the Bi-CG
-    // path) so the retry after a Bi-CG failure can resolve with dgbsv
-    // (the band pivoting handles the near-singular 3D interface systems
-    // that the dense dgesv rejects).
+    // band LU workspace (dgbsv): only for the band routes (-matrix_lapack,
+    // eigen). The Bi-CG retry after a failure builds its own band matrix
+    // lazily (solve_band_retry, F4 T7): allocating it here on every solve,
+    // plus a dense n*n copy that was never read, exhausted the memory of
+    // large models.
     kl = band;
     ku = band;
     ldmat = 2*kl+ku+1;
     lmat = ldmat*solve_nlocal;
-    if ( solve_nlocal>0 ) {
+    if ( band_solver && solve_nlocal>0 ) {
       mat = get_new_dbl( lmat );
       array_set( mat, 0., lmat );
       ipiv = get_new_int( solve_nlocal );
@@ -767,8 +931,7 @@ void solve( long int task )
     }
 
 // fill matrices in band format or profile format
-    // (also under bicg_solver: the direct-LU retry needs mat/mat_dense)
-    if ( band_solver || petsc_solver || superlu_solver || bicg_solver ) {
+    if ( band_solver || petsc_solver || superlu_solver ) {
       for ( element=0; element<=max_element; element++ ) {
         if ( db_active_index( ELEMENT, element, VERSION_NORMAL ) ) {
           element_group = 0;
@@ -825,16 +988,8 @@ void solve( long int task )
                 jlocal = solve_global_local[col_t[it2]];
                 if ( ilocal!=-NO && jlocal!=-NO ) {
                   double val = element_matrix_values[imat] * fac_t[it2];
-                  // dense LU fill (always, for the Bi-CG retry): A direct
-                  if ( mat_dense )
-                    mat_dense[ilocal*solve_nlocal+jlocal] += val;
-                  // the band fill feeds the dgbsv direct-LU retry after a
-                  // Bi-CG failure (and the -matrix_lapack route). The
-                  // sparse fill below feeds SuperLU/PETSc: it must run
-                  // whenever those solvers are active even though the band
-                  // workspace is also allocated (since 5b7bb8b the always-
-                  // allocated mat made this sparse branch dead code and the
-                  // SuperLU path received an EMPTY matrix -> segfault).
+                  // the band fill feeds the -matrix_lapack and eigen
+                  // routes; the sparse fill below feeds SuperLU/PETSc.
                   if ( mat && !petsc_solver && !superlu_solver ) {
                     ii = kl + ku + 1 + (ilocal+1) - (jlocal+1);
                     jj = jlocal + 1;
@@ -891,10 +1046,6 @@ void solve( long int task )
             ilocal = solve_global_local[iglobal];
             jlocal = ilocal;
             if ( ilocal!=-NO ) {
-              // dense LU diagonal (always, for the Bi-CG retry)
-              if ( mat_dense && use_node_lhside )
-                mat_dense[ilocal*solve_nlocal+ilocal] +=
-                  node_lhside[ipuknwn];
               if ( mat && !petsc_solver && !superlu_solver ) {
                 ii = kl + ku + 1 + (ilocal+1) - (jlocal+1);
                 jj = jlocal + 1;
@@ -937,32 +1088,17 @@ void solve( long int task )
     if      ( bicg_solver ) {
       succesful = solve_iterative_bicg( );
       // CONVERGENCE (2026-08-30): if the Bi-CG fails (3D interfaces
-      // with kn >> E, ratio 1e10), retry with the dense LU (dgesv).
-      // The dense matrix is filled alongside the band path.
-      if ( !succesful && ( mat_dense || mat ) ) {
+      // with kn >> E, ratio 1e10), retry with a direct band LU (dgbsv,
+      // pivoting handles the near-singular interface systems). The band
+      // matrix is built only now (F4 T7, solve_band_retry).
+      if ( !succesful ) {
         static long int warned_dense = 0;
         if ( !warned_dense ) {
           pri( "Warning: Bi-CG did not converge - retrying with direct LU" );
           warned_dense = 1;
         }
-        // the Bi-CG overwrote solve_b (workspace); restore the original
-        // right-hand side from solve_b_temp before the direct solve
-        for ( ii=0; ii<solve_nlocal; ii++ )
-          solve_b[ii] = solve_b_temp[ii+1];
-        // try the band LU first (handles the near-singular 3D interface
-        // systems with pivoting); fall back to the dense LU
-        if ( mat ) {
-          n = solve_nlocal;
-          kl = band;
-          ku = band;
-          nrhs = 1;
-          dgbsv_( &n, &kl, &ku, &nrhs, mat, &ldmat, ipiv, solve_b, &n, &info );
-        }
-        else {
-          n = solve_nlocal;
-          nrhs = 1;
-          dgesv_( &n, &nrhs, mat_dense, &n, ipiv_dense, solve_b, &n, &info );
-        }
+        info = solve_band_retry( max_node, max_element,
+          element_matrix_unknowns, solve_b_temp );
         if ( info !=0 ) {
           pri( "Error with Lapack direct solver." );
           pri( "Try one of the other solver option:" );
@@ -1204,8 +1340,7 @@ if (band_solver)
       }
     }
 
-    // the band workspace is allocated in every route (the Bi-CG path
-    // needs it for the direct-LU retry); free it whenever it was used
+    // band workspace of the -matrix_lapack / eigen routes
     if ( mat )
     {
       delete[] mat;
@@ -1218,13 +1353,6 @@ if (band_solver)
         if ( disp_rhside!=NULL ) { delete[] disp_rhside; disp_rhside = NULL; }
         if ( disp_x1!=NULL ) { delete[] disp_x1; disp_x1 = NULL; }
         if ( disp_x2!=NULL ) { delete[] disp_x2; disp_x2 = NULL; }
-    if ( mat_dense )
-    {
-      delete[] mat_dense;
-      delete[] ipiv_dense;
-      mat_dense = NULL;
-      ipiv_dense = NULL;
-    }
     if ( petsc_solver ) 
 	{
       delete[] solve_solution;

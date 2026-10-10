@@ -1072,7 +1072,20 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
 - **Severity**: **LOW** — deliberate divergence; the GNU follows the manual.
   **Effort**: —.
 
-### C31. `tet10` integration rule is only degree 1 (Pro `tet10_2` under gravity)
+### C31. `tet10` integration rule is only degree 1 (Pro `tet10_2` under gravity) — RESOLVED 2026-10-09 (F4 T4)
+
+- **Resolution (F4 T4, option (c), project owner 2026-10-09)**: the
+  Professional's Keast 5-point rule (`polynom.cc`), its linear
+  least-squares nodal recovery `1,L1,L2,L3` (`miscel.cc`) and a positive
+  HRZ lumping of the principal-dof inertia/capacity (`general.cc`,
+  corner V/36, mid-edge 4V/27; deliberate divergence TET10-HRZ: the
+  Professional row sum gives the corner -V/20 and its dynamics fail).
+  `tet10_2` sigzz -1.00000000515 (Pro -1); tests
+  `test-2026/tet10_body_load1`, `tet10_mass_hrz1`,
+  `tet10_dynamic_gravity1`. Found on the way: the Professional
+  `post_point_dof` inside a tet10 interpolates linearly from the corners
+  (DIVERGENCES TET10-PPOINT, pending decision).
+
 
 - **Symptom** (F1 T3, audit K04): `tet10_2` (hex8 -> h -> p -> split into
   48 tet10, gravity): GNU post-point sigzz -0.894 (nodal sigzz at z = 0
@@ -1100,22 +1113,30 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
 - **Severity**: **MEDIUM** (wrong quadratic-tet results under body
   loads/bending). **Effort**: **medium**.
 
-### C32. K04 targets that are not GNU defects (`axisym9`, `distri2`)
+### C32. K04 targets that are not GNU defects (`axisym9`, `distri2`) — CLOSED 2026-10-09 (F4 T4)
 
-- `axisym9` (post_point sigxx 0.00158902 vs 0.0015915 +/- 1e-6): the field
-  is uniform in both binaries; the GNU total ring force is 0.16 % low
-  because `polynom.cc` forces 1-point Gauss for axisymmetric
-  `materi_velocity` quad4 (element-constant hoop term, audit K20). Not the
-  `post_point_dof` convention. Decision belongs to K20, moved to **F4**
-  (design + corpus A/B; project owner, 2026-10-06).
-- `distri2` (post_point temp 0.998933 vs 0.999774 +/- 1e-4):
-  `control_distribute -normal` random field; both binaries draw a valid
-  N(1, 2e-3) (GNU mean 0.99995 / std 0.00203, Pro 0.99997 / 0.00201)
-  from different random generators. The target encodes the Professional
-  random sequence; no fix.
+- **Closure (F4 T4)**: neither target is a GNU defect and nothing is left
+  to do here.
+  - `axisym9`: the row was stale. The GNU already gave post_point sigxx
+    0.00159154943 = Professional (0.001591549431; target 0.0015915 +/-
+    1e-6) before F4 T4; the 0.00158902 of F1 T3 predates the Gauss
+    alignment of the recovery. The forced 1-point axisymmetric rule
+    (audit K20) it was attributed to was removed in F4 T4 and the value
+    stays 0.00159154943.
+  - `distri2` (post_point temp 0.998933 vs 0.999774 +/- 1e-4):
+    `control_distribute -normal` random field; both binaries draw a valid
+    N(1, 2e-3) (GNU mean 0.99995 / std 0.00203, Pro 0.99997 / 0.00201)
+    from different random generators. The target encodes the
+    Professional random sequence; no fix (DIVERGENCES DISTRI, class C).
 
+### C33. `_visco` direct cut-offs: one-step-lagged relaxation time step and no visco on the principal tension cap — RESOLVED 2026-10-09 (F4 T3)
 
-### C33. `_visco` direct cut-offs: one-step-lagged relaxation time step and no visco on the principal tension cap
+- **Resolution**: `set_stress()` reads `DTIME` at `VERSION_NEW`; the
+  principal tension cap applies the tension `_visco` factor; in the full
+  principal mode each law relaxes with its own `_visco` record. 12 direct
+  probes and 2 incremental viscoplastic probes equal to the Professional
+  02-08-2026; tests `materi_direct_visco_first_step1/2`,
+  `materi_direct_visco_separate1`, `materi_plasti_visco_power_dt1`.
 
 - **Symptom** (F1 T4, K13 probes on the Professional 02-08-2026, single
   quad4, E 1, nu 0.25, tension_direct 1e-3, `_visco` tm 2, eps_xx 2e-3 in
@@ -1311,7 +1332,21 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
 - **Severity**: **LOW**. **Effort**: **cheap** (1, 2) to **medium** (3).
 ---
 
-### C41. `mohr_coul_direct7` (Pro `other`): `-total_linear` with a velocity `mpc_node_number` tie (F3, 2026-10-07)
+### C41. `mohr_coul_direct7` (Pro `other`): `-total_linear` with a velocity `mpc_node_number` tie (F3, 2026-10-07) — tie RESOLVED 2026-10-09 (F4 T2); residual open
+
+- **Resolution (F4 T2)**: root cause `mpc.cc` `mpc_node_apply()`: the
+  post-solve re-sync set the slave VELOCITY but not its integrated
+  displacement (`parallel_new_dof_diagonal` integrates `dis = dis_old +
+  vel*dt` before the re-sync), so the slave displacement lagged one solve;
+  with `-total_linear` the tied nodes 3/4 ended with disy -0.001808 /
+  -0.001692. The slave displacement is now integrated with the slave
+  velocity. Target met: sigxy 0.0998334 at every node (= Professional);
+  tied nodes equal. Test `test-2026/mohr_coul_direct_mpc_total1`.
+- **Residual (open, LOW)**: disy -0.00175 vs Professional -0.0018458 and
+  sigzz -1.0084 vs -0.90785 (sigxx, sigyy, sigxy equal). Not the tie (both
+  programs keep the tied nodes equal); belongs to the `mohr_coul_direct`
+  cut under `-total_linear`, possibly through the stored direct plastic
+  strain (C34), not verified. DIVERGENCES C41.
 
 - **Corpus**: Pro `other` `mohr_coul_direct7` (exit-code pass before F3,
   fail after). The input has `materi_displacement` and no memory record,
@@ -1324,6 +1359,95 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
   `-total_linear` path with a velocity tie (the same input with an
   explicit `-total_linear` already failed before F3).
 - **Severity**: **LOW**. **Effort**: **medium** (investigation).
+### C42. quad4 nodal stress recovery: natural-coordinate bilinear interpolation (GNU) vs physical-coordinate linear least squares (Professional) (F4 T4, 2026-10-09)
+
+- **Symptom** (F4 T4 investigation, after the K20 fix): on rectangles in
+  plane analyses both programs agree; on distorted quad4 and on
+  axisymmetric rings the nodal stresses differ although the
+  displacements and the integration-point stresses are equal.
+  Distorted 4x4 axisymmetric patch `hg4d`: nodal stresses 3-7 % apart;
+  Akin ring (`axisym2`, test `test-2026/axisym_quad4_ring1`): inner sigzz
+  GNU 10760.09, Professional 10759.22 (disx equal to 1e-12).
+- **Root cause**: `sri_stress_recovery_weight()` (`miscel.cc`) recovers
+  the quad4 by the bilinear `1,xi,eta,xi*eta` interpolation of the 2x2
+  Gauss values in the natural coordinates (identified on a rectangle,
+  2026-09-13). The Professional fits `1,x,y` by uniform-weight least
+  squares in the PHYSICAL coordinates of the points and evaluates it at
+  the physical node (the two coincide on a rectangle up to the xy term).
+- **Experiment** (variant v4 of the F4 T4 investigation, scratch build):
+  the physical-coordinate fit reproduced the Professional `axisym2`
+  sigzz (10759.2155) and moved the distorted `hg4d` nodal stresses
+  towards the Professional, but changed the exit code of `cd_method`
+  (validation-suite, pass -> fail), so it was not adopted with K20.
+- **Severity**: **LOW** (post-processing of the nodal stress field only;
+  the solution is unchanged). **Effort**: **medium** (the per-element
+  physical fit, plus the `cd_method` analysis).
+
+### C43. Memory hogs of the default Bi-CG solver (F4 T7, 2026-10-09) — memory RESOLVED; solver-speed residual open
+
+- **Symptom**: five Professional `other` inputs (`force11`, `large1`,
+  `ground19_water_under_dam`, `mesh_activate1`,
+  `foundation_consolidation_settlement`) need more than 4 GB with the GNU
+  (bad_alloc under the cap, up to 11.9 GB RSS under a 12 GB cap) while
+  the Professional runs them in 0.07-1.3 GB.
+- **Root cause A** (`so.cc` `solve()`): since `5b7bb8b` every solve
+  allocated and zero-filled a dense `n x n` matrix `mat_dense` that was
+  never read (its `dgesv_` reader was a dead branch). **Resolved** in
+  F4 T7 A: removed; no result change.
+- **Root cause B**: the band LU workspace of the Bi-CG retry was allocated
+  and filled on every solve with the raw node-number band. **Resolved** in
+  F4 T7 B: built lazily in `solve_band_retry()` after a failure, exact
+  band, Cuthill-McKee ordering when narrower; round-off changes in the
+  retried solves only.
+- **Root cause C** (`mesh_activate1`): `control_mesh_macro` on the
+  `control_timestep` index added a mesh copy per step. **Resolved** in
+  F4 T7 C (C44).
+- **Measured** (omen, 12 GB cap, old -> new, Professional): `force11`
+  bad_alloc 7.8 GB -> 0.27 GB (Pro 0.27 GB); `large1` bad_alloc -> rc 0,
+  0.65 GB, 58 s (Pro 1.3 GB, 9 s); `ground19` 5.2 -> 0.12 GB (Pro 0.17);
+  `mesh_activate1` 11.9 GB bad_alloc -> 0.035 GB, 29 s (Pro 0.07 GB, 26 s);
+  `foundation_consolidation_settlement` bad_alloc -> 1.5 GB, timeout 600 s
+  (Pro timeout too). Table: `manual-developer/solver_memory.md`.
+- **Residual (open, solver speed, not memory)**: `force11` (one 3D solve)
+  does not converge with the Bi-CG within 600 s (Pro PARDISO 13 s);
+  `foundation_consolidation_settlement` breaks the Bi-CG down on every
+  solve and runs the band LU retry (1.5 GB).
+
+### C44. One-shot mesh records re-applied on every time step (F4 T7, 2026-10-09) — RESOLVED
+
+- **Symptom**: `control_mesh_macro`, `_copy`, `_mirror`, `_switch` on the
+  same index as a multi-step `control_timestep` were applied on every
+  step (`mesh_activate1` 202 -> 4040 nodes in 20 steps; copy doubled the
+  mesh per step; switch swapped the axes back).
+- **Fix**: `top.cc` `step_start_control_entry` / `first_of_control`: run
+  them on the first step of the index (Professional probes: once per
+  index). Tests `mesh_macro_timestep1`, `mesh_switch_timestep1`.
+
+### C45. `control_mesh_copy` / `control_mesh_mirror` after the first time step stop with a `node_dof_start_refined` error
+
+- **Symptom** (F4 T7 probes): a copy or mirror on an index after a
+  `control_timestep` index stops with "Error detected for data item :
+  node_dof_start_refined / record : 8" (rc 1); the Professional runs it
+  (12 nodes). Pre-existing, independent of C44.
+- **Severity**: **LOW**. **Effort**: **cheap** (the duplicated node data
+  in `mesh.cc` `mesh_copy()` / `mesh_mirror()`).
+
+### C46. `step_start()` mesh-operation residuals vs the Professional (F4 T7)
+
+- `control_mesh_move` had no effect in the Professional probes (with or
+  without a `control_timestep`); the GNU moves the mesh, and on every
+  step of a `control_timestep` on the same index (not guarded: the
+  Professional semantics could not be measured).
+- With `control_mesh_copy` and `control_mesh_switch` on one index the
+  Professional copies first and then switches; the GNU switches first.
+- `control_mesh_rotate_angle` is only a parameter of `control_mesh_rotate`
+  in the Professional (GNU: standalone 2D rotation); the 3D
+  `control_mesh_rotate` probe did not run on either binary.
+- `mesh_activate1` (after C44): the final-step velocity `vely` is 0 in
+  the GNU and -9.95e-6 in the Professional at the top; the integrated
+  `veliy` agrees to 5e-10.
+- **Severity**: **LOW**. **Effort**: **cheap/medium**.
+
 ---
 
 ## D. Summary
@@ -1366,9 +1490,9 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
 | C27 | — | FRD/gmsh layout vs Pro (PSTEP per block, `ALL` component, names, extra blocks/fields, multi-component gmsh fields) | LOW | medium |
 | C29 | Pro `other` | `group_condif_conductivity` per-direction values (condif11) not parsed | LOW | cheap/medium |
 | C30 | Pro `other` | `mohr_coul_direct4`: Pro does not enforce the interface MC strength (deliberate divergence, GNU = manual 6.632) | LOW | — |
-| C31 | Pro `other` | `tet10` nodal quadrature only degree 1 (`tet10_2` gravity); F4 (design + corpus A/B) | MEDIUM | medium |
-| C32 | Pro `other` | `axisym9` (K20 1-point axisymmetric rule, F4), `distri2` (random generator): not GNU defects | LOW | — |
-| C33 | — | `_visco` direct cut-offs: `DTIME` from the previous step, no visco on the principal tension cap; F4 | MEDIUM | cheap/medium |
+| C31 | Pro `other` | `tet10` nodal quadrature only degree 1 (`tet10_2` gravity) — resolved 2026-10-09 (F4 T4: Keast 5-point + LSQ recovery + HRZ lumping) | MEDIUM | medium |
+| C32 | Pro `other` | `axisym9` (stale row, already = Pro), `distri2` (random generator): not GNU defects — closed 2026-10-09 (F4 T4) | LOW | — |
+| C33 | — | `_visco` direct cut-offs: `DTIME` from the previous step, no visco on the principal tension cap — resolved 2026-10-09 (F4 T3) | MEDIUM | cheap/medium |
 | C34 | — | direct cut shear plastic strain: Pro twice the tensor value (deliberate divergence) | LOW | — |
 | C35 | — | one-iteration lag of the whole material state (K02, `spring4` 1 iteration) — parked, design; F4 | MEDIUM | medium/large |
 | C36 | validation-suite | `young_power` + `young`: Pro adds both stiffnesses, manual says law = modulus (K06) — decided 2026-10-06: deliberate divergence (GNU = manual), no code change | LOW | cheap |
@@ -1376,9 +1500,14 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
 | C38 | Pro `other` | `control_support_edge_normal_stiffness_freeze` parse-only (support_edge_normal_3, 1e-9 effect) | LOW | cheap/medium |
 | C39 | Pro `other` | K17 residuals: `truss8` birth node resolved 2026-10-06 (death velocity reset open), `update2` -updated robustness, `truss13` truss_distribute_mpc, zero-force truss first iteration | LOW | cheap/large |
 | C40 | Pro `other` | element-target contact residuals after F2 T3b: no Pro check "target element has all nodes on the boundary", hex8 target sides never detected, node_boundary generated only for element-target contact | LOW | cheap/medium |
-| C41 | Pro `other` | `mohr_coul_direct7`: `-total_linear` + velocity `mpc_node_number` tie misses sigxy (F3) | LOW | medium |
+| C41 | Pro `other` | `mohr_coul_direct7`: `-total_linear` + velocity `mpc_node_number` tie — tie resolved 2026-10-09 (F4 T2); residual disy/sigzz difference | LOW | medium |
+| C42 | Pro `other` | quad4 nodal stress recovery: natural bilinear (GNU) vs physical linear least squares (Pro); distorted/axisymmetric quad4 (`axisym2` sigzz 10760.09 vs 10759.22) | LOW | medium |
+| C43 | Pro `other` | memory hogs of the Bi-CG solver (`force11`, `large1`, `ground19`, `mesh_activate1`, `foundation_consolidation_settlement`): resolved 2026-10-09 (F4 T7 A dense n x n matrix, B lazy band retry, C macro per step) | MEDIUM | cheap/medium |
+| C44 | Pro `other` | one-shot mesh records (`control_mesh_macro`/`_copy`/`_mirror`/`_switch`) re-applied on every time step — resolved 2026-10-09 (F4 T7 C) | MEDIUM | cheap |
+| C45 | — | `control_mesh_copy`/`_mirror` after the first time step: `node_dof_start_refined` error (Pro runs) | LOW | cheap |
+| C46 | Pro `other` | `step_start()` mesh residuals: `control_mesh_move` (no effect in Pro), copy/switch order, rotate not comparable, `mesh_activate1` final `vely` | LOW | cheap/medium |
 
-Thirty-nine items remain open: nine MEDIUM and thirty LOW (C23 and C24 resolved 2026-10-05; C25, C26, C27 and B10 added; F1 T3 / K04 2026-10-06 added B11, C28-C32; F1 T6 resolved C28, added and resolved B12; F2 T1 added C36; F2 T2 added C37, C38, C39; F2 T3 resolved C5 and added C40; F3 T2 resolved C8, C18, C19, C20 and added B13, C41). No open issue is CRITICAL or
+Thirty-seven items remain open: seven MEDIUM and thirty LOW (C23 and C24 resolved 2026-10-05; C25, C26, C27 and B10 added; F1 T3 / K04 2026-10-06 added B11, C28-C32; F1 T6 resolved C28, added and resolved B12; F2 T1 added C36; F2 T2 added C37, C38, C39; F2 T3 resolved C5 and added C40; F3 T2 resolved C8, C18, C19, C20 and added B13, C41; F4 T2 fixed the C41 tie and left a residual; F4 T3 resolved C33; F4 T4 closed C32, added C42 and resolved C31). No open issue is CRITICAL or
 HIGH. The validation-suite corpus has no open failure — its 233 real tests
 pass (`materi_direct_mc` input corrected, C17 resolved). Every remaining failure is a stale or malformed test, an out-of-scope model
 or infrastructure limit, a narrow post-processing divergence, a corpus-coverage

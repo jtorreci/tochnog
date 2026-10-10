@@ -1,0 +1,42 @@
+( F4 T2 / C41: Pro corpus other/mohr_coul_direct7 with a second target.
+  materi_displacement without a memory record gives -total_linear; node 4
+  is tied to node 3 in velx and vely with mpc_node_number. The tied slave
+  displacement must follow the re-synced slave velocity: the old GNU
+  integrated it one solve behind, so the tied nodes ended with unequal
+  disy -0.001808 / -0.001692 and the total-strain stress was not uniform,
+  sigxy 0.102732 at node 1 and 0.096935 at node 2. Professional 02-08-2026:
+  sigxy 0.0998334 at every node. )
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_displacement
+materi_strain_total
+materi_stress
+materi_plasti_f
+end_initia
+print_apply -no
+node 1  0 0
+node 2  1 0
+node 3  0 1
+node 4  1 1
+element 1  -quad4 1 2 3 4
+group_type 0  -materi
+group_materi_elasti_young 0  1.e3
+group_materi_plasti_tension_direct 0  0.0
+group_materi_plasti_mohr_coul_direct 0  0.1 0.0 0.0
+bounda_dof 0  -ra 1 2 -ra -velx -vely
+bounda_dof 1  3 -velx
+bounda_time 1  1.0
+bounda_force 10  3 -vely
+bounda_time  10  -1.0
+mpc_node_number 10  4 -velx 3 -velx
+mpc_node_number 20  4 -vely 3 -vely
+post_calcul -materi_stress -prival
+print_filter 10 -node_dof -all -sigxx -sigxy -sigyy
+control_timestep 0  1.e-3 1.
+control_print 0  -node_dof -node_dof_calcul
+target_item  0   -node_dof 1 -sigxy
+target_value 0   0.0998334 1.e-4
+target_item  1   -node_dof 2 -sigxy
+target_value 1   0.0998334 1.e-4
+end_data

@@ -523,8 +523,8 @@ static long int msf_border_nodes_quad9[] = {
 //     -GAUSS override;
 //   - the SRI quad4/hex8 switches the FULL rule to GAUSS (2x2 / 2x2x2;
 //     polynom.cc:421; the same single source sri_active);
-//   - axisymmetric + materi_velocity forces GAUSS + MINIMAL (polynom
-//     cc:401-407: the 1-point rule at the centroid).
+//   - axisymmetric elements use the same default rule (K20, F4 T4
+//     2026-10-09: the former forced 1-point rule was removed).
 // nper[d] = the number of points in direction d, iso[d][0..nper-1] =
 // the iso coordinates and weight[d][0..nper-1] the 1D weights (the
 // same arrays pol() uses for the element integration points:
@@ -562,10 +562,8 @@ static void msf_element_rule( long int element, long int element_group,
     integration_points = -MINIMAL;
   else
     integration_points = -MAXIMAL;
-  if ( axisymmetric==-YES && materi_velocity ) {
-    integration_method = -GAUSS;
-    integration_points = -MINIMAL;
-  }
+  // K20 (F4 T4, 2026-10-09): no forced 1-point axisymmetric rule (pol()
+  // dropped it; this replica must follow the element's real rule)
   db( GROUP_INTEGRATION_POINTS, element_group, &integration_points, ddum,
     ldum, VERSION_NORMAL, GET_IF_EXISTS );
   db( GROUP_INTEGRATION_METHOD, element_group, &integration_method, ddum,

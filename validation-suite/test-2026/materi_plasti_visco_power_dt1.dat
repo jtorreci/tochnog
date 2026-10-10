@@ -1,0 +1,29 @@
+( F4 T3 / C33: incremental viscoplasticity, tension 1 with visco_power 0.1 1,
+  1D bar E 2, velocity 1, step dt 0.5 then dt 1. lambda dt uses the
+  CURRENT step dt: sigxx 2.666667 = Professional 02-08-2026. Old GNU,
+  previous-step dt: 2.818182. )
+echo -no
+number_of_space_dimensions 1
+materi_velocity
+materi_displacement
+materi_strain_total
+materi_strain_plasti
+materi_stress
+end_initia
+node 1  0
+node 2  1
+element 1  -bar2 1 2
+bounda_dof 0  1 -velx
+bounda_time 0  0.
+bounda_dof 1  2 -velx
+bounda_time 1  1.
+group_type 0  -materi
+group_materi_elasti_young 0  2.0
+group_materi_memory 0  -total_linear
+group_materi_plasti_tension 0  1.
+group_materi_plasti_visco_power 0  1.e-1 1.
+control_timestep 0  0.5 0.5
+control_timestep 1  1. 1.
+target_item 0 -node_dof 1 -sigxx
+target_value 0 2.666667 1.e-5
+end_data

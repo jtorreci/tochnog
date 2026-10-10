@@ -33,3 +33,8 @@ None. Uses the internal database API (`db`, `db_dbl`, `db_active_index`,
   plane at 0 (no offset mirror plane).
 - The node/`NODE_START_REFINED`/`NODE_DOF` duplication loop is duplicated with
   `mesh_copy`; a shared duplication helper could be extracted.
+
+## Once per control index (F4 T7)
+
+The call in `top.cc` `step_start()` is guarded by `first_of_control`
+(see [control_mesh_once_per_control](control_mesh_once_per_control.md)).

@@ -170,7 +170,7 @@ page lists its own in "Differences with the Professional version".
 - [groundflow_phreatic_level_multiple](groundflow_phreatic_level_multiple.md) — multiple phreatic levels (groundfl.cc _find/_coord + phreatic_apply _static).
 - [groundflow_seepage](groundflow_seepage.md) — seepage boundary in bounda.cc (Darcy flow projection on the outward normal).
 - [groundflow_pressure_atmospheric](groundflow_pressure_atmospheric.md) — static/total pressure cap in groundfl.cc groundflow_phreatic_coord (GNU-inherited keyword, documented + verified 2026-08-24).
-- [groundflow_total_pressure_limit](groundflow_total_pressure_limit.md) — solved-pressure cap after solve (top.cc hook) + dry-element consolidation skip (groundfl.cc, manual Professional 6.587/2.4.3). Differs from the Professional (DIVERGENCES TPL, pending owner decision).
+- [groundflow_total_pressure_limit](groundflow_total_pressure_limit.md) — `groundflow_total_pressure_limit()` single source of the limit (default 0); total-pressure cap in `groundflow_phreatic_coord()`, dry rule (velocity 0) in `groundflow()` (groundfl.cc); F4 T1.
 
 ## P6 — contact family remnant
 
@@ -297,7 +297,7 @@ page lists its own in "Differences with the Professional version".
 
 ## Integration quadrature + nodal stress recovery (Professional alignment, 2026-09-13)
 
-- [integration_quadrature_and_stress_recovery](integration_quadrature_and_stress_recovery.md) — the PER-OPERATION quadrature map (Professional vs GNU: Gauss element integrals, row-sum lumped mass, boundary/interface integration) and the Professional's nodal stress recovery identified from its own `.dbs` dumps: per-element least-squares fit (quad4 bilinear, quad9/hex8 linear, verified to 1e-12) + arithmetic-mean assembly; GNU implementation in `sri_stress_recovery_weight` (volume cancellation so the lumped sigma-dof equation assembles the mean), the `stress_recovery_gauss` flag, the SRI path preserved, the `force_element_edge_water` phreatic fix, and the validation (dynamic8 6e-11, beam2d_1 59.5766 vs Pro 59.5710, force5 -9.80718 = Pro; corpus 155/197 with the 5 residual failures classified).
+- [integration_quadrature_and_stress_recovery](integration_quadrature_and_stress_recovery.md) — the PER-OPERATION quadrature map (Professional vs GNU: Gauss element integrals, row-sum lumped mass, boundary/interface integration) and the Professional's nodal stress recovery identified from its own `.dbs` dumps: per-element least-squares fit (quad4 bilinear, quad9/hex8 linear, verified to 1e-12) + arithmetic-mean assembly; GNU implementation in `sri_stress_recovery_weight` (volume cancellation so the lumped sigma-dof equation assembles the mean), the `stress_recovery_gauss` flag, the SRI path preserved, the `force_element_edge_water` phreatic fix, the removal of the forced 1-point axisymmetric rule (K20, F4 T4), the tet10 Keast 5-point rule + linear least-squares recovery + HRZ lumping (C31, F4 T4), and the validation (dynamic8 6e-11, beam2d_1 59.5766 vs Pro 59.5710, force5 -9.80718 = Pro; corpus 155/197 with the 5 residual failures classified).
 
 ## Solve u-σ — honest stopping criteria + CG (lote A+B de DIAG-SOLVE-MIXTO)
 
@@ -524,3 +524,11 @@ page lists its own in "Differences with the Professional version".
 - [group_interface_groundflow_permeability](group_interface_groundflow_permeability.md) — `interface.cc` `interface_element()`: pair conductance/capacity weighted by `w_ip*iface_measure` (capacity split over the pair, implicit `C/dt`), same for `group_interface_condif_conductivity` (K04 ground9).
 - [group_materi_elasti_stress_pressure_history_factor](group_materi_elasti_stress_pressure_history_factor.md) — `stress.cc` `set_stress()`: trial `dp` factored when the step starts below the history, factor only when strictly below `sph*(1-1e-10)` (K04 stress_pressure_factor).
 - [group_materi_expansion_volume](group_materi_expansion_volume.md) — `general.cc` `general()`: the MATERI density is reduced by (1 - beta*T) as in `materi.cc` (inertia and convection now consistent with gravity; K04 incnav3).
+
+## SOLVER MEMORY (2026-10-09, F4 T7)
+
+- [solver_memory](solver_memory.md) — `so.cc` `solve()`: the dense `mat_dense` workspace added by `5b7bb8b` (allocated, zero-filled and filled on every solve; its only reader, the `dgesv_` branch of the Bi-CG retry, was dead because `mat` always existed) is removed. Corpus A/B: no result change. B: the band LU retry workspace is built lazily in `solve_band_retry()` after a Bi-CG failure, with the exact band of the node-number or Cuthill-McKee ordering (round-off changes in retried solves only).
+
+## ONE-SHOT MESH OPERATIONS ONCE PER CONTROL INDEX (2026-10-09, F4 T7)
+
+- [control_mesh_once_per_control](control_mesh_once_per_control.md) — `top.cc`: `step_start_control_entry` set when the control loop enters an index, consumed by `step_start()` (`first_of_control`), guards `macro()`, `mesh_switch()`, `mesh_mirror()`, `mesh_copy()`. Professional probes: each applied once per index. Tests `mesh_macro_timestep1`, `mesh_switch_timestep1` (node checks in build_safe).

@@ -1213,6 +1213,31 @@ void mpc_node_apply( void )
             }
           }
           new_node_dof[iuknwn_0] = value;
+          // A tied VELOCITY slave also carries its integrated
+          // displacement: parallel_new_dof_diagonal integrates
+          // dis_new = dis_old + vel_new*dtime BEFORE the post-solve
+          // re-sync above refreshes the slave velocity, so without this
+          // the slave displacement lags one solve behind its velocity and
+          // a -total_linear memory (strain from the total displacement)
+          // sees unequal displacements at tied nodes (C41,
+          // mohr_coul_direct7: disy -0.001808 / -0.001692 at the tied
+          // nodes 3/4, Professional 02-08-2026 -0.0018458 at both).
+          if ( ( materi_displacement || materi_displacement_relative ) &&
+               iuknwn_0>=vel_indx && iuknwn_0<vel_indx+ndim*nder &&
+               ( iuknwn_0-vel_indx )%nder==0 ) {
+            long int idim_v = ( iuknwn_0-vel_indx ) / nder, ldum_v=0,
+              idum_v[1];
+            double dtime_v = 0.;
+            double *old_node_dof = db_dbl( NODE_DOF, node_0, VERSION_NORMAL );
+            db( DTIME, 0, idum_v, &dtime_v, ldum_v, VERSION_NEW,
+              GET_IF_EXISTS );
+            if ( materi_displacement )
+              new_node_dof[dis_indx+idim_v*nder] =
+                old_node_dof[dis_indx+idim_v*nder] + value * dtime_v;
+            if ( materi_displacement_relative )
+              new_node_dof[dis_rel_indx+idim_v*nder] =
+                old_node_dof[dis_rel_indx+idim_v*nder] + value * dtime_v;
+          }
         }
       }
 

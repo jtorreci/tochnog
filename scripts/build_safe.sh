@@ -243,10 +243,10 @@ rm -f validation-suite/test-2014/dof.* \
 #   heredado del GNU: cap de la presion estatica en phreatic_coord. Con
 #   pa=0.5 la succion +1 se mantiene en 0.5 y la compresion -1 pasa intacta;
 #   con default 0 la succion se anula -> 0).
-# + groundflow_total_pressure_limit/_dry (manual Professional 6.588: cap del
-#   pres resuelto tras el solve; nodos Dirichlet exentos. Con limit 0.5 los
-#   nodos libres quedan en 0.5 (sin limit ~1.67); con limit 0 y pres 0 el
-#   elemento esta seco y se salta el termino de consolidacion -> pres 0).
+# + groundflow_total_pressure_limit/_dry (manual Professional 6.587; F4 T1
+#   retarget to the Professional 02-08-2026: the pres dof is never cut and
+#   the consolidation term is kept -> free-node pres 1.6667 with limit 0.5
+#   and 0; gvely 0.16667 with 0.5, 0 with 0 = limit reached, dry).
 # + contact_block/ctrl_apply/heatgen (remate P6 contacto: bloque en caida
 #   detenido por el penalty disy~-0.003 vs -0.055 libre; control_contact_apply
 #   0 -no = caida libre exacta; contact_heat_generation nombre Professional
@@ -1374,6 +1374,89 @@ run_ok "$T2026" materi_memory_updated_jaumann_shear1
 run_ok "$T2026" materi_memory_updated_jaumann_shear2
 
 # ---------------------------------------------------------------------
+# F4 T1 TPL + K10 (2026-10-09): groundflow_total_pressure_limit as in
+# manual 6.587 and the Professional 02-08-2026: default limit 0, the
+# CALCULATED total pressure is capped at every node (prescribed ones
+# included), the pres dof is never cut, and the groundflow velocity is 0
+# where the integration-point total pressure reaches the limit.
+#   groundflow_total_pressure_limit_default1/high1/negative1: one quad4,
+#     consolidation source, free-node pres 1.6667 always; total pressure
+#     / gvely: no record 0 / 0, limit 100 1.6667 / 0.16667, limit -0.5
+#     -0.5 at every node / 0 (old GNU: gvely 0.16667, total pressure 0,
+#     pres -0.5).
+#   groundflow_velocity_dry1/2: corpus ground1 (K10), gvely 0 without the
+#     record (old GNU -0.05), -0.05 with limit 1.e10.
+# ---------------------------------------------------------------------
+run_ok "$T2026" groundflow_total_pressure_limit_default1
+run_ok "$T2026" groundflow_total_pressure_limit_high1
+run_ok "$T2026" groundflow_total_pressure_limit_negative1
+run_ok "$T2026" groundflow_velocity_dry1
+run_ok "$T2026" groundflow_velocity_dry2
+# F4 T2 / C41 (2026-10-09): a tied VELOCITY slave carries its integrated
+#   displacement (mpc_node_apply). mohr_coul_direct_mpc_total1 = Pro
+#   other/mohr_coul_direct7 (-total_linear default + velocity tie):
+#   sigxy 0.0998334 at nodes 1 and 2 (= Pro; old GNU 0.102732 /
+#   0.096935, the slave disy lagged one solve).
+run_ok "$T2026" mohr_coul_direct_mpc_total1
+# F4 T3 / C33 (2026-10-09): set_stress reads DTIME at VERSION_NEW and the
+#   principal tension cap honours _visco; each direct law relaxes with its
+#   own _visco record (values = Professional 02-08-2026):
+#   materi_direct_visco_first_step1: tension_direct, 1 step dt 1: sigxx
+#     1.849143e-3 (old 1e-3); _first_step2: compression_direct, dt 0.5
+#     then 1: -2.550147e-3 (old -3.024897e-3); _separate1: full MC + tension
+#     cap, tm 2 / 4: sigxx -2.654391e-4, sigxy 1.688146e-3 (old -1.2e-3 /
+#     1.2e-3); materi_plasti_visco_power_dt1: 1D visco_power, dt 0.5 then 1:
+#     sigxx 2.666667 (old 2.818182).
+run_ok "$T2026" materi_direct_visco_first_step1
+run_ok "$T2026" materi_direct_visco_first_step2
+run_ok "$T2026" materi_direct_visco_separate1
+run_ok "$T2026" materi_plasti_visco_power_dt1
+# F4 T4 / K20 (2026-10-09): no forced 1-point rule for axisymmetric
+#   materi_velocity (polynom.cc pol(), calcul_force.cc msf_element_rule);
+#   quad4 2x2 / quad9 3x3 Gauss as the Professional 02-08-2026:
+#   axisym_quad4_hourglass1: 4x4 quad4 ring patch, point load: post_point
+#     disx 2.657533803232e-4, disy -4.380511327008e-4 (= Pro; old GNU
+#     hourglass ~1e12, solver did not converge);
+#   axisym_quad4_ring1: Akin thick ring: disx 1.081776788020e-2 (= Pro),
+#     sigzz 10760.09 vs Pro 10759.22 +- 1 (quad4 recovery, BACKLOG C42;
+#     old GNU 1.08238e-2 / 10000);
+#   axisym_quad9_uniform1: quad9 no longer refused: sigxx = sigzz = 1000,
+#     disx 500 (analytic; old GNU "not available for axisymmetric").
+run_ok "$T2026" axisym_quad4_hourglass1
+run_ok "$T2026" axisym_quad4_ring1
+run_ok "$T2026" axisym_quad9_uniform1
+# F4 T4 / C31 (2026-10-09): tet10 Keast 5-point rule (polynom.cc), linear
+#   least-squares recovery 1,L1,L2,L3 (miscel.cc), HRZ lumping (general.cc):
+#   tet10_body_load1: 48 tet10 under gravity: sigzz -1 (= Pro tet10_2;
+#     old GNU -0.894);
+#   tet10_mass_hrz1: one tet10, unit point forces, dt 0.01: v = dt/m with
+#     the HRZ masses, corner 2.16, mid-edge 0.405 (GNU-specific target,
+#     deliberate divergence TET10-HRZ: Pro row sum -1.2 / 0.3; old GNU
+#     59999.99 / 0.36);
+#   tet10_dynamic_gravity1: 48 tet10 column, sudden gravity with inertia:
+#     stable, top disz -0.5286 at t 3 (analytic -0.5 +- 0.05; row sum with
+#     the 5-point rule diverges to 5e8, the Pro solver fails).
+run_ok "$T2026" tet10_body_load1
+run_ok "$T2026" tet10_mass_hrz1
+run_ok "$T2026" tet10_dynamic_gravity1
+# F4 T7 / C (2026-10-09): one-shot mesh operations (control_mesh_macro,
+#   _copy, _mirror, _switch) on the SAME index as control_timestep run on
+#   the first step of the control only (top.cc step_start_control_entry),
+#   as the Professional 02-08-2026:
+#   mesh_macro_timestep1: Pro mesh_activate1 with 20 steps: 202 nodes
+#     (= Pro; old GNU 4040, one macro copy per step);
+#   mesh_switch_timestep1: two steps, axes swapped once: node 3
+#     0.5 0 -> 0 0.5 (= Pro; old GNU swapped twice, node 3 unchanged).
+run_ok "$T2026" mesh_macro_timestep1
+n_nodes=$(grep -ac '^node ' "$T2026/mesh_macro_timestep1.dbs" 2>/dev/null)
+if [ "$n_nodes" = "202" ]; then check_ok "mesh_macro_timestep1 (202 nodes)";
+else check_fail "mesh_macro_timestep1" "nodes=$n_nodes, expected 202"; fi
+run_ok "$T2026" mesh_switch_timestep1
+if grep -aqE '^node +3 +0 +0\.5 *$' "$T2026/mesh_switch_timestep1.dbs" 2>/dev/null;
+then check_ok "mesh_switch_timestep1 (node 3 at 0 0.5)";
+else check_fail "mesh_switch_timestep1" "node 3 not at 0 0.5"; fi
+
+# ---------------------------------------------------------------------
 # K03 (2026-10-06): default convection_apply -no (manual Professional
 # 6.395, = Professional 02-08-2026). sfnet condif2 model in the Pro
 # dialect: without the record the heat is not convected by the material
@@ -1852,7 +1935,9 @@ fi
 # factor 2*PI*r pequeno - bug documentado; SIGNED desde el lote 1 del
 # sprint 12: la pared esta a compresion, nors = -0.5 con la convencion
 # tension-positiva del Professional - el check compara MAGNITUDES).
-# she = 0, mom ~ 0.
+# she = 0, mom ~ 0 (F4 T4 / K20: with the 2x2 rule the face moment is
+# 1/960 ~ 0.00104, the analytic value of the 2*PI*r-weighted section;
+# the former 1-point rule gave 0).
 MSF_AX_OK=1
 awk '!/^#/ && NF==10 { n=$4; if (n<0) n=-n; d=n-0.5; if (d<0) d=-d; m=$10; if (m<0) m=-m;
        if (d>0.005 || $7>1.e-6 || m>0.005) bad=1 }

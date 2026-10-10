@@ -49,3 +49,12 @@ and kap hardening; target kap = 0.0065 met). Legacy 3-value inputs
 - `f_ref = 1.` when the Professional 2-value layout is used.
 - `EPS_VISCO` caps the exponential argument (shared with the
   exponential law); `EPS_LAMBDA` is the plastic seed multiplier.
+
+## Time step (F4 T3, 2026-10-09)
+
+`set_stress()` (stress.cc) integrates `lambda*dtime` with the time step
+of the CURRENT step (`DTIME` VERSION_NEW). It read VERSION_NORMAL (the
+previous step; 0 in the first step) before BACKLOG C33 was resolved.
+Verified on the Professional 02-08-2026 (1D bar, tension 1, visco_power
+0.1 1, dt 0.5 then 1: sigxx 2.666667, old GNU 2.818182); test
+`test-2026/materi_plasti_visco_power_dt1`.

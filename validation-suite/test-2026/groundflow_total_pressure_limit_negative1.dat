@@ -1,0 +1,49 @@
+(F4 T1, groundflow_total_pressure_limit, manual Professional 6.587, default 0.
+ One quad4, prescribed solid velocity with divergence 2, consolidation and
+ capacity storage active, pres 0 prescribed at the bottom nodes 1-2; the
+ free top nodes develop pres 1.6667, which is never cut. The calculated
+ total pressure of post_calcul -groundflow_pressure -total_pressure is capped
+ by the limit at every node, and the groundflow velocity is 0 where the
+ integration-point total pressure reaches the limit.
+ Limit -0.5: the total pressure is -0.5 at every node, the prescribed bottom node included; the limit is reached everywhere: gvely 0.
+ Values = Professional 02-08-2026, F4 T1 probes.)
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_stress
+groundflow_velocity
+groundflow_pressure
+end_initia
+bounda_time  0  0 -1 100 -1
+bounda_time  1  0 1 100 1
+bounda_time  2  0 0 100 0
+bounda_time  3  0 0 100 0
+bounda_dof  0  -ra 1 3 -ra -velx
+bounda_dof  1  -ra 2 4 -ra -velx
+bounda_dof  2  -ra 1 2 3 4 -ra -vely
+bounda_dof  3  -ra 1 2 -ra -pres
+control_timestep  0  1 1
+element  1  -quad4 1 2 3 4
+groundflow_consolidation_apply   -yes
+inertia_apply   -yes
+groundflow_total_pressure_limit  -0.5
+group_groundflow_capacity  0  1
+group_groundflow_permeability  0  0.1 0.1
+group_materi_elasti_young  0  1
+group_materi_memory  0  -updated_linear
+group_type  0  -groundflow -materi
+node  1  0 0
+node  2  1 0
+node  3  0 1
+node  4  1 1
+mesh   -fixed_in_space -fixed_in_space
+post_calcul -groundflow_pressure -total_pressure
+target_item  0  -node_dof 3 -pres
+target_value  0  1.666667 1.e-4
+target_item  1  -node_dof_calcul 3 0
+target_value  1  -0.5 1.e-6
+target_item  2  -node_dof_calcul 1 0
+target_value  2  -0.5 1.e-6
+target_item  3  -node_dof 3 -gvely
+target_value  3  0. 1.e-6
+end_data

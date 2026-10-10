@@ -33,3 +33,8 @@ None. Uses the internal database API (`db`, `db_dbl`, `db_active_index`,
   first `ndim` are used; `copy_length` is read but not passed to `mesh_copy`.
 - The node duplication loop is duplicated with `mesh_mirror`; a shared helper
   (e.g. `duplicate_mesh(coord_transform)`) could unify both.
+
+## Once per control index (F4 T7)
+
+The call in `top.cc` `step_start()` is guarded by `first_of_control`
+(see [control_mesh_once_per_control](control_mesh_once_per_control.md)).

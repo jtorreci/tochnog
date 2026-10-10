@@ -36,8 +36,10 @@ options_stabilization   -static
 print_filter  0  -node_dof -all -pres
 target_item  0  -node_dof 3 -pres
 target_item  1  -node_dof 4 -pres
-target_value  0  0.5 0.0001
-target_value  1  0.5 0.0001
+target_value  0  1.666667 0.0001
+target_value  1  1.666667 0.0001
+target_item  2  -node_dof 3 -gvely
+target_value  2  0.1666667 1.e-5
 node_dof  1  0 0 0 0 0 0 0 0 0 0 0 0 0
 node_dof  2  0 0 0 0 0 0 0 0 0 0 0 0 0
 node_dof  3  0 0 0 0 0 0 0 0 0 0 0 0 0

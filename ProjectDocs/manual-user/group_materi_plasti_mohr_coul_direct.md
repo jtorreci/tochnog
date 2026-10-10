@@ -203,12 +203,13 @@ The normal record accepts ndim values (1 value in 1D, 2 in 2D, 3 in 3D).
   (its target `disx` 0.1024). The drift looks like an artefact of the
   Professional; the GNU follows the manual (project decision 2026-10-06).
 
-- **`_visco` direct cut-offs** (known difference, not decided; BACKLOG C33).
-  GNU: Relaxation factor uses the previous step's `DTIME` (no cut in the
-  first step); no visco on the principal tension cap. Professional
-  02-08-2026: 1 - exp(-dt/tm) with the current step (sigxx 1.84914e-3 vs GNU
-  1e-3). Status: Scheduled for F4, project owner 2026-10-06. Index:
-  [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).
+- **`_visco` direct cut-offs**: resolved in F4 T3 (2026-10-09, BACKLOG
+  C33). The relaxation factor 1 - exp(-dt/tm) uses the time step of the
+  CURRENT step and each law relaxes with its own `_visco` record (tension
+  cap with `tension_direct_visco`, Mohr-Coulomb cut with
+  `mohr_coul_direct_visco`, compression with `compression_direct_visco`),
+  as in the Professional 02-08-2026 (12 probes equal, e.g. sigxx
+  1.849143e-3 in the first step). No known difference left.
 - **3 values in `group_materi_plasti_*_direct_normal` in 2D** (GNU extension
   / input dialect; manual pages only). GNU: Accepts up to 3 values in any
   dimension (`data_length` 3, `fixed_length` 0 in `database.cc`); the use of

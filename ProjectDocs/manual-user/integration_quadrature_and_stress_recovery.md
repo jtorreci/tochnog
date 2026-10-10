@@ -14,14 +14,31 @@ one point per node direction:
 |---|---|
 | quad4 / hex8 | 2x2 / 2x2x2 Gauss |
 | quad9 / hex27 | 3x3 / 3x3x3 Gauss |
+| tet10 | Keast 5-point rule (centroid + 4 interior points, degree 3) |
 
-This matches the Tochnog Professional default. The `group_integration_method`
+This matches the Tochnog Professional default. Axisymmetric element groups
+(`group_axisymmetric -yes`) use the same default since F4 T4 (2026-10-09):
+the quad4 is integrated with 2x2 Gauss and the quad9 with 3x3 Gauss, as the
+Professional does. Before, the GNU forced a 1-point rule for axisymmetric
+`materi_velocity` and refused the quadratic elements ("not available for
+axisymmetric analysis"); the hoop term was then constant over the element
+and the quad4 hourglass modes were not restrained.
+
+The `group_integration_method`
 and `group_integration_points` records still override it per element group
 (`-gauss`, `-lobatto`, `-reduced`, and `-minimal` / `-maximal` / `-normal`).
 The reduced method and the SRI keyword are unchanged.
 
+The `tet10` rule is the Professional one since F4 T4 (2026-10-09). The
+former nodal rule integrated only linear integrands exactly, so a
+quadratic tetrahedron mesh under gravity gave sigzz -0.894 instead of the
+exact -1 (`tet10_2`); the 5-point rule gives -1.
+
 The mass matrix is the row-sum lumped mass (quadrature-invariant), and the
-interface elements keep their nodal (Lobatto) integration.
+interface elements keep their nodal (Lobatto) integration. The exception is
+the `tet10`: its 5-point rule would give negative corner masses, so the GNU
+lumps the inertia/capacity with the positive HRZ masses (corner V/36,
+mid-edge 4V/27; see the differences below).
 
 ## Nodal stress recovery
 
@@ -29,7 +46,8 @@ The stresses are stored at the nodes. For the interior Gauss rules the
 GNU version now recovers them the way the Professional does: a per-element
 least-squares fit of the integration-point stresses evaluated at the nodes,
 assembled as the arithmetic mean over the elements that share the node. The
-resulting nodal stress field matches the Professional (the `beam2d` /
+`tet10` uses the Professional linear least-squares fit `1,L1,L2,L3` of its
+5 points. The resulting nodal stress field matches the Professional (the `beam2d` /
 `beam2d_1` cantilever corner stress and the `post4` moment are the
 discriminating examples).
 
@@ -42,17 +60,30 @@ target if the new value matches the Professional.
 
 ## Differences with the Professional version
 
-- **`tet10` integration rule** (known difference, not decided; BACKLOG C31;
-  AUDIT K04). GNU: Nodal quadrature exact only for linear integrands
-  (`tet10_2` gravity sigzz -0.894). Professional 02-08-2026: Exact (-1).
-  Status: Scheduled for F4 (design + corpus A/B), project owner 2026-10-06.
-  Index: [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).
-- **axisymmetric hoop (zz) values, `materi_velocity` quad4 (`axisym2`,
-  `axisym9`)** (known difference, not decided; AUDIT K20; BACKLOG C32). GNU:
-  1-point Gauss for axisymmetric `materi_velocity` quad4: element-constant
-  hoop term (axisym2 1.000e-3; axisym9 0.00158902). Professional 02-08-2026:
-  Linear hoop field (1.0498e-3; axisym9 0.0015915). Status: Scheduled for F4
-  (design + corpus A/B), project owner 2026-10-06. Index:
+- **Lumped mass / capacity of the `tet10`** (deliberate divergence,
+  project owner 2026-10-09; DIVERGENCES TET10-HRZ). GNU: positive HRZ
+  lumping, corner V/36 and mid-edge 4V/27 (the diagonal of the
+  consistent mass scaled to the element total). Professional 02-08-2026:
+  row-sum lumping of its 5-point rule, corner -V/20 and mid-edge V/5;
+  the negative corner masses make dynamics unstable (sudden gravity on a
+  48-tet10 column: the Professional solver fails, a GNU row-sum build
+  diverges to 5e8). Static results are unaffected. Index:
+  [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).
+- **`post_point_dof` inside a `tet10`** (deliberate divergence, project
+  owner 2026-10-09; DIVERGENCES TET10-PPOINT). GNU: interpolates the
+  nodal values with the quadratic `tet10` shape functions (all 10
+  nodes), the consistent finite-element interpolation. Professional
+  02-08-2026: interpolates linearly from the 4 corner nodes (`tet10p`
+  post points differ by up to 2 %). Index:
+  [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).
+- **quad4 nodal stress recovery on distorted or axisymmetric elements**
+  (known difference, not decided; BACKLOG C42). GNU: bilinear fit
+  `1,xi,eta,xi*eta` in the natural coordinates (exact interpolation of the
+  4 Gauss points). Professional 02-08-2026: linear least squares `1,x,y`
+  in the physical coordinates. Equal on rectangles in plane analyses;
+  differs on distorted quad4 (3-7 %) and on axisymmetric rings
+  (`axisym2` inner sigzz GNU 10760.09, Professional 10759.22; the
+  displacements are equal). Status: open, LOW. Index:
   [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).
 - **`post_point_dof` of recovered fields (stress/strain)** (known
   difference, not decided; AUDIT section 5 (after the K04 table)). GNU:

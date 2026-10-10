@@ -44,6 +44,18 @@ records (also when there are no bounda records: the call sits after the
      flattened master-dof order, missing factors default to 1.
    - The slave node must exist (`db_active_index(NODE, ...)`); deleted
      nodes (mesh deletion) are skipped, deleted master nodes contribute 0.
+   - Integrated displacement of a VELOCITY slave (F4 T2, BACKLOG C41,
+     2026-10-09): when the slave dof is a `materi_velocity` component and
+     `materi_displacement` (or `materi_displacement_relative`) is an
+     unknown, the slave displacement is set to
+     `dis_old + value*dtime` (DTIME VERSION_NEW) together with the
+     velocity. `parallel_new_dof_diagonal` integrates the displacement
+     BEFORE the post-solve re-sync refreshes the slave velocity, so the
+     slave displacement lagged one solve behind its velocity; with a
+     `-total_linear` memory (strain from the total displacement) the
+     tied nodes then ended with unequal displacements (`mohr_coul_direct7`:
+     disy -0.001808 / -0.001692, sigxy 0.102732 / 0.096935 at nodes 1/2;
+     Professional 02-08-2026: equal disy, sigxy 0.0998334 everywhere).
 
 ## Gotchas
 
@@ -63,3 +75,13 @@ records (also when there are no bounda records: the call sits after the
   of a single quad4 tied by geometry).
 - `mpc_element_group` family (mpc7 rc=0 since 2026-09-02; mpc6 stays RUNFAIL — a condif single-field model whose node-3 temp reads 0 vs 0.5, own diagnosis pending).
 - `mpc_geometry_method`/`mpc_geometry_tolerance` keyword registration.
+
+## Differences with the Professional version
+
+- `mohr_coul_direct7` after F4 T2: sigxy 0.0998334 = Professional, tied
+  nodes equal, but disy -0.00175 vs Professional -0.0018458 and sigzz
+  -1.0084 vs -0.90785. This residual difference belongs to the
+  `mohr_coul_direct` law under `-total_linear` (out-of-plane/flow), not to
+  the tie (both tied nodes are exactly equal in both programs); recorded
+  in BACKLOG C41.
+

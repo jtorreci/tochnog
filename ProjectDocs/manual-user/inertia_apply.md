@@ -54,6 +54,10 @@ active (the corpus examples `large2`/`large3` set both records).
 
 ## Notes
 
+- Lumped masses: every element uses the row-sum lumped mass of its
+  integration rule, except the `tet10`, which uses the positive HRZ masses
+  (corner V/36, mid-edge 4V/27) since F4 T4 (2026-10-09).
+
 - The default changed from `-yes` (GNU legacy) to `-no` (Professional) in the
   u-p consolidation sprint (2026-09-05, commit `0560dcf`). The legacy GNU
   default made every model with a material density run a pseudo-dynamic
@@ -64,3 +68,15 @@ active (the corpus examples `large2`/`large3` set both records).
   set the switch explicitly. The corpus dynamic (`dynamic*`), transient heat
   (`bicg1`, `phase1`, ...) and consolidation (`large2`, `large3`) examples
   all do so.
+
+## Differences with the Professional version
+
+- **Lumped mass / capacity of the `tet10`** (deliberate divergence,
+  project owner 2026-10-09; DIVERGENCES TET10-HRZ). GNU: positive HRZ
+  lumping, corner V/36 and mid-edge 4V/27 (the diagonal of the
+  consistent mass scaled to the element total). Professional 02-08-2026:
+  row-sum lumping of its 5-point rule, corner -V/20 and mid-edge V/5;
+  the negative corner masses make dynamics unstable (sudden gravity on a
+  48-tet10 column: the Professional solver fails, a GNU row-sum build
+  diverges to 5e8). Static results are unaffected. Index:
+  [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).

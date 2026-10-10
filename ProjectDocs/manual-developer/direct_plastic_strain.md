@@ -54,11 +54,9 @@ convention).
   writes `dsig_xy / G` while its total strain uses tensor components; the
   GNU keeps the tensor value so sigma = C (eps - eps_p) holds. See the
   user page, section "Differences with the Professional version".
-- C33 (BACKLOG): `set_stress()` reads `DTIME` from `VERSION_NORMAL` (the
-  previous step: the first step of a `_visco` direct law does not cut,
-  later steps use the old dt) and the principal tension cap
-  (`direct_cap_principal_values`) ignores `_visco`; not changed here
-  (stress path, own A/B); scheduled for F4 (project decision 2026-10-06).
+- C33 (BACKLOG), resolved in F4 T3 (2026-10-09): `set_stress()` reads
+  `DTIME` from `VERSION_NEW` (current step) and the principal tension cap
+  (`direct_cap_principal_values`) applies the tension `_visco` factor.
 - With formulation TOTAL (`-total` memory without `materi_strain_total`)
   the stored plastic strain now enters `new_epe` of the next step, so a
   `_visco` direct cut persists instead of being re-derived from the
@@ -73,9 +71,10 @@ convention).
   inconsistent with its own total strain. Status: Deliberate divergence,
   project owner (F1 T4). Also Pro-suspect. Index:
   [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).
-- **`_visco` direct cut-offs** (known difference, not decided; BACKLOG C33).
-  GNU: Relaxation factor uses the previous step's `DTIME` (no cut in the
-  first step); no visco on the principal tension cap. Professional
-  02-08-2026: 1 - exp(-dt/tm) with the current step (sigxx 1.84914e-3 vs GNU
-  1e-3). Status: Scheduled for F4, project owner 2026-10-06. Index:
-  [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).
+- **`_visco` direct cut-offs**: resolved in F4 T3 (2026-10-09, BACKLOG
+  C33). The relaxation factor 1 - exp(-dt/tm) uses the time step of the
+  CURRENT step and each law relaxes with its own `_visco` record (tension
+  cap with `tension_direct_visco`, Mohr-Coulomb cut with
+  `mohr_coul_direct_visco`, compression with `compression_direct_visco`),
+  as in the Professional 02-08-2026 (12 probes equal, e.g. sigxx
+  1.849143e-3 in the first step). No known difference left.

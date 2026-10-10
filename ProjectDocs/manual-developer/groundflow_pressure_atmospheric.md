@@ -1,7 +1,7 @@
 # groundflow_pressure_atmospheric (developer)
 
-Upper cap on the static/total pore pressure computed from the phreatic
-level. Keyword inherited from the GNU 2014 sources (not in Professional);
+Upper cap on the static pore pressure computed from the phreatic level
+(the total pressure cap moved to `groundflow_total_pressure_limit` in F4). Keyword inherited from the GNU 2014 sources (not in Professional);
 this change only documents and verifies it — no code was modified.
 
 ## Files and functions
@@ -16,10 +16,14 @@ this change only documents and verifies it — no code was modified.
   - Clamp at lines 323-325, applied to the outgoing values:
     ```c
     if ( static_pressure>=pressure_atmospheric ) static_pressure = pressure_atmospheric;
-    if ( total_pressure>=pressure_atmospheric ) total_pressure = pressure_atmospheric;
+    if ( total_pressure>=total_pressure_limit ) total_pressure = total_pressure_limit;
     total_pressure += addtopressure;
     ```
-    (`groundflow_addtopressure` is added AFTER the clamp.)
+    (`groundflow_addtopressure` is added AFTER the clamp.) Since F4 T1
+    (2026-10-09) the TOTAL pressure is capped by
+    `groundflow_total_pressure_limit()` (default 0, manual Professional
+    6.587) and this keyword caps the static pressure only; with both
+    defaults (0) the values are unchanged.
 - `check.cc:345` — requires the `groundflow_pressure` unknown.
 
 ## Semantics (sign convention)

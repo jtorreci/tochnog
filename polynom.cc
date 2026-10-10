@@ -448,67 +448,31 @@ void pol( long int element, long int element_group,
   else if ( name==-TET10 ) {
     db( GROUP_INTEGRATION_POINTS, element_group, &integration_points, ddum, 
       ldum, VERSION_NORMAL, GET_IF_EXISTS );
-    npoint = nnol;
+    // C31 (F4 T4, 2026-10-09): Keast 5-point rule (degree 3), the rule of
+    // the Professional 02-08-2026: the centroid with weight -4/5 and the
+    // four points (1/2,1/6,1/6,1/6) with weight 9/20 (normalised to a
+    // total of 1, as every rule here). It integrates the quadratic
+    // stiffness and the consistent body load (corner -V/20, mid-edge V/5)
+    // exactly. The former nodal rule (corners ~0, mid-edges 1/6) was exact
+    // only for linear integrands (tet10_2 under gravity: sigzz -0.894
+    // instead of -1). Its companions: the nodal stress recovery is the
+    // Professional linear least-squares fit (sri_stress_recovery_weight,
+    // miscel.cc) and the lumped inertia/capacity of the principal dofs
+    // uses the positive HRZ masses (general.cc), not h.
+    npoint = 5;
+    stress_recovery_gauss = 1;
     for ( ipoint=0; ipoint<npoint; ipoint++ ) {
-      if      ( ipoint==0 ) {
-        L1 = 1.;
-        L2 = 0.;
-        L3 = 0.;
-        weight[ipoint] = EPS_TRIANGLE;
+      if ( ipoint==0 ) {
+        L1 = 0.25;
+        L2 = 0.25;
+        L3 = 0.25;
+        weight[ipoint] = -4./5.;
       }
-      else if ( ipoint==1 ) {
-        L1 = 0.;
-        L2 = 1.;
-        L3 = 0.;
-        weight[ipoint] = EPS_TRIANGLE;
-      }
-      else if ( ipoint==2 ) {
-        L1 = 0.;
-        L2 = 0.;
-        L3 = 1.;
-        weight[ipoint] = EPS_TRIANGLE;
-      }
-      else if ( ipoint==3 ) {
-        L1 = 0.;
-        L2 = 0.;
-        L3 = 0.;
-        weight[ipoint] = EPS_TRIANGLE;
-      }
-      else if ( ipoint==4 ) {
-        L1 = 0.5;
-        L2 = 0.5;
-        L3 = 0.0;
-        weight[ipoint] = 1./6.-(4./6.)*EPS_TRIANGLE;
-      }
-      else if ( ipoint==5 ) {
-        L1 = 0.5;
-        L2 = 0.0;
-        L3 = 0.5;
-        weight[ipoint] = 1./6.-(4./6.)*EPS_TRIANGLE;
-      }
-      else if ( ipoint==6 ) {
-        L1 = 0.0;
-        L2 = 0.5;
-        L3 = 0.5;
-        weight[ipoint] = 1./6.-(4./6.)*EPS_TRIANGLE;
-      }
-      else if ( ipoint==7 ) {
-        L1 = 0.5;
-        L2 = 0.0;
-        L3 = 0.0;
-        weight[ipoint] = 1./6.-(4./6.)*EPS_TRIANGLE;
-      }
-      else if ( ipoint==8 ) {
-        L1 = 0.0;
-        L2 = 0.5;
-        L3 = 0.0;
-        weight[ipoint] = 1./6.-(4./6.)*EPS_TRIANGLE;
-      }
-      else if ( ipoint==9 ) {
-        L1 = 0.0;
-        L2 = 0.0;
-        L3 = 0.5;
-        weight[ipoint] = 1./6.-(4./6.)*EPS_TRIANGLE;
+      else {
+        L1 = ( ipoint==1 ) ? 0.5 : 1./6.;
+        L2 = ( ipoint==2 ) ? 0.5 : 1./6.;
+        L3 = ( ipoint==3 ) ? 0.5 : 1./6.;
+        weight[ipoint] = 9./20.;
       }
       L4 = 1. - L1 - L2 - L3;
 
@@ -571,14 +535,12 @@ void pol( long int element, long int element_group,
       integration_points = -MINIMAL;
     else
       integration_points = -MAXIMAL;
-    if ( axisymmetric==-YES && materi_velocity ) {
-      if ( npol>2 ) {
-        pri( "Error, not available for axisymmetric analysis: ", name );
-        exit_tn_on_error();
-      }
-      integration_method = -GAUSS;
-      integration_points = -MINIMAL;
-    }
+    // K20 (F4 T4, 2026-10-09): no forced 1-point rule for axisymmetric
+    // materi_velocity and no refusal of the quadratic elements. The
+    // Professional 02-08-2026 integrates the axisymmetric quad4 with 2x2
+    // and the quad9 with 3x3 Gauss (the default rule below); the 1-point
+    // rule made the hoop term element-constant (axisym2 ring 1.000e-3 vs
+    // analytic/Pro 1.0498e-3) and left the quad4 hourglass modes free.
     db( GROUP_INTEGRATION_POINTS, element_group, &integration_points, ddum, 
       ldum, VERSION_NORMAL, GET_IF_EXISTS );
     db( GROUP_INTEGRATION_METHOD, element_group, &integration_method, ddum, 

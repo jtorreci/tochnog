@@ -77,3 +77,22 @@
   form) is not supported: the GNU reads only the first value and applies it
   to every principal dof. Extending `OPTIONS_INERTIA` to a variable-length
   record would need the per-dof switch bookkeeping of `dof_type`.
+
+- The `tet10` lumped inertia/capacity of the principal dofs uses the HRZ
+  fractions 1/36 (corner) and 4/27 (mid-edge) instead of `h`
+  (`general.cc` `general()`, hardcoded; C31, F4 T4). A generic
+  consistent-mass-diagonal HRZ for any element would replace the
+  hardcoded fractions.
+
+## Differences with the Professional version
+
+- **Lumped mass / capacity of the `tet10`** (deliberate divergence,
+  project owner 2026-10-09; DIVERGENCES TET10-HRZ). GNU: positive HRZ
+  lumping, corner V/36 and mid-edge 4V/27 (the diagonal of the
+  consistent mass scaled to the element total). Professional 02-08-2026:
+  row-sum lumping of its 5-point rule, corner -V/20 and mid-edge V/5;
+  the negative corner masses make dynamics unstable (sudden gravity on a
+  48-tet10 column: the Professional solver fails, a GNU row-sum build
+  diverges to 5e8). Static results are unaffected. Code: `general.cc`
+  `general()`. Index:
+  [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).

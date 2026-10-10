@@ -22,6 +22,17 @@
 #define ITERATION_WISHED 4
 #define EPS_DTIME 1.e-4
 
+// Set when the control loop enters a control index (also on a
+// control_repeat re-entry); step_start() consumes it, so the one-shot mesh
+// operations of that index run on its FIRST step only (F4 T7). A
+// control_timestep on the same index calls step_start() on every step:
+// re-running control_mesh_macro / _copy / _mirror there added a copy of
+// the mesh per step (mesh_activate1: 202 -> 4040 nodes in 20 steps, then
+// out of memory) and _switch swapped the axes back and forth. Measured on
+// the Professional (probes F4 T7): it applies each of them once per
+// control index.
+static long int step_start_control_entry = 0;
+
 void top( void )
 {
 
@@ -326,6 +337,7 @@ void top( void )
                 swit_timestep = swit; swit = swit && set_swit(-1,-1,"");
                 length=1; db( ICONTROL, 0, &icontrol, ddum, length, 
                   VERSION_NORMAL, PUT );
+                step_start_control_entry = 1;
 		  
                 if ( db_active_index( CONTROL_TIMESTEP, icontrol, VERSION_NORMAL ) ) {
                   maximum_timestep = DBL_MAX;
@@ -565,7 +577,6 @@ void top( void )
                           slide(); 
                           if ( print_where==-YES ) pri( "Where: before solver." ); 
                           solve( options_solver );
-                          groundflow_total_pressure_limit_apply();
                           if ( print_where==-YES ) pri( "Where: after solver." ); 
                           // The post-solve constitutive re-evaluation is
                           // HOISTED after the equilibrium loop (2026-09-16):
@@ -809,6 +820,10 @@ void step_start( long int task, long int options_solver[], double dtime, double 
 
   db( ICONTROL, 0, &icontrol, ddum, ldum, VERSION_NORMAL, GET );
 
+  // first step of this control index (see step_start_control_entry)
+  long int first_of_control = step_start_control_entry;
+  step_start_control_entry = 0;
+
   // node_geometry_present (manual Professional 6.886): fill the
   // per-node list of present geometries at the START of every step,
   // when the node coordinates still hold the converged state of the
@@ -826,7 +841,7 @@ void step_start( long int task, long int options_solver[], double dtime, double 
     }
   }
 
-  macro();
+  if ( first_of_control ) macro();
 
   if ( db_active_index( CONTROL_MESH_ADJUST_GEOMETRY, icontrol, VERSION_NORMAL )  ) {
     db( CONTROL_MESH_ADJUST_GEOMETRY, icontrol, control_adjust_geometry, 
@@ -834,7 +849,8 @@ void step_start( long int task, long int options_solver[], double dtime, double 
     adjust_geom( &control_adjust_geometry[0], &control_adjust_geometry[2] ); 
   }
 
-  if ( db_active_index( CONTROL_MESH_SWITCH, icontrol, VERSION_NORMAL ) ) {
+  if ( first_of_control &&
+       db_active_index( CONTROL_MESH_SWITCH, icontrol, VERSION_NORMAL ) ) {
     long int control_switch[DATA_ITEM_SIZE], switch_length=0;
     db( CONTROL_MESH_SWITCH, icontrol, control_switch, ddum, 
       switch_length, VERSION_NORMAL, GET );
@@ -849,14 +865,16 @@ void step_start( long int task, long int options_solver[], double dtime, double 
     mesh_move( control_move, move_length );
   }
 
-  if ( db_active_index( CONTROL_MESH_MIRROR, icontrol, VERSION_NORMAL ) ) {
+  if ( first_of_control &&
+       db_active_index( CONTROL_MESH_MIRROR, icontrol, VERSION_NORMAL ) ) {
     long int mirror_axis=0;
     db( CONTROL_MESH_MIRROR, icontrol, &mirror_axis, ddum, ldum,
       VERSION_NORMAL, GET );
     mesh_mirror( mirror_axis );
   }
 
-  if ( db_active_index( CONTROL_MESH_COPY, icontrol, VERSION_NORMAL ) ) {
+  if ( first_of_control &&
+       db_active_index( CONTROL_MESH_COPY, icontrol, VERSION_NORMAL ) ) {
     long int copy_length=0, idum_c=0;
     double control_copy[MDIM];
     db( CONTROL_MESH_COPY, icontrol, &idum_c, control_copy, copy_length,

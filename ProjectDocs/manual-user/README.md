@@ -167,8 +167,8 @@ page lists its own in "Differences with the Professional version".
 - [groundflow_seepage_eps](groundflow_seepage_eps.md) — tolerance of the seepage (outflow-only) boundary condition.
 - [groundflow_seepage_geometry](groundflow_seepage_geometry.md) — seepage edge selected by geometry entity.
 - [groundflow_seepage_node](groundflow_seepage_node.md) — seepage condition on explicit nodes.
-- [groundflow_pressure_atmospheric](groundflow_pressure_atmospheric.md) — cap on the static/total pore pressure from the phreatic level (GNU-inherited; default 0 removes suction).
-- [groundflow_total_pressure_limit](groundflow_total_pressure_limit.md) — cap on the solved pore pressure; limit 0 + pressure 0 marks dry elements (consolidation skipped).
+- [groundflow_pressure_atmospheric](groundflow_pressure_atmospheric.md) — GNU-only cap on the static pore pressure from the phreatic level (the total pressure is capped by groundflow_total_pressure_limit since F4).
+- [groundflow_total_pressure_limit](groundflow_total_pressure_limit.md) — maximum calculated total pressure (default 0, manual 6.587): caps the total pressure at every node and zeroes the groundflow velocity where it is reached; the `pres` dof is never cut.
 
 ## P6 — contact family remnant
 
@@ -302,7 +302,7 @@ page lists its own in "Differences with the Professional version".
 
 ## Integration quadrature + nodal stress recovery (2026-09-13)
 
-- [integration_quadrature_and_stress_recovery](integration_quadrature_and_stress_recovery.md) — the default element integration is now the Gauss rule (2×2 quad4 / 2×2×2 hex8, 3×3 quad9 / 3×3×3 hex27), matching Tochnog Professional, and the nodal stresses are recovered with the Professional's per-element least-squares fit assembled as the arithmetic mean. The `group_integration_method` / `group_integration_points` records still override the rule. Stored reference values produced under the old Lobatto default can change; recalibrate them against the Professional.
+- [integration_quadrature_and_stress_recovery](integration_quadrature_and_stress_recovery.md) — the default element integration is now the Gauss rule (2×2 quad4 / 2×2×2 hex8, 3×3 quad9 / 3×3×3 hex27), matching Tochnog Professional, and the nodal stresses are recovered with the Professional's per-element least-squares fit assembled as the arithmetic mean. Axisymmetric groups use the same rule since F4 T4 (no forced 1-point rule; quad9 accepted), and the `tet10` uses the Professional Keast 5-point rule with positive HRZ lumped masses (deliberate divergence). The `group_integration_method` / `group_integration_points` records still override the rule. Stored reference values produced under the old Lobatto default can change; recalibrate them against the Professional.
 
 ## Sprint 12 lote 3 — solver global + pequeños
 
@@ -498,3 +498,11 @@ page lists its own in "Differences with the Professional version".
 - [group_interface_groundflow_permeability](group_interface_groundflow_permeability.md) / [group_interface_groundflow_capacity](group_interface_groundflow_capacity.md) / [group_interface_condif_conductivity](group_interface_condif_conductivity.md) — per unit length/area since 2026-10-06 (K04 ground9: middle pressure 1/3 -> 0.5 as the Professional); the interface capacity is implicit.
 - [group_materi_elasti_stress_pressure_history_factor](group_materi_elasti_stress_pressure_history_factor.md) — 2026-10-06 (K04): the per-step loading/reloading decision follows the Professional (factored estimate, strict tie); Pro test stress_pressure_factor −3.10 -> −3.05.
 - [group_materi_expansion_volume](group_materi_expansion_volume.md) — volume expansion: rho = rho0*(1 - beta*T) for gravity and, since 2026-10-06 (K04 incnav3), for the inertia (mass), as the Professional.
+
+## SOLVER MEMORY (2026-10-09, F4 T7)
+
+- [solver_memory](solver_memory.md) — the default Bi-CG solver no longer allocates and zero-fills a dense n x n copy of the matrix on every solve (8 n² bytes, never read); results unchanged. `ground19_water_under_dam` (Professional `other`) now runs under a 4 GB cap. The band matrix of the direct-LU fallback is built only after a Bi-CG failure (F4 T7 B).
+
+## ONE-SHOT MESH OPERATIONS ONCE PER CONTROL INDEX (2026-10-09, F4 T7)
+
+- [control_mesh_once_per_control](control_mesh_once_per_control.md) — `control_mesh_macro`, `_copy`, `_mirror` and `_switch` run once per control index (first step), also with a multi-step `control_timestep` on the same index, as the Professional. Before, every time step re-applied them (`mesh_activate1`: 202 -> 4040 nodes in 20 steps, out of memory with 1000 steps).
