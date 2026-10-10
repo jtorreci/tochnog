@@ -62,3 +62,23 @@ Shift a 2D mesh by 2 in x and -1 in y:
 ```
 control_mesh_move 0  2.  0.  0.  -1.  0.  0.
 ```
+
+## Once per control index (F4 T8)
+
+Like the other one-shot mesh records the move is applied once per control
+index, on its first step, also when the index carries a multi-step
+`control_timestep` (before F4 T8 it was applied on every step, so a
+linear term compounded). It runs after `control_mesh_copy` and before
+`control_mesh_switch` / `control_mesh_mirror` on the same index (see
+[control_mesh_once_per_control](control_mesh_once_per_control.md)).
+
+## Differences with the Professional version
+
+The manual (6.217) says the mesh is moved. The Professional 02-08-2026 did
+not move the nodes in the probes: it only set `node_start_refined` to the
+moved current coordinates, once per control index (a 12-value record in
+2D is refused). The GNU follows the manual and moves both the nodes and
+`node_start_refined`. Professional-suspect divergence, class D in
+[DIVERGENCES-PROFESSIONAL](../DIVERGENCES-PROFESSIONAL.md) (C46b). Test
+`validation-suite/test-2026/mesh_move_timestep1` (node 6 at 12 1).
+

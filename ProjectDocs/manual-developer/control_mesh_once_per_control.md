@@ -28,8 +28,9 @@ Professional probes (02-08-2026, omen, F4 T7): a 3x2-node mesh with the
 operation and a two- or three-step `control_timestep` on index 1:
 macro 12 nodes (GNU before 24), copy 12 (GNU 48), mirror 12 (GNU 48),
 switch applied once with two steps (GNU twice = identity).
-`control_mesh_move` had no effect in the Professional (with or without
-time stepping), so it is NOT guarded; `control_mesh_rotate_angle` is only
+`control_mesh_move`: F4 T8 found that the Professional moves only
+`node_start_refined`, once per index; the GNU guards `mesh_move()` too
+(control_mesh_move page); `control_mesh_rotate_angle` is only
 a parameter of `control_mesh_rotate` in the Professional, and the 3D
 `control_mesh_rotate` probe did not run on either binary — both left
 unguarded (BACKLOG C46).

@@ -1483,6 +1483,14 @@ if grep -aqE '^node +10 +0 +7 *$' "$T2026/mesh_order_timestep1.dbs" 2>/dev/null 
    grep -aqE '^node +25 +-1 +5 *$' "$T2026/mesh_order_timestep1.dbs" 2>/dev/null;
 then check_ok "mesh_order_timestep1 (node 10 at 0 7, node 25 at -1 5)";
 else check_fail "mesh_order_timestep1" "copy/switch/mirror order differs from the Professional"; fi
+# F4 T8 / C46b: control_mesh_move once per control index, node and
+#   node_start_refined moved (manual 6.217; the Professional moves only
+#   node_start_refined, DIVERGENCES C46b). Old GNU: once per step.
+run_ok "$T2026" mesh_move_timestep1
+if grep -aqE '^node +6 +12 +1 *$' "$T2026/mesh_move_timestep1.dbs" 2>/dev/null &&
+   grep -aqE '^node_start_refined +6 +12 +1 *$' "$T2026/mesh_move_timestep1.dbs" 2>/dev/null;
+then check_ok "mesh_move_timestep1 (node 6 at 12 1, moved once)";
+else check_fail "mesh_move_timestep1" "node 6 not at 12 1"; fi
 
 # ---------------------------------------------------------------------
 # K03 (2026-10-06): default convection_apply -no (manual Professional

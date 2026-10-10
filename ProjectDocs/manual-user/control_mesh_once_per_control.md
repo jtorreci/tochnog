@@ -2,8 +2,8 @@
 
 ## What it does
 
-`control_mesh_macro`, `control_mesh_copy`, `control_mesh_mirror` and
-`control_mesh_switch` are applied once per control index, on the first
+`control_mesh_macro`, `control_mesh_copy`, `control_mesh_mirror`,
+`control_mesh_switch` and (since F4 T8) `control_mesh_move` are applied once per control index, on the first
 step of that index, also when the same index carries a
 `control_timestep` with several steps. Since F4 T7 this matches the
 Professional 02-08-2026.
@@ -41,10 +41,10 @@ again (a `control_repeat` re-entry).
 
 ## Differences with the Professional version
 
-- `control_mesh_move` is not part of this rule: in the probes the
-  Professional did not move the mesh at all, so the once-per-control
-  behaviour could not be confirmed; the GNU still moves the mesh on every
-  step of a `control_timestep` index (BACKLOG C46, DIVERGENCES C46).
+- `control_mesh_move` follows the same rule since F4 T8. The Professional
+  moves only `node_start_refined` (once per index) and not the nodes;
+  the GNU follows the manual (6.217) and moves the mesh (DIVERGENCES
+  C46b, class D).
 - Fixed in F4 T8: `control_mesh_copy` / `control_mesh_mirror` on an index
   after a time step (BACKLOG C45, see their pages).
 
