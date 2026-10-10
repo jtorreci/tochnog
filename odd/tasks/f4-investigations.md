@@ -17,7 +17,7 @@ through `scripts/remote_run.sh`.
 - [x] T9 C43: GNU Bi-CG converges far slower than the Pro (`force11` >600 s vs 13 s). Route: read-only investigator + omen, owner decisions 2026-10-10 (items 1-6), then one delegated writer. Done: SuperLU UAF, interface_convert UAF, recovery table, pardiso -> SuperLU, CSR operator, docs (C46b/C46e class A, C46c not scheduled).
 - [x] T10 C48: interface tension-status record written from a double buffer (`interface_element()` ~1031) → stack garbage. Route: delegated writer. Done `c06fa2d`.
 - [x] T11 C49: build optimisation `-O1` vs `-O2` — find why -O1 was chosen, measure -O2 (results + time) on omen; owner decision before changing the default. Study done (default unchanged); owner decision pending.
-- [ ] T12 C47: `force11` `mom1y_sig` 5.80223 vs Pro 5.76460 (0.65 %, model difference, solver excluded).
+- [x] T12 C47: `force11` `mom1y_sig` 5.80223 vs Pro 5.76460 (0.65 %, model difference, solver excluded). Root cause: quad9 -> hex27 extrusion did not share the inner-plane nodes. Done `24301c8`.
 - [x] T13 C49 prerequisite: audit every `db()` / array call that receives a fixed-size scratch buffer (`idum[1]`, `ddum[1]`, small arrays) and can write more values; fix them; run build_safe + corpus under ASan; then switch the build to `-O2` with a full corpus A/B (owner 2026-10-10). Done `40ae7cd` (fixes + audit script) + `44c68c7` (`-O2` default).
 Order (owner 2026-10-10): T10 → T11 → T5 → T13 → T12 → T6.
 
@@ -304,4 +304,38 @@ docs + SEGUIMIENTO + BACKLOG + DIVERGENCES.
   (default -O2): md5 019e3620 = build/tochnog (differs from cc867346 only
   in the __DATE__ string, 21 bytes); build_safe TN_CHECK_ONLY 187 OK /
   0 FALLO, runs 226/226, rc 0. Not changed: scripts/install_superlu.sh
-  still builds SuperLU with -O1 (outside the edit surface). Next: T12.
+  still builds SuperLU with -O1 (outside the edit surface)..
+- T12 (route: delegated writer, single source file + test + docs; root
+  cause from a prior read-only investigation, scratch `f4t12/`). Fix
+  `mesh.cc` `mesh_extrude()` quad9 -> hex27: plane q (1..2nq-1) of source
+  node inod = `next_node + (q-1)*nbase + inod`, created once, shared
+  (numbering kept GNU-style, not the Pro compact one: renumbering would
+  move the boundary-copy block of the linear branches). Clean scratch
+  builds (`git archive` a08992b md5 019e3620 = old; `git stash create`
+  tree md5 edb81804 = new = build/tochnog, sources = 24301c8).
+  force11 (Pro 02-08-2026, `-matrix_iterative_bicg` for the Pro run):
+  nodes 15600 -> 12000 (Pro 12000), rc 1 -> 0, mom1y_sig 5.80223 ->
+  5.764609 (Pro 5.764612), nodal displacements = Pro to 5.5e-7, section
+  forces 2e-4; nodal stresses up to 3.38 % of the field maximum off
+  (largest at the loaded points x 0 y +-50.1: sigxx -816.80 vs -789.09;
+  ratio 0.987..1.035, mean 1.0001; sigxy 0.9 %) -> new BACKLOG C57 (+
+  `post_point` on a hex27 node not equal to the nodal value: disy
+  -3.51050e-5 vs -3.51802e-5), DIVERGENCES C57 (class B).
+  Test `extrude_quad9_shared_nodes1` (2 quad9 x 2 hex27 layers,
+  cantilever plate; targets = Pro nodal displacements at the same
+  coordinates): RED old rc 1, 84 nodes (planes 15/18/18/18/15); GREEN rc
+  0, 75 nodes (15 per plane) = Pro, displacements = Pro to 2e-12.
+  build_safe TN_CHECK_ONLY: 189 OK / 0 FALLO, runs 226/226, rc 0
+  (baseline 187 + run_ok + node-count check). audit_db_buffers.py exit 0.
+  Corpus A/B on omen (`f4t12w_runs`, 6 jobs, 4 GB, timeout 120): every
+  control_mesh_extrude input (Pro other extrude1/2, safety2,
+  interface_bar2_hex8, force11, Pro validation_14_mesh, new test): only
+  force11 (rc 1 -> 0) and the new test change; the others keep their
+  class (extrude1/safety2/validation_14_mesh PARSE, extrude2 RUNFAIL,
+  interface_bar2_hex8 OK) with identical .dbs. Full Pro other (330):
+  .dbs differ only for force11; classes equal except cylinder_buckle
+  OK 119.0 s -> TIMEOUT 120 s (borderline; rerun alone 80 / 81 s, .dbs
+  identical but time records). Work unit `24301c8` fix(mesh) (fix + test
+  + build_safe + docs: control_mesh_extrude user/dev, SEGUIMIENTO row,
+  BACKLOG C47 resolved + C57, DIVERGENCES C47 closed + C57, solver.md /
+  matrix_pardiso.md notes). Next: T6.

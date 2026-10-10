@@ -161,7 +161,8 @@ No result change: the factorization and the solution are the same calls.
   segmentation fault above is its evidence.)
 - Professional `force11` with `-matrix_superlu` (4 GB cap): old rc 139
   after 9 s; new runs in 10 s (0.41 GB). Its `mom1y_sig` target misses
-  (5.80223 vs target 5.76474, Professional 5.76460; BACKLOG C47).
+  (5.80223 vs target 5.76474, Professional 5.76460; BACKLOG C47,
+  resolved by F4 T12: quad9 -> hex27 extrusion, now 5.76461, rc 0).
 - `build_safe.sh` (items 1, 2 and the recovery memo of F4 T9 together):
   171 OK / 0 FALLO, every suite `.dbs` identical to the old build.
 

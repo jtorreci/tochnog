@@ -957,8 +957,17 @@ void mesh_extrude( double z_layer[], long int n_layer, long int quad9_layers )
         // layer). The number of layers comes from control_mesh_extrude_n
         // (quad9_layers; the z record gives the total extent z0..z1).
         // The intermediate boundary nodes and the mid-plane nodes are
-        // NEW nodes; the existing copy at z1 serves as the top of the
-        // last layer, the source nodes as the base of the first.
+        // NEW nodes SHARED by the neighbouring hex27 elements (one node
+        // per source node and plane, as in the Professional: force11 has
+        // 2400 nodes on each of its 5 z planes); the existing copy at z1
+        // serves as the top of the last layer, the source nodes as the
+        // base of the first. Plane q (1..2nq-1, z ascending) of source
+        // node inod is node next_node + (q-1)*nbase + inod; it is created
+        // by the first element that uses it (F4 T12, BACKLOG C47: the
+        // planes were per-element node blocks before, which disconnected
+        // the elements at the inner planes). The numbering differs from
+        // the Professional's compact plane-major one; the geometry and
+        // connectivity are the same.
         long int nq = ( quad9_layers>1 ? quad9_layers : 1 );
         double zq0 = z_layer[0], zq1 = z_layer[n_layer-1];
         for ( long int lay=0; lay<nq; lay++ ) {
@@ -969,58 +978,38 @@ void mesh_extrude( double z_layer[], long int n_layer, long int quad9_layers )
           // ABSOLUTE block of the previous layer's top (last_top)
           long int base_abs = ( lay==0 ? -1 : last_top );
           // top: last layer -> the existing copy offset n_layer*nbase
-          // (nodes[inol] + offset); other layers -> a NEW absolute
-          // node block at zt
+          // (nodes[inol] + offset); other layers -> the shared plane
+          // block 2*lay+2 at zt; mid: the shared plane block 2*lay+1
           long int top_off = -1, top_abs = -1;
-          if ( lay==nq-1 ) {
-            top_off = n_layer*nbase;
-          }
-          else {
-            top_abs = next_node;
+          if ( lay==nq-1 ) top_off = n_layer*nbase;
+          else top_abs = next_node + (2*lay+1)*nbase;
+          long int mid0 = next_node + (2*lay)*nbase;
+          for ( int pass=0; pass<2; pass++ ) {
+            long int blk = ( pass==0 ? mid0 : top_abs );
+            double zz = ( pass==0 ? z_mid : zt );
+            if ( blk<0 ) continue;
             for ( inol=0; inol<9; inol++ ) {
-              db( NODE, nodes[inol], idum, coords, ndim,
-                VERSION_NORMAL, GET );
-              coords[2] = zt;
-              db( NODE, next_node, idum, coords, len3, VERSION_NORMAL,
-                PUT );
+              long int nn = blk + nodes[inol];
+              if ( db_active_index( NODE, nn, VERSION_NORMAL ) ) continue;
+              db( NODE, nodes[inol], idum, coords, ndim, VERSION_NORMAL, GET );
+              coords[2] = zz;
+              db( NODE, nn, idum, coords, len3, VERSION_NORMAL, PUT );
               for ( int idat=0; idat<MDAT; idat++ ) {
                 if ( idat!=NODE && db_data_class(idat)==NODE &&
-                     db_active_index( idat, nodes[inol],
-                       VERSION_NORMAL ) ) {
-                  long int ndata_len = db_len( idat, nodes[inol],
-                    VERSION_NORMAL );
-                  mesh_copy_node_item( idat, nodes[inol], next_node, ndata_len );
+                     db_active_index( idat, nodes[inol], VERSION_NORMAL ) ) {
+                  long int ndata_len = db_len( idat, nodes[inol], VERSION_NORMAL );
+                  mesh_copy_node_item( idat, nodes[inol], nn, ndata_len );
                 }
               }
-              next_node++;
             }
-          }
-          // the mid-plane nodes at the layer mid-height
-          long int mid0 = next_node;
-          for ( inol=0; inol<9; inol++ ) {
-            db( NODE, nodes[inol], idum, coords, ndim, VERSION_NORMAL,
-              GET );
-            coords[2] = z_mid;
-            db( NODE, next_node, idum, coords, len3, VERSION_NORMAL,
-              PUT );
-            for ( int idat=0; idat<MDAT; idat++ ) {
-              if ( idat!=NODE && db_data_class(idat)==NODE &&
-                   db_active_index( idat, nodes[inol],
-                     VERSION_NORMAL ) ) {
-                long int ndata_len = db_len( idat, nodes[inol],
-                  VERSION_NORMAL );
-                mesh_copy_node_item( idat, nodes[inol], next_node, ndata_len );
-              }
-            }
-            next_node++;
           }
           new_elem++;
           new_nodes[0] = -HEX27;
           for ( inol=0; inol<9; inol++ ) {
-            new_nodes[1+inol] = ( base_abs>=0 ? base_abs+inol
+            new_nodes[1+inol] = ( base_abs>=0 ? base_abs+nodes[inol]
                                                : nodes[inol] );
-            new_nodes[10+inol] = mid0 + inol;
-            new_nodes[19+inol] = ( top_abs>=0 ? top_abs+inol
+            new_nodes[10+inol] = mid0 + nodes[inol];
+            new_nodes[19+inol] = ( top_abs>=0 ? top_abs+nodes[inol]
                                                : nodes[inol]+top_off );
           }
           create_element( ielem, new_elem, new_nodes, 28, VERSION_NORMAL,
