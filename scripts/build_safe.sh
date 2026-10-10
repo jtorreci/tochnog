@@ -105,9 +105,15 @@ if [ -d "$NUMLIB_RUNTIME" ]; then
   echo "==> Runtime numerico local: $NUMLIB_RUNTIME"
 fi
 
+# Optimisation -O2 (F4 T13, 2026-10-10, BACKLOG C49): -O1 until the
+# fixed-size scratch-buffer overflows were fixed (scripts/audit_db_buffers.py,
+# ProjectDocs/manual-developer/db_buffer_contract.md); the -O2 corpus A/B
+# gives byte-identical .dbs, 29-47 % less time on large1/force11 and 8-16 %
+# on the corpora (BACKLOG C49). TN_EXTRA_FLAGS is
+# appended, so a later -O1 / -O0 in it still wins (sanitizer targets).
 MAKE_FLAGS=( "SYS_FILE=sysposix" "OBJ=o" "BCPP=" "VCPP="
   "COMPILER_C=gcc" "COMPILER_CPP=g++"
-  "COMPILER_FLAGS=-c -O1 -Wall -D_REENTRANT $SUPERLU_INC $SQLITE_INC $TN_EXTRA_FLAGS"
+  "COMPILER_FLAGS=-c -O2 -Wall -D_REENTRANT $SUPERLU_INC $SQLITE_INC $TN_EXTRA_FLAGS"
   "LINK_FLAGS_BEFORE=" )
 
 LINK_FLAGS_AFTER="$NUMLIB_LINK -Wl,--start-group $SUPERLU_A -l:liblapack.so.3 -l:libblas.so.3 $NUMLIB_FORTRAN -Wl,--end-group $SQLITE_LIB -lm -lpthread $TN_EXTRA_FLAGS -o build/$TN_BIN"

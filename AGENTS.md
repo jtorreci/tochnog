@@ -55,6 +55,16 @@ feature in `ProjectDocs/SEGUIMIENTO-CONVERGENCIA.md`:
 - On the NAS, `git merge` right after `git switch` often fails with
   "no se pudo escribir índice / stash falló" (stale index stat data).
   Run `git update-index --refresh` before the merge; it then succeeds.
+- The canonical build is `-O2` (F4 T13, 2026-10-11; `-O1` before).
+  Buffers given to `db()` reads, `get_group_data()`, `array_*()` and
+  `geometry()` must hold the full record / contract length (a short
+  `idum[1]`/`ddum[1]` is a latent overflow that `-O2` exposes): run
+  `scripts/audit_db_buffers.py` (exit 1 on a hit) after adding such
+  calls; contract in `ProjectDocs/manual-developer/db_buffer_contract.md`.
+- ASan / UBSan builds (`TN_EXTRA_FLAGS="-fsanitize=address,undefined
+  -fno-omit-frame-pointer -g -O1"`, `TN_MEMLIMIT_KB=unlimited`) cannot run
+  under `ulimit -v`: cap them with `ASAN_OPTIONS=hard_rss_limit_mb=4000`
+  (plus `detect_leaks=0`) instead, same job limits.
 - Running `build/tochnog` outside `scripts/build_safe.sh` needs
   `LD_LIBRARY_PATH=external-downloads/numlib-runtime` (no system
   `liblapack.so.3`).

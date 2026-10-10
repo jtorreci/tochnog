@@ -134,6 +134,18 @@ Scanned 3450 calls in HEAD `dca225a`: 1972 `db()`, 129
 - 273 unresolved: 252 pointer buffers, 15 variable offsets (all
   `&coord[inol*ndim]` into `MNOL*MDIM` arrays), 6 array parameters.
 
+## Verification (F4 T13)
+
+- ASan + UBSan build (`-fsanitize=address,undefined -fno-omit-frame-pointer
+  -g -O1`, `ASAN_OPTIONS=hard_rss_limit_mb=4000:detect_leaks=0`, no
+  `ulimit -v`): build_safe 28 failing runs -> 1; corpus (omen, 6 jobs,
+  360 s) 45 tests with a report at 9 sites -> 2. Left: BACKLOG C55
+  (`print_unknownsrhside()` heap read, wrong index) and C56 (parser token
+  longer than `MCHAR`). No UBSan report.
+- `-O1`: build_safe 187 OK / 0 FALLO; corpus `.dbs` identical to HEAD.
+- `-O2` (now the default, `scripts/build_safe.sh`): every finished `.dbs`
+  identical to `-O1`; the F4 T11 `-O2` failures run.
+
 ## Pending refactorings
 
 - Several variable records are declared with `data_length =

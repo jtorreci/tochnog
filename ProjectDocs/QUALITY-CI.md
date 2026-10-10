@@ -92,6 +92,24 @@ los builds sanitizados; además PODRÍA dispararse con otras flags/layouts).
 Detalle del fix y re-medición hypo vs el Professional:
 ProjectDocs/SEGUIMIENTO-CONVERGENCIA.md (registro 2026-09-06).
 
+## Build flags (F4 T13, 2026-10-11)
+
+- Build canónico (`scripts/build_safe.sh`): `-c -O2 -Wall -D_REENTRANT`
+  + includes + `TN_EXTRA_FLAGS` (añadido al final: un `-O1`/`-O0` en
+  `TN_EXTRA_FLAGS` gana). Hasta F4 T13 era `-O1` sin razón registrada
+  (BACKLOG C49); `-O2` exigía antes arreglar los desbordamientos de
+  buffers de 1 elemento que el layout de `-O1` toleraba.
+- Targets de sanitizers (`make asan` / `make ubsan`, job sanitize de CI):
+  siguen añadiendo `-O1` (trazas legibles, el nivel validado).
+- Verificación del cambio: corpus A/B `-O1` vs `-O2` en omen con todos
+  los `.dbs` terminados idénticos byte a byte; build_safe 187 OK /
+  0 FALLO en ambos niveles; tiempos y detalle en BACKLOG C49 y en el
+  registro de SEGUIMIENTO-CONVERGENCIA.md (F4 T13).
+- Antes de tocar flags o de añadir lecturas `db()` con buffers locales:
+  `scripts/audit_db_buffers.py` (exit 1 si algún buffer es menor que el
+  registro o que el contrato del callee). Contrato:
+  `manual-developer/db_buffer_contract.md`.
+
 ## Variables de hooks en scripts/build_safe.sh (aditivas)
 
 Con los defaults el script es byte-idéntico al build canónico:

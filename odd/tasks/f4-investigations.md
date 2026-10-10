@@ -18,7 +18,7 @@ through `scripts/remote_run.sh`.
 - [x] T10 C48: interface tension-status record written from a double buffer (`interface_element()` ~1031) → stack garbage. Route: delegated writer. Done `c06fa2d`.
 - [x] T11 C49: build optimisation `-O1` vs `-O2` — find why -O1 was chosen, measure -O2 (results + time) on omen; owner decision before changing the default. Study done (default unchanged); owner decision pending.
 - [ ] T12 C47: `force11` `mom1y_sig` 5.80223 vs Pro 5.76460 (0.65 %, model difference, solver excluded).
-- [ ] T13 C49 prerequisite: audit every `db()` / array call that receives a fixed-size scratch buffer (`idum[1]`, `ddum[1]`, small arrays) and can write more values; fix them; run build_safe + corpus under ASan; then switch the build to `-O2` with a full corpus A/B (owner 2026-10-10).
+- [x] T13 C49 prerequisite: audit every `db()` / array call that receives a fixed-size scratch buffer (`idum[1]`, `ddum[1]`, small arrays) and can write more values; fix them; run build_safe + corpus under ASan; then switch the build to `-O2` with a full corpus A/B (owner 2026-10-10). Done `40ae7cd` (fixes + audit script) + `-O2` switch (see Progress).
 Order (owner 2026-10-10): T10 → T11 → T5 → T13 → T12 → T6.
 
 ## Later (owner 2026-10-10, after convergence with ALL divergences documented and accepted)
@@ -273,3 +273,32 @@ docs + SEGUIMIENTO + BACKLOG + DIVERGENCES.
   nodal_stress_post_solve_sync notes, SEGUIMIENTO, BACKLOG C35 resolved
   + C52/C53, DIVERGENCES POSTPASS-GATE (C35 row removed), AUDIT K02.
   Engram mirror: see report.
+- T13 (route: delegated writer; trigger evidence: 21 source files touched,
+  mechanical per-site fixes found by a script, so one writer; clean scratch
+  builds from `git archive` / `git stash create`, local ASan build_safe,
+  corpus A/B + ASan corpus + timing on omen `f4t13_runs` / `f4t13_meas`).
+  Audit: `scripts/audit_db_buffers.py` (db() reads vs `data_length`,
+  get_group_data, constant-length array_*, geometry()/msf_element_rule()
+  contracts). HEAD dca225a: 3450 calls, 45 hits at 34 call sites (26 db/
+  array, 7 geometry() callers with ddum[1], msf nper[2]); all fixed; 0
+  hits after (exit 0). False positives met while building the script
+  (prototype `sig[6]` matched as a global, unbounded maxwell length) were
+  fixed in the script, none left. 38 run-time-record calls reviewed by
+  hand -> C54. Work unit 1 `40ae7cd` fix(db).
+  ASan+UBSan (-g -O1): build_safe head 28 failing runs / 18 FALLO ->
+  fix 1 / 1 (dofrhside, C55); corpus head 45 ASan tests at 9 sites ->
+  fix 2 (dofrhside C55, Pro ground19_water_under_dam parser token C56);
+  no UBSan report. -O1 fix (md5 db9254c8) vs HEAD (2c825fe4): corpus
+  .dbs identical (bicg_csr_threads1 2-thread round-off), classes equal;
+  build_safe 187 OK / 0 FALLO, 226/226.
+  -O2 (fix2 md5 cc867346 = final default build): all finished .dbs
+  byte-identical to -O1; creset_iface, bmom*, interface7, interface10,
+  mesh_cut_2 run; alternate1, cylinder_buckle, ground11_nonsaturated
+  TIMEOUT -> OK (Pro other 275 -> 278 OK); build_safe 187 OK / 0 FALLO
+  rc 0. Time (omen, alone, median of 3) large1 31.4 -> 22.2 s, force11
+  18.8 -> 9.9 s; corpus wall (finished on both) Pro other 696.5 -> 582.5
+  s, sfnet 240.1 -> 220.1, t26 35.9 -> 32.1, vs 28.2 -> 26.0; peak RSS
+  same. Work unit 2: build_safe.sh -O2 (+ makefile note, QUALITY-CI,
+  AGENTS, BACKLOG C49 resolved + C54-C56, SEGUIMIENTO row, dev page
+  db_buffer_contract). Not changed: scripts/install_superlu.sh still
+  builds SuperLU with -O1 (outside the edit surface).
