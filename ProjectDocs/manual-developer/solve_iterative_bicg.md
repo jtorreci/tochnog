@@ -138,6 +138,12 @@ systems the two accumulations are identical, so the behavior of every
 symmetric solve is unchanged (verified: suite 199/199, converged-path
 values byte-identical).
 
+### 4. Assembled CSR operator (F4 T9, 2026-10-10)
+
+The products of `solve_iterative_bicg_sys()` run on a CSR matrix
+assembled once per solve (element-by-element fallback with mpc ties):
+see [solver_bicg_csr_operator](solver_bicg_csr_operator.md).
+
 ## Measured behavior (evidence)
 
 - **3D cantilever hex8 ×1, tip load** (the `A·b ≈ 0` family): the old code

@@ -520,3 +520,4 @@ page lists its own in "Differences with the Professional version".
 ## F4 T9 — solvers (2026-10-10)
 
 - [matrix_pardiso](matrix_pardiso.md) — `-matrix_pardiso` is solved with SuperLU, Bi-CG fallback when the factorization fails (memory budget 70 % of the room); GNU default stays the Bi-CG (class B divergence).
+- [solver_bicg_csr_operator](solver_bicg_csr_operator.md) — the iterative solver multiplies with an assembled CSR matrix (about 5x faster per iteration in 3D, same results up to round-off); `options_processors` row blocks; element-by-element fallback for mpc ties.

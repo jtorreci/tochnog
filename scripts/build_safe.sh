@@ -1526,6 +1526,14 @@ if [ "$RC_PBF" = "0" ] &&
    grep -aq "SuperLU failed for -matrix_pardiso - falling back" /tmp/pardiso_bicg_fallback1_safe.out 2>/dev/null;
 then check_ok "pardiso_bicg_fallback1 (SuperLU out of memory -> Bi-CG, targets met)";
 else check_fail "pardiso_bicg_fallback1" "rc=$RC_PBF or no Bi-CG fallback"; fi
+# F4 T9 / C43: the iterative solver multiplies with an assembled CSR matrix
+#   (so_bicg.cc bicg_csr_build/bicg_csr_sys) instead of the element-by-
+#   element products; two threads (options_processors 2). print_solver -yes
+#   reports the operator; old GNU: no CSR line. Analytic targets.
+run_ok "$T2026" bicg_csr_threads1
+if grep -aq "assembled CSR operator" /tmp/bicg_csr_threads1_safe.out 2>/dev/null;
+then check_ok "bicg_csr_threads1 (assembled CSR operator, 2 threads)";
+else check_fail "bicg_csr_threads1" "no assembled CSR operator"; fi
 
 # ---------------------------------------------------------------------
 # K03 (2026-10-06): default convection_apply -no (manual Professional

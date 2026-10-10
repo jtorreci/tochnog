@@ -546,3 +546,4 @@ page lists its own in "Differences with the Professional version".
 ## F4 T9 — solvers (2026-10-10)
 
 - [matrix_pardiso](matrix_pardiso.md) — so.cc pardiso -> SuperLU route, Bi-CG fallback, RLIMIT_AS memory guard (`solve_pardiso_memory_guard`), failure disables SuperLU for the run.
+- [solver_bicg_csr_operator](solver_bicg_csr_operator.md) — so_bicg.cc CSR pattern from element node sets + node incidence (no triplet buffer), threaded row blocks, NODE_LHSIDE kept apart, EBE fallback (mpc ties, TN_BICG_EBE).

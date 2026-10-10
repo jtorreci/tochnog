@@ -18,6 +18,7 @@
 */
 
 #include "tochnog.h"
+#include <algorithm>
 
 double *d1, *d2, *p, *Ad1_thread, *Ad2_thread, *p_thread, *residue_thread;
 long int solve_iterative_bicg_use_cg = 0;
@@ -38,6 +39,326 @@ long int solve_iterative_bicg_use_cg = 0;
 
 long int solve_iterative_bicg_symmetric( void );
 double solve_iterative_bicg_real_residual( double *residue, double norm_b );
+
+// ---------------------------------------------------------------------------
+// Assembled CSR operator of the iterative solver (F4 T9, 2026-10-10).
+//
+// The historic Bi-CG/CG product is matrix free, element by element: every
+// matrix-vector product walks all element matrices, maps every entry
+// through solve_global_local and scatters into per-thread buffers. On the
+// Professional force11 (one 3D solve, ~10^5 iterations) that costs >1 h.
+// Here the element matrices are assembled once per solve into a compressed
+// sparse row matrix (rows and columns = local solver dofs, the NODE_LHSIDE
+// diagonal kept apart), and the products of solve_iterative_bicg_sys() run
+// on it. The pattern is built without a triplet buffer: the node set of
+// every element (the nodes of its matrix unknowns that are solver dofs),
+// the node -> element incidence, and per node the union of the node sets
+// of its elements give the column list shared by all dofs of the node.
+// The products are the same sums in another order (round-off only).
+//
+// The element-by-element product stays the fallback: with the mpc tie
+// elimination active (DIAG-SOLVE-MIXTO §16: small systems only), when an
+// entry is not found in the pattern, and with the diagnostic environment
+// variable TN_BICG_EBE set.
+static long int bicg_csr_on = 0;
+static long int *bicg_csr_rowptr = NULL;
+static int *bicg_csr_col = NULL;
+static double *bicg_csr_val = NULL;
+static double *bicg_csr_lhside = NULL;
+// 1 for the dofs of a node with NODE_LHSIDE: the element-by-element product
+// adds the right-hand side to the residue in that node loop only
+static double *bicg_csr_bfac = NULL;
+static double *bicg_csr_Ad1 = NULL, *bicg_csr_Ad2 = NULL,
+  *bicg_csr_p_tmp = NULL, *bicg_csr_residue = NULL;
+static long int bicg_csr_nblock = 1;
+
+// Visit the matrix entries of one element that map to solver dofs, with the
+// same element/group matrix selection as solve_iterative_bicg_element():
+// f( ilocal, jlocal, iglobal, jglobal, value ).
+template <class F> static void bicg_csr_visit_element( long int element,
+  long int *unk_buf, F f )
+
+{
+  long int i=0, element_group=0, ldum=0, length=0, use_element_matrix=0,
+    use_group_matrix=0;
+  long int *unk=NULL;
+  double ddum[1], *val=NULL;
+
+  if ( db_active_index( ELEMENT_MATRIX_VALUES, element, VERSION_NORMAL ) )
+    use_element_matrix = 1;
+  else if ( db_active_index( ELEMENT, element, VERSION_NORMAL ) ) {
+    db( ELEMENT_GROUP, element, &element_group, ddum, ldum,
+      VERSION_NORMAL, GET_IF_EXISTS );
+    if ( db_active_index( GROUP_MATRIX_VALUES, element_group, VERSION_NORMAL ) )
+      use_group_matrix = 1;
+  }
+  if ( !use_element_matrix && !use_group_matrix ) return;
+  if ( use_element_matrix ) {
+    unk = db_int( ELEMENT_MATRIX_UNKNOWNS, element, VERSION_NORMAL );
+    val = db_dbl( ELEMENT_MATRIX_VALUES, element, VERSION_NORMAL );
+    length = db_len( ELEMENT_MATRIX_VALUES, element, VERSION_NORMAL );
+  }
+  else {
+    unk = unk_buf;
+    get_element_matrix_unknowns( element, unk );
+    val = db_dbl( GROUP_MATRIX_VALUES, element_group, VERSION_NORMAL );
+    length = db_len( GROUP_MATRIX_VALUES, element_group, VERSION_NORMAL );
+  }
+  for ( i=0; i<length; i++ ) {
+    long int iglobal = unk[i*2+0], jglobal = unk[i*2+1];
+    long int ilocal = solve_global_local[iglobal];
+    long int jlocal = solve_global_local[jglobal];
+    if ( ilocal!=-NO && jlocal!=-NO )
+      f( ilocal, jlocal, iglobal, jglobal, val[i] );
+  }
+}
+
+static void bicg_csr_free( void )
+
+{
+  delete[] bicg_csr_rowptr; bicg_csr_rowptr = NULL;
+  delete[] bicg_csr_col; bicg_csr_col = NULL;
+  delete[] bicg_csr_val; bicg_csr_val = NULL;
+  delete[] bicg_csr_lhside; bicg_csr_lhside = NULL;
+  delete[] bicg_csr_bfac; bicg_csr_bfac = NULL;
+  bicg_csr_on = 0;
+}
+
+// Build the CSR operator of the current solve; returns 1 on success (and
+// sets bicg_csr_on), 0 when the element-by-element product must be used.
+static long int bicg_csr_build( void )
+
+{
+  long int n = solve_nlocal, max_element=-1, max_node=-1, element=0,
+    inod=0, ipuknwn=0, k=0, nthread=1, ldum=0, ok=1;
+  double ddum[1];
+
+  bicg_csr_on = 0;
+  if ( n<=0 ) return 0;
+  if ( getenv( "TN_BICG_EBE" )!=NULL ) return 0;
+  if ( mpc_tie_elimination_active() ) return 0;
+  db_highest_index( ELEMENT, max_element, VERSION_NORMAL );
+  db_highest_index( NODE, max_node, VERSION_NORMAL );
+  if ( max_element<0 || max_node<0 ) return 0;
+  db( OPTIONS_PROCESSORS, 0, &nthread, ddum, ldum, VERSION_NORMAL, GET );
+  bicg_csr_nblock = ( nthread>1 ) ? nthread : 1;
+
+  long int nnode = 1 + max_node;
+  long int *unk_buf = get_new_int( 2*MNOL*nprinc*MNOL*nprinc );
+  long int *mark = get_new_int( nnode );
+  for ( inod=0; inod<nnode; inod++ ) mark[inod] = -1;
+
+  // 1. node set of every element (nodes of entries that are solver dofs)
+  long int *el_ptr = get_new_int( max_element+2 );
+  std::vector<long int> el_nodes;
+  el_ptr[0] = 0;
+  for ( element=0; element<=max_element; element++ ) {
+    bicg_csr_visit_element( element, unk_buf,
+      [&]( long int, long int, long int ig, long int jg, double ) {
+        long int a = ig/npuknwn, b = jg/npuknwn;
+        if ( mark[a]!=element ) { mark[a] = element; el_nodes.push_back( a ); }
+        if ( mark[b]!=element ) { mark[b] = element; el_nodes.push_back( b ); }
+      } );
+    el_ptr[element+1] = (long int) el_nodes.size();
+  }
+
+  // 2. node -> element incidence
+  long int *nd_ptr = get_new_int( nnode+1 );
+  for ( inod=0; inod<=nnode; inod++ ) nd_ptr[inod] = 0;
+  for ( k=0; k<(long int)el_nodes.size(); k++ ) nd_ptr[el_nodes[k]+1]++;
+  for ( inod=0; inod<nnode; inod++ ) nd_ptr[inod+1] += nd_ptr[inod];
+  long int *nd_el = get_new_int( nd_ptr[nnode]>0 ? nd_ptr[nnode] : 1 );
+  {
+    long int *fill = get_new_int( nnode );
+    for ( inod=0; inod<nnode; inod++ ) fill[inod] = nd_ptr[inod];
+    for ( element=0; element<=max_element; element++ )
+      for ( k=el_ptr[element]; k<el_ptr[element+1]; k++ )
+        nd_el[fill[el_nodes[k]]++] = element;
+    delete[] fill;
+  }
+
+  // 3. row lengths: a dof row of node a holds the solver dofs of every node
+  //    sharing an element with a
+  long int *ndof_node = get_new_int( nnode );
+  for ( inod=0; inod<nnode; inod++ ) {
+    ndof_node[inod] = 0;
+    mark[inod] = -1;
+    for ( ipuknwn=0; ipuknwn<npuknwn; ipuknwn++ )
+      if ( solve_global_local[inod*npuknwn+ipuknwn]!=-NO ) ndof_node[inod]++;
+  }
+  bicg_csr_rowptr = new long int[n+1];
+  for ( k=0; k<=n; k++ ) bicg_csr_rowptr[k] = 0;
+  for ( inod=0; inod<nnode; inod++ ) {
+    if ( ndof_node[inod]==0 ) continue;
+    long int len = 0;
+    for ( long int ie=nd_ptr[inod]; ie<nd_ptr[inod+1]; ie++ ) {
+      element = nd_el[ie];
+      for ( k=el_ptr[element]; k<el_ptr[element+1]; k++ ) {
+        long int b = el_nodes[k];
+        if ( mark[b]!=inod ) { mark[b] = inod; len += ndof_node[b]; }
+      }
+    }
+    for ( ipuknwn=0; ipuknwn<npuknwn; ipuknwn++ ) {
+      long int il = solve_global_local[inod*npuknwn+ipuknwn];
+      if ( il!=-NO ) bicg_csr_rowptr[il+1] = len;
+    }
+  }
+  for ( k=0; k<n; k++ ) bicg_csr_rowptr[k+1] += bicg_csr_rowptr[k];
+  long int nnz = bicg_csr_rowptr[n];
+
+  // 4. sorted column lists (one per node, copied to each of its dof rows)
+  bicg_csr_col = new int[nnz>0 ? nnz : 1];
+  bicg_csr_val = new double[nnz>0 ? nnz : 1];
+  for ( k=0; k<nnz; k++ ) bicg_csr_val[k] = 0.;
+  for ( inod=0; inod<nnode; inod++ ) mark[inod] = -1;
+  std::vector<int> cols;
+  for ( inod=0; inod<nnode; inod++ ) {
+    if ( ndof_node[inod]==0 ) continue;
+    cols.clear();
+    for ( long int ie=nd_ptr[inod]; ie<nd_ptr[inod+1]; ie++ ) {
+      element = nd_el[ie];
+      for ( k=el_ptr[element]; k<el_ptr[element+1]; k++ ) {
+        long int b = el_nodes[k];
+        if ( mark[b]==inod ) continue;
+        mark[b] = inod;
+        for ( ipuknwn=0; ipuknwn<npuknwn; ipuknwn++ ) {
+          long int jl = solve_global_local[b*npuknwn+ipuknwn];
+          if ( jl!=-NO ) cols.push_back( (int) jl );
+        }
+      }
+    }
+    std::sort( cols.begin(), cols.end() );
+    for ( ipuknwn=0; ipuknwn<npuknwn; ipuknwn++ ) {
+      long int il = solve_global_local[inod*npuknwn+ipuknwn];
+      if ( il==-NO ) continue;
+      if ( bicg_csr_rowptr[il+1]-bicg_csr_rowptr[il]!=(long int)cols.size() )
+        ok = 0;
+      else
+        for ( k=0; k<(long int)cols.size(); k++ )
+          bicg_csr_col[bicg_csr_rowptr[il]+k] = cols[k];
+    }
+  }
+  delete[] nd_el;
+  delete[] nd_ptr;
+  delete[] el_ptr;
+  std::vector<long int>().swap( el_nodes );
+
+  // 5. values (element entries summed in element order)
+  if ( ok ) {
+    for ( element=0; element<=max_element && ok; element++ ) {
+      bicg_csr_visit_element( element, unk_buf,
+        [&]( long int il, long int jl, long int, long int, double v ) {
+          int *first = bicg_csr_col + bicg_csr_rowptr[il];
+          int *last = bicg_csr_col + bicg_csr_rowptr[il+1];
+          int *pos = std::lower_bound( first, last, (int) jl );
+          if ( pos==last || *pos!=(int) jl ) { ok = 0; return; }
+          bicg_csr_val[pos-bicg_csr_col] += v;
+        } );
+    }
+  }
+
+  // 6. NODE_LHSIDE diagonal per solver dof
+  bicg_csr_lhside = new double[n];
+  bicg_csr_bfac = new double[n];
+  for ( k=0; k<n; k++ ) bicg_csr_lhside[k] = bicg_csr_bfac[k] = 0.;
+  db_highest_index( NODE_LHSIDE, max_node, VERSION_NORMAL );
+  for ( inod=0; inod<=max_node; inod++ ) {
+    if ( !db_active_index( NODE_LHSIDE, inod, VERSION_NORMAL ) ) continue;
+    double *node_lhside = db_dbl( NODE_LHSIDE, inod, VERSION_NORMAL );
+    for ( ipuknwn=0; ipuknwn<npuknwn; ipuknwn++ ) {
+      long int il = solve_global_local[inod*npuknwn+ipuknwn];
+      if ( il!=-NO ) {
+        bicg_csr_lhside[il] += node_lhside[ipuknwn];
+        bicg_csr_bfac[il] = 1.;
+      }
+    }
+  }
+
+  delete[] ndof_node;
+  delete[] mark;
+  delete[] unk_buf;
+  if ( !ok ) {
+    bicg_csr_free();
+    return 0;
+  }
+  bicg_csr_on = 1;
+  return 1;
+}
+
+// One block of rows of the CSR products (see solve_iterative_bicg_sys):
+// Ad1 = P A P d1, Ad2 = P A^T P d2 (Bi-CG only, scattered into the thread
+// buffer), residue = P b - P A P x, p_tmp = diag(A) (+ NODE_LHSIDE).
+static void bicg_csr_rows( long int iblock, long int ithread )
+
+{
+  long int n = solve_nlocal, i=0, k=0;
+  long int chunk = ( n + bicg_csr_nblock - 1 ) / bicg_csr_nblock;
+  long int i0 = iblock*chunk, i1 = i0 + chunk;
+  double *Ad2t = Ad2_thread + ithread*n;
+
+  if ( i1>n ) i1 = n;
+  for ( i=i0; i<i1; i++ ) {
+    double pi = p[i], a1 = 0., rx = 0., dg = bicg_csr_lhside[i],
+      d2pi = d2[i]*pi;
+    for ( k=bicg_csr_rowptr[i]; k<bicg_csr_rowptr[i+1]; k++ ) {
+      long int j = bicg_csr_col[k];
+      double v = bicg_csr_val[k], vpj = v*p[j];
+      a1 += vpj*d1[j];
+      rx += vpj*solve_x[j];
+      if ( j==i ) dg += v;
+      if ( !solve_iterative_bicg_use_cg ) Ad2t[j] += vpj*d2pi;
+    }
+    double lpp = bicg_csr_lhside[i]*pi*pi;
+    bicg_csr_Ad1[i] = a1*pi + lpp*d1[i];
+    bicg_csr_residue[i] = bicg_csr_bfac[i]*solve_b[i]*pi - rx*pi -
+      lpp*solve_x[i];
+    bicg_csr_p_tmp[i] = dg;
+  }
+}
+
+static void parallel_solve_iterative_bicg_csr( void )
+
+{
+  long int iloop=0, nloop=0, ithread=0, *next_of_loop=NULL;
+
+  next_of_loop = get_new_int( bicg_csr_nblock );
+  parallel_sys_next_of_loop( next_of_loop, bicg_csr_nblock-1, nloop, ithread );
+  for ( iloop=0; iloop<nloop; iloop++ ) {
+    if ( next_of_loop[iloop]>bicg_csr_nblock-1 ) break;
+    bicg_csr_rows( next_of_loop[iloop], ithread );
+  }
+  delete[] next_of_loop;
+}
+
+static void bicg_csr_sys( double *Ad1, double *Ad2, double *p_tmp,
+  double *residue )
+
+{
+  long int n = solve_nlocal, i=0, ithread=0, nthread=1, ldum=0;
+  double ddum[1];
+
+  db( OPTIONS_PROCESSORS, 0, &nthread, ddum, ldum, VERSION_NORMAL, GET );
+  if ( !solve_iterative_bicg_use_cg )
+    array_set( Ad2_thread, 0., nthread*n );
+  bicg_csr_Ad1 = Ad1; bicg_csr_Ad2 = Ad2;
+  bicg_csr_p_tmp = p_tmp; bicg_csr_residue = residue;
+  if ( bicg_csr_nblock>1 )
+    parallel_sys_routine( &parallel_solve_iterative_bicg_csr );
+  else
+    bicg_csr_rows( 0, 0 );
+  for ( i=0; i<n; i++ ) {
+    if ( !solve_iterative_bicg_use_cg ) {
+      double a2 = bicg_csr_lhside[i]*d2[i]*p[i]*p[i];
+      for ( ithread=0; ithread<nthread; ithread++ )
+        a2 += Ad2_thread[ithread*n+i];
+      Ad2[i] = a2;
+    }
+    else
+      Ad2[i] = 0.;
+    if ( scalar_dabs(p_tmp[i])<EPS_P ) p_tmp[i] = 1.;
+  }
+}
+// ---------------------------------------------------------------------------
 
 long int solve_iterative_bicg( void )
 
@@ -90,6 +411,17 @@ long int solve_iterative_bicg( void )
     // routine, so the norm is saved here for the honest relative-residual
     // reporting (|b-Ax|/|b|).
   norm_b = sqrt( array_inproduct( solve_b, solve_b, solve_nlocal ) );
+
+    // assembled CSR operator (F4 T9); element-by-element when unavailable
+  bicg_csr_build();
+  if ( print_solver==-YES ) {
+    if ( bicg_csr_on )
+      cout << "iterative solver: assembled CSR operator, rows " <<
+        solve_nlocal << " nonzeros " << bicg_csr_rowptr[solve_nlocal] << "\n";
+    else
+      cout << "iterative solver: element-by-element operator, rows " <<
+        solve_nlocal << "\n";
+  }
 
     // set diagonal preconditioner
   solve_iterative_bicg_sys( Ad1, Ad2, p_tmp, residue );
@@ -426,6 +758,7 @@ long int solve_iterative_bicg( void )
   delete[] p_thread;
   delete[] residue;
   delete[] residue_thread;
+  bicg_csr_free();
 
   if ( swit ) pri( "Out routine SOLVE_ITERATIVE_BICG" );
   return succesful;
@@ -567,6 +900,12 @@ void solve_iterative_bicg_sys( double *Ad1, double *Ad2, double *p_tmp, double *
 
   swit = set_swit(-1,-1,"solve_iterative_bicg_sys");
   if ( swit ) pri( "In routine SOLVE_ITERATIVE_BICG" );
+
+  if ( bicg_csr_on ) {
+    bicg_csr_sys( Ad1, Ad2, p_tmp, residue );
+    if ( swit ) pri( "Out routine SOLVE_ITERATIVE_BICG_SYS (CSR)" );
+    return;
+  }
 
   db( OPTIONS_PROCESSORS, 0, &nthread, ddum, ldum, VERSION_NORMAL, GET );
   array_set( Ad1_thread, 0., nthread*solve_nlocal );
