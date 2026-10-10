@@ -15,7 +15,7 @@ through `scripts/remote_run.sh`.
 - [x] T7 Memory hogs (>4 GB with any binary): Pro `force11`, `large1`, `ground19_water_under_dam`, `mesh_activate1`, `foundation_consolidation_settlement` (runs since F4 T4 K20, bad_alloc under the 4 GB cap). Route: read-only investigation, owner decision 2026-10-09 (fix A, B, C), then one delegated writer. Memory fixed; solver-speed residual of `force11`/`foundation...` open (BACKLOG C43).
 - [x] T8 C45 + C46 (owner 2026-10-10: study, not only document): `control_mesh_copy`/`_mirror` after a time step stop with a `node_dof_start_refined` error (Pro runs); copy/switch order on the same index (Pro copies first); `control_mesh_move` has no effect in the Pro (Pro-suspect?); `mesh_activate1` final-step vely (GNU 0, Pro -9.95e-6). Route: delegated writer. Done except C46c (rotate sweep, parked: large) and two owner decisions (C46b, C46e class D).
 - [x] T9 C43: GNU Bi-CG converges far slower than the Pro (`force11` >600 s vs 13 s). Route: read-only investigator + omen, owner decisions 2026-10-10 (items 1-6), then one delegated writer. Done: SuperLU UAF, interface_convert UAF, recovery table, pardiso -> SuperLU, CSR operator, docs (C46b/C46e class A, C46c not scheduled).
-- [ ] T10 C48: interface tension-status record written from a double buffer (`interface_element()` ~1031) → stack garbage. Route: delegated writer.
+- [x] T10 C48: interface tension-status record written from a double buffer (`interface_element()` ~1031) → stack garbage. Route: delegated writer. Done `c06fa2d`.
 - [ ] T11 C49: build optimisation `-O1` vs `-O2` — find why -O1 was chosen, measure -O2 (results + time) on omen; owner decision before changing the default.
 - [ ] T12 C47: `force11` `mom1y_sig` 5.80223 vs Pro 5.76460 (0.65 %, model difference, solver excluded).
 Order (owner 2026-10-10): T10 → T11 → T5 → T12 → T6.
@@ -185,4 +185,29 @@ docs + SEGUIMIENTO + BACKLOG + DIVERGENCES.
   Engram mirror: pending (writer subagent).
   Next: C47 (force11 3D moment), C48 (cheap fix + A/B), C49 (-O2),
   foundation_consolidation_settlement (Bi-CG breakdown + band retry).
-
+- T10 (route: delegated writer, inline single file interface.cc + test +
+  build_safe registration + docs; clean scratch build from `git archive`,
+  Pro probes local (4 GB, <=4 jobs), corpus A/B on omen `f4t10_runs`).
+  Trigger evidence: one non-trivial code file (inline), corpus on omen.
+  Root cause: `rec_status` was a `double*` over `get_new_int()` and the
+  PUT passed `idum[1]` as the integer array (length n_intpnt): stack
+  garbage (`2 -total_linear 9 0 1406...`, changing between runs). Fix
+  `c06fa2d`: `long int` array of `-CLOSED`/`-OPENED`, PUT as integers,
+  `delete[]` for the five output buffers. Nobody reads the record back
+  (`print_only`; top.cc only sizes/allocates it).
+  RED/GREEN: new test-2026 `interface_tension_status1` (two quad6
+  interfaces, one closed, one open behind a gap): Pro `-closed` x3 /
+  `-opened` x3; old GNU `2 -total_linear 3` (RED); new = Pro, two runs
+  byte-identical (GREEN). Pro sweep, 20 `interface*` inputs of Pro
+  `test/other`: all Pro records `-closed`, GNU line-equal except
+  `interface_bar2_hex8` (element numbering after extrude+convert: new
+  BACKLOG C50 / DIVERGENCES row). Determinism: two GNU runs identical
+  on all 20 apart from `time_calculation`.
+  Evidence: build_safe TN_CHECK_ONLY 181 OK / 0 FALLO, rc 0 (177 + 4
+  new checks); build md5 25040c72 (= build/tochnog = omen f4t10_new).
+  Corpus A/B old e84e554c -> new: classes unchanged (Pro other 276,
+  sfnet 192, t26 112, vs 232); only this record changes (28 + 25 + 4
+  files), plus 2-thread round-off in bicg_csr_threads1 (6.7e-11).
+  Docs: user/dev group_interface, SEGUIMIENTO (row + checklist),
+  BACKLOG C48 resolved + C50, DIVERGENCES C48 row removed / C50 added.
+  Engram mirror: pending (writer subagent).

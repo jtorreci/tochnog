@@ -1528,7 +1528,7 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
   its own A/B.
 - **Severity**: **LOW** (status output only; stresses and strains are
   written correctly). **Effort**: **cheap**.
-- **Resolution** (F4 T10, commit F4 T10 fix commit): `long int` status array
+- **Resolution** (F4 T10, commit `c06fa2d`): `long int` status array
   (`-CLOSED` / `-OPENED`) PUT as integers, buffers released with
   `delete[]`. The record is print-only (nothing reads it back), so only
   that output changes. Values equal to the Professional 02-08-2026 on its
