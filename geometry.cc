@@ -34,7 +34,7 @@ void geometry( long int inod, double co[], long int geometry_entity[],
     ok=0, ldum=0, idum[1], geometry_set[DATA_ITEM_SIZE],
     project_inside=0;
   double xi=0., tolerance=0., tmp=0., tmp1=0., a=0., b=0.,
-    xyint[2], ellilength=0.,
+    xyint[MDIM]={0.,0.,0.}, ellilength=0.,
     l0=0., l1=0., l2=0., x0=0., x1=0., y0=0., y1=0., l=0.,
     radius=0., cylinder_length=0., x=0., y=0., z=0., eps_iso=EPS_ISO,
     side[MDIM], geometry_bounda_sine_x[2], geometry_bounda_sine_y[2],

@@ -84,8 +84,13 @@ void truss( long int element, long int element_group,
        ldum, VERSION_NORMAL, GET_IF_EXISTS );
     db( OPTIONS_INERTIA, 0, &options_inertia, ddum, 
       ldum, VERSION_NORMAL, GET_IF_EXISTS );
-    db( CONTROL_OPTIONS_INERTIA, icontrol, &options_inertia, ddum, 
-      ldum, VERSION_NORMAL, GET_IF_EXISTS );
+    {
+      // multi-valued record: GNU uses the first value (see general.cc)
+      long int inertia_switches[DATA_ITEM_SIZE];
+      if ( db( CONTROL_OPTIONS_INERTIA, icontrol, inertia_switches, ddum,
+          ldum, VERSION_NORMAL, GET_IF_EXISTS ) )
+        options_inertia = inertia_switches[0];
+    }
     force_gravity_calculate( force_gravity );
     // f=0 displacement-primary dynamics holds its mass and elastic force
     // in the reference configuration. The f=1 auxiliary reassembly is

@@ -15,9 +15,10 @@ void print_interface_stress( long int icontrol, long int task )
   long int element=0, max_element=0, inod=0, inol=0, max_node=0,
     length=0, ldum=0, swit=0, element_group=0, idum[1], *el=NULL,
     *nodes=NULL, in_geometry=0;
-  double ddum[1], xstart=0., ystart=0., xend=0., yend=0.,
+  double ddum[MDIM], xstart=0., ystart=0., xend=0., yend=0.,
     dx=0., dy=0., len=0., strain_normal=0., sign=0., sigt=0., kn=0.,
-    f_t=0., f_t2=0., ddum3[3], centroid[MDIM];
+    f_t=0., f_t2=0., ddum3[DATA_ITEM_SIZE], centroid[MDIM],
+    coordinates[4], values[DATA_ITEM_SIZE];
   char filename[MCHAR], str[MCHAR];
 
   swit = set_swit(-1,-1,"print_interface_stress");
@@ -43,8 +44,9 @@ void print_interface_stress( long int icontrol, long int task )
     if ( db_active_index( CONTROL_PRINT_INTERFACE_STRESS_2D_COORDINATES,
         icontrol, VERSION_NORMAL ) ) {
       db( CONTROL_PRINT_INTERFACE_STRESS_2D_COORDINATES, icontrol, idum,
-        ddum, length, VERSION_NORMAL, GET );
-      xstart = ddum[0]; ystart = ddum[1]; xend = ddum[2]; yend = ddum[3];
+        coordinates, length, VERSION_NORMAL, GET );
+      xstart = coordinates[0]; ystart = coordinates[1];
+      xend = coordinates[2]; yend = coordinates[3];
     }
     else {
       // default: cut through the whole mesh along x at y=0
@@ -112,12 +114,15 @@ void print_interface_stress( long int icontrol, long int task )
     // to kn * strain,normal when the history is not there yet.
     sign = 0.;
     {
+      // per-integration-point records (up to 4 values): the first one
       long int has_fn = db( ELEMENT_INTERFACE_FORCE_NORM, element, idum,
-        &sign, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+        values, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+      if ( has_fn ) sign = values[0];
       if ( !has_fn ) {
         strain_normal = 0.;
-        db( ELEMENT_INTERFACE_STRAIN_NORMAL, element, idum, &strain_normal,
-          ldum, VERSION_NORMAL, GET_IF_EXISTS );
+        if ( db( ELEMENT_INTERFACE_STRAIN_NORMAL, element, idum, values,
+            ldum, VERSION_NORMAL, GET_IF_EXISTS ) )
+          strain_normal = values[0];
         sign = kn * strain_normal;
       }
     }
@@ -125,11 +130,13 @@ void print_interface_stress( long int icontrol, long int task )
     // Fase 3): cumulative Mohr-Coulomb or elastic total. Same accumulated
     // semantics as sign -> consistent sigt. 3D: two tangential components.
     f_t = 0.; f_t2 = 0.;
-    db( ELEMENT_INTERFACE_FORCE_TANG, element, idum, &f_t, ldum,
-      VERSION_NORMAL, GET_IF_EXISTS );
-    if ( ndim==3 )
-      db( ELEMENT_INTERFACE_FORCE_TANG2, element, idum, &f_t2, ldum,
-        VERSION_NORMAL, GET_IF_EXISTS );
+    if ( db( ELEMENT_INTERFACE_FORCE_TANG, element, idum, values, ldum,
+        VERSION_NORMAL, GET_IF_EXISTS ) )
+      f_t = values[0];
+    if ( ndim==3 &&
+         db( ELEMENT_INTERFACE_FORCE_TANG2, element, idum, values, ldum,
+           VERSION_NORMAL, GET_IF_EXISTS ) )
+      f_t2 = values[0];
     sigt = f_t;
 
     if ( ndim==2 ) {

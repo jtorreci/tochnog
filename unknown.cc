@@ -61,7 +61,7 @@ void unknown_reset( void )
     control_unknown_reset_unknown[MUKNWN], control_unknown_reset_geometry[2], 
     dof_label[MUKNWN];
   double rdum=0., control_unknown_reset_value=0.,
-    ddum[1], normal[MDIM], *node_dof=NULL;
+    ddum[MDIM], normal[MDIM], *node_dof=NULL;
 
   db( ICONTROL, 0, &icontrol, ddum, ldum, VERSION_NORMAL, GET );
   if ( db_active_index( CONTROL_UNKNOWN_RESET_UNKNOWN, icontrol, VERSION_NORMAL ) ) {

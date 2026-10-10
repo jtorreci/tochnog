@@ -1543,9 +1543,10 @@ void strain_settlement_creep( long int element, long int gr, long int nnol,
     db( ELEMENT, element, el, ddum, length, VERSION_NORMAL, GET );
     nnol = length - 1;
     array_move( &el[1], nodes, nnol );
-    double ts=0.;
-    db( MESH_ACTIVATE_GRAVITY_TIME, 0, idum, ddum, ldum, VERSION_NORMAL, GET );
-    ts = ddum[0];
+    double ts=0., gravity_time[2];
+    db( MESH_ACTIVATE_GRAVITY_TIME, 0, idum, gravity_time, ldum,
+      VERSION_NORMAL, GET );
+    ts = gravity_time[0];
     // activation starts at ts for the lowest element; here we use ts as the
     // element activation time (single-element simplification)
     t_active = ts;

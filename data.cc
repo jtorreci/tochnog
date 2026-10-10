@@ -84,7 +84,7 @@ void control_reset_interface( long int icontrol )
 
 {
   long int idum[1], ldum = 0;
-  double ddum[1];
+  double ddum[MDIM]; // geometry() writes normal/projection[MDIM]
     long int ireset_i = 0, iel_i = 0, max_element_i = 0,
       inol_i = 0, length_el_i = 0, all_in_i = 0, in_geom_i = 0,
       geometry_i[2];
@@ -1338,7 +1338,7 @@ void data( long int task, double dtime, double time_current )
                   if ( dot<0.99 ) continue;
                 }
                 {
-                  double ddum3_r[3];
+                  double ddum3_r[DATA_ITEM_SIZE];
                   array_set( ddum3_r, 0., 3 );
                   db( GROUP_INTERFACE_MATERI_ELASTI_STIFFNESS, element_group_r,
                     idum, ddum3_r, ldum, VERSION_NORMAL, GET_IF_EXISTS );

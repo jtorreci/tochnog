@@ -943,7 +943,7 @@ static void msf_element_contribution_2d( long int element, long int name,
     nside=4, npol=0, nnol=0, node=0, axisym=-NO, iface=0,
     is_face_node=0, order[4], corners[4], itmp=0,
     icorner=0, ncorner=0, inod_pos=-1, *el=NULL, npoint_ip=0,
-    nper[2], ip=0, sri=0;
+    nper[3], ip=0, sri=0;
   double ddum[1], *coord=NULL, *node_dof=NULL, *edof=NULL,
     coords[MDIM*MNOL], sig_ip[3*MPOINT],
     sig_n[3*MNOL], iso[2][MPOINT], wrule[2][MPOINT],
@@ -1298,7 +1298,7 @@ static void msf_calculate_node_2d( long int inod, double result[] )
 {
   long int idum[1], ldum=0, ngroups=0, nvalues=0, i=0, ig=0,
     element=0, max_element=0, length_el=0, element_group=0, name=0,
-    average=-YES, outer=-NO, plot_switch[3], ncontrib=0, has_avg=0,
+    average=-YES, outer=-NO, plot_switch[DATA_ITEM_SIZE], ncontrib=0, has_avg=0,
     has_prim=0, got=0, is_avg=0, value=-NO, length=0, *groups=NULL,
     *el=NULL;
   double ddum[1], reference[DATA_ITEM_SIZE], node_values[9], sum[9];
@@ -1576,7 +1576,7 @@ static void msf_element_contribution_3d( long int element, long int name,
     centroid[MDIM], t_global[MDIM], side_nrm[6][MDIM],
     face_t[2][MDIM], face_l[2][MDIM], face_len[2], face_nor[2],
     face_she[2], face_m1[2], face_m2[2], max_dist=0., d=0., nor=0.,
-    she=0., mom1=0., mom2=0., tol=0., dir[MDIM], eps=1.e-8,
+    she=0., mom1=0., mom2=0., tol=0., dir[DATA_ITEM_SIZE], eps=1.e-8,
     e1[MDIM], e2[MDIM], mid[MDIM], s1=0., s2=0., len1=0., len2=0.,
     cross=0., sig_sum=0.;
   long int side_nodes[6][9], face_nodes[2][9], corners[6][4];
@@ -2130,7 +2130,7 @@ static void msf_calculate_node_3d( long int inod, double result[] )
 {
   long int idum[1], ldum=0, ngroups=0, nvalues=0, i=0, ig=0,
     element=0, max_element=0, length_el=0, element_group=0, name=0,
-    average=-YES, outer=-NO, plot_switch[4], *thick_switch=NULL,
+    average=-YES, outer=-NO, plot_switch[DATA_ITEM_SIZE], *thick_switch=NULL,
     ncontrib=0, has_avg=0, has_prim=0, got=0, is_avg=0, value=-NO,
     length=0, *groups=NULL, *el=NULL;
   double ddum[1], reference[DATA_ITEM_SIZE], node_values[16], sum[16];

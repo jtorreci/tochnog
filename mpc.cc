@@ -704,7 +704,7 @@ static void mpc_element_group_generate( void )
 
 {
   long int ldum=0, idum[1], length=0, max_meg=0, ieg=0, i=0;
-  double ddum[1];
+  double ddum[MDIM]; // geometry() writes normal/projection[MDIM]
 
   db_max_index( MPC_ELEMENT_GROUP, max_meg, VERSION_NORMAL, GET );
   if ( max_meg<0 ) return;

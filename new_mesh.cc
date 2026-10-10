@@ -47,8 +47,12 @@ void new_mesh( void )
     db( ICONTROL, 0, &icontrol, ddum, ldum, VERSION_NORMAL, GET );
     if ( db_active_index( CONTROL_MESH_NEW_MESH_REGION, 
         icontrol, VERSION_NORMAL ) )
-      db( CONTROL_MESH_NEW_MESH_REGION, icontrol, &control_mesh_new_mesh_region, 
+    {
+      long int region[6+MUKNWN];
+      db( CONTROL_MESH_NEW_MESH_REGION, icontrol, region,
         ddum, ldum, VERSION_NORMAL, GET );
+      control_mesh_new_mesh_region = region[0];
+    }
     else
       control_mesh_new_mesh_region = -ALL;
 
