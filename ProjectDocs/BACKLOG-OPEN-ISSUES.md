@@ -1527,7 +1527,7 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
   only at z0 and z1 (15600 nodes vs Professional 12000; planes
   2400/3600/3600/3600/2400 vs 2400 each; the ring 7.9x too soft). The
   section moment is equilibrium-based, so it was only 0.65 % off.
-- **Fix** (F4 T12, `T12-HASH`): plane q (1..2nq-1) of source node inod is
+- **Fix** (F4 T12, `24301c8`): plane q (1..2nq-1) of source node inod is
   node `next_node + (q-1)*nbase + inod`, created once and shared. After:
   `force11` rc 0, `mom1y_sig` 5.764609 (Professional 5.764612), every
   nodal displacement = Professional to 5.5e-7 (relative to the field
