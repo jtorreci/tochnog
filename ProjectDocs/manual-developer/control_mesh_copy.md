@@ -75,5 +75,6 @@ free reported by the F4 T9 ASan run). Results unchanged (all 297 suite
 tests and the Professional `quad8`, `hex20`). The same pattern remains in
 `interface.cc` `interface_convert()` (lines ~1450 / ~1631; ASan on the
 Professional `interface_bar2_hex8`, `interface_bar3_quad8`,
-`interface_quad8_hex20`), outside F4 T8.
+`interface_quad8_hex20`), outside F4 T8. Fixed in F4 T9 (2026-10-10, `interface_copy_node_dbl`, see
+`group_interface.md`).
 

@@ -1199,6 +1199,25 @@ void interface_element( long int element, long int name,
 //   nodes, Lobatto weights 1/6,4/6,1/6).
 //
 // See ProjectDocs/DESIGN-INTERFACES.md for the full algorithm.
+// Copy the double node item idat of node from into node to through a local
+// buffer: a PUT beyond the allocated range of the item reallocates its data
+// array, so passing the db_dbl() pointer of the source straight to the PUT
+// reads freed memory (heap-use-after-free, ASan, F4 T9; same fix as
+// mesh_copy_node_item in mesh.cc).
+static void interface_copy_node_dbl( long int idat, long int from,
+  long int to )
+
+{
+  long int idum[1];
+
+  long int len = db_len( idat, from, VERSION_NORMAL );
+  if ( len<1 ) return;
+  double *buf = get_new_dbl( len );
+  array_move( db_dbl( idat, from, VERSION_NORMAL ), buf, len );
+  db( idat, to, idum, buf, len, VERSION_NORMAL, PUT );
+  delete[] buf;
+}
+
 void interface_convert( long int icontrol )
 
 {
@@ -1391,15 +1410,8 @@ void interface_convert( long int icontrol )
         db( NODE, cn, idum, centre, ndim, VERSION_NORMAL, PUT );
         db( NODE_START_REFINED, cn, idum, centre, ndim,
           VERSION_NORMAL, PUT );
-        double *ndof = db_dbl( NODE_DOF, q8[1], VERSION_NORMAL );
-        long int ln = db_len( NODE_DOF, q8[1], VERSION_NORMAL );
-        db( NODE_DOF, cn, idum, ndof, ln, VERSION_NORMAL, PUT );
-        double *ndof_sr = db_dbl( NODE_DOF_START_REFINED, q8[1],
-          VERSION_NORMAL );
-        long int ln_sr = db_len( NODE_DOF_START_REFINED, q8[1],
-          VERSION_NORMAL );
-        db( NODE_DOF_START_REFINED, cn, idum, ndof_sr, ln_sr,
-          VERSION_NORMAL, PUT );
+        interface_copy_node_dbl( NODE_DOF, q8[1], cn );
+        interface_copy_node_dbl( NODE_DOF_START_REFINED, q8[1], cn );
         length = 1;
         db( NODE_MACRO_GENERATE, cn, &icontrol, ddum, length,
           VERSION_NORMAL, PUT );
@@ -1445,15 +1457,8 @@ void interface_convert( long int icontrol )
         for ( i=0; i<3; i++ ) coord[i] += shift*normal[i];
         db( NODE_START_REFINED, dst, idum, coord, ldum,
           VERSION_NORMAL, PUT );
-        double *ndof = db_dbl( NODE_DOF, src, VERSION_NORMAL );
-        long int ln = db_len( NODE_DOF, src, VERSION_NORMAL );
-        db( NODE_DOF, dst, idum, ndof, ln, VERSION_NORMAL, PUT );
-        double *ndof_sr = db_dbl( NODE_DOF_START_REFINED, src,
-          VERSION_NORMAL );
-        long int ln_sr = db_len( NODE_DOF_START_REFINED, src,
-          VERSION_NORMAL );
-        db( NODE_DOF_START_REFINED, dst, idum, ndof_sr, ln_sr,
-          VERSION_NORMAL, PUT );
+        interface_copy_node_dbl( NODE_DOF, src, dst );
+        interface_copy_node_dbl( NODE_DOF_START_REFINED, src, dst );
         length = 1;
         db( NODE_MACRO_GENERATE, dst, &icontrol, ddum, length,
           VERSION_NORMAL, PUT );
@@ -1626,13 +1631,8 @@ void interface_convert( long int icontrol )
         db( NODE, dst, idum, coord, ldum, VERSION_NORMAL, PUT );
         db( NODE_START_REFINED, c, idum, coord, ldum, VERSION_NORMAL, GET );
         db( NODE_START_REFINED, dst, idum, coord, ldum, VERSION_NORMAL, PUT );
-        double *ndof = db_dbl( NODE_DOF, c, VERSION_NORMAL );
-        long int ln = db_len( NODE_DOF, c, VERSION_NORMAL );
-        db( NODE_DOF, dst, idum, ndof, ln, VERSION_NORMAL, PUT );
-        double *ndof_sr = db_dbl( NODE_DOF_START_REFINED, c, VERSION_NORMAL );
-        long int ln_sr = db_len( NODE_DOF_START_REFINED, c, VERSION_NORMAL );
-        db( NODE_DOF_START_REFINED, dst, idum, ndof_sr, ln_sr,
-          VERSION_NORMAL, PUT );
+        interface_copy_node_dbl( NODE_DOF, c, dst );
+        interface_copy_node_dbl( NODE_DOF_START_REFINED, c, dst );
         length = 1;
         db( NODE_MACRO_GENERATE, dst, &icontrol, ddum, length,
           VERSION_NORMAL, PUT );
