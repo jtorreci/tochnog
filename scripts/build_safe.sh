@@ -1502,6 +1502,11 @@ else check_fail "mesh_switch_pair1" "node 3 not at 0 2"; fi
 #   increment (mesh.cc mesh_activate_gravity_factor, materi.cc). Targets =
 #   Professional values; old GNU: full gravity from the first step.
 run_ok "$T2026" mesh_activate_gravity_time1
+# F4 T9 / C43 (2026-10-10): -matrix_superlu route (so_suplu.c). The old
+#   code read L and U (dQuerySpace) after destroying them and free()d the
+#   new[] matrix arrays (ASan alloc-dealloc-mismatch). Old GNU: segmentation
+#   fault (rc 139) after the first solve. Analytic plane-strain targets.
+run_ok "$T2026" superlu_solve1
 
 # ---------------------------------------------------------------------
 # K03 (2026-10-06): default convection_apply -no (manual Professional

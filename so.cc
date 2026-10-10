@@ -1195,6 +1195,14 @@ void solve( long int task )
       succesful = solve_superlu( superlu_A, superlu_asub, superlu_xa, 
         superlu_nnz, solve_b, solve_nlocal, nthread );
 #endif
+      // the compressed-column arrays are owned here (new[]); SuperLU only
+      // destroys its SuperMatrix store (so_suplu.c, F4 T9)
+      delete[] superlu_A;
+      delete[] superlu_asub;
+      delete[] superlu_xa;
+      superlu_A = NULL;
+      superlu_asub = NULL;
+      superlu_xa = NULL;
     }
     else
       succesful = 1;

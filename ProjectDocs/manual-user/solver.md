@@ -21,7 +21,9 @@ When using the bicg solver, consider also setting
 `solver_matrix_symmetric -yes` to speed up the solve.
 
 `-matrix_superlu` runs the direct sparse SuperLU LU factorization
-(2026-09-04: the route was segfaulting; fixed in `c2cbaf7`). It is the
+(2026-09-04: the route was segfaulting; fixed in `c2cbaf7`; 2026-10-10,
+F4 T9: a second crash after the first solve of larger models - a read of
+the factors after they were released - is fixed, test `superlu_solve1`). It is the
 direct-solver alternative to `-matrix_pardiso` (PARDISO itself is not
 compiled in the GNU - that type falls back to the iterative Bi-CG with
 an automatic retry with the direct band LU when the Bi-CG fails).

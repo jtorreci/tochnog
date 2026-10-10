@@ -118,3 +118,60 @@ Additional changes:
 - Blast radius (114 solver/interface tests): 59 PASS, unchanged vs
   HEAD; force16/force17/mpc8/mpc9 segfault at HEAD as well
   (pre-existing, MPC + stress-dof family, unrelated to this change).
+
+## 2026-10-10: SuperLU use-after-free and new[]/free mismatch (F4 T9)
+
+`so_suplu.c` `solve_superlu()` + `so.cc` `solve()`.
+
+1. **Use-after-free.** After `dgssv` the routine destroyed `L` and `U`
+   (`Destroy_SuperNode_Matrix`, `Destroy_CompCol_Matrix`) and only then
+   called `dQuerySpace(&L, &U, ...)` for the memory report, which reads
+   the stores of both matrices. On a model whose factor arrays are
+   large enough to be returned to the system the read crashes: the
+   Professional `force11` with `-matrix_superlu` and the test
+   `superlu_solve1` (41 x 41 quad4) stopped with a segmentation fault
+   (rc 139) after the first solve. The report now runs before the
+   destroy calls.
+2. **`L`/`U` destroyed when they do not exist.** `dgstrf` creates `L`
+   and `U` only when the factorization completes (`info == 0`, or
+   `0 < info <= n`: exactly singular `U`). On an argument error or a
+   memory failure (`info > n`; under a 4 GB cap the value can even
+   overflow to a negative number, measured on the Professional `large1`)
+   it returns before creating them, and destroying the uninitialised
+   stores crashed. `L.Store`/`U.Store` are set to `NULL` before `dgssv`
+   and the report/destroy runs only when both were created.
+3. **`new[]`/`free()` mismatch.** `Destroy_CompCol_Matrix(&A)` freed the
+   value, row index and column pointer arrays of `A` with `free()`, but
+   `so.cc` allocates them with `new[]` (`get_new_dbl`,
+   `get_new_int_short`). Only the SuperMatrix store of `A` is SuperLU's
+   now (`Destroy_SuperMatrix_Store`); `so.cc` releases the three arrays
+   with `delete[]` after the solve.
+
+No result change: the factorization and the solution are the same calls.
+
+### Verification
+
+- Test `superlu_solve1` (test-2026, registered in `build_safe.sh`): old
+  GNU rc 139 on 3 of 3 runs; new rc 0, targets met (analytic plane
+  strain: sigxx 1041.6667, disx 0.04, disy -0.01).
+- ASan build (`-fsanitize=address`): old `alloc-dealloc-mismatch` in
+  `solve_superlu` (`Destroy_CompCol_Matrix`) on `superlu_solve1` and on
+  the sfnet `examp9`; new: ASan clean on both. (The `dQuerySpace` read is
+  inside the uninstrumented SuperLU library, so ASan cannot flag it; the
+  segmentation fault above is its evidence.)
+- Professional `force11` with `-matrix_superlu` (4 GB cap): old rc 139
+  after 9 s; new runs in 10 s (0.41 GB). Its `mom1y_sig` target misses
+  (5.80223 vs target 5.76474, Professional 5.76460; BACKLOG C47).
+- `build_safe.sh` (items 1, 2 and the recovery memo of F4 T9 together):
+  171 OK / 0 FALLO, every suite `.dbs` identical to the old build.
+
+### Note: SuperLU headers
+
+The build links SuperLU 6.0.1 (`external-downloads/superlu-6.0.1/lib`)
+but compiles `so_suplu.c` against the SuperLU 4.1 headers in the
+repository root (`slu_ddefs.h`, `slu_util.h`, `supermatrix.h`; the 6.0.1
+`SRC` directory has no headers). The structures used by `dgssv`
+(`superlu_options_t`, `SuperLUStat_t`, `mem_usage_t`, `SuperMatrix`) have
+the same layout in both versions, so the `dgssv` call is sound; calling
+6.0.1 routines whose signature changed (`dgstrf`, `dgssvx` gained a
+`GlobalLU_t *` argument) would not be.
