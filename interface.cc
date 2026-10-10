@@ -989,7 +989,7 @@ void interface_element( long int element, long int name,
     long int i_intpnt = 0, iv = 0;
     double *rec_stress = get_new_dbl( n_intpnt * nval );
     double *rec_strain = get_new_dbl( n_intpnt * nval );
-    double *rec_status = (double*)get_new_int( n_intpnt );
+    long int *rec_status = get_new_int( n_intpnt );
     double *avg_stress = get_new_dbl( nval );
     double *avg_strain = get_new_dbl( nval );
     array_set( rec_stress, 0., n_intpnt * nval );
@@ -1009,8 +1009,10 @@ void interface_element( long int element, long int name,
         rec_strain[i_intpnt*nval+2] =
           array_inproduct( &du_ip[i_intpnt*MDIM], tangent2, ndim ) / 2.;
       }
+      // tension status per integration point, as the Professional prints
+      // it (-closed / -opened; an INTEGER record holding the negative enum)
       rec_status[i_intpnt] =
-        ( strain_eff_ip[i_intpnt] <= gap ) ? CLOSED : OPENED;
+        ( strain_eff_ip[i_intpnt] <= gap ) ? -CLOSED : -OPENED;
       for ( iv=0; iv<nval; iv++ ) {
         avg_stress[iv] += rec_stress[i_intpnt*nval+iv] / n_intpnt;
         avg_strain[iv] += rec_strain[i_intpnt*nval+iv] / n_intpnt;
@@ -1027,11 +1029,15 @@ void interface_element( long int element, long int name,
       ldum, VERSION_NORMAL, PUT );
     db( ELEMENT_INTERFACE_INTPNT_STRAIN, element, idum, rec_strain,
       ldum, VERSION_NEW, PUT );
-    ldum = n_intpnt;   // tension_status: one value per integration point
-    db( ELEMENT_INTERFACE_INTPNT_MATERI_TENSION_STATUS, element, idum,
-      rec_status, ldum, VERSION_NORMAL, PUT );
-    db( ELEMENT_INTERFACE_INTPNT_MATERI_TENSION_STATUS, element, idum,
-      rec_status, ldum, VERSION_NEW, PUT );
+    // tension_status: one INTEGER value per integration point. It is PUT
+    // from the long int array (C48, F4 T10: the old code filled a double
+    // buffer and PUT idum[1] with length n_intpnt, so the stored statuses
+    // were read from the stack and changed from run to run).
+    ldum = n_intpnt;
+    db( ELEMENT_INTERFACE_INTPNT_MATERI_TENSION_STATUS, element, rec_status,
+      ddum, ldum, VERSION_NORMAL, PUT );
+    db( ELEMENT_INTERFACE_INTPNT_MATERI_TENSION_STATUS, element, rec_status,
+      ddum, ldum, VERSION_NEW, PUT );
     ldum = nval;
     db( ELEMENT_INTERFACE_STRESS_AVERAGE, element, idum, avg_stress,
       ldum, VERSION_NORMAL, PUT );
@@ -1041,8 +1047,8 @@ void interface_element( long int element, long int name,
       ldum, VERSION_NORMAL, PUT );
     db( ELEMENT_INTERFACE_STRAIN_AVERAGE, element, idum, avg_strain,
       ldum, VERSION_NEW, PUT );
-    free( rec_stress ); free( rec_strain ); free( rec_status );
-    free( avg_stress ); free( avg_strain );
+    delete[] rec_stress; delete[] rec_strain; delete[] rec_status;
+    delete[] avg_stress; delete[] avg_strain;
   }
 
   // release per-IP work arrays (w_ip is kept for the groundflow /

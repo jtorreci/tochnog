@@ -529,3 +529,32 @@ INTEGER record, but it is written from a `double` buffer allocated with
 the integer array with length `n_intpnt` (stack-buffer-overflow read).
 The tension status values written to the database are therefore
 garbage. Not fixed in F4 T9 (it changes that output): BACKLOG C48.
+
+## 2026-10-10: tension status written as integers (F4 T10, C48)
+
+`interface.cc` `interface_element()`, output-records block: the status
+array is now a `long int` buffer (`get_new_int(n_intpnt)`), filled with
+`-CLOSED` / `-OPENED` (negative enum, so the printer writes `-closed` /
+`-opened` like the Professional) and PUT as the integer array
+(`db(..., rec_status, ddum, n_intpnt, ..., PUT)`) for VERSION_NORMAL and
+VERSION_NEW. The five output buffers come from `get_new_dbl` /
+`get_new_int` (`new[]`) and are now released with `delete[]` instead of
+`free()`.
+
+Nothing reads the record back: `database.cc` marks it `print_only`, the
+only other reference is the length/allocation set-up in `top.cc`
+(`db_data_length_put`, `db_allocate`). Other outputs and results are
+therefore unchanged (corpus A/B: only this record changes).
+
+Verification: Professional 02-08-2026 sweep over the 20 `interface*`
+inputs of its `test/other` corpus: every record the Professional writes is
+`-closed`; the GNU now prints the same line for the same element in all
+of them except `interface_bar2_hex8`, where the element numbering after
+`control_mesh_extrude` + `control_mesh_convert` differs (pre-existing,
+BACKLOG C50). The `-opened` value was checked on the dedicated input
+`interface_tension_status1` (Professional: `-closed` x3 / `-opened` x3).
+Two GNU runs now give byte-identical `.dbs` files (apart from
+`time_calculation`). Test: `validation-suite/test-2026/
+interface_tension_status1.dat` in `build_safe.sh` (status lines + two-run
+`.dbs` identity; old GNU printed `2 -total_linear 3`).
+

@@ -1534,6 +1534,23 @@ run_ok "$T2026" bicg_csr_threads1
 if grep -aq "assembled CSR operator" /tmp/bicg_csr_threads1_safe.out 2>/dev/null;
 then check_ok "bicg_csr_threads1 (assembled CSR operator, 2 threads)";
 else check_fail "bicg_csr_threads1" "no assembled CSR operator"; fi
+# F4 T10 / C48 (2026-10-10): element_interface_intpnt_materi_tension_status
+#   is an INTEGER record; interface.cc interface_element() PUT it from the
+#   wrong buffer (idum[1] with length n_intpnt), so the statuses were stack
+#   garbage (old GNU: "2 -total_linear 3"). Values = Professional
+#   02-08-2026 on this input (-closed x3 / -opened x3); two runs must give
+#   byte-identical .dbs files.
+run_ok "$T2026" interface_tension_status1
+ITS_DBS="$T2026/interface_tension_status1.dbs"
+if grep -aqE '^element_interface_intpnt_materi_tension_status +1 +-closed -closed -closed *$' "$ITS_DBS" 2>/dev/null &&
+   grep -aqE '^element_interface_intpnt_materi_tension_status +2 +-opened -opened -opened *$' "$ITS_DBS" 2>/dev/null;
+then check_ok "interface_tension_status1 (-closed / -opened per integration point)";
+else check_fail "interface_tension_status1" "wrong element_interface_intpnt_materi_tension_status"; fi
+cp "$ITS_DBS" /tmp/interface_tension_status1_run1.dbs 2>/dev/null
+run_ok "$T2026" interface_tension_status1
+if cmp -s "$ITS_DBS" /tmp/interface_tension_status1_run1.dbs;
+then check_ok "interface_tension_status1 (two runs byte-identical)";
+else check_fail "interface_tension_status1" "two runs give different .dbs"; fi
 
 # ---------------------------------------------------------------------
 # K03 (2026-10-06): default convection_apply -no (manual Professional

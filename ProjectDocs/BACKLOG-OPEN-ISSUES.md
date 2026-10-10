@@ -1511,7 +1511,7 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
   `calcul_force.cc`).
 - **Severity**: **LOW**. **Effort**: **medium**.
 
-### C48. Interface tension status written from the wrong buffer (F4 T9, 2026-10-10)
+### C48. Interface tension status written from the wrong buffer (F4 T9, 2026-10-10) — RESOLVED 2026-10-10 (F4 T10)
 
 - **Found by**: the F4 T9 ASan runs on the Professional
   `interface_bar2_hex8`, `interface_bar3_quad8`, `interface_quad8_hex20`
@@ -1528,6 +1528,26 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
   its own A/B.
 - **Severity**: **LOW** (status output only; stresses and strains are
   written correctly). **Effort**: **cheap**.
+- **Resolution** (F4 T10, commit F4 T10 fix commit): `long int` status array
+  (`-CLOSED` / `-OPENED`) PUT as integers, buffers released with
+  `delete[]`. The record is print-only (nothing reads it back), so only
+  that output changes. Values equal to the Professional 02-08-2026 on its
+  20 `interface*` inputs (all `-closed`; `interface_bar2_hex8` differs by
+  element numbering, see C50) and on the new
+  `test-2026/interface_tension_status1` (`-opened` case). Two GNU runs give
+  byte-identical `.dbs`.
+
+### C50. `interface_bar2_hex8`: extruded + converted interface mesh differs from the Professional (F4 T10, 2026-10-10)
+
+- **Found by**: the F4 T10 tension-status sweep (Professional `test/other`).
+- **Symptom**: after `control_mesh_extrude` (`_n 2 2`) and
+  `control_mesh_convert` of a 3D `-bar2` interface the GNU final mesh holds
+  element 3 as a `-quad4` (with interface output records of 2 integration
+  points) and `-hex8` elements 5-10 with interfaces 9 and 10; the
+  Professional has `-hex8` elements 1-6 with interfaces 3 and 6. Both end
+  rc 0 (target met).
+- **Root cause**: not investigated.
+- **Severity**: **LOW**. **Effort**: **medium** (unknown).
 
 ### C49. The build uses `-O1` (F4 T9, 2026-10-10)
 
@@ -1599,10 +1619,10 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
 | C45 | — | `control_mesh_copy`/`_mirror` after the first time step: `node_dof_start_refined` error — resolved 2026-10-10 (F4 T8 `0ca144c`) | LOW | cheap |
 | C46 | Pro `other` | `step_start()` mesh residuals — F4 T8: order, move once, switch pair, `mesh_activate1` resolved; rotate sweep parked, not scheduled (C46c, large); move/switch `node_start_refined` deliberate divergences (A, 2026-10-10) | LOW | large (C46c) |
 | C47 | Pro `other` | `force11` 3D section moment `mom1y_sig` 5.80223 vs Pro 5.76460 (target miss, visible since F4 T9) | LOW | medium |
-| C48 | — | interface tension status record written from the wrong buffer (ASan, F4 T9) | LOW | cheap |
 | C49 | — | build at `-O1`: find why before moving to `-O2` (~25 % faster) | LOW | cheap/medium |
+| C50 | Pro other | `interface_bar2_hex8` extruded/converted interface mesh numbering | LOW | medium |
 
-Thirty-seven items remain open: seven MEDIUM and thirty LOW (C23 and C24 resolved 2026-10-05; C25, C26, C27 and B10 added; F1 T3 / K04 2026-10-06 added B11, C28-C32; F1 T6 resolved C28, added and resolved B12; F2 T1 added C36; F2 T2 added C37, C38, C39; F2 T3 resolved C5 and added C40; F3 T2 resolved C8, C18, C19, C20 and added B13, C41; F4 T2 fixed the C41 tie and left a residual; F4 T3 resolved C33; F4 T4 closed C32, added C42 and resolved C31; F4 T7-T8 added C43-C46; F4 T9 resolved the C43 solver speed, decided C46b/C46e and added C47, C48, C49). No open issue is CRITICAL or
+Thirty-seven items remain open: seven MEDIUM and thirty LOW (C23 and C24 resolved 2026-10-05; C25, C26, C27 and B10 added; F1 T3 / K04 2026-10-06 added B11, C28-C32; F1 T6 resolved C28, added and resolved B12; F2 T1 added C36; F2 T2 added C37, C38, C39; F2 T3 resolved C5 and added C40; F3 T2 resolved C8, C18, C19, C20 and added B13, C41; F4 T2 fixed the C41 tie and left a residual; F4 T3 resolved C33; F4 T4 closed C32, added C42 and resolved C31; F4 T7-T8 added C43-C46; F4 T9 resolved the C43 solver speed, decided C46b/C46e and added C47, C48, C49; F4 T10 resolved C48 and added C50). No open issue is CRITICAL or
 HIGH. The validation-suite corpus has no open failure — its 233 real tests
 pass (`materi_direct_mc` input corrected, C17 resolved). Every remaining failure is a stale or malformed test, an out-of-scope model
 or infrastructure limit, a narrow post-processing divergence, a corpus-coverage

@@ -188,6 +188,28 @@ improved 50x (sigxx 1199.49 → 1200.01) but its ±1e-3-absolute targets on
 a kn=1e11 penalty system need a direct solver (the GNU default Bi-CG
 precision is not enough; the SuperLU path segfaults — pending).
 
+## Output: tension status per integration point (F4 T10, 2026-10-10)
+
+`element_interface_intpnt_materi_tension_status` holds, for every interface
+element, one status per integration point (nodes per side: 1 for a 2D
+linear interface, 2 for quad4, 3 for quad6/prism6, 4 for hex8, 9 for
+hex18): `-closed` when the accumulated normal strain is at or below the
+gap, `-opened` otherwise. It is an output record (written to the `.dbs`
+and printable with `control_print`), never read back by the calculation.
+
+Minimal example (`validation-suite/test-2026/interface_tension_status1.dat`):
+two `-quad6` interfaces pushed shut by `vely = -1e-3`; the one with
+`group_interface_gap -0.1` stays open.
+
+```
+element_interface_intpnt_materi_tension_status  1  -closed -closed -closed
+element_interface_intpnt_materi_tension_status  2  -opened -opened -opened
+```
+
+These are the Professional 02-08-2026 values on the same input. Before
+F4 T10 (BACKLOG C48) the GNU wrote this record from the wrong buffer and
+the printed statuses were garbage.
+
 ## Related
 
 - `group_interface_materi_elasti_stiffness index kn kt,first kt,second` —
