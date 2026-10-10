@@ -249,6 +249,32 @@ void mesh_move( double control_mesh_move[], long int length )
   mesh_has_changed( VERSION_NORMAL );
 }
 
+// Copy one node-class item of node from into node to through a local
+// buffer: a PUT beyond the allocated range reallocates the data array, so
+// passing the db_dbl()/db_int() pointer of the source straight to the PUT
+// reads freed memory (use-after-free, found with ASan in F4 T8/T9).
+static void mesh_copy_node_item( long int idat, long int from, long int to,
+  long int len )
+
+{
+  long int idum[1];
+  double ddum[1];
+
+  if ( len<1 ) return;
+  if ( db_type(idat)==DOUBLE_PRECISION ) {
+    double *buf = get_new_dbl( len );
+    array_move( db_dbl( idat, from, VERSION_NORMAL ), buf, len );
+    db( idat, to, idum, buf, len, VERSION_NORMAL, PUT );
+    delete[] buf;
+  }
+  else {
+    long int *buf = get_new_int( len );
+    array_move( db_int( idat, from, VERSION_NORMAL ), buf, len );
+    db( idat, to, buf, ddum, len, VERSION_NORMAL, PUT );
+    delete[] buf;
+  }
+}
+
 // Duplicate the node-class data of node inod into node new_node (all
 // items except NODE and NODE_START_REFINED, which the caller writes with
 // its own coordinate transformation). renumber() and create_node() read
@@ -259,27 +285,12 @@ void mesh_move( double control_mesh_move[], long int length )
 static void mesh_duplicate_node_data( long int inod, long int new_node )
 
 {
-  long int idum[1];
-  double ddum[1];
-
   for ( long int idat=0; idat<MDAT; idat++ ) {
     if ( idat==NODE || idat==NODE_START_REFINED ) continue;
     if ( db_data_class(idat)!=NODE ) continue;
     if ( !db_active_index( idat, inod, VERSION_NORMAL ) ) continue;
-    long int len = db_len( idat, inod, VERSION_NORMAL );
-    if ( len<1 ) continue;
-    if ( db_type(idat)==DOUBLE_PRECISION ) {
-      double *buf = get_new_dbl( len );
-      array_move( db_dbl( idat, inod, VERSION_NORMAL ), buf, len );
-      db( idat, new_node, idum, buf, len, VERSION_NORMAL, PUT );
-      delete[] buf;
-    }
-    else {
-      long int *buf = get_new_int( len );
-      array_move( db_int( idat, inod, VERSION_NORMAL ), buf, len );
-      db( idat, new_node, buf, ddum, len, VERSION_NORMAL, PUT );
-      delete[] buf;
-    }
+    mesh_copy_node_item( idat, inod, new_node,
+      db_len( idat, inod, VERSION_NORMAL ) );
   }
 }
 
@@ -620,14 +631,7 @@ void mesh_convert_quad8( void )
            db_data_class(idat)==NODE &&
            db_active_index( idat, el[1], VERSION_NORMAL ) ) {
         long int ndata_len = db_len( idat, el[1], VERSION_NORMAL );
-        if ( db_type(idat)==DOUBLE_PRECISION ) {
-          double *dold = db_dbl( idat, el[1], VERSION_NORMAL );
-          db( idat, max_node, idum, dold, ndata_len, VERSION_NORMAL, PUT );
-        }
-        else {
-          long int *iold = db_int( idat, el[1], VERSION_NORMAL );
-          db( idat, max_node, iold, ddum, ndata_len, VERSION_NORMAL, PUT );
-        }
+        mesh_copy_node_item( idat, el[1], max_node, ndata_len );
       }
     }
     // rewrite the connectivity in the GNU quad9 tensor ordering
@@ -824,14 +828,7 @@ void mesh_convert_hex20( void )
                db_data_class(idat)==NODE &&
                db_active_index( idat, el[1], VERSION_NORMAL ) ) {
             long int ndata_len = db_len( idat, el[1], VERSION_NORMAL );
-            if ( db_type(idat)==DOUBLE_PRECISION ) {
-              double *dold = db_dbl( idat, el[1], VERSION_NORMAL );
-              db( idat, found, idum, dold, ndata_len, VERSION_NORMAL, PUT );
-            }
-            else {
-              long int *iold = db_int( idat, el[1], VERSION_NORMAL );
-              db( idat, found, iold, ddum, ndata_len, VERSION_NORMAL, PUT );
-            }
+            mesh_copy_node_item( idat, el[1], found, ndata_len );
           }
         }
       }
@@ -887,14 +884,7 @@ void mesh_extrude( double z_layer[], long int n_layer, long int quad9_layers )
           if ( idat!=NODE && db_data_class(idat)==NODE &&
                db_active_index( idat, inod, VERSION_NORMAL ) ) {
             long int ndata_len = db_len( idat, inod, VERSION_NORMAL );
-            if ( db_type(idat)==DOUBLE_PRECISION ) {
-              double *dold = db_dbl( idat, inod, VERSION_NORMAL );
-              db( idat, new_node, idum, dold, ndata_len, VERSION_NORMAL, PUT );
-            }
-            else {
-              long int *iold = db_int( idat, inod, VERSION_NORMAL );
-              db( idat, new_node, iold, ddum, ndata_len, VERSION_NORMAL, PUT );
-            }
+            mesh_copy_node_item( idat, inod, new_node, ndata_len );
           }
         }
         // the extruded coordinate also applies to node_start_refined
@@ -999,18 +989,7 @@ void mesh_extrude( double z_layer[], long int n_layer, long int quad9_layers )
                        VERSION_NORMAL ) ) {
                   long int ndata_len = db_len( idat, nodes[inol],
                     VERSION_NORMAL );
-                  if ( db_type(idat)==DOUBLE_PRECISION ) {
-                    double *dold = db_dbl( idat, nodes[inol],
-                      VERSION_NORMAL );
-                    db( idat, next_node, idum, dold, ndata_len,
-                      VERSION_NORMAL, PUT );
-                  }
-                  else {
-                    long int *iold = db_int( idat, nodes[inol],
-                      VERSION_NORMAL );
-                    db( idat, next_node, iold, ddum, ndata_len,
-                      VERSION_NORMAL, PUT );
-                  }
+                  mesh_copy_node_item( idat, nodes[inol], next_node, ndata_len );
                 }
               }
               next_node++;
@@ -1030,18 +1009,7 @@ void mesh_extrude( double z_layer[], long int n_layer, long int quad9_layers )
                      VERSION_NORMAL ) ) {
                 long int ndata_len = db_len( idat, nodes[inol],
                   VERSION_NORMAL );
-                if ( db_type(idat)==DOUBLE_PRECISION ) {
-                  double *dold = db_dbl( idat, nodes[inol],
-                    VERSION_NORMAL );
-                  db( idat, next_node, idum, dold, ndata_len,
-                    VERSION_NORMAL, PUT );
-                }
-                else {
-                  long int *iold = db_int( idat, nodes[inol],
-                    VERSION_NORMAL );
-                  db( idat, next_node, iold, ddum, ndata_len,
-                    VERSION_NORMAL, PUT );
-                }
+                mesh_copy_node_item( idat, nodes[inol], next_node, ndata_len );
               }
             }
             next_node++;
