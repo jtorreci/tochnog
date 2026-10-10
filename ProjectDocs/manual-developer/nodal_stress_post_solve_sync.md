@@ -1,5 +1,11 @@
 # nodal_stress_post_solve_sync
 
+> **Since 2026-10-10 (F4 T5)** this stress-only sync runs only when the
+> post-solve material state pass is off: inertia, slide or contact models,
+> the `-diagonal` solver, `options_elementloop -no`, nonlocal softening.
+> Every other model uses
+> [post_solve_material_state_pass](post_solve_material_state_pass.md).
+
 Status: **IMPLEMENTED 2026-09-15**. Closes the last documented `mpc5`
 residual: the reported nodal stress no longer trails the solved velocity by
 one iteration. `mpc5.dat` now reports `sigyy = 0.5` at `k=1` (and still `0.5`

@@ -1796,6 +1796,10 @@ extern long int stress_recovery_gauss;
   // would discard the transport terms.
 extern long int stress_recovery_absolute;
 extern long int stress_recovery_post_pass;
+  // post-solve material state pass (F4 T5, BACKLOG C35; top.cc):
+  // set while the element loop re-evaluates the material on the final
+  // iterate; elem() then skips the element matrix store (no solve follows)
+extern long int material_state_post_pass;
 
   // for swit
 extern long int swit_element_stack, swit_node_stack;
@@ -2096,6 +2100,7 @@ long int  intersect_line_with_triangle( double line0[], double line1[],
 void      inverse_calculation( long int ipar, long int npar, long int ipar_i,
             long int ipar_n, long int max_time, long int task );
 void      iteration_start( void );
+long int  post_solve_state_pass_gated( long int icontrol );
 void      itoa( int n, char str[] );
 void      locate( void );
 char     *long_to_a( long int i, char str[] );

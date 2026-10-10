@@ -1563,6 +1563,22 @@ else check_fail "interface_tension_status1" "two runs give different .dbs"; fi
 #   0.0030 / 0.0006 (period-2 oscillation in the iteration count).
 run_ok "$T2026" hardsoil_kappa_iterations1
 run_ok "$T2026" hardsoil_kappa_iterations2
+# F4 T5 / C35 (2026-10-10): post-solve material state pass (top.cc): the
+#   material is evaluated once more on the final iterate of every step, so
+#   the reported/stored state follows the solved velocity (= Professional
+#   02-08-2026). One equilibrium iteration per step in all three:
+#   stretch1 node 2 velx 0.5 in every step (old GNU 0.5 1 1 0.5 0 0),
+#   plastic1 eppxx 0.01 / sigxx 0.015 at node 1 (old GNU 0 / 0),
+#   rigid1 eptxx = sigxx = 0 (old GNU -0.01).
+rm -f "$T2026/velx2.his"
+run_ok "$T2026" post_solve_state_stretch1
+if [ -f "$T2026/velx2.his" ] &&
+   [ "$(wc -l < "$T2026/velx2.his")" = "6" ] &&
+   awk '{ d=$2-0.5; if (d<0) d=-d; if (d>1.e-10) bad=1 } END { exit bad }' "$T2026/velx2.his";
+then check_ok "post_solve_state_stretch1 (node 2 velx 0.5 in all 6 steps)";
+else check_fail "post_solve_state_stretch1" "node 2 velx history is not 0.5 in every step"; fi
+run_ok "$T2026" post_solve_state_plastic1
+run_ok "$T2026" post_solve_state_rigid1
 
 # ---------------------------------------------------------------------
 # K03 (2026-10-06): default convection_apply -no (manual Professional

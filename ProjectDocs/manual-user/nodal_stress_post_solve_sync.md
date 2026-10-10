@@ -1,5 +1,11 @@
 # nodal_stress_post_solve_sync
 
+> **Since 2026-10-10 (F4 T5)** this stress-only sync runs only when the
+> post-solve material state pass is off: inertia, slide or contact models,
+> the `-diagonal` solver, `options_elementloop -no`, nonlocal softening.
+> Every other model uses
+> [post_solve_material_state_pass](post_solve_material_state_pass.md).
+
 Status: **active since 2026-09-15**.
 
 ## What it does

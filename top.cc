@@ -599,6 +599,43 @@ void top( void )
                             ldum, VERSION_NORMAL, GET );
                         }
                       }
+                      // Post-solve material state pass (F4 T5, BACKLOG C35,
+                      // audit K02; the default since 2026-10-10). The
+                      // element loop of an iteration evaluates the material
+                      // on the PRE-solve iterate, so the stored
+                      // integration-point state (ELEMENT_DOF VERSION_NEW)
+                      // and the non-principal nodal dofs lag the solved
+                      // velocity by one iteration. The Professional
+                      // evaluates the material once more on the final
+                      // iterate, and that state is the output and the
+                      // history of the next step. This pass does the same
+                      // once per step, after the equilibrium loop: a full
+                      // element loop on the final iterate (material state,
+                      // element force records, NODE_RHSIDE/NODE_LHSIDE),
+                      // the non-principal nodal update and the mpc re-sync.
+                      // No matrix is stored (material_state_post_pass makes
+                      // elem() skip the store) and no solve follows.
+                      // Not for the -diagonal solver (explicit update of
+                      // the principal dofs), options_elementloop -no and
+                      // the nonlocal softening variable, and gated OFF
+                      // (temporary divergence, DIVERGENCES class B) for
+                      // inertia, slide and contact models: see
+                      // post_solve_state_pass_gated() and
+                      // manual-developer/post_solve_material_state_pass.md.
+                      // Those keep the hoisted stress-only sync below.
+                      long int state_pass_done = 0;
+                      if ( nuknwn>0 && options_solver!=-DIAGONAL &&
+                           options_elementloop==-YES && !find_local_softvar &&
+                           !( scalar_dabs(options_nonlocal_softvar)>TINY ) &&
+                           !post_solve_state_pass_gated( icontrol ) ) {
+                        iteration_start();
+                        material_state_post_pass = 1;
+                        element_loop();
+                        material_state_post_pass = 0;
+                        parallel_sys_routine( &parallel_new_dof_diagonal );
+                        mpc_node_apply();
+                        state_pass_done = 1;
+                      }
                       // Hoisted post-solve stress sync (2026-09-16): the
                       // stress-only re-evaluation used to run inside the
                       // equilibrium loop; only the LAST iteration's report is
@@ -610,7 +647,7 @@ void top( void )
                       // block. Only the stress slots are assigned: re-running
                       // the whole function would double the += accumulation
                       // of the other non-principal dofs.
-                      if ( nuknwn>0 && stress_recovery_absolute && materi_stress &&
+                      if ( !state_pass_done && nuknwn>0 && stress_recovery_absolute && materi_stress &&
                            stres_indx>=0 && !find_local_softvar ) {
                         long int max_node_ps=0;
                         db_max_index( NODE, max_node_ps, VERSION_NORMAL, GET );
@@ -1225,6 +1262,61 @@ void step_start( long int task, long int options_solver[], double dtime, double 
 
   }
 
+}
+
+// Post-solve material state pass (F4 T5, BACKLOG C35): flag read by
+// elem() to skip the element matrix store during the pass.
+long int material_state_post_pass = 0;
+
+// Gate of the post-solve material state pass (owner decision 2026-10-10,
+// temporary divergence class B): returns 1 (pass OFF, the hoisted
+// stress-only sync of the previous scheme is kept) when the model has
+//  - inertia: materi_acceleration, options_inertia / inertia_apply -yes,
+//    or any control_options_inertia / control_inertia_apply -yes
+//    (Pro dynamic3: the pass moves the truss dynamics away from the Pro);
+//  - slide: any slide_* record or node_slide (Pro slide4: the friction
+//    state is updated in slide(), outside the element loop);
+//  - contact: any contact_* record while contact_apply /
+//    control_contact_apply of this icontrol is not -no (the contact
+//    forces come from parallel_contact(), outside the element loop).
+// The pass is enabled for a family only after it is extended to that
+// physics and the probes + full corpus A/B show no test moving away from
+// the Pro (manual-developer/post_solve_material_state_pass.md).
+long int post_solve_state_pass_gated( long int icontrol )
+
+{
+  long int idat=0, max=0, i=0, ldum=0, any_contact_data=0,
+    options_inertia=-NO, contact_apply=-YES, control_contact_apply=-YES;
+  double ddum[1];
+
+  if ( materi_acceleration ) return 1;
+  db( OPTIONS_INERTIA, 0, &options_inertia, ddum, ldum,
+    VERSION_NORMAL, GET_IF_EXISTS );
+  if ( options_inertia==-YES ) return 1;
+  db_highest_index( CONTROL_OPTIONS_INERTIA, max, VERSION_NORMAL );
+  for ( i=0; i<=max; i++ ) {
+    options_inertia = -NO;
+    db( CONTROL_OPTIONS_INERTIA, i, &options_inertia, ddum, ldum,
+      VERSION_NORMAL, GET_IF_EXISTS );
+    if ( options_inertia==-YES ) return 1;
+  }
+
+  db_highest_index( NODE_SLIDE, max, VERSION_NORMAL );
+  if ( max>=0 ) return 1;
+  for ( idat=0; idat<MDAT; idat++ ) {
+    db_highest_index( idat, max, VERSION_NORMAL );
+    if ( max<0 ) continue;
+    if ( db_data_class(idat)==SLIDE ) return 1;
+    if ( db_data_class(idat)==CONTACT ) any_contact_data = 1;
+  }
+  if ( any_contact_data ) {
+    db( CONTACT_APPLY, 0, &contact_apply, ddum, ldum,
+      VERSION_NORMAL, GET_IF_EXISTS );
+    db( CONTROL_CONTACT_APPLY, icontrol, &control_contact_apply, ddum,
+      ldum, VERSION_NORMAL, GET_IF_EXISTS );
+    if ( contact_apply!=-NO && control_contact_apply!=-NO ) return 1;
+  }
+  return 0;
 }
 
 void iteration_start( void )

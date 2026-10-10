@@ -1181,7 +1181,7 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
   table.
 - **Severity**: **LOW** (output only). **Effort**: —.
 
-### C35. One-equilibrium-iteration lag of the whole material state (audit K02) — PARKED, design, scheduled for F4
+### C35. One-equilibrium-iteration lag of the whole material state (audit K02) — RESOLVED 2026-10-10 (F4 T5), gated families open (C52, C53)
 
 - **Symptom** (F1 T5, Professional 02-08-2026, sfnet `spring4` converted:
   rigid translation velx 1, `materi_strain_total`, one equilibrium
@@ -1205,6 +1205,21 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
   full corpus A/B); not part of F1.
 - **Severity**: **MEDIUM** (one-iteration models report a lagged state).
   **Effort**: **medium/large**.
+- **Resolution** (F4 T5, project owner 2026-10-10): post-solve material
+  state pass as the default (`top.cc`, after the equilibrium loop:
+  `iteration_start(); element_loop(); parallel_new_dof_diagonal;
+  mpc_node_apply()`; `material_state_post_pass` makes `elem.cc` skip the
+  matrix store). It replaces the stress-only sync except for the gated
+  families: inertia, slide, contact (temporary divergence, DIVERGENCES
+  class B `POSTPASS-GATE`). Verified: probes = Professional (`spring4`
+  eptxx 0, plastic bars eppxx 0.01, stretch velx 0.5 every step); matrix
+  vs no-matrix byte-identical; corpus A/B: see SEGUIMIENTO F4 T5 row.
+  Exposed and fixed first: C51 (hardsoil kappa read). Docs:
+  `manual-*/post_solve_material_state_pass.md`.
+- **Widening criterion**: a gated family is enabled only after the pass
+  is extended to its physics (`slide()` / `parallel_contact` called
+  consistently, consistent inertia update) and the probes + full corpus
+  A/B on omen show no test moving away from the Professional.
 
 ### C36. `group_materi_elasti_young_power` next to `group_materi_elasti_young`: the Professional adds both stiffnesses — DECIDED 2026-10-06: deliberate divergence, option (a) (audit K06)
 
@@ -1604,6 +1619,31 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
     `-O2` (not `-O3`: little extra gain, more warnings) with a full A/B.
     Expected gain about 28 % (`large1`) to 42 % (`force11`).
 
+### C52. Post-solve material state pass for inertia models (`dynamic3`, F4 T5, 2026-10-10) — OPEN, investigation
+
+- **Symptom**: with the ungated pass (TN_C35 prototype) Pro `dynamic3`
+  (1D truss, `inertia_apply -yes`, prescribed acceleration 1.234,
+  analytic disx 61.7) moved away from the Professional (worst relative
+  difference 0.45 -> 0.74, disx).
+- **Status**: gated off (`post_solve_state_pass_gated()`: inertia).
+  Needed: a pass that updates the inertia terms consistently with the
+  final iterate (acceleration/velocity history of the truss), then probes
+  + full corpus A/B (widening criterion, C35).
+- **Severity**: LOW (gated, previous behaviour kept). **Effort**: medium.
+
+### C53. Post-solve material state pass for slide models (`slide4`, F4 T5, 2026-10-10) — OPEN, investigation
+
+- **Symptom**: with the ungated pass Pro `slide4` (quad4 on a frictional
+  `slide_geometry`, `slide_plasti_friction`, `slide_stiffness`) moved
+  away from the Professional (velocity 0.49 relative; before 0.024 sig).
+- **Cause (hypothesis)**: the slide forces and friction state are applied
+  in `slide()` outside the element loop; the pass re-evaluates the
+  material without re-applying them.
+- **Status**: gated off (slide and contact data). Needed: call `slide()`
+  (and `parallel_contact` for contact) consistently in the pass, then
+  probes + full corpus A/B (widening criterion, C35).
+- **Severity**: LOW (gated). **Effort**: medium.
+
 ### C51. Hardsoil yield read the nodal kappa of the previous evaluation of the same step (F4 T5, 2026-10-10) — RESOLVED 2026-10-10
 
 - **Symptom**: test-2014 `mhardsoil_plast` (one quad4, zero total
@@ -1683,7 +1723,7 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
 | C32 | Pro `other` | `axisym9` (stale row, already = Pro), `distri2` (random generator): not GNU defects — closed 2026-10-09 (F4 T4) | LOW | — |
 | C33 | — | `_visco` direct cut-offs: `DTIME` from the previous step, no visco on the principal tension cap — resolved 2026-10-09 (F4 T3) | MEDIUM | cheap/medium |
 | C34 | — | direct cut shear plastic strain: Pro twice the tensor value (deliberate divergence) | LOW | — |
-| C35 | — | one-iteration lag of the whole material state (K02, `spring4` 1 iteration) — parked, design; F4 | MEDIUM | medium/large |
+| C35 | — | one-iteration lag of the whole material state (K02, `spring4` 1 iteration) — resolved 2026-10-10 (F4 T5, post-solve material state pass); inertia/slide/contact gated (C52, C53) | MEDIUM | medium/large |
 | C36 | validation-suite | `young_power` + `young`: Pro adds both stiffnesses, manual says law = modulus (K06) — decided 2026-10-06: deliberate divergence (GNU = manual), no code change | LOW | cheap |
 | C37 | Pro `other` | planar GNU beam vs Pro 3D frame beam (`trubea2/3`, K17) — parked, design | MEDIUM | large |
 | C38 | Pro `other` | `control_support_edge_normal_stiffness_freeze` parse-only (support_edge_normal_3, 1e-9 effect) | LOW | cheap/medium |
@@ -1699,6 +1739,8 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
 | C49 | — | build at `-O1`: `-O2` 28-42 % faster, results identical, blocked by latent stack-buffer overflows (F4 T11 study) | LOW | medium |
 | C50 | Pro other | `interface_bar2_hex8` extruded/converted interface mesh numbering | LOW | medium |
 | C51 | validation-suite | hardsoil `gamma_p` read the nodal kappa of the previous evaluation (iteration-count oscillation, `mhardsoil_plast`) — resolved 2026-10-10 (F4 T5); cap/cap1/void reads open | MEDIUM | cheap |
+| C52 | Pro `other` | post-solve state pass for inertia models (`dynamic3`) — gated off, investigation | LOW | medium |
+| C53 | Pro `other` | post-solve state pass for slide/contact models (`slide4`) — gated off, investigation | LOW | medium |
 
 Thirty-seven items remain open: seven MEDIUM and thirty LOW (C23 and C24 resolved 2026-10-05; C25, C26, C27 and B10 added; F1 T3 / K04 2026-10-06 added B11, C28-C32; F1 T6 resolved C28, added and resolved B12; F2 T1 added C36; F2 T2 added C37, C38, C39; F2 T3 resolved C5 and added C40; F3 T2 resolved C8, C18, C19, C20 and added B13, C41; F4 T2 fixed the C41 tie and left a residual; F4 T3 resolved C33; F4 T4 closed C32, added C42 and resolved C31; F4 T7-T8 added C43-C46; F4 T9 resolved the C43 solver speed, decided C46b/C46e and added C47, C48, C49; F4 T10 resolved C48 and added C50). No open issue is CRITICAL or
 HIGH. The validation-suite corpus has no open failure — its 233 real tests
