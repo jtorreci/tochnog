@@ -1446,15 +1446,16 @@ run_ok "$T2026" tet10_dynamic_gravity1
 #   mesh_macro_timestep1: Pro mesh_activate1 with 20 steps: 202 nodes
 #     (= Pro; old GNU 4040, one macro copy per step);
 #   mesh_switch_timestep1: two steps, axes swapped once: node 3
-#     0.5 0 -> 0 0.5 (= Pro; old GNU swapped twice, node 3 unchanged).
+#     1 0 -> 0 1 (= Pro; old GNU swapped twice, node 3 unchanged; before
+#     the F4 T8 macro numbering the GNU node 3 was 0.5 0 -> 0 0.5).
 run_ok "$T2026" mesh_macro_timestep1
 n_nodes=$(grep -ac '^node ' "$T2026/mesh_macro_timestep1.dbs" 2>/dev/null)
 if [ "$n_nodes" = "202" ]; then check_ok "mesh_macro_timestep1 (202 nodes)";
 else check_fail "mesh_macro_timestep1" "nodes=$n_nodes, expected 202"; fi
 run_ok "$T2026" mesh_switch_timestep1
-if grep -aqE '^node +3 +0 +0\.5 *$' "$T2026/mesh_switch_timestep1.dbs" 2>/dev/null;
-then check_ok "mesh_switch_timestep1 (node 3 at 0 0.5)";
-else check_fail "mesh_switch_timestep1" "node 3 not at 0 0.5"; fi
+if grep -aqE '^node +3 +0 +1 *$' "$T2026/mesh_switch_timestep1.dbs" 2>/dev/null;
+then check_ok "mesh_switch_timestep1 (node 3 at 0 1)";
+else check_fail "mesh_switch_timestep1" "node 3 not at 0 1"; fi
 # F4 T8 / C45 (2026-10-10): control_mesh_copy / _mirror on an index after
 #   a control_timestep (mesh.cc mesh_duplicate_node_data /
 #   mesh_duplicate_element_state). Old GNU: rc 1 (node_dof_start_refined
@@ -1462,6 +1463,19 @@ else check_fail "mesh_switch_timestep1" "node 3 not at 0 0.5"; fi
 #   re-initialised). Targets = Professional 02-08-2026 post_point values.
 run_ok "$T2026" mesh_copy_timestep1
 run_ok "$T2026" mesh_mirror_timestep1
+# F4 T8 / C46d (2026-10-10): control_mesh_macro -bar/-rectangle/-brick
+#   numbered as the Professional 02-08-2026 (x fastest, then y, then z;
+#   macro.cc). Old GNU: transposed (x slowest).
+run_ok "$T2026" mesh_macro_numbering1
+if grep -aqE '^node +2 +1 +0 *$' "$T2026/mesh_macro_numbering1.dbs" 2>/dev/null &&
+   grep -aqE '^element +1 +-quad4 1 2 4 5 *$' "$T2026/mesh_macro_numbering1.dbs" 2>/dev/null;
+then check_ok "mesh_macro_numbering1 (node 2 at 1 0, element 1 1 2 4 5)";
+else check_fail "mesh_macro_numbering1" "rectangle numbering differs from the Professional"; fi
+run_ok "$T2026" mesh_macro_numbering2
+if grep -aqE '^node +2 +1 +0 +0 *$' "$T2026/mesh_macro_numbering2.dbs" 2>/dev/null &&
+   grep -aqE '^element +1 +-hex8 1 2 4 5 7 8 10 11 *$' "$T2026/mesh_macro_numbering2.dbs" 2>/dev/null;
+then check_ok "mesh_macro_numbering2 (node 2 at 1 0 0, element 1 1 2 4 5 7 8 10 11)";
+else check_fail "mesh_macro_numbering2" "brick numbering differs from the Professional"; fi
 
 # ---------------------------------------------------------------------
 # K03 (2026-10-06): default convection_apply -no (manual Professional

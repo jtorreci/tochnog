@@ -506,3 +506,7 @@ page lists its own in "Differences with the Professional version".
 ## ONE-SHOT MESH OPERATIONS ONCE PER CONTROL INDEX (2026-10-09, F4 T7)
 
 - [control_mesh_once_per_control](control_mesh_once_per_control.md) — `control_mesh_macro`, `_copy`, `_mirror` and `_switch` run once per control index (first step), also with a multi-step `control_timestep` on the same index, as the Professional. Before, every time step re-applied them (`mesh_activate1`: 202 -> 4040 nodes in 20 steps, out of memory with 1000 steps).
+
+## MESH OPERATIONS VS THE PROFESSIONAL (2026-10-10, F4 T8)
+
+- [control_mesh_macro](control_mesh_macro.md) — node and element numbering of the `-bar`/`-rectangle`/`-brick` macros: x fastest, then y, then z, as the Professional (before: transposed). Tests `mesh_macro_numbering1`/`2`.
