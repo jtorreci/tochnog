@@ -1768,6 +1768,23 @@ run_ok "$T2026" contact_element_target_boundary1
 run_ok "$T2026" contact_element_target_boundary2d1
 
 # ---------------------------------------------------------------------
+# F4 T12 / BACKLOG C47 (2026-10-11): control_mesh_extrude quad9 -> hex27
+# (mesh.cc mesh_extrude). The inner z planes (mid-planes and layer tops)
+# hold ONE node per source node, shared by the neighbouring hex27, as in
+# the Professional. Before: per-element plane nodes, the elements were
+# disconnected at the inner planes (force11 ring 7.9x too soft). Two
+# quad9 x two hex27 layers: 75 node records (old GNU 84); nodal
+# displacements = Professional 02-08-2026 (targets, 1e-9).
+# ---------------------------------------------------------------------
+run_ok "$T2026" extrude_quad9_shared_nodes1
+n_ext=$(grep -c '^ *node ' "$T2026/extrude_quad9_shared_nodes1.dbs" 2>/dev/null)
+if [ "$n_ext" = "75" ]; then
+  check_ok "extrude_quad9_shared_nodes1 (75 nodes: 15 per z plane)"
+else
+  check_fail "extrude_quad9_shared_nodes1" "node records $n_ext, expected 75"
+fi
+
+# ---------------------------------------------------------------------
 # Sub-sprint materi_stress_force, lote 2 (integracion 2D quad4/quad9):
 # verificacion ANALITICA por estatica. Decisiones de diseno (manual-
 # developer/post_calcul_materi_stress_force.md): caras extremas = las

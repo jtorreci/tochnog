@@ -1512,7 +1512,7 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
 - **Severity**: **LOW** (open: C46c large, not scheduled; C46b/C46e
   decided 2026-10-10).
 
-### C47. `force11` 3D section moment 0.65 % off the Professional (F4 T9, 2026-10-10)
+### C47. `force11` 3D section moment 0.65 % off the Professional (F4 T9, 2026-10-10) — RESOLVED 2026-10-11 (F4 T12)
 
 - **Corpus**: Professional `other/force11` (circular ring, `post_calcul
   -materi_stress -force`, `solver -matrix_pardiso`).
@@ -1521,10 +1521,40 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
   5.80223 vs target 5.76474 +- 0.01 (Professional 5.76460; `nory_sig`
   and `shey_sig` targets met: -0.2 shear). Before, the Bi-CG did not
   finish, so the difference was hidden.
-- **Root cause**: not investigated (the direct solve is exact: the
-  difference is in the model or in the 3D section integration of
-  `calcul_force.cc`).
-- **Severity**: **LOW**. **Effort**: **medium**.
+- **Root cause**: `mesh.cc` `mesh_extrude()`, quad9 -> hex27 branch: the
+  inner planes (layer mid-planes and the layer tops below z1) were
+  fresh per-element node blocks, so neighbouring hex27 were connected
+  only at z0 and z1 (15600 nodes vs Professional 12000; planes
+  2400/3600/3600/3600/2400 vs 2400 each; the ring 7.9x too soft). The
+  section moment is equilibrium-based, so it was only 0.65 % off.
+- **Fix** (F4 T12, `T12-HASH`): plane q (1..2nq-1) of source node inod is
+  node `next_node + (q-1)*nbase + inod`, created once and shared. After:
+  `force11` rc 0, `mom1y_sig` 5.764609 (Professional 5.764612), every
+  nodal displacement = Professional to 5.5e-7 (relative to the field
+  maximum), section forces within 2e-4. Test
+  `extrude_quad9_shared_nodes1` (RED old GNU: rc 1, 84 nodes; GREEN: 75
+  nodes, displacements = Professional). Residual: hex27 nodal stresses
+  (C57).
+- **Severity**: **LOW** (resolved). **Effort**: cheap.
+
+### C57. hex27 nodal stress recovery and `post_point` interpolation differ from the Professional (F4 T12, 2026-10-11) — OPEN
+
+- **Corpus**: Professional `other/force11` (after the C47 fix), test
+  `extrude_quad9_shared_nodes1`.
+- **Symptom**: with nodal displacements equal to the Professional (5.5e-7)
+  the `force11` hex27 nodal stresses differ by up to 3.38 % of the field
+  maximum for sigxx/sigyy/sigzz (sigxy 0.9 %). The largest differences
+  are at the loaded points (x 0, y +-50.1, every z plane: sigxx -816.80
+  vs -789.09, +3.5 %); over the nodes the ratio GNU/Professional spans
+  0.987..1.035 with mean 1.0001. Second symptom (same test family):
+  a `post_point` placed exactly on a hex27 node returns an interpolated
+  displacement that is not the nodal value (`extrude_quad9_shared_nodes1`
+  draft, point (2, 1, 0.5): disy -3.51050e-5 vs nodal -3.51802e-5 =
+  Professional post_point value).
+- **Root cause**: not investigated (Gauss-to-node stress recovery for
+  hex27, cf. C42 for quad4; hex27 shape functions / point location in
+  `post_point`).
+- **Severity**: **LOW**. **Effort**: medium.
 
 ### C48. Interface tension status written from the wrong buffer (F4 T9, 2026-10-10) — RESOLVED 2026-10-10 (F4 T10)
 
@@ -1802,7 +1832,7 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
 | C44 | Pro `other` | one-shot mesh records (`control_mesh_macro`/`_copy`/`_mirror`/`_switch`) re-applied on every time step — resolved 2026-10-09 (F4 T7 C) | MEDIUM | cheap |
 | C45 | — | `control_mesh_copy`/`_mirror` after the first time step: `node_dof_start_refined` error — resolved 2026-10-10 (F4 T8 `0ca144c`) | LOW | cheap |
 | C46 | Pro `other` | `step_start()` mesh residuals — F4 T8: order, move once, switch pair, `mesh_activate1` resolved; rotate sweep parked, not scheduled (C46c, large); move/switch `node_start_refined` deliberate divergences (A, 2026-10-10) | LOW | large (C46c) |
-| C47 | Pro `other` | `force11` 3D section moment `mom1y_sig` 5.80223 vs Pro 5.76460 (target miss, visible since F4 T9) | LOW | medium |
+| C47 | Pro `other` | `force11` 3D section moment `mom1y_sig` 5.80223 vs Pro 5.76460 — resolved 2026-10-11 (F4 T12: quad9 -> hex27 extrusion shares the inner-plane nodes) | LOW | cheap |
 | C49 | — | build at `-O1` — resolved 2026-10-11 (F4 T13: 34 scratch-buffer call sites fixed, default `-O2`, results identical) | LOW | medium |
 | C50 | Pro other | `interface_bar2_hex8` extruded/converted interface mesh numbering | LOW | medium |
 | C51 | validation-suite | hardsoil `gamma_p` read the nodal kappa of the previous evaluation (iteration-count oscillation, `mhardsoil_plast`) — resolved 2026-10-10 (F4 T5); cap/cap1/void reads open | MEDIUM | cheap |
@@ -1811,8 +1841,9 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
 | C54 | — | run-time record names read without a type check into a 1-value dummy (`post.cc`, `print_el.cc`, `repeat.cc`, `data.cc`, `calcul.cc`) | LOW | cheap |
 | C55 | validation-suite | `print_unknownsrhside()` indexes `node_rhside` (npuknwn values) with `iuknwn` (heap read past the end, wrong column when nder > 1) | LOW | cheap |
 | C56 | Pro `other` | input tokens longer than `MCHAR`-1 (`cin >> str`) overflow the parser buffers (`ground19_water_under_dam`, 141-char URL in a comment) | LOW | cheap |
+| C57 | Pro `other` | hex27 nodal stress recovery (`force11` up to 3.5 % at the loaded points, displacements equal) and `post_point` interpolation on a hex27 node | LOW | medium |
 
-Forty-one items remain open: seven MEDIUM and thirty-four LOW (C23 and C24 resolved 2026-10-05; C25, C26, C27 and B10 added; F1 T3 / K04 2026-10-06 added B11, C28-C32; F1 T6 resolved C28, added and resolved B12; F2 T1 added C36; F2 T2 added C37, C38, C39; F2 T3 resolved C5 and added C40; F3 T2 resolved C8, C18, C19, C20 and added B13, C41; F4 T2 fixed the C41 tie and left a residual; F4 T3 resolved C33; F4 T4 closed C32, added C42 and resolved C31; F4 T7-T8 added C43-C46; F4 T9 resolved the C43 solver speed, decided C46b/C46e and added C47, C48, C49; F4 T10 resolved C48 and added C50; F4 T5 added C52, C53 and resolved C51; F4 T13 resolved C49 and added C54-C56). No open issue is CRITICAL or
+Forty-one items remain open: seven MEDIUM and thirty-four LOW (C23 and C24 resolved 2026-10-05; C25, C26, C27 and B10 added; F1 T3 / K04 2026-10-06 added B11, C28-C32; F1 T6 resolved C28, added and resolved B12; F2 T1 added C36; F2 T2 added C37, C38, C39; F2 T3 resolved C5 and added C40; F3 T2 resolved C8, C18, C19, C20 and added B13, C41; F4 T2 fixed the C41 tie and left a residual; F4 T3 resolved C33; F4 T4 closed C32, added C42 and resolved C31; F4 T7-T8 added C43-C46; F4 T9 resolved the C43 solver speed, decided C46b/C46e and added C47, C48, C49; F4 T10 resolved C48 and added C50; F4 T5 added C52, C53 and resolved C51; F4 T13 resolved C49 and added C54-C56; F4 T12 resolved C47 and added C57). No open issue is CRITICAL or
 HIGH. The validation-suite corpus has no open failure — its 233 real tests
 pass (`materi_direct_mc` input corrected, C17 resolved). Every remaining failure is a stale or malformed test, an out-of-scope model
 or infrastructure limit, a narrow post-processing divergence, a corpus-coverage

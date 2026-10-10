@@ -61,7 +61,9 @@ the GNU already holds.
   (old: Bi-CG > 1 h). The run ends with rc 1 on its `mom1y_sig` target
   (5.80223 vs 5.76474; Professional 5.76460): a 0.65 % model difference
   of `post_calcul -materi_stress -force` in 3D exposed now that the solve
-  finishes (BACKLOG C47).
+  finishes (BACKLOG C47). Cause found in F4 T12 (2026-10-11): the
+  quad9 -> hex27 extrusion disconnected the elements at the inner
+  planes (`control_mesh_extrude`); after the fix rc 0, 5.76461.
 - Corpus A/B and timings: SEGUIMIENTO F4 T9 row and
   `solver_memory.md`.
 
