@@ -418,24 +418,29 @@ void macro( void )
         leny = control_mesh_macro_parameters[ndim+1];
         lenz = control_mesh_macro_parameters[ndim+2];
       }
-      for ( ix=0; ix<nx; ix++ ) {
-        if ( ndim>=3 ) dx = ix*lenx/(nx-1);
-        for ( iy=0; iy<ny; iy++ ) {
-          if ( ndim>=2 ) dy = iy*leny/(ny-1);
-          for ( iz=0; iz<nz; iz++ ) {
-            if ( ndim>=1 ) dz = iz*lenz/(nz-1);
-            if      ( ndim==1 ) {
-              coord[0] = -0.5*lenz + dz;
-            }
-            else if ( ndim==2 ) {
-              coord[0] = -0.5*leny + dy;
-              coord[1] = -0.5*lenz + dz;
-            }
-            else {
-              assert( ndim==3 );
-              coord[0] = -0.5*lenx + dx;
-              coord[1] = -0.5*leny + dy;
-              coord[2] = -0.5*lenz + dz;
+      // Node and element numbering of the Professional 02-08-2026 (F4 T8
+      // probes, -bar/-rectangle/-brick): x varies fastest, then y, then z,
+      // for the nodes, for the elements and for the local element nodes
+      // (tensor order). The old GNU loops ran x slowest (the transposed
+      // numbering): node numbers in targets, node ranges and prints did
+      // not match the Professional inputs (mesh_activate1: node 5).
+      long int ncount[MDIM] = { 1, 1, 1 };
+      double lcount[MDIM] = { 0., 0., 0. };
+      if      ( ndim==1 ) { ncount[0] = nz; lcount[0] = lenz; }
+      else if ( ndim==2 ) { ncount[0] = ny; ncount[1] = nz;
+                            lcount[0] = leny; lcount[1] = lenz; }
+      else { ncount[0] = nx; ncount[1] = ny; ncount[2] = nz;
+             lcount[0] = lenx; lcount[1] = leny; lcount[2] = lenz; }
+      long int inod_first = inod;
+      for ( iz=0; iz<ncount[2]; iz++ ) {
+        for ( iy=0; iy<ncount[1]; iy++ ) {
+          for ( ix=0; ix<ncount[0]; ix++ ) {
+            long int ic[MDIM] = { ix, iy, iz };
+            long int on_bnd[MDIM] = { 0, 0, 0 };
+            for ( idim=0; idim<ndim; idim++ ) {
+              coord[idim] = -0.5*lcount[idim] +
+                ic[idim]*lcount[idim]/(ncount[idim]-1);
+              on_bnd[idim] = ( ic[idim]==0 || ic[idim]==ncount[idim]-1 );
             }
             array_add( coord, control_mesh_macro_parameters, coord, ndim );
             db( NODE, inod, idum, coord, ndim, VERSION_MACRO, PUT );
@@ -446,54 +451,61 @@ void macro( void )
               db( NODE_DOF, inod, idum, node_dof, nuknwn, VERSION_MACRO, PUT );
               db( NODE_DOF_START_REFINED, inod, idum, node_dof, nuknwn, VERSION_MACRO, PUT );
             }
-            test1 = ndim>=3 && (ix==0 || ix==nx-1);
-            test2 = ndim>=2 && (iy==0 || iy==ny-1);
-            test3 = ndim>=1 && (iz==0 || iz==nz-1);
-            if ( test1 || test2 || test3 ) {
+            if ( on_bnd[0] || on_bnd[1] || on_bnd[2] ) {
               if (  control_mesh_macro_set_node_boundary==-YES ) {
                 length = 1; db( NODE_BOUNDARY, inod, &node_boundary, ddum, 
                   length, VERSION_MACRO, PUT );
               }
             }
+            // node_remesh_allowed: the old loop-role mapping is kept as
+            // it was (3D: direction d -> slot d; 2D: x boundary -> slot
+            // 1, y boundary dropped; 1D: never). Suspect, see the
+            // developer manual (pending refactoring).
             array_set( node_remesh_allowed, -YES, ndim );
-            if ( test1 ) node_remesh_allowed[0] = -NO;
-            if ( test2 ) node_remesh_allowed[1] = -NO;
-            if ( test3 ) node_remesh_allowed[2] = -NO;
+            if ( ndim==3 ) {
+              for ( idim=0; idim<3; idim++ )
+                if ( on_bnd[idim] ) node_remesh_allowed[idim] = -NO;
+            }
+            else if ( ndim==2 ) {
+              if ( on_bnd[0] ) node_remesh_allowed[1] = -NO;
+            }
             length = ndim; db( NODE_REMESH_ALLOWED, inod, node_remesh_allowed, ddum, 
                length, VERSION_MACRO, PUT );
             inod++;
           }
         }
       }
-      for ( ix=0; ix<scalar_imax(1,nx-1); ix++ ) {
-        for ( iy=0; iy<scalar_imax(1,ny-1); iy++ ) {
-          for ( iz=0; iz<scalar_imax(1,nz-1); iz++ ) {
+      long int sx = 1, sy = ncount[0], sz = ncount[0]*ncount[1];
+      for ( iz=0; iz<scalar_imax(1,ncount[2]-1); iz++ ) {
+        for ( iy=0; iy<scalar_imax(1,ncount[1]-1); iy++ ) {
+          for ( ix=0; ix<scalar_imax(1,ncount[0]-1); ix++ ) {
+            long int n0 = inod_first + ix*sx + iy*sy + iz*sz;
             if      ( ndim==1 ) {
               el[0] = -BAR2;
               nnol = 2;
-              nodes[0] = iz;
-              nodes[1] = iz + 1;
+              nodes[0] = n0;
+              nodes[1] = n0 + sx;
             }
             else if ( ndim==2 ) {
               el[0] = -QUAD4;
               nnol = 4;
-              nodes[0] = iy*nz+iz;
-              nodes[1] = iy*nz+iz + 1;
-              nodes[2] = (iy+1)*nz+iz;
-              nodes[3] = (iy+1)*nz+iz + 1;
+              nodes[0] = n0;
+              nodes[1] = n0 + sx;
+              nodes[2] = n0 + sy;
+              nodes[3] = n0 + sy + sx;
             }
             else {
               assert( ndim==3 );
               el[0] = -HEX8;
               nnol = 8;
-              nodes[0] = ix*nz*ny+iy*nz+iz;
-              nodes[1] = ix*nz*ny+iy*nz+iz + 1;
-              nodes[2] = ix*nz*ny+(iy+1)*nz+iz;
-              nodes[3] = ix*nz*ny+(iy+1)*nz+iz + 1;
-              nodes[4] = (ix+1)*nz*ny+iy*nz+iz;
-              nodes[5] = (ix+1)*nz*ny+iy*nz+iz + 1;
-              nodes[6] = (ix+1)*nz*ny+(iy+1)*nz+iz;
-              nodes[7] = (ix+1)*nz*ny+(iy+1)*nz+iz + 1;
+              nodes[0] = n0;
+              nodes[1] = n0 + sx;
+              nodes[2] = n0 + sy;
+              nodes[3] = n0 + sy + sx;
+              nodes[4] = n0 + sz;
+              nodes[5] = n0 + sz + sx;
+              nodes[6] = n0 + sz + sy;
+              nodes[7] = n0 + sz + sy + sx;
             }
             array_move( nodes, &el[1], nnol ); 
             length = 1 + nnol;

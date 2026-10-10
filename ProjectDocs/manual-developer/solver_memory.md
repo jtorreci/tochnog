@@ -115,3 +115,43 @@ validation-suite 29.9 -> 31.3 s (233, noise); total 838.6 -> 784.8 s
 - `solve()` is a 1000-line function mixing ordering, workspace setup, fill
   and five solver routes; the fill loops should become one helper per
   storage format.
+
+## F4 T9 (2026-10-10): solver speed
+
+Changes (BACKLOG C43, owner decisions 2026-10-10): `-matrix_pardiso` is
+solved with SuperLU with a Bi-CG fallback ([matrix_pardiso](matrix_pardiso.md),
+`3349515`); the CG/Bi-CG products run on an assembled CSR matrix
+([solver_bicg_csr_operator](solver_bicg_csr_operator.md), `b7009dd`); the
+nodal stress recovery factors are tabulated (`acfac40`); two SuperLU /
+interface memory defects fixed (`681dc83`, `789f8bf`). The GNU default
+stays the Bi-CG.
+
+Measurements (omen, one input at a time, 12 GB cap, timeout 900 s,
+`/usr/bin/time -v`; old = `c62d28f`, new = `b7009dd`, md5 e84e554c;
+Professional 02-08-2026 with the same script). A run killed by the
+timeout has no `/usr/bin/time` record: its peak RSS is the VmHWM sampled
+in F4 T7 (old) or locally (new `foundation...`, 4 GB cap, 900 s).
+
+| input | old rc / RSS / wall | new rc / RSS / wall | Pro rc / RSS / wall |
+|---|---|---|---|
+| `force11` (`solver -matrix_pardiso`) | 124 timeout / 0.27 GB (F4 T7) / > 900 s (Bi-CG; > 1 h estimated) | 1 (target C47) / 0.41 GB / 14.9 s (SuperLU) | 0 / 0.27 GB / 11.9 s (PARDISO) |
+| `large1` (default Bi-CG) | 0 / 0.65 GB / 60.0 s | 0 / 0.72 GB / 23.9 s | 0 / 1.31 GB / 9.6 s |
+| `foundation_consolidation_settlement` | 124 timeout / 1.5 GB (F4 T7) / > 900 s | 124 timeout / 1.56 GB / > 900 s | 124 timeout / - / > 600 s (F4 T7) |
+
+`large1`: -60 % wall (recovery table 37 -> 27 s locally, the rest from
+the CSR products) for +70 MB (the CSR matrix). `force11` with the CSR
+Bi-CG (`-matrix_iterative_bicg`, local): 311040 iterations (the maximum)
+in ~640 s without converging (the Professional Bi-CG does not converge
+either), then the band LU retry: same `mom1y_sig` 5.80223 as SuperLU.
+`foundation_consolidation_settlement` stays Bi-CG bound (breakdown and
+band LU retry on every solve); the Professional times out as well.
+
+Corpus wall time (omen, 6 jobs, 4 GB cap, timeout 120, sum of the test
+times of tests finished on both), old -> new: Pro other 794 -> 525 s
+(317 tests), sfnet 317 -> 220 s (195), test-2026 39 -> 33 s (113),
+validation-suite 31 -> 24 s (242); total 1180 -> 803 s (-32 %). Per
+step: recovery table (old -> b1) Pro other 794 -> 685 s, sfnet 317 ->
+289 s; CSR (b3 -> b4) Pro other 696 -> 545 s, sfnet 288 -> 220 s. OK
+counts: Pro other 273 -> 276 (`force11`, `ground11_nonsaturated`,
+`ground11_phreatic_level` finish), test-2026 110 -> 111
+(`superlu_solve1`), sfnet 192 and validation-suite 232 unchanged.

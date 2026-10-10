@@ -1,0 +1,32 @@
+( F4 T8 C45: control_mesh_mirror on an index AFTER a control_timestep.
+  Same loaded block as mesh_copy_timestep1, mirrored about x=0 on index
+  1. Old GNU: rc 1 [node_dof_start_refined of the new nodes], then 1 %
+  off [integration-point state re-initialised]. The Professional
+  02-08-2026 duplicates nodes [no merge at x=0], nodal dofs as they are
+  [no sign flip of velix] and the integration-point state.
+  Targets = Professional post_point values. )
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_velocity_integrated
+materi_strain_total
+materi_stress
+end_initia
+geometry_line 1 -10. 0. 10. 0. 1.e-4
+bounda_dof 1 -geometry_line 1 -velx -vely
+group_type 0  -materi
+group_materi_elasti_young   0  1.0e6
+group_materi_elasti_poisson 0  0.2
+group_materi_density   0  1.0
+force_gravity 0  -10.
+control_mesh_macro 0   -rectangle 0 3 2
+control_mesh_macro_parameters 0   0.5 0.5 1. 1.
+control_timestep 0 0.1 0.1
+control_mesh_mirror 1  -x
+control_timestep 1 0.1 0.2
+post_point 1  -1. 1.
+target_item 1  -post_point_dof 1 -velix
+target_value 1  7.715470861501e-07 1.e-11
+target_item 2  -post_point_dof 1 -veliy
+target_value 2  -4.836357725334e-06 1.e-11
+end_data

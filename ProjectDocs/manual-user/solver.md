@@ -15,16 +15,20 @@ solver -matrix_superlu
 
 Valid types are the same as for `control_solver`:
 `-matrix_iterative_bicg` (default), `-matrix_superlu`,
-`-matrix_lapack` (band), and the PETSC variants when compiled in.
+`-matrix_pardiso` (solved with SuperLU, see below), `-matrix_lapack`
+(band), and the PETSC variants when compiled in.
 
 When using the bicg solver, consider also setting
 `solver_matrix_symmetric -yes` to speed up the solve.
 
 `-matrix_superlu` runs the direct sparse SuperLU LU factorization
-(2026-09-04: the route was segfaulting; fixed in `c2cbaf7`). It is the
-direct-solver alternative to `-matrix_pardiso` (PARDISO itself is not
-compiled in the GNU - that type falls back to the iterative Bi-CG with
-an automatic retry with the direct band LU when the Bi-CG fails).
+(2026-09-04: the route was segfaulting; fixed in `c2cbaf7`; 2026-10-10,
+F4 T9: a second crash after the first solve of larger models - a read of
+the factors after they were released - is fixed, test `superlu_solve1`). PARDISO itself
+is not compiled in the GNU: since F4 T9 (2026-10-10) `-matrix_pardiso` is
+solved with SuperLU, with a fallback to the iterative Bi-CG (and its
+direct band LU retry) when the factorization fails - see
+[matrix_pardiso](matrix_pardiso.md). The GNU default stays the Bi-CG.
 
 ## The global solver_* family (manual Professional 6.1048-6.1056)
 

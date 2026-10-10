@@ -1,0 +1,64 @@
+( F4 T9 / C43: assembled CSR operator of the iterative solver, two
+  threads. Same 3D hex8 block as pardiso_superlu1 with the default
+  solver [Bi-CG/CG]: 12 x 6 x 6, symmetry supports, prescribed x
+  velocity 0.012 on x = 12, E 1e6, nu 0.2: sigxx = 1000, disx = 0.012,
+  disy = disz = -1.2e-3 at [12, 6, 6] [analytic]. print_solver -yes:
+  build_safe.sh checks the stdout line "assembled CSR operator" [old GNU:
+  element-by-element products only, no such line]. options_processors 2
+  runs the CSR products in two row blocks. )
+echo -no
+number_of_space_dimensions 3
+materi_velocity
+materi_displacement
+materi_stress
+end_initia
+
+options_processors 2
+print_solver -yes
+
+start_define
+  x_start geometry_quadrilateral 1
+end_define
+x_start  0. 0. 0.   0. 6. 0.   0. 0. 6.   0. 6. 6.  1.e-4
+start_define
+  y_start geometry_quadrilateral 2
+end_define
+y_start  0. 0. 0.   12. 0. 0.   0. 0. 6.   12. 0. 6.  1.e-4
+start_define
+  z_start geometry_quadrilateral 3
+end_define
+z_start  0. 0. 0.   12. 0. 0.   0. 6. 0.   12. 6. 0.  1.e-4
+start_define
+  x_end geometry_quadrilateral 4
+end_define
+x_end  12. 0. 0.   12. 6. 0.   12. 0. 6.   12. 6. 6.  1.e-4
+
+bounda_dof  1  -x_start -velx
+bounda_time 1  0. 0. 100. 0.
+bounda_dof  2  -y_start -vely
+bounda_time 2  0. 0. 100. 0.
+bounda_dof  3  -z_start -velz
+bounda_time 3  0. 0. 100. 0.
+bounda_dof  4  -x_end -velx
+bounda_time 4  0. 0.012 100. 0.012
+
+group_type 0  -materi
+group_materi_elasti_young   0  1.e6
+group_materi_elasti_poisson 0  0.2
+group_materi_memory 0  -total_linear
+
+post_point 1  6. 3. 3.
+post_point 2  12. 6. 6.
+
+control_mesh_macro 0  -brick 0 13 7 7
+control_mesh_macro_parameters 0  6. 3. 3. 12. 6. 6.
+control_timestep 0  1. 1.
+target_item 1  -post_point_dof 1 -sigxx
+target_value 1  1000.0 1.e-3
+target_item 2  -post_point_dof 2 -disx
+target_value 2  0.012 1.e-8
+target_item 3  -post_point_dof 2 -disy
+target_value 3  -1.2e-3 1.e-8
+target_item 4  -post_point_dof 2 -disz
+target_value 4  -1.2e-3 1.e-8
+end_data

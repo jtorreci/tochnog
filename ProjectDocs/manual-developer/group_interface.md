@@ -506,3 +506,26 @@ BYTE-IDENTICAL to the Pro (10-13); bar2_quad4 −1.00000008 (Pro
 suite 16/16. interface13 stays the documented corpus bug (its own
 record semantics 0.67082 vs the target 1.11803 = |du|/2 — pre-existing
 and identical on both codes).
+
+## 2026-10-10: buffered node copies in interface_convert() (F4 T9)
+
+`interface.cc` `interface_convert()` copied `NODE_DOF` and
+`NODE_DOF_START_REFINED` of a side-1 node into its new side-2 copy (and
+into the new quad8 face-centre node of the hex20 conversion) by passing
+the `db_dbl()` pointer of the source record straight to the `db(... PUT)`
+of the new node. A PUT beyond the allocated range of the item reallocates
+its data array, so the copy read freed memory (heap-use-after-free; ASan
+on the Professional `interface_bar2_hex8`, `interface_bar3_quad8`,
+`interface_quad8_hex20`). The three copy sites now go through
+`interface_copy_node_dbl()` (local buffer, then PUT), the same fix as
+`mesh_copy_node_item()` in `mesh.cc` (`fd477ff`). Results unchanged
+(build_safe 171 OK, every suite `.dbs` identical).
+
+ASan after the fix: the three inputs pass `interface_convert()` cleanly;
+the first ASan report is now a separate defect in `interface_element()`
+(~line 1031): `element_interface_intpnt_materi_tension_status` is an
+INTEGER record, but it is written from a `double` buffer allocated with
+`get_new_int()` (released with `free()`) and the PUT passes `idum[1]` as
+the integer array with length `n_intpnt` (stack-buffer-overflow read).
+The tension status values written to the database are therefore
+garbage. Not fixed in F4 T9 (it changes that output): BACKLOG C48.

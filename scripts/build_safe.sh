@@ -1446,15 +1446,94 @@ run_ok "$T2026" tet10_dynamic_gravity1
 #   mesh_macro_timestep1: Pro mesh_activate1 with 20 steps: 202 nodes
 #     (= Pro; old GNU 4040, one macro copy per step);
 #   mesh_switch_timestep1: two steps, axes swapped once: node 3
-#     0.5 0 -> 0 0.5 (= Pro; old GNU swapped twice, node 3 unchanged).
+#     1 0 -> 0 1 (= Pro; old GNU swapped twice, node 3 unchanged; before
+#     the F4 T8 macro numbering the GNU node 3 was 0.5 0 -> 0 0.5).
 run_ok "$T2026" mesh_macro_timestep1
 n_nodes=$(grep -ac '^node ' "$T2026/mesh_macro_timestep1.dbs" 2>/dev/null)
 if [ "$n_nodes" = "202" ]; then check_ok "mesh_macro_timestep1 (202 nodes)";
 else check_fail "mesh_macro_timestep1" "nodes=$n_nodes, expected 202"; fi
 run_ok "$T2026" mesh_switch_timestep1
-if grep -aqE '^node +3 +0 +0\.5 *$' "$T2026/mesh_switch_timestep1.dbs" 2>/dev/null;
-then check_ok "mesh_switch_timestep1 (node 3 at 0 0.5)";
-else check_fail "mesh_switch_timestep1" "node 3 not at 0 0.5"; fi
+if grep -aqE '^node +3 +0 +1 *$' "$T2026/mesh_switch_timestep1.dbs" 2>/dev/null;
+then check_ok "mesh_switch_timestep1 (node 3 at 0 1)";
+else check_fail "mesh_switch_timestep1" "node 3 not at 0 1"; fi
+# F4 T8 / C45 (2026-10-10): control_mesh_copy / _mirror on an index after
+#   a control_timestep (mesh.cc mesh_duplicate_node_data /
+#   mesh_duplicate_element_state). Old GNU: rc 1 (node_dof_start_refined
+#   of the new nodes missing), then 1 % off (integration-point state
+#   re-initialised). Targets = Professional 02-08-2026 post_point values.
+run_ok "$T2026" mesh_copy_timestep1
+run_ok "$T2026" mesh_mirror_timestep1
+# F4 T8 / C46d (2026-10-10): control_mesh_macro -bar/-rectangle/-brick
+#   numbered as the Professional 02-08-2026 (x fastest, then y, then z;
+#   macro.cc). Old GNU: transposed (x slowest).
+run_ok "$T2026" mesh_macro_numbering1
+if grep -aqE '^node +2 +1 +0 *$' "$T2026/mesh_macro_numbering1.dbs" 2>/dev/null &&
+   grep -aqE '^element +1 +-quad4 1 2 4 5 *$' "$T2026/mesh_macro_numbering1.dbs" 2>/dev/null;
+then check_ok "mesh_macro_numbering1 (node 2 at 1 0, element 1 1 2 4 5)";
+else check_fail "mesh_macro_numbering1" "rectangle numbering differs from the Professional"; fi
+run_ok "$T2026" mesh_macro_numbering2
+if grep -aqE '^node +2 +1 +0 +0 *$' "$T2026/mesh_macro_numbering2.dbs" 2>/dev/null &&
+   grep -aqE '^element +1 +-hex8 1 2 4 5 7 8 10 11 *$' "$T2026/mesh_macro_numbering2.dbs" 2>/dev/null;
+then check_ok "mesh_macro_numbering2 (node 2 at 1 0 0, element 1 1 2 4 5 7 8 10 11)";
+else check_fail "mesh_macro_numbering2" "brick numbering differs from the Professional"; fi
+# F4 T8 / C46a: one-shot mesh records on one index in the Professional
+#   order copy, (move), switch, mirror (top.cc step_start).
+run_ok "$T2026" mesh_order_timestep1
+if grep -aqE '^node +10 +0 +7 *$' "$T2026/mesh_order_timestep1.dbs" 2>/dev/null &&
+   grep -aqE '^node +25 +-1 +5 *$' "$T2026/mesh_order_timestep1.dbs" 2>/dev/null;
+then check_ok "mesh_order_timestep1 (node 10 at 0 7, node 25 at -1 5)";
+else check_fail "mesh_order_timestep1" "copy/switch/mirror order differs from the Professional"; fi
+# F4 T8 / C46b: control_mesh_move once per control index, node and
+#   node_start_refined moved (manual 6.217; the Professional moves only
+#   node_start_refined, DIVERGENCES C46b). Old GNU: once per step.
+run_ok "$T2026" mesh_move_timestep1
+if grep -aqE '^node +6 +12 +1 *$' "$T2026/mesh_move_timestep1.dbs" 2>/dev/null &&
+   grep -aqE '^node_start_refined +6 +12 +1 *$' "$T2026/mesh_move_timestep1.dbs" 2>/dev/null;
+then check_ok "mesh_move_timestep1 (node 6 at 12 1, moved once)";
+else check_fail "mesh_move_timestep1" "node 6 not at 12 1"; fi
+# F4 T8: control_mesh_switch with two entries swaps them (manual 6.244,
+#   Professional: -x -y swaps x and y; old GNU: axis order = no change).
+run_ok "$T2026" mesh_switch_pair1
+if grep -aqE '^node +3 +0 +2 *$' "$T2026/mesh_switch_pair1.dbs" 2>/dev/null;
+then check_ok "mesh_switch_pair1 (node 3 at 0 2)";
+else check_fail "mesh_switch_pair1" "node 3 not at 0 2"; fi
+# F4 T8 / C46d: mesh_activate_gravity_time read at its own index, bottom-
+#   to-top activation, default -method2, reduced tangent and stress
+#   increment (mesh.cc mesh_activate_gravity_factor, materi.cc). Targets =
+#   Professional values; old GNU: full gravity from the first step.
+run_ok "$T2026" mesh_activate_gravity_time1
+# F4 T9 / C43 (2026-10-10): -matrix_superlu route (so_suplu.c). The old
+#   code read L and U (dQuerySpace) after destroying them and free()d the
+#   new[] matrix arrays (ASan alloc-dealloc-mismatch). Old GNU: segmentation
+#   fault (rc 139) after the first solve. Analytic plane-strain targets.
+run_ok "$T2026" superlu_solve1
+# F4 T9 / C43 (2026-10-10): -matrix_pardiso is solved with SuperLU (so.cc;
+#   old GNU: always the Bi-CG) and falls back to the Bi-CG when the SuperLU
+#   factorization fails. pardiso_bicg_fallback1 forces the failure with the
+#   memory guard budget TN_PARDISO_SUPERLU_MB=4 (4 MB above the current
+#   address space; SuperLU needs ~130 MB). Same analytic targets.
+run_ok "$T2026" pardiso_superlu1
+if grep -aq "Solution Found" /tmp/pardiso_superlu1_safe.out 2>/dev/null &&
+   ! grep -aq "falling back to the iterative Bi-CG" /tmp/pardiso_superlu1_safe.out 2>/dev/null;
+then check_ok "pardiso_superlu1 (-matrix_pardiso solved by SuperLU)";
+else check_fail "pardiso_superlu1" "SuperLU did not solve -matrix_pardiso"; fi
+( cd "$T2026" &&
+  ulimit -v "$TN_MEMLIMIT_KB" &&
+  TN_PARDISO_SUPERLU_MB=4 timeout 60 "$REPO_DIR/build/$TN_BIN" \
+    pardiso_bicg_fallback1.dat > /tmp/pardiso_bicg_fallback1_safe.out 2>&1 )
+RC_PBF=$?
+if [ "$RC_PBF" = "0" ] &&
+   grep -aq "SuperLU failed for -matrix_pardiso - falling back" /tmp/pardiso_bicg_fallback1_safe.out 2>/dev/null;
+then check_ok "pardiso_bicg_fallback1 (SuperLU out of memory -> Bi-CG, targets met)";
+else check_fail "pardiso_bicg_fallback1" "rc=$RC_PBF or no Bi-CG fallback"; fi
+# F4 T9 / C43: the iterative solver multiplies with an assembled CSR matrix
+#   (so_bicg.cc bicg_csr_build/bicg_csr_sys) instead of the element-by-
+#   element products; two threads (options_processors 2). print_solver -yes
+#   reports the operator; old GNU: no CSR line. Analytic targets.
+run_ok "$T2026" bicg_csr_threads1
+if grep -aq "assembled CSR operator" /tmp/bicg_csr_threads1_safe.out 2>/dev/null;
+then check_ok "bicg_csr_threads1 (assembled CSR operator, 2 threads)";
+else check_fail "bicg_csr_threads1" "no assembled CSR operator"; fi
 
 # ---------------------------------------------------------------------
 # K03 (2026-10-06): default convection_apply -no (manual Professional

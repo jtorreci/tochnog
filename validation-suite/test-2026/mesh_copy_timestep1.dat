@@ -1,0 +1,35 @@
+( F4 T8 C45: control_mesh_copy on an index AFTER a control_timestep.
+  Loaded 3x2-node block [gravity, fixed base]; one step on index 0, then
+  the copy [shift 2 0] with two steps on index 1. Old GNU: rc 1,
+  "Error detected for data item : node_dof_start_refined, record : 8"
+  [the copied nodes had no node_dof_start_refined]; with only that fixed
+  the copy was re-initialised from the smoothed nodal stresses and
+  differed by 1 %. The Professional 02-08-2026 copies nodes, nodal dofs
+  and the integration-point state: the copy is an exact replica.
+  Targets = Professional post_point values. )
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_velocity_integrated
+materi_strain_total
+materi_stress
+end_initia
+geometry_line 1 -10. 0. 10. 0. 1.e-4
+bounda_dof 1 -geometry_line 1 -velx -vely
+group_type 0  -materi
+group_materi_elasti_young   0  1.0e6
+group_materi_elasti_poisson 0  0.2
+group_materi_density   0  1.0
+force_gravity 0  -10.
+control_mesh_macro 0   -rectangle 0 3 2
+control_mesh_macro_parameters 0   0.5 0.5 1. 1.
+control_timestep 0 0.1 0.1
+control_mesh_copy 1  2. 0.
+control_timestep 1 0.1 0.2
+post_point 1  2. 1.
+post_point 2  2.5 0.
+target_item 1  -post_point_dof 1 -veliy
+target_value 1  -4.845961002744e-06 1.e-11
+target_item 2  -post_point_dof 2 -sigyy
+target_value 2  -5.083565459654 1.e-5
+end_data

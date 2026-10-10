@@ -1,0 +1,18 @@
+( F4 T8 C46d: control_mesh_macro -brick node and element numbering.
+  The Professional 02-08-2026 numbers x fastest, then y, then z: node 2
+  at 1 0 0, node 4 at 0 1 0, element 1 -hex8 1 2 4 5 7 8 10 11. Old GNU:
+  z fastest [node 2 at 0 0 1]. build_safe.sh checks the .dbs. )
+echo -no
+number_of_space_dimensions 3
+materi_velocity
+materi_stress
+end_initia
+geometry_brick 1  0. 0. 0. 400. 400. 400. 1.e-4
+bounda_dof 1 -geometry_brick 1 -velx -vely -velz
+group_type 0  -materi
+group_materi_elasti_young   0  1.0e6
+group_materi_density   0  1.0
+control_mesh_macro 0   -brick 0 3 2 2
+control_mesh_macro_parameters 0   1. 0.5 0.5 2. 1. 1.
+control_timestep 0 0.1 0.1
+end_data

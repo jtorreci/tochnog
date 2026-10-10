@@ -22,6 +22,7 @@
 */
 
 #include "tochnog.h"
+#include <sys/resource.h>
 
   // c routines
 extern "C" 
@@ -355,6 +356,65 @@ static long int disp_primary_gate( long int task )
   return 1;
 }
 
+// -matrix_pardiso memory guard (F4 T9). The GNU solves -matrix_pardiso
+// with SuperLU (dgssv) and falls back to the Bi-CG when the factorization
+// fails. dgssv cannot release the L/U workspace it allocated when it runs
+// out of memory (its GlobalLU_t is local to dgssv), so before the
+// factorization the soft address-space limit is lowered to the current
+// address space plus PARDISO_SUPERLU_MEMORY_FRACTION of the room left
+// (the smaller of the soft limit headroom and MemAvailable): SuperLU then
+// fails cleanly at that budget and the remaining room is left for the
+// Bi-CG fallback. The diagnostic environment variable TN_PARDISO_SUPERLU_MB
+// replaces that budget by the given number of megabytes (used by the
+// build_safe.sh test of the fallback). Returns 1 when the limit was lowered
+// (saved holds the limit to restore), 0 when no guard could be set (no
+// /proc, no room).
+#define PARDISO_SUPERLU_MEMORY_FRACTION 0.7
+// Set after the first failed SuperLU factorization of -matrix_pardiso: the
+// rest of the run uses the Bi-CG directly (a failed dgssv leaks its
+// workspace, so repeated attempts would eat the room left for the Bi-CG).
+static long int solve_pardiso_superlu_failed = 0;
+static long int solve_proc_kb( const char *file, const char *key )
+
+{
+  long int kb = -1;
+  char line[256];
+  size_t lkey = strlen( key );
+  FILE *fp = fopen( file, "r" );
+  if ( fp==NULL ) return -1;
+  while ( fgets( line, sizeof(line), fp )!=NULL ) {
+    if ( strncmp( line, key, lkey )==0 ) {
+      kb = atol( line+lkey );
+      break;
+    }
+  }
+  fclose( fp );
+  return kb;
+}
+
+static long int solve_pardiso_memory_guard( struct rlimit &saved )
+
+{
+  long int vm_kb = solve_proc_kb( "/proc/self/status", "VmSize:" );
+  long int avail_kb = solve_proc_kb( "/proc/meminfo", "MemAvailable:" );
+  if ( vm_kb<0 || avail_kb<=0 ) return 0;
+  if ( getrlimit( RLIMIT_AS, &saved )!=0 ) return 0;
+  double vm = 1024.*(double)vm_kb, room = 1024.*(double)avail_kb;
+  if ( saved.rlim_cur!=RLIM_INFINITY ) {
+    double head = (double)saved.rlim_cur - vm;
+    if ( head<room ) room = head;
+  }
+  if ( room<=0. ) return 0;
+  double budget = PARDISO_SUPERLU_MEMORY_FRACTION*room;
+  const char *env = getenv( "TN_PARDISO_SUPERLU_MB" );
+  if ( env!=NULL && atof( env )>0. && 1048576.*atof( env )<room )
+    budget = 1048576.*atof( env );
+  struct rlimit lowered = saved;
+  lowered.rlim_cur = (rlim_t) ( vm + budget );
+  if ( setrlimit( RLIMIT_AS, &lowered )!=0 ) return 0;
+  return 1;
+}
+
 void solve( long int task )
 
 {
@@ -369,7 +429,7 @@ void solve( long int task )
     icontrol=0, ieigen=0, neigen=0, neigen_positive=0,
     new_node=0, ldum=0, succesful=0, test1=0, test2=0,
     mg=0, nthread=1, band_solver=0, bicg_solver=0,lapack_solver=0,
-    petsc_solver=0, superlu_solver=0, use_node_lhside=0, 
+    petsc_solver=0, superlu_solver=0, pardiso_superlu=0, use_node_lhside=0, 
     control_options_solver_petsc_ksptype=-1, control_options_solver_petsc_pctype=-1,
     idum[1], control_eigen[2], *node_bounded=NULL, *dof_principal=NULL, 
     *node_node=NULL, *dof_label=NULL, *dof_type=NULL,
@@ -468,25 +528,37 @@ void solve( long int task )
 	/*----- lapack  ----*/  
 
         /*----- pardiso (Professional): NOT compiled in the GNU.
-          Accepted with a warning and a fallback to the iterative Bi-CG
-          (the iterative default) so Professional inputs PARSE - the
-          convergence corpus runs; PARDISO itself is the documented
-          partial of the solver family 6.1047.
-          (2026-08-30: the LAPACK band solver dgbsv silently returns 0
-          for some models (truss, some 2D interfaces) because its matrix
-          fill is incomplete, while it works for the 3D hex8 interfaces.
-          The Bi-CG is the honest general fallback; the 3D interface
-          family with kn >> E needs a real direct solver (SuperLU) -
-          documented as pending.) */
+          F4 T9 (2026-10-10, owner decision): -matrix_pardiso is solved
+          with the SuperLU direct solver (the Professional default is
+          PARDISO, a direct solver; the GNU Bi-CG needs >1 h on the
+          Professional force11 where SuperLU takes ~10 s). When the
+          SuperLU factorization fails (singular U, out of memory under
+          the guard of solve_pardiso_memory_guard) the solve falls back
+          to the iterative Bi-CG (with its band LU retry), the historic
+          GNU route of -matrix_pardiso. The GNU default solver stays the
+          Bi-CG: SuperLU does not scale to large 3D models (Professional
+          large1 30x30x30 exhausts 4 GB). */
 	if ( task==-MATRIX_PARDISO )
 	{
           static long int warned_pardiso = 0;
-          if ( !warned_pardiso ) {
-            pri( "Warning: -matrix_pardiso is not compiled in the GNU "
-              "- falling back to the iterative Bi-CG solver" );
-            warned_pardiso = 1;
+          if ( SUPERLU_USE && !solve_pardiso_superlu_failed ) {
+            if ( !warned_pardiso ) {
+              pri( "Warning: -matrix_pardiso is not compiled in the GNU "
+                "- solving with the SuperLU direct solver "
+                "(Bi-CG if SuperLU fails)" );
+              warned_pardiso = 1;
+            }
+            superlu_solver = 1;
+            pardiso_superlu = 1;
           }
-          bicg_solver = 1;
+          else {
+            if ( !warned_pardiso ) {
+              pri( "Warning: -matrix_pardiso is not compiled in the GNU "
+                "- falling back to the iterative Bi-CG solver" );
+              warned_pardiso = 1;
+            }
+            bicg_solver = 1;
+          }
 	}
 
   // ---------------------------------------------------------------------
@@ -1085,6 +1157,64 @@ void solve( long int task )
     }
 
 // call solver
+    // SuperLU first: -matrix_superlu, and -matrix_pardiso (F4 T9), which
+    // falls back to the Bi-CG below when the factorization fails.
+    if ( superlu_solver ) {
+      superlu_nnz = 0;
+      for ( jlocal=0; jlocal<solve_nlocal; jlocal++ ) superlu_nnz += nnz[jlocal];
+      superlu_A = get_new_dbl(superlu_nnz);
+      superlu_asub = get_new_int_short(superlu_nnz);
+      superlu_xa = get_new_int_short(solve_nlocal+1);
+      for ( i=0; i<superlu_nnz; i++ ) superlu_A[i] = 0.;
+      for ( i=0; i<superlu_nnz; i++ ) superlu_asub[i] = 0;
+      for ( i=0; i<solve_nlocal+1; i++ ) superlu_xa[i] = 0;
+      index = 0;
+      for ( jlocal=0; jlocal<solve_nlocal; jlocal++ ) {
+        for ( ilocal=0; ilocal<nnz[jlocal]; ilocal++ ) {
+          assert(index<superlu_nnz);
+          if ( ilocal==0 ) superlu_xa[jlocal] = index;
+          superlu_A[index] = solve_A[jlocal][ilocal];
+          superlu_asub[index] = inz[jlocal][ilocal];
+          index++;
+        }
+        superlu_xa[solve_nlocal] = superlu_nnz;
+      }
+#if ( SUPERLU_USE || SUPERLU_MT_USE || SUPERLU_DIST_USE )
+      {
+        struct rlimit saved_as;
+        long int guarded = 0;
+        if ( pardiso_superlu )
+          guarded = solve_pardiso_memory_guard( saved_as );
+        succesful = solve_superlu( superlu_A, superlu_asub, superlu_xa, 
+          superlu_nnz, solve_b, solve_nlocal, nthread );
+        if ( guarded ) setrlimit( RLIMIT_AS, &saved_as );
+      }
+#endif
+      // the compressed-column arrays are owned here (new[]); SuperLU only
+      // destroys its SuperMatrix store (so_suplu.c, F4 T9)
+      delete[] superlu_A;
+      delete[] superlu_asub;
+      delete[] superlu_xa;
+      superlu_A = NULL;
+      superlu_asub = NULL;
+      superlu_xa = NULL;
+      if ( !succesful && pardiso_superlu ) {
+        static long int warned_pardiso_bicg = 0;
+        if ( !warned_pardiso_bicg ) {
+          pri( "Warning: SuperLU failed for -matrix_pardiso - "
+            "falling back to the iterative Bi-CG solver "
+            "(for the rest of the calculation)" );
+          warned_pardiso_bicg = 1;
+        }
+        // dgssv overwrites the right-hand side only after a successful
+        // factorization; restore it from the saved copy anyway
+        for ( ilocal=0; ilocal<solve_nlocal; ilocal++ )
+          solve_b[ilocal] = solve_b_temp[ilocal+1];
+        array_set( solve_x, 0., solve_nlocal );
+        bicg_solver = 1;
+        solve_pardiso_superlu_failed = 1;
+      }
+    }
     if      ( bicg_solver ) {
       succesful = solve_iterative_bicg( );
       // CONVERGENCE (2026-08-30): if the Bi-CG fails (3D interfaces
@@ -1171,32 +1301,7 @@ void solve( long int task )
       length = 1;
       db( GLOBAL_SOLVER_ITERATIONS, 0, &iter, ddum, length, VERSION_NORMAL, PUT );    
     }
-    else if ( superlu_solver  ) {
-      superlu_nnz = 0;
-      for ( jlocal=0; jlocal<solve_nlocal; jlocal++ ) superlu_nnz += nnz[jlocal];
-      superlu_A = get_new_dbl(superlu_nnz);
-      superlu_asub = get_new_int_short(superlu_nnz);
-      superlu_xa = get_new_int_short(solve_nlocal+1);
-      for ( i=0; i<superlu_nnz; i++ ) superlu_A[i] = 0.;
-      for ( i=0; i<superlu_nnz; i++ ) superlu_asub[i] = 0;
-      for ( i=0; i<solve_nlocal+1; i++ ) superlu_xa[i] = 0;
-      index = 0;
-      for ( jlocal=0; jlocal<solve_nlocal; jlocal++ ) {
-        for ( ilocal=0; ilocal<nnz[jlocal]; ilocal++ ) {
-          assert(index<superlu_nnz);
-          if ( ilocal==0 ) superlu_xa[jlocal] = index;
-          superlu_A[index] = solve_A[jlocal][ilocal];
-          superlu_asub[index] = inz[jlocal][ilocal];
-          index++;
-        }
-        superlu_xa[solve_nlocal] = superlu_nnz;
-      }
-#if ( SUPERLU_USE || SUPERLU_MT_USE || SUPERLU_DIST_USE )
-      succesful = solve_superlu( superlu_A, superlu_asub, superlu_xa, 
-        superlu_nnz, solve_b, solve_nlocal, nthread );
-#endif
-    }
-    else
+    else if ( !superlu_solver )
       succesful = 1;
     if ( !succesful ) {
       pri( "The solver did not find a solution." );

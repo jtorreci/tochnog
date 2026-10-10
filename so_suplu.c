@@ -136,6 +136,9 @@ long int solve_superlu( double *superlu_A, int *superlu_asub,
 /*  Initialize Stats vars */
   StatInit(&stat); 
 
+  /* dgstrf creates L and U only when the factorization completes */
+  L.Store = NULL;
+  U.Store = NULL;
   dgssv( &options, &A, perm_c, perm_r, &L, &U, &B, &stat, &info);
   StatFree(&stat);
     
@@ -171,13 +174,38 @@ long int solve_superlu( double *superlu_A, int *superlu_asub,
   SUPERLU_FREE(berr);
     
 #endif
-  Destroy_CompCol_Matrix(&A);
+  /* F4 T9 (2026-10-10): only the SuperMatrix store of A is SuperLU's.
+     Its value / row index / column pointer arrays are allocated with
+     new[] by the caller (so.cc solve) and released there with delete[];
+     Destroy_CompCol_Matrix(&A) freed them with free() (alloc-dealloc
+     mismatch, ASan). */
+  Destroy_SuperMatrix_Store(&A);
     
 #if ( SUPERLU_USE || SUPERLU_MT_USE )
     
   Destroy_SuperMatrix_Store(&B);
-  Destroy_SuperNode_Matrix(&L);
-  Destroy_CompCol_Matrix(&U);
+  /* L and U exist only when dgstrf completed the factorization
+     (info == 0, or 0 < info <= n: U is exactly singular); on an
+     argument error (info < 0) or a memory failure (info > n) dgstrf
+     returns before it creates them. The memory report is read BEFORE
+     L and U are destroyed (the old code queried them after
+     Destroy_SuperNode_Matrix / Destroy_CompCol_Matrix: heap
+     use-after-free, ASan, F4 T9). */
+  if ( L.Store!=NULL && U.Store!=NULL ) {
+    dQuerySpace(&L, &U, &mem_usage);
+    if ( info == 0 )
+      printf(" Solution Found - L\\U MB %.3f\ttotal MB needed %.3f\n",
+        mem_usage.for_lu/1e6, mem_usage.total_needed/1e6);
+    else {
+      printf("dgssv() error returns INFO= %d\n", info);
+      printf("L\\U MB %.3f\ttotal MB needed %.3f\n",
+        mem_usage.for_lu/1e6, mem_usage.total_needed/1e6);
+    }
+    Destroy_SuperNode_Matrix(&L);
+    Destroy_CompCol_Matrix(&U);
+  }
+  else if ( info != 0 )
+    printf("dgssv() error returns INFO= %d\n", info);
     
 #endif
 
@@ -189,18 +217,5 @@ out:
     
 #endif
     
-if ( info == 0 ) {
-    dQuerySpace(&L, &U, &mem_usage);
-    printf(" Solution Found - L\\U MB %.3f\ttotal MB needed %.3f\n",
-               mem_usage.for_lu/1e6, mem_usage.total_needed/1e6);
-    } else {
-        printf("dgssv() error returns INFO= %d\n", info);
-        if ( info <= n ) { /* factorization completed, but U is singular */
-            dQuerySpace(&L, &U, &mem_usage);
-            printf("L\\U MB %.3f\ttotal MB needed %.3f\n",
-            mem_usage.for_lu/1e6, mem_usage.total_needed/1e6);
-        }
-    }
-
   return ( info == 0 );
 }

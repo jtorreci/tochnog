@@ -28,8 +28,9 @@ Professional probes (02-08-2026, omen, F4 T7): a 3x2-node mesh with the
 operation and a two- or three-step `control_timestep` on index 1:
 macro 12 nodes (GNU before 24), copy 12 (GNU 48), mirror 12 (GNU 48),
 switch applied once with two steps (GNU twice = identity).
-`control_mesh_move` had no effect in the Professional (with or without
-time stepping), so it is NOT guarded; `control_mesh_rotate_angle` is only
+`control_mesh_move`: F4 T8 found that the Professional moves only
+`node_start_refined`, once per index; the GNU guards `mesh_move()` too
+(control_mesh_move page); `control_mesh_rotate_angle` is only
 a parameter of `control_mesh_rotate` in the Professional, and the 3D
 `control_mesh_rotate` probe did not run on either binary — both left
 unguarded (BACKLOG C46).
@@ -53,3 +54,14 @@ None.
   unconfirmed against the Professional (BACKLOG C46).
 - A per-operation registry (operation, once/always) would replace the
   scattered `first_of_control &&` tests.
+
+## Order of the operations (F4 T8)
+
+`step_start()` runs `macro()`, `adjust_geom`, then `mesh_copy()`,
+`mesh_move()`, `mesh_switch()`, `mesh_mirror()` (before: switch, move,
+mirror, copy). Professional probes (macro x 0..2, y 0..1; copy 5 0,
+mirror -x, switch -y -x, move +10 / linear 2x on index 1, every pair and
+copy+switch+mirror; the record order in the input swapped too): copy
+before move, switch and mirror; move before switch and mirror; switch
+before mirror. The place of `adjust_geom` and of the rotate records was
+not probed (left where they were). Test `mesh_order_timestep1`.

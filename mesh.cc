@@ -136,15 +136,34 @@ void mesh_switch( long int control_mesh_switch[], long int length )
 
 {
   // Switch x, y, z coordinates of all nodes, e.g. for easy rotating the mesh.
-  // The control specifies the new order of the axes:
+  // Manual Professional 6.244: control_mesh_switch index dir0 dir1 switches
+  // the coordinates dir0 and dir1 (two entries, also in 3D; -x -y swaps x
+  // and y, -x -x does nothing). Professional 02-08-2026 probes (F4 T8):
+  // 2D -x -y swaps, 3D -x -z swaps x and z, a third entry is refused.
+  // GNU extension: ndim entries (3 in 3D) give the new order of the axes:
   //   control_mesh_switch 0  -y -x -z   (interchange x and y)
-  // The number of axes given must equal ndim.
   long int inod=0, max_node=0, idim=0, order[MDIM],
     has[MDIM], idum[1];
   double coords[MDIM], new_coords[MDIM];
 
   array_set( order, -1, MDIM );
   array_set( has, 0, MDIM );
+  if ( length==2 && ndim>=2 ) {
+    long int ax[2];
+    for ( idim=0; idim<2; idim++ ) {
+      if      ( control_mesh_switch[idim]==-X ) ax[idim] = 0;
+      else if ( control_mesh_switch[idim]==-Y ) ax[idim] = 1;
+      else if ( control_mesh_switch[idim]==-Z && ndim==3 ) ax[idim] = 2;
+      else {
+        pri( "Error: control_mesh_switch axes must be -x, -y or -z." );
+        exit(TN_EXIT_STATUS);
+      }
+    }
+    for ( idim=0; idim<ndim; idim++ ) order[idim] = idim;
+    order[ax[0]] = ax[1];
+    order[ax[1]] = ax[0];
+    length = 0; // order complete: skip the permutation parsing below
+  }
   for ( idim=0; idim<ndim && idim<length; idim++ ) {
     if ( control_mesh_switch[idim]==-X ) order[idim] = 0;
     else if ( control_mesh_switch[idim]==-Y ) order[idim] = 1;
@@ -230,6 +249,83 @@ void mesh_move( double control_mesh_move[], long int length )
   mesh_has_changed( VERSION_NORMAL );
 }
 
+// Copy one node-class item of node from into node to through a local
+// buffer: a PUT beyond the allocated range reallocates the data array, so
+// passing the db_dbl()/db_int() pointer of the source straight to the PUT
+// reads freed memory (use-after-free, found with ASan in F4 T8/T9).
+static void mesh_copy_node_item( long int idat, long int from, long int to,
+  long int len )
+
+{
+  long int idum[1];
+  double ddum[1];
+
+  if ( len<1 ) return;
+  if ( db_type(idat)==DOUBLE_PRECISION ) {
+    double *buf = get_new_dbl( len );
+    array_move( db_dbl( idat, from, VERSION_NORMAL ), buf, len );
+    db( idat, to, idum, buf, len, VERSION_NORMAL, PUT );
+    delete[] buf;
+  }
+  else {
+    long int *buf = get_new_int( len );
+    array_move( db_int( idat, from, VERSION_NORMAL ), buf, len );
+    db( idat, to, buf, ddum, len, VERSION_NORMAL, PUT );
+    delete[] buf;
+  }
+}
+
+// Duplicate the node-class data of node inod into node new_node (all
+// items except NODE and NODE_START_REFINED, which the caller writes with
+// its own coordinate transformation). renumber() and create_node() read
+// NODE_DOF and NODE_DOF_START_REFINED of every node, so a copied node
+// without them stops the run (BACKLOG C45). The source is copied into a
+// local buffer first: a PUT beyond the allocated range reallocates the
+// data array and would leave a db_dbl()/db_int() pointer dangling.
+static void mesh_duplicate_node_data( long int inod, long int new_node )
+
+{
+  for ( long int idat=0; idat<MDAT; idat++ ) {
+    if ( idat==NODE || idat==NODE_START_REFINED ) continue;
+    if ( db_data_class(idat)!=NODE ) continue;
+    if ( !db_active_index( idat, inod, VERSION_NORMAL ) ) continue;
+    mesh_copy_node_item( idat, inod, new_node,
+      db_len( idat, inod, VERSION_NORMAL ) );
+  }
+}
+
+// Copy the integration-point state of element ielem into its duplicate
+// new_elem. create_element() resets ELEMENT_DOF and marks it
+// uninitialised (right for refinement), which re-initialises the copy
+// from the smoothed nodal values; the Professional copies the
+// integration-point state (F4 T8: a copied loaded block is an exact
+// replica).
+static void mesh_duplicate_element_state( long int ielem, long int new_elem )
+
+{
+  long int idum[1];
+  double ddum[1];
+  long int vers[2] = { VERSION_NORMAL, VERSION_NEW };
+
+  for ( int iv=0; iv<2; iv++ ) {
+    long int version = vers[iv];
+    if ( !db_version( ELEMENT_DOF, version ) ) continue;
+    if ( db_active_index( ELEMENT_DOF, ielem, version ) ) {
+      long int len = db_len( ELEMENT_DOF, ielem, version );
+      double *buf = get_new_dbl( len );
+      array_move( db_dbl( ELEMENT_DOF, ielem, version ), buf, len );
+      db( ELEMENT_DOF, new_elem, idum, buf, len, version, PUT );
+      delete[] buf;
+    }
+    if ( db_version( ELEMENT_DOF_INITIALISED, version ) &&
+         db_active_index( ELEMENT_DOF_INITIALISED, ielem, version ) ) {
+      long int init = 0, len = 1;
+      db( ELEMENT_DOF_INITIALISED, ielem, &init, ddum, len, version, GET );
+      db( ELEMENT_DOF_INITIALISED, new_elem, &init, ddum, len, version, PUT );
+    }
+  }
+}
+
 void mesh_mirror( long int axis )
 
 {
@@ -265,10 +361,7 @@ void mesh_mirror( long int axis )
         new_coords[axis_i] = -coords[axis_i];
         db( NODE_START_REFINED, new_node, idum, new_coords, ndim, VERSION_NORMAL, PUT );
       }
-      if ( db_active_index( NODE_DOF, inod, VERSION_NORMAL ) ) {
-        double *ndof_old = db_dbl( NODE_DOF, inod, VERSION_NORMAL );
-        db( NODE_DOF, new_node, idum, ndof_old, nuknwn, VERSION_NORMAL, PUT );
-      }
+      mesh_duplicate_node_data( inod, new_node );
     }
   }
 
@@ -278,13 +371,15 @@ void mesh_mirror( long int axis )
   new_elem = max_elem;
   for ( ielem=0; ielem<=max_elem; ielem++ ) {
     if ( db_active_index( ELEMENT, ielem, VERSION_NORMAL ) ) {
-      new_elem++;
+      // Professional numbering (F4 T8 probes): old element + max + 1
+      new_elem = ielem + max_elem + 1;
       db( ELEMENT, ielem, el, ddum, length, VERSION_NORMAL, GET );
       nnol = length - 1;
       new_nodes[0] = el[0];
       for ( inol=0; inol<nnol; inol++ ) new_nodes[1+inol] = el[1+inol]+max_node_old+1;
       create_element( ielem, new_elem, new_nodes, length, VERSION_NORMAL,
         VERSION_NORMAL );
+      mesh_duplicate_element_state( ielem, new_elem );
     }
   }
   mesh_has_changed( VERSION_NORMAL );
@@ -316,10 +411,7 @@ void mesh_copy( double move_coords[] )
         for ( int i=0; i<ndim; i++ ) new_coords[i] = coords[i] + move_coords[i];
         db( NODE_START_REFINED, new_node, idum, new_coords, ndim, VERSION_NORMAL, PUT );
       }
-      if ( db_active_index( NODE_DOF, inod, VERSION_NORMAL ) ) {
-        double *ndof_old = db_dbl( NODE_DOF, inod, VERSION_NORMAL );
-        db( NODE_DOF, new_node, idum, ndof_old, nuknwn, VERSION_NORMAL, PUT );
-      }
+      mesh_duplicate_node_data( inod, new_node );
     }
   }
 
@@ -328,13 +420,15 @@ void mesh_copy( double move_coords[] )
   new_elem = max_elem;
   for ( ielem=0; ielem<=max_elem; ielem++ ) {
     if ( db_active_index( ELEMENT, ielem, VERSION_NORMAL ) ) {
-      new_elem++;
+      // Professional numbering (F4 T8 probes): old element + max + 1
+      new_elem = ielem + max_elem + 1;
       db( ELEMENT, ielem, el, ddum, length, VERSION_NORMAL, GET );
       nnol = length - 1;
       new_nodes[0] = el[0];
       for ( inol=0; inol<nnol; inol++ ) new_nodes[1+inol] = el[1+inol]+max_node_old+1;
       create_element( ielem, new_elem, new_nodes, length, VERSION_NORMAL,
         VERSION_NORMAL );
+      mesh_duplicate_element_state( ielem, new_elem );
     }
   }
   mesh_has_changed( VERSION_NORMAL );
@@ -404,20 +498,7 @@ void mesh_rotate_3d( long int nrot )
       new_coords[2] = -coords[0];
       db( NODE, new_node, idum, new_coords, len3, VERSION_NORMAL, PUT );
       // copy all other node-class data items from the source node
-      for ( int idat=0; idat<MDAT; idat++ ) {
-        if ( idat!=NODE && db_data_class(idat)==NODE &&
-             db_active_index( idat, inod, VERSION_NORMAL ) ) {
-          long int ndata_len = db_len( idat, inod, VERSION_NORMAL );
-          if ( db_type(idat)==DOUBLE_PRECISION ) {
-            double *dold = db_dbl( idat, inod, VERSION_NORMAL );
-            db( idat, new_node, idum, dold, ndata_len, VERSION_NORMAL, PUT );
-          }
-          else {
-            long int *iold = db_int( idat, inod, VERSION_NORMAL );
-            db( idat, new_node, iold, ddum, ndata_len, VERSION_NORMAL, PUT );
-          }
-        }
-      }
+      mesh_duplicate_node_data( inod, new_node );
       // the rotated coordinate also applies to node_start_refined
       if ( db_active_index( NODE_START_REFINED, inod, VERSION_NORMAL ) ) {
         db( NODE_START_REFINED, inod, idum, coords, ndim, VERSION_NORMAL, GET );
@@ -550,14 +631,7 @@ void mesh_convert_quad8( void )
            db_data_class(idat)==NODE &&
            db_active_index( idat, el[1], VERSION_NORMAL ) ) {
         long int ndata_len = db_len( idat, el[1], VERSION_NORMAL );
-        if ( db_type(idat)==DOUBLE_PRECISION ) {
-          double *dold = db_dbl( idat, el[1], VERSION_NORMAL );
-          db( idat, max_node, idum, dold, ndata_len, VERSION_NORMAL, PUT );
-        }
-        else {
-          long int *iold = db_int( idat, el[1], VERSION_NORMAL );
-          db( idat, max_node, iold, ddum, ndata_len, VERSION_NORMAL, PUT );
-        }
+        mesh_copy_node_item( idat, el[1], max_node, ndata_len );
       }
     }
     // rewrite the connectivity in the GNU quad9 tensor ordering
@@ -754,14 +828,7 @@ void mesh_convert_hex20( void )
                db_data_class(idat)==NODE &&
                db_active_index( idat, el[1], VERSION_NORMAL ) ) {
             long int ndata_len = db_len( idat, el[1], VERSION_NORMAL );
-            if ( db_type(idat)==DOUBLE_PRECISION ) {
-              double *dold = db_dbl( idat, el[1], VERSION_NORMAL );
-              db( idat, found, idum, dold, ndata_len, VERSION_NORMAL, PUT );
-            }
-            else {
-              long int *iold = db_int( idat, el[1], VERSION_NORMAL );
-              db( idat, found, iold, ddum, ndata_len, VERSION_NORMAL, PUT );
-            }
+            mesh_copy_node_item( idat, el[1], found, ndata_len );
           }
         }
       }
@@ -817,14 +884,7 @@ void mesh_extrude( double z_layer[], long int n_layer, long int quad9_layers )
           if ( idat!=NODE && db_data_class(idat)==NODE &&
                db_active_index( idat, inod, VERSION_NORMAL ) ) {
             long int ndata_len = db_len( idat, inod, VERSION_NORMAL );
-            if ( db_type(idat)==DOUBLE_PRECISION ) {
-              double *dold = db_dbl( idat, inod, VERSION_NORMAL );
-              db( idat, new_node, idum, dold, ndata_len, VERSION_NORMAL, PUT );
-            }
-            else {
-              long int *iold = db_int( idat, inod, VERSION_NORMAL );
-              db( idat, new_node, iold, ddum, ndata_len, VERSION_NORMAL, PUT );
-            }
+            mesh_copy_node_item( idat, inod, new_node, ndata_len );
           }
         }
         // the extruded coordinate also applies to node_start_refined
@@ -929,18 +989,7 @@ void mesh_extrude( double z_layer[], long int n_layer, long int quad9_layers )
                        VERSION_NORMAL ) ) {
                   long int ndata_len = db_len( idat, nodes[inol],
                     VERSION_NORMAL );
-                  if ( db_type(idat)==DOUBLE_PRECISION ) {
-                    double *dold = db_dbl( idat, nodes[inol],
-                      VERSION_NORMAL );
-                    db( idat, next_node, idum, dold, ndata_len,
-                      VERSION_NORMAL, PUT );
-                  }
-                  else {
-                    long int *iold = db_int( idat, nodes[inol],
-                      VERSION_NORMAL );
-                    db( idat, next_node, iold, ddum, ndata_len,
-                      VERSION_NORMAL, PUT );
-                  }
+                  mesh_copy_node_item( idat, nodes[inol], next_node, ndata_len );
                 }
               }
               next_node++;
@@ -960,18 +1009,7 @@ void mesh_extrude( double z_layer[], long int n_layer, long int quad9_layers )
                      VERSION_NORMAL ) ) {
                 long int ndata_len = db_len( idat, nodes[inol],
                   VERSION_NORMAL );
-                if ( db_type(idat)==DOUBLE_PRECISION ) {
-                  double *dold = db_dbl( idat, nodes[inol],
-                    VERSION_NORMAL );
-                  db( idat, next_node, idum, dold, ndata_len,
-                    VERSION_NORMAL, PUT );
-                }
-                else {
-                  long int *iold = db_int( idat, nodes[inol],
-                    VERSION_NORMAL );
-                  db( idat, next_node, iold, ddum, ndata_len,
-                    VERSION_NORMAL, PUT );
-                }
+                mesh_copy_node_item( idat, nodes[inol], next_node, ndata_len );
               }
             }
             next_node++;
@@ -1003,124 +1041,175 @@ void mesh_extrude( double z_layer[], long int n_layer, long int quad9_layers )
   mesh_has_changed( VERSION_NORMAL );
 }
 
-// mesh_activate_gravity_factor - mesh_activate_gravity_time (Carril B).
+// mesh_activate_gravity_time (manual Professional 6.807-6.813).
 //
-// Returns the gravity activation factor for an element: 0 before the
-// element start time of activation, 1 after the element end time of
-// activation, interpolated in between. The start/end times are
-// interpolated from the global time_start/time_end of the
-// mesh_activate_gravity_time record and the lowest/highest coordinate of
-// the element (bottom to top activation, typical for dam/dumping
-// construction). The element is selected by mesh_activate_gravity_element
-// (range), _element_group, or _geometry. Without the record the factor is 1
-// (gravity fully active).
+// The records are indexed: mesh_activate_gravity_time index t_start
+// t_end applies to the elements selected by the _element, _element_group
+// or _geometry record with the SAME index (no selection record: all
+// elements); _method, _stiffness_factor and _time_initial are read at the
+// same index. The first index whose selection contains the element wins.
 //
-// With mesh_activate_gravity_method -method2 the element stays ACTIVE in
-// the calculation before its activation but without gravity and with a
-// REDUCED STIFFNESS (mesh_activate_gravity_stiffness_factor, default 1e-6).
-// When stiff_factor is non-NULL it receives the element stiffness factor
-// (1 fully active; stiffness_factor before activation, ramping up between
-// the element start/end times).
+// Tochnog activates the elements from the bottom to the top: the element
+// start (end) time of activation is interpolated from t_start / t_end and
+// the lowest (highest) vertical coordinate of the element (y in 2D, z in
+// 3D) within the vertical range of all elements of the record. Gravity is
+// 0 before the element start time, ramps linearly to its full value at
+// the element end time, and is full afterwards.
+//
+// -method2 (the manual default): before its start time the element stays
+// in the calculation with its stiffness multiplied by
+// mesh_activate_gravity_stiffness_factor (default 1.e-6). -method1: the
+// element keeps its stiffness and has no gravity before activation (the
+// GNU does not take it out of the calculation, BACKLOG C46).
+//
+// F4 T8 (C46d): the old code read index 0 only (the Professional
+// mesh_activate1 has index 10: gravity was full from the first step),
+// used the global window for every element (no bottom-to-top
+// interpolation), defaulted to -method1 and gave a not-yet-activated
+// method2 element full gravity on the reduced stiffness.
+
+static long int mesh_activate_gravity_selected( long int index,
+  long int element, long int element_group, long int nnol, long int nodes[] )
+
+{
+  long int i=0, inod=0, length=0, ldum=0, in_geometry=0, any=0;
+  double rdum=0., ddum[MDIM];
+
+  if ( db_active_index( MESH_ACTIVATE_GRAVITY_ELEMENT, index, VERSION_NORMAL ) ) {
+    any = 1;
+    long int *list = db_int( MESH_ACTIVATE_GRAVITY_ELEMENT, index, VERSION_NORMAL );
+    length = db_len( MESH_ACTIVATE_GRAVITY_ELEMENT, index, VERSION_NORMAL );
+    for ( i=0; i<length; i++ ) if ( list[i]==element ) return 1;
+  }
+  if ( db_active_index( MESH_ACTIVATE_GRAVITY_ELEMENT_GROUP, index, VERSION_NORMAL ) ) {
+    any = 1;
+    long int *list = db_int( MESH_ACTIVATE_GRAVITY_ELEMENT_GROUP, index, VERSION_NORMAL );
+    length = db_len( MESH_ACTIVATE_GRAVITY_ELEMENT_GROUP, index, VERSION_NORMAL );
+    for ( i=0; i<length; i++ ) if ( list[i]==element_group ) return 1;
+  }
+  if ( db_active_index( MESH_ACTIVATE_GRAVITY_GEOMETRY, index, VERSION_NORMAL ) ) {
+    any = 1;
+    long int geom[2];
+    db( MESH_ACTIVATE_GRAVITY_GEOMETRY, index, geom, ddum, ldum, VERSION_NORMAL, GET );
+    for ( inod=0; inod<nnol; inod++ ) {
+      in_geometry = 0;
+      geometry( nodes[inod], ddum, geom, in_geometry, rdum, ddum, rdum,
+        ddum, NODE_START_REFINED, PROJECT_EXACT, VERSION_NORMAL );
+      if ( !in_geometry ) break;
+    }
+    if ( nnol>0 && in_geometry ) return 1;
+  }
+  return !any;
+}
+
+// vertical coordinate of a node in the start geometry
+static double mesh_activate_gravity_vertical( long int inod )
+
+{
+  long int vdim = ( ndim==3 ) ? 2 : 1;
+  if ( db_active_index( NODE_START_REFINED, inod, VERSION_NORMAL ) )
+    return db_dbl( NODE_START_REFINED, inod, VERSION_NORMAL )[vdim];
+  return db_dbl( NODE, inod, VERSION_NORMAL )[vdim];
+}
+
+// vertical range of all elements selected by the record at index; cached
+// per time step (the loop over the elements runs once per step and index)
+static void mesh_activate_gravity_range( long int index, double &zmin,
+  double &zmax )
+
+{
+  static std::vector<double> c_min, c_max, c_time, c_dtime;
+  static std::vector<long int> c_nel;
+  long int element=0, max_element=-1, length=0, ldum=0, inol=0, nnol=0,
+    element_group=0, el[1+MNOL], idum[1];
+  double time_current=0., dtime=0., ddum[1];
+
+  db( TIME_CURRENT, 0, idum, &time_current, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+  db( DTIME, 0, idum, &dtime, ldum, VERSION_NEW, GET_IF_EXISTS );
+  db_max_index( ELEMENT, max_element, VERSION_NORMAL, GET );
+  if ( (long int) c_min.size()<=index ) {
+    c_min.resize( index+1 ); c_max.resize( index+1 );
+    c_time.resize( index+1, DBL_MAX ); c_dtime.resize( index+1, DBL_MAX );
+    c_nel.resize( index+1, -2 );
+  }
+  if ( c_time[index]==time_current && c_dtime[index]==dtime &&
+       c_nel[index]==max_element ) {
+    zmin = c_min[index]; zmax = c_max[index];
+    return;
+  }
+  zmin = DBL_MAX; zmax = -DBL_MAX;
+  for ( element=0; element<=max_element; element++ ) {
+    if ( !db_active_index( ELEMENT, element, VERSION_NORMAL ) ) continue;
+    db( ELEMENT, element, el, ddum, length, VERSION_NORMAL, GET );
+    nnol = length - 1;
+    element_group = 0;
+    db( ELEMENT_GROUP, element, &element_group, ddum, ldum, VERSION_NORMAL,
+      GET_IF_EXISTS );
+    if ( !mesh_activate_gravity_selected( index, element, element_group,
+         nnol, &el[1] ) ) continue;
+    for ( inol=0; inol<nnol; inol++ ) {
+      double z = mesh_activate_gravity_vertical( el[1+inol] );
+      if ( z<zmin ) zmin = z;
+      if ( z>zmax ) zmax = z;
+    }
+  }
+  c_min[index] = zmin; c_max[index] = zmax;
+  c_time[index] = time_current; c_dtime[index] = dtime;
+  c_nel[index] = max_element;
+}
+
 double mesh_activate_gravity_factor( long int element, long int element_group,
   long int nnol, long int nodes[], double *stiff_factor )
 
 {
-  long int i=0, inod=0, length=0, ldum=0, in_geometry=0,
-    method=-METHOD1, idum[1], *mesh_act=NULL, *gr_list=NULL;
-  double factor=1., time_start=0., time_end=0., time_current=0., dtime=0.,
-    coord_min=0., coord_max=0., t_start_el=0., t_end_el=0., ddum[MDIM],
-    rdum=0., *coord=NULL, stiff=1.;
+  long int index=0, max_index=-1, inod=0, ldum=0, method=-METHOD2, idum[1];
+  double factor=1., stiff=1., time_start=0., time_end=0., time_current=0.,
+    dtime=0., ddum[MDIM];
 
   if ( stiff_factor ) *stiff_factor = 1.;
-  if ( db_active_index( MESH_ACTIVATE_GRAVITY_TIME, 0, VERSION_NORMAL ) ) {
-    db( DTIME, 0, idum, &dtime, ldum, VERSION_NEW, GET );    db( TIME_CURRENT, 0, idum, &time_current, ldum, VERSION_NORMAL, GET_IF_EXISTS );
-    db( MESH_ACTIVATE_GRAVITY_TIME, 0, idum, ddum, ldum, VERSION_NORMAL, GET );
-    time_start = ddum[0]; time_end = ddum[1];
-    db( MESH_ACTIVATE_GRAVITY_METHOD, 0, &method, ddum, ldum,
-      VERSION_NORMAL, GET_IF_EXISTS );
-    double stiff_factor_val = 1.e-6;
-    db( MESH_ACTIVATE_GRAVITY_STIFFNESS_FACTOR, 0, idum, &stiff_factor_val,
-      ldum, VERSION_NORMAL, GET_IF_EXISTS );
-
-    // select the element: range (_element), group (_element_group), or
-    // geometry (_geometry). If no selection is given, all elements apply.
-    long int selected = 0;
-    if ( db_active_index( MESH_ACTIVATE_GRAVITY_ELEMENT, 0, VERSION_NORMAL ) ) {
-      length = 0;
-      mesh_act = db_int( MESH_ACTIVATE_GRAVITY_ELEMENT, 0, VERSION_NORMAL );
-      length = db_len( MESH_ACTIVATE_GRAVITY_ELEMENT, 0, VERSION_NORMAL );
-      for ( i=0; i<length; i++ )
-        if ( mesh_act[i]==element ) { selected = 1; break; }
-    }
-    if ( db_active_index( MESH_ACTIVATE_GRAVITY_ELEMENT_GROUP, 0, VERSION_NORMAL ) ) {
-      length = 0;
-      gr_list = db_int( MESH_ACTIVATE_GRAVITY_ELEMENT_GROUP, 0, VERSION_NORMAL );
-      length = db_len( MESH_ACTIVATE_GRAVITY_ELEMENT_GROUP, 0, VERSION_NORMAL );
-      for ( i=0; i<length; i++ )
-        if ( gr_list[i]==element_group ) { selected = 1; break; }
-    }
-    if ( db_active_index( MESH_ACTIVATE_GRAVITY_GEOMETRY, 0, VERSION_NORMAL ) ) {
-      long int geom[2];
-      db( MESH_ACTIVATE_GRAVITY_GEOMETRY, 0, geom, ddum, ldum, VERSION_NORMAL, GET );
-      for ( inod=0; inod<nnol; inod++ ) {
-        in_geometry = 0;
-        geometry( nodes[inod], ddum, geom, in_geometry, rdum, ddum, rdum,
-          ddum, NODE_START_REFINED, PROJECT_EXACT, VERSION_NORMAL );
-        if ( !in_geometry ) break;
-      }
-      if ( in_geometry ) selected = 1;
-    }
-    // default: no selection record -> all elements
-    if ( !db_active_index( MESH_ACTIVATE_GRAVITY_ELEMENT, 0, VERSION_NORMAL ) &&
-         !db_active_index( MESH_ACTIVATE_GRAVITY_ELEMENT_GROUP, 0, VERSION_NORMAL ) &&
-         !db_active_index( MESH_ACTIVATE_GRAVITY_GEOMETRY, 0, VERSION_NORMAL ) )
-      selected = 1;
-    if ( !selected ) return 1.;
-
-    // lowest/highest vertical coordinate (y in 2D, z in 3D). The element
-    // activation interval is interpolated from the global window: elements
-    // with the lowest coordinate activate first. Without the global mesh
-    // range we map the element height into the window (single element: the
-    // full window).
-    long int vdim = ( ndim==3 ) ? 2 : 1;
-    coord_min = 1.e30; coord_max = -1.e30;
-    for ( inod=0; inod<nnol; inod++ ) {
-      coord = db_dbl( NODE, nodes[inod], VERSION_NORMAL );
-      if ( coord[vdim]<coord_min ) coord_min = coord[vdim];
-      if ( coord[vdim]>coord_max ) coord_max = coord[vdim];
-    }
-    if ( coord_max<=coord_min ) coord_max = coord_min + 1.e-6;
-    t_start_el = time_start;
-    t_end_el   = time_end;
-    double t_total = time_current + dtime;
-    // time_initial: before time_of_birth the element is inactive
-    double time_birth = -1.e30;
-    db( MESH_ACTIVATE_GRAVITY_TIME_INITIAL, 0, idum, &time_birth, ldum,
-      VERSION_NORMAL, GET_IF_EXISTS );
-    if ( t_total<time_birth ) {
-      // method1: inactive before birth (no stiffness). method2: still active
-      // with the reduced stiffness.
-      if ( method==-METHOD2 && stiff_factor ) *stiff_factor = stiff_factor_val;
-      return ( method==-METHOD2 ) ? 1. : 0.;
-    }
-
-    factor = 1.;
-    if ( t_total<t_start_el ) {
-      factor = 0.;
-      // method2: element stays active with reduced stiffness until activation
-      if ( method==-METHOD2 ) {
-        factor = 1.;
-        stiff = stiff_factor_val;
-      }
-    }
-    else if ( t_total<t_end_el && t_end_el>t_start_el ) {
-      factor = (t_total-t_start_el)/(t_end_el-t_start_el);
-      // method2: stiffness ramps from reduced to full between the times
-      if ( method==-METHOD2 )
-        stiff = stiff_factor_val +
-          (1.-stiff_factor_val) * (t_total-t_start_el)/(t_end_el-t_start_el);
-    }
+  db_max_index( MESH_ACTIVATE_GRAVITY_TIME, max_index, VERSION_NORMAL, GET );
+  for ( index=0; index<=max_index; index++ ) {
+    if ( db_active_index( MESH_ACTIVATE_GRAVITY_TIME, index, VERSION_NORMAL ) &&
+         mesh_activate_gravity_selected( index, element, element_group,
+           nnol, nodes ) ) break;
   }
+  if ( index>max_index ) return 1.;
+
+  db( DTIME, 0, idum, &dtime, ldum, VERSION_NEW, GET );
+  db( TIME_CURRENT, 0, idum, &time_current, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+  db( MESH_ACTIVATE_GRAVITY_TIME, index, idum, ddum, ldum, VERSION_NORMAL, GET );
+  time_start = ddum[0]; time_end = ddum[1];
+  db( MESH_ACTIVATE_GRAVITY_METHOD, index, &method, ddum, ldum,
+    VERSION_NORMAL, GET_IF_EXISTS );
+  double stiff_factor_val = 1.e-6;
+  db( MESH_ACTIVATE_GRAVITY_STIFFNESS_FACTOR, index, idum, &stiff_factor_val,
+    ldum, VERSION_NORMAL, GET_IF_EXISTS );
+
+  // element activation window, bottom to top
+  double coord_min = DBL_MAX, coord_max = -DBL_MAX, zmin=0., zmax=0.;
+  for ( inod=0; inod<nnol; inod++ ) {
+    double z = mesh_activate_gravity_vertical( nodes[inod] );
+    if ( z<coord_min ) coord_min = z;
+    if ( z>coord_max ) coord_max = z;
+  }
+  mesh_activate_gravity_range( index, zmin, zmax );
+  double t_start_el = time_start, t_end_el = time_end;
+  if ( zmax>zmin ) {
+    t_start_el = time_start + (time_end-time_start)*(coord_min-zmin)/(zmax-zmin);
+    t_end_el   = time_start + (time_end-time_start)*(coord_max-zmin)/(zmax-zmin);
+  }
+  double t_total = time_current + dtime;
+
+  // time_initial: before time_of_birth the element has no gravity
+  double time_birth = -DBL_MAX;
+  db( MESH_ACTIVATE_GRAVITY_TIME_INITIAL, index, idum, &time_birth, ldum,
+    VERSION_NORMAL, GET_IF_EXISTS );
+  if ( t_total<time_birth || t_total<t_start_el ) {
+    factor = 0.;
+    if ( method==-METHOD2 ) stiff = stiff_factor_val;
+  }
+  else if ( t_total<t_end_el )
+    factor = (t_total-t_start_el)/(t_end_el-t_start_el);
   if ( stiff_factor ) *stiff_factor = stiff;
   return factor;
 }

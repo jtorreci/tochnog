@@ -62,3 +62,36 @@ mesh_activate_gravity_element 0  -ra 1 5 -ra
   active with reduced stiffness before activation (the element matrix and
   lhside are scaled by the stiffness factor in materi.cc). Validated with
   `mesh_act_grav` (method 1) and `mesh_act_grav2` (method 2).
+
+## F4 T8 (2026-10-10): aligned with the manual and the Professional
+
+- The records are indexed: `mesh_activate_gravity_time index ...` applies
+  to the elements selected by the `_element` / `_element_group` /
+  `_geometry` record with the same index (none: all elements), and
+  `_method`, `_stiffness_factor`, `_time_initial` are read at that index.
+  Before, only index 0 was read (the Professional `mesh_activate1` uses
+  index 10: the GNU applied full gravity from the first step).
+- Bottom to top: the element start (end) time is interpolated from
+  `time_start`/`time_end` and the lowest (highest) vertical coordinate of
+  the element within the vertical range of all elements of the record.
+- Default `-method2` (manual 6.810). Before its start time a method-2
+  element has no gravity and its stiffness (material tangent and stress
+  increment) is multiplied by the stiffness factor; between the start and
+  end times it has full stiffness and ramping gravity.
+- `-method1` keeps the element in the calculation without gravity before
+  its start time (the Professional takes it out; not implemented).
+
+Professional `mesh_activate1` (202 nodes, 1000 steps): final `veliy`,
+`vely` and `sigyy` = Professional to 3e-4 relative (vely top -9.9504e-6 vs
+-9.95e-6; before F4 T8 vely 0) and its target passes. Test
+`validation-suite/test-2026/mesh_activate_gravity_time1` (targets =
+Professional values, t = 0.5 with the front half way).
+
+## Differences with the Professional version
+
+- The partly activated element is loaded uniformly over its height; the
+  Professional nodal values are the exact column solution. GNU off by
+  2.2e-9 (0.2 %) on `veliy` in the coarse test and 6 % on `vely` above the
+  front; 3e-4 in `mesh_activate1` (DIVERGENCES C46d, class B).
+- `-method1` does not take the element out of the calculation.
+

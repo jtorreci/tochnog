@@ -1,0 +1,36 @@
+( F4 T8 C46d: mesh_activate_gravity_time on index 10 [the Professional
+  mesh_activate1, coarser: 2x21 nodes, 50 steps to t 0.5]. Bottom-to-top
+  activation, default -method2: at t 0.5 the column is built to y 0.5;
+  above the front the soft elements follow the front node. Old GNU: index
+  0 only, so full gravity from the first step [veliy -2.19e-6 / -5e-6,
+  vely 0]. Targets = Professional 02-08-2026 post_point values [GNU
+  within 2.2e-9 on veliy: the partly activated element is loaded
+  uniformly over its height]. )
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_velocity_integrated
+materi_strain_total
+materi_stress
+end_initia
+geometry_line 10 0. 0. 1. 0. 1.e-4
+group_type 0  -materi
+group_materi_elasti_young   0  1.0e6
+group_materi_density   0  1.0
+bounda_dof 1  -geometry_line 10 -velx -vely
+force_gravity 0. -10.
+mesh_activate_gravity_time 10  0. 1.
+post_point 1  0. 0.25
+post_point 2  0. 1.
+control_mesh_macro 10   -rectangle 0 2 21
+control_mesh_macro_parameters 10   0.05 0.5 0.1 1.
+control_timestep  10  1.e-2 0.5
+target_item 1  -post_point_dof 1 -veliy
+target_value 1  -9.375000000718e-07 5.e-9
+target_item 2  -post_point_dof 1 -vely
+target_value 2  -2.500000000765e-06 1.e-9
+target_item 3  -post_point_dof 1 -sigyy
+target_value 3  -2.5 1.e-5
+target_item 4  -post_point_dof 2 -veliy
+target_value 4  -1.250000000107e-06 5.e-9
+end_data

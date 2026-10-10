@@ -27,3 +27,41 @@
   Nota: con stiffness_factor bajo y dofs libres el modelo puede ser
   numéricamente inestable (documentado en el test mesh_act_grav2, que usa
   todos los nodos fijos).
+
+## F4 T8 (2026-10-10, BACKLOG C46d)
+
+- `mesh.cc` `mesh_activate_gravity_factor()` rewritten with three static
+  helpers: `mesh_activate_gravity_selected(index, ...)` (selection
+  records of one index; none = all), `mesh_activate_gravity_vertical()`
+  (y in 2D, z in 3D, from `NODE_START_REFINED`), and
+  `mesh_activate_gravity_range(index, zmin, zmax)` (vertical range of the
+  selected elements, cached per index and per (time_current, dtime,
+  max element)). The first index whose selection contains the element
+  wins. Element window: `t_start_el = ts + (te-ts)(zmin_el-zmin)/(zmax-zmin)`,
+  `t_end_el` with `zmax_el`. Time `time_current + dtime` (end of step;
+  the start of step was worse against the Professional).
+- Default method `-METHOD2` (manual 6.810; before `-METHOD1`). Before the
+  element start time: factor 0, stiffness factor `stiff_factor_val`
+  (default 1e-6); the old code gave a method-2 element full gravity on
+  the reduced stiffness. Between start and end: factor ramps, stiffness 1
+  (manual text; a stiffness ramp matched `vely` above the front but made
+  `veliy` 9 % worse).
+- `materi.cc` `materi()`: the stiffness factor now scales the material
+  tangent `ddsdde` and the stress increment right after `set_stress()`
+  (a material with the reduced stiffness). The old post-hoc scaling of
+  the whole `element_matrix` / `element_lhside` left the internal force
+  and the stress-projection rows unscaled: Newton updates 1e6 too large
+  (Bi-CG divergence) or full-stiffness stresses stored in the soft
+  elements (sigyy 349 at the top of `mesh_activate1`).
+
+## Hardcoded parameters (F4 T8)
+
+- Stiffness factor default 1e-6 (manual). Activation by element extreme
+  vertical coordinates (not per integration point).
+
+## Pending refactorings (F4 T8)
+
+- `-method1` element removal; per-integration-point activation (would
+  close the 2e-9 residual); `materi.cc` `strain_settlement` code still
+  reads `MESH_ACTIVATE_GRAVITY_TIME` index 0 only.
+

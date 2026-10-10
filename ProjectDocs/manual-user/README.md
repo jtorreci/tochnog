@@ -506,3 +506,18 @@ page lists its own in "Differences with the Professional version".
 ## ONE-SHOT MESH OPERATIONS ONCE PER CONTROL INDEX (2026-10-09, F4 T7)
 
 - [control_mesh_once_per_control](control_mesh_once_per_control.md) — `control_mesh_macro`, `_copy`, `_mirror` and `_switch` run once per control index (first step), also with a multi-step `control_timestep` on the same index, as the Professional. Before, every time step re-applied them (`mesh_activate1`: 202 -> 4040 nodes in 20 steps, out of memory with 1000 steps).
+
+## MESH OPERATIONS VS THE PROFESSIONAL (2026-10-10, F4 T8)
+
+- [control_mesh_macro](control_mesh_macro.md) — node and element numbering of the `-bar`/`-rectangle`/`-brick` macros: x fastest, then y, then z, as the Professional (before: transposed). Tests `mesh_macro_numbering1`/`2`.
+- [control_mesh_copy](control_mesh_copy.md) / [control_mesh_mirror](control_mesh_mirror.md) — after a time step: node dofs and integration-point state duplicated, element numbers `old + max + 1` (C45, = Professional).
+- [control_mesh_once_per_control](control_mesh_once_per_control.md) — Professional order on one index: macro, copy, move, switch, mirror (C46a).
+- [control_mesh_move](control_mesh_move.md) — once per control index; Professional moves only `node_start_refined` (C46b, class A deliberate divergence, owner 2026-10-10).
+- [control_mesh_switch](control_mesh_switch.md) — two entries swap the two axes (manual 6.244).
+- [control_mesh_rotate](control_mesh_rotate.md) / [control_mesh_rotate_angle](control_mesh_rotate_angle.md) — 2D -> 3D sweep missing, parked (C46c).
+- [mesh_activate_gravity_time](mesh_activate_gravity_time.md) — indexed records, bottom-to-top activation, method 2 default, consistent reduced stiffness (C46d, Pro `mesh_activate1`).
+
+## F4 T9 — solvers (2026-10-10)
+
+- [matrix_pardiso](matrix_pardiso.md) — `-matrix_pardiso` is solved with SuperLU, Bi-CG fallback when the factorization fails (memory budget 70 % of the room); GNU default stays the Bi-CG (class B divergence).
+- [solver_bicg_csr_operator](solver_bicg_csr_operator.md) — the iterative solver multiplies with an assembled CSR matrix (about 5x faster per iteration in 3D, same results up to round-off); `options_processors` row blocks; element-by-element fallback for mpc ties.

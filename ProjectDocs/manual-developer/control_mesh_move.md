@@ -33,3 +33,23 @@ None. Uses only the internal database API (`db`, `db_active_index`,
 - The transform loop is duplicated for `NODE` and `NODE_START_REFINED` (the same
   duplication appears in `mesh_mirror`/`mesh_copy`); a shared node-transform
   helper could be extracted.
+
+## Once per control index (F4 T8, C46b)
+
+`top.cc` `step_start()`: the `mesh_move()` call is guarded by
+`first_of_control`, as macro/copy/switch/mirror, and runs after
+`mesh_copy()`. Professional probes (omen/local, 02-08-2026, F4 T8): with
+`control_mesh_move 1 0.1 0 0 0 0 0` and a two-step `control_timestep 1`
+the Professional `node_start_refined` x is 1.1 (applied once, from the
+current, deformed node with `-follow_material`) and `node` is unchanged;
+with a linear term (x + 1*x) once as well. The GNU keeps the manual
+semantics (node and node_start_refined moved) and adopts the once per
+index measured on `node_start_refined`. Test `mesh_move_timestep1`.
+
+## Differences with the Professional version
+
+- **C46b** (class A, deliberate divergence, project owner 2026-10-10):
+  the GNU moves the nodes and `node_start_refined` (manual 6.217); the
+  Professional 02-08-2026 sets only `node_start_refined`. Index:
+  [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).
+

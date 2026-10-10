@@ -1383,7 +1383,7 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
   the solution is unchanged). **Effort**: **medium** (the per-element
   physical fit, plus the `cd_method` analysis).
 
-### C43. Memory hogs of the default Bi-CG solver (F4 T7, 2026-10-09) — memory RESOLVED; solver-speed residual open
+### C43. Memory hogs of the default Bi-CG solver (F4 T7, 2026-10-09) — memory RESOLVED; solver speed RESOLVED (F4 T9, 2026-10-10)
 
 - **Symptom**: five Professional `other` inputs (`force11`, `large1`,
   `ground19_water_under_dam`, `mesh_activate1`,
@@ -1408,10 +1408,29 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
   `mesh_activate1` 11.9 GB bad_alloc -> 0.035 GB, 29 s (Pro 0.07 GB, 26 s);
   `foundation_consolidation_settlement` bad_alloc -> 1.5 GB, timeout 600 s
   (Pro timeout too). Table: `manual-developer/solver_memory.md`.
-- **Residual (open, solver speed, not memory)**: `force11` (one 3D solve)
-  does not converge with the Bi-CG within 600 s (Pro PARDISO 13 s);
+- **Residual (solver speed)** after F4 T7: `force11` (one 3D solve)
+  did not converge with the Bi-CG within 600 s (Pro PARDISO 13 s);
   `foundation_consolidation_settlement` breaks the Bi-CG down on every
   solve and runs the band LU retry (1.5 GB).
+- **F4 T9 (2026-10-10, owner decisions of the same day)**. Findings: the
+  Professional default solver is PARDISO, and the Professional Bi-CG does
+  not converge on `force11` either; the GNU `-matrix_pardiso` fell back to
+  the Bi-CG; the linked SuperLU 6.0.1 route crashed (use-after-free in
+  `so_suplu.c`); the Bi-CG products were element by element; the nodal
+  stress recovery re-solved a 4x4 least-squares system 43.7 M times on
+  `large1`. Changes: `681dc83` SuperLU use-after-free and new[]/free
+  mismatch; `789f8bf` the same db-pointer-into-PUT use-after-free in
+  `interface.cc` `interface_convert()`; `acfac40` recovery factor table
+  (bit-identical); `3349515` `-matrix_pardiso` -> SuperLU with Bi-CG
+  fallback and memory guard (GNU default stays the Bi-CG: SuperLU does
+  not scale in 3D, `large1` 30^3 > 4 GB); `b7009dd` CSR operator for the
+  CG/Bi-CG products (~5x per iteration in 3D). C12/C13 `bicg_stop`
+  semantics unchanged. `force11` with its own `solver -matrix_pardiso` now
+  finishes in 15 s (0.41 GB; target miss C47); `large1` 60 -> 24 s;
+  corpus -32 % (tests finished on both).
+  Measurements: `manual-developer/solver_memory.md` (F4 T9 table).
+  Remaining: `foundation_consolidation_settlement` (default Bi-CG,
+  breakdown + band retry on every solve; the Professional times out too).
 
 ### C44. One-shot mesh records re-applied on every time step (F4 T7, 2026-10-09) — RESOLVED
 
@@ -1423,30 +1442,103 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
   them on the first step of the index (Professional probes: once per
   index). Tests `mesh_macro_timestep1`, `mesh_switch_timestep1`.
 
-### C45. `control_mesh_copy` / `control_mesh_mirror` after the first time step stop with a `node_dof_start_refined` error
+### C45. `control_mesh_copy` / `control_mesh_mirror` after the first time step stop with a `node_dof_start_refined` error (F4 T8, 2026-10-10) — RESOLVED
 
 - **Symptom** (F4 T7 probes): a copy or mirror on an index after a
-  `control_timestep` index stops with "Error detected for data item :
-  node_dof_start_refined / record : 8" (rc 1); the Professional runs it
-  (12 nodes). Pre-existing, independent of C44.
-- **Severity**: **LOW**. **Effort**: **cheap** (the duplicated node data
-  in `mesh.cc` `mesh_copy()` / `mesh_mirror()`).
+  `control_timestep` index stopped with "Error detected for data item :
+  node_dof_start_refined / record : 8" (rc 1); the Professional runs it.
+  Also on index 1 without an earlier time step.
+- **Root cause**: `mesh.cc` `mesh_copy()` / `mesh_mirror()` copied only
+  `NODE_DOF` to the new nodes; `renumber()` reads `NODE_DOF_START_REFINED`
+  of every node. With that fixed, `create_element()` reset the
+  integration-point state of the duplicates (1 % off the Professional on
+  a loaded block).
+- **Fix** `0ca144c`: `mesh_duplicate_node_data()` (all node-class items,
+  buffered PUT) and `mesh_duplicate_element_state()` (`ELEMENT_DOF`,
+  `ELEMENT_DOF_INITIALISED`); element numbers `old + max + 1` (Pro).
+  Loaded copy/mirror probes = Professional to 4e-10. Tests
+  `mesh_copy_timestep1`, `mesh_mirror_timestep1`.
 
-### C46. `step_start()` mesh-operation residuals vs the Professional (F4 T7)
+### C46. `step_start()` mesh-operation residuals vs the Professional (F4 T7; studied in F4 T8, 2026-10-10)
 
-- `control_mesh_move` had no effect in the Professional probes (with or
-  without a `control_timestep`); the GNU moves the mesh, and on every
-  step of a `control_timestep` on the same index (not guarded: the
-  Professional semantics could not be measured).
-- With `control_mesh_copy` and `control_mesh_switch` on one index the
-  Professional copies first and then switches; the GNU switches first.
-- `control_mesh_rotate_angle` is only a parameter of `control_mesh_rotate`
-  in the Professional (GNU: standalone 2D rotation); the 3D
-  `control_mesh_rotate` probe did not run on either binary.
-- `mesh_activate1` (after C44): the final-step velocity `vely` is 0 in
-  the GNU and -9.95e-6 in the Professional at the top; the integrated
-  `veliy` agrees to 5e-10.
-- **Severity**: **LOW**. **Effort**: **cheap/medium**.
+- **C46a order — RESOLVED** `e730052`: Professional order on one index
+  (pairwise probes, record order irrelevant): macro, copy, move, switch,
+  mirror (GNU was switch, move, mirror, copy). Test `mesh_order_timestep1`.
+- **C46b `control_mesh_move` — RESOLVED in the GNU; deliberate divergence**
+  `c21b62e`: the Professional does not move the nodes; it sets
+  `node_start_refined` to the moved current coordinates, once per index.
+  Manual 6.217: the mesh is moved. The GNU moves node and
+  `node_start_refined`, now once per index (was every step). Owner
+  decision 2026-10-10: keep the GNU (DIVERGENCES C46b, class A).
+- **C46c `control_mesh_rotate` — PARKED**: the F4 T7 probe was an invalid
+  input. Valid probe = the Professional example `test/other/rotate1.dat`
+  (2D axisymmetric, swept 180 degrees into 5 prism6): Professional 14
+  nodes / 5 prism6; GNU rc 1 ("Length too small of : node"). The GNU has
+  no run-time 2D -> 3D conversion, its `mesh_rotate_3d` makes one
+  90-degree copy, and it reads `control_mesh_rotate_angle` as a 2D
+  rotation instead of the sweep angle. Effort **large**. DIVERGENCES C46c
+  (class B). Neither rotate record is guarded once per control yet.
+  Owner decision 2026-10-10: BACKLOG item, not scheduled.
+- **C46d `mesh_activate1` — RESOLVED** `7aeac4a` + `bc2235e`:
+  `mesh_activate_gravity_time` read index 0 only (the input uses 10: full
+  gravity from the first step, final vely 0), no bottom-to-top
+  interpolation, default method1, a method-2 element got full gravity on
+  the reduced stiffness, and the reduced stiffness scaled the assembled
+  matrix only (inconsistent Newton). Its target names node 5: the macro
+  numbering was transposed (x slowest) vs the Professional (x fastest).
+  Now final vely/veliy/sigyy = Pro to 3e-4 and the target passes. Residual
+  (partly activated element loaded uniformly): DIVERGENCES C46d (class B).
+  Tests `mesh_activate_gravity_time1`, `mesh_macro_numbering1/2`.
+- **C46e `control_mesh_switch`** `fb834c6`: two entries are a swap
+  (manual 6.244, Professional: `-x -y` swaps; GNU read them as the axis
+  order). The Professional leaves `node_start_refined` unswitched; the
+  GNU switches it (manual 6.244). Owner decision 2026-10-10: keep the GNU
+  (DIVERGENCES C46e, class A). Test `mesh_switch_pair1`.
+- **Severity**: **LOW** (open: C46c large, not scheduled; C46b/C46e
+  decided 2026-10-10).
+
+### C47. `force11` 3D section moment 0.65 % off the Professional (F4 T9, 2026-10-10)
+
+- **Corpus**: Professional `other/force11` (circular ring, `post_calcul
+  -materi_stress -force`, `solver -matrix_pardiso`).
+- **Symptom**: since `-matrix_pardiso` is solved with SuperLU (F4 T9) the
+  run finishes in ~10 s, with rc 1: `node_dof_calcul 1 -mom1y_sig`
+  5.80223 vs target 5.76474 +- 0.01 (Professional 5.76460; `nory_sig`
+  and `shey_sig` targets met: -0.2 shear). Before, the Bi-CG did not
+  finish, so the difference was hidden.
+- **Root cause**: not investigated (the direct solve is exact: the
+  difference is in the model or in the 3D section integration of
+  `calcul_force.cc`).
+- **Severity**: **LOW**. **Effort**: **medium**.
+
+### C48. Interface tension status written from the wrong buffer (F4 T9, 2026-10-10)
+
+- **Found by**: the F4 T9 ASan runs on the Professional
+  `interface_bar2_hex8`, `interface_bar3_quad8`, `interface_quad8_hex20`
+  (stack-buffer-overflow READ in `db()` from `interface_element()`,
+  `interface.cc` ~1031), once the `interface_convert()` use-after-free was
+  fixed.
+- **Root cause**: `element_interface_intpnt_materi_tension_status` is an
+  INTEGER record; `interface_element()` fills a `double` buffer allocated
+  with `get_new_int()` (released with `free()`, also `rec_stress` /
+  `rec_strain`) and PUTs it with `idum[1]` as the integer array and length
+  `n_intpnt`: the stored status values are read from the stack (garbage).
+- **Fix**: fill a `long int` array and PUT it as integers; release the
+  three buffers with `delete[]`. Changes that output record, so it needs
+  its own A/B.
+- **Severity**: **LOW** (status output only; stresses and strains are
+  written correctly). **Effort**: **cheap**.
+
+### C49. The build uses `-O1` (F4 T9, 2026-10-10)
+
+- **Symptom**: `scripts/build_safe.sh` compiles with `-O1`. The F4 T9
+  investigation measured about 25 % less run time with `-O2` on the
+  solver-bound inputs.
+- **To do**: find why `-O1` was chosen (history of `build_safe.sh` and of
+  the makefile flags; numerical reproducibility, a past miscompilation, or
+  the incremental-build corruption on the NAS) before changing it; then a
+  full corpus A/B (`-O2` may change round-off).
+- **Severity**: **LOW** (performance). **Effort**: **cheap/medium**.
 
 ---
 
@@ -1502,12 +1594,15 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
 | C40 | Pro `other` | element-target contact residuals after F2 T3b: no Pro check "target element has all nodes on the boundary", hex8 target sides never detected, node_boundary generated only for element-target contact | LOW | cheap/medium |
 | C41 | Pro `other` | `mohr_coul_direct7`: `-total_linear` + velocity `mpc_node_number` tie — tie resolved 2026-10-09 (F4 T2); residual disy/sigzz difference | LOW | medium |
 | C42 | Pro `other` | quad4 nodal stress recovery: natural bilinear (GNU) vs physical linear least squares (Pro); distorted/axisymmetric quad4 (`axisym2` sigzz 10760.09 vs 10759.22) | LOW | medium |
-| C43 | Pro `other` | memory hogs of the Bi-CG solver (`force11`, `large1`, `ground19`, `mesh_activate1`, `foundation_consolidation_settlement`): resolved 2026-10-09 (F4 T7 A dense n x n matrix, B lazy band retry, C macro per step) | MEDIUM | cheap/medium |
+| C43 | Pro `other` | memory hogs of the Bi-CG solver (`force11`, `large1`, `ground19`, `mesh_activate1`, `foundation_consolidation_settlement`): resolved 2026-10-09 (F4 T7 A dense n x n matrix, B lazy band retry, C macro per step); solver speed resolved 2026-10-10 (F4 T9: `-matrix_pardiso` -> SuperLU, CSR operator, recovery table); `foundation...` still Bi-CG bound | MEDIUM | cheap/medium |
 | C44 | Pro `other` | one-shot mesh records (`control_mesh_macro`/`_copy`/`_mirror`/`_switch`) re-applied on every time step — resolved 2026-10-09 (F4 T7 C) | MEDIUM | cheap |
-| C45 | — | `control_mesh_copy`/`_mirror` after the first time step: `node_dof_start_refined` error (Pro runs) | LOW | cheap |
-| C46 | Pro `other` | `step_start()` mesh residuals: `control_mesh_move` (no effect in Pro), copy/switch order, rotate not comparable, `mesh_activate1` final `vely` | LOW | cheap/medium |
+| C45 | — | `control_mesh_copy`/`_mirror` after the first time step: `node_dof_start_refined` error — resolved 2026-10-10 (F4 T8 `0ca144c`) | LOW | cheap |
+| C46 | Pro `other` | `step_start()` mesh residuals — F4 T8: order, move once, switch pair, `mesh_activate1` resolved; rotate sweep parked, not scheduled (C46c, large); move/switch `node_start_refined` deliberate divergences (A, 2026-10-10) | LOW | large (C46c) |
+| C47 | Pro `other` | `force11` 3D section moment `mom1y_sig` 5.80223 vs Pro 5.76460 (target miss, visible since F4 T9) | LOW | medium |
+| C48 | — | interface tension status record written from the wrong buffer (ASan, F4 T9) | LOW | cheap |
+| C49 | — | build at `-O1`: find why before moving to `-O2` (~25 % faster) | LOW | cheap/medium |
 
-Thirty-seven items remain open: seven MEDIUM and thirty LOW (C23 and C24 resolved 2026-10-05; C25, C26, C27 and B10 added; F1 T3 / K04 2026-10-06 added B11, C28-C32; F1 T6 resolved C28, added and resolved B12; F2 T1 added C36; F2 T2 added C37, C38, C39; F2 T3 resolved C5 and added C40; F3 T2 resolved C8, C18, C19, C20 and added B13, C41; F4 T2 fixed the C41 tie and left a residual; F4 T3 resolved C33; F4 T4 closed C32, added C42 and resolved C31). No open issue is CRITICAL or
+Thirty-seven items remain open: seven MEDIUM and thirty LOW (C23 and C24 resolved 2026-10-05; C25, C26, C27 and B10 added; F1 T3 / K04 2026-10-06 added B11, C28-C32; F1 T6 resolved C28, added and resolved B12; F2 T1 added C36; F2 T2 added C37, C38, C39; F2 T3 resolved C5 and added C40; F3 T2 resolved C8, C18, C19, C20 and added B13, C41; F4 T2 fixed the C41 tie and left a residual; F4 T3 resolved C33; F4 T4 closed C32, added C42 and resolved C31; F4 T7-T8 added C43-C46; F4 T9 resolved the C43 solver speed, decided C46b/C46e and added C47, C48, C49). No open issue is CRITICAL or
 HIGH. The validation-suite corpus has no open failure — its 233 real tests
 pass (`materi_direct_mc` input corrected, C17 resolved). Every remaining failure is a stale or malformed test, an out-of-scope model
 or infrastructure limit, a narrow post-processing divergence, a corpus-coverage

@@ -1,0 +1,23 @@
+( F4 T8: control_mesh_switch index dir0 dir1 switches the coordinates
+  dir0 and dir1 [manual 6.244]. The Professional 02-08-2026 swaps x and
+  y for -x -y [node 3: 2 0 -> 0 2]. Old GNU: the entries were the new
+  axis order, -x -y = no change. build_safe.sh checks the .dbs. )
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_velocity_integrated
+materi_strain_total
+materi_stress
+end_initia
+geometry_brick 1  0. 0. 0. 400. 400. 400. 1.e-4
+bounda_dof 1 -geometry_brick 1 -velx -vely
+group_type 0  -materi
+group_materi_elasti_young   0  1.0e6
+group_materi_elasti_poisson 0  0.2
+group_materi_density   0  1.0
+control_mesh_macro 0   -rectangle 0 3 2
+control_mesh_macro_parameters 0   1. 0.5 2. 1.
+control_timestep 0 0.1 0.1
+control_mesh_switch 1 -x -y
+control_timestep 1 0.1 0.2
+end_data

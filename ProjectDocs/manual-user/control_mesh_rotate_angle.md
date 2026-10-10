@@ -29,3 +29,12 @@ Rotate the mesh 90 degrees counter-clockwise:
 ```
 control_mesh_rotate_angle 0 90.
 ```
+
+## Differences with the Professional version (F4 T8)
+
+Manual 6.239 and the Professional: `control_mesh_rotate_angle index
+angle` is the sweep angle of the `control_mesh_rotate` with the same index
+(default 360). The GNU reads it as a standalone 2D rotation of the mesh
+around z (GNU semantics, conflicting with the manual); with
+`control_mesh_rotate` on the same index the GNU therefore rotates the 2D
+mesh first. Pending with the full rotate sweep (DIVERGENCES C46c, class B).

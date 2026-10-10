@@ -532,3 +532,18 @@ page lists its own in "Differences with the Professional version".
 ## ONE-SHOT MESH OPERATIONS ONCE PER CONTROL INDEX (2026-10-09, F4 T7)
 
 - [control_mesh_once_per_control](control_mesh_once_per_control.md) — `top.cc`: `step_start_control_entry` set when the control loop enters an index, consumed by `step_start()` (`first_of_control`), guards `macro()`, `mesh_switch()`, `mesh_mirror()`, `mesh_copy()`. Professional probes: each applied once per index. Tests `mesh_macro_timestep1`, `mesh_switch_timestep1` (node checks in build_safe).
+
+## MESH OPERATIONS VS THE PROFESSIONAL (2026-10-10, F4 T8)
+
+- [control_mesh_macro](control_mesh_macro.md) — `macro.cc` tensor macros: node/element loops x fastest (Professional probes); `node_remesh_allowed` legacy mapping kept.
+- [control_mesh_copy](control_mesh_copy.md) / [control_mesh_mirror](control_mesh_mirror.md) — after a time step: node dofs and integration-point state duplicated, element numbers `old + max + 1` (C45, = Professional).
+- [control_mesh_once_per_control](control_mesh_once_per_control.md) — Professional order on one index: macro, copy, move, switch, mirror (C46a).
+- [control_mesh_move](control_mesh_move.md) — once per control index; Professional moves only `node_start_refined` (C46b, class A deliberate divergence, owner 2026-10-10).
+- [control_mesh_switch](control_mesh_switch.md) — two entries swap the two axes (manual 6.244).
+- [control_mesh_rotate](control_mesh_rotate.md) / [control_mesh_rotate_angle](control_mesh_rotate_angle.md) — 2D -> 3D sweep missing, parked (C46c).
+- [mesh_activate_gravity_time](mesh_activate_gravity_time.md) — indexed records, bottom-to-top activation, method 2 default, consistent reduced stiffness (C46d, Pro `mesh_activate1`).
+
+## F4 T9 — solvers (2026-10-10)
+
+- [matrix_pardiso](matrix_pardiso.md) — so.cc pardiso -> SuperLU route, Bi-CG fallback, RLIMIT_AS memory guard (`solve_pardiso_memory_guard`), failure disables SuperLU for the run.
+- [solver_bicg_csr_operator](solver_bicg_csr_operator.md) — so_bicg.cc CSR pattern from element node sets + node incidence (no triplet buffer), threaded row blocks, NODE_LHSIDE kept apart, EBE fallback (mpc ties, TN_BICG_EBE).

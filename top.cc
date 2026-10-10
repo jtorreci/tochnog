@@ -849,15 +849,24 @@ void step_start( long int task, long int options_solver[], double dtime, double 
     adjust_geom( &control_adjust_geometry[0], &control_adjust_geometry[2] ); 
   }
 
+  // One-shot mesh operations of a control index, in the order of the
+  // Professional 02-08-2026 (F4 T8 probes, every pair on one index, record
+  // order in the input irrelevant): macro, copy, move, switch, mirror. All
+  // of them run on the first step of the control index only
+  // (step_start_control_entry). control_mesh_move: the Professional moved
+  // only node_start_refined (once per index); the GNU follows the manual
+  // and moves the mesh (node and node_start_refined), once per index.
   if ( first_of_control &&
-       db_active_index( CONTROL_MESH_SWITCH, icontrol, VERSION_NORMAL ) ) {
-    long int control_switch[DATA_ITEM_SIZE], switch_length=0;
-    db( CONTROL_MESH_SWITCH, icontrol, control_switch, ddum, 
-      switch_length, VERSION_NORMAL, GET );
-    mesh_switch( control_switch, switch_length );
+       db_active_index( CONTROL_MESH_COPY, icontrol, VERSION_NORMAL ) ) {
+    long int copy_length=0, idum_c=0;
+    double control_copy[MDIM];
+    db( CONTROL_MESH_COPY, icontrol, &idum_c, control_copy, copy_length,
+      VERSION_NORMAL, GET );
+    mesh_copy( control_copy );
   }
 
-  if ( db_active_index( CONTROL_MESH_MOVE, icontrol, VERSION_NORMAL ) ) {
+  if ( first_of_control &&
+       db_active_index( CONTROL_MESH_MOVE, icontrol, VERSION_NORMAL ) ) {
     long int move_length=0, idum_m=0;
     double control_move[DATA_ITEM_SIZE];
     db( CONTROL_MESH_MOVE, icontrol, &idum_m, control_move, move_length,
@@ -866,20 +875,19 @@ void step_start( long int task, long int options_solver[], double dtime, double 
   }
 
   if ( first_of_control &&
+       db_active_index( CONTROL_MESH_SWITCH, icontrol, VERSION_NORMAL ) ) {
+    long int control_switch[DATA_ITEM_SIZE], switch_length=0;
+    db( CONTROL_MESH_SWITCH, icontrol, control_switch, ddum, 
+      switch_length, VERSION_NORMAL, GET );
+    mesh_switch( control_switch, switch_length );
+  }
+
+  if ( first_of_control &&
        db_active_index( CONTROL_MESH_MIRROR, icontrol, VERSION_NORMAL ) ) {
     long int mirror_axis=0;
     db( CONTROL_MESH_MIRROR, icontrol, &mirror_axis, ddum, ldum,
       VERSION_NORMAL, GET );
     mesh_mirror( mirror_axis );
-  }
-
-  if ( first_of_control &&
-       db_active_index( CONTROL_MESH_COPY, icontrol, VERSION_NORMAL ) ) {
-    long int copy_length=0, idum_c=0;
-    double control_copy[MDIM];
-    db( CONTROL_MESH_COPY, icontrol, &idum_c, control_copy, copy_length,
-      VERSION_NORMAL, GET );
-    mesh_copy( control_copy );
   }
 
   // control_mesh_rotate_angle: rotate the 2D mesh around z-axis

@@ -38,3 +38,43 @@ None. Uses the internal database API (`db`, `db_dbl`, `db_active_index`,
 
 The call in `top.cc` `step_start()` is guarded by `first_of_control`
 (see [control_mesh_once_per_control](control_mesh_once_per_control.md)).
+
+## Node and element data of the duplicate (F4 T8, BACKLOG C45)
+
+- `mesh.cc` `mesh_duplicate_node_data( inod, new_node )` (static): copies
+  every node-class item except `NODE` / `NODE_START_REFINED` (written by
+  the caller with the coordinate transformation). Before, only `NODE_DOF`
+  was copied; `renumber()` reads `NODE_DOF_START_REFINED` of every node and
+  stopped with "Error detected for data item : node_dof_start_refined".
+  The source is copied into a local buffer before the PUT: a PUT beyond
+  the allocated range reallocates the data array, so a `db_dbl()` pointer
+  passed to it dangled (latent use-after-free, also in `mesh_rotate_3d`,
+  which now uses the same helper).
+- `mesh.cc` `mesh_duplicate_element_state( ielem, new_elem )` (static):
+  copies `ELEMENT_DOF` and `ELEMENT_DOF_INITIALISED` (versions NORMAL and
+  NEW) after `create_element()`, which resets them (right for refinement)
+  and so re-initialised the duplicate from the smoothed nodal values (1 %
+  off the Professional on a loaded block).
+- New element numbers: `ielem + max_element + 1` (Professional probes),
+  before sequential from `max_element + 1`.
+- Verification: probes on a loaded 3x2-node block (gravity, step on index
+  0, copy on index 1 with two steps): all nodal dofs = Professional to 4e-10
+  (round-off level of the untouched block).
+
+## Buffered node-item copies in mesh.cc (F4 T8, ASan)
+
+`mesh.cc` `mesh_copy_node_item( idat, from, to, len )` (static) copies one
+node-class item through a local buffer. It replaces every
+`db_dbl()/db_int()` pointer passed straight to a `db(... PUT)` of the
+same item in `mesh.cc` (`mesh_duplicate_node_data` - copy, mirror,
+rotate_3d - and `mesh_convert_quad8`, `mesh_convert_hex20`,
+`mesh_extrude` x3): a PUT beyond the allocated range reallocates the
+array and the source pointer then reads freed memory (heap-use-after-
+free reported by the F4 T9 ASan run). Results unchanged (all 297 suite
+`.dbs` identical apart from timing lines; ASan clean on the copy/mirror
+tests and the Professional `quad8`, `hex20`). The same pattern remains in
+`interface.cc` `interface_convert()` (lines ~1450 / ~1631; ASan on the
+Professional `interface_bar2_hex8`, `interface_bar3_quad8`,
+`interface_quad8_hex20`), outside F4 T8. Fixed in F4 T9 (2026-10-10, `interface_copy_node_dbl`, see
+`group_interface.md`).
+

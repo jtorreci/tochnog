@@ -2,7 +2,7 @@
   control_timestep. The Professional 02-08-2026 swaps the axes once per
   control index [its node 3: 1 0 -> 0 1]. Old GNU: swapped on every
   step, twice = not swapped. build_safe.sh checks the coordinates of
-  node 3 in the .dbs: 0.5 0 -> 0 0.5 [GNU numbering of the same mesh]. )
+  node 3 in the .dbs: 1 0 -> 0 1 [F4 T8: GNU macro numbering = Pro]. )
 echo -no
 number_of_space_dimensions 2
 materi_velocity
