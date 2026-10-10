@@ -18,7 +18,7 @@ through `scripts/remote_run.sh`.
 - [x] T10 C48: interface tension-status record written from a double buffer (`interface_element()` ~1031) → stack garbage. Route: delegated writer. Done `c06fa2d`.
 - [x] T11 C49: build optimisation `-O1` vs `-O2` — find why -O1 was chosen, measure -O2 (results + time) on omen; owner decision before changing the default. Study done (default unchanged); owner decision pending.
 - [ ] T12 C47: `force11` `mom1y_sig` 5.80223 vs Pro 5.76460 (0.65 %, model difference, solver excluded).
-- [x] T13 C49 prerequisite: audit every `db()` / array call that receives a fixed-size scratch buffer (`idum[1]`, `ddum[1]`, small arrays) and can write more values; fix them; run build_safe + corpus under ASan; then switch the build to `-O2` with a full corpus A/B (owner 2026-10-10). Done `40ae7cd` (fixes + audit script) + `-O2` switch (see Progress).
+- [x] T13 C49 prerequisite: audit every `db()` / array call that receives a fixed-size scratch buffer (`idum[1]`, `ddum[1]`, small arrays) and can write more values; fix them; run build_safe + corpus under ASan; then switch the build to `-O2` with a full corpus A/B (owner 2026-10-10). Done `40ae7cd` (fixes + audit script) + `44c68c7` (`-O2` default).
 Order (owner 2026-10-10): T10 → T11 → T5 → T13 → T12 → T6.
 
 ## Later (owner 2026-10-10, after convergence with ALL divergences documented and accepted)
@@ -300,5 +300,8 @@ docs + SEGUIMIENTO + BACKLOG + DIVERGENCES.
   s, sfnet 240.1 -> 220.1, t26 35.9 -> 32.1, vs 28.2 -> 26.0; peak RSS
   same. Work unit 2: build_safe.sh -O2 (+ makefile note, QUALITY-CI,
   AGENTS, BACKLOG C49 resolved + C54-C56, SEGUIMIENTO row, dev page
-  db_buffer_contract). Not changed: scripts/install_superlu.sh still
-  builds SuperLU with -O1 (outside the edit surface).
+  db_buffer_contract) = `44c68c7`. Final clean build from 44c68c7
+  (default -O2): md5 019e3620 = build/tochnog (differs from cc867346 only
+  in the __DATE__ string, 21 bytes); build_safe TN_CHECK_ONLY 187 OK /
+  0 FALLO, runs 226/226, rc 0. Not changed: scripts/install_superlu.sh
+  still builds SuperLU with -O1 (outside the edit surface). Next: T12.
