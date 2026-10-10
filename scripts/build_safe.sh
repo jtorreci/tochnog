@@ -1507,6 +1507,25 @@ run_ok "$T2026" mesh_activate_gravity_time1
 #   new[] matrix arrays (ASan alloc-dealloc-mismatch). Old GNU: segmentation
 #   fault (rc 139) after the first solve. Analytic plane-strain targets.
 run_ok "$T2026" superlu_solve1
+# F4 T9 / C43 (2026-10-10): -matrix_pardiso is solved with SuperLU (so.cc;
+#   old GNU: always the Bi-CG) and falls back to the Bi-CG when the SuperLU
+#   factorization fails. pardiso_bicg_fallback1 forces the failure with the
+#   memory guard budget TN_PARDISO_SUPERLU_MB=4 (4 MB above the current
+#   address space; SuperLU needs ~130 MB). Same analytic targets.
+run_ok "$T2026" pardiso_superlu1
+if grep -aq "Solution Found" /tmp/pardiso_superlu1_safe.out 2>/dev/null &&
+   ! grep -aq "falling back to the iterative Bi-CG" /tmp/pardiso_superlu1_safe.out 2>/dev/null;
+then check_ok "pardiso_superlu1 (-matrix_pardiso solved by SuperLU)";
+else check_fail "pardiso_superlu1" "SuperLU did not solve -matrix_pardiso"; fi
+( cd "$T2026" &&
+  ulimit -v "$TN_MEMLIMIT_KB" &&
+  TN_PARDISO_SUPERLU_MB=4 timeout 60 "$REPO_DIR/build/$TN_BIN" \
+    pardiso_bicg_fallback1.dat > /tmp/pardiso_bicg_fallback1_safe.out 2>&1 )
+RC_PBF=$?
+if [ "$RC_PBF" = "0" ] &&
+   grep -aq "SuperLU failed for -matrix_pardiso - falling back" /tmp/pardiso_bicg_fallback1_safe.out 2>/dev/null;
+then check_ok "pardiso_bicg_fallback1 (SuperLU out of memory -> Bi-CG, targets met)";
+else check_fail "pardiso_bicg_fallback1" "rc=$RC_PBF or no Bi-CG fallback"; fi
 
 # ---------------------------------------------------------------------
 # K03 (2026-10-06): default convection_apply -no (manual Professional

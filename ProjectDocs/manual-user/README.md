@@ -517,3 +517,6 @@ page lists its own in "Differences with the Professional version".
 - [control_mesh_rotate](control_mesh_rotate.md) / [control_mesh_rotate_angle](control_mesh_rotate_angle.md) — 2D -> 3D sweep missing, parked (C46c).
 - [mesh_activate_gravity_time](mesh_activate_gravity_time.md) — indexed records, bottom-to-top activation, method 2 default, consistent reduced stiffness (C46d, Pro `mesh_activate1`).
 
+## F4 T9 — solvers (2026-10-10)
+
+- [matrix_pardiso](matrix_pardiso.md) — `-matrix_pardiso` is solved with SuperLU, Bi-CG fallback when the factorization fails (memory budget 70 % of the room); GNU default stays the Bi-CG (class B divergence).
