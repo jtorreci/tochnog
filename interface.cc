@@ -95,7 +95,7 @@ void interface_element( long int element, long int name,
     stress_shear2=0., strain_normal=0., strain_eff=0.,
     gap=0., tension_limit=0.,
     residual_factor=0.01, phi=0., c=0., phi_flow=0.,
-    ddum3[3],
+    ddum3[DATA_ITEM_SIZE], // db() GET writes the stored length, not length_stiff
     f_t_old=0., f_t=0., f_t2_old=0., f_t2=0.,
     force_gravity[MDIM];
   long int *nodes=NULL;

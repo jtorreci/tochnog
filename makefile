@@ -226,6 +226,11 @@ linux_insure:
 #                   ejercicio aparte; aqui se cazan errores de memoria).
 #   make ubsan   -> variante undefined-only (-fsanitize=undefined).
 #
+# El build canonico (scripts/build_safe.sh) compila con -O2 desde F4 T13
+# (2026-10-10); los targets de sanitizers anaden -O1 al final a proposito
+# (TN_EXTRA_FLAGS va despues, gana el ultimo -O): trazas legibles y el
+# mismo nivel con el que se validaron.
+#
 # Implementacion: cada target delega en scripts/build_safe.sh (la misma
 # resolucion de dependencias y el mismo runner de la suite) y SOLO anade
 # flags via TN_EXTRA_FLAGS. El binario sale en build/tochnog-<modo>, asi

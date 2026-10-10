@@ -160,7 +160,7 @@ void print_beam_force_moment( long int icontrol, long int task )
     *el=NULL, *nodes=NULL;
   double ddum[1], bm[6], truss_force=0., a=0., b=0., f0=0., f1=0.,
     m=0., dist=0., t=0., cut_len=0., tol=0., factor=1., p1[3], p2[3],
-    q1[3], q2[3], len=0., *coordinates=NULL, *key=NULL, *val=NULL;
+    q1[3], q2[3], work[3], len=0., *coordinates=NULL, *key=NULL, *val=NULL;
   long int *idx=NULL;
   char filename[MCHAR], str[MCHAR];
   static long int beam_force_moment_seq=0;
@@ -186,7 +186,7 @@ void print_beam_force_moment( long int icontrol, long int task )
     p2[idim] = coordinates[ndim+idim];
   }
   delete[] coordinates;
-  cut_len = array_distance( p1, p2, ddum, 3 );
+  cut_len = array_distance( p1, p2, work, 3 );
   if ( cut_len<=0. )
     db_error( CONTROL_PRINT_BEAM_FORCE_MOMENT_COORDINATES, icontrol );
   tol = BEAM_FORCE_MOMENT_CUT_TOL * ( cut_len>1. ? cut_len : 1. );
@@ -279,7 +279,7 @@ void print_beam_force_moment( long int icontrol, long int task )
     beam_plane_index( element_group, index_plane );
     ip0 = index_plane[0];
     ip1 = index_plane[1];
-    len = array_distance( q1, q2, ddum, 3 );
+    len = array_distance( q1, q2, work, 3 );
     a = 0.; b = 0.;
     if ( len>0. ) {
       for ( idim=0; idim<ndim; idim++ ) {

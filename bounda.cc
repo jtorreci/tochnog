@@ -271,7 +271,10 @@ void bounda( )
   double bounda_normal_vec[3], bounda_dof_radial[3],
     bounda_dof_cylindrical[6];
   double bounda_time_increment=0., bounda_time_offset=0.;
-  double bounda_factor[4], bounda_factor_px[3], bounda_time_units[2];
+  // bounda_factor / _parabolic_x: db() writes the stored length (up to
+  // DATA_ITEM_SIZE), only the first 4 / 3 values are used
+  double bounda_factor[DATA_ITEM_SIZE], bounda_factor_px[DATA_ITEM_SIZE],
+    bounda_time_units[2];
   // bounda_time_until_data + bounda_time_until_value_minimum (manual
   // Professional 6.40/6.41): reduce the load of the bounda_time record
   // when the monitored data item falls from start to wanted.
@@ -988,13 +991,10 @@ void bounda( )
                           if ( db_active_index( GROUNDFLOW_PHREATICLEVEL, 0,
                               VERSION_NORMAL ) ) {
                             long int plen=0, idum2[1];
-                            db( GROUNDFLOW_PHREATICLEVEL, 0, idum2, &wl, plen,
-                              VERSION_NORMAL, GET );
-                            if ( plen>=1 ) {
-                              double *gpv = db_dbl(
-                                GROUNDFLOW_PHREATICLEVEL, 0, VERSION_NORMAL );
-                              wl = gpv[0];
-                            }
+                            double phreatic[DATA_ITEM_SIZE];
+                            db( GROUNDFLOW_PHREATICLEVEL, 0, idum2, phreatic,
+                              plen, VERSION_NORMAL, GET );
+                            if ( plen>=1 ) wl = phreatic[0];
                           }
                           sp = fg[ndim-1] * dens * ( wl - coords_w[ndim-1] );
                           new_node_dof[iuknwn] = factor * sp;

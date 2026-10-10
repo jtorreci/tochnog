@@ -65,7 +65,7 @@ void print_node( long int icontrol, long int ival[], long int nval )
     *geom_entity=NULL, *post_calcul_scal_vec_mat=NULL,
     *post_calcul_unknown_operat=NULL, *node_list=NULL, *order=NULL,
     *ival2=NULL;
-  double ddum[1], coord[MDIM], middle[MDIM], *key=NULL, *dval=NULL,
+  double ddum[MDIM], coord[MDIM], middle[MDIM], *key=NULL, *dval=NULL,
     factor=0., normal[MDIM], penetration=0., projection[MDIM], value=0.;
   char filename[MCHAR], str[MCHAR];
   static char base[DATA_ITEM_SIZE][MCHAR]; // file base name per part

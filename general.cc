@@ -92,7 +92,14 @@ void general( long int element, long int name, long int nnol, long int element_g
     ( options_convection==-NO || materi_displacement ||
       ( materi_velocity && options_mesh[0]==-FOLLOW_MATERIAL ) ) );
   db( OPTIONS_INERTIA, 0, &options_inertia, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
-  db( CONTROL_OPTIONS_INERTIA, icontrol, &options_inertia, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+  {
+    // multi-valued record (Professional: one switch per principal dof);
+    // GNU applies the first value to every principal dof
+    long int inertia_switches[DATA_ITEM_SIZE];
+    if ( db( CONTROL_OPTIONS_INERTIA, icontrol, inertia_switches, ddum, ldum,
+        VERSION_NORMAL, GET_IF_EXISTS ) )
+      options_inertia = inertia_switches[0];
+  }
   db( OPTIONS_STABILIZATION, 0, &options_stabilization, ddum, ldum, VERSION_NORMAL, GET );
   db( GROUP_AXISYMMETRIC, element_group, 
     &options_axisymmetric, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );

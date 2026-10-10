@@ -64,7 +64,7 @@ void condif( long int element, long int gr, long int nnol, double h[],
     long int max_heat=0, iheat=0, length=0, idum[1], length_el=0,
       heat_volume_user=0, nfreq=0, ifreq=0, all_in=0, in_geometry=0,
       inod=0, i=0, el[MNOL+1], geometry_entity[2];
-    double ddum[1], heat=0., load=1., factor=1., time_current=0., dtime=0.,
+    double ddum[MDIM], heat=0., load=1., factor=1., time_current=0., dtime=0.,
       time_total=0., time_start=0., time_end=0., frequency=0., amplitude=0.,
       values[DATA_ITEM_SIZE], coord[MDIM], rdum=0.;
     long int *heat_element=NULL, *heat_group=NULL;

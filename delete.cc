@@ -624,14 +624,13 @@ void mesh_cut( double /*time_current*/ )
   // applied to the remaining mesh
   for ( imax=0; imax<MDIM; imax++ ) node_force_switches[imax] = -YES;
   node_force_length = 0;
-  db( CONTROL_MESH_CUT_NODE_FORCE, icontrol, idum, ddum,
-    node_force_length, VERSION_NORMAL, GET_IF_EXISTS );
-  if ( node_force_length>0 ) {
+  {
     long int ival[MDIM];
-    db( CONTROL_MESH_CUT_NODE_FORCE, icontrol, ival, ddum,
-      node_force_length, VERSION_NORMAL, GET );
-    for ( imax=0; imax<node_force_length && imax<MDIM; imax++ )
-      node_force_switches[imax] = ival[imax];
+    if ( db( CONTROL_MESH_CUT_NODE_FORCE, icontrol, ival, ddum,
+        node_force_length, VERSION_NORMAL, GET_IF_EXISTS ) ) {
+      for ( imax=0; imax<node_force_length && imax<MDIM; imax++ )
+        node_force_switches[imax] = ival[imax];
+    }
   }
 
   db_max_index( NODE, max_node, VERSION_NORMAL, GET );

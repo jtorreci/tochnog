@@ -58,7 +58,7 @@ void top( void )
     dtime=0., time_old=0., time_new=0., ratio_criterium=0., 
     ratio_max=0., decrease_factor=0., min_timestep=0.,
     maximum_timestep=0., post_node_rhside_ratio=0.,
-    multiplier=1., ddum[1], dzero=0., control_timestep_iterations_automatic[2], 
+    multiplier=1., ddum[1], dzero=0., control_timestep_iterations_automatic[3], 
     control_timestep_size_automatic_decrease[3], 
     dwork[MUKNWN], *timestep=NULL, dworkmnol[MPOINT*MUKNWN], *dworknei=NULL;
 
@@ -896,7 +896,7 @@ void step_start( long int task, long int options_solver[], double dtime, double 
   if ( first_of_control &&
        db_active_index( CONTROL_MESH_COPY, icontrol, VERSION_NORMAL ) ) {
     long int copy_length=0, idum_c=0;
-    double control_copy[MDIM];
+    double control_copy[DATA_ITEM_SIZE]; // variable-length record
     db( CONTROL_MESH_COPY, icontrol, &idum_c, control_copy, copy_length,
       VERSION_NORMAL, GET );
     mesh_copy( control_copy );
@@ -1295,9 +1295,12 @@ long int post_solve_state_pass_gated( long int icontrol )
   if ( options_inertia==-YES ) return 1;
   db_highest_index( CONTROL_OPTIONS_INERTIA, max, VERSION_NORMAL );
   for ( i=0; i<=max; i++ ) {
+    long int inertia_switches[DATA_ITEM_SIZE];
     options_inertia = -NO;
-    db( CONTROL_OPTIONS_INERTIA, i, &options_inertia, ddum, ldum,
-      VERSION_NORMAL, GET_IF_EXISTS );
+    // multi-valued record: GNU uses the first value (see general.cc)
+    if ( db( CONTROL_OPTIONS_INERTIA, i, inertia_switches, ddum, ldum,
+        VERSION_NORMAL, GET_IF_EXISTS ) )
+      options_inertia = inertia_switches[0];
     if ( options_inertia==-YES ) return 1;
   }
 

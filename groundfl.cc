@@ -227,7 +227,7 @@ long int groundflow_phreatic_level_multiple_find_element( long int elnum )
     gr=0, j=0,
     length_list=0, use_element=0, use_group=0, use_geometry=0, use_node=0,
     itmp=0, all=0, any=0;
-  double ddum[1], rdum=0.;
+  double ddum[MDIM], rdum=0.; // geometry() writes normal/projection[MDIM]
   long int *sel=NULL, *nodes=NULL, *el=NULL;
 
   db_max_index( GROUNDFLOW_PHREATICLEVEL_MULTIPLE, max_multiple, VERSION_NORMAL, GET );

@@ -1564,7 +1564,7 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
 - **Root cause**: not investigated.
 - **Severity**: **LOW**. **Effort**: **medium** (unknown).
 
-### C49. The build uses `-O1` (F4 T9, 2026-10-10)
+### C49. The build uses `-O1` (F4 T9, 2026-10-10) — RESOLVED 2026-10-11 (F4 T13, default `-O2`)
 
 - **Symptom**: `scripts/build_safe.sh` compiles with `-O1`. The F4 T9
   investigation measured about 25 % less run time with `-O2` on the
@@ -1618,6 +1618,73 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
     then the suite and the corpus under the ASan build), then move to
     `-O2` (not `-O3`: little extra gain, more warnings) with a full A/B.
     Expected gain about 28 % (`large1`) to 42 % (`force11`).
+- **Resolution (F4 T13, 2026-10-11, owner decision 2026-10-10)**:
+  - **Audit**: `scripts/audit_db_buffers.py` (rerunnable, exit 1 on a
+    hit) cross-checks every `db()` read, `get_group_data()`, `array_*()`
+    with a constant length and the `geometry()` / `msf_element_rule()`
+    output arrays against `data_length` (`database.cc`) and the callee
+    contracts. HEAD `dca225a`: 3450 calls, 45 hits at 34 call sites, all
+    real or latent overflows, all fixed in `40ae7cd` (no false positive
+    left after the script resolved struct members and prototype
+    parameters); 38 run-time-record calls reviewed by hand (C54); 273
+    unresolved buffers (pointers, array parameters, `&coord[inol*ndim]`).
+    Contract and per-site table:
+    `manual-developer/db_buffer_contract.md`.
+  - **ASan + UBSan** (`-fsanitize=address,undefined -g -O1`): build_safe
+    28 failing runs / 18 failed checks -> 1 run (`dofrhside`, C55) /
+    1 check; corpus on omen (6 jobs, 360 s, `hard_rss_limit_mb=4000`)
+    45 tests with an ASan report at 9 sites -> 2 tests (`dofrhside` C55,
+    Pro `ground19_water_under_dam` C56). No UBSan report in either.
+  - **`-O1` unchanged**: build_safe 187 OK / 0 FALLO, 226/226 runs; corpus
+    `.dbs` identical to HEAD (only the 2-thread `bicg_csr_threads1`
+    round-off).
+  - **`-O2` A/B** (same sources): every `.dbs` finished by both builds
+    byte-identical; `creset_iface`, `bmom*`, Pro `interface7`,
+    `interface10`, `mesh_cut_2` run (they failed at `-O2` in F4 T11);
+    Pro `alternate1`, `cylinder_buckle`, `ground11_nonsaturated` now
+    finish inside the 120 s corpus timeout. build_safe at `-O2` 187 OK /
+    0 FALLO, rc 0. Timing in `SEGUIMIENTO-CONVERGENCIA.md` (F4 T13 row).
+  - `scripts/build_safe.sh` compiles with `-O2`; the sanitizer targets
+    keep appending `-O1`.
+
+### C54. Run-time record names read into a 1-value dummy without a type check (F4 T13, 2026-10-11) — OPEN
+
+- **Symptom**: the `scripts/audit_db_buffers.py --all` REVIEW list. Most
+  run-time `db( data_item_name, ... )` reads dispatch on `db_type()` and
+  give the matching buffer `DATA_ITEM_SIZE` values, but
+  `post.cc` `post_integrate()` / `parallel_post_node()`, `print_el.cc`
+  `print_element()`, `repeat.cc` (`control_repeat_save`,
+  `control_repeat_until_item`), `data.cc` (arithmetic, spatial resets) and
+  `calcul.cc` assume a DOUBLE record and pass `idum[1]` as the integer
+  buffer. An input that names an INTEGER record there overflows `idum`.
+- **To do**: check `db_type()` (error for an INTEGER record, or read it
+  into a long buffer). No corpus input triggers it.
+- **Severity**: LOW. **Effort**: cheap.
+
+### C55. `print_unknownsrhside()` reads `node_rhside` with the wrong index (F4 T13, 2026-10-11) — OPEN
+
+- **Symptom**: ASan heap-buffer-overflow READ in `print_un.cc:149`
+  (test-2014 `dofrhside`, build_safe and corpus).
+- **Cause**: `NODE_RHSIDE` holds `npuknwn` values per node
+  (`data_length = npuknwn`) but the loop prints `node_rhside[iuknwn]`
+  with `iuknwn = ipuknwn*nder`: the column is wrong for every principal
+  unknown after the first when `nder > 1` and the last one reads past
+  the record. The fix (`node_rhside[ipuknwn]`) changes the printed
+  `*_rhside.N` files, so it needs its own verification (Professional
+  `node_rhside` print).
+- **Severity**: LOW (print only). **Effort**: cheap.
+
+### C56. Parser tokens longer than `MCHAR`-1 overflow the input buffers (F4 T13, 2026-10-11) — OPEN
+
+- **Symptom**: ASan stack-buffer-overflow (`strlen` in
+  `input_skip_comment()`, `input.cc`) on the Professional
+  `ground19_water_under_dam`: line 2 has a 141-character URL inside a
+  comment; `cin >> str` (`char str[MCHAR]`, 100) writes past `str`
+  into `str_tmp`. Results are fine at `-O1` and `-O2` by layout luck.
+- **To do**: read tokens with a width limit or into `std::string`
+  (11 `cin >> str` sites in `input.cc`) and decide between truncating
+  inside comments and an error for an over-long data token.
+- **Severity**: LOW. **Effort**: cheap.
 
 ### C52. Post-solve material state pass for inertia models (`dynamic3`, F4 T5, 2026-10-10) — OPEN, investigation
 
@@ -1736,13 +1803,16 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
 | C45 | — | `control_mesh_copy`/`_mirror` after the first time step: `node_dof_start_refined` error — resolved 2026-10-10 (F4 T8 `0ca144c`) | LOW | cheap |
 | C46 | Pro `other` | `step_start()` mesh residuals — F4 T8: order, move once, switch pair, `mesh_activate1` resolved; rotate sweep parked, not scheduled (C46c, large); move/switch `node_start_refined` deliberate divergences (A, 2026-10-10) | LOW | large (C46c) |
 | C47 | Pro `other` | `force11` 3D section moment `mom1y_sig` 5.80223 vs Pro 5.76460 (target miss, visible since F4 T9) | LOW | medium |
-| C49 | — | build at `-O1`: `-O2` 28-42 % faster, results identical, blocked by latent stack-buffer overflows (F4 T11 study) | LOW | medium |
+| C49 | — | build at `-O1` — resolved 2026-10-11 (F4 T13: 34 scratch-buffer call sites fixed, default `-O2`, results identical) | LOW | medium |
 | C50 | Pro other | `interface_bar2_hex8` extruded/converted interface mesh numbering | LOW | medium |
 | C51 | validation-suite | hardsoil `gamma_p` read the nodal kappa of the previous evaluation (iteration-count oscillation, `mhardsoil_plast`) — resolved 2026-10-10 (F4 T5); cap/cap1/void reads open | MEDIUM | cheap |
 | C52 | Pro `other` | post-solve state pass for inertia models (`dynamic3`) — gated off, investigation | LOW | medium |
 | C53 | Pro `other` | post-solve state pass for slide/contact models (`slide4`) — gated off, investigation | LOW | medium |
+| C54 | — | run-time record names read without a type check into a 1-value dummy (`post.cc`, `print_el.cc`, `repeat.cc`, `data.cc`, `calcul.cc`) | LOW | cheap |
+| C55 | validation-suite | `print_unknownsrhside()` indexes `node_rhside` (npuknwn values) with `iuknwn` (heap read past the end, wrong column when nder > 1) | LOW | cheap |
+| C56 | Pro `other` | input tokens longer than `MCHAR`-1 (`cin >> str`) overflow the parser buffers (`ground19_water_under_dam`, 141-char URL in a comment) | LOW | cheap |
 
-Thirty-seven items remain open: seven MEDIUM and thirty LOW (C23 and C24 resolved 2026-10-05; C25, C26, C27 and B10 added; F1 T3 / K04 2026-10-06 added B11, C28-C32; F1 T6 resolved C28, added and resolved B12; F2 T1 added C36; F2 T2 added C37, C38, C39; F2 T3 resolved C5 and added C40; F3 T2 resolved C8, C18, C19, C20 and added B13, C41; F4 T2 fixed the C41 tie and left a residual; F4 T3 resolved C33; F4 T4 closed C32, added C42 and resolved C31; F4 T7-T8 added C43-C46; F4 T9 resolved the C43 solver speed, decided C46b/C46e and added C47, C48, C49; F4 T10 resolved C48 and added C50). No open issue is CRITICAL or
+Forty-one items remain open: seven MEDIUM and thirty-four LOW (C23 and C24 resolved 2026-10-05; C25, C26, C27 and B10 added; F1 T3 / K04 2026-10-06 added B11, C28-C32; F1 T6 resolved C28, added and resolved B12; F2 T1 added C36; F2 T2 added C37, C38, C39; F2 T3 resolved C5 and added C40; F3 T2 resolved C8, C18, C19, C20 and added B13, C41; F4 T2 fixed the C41 tie and left a residual; F4 T3 resolved C33; F4 T4 closed C32, added C42 and resolved C31; F4 T7-T8 added C43-C46; F4 T9 resolved the C43 solver speed, decided C46b/C46e and added C47, C48, C49; F4 T10 resolved C48 and added C50; F4 T5 added C52, C53 and resolved C51; F4 T13 resolved C49 and added C54-C56). No open issue is CRITICAL or
 HIGH. The validation-suite corpus has no open failure — its 233 real tests
 pass (`materi_direct_mc` input corrected, C17 resolved). Every remaining failure is a stale or malformed test, an out-of-scope model
 or infrastructure limit, a narrow post-processing divergence, a corpus-coverage
