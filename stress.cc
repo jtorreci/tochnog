@@ -1601,6 +1601,19 @@ void set_stress( long int element, long int gr,
   /*********************************************************************************/
 
     // plastic iterations
+    // History dofs seen by the yield rules (F4 T5 / C35 follow-up,
+    // 2026-10-10): plasti_rule() reads the hardening variables kappa and
+    // kappa_shear from its unknowns array (hardsoil gamma_p, the kappa
+    // hardened mohr_coul variants, von Mises Nadai). new_unknowns holds
+    // the NODAL value written by the previous material evaluation of the
+    // same step, so the result depended on the number of evaluations
+    // (period-2 oscillation of mhardsoil_plast). The return mapping must
+    // use the step-start value plus its own increment: pl_unknowns is
+    // new_unknowns with those two slots replaced by old + increment.
+  double pl_unknowns[MUKNWN];
+  array_move( new_unknowns, pl_unknowns, nuknwn );
+  if ( materi_plasti_kappa ) pl_unknowns[kap_indx] = old_kappa;
+  if ( materi_plasti_kappa_shear ) pl_unknowns[kapsh_indx] = old_kapsh;
   while ( !plasti_found && total_plasti_iter<max_plasti_iter ) {
     plasti_iter++;
     total_plasti_iter++;
@@ -1622,6 +1635,7 @@ void set_stress( long int element, long int gr,
       tmp = array_inproduct( inc_epp, inc_epp, MDIM*MDIM );
       new_kappa = old_kappa + sqrt(0.5*tmp);     
       if ( swit ) pri( "new_kappa", new_kappa );
+      pl_unknowns[kap_indx] = new_kappa;
     }
     // materi_plasti_kappa_shear (manual 4.25): the size of the SHEAR
     // plastic strain rate (deviatoric part), independent of the total
@@ -1638,6 +1652,7 @@ void set_stress( long int element, long int gr,
       tmp = array_inproduct( epp_dev2, epp_dev2, MDIM*MDIM );
       new_kapsh = old_kapsh + sqrt(0.5*tmp);
       if ( swit ) pri( "new_kapsh", new_kapsh );
+      pl_unknowns[kapsh_indx] = new_kapsh;
     }
     else
       new_kapsh = old_kapsh;
@@ -1940,7 +1955,7 @@ void set_stress( long int element, long int gr,
       // new lambda
     if ( plasti_iter==1 ) {
       plasti_type = -NONE; plasti_rule( element, gr, plasti_on_boundary, user_data, 
-        new_unknowns, new_grad_new_unknowns, old_hisv, new_hisv,
+        pl_unknowns, new_grad_new_unknowns, old_hisv, new_hisv,
         old_epp, inc_epp, inc_ept, GET_YIELD_RULE, 
         plasti_type, test_sig, f, new_f, ddum );
 
@@ -1972,7 +1987,7 @@ void set_stress( long int element, long int gr,
           lambda = EPS_LAMBDA;
         }
         plasti_rule( element, gr, plasti_on_boundary, user_data, 
-          new_unknowns, new_grad_new_unknowns,
+          pl_unknowns, new_grad_new_unknowns,
           old_hisv, new_hisv, old_epp, inc_epp, inc_ept,
           GET_FLOW_RULE_GRAD, plasti_type, test_sig, rdum, rdum, plasti_dir );
         if ( !viscoplasti ) array_normalize( plasti_dir, MDIM*MDIM );
@@ -1980,7 +1995,7 @@ void set_stress( long int element, long int gr,
       }
     }
     else {
-      plasti_rule( element, gr, plasti_on_boundary, user_data, new_unknowns, new_grad_new_unknowns,
+      plasti_rule( element, gr, plasti_on_boundary, user_data, pl_unknowns, new_grad_new_unknowns,
         old_hisv, new_hisv, old_epp, inc_epp, inc_ept, GET_YIELD_RULE, plasti_type, 
         test_sig, f, new_f, ddum );
       if ( materi_plasti_f_nonlocal && viscoplasti ) f = new_unknowns[fn_indx];
@@ -1998,7 +2013,7 @@ void set_stress( long int element, long int gr,
       if ( scalar_dabs(f)<EPS_F || scalar_dabs(f-f_previous)<EPS_EPS_F*EPS_F ) {
         array_add( work_inc_epp, total_inc_epp, total_inc_epp, MDIM*MDIM );
         plasti_type = -NONE; plasti_rule( element, gr, plasti_on_boundary, user_data, 
-          new_unknowns, new_grad_new_unknowns, old_hisv, new_hisv,
+          pl_unknowns, new_grad_new_unknowns, old_hisv, new_hisv,
           old_epp, inc_epp, inc_ept, GET_YIELD_RULE, 
           plasti_type, test_sig, f, new_f, ddum );
         if ( f<EPS_F ) 

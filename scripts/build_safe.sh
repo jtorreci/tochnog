@@ -483,10 +483,14 @@ rm -f validation-suite/test-2014/dof.* \
 #   mhardsoil_gp0 (tension inicial sigxx=-2 + control: f=0 -> el estado
 #   NO se relaja, sigxx -2.0 EXACTO, record 0.0007763 = f(q=2) analitico,
 #   kappa 0) y mhardsoil_gp0_off (sin control: el retorno relaja la
-#   desviadora a sigxx -1.225 y kappa crece a 0.000293; el estado final
-#   cumple f ~ 0: 0.687/(1000*(1-0.687/38.49)) - 2*0.687/3000 -
-#   0.000293 = -0.000061). mhardsoil_plast (sigxx=-4): kappa 0.0006 =
-#   2x gp0_off -> el endurecimiento ESCALA con q inicial. GOTCHAS: el
+#   desviadora y kappa crece; el estado final cumple f ~ 0).
+#   mhardsoil_plast (sigxx=-4). F4 T5 (2026-10-10): tras el fix del
+#   kappa del hardsoil (gamma_p = kappa del inicio del paso + incremento
+#   del propio retorno) los targets de mhardsoil_plast (kap 0.00104991,
+#   sigxx -3.11898) y mhardsoil_gp0_off (kap 0.000494563, sigxx
+#   -1.56781) estan calibrados GNU (sin oraculo Pro, decision del owner);
+#   los valores viejos 0.0006/-2.44 y 0.000293/-1.225 eran la rama par
+#   de una oscilacion de periodo 2 en el numero de iteraciones. GOTCHAS: el
 #   retorno plastico del HS (f = O(q/E) ~ 1e-4, minisculo) converge en
 #   el punto de integracion pero el dof de tension del sistema acoplado
 #   NO lo propaga (el estado medido queda sobre la superficie f ~ 0 con
@@ -1551,6 +1555,14 @@ run_ok "$T2026" interface_tension_status1
 if cmp -s "$ITS_DBS" /tmp/interface_tension_status1_run1.dbs;
 then check_ok "interface_tension_status1 (two runs byte-identical)";
 else check_fail "interface_tension_status1" "two runs give different .dbs"; fi
+# F4 T5 follow-up (2026-10-10): the hardsoil yield function reads gamma_p
+#   = kappa at the step-start value plus the increment of its own return
+#   mapping (stress.cc set_stress pl_unknowns), not the nodal kappa of the
+#   previous material evaluation of the step. Same result for 1 and 2
+#   equilibrium iterations (kap 0.00104991, sigxx -3.11898); old GNU
+#   0.0030 / 0.0006 (period-2 oscillation in the iteration count).
+run_ok "$T2026" hardsoil_kappa_iterations1
+run_ok "$T2026" hardsoil_kappa_iterations2
 
 # ---------------------------------------------------------------------
 # K03 (2026-10-06): default convection_apply -no (manual Professional

@@ -91,10 +91,16 @@ and `materi_plasti_hardsoil_history` to be initialized.
   4/3000 = 0.0007763` is stored EXACTLY as the extra gamma_p: with the
   control the state does not relax (`sigxx = -2.0` EXACT, `kappa = 0`).
 - `mhardsoil_gp0_off` (same, without the control): the return relaxes
-  the deviatoric stress (`sigxx -2 -> -1.225`) and `kappa` grows to
-  `0.000293`; the end state satisfies `f ~ 0` (it sits on the expanding
-  surface): `0.687/(1000*(1-0.687/38.49)) - 2*0.687/3000 - 0.000293 =
-  -0.000061`.
-- `mhardsoil_plast` (initial `sigxx = -4`): `kappa = 0.0006` = 2x the
-  `sigxx = -2` case: the hardening scales with the initial deviatoric
-  stress.
+  the deviatoric stress (`sigxx -2 -> -1.56781`, `sigyy -0.226726`) and
+  `kappa` grows to `0.000494563`; the end state lies on the expanding
+  surface (`f` = 2e-7) and satisfies `sigma = sigma0 - C eps_p` with
+  E50 and nu50 (zero total strain).
+- `mhardsoil_plast` (initial `sigxx = -4`): `sigxx -3.11898`,
+  `kappa 0.00104991`.
+- The result does not depend on the number of equilibrium iterations
+  (`test-2026/hardsoil_kappa_iterations1/2`): the hardening variable of
+  the yield function is the value at the start of the step plus the
+  plastic strain of the current return (F4 T5 follow-up, 2026-10-10).
+  Before that fix the two inputs above gave different values for odd
+  and even iteration counts. These values are GNU-calibrated: the
+  Professional 02-08-2026 returns a zero field on these inputs.

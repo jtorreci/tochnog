@@ -1604,6 +1604,39 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
     `-O2` (not `-O3`: little extra gain, more warnings) with a full A/B.
     Expected gain about 28 % (`large1`) to 42 % (`force11`).
 
+### C51. Hardsoil yield read the nodal kappa of the previous evaluation of the same step (F4 T5, 2026-10-10) — RESOLVED 2026-10-10
+
+- **Symptom**: test-2014 `mhardsoil_plast` (one quad4, zero total
+  strain, initial sigxx -4) alternated with the number of equilibrium
+  iterations: kap 0.0030 / sigxx -1.480 with 1 or 3 iterations, kap
+  0.0006 / sigxx -2.47 to -2.49 with 2, 4, 8, 20, 50 (`mhardsoil_gp0_off`
+  likewise 0.0015 / 0.00029). The F4 T5 post-solve material state pass
+  adds one evaluation and flipped both tests to the odd branch.
+- **Root cause**: `plasti.cc` `plasti_rule()` takes `gamma_p` from
+  `new_unknowns[kap_indx]`, the interpolated NODAL kappa written by the
+  previous material evaluation of the step, instead of the step-start
+  kappa plus the increment of its own return mapping.
+- **Fix**: `stress.cc` `set_stress()` passes the yield rules a copy of
+  the unknowns whose kappa and kappa_shear slots are `old + increment of
+  this return` (`pl_unknowns`). Also covers the kappa-hardened
+  Mohr-Coulomb variants and the von Mises Nadai hardening (same read).
+- **Verification**: no Professional oracle (zero field on the converted
+  inputs). Identical results for 1/2/3/4/8 iterations with and without
+  the post-solve pass; end state satisfies `sigma = sigma0 - C(E50,nu50)
+  eps_p` exactly (HEAD did not), `kap = sqrt(0.5 eps_p:eps_p)`, f ~ 1e-8.
+  New tests `test-2026/hardsoil_kappa_iterations1/2`. Retarget (project
+  owner 2026-10-10, GNU-calibrated, no Pro oracle): `mhardsoil_plast`
+  kap 0.00104991 / sigxx -3.11898 (was 0.0006 / -2.44),
+  `mhardsoil_gp0_off` kap 0.000494563 / sigxx -1.56781 (was 0.000293 /
+  -1.225).
+- **Open, same pattern (not changed)**: `plasti.cc` reads other history
+  dofs from `new_unknowns` inside the yield rules: the cap `epp_vol`
+  (~221), the cap1 `pc` (~282), the void fraction (~957/987). Each needs
+  its own probe (iteration-count sweep) before a change. The nonlocal `f`
+  (`fn_indx`) is nonlocal by design.
+- **Severity**: MEDIUM (iteration-count dependent results). **Effort**:
+  cheap.
+
 ---
 
 ## D. Summary
@@ -1665,6 +1698,7 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
 | C47 | Pro `other` | `force11` 3D section moment `mom1y_sig` 5.80223 vs Pro 5.76460 (target miss, visible since F4 T9) | LOW | medium |
 | C49 | — | build at `-O1`: `-O2` 28-42 % faster, results identical, blocked by latent stack-buffer overflows (F4 T11 study) | LOW | medium |
 | C50 | Pro other | `interface_bar2_hex8` extruded/converted interface mesh numbering | LOW | medium |
+| C51 | validation-suite | hardsoil `gamma_p` read the nodal kappa of the previous evaluation (iteration-count oscillation, `mhardsoil_plast`) — resolved 2026-10-10 (F4 T5); cap/cap1/void reads open | MEDIUM | cheap |
 
 Thirty-seven items remain open: seven MEDIUM and thirty LOW (C23 and C24 resolved 2026-10-05; C25, C26, C27 and B10 added; F1 T3 / K04 2026-10-06 added B11, C28-C32; F1 T6 resolved C28, added and resolved B12; F2 T1 added C36; F2 T2 added C37, C38, C39; F2 T3 resolved C5 and added C40; F3 T2 resolved C8, C18, C19, C20 and added B13, C41; F4 T2 fixed the C41 tie and left a residual; F4 T3 resolved C33; F4 T4 closed C32, added C42 and resolved C31; F4 T7-T8 added C43-C46; F4 T9 resolved the C43 solver speed, decided C46b/C46e and added C47, C48, C49; F4 T10 resolved C48 and added C50). No open issue is CRITICAL or
 HIGH. The validation-suite corpus has no open failure — its 233 real tests
