@@ -16,7 +16,7 @@ through `scripts/remote_run.sh`.
 - [x] T8 C45 + C46 (owner 2026-10-10: study, not only document): `control_mesh_copy`/`_mirror` after a time step stop with a `node_dof_start_refined` error (Pro runs); copy/switch order on the same index (Pro copies first); `control_mesh_move` has no effect in the Pro (Pro-suspect?); `mesh_activate1` final-step vely (GNU 0, Pro -9.95e-6). Route: delegated writer. Done except C46c (rotate sweep, parked: large) and two owner decisions (C46b, C46e class D).
 - [x] T9 C43: GNU Bi-CG converges far slower than the Pro (`force11` >600 s vs 13 s). Route: read-only investigator + omen, owner decisions 2026-10-10 (items 1-6), then one delegated writer. Done: SuperLU UAF, interface_convert UAF, recovery table, pardiso -> SuperLU, CSR operator, docs (C46b/C46e class A, C46c not scheduled).
 - [x] T10 C48: interface tension-status record written from a double buffer (`interface_element()` ~1031) → stack garbage. Route: delegated writer. Done `c06fa2d`.
-- [ ] T11 C49: build optimisation `-O1` vs `-O2` — find why -O1 was chosen, measure -O2 (results + time) on omen; owner decision before changing the default.
+- [x] T11 C49: build optimisation `-O1` vs `-O2` — find why -O1 was chosen, measure -O2 (results + time) on omen; owner decision before changing the default. Study done (default unchanged); owner decision pending.
 - [ ] T12 C47: `force11` `mom1y_sig` 5.80223 vs Pro 5.76460 (0.65 %, model difference, solver excluded).
 Order (owner 2026-10-10): T10 → T11 → T5 → T12 → T6.
 
@@ -211,3 +211,18 @@ docs + SEGUIMIENTO + BACKLOG + DIVERGENCES.
   Docs: user/dev group_interface, SEGUIMIENTO (row + checklist),
   BACKLOG C48 resolved + C50, DIVERGENCES C48 row removed / C50 added.
   Engram mirror: pending (writer subagent).
+- T11 (route: delegated writer, study only; scratch clean builds with
+  `TN_EXTRA_FLAGS` (no repo script edit), corpus A/B and timing on omen
+  `f4t11_runs` / `f4t11_meas`). Builds from HEAD + T10 (O1 md5 25040c72,
+  O2 08720f95, O2 -fno-strict-aliasing 6316eb79, O3 1001a41c).
+  Why -O1: no recorded reason (2026-08-02 modernisation command copied
+  into build_safe.sh 73f0e70; upstream Linux targets use -O2).
+  Build: 35/44/45/49 s, largest compiler process 137/149/151/158 MB.
+  Times (median of 3): large1 23.4/16.9/22.2/16.2 s, force11
+  14.5/8.4/14.0/7.7 s. Corpus: all finished .dbs byte-identical to O1;
+  new RUNFAIL at O2/O2nsa/O3: Pro interface7, interface10, mesh_cut_2,
+  vs creset_iface; build_safe 177 OK / 4 FALLO (bmom* cut distance 0,
+  creset_iface). Cause: latent 1-element scratch-buffer overflows (C48
+  class) in print_beam_force_moment.cc, print_interface_stress.cc,
+  delete.cc, top.cc. Recommendation: keep -O1; fix the buffer class
+  (ASan), then -O2 with a full A/B. Details: BACKLOG C49.

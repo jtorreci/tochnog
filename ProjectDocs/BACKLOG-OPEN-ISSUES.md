@@ -1558,7 +1558,51 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
   the makefile flags; numerical reproducibility, a past miscompilation, or
   the incremental-build corruption on the NAS) before changing it; then a
   full corpus A/B (`-O2` may change round-off).
-- **Severity**: **LOW** (performance). **Effort**: **cheap/medium**.
+- **Study (F4 T11, 2026-10-10; default NOT changed, owner decision)**:
+  - **Why `-O1`**: no recorded reason. It comes from the 2026-08-02
+    modernisation build command (`VALIDACION-2026-08-02.md`) and was
+    copied into `build_safe.sh` when it was created (`73f0e70`, an
+    "anti-OOM WSL2" sequential build with a 4 GB `ulimit -v`). The
+    upstream makefile Linux targets use `-O2`. No commit or document
+    reports a miscompilation or a reproducibility problem at `-O2`;
+    `0c2f5e0` (uninitialised `ddum3`) shows UB surfacing with a compiler
+    change at `-O1`.
+  - **Build** (local, clean, `build_safe.sh` + `TN_EXTRA_FLAGS`, which
+    is appended after `-O1`): `-O1` 35 s / largest compiler process 137 MB,
+    9 warnings; `-O2` 44 s / 149 MB, 22 warnings; `-O2
+    -fno-strict-aliasing` 45 s / 151 MB; `-O3` 49 s / 158 MB, 33 warnings.
+    Far below the 4 GB cap.
+  - **Speed** (omen, one run at a time, 3 repetitions, medians):
+    `large1` 23.4 / 16.9 / 22.2 / 16.2 s and `force11` 14.5 / 8.4 /
+    14.0 / 7.7 s (O1 / O2 / O2 -fno-strict-aliasing / O3). Corpus wall
+    on the tests finished by both (Pro other, 6 jobs) 731 -> 623 s (O2),
+    695 s (O2 nsa), 593 s (O3); sfnet 221 -> 206 / 212 / 190 s. The gain
+    comes almost entirely from type-based (strict) aliasing.
+  - **Results**: every `.dbs` of the tests finished by both builds is
+    byte-identical to `-O1` (O2, O2 nsa, O3; the only difference is the
+    2-thread `bicg_csr_threads1`, run-to-run round-off). Peak memory the
+    same. Pro other `alternate1`, `cylinder_buckle` finish within the
+    120 s timeout at O2/O3.
+  - **Blockers**: at O2, O2 nsa and O3 the Pro `interface7`,
+    `interface10`, `mesh_cut_2` and the vs `creset_iface` stop with a
+    database error (`element_interface_strain_normal`,
+    `control_mesh_cut_node_force`), and build_safe gives 177 OK / 4 FALLO
+    (`creset_iface`, `bmom1`, `bmom_switch`, `bmom_truss`, `bmom_2d`:
+    the cut distance column comes out 0). These are latent stack
+    overflows of 1-element scratch buffers given to multi-value `db()` /
+    array calls, the C48 class, which the `-O1` stack layout happens to
+    tolerate: `print_beam_force_moment.cc` `array_distance(p1, p2, ddum,
+    3)` with `ddum[1]`; `print_interface_stress.cc` reads 4 coordinates
+    into `ddum[1]` (gcc -Warray-bounds at O2) and the per-intpnt
+    `ELEMENT_INTERFACE_FORCE_NORM` / `_STRAIN_NORMAL` into scalars;
+    `delete.cc` reads `CONTROL_MESH_CUT_NODE_FORCE` (up to 3 integers)
+    into `idum[1]`; `top.cc` reads up to 3 values of
+    `control_timestep_iterations_automatic` into an array of 2.
+  - **Recommendation**: keep `-O1` for now. First fix this buffer class
+    (audit of `db()` / array calls with `idum` / `ddum` scratch buffers,
+    then the suite and the corpus under the ASan build), then move to
+    `-O2` (not `-O3`: little extra gain, more warnings) with a full A/B.
+    Expected gain about 28 % (`large1`) to 42 % (`force11`).
 
 ---
 
@@ -1619,7 +1663,7 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
 | C45 | — | `control_mesh_copy`/`_mirror` after the first time step: `node_dof_start_refined` error — resolved 2026-10-10 (F4 T8 `0ca144c`) | LOW | cheap |
 | C46 | Pro `other` | `step_start()` mesh residuals — F4 T8: order, move once, switch pair, `mesh_activate1` resolved; rotate sweep parked, not scheduled (C46c, large); move/switch `node_start_refined` deliberate divergences (A, 2026-10-10) | LOW | large (C46c) |
 | C47 | Pro `other` | `force11` 3D section moment `mom1y_sig` 5.80223 vs Pro 5.76460 (target miss, visible since F4 T9) | LOW | medium |
-| C49 | — | build at `-O1`: find why before moving to `-O2` (~25 % faster) | LOW | cheap/medium |
+| C49 | — | build at `-O1`: `-O2` 28-42 % faster, results identical, blocked by latent stack-buffer overflows (F4 T11 study) | LOW | medium |
 | C50 | Pro other | `interface_bar2_hex8` extruded/converted interface mesh numbering | LOW | medium |
 
 Thirty-seven items remain open: seven MEDIUM and thirty LOW (C23 and C24 resolved 2026-10-05; C25, C26, C27 and B10 added; F1 T3 / K04 2026-10-06 added B11, C28-C32; F1 T6 resolved C28, added and resolved B12; F2 T1 added C36; F2 T2 added C37, C38, C39; F2 T3 resolved C5 and added C40; F3 T2 resolved C8, C18, C19, C20 and added B13, C41; F4 T2 fixed the C41 tie and left a residual; F4 T3 resolved C33; F4 T4 closed C32, added C42 and resolved C31; F4 T7-T8 added C43-C46; F4 T9 resolved the C43 solver speed, decided C46b/C46e and added C47, C48, C49; F4 T10 resolved C48 and added C50). No open issue is CRITICAL or
