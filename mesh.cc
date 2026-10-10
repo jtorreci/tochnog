@@ -230,6 +230,72 @@ void mesh_move( double control_mesh_move[], long int length )
   mesh_has_changed( VERSION_NORMAL );
 }
 
+// Duplicate the node-class data of node inod into node new_node (all
+// items except NODE and NODE_START_REFINED, which the caller writes with
+// its own coordinate transformation). renumber() and create_node() read
+// NODE_DOF and NODE_DOF_START_REFINED of every node, so a copied node
+// without them stops the run (BACKLOG C45). The source is copied into a
+// local buffer first: a PUT beyond the allocated range reallocates the
+// data array and would leave a db_dbl()/db_int() pointer dangling.
+static void mesh_duplicate_node_data( long int inod, long int new_node )
+
+{
+  long int idum[1];
+  double ddum[1];
+
+  for ( long int idat=0; idat<MDAT; idat++ ) {
+    if ( idat==NODE || idat==NODE_START_REFINED ) continue;
+    if ( db_data_class(idat)!=NODE ) continue;
+    if ( !db_active_index( idat, inod, VERSION_NORMAL ) ) continue;
+    long int len = db_len( idat, inod, VERSION_NORMAL );
+    if ( len<1 ) continue;
+    if ( db_type(idat)==DOUBLE_PRECISION ) {
+      double *buf = get_new_dbl( len );
+      array_move( db_dbl( idat, inod, VERSION_NORMAL ), buf, len );
+      db( idat, new_node, idum, buf, len, VERSION_NORMAL, PUT );
+      delete[] buf;
+    }
+    else {
+      long int *buf = get_new_int( len );
+      array_move( db_int( idat, inod, VERSION_NORMAL ), buf, len );
+      db( idat, new_node, buf, ddum, len, VERSION_NORMAL, PUT );
+      delete[] buf;
+    }
+  }
+}
+
+// Copy the integration-point state of element ielem into its duplicate
+// new_elem. create_element() resets ELEMENT_DOF and marks it
+// uninitialised (right for refinement), which re-initialises the copy
+// from the smoothed nodal values; the Professional copies the
+// integration-point state (F4 T8: a copied loaded block is an exact
+// replica).
+static void mesh_duplicate_element_state( long int ielem, long int new_elem )
+
+{
+  long int idum[1];
+  double ddum[1];
+  long int vers[2] = { VERSION_NORMAL, VERSION_NEW };
+
+  for ( int iv=0; iv<2; iv++ ) {
+    long int version = vers[iv];
+    if ( !db_version( ELEMENT_DOF, version ) ) continue;
+    if ( db_active_index( ELEMENT_DOF, ielem, version ) ) {
+      long int len = db_len( ELEMENT_DOF, ielem, version );
+      double *buf = get_new_dbl( len );
+      array_move( db_dbl( ELEMENT_DOF, ielem, version ), buf, len );
+      db( ELEMENT_DOF, new_elem, idum, buf, len, version, PUT );
+      delete[] buf;
+    }
+    if ( db_version( ELEMENT_DOF_INITIALISED, version ) &&
+         db_active_index( ELEMENT_DOF_INITIALISED, ielem, version ) ) {
+      long int init = 0, len = 1;
+      db( ELEMENT_DOF_INITIALISED, ielem, &init, ddum, len, version, GET );
+      db( ELEMENT_DOF_INITIALISED, new_elem, &init, ddum, len, version, PUT );
+    }
+  }
+}
+
 void mesh_mirror( long int axis )
 
 {
@@ -265,10 +331,7 @@ void mesh_mirror( long int axis )
         new_coords[axis_i] = -coords[axis_i];
         db( NODE_START_REFINED, new_node, idum, new_coords, ndim, VERSION_NORMAL, PUT );
       }
-      if ( db_active_index( NODE_DOF, inod, VERSION_NORMAL ) ) {
-        double *ndof_old = db_dbl( NODE_DOF, inod, VERSION_NORMAL );
-        db( NODE_DOF, new_node, idum, ndof_old, nuknwn, VERSION_NORMAL, PUT );
-      }
+      mesh_duplicate_node_data( inod, new_node );
     }
   }
 
@@ -278,13 +341,15 @@ void mesh_mirror( long int axis )
   new_elem = max_elem;
   for ( ielem=0; ielem<=max_elem; ielem++ ) {
     if ( db_active_index( ELEMENT, ielem, VERSION_NORMAL ) ) {
-      new_elem++;
+      // Professional numbering (F4 T8 probes): old element + max + 1
+      new_elem = ielem + max_elem + 1;
       db( ELEMENT, ielem, el, ddum, length, VERSION_NORMAL, GET );
       nnol = length - 1;
       new_nodes[0] = el[0];
       for ( inol=0; inol<nnol; inol++ ) new_nodes[1+inol] = el[1+inol]+max_node_old+1;
       create_element( ielem, new_elem, new_nodes, length, VERSION_NORMAL,
         VERSION_NORMAL );
+      mesh_duplicate_element_state( ielem, new_elem );
     }
   }
   mesh_has_changed( VERSION_NORMAL );
@@ -316,10 +381,7 @@ void mesh_copy( double move_coords[] )
         for ( int i=0; i<ndim; i++ ) new_coords[i] = coords[i] + move_coords[i];
         db( NODE_START_REFINED, new_node, idum, new_coords, ndim, VERSION_NORMAL, PUT );
       }
-      if ( db_active_index( NODE_DOF, inod, VERSION_NORMAL ) ) {
-        double *ndof_old = db_dbl( NODE_DOF, inod, VERSION_NORMAL );
-        db( NODE_DOF, new_node, idum, ndof_old, nuknwn, VERSION_NORMAL, PUT );
-      }
+      mesh_duplicate_node_data( inod, new_node );
     }
   }
 
@@ -328,13 +390,15 @@ void mesh_copy( double move_coords[] )
   new_elem = max_elem;
   for ( ielem=0; ielem<=max_elem; ielem++ ) {
     if ( db_active_index( ELEMENT, ielem, VERSION_NORMAL ) ) {
-      new_elem++;
+      // Professional numbering (F4 T8 probes): old element + max + 1
+      new_elem = ielem + max_elem + 1;
       db( ELEMENT, ielem, el, ddum, length, VERSION_NORMAL, GET );
       nnol = length - 1;
       new_nodes[0] = el[0];
       for ( inol=0; inol<nnol; inol++ ) new_nodes[1+inol] = el[1+inol]+max_node_old+1;
       create_element( ielem, new_elem, new_nodes, length, VERSION_NORMAL,
         VERSION_NORMAL );
+      mesh_duplicate_element_state( ielem, new_elem );
     }
   }
   mesh_has_changed( VERSION_NORMAL );
@@ -404,20 +468,7 @@ void mesh_rotate_3d( long int nrot )
       new_coords[2] = -coords[0];
       db( NODE, new_node, idum, new_coords, len3, VERSION_NORMAL, PUT );
       // copy all other node-class data items from the source node
-      for ( int idat=0; idat<MDAT; idat++ ) {
-        if ( idat!=NODE && db_data_class(idat)==NODE &&
-             db_active_index( idat, inod, VERSION_NORMAL ) ) {
-          long int ndata_len = db_len( idat, inod, VERSION_NORMAL );
-          if ( db_type(idat)==DOUBLE_PRECISION ) {
-            double *dold = db_dbl( idat, inod, VERSION_NORMAL );
-            db( idat, new_node, idum, dold, ndata_len, VERSION_NORMAL, PUT );
-          }
-          else {
-            long int *iold = db_int( idat, inod, VERSION_NORMAL );
-            db( idat, new_node, iold, ddum, ndata_len, VERSION_NORMAL, PUT );
-          }
-        }
-      }
+      mesh_duplicate_node_data( inod, new_node );
       // the rotated coordinate also applies to node_start_refined
       if ( db_active_index( NODE_START_REFINED, inod, VERSION_NORMAL ) ) {
         db( NODE_START_REFINED, inod, idum, coords, ndim, VERSION_NORMAL, GET );

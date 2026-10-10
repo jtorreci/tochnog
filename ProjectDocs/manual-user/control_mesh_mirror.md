@@ -45,6 +45,22 @@ After this record the model has 6 nodes and 2 elements, symmetric about x=0.
 
 Applied once per control index, on its first step, also when the same
 index carries a multi-step `control_timestep` (as the Professional). See
-[control_mesh_once_per_control](control_mesh_once_per_control.md). On an
-index after the first time step the GNU currently stops with a
-`node_dof_start_refined` error (BACKLOG C45).
+[control_mesh_once_per_control](control_mesh_once_per_control.md).
+
+## After a time step (F4 T8, BACKLOG C45)
+
+The mirror can be applied on any control index, also after earlier time
+steps. The new nodes carry the nodal dofs of their source nodes and the
+new elements the integration-point state (stresses, strains, history) of
+their source elements, as in the Professional 02-08-2026 (a mirrored
+loaded block gives the Professional values to round-off). New nodes are numbered
+`old + max_node + 1` and new elements `old + max_element + 1` (the
+Professional numbering). Before F4 T8 the GNU stopped with a
+`node_dof_start_refined` error.
+
+Tests: `validation-suite/test-2026/mesh_copy_timestep1`,
+`mesh_mirror_timestep1` (targets = Professional values).
+
+Nodal dofs are copied as they are (no sign change of the mirrored
+velocity components) and nodes on the mirror plane are not merged, as in
+the Professional.

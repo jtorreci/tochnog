@@ -1455,6 +1455,13 @@ run_ok "$T2026" mesh_switch_timestep1
 if grep -aqE '^node +3 +0 +0\.5 *$' "$T2026/mesh_switch_timestep1.dbs" 2>/dev/null;
 then check_ok "mesh_switch_timestep1 (node 3 at 0 0.5)";
 else check_fail "mesh_switch_timestep1" "node 3 not at 0 0.5"; fi
+# F4 T8 / C45 (2026-10-10): control_mesh_copy / _mirror on an index after
+#   a control_timestep (mesh.cc mesh_duplicate_node_data /
+#   mesh_duplicate_element_state). Old GNU: rc 1 (node_dof_start_refined
+#   of the new nodes missing), then 1 % off (integration-point state
+#   re-initialised). Targets = Professional 02-08-2026 post_point values.
+run_ok "$T2026" mesh_copy_timestep1
+run_ok "$T2026" mesh_mirror_timestep1
 
 # ---------------------------------------------------------------------
 # K03 (2026-10-06): default convection_apply -no (manual Professional
