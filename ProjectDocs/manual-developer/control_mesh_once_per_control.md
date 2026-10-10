@@ -53,3 +53,14 @@ None.
   unconfirmed against the Professional (BACKLOG C46).
 - A per-operation registry (operation, once/always) would replace the
   scattered `first_of_control &&` tests.
+
+## Order of the operations (F4 T8)
+
+`step_start()` runs `macro()`, `adjust_geom`, then `mesh_copy()`,
+`mesh_move()`, `mesh_switch()`, `mesh_mirror()` (before: switch, move,
+mirror, copy). Professional probes (macro x 0..2, y 0..1; copy 5 0,
+mirror -x, switch -y -x, move +10 / linear 2x on index 1, every pair and
+copy+switch+mirror; the record order in the input swapped too): copy
+before move, switch and mirror; move before switch and mirror; switch
+before mirror. The place of `adjust_geom` and of the rotate records was
+not probed (left where they were). Test `mesh_order_timestep1`.

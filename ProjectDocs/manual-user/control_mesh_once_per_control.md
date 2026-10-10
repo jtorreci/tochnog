@@ -45,10 +45,15 @@ again (a `control_repeat` re-entry).
   Professional did not move the mesh at all, so the once-per-control
   behaviour could not be confirmed; the GNU still moves the mesh on every
   step of a `control_timestep` index (BACKLOG C46, DIVERGENCES C46).
-- On one index with both `control_mesh_copy` and `control_mesh_switch` the
-  Professional copies first and then switches; the GNU switches first
-  (BACKLOG C46).
-- `control_mesh_copy` / `control_mesh_mirror` on an index after the first
-  time step stop with "Error detected for data item :
-  node_dof_start_refined" in the GNU (pre-existing, BACKLOG C45); the
-  Professional runs them.
+- Fixed in F4 T8: `control_mesh_copy` / `control_mesh_mirror` on an index
+  after a time step (BACKLOG C45, see their pages).
+
+## Order on one control index (F4 T8)
+
+With several records on the same index the operations run in the order
+of the Professional 02-08-2026 (pairwise probes, the order of the records
+in the input does not matter): `control_mesh_macro`, `control_mesh_copy`,
+`control_mesh_move`, `control_mesh_switch`, `control_mesh_mirror`. Before
+F4 T8 the GNU ran switch, move, mirror, copy. Test
+`validation-suite/test-2026/mesh_order_timestep1` (copy + switch + mirror:
+node 10 at 0 7, node 25 at -1 5, = Professional).

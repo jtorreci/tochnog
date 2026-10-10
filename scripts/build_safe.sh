@@ -1476,6 +1476,13 @@ if grep -aqE '^node +2 +1 +0 +0 *$' "$T2026/mesh_macro_numbering2.dbs" 2>/dev/nu
    grep -aqE '^element +1 +-hex8 1 2 4 5 7 8 10 11 *$' "$T2026/mesh_macro_numbering2.dbs" 2>/dev/null;
 then check_ok "mesh_macro_numbering2 (node 2 at 1 0 0, element 1 1 2 4 5 7 8 10 11)";
 else check_fail "mesh_macro_numbering2" "brick numbering differs from the Professional"; fi
+# F4 T8 / C46a: one-shot mesh records on one index in the Professional
+#   order copy, (move), switch, mirror (top.cc step_start).
+run_ok "$T2026" mesh_order_timestep1
+if grep -aqE '^node +10 +0 +7 *$' "$T2026/mesh_order_timestep1.dbs" 2>/dev/null &&
+   grep -aqE '^node +25 +-1 +5 *$' "$T2026/mesh_order_timestep1.dbs" 2>/dev/null;
+then check_ok "mesh_order_timestep1 (node 10 at 0 7, node 25 at -1 5)";
+else check_fail "mesh_order_timestep1" "copy/switch/mirror order differs from the Professional"; fi
 
 # ---------------------------------------------------------------------
 # K03 (2026-10-06): default convection_apply -no (manual Professional
