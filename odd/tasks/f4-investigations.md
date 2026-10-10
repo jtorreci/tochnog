@@ -18,7 +18,13 @@ through `scripts/remote_run.sh`.
 - [x] T10 C48: interface tension-status record written from a double buffer (`interface_element()` ~1031) → stack garbage. Route: delegated writer. Done `c06fa2d`.
 - [x] T11 C49: build optimisation `-O1` vs `-O2` — find why -O1 was chosen, measure -O2 (results + time) on omen; owner decision before changing the default. Study done (default unchanged); owner decision pending.
 - [ ] T12 C47: `force11` `mom1y_sig` 5.80223 vs Pro 5.76460 (0.65 %, model difference, solver excluded).
-Order (owner 2026-10-10): T10 → T11 → T5 → T12 → T6.
+- [ ] T13 C49 prerequisite: audit every `db()` / array call that receives a fixed-size scratch buffer (`idum[1]`, `ddum[1]`, small arrays) and can write more values; fix them; run build_safe + corpus under ASan; then switch the build to `-O2` with a full corpus A/B (owner 2026-10-10).
+Order (owner 2026-10-10): T10 → T11 → T5 → T13 → T12 → T6.
+
+## Later (owner 2026-10-10, after convergence with ALL divergences documented and accepted)
+- F6: exhaustive profiling and optimisation pass; special attention to the hot
+  helpers used everywhere (`db()`, `pri()`): leaks, per-call costs (e.g. `pri()`
+  flushes `cout` on every call), buffer contracts.
 
 ## Rules
 Manual/analytic decides; Pro is the oracle when the manual is silent;
