@@ -51,6 +51,11 @@ assembled as the arithmetic mean over the elements that share the node. The
 `beam2d_1` cantilever corner stress and the `post4` moment are the
 discriminating examples).
 
+The recovery factors of quad4, quad9, hex8, hex27 and tet10 are computed
+once per run (F4 T9, 2026-10-10): the results are unchanged and large 3D
+models recover their nodal stresses faster (Professional `large1`
+37 s -> 27 s).
+
 ## When a stored reference value changes
 
 Because the default quadrature changed, stored static/dynamic reference

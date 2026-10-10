@@ -245,11 +245,34 @@ operations):
   (independent of the quadrature): a non-selected side must not require a
   phreatic level.
 
+## 6b. Recovery factor table (F4 T9, 2026-10-10)
+
+The least-squares factor `F(inol, ipoint)` depends only on the element
+type, the node and the integration point, but
+`sri_stress_recovery_weight()` rebuilt and inverted the 4x4 normal matrix
+on every call - once per node, integration point and element on every
+recovery and inertia pass (43.7 million fits on the Professional
+`large1`). `miscel.cc` now builds a static table once
+(`sri_recovery_table_build()`, a function-local `static const`, so the
+first call initialises it thread-safely) for the five recovered types:
+quad4 (4 points, bilinear), quad9 (9, linear), hex8 (8, linear), hex27
+(27, linear) and tet10 (5 Keast points, closed form). The fit itself
+moved unchanged into `sri_recovery_factor()` (the space dimension is
+the type's own instead of the global `ndim`, which the type test already
+fixed); a singular normal matrix keeps the `h_inol` fallback through the
+`ok` flag. The SRI Lagrange path and the volume cancellation are
+unchanged.
+
+Results are bit-identical: every suite `.dbs` equal to the old build
+(297 files), corpus A/B on omen (F4 T9 SEGUIMIENTO row). Time: `large1`
+37 s -> 27 s locally (4 GB cap).
+
 ## 7. Files and functions
 
 - `polynom.cc` — `pol()` (incl. the tet10 Keast rule, C31),
   `stress_recovery_gauss`.
-- `miscel.cc` — `sri_stress_recovery_weight()`.
+- `miscel.cc` — `sri_stress_recovery_weight()`, `sri_recovery_factor()`,
+  `sri_recovery_table_build()` (F4 T9 factor table).
 - `general.cc` — `general()`, the lumped sigma-dof inertia weight and the
   tet10 HRZ lumping (C31).
 - `materi.cc` — `materi()`, the stress-dof RHS.

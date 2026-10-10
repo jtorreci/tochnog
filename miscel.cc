@@ -411,6 +411,169 @@ double strain_recovery_weight( long int sri_on, long int name, long int nnol,
     h_inol, volume );
 }
 
+// Per-element least-squares stress recovery factor F(inol,ipoint) of the
+// elements (see sri_stress_recovery_weight): ttype 0 quad4 (4 points),
+// 1 quad9 (9), 2 hex8 (8), 3 hex27 (27), 4 tet10 (5 Keast points); nd is
+// the space dimension of the type. Returns 0 when
+// the normal matrix is singular (the caller then keeps h_inol), 1 with F.
+static long int sri_recovery_factor( long int ttype, long int nd,
+  long int npoint, long int inol, long int ipoint, double &F )
+
+{
+  long int nterm=0, npol=0, nxi=1, neta=1, nzeta=1, ixi=0, ieta=0, izeta=0,
+    inol_xi=0, inol_eta=0, inol_zeta=0, k=0, l=0, d=0, p=0, m=0, pmax=0;
+  long int expo[4][MDIM];
+  double xg[MPOINT], wg[MPOINT], node[MDIM], ipc[MDIM], pc[MDIM],
+    phn[4], phi[4], M[4][4], aug[4][8], piv=0., fac=0.;
+
+  // tet10 with the 5-point Keast rule (C31, F4 T4 2026-10-09): the
+  // Professional 02-08-2026 fits 1,L1,L2,L3 to the 5 point values by
+  // uniform-weight least squares and evaluates the fit at the node. With
+  // the barycentric basis the normal matrix is I/9 + (41/144) J, so the
+  // factor has the closed form F = 9 L(node).L(point) - 41/20 (it sums to
+  // 1 over the points).
+  if ( ttype==4 ) {
+    static const double lnode[10][4] = {
+      {1.,0.,0.,0.}, {.5,.5,0.,0.}, {0.,1.,0.,0.}, {.5,0.,.5,0.},
+      {0.,.5,.5,0.}, {0.,0.,1.,0.}, {.5,0.,0.,.5}, {0.,.5,0.,.5},
+      {0.,0.,.5,.5}, {0.,0.,0.,1.} };
+    double dot = 0.;
+    for ( k=0; k<4; k++ ) {
+      double lp = ( ipoint==0 ) ? 0.25 : ( ( k==ipoint-1 ) ? 0.5 : 1./6. );
+      dot += lnode[inol][k] * lp;
+    }
+    F = 9.*dot - 41./20.;
+    return 1;
+  }
+
+  for ( k=0; k<4; k++ )
+    for ( d=0; d<MDIM; d++ ) expo[k][d] = 0;
+
+  if ( ttype==0 ) {
+    npol = 2; nterm = 4;               // bilinear 1,x,y,xy
+    expo[1][0]=1; expo[2][1]=1; expo[3][0]=1; expo[3][1]=1;
+  }
+  else if ( ttype==1 ) {
+    npol = 3; nterm = 3;               // linear 1,x,y
+    expo[1][0]=1; expo[2][1]=1;
+  }
+  else if ( ttype==2 ) {
+    npol = 2; nterm = 4;               // linear 1,x,y,z
+    expo[1][0]=1; expo[2][1]=1; expo[3][2]=1;
+  }
+  else if ( ttype==3 ) {
+    npol = 3; nterm = 4;               // linear 1,x,y,z
+    expo[1][0]=1; expo[2][1]=1; expo[3][2]=1;
+  }
+  else return 0;
+
+  if ( nd>=1 ) nxi = npol;
+  if ( nd>=2 ) neta = npol;
+  if ( nd==3 ) nzeta = npol;
+
+  inol_xi = inol % nxi; inol_eta = (inol/nxi) % neta;
+  inol_zeta = inol/(nxi*neta);
+  node[0] = ( nxi>1 ) ? -1. + 2.*inol_xi/(nxi-1) : 0.;
+  if ( nd>=2 ) node[1] = ( neta>1 ) ? -1. + 2.*inol_eta/(neta-1) : 0.;
+  if ( nd==3 ) node[2] = ( nzeta>1 ) ? -1. + 2.*inol_zeta/(nzeta-1) : 0.;
+
+  ixi = ipoint % nxi; ieta = (ipoint/nxi) % neta; izeta = ipoint/(nxi*neta);
+  integration_gauss( npol, xg, wg );
+  ipc[0] = xg[ixi];
+  if ( nd>=2 ) ipc[1] = xg[ieta];
+  if ( nd==3 ) ipc[2] = xg[izeta];
+
+  // normal matrix M = sum_p phi(p) phi(p)^T (UNIFORM weights, as measured)
+  for ( k=0; k<nterm; k++ )
+    for ( l=0; l<nterm; l++ ) M[k][l] = 0.;
+  for ( p=0; p<npoint; p++ ) {
+    long int pxi = p % nxi, peta = (p/nxi) % neta, pzeta = p/(nxi*neta);
+    pc[0] = xg[pxi];
+    if ( nd>=2 ) pc[1] = xg[peta];
+    if ( nd==3 ) pc[2] = xg[pzeta];
+    for ( k=0; k<nterm; k++ ) {
+      phi[k] = 1.;
+      for ( d=0; d<nd; d++ )
+        for ( long int e=0; e<expo[k][d]; e++ ) phi[k] *= pc[d];
+    }
+    for ( k=0; k<nterm; k++ )
+      for ( l=0; l<nterm; l++ ) M[k][l] += phi[k]*phi[l];
+  }
+
+  // invert M (nterm <= 4) by Gauss-Jordan with partial pivoting
+  for ( k=0; k<nterm; k++ ) {
+    for ( l=0; l<nterm; l++ ) aug[k][l] = M[k][l];
+    for ( l=0; l<nterm; l++ ) aug[k][nterm+l] = ( k==l ) ? 1. : 0.;
+  }
+  for ( k=0; k<nterm; k++ ) {
+    pmax = k;
+    for ( l=k+1; l<nterm; l++ )
+      if ( scalar_dabs(aug[l][k])>scalar_dabs(aug[pmax][k]) ) pmax = l;
+    if ( pmax!=k ) {
+      for ( l=0; l<2*nterm; l++ ) {
+        double tmp = aug[k][l]; aug[k][l] = aug[pmax][l]; aug[pmax][l] = tmp;
+      }
+    }
+    piv = aug[k][k];
+    if ( scalar_dabs(piv)<TINY ) return 0;
+    for ( l=0; l<2*nterm; l++ ) aug[k][l] /= piv;
+    for ( l=0; l<nterm; l++ ) {
+      if ( l!=k ) {
+        fac = aug[l][k];
+        for ( m=0; m<2*nterm; m++ ) aug[l][m] -= fac*aug[k][m];
+      }
+    }
+  }
+
+  // F = phi(node)^T M^{-1} phi(ipoint)
+  for ( k=0; k<nterm; k++ ) {
+    phn[k] = 1.;
+    for ( d=0; d<nd; d++ )
+      for ( long int e=0; e<expo[k][d]; e++ ) phn[k] *= node[d];
+  }
+  for ( k=0; k<nterm; k++ ) {
+    phi[k] = 1.;
+    for ( d=0; d<nd; d++ )
+      for ( long int e=0; e<expo[k][d]; e++ ) phi[k] *= ipc[d];
+  }
+  F = 0.;
+  for ( k=0; k<nterm; k++ )
+    for ( l=0; l<nterm; l++ ) F += phn[k]*aug[k][nterm+l]*phi[l];
+
+  return 1;
+}
+
+#define SRI_TABLE_NTYPE 5
+#define SRI_TABLE_N 27
+struct SriRecoveryTable {
+  double F[SRI_TABLE_NTYPE][SRI_TABLE_N][SRI_TABLE_N];
+  char ok[SRI_TABLE_NTYPE][SRI_TABLE_N][SRI_TABLE_N];
+};
+
+static SriRecoveryTable sri_recovery_table_build( void )
+
+{
+  static const long int nnol_t[SRI_TABLE_NTYPE] = { 4, 9, 8, 27, 10 };
+  static const long int npoint_t[SRI_TABLE_NTYPE] = { 4, 9, 8, 27, 5 };
+  static const long int nd_t[SRI_TABLE_NTYPE] = { 2, 2, 3, 3, 3 };
+  SriRecoveryTable t;
+  for ( long int it=0; it<SRI_TABLE_NTYPE; it++ ) {
+    for ( long int i=0; i<SRI_TABLE_N; i++ ) {
+      for ( long int j=0; j<SRI_TABLE_N; j++ ) {
+        t.F[it][i][j] = 0.;
+        t.ok[it][i][j] = 0;
+        if ( i>=nnol_t[it] || j>=npoint_t[it] ) continue;
+        double F = 0.;
+        if ( sri_recovery_factor( it, nd_t[it], npoint_t[it], i, j, F ) ) {
+          t.F[it][i][j] = F;
+          t.ok[it][i][j] = 1;
+        }
+      }
+    }
+  }
+  return t;
+}
+
 double sri_stress_recovery_weight( long int sri, long int name, long int nnol,
   long int inol, long int npoint, long int ipoint, double h_inol, double volume )
 
@@ -445,11 +608,8 @@ double sri_stress_recovery_weight( long int sri, long int name, long int nnol,
   // exact sigxx = 1000 came out 1333 = 4/3).
 
 {
-  long int nterm=0, npol=0, nxi=1, neta=1, nzeta=1, ixi=0, ieta=0, izeta=0,
-    inol_xi=0, inol_eta=0, inol_zeta=0, k=0, l=0, d=0, p=0, m=0, pmax=0;
-  long int expo[4][MDIM];
-  double xg[MPOINT], wg[MPOINT], node[MDIM], ipc[MDIM], pc[MDIM],
-    phn[4], phi[4], M[4][4], aug[4][8], piv=0., fac=0., F=0.;
+  long int ttype=0;
+  double F=0.;
 
   // SRI path (GNU-specific feature, unchanged 2026-09-13): the classic
   // selective reduced integration of the quad4/hex8 uses the Lagrange
@@ -475,121 +635,21 @@ double sri_stress_recovery_weight( long int sri, long int name, long int nnol,
 
   if ( !stress_recovery_gauss ) return h_inol;
 
-  // tet10 with the 5-point Keast rule (C31, F4 T4 2026-10-09): the
-  // Professional 02-08-2026 fits 1,L1,L2,L3 to the 5 point values by
-  // uniform-weight least squares and evaluates the fit at the node. With
-  // the barycentric basis the normal matrix is I/9 + (41/144) J, so the
-  // factor has the closed form F = 9 L(node).L(point) - 41/20 (it sums to
-  // 1 over the points). Same volume cancellation as below.
-  if ( name==-TET10 && nnol==10 && npoint==5 && ndim==3 ) {
-    static const double lnode[10][4] = {
-      {1.,0.,0.,0.}, {.5,.5,0.,0.}, {0.,1.,0.,0.}, {.5,0.,.5,0.},
-      {0.,.5,.5,0.}, {0.,0.,1.,0.}, {.5,0.,0.,.5}, {0.,.5,0.,.5},
-      {0.,0.,.5,.5}, {0.,0.,0.,1.} };
-    double dot = 0.;
-    for ( k=0; k<4; k++ ) {
-      double lp = ( ipoint==0 ) ? 0.25 : ( ( k==ipoint-1 ) ? 0.5 : 1./6. );
-      dot += lnode[inol][k] * lp;
-    }
-    F = 9.*dot - 41./20.;
-    if ( scalar_dabs(volume)>TINY ) return F/volume;
-    return h_inol;
-  }
-
-  for ( k=0; k<4; k++ )
-    for ( d=0; d<MDIM; d++ ) expo[k][d] = 0;
-
-  if ( name==-QUAD4 && nnol==4 && npoint==4 && ndim==2 ) {
-    npol = 2; nterm = 4;               // bilinear 1,x,y,xy
-    expo[1][0]=1; expo[2][1]=1; expo[3][0]=1; expo[3][1]=1;
-  }
-  else if ( name==-QUAD9 && nnol==9 && npoint==9 && ndim==2 ) {
-    npol = 3; nterm = 3;               // linear 1,x,y
-    expo[1][0]=1; expo[2][1]=1;
-  }
-  else if ( name==-HEX8 && nnol==8 && npoint==8 && ndim==3 ) {
-    npol = 2; nterm = 4;               // linear 1,x,y,z
-    expo[1][0]=1; expo[2][1]=1; expo[3][2]=1;
-  }
-  else if ( name==-HEX27 && nnol==27 && npoint==27 && ndim==3 ) {
-    npol = 3; nterm = 4;               // linear 1,x,y,z
-    expo[1][0]=1; expo[2][1]=1; expo[3][2]=1;
-  }
+  if ( name==-QUAD4 && nnol==4 && npoint==4 && ndim==2 ) ttype = 0;
+  else if ( name==-QUAD9 && nnol==9 && npoint==9 && ndim==2 ) ttype = 1;
+  else if ( name==-HEX8 && nnol==8 && npoint==8 && ndim==3 ) ttype = 2;
+  else if ( name==-HEX27 && nnol==27 && npoint==27 && ndim==3 ) ttype = 3;
+  else if ( name==-TET10 && nnol==10 && npoint==5 && ndim==3 ) ttype = 4;
   else return h_inol;
 
-  if ( ndim>=1 ) nxi = npol;
-  if ( ndim>=2 ) neta = npol;
-  if ( ndim==3 ) nzeta = npol;
-
-  inol_xi = inol % nxi; inol_eta = (inol/nxi) % neta;
-  inol_zeta = inol/(nxi*neta);
-  node[0] = ( nxi>1 ) ? -1. + 2.*inol_xi/(nxi-1) : 0.;
-  if ( ndim>=2 ) node[1] = ( neta>1 ) ? -1. + 2.*inol_eta/(neta-1) : 0.;
-  if ( ndim==3 ) node[2] = ( nzeta>1 ) ? -1. + 2.*inol_zeta/(nzeta-1) : 0.;
-
-  ixi = ipoint % nxi; ieta = (ipoint/nxi) % neta; izeta = ipoint/(nxi*neta);
-  integration_gauss( npol, xg, wg );
-  ipc[0] = xg[ixi];
-  if ( ndim>=2 ) ipc[1] = xg[ieta];
-  if ( ndim==3 ) ipc[2] = xg[izeta];
-
-  // normal matrix M = sum_p phi(p) phi(p)^T (UNIFORM weights, as measured)
-  for ( k=0; k<nterm; k++ )
-    for ( l=0; l<nterm; l++ ) M[k][l] = 0.;
-  for ( p=0; p<npoint; p++ ) {
-    long int pxi = p % nxi, peta = (p/nxi) % neta, pzeta = p/(nxi*neta);
-    pc[0] = xg[pxi];
-    if ( ndim>=2 ) pc[1] = xg[peta];
-    if ( ndim==3 ) pc[2] = xg[pzeta];
-    for ( k=0; k<nterm; k++ ) {
-      phi[k] = 1.;
-      for ( d=0; d<ndim; d++ )
-        for ( long int e=0; e<expo[k][d]; e++ ) phi[k] *= pc[d];
-    }
-    for ( k=0; k<nterm; k++ )
-      for ( l=0; l<nterm; l++ ) M[k][l] += phi[k]*phi[l];
-  }
-
-  // invert M (nterm <= 4) by Gauss-Jordan with partial pivoting
-  for ( k=0; k<nterm; k++ ) {
-    for ( l=0; l<nterm; l++ ) aug[k][l] = M[k][l];
-    for ( l=0; l<nterm; l++ ) aug[k][nterm+l] = ( k==l ) ? 1. : 0.;
-  }
-  for ( k=0; k<nterm; k++ ) {
-    pmax = k;
-    for ( l=k+1; l<nterm; l++ )
-      if ( scalar_dabs(aug[l][k])>scalar_dabs(aug[pmax][k]) ) pmax = l;
-    if ( pmax!=k ) {
-      for ( l=0; l<2*nterm; l++ ) {
-        double tmp = aug[k][l]; aug[k][l] = aug[pmax][l]; aug[pmax][l] = tmp;
-      }
-    }
-    piv = aug[k][k];
-    if ( scalar_dabs(piv)<TINY ) return h_inol;
-    for ( l=0; l<2*nterm; l++ ) aug[k][l] /= piv;
-    for ( l=0; l<nterm; l++ ) {
-      if ( l!=k ) {
-        fac = aug[l][k];
-        for ( m=0; m<2*nterm; m++ ) aug[l][m] -= fac*aug[k][m];
-      }
-    }
-  }
-
-  // F = phi(node)^T M^{-1} phi(ipoint)
-  for ( k=0; k<nterm; k++ ) {
-    phn[k] = 1.;
-    for ( d=0; d<ndim; d++ )
-      for ( long int e=0; e<expo[k][d]; e++ ) phn[k] *= node[d];
-  }
-  for ( k=0; k<nterm; k++ ) {
-    phi[k] = 1.;
-    for ( d=0; d<ndim; d++ )
-      for ( long int e=0; e<expo[k][d]; e++ ) phi[k] *= ipc[d];
-  }
-  F = 0.;
-  for ( k=0; k<nterm; k++ )
-    for ( l=0; l<nterm; l++ ) F += phn[k]*aug[k][nterm+l]*phi[l];
-
+  // F depends only on (element type, inol, ipoint): the table is built
+  // once (thread-safe static initialisation) with the same fit as before,
+  // instead of re-solving the 4x4 normal equations for every node of
+  // every integration point of every element (43.7 M fits on the
+  // Professional large1, F4 T9). Results are bit-identical.
+  static const SriRecoveryTable table = sri_recovery_table_build();
+  if ( !table.ok[ttype][inol][ipoint] ) return h_inol;
+  F = table.F[ttype][inol][ipoint];
   if ( scalar_dabs(volume)>TINY ) return F/volume;
   return h_inol;
 }
