@@ -10,7 +10,7 @@ through `scripts/remote_run.sh`.
 - [x] T2 C41: `mohr_coul_direct7` (`-total_linear` + velocity `mpc_node_number` tie: unequal disy at tied nodes). Route: same writer after T1.
 - [x] T3 C33: `set_stress` reads DTIME from VERSION_NORMAL (previous dt) → `_visco` direct law does not cut in the first step; principal tension cap ignores `_visco`. Route: same writer.
 - [x] T4 C31 + K20: quadrature design (TET10 nodal rule degree 1; axisymmetric quad4 forced 1-point rule). Route: read-only investigator + omen A/B, then decision (owner 2026-10-09: v2 + HRZ); implementation by a delegated writer.
-- [x] T5 C35/K02: integration-point state one-iteration lag. Investigation, owner decision 2026-10-10 (post-solve material state pass, gate inertia/slide/contact; mhardsoil blocker: option 1, hardsoil kappa fix first). Done `8e4d080` + T5 pass commit.
+- [x] T5 C35/K02: integration-point state one-iteration lag. Investigation, owner decision 2026-10-10 (post-solve material state pass, gate inertia/slide/contact; mhardsoil blocker: option 1, hardsoil kappa fix first). Done `8e4d080` + `e8e3f12`.
 - [ ] T6 Open-cause clusters: K14 (hypoplasticity history/stress path), K15 (MC/DP/von Mises), K24 (3D consolidation `large2`), K21 (Navier-Stokes), C7 (Mazars), C11 (dynamics), C3 (3D section sign), C6 (iface_gen coverage). Investigations, one by one.
 - [x] T7 Memory hogs (>4 GB with any binary): Pro `force11`, `large1`, `ground19_water_under_dam`, `mesh_activate1`, `foundation_consolidation_settlement` (runs since F4 T4 K20, bad_alloc under the 4 GB cap). Route: read-only investigation, owner decision 2026-10-09 (fix A, B, C), then one delegated writer. Memory fixed; solver-speed residual of `force11`/`foundation...` open (BACKLOG C43).
 - [x] T8 C45 + C46 (owner 2026-10-10: study, not only document): `control_mesh_copy`/`_mirror` after a time step stop with a `node_dof_start_refined` error (Pro runs); copy/switch order on the same index (Pro copies first); `control_mesh_move` has no effect in the Pro (Pro-suspect?); `mesh_activate1` final-step vely (GNU 0, Pro -9.95e-6). Route: delegated writer. Done except C46c (rotate sweep, parked: large) and two owner decisions (C46b, C46e class D).
@@ -259,7 +259,7 @@ docs + SEGUIMIENTO + BACKLOG + DIVERGENCES.
   unchanged, farther 0 (changes: tensile_instability, taylor3, examp19,
   examp3, ho_mech2, examp14, mhardsoil x2; no Pro value or ~same). Same
   pattern not changed (cap epp_vol, cap1 pc, void fraction): BACKLOG C51.
-  Work unit 2 (T5 pass commit): top.cc pass + post_solve_state_pass_gated,
+  Work unit 2 `e8e3f12` feat(top): top.cc pass + post_solve_state_pass_gated,
   elem.cc matrix-store skip, headers. Probes all = Pro; tests
   post_solve_state_stretch1/_plastic1/_rigid1 RED (HEAD rc 1) / GREEN.
   Matrix vs no-matrix: probes and 742 non-gated corpus tests identical
