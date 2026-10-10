@@ -59,3 +59,19 @@ Applied once per control index, on its first step, also when the same
 index carries a multi-step `control_timestep` (as the Professional; before
 F4 T7 the axes were swapped on every step). See
 [control_mesh_once_per_control](control_mesh_once_per_control.md).
+
+## Two entries: swap (F4 T8)
+
+Manual Professional 6.244: `control_mesh_switch index dir0 dir1` switches
+the coordinates `dir0` and `dir1` of all nodes. Since F4 T8 two entries
+always mean that swap, in 2D and in 3D: `-x -y` and `-y -x` both
+interchange x and y, `-x -z` in 3D interchanges x and z, `-x -x` does
+nothing (Professional 02-08-2026 probes). Before F4 T8 the GNU read the
+entries as the new axis order (`-x -y` = no change, and a 3D model needed
+three entries). Three entries in 3D (`-z -y -x`, the new axis order) are a
+GNU extension; the Professional refuses them.
+
+The Professional leaves `node_start_refined` unswitched; the GNU switches
+it with the nodes (DIVERGENCES C46e, class D). Test
+`validation-suite/test-2026/mesh_switch_pair1` (node 3 at 0 2).
+

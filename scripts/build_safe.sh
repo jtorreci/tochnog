@@ -1491,6 +1491,12 @@ if grep -aqE '^node +6 +12 +1 *$' "$T2026/mesh_move_timestep1.dbs" 2>/dev/null &
    grep -aqE '^node_start_refined +6 +12 +1 *$' "$T2026/mesh_move_timestep1.dbs" 2>/dev/null;
 then check_ok "mesh_move_timestep1 (node 6 at 12 1, moved once)";
 else check_fail "mesh_move_timestep1" "node 6 not at 12 1"; fi
+# F4 T8: control_mesh_switch with two entries swaps them (manual 6.244,
+#   Professional: -x -y swaps x and y; old GNU: axis order = no change).
+run_ok "$T2026" mesh_switch_pair1
+if grep -aqE '^node +3 +0 +2 *$' "$T2026/mesh_switch_pair1.dbs" 2>/dev/null;
+then check_ok "mesh_switch_pair1 (node 3 at 0 2)";
+else check_fail "mesh_switch_pair1" "node 3 not at 0 2"; fi
 
 # ---------------------------------------------------------------------
 # K03 (2026-10-06): default convection_apply -no (manual Professional

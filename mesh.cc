@@ -136,15 +136,34 @@ void mesh_switch( long int control_mesh_switch[], long int length )
 
 {
   // Switch x, y, z coordinates of all nodes, e.g. for easy rotating the mesh.
-  // The control specifies the new order of the axes:
+  // Manual Professional 6.244: control_mesh_switch index dir0 dir1 switches
+  // the coordinates dir0 and dir1 (two entries, also in 3D; -x -y swaps x
+  // and y, -x -x does nothing). Professional 02-08-2026 probes (F4 T8):
+  // 2D -x -y swaps, 3D -x -z swaps x and z, a third entry is refused.
+  // GNU extension: ndim entries (3 in 3D) give the new order of the axes:
   //   control_mesh_switch 0  -y -x -z   (interchange x and y)
-  // The number of axes given must equal ndim.
   long int inod=0, max_node=0, idim=0, order[MDIM],
     has[MDIM], idum[1];
   double coords[MDIM], new_coords[MDIM];
 
   array_set( order, -1, MDIM );
   array_set( has, 0, MDIM );
+  if ( length==2 && ndim>=2 ) {
+    long int ax[2];
+    for ( idim=0; idim<2; idim++ ) {
+      if      ( control_mesh_switch[idim]==-X ) ax[idim] = 0;
+      else if ( control_mesh_switch[idim]==-Y ) ax[idim] = 1;
+      else if ( control_mesh_switch[idim]==-Z && ndim==3 ) ax[idim] = 2;
+      else {
+        pri( "Error: control_mesh_switch axes must be -x, -y or -z." );
+        exit(TN_EXIT_STATUS);
+      }
+    }
+    for ( idim=0; idim<ndim; idim++ ) order[idim] = idim;
+    order[ax[0]] = ax[1];
+    order[ax[1]] = ax[0];
+    length = 0; // order complete: skip the permutation parsing below
+  }
   for ( idim=0; idim<ndim && idim<length; idim++ ) {
     if ( control_mesh_switch[idim]==-X ) order[idim] = 0;
     else if ( control_mesh_switch[idim]==-Y ) order[idim] = 1;

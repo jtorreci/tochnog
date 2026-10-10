@@ -42,3 +42,15 @@ del programa.
 
 The call in `top.cc` `step_start()` is guarded by `first_of_control`
 (see [control_mesh_once_per_control](control_mesh_once_per_control.md)).
+
+## Two entries = swap (F4 T8)
+
+`mesh.cc` `mesh_switch()`: with `length==2` the order is the identity
+with the two given axes exchanged (`-z` only in 3D); `length` is then set
+to 0 so the permutation parser below only validates. `ndim` entries keep
+the GNU permutation meaning (3D extension, refused by the Professional).
+Professional probes (F4 T8): 2D `-x -y` swaps, 3D `-x -z` swaps x and z
+(nodes identical to the Professional), 3D three entries refused
+("I do not know : -x"). The Professional does not switch
+`node_start_refined`; the GNU does (class D, DIVERGENCES C46e).
+
