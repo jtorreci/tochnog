@@ -383,3 +383,4 @@ docs + SEGUIMIENTO + BACKLOG + DIVERGENCES.
   ctvmis2, examp18; size x sqrt(2) in examp3/10/14/17/23), t26 122 ->
   122 (new tests GREEN; bicg_csr_threads1 2-thread round-off), vs 232 ->
   232 (dbs identical). Docs commit: see git log.
+- T6a C3 owner decision 2026-10-11: keep the GNU square-face tie-break, class A (`a0cea2e`). T6a closed. Next: T6b K24.
