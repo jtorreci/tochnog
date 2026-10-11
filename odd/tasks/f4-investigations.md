@@ -529,3 +529,21 @@ docs + SEGUIMIENTO + BACKLOG + DIVERGENCES.
   audit_db_buffers exit 0. BACKLOG C64 (quad4 operator), C65 (Pro
   post_point at a node), C66 (tria6 element 1e-5), C67 (unmeasured
   rules). Next: WU2 (integration-point kappa).
+  T6f WU2 integration-point kappa (2026-10-11), route: delegated writer.
+  STOPPED before commit (rule: a corpus target encoding the old
+  behaviour -> owner decision). Fix in the working tree (uncommitted;
+  patch copy in the session scratchpad t6fw/wu2_pending.patch): elem.cc
+  ELEMENT_DOF read/write masks + kap_indx, materi.cc kappa block outside
+  the h guard with strain_recovery_weight + IP write, general.cc kappa
+  denominator weight. RED/GREEN: test-2026 kappa_ip_state1 (HEAD rc 1,
+  fix rc 0; reactions = Pro within 1e-4), test-2014 validation_3_kappa
+  (HEAD rc 1, fix rc 0; Pro validation_3 displacements 1.25 % -> 0.06 %,
+  kap node 1 11.6 % -> 2.7 %). build_safe TN_CHECK_ONLY=1 224 OK /
+  0 FALLO, runs 226/226; audit_db_buffers exit 0. Corpus A/B wu1 vs
+  wu2 (omen f4t6f_runs): rc changes = the 2 new tests 1 -> 0 and sfnet
+  examp3 0 -> 1: post_node_result vely -126.431 (Pro on the translated
+  input -126.374, 0.045 %; before -125.477) vs target -124.8 +- 1, a
+  2014 GNU calibration -> owner decision (recalibrate as a stale sfnet
+  target or not). Pro ground11_nonsaturated OK -> TIMEOUT was load
+  (alone 96.9 s wu1 / 97.1 s wu2). BACKLOG C68 drafted (kapsh, cap1pc,
+  rho, damage, Maxwell stresses: same mask omission).
