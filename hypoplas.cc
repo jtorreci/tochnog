@@ -61,6 +61,30 @@ extern "C"
     double *dstran, double dtime, double *props, int nprops, int testing,
     int *error );
 
+  // Fixed number of Runge-Kutta substeps of masin_basic.c mb_integrate()
+  // (nsub there; keep both equal). Reported in hyhis1.
+#define MASIN_BASIC_NSUB 32.
+
+  // Size sqrt(Mijkl Mijkl) of a 6x6 Voigt tangent [11,22,33,12,13,23]:
+  // M_ijkl = ddsdde[ij][kl] * (kl shear ? shear_column_factor : 1); every
+  // shear row/column stands for two tensor components.
+static double hypo_masin_stiffness_size( const double ddsdde[36],
+  double shear_column_factor )
+
+{
+  long int i=0, j=0;
+  double m=0., w=0., sum=0.;
+
+  for ( i=0; i<6; i++ ) {
+    for ( j=0; j<6; j++ ) {
+      m = ddsdde[i*6+j] * ( j>=3 ? shear_column_factor : 1. );
+      w = ( i>=3 ? 2. : 1. ) * ( j>=3 ? 2. : 1. );
+      sum += w*m*m;
+    }
+  }
+  return sqrt(sum);
+}
+
 void hypoplasticity( long int element, long int gr,
   long int formulation, double old_hisv[], double new_hisv[], 
   double /*old_unknowns*/[], double /*new_unknowns*/[], 
@@ -489,6 +513,69 @@ void hypoplasticity( long int element, long int gr,
           else if ( !materi_plasti_hypo_history ) {
             // legacy layout: delta lives in hisv[0..5].
             for ( i=0; i<6; i++ ) new_hisv[i] = mstatev[i];
+          }
+          // Post-processing history slots of the hyhis layout (manual
+          // Professional 4.23, K14a): hyhis1 substep size, hyhis2
+          // mobilized friction angle, hyhis3 stiffness size
+          // sqrt(Mijkl Mijkl), hyhis5 OCR, hyhis7 intergranular rho
+          // (hyhis0 = e and hyhis4 = s are written above; hyhis6, the
+          // density index, belongs to von Wolffersdorff). None of them is
+          // read back by the kernels.
+          if ( materi_plasti_hypo_history ) {
+            if ( hypo_masin_visco || hypo_masin_visco_jm || hypo_masin_clay ) {
+                // HCEA kernels (masin.c calc_statev): statev 10 phi_mob,
+                // 11 rho, 12 suggested substep (time), 14 OCR; ddsdde is
+                // the hypoplastic L (m_R L with intergranular strains) in
+                // the engineering-shear Voigt form: M_ij12 = D[ij][3].
+              new_hisv[1] = mstatev[12];
+              new_hisv[2] = mstatev[10];
+              new_hisv[3] = hypo_masin_stiffness_size( mddsdde, 1.0 );
+              new_hisv[5] = mstatev[14];
+              new_hisv[7] = mstatev[11];
+            }
+            else {
+                // basic Masin kernel (masin_basic.c): fixed Runge-Kutta
+                // substeps, no post-processing statev. phi_mob as in
+                // masin.c calc_statev (p_t = 0) on the new state; OCR =
+                // p_e/p WITHOUT the structure factor s (the Professional
+                // 02-08-2026: hypo8 1.31766 = p_e/p; with s it would be
+                // 2.12; its HCEA clay law does include s, hypo12); the
+                // stiffness from the kernel tangent at a zero strain
+                // increment (central differences of the |D| term cancel:
+                // L of the new state). Its shear columns are per tensorial
+                // strain (both eps_12 and eps_21): M_ij12 = D[ij][3]/2.
+              double mI1=0., mI2=0., mI3=0., mx=0., msin2=0.;
+              double mstress0[6], mstatev0[16], mddsdde0[36], mdstran0[6];
+              int merror0=0;
+              mI1 = mstress[0] + mstress[1] + mstress[2];
+              mI2 = 0.5*( mstress[0]*mstress[0] + mstress[1]*mstress[1] +
+                mstress[2]*mstress[2] + 2.*( mstress[3]*mstress[3] +
+                mstress[4]*mstress[4] + mstress[5]*mstress[5] ) - mI1*mI1 );
+              mI3 = mstress[0]*( mstress[1]*mstress[2] - mstress[5]*mstress[5] ) -
+                mstress[3]*( mstress[3]*mstress[2] - mstress[5]*mstress[4] ) +
+                mstress[4]*( mstress[3]*mstress[5] - mstress[4]*mstress[1] );
+              if ( mI3!=0. ) {
+                mx = mI1*mI2/mI3;
+                if ( 1.+mx!=0. ) msin2 = ( 9.+mx )/( 1.+mx );
+              }
+              if ( msin2<0. ) msin2 = 0.;
+              if ( msin2>1. ) msin2 = 1.;
+              new_hisv[1] = mdt/MASIN_BASIC_NSUB;
+              new_hisv[2] = asin(sqrt(msin2))*180./PIRAD;
+              new_hisv[5] = ( mI1<0. ) ? -
+                exp( ( mprops[4] - log( 1.+mstatev[6] ) )/mprops[2] )/( mI1/3. ) : 0.;
+              new_hisv[7] = 0.;
+              for ( i=0; i<6; i++ ) {
+                mstress0[i] = mstress[i];
+                mdstran0[i] = 0.;
+              }
+              for ( i=0; i<16; i++ ) mstatev0[i] = mstatev[i];
+              for ( i=0; i<36; i++ ) mddsdde0[i] = 0.;
+              masin_basic_umat( mstress0, mstatev0, mddsdde0, mdstran0, mdt,
+                mprops, 29, mtesting, &merror0 );
+              new_hisv[3] = merror0 ? 0. :
+                hypo_masin_stiffness_size( mddsdde0, 0.5 );
+            }
           }
     }
 

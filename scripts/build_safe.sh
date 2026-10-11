@@ -1808,6 +1808,9 @@ expected_error_ok "$T2026" input_long_word_error1
 #   manual and the Professional calcul1 (targets 1 and 0.816497); old GNU
 #   sqrt(0.5 A:A).
 run_ok "$T2026" post_calcul_size_tot1
+# K14a: hyhis1/2/3/5/7 written back for the Masin laws (hypoplas.cc);
+#   targets = Professional hypo7 at t 0.1. Old GNU: 0.
+run_ok "$T2026" hypo_masin_history_slots1
 
 # ---------------------------------------------------------------------
 # Sub-sprint materi_stress_force, lote 2 (integracion 2D quad4/quad9):

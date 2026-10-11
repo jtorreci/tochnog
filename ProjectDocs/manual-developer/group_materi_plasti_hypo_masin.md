@@ -255,11 +255,41 @@
   taken from the paper referenced by the manual ([12]) and validated
   end-to-end against `hypo8`.
 
+- **hyhis post-processing slots (F4 T6a, K14a)**: `hypoplas.cc`, after
+  the kernel call, only with `materi_plasti_hypo_history`. HCEA kernels
+  (`masin_umat`, `masin_visco_umat`, `masin_niemunis_visco_umat`):
+  `hyhis1` = statev[12] (dtsub, time units), `hyhis2` = statev[10],
+  `hyhis5` = statev[14], `hyhis7` = statev[11] (`calc_statev`), `hyhis3`
+  = `hypo_masin_stiffness_size(mddsdde, 1.0)` (engineering-shear Voigt).
+  Basic kernel: phi_mob from the `calc_statev` formula, OCR =
+  exp((N - ln(1+e))/lambda*)/p (no s factor: Professional hypo8),
+  `hyhis1` = dt / `MASIN_BASIC_NSUB` (32, must equal `nsub` of
+  `masin_basic.c mb_integrate`), `hyhis3` from a second
+  `masin_basic_umat` call at the new state with a zero strain increment
+  (its central-difference tangent is L; tensorial shear columns, factor
+  0.5). The extra call about doubles the basic-kernel cost with the
+  hyhis layout (Professional hypo7, user time 1.7 -> 3.1 s). Verified against the Professional
+  02-08-2026: hypo7/hypo8 (basic) and hypo12/hypo13 (clay) hyhis2/3/5
+  to ~3e-4, residuals in "Differences". Read side unchanged (the
+  kernels still start from statev[12] = 0).
+- Pending refactoring: expose `nsub` of `masin_basic.c` instead of the
+  duplicated `MASIN_BASIC_NSUB`; `hypoplas.cc` passes the tensorial
+  strain increment (eps_12) to `masin.c`, whose Voigt convention is
+  engineering shear (gamma_12 = 2 eps_12): to be checked on a shear path.
+
 ## Differences with the Professional version
 
 - **hypoplasticity history slots and stress path** (known difference, not
-  decided; AUDIT K14). GNU: Leaves `hyhis1..5` = 0 (`hypo7/8/9`); `hypo3`
-  -0.1034; `hypo10` disx 4.3e-9. Professional 02-08-2026: Fills the slots
-  (e.g. `hyhis3` 22519); `hypo3` -0.1629; `hypo10` 9.84e-8. Status: UNKNOWN
-  root cause (partly GNU-suspect); investigate before touching code. Index:
+  decided; AUDIT K14). Since F4 T6a (K14a) the GNU fills the
+  post-processing slots like the Professional 02-08-2026: `hyhis2`, `hyhis3`
+  and `hyhis5` of `hypo7`/`hypo8` and of the clay law `hypo12`/`hypo13`
+  agree to about 3e-4 (hypo7: 23.4037 / 22516.4 / 2.09388, Pro 23.4076 /
+  22518.8 / 2.09449). Remaining: `hyhis1` is the GNU substep (basic law:
+  time step / 32, clay law: the adaptive substep) where the Professional
+  reports the time step; `hyhis3` with intergranular strain near rho = 1
+  (`hypo12` 157632, Pro 74297: the GNU reports the m_R L tangent of the
+  kernel); `hypo9` (basic law with `group_materi_plasti_hypo_strain_
+  intergranular`, not used by the GNU basic kernel: `hyhis3`/`hyhis7`
+  differ); stress path `hypo3` -0.1034 (Pro -0.1629) and `hypo10` disx
+  4.3e-9 (Pro 9.84e-8) unchanged. Index:
   [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).
