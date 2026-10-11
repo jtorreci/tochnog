@@ -141,6 +141,49 @@ at its own iteration count (2). Closing the lag needs a post-solve
 constitutive re-evaluation (candidate (b) of
 `mpc5_staggered_stress_lag.md`), not a different recovery weight.
 
+## Simplex elements and the 1-point bar2 (F4 T6f WU1, 2026-10-11)
+
+Until 2026-10-11 `sri_stress_recovery_weight()` returned `h_inol` for
+every element outside the Gauss table (quad4/quad9/hex8/hex27/tet10). With
+the lumped numerator/denominator multiplying the weight by the point
+volume, the tria3/tria6/tet4/bar2 nodes were the AREA (volume, length)
+weighted average of the adjacent elements. The Professional 02-08-2026
+assembles them by the ARITHMETIC MEAN, like every other element (the
+function's own design comment already said so).
+
+Evidence (two-element probes of different size and stiffness, Professional
+`element_dof` = per-element nodal value, `node_dof` compared with the mean
+and the area-weighted mean of those values):
+
+| element / rule | Professional `node_dof` | GNU before |
+|---|---|---|
+| tria3 1 point (default) | arithmetic mean, exact (1e-13) | area-weighted, exact |
+| tria3 `-maximal` (3-point nodal rule) | arithmetic mean, exact | area-weighted, exact |
+| tria6 (6-point nodal rule) | arithmetic mean, exact | area-weighted (element values ~1e-5 off, see BACKLOG C66) |
+| tet4 1 point (default) | arithmetic mean, exact | volume-weighted, exact |
+| bar2 1 point (default) | arithmetic mean, exact | length-weighted, exact |
+
+Fix (`miscel.cc` `sri_stress_recovery_weight()`, before the Gauss-table
+dispatch): for `tria3` with 1 or 3 points, `tria6` with 6 points, `tet4`
+and `bar2` with 1 point the weight is `F/volume` with `F = 1` for the
+1-point rules and `F = h_inol` (the Kronecker delta) for the nodal rules,
+so each element contributes weight 1. The strain tensors follow through
+`strain_recovery_weight()` (same function); the convected-stress path of
+`general.cc` uses the same weight. Unmeasured rules (tet4 `-maximal`,
+bar2 with 2 points, bar3/bar4, the quad Lobatto rules) keep `h_inol`
+(BACKLOG C67).
+
+Effect on `validation_14` (DIVERGENCES K15): the pass-1 hole-boundary
+nodal stress / plastic strain (up to ~20 % at 8 hole nodes) was exactly
+this weighting; with the fix the whole refined mesh (586 nodes, 1118
+elements) equals the Professional and every `node_dof` is within 1e-4.
+
+Tests (`validation-suite/test-2026`, targets = Professional, RED on the
+previous binary, GREEN after): `tria3_nodal_recovery_mean1`,
+`tria3_nodal_recovery_mean2`, `tria6_nodal_recovery_mean1`,
+`bar2_nodal_recovery_mean1`, `tet4_nodal_recovery_mean1`; and
+`validation-suite/test-2014/validation_14_pass1` (hole nodes 4 and 120).
+
 ## Files
 
 - `dof.cc` — `parallel_new_dof_diagonal()`
@@ -149,4 +192,5 @@ constitutive re-evaluation (candidate (b) of
 - `elem.cc` — `elem()`, the `ELEMENT_DELETE_FACTOR` block
 - `polynom.cc` — `stress_recovery_absolute`
 - `tochnog.h` / `tochnog-mod.h` — the extern declaration
-- `miscel.cc` — `sri_stress_recovery_weight()` (unchanged, 2026-09-13)
+- `miscel.cc` — `sri_stress_recovery_weight()` (2026-09-13; simplex and
+  1-point bar2 arithmetic mean F4 T6f, 2026-10-11)

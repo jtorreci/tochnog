@@ -59,6 +59,7 @@ Measured on the Professional's own `beam2d_1.dbs` (quad9, 45 elements),
 | hex8 | 8 | **uniform-weight linear least squares** `1,x,y,z` (4 terms) | 1.0e-8 |
 | hex27 | 27 | uniform-weight linear least squares `1,x,y,z` (assumed) | not independently verified |
 | tet10 | 5 | uniform-weight linear least squares `1,L1,L2,L3` (F4 T4 investigation) | `tet10_2` exact (-1); `tet10p` post points within 2 % of the Pro (its post_point interpolation differs, TET10-PPOINT) |
+| tria3 / tet4 / bar2 1 point, tria3 3-point and tria6 6-point nodal rules | 1 / 3 / 6 | the point value / the value of the point at the node (F4 T6f, two-element probes) | exact |
 
 The operator is FIXED in the element natural coordinates (the same 9x9
 matrix fits all 45 beam2d_1 elements of different geometry to 1e-9). The
@@ -67,6 +68,18 @@ operator). The order rule is not a single clean formula: quad4 uses the
 full 4-term interpolation while quad9 and hex8 use the linear fit. The
 operators above were determined empirically and are the discriminating
 data; hex27/quad16 were not independently exercised.
+
+Open question on the quad4 operator (F4 T6f, 2026-10-11, BACKLOG C64):
+on a Drucker-Prager variant of `validation_14` the Professional
+per-element quad4 values (`element_dof` from `element_intpnt_dof`) are
+reproduced exactly in 92 of 95 elements by a LINEAR least-squares fit
+`1,xi,eta` of the 2x2 Gauss values, not by the bilinear interpolation
+`1,x,y,xy` of the table above. The two operators agree whenever the
+Gauss values have no `xi*eta` mode, so the finding discriminates only if
+those elements carry that mode; the original identification used probes
+whose stress field may not have had it either. An elastic quad4 probe with a non-zero `xi*eta` stress mode is
+needed before changing the operator (see also C42, physical vs natural
+coordinates).
 
 Assembly: `node_dof` = **arithmetic mean** of the adjacent elements'
 `element_dof` (e.g. beam2d_1 node 3: `node_lhside` = 2 and
@@ -120,6 +133,18 @@ stress slots), matching the Professional's `node_lhside = 0` on the nodes
 exclusive to a deleted element. The absolute assignment is applied only when
 the stress dofs are a pure recovered field (gate in `general.cc`:
 `!materi_strain_total` and the stress dof not convected).
+
+### 3.1b Simplex elements and the 1-point bar2 (F4 T6f, 2026-10-11)
+
+`sri_stress_recovery_weight()` returned `h_inol` for the tria3, tria6,
+tet4 and bar2, so their nodes were the area/volume/length-weighted
+average of the adjacent elements. The Professional 02-08-2026 uses the
+arithmetic mean for them too (two-element probes, exact). The weight is
+now `F/volume` (`F = 1` for the 1-point rules, `F = h` for the tria3
+3-point and tria6 6-point nodal rules), like the table elements. Unmeasured
+rules (tet4 `-maximal`, bar2 2 points, bar3/bar4, the quad Lobatto
+rules) keep `h_inol` (BACKLOG C67). Details and tests:
+`nodal_stress_recovery.md`.
 
 ### 3.2 Axisymmetric rule (K20, F4 T4, 2026-10-09)
 
@@ -230,6 +255,10 @@ operations):
   binary; hex27 and quad16 were not independently verified (assumed linear
   least squares). A second element type would need a discriminating
   `.dbs` dump.
+- quad4 operator: a Drucker-Prager `validation_14` variant fits the
+  Professional per-element values with the linear `1,xi,eta` least
+  squares in 92/95 elements, contradicting the bilinear row of section 2
+  (BACKLOG C64, needs an elastic probe with a `xi*eta` stress mode).
 - The fit basis differs between quad4 (bilinear) and quad9/hex8 (linear);
   the underlying rule in the Professional was not identified, only the
   operators.

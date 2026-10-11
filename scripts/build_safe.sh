@@ -1879,6 +1879,24 @@ run_ok "$T2026" interface_mc_slip_reversal1
 #     node_rhside 1 vely ~0 (HEAD -0.180239).
 run_ok "$T2026" slide_friction_cohesion1
 run_ok "$T2026" contact_block_pass1
+# F4 T6f WU1 (2026-10-11): nodal stress/strain recovery of the simplex
+#   elements and the 1-point bar2 = ARITHMETIC MEAN of the adjacent
+#   elements' values (Professional 02-08-2026, measured exact; GNU was
+#   area/volume weighted). Two elements of different size and stiffness
+#   sharing nodes; targets = Professional node_dof:
+#   tria3 1-point (mean1) and 3-point nodal rule (mean2), tria6 nodal
+#   rule (tolerance 2e-4 of the family scale: the tria6 element itself
+#   differs ~1e-5), bar2 1-point (1D, gravity), tet4 1-point.
+#   validation_14_pass1 (test-2014): the Professional validation_14 first
+#   pass (DP, hole, tria3 after control_mesh_split); hole nodes 4 and 120
+#   sigyy/eppyy/sigxx/eppxx = Professional within 1e-3 (GNU before the
+#   fix: node 4 sigyy -11.23 vs -8.5195).
+run_ok "$T2026" tria3_nodal_recovery_mean1
+run_ok "$T2026" tria3_nodal_recovery_mean2
+run_ok "$T2026" tria6_nodal_recovery_mean1
+run_ok "$T2026" bar2_nodal_recovery_mean1
+run_ok "$T2026" tet4_nodal_recovery_mean1
+run_ok "$T2014" validation_14_pass1
 
 # ---------------------------------------------------------------------
 # Sub-sprint materi_stress_force, lote 2 (integracion 2D quad4/quad9):

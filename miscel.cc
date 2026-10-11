@@ -591,10 +591,13 @@ double sri_stress_recovery_weight( long int sri, long int name, long int nnol,
   //   hex8    8 pts  linear least squares    1,x,y,z   (4 terms)
   //   hex27  27 pts  linear least squares    1,x,y,z   (4 terms)
   //   tet10    5 pts  linear least squares    1,L1,L2,L3 (4 terms, C31)
-  // Every other element/rule returns h_inol. The node-containing Lobatto
-  // rules already have h as the exact weight (h is the Kronecker delta at
-  // the nodes), and the non-tensor elements (bar/tria/tet) keep the
-  // historic h weighting.
+  //   tria3 1 pt / 3 pt nodal, tria6 6 pt nodal, tet4 1 pt, bar2 1 pt:
+  //            the point value (F=1) / the value at the node (F=h)
+  //            (F4 T6f, 2026-10-11; before, these were area-weighted)
+  // Every other element/rule returns h_inol: the node-containing Lobatto
+  // rules (h is the Kronecker delta at the nodes, but the h weight times
+  // the point volume keeps a volume weighting across elements) and the
+  // unmeasured rules (tet4 -maximal, bar2 2 points, bar3, ...).
   //
   // The lumped sigma-dof equation (general.cc/materi.cc) multiplies the
   // weight by the integration-point volume, so the assembled average is
@@ -631,6 +634,25 @@ double sri_stress_recovery_weight( long int sri, long int name, long int nnol,
     double zeta_g = ( ipoint/4 == 0 ? -1. : 1. ) / sqrt(3.);
     double w_zeta = ( zeta_n + zeta_g ) / ( 2.*zeta_g  );
     return w_xi * w_eta * w_zeta;
+  }
+
+  // Simplex elements and the 1-point bar2 (F4 T6f, 2026-10-11): the
+  // Professional 02-08-2026 assembles their nodes by the arithmetic mean
+  // of the adjacent elements' values too (measured exact on two-element
+  // probes of different size: tria3 1-point and 3-point nodal rule,
+  // tria6 6-point nodal rule, tet4 1-point, bar2 1-point; GNU was
+  // area/volume weighted). Per element the nodal value is the single
+  // point value (1-point rules, F=1) or the value of the point at the
+  // node (nodal rules, F=h, the Kronecker delta), so the weight is F/volume
+  // and each element contributes weight 1, exactly as for the table
+  // elements below. Other simplex rules (tet4 -maximal, bar2 2 points,
+  // ...) are unmeasured and keep h_inol.
+  if ( ( name==-TRIA3 && ( npoint==1 || npoint==3 ) ) ||
+       ( name==-TRIA6 && npoint==6 ) ||
+       ( name==-TET4  && npoint==1 ) ||
+       ( name==-BAR2  && npoint==1 ) ) {
+    if ( scalar_dabs(volume)>TINY ) return ( npoint==1 ? 1. : h_inol )/volume;
+    return h_inol;
   }
 
   if ( !stress_recovery_gauss ) return h_inol;

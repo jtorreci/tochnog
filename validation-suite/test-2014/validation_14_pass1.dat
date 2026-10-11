@@ -1,0 +1,102 @@
+(Validation 14, pass 1 [F4 T6f WU1]: the Professional validation_14 without
+ the local refinement and control_repeat, i.e. the first pass only. Drucker-
+ Prager plate with a hole, tria3 mesh after control_mesh_split. Targets =
+ Professional 02-08-2026 node_dof at the hole nodes 4 and 120. The tria3
+ nodal recovery is the arithmetic mean of the adjacent elements [Pro];
+ GNU before the fix was area-weighted: node 4 sigyy -11.23 vs -8.5195,
+ eppyy -3.91e-3 vs -2.247e-3, node 120 sigyy -7.06 vs -2.772. After the fix
+ GNU = Pro within 1e-4 relative [plastic iteration noise]; tolerance 1e-3.)
+
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_displacement
+materi_strain_total
+materi_strain_plasti
+materi_stress
+end_initia
+
+node 1  0.00 0.00
+node 2  0.02 0.00
+node 3  0.04 0.00
+node 4  0.00 0.02
+node 5  0.02 0.02
+node 6  0.04 0.02
+node 7  0.00 0.04
+node 8  0.02 0.04
+node 9  0.04 0.04
+node 10  0.00 0.07
+node 11  0.02 0.07
+node 12  0.04 0.07
+
+element 1 -quad4 1 2 4 5
+element 2 -quad4 2 3 5 6
+element 3 -quad4 4 5 7 8
+element 4 -quad4 5 6 8 9
+element 5 -quad4 7 8 10 11
+element 6 -quad4 8 9 11 12
+
+(left edge)
+geometry_line 0  0.00 0.00 0.00 0.07 1.e-5
+(lower edge)
+geometry_line 1  0.00 0.00 0.04 0.00 1.e-5
+(upper edge)
+geometry_line 2  0.00 0.07 0.04 0.07 1.e-5
+(hole)
+geometry_point 1 0.00 0.00 1.e-2
+geometry_circle 1 0.00 0.00 1.e-2 1.e-5
+geometry_projection_type 1 -project_inside
+(all edges)
+geometry_set 1 -geometry_line 0 -geometry_line 1 -geometry_line 0 -geometry_circle 1
+
+bounda_dof 0  -geometry_line 0 -velx
+bounda_time    0  0. 0. 1.e10 0.
+bounda_dof 1  -geometry_line 1 -vely
+bounda_time    1  0. 0. 1.e10 0.
+bounda_dof 2  -geometry_line 2 -vely
+bounda_time    2  0. -3.e-1 1.e10 -3.e-1
+
+group_type 0  -materi
+group_materi_elasti_young 0 1.e4
+group_materi_memory 0  -total_linear
+group_materi_plasti_druck_prag 0  0.30 5. 0.30
+
+post_calcul -materi_strain_plasti -size_tot
+post_point 0  0.01 0.0
+print_filter 1  -post_point_dof 0 -eppyy
+
+post_node 0 -node_rhside -sum -geometry_line 2
+
+control_mesh_refine_globally           1  -h_refinement
+control_mesh_refine_globally           2  -h_refinement
+control_mesh_split                     5  -yes
+
+control_mesh_delete_geometry          10  -geometry_point 1
+control_mesh_delete_geometry_move_node 10  -yes
+
+control_restart                       20  -yes
+
+control_timestep                      30  5.e-6 1.e-3
+(
+control_print                         40  -control_repeat -time_current
+)
+
+
+
+target_item 0 -node_dof 4 -sigyy
+target_value 0 -8.519535196627e+00 8.5e-03
+target_item 1 -node_dof 4 -eppyy
+target_value 1 -2.246979432227e-03 2.2e-06
+target_item 2 -node_dof 4 -sigxx
+target_value 2 -4.118667096076e-01 4.1e-04
+target_item 3 -node_dof 4 -eppxx
+target_value 3 8.337947841001e-03 8.3e-06
+target_item 4 -node_dof 120 -sigyy
+target_value 4 -2.772075936544e+00 2.8e-03
+target_item 5 -node_dof 120 -eppyy
+target_value 5 -5.032928343521e-04 5.0e-07
+target_item 6 -node_dof 120 -sigxx
+target_value 6 5.958357784135e+00 6.0e-03
+target_item 7 -node_dof 120 -eppxx
+target_value 7 1.081814375913e-03 1.1e-06
+end_data
