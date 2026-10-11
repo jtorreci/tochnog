@@ -1,0 +1,25 @@
+( Expected-error test, F4 T6d C59 (owner decision 2026-10-11): without
+  materi_displacement (velocity-integrated truss), group_truss_memory
+  -total (or -total_linear) is an input error, as in the Professional
+  02-08-2026 ("materi_displacement should be initialised").
+  EXPECTED_ERROR: group_truss_memory -total or -total_linear needs materi_displacement to be initialised
+)
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_velocity_integrated
+end_initia
+node 1 0 0
+node 2 1 0
+element 1 -truss 1 2
+group_type 0 -truss
+group_truss_area 0 1.
+group_truss_elasti_young 0 100.
+group_truss_memory 0 -total_linear
+bounda_dof 1 1 -velx -vely
+bounda_dof 2 2 -velx
+bounda_time 2 0. -0.5 1. -0.5
+bounda_dof 3 2 -vely
+bounda_time 3 0. 1. 1. 1.
+control_timestep 10 0.1 1.
+end_data

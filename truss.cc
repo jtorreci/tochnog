@@ -87,8 +87,25 @@ void truss( long int element, long int element_group,
     // without it (rotating/stretching truss force -50 = -updated_linear;
     // -updated gives 10.4587). The GNU legacy default was -updated.
     memory = materi_displacement ? -TOTAL_LINEAR : -UPDATED_LINEAR;
-    db( GROUP_TRUSS_MEMORY, element_group, &memory, ddum,
-       ldum, VERSION_NORMAL, GET_IF_EXISTS );
+    if ( db( GROUP_TRUSS_MEMORY, element_group, &memory, ddum,
+        ldum, VERSION_NORMAL, GET_IF_EXISTS ) && check_error!=-NO ) {
+      // Input checks of the Professional 02-08-2026 (BACKLOG C59, owner
+      // decision 2026-10-11): the updated types need the velocity
+      // formulation, the total types need materi_displacement.
+      // check_error -no skips them, as in the Professional.
+      if ( materi_displacement &&
+           ( memory==-UPDATED || memory==-UPDATED_LINEAR ) ) {
+        pri( "Error: group_truss_memory -updated or -updated_linear is not allowed when materi_displacement is initialised (use -total_linear or -total)." );
+        pri( "Element group ", element_group );
+        exit_tn_on_error();
+      }
+      if ( !materi_displacement &&
+           ( memory==-TOTAL || memory==-TOTAL_LINEAR ) ) {
+        pri( "Error: group_truss_memory -total or -total_linear needs materi_displacement to be initialised (use -updated_linear or -updated)." );
+        pri( "Element group ", element_group );
+        exit_tn_on_error();
+      }
+    }
     db( OPTIONS_INERTIA, 0, &options_inertia, ddum, 
       ldum, VERSION_NORMAL, GET_IF_EXISTS );
     {

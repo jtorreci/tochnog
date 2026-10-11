@@ -1855,6 +1855,12 @@ run_ok "$T2026" control_materi_dynamic_only1
 run_ok "$T2026" control_materi_dynamic_half1
 run_ok "$T2026" truss_dynamic_no_record1
 run_ok "$T2026" truss_memory_default_velocity1
+# F4 T6d C59 (2026-10-11, owner decision): the Professional input checks
+#   of group_truss_memory (truss.cc): -updated/-updated_linear with
+#   materi_displacement and -total/-total_linear without it stop with an
+#   input error naming both records.
+expected_error_ok "$T2026" truss_memory_updated_displacement_error1
+expected_error_ok "$T2026" truss_memory_total_velocity_error1
 
 # ---------------------------------------------------------------------
 # Sub-sprint materi_stress_force, lote 2 (integracion 2D quad4/quad9):

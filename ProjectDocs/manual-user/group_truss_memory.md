@@ -65,15 +65,30 @@ Own tests: `validation-suite/test-2026/truss_total_rotation1.dat` and
 `truss_memory_default_displacement1`, `truss_memory_default_velocity1`,
 `truss_total_linear_inversion1`, `truss_dynamic_no_record1`.
 
+## Input checks
+
+As the Professional 02-08-2026 (owner decision 2026-10-11), an explicit
+`group_truss_memory` record is checked against `materi_displacement`:
+
+- `-updated` or `-updated_linear` with `materi_displacement` initialised:
+  input error "group_truss_memory -updated or -updated_linear is not
+  allowed when materi_displacement is initialised";
+- `-total` or `-total_linear` without `materi_displacement`: input error
+  "group_truss_memory -total or -total_linear needs materi_displacement
+  to be initialised".
+
+`check_error -no` skips both checks. The sfnet input `truss5` used
+`-updated` with `materi_displacement`; the corpus copy was adapted (record
+dropped, default `-total_linear`, target -93.8 from the Professional). The
+copy inside `validation-suite/test.zip` keeps the original input and now
+stops with the first error. Tests: `truss_memory_updated_displacement_error1`,
+`truss_memory_total_velocity_error1`.
+
 ## Differences with the Professional version
 
-- The Professional stops with "materi_displacement should not be
-  initialised" when `-updated` (or `-updated_linear`) is combined with
-  `materi_displacement`, and with "materi_displacement should be
-  initialised" for `-total` / `-total_linear` without it. The GNU still
-  accepts both combinations (owner decision pending: the sfnet input
-  `truss5` uses `materi_displacement` with `-updated`; BACKLOG C59,
-  DIVERGENCES TRUSS-MEM-ERR).
+- None known for the default and the input checks. The GNU messages name
+  both records; the Professional prints "materi_displacement should (not)
+  be initialised".
 
 ## Notes
 

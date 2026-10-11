@@ -56,13 +56,19 @@
   `scalar_dabs()`. With the absolute value an inverted truss (node 1
   passes node 2) produced a length that decreases again after the
   crossing: dynamic3 `-total_linear` node 2 disx -5962.6 (Pro 60.44025).
-- **Not implemented (owner decision pending, BACKLOG C59)**: the Professional input
-  errors `-updated`/`-updated_linear` + `materi_displacement` and
-  `-total`/`-total_linear` without it. Corpus check 2026-10-11: sfnet
-  `truss5` (also `validation-suite/test.zip` `test/truss5.dat`) uses
-  `materi_displacement` with `-updated` (Pro stops with the error);
-  `-updated_without_rotation` + `materi_displacement` in test-2014
-  `gen1`, `hreltime`, sfnet `genera1/2` is a different type.
+- **Input checks (C59, owner decision 2026-10-11)**: right after the
+  `GROUP_TRUSS_MEMORY` read, only when the record exists and
+  `check_error != -NO`: `materi_displacement` with `-UPDATED` /
+  `-UPDATED_LINEAR`, and no `materi_displacement` with `-TOTAL` /
+  `-TOTAL_LINEAR`, print an error naming both records plus the element
+  group and call `exit_tn_on_error()` (rc 1). The check runs in the element
+  loop (first `truss()` call), not in `check.cc` (outside the edit scope of
+  the work unit; possible later move to the input check). Corpus check
+  2026-10-11: only sfnet `truss5` hit (a), adapted (external copy and
+  omen corpus; the `validation-suite/test.zip` copy is unchanged);
+  `-updated_without_rotation` (test-2014 `gen1`, `hreltime`, sfnet
+  `genera1/2`) is not checked. Tests `truss_memory_updated_displacement_error1`,
+  `truss_memory_total_velocity_error1` (expected error, RED old rc 0).
 - Tests (test-2026): `truss_memory_default_displacement1`,
   `truss_total_linear_inversion1`, `truss_dynamic_no_record1`,
   `truss_memory_default_velocity1`; RED old GNU rc 1, GREEN = Pro.

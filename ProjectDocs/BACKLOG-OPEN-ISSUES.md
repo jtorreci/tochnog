@@ -1661,7 +1661,23 @@ Original report:
 - **Docs**: `manual-user/` and `manual-developer/control_restart.md`,
   DIVERGENCES C58.
 
-### C59. `group_truss_memory` / `materi_displacement` input errors of the Professional (F4 T6d, 2026-10-11) — OPEN, owner decision
+### C59. `group_truss_memory` / `materi_displacement` input errors of the Professional (F4 T6d, 2026-10-11) — RESOLVED 2026-10-11 (F4 T6d)
+
+- **Resolution** (owner decision 2026-10-11): `truss.cc` stops with an
+  input error naming both records for an explicit `-updated` /
+  `-updated_linear` with `materi_displacement` and for `-total` /
+  `-total_linear` without it; `check_error -no` skips both checks (as the
+  Professional). sfnet `truss5` adapted (external copy
+  `external-downloads/sfnet/extracted/test/truss5.dat` and the omen
+  corpus): `-updated` dropped, default `-total_linear`, target = the
+  Professional run of the adapted input (node 1 rhside vely -93.8). The
+  copy `test/truss5.dat` inside `validation-suite/test.zip` is NOT
+  rewritten (archive) and still holds the original. No other corpus input
+  hits either check. Tests: `test-2026/truss_memory_updated_displacement_error1`,
+  `truss_memory_total_velocity_error1` (expected error).
+
+Original report:
+
 
 - **Professional 02-08-2026**: `-updated` (or `-updated_linear`) with
   `materi_displacement` stops with "materi_displacement should not be
@@ -1984,9 +2000,9 @@ Original report:
 | C56 | Pro `other` | input tokens longer than `MCHAR`-1 (`cin >> str`) overflow the parser buffers (`ground19_water_under_dam`, 141-char URL in a comment)  — resolved 2026-10-11 (F4 T6a)| LOW | cheap |
 | C57 | Pro `other` | hex27 nodal stress recovery (`force11` up to 3.5 % at the loaded points, displacements equal) and `post_point` interpolation on a hex27 node | LOW | medium |
 | C58 | Pro `validation` | `control_restart`: interface/spring/contact-spring/tendon/damage element history records not verified after the F4 T6c integration-point reset (`number_timesteps` record absent) | LOW | cheap/medium |
-| C59 | sfnet | `group_truss_memory -updated` + `materi_displacement` (and `-total*` without it): input error in the Pro, accepted by the GNU; owner decision pending (sfnet `truss5` uses it) | LOW | cheap |
+| C59 | sfnet | `group_truss_memory -updated` + `materi_displacement` (and `-total*` without it): input error in the Pro — resolved 2026-10-11 (F4 T6d) | LOW | cheap |
 
-Forty-one items remain open: four MEDIUM and thirty-seven LOW (C23 and C24 resolved 2026-10-05; C25, C26, C27 and B10 added; F1 T3 / K04 2026-10-06 added B11, C28-C32; F1 T6 resolved C28, added and resolved B12; F2 T1 added C36; F2 T2 added C37, C38, C39; F2 T3 resolved C5 and added C40; F3 T2 resolved C8, C18, C19, C20 and added B13, C41; F4 T2 fixed the C41 tie and left a residual; F4 T3 resolved C33; F4 T4 closed C32, added C42 and resolved C31; F4 T7-T8 added C43-C46; F4 T9 resolved the C43 solver speed, decided C46b/C46e and added C47, C48, C49; F4 T10 resolved C48 and added C50; F4 T5 added C52, C53 and resolved C51; F4 T13 resolved C49 and added C54-C56; F4 T12 resolved C47 and added C57; F4 T6a resolved C6, C55, C56 and the C3 sign, the C3 square-face tie becoming a deliberate divergence (owner 2026-10-11), and added B14; F4 T6c fixed the `control_restart` integration-point reset and added C58; F4 T6d resolved C11 and added C59 and B15). No open issue is CRITICAL or
+Forty items remain open: four MEDIUM and thirty-six LOW (C23 and C24 resolved 2026-10-05; C25, C26, C27 and B10 added; F1 T3 / K04 2026-10-06 added B11, C28-C32; F1 T6 resolved C28, added and resolved B12; F2 T1 added C36; F2 T2 added C37, C38, C39; F2 T3 resolved C5 and added C40; F3 T2 resolved C8, C18, C19, C20 and added B13, C41; F4 T2 fixed the C41 tie and left a residual; F4 T3 resolved C33; F4 T4 closed C32, added C42 and resolved C31; F4 T7-T8 added C43-C46; F4 T9 resolved the C43 solver speed, decided C46b/C46e and added C47, C48, C49; F4 T10 resolved C48 and added C50; F4 T5 added C52, C53 and resolved C51; F4 T13 resolved C49 and added C54-C56; F4 T12 resolved C47 and added C57; F4 T6a resolved C6, C55, C56 and the C3 sign, the C3 square-face tie becoming a deliberate divergence (owner 2026-10-11), and added B14; F4 T6c fixed the `control_restart` integration-point reset and added C58; F4 T6d resolved C11 and C59 and added B15). No open issue is CRITICAL or
 HIGH. The validation-suite corpus has no open failure — its 233 real tests
 pass (`materi_direct_mc` input corrected, C17 resolved). Every remaining failure is a stale or malformed test, an out-of-scope model
 or infrastructure limit, a narrow post-processing divergence, a corpus-coverage
