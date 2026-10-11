@@ -167,6 +167,32 @@ Each file also gains `target_item 2 -element_interface_intpnt_stress 2 1`
 ±1). Old binary: rc 1 on the restored targets (actual 1e6 / 5000 / 5000);
 new binary: rc 0.
 
+## 7. test-2014 `node_slide` recalibrated to the physical penalty reaction (2026-10-11, F4 T6e C53)
+
+`slide_penalty_law` (`slide.cc`, the legacy slide law without
+`slide_stiffness`) indexed `node_lhside` / `node_rhside` with the node_dof
+index `vel_indx+idim*nder` instead of the principal-dof index
+`vel_indx/nder+idim` (`slide_spring`, `dof.cc`). In `node_slide`
+(`materi_strain_total`, `derivatives`, nder 4) the y penalty term landed in
+the `eptxx` slot: `node_rhside 4` eptxx -5e13, `node_dof 4 eptxx` -10, and
+`vely` kept only the element force 2.97e-12, so the 2014 target
+`node_rhside 4 -vely 0.001 ±0.05` passed trivially (already noted as
+"pasaba trivial" in the `scripts/build_safe.sh` header of 2026-09).
+
+Owner decision 2026-10-11: recalibrate to the physically correct values.
+Node 4 has v = (0, 1) (prescribed), the slide line normal is
+n = (-1,1)/sqrt(2), slide_penalty 1e15 (default), dtime 0.1: the penalty
+reaction is - 1e15 * (v.n) * dtime * n_y = -1e15 * 0.1 * 0.5 = -5e13
+(the friction term is O(1e-3)). Tracked file, header comment added:
+
+```
+node_slide.dat:  target_value  1  0.001 0.05  -> target_value  1  -5.e13 5.e7   (relative 1e-6)
+                 + target_item 2 -node_dof 4 -eptxx / target_value 2 0. 1.e-10
+```
+
+HEAD binary (`c276931`): rc 1 (vely 2.97e-12, eptxx -10); fixed binary:
+rc 0 (vely -5e13, eptxx 0).
+
 # Inertia-apply reconstruction — the 15 solver-divergence tests (2026-09-16)
 
 Date: 2026-09-16
