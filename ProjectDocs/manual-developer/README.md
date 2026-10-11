@@ -556,3 +556,4 @@ page lists its own in "Differences with the Professional version".
 ## F4 T6a — cheap batch (2026-10-11)
 
 - [input_word_length](input_word_length.md) — input.cc input_word(): bounded word reads (setw(MCHAR)) for every parser read, split words allowed only in comments; range.cc still pending.
+- [post_calcul_size_tot](post_calcul_size_tot.md) — calcul.cc calculate_operat SIZETOT/SIZEDEV without the 0.5 factor (F4 T6a); refinement indicator scale-invariant.
