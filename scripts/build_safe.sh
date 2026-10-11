@@ -1785,6 +1785,22 @@ else
 fi
 
 # ---------------------------------------------------------------------
+# F4 T6a (2026-10-11), cheap batch.
+# C55: control_print_dof_rhside with derivatives (print_un.cc): the nodal
+#   right-hand side is indexed per principal unknown. Old GNU: column of
+#   another dof (vely_rhside = 0) and a heap read past NODE_RHSIDE.
+#   Values = Professional 02-08-2026.
+run_ok "$T2026" dof_rhside_derivatives1
+if awk '$1==1 && $2==1 { d=$3-1.04166666667; if (d<0) d=-d; f=(d<1.e-6) } END { exit !f }' \
+     "$T2026/vely_rhside.31" 2>/dev/null &&
+   awk '{ n++; d=$3+2.08333333333; if (d<0) d=-d; if (d>1.e-6) bad=1 } END { exit (bad || n!=4) }' \
+     "$T2026/sigyy_rhside.31" 2>/dev/null; then
+  check_ok "dof_rhside_derivatives1 (vely_rhside 1.0416667, sigyy_rhside -2.0833333)"
+else
+  check_fail "dof_rhside_derivatives1" "rhside columns differ from the Professional"
+fi
+
+# ---------------------------------------------------------------------
 # Sub-sprint materi_stress_force, lote 2 (integracion 2D quad4/quad9):
 # verificacion ANALITICA por estatica. Decisiones de diseno (manual-
 # developer/post_calcul_materi_stress_force.md): caras extremas = las

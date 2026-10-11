@@ -23,6 +23,15 @@
 - El `check` de `CONTROL_PRINT_UNKNOWNSRHSIDE` (check.cc:
   `check_unknowns_are_specified`) aplica automáticamente por enum.
 
+- **Índice del record (F4 T6a, BACKLOG C55)**: `NODE_RHSIDE` guarda un
+  valor por incógnita principal (`data_length = npuknwn`), así que el
+  valor impreso es `node_rhside[ipuknwn]`; el nombre del archivo sigue
+  usando `dof_label[iuknwn]` con `iuknwn = ipuknwn*nder`. Antes se
+  imprimía `node_rhside[iuknwn]`: con `derivatives` (nder 4) la columna
+  era la de otro dof y las últimas incógnitas leían fuera del record
+  (ASan heap-buffer-overflow, test `dofrhside`). Verificado contra el
+  Professional 02-08-2026 con `dof_rhside_derivatives1`.
+
 ## Pendiente
 
 - Nada específico: el alias comparte el comportamiento (y las

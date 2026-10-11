@@ -1691,7 +1691,7 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
   into a long buffer). No corpus input triggers it.
 - **Severity**: LOW. **Effort**: cheap.
 
-### C55. `print_unknownsrhside()` reads `node_rhside` with the wrong index (F4 T13, 2026-10-11) — OPEN
+### C55. `print_unknownsrhside()` reads `node_rhside` with the wrong index (F4 T13, 2026-10-11) — RESOLVED 2026-10-11 (F4 T6a)
 
 - **Symptom**: ASan heap-buffer-overflow READ in `print_un.cc:149`
   (test-2014 `dofrhside`, build_safe and corpus).
@@ -1703,6 +1703,12 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
   `*_rhside.N` files, so it needs its own verification (Professional
   `node_rhside` print).
 - **Severity**: LOW (print only). **Effort**: cheap.
+- **Status**: **RESOLVED 2026-10-11 (F4 T6a)**: `node_rhside[ipuknwn]`.
+  Professional 02-08-2026 probe with `derivatives` (one quad4 pushed
+  down): Pro `vely_rhside` -1.0416667 (bottom) / +1.0416667 (top),
+  `sigyy_rhside` -2.0833333; old GNU 0 / 0 and 4.7e-310 in `disy`; new
+  GNU = Pro (= old GNU without `derivatives`). Test
+  `dof_rhside_derivatives1` (build_safe file check, RED old / GREEN new).
 
 ### C56. Parser tokens longer than `MCHAR`-1 overflow the input buffers (F4 T13, 2026-10-11) — OPEN
 
@@ -1839,7 +1845,7 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
 | C52 | Pro `other` | post-solve state pass for inertia models (`dynamic3`) — gated off, investigation | LOW | medium |
 | C53 | Pro `other` | post-solve state pass for slide/contact models (`slide4`) — gated off, investigation | LOW | medium |
 | C54 | — | run-time record names read without a type check into a 1-value dummy (`post.cc`, `print_el.cc`, `repeat.cc`, `data.cc`, `calcul.cc`) | LOW | cheap |
-| C55 | validation-suite | `print_unknownsrhside()` indexes `node_rhside` (npuknwn values) with `iuknwn` (heap read past the end, wrong column when nder > 1) | LOW | cheap |
+| C55 | validation-suite | `print_unknownsrhside()` indexes `node_rhside` (npuknwn values) with `iuknwn` (heap read past the end, wrong column when nder > 1)  — resolved 2026-10-11 (F4 T6a)| LOW | cheap |
 | C56 | Pro `other` | input tokens longer than `MCHAR`-1 (`cin >> str`) overflow the parser buffers (`ground19_water_under_dam`, 141-char URL in a comment) | LOW | cheap |
 | C57 | Pro `other` | hex27 nodal stress recovery (`force11` up to 3.5 % at the loaded points, displacements equal) and `post_point` interpolation on a hex27 node | LOW | medium |
 

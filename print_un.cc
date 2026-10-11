@@ -146,7 +146,9 @@ void print_unknownsrhside( void )
             coord = db_dbl( NODE, inod, VERSION_NORMAL );     
             node_rhside = db_dbl( NODE_RHSIDE, inod, VERSION_NORMAL );     
             for ( idim=0; idim<ndim; idim++ ) out << coord[idim] << " ";
-            out << node_rhside[iuknwn] << "\n";
+            // NODE_RHSIDE holds one value per principal unknown
+            // (data_length npuknwn): index with ipuknwn, not iuknwn.
+            out << node_rhside[ipuknwn] << "\n";
           }
         }
       }
