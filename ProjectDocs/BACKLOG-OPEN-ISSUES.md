@@ -566,7 +566,7 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
   had a second, separate root cause (no mesh boundary): fixed in F2 T3b,
   residuals in C40.
 
-### C6. `iface_gen*` — reconstructed inputs do not exercise interface generation
+### C6. `iface_gen*` — reconstructed inputs do not exercise interface generation — RESOLVED 2026-10-11 (F4 T6a)
 
 - **Corpus**: validation-suite 233 (`iface_gen`, `iface_gen_method`,
   `iface_gen_geom`, `iface_gen_quad9`).
@@ -586,6 +586,15 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
   the targets still pass; five currently-passing tests are touched, so it is a
   separate work unit with a full A/B.
 - **Effort**: **cheap**.
+- **Status**: **RESOLVED 2026-10-11 (F4 T6a)**: the generated elements
+  (`iface_gen`, `iface_gen_method`, `iface_gen_geom`: element 3;
+  `iface_gen_quad9`: elements 3 and 4) and their `element_group ... 10`
+  records were removed from the inputs; `iface_gen_method` (selection
+  `-element_geometry`) got back its input tags `element_geometry 1 20 /
+  2 30`. Each run generates the same elements (`element 3 -quad4 2 4 5
+  7`, quad9: `3 -quad4 6 9 13 16`, `4 -quad4 3 6 10 13`, `element_group
+  3/4 10`), rc 0, targets met. build_safe checks that the input has no
+  element 3 and the run produces it.
 
 ### C7. Mazars damage: gamma with shear, and damage + early plasticity
 
@@ -1811,7 +1820,7 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
 | C2 | validation-suite | `groundflow_interface` `gvelx` sign | LOW | medium |
 | C3 | sfnet | `gforce10` 3D section sign | MEDIUM | medium |
 | C5 | — | `contact_target_geometry` index-0 alias — resolved 2026-10-07 (F2 T3a) | MEDIUM | medium |
-| C6 | validation-suite | `iface_gen*` generation-coverage gap | MEDIUM | cheap |
+| C6 | validation-suite | `iface_gen*` generation-coverage gap — resolved 2026-10-11 (F4 T6a: generated elements removed from the inputs) | MEDIUM | cheap |
 | C7 | — | Mazars gamma with shear; damage + early plasticity path | MEDIUM | medium |
 | C8 | — | default `mesh` `-follow_material` vs Pro `-fixed_in_space` — resolved 2026-10-07 (F3 T2) | MEDIUM | large |
 | C9 | — | `-total_linear` + compressibility: Pro time-step dependent (deliberate divergence) | LOW | cheap |
