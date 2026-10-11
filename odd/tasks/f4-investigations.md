@@ -25,7 +25,7 @@ T6 triage (2026-10-11, HEAD 53dbb86) and owner order (2026-10-11):
 - [x] T6b K24 `large2` transient 3D consolidation coupling (4.5 % pres, dt-independent; drained steady state equal). Closed 2026-10-11: deliberate divergence class A (`c350b3c`, `0cc417f`).
 - [x] T6c K15 `validation_14` `control_restart` semantics (without restart every node_dof = Pro). Done `8ca6124`: restart resets the IP state (manual 6.368, Pro deletes element_dof); `validation_14` NOT caused by the restart (re-scoped, open under T6f); element history records -> BACKLOG C58.
 - [x] T6d C11 `dynamic3` (disp_primary_gate per material) -> C52. Done `28992d5` (C11), `e0f2204` (C59), `b318484` (interface history), `c276931` (inertia pass).
-- [ ] T6e C53 slide in the post-solve pass.
+- [x] T6e C53 slide in the post-solve pass. Done `b4e4fa4` (slide law), `07433f5` (slide/contact in the pass, gate removed).
 - [ ] T6f Rest by relevance: K15 `validation_14` (re-scoped by T6c: pass-1 hole-boundary nodal stress/plastic strain up to ~20 % at 8 nodes on the r=0.01 circle -> `refine_locally` picks a different element -> pass 2 on a different mesh), K15 mmc_tension, validation_3 kap/eptzz, K14b hypo3, C7 Mazars, K21, C57. Parked: K14c (ISA, class D), mohrcou2 sfnet (input artifact).
 
 ## Later (owner 2026-10-10, after convergence with ALL divergences documented and accepted)
@@ -492,3 +492,25 @@ docs + SEGUIMIENTO + BACKLOG + DIVERGENCES.
   0.0999992); Pro own copies and the dialect-translated adapted inputs
   (0.1000002, 0.0999998), rc 0. Docs: BACKLOG B15 left for the parent
   (outside the writer surface).
+  T6e C53 (2026-10-11, owner-approved), route: delegated writer (trigger:
+  2+ non-trivial source files slide.cc + top.cc, tests, docs; patch from
+  the read-only investigation, A/B on omen f4t6e_runs).
+  WU1 `b4e4fa4` fix(slide): sig_t default 1.e300 (absent
+  slide_plasti_tension = no tension limit), cap c + mu*|S| (Pro),
+  slide_penalty_law principal-dof index vel_indx/nder+idim. test-2014
+  node_slide recalibrated (owner): node_rhside 4 vely -5e13 (analytic
+  -1e15*(v.n)*dt*n_y, rel 1e-6) + node_dof 4 eptxx 0; RED HEAD rc 1
+  (vely 2.97e-12, eptxx -10), GREEN rc 0 (CORPUS-STALE-TARGETS 7).
+  build_safe TN_CHECK_ONLY=1 214 OK / 0 FALLO, runs 226/226.
+  WU2 `07433f5` feat(top): pass calls parallel_contact + slide();
+  post_solve_state_pass_gated() deleted (both headers); DIVERGENCES
+  POSTPASS-GATE removed (B 40 -> 39, total 76). Tests test-2026
+  slide_friction_cohesion1 (RED HEAD rc 1 -0.002, slide fix alone rc 1
+  -2.066157e-3, GREEN -2.06548203e-3 vs Pro -2.065482222595e-3) and
+  contact_block_pass1 (RED HEAD rc 1, GREEN; Pro node_dof <= 7e-13).
+  Pro slide4 rc 0 = Pro (HEAD rc 1). Focus set slide/contact 18/18 rc 0.
+  build_safe 216 OK / 0 FALLO, runs 226/226; audit_db_buffers exit 0.
+  BACKLOG C53 resolved; added C62 (pass skips parallel_new_dof_before),
+  C63 (slide4 post_node_rhside_fixed vs Pro, pre-existing). No full
+  corpus A/B re-run by the writer (investigation A/B covered the same
+  patch). Next: T6f.
