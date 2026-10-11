@@ -1833,6 +1833,14 @@ run_ok "$T2026" k24_consol_3d1
 run_ok "$T2026" k24_consol_3d2
 run_ok "$T2026" k24_consol_3d_undrained1
 run_ok "$T2026" k24_consol_3d_undrained2
+# F4 T6c (2026-10-11): control_restart -yes resets the integration-point
+#   state (manual 6.368; the Professional deletes element_dof). Unit quad4,
+#   10 steps to t 1, restart, 5 steps to t 0.5 = a fresh 0.5 run. Targets
+#   at node 4 = Professional 02-08-2026: _ip1 Drucker-Prager sigyy
+#   -24.18351 (GNU before the fix +19.65), _ip2 elastic sigyy -52.08333
+#   (GNU before the fix +52.08333).
+run_ok "$T2026" control_restart_reset_ip1
+run_ok "$T2026" control_restart_reset_ip2
 
 # ---------------------------------------------------------------------
 # Sub-sprint materi_stress_force, lote 2 (integracion 2D quad4/quad9):

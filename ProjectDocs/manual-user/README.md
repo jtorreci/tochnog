@@ -527,3 +527,7 @@ page lists its own in "Differences with the Professional version".
 
 - [input_word_length](input_word_length.md) — input words are at most 99 characters: longer words are allowed inside comments (read in pieces) and are an input error elsewhere (F4 T6a, BACKLOG C56).
 - [post_calcul_size_tot](post_calcul_size_tot.md) — `post_calcul` `-size_tot` = sqrt(Aij Aij) and `-size_dev` = sqrt(Bij Bij) as the manual and the Professional (F4 T6a; before sqrt(0.5 ...)).
+
+## F4 T6c — control_restart (2026-10-11)
+
+- [control_restart](control_restart.md) — restart from the initial state: undeformed mesh, initial node dofs, initial time and (since F4 T6c) a fresh integration-point state, as the manual 6.368 and the Professional.

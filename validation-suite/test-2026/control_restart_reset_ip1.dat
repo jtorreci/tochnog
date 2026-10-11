@@ -1,0 +1,53 @@
+(F4 T6c, control_restart resets the integration-point state.
+ Manual Professional 6.368: after a restart the calculation continues
+ with the undeformed mesh, node_dof reset to the initial values and
+ time_current reset, to calculate path dependent behaviour completely
+ from the start. The Professional also deletes element_dof (IP state).
+ Unit quad4, Drucker-Prager, vely -1e-2 on top: 10 steps to t 1, restart,
+ 5 steps to t 0.5 = a fresh 0.5 run. Targets at node 4 = Professional
+ 02-08-2026. Before the fix the GNU kept the old IP stress: sigyy +19.65.)
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_displacement
+materi_strain_total
+materi_strain_plasti
+materi_stress
+end_initia
+node 1 0 0
+node 2 1 0
+node 3 0 1
+node 4 1 1
+element 1 -quad4 1 2 3 4
+geometry_line 0 0 0 0 1 1.e-5
+geometry_line 1 0 0 1 0 1.e-5
+geometry_line 2 0 1 1 1 1.e-5
+bounda_dof 0 -geometry_line 0 -velx
+bounda_time 0 0. 0. 1.e10 0.
+bounda_dof 1 -geometry_line 1 -vely
+bounda_time 1 0. 0. 1.e10 0.
+bounda_dof 2 -geometry_line 2 -vely
+bounda_time 2 0. -1.e-2 1.e10 -1.e-2
+group_type 0 -materi
+group_materi_elasti_young 0 1.e4
+group_materi_elasti_poisson 0 0.2
+group_materi_memory 0 -total_linear
+group_materi_plasti_druck_prag 0 0.30 5. 0.30
+control_timestep 10 0.1 1.0
+control_restart 20 -yes
+control_timestep 30 0.1 0.5
+target_item 0 -node_dof 4 -sigyy
+target_value 0 -2.418351140931e+01 2.4e-3
+target_item 1 -node_dof 4 -sigxx
+target_value 1 -1.729296628849 1.7e-4
+target_item 2 -node_dof 4 -sigzz
+target_value 2 -1.513193493595e+01 1.5e-3
+target_item 3 -node_dof 4 -eppxx
+target_value 3 4.905209654947e-03 5.e-7
+target_item 4 -node_dof 4 -eppyy
+target_value 4 -2.918873490365e-03 3.e-7
+target_item 5 -node_dof 4 -disx
+target_value 5 5.518588918968e-03 5.e-7
+target_item 6 -node_dof 4 -velx
+target_value 6 2.054339418669e-02 2.e-6
+end_data

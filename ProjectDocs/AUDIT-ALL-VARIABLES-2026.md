@@ -665,7 +665,13 @@ showed that K0 applies without `group_materi_elasti_poisson` and to
 10. **Investigate before touching code.** These are UNKNOWN with high
     relevance:
     - K14: `hypo3`/`hypo10` stress path, and the empty hypo history slots
-    - K15: `validation_14` DP, `validation_3` von Mises
+    - K15: `validation_14` DP, `validation_3` von Mises. F4 T6c (2026-10-11):
+      `validation_14` is NOT caused by `control_restart` (without the restart
+      every node_dof = Pro). Re-scoped: the pass-1 hole-boundary nodal
+      stress / plastic strain differs up to ~20 % at 8 nodes on the r = 0.01
+      circle, `refine_locally` picks a different element and pass 2 runs on
+      a different mesh. The T6c restart IP-state fix (manual 6.368) leaves
+      the `validation_14` .dbs unchanged. Open under F4 T6f.
     - K24: `large2` 3D consolidation — closed 2026-10-11 (F4 T6b): deliberate
       divergence, `solver_matrix_symmetric -yes` symmetrization in the Pro
 

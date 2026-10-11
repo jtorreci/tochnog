@@ -1601,6 +1601,27 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
   `post_point`).
 - **Severity**: **LOW**. **Effort**: medium.
 
+### C58. `control_restart`: element history records outside the integration-point dofs not verified (F4 T6c, 2026-10-11) — OPEN
+
+- **Context**: F4 T6c made `control_restart -yes` rebuild the
+  integration-point state (`restart.cc` clears `ELEMENT_DOF_INITIALISED`;
+  the Professional deletes `element_dof` / `element_intpnt_dof`), tests
+  `test-2026/control_restart_reset_ip1/2`.
+- **Verified** (probes, Professional 02-08-2026): `element_truss_force`
+  is kept by both binaries (1.5 after restart); the undrained pressure
+  (`element_intpnt_materi_undrained_pressure`) = Professional (-9.75297).
+- **Not verified**: interface IP strain/stress/tension status and
+  `element_interface_strain_normal`, `element_contactspring_force`,
+  `element_spring_strain`, `element_tendon_strain/_stress`,
+  `element_intpnt_materi_stress_effective` (damage). Each is read back as
+  history from VERSION_NORMAL and is not reset by `restart()`.
+- **`number_timesteps`**: the Professional sets it to 0 on a restart
+  (`number_timesteps_total` kept); the GNU has no such record.
+- **Next**: one restart probe per family vs the Professional; reset the
+  records the Professional deletes.
+- **Docs**: `manual-user/` and `manual-developer/control_restart.md`,
+  DIVERGENCES C58.
+
 ### C48. Interface tension status written from the wrong buffer (F4 T9, 2026-10-10) — RESOLVED 2026-10-10 (F4 T10)
 
 - **Found by**: the F4 T9 ASan runs on the Professional
@@ -1903,8 +1924,9 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
 | C55 | validation-suite | `print_unknownsrhside()` indexes `node_rhside` (npuknwn values) with `iuknwn` (heap read past the end, wrong column when nder > 1)  — resolved 2026-10-11 (F4 T6a)| LOW | cheap |
 | C56 | Pro `other` | input tokens longer than `MCHAR`-1 (`cin >> str`) overflow the parser buffers (`ground19_water_under_dam`, 141-char URL in a comment)  — resolved 2026-10-11 (F4 T6a)| LOW | cheap |
 | C57 | Pro `other` | hex27 nodal stress recovery (`force11` up to 3.5 % at the loaded points, displacements equal) and `post_point` interpolation on a hex27 node | LOW | medium |
+| C58 | Pro `validation` | `control_restart`: interface/spring/contact-spring/tendon/damage element history records not verified after the F4 T6c integration-point reset (`number_timesteps` record absent) | LOW | cheap/medium |
 
-Thirty-nine items remain open: five MEDIUM and thirty-four LOW (C23 and C24 resolved 2026-10-05; C25, C26, C27 and B10 added; F1 T3 / K04 2026-10-06 added B11, C28-C32; F1 T6 resolved C28, added and resolved B12; F2 T1 added C36; F2 T2 added C37, C38, C39; F2 T3 resolved C5 and added C40; F3 T2 resolved C8, C18, C19, C20 and added B13, C41; F4 T2 fixed the C41 tie and left a residual; F4 T3 resolved C33; F4 T4 closed C32, added C42 and resolved C31; F4 T7-T8 added C43-C46; F4 T9 resolved the C43 solver speed, decided C46b/C46e and added C47, C48, C49; F4 T10 resolved C48 and added C50; F4 T5 added C52, C53 and resolved C51; F4 T13 resolved C49 and added C54-C56; F4 T12 resolved C47 and added C57; F4 T6a resolved C6, C55, C56 and the C3 sign, the C3 square-face tie becoming a deliberate divergence (owner 2026-10-11), and added B14). No open issue is CRITICAL or
+Forty items remain open: five MEDIUM and thirty-five LOW (C23 and C24 resolved 2026-10-05; C25, C26, C27 and B10 added; F1 T3 / K04 2026-10-06 added B11, C28-C32; F1 T6 resolved C28, added and resolved B12; F2 T1 added C36; F2 T2 added C37, C38, C39; F2 T3 resolved C5 and added C40; F3 T2 resolved C8, C18, C19, C20 and added B13, C41; F4 T2 fixed the C41 tie and left a residual; F4 T3 resolved C33; F4 T4 closed C32, added C42 and resolved C31; F4 T7-T8 added C43-C46; F4 T9 resolved the C43 solver speed, decided C46b/C46e and added C47, C48, C49; F4 T10 resolved C48 and added C50; F4 T5 added C52, C53 and resolved C51; F4 T13 resolved C49 and added C54-C56; F4 T12 resolved C47 and added C57; F4 T6a resolved C6, C55, C56 and the C3 sign, the C3 square-face tie becoming a deliberate divergence (owner 2026-10-11), and added B14; F4 T6c fixed the `control_restart` integration-point reset and added C58). No open issue is CRITICAL or
 HIGH. The validation-suite corpus has no open failure — its 233 real tests
 pass (`materi_direct_mc` input corrected, C17 resolved). Every remaining failure is a stale or malformed test, an out-of-scope model
 or infrastructure limit, a narrow post-processing divergence, a corpus-coverage
