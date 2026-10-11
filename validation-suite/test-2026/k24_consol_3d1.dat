@@ -1,0 +1,53 @@
+(F4 T6b, K24 deliberate divergence class A, owner decision 2026-10-11.
+ 3D Biot u-p consolidation column: brick macro of 10x2x2 nodes over
+ [0,1]x[-0.5,0.5]^2, E=10 -total_linear, capacity 1, force_edge 1.0 on the
+ x=0 face, velocity and pres fixed on x=1 with pres ramped -1 -> 0 over
+ the first step, control_reset pres -1, inertia_apply -yes.
+ The u-p system is NOT symmetric. With solver_matrix_symmetric -yes the
+ Professional 02-08-2026 symmetrizes it (manual 6.1052) and its pres
+ drifts with no flow (undrained) and has the wrong sign for small
+ capacities; the GNU keeps the as-assembled matrix (Bi-CG, warning), so
+ -yes and -no give the same answer. Targets at node 1 (0,-0.5,-0.5) =
+ Professional 02-08-2026 run with solver_matrix_symmetric -no.
+ Transient, k 0.1, dt 0.1 to t 2.2, solver_matrix_symmetric -yes.
+ Pro -no: pres -0.7085296, disx 0.05420111 (GNU -0.708335 / 0.0542098);
+ Pro -yes: pres -0.6783319, disx 0.05643984 (the K24 gap; large2 itself:
+ -0.672711 vs -0.704603 with -no). Tolerance 1e-3 relative.)
+echo -no
+number_of_space_dimensions 3
+materi_velocity
+materi_displacement
+materi_stress
+groundflow_pressure
+groundflow_velocity
+end_initia
+inertia_apply -yes
+groundflow_consolidation_apply -yes
+solver_matrix_symmetric -yes
+start_define
+  delta_time 0.1
+end_define
+group_type 0  -materi -groundflow
+group_materi_elasti_young  0  1.0e1
+group_materi_memory 0  -total_linear
+group_groundflow_permeability 0 0.1
+group_groundflow_capacity 0 1.0
+geometry_quadrilateral 10  0.0 -10.0 -10.0  0.0 +10.0 -10.0  0.0 -10.0 +10.0  0.0 +10.0 +10.0  1.e-4
+geometry_quadrilateral 20  1.0 -10.0 -10.0  1.0 +10.0 -10.0  1.0 -10.0 +10.0  1.0 +10.0 +10.0  1.e-4
+bounda_dof     1  -geometry_quadrilateral 20 -velx -vely -velz
+bounda_time    1  0.
+bounda_dof     2  -geometry_quadrilateral 20 -pres
+bounda_time    2  0. -1. delta_time 0. 1000. 0.
+post_calcul -groundflow_pressure -total_pressure
+force_edge 10  1.0 0.0 0.0
+force_edge_geometry 10  -geometry_quadrilateral 10
+control_mesh_macro            10  -brick 0 10 2 2
+control_mesh_macro_parameters 10  0.5 0.0 0.0 1.0 1.0 1.0
+control_reset_dof             20  -pres
+control_reset_value_constant  20  -1.0
+control_timestep              30  delta_time 2.2
+target_item  0  -node_dof 1 -pres
+target_value  0  -0.7085296 7.e-4
+target_item  1  -node_dof 1 -disx
+target_value  1  0.05420111 5.4e-5
+end_data
