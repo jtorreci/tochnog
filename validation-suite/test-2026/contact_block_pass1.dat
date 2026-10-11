@@ -1,0 +1,48 @@
+( F4 T6e C53 (2026-10-11): post-solve material state pass for contact
+  models. Pro-syntax variant of test-2014 contact_block: a quad4 block
+  (E 1000, density 1, gravity -10, inertia) on a contact geometry_line
+  with contact_penalty_velocity 1.e5, 10 steps of 0.01. The pass
+  re-applies the contact forces (parallel_contact) on the final iterate,
+  so the stored state is the converged one as in the Professional.
+  Professional 02-08-2026: node 1 vely 2.276148940747e-4, node 3 disy
+  -6.022146669393e-3, node 1 sigyy -5.990411829884, node 1 node_rhside
+  vely -6.87e-12 (~0); GNU with the pass: every node_dof within 7e-13
+  of the Professional. GNU before (contact models gated out of the
+  pass): vely 2.5435e-4, disy -7.1728e-3, sigyy -6.29034, node_rhside
+  vely -0.180239.
+)
+echo -no
+number_of_space_dimensions 2
+derivatives
+materi_velocity
+materi_displacement
+materi_stress
+end_initia
+inertia_apply -yes
+
+contact_apply   -yes
+contact_target_geometry  0  -geometry_line 1
+contact_penalty_velocity   100000
+control_timestep  0  0.01 0.1
+element  1  -quad4 1 2 3 4
+element_group  1  0
+force_gravity   0 -10
+geometry_line  1  0 1 1 1 0.05
+group_materi_density  0  1
+group_materi_elasti_poisson  0  0
+group_materi_elasti_young  0  1000
+group_materi_memory  0  -total_linear
+group_type  0  -materi
+node  1  0 1
+node  2  1 1
+node  3  1 2
+node  4  0 2
+target_item  0  -node_dof 1 -vely
+target_value 0  2.276148940747e-4 1.e-10
+target_item  1  -node_dof 3 -disy
+target_value 1  -6.022146669393e-3 1.e-10
+target_item  2  -node_dof 1 -sigyy
+target_value 2  -5.990411829884 1.e-8
+target_item  3  -node_rhside 1 -vely
+target_value 3  0. 1.e-9
+end_data

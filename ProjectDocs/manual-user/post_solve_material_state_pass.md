@@ -2,7 +2,7 @@
 
 Status: **IMPLEMENTED 2026-10-10** (F4 T5, BACKLOG C35, audit K02). No
 keyword: it is part of the iteration scheme and always on, except for the
-model families listed under "Gate".
+solver options listed under "Where the pass is not applied".
 
 ## What it does
 
@@ -35,17 +35,18 @@ system matrix, so it costs about one extra element loop per step.
 
 None. The pass is automatic.
 
-## Gate (temporary difference with the Professional)
+## Where the pass is not applied
 
-For these families the pass is OFF and the previous scheme is kept
-unchanged (only the nodal stress is re-synchronised, see
-`nodal_stress_post_solve_sync`):
+The pass runs for every physics (material, inertia, slide, contact). It
+is not applied with the `-diagonal` solver, `options_elementloop -no` and
+the nonlocal softening variable: those keep the previous scheme (only the
+nodal stress is re-synchronised, see `nodal_stress_post_solve_sync`).
 
-- slide: any `slide_*` record or `node_slide`;
-- contact: any `contact_*` record, unless `contact_apply -no` /
-  `control_contact_apply -no` for the step;
-- also the `-diagonal` solver, `options_elementloop -no` and the nonlocal
-  softening variable.
+Slide and contact models take the pass since 2026-10-11 (F4 T6e, BACKLOG
+C53): the slide and contact forces are re-applied on the final iterate
+too. Pro `slide4` now equals the Professional (node 1 `node_slide_force`
+-2.112919e-3 / -1.219892e-3); see `test-2026/slide_friction_cohesion1`
+and `contact_block_pass1`.
 
 ## Example
 
@@ -81,11 +82,10 @@ end, the same as the Professional 02-08-2026. Before, node 2 velx went
 
 - Inertia models (`materi_acceleration`, `inertia_apply -yes`) take the
   pass since F4 T6d (2026-10-11, BACKLOG C52).
-- Gated families (slide, contact): the GNU keeps the previous
-  scheme, so with few iterations their state still lags one iteration.
-  This is a temporary divergence (DIVERGENCES class B, `POSTPASS-GATE`). The
-  measured case is Pro `slide4` (slide friction state): there, the ungated
-  pass moved the result
-  away from the Professional. A family is enabled only after the pass
-  covers its physics and the full corpus shows no test moving away from the
-  Professional.
+- Slide and contact models take the pass since F4 T6e (2026-10-11,
+  BACKLOG C53); the former temporary divergence `POSTPASS-GATE` is
+  closed.
+- Known, open (LOW): the reported `node_rhside` after the pass does not
+  include the `node_force` / nodal mass terms that an equilibrium
+  iteration adds before the solve (BACKLOG C62); `post_node_rhside_fixed`
+  of Pro `slide4` differs from the Professional (BACKLOG C63).

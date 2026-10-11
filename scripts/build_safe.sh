@@ -1866,6 +1866,19 @@ expected_error_ok "$T2026" truss_memory_total_velocity_error1
 #   elastically. Quasi-static reversal, element 3 shear: analytic 4.0,
 #   Professional 02-08-2026 4.000000083 (GNU before the fix 5.0).
 run_ok "$T2026" interface_mc_slip_reversal1
+# F4 T6e C53 (2026-10-11): post-solve material state pass for slide and
+#   contact models (parallel_contact + slide() re-applied on the final
+#   iterate) plus the slide law fixes (absent slide_plasti_tension = no
+#   tension limit, cap c + |Fn|*tan(phi)).
+#   slide_friction_cohesion1: slide4 with cohesion 0.002, end time 10:
+#     node_slide_force 1 tangential -2.065482e-3 (Professional 02-08-2026
+#     -2.065482222595e-3; HEAD -0.002, slide fix without the pass
+#     -2.066157e-3).
+#   contact_block_pass1: Pro-syntax contact_block (inertia, gravity,
+#     contact penalty): node_dof vely/disy/sigyy = Professional (<= 7e-13),
+#     node_rhside 1 vely ~0 (HEAD -0.180239).
+run_ok "$T2026" slide_friction_cohesion1
+run_ok "$T2026" contact_block_pass1
 
 # ---------------------------------------------------------------------
 # Sub-sprint materi_stress_force, lote 2 (integracion 2D quad4/quad9):

@@ -79,7 +79,8 @@ slide_plasti_residual_stiffness 10  1.e-2 1.e-2   (matrix-only, optional)
 
 ## Verification / status
 
-- `slide1` and `slide3` of the corpus pass (rc=0). slide1's final state
+- `slide1`, `slide3` and `slide4` of the corpus pass (rc=0); `slide4`
+  equals the Professional since 2026-10-11 (F4 T6e). slide1's final state
   matches the Professional .dbs: node_slide_force (-2.1148e-3,
   -1.2210e-3) vs (-2.1129e-3, -1.2199e-3); the top reactions +0.01 /
   -5.7707e-3 (targets).

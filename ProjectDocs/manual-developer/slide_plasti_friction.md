@@ -111,7 +111,12 @@ kn = kt = 1e3, phi = 0.523598):
   records: GNU 4.712/4.712 vs Pro 3.142/6.283 with lobatto), so the
   slide springs settle at u1 != u2 and sigma_yy = -6.447e-4 instead of
   the target -6.666666e-4. Not a slide-law issue.
-- slide4 (drag at vx = 1, 100x slide1's rate): the per-step equilibrium
+- slide4 — RESOLVED 2026-10-11 (F4 T6e C53): rc 0 and equal to the
+  Professional (node 1 node_slide_force -2.11291867e-3 / -1.21989198e-3
+  vs -2.11291887e-3 / -1.21989209e-3) with the absent-tension default,
+  the `|S|` cap and slide() in the post-solve material state pass. The
+  historical diagnosis below (2026-09-04) is superseded.
+  Historical: slide4 (drag at vx = 1, 100x slide1's rate): the per-step equilibrium
   of the capped slider oscillates at the drag start (fixed iteration
   budgets from 2 to 40 all fail to converge; the node at x=0 drifts into
   lift-off). slide1 (slow drag) converges exactly with the same law, so

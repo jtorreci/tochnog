@@ -1269,7 +1269,7 @@ Original report:
   table.
 - **Severity**: **LOW** (output only). **Effort**: —.
 
-### C35. One-equilibrium-iteration lag of the whole material state (audit K02) — RESOLVED 2026-10-10 (F4 T5), gated families open (C52, C53)
+### C35. One-equilibrium-iteration lag of the whole material state (audit K02) — RESOLVED 2026-10-10 (F4 T5), gated families resolved 2026-10-11 (C52, C53)
 
 - **Symptom** (F1 T5, Professional 02-08-2026, sfnet `spring4` converted:
   rigid translation velx 1, `materi_strain_total`, one equilibrium
@@ -1922,6 +1922,31 @@ Original report:
   0 FALLO, runs 226/226. Remaining interface + inertia gap -> C61.
 - **Severity**: LOW. **Effort**: medium.
 
+### C63. `post_node_rhside_fixed` of Pro `slide4` differs from the Professional (F4 T6e, 2026-10-11) — OPEN
+
+- **Symptom**: Pro `other/slide4`: GNU `post_node_rhside_fixed` 3.44e-3 /
+  7.88e-3, Professional -5.770607e-3 / 9.995002e-3 (= its
+  `post_node_result 10` sum of the top, which GNU reproduces to 1e-9).
+  Also different on HEAD before F4 T6e (3.38e-3 / 7.73e-3), so not caused
+  by the C53 pass.
+- **Cause**: not established (which fixed dofs / which rhside terms the
+  sum includes when slide nodes exist).
+- **Severity**: LOW. **Effort**: cheap/medium.
+
+### C62. The post-solve pass skips `parallel_new_dof_before`: reported `node_rhside` without node_force / nodal mass terms (F4 T6e, 2026-10-11) — OPEN
+
+- **Symptom**: an equilibrium iteration runs `element_loop();
+  parallel_contact; parallel_new_dof_before; slide(); solve()`; the
+  post-solve material state pass (`top.cc`) runs `element_loop();
+  parallel_contact; slide(); parallel_new_dof_diagonal` without
+  `parallel_new_dof_before`, so the `node_rhside` written by the pass
+  (the step output) lacks the `node_force` and nodal mass terms that
+  routine adds. Pre-existing since F4 T5 (C35); seen while closing C53.
+- **Fix candidate**: call `parallel_new_dof_before` in the pass too
+  (check that it does not double-apply anything to the principal dofs),
+  then probes + corpus A/B.
+- **Severity**: LOW. **Effort**: cheap/medium.
+
 ### C61. Interface Mohr-Coulomb under `inertia_apply`: first-step velocity differs from the Professional (F4 T6d, 2026-10-11) — OPEN
 
 - **Symptom**: probe (two quad4 blocks, quad4 interface kn = kt = 1000,
@@ -1951,18 +1976,34 @@ Original report:
   `group_interface.md` RF-5) leaks into the output record.
 - **Severity**: LOW (output record only). **Effort**: cheap/medium.
 
-### C53. Post-solve material state pass for slide models (`slide4`, F4 T5, 2026-10-10) — OPEN, investigation
+### C53. Post-solve material state pass for slide models (`slide4`, F4 T5, 2026-10-10) — RESOLVED 2026-10-11 (F4 T6e)
 
 - **Symptom**: with the ungated pass Pro `slide4` (quad4 on a frictional
   `slide_geometry`, `slide_plasti_friction`, `slide_stiffness`) moved
   away from the Professional (velocity 0.49 relative; before 0.024 sig).
-- **Cause (hypothesis)**: the slide forces and friction state are applied
-  in `slide()` outside the element loop; the pass re-evaluates the
-  material without re-applying them.
-- **Status**: gated off (slide and contact data). Needed: call `slide()`
-  (and `parallel_contact` for contact) consistently in the pass, then
-  probes + full corpus A/B (widening criterion, C35).
-- **Severity**: LOW (gated). **Effort**: medium.
+- **Root cause** (read-only investigation, A/B on omen `f4t6e_runs`):
+  (1) the pass did not re-apply the slide and contact forces, which are
+  added outside the element loop (`slide()`, `parallel_contact`);
+  (2) slide law: an absent `slide_plasti_tension` defaulted to
+  `sig_t = 0` (a compression-only gap, contrary to manual 6.1044 and the
+  code comment), and the friction cap was `max(c + mu*S, 0)` while the
+  Professional caps with `c + tan(phi)*|Fn|`; (3) `slide_penalty_law`
+  indexed `node_lhside`/`node_rhside` with the node_dof index
+  `vel_indx+idim*nder` (the y term went into the eptxx slot of
+  test-2014 `node_slide`).
+- **Fix**: `slide.cc` (sig_t 1.e300, `|S|` cap, principal-dof index
+  `vel_indx/nder+idim`); `top.cc` pass calls `parallel_contact` and
+  `slide()` after its element loop; `post_solve_state_pass_gated()` and
+  its declarations deleted (DIVERGENCES `POSTPASS-GATE` removed).
+- **Verification**: Pro `slide4` = Professional (node 1
+  `node_slide_force` -2.11291867e-3 / -1.21989198e-3 vs -2.11291887e-3 /
+  -1.21989209e-3; HEAD rc 1); new test-2026 `slide_friction_cohesion1`
+  (Pro -2.065482222595e-3; HEAD -0.002 rc 1, GREEN -2.06548203e-3) and
+  `contact_block_pass1` (Pro node_dof within 7e-13; HEAD rc 1);
+  test-2014 `node_slide` recalibrated to the analytic penalty reaction
+  -5e13 + eptxx 0 (owner decision, CORPUS-STALE-TARGETS §7). Out of
+  scope, recorded: C62, C63.
+- **Severity**: LOW. **Effort**: medium.
 
 ### C51. Hardsoil yield read the nodal kappa of the previous evaluation of the same step (F4 T5, 2026-10-10) — RESOLVED 2026-10-10
 
@@ -2045,7 +2086,7 @@ Original report:
 | C32 | Pro `other` | `axisym9` (stale row, already = Pro), `distri2` (random generator): not GNU defects — closed 2026-10-09 (F4 T4) | LOW | — |
 | C33 | — | `_visco` direct cut-offs: `DTIME` from the previous step, no visco on the principal tension cap — resolved 2026-10-09 (F4 T3) | MEDIUM | cheap/medium |
 | C34 | — | direct cut shear plastic strain: Pro twice the tensor value (deliberate divergence) | LOW | — |
-| C35 | — | one-iteration lag of the whole material state (K02, `spring4` 1 iteration) — resolved 2026-10-10 (F4 T5, post-solve material state pass); inertia/slide/contact gated (C52, C53) | MEDIUM | medium/large |
+| C35 | — | one-iteration lag of the whole material state (K02, `spring4` 1 iteration) — resolved 2026-10-10 (F4 T5, post-solve material state pass); inertia/slide/contact widened 2026-10-11 (C52, C53) | MEDIUM | medium/large |
 | C36 | validation-suite | `young_power` + `young`: Pro adds both stiffnesses, manual says law = modulus (K06) — decided 2026-10-06: deliberate divergence (GNU = manual), no code change | LOW | cheap |
 | C37 | Pro `other` | planar GNU beam vs Pro 3D frame beam (`trubea2/3`, K17) — parked, design | MEDIUM | large |
 | C38 | Pro `other` | `control_support_edge_normal_stiffness_freeze` parse-only (support_edge_normal_3, 1e-9 effect) | LOW | cheap/medium |
@@ -2062,17 +2103,19 @@ Original report:
 | C50 | Pro other | `interface_bar2_hex8` extruded/converted interface mesh numbering | LOW | medium |
 | C51 | validation-suite | hardsoil `gamma_p` read the nodal kappa of the previous evaluation (iteration-count oscillation, `mhardsoil_plast`) — resolved 2026-10-10 (F4 T5); cap/cap1/void reads open | MEDIUM | cheap |
 | C52 | Pro `other` | post-solve state pass for inertia models (`dynamic3`) — resolved 2026-10-11 (F4 T6d: interface history fix + inertia removed from the gate) | LOW | medium |
-| C53 | Pro `other` | post-solve state pass for slide/contact models (`slide4`) — gated off, investigation | LOW | medium |
+| C53 | Pro `other` | post-solve state pass for slide/contact models (`slide4`) — resolved 2026-10-11 (F4 T6e: slide/contact in the pass, gate removed, slide tension default / `\|Fn\|` cap / penalty index) | LOW | medium |
 | C54 | — | run-time record names read without a type check into a 1-value dummy (`post.cc`, `print_el.cc`, `repeat.cc`, `data.cc`, `calcul.cc`) | LOW | cheap |
 | C55 | validation-suite | `print_unknownsrhside()` indexes `node_rhside` (npuknwn values) with `iuknwn` (heap read past the end, wrong column when nder > 1)  — resolved 2026-10-11 (F4 T6a)| LOW | cheap |
 | C56 | Pro `other` | input tokens longer than `MCHAR`-1 (`cin >> str`) overflow the parser buffers (`ground19_water_under_dam`, 141-char URL in a comment)  — resolved 2026-10-11 (F4 T6a)| LOW | cheap |
 | C57 | Pro `other` | hex27 nodal stress recovery (`force11` up to 3.5 % at the loaded points, displacements equal) and `post_point` interpolation on a hex27 node | LOW | medium |
 | C58 | Pro `validation` | `control_restart`: interface/spring/contact-spring/tendon/damage element history records not verified after the F4 T6c integration-point reset (`number_timesteps` record absent) | LOW | cheap/medium |
 | C59 | sfnet | `group_truss_memory -updated` + `materi_displacement` (and `-total*` without it): input error in the Pro — resolved 2026-10-11 (F4 T6d) | LOW | cheap |
+| C63 | — | Pro `slide4` `post_node_rhside_fixed` 3.44e-3 / 7.88e-3 vs Pro -5.77e-3 / 9.995e-3 (pre-existing) | LOW | cheap/medium |
+| C62 | — | post-solve pass skips `parallel_new_dof_before`: reported `node_rhside` without node_force / nodal mass terms | LOW | cheap/medium |
 | C61 | — | interface Mohr-Coulomb + `inertia_apply`: first-step velocity differs from the Pro (0.412 vs 0.273), independent of the pass | LOW | medium |
 | C60 | — | interface `element_interface_intpnt_stress` normal sign depends on the node order (Pro: compression negative always) | LOW | cheap/medium |
 
-Forty items remain open: four MEDIUM and thirty-six LOW (C23 and C24 resolved 2026-10-05; C25, C26, C27 and B10 added; F1 T3 / K04 2026-10-06 added B11, C28-C32; F1 T6 resolved C28, added and resolved B12; F2 T1 added C36; F2 T2 added C37, C38, C39; F2 T3 resolved C5 and added C40; F3 T2 resolved C8, C18, C19, C20 and added B13, C41; F4 T2 fixed the C41 tie and left a residual; F4 T3 resolved C33; F4 T4 closed C32, added C42 and resolved C31; F4 T7-T8 added C43-C46; F4 T9 resolved the C43 solver speed, decided C46b/C46e and added C47, C48, C49; F4 T10 resolved C48 and added C50; F4 T5 added C52, C53 and resolved C51; F4 T13 resolved C49 and added C54-C56; F4 T12 resolved C47 and added C57; F4 T6a resolved C6, C55, C56 and the C3 sign, the C3 square-face tie becoming a deliberate divergence (owner 2026-10-11), and added B14; F4 T6c fixed the `control_restart` integration-point reset and added C58; F4 T6d resolved C11 and C59, fixed the interface history and resolved C52, and added B15, C60 and C61; B15 resolved the same day). No open issue is CRITICAL or
+Forty-one items remain open: four MEDIUM and thirty-seven LOW (C23 and C24 resolved 2026-10-05; C25, C26, C27 and B10 added; F1 T3 / K04 2026-10-06 added B11, C28-C32; F1 T6 resolved C28, added and resolved B12; F2 T1 added C36; F2 T2 added C37, C38, C39; F2 T3 resolved C5 and added C40; F3 T2 resolved C8, C18, C19, C20 and added B13, C41; F4 T2 fixed the C41 tie and left a residual; F4 T3 resolved C33; F4 T4 closed C32, added C42 and resolved C31; F4 T7-T8 added C43-C46; F4 T9 resolved the C43 solver speed, decided C46b/C46e and added C47, C48, C49; F4 T10 resolved C48 and added C50; F4 T5 added C52, C53 and resolved C51; F4 T13 resolved C49 and added C54-C56; F4 T12 resolved C47 and added C57; F4 T6a resolved C6, C55, C56 and the C3 sign, the C3 square-face tie becoming a deliberate divergence (owner 2026-10-11), and added B14; F4 T6c fixed the `control_restart` integration-point reset and added C58; F4 T6d resolved C11 and C59, fixed the interface history and resolved C52, and added B15, C60 and C61; B15 resolved the same day; F4 T6e resolved C53 and added C62 and C63). No open issue is CRITICAL or
 HIGH. The validation-suite corpus has no open failure — its 233 real tests
 pass (`materi_direct_mc` input corrected, C17 resolved). Every remaining failure is a stale or malformed test, an out-of-scope model
 or infrastructure limit, a narrow post-processing divergence, a corpus-coverage

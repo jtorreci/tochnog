@@ -617,21 +617,25 @@ void top( void )
                       // elem() skip the store) and no solve follows.
                       // Not for the -diagonal solver (explicit update of
                       // the principal dofs), options_elementloop -no and
-                      // the nonlocal softening variable, and gated OFF
-                      // (temporary divergence, DIVERGENCES class B) for
-                      // inertia, slide and contact models: see
-                      // post_solve_state_pass_gated() and
+                      // the nonlocal softening variable; those keep the
+                      // hoisted stress-only sync below. Every physics
+                      // takes the pass (inertia since F4 T6d C52, slide
+                      // and contact since F4 T6e C53, 2026-10-11): the
+                      // contact and slide forces are applied outside the
+                      // element loop, so the pass re-applies them on the
+                      // final iterate exactly as an equilibrium
+                      // iteration does (parallel_contact, slide()). See
                       // manual-developer/post_solve_material_state_pass.md.
-                      // Those keep the hoisted stress-only sync below.
                       long int state_pass_done = 0;
                       if ( nuknwn>0 && options_solver!=-DIAGONAL &&
                            options_elementloop==-YES && !find_local_softvar &&
-                           !( scalar_dabs(options_nonlocal_softvar)>TINY ) &&
-                           !post_solve_state_pass_gated( icontrol ) ) {
+                           !( scalar_dabs(options_nonlocal_softvar)>TINY ) ) {
                         iteration_start();
                         material_state_post_pass = 1;
                         element_loop();
                         material_state_post_pass = 0;
+                        parallel_sys_routine( &parallel_contact );
+                        slide();
                         parallel_sys_routine( &parallel_new_dof_diagonal );
                         mpc_node_apply();
                         state_pass_done = 1;
@@ -1267,47 +1271,6 @@ void step_start( long int task, long int options_solver[], double dtime, double 
 // Post-solve material state pass (F4 T5, BACKLOG C35): flag read by
 // elem() to skip the element matrix store during the pass.
 long int material_state_post_pass = 0;
-
-// Gate of the post-solve material state pass (owner decision 2026-10-10,
-// temporary divergence class B): returns 1 (pass OFF, the hoisted
-// stress-only sync of the previous scheme is kept) when the model has
-//  - slide: any slide_* record or node_slide (Pro slide4: the friction
-//    state is updated in slide(), outside the element loop);
-//  - contact: any contact_* record while contact_apply /
-//    control_contact_apply of this icontrol is not -no (the contact
-//    forces come from parallel_contact(), outside the element loop).
-// The pass is enabled for a family only after it is extended to that
-// physics and the probes + full corpus A/B show no test moving away from
-// the Pro (manual-developer/post_solve_material_state_pass.md).
-// Inertia models (materi_acceleration, inertia_apply) take the pass since
-// F4 T6d (BACKLOG C52, 2026-10-11): the Pro dynamic3 gap that kept them
-// gated was the truss memory default / sign defect C11, and the test-2014
-// iface_gen* break of the first widening attempt was the interface
-// Mohr-Coulomb elastic-trial history (fixed in interface.cc), not the pass.
-long int post_solve_state_pass_gated( long int icontrol )
-
-{
-  long int idat=0, max=0, ldum=0, any_contact_data=0,
-    contact_apply=-YES, control_contact_apply=-YES;
-  double ddum[1];
-
-  db_highest_index( NODE_SLIDE, max, VERSION_NORMAL );
-  if ( max>=0 ) return 1;
-  for ( idat=0; idat<MDAT; idat++ ) {
-    db_highest_index( idat, max, VERSION_NORMAL );
-    if ( max<0 ) continue;
-    if ( db_data_class(idat)==SLIDE ) return 1;
-    if ( db_data_class(idat)==CONTACT ) any_contact_data = 1;
-  }
-  if ( any_contact_data ) {
-    db( CONTACT_APPLY, 0, &contact_apply, ddum, ldum,
-      VERSION_NORMAL, GET_IF_EXISTS );
-    db( CONTROL_CONTACT_APPLY, icontrol, &control_contact_apply, ddum,
-      ldum, VERSION_NORMAL, GET_IF_EXISTS );
-    if ( contact_apply!=-NO && control_contact_apply!=-NO ) return 1;
-  }
-  return 0;
-}
 
 void iteration_start( void )
 
