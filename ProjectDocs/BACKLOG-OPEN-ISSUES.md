@@ -512,7 +512,7 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
   corpus is next edited.
 - **Severity**: LOW. **Effort**: cheap.
 
-### B15. sfnet `truss2`/`truss3` targets calibrated on the legacy GNU truss memory default (F4 T6d, 2026-10-11)
+### B15. sfnet `truss2`/`truss3` targets calibrated on the legacy GNU truss memory default (F4 T6d, 2026-10-11) — RESOLVED 2026-10-11
 
 - **Corpus**: sfnet 197 (external, not edited). Both inputs have no
   `group_truss_memory` record and target a reaction (0.1, 0.1) that only a
@@ -525,6 +525,10 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
   `materi_velocity_integrated`).
 - **Proposed fix**: adapt both inputs as the Professional copies when the
   sfnet corpus is next edited.
+- **Status**: **RESOLVED 2026-10-11 (`94b0254`)**: both local and omen
+  sfnet copies now declare `group_truss_memory 0 -updated` (`truss3` also
+  uses `materi_velocity_integrated`), as the Professional copies; GNU and
+  the Professional give the original target (0.1, 0.1), exit 0.
 - **Severity**: LOW. **Effort**: cheap.
 
 ### C1. `pruebavel` — dead/malformed test (the 1 PARSE)
@@ -2012,7 +2016,7 @@ Original report:
 | B11 | sfnet | `incnav3` target predates the `expansion_volume` inertia density (K04) | LOW | cheap |
 | B13 | sfnet | `axisym3/4`, `contac1/2`, `examp12`, `temp4/5`, `visc_pl2` targets calibrated on the old GNU `-follow_material` default (F3) | LOW | cheap |
 | B14 | sfnet | `calcul1/2`, `ctvmis2`, `examp18` targets calibrated on the old GNU `-size_tot`/`-size_dev` (F4 T6a) | LOW | cheap |
-| B15 | sfnet | `truss2`/`truss3` targets calibrated on the legacy `-updated` truss memory default (F4 T6d; Pro gives the new GNU value) | LOW | cheap |
+| B15 | sfnet | `truss2`/`truss3` targets calibrated on the legacy `-updated` truss memory default (F4 T6d) — resolved 2026-10-11 (inputs adapted as the Pro copies) | closed | - |
 | C1 | sfnet | `pruebavel` dead/malformed | LOW | cheap |
 | C2 | validation-suite | `groundflow_interface` `gvelx` sign | LOW | medium |
 | C3 | sfnet | `gforce10` 3D section sign — sign resolved 2026-10-11 (F4 T6a: plot_switch convention, test-2014 input restored, -5000 = Pro); square-face tie kept as deliberate divergence (owner 2026-10-11) | closed | - |
@@ -2068,7 +2072,7 @@ Original report:
 | C61 | — | interface Mohr-Coulomb + `inertia_apply`: first-step velocity differs from the Pro (0.412 vs 0.273), independent of the pass | LOW | medium |
 | C60 | — | interface `element_interface_intpnt_stress` normal sign depends on the node order (Pro: compression negative always) | LOW | cheap/medium |
 
-Forty-one items remain open: four MEDIUM and thirty-seven LOW (C23 and C24 resolved 2026-10-05; C25, C26, C27 and B10 added; F1 T3 / K04 2026-10-06 added B11, C28-C32; F1 T6 resolved C28, added and resolved B12; F2 T1 added C36; F2 T2 added C37, C38, C39; F2 T3 resolved C5 and added C40; F3 T2 resolved C8, C18, C19, C20 and added B13, C41; F4 T2 fixed the C41 tie and left a residual; F4 T3 resolved C33; F4 T4 closed C32, added C42 and resolved C31; F4 T7-T8 added C43-C46; F4 T9 resolved the C43 solver speed, decided C46b/C46e and added C47, C48, C49; F4 T10 resolved C48 and added C50; F4 T5 added C52, C53 and resolved C51; F4 T13 resolved C49 and added C54-C56; F4 T12 resolved C47 and added C57; F4 T6a resolved C6, C55, C56 and the C3 sign, the C3 square-face tie becoming a deliberate divergence (owner 2026-10-11), and added B14; F4 T6c fixed the `control_restart` integration-point reset and added C58; F4 T6d resolved C11 and C59, fixed the interface history and resolved C52, and added B15, C60 and C61). No open issue is CRITICAL or
+Forty items remain open: four MEDIUM and thirty-six LOW (C23 and C24 resolved 2026-10-05; C25, C26, C27 and B10 added; F1 T3 / K04 2026-10-06 added B11, C28-C32; F1 T6 resolved C28, added and resolved B12; F2 T1 added C36; F2 T2 added C37, C38, C39; F2 T3 resolved C5 and added C40; F3 T2 resolved C8, C18, C19, C20 and added B13, C41; F4 T2 fixed the C41 tie and left a residual; F4 T3 resolved C33; F4 T4 closed C32, added C42 and resolved C31; F4 T7-T8 added C43-C46; F4 T9 resolved the C43 solver speed, decided C46b/C46e and added C47, C48, C49; F4 T10 resolved C48 and added C50; F4 T5 added C52, C53 and resolved C51; F4 T13 resolved C49 and added C54-C56; F4 T12 resolved C47 and added C57; F4 T6a resolved C6, C55, C56 and the C3 sign, the C3 square-face tie becoming a deliberate divergence (owner 2026-10-11), and added B14; F4 T6c fixed the `control_restart` integration-point reset and added C58; F4 T6d resolved C11 and C59, fixed the interface history and resolved C52, and added B15, C60 and C61; B15 resolved the same day). No open issue is CRITICAL or
 HIGH. The validation-suite corpus has no open failure — its 233 real tests
 pass (`materi_direct_mc` input corrected, C17 resolved). Every remaining failure is a stale or malformed test, an out-of-scope model
 or infrastructure limit, a narrow post-processing divergence, a corpus-coverage
