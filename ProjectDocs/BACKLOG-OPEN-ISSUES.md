@@ -1881,6 +1881,18 @@ Original report:
   Needed: a pass that updates the inertia terms consistently with the
   final iterate (acceleration/velocity history of the truss), then probes
   + full corpus A/B (widening criterion, C35).
+- **F4 T6d attempt (2026-10-11)**: after the C11 fix the `dynamic3` gap
+  was the truss memory default / sign, not the pass (c11 = Pro 60.44025,
+  identical with the inertia gate removed). Widening the inertia gate
+  alone (`top.cc`, materi_acceleration / inertia_apply checks removed) was
+  NOT clean: full corpus A/B c59 20b5dc20 -> c52 b4f0f5eb (omen) test-2014
+  `iface_gen`, `iface_gen_geom`, `iface_gen_method` exit 0 -> 1
+  (interface elements + `inertia_apply -yes`: node 6 disy -0.1009 ->
+  -7.417, vely 0.0007 -> 0.551; `iface_gen_quad9` 9 % node_dof, targets
+  met); Pro other, sfnet, test-2026 without class change (`taylor3`
+  4e-4). build_safe with c52: 223/226 runs. Not committed; the gate stays.
+  Next: make the pass consistent for interface elements under inertia
+  (or keep interfaces gated) before widening.
 - **Severity**: LOW (gated, previous behaviour kept). **Effort**: medium.
 
 ### C53. Post-solve material state pass for slide models (`slide4`, F4 T5, 2026-10-10) — OPEN, investigation

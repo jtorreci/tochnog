@@ -444,3 +444,19 @@ docs + SEGUIMIENTO + BACKLOG + DIVERGENCES.
   new tests, test-2014 232 -> 232 (bmom_truss 2 %, targets met). Corpus
   check of the Pro memory input errors: sfnet truss5 hit -> owner decision
   2026-10-11: replicate both checks (C59, next work unit), then C52.
+  WU2 C59 `e0f2204` (owner decision 2026-10-11): truss.cc input errors
+  for explicit `-updated`/`-updated_linear` + materi_displacement and
+  `-total`/`-total_linear` without it (GNU message names both records;
+  check_error -no skips). Corpus scan: only sfnet truss5 hit (a) ->
+  adapted (external corpus + omen copy; record dropped, target -93.8 =
+  Pro run of the adapted input; validation-suite/test.zip copy untouched).
+  Tests truss_memory_updated_displacement_error1 /
+  truss_memory_total_velocity_error1: RED old rc 0, GREEN rc 1 + message.
+  build_safe 213 OK / 0 FALLO, runs 226/226; audit exit 0. A/B c11 ->
+  c59 20b5dc20: only the two new tests (expected error) and the
+  alternate1 timeout flake; no .dbs change.
+  WU3 C52 (inertia part of `post_solve_state_pass_gated`): built c52
+  b4f0f5eb on top of C59; A/B c59 -> c52 NOT clean (test-2014 iface_gen,
+  iface_gen_geom, iface_gen_method exit 0 -> 1; build_safe 223/226 runs)
+  -> top.cc not committed, gate kept, BACKLOG C52 updated. T6d stays open
+  for C52 (interface + inertia in the pass). Next: T6e C53 or C52 rework.
