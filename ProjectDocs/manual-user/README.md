@@ -522,3 +522,7 @@ page lists its own in "Differences with the Professional version".
 
 - [matrix_pardiso](matrix_pardiso.md) — `-matrix_pardiso` is solved with SuperLU, Bi-CG fallback when the factorization fails (memory budget 70 % of the room); GNU default stays the Bi-CG (class B divergence).
 - [solver_bicg_csr_operator](solver_bicg_csr_operator.md) — the iterative solver multiplies with an assembled CSR matrix (about 5x faster per iteration in 3D, same results up to round-off); `options_processors` row blocks; element-by-element fallback for mpc ties.
+
+## F4 T6a — cheap batch (2026-10-11)
+
+- [input_word_length](input_word_length.md) — input words are at most 99 characters: longer words are allowed inside comments (read in pieces) and are an input error elsewhere (F4 T6a, BACKLOG C56).

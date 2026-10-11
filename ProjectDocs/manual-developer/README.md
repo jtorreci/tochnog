@@ -552,3 +552,7 @@ page lists its own in "Differences with the Professional version".
 ## F4 T13 — scratch buffers and build flags (2026-10-10)
 
 - [db_buffer_contract](db_buffer_contract.md) — how to size the buffers given to `db()` / `get_group_data()` / `array_*()` / `geometry()`, the `scripts/audit_db_buffers.py` audit and the 34 call sites it fixed (prerequisite of the `-O2` build, BACKLOG C49).
+
+## F4 T6a — cheap batch (2026-10-11)
+
+- [input_word_length](input_word_length.md) — input.cc input_word(): bounded word reads (setw(MCHAR)) for every parser read, split words allowed only in comments; range.cc still pending.

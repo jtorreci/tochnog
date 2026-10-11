@@ -1710,7 +1710,7 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
   GNU = Pro (= old GNU without `derivatives`). Test
   `dof_rhside_derivatives1` (build_safe file check, RED old / GREEN new).
 
-### C56. Parser tokens longer than `MCHAR`-1 overflow the input buffers (F4 T13, 2026-10-11) — OPEN
+### C56. Parser tokens longer than `MCHAR`-1 overflow the input buffers (F4 T13, 2026-10-11) — RESOLVED 2026-10-11 (F4 T6a)
 
 - **Symptom**: ASan stack-buffer-overflow (`strlen` in
   `input_skip_comment()`, `input.cc`) on the Professional
@@ -1721,6 +1721,15 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
   (11 `cin >> str` sites in `input.cc`) and decide between truncating
   inside comments and an error for an over-long data token.
 - **Severity**: LOW. **Effort**: cheap.
+- **Status**: **RESOLVED 2026-10-11 (F4 T6a)**: `input.cc`
+  `input_word()` reads at most `MCHAR`-1 characters (`setw`) at all 16
+  word reads of the parser (11 `cin`, include file, 2 `.run`, 2 gmsh); a
+  longer word is split inside a comment (the parenthesis count sees
+  every piece) and is an input error (`Word too long`) elsewhere. Tests
+  `input_long_comment_word1` (rc 0) and `input_long_word_error1`
+  (expected error; old GNU rc 139). Not converted: the two `cin >> str`
+  reads of `range.cc` (outside the work unit; manual-developer
+  `input_word_length.md`).
 
 ### C52. Post-solve material state pass for inertia models (`dynamic3`, F4 T5, 2026-10-10) — OPEN, investigation
 
@@ -1846,7 +1855,7 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
 | C53 | Pro `other` | post-solve state pass for slide/contact models (`slide4`) — gated off, investigation | LOW | medium |
 | C54 | — | run-time record names read without a type check into a 1-value dummy (`post.cc`, `print_el.cc`, `repeat.cc`, `data.cc`, `calcul.cc`) | LOW | cheap |
 | C55 | validation-suite | `print_unknownsrhside()` indexes `node_rhside` (npuknwn values) with `iuknwn` (heap read past the end, wrong column when nder > 1)  — resolved 2026-10-11 (F4 T6a)| LOW | cheap |
-| C56 | Pro `other` | input tokens longer than `MCHAR`-1 (`cin >> str`) overflow the parser buffers (`ground19_water_under_dam`, 141-char URL in a comment) | LOW | cheap |
+| C56 | Pro `other` | input tokens longer than `MCHAR`-1 (`cin >> str`) overflow the parser buffers (`ground19_water_under_dam`, 141-char URL in a comment)  — resolved 2026-10-11 (F4 T6a)| LOW | cheap |
 | C57 | Pro `other` | hex27 nodal stress recovery (`force11` up to 3.5 % at the loaded points, displacements equal) and `post_point` interpolation on a hex27 node | LOW | medium |
 
 Forty-one items remain open: seven MEDIUM and thirty-four LOW (C23 and C24 resolved 2026-10-05; C25, C26, C27 and B10 added; F1 T3 / K04 2026-10-06 added B11, C28-C32; F1 T6 resolved C28, added and resolved B12; F2 T1 added C36; F2 T2 added C37, C38, C39; F2 T3 resolved C5 and added C40; F3 T2 resolved C8, C18, C19, C20 and added B13, C41; F4 T2 fixed the C41 tie and left a residual; F4 T3 resolved C33; F4 T4 closed C32, added C42 and resolved C31; F4 T7-T8 added C43-C46; F4 T9 resolved the C43 solver speed, decided C46b/C46e and added C47, C48, C49; F4 T10 resolved C48 and added C50; F4 T5 added C52, C53 and resolved C51; F4 T13 resolved C49 and added C54-C56; F4 T12 resolved C47 and added C57). No open issue is CRITICAL or

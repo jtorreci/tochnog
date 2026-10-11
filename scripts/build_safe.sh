@@ -1799,6 +1799,11 @@ if awk '$1==1 && $2==1 { d=$3-1.04166666667; if (d<0) d=-d; f=(d<1.e-6) } END { 
 else
   check_fail "dof_rhside_derivatives1" "rhside columns differ from the Professional"
 fi
+# C56: words longer than MCHAR-1 (input.cc input_word): split inside a
+#   comment (rc 0), an input error elsewhere. Old GNU: buffer overflow
+#   (the data-word case crashed, rc 139).
+run_ok "$T2026" input_long_comment_word1
+expected_error_ok "$T2026" input_long_word_error1
 
 # ---------------------------------------------------------------------
 # Sub-sprint materi_stress_force, lote 2 (integracion 2D quad4/quad9):
