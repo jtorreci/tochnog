@@ -1871,7 +1871,7 @@ Original report:
   reads of `range.cc` (outside the work unit; manual-developer
   `input_word_length.md`).
 
-### C52. Post-solve material state pass for inertia models (`dynamic3`, F4 T5, 2026-10-10) — OPEN, investigation
+### C52. Post-solve material state pass for inertia models (`dynamic3`, F4 T5, 2026-10-10) — RESOLVED 2026-10-11 (F4 T6d)
 
 - **Symptom**: with the ungated pass (TN_C35 prototype) Pro `dynamic3`
   (1D truss, `inertia_apply -yes`, prescribed acceleration 1.234,
@@ -1905,7 +1905,32 @@ Original report:
   `iface_mc_num` original targets restored (CORPUS-STALE-TARGETS §6).
   The inertia part of the gate is removed in a separate work unit only
   if the full corpus A/B is clean.
-- **Severity**: LOW (gated, previous behaviour kept). **Effort**: medium.
+- **Resolution (F4 T6d, 2026-10-11)**: inertia removed from
+  `post_solve_state_pass_gated()` (`top.cc`; slide/contact stay gated,
+  C53). RED/GREEN: test-2014 `iface_gen`, `iface_gen_geom`,
+  `iface_gen_method` rc 1 with the gate removed and the old interface
+  history (node 6 vely -1.70554), rc 0 with both changes. Full corpus A/B
+  on omen (interface fix -> gate removed): no class or exit-code change
+  except the `alternate1` timeout flake; .dbs differences only in inertia
+  models (Pro other `taylor3` 4.1e-4, distance to the Professional
+  unchanged: 0.2667 -> 0.2649 / 0.3907 -> 0.3926; test-2014 `iface_gen*`
+  up to 0.15, targets met; the rest <= 1.3e-7). build_safe 214 OK /
+  0 FALLO, runs 226/226. Remaining interface + inertia gap -> C61.
+- **Severity**: LOW. **Effort**: medium.
+
+### C61. Interface Mohr-Coulomb under `inertia_apply`: first-step velocity differs from the Professional (F4 T6d, 2026-10-11) — OPEN
+
+- **Symptom**: probe (two quad4 blocks, quad4 interface kn = kt = 1000,
+  phi = 0.785398, c = 0, density 1, `inertia_apply -yes`, volume force
+  on the right block, right edge velx -0.1, dt 0.1): after one step
+  node 6 vely GNU 0.412250 vs Professional 0.273356; after 10 steps
+  -0.105 (GNU, pass on) / -0.098 (GNU, gated) vs -0.0456 (Pro);
+  interface shear IP 1 1.65 / 1.84 vs 3.96. Same gap with and without the
+  post-solve pass, so it predates C52.
+- **Cause**: not established (interface + inertia coupling in the first
+  step; candidates: the interface rhs/tangent with the dynamic
+  predictor, or the initial acceleration).
+- **Severity**: LOW. **Effort**: medium.
 
 ### C60. Interface `element_interface_intpnt_stress` normal sign depends on the node order (F4 T6d, 2026-10-11) — OPEN
 
@@ -2032,7 +2057,7 @@ Original report:
 | C49 | — | build at `-O1` — resolved 2026-10-11 (F4 T13: 34 scratch-buffer call sites fixed, default `-O2`, results identical) | LOW | medium |
 | C50 | Pro other | `interface_bar2_hex8` extruded/converted interface mesh numbering | LOW | medium |
 | C51 | validation-suite | hardsoil `gamma_p` read the nodal kappa of the previous evaluation (iteration-count oscillation, `mhardsoil_plast`) — resolved 2026-10-10 (F4 T5); cap/cap1/void reads open | MEDIUM | cheap |
-| C52 | Pro `other` | post-solve state pass for inertia models (`dynamic3`) — gated off, investigation | LOW | medium |
+| C52 | Pro `other` | post-solve state pass for inertia models (`dynamic3`) — resolved 2026-10-11 (F4 T6d: interface history fix + inertia removed from the gate) | LOW | medium |
 | C53 | Pro `other` | post-solve state pass for slide/contact models (`slide4`) — gated off, investigation | LOW | medium |
 | C54 | — | run-time record names read without a type check into a 1-value dummy (`post.cc`, `print_el.cc`, `repeat.cc`, `data.cc`, `calcul.cc`) | LOW | cheap |
 | C55 | validation-suite | `print_unknownsrhside()` indexes `node_rhside` (npuknwn values) with `iuknwn` (heap read past the end, wrong column when nder > 1)  — resolved 2026-10-11 (F4 T6a)| LOW | cheap |
@@ -2040,9 +2065,10 @@ Original report:
 | C57 | Pro `other` | hex27 nodal stress recovery (`force11` up to 3.5 % at the loaded points, displacements equal) and `post_point` interpolation on a hex27 node | LOW | medium |
 | C58 | Pro `validation` | `control_restart`: interface/spring/contact-spring/tendon/damage element history records not verified after the F4 T6c integration-point reset (`number_timesteps` record absent) | LOW | cheap/medium |
 | C59 | sfnet | `group_truss_memory -updated` + `materi_displacement` (and `-total*` without it): input error in the Pro — resolved 2026-10-11 (F4 T6d) | LOW | cheap |
+| C61 | — | interface Mohr-Coulomb + `inertia_apply`: first-step velocity differs from the Pro (0.412 vs 0.273), independent of the pass | LOW | medium |
 | C60 | — | interface `element_interface_intpnt_stress` normal sign depends on the node order (Pro: compression negative always) | LOW | cheap/medium |
 
-Forty-one items remain open: four MEDIUM and thirty-seven LOW (C23 and C24 resolved 2026-10-05; C25, C26, C27 and B10 added; F1 T3 / K04 2026-10-06 added B11, C28-C32; F1 T6 resolved C28, added and resolved B12; F2 T1 added C36; F2 T2 added C37, C38, C39; F2 T3 resolved C5 and added C40; F3 T2 resolved C8, C18, C19, C20 and added B13, C41; F4 T2 fixed the C41 tie and left a residual; F4 T3 resolved C33; F4 T4 closed C32, added C42 and resolved C31; F4 T7-T8 added C43-C46; F4 T9 resolved the C43 solver speed, decided C46b/C46e and added C47, C48, C49; F4 T10 resolved C48 and added C50; F4 T5 added C52, C53 and resolved C51; F4 T13 resolved C49 and added C54-C56; F4 T12 resolved C47 and added C57; F4 T6a resolved C6, C55, C56 and the C3 sign, the C3 square-face tie becoming a deliberate divergence (owner 2026-10-11), and added B14; F4 T6c fixed the `control_restart` integration-point reset and added C58; F4 T6d resolved C11 and C59, found the interface history root cause of C52 and added B15 and C60). No open issue is CRITICAL or
+Forty-one items remain open: four MEDIUM and thirty-seven LOW (C23 and C24 resolved 2026-10-05; C25, C26, C27 and B10 added; F1 T3 / K04 2026-10-06 added B11, C28-C32; F1 T6 resolved C28, added and resolved B12; F2 T1 added C36; F2 T2 added C37, C38, C39; F2 T3 resolved C5 and added C40; F3 T2 resolved C8, C18, C19, C20 and added B13, C41; F4 T2 fixed the C41 tie and left a residual; F4 T3 resolved C33; F4 T4 closed C32, added C42 and resolved C31; F4 T7-T8 added C43-C46; F4 T9 resolved the C43 solver speed, decided C46b/C46e and added C47, C48, C49; F4 T10 resolved C48 and added C50; F4 T5 added C52, C53 and resolved C51; F4 T13 resolved C49 and added C54-C56; F4 T12 resolved C47 and added C57; F4 T6a resolved C6, C55, C56 and the C3 sign, the C3 square-face tie becoming a deliberate divergence (owner 2026-10-11), and added B14; F4 T6c fixed the `control_restart` integration-point reset and added C58; F4 T6d resolved C11 and C59, fixed the interface history and resolved C52, and added B15, C60 and C61). No open issue is CRITICAL or
 HIGH. The validation-suite corpus has no open failure — its 233 real tests
 pass (`materi_direct_mc` input corrected, C17 resolved). Every remaining failure is a stale or malformed test, an out-of-scope model
 or infrastructure limit, a narrow post-processing divergence, a corpus-coverage

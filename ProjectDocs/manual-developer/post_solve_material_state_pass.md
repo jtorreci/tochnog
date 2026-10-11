@@ -50,8 +50,6 @@ ip velx 1, eptxx 0, while the old GNU gave ip velx 0.5, eptxx -0.01.
 
 Returns 1 (pass OFF) for:
 
-- inertia: `materi_acceleration`, OPTIONS_INERTIA -yes (`inertia_apply`
-  is a database alias), or any CONTROL_OPTIONS_INERTIA index -yes;
 - slide: NODE_SLIDE or any record of data class SLIDE;
 - contact: any record of data class CONTACT, unless CONTACT_APPLY or
   CONTROL_CONTACT_APPLY (this icontrol) is -no (same test as
@@ -70,6 +68,18 @@ calling `slide()` / `parallel_contact` consistently, or a consistent
 inertia update) AND the probes plus the full corpus A/B on omen show no
 test moving away from the Professional. Investigations: BACKLOG C52
 (`dynamic3`, inertia/truss) and C53 (`slide4`, friction state).
+
+**Inertia widened (F4 T6d, BACKLOG C52, 2026-10-11)**: the inertia test
+(`materi_acceleration`, OPTIONS_INERTIA, CONTROL_OPTIONS_INERTIA) was
+removed from the gate. The two blockers were not the pass: Pro `dynamic3`
+was the truss memory default / sign defect C11 (= Professional with and
+without the gate), and the test-2014 `iface_gen`, `iface_gen_geom`,
+`iface_gen_method` break of the first attempt (node 6 vely -1.70554, rc 1)
+was the interface Mohr-Coulomb elastic-trial history (fixed in
+`interface.cc`, `manual-developer/group_interface.md` record 2026-10-11).
+With both fixes these tests are rc 0 with the pass. An interface +
+`inertia_apply` probe keeps an older GNU/Professional gap that
+the pass does not cause (BACKLOG C61). Slide and contact stay gated (C53).
 
 ## Verification
 
@@ -99,5 +109,5 @@ test moving away from the Professional. Investigations: BACKLOG C52
 
 ## Differences with the Professional version
 
-- Gated families keep the one-iteration lag (DIVERGENCES class B
-  `POSTPASS-GATE`).
+- Gated families (slide, contact since F4 T6d) keep the one-iteration lag
+  (DIVERGENCES class B `POSTPASS-GATE`).

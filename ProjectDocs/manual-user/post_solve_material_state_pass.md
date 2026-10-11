@@ -41,8 +41,6 @@ For these families the pass is OFF and the previous scheme is kept
 unchanged (only the nodal stress is re-synchronised, see
 `nodal_stress_post_solve_sync`):
 
-- inertia: `materi_acceleration`, `inertia_apply -yes` /
-  `options_inertia -yes`, or any `control_inertia_apply -yes`;
 - slide: any `slide_*` record or `node_slide`;
 - contact: any `contact_*` record, unless `contact_apply -no` /
   `control_contact_apply -no` for the step;
@@ -81,11 +79,13 @@ end, the same as the Professional 02-08-2026. Before, node 2 velx went
 
 ## Differences with the Professional version
 
-- Gated families (inertia, slide, contact): the GNU keeps the previous
+- Inertia models (`materi_acceleration`, `inertia_apply -yes`) take the
+  pass since F4 T6d (2026-10-11, BACKLOG C52).
+- Gated families (slide, contact): the GNU keeps the previous
   scheme, so with few iterations their state still lags one iteration.
   This is a temporary divergence (DIVERGENCES class B, `POSTPASS-GATE`). The
-  measured cases are Pro `dynamic3` (truss with prescribed acceleration) and
-  `slide4` (slide friction state): there, the ungated pass moved the result
+  measured case is Pro `slide4` (slide friction state): there, the ungated
+  pass moved the result
   away from the Professional. A family is enabled only after the pass
   covers its physics and the full corpus shows no test moving away from the
   Professional.
