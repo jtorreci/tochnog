@@ -494,6 +494,24 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
   fix on `dev/f1-cheap-bugs` (F1 T6).
 - **Severity**: **LOW**. **Effort**: **cheap**.
 
+### B14. sfnet targets calibrated on the old GNU `-size_tot`/`-size_dev` (F4 T6a, 2026-10-11)
+
+- **Corpus**: sfnet 197 (external, not edited). Since F4 T6a `-size_tot`
+  and `-size_dev` are sqrt(A:A) / sqrt(B:B) as the manual (post_calcul)
+  and the Professional; the GNU used sqrt(0.5 ...). Four sfnet inputs
+  have targets calibrated on the old value and now exit 1:
+  `calcul1`, `calcul2` (sizes 0.707 / 0.577; the Professional's own
+  `calcul1` targets 1 / 0.816497), `ctvmis2` (`-sizedev` 0.11547; the
+  Professional's own `ctvmis2` targets 0.163299 = 0.11547 sqrt(2), which
+  the GNU now meets: Pro `other` ctvmis2 exit 1 -> 0) and `examp18`
+  (`post_point_dof_calcul` 6.07489e7; GNU node values 1.514e8 ->
+  2.142e8, ratio sqrt(2)). Other size values change by sqrt(2) with no
+  exit-code change (`examp3`, `examp10`, `examp14`, `examp17`,
+  `examp23`).
+- **Proposed fix**: retarget the four inputs (x sqrt(2)) when the sfnet
+  corpus is next edited.
+- **Severity**: LOW. **Effort**: cheap.
+
 ### C1. `pruebavel` — dead/malformed test (the 1 PARSE)
 
 - **Corpus**: sfnet 197.
@@ -1832,6 +1850,7 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
 | B10 | sfnet | `condif2/3`, `examp1`, `incnav5`, `strconv1` targets calibrated on the legacy `convection_apply -yes` default (K03) | LOW | cheap |
 | B11 | sfnet | `incnav3` target predates the `expansion_volume` inertia density (K04) | LOW | cheap |
 | B13 | sfnet | `axisym3/4`, `contac1/2`, `examp12`, `temp4/5`, `visc_pl2` targets calibrated on the old GNU `-follow_material` default (F3) | LOW | cheap |
+| B14 | sfnet | `calcul1/2`, `ctvmis2`, `examp18` targets calibrated on the old GNU `-size_tot`/`-size_dev` (F4 T6a) | LOW | cheap |
 | C1 | sfnet | `pruebavel` dead/malformed | LOW | cheap |
 | C2 | validation-suite | `groundflow_interface` `gvelx` sign | LOW | medium |
 | C3 | sfnet | `gforce10` 3D section sign — sign resolved 2026-10-11 (F4 T6a: plot_switch convention, test-2014 input restored, -5000 = Pro); open: square-face tie without thickness_switch (owner decision) | LOW | cheap |
@@ -1883,7 +1902,7 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
 | C56 | Pro `other` | input tokens longer than `MCHAR`-1 (`cin >> str`) overflow the parser buffers (`ground19_water_under_dam`, 141-char URL in a comment)  — resolved 2026-10-11 (F4 T6a)| LOW | cheap |
 | C57 | Pro `other` | hex27 nodal stress recovery (`force11` up to 3.5 % at the loaded points, displacements equal) and `post_point` interpolation on a hex27 node | LOW | medium |
 
-Thirty-eight items remain open: five MEDIUM and thirty-three LOW (C23 and C24 resolved 2026-10-05; C25, C26, C27 and B10 added; F1 T3 / K04 2026-10-06 added B11, C28-C32; F1 T6 resolved C28, added and resolved B12; F2 T1 added C36; F2 T2 added C37, C38, C39; F2 T3 resolved C5 and added C40; F3 T2 resolved C8, C18, C19, C20 and added B13, C41; F4 T2 fixed the C41 tie and left a residual; F4 T3 resolved C33; F4 T4 closed C32, added C42 and resolved C31; F4 T7-T8 added C43-C46; F4 T9 resolved the C43 solver speed, decided C46b/C46e and added C47, C48, C49; F4 T10 resolved C48 and added C50; F4 T5 added C52, C53 and resolved C51; F4 T13 resolved C49 and added C54-C56; F4 T12 resolved C47 and added C57; F4 T6a resolved C6, C55, C56 and the C3 sign, leaving the C3 square-face tie for an owner decision). No open issue is CRITICAL or
+Thirty-nine items remain open: five MEDIUM and thirty-four LOW (C23 and C24 resolved 2026-10-05; C25, C26, C27 and B10 added; F1 T3 / K04 2026-10-06 added B11, C28-C32; F1 T6 resolved C28, added and resolved B12; F2 T1 added C36; F2 T2 added C37, C38, C39; F2 T3 resolved C5 and added C40; F3 T2 resolved C8, C18, C19, C20 and added B13, C41; F4 T2 fixed the C41 tie and left a residual; F4 T3 resolved C33; F4 T4 closed C32, added C42 and resolved C31; F4 T7-T8 added C43-C46; F4 T9 resolved the C43 solver speed, decided C46b/C46e and added C47, C48, C49; F4 T10 resolved C48 and added C50; F4 T5 added C52, C53 and resolved C51; F4 T13 resolved C49 and added C54-C56; F4 T12 resolved C47 and added C57; F4 T6a resolved C6, C55, C56 and the C3 sign, leaving the C3 square-face tie for an owner decision, and added B14). No open issue is CRITICAL or
 HIGH. The validation-suite corpus has no open failure — its 233 real tests
 pass (`materi_direct_mc` input corrected, C17 resolved). Every remaining failure is a stale or malformed test, an out-of-scope model
 or infrastructure limit, a narrow post-processing divergence, a corpus-coverage

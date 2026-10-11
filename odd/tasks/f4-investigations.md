@@ -20,6 +20,13 @@ through `scripts/remote_run.sh`.
 - [x] T12 C47: `force11` `mom1y_sig` 5.80223 vs Pro 5.76460 (0.65 %, model difference, solver excluded). Root cause: quad9 -> hex27 extrusion did not share the inner-plane nodes. Done `24301c8`.
 - [x] T13 C49 prerequisite: audit every `db()` / array call that receives a fixed-size scratch buffer (`idum[1]`, `ddum[1]`, small arrays) and can write more values; fix them; run build_safe + corpus under ASan; then switch the build to `-O2` with a full corpus A/B (owner 2026-10-10). Done `40ae7cd` (fixes + audit script) + `44c68c7` (`-O2` default).
 Order (owner 2026-10-10): T10 → T11 → T5 → T13 → T12 → T6.
+T6 triage (2026-10-11, HEAD 53dbb86) and owner order (2026-10-11):
+- [x] T6a Cheap batch: C55 (`print_un.cc:149` node_rhside index), C56 (`input.cc` `cin >> str` overflow), `-size_tot` (calcul.cc sqrt(0.5 a:a) vs Pro sqrt(a:a); manual first), C3 (thickness_switch default; sign = plot_switch convention), K14a (`hypoplas.cc` hyhis write-back), C6 (corpus input repair). Done `f7559bc` `80b19af` `4705692` `7e09c40` `523a959` `3e7837b` (+ docs); C3 square-face tie -> owner decision.
+- [ ] T6b K24 `large2` transient 3D consolidation coupling (4.5 % pres, dt-independent; drained steady state equal).
+- [ ] T6c K15 `validation_14` `control_restart` semantics (without restart every node_dof = Pro).
+- [ ] T6d C11 `dynamic3` (disp_primary_gate per material) -> C52.
+- [ ] T6e C53 slide in the post-solve pass.
+- [ ] T6f Rest by relevance: K15 mmc_tension, validation_3 kap/eptzz, K14b hypo3, C7 Mazars, K21, C57. Parked: K14c (ISA, class D), mohrcou2 sfnet (input artifact).
 
 ## Later (owner 2026-10-10, after convergence with ALL divergences documented and accepted)
 - F6: exhaustive profiling and optimisation pass; special attention to the hot
@@ -339,3 +346,40 @@ docs + SEGUIMIENTO + BACKLOG + DIVERGENCES.
   + build_safe + docs: control_mesh_extrude user/dev, SEGUIMIENTO row,
   BACKLOG C47 resolved + C57, DIVERGENCES C47 closed + C57, solver.md /
   matrix_pardiso.md notes). Next: T6.
+- T6a (route: delegated writer, single writer; inline edits of print_un.cc,
+  input.cc, calcul.cc, hypoplas.cc, corpus inputs; local Pro probes, clean
+  scratch build md5 d1aa27b8 = build/tochnog = omen f4t6a_new; omen A/B
+  `f4t6a_runs`). Trigger evidence: 4 code files + docs (writer trigger).
+  C55 `f7559bc`: `node_rhside[ipuknwn]`; Pro probe with derivatives =
+  new GNU (vely_rhside +-1.0416667, sigyy_rhside -2.0833333; old 0 and
+  4.7e-310). Test dof_rhside_derivatives1 + file check (RED/GREEN).
+  C56 `80b19af`: `input_word()` (setw(MCHAR)) at all 16 word reads;
+  split words allowed in comments, `Word too long` elsewhere. Tests
+  input_long_comment_word1 (rc 0), input_long_word_error1 (old SIGSEGV).
+  range.cc still has 2 `cin >> str` (outside the surface).
+  size_tot `4705692`: manual post_calcul = sqrt(Aij Aij) / sqrt(Bij Bij),
+  no 0.5 (also -size_dev); Pro calcul1 1 / 0.816497. Test
+  post_calcul_size_tot1 (RED/GREEN). A/B: Pro ctvmis2 1 -> 0; sfnet
+  calcul1/2, ctvmis2, examp18 0 -> 1 (stale old-convention targets,
+  BACKLOG B14).
+  K14a `7e09c40`: hyhis1/2/3/5/7 written back (clay from statev + L;
+  basic phi_mob, OCR p_e/p without s, sqrt(M:M) of the zero-increment
+  tangent). hypo7/8/12/13 hyhis2/3/5 = Pro to ~3e-4; residuals hyhis1
+  (GNU substep vs Pro dt), hypo12 hyhis3 (m_R L), hypo9 -> DIVERGENCES
+  K14. Test hypo_masin_history_slots1 (RED/GREEN). A/B: only hyhis
+  columns change. hypo7 1.7 -> 3.1 s user.
+  C6 `523a959`: generated interface elements removed from the 4
+  iface_gen inputs (+ element_geometry tags in iface_gen_method); runs
+  generate them; 4 build_safe checks.
+  C3 `3e7837b`: no code change; gforce10 input regains the force10
+  plot_switch/thickness_switch -yes, target -5000 = Pro exactly;
+  thickness_switch default -no in manual, Pro and GNU. OWNER DECISION:
+  square end face without -yes (Pro degenerate frame vs GNU tie by the
+  reference point).
+  Evidence: build_safe 199 OK / 0 FALLO, runs 226/226, rc 0 (baseline
+  189); audit_db_buffers exit 0. Corpus A/B old edb81804 -> new: Pro
+  other OK 277 -> 277 (ctvmis2 exit 1 -> 0; dbs diffs calcul1/2,
+  ctvmis2, hypo7/8/9/12/13), sfnet 192 -> 192 (exit 0 -> 1 calcul1/2,
+  ctvmis2, examp18; size x sqrt(2) in examp3/10/14/17/23), t26 122 ->
+  122 (new tests GREEN; bicg_csr_threads1 2-thread round-off), vs 232 ->
+  232 (dbs identical). Docs commit: see git log.
