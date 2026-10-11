@@ -449,7 +449,7 @@ page lists its own in "Differences with the Professional version".
 
 ## NODAL STRESS RECOVERY (2026-09-15)
 
-- [nodal_stress_recovery](nodal_stress_recovery.md) — the stress reported at a node is the absolute weighted average of the adjacent elements' nodal stresses (Professional convention). Visible with partially deleted/reactivated elements: `delete2.dat` shared node 2 `sigxx` is now `0.8` (was `0.6`); a currently deleted element is excluded from the recovery (`delete3.dat` `sigyy = 0.6` on the shared nodes).
+- [nodal_stress_recovery](nodal_stress_recovery.md) — the stress reported at a node is the absolute weighted average of the adjacent elements' nodal stresses (Professional convention). Visible with partially deleted/reactivated elements: `delete2.dat` shared node 2 `sigxx` is now `0.8` (was `0.6`); a currently deleted element is excluded from the recovery (`delete3.dat` `sigyy = 0.6` on the shared nodes). Since F4 T6f (2026-10-11) the tria3/tria6/tet4 and 1-point bar2 nodes are the arithmetic mean too (before area-weighted; `tria3_nodal_recovery_mean1`).
 
 ## NODAL STRESS POST-SOLVE SYNC (2026-09-15)
 

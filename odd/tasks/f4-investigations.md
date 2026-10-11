@@ -514,3 +514,18 @@ docs + SEGUIMIENTO + BACKLOG + DIVERGENCES.
   C63 (slide4 post_node_rhside_fixed vs Pro, pre-existing). No full
   corpus A/B re-run by the writer (investigation A/B covered the same
   patch). Next: T6f.
+  T6f WU1 K15 `validation_14` (2026-10-11, owner-approved), route:
+  delegated writer (trigger: source + 6 tests + docs; probes and A/B on
+  omen `f4t6f_w`, `f4t6f_runs`, `f4t6f_val`). `1d446b3`
+  fix(recovery): tria3 (1 pt and 3-pt nodal), tria6, tet4 1 pt, bar2
+  1 pt nodal stress/strain recovery = arithmetic mean (Professional,
+  two-element probes exact; GNU area-weighted). RED/GREEN: test-2026
+  tria3_nodal_recovery_mean1/2, tria6/bar2/tet4_nodal_recovery_mean1,
+  test-2014 validation_14_pass1 (rc 1 HEAD, rc 0 fix). Full Pro
+  validation_14 = Pro within 1.2e-4 (HEAD velx 99 %). Corpus A/B head
+  vs wu1: rc changes only the 6 new tests; closer to Pro 2 (axisym3,
+  force17), farther 0; sfnet examp23 different mesh (no Pro, rc 0).
+  build_safe TN_CHECK_ONLY=1 222 OK / 0 FALLO, runs 226/226;
+  audit_db_buffers exit 0. BACKLOG C64 (quad4 operator), C65 (Pro
+  post_point at a node), C66 (tria6 element 1e-5), C67 (unmeasured
+  rules). Next: WU2 (integration-point kappa).

@@ -1922,6 +1922,65 @@ Original report:
   0 FALLO, runs 226/226. Remaining interface + inertia gap -> C61.
 - **Severity**: LOW. **Effort**: medium.
 
+### C67. Nodal recovery of the unmeasured element rules (F4 T6f, 2026-10-11) — OPEN
+
+- **Symptom**: F4 T6f WU1 aligned the nodal recovery of tria3 (1 point,
+  3-point nodal rule), tria6, tet4 (1 point) and bar2 (1 point) with the
+  Professional arithmetic mean (two-element probes, exact). The other
+  rules outside the Gauss table still return `h_inol` (volume-weighted
+  across elements): tet4 `-maximal`, bar2 with 2 points, bar3/bar4, the
+  quad/hex Lobatto rules (`group_integration_method -lobatto`), tria3/tet4
+  axisymmetric variants were not probed separately.
+- **Fix candidate**: one two-element probe per rule (different size and
+  stiffness), compare the Professional `node_dof` with the mean and the
+  volume-weighted mean of its `element_dof`; extend
+  `sri_stress_recovery_weight()` only for the rules proven to be the mean.
+- **Severity**: LOW. **Effort**: cheap.
+
+### C66. tria6 element results differ ~1e-5 from the Professional (F4 T6f, 2026-10-11) — OPEN
+
+- **Symptom**: two-tria6 probe (`test-2026/tria6_nodal_recovery_mean1`):
+  displacements, integration-point and single-element nodal stresses
+  differ 1e-6..2e-5 relative from the Professional 02-08-2026 (the
+  nodal recovery itself is the same mean). The tria3, tet4 and bar2
+  probes agree to 1e-13.
+- **Cause (hypothesis)**: the tria6 6-point nodal rule weights
+  (`polynom.cc`, corner weight `EPS_TRIANGLE` 1e-6, mid-side 1/3-1e-6)
+  or a different Professional tria6 rule.
+- **Severity**: LOW. **Effort**: cheap/medium.
+
+### C65. Professional `post_point_dof` at a node differs from its own `node_dof` (F4 T6f, 2026-10-11) — OPEN
+
+- **Symptom**: Professional `validation_14`: `post_point_dof` at the
+  coordinates of a node gives `eppxy` 0.00815 while its `node_dof` at that
+  node is 0.01400. GNU interpolates the nodal field, so its post point at
+  a node equals its `node_dof`. Consistent with the known AUDIT section 5
+  item (the Professional evaluates post points from the element-local
+  recovered value, `element_dof`); which element value (or combination)
+  it uses at a shared node is not identified.
+- **Next step**: identify which element the Professional uses (lowest
+  number, first found) on a two-element probe; decide whether to follow.
+- **Severity**: LOW (post-processing only). **Effort**: cheap.
+
+### C64. quad4 per-element recovery of the Professional: linear `1,xi,eta` least squares? (F4 T6f, 2026-10-11) — OPEN
+
+- **Symptom**: on a Drucker-Prager variant of `validation_14` (quad4,
+  2x2 Gauss) the Professional per-element nodal values (`element_dof`
+  from `element_intpnt_dof`) are reproduced exactly in 92 of 95 elements
+  by a linear least-squares fit `1,xi,eta` of the 4 Gauss values; GNU
+  uses the bilinear interpolation `1,x,y,xy` (`miscel.cc`
+  `sri_recovery_factor()`, table type 0), as documented in
+  `integration_quadrature_and_stress_recovery.md` section 2 (identified
+  on probes that may have had no `xi*eta` stress mode). Related: C42
+  (physical vs natural coordinates). The kappa probe of F4 T6f WU2
+  (`test-2026/kappa_ip_state1`) shows the same signature: reactions equal
+  the Professional within 1e-4, nodal sigyy/kap a few per cent off.
+- **Next step**: an elastic quad4 probe with a non-zero `xi*eta` stress
+  mode (e.g. pure bending of a single quad4) to discriminate the two
+  operators; then decide together with C42 (cd_method exit code).
+- **Severity**: LOW (nodal output only; the solution is unchanged).
+  **Effort**: cheap probe, medium fix.
+
 ### C63. `post_node_rhside_fixed` of Pro `slide4` differs from the Professional (F4 T6e, 2026-10-11) — OPEN
 
 - **Symptom**: Pro `other/slide4`: GNU `post_node_rhside_fixed` 3.44e-3 /
