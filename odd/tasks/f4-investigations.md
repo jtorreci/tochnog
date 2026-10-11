@@ -22,7 +22,7 @@ through `scripts/remote_run.sh`.
 Order (owner 2026-10-10): T10 → T11 → T5 → T13 → T12 → T6.
 T6 triage (2026-10-11, HEAD 53dbb86) and owner order (2026-10-11):
 - [x] T6a Cheap batch: C55 (`print_un.cc:149` node_rhside index), C56 (`input.cc` `cin >> str` overflow), `-size_tot` (calcul.cc sqrt(0.5 a:a) vs Pro sqrt(a:a); manual first), C3 (thickness_switch default; sign = plot_switch convention), K14a (`hypoplas.cc` hyhis write-back), C6 (corpus input repair). Done `f7559bc` `80b19af` `4705692` `7e09c40` `523a959` `3e7837b` (+ docs); C3 square-face tie -> owner decision.
-- [ ] T6b K24 `large2` transient 3D consolidation coupling (4.5 % pres, dt-independent; drained steady state equal).
+- [x] T6b K24 `large2` transient 3D consolidation coupling (4.5 % pres, dt-independent; drained steady state equal). Closed 2026-10-11: deliberate divergence class A (`c350b3c`, `0cc417f`).
 - [ ] T6c K15 `validation_14` `control_restart` semantics (without restart every node_dof = Pro).
 - [ ] T6d C11 `dynamic3` (disp_primary_gate per material) -> C52.
 - [ ] T6e C53 slide in the post-solve pass.
@@ -384,3 +384,22 @@ docs + SEGUIMIENTO + BACKLOG + DIVERGENCES.
   122 (new tests GREEN; bicg_csr_threads1 2-thread round-off), vs 232 ->
   232 (dbs identical). Docs commit: see git log.
 - T6a C3 owner decision 2026-10-11: keep the GNU square-face tie-break, class A (`a0cea2e`). T6a closed. Next: T6b K24.
+- T6b K24 (2026-10-11), route: delegated writer (docs in 11 files + 4 test
+  inputs + build_safe wiring; preparation reading delegated). Cause:
+  `solver_matrix_symmetric -yes` - the Pro symmetrizes the non-symmetric
+  Biot u-p matrix (manual 6.1052), the GNU keeps it (Bi-CG, warning).
+  Owner decision option A: GNU kept, DIVERGENCES K24 -> class A (A 20,
+  B 38), also Pro-suspect. Guard tests `c350b3c`
+  (test-2026/k24_consol_3d1/2 -yes/-no, k24_consol_3d_undrained1/2),
+  targets = Pro 02-08-2026 `-no` re-run here at node 1: pres -0.7085296
+  / disx 0.05420111 (GNU -0.708335 / 0.0542098) and pres -0.847677 /
+  disx 0.01748967 (GNU -0.8476521 / 0.0175445); GNU identical for -yes
+  and -no; Pro -yes -0.678332 / -0.803176 fails them; a wrong target
+  gives rc 1. Guard tests: GREEN on the current binary, no RED (no
+  behaviour change). Docs `0cc417f`: DIVERGENCES, AUDIT K24 closed,
+  SEGUIMIENTO Descarte + register, solver_matrix_symmetric user/dev
+  (manual number corrected to 6.1052), solver.md stale "-yes forces CG"
+  text fixed, groundflow_consolidation_apply notes. Evidence: build_safe
+  TN_CHECK_ONLY=1 203 OK / 0 FALLO, runs 226/226. Pending (source,
+  out of scope): two stale comments in so_bicg.cc next to the selection.
+  Next: T6c K15.
