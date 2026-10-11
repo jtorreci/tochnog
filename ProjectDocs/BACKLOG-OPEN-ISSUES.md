@@ -1900,12 +1900,12 @@ Original report:
   after a slip reversal; the one-iteration lag (C35) masked it.
   Quasi-static reversal probe: Professional 02-08-2026 4.000000083,
   analytic 4.0, GNU 5.0. Fixed (owner decision 2026-10-11): the history
-  is the clamped force (work unit F4 T6d C52 interface); test-2026
+  is the clamped force (`b318484`); test-2026
   `interface_mc_slip_reversal1`; test-2014 `iface_mc_slip`/`_1step`/
   `iface_mc_num` original targets restored (CORPUS-STALE-TARGETS §6).
   The inertia part of the gate is removed in a separate work unit only
   if the full corpus A/B is clean.
-- **Resolution (F4 T6d, 2026-10-11)**: inertia removed from
+- **Resolution (F4 T6d, 2026-10-11, `c276931`)**: inertia removed from
   `post_solve_state_pass_gated()` (`top.cc`; slide/contact stay gated,
   C53). RED/GREEN: test-2014 `iface_gen`, `iface_gen_geom`,
   `iface_gen_method` rc 1 with the gate removed and the old interface

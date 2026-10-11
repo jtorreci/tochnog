@@ -24,7 +24,7 @@ T6 triage (2026-10-11, HEAD 53dbb86) and owner order (2026-10-11):
 - [x] T6a Cheap batch: C55 (`print_un.cc:149` node_rhside index), C56 (`input.cc` `cin >> str` overflow), `-size_tot` (calcul.cc sqrt(0.5 a:a) vs Pro sqrt(a:a); manual first), C3 (thickness_switch default; sign = plot_switch convention), K14a (`hypoplas.cc` hyhis write-back), C6 (corpus input repair). Done `f7559bc` `80b19af` `4705692` `7e09c40` `523a959` `3e7837b` (+ docs); C3 square-face tie -> owner decision.
 - [x] T6b K24 `large2` transient 3D consolidation coupling (4.5 % pres, dt-independent; drained steady state equal). Closed 2026-10-11: deliberate divergence class A (`c350b3c`, `0cc417f`).
 - [x] T6c K15 `validation_14` `control_restart` semantics (without restart every node_dof = Pro). Done `8ca6124`: restart resets the IP state (manual 6.368, Pro deletes element_dof); `validation_14` NOT caused by the restart (re-scoped, open under T6f); element history records -> BACKLOG C58.
-- [ ] T6d C11 `dynamic3` (disp_primary_gate per material) -> C52.
+- [x] T6d C11 `dynamic3` (disp_primary_gate per material) -> C52. Done `28992d5` (C11), `e0f2204` (C59), `b318484` (interface history), `c276931` (inertia pass).
 - [ ] T6e C53 slide in the post-solve pass.
 - [ ] T6f Rest by relevance: K15 `validation_14` (re-scoped by T6c: pass-1 hole-boundary nodal stress/plastic strain up to ~20 % at 8 nodes on the r=0.01 circle -> `refine_locally` picks a different element -> pass 2 on a different mesh), K15 mmc_tension, validation_3 kap/eptzz, K14b hypo3, C7 Mazars, K21, C57. Parked: K14c (ISA, class D), mohrcou2 sfnet (input artifact).
 
@@ -460,3 +460,24 @@ docs + SEGUIMIENTO + BACKLOG + DIVERGENCES.
   iface_gen_geom, iface_gen_method exit 0 -> 1; build_safe 223/226 runs)
   -> top.cc not committed, gate kept, BACKLOG C52 updated. T6d stays open
   for C52 (interface + inertia in the pass). Next: T6e C53 or C52 rework.
+  WU4 C52 interface (2026-10-11, owner decision), route: delegated writer
+  (interface.cc + comments in data.cc / print_interface_stress.cc, tests,
+  docs). Root cause of the iface_gen* break: the interface MC history
+  stored the elastic trial kt*gamma_total (no unloading after a slip
+  reversal). Fix: history = clamped force. Test-2026
+  interface_mc_slip_reversal1: RED old rc 1 (5.0), GREEN 4.0 (Pro
+  4.000000083). test-2014 iface_mc_slip/_1step/iface_mc_num original 2014
+  targets 0/0/50 restored + intpnt shear target (old rc 1). data.cc
+  probe: strain reset Pro 4.0 = new (old 5.0), full reset -1.0 all;
+  no code change. build_safe 214 OK / 0 FALLO, runs 226/226; audit
+  exit 0. A/B c59 -> wu1 ea7181d3: only the new test (OK) and the
+  alternate1 timeout flake; Pro interface*/mohr_coul_direct <= 8e-12.
+  Found C60 (intpnt normal sign vs node order). Commit `b318484`.
+  WU5 C52 gate (route: same writer, top.cc + docs): inertia removed from
+  post_solve_state_pass_gated(). RED c52 iface_gen/_geom/_method rc 1,
+  GREEN rc 0. build_safe 214 OK / 0 FALLO, runs 226/226; audit exit 0.
+  A/B wu1 -> wu2 f6cb4e19: classes/exit codes unchanged (alternate1
+  flake back to timeout); .dbs only in inertia models (taylor3 4.1e-4,
+  distance to Pro unchanged; iface_gen* <= 0.15, targets met). ifx
+  probe (interface + inertia) gap vs Pro independent of the pass ->
+  C61. Commit `c276931`. T6d closed. Next: T6e C53.
