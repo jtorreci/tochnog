@@ -425,3 +425,22 @@ docs + SEGUIMIENTO + BACKLOG + DIVERGENCES.
   re-scoped (AUDIT, DIVERGENCES K15), kept open under T6f. Evidence:
   build_safe TN_CHECK_ONLY=1 205 OK / 0 FALLO, runs 226/226;
   audit_db_buffers exit 0. Work unit `8ca6124`. Next: T6d C11.
+- T6d C11 (2026-10-11), route: delegated writer (code in general.cc,
+  so.cc, truss.cc, materi.cc, elem.cc, headers; 6 tests + build_safe +
+  docs; probes local, corpus A/B on omen `f4t6d_runs`). WU1 C11 `28992d5`:
+  `materi_dynamic_effective()` (control_materi_dynamic at ICONTROL
+  overrules materi_dynamic, manual 6.141) in the displacement-primary gate
+  and every reader, no PUT/restore of MATERI_DYNAMIC; truss default memory
+  `-total_linear` with / `-updated_linear` without materi_displacement
+  (Pro probes; manual 6.777 silent); signed projected length in the linear
+  branch. Tests test-2026 truss_memory_default_displacement1,
+  truss_total_linear_inversion1, control_materi_dynamic_only1/_half1,
+  truss_dynamic_no_record1, truss_memory_default_velocity1: RED old rc 1,
+  GREEN = Pro to 1e-10. build_safe TN_CHECK_ONLY=1 211 OK / 0 FALLO, runs
+  226/226; audit_db_buffers exit 0. A/B old 929f446a -> c11 217e574c: Pro
+  other 276 -> 277 (dynamic3 = Pro; alternate1 timeout -> rc 1), sfnet
+  192 -> 192 but truss2/truss3 exit 0 -> 1 (stale targets of the legacy
+  `-updated` default, Pro = new GNU -> BACKLOG B15), test-2026 only the
+  new tests, test-2014 232 -> 232 (bmom_truss 2 %, targets met). Corpus
+  check of the Pro memory input errors: sfnet truss5 hit -> owner decision
+  2026-10-11: replicate both checks (C59, next work unit), then C52.
