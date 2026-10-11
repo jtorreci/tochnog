@@ -307,7 +307,7 @@ page lists its own in "Differences with the Professional version".
 ## Sprint 12 lote 3 — solver global + pequeños
 
 - [solver](solver.md) — the GLOBAL solver type (manual 6.1047): overwrites every control_solver; the plain `solver_*` family (bicg_error/bicg_restart/bicg_stop/matrix_save/matrix_symmetric/pardiso×4, 6.1048-6.1056) with the wired/partial status of each.
-- [solver_matrix_symmetric](solver_matrix_symmetric.md) — symmetrization switch of the bicg family (6.1053): honest Bi-CG on the as-assembled matrix when the measured system is NOT symmetric under `-yes` (CG diverges there); unlocks large2/large3 coupled consolidation.
+- [solver_matrix_symmetric](solver_matrix_symmetric.md) — symmetrization switch of the bicg family (6.1052): honest Bi-CG on the as-assembled matrix when the measured system is NOT symmetric under `-yes` (CG diverges there); unlocks large2/large3 coupled consolidation. The GNU does not symmetrize: deliberate divergence K24 (2026-10-11) on coupled consolidation.
 - [timestep_predict_velocity](timestep_predict_velocity.md) — previous-velocity prediction (6.1089, PARTIAL in the GNU) + `timestep_iterations_automatic_apply` (6.1090): -no neglects every control_timestep_iterations_automatic.
 - [tochnog_version](tochnog_version.md) — the build date as a queryable record (day, month, year; 6.1091).
 - [volume_factor_x](volume_factor_x.md) — piecewise-constant volume factor in x (6.1094): thickness/area by x intervals.

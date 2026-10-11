@@ -51,22 +51,22 @@ the control record overrules (manual 6.376, see the table).
 
 ## solver_matrix_symmetric
 
-With `-yes` the user asserts that the system is symmetric: the
-per-solve symmetry measurement is bypassed and the symmetric solver
-(plain CG) is used. The GNU measures the symmetry of every solve
-(measured symmetric -> CG, non-symmetric -> honest Bi-CG); this record
-removes the measurement from the equation. The Professional
-symmetrizes the matrix when needed; the GNU runs CG on the
-as-assembled matrix, so a WARNING is printed when the measurement
-disagrees with the user's assertion:
+With `-yes` the symmetric solver (plain CG) is used when the system
+measures symmetric. The GNU measures the symmetry of every solve
+(measured symmetric -> CG, non-symmetric -> honest Bi-CG) and does NOT
+symmetrize the matrix: when the measurement disagrees with `-yes`, it
+runs Bi-CG on the as-assembled matrix and prints a WARNING:
 
 ```
 Warning: solver_matrix_symmetric -yes but the measured system is NOT
-symmetric - CG may not converge on it
+symmetric - running Bi-CG on the as-assembled matrix instead of CG (the
+Professional symmetrizes the matrix in this case)
 ```
 
-Combine with `solver_bicg_stop -no` to keep the calculation alive in
-that situation.
+The GNU result therefore does not depend on the switch. The
+Professional symmetrizes the matrix; on coupled consolidation (u-p)
+systems this changes its answer (deliberate divergence K24, see
+[solver_matrix_symmetric](solver_matrix_symmetric.md)).
 
 ## Example
 
@@ -98,6 +98,11 @@ the SuperLU banner appears in the output (the direct solver ran).
   the Professional; `control_solver_bicg_stop 0 -no` plus
   `control_solver_bicg_stop 20 -yes` stops in the GNU and continues in
   the Professional.
+- `solver_matrix_symmetric -yes` on a non-symmetric system (coupled
+  consolidation): the Professional symmetrizes the matrix, the GNU
+  solves the as-assembled one (K24, deliberate divergence, project
+  decision 2026-10-11; details in
+  [solver_matrix_symmetric](solver_matrix_symmetric.md)).
 
 - **Bi-CG breakdown on a singular system** (known difference, not decided;
   BACKLOG C12). GNU: Prints the breakdown error each iteration, finishes

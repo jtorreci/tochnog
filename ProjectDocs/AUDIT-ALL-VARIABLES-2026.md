@@ -373,7 +373,7 @@ The priority list in section 6 re-orders by judgement.
 | 21 | K03 | Default `convection_apply` | 2 | 0.5 | **GNU-suspect** | `condif2`: GNU T = 1, Pro T = 0.5. With an explicit `convection_apply -yes`, **both give 1**. The GNU default is `-YES` (`general.cc:54`); the Pro manual 6.395 says the default is `-no`. **Resolved 2026-10-06 (F1 T2)**: default `-no`, see recommendation 6. |
 | 22 | K08 | `bounda_time_increment` tables | 2 | 1.0 | PRO-suspect | `mcap1_elast`: the Pro prescribes −1.4 on dofs whose table is all zero. The GNU follows manual 6.146. **Deliberate divergence, project decision 2026-10-07.** |
 | 23 | K20 | Axisymmetric hoop (zz) nodal values | 5 | 0.05 | BOTH-plausible | `axisym2` (Akin ring, analytic e_t(ID) = 9.964e-4, S_t = 10910): GNU 1.000e-3 / 10000 (element-constant), Pro 1.0796e-3 / 10759.2 at the inner node (linear; the earlier 1.0498e-3 / 10498 was stale). RESOLVED 2026-10-09 (F4 T4): forced 1-point axisymmetric rule removed, GNU 1.0796e-3 / 10760.1 (residual = quad4 recovery, BACKLOG C42). |
-| 24 | K24 | 3D coupled consolidation | 1 | 0.05 | UNKNOWN (high relevance) | `large2`: pore pressure differs 4.5 %, displacements 4 %. The 1D consolidation (`validation_2`) matches to 1e-11. |
+| 24 | K24 | 3D coupled consolidation | 1 | 0.05 | PRO-suspect (was UNKNOWN, high relevance) | `large2`: pore pressure differs 4.5 %, displacements 4 %. The 1D consolidation (`validation_2`) matches to 1e-11. **Closed 2026-10-11 (F4 T6b) as a deliberate divergence (project decision, DIVERGENCES K24 class A, also Pro-suspect)**: cause `solver_matrix_symmetric -yes` — the Professional symmetrizes the non-symmetric u-p matrix (manual 6.1052), the GNU keeps it; with `-no` the Pro = GNU (-0.704603 vs -0.704550). Guard tests `test-2026/k24_consol_3d*` (`c350b3c`). |
 | — | K99 | Unclassified | 10 | 0.23 | UNKNOWN | `axisym2`/`axisym5`/`force17`/`relax2`/`silo1`/`slide2-4`/`strain_volume1`/`interface_bar2_hex8` |
 
 **K04: Pro analytic targets the GNU misses** (GNU value vs Professional value
@@ -666,7 +666,8 @@ showed that K0 applies without `group_materi_elasti_poisson` and to
     relevance:
     - K14: `hypo3`/`hypo10` stress path, and the empty hypo history slots
     - K15: `validation_14` DP, `validation_3` von Mises
-    - K24: `large2` 3D consolidation
+    - K24: `large2` 3D consolidation — closed 2026-10-11 (F4 T6b): deliberate
+      divergence, `solver_matrix_symmetric -yes` symmetrization in the Pro
 
 ## 7. What makes this audit less reliable
 

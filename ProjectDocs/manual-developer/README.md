@@ -306,7 +306,7 @@ page lists its own in "Differences with the Professional version".
 ## Sprint 12 lote 3 — solver global + pequeños
 
 - [solver](solver.md) — the plain solver_* enums (no_index), the global type override read LAST in top.cc/elem.cc/dof.cc (opposite precedence of the legacy options_solver), solver_bicg_error/stop wired in so_bicg.cc, solver_matrix_symmetric -yes with honest Bi-CG fallback when the measured system is asymmetric (large2), the partials (restart/matrix_save/pardiso×4) verified behavior-neutral.
-- [solver_matrix_symmetric](solver_matrix_symmetric.md) — so_bicg.cc per-solve selection: CG on measured-symmetric systems, honest Bi-CG (as-assembled, not re-symmetrized) under -yes when asymmetric; large2/large3 verification.
+- [solver_matrix_symmetric](solver_matrix_symmetric.md) — so_bicg.cc per-solve selection: CG on measured-symmetric systems, honest Bi-CG (as-assembled, not re-symmetrized) under -yes when asymmetric; large2/large3 verification; K24 guard tests k24_consol_3d* (deliberate divergence, 2026-10-11).
 - [timestep_predict_velocity](timestep_predict_velocity.md) — why the previous-velocity initial guess does not map to the staggered scheme (x=0 start + += accumulation) and the automatic-apply gate in top.cc; the quasistatic iteration-count invisibility gotcha.
 - [tochnog_version](tochnog_version.md) — the record PUT at top() init parsed from __DATE__.
 - [volume_factor_x](volume_factor_x.md) — volume.cc piecewise factor at the IP x; the right-of-last-x factor-1 guard; odd-length validation.

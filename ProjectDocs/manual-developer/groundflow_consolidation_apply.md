@@ -63,3 +63,12 @@
 - The three switches (group/global/timestep) plus the two legacy skip switches
   all funnel into the single `materidivergence` flag; the precedence chain is
   simple but implicit. A small helper would make the intent clearer.
+
+## Differences with the Professional version
+
+- K24 (DIVERGENCES-PROFESSIONAL.md, class A, project decision
+  2026-10-11): with `solver_matrix_symmetric -yes` the Professional
+  symmetrizes the non-symmetric u-p matrix of the coupled consolidation
+  solve; the GNU keeps it (`so_bicg.cc`, Bi-CG on the as-assembled
+  matrix). Guard tests `validation-suite/test-2026/k24_consol_3d*`; see
+  `solver_matrix_symmetric.md`.

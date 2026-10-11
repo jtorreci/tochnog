@@ -39,16 +39,17 @@ Sprint 12 lot 3. The Professional's global solver family (manual
   the timestep index is a deliberate divergence (project decision
   2026-09-29, BACKLOG C13; table in solve_iterative_bicg.md).
 
-- **`solver_matrix_symmetric -yes`**: in `so_bicg.cc`, replaces the
-  per-solve measurement `solve_iterative_bicg_symmetric()` with the
-  user assertion (plain CG). The measurement still runs (once) to
-  print an unconditional WARNING when it disagrees - the Professional
-  symmetrizes the matrix in that case, the GNU runs CG on the
-  as-assembled matrix, so the warning tells the user CG may not
-  converge (test `tslv_bsym`: the beam, measured non-symmetric by the
-  dtime factor in the translation-rotation blocks, prints the warning
-  and survives with `solver_bicg_stop -no`). `-no`/absent: measured
-  behavior unchanged (CG when symmetric, honest Bi-CG when not).
+- **`solver_matrix_symmetric -yes`**: in `so_bicg.cc`
+  (`solve_iterative_bicg()`), the per-solve measurement
+  `solve_iterative_bicg_symmetric()` still decides: CG when the system
+  measures symmetric, honest Bi-CG on the as-assembled matrix when not
+  (2026-09-02, large2). Under `-yes` a non-symmetric measurement prints
+  a WARNING (the Professional symmetrizes the matrix in that case; the
+  GNU does not - deliberate divergence K24, project decision
+  2026-10-11, see solver_matrix_symmetric.md). `-no`/absent: same
+  selection without the warning (test `tslv_bsym`: the beam, measured
+  non-symmetric by the dtime factor in the translation-rotation blocks,
+  prints the warning).
 
 - **PARTIALS** (registered, accepted, behavior-neutral - test
   `tslv_part` verifies identical results with all of them present):
