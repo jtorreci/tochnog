@@ -723,7 +723,31 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
   (merge `ad3437e`); excavate1 keeps a documented target mismatch.
 - **Effort**: **cheap**.
 
-### C11. `control_materi_dynamic` / truss dynamics without `materi_dynamic` diverge from the Professional
+### C11. `control_materi_dynamic` / truss dynamics without `materi_dynamic` diverge from the Professional — RESOLVED 2026-10-11 (F4 T6d)
+
+- **Resolution** (F4 T6d, 2026-10-11): three defects. (1) `so.cc`
+  `disp_primary_gate` keyed on the global `materi_dynamic` only and
+  excluded `control_materi_dynamic`; now every reader (gate, `solve()`,
+  `truss.cc`, `materi.cc`, `elem.cc`) uses `general.cc`
+  `materi_dynamic_effective()` (control record at ICONTROL overrules the
+  global one, manual 6.141; 1 during the auxiliary f = 1 reassembly), and
+  `solve()` no longer PUTs/restores `MATERI_DYNAMIC`. (2) `truss.cc`
+  default memory was `-updated`; now `-total_linear` with
+  `materi_displacement` (manual 4.12, Pro dynamic3) and `-updated_linear`
+  without (Pro probe). (3) the linear branch took `scalar_dabs()` of the
+  projected length, wrong for an inverted truss. Results = Pro (node 2
+  disx): dynamic3 32.6583 -> 60.44025; only control 0. 6.4477 ->
+  0.0958890; global + control 0. 0.0937873 -> 0.0958890; control 0.5
+  1.45599 -> 0.932818; no record 1.91225 -> 0.995505; dynamic3
+  `-total_linear` -5962.6 -> 60.44025. Tests (test-2026):
+  `truss_memory_default_displacement1`, `truss_total_linear_inversion1`,
+  `control_materi_dynamic_only1`, `control_materi_dynamic_half1`,
+  `truss_dynamic_no_record1`, `truss_memory_default_velocity1`. Residual
+  (input errors of the Pro for the memory / materi_displacement
+  combinations): C59.
+
+Original report:
+
 
 - **Corpus**: none; probes = Pro `test/other/dynamic1` (truss, `materi_dynamic
   0.`, control index 10) with extra records (2026-09-29, scratch inputs).
@@ -1622,6 +1646,25 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
 - **Docs**: `manual-user/` and `manual-developer/control_restart.md`,
   DIVERGENCES C58.
 
+### C59. `group_truss_memory` / `materi_displacement` input errors of the Professional (F4 T6d, 2026-10-11) — OPEN, owner decision
+
+- **Professional 02-08-2026**: `-updated` (or `-updated_linear`) with
+  `materi_displacement` stops with "materi_displacement should not be
+  initialised"; `-total` / `-total_linear` without it stops with
+  "materi_displacement should be initialised" (both suppressible with
+  `check_error -no`). The GNU accepts every combination.
+- **Owner request** (2026-10-11): make `-updated`/`-updated_linear` +
+  `materi_displacement` an input error. Corpus check before adding it:
+  sfnet `truss5` (and its copy `test/truss5.dat` in
+  `validation-suite/test.zip`) uses exactly that combination (the GNU runs
+  it rc 0, the Professional stops). test-2014 `gen1`, `hreltime`, sfnet
+  `genera1/2` use `-updated_without_rotation` (another type). No hit in
+  test-2026 or the Professional test tree.
+- **Next**: owner decision on `truss5`; then the error with a GNU message
+  naming both records, plus an expected-error test.
+- **Docs**: `manual-user/` and `manual-developer/group_truss_memory.md`,
+  DIVERGENCES TRUSS-MEM-ERR.
+
 ### C48. Interface tension status written from the wrong buffer (F4 T9, 2026-10-10) — RESOLVED 2026-10-10 (F4 T10)
 
 - **Found by**: the F4 T9 ASan runs on the Professional
@@ -1883,7 +1926,7 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
 | C8 | — | default `mesh` `-follow_material` vs Pro `-fixed_in_space` — resolved 2026-10-07 (F3 T2) | MEDIUM | large |
 | C9 | — | `-total_linear` + compressibility: Pro time-step dependent (deliberate divergence) | LOW | cheap |
 | C10 | Pro `other` | static pore pressure tied to `post_calcul -total_pressure` in the Pro (`excavate1` target) | MEDIUM | cheap |
-| C11 | — | `control_materi_dynamic` and implicit truss dynamics vs Pro | MEDIUM | medium |
+| C11 | — | `control_materi_dynamic` and implicit truss dynamics vs Pro — resolved 2026-10-11 (F4 T6d) | MEDIUM | medium |
 | C12 | — | bicg stop does not abort the GNU on a singular system | LOW | cheap |
 | C13 | — | `control_solver_bicg_stop` at the timestep index: Pro reads index 0 only (deliberate divergence) | LOW | cheap |
 | C14 | — | `element_normal`: curved quadratic sides, `node_normal`/`element_boundary`/`global_normal` not implemented (zero normal and plane MC direct return resolved) | LOW | cheap |
@@ -1925,8 +1968,9 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
 | C56 | Pro `other` | input tokens longer than `MCHAR`-1 (`cin >> str`) overflow the parser buffers (`ground19_water_under_dam`, 141-char URL in a comment)  — resolved 2026-10-11 (F4 T6a)| LOW | cheap |
 | C57 | Pro `other` | hex27 nodal stress recovery (`force11` up to 3.5 % at the loaded points, displacements equal) and `post_point` interpolation on a hex27 node | LOW | medium |
 | C58 | Pro `validation` | `control_restart`: interface/spring/contact-spring/tendon/damage element history records not verified after the F4 T6c integration-point reset (`number_timesteps` record absent) | LOW | cheap/medium |
+| C59 | sfnet | `group_truss_memory -updated` + `materi_displacement` (and `-total*` without it): input error in the Pro, accepted by the GNU; owner decision pending (sfnet `truss5` uses it) | LOW | cheap |
 
-Forty items remain open: five MEDIUM and thirty-five LOW (C23 and C24 resolved 2026-10-05; C25, C26, C27 and B10 added; F1 T3 / K04 2026-10-06 added B11, C28-C32; F1 T6 resolved C28, added and resolved B12; F2 T1 added C36; F2 T2 added C37, C38, C39; F2 T3 resolved C5 and added C40; F3 T2 resolved C8, C18, C19, C20 and added B13, C41; F4 T2 fixed the C41 tie and left a residual; F4 T3 resolved C33; F4 T4 closed C32, added C42 and resolved C31; F4 T7-T8 added C43-C46; F4 T9 resolved the C43 solver speed, decided C46b/C46e and added C47, C48, C49; F4 T10 resolved C48 and added C50; F4 T5 added C52, C53 and resolved C51; F4 T13 resolved C49 and added C54-C56; F4 T12 resolved C47 and added C57; F4 T6a resolved C6, C55, C56 and the C3 sign, the C3 square-face tie becoming a deliberate divergence (owner 2026-10-11), and added B14; F4 T6c fixed the `control_restart` integration-point reset and added C58). No open issue is CRITICAL or
+Forty items remain open: four MEDIUM and thirty-six LOW (C23 and C24 resolved 2026-10-05; C25, C26, C27 and B10 added; F1 T3 / K04 2026-10-06 added B11, C28-C32; F1 T6 resolved C28, added and resolved B12; F2 T1 added C36; F2 T2 added C37, C38, C39; F2 T3 resolved C5 and added C40; F3 T2 resolved C8, C18, C19, C20 and added B13, C41; F4 T2 fixed the C41 tie and left a residual; F4 T3 resolved C33; F4 T4 closed C32, added C42 and resolved C31; F4 T7-T8 added C43-C46; F4 T9 resolved the C43 solver speed, decided C46b/C46e and added C47, C48, C49; F4 T10 resolved C48 and added C50; F4 T5 added C52, C53 and resolved C51; F4 T13 resolved C49 and added C54-C56; F4 T12 resolved C47 and added C57; F4 T6a resolved C6, C55, C56 and the C3 sign, the C3 square-face tie becoming a deliberate divergence (owner 2026-10-11), and added B14; F4 T6c fixed the `control_restart` integration-point reset and added C58; F4 T6d resolved C11 and added C59). No open issue is CRITICAL or
 HIGH. The validation-suite corpus has no open failure — its 233 real tests
 pass (`materi_direct_mc` input corrected, C17 resolved). Every remaining failure is a stale or malformed test, an out-of-scope model
 or infrastructure limit, a narrow post-processing divergence, a corpus-coverage

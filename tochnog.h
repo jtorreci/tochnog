@@ -2370,6 +2370,7 @@ long int  control_materi_gate_off( long int control_item );
 long int  materi_memory_default( void );
 long int  convection_apply_switch( void );
 long int  materi_apply_gate_off( long int global_item, long int control_item );
+double  materi_dynamic_effective( long int *specified );
 long int  set_swit( long int element, long int inod, const char *routine
  );
 void      slide( void );

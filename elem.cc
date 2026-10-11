@@ -195,8 +195,7 @@ void elem( long int element, long int ithread )
   // The measured f=0 displacement-primary map has a fixed reference mass
   // and elastic operator. The normal f<1 pass identifies it directly; the
   // auxiliary f=1 pass is marked by solve() while it is reassembled.
-  db( MATERI_DYNAMIC, 0, idum, &disp_primary_factor, ldum,
-    VERSION_NORMAL, GET_IF_EXISTS );
+  disp_primary_factor = materi_dynamic_effective( NULL );
   if ( disp_primary_reference==-YES ||
        ( materi_velocity && materi_displacement &&
          disp_primary_factor>=0. && disp_primary_factor<1. ) ) {

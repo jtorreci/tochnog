@@ -186,8 +186,7 @@ void materi( long int element, long int gr, long int name, long int nnol,
   // Keep the elastic stress and tangent in the reference configuration for
   // the f=0 displacement-primary map. solve() marks the temporary f=1
   // auxiliary pass explicitly, so it uses this same operator.
-  db( MATERI_DYNAMIC, 0, idum, &disp_primary_factor, ldum,
-    VERSION_NORMAL, GET_IF_EXISTS );
+  disp_primary_factor = materi_dynamic_effective( NULL );
   if ( disp_primary_reference==-YES ||
        ( materi_velocity && materi_displacement &&
          disp_primary_factor>=0. && disp_primary_factor<1. ) ) {
@@ -812,16 +811,7 @@ void materi( long int element, long int gr, long int name, long int nnol,
     // momentum). The momentum stiffness is scaled by the same factor
     // (the tangent of factor*sigma_{t+dt}).
     {
-      double materi_dynamic_factor = 1.;
-      db( MATERI_DYNAMIC, 0, idum, &materi_dynamic_factor, ldum,
-        VERSION_NORMAL, GET_IF_EXISTS );
-      long int icontrol_md = 0;
-      db( ICONTROL, 0, &icontrol_md, ddum, ldum, VERSION_NORMAL,
-        GET_IF_EXISTS );
-      if ( db_active_index( CONTROL_MATERI_DYNAMIC, icontrol_md,
-          VERSION_NORMAL ) )
-        db( CONTROL_MATERI_DYNAMIC, icontrol_md, idum,
-          &materi_dynamic_factor, ldum, VERSION_NORMAL, GET );
+      double materi_dynamic_factor = materi_dynamic_effective( NULL );
       md_factor = materi_dynamic_factor;
       if ( materi_dynamic_factor<1. ) {
         if ( materi_dynamic_factor<0. || materi_dynamic_factor>1. )

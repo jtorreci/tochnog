@@ -21,3 +21,14 @@ remains rc=1 at `-3.38705737383e-04` (Professional:
 `-9.985253775e-04`). In dynamic8 the second Bi-CG solve repeatedly breaks
 down and the code falls back to `x2=0`; investigate that auxiliary continuum
 system before broadening the gate.
+
+## Factor resolution (F4 T6d / C11, 2026-10-11)
+
+The gate and `disp_primary_f` take the factor from `general.cc`
+`materi_dynamic_effective()`: `control_materi_dynamic` at the current
+ICONTROL overrules `materi_dynamic` (manual 6.141). Before, the gate read
+only the global record and refused any input with
+`control_materi_dynamic` (dynamic1 with only `control_materi_dynamic 10
+0.`: 6.4477, Professional 0.0958890; now equal). The auxiliary `f=1`
+reassembly no longer PUTs `MATERI_DYNAMIC = 1` and restores it: the
+helper returns 1 while `disp_primary_reference == -YES`.

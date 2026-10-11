@@ -26,8 +26,8 @@
 
 // Set only while solve() reassembles the full-stiffness auxiliary system of
 // the displacement-primary transient. Element code also recognizes f<1 on
-// the normal pass; this marker preserves that reference configuration while
-// solve() temporarily sets MATERI_DYNAMIC to 1 for the auxiliary pass.
+// the normal pass; this marker preserves that reference configuration and
+// makes materi_dynamic_effective() return 1 for the auxiliary pass.
 long int disp_primary_reference = -NO;
 
 void general( long int element, long int name, long int nnol, long int element_group, 
@@ -616,6 +616,27 @@ long int materi_apply_gate_off( long int global_item, long int control_item )
   db( control_item, icontrol, &swit, ddum, ldum, VERSION_NORMAL,
     GET_IF_EXISTS );
   return swit==-NO;
+}
+
+// Effective materi_dynamic factor (C11). control_materi_dynamic with the
+// index of the current timestep (ICONTROL) overrules the global
+// materi_dynamic (manual 6.141: same as materi_dynamic, but only for the
+// timesteps of that control index); default 1 (no record). While solve()
+// reassembles the f=1 auxiliary system of the displacement-primary scheme
+// (disp_primary_reference == -YES) the factor is 1. If specified is not
+// NULL it returns 1 when one of the two records applies, else 0.
+double materi_dynamic_effective( long int *specified )
+{
+  long int icontrol=0, ldum=0, idum[1], spec=0;
+  double f=1., ddum[1];
+  if ( db( MATERI_DYNAMIC, 0, idum, &f, ldum, VERSION_NORMAL,
+      GET_IF_EXISTS ) ) spec = 1;
+  db( ICONTROL, 0, &icontrol, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+  if ( db( CONTROL_MATERI_DYNAMIC, icontrol, idum, &f, ldum,
+      VERSION_NORMAL, GET_IF_EXISTS ) ) spec = 1;
+  if ( specified!=NULL ) *specified = spec;
+  if ( disp_primary_reference==-YES ) return 1.;
+  return f;
 }
 
 // convection_apply switch (K03). Single source of truth for every

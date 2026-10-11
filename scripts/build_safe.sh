@@ -1841,6 +1841,20 @@ run_ok "$T2026" k24_consol_3d_undrained2
 #   (GNU before the fix +52.08333).
 run_ok "$T2026" control_restart_reset_ip1
 run_ok "$T2026" control_restart_reset_ip2
+# F4 T6d C11 (2026-10-11): truss memory default and control_materi_dynamic
+#   (truss.cc, general.cc materi_dynamic_effective, so.cc gate). Targets =
+#   Professional 02-08-2026, node 2 disx unless noted (old GNU in brackets):
+#   default -total_linear with materi_displacement (Pro dynamic3) 60.44025
+#   [32.6583]; explicit -total_linear, inverting truss 60.44025 [-5962.6];
+#   only control_materi_dynamic 10 0. 0.0958890 [6.4477], 0.5 0.932818
+#   [1.45599]; no dynamic record 0.995505 [1.91225]; default -updated_linear
+#   without materi_displacement, node 2 rhside velx 50 [-4.677].
+run_ok "$T2026" truss_memory_default_displacement1
+run_ok "$T2026" truss_total_linear_inversion1
+run_ok "$T2026" control_materi_dynamic_only1
+run_ok "$T2026" control_materi_dynamic_half1
+run_ok "$T2026" truss_dynamic_no_record1
+run_ok "$T2026" truss_memory_default_velocity1
 
 # ---------------------------------------------------------------------
 # Sub-sprint materi_stress_force, lote 2 (integracion 2D quad4/quad9):

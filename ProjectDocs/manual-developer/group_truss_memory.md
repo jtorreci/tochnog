@@ -40,3 +40,29 @@
 - `truss_updated_transverse1` (= Pro truss2 plus targets): RED rc 1
   (reaction velx -0.99997), GREEN reactions 0.1/0.1, veliy 0.823578 (Pro
   0.823577).
+
+## C11 default and sign fix (F4 T6d, 2026-10-11)
+
+- **Default**: `truss()` sets `memory = materi_displacement ?
+  -TOTAL_LINEAR : -UPDATED_LINEAR` before reading `GROUP_TRUSS_MEMORY`
+  (the declaration initialiser is `-UPDATED_LINEAR` too). Legacy GNU
+  default: `-UPDATED`. Measured on the Professional 02-08-2026: dynamic3
+  (materi_displacement) no record = `-total_linear` = 60.44025; a
+  velocity-integrated truss rotated and stretched by (-0.5, 1): no record
+  = `-updated_linear` = force -50 (`-updated` 10.4587).
+- **Sign**: in the linear branch (`else`, also `-updated_without_rotation`
+  and `truss_reference`) `new_length` / `old_length` are
+  `array_inproduct( diff_coord, truss_direction )` without
+  `scalar_dabs()`. With the absolute value an inverted truss (node 1
+  passes node 2) produced a length that decreases again after the
+  crossing: dynamic3 `-total_linear` node 2 disx -5962.6 (Pro 60.44025).
+- **Not implemented (owner decision pending, BACKLOG C59)**: the Professional input
+  errors `-updated`/`-updated_linear` + `materi_displacement` and
+  `-total`/`-total_linear` without it. Corpus check 2026-10-11: sfnet
+  `truss5` (also `validation-suite/test.zip` `test/truss5.dat`) uses
+  `materi_displacement` with `-updated` (Pro stops with the error);
+  `-updated_without_rotation` + `materi_displacement` in test-2014
+  `gen1`, `hreltime`, sfnet `genera1/2` is a different type.
+- Tests (test-2026): `truss_memory_default_displacement1`,
+  `truss_total_linear_inversion1`, `truss_dynamic_no_record1`,
+  `truss_memory_default_velocity1`; RED old GNU rc 1, GREEN = Pro.

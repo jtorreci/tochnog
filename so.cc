@@ -311,7 +311,10 @@ static long int solve_band_retry( long int max_node, long int max_element,
   return info;
 }
 
-// DEV-B displacement-primary gate (materi_dynamic < 1): deliberately
+// DEV-B displacement-primary gate (materi_dynamic < 1): the factor is the
+// effective one of materi_dynamic_effective() (control_materi_dynamic at
+// the current ICONTROL overrules materi_dynamic, manual 6.141; the gate
+// needs one of the two records). Deliberately
 // conservative. Only the plain mechanical transient of the dynamic corpus
 // family (elastic material, inertia_apply -yes, displacement+velocity
 // dofs, iterative Bi-CG solver) may take the new scheme; any nonlinear or
@@ -323,12 +326,12 @@ static long int disp_primary_gate( long int task )
   long int ldum_gate = 0, idum_gate[1], maxg = -1;
   double f_gate = 0., ddum_gate[1];
   if ( task!=-MATRIX_ITERATIVE_BICG ) return 0;
-  if ( !db_active_index( MATERI_DYNAMIC, 0, VERSION_NORMAL ) ) return 0;
-  db( MATERI_DYNAMIC, 0, idum_gate, &f_gate, ldum_gate,
-    VERSION_NORMAL, GET_IF_EXISTS );
+  {
+    long int spec_gate = 0;
+    f_gate = materi_dynamic_effective( &spec_gate );
+    if ( !spec_gate ) return 0;
+  }
   if ( f_gate<0. || f_gate>=1. ) return 0;
-  // the per-control-step factor variant is kept on the historic path
-  if ( db_active_index( CONTROL_MATERI_DYNAMIC, 0, VERSION_NORMAL ) ) return 0;
   if ( !materi_velocity || !materi_displacement ) return 0;
   {
     long int options_inertia_gate = -NO;
@@ -581,9 +584,10 @@ void solve( long int task )
   // without an eigendecomposition (alpha = 2b - b^2 with
   // b = (I + dt^2 M^-1 K)^-1).
   //
-  // Implementation: at iteration 1 of a gated step the MATERI_DYNAMIC
-  // record is temporarily flipped to 1 and element_loop() re-assembles
-  // the momentum system with the full stiffness; solving that system
+  // Implementation: at iteration 1 of a gated step solve() sets
+  // disp_primary_reference = -YES, which makes materi_dynamic_effective()
+  // return 1 (no database record is changed), and element_loop()
+  // re-assembles the momentum system with the full stiffness; solving that system
   // gives x1 = w1 (the equilibrium loop solves for the CORRECTION to the
   // iterate: node_dof_new += solve_b). A second solve with right-hand
   // side M*x1 gives x2, and the returned correction is
@@ -614,8 +618,7 @@ void solve( long int task )
       return;
     }
     disp_primary_pass = 1;
-    db( MATERI_DYNAMIC, 0, idum, &disp_primary_f, ldum,
-      VERSION_NORMAL, GET );
+    disp_primary_f = materi_dynamic_effective( NULL );
     db( DTIME, 0, idum, &dtime_disp, ldum, VERSION_NEW, GET );
     // save the assembled A0 diagonal (= M/dt) and the momentum rhside
     disp_mass_dt = get_new_dbl( (1+max_node)*npuknwn );
@@ -700,20 +703,14 @@ void solve( long int task )
       }
       delete[] zeros_dp;
     }
-    {
-      double f_one = 1.;
-      db( MATERI_DYNAMIC, 0, idum, &f_one, ldum, VERSION_NORMAL, PUT );
-    }
+
     // The Professional auxiliary system uses the same reference mass and
     // elastic operator as the f=0 pass. Keep that selection while the
     // temporary factor supplies its full tangent.
     disp_primary_reference = -YES;
     element_loop();
     disp_primary_reference = -NO;
-    {
-      double f_back = disp_primary_f;
-      db( MATERI_DYNAMIC, 0, idum, &f_back, ldum, VERSION_NORMAL, PUT );
-    }
+
     // restore the momentum rhside of THIS iteration (the extra pass's
     // own right-hand side is discarded: only the matrix is taken)
     for ( long int inod_dp=0; inod_dp<=max_node; inod_dp++ ) {

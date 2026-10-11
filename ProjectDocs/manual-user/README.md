@@ -351,7 +351,7 @@ page lists its own in "Differences with the Professional version".
 
 - [inertia_apply](inertia_apply.md) - global switch of the principal-dof inertia terms (material mass, heat capacity, groundflow storage). Default -no (Professional semantics, manual 6.785); the GNU legacy -yes default made density-bearing models pseudo-dynamic. Unlocks ground14/15/16 (rc=0, drained state in the 1 s window).
 - [materi_acceleration](materi_acceleration.md) - los dofs de aceleracion (manual 4.11): records derivados acc = (v_new - v_old)/dt; bounda_dof -accx impone el bound de velocidad v_new = v_old + a*dt (base excitation). Unlocks dynamic3/dynamic4 (rc=0) y el parse de dynamic2/5/6/7/8, earthquake_1/2/3, smc_1/2.
-- [materi_dynamic](materi_dynamic.md) - el factor de mezcla temporal sigma = (1-f)*sigma(t) + f*sigma(t+dt) (6.800) y control_materi_dynamic (6.141). Implementado en materi() y truss(); f=1 = esquema historico byte-identico. Los tests dynamic1/2/5/8 siguen RUNFAIL por el esquema de velocidades del GNU (bloqueador de solver, no de parse).
+- [materi_dynamic](materi_dynamic.md) - el factor de mezcla temporal sigma = (1-f)*sigma(t) + f*sigma(t+dt) (6.800) y control_materi_dynamic (6.141). Implementado en materi() y truss(); f=1 = esquema historico byte-identico. Los tests dynamic1/2/5/8 siguen RUNFAIL por el esquema de velocidades del GNU (bloqueador de solver, no de parse). C11 (2026-10-11): control_materi_dynamic also drives the displacement-primary scheme (= Professional).
 - [start_if_not](start_if_not.md) - bloques condicionales start_if_not ... end_if_not del data part (con start_if ... end_if ya existente).
 - [bounda_time_smc](bounda_time_smc.md) - familia de acelerogramas SMC registrada y parseada; el lector esta PENDIENTE (fallo honesto en runtime).
 
@@ -402,7 +402,7 @@ page lists its own in "Differences with the Professional version".
 
 - [group_truss_expansion](group_truss_expansion.md) — thermal expansion of trusses (manual 6.775): the mechanical stretch subtracts the free thermal increment alpha*dT*L0. Unlocks truss11 (force -2 EXACT) and truss15 rc=0.
 - [group_truss_initial_force](group_truss_initial_force.md) — pre-tension of truss elements from the moment they come to life (manual 6.776); no initial strain. Unlocks truss12 rc=0.
-- [group_truss_memory](group_truss_memory.md) — truss kinematics: -updated / -total (geometrically nonlinear; -total = Pro truss14, N = EA (L-L0)/L0) / -updated_linear / -total_linear; tension geometric stiffness in the matrix (K17, 2026-10-06).
+- [group_truss_memory](group_truss_memory.md) — truss kinematics: -updated / -total (geometrically nonlinear; -total = Pro truss14, N = EA (L-L0)/L0) / -updated_linear / -total_linear; tension geometric stiffness in the matrix (K17, 2026-10-06). Default (C11, 2026-10-11): -total_linear with materi_displacement, -updated_linear without (= Professional).
 - [group_time](group_time.md) — element group birth/death times; since 2026-10-06 (C39, Pro truss8) a node whose elements are all inactive is not driven by its bounda_dof and stays at rest.
 - [post_calcul_k0](post_calcul_k0.md) — post_calcul -materi_stress -k0 (manual 6.901): ratio horizontal/vertical stress; output item -k0_sig. Unlocks k0 rc=0.
 - [element_dof_initial](element_dof_initial.md) — past dofs of an element at its birth step (manual 6.422); the transient inertia integrates from them. Unlocks phase1 rc=0.
