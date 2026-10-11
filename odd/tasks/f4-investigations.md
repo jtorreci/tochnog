@@ -481,3 +481,14 @@ docs + SEGUIMIENTO + BACKLOG + DIVERGENCES.
   distance to Pro unchanged; iface_gen* <= 0.15, targets met). ifx
   probe (interface + inertia) gap vs Pro independent of the pass ->
   C61. Commit `c276931`. T6d closed. Next: T6e C53.
+  B15 (owner-approved 2026-10-11, route: delegated writer, corpus +
+  docs only, no source change): sfnet truss2/truss3 adapted as the
+  Professional 02-08-2026 copies other/truss2, other/truss3: explicit
+  `group_truss_memory 0 -updated`; truss3 also replaces
+  materi_displacement by materi_velocity_integrated (as Pro; avoids the
+  C59 error). External copies external-downloads/sfnet/extracted/test/ +
+  omen f4t4_corpus/sfnet (validation-suite/test.zip copies untouched).
+  Original targets kept: GNU rc 0 both, node 1 rhside (0.100001,
+  0.0999992); Pro own copies and the dialect-translated adapted inputs
+  (0.1000002, 0.0999998), rc 0. Docs: BACKLOG B15 left for the parent
+  (outside the writer surface).
