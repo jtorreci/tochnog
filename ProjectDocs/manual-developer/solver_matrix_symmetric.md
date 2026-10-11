@@ -62,7 +62,5 @@ measurement of `solve_iterative_bicg_symmetric`.
 
 - Symmetrization of the assembled matrix (Professional parity) is not
   implemented, deliberately (K24).
-- Refactor: `so_bicg.cc` carries two stale comments next to the
-  selection (one says CG is used under `-yes` on the as-assembled
-  matrix, and they cite manual 6.1052 and 6.1053); the code runs Bi-CG
-  when the system measures non-symmetric. Manual number is 6.1052.
+- The stale `so_bicg.cc` comments next to the selection (CG under
+  `-yes`, manual 6.1053) were removed/corrected after F4 T6b.

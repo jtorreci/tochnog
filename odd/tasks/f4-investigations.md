@@ -400,6 +400,6 @@ docs + SEGUIMIENTO + BACKLOG + DIVERGENCES.
   SEGUIMIENTO Descarte + register, solver_matrix_symmetric user/dev
   (manual number corrected to 6.1052), solver.md stale "-yes forces CG"
   text fixed, groundflow_consolidation_apply notes. Evidence: build_safe
-  TN_CHECK_ONLY=1 203 OK / 0 FALLO, runs 226/226. Pending (source,
-  out of scope): two stale comments in so_bicg.cc next to the selection.
+  TN_CHECK_ONLY=1 203 OK / 0 FALLO, runs 226/226. The two stale
+  so_bicg.cc comments were fixed afterwards (parent, comment-only).
   Next: T6c K15.

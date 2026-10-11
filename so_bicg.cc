@@ -525,21 +525,16 @@ long int solve_iterative_bicg( void )
   {
     long int matrix_symmetric = -NO;
     long int measured_symmetric = solve_iterative_bicg_symmetric( );
-    // solver_matrix_symmetric -yes (manual Professional 6.1052): the
-    // user asserts the system is symmetric - the per-solve measurement
-    // is bypassed and the symmetric solver (CG) is used. The
-    // Professional symmetrizes the matrix if needed; the GNU runs CG
-    // on the as-assembled matrix, so a warning is printed when the
-    // measurement disagrees with the user's assertion.
     db( SOLVER_MATRIX_SYMMETRIC, 0, &matrix_symmetric, ddum_bs, ldum_bs,
       VERSION_NORMAL, GET_IF_EXISTS );
     if ( matrix_symmetric==-YES ) {
-      // solver_matrix_symmetric -yes (manual Professional 6.1053): the
+      // solver_matrix_symmetric -yes (manual Professional 6.1052): the
       // matrices are symmetrized IF NEEDED so that a symmetric equation
       // solver can be used. The GNU does not re-symmetrize the assembled
       // matrix: when the measurement disagrees with the user's assertion
       // the honest Bi-CG runs on the as-assembled system (it converges
-      // where plain CG on a non-symmetric system diverges).
+      // where plain CG on a non-symmetric system diverges). Deliberate
+      // divergence K24 (DIVERGENCES-PROFESSIONAL.md, class A).
       solve_iterative_bicg_use_cg = measured_symmetric;
       if ( swit ) pri( "solver_matrix_symmetric -yes: using CG" );
       if ( !measured_symmetric ) {
