@@ -531,6 +531,19 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
   the Professional give the original target (0.1, 0.1), exit 0.
 - **Severity**: LOW. **Effort**: cheap.
 
+### B16. sfnet `examp3` target calibrated on the nodal-kappa defect (F4 T6f WU2, 2026-10-12) — RESOLVED 2026-10-12
+
+- **Corpus**: sfnet 197 (external). `examp3` (2014 ancestor of the
+  Professional `validation_3`) targets `post_node_result 1 -vely` -124.8
+  ±1, a 2014 GNU value that encoded the nodal-kappa defect (hardening
+  read the h-lumped nodal kappa back at the points). With the
+  integration-point kappa of F4 T6f WU2 GNU gives -126.431 (exit 0 -> 1);
+  the Professional 02-08-2026 on the translated input gives -126.374.
+- **Status**: **RESOLVED 2026-10-12** (owner decision): local and omen
+  sfnet copies recalibrated to -126.374 ±1 with a dated header comment
+  (CORPUS-STALE-TARGETS §8); GNU exit 0.
+- **Severity**: LOW. **Effort**: cheap.
+
 ### C1. `pruebavel` — dead/malformed test (the 1 PARSE)
 
 - **Corpus**: sfnet 197.
@@ -1921,6 +1934,29 @@ Original report:
   up to 0.15, targets met; the rest <= 1.3e-7). build_safe 214 OK /
   0 FALLO, runs 226/226. Remaining interface + inertia gap -> C61.
 - **Severity**: LOW. **Effort**: medium.
+
+### C68. Other integration-point state variables read back from the nodes (F4 T6f WU2, 2026-10-11) — OPEN
+
+- **Symptom / evidence**: the ELEMENT_DOF masks of `elem.cc` `elem()`
+  (read ~636-650, write ~812-825) restore/store only the history
+  variables, stresses, the epe/epp/ept/epi strains, svloc/svnonloc and
+  (since F4 T6f WU2) kappa. Every other state that the constitutive
+  update reads from `old_unknowns` is therefore the h-lumped NODAL value
+  interpolated back to the point, the defect fixed for kappa in WU2:
+  `materi.cc` `old_kapsh` (`kapsh_indx`, ~287), `old_cap1pc`
+  (`cap1_indx`, ~292), `old_rho` (`rho_indx`, ~265, kinematic
+  hardening), `old_damage` (`dam_indx`, ~297) and the Maxwell stresses
+  `old_msig` (`mstres_indx`, ~262). `old_f` and `old_substeps` are only
+  used for their own nodal output (not state inputs).
+- **Not changed**: no Professional evidence per variable yet (kappa was
+  validated on `validation_3`). Candidate tests: Pro `other` models with
+  `materi_plasti_kappa_shear` (MC hardening-softening), cap1, rho,
+  damage, Maxwell.
+- **Fix candidate**: the same two-line mask extension + the IP write in
+  `materi.cc`, one variable at a time with a two-element probe vs the
+  Professional and a corpus A/B.
+- **Severity**: MEDIUM (wrong hardening history on non-uniform fields).
+  **Effort**: cheap per variable, medium with the evidence.
 
 ### C67. Nodal recovery of the unmeasured element rules (F4 T6f, 2026-10-11) — OPEN
 

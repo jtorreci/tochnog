@@ -26,7 +26,7 @@ T6 triage (2026-10-11, HEAD 53dbb86) and owner order (2026-10-11):
 - [x] T6c K15 `validation_14` `control_restart` semantics (without restart every node_dof = Pro). Done `8ca6124`: restart resets the IP state (manual 6.368, Pro deletes element_dof); `validation_14` NOT caused by the restart (re-scoped, open under T6f); element history records -> BACKLOG C58.
 - [x] T6d C11 `dynamic3` (disp_primary_gate per material) -> C52. Done `28992d5` (C11), `e0f2204` (C59), `b318484` (interface history), `c276931` (inertia pass).
 - [x] T6e C53 slide in the post-solve pass. Done `b4e4fa4` (slide law), `07433f5` (slide/contact in the pass, gate removed).
-- [ ] T6f Rest by relevance: K15 `validation_14` (re-scoped by T6c: pass-1 hole-boundary nodal stress/plastic strain up to ~20 % at 8 nodes on the r=0.01 circle -> `refine_locally` picks a different element -> pass 2 on a different mesh), K15 mmc_tension, validation_3 kap/eptzz, K14b hypo3, C7 Mazars, K21, C57. Parked: K14c (ISA, class D), mohrcou2 sfnet (input artifact).
+- [ ] T6f Rest by relevance (K15 `validation_14` done `1d446b3`; K15 validation_3 kap done `c3e6d2a`): K15 `validation_14` (re-scoped by T6c: pass-1 hole-boundary nodal stress/plastic strain up to ~20 % at 8 nodes on the r=0.01 circle -> `refine_locally` picks a different element -> pass 2 on a different mesh), K15 mmc_tension, validation_3 kap/eptzz, K14b hypo3, C7 Mazars, K21, C57. Parked: K14c (ISA, class D), mohrcou2 sfnet (input artifact).
 
 ## Later (owner 2026-10-10, after convergence with ALL divergences documented and accepted)
 - F6: exhaustive profiling and optimisation pass; special attention to the hot
@@ -547,3 +547,16 @@ docs + SEGUIMIENTO + BACKLOG + DIVERGENCES.
   target or not). Pro ground11_nonsaturated OK -> TIMEOUT was load
   (alone 96.9 s wu1 / 97.1 s wu2). BACKLOG C68 drafted (kapsh, cap1pc,
   rho, damage, Maxwell stresses: same mask omission).
+  T6f WU2 resumed after the owner decision 2026-10-12 (recalibrate sfnet
+  examp3 to the Professional value). `c3e6d2a` fix(plasti): kappa as an
+  integration-point state (elem.cc masks + kap_indx, materi.cc IP write
+  and nodal numerator with strain_recovery_weight outside the h guard,
+  general.cc denominator); tests kappa_ip_state1 + validation_3_kappa
+  (RED HEAD rc 1, GREEN rc 0). sfnet examp3 (local + omen copies,
+  untracked): target -124.8 -> -126.374 +-1 with dated header (B16,
+  CORPUS-STALE-TARGETS 8); GNU rc 0. A/B wu1 vs wu2 as recorded above
+  (rc changes: 2 new tests 1 -> 0, examp3 0 -> 1 before recalibration).
+  Clean build of c3e6d2a (build/tochnog, byte-identical to the A/B wu2
+  binary): build_safe 224 OK / 0 FALLO, runs 226/226; audit_db_buffers
+  exit 0. BACKLOG C68 open (kapsh, cap1pc, rho, damage, Maxwell msig).
+  Next: T6f remaining items (mmc_tension, K14b, C7, K21, C57).

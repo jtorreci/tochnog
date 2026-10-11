@@ -193,6 +193,28 @@ node_slide.dat:  target_value  1  0.001 0.05  -> target_value  1  -5.e13 5.e7   
 HEAD binary (`c276931`): rc 1 (vely 2.97e-12, eptxx -10); fixed binary:
 rc 0 (vely -5e13, eptxx 0).
 
+## 8. sfnet `examp3` recalibrated to the Professional value (2026-10-12, F4 T6f WU2, BACKLOG B16)
+
+`examp3` (sfnet; the 2014 ancestor of the Professional `validation_3`, von
+Mises plate with kap hardening) targets `post_node_result 1 -vely`
+-124.8 ±1. That value is a 2014 GNU calibration of the nodal-kappa
+defect: the hardening read the h-lumped NODAL kappa interpolated back to
+the integration points. With kappa kept per integration point (F4 T6f
+WU2) GNU gives -126.431; the Professional 02-08-2026 on the translated
+input (`-updated_linear` for the GNU-only `-updated_without_rotation`;
+same GNU result with either memory) gives -126.374 (0.045 %). HEAD
+before the fix: -125.477. Owner decision 2026-10-12: recalibrate to the
+Professional value, tolerance kept, dated header comment. Untracked
+external file, edited identically in the local copy
+(`external-downloads/sfnet/extracted/test/examp3.dat`) and the omen copy
+(`f4t4_corpus/sfnet/examp3.dat`):
+
+```
+examp3.dat:  target_value 1   -124.8 1.   -> target_value 1   -126.374 1.
+```
+
+WU2 binary: rc 0 (was rc 1 against the old target).
+
 # Inertia-apply reconstruction — the 15 solver-divergence tests (2026-09-16)
 
 Date: 2026-09-16
