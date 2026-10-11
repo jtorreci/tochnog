@@ -642,6 +642,10 @@ void elem( long int element, long int ithread )
    	      (i>=epp_indx && i<(epp_indx+MDIM*MDIM))||
    	      (i>=ept_indx && i<(ept_indx+MDIM*MDIM))||
    	      (i>=epi_indx && i<(epi_indx+MDIM*MDIM))||
+	      // F4 T6f WU2 (2026-10-11): the hardening parameter kappa is an
+	      // integration-point state (manual: materi_plasti_kappa); read
+	      // it back from ELEMENT_DOF instead of the h-lumped nodal value.
+	      (materi_plasti_kappa && i==kap_indx) ||
 	      i==svloc_indx || i==svnonloc_indx) 
 	       old_unknowns[i]=element_dof_npoint[i+startindx];
 	}
@@ -817,6 +821,7 @@ void elem( long int element, long int ithread )
    	    (i>=epp_indx && i<(epp_indx+MDIM*MDIM))||
    	    (i>=ept_indx && i<(ept_indx+MDIM*MDIM))||
    	    (i>=epi_indx && i<(epi_indx+MDIM*MDIM))||
+	    (materi_plasti_kappa && i==kap_indx) || // F4 T6f WU2: IP kappa
 	           i==svloc_indx || i==svnonloc_indx)
 	    element_dof_npoint[i+startindx]=new_unknowns[i];//only for unknowns filled in materi.cc
     }

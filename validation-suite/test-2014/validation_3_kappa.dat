@@ -1,0 +1,97 @@
+(Validation 3, GNU copy with extra targets [F4 T6f WU2]. The Professional
+ validation_3 input [von Mises plate with a hole, kap hardening] plus
+ targets from the Professional 02-08-2026 .dbs. Before the integration-
+ point kappa fix GNU read the h-lumped nodal kappa back at the points:
+ post_node_result vely -128.835 [Pro -129.302090], node 2 disx -2.963912e-2,
+ node 7 disy 3.396333e-2, node 1 kap 0.014532 [11.6 % off]. After the fix:
+ -129.353, -2.938817e-2, 3.377779e-2 [displacements within 0.1 %] and
+ kap 0.016004 [2.7 %: the quad4 nodal recovery operator, BACKLOG C42/C64;
+ tolerance 3 %]. The original target -128 +- 10 is kept.)
+
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_displacement
+materi_stress
+materi_strain_total
+materi_strain_plasti
+materi_plasti_kappa
+end_initia
+
+node 1   5  0
+node 2  10  0
+node 3   0  5
+node 4   3.535533905933 3.535533905933
+node 5  10  5
+node 6   0 18
+node 7   5 18
+node 8  10 18
+element 1  -quad4 1 2 4 5
+element 2  -quad4 3 4 6 7
+element 3  -quad4 4 5 7 8
+
+start_define
+  hole_edge   geometry_circle 1
+end_define
+start_define
+  lower_edge  geometry_line 1
+end_define
+start_define
+  upper_edge  geometry_line 2
+end_define
+start_define
+  left_edge   geometry_line 3
+end_define
+start_define
+  all_edges   geometry_set 1
+end_define
+
+hole_edge   0. 0. 5. 0.01
+lower_edge  5. 0. 10. 0. 0.01
+upper_edge  0. 18. 10. 18. 0.01
+left_edge   0. 5. 0. 18. 0.01
+all_edges   -hole_edge -lower_edge -upper_edge -left_edge
+
+bounda_dof 0  -lower_edge -vely
+bounda_time    0  0.0 0. 1.e6 0.0
+bounda_dof 1  -upper_edge -vely
+bounda_time    1  0.0 0.0625 1. 0.0625 1.000001 0. 1.e6 0.
+bounda_dof 2  -left_edge -velx
+bounda_time    2  0.0 0. 1.e6 0.0
+
+group_type 0  -materi
+group_materi_elasti_young   0  7.e3
+group_materi_elasti_poisson 0  0.2
+group_materi_memory 0  -total_linear
+group_materi_membrane 0  -yes
+group_materi_plasti_vonmises 0  24.3
+
+dependency_item 1  -group_materi_plasti_vonmises 0 -kap 2
+dependency_diagram 1  0. 1.  24.3 248.3
+
+post_calcul -materi_stress -size_tot -materi_stress -privec
+
+post_node 1 -node_rhside -sum -upper_edge
+print_filter 1 -post_node_result 1 -vely
+
+control_mesh_refine_globally           0  -h_refinement
+control_mesh_refine_globally_geometry  0  -all_edges
+control_mesh_refine_globally           1  -h_refinement
+control_mesh_refine_globally_geometry  1  -all_edges
+
+control_timestep                      10  1.e-2 1.
+(
+control_print                         10  -time_current -post_node_result
+)
+
+target_item 1  -post_node_result 1 -vely
+target_value 1   -128. 10.
+target_item 2 -post_node_result 1 -vely
+target_value 2 -1.293020901773e+02 1.3e-01
+target_item 3 -node_dof 2 -disx
+target_value 3 -2.938997137893e-02 3.0e-05
+target_item 4 -node_dof 7 -disy
+target_value 4 3.379371289521e-02 3.4e-05
+target_item 5 -node_dof 1 -kap
+target_value 5 1.644260449121e-02 4.9e-04
+end_data

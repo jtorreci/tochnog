@@ -1897,6 +1897,17 @@ run_ok "$T2026" tria6_nodal_recovery_mean1
 run_ok "$T2026" bar2_nodal_recovery_mean1
 run_ok "$T2026" tet4_nodal_recovery_mean1
 run_ok "$T2014" validation_14_pass1
+# F4 T6f WU2 (2026-10-11): the hardening parameter kappa is an
+#   integration-point state (ELEMENT_DOF), not the h-lumped nodal value
+#   interpolated back; its nodal value uses the strain recovery weight.
+#   kappa_ip_state1: two quad4 von Mises + kap hardening, reactions =
+#   Professional within 1e-3 (before 5e-3 off), nodal kap within 5 %
+#   (quad4 recovery operator, C42/C64). validation_3_kappa (test-2014):
+#   the Professional validation_3 with Pro targets post_node_result vely
+#   -129.302 (+-0.13; before -128.835), disx/disy within 0.1 %, kap node 1
+#   within 3 % (before 11.6 % off).
+run_ok "$T2026" kappa_ip_state1
+run_ok "$T2014" validation_3_kappa
 
 # ---------------------------------------------------------------------
 # Sub-sprint materi_stress_force, lote 2 (integracion 2D quad4/quad9):

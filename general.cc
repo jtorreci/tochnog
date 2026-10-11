@@ -367,10 +367,12 @@ void general( long int element, long int name, long int nnol, long int element_g
               1./36. : 4./27.;
           // K11 (2026-10-06): the strain tensors use the recovery weight
           // of materi.cc (strain_recovery_weight), so numerator and
-          // denominator of the lumped update match
+          // denominator of the lumped update match; kappa too (F4 T6f
+          // WU2, 2026-10-11)
           if ( dof_type[iuknwn]==-MATERI_STRAIN_TOTAL ||
                dof_type[iuknwn]==-MATERI_STRAIN_ELASTI ||
-               dof_type[iuknwn]==-MATERI_STRAIN_PLASTI )
+               dof_type[iuknwn]==-MATERI_STRAIN_PLASTI ||
+               dof_type[iuknwn]==-MATERI_PLASTI_KAPPA )
             weight = strain_recovery_weight(
               sri_active( element, element_group, name, nnol ), name, nnol,
               inol, npoint, ipoint, h[inol], volume );

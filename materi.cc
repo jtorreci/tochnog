@@ -1235,6 +1235,25 @@ void materi( long int element, long int gr, long int name, long int nnol,
         }
       }
     }
+    // Hardening parameter kappa (F4 T6f WU2, 2026-10-11): an
+    // integration-point state (manual materi_plasti_kappa). The IP value
+    // is stored in ELEMENT_DOF (elem.cc reads it back as old_kappa)
+    // instead of the h-lumped nodal value interpolated back to the point,
+    // and its nodal (output) value uses the strain recovery weight, whose
+    // lumped denominator general.cc builds with the same weight. Outside
+    // the h guard because that weight is non-zero where h vanishes
+    // (quad9/hex27/tet10 least squares), as for the strain tensors.
+    if ( materi_plasti_kappa ) {
+      double w_rec = strain_recovery_weight( sri_on, name, nnol, inol,
+        npoint, ipoint, h[inol], volume );
+      if ( scalar_dabs(w_rec)>EPS_H || scalar_dabs(h[inol])>EPS_H ) {
+        ipuknwn = kap_indx/nder;
+        indx = inol*npuknwn + ipuknwn;
+        tmp = volume * w_rec * ( new_kappa - old_kappa ) / dtime;
+        element_rhside[indx] += tmp;
+        if ( options_element_dof==-YES ) new_unknowns[kap_indx] = new_kappa;
+      }
+    }
     if ( scalar_dabs(h[inol])>EPS_H ) {
       if ( materi_plasti_f ) {
         ipuknwn = f_indx/nder;
@@ -1252,13 +1271,6 @@ void materi( long int element, long int gr, long int name, long int nnol,
         ipuknwn = substeps_indx/nder;
         indx = inol*npuknwn + ipuknwn;
         tmp = volume * h[inol] * ( new_substeps - old_substeps ) / dtime;
-        element_rhside[indx] += tmp;
-      }
-
-      if ( materi_plasti_kappa ) {
-        ipuknwn = kap_indx/nder;
-        indx = inol*npuknwn + ipuknwn;
-        tmp = volume * h[inol] * ( new_kappa - old_kappa ) / dtime;
         element_rhside[indx] += tmp;
       }
 

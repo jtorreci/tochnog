@@ -39,7 +39,11 @@
 
 ## Hardcoded / pending
 
-- The other integration-point dofs (kappa, f, damage, history variables,
+- kappa (`materi_plasti_kappa`) uses the same weight since F4 T6f WU2
+  (2026-10-11), with its integration-point value kept in ELEMENT_DOF
+  (`materi_plasti_kappa.md`); validation_3 nodal kap within 2.7 % of the
+  Professional (quad4 operator, C42/C64).
+- The other integration-point dofs (f, damage, kapsh, history variables,
   model-specific plastic strains `epphs*` ...) keep the h weight; not
   measured against the Professional.
 - K02 (one-iteration lag of the non-principal dofs when the stress

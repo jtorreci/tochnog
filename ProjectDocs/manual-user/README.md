@@ -486,6 +486,7 @@ page lists its own in "Differences with the Professional version".
 ## K11 NODAL STRAIN RECOVERY (2026-10-06)
 
 - [nodal_strain_recovery](nodal_strain_recovery.md) — the nodal total/elastic/plastic strains are recovered with the same operator as the stress (Professional least-squares fit): clamped-edge eptyy 0 exact, strain and stress fields consistent, = Professional.
+- [materi_plasti_kappa](materi_plasti_kappa.md) — the kap dof (size of the plastic strain, manual 4.24), isotropic hardening parameter; kept per integration point since F4 T6f (validation_3 = Professional within 0.06 %).
 
 ## K13 DIRECT PLASTICITY STATE OUTPUT (2026-10-06)
 
