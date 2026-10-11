@@ -56,8 +56,9 @@
 //   - Mohr-Coulomb (Fase 3, RF-1): cumulative. The friction limit applies
 //       to the TOTAL tangential force F_t (history ELEMENT_INTERFACE_FORCE_TANG):
 //       group_interface_materi_plasti_mohr_coul_direct phi c phi_flow
-//       trial = F_t,old + kt*du_tang (the history stores the ELASTIC trial
-//       kt*gamma_total, which keeps accumulating across plastic steps),
+//       trial = F_t,old + kt*du_tang (the history stores the CLAMPED
+//       force of the previous step, so a slip reversal unloads elastically
+//       from the yield surface - F4 T6d C52, Professional 02-08-2026),
 //       clamped to +/- max_fric with
 //       max_fric = |c + Fn*tan(phi)|, Fn = -kn*strain_normal (POSITIVE
 //       under compression: verified against the Professional plateau of
@@ -70,9 +71,8 @@
 //   - dilatancy (Fase 3, RF-4): when the tangential force plastifies,
 //       strain_normal += -dgamma_inc*tan(phi_flow) (plastic normal
 //       opening), where dgamma_inc is the plastic slip INCREMENT of the
-//       step (the accumulated-trial return multiplier minus the slip
-//       already accumulated in the past - otherwise the dilatancy
-//       ratchet double-counts, direct3 sigma_n -250 vs -200).
+//       step (the return multiplier of the trial built from the clamped
+//       history is already incremental: direct3 sigma_n -200).
 //   - residual stiffness (Fase 3):
 //       group_interface_materi_residual_stiffness factor
 //       (fraction of the original stiffness used in opened interfaces)
@@ -619,8 +619,6 @@ void interface_element( long int element, long int name,
   double *f_t_ip     = get_new_dbl( ns1 );
   double *f_t2_old_ip = get_new_dbl( ns1 );
   double *f_t2_ip     = get_new_dbl( ns1 );
-  double *f_t_el_ip   = get_new_dbl( ns1 );
-  double *f_t2_el_ip  = get_new_dbl( ns1 );
   double *rhs_shear_ip  = get_new_dbl( ns1 );
   double *rhs_shear2_ip = get_new_dbl( ns1 );
   array_set( f_t_old_ip, 0., ns1 );
@@ -681,8 +679,6 @@ void interface_element( long int element, long int name,
   double *stress_normal_ip = get_new_dbl( ns1 );
   double *stress_shear_ip  = get_new_dbl( ns1 );
   double *stress_shear2_ip = get_new_dbl( ns1 );
-  array_set( f_t_el_ip, 0., ns1 );
-  array_set( f_t2_el_ip, 0., ns1 );
   array_set( rhs_shear_ip, 0., ns1 );
   array_set( rhs_shear2_ip, 0., ns1 );
   double *stiff_tang_ip    = get_new_dbl( ns1 );
@@ -714,15 +710,18 @@ void interface_element( long int element, long int name,
     // tangential force. CONVERGENCE (2026-08-30): F_t = kt*du_tang (not
     // kt*2*du_tang), and the plastic return is IMPLICIT with dilatancy
     // (see the block comments above; verified EXACT against interface15).
-    // CONVERGENCE (interface_patch): the Professional's trial is the
-    // ACCUMULATED tangential strain times the stiffness (kt*gamma_total),
-    // NOT the last-step increment f_old + kt*du_paso. With the incremental
-    // trial the plastic slip exhausts the relative displacement and the
-    // friction force stalls below the cohesion (f_t=-5.55 vs target -10).
-    // The stored history ELEMENT_INTERFACE_FORCE_TANG holds the ELASTIC
-    // trial (grows every step, even when plastic: it is kt*gamma_total
-    // with gamma_total = sum(du_tang) over all steps) and the resulting
-    // force is f_t = clamp(trial) to the yield limit.
+    // History (F4 T6d C52, 2026-10-11): ELEMENT_INTERFACE_FORCE_TANG holds
+    // the CLAMPED tangential force of the previous step, and the trial is
+    // f_t,old + kt*du_tang of this step (classic elastic predictor /
+    // plastic corrector). A slip reversal therefore unloads elastically
+    // from the yield surface, as in the Professional 02-08-2026
+    // (quasi-static reversal probe: shear 4.0 = analytic, Pro
+    // 4.000000083). The earlier history (2026-08-30 to 2026-10-11) stored
+    // the ELASTIC trial kt*gamma_total, i.e. the force had no memory of
+    // the plastic slip and stayed on the surface after a reversal (5.0);
+    // the one-iteration lag of the material state (C35) masked it. The
+    // old interface_patch note (incremental trial stalling at -5.55 vs
+    // -10) is not reproduced with the post-solve material pass.
     // CONVERGENCE (2026-09-03, mohr_coul_direct3/4): the interface
     // assembles the FULL accumulated forces into the rhs (spring.cc
     // pattern, like every other element), NOT the step increment. With
@@ -756,32 +755,19 @@ void interface_element( long int element, long int name,
         f_t2_clamped_i = trial_el2_i * scale;
         plast_i = 1;
         // dilatancy: plastic slip OPENS the interface (reduces the
-        // accumulated compressive strain). The return multiplier dgamma
-        // is the TOTAL plastic slip (the accumulated-trial return maps
-        // the whole history back to the surface); the opening of THIS
-        // step must use only the INCREMENTAL plastic slip, otherwise the
-        // slip already accumulated in the past is re-counted every step
+        // accumulated compressive strain). The trial starts from the
+        // clamped force of the previous step, so the return multiplier
+        // dgamma is already the plastic slip INCREMENT of this step
         // (direct3 sigma_n = -200 = kn*(-1e-6 - 1e-6*tan(pi/4)) for a
-        // total slip of 1e-6, NOT -250). The past plastic slip follows
-        // from the stored elastic trial: gamma_pl_old =
-        // (|trial_old| - |clamp(trial_old)|)/kt.
-        double f_el_mag_old = sqrt( f_t_old_ip[inol]*f_t_old_ip[inol] +
-                                    f_t2_old_ip[inol]*f_t2_old_ip[inol] );
-        double f_old_surf_mag = f_el_mag_old;
-        if ( f_old_surf_mag > max_fric_abs ) f_old_surf_mag = max_fric_abs;
-        double gamma_pl_old = ( kt1>0. ) ? ( f_el_mag_old - f_old_surf_mag )/kt1 : 0.;
-        double dgamma_inc = dgamma - gamma_pl_old;
-        if ( dgamma_inc<0. ) dgamma_inc = 0.;
+        // total slip of 1e-6, NOT -250).
+        double dgamma_inc = dgamma;
         strain_normal_ip[inol] += -dgamma_inc * tan( phi_flow );
       }
     }
-    // f_t: the clamped force of the current state (record + assembly)
+    // f_t: the clamped force of the current state (record, assembly and
+    // the history of the next step's trial)
     f_t_ip[inol]  = f_t_clamped_i;
     f_t2_ip[inol] = f_t2_clamped_i;
-    // the stored history is the ELASTIC trial (keeps accumulating)
-    // so the next step's trial continues from kt*gamma_total
-    f_t_el_ip[inol]  = trial_el_i;
-    f_t2_el_ip[inol] = trial_el2_i;
     plastified_ip[inol] = plast_i;
     stiff_tang_ip[inol]  = ( mc_active && plast_i ) ? 0. : kt1;
     stiff_tang2_ip[inol] = ( mc_active && plast_i ) ? 0. : kt2;
@@ -821,8 +807,8 @@ void interface_element( long int element, long int name,
     }
     force_norm_ip[inol] = force_norm_new_i;
     stress_normal_ip[inol] = force_norm_new_i;
-    // stress,shear = the accumulated tangential force clamped to the
-    // yield limit (WITH Mohr-Coulomb) or the accumulated elastic trial
+    // stress,shear = the tangential force clamped to the yield limit
+    // (WITH Mohr-Coulomb) or the accumulated elastic force
     // kt*gamma_total (WITHOUT: elastic, single- and multi-step alike -
     // interface9 -0.159 = kt*du_total, interface14 5e3 = kt*1).
     stress_shear_ip[inol]  = f_t_ip[inol];
@@ -947,13 +933,12 @@ void interface_element( long int element, long int name,
     // control_reset_interface_strain (data.cc)
     db( ELEMENT_INTERFACE_FORCE_NORM, element, idum, force_norm_ip,
       ln, VERSION_NEW, PUT );
-    // the history holds the ELASTIC trial (kt*gamma_total) so the
-    // accumulated tangential strain keeps growing after plastic slip
-    // (the clamped force is rebuilt from it every step)
-    db( ELEMENT_INTERFACE_FORCE_TANG, element, idum, f_t_el_ip,
+    // the history holds the CLAMPED tangential force (F4 T6d C52): the
+    // next step's trial starts from it, so a reversal unloads elastically
+    db( ELEMENT_INTERFACE_FORCE_TANG, element, idum, f_t_ip,
       ln, VERSION_NEW, PUT );
     if ( ndim==3 )
-      db( ELEMENT_INTERFACE_FORCE_TANG2, element, idum, f_t2_el_ip,
+      db( ELEMENT_INTERFACE_FORCE_TANG2, element, idum, f_t2_ip,
         ln, VERSION_NEW, PUT );
   }
 

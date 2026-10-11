@@ -1861,6 +1861,11 @@ run_ok "$T2026" truss_memory_default_velocity1
 #   input error naming both records.
 expected_error_ok "$T2026" truss_memory_updated_displacement_error1
 expected_error_ok "$T2026" truss_memory_total_velocity_error1
+# F4 T6d C52 (2026-10-11): interface Mohr-Coulomb history = the CLAMPED
+#   tangential force (interface.cc), so a slip reversal unloads
+#   elastically. Quasi-static reversal, element 3 shear: analytic 4.0,
+#   Professional 02-08-2026 4.000000083 (GNU before the fix 5.0).
+run_ok "$T2026" interface_mc_slip_reversal1
 
 # ---------------------------------------------------------------------
 # Sub-sprint materi_stress_force, lote 2 (integracion 2D quad4/quad9):

@@ -14,10 +14,10 @@ Single index of every known difference between the GNU version and Tochnog Profe
 | class | meaning | items |
 |---|---|---|
 | A | deliberate divergence decided by the project owner | 20 |
-| B | known difference, not decided yet or scheduled (F3/F4) | 38 |
+| B | known difference, not decided yet or scheduled (F3/F4) | 39 |
 | C | GNU extension or input-dialect difference | 16 |
 | D | Professional-suspect: the Professional contradicts its own manual or the analytic answer | 1 |
-| | **total** | **75** |
+| | **total** | **76** |
 
 Ids: `C*`/`B*` are [BACKLOG-OPEN-ISSUES.md](BACKLOG-OPEN-ISSUES.md) items, `K*` are clusters of [AUDIT-ALL-VARIABLES-2026.md](AUDIT-ALL-VARIABLES-2026.md); other ids are local to this index. Several class A items are also Professional-suspect (noted in their status). Professional values are from the binary 02-08-2026 unless stated.
 
@@ -64,6 +64,7 @@ Open residuals. They are not decisions: each one is either scheduled, parked for
 
 | id | feature | GNU | Professional | decision / status | date | documented in |
 |---|---|---|---|---|---|---|
+| C60 | `element_interface_intpnt_stress` normal component | Sign follows the internal orientation of the interface element (node order): +10 for `2 4 9 10` and `9 10 2 4`, -10 for `4 2 10 9` on the same compressed interface. | -10 (compression negative) for every node order. | Open, LOW; found in F4 T6d (slip-reversal probe), output record only (shear and nodal results agree). | 2026-10-11 | [dev/group_interface](manual-developer/group_interface.md); BACKLOG C60 |
 | C2 | `gvelx` sign in the interface-coupled groundflow path (`groundflow_interface`) | gvelx -1.99962e-6. | +1.99960e-6 (pressure field identical). | Open, LOW; root cause not established. | 2026-09-16 | [user/groundflow_velocity_sign](manual-user/groundflow_velocity_sign.md); [dev/groundflow_velocity_sign](manual-developer/groundflow_velocity_sign.md); BACKLOG C2 |
 | C7 | Mazars damage: gamma with shear; damage + early plasticity | gamma from xx, xy, xz (e.g. dam 0.10809); plastic path eppxx 1.879e-4. | dam 0.18752; eppxx 1.368e-4 (Pro gamma matches none of the tried forms). | Open, MEDIUM; needs more probes. | 2026-09-29 | [user/group_materi_damage_mazars](manual-user/group_materi_damage_mazars.md); [user/materi_damage_effective_stress](manual-user/materi_damage_effective_stress.md); [dev/group_materi_damage_mazars](manual-developer/group_materi_damage_mazars.md); [dev/materi_damage_effective_stress](manual-developer/materi_damage_effective_stress.md); BACKLOG C7 |
 | C12 | Bi-CG breakdown on a singular system | Prints the breakdown error each iteration, finishes with rc 0 and a `.dbs`. | Prints "the BICG solver did not converge" and stops without a `.dbs`. | Open, LOW. | 2026-09-29 | [user/solver](manual-user/solver.md); [dev/solve_iterative_bicg](manual-developer/solve_iterative_bicg.md); BACKLOG C12 |

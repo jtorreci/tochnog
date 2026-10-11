@@ -94,10 +94,11 @@
   (Fase 1). The limit applies to the TOTAL tangential force, stored in
   the history `ELEMENT_INTERFACE_FORCE_TANG` (spring.cc pattern, GET
   VERSION_NORMAL with GET_IF_EXISTS, PUT VERSION_NEW):
-  - `trial = f_t_old + kt1*du_tang` — the stored history is the ELASTIC
-    trial `kt*gamma_total` (gamma_total = sum(du_tang) over ALL steps;
-    it keeps accumulating even while plastic, so the force can reach the
-    cohesion after a large slip — interface_patch -10)
+  - `trial = f_t_old + kt1*du_tang` — the stored history `f_t_old` is
+    the CLAMPED force of the previous step (F4 T6d C52, 2026-10-11; see
+    the convergence record below). From 2026-08-30 to 2026-10-11 it was
+    the ELASTIC trial `kt*gamma_total`, which has no memory of the
+    plastic slip (a reversal did not unload)
   - `max_fric = |c + Fn*tan(phi)|` with `Fn = -kn*strain_normal`
     (POSITIVE under compression — verified against the Professional
     plateau of mohr_coul_direct4: c + |Fn|*tan(phi) = 1.20271 with
@@ -119,10 +120,9 @@
   `phi_flow > 0`, the INCREMENTAL plastic slip of the step opens the
   interface in both sliding directions:
   `strain_normal += -dgamma_inc * tan(phi_flow)` where `dgamma_inc =
-  dgamma - gamma_pl_old` (the accumulated-trial return multiplier
-  dgamma is the TOTAL plastic slip; the slip already accumulated in the
-  past, gamma_pl_old = (|trial_old| - |clamp(trial_old)|)/kt1, is
-  subtracted so the ratchet is not re-counted — mohr_coul_direct3
+  dgamma` (the trial starts from the clamped force, so the return
+  multiplier is already the plastic slip of THIS step; the elastic-trial
+  history needed `dgamma - gamma_pl_old` — mohr_coul_direct3
   sigma_n = −200 = kn*(−1e-6 − 1e-6*tan(pi/4)), not −250). Feeds back
   into the normal history → gap/tension/max_fric of the next step.
 - **Memory model** (`group_interface_materi_memory`): `-updated_linear`
@@ -263,7 +263,9 @@ verified against the Professional binary .dbs (user-supplied 25-10-2023):
    unchanged, reads the same per-IP arrays). The matrix/tangent and the
    Lobatto-weighted per-pair assembly are unchanged.
 2. **Incremental dilatancy**: `dgamma_inc = dgamma - gamma_pl_old` with
-   `gamma_pl_old = (|f_el_old| - min(|f_el_old|, max_fric))/kt1`.
+   `gamma_pl_old = (|f_el_old| - min(|f_el_old|, max_fric))/kt1`
+   (superseded 2026-10-11, F4 T6d C52: with the clamped history
+   `dgamma_inc = dgamma`).
 3. **Fn sign**: `max_fric_abs = |c - kn*strain_eff*tan(phi)|` (the
    accumulated strain is negative under compression, so this equals
    |c + |Fn|*tan(phi)|).
@@ -558,3 +560,41 @@ Two GNU runs now give byte-identical `.dbs` files (apart from
 interface_tension_status1.dat` in `build_safe.sh` (status lines + two-run
 `.dbs` identity; old GNU printed `2 -total_linear 3`).
 
+## Convergence record 2026-10-11 — Mohr-Coulomb history = clamped force (F4 T6d C52)
+
+- **Symptom**: with the inertia gate of the post-solve material pass
+  removed (C52), test-2014 `iface_gen`, `iface_gen_geom`,
+  `iface_gen_method` diverged (node 6 disy −0.1009 → −7.417). Root cause
+  in `interface_element()`: the tangential history
+  `ELEMENT_INTERFACE_FORCE_TANG` (`_TANG2` in 3D) stored the ELASTIC
+  trial `kt*gamma_total`, so the friction force was `clamp(kt*gamma_total)`:
+  no memory of the plastic slip, no elastic unloading after a slip
+  reversal. The one-iteration lag of the material state (C35) masked it.
+- **Professional oracle**: quasi-static slip-reversal probe (slide at
+  `c = 5`, reverse by 5 increments of −0.2): Professional 02-08-2026
+  shear 4.000000083, analytic 4.0, GNU before 5.0, GNU after 4.0.
+  `control_reset_interface_strain` (manual 6.355, stresses remembered)
+  in the middle of the same probe: Professional 4.000000083, GNU after
+  4.0 (before 5.0); `control_reset_interface` (everything to 0):
+  Professional and GNU −1.0 (before and after).
+- **Fix** (`interface.cc`): the history PUT is the clamped force
+  `f_t_ip` / `f_t2_ip`; the trial is `f_t_old + kt*du_tang`; the
+  dilatancy increment is `dgamma` (the `gamma_pl_old` correction and the
+  `f_t_el_ip` / `f_t2_el_ip` arrays, never freed, were removed). No
+  change in `data.cc`: the strain reset keeps `FORCE_TANG` (now the
+  remembered stress, manual 6.355) and the full reset zeroes it.
+- **Unchanged** (investigation on 55 inputs): every Professional
+  `interface*`, `mohr_coul_direct1-8`, `tension_direct1`, `taylor3`;
+  `interface_patch` keeps its target −10 (the old note that an
+  incremental trial stalls at −5.55 is not reproduced with the
+  post-solve material pass).
+- **Targets**: test-2014 `iface_mc_slip`, `iface_mc_slip_1step`,
+  `iface_mc_num` restored to their original 2014 targets 0 / 0 / 50
+  (the physical clamped force; CORPUS-STALE-TARGETS §1) plus a target on
+  `element_interface_intpnt_stress 2 1` (same values). New test-2026
+  `interface_mc_slip_reversal1` (RED 5.0, GREEN 4.0).
+- **Open difference found by the same probe (BACKLOG C60)**: the normal
+  component of `element_interface_intpnt_stress` follows the internal
+  orientation (node order) of the element (+10 / +10 / -10 for the node
+  orders `2 4 9 10` / `9 10 2 4` / `4 2 10 9`), while the Professional
+  writes -10 (compression negative) for all three.

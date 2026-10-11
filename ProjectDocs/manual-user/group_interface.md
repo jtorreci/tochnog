@@ -37,8 +37,8 @@ implemented:
 - `group_interface_materi_plasti_mohr_coul_direct phi c phi_flow`:
   cumulative Mohr-Coulomb friction (manual Professional 6.632, angles in
   RADIANS). The **presence of the record activates the law**: the trial is
-  the ACCUMULATED tangential displacement times the stiffness
-  (`kt*gamma_total`, the history keeps accumulating across plastic steps)
+  the tangential force of the previous step plus the stiffness times the
+  tangential displacement increment of this step (elastic predictor),
   and the resulting tangential force is clamped to the yield limit
   `max_fric = |c + Fn*tan(phi)|`, where `Fn` is the accumulated normal
   force (POSITIVE under compression). While sliding the tangential
@@ -54,6 +54,14 @@ implemented:
   the interface in both sliding directions
   (`strain_normal += -dgamma_inc*tan(phi_flow)`; the increment, not the
   total accumulated slip, so the dilatancy is not re-counted every step).
+  The stored history is the clamped force (F4 T6d C52, 2026-10-11), so a
+  slip reversal unloads elastically from the yield limit, as in the
+  Professional: slide at the limit `c = 5`, then reverse the slip by
+  `5*0.2/kt` → shear 4.0 (test-2026 `interface_mc_slip_reversal1`;
+  Professional 02-08-2026 4.000000083). Before, the history held the
+  elastic trial `kt*gamma_total` and the force stayed at 5.0 after the
+  reversal. `element_interface_force_tang` / `_tang2` report this
+  clamped force.
 - `control_reset_dof -sigxx/-sigyy/-sigzz value` (normal stress reset):
   also initialises the accumulated normal strain of the interface
   elements whose normal aligns with the reset axis
@@ -248,3 +256,11 @@ non-unit-length interfaces under load (e.g. the inclined patch1 of the
 corpus) converged to a non-uniform traction instead of the equilibrium
 `sigma_n = n·sigma·n`. The Professional-validated unit-length behaviour
 is unchanged.
+
+## Differences with the Professional version
+
+- The normal component of `element_interface_intpnt_stress` follows the
+  orientation of the interface element (its node order): the same
+  compressed interface can report +10 or -10, while the Professional
+  always reports compression as negative (BACKLOG C60, open). The shear
+  component and the nodal results agree.

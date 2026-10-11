@@ -1893,7 +1893,34 @@ Original report:
   4e-4). build_safe with c52: 223/226 runs. Not committed; the gate stays.
   Next: make the pass consistent for interface elements under inertia
   (or keep interfaces gated) before widening.
+- **Root cause of the `iface_gen*` break (F4 T6d, 2026-10-11)**: not the
+  pass but the interface Mohr-Coulomb history. `interface.cc` stored the
+  ELASTIC trial `kt*gamma_total` in `ELEMENT_INTERFACE_FORCE_TANG`, so the
+  friction force had no memory of the plastic slip and did not unload
+  after a slip reversal; the one-iteration lag (C35) masked it.
+  Quasi-static reversal probe: Professional 02-08-2026 4.000000083,
+  analytic 4.0, GNU 5.0. Fixed (owner decision 2026-10-11): the history
+  is the clamped force (work unit F4 T6d C52 interface); test-2026
+  `interface_mc_slip_reversal1`; test-2014 `iface_mc_slip`/`_1step`/
+  `iface_mc_num` original targets restored (CORPUS-STALE-TARGETS §6).
+  The inertia part of the gate is removed in a separate work unit only
+  if the full corpus A/B is clean.
 - **Severity**: LOW (gated, previous behaviour kept). **Effort**: medium.
+
+### C60. Interface `element_interface_intpnt_stress` normal sign depends on the node order (F4 T6d, 2026-10-11) — OPEN
+
+- **Symptom**: quasi-static interface probe (quad4 interface between two
+  blocks, the right block pushed against the left one, kn = 1000,
+  normal displacement -0.01): the Professional 02-08-2026 writes the
+  normal stress -10 (compression negative) for every node order of the
+  interface element (`2 4 9 10`, `9 10 2 4`, `4 2 10 9`); the GNU writes
+  +10, +10 and -10. The shear (4.0 / -4.0) and the nodal results agree.
+  `element_interface_intpnt_strain` also differs (GNU writes the last
+  step values, SEGUIMIENTO `element_interface_intpnt_strain` PENDIENTE).
+- **Cause (hypothesis)**: the GNU internal sign convention (compression
+  = positive `strain_normal`, normal orientation from the node numbering,
+  `group_interface.md` RF-5) leaks into the output record.
+- **Severity**: LOW (output record only). **Effort**: cheap/medium.
 
 ### C53. Post-solve material state pass for slide models (`slide4`, F4 T5, 2026-10-10) — OPEN, investigation
 
@@ -2013,8 +2040,9 @@ Original report:
 | C57 | Pro `other` | hex27 nodal stress recovery (`force11` up to 3.5 % at the loaded points, displacements equal) and `post_point` interpolation on a hex27 node | LOW | medium |
 | C58 | Pro `validation` | `control_restart`: interface/spring/contact-spring/tendon/damage element history records not verified after the F4 T6c integration-point reset (`number_timesteps` record absent) | LOW | cheap/medium |
 | C59 | sfnet | `group_truss_memory -updated` + `materi_displacement` (and `-total*` without it): input error in the Pro — resolved 2026-10-11 (F4 T6d) | LOW | cheap |
+| C60 | — | interface `element_interface_intpnt_stress` normal sign depends on the node order (Pro: compression negative always) | LOW | cheap/medium |
 
-Forty items remain open: four MEDIUM and thirty-six LOW (C23 and C24 resolved 2026-10-05; C25, C26, C27 and B10 added; F1 T3 / K04 2026-10-06 added B11, C28-C32; F1 T6 resolved C28, added and resolved B12; F2 T1 added C36; F2 T2 added C37, C38, C39; F2 T3 resolved C5 and added C40; F3 T2 resolved C8, C18, C19, C20 and added B13, C41; F4 T2 fixed the C41 tie and left a residual; F4 T3 resolved C33; F4 T4 closed C32, added C42 and resolved C31; F4 T7-T8 added C43-C46; F4 T9 resolved the C43 solver speed, decided C46b/C46e and added C47, C48, C49; F4 T10 resolved C48 and added C50; F4 T5 added C52, C53 and resolved C51; F4 T13 resolved C49 and added C54-C56; F4 T12 resolved C47 and added C57; F4 T6a resolved C6, C55, C56 and the C3 sign, the C3 square-face tie becoming a deliberate divergence (owner 2026-10-11), and added B14; F4 T6c fixed the `control_restart` integration-point reset and added C58; F4 T6d resolved C11 and C59 and added B15). No open issue is CRITICAL or
+Forty-one items remain open: four MEDIUM and thirty-seven LOW (C23 and C24 resolved 2026-10-05; C25, C26, C27 and B10 added; F1 T3 / K04 2026-10-06 added B11, C28-C32; F1 T6 resolved C28, added and resolved B12; F2 T1 added C36; F2 T2 added C37, C38, C39; F2 T3 resolved C5 and added C40; F3 T2 resolved C8, C18, C19, C20 and added B13, C41; F4 T2 fixed the C41 tie and left a residual; F4 T3 resolved C33; F4 T4 closed C32, added C42 and resolved C31; F4 T7-T8 added C43-C46; F4 T9 resolved the C43 solver speed, decided C46b/C46e and added C47, C48, C49; F4 T10 resolved C48 and added C50; F4 T5 added C52, C53 and resolved C51; F4 T13 resolved C49 and added C54-C56; F4 T12 resolved C47 and added C57; F4 T6a resolved C6, C55, C56 and the C3 sign, the C3 square-face tie becoming a deliberate divergence (owner 2026-10-11), and added B14; F4 T6c fixed the `control_restart` integration-point reset and added C58; F4 T6d resolved C11 and C59, found the interface history root cause of C52 and added B15 and C60). No open issue is CRITICAL or
 HIGH. The validation-suite corpus has no open failure — its 233 real tests
 pass (`materi_direct_mc` input corrected, C17 resolved). Every remaining failure is a stale or malformed test, an out-of-scope model
 or infrastructure limit, a narrow post-processing divergence, a corpus-coverage

@@ -126,9 +126,12 @@ void print_interface_stress( long int icontrol, long int task )
         sign = kn * strain_normal;
       }
     }
-    // accumulated total tangential force (history ELEMENT_INTERFACE_FORCE_TANG,
-    // Fase 3): cumulative Mohr-Coulomb or elastic total. Same accumulated
-    // semantics as sign -> consistent sigt. 3D: two tangential components.
+    // interface_sigt = the current tangential force (history
+    // ELEMENT_INTERFACE_FORCE_TANG): the elastic accumulated force, or with
+    // Mohr-Coulomb the force clamped to the yield limit. Since F4 T6d C52
+    // (2026-10-11) the history stores the CLAMPED force; before it held the
+    // elastic trial kt*gamma_total, so a sliding interface printed a sigt
+    // above the friction limit. 3D: two tangential components.
     f_t = 0.; f_t2 = 0.;
     if ( db( ELEMENT_INTERFACE_FORCE_TANG, element, idum, values, ldum,
         VERSION_NORMAL, GET_IF_EXISTS ) )
