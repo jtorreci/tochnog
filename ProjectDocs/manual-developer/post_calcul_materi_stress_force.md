@@ -532,8 +532,8 @@
 ## Differences with the Professional version
 
 - **3D section frame of a square end face without
-  `post_calcul_materi_stress_force_thickness_switch -yes`** (known
-  difference, owner decision pending; BACKLOG C3). A square face has no
+  `post_calcul_materi_stress_force_thickness_switch -yes`** (deliberate
+  divergence, project owner 2026-10-11; BACKLOG C3). A square face has no
   shortest direction (manual 6.915 is silent on the tie). GNU: the tie is
   broken by the reference point (Professional force10 without the switch:
   nory -12.34, mom1y +5000). Professional 02-08-2026: a degenerate frame

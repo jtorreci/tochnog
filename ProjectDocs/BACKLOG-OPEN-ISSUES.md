@@ -572,7 +572,9 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
   a degenerate frame (vector components 0, the moment in the mom2 slot:
   force10 without the switch gives nors -12.34, mom2s 5000, all vectors
   0), the GNU breaks the tie with the reference point (nory -12.34, mom1y
-  5000). The sfnet copy of `gforce10` (on omen, not versioned) keeps the
+  5000). Owner decision 2026-10-11: the GNU keeps its tie-break
+  (deliberate divergence, class A in DIVERGENCES-PROFESSIONAL.md). Closed.
+  The sfnet copy of `gforce10` (on omen, not versioned) keeps the
   old input and target.
 
 ### C5. `contact_target_geometry` alias only reads index 0
@@ -1853,7 +1855,7 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
 | B14 | sfnet | `calcul1/2`, `ctvmis2`, `examp18` targets calibrated on the old GNU `-size_tot`/`-size_dev` (F4 T6a) | LOW | cheap |
 | C1 | sfnet | `pruebavel` dead/malformed | LOW | cheap |
 | C2 | validation-suite | `groundflow_interface` `gvelx` sign | LOW | medium |
-| C3 | sfnet | `gforce10` 3D section sign — sign resolved 2026-10-11 (F4 T6a: plot_switch convention, test-2014 input restored, -5000 = Pro); open: square-face tie without thickness_switch (owner decision) | LOW | cheap |
+| C3 | sfnet | `gforce10` 3D section sign — sign resolved 2026-10-11 (F4 T6a: plot_switch convention, test-2014 input restored, -5000 = Pro); square-face tie kept as deliberate divergence (owner 2026-10-11) | closed | - |
 | C5 | — | `contact_target_geometry` index-0 alias — resolved 2026-10-07 (F2 T3a) | MEDIUM | medium |
 | C6 | validation-suite | `iface_gen*` generation-coverage gap — resolved 2026-10-11 (F4 T6a: generated elements removed from the inputs) | MEDIUM | cheap |
 | C7 | — | Mazars gamma with shear; damage + early plasticity path | MEDIUM | medium |
@@ -1902,7 +1904,7 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
 | C56 | Pro `other` | input tokens longer than `MCHAR`-1 (`cin >> str`) overflow the parser buffers (`ground19_water_under_dam`, 141-char URL in a comment)  — resolved 2026-10-11 (F4 T6a)| LOW | cheap |
 | C57 | Pro `other` | hex27 nodal stress recovery (`force11` up to 3.5 % at the loaded points, displacements equal) and `post_point` interpolation on a hex27 node | LOW | medium |
 
-Thirty-nine items remain open: five MEDIUM and thirty-four LOW (C23 and C24 resolved 2026-10-05; C25, C26, C27 and B10 added; F1 T3 / K04 2026-10-06 added B11, C28-C32; F1 T6 resolved C28, added and resolved B12; F2 T1 added C36; F2 T2 added C37, C38, C39; F2 T3 resolved C5 and added C40; F3 T2 resolved C8, C18, C19, C20 and added B13, C41; F4 T2 fixed the C41 tie and left a residual; F4 T3 resolved C33; F4 T4 closed C32, added C42 and resolved C31; F4 T7-T8 added C43-C46; F4 T9 resolved the C43 solver speed, decided C46b/C46e and added C47, C48, C49; F4 T10 resolved C48 and added C50; F4 T5 added C52, C53 and resolved C51; F4 T13 resolved C49 and added C54-C56; F4 T12 resolved C47 and added C57; F4 T6a resolved C6, C55, C56 and the C3 sign, leaving the C3 square-face tie for an owner decision, and added B14). No open issue is CRITICAL or
+Thirty-nine items remain open: five MEDIUM and thirty-four LOW (C23 and C24 resolved 2026-10-05; C25, C26, C27 and B10 added; F1 T3 / K04 2026-10-06 added B11, C28-C32; F1 T6 resolved C28, added and resolved B12; F2 T1 added C36; F2 T2 added C37, C38, C39; F2 T3 resolved C5 and added C40; F3 T2 resolved C8, C18, C19, C20 and added B13, C41; F4 T2 fixed the C41 tie and left a residual; F4 T3 resolved C33; F4 T4 closed C32, added C42 and resolved C31; F4 T7-T8 added C43-C46; F4 T9 resolved the C43 solver speed, decided C46b/C46e and added C47, C48, C49; F4 T10 resolved C48 and added C50; F4 T5 added C52, C53 and resolved C51; F4 T13 resolved C49 and added C54-C56; F4 T12 resolved C47 and added C57; F4 T6a resolved C6, C55, C56 and the C3 sign, the C3 square-face tie becoming a deliberate divergence (owner 2026-10-11), and added B14). No open issue is CRITICAL or
 HIGH. The validation-suite corpus has no open failure — its 233 real tests
 pass (`materi_direct_mc` input corrected, C17 resolved). Every remaining failure is a stale or malformed test, an out-of-scope model
 or infrastructure limit, a narrow post-processing divergence, a corpus-coverage
