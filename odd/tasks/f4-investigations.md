@@ -23,10 +23,10 @@ Order (owner 2026-10-10): T10 → T11 → T5 → T13 → T12 → T6.
 T6 triage (2026-10-11, HEAD 53dbb86) and owner order (2026-10-11):
 - [x] T6a Cheap batch: C55 (`print_un.cc:149` node_rhside index), C56 (`input.cc` `cin >> str` overflow), `-size_tot` (calcul.cc sqrt(0.5 a:a) vs Pro sqrt(a:a); manual first), C3 (thickness_switch default; sign = plot_switch convention), K14a (`hypoplas.cc` hyhis write-back), C6 (corpus input repair). Done `f7559bc` `80b19af` `4705692` `7e09c40` `523a959` `3e7837b` (+ docs); C3 square-face tie -> owner decision.
 - [x] T6b K24 `large2` transient 3D consolidation coupling (4.5 % pres, dt-independent; drained steady state equal). Closed 2026-10-11: deliberate divergence class A (`c350b3c`, `0cc417f`).
-- [ ] T6c K15 `validation_14` `control_restart` semantics (without restart every node_dof = Pro).
+- [x] T6c K15 `validation_14` `control_restart` semantics (without restart every node_dof = Pro). Done `8ca6124`: restart resets the IP state (manual 6.368, Pro deletes element_dof); `validation_14` NOT caused by the restart (re-scoped, open under T6f); element history records -> BACKLOG C58.
 - [ ] T6d C11 `dynamic3` (disp_primary_gate per material) -> C52.
 - [ ] T6e C53 slide in the post-solve pass.
-- [ ] T6f Rest by relevance: K15 mmc_tension, validation_3 kap/eptzz, K14b hypo3, C7 Mazars, K21, C57. Parked: K14c (ISA, class D), mohrcou2 sfnet (input artifact).
+- [ ] T6f Rest by relevance: K15 `validation_14` (re-scoped by T6c: pass-1 hole-boundary nodal stress/plastic strain up to ~20 % at 8 nodes on the r=0.01 circle -> `refine_locally` picks a different element -> pass 2 on a different mesh), K15 mmc_tension, validation_3 kap/eptzz, K14b hypo3, C7 Mazars, K21, C57. Parked: K14c (ISA, class D), mohrcou2 sfnet (input artifact).
 
 ## Later (owner 2026-10-10, after convergence with ALL divergences documented and accepted)
 - F6: exhaustive profiling and optimisation pass; special attention to the hot
@@ -403,3 +403,25 @@ docs + SEGUIMIENTO + BACKLOG + DIVERGENCES.
   TN_CHECK_ONLY=1 203 OK / 0 FALLO, runs 226/226. The two stale
   so_bicg.cc comments were fixed afterwards (parent, comment-only).
   Next: T6c K15.
+- T6c K15 `control_restart` (2026-10-11), route: delegated writer (one
+  code file restart.cc + 2 tests + build_safe + docs; probes local,
+  corpus A/B on omen `f4t6c_corpus`). Cause: `restart()` reset node,
+  node_dof and time_current but left `ELEMENT_DOF_INITIALISED` = 1, so
+  the old IP state survived (manual 6.368: restart from the start; Pro
+  02-08-2026 deletes element_dof/element_intpnt_dof, sets
+  number_timesteps 0). Fix `restart_reset_element_state()` clears the
+  flag (NORMAL/NEW). GNU has no number_timesteps record (noted). Tests
+  test-2026/control_restart_reset_ip1 (DP) / _ip2 (elastic), Pro targets
+  at node 4: RED old binary rc 1 (sigyy +19.65 / +52.08), GREEN new
+  (sigyy -24.18334 / -52.08333). Probes vs Pro: truss force kept by
+  both (1.5), undrained pressure = Pro (-9.75297); interface, spring,
+  contact-spring, tendon, damage effective stress not verified -> BACKLOG
+  C58 + DIVERGENCES C58 (class B 39, total 76). Corpus A/B old d1aa27b8
+  -> new 929f446a (omen, Pro reference): every control_restart input
+  (`examp6`, `examp23`, Pro `validation_14`, Pro other
+  `slope_nonlocal_refine`) .dbs identical except time_calculation; exit
+  codes unchanged (examp6 rc 1 both = stale target; slope_nonlocal_refine
+  timeout 300 s in old/new/Pro); new tests rc 1 -> 0. K15 `validation_14`
+  re-scoped (AUDIT, DIVERGENCES K15), kept open under T6f. Evidence:
+  build_safe TN_CHECK_ONLY=1 205 OK / 0 FALLO, runs 226/226;
+  audit_db_buffers exit 0. Work unit `8ca6124`. Next: T6d C11.
