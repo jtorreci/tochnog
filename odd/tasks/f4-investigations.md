@@ -26,7 +26,7 @@ T6 triage (2026-10-11, HEAD 53dbb86) and owner order (2026-10-11):
 - [x] T6c K15 `validation_14` `control_restart` semantics (without restart every node_dof = Pro). Done `8ca6124`: restart resets the IP state (manual 6.368, Pro deletes element_dof); `validation_14` NOT caused by the restart (re-scoped, open under T6f); element history records -> BACKLOG C58.
 - [x] T6d C11 `dynamic3` (disp_primary_gate per material) -> C52. Done `28992d5` (C11), `e0f2204` (C59), `b318484` (interface history), `c276931` (inertia pass).
 - [x] T6e C53 slide in the post-solve pass. Done `b4e4fa4` (slide law), `07433f5` (slide/contact in the pass, gate removed).
-- [ ] T6f Rest by relevance (K15 `validation_14` done `1d446b3`; K15 validation_3 kap done `c3e6d2a`): K15 `validation_14` (re-scoped by T6c: pass-1 hole-boundary nodal stress/plastic strain up to ~20 % at 8 nodes on the r=0.01 circle -> `refine_locally` picks a different element -> pass 2 on a different mesh), K15 mmc_tension, validation_3 kap/eptzz, K14b hypo3, C7 Mazars, K21, C57. Parked: K14c (ISA, class D), mohrcou2 sfnet (input artifact).
+- [ ] T6f Rest by relevance (K15 `validation_14` done `1d446b3`; K15 validation_3 kap done `c3e6d2a`): K15 `validation_14` (re-scoped by T6c: pass-1 hole-boundary nodal stress/plastic strain up to ~20 % at 8 nodes on the r=0.01 circle -> `refine_locally` picks a different element -> pass 2 on a different mesh), K15 mmc_tension and validation_3 eptzz closed 2026-10-12 as class A divergences (`600a0b4`), K14b hypo3, C7 Mazars, K21, C57. Parked: K14c (ISA, class D), mohrcou2 sfnet (input artifact).
 
 ## Later (owner 2026-10-10, after convergence with ALL divergences documented and accepted)
 - F6: exhaustive profiling and optimisation pass; special attention to the hot
@@ -560,3 +560,20 @@ docs + SEGUIMIENTO + BACKLOG + DIVERGENCES.
   binary): build_safe 224 OK / 0 FALLO, runs 226/226; audit_db_buffers
   exit 0. BACKLOG C68 open (kapsh, cap1pc, rho, damage, Maxwell msig).
   Next: T6f remaining items (mmc_tension, K14b, C7, K21, C57).
+  T6f mmc_tension + validation_3 eptzz (2026-10-12, owner decision:
+  class A, keep GNU, document), route: delegated writer (trigger: tests
+  + 6 docs; no source change). `600a0b4` test(plasti): test-2026
+  mmc_tension_vertex1/2 (test-2014 mmc_tension at dt 0.05 / 0.047;
+  sigxx 46.19, sigzz 0 +- 0.05, eppzz 0 +- 1e-4; GNU sigzz -3.3e-10 /
+  1.1e-9) and membrane_eptzz_total1/2 (vm1_ps at dt 0.01 / 0.1; eptzz
+  analytic -0.0088249 +- 3e-4 / 2e-3, sigxx 27.4199 +- 0.05; GNU
+  -0.0086300 / -0.0072102). Guard tests: rc 0 on HEAD by design, RED not
+  applicable (GNU already correct); Professional values (sigzz 0.974 /
+  0.367, eptzz -9.6e-5 / -7.9e-4) fail them. Finding: the analytic eptzz
+  is -0.0088249, not -0.00863 (that is GNU at dt 0.01): GNU eppyy/eppzz
+  split is first order in dt (dt 0.001 -0.0088050) -> BACKLOG C69.
+  DIVERGENCES MC-VERTEX-ZZ + MEMBRANE-EPTZZ (A 20 -> 22, total 78);
+  SEGUIMIENTO Descarte + register; new pages group_materi_plasti_mohr_coul
+  and group_materi_membrane (user + developer, READMEs); BACKLOG C69,
+  summary C64-C69, 47 open. build_safe TN_CHECK_ONLY=1 228 OK / 0 FALLO,
+  runs 226/226. Next: T6f remaining items (K14b, C7, K21, C57).
