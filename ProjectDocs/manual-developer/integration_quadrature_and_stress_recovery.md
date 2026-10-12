@@ -349,7 +349,9 @@ Results are bit-identical: every suite `.dbs` equal to the old build
   Professional. The convected-stress gate of WU1 was removed in WU1b
   (2026-10-12): the `cd_method` flip came from an ill-posed input
   (`-ra 1 4 -ra` is a node list), rewritten as a well-posed shear; the
-  convected stress path is BACKLOG C72 (class B). Remaining: 3x3 quad9 and hex8 natural-coordinate tables on
+  convected stress path is BACKLOG C72 (nodal output recovered
+  absolutely since F4 T6f C72, `c1a1ae9`; Professional-side residuals
+  class B). Remaining: 3x3 quad9 and hex8 natural-coordinate tables on
   curved/distorted elements (C70). Index:
   [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).
 - **`post_point_dof` of recovered fields (stress/strain)** (known

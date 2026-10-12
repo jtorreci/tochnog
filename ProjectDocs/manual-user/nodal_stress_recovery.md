@@ -52,12 +52,23 @@ recovered integration-point states follow the same rule, also when the
 stress is CONVECTED (`convection_apply -yes` on a fixed mesh with
 `materi_velocity`; since 2026-10-12, K21 WU1b, no exception).
 
-Difference with the Professional version: on the convected (Eulerian)
-stress path the GNU does not convect the integration-point stress state,
-and the nodal stress is an incremental transported output that is not
-consistent with it; the Professional sweeps the stress out of the fixed
-mesh (BACKLOG C72, class B). Use a Lagrangian mesh
-(`options_mesh -follow_material`) when the stress history matters.
+Convected stress (C72, 2026-10-13): on a mesh fixed in space with
+`convection_apply -yes`, the nodal stress is the same absolute recovery
+of the integration-point stress, as in the Professional. Neither program
+convects the integration-point stress: it stays where it is while the
+material flows through the mesh. Example:
+`validation-suite/test-2026/convected_stress_recovery1.dat` (sigzz pulse,
+uniform velocity 1): the pulse stays at 0.5 / 1.0 / 0.5, equal to the
+Professional. Before, the GNU transported the nodal stress at a wrong
+speed (about v times the integration-point volume). Use a Lagrangian
+mesh (`options_mesh -follow_material`) when the stress history of a
+solid matters (BACKLOG C73).
+
+Difference with the Professional version: on the Eulerian `validation_1`
+flow the Professional velocity drifts in time although the problem is
+steady; the GNU stays steady (DIVERGENCES C72-V1, class B). Other
+Professional-side residuals of the convected path are listed in BACKLOG
+C72.
 
 Not yet aligned (the Professional also fits in physical coordinates
 there): `quad9` with 3x3 points and `hex8` on curved or distorted

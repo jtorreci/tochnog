@@ -95,7 +95,10 @@ control_convection_apply 10 -no
 `validation-suite/test-2026/convection_apply_default1.dat` (the condif2
 model without the record: middle temperature 0.5, pure diffusion, as the
 Professional) and `convection_apply_yes1.dat` (same model with `-yes`:
-1). The validation-suite inputs `cmat_gate`, `cd_method` and
+1). `convected_stress_recovery1.dat` (nodal stress of a frozen sigzz
+pulse on an Eulerian strip = Professional) and `validation1_steady1.dat`
+(steady `validation_1` velocity at t = 3, C72). The validation-suite
+inputs `cmat_gate`, `cd_method` and
 `materi_direct_wall` carry an explicit `convection_apply -yes` since
 their targets were calibrated on the old default.
 
@@ -114,11 +117,10 @@ Corpus tests that pass with these aliases: `condif2`, `condif3`
 gives 1.000000 on the same model) and `tube1` (post-point vely 1066.59
 vs target 1000 +/- 100; the Professional gives 1000.49).
 
-`validation_1` parses and runs with the aliases but remains RUNFAIL: the
-eulerian velocity self-advection transient of the GNU diverges from the
-Professional (per-step post_point_dof trajectory and final .dbs differ;
-final state velx +0.0723 vs -0.0391). The eulerian NS transient needs a
-dedicated solver/physics sprint - see SEGUIMIENTO-CONVERGENCIA.md.
+`validation_1` parses and runs with the aliases. Since 2026-10-13 the
+GNU velocity is steady (-0.057 at t = 1 and t = 3) while the
+Professional drifts (-0.0391 at t = 1, +0.0034 at t = 3); see the
+Professional differences below.
 
 ## Differences with the Professional version
 
@@ -127,3 +129,12 @@ dedicated solver/physics sprint - see SEGUIMIENTO-CONVERGENCIA.md.
   with `materi_displacement`). Professional 02-08-2026: Refuses the explicit
   record (`-no` is its default). Status: Input dialect. Index:
   [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).
+- **`validation_1` steady state** (known difference, class B;
+  DIVERGENCES C72-V1, owner decision 2026-10-13: Professional-suspect).
+  The channel flow with `convection_apply -yes`, `inertia_apply -no` and
+  `group_materi_stokes -no` is a steady problem. GNU: post_point velx
+  -0.0570386 / -0.0571954 at t = 1 / 3 (inside the GAMM range -0.066 ..
+  -0.018; guard test `validation1_steady1`). Professional 02-08-2026:
+  drifts to -0.0391 / -0.0179 / +0.0034 at t = 1 / 2 / 3, also with a
+  smaller time step. Neither program convects the integration-point
+  stress (BACKLOG C72, C73).

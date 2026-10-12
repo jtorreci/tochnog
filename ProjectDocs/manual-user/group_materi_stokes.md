@@ -71,12 +71,14 @@ Own tests: `validation-suite/test-2026/stokes_default1.dat`,
   1 with `-no` that holds the post_point gives velx 0.124105 in the GNU
   and 0.1465713 (the all `-yes` result) in the Professional. With one
   group, or with the same switch in every group, both programs agree.
-- **Stokes flow with convected stress** (known difference, class B;
-  BACKLOG C72). With `-yes` and `convection_apply -yes`, the Professional
-  still convects the integration-point stress, and that changes the
-  velocity. The GNU convects only the nodal stress output. Without the
-  record, `validation_1` gives velx 0.1465713 in the Professional and
-  0.144159 in the GNU. The GNU value is the same as with `convection_apply
-  -no` (Professional 0.1441588). The gap grows for a stiffer
-  compressibility: with 1e-5, Professional 0.1442 against 0.1386.
+- **Stokes flow on an Eulerian mesh** (known difference, class B;
+  BACKLOG C72). With `-yes` and `convection_apply -yes` the Professional
+  velocity differs from its own `convection_apply -no` run; the GNU
+  velocity does not. Without the record, `validation_1` gives velx
+  0.1465713 in the Professional and 0.144159 in the GNU, the same as with
+  `convection_apply -no` (Professional 0.1441588). The gap grows for a
+  stiffer compressibility: with 1e-5, Professional 0.1442 against 0.1386.
+  The cause is NOT a convected integration-point stress: neither program
+  convects it (2026-10-13 probes); the Professional mechanism is not
+  identified.
 - See also [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).

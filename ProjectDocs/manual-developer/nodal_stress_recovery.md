@@ -58,17 +58,19 @@ element; `node_dof` is `0.6` on the shared nodes and keeps its reset value
 
 - `polynom.cc` — new global `stress_recovery_absolute` (declared in
   `tochnog.h` / `tochnog-mod.h`).
-- `general.cc` `general()` — sets the global from the same condition as the
-  local `lagrange` flag:
+- `general.cc` `general()` — sets the global (since F4 T6f C72,
+  2026-10-13, `c1a1ae9`; before, a convected stress dof also cleared it):
 
   ```c
-  stress_recovery_absolute = ( !materi_strain_total &&
-    ( options_convection==-NO || materi_displacement ||
-      ( materi_velocity && options_mesh[0]==-FOLLOW_MATERIAL ) ) );
+  stress_recovery_absolute = !materi_strain_total;
   ```
 
   and SKIPS the incremental lumped block for `-MATERI_STRESS` dofs when the
-  flag is set (the whole recovery is assembled in `materi.cc`).
+  flag is set (the whole recovery is assembled in `materi.cc`). With the
+  flag set it also skips the convective and artificial-diffusion terms
+  of the `-MATERI_STRESS` dofs (`continue` at the top of the `jdim`
+  loop): `materi.cc` writes the absolute numerator into the same
+  `element_rhside` slot, so a transport term there would pollute it.
 - `materi.cc` `materi()` — with the flag set, the stress block assembles the
   ABSOLUTE numerator and the denominator:
 
@@ -78,8 +80,8 @@ element; `node_dof` is `0.6` on the shared nodes and keeps its reset value
   element_lhside[indx] += volume * rec_w;      // rec_w = F/volume
   ```
 
-  When the flag is clear (convected stress dof) the historic increment is
-  kept and the denominator/inertia come from `general()`.
+  When the flag is clear (independent strain unknown) the historic
+  increment is kept and the denominator/inertia come from `general()`.
 - `dof.cc` `parallel_new_dof_diagonal()` — with the flag set, the stress dofs
   are ASSIGNED (`node_dof_new = node_rhside/node_lhside`) instead of
   accumulated. Every other non-principal dof keeps `+=`.
@@ -96,10 +98,9 @@ so the node is the per-element arithmetic mean, exactly as the Professional.
 ## Gate rationale
 
 The absolute assignment is only valid when the stress dofs are a PURE
-recovered field. Two cases keep the historic incremental lumped update:
+recovered field. One case keeps the historic incremental lumped update
+(until 2026-10-13 a second one did, see below):
 
-- the stress dof is CONVECTED (the `general()` `lagrange` flag is 0, e.g.
-  `strconv1`): the assignment would discard the transport terms;
 - an INDEPENDENT strain unknown exists (`materi_strain_total` and the
   plasti/elasti strain variants, e.g. `examp9`/`examp10`/`examp23`): the
   stress dof evolves with that unknown. The Professional cannot validate
@@ -107,7 +108,32 @@ recovered field. Two cases keep the historic incremental lumped update:
   `contact_geometry`), and the absolute form changes the adaptive-remesh
   path of `examp9`.
 
-Measured: with the gate, the sfnet 197 and validation-suite 233
+The CONVECTED stress dof (`-fixed_in_space` + `convection_apply -yes`,
+`general()` `lagrange` 0) was the second case until F4 T6f C72
+(2026-10-13). It was wrong twice: (1) the Professional 02-08-2026 does
+not transport the nodal stress, its node stress is the recovery of the
+integration-point stress, which it does not convect either (a stress
+pulse stays bit-frozen; Engram 2775); (2) the incremental update was
+inconsistent: its lumped mass used `sri_stress_recovery_weight()`
+(F/volume, per-element arithmetic mean) while the convective term used
+`h`, so the nodal stress moved at about v*volume_ip (measured 0.055 and
+0.011 for volume_ip 0.0625 and 0.0125 at v = 1). Making the convective
+term use the same weight was the alternative; it was rejected because a
+correctly transported nodal stress would still differ from the
+Professional and from the integration-point state that the GNU itself
+keeps frozen. Evidence: `test-2026/convected_stress_recovery1` (40
+quad4, uniform v = 1, elastic, sigzz pulse): post_point 0.5 / 1.0 / 0.5
+at t = 2 = Professional (bit-frozen), before 0.348732 / 0.904484 /
+0.6481; a parabolic-shear fluid variant also gives the Professional
+0.5 / 1.0 / 0.5 (before 0.4827 / 0.9937 / 0.5173). A/B on every input
+with `convection_apply -yes` (test-2014 `cd_method`, `cmat_gate`,
+`materi_direct_wall`, test-2026 `convection_apply_yes1`, `stokes_*`,
+Professional `validation_1`, `validation_8`, `condif2`, `condif3`):
+velocities bit-identical (the nodal stress never feeds back), nodal
+stresses move up to 1.3 % of their maximum on `validation_1` /
+`stokes_*` only; sfnet `strconv1` (`materi_strain_total`) byte-identical.
+
+Measured (2026-09-15): with the gate, the sfnet 197 and validation-suite 233
 classifications are byte-identical to the 73fb304 baseline and the
 `node_dof`/`post_point_dof` fields of all 191 sfnet tests that dump a `.dbs`
 are unchanged (max abs diff 0). Only the `delete`/`mpc` family changes, and
@@ -244,10 +270,10 @@ Implementation (`miscel.cc`):
   Professional gives 0 from t = 0.6), and neither value converged in dt
   or mesh. `cd_method`, `cd_geom` and `materi_direct_mc` were rewritten
   as well-posed simple shears (sigxy = c exactly with both operators).
-  The convected (Eulerian, `-fixed_in_space` + convection) stress path
-  itself is a class B divergence (BACKLOG C72): the integration-point
-  state is not convected and the nodal stress is an incremental
-  transported output not consistent with it.
+  The convected (Eulerian, `-fixed_in_space` + convection) stress path:
+  since F4 T6f C72 (2026-10-13) the nodal stress is recovered absolutely
+  there too (see "Gate rationale"); neither code convects the
+  integration-point state (BACKLOG C72 / C73).
 
 Not changed (probes in K21 WU1, Professional = physical linear fit too,
 GNU = iso linear table; BACKLOG C70): quad9 with 9 points on curved /
@@ -281,3 +307,13 @@ except the 4 new tests (1 -> 0); 9 tests move closer to the Professional
 - `miscel.cc` — `sri_stress_recovery_weight()` (2026-09-13; simplex and
   1-point bar2 arithmetic mean F4 T6f, 2026-10-11), `recovery_fit_kind()`,
   `recovery_fit_build()`, `recovery_fit_factor()` (K21, 2026-10-12)
+
+## Differences with the Professional version
+
+- Convected stress path (`-fixed_in_space` + `convection_apply -yes`):
+  nodal output = Professional since `c1a1ae9` (absolute recovery of a
+  non-convected integration-point state in both codes). Professional-side
+  residuals on `validation_1` (drift, class B C72-V1; Stokes gap) and the
+  original rigid-rotation `cd_method` stay open (BACKLOG C72).
+- 3x3 quad9 / hex8 on curved or distorted elements: BACKLOG C70.
+- Index: [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).

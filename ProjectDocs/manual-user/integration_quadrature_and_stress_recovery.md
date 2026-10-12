@@ -88,8 +88,9 @@ target if the new value matches the Professional.
   shape-function weighted average); `axisym2` inner sigzz 10759.2155 =
   Professional. Still different: the 3x3 quad9 and the hex8 on curved or
   distorted elements (GNU natural-coordinate fit, BACKLOG C70), and the
-  convected-stress models (Eulerian stress path not consistent with the
-  Professional, BACKLOG C72; same recovery operator since 2026-10-12).
+  convected-stress models (BACKLOG C72: since 2026-10-13 the nodal
+  stress is recovered from the integration points as in the
+  Professional; Professional-side residuals remain on `validation_1`).
   Index:
   [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).
 - **`post_point_dof` of recovered fields (stress/strain)** (known

@@ -1969,45 +1969,81 @@ Original report:
   0 FALLO, runs 226/226. Remaining interface + inertia gap -> C61.
 - **Severity**: LOW. **Effort**: medium.
 
-### C72. Convected (Eulerian) stress path: integration-point state not convected, nodal stress output inconsistent (F4 T6f K21 WU1b, 2026-10-12) — OPEN
+### C74. `validation_1` prints "Bi-CG iteration broke down" about 600 times (F4 T6f C72, 2026-10-13) — OPEN
 
-- **Symptom**: `options_mesh -fixed_in_space` + `convection_apply -yes`
-  with `materi_velocity` and `materi_stress`: the GNU does not convect
-  the integration-point stress state (`element_dof`, frozen: original
-  test-2014 `cd_method` sigxy mean 0.577, sigxx -33.8, sigyy -20.8),
-  and the nodal stress dof is an incremental transported OUTPUT that is
-  not consistent with that state. The Professional 02-08-2026 sweeps the
-  stress out of the fixed mesh: original `cd_method` (rigid rotation,
-  `-ra 1 4 -ra` node list) sigxy 10.78, 9.89, 6.99, 4.22, 1.25, then 0
-  from t = 0.6 (dt 0.1 and 0.05). GNU: 0.744 at t = 1 with the old
-  recovery operator, 3.642 with the physical fit; neither converges in
-  dt (0.29 / 2.06 at dt 0.05) or mesh (2x2 / 4x4: about 5 / 0.8; Pro
-  -0.39 / -0.15).
-- **Status**: the WU1 convected-stress recovery gate was removed in WU1b
-  (one operator everywhere); the recovery does not feed back into the
-  solution (the IP states are bit-identical with both operators), so the
-  difference is in the transported nodal output only. The well-posed
-  rewritten `cd_method` (pure shear) gives sigxy 0.9999956 with both
-  operators. test-2014 `cmat_gate` was the same ill-posed convected model
-  (`-ra 1 4 -ra`, target 3.20774 +- 2): gate removal moved its nodal sig
-  by 5.9e-2 relative (vs Pro 0.107 -> 0.118), and the K21 WU2
-  `group_materi_stokes` default -yes made it fail (sigxy 1.532 -> 0.921,
-  Pro 0); rewritten 2026-10-12 (`58bba14`) as a well-posed simple shear
-  (sigxy 250.5 / sigxx -49.5 = analytic = Pro).
-- **Stokes flow (K21 WU2, 2026-10-12)**: with `group_materi_stokes -yes`
-  the Professional still convects the integration-point stress and the
-  velocity feels it; the GNU Stokes result equals `convection_apply -no`
-  (`validation_1` without the record: Pro 0.1465713, GNU 0.144159 = Pro
-  `convection_apply -no` 0.1441588; compressibility 1e-5: Pro 0.1442 vs
-  0.1386). Density 0/1/2 does not change the Pro Stokes value, so the
-  gap is not a momentum term. `test-2026/stokes_default1` tolerates it
-  (0.003). Closing C72 should close it.
-- **Next step**: convect the integration-point stress state (or make the
-  nodal stress the recovered field of a convected IP state), then
-  compare with the Professional on the original `cd_method` input
-  (kept in `odd/tasks/f4-investigations.md`, WU1b).
-- **Severity**: LOW (no corpus model relies on Eulerian solid stress
-  history). **Effort**: medium/large.
+- **Symptom**: the GNU `validation_1` channel flow (`validation1_steady1`,
+  quad4 with p- and h-refinement, `convection_apply -yes`, `inertia_apply
+  -no`, t = 0..3, dt 0.01) prints "Error: the Bi-CG iteration broke down."
+  599 times (both before and after `c1a1ae9`). The run ends rc 0 and the
+  velocity is steady (-0.0570386 / -0.0571954 at t = 1 / 3), so the
+  fallback recovers each time.
+- **Next step**: find which system breaks down (first equilibrium
+  iteration of each step?), whether the Professional uses another
+  solver path, and whether a better initial guess or the direct solver
+  removes it; check the cost.
+- **Severity**: LOW. **Effort**: cheap/medium.
+
+### C73. Convection of the integration-point state of history materials (F4 T6f C72, 2026-10-13) — OPEN (optional improvement)
+
+- **Context**: on a mesh fixed in space with `convection_apply -yes`
+  neither the GNU nor the Professional 02-08-2026 convects the
+  integration-point state (stress, plastic strains, kappa, damage,
+  hypoplastic / Cam clay history, Maxwell stresses): it stays frozen at
+  the integration points while the material flows through the mesh
+  (probes, Engram 2775). For a fluid this is harmless; for a solid with
+  memory (Eulerian forming, steady rolling) it is wrong physics.
+- **Proposal**: convect the integration-point state (for example by
+  re-interpolating it upstream along the mesh velocity each step, or by
+  convecting a recovered nodal field and interpolating it back). This
+  would be a deliberate class A divergence (GNU better than the
+  Professional) and needs a project-owner decision.
+- **Severity**: LOW (no corpus model relies on Eulerian solid history).
+  **Effort**: large.
+
+### C72. Convected (Eulerian) stress path (F4 T6f K21 WU1b, 2026-10-12; nodal output resolved F4 T6f C72, 2026-10-13) — OPEN (Professional-side residuals)
+
+- **Corrected premise (2026-10-13, Engram 2775)**: the Professional
+  02-08-2026 does NOT convect the integration-point stress. A sigzz,
+  sigxy or isotropic-pressure sin^2 pulse (node_dof +
+  `global_element_dof_from_node_dof -yes`) stays bit-frozen at the
+  integration points and at the nodes for t = 0..2 (elastic and fluid,
+  Stokes `-yes`/`-no`, velocity prescribed or free, uniform or parabolic
+  shear, `-updated` or `-updated_linear`). The earlier wording ("the
+  Professional convects / sweeps the stress") was wrong.
+- **Resolved (`c1a1ae9`)**: the GNU nodal stress output. With the stress
+  dof convected (`stress_recovery_absolute` 0) the lumped mass of the
+  incremental update used the per-element recovery weight F/volume
+  (`miscel.cc` `sri_stress_recovery_weight()`, `general.cc` lumped
+  block) while the convective term used h, so the nodal stress moved at
+  about v*volume_ip (0.055 for volume_ip 0.0625 and 0.011 for 0.0125 at
+  v = 1). Fix: the convected stress dof is recovered absolutely, as
+  everywhere else (the Professional's node stress is the recovery of the
+  integration-point stress); the convective terms are skipped for it.
+  `test-2026/convected_stress_recovery1` (40 quad4, uniform v = 1,
+  elastic, sigzz pulse): post_point 0.5 / 1.0 / 0.5 at x = 1.5 / 2.0 /
+  2.5, t = 2 = Professional; before 0.348732 / 0.904484 / 0.6481. The
+  velocities never depend on the nodal stress (A/B on every input with
+  `convection_apply -yes`: velocities bit-identical, nodal stresses move
+  up to 1.3 % of their maximum on `validation_1` / `stokes_*`). The
+  incremental path remains only with an independent strain unknown
+  (`materi_strain_total`, e.g. sfnet `strconv1`, unchanged byte for byte).
+- **Remaining (Professional side, class B)**: (1) `validation_1` drift
+  of the Professional (-0.0391 / -0.0179 / +0.0034 at t = 1 / 2 / 3,
+  dt-converged), independent of `global_element_dof_apply`,
+  stabilization, predictor and density; the GNU is steady at -0.057,
+  inside the GAMM range -0.066 .. -0.018 (DIVERGENCES C72-V1, owner
+  decision: Pro-suspect; guard `test-2026/validation1_steady1`). (2)
+  Stokes flow: the Professional `validation_1` without the stokes record
+  0.1465713 vs GNU 0.144159 = Pro `convection_apply -no` 0.1441588, a
+  convection-gated, density-independent residual
+  (`test-2026/stokes_default1` tolerates it, 0.003). (3) Original
+  test-2014 `cd_method` rigid rotation (`-ra 1 4 -ra` node list): Pro
+  sigxy 10.78, 9.89, 6.99, 4.22, 1.25, then 0 from t = 0.6; GNU 0.744 /
+  3.642 at t = 1, not converged in dt or mesh. Both codes accumulate the
+  compressibility pressure at the integration points linearly in time
+  (not convected). Mechanisms of (1)-(3) not identified.
+- **Severity**: LOW. **Effort**: medium (diagnosing a Professional-side
+  effect without its source).
 
 ### C71. sfnet `tube1` (`-lobatto` + axisymmetric) gives NaN in the GNU (F4 T6f K21, 2026-10-12) — OPEN
 
@@ -2438,7 +2474,9 @@ Original report:
 | C64 | — | quad4 per-element nodal recovery of the Professional — resolved 2026-10-12 (F4 T6f K21: physical linear fit, 1-point value, on-axis rule) | closed | - |
 | C70 | — | 3x3 quad9 and hex8 (hex27/tet10 likely) recovery tables in natural coordinates; the Professional fits in physical coordinates | LOW | cheap/medium |
 | C71 | sfnet | `tube1` (`-lobatto` + axisymmetric) NaN in the GNU; Pro runs | LOW | medium |
-| C72 | — | convected (Eulerian) stress: IP state not convected, nodal stress an inconsistent incremental output; Pro sweeps the stress out; also the Stokes-flow gap (K21 WU2) | LOW | medium/large |
+| C72 | — | convected (Eulerian) stress: nodal output resolved 2026-10-13 (`c1a1ae9`, absolute recovery = Pro); neither code convects the IP state; remaining Pro-side residuals: `validation_1` drift (C72-V1), Stokes gap, `cd_method` rotation sweep | LOW | medium |
+| C73 | — | optional: convect the integration-point state of history materials on an Eulerian mesh (neither code does; class A improvement, owner decision) | LOW | large |
+| C74 | — | `validation_1` prints "Bi-CG iteration broke down" about 600 times (run ends rc 0, steady) | LOW | cheap/medium |
 | C65 | — | Professional `post_point_dof` at a node differs from its own `node_dof` | LOW | cheap |
 | C66 | — | tria6 element results differ ~1e-5 from the Professional | LOW | cheap/medium |
 | C67 | — | nodal recovery of the unmeasured element rules | LOW | cheap |
@@ -2449,7 +2487,7 @@ Original report:
 | C68d | — | `materi.cc` old rho/epi/epp read with the Maxwell loop index (two or more chains) — resolved 2026-10-12 (F4 T6f, `2327083`) | LOW | cheap |
 | C69 | — | plane-stress membrane: yy/zz split of the plastic strain first order in dt (eptzz -0.00721 at dt 0.1 vs analytic -0.00882) | LOW | medium |
 
-Forty-eight items remain open: three MEDIUM and forty-five LOW (C23 and C24 resolved 2026-10-05; C25, C26, C27 and B10 added; F1 T3 / K04 2026-10-06 added B11, C28-C32; F1 T6 resolved C28, added and resolved B12; F2 T1 added C36; F2 T2 added C37, C38, C39; F2 T3 resolved C5 and added C40; F3 T2 resolved C8, C18, C19, C20 and added B13, C41; F4 T2 fixed the C41 tie and left a residual; F4 T3 resolved C33; F4 T4 closed C32, added C42 and resolved C31; F4 T7-T8 added C43-C46; F4 T9 resolved the C43 solver speed, decided C46b/C46e and added C47, C48, C49; F4 T10 resolved C48 and added C50; F4 T5 added C52, C53 and resolved C51; F4 T13 resolved C49 and added C54-C56; F4 T12 resolved C47 and added C57; F4 T6a resolved C6, C55, C56 and the C3 sign, the C3 square-face tie becoming a deliberate divergence (owner 2026-10-11), and added B14; F4 T6c fixed the `control_restart` integration-point reset and added C58; F4 T6d resolved C11 and C59, fixed the interface history and resolved C52, and added B15, C60 and C61; B15 resolved the same day; F4 T6e resolved C53 and added C62 and C63; F4 T6f added C64-C68 and C69, and closed the K15 `mmc_tension` vertex sigzz/eppzz and `validation_3` eptzz items as deliberate divergences MC-VERTEX-ZZ / MEMBRANE-EPTZZ, owner 2026-10-12; F4 T6f resolved C68 and added C68a-C68d; C68d resolved the same day; F4 T6f closed C7 (Mazars equivalent strain, with C7b) and the AUDIT K14b `hypo3` sigxx reversal as deliberate divergences C7 / K14b, owner 2026-10-12; the `hypo3` hyhis slot residual stays open under AUDIT K14; F4 T6f K21 WU2 widened C72 with the Stokes-flow residual and closed its `cmat_gate` rewrite, no new item). No open issue is CRITICAL or
+Fifty items remain open: three MEDIUM and forty-seven LOW (C23 and C24 resolved 2026-10-05; C25, C26, C27 and B10 added; F1 T3 / K04 2026-10-06 added B11, C28-C32; F1 T6 resolved C28, added and resolved B12; F2 T1 added C36; F2 T2 added C37, C38, C39; F2 T3 resolved C5 and added C40; F3 T2 resolved C8, C18, C19, C20 and added B13, C41; F4 T2 fixed the C41 tie and left a residual; F4 T3 resolved C33; F4 T4 closed C32, added C42 and resolved C31; F4 T7-T8 added C43-C46; F4 T9 resolved the C43 solver speed, decided C46b/C46e and added C47, C48, C49; F4 T10 resolved C48 and added C50; F4 T5 added C52, C53 and resolved C51; F4 T13 resolved C49 and added C54-C56; F4 T12 resolved C47 and added C57; F4 T6a resolved C6, C55, C56 and the C3 sign, the C3 square-face tie becoming a deliberate divergence (owner 2026-10-11), and added B14; F4 T6c fixed the `control_restart` integration-point reset and added C58; F4 T6d resolved C11 and C59, fixed the interface history and resolved C52, and added B15, C60 and C61; B15 resolved the same day; F4 T6e resolved C53 and added C62 and C63; F4 T6f added C64-C68 and C69, and closed the K15 `mmc_tension` vertex sigzz/eppzz and `validation_3` eptzz items as deliberate divergences MC-VERTEX-ZZ / MEMBRANE-EPTZZ, owner 2026-10-12; F4 T6f resolved C68 and added C68a-C68d; C68d resolved the same day; F4 T6f closed C7 (Mazars equivalent strain, with C7b) and the AUDIT K14b `hypo3` sigxx reversal as deliberate divergences C7 / K14b, owner 2026-10-12; the `hypo3` hyhis slot residual stays open under AUDIT K14; F4 T6f K21 WU2 widened C72 with the Stokes-flow residual and closed its `cmat_gate` rewrite, no new item; F4 T6f C72 resolved the convected nodal stress output (C72 stays open for the Professional-side residuals) and added C73 and C74). No open issue is CRITICAL or
 HIGH. The validation-suite corpus has no open failure — its 233 real tests
 pass (`materi_direct_mc` input corrected, C17 resolved). Every remaining failure is a stale or malformed test, an out-of-scope model
 or infrastructure limit, a narrow post-processing divergence, a corpus-coverage

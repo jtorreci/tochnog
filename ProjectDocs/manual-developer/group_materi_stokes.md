@@ -40,9 +40,12 @@
   `-no` run (sigxx -0.200808 against -0.200826), but the velocity is
   identical. In the Professional run the stress feeds back into the
   velocity.
-- Conclusion: the Professional convects the integration-point stress
-  state. The GNU does not (BACKLOG C72). The fix belongs to C72, not to
-  this switch.
+- Conclusion (corrected 2026-10-13, F4 T6f C72, Engram 2775): the
+  Professional does NOT convect the integration-point stress either (a
+  stress pulse stays bit-frozen), and its Stokes value is unchanged with
+  `global_element_dof_apply -no`, so the stress storage is not the cause.
+  The residual is a convection-gated Professional effect whose mechanism
+  is not identified (BACKLOG C72); it does not belong to this switch.
 - Index probes: the result is always the index-0 value, to 1e-12. Probed
   cases: groups `-no/-yes` and `-yes/-no`; the record only on group 1;
   element 0 moved to group 1. The probes are in the session scratch;
@@ -57,8 +60,8 @@
 - `general()` declares `stokes` together with unrelated locals. A small
   `materi_stokes_switch(element_group)` helper would make the default
   explicit if a second consumer appears.
-- The Stokes / convected-stress residual depends on C72 (convecting the
-  integration-point state).
+- The Stokes residual stays open under C72 (Professional-side effect,
+  mechanism not identified).
 
 ## Differences with the Professional version
 
@@ -67,8 +70,10 @@
   Professional: index 0 for every group. Guard tests: `stokes_group1`
   (0.124105) and `stokes_group2` (-0.0570386). The Professional gives
   0.1465713 for both and fails them.
-- **Stokes flow with convected stress** (class B; BACKLOG C72).
+- **Stokes flow on an Eulerian mesh** (class B; BACKLOG C72).
   Professional `validation_1` without the record: 0.1465713; GNU:
-  0.144159, equal to `convection_apply -no`. The tolerance of
+  0.144159, equal to `convection_apply -no`. Neither program convects the
+  integration-point stress; the Professional mechanism is not
+  identified. The tolerance of
   `stokes_default1` (0.003) covers this gap.
 - See also [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).
