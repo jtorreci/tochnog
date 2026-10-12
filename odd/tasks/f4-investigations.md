@@ -26,7 +26,7 @@ T6 triage (2026-10-11, HEAD 53dbb86) and owner order (2026-10-11):
 - [x] T6c K15 `validation_14` `control_restart` semantics (without restart every node_dof = Pro). Done `8ca6124`: restart resets the IP state (manual 6.368, Pro deletes element_dof); `validation_14` NOT caused by the restart (re-scoped, open under T6f); element history records -> BACKLOG C58.
 - [x] T6d C11 `dynamic3` (disp_primary_gate per material) -> C52. Done `28992d5` (C11), `e0f2204` (C59), `b318484` (interface history), `c276931` (inertia pass).
 - [x] T6e C53 slide in the post-solve pass. Done `b4e4fa4` (slide law), `07433f5` (slide/contact in the pass, gate removed).
-- [ ] T6f Rest by relevance (K15 `validation_14` done `1d446b3`; K15 validation_3 kap done `c3e6d2a`; C68 IP states kapsh/cap1/damage/rho/Maxwell done `70235c6`; C68d Maxwell old-state index done `2327083`): K15 `validation_14` (re-scoped by T6c: pass-1 hole-boundary nodal stress/plastic strain up to ~20 % at 8 nodes on the r=0.01 circle -> `refine_locally` picks a different element -> pass 2 on a different mesh), K15 mmc_tension and validation_3 eptzz closed 2026-10-12 as class A divergences (`600a0b4`), K14b hypo3 and C7/C7b Mazars closed 2026-10-12 as class A divergences (`ae0691b`), K21, C57. Parked: K14c (ISA, class D), mohrcou2 sfnet (input artifact).
+- [ ] T6f Rest by relevance (K15 `validation_14` done `1d446b3`; K15 validation_3 kap done `c3e6d2a`; C68 IP states kapsh/cap1/damage/rho/Maxwell done `70235c6`; C68d Maxwell old-state index done `2327083`; K21 recovery part done `2305659`): K15 `validation_14` (re-scoped by T6c: pass-1 hole-boundary nodal stress/plastic strain up to ~20 % at 8 nodes on the r=0.01 circle -> `refine_locally` picks a different element -> pass 2 on a different mesh), K15 mmc_tension and validation_3 eptzz closed 2026-10-12 as class A divergences (`600a0b4`), K14b hypo3 and C7/C7b Mazars closed 2026-10-12 as class A divergences (`ae0691b`), K21 (recovery done; validation_1 stokes default + convection remain), C57, C70 (3x3 quad9 / hex8 physical fit), C71 (tube1 -lobatto NaN). Parked: K14c (ISA, class D), mohrcou2 sfnet (input artifact).
 
 ## Later (owner 2026-10-10, after convergence with ALL divergences documented and accepted)
 - F6: exhaustive profiling and optimisation pass; special attention to the hot
@@ -636,3 +636,32 @@ docs + SEGUIMIENTO + BACKLOG + DIVERGENCES.
   damage effective stress pages (user + developer). build_safe
   TN_CHECK_ONLY=1 237 OK / 0 FALLO, runs 226/226; audit_db_buffers exit
   0. Next: T6f remaining items (K21, C57).
+  T6f K21 WU1 nodal recovery (2026-10-12, owner-approved), route:
+  delegated writer (trigger: 5 source files + 4 tests + build_safe + 10
+  docs). Investigation Engram 2751. Probes (Pro 02-08-2026, operators
+  fitted on element_intpnt_dof -> element_dof): distorted hex8 2x2x2 and
+  curved quad9 3x3 are ALSO physical-coordinate fits (not implemented,
+  BACKLOG C70); elastic axisymmetric quad4 confirms the r=0 rule (1.5e-13).
+  RED on 7eed0db: test-2026 recovery_examp1_quad4_point_mean1 (node 19
+  sigxx -0.256815 vs -0.2350738), recovery_incnav4_quad9_minimal1 (sigxy
+  0.02/0.08 vs 0.05), recovery_tube1_axis1 (node 3 -66.40 vs -159.5805),
+  recovery_quad4_distorted_plane1 (node 21 1.1829 vs 2.0014257), all rc 1.
+  First build (ungated) failed test-2014 cd_method (convected
+  materi_strain_total + derivatives, sigxy 0.744 -> 3.64, target 1+-0.3);
+  a stress_recovery_absolute gate fixed it but also excluded axisym2
+  (materi_strain_total); final gate stress_recovery_lagrange (convected
+  stress only): cd_method unchanged, axisym_quad4_ring1 sigzz 10759.2155 =
+  Pro. A per-call coordinate read cost +12 % on ground11_nonsaturated;
+  the cache now re-reads only on the (inol 0, ipoint 0) call (+3 %).
+  `2305659` fix(recovery): GREEN rc 0, whole stress field = Pro within
+  1e-7. Clean build; build_safe TN_CHECK_ONLY=1 241 OK / 0 FALLO, runs
+  226/226; audit_db_buffers exit 0. Corpus A/B omen f4t6g_rec_runs (head
+  vs fin): rc changes only the 4 new tests (alternate1 timeout flake);
+  closer 9, farther 0; no-Pro changes taylor3, disk1, examp18, axisym4,
+  examp3, examp14, cd_geom (targets met); wall +0.9 %. Docs: BACKLOG C42,
+  C64 resolved, C70, C71 new (open count unchanged); DIVERGENCES C42
+  removed (closed by following the Pro), K21 re-scoped, C70/C71 added (B
+  41 -> 42, total 83); SEGUIMIENTO register; AUDIT K21; user/developer
+  nodal_stress_recovery, nodal_strain_recovery,
+  integration_quadrature_and_stress_recovery. Next: K21 validation_1
+  (stokes default, convection), C70, C57.

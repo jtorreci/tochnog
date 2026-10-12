@@ -26,6 +26,37 @@ area 0.5 and 2 sharing an edge): node 2 `sigxx` 6.4643 = (1.0938 +
 Not yet measured, and therefore unchanged: tet4 `-maximal`, bar2 with 2
 points, bar3/bar4.
 
+## quad4 and quad9 per-element values (K21, 2026-10-12)
+
+Since F4 T6f K21 the per-element nodal value of the 2D Gauss rules is the
+one of the Professional 02-08-2026:
+
+- `quad4` with 2x2 Gauss points (default) and `quad9` with 2x2 points
+  (`group_integration_points -minimal`): a least-squares plane
+  `a + b x + c y` through the integration-point values, fitted in the
+  PHYSICAL coordinates and evaluated at the node. On rectangles and
+  parallelograms this is the same as before; on distorted elements the
+  nodal stresses change (up to tens of per cent of the local value).
+- `quad4` with 1 point (`-minimal`): the point value, so the node is the
+  plain mean of the adjacent element values (before: area weighted).
+- axisymmetric `quad4` element with a node exactly on the axis (r = 0):
+  the shape-function weighted average of its point values. Elements that
+  only come close to the axis (r = 1e-6) use the plane fit.
+
+Example: `validation-suite/test-2026/recovery_tube1_axis1.dat` (laminar
+tube flow, axisymmetric quad4): node 3 sigxx -159.58 (before -66.40),
+equal to the Professional. Other examples:
+`recovery_quad4_distorted_plane1.dat`, `recovery_examp1_quad4_point_mean1.dat`,
+`recovery_incnav4_quad9_minimal1.dat`. The strain tensors and the other
+recovered integration-point states follow the same rule. When the stress
+is CONVECTED (`convection_apply -yes` on a fixed mesh with
+`materi_velocity`), the nodal stress is the transported state and the
+previous operator is kept.
+
+Not yet aligned (the Professional also fits in physical coordinates
+there): `quad9` with 3x3 points and `hex8` on curved or distorted
+elements; see BACKLOG C70.
+
 ## When it matters
 
 The difference is visible in models where a node is shared by elements with

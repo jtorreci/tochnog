@@ -54,22 +54,32 @@ Measured on the Professional's own `beam2d_1.dbs` (quad9, 45 elements),
 
 | element | points | operator | residual vs `element_dof` |
 |---|---|---|---|
-| quad4 | 4 | **bilinear interpolation** `1,x,y,xy` (4 terms) | 1.4e-7 |
-| quad9 | 9 | **uniform-weight linear least squares** `1,x,y` (3 terms) | 1.2e-12 |
-| hex8 | 8 | **uniform-weight linear least squares** `1,x,y,z` (4 terms) | 1.0e-8 |
+| quad4 | 4 | ~~bilinear interpolation `1,x,y,xy`~~ -> **linear least squares `1,x,y` in PHYSICAL coordinates** (K21, 2026-10-12; axisymmetric with a node at r=0: `sum h sig / sum h`) | 1e-12 (distorted probes, `tube1`) |
+| quad4 | 1 | the point value (K21) | exact (`examp1`) |
+| quad9 | 4 | linear least squares `1,x,y` in physical coordinates (K21) | 1e-12 (`incnav4`, probes) |
+| quad9 | 9 | **uniform-weight linear least squares** `1,x,y` (3 terms); GNU table in natural coordinates, the Professional fits in PHYSICAL coordinates (K21 probe, curved quad9; C70) | 1.2e-12 |
+| hex8 | 8 | **uniform-weight linear least squares** `1,x,y,z` (4 terms); GNU table in natural coordinates, the Professional fits in PHYSICAL coordinates (K21 probe, distorted hex8; C70) | 1.0e-8 |
 | hex27 | 27 | uniform-weight linear least squares `1,x,y,z` (assumed) | not independently verified |
 | tet10 | 5 | uniform-weight linear least squares `1,L1,L2,L3` (F4 T4 investigation) | `tet10_2` exact (-1); `tet10p` post points within 2 % of the Pro (its post_point interpolation differs, TET10-PPOINT) |
 | tria3 / tet4 / bar2 1 point, tria3 3-point and tria6 6-point nodal rules | 1 / 3 / 6 | the point value / the value of the point at the node (F4 T6f, two-element probes) | exact |
 
-The operator is FIXED in the element natural coordinates (the same 9x9
-matrix fits all 45 beam2d_1 elements of different geometry to 1e-9). The
+The operator was believed FIXED in the element natural coordinates (the
+same 9x9 matrix fits all 45 beam2d_1 elements of different geometry to
+1e-9: they are parallelograms, where the physical and natural fits
+coincide). K21 (2026-10-12) showed it is a fit in the PHYSICAL
+coordinates of the points (distorted quad4, curved quad9, distorted hex8
+probes); the GNU builds it per element for the 2D quad4/quad9 2x2 rules
+(`nodal_stress_recovery.md`), the 3x3 quad9 and the 3D table types
+remain natural-coordinate (C70). The
 least-squares fit uses UNIFORM weights (the Gauss weights give a different
 operator). The order rule is not a single clean formula: quad4 uses the
 full 4-term interpolation while quad9 and hex8 use the linear fit. The
 operators above were determined empirically and are the discriminating
 data; hex27/quad16 were not independently exercised.
 
-Open question on the quad4 operator (F4 T6f, 2026-10-11, BACKLOG C64):
+Resolved 2026-10-12 (K21; see the table above and
+`nodal_stress_recovery.md`). Historical note, the open question of
+F4 T6f (2026-10-11, BACKLOG C64):
 on a Drucker-Prager variant of `validation_14` the Professional
 per-element quad4 values (`element_dof` from `element_intpnt_dof`) are
 reproduced exactly in 92 of 95 elements by a LINEAR least-squares fit
@@ -167,10 +177,11 @@ Evidence (Professional 02-08-2026 probes, investigation of F4 T4):
 
 The 1-point rule left the quad4 hourglass modes free (the plane quad4 is
 saved by the 2x2 rule of the stiffness) and made the hoop strain u/r
-constant over the element. The remaining `axisym2` sigzz difference is
+constant over the element. The remaining `axisym2` sigzz difference was
 the quad4 nodal recovery (natural-coordinate bilinear interpolation in
 the GNU, physical-coordinate linear least squares in the Professional;
-BACKLOG C42). `msf_axisym` (`post_calcul -materi_stress -force`): the
+BACKLOG C42, resolved by K21 2026-10-12: `axisym_quad4_ring1` sigzz
+10759.2155 = Professional). `msf_axisym` (`post_calcul -materi_stress -force`): the
 section moment changes from 0 to 1/960, the analytic moment of the
 2*PI*r-weighted face (the build_safe tolerance 0.005 holds).
 `foundation_consolidation_settlement` (Pro `other`, axisymmetric) now
@@ -255,13 +266,11 @@ operations):
   binary; hex27 and quad16 were not independently verified (assumed linear
   least squares). A second element type would need a discriminating
   `.dbs` dump.
-- quad4 operator: a Drucker-Prager `validation_14` variant fits the
-  Professional per-element values with the linear `1,xi,eta` least
-  squares in 92/95 elements, contradicting the bilinear row of section 2
-  (BACKLOG C64, needs an elastic probe with a `xi*eta` stress mode).
-- The fit basis differs between quad4 (bilinear) and quad9/hex8 (linear);
-  the underlying rule in the Professional was not identified, only the
-  operators.
+- quad4 operator: resolved by K21 (2026-10-12, C64 closed): the
+  Professional fits `1,x,y` in physical coordinates for every measured
+  type; the 92/95 `validation_14` match was the natural fit agreeing with
+  the physical one on near-parallelograms. Pending: the 3x3 quad9 and the
+  3D table types (hex8 proven physical, hex27/tet10 unmeasured; C70).
 - The 3 stale targets (condif10, examp5, ho_mech1) should be recalibrated
   in the same work unit that promotes the alignment to the default;
   strconv1 needs a longer transient or a recalibrated target; examp8 needs
@@ -333,15 +342,14 @@ Results are bit-identical: every suite `.dbs` equal to the old build
   post points differ by up to 2 %). Code: `point_el.cc` (tet10 shape functions). Index:
   [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).
 - **quad4 nodal stress recovery on distorted or axisymmetric elements**
-  (known difference, not decided; BACKLOG C42). GNU: bilinear
-  interpolation `1,xi,eta,xi*eta` of the 2x2 Gauss values in the natural
-  coordinates (`sri_stress_recovery_weight`). Professional 02-08-2026:
-  uniform-weight linear least squares `1,x,y` in the physical
-  coordinates. Equal on plane rectangles; distorted quad4 3-7 %
-  (investigation probe `hg4d`), axisymmetric ring `axisym2` sigzz
-  10760.09 vs 10759.22 (displacements equal). A prototype (variant v4
-  of F4 T4) reproduced the Professional `axisym2` value but flips the
-  exit code of `cd_method`; not adopted. Index:
+  (BACKLOG C42) — RESOLVED 2026-10-12 (F4 T6f K21): `miscel.cc`
+  `recovery_fit_factor()` builds the Professional physical-coordinate
+  linear fit per element for the 2x2 quad4/quad9 (on-axis `h` rule,
+  1-point quad4 point value); `axisym_quad4_ring1` sigzz 10759.2155 =
+  Professional. The `cd_method` flip of the F4 T4 prototype is avoided by
+  the `stress_recovery_lagrange` gate (convected stress keeps the old
+  operator). Remaining: 3x3 quad9 and hex8 natural-coordinate tables on
+  curved/distorted elements (C70). Index:
   [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).
 - **`post_point_dof` of recovered fields (stress/strain)** (known
   difference, not decided; AUDIT section 5 (after the K04 table)). GNU:

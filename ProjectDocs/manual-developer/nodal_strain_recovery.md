@@ -39,6 +39,14 @@
 
 ## Hardcoded / pending
 
+- K21 WU1 (F4 T6f, 2026-10-12): `strain_recovery_weight()` forwards the
+  new `element_group` / `nodes[]` arguments to
+  `sri_stress_recovery_weight()`, so the strain tensors and the IP states
+  (kappa, C68) get the geometry-dependent quad4/quad9 operator (physical
+  linear fit, on-axis `h` rule, 1-point value) in both the `materi.cc`
+  numerators and the `general.cc` denominators. SRI elements keep `h`.
+  Details: `nodal_stress_recovery.md`.
+
 - kappa (`materi_plasti_kappa`) uses the same weight since F4 T6f WU2
   (2026-10-11), with its integration-point value kept in ELEMENT_DOF
   (`materi_plasti_kappa.md`); validation_3 nodal kap within 2.7 % of the

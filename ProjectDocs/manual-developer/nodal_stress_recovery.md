@@ -184,6 +184,86 @@ previous binary, GREEN after): `tria3_nodal_recovery_mean1`,
 `bar2_nodal_recovery_mean1`, `tet4_nodal_recovery_mean1`; and
 `validation-suite/test-2014/validation_14_pass1` (hole nodes 4 and 120).
 
+## Geometry-dependent quad4 / quad9 recovery (F4 T6f K21 WU1, 2026-10-12)
+
+The K21 investigation (Engram 2751) fitted the Professional per-element
+operator from its `.dbs` (`element_intpnt_dof` and `element_intpnt_coord`
+-> `element_dof`, exact to 1e-10..1e-13) on the sfnet `examp1`/`incnav4`,
+the Pro `tube1` and dedicated distorted probes:
+
+| element / rule | Professional per-element nodal value | GNU before |
+|---|---|---|
+| quad4 2x2 Gauss | linear least squares `1,x,y` in PHYSICAL coordinates, `F_g(n) = [1,x_n,y_n] (A^T A)^-1 [1,x_g,y_g]^T` | iso bilinear `1,xi,eta,xi*eta` (table type 0) |
+| quad9 2x2 Gauss (`-minimal`) | same physical linear fit | `h_inol` (volume weighted) |
+| quad4 1 point (`-minimal`) | the point value | `h_inol` (volume weighted) |
+| axisymmetric quad4 2x2 with a node EXACTLY at r=0 | `sum_g h_n(g) sig_g / sum_g h_n(g)` | table type 0 |
+
+Assembly is the arithmetic mean over the adjacent elements in every case
+(unchanged `F/volume` trick). The physical and iso linear fits are equal
+on parallelograms (the fit is affine invariant), and the bilinear
+interpolation also agrees when the integration-point field has no
+`xi*eta` mode, which is why rectangular plane meshes never discriminated
+them (C64, C42). The axis rule is triggered only by r == 0.: elements
+starting at r = 1e-6 or 1e-3 use the linear fit. It was confirmed for a
+viscous fluid (`tube1`) and an elastic axisymmetric probe (displacement
+prescribed at every node; the two on-axis elements, one of them
+distorted, exact to 1.5e-13 with the `h` rule, 0.31 of the scale off
+with the linear fit).
+
+Implementation (`miscel.cc`):
+
+- `recovery_fit_kind()` selects the rule (2D only; quad4 1 point; quad4
+  and quad9 with 4 points when `stress_recovery_gauss`).
+- `recovery_fit_build()` evaluates the Lagrange shape functions at the
+  2x2 Gauss points, maps the points to physical coordinates, and builds
+  `F[inol][ipoint]`: the `h` rule on the axis, otherwise the 3x3 normal
+  equations on centred and scaled coordinates (Gauss-Jordan, pivot
+  < 1e-12 -> not applied, `h_inol` fallback).
+- `recovery_fit_factor()` reads the start-of-step node coordinates
+  (`NODE`, `VERSION_NORMAL`) and `GROUP_AXISYMMETRIC`, and keeps a
+  `thread_local` cache of the last element (type, group, node numbers,
+  coordinates), so the many calls per element (stress, strain tensors, IP
+  states, `general.cc` denominators) build the operator once. Calls with
+  the same node numbers skip the `db()` reads; the coordinates are re-read
+  and compared on the `(inol 0, ipoint 0)` call, the first call of every
+  element visit, so a moved or refined mesh is always caught (a first
+  version that re-read the coordinates on every call cost +12 % wall on
+  Pro `ground11_nonsaturated`). The element loop can run in threads
+  (`options_processors`), hence `thread_local`.
+- `sri_stress_recovery_weight()` and `strain_recovery_weight()` take two
+  new arguments, `element_group` and `nodes[]`; every caller in
+  `materi.cc` (stress, strain tensors, kappa, C68 IP states) and
+  `general.cc` (strain/IP-state lumped denominators, convected stress)
+  passes them, so numerator and denominator stay consistent.
+- Gate: not applied to CONVECTED stress dofs (`stress_recovery_lagrange`
+  == 0, set in `general()` next to `stress_recovery_absolute`: convection
+  on a fixed/ALE mesh). There the nodal stress is the transported
+  material state; test-2014 `cd_method` (GNU-only convected
+  `materi_strain_total` + `derivatives`, one rectangle) moved from sigxy
+  0.744 to 3.64 (target 1 +- 0.3) with the fit, so the historic operator
+  is kept on that path (no Professional reference).
+
+Not changed (probes in K21 WU1, Professional = physical linear fit too,
+GNU = iso linear table; BACKLOG C70): quad9 with 9 points on curved /
+distorted elements (iso fit off by ~1.0 of a scale 8 field), hex8 2x2x2 on
+distorted bricks (off by 1.1-1.5 of a scale 10 field). Unmeasured: hex27,
+tet10 geometry dependence, the axis rule for quad9 / 1-point quad4 (the
+point value is used), the Lobatto rules (C67).
+
+Tests (`validation-suite/test-2026`, RED on 7eed0db, GREEN after; every
+stress component of the whole node field = Professional to <= 1e-7 of
+its scale): `recovery_examp1_quad4_point_mean1` (node 19 sigxx -0.2350738,
+before -0.256815), `recovery_incnav4_quad9_minimal1` (nodes 1/3 sigxy
+0.05, before 0.02/0.08), `recovery_tube1_axis1` (node 3 sigxx -159.5805,
+before -66.40; nodes 2, 33, 40), `recovery_quad4_distorted_plane1`
+(node 21 sigxx 2.0014257, before 1.1829).
+
+Corpus A/B (omen, `f4t6g_rec_runs`, 7eed0db vs `2305659`): no rc change
+except the 4 new tests (1 -> 0); 9 tests move closer to the Professional
+(`tube1`, `pressed_rubber_cylinder`, `axisym5`, `examp1`, `ho_mech1`,
+`incnav4`, `incnav5`, `axisym_quad4_hourglass1`,
+`materi_memory_updated_linear_current2`), none farther; wall +0.9 %.
+
 ## Files
 
 - `dof.cc` — `parallel_new_dof_diagonal()`
@@ -193,4 +273,6 @@ previous binary, GREEN after): `tria3_nodal_recovery_mean1`,
 - `polynom.cc` — `stress_recovery_absolute`
 - `tochnog.h` / `tochnog-mod.h` — the extern declaration
 - `miscel.cc` — `sri_stress_recovery_weight()` (2026-09-13; simplex and
-  1-point bar2 arithmetic mean F4 T6f, 2026-10-11)
+  1-point bar2 arithmetic mean F4 T6f, 2026-10-11), `recovery_fit_kind()`,
+  `recovery_fit_build()`, `recovery_fit_factor()` (K21, 2026-10-12)
+- `general.cc` — `stress_recovery_lagrange` (K21 gate)

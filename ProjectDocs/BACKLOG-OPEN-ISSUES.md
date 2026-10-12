@@ -1484,7 +1484,14 @@ Original report:
   `-total_linear` path with a velocity tie (the same input with an
   explicit `-total_linear` already failed before F3).
 - **Severity**: **LOW**. **Effort**: **medium** (investigation).
-### C42. quad4 nodal stress recovery: natural-coordinate bilinear interpolation (GNU) vs physical-coordinate linear least squares (Professional) (F4 T4, 2026-10-09)
+### C42. quad4 nodal stress recovery: natural-coordinate bilinear interpolation (GNU) vs physical-coordinate linear least squares (Professional) (F4 T4, 2026-10-09) — RESOLVED 2026-10-12 (F4 T6f K21 WU1)
+
+- **Resolution**: physical-coordinate linear fit per element for the 2x2
+  quad4/quad9 (`miscel.cc` `recovery_fit_factor()`); `axisym_quad4_ring1`
+  sigzz 10759.2155 = Professional. The `cd_method` flip of the F4 T4
+  prototype is avoided by gating the fit to non-convected stress dofs
+  (`stress_recovery_lagrange`): `cd_method` convects its stress, so the
+  nodal stress is its material state there.
 
 - **Symptom** (F4 T4 investigation, after the K20 fix): on rectangles in
   plane analyses both programs agree; on distorted quad4 and on
@@ -1944,6 +1951,44 @@ Original report:
   0 FALLO, runs 226/226. Remaining interface + inertia gap -> C61.
 - **Severity**: LOW. **Effort**: medium.
 
+### C71. sfnet `tube1` (`-lobatto` + axisymmetric) gives NaN in the GNU (F4 T6f K21, 2026-10-12) — OPEN
+
+- **Corpus**: sfnet `tube1` (`group_integration_method -lobatto`,
+  `group_axisymmetric -yes`, h-refined quad4, viscous fluid).
+- **Symptom**: GNU `node_dof` velocities NaN ("the iterative solver did
+  not converge"); the Professional 02-08-2026 runs it (node 3 vely
+  999.98, sigxx -158.25). The Pro `tube1` (default Gauss rule) runs in
+  both programs and is a K21 test (`recovery_tube1_axis1`).
+- **Cause candidate**: the Lobatto points on the axis have radius 0, so
+  their axisymmetric volume `2*PI*r*w*detJ` is 0 (and terms divided by r
+  are singular); how the Professional treats on-axis Lobatto points is
+  not measured.
+- **Next step**: one-element on-axis Lobatto probe in both programs
+  (element_intpnt_dof, volumes), then decide.
+- **Severity**: LOW. **Effort**: cheap probe, medium fix.
+
+### C70. 3x3 quad9 and 3D recovery tables fit in natural, the Professional in physical coordinates (F4 T6f K21, 2026-10-12) — OPEN
+
+- **Symptom**: K21 WU1 probes (prescribed quadratic velocity at every
+  node, viscous fluid, Professional `element_dof` vs the operators
+  applied to its `element_intpnt_dof`): the Professional per-element
+  value of a CURVED/distorted quad9 with 3x3 points and of a DISTORTED
+  hex8 with 2x2x2 points is the uniform linear least squares in
+  PHYSICAL coordinates (residual 1e-12), not the natural-coordinate fit
+  of the GNU table (`sri_recovery_factor()` types 1 and 2): the natural
+  fit is off by ~1.0 of a field scale 8 (quad9) and 1.1-1.5 of a scale 10
+  (hex8). Equal on parallelograms / parallelepipeds (affine invariance),
+  which is why the earlier probes matched.
+- **Not changed in K21 WU1** (scope: 2D 2x2 / 1-point quad rules). The
+  hex27 and tet10 tables are probably the same case (unmeasured; C57 hex27
+  `force11` up to 3.5 % may be this). The geometry-dependent builder
+  `recovery_fit_build()` (`miscel.cc`) generalises to 9 points directly;
+  3D needs the 4-term fit and the 3D shape functions.
+- **Next step**: extend `recovery_fit_kind()` to quad9 9-point (one line +
+  test), then a 3D builder for hex8/hex27 (+ tet10 probe), corpus A/B.
+- **Severity**: LOW (nodal output only). **Effort**: cheap (quad9) /
+  medium (3D).
+
 ### C69. Plane-stress membrane: the yy/zz split of the plastic strain is first order in dt (F4 T6f, 2026-10-12) — OPEN
 
 - **Context**: found while writing the guard tests of the deliberate
@@ -2112,7 +2157,16 @@ Original report:
   number, first found) on a two-element probe; decide whether to follow.
 - **Severity**: LOW (post-processing only). **Effort**: cheap.
 
-### C64. quad4 per-element recovery of the Professional: linear `1,xi,eta` least squares? (F4 T6f, 2026-10-11) — OPEN
+### C64. quad4 per-element recovery of the Professional: linear `1,xi,eta` least squares? (F4 T6f, 2026-10-11) — RESOLVED 2026-10-12 (F4 T6f K21 WU1)
+
+- **Resolution**: the Professional fits `1,x,y` in PHYSICAL coordinates
+  (quad4 2x2, quad9 2x2; 1-point quad4 = point value; axisymmetric
+  element with a node at r=0: `sum h sig / sum h`), measured exact on
+  `tube1`, `examp1`, `incnav4` and distorted probes. Implemented per
+  element in `miscel.cc` `recovery_fit_factor()`; tests
+  `test-2026/recovery_*`. The natural `1,xi,eta` fit matched 92/95
+  `validation_14` elements because it equals the physical fit on
+  (near-)parallelograms. Remaining types: C70.
 
 - **Symptom**: on a Drucker-Prager variant of `validation_14` (quad4,
   2x2 Gauss) the Professional per-element nodal values (`element_dof`
@@ -2302,7 +2356,7 @@ Original report:
 | C39 | Pro `other` | K17 residuals: `truss8` birth node resolved 2026-10-06 (death velocity reset open), `update2` -updated robustness, `truss13` truss_distribute_mpc, zero-force truss first iteration | LOW | cheap/large |
 | C40 | Pro `other` | element-target contact residuals after F2 T3b: no Pro check "target element has all nodes on the boundary", hex8 target sides never detected, node_boundary generated only for element-target contact | LOW | cheap/medium |
 | C41 | Pro `other` | `mohr_coul_direct7`: `-total_linear` + velocity `mpc_node_number` tie — tie resolved 2026-10-09 (F4 T2); residual disy/sigzz difference | LOW | medium |
-| C42 | Pro `other` | quad4 nodal stress recovery: natural bilinear (GNU) vs physical linear least squares (Pro); distorted/axisymmetric quad4 (`axisym2` sigzz 10760.09 vs 10759.22) | LOW | medium |
+| C42 | Pro `other` | quad4 nodal stress recovery: natural bilinear (GNU) vs physical linear least squares (Pro) — resolved 2026-10-12 (F4 T6f K21: `axisym2` sigzz 10759.2155 = Pro) | closed | - |
 | C43 | Pro `other` | memory hogs of the Bi-CG solver (`force11`, `large1`, `ground19`, `mesh_activate1`, `foundation_consolidation_settlement`): resolved 2026-10-09 (F4 T7 A dense n x n matrix, B lazy band retry, C macro per step); solver speed resolved 2026-10-10 (F4 T9: `-matrix_pardiso` -> SuperLU, CSR operator, recovery table); `foundation...` still Bi-CG bound | MEDIUM | cheap/medium |
 | C44 | Pro `other` | one-shot mesh records (`control_mesh_macro`/`_copy`/`_mirror`/`_switch`) re-applied on every time step — resolved 2026-10-09 (F4 T7 C) | MEDIUM | cheap |
 | C45 | — | `control_mesh_copy`/`_mirror` after the first time step: `node_dof_start_refined` error — resolved 2026-10-10 (F4 T8 `0ca144c`) | LOW | cheap |
@@ -2323,7 +2377,9 @@ Original report:
 | C62 | — | post-solve pass skips `parallel_new_dof_before`: reported `node_rhside` without node_force / nodal mass terms | LOW | cheap/medium |
 | C61 | — | interface Mohr-Coulomb + `inertia_apply`: first-step velocity differs from the Pro (0.412 vs 0.273), independent of the pass | LOW | medium |
 | C60 | — | interface `element_interface_intpnt_stress` normal sign depends on the node order (Pro: compression negative always) | LOW | cheap/medium |
-| C64 | — | quad4 per-element nodal recovery of the Professional (linear least squares?) | LOW | cheap/medium |
+| C64 | — | quad4 per-element nodal recovery of the Professional — resolved 2026-10-12 (F4 T6f K21: physical linear fit, 1-point value, on-axis rule) | closed | - |
+| C70 | — | 3x3 quad9 and hex8 (hex27/tet10 likely) recovery tables in natural coordinates; the Professional fits in physical coordinates | LOW | cheap/medium |
+| C71 | sfnet | `tube1` (`-lobatto` + axisymmetric) NaN in the GNU; Pro runs | LOW | medium |
 | C65 | — | Professional `post_point_dof` at a node differs from its own `node_dof` | LOW | cheap |
 | C66 | — | tria6 element results differ ~1e-5 from the Professional | LOW | cheap/medium |
 | C67 | — | nodal recovery of the unmeasured element rules | LOW | cheap |

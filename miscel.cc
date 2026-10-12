@@ -810,9 +810,9 @@ double sri_stress_recovery_weight( long int sri, long int name, long int nnol,
   //   quad9   4 pts  linear least squares 1,x,y in PHYSICAL coordinates (K21)
   //   quad9   9 pts  linear least squares    1,xi,eta  (3 terms, iso;
   //                  the Professional fits in physical coordinates: equal on
-  //                  parallelograms, differs on curved/distorted quad9, C64)
+  //                  parallelograms, differs on curved/distorted quad9, C70)
   //   hex8    8 pts  linear least squares    1,xi,eta,zeta (4 terms, iso;
-  //                  the Professional fits in physical coordinates, C64)
+  //                  the Professional fits in physical coordinates, C70)
   //   hex27  27 pts  linear least squares    1,x,y,z   (4 terms)
   //   tet10    5 pts  linear least squares    1,L1,L2,L3 (4 terms, C31)
   //   tria3 1 pt / 3 pt nodal, tria6 6 pt nodal, tet4 1 pt, bar2 1 pt:

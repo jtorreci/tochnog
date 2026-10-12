@@ -82,13 +82,13 @@ target if the new value matches the Professional.
   post points differ by up to 2 %). Index:
   [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).
 - **quad4 nodal stress recovery on distorted or axisymmetric elements**
-  (known difference, not decided; BACKLOG C42). GNU: bilinear fit
-  `1,xi,eta,xi*eta` in the natural coordinates (exact interpolation of the
-  4 Gauss points). Professional 02-08-2026: linear least squares `1,x,y`
-  in the physical coordinates. Equal on rectangles in plane analyses;
-  differs on distorted quad4 (3-7 %) and on axisymmetric rings
-  (`axisym2` inner sigzz GNU 10760.09, Professional 10759.22; the
-  displacements are equal). Status: open, LOW. Index:
+  (BACKLOG C42) — RESOLVED 2026-10-12 (F4 T6f K21): the 2x2 Gauss quad4
+  (and the 2x2 quad9) now use the Professional linear least squares
+  `1,x,y` in the physical coordinates (on-axis axisymmetric elements:
+  shape-function weighted average); `axisym2` inner sigzz 10759.2155 =
+  Professional. Still different: the 3x3 quad9 and the hex8 on curved or
+  distorted elements (GNU natural-coordinate fit, BACKLOG C70), and the
+  convected-stress models (previous operator kept). Index:
   [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).
 - **`post_point_dof` of recovered fields (stress/strain)** (known
   difference, not decided; AUDIT section 5 (after the K04 table)). GNU:
