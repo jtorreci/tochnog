@@ -78,19 +78,22 @@ void general( long int element, long int name, long int nnol, long int element_g
   db( OPTIONS_MESH, 0, options_mesh, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
   options_convection = convection_apply_switch();
   // Nodal stress recovery (2026-09-15): the absolute weighted average is
-  // only valid when the stress dofs are a PURE recovered field. Two cases
-  // keep the historic incremental lumped update:
-  //   - the stress dof is CONVECTED (the local lagrange flag below is 0,
-  //     e.g. strconv1): the absolute assignment would discard the
-  //     transport terms;
-  //   - an INDEPENDENT strain unknown exists (materi_strain_total and the
-  //     plasti/elasti strain variants): the stress dof evolves with that
-  //     unknown (measured: examp9/10/23, where the Pro cannot validate the
-  //     model - unsupported bounda_unknown/options_mesh/contact_geometry -
-  //     and the absolute form changes the adaptive-remesh path).
-  stress_recovery_absolute = ( !materi_strain_total &&
-    ( options_convection==-NO || materi_displacement ||
-      ( materi_velocity && options_mesh[0]==-FOLLOW_MATERIAL ) ) );
+  // only valid when the stress dofs are a PURE recovered field. One case
+  // keeps the historic incremental lumped update: an INDEPENDENT strain
+  // unknown exists (materi_strain_total and the plasti/elasti strain
+  // variants): the stress dof evolves with that unknown (measured:
+  // examp9/10/23, where the Pro cannot validate the model - unsupported
+  // bounda_unknown/options_mesh/contact_geometry - and the absolute form
+  // changes the adaptive-remesh path).
+  // C72 (F4 T6f, 2026-10-13): a CONVECTED stress dof (convection_apply
+  // -yes on a mesh fixed in space) is recovered absolutely too. The
+  // Professional 02-08-2026 never transports the nodal stress: it is the
+  // recovery of the integration-point stress, which is not convected
+  // either (a sigzz pulse stays bit-frozen). The former incremental
+  // convected update was also inconsistent: its lumped mass used the
+  // per-element recovery weight F/volume while the convective term used
+  // h, so the nodal stress moved at about v*volume_ip instead of v.
+  stress_recovery_absolute = !materi_strain_total;
   db( OPTIONS_INERTIA, 0, &options_inertia, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
   {
     // multi-valued record (Professional: one switch per principal dof);
@@ -392,9 +395,10 @@ void general( long int element, long int name, long int nnol, long int element_g
               inol, npoint, ipoint, h[inol], volume, element_group,
               nodes );
           if ( dof_type[iuknwn]==-MATERI_STRESS ) {
-            // Convected stress dof (stress_recovery_absolute==0): keep the
-            // 2026-09-13 least-squares recovery weight for the incremental
-            // lumped update.
+            // Incremental stress dof (stress_recovery_absolute==0, an
+            // independent strain unknown exists): keep the 2026-09-13
+            // least-squares recovery weight for the incremental lumped
+            // update.
             long int kcomp = iuknwn - stres_indx;
             if ( sri_active( element, element_group, name, nnol ) ) {
               if ( kcomp==0 || kcomp==3*nder || kcomp==5*nder )
@@ -419,6 +423,13 @@ void general( long int element, long int name, long int nnol, long int element_g
         }
           
         for ( jdim=0; jdim<ndim; jdim++ ) {
+
+            // C72: an absolutely recovered stress dof is a pure recovery
+            // of the integration-point stress (materi.cc assembles the
+            // numerator in the same element_rhside slot); no convective or
+            // artificial-diffusion terms may be added to it.
+          if ( dof_type[iuknwn]==-MATERI_STRESS && stress_recovery_absolute )
+            continue;
 
             // diffusion: real dissusion
             // diff_part: diffusion term used for determination peclet number
