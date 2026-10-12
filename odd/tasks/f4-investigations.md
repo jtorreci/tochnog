@@ -26,7 +26,7 @@ T6 triage (2026-10-11, HEAD 53dbb86) and owner order (2026-10-11):
 - [x] T6c K15 `validation_14` `control_restart` semantics (without restart every node_dof = Pro). Done `8ca6124`: restart resets the IP state (manual 6.368, Pro deletes element_dof); `validation_14` NOT caused by the restart (re-scoped, open under T6f); element history records -> BACKLOG C58.
 - [x] T6d C11 `dynamic3` (disp_primary_gate per material) -> C52. Done `28992d5` (C11), `e0f2204` (C59), `b318484` (interface history), `c276931` (inertia pass).
 - [x] T6e C53 slide in the post-solve pass. Done `b4e4fa4` (slide law), `07433f5` (slide/contact in the pass, gate removed).
-- [ ] T6f Rest by relevance (K15 `validation_14` done `1d446b3`; K15 validation_3 kap done `c3e6d2a`; C68 IP states kapsh/cap1/damage/rho/Maxwell done `70235c6`): K15 `validation_14` (re-scoped by T6c: pass-1 hole-boundary nodal stress/plastic strain up to ~20 % at 8 nodes on the r=0.01 circle -> `refine_locally` picks a different element -> pass 2 on a different mesh), K15 mmc_tension and validation_3 eptzz closed 2026-10-12 as class A divergences (`600a0b4`), K14b hypo3, C7 Mazars, K21, C57. Parked: K14c (ISA, class D), mohrcou2 sfnet (input artifact).
+- [ ] T6f Rest by relevance (K15 `validation_14` done `1d446b3`; K15 validation_3 kap done `c3e6d2a`; C68 IP states kapsh/cap1/damage/rho/Maxwell done `70235c6`; C68d Maxwell old-state index done `2327083`): K15 `validation_14` (re-scoped by T6c: pass-1 hole-boundary nodal stress/plastic strain up to ~20 % at 8 nodes on the r=0.01 circle -> `refine_locally` picks a different element -> pass 2 on a different mesh), K15 mmc_tension and validation_3 eptzz closed 2026-10-12 as class A divergences (`600a0b4`), K14b hypo3, C7 Mazars, K21, C57. Parked: K14c (ISA, class D), mohrcou2 sfnet (input artifact).
 
 ## Later (owner 2026-10-10, after convergence with ALL divergences documented and accepted)
 - F6: exhaustive profiling and optimisation pass; special attention to the hot
@@ -599,3 +599,16 @@ docs + SEGUIMIENTO + BACKLOG + DIVERGENCES.
   index in the old-state read), 50 open; DIVERGENCES B 39 -> 42, total
   81; SEGUIMIENTO register. Next: T6f remaining items (K14b, C7, K21,
   C57).
+  T6f C68d Maxwell old-state index (2026-10-12), route: delegated writer
+  (trigger: source + test + build_safe + docs). Code reading confirmed
+  only the old-state read loop of materi() had the pattern (the Maxwell
+  loop overwrote indx before the rho/epi/epp reads). RED: test-2026
+  maxwell_two_chains_state1 (two identical chains vs one chain with the
+  summed stiffness; Pro 02-08-2026 equal to ~1e-12 on omen) rc 1 on
+  30bb922 (node 1 reaction -13.32 vs -19.17); ASan/UBSan build of
+  30bb922: no report (overrun inside dbl_array). `2327083`
+  fix(materi): old_msig[m*MDIM*MDIM + indx], indx untouched; GREEN rc 0
+  (1e-11). Clean build; build_safe TN_CHECK_ONLY=1 233 OK / 0 FALLO,
+  runs 226/226; audit_db_buffers exit 0. Docs: BACKLOG C68d resolved,
+  49 open; SEGUIMIENTO register + materi_maxwell_stress line; Maxwell
+  developer page. Next: T6f remaining items (K14b, C7, K21, C57).

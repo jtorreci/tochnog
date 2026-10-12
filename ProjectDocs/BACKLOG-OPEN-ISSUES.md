@@ -2034,7 +2034,7 @@ Original report:
 - **Classification**: class B, cause unknown.
 - **Severity**: LOW. **Effort**: medium.
 
-### C68d. `materi.cc` old-state read uses the Maxwell loop index (F4 T6f C68, 2026-10-12) — OPEN
+### C68d. `materi.cc` old-state read uses the Maxwell loop index (F4 T6f C68, 2026-10-12) — RESOLVED 2026-10-12 (`2327083`)
 
 - **Symptom**: in the old-state read loop of `materi()` the Maxwell loop
   overwrites `indx` with `m*MDIM*MDIM + idim*MDIM + jdim`, and the
@@ -2048,6 +2048,20 @@ Original report:
   test.
 - **Severity**: LOW (latent; memory safety when triggered).
   **Effort**: cheap.
+- **Resolution** (F4 T6f C68d, `2327083`): confirmed by code reading
+  (only the old-state read loop had the pattern; the C68 write block
+  and the rotation loops use explicit indices) and by a test. With two
+  chains the rho/epi/epp reads went past their 9-entry slices into
+  `new_rho`, `new_epi` and `inc_epp` (inside the single `dbl_array`
+  allocation, so an ASan/UBSan build reports nothing) and the real
+  slots stayed 0: rho and epp never accumulated. The Maxwell read now
+  indexes `old_msig[m*MDIM*MDIM + indx]`. Test `test-2026/
+  maxwell_two_chains_state1` (von Mises + kinematic hardening, two
+  identical chains = one chain with the summed stiffness, exact in the
+  Professional 02-08-2026 too): previous binary rc 1 (node 1 reaction
+  -13.32 vs -19.17), fix rc 0 (1e-11). The remaining GNU-vs-Professional
+  difference of that model (one chain: reaction 2.5e-3, rhoyy 7e-3,
+  msigyy 9 % relative) is the Maxwell relaxation item C68a.
 
 ### C67. Nodal recovery of the unmeasured element rules (F4 T6f, 2026-10-11) — OPEN
 
@@ -2308,10 +2322,10 @@ Original report:
 | C68a | — | Professional Maxwell chain differs from the analytic relaxation even homogeneous (msig -23.81 vs -20.25), Pro-suspect | LOW | medium |
 | C68b | — | cap1 model: Professional c1his -17 vs GNU pc 108, reactions 6x | LOW | medium/expensive |
 | C68c | — | Mohr-Coulomb hardening-softening on kappa_shear 1.2x off the Professional (homogeneous) | LOW | medium |
-| C68d | — | `materi.cc` old rho/epi/epp read with the Maxwell loop index (two or more chains) | LOW | cheap |
+| C68d | — | `materi.cc` old rho/epi/epp read with the Maxwell loop index (two or more chains) — resolved 2026-10-12 (F4 T6f, `2327083`) | LOW | cheap |
 | C69 | — | plane-stress membrane: yy/zz split of the plastic strain first order in dt (eptzz -0.00721 at dt 0.1 vs analytic -0.00882) | LOW | medium |
 
-Fifty items remain open: four MEDIUM and forty-six LOW (C23 and C24 resolved 2026-10-05; C25, C26, C27 and B10 added; F1 T3 / K04 2026-10-06 added B11, C28-C32; F1 T6 resolved C28, added and resolved B12; F2 T1 added C36; F2 T2 added C37, C38, C39; F2 T3 resolved C5 and added C40; F3 T2 resolved C8, C18, C19, C20 and added B13, C41; F4 T2 fixed the C41 tie and left a residual; F4 T3 resolved C33; F4 T4 closed C32, added C42 and resolved C31; F4 T7-T8 added C43-C46; F4 T9 resolved the C43 solver speed, decided C46b/C46e and added C47, C48, C49; F4 T10 resolved C48 and added C50; F4 T5 added C52, C53 and resolved C51; F4 T13 resolved C49 and added C54-C56; F4 T12 resolved C47 and added C57; F4 T6a resolved C6, C55, C56 and the C3 sign, the C3 square-face tie becoming a deliberate divergence (owner 2026-10-11), and added B14; F4 T6c fixed the `control_restart` integration-point reset and added C58; F4 T6d resolved C11 and C59, fixed the interface history and resolved C52, and added B15, C60 and C61; B15 resolved the same day; F4 T6e resolved C53 and added C62 and C63; F4 T6f added C64-C68 and C69, and closed the K15 `mmc_tension` vertex sigzz/eppzz and `validation_3` eptzz items as deliberate divergences MC-VERTEX-ZZ / MEMBRANE-EPTZZ, owner 2026-10-12; F4 T6f resolved C68 and added C68a-C68d). No open issue is CRITICAL or
+Forty-nine items remain open: four MEDIUM and forty-five LOW (C23 and C24 resolved 2026-10-05; C25, C26, C27 and B10 added; F1 T3 / K04 2026-10-06 added B11, C28-C32; F1 T6 resolved C28, added and resolved B12; F2 T1 added C36; F2 T2 added C37, C38, C39; F2 T3 resolved C5 and added C40; F3 T2 resolved C8, C18, C19, C20 and added B13, C41; F4 T2 fixed the C41 tie and left a residual; F4 T3 resolved C33; F4 T4 closed C32, added C42 and resolved C31; F4 T7-T8 added C43-C46; F4 T9 resolved the C43 solver speed, decided C46b/C46e and added C47, C48, C49; F4 T10 resolved C48 and added C50; F4 T5 added C52, C53 and resolved C51; F4 T13 resolved C49 and added C54-C56; F4 T12 resolved C47 and added C57; F4 T6a resolved C6, C55, C56 and the C3 sign, the C3 square-face tie becoming a deliberate divergence (owner 2026-10-11), and added B14; F4 T6c fixed the `control_restart` integration-point reset and added C58; F4 T6d resolved C11 and C59, fixed the interface history and resolved C52, and added B15, C60 and C61; B15 resolved the same day; F4 T6e resolved C53 and added C62 and C63; F4 T6f added C64-C68 and C69, and closed the K15 `mmc_tension` vertex sigzz/eppzz and `validation_3` eptzz items as deliberate divergences MC-VERTEX-ZZ / MEMBRANE-EPTZZ, owner 2026-10-12; F4 T6f resolved C68 and added C68a-C68d; C68d resolved the same day). No open issue is CRITICAL or
 HIGH. The validation-suite corpus has no open failure — its 233 real tests
 pass (`materi_direct_mc` input corrected, C17 resolved). Every remaining failure is a stale or malformed test, an out-of-scope model
 or infrastructure limit, a narrow post-processing divergence, a corpus-coverage
