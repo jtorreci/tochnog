@@ -2008,6 +2008,8 @@ run_ok "$T2026" recovery_quad4_distorted_plane1
 run_ok "$T2026" stokes_default1
 run_ok "$T2026" stokes_group1
 run_ok "$T2026" stokes_group2
+run_ok "$T2026" convected_stress_recovery1
+run_ok "$T2026" validation1_steady1
 
 # ---------------------------------------------------------------------
 # Sub-sprint materi_stress_force, lote 2 (integracion 2D quad4/quad9):
