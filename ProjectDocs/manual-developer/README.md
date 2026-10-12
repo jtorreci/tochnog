@@ -514,7 +514,8 @@ page lists its own in "Differences with the Professional version".
 ## K11 NODAL STRAIN RECOVERY (2026-10-06)
 
 - [nodal_strain_recovery](nodal_strain_recovery.md) — `miscel.cc` `strain_recovery_weight()`; `materi.cc` strain numerators and `general.cc` lumped denominator/inertia with the stress recovery weight (sri_stress_recovery_weight, h for SRI).
-- [materi_plasti_kappa](materi_plasti_kappa.md) — `elem.cc` ELEMENT_DOF masks + `kap_indx`, `materi.cc` IP write and nodal numerator with `strain_recovery_weight()` outside the h guard, `general.cc` denominator weight (F4 T6f WU2); open sibling defect BACKLOG C68.
+- [materi_plasti_kappa](materi_plasti_kappa.md) — `elem.cc` ELEMENT_DOF masks + `kap_indx`, `materi.cc` IP write and nodal numerator with `strain_recovery_weight()` outside the h guard, `general.cc` denominator weight (F4 T6f WU2); sibling defect C68 resolved 2026-10-12.
+- [materi_plasti_rho](materi_plasti_rho.md) — rho read/update path; C68 (2026-10-12): rho, kapsh, cap1 pc, damage and Maxwell msig kept in ELEMENT_DOF (`elem.cc` masks), one `materi.cc` recovery-weight block after kappa, `general.cc` denominator; latent Maxwell-index read issue C68d.
 
 ## K13 DIRECT PLASTICITY STATE OUTPUT (2026-10-06)
 

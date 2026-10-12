@@ -42,8 +42,8 @@ Verification:
 
 ## Hardcoded / pending
 
-- `kapsh_indx`, `cap1_indx`, the `rho` block and `dam_indx` are read the
-  same way (`materi.cc` `old_kapsh`/`old_cap1pc`/`old_rho`/`old_damage`
-  from `old_unknowns`) and are also missing from the masks; not changed
-  without evidence (BACKLOG C68).
+- `kapsh_indx`, `cap1_indx`, the `rho` block, `dam_indx` and the Maxwell
+  `mstres_indx` block had the same defect; fixed with the same pattern in
+  C68 (F4 T6f, 2026-10-12): one block right after this kappa block (see
+  `nodal_strain_recovery.md`).
 - The quad4 nodal value keeps the GNU bilinear operator (C42/C64).

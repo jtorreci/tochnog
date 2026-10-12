@@ -489,6 +489,7 @@ page lists its own in "Differences with the Professional version".
 
 - [nodal_strain_recovery](nodal_strain_recovery.md) — the nodal total/elastic/plastic strains are recovered with the same operator as the stress (Professional least-squares fit): clamped-edge eptyy 0 exact, strain and stress fields consistent, = Professional.
 - [materi_plasti_kappa](materi_plasti_kappa.md) — the kap dof (size of the plastic strain, manual 4.24), isotropic hardening parameter; kept per integration point since F4 T6f (validation_3 = Professional within 0.06 %).
+- [materi_plasti_rho](materi_plasti_rho.md) — the kinematic hardening tensor rho (manual 4.27); kept per integration point since C68 (2026-10-12), as kapsh, the cap1 pc, the damage and the Maxwell stresses.
 
 ## K13 DIRECT PLASTICITY STATE OUTPUT (2026-10-06)
 

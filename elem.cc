@@ -646,6 +646,15 @@ void elem( long int element, long int ithread )
 	      // integration-point state (manual: materi_plasti_kappa); read
 	      // it back from ELEMENT_DOF instead of the h-lumped nodal value.
 	      (materi_plasti_kappa && i==kap_indx) ||
+	      // C68 (F4 T6f): the other integration-point states of the
+	      // constitutive update (kappa_shear, cap1 pc, damage, the
+	      // kinematic hardening rho and the Maxwell stresses) likewise.
+	      (materi_plasti_kappa_shear && i==kapsh_indx) ||
+	      (materi_plasti_cap1_history && i==cap1_indx) ||
+	      (materi_damage && i==dam_indx) ||
+	      (materi_plasti_rho && i>=rho_indx && i<(rho_indx+6*nder)) ||
+	      (materi_maxwell_stress && i>=mstres_indx &&
+	       i<(mstres_indx+materi_maxwell_stress*6*nder)) ||
 	      i==svloc_indx || i==svnonloc_indx) 
 	       old_unknowns[i]=element_dof_npoint[i+startindx];
 	}
@@ -822,6 +831,13 @@ void elem( long int element, long int ithread )
    	    (i>=ept_indx && i<(ept_indx+MDIM*MDIM))||
    	    (i>=epi_indx && i<(epi_indx+MDIM*MDIM))||
 	    (materi_plasti_kappa && i==kap_indx) || // F4 T6f WU2: IP kappa
+	    // C68 (F4 T6f): the other integration-point states
+	    (materi_plasti_kappa_shear && i==kapsh_indx) ||
+	    (materi_plasti_cap1_history && i==cap1_indx) ||
+	    (materi_damage && i==dam_indx) ||
+	    (materi_plasti_rho && i>=rho_indx && i<(rho_indx+6*nder)) ||
+	    (materi_maxwell_stress && i>=mstres_indx &&
+	     i<(mstres_indx+materi_maxwell_stress*6*nder)) ||
 	           i==svloc_indx || i==svnonloc_indx)
 	    element_dof_npoint[i+startindx]=new_unknowns[i];//only for unknowns filled in materi.cc
     }

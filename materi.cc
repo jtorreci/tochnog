@@ -1097,21 +1097,6 @@ void materi( long int element, long int gr, long int name, long int nnol,
         }
       }
 
-      if ( materi_plasti_kappa_shear ) {
-        ipuknwn = kapsh_indx/nder;
-        indx = inol*npuknwn + ipuknwn;
-        tmp = volume * h[inol] * ( new_kapsh - old_kapsh ) / dtime;
-        element_rhside[indx] += tmp;
-        ipuknwn++;
-      }
-
-      if ( materi_damage ) {
-        ipuknwn = dam_indx/nder;
-        indx = inol*npuknwn + ipuknwn;
-        tmp = volume * h[inol] * ( new_damage - old_damage ) / dtime;
-        element_rhside[indx] += tmp;
-      }
-
     }
     // Stress recovery (2026-09-13, Professional alignment): the recovery
     // weights are NON-zero at (node,point) pairs where the shape function
@@ -1254,6 +1239,63 @@ void materi( long int element, long int gr, long int name, long int nnol,
         if ( options_element_dof==-YES ) new_unknowns[kap_indx] = new_kappa;
       }
     }
+    // Other integration-point states (C68, F4 T6f): kappa_shear, the cap1
+    // pc, the damage d, the kinematic hardening rho and the Maxwell
+    // stresses are read back by the constitutive update (old_kapsh,
+    // old_cap1pc, old_damage, old_rho, old_msig), so, as kappa, their IP
+    // value is stored in ELEMENT_DOF (elem.cc masks) and their nodal
+    // (output) value is the lumped recovery with the strain recovery
+    // weight, whose denominator general.cc builds with the same weight.
+    // The ELEMENT_DOF slot of component k is <indx> + k*nder.
+    if ( materi_plasti_kappa_shear || materi_plasti_cap1_history ||
+         materi_damage || materi_plasti_rho || materi_maxwell_stress ) {
+      double w_rec = strain_recovery_weight( sri_on, name, nnol, inol,
+        npoint, ipoint, h[inol], volume );
+      if ( scalar_dabs(w_rec)>EPS_H || scalar_dabs(h[inol])>EPS_H ) {
+        long int kcomp=0;
+        if ( materi_plasti_kappa_shear ) {
+          indx = inol*npuknwn + kapsh_indx/nder;
+          element_rhside[indx] += volume * w_rec * ( new_kapsh - old_kapsh ) / dtime;
+          if ( options_element_dof==-YES ) new_unknowns[kapsh_indx] = new_kapsh;
+        }
+        if ( materi_plasti_cap1_history ) {
+          indx = inol*npuknwn + cap1_indx/nder;
+          element_rhside[indx] += volume * w_rec * ( new_cap1pc - old_cap1pc ) / dtime;
+          if ( options_element_dof==-YES ) new_unknowns[cap1_indx] = new_cap1pc;
+        }
+        if ( materi_damage ) {
+          indx = inol*npuknwn + dam_indx/nder;
+          element_rhside[indx] += volume * w_rec * ( new_damage - old_damage ) / dtime;
+          if ( options_element_dof==-YES ) new_unknowns[dam_indx] = new_damage;
+        }
+        if ( materi_plasti_rho ) {
+          for ( idim=0; idim<MDIM; idim++ ) {
+            for ( jdim=idim; jdim<MDIM; jdim++ ) {
+              kcomp = stress_indx(idim,jdim);
+              indx = inol*npuknwn + rho_indx/nder + kcomp;
+              element_rhside[indx] += volume * w_rec * ( new_rho[idim*MDIM+jdim] -
+                old_rho[idim*MDIM+jdim] ) / dtime;
+              if ( options_element_dof==-YES )
+                new_unknowns[rho_indx+kcomp*nder] = new_rho[idim*MDIM+jdim];
+            }
+          }
+        }
+        for ( m=0; m<materi_maxwell_stress; m++ ) {
+          for ( idim=0; idim<MDIM; idim++ ) {
+            for ( jdim=idim; jdim<MDIM; jdim++ ) {
+              kcomp = m*6 + stress_indx(idim,jdim);
+              indx = inol*npuknwn + mstres_indx/nder + kcomp;
+              element_rhside[indx] += volume * w_rec *
+                ( new_msig[m*MDIM*MDIM+idim*MDIM+jdim] -
+                  old_msig[m*MDIM*MDIM+idim*MDIM+jdim] ) / dtime;
+              if ( options_element_dof==-YES )
+                new_unknowns[mstres_indx+kcomp*nder] =
+                  new_msig[m*MDIM*MDIM+idim*MDIM+jdim];
+            }
+          }
+        }
+      }
+    }
     if ( scalar_dabs(h[inol])>EPS_H ) {
       if ( materi_plasti_f ) {
         ipuknwn = f_indx/nder;
@@ -1274,25 +1316,6 @@ void materi( long int element, long int gr, long int name, long int nnol,
         element_rhside[indx] += tmp;
       }
 
-      if ( materi_plasti_cap1_history ) {
-        ipuknwn = cap1_indx/nder;
-        indx = inol*npuknwn + ipuknwn;
-        tmp = volume * h[inol] * ( new_cap1pc - old_cap1pc ) / dtime;
-        element_rhside[indx] += tmp;
-      }
-
-      if ( materi_plasti_rho ) {
-        ipuknwn = rho_indx/nder;
-        for ( idim=0; idim<MDIM; idim++ ) {
-          for ( jdim=idim; jdim<MDIM; jdim++ ) {
-            indx = inol*npuknwn + ipuknwn;
-            tmp = volume * h[inol] * ( new_rho[idim*MDIM+jdim] - 
-              old_rho[idim*MDIM+jdim] ) / dtime;
-            element_rhside[indx] += tmp;
-            ipuknwn++;
-          }
-        }
-      }
       if ( materi_plasti_softvar_local ) {
         ipuknwn = svloc_indx/nder;
         indx = inol*npuknwn + ipuknwn;
@@ -1388,21 +1411,6 @@ void materi( long int element, long int gr, long int name, long int nnol,
         element_rhside[indx] += tmp;
         element_residue[indx] -= tmp;
       }                    
-
-      if ( materi_maxwell_stress ) {
-        ipuknwn = mstres_indx/nder;
-        for ( m=0; m<materi_maxwell_stress; m++ ) {
-          for ( idim=0; idim<MDIM; idim++ ) {
-            for ( jdim=idim; jdim<MDIM; jdim++ ) {
-              indx = inol*npuknwn + ipuknwn;
-              tmp = volume * h[inol] * ( new_msig[m*MDIM*MDIM+idim*MDIM+jdim] -
-                  old_msig[m*MDIM*MDIM+idim*MDIM+jdim] ) / dtime;
-              element_rhside[indx] += tmp;
-              ipuknwn++;
-            }
-          }
-        }
-      }
 
       if ( materi_void_fraction && materi_strain_plasti ) {
         ipuknwn = void_indx/nder;

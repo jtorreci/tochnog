@@ -372,7 +372,13 @@ void general( long int element, long int name, long int nnol, long int element_g
           if ( dof_type[iuknwn]==-MATERI_STRAIN_TOTAL ||
                dof_type[iuknwn]==-MATERI_STRAIN_ELASTI ||
                dof_type[iuknwn]==-MATERI_STRAIN_PLASTI ||
-               dof_type[iuknwn]==-MATERI_PLASTI_KAPPA )
+               dof_type[iuknwn]==-MATERI_PLASTI_KAPPA ||
+               // C68 (F4 T6f): the other integration-point states
+               dof_type[iuknwn]==-MATERI_PLASTI_KAPPA_SHEAR ||
+               dof_type[iuknwn]==-MATERI_PLASTI_CAP1_HISTORY ||
+               dof_type[iuknwn]==-MATERI_DAMAGE ||
+               dof_type[iuknwn]==-MATERI_PLASTI_RHO ||
+               dof_type[iuknwn]==-MATERI_MAXWELL_STRESS )
             weight = strain_recovery_weight(
               sri_active( element, element_group, name, nnol ), name, nnol,
               inol, npoint, ipoint, h[inol], volume );

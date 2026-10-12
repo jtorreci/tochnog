@@ -1908,6 +1908,17 @@ run_ok "$T2014" validation_14_pass1
 #   within 3 % (before 11.6 % off).
 run_ok "$T2026" kappa_ip_state1
 run_ok "$T2014" validation_3_kappa
+# C68 F4 T6f (2026-10-12): kappa_shear, the cap1 pc, the damage d, the
+#   kinematic hardening rho and the Maxwell stresses are integration-
+#   point states too (ELEMENT_DOF, nodal value with the strain recovery
+#   weight), as kappa above. Four tria3 (1-point rule) on a non-uniform
+#   field, targets = Professional 02-08-2026 (RED on the previous binary:
+#   damage reactions 1.9e-1 off, rho 1.1e-1, kapsh 1.3e-2, Maxwell nodal
+#   msigyy 8.4e-2). cap1 has no Professional test (C68b, model diverges).
+run_ok "$T2026" damage_ip_state1
+run_ok "$T2026" kappa_shear_ip_state1
+run_ok "$T2026" rho_ip_state1
+run_ok "$T2026" maxwell_ip_state1
 # F4 T6f (2026-10-12), class A divergences (owner decision 2026-10-12),
 #   guard tests: GNU already follows the continuum / manual answer.
 #   mmc_tension_vertex1/2 (MC-VERTEX-ZZ): test-2014 mmc_tension at dt 0.05

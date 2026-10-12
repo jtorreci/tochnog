@@ -108,9 +108,10 @@ Target `dam = 0.471973` (tolerance 1e-5):
 
 ## Hardcoded parameters / pending refactorings
 
-- The damage is stored as a nodal unknown dof (not element history); the
-  element-level assembly in `materi.cc:491-494` uses the shape functions `h`
-  to distribute it, which couples damage to the mesh interpolation.
+- The damage is an integration-point state since C68 (F4 T6f,
+  2026-10-12): see "Integration-point state (C68)" below. Before, the
+  constitutive update read the h-lumped nodal value back, which coupled
+  the damage to the mesh interpolation.
 - There is no user-facing switch to force a pure elastic run other than omitting
   the record.
 - The `epseq` accumulation bug (see "Bug report and fix") is FIXED. The
@@ -125,3 +126,25 @@ Target `dam = 0.471973` (tolerance 1e-5):
   0.18752; eppxx 1.368e-4 (Pro gamma matches none of the tried forms).
   Status: Open, MEDIUM; needs more probes. Index:
   [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).
+
+## Integration-point state (C68, F4 T6f, 2026-10-12)
+
+`materi_damage` is an integration-point history state (Professional manual
+4.10), like the hardening parameter kappa (`materi_plasti_kappa.md`).
+
+- `elem.cc` `elem()`: the ELEMENT_DOF read and write masks include
+  `(materi_damage && i==dam_indx)`, so `old_damage` in `materi.cc` is the value remembered at the
+  integration point, not the h-lumped nodal value interpolated back.
+- `materi.cc` `materi()`: one block right after the kappa block (after
+  the `stress_recovery_post_pass` skip, outside the `|h| > EPS_H`
+  guard) assembles the nodal (output) numerator
+  `volume * w * (new - old) / dtime` with `w = strain_recovery_weight()`
+  and writes the IP value to `new_unknowns[<indx> + k*nder]` when
+  `options_element_dof -yes`. The old h-weighted block was removed.
+- `general.cc` `general()`: the lumped denominator of `MATERI_DAMAGE` uses the
+  same weight.
+
+Verification: `test-2026/damage_ip_state1` (four tria3, 1-point rule, non-uniform
+field, targets = Professional 02-08-2026): previous binary rc 1 (node
+reactions 1.9e-1 relative off), fix rc 0 (5e-13); nodal dam within
+2e-3.

@@ -79,3 +79,14 @@ This is the `damage1.dat` regression test (uniaxial extension, damage growth).
   0.18752; eppxx 1.368e-4 (Pro gamma matches none of the tried forms).
   Status: Open, MEDIUM; needs more probes. Index:
   [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).
+
+## Integration-point state (C68, 2026-10-12)
+
+`materi_damage` is kept per integration point between steps (Professional manual
+4.10), as the hardening parameter `kap`. The node values printed by
+`node_dof` are a recovery (averaging) of the integration-point values
+with the same weights as the strains; the constitutive update always
+uses the integration-point value. Before 2026-10-12 GNU fed the averaged
+node value back into the update, which smeared the history across
+elements (up to 19 % off the Professional in the reactions of a small
+damage test).

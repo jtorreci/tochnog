@@ -27,9 +27,11 @@
   ```
   with `epp_dev = inc_epp - mean(inc_epp)*I` (deviatoric part of the
   plastic strain increment).
-- **Element RHS** (materi.cc, `element_rhside`): the kapsh dof is
-  integrated with the standard transient pattern
-  `volume * h[inol] * (new_kapsh - old_kapsh) / dtime` (same as kap).
+- **Element RHS** (materi.cc, `element_rhside`): since C68 (F4 T6f,
+  2026-10-12) `volume * w * (new_kapsh - old_kapsh) / dtime` with
+  `w = strain_recovery_weight()`, outside the h guard, and the IP value
+  is written to ELEMENT_DOF (same as kap; see "Integration-point state
+  (C68)" below).
 - **Hardening** (plasti.cc, `plasti_rule`): the Mohr-Coulomb
   hardening-softening laws read the hardening variable from
   `new_unknowns[kapsh_indx]` when `materi_plasti_kappa_shear` is set,
@@ -45,3 +47,26 @@
   corpus (45 s budget) but the kapsh dof and its reset are exercised.
 - slope_classical_numerical / slope_nonlocal_refine: parse and run
   (the kappa_shear initia is consumed).
+
+## Integration-point state (C68, F4 T6f, 2026-10-12)
+
+`materi_plasti_kappa_shear` is an integration-point history state (Professional manual
+4.25), like the hardening parameter kappa (`materi_plasti_kappa.md`).
+
+- `elem.cc` `elem()`: the ELEMENT_DOF read and write masks include
+  `(materi_plasti_kappa_shear && i==kapsh_indx)`, so `old_kapsh` in `materi.cc` is the value remembered at the
+  integration point, not the h-lumped nodal value interpolated back.
+- `materi.cc` `materi()`: one block right after the kappa block (after
+  the `stress_recovery_post_pass` skip, outside the `|h| > EPS_H`
+  guard) assembles the nodal (output) numerator
+  `volume * w * (new - old) / dtime` with `w = strain_recovery_weight()`
+  and writes the IP value to `new_unknowns[<indx> + k*nder]` when
+  `options_element_dof -yes`. The old h-weighted block was removed.
+- `general.cc` `general()`: the lumped denominator of `MATERI_PLASTI_KAPPA_SHEAR` uses the
+  same weight.
+
+Verification: `test-2026/kappa_shear_ip_state1` (four tria3, von Mises
+hardening on `-kapsh`, targets = Professional 02-08-2026): previous binary
+rc 1 (1.3e-2 relative off), fix rc 0 (1.5e-4). The Mohr-Coulomb
+hardening-softening use of kapsh keeps an open 1.2x difference on a
+homogeneous control (BACKLOG C68c, not an IP-state issue).

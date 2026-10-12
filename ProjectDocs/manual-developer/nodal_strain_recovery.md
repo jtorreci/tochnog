@@ -43,9 +43,18 @@
   (2026-10-11), with its integration-point value kept in ELEMENT_DOF
   (`materi_plasti_kappa.md`); validation_3 nodal kap within 2.7 % of the
   Professional (quad4 operator, C42/C64).
-- The other integration-point dofs (f, damage, kapsh, history variables,
-  model-specific plastic strains `epphs*` ...) keep the h weight; not
-  measured against the Professional.
+- C68 (F4 T6f, 2026-10-12): kappa_shear (`kapsh`), the cap1 pc, the
+  damage `dam`, the kinematic hardening `rho` (6 components) and the
+  Maxwell stresses `msig` (6 per chain) follow kappa: ELEMENT_DOF masks
+  in `elem.cc` (both), one `materi.cc` block right after the kappa block
+  (outside the h guard, recovery weight numerator, IP write
+  `new_unknowns[<indx>+k*nder]`), and the `general.cc` denominator.
+  Verified on four-tria3 probes against the Professional (tests
+  `test-2026/{damage,kappa_shear,rho,maxwell}_ip_state1`); cap1 by the
+  manual only (BACKLOG C68b).
+- The other integration-point dofs (f, history variables, softening
+  variables, model-specific plastic strains `epphs*` ...) keep the h
+  weight; not measured against the Professional.
 - K02 (one-iteration lag of the non-principal dofs when the stress
   recovery is not absolute, e.g. `materi_strain_total` + one equilibrium
   iteration) is not addressed: see BACKLOG C35.
