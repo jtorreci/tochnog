@@ -1804,6 +1804,19 @@ fi
 #   (the data-word case crashed, rc 139).
 run_ok "$T2026" input_long_comment_word1
 expected_error_ok "$T2026" input_long_word_error1
+# F4 T6f ranges (range.cc, Professional user manual "Ranges"): index
+#   -step (old GNU: wrong keyword sign, junk indices), -from a -to a,
+#   two -from/-to blocks, defines inside a range (old raw cin reads);
+#   descending -from/-to and a 9.0 in a value range are errors as in
+#   the Professional; value -step is a guard (already right).
+run_ok "$T2026" range_index_step1
+run_ok "$T2026" range_index_single1
+run_ok "$T2026" range_index_two_blocks1
+run_ok "$T2026" range_index_define1
+run_ok "$T2026" range_value_step1
+expected_error_ok "$T2026" range_index_descending_error1
+expected_error_ok "$T2026" range_value_descending_error1
+expected_error_ok "$T2026" range_value_double_error1
 # -size_tot / -size_dev (calcul.cc): sqrt(A:A) and sqrt(B:B) as the
 #   manual and the Professional calcul1 (targets 1 and 0.816497); old GNU
 #   sqrt(0.5 A:A).

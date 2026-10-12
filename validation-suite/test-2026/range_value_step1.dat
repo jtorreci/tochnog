@@ -1,0 +1,38 @@
+( F4 T6f ranges: a value range with -step (already right in the old
+  GNU; guard). Nodes 1 5 9 fixed at 0, nodes 3 and 7 moved 0.01, so the
+  free node 6 sits half way: disx = 0.005. Without the step it would be
+  fixed (0). )
+echo -no
+number_of_space_dimensions 1
+materi_velocity
+materi_displacement
+materi_stress
+end_initia
+node 1 0.
+node 2 1.
+node 3 2.
+node 4 3.
+node 5 4.
+node 6 5.
+node 7 6.
+node 8 7.
+node 9 8.
+element 1 -bar2 1 2
+element 2 -bar2 2 3
+element 3 -bar2 3 4
+element 4 -bar2 4 5
+element 5 -bar2 5 6
+element 6 -bar2 6 7
+element 7 -bar2 7 8
+element 8 -bar2 8 9
+group_type 0 -materi
+group_materi_elasti_young 0 1000.
+group_materi_memory 0 -total_linear
+bounda_dof 0 -ra -from 1 -to 9 -step 4 -ra -velx
+bounda_time 0 0. 0. 100. 0.
+bounda_dof 1 -ra 3 7 -ra -velx
+bounda_time 1 0. 0.01 100. 0.01
+control_timestep 0 1. 1.
+target_item 0 -node_dof 6 -disx
+target_value 0 0.005 1.e-8
+end_data

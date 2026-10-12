@@ -72,7 +72,8 @@ static long int input_word( std::istream &in, char str[], long int in_comment )
 void input( )
 
 {
-  long int i=0, j=0, n=0, iv=0, length=0, max=0, idat=0, itmp=0, idim=0,
+  long int in_value_range=0,
+    i=0, j=0, n=0, iv=0, length=0, max=0, idat=0, itmp=0, idim=0,
     ready=0, d_is_set=0, index=0, range_length=0, last_data_value=0,
     unknown_indx=0, ninitia=0, istr=0, nstr=0,
     print_define=-NO, print_arithmetic=-NO,
@@ -935,7 +936,7 @@ void input( )
 
 
       // data item values
-    length = last_data_value = istr = nstr = 0;
+    length = last_data_value = istr = nstr = in_value_range = 0;
     for ( iv=0; !last_data_value; iv++ ) {
       if ( istr>=nstr ) {
         if ( has_saved_first_value && iv==0 ) {
@@ -988,12 +989,16 @@ void input( )
             }
             check( itmp, CHECK_USAGE_AND_ERROR );
             ival[iv] = -itmp;
+            if ( itmp==RA ) in_value_range = !in_value_range;
           }
           else {
             if ( d_is_set )
               ival[iv] = (long int) d;
             else {
-              if ( !string_isinteger(str) && !string_isdouble(str) ) {
+                // a number in a value range -ra ... -ra must be an
+                // integer (Professional: 9.0 is rejected; F4 T6f)
+              if ( ( in_value_range && !string_isinteger(str) ) ||
+                   ( !string_isinteger(str) && !string_isdouble(str) ) ) {
                 pri( "\n\nError in data part." );
                 pri( "Problem reading ", db_name(idat) );
                 pri( "I don't know what to do with ", str );
