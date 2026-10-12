@@ -559,9 +559,13 @@ page lists its own in "Differences with the Professional version".
 
 ## F4 T6a — cheap batch (2026-10-11)
 
-- [input_word_length](input_word_length.md) — input.cc input_word(): bounded word reads (setw(MCHAR)) for every parser read, split words allowed only in comments; range.cc still pending.
+- [input_word_length](input_word_length.md) — input.cc input_word(): bounded word reads (setw(MCHAR)) for every parser read, split words allowed only in comments; range.cc converted in F4 T6f ([ranges](ranges.md)).
 - [post_calcul_size_tot](post_calcul_size_tot.md) — calcul.cc calculate_operat SIZETOT/SIZEDEV without the 0.5 factor (F4 T6a); refinement indicator scale-invariant.
 
 ## F4 T6c — control_restart (2026-10-11)
 
 - [control_restart](control_restart.md) — restart.cc restart() + restart_reset_element_state(): clears ELEMENT_DOF_INITIALISED so elem.cc rebuilds the IP state from the reset node dofs; other element history records (interface, spring, tendon, damage) not verified (BACKLOG C58).
+
+## F4 T6f — ranges (2026-10-12)
+
+- [ranges](ranges.md) — range.cc range_scan() (STEP sign, from==to, several blocks, reads through input_read_string()) and range_expand() (value-range validation); input.cc integer check inside value ranges.

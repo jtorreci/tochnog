@@ -535,3 +535,7 @@ page lists its own in "Differences with the Professional version".
 ## F4 T6c — control_restart (2026-10-11)
 
 - [control_restart](control_restart.md) — restart from the initial state: undeformed mesh, initial node dofs, initial time and (since F4 T6c) a fresh integration-point state, as the manual 6.368 and the Professional.
+
+## F4 T6f — ranges (2026-10-12)
+
+- [ranges](ranges.md) — `-ra ... -ra` syntax: lists, `-from/-to` blocks (several, `a` = `b` allowed), `-step`; `-ra a b -ra` is a LIST, not a..b. Index `-step`, single and two-block ranges, descending and `9.0` errors now as the Professional.

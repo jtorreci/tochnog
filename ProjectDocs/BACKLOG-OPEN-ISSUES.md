@@ -1915,7 +1915,12 @@ Original report:
   `input_long_comment_word1` (rc 0) and `input_long_word_error1`
   (expected error; old GNU rc 139). Not converted: the two `cin >> str`
   reads of `range.cc` (outside the work unit; manual-developer
-  `input_word_length.md`).
+  `input_word_length.md`). **Closed 2026-10-12 (F4 T6f ranges)**:
+  `range_scan()` reads every word through `input_read_string()` (bounded
+  `input_word()`, defines, include files); no raw `cin` read is left in
+  `range.cc`. Cosmetic note: the Professional manual calls the list
+  `-ra 5 4 8 -ra` (mesh_activate_gravity_element) "a number range"; it
+  is a list (manual pages `ranges.md`).
 
 ### C52. Post-solve material state pass for inertia models (`dynamic3`, F4 T5, 2026-10-10) — RESOLVED 2026-10-11 (F4 T6d)
 
