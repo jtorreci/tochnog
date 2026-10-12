@@ -1786,6 +1786,9 @@ extern long int stress_recovery_gauss;
   // incremental lumped update is kept, because the absolute assignment
   // would discard the transport terms.
 extern long int stress_recovery_absolute;
+  // K21 (F4 T6f, 2026-10-12): 1 when the stress dofs are not convected
+  // (general.cc); gates the geometry-dependent nodal recovery.
+extern long int stress_recovery_lagrange;
 extern long int stress_recovery_post_pass;
   // post-solve material state pass (F4 T5, BACKLOG C35; top.cc):
   // set while the element loop re-evaluates the material on the final
@@ -2333,10 +2336,12 @@ long int  sri_active( long int element, long int element_group,
             long int name, long int nnol );
 double    sri_stress_recovery_weight( long int sri, long int name,
             long int nnol, long int inol, long int npoint, long int ipoint,
-            double h_inol, double volume );
+            double h_inol, double volume, long int element_group,
+            const long int nodes[] );
 double    strain_recovery_weight( long int sri_on, long int name,
             long int nnol, long int inol, long int npoint, long int ipoint,
-            double h_inol, double volume );
+            double h_inol, double volume, long int element_group,
+            const long int nodes[] );
 void      stress_umat( long int element, long int gr, long int formulation,
             long int nuser_data, double user_data[], double coord_ip[],
             double old_hisv[], double new_hisv[], 

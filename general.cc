@@ -30,6 +30,12 @@
 // makes materi_dynamic_effective() return 1 for the auxiliary pass.
 long int disp_primary_reference = -NO;
 
+// K21 (F4 T6f, 2026-10-12): 1 when the stress dofs are NOT convected (the
+// local lagrange condition below); read by the geometry-dependent nodal
+// recovery (miscel.cc recovery_fit_factor). Set per general() call, like
+// stress_recovery_absolute.
+long int stress_recovery_lagrange = 1;
+
 void general( long int element, long int name, long int nnol, long int element_group, 
   long int type, long int nodes[], double coord_ip[], double old_dof[], double new_dof[], 
   double old_unknowns[], double new_unknowns[], 
@@ -88,9 +94,11 @@ void general( long int element, long int name, long int nnol, long int element_g
   //     unknown (measured: examp9/10/23, where the Pro cannot validate the
   //     model - unsupported bounda_unknown/options_mesh/contact_geometry -
   //     and the absolute form changes the adaptive-remesh path).
+  stress_recovery_lagrange = ( options_convection==-NO ||
+    materi_displacement ||
+    ( materi_velocity && options_mesh[0]==-FOLLOW_MATERIAL ) );
   stress_recovery_absolute = ( !materi_strain_total &&
-    ( options_convection==-NO || materi_displacement ||
-      ( materi_velocity && options_mesh[0]==-FOLLOW_MATERIAL ) ) );
+    stress_recovery_lagrange );
   db( OPTIONS_INERTIA, 0, &options_inertia, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
   {
     // multi-valued record (Professional: one switch per principal dof);
@@ -381,7 +389,8 @@ void general( long int element, long int name, long int nnol, long int element_g
                dof_type[iuknwn]==-MATERI_MAXWELL_STRESS )
             weight = strain_recovery_weight(
               sri_active( element, element_group, name, nnol ), name, nnol,
-              inol, npoint, ipoint, h[inol], volume );
+              inol, npoint, ipoint, h[inol], volume, element_group,
+              nodes );
           if ( dof_type[iuknwn]==-MATERI_STRESS ) {
             // Convected stress dof (stress_recovery_absolute==0): keep the
             // 2026-09-13 least-squares recovery weight for the incremental
@@ -390,11 +399,13 @@ void general( long int element, long int name, long int nnol, long int element_g
             if ( sri_active( element, element_group, name, nnol ) ) {
               if ( kcomp==0 || kcomp==3*nder || kcomp==5*nder )
                 weight = sri_stress_recovery_weight( 1, name, nnol, inol,
-                  npoint, ipoint, h[inol], volume );
+                  npoint, ipoint, h[inol], volume, element_group,
+                  nodes );
             }
             else
               weight = sri_stress_recovery_weight( 0, name, nnol, inol,
-                npoint, ipoint, h[inol], volume );
+                npoint, ipoint, h[inol], volume, element_group,
+                nodes );
           }
           double past_dof = old_dof[inol*nuknwn+ipuknwn*nder];
           if ( element_dof_initial_active && ipuknwn<nuknwn )

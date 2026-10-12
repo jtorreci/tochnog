@@ -403,12 +403,13 @@ long int sri_active( long int /*element*/, long int element_group,
 // Used for the numerator (materi.cc) and the lumped denominator and
 // inertia term (general.cc) of the incremental strain update.
 double strain_recovery_weight( long int sri_on, long int name, long int nnol,
-  long int inol, long int npoint, long int ipoint, double h_inol, double volume )
+  long int inol, long int npoint, long int ipoint, double h_inol, double volume,
+  long int element_group, const long int nodes[] )
 
 {
   if ( sri_on ) return h_inol;
   return sri_stress_recovery_weight( 0, name, nnol, inol, npoint, ipoint,
-    h_inol, volume );
+    h_inol, volume, element_group, nodes );
 }
 
 // Per-element least-squares stress recovery factor F(inol,ipoint) of the
@@ -574,8 +575,224 @@ static SriRecoveryTable sri_recovery_table_build( void )
   return t;
 }
 
+// K21 (F4 T6f, 2026-10-12): geometry-dependent per-element recovery
+// operator F(inol,ipoint) of the 2D quad4/quad9 Gauss rules, measured on
+// the Professional 02-08-2026 (element_intpnt_dof -> element_dof, 1e-12):
+//   kind 1  quad4 2x2 Gauss and quad9 2x2 Gauss (-minimal): linear least
+//           squares of 1,x,y in PHYSICAL coordinates over the points,
+//           evaluated at the node, F = [1,x_n,y_n] (A^T A)^-1 [1,x_g,y_g]^T
+//           (the iso bilinear extrapolation / iso linear fit coincide with
+//           it only on parallelograms without a xi*eta mode in the field);
+//   kind 2  quad4 1 point: the point value (F = 1);
+//   axis    axisymmetric quad4 2x2 with a node EXACTLY at r=0 (r=1e-6 does
+//           not trigger it): F = h_n(g) / sum_g h_n(g) (fluid tube1 and an
+//           elastic probe, both exact).
+// The operator depends on the element geometry, so it cannot live in the
+// static (type,inol,ipoint) table below. It is built from the start-of-step
+// nodal coordinates (NODE, VERSION_NORMAL) and cached per thread for the
+// current element (the element loop may run in parallel threads).
+struct RecoveryFitCache {
+  long int valid, name, nnol, npoint, group, axis;
+  long int nodes[MNOL];
+  double coord[MNOL*MDIM];
+  double F[MNOL][MPOINT];
+  long int ok;
+};
+
+static long int recovery_fit_kind( long int name, long int nnol,
+  long int npoint )
+
+{
+  if ( ndim!=2 ) return 0;
+  if ( name==-QUAD4 && nnol==4 && npoint==1 ) return 2;
+  if ( !stress_recovery_gauss ) return 0;
+  if ( name==-QUAD4 && nnol==4 && npoint==4 ) return 1;
+  if ( name==-QUAD9 && nnol==9 && npoint==4 ) return 1;
+  return 0;
+}
+
+static void recovery_fit_build( RecoveryFitCache &c, long int kind )
+
+{
+  long int npol=0, m=0, inol=0, ipoint=0, k=0, l=0, r=0, pmax=0;
+  double niso[3], xg[MPOINT], wg[MPOINT], lxi[3], leta[3],
+    hp[MPOINT][MNOL], xp[MPOINT][2], xc[2], scale=0., M[3][3], aug[3][6],
+    piv=0., fac=0., phn[3], php[3];
+
+  c.ok = 0;
+  if ( kind==2 ) {
+    for ( inol=0; inol<c.nnol; inol++ ) c.F[inol][0] = 1.;
+    c.ok = 1;
+    return;
+  }
+
+  // Gauss points of the 2x2 rule and the Lagrange shape functions there
+  npol = ( c.nnol==4 ) ? 2 : 3;
+  for ( k=0; k<npol; k++ ) niso[k] = -1. + 2.*k/(npol-1);
+  m = 2;
+  integration_gauss( m, xg, wg );
+  for ( ipoint=0; ipoint<c.npoint; ipoint++ ) {
+    double xi = xg[ipoint%m], eta = xg[ipoint/m];
+    for ( k=0; k<npol; k++ ) {
+      lxi[k] = leta[k] = 1.;
+      for ( l=0; l<npol; l++ ) {
+        if ( l==k ) continue;
+        lxi[k]  *= ( xi -niso[l] ) / ( niso[k]-niso[l] );
+        leta[k] *= ( eta-niso[l] ) / ( niso[k]-niso[l] );
+      }
+    }
+    xp[ipoint][0] = xp[ipoint][1] = 0.;
+    for ( inol=0; inol<c.nnol; inol++ ) {
+      hp[ipoint][inol] = lxi[inol%npol] * leta[inol/npol];
+      xp[ipoint][0] += hp[ipoint][inol] * c.coord[inol*ndim+0];
+      xp[ipoint][1] += hp[ipoint][inol] * c.coord[inol*ndim+1];
+    }
+  }
+
+  if ( c.axis ) {
+    for ( inol=0; inol<c.nnol; inol++ ) {
+      double sum = 0.;
+      for ( ipoint=0; ipoint<c.npoint; ipoint++ ) sum += hp[ipoint][inol];
+      if ( scalar_dabs(sum)<TINY ) return;
+      for ( ipoint=0; ipoint<c.npoint; ipoint++ )
+        c.F[inol][ipoint] = hp[ipoint][inol] / sum;
+    }
+    c.ok = 1;
+    return;
+  }
+
+  // linear least squares 1,x,y on centred and scaled coordinates (the fit
+  // is affine invariant; this only keeps the normal matrix well scaled)
+  xc[0] = xc[1] = 0.;
+  for ( ipoint=0; ipoint<c.npoint; ipoint++ ) {
+    xc[0] += xp[ipoint][0] / c.npoint;
+    xc[1] += xp[ipoint][1] / c.npoint;
+  }
+  for ( ipoint=0; ipoint<c.npoint; ipoint++ )
+    for ( k=0; k<2; k++ )
+      scale = scalar_dmax( scale, scalar_dabs(xp[ipoint][k]-xc[k]) );
+  if ( scale<TINY ) return;
+  for ( k=0; k<3; k++ )
+    for ( l=0; l<3; l++ ) M[k][l] = 0.;
+  for ( ipoint=0; ipoint<c.npoint; ipoint++ ) {
+    php[0] = 1.;
+    php[1] = ( xp[ipoint][0]-xc[0] ) / scale;
+    php[2] = ( xp[ipoint][1]-xc[1] ) / scale;
+    for ( k=0; k<3; k++ )
+      for ( l=0; l<3; l++ ) M[k][l] += php[k]*php[l];
+  }
+  for ( k=0; k<3; k++ ) {
+    for ( l=0; l<3; l++ ) aug[k][l] = M[k][l];
+    for ( l=0; l<3; l++ ) aug[k][3+l] = ( k==l ) ? 1. : 0.;
+  }
+  for ( k=0; k<3; k++ ) {
+    pmax = k;
+    for ( l=k+1; l<3; l++ )
+      if ( scalar_dabs(aug[l][k])>scalar_dabs(aug[pmax][k]) ) pmax = l;
+    if ( pmax!=k ) {
+      for ( l=0; l<6; l++ ) {
+        double tmp = aug[k][l]; aug[k][l] = aug[pmax][l]; aug[pmax][l] = tmp;
+      }
+    }
+    piv = aug[k][k];
+    if ( scalar_dabs(piv)<1.e-12 ) return;
+    for ( l=0; l<6; l++ ) aug[k][l] /= piv;
+    for ( l=0; l<3; l++ ) {
+      if ( l!=k ) {
+        fac = aug[l][k];
+        for ( r=0; r<6; r++ ) aug[l][r] -= fac*aug[k][r];
+      }
+    }
+  }
+  for ( inol=0; inol<c.nnol; inol++ ) {
+    phn[0] = 1.;
+    phn[1] = ( c.coord[inol*ndim+0]-xc[0] ) / scale;
+    phn[2] = ( c.coord[inol*ndim+1]-xc[1] ) / scale;
+    for ( ipoint=0; ipoint<c.npoint; ipoint++ ) {
+      php[0] = 1.;
+      php[1] = ( xp[ipoint][0]-xc[0] ) / scale;
+      php[2] = ( xp[ipoint][1]-xc[1] ) / scale;
+      double F = 0.;
+      for ( k=0; k<3; k++ )
+        for ( l=0; l<3; l++ ) F += phn[k]*aug[k][3+l]*php[l];
+      c.F[inol][ipoint] = F;
+    }
+  }
+  c.ok = 1;
+}
+
+// Returns 1 and F(inol,ipoint) of the geometry-dependent recovery of the
+// current element, 0 when it does not apply (or the fit is singular).
+static long int recovery_fit_factor( long int name, long int nnol,
+  long int inol, long int npoint, long int ipoint, long int element_group,
+  const long int nodes[], double &F )
+
+{
+  static thread_local RecoveryFitCache cache = { 0, 0, 0, 0, 0, 0, {0}, {0.}, {{0.}}, 0 };
+  long int kind=0, axis=0, axisymmetric=-NO, same=0, k=0, ldum=0, idum[1];
+  double xn[MDIM], coord[MNOL*MDIM], ddum[1];
+
+  // Not for CONVECTED stress dofs (stress_recovery_lagrange==0,
+  // general.cc: convection on a fixed or ALE mesh): there the nodal stress
+  // is the transported material state, not an output, and the historic
+  // operator is kept (test-2014 cd_method, a GNU-only convected
+  // materi_strain_total + derivatives rectangle, drifts from sigxy 0.74 to
+  // 3.64 with the physical fit; no Professional reference).
+  if ( nodes==NULL || !stress_recovery_lagrange ) return 0;
+  kind = recovery_fit_kind( name, nnol, npoint );
+  if ( !kind ) return 0;
+
+  // Fast path: same element (type, group and node numbers) as the cached
+  // one. The coordinates and the axis flag are re-read on the (inol 0,
+  // ipoint 0) call, which is the first call of every element visit
+  // (general() and materi() loop ipoint, then inol, from 0), so a geometry
+  // change between passes (updated mesh, refinement) is always caught.
+  same = cache.valid && cache.name==name && cache.nnol==nnol &&
+    cache.npoint==npoint && cache.group==element_group;
+  for ( k=0; same && k<nnol; k++ )
+    if ( cache.nodes[k]!=nodes[k] ) same = 0;
+  if ( same && !( inol==0 && ipoint==0 ) ) {
+    if ( !cache.ok ) return 0;
+    F = cache.F[inol][ipoint];
+    return 1;
+  }
+
+  for ( k=0; k<nnol; k++ ) {
+    db( NODE, nodes[k], idum, xn, ldum, VERSION_NORMAL, GET );
+    coord[k*ndim+0] = xn[0];
+    coord[k*ndim+1] = xn[1];
+  }
+  if ( kind==1 && name==-QUAD4 ) {
+    db( GROUP_AXISYMMETRIC, element_group, &axisymmetric, ddum, ldum,
+      VERSION_NORMAL, GET_IF_EXISTS );
+    if ( axisymmetric==-YES )
+      for ( k=0; k<nnol; k++ ) if ( coord[k*ndim+0]==0. ) axis = 1;
+  }
+
+  same = same && cache.axis==axis;
+  for ( k=0; same && k<nnol; k++ ) {
+    if ( cache.coord[k*ndim+0]!=coord[k*ndim+0] ||
+         cache.coord[k*ndim+1]!=coord[k*ndim+1] ) same = 0;
+  }
+  if ( !same ) {
+    cache.name = name; cache.nnol = nnol; cache.npoint = npoint;
+    cache.group = element_group; cache.axis = axis;
+    for ( k=0; k<nnol; k++ ) {
+      cache.nodes[k] = nodes[k];
+      cache.coord[k*ndim+0] = coord[k*ndim+0];
+      cache.coord[k*ndim+1] = coord[k*ndim+1];
+    }
+    recovery_fit_build( cache, kind );
+    cache.valid = 1;
+  }
+  if ( !cache.ok ) return 0;
+  F = cache.F[inol][ipoint];
+  return 1;
+}
+
 double sri_stress_recovery_weight( long int sri, long int name, long int nnol,
-  long int inol, long int npoint, long int ipoint, double h_inol, double volume )
+  long int inol, long int npoint, long int ipoint, double h_inol, double volume,
+  long int element_group, const long int nodes[] )
 
   // Nodal stress recovery weight of the lumped sigma-dof update.
   //
@@ -586,9 +803,16 @@ double sri_stress_recovery_weight( long int sri, long int name, long int nnol,
   // number of adjacent elements). The per-element fit was identified from
   // the Professional's own .dbs dumps (element_intpnt_dof -> element_dof)
   // and is, per element type:
-  //   quad4   4 pts  bilinear interpolation  1,x,y,xy  (4 terms)
-  //   quad9   9 pts  linear least squares    1,x,y     (3 terms)
-  //   hex8    8 pts  linear least squares    1,x,y,z   (4 terms)
+  //   quad4   4 pts  linear least squares 1,x,y in PHYSICAL coordinates
+  //                  (K21, 2026-10-12; before: iso bilinear 1,xi,eta,xi*eta);
+  //                  axisymmetric with a node at r=0: sum h sig / sum h
+  //   quad4   1 pt   the point value (K21; before: volume weighted h)
+  //   quad9   4 pts  linear least squares 1,x,y in PHYSICAL coordinates (K21)
+  //   quad9   9 pts  linear least squares    1,xi,eta  (3 terms, iso;
+  //                  the Professional fits in physical coordinates: equal on
+  //                  parallelograms, differs on curved/distorted quad9, C64)
+  //   hex8    8 pts  linear least squares    1,xi,eta,zeta (4 terms, iso;
+  //                  the Professional fits in physical coordinates, C64)
   //   hex27  27 pts  linear least squares    1,x,y,z   (4 terms)
   //   tet10    5 pts  linear least squares    1,L1,L2,L3 (4 terms, C31)
   //   tria3 1 pt / 3 pt nodal, tria6 6 pt nodal, tet4 1 pt, bar2 1 pt:
@@ -652,6 +876,15 @@ double sri_stress_recovery_weight( long int sri, long int name, long int nnol,
        ( name==-TET4  && npoint==1 ) ||
        ( name==-BAR2  && npoint==1 ) ) {
     if ( scalar_dabs(volume)>TINY ) return ( npoint==1 ? 1. : h_inol )/volume;
+    return h_inol;
+  }
+
+  // Geometry-dependent per-element fit (K21, see recovery_fit_factor): the
+  // 2D quad4 2x2 / 1-point and quad9 2x2 Gauss rules, including the
+  // axisymmetric on-axis rule. Each element contributes weight 1 (F/volume).
+  if ( recovery_fit_factor( name, nnol, inol, npoint, ipoint, element_group,
+         nodes, F ) ) {
+    if ( scalar_dabs(volume)>TINY ) return F/volume;
     return h_inol;
   }
 

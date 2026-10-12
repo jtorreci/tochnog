@@ -1125,11 +1125,11 @@ void materi( long int element, long int gr, long int name, long int nnol,
         double weight_normal = h[inol], weight_shear = h[inol];
         if ( sri_on ) {
           weight_normal = sri_stress_recovery_weight( 1, name, nnol, inol,
-            npoint, ipoint, h[inol], volume );
+            npoint, ipoint, h[inol], volume, gr, nodes );
         }
         else {
           weight_normal = weight_shear = sri_stress_recovery_weight( 0,
-            name, nnol, inol, npoint, ipoint, h[inol], volume );
+            name, nnol, inol, npoint, ipoint, h[inol], volume, gr, nodes );
         }
         for ( idim=0; idim<MDIM; idim++ ) {
           for ( jdim=idim; jdim<MDIM; jdim++ ) {
@@ -1191,7 +1191,7 @@ void materi( long int element, long int gr, long int name, long int nnol,
     // Professional tslv_part clamped edge eptyy 0, GNU -2.35e-6.
     if ( materi_strain_total || materi_strain_elasti || materi_strain_plasti ) {
       double w_rec = strain_recovery_weight( sri_on, name, nnol, inol,
-        npoint, ipoint, h[inol], volume );
+        npoint, ipoint, h[inol], volume, gr, nodes );
       if ( scalar_dabs(w_rec)>EPS_H || scalar_dabs(h[inol])>EPS_H ) {
         long int iblk=0, blk_indx=0;
         double *blk_old=NULL, *blk_inc=NULL;
@@ -1232,7 +1232,7 @@ void materi( long int element, long int gr, long int name, long int nnol,
     // (quad9/hex27/tet10 least squares), as for the strain tensors.
     if ( materi_plasti_kappa ) {
       double w_rec = strain_recovery_weight( sri_on, name, nnol, inol,
-        npoint, ipoint, h[inol], volume );
+        npoint, ipoint, h[inol], volume, gr, nodes );
       if ( scalar_dabs(w_rec)>EPS_H || scalar_dabs(h[inol])>EPS_H ) {
         ipuknwn = kap_indx/nder;
         indx = inol*npuknwn + ipuknwn;
@@ -1252,7 +1252,7 @@ void materi( long int element, long int gr, long int name, long int nnol,
     if ( materi_plasti_kappa_shear || materi_plasti_cap1_history ||
          materi_damage || materi_plasti_rho || materi_maxwell_stress ) {
       double w_rec = strain_recovery_weight( sri_on, name, nnol, inol,
-        npoint, ipoint, h[inol], volume );
+        npoint, ipoint, h[inol], volume, gr, nodes );
       if ( scalar_dabs(w_rec)>EPS_H || scalar_dabs(h[inol])>EPS_H ) {
         long int kcomp=0;
         if ( materi_plasti_kappa_shear ) {

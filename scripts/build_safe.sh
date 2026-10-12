@@ -1958,6 +1958,28 @@ run_ok "$T2026" damage_mazars_eq_two_positive1
 run_ok "$T2026" damage_mazars_vonmises1
 
 # ---------------------------------------------------------------------
+# K21 WU1 (F4 T6f, 2026-10-12): integration-point -> node recovery of the
+# 2D quad4/quad9 Gauss rules = Professional 02-08-2026 (per-element value,
+# arithmetic mean over the adjacent elements). Targets = Professional
+# node_dof; whole stress field = Professional to <= 1e-7 of its scale.
+#   recovery_examp1_quad4_point_mean1 (sfnet examp1, quad4 1 point): the
+#     point value per element; node 19 sigxx -0.2350738 (before -0.256815,
+#     volume weighted).
+#   recovery_incnav4_quad9_minimal1 (sfnet incnav4, quad9 2x2 Gauss):
+#     physical linear fit; nodes 1/3 sigxy 0.05 (before 0.02 / 0.08).
+#   recovery_tube1_axis1 (Pro tube1, axisymmetric quad4): on-axis elements
+#     (a node at r=0) sum h sig / sum h; node 3 sigxx -159.5805 (before
+#     -66.40), node 2 -324.826, node 33 -14.745, node 40 -165.8009.
+#   recovery_quad4_distorted_plane1 (distorted plane quad4 2x2): physical
+#     linear least squares 1,x,y; node 21 sigxx 2.0014257 (before 1.1829),
+#     node 24 5.6815309 (before 5.0343).
+# ---------------------------------------------------------------------
+run_ok "$T2026" recovery_examp1_quad4_point_mean1
+run_ok "$T2026" recovery_incnav4_quad9_minimal1
+run_ok "$T2026" recovery_tube1_axis1
+run_ok "$T2026" recovery_quad4_distorted_plane1
+
+# ---------------------------------------------------------------------
 # Sub-sprint materi_stress_force, lote 2 (integracion 2D quad4/quad9):
 # verificacion ANALITICA por estatica. Decisiones de diseno (manual-
 # developer/post_calcul_materi_stress_force.md): caras extremas = las
