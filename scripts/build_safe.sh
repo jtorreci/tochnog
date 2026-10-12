@@ -1942,6 +1942,20 @@ run_ok "$T2026" mmc_tension_vertex1
 run_ok "$T2026" mmc_tension_vertex2
 run_ok "$T2026" membrane_eptzz_total1
 run_ok "$T2026" membrane_eptzz_total2
+#   hypo_wolff_igs_oedometer1/2 (K14b): test-2014 hypo3 (von Wolffersdorff
+#   + intergranular strain, strain reversal) at dt 1e-3 / 1e-5; sigxx
+#   converged reference -0.10466 (Python integration of the law), +- 2e-3
+#   / 5e-4. GNU -0.1034 / -0.104235; the Professional -0.1629 at dt 1e-3
+#   (time-discretisation error at the reversal; hyhis slots: K14 open).
+#   damage_mazars_eq_two_positive1 (C7): hex8 diag(2e-4,-3e-4,1e-4), dam
+#   0.28610207515 (manual eps_eq = sqrt(sum <eps_i>+^2)); the Professional
+#   0.36409 (weights 4,2,1 on the ascending positive principal strains).
+#   damage_mazars_vonmises1 (C7b): damage_stress1 bar + von Mises 3e6, dam
+#   0.925372225695, eppxx 1.87863e-4; the Professional 0.96946 / 1.368e-4.
+run_ok "$T2026" hypo_wolff_igs_oedometer1
+run_ok "$T2026" hypo_wolff_igs_oedometer2
+run_ok "$T2026" damage_mazars_eq_two_positive1
+run_ok "$T2026" damage_mazars_vonmises1
 
 # ---------------------------------------------------------------------
 # Sub-sprint materi_stress_force, lote 2 (integracion 2D quad4/quad9):

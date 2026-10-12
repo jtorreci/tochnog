@@ -1,0 +1,85 @@
+(F4 T6f class A guard test C7 (owner decision 2026-10-12).
+ Mazars equivalent strain with two positive principal strains: one hex8,
+ prescribed homogeneous strain diag(2e-4, -3e-4, 1e-4) in 20 steps,
+ E = 1e9, nu = 0.2, Mazars 1e-4 1 15000 1.2 649 1.05.
+ Manual: eps_eq = sqrt(sum <eps_i>+^2) = sqrt(5e-8) = 2.2361e-4,
+ dam = 0.28610207515 (GNU). The Professional 02-08-2026 accumulates the
+ positive principal strains in ascending order as s = 2 s + eps^2
+ (weights 4, 2, 1): eps_eq = sqrt(6e-8), dam 0.36409; it fails this test.
+ Tolerance absolute.)
+
+echo -no
+number_of_space_dimensions 3
+materi_velocity
+materi_displacement
+materi_strain_elasti
+materi_strain_total
+materi_stress
+materi_damage
+end_initia
+node 1 0 0 0
+node 2 1 0 0
+node 3 0 1 0
+node 4 1 1 0
+node 5 0 0 1
+node 6 1 0 1
+node 7 0 1 1
+node 8 1 1 1
+element 1 -hex8 1 2 3 4 5 6 7 8
+group_type 0 -materi
+group_materi_elasti_young 0 1.e9
+group_materi_elasti_poisson 0 0.2
+group_materi_memory 0 -total_linear
+group_materi_damage_mazars 0 1.e-4 1. 15000. 1.2 649. 1.05
+bounda_dof 0 1 -velx
+bounda_time 0 0. 0 1. 0
+bounda_dof 1 1 -vely
+bounda_time 1 0. 0 1. 0
+bounda_dof 2 1 -velz
+bounda_time 2 0. 0 1. 0
+bounda_dof 3 2 -velx
+bounda_time 3 0. 0.0002 1. 0.0002
+bounda_dof 4 2 -vely
+bounda_time 4 0. 0 1. 0
+bounda_dof 5 2 -velz
+bounda_time 5 0. 0 1. 0
+bounda_dof 6 3 -velx
+bounda_time 6 0. 0 1. 0
+bounda_dof 7 3 -vely
+bounda_time 7 0. -0.0003 1. -0.0003
+bounda_dof 8 3 -velz
+bounda_time 8 0. 0 1. 0
+bounda_dof 9 4 -velx
+bounda_time 9 0. 0.0002 1. 0.0002
+bounda_dof 10 4 -vely
+bounda_time 10 0. -0.0003 1. -0.0003
+bounda_dof 11 4 -velz
+bounda_time 11 0. 0 1. 0
+bounda_dof 12 5 -velx
+bounda_time 12 0. 0 1. 0
+bounda_dof 13 5 -vely
+bounda_time 13 0. 0 1. 0
+bounda_dof 14 5 -velz
+bounda_time 14 0. 0.0001 1. 0.0001
+bounda_dof 15 6 -velx
+bounda_time 15 0. 0.0002 1. 0.0002
+bounda_dof 16 6 -vely
+bounda_time 16 0. 0 1. 0
+bounda_dof 17 6 -velz
+bounda_time 17 0. 0.0001 1. 0.0001
+bounda_dof 18 7 -velx
+bounda_time 18 0. 0 1. 0
+bounda_dof 19 7 -vely
+bounda_time 19 0. -0.0003 1. -0.0003
+bounda_dof 20 7 -velz
+bounda_time 20 0. 0.0001 1. 0.0001
+bounda_dof 21 8 -velx
+bounda_time 21 0. 0.0002 1. 0.0002
+bounda_dof 22 8 -vely
+bounda_time 22 0. -0.0003 1. -0.0003
+bounda_dof 23 8 -velz
+bounda_time 23 0. 0.0001 1. 0.0001
+control_timestep 0 0.05 1.
+target_item 0 -node_dof 8 -dam
+target_value 0 0.28610207515 1.e-8
+end_data
