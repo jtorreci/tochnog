@@ -27,6 +27,7 @@ T6 triage (2026-10-11, HEAD 53dbb86) and owner order (2026-10-11):
 - [x] T6d C11 `dynamic3` (disp_primary_gate per material) -> C52. Done `28992d5` (C11), `e0f2204` (C59), `b318484` (interface history), `c276931` (inertia pass).
 - [x] T6e C53 slide in the post-solve pass. Done `b4e4fa4` (slide law), `07433f5` (slide/contact in the pass, gate removed).
 - [ ] T6f Rest by relevance (K15 `validation_14` done `1d446b3`; K15 validation_3 kap done `c3e6d2a`; C68 IP states kapsh/cap1/damage/rho/Maxwell done `70235c6`; C68d Maxwell old-state index done `2327083`; K21 recovery part done `2305659`, gate removed `e2b044f`; `-ra` ranges done `35025dc`): K15 `validation_14` (re-scoped by T6c: pass-1 hole-boundary nodal stress/plastic strain up to ~20 % at 8 nodes on the r=0.01 circle -> `refine_locally` picks a different element -> pass 2 on a different mesh), K15 mmc_tension and validation_3 eptzz closed 2026-10-12 as class A divergences (`600a0b4`), K14b hypo3 and C7/C7b Mazars closed 2026-10-12 as class A divergences (`ae0691b`), K21 (recovery done; validation_1 stokes default + convection remain), C57, C70 (3x3 quad9 / hex8 physical fit), C71 (tube1 -lobatto NaN). Parked: K14c (ISA, class D), mohrcou2 sfnet (input artifact).
+- [x] T6f C72 convected nodal stress + validation_1 steady guard (owner-approved 2026-10-13; route: delegated writer, trigger: general.cc + 3 tests + 9 docs). Done `c1a1ae9` (fix + tests), `cc245f7` (docs). Pending: register `convected_stress_recovery1` and `validation1_steady1` in `scripts/build_safe.sh` (outside the writer's edit surface).
 
 ## Later (owner 2026-10-10, after convergence with ALL divergences documented and accepted)
 - F6: exhaustive profiling and optimisation pass; special attention to the hot
@@ -737,3 +738,27 @@ docs + SEGUIMIENTO + BACKLOG + DIVERGENCES.
   register + Descarte, DIVERGENCES STOKES-IDX (A 24 -> 25, total 86), K21
   re-scoped, C72 widened; BACKLOG C72 (no new item); AUDIT K21. Next: K21
   WU3 validation_1 convection transient, C72, C70, C57.
+  T6f C72 (2026-10-13, owner-approved; investigation Engram 2775), route:
+  delegated writer. Premise corrected: neither the Professional 02-08-2026
+  nor the GNU convects the integration-point stress (pulse bit-frozen).
+  GNU bug fixed `c1a1ae9`: the convected nodal stress dof was incremental
+  with a lumped mass weight F/volume (sri_stress_recovery_weight) against
+  a convective weight h, so it moved at about v*volume_ip; now
+  `stress_recovery_absolute = !materi_strain_total` and general() skips
+  the convective terms of an absolute stress dof (option chosen: always
+  absolute recovery, = Pro node stress; the weight-consistent transport
+  was rejected because a transported nodal stress would still differ
+  from the Pro and from the frozen IP state). Tests test-2026:
+  `convected_stress_recovery1` RED on HEAD rc 1 (0.348732 / 0.904484 /
+  0.6481) -> GREEN rc 0 (0.5 / 1.0 / 0.5 = Pro); `validation1_steady1`
+  (t = 3 -0.0571954 vs t = 1 -0.0570386, tol 9.9e-4; HEAD identical, Pro
+  +0.0034 fails). A/B on all `convection_apply -yes` inputs: velocities
+  bit-identical, nodal stresses <= 1.3 % of max (validation_1, stokes_*);
+  strconv1 byte-identical; cd_method / cmat_gate / materi_direct_wall
+  unchanged. Clean build; build_safe TN_CHECK_ONLY=1 252 OK / 0 FALLO,
+  runs 226/226 (new tests run manually rc 0, not yet registered:
+  scripts/build_safe.sh outside the edit surface); audit_db_buffers exit
+  0. Docs `cc245f7`: DIVERGENCES C72 rewritten + C72-V1 (class B 44,
+  total 87), BACKLOG C72 nodal part resolved + C73 + C74, SEGUIMIENTO
+  register, manual pages. Next: register the 2 tests in build_safe.sh,
+  then C70, C57, C74.
