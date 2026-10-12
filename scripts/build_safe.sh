@@ -1908,6 +1908,22 @@ run_ok "$T2014" validation_14_pass1
 #   within 3 % (before 11.6 % off).
 run_ok "$T2026" kappa_ip_state1
 run_ok "$T2014" validation_3_kappa
+# F4 T6f (2026-10-12), class A divergences (owner decision 2026-10-12),
+#   guard tests: GNU already follows the continuum / manual answer.
+#   mmc_tension_vertex1/2 (MC-VERTEX-ZZ): test-2014 mmc_tension at dt 0.05
+#   and 0.047; classic MC uniaxial tension, plane strain, nu 0: sigxx
+#   46.19 (2c cos phi/(1+sin phi)), sigzz 0 +- 0.05, eppzz 0 +- 1e-4 (MC
+#   vertex). The Professional gives a dt-dependent artefact (sigzz 0.974 /
+#   eppzz -9.7e-4 at dt 0.05, 0.367 at 0.047).
+#   membrane_eptzz_total1/2 (MEMBRANE-EPTZZ): plane-stress von Mises
+#   uniaxial, dt 0.01 / 0.1: eptzz = accumulated elastic + plastic zz
+#   strain, analytic -0.0088249 (+- 3e-4 / 2e-3: GNU eppyy/eppzz split is
+#   first order in dt, BACKLOG C69). The Professional stores only the last
+#   step's zz correction (-9.6e-5 / -7.9e-4).
+run_ok "$T2026" mmc_tension_vertex1
+run_ok "$T2026" mmc_tension_vertex2
+run_ok "$T2026" membrane_eptzz_total1
+run_ok "$T2026" membrane_eptzz_total2
 
 # ---------------------------------------------------------------------
 # Sub-sprint materi_stress_force, lote 2 (integracion 2D quad4/quad9):

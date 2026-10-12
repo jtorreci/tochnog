@@ -122,6 +122,8 @@ page lists its own in "Differences with the Professional version".
 - [group_materi_expansion_linear](group_materi_expansion_linear.md) — thermal expansion (stress.cc:437, materi.cc:166).
 - [group_materi_plasti_visco_exponential](group_materi_plasti_visco_exponential.md) — viscoplasticity (stress.cc:100-115, 737-755; EPS_VISCO hardcoded).
 - [group_materi_plasti_visco_power](group_materi_plasti_visco_power.md) — power viscoplasticity: dual layout (Professional eta p / legacy eta p f_ref), f_ref=1 implicit, lambda = eta*(f/f_ref)^p times dtime.
+- [group_materi_plasti_mohr_coul](group_materi_plasti_mohr_coul.md) — plasti.cc plasti_rule MC block (eigenvalues, f_yield/f_flow) + central-difference flow gradient; MC-VERTEX-ZZ guard tests.
+- [group_materi_membrane](group_materi_membrane.md) — membrane.cc membrane_apply (elastic zz correction added to new_ept/new_epe, called from set_stress); C69 yy/zz plastic split; MEMBRANE-EPTZZ guard tests.
 - [group_materi_plasti_mohr_coul_direct](group_materi_plasti_mohr_coul_direct.md) — direct stress cut-off (materi_direct_full_mc / materi_direct_cutoff in stress.cc; per-law normals via direct_normal_get in materi.cc; phi_flow M/G from the element stiffness, direct_flow_factor).
 - [group_materi_plasti_mohr_coul_hardening_softening](group_materi_plasti_mohr_coul_hardening_softening.md) — classic MC with linear c/phi hardening-softening vs kappa (plasti.cc plasti_rule block).
 - [group_materi_plasti_cap2](group_materi_plasti_cap2.md) — db_number alias of GROUP_MATERI_PLASTI_CAP (same physics, plasti.cc untouched).

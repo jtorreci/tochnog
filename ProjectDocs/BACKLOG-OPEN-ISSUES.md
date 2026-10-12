@@ -1935,6 +1935,33 @@ Original report:
   0 FALLO, runs 226/226. Remaining interface + inertia gap -> C61.
 - **Severity**: LOW. **Effort**: medium.
 
+### C69. Plane-stress membrane: the yy/zz split of the plastic strain is first order in dt (F4 T6f, 2026-10-12) — OPEN
+
+- **Context**: found while writing the guard tests of the deliberate
+  divergences MEMBRANE-EPTZZ and MC-VERTEX-ZZ (owner decision 2026-10-12,
+  class A in `DIVERGENCES-PROFESSIONAL.md`). Those two K15 items
+  (`validation_3` eptzz, `mmc_tension` sigzz/eppzz) are closed as
+  deliberate divergences with test-2026 `membrane_eptzz_total1/2` and
+  `mmc_tension_vertex1/2`; this item is the GNU-only residual.
+- **Symptom / evidence**: single quad4, von Mises 24.3 + kap hardening
+  (slope 224), E 7000, nu 0.2, `group_materi_membrane -yes`, uniaxial
+  stretch eptxx 0.02. Analytic (uniaxial Prandtl-Reuss): eppyy = eppzz =
+  -0.0080414, eptzz -0.0088249. GNU eppyy / eppzz / eptzz:
+  dt 0.1 -0.009654 / -0.006426 / -0.0072102;
+  dt 0.01 -0.008236 / -0.007847 / -0.0086300;
+  dt 0.001 -0.008061 / -0.008022 / -0.0088050. eppxx 0.01608, sigxx
+  27.42, sigzz ~0 and tr(epp) = 0 at every dt; eptzz = -nu sigxx/E +
+  eppzz holds (the stored total is consistent).
+- **Root cause (probable)**: `membrane_apply()` (`membrane.cc`, called in
+  `stress.cc` `set_stress()` ~1871) makes sigzz zero with an ELASTIC zz
+  strain correction on the trial stress, before the plastic return; the
+  return of a step therefore does not see an exact plane-stress state.
+- **Fix candidate**: a plane-stress-consistent return (iterate the zz
+  correction with the plastic return, or the reduced plane-stress return
+  mapping). Needs a Professional comparison of eppyy/eppzz first.
+- **Severity**: LOW (converges with dt; the total eptzz is stored).
+  **Effort**: medium.
+
 ### C68. Other integration-point state variables read back from the nodes (F4 T6f WU2, 2026-10-11) — OPEN
 
 - **Symptom / evidence**: the ELEMENT_DOF masks of `elem.cc` `elem()`
@@ -2209,8 +2236,14 @@ Original report:
 | C62 | — | post-solve pass skips `parallel_new_dof_before`: reported `node_rhside` without node_force / nodal mass terms | LOW | cheap/medium |
 | C61 | — | interface Mohr-Coulomb + `inertia_apply`: first-step velocity differs from the Pro (0.412 vs 0.273), independent of the pass | LOW | medium |
 | C60 | — | interface `element_interface_intpnt_stress` normal sign depends on the node order (Pro: compression negative always) | LOW | cheap/medium |
+| C64 | — | quad4 per-element nodal recovery of the Professional (linear least squares?) | LOW | cheap/medium |
+| C65 | — | Professional `post_point_dof` at a node differs from its own `node_dof` | LOW | cheap |
+| C66 | — | tria6 element results differ ~1e-5 from the Professional | LOW | cheap/medium |
+| C67 | — | nodal recovery of the unmeasured element rules | LOW | cheap |
+| C68 | — | other integration-point state variables (kapsh, cap1pc, rho, damage, Maxwell msig) read back from the nodes | MEDIUM | cheap/medium |
+| C69 | — | plane-stress membrane: yy/zz split of the plastic strain first order in dt (eptzz -0.00721 at dt 0.1 vs analytic -0.00882) | LOW | medium |
 
-Forty-one items remain open: four MEDIUM and thirty-seven LOW (C23 and C24 resolved 2026-10-05; C25, C26, C27 and B10 added; F1 T3 / K04 2026-10-06 added B11, C28-C32; F1 T6 resolved C28, added and resolved B12; F2 T1 added C36; F2 T2 added C37, C38, C39; F2 T3 resolved C5 and added C40; F3 T2 resolved C8, C18, C19, C20 and added B13, C41; F4 T2 fixed the C41 tie and left a residual; F4 T3 resolved C33; F4 T4 closed C32, added C42 and resolved C31; F4 T7-T8 added C43-C46; F4 T9 resolved the C43 solver speed, decided C46b/C46e and added C47, C48, C49; F4 T10 resolved C48 and added C50; F4 T5 added C52, C53 and resolved C51; F4 T13 resolved C49 and added C54-C56; F4 T12 resolved C47 and added C57; F4 T6a resolved C6, C55, C56 and the C3 sign, the C3 square-face tie becoming a deliberate divergence (owner 2026-10-11), and added B14; F4 T6c fixed the `control_restart` integration-point reset and added C58; F4 T6d resolved C11 and C59, fixed the interface history and resolved C52, and added B15, C60 and C61; B15 resolved the same day; F4 T6e resolved C53 and added C62 and C63). No open issue is CRITICAL or
+Forty-seven items remain open: five MEDIUM and forty-two LOW (C23 and C24 resolved 2026-10-05; C25, C26, C27 and B10 added; F1 T3 / K04 2026-10-06 added B11, C28-C32; F1 T6 resolved C28, added and resolved B12; F2 T1 added C36; F2 T2 added C37, C38, C39; F2 T3 resolved C5 and added C40; F3 T2 resolved C8, C18, C19, C20 and added B13, C41; F4 T2 fixed the C41 tie and left a residual; F4 T3 resolved C33; F4 T4 closed C32, added C42 and resolved C31; F4 T7-T8 added C43-C46; F4 T9 resolved the C43 solver speed, decided C46b/C46e and added C47, C48, C49; F4 T10 resolved C48 and added C50; F4 T5 added C52, C53 and resolved C51; F4 T13 resolved C49 and added C54-C56; F4 T12 resolved C47 and added C57; F4 T6a resolved C6, C55, C56 and the C3 sign, the C3 square-face tie becoming a deliberate divergence (owner 2026-10-11), and added B14; F4 T6c fixed the `control_restart` integration-point reset and added C58; F4 T6d resolved C11 and C59, fixed the interface history and resolved C52, and added B15, C60 and C61; B15 resolved the same day; F4 T6e resolved C53 and added C62 and C63; F4 T6f added C64-C68 and C69, and closed the K15 `mmc_tension` vertex sigzz/eppzz and `validation_3` eptzz items as deliberate divergences MC-VERTEX-ZZ / MEMBRANE-EPTZZ, owner 2026-10-12). No open issue is CRITICAL or
 HIGH. The validation-suite corpus has no open failure — its 233 real tests
 pass (`materi_direct_mc` input corrected, C17 resolved). Every remaining failure is a stale or malformed test, an out-of-scope model
 or infrastructure limit, a narrow post-processing divergence, a corpus-coverage

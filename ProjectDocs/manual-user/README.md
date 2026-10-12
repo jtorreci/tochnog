@@ -118,6 +118,8 @@ page lists its own in "Differences with the Professional version".
 - [group_materi_expansion_linear](group_materi_expansion_linear.md) — linear and volumetric thermal expansion.
 - [group_materi_plasti_visco_exponential](group_materi_plasti_visco_exponential.md) — viscoplasticity (exponential / power / always).
 - [group_materi_plasti_visco_power](group_materi_plasti_visco_power.md) — viscoplasticity power law (6.748): `eta p` (Professional) or legacy `eta p f_ref`; eps_dot_pl = eta*f^p. Unlocks visc_pl1/visc_pl2/validation_12.
+- [group_materi_plasti_mohr_coul](group_materi_plasti_mohr_coul.md) — classic Mohr-Coulomb (6.725): yield/flow with phi, c, phi_flow; differences: MC-VERTEX-ZZ (vertex sigzz/eppzz, class A).
+- [group_materi_membrane](group_materi_membrane.md) — plane stress (6.685); eptzz = total zz strain (elastic + plastic); differences: MEMBRANE-EPTZZ (class A).
 - [group_materi_plasti_mohr_coul_direct](group_materi_plasti_mohr_coul_direct.md) — direct stress cut-off Mohr-Coulomb/tension: full principal-stress mode (6.726/6.738: spectral tension cap + MC difference cut with the non-assoc phi_flow) or plane-traction mode (6.727/6.739: separate tension and MC planes, tension first with default sigy 0, phi_flow return with k = (M/G) tan(phi_flow); divergence from the Pro constant 2 documented).
 - [group_materi_plasti_mohr_coul_hardening_softening](group_materi_plasti_mohr_coul_hardening_softening.md) — Mohr-Coulomb classic with linear hardening/softening of c and phi with kappa.
 - [group_materi_plasti_cap2](group_materi_plasti_cap2.md) — Professional name of the cap plasticity (c phi alpha R + epsilonp_v/pb table), alias of the GNU cap.
