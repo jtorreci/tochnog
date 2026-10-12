@@ -256,9 +256,11 @@ void materi( long int element, long int gr, long int name, long int nnol,
         old_unknowns[epe_indx+stress_indx(idim,jdim)*nder];
       if ( materi_strain_total ) old_ept[indx] = 
         old_unknowns[ept_indx+stress_indx(idim,jdim)*nder];
+      // C68d: the chain loop must not overwrite indx, which the
+      // rho / epi / epp reads below still use (two or more chains read
+      // the wrong slots and overran these 9-entry arrays).
       for ( m=0; m<materi_maxwell_stress; m++ ) {
-        indx = m*MDIM*MDIM+idim*MDIM+jdim;
-        old_msig[indx] = old_unknowns[mstres_indx+
+        old_msig[m*MDIM*MDIM+indx] = old_unknowns[mstres_indx+
           (m*6+stress_indx(idim,jdim))*nder];
       }
       if ( materi_plasti_rho ) old_rho[indx] =

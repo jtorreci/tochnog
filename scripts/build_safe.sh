@@ -1919,6 +1919,13 @@ run_ok "$T2026" damage_ip_state1
 run_ok "$T2026" kappa_shear_ip_state1
 run_ok "$T2026" rho_ip_state1
 run_ok "$T2026" maxwell_ip_state1
+# C68d F4 T6f (2026-10-12): the old-state read loop of materi() reused
+#   the Maxwell chain index for old_rho / old_epi / old_epp (two or more
+#   chains: wrong slots, reads past the 9-entry arrays). Two identical
+#   chains must equal one chain with the summed stiffness (exact in the
+#   Professional 02-08-2026 too); targets = the one-chain GNU run, tight
+#   (1e-6 relative). Before the fix: node 1 reaction -13.32 vs -19.17.
+run_ok "$T2026" maxwell_two_chains_state1
 # F4 T6f (2026-10-12), class A divergences (owner decision 2026-10-12),
 #   guard tests: GNU already follows the continuum / manual answer.
 #   mmc_tension_vertex1/2 (MC-VERTEX-ZZ): test-2014 mmc_tension at dt 0.05

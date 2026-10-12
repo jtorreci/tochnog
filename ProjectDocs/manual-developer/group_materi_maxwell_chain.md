@@ -86,6 +86,27 @@ relative off), fix rc 0 (5e-4). The Professional Maxwell chain itself
 differs from the analytic solution even on a homogeneous field (BACKLOG
 C68a, Professional-suspect).
 
+### Old-state read with two or more chains (C68d, 2026-10-12)
+
+In the old-state read loop of `materi()` (`materi.cc`, "get old
+stresses, etc."), `indx = idim*MDIM + jdim` is shared by the stress,
+strain, rho, epi and epp reads. The Maxwell loop used to overwrite it
+with `m*MDIM*MDIM + idim*MDIM + jdim`, so with two or more chains the
+following `old_rho`, `old_epi` and `old_epp` reads wrote to
+`(nchain-1)*9 + ...`: past these 9-entry slices of `dbl_array` (into
+`new_rho`, `new_epi` and `inc_epp`, so no sanitizer sees it) while the
+real slots stayed 0, i.e. rho and the plastic strain never accumulated.
+The Maxwell read now indexes `old_msig[m*MDIM*MDIM + indx]` and leaves
+`indx` alone. The write/assembly side (C68 block) and the rotation loops
+already used explicit indices.
+
+Verification: `test-2026/maxwell_two_chains_state1` (four tria3, von
+Mises + kinematic hardening, two identical chains E 1000 / tau 0.5).
+Linear Maxwell chains with the same tau add up, so the targets are the
+one-chain (E 2000) run of the same model, tolerance 1e-6 relative; the
+Professional 02-08-2026 reproduces that equivalence to ~1e-12. Before
+the fix: node 1 reaction -13.32 instead of -19.17 (rc 1); after: rc 0.
+
 ## Differences with the Professional version
 
 - **Maxwell chain relaxation** (C68a, class B, Professional-suspect, not decided): on a homogeneous one-chain probe GNU gives the analytic msig -20.25, the Professional 02-08-2026 -23.81. Index: [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).
