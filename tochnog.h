@@ -1795,9 +1795,6 @@ extern long int stress_recovery_gauss;
   // incremental lumped update is kept, because the absolute assignment
   // would discard the transport terms.
 extern long int stress_recovery_absolute;
-  // K21 (F4 T6f, 2026-10-12): 1 when the stress dofs are not convected
-  // (general.cc); gates the geometry-dependent nodal recovery.
-extern long int stress_recovery_lagrange;
 extern long int stress_recovery_post_pass;
   // post-solve material state pass (F4 T5, BACKLOG C35; top.cc):
   // set while the element loop re-evaluates the material on the final

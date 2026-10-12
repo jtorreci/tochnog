@@ -732,13 +732,11 @@ static long int recovery_fit_factor( long int name, long int nnol,
   long int kind=0, axis=0, axisymmetric=-NO, same=0, k=0, ldum=0, idum[1];
   double xn[MDIM], coord[MNOL*MDIM], ddum[1];
 
-  // Not for CONVECTED stress dofs (stress_recovery_lagrange==0,
-  // general.cc: convection on a fixed or ALE mesh): there the nodal stress
-  // is the transported material state, not an output, and the historic
-  // operator is kept (test-2014 cd_method, a GNU-only convected
-  // materi_strain_total + derivatives rectangle, drifts from sigxy 0.74 to
-  // 3.64 with the physical fit; no Professional reference).
-  if ( nodes==NULL || !stress_recovery_lagrange ) return 0;
+  // Applies to every stress dof, convected ones included (K21 WU1b,
+  // 2026-10-12: the convection gate was removed; the old test-2014
+  // cd_method target was met by chance by an ill-posed model, and the
+  // convected nodal stress is a known class B divergence, BACKLOG C72).
+  if ( nodes==NULL ) return 0;
   kind = recovery_fit_kind( name, nnol, npoint );
   if ( !kind ) return 0;
 

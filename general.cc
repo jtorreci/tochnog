@@ -30,12 +30,6 @@
 // makes materi_dynamic_effective() return 1 for the auxiliary pass.
 long int disp_primary_reference = -NO;
 
-// K21 (F4 T6f, 2026-10-12): 1 when the stress dofs are NOT convected (the
-// local lagrange condition below); read by the geometry-dependent nodal
-// recovery (miscel.cc recovery_fit_factor). Set per general() call, like
-// stress_recovery_absolute.
-long int stress_recovery_lagrange = 1;
-
 void general( long int element, long int name, long int nnol, long int element_group, 
   long int type, long int nodes[], double coord_ip[], double old_dof[], double new_dof[], 
   double old_unknowns[], double new_unknowns[], 
@@ -94,11 +88,9 @@ void general( long int element, long int name, long int nnol, long int element_g
   //     unknown (measured: examp9/10/23, where the Pro cannot validate the
   //     model - unsupported bounda_unknown/options_mesh/contact_geometry -
   //     and the absolute form changes the adaptive-remesh path).
-  stress_recovery_lagrange = ( options_convection==-NO ||
-    materi_displacement ||
-    ( materi_velocity && options_mesh[0]==-FOLLOW_MATERIAL ) );
   stress_recovery_absolute = ( !materi_strain_total &&
-    stress_recovery_lagrange );
+    ( options_convection==-NO || materi_displacement ||
+      ( materi_velocity && options_mesh[0]==-FOLLOW_MATERIAL ) ) );
   db( OPTIONS_INERTIA, 0, &options_inertia, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
   {
     // multi-valued record (Professional: one switch per principal dof);
