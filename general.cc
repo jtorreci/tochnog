@@ -52,7 +52,7 @@ void general( long int element, long int name, long int nnol, long int element_g
     // safety/groundflow tests (ground14/15/16) run static in the
     // Professional within the same 1 s window.
     options_inertia=-NO, options_convection=-NO, options_axisymmetric=0,
-    lagrange=0, stokes=-NO, principal_unknown=0, ldum=0, 
+    lagrange=0, stokes=-YES, principal_unknown=0, ldum=0, 
     idum[1], options_mesh[MDIM], dof_type[MUKNWN], dof_principal[MUKNWN];
   double condif_conductivity=0., dens=0.,
     condif_capacity=0., visc=0., vel=0.,
@@ -141,7 +141,15 @@ void general( long int element, long int name, long int nnol, long int element_g
     }
     get_group_data( GROUP_MATERI_VISCOSITY, element_group, element, new_unknowns, 
       &visc, ldum, GET_IF_EXISTS );
-    db( GROUP_MATERI_STOKES, 0, &stokes, ddum, ldum, 
+    // group_materi_stokes (manual Professional 6.752): per element
+    // group, default -yes (record absent), i.e. the momentum convection
+    // term rho v.grad(v) is dropped unless the group says -no (K21 WU2,
+    // 2026-10-12: the Professional 02-08-2026 without the record = -yes,
+    // validation_1 velx 0.1465713). DELIBERATE DIVERGENCE (owner
+    // 2026-10-12, DIVERGENCES STOKES-IDX, class A): the
+    // Professional reads index 0 for every group and ignores the other
+    // indices; GNU follows the manual.
+    db( GROUP_MATERI_STOKES, element_group, &stokes, ddum, ldum, 
       VERSION_NORMAL, GET_IF_EXISTS );
   }
 

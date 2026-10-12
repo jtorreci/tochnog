@@ -1993,6 +1993,23 @@ run_ok "$T2026" recovery_tube1_axis1
 run_ok "$T2026" recovery_quad4_distorted_plane1
 
 # ---------------------------------------------------------------------
+# K21 WU2 group_materi_stokes (F4 T6f, 2026-10-12): default -yes (manual
+# 6.752, = Professional 02-08-2026), read PER ELEMENT GROUP as the manual
+# says (owner decision; the Professional reads index 0 for every group:
+# DIVERGENCES STOKES-IDX, class A). validation_1 flow.
+#   stokes_default1: no stokes record; target = Professional post_point
+#     velx 0.1465713 +- 0.003 (C72 residual: GNU 0.144159; before WU2
+#     -0.0570386, -no default).
+#   stokes_group1: post_point elements in group 1 with -no, group 0 no
+#     record -> mixed per-group flow 0.124105 (Pro 0.1465713 fails it).
+#   stokes_group2: every element in group 1 with -no, group 0 -yes ->
+#     = the one-group -no run -0.0570386 (Pro 0.1465713 fails it).
+# ---------------------------------------------------------------------
+run_ok "$T2026" stokes_default1
+run_ok "$T2026" stokes_group1
+run_ok "$T2026" stokes_group2
+
+# ---------------------------------------------------------------------
 # Sub-sprint materi_stress_force, lote 2 (integracion 2D quad4/quad9):
 # verificacion ANALITICA por estatica. Decisiones de diseno (manual-
 # developer/post_calcul_materi_stress_force.md): caras extremas = las

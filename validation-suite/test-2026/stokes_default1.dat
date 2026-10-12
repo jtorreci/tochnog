@@ -1,0 +1,88 @@
+( K21 WU2 {F4 T6f, 2026-10-12} group_materi_stokes default: the Professional validation_1 channel flow {convection_apply -yes, inertia -no} WITHOUT the group_materi_stokes record. Manual 6.752: default -yes, so the momentum convection is dropped. Professional 02-08-2026 post_point velx 0.1465713 {= the run with group_materi_stokes 0 -yes}; GNU before WU2 defaulted to -no: velx -0.0570386. Tolerance 0.003: with stokes the Professional still convects the integration-point stress, GNU only the nodal output {C72, class B}: GNU 0.144159 = the Professional convection_apply -no 0.1441588. )
+
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_stress
+end_initia
+
+mesh -fixed_in_space -fixed_in_space
+inertia_apply -no
+convection_apply -yes
+convection_stabilization -yes
+
+node  0  0. 0.
+node  1  2. 0.
+node  2  5. 0.
+node  3 -3. 0.5
+node  4  0. 0.5
+node  5  2. 0.5
+node  6  5. 0.5
+node  7 -3. 1.0
+node  8  0. 1.0
+node  9  2. 1.0
+node 10  5. 1.0
+element 0  -quad4 0 1 4 5
+element 1  -quad4 1 2 5 6
+element 2  -quad4 3 4 7 8
+element 3  -quad4 4 5 8 9
+element 4  -quad4 5 6 9 10
+
+start_define
+  lower_horizontal_edge   geometry_line 1
+end_define
+start_define
+  upper_horizontal_edge   geometry_line 2
+end_define
+start_define
+  middle_horizontal_edge  geometry_line 3
+end_define
+start_define
+  left_vertical_edge      geometry_line 4
+end_define
+start_define
+  middle_vertical_edge    geometry_line 5
+end_define
+start_define
+  right_vertical_edge     geometry_line 6
+end_define
+start_define
+  prescribed_edges        geometry_set  1
+end_define
+
+lower_horizontal_edge    0.0 0.0   5.0 0.0  0.01
+upper_horizontal_edge   -3.0 1.0   5.0 1.0  0.01
+middle_horizontal_edge  -3.0 0.5   0.0 0.5  0.01
+left_vertical_edge      -3.0 0.5  -3.0 1.0  0.01
+middle_vertical_edge     0.0 0.0   0.0 0.5  0.01
+right_vertical_edge      5.0 0.0   5.0 1.0  0.01
+prescribed_edges  -lower_horizontal_edge -upper_horizontal_edge -middle_horizontal_edge -left_vertical_edge -middle_vertical_edge
+
+geometry_factor 4  0. 1. 0.
+
+bounda_dof 0  -prescribed_edges -velx -vely
+bounda_time    0  0. 0. 1.e2 0.
+bounda_dof 1  -left_vertical_edge -velx
+bounda_time    1  0. 1. 1.e2 1.
+bounda_dof 2  -right_vertical_edge -vely
+bounda_time    2  0. 0. 1.e2 0.
+
+group_type 0  -materi
+group_materi_density 0  1.
+group_materi_viscosity 0  1.e-2
+group_materi_elasti_compressibility 0  1.e-2
+group_materi_memory 0  -updated_linear
+
+post_point 1   0.8 0.1
+print_filter 0  -post_point_dof -all -velx -vely
+
+control_mesh_refine_globally          2  -p_refinement
+control_mesh_refine_globally          3  -h_refinement
+control_mesh_refine_globally          4  -h_refinement
+
+control_timestep                     10  0.01 1.
+control_print                        10  -time_current -post_point_dof
+
+target_item 0  -post_point_dof 1 -velx
+target_value 0 0.1465713 0.003
+end_data
