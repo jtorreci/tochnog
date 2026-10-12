@@ -1,3 +1,9 @@
+( F4 T6f K21 WU1b 2026-10-12: well-posed simple shear. vely is fixed
+  at all four nodes ('-ra 1 4 -ra' would be a LIST of nodes 1 and 4, not
+  a range: BACKLOG C17) and the principal tension cap of the direct MC
+  law is lifted (tension_direct 1.e10), so sigxy equals the cohesion
+  c = 1 exactly without depending on the capped pressure (old input:
+  sigxy 1 with sxx = syy -100.87 at t = 1). Tolerance 1e-6 (was 0.3). )
 echo -no
 number_of_space_dimensions 2
 derivatives
@@ -24,6 +30,7 @@ group_materi_elasti_young  0  1000
 group_materi_memory  0  -updated_without_rotation
 group_materi_plasti_mohr_coul_direct  0  0 1 0
 group_materi_plasti_mohr_coul_direct_normal  0  0 1 0
+group_materi_plasti_tension_direct  0  1.e10
 group_type  0  -materi
 node  1  0 0
 node  2  1 0
@@ -34,7 +41,7 @@ options_processors   1
 options_stabilization   -static
 post_point  1  0.5 0.5
 target_item  1  -post_point_dof 1 -sigxy
-target_value  1  1 0.3
+target_value  1  1 1.e-6
 node_dof  1  0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
 node_dof  2  0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
 node_dof  3  0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
