@@ -70,3 +70,7 @@ hardening on `-kapsh`, targets = Professional 02-08-2026): previous binary
 rc 1 (1.3e-2 relative off), fix rc 0 (1.5e-4). The Mohr-Coulomb
 hardening-softening use of kapsh keeps an open 1.2x difference on a
 homogeneous control (BACKLOG C68c, not an IP-state issue).
+
+## Differences with the Professional version
+
+- **Mohr-Coulomb hardening-softening on kapsh** (C68c, class B, cause unknown): 1.2x between GNU and the Professional on a homogeneous control. Index: [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).

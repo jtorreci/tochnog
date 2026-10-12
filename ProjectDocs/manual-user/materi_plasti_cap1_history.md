@@ -92,3 +92,7 @@ uses the integration-point value. Before 2026-10-12 GNU fed the averaged
 node value back into the update, which smeared the history across
 elements (up to 19 % off the Professional in the reactions of a small
 damage test). For cap1 this follows the manual; it is not verified against the Professional, whose cap model differs (see the Professional differences in the backlog, C68b).
+
+## Differences with the Professional version
+
+- **cap1 model** (C68b, class B, cause unknown): Professional c1his -17 vs GNU pc 108, reactions 6x; the integration-point state of pc follows the manual and is not verified against the Professional. Index: [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).

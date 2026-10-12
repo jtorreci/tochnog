@@ -26,7 +26,7 @@ T6 triage (2026-10-11, HEAD 53dbb86) and owner order (2026-10-11):
 - [x] T6c K15 `validation_14` `control_restart` semantics (without restart every node_dof = Pro). Done `8ca6124`: restart resets the IP state (manual 6.368, Pro deletes element_dof); `validation_14` NOT caused by the restart (re-scoped, open under T6f); element history records -> BACKLOG C58.
 - [x] T6d C11 `dynamic3` (disp_primary_gate per material) -> C52. Done `28992d5` (C11), `e0f2204` (C59), `b318484` (interface history), `c276931` (inertia pass).
 - [x] T6e C53 slide in the post-solve pass. Done `b4e4fa4` (slide law), `07433f5` (slide/contact in the pass, gate removed).
-- [ ] T6f Rest by relevance (K15 `validation_14` done `1d446b3`; K15 validation_3 kap done `c3e6d2a`): K15 `validation_14` (re-scoped by T6c: pass-1 hole-boundary nodal stress/plastic strain up to ~20 % at 8 nodes on the r=0.01 circle -> `refine_locally` picks a different element -> pass 2 on a different mesh), K15 mmc_tension and validation_3 eptzz closed 2026-10-12 as class A divergences (`600a0b4`), K14b hypo3, C7 Mazars, K21, C57. Parked: K14c (ISA, class D), mohrcou2 sfnet (input artifact).
+- [ ] T6f Rest by relevance (K15 `validation_14` done `1d446b3`; K15 validation_3 kap done `c3e6d2a`; C68 IP states kapsh/cap1/damage/rho/Maxwell done `70235c6`): K15 `validation_14` (re-scoped by T6c: pass-1 hole-boundary nodal stress/plastic strain up to ~20 % at 8 nodes on the r=0.01 circle -> `refine_locally` picks a different element -> pass 2 on a different mesh), K15 mmc_tension and validation_3 eptzz closed 2026-10-12 as class A divergences (`600a0b4`), K14b hypo3, C7 Mazars, K21, C57. Parked: K14c (ISA, class D), mohrcou2 sfnet (input artifact).
 
 ## Later (owner 2026-10-10, after convergence with ALL divergences documented and accepted)
 - F6: exhaustive profiling and optimisation pass; special attention to the hot
@@ -577,3 +577,25 @@ docs + SEGUIMIENTO + BACKLOG + DIVERGENCES.
   and group_materi_membrane (user + developer, READMEs); BACKLOG C69,
   summary C64-C69, 47 open. build_safe TN_CHECK_ONLY=1 228 OK / 0 FALLO,
   runs 226/226. Next: T6f remaining items (K14b, C7, K21, C57).
+  T6f C68 integration-point states (2026-10-12), route: delegated writer
+  (trigger: 3 source files + 4 tests + docs; patch from a read-only
+  investigation, scratch c68). The manual (4.10, 4.15, 4.17, 4.25, 4.27)
+  treats kapsh, cap1 pc, damage, rho and the Maxwell stresses as point
+  history like kappa -> GNU defect fix. `70235c6` fix(materi): elem.cc
+  ELEMENT_DOF masks (feature-guarded), materi.cc one recovery-weight
+  block after kappa outside the h guard + IP write (old h blocks
+  removed), general.cc denominator; manual pages (damage, kapsh, cap1,
+  Maxwell, kappa, nodal_strain_recovery; new materi_plasti_rho user +
+  developer, READMEs). RED/GREEN on four-tria3 Pro probes: test-2026
+  damage_ip_state1, kappa_shear_ip_state1, rho_ip_state1,
+  maxwell_ip_state1 all rc 1 on c8737c8, rc 0 on the fix (vs Pro:
+  damage reactions 1.9e-1 -> 5e-13, rho 1.1e-1 -> 7e-6, kapsh 1.3e-2 ->
+  1.5e-4, Maxwell nodal msigyy 8.4e-2 -> 5e-4). cap1 manual-only (no Pro
+  evidence). Corpus A/B omen f4t6f_c68_runs: no rc/class change, no
+  node_dof change > 1e-10. Clean build; build_safe TN_CHECK_ONLY=1 232
+  OK / 0 FALLO, runs 226/226; audit_db_buffers exit 0. Docs commit:
+  BACKLOG C68 resolved + C68a (Pro Maxwell vs analytic, Pro-suspect),
+  C68b (cap1 model), C68c (MC h-s kapsh 1.2x), C68d (latent Maxwell
+  index in the old-state read), 50 open; DIVERGENCES B 39 -> 42, total
+  81; SEGUIMIENTO register. Next: T6f remaining items (K14b, C7, K21,
+  C57).

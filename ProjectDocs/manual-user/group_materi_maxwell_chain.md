@@ -78,3 +78,7 @@ uses the integration-point value. Before 2026-10-12 GNU fed the averaged
 node value back into the update, which smeared the history across
 elements (up to 19 % off the Professional in the reactions of a small
 damage test). Note: the Professional Maxwell chain gives a different (non-analytic) result even on a homogeneous field; GNU follows the analytic E*tau*rate*(1-exp(-t/tau)) (BACKLOG C68a).
+
+## Differences with the Professional version
+
+- **Maxwell chain relaxation** (C68a, class B, Professional-suspect, not decided): on a homogeneous one-chain probe GNU gives the analytic msig -20.25, the Professional 02-08-2026 -23.81. Index: [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).

@@ -14,10 +14,10 @@ Single index of every known difference between the GNU version and Tochnog Profe
 | class | meaning | items |
 |---|---|---|
 | A | deliberate divergence decided by the project owner | 22 |
-| B | known difference, not decided yet or scheduled (F3/F4) | 39 |
+| B | known difference, not decided yet or scheduled (F3/F4) | 42 |
 | C | GNU extension or input-dialect difference | 16 |
 | D | Professional-suspect: the Professional contradicts its own manual or the analytic answer | 1 |
-| | **total** | **78** |
+| | **total** | **81** |
 
 Ids: `C*`/`B*` are [BACKLOG-OPEN-ISSUES.md](BACKLOG-OPEN-ISSUES.md) items, `K*` are clusters of [AUDIT-ALL-VARIABLES-2026.md](AUDIT-ALL-VARIABLES-2026.md); other ids are local to this index. Several class A items are also Professional-suspect (noted in their status). Professional values are from the binary 02-08-2026 unless stated.
 
@@ -66,6 +66,9 @@ Open residuals. They are not decisions: each one is either scheduled, parked for
 
 | id | feature | GNU | Professional | decision / status | date | documented in |
 |---|---|---|---|---|---|---|
+| C68a | `group_materi_maxwell_chain` relaxation (`materi_maxwell_stress`) | Homogeneous one-chain probe (tau 0.3, constant strain rate): msig -20.25 = analytic E*tau*rate*(1-exp(-t/tau)); non-homogeneous field: msigxx ~0. | -23.81 on the same probe; msigxx != 0 on the non-homogeneous field. | Open, LOW; Professional-suspect (contradicts the analytic answer), not decided. Found in F4 T6f C68; the IP-state test `maxwell_ip_state1` agrees within 5e-4. | 2026-10-12 | [user/group_materi_maxwell_chain](manual-user/group_materi_maxwell_chain.md); [dev/group_materi_maxwell_chain](manual-developer/group_materi_maxwell_chain.md); BACKLOG C68a |
+| C68b | `group_materi_plasti_cap1` + `materi_plasti_cap1_history` | Probe: pc 108. | c1his -17; reactions 6x the GNU. | Open, LOW; cause unknown (model-level). The C68 cap1 IP-state change is verified by the manual only. | 2026-10-12 | [user/materi_plasti_cap1_history](manual-user/materi_plasti_cap1_history.md); [dev/materi_plasti_cap1_history](manual-developer/materi_plasti_cap1_history.md); BACKLOG C68b |
+| C68c | `group_materi_plasti_mohr_coul_hardening_softening` on `materi_plasti_kappa_shear` | Homogeneous control `c68_kapsh2*`: GNU response. | 1.2x the GNU on the same control. | Open, LOW; cause unknown (homogeneous, not the IP-state defect). | 2026-10-12 | [user/materi_plasti_kappa_shear](manual-user/materi_plasti_kappa_shear.md); [dev/materi_plasti_kappa_shear](manual-developer/materi_plasti_kappa_shear.md); BACKLOG C68c |
 | C61 | interface Mohr-Coulomb with `inertia_apply` | Probe: node 6 vely after one step 0.412250; after 10 steps -0.105, interface shear IP 1 1.65. | 0.273356; -0.0456, 3.96. | Open, LOW; found in F4 T6d, independent of the post-solve pass (same gap gated), cause not established. | 2026-10-11 | [dev/post_solve_material_state_pass](manual-developer/post_solve_material_state_pass.md); BACKLOG C61 |
 | C60 | `element_interface_intpnt_stress` normal component | Sign follows the internal orientation of the interface element (node order): +10 for `2 4 9 10` and `9 10 2 4`, -10 for `4 2 10 9` on the same compressed interface. | -10 (compression negative) for every node order. | Open, LOW; found in F4 T6d (slip-reversal probe), output record only (shear and nodal results agree). | 2026-10-11 | [dev/group_interface](manual-developer/group_interface.md); BACKLOG C60 |
 | C2 | `gvelx` sign in the interface-coupled groundflow path (`groundflow_interface`) | gvelx -1.99962e-6. | +1.99960e-6 (pressure field identical). | Open, LOW; root cause not established. | 2026-09-16 | [user/groundflow_velocity_sign](manual-user/groundflow_velocity_sign.md); [dev/groundflow_velocity_sign](manual-developer/groundflow_velocity_sign.md); BACKLOG C2 |

@@ -85,3 +85,7 @@ Professional 02-08-2026): previous binary rc 1 (nodal msigyy 8.4e-2
 relative off), fix rc 0 (5e-4). The Professional Maxwell chain itself
 differs from the analytic solution even on a homogeneous field (BACKLOG
 C68a, Professional-suspect).
+
+## Differences with the Professional version
+
+- **Maxwell chain relaxation** (C68a, class B, Professional-suspect, not decided): on a homogeneous one-chain probe GNU gives the analytic msig -20.25, the Professional 02-08-2026 -23.81. Index: [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).

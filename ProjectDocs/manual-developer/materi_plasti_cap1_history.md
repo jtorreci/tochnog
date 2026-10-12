@@ -91,3 +91,7 @@ variable). No Professional evidence: the Professional cap1 model diverges
 at model level (c1his -17 vs GNU pc 108, reactions 6x; BACKLOG C68b), so
 there is no cap1 test against it. Changed for consistency with kappa and
 the manual.
+
+## Differences with the Professional version
+
+- **cap1 model** (C68b, class B, cause unknown): Professional c1his -17 vs GNU pc 108, reactions 6x; the integration-point state of pc follows the manual and is not verified against the Professional. Index: [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).

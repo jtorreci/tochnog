@@ -69,3 +69,7 @@ uses the integration-point value. Before 2026-10-12 GNU fed the averaged
 node value back into the update, which smeared the history across
 elements (up to 19 % off the Professional in the reactions of a small
 damage test).
+
+## Differences with the Professional version
+
+- **Mohr-Coulomb hardening-softening on kapsh** (C68c, class B, cause unknown): 1.2x between GNU and the Professional on a homogeneous control. Index: [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).
