@@ -36,10 +36,9 @@ luck / segmentation fault (rc 139); ASan stack-buffer-overflow in
 
 - `MCHAR` (100, `tochnog.h`) is the word limit; `MCHAR_WORDS` (60) still
   limits define and arithmetic names separately.
-- `range.cc` (`-ra ... -ra` lists, `-from ... -to`) still reads two words
-  with a plain `cin >> str` into `char str[MCHAR]`: same overflow, not
-  converted in F4 T6a (outside the work unit); move `input_word()` to a
-  shared header and use it there.
+- `range.cc` (`-ra ... -ra` lists, `-from ... -to`): resolved in F4 T6f
+  (`35025dc`); every range word now goes through `input_read_string()`,
+  no raw `cin >> str` read is left (see `ranges.md`).
 - Reads into `char*` with `setw` rely on the C++17 `operator>>(istream&,
   char*)`; C++20 removed it (the array-reference overload bounds by
   itself). The build uses the g++ default (gnu++17).
