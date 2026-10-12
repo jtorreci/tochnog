@@ -30,8 +30,10 @@ stress is `(1-d)` times the effective (undamaged) stress, which is kept per
 integration point (manual Professional 2.2.5; before 2026-09-29 the damage
 compounded every step, see `materi_damage_effective_stress.md`). `gamma` is
 evaluated with the effective stress components xx, xy, xz (not the
-principal stresses); with a compressive xx combined with a same-sign xy or
-xz shear the damage differs from the Professional.
+principal stresses), as in the Professional. With two or three positive
+principal strains the damage differs from the Professional, which uses a
+non-standard equivalent strain (see "Differences with the Professional
+version").
 
 Useful for cracking/failure of concrete, mortar, rock and other quasi-brittle
 materials.
@@ -73,12 +75,22 @@ This is the `damage1.dat` regression test (uniaxial extension, damage growth).
 
 ## Differences with the Professional version
 
-- **Mazars damage: gamma with shear; damage + early plasticity** (known
-  difference, not decided; BACKLOG C7). GNU: gamma from xx, xy, xz (e.g. dam
-  0.10809); plastic path eppxx 1.879e-4. Professional 02-08-2026: dam
-  0.18752; eppxx 1.368e-4 (Pro gamma matches none of the tried forms).
-  Status: Open, MEDIUM; needs more probes. Index:
+- **Mazars equivalent strain** (deliberate divergence, class A, project
+  decision 2026-10-12; BACKLOG C7). GNU: manual 2.2.5, eps_eq =
+  sqrt(sum <eps_i>+^2) of the positive principal strains (hex8
+  diag(2e-4,-3e-4,1e-4): dam 0.28610207515). Professional 02-08-2026:
+  accumulates them in ascending order as s = 2 s + eps^2 (weights 4, 2, 1;
+  the 2014 accumulation defect the GNU fixed on 2026-08-10): dam 0.36409.
+  It differs whenever two or three principal strains are positive, also
+  through a von Mises + damage path (bar with `vonmises 3e6`: GNU dam
+  0.925372, eppxx 1.87863e-4; Professional 0.96946, 1.368e-4). Guard
+  tests `test-2026/damage_mazars_eq_two_positive1`,
+  `damage_mazars_vonmises1`. Index:
   [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).
+- The triaxiality factor gamma is built from the xx, xy, xz stress
+  components in both codes (not objective: a compressive xx with xy or xz
+  shear gives an orientation-dependent `dam`). Same in the Professional,
+  so not a divergence; noted in BACKLOG C7, no fix planned.
 
 ## Integration-point state (C68, 2026-10-12)
 

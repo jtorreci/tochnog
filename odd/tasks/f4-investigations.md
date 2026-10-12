@@ -26,7 +26,7 @@ T6 triage (2026-10-11, HEAD 53dbb86) and owner order (2026-10-11):
 - [x] T6c K15 `validation_14` `control_restart` semantics (without restart every node_dof = Pro). Done `8ca6124`: restart resets the IP state (manual 6.368, Pro deletes element_dof); `validation_14` NOT caused by the restart (re-scoped, open under T6f); element history records -> BACKLOG C58.
 - [x] T6d C11 `dynamic3` (disp_primary_gate per material) -> C52. Done `28992d5` (C11), `e0f2204` (C59), `b318484` (interface history), `c276931` (inertia pass).
 - [x] T6e C53 slide in the post-solve pass. Done `b4e4fa4` (slide law), `07433f5` (slide/contact in the pass, gate removed).
-- [ ] T6f Rest by relevance (K15 `validation_14` done `1d446b3`; K15 validation_3 kap done `c3e6d2a`; C68 IP states kapsh/cap1/damage/rho/Maxwell done `70235c6`; C68d Maxwell old-state index done `2327083`): K15 `validation_14` (re-scoped by T6c: pass-1 hole-boundary nodal stress/plastic strain up to ~20 % at 8 nodes on the r=0.01 circle -> `refine_locally` picks a different element -> pass 2 on a different mesh), K15 mmc_tension and validation_3 eptzz closed 2026-10-12 as class A divergences (`600a0b4`), K14b hypo3, C7 Mazars, K21, C57. Parked: K14c (ISA, class D), mohrcou2 sfnet (input artifact).
+- [ ] T6f Rest by relevance (K15 `validation_14` done `1d446b3`; K15 validation_3 kap done `c3e6d2a`; C68 IP states kapsh/cap1/damage/rho/Maxwell done `70235c6`; C68d Maxwell old-state index done `2327083`): K15 `validation_14` (re-scoped by T6c: pass-1 hole-boundary nodal stress/plastic strain up to ~20 % at 8 nodes on the r=0.01 circle -> `refine_locally` picks a different element -> pass 2 on a different mesh), K15 mmc_tension and validation_3 eptzz closed 2026-10-12 as class A divergences (`600a0b4`), K14b hypo3 and C7/C7b Mazars closed 2026-10-12 as class A divergences (`ae0691b`), K21, C57. Parked: K14c (ISA, class D), mohrcou2 sfnet (input artifact).
 
 ## Later (owner 2026-10-10, after convergence with ALL divergences documented and accepted)
 - F6: exhaustive profiling and optimisation pass; special attention to the hot
@@ -612,3 +612,27 @@ docs + SEGUIMIENTO + BACKLOG + DIVERGENCES.
   runs 226/226; audit_db_buffers exit 0. Docs: BACKLOG C68d resolved,
   49 open; SEGUIMIENTO register + materi_maxwell_stress line; Maxwell
   developer page. Next: T6f remaining items (K14b, C7, K21, C57).
+  T6f K14b + C7 (2026-10-12, owner decision: class A for both, keep GNU,
+  document), route: delegated writer (trigger: 4 tests + build_safe + 10
+  docs; no source change). Investigation: Engram 2742. `ae0691b`
+  test(materi): test-2026 hypo_wolff_igs_oedometer1/2 (test-2014 hypo3
+  at dt 1e-3 / 1e-5; sigxx converged reference -0.10466 from a Python
+  integration of von Wolffersdorff + IGS, +- 2e-3 / 5e-4; GNU -0.103436 /
+  -0.104235, dt 1e-5 runs in ~1 s; Pro -0.1629 / -0.10499),
+  damage_mazars_eq_two_positive1 (hex8 diag(2e-4,-3e-4,1e-4), dam
+  0.28610207515 +- 1e-8; GNU 0.286102; Pro 0.36409) and
+  damage_mazars_vonmises1 (damage_stress1 bar + vonmises 3e6, dam
+  0.925372225695 +- 1e-6, eppxx 1.87863e-4 +- 1e-8; Pro 0.96946 /
+  1.368e-4). Guard tests: rc 0 on HEAD by design, RED not applicable (no
+  behaviour change); sensitivity checked (a shifted target -> rc 1 with
+  the actual value in tn.log). Finding: the Pro Mazars eps_eq s = 2 s +
+  eps^2 is the 2014 `epseq += epseq + ...` defect the GNU fixed on
+  2026-08-10 (manual-developer group_materi_damage_mazars "Bug report").
+  DIVERGENCES K14b + C7 class A (A 22 -> 24, B 42 -> 41, total 82; K14 row
+  keeps the hypo3 hyhis residual); SEGUIMIENTO Descarte x2 + register;
+  BACKLOG C7 closed with the shared non-objective gamma note
+  (`damage.cc:84-95`, no fix), 48 open (3 MEDIUM, 45 LOW); Differences
+  sections of the hypo wolfersdorff / intergranularstrain and Mazars /
+  damage effective stress pages (user + developer). build_safe
+  TN_CHECK_ONLY=1 237 OK / 0 FALLO, runs 226/226; audit_db_buffers exit
+  0. Next: T6f remaining items (K21, C57).

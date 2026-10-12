@@ -664,7 +664,7 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
   3/4 10`), rc 0, targets met. build_safe checks that the input has no
   element 3 and the run produces it.
 
-### C7. Mazars damage: gamma with shear, and damage + early plasticity
+### C7. Mazars damage: gamma with shear, and damage + early plasticity — RESOLVED 2026-10-12 (deliberate divergence, class A)
 
 - **Corpus**: none (own hex8 / bar probes, `materi_damage_effective_stress.md`).
 - **Symptom**: (a) with a compressive `sigxx` and a same-sign `sigxy`/`sigxz`
@@ -672,17 +672,26 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
   0.18752; with the opposite shear sign 0.26351 vs 0.39352); (b) a bar with
   `group_materi_plasti_vonmises` yielding before the damage threshold gives a
   different plastic strain path (`eppxx` 1.879e-4 vs 1.368e-4).
-- **Root cause**: (a) `damage_mazars()` builds gamma from xx, xy, xz (not
-  objective); the Professional is not objective either and matches none of
-  the candidate forms tried (GNU form, principal-stress gamma, gamma = 1).
-  (b) not established (iteration order of plasticity and damage); both codes
-  satisfy sigma = (1-d) C eps_e for their own strains.
-- **Severity**: **MEDIUM** — damage in shear-compression states and
-  damage+plasticity models diverge from the Professional.
-- **Proposed fix**: identify the Professional gamma with more probes (vary
-  each stress component separately), then (b) with a trace of the plastic
-  iterations.
-- **Effort**: **medium**.
+- **Root cause (F4 T6f, 2026-10-12)**: not gamma. The Professional uses a
+  non-standard equivalent strain: it accumulates the positive principal
+  strains in ascending order as s = 2 s + eps^2 (weights 4, 2, 1 instead
+  of 1, 1, 1), eps_eq = sqrt(s) times gamma; this form reproduces 14
+  Professional probes to 7e-14. The GNU follows the manual 2.2.5,
+  eps_eq = sqrt(sum <eps_i>+^2). (b) is the same defect (the plastic path
+  follows from the different damage). Both codes use the same gamma.
+- **Resolution**: owner decision 2026-10-12: keep the GNU (manual), class A
+  row C7 in `DIVERGENCES-PROFESSIONAL.md`, SEGUIMIENTO "Descarte de
+  features". Guard tests (`ae0691b`): test-2026
+  `damage_mazars_eq_two_positive1` (hex8 diag(2e-4,-3e-4,1e-4), dam
+  0.28610207515; Pro 0.36409) and `damage_mazars_vonmises1` (dam
+  0.925372225695, eppxx 1.87863e-4; Pro 0.96946 / 1.368e-4).
+- **Note (no fix planned)**: the triaxiality factor gamma is not objective
+  in either code: `damage_mazars()` (`damage.cc:84-95`) builds it from the
+  xx, xy, xz row of the stress matrix instead of the principal stresses,
+  so two reflected states (xx -5e-4, xy -/+5e-4, zz 3e-4) give different
+  `dam`. It only matters with a compressive xx combined with xy or xz
+  shear. Shared with the Professional, so not a divergence; recorded as a
+  latent model issue (owner decision 2026-10-12: note only).
 
 ### C8. Default `mesh`: GNU `-follow_material`, Professional `-fixed_in_space` — RESOLVED 2026-10-07 (F3 T2)
 
@@ -2263,7 +2272,7 @@ Original report:
 | C3 | sfnet | `gforce10` 3D section sign — sign resolved 2026-10-11 (F4 T6a: plot_switch convention, test-2014 input restored, -5000 = Pro); square-face tie kept as deliberate divergence (owner 2026-10-11) | closed | - |
 | C5 | — | `contact_target_geometry` index-0 alias — resolved 2026-10-07 (F2 T3a) | MEDIUM | medium |
 | C6 | validation-suite | `iface_gen*` generation-coverage gap — resolved 2026-10-11 (F4 T6a: generated elements removed from the inputs) | MEDIUM | cheap |
-| C7 | — | Mazars gamma with shear; damage + early plasticity path | MEDIUM | medium |
+| C7 | — | Mazars damage vs Pro: Pro equivalent strain weights 4,2,1 (also with plasticity, C7b) — closed 2026-10-12 as a deliberate divergence (class A, F4 T6f); shared non-objective gamma noted, no fix | closed | - |
 | C8 | — | default `mesh` `-follow_material` vs Pro `-fixed_in_space` — resolved 2026-10-07 (F3 T2) | MEDIUM | large |
 | C9 | — | `-total_linear` + compressibility: Pro time-step dependent (deliberate divergence) | LOW | cheap |
 | C10 | Pro `other` | static pore pressure tied to `post_calcul -total_pressure` in the Pro (`excavate1` target) | MEDIUM | cheap |
@@ -2325,7 +2334,7 @@ Original report:
 | C68d | — | `materi.cc` old rho/epi/epp read with the Maxwell loop index (two or more chains) — resolved 2026-10-12 (F4 T6f, `2327083`) | LOW | cheap |
 | C69 | — | plane-stress membrane: yy/zz split of the plastic strain first order in dt (eptzz -0.00721 at dt 0.1 vs analytic -0.00882) | LOW | medium |
 
-Forty-nine items remain open: four MEDIUM and forty-five LOW (C23 and C24 resolved 2026-10-05; C25, C26, C27 and B10 added; F1 T3 / K04 2026-10-06 added B11, C28-C32; F1 T6 resolved C28, added and resolved B12; F2 T1 added C36; F2 T2 added C37, C38, C39; F2 T3 resolved C5 and added C40; F3 T2 resolved C8, C18, C19, C20 and added B13, C41; F4 T2 fixed the C41 tie and left a residual; F4 T3 resolved C33; F4 T4 closed C32, added C42 and resolved C31; F4 T7-T8 added C43-C46; F4 T9 resolved the C43 solver speed, decided C46b/C46e and added C47, C48, C49; F4 T10 resolved C48 and added C50; F4 T5 added C52, C53 and resolved C51; F4 T13 resolved C49 and added C54-C56; F4 T12 resolved C47 and added C57; F4 T6a resolved C6, C55, C56 and the C3 sign, the C3 square-face tie becoming a deliberate divergence (owner 2026-10-11), and added B14; F4 T6c fixed the `control_restart` integration-point reset and added C58; F4 T6d resolved C11 and C59, fixed the interface history and resolved C52, and added B15, C60 and C61; B15 resolved the same day; F4 T6e resolved C53 and added C62 and C63; F4 T6f added C64-C68 and C69, and closed the K15 `mmc_tension` vertex sigzz/eppzz and `validation_3` eptzz items as deliberate divergences MC-VERTEX-ZZ / MEMBRANE-EPTZZ, owner 2026-10-12; F4 T6f resolved C68 and added C68a-C68d; C68d resolved the same day). No open issue is CRITICAL or
+Forty-eight items remain open: three MEDIUM and forty-five LOW (C23 and C24 resolved 2026-10-05; C25, C26, C27 and B10 added; F1 T3 / K04 2026-10-06 added B11, C28-C32; F1 T6 resolved C28, added and resolved B12; F2 T1 added C36; F2 T2 added C37, C38, C39; F2 T3 resolved C5 and added C40; F3 T2 resolved C8, C18, C19, C20 and added B13, C41; F4 T2 fixed the C41 tie and left a residual; F4 T3 resolved C33; F4 T4 closed C32, added C42 and resolved C31; F4 T7-T8 added C43-C46; F4 T9 resolved the C43 solver speed, decided C46b/C46e and added C47, C48, C49; F4 T10 resolved C48 and added C50; F4 T5 added C52, C53 and resolved C51; F4 T13 resolved C49 and added C54-C56; F4 T12 resolved C47 and added C57; F4 T6a resolved C6, C55, C56 and the C3 sign, the C3 square-face tie becoming a deliberate divergence (owner 2026-10-11), and added B14; F4 T6c fixed the `control_restart` integration-point reset and added C58; F4 T6d resolved C11 and C59, fixed the interface history and resolved C52, and added B15, C60 and C61; B15 resolved the same day; F4 T6e resolved C53 and added C62 and C63; F4 T6f added C64-C68 and C69, and closed the K15 `mmc_tension` vertex sigzz/eppzz and `validation_3` eptzz items as deliberate divergences MC-VERTEX-ZZ / MEMBRANE-EPTZZ, owner 2026-10-12; F4 T6f resolved C68 and added C68a-C68d; C68d resolved the same day; F4 T6f closed C7 (Mazars equivalent strain, with C7b) and the AUDIT K14b `hypo3` sigxx reversal as deliberate divergences C7 / K14b, owner 2026-10-12; the `hypo3` hyhis slot residual stays open under AUDIT K14). No open issue is CRITICAL or
 HIGH. The validation-suite corpus has no open failure — its 233 real tests
 pass (`materi_direct_mc` input corrected, C17 resolved). Every remaining failure is a stale or malformed test, an out-of-scope model
 or infrastructure limit, a narrow post-processing divergence, a corpus-coverage
