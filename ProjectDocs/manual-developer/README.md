@@ -569,3 +569,7 @@ page lists its own in "Differences with the Professional version".
 ## F4 T6f — ranges (2026-10-12)
 
 - [ranges](ranges.md) — range.cc range_scan() (STEP sign, from==to, several blocks, reads through input_read_string()) and range_expand() (value-range validation); input.cc integer check inside value ranges.
+
+## F4 T6f — K21 WU2 group_materi_stokes (2026-10-12)
+
+- [group_materi_stokes](group_materi_stokes.md) — general.cc general(): `stokes` default -YES, read with `db(GROUP_MATERI_STOKES, element_group, ...)` (before -NO at index 0); only `conv_part` of MATERI_VELOCITY depends on it. Tests stokes_default1/group1/group2; test-2014 cmat_gate rewritten. Residual: C72 convected IP stress.

@@ -1988,10 +1988,20 @@ Original report:
   solution (the IP states are bit-identical with both operators), so the
   difference is in the transported nodal output only. The well-posed
   rewritten `cd_method` (pure shear) gives sigxy 0.9999956 with both
-  operators. test-2014 `cmat_gate` is the same ill-posed convected model
-  (`-ra 1 4 -ra`, target 3.20774 +- 2, still met): gate removal moved its
-  nodal sig by 5.9e-2 relative (vs Pro 0.107 -> 0.118); rewrite it with
-  the C72 fix.
+  operators. test-2014 `cmat_gate` was the same ill-posed convected model
+  (`-ra 1 4 -ra`, target 3.20774 +- 2): gate removal moved its nodal sig
+  by 5.9e-2 relative (vs Pro 0.107 -> 0.118), and the K21 WU2
+  `group_materi_stokes` default -yes made it fail (sigxy 1.532 -> 0.921,
+  Pro 0); rewritten 2026-10-12 (`58bba14`) as a well-posed simple shear
+  (sigxy 250.5 / sigxx -49.5 = analytic = Pro).
+- **Stokes flow (K21 WU2, 2026-10-12)**: with `group_materi_stokes -yes`
+  the Professional still convects the integration-point stress and the
+  velocity feels it; the GNU Stokes result equals `convection_apply -no`
+  (`validation_1` without the record: Pro 0.1465713, GNU 0.144159 = Pro
+  `convection_apply -no` 0.1441588; compressibility 1e-5: Pro 0.1442 vs
+  0.1386). Density 0/1/2 does not change the Pro Stokes value, so the
+  gap is not a momentum term. `test-2026/stokes_default1` tolerates it
+  (0.003). Closing C72 should close it.
 - **Next step**: convect the integration-point stress state (or make the
   nodal stress the recovered field of a convected IP state), then
   compare with the Professional on the original `cd_method` input
@@ -2428,7 +2438,7 @@ Original report:
 | C64 | — | quad4 per-element nodal recovery of the Professional — resolved 2026-10-12 (F4 T6f K21: physical linear fit, 1-point value, on-axis rule) | closed | - |
 | C70 | — | 3x3 quad9 and hex8 (hex27/tet10 likely) recovery tables in natural coordinates; the Professional fits in physical coordinates | LOW | cheap/medium |
 | C71 | sfnet | `tube1` (`-lobatto` + axisymmetric) NaN in the GNU; Pro runs | LOW | medium |
-| C72 | — | convected (Eulerian) stress: IP state not convected, nodal stress an inconsistent incremental output; Pro sweeps the stress out | LOW | medium/large |
+| C72 | — | convected (Eulerian) stress: IP state not convected, nodal stress an inconsistent incremental output; Pro sweeps the stress out; also the Stokes-flow gap (K21 WU2) | LOW | medium/large |
 | C65 | — | Professional `post_point_dof` at a node differs from its own `node_dof` | LOW | cheap |
 | C66 | — | tria6 element results differ ~1e-5 from the Professional | LOW | cheap/medium |
 | C67 | — | nodal recovery of the unmeasured element rules | LOW | cheap |
@@ -2439,7 +2449,7 @@ Original report:
 | C68d | — | `materi.cc` old rho/epi/epp read with the Maxwell loop index (two or more chains) — resolved 2026-10-12 (F4 T6f, `2327083`) | LOW | cheap |
 | C69 | — | plane-stress membrane: yy/zz split of the plastic strain first order in dt (eptzz -0.00721 at dt 0.1 vs analytic -0.00882) | LOW | medium |
 
-Forty-eight items remain open: three MEDIUM and forty-five LOW (C23 and C24 resolved 2026-10-05; C25, C26, C27 and B10 added; F1 T3 / K04 2026-10-06 added B11, C28-C32; F1 T6 resolved C28, added and resolved B12; F2 T1 added C36; F2 T2 added C37, C38, C39; F2 T3 resolved C5 and added C40; F3 T2 resolved C8, C18, C19, C20 and added B13, C41; F4 T2 fixed the C41 tie and left a residual; F4 T3 resolved C33; F4 T4 closed C32, added C42 and resolved C31; F4 T7-T8 added C43-C46; F4 T9 resolved the C43 solver speed, decided C46b/C46e and added C47, C48, C49; F4 T10 resolved C48 and added C50; F4 T5 added C52, C53 and resolved C51; F4 T13 resolved C49 and added C54-C56; F4 T12 resolved C47 and added C57; F4 T6a resolved C6, C55, C56 and the C3 sign, the C3 square-face tie becoming a deliberate divergence (owner 2026-10-11), and added B14; F4 T6c fixed the `control_restart` integration-point reset and added C58; F4 T6d resolved C11 and C59, fixed the interface history and resolved C52, and added B15, C60 and C61; B15 resolved the same day; F4 T6e resolved C53 and added C62 and C63; F4 T6f added C64-C68 and C69, and closed the K15 `mmc_tension` vertex sigzz/eppzz and `validation_3` eptzz items as deliberate divergences MC-VERTEX-ZZ / MEMBRANE-EPTZZ, owner 2026-10-12; F4 T6f resolved C68 and added C68a-C68d; C68d resolved the same day; F4 T6f closed C7 (Mazars equivalent strain, with C7b) and the AUDIT K14b `hypo3` sigxx reversal as deliberate divergences C7 / K14b, owner 2026-10-12; the `hypo3` hyhis slot residual stays open under AUDIT K14). No open issue is CRITICAL or
+Forty-eight items remain open: three MEDIUM and forty-five LOW (C23 and C24 resolved 2026-10-05; C25, C26, C27 and B10 added; F1 T3 / K04 2026-10-06 added B11, C28-C32; F1 T6 resolved C28, added and resolved B12; F2 T1 added C36; F2 T2 added C37, C38, C39; F2 T3 resolved C5 and added C40; F3 T2 resolved C8, C18, C19, C20 and added B13, C41; F4 T2 fixed the C41 tie and left a residual; F4 T3 resolved C33; F4 T4 closed C32, added C42 and resolved C31; F4 T7-T8 added C43-C46; F4 T9 resolved the C43 solver speed, decided C46b/C46e and added C47, C48, C49; F4 T10 resolved C48 and added C50; F4 T5 added C52, C53 and resolved C51; F4 T13 resolved C49 and added C54-C56; F4 T12 resolved C47 and added C57; F4 T6a resolved C6, C55, C56 and the C3 sign, the C3 square-face tie becoming a deliberate divergence (owner 2026-10-11), and added B14; F4 T6c fixed the `control_restart` integration-point reset and added C58; F4 T6d resolved C11 and C59, fixed the interface history and resolved C52, and added B15, C60 and C61; B15 resolved the same day; F4 T6e resolved C53 and added C62 and C63; F4 T6f added C64-C68 and C69, and closed the K15 `mmc_tension` vertex sigzz/eppzz and `validation_3` eptzz items as deliberate divergences MC-VERTEX-ZZ / MEMBRANE-EPTZZ, owner 2026-10-12; F4 T6f resolved C68 and added C68a-C68d; C68d resolved the same day; F4 T6f closed C7 (Mazars equivalent strain, with C7b) and the AUDIT K14b `hypo3` sigxx reversal as deliberate divergences C7 / K14b, owner 2026-10-12; the `hypo3` hyhis slot residual stays open under AUDIT K14; F4 T6f K21 WU2 widened C72 with the Stokes-flow residual and closed its `cmat_gate` rewrite, no new item). No open issue is CRITICAL or
 HIGH. The validation-suite corpus has no open failure — its 233 real tests
 pass (`materi_direct_mc` input corrected, C17 resolved). Every remaining failure is a stale or malformed test, an out-of-scope model
 or infrastructure limit, a narrow post-processing divergence, a corpus-coverage

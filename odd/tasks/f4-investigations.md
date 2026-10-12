@@ -708,3 +708,32 @@ docs + SEGUIMIENTO + BACKLOG + DIVERGENCES.
   BACKLOG C56 range.cc residual closed. Stale: manual-developer
   input_word_length.md line 39 still says range.cc pending (outside the
   edit surface). Next: C72, K21 validation_1, C70, C57.
+  T6f K21 WU2 group_materi_stokes (2026-10-12, owner-approved), route:
+  delegated writer (trigger: general.cc + 3 tests + cmat_gate + wiring +
+  10 docs). Investigation Engram 2751 / 2765. Pro 02-08-2026 probes:
+  absent record = -yes (validation_1 flow velx 0.1465713); the Pro reads
+  index 0 for every group (-no/-yes, -yes/-no, record only on group 1,
+  element 0 moved to group 1: always the index-0 value, 1e-12); Stokes vs
+  convection -no residual = convected IP stress (density 0/1/2 no effect;
+  GNU nodal stress convected but no velocity feedback) -> C72. First
+  build (default only, index 0) hit the STOP RULE: test-2014 cmat_gate
+  sigxy 1.532 -> 0.921 vs target 3.20774 +- 2 (Pro 0; ill-posed
+  `-ra 1 4 -ra` rigid rotation, met by chance); corpus A/B omen
+  f4t6g_stokes_runs (range vs stokes): rc change only cmat_gate, cd_method
+  ept 4.6e-2 (target met), Pro other / sfnet / test-2026 .dbs unchanged.
+  Owner decisions 2026-10-12: per element group read (manual; Pro index 0
+  = class A STOKES-IDX), cmat_gate rewritten. `58bba14` fix(convection):
+  general.cc default -YES + db(GROUP_MATERI_STOKES, element_group); tests
+  RED on HEAD rc 1 / GREEN rc 0: stokes_default1 (Pro 0.1465713 +- 0.003,
+  GNU 0.144159, HEAD -0.0570386), stokes_group1 (0.124105, Pro 0.1465713
+  fails), stokes_group2 (all in a -no group = one-group -no -0.0570386,
+  HEAD 0.144159, Pro 0.1465713 fails); cmat_gate simple shear with gate
+  sigxy 250.5 / sigxx -49.5 (analytic = Pro exactly; no gate 150.5 /
+  -149.5), GNU 250.4989 / -49.4998 tol 0.01, HEAD and new identical. No
+  corpus input has an index != 0 stokes record, so the per-group build
+  cannot change the A/B (not re-run). Clean build; build_safe
+  TN_CHECK_ONLY=1 252 OK / 0 FALLO, runs 226/226; audit_db_buffers exit 0.
+  Docs: user/developer group_materi_stokes (+ READMEs), SEGUIMIENTO line +
+  register + Descarte, DIVERGENCES STOKES-IDX (A 24 -> 25, total 86), K21
+  re-scoped, C72 widened; BACKLOG C72 (no new item); AUDIT K21. Next: K21
+  WU3 validation_1 convection transient, C72, C70, C57.

@@ -539,3 +539,7 @@ page lists its own in "Differences with the Professional version".
 ## F4 T6f — ranges (2026-10-12)
 
 - [ranges](ranges.md) — `-ra ... -ra` syntax: lists, `-from/-to` blocks (several, `a` = `b` allowed), `-step`; `-ra a b -ra` is a LIST, not a..b. Index `-step`, single and two-block ranges, descending and `9.0` errors now as the Professional.
+
+## F4 T6f — K21 WU2 group_materi_stokes (2026-10-12)
+
+- [group_materi_stokes](group_materi_stokes.md) — Stokes flow per element group (no momentum convection): default `-yes` as manual 6.752 and the Professional (before: `-no`); read per element group (the Professional uses index 0 for every group, class A divergence STOKES-IDX).
