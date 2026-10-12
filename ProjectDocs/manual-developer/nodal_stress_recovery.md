@@ -235,13 +235,19 @@ Implementation (`miscel.cc`):
   `materi.cc` (stress, strain tensors, kappa, C68 IP states) and
   `general.cc` (strain/IP-state lumped denominators, convected stress)
   passes them, so numerator and denominator stay consistent.
-- Gate: not applied to CONVECTED stress dofs (`stress_recovery_lagrange`
-  == 0, set in `general()` next to `stress_recovery_absolute`: convection
-  on a fixed/ALE mesh). There the nodal stress is the transported
-  material state; test-2014 `cd_method` (GNU-only convected
-  `materi_strain_total` + `derivatives`, one rectangle) moved from sigxy
-  0.744 to 3.64 (target 1 +- 0.3) with the fit, so the historic operator
-  is kept on that path (no Professional reference).
+- No gate (K21 WU1b, 2026-10-12): the fit applies to every stress dof,
+  CONVECTED ones included. WU1 (`2305659`) kept the old operator when the
+  stress dofs are convected (`stress_recovery_lagrange`, removed): the
+  original test-2014 `cd_method` moved from sigxy 0.744 to 3.64 (target
+  1 +- 0.3) with the fit. Both values were meaningless: `-ra 1 4 -ra` is a
+  node LIST, so the element rotated rigidly (physical stress 0, the
+  Professional gives 0 from t = 0.6), and neither value converged in dt
+  or mesh. `cd_method`, `cd_geom` and `materi_direct_mc` were rewritten
+  as well-posed simple shears (sigxy = c exactly with both operators).
+  The convected (Eulerian, `-fixed_in_space` + convection) stress path
+  itself is a class B divergence (BACKLOG C72): the integration-point
+  state is not convected and the nodal stress is an incremental
+  transported output not consistent with it.
 
 Not changed (probes in K21 WU1, Professional = physical linear fit too,
 GNU = iso linear table; BACKLOG C70): quad9 with 9 points on curved /
@@ -275,4 +281,3 @@ except the 4 new tests (1 -> 0); 9 tests move closer to the Professional
 - `miscel.cc` — `sri_stress_recovery_weight()` (2026-09-13; simplex and
   1-point bar2 arithmetic mean F4 T6f, 2026-10-11), `recovery_fit_kind()`,
   `recovery_fit_build()`, `recovery_fit_factor()` (K21, 2026-10-12)
-- `general.cc` — `stress_recovery_lagrange` (K21 gate)

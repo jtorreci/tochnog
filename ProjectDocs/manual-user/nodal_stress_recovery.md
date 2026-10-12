@@ -48,10 +48,16 @@ tube flow, axisymmetric quad4): node 3 sigxx -159.58 (before -66.40),
 equal to the Professional. Other examples:
 `recovery_quad4_distorted_plane1.dat`, `recovery_examp1_quad4_point_mean1.dat`,
 `recovery_incnav4_quad9_minimal1.dat`. The strain tensors and the other
-recovered integration-point states follow the same rule. When the stress
-is CONVECTED (`convection_apply -yes` on a fixed mesh with
-`materi_velocity`), the nodal stress is the transported state and the
-previous operator is kept.
+recovered integration-point states follow the same rule, also when the
+stress is CONVECTED (`convection_apply -yes` on a fixed mesh with
+`materi_velocity`; since 2026-10-12, K21 WU1b, no exception).
+
+Difference with the Professional version: on the convected (Eulerian)
+stress path the GNU does not convect the integration-point stress state,
+and the nodal stress is an incremental transported output that is not
+consistent with it; the Professional sweeps the stress out of the fixed
+mesh (BACKLOG C72, class B). Use a Lagrangian mesh
+(`options_mesh -follow_material`) when the stress history matters.
 
 Not yet aligned (the Professional also fits in physical coordinates
 there): `quad9` with 3x3 points and `hex8` on curved or distorted

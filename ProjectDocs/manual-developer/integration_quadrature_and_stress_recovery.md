@@ -346,9 +346,10 @@ Results are bit-identical: every suite `.dbs` equal to the old build
   `recovery_fit_factor()` builds the Professional physical-coordinate
   linear fit per element for the 2x2 quad4/quad9 (on-axis `h` rule,
   1-point quad4 point value); `axisym_quad4_ring1` sigzz 10759.2155 =
-  Professional. The `cd_method` flip of the F4 T4 prototype is avoided by
-  the `stress_recovery_lagrange` gate (convected stress keeps the old
-  operator). Remaining: 3x3 quad9 and hex8 natural-coordinate tables on
+  Professional. The convected-stress gate of WU1 was removed in WU1b
+  (2026-10-12): the `cd_method` flip came from an ill-posed input
+  (`-ra 1 4 -ra` is a node list), rewritten as a well-posed shear; the
+  convected stress path is BACKLOG C72 (class B). Remaining: 3x3 quad9 and hex8 natural-coordinate tables on
   curved/distorted elements (C70). Index:
   [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).
 - **`post_point_dof` of recovered fields (stress/strain)** (known

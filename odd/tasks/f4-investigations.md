@@ -26,7 +26,7 @@ T6 triage (2026-10-11, HEAD 53dbb86) and owner order (2026-10-11):
 - [x] T6c K15 `validation_14` `control_restart` semantics (without restart every node_dof = Pro). Done `8ca6124`: restart resets the IP state (manual 6.368, Pro deletes element_dof); `validation_14` NOT caused by the restart (re-scoped, open under T6f); element history records -> BACKLOG C58.
 - [x] T6d C11 `dynamic3` (disp_primary_gate per material) -> C52. Done `28992d5` (C11), `e0f2204` (C59), `b318484` (interface history), `c276931` (inertia pass).
 - [x] T6e C53 slide in the post-solve pass. Done `b4e4fa4` (slide law), `07433f5` (slide/contact in the pass, gate removed).
-- [ ] T6f Rest by relevance (K15 `validation_14` done `1d446b3`; K15 validation_3 kap done `c3e6d2a`; C68 IP states kapsh/cap1/damage/rho/Maxwell done `70235c6`; C68d Maxwell old-state index done `2327083`; K21 recovery part done `2305659`): K15 `validation_14` (re-scoped by T6c: pass-1 hole-boundary nodal stress/plastic strain up to ~20 % at 8 nodes on the r=0.01 circle -> `refine_locally` picks a different element -> pass 2 on a different mesh), K15 mmc_tension and validation_3 eptzz closed 2026-10-12 as class A divergences (`600a0b4`), K14b hypo3 and C7/C7b Mazars closed 2026-10-12 as class A divergences (`ae0691b`), K21 (recovery done; validation_1 stokes default + convection remain), C57, C70 (3x3 quad9 / hex8 physical fit), C71 (tube1 -lobatto NaN). Parked: K14c (ISA, class D), mohrcou2 sfnet (input artifact).
+- [ ] T6f Rest by relevance (K15 `validation_14` done `1d446b3`; K15 validation_3 kap done `c3e6d2a`; C68 IP states kapsh/cap1/damage/rho/Maxwell done `70235c6`; C68d Maxwell old-state index done `2327083`; K21 recovery part done `2305659`, gate removed `e2b044f`): K15 `validation_14` (re-scoped by T6c: pass-1 hole-boundary nodal stress/plastic strain up to ~20 % at 8 nodes on the r=0.01 circle -> `refine_locally` picks a different element -> pass 2 on a different mesh), K15 mmc_tension and validation_3 eptzz closed 2026-10-12 as class A divergences (`600a0b4`), K14b hypo3 and C7/C7b Mazars closed 2026-10-12 as class A divergences (`ae0691b`), K21 (recovery done; validation_1 stokes default + convection remain), C57, C70 (3x3 quad9 / hex8 physical fit), C71 (tube1 -lobatto NaN). Parked: K14c (ISA, class D), mohrcou2 sfnet (input artifact).
 
 ## Later (owner 2026-10-10, after convergence with ALL divergences documented and accepted)
 - F6: exhaustive profiling and optimisation pass; special attention to the hot
@@ -665,3 +665,28 @@ docs + SEGUIMIENTO + BACKLOG + DIVERGENCES.
   nodal_stress_recovery, nodal_strain_recovery,
   integration_quadrature_and_stress_recovery. Next: K21 validation_1
   (stokes default, convection), C70, C57.
+  T6f K21 WU1b gate removal + test rewrite (2026-10-12, owner-approved),
+  route: delegated writer (trigger: 4 source files + 3 inputs + 8 docs).
+  Investigation Engram 2756: `-ra 1 4 -ra` is a node LIST, cd_method /
+  cd_geom rotated rigidly (physical stress 0, Pro cd_method 0 from t 0.6),
+  old targets met by chance. `e3af9f2` test(materi): vely on every node +
+  tension_direct 1.e10; GNU HEAD = new binary: cd_method 0.9999956 (1e-5,
+  phi target kept), cd_geom 0 / 1 (1e-6), materi_direct_mc 1 (1e-6), rc 0
+  (no RED for the rewrite: behaviour already correct, as expected). Pro
+  02-08-2026 -updated_linear: 1 / 0,1 / 1 exactly; Pro -updated 18.04 /
+  18.69 = GNU -updated, so the investigation's "Pro 18.0" was a memory
+  translation artifact, not an MC-direct divergence (C17 note). RED for
+  the gate removal: original cd_method rc 0 on HEAD (0.744), rc 1
+  ungated (3.642). `e2b044f` refactor(recovery): gate removed (miscel.cc,
+  general.cc, tochnog.h/-mod.h; materi.cc had no reference). Clean build;
+  build_safe TN_CHECK_ONLY=1 241 OK / 0 FALLO, runs 226/226;
+  audit_db_buffers exit 0. Corpus A/B omen f4t6g_ungate_runs (fin vs
+  ungate): rc change only old cd_method 0 -> 1; cmat_gate (same ill-posed
+  convected model) sig 5.9e-2 rel, target met, vs Pro 0.107 -> 0.118;
+  Pro other / sfnet / test-2026 dbs unchanged (alternate1,
+  cylinder_buckle near-120 s timeout flakes). Docs: BACKLOG C72 new
+  (convected stress path, class B), C42/C17 notes; DIVERGENCES C72 (B 42
+  -> 43, total 84); SEGUIMIENTO register; user/developer
+  nodal_stress_recovery, integration_quadrature_and_stress_recovery.
+  Next: C72 (convect IP stress, rewrite cmat_gate), K21 validation_1,
+  C70, C57.

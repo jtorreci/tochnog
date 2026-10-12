@@ -922,6 +922,17 @@ Original report:
   target `sigxy` 1 +- 0.3 holds again on the GNU (rc 0), as on the
   Professional with the same constraints. The validation-suite is
   gitignored, so the input change lives in the working tree only.
+- **WU1b (F4 T6f K21, 2026-10-12)**: the principal tension cap is lifted
+  too (`group_materi_plasti_tension_direct 0 1.e10`), target `sigxy`
+  1 +- 1e-6 (GNU exactly 1 every step); same rewrite for `cd_method` and
+  `cd_geom` (all `vely` nodes). Professional 02-08-2026: exactly 1 with
+  `-updated_linear` (also the old input); with `-updated` it gives
+  2.95 .. 18.69 at t = 1 and so does the GNU with `-updated` (18.6915
+  vs Pro 18.6915; `cd_method` 18.0374 vs 18.0375). The "Pro 18.0 vs 1.0"
+  of the WU1b investigation was a translation artifact
+  (`-updated_without_rotation` has no Professional equivalent; on these
+  shears it behaves as the Pro `-updated_linear`, both sigxy 1, not as
+  `-updated`), NOT an MC-direct divergence.
 
 - **Symptom**: since `d17461e` the plane MC cut-off without
   `tension_direct` caps the principal tension at 0 (Professional rule).
@@ -1489,9 +1500,11 @@ Original report:
 - **Resolution**: physical-coordinate linear fit per element for the 2x2
   quad4/quad9 (`miscel.cc` `recovery_fit_factor()`); `axisym_quad4_ring1`
   sigzz 10759.2155 = Professional. The `cd_method` flip of the F4 T4
-  prototype is avoided by gating the fit to non-convected stress dofs
-  (`stress_recovery_lagrange`): `cd_method` convects its stress, so the
-  nodal stress is its material state there.
+  prototype was first avoided by gating the fit to non-convected stress
+  dofs (`stress_recovery_lagrange`); WU1b (2026-10-12) removed the gate:
+  the old `cd_method` was ill-posed (`-ra 1 4 -ra` is a node list, rigid
+  rotation, target met by chance) and was rewritten as a well-posed
+  shear; the convected stress path is C72.
 
 - **Symptom** (F4 T4 investigation, after the K20 fix): on rectangles in
   plane analyses both programs agree; on distorted quad4 and on
@@ -1951,6 +1964,36 @@ Original report:
   0 FALLO, runs 226/226. Remaining interface + inertia gap -> C61.
 - **Severity**: LOW. **Effort**: medium.
 
+### C72. Convected (Eulerian) stress path: integration-point state not convected, nodal stress output inconsistent (F4 T6f K21 WU1b, 2026-10-12) — OPEN
+
+- **Symptom**: `options_mesh -fixed_in_space` + `convection_apply -yes`
+  with `materi_velocity` and `materi_stress`: the GNU does not convect
+  the integration-point stress state (`element_dof`, frozen: original
+  test-2014 `cd_method` sigxy mean 0.577, sigxx -33.8, sigyy -20.8),
+  and the nodal stress dof is an incremental transported OUTPUT that is
+  not consistent with that state. The Professional 02-08-2026 sweeps the
+  stress out of the fixed mesh: original `cd_method` (rigid rotation,
+  `-ra 1 4 -ra` node list) sigxy 10.78, 9.89, 6.99, 4.22, 1.25, then 0
+  from t = 0.6 (dt 0.1 and 0.05). GNU: 0.744 at t = 1 with the old
+  recovery operator, 3.642 with the physical fit; neither converges in
+  dt (0.29 / 2.06 at dt 0.05) or mesh (2x2 / 4x4: about 5 / 0.8; Pro
+  -0.39 / -0.15).
+- **Status**: the WU1 convected-stress recovery gate was removed in WU1b
+  (one operator everywhere); the recovery does not feed back into the
+  solution (the IP states are bit-identical with both operators), so the
+  difference is in the transported nodal output only. The well-posed
+  rewritten `cd_method` (pure shear) gives sigxy 0.9999956 with both
+  operators. test-2014 `cmat_gate` is the same ill-posed convected model
+  (`-ra 1 4 -ra`, target 3.20774 +- 2, still met): gate removal moved its
+  nodal sig by 5.9e-2 relative (vs Pro 0.107 -> 0.118); rewrite it with
+  the C72 fix.
+- **Next step**: convect the integration-point stress state (or make the
+  nodal stress the recovered field of a convected IP state), then
+  compare with the Professional on the original `cd_method` input
+  (kept in `odd/tasks/f4-investigations.md`, WU1b).
+- **Severity**: LOW (no corpus model relies on Eulerian solid stress
+  history). **Effort**: medium/large.
+
 ### C71. sfnet `tube1` (`-lobatto` + axisymmetric) gives NaN in the GNU (F4 T6f K21, 2026-10-12) — OPEN
 
 - **Corpus**: sfnet `tube1` (`group_integration_method -lobatto`,
@@ -2380,6 +2423,7 @@ Original report:
 | C64 | — | quad4 per-element nodal recovery of the Professional — resolved 2026-10-12 (F4 T6f K21: physical linear fit, 1-point value, on-axis rule) | closed | - |
 | C70 | — | 3x3 quad9 and hex8 (hex27/tet10 likely) recovery tables in natural coordinates; the Professional fits in physical coordinates | LOW | cheap/medium |
 | C71 | sfnet | `tube1` (`-lobatto` + axisymmetric) NaN in the GNU; Pro runs | LOW | medium |
+| C72 | — | convected (Eulerian) stress: IP state not convected, nodal stress an inconsistent incremental output; Pro sweeps the stress out | LOW | medium/large |
 | C65 | — | Professional `post_point_dof` at a node differs from its own `node_dof` | LOW | cheap |
 | C66 | — | tria6 element results differ ~1e-5 from the Professional | LOW | cheap/medium |
 | C67 | — | nodal recovery of the unmeasured element rules | LOW | cheap |
