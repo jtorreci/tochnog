@@ -1783,6 +1783,9 @@ if [ "$n_ext" = "75" ]; then
 else
   check_fail "extrude_quad9_shared_nodes1" "node records $n_ext, expected 75"
 fi
+# F4 T6f C57: post_point in the quad9 -> hex27 extruded mesh (inner-plane
+# node_start_refined z; Professional post_point_dof targets)
+run_ok "$T2026" post_point_extrude_hex27_1
 
 # ---------------------------------------------------------------------
 # F4 T6a (2026-10-11), cheap batch.
