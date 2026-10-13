@@ -1,0 +1,98 @@
+( C70 {F4 T6f, 2026-10-13} quad9 3x3 Gauss recovery on two curved elements sharing an edge: per-element linear least squares 1,x,y in PHYSICAL coordinates {GNU before: natural-coordinate fit}. Prescribed velocity at every node. Targets = Professional 02-08-2026 node_dof; GNU before: node 11 sigxx 2.28322; node 15 sigxx 6.01109; node 15 sigyy 4.93176. )
+
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_stress
+end_initia
+mesh -fixed_in_space -fixed_in_space
+inertia_apply -no
+node 1 0.0 0.0
+node 2 0.4875 0.025
+node 3 0.95 0.1
+node 4 0.0 0.5075
+node 5 0.525 0.515
+node 6 1.025 0.5725
+node 7 0.0 1.03
+node 8 0.5775 1.02
+node 9 1.13 1.06
+node 10 1.472 0.256
+node 11 1.958 0.484
+node 12 1.592 0.7075
+node 13 2.123 0.9145
+node 14 1.76 1.174
+node 15 2.354 1.36
+element 1 -quad9 1 2 3 4 5 6 7 8 9
+element 2 -quad9 3 10 11 6 12 13 9 14 15
+bounda_dof 0 -ra 1 -ra -velx
+bounda_time 0 0. 0.0 10. 0.0
+bounda_dof 1 -ra 1 -ra -vely
+bounda_time 1 0. 0.0 10. 0.0
+bounda_dof 2 -ra 2 -ra -velx
+bounda_time 2 0. 0.001813671875 10. 0.001813671875
+bounda_dof 3 -ra 2 -ra -vely
+bounda_time 3 0. -0.016575 10. -0.016575
+bounda_dof 4 -ra 3 -ra -velx
+bounda_time 4 0. 0.027575000000000002 10. 0.027575000000000002
+bounda_dof 5 -ra 3 -ra -vely
+bounda_time 5 0. -0.061274999999999996 10. -0.061274999999999996
+bounda_dof 6 -ra 4 -ra -velx
+bounda_time 6 0. 0.012877812499999999 10. 0.012877812499999999
+bounda_dof 7 -ra 4 -ra -vely
+bounda_time 7 0. 0.0 10. 0.0
+bounda_dof 8 -ra 5 -ra -velx
+bounda_time 8 0. 0.05584531250000001 10. 0.05584531250000001
+bounda_dof 9 -ra 5 -ra -vely
+bounda_time 9 0. 0.008554875 10. 0.008554875
+bounda_dof 10 -ra 6 -ra -velx
+bounda_time 10 0. 0.19683265624999996 10. 0.19683265624999996
+bounda_dof 11 -ra 6 -ra -vely
+bounda_time 11 0. -0.006353718749999987 10. -0.006353718749999987
+bounda_dof 12 -ra 7 -ra -velx
+bounda_time 12 0. 0.05304500000000001 10. 0.05304500000000001
+bounda_dof 13 -ra 7 -ra -vely
+bounda_time 13 0. 0.0 10. 0.0
+bounda_dof 14 -ra 8 -ra -velx
+bounda_time 14 0. 0.1540729125 10. 0.1540729125
+bounda_dof 15 -ra 8 -ra -vely
+bounda_time 15 0. 0.09682076250000002 10. 0.09682076250000002
+bounda_dof 16 -ra 9 -ra -velx
+bounda_time 16 0. 0.46223419999999993 10. 0.46223419999999993
+bounda_dof 17 -ra 9 -ra -vely
+bounda_time 17 0. 0.1645506 10. 0.1645506
+bounda_dof 18 -ra 10 -ra -velx
+bounda_time 18 0. 0.16968581119999998 10. 0.16968581119999998
+bounda_dof 19 -ra 10 -ra -vely
+bounda_time 19 0. -0.1323810816 10. -0.1323810816
+bounda_dof 20 -ra 11 -ra -velx
+bounda_time 20 0. 0.5683753327999999 10. 0.5683753327999999
+bounda_dof 21 -ra 11 -ra -vely
+bounda_time 21 0. -0.17662883040000005 10. -0.17662883040000005
+bounda_dof 22 -ra 12 -ra -velx
+bounda_time 22 0. 0.5629677965000001 10. 0.5629677965000001
+bounda_dof 23 -ra 12 -ra -vely
+bounda_time 23 0. -0.018035370000000023 10. -0.018035370000000023
+bounda_dof 24 -ra 13 -ra -velx
+bounda_time 24 0. 1.2783463536500002 10. 1.2783463536500002
+bounda_dof 25 -ra 13 -ra -vely
+bounda_time 25 0. 0.03959830214999999 10. 0.03959830214999999
+bounda_dof 26 -ra 14 -ra -velx
+bounda_time 26 0. 1.15988852 10. 1.15988852
+bounda_dof 27 -ra 14 -ra -vely
+bounda_time 27 0. 0.26832115199999995 10. 0.26832115199999995
+bounda_dof 28 -ra 15 -ra -velx
+bounda_time 28 0. 2.3533369280000005 10. 2.3533369280000005
+bounda_dof 29 -ra 15 -ra -vely
+bounda_time 29 0. 0.4828995600000001 10. 0.4828995600000001
+group_type 0 -materi
+group_materi_viscosity 0 1.0
+group_materi_elasti_compressibility 0 1.0
+group_materi_memory 0 -updated_linear
+control_timestep 0 1. 1.
+target_item 0 -node_dof 11 -sigxx
+target_value 0 2.433261014440e+00 6.1e-06
+target_item 1 -node_dof 15 -sigxx
+target_value 1 6.142732200308e+00 6.1e-06
+target_item 2 -node_dof 15 -sigyy
+target_value 2 5.041536761985e+00 6.1e-06
+end_data

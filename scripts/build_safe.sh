@@ -1991,6 +1991,26 @@ run_ok "$T2026" recovery_examp1_quad4_point_mean1
 run_ok "$T2026" recovery_incnav4_quad9_minimal1
 run_ok "$T2026" recovery_tube1_axis1
 run_ok "$T2026" recovery_quad4_distorted_plane1
+#   C70 (F4 T6f, 2026-10-13): the other Gauss rules = Professional too
+#     (per-element linear least squares 1,x,y(,z) in PHYSICAL coordinates;
+#     before: natural-coordinate fits / volume-weighted h):
+#     recovery_hex8_distorted1 (hex8 2x2x2) node 11 sigxx 1.3071691
+#     (before 1.1216); recovery_hex8_point_mean1 (hex8 1 point: point value,
+#     arithmetic mean) node 2 sigxx 2.3571531 (before 2.9277);
+#     recovery_hex27_distorted1 (3x3x3) node 41 sigxx 3.6670886 (before
+#     3.4134); recovery_tet10_curved1 (Keast 5) node 14 sigxx 2.6187305
+#     (before 2.5316); recovery_prism6_linear1 (linear stress, exact) node 1
+#     sigxx 0.55 (before 1.0575); recovery_quad9_curved1 (3x3) node 11
+#     sigxx 2.4332610 (before 2.2832); recovery_quad9_axis1 (axisymmetric
+#     quad9 3x3 / 2x2 at r=0: sum h sig / sum h) node 10 sigxx 0.9518217
+#     (before -0.1123).
+run_ok "$T2026" recovery_hex8_distorted1
+run_ok "$T2026" recovery_hex8_point_mean1
+run_ok "$T2026" recovery_hex27_distorted1
+run_ok "$T2026" recovery_tet10_curved1
+run_ok "$T2026" recovery_prism6_linear1
+run_ok "$T2026" recovery_quad9_curved1
+run_ok "$T2026" recovery_quad9_axis1
 
 # ---------------------------------------------------------------------
 # K21 WU2 group_materi_stokes (F4 T6f, 2026-10-12): default -yes (manual
