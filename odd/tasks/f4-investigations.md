@@ -26,12 +26,13 @@ T6 triage (2026-10-11, HEAD 53dbb86) and owner order (2026-10-11):
 - [x] T6c K15 `validation_14` `control_restart` semantics (without restart every node_dof = Pro). Done `8ca6124`: restart resets the IP state (manual 6.368, Pro deletes element_dof); `validation_14` NOT caused by the restart (re-scoped, open under T6f); element history records -> BACKLOG C58.
 - [x] T6d C11 `dynamic3` (disp_primary_gate per material) -> C52. Done `28992d5` (C11), `e0f2204` (C59), `b318484` (interface history), `c276931` (inertia pass).
 - [x] T6e C53 slide in the post-solve pass. Done `b4e4fa4` (slide law), `07433f5` (slide/contact in the pass, gate removed).
-- [ ] T6f Rest by relevance (K15 `validation_14` done `1d446b3`; K15 validation_3 kap done `c3e6d2a`; C68 IP states kapsh/cap1/damage/rho/Maxwell done `70235c6`; C68d Maxwell old-state index done `2327083`; K21 recovery part done `2305659`, gate removed `e2b044f`; `-ra` ranges done `35025dc`): K15 `validation_14` (re-scoped by T6c: pass-1 hole-boundary nodal stress/plastic strain up to ~20 % at 8 nodes on the r=0.01 circle -> `refine_locally` picks a different element -> pass 2 on a different mesh), K15 mmc_tension and validation_3 eptzz closed 2026-10-12 as class A divergences (`600a0b4`), K14b hypo3 and C7/C7b Mazars closed 2026-10-12 as class A divergences (`ae0691b`), K21 (recovery done; validation_1 stokes default + convection remain), C57 (hex27 nodal stress resolved by C70; post_point open), C70 done `39d0138` (all Gauss rules + 3D physical fit), C71 done `bea7599` (on-axis Lobatto -> Gauss; Lobatto recovery weighting -> C79), C75 (prism6 points). Parked: K14c (ISA, class D), mohrcou2 sfnet (input artifact).
+- [ ] T6f Rest by relevance (K15 `validation_14` done `1d446b3`; K15 validation_3 kap done `c3e6d2a`; C68 IP states kapsh/cap1/damage/rho/Maxwell done `70235c6`; C68d Maxwell old-state index done `2327083`; K21 recovery part done `2305659`, gate removed `e2b044f`; `-ra` ranges done `35025dc`): K15 `validation_14` (re-scoped by T6c: pass-1 hole-boundary nodal stress/plastic strain up to ~20 % at 8 nodes on the r=0.01 circle -> `refine_locally` picks a different element -> pass 2 on a different mesh), K15 mmc_tension and validation_3 eptzz closed 2026-10-12 as class A divergences (`600a0b4`), K14b hypo3 and C7/C7b Mazars closed 2026-10-12 as class A divergences (`ae0691b`), K21 (recovery done; validation_1 stokes default + convection remain), C57 (hex27 nodal stress resolved by C70; post_point open), C70 done `39d0138` (all Gauss rules + 3D physical fit), C71 done `bea7599` (on-axis Lobatto -> Gauss; Lobatto recovery weighting -> C79), C79 done `ab4ef78` (Lobatto recovery = Pro + msf on-axis replica; found C80 `-reduced`), C75 (prism6 points). Parked: K14c (ISA, class D), mohrcou2 sfnet (input artifact).
 - [x] T6f C72 convected nodal stress + validation_1 steady guard (owner-approved 2026-10-13; route: delegated writer, trigger: general.cc + 3 tests + 9 docs). Done `c1a1ae9` (fix + tests), `cc245f7` (docs). Tests registered in `scripts/build_safe.sh` `421a3f4`.
 - [x] T6f C70 nodal recovery of the other Gauss rules and the 3D elements in physical coordinates (route: delegated writer; trigger: multi-file code + 7 tests + build_safe + 9 docs). Done `39d0138` (fix + tests + registration), `170e573` (docs). Found C75 (prism6 integration points).
 - [x] T6f C75 prism6 integration rule: investigation + owner decision + docs (route: delegated writer; trigger: Pro/GNU probes + 7 docs). Gate stop before code; owner 2026-10-13: keep the GNU interior rule (class A). Done `4ab9549` (docs). Found C76 (`-minimal` ignored for prism6).
 - [x] T6f C74 Bi-CG breakdown message on `validation_1` (route: delegated writer; trigger: Pro/GNU probes + corpus A/B + so.cc/so_bicg.cc + test + 5 docs). Investigation stop, owner 2026-10-13: option A (one warning per LU-rescued breakdown), option B -> C77. Done `cf07b19` (fix + test + build_safe), `e5f50fc` (docs).
 - [x] T6f C57 `post_point` on the quad9 -> hex27 extruded mesh (route: delegated writer; trigger: Pro/GNU probes + corpus A/B + mesh.cc + test + 9 docs). Investigation stop (mesh.cc outside the surface), owner authorized 2026-10-13; curved-element rule C78 decided deliberate divergence class A. Done `cf37de3` (fix + test + build_safe), `30f2621` + `1f5e82c` (docs).
+- [x] T6f C79 Lobatto nodal recovery + C71 `msf_element_rule()` replica (route: delegated writer; trigger: Pro/GNU probes + corpus A/B on omen + miscel.cc/polynom.cc/calcul_force.cc/headers + 6 tests + 9 docs). Done `ab4ef78` (fix + tests + registration), `6094739` (docs). Found C80 (`-reduced` refused by the GNU).
 
 ## Later (owner 2026-10-10, after convergence with ALL divergences documented and accepted)
 - F6: exhaustive profiling and optimisation pass; special attention to the hot
@@ -895,3 +896,41 @@ docs + SEGUIMIENTO + BACKLOG + DIVERGENCES.
   open); DIVERGENCES C71 row -> C79 (B 44, total 89); SEGUIMIENTO
   register; user/dev integration_quadrature_and_stress_recovery + README
   indexes. Next: K21 validation_1, C76, C77, C79.
+  T6f C79 (2026-10-13), route: delegated writer (trigger: Pro/GNU
+  probes, corpus A/B on omen, miscel.cc + polynom.cc + calcul_force.cc +
+  headers + 6 tests + 9 docs). Pro 02-08-2026 probes (12 probes,
+  prescribed nonlinear velocity at every node, distorted meshes of
+  unequal element size): Lobatto with the points at the nodes (quad4 2x2,
+  quad9 3x3, hex8 2x2x2, hex27 3x3x3; plane + axisymmetric off-axis) =
+  point value at the node + arithmetic mean (5e-12; physical fit
+  0.39-0.46 off); quad9 2x2 / hex27 2x2x2 Lobatto -minimal = physical
+  linear fit of the corner points + mean (5e-12; point value 0.18-0.19
+  off, also on a rectangle); quad4/hex8 1-point already = Pro. Manual
+  6.623 silent -> Pro oracle, no product decision. GNU cause:
+  sri_stress_recovery_weight() returned h for every Lobatto rule (x point
+  volume = volume weighting; never measured, 06e175d kept h); quad9/hex27
+  -minimal non-corner nodes got nothing (materi.cc h guard; sigxx 0 vs
+  up to 16.5). No earlier test/corpus target used -lobatto. Fix
+  `ab4ef78`: recovery_fit_kind() kind 3 (point value) for npoint==nnol
+  Lobatto quad4/quad9/hex8/hex27; kind 1 fit with Lobatto point
+  positions for the -minimal ones; pol() sets stress_recovery_gauss=1 for
+  Lobatto with fewer points than nodes and the new
+  stress_recovery_lobatto (both thread_local). C71 leftover:
+  msf_element_rule() rebuilds the rule with Gauss when an axisymmetric
+  Lobatto point has |r| < EPS_COORD. Tests test-2026
+  recovery_lobatto_{quad4_mean1, quad4_axisym_mean1, hex8_mean1,
+  quad9_minimal1, hex27_minimal1} (Pro targets 4e-6) and
+  msf_axisym_lobatto_axis1 (target = -gauss run momx_sig 1/6; Pro prints
+  zero section forces for this axisymmetric input): RED rc 1 on d2a365f,
+  GREEN; all probes every node = Pro within 5e-11; tube1 every node_dof =
+  Pro within 6e-8. Clean build; build_safe TN_CHECK_ONLY=1 271 OK / 0
+  FALLO, runs 226/226; audit_db_buffers exit 0. Corpus A/B omen c79_runs
+  vs c71_runs (959 runs): tube1 node_dof -> Pro; slide2, slide3,
+  axisym_lobatto_axis1 only stress-dof node_rhside (now = Pro, node_dof
+  unchanged); bicg_csr_threads1 (not an identity witness). Interface
+  elements not involved (interface.cc assembles forces only). Found C80:
+  group_integration_method -reduced refused by the GNU (Pro accepts it).
+  Docs `6094739`: BACKLOG C79 resolved + C80 (49 open); DIVERGENCES C79
+  row -> C80 (B 44, total 89); SEGUIMIENTO register; user/dev
+  integration_quadrature_and_stress_recovery, nodal_stress_recovery,
+  post_calcul_materi_stress_force. Next: K21 validation_1, C76, C77, C80.
