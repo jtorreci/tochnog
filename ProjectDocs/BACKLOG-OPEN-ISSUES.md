@@ -2221,7 +2221,57 @@ Original report:
 - **Severity**: LOW. **Effort**: medium (diagnosing a Professional-side
   effect without its source).
 
-### C71. sfnet `tube1` (`-lobatto` + axisymmetric) gives NaN in the GNU (F4 T6f K21, 2026-10-12) — OPEN
+### C79. Nodal recovery of the Lobatto quad4 is volume weighted; the Professional takes the arithmetic mean (F4 T6f C71, 2026-10-13) — OPEN
+
+- **Symptom**: with `group_integration_method -lobatto` the GNU nodal
+  stress of a quad4 is the volume-weighted average of the adjacent
+  elements' point values at the node (`sri_stress_recovery_weight()`
+  returns `h` for the node-containing rules, and the lumped sigma-dof
+  equation multiplies it by the point volume). The Professional
+  02-08-2026 takes the arithmetic mean of the elements' values at the
+  node, as for its Gauss rules. Two plane quad4 of widths 1 and 2 sharing
+  an edge (quadratic prescribed velocity): shared node sigxx GNU 6.525
+  (weights 1/3, 2/3), Professional 6.15 = mean(5.025, 7.275); the same
+  for axisymmetric off-axis elements (7.9 vs 7.525). Equal sizes agree.
+  quad9 Lobatto: equal in the probe (the element values at the shared
+  nodes coincide), so not discriminated.
+- **Visible in**: sfnet `tube1` (`-lobatto` + axisymmetric) after C71:
+  velocities = Professional (7e-9), nodal stresses = Professional except
+  the r=1.25 column, where a Gauss axis element (weight 1, C71) meets a
+  Lobatto element (weight = point volume 2*PI*r*w*detJ ~ 15): node
+  (1.25,0) sigxx -494.42 vs -407.64 = mean(-308.77, -506.52).
+- **Fix candidate**: return `h/volume` (each element weight 1) for the
+  quad4 Lobatto rule, after measuring hex8 / quad9 / bar Lobatto and the
+  interface elements (which also integrate at the nodes).
+- **Severity**: LOW (only explicit `-lobatto` groups with unequal
+  element volumes at a node). **Effort**: cheap fix, medium measurement.
+
+### C71. sfnet `tube1` (`-lobatto` + axisymmetric) gives NaN in the GNU (F4 T6f K21, 2026-10-12) — RESOLVED 2026-10-13 (F4 T6f C71)
+
+- **Resolution** (F4 T6f C71, 2026-10-13): first NaN at `polynom.cc`
+  `pol()`: the Lobatto points of an element touching the axis lie at
+  r=0, so the hoop entry `new_b += h/radius` is infinite (or 0/0) and the
+  point volume `2*PI*r*w*detj` is 0; `B^T sig dV` = inf*0 = NaN in the
+  velx right-hand side (`node_rhside` velx -nan on a one-element probe),
+  then NaN velocities. Professional 02-08-2026 probes (one on-axis and
+  one off-axis quad4/quad9 in a `-lobatto` axisymmetric group,
+  `element_intpnt_dof`): the element touching the axis gets the Gauss
+  points and values (identical to a `-gauss` run), the off-axis element
+  keeps the Lobatto points. Switch on the node radius, absolute: 9e-10
+  Gauss, 1e-9 Lobatto (scale 1e-6 with r=1e-10: Gauss; scale 1000 with
+  r=1e-7: Lobatto), i.e. `|r| < EPS_COORD` (1e-9). The Professional
+  manual (6.621, 6.623) does not mention it. Fix: `pol()` rebuilds the
+  rule with Gauss when an axisymmetric Lobatto point has `|r| <
+  EPS_COORD` (also sets `stress_recovery_gauss`, so the on-axis recovery
+  rule of K21 applies). Test `test-2026/axisym_lobatto_axis1` (RED rc 1
+  on 58af21e: node 3 vely 1.1, node 1 stresses 0; GREEN = Professional
+  1e-9). sfnet `tube1` (modern keywords, `-updated_linear`): velocities
+  = Professional within 7e-9; the remaining nodal stress difference at
+  the r=1.25 column is the Lobatto recovery weighting, C79. Pending: the
+  `post_calcul -materi_stress -force` replica of the rule
+  (`calcul_force.cc` `msf_element_rule()`) does not apply the switch
+  (only matters for that output on `-lobatto` axisymmetric elements
+  touching the axis).
 
 - **Corpus**: sfnet `tube1` (`group_integration_method -lobatto`,
   `group_axisymmetric -yes`, h-refined quad4, viscous fluid).
@@ -2671,7 +2721,8 @@ Original report:
 | C60 | — | interface `element_interface_intpnt_stress` normal sign depends on the node order (Pro: compression negative always) | LOW | cheap/medium |
 | C64 | — | quad4 per-element nodal recovery of the Professional — resolved 2026-10-12 (F4 T6f K21: physical linear fit, 1-point value, on-axis rule) | closed | - |
 | C70 | — | 3x3 quad9 / hex8 / hex27 / tet10 / prism6 recovery in physical coordinates — resolved 2026-10-13 (F4 T6f C70) | closed | - |
-| C71 | sfnet | `tube1` (`-lobatto` + axisymmetric) NaN in the GNU; Pro runs | LOW | medium |
+| C71 | sfnet | `tube1` (`-lobatto` + axisymmetric) NaN — resolved 2026-10-13 (F4 T6f C71: on-axis Lobatto element integrated with Gauss = Pro) | closed | - |
+| C79 | sfnet | Lobatto quad4 nodal recovery volume weighted, Professional arithmetic mean (`tube1` r=1.25 column) | LOW | cheap/medium |
 | C72 | — | convected (Eulerian) stress: nodal output resolved 2026-10-13 (`c1a1ae9`, absolute recovery = Pro); neither code convects the IP state; remaining Pro-side residuals: `validation_1` drift (C72-V1), Stokes gap, `cd_method` rotation sweep | LOW | medium |
 | C73 | — | optional: convect the integration-point state of history materials on an Eulerian mesh (neither code does; class A improvement, owner decision) | LOW | large |
 | C74 | — | `validation_1` prints "Bi-CG iteration broke down" about 600 times — resolved 2026-10-13 (F4 T6f C74: one warning per LU-rescued solve; solver part -> C77) | closed | - |
@@ -2689,7 +2740,7 @@ Original report:
 | C68d | — | `materi.cc` old rho/epi/epp read with the Maxwell loop index (two or more chains) — resolved 2026-10-12 (F4 T6f, `2327083`) | LOW | cheap |
 | C69 | — | plane-stress membrane: yy/zz split of the plastic strain first order in dt (eptzz -0.00721 at dt 0.1 vs analytic -0.00882) | LOW | medium |
 
-Forty-nine items remain open: three MEDIUM and forty-six LOW (C23 and C24 resolved 2026-10-05; C25, C26, C27 and B10 added; F1 T3 / K04 2026-10-06 added B11, C28-C32; F1 T6 resolved C28, added and resolved B12; F2 T1 added C36; F2 T2 added C37, C38, C39; F2 T3 resolved C5 and added C40; F3 T2 resolved C8, C18, C19, C20 and added B13, C41; F4 T2 fixed the C41 tie and left a residual; F4 T3 resolved C33; F4 T4 closed C32, added C42 and resolved C31; F4 T7-T8 added C43-C46; F4 T9 resolved the C43 solver speed, decided C46b/C46e and added C47, C48, C49; F4 T10 resolved C48 and added C50; F4 T5 added C52, C53 and resolved C51; F4 T13 resolved C49 and added C54-C56; F4 T12 resolved C47 and added C57; F4 T6a resolved C6, C55, C56 and the C3 sign, the C3 square-face tie becoming a deliberate divergence (owner 2026-10-11), and added B14; F4 T6c fixed the `control_restart` integration-point reset and added C58; F4 T6d resolved C11 and C59, fixed the interface history and resolved C52, and added B15, C60 and C61; B15 resolved the same day; F4 T6e resolved C53 and added C62 and C63; F4 T6f added C64-C68 and C69, and closed the K15 `mmc_tension` vertex sigzz/eppzz and `validation_3` eptzz items as deliberate divergences MC-VERTEX-ZZ / MEMBRANE-EPTZZ, owner 2026-10-12; F4 T6f resolved C68 and added C68a-C68d; C68d resolved the same day; F4 T6f closed C7 (Mazars equivalent strain, with C7b) and the AUDIT K14b `hypo3` sigxx reversal as deliberate divergences C7 / K14b, owner 2026-10-12; the `hypo3` hyhis slot residual stays open under AUDIT K14; F4 T6f K21 WU2 widened C72 with the Stokes-flow residual and closed its `cmat_gate` rewrite, no new item; F4 T6f C72 resolved the convected nodal stress output (C72 stays open for the Professional-side residuals) and added C73 and C74; F4 T6f C70 resolved C70 and added C75; F4 T6f C75 closed C75 as a deliberate divergence, owner 2026-10-13, and added C76; F4 T6f C74 resolved C74 and added C77; F4 T6f C57 resolved C57 and added C78, decided the same day as a deliberate divergence, owner 2026-10-13; forty-nine items remain open). No open issue is CRITICAL or
+Forty-nine items remain open: three MEDIUM and forty-six LOW (C23 and C24 resolved 2026-10-05; C25, C26, C27 and B10 added; F1 T3 / K04 2026-10-06 added B11, C28-C32; F1 T6 resolved C28, added and resolved B12; F2 T1 added C36; F2 T2 added C37, C38, C39; F2 T3 resolved C5 and added C40; F3 T2 resolved C8, C18, C19, C20 and added B13, C41; F4 T2 fixed the C41 tie and left a residual; F4 T3 resolved C33; F4 T4 closed C32, added C42 and resolved C31; F4 T7-T8 added C43-C46; F4 T9 resolved the C43 solver speed, decided C46b/C46e and added C47, C48, C49; F4 T10 resolved C48 and added C50; F4 T5 added C52, C53 and resolved C51; F4 T13 resolved C49 and added C54-C56; F4 T12 resolved C47 and added C57; F4 T6a resolved C6, C55, C56 and the C3 sign, the C3 square-face tie becoming a deliberate divergence (owner 2026-10-11), and added B14; F4 T6c fixed the `control_restart` integration-point reset and added C58; F4 T6d resolved C11 and C59, fixed the interface history and resolved C52, and added B15, C60 and C61; B15 resolved the same day; F4 T6e resolved C53 and added C62 and C63; F4 T6f added C64-C68 and C69, and closed the K15 `mmc_tension` vertex sigzz/eppzz and `validation_3` eptzz items as deliberate divergences MC-VERTEX-ZZ / MEMBRANE-EPTZZ, owner 2026-10-12; F4 T6f resolved C68 and added C68a-C68d; C68d resolved the same day; F4 T6f closed C7 (Mazars equivalent strain, with C7b) and the AUDIT K14b `hypo3` sigxx reversal as deliberate divergences C7 / K14b, owner 2026-10-12; the `hypo3` hyhis slot residual stays open under AUDIT K14; F4 T6f K21 WU2 widened C72 with the Stokes-flow residual and closed its `cmat_gate` rewrite, no new item; F4 T6f C72 resolved the convected nodal stress output (C72 stays open for the Professional-side residuals) and added C73 and C74; F4 T6f C70 resolved C70 and added C75; F4 T6f C75 closed C75 as a deliberate divergence, owner 2026-10-13, and added C76; F4 T6f C74 resolved C74 and added C77; F4 T6f C57 resolved C57 and added C78, decided the same day as a deliberate divergence, owner 2026-10-13; F4 T6f C71 resolved C71 and added C79; forty-nine items remain open). No open issue is CRITICAL or
 HIGH. The validation-suite corpus has no open failure — its 233 real tests
 pass (`materi_direct_mc` input corrected, C17 resolved). Every remaining failure is a stale or malformed test, an out-of-scope model
 or infrastructure limit, a narrow post-processing divergence, a corpus-coverage

@@ -29,6 +29,25 @@ and `group_integration_points` records still override it per element group
 (`-gauss`, `-lobatto`, `-reduced`, and `-minimal` / `-maximal` / `-normal`).
 The reduced method and the SRI keyword are unchanged.
 
+With `group_integration_method -lobatto` in an axisymmetric group, an
+element that touches the symmetry axis (a node with radius below 1e-9)
+is integrated with the Gauss rule instead, as the Professional does:
+the Lobatto points at r=0 have zero volume and an infinite hoop strain
+term u/r (before 2026-10-13 the GNU produced NaN velocities, sfnet
+`tube1`). The other elements of the group keep the Lobatto rule.
+Minimal example (one element on the axis):
+
+```
+group_type 0 -materi
+group_axisymmetric 0 -yes
+group_integration_method 0 -lobatto
+node 1 0. 0.
+node 2 1. 0.
+node 3 0. 1.
+node 4 1. 1.
+element 1 -quad4 1 2 3 4
+```
+
 The `tet10` rule is the Professional one since F4 T4 (2026-10-09). The
 former nodal rule integrated only linear integrands exactly, so a
 quadratic tetrahedron mesh under gravity gave sigzz -0.894 instead of the
@@ -69,6 +88,12 @@ target if the new value matches the Professional.
 
 ## Differences with the Professional version
 
+- **Nodal stresses of `-lobatto` quad4 elements** (BACKLOG C79, open,
+  LOW). Where elements of different volume share a node, the GNU
+  averages their values at the node weighted by volume, the Professional
+  takes the plain mean (two quad4 of widths 1 and 2: 6.525 vs 6.15).
+  Velocities and integration-point stresses are equal. Index:
+  [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).
 - **Lumped mass / capacity of the `tet10`** (deliberate divergence,
   project owner 2026-10-09; DIVERGENCES TET10-HRZ). GNU: positive HRZ
   lumping, corner V/36 and mid-edge 4V/27 (the diagonal of the

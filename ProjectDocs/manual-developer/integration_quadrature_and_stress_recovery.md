@@ -189,6 +189,35 @@ section moment changes from 0 to 1/960, the analytic moment of the
 runs past the point where the 1-point rule failed and needs more than
 4 GB (F4 T7 memory hogs).
 
+### 3.2b Lobatto points on the symmetry axis (C71, F4 T6f, 2026-10-13)
+
+With `group_integration_method -lobatto` an axisymmetric element whose
+nodes lie on the axis has integration points at r=0. In `pol()`
+(`polynom.cc`) the hoop entry `new_b += h/radius` is then infinite (or
+0/0) and the point volume `2*PI*r*w*detj` is 0, so `B^T sig dV` =
+inf*0 = NaN in the velx right-hand side (sfnet `tube1`: NaN velocities,
+"iterative solver did not converge").
+
+The Professional 02-08-2026 integrates such an element with the Gauss
+rule (its `element_intpnt_dof` is identical to a `-gauss` run), while
+the off-axis elements of the same group keep Lobatto. The switch is on
+the radius, absolute (9e-10: Gauss, 1e-9: Lobatto; independent of the
+element size), which is `EPS_COORD` (`tochnog.h`, 1e-9).
+
+Implementation: in the tensor-product branch of `pol()` the flag
+`rule_lobatto` records that a direction used `integration_lobatto()`.
+After the point loop, for an axisymmetric group, any point with
+`|r| < EPS_COORD` (r from `h * new_coord`) sets
+`integration_method = -GAUSS` and jumps back to `build_rule:` to rebuild
+the points; the Gauss branch also sets `stress_recovery_gauss = 1`, so
+the K21 on-axis recovery rule (`sum h sig / sum h`) applies. Test
+`test-2026/axisym_lobatto_axis1` (one on-axis and one off-axis quad4,
+Professional targets 1e-9).
+
+Pending: `msf_element_rule()` (`calcul_force.cc`, the
+`post_calcul -materi_stress -force` replica of the rule) does not apply
+the switch. Hardcoded: the threshold `EPS_COORD`.
+
 ### 3.3 tet10 rule, recovery and lumping (C31, F4 T4, 2026-10-09)
 
 - `polynom.cc` `pol()`, TET10 branch: `npoint = 5`, Keast rule (centroid
@@ -273,6 +302,11 @@ operations):
   the physical one on near-parallelograms. The 3x3 quad9 and the 3D
   types followed in C70 (2026-10-13, all measured physical). Unmeasured:
   prism15, quad16/hex64, the Lobatto rules (C67).
+- Lobatto quad4 recovery (BACKLOG C79, found in C71): the GNU keeps the
+  `h` weight times the point volume (volume-weighted mean across
+  elements), the Professional takes the arithmetic mean (two plane quad4
+  of widths 1 and 2: 6.525 vs 6.15). Fix candidate: `h/volume` in
+  `sri_stress_recovery_weight()` after measuring the other Lobatto rules.
 - The 3 stale targets (condif10, examp5, ho_mech1) should be recalibrated
   in the same work unit that promotes the alignment to the default;
   strconv1 needs a longer transient or a recalibrated target; examp8 needs
@@ -335,6 +369,10 @@ small fit per element instead of one per (node, point) call.
 
 ## Differences with the Professional version
 
+- **Lobatto quad4 nodal recovery** (BACKLOG C79, open, LOW): GNU
+  volume-weighted mean of the elements' point values at a node,
+  Professional arithmetic mean. Index:
+  [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).
 - **Lumped mass / capacity of the `tet10`** (deliberate divergence,
   project owner 2026-10-09; DIVERGENCES TET10-HRZ). GNU: positive HRZ
   lumping, corner V/36 and mid-edge 4V/27 (the diagonal of the
