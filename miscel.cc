@@ -426,7 +426,12 @@ double strain_recovery_weight( long int sri_on, long int name, long int nnol,
 //           straight-edged tet10);
 //   kind 2  quad4 / hex8 1 point: the point value (F = 1);
 //   axis    axisymmetric quad4 / quad9 (2x2 and 3x3) with a node EXACTLY at
-//           r=0 (r=1e-6 does not trigger it): F = h_n(g) / sum_g h_n(g).
+//           r=0 (r=1e-6 does not trigger it): F = h_n(g) / sum_g h_n(g);
+//   kind 3  Lobatto rules with the points at the nodes (quad4 2x2, quad9
+//           3x3, hex8 2x2x2, hex27 3x3x3, C79 2026-10-13): the value of the
+//           point at the node (F = Kronecker delta). The Lobatto -minimal
+//           quad9 2x2 / hex27 2x2x2 (corner points) are kind 1 with the
+//           Lobatto point positions.
 // The operator depends on the element geometry, so it is built from the
 // start-of-step nodal coordinates (NODE, VERSION_NORMAL) and cached per
 // thread for the current element (the element loop may run in parallel
@@ -434,7 +439,7 @@ double strain_recovery_weight( long int sri_on, long int name, long int nnol,
 // layout of pol() (polynom.cc): tensor point/node index xi fastest, tet10
 // and prism6 point order of their pol() branches.
 struct RecoveryFitCache {
-  long int valid, name, nnol, npoint, group, axis;
+  long int valid, name, nnol, npoint, group, axis, lobatto;
   long int nodes[MNOL];
   double coord[MNOL*MDIM];
   double F[MNOL][MPOINT];
@@ -449,9 +454,20 @@ static long int recovery_fit_kind( long int name, long int nnol,
                       ( ndim==3 && name==-HEX8  && nnol==8 ) ) ) return 2;
   if ( ndim==3 && name==-TET10  && nnol==10 && npoint==5 ) return 1;
   if ( ndim==3 && name==-PRISM6 && nnol==6  && npoint==6 ) return 1;
-  // tensor elements: Gauss rules only (the node-containing Lobatto rules
-  // keep h, see sri_stress_recovery_weight)
-  if ( !stress_recovery_gauss ) return 0;
+  // tensor elements. Lobatto rule with the points at the nodes (C79,
+  // F4 T6f 2026-10-13): the Professional 02-08-2026 takes the point
+  // value per element and the arithmetic mean over the elements (measured
+  // exact on distorted quad4 / quad9 / hex8 / hex27 meshes of unequal
+  // element size, plane and axisymmetric off-axis). Before, the h weight
+  // times the point volume made the node a volume-weighted average.
+  if ( !stress_recovery_gauss ) {
+    if ( stress_recovery_lobatto && npoint==nnol &&
+         ( ( ndim==2 && ( name==-QUAD4 || name==-QUAD9 ) ) ||
+           ( ndim==3 && ( name==-HEX8  || name==-HEX27 ) ) ) ) return 3;
+    return 0;
+  }
+  // Gauss rules and the Lobatto -minimal quad9 2x2 / hex27 2x2x2 (corner
+  // points; Professional: the same physical linear fit, C79)
   if ( ndim==2 && name==-QUAD4 && nnol==4 && npoint==4 ) return 1;
   if ( ndim==2 && name==-QUAD9 && nnol==9 && ( npoint==4 || npoint==9 ) )
     return 1;
@@ -463,7 +479,7 @@ static long int recovery_fit_kind( long int name, long int nnol,
 
 // Shape functions hp[ipoint][inol] of the element at its integration points.
 static void recovery_fit_shape( long int name, long int nnol, long int npoint,
-  double hp[MPOINT][MNOL] )
+  long int lobatto, double hp[MPOINT][MNOL] )
 
 {
   long int ipoint=0, inol=0, k=0, l=0, d=0, npol=0, m=1, mpow=1;
@@ -505,7 +521,7 @@ static void recovery_fit_shape( long int name, long int nnol, long int npoint,
   }
 
   // tensor Lagrange elements (quad4, quad9, hex8, hex27) with m^ndim Gauss
-  // points
+  // points (Lobatto points for the Lobatto rules, C79)
   npol = ( nnol==4 || nnol==8 ) ? 2 : 3;
   for ( k=0; k<npol; k++ ) niso[k] = -1. + 2.*k/(npol-1);
   while ( mpow<npoint ) {
@@ -513,7 +529,8 @@ static void recovery_fit_shape( long int name, long int nnol, long int npoint,
     mpow = 1;
     for ( d=0; d<ndim; d++ ) mpow *= m;
   }
-  integration_gauss( m, xg, wg );
+  if ( lobatto ) integration_lobatto( m, xg, wg );
+  else integration_gauss( m, xg, wg );
   for ( ipoint=0; ipoint<npoint; ipoint++ ) {
     iso[0] = xg[ipoint%m];
     iso[1] = xg[(ipoint/m)%m];
@@ -547,9 +564,17 @@ static void recovery_fit_build( RecoveryFitCache &c, long int kind )
     c.ok = 1;
     return;
   }
+  if ( kind==3 ) {
+    // Lobatto points at the nodes: the point value (same tensor index)
+    for ( inol=0; inol<c.nnol; inol++ )
+      for ( ipoint=0; ipoint<c.npoint; ipoint++ )
+        c.F[inol][ipoint] = ( inol==ipoint ) ? 1. : 0.;
+    c.ok = 1;
+    return;
+  }
 
   // physical coordinates of the integration points
-  recovery_fit_shape( c.name, c.nnol, c.npoint, hp );
+  recovery_fit_shape( c.name, c.nnol, c.npoint, c.lobatto, hp );
   for ( ipoint=0; ipoint<c.npoint; ipoint++ ) {
     for ( d=0; d<ndim; d++ ) {
       xp[ipoint][d] = 0.;
@@ -632,9 +657,9 @@ static long int recovery_fit_factor( long int name, long int nnol,
   const long int nodes[], double &F )
 
 {
-  static thread_local RecoveryFitCache cache = { 0, 0, 0, 0, 0, 0, {0}, {0.}, {{0.}}, 0 };
+  static thread_local RecoveryFitCache cache = { 0, 0, 0, 0, 0, 0, 0, {0}, {0.}, {{0.}}, 0 };
   long int kind=0, axis=0, axisymmetric=-NO, same=0, k=0, d=0, ldum=0,
-    idum[1];
+    idum[1], lobatto=stress_recovery_lobatto;
   double xn[MDIM], coord[MNOL*MDIM], ddum[1];
 
   // Applies to every stress dof, convected ones included (K21 WU1b,
@@ -651,7 +676,8 @@ static long int recovery_fit_factor( long int name, long int nnol,
   // (general() and materi() loop ipoint, then inol, from 0), so a geometry
   // change between passes (updated mesh, refinement) is always caught.
   same = cache.valid && cache.name==name && cache.nnol==nnol &&
-    cache.npoint==npoint && cache.group==element_group;
+    cache.npoint==npoint && cache.group==element_group &&
+    cache.lobatto==lobatto;
   for ( k=0; same && k<nnol; k++ )
     if ( cache.nodes[k]!=nodes[k] ) same = 0;
   if ( same && !( inol==0 && ipoint==0 ) ) {
@@ -676,7 +702,7 @@ static long int recovery_fit_factor( long int name, long int nnol,
     if ( cache.coord[k]!=coord[k] ) same = 0;
   if ( !same ) {
     cache.name = name; cache.nnol = nnol; cache.npoint = npoint;
-    cache.group = element_group; cache.axis = axis;
+    cache.group = element_group; cache.axis = axis; cache.lobatto = lobatto;
     for ( k=0; k<nnol; k++ ) cache.nodes[k] = nodes[k];
     for ( k=0; k<nnol*ndim; k++ ) cache.coord[k] = coord[k];
     recovery_fit_build( cache, kind );
@@ -712,10 +738,14 @@ double sri_stress_recovery_weight( long int sri, long int name, long int nnol,
   //   tria3 1 pt / 3 pt nodal, tria6 6 pt nodal, tet4 1 pt, bar2 1 pt:
   //            the point value (F=1) / the value at the node (F=h)
   //            (F4 T6f, 2026-10-11; before, these were area-weighted)
-  // Every other element/rule returns h_inol: the node-containing Lobatto
-  // rules (h is the Kronecker delta at the nodes, but the h weight times
-  // the point volume keeps a volume weighting across elements) and the
-  // unmeasured rules (tet4 -maximal, bar2 2 points, bar3, prism15, ...).
+  //   quad4 / quad9 / hex8 / hex27 Lobatto with the points at the nodes:
+  //                  the point value; quad9 / hex27 Lobatto -minimal
+  //                  (corner points): the physical linear fit (C79,
+  //                  2026-10-13; before: h, i.e. volume weighted, and
+  //                  no contribution at the quad9/hex27 non-corner nodes
+  //                  of the -minimal rules)
+  // Every other element/rule returns h_inol: the unmeasured rules (tet4
+  // -maximal, bar2 2 points, bar3, quad16, hex64, prism15, ...).
   //
   // The lumped sigma-dof equation (general.cc/materi.cc) multiplies the
   // weight by the integration-point volume, so the assembled average is
@@ -775,7 +805,8 @@ double sri_stress_recovery_weight( long int sri, long int name, long int nnol,
   // Geometry-dependent per-element fit (K21 + C70, see recovery_fit_factor):
   // the quad4/quad9/hex8/hex27 Gauss rules, the 1-point quad4/hex8, the
   // tet10 Keast and the prism6 rules, including the axisymmetric on-axis
-  // rule. Each element contributes weight 1 (F/volume).
+  // rule, and the quad4/quad9/hex8/hex27 Lobatto rules (C79). Each element
+  // contributes weight 1 (F/volume).
   if ( recovery_fit_factor( name, nnol, inol, npoint, ipoint, element_group,
          nodes, F ) ) {
     if ( scalar_dabs(volume)>TINY ) return F/volume;

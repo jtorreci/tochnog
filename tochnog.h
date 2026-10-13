@@ -1782,10 +1782,13 @@ extern double *solve_b, *solve_x;
 extern long int disp_primary_reference;
 
   // stress recovery (pol() -> general()/materi()): 1 when the last pol()
-  // call resolved the element quadrature to interior GAUSS points, so the
-  // nodal stress recovery must use the Professional's per-element
-  // least-squares fit instead of the (diluted) shape-function weight.
-extern long int stress_recovery_gauss;
+  // call resolved the element quadrature to interior GAUSS points (or a
+  // Lobatto rule not covering every node, C79), so the nodal stress
+  // recovery must use the Professional's per-element least-squares fit
+  // instead of the (diluted) shape-function weight; stress_recovery_lobatto
+  // is 1 for the Lobatto tensor rules (C79). Thread local (polynom.cc).
+extern thread_local long int stress_recovery_gauss;
+extern thread_local long int stress_recovery_lobatto;
 
   // Nodal stress recovery (2026-09-15, Professional alignment): 1 when the
   // stress dofs are a PURE recovered field (Lagrangian: no convection of

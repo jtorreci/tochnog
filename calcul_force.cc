@@ -519,8 +519,9 @@ static long int msf_border_nodes_quad9[] = {
 //   - npol from the element name; integration_points default -MAXIMAL
 //     (npol points per direction); -MINIMAL override = npol-1 points
 //     (Gauss, interior);
-//   - integration_method default -LOBATTO (the node-containing rules);
-//     -GAUSS override;
+//   - integration_method default -GAUSS; -LOBATTO override (the
+//     node-containing rules); an axisymmetric Lobatto element touching
+//     the axis switches to Gauss as in pol() (C71 replica, C79);
 //   - the SRI quad4/hex8 switches the FULL rule to GAUSS (2x2 / 2x2x2;
 //     polynom.cc:421; the same single source sri_active);
 //   - axisymmetric elements use the same default rule (K20, F4 T4
@@ -537,7 +538,7 @@ static void msf_element_rule( long int element, long int element_group,
 
 {
   long int integration_method=-GAUSS, integration_points=-MAXIMAL,
-    axisymmetric=-NO, ldum=0, idim=0;
+    axisymmetric=-NO, ldum=0, idim=0, rule_lobatto=0, ldum_node[1];
   double ddum[1];
 
   // the per-direction point counts: pol() integrates the directions
@@ -571,16 +572,53 @@ static void msf_element_rule( long int element, long int element_group,
   if ( integration_points==-NORMAL ) integration_points = -MAXIMAL;
   if ( sri_active( element, element_group, name, nnol ) )
     integration_method = -GAUSS;
+  build_rule:
+  rule_lobatto = 0;
   for ( idim=0; idim<ndim; idim++ ) {
     nper[idim] = ( integration_points==-MINIMAL ? npol-1 : npol );
     if      ( integration_method==-GAUSS )
       integration_gauss( nper[idim], iso[idim], weight[idim] );
-    else if ( integration_method==-LOBATTO )
+    else if ( integration_method==-LOBATTO ) {
       integration_lobatto( nper[idim], iso[idim], weight[idim] );
+      rule_lobatto = 1;
+    }
     else if ( nper[idim]<npol )
       integration_gauss( nper[idim], iso[idim], weight[idim] );
-    else
+    else {
       integration_lobatto( nper[idim], iso[idim], weight[idim] );
+      rule_lobatto = 1;
+    }
+  }
+  // C71 replica (F4 T6f C79, 2026-10-13): pol() integrates an
+  // axisymmetric element whose Lobatto points lie on the axis
+  // (|r| < EPS_COORD) with the Gauss rule (polynom.cc), so its
+  // ELEMENT_DOF stresses sit at the Gauss points; the section forces must
+  // use the same rule (before: the Lobatto rule, zero-volume points on
+  // the axis, a wrong moment). The point radius is interpolated from the
+  // element's nodal radii with the same tensor shape functions.
+  if ( axisymmetric==-YES && ndim==2 && rule_lobatto &&
+       integration_method!=-GAUSS ) {
+    long int el[1+MNOL], length_el=0, inol=0, ixi=0, ieta=0;
+    double xn[MDIM], radius_n[MNOL], hx[MNOL], px[MNOL], hy[MNOL],
+      py[MNOL], radius=0.;
+    db( ELEMENT, element, el, ddum, length_el, VERSION_NORMAL, GET );
+    for ( inol=0; inol<nnol && inol<length_el-1; inol++ ) {
+      db( NODE, el[1+inol], ldum_node, xn, ldum, VERSION_NORMAL, GET );
+      radius_n[inol] = xn[0];
+    }
+    for ( ieta=0; ieta<nper[1]; ieta++ ) {
+      interpolation_polynomial( iso[1][ieta], npol, hy, py );
+      for ( ixi=0; ixi<nper[0]; ixi++ ) {
+        interpolation_polynomial( iso[0][ixi], npol, hx, px );
+        radius = 0.;
+        for ( inol=0; inol<nnol; inol++ )
+          radius += hx[inol%npol]*hy[inol/npol]*radius_n[inol];
+        if ( scalar_dabs(radius)<EPS_COORD ) {
+          integration_method = -GAUSS;
+          goto build_rule;
+        }
+      }
+    }
   }
 }
 

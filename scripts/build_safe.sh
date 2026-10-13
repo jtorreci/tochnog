@@ -2017,6 +2017,25 @@ run_ok "$T2026" recovery_tet10_curved1
 run_ok "$T2026" recovery_prism6_linear1
 run_ok "$T2026" recovery_quad9_curved1
 run_ok "$T2026" recovery_quad9_axis1
+#   C79 (F4 T6f, 2026-10-13): the Lobatto rules = Professional (per
+#     element the point value at the node when the points sit at the
+#     nodes, the physical linear fit for the quad9/hex27 -minimal corner
+#     rules; arithmetic mean over the elements; before: volume weighted h,
+#     and no contribution at the quad9/hex27 -minimal non-corner nodes):
+#     recovery_lobatto_quad4_mean1 node 8 sigxx 10.4179437 (before
+#     11.3589); recovery_lobatto_quad4_axisym_mean1 node 8 sigxx 13.4596104
+#     (before 14.4006); recovery_lobatto_hex8_mean1 node 26 sigxx
+#     11.6814286 (before 12.5087); recovery_lobatto_quad9_minimal1 node 20
+#     sigxx 13.9811919 (before 0); recovery_lobatto_hex27_minimal1 node 100
+#     sigxx 16.4575752 (before 0). msf_axisym_lobatto_axis1: the C71
+#     on-axis Gauss switch mirrored in post_calcul -materi_stress -force
+#     (momx_sig 1/6 = the -gauss run; before 0.5).
+run_ok "$T2026" recovery_lobatto_quad4_mean1
+run_ok "$T2026" recovery_lobatto_quad4_axisym_mean1
+run_ok "$T2026" recovery_lobatto_hex8_mean1
+run_ok "$T2026" recovery_lobatto_quad9_minimal1
+run_ok "$T2026" recovery_lobatto_hex27_minimal1
+run_ok "$T2026" msf_axisym_lobatto_axis1
 
 # ---------------------------------------------------------------------
 # K21 WU2 group_materi_stokes (F4 T6f, 2026-10-12): default -yes (manual

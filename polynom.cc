@@ -22,11 +22,19 @@
 #define EPS_TRIANGLE 1.e-6
 
 // Stress recovery (see sri_stress_recovery_weight in miscel.cc): 1 when
-// the quadrature resolved by the current pol() call is interior GAUSS.
-// Read by general()/materi() while they loop over the integration points
-// of the element just integrated by pol(), so it is the single source of
-// truth for the rule actually in use.
-long int stress_recovery_gauss = 0;
+// the quadrature resolved by the current pol() call is interior GAUSS, or
+// a Lobatto rule whose points do not cover every node (quad9 / hex27
+// -minimal, C79): the recovery operator is then a dense fit and the
+// materi() stress block must also visit the nodes where h vanishes.
+// stress_recovery_lobatto is 1 when the tensor rule is Lobatto (C79: the
+// fit then uses the Lobatto point positions; with the points at the
+// nodes the recovery is the point value). Read by general()/materi()
+// while they loop over the integration points of the element just
+// integrated by pol(), so they are the single source of truth for the
+// rule actually in use. Thread local: the element loop may run in
+// parallel threads and one group can mix rules (C71 on-axis Gauss).
+thread_local long int stress_recovery_gauss = 0;
+thread_local long int stress_recovery_lobatto = 0;
 
 // 1 when the stress dofs are a pure recovered field (Lagrangian, no
 // convection of the stress dofs). Set by general() from the same condition
@@ -60,6 +68,7 @@ void pol( long int element, long int element_group,
     xj_inv[MPOINT*MDIM*MDIM], weight[MPOINT], coord_ip[MDIM];
 
   stress_recovery_gauss = 0;
+  stress_recovery_lobatto = 0;
 
   db( GROUP_AXISYMMETRIC, element_group, &axisymmetric, ddum, ldum, 
     VERSION_NORMAL, GET_IF_EXISTS );
@@ -605,6 +614,14 @@ void pol( long int element, long int element_group,
         array_move( weight_iso, weight_zeta, nzeta );
       }
     }
+    // C79 (F4 T6f, 2026-10-13): the Lobatto rules. With npol points per
+    // direction (-maximal) they sit at the nodes and the Professional
+    // 02-08-2026 takes the point value per element; with fewer (-minimal)
+    // the quad9/hex27 points are the corners only and the Professional
+    // fits them like its 2x2 Gauss rule (dense operator, so the materi()
+    // stress block must visit the h=0 nodes too: stress_recovery_gauss).
+    stress_recovery_lobatto = rule_lobatto;
+    if ( rule_lobatto ) stress_recovery_gauss = ( nxi<npol ) ? 1 : 0;
     if ( npoint>MPOINT ) {
       cout << "\nError: too many int. points in element " << element << ".\n";
       exit(TN_EXIT_STATUS);
