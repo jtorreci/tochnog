@@ -275,12 +275,7 @@ Implementation (`miscel.cc`):
   there too (see "Gate rationale"); neither code convects the
   integration-point state (BACKLOG C72 / C73).
 
-Not changed (probes in K21 WU1, Professional = physical linear fit too,
-GNU = iso linear table; BACKLOG C70): quad9 with 9 points on curved /
-distorted elements (iso fit off by ~1.0 of a scale 8 field), hex8 2x2x2 on
-distorted bricks (off by 1.1-1.5 of a scale 10 field). Unmeasured: hex27,
-tet10 geometry dependence, the axis rule for quad9 / 1-point quad4 (the
-point value is used), the Lobatto rules (C67).
+The other Gauss rules followed in C70 (2026-10-13, next section).
 
 Tests (`validation-suite/test-2026`, RED on 7eed0db, GREEN after; every
 stress component of the whole node field = Professional to <= 1e-7 of
@@ -296,6 +291,75 @@ except the 4 new tests (1 -> 0); 9 tests move closer to the Professional
 `incnav4`, `incnav5`, `axisym_quad4_hourglass1`,
 `materi_memory_updated_linear_current2`), none farther; wall +0.9 %.
 
+## The other Gauss rules and the 3D elements (F4 T6f C70, 2026-10-13)
+
+Probes on the Professional 02-08-2026 (prescribed velocity at every node,
+viscous fluid, `element_intpnt_dof` + `element_intpnt_coord` ->
+`element_dof`; distorted bricks, curved quad9/hex27/tet10 with displaced
+mid-side nodes). Residual of the PHYSICAL linear least squares
+`1,x,y(,z)` relative to the field scale:
+
+| element / rule | Professional | residual | GNU before |
+|---|---|---|---|
+| quad9 3x3 | physical linear fit | 1e-12 | natural `1,xi,eta` table |
+| hex8 2x2x2 | physical linear fit | 8e-13 | natural `1,xi,eta,zeta` table |
+| hex8 1 point (`-minimal`) | the point value | exact | `h_inol` (volume weighted) |
+| hex27 3x3x3 | physical linear fit | 4e-13 | natural table |
+| hex27 2x2x2 (`-minimal`) | physical linear fit | 6e-13 | `h_inol` |
+| tet10 5-point Keast | physical linear fit | 4e-13 | barycentric `1,L1,L2,L3` (= physical only on straight edges) |
+| prism6 6 points | physical linear fit (of its own points) | 5e-13 | `h_inol` |
+| axisymmetric quad9 3x3 / 2x2, node at r=0 | `sum_g h_n(g) sig_g / sum_g h_n(g)` | 9e-12 | natural table / physical fit |
+
+The node is the arithmetic mean of the element values in every probe
+(two elements sharing a face/edge, 1e-13). The natural-coordinate fits
+differ by 2-15 % of the field scale on these elements.
+
+Implementation (`miscel.cc`):
+
+- `recovery_fit_kind()` covers quad4/quad9/hex8/hex27 Gauss rules (when
+  `stress_recovery_gauss`), the 1-point quad4/hex8 (kind 2, point value),
+  tet10 5 points and prism6 6 points (their `pol()` branches have fixed
+  rules; prism6 leaves `stress_recovery_gauss` at 0).
+- `recovery_fit_shape()` repeats the point layout and the shape functions
+  of `pol()` (tensor index xi fastest, `m` Gauss points per direction from
+  `npoint`; the tet10 Keast points; the prism6 3 x 2 points).
+- `recovery_fit_build()` maps the points to physical coordinates and
+  solves the `(ndim+1)` normal equations on centred, scaled coordinates;
+  the axis rule applies to every 2D quad (quad4 and quad9).
+- The static natural-coordinate table (`sri_recovery_factor()`,
+  `sri_recovery_table_build()`, F4 T9) was removed: every case it served
+  is now a geometry-dependent fit, and a singular fit falls back to
+  `h_inol`.
+
+Prism6 integration points (not changed, outside the recovery): the
+Professional `element_intpnt_coord` of a prism6 are the triangle CORNERS
+at the two Gauss levels in zeta, the GNU `pol()` uses the interior points
+(2/3,1/6,1/6). The integration-point stresses therefore differ on a
+non-linear field (distorted-prism probe: nodal sigzz 1.92 vs 1.87, 1.6 %
+of the scale), although both recover with the same physical fit. The
+test `recovery_prism6_linear1` uses a velocity in the prism6 span
+`1,x,y,z,xz,yz` on right prisms (linear exact stress), so both point
+sets give the exact nodal values (BACKLOG C75).
+
+Tests (`validation-suite/test-2026`, `39d0138`; RED on 421a3f4 rc 1, GREEN rc 0,
+the whole node stress field = Professional to <= 2e-12 of its scale):
+`recovery_hex8_distorted1` (node 11 sigxx 1.3071691, before 1.1216),
+`recovery_hex8_point_mean1` (node 2 sigxx 2.3571531, before 2.9277),
+`recovery_hex27_distorted1` (node 41 sigxx 3.6670886, before 3.4134),
+`recovery_tet10_curved1` (node 14 sigxx 2.6187305, before 2.5316),
+`recovery_prism6_linear1` (node 1 sigxx 0.55 exact, before 1.0575),
+`recovery_quad9_curved1` (node 11 sigxx 2.4332610, before 2.2832),
+`recovery_quad9_axis1` (node 10 sigxx 0.9518217, before -0.1123).
+
+Corpus A/B (omen `f4t6g_c70_runs`, 421a3f4 vs `39d0138`; Pro other,
+sfnet, test-2026, test-2014): no rc / classification change; nodal
+stresses move >= 1e-3 of their scale only in `force15` (0.25 -> 4.8e-11
+vs the Professional), `force9` (3.4e-2 -> 1.1e-7), `force11` (3.4e-2 ->
+7e-7, C57), `interface_patch`, `update2` and sfnet `silo1`; none moves
+away from the Professional. Wall `large1` (hex8 30^3) +1.5 % locally
+(the per-element fit replaces the F4 T9 table), corpus totals within
++-2 %.
+
 ## Files
 
 - `dof.cc` — `parallel_new_dof_diagonal()`
@@ -306,7 +370,8 @@ except the 4 new tests (1 -> 0); 9 tests move closer to the Professional
 - `tochnog.h` / `tochnog-mod.h` — the extern declaration
 - `miscel.cc` — `sri_stress_recovery_weight()` (2026-09-13; simplex and
   1-point bar2 arithmetic mean F4 T6f, 2026-10-11), `recovery_fit_kind()`,
-  `recovery_fit_build()`, `recovery_fit_factor()` (K21, 2026-10-12)
+  `recovery_fit_shape()`, `recovery_fit_build()`, `recovery_fit_factor()`
+  (K21, 2026-10-12; 3D and 3x3 rules C70, 2026-10-13)
 
 ## Differences with the Professional version
 
@@ -315,5 +380,9 @@ except the 4 new tests (1 -> 0); 9 tests move closer to the Professional
   non-convected integration-point state in both codes). Professional-side
   residuals on `validation_1` (drift, class B C72-V1; Stokes gap) and the
   original rigid-rotation `cd_method` stay open (BACKLOG C72).
-- 3x3 quad9 / hex8 on curved or distorted elements: BACKLOG C70.
+- 3x3 quad9, hex8, hex27, tet10, prism6: = Professional since C70
+  (2026-10-13). The prism6 integration points differ (Professional
+  triangle corners, GNU interior points; BACKLOG C75), so prism6 nodal
+  stresses agree only for a linear stress field. Unmeasured rules keep
+  `h_inol` (prism15, Lobatto, tet4 `-maximal`, ...; BACKLOG C67).
 - Index: [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).

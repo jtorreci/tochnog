@@ -57,10 +57,12 @@ Measured on the Professional's own `beam2d_1.dbs` (quad9, 45 elements),
 | quad4 | 4 | ~~bilinear interpolation `1,x,y,xy`~~ -> **linear least squares `1,x,y` in PHYSICAL coordinates** (K21, 2026-10-12; axisymmetric with a node at r=0: `sum h sig / sum h`) | 1e-12 (distorted probes, `tube1`) |
 | quad4 | 1 | the point value (K21) | exact (`examp1`) |
 | quad9 | 4 | linear least squares `1,x,y` in physical coordinates (K21) | 1e-12 (`incnav4`, probes) |
-| quad9 | 9 | **uniform-weight linear least squares** `1,x,y` (3 terms); GNU table in natural coordinates, the Professional fits in PHYSICAL coordinates (K21 probe, curved quad9; C70) | 1.2e-12 |
-| hex8 | 8 | **uniform-weight linear least squares** `1,x,y,z` (4 terms); GNU table in natural coordinates, the Professional fits in PHYSICAL coordinates (K21 probe, distorted hex8; C70) | 1.0e-8 |
-| hex27 | 27 | uniform-weight linear least squares `1,x,y,z` (assumed) | not independently verified |
-| tet10 | 5 | uniform-weight linear least squares `1,L1,L2,L3` (F4 T4 investigation) | `tet10_2` exact (-1); `tet10p` post points within 2 % of the Pro (its post_point interpolation differs, TET10-PPOINT) |
+| quad9 | 9 | **uniform-weight linear least squares** `1,x,y` (3 terms) in PHYSICAL coordinates (C70, 2026-10-13; before: GNU table in natural coordinates); axisymmetric with a node at r=0 (9 and 4 points): `sum h sig / sum h` | 1e-12 (curved probes) |
+| hex8 | 8 | **uniform-weight linear least squares** `1,x,y,z` (4 terms) in PHYSICAL coordinates (C70; before: natural table) | 1e-12 (distorted probes) |
+| hex8 | 1 | the point value (C70; before: volume-weighted h) | exact |
+| hex27 | 27 / 8 | uniform-weight linear least squares `1,x,y,z` in PHYSICAL coordinates (C70, measured; before: natural table for 27, h for 8) | 1e-12 (curved probes) |
+| tet10 | 5 | uniform-weight linear least squares `1,x,y,z` in PHYSICAL coordinates (C70; the F4 T4 barycentric fit `1,L1,L2,L3` is the same on straight-edged tet10 only) | 1e-12 (curved probes); `tet10_2` exact (-1) |
+| prism6 | 6 | uniform-weight linear least squares `1,x,y,z` in PHYSICAL coordinates (C70; before: volume-weighted h). The Professional points are the triangle corners x 2 Gauss levels, the GNU points (2/3,1/6,1/6) x 2 Gauss levels (C75) | 1e-13 |
 | tria3 / tet4 / bar2 1 point, tria3 3-point and tria6 6-point nodal rules | 1 / 3 / 6 | the point value / the value of the point at the node (F4 T6f, two-element probes) | exact |
 
 The operator was believed FIXED in the element natural coordinates (the
@@ -68,9 +70,8 @@ same 9x9 matrix fits all 45 beam2d_1 elements of different geometry to
 1e-9: they are parallelograms, where the physical and natural fits
 coincide). K21 (2026-10-12) showed it is a fit in the PHYSICAL
 coordinates of the points (distorted quad4, curved quad9, distorted hex8
-probes); the GNU builds it per element for the 2D quad4/quad9 2x2 rules
-(`nodal_stress_recovery.md`), the 3x3 quad9 and the 3D table types
-remain natural-coordinate (C70). The
+probes); the GNU builds it per element for every Gauss rule since C70
+(2026-10-13; K21 did the 2D 2x2 rules first, `nodal_stress_recovery.md`). The
 least-squares fit uses UNIFORM weights (the Gauss weights give a different
 operator). The order rule is not a single clean formula: quad4 uses the
 full 4-term interpolation while quad9 and hex8 use the linear fit. The
@@ -269,8 +270,9 @@ operations):
 - quad4 operator: resolved by K21 (2026-10-12, C64 closed): the
   Professional fits `1,x,y` in physical coordinates for every measured
   type; the 92/95 `validation_14` match was the natural fit agreeing with
-  the physical one on near-parallelograms. Pending: the 3x3 quad9 and the
-  3D table types (hex8 proven physical, hex27/tet10 unmeasured; C70).
+  the physical one on near-parallelograms. The 3x3 quad9 and the 3D
+  types followed in C70 (2026-10-13, all measured physical). Unmeasured:
+  prism15, quad16/hex64, the Lobatto rules (C67).
 - The 3 stale targets (condif10, examp5, ho_mech1) should be recalibrated
   in the same work unit that promotes the alignment to the default;
   strconv1 needs a longer transient or a recalibrated target; examp8 needs
@@ -305,12 +307,21 @@ Results are bit-identical: every suite `.dbs` equal to the old build
 (297 files), corpus A/B on omen (F4 T9 SEGUIMIENTO row). Time: `large1`
 37 s -> 27 s locally (4 GB cap).
 
+Superseded by C70 (F4 T6f, 2026-10-13): the Professional operator depends
+on the element geometry, so the table, `sri_recovery_factor()` and
+`sri_recovery_table_build()` were removed; `recovery_fit_factor()` builds
+the operator once per element visit from the node coordinates and caches
+it per thread (`nodal_stress_recovery.md`), which keeps the cost at one
+small fit per element instead of one per (node, point) call.
+
 ## 7. Files and functions
 
 - `polynom.cc` — `pol()` (incl. the tet10 Keast rule, C31),
   `stress_recovery_gauss`.
-- `miscel.cc` — `sri_stress_recovery_weight()`, `sri_recovery_factor()`,
-  `sri_recovery_table_build()` (F4 T9 factor table).
+- `miscel.cc` — `sri_stress_recovery_weight()`, `recovery_fit_kind()`,
+  `recovery_fit_shape()`, `recovery_fit_build()`, `recovery_fit_factor()`
+  (K21 / C70 per-element physical fit; the F4 T9 factor table was
+  removed in C70).
 - `general.cc` — `general()`, the lumped sigma-dof inertia weight and the
   tet10 HRZ lumping (C31).
 - `materi.cc` — `materi()`, the stress-dof RHS.
@@ -351,8 +362,9 @@ Results are bit-identical: every suite `.dbs` equal to the old build
   (`-ra 1 4 -ra` is a node list), rewritten as a well-posed shear; the
   convected stress path is BACKLOG C72 (nodal output recovered
   absolutely since F4 T6f C72, `c1a1ae9`; Professional-side residuals
-  class B). Remaining: 3x3 quad9 and hex8 natural-coordinate tables on
-  curved/distorted elements (C70). Index:
+  class B). The 3x3 quad9, hex8, hex27, tet10 and prism6 followed in C70
+  (2026-10-13). Remaining: the prism6 integration points (Professional
+  triangle corners vs GNU interior points, BACKLOG C75). Index:
   [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).
 - **`post_point_dof` of recovered fields (stress/strain)** (known
   difference, not decided; AUDIT section 5 (after the K04 table)). GNU:

@@ -1684,6 +1684,10 @@ Original report:
 - **Root cause**: not investigated (Gauss-to-node stress recovery for
   hex27, cf. C42 for quad4; hex27 shape functions / point location in
   `post_point`).
+- **Update 2026-10-13 (F4 T6f C70)**: the nodal stress part is RESOLVED:
+  the Professional fits the hex27 points in physical coordinates (C70);
+  `force11` nodal sigxx/sigyy/sigzz/sigxy now = Professional to 7e-7 of
+  the field maximum (before 3.38 %). Open: the `post_point` part.
 - **Severity**: **LOW**. **Effort**: medium.
 
 ### C58. `control_restart`: element history records outside the integration-point dofs not verified (F4 T6c, 2026-10-11) — OPEN
@@ -1969,6 +1973,22 @@ Original report:
   0 FALLO, runs 226/226. Remaining interface + inertia gap -> C61.
 - **Severity**: LOW. **Effort**: medium.
 
+### C75. `prism6` integration points differ from the Professional (F4 T6f C70, 2026-10-13) — OPEN
+
+- **Symptom**: the Professional 02-08-2026 `element_intpnt_coord` of a
+  prism6 are the triangle CORNERS at the two Gauss levels zeta = 1/2 +-
+  1/(2 sqrt 3) (element (0,0,0)-(1,0,1): points (0,0,0.2113),
+  (1,0,0.2113), (0,1,0.2113), ...); the GNU `pol()` (`polynom.cc`, rule of
+  2026-09-07) uses the interior degree-2 triangle points (2/3,1/6,1/6) at
+  the same levels (only the zeta levels were checked then). On a
+  distorted prism with a non-linear field the nodal sigzz differs by
+  1.6 % of the scale (1.9247 vs 1.8713); with a field in the prism6 span
+  `1,x,y,z,xz,yz` both are exact (`test-2026/recovery_prism6_linear1`).
+- **Next step**: measure the Professional weights (corner rule weights
+  1/6 each?) on a stiffness probe, check prism15, decide whether to
+  follow (corner sampling integrates only degree 1 in the triangle).
+- **Severity**: LOW. **Effort**: cheap/medium.
+
 ### C74. `validation_1` prints "Bi-CG iteration broke down" about 600 times (F4 T6f C72, 2026-10-13) — OPEN
 
 - **Symptom**: the GNU `validation_1` channel flow (`validation1_steady1`,
@@ -2061,7 +2081,26 @@ Original report:
   (element_intpnt_dof, volumes), then decide.
 - **Severity**: LOW. **Effort**: cheap probe, medium fix.
 
-### C70. 3x3 quad9 and 3D recovery tables fit in natural, the Professional in physical coordinates (F4 T6f K21, 2026-10-12) — OPEN
+### C70. 3x3 quad9 and 3D recovery tables fit in natural, the Professional in physical coordinates (F4 T6f K21, 2026-10-12) — RESOLVED 2026-10-13 (F4 T6f C70)
+
+- **Resolution** (F4 T6f C70, 2026-10-13): Professional 02-08-2026 probes
+  (distorted / curved elements, `element_intpnt_dof` +
+  `element_intpnt_coord` -> `element_dof`): quad9 3x3, hex8 2x2x2,
+  hex27 3x3x3 and 2x2x2, tet10 5-point and prism6 6-point = linear least
+  squares `1,x,y(,z)` in PHYSICAL coordinates (residual <= 1e-12 of the
+  scale); hex8 1 point = the point value; axisymmetric quad9 (3x3 and
+  2x2) with a node at r=0 = `sum h sig / sum h` (the GNU 2x2 used the
+  linear fit there); node = arithmetic mean (1e-13). `miscel.cc`
+  `recovery_fit_kind()` / `recovery_fit_shape()` / `recovery_fit_build()`
+  generalised to 3D; the static natural table (F4 T9) removed. Tests
+  `test-2026/recovery_hex8_distorted1`, `recovery_hex8_point_mean1`,
+  `recovery_hex27_distorted1`, `recovery_tet10_curved1`,
+  `recovery_prism6_linear1`, `recovery_quad9_curved1`,
+  `recovery_quad9_axis1` (RED rc 1 on 421a3f4, GREEN). Side effect:
+  `force11` hex27 nodal stresses = Professional (C57 recovery part).
+  Found: the prism6 integration points differ (C75). Unmeasured rules
+  stay in C67 (prism15, Lobatto, ...).
+
 
 - **Symptom**: K21 WU1 probes (prescribed quadratic velocity at every
   node, viscous fluid, Professional `element_dof` vs the operators
@@ -2081,7 +2120,7 @@ Original report:
 - **Next step**: extend `recovery_fit_kind()` to quad9 9-point (one line +
   test), then a 3D builder for hex8/hex27 (+ tet10 probe), corpus A/B.
 - **Severity**: LOW (nodal output only). **Effort**: cheap (quad9) /
-  medium (3D).
+  medium (3D). (Original entry, kept for history.)
 
 ### C69. Plane-stress membrane: the yy/zz split of the plastic strain is first order in dt (F4 T6f, 2026-10-12) — OPEN
 
@@ -2219,7 +2258,10 @@ Original report:
   rules outside the Gauss table still return `h_inol` (volume-weighted
   across elements): tet4 `-maximal`, bar2 with 2 points, bar3/bar4, the
   quad/hex Lobatto rules (`group_integration_method -lobatto`), tria3/tet4
-  axisymmetric variants were not probed separately.
+  axisymmetric variants were not probed separately. Since C70
+  (2026-10-13) hex8 1 point, hex27 2x2x2 and prism6 are measured and
+  aligned; still `h_inol`: prism15, quad16/hex64, the Lobatto rules,
+  tet4 `-maximal`, bar2 2 points, bar3/bar4.
 - **Fix candidate**: one two-element probe per rule (different size and
   stiffness), compare the Professional `node_dof` with the mean and the
   volume-weighted mean of its `element_dof`; extend
@@ -2260,7 +2302,7 @@ Original report:
   element in `miscel.cc` `recovery_fit_factor()`; tests
   `test-2026/recovery_*`. The natural `1,xi,eta` fit matched 92/95
   `validation_14` elements because it equals the physical fit on
-  (near-)parallelograms. Remaining types: C70.
+  (near-)parallelograms. Remaining types: C70 (resolved 2026-10-13).
 
 - **Symptom**: on a Drucker-Prager variant of `validation_14` (quad4,
   2x2 Gauss) the Professional per-element nodal values (`element_dof`
@@ -2464,7 +2506,7 @@ Original report:
 | C54 | — | run-time record names read without a type check into a 1-value dummy (`post.cc`, `print_el.cc`, `repeat.cc`, `data.cc`, `calcul.cc`) | LOW | cheap |
 | C55 | validation-suite | `print_unknownsrhside()` indexes `node_rhside` (npuknwn values) with `iuknwn` (heap read past the end, wrong column when nder > 1)  — resolved 2026-10-11 (F4 T6a)| LOW | cheap |
 | C56 | Pro `other` | input tokens longer than `MCHAR`-1 (`cin >> str`) overflow the parser buffers (`ground19_water_under_dam`, 141-char URL in a comment)  — resolved 2026-10-11 (F4 T6a)| LOW | cheap |
-| C57 | Pro `other` | hex27 nodal stress recovery (`force11` up to 3.5 % at the loaded points, displacements equal) and `post_point` interpolation on a hex27 node | LOW | medium |
+| C57 | Pro `other` | `post_point` interpolation on a hex27 node (the `force11` hex27 nodal stress part resolved 2026-10-13 by C70) | LOW | medium |
 | C58 | Pro `validation` | `control_restart`: interface/spring/contact-spring/tendon/damage element history records not verified after the F4 T6c integration-point reset (`number_timesteps` record absent) | LOW | cheap/medium |
 | C59 | sfnet | `group_truss_memory -updated` + `materi_displacement` (and `-total*` without it): input error in the Pro — resolved 2026-10-11 (F4 T6d) | LOW | cheap |
 | C63 | — | Pro `slide4` `post_node_rhside_fixed` 3.44e-3 / 7.88e-3 vs Pro -5.77e-3 / 9.995e-3 (pre-existing) | LOW | cheap/medium |
@@ -2472,11 +2514,12 @@ Original report:
 | C61 | — | interface Mohr-Coulomb + `inertia_apply`: first-step velocity differs from the Pro (0.412 vs 0.273), independent of the pass | LOW | medium |
 | C60 | — | interface `element_interface_intpnt_stress` normal sign depends on the node order (Pro: compression negative always) | LOW | cheap/medium |
 | C64 | — | quad4 per-element nodal recovery of the Professional — resolved 2026-10-12 (F4 T6f K21: physical linear fit, 1-point value, on-axis rule) | closed | - |
-| C70 | — | 3x3 quad9 and hex8 (hex27/tet10 likely) recovery tables in natural coordinates; the Professional fits in physical coordinates | LOW | cheap/medium |
+| C70 | — | 3x3 quad9 / hex8 / hex27 / tet10 / prism6 recovery in physical coordinates — resolved 2026-10-13 (F4 T6f C70) | closed | - |
 | C71 | sfnet | `tube1` (`-lobatto` + axisymmetric) NaN in the GNU; Pro runs | LOW | medium |
 | C72 | — | convected (Eulerian) stress: nodal output resolved 2026-10-13 (`c1a1ae9`, absolute recovery = Pro); neither code convects the IP state; remaining Pro-side residuals: `validation_1` drift (C72-V1), Stokes gap, `cd_method` rotation sweep | LOW | medium |
 | C73 | — | optional: convect the integration-point state of history materials on an Eulerian mesh (neither code does; class A improvement, owner decision) | LOW | large |
 | C74 | — | `validation_1` prints "Bi-CG iteration broke down" about 600 times (run ends rc 0, steady) | LOW | cheap/medium |
+| C75 | — | `prism6` integration points: Professional triangle corners, GNU interior (2/3,1/6,1/6) points | LOW | cheap/medium |
 | C65 | — | Professional `post_point_dof` at a node differs from its own `node_dof` | LOW | cheap |
 | C66 | — | tria6 element results differ ~1e-5 from the Professional | LOW | cheap/medium |
 | C67 | — | nodal recovery of the unmeasured element rules | LOW | cheap |

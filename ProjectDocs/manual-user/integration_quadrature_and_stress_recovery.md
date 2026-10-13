@@ -46,15 +46,19 @@ The stresses are stored at the nodes. For the interior Gauss rules the
 GNU version now recovers them the way the Professional does: a per-element
 least-squares fit of the integration-point stresses evaluated at the nodes,
 assembled as the arithmetic mean over the elements that share the node. The
-`tet10` uses the Professional linear least-squares fit `1,L1,L2,L3` of its
-5 points. The resulting nodal stress field matches the Professional (the `beam2d` /
-`beam2d_1` cantilever corner stress and the `post4` moment are the
-discriminating examples).
+fit is the linear field `1,x,y` (2D) or `1,x,y,z` (3D) in the PHYSICAL
+coordinates for every quad/brick Gauss rule (quad4 2x2, quad9 2x2 and
+3x3, hex8 2x2x2, hex27 2x2x2 and 3x3x3), the `tet10` 5-point rule and
+the `prism6` 6-point rule; the 1-point quad4/hex8 take the point value
+(F4 T6f K21 2026-10-12 and C70 2026-10-13). The resulting nodal stress
+field matches the Professional (the `beam2d` / `beam2d_1` cantilever
+corner stress and the `post4` moment are the discriminating examples;
+`test-2026/recovery_*` cover distorted and curved elements).
 
-The recovery factors of quad4, quad9, hex8, hex27 and tet10 are computed
-once per run (F4 T9, 2026-10-10): the results are unchanged and large 3D
-models recover their nodal stresses faster (Professional `large1`
-37 s -> 27 s).
+The recovery operator depends on the element geometry, so it is built
+per element and cached while the element is visited (since C70 also for
+the 3D elements; before, the natural-coordinate factors were computed once
+per run, F4 T9).
 
 ## When a stored reference value changes
 
@@ -86,9 +90,10 @@ target if the new value matches the Professional.
   (and the 2x2 quad9) now use the Professional linear least squares
   `1,x,y` in the physical coordinates (on-axis axisymmetric elements:
   shape-function weighted average); `axisym2` inner sigzz 10759.2155 =
-  Professional. Still different: the 3x3 quad9 and the hex8 on curved or
-  distorted elements (GNU natural-coordinate fit, BACKLOG C70), and the
-  convected-stress models (BACKLOG C72: since 2026-10-13 the nodal
+  Professional. The 3x3 quad9, hex8, hex27, tet10 and prism6 followed on
+  2026-10-13 (F4 T6f C70; before: natural-coordinate fits, different on
+  curved or distorted elements). Still different: the prism6
+  integration points (BACKLOG C75) and the convected-stress models (BACKLOG C72: since 2026-10-13 the nodal
   stress is recovered from the integration points as in the
   Professional; Professional-side residuals remain on `validation_1`).
   Index:

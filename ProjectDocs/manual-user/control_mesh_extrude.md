@@ -93,7 +93,8 @@ displacements = Professional).
   (plane `q` of node `inod` is `q*n + inod`). Geometry, connectivity and
   results are the same; node-numbered output (`node_dof N`, targets on
   node numbers) differs.
-- hex27 nodal stresses (`force11`) differ from the Professional at the
-  loaded points by up to 3.5 % while the displacements match: BACKLOG
-  C57, DIVERGENCES C57.
+- hex27 nodal stresses (`force11`): equal to the Professional (7e-7 of
+  the field maximum) since F4 T6f C70 (2026-10-13, physical-coordinate
+  recovery fit; before up to 3.5 % off at the loaded points). Still open:
+  a `post_point` on a hex27 node (BACKLOG C57, DIVERGENCES C57).
 

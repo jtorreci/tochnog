@@ -108,8 +108,9 @@ the section moment is equilibrium-based). Test:
 - quad9 -> hex27 node numbering has gaps (`nbase` blocks) and is not the
   Professional's compact plane-major numbering; renumbering would also
   move the boundary-copy block shared with the linear branches.
-- hex27 nodal stress recovery differs from the Professional at stress
-  peaks (BACKLOG C57).
+- hex27 nodal stress recovery: = Professional since F4 T6f C70
+  (2026-10-13, `force11` 7e-7 of the field maximum); the `post_point` on
+  a hex27 node stays open (BACKLOG C57).
 - The generic node-data copy loop could be factored out and reused by
   `mesh_mirror`/`mesh_copy`/`mesh_rotate_3d` (they currently each have their
   own copy logic).

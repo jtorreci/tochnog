@@ -70,9 +70,36 @@ steady; the GNU stays steady (DIVERGENCES C72-V1, class B). Other
 Professional-side residuals of the convected path are listed in BACKLOG
 C72.
 
-Not yet aligned (the Professional also fits in physical coordinates
-there): `quad9` with 3x3 points and `hex8` on curved or distorted
-elements; see BACKLOG C70.
+## The other Gauss rules and the 3D elements (C70, 2026-10-13)
+
+Since F4 T6f C70 the same per-element rule covers every quad/brick Gauss
+rule and the tet10 / prism6 rules, as in the Professional 02-08-2026:
+
+- `quad9` 3x3 (default), `hex8` 2x2x2 (default), `hex27` 3x3x3 (default)
+  and 2x2x2 (`-minimal`), `tet10` (5-point rule) and `prism6` (6 points):
+  the least-squares linear field `a + b x + c y (+ d z)` through the
+  integration-point values, in PHYSICAL coordinates, evaluated at the
+  node. Before, quad9 / hex8 / hex27 / tet10 used the same fit in the
+  element's natural coordinates, which is identical on parallelograms,
+  parallelepipeds and straight-edged tet10 but not on curved or distorted
+  elements (typically 2-15 % of the local stress); prism6 used an area
+  weighted average.
+- `hex8` with 1 point (`-minimal`): the point value, as the quad4.
+- axisymmetric `quad9` (3x3 and 2x2) with a node exactly on the axis:
+  the shape-function weighted average, as the quad4.
+
+Examples (`validation-suite/test-2026`, targets = Professional):
+`recovery_hex8_distorted1.dat`, `recovery_hex8_point_mean1.dat`,
+`recovery_hex27_distorted1.dat`, `recovery_tet10_curved1.dat`,
+`recovery_prism6_linear1.dat`, `recovery_quad9_curved1.dat`,
+`recovery_quad9_axis1.dat`.
+
+Difference with the Professional version: the `prism6` integration
+points themselves differ (the Professional samples the triangle corners,
+the GNU three interior points, BACKLOG C75), so prism6 nodal stresses
+agree only where the stress field is linear. The Lobatto rules and the
+remaining unmeasured rules (prism15, tet4 `-maximal`, bar2 2 points,
+...) keep the volume-weighted average (BACKLOG C67).
 
 ## When it matters
 
