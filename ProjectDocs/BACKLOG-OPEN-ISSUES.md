@@ -1973,7 +1973,22 @@ Original report:
   0 FALLO, runs 226/226. Remaining interface + inertia gap -> C61.
 - **Severity**: LOW. **Effort**: medium.
 
-### C75. `prism6` integration points differ from the Professional (F4 T6f C70, 2026-10-13) — OPEN
+### C76. `prism6` `group_integration_points -minimal` ignored (F4 T6f C75, 2026-10-13) — OPEN
+
+- **Symptom**: with `group_integration_points -minimal` the Professional
+  02-08-2026 integrates a prism6 with 2 points, the triangle centroid
+  (1/3,1/3) at the two Gauss levels zeta = 1/2 +- 1/(2 sqrt 3)
+  (`element_intpnt_npoint` 2, `element_intpnt_iso_coord`; manual 6.622:
+  "-minimal ... number of nodes in the direction minus 1"). The GNU
+  `pol()` (`polynom.cc`) reads the record but always uses its 6-point
+  rule (C75).
+- **Next step**: add the 2-point branch to `pol()`; measure how the
+  Professional recovers 2 points to the 6 nodes (`recovery_fit_kind` in
+  `miscel.cc` only accepts npoint 6 for prism6; a linear `1,x,y,z` fit
+  is not defined on 2 points), then a dedicated test.
+- **Severity**: LOW (non-default option). **Effort**: cheap/medium.
+
+### C75. `prism6` integration points differ from the Professional (F4 T6f C70, 2026-10-13) — DECIDED 2026-10-13 (deliberate divergence, class A)
 
 - **Symptom**: the Professional 02-08-2026 `element_intpnt_coord` of a
   prism6 are the triangle CORNERS at the two Gauss levels zeta = 1/2 +-
@@ -1984,10 +1999,30 @@ Original report:
   distorted prism with a non-linear field the nodal sigzz differs by
   1.6 % of the scale (1.9247 vs 1.8713); with a field in the prism6 span
   `1,x,y,z,xz,yz` both are exact (`test-2026/recovery_prism6_linear1`).
-- **Next step**: measure the Professional weights (corner rule weights
-  1/6 each?) on a stiffness probe, check prism15, decide whether to
-  follow (corner sampling integrates only degree 1 in the triangle).
-- **Severity**: LOW. **Effort**: cheap/medium.
+- **Measured** (F4 T6f C75, 2026-10-13): the corner points x 2 Gauss
+  levels are used by default, with `-normal`, `-maximal` and with
+  `inertia_apply -yes`; `-minimal` uses 2 centroid points (C76). Weights
+  1/12 each: the nodal displacements of a 20x2x2 prism6 cantilever (E 1,
+  poisson 0.3, tip deflection prescribed) equal an independent corner-rule
+  FE model to every printed digit (midspan node 11 disz -0.3121926845;
+  GNU = interior rule, -0.3123428787). The element volume does not tell
+  the rules apart (detJ is linear in the triangle). Manual 6.622 is silent
+  on the triangle points of a prism. prism15 was not re-probed (its
+  21-point rule was already measured equal to the Professional).
+- **Accuracy**: both rules give a full-rank stiffness (6 rigid modes) and
+  pass the patch test (internal forces equal to 1e-16 on a distorted
+  prism). Cantilever 10x1x1, end load, triangles in xy, against Timoshenko
+  -4031.2: corner (Professional) -56.0 / -26.0 / -9.95 %, interior (GNU)
+  -34.7 / -13.1 / -4.85 % for meshes 10x1x1 / 20x2x2 / 40x2x4; triangles
+  in xz: -80.0 / -51.2 / -21.8 % against -79.6 / -50.2 / -21.1 %. Prescribed
+  tip deflection 20x2x2: reaction 3.357e-4 (corner) / 2.861e-4 (interior),
+  analytic 2.481e-4. The vertex rule integrates L_i^2 as A/3 instead of
+  A/6, which stiffens the element.
+- **Decision** (project owner, 2026-10-13): keep the GNU interior rule as
+  a deliberate divergence (DIVERGENCES class A row C75, SEGUIMIENTO
+  Descarte). No code change. Probes: scratchpad `c75` of the session
+  (`m/`, `beam/`, `rank.py`, `beam.py`, `beam2.py`, `gbeam.py`).
+- **Severity**: closed (deliberate). **Effort**: -.
 
 ### C74. `validation_1` prints "Bi-CG iteration broke down" about 600 times (F4 T6f C72, 2026-10-13) — OPEN
 
@@ -2519,7 +2554,8 @@ Original report:
 | C72 | — | convected (Eulerian) stress: nodal output resolved 2026-10-13 (`c1a1ae9`, absolute recovery = Pro); neither code convects the IP state; remaining Pro-side residuals: `validation_1` drift (C72-V1), Stokes gap, `cd_method` rotation sweep | LOW | medium |
 | C73 | — | optional: convect the integration-point state of history materials on an Eulerian mesh (neither code does; class A improvement, owner decision) | LOW | large |
 | C74 | — | `validation_1` prints "Bi-CG iteration broke down" about 600 times (run ends rc 0, steady) | LOW | cheap/medium |
-| C75 | — | `prism6` integration points: Professional triangle corners, GNU interior (2/3,1/6,1/6) points | LOW | cheap/medium |
+| C75 | — | `prism6` integration points: Professional triangle corners, GNU interior (2/3,1/6,1/6) points — decided 2026-10-13: deliberate divergence (GNU half the bending error) | closed | - |
+| C76 | — | `prism6` `group_integration_points -minimal` ignored (Professional: 2 centroid points; its 2-point recovery not measured) | LOW | cheap/medium |
 | C65 | — | Professional `post_point_dof` at a node differs from its own `node_dof` | LOW | cheap |
 | C66 | — | tria6 element results differ ~1e-5 from the Professional | LOW | cheap/medium |
 | C67 | — | nodal recovery of the unmeasured element rules | LOW | cheap |
@@ -2530,7 +2566,7 @@ Original report:
 | C68d | — | `materi.cc` old rho/epi/epp read with the Maxwell loop index (two or more chains) — resolved 2026-10-12 (F4 T6f, `2327083`) | LOW | cheap |
 | C69 | — | plane-stress membrane: yy/zz split of the plastic strain first order in dt (eptzz -0.00721 at dt 0.1 vs analytic -0.00882) | LOW | medium |
 
-Fifty items remain open: three MEDIUM and forty-seven LOW (C23 and C24 resolved 2026-10-05; C25, C26, C27 and B10 added; F1 T3 / K04 2026-10-06 added B11, C28-C32; F1 T6 resolved C28, added and resolved B12; F2 T1 added C36; F2 T2 added C37, C38, C39; F2 T3 resolved C5 and added C40; F3 T2 resolved C8, C18, C19, C20 and added B13, C41; F4 T2 fixed the C41 tie and left a residual; F4 T3 resolved C33; F4 T4 closed C32, added C42 and resolved C31; F4 T7-T8 added C43-C46; F4 T9 resolved the C43 solver speed, decided C46b/C46e and added C47, C48, C49; F4 T10 resolved C48 and added C50; F4 T5 added C52, C53 and resolved C51; F4 T13 resolved C49 and added C54-C56; F4 T12 resolved C47 and added C57; F4 T6a resolved C6, C55, C56 and the C3 sign, the C3 square-face tie becoming a deliberate divergence (owner 2026-10-11), and added B14; F4 T6c fixed the `control_restart` integration-point reset and added C58; F4 T6d resolved C11 and C59, fixed the interface history and resolved C52, and added B15, C60 and C61; B15 resolved the same day; F4 T6e resolved C53 and added C62 and C63; F4 T6f added C64-C68 and C69, and closed the K15 `mmc_tension` vertex sigzz/eppzz and `validation_3` eptzz items as deliberate divergences MC-VERTEX-ZZ / MEMBRANE-EPTZZ, owner 2026-10-12; F4 T6f resolved C68 and added C68a-C68d; C68d resolved the same day; F4 T6f closed C7 (Mazars equivalent strain, with C7b) and the AUDIT K14b `hypo3` sigxx reversal as deliberate divergences C7 / K14b, owner 2026-10-12; the `hypo3` hyhis slot residual stays open under AUDIT K14; F4 T6f K21 WU2 widened C72 with the Stokes-flow residual and closed its `cmat_gate` rewrite, no new item; F4 T6f C72 resolved the convected nodal stress output (C72 stays open for the Professional-side residuals) and added C73 and C74). No open issue is CRITICAL or
+Fifty items remain open: three MEDIUM and forty-seven LOW (C23 and C24 resolved 2026-10-05; C25, C26, C27 and B10 added; F1 T3 / K04 2026-10-06 added B11, C28-C32; F1 T6 resolved C28, added and resolved B12; F2 T1 added C36; F2 T2 added C37, C38, C39; F2 T3 resolved C5 and added C40; F3 T2 resolved C8, C18, C19, C20 and added B13, C41; F4 T2 fixed the C41 tie and left a residual; F4 T3 resolved C33; F4 T4 closed C32, added C42 and resolved C31; F4 T7-T8 added C43-C46; F4 T9 resolved the C43 solver speed, decided C46b/C46e and added C47, C48, C49; F4 T10 resolved C48 and added C50; F4 T5 added C52, C53 and resolved C51; F4 T13 resolved C49 and added C54-C56; F4 T12 resolved C47 and added C57; F4 T6a resolved C6, C55, C56 and the C3 sign, the C3 square-face tie becoming a deliberate divergence (owner 2026-10-11), and added B14; F4 T6c fixed the `control_restart` integration-point reset and added C58; F4 T6d resolved C11 and C59, fixed the interface history and resolved C52, and added B15, C60 and C61; B15 resolved the same day; F4 T6e resolved C53 and added C62 and C63; F4 T6f added C64-C68 and C69, and closed the K15 `mmc_tension` vertex sigzz/eppzz and `validation_3` eptzz items as deliberate divergences MC-VERTEX-ZZ / MEMBRANE-EPTZZ, owner 2026-10-12; F4 T6f resolved C68 and added C68a-C68d; C68d resolved the same day; F4 T6f closed C7 (Mazars equivalent strain, with C7b) and the AUDIT K14b `hypo3` sigxx reversal as deliberate divergences C7 / K14b, owner 2026-10-12; the `hypo3` hyhis slot residual stays open under AUDIT K14; F4 T6f K21 WU2 widened C72 with the Stokes-flow residual and closed its `cmat_gate` rewrite, no new item; F4 T6f C72 resolved the convected nodal stress output (C72 stays open for the Professional-side residuals) and added C73 and C74; F4 T6f C70 resolved C70 and added C75; F4 T6f C75 closed C75 as a deliberate divergence, owner 2026-10-13, and added C76). No open issue is CRITICAL or
 HIGH. The validation-suite corpus has no open failure — its 233 real tests
 pass (`materi_direct_mc` input corrected, C17 resolved). Every remaining failure is a stale or malformed test, an out-of-scope model
 or infrastructure limit, a narrow post-processing divergence, a corpus-coverage

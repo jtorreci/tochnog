@@ -363,9 +363,23 @@ small fit per element instead of one per (node, point) call.
   convected stress path is BACKLOG C72 (nodal output recovered
   absolutely since F4 T6f C72, `c1a1ae9`; Professional-side residuals
   class B). The 3x3 quad9, hex8, hex27, tet10 and prism6 followed in C70
-  (2026-10-13). Remaining: the prism6 integration points (Professional
-  triangle corners vs GNU interior points, BACKLOG C75). Index:
+  (2026-10-13). The prism6 integration points stay different on purpose
+  (see the next item). Index:
   [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).
+- **`prism6` integration points** (deliberate divergence, project owner
+  2026-10-13, BACKLOG C75, DIVERGENCES class A). Professional 02-08-2026:
+  triangle corners (1,0),(0,1),(0,0) x zeta = 1/2 +- 1/(2 sqrt 3),
+  weight 1/12 (`element_intpnt_iso_coord`; default, `-normal`,
+  `-maximal`, `inertia_apply -yes`). GNU `pol()` (`polynom.cc`, PRISM6
+  branch): (2/3,1/6,1/6) x the same levels, weight 1/12. Both full rank
+  and patch-test exact; the vertex rule integrates L_i^2 as A/3 instead
+  of A/6 and stiffens bending (cantilever 40x2x4: -9.95 % against
+  -4.85 %). `recovery_fit_shape` (`miscel.cc`) repeats the GNU point
+  table and must stay consistent with `pol()`.
+- **`prism6` `-minimal`** (BACKLOG C76, class B): Professional 2 centroid
+  points; the GNU `pol()` reads `GROUP_INTEGRATION_POINTS` but does not
+  branch on it for a prism6, and `recovery_fit_kind` accepts only
+  npoint 6. Not implemented.
 - **`post_point_dof` of recovered fields (stress/strain)** (known
   difference, not decided; AUDIT section 5 (after the K04 table)). GNU:
   Interpolates the averaged nodal field (`validation_2` -0.036558).

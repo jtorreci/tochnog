@@ -93,11 +93,25 @@ target if the new value matches the Professional.
   Professional. The 3x3 quad9, hex8, hex27, tet10 and prism6 followed on
   2026-10-13 (F4 T6f C70; before: natural-coordinate fits, different on
   curved or distorted elements). Still different: the prism6
-  integration points (BACKLOG C75) and the convected-stress models (BACKLOG C72: since 2026-10-13 the nodal
+  integration points (deliberate, see the next item) and the convected-stress models (BACKLOG C72: since 2026-10-13 the nodal
   stress is recovered from the integration points as in the
   Professional; Professional-side residuals remain on `validation_1`).
   Index:
   [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).
+- **`prism6` integration points** (deliberate divergence, project owner
+  2026-10-13, BACKLOG C75). The Professional integrates a prism6 at the
+  three triangle CORNERS x 2 Gauss levels in zeta (weight 1/12 each; also
+  with `-maximal` and with inertia); the GNU keeps the interior points
+  (2/3,1/6,1/6) x 2 Gauss levels, exact to degree 2 in the triangle. The
+  GNU rule halves the bending error of a prism6 cantilever (40x2x4 mesh:
+  -4.85 % against -9.95 % of the analytic deflection). Results agree when
+  the stress is linear in the element; otherwise prism6 stresses and
+  displacements differ slightly (distorted-prism probe: nodal sigzz 1.6 %
+  of the scale).
+- **`prism6` with `group_integration_points -minimal`** (known
+  difference, not decided; BACKLOG C76). The Professional uses 2 points
+  (triangle centroid x 2 Gauss levels); the GNU ignores the record for a
+  prism6 and keeps its 6 points.
 - **`post_point_dof` of recovered fields (stress/strain)** (known
   difference, not decided; AUDIT section 5 (after the K04 table)). GNU:
   Interpolates the averaged nodal field (`validation_2` -0.036558).

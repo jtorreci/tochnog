@@ -339,7 +339,9 @@ non-linear field (distorted-prism probe: nodal sigzz 1.92 vs 1.87, 1.6 %
 of the scale), although both recover with the same physical fit. The
 test `recovery_prism6_linear1` uses a velocity in the prism6 span
 `1,x,y,z,xz,yz` on right prisms (linear exact stress), so both point
-sets give the exact nodal values (BACKLOG C75).
+sets give the exact nodal values (BACKLOG C75: kept as a deliberate
+divergence, project owner 2026-10-13; the corner rule doubles the
+bending error of a prism6 cantilever).
 
 Tests (`validation-suite/test-2026`, `39d0138`; RED on 421a3f4 rc 1, GREEN rc 0,
 the whole node stress field = Professional to <= 2e-12 of its scale):
@@ -382,7 +384,8 @@ away from the Professional. Wall `large1` (hex8 30^3) +1.5 % locally
   original rigid-rotation `cd_method` stay open (BACKLOG C72).
 - 3x3 quad9, hex8, hex27, tet10, prism6: = Professional since C70
   (2026-10-13). The prism6 integration points differ (Professional
-  triangle corners, GNU interior points; BACKLOG C75), so prism6 nodal
-  stresses agree only for a linear stress field. Unmeasured rules keep
+  triangle corners, GNU interior points; deliberate divergence, owner
+  2026-10-13, BACKLOG C75), so prism6 nodal stresses agree only for a
+  linear stress field. `-minimal` on a prism6 is ignored (BACKLOG C76). Unmeasured rules keep
   `h_inol` (prism15, Lobatto, tet4 `-maximal`, ...; BACKLOG C67).
 - Index: [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).
