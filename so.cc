@@ -1218,15 +1218,22 @@ void solve( long int task )
       // with kn >> E, ratio 1e10), retry with a direct band LU (dgbsv,
       // pivoting handles the near-singular interface systems). The band
       // matrix is built only now (F4 T7, solve_band_retry).
+      // F4 T6f C74: a Bi-CG breakdown (solve_iterative_bicg_breakdown)
+      // gets ONE warning line per solve when the LU retry solves it; the
+      // full breakdown diagnostic is printed only when the retry fails.
       if ( !succesful ) {
+        long int bicg_breakdown = solve_iterative_bicg_breakdown;
         static long int warned_dense = 0;
-        if ( !warned_dense ) {
+        if ( !warned_dense && !bicg_breakdown ) {
           pri( "Warning: Bi-CG did not converge - retrying with direct LU" );
           warned_dense = 1;
         }
         info = solve_band_retry( max_node, max_element,
           element_matrix_unknowns, solve_b_temp );
+        if ( info==0 && bicg_breakdown )
+          pri( "Warning: Bi-CG breakdown, system solved with the direct band LU" );
         if ( info !=0 ) {
+          if ( bicg_breakdown ) solve_iterative_bicg_breakdown_report();
           pri( "Error with Lapack direct solver." );
           pri( "Try one of the other solver option:" );
           exit(TN_EXIT_STATUS);
@@ -1265,6 +1272,9 @@ void solve( long int task )
           array_move( solve_b, disp_x2, solve_nlocal );
         }
         else {
+          // no LU retry on this second solve: keep the full diagnostic
+          if ( solve_iterative_bicg_breakdown )
+            solve_iterative_bicg_breakdown_report();
           // second solve failed: keep the first solve only (x2 = 0
           // degrades the correction to 2*x1, still far closer to the
           // Professional map than the historic explicit update)

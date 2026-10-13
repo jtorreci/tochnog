@@ -2030,6 +2030,18 @@ run_ok "$T2026" stokes_group1
 run_ok "$T2026" stokes_group2
 run_ok "$T2026" convected_stress_recovery1
 run_ok "$T2026" validation1_steady1
+# F4 T6f C74 (2026-10-13): a Bi-CG breakdown that the direct band LU retry
+#   (so.cc) solves is reported with ONE warning line per solve; the full
+#   "Error ... Probably you have a wrong input file" block is kept for a
+#   breakdown the LU cannot rescue (or solver_bicg_stop -no). Old GNU: the
+#   error block for every rescued solve (9 here, 599 on validation1_steady1).
+#   Target = the SuperLU solution (the LU retry is exact).
+run_ok "$T2026" bicg_breakdown_lu_retry1
+if grep -aq "Warning: Bi-CG breakdown, system solved with the direct band LU" \
+     /tmp/bicg_breakdown_lu_retry1_safe.out 2>/dev/null &&
+   ! grep -aq "wrong input file" /tmp/bicg_breakdown_lu_retry1_safe.out 2>/dev/null;
+then check_ok "bicg_breakdown_lu_retry1 (rescued breakdown: one warning, no error block)";
+else check_fail "bicg_breakdown_lu_retry1" "error block printed or warning missing"; fi
 
 # ---------------------------------------------------------------------
 # Sub-sprint materi_stress_force, lote 2 (integracion 2D quad4/quad9):

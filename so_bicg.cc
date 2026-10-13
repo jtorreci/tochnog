@@ -22,6 +22,11 @@
 
 double *d1, *d2, *p, *Ad1_thread, *Ad2_thread, *p_thread, *residue_thread;
 long int solve_iterative_bicg_use_cg = 0;
+// F4 T6f C74: set by solve_iterative_bicg() when the Bi-CG recurrence broke
+// down (returned 0 from the breakdown exit, solver_bicg_stop -yes); the
+// diagnostics are kept for solve_iterative_bicg_breakdown_report().
+long int solve_iterative_bicg_breakdown = 0;
+static double bicg_breakdown_initial_error = 0., bicg_breakdown_real_residual = 0.;
 #define EPS_dAd 1.e-16
 // FIX A (2026-09-13): scale-relative breakdown test. |d^T A d| is compared
 // against the CURRENT residual energy error = ||residue||^2 instead of the
@@ -372,6 +377,7 @@ long int solve_iterative_bicg( void )
    *r1=NULL, *r2=NULL, *Ad1=NULL, *Ad2=NULL, *p_tmp=NULL, *residue=NULL;
 
   swit = set_swit(-1,-1,"solve_iterative_bicg");
+  solve_iterative_bicg_breakdown = 0;
   if ( swit ) pri( "In routine SOLVE_ITERATIVE_BICG" );
 
   db_max_index( NODE, max_node, VERSION_NORMAL, GET );
@@ -689,18 +695,14 @@ long int solve_iterative_bicg( void )
           ready = 1;
           break;
         }
-        pri( "" );
-        pri( "Error: the Bi-CG iteration broke down." );
-        pri( "The bi-Lanczos recurrence collapsed (r1.r2 or d^T A d ~ 0)" );
-        pri( "with a non-converged residual." );
-        pri( "The system is (numerically) singular." );
-        pri( "The initial error in the linear equations is", initial_error );
-        pri( "The relative residual |b-Ax|/|b| is", real_residual );
-        pri( "That is not good enough.\n\n" );
-        pri( "Probably you have a wrong input file." );
-        pri( "- Not enough boundary conditions?" );
-        pri( "- An invalid element connectivity (negative Jacobians)?" );
-        pri( "- A load in a zero-energy mode of the matrix?\n" );
+          // F4 T6f C74: the error block is NOT printed here. The caller
+          // (so.cc) retries the solve with the direct band LU; only when
+          // that retry fails too (or when there is no retry) does it print
+          // the block, with solve_iterative_bicg_breakdown_report(). A
+          // rescued breakdown gets one warning line from the caller.
+        solve_iterative_bicg_breakdown = 1;
+        bicg_breakdown_initial_error = initial_error;
+        bicg_breakdown_real_residual = real_residual;
         succesful = 0;
         break;
       }
@@ -1077,4 +1079,26 @@ void solve_iterative_bicg_element( long int element, long int ithread )
     if ( use_group_matrix ) delete[] element_matrix_unknowns;
   }
 
+}
+
+// F4 T6f C74: full diagnostic of a Bi-CG breakdown (r1.r2 or d^T A d ~ 0
+// with a non-converged residual), printed by the caller only when the
+// breakdown is NOT rescued by the direct band LU retry (so.cc). Before C74
+// it was printed inside solve_iterative_bicg() for every breakdown, also
+// for the ones the LU retry solved exactly (599 times on validation_1).
+void solve_iterative_bicg_breakdown_report( void )
+
+{
+  pri( "" );
+  pri( "Error: the Bi-CG iteration broke down." );
+  pri( "The bi-Lanczos recurrence collapsed (r1.r2 or d^T A d ~ 0)" );
+  pri( "with a non-converged residual." );
+  pri( "The system is (numerically) singular." );
+  pri( "The initial error in the linear equations is", bicg_breakdown_initial_error );
+  pri( "The relative residual |b-Ax|/|b| is", bicg_breakdown_real_residual );
+  pri( "That is not good enough.\n\n" );
+  pri( "Probably you have a wrong input file." );
+  pri( "- Not enough boundary conditions?" );
+  pri( "- An invalid element connectivity (negative Jacobians)?" );
+  pri( "- A load in a zero-energy mode of the matrix?\n" );
 }

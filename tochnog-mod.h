@@ -2316,6 +2316,8 @@ long int  solve_direct_symmetric_factor( long int n, double *a,
 long int  solve_direct_symmetric_substi( long int n, double *a, 
             long int band, long int *p, long int *f );
 long int  solve_iterative_bicg( void );
+extern long int solve_iterative_bicg_breakdown;
+void      solve_iterative_bicg_breakdown_report( void );
 void      solve_iterative_bicg_sys( double *Ad1, double *Ad2, double *p_tmp, double *residue );
 void      solve_iterative_bicg_element( long int element, long int ithread );
 void      sort( double val[], double vec[] );
