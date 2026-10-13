@@ -30,6 +30,25 @@ solved with SuperLU, with a fallback to the iterative Bi-CG (and its
 direct band LU retry) when the factorization fails - see
 [matrix_pardiso](matrix_pardiso.md). The GNU default stays the Bi-CG.
 
+When the Bi-CG iteration breaks down (the bi-Lanczos recurrence collapses,
+which happens on non-symmetric systems with very small right-hand sides,
+e.g. a convection flow close to its steady state), the GNU re-solves that
+system with the direct band LU solver. The result is then exact and the
+log shows one line per such solve:
+
+```
+Warning: Bi-CG breakdown, system solved with the direct band LU
+```
+
+This is information, not an error in the input. The long "Error: the
+Bi-CG iteration broke down ... Probably you have a wrong input file"
+message is printed only when the direct LU cannot solve the system either
+(the run then stops), or with `solver_bicg_stop -no` (the partial Bi-CG
+solution is kept, with a warning). To avoid the extra direct solves on a
+small model, choose a direct solver (`-matrix_superlu`). Before
+2026-10-13 (F4 T6f C74) the long error message was printed for every
+breakdown, also for the ones the direct LU solved.
+
 ## The global solver_* family (manual Professional 6.1048-6.1056)
 
 These plain records are the global counterparts of the per-control
@@ -104,6 +123,15 @@ the SuperLU banner appears in the output (the direct solver ran).
   decision 2026-10-11; details in
   [solver_matrix_symmetric](solver_matrix_symmetric.md)).
 
+- **Bi-CG breakdown on a solvable system** (C74; DIVERGENCES C77, class B). The Professional
+  default solver is the direct PARDISO solver, so its log never shows a
+  breakdown; its iterative Bi-CG does not report one on the same inputs
+  either. The GNU default Bi-CG reports the breakdown with the one-line
+  warning above and solves the system with the direct band LU (exact
+  result). Example: the Professional `validation_1` channel flow prints
+  nothing in the Professional and 599 such warnings in the GNU (same
+  velocity as a direct solve). Index:
+  [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).
 - **Bi-CG breakdown on a singular system** (known difference, not decided;
   BACKLOG C12). GNU: Prints the breakdown error each iteration, finishes
   with rc 0 and a `.dbs`. Professional 02-08-2026: Prints "the BICG solver

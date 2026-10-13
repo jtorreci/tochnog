@@ -2024,19 +2024,65 @@ Original report:
   (`m/`, `beam/`, `rank.py`, `beam.py`, `beam2.py`, `gbeam.py`).
 - **Severity**: closed (deliberate). **Effort**: -.
 
-### C74. `validation_1` prints "Bi-CG iteration broke down" about 600 times (F4 T6f C72, 2026-10-13) — OPEN
+### C74. `validation_1` prints "Bi-CG iteration broke down" about 600 times (F4 T6f C72, 2026-10-13) — RESOLVED 2026-10-13 (F4 T6f C74, message part; solver part -> C77)
 
 - **Symptom**: the GNU `validation_1` channel flow (`validation1_steady1`,
   quad4 with p- and h-refinement, `convection_apply -yes`, `inertia_apply
-  -no`, t = 0..3, dt 0.01) prints "Error: the Bi-CG iteration broke down."
-  599 times (both before and after `c1a1ae9`). The run ends rc 0 and the
-  velocity is steady (-0.0570386 / -0.0571954 at t = 1 / 3), so the
-  fallback recovers each time.
-- **Next step**: find which system breaks down (first equilibrium
-  iteration of each step?), whether the Professional uses another
-  solver path, and whether a better initial guess or the direct solver
-  removes it; check the cost.
-- **Severity**: LOW. **Effort**: cheap/medium.
+  -no`, t = 0..3, dt 0.01) printed "Error: the Bi-CG iteration broke down."
+  plus "Probably you have a wrong input file" 599 times (599 of its 600
+  solves). The run ended rc 0 with the correct steady velocity.
+- **Cause**: `so_bicg.cc` Bi-CG breakdown test `|r1.r2| < 1e-16` or
+  `|d2^T A d1| < 1e-16`, ABSOLUTE. Near the steady state `|r0|^2` is
+  1e-12 .. 1e-8, and the test fires on healthy recurrences
+  (`|r1.r2|/(|r1||r2|)` 1e-3 .. 1e-4, `|dAd|/(|d2||Ad1|)` 1e-2 .. 1e-4;
+  493 events dAd, 66 r1.r2, 40 both). `so.cc` then re-solves with the
+  direct band LU (`solve_band_retry`), exact: HEAD = SuperLU
+  (-0.0571954 at t = 3). Not limited to validation_1: 38 of 956 corpus
+  runs (Professional `test/other` 330, sfnet 197, test-2026 185,
+  test-2014 244) printed it; largest ground11_phreatic_level 2983,
+  ground11_nonsaturated 2492, sfnet ho_mech1 613, validation1_steady1
+  599, stokes_group1/2 199, vajont_slope_fs 150.
+- **Professional 02-08-2026**: default solver PARDISO (direct); with
+  `solver -matrix_iterative_bicg` it prints no breakdown on validation_1
+  either (same velocity).
+- **Resolution** (owner decision 2026-10-13, option A): a breakdown that
+  the LU retry solves prints ONE line per solve, "Warning: Bi-CG
+  breakdown, system solved with the direct band LU"; the full error block
+  (`solve_iterative_bicg_breakdown_report()`) is printed only when the LU
+  retry fails too, or on the displacement-primary second solve (no
+  retry); `solver_bicg_stop -no` keeps its partial-iterate warning. No
+  numerical change: corpus A/B on omen (HEAD `46104a3` vs the fix, 957 runs, `c74b_runs`) has no classification change and 881 of the 882 non-timeout `.dbs` are identical after masking `time_calculation` / `time_at_start` (the other, `bicg_csr_threads1`, runs on 2 threads and differs between two HEAD runs at round-off); the runs with the error block drop from 38 (+ the new test) to 0 (`tslv_bsym` keeps its `solver_bicg_stop -no` warning). Test test-2026
+  `bicg_breakdown_lu_retry1` (build_safe: rc 0, the warning, no "wrong
+  input file"; old GNU: 9 error blocks).
+- **Not done** (option B, -> C77): a scale-relative breakdown test.
+
+### C77. Bi-CG scale-relative breakdown test and relative convergence floor (F4 T6f C74, 2026-10-13) — OPEN
+
+- **Symptom**: the Bi-CG breakdown test (`so_bicg.cc`, `|r1.r2|`,
+  `|d2^T A d1| < 1e-16`) and the convergence floor (`bicg_error_minimum`
+  1e-16, `eps_stop` 1e-16 on `|r|^2`) are absolute, so both depend on the
+  scale of the right-hand side. On tiny systems the false breakdowns are
+  rescued by the exact direct band LU retry (C74), at the cost of a band
+  factorization per solve.
+- **Measured** (scratch variant, 2026-10-13): a scale-relative test
+  (`|r1.r2| < 1e-14 |r1||r2|`, `|dAd| < 1e-14 |d2||Ad1|`) removes every
+  breakdown on validation_1 (600/600 solves converge, result equal to
+  1e-7, -10 % wall) with no corpus classification change (956 runs), but
+  the converged Bi-CG then stops on the absolute floor and is LESS
+  accurate than the LU retry: examp16 `node_dof` vs SuperLU 0.43 % ->
+  2.45 % (`post_line_dof` sigyy 5.3e-4 -> 5.8e-3); validation_1 with the
+  inflow scaled by 1e-5, velx at t = 0.05: HEAD 9.77556e-7 = SuperLU
+  9.77517e-7, variant 8.96098e-7 (8 %). A restart-on-breakdown variant
+  failed (14671 restarts, 200 solves still broke down). The Professional
+  Bi-CG shows the same floor behaviour (8.9888e-7 vs PARDISO
+  9.77518e-7); its default solver is PARDISO.
+- **Next step**: scale-relative breakdown test TOGETHER with a relative
+  convergence floor (e.g. `||r||/||b||`, or `bicg_error_minimum` scaled
+  by `|b|^2`), gated by a corpus A/B against a direct solver (SuperLU)
+  on the 38 inputs that break down today; check the cost of the extra
+  Bi-CG iterations against the saved LU factorizations.
+- **Severity**: LOW (results are exact today through the LU retry).
+  **Effort**: medium.
 
 ### C73. Convection of the integration-point state of history materials (F4 T6f C72, 2026-10-13) — OPEN (optional improvement)
 
@@ -2553,7 +2599,8 @@ Original report:
 | C71 | sfnet | `tube1` (`-lobatto` + axisymmetric) NaN in the GNU; Pro runs | LOW | medium |
 | C72 | — | convected (Eulerian) stress: nodal output resolved 2026-10-13 (`c1a1ae9`, absolute recovery = Pro); neither code convects the IP state; remaining Pro-side residuals: `validation_1` drift (C72-V1), Stokes gap, `cd_method` rotation sweep | LOW | medium |
 | C73 | — | optional: convect the integration-point state of history materials on an Eulerian mesh (neither code does; class A improvement, owner decision) | LOW | large |
-| C74 | — | `validation_1` prints "Bi-CG iteration broke down" about 600 times (run ends rc 0, steady) | LOW | cheap/medium |
+| C74 | — | `validation_1` prints "Bi-CG iteration broke down" about 600 times — resolved 2026-10-13 (F4 T6f C74: one warning per LU-rescued solve; solver part -> C77) | closed | - |
+| C77 | — | Bi-CG absolute breakdown test and convergence floor (scale-relative test needs a relative floor; examp16 0.43 % -> 2.45 % without it) | LOW | medium |
 | C75 | — | `prism6` integration points: Professional triangle corners, GNU interior (2/3,1/6,1/6) points — decided 2026-10-13: deliberate divergence (GNU half the bending error) | closed | - |
 | C76 | — | `prism6` `group_integration_points -minimal` ignored (Professional: 2 centroid points; its 2-point recovery not measured) | LOW | cheap/medium |
 | C65 | — | Professional `post_point_dof` at a node differs from its own `node_dof` | LOW | cheap |
@@ -2566,7 +2613,7 @@ Original report:
 | C68d | — | `materi.cc` old rho/epi/epp read with the Maxwell loop index (two or more chains) — resolved 2026-10-12 (F4 T6f, `2327083`) | LOW | cheap |
 | C69 | — | plane-stress membrane: yy/zz split of the plastic strain first order in dt (eptzz -0.00721 at dt 0.1 vs analytic -0.00882) | LOW | medium |
 
-Fifty items remain open: three MEDIUM and forty-seven LOW (C23 and C24 resolved 2026-10-05; C25, C26, C27 and B10 added; F1 T3 / K04 2026-10-06 added B11, C28-C32; F1 T6 resolved C28, added and resolved B12; F2 T1 added C36; F2 T2 added C37, C38, C39; F2 T3 resolved C5 and added C40; F3 T2 resolved C8, C18, C19, C20 and added B13, C41; F4 T2 fixed the C41 tie and left a residual; F4 T3 resolved C33; F4 T4 closed C32, added C42 and resolved C31; F4 T7-T8 added C43-C46; F4 T9 resolved the C43 solver speed, decided C46b/C46e and added C47, C48, C49; F4 T10 resolved C48 and added C50; F4 T5 added C52, C53 and resolved C51; F4 T13 resolved C49 and added C54-C56; F4 T12 resolved C47 and added C57; F4 T6a resolved C6, C55, C56 and the C3 sign, the C3 square-face tie becoming a deliberate divergence (owner 2026-10-11), and added B14; F4 T6c fixed the `control_restart` integration-point reset and added C58; F4 T6d resolved C11 and C59, fixed the interface history and resolved C52, and added B15, C60 and C61; B15 resolved the same day; F4 T6e resolved C53 and added C62 and C63; F4 T6f added C64-C68 and C69, and closed the K15 `mmc_tension` vertex sigzz/eppzz and `validation_3` eptzz items as deliberate divergences MC-VERTEX-ZZ / MEMBRANE-EPTZZ, owner 2026-10-12; F4 T6f resolved C68 and added C68a-C68d; C68d resolved the same day; F4 T6f closed C7 (Mazars equivalent strain, with C7b) and the AUDIT K14b `hypo3` sigxx reversal as deliberate divergences C7 / K14b, owner 2026-10-12; the `hypo3` hyhis slot residual stays open under AUDIT K14; F4 T6f K21 WU2 widened C72 with the Stokes-flow residual and closed its `cmat_gate` rewrite, no new item; F4 T6f C72 resolved the convected nodal stress output (C72 stays open for the Professional-side residuals) and added C73 and C74; F4 T6f C70 resolved C70 and added C75; F4 T6f C75 closed C75 as a deliberate divergence, owner 2026-10-13, and added C76). No open issue is CRITICAL or
+Fifty items remain open: three MEDIUM and forty-seven LOW (C23 and C24 resolved 2026-10-05; C25, C26, C27 and B10 added; F1 T3 / K04 2026-10-06 added B11, C28-C32; F1 T6 resolved C28, added and resolved B12; F2 T1 added C36; F2 T2 added C37, C38, C39; F2 T3 resolved C5 and added C40; F3 T2 resolved C8, C18, C19, C20 and added B13, C41; F4 T2 fixed the C41 tie and left a residual; F4 T3 resolved C33; F4 T4 closed C32, added C42 and resolved C31; F4 T7-T8 added C43-C46; F4 T9 resolved the C43 solver speed, decided C46b/C46e and added C47, C48, C49; F4 T10 resolved C48 and added C50; F4 T5 added C52, C53 and resolved C51; F4 T13 resolved C49 and added C54-C56; F4 T12 resolved C47 and added C57; F4 T6a resolved C6, C55, C56 and the C3 sign, the C3 square-face tie becoming a deliberate divergence (owner 2026-10-11), and added B14; F4 T6c fixed the `control_restart` integration-point reset and added C58; F4 T6d resolved C11 and C59, fixed the interface history and resolved C52, and added B15, C60 and C61; B15 resolved the same day; F4 T6e resolved C53 and added C62 and C63; F4 T6f added C64-C68 and C69, and closed the K15 `mmc_tension` vertex sigzz/eppzz and `validation_3` eptzz items as deliberate divergences MC-VERTEX-ZZ / MEMBRANE-EPTZZ, owner 2026-10-12; F4 T6f resolved C68 and added C68a-C68d; C68d resolved the same day; F4 T6f closed C7 (Mazars equivalent strain, with C7b) and the AUDIT K14b `hypo3` sigxx reversal as deliberate divergences C7 / K14b, owner 2026-10-12; the `hypo3` hyhis slot residual stays open under AUDIT K14; F4 T6f K21 WU2 widened C72 with the Stokes-flow residual and closed its `cmat_gate` rewrite, no new item; F4 T6f C72 resolved the convected nodal stress output (C72 stays open for the Professional-side residuals) and added C73 and C74; F4 T6f C70 resolved C70 and added C75; F4 T6f C75 closed C75 as a deliberate divergence, owner 2026-10-13, and added C76; F4 T6f C74 resolved C74 and added C77). No open issue is CRITICAL or
 HIGH. The validation-suite corpus has no open failure — its 233 real tests
 pass (`materi_direct_mc` input corrected, C17 resolved). Every remaining failure is a stale or malformed test, an out-of-scope model
 or infrastructure limit, a narrow post-processing divergence, a corpus-coverage

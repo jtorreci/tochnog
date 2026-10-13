@@ -30,11 +30,16 @@ converged  <=>  error < check_error
 check_error = max( bicg_error * |r0|^2, bicg_error_minimum )
 ```
 
-with `bicg_error` default `1e-10` (`control_options_solver_bicg_error`) and
-`bicg_error_minimum` default `1e-12`
-(`control_options_solver_bicg_error_minimum`). This is a **relative**
-residual test (`|r|/|r0| < sqrt(1e-10)` when the floor does not bind, with
-an absolute floor for tiny loads) — it is not the "error decrease"
+with `bicg_error` default `1e-14` (`control_options_solver_bicg_error`,
+overwritten by the global `solver_bicg_error`) and `bicg_error_minimum`
+default `1e-16` (`control_options_solver_bicg_error_minimum`); the loop also
+stops when `error < eps_stop = EPS_TMP = 1e-16` (code defaults in
+`solve_iterative_bicg`, `so_bicg.cc`; measured `check_error 4.42565e-15` for
+`|r0|^2 = 0.442565` and `1e-16` for smaller `|r0|^2`; this page said
+`1e-10` / `1e-12` before F4 T6f C74). This is a **relative** residual test
+(`|r|/|r0| < sqrt(1e-14) = 1e-7` when the floor does not bind, with an
+**absolute** floor `|r|^2 >= 1e-16` for tiny loads; the §21 eliminated tie
+systems tighten both to `1e-24` / `1e-26`) — it is not the "error decrease"
 heuristic, and it is evaluated on the residual of the solution that is
 actually returned (the iterate is not updated after the check).
 
@@ -177,6 +182,50 @@ see [solver_bicg_csr_operator](solver_bicg_csr_operator.md).
 - **Timing**: no test approaches the 120 s `build_safe.sh` timeout (the
   slowest is `msf_sheet3d` at ~1.4 s).
 
+### Bi-CG breakdown and the direct band LU retry (F4 T6f C74, 2026-10-13)
+
+**Breakdown test** (`so_bicg.cc`, Bi-CG branch of `solve_iterative_bicg`):
+`|r1·r2| < EPS_TMP` or `|d2ᵀ A d1| < EPS_dAd`, both `1e-16`, absolute.
+With `solver_bicg_stop -no` the iteration stops with the current iterate
+and the warning "Warning: the Bi-CG iteration broke down (r1.r2 or d^T A d
+~ 0, continuing)" (unchanged). Otherwise `solve_iterative_bicg()` returns
+0 and sets the global flag `solve_iterative_bicg_breakdown`, keeping the
+initial error and the relative residual for the diagnostic.
+
+**LU retry** (`so.cc`, `solve()`, after the `bicg_solver` call): a failed
+Bi-CG solve is re-solved with the direct band LU (`solve_band_retry`,
+LAPACK dgbsv in a Cuthill-McKee ordering, F4 T7).
+
+- breakdown + LU success: ONE line per solve, `Warning: Bi-CG breakdown,
+  system solved with the direct band LU`;
+- breakdown + LU failure: the full diagnostic
+  (`solve_iterative_bicg_breakdown_report()`: "Error: the Bi-CG iteration
+  broke down. ... Probably you have a wrong input file ...") and then the
+  LAPACK error, exit;
+- the displacement-primary second solve (no LU retry): the full diagnostic
+  before its "did not converge" warning;
+- a max_iter failure keeps its own error block and the one-time "Warning:
+  Bi-CG did not converge - retrying with direct LU".
+
+Before C74 the full "Error ... wrong input file" block was printed inside
+`solve_iterative_bicg()` for EVERY breakdown, also when the LU retry then
+solved the system exactly: 599 times on `validation1_steady1`, 38 of 956
+corpus runs (Professional `test/other`, sfnet, test-2026, test-2014).
+Numerical results are unchanged (corpus A/B `.dbs` identical; test
+`bicg_breakdown_lu_retry1`, target = the SuperLU solution).
+
+**Why it breaks down** (validation_1, traced): near the steady state the
+right-hand sides are tiny (`|r0|^2` 1e-12 .. 1e-8 for most solves), so
+the absolute 1e-16 thresholds fire while the scale-relative quantities are
+healthy: `|r1·r2|/(|r1||r2|)` ~ 1e-3 .. 1e-4 (min 1e-8),
+`|d2ᵀAd1|/(|d2||Ad1|)` ~ 1e-2 .. 1e-4. These are false breakdowns; the
+exact LU retry happens to give a MORE accurate solution than a converged
+Bi-CG, whose absolute 1e-16 floor binds on tiny systems. A scale-relative
+breakdown test alone (measured: no breakdown on validation_1, -10 % wall)
+therefore loses accuracy (examp16 `node_dof` vs SuperLU 0.43 % -> 2.45 %;
+validation_1 with the inflow scaled 1e-5: 8 %); it must come with a
+relative convergence floor. Open as BACKLOG C77.
+
 ## External features / libraries used
 
 None new — plain C++ and the existing `parallel_sys_routine` machinery.
@@ -193,7 +242,10 @@ The symmetry check is one serial pass over the element matrices
   exotic dof counts; the dense per-element buffer is `(nnol·npuknwn)²`).
 - `max_iter = 10·solve_nlocal` (unchanged).
 - `check_error = max(bicg_error·|r0|², bicg_error_minimum)` (unchanged
-  formula; `bicg_error` default 1e-10, floor 1e-12).
+  formula; `bicg_error` default 1e-14, floor 1e-16, `eps_stop` 1e-16).
+- The Bi-CG breakdown thresholds `|r1·r2| < 1e-16`, `|d2ᵀA d1| < 1e-16`
+  are ABSOLUTE (the CG one is relative, `|dᵀAd| < 1e-14·error`); see
+  "Bi-CG breakdown and the direct band LU retry" and BACKLOG C77.
 
 ## Pending refactorings / known limitations
 
@@ -210,6 +262,16 @@ The symmetry check is one serial pass over the element matrices
   (fix D) is the definitive repair for the user case.
 
 ## Differences with the Professional version
+
+- **Bi-CG breakdown message** (F4 T6f C74; DIVERGENCES C77, class B).
+  GNU: a false Bi-CG breakdown (absolute 1e-16 test, tiny vectors) is
+  re-solved with the direct band LU and reported with one warning line per
+  solve. Professional 02-08-2026: default solver PARDISO (direct, no
+  breakdown possible); its `solver -matrix_iterative_bicg` prints no
+  breakdown on `validation_1` and stops on its convergence floor (1e-5
+  scaled probe: Pro Bi-CG velx 8.9888e-7 vs PARDISO 9.77518e-7, GNU
+  9.77556e-7 through the LU retry). Status: open as C77 (scale-relative
+  breakdown test plus a relative convergence floor).
 
 - **`control_solver_bicg_stop` at the timestep's own index** (deliberate
   divergence, project decision 2026-09-29; BACKLOG C13; SEGUIMIENTO
