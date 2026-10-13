@@ -31,6 +31,7 @@ T6 triage (2026-10-11, HEAD 53dbb86) and owner order (2026-10-11):
 - [x] T6f C70 nodal recovery of the other Gauss rules and the 3D elements in physical coordinates (route: delegated writer; trigger: multi-file code + 7 tests + build_safe + 9 docs). Done `39d0138` (fix + tests + registration), `170e573` (docs). Found C75 (prism6 integration points).
 - [x] T6f C75 prism6 integration rule: investigation + owner decision + docs (route: delegated writer; trigger: Pro/GNU probes + 7 docs). Gate stop before code; owner 2026-10-13: keep the GNU interior rule (class A). Done `4ab9549` (docs). Found C76 (`-minimal` ignored for prism6).
 - [x] T6f C74 Bi-CG breakdown message on `validation_1` (route: delegated writer; trigger: Pro/GNU probes + corpus A/B + so.cc/so_bicg.cc + test + 5 docs). Investigation stop, owner 2026-10-13: option A (one warning per LU-rescued breakdown), option B -> C77. Done `cf07b19` (fix + test + build_safe), `e5f50fc` (docs).
+- [x] T6f C57 `post_point` on the quad9 -> hex27 extruded mesh (route: delegated writer; trigger: Pro/GNU probes + corpus A/B + mesh.cc + test + 9 docs). Investigation stop (mesh.cc outside the surface), owner authorized 2026-10-13; curved-element rule C78 decided deliberate divergence class A. Done `cf37de3` (fix + test + build_safe), `30f2621` + `1f5e82c` (docs).
 
 ## Later (owner 2026-10-10, after convergence with ALL divergences documented and accepted)
 - F6: exhaustive profiling and optimisation pass; special attention to the hot
@@ -842,3 +843,29 @@ docs + SEGUIMIENTO + BACKLOG + DIVERGENCES.
   register; dev solve_iterative_bicg (stale 1e-10/1e-12 defaults fixed to
   1e-14/1e-16, breakdown + LU retry), user solver. Next: C57 post_point,
   C71, K21 validation_1, C76, C77.
+  T6f C57 (2026-10-13), route: delegated writer (trigger: Pro/GNU
+  probes, corpus A/B on omen, mesh.cc + test + 9 docs). Cause:
+  `mesh.cc` `mesh_extrude()` quad9 -> hex27 branch (C47 shared planes)
+  copied `node_start_refined` from the z = 0 source node, so the inner
+  plane nodes kept z = 0 there and `point_el()` (which reads
+  `NODE_START_REFINED`) located post points in collapsed hex27. Pro
+  02-08-2026 post_point = exact hex27 interpolation of the nodal dofs
+  (1e-14). Other mesh branches (mirror, copy, rotate 2d/3d, move,
+  switch, convert_quad8/hex20, linear extrude) checked: already correct.
+  Fix `cf37de3`: rewrite `NODE_START_REFINED` with the plane z. Test
+  test-2026 post_point_extrude_hex27_1 (4 post points, Pro targets, abs
+  1e-11): RED on 8b36a34 rc 1 (disy -3.51050e-5 / -1.13556e-5 /
+  -3.25367e-6 / -1.78447e-5), GREEN rc 0 (point 1 9.6e-12 off: the
+  point_el descent stops ~1e-8 iso short). Clean build; build_safe
+  TN_CHECK_ONLY=1 264 OK / 0 FALLO, runs 226/226; audit_db_buffers exit
+  0. Corpus A/B omen c57_runs (958 runs): no classification change,
+  878/882 .dbs identical; force11 / extrude_quad9_shared_nodes1 differ
+  only in node_start_refined (7200 / 45 nodes, now = node), plus the new
+  test and bicg_csr_threads1 round-off. Curved quad9 / hex27 probes: Pro
+  locates with the corner nodes only (bilinear / trilinear), GNU exact
+  isoparametric; owner 2026-10-13: deliberate divergence C78 class A.
+  Docs `30f2621` (C57 cause, C77 owner notes), `1f5e82c`: BACKLOG C57
+  resolved, C78 decided (49 open); DIVERGENCES C78 class A (A 27, B 44,
+  total 89), C57 removed; SEGUIMIENTO register + Descarte rows;
+  user/developer post_point (new) and control_mesh_extrude. Next: C71,
+  K21 validation_1, C76, C77.
