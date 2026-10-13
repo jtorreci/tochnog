@@ -1786,6 +1786,9 @@ fi
 # F4 T6f C57: post_point in the quad9 -> hex27 extruded mesh (inner-plane
 # node_start_refined z; Professional post_point_dof targets)
 run_ok "$T2026" post_point_extrude_hex27_1
+# C71 (F4 T6f, 2026-10-13): axisymmetric -lobatto element on the axis
+# r=0 integrated with Gauss (= Professional); before NaN.
+run_ok "$T2026" axisym_lobatto_axis1
 
 # ---------------------------------------------------------------------
 # F4 T6a (2026-10-11), cheap batch.

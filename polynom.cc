@@ -48,7 +48,7 @@ void pol( long int element, long int element_group,
   long int idim=0, jdim=0, ixi=0, ieta=0, izeta=0, nxi=1, neta=1, nzeta=1,
     ipoint=0, npol=0, length=0, axisymmetric=-NO, npoint_per_dir=0,
     inol_xi=0, inol_eta=0, inol_zeta=0, nnol_xi=1, nnol_eta=1, nnol_zeta=1, 
-    inol=0, istrain=0, indx=0, ldum=0,
+    inol=0, istrain=0, indx=0, ldum=0, rule_lobatto=0,
     integration_method=-GAUSS, integration_points=-MINIMAL;
   double detj=0., radius=0., fac=0., L1=0., L2=0., L3=0., L4=0.,
     ddum[1], iso[MPOINT], xi[MPOINT], 
@@ -557,6 +557,8 @@ void pol( long int element, long int element_group,
     if ( sri_active( element, element_group, name, nnol ) )
       integration_method = -GAUSS;
     if ( integration_points==-NORMAL ) integration_points = -MAXIMAL;
+    build_rule:
+    rule_lobatto = 0;
     npoint = 1;
     for ( idim=0; idim<MDIM; idim++ ) {
       if ( idim>ndim-1 )
@@ -575,6 +577,7 @@ void pol( long int element, long int element_group,
       else if ( integration_method==-LOBATTO ) {
         integration_lobatto( npoint_per_dir, iso, weight_iso );
         stress_recovery_gauss = 0;
+        rule_lobatto = 1;
       }
       else if ( npoint_per_dir<npol ) {
         integration_gauss( npoint_per_dir, iso, weight_iso );
@@ -583,6 +586,7 @@ void pol( long int element, long int element_group,
       else {
         integration_lobatto( npoint_per_dir, iso, weight_iso );
         stress_recovery_gauss = 0;
+        rule_lobatto = 1;
       }
       if ( idim==0 ) {
         nxi = npoint_per_dir;
@@ -635,6 +639,24 @@ void pol( long int element, long int element_group,
               }
             }
           }
+        }
+      }
+    }
+    // C71 (F4 T6f, 2026-10-13): an axisymmetric element whose Lobatto
+    // points lie on the symmetry axis (|r| < EPS_COORD) is integrated
+    // with the Gauss rule instead. At r=0 the hoop term h/r of new_b
+    // is infinite and the volume 2*PI*r*w*detj is zero, so B^T sig dV
+    // = inf*0 = NaN (sfnet tube1 -lobatto: NaN velocities). Professional
+    // 02-08-2026 probes: the element touching the axis gets the Gauss
+    // point coordinates and values, the off-axis elements of the same
+    // -lobatto group keep the Lobatto points; switch threshold absolute,
+    // between 9e-10 (Gauss) and 1e-9 (Lobatto) on the node radius.
+    if ( axisymmetric==-YES && rule_lobatto && integration_method!=-GAUSS ) {
+      for ( ipoint=0; ipoint<npoint; ipoint++ ) {
+        matrix_ab( &h[ipoint*nnol], new_coord, coord_ip, 1, nnol, ndim );
+        if ( scalar_dabs(coord_ip[0])<EPS_COORD ) {
+          integration_method = -GAUSS;
+          goto build_rule;
         }
       }
     }
