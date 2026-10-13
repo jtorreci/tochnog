@@ -30,6 +30,7 @@ T6 triage (2026-10-11, HEAD 53dbb86) and owner order (2026-10-11):
 - [x] T6f C72 convected nodal stress + validation_1 steady guard (owner-approved 2026-10-13; route: delegated writer, trigger: general.cc + 3 tests + 9 docs). Done `c1a1ae9` (fix + tests), `cc245f7` (docs). Tests registered in `scripts/build_safe.sh` `421a3f4`.
 - [x] T6f C70 nodal recovery of the other Gauss rules and the 3D elements in physical coordinates (route: delegated writer; trigger: multi-file code + 7 tests + build_safe + 9 docs). Done `39d0138` (fix + tests + registration), `170e573` (docs). Found C75 (prism6 integration points).
 - [x] T6f C75 prism6 integration rule: investigation + owner decision + docs (route: delegated writer; trigger: Pro/GNU probes + 7 docs). Gate stop before code; owner 2026-10-13: keep the GNU interior rule (class A). Done `4ab9549` (docs). Found C76 (`-minimal` ignored for prism6).
+- [x] T6f C74 Bi-CG breakdown message on `validation_1` (route: delegated writer; trigger: Pro/GNU probes + corpus A/B + so.cc/so_bicg.cc + test + 5 docs). Investigation stop, owner 2026-10-13: option A (one warning per LU-rescued breakdown), option B -> C77. Done `cf07b19` (fix + test + build_safe), `e5f50fc` (docs).
 
 ## Later (owner 2026-10-10, after convergence with ALL divergences documented and accepted)
 - F6: exhaustive profiling and optimisation pass; special attention to the hot
@@ -812,3 +813,32 @@ docs + SEGUIMIENTO + BACKLOG + DIVERGENCES.
   integration_quadrature_and_stress_recovery and nodal_stress_recovery.
   No code, test or build change (suite not re-run). Next: C57 post_point,
   C74, C71, K21 validation_1, C76.
+  T6f C74 (2026-10-13), route: delegated writer (trigger: Pro/GNU probes,
+  corpus A/B on omen, so.cc + so_bicg.cc + headers, test, 5 docs).
+  Investigation: `so_bicg.cc` Bi-CG breakdown test `|r1.r2|`,
+  `|d2^T A d1| < 1e-16` is absolute (the CG one relative since
+  2026-09-13); near the validation_1 steady state it fires on healthy
+  recurrences (normalised r1.r2 1e-3..1e-4, dAd 1e-2..1e-4) in 599 of
+  600 solves and `so.cc` re-solves exactly with the band LU (= SuperLU).
+  38 of 956 corpus runs printed the error block. Pro 02-08-2026: default
+  PARDISO, its Bi-CG prints nothing. A scale-relative variant removes all
+  breakdowns but loses accuracy on the absolute 1e-16 floor (examp16
+  node_dof vs SuperLU 0.43 % -> 2.45 %, 1e-5 scaled validation_1 8 %; Pro
+  Bi-CG the same floor behaviour); a restart variant failed. Owner
+  decision 2026-10-13: option A now, B -> C77. Fix `cf07b19`: the block
+  moves to `solve_iterative_bicg_breakdown_report()`, printed only when
+  the LU retry fails (or on the displacement-primary second solve); a
+  rescued breakdown prints "Warning: Bi-CG breakdown, system solved with
+  the direct band LU". Test test-2026 bicg_breakdown_lu_retry1 + build_safe
+  check: RED on 46104a3 (rc 0, 9 error blocks, check FALLO), GREEN (9
+  warnings, no block). Clean build; build_safe TN_CHECK_ONLY=1 263 OK /
+  0 FALLO, runs 226/226; audit_db_buffers exit 0. Corpus A/B omen
+  c74b_runs (957 runs): no classification change, 881/882 non-timeout
+  .dbs identical masking time_calculation/time_at_start (the other,
+  bicg_csr_threads1, 2-thread round-off that also differs between HEAD
+  runs); error-block runs 38 -> 0. audit_all_variables.py FATAL regex
+  unchanged (message text unchanged). Docs `e5f50fc`: BACKLOG C74
+  resolved + C77; DIVERGENCES C77 class B (B 45, total 89); SEGUIMIENTO
+  register; dev solve_iterative_bicg (stale 1e-10/1e-12 defaults fixed to
+  1e-14/1e-16, breakdown + LU retry), user solver. Next: C57 post_point,
+  C71, K21 validation_1, C76, C77.
