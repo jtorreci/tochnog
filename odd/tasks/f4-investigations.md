@@ -26,8 +26,9 @@ T6 triage (2026-10-11, HEAD 53dbb86) and owner order (2026-10-11):
 - [x] T6c K15 `validation_14` `control_restart` semantics (without restart every node_dof = Pro). Done `8ca6124`: restart resets the IP state (manual 6.368, Pro deletes element_dof); `validation_14` NOT caused by the restart (re-scoped, open under T6f); element history records -> BACKLOG C58.
 - [x] T6d C11 `dynamic3` (disp_primary_gate per material) -> C52. Done `28992d5` (C11), `e0f2204` (C59), `b318484` (interface history), `c276931` (inertia pass).
 - [x] T6e C53 slide in the post-solve pass. Done `b4e4fa4` (slide law), `07433f5` (slide/contact in the pass, gate removed).
-- [ ] T6f Rest by relevance (K15 `validation_14` done `1d446b3`; K15 validation_3 kap done `c3e6d2a`; C68 IP states kapsh/cap1/damage/rho/Maxwell done `70235c6`; C68d Maxwell old-state index done `2327083`; K21 recovery part done `2305659`, gate removed `e2b044f`; `-ra` ranges done `35025dc`): K15 `validation_14` (re-scoped by T6c: pass-1 hole-boundary nodal stress/plastic strain up to ~20 % at 8 nodes on the r=0.01 circle -> `refine_locally` picks a different element -> pass 2 on a different mesh), K15 mmc_tension and validation_3 eptzz closed 2026-10-12 as class A divergences (`600a0b4`), K14b hypo3 and C7/C7b Mazars closed 2026-10-12 as class A divergences (`ae0691b`), K21 (recovery done; validation_1 stokes default + convection remain), C57, C70 (3x3 quad9 / hex8 physical fit), C71 (tube1 -lobatto NaN). Parked: K14c (ISA, class D), mohrcou2 sfnet (input artifact).
-- [x] T6f C72 convected nodal stress + validation_1 steady guard (owner-approved 2026-10-13; route: delegated writer, trigger: general.cc + 3 tests + 9 docs). Done `c1a1ae9` (fix + tests), `cc245f7` (docs). Pending: register `convected_stress_recovery1` and `validation1_steady1` in `scripts/build_safe.sh` (outside the writer's edit surface).
+- [ ] T6f Rest by relevance (K15 `validation_14` done `1d446b3`; K15 validation_3 kap done `c3e6d2a`; C68 IP states kapsh/cap1/damage/rho/Maxwell done `70235c6`; C68d Maxwell old-state index done `2327083`; K21 recovery part done `2305659`, gate removed `e2b044f`; `-ra` ranges done `35025dc`): K15 `validation_14` (re-scoped by T6c: pass-1 hole-boundary nodal stress/plastic strain up to ~20 % at 8 nodes on the r=0.01 circle -> `refine_locally` picks a different element -> pass 2 on a different mesh), K15 mmc_tension and validation_3 eptzz closed 2026-10-12 as class A divergences (`600a0b4`), K14b hypo3 and C7/C7b Mazars closed 2026-10-12 as class A divergences (`ae0691b`), K21 (recovery done; validation_1 stokes default + convection remain), C57 (hex27 nodal stress resolved by C70; post_point open), C70 done `39d0138` (all Gauss rules + 3D physical fit), C71 (tube1 -lobatto NaN), C75 (prism6 points). Parked: K14c (ISA, class D), mohrcou2 sfnet (input artifact).
+- [x] T6f C72 convected nodal stress + validation_1 steady guard (owner-approved 2026-10-13; route: delegated writer, trigger: general.cc + 3 tests + 9 docs). Done `c1a1ae9` (fix + tests), `cc245f7` (docs). Tests registered in `scripts/build_safe.sh` `421a3f4`.
+- [x] T6f C70 nodal recovery of the other Gauss rules and the 3D elements in physical coordinates (route: delegated writer; trigger: multi-file code + 7 tests + build_safe + 9 docs). Done `39d0138` (fix + tests + registration), `170e573` (docs). Found C75 (prism6 integration points).
 
 ## Later (owner 2026-10-10, after convergence with ALL divergences documented and accepted)
 - F6: exhaustive profiling and optimisation pass; special attention to the hot
@@ -762,3 +763,33 @@ docs + SEGUIMIENTO + BACKLOG + DIVERGENCES.
   total 87), BACKLOG C72 nodal part resolved + C73 + C74, SEGUIMIENTO
   register, manual pages. Next: register the 2 tests in build_safe.sh,
   then C70, C57, C74.
+  T6f C70 (2026-10-13), route: delegated writer (trigger: miscel.cc +
+  7 tests + build_safe + 9 docs). Pro 02-08-2026 probes (distorted
+  bricks, curved quad9/hex27/tet10, element_intpnt_coord ->
+  element_dof): quad9 3x3, hex8 2x2x2, hex27 3x3x3 / 2x2x2, tet10
+  5-point, prism6 6-point = linear least squares 1,x,y(,z) in PHYSICAL
+  coordinates (residual <= 1e-12 of the scale); hex8 1 point = point
+  value; axisymmetric quad9 3x3 / 2x2 with a node at r=0 = sum h sig /
+  sum h (GNU 2x2 used the plain fit there); node = arithmetic mean.
+  `39d0138` fix(recovery): recovery_fit_kind/shape/build/factor
+  generalised to 3D, the F4 T9 natural table removed. Tests test-2026
+  recovery_hex8_distorted1 (node 11 sigxx HEAD 1.1216 -> 1.3071691 =
+  Pro), recovery_hex8_point_mean1 (2.9277 -> 2.3571531),
+  recovery_hex27_distorted1 (3.4134 -> 3.6670886),
+  recovery_tet10_curved1 (2.5316 -> 2.6187305), recovery_prism6_linear1
+  (1.0575 -> 0.55 exact), recovery_quad9_curved1 (2.2832 -> 2.4332610),
+  recovery_quad9_axis1 (-0.1123 -> 0.9518217): RED rc 1 on 421a3f4,
+  GREEN rc 0, whole field = Pro <= 2e-12; registered in build_safe.sh.
+  Clean build; build_safe TN_CHECK_ONLY=1 261 OK / 0 FALLO, runs
+  226/226; audit_db_buffers exit 0. Corpus A/B omen f4t6g_c70_runs
+  (421a3f4 vs 39d0138): no rc/classification change; force15 0.25 ->
+  5e-11 and force9 3.4e-2 -> 1e-7 vs Pro, force11 hex27 nodal stress =
+  Pro 7e-7 (C57 recovery part resolved; post_point part open), none
+  farther; large1 +1.5 % wall. Found C75: the Pro prism6 points are the
+  triangle corners x 2 Gauss levels, GNU interior (2/3,1/6,1/6) (nodal
+  sigzz 1.6 % of the scale on a distorted prism). Docs `170e573`:
+  DIVERGENCES C70 closed, C75 added (class B 44, total 87), C57
+  re-scoped; BACKLOG C70 resolved, C75 new, C57/C67 updates; SEGUIMIENTO
+  register; user/developer nodal_stress_recovery,
+  integration_quadrature_and_stress_recovery, control_mesh_extrude.
+  Next: C57 post_point, C75, C74, C71, K21 validation_1.
