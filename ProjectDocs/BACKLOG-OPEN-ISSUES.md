@@ -1688,6 +1688,30 @@ Original report:
   the Professional fits the hex27 points in physical coordinates (C70);
   `force11` nodal sigxx/sigyy/sigzz/sigxy now = Professional to 7e-7 of
   the field maximum (before 3.38 %). Open: the `post_point` part.
+- **Investigation 2026-10-13 (F4 T6f C57, no code change)**: the
+  `post_point` part is a GNU extrusion defect, not an interpolation
+  one. The quad9 -> hex27 branch of `mesh_extrude()` (`mesh.cc`, the
+  shared-plane node loop added by C47 in `24301c8`) writes `NODE` with
+  the plane z but copies every other node-class item, including
+  `NODE_START_REFINED`, from the source node: the 45 mid / inner plane
+  nodes of the witness keep z = 0 in `node_start_refined` (the linear
+  branch sets it explicitly). `point_el()` reads `NODE_START_REFINED`, so
+  it locates the point in a collapsed element: GNU (2, 1, 0.5) disy
+  -3.51050e-5, (1, 0.5, 0.5) -1.13556e-5, (0.5, 0.5, 0.5) -3.25367e-6;
+  the exact hex27 interpolation of the GNU nodal dofs gives -3.518023e-5,
+  -1.165094e-5, -3.574477e-6 = Professional post_point to 1e-14. Fix
+  (pending, `mesh.cc` was outside the work unit's edit surface): set
+  `coords[2] = zz` on `NODE_START_REFINED` of the new plane nodes, as in
+  the linear branch. Other users of `NODE_START_REFINED` (geometry
+  selection of those nodes) are affected too.
+- **Second finding (curved elements, owner to classify)**: on a curved
+  quad9 (2D) and a distorted hex27 the GNU `post_point` is the exact
+  isoparametric interpolation (2e-12 / 2e-8 of the nodal dofs; the
+  descent stops ~1e-8 short), while the Professional 02-08-2026 locates
+  the point with the CORNER nodes only (bilinear / trilinear inversion,
+  iso within ~3e-6) and then interpolates with the full quadratic shape
+  functions: a `post_point` on the quad9 centre node returns velx
+  9.437e-7 for a nodal 1.898e-7. The GNU is analytically right there.
 - **Severity**: **LOW**. **Effort**: medium.
 
 ### C58. `control_restart`: element history records outside the integration-point dofs not verified (F4 T6c, 2026-10-11) — OPEN
@@ -2081,6 +2105,13 @@ Original report:
   by `|b|^2`), gated by a corpus A/B against a direct solver (SuperLU)
   on the 38 inputs that break down today; check the cost of the extra
   Bi-CG iterations against the saved LU factorizations.
+- **Owner notes** (2026-10-13): the owner suggested a stagnation stop
+  (relative improvement between iterations). Planned design: main
+  criterion `||r||/||b|| < tol`; stagnation detection over a window of k
+  iterations on the BEST residual, returning the best iterate (the Bi-CG
+  residual is non-monotone); a floor of about `eps*||A||*||x||` instead
+  of the absolute 1e-16; and a true-residual `b - Ax` check at the stop
+  (the recursive residual drifts near machine precision).
 - **Severity**: LOW (results are exact today through the LU retry).
   **Effort**: medium.
 
