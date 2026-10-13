@@ -29,6 +29,7 @@ T6 triage (2026-10-11, HEAD 53dbb86) and owner order (2026-10-11):
 - [ ] T6f Rest by relevance (K15 `validation_14` done `1d446b3`; K15 validation_3 kap done `c3e6d2a`; C68 IP states kapsh/cap1/damage/rho/Maxwell done `70235c6`; C68d Maxwell old-state index done `2327083`; K21 recovery part done `2305659`, gate removed `e2b044f`; `-ra` ranges done `35025dc`): K15 `validation_14` (re-scoped by T6c: pass-1 hole-boundary nodal stress/plastic strain up to ~20 % at 8 nodes on the r=0.01 circle -> `refine_locally` picks a different element -> pass 2 on a different mesh), K15 mmc_tension and validation_3 eptzz closed 2026-10-12 as class A divergences (`600a0b4`), K14b hypo3 and C7/C7b Mazars closed 2026-10-12 as class A divergences (`ae0691b`), K21 (recovery done; validation_1 stokes default + convection remain), C57 (hex27 nodal stress resolved by C70; post_point open), C70 done `39d0138` (all Gauss rules + 3D physical fit), C71 (tube1 -lobatto NaN), C75 (prism6 points). Parked: K14c (ISA, class D), mohrcou2 sfnet (input artifact).
 - [x] T6f C72 convected nodal stress + validation_1 steady guard (owner-approved 2026-10-13; route: delegated writer, trigger: general.cc + 3 tests + 9 docs). Done `c1a1ae9` (fix + tests), `cc245f7` (docs). Tests registered in `scripts/build_safe.sh` `421a3f4`.
 - [x] T6f C70 nodal recovery of the other Gauss rules and the 3D elements in physical coordinates (route: delegated writer; trigger: multi-file code + 7 tests + build_safe + 9 docs). Done `39d0138` (fix + tests + registration), `170e573` (docs). Found C75 (prism6 integration points).
+- [x] T6f C75 prism6 integration rule: investigation + owner decision + docs (route: delegated writer; trigger: Pro/GNU probes + 7 docs). Gate stop before code; owner 2026-10-13: keep the GNU interior rule (class A). Done `4ab9549` (docs). Found C76 (`-minimal` ignored for prism6).
 
 ## Later (owner 2026-10-10, after convergence with ALL divergences documented and accepted)
 - F6: exhaustive profiling and optimisation pass; special attention to the hot
@@ -793,3 +794,21 @@ docs + SEGUIMIENTO + BACKLOG + DIVERGENCES.
   register; user/developer nodal_stress_recovery,
   integration_quadrature_and_stress_recovery, control_mesh_extrude.
   Next: C57 post_point, C75, C74, C71, K21 validation_1.
+  T6f C75 (2026-10-13), route: delegated writer (trigger: Pro/GNU
+  probes + 7 docs). Pro 02-08-2026 prism6 rule measured: triangle
+  corners (1,0),(0,1),(0,0) x zeta 1/2 +- 1/(2 sqrt 3), weight 1/12, for
+  the default, -normal, -maximal and inertia_apply -yes; -minimal = 2
+  centroid points (GNU ignores the record for prism6 -> C76). Weights
+  confirmed: a 20x2x2 prism6 cantilever's Pro nodal displacements equal a
+  corner-rule FE model to every printed digit (GNU HEAD = interior rule).
+  Manual 6.622 silent on the triangle points of a prism. Gate: both rules
+  full rank and patch-test exact, but the corner rule doubles the bending
+  error (cantilever vs Timoshenko, 20x2x2 / 40x2x4: -26.0 / -9.95 %
+  against GNU -13.1 / -4.85 %; tip reaction +35 % vs +15 %), so the
+  writer stopped before code. Owner decision 2026-10-13: keep the GNU
+  rule, C75 = deliberate divergence class A. Docs `4ab9549`: DIVERGENCES
+  C75 -> class A, C76 added class B (A 26, B 44, total 88); BACKLOG C75
+  decided, C76 new; SEGUIMIENTO Descarte + register rows; user/developer
+  integration_quadrature_and_stress_recovery and nodal_stress_recovery.
+  No code, test or build change (suite not re-run). Next: C57 post_point,
+  C74, C71, K21 validation_1, C76.
