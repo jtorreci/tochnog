@@ -74,7 +74,8 @@ layer, `top_abs = next_node + (2*lay+1)*nbase`; its base is plane 0 for
 `lay==0` and the previous layer's `top_abs` (`last_top`) otherwise. A
 plane node is created (`db(NODE, ..., PUT)` with the z coordinate, plus
 every other node-class record copied from the source node with
-`mesh_copy_node_item()`) only when `db_active_index(NODE, nn)` is false,
+`mesh_copy_node_item()`, then `NODE_START_REFINED` rewritten with the
+plane z, as the linear branch does) only when `db_active_index(NODE, nn)` is false,
 so the first element that reaches it creates it and its neighbours reuse
 it. The hex27 connectivity is base `base+nodes[inol]`, mid `mid0+nodes[inol]`,
 top `top_abs+nodes[inol]` (or the boundary copy) for inol = 0..8 in the
@@ -88,6 +89,20 @@ elements were disconnected at every inner plane (Professional `force11`:
 the section moment is equilibrium-based). Test:
 `validation-suite/test-2026/extrude_quad9_shared_nodes1.dat`
 (`build_safe.sh`: rc 0 + 75 node records in the .dbs).
+
+F4 T6f C57 (2026-10-13): the copy loop carried `NODE_START_REFINED`
+from the z = 0 source node, so the plane nodes had `node` at the plane z
+but `node_start_refined` at z = 0. `point_el()` (post points, post
+lines, force points, map, mpc) and `geometry()` selections read
+`NODE_START_REFINED`, so they worked on collapsed hex27 elements
+(`post_point` (1, 0.5, 0.5) disy -1.13556e-5 vs -1.16509e-5). The loop
+now rewrites `NODE_START_REFINED` with `coords[2] = zz`. Test:
+`validation-suite/test-2026/post_point_extrude_hex27_1.dat` (four
+post points, Professional targets, absolute 1e-11). The other
+node-creating branches (`mesh_mirror`, `mesh_copy`, `mesh_rotate_2d`,
+`mesh_rotate_3d`, `mesh_move`, `mesh_switch`, `mesh_convert_quad8`,
+`mesh_convert_hex20`, the linear extrusion) already write
+`NODE_START_REFINED` with the transformed coordinate (checked).
 
 ## External dependencies
 
@@ -109,8 +124,8 @@ the section moment is equilibrium-based). Test:
   Professional's compact plane-major numbering; renumbering would also
   move the boundary-copy block shared with the linear branches.
 - hex27 nodal stress recovery: = Professional since F4 T6f C70
-  (2026-10-13, `force11` 7e-7 of the field maximum); the `post_point` on
-  a hex27 node stays open (BACKLOG C57).
+  (2026-10-13, `force11` 7e-7 of the field maximum); `post_point` =
+  Professional since F4 T6f C57 (2026-10-13).
 - The generic node-data copy loop could be factored out and reused by
   `mesh_mirror`/`mesh_copy`/`mesh_rotate_3d` (they currently each have their
   own copy logic).

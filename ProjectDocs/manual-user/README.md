@@ -66,6 +66,7 @@ page lists its own in "Differences with the Professional version".
 - [postprocess.py](postprocess_py.md) — Python tool for post-processing the tabular SQLite database.
 - [control_print_data_versus_data_factor](control_print_data_versus_data_factor.md) — multiply data-versus-data output values.
 - [force_point](force_point.md) — point force anywhere in space.
+- [post_point](post_point.md) — solution interpolated at a point of the mesh (`post_point_dof`).
 - [post_point_move](post_point_move.md) — let a post point follow the material.
 
 ## Phase 2 features

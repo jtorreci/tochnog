@@ -1667,7 +1667,7 @@ Original report:
   (C57).
 - **Severity**: **LOW** (resolved). **Effort**: cheap.
 
-### C57. hex27 nodal stress recovery and `post_point` interpolation differ from the Professional (F4 T12, 2026-10-11) — OPEN
+### C57. hex27 nodal stress recovery and `post_point` interpolation differ from the Professional (F4 T12, 2026-10-11) — RESOLVED 2026-10-13 (recovery by C70; `post_point` by F4 T6f C57; curved-element location -> C78)
 
 - **Corpus**: Professional `other/force11` (after the C47 fix), test
   `extrude_quad9_shared_nodes1`.
@@ -1688,7 +1688,7 @@ Original report:
   the Professional fits the hex27 points in physical coordinates (C70);
   `force11` nodal sigxx/sigyy/sigzz/sigxy now = Professional to 7e-7 of
   the field maximum (before 3.38 %). Open: the `post_point` part.
-- **Investigation 2026-10-13 (F4 T6f C57, no code change)**: the
+- **Investigation 2026-10-13 (F4 T6f C57)**: the
   `post_point` part is a GNU extrusion defect, not an interpolation
   one. The quad9 -> hex27 branch of `mesh_extrude()` (`mesh.cc`, the
   shared-plane node loop added by C47 in `24301c8`) writes `NODE` with
@@ -1699,12 +1699,24 @@ Original report:
   it locates the point in a collapsed element: GNU (2, 1, 0.5) disy
   -3.51050e-5, (1, 0.5, 0.5) -1.13556e-5, (0.5, 0.5, 0.5) -3.25367e-6;
   the exact hex27 interpolation of the GNU nodal dofs gives -3.518023e-5,
-  -1.165094e-5, -3.574477e-6 = Professional post_point to 1e-14. Fix
-  (pending, `mesh.cc` was outside the work unit's edit surface): set
-  `coords[2] = zz` on `NODE_START_REFINED` of the new plane nodes, as in
-  the linear branch. Other users of `NODE_START_REFINED` (geometry
-  selection of those nodes) are affected too.
-- **Second finding (curved elements, owner to classify)**: on a curved
+  -1.165094e-5, -3.574477e-6 = Professional post_point to 1e-14.
+- **Fix** (F4 T6f C57, `cf37de3`): the quad9 branch rewrites
+  `NODE_START_REFINED` of every new plane node with `coords[2] = zz`, as
+  the linear branch does. The other node-creating mesh branches (mirror,
+  copy, rotate 2d/3d, move, switch, convert_quad8/hex20, linear extrude)
+  already transform it (checked). Test `test-2026/post_point_extrude_hex27_1`
+  (four post points, Professional targets, absolute 1e-11): RED on HEAD
+  `8b36a34` rc 1 (disy -3.51050e-5 / -1.13556e-5 / -3.25367e-6 /
+  -1.78447e-5), GREEN rc 0 (-3.5180218e-5 / -1.1650940e-5 / -3.5744774e-6
+  / -1.8052922e-5; the first point is 9.6e-12 off because the
+  `point_el` descent stops about 1e-8 iso short).
+  Corpus A/B omen `c57_runs` (958 runs): no classification change; 878
+  of 882 non-timeout `.dbs` identical (masking `time_calculation` /
+  `time_at_start`); `force11` and `extrude_quad9_shared_nodes1` differ
+  only in `node_start_refined` (7200 / 45 inner-plane nodes, now = `node`;
+  every result record identical), the new test, and `bicg_csr_threads1`
+  (2-thread round-off).
+- **Second finding (curved elements, -> C78, deliberate divergence)**: on a curved
   quad9 (2D) and a distorted hex27 the GNU `post_point` is the exact
   isoparametric interpolation (2e-12 / 2e-8 of the nodal dofs; the
   descent stops ~1e-8 short), while the Professional 02-08-2026 locates
@@ -1712,7 +1724,7 @@ Original report:
   iso within ~3e-6) and then interpolates with the full quadratic shape
   functions: a `post_point` on the quad9 centre node returns velx
   9.437e-7 for a nodal 1.898e-7. The GNU is analytically right there.
-- **Severity**: **LOW**. **Effort**: medium.
+- **Severity**: **LOW** (resolved). **Effort**: cheap.
 
 ### C58. `control_restart`: element history records outside the integration-point dofs not verified (F4 T6c, 2026-10-11) — OPEN
 
@@ -2079,6 +2091,38 @@ Original report:
   `bicg_breakdown_lu_retry1` (build_safe: rc 0, the warning, no "wrong
   input file"; old GNU: 9 error blocks).
 - **Not done** (option B, -> C77): a scale-relative breakdown test.
+
+### C78. `post_point` location in curved quad9 / hex27: the Professional uses the corner nodes only (F4 T6f C57, 2026-10-13) — DECIDED 2026-10-13 (deliberate divergence, class A)
+
+- **Probes** (2026-10-13, Professional 02-08-2026): two curved quad9
+  (2D, midside and centre nodes off the straight positions, 7 post
+  points) and one randomly distorted hex27 (5 points); the nodal dofs of
+  both binaries agree to 1e-12.
+- **GNU**: exact isoparametric location (full quadratic map): the
+  `post_point_dof` equals the exact interpolation of the nodal dofs to
+  2e-12 (quad9) / 2e-8 (hex27, the descent stops about 1e-8 short); a
+  post point on a node returns the nodal value.
+- **Professional**: locates the point with the CORNER nodes only
+  (bilinear / trilinear inversion) and interpolates with the full
+  quadratic shape functions: its values match that model to about
+  1e-6 relative; the iso coordinates backed out of its values sit
+  within about 3e-6 of the exact corner inversion (its own iteration
+  tolerance). A post point on the curved quad9 centre node: velx
+  9.437e-7 vs nodal 1.898e-7; hex27 interior point disx -6.5709e-3
+  vs -5.9265e-3 (11 %).
+  Same family as TET10-PPOINT (tet10: Professional linear from the
+  corners, deliberate divergence).
+- **Decision** (project owner 2026-10-13): deliberate divergence, class
+  A. The GNU keeps the exact isoparametric inversion (a post point on a
+  node returns the nodal value); the Professional corner-node location
+  is not adopted. Straight-edged elements with centred mid nodes agree
+  in both codes.
+- **Optional (LOW)**: the `point_el` finite-difference descent stops
+  about 1e-8 iso units short; an analytic-Jacobian Newton polish (as in
+  `mpc.cc` `mpc_weights_polish()`) would make post points exact to
+  machine precision (prism15 1.000000261 vs 1.0, the C57 test point 1
+  9.6e-12).
+- **Severity**: LOW (decided). **Effort**: -.
 
 ### C77. Bi-CG scale-relative breakdown test and relative convergence floor (F4 T6f C74, 2026-10-13) — OPEN
 
@@ -2618,7 +2662,7 @@ Original report:
 | C54 | — | run-time record names read without a type check into a 1-value dummy (`post.cc`, `print_el.cc`, `repeat.cc`, `data.cc`, `calcul.cc`) | LOW | cheap |
 | C55 | validation-suite | `print_unknownsrhside()` indexes `node_rhside` (npuknwn values) with `iuknwn` (heap read past the end, wrong column when nder > 1)  — resolved 2026-10-11 (F4 T6a)| LOW | cheap |
 | C56 | Pro `other` | input tokens longer than `MCHAR`-1 (`cin >> str`) overflow the parser buffers (`ground19_water_under_dam`, 141-char URL in a comment)  — resolved 2026-10-11 (F4 T6a)| LOW | cheap |
-| C57 | Pro `other` | `post_point` interpolation on a hex27 node (the `force11` hex27 nodal stress part resolved 2026-10-13 by C70) | LOW | medium |
+| C57 | Pro `other` | `post_point` on a quad9 -> hex27 extruded mesh — resolved 2026-10-13 (F4 T6f C57: inner-plane `node_start_refined` z; nodal stress part by C70) | closed | - |
 | C58 | Pro `validation` | `control_restart`: interface/spring/contact-spring/tendon/damage element history records not verified after the F4 T6c integration-point reset (`number_timesteps` record absent) | LOW | cheap/medium |
 | C59 | sfnet | `group_truss_memory -updated` + `materi_displacement` (and `-total*` without it): input error in the Pro — resolved 2026-10-11 (F4 T6d) | LOW | cheap |
 | C63 | — | Pro `slide4` `post_node_rhside_fixed` 3.44e-3 / 7.88e-3 vs Pro -5.77e-3 / 9.995e-3 (pre-existing) | LOW | cheap/medium |
@@ -2634,6 +2678,7 @@ Original report:
 | C77 | — | Bi-CG absolute breakdown test and convergence floor (scale-relative test needs a relative floor; examp16 0.43 % -> 2.45 % without it) | LOW | medium |
 | C75 | — | `prism6` integration points: Professional triangle corners, GNU interior (2/3,1/6,1/6) points — decided 2026-10-13: deliberate divergence (GNU half the bending error) | closed | - |
 | C76 | — | `prism6` `group_integration_points -minimal` ignored (Professional: 2 centroid points; its 2-point recovery not measured) | LOW | cheap/medium |
+| C78 | — | `post_point` in curved quad9 / hex27: Professional corner-node (sub-parametric) location, GNU isoparametric — decided 2026-10-13: deliberate divergence (class A) | closed | - |
 | C65 | — | Professional `post_point_dof` at a node differs from its own `node_dof` | LOW | cheap |
 | C66 | — | tria6 element results differ ~1e-5 from the Professional | LOW | cheap/medium |
 | C67 | — | nodal recovery of the unmeasured element rules | LOW | cheap |
@@ -2644,7 +2689,7 @@ Original report:
 | C68d | — | `materi.cc` old rho/epi/epp read with the Maxwell loop index (two or more chains) — resolved 2026-10-12 (F4 T6f, `2327083`) | LOW | cheap |
 | C69 | — | plane-stress membrane: yy/zz split of the plastic strain first order in dt (eptzz -0.00721 at dt 0.1 vs analytic -0.00882) | LOW | medium |
 
-Fifty items remain open: three MEDIUM and forty-seven LOW (C23 and C24 resolved 2026-10-05; C25, C26, C27 and B10 added; F1 T3 / K04 2026-10-06 added B11, C28-C32; F1 T6 resolved C28, added and resolved B12; F2 T1 added C36; F2 T2 added C37, C38, C39; F2 T3 resolved C5 and added C40; F3 T2 resolved C8, C18, C19, C20 and added B13, C41; F4 T2 fixed the C41 tie and left a residual; F4 T3 resolved C33; F4 T4 closed C32, added C42 and resolved C31; F4 T7-T8 added C43-C46; F4 T9 resolved the C43 solver speed, decided C46b/C46e and added C47, C48, C49; F4 T10 resolved C48 and added C50; F4 T5 added C52, C53 and resolved C51; F4 T13 resolved C49 and added C54-C56; F4 T12 resolved C47 and added C57; F4 T6a resolved C6, C55, C56 and the C3 sign, the C3 square-face tie becoming a deliberate divergence (owner 2026-10-11), and added B14; F4 T6c fixed the `control_restart` integration-point reset and added C58; F4 T6d resolved C11 and C59, fixed the interface history and resolved C52, and added B15, C60 and C61; B15 resolved the same day; F4 T6e resolved C53 and added C62 and C63; F4 T6f added C64-C68 and C69, and closed the K15 `mmc_tension` vertex sigzz/eppzz and `validation_3` eptzz items as deliberate divergences MC-VERTEX-ZZ / MEMBRANE-EPTZZ, owner 2026-10-12; F4 T6f resolved C68 and added C68a-C68d; C68d resolved the same day; F4 T6f closed C7 (Mazars equivalent strain, with C7b) and the AUDIT K14b `hypo3` sigxx reversal as deliberate divergences C7 / K14b, owner 2026-10-12; the `hypo3` hyhis slot residual stays open under AUDIT K14; F4 T6f K21 WU2 widened C72 with the Stokes-flow residual and closed its `cmat_gate` rewrite, no new item; F4 T6f C72 resolved the convected nodal stress output (C72 stays open for the Professional-side residuals) and added C73 and C74; F4 T6f C70 resolved C70 and added C75; F4 T6f C75 closed C75 as a deliberate divergence, owner 2026-10-13, and added C76; F4 T6f C74 resolved C74 and added C77). No open issue is CRITICAL or
+Forty-nine items remain open: three MEDIUM and forty-six LOW (C23 and C24 resolved 2026-10-05; C25, C26, C27 and B10 added; F1 T3 / K04 2026-10-06 added B11, C28-C32; F1 T6 resolved C28, added and resolved B12; F2 T1 added C36; F2 T2 added C37, C38, C39; F2 T3 resolved C5 and added C40; F3 T2 resolved C8, C18, C19, C20 and added B13, C41; F4 T2 fixed the C41 tie and left a residual; F4 T3 resolved C33; F4 T4 closed C32, added C42 and resolved C31; F4 T7-T8 added C43-C46; F4 T9 resolved the C43 solver speed, decided C46b/C46e and added C47, C48, C49; F4 T10 resolved C48 and added C50; F4 T5 added C52, C53 and resolved C51; F4 T13 resolved C49 and added C54-C56; F4 T12 resolved C47 and added C57; F4 T6a resolved C6, C55, C56 and the C3 sign, the C3 square-face tie becoming a deliberate divergence (owner 2026-10-11), and added B14; F4 T6c fixed the `control_restart` integration-point reset and added C58; F4 T6d resolved C11 and C59, fixed the interface history and resolved C52, and added B15, C60 and C61; B15 resolved the same day; F4 T6e resolved C53 and added C62 and C63; F4 T6f added C64-C68 and C69, and closed the K15 `mmc_tension` vertex sigzz/eppzz and `validation_3` eptzz items as deliberate divergences MC-VERTEX-ZZ / MEMBRANE-EPTZZ, owner 2026-10-12; F4 T6f resolved C68 and added C68a-C68d; C68d resolved the same day; F4 T6f closed C7 (Mazars equivalent strain, with C7b) and the AUDIT K14b `hypo3` sigxx reversal as deliberate divergences C7 / K14b, owner 2026-10-12; the `hypo3` hyhis slot residual stays open under AUDIT K14; F4 T6f K21 WU2 widened C72 with the Stokes-flow residual and closed its `cmat_gate` rewrite, no new item; F4 T6f C72 resolved the convected nodal stress output (C72 stays open for the Professional-side residuals) and added C73 and C74; F4 T6f C70 resolved C70 and added C75; F4 T6f C75 closed C75 as a deliberate divergence, owner 2026-10-13, and added C76; F4 T6f C74 resolved C74 and added C77; F4 T6f C57 resolved C57 and added C78, decided the same day as a deliberate divergence, owner 2026-10-13; forty-nine items remain open). No open issue is CRITICAL or
 HIGH. The validation-suite corpus has no open failure — its 233 real tests
 pass (`materi_direct_mc` input corrected, C17 resolved). Every remaining failure is a stale or malformed test, an out-of-scope model
 or infrastructure limit, a narrow post-processing divergence, a corpus-coverage
