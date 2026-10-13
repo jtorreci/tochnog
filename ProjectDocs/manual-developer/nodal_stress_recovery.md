@@ -196,8 +196,10 @@ and `bar2` with 1 point the weight is `F/volume` with `F = 1` for the
 so each element contributes weight 1. The strain tensors follow through
 `strain_recovery_weight()` (same function); the convected-stress path of
 `general.cc` uses the same weight. Unmeasured rules (tet4 `-maximal`,
-bar2 with 2 points, bar3/bar4, the quad Lobatto rules) keep `h_inol`
-(BACKLOG C67).
+bar2 with 2 points, bar3/bar4, the bar/quad16/hex64 Lobatto rules)
+keep `h_inol` (BACKLOG C67); the quad4/quad9/hex8/hex27 Lobatto rules
+are aligned since C79 (2026-10-13, see
+`integration_quadrature_and_stress_recovery.md` section 3.2c).
 
 Effect on `validation_14` (DIVERGENCES K15): the pass-1 hole-boundary
 nodal stress / plastic strain (up to ~20 % at 8 hole nodes) was exactly
@@ -387,5 +389,6 @@ away from the Professional. Wall `large1` (hex8 30^3) +1.5 % locally
   triangle corners, GNU interior points; deliberate divergence, owner
   2026-10-13, BACKLOG C75), so prism6 nodal stresses agree only for a
   linear stress field. `-minimal` on a prism6 is ignored (BACKLOG C76). Unmeasured rules keep
-  `h_inol` (prism15, Lobatto, tet4 `-maximal`, ...; BACKLOG C67).
+  `h_inol` (prism15, bar/quad16/hex64 Lobatto, tet4 `-maximal`, ...;
+  BACKLOG C67; quad/hex Lobatto aligned in C79, 2026-10-13).
 - Index: [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).

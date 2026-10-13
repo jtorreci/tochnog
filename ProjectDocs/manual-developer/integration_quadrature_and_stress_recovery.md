@@ -112,9 +112,12 @@ weight 1.
     and the assembly becomes the arithmetic mean. Without the volume
     cancellation the quadrature weights bias the average (measured on a
     controlled quad9 patch: the exact `sigxx = 1000` came out 1333 = 4/3).
-- `polynom.cc` — `stress_recovery_gauss` (global) is 1 when the resolved
-  quadrature is interior Gauss and 0 for Lobatto. `pol()` sets it; the
-  recovery returns `h` for every case that is not the aligned Gauss rule.
+- `polynom.cc` — `stress_recovery_gauss` (thread-local global) is 1 when
+  the resolved quadrature is interior Gauss, or a Lobatto rule whose points
+  do not cover every node (quad9 / hex27 `-minimal`, C79); 0 for the
+  Lobatto rules with the points at the nodes. `stress_recovery_lobatto`
+  (thread-local, C79) is 1 for every Lobatto tensor rule. `pol()` sets
+  both; the recovery returns `h` for the cases that are not aligned.
 - `general.cc` / `materi.cc` — apply the recovery to ALL stress components
   (normal and shear), exactly as the Professional's `element_dof`; the
   SRI path keeps its normal-only recovery. The `materi.cc` stress block
@@ -214,9 +217,66 @@ the K21 on-axis recovery rule (`sum h sig / sum h`) applies. Test
 `test-2026/axisym_lobatto_axis1` (one on-axis and one off-axis quad4,
 Professional targets 1e-9).
 
-Pending: `msf_element_rule()` (`calcul_force.cc`, the
-`post_calcul -materi_stress -force` replica of the rule) does not apply
-the switch. Hardcoded: the threshold `EPS_COORD`.
+`msf_element_rule()` (`calcul_force.cc`, the
+`post_calcul -materi_stress -force` replica of the rule) applies the same
+switch since C79 (2026-10-13): for an axisymmetric 2D Lobatto rule it
+reads the element nodes (`ELEMENT`, `NODE`), interpolates the radius at
+each Lobatto point with `interpolation_polynomial()` and rebuilds the
+rule with Gauss when one is below `EPS_COORD`. Before, the section forces
+of such an element integrated its Gauss-point `ELEMENT_DOF` stresses with
+the Lobatto rule (zero-volume points on the axis): one on-axis quad4
+under uniaxial compression gave momx_sig 0.5 instead of the 1/6 of the
+`-gauss` run (`test-2026/msf_axisym_lobatto_axis1`). The Professional
+02-08-2026 prints zero section forces for that axisymmetric input, so the
+target is the `-gauss` run. `delete.cc` `mc_element_rule()`
+(`control_mesh_cut_geometry`) does not need the switch: it refuses
+axisymmetric groups. Hardcoded: the threshold `EPS_COORD`.
+
+### 3.2c Lobatto recovery (C79, F4 T6f, 2026-10-13)
+
+Professional 02-08-2026 probes (prescribed nonlinear velocity at every
+node, viscous material, distorted meshes of unequal element size;
+`element_intpnt_dof` -> `node_dof`, residual <= 5e-12 of a field scale
+13-19):
+
+| rule | Professional per-element nodal value | assembly |
+|---|---|---|
+| quad4 2x2, quad9 3x3, hex8 2x2x2, hex27 3x3x3 Lobatto (points at the nodes), plane and axisymmetric off the axis | the value of the point at the node (the physical linear fit is 0.39-0.46 off) | arithmetic mean |
+| quad9 2x2, hex27 2x2x2 Lobatto `-minimal` (corner points) | linear least squares `1,x,y(,z)` in physical coordinates of the corner-point values (the point value is 0.18-0.19 off at the corners), also on a rectangle | arithmetic mean |
+| quad4 / hex8 Lobatto `-minimal` (1 point) | the point value (already aligned, C70) | arithmetic mean |
+
+GNU before: `sri_stress_recovery_weight()` returned `h_inol` for every
+Lobatto rule. With the points at the nodes `h` is the Kronecker delta,
+so the per-element value was right, but the lumped equation multiplies
+the weight by the point volume, so the node was the volume-weighted
+average (quad4 0.94, hex8 0.83, quad9 0.013, hex27 0.0099 off; sfnet
+`tube1` node (1.25,0) sigxx -494.42 vs -407.64). For the quad9 / hex27
+`-minimal` rules `h` vanishes at the non-corner nodes, and the
+`materi.cc` stress block skips `|h| < EPS_H` pairs unless
+`stress_recovery_gauss`, so those nodes received no contribution at all
+(sigxx 0 instead of up to 16.5). The h weighting was never measured: the
+2026-09-13 alignment (`06e175d`) kept `h` for "the node-containing
+Lobatto rules" and noted the volume weighting; no test or corpus target
+used `-lobatto` before C71 (sfnet `tube1` was NaN).
+
+Fix: `recovery_fit_kind()` returns kind 3 (F = Kronecker delta, point
+index = node index in the tensor layout) for the Lobatto quad4 / quad9 /
+hex8 / hex27 rules with `npoint == nnol`; the `-minimal` quad9 / hex27
+Lobatto rules take the kind 1 physical fit, with `recovery_fit_shape()`
+placing the points at the Lobatto positions (`integration_lobatto()`);
+the cache key includes the Lobatto flag. `pol()` sets
+`stress_recovery_gauss = 1` for a Lobatto rule with fewer points than
+nodes per direction, so the `materi.cc` stress block visits the `h = 0`
+nodes. The two flags became `thread_local` (the element loop may run in
+threads, and since C71 one group can mix Gauss and Lobatto elements).
+Unmeasured Lobatto rules (bar2/bar3 2-3 points, quad16, hex64) keep
+`h_inol`. Tests (Professional targets, 4e-6):
+`test-2026/recovery_lobatto_quad4_mean1`,
+`recovery_lobatto_quad4_axisym_mean1`, `recovery_lobatto_hex8_mean1`,
+`recovery_lobatto_quad9_minimal1`, `recovery_lobatto_hex27_minimal1`.
+sfnet `tube1` (modern keywords): every node_dof = Professional within
+6e-8. Interface elements are not involved: `interface.cc` assembles
+forces only and does not call the continuum stress recovery.
 
 ### 3.3 tet10 rule, recovery and lumping (C31, F4 T4, 2026-10-09)
 
@@ -301,12 +361,12 @@ operations):
   type; the 92/95 `validation_14` match was the natural fit agreeing with
   the physical one on near-parallelograms. The 3x3 quad9 and the 3D
   types followed in C70 (2026-10-13, all measured physical). Unmeasured:
-  prism15, quad16/hex64, the Lobatto rules (C67).
-- Lobatto quad4 recovery (BACKLOG C79, found in C71): the GNU keeps the
-  `h` weight times the point volume (volume-weighted mean across
-  elements), the Professional takes the arithmetic mean (two plane quad4
-  of widths 1 and 2: 6.525 vs 6.15). Fix candidate: `h/volume` in
-  `sri_stress_recovery_weight()` after measuring the other Lobatto rules.
+  prism15, quad16/hex64, the bar Lobatto rules (C67). The quad4/quad9/
+  hex8/hex27 Lobatto rules were measured and aligned in C79 (2026-10-13).
+- `-reduced` integration method: listed in the Professional manual
+  (weighted Lobatto / 1-point combination) and accepted by the
+  Professional binary, refused by the GNU input reader ("I do not know :
+  -reduced"); not part of C79.
 - The 3 stale targets (condif10, examp5, ho_mech1) should be recalibrated
   in the same work unit that promotes the alignment to the default;
   strconv1 needs a longer transient or a recalibrated target; examp8 needs
@@ -350,8 +410,9 @@ small fit per element instead of one per (node, point) call.
 
 ## 7. Files and functions
 
-- `polynom.cc` — `pol()` (incl. the tet10 Keast rule, C31),
-  `stress_recovery_gauss`.
+- `polynom.cc` — `pol()` (incl. the tet10 Keast rule, C31, and the C71
+  on-axis Lobatto switch), `stress_recovery_gauss`,
+  `stress_recovery_lobatto` (C79).
 - `miscel.cc` — `sri_stress_recovery_weight()`, `recovery_fit_kind()`,
   `recovery_fit_shape()`, `recovery_fit_build()`, `recovery_fit_factor()`
   (K21 / C70 per-element physical fit; the F4 T9 factor table was
@@ -365,14 +426,15 @@ small fit per element instead of one per (node, point) call.
 - `calcul_force.cc`, `delete.cc` — the replicated tensor-product default
   (`msf_element_rule`, `mc_element_rule`), switched to Gauss with the
   element default; `msf_element_rule` no longer forces the axisymmetric
-  1-point rule (K20).
+  1-point rule (K20) and mirrors the C71 on-axis Lobatto -> Gauss switch
+  (C79).
 
 ## Differences with the Professional version
 
-- **Lobatto quad4 nodal recovery** (BACKLOG C79, open, LOW): GNU
-  volume-weighted mean of the elements' point values at a node,
-  Professional arithmetic mean. Index:
-  [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).
+- **Lobatto nodal recovery** (BACKLOG C79) — RESOLVED 2026-10-13 (F4
+  T6f C79): quad4/quad9/hex8/hex27 Lobatto = Professional (point value at
+  the node, or the physical linear fit for the `-minimal` corner rules,
+  arithmetic mean); section 3.2c.
 - **Lumped mass / capacity of the `tet10`** (deliberate divergence,
   project owner 2026-10-09; DIVERGENCES TET10-HRZ). GNU: positive HRZ
   lumping, corner V/36 and mid-edge 4V/27 (the diagonal of the

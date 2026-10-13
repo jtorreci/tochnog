@@ -99,9 +99,10 @@ points themselves differ (the Professional samples the triangle corners,
 the GNU three interior points; a deliberate divergence decided on
 2026-10-13 because the GNU rule is more accurate in bending, BACKLOG
 C75), so prism6 nodal stresses agree only where the stress field is
-linear. The Lobatto rules and the
-remaining unmeasured rules (prism15, tet4 `-maximal`, bar2 2 points,
-...) keep the volume-weighted average (BACKLOG C67).
+linear. The quad4/quad9/hex8/hex27 Lobatto rules follow the
+Professional since 2026-10-13 (BACKLOG C79). The remaining unmeasured
+rules (prism15, tet4 `-maximal`, bar2 2 points, the bar/quad16/hex64
+Lobatto rules, ...) keep the volume-weighted average (BACKLOG C67).
 
 ## When it matters
 

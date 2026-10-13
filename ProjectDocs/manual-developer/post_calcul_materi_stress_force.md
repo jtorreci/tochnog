@@ -529,6 +529,19 @@
   y qsri3d_beam (mom1s = P·L = 0.08 para SRI/OFF — la estática del
   cuerpo libre; el discriminador SRI es la deflexión).
 
+## C71 on-axis switch replica (F4 T6f C79, 2026-10-13)
+
+`msf_element_rule()` (`calcul_force.cc`) mirrors the `pol()` on-axis
+Lobatto -> Gauss switch (C71): for an axisymmetric 2D Lobatto rule it
+reads the element nodes (`ELEMENT`, `NODE`), interpolates the radius at
+each Lobatto point with `interpolation_polynomial()` and rebuilds the rule
+with Gauss (`goto build_rule`) when one is below `EPS_COORD`. Test
+`test-2026/msf_axisym_lobatto_axis1` (target = the `-gauss` run, momx_sig
+1/6; before 0.5). The Professional 02-08-2026 printed zero section forces
+for this axisymmetric input (also off the axis), so it is not the oracle.
+`delete.cc` `mc_element_rule()` refuses axisymmetric groups and needs no
+switch. Hardcoded: `EPS_COORD`.
+
 ## Differences with the Professional version
 
 - **3D section frame of a square end face without

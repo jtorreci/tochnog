@@ -220,6 +220,18 @@ average of the two adjacent sections.
 - `outer -yes` and `plot_switch` are implemented in 2D (3 switches)
   and 3D (4 switches, manual 6.916).
 
+## Axisymmetric `-lobatto` elements on the axis
+
+An axisymmetric element of a `group_integration_method -lobatto` group
+that touches the symmetry axis is integrated with the Gauss rule (BACKLOG
+C71). Since 2026-10-13 (F4 T6f C79) its section forces use that Gauss
+rule too; before, they used the Lobatto rule, whose points on the axis
+have zero volume (one on-axis quad4 under uniaxial compression: momx_sig
+0.5 instead of the 1/6 of the same model with `-gauss`; test
+`test-2026/msf_axisym_lobatto_axis1`). The Professional 02-08-2026 printed
+zero section forces for that axisymmetric input, so it was not used as
+the reference.
+
 ## Differences with the Professional version
 
 - **3D section frame of a square end face without

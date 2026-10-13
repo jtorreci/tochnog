@@ -26,8 +26,9 @@ and the quad4 hourglass modes were not restrained.
 
 The `group_integration_method`
 and `group_integration_points` records still override it per element group
-(`-gauss`, `-lobatto`, `-reduced`, and `-minimal` / `-maximal` / `-normal`).
-The reduced method and the SRI keyword are unchanged.
+(`-gauss`, `-lobatto`, and `-minimal` / `-maximal` / `-normal`; the
+Professional's `-reduced` method is not accepted by the GNU, BACKLOG C80).
+The SRI keyword is unchanged.
 
 With `group_integration_method -lobatto` in an axisymmetric group, an
 element that touches the symmetry axis (a node with radius below 1e-9)
@@ -74,6 +75,37 @@ field matches the Professional (the `beam2d` / `beam2d_1` cantilever
 corner stress and the `post4` moment are the discriminating examples;
 `test-2026/recovery_*` cover distorted and curved elements).
 
+With `group_integration_method -lobatto` (F4 T6f C79, 2026-10-13) the
+same arithmetic mean over the elements applies. When the Lobatto points
+sit at the nodes (quad4, quad9, hex8, hex27 with the default
+`-maximal` points) each element contributes the value of its point at
+the node; with `group_integration_points -minimal` the quad9 / hex27
+points are the element corners and each element contributes the
+physical linear fit of those corner values, as for its 2x2 Gauss rule.
+Before, the GNU weighted the Lobatto elements by their volume (a node
+shared by a small and a large element leaned towards the large one) and
+gave zero stress at the mid-side and centre nodes of a `-minimal`
+quad9 / hex27. Minimal example (two elements of different size sharing
+the nodes 2 and 5):
+
+```
+group_type 0 -materi
+group_integration_method 0 -lobatto
+node 1 0. 0.
+node 2 1. 0.
+node 3 3. 0.
+node 4 0. 1.
+node 5 1. 1.
+node 6 3. 1.
+element 1 -quad4 1 2 4 5
+element 2 -quad4 2 3 5 6
+```
+
+The `post_calcul -materi_stress -force` section forces of an
+axisymmetric `-lobatto` element touching the axis use its Gauss rule
+too (the rule it was integrated with; before, the Lobatto rule gave a
+wrong moment).
+
 The recovery operator depends on the element geometry, so it is built
 per element and cached while the element is visited (since C70 also for
 the 3D elements; before, the natural-coordinate factors were computed once
@@ -88,12 +120,14 @@ target if the new value matches the Professional.
 
 ## Differences with the Professional version
 
-- **Nodal stresses of `-lobatto` quad4 elements** (BACKLOG C79, open,
-  LOW). Where elements of different volume share a node, the GNU
-  averages their values at the node weighted by volume, the Professional
-  takes the plain mean (two quad4 of widths 1 and 2: 6.525 vs 6.15).
-  Velocities and integration-point stresses are equal. Index:
-  [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).
+- **Nodal stresses of `-lobatto` elements** (BACKLOG C79) — RESOLVED
+  2026-10-13 (F4 T6f C79): quad4, quad9, hex8 and hex27 Lobatto rules now
+  = Professional (arithmetic mean; sfnet `tube1` node (1.25,0) sigxx
+  -407.64, before -494.42). Lobatto rules of bar2/bar3, quad16 and hex64
+  were not measured and keep the volume-weighted average.
+- **`group_integration_method -reduced`** (known difference, not
+  decided). Listed in the Professional manual and accepted by the
+  Professional; the GNU refuses it ("I do not know : -reduced").
 - **Lumped mass / capacity of the `tet10`** (deliberate divergence,
   project owner 2026-10-09; DIVERGENCES TET10-HRZ). GNU: positive HRZ
   lumping, corner V/36 and mid-edge 4V/27 (the diagonal of the
