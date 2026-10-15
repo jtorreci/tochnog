@@ -1436,7 +1436,10 @@ Original report:
   further.
 - **`truss13`** (Pro `other`): `control_mesh_truss_distribute_mpc` is not
   implemented (SEGUIMIENTO "PENDIENTE"); the truss across an interface
-  carries no force in the GNU (Pro 5.0).
+  carries no force in the GNU (Pro 5.0). Since C77 (2026-10-15) the
+  resulting singular system is no longer accepted on the old absolute
+  floor: the run stops with an explicit breakdown error after SuperLU
+  and the band LU both refuse the matrix (rc 1 before and after).
 - **Zero-force straight truss**: the first iteration of a straight truss
   under a transverse load is still singular (no force, so no geometric
   stiffness); the GNU prints "iterative solver broke down" and continues
@@ -2188,6 +2191,14 @@ Original report:
   preconditioner on the assembled CSR operator (`so_bicg.cc`
   `bicg_csr_build()`), measured in the F6 profiling phase; it may also
   make BiCGStab robust enough to replace Bi-CG (C77 pending choice).
+- **BiCGStab notes for the revisit** (C77 measurement, 2026-10-15): with
+  Jacobi scaling only, BiCGStab stagnated on `distri3`, `bimet1` and
+  `beam2d_2` and spent the full `max_iter = 10*n` before the direct
+  retry; detect stagnation earlier so a hopeless solve reaches the
+  direct retry sooner. On `tquad6_iface` it stopped at the round-off
+  floor with a true residual below `BICG_FLOOR_ACCEPT` (1e-6) and the
+  accepted iterate moved the result from 5e-8 to 7.5e-3 off SuperLU:
+  review whether 1e-6 is too loose for interface systems.
 - **Owner rationale** (2026-10-15): in large meshes with many steps even
   small per-solve gains compound.
 - **Severity**: LOW (performance). **Effort**: medium/large.
