@@ -2055,18 +2055,26 @@ run_ok "$T2026" stokes_group1
 run_ok "$T2026" stokes_group2
 run_ok "$T2026" convected_stress_recovery1
 run_ok "$T2026" validation1_steady1
-# F4 T6f C74 (2026-10-13): a Bi-CG breakdown that the direct band LU retry
-#   (so.cc) solves is reported with ONE warning line per solve; the full
-#   "Error ... Probably you have a wrong input file" block is kept for a
-#   breakdown the LU cannot rescue (or solver_bicg_stop -no). Old GNU: the
-#   error block for every rescued solve (9 here, 599 on validation1_steady1).
-#   Target = the SuperLU solution (the LU retry is exact).
+# F4 T6f C74 (2026-10-13): a breakdown that a direct retry (so.cc) solves
+#   is reported with ONE warning line per solve; the full "Error ...
+#   Probably you have a wrong input file" block is kept for a breakdown no
+#   direct solver can rescue (or solver_bicg_stop -no). Old GNU: the error
+#   block for every rescued solve (9 here, 599 on validation1_steady1).
+#   F4 T6f C77 (2026-10-15): the 9 breakdowns were false (absolute 1e-16
+#   test on tiny vectors); with the scale-relative test the iterative
+#   solver converges on every solve: no breakdown warning, no error block.
+#   Target = the SuperLU solution.
 run_ok "$T2026" bicg_breakdown_lu_retry1
-if grep -aq "Warning: Bi-CG breakdown, system solved with the direct band LU" \
+if ! grep -aq "breakdown, system solved with the direct" \
      /tmp/bicg_breakdown_lu_retry1_safe.out 2>/dev/null &&
    ! grep -aq "wrong input file" /tmp/bicg_breakdown_lu_retry1_safe.out 2>/dev/null;
-then check_ok "bicg_breakdown_lu_retry1 (rescued breakdown: one warning, no error block)";
-else check_fail "bicg_breakdown_lu_retry1" "error block printed or warning missing"; fi
+then check_ok "bicg_breakdown_lu_retry1 (no false breakdown, no error block)";
+else check_fail "bicg_breakdown_lu_retry1" "breakdown warning or error block printed"; fi
+# F4 T6f C77 (2026-10-15): relative stop of the iterative solver. The same
+#   flow with the inflow scaled by 1e-5: the old absolute floors (|r|^2 <
+#   1e-16) accepted iterates 4.0e-5 relative off the direct solution
+#   (velx 9.77555956992e-07); target = SuperLU 9.77517060814e-07 +- 1e-13.
+run_ok "$T2026" bicg_relative_stop1
 
 # ---------------------------------------------------------------------
 # Sub-sprint materi_stress_force, lote 2 (integracion 2D quad4/quad9):
