@@ -2124,7 +2124,7 @@ Original report:
   9.6e-12).
 - **Severity**: LOW (decided). **Effort**: -.
 
-### C77. Bi-CG scale-relative breakdown test and relative convergence floor (F4 T6f C74, 2026-10-13) — OPEN
+### C77. Bi-CG scale-relative breakdown test and relative convergence floor (F4 T6f C74, 2026-10-13) — RESOLVED 2026-10-15 (F4 T6f C77; non-symmetric algorithm choice pending)
 
 - **Symptom**: the Bi-CG breakdown test (`so_bicg.cc`, `|r1.r2|`,
   `|d2^T A d1| < 1e-16`) and the convergence floor (`bicg_error_minimum`
@@ -2156,8 +2156,41 @@ Original report:
   residual is non-monotone); a floor of about `eps*||A||*||x||` instead
   of the absolute 1e-16; and a true-residual `b - Ax` check at the stop
   (the recursive residual drifts near machine precision).
-- **Severity**: LOW (results are exact today through the LU retry).
-  **Effort**: medium.
+- **Resolution** (owner decision 2026-10-15, fix `d567672`): main
+  criterion `|r|^2 < bicg_error |r0|^2` (relative); the absolute
+  `bicg_error_minimum` only when the user gives the record; round-off
+  floor `100 eps |A| |x|`; scale-relative Bi-CG breakdown (1e-14); a floor
+  or breakdown stop is kept when `|b-Ax|/|b| <= 1e-6`, otherwise SuperLU,
+  then the band LU within a memory budget (clear error instead of
+  bad_alloc). No stagnation window and no best-iterate return (prototype:
+  a 10-iteration window raised the retries 26 -> 10958). The CG takes the
+  same stop (measured safe: E15 1.4e-6 -> 4.0e-11 off SuperLU, +7 % wall).
+  Evidence: 86 Bi-CG corpus inputs, retries 7378 -> 13, 19 inputs 10x
+  closer to SuperLU, 0 farther; large meshes C23 91.9 -> 18.6 s, C36
+  bad_alloc -> 83 s; omen A/B 965 runs, 63 of the 84 moved runs toward
+  SuperLU (details: dev/solve_iterative_bicg, SEGUIMIENTO). Test
+  `bicg_relative_stop1`. DIVERGENCES C77 -> class A.
+- **Pending owner choice** (item 2 of the decision): BiCGStab measured
+  9-13 % less solver time on the large meshes but 71 SuperLU retries
+  (29 max_iter solves) and 2 inputs farther from SuperLU on the 86-input
+  corpus (`tquad6_iface` 5e-8 -> 7.5e-3); GMRES(30) clearly worse (379
+  max_iter solves, 4.8x products). The classical Bi-CG with the relative
+  stop is kept until the owner decides.
+- **Severity**: LOW. **Effort**: medium.
+
+### C81. ILU / AMG preconditioning of the iterative solver (F6, owner 2026-10-15) — OPEN (F6)
+
+- **Context**: the CG / Bi-CG use only the symmetric Jacobi scaling
+  `P = diag(A)^-1/2`. With the C77 relative stop the iteration counts
+  grew (+66 % Bi-CG iterations on the 86 Bi-CG corpus inputs, CG E15 127
+  -> 295).
+- **Proposal**: an incomplete LU (ILU(0) / ILUT) or algebraic multigrid
+  preconditioner on the assembled CSR operator (`so_bicg.cc`
+  `bicg_csr_build()`), measured in the F6 profiling phase; it may also
+  make BiCGStab robust enough to replace Bi-CG (C77 pending choice).
+- **Owner rationale** (2026-10-15): in large meshes with many steps even
+  small per-solve gains compound.
+- **Severity**: LOW (performance). **Effort**: medium/large.
 
 ### C73. Convection of the integration-point state of history materials (F4 T6f C72, 2026-10-13) — OPEN (optional improvement)
 
@@ -2776,7 +2809,8 @@ Original report:
 | C72 | — | convected (Eulerian) stress: nodal output resolved 2026-10-13 (`c1a1ae9`, absolute recovery = Pro); neither code convects the IP state; remaining Pro-side residuals: `validation_1` drift (C72-V1), Stokes gap, `cd_method` rotation sweep | LOW | medium |
 | C73 | — | optional: convect the integration-point state of history materials on an Eulerian mesh (neither code does; class A improvement, owner decision) | LOW | large |
 | C74 | — | `validation_1` prints "Bi-CG iteration broke down" about 600 times — resolved 2026-10-13 (F4 T6f C74: one warning per LU-rescued solve; solver part -> C77) | closed | - |
-| C77 | — | Bi-CG absolute breakdown test and convergence floor (scale-relative test needs a relative floor; examp16 0.43 % -> 2.45 % without it) | LOW | medium |
+| C77 | — | Bi-CG absolute breakdown test and convergence floor — resolved 2026-10-15 (F4 T6f C77: relative stop, relative breakdown, guarded SuperLU / band LU retry; BiCGStab choice pending) | closed | - |
+| C81 | — | ILU / AMG preconditioning of the iterative solver (F6 profiling, owner 2026-10-15) | LOW | medium/large |
 | C75 | — | `prism6` integration points: Professional triangle corners, GNU interior (2/3,1/6,1/6) points — decided 2026-10-13: deliberate divergence (GNU half the bending error) | closed | - |
 | C76 | — | `prism6` `group_integration_points -minimal` ignored (Professional: 2 centroid points; its 2-point recovery not measured) | LOW | cheap/medium |
 | C78 | — | `post_point` in curved quad9 / hex27: Professional corner-node (sub-parametric) location, GNU isoparametric — decided 2026-10-13: deliberate divergence (class A) | closed | - |
@@ -2790,7 +2824,7 @@ Original report:
 | C68d | — | `materi.cc` old rho/epi/epp read with the Maxwell loop index (two or more chains) — resolved 2026-10-12 (F4 T6f, `2327083`) | LOW | cheap |
 | C69 | — | plane-stress membrane: yy/zz split of the plastic strain first order in dt (eptzz -0.00721 at dt 0.1 vs analytic -0.00882) | LOW | medium |
 
-Forty-nine items remain open: three MEDIUM and forty-six LOW (C23 and C24 resolved 2026-10-05; C25, C26, C27 and B10 added; F1 T3 / K04 2026-10-06 added B11, C28-C32; F1 T6 resolved C28, added and resolved B12; F2 T1 added C36; F2 T2 added C37, C38, C39; F2 T3 resolved C5 and added C40; F3 T2 resolved C8, C18, C19, C20 and added B13, C41; F4 T2 fixed the C41 tie and left a residual; F4 T3 resolved C33; F4 T4 closed C32, added C42 and resolved C31; F4 T7-T8 added C43-C46; F4 T9 resolved the C43 solver speed, decided C46b/C46e and added C47, C48, C49; F4 T10 resolved C48 and added C50; F4 T5 added C52, C53 and resolved C51; F4 T13 resolved C49 and added C54-C56; F4 T12 resolved C47 and added C57; F4 T6a resolved C6, C55, C56 and the C3 sign, the C3 square-face tie becoming a deliberate divergence (owner 2026-10-11), and added B14; F4 T6c fixed the `control_restart` integration-point reset and added C58; F4 T6d resolved C11 and C59, fixed the interface history and resolved C52, and added B15, C60 and C61; B15 resolved the same day; F4 T6e resolved C53 and added C62 and C63; F4 T6f added C64-C68 and C69, and closed the K15 `mmc_tension` vertex sigzz/eppzz and `validation_3` eptzz items as deliberate divergences MC-VERTEX-ZZ / MEMBRANE-EPTZZ, owner 2026-10-12; F4 T6f resolved C68 and added C68a-C68d; C68d resolved the same day; F4 T6f closed C7 (Mazars equivalent strain, with C7b) and the AUDIT K14b `hypo3` sigxx reversal as deliberate divergences C7 / K14b, owner 2026-10-12; the `hypo3` hyhis slot residual stays open under AUDIT K14; F4 T6f K21 WU2 widened C72 with the Stokes-flow residual and closed its `cmat_gate` rewrite, no new item; F4 T6f C72 resolved the convected nodal stress output (C72 stays open for the Professional-side residuals) and added C73 and C74; F4 T6f C70 resolved C70 and added C75; F4 T6f C75 closed C75 as a deliberate divergence, owner 2026-10-13, and added C76; F4 T6f C74 resolved C74 and added C77; F4 T6f C57 resolved C57 and added C78, decided the same day as a deliberate divergence, owner 2026-10-13; F4 T6f C71 resolved C71 and added C79; F4 T6f C79 resolved C79 and added C80; forty-nine items remain open). No open issue is CRITICAL or
+Forty-nine items remain open: three MEDIUM and forty-six LOW (C23 and C24 resolved 2026-10-05; C25, C26, C27 and B10 added; F1 T3 / K04 2026-10-06 added B11, C28-C32; F1 T6 resolved C28, added and resolved B12; F2 T1 added C36; F2 T2 added C37, C38, C39; F2 T3 resolved C5 and added C40; F3 T2 resolved C8, C18, C19, C20 and added B13, C41; F4 T2 fixed the C41 tie and left a residual; F4 T3 resolved C33; F4 T4 closed C32, added C42 and resolved C31; F4 T7-T8 added C43-C46; F4 T9 resolved the C43 solver speed, decided C46b/C46e and added C47, C48, C49; F4 T10 resolved C48 and added C50; F4 T5 added C52, C53 and resolved C51; F4 T13 resolved C49 and added C54-C56; F4 T12 resolved C47 and added C57; F4 T6a resolved C6, C55, C56 and the C3 sign, the C3 square-face tie becoming a deliberate divergence (owner 2026-10-11), and added B14; F4 T6c fixed the `control_restart` integration-point reset and added C58; F4 T6d resolved C11 and C59, fixed the interface history and resolved C52, and added B15, C60 and C61; B15 resolved the same day; F4 T6e resolved C53 and added C62 and C63; F4 T6f added C64-C68 and C69, and closed the K15 `mmc_tension` vertex sigzz/eppzz and `validation_3` eptzz items as deliberate divergences MC-VERTEX-ZZ / MEMBRANE-EPTZZ, owner 2026-10-12; F4 T6f resolved C68 and added C68a-C68d; C68d resolved the same day; F4 T6f closed C7 (Mazars equivalent strain, with C7b) and the AUDIT K14b `hypo3` sigxx reversal as deliberate divergences C7 / K14b, owner 2026-10-12; the `hypo3` hyhis slot residual stays open under AUDIT K14; F4 T6f K21 WU2 widened C72 with the Stokes-flow residual and closed its `cmat_gate` rewrite, no new item; F4 T6f C72 resolved the convected nodal stress output (C72 stays open for the Professional-side residuals) and added C73 and C74; F4 T6f C70 resolved C70 and added C75; F4 T6f C75 closed C75 as a deliberate divergence, owner 2026-10-13, and added C76; F4 T6f C74 resolved C74 and added C77; F4 T6f C57 resolved C57 and added C78, decided the same day as a deliberate divergence, owner 2026-10-13; F4 T6f C71 resolved C71 and added C79; F4 T6f C79 resolved C79 and added C80; F4 T6f C77 resolved C77 and added C81 (F6); forty-nine items remain open). No open issue is CRITICAL or
 HIGH. The validation-suite corpus has no open failure — its 233 real tests
 pass (`materi_direct_mc` input corrected, C17 resolved). Every remaining failure is a stale or malformed test, an out-of-scope model
 or infrastructure limit, a narrow post-processing divergence, a corpus-coverage

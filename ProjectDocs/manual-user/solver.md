@@ -30,24 +30,62 @@ solved with SuperLU, with a fallback to the iterative Bi-CG (and its
 direct band LU retry) when the factorization fails - see
 [matrix_pardiso](matrix_pardiso.md). The GNU default stays the Bi-CG.
 
-When the Bi-CG iteration breaks down (the bi-Lanczos recurrence collapses,
-which happens on non-symmetric systems with very small right-hand sides,
-e.g. a convection flow close to its steady state), the GNU re-solves that
-system with the direct band LU solver. The result is then exact and the
-log shows one line per such solve:
+### Stopping criterion of the iterative solver (F4 T6f C77, 2026-10-15)
+
+The iterative solver (CG for a symmetric system, Bi-CG otherwise) stops
+when the residual of the current iterate, relative to the right-hand
+side, is below the tolerance:
 
 ```
-Warning: Bi-CG breakdown, system solved with the direct band LU
+|b - A x|^2 / |b|^2  <  bicg_error      (Jacobi-scaled norm, default 1e-14)
 ```
 
-This is information, not an error in the input. The long "Error: the
-Bi-CG iteration broke down ... Probably you have a wrong input file"
-message is printed only when the direct LU cannot solve the system either
-(the run then stops), or with `solver_bicg_stop -no` (the partial Bi-CG
-solution is kept, with a warning). To avoid the extra direct solves on a
-small model, choose a direct solver (`-matrix_superlu`). Before
-2026-10-13 (F4 T6f C74) the long error message was printed for every
-breakdown, also for the ones the direct LU solved.
+`bicg_error` is `control_solver_bicg_error` / `solver_bicg_error` (the
+termination error ratio, manual 6.374 / 6.1048), so the default is a
+relative residual of 1e-7. The stop does not depend on the scale of the
+load: a tiny correction solve is solved as accurately as the first one.
+
+`control_options_solver_bicg_error_minimum <value>` (and the global
+`options_solver_bicg_error_minimum`, GNU records) add an ABSOLUTE floor:
+the solver also stops when `|b - A x|^2 < value` (Jacobi-scaled). Without
+the record there is no absolute floor. Before 2026-10-15 a floor of 1e-16
+was always active; a solve with a small right-hand side (a Newton
+correction, a flow near its steady state) then stopped with a relative
+residual up to 0.13.
+
+Two more stops protect the iteration:
+
+- the residual cannot drop below the round-off level of the computer,
+  about `1e-14 |A| |x|`; the iteration stops there;
+- the iteration breaks down when a scalar product of the method becomes
+  zero RELATIVE to the size of its vectors.
+
+The iterate of such a stop is kept when its relative residual
+`|b - A x|/|b|` is at most 1e-6. Otherwise the system is re-solved with a
+direct solver: SuperLU first, then the direct band LU when SuperLU fails
+and the band matrix fits in memory. The log shows one line per such
+solve:
+
+```
+Warning: iterative solver breakdown, system solved with the direct SuperLU
+```
+
+(or `... with the direct band LU`). This is information, not an error in
+the input. When the iterative solver does not converge within its
+iteration limit, the log shows once "Warning: the iterative solver did
+not converge - retrying with a direct solver". When no direct solver can
+solve the system either, the run stops with the full "Error: the
+iterative solver broke down ... Probably you have a wrong input file"
+block, or with "Error: the direct band LU retry does not fit in memory"
+when the band matrix is too large (before 2026-10-15 a large model
+crashed here with std::bad_alloc). With `solver_bicg_stop -no` the
+partial iterative solution is kept, with a warning.
+
+Example (validation_1 channel flow, `convection_apply -yes`): before
+2026-10-15 the GNU printed 599 band-LU warnings (false breakdowns of the
+old absolute test, F4 T6f C74); now every solve converges. With the
+inflow scaled by 1e-5 the old floor gave velx 9.77556e-7, now 9.775171e-7
+= SuperLU (test `bicg_relative_stop1`).
 
 ## The global solver_* family (manual Professional 6.1048-6.1056)
 
@@ -58,7 +96,7 @@ the control record overrules (manual 6.376, see the table).
 
 | record | meaning | GNU status |
 |---|---|---|
-| `solver_bicg_error <error>` | termination error ratio of the bicg iterations (6.1048) | wired (overwrites `control_solver_bicg_error`) |
+| `solver_bicg_error <error>` | termination error ratio of the bicg iterations (6.1048) | wired (overwrites `control_solver_bicg_error`): relative stop `|r|^2/|b|^2 < error`, see above |
 | `solver_bicg_restart <n>` | number of bicg restarts (6.1049) | PARTIAL: registered and accepted; the GNU bicg has no restart mechanism |
 | `solver_bicg_stop <sw>` | stop the calculation when bicg does not converge (6.1050) | wired (`control_solver_bicg_stop` overrules it: the index-0 record, then the record of the timestep's own index; `-no` continues with a warning) |
 | `solver_matrix_save <sw>` | save and reuse the decomposed matrix (6.1051) | PARTIAL: registered and accepted; decomposition caching is direct-solver functionality not present in the GNU. `-always` is pardiso-only in the Professional |
@@ -123,14 +161,15 @@ the SuperLU banner appears in the output (the direct solver ran).
   decision 2026-10-11; details in
   [solver_matrix_symmetric](solver_matrix_symmetric.md)).
 
-- **Bi-CG breakdown on a solvable system** (C74; DIVERGENCES C77, class B). The Professional
-  default solver is the direct PARDISO solver, so its log never shows a
-  breakdown; its iterative Bi-CG does not report one on the same inputs
-  either. The GNU default Bi-CG reports the breakdown with the one-line
-  warning above and solves the system with the direct band LU (exact
-  result). Example: the Professional `validation_1` channel flow prints
-  nothing in the Professional and 599 such warnings in the GNU (same
-  velocity as a direct solve). Index:
+- **Iterative solver stop** (C74, C77; DIVERGENCES C77, class A). The
+  Professional default solver is the direct PARDISO solver. Its iterative
+  `solver -matrix_iterative_bicg` stops on an absolute convergence floor:
+  `validation_1` with the inflow scaled by 1e-5 gives velx 8.9888e-7
+  against PARDISO 9.77518e-7. The GNU iterative solver stops on the
+  relative residual (owner decision 2026-10-15): 9.775171e-7, equal to
+  SuperLU. The Intel MKL PARDISO solver is not integrated in the GNU
+  (decision 2026-10-15, SEGUIMIENTO Descarte); `-matrix_pardiso` is
+  solved with SuperLU. Index:
   [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).
 - **Bi-CG breakdown on a singular system** (known difference, not decided;
   BACKLOG C12). GNU: Prints the breakdown error each iteration, finishes
