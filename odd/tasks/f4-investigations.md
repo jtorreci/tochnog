@@ -73,12 +73,19 @@ T6 triage (2026-10-11, HEAD 53dbb86) and owner order (2026-10-11):
   - [x] C83c polynom.cc `pol()` axisymmetric tria3 `-maximal` = 3 nodal points, on-axis node -> 1 point (recovery unchanged if the probes agree).
   - [x] C83d verification: clean build, build_safe TN_CHECK_ONLY, audit_db_buffers, probes = Pro, omen corpus A/B.
   - [x] C83e docs: DIVERGENCES (C82, C83 part 1 class A; C83 out of class B), SEGUIMIENTO (Descarte C82 / C83 part 1, register C83 part 2), user/dev nodal_stress_recovery, integration pages, prism15; BACKLOG C82/C83 closed.
-- [ ] T6f C66 tria6 rule + lumping (owner 2026-10-16: MEASURE how the Professional lumps the mass before any lumping decision). Route: delegated writer (trigger: Pro/GNU mass probes + lumping-site inventory + possible polynom.cc/miscel.cc/general.cc + tests + docs, omen corpus A/B). Phase 2 gate: implement only if the Professional lumping is sound (positive, total-preserving); otherwise stop before any source edit. Subtasks:
+- [x] T6f C66 tria6 rule + lumping (owner 2026-10-16: MEASURE how the Professional lumps the mass before any lumping decision). Route: delegated writer (trigger: Pro/GNU mass probes + lumping-site inventory + possible polynom.cc/miscel.cc/general.cc + tests + docs, omen corpus A/B). Phase 2 gate: implement only if the Professional lumping is sound (positive, total-preserving); otherwise stop before any source edit. Subtasks:
   - [x] C66a GNU lumping-site inventory (general.cc inertia block, recovery weights, calcul_force/elem/interface lumped terms).
   - [x] C66b Pro lumped masses (point force, other nodes fixed, v = F dt / m): tria3, quad4, quad9, tet10, tria6 default/-maximal/-minimal, plane and axisymmetric; condif capacity cross-check.
   - [x] C66c verdict vs row-sum / HRZ / nodal quadrature / equal split -> gate result.
-  - [ ] C66d (only if the gate passes) implementation + RED/GREEN tests + verification.
+  - [x] C66d (only if the gate passes) implementation + RED/GREEN tests + verification: done in phase 2 below.
   - [x] C66e docs: BACKLOG C66 (measured lumping), DIVERGENCES C66 row, BACKLOG new item for the `post_element_force` tria3/tet path (C84).
+- [x] T6f C66 phase 2 (owner decision 2026-10-16: manual 6.623 rule, 7 points default/`-maximal`, 4 points `-minimal`, physical linear-fit recovery + arithmetic mean = Professional; HRZ lumping of the h-weighted tria6 dofs, plane corner A/19 and mid-side 16A/57, axisymmetric r-weighted diagonal scaled to 2 pi A r_c, deliberate class A divergence TRIA6-HRZ; accept axisymmetric tria6, match the Professional on-axis behaviour). Route: delegated writer (trigger: polynom.cc + miscel.cc + general.cc + materi.cc + headers + tests + build_safe + docs, Pro probes, omen corpus A/B). Done `175faf1` (fix + tests + build_safe), `4b65b07` (docs). Subtasks:
+  - [x] C66f Pro probes: tria6 point order/weights, axisymmetric on-axis tria6 (rule switch?), r=0 hoop term.
+  - [x] C66g RED tests under test-2026 (plane/curved recovery 7 and 4 points, axisymmetric recovery, HRZ masses plane/axisymmetric; Pro / hand targets) + build_safe registration.
+  - [x] C66h implementation: pol() rule + axisymmetric acceptance, recovery_fit_kind/shape, HRZ weight (general.cc inertia block + materi.cc state numerators), headers; replicas tensor-only check.
+  - [x] C66i analytic HRZ sanity check (row sum vs HRZ vs analytic).
+  - [x] C66j verification: clean build, build_safe TN_CHECK_ONLY, audit_db_buffers, omen corpus A/B of every tria6 case.
+  - [x] C66k docs: user/dev nodal_stress_recovery, integration pages, TET10-HRZ/mass-lumping page, DIVERGENCES TRIA6-HRZ, SEGUIMIENTO register + Descarte, BACKLOG C66 closed.
 
 ## Later (owner 2026-10-10, after convergence with ALL divergences documented and accepted)
 - F6: ILU/AMG preconditioning of the iterative solver (BACKLOG C81, owner 2026-10-15: in large meshes with many steps even small per-solve gains compound).
@@ -1191,3 +1198,29 @@ docs + SEGUIMIENTO + BACKLOG + DIVERGENCES.
   (`post_element_force` 2D/3D: tet4 cantilever normal 3143 vs Pro
   -123.4; 2D record 7 vs 6 values and NaN), 47 open; DIVERGENCES C66
   row. Next: owner decision on C66.
+- 2026-10-16 T6f C66 phase 2 (route: delegated writer; trigger:
+  polynom.cc + miscel.cc + general.cc + materi.cc + headers + 5 tests +
+  build_safe + docs, Pro probes, omen A/B). Pro: tria6 iso = L1,L2,
+  7-point Hammer (10-digit literals) / 4-point Strang-Fix; on-axis
+  axisymmetric tria6 (new probes `scratchpad/c66/p2/probes/tria6ax0_*`):
+  no rule switch, linear fit (no h-average), no NaN. Fix `175faf1`:
+  pol() 7/4-point rules + `tria6_shape()`, axisymmetric refusal removed,
+  thread-local `lumped_hrz_weight` (7-point consistent diagonal scaled
+  to the total, constant per point, rule-independent masses); general()
+  HRZ for every h-weighted tria6 dof except groundflow_velocity
+  (groundfl.cc numerator out of surface -> BACKLOG C85, with condif
+  absorption); materi() `h_lump` state numerators; recovery_fit_kind/
+  shape kind 1, no on-axis h-average for tria6; replicas tensor-only.
+  RED rc 1 on c730f39 (5 tests), GREEN; probes = Pro within 3.1e-10;
+  tria6_nodal_recovery_mean1 tightened (now 5e-10). Analytic (bar modes
+  1-5 vs (2n-1)pi c/2L): consistent +0..+0.19 %, HRZ -0.01..-0.67 %,
+  row sum condensed -0..-0.18 %; time-domain tip peaks identical. 4-point
+  stiffness on curved elements: no spurious modes. Clean build;
+  build_safe TN_CHECK_ONLY 307 OK / 0 FALLO, runs 226/226;
+  audit_db_buffers 0. Omen A/B c66_runs vs c83_runs (997): changed
+  `tria6` x2 (3.3e-10, = Pro as before), `tria6_nodal_recovery_mean1`
+  (toward Pro); slope_classical_numerical (timeout both, rerun 1800 s):
+  collapse 1.26297 -> 1.26265 vs Pro 1.27045, final stresses vs Pro 20.8
+  -> 0.25. Docs `4b65b07`: DIVERGENCES TRIA6-HRZ (A 32, B 41, total 91),
+  SEGUIMIENTO register + Descarte, BACKLOG C66 closed + C85 (47 open).
+  Next: C85 (needs groundfl.cc / condif.cc in a surface).
