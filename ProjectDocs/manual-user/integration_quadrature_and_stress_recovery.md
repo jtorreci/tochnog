@@ -125,8 +125,10 @@ target if the new value matches the Professional.
 - **Nodal stresses of `-lobatto` elements** (BACKLOG C79) — RESOLVED
   2026-10-13 (F4 T6f C79): quad4, quad9, hex8 and hex27 Lobatto rules now
   = Professional (arithmetic mean; sfnet `tube1` node (1.25,0) sigxx
-  -407.64, before -494.42). Lobatto rules of bar2/bar3, quad16 and hex64
-  were not measured and keep the volume-weighted average.
+  -407.64, before -494.42). The bar2/bar3/bar4 and quad16 rules (Gauss,
+  Lobatto, `-reduced`) follow the Professional since 2026-10-16 (BACKLOG
+  C67, [nodal_stress_recovery](nodal_stress_recovery.md)); the `hex64`
+  is accepted by neither version.
 - **`group_integration_method -reduced`** (BACKLOG C80) — implemented
   2026-10-16 (F4 T6f C80), = Professional when the factor is given.
   Without `group_integration_method_reduced_factor` the GNU uses the

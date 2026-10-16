@@ -64,6 +64,7 @@ Measured on the Professional's own `beam2d_1.dbs` (quad9, 45 elements),
 | tet10 | 5 | uniform-weight linear least squares `1,x,y,z` in PHYSICAL coordinates (C70; the F4 T4 barycentric fit `1,L1,L2,L3` is the same on straight-edged tet10 only) | 1e-12 (curved probes); `tet10_2` exact (-1) |
 | prism6 | 6 | uniform-weight linear least squares `1,x,y,z` in PHYSICAL coordinates (C70; before: volume-weighted h). The Professional points are the triangle corners x 2 Gauss levels, the GNU points (2/3,1/6,1/6) x 2 Gauss levels (C75) | 1e-13 |
 | tria3 / tet4 / bar2 1 point, tria3 3-point and tria6 6-point nodal rules | 1 / 3 / 6 | the point value / the value of the point at the node (F4 T6f, two-element probes) | exact |
+| bar2 / bar3 / bar4 (1D), quad16 | Gauss, `-reduced`, Lobatto `-minimal` | uniform-weight linear least squares `1,x(,y)` in PHYSICAL coordinates; Lobatto `-maximal`: the point value (C67, 2026-10-16; before: volume-weighted h) | 5e-13 (distorted probes) |
 
 The operator was believed FIXED in the element natural coordinates (the
 same 9x9 matrix fits all 45 beam2d_1 elements of different geometry to
@@ -76,7 +77,8 @@ least-squares fit uses UNIFORM weights (the Gauss weights give a different
 operator). The order rule is not a single clean formula: quad4 uses the
 full 4-term interpolation while quad9 and hex8 use the linear fit. The
 operators above were determined empirically and are the discriminating
-data; hex27/quad16 were not independently exercised.
+data; hex27 was not independently exercised, quad16 was measured in C67
+(2026-10-16).
 
 Resolved 2026-10-12 (K21; see the table above and
 `nodal_stress_recovery.md`). Historical note, the open question of
@@ -155,9 +157,9 @@ tet4 and bar2, so their nodes were the area/volume/length-weighted
 average of the adjacent elements. The Professional 02-08-2026 uses the
 arithmetic mean for them too (two-element probes, exact). The weight is
 now `F/volume` (`F = 1` for the 1-point rules, `F = h` for the tria3
-3-point and tria6 6-point nodal rules), like the table elements. Unmeasured
-rules (tet4 `-maximal`, bar2 2 points, bar3/bar4, the quad Lobatto
-rules) keep `h_inol` (BACKLOG C67). Details and tests:
+3-point and tria6 6-point nodal rules), like the table elements. The
+bar2 2-point, bar3 and bar4 rules use the tensor fit since C67
+(2026-10-16); tet4 `-maximal` keeps `h_inol`. Details and tests:
 `nodal_stress_recovery.md`.
 
 ### 3.2 Axisymmetric rule (K20, F4 T4, 2026-10-09)
@@ -269,8 +271,9 @@ the cache key includes the Lobatto flag. `pol()` sets
 nodes per direction, so the `materi.cc` stress block visits the `h = 0`
 nodes. The two flags became `thread_local` (the element loop may run in
 threads, and since C71 one group can mix Gauss and Lobatto elements).
-Unmeasured Lobatto rules (bar2/bar3 2-3 points, quad16, hex64) keep
-`h_inol`. Tests (Professional targets, 4e-6):
+The bar2/bar3/bar4 and quad16 Lobatto rules followed in C67 (2026-10-16,
+`nodal_stress_recovery.md`; hex64 is rejected by both codes). Tests
+(Professional targets, 4e-6):
 `test-2026/recovery_lobatto_quad4_mean1`,
 `recovery_lobatto_quad4_axisym_mean1`, `recovery_lobatto_hex8_mean1`,
 `recovery_lobatto_quad9_minimal1`, `recovery_lobatto_hex27_minimal1`.
@@ -353,16 +356,17 @@ operations):
 ## 6. Pending refactorings / limitations
 
 - The recovery operators are empirically matched to the Professional
-  binary; hex27 and quad16 were not independently verified (assumed linear
-  least squares). A second element type would need a discriminating
+  binary; hex27 was not independently verified (assumed linear least
+  squares); quad16 and the bars were measured in C67 (2026-10-16). A second element type would need a discriminating
   `.dbs` dump.
 - quad4 operator: resolved by K21 (2026-10-12, C64 closed): the
   Professional fits `1,x,y` in physical coordinates for every measured
   type; the 92/95 `validation_14` match was the natural fit agreeing with
   the physical one on near-parallelograms. The 3x3 quad9 and the 3D
   types followed in C70 (2026-10-13, all measured physical). Unmeasured:
-  prism15, quad16/hex64, the bar Lobatto rules (C67). The quad4/quad9/
-  hex8/hex27 Lobatto rules were measured and aligned in C79 (2026-10-13).
+  prism15, tet4 `-maximal`. The quad4/quad9/hex8/hex27 Lobatto rules were
+  measured and aligned in C79 (2026-10-13), the bar2/bar3/bar4 and quad16
+  rules in C67 (2026-10-16); hex64 is rejected by both codes.
 - `-reduced` integration method: implemented in C80 (F4 T6f,
   2026-10-16), see
   [group_integration_method_reduced](group_integration_method_reduced.md):

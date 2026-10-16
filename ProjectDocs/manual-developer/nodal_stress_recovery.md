@@ -196,10 +196,65 @@ and `bar2` with 1 point the weight is `F/volume` with `F = 1` for the
 so each element contributes weight 1. The strain tensors follow through
 `strain_recovery_weight()` (same function); the convected-stress path of
 `general.cc` uses the same weight. Unmeasured rules (tet4 `-maximal`,
-bar2 with 2 points, bar3/bar4, the bar/quad16/hex64 Lobatto rules)
-keep `h_inol` (BACKLOG C67); the quad4/quad9/hex8/hex27 Lobatto rules
-are aligned since C79 (2026-10-13, see
-`integration_quadrature_and_stress_recovery.md` section 3.2c).
+prism15) keep `h_inol`; the quad4/quad9/hex8/hex27 Lobatto rules are
+aligned since C79 (2026-10-13), the bar2 2-point, bar3, bar4 and quad16
+rules since C67 (2026-10-16, next section).
+
+## Bars and quad16 (F4 T6f C67, 2026-10-16)
+
+Measurement: 65 Professional 02-08-2026 probes (`gen67.py`: bar2 x4,
+bar3 x3, bar4 x3 elements in 1D, quad16 2x2 elements; unequal element
+sizes, non-separable distortion, interior bar nodes off the GLL
+positions in physical space, nonlinear velocity prescribed at every node
+of a viscous materi; methods default, `-gauss`, `-lobatto`, `-reduced`
+factor 2 and 4, each with default/`-minimal`/`-maximal`). The
+Professional `element_dof` was compared with candidate per-element
+operators and its `node_dof` with the mean / length-weighted mean of
+`element_dof`:
+
+| rule | per-element value (residual) | node |
+|---|---|---|
+| bar2 1 point | point value (0) | mean (1e-13; length-weighted 3e-2) |
+| bar2 2 points (Gauss, Lobatto, `-reduced -maximal`) | linear fit = Lagrange extrapolation = point value (1e-15) | mean |
+| bar3/bar4/quad16 Gauss (default, `-minimal`) | physical linear fit `1,x(,y)` (5e-13; natural fit 1e-2, quadratic fit 5e-2) | mean |
+| bar3/bar4/quad16 Lobatto `-minimal` | physical linear fit (4e-13) | mean |
+| bar3/bar4/quad16 `-reduced` (Lobatto points, also with the points at the nodes) | physical linear fit (4e-13; point value 5e-2) | mean |
+| bar2/bar3/bar4/quad16 Lobatto `-maximal` | point value at the node (0) | mean |
+| quad16 axisymmetric, node at r=0 | 4x4 Gauss (C71 switch), `sum h sig / sum h` (4e-13) | mean |
+
+The bar4/quad16 interior nodes sit at the Lobatto positions
+`iso +-1/sqrt(5)` in both codes (`interpolation_polynomial()` builds the
+npol>=3 Lagrange basis on the Lobatto points; the Professional
+`element_intpnt_h` of the Lobatto rule is the identity), so the
+Lobatto `-maximal` points are the nodes. `hex64` is rejected by both
+codes (Professional "I do not know : -hex64"; GNU element record length
+28 < 65). Truss/beam elements have no recovered nodal stress
+(`element_truss_force`, `element_beam_force_moment`).
+
+GNU before: `h_inol` for every rule above except the 1-point bar2, i.e.
+a length/area-weighted mean of shape-function weighted values; the bar3
+Lobatto `-minimal` mid nodes got no contribution (0). On the probes the
+node_dof differed 1e-2..8e-1 of the field scale; after the fix every
+node of the 56 supported probes (52 + 4 axisymmetric) equals the
+Professional within 4e-12.
+
+Implementation (`miscel.cc`): `recovery_tensor_npol()` (new) gives the
+nodes per direction of the tensor elements per dimension (bars in 1D,
+quad4/9/16 in 2D, hex8/27 in 3D); `recovery_fit_kind()` returns kind 3
+(point value) for the Lobatto rule with `npoint==nnol` and kind 1 (fit)
+for `npoint` = npol^ndim or (npol-1)^ndim (> 1) when
+`stress_recovery_gauss`; `recovery_fit_shape()` is now dimension-generic
+and places the nodes at the Lobatto positions of npol points (the old
+`-1 + 2k/(npol-1)` spacing was the same for npol <= 3). `polynom.cc`
+`pol()`: every `-reduced` rule that resolves to Lobatto points sets
+`stress_recovery_gauss` (before: quad9/hex27 only). No change to the
+point rules, so `msf_element_rule()` / `mc_element_rule()` need none.
+Tests: `recovery_bar2_gauss2_mean1`, `recovery_bar3_gauss_fit1`,
+`recovery_bar3_lobatto_minimal1`, `recovery_bar3_reduced1`,
+`recovery_bar4_gauss_fit1`, `recovery_bar4_lobatto1`,
+`recovery_quad16_gauss_fit1`, `recovery_quad16_lobatto1`,
+`recovery_quad16_lobatto_minimal1`, `recovery_quad16_axisym_lobatto1`
+(Professional targets 4e-6; RED rc 1 on 75bc0b5, GREEN).
 
 Effect on `validation_14` (DIVERGENCES K15): the pass-1 hole-boundary
 nodal stress / plastic strain (up to ~20 % at 8 hole nodes) was exactly
@@ -375,7 +430,8 @@ away from the Professional. Wall `large1` (hex8 30^3) +1.5 % locally
 - `miscel.cc` — `sri_stress_recovery_weight()` (2026-09-13; simplex and
   1-point bar2 arithmetic mean F4 T6f, 2026-10-11), `recovery_fit_kind()`,
   `recovery_fit_shape()`, `recovery_fit_build()`, `recovery_fit_factor()`
-  (K21, 2026-10-12; 3D and 3x3 rules C70, 2026-10-13)
+  (K21, 2026-10-12; 3D and 3x3 rules C70, 2026-10-13),
+  `recovery_tensor_npol()` (bars and quad16, C67, 2026-10-16)
 
 ## Differences with the Professional version
 
@@ -389,6 +445,8 @@ away from the Professional. Wall `large1` (hex8 30^3) +1.5 % locally
   triangle corners, GNU interior points; deliberate divergence, owner
   2026-10-13, BACKLOG C75), so prism6 nodal stresses agree only for a
   linear stress field. `-minimal` on a prism6 is ignored (BACKLOG C76). Unmeasured rules keep
-  `h_inol` (prism15, bar/quad16/hex64 Lobatto, tet4 `-maximal`, ...;
-  BACKLOG C67; quad/hex Lobatto aligned in C79, 2026-10-13).
+  `h_inol` (prism15, tet4 `-maximal`, ...; quad/hex Lobatto aligned in
+  C79, 2026-10-13; bars and quad16 in C67, 2026-10-16).
+- `hex64`: rejected by both codes (the GNU source has the npol=4 branch
+  in `pol()`, but the element record is too short); not a divergence.
 - Index: [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).

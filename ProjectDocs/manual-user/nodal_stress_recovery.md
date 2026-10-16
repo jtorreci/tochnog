@@ -23,8 +23,9 @@ element values, as in the Professional. Example:
 `validation-suite/test-2026/tria3_nodal_recovery_mean1.dat` (two tria3 of
 area 0.5 and 2 sharing an edge): node 2 `sigxx` 6.4643 = (1.0938 +
 11.8348)/2 (before: 9.6866). The strain tensors follow the same rule.
-Not yet measured, and therefore unchanged: tet4 `-maximal`, bar2 with 2
-points, bar3/bar4.
+Not yet measured, and therefore unchanged: tet4 `-maximal`. The bar
+rules with more than one point follow the Professional since 2026-10-16
+(see "Bars and quad16" below).
 
 ## quad4 and quad9 per-element values (K21, 2026-10-12)
 
@@ -100,9 +101,56 @@ the GNU three interior points; a deliberate divergence decided on
 2026-10-13 because the GNU rule is more accurate in bending, BACKLOG
 C75), so prism6 nodal stresses agree only where the stress field is
 linear. The quad4/quad9/hex8/hex27 Lobatto rules follow the
-Professional since 2026-10-13 (BACKLOG C79). The remaining unmeasured
-rules (prism15, tet4 `-maximal`, bar2 2 points, the bar/quad16/hex64
-Lobatto rules, ...) keep the volume-weighted average (BACKLOG C67).
+Professional since 2026-10-13 (BACKLOG C79), the bar and quad16 rules
+since 2026-10-16 (below). The remaining unmeasured rules (prism15, tet4
+`-maximal`, ...) keep the volume-weighted average.
+
+## Bars and quad16 (C67, 2026-10-16)
+
+The 1D continuum bars (`bar2`, `bar3`, `bar4` with
+`number_of_space_dimensions 1`) and the `quad16` follow the same rules as
+the quad and hex elements, measured on the Professional 02-08-2026 (65
+distorted probes of unequal element size, every node):
+
+| Rule | Per-element nodal value |
+|------|-------------------------|
+| Gauss, any number of points (bar2 `-maximal`, bar3, bar4, quad16 default and `-minimal`) | least-squares line `a + b x` (quad16: plane `a + b x + c y`) in physical coordinates, evaluated at the node |
+| `-reduced` (Lobatto points, the factor is not applied) and Lobatto `-minimal` | the same physical linear fit |
+| Lobatto `-maximal` (the points are the nodes) | the point value |
+| 1 point (bar2 default) | the point value |
+
+The node is the arithmetic mean over the adjacent elements; an
+axisymmetric quad16 with a node on the axis uses the on-axis rule of the
+quad4/quad9. Before, these rules used the shape-function weights and a
+length/area-weighted mean (bar3 Lobatto `-minimal`: the mid nodes were 0).
+Truss and beam elements carry no recovered nodal stress (their results are
+`element_truss_force` and `element_beam_force_moment`), and the `hex64`
+is not accepted by either version.
+
+Examples (`validation-suite/test-2026`, targets = Professional):
+`recovery_bar2_gauss2_mean1.dat`, `recovery_bar3_gauss_fit1.dat`,
+`recovery_bar3_lobatto_minimal1.dat`, `recovery_bar3_reduced1.dat`,
+`recovery_bar4_gauss_fit1.dat`, `recovery_bar4_lobatto1.dat`,
+`recovery_quad16_gauss_fit1.dat`, `recovery_quad16_lobatto1.dat`,
+`recovery_quad16_lobatto_minimal1.dat`,
+`recovery_quad16_axisym_lobatto1.dat`.
+
+Minimal input (bar3, 3 elements, every node prescribed):
+
+```
+number_of_space_dimensions 1
+materi_velocity
+materi_stress
+end_initia
+node 1 0.25
+...
+element 1 -bar3 1 2 3
+...
+group_type 0 -materi
+group_materi_viscosity 0 1.0
+group_integration_method 0 -lobatto
+group_integration_points 0 -minimal
+```
 
 ## When it matters
 

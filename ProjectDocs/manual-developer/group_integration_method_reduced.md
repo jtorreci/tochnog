@@ -29,12 +29,15 @@ fallback:
   default 1 point = Gauss, bar2 `-maximal` = Lobatto, quad4/hex8
   `-minimal` = 1 point, bar3/quad9/hex27 default = Lobatto -1,0,1, and
   `-minimal` = 2-point Gauss. These are the measured Professional rules.
-  tria3/tet4/prism6 never read the method. bar4/quad16/hex64 take the
-  same fallback (Lobatto, `-minimal` Gauss); not measured.
-- After the loop: for `-reduced` quad9/hex27 with the Lobatto rule,
-  `stress_recovery_gauss = 1`. `recovery_fit_kind()` then returns kind 1
-  (physical linear fit at the Lobatto points), not kind 3 (point value of
-  `-lobatto`). bar2/bar3 keep the `-lobatto` / Gauss flags (C67).
+  tria3/tet4/prism6 never read the method. bar4/quad16 take the same
+  fallback (Lobatto, `-minimal` Gauss; = Professional, C67 probes); hex64
+  is rejected by both codes.
+- After the loop: for every `-reduced` rule that resolves to Lobatto
+  points (bar2 `-maximal`, bar3/bar4, quad9/quad16, hex27; C67 extended
+  it from quad9/hex27 on 2026-10-16), `stress_recovery_gauss = 1`.
+  `recovery_fit_kind()` then returns kind 1 (physical linear fit at the
+  Lobatto points), not kind 3 (point value of `-lobatto`). For the bar2
+  the two points are the end nodes and the fit equals the point value.
 - `stress_recovery_reduced_iso = 1/f` only when `rule_reduced`.
 
 Nodal recovery: the Professional uses kind 1 (physical linear fit plus the
@@ -75,7 +78,8 @@ the explicit f = 10 run.
   maximum).
 - The earlier probe set (`gen.py`: bar2, bar3, quad4, quad9, hex8, hex27,
   tria3, tet4, prism6 x f = 2, 4 x default/min/max) matches within 5e-12,
-  except two groups. bar3: 1.3-2.3 %, the stress recovery, C67.
+  except two groups. bar3: 1.3-2.3 %, the stress recovery (resolved in
+  C67, 2026-10-16: = Professional within 4e-12).
   prism6 `-minimal`: the known C76.
 
 - Clean build; `build_safe.sh` TN_CHECK_ONLY 279 OK / 0 FALLO, runs
@@ -92,6 +96,6 @@ the explicit f = 10 run.
   three copies of the method branching (also for `-lobatto` and SRI).
 - The integer method values (`-GAUSS`, `-LOBATTO`, `-REDUCED`) are the
   generic name enums, not a dedicated method enum.
-- Not done: the bar3 `-reduced` linear-fit recovery (C67), the
+- Not done: the
   Professional fallback at very large f (element average), and the
   selective / B-bar extension (BACKLOG C80.1).

@@ -40,13 +40,14 @@ group_integration_method_reduced_factor  index  factor
 | bar3 / quad9 / hex27 (default or `-maximal`) | Lobatto points -1, 0, 1 (the factor is ignored) |
 | bar3 / quad9 / hex27 `-minimal` | 2-point Gauss rule (unlike `-lobatto -minimal`, which uses the corners) |
 | tria3, tet4, prism6 | the method is ignored (the same as `-gauss`) |
-| bar4 / quad16 / hex64 | Lobatto, `-minimal` Gauss (as bar3; not measured on the Professional) |
+| bar4 / quad16 | Lobatto (the factor is ignored), `-minimal` Gauss (as bar3; measured on the Professional in C67) |
+| hex64 | not accepted by either version |
 
-Nodal stresses: for every `-reduced` quad and hex rule, each element
-contributes the linear least-squares fit `1,x,y(,z)` of its point
+Nodal stresses: for every `-reduced` bar, quad and hex rule, each element
+contributes the linear least-squares fit `1,x(,y,z)` of its point
 stresses in physical coordinates. The node takes the arithmetic mean over
 its elements. This holds even when the points sit at the nodes
-(f = 1, or the quad9/hex27 Lobatto points). It differs from `-lobatto`,
+(f = 1, or the bar3/bar4/quad9/quad16/hex27 Lobatto points). It differs from `-lobatto`,
 where each element contributes the value of its point at the node.
 
 In an axisymmetric group, an element with a node on the symmetry axis
@@ -114,10 +115,10 @@ and the default factor).
   manual default 10. The Professional 02-08-2026 uses 1 (its results
   without the record equal the f = 1 run). Give the record explicitly to
   get the same results in both versions.
-- **bar3 nodal stresses** (BACKLOG C67): the Professional recovers the
-  bar3 `-reduced` rules with the linear fit. The GNU keeps its `-lobatto`
-  / Gauss bar recovery (1-2 % different on the probe). The integration
-  itself is the same.
+- **bar nodal stresses** (BACKLOG C67): resolved 2026-10-16. The
+  bar2/bar3/bar4 and quad16 `-reduced` rules are recovered with the
+  physical linear fit, as in the Professional (test
+  `recovery_bar3_reduced1`).
 - **Very large factor** (for example 1e6): the Professional per-element
   stress is the element average (apparently a fallback when its fit is
   singular). Not reproduced or investigated.
