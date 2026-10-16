@@ -2149,6 +2149,12 @@ run_ok "$T2026" recovery_tet4_maximal1
 run_ok "$T2026" recovery_prism6_minimal1
 run_ok "$T2026" prism6_minimal_cantilever1
 run_ok "$T2026" prism15_elastic_shear1
+# C83 (F4 T6f, 2026-10-16): axisymmetric tria3 group_integration_points
+#   -maximal = Professional 02-08-2026: 3 points at the nodes, 1 centroid
+#   point in an element with a node on the axis (GNU before: every
+#   axisymmetric tria3 forced to 1 point, nodal stresses 3 % of the scale
+#   off). Targets = Professional node_dof (4e-6). Old GNU: rc 1.
+run_ok "$T2026" recovery_tria3_axisym_maximal1
 
 # ---------------------------------------------------------------------
 # Sub-sprint materi_stress_force, lote 2 (integracion 2D quad4/quad9):

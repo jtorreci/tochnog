@@ -103,8 +103,22 @@ void pol( long int element, long int element_group,
     nnol = 3; 
     db( GROUP_INTEGRATION_POINTS, element_group, &integration_points, ddum, 
       ldum, VERSION_NORMAL, GET_IF_EXISTS );
-    if ( axisymmetric==-YES ) integration_points = -MINIMAL;
     if ( integration_points==-NORMAL ) integration_points = -MINIMAL;
+    // C83 (F4 T6f, 2026-10-16): an axisymmetric tria3 keeps the -maximal
+    // rule (3 points at the nodes) unless a node lies on the symmetry
+    // axis (|r| < EPS_COORD), where the hoop term h/r of the nodal point
+    // is infinite and its volume 2*PI*r*w*detj zero (NaN, as C71); that
+    // element gets the 1-point centroid rule. Professional 02-08-2026
+    // probes: the same per-element switch on the node radius (as C71 /
+    // C80); default and -minimal 1 point in both codes. Before: every
+    // axisymmetric tria3 was forced to 1 point (initial version, no
+    // comment; the r=0 singularity is the only reason found).
+    if ( axisymmetric==-YES && integration_points==-MAXIMAL ) {
+      for ( inol=0; inol<nnol; inol++ ) {
+        if ( scalar_dabs(new_coord[inol*ndim+0])<EPS_COORD )
+          integration_points = -MINIMAL;
+      }
+    }
     if      ( integration_points==-MINIMAL ) {
       npoint = 1;
       weight[0] = 1.;
