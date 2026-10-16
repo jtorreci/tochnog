@@ -50,6 +50,12 @@ T6 triage (2026-10-11, HEAD 53dbb86) and owner order (2026-10-11):
   - [x] C80.1c measurement vs analytic (Gauss, `-yes`, `-volumetric`, `-both`, Pro `-reduced` f=2/10 from the C80 study), hourglass single quad4 + 4x4 point-load block, element eigenvalues.
   - [x] C80.1d verification: clean build, build_safe TN_CHECK_ONLY, audit_db_buffers, omen corpus A/B.
   - [x] C80.1e docs: user/dev SRI pages (GNU-only note, comparison vs `-reduced`), SEGUIMIENTO register, DIVERGENCES (only if GNU-only extensions are listed there), BACKLOG C80.1 closed.
+- [x] T6f C80.2 `-lambda` (Hughes 1977 lambda/mu split) + removal of `-both` (owner decision 2026-10-16: only lambda*m*m^T at the centroid point, the 2*mu part full Gauss, linear elastic; `-both` removed and rejected; `-yes` / `-volumetric` unchanged; gate: no material regression vs `-volumetric`/Gauss on the C80.1 problems, no spurious mode, before committing). Route: delegated writer (trigger: miscel.cc + materi.cc + database.cc + input.cc + headers + tests + build_safe + docs, omen corpus A/B). Done `5993499` (feat + tests + build_safe), `7866a53` (docs); gate passed. Subtasks:
+  - [x] C80.2a RED tests under test-2026 (`-lambda` coarse plane-strain cantilever 10x1 nu 0.3, Lame cylinder nu 0.4999; `-both` expected-error test) + build_safe registration (the `-both` test removed).
+  - [x] C80.2b enum BOTH -> LAMBDA in place (both headers, numbering unchanged), database.cc name, sri_active() SRI_LAMBDA bit (dropped on membrane groups), materi() lambda coefficient in the C80.1 centroid machinery (isotropic tangent check), input.cc clear `-both` message.
+  - [x] C80.2c gate measurement (C80.1 problems + pure bending + hex8 cantilever + hourglass + eigenvalues + mesh convergence).
+  - [x] C80.2d verification: clean build, build_safe TN_CHECK_ONLY, audit_db_buffers, omen corpus A/B.
+  - [x] C80.2e docs: user/dev SRI pages (comparison table, guidance), SEGUIMIENTO register, BACKLOG (C80.2 note on C80.1).
 
 ## Later (owner 2026-10-10, after convergence with ALL divergences documented and accepted)
 - F6: ILU/AMG preconditioning of the iterative solver (BACKLOG C81, owner 2026-10-15: in large meshes with many steps even small per-solve gains compound).
@@ -1029,3 +1035,28 @@ docs + SEGUIMIENTO + BACKLOG + DIVERGENCES.
   resolved (48 open); DIVERGENCES unchanged (shear SRI not listed).
   Open owner questions: lambda/mu split, B-bar for plasticity,
   axisymmetry, adaptive reduced factor.
+- 2026-10-16 T6f C80.2 (route: delegated writer; trigger: miscel.cc +
+  materi.cc + database.cc + input.cc + headers + 4 tests + build_safe +
+  docs, omen corpus A/B). Owner decision 2026-10-16: `-lambda` (Hughes
+  1977 lambda/mu split, isotropic linear elastic), `-both` removed, gate
+  before committing. Implementation: C80.1 machinery with kappa ->
+  lambda (SRI_LAMBDA 4), lambda = mean off-diagonal of the normal block,
+  isotropy check (1e-6) else error naming -volumetric; plane stress
+  dropped; enum BOTH -> LAMBDA in place; input.cc dedicated -both
+  error. Gate PASSED: Lame 8x16 nu 0.4999 -0.24 % (vol -0.19 %),
+  sigma_theta(a) -0.14 % (vol -3.1 %); element pressure oscillation
+  0.1 % (= vol; IP intra-element 13 %, nu-independent, O(h)); TG
+  cantilever / pure bending 10x1 nu 0.3 -4.9 % (vol +22 %), nu 0.49
+  +30 % (vol +67 %), 40x4 nu 0.49 +1.4 % (vol +2.5 %); hex8 = quad4;
+  distorted 20x2 lambda -12/-3.8/-3.3 % vs vol -8.4/-0.7/-0.3 % (no
+  locking trend, documented); hourglass 1.5x Gauss, zig-zag 0.083;
+  zero eigenvalues quad4 3 / hex8 6 also distorted. Independent solves
+  match GNU (2D distorted 1e-10, 3D distorted 1e-12). RED on 051c706
+  (rc 1 "I do not know : -lambda"; -both rc 0), GREEN. Clean build;
+  build_safe TN_CHECK_ONLY 286 OK / 0 FALLO, runs 226/226;
+  audit_db_buffers exit 0. Omen A/B c802_runs vs c801_runs (977 runs):
+  0 node_dof changes; text only bicg_csr_threads1, alternate1 (timeout
+  border), cylinder_buckle (timeout both); sri_both_cantilever1 now the
+  -both error. Docs `7866a53`: user/dev SRI pages, READMEs, SEGUIMIENTO,
+  BACKLOG (C80.2 note on C80.1). Open: build_safe expected_error_ok
+  greps the marker without `--`.
