@@ -80,9 +80,17 @@
 
 - The `tet10` lumped inertia/capacity of the principal dofs uses the HRZ
   fractions 1/36 (corner) and 4/27 (mid-edge) instead of `h`
-  (`general.cc` `general()`, hardcoded; C31, F4 T4). A generic
-  consistent-mass-diagonal HRZ for any element would replace the
-  hardcoded fractions.
+  (`general.cc` `general()`, hardcoded; C31, F4 T4). The `tria6` uses a
+  generic, geometry-dependent HRZ weight computed in `pol()`
+  (`lumped_hrz_weight`, the 7-point consistent-mass diagonal scaled to
+  the element total, r-weighted when axisymmetric) for every h-weighted
+  dof, with the matching `materi.cc` numerators (C66 phase 2,
+  2026-10-16; details in
+  [integration_quadrature_and_stress_recovery](integration_quadrature_and_stress_recovery.md)
+  section 3.3b). The same `pol()` mechanism could replace the hardcoded
+  tet10 fractions. Pending: the `groundfl.cc` groundflow velocity
+  numerator (h-weighted, so the tria6 groundflow velocity keeps h; BACKLOG
+  C85).
 
 ## Differences with the Professional version
 
@@ -94,5 +102,13 @@
   the negative corner masses make dynamics unstable (sudden gravity on a
   48-tet10 column: the Professional solver fails, a GNU row-sum build
   diverges to 5e8). Static results are unaffected. Code: `general.cc`
-  `general()`. Index:
+  `general()`.
+- **Lumped mass / capacity of the `tria6`** (deliberate divergence,
+  project owner 2026-10-16; DIVERGENCES TRIA6-HRZ). GNU: HRZ masses of
+  every h-weighted dof, plane corner A/19 and mid-side 16A/57,
+  axisymmetric the r-weighted diagonal scaled to 2 pi A r_c, for every
+  rule. Professional 02-08-2026: row sum (plane corner 0, a free
+  one-element step fails with a zero pivot; axisymmetric corners
+  negative). Code: `polynom.cc` `pol()` (`lumped_hrz_weight`),
+  `general.cc` `general()`, `materi.cc` `materi()` (`h_lump`). Index:
   [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).

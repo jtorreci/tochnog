@@ -25,7 +25,7 @@ recovery.
 | element stiffness, quad4 / hex8 | 2x2 / 2x2x2 **Gauss** | 2x2 / 2x2x2 Lobatto (`-minimal` default) | Gauss | static probes, 12 digits (prior sprint) |
 | element stiffness, quad9 / hex27 | 3x3 / 3x3x3 **Gauss** | Lobatto | Gauss | `.dbs element_intpnt_method -gauss`, `npoint` 9/27 |
 | element stiffness, tet10 | **Keast 5-point** (centroid -4/5, (1/2,1/6,1/6,1/6) x4 9/20) | nodal rule (degree 1) | Keast 5-point (F4 T4) | `tet10_2` gravity sigzz -1; `.dbs` npoint 5 |
-| mass matrix | **row-sum lumped** (quadrature-invariant) | row-sum lumped | unchanged; tet10 HRZ (F4 T4, deliberate) | distorted-element dynamic probe; `mass10` |
+| mass matrix | **row-sum lumped** (quadrature-invariant) | row-sum lumped | unchanged; tet10 HRZ (F4 T4, deliberate), tria6 HRZ (F4 T6f C66, deliberate) | distorted-element dynamic probe; `mass10`; `tria6_mass_hrz1` |
 | internal force vector | same rule as the stiffness (one `pol()` rule) | Lobatto | Gauss | — |
 | body / gravity load | same rule | Lobatto | Gauss | — |
 | edge / surface load | boundary integration; interface elements keep nodal (Lobatto) | boundary integration | unchanged | GNU `area.cc`; interfaces do not call `pol()` |
@@ -63,7 +63,8 @@ Measured on the Professional's own `beam2d_1.dbs` (quad9, 45 elements),
 | hex27 | 27 / 8 | uniform-weight linear least squares `1,x,y,z` in PHYSICAL coordinates (C70, measured; before: natural table for 27, h for 8) | 1e-12 (curved probes) |
 | tet10 | 5 | uniform-weight linear least squares `1,x,y,z` in PHYSICAL coordinates (C70; the F4 T4 barycentric fit `1,L1,L2,L3` is the same on straight-edged tet10 only) | 1e-12 (curved probes); `tet10_2` exact (-1) |
 | prism6 | 6 | uniform-weight linear least squares `1,x,y,z` in PHYSICAL coordinates (C70; before: volume-weighted h). The Professional points are the triangle corners x 2 Gauss levels, the GNU points (2/3,1/6,1/6) x 2 Gauss levels (C75) | 1e-13 |
-| tria3 / tet4 / bar2 1 point, tria3 3-point and tria6 6-point nodal rules | 1 / 3 / 6 | the point value / the value of the point at the node (F4 T6f, two-element probes) | exact |
+| tria3 / tet4 / bar2 1 point, tria3 3-point nodal rule | 1 / 3 | the point value / the value of the point at the node (F4 T6f, two-element probes) | exact |
+| tria6 | 7 / 4 | uniform-weight linear least squares `1,x,y` in PHYSICAL coordinates, plane and axisymmetric, on-axis elements included (C66 phase 2, 2026-10-16; before: a 6-point nodal rule, the value at the node) | 5e-13 (curved probes) |
 | bar2 / bar3 / bar4 (1D), quad16 | Gauss, `-reduced`, Lobatto `-minimal` | uniform-weight linear least squares `1,x(,y)` in PHYSICAL coordinates; Lobatto `-maximal`: the point value (C67, 2026-10-16; before: volume-weighted h) | 5e-13 (distorted probes) |
 
 The operator was believed FIXED in the element natural coordinates (the
@@ -320,6 +321,99 @@ forces only and does not call the continuum stress recovery.
 - Tests: `test-2026/tet10_body_load1`, `tet10_mass_hrz1`,
   `tet10_dynamic_gravity1`.
 
+### 3.3b tria6 rule and HRZ lumping (F4 T6f C66 phase 2, 2026-10-16)
+
+- `polynom.cc` `pol()`, `TRIA6` branch (owner decision 2026-10-16): the
+  manual 6.623 rules, measured identical on the Professional 02-08-2026
+  (`element_intpnt_iso_coord` = L1,L2): default / `-maximal` the 7-point
+  degree-5 rule (centroid 9/40; (b,a), (a,b), (a,a) with
+  a = (6+sqrt15)/21, b = (9-2 sqrt15)/21, weight (155+sqrt15)/1200;
+  (d,c), (c,d), (c,c) with c = (6-sqrt15)/21, d = (9+2 sqrt15)/21,
+  weight (155-sqrt15)/1200; the Professional prints 10-digit literals,
+  ~1e-10 apart), `-minimal` the 4-point degree-3 rule (centroid -27/48,
+  (0.6,0.2), (0.2,0.6), (0.2,0.2) 25/48). Weights sum to 1 (volume =
+  weight * detj / 2). `stress_recovery_gauss = 1` (the recovery fit is
+  dense). The axisymmetric refusal ("not available for axisymmetric
+  analysis") was removed: every point is interior, so the hoop term h/r
+  is finite even in an element with a node on the axis, and the
+  Professional keeps the rule there (probes `tria6ax0_*`, no switch,
+  unlike C71/C80/C83). `tria6_shape()` holds the shape functions and
+  their L1/L2 derivatives. The former 6-point nodal rule (corner weight
+  `EPS_TRIANGLE` 1e-6, mid-side 1/3-1e-6) and the macro are gone.
+- `miscel.cc` `recovery_fit_kind()`: tria6 with 7 or 4 points is kind 1
+  (physical linear fit `1,x,y`; Professional residual 5e-13 on curved,
+  distorted, plane and axisymmetric probes, on-axis elements included);
+  `recovery_fit_shape()` repeats the point layout of `pol()`;
+  `recovery_fit_factor()` skips the on-axis `h`-average for the tria6
+  (the Professional fits those elements too). The tria6 6-point entry of
+  `sri_stress_recovery_weight()` was removed.
+- HRZ lumping. `pol()` computes, for every tria6, the diagonal of the
+  consistent mass `D_i = int N_i^2 dV` (dV = 2 pi r dA when axisymmetric)
+  with the 7-point rule whatever rule the element uses (exact for a
+  straight-edged element, degree 4 / 5 integrands), its total
+  `V = int dV`, and stores the thread-local constant per-point weight
+  `lumped_hrz_weight[i] = D_i V / sum_j D_j / sum_g volume_g`
+  (`lumped_hrz_active = 1`), so that `sum_g volume_g * weight_i` is the
+  HRZ mass of node i for the rule in use (the 4-point rule has a negative
+  centroid volume; the constant weight still sums exactly). Plane
+  straight-edged: corner A/19, mid-side 16A/57 (the consistent diagonal
+  A/30 and 8A/45 scaled by 30/19). Axisymmetric corners r,z = 1,0 / 2,0 /
+  1,1: 0.188968, 0.283452 (corners), 1.259787 / 1.007829 (mid-sides),
+  total 4 pi / 3. The TET10 precedent (`name==-TET10 && npoint==5`)
+  hardcodes its fractions; the tria6 weight is geometry-dependent because
+  a curved or axisymmetric tria6 has no constant fractions.
+- `general.cc` `general()` inertia block: `weight = lumped_hrz_weight[inol]`
+  for every h-weighted dof of a tria6 (principal: velocity, temperature,
+  groundflow pressure, density, wave; state: history variables (hypo /
+  camclay included), `plasti_f`, substeps, softening variables, strain
+  energy, intergranular and model plastic strains, void fraction, work).
+  The recovered dofs (stress, strains, kappa, ...) override it with their
+  fit weight as before. Exception: `groundflow_velocity` keeps `h`
+  because its numerator (`groundfl.cc`) is h-weighted (pending, BACKLOG
+  C85).
+- `materi.cc` `materi()`: the numerators of the h-weighted state dofs use
+  the same weight (`h_lump`), so the lumped update stays consistent
+  (with `h` the tria6 corner denominator `sum volume h` is 0). The
+  plastic / viscous heat generation (a consistent source of the
+  temperature equation) keeps `h`.
+- Not converted (outside the work unit): `condif.cc` lumped absorption
+  (`volume * h * condif_absorption` on the diagonal, ~0 at the tria6
+  corners as before) and the `groundfl.cc` groundflow velocity numerator.
+  The replicas `msf_element_rule()` (`calcul_force.cc`) and
+  `mc_element_rule()` (`delete.cc`) cover tensor elements only (no tria6
+  branch), unchanged.
+- Analytic sanity check (`scratchpad/c66/p2/bar/modal.py`, `genbar.py`):
+  a tria6 strip L 10 x H 1 (20 elements), E 1, nu 0, rho 1, fixed at
+  x = 0, axial motion only. Angular frequencies vs the 1D analytic
+  (2n-1) pi c / (2L) = 0.15708, 0.47124, 0.78540, 1.09956, 1.41372:
+  consistent mass +0.00 / +0.00 / +0.02 / +0.07 / +0.19 %; HRZ -0.01 /
+  -0.08 / -0.23 / -0.43 / -0.67 %; row sum (corner masses 0, the massless
+  dofs statically condensed) -0.00 / -0.00 / -0.01 / -0.06 / -0.18 %.
+  HRZ is as accurate as the usual lumped-mass error (lower frequencies);
+  the row sum is accurate here only because the stiffness restrains its
+  massless corners, its mass matrix is singular (a free single element
+  has a zero pivot) and negative in axisymmetric analysis. Sudden tip
+  load F 1e-3, dt 0.1, 800 steps: GNU HRZ, old GNU and Professional row
+  sum give the same tip history (peak 0.01887 at t 20 = 2L/c, minimum
+  at t 40; analytic undamped peak 0.02 at t 20).
+- 4-point (`-minimal`) stiffness: on the 12 curved probe elements the
+  plane-strain element stiffness has exactly the 3 rigid-body zero
+  eigenvalues (4th / largest >= 1.6e-3), no negative eigenvalue (unlike
+  the prism15 `-minimal` rule rejected in C82).
+- Tests: `test-2026/recovery_tria6_curved1`, `recovery_tria6_minimal1`,
+  `recovery_tria6_axisym1` (Professional targets 4e-6; old GNU 7.7 % /
+  9.5 % of the scale off, axisymmetric rc 1), `tria6_mass_hrz1`,
+  `tria6_mass_hrz_axisym1` (HRZ targets, both rules; old GNU corner v
+  ~2e4 / rc 1); `tria6_nodal_recovery_mean1` tolerances tightened to
+  4e-6 (GNU = Professional within 5e-10).
+- Corpus (omen A/B, 997 runs): only the tria6 cases changed: `tria6`
+  (quad9 split into tria6, uniform stress) 3.3e-10, equal to the
+  Professional as before; `tria6_nodal_recovery_mean1` now = Professional
+  within 5e-10; `slope_classical_numerical` (584 tria6, strength
+  reduction to the minimal step, 1800 s run) collapse factor 1.26297 ->
+  1.26265 (Professional 1.27045, step-control level), final nodal
+  stresses vs the Professional 20.8 -> 0.25 of the column scale.
+
 ## 4. force5 (phreatic level)
 
 `area.cc` looked up the phreatic level for the FIRST node of a
@@ -419,15 +513,18 @@ small fit per element instead of one per (node, point) call.
 ## 7. Files and functions
 
 - `polynom.cc` — `pol()` (incl. the tet10 Keast rule, C31, and the C71
-  on-axis Lobatto switch), `stress_recovery_gauss`,
-  `stress_recovery_lobatto` (C79).
+  on-axis Lobatto switch, and the tria6 7 / 4-point rules with
+  `tria6_shape()`, C66), `stress_recovery_gauss`,
+  `stress_recovery_lobatto` (C79), `lumped_hrz_active` /
+  `lumped_hrz_weight` (tria6 HRZ, C66).
 - `miscel.cc` — `sri_stress_recovery_weight()`, `recovery_fit_kind()`,
   `recovery_fit_shape()`, `recovery_fit_build()`, `recovery_fit_factor()`
   (K21 / C70 per-element physical fit; the F4 T9 factor table was
   removed in C70).
 - `general.cc` — `general()`, the lumped sigma-dof inertia weight and the
-  tet10 HRZ lumping (C31).
-- `materi.cc` — `materi()`, the stress-dof RHS.
+  tet10 HRZ lumping (C31) and tria6 HRZ lumping (C66).
+- `materi.cc` — `materi()`, the stress-dof RHS and the `h_lump` weight of
+  the h-weighted state numerators (C66).
 - `area.cc` — `area()`, the `force_element_edge_water` phreatic lookup.
 - `so_bicg.cc` — `solve_iterative_bicg()`, the scale-relative CG breakdown
   test (fix A) required for dynamic8.
@@ -454,7 +551,15 @@ small fit per element instead of one per (node, point) call.
   the negative corner masses make dynamics unstable (sudden gravity on a
   48-tet10 column: the Professional solver fails, a GNU row-sum build
   diverges to 5e8). Static results are unaffected. Code: `general.cc`
-  `general()` (HRZ weight). Index:
+  `general()` (HRZ weight).
+- **Lumped mass / capacity of the `tria6`** (deliberate divergence,
+  project owner 2026-10-16; DIVERGENCES TRIA6-HRZ). GNU: HRZ masses of
+  every h-weighted dof, plane corner A/19 and mid-side 16A/57,
+  axisymmetric the r-weighted diagonal scaled to 2 pi A r_c, for every
+  rule. Professional 02-08-2026: row sum (plane corner 0, a free
+  one-element step fails with a zero pivot; axisymmetric corners
+  negative). Code: `polynom.cc` `pol()` (`lumped_hrz_weight`),
+  `general.cc` `general()`, `materi.cc` `materi()` (`h_lump`). Index:
   [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).
 - **`post_point_dof` inside a `tet10`** (deliberate divergence, project
   owner 2026-10-09; DIVERGENCES TET10-PPOINT). GNU: interpolates the
@@ -498,10 +603,9 @@ small fit per element instead of one per (node, point) call.
   (deliberate divergence, owner decision 2026-10-16; BACKLOG C82).
 - **`tet4` `-maximal`**: Keast 5 points since C67 (2026-10-16), manual
   6.623 = Professional.
-- **`tria6`** (BACKLOG C66): GNU 6 nodal points (corner weight
-  `EPS_TRIANGLE`), manual and Professional 7 / 4 points with the linear
-  fit; adopting them needs a lumping decision in `general.cc` (the row-sum
-  corner masses of a tria6 are 0) and an axisymmetric enablement.
+- **`tria6` rule**: = manual 6.623 and Professional since C66 phase 2
+  (2026-10-16): 7 / 4 points, linear-fit recovery, axisymmetric accepted
+  (section 3.3b). Its HRZ lumping is the class A row below.
 - **`tria3` / `tet10` `-maximal`** (BACKLOG C83, deliberate divergence
   from the MANUAL, owner decision 2026-10-16): manual 6.623 says 4 / 10
   points but gives no points or weights; both codes use 3 nodal / 5

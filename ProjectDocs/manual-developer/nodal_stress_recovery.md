@@ -185,7 +185,7 @@ and the area-weighted mean of those values):
 |---|---|---|
 | tria3 1 point (default) | arithmetic mean, exact (1e-13) | area-weighted, exact |
 | tria3 `-maximal` (3-point nodal rule) | arithmetic mean, exact | area-weighted, exact |
-| tria6 (6-point nodal rule) | arithmetic mean, exact | area-weighted (element values ~1e-5 off, see BACKLOG C66) |
+| tria6 (6-point nodal rule; replaced by the 7 / 4-point rules in C66 phase 2) | arithmetic mean, exact | area-weighted (element values ~1e-5 off, see BACKLOG C66) |
 | tet4 1 point (default) | arithmetic mean, exact | volume-weighted, exact |
 | bar2 1 point (default) | arithmetic mean, exact | length-weighted, exact |
 
@@ -527,10 +527,14 @@ rule table per element).
   linear stress field. prism6 `-minimal` = Professional since C76
   (2026-10-16); every rule now has a measured recovery (quad/hex Lobatto
   C79, bars and quad16 C67, tet4 `-maximal` and prism15 C67 remainder).
+- tria6: = Professional since C66 phase 2 (2026-10-16): 7 / 4-point
+  rules, `recovery_fit_kind()` kind 1 (physical linear fit), plane and
+  axisymmetric (on-axis elements fitted too, no `h`-average), arithmetic
+  mean; every probe node within 3e-10 of the scale (the Professional
+  prints 10-digit point literals). Tests `recovery_tria6_curved1`,
+  `recovery_tria6_minimal1`, `recovery_tria6_axisym1`.
 - Integration rules still different (the recovery of each GNU rule is
-  the Professional one): tria6 (GNU 6 nodal points, manual and
-  Professional 7 / 4 points; axisymmetric refused by the GNU; BACKLOG
-  C66), prism15 `-minimal` (Professional 8 points, indefinite stiffness;
+  the Professional one): prism15 `-minimal` (Professional 8 points, indefinite stiffness;
   GNU 21; deliberate divergence, owner 2026-10-16, BACKLOG C82). tria3
   `-maximal` (manual 4 points, both 3 nodal) and tet10 `-maximal` (manual
   10 points, both 5): deliberate divergence from the MANUAL, owner

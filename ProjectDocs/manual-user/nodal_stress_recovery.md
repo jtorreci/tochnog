@@ -212,14 +212,17 @@ group_integration_points 0 -minimal
 ```
 
 Differences with the Professional version (integration rules, not the
-recovery; BACKLOG C66, C82, C83):
+recovery; BACKLOG C82, C83):
 
-- `tria6`: the GNU integrates with 6 points at the nodes and mid-edges
-  (and refuses axisymmetric groups). The manual (6.623) and the
-  Professional use 7 points (default and `-maximal`) or 4 points
-  (`-minimal`) and recover them with the physical linear fit. Nodal
-  stresses differ by 8-10 % of the scale on curved, distorted meshes
-  (BACKLOG C66).
+- `tria6`: = Professional since 2026-10-16 (F4 T6f C66): 7 points
+  (default and `-maximal`) or 4 points (`-minimal`), recovered with the
+  physical linear fit `1,x,y` per element and the arithmetic mean over
+  the elements, plane and axisymmetric (an element with a node on the
+  axis keeps the fit, unlike the quads). Before: 6 points at the nodes
+  and mid-edges, axisymmetric refused, nodal stresses 8-10 % of the
+  scale off on curved, distorted meshes. Tests
+  `validation-suite/test-2026/recovery_tria6_curved1.dat`,
+  `recovery_tria6_minimal1.dat`, `recovery_tria6_axisym1.dat`.
 - prism15 `-minimal`: the Professional uses 8 points (the 4-point
   triangle rule with a negative centroid weight x 2 levels). That rule
   gives an indefinite element stiffness (negative eigenvalues), so the GNU

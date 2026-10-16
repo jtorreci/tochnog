@@ -57,10 +57,19 @@ quadratic tetrahedron mesh under gravity gave sigzz -0.894 instead of the
 exact -1 (`tet10_2`); the 5-point rule gives -1.
 
 The mass matrix is the row-sum lumped mass (quadrature-invariant), and the
-interface elements keep their nodal (Lobatto) integration. The exception is
-the `tet10`: its 5-point rule would give negative corner masses, so the GNU
-lumps the inertia/capacity with the positive HRZ masses (corner V/36,
-mid-edge 4V/27; see the differences below).
+interface elements keep their nodal (Lobatto) integration. The exceptions
+are the `tet10` and the `tria6`: their row sums give negative (tet10) or
+zero / negative (tria6) corner masses, so the GNU lumps them with the
+positive HRZ masses (the consistent-mass diagonal scaled to the element
+total: tet10 corner V/36, mid-edge 4V/27; tria6 corner A/19, mid-side
+16A/57, r-weighted when axisymmetric; see the differences below).
+
+The `tria6` (since 2026-10-16, F4 T6f C66) integrates with the manual
+6.623 rules, = Professional: 7 points (degree 5) by default and with
+`-maximal`, 4 points (degree 3, centroid weight -27/48) with `-minimal`;
+axisymmetric groups are accepted, and an element with a node on the axis
+keeps its rule (all points are interior). Before, a 6-point nodal rule was
+used for every value and axisymmetric tria6 groups were refused.
 
 ## Nodal stress recovery
 
@@ -142,7 +151,18 @@ target if the new value matches the Professional.
   row-sum lumping of its 5-point rule, corner -V/20 and mid-edge V/5;
   the negative corner masses make dynamics unstable (sudden gravity on a
   48-tet10 column: the Professional solver fails, a GNU row-sum build
-  diverges to 5e8). Static results are unaffected. Index:
+  diverges to 5e8). Static results are unaffected.
+- **Lumped mass / capacity of the `tria6`** (deliberate divergence,
+  project owner 2026-10-16; DIVERGENCES TRIA6-HRZ). GNU: positive HRZ
+  lumping of every h-weighted dof (velocity, temperature, pressure,
+  density, the h-weighted state variables): plane corner A/19 and
+  mid-side 16A/57; axisymmetric the r-weighted diagonal int N_i^2 2 pi r
+  dA scaled to 2 pi A r_c; the same masses for every
+  `group_integration_points` value. Professional 02-08-2026: row sum,
+  corner 0 in plane analysis (a free one-element dynamic step fails with
+  a zero pivot), negative corners in axisymmetric analysis (-pi/60 at
+  r = 1 for r = 1..2). Static results are unaffected. Tests
+  `tria6_mass_hrz1`, `tria6_mass_hrz_axisym1`. Index:
   [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).
 - **`post_point_dof` inside a `tet10`** (deliberate divergence, project
   owner 2026-10-09; DIVERGENCES TET10-PPOINT). GNU: interpolates the
@@ -189,11 +209,10 @@ target if the new value matches the Professional.
 - **`tet4` with `-maximal`**: 5 points (the Keast rule of the tet10), as
   manual 6.623 and the Professional, since 2026-10-16 (before: 4 points
   at the nodes; same stiffness for a linear material).
-- **`tria6`** (known difference; BACKLOG C66): the GNU uses 6 points at
-  the nodes and mid-edges and refuses axisymmetric groups; the manual
-  (6.623) and the Professional use 7 points (default, `-maximal`) or 4
-  (`-minimal`). Results agree to ~1e-5 on straight-edged elements and
-  differ by several percent on curved ones.
+- **`tria6` rule**: = manual 6.623 and Professional since 2026-10-16
+  (F4 T6f C66): 7 points (default, `-maximal`), 4 points (`-minimal`),
+  axisymmetric accepted; nodal stresses equal within 3e-10 of the scale.
+  Its lumped mass is the class A row below.
 - **`tria3` `-maximal`, `tet10` `-maximal`** (deliberate divergence from
   the MANUAL, owner decision 2026-10-16; BACKLOG C83): the manual (6.623)
   specifies 4 and 10 points but gives neither points nor weights; both
