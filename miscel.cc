@@ -461,6 +461,10 @@ double strain_recovery_weight( long int sri_on, long int name, long int nnol,
 //           sit at the Lobatto positions iso +-1/sqrt(5), interpolation_
 //           polynomial, so the points are at the nodes); axis rule for the
 //           on-axis quad16 too. hex64 is rejected by both codes.
+//   C67 remainder + C76 (2026-10-16): kind 1 also for the prism15 21-point
+//           rule and the tet4 -maximal Keast rule; kind 4 = the prism6
+//           -minimal 2-point rule (centroid x 2 Gauss levels): F =
+//           h_n(g) / sum_g h_n(g), like the axis rule.
 // The operator depends on the element geometry, so it is built from the
 // start-of-step nodal coordinates (NODE, VERSION_NORMAL) and cached per
 // thread for the current element (the element loop may run in parallel
@@ -508,6 +512,12 @@ static long int recovery_fit_kind( long int name, long int nnol,
                       ( ndim==3 && name==-HEX8  && nnol==8 ) ) ) return 2;
   if ( ndim==3 && name==-TET10  && nnol==10 && npoint==5 ) return 1;
   if ( ndim==3 && name==-PRISM6 && nnol==6  && npoint==6 ) return 1;
+  // C67 remainder + C76 (F4 T6f, 2026-10-16): tet4 -maximal (Keast 5
+  // points) and prism15 (21 points): the physical linear fit; prism6
+  // -minimal (2 points on the element axis): kind 4.
+  if ( ndim==3 && name==-TET4    && nnol==4  && npoint==5  ) return 1;
+  if ( ndim==3 && name==-PRISM15 && nnol==15 && npoint==21 ) return 1;
+  if ( ndim==3 && name==-PRISM6  && nnol==6  && npoint==2  ) return 4;
   npol = recovery_tensor_npol( name );
   if ( !npol ) return 0;
   for ( d=0; d<ndim; d++ ) {
@@ -560,6 +570,58 @@ static void recovery_fit_shape( long int name, long int nnol, long int npoint,
       hp[ipoint][7] = 4.*L2*L4;
       hp[ipoint][8] = 4.*L3*L4;
       hp[ipoint][9] = (2.*L4-1.)*L4;
+    }
+    return;
+  }
+  if ( name==-TET4 ) {
+    // Keast points of the tet4 -maximal rule (pol(): xi = L1 -> node 0,
+    // eta = L2 -> node 2, zeta = L3 -> node 1)
+    for ( ipoint=0; ipoint<npoint; ipoint++ ) {
+      double L1 = ( ipoint==0 ) ? 0.25 : ( ( ipoint==1 ) ? 0.5 : 1./6. );
+      double L2 = ( ipoint==0 ) ? 0.25 : ( ( ipoint==2 ) ? 0.5 : 1./6. );
+      double L3 = ( ipoint==0 ) ? 0.25 : ( ( ipoint==3 ) ? 0.5 : 1./6. );
+      hp[ipoint][0] = L1;
+      hp[ipoint][1] = L3;
+      hp[ipoint][2] = L2;
+      hp[ipoint][3] = 1. - L1 - L2 - L3;
+    }
+    return;
+  }
+  if ( name==-PRISM15 ) {
+    // 7-point Dunavant triangle rule x 3 Gauss levels in zeta in [-1,1],
+    // serendipity shape functions and node order of pol()
+    double s15 = sqrt( 15. );
+    double a = (6.+s15)/21., b = (9.-2.*s15)/21.;
+    double c = (6.-s15)/21., d = (9.+2.*s15)/21.;
+    double tri[7][2] = { {1./3.,1./3.}, {b,a}, {a,b}, {a,a}, {d,c}, {c,d},
+      {c,c} };
+    double zg[3] = { -sqrt(0.6), 0., sqrt(0.6) };
+    for ( ipoint=0; ipoint<npoint; ipoint++ ) {
+      double zz = zg[ipoint/7], L[3];
+      L[0] = tri[ipoint%7][0];
+      L[1] = tri[ipoint%7][1];
+      L[2] = 1. - L[0] - L[1];
+      for ( k=0; k<3; k++ ) {
+        hp[ipoint][k]   = L[k]*0.5*(1.-zz)*(2.*L[k]-2.-zz);
+        hp[ipoint][3+k] = L[k]*0.5*(1.+zz)*(2.*L[k]-2.+zz);
+        hp[ipoint][6+k] = L[k]*(1.-zz*zz);
+      }
+      for ( k=0; k<3; k++ ) {
+        l = ( k+1 )%3;
+        hp[ipoint][9+k]  = 2.*L[k]*L[l]*(1.-zz);
+        hp[ipoint][12+k] = 2.*L[k]*L[l]*(1.+zz);
+      }
+    }
+    return;
+  }
+  if ( name==-PRISM6 && npoint==2 ) {
+    // C76: the -minimal rule, triangle centroid x 2 Gauss levels
+    for ( ipoint=0; ipoint<npoint; ipoint++ ) {
+      double zz = ( ipoint==0 ) ? 0.5-0.5/sqrt(3.) : 0.5+0.5/sqrt(3.);
+      for ( k=0; k<3; k++ ) {
+        hp[ipoint][k]   = (1.-zz)/3.;
+        hp[ipoint][3+k] = zz/3.;
+      }
     }
     return;
   }
@@ -655,7 +717,10 @@ static void recovery_fit_build( RecoveryFitCache &c, long int kind )
     }
   }
 
-  if ( c.axis ) {
+  // axisymmetric node on the axis, and the prism6 -minimal 2-point rule
+  // (kind 4, C76: Professional 02-08-2026, per element residual 5e-13):
+  // F = h_n(g) / sum_g h_n(g)
+  if ( c.axis || kind==4 ) {
     for ( inol=0; inol<c.nnol; inol++ ) {
       double sum = 0.;
       for ( ipoint=0; ipoint<c.npoint; ipoint++ ) sum += hp[ipoint][inol];
@@ -826,8 +891,15 @@ double sri_stress_recovery_weight( long int sri, long int name, long int nnol,
   //                  (Gauss / -reduced / Lobatto -minimal: the physical
   //                  linear fit 1,x(,y); Lobatto -maximal: the point value;
   //                  C67, 2026-10-16; before: h, volume weighted)
-  // Every other element/rule returns h_inol: the unmeasured rules (tet4
-  // -maximal, prism15, ...; hex64 is rejected by both codes).
+  //   prism15 21 points, tet4 -maximal (Keast 5 points): the physical
+  //                  linear fit; prism6 -minimal (2 points): sum h sig /
+  //                  sum h per element (C67 remainder + C76, 2026-10-16;
+  //                  before: h, volume weighted, unbounded for the prism15
+  //                  whose serendipity corner functions are negative)
+  // Every element/rule that pol() can produce is now covered (81
+  // Professional probes of tria3/tria6/tet4/tet10/prism6/prism15, plane
+  // and axisymmetric, every rule value). The h_inol return below is only
+  // a guard (singular fit, zero volume); hex64 is rejected by both codes.
   //
   // The lumped sigma-dof equation (general.cc/materi.cc) multiplies the
   // weight by the integration-point volume, so the assembled average is
@@ -874,8 +946,8 @@ double sri_stress_recovery_weight( long int sri, long int name, long int nnol,
   // point value (1-point rules, F=1) or the value of the point at the
   // node (nodal rules, F=h, the Kronecker delta), so the weight is F/volume
   // and each element contributes weight 1, exactly as for the table
-  // elements below. Other simplex rules (tet4 -maximal, bar2 2 points,
-  // ...) are unmeasured and keep h_inol.
+  // elements below. The tet4 -maximal Keast rule and the bar2 2-point
+  // rules are fitted below (recovery_fit_factor, C67).
   if ( ( name==-TRIA3 && ( npoint==1 || npoint==3 ) ) ||
        ( name==-TRIA6 && npoint==6 ) ||
        ( name==-TET4  && npoint==1 ) ||

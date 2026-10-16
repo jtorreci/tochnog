@@ -234,11 +234,60 @@ void pol( long int element, long int element_group,
     // 0.2113248654 / 0.7886751346 = 1/2 +- 1/(2*sqrt(3))). With
     // sum(weight) = 1/2 the volume[] branch below integrates
     // weight*detj (no extra factor), exactly like the PRISM15 branch.
+    // Default -maximal (manual 6.623: -minimal is the default only for
+    // bar2, tria3 and tet4), so only an explicit -minimal selects the
+    // 2-point rule below.
+    integration_points = -MAXIMAL;
     db( GROUP_INTEGRATION_POINTS, element_group, &integration_points, ddum,
       ldum, VERSION_NORMAL, GET_IF_EXISTS );
     nnol = 6;
     npoint = 6;   // 2 Gauss zeta-levels x 3 area points
-    {
+    // C76 (F4 T6f, 2026-10-16): -minimal = 2 points, the triangle centroid
+    // (1/3,1/3) at the same two Gauss levels in zeta, weight 1/4 each (sum
+    // 1/2), the rule of the Professional 02-08-2026 (element_intpnt_iso_
+    // coord; its nodal displacements of a 20x2x2 cantilever equal a
+    // 2-point FE model to 1.5e-13). One spurious mode per element (7 zero
+    // eigenvalues), restrained by any connected mesh tried; passes the
+    // patch test and halves the bending error of the 6-point rule (tip
+    // load Timoshenko, 20x2x2: -7.1 % vs -13.1 %). Before, the record was
+    // read but ignored. Recovery: sum_g h_n(g) sig_g / sum_g h_n(g)
+    // (miscel.cc, recovery kind 4). The default, -normal and -maximal keep
+    // the interior 6-point rule (C75, deliberate divergence).
+    if ( integration_points==-MINIMAL ) {
+      double zeta_pt[2] = { 0.5 - 0.5/sqrt(3.), 0.5 + 0.5/sqrt(3.) };
+      npoint = 2;
+      stress_recovery_gauss = 1;
+      L1 = 1./3.; L2 = 1./3.; L3 = 1./3.;
+      for ( ipoint=0; ipoint<npoint; ipoint++ ) {
+        double zbase = 1.-zeta_pt[ipoint], ztop = zeta_pt[ipoint];
+        weight[ipoint] = 0.25;
+        h[ipoint*nnol+0] = zbase*L1;
+        h[ipoint*nnol+1] = zbase*L2;
+        h[ipoint*nnol+2] = zbase*L3;
+        h[ipoint*nnol+3] = ztop*L1;
+        h[ipoint*nnol+4] = ztop*L2;
+        h[ipoint*nnol+5] = ztop*L3;
+        p[ipoint*ndim*nnol+0*nnol+0] = zbase;
+        p[ipoint*ndim*nnol+0*nnol+1] = 0.;
+        p[ipoint*ndim*nnol+0*nnol+2] = -zbase;
+        p[ipoint*ndim*nnol+0*nnol+3] = ztop;
+        p[ipoint*ndim*nnol+0*nnol+4] = 0.;
+        p[ipoint*ndim*nnol+0*nnol+5] = -ztop;
+        p[ipoint*ndim*nnol+1*nnol+0] = 0.;
+        p[ipoint*ndim*nnol+1*nnol+1] = zbase;
+        p[ipoint*ndim*nnol+1*nnol+2] = -zbase;
+        p[ipoint*ndim*nnol+1*nnol+3] = 0.;
+        p[ipoint*ndim*nnol+1*nnol+4] = ztop;
+        p[ipoint*ndim*nnol+1*nnol+5] = -ztop;
+        p[ipoint*ndim*nnol+2*nnol+0] = -L1;
+        p[ipoint*ndim*nnol+2*nnol+1] = -L2;
+        p[ipoint*ndim*nnol+2*nnol+2] = -L3;
+        p[ipoint*ndim*nnol+2*nnol+3] =  L1;
+        p[ipoint*ndim*nnol+2*nnol+4] =  L2;
+        p[ipoint*ndim*nnol+2*nnol+5] =  L3;
+      }
+    }
+    else {
       // Gauss-Legendre 2 points mapped to zeta in [0,1]
       double zeta_pt[2], zeta_w[2];
       zeta_pt[0] = 0.5 - 0.5/sqrt(3.);   // 0.211324865405187
@@ -307,20 +356,37 @@ void pol( long int element, long int element_group,
     // Integration rule (matches the Professional, measured from its
     // element_intpnt_coord): 3-point Gauss in zeta x the 7-point
     // degree-5 triangle rule (Dunavant) = 21 points. The shape
-    // functions and rule reproduce the Professional element_intpnt_h
-    // of prism15.dat exactly (dev-checked). The natural-domain measure
+    // functions and rule reproduce the Professional element_intpnt_h,
+    // element_intpnt_coord and element_intpnt_dof of every point (C67,
+    // 2026-10-16, 16 distorted prisms; the earlier check had missed two
+    // wrong triangle points, see tri_pt below). The natural-domain measure
     // (triangle area 1/2 x zeta in [-1,1]) is 1, so volume[] uses the
     // plain weight*detj factor (see the volume chain below).
     nnol = 15;
     npoint = 21;
+    // C67 (F4 T6f, 2026-10-16): recovered with the Professional physical
+    // linear fit (miscel.cc, kind 1), a dense operator, so the materi()
+    // stress block visits every (node, point) pair. The Professional
+    // -minimal rule (2 zeta levels x the 4-point triangle rule with the
+    // negative centroid weight) gives an indefinite stiffness (3 negative
+    // eigenvalues on a distorted prism15) and is not implemented (BACKLOG
+    // C82, owner decision pending): the GNU keeps 21 points for every
+    // group_integration_points value.
+    stress_recovery_gauss = 1;
     {
       double sqrt15 = sqrt( 15. );
       double zeta_pt[3] = { -sqrt(0.6), 0., sqrt(0.6) };
       double zeta_w[3]  = { 5./9., 8./9., 5./9. };
       double a = (6.+sqrt15)/21., b = (9.-2.*sqrt15)/21.;
       double c = (6.-sqrt15)/21., d = (9.+2.*sqrt15)/21.;
-      double tri_pt[7][2] = { {1./3.,1./3.}, {a,b}, {b,a}, {b,b},
-        {c,d}, {d,c}, {d,d} };
+      // C67 (F4 T6f, 2026-10-16): the permutations of (a,a,b) and
+      // (c,c,d). The former table had (b,b) and (d,d) instead of (a,a)
+      // and (c,c): (d,d) lies OUTSIDE the triangle (L3 = -0.59) and the
+      // rule was not even exact for linear integrands (monomial error
+      // 0.025; corrected table exact to degree 5, 3e-17). Point order of
+      // the Professional 02-08-2026 element_intpnt_iso_coord.
+      double tri_pt[7][2] = { {1./3.,1./3.}, {b,a}, {a,b}, {a,a},
+        {d,c}, {c,d}, {c,c} };
       double tri_w[7] = { 9./80., (155.+sqrt15)/2400., (155.+sqrt15)/2400.,
         (155.+sqrt15)/2400., (155.-sqrt15)/2400., (155.-sqrt15)/2400.,
         (155.-sqrt15)/2400. };
@@ -454,9 +520,32 @@ void pol( long int element, long int element_group,
       p[11] = -1.;
     }
     else if ( integration_points==-MAXIMAL ) {
-      npoint = nnol;
+      // C67 (F4 T6f, 2026-10-16): manual 6.623 "a five-point integration
+      // scheme will be used with -maximal integration", and so does the
+      // Professional 02-08-2026 (element_intpnt_iso_coord: the tet10
+      // Keast points, centroid weight -4/5 and (1/2,1/6,1/6,1/6) 9/20).
+      // Before: 4 points at the nodes. The tet4 strain is constant, so a
+      // linear material gives the same stiffness and the same lumped
+      // masses (sum_g h w = 1/4 per node); the recovery is the physical
+      // linear fit (miscel.cc, kind 1). Point order as the tet10 branch:
+      // xi = L1 (node 0), eta = L2 (node 2), zeta = L3 (node 1).
+      npoint = 5;
+      stress_recovery_gauss = 1;
       for ( ipoint=0; ipoint<npoint; ipoint++ ) {
-        weight[ipoint] = 1./npoint;
+        if ( ipoint==0 ) {
+          L1 = L2 = L3 = 0.25;
+          weight[ipoint] = -4./5.;
+        }
+        else {
+          L1 = ( ipoint==1 ) ? 0.5 : 1./6.;
+          L2 = ( ipoint==2 ) ? 0.5 : 1./6.;
+          L3 = ( ipoint==3 ) ? 0.5 : 1./6.;
+          weight[ipoint] = 9./20.;
+        }
+        h[ipoint*nnol+0] = L1;
+        h[ipoint*nnol+1] = L3;
+        h[ipoint*nnol+2] = L2;
+        h[ipoint*nnol+3] = 1. - L1 - L2 - L3;
         p[ipoint*ndim*nnol+0]  =  1.;
         p[ipoint*ndim*nnol+1]  =  0.;
         p[ipoint*ndim*nnol+2]  =  0.;
@@ -469,12 +558,6 @@ void pol( long int element, long int element_group,
         p[ipoint*ndim*nnol+9]  =  1.;
         p[ipoint*ndim*nnol+10] =  0.;
         p[ipoint*ndim*nnol+11] = -1.;
-        for ( inol=0; inol<nnol; inol++ ) {
-          if ( inol==ipoint )
-            h[ipoint*nnol+inol] = 1.;
-          else
-            h[ipoint*nnol+inol] = 0.;
-        }
       }
     }
     else

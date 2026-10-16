@@ -1,0 +1,377 @@
+( C76 {F4 T6f, 2026-10-16} prism6 group_integration_points -minimal: 2 points, the triangle centroid at zeta = 1/2 +- 1/(2 sqrt 3), equal weights {Professional 02-08-2026; its nodal displacements equal a 2-point FE model to 1.5e-13}. Cantilever 10x1x1 of 20x2x2x2 prism6 {triangles in xy}, root clamped, tip displacement -1 in z, linear elastic E 1 nu 0.3. The 2-point rule halves the bending error of the full rules {tip-load Timoshenko: 2 points -7.1 %, GNU 6-point -13.1 %}; 1 spurious mode per element, restrained by the mesh. Targets = Professional node_dof. GNU before {record ignored, 6 points}: node 171 disx 0.013528 (Professional 0.0138348); node 45 disx -0.013528 (Professional -0.0138348); node 178 disz -0.255669 (Professional -0.255369); node 21 disx -0.0746599 (Professional -0.0746468). )
+
+echo -no
+number_of_space_dimensions 3
+materi_velocity
+materi_displacement
+materi_stress
+end_initia
+inertia_apply -no
+node 1 0 0 0
+node 2 0.5 0 0
+node 3 1 0 0
+node 4 1.5 0 0
+node 5 2 0 0
+node 6 2.5 0 0
+node 7 3 0 0
+node 8 3.5 0 0
+node 9 4 0 0
+node 10 4.5 0 0
+node 11 5 0 0
+node 12 5.5 0 0
+node 13 6 0 0
+node 14 6.5 0 0
+node 15 7 0 0
+node 16 7.5 0 0
+node 17 8 0 0
+node 18 8.5 0 0
+node 19 9 0 0
+node 20 9.5 0 0
+node 21 10 0 0
+node 22 0 0.5 0
+node 23 0.5 0.5 0
+node 24 1 0.5 0
+node 25 1.5 0.5 0
+node 26 2 0.5 0
+node 27 2.5 0.5 0
+node 28 3 0.5 0
+node 29 3.5 0.5 0
+node 30 4 0.5 0
+node 31 4.5 0.5 0
+node 32 5 0.5 0
+node 33 5.5 0.5 0
+node 34 6 0.5 0
+node 35 6.5 0.5 0
+node 36 7 0.5 0
+node 37 7.5 0.5 0
+node 38 8 0.5 0
+node 39 8.5 0.5 0
+node 40 9 0.5 0
+node 41 9.5 0.5 0
+node 42 10 0.5 0
+node 43 0 1 0
+node 44 0.5 1 0
+node 45 1 1 0
+node 46 1.5 1 0
+node 47 2 1 0
+node 48 2.5 1 0
+node 49 3 1 0
+node 50 3.5 1 0
+node 51 4 1 0
+node 52 4.5 1 0
+node 53 5 1 0
+node 54 5.5 1 0
+node 55 6 1 0
+node 56 6.5 1 0
+node 57 7 1 0
+node 58 7.5 1 0
+node 59 8 1 0
+node 60 8.5 1 0
+node 61 9 1 0
+node 62 9.5 1 0
+node 63 10 1 0
+node 64 0 0 0.5
+node 65 0.5 0 0.5
+node 66 1 0 0.5
+node 67 1.5 0 0.5
+node 68 2 0 0.5
+node 69 2.5 0 0.5
+node 70 3 0 0.5
+node 71 3.5 0 0.5
+node 72 4 0 0.5
+node 73 4.5 0 0.5
+node 74 5 0 0.5
+node 75 5.5 0 0.5
+node 76 6 0 0.5
+node 77 6.5 0 0.5
+node 78 7 0 0.5
+node 79 7.5 0 0.5
+node 80 8 0 0.5
+node 81 8.5 0 0.5
+node 82 9 0 0.5
+node 83 9.5 0 0.5
+node 84 10 0 0.5
+node 85 0 0.5 0.5
+node 86 0.5 0.5 0.5
+node 87 1 0.5 0.5
+node 88 1.5 0.5 0.5
+node 89 2 0.5 0.5
+node 90 2.5 0.5 0.5
+node 91 3 0.5 0.5
+node 92 3.5 0.5 0.5
+node 93 4 0.5 0.5
+node 94 4.5 0.5 0.5
+node 95 5 0.5 0.5
+node 96 5.5 0.5 0.5
+node 97 6 0.5 0.5
+node 98 6.5 0.5 0.5
+node 99 7 0.5 0.5
+node 100 7.5 0.5 0.5
+node 101 8 0.5 0.5
+node 102 8.5 0.5 0.5
+node 103 9 0.5 0.5
+node 104 9.5 0.5 0.5
+node 105 10 0.5 0.5
+node 106 0 1 0.5
+node 107 0.5 1 0.5
+node 108 1 1 0.5
+node 109 1.5 1 0.5
+node 110 2 1 0.5
+node 111 2.5 1 0.5
+node 112 3 1 0.5
+node 113 3.5 1 0.5
+node 114 4 1 0.5
+node 115 4.5 1 0.5
+node 116 5 1 0.5
+node 117 5.5 1 0.5
+node 118 6 1 0.5
+node 119 6.5 1 0.5
+node 120 7 1 0.5
+node 121 7.5 1 0.5
+node 122 8 1 0.5
+node 123 8.5 1 0.5
+node 124 9 1 0.5
+node 125 9.5 1 0.5
+node 126 10 1 0.5
+node 127 0 0 1
+node 128 0.5 0 1
+node 129 1 0 1
+node 130 1.5 0 1
+node 131 2 0 1
+node 132 2.5 0 1
+node 133 3 0 1
+node 134 3.5 0 1
+node 135 4 0 1
+node 136 4.5 0 1
+node 137 5 0 1
+node 138 5.5 0 1
+node 139 6 0 1
+node 140 6.5 0 1
+node 141 7 0 1
+node 142 7.5 0 1
+node 143 8 0 1
+node 144 8.5 0 1
+node 145 9 0 1
+node 146 9.5 0 1
+node 147 10 0 1
+node 148 0 0.5 1
+node 149 0.5 0.5 1
+node 150 1 0.5 1
+node 151 1.5 0.5 1
+node 152 2 0.5 1
+node 153 2.5 0.5 1
+node 154 3 0.5 1
+node 155 3.5 0.5 1
+node 156 4 0.5 1
+node 157 4.5 0.5 1
+node 158 5 0.5 1
+node 159 5.5 0.5 1
+node 160 6 0.5 1
+node 161 6.5 0.5 1
+node 162 7 0.5 1
+node 163 7.5 0.5 1
+node 164 8 0.5 1
+node 165 8.5 0.5 1
+node 166 9 0.5 1
+node 167 9.5 0.5 1
+node 168 10 0.5 1
+node 169 0 1 1
+node 170 0.5 1 1
+node 171 1 1 1
+node 172 1.5 1 1
+node 173 2 1 1
+node 174 2.5 1 1
+node 175 3 1 1
+node 176 3.5 1 1
+node 177 4 1 1
+node 178 4.5 1 1
+node 179 5 1 1
+node 180 5.5 1 1
+node 181 6 1 1
+node 182 6.5 1 1
+node 183 7 1 1
+node 184 7.5 1 1
+node 185 8 1 1
+node 186 8.5 1 1
+node 187 9 1 1
+node 188 9.5 1 1
+node 189 10 1 1
+element 1 -prism6 1 2 23 64 65 86
+element 2 -prism6 1 23 22 64 86 85
+element 3 -prism6 2 3 24 65 66 87
+element 4 -prism6 2 24 23 65 87 86
+element 5 -prism6 3 4 25 66 67 88
+element 6 -prism6 3 25 24 66 88 87
+element 7 -prism6 4 5 26 67 68 89
+element 8 -prism6 4 26 25 67 89 88
+element 9 -prism6 5 6 27 68 69 90
+element 10 -prism6 5 27 26 68 90 89
+element 11 -prism6 6 7 28 69 70 91
+element 12 -prism6 6 28 27 69 91 90
+element 13 -prism6 7 8 29 70 71 92
+element 14 -prism6 7 29 28 70 92 91
+element 15 -prism6 8 9 30 71 72 93
+element 16 -prism6 8 30 29 71 93 92
+element 17 -prism6 9 10 31 72 73 94
+element 18 -prism6 9 31 30 72 94 93
+element 19 -prism6 10 11 32 73 74 95
+element 20 -prism6 10 32 31 73 95 94
+element 21 -prism6 11 12 33 74 75 96
+element 22 -prism6 11 33 32 74 96 95
+element 23 -prism6 12 13 34 75 76 97
+element 24 -prism6 12 34 33 75 97 96
+element 25 -prism6 13 14 35 76 77 98
+element 26 -prism6 13 35 34 76 98 97
+element 27 -prism6 14 15 36 77 78 99
+element 28 -prism6 14 36 35 77 99 98
+element 29 -prism6 15 16 37 78 79 100
+element 30 -prism6 15 37 36 78 100 99
+element 31 -prism6 16 17 38 79 80 101
+element 32 -prism6 16 38 37 79 101 100
+element 33 -prism6 17 18 39 80 81 102
+element 34 -prism6 17 39 38 80 102 101
+element 35 -prism6 18 19 40 81 82 103
+element 36 -prism6 18 40 39 81 103 102
+element 37 -prism6 19 20 41 82 83 104
+element 38 -prism6 19 41 40 82 104 103
+element 39 -prism6 20 21 42 83 84 105
+element 40 -prism6 20 42 41 83 105 104
+element 41 -prism6 22 23 44 85 86 107
+element 42 -prism6 22 44 43 85 107 106
+element 43 -prism6 23 24 45 86 87 108
+element 44 -prism6 23 45 44 86 108 107
+element 45 -prism6 24 25 46 87 88 109
+element 46 -prism6 24 46 45 87 109 108
+element 47 -prism6 25 26 47 88 89 110
+element 48 -prism6 25 47 46 88 110 109
+element 49 -prism6 26 27 48 89 90 111
+element 50 -prism6 26 48 47 89 111 110
+element 51 -prism6 27 28 49 90 91 112
+element 52 -prism6 27 49 48 90 112 111
+element 53 -prism6 28 29 50 91 92 113
+element 54 -prism6 28 50 49 91 113 112
+element 55 -prism6 29 30 51 92 93 114
+element 56 -prism6 29 51 50 92 114 113
+element 57 -prism6 30 31 52 93 94 115
+element 58 -prism6 30 52 51 93 115 114
+element 59 -prism6 31 32 53 94 95 116
+element 60 -prism6 31 53 52 94 116 115
+element 61 -prism6 32 33 54 95 96 117
+element 62 -prism6 32 54 53 95 117 116
+element 63 -prism6 33 34 55 96 97 118
+element 64 -prism6 33 55 54 96 118 117
+element 65 -prism6 34 35 56 97 98 119
+element 66 -prism6 34 56 55 97 119 118
+element 67 -prism6 35 36 57 98 99 120
+element 68 -prism6 35 57 56 98 120 119
+element 69 -prism6 36 37 58 99 100 121
+element 70 -prism6 36 58 57 99 121 120
+element 71 -prism6 37 38 59 100 101 122
+element 72 -prism6 37 59 58 100 122 121
+element 73 -prism6 38 39 60 101 102 123
+element 74 -prism6 38 60 59 101 123 122
+element 75 -prism6 39 40 61 102 103 124
+element 76 -prism6 39 61 60 102 124 123
+element 77 -prism6 40 41 62 103 104 125
+element 78 -prism6 40 62 61 103 125 124
+element 79 -prism6 41 42 63 104 105 126
+element 80 -prism6 41 63 62 104 126 125
+element 81 -prism6 64 65 86 127 128 149
+element 82 -prism6 64 86 85 127 149 148
+element 83 -prism6 65 66 87 128 129 150
+element 84 -prism6 65 87 86 128 150 149
+element 85 -prism6 66 67 88 129 130 151
+element 86 -prism6 66 88 87 129 151 150
+element 87 -prism6 67 68 89 130 131 152
+element 88 -prism6 67 89 88 130 152 151
+element 89 -prism6 68 69 90 131 132 153
+element 90 -prism6 68 90 89 131 153 152
+element 91 -prism6 69 70 91 132 133 154
+element 92 -prism6 69 91 90 132 154 153
+element 93 -prism6 70 71 92 133 134 155
+element 94 -prism6 70 92 91 133 155 154
+element 95 -prism6 71 72 93 134 135 156
+element 96 -prism6 71 93 92 134 156 155
+element 97 -prism6 72 73 94 135 136 157
+element 98 -prism6 72 94 93 135 157 156
+element 99 -prism6 73 74 95 136 137 158
+element 100 -prism6 73 95 94 136 158 157
+element 101 -prism6 74 75 96 137 138 159
+element 102 -prism6 74 96 95 137 159 158
+element 103 -prism6 75 76 97 138 139 160
+element 104 -prism6 75 97 96 138 160 159
+element 105 -prism6 76 77 98 139 140 161
+element 106 -prism6 76 98 97 139 161 160
+element 107 -prism6 77 78 99 140 141 162
+element 108 -prism6 77 99 98 140 162 161
+element 109 -prism6 78 79 100 141 142 163
+element 110 -prism6 78 100 99 141 163 162
+element 111 -prism6 79 80 101 142 143 164
+element 112 -prism6 79 101 100 142 164 163
+element 113 -prism6 80 81 102 143 144 165
+element 114 -prism6 80 102 101 143 165 164
+element 115 -prism6 81 82 103 144 145 166
+element 116 -prism6 81 103 102 144 166 165
+element 117 -prism6 82 83 104 145 146 167
+element 118 -prism6 82 104 103 145 167 166
+element 119 -prism6 83 84 105 146 147 168
+element 120 -prism6 83 105 104 146 168 167
+element 121 -prism6 85 86 107 148 149 170
+element 122 -prism6 85 107 106 148 170 169
+element 123 -prism6 86 87 108 149 150 171
+element 124 -prism6 86 108 107 149 171 170
+element 125 -prism6 87 88 109 150 151 172
+element 126 -prism6 87 109 108 150 172 171
+element 127 -prism6 88 89 110 151 152 173
+element 128 -prism6 88 110 109 151 173 172
+element 129 -prism6 89 90 111 152 153 174
+element 130 -prism6 89 111 110 152 174 173
+element 131 -prism6 90 91 112 153 154 175
+element 132 -prism6 90 112 111 153 175 174
+element 133 -prism6 91 92 113 154 155 176
+element 134 -prism6 91 113 112 154 176 175
+element 135 -prism6 92 93 114 155 156 177
+element 136 -prism6 92 114 113 155 177 176
+element 137 -prism6 93 94 115 156 157 178
+element 138 -prism6 93 115 114 156 178 177
+element 139 -prism6 94 95 116 157 158 179
+element 140 -prism6 94 116 115 157 179 178
+element 141 -prism6 95 96 117 158 159 180
+element 142 -prism6 95 117 116 158 180 179
+element 143 -prism6 96 97 118 159 160 181
+element 144 -prism6 96 118 117 159 181 180
+element 145 -prism6 97 98 119 160 161 182
+element 146 -prism6 97 119 118 160 182 181
+element 147 -prism6 98 99 120 161 162 183
+element 148 -prism6 98 120 119 161 183 182
+element 149 -prism6 99 100 121 162 163 184
+element 150 -prism6 99 121 120 162 184 183
+element 151 -prism6 100 101 122 163 164 185
+element 152 -prism6 100 122 121 163 185 184
+element 153 -prism6 101 102 123 164 165 186
+element 154 -prism6 101 123 122 164 186 185
+element 155 -prism6 102 103 124 165 166 187
+element 156 -prism6 102 124 123 165 187 186
+element 157 -prism6 103 104 125 166 167 188
+element 158 -prism6 103 125 124 166 188 187
+element 159 -prism6 104 105 126 167 168 189
+element 160 -prism6 104 126 125 167 189 188
+group_type 0 -materi
+group_materi_elasti_young 0 1.0
+group_materi_elasti_poisson 0 0.3
+group_materi_memory 0 -total_linear
+bounda_dof 0 -ra 1 22 43 64 85 106 127 148 169 -ra -velx -vely -velz
+bounda_time 0 0. 0. 1. 0.
+bounda_dof 1 -ra 21 42 63 84 105 126 147 168 189 -ra -velz
+bounda_time 1 0. -1. 1. -1.
+group_integration_points 0 -minimal
+control_timestep 0 1. 1.
+target_item 0 -node_dof 171 -disx
+target_value 0 1.383483085245e-02 4.0e-06
+target_item 1 -node_dof 45 -disx
+target_value 1 -1.383483085245e-02 4.0e-06
+target_item 2 -node_dof 178 -disz
+target_value 2 -2.553687607198e-01 4.0e-06
+target_item 3 -node_dof 21 -disx
+target_value 3 -7.464680403933e-02 4.0e-06
+end_data

@@ -2132,6 +2132,23 @@ run_ok "$T2026" recovery_quad16_gauss_fit1
 run_ok "$T2026" recovery_quad16_lobatto1
 run_ok "$T2026" recovery_quad16_lobatto_minimal1
 run_ok "$T2026" recovery_quad16_axisym_lobatto1
+# F4 T6f C67 remainder + C76 (2026-10-16): the last rules on the h
+#   fallback. Professional 02-08-2026 (81 distorted probes, every node):
+#   prism15 21 points and tet4 -maximal (5-point Keast rule, manual 6.623;
+#   GNU before: 4 nodal points) = per element the physical linear fit
+#   1,x,y,z, arithmetic mean; prism6 -minimal = 2 points (triangle
+#   centroid x 2 Gauss levels, equal weights; GNU before: record ignored)
+#   recovered by sum_g h_n(g) sig_g / sum_g h_n(g), arithmetic mean.
+#   Targets = Professional node_dof (4e-6). Old GNU: rc 1 (prism15 h
+#   average unbounded at the corners, volume-weighted means, 6 points).
+#   prism15_elastic_shear1: the prism15 7-point triangle rule had two
+#   wrong points ((b,b), (d,d) instead of (a,a), (c,c)); old GNU
+#   displacements 3.7 % off the Professional, now 3e-11.
+run_ok "$T2026" recovery_prism15_fit1
+run_ok "$T2026" recovery_tet4_maximal1
+run_ok "$T2026" recovery_prism6_minimal1
+run_ok "$T2026" prism6_minimal_cantilever1
+run_ok "$T2026" prism15_elastic_shear1
 
 # ---------------------------------------------------------------------
 # Sub-sprint materi_stress_force, lote 2 (integracion 2D quad4/quad9):
