@@ -1,0 +1,414 @@
+( C80.1 {F4 T6f, 2026-10-16} group_element_selective_reduced_integration -both {shear terms and volumetric part at 1 centroid point, the rest 2x2 Gauss}. Timoshenko-Goodier cantilever L=10 D=1, plane strain {E'=E/{1-nu^2}, nu'=nu/{1-nu}}, E=1000 nu=0.49, parabolic tip shear P=1, exact clamp displacements, 40x4 quad4. Analytic tip deflection v{L,0}=3.0730505000e+00 at node 123 {tol 0.15 = 4.9 %; measured +4.18 % = an independent pure-displacement solve of the same element to all digits; Gauss -40.8 %, -yes -40.3 %}. Coarser meshes are soft {20x2 +19 %, 10x1 +192 %, documented}. Old GNU: rc 1, I do not know : -both. )
+
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_stress
+end_initia
+mesh -fixed_in_space -fixed_in_space
+inertia_apply -no
+convection_apply -no
+node 1 0 -0.5
+node 2 0.25 -0.5
+node 3 0.5 -0.5
+node 4 0.75 -0.5
+node 5 1 -0.5
+node 6 1.25 -0.5
+node 7 1.5 -0.5
+node 8 1.75 -0.5
+node 9 2 -0.5
+node 10 2.25 -0.5
+node 11 2.5 -0.5
+node 12 2.75 -0.5
+node 13 3 -0.5
+node 14 3.25 -0.5
+node 15 3.5 -0.5
+node 16 3.75 -0.5
+node 17 4 -0.5
+node 18 4.25 -0.5
+node 19 4.5 -0.5
+node 20 4.75 -0.5
+node 21 5 -0.5
+node 22 5.25 -0.5
+node 23 5.5 -0.5
+node 24 5.75 -0.5
+node 25 6 -0.5
+node 26 6.25 -0.5
+node 27 6.5 -0.5
+node 28 6.75 -0.5
+node 29 7 -0.5
+node 30 7.25 -0.5
+node 31 7.5 -0.5
+node 32 7.75 -0.5
+node 33 8 -0.5
+node 34 8.25 -0.5
+node 35 8.5 -0.5
+node 36 8.75 -0.5
+node 37 9 -0.5
+node 38 9.25 -0.5
+node 39 9.5 -0.5
+node 40 9.75 -0.5
+node 41 10 -0.5
+node 42 0 -0.25
+node 43 0.25 -0.25
+node 44 0.5 -0.25
+node 45 0.75 -0.25
+node 46 1 -0.25
+node 47 1.25 -0.25
+node 48 1.5 -0.25
+node 49 1.75 -0.25
+node 50 2 -0.25
+node 51 2.25 -0.25
+node 52 2.5 -0.25
+node 53 2.75 -0.25
+node 54 3 -0.25
+node 55 3.25 -0.25
+node 56 3.5 -0.25
+node 57 3.75 -0.25
+node 58 4 -0.25
+node 59 4.25 -0.25
+node 60 4.5 -0.25
+node 61 4.75 -0.25
+node 62 5 -0.25
+node 63 5.25 -0.25
+node 64 5.5 -0.25
+node 65 5.75 -0.25
+node 66 6 -0.25
+node 67 6.25 -0.25
+node 68 6.5 -0.25
+node 69 6.75 -0.25
+node 70 7 -0.25
+node 71 7.25 -0.25
+node 72 7.5 -0.25
+node 73 7.75 -0.25
+node 74 8 -0.25
+node 75 8.25 -0.25
+node 76 8.5 -0.25
+node 77 8.75 -0.25
+node 78 9 -0.25
+node 79 9.25 -0.25
+node 80 9.5 -0.25
+node 81 9.75 -0.25
+node 82 10 -0.25
+node 83 0 0
+node 84 0.25 0
+node 85 0.5 0
+node 86 0.75 0
+node 87 1 0
+node 88 1.25 0
+node 89 1.5 0
+node 90 1.75 0
+node 91 2 0
+node 92 2.25 0
+node 93 2.5 0
+node 94 2.75 0
+node 95 3 0
+node 96 3.25 0
+node 97 3.5 0
+node 98 3.75 0
+node 99 4 0
+node 100 4.25 0
+node 101 4.5 0
+node 102 4.75 0
+node 103 5 0
+node 104 5.25 0
+node 105 5.5 0
+node 106 5.75 0
+node 107 6 0
+node 108 6.25 0
+node 109 6.5 0
+node 110 6.75 0
+node 111 7 0
+node 112 7.25 0
+node 113 7.5 0
+node 114 7.75 0
+node 115 8 0
+node 116 8.25 0
+node 117 8.5 0
+node 118 8.75 0
+node 119 9 0
+node 120 9.25 0
+node 121 9.5 0
+node 122 9.75 0
+node 123 10 0
+node 124 0 0.25
+node 125 0.25 0.25
+node 126 0.5 0.25
+node 127 0.75 0.25
+node 128 1 0.25
+node 129 1.25 0.25
+node 130 1.5 0.25
+node 131 1.75 0.25
+node 132 2 0.25
+node 133 2.25 0.25
+node 134 2.5 0.25
+node 135 2.75 0.25
+node 136 3 0.25
+node 137 3.25 0.25
+node 138 3.5 0.25
+node 139 3.75 0.25
+node 140 4 0.25
+node 141 4.25 0.25
+node 142 4.5 0.25
+node 143 4.75 0.25
+node 144 5 0.25
+node 145 5.25 0.25
+node 146 5.5 0.25
+node 147 5.75 0.25
+node 148 6 0.25
+node 149 6.25 0.25
+node 150 6.5 0.25
+node 151 6.75 0.25
+node 152 7 0.25
+node 153 7.25 0.25
+node 154 7.5 0.25
+node 155 7.75 0.25
+node 156 8 0.25
+node 157 8.25 0.25
+node 158 8.5 0.25
+node 159 8.75 0.25
+node 160 9 0.25
+node 161 9.25 0.25
+node 162 9.5 0.25
+node 163 9.75 0.25
+node 164 10 0.25
+node 165 0 0.5
+node 166 0.25 0.5
+node 167 0.5 0.5
+node 168 0.75 0.5
+node 169 1 0.5
+node 170 1.25 0.5
+node 171 1.5 0.5
+node 172 1.75 0.5
+node 173 2 0.5
+node 174 2.25 0.5
+node 175 2.5 0.5
+node 176 2.75 0.5
+node 177 3 0.5
+node 178 3.25 0.5
+node 179 3.5 0.5
+node 180 3.75 0.5
+node 181 4 0.5
+node 182 4.25 0.5
+node 183 4.5 0.5
+node 184 4.75 0.5
+node 185 5 0.5
+node 186 5.25 0.5
+node 187 5.5 0.5
+node 188 5.75 0.5
+node 189 6 0.5
+node 190 6.25 0.5
+node 191 6.5 0.5
+node 192 6.75 0.5
+node 193 7 0.5
+node 194 7.25 0.5
+node 195 7.5 0.5
+node 196 7.75 0.5
+node 197 8 0.5
+node 198 8.25 0.5
+node 199 8.5 0.5
+node 200 8.75 0.5
+node 201 9 0.5
+node 202 9.25 0.5
+node 203 9.5 0.5
+node 204 9.75 0.5
+node 205 10 0.5
+element 1 -quad4 1 2 42 43
+element 2 -quad4 2 3 43 44
+element 3 -quad4 3 4 44 45
+element 4 -quad4 4 5 45 46
+element 5 -quad4 5 6 46 47
+element 6 -quad4 6 7 47 48
+element 7 -quad4 7 8 48 49
+element 8 -quad4 8 9 49 50
+element 9 -quad4 9 10 50 51
+element 10 -quad4 10 11 51 52
+element 11 -quad4 11 12 52 53
+element 12 -quad4 12 13 53 54
+element 13 -quad4 13 14 54 55
+element 14 -quad4 14 15 55 56
+element 15 -quad4 15 16 56 57
+element 16 -quad4 16 17 57 58
+element 17 -quad4 17 18 58 59
+element 18 -quad4 18 19 59 60
+element 19 -quad4 19 20 60 61
+element 20 -quad4 20 21 61 62
+element 21 -quad4 21 22 62 63
+element 22 -quad4 22 23 63 64
+element 23 -quad4 23 24 64 65
+element 24 -quad4 24 25 65 66
+element 25 -quad4 25 26 66 67
+element 26 -quad4 26 27 67 68
+element 27 -quad4 27 28 68 69
+element 28 -quad4 28 29 69 70
+element 29 -quad4 29 30 70 71
+element 30 -quad4 30 31 71 72
+element 31 -quad4 31 32 72 73
+element 32 -quad4 32 33 73 74
+element 33 -quad4 33 34 74 75
+element 34 -quad4 34 35 75 76
+element 35 -quad4 35 36 76 77
+element 36 -quad4 36 37 77 78
+element 37 -quad4 37 38 78 79
+element 38 -quad4 38 39 79 80
+element 39 -quad4 39 40 80 81
+element 40 -quad4 40 41 81 82
+element 41 -quad4 42 43 83 84
+element 42 -quad4 43 44 84 85
+element 43 -quad4 44 45 85 86
+element 44 -quad4 45 46 86 87
+element 45 -quad4 46 47 87 88
+element 46 -quad4 47 48 88 89
+element 47 -quad4 48 49 89 90
+element 48 -quad4 49 50 90 91
+element 49 -quad4 50 51 91 92
+element 50 -quad4 51 52 92 93
+element 51 -quad4 52 53 93 94
+element 52 -quad4 53 54 94 95
+element 53 -quad4 54 55 95 96
+element 54 -quad4 55 56 96 97
+element 55 -quad4 56 57 97 98
+element 56 -quad4 57 58 98 99
+element 57 -quad4 58 59 99 100
+element 58 -quad4 59 60 100 101
+element 59 -quad4 60 61 101 102
+element 60 -quad4 61 62 102 103
+element 61 -quad4 62 63 103 104
+element 62 -quad4 63 64 104 105
+element 63 -quad4 64 65 105 106
+element 64 -quad4 65 66 106 107
+element 65 -quad4 66 67 107 108
+element 66 -quad4 67 68 108 109
+element 67 -quad4 68 69 109 110
+element 68 -quad4 69 70 110 111
+element 69 -quad4 70 71 111 112
+element 70 -quad4 71 72 112 113
+element 71 -quad4 72 73 113 114
+element 72 -quad4 73 74 114 115
+element 73 -quad4 74 75 115 116
+element 74 -quad4 75 76 116 117
+element 75 -quad4 76 77 117 118
+element 76 -quad4 77 78 118 119
+element 77 -quad4 78 79 119 120
+element 78 -quad4 79 80 120 121
+element 79 -quad4 80 81 121 122
+element 80 -quad4 81 82 122 123
+element 81 -quad4 83 84 124 125
+element 82 -quad4 84 85 125 126
+element 83 -quad4 85 86 126 127
+element 84 -quad4 86 87 127 128
+element 85 -quad4 87 88 128 129
+element 86 -quad4 88 89 129 130
+element 87 -quad4 89 90 130 131
+element 88 -quad4 90 91 131 132
+element 89 -quad4 91 92 132 133
+element 90 -quad4 92 93 133 134
+element 91 -quad4 93 94 134 135
+element 92 -quad4 94 95 135 136
+element 93 -quad4 95 96 136 137
+element 94 -quad4 96 97 137 138
+element 95 -quad4 97 98 138 139
+element 96 -quad4 98 99 139 140
+element 97 -quad4 99 100 140 141
+element 98 -quad4 100 101 141 142
+element 99 -quad4 101 102 142 143
+element 100 -quad4 102 103 143 144
+element 101 -quad4 103 104 144 145
+element 102 -quad4 104 105 145 146
+element 103 -quad4 105 106 146 147
+element 104 -quad4 106 107 147 148
+element 105 -quad4 107 108 148 149
+element 106 -quad4 108 109 149 150
+element 107 -quad4 109 110 150 151
+element 108 -quad4 110 111 151 152
+element 109 -quad4 111 112 152 153
+element 110 -quad4 112 113 153 154
+element 111 -quad4 113 114 154 155
+element 112 -quad4 114 115 155 156
+element 113 -quad4 115 116 156 157
+element 114 -quad4 116 117 157 158
+element 115 -quad4 117 118 158 159
+element 116 -quad4 118 119 159 160
+element 117 -quad4 119 120 160 161
+element 118 -quad4 120 121 161 162
+element 119 -quad4 121 122 162 163
+element 120 -quad4 122 123 163 164
+element 121 -quad4 124 125 165 166
+element 122 -quad4 125 126 166 167
+element 123 -quad4 126 127 167 168
+element 124 -quad4 127 128 168 169
+element 125 -quad4 128 129 169 170
+element 126 -quad4 129 130 170 171
+element 127 -quad4 130 131 171 172
+element 128 -quad4 131 132 172 173
+element 129 -quad4 132 133 173 174
+element 130 -quad4 133 134 174 175
+element 131 -quad4 134 135 175 176
+element 132 -quad4 135 136 176 177
+element 133 -quad4 136 137 177 178
+element 134 -quad4 137 138 178 179
+element 135 -quad4 138 139 179 180
+element 136 -quad4 139 140 180 181
+element 137 -quad4 140 141 181 182
+element 138 -quad4 141 142 182 183
+element 139 -quad4 142 143 183 184
+element 140 -quad4 143 144 184 185
+element 141 -quad4 144 145 185 186
+element 142 -quad4 145 146 186 187
+element 143 -quad4 146 147 187 188
+element 144 -quad4 147 148 188 189
+element 145 -quad4 148 149 189 190
+element 146 -quad4 149 150 190 191
+element 147 -quad4 150 151 191 192
+element 148 -quad4 151 152 192 193
+element 149 -quad4 152 153 193 194
+element 150 -quad4 153 154 194 195
+element 151 -quad4 154 155 195 196
+element 152 -quad4 155 156 196 197
+element 153 -quad4 156 157 197 198
+element 154 -quad4 157 158 198 199
+element 155 -quad4 158 159 199 200
+element 156 -quad4 159 160 200 201
+element 157 -quad4 160 161 201 202
+element 158 -quad4 161 162 202 203
+element 159 -quad4 162 163 203 204
+element 160 -quad4 163 164 204 205
+bounda_dof 0 1 -velx
+bounda_time 0 0. 0 10. 0
+bounda_dof 1 1 -vely
+bounda_time 1 0. 0.0109515 10. 0.0109515
+bounda_dof 2 42 -velx
+bounda_time 2 0. -0.000210928125 10. -0.000210928125
+bounda_dof 3 42 -vely
+bounda_time 3 0. 0.002737875 10. 0.002737875
+bounda_dof 4 83 -velx
+bounda_time 4 0. 0 10. 0
+bounda_dof 5 83 -vely
+bounda_time 5 0. 0 10. 0
+bounda_dof 6 124 -velx
+bounda_time 6 0. 0.000210928125 10. 0.000210928125
+bounda_dof 7 124 -vely
+bounda_time 7 0. 0.002737875 10. 0.002737875
+bounda_dof 8 165 -velx
+bounda_time 8 0. -0 10. -0
+bounda_dof 9 165 -vely
+bounda_time 9 0. 0.0109515 10. 0.0109515
+bounda_force 10 41 -vely
+bounda_time 10 0. 0.0546875 10. 0.0546875
+bounda_force 11 82 -vely
+bounda_time 11 0. 0.265625 10. 0.265625
+bounda_force 12 123 -vely
+bounda_time 12 0. 0.359375 10. 0.359375
+bounda_force 13 164 -vely
+bounda_time 13 0. 0.265625 10. 0.265625
+bounda_force 14 205 -vely
+bounda_time 14 0. 0.0546875 10. 0.0546875
+group_type 0 -materi
+group_materi_elasti_young 0 1000.0
+group_materi_elasti_poisson 0 0.49
+group_materi_memory 0 -updated_linear
+group_element_selective_reduced_integration 0 -both
+control_timestep 10 1. 1.
+target_item 0 -node_dof 123 -vely
+target_value 0 3.073050500000e+00 1.5e-01
+end_data

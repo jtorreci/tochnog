@@ -1067,7 +1067,12 @@ static void msf_element_contribution_2d( long int element, long int name,
   // in the validation) skips the element with a warning.
   msf_element_rule( element, element_group, name, npol, nnol, nper, iso,
     wrule );
-  sri = sri_active( element, element_group, name, nnol );
+  // C80.1: only the shear bit replaces the full-rule shear internal
+  // force; the -volumetric stored stress is already the B-bar stress
+  // (constant kappa*theta_c per element), whose full-rule internal
+  // force equals the reduced one (the Gauss sum of dN/dx*detJ is the
+  // centroid value for the quad4 and the parallelepiped hex8).
+  sri = ( sri_active( element, element_group, name, nnol ) & SRI_SHEAR );
   npoint_ip = nper[0]*nper[1];
   if ( options_element_dof==-YES &&
        db_active_index( ELEMENT_DOF, element, VERSION_NORMAL ) ) {
@@ -2086,7 +2091,12 @@ static void msf_element_contribution_3d( long int element, long int name,
   // SRI hex8 (opt-in): the full-rule shear part is replaced by the
   // reduced 1-point shear internal force (the momentum feedback of the
   // fixed point K_elem*u = P, the same correction as the 2D quad4).
-  sri = sri_active( element, element_group, name, nnol );
+  // C80.1: only the shear bit replaces the full-rule shear internal
+  // force; the -volumetric stored stress is already the B-bar stress
+  // (constant kappa*theta_c per element), whose full-rule internal
+  // force equals the reduced one (the Gauss sum of dN/dx*detJ is the
+  // centroid value for the quad4 and the parallelepiped hex8).
+  sri = ( sri_active( element, element_group, name, nnol ) & SRI_SHEAR );
   msf_element_internal_forces_3d( npol, nnol, coords, nper3, iso3, wrule3,
     sig_ip, f_elem, sri );
   for ( iside=0; iside<2; iside++ ) {

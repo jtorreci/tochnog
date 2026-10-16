@@ -2089,6 +2089,19 @@ run_ok "$T2026" reduced_quad9_minimal1
 run_ok "$T2026" reduced_quad9_maximal1
 run_ok "$T2026" reduced_quad4_axisym1
 run_ok "$T2026" reduced_default_factor1
+# F4 T6f C80.1 (2026-10-16): group_element_selective_reduced_integration
+#   -volumetric / -both (GNU-only extension; -yes unchanged, covered by
+#   the qsri/qsri3d families). -volumetric = B-bar: volumetric part
+#   kappa*m*m^T at 1 centroid point, deviatoric part full Gauss, B-bar
+#   stored stress. Analytic targets: Lame cylinder plane strain nu 0.49 /
+#   0.4999 (quad4 and one hex8 layer, u_r(a) 0.5 %, sigma_theta(a) 6 %;
+#   Gauss -4 % / -80 %), plane-strain Timoshenko-Goodier cantilever 40x4
+#   nu 0.49 with -both (4.9 %; Gauss -41 %). Old GNU: rc 1, "I do not
+#   know : -volumetric" / "-both".
+run_ok "$T2026" sri_volumetric_lame049_1
+run_ok "$T2026" sri_volumetric_lame04999_1
+run_ok "$T2026" sri_volumetric_hex8_lame1
+run_ok "$T2026" sri_both_cantilever1
 
 # ---------------------------------------------------------------------
 # Sub-sprint materi_stress_force, lote 2 (integracion 2D quad4/quad9):

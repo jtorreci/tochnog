@@ -21,6 +21,59 @@
 
 #define EPS_H 1.e-8
 
+// C80.1 (2026-10-16): physical shape-function derivatives of the bilinear
+// quad4 / trilinear hex8 at the element centroid (iso 0), the centroid
+// Jacobian determinant and the centroid coordinates. Same conventions as
+// the shear SRI blocks of materi(): local node coordinates derived from
+// the index (row-major from the bottom, polynom.cc), the transpose
+// Jacobian of pol(). dndx[inol*ndim+idim] = dN_inol/dx_idim. Returns 0
+// for a degenerate centroid Jacobian.
+static long int sri_centroid_derivatives( long int name, long int nnol,
+  const double old_coord[], double dndx[], double &detj_c,
+  double coord_c[] )
+
+{
+  long int inol=0, idim=0, jdim=0;
+  double p[MNOL*MDIM], jac[MDIM*MDIM], invjac[MDIM*MDIM];
+
+  for ( inol=0; inol<nnol; inol++ ) {
+    // quad4: dN/dxi = xi_i/4 ; hex8: dN/dxi = xi_i/8 (i.e. xi_i/nnol)
+    p[inol*ndim+0] = ( (inol%2) ? 1. : -1. ) / (double) nnol;
+    p[inol*ndim+1] = ( ((inol/2)%2) ? 1. : -1. ) / (double) nnol;
+    if ( ndim==3 ) p[inol*ndim+2] = ( (inol/4) ? 1. : -1. ) / (double) nnol;
+  }
+  array_set( jac, 0., MDIM*MDIM );
+  for ( idim=0; idim<ndim; idim++ ) coord_c[idim] = 0.;
+  for ( inol=0; inol<nnol; inol++ ) {
+    for ( idim=0; idim<ndim; idim++ ) {
+      for ( jdim=0; jdim<ndim; jdim++ )
+        jac[idim*ndim+jdim] += p[inol*ndim+idim] * old_coord[inol*ndim+jdim];
+      coord_c[idim] += old_coord[inol*ndim+idim] / (double) nnol;
+    }
+  }
+  if ( ndim==2 ) {
+    detj_c = jac[0]*jac[3] - jac[1]*jac[2];
+    if ( scalar_dabs(detj_c)<TINY ) return 0;
+    invjac[0] =  jac[3]/detj_c; invjac[1] = -jac[1]/detj_c;
+    invjac[2] = -jac[2]/detj_c; invjac[3] =  jac[0]/detj_c;
+  }
+  else {
+    detj_c = jac[0]*( jac[4]*jac[8] - jac[5]*jac[7] )
+           - jac[1]*( jac[3]*jac[8] - jac[5]*jac[6] )
+           + jac[2]*( jac[3]*jac[7] - jac[4]*jac[6] );
+    if ( scalar_dabs(detj_c)<TINY ||
+         !matrix_inverse( jac, invjac, detj_c, 3 ) ) return 0;
+  }
+  for ( inol=0; inol<nnol; inol++ ) {
+    for ( idim=0; idim<ndim; idim++ ) {
+      dndx[inol*ndim+idim] = 0.;
+      for ( jdim=0; jdim<ndim; jdim++ )
+        dndx[inol*ndim+idim] += invjac[idim*ndim+jdim] * p[inol*ndim+jdim];
+    }
+  }
+  return 1;
+}
+
 void materi( long int element, long int gr, long int name, long int nnol, 
   long int npoint, long int nodes[], long int plasti_on_boundary,
   double coord_ip[], double old_coord[], long int ipoint,
@@ -37,7 +90,7 @@ void materi( long int element, long int gr, long int name, long int nnol,
     inol=0, jnol=0, m=0, n=0, indx=0, ipuknwn=0, iuknwn=0, jpuknwn=0, 
     swit=0, indxi=0, indxj=0, indx1=0, indx2=0, memory=-UPDATED, 
     ind_ddsdde=0, ldum=0, idum[1],
-    sri=-NO, sri_on=0,
+    sri=-NO, sri_on=0, sri_req=0,
     undr_active=0, undr_apply=-YES, undr_icontrol=0, undr_len=0, undr_len2=0, undr_k=0,
     dam_eff=0, dam_eff_len=0;
   double rdum=0., dens=0., dtime=0., materi_expansion_linear=0., 
@@ -54,7 +107,8 @@ void materi( long int element, long int gr, long int name, long int nnol,
     undr_p=0., undr_C=0., undr_buf[MPOINT],
     activation_factor=1., activation_stiff=1.,
     sri_g=0., sri_g2=0., sri_g3=0., sri_volfac=1., sri_detj_weight=0.,
-    sri_coord_center[MDIM],
+    sri_coord_center[MDIM], sri_kappa=0., sri_detj_vol=0.,
+    sri_volfac_vol=1., sri_bdiv[MNOL*MDIM],
     old_sig_eff[MDIM*MDIM], new_sig_eff[MDIM*MDIM],
     dam_eff_buf[MPOINT*MSTRESS_EFF_SLOTS],
     *old_deften=NULL, *new_deften=NULL, *inv_deften=NULL,
@@ -219,10 +273,22 @@ void materi( long int element, long int gr, long int name, long int nnol,
   db( GROUP_ELEMENT_SELECTIVE_REDUCED_INTEGRATION, gr, &sri, ddum, ldum,
     VERSION_NORMAL, GET_IF_EXISTS );
   sri_on = sri_active( element, gr, name, nnol );
-  if ( sri==-YES && materi_stress && !sri_on && !sri_warning_done ) {
-    pri( "Warning: group_element_selective_reduced_integration ignored: "
-      "only linear elastic 2D quad4 / 3D hex8 groups are supported (no "
-      "axisymmetry, no materi_displacement, no plasticity/damage/maxwell)." );
+  // C80.1: requested mode mask (-yes shear, -volumetric, -both); the
+  // volumetric bit is dropped by sri_active() for membrane groups.
+  sri_req = 0;
+  if ( sri==-YES || sri==-BOTH ) sri_req |= SRI_SHEAR;
+  if ( sri==-VOLUMETRIC || sri==-BOTH ) sri_req |= SRI_VOLUMETRIC;
+  if ( sri_req && materi_stress && sri_on!=sri_req && !sri_warning_done ) {
+    if ( sri==-YES )
+      pri( "Warning: group_element_selective_reduced_integration ignored: "
+        "only linear elastic 2D quad4 / 3D hex8 groups are supported (no "
+        "axisymmetry, no materi_displacement, no plasticity/damage/maxwell)." );
+    else
+      pri( "Warning: group_element_selective_reduced_integration "
+        "-volumetric/-both not fully applied: only linear elastic 2D "
+        "plane-strain quad4 / 3D hex8 groups are supported (no membrane "
+        "for the volumetric part, no axisymmetry, no materi_displacement, "
+        "no plasticity/damage/maxwell)." );
     sri_warning_done = 1;
   }
 
@@ -784,7 +850,10 @@ void materi( long int element, long int gr, long int name, long int nnol,
       // coincide; in 3D the yz entry differs (tensor 1*MDIM+2 = 5 vs
       // Voigt stress_indx(1,2) = 4), so the strain MUST use the tensor
       // index idim*MDIM+jdim.
-      if ( name==-QUAD4 ) {
+      if ( !( sri_on & SRI_SHEAR ) ) {
+        // C80.1 -volumetric: no shear split
+      }
+      else if ( name==-QUAD4 ) {
         sri_g = ddsdde_total[1*MSTRAIN+1];
         sigvec[stress_indx(0,1)] -= 2. * sri_g * inc_ept[stress_indx(0,1)];
         ddsdde_total[1*MSTRAIN+1] = 0.;
@@ -800,6 +869,57 @@ void materi( long int element, long int gr, long int name, long int nnol,
         ddsdde_total[1*MSTRAIN+1] = 0.;
         ddsdde_total[2*MSTRAIN+2] = 0.;
         ddsdde_total[4*MSTRAIN+4] = 0.;
+      }
+      if ( sri_on & SRI_VOLUMETRIC ) {
+        // C80.1 (2026-10-16) selective volumetric reduced integration
+        // (Hughes 1980 selective integration / B-bar with the centroid
+        // dilatation): D = D_dev + kappa*m*m^T with m = (1,1,1,0,0,0)
+        // (Voigt indices stress_indx 0, 3, 5) and kappa = m^T*D*m/9
+        // (the bulk modulus lambda+2G/3 for isotropic elasticity). The
+        // deviatoric part D_dev keeps the full Gauss rule; the
+        // volumetric part is integrated with 1 point at the centroid:
+        //   K_vol = kappa * volfac * W * detJ_c * b_div*b_div^T,
+        //   b_div[inol*ndim+idim] = dN_inol/dx_idim at the centroid,
+        // W = 4 (quad4) / 8 (hex8). In plane strain eps_zz = 0, so the
+        // dilatation is eps_xx+eps_yy and sigma_zz carries kappa*theta
+        // plus its deviatoric part. Same element-consistent momentum
+        // feedback as the shear (fix D-c): the current-iterate
+        // volumetric increment kappa*m*tr(inc_ept) of the IP is removed
+        // from the feedback stress and -dt*K_vol*v is added to the RHS
+        // (stiffness_shear carries the whole reduced stiffness). The
+        // STORED stress (new_sig: recovery, element_dof, next-step old
+        // stress) is the B-bar stress: the IP volumetric increment is
+        // replaced by the centroid one, kappa*dt*b_div^T*v, so the
+        // pressure is constant per element (no checkerboard from the
+        // IP dilatations).
+        double theta_ip = inc_ept[0*MDIM+0] + inc_ept[1*MDIM+1] +
+          inc_ept[2*MDIM+2], theta_c = 0.;
+        long int vol_ix[3] = { 0, 3, 5 }, a=0, b=0;
+        sri_kappa = 0.;
+        for ( a=0; a<3; a++ )
+          for ( b=0; b<3; b++ )
+            sri_kappa += ddsdde_total[vol_ix[a]*MSTRAIN+vol_ix[b]];
+        sri_kappa /= 9.;
+        if ( sri_centroid_derivatives( name, nnol, old_coord, sri_bdiv,
+             sri_detj_vol, sri_coord_center ) ) {
+          for ( jnol=0; jnol<nnol; jnol++ )
+            for ( jdim=0; jdim<ndim; jdim++ )
+              theta_c += sri_bdiv[jnol*ndim+jdim] *
+                new_dof[jnol*nuknwn + vel_indx + jdim*nder];
+          theta_c *= dtime;
+          sri_volfac_vol = 1.;
+          volume_factor( gr, sri_coord_center, sri_volfac_vol );
+        }
+        else {
+          array_set( sri_bdiv, 0., nnol*ndim );
+          sri_detj_vol = 0.;
+        }
+        for ( a=0; a<3; a++ ) {
+          sigvec[vol_ix[a]] -= sri_kappa * theta_ip;
+          new_sig[a*MDIM+a] += sri_kappa * ( theta_c - theta_ip );
+          for ( b=0; b<3; b++ )
+            ddsdde_total[vol_ix[a]*MSTRAIN+vol_ix[b]] -= sri_kappa;
+        }
       }
     }
     // materi_dynamic (manual Professional 6.800) / control_materi_dynamic
@@ -851,7 +971,11 @@ void materi( long int element, long int gr, long int name, long int nnol,
       // matrices of pol() for ANY physical node numbering; the
       // Jacobian at the centroid handles distorted elements exactly.
       // The 1x1 / 1x1x1 Gauss weight on [-1,1]^2 / [-1,1]^3 is 4 / 8.
-      if ( name==-QUAD4 ) {
+      if ( !( sri_on & SRI_SHEAR ) ) {
+        // C80.1 -volumetric: no reduced shear stiffness
+        array_set( stiffness_shear, 0., nnol*ndim*nnol*ndim );
+      }
+      else if ( name==-QUAD4 ) {
         double jac[4], invjac[4], dnxi[4], dnet[4], detj_center=0.;
         for ( inol=0; inol<nnol; inol++ ) {
           dnxi[inol] = 0.25 * ( (inol%2) ? 1. : -1. );
@@ -953,6 +1077,19 @@ void materi( long int element, long int gr, long int name, long int nnol,
                   sri_g2*b_xz[i]*b_xz[j] + sri_g3*b_yz[i]*b_yz[j] );
         }
         if ( swit ) pri( "stiffness_shear", stiffness_shear, nnol*ndim, nnol*ndim );
+      }
+      if ( sri_on & SRI_VOLUMETRIC ) {
+        // C80.1: the reduced volumetric stiffness (1 point at the
+        // centroid) joins the reduced shear stiffness; the momentum
+        // matrix and the D-c feedback below use their sum.
+        double w_c = ( ndim==2 ? 4. : 8. ) * sri_detj_vol *
+          sri_volfac_vol * sri_kappa;
+        for ( i=0; i<nnol*ndim; i++ )
+          for ( j=0; j<nnol*ndim; j++ )
+            stiffness_shear[i*nnol*ndim+j] += w_c * sri_bdiv[i] *
+              sri_bdiv[j];
+        if ( swit ) pri( "stiffness_reduced", stiffness_shear, nnol*ndim,
+          nnol*ndim );
       }
     }
   }

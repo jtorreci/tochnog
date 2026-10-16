@@ -344,8 +344,9 @@ long int sri_active( long int /*element*/, long int element_group,
 
   // group_element_selective_reduced_integration (SRI, Hughes): opt-in
   // fix for the shear locking of the bilinear elements in bending.
-  // Returns 1 when the keyword is -yes AND the full SRI applies to the
-  // element:
+  // Returns the mode mask (SRI_SHEAR for -yes, SRI_VOLUMETRIC for
+  // -volumetric, both bits for -both; C80.1) when the full SRI applies
+  // to the element, 0 otherwise:
   //   - 2D bilinear quad4 (nnol==4, ndim==2)
   //   - 3D trilinear hex8 (nnol==8, ndim==3) — EXTENSION 2026-08-29
   //     (same mechanism: the shear strains gamma_xy/gamma_xz/gamma_yz
@@ -384,7 +385,9 @@ long int sri_active( long int /*element*/, long int element_group,
           ( name==-HEX8 && nnol==8 && ndim==3 ) ) ) return 0;
   db( GROUP_ELEMENT_SELECTIVE_REDUCED_INTEGRATION, element_group, &sri,
     ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
-  if ( sri!=-YES ) return 0;
+  if ( sri!=-NO && sri!=-YES && sri!=-VOLUMETRIC && sri!=-BOTH )
+    db_error( GROUP_ELEMENT_SELECTIVE_REDUCED_INTEGRATION, element_group );
+  if ( sri==-NO ) return 0;
   if ( !materi_stress ) return 0;
   db( GROUP_AXISYMMETRIC, element_group, &axisymmetric, ddum, ldum,
     VERSION_NORMAL, GET_IF_EXISTS );
@@ -393,7 +396,21 @@ long int sri_active( long int /*element*/, long int element_group,
   if ( materi_plasti_kappa || materi_strain_plasti || materi_plasti_f ||
     materi_plasti_softvar_local || materi_plasti_softvar_nonlocal ||
     materi_damage || materi_maxwell_stress ) return 0;
-  return 1;
+  // C80.1 (2026-10-16): mode mask. -yes = the shear terms only
+  // (SRI_SHEAR, unchanged); -volumetric = the volumetric part only
+  // (SRI_VOLUMETRIC, B-bar / selective volumetric integration); -both =
+  // both. The volumetric part needs a 3D or plane-strain kinematics:
+  // a membrane (plane stress) group has a dependent eps_zz and no
+  // volumetric locking, so the volumetric bit is dropped there (the
+  // caller warns once).
+  long int mask = 0, membrane=-NO;
+  if ( sri==-YES || sri==-BOTH ) mask |= SRI_SHEAR;
+  if ( sri==-VOLUMETRIC || sri==-BOTH ) {
+    db( GROUP_MATERI_MEMBRANE, element_group, &membrane, ddum, ldum,
+      VERSION_NORMAL, GET_IF_EXISTS );
+    if ( membrane!=-YES ) mask |= SRI_VOLUMETRIC;
+  }
+  return mask;
 }
 
 // strain_recovery_weight - K11 (2026-10-06): nodal recovery weight of the
