@@ -73,6 +73,12 @@ T6 triage (2026-10-11, HEAD 53dbb86) and owner order (2026-10-11):
   - [x] C83c polynom.cc `pol()` axisymmetric tria3 `-maximal` = 3 nodal points, on-axis node -> 1 point (recovery unchanged if the probes agree).
   - [x] C83d verification: clean build, build_safe TN_CHECK_ONLY, audit_db_buffers, probes = Pro, omen corpus A/B.
   - [x] C83e docs: DIVERGENCES (C82, C83 part 1 class A; C83 out of class B), SEGUIMIENTO (Descarte C82 / C83 part 1, register C83 part 2), user/dev nodal_stress_recovery, integration pages, prism15; BACKLOG C82/C83 closed.
+- [ ] T6f C66 tria6 rule + lumping (owner 2026-10-16: MEASURE how the Professional lumps the mass before any lumping decision). Route: delegated writer (trigger: Pro/GNU mass probes + lumping-site inventory + possible polynom.cc/miscel.cc/general.cc + tests + docs, omen corpus A/B). Phase 2 gate: implement only if the Professional lumping is sound (positive, total-preserving); otherwise stop before any source edit. Subtasks:
+  - [x] C66a GNU lumping-site inventory (general.cc inertia block, recovery weights, calcul_force/elem/interface lumped terms).
+  - [x] C66b Pro lumped masses (point force, other nodes fixed, v = F dt / m): tria3, quad4, quad9, tet10, tria6 default/-maximal/-minimal, plane and axisymmetric; condif capacity cross-check.
+  - [x] C66c verdict vs row-sum / HRZ / nodal quadrature / equal split -> gate result.
+  - [ ] C66d (only if the gate passes) implementation + RED/GREEN tests + verification.
+  - [x] C66e docs: BACKLOG C66 (measured lumping), DIVERGENCES C66 row, BACKLOG new item for the `post_element_force` tria3/tet path (C84).
 
 ## Later (owner 2026-10-10, after convergence with ALL divergences documented and accepted)
 - F6: ILU/AMG preconditioning of the iterative solver (BACKLOG C81, owner 2026-10-15: in large meshes with many steps even small per-solve gains compound).
@@ -1165,3 +1171,23 @@ docs + SEGUIMIENTO + BACKLOG + DIVERGENCES.
   nodal_stress_recovery, integration pages, prism15; BACKLOG C82/C83
   closed (46 open). Open: `post_element_force` (`calcul_force.cc`) feeds
   a tria3 to the quad4 msf helpers (pre-existing, unrelated).
+- 2026-10-16 T6f C66 phase 1 (route: delegated writer; trigger: Pro/GNU
+  mass probes + lumping-site inventory). Owner: measure the Professional
+  lumping first. Method: one element, density 1, E 1e-9, unit point
+  force at one node, every other node fixed, one step dt 0.01, m = F dt
+  / v (`scratchpad/c66/genm.py`, `anm.py`; 174 Pro + 174 GNU runs);
+  condif capacity cross-check (`scratchpad/c66/cd/`). Pro = row sum of
+  the consistent mass for every element and rule value: tria3 A/3, quad4
+  A/4, quad9 A/36 / A/9 / 4A/9, tet10 -V/20 / V/5 (GNU = Pro except
+  tet10 HRZ); tria6 plane corner 0 (free one-element step: Pardiso zero
+  pivot), mid-side A/3; tria6 axisymmetric (r 1..2) corners -pi/60,
+  -pi/60, +pi/30, mid-side 1.466/1.257/1.466 (total 2 pi A r_c); capacity
+  identical. GNU HEAD tria6 corner 5e-7. Gate: zero/negative corner
+  masses -> stopped before any source edit (C66d not started).
+  Inventory: general.cc inertia block h-weight (principal dofs + the
+  h-weighted state dofs) affected; recovered dofs (F/volume fit weights)
+  not affected. Docs `9b51253`: BACKLOG C66 measured lumping + owner
+  question (HRZ for tria6 vs keep the GNU rule), new C84
+  (`post_element_force` 2D/3D: tet4 cantilever normal 3143 vs Pro
+  -123.4; 2D record 7 vs 6 values and NaN), 47 open; DIVERGENCES C66
+  row. Next: owner decision on C66.
