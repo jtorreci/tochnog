@@ -88,8 +88,13 @@ the measured values below.
 ## Keyword
 
 ```
-group_element_selective_reduced_integration <element_group> -yes
+group_element_selective_reduced_integration <element_group> -yes|-volumetric|-both
 ```
+
+GNU-only extension (no Professional counterpart). `-yes` = the shear
+terms at 1 point (the original feature, unchanged); `-volumetric` (C80.1,
+2026-10-16) = the volumetric part at 1 point (B-bar); `-both` = both.
+See the section "C80.1 volumetric / both" below.
 
 - Opt-in, DEFAULT OFF: without the keyword (or with `-no`) the group
   behaves EXACTLY as before (byte-identical path; the full 191-run suite
@@ -318,6 +323,178 @@ Professional) — no regression. **Suite**: 209/209 runs + all file
 checks green on a clean build (201 pre-existing + 8 new); the default
 (no keyword) path is byte-identical (the SRI gates are all
 `GET_IF_EXISTS` + element-scope checks).
+
+## C80.1 — `-volumetric` and `-both` (selective volumetric integration, 2026-10-16)
+
+Owner decision 2026-10-16: extend this keyword (no new keyword) with
+`-volumetric` and `-both`; opt-in, never the default; GNU-only.
+
+### Formulation (chosen and why)
+
+Volumetric/deviatoric split of the tangent, with the volumetric part at
+the centroid (Hughes 1980 selective integration / B-bar with the
+centroid dilatation, small strain):
+
+```
+D = D_dev + kappa * m m^T,   m = (1,1,1,0,0,0) (Voigt stress_indx 0,3,5)
+kappa = m^T D m / 9          (= lambda + 2G/3 for isotropic elasticity)
+K = sum_GaussIP B^T D_dev B w detJ  +  kappa * volfac * W * detJ_c * b b^T
+b[inol*ndim+idim] = dN_inol/dx_idim at the centroid,  W = 4 (quad4) / 8 (hex8)
+```
+
+Why this split: it is the volumetric part the owner specified, it is
+the split that carries over to plastic incompressibility (the B-bar
+standard for J2 plasticity), and the deviatoric part keeps every
+hourglass mode stiff. The alternative, the λ/μ split of Hughes 1977
+(reduce only `λ m m^T`), was measured with an independent solve: the
+same Lamé accuracy (−0.24 % at ν=0.4999) and a better bending response
+on coarse meshes (cantilever 10×1, ν=0.3: −4.9 % vs +22 %). It was NOT
+chosen, because it is not a volumetric/deviatoric split and does not
+extend to plasticity. This is an open question for the owner.
+
+Plane strain: ε_zz = 0, so the dilatation is ε_xx+ε_yy, and σ_zz gets
+κ·θ_c plus its deviatoric part. Plane stress (membrane) is refused
+(volumetric bit dropped, see below). Axisymmetry is refused by the
+existing scope gate (the hoop strain u_r/r would enter the centroid
+dilatation and the volume factor 2πr; not implemented).
+
+### Files and functions
+
+- `miscel.cc` `sri_active()` now returns a MODE MASK: `SRI_SHEAR` (1)
+  for `-yes`, `SRI_VOLUMETRIC` (2) for `-volumetric`, both for `-both`,
+  0 otherwise (macros next to the prototype in `tochnog.h` /
+  `tochnog-mod.h`). All boolean consumers (`pol()`, `delete.cc`,
+  `general.cc`, the msf rule) are unchanged: every mode switches the
+  full rule to Gauss and keeps the SRI recovery weights (Lagrange for
+  the normal components, h for the shear). For a membrane group the
+  volumetric bit is dropped. A value other than -no/-yes/-volumetric/
+  -both is a `db_error`.
+- `materi.cc`:
+  - `sri_centroid_derivatives()` (static): physical dN/dx at iso 0, the
+    centroid detJ and coordinates. It uses the same index convention
+    and transpose Jacobian as the shear blocks, for both quad4 and hex8.
+  - `materi()`, in the split block after the shear split:
+    - κ from `ddsdde_total`;
+    - θ_ip = tr(inc_ept);
+    - θ_c = dt·b·v, from `new_dof` velocities, the same source as the
+      shear fix D-c.
+    - `sigvec[0,3,5] -= κ·θ_ip`: the D-c feedback. The IP volumetric
+      increment leaves the momentum RHS.
+    - `new_sig[aa] += κ·(θ_c − θ_ip)`: the STORED stress is the B-bar
+      stress, used by the recovery, element_dof and the next step's old
+      stress.
+    - `ddsdde_total[0,3,5 × 0,3,5] -= κ` (D_dev).
+  - The reduced stiffness block adds K_vol to `stiffness_shear`, which
+    now carries the whole reduced stiffness and is zeroed first for
+    `-volumetric`. The existing matrix (`dt·K/npoint`) and RHS
+    (`−dt·K·v/npoint`) loops then treat shear and volume alike.
+  - The warning distinguishes `-yes` from `-volumetric`/`-both`; it is
+    printed when the applied mask differs from the requested one.
+- `calcul_force.cc`: the section internal force replaces the full-rule
+  shear only for the shear bit (`sri_active() & SRI_SHEAR`). For the
+  volumetric part, the stored B-bar stress integrated with the Gauss
+  rule IS the reduced internal force, because Σ_ip dN/dx·detJ·w = 4·
+  detJ_c·dN/dx(0) exactly for the quad4 (the integrand is bilinear in
+  ξ, η) and for the parallelepiped hex8.
+- `database.cc`: the names `volumetric` and `both`. The enums
+  `VOLUMETRIC` and `BOTH` are appended before `LAST_DUMMY` in both
+  headers (in sync).
+
+### Verification (measured 2026-10-16)
+
+Independent check: a pure-displacement Python solve of the same
+element (2×2 Gauss D_dev + 1-point κ b b^T) reproduces the GNU
+staggered results to all printed digits on every cantilever (Gauss,
+`-yes`, `-volumetric`, `-both`). For linear elasticity, the D-c
+feedback makes the fixed point converge in one pass, as for the shear.
+The Gauss, `-yes` and default runs of the study are byte-identical to
+the previous binary (51/51 `.dbs`).
+
+Accuracy against analytic solutions (plane strain; Lamé a=1, b=2, p=1;
+Timoshenko-Goodier cantilever with E'=E/(1−ν²), ν'=ν/(1−ν), exact
+clamp displacements). The table gives the u_r(a) error | the max
+deviation of the IP mean stress from p a²/(b²−a²), in % (the
+checkerboard measure):
+
+| Lamé 8×16 | Gauss | `-yes` | `-volumetric` | `-both` | Pro f=2 | Pro f=10 |
+|-----------|-------|--------|---------------|---------|---------|----------|
+| ν=0.3 | −0.33 / 31 | −0.26 / 32 | −0.17 / 4 | −0.10 / 4 | −0.25 / 27 | −0.01 / 5 |
+| ν=0.49 | −4.01 / 606 | −3.94 / 607 | −0.19 / 4 | −0.11 / 4 | −3.04 / 527 | −0.13 / 105 |
+| ν=0.4999 | −80.16 / 12531 | −80.16 / 12533 | −0.19 / 4 | −0.11 / 4 | −75.18 / 13493 | −10.80 / 9401 |
+
+The hex8 Lamé (one layer, w=0) is identical to the quad4 to all
+digits. The GNU Gauss column equals the Pro `-gauss` column of the C80
+study exactly.
+
+Cantilever, tip deflection error:
+
+| case | Gauss | `-yes` | `-volumetric` | `-both` | λ-split (not chosen) |
+|------|-------|--------|---------------|---------|----------------------|
+| ν=0.3 10×1 | −36.28 | −18.32 | +22.08 | +112.99 | −4.86 |
+| ν=0.3 20×2 | −12.42 | −5.28 | +4.70 | +15.15 | −1.25 |
+| ν=0.3 40×4 | −3.44 | −1.38 | +1.14 | +3.40 | −0.32 |
+| ν=0.49 10×1 | −91.23 | −91.09 | +67.15 | +191.51 | +30.30 |
+| ν=0.49 20×2 | −70.61 | −70.24 | +10.82 | +19.10 | +5.98 |
+| ν=0.49 40×4 | −40.78 | −40.30 | +2.52 | +4.18 | +1.44 |
+
+The overshoot is exact element behaviour, not a solver artefact. In the
+one-element-thick bending mode the centroid dilatation is zero and ε_yy
+cannot follow the linear Poisson contraction, so only the deviatoric
+modulus resists: `(4/3)G` instead of `E'`. The predicted ratio
+E'/((4/3)G) = 2.14 (ν=0.3) and 2.94 (ν=0.49) matches `-both` 10×1
+(+113 %, +192 %).
+
+For the plane-stress cantilever (the C80 study case, ν=0.3; tip error
+20×2), Gauss gives −10.71 % (= Pro), `-yes` −2.43 %, Pro f=2 −2.75 %
+and Pro f=10 +31 %. `-volumetric` is dropped on membrane groups.
+
+Hourglass (the C80 study cases; Gauss = Pro gauss exactly):
+
+| | Gauss | `-yes` | `-volumetric` | `-both` | Pro f=2 | Pro f=10 |
+|-|-------|--------|---------------|---------|---------|----------|
+| single quad4, hourglass load, max \|u\| | 3.47e-5 | 4.46e-5 | 6.69e-5 | 1.17e-4 | 4.62e-5 | 1.16e-3 |
+| 4×4 block, point load, mid-row zig-zag | 0.104 | 0.090 | 0.076 | 0.085 | 0.088 | 0.799 |
+
+Isolated-element eigenvalues (independent reconstruction): quad4: 3
+zero eigenvalues (the rigid modes) for Gauss, `-yes`, `-volumetric` and
+`-both`. hex8: 6 for Gauss and `-volumetric`, and 9 (6 rigid + 3 twist)
+for `-yes` and `-both`. `-both` therefore inherits the documented twist
+and warping modes of the shear-only hex8; `-volumetric` adds no
+spurious mode.
+
+Tests (`validation-suite/test-2026`, registered in build_safe.sh):
+
+| test | tolerance |
+|------|-----------|
+| `sri_volumetric_lame049_1` | u_r(a) 1e-5 = 0.5 %, σ_θ(a) 0.1 = 6 % |
+| `sri_volumetric_lame04999_1` | as above |
+| `sri_volumetric_hex8_lame1` | as above |
+| `sri_both_cantilever1` | 40×4, ν=0.49: tip v 0.15 = 4.9 % |
+
+Each tolerance is set above the measured error against the analytic
+value: u_r 2.6× (−0.19 %), σ_θ 1.9× (−3.1 %, from the nodal recovery at
+the loaded edge) and the cantilever 1.2× (+4.18 %, deterministic: the
+independent solve gives the same digits). Gauss fails every
+target by an order of magnitude. RED on the previous binary: rc 1, "I
+do not know : -volumetric" / "-both". `-yes` is covered by the
+unchanged families `qsri` and `qsri3d`.
+
+### Limitations / pending
+
+- Linear elasticity only (the existing scope gate). B-bar for
+  plasticity (plastic incompressibility) needs the reduced point to have
+  its own volumetric state; not implemented, and an owner decision.
+- Axisymmetric and plane-stress groups are refused (warning, volumetric
+  bit dropped).
+- The hex8 uses the 1-point centroid b in both the stiffness and the
+  stored stress. For a distorted (non-parallelepiped) hex8, the Gauss
+  sum Σ b_ip w detJ in the section post-processing differs slightly
+  from 8 detJ_c b_c (calcul_force only).
+- κ = m^T D m / 9 is exact for isotropic tangents. An anisotropic
+  tangent still gets an algebraically exact split D_dev + κ m m^T, but
+  D_dev is then not purely deviatoric.
+- `-both` is dominated by `-volumetric` in every measured bending case.
+  It is kept by owner decision.
 
 ## Hardcoded parameters / pending refactorings
 
