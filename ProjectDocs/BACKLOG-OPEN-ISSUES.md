@@ -2265,7 +2265,49 @@ Original report:
 - **Severity**: LOW. **Effort**: medium (diagnosing a Professional-side
   effect without its source).
 
-### C80. `group_integration_method -reduced` refused by the GNU (F4 T6f C79, 2026-10-13) — OPEN
+### C80.1. Selective / B-bar integration or an adaptive reduced factor (owner 2026-10-16, F4 T6f C80) — OPEN (next)
+
+- **Context**: the C80 `-reduced` rule (= Professional) applies one
+  factor to the whole stress. The analytic study of C80 (plane-strain
+  cantilever, thick cylinder, point load; tip / inner-radius error vs
+  exact): f = 1 is stiffer than Gauss in bending (20x2 -46 % vs -11 %)
+  and locks volumetrically (nu 0.49, 8x16: -11 %); f = 10 (the manual
+  default) overshoots bending (20x2 +31 %, 40x4 +6.3 %, one element
+  thick 10x1 +2100 % hourglass, zig-zag under a point load, no solver
+  warning) but removes the volumetric locking (nu 0.49 -0.13 %, nu
+  0.4999 -11 % vs Gauss -80 %); f = 2 is best in bending (40x4 -0.7 %,
+  20x2 -2.8 %) and still locks near nu 0.5 (0.4999: -75 %).
+- **Candidate**: selective / B-bar integration (volumetric part at 1
+  point, deviatoric part at f ~ 2 or Gauss), or an adaptive f(nu). An
+  explicit per-group opt-in, NEVER the default. It is a GNU extension
+  (class C): a new keyword or value, to be decided by the owner before
+  the work starts. Relation with the existing
+  `group_element_selective_reduced_integration` (shear-only SRI) to be
+  decided too.
+- **Verification**: the C80 analytic cases (scripts in the C80 work
+  notes) plus patch tests; no Professional reference.
+- **Severity**: LOW. **Effort**: medium.
+
+### C80. `group_integration_method -reduced` refused by the GNU (F4 T6f C79, 2026-10-13) — RESOLVED 2026-10-16 (F4 T6f C80)
+
+- **Resolution** (F4 T6f C80, 2026-10-16, `995de49`): implemented after
+  135 Professional 02-08-2026 probes (residual <= 2e-13). quad4/hex8 2x2
+  (x2): points at iso +-1/f, equal weights; `-minimal`: 1 point. bar2
+  default 1 point, `-maximal` Lobatto; bar3/quad9/hex27 Lobatto -1,0,1
+  (factor ignored), `-minimal` 2-point Gauss; tria3/tet4/prism6 ignore
+  the method. Nodal recovery of the quad/hex rules: physical linear fit
+  plus the arithmetic mean, also with the points at the nodes (unlike
+  `-lobatto`). Axisymmetric: an element with a node on the axis is
+  integrated with Gauss for any factor (Pro probe at f = 1 and f = 2).
+  Default factor: the GNU applies the manual 10, the Professional 1
+  (owner 2026-10-16: deliberate divergence class A, DIVERGENCES C80).
+  Tests `test-2026/reduced_quad4_f2_1`, `reduced_quad4_f10_1`,
+  `reduced_hex8_f2_1`, `reduced_quad9_minimal1`, `reduced_quad9_maximal1`,
+  `reduced_quad4_axisym1` (Pro targets 4e-6), `reduced_default_factor1`
+  (GNU default): RED rc 1, GREEN, every node_dof = Pro within 5e-12. Not
+  done: bar3 `-reduced` recovery (Pro linear fit, GNU 1.3-2.3 % off; C67);
+  the Professional element-average fallback at very large factor (1e6),
+  not investigated. Follow-up: C80.1 (selective / B-bar, opt-in).
 
 - **Symptom**: the Professional manual (6.623) lists `-reduced` (a
   weighted combination of the Lobatto and the 1-point rule, with a
@@ -2560,7 +2602,10 @@ Original report:
   aligned; still `h_inol`: prism15, quad16/hex64, the Lobatto rules,
   tet4 `-maximal`, bar2 2 points, bar3/bar4. Since C79 (2026-10-13) the
   quad4/quad9/hex8/hex27 Lobatto rules are measured and aligned; the bar
-  and quad16/hex64 Lobatto rules remain.
+  and quad16/hex64 Lobatto rules remain. C80 (2026-10-16): the
+  Professional recovers the bar3 `-reduced` rules (Lobatto 3 points or
+  Gauss 2 points) with the linear fit; the GNU keeps the `-lobatto` /
+  Gauss bar recovery (1.3-2.3 % off on the C80 probe).
 - **Fix candidate**: one two-element probe per rule (different size and
   stiffness), compare the Professional `node_dof` with the mean and the
   volume-weighted mean of its `element_dof`; extend
@@ -2816,7 +2861,8 @@ Original report:
 | C70 | — | 3x3 quad9 / hex8 / hex27 / tet10 / prism6 recovery in physical coordinates — resolved 2026-10-13 (F4 T6f C70) | closed | - |
 | C71 | sfnet | `tube1` (`-lobatto` + axisymmetric) NaN — resolved 2026-10-13 (F4 T6f C71: on-axis Lobatto element integrated with Gauss = Pro) | closed | - |
 | C79 | sfnet | Lobatto nodal recovery volume weighted (`tube1` r=1.25 column) — resolved 2026-10-13 (F4 T6f C79: point value / corner fit, arithmetic mean = Pro; `msf_element_rule()` on-axis switch) | closed | - |
-| C80 | — | `group_integration_method -reduced` (manual 6.623, accepted by the Professional) refused by the GNU input reader | LOW | medium |
+| C80 | — | `group_integration_method -reduced` refused by the GNU — resolved 2026-10-16 (F4 T6f C80: Pro rule, linear-fit recovery; default factor 10 = manual, class A) | — | — |
+| C80.1 | — | selective / B-bar integration or adaptive reduced factor, explicit opt-in GNU extension (owner 2026-10-16) — OPEN (next) | LOW | medium |
 | C72 | — | convected (Eulerian) stress: nodal output resolved 2026-10-13 (`c1a1ae9`, absolute recovery = Pro); neither code convects the IP state; remaining Pro-side residuals: `validation_1` drift (C72-V1), Stokes gap, `cd_method` rotation sweep | LOW | medium |
 | C73 | — | optional: convect the integration-point state of history materials on an Eulerian mesh (neither code does; class A improvement, owner decision) | LOW | large |
 | C74 | — | `validation_1` prints "Bi-CG iteration broke down" about 600 times — resolved 2026-10-13 (F4 T6f C74: one warning per LU-rescued solve; solver part -> C77) | closed | - |
@@ -2835,7 +2881,7 @@ Original report:
 | C68d | — | `materi.cc` old rho/epi/epp read with the Maxwell loop index (two or more chains) — resolved 2026-10-12 (F4 T6f, `2327083`) | LOW | cheap |
 | C69 | — | plane-stress membrane: yy/zz split of the plastic strain first order in dt (eptzz -0.00721 at dt 0.1 vs analytic -0.00882) | LOW | medium |
 
-Forty-nine items remain open: three MEDIUM and forty-six LOW (C23 and C24 resolved 2026-10-05; C25, C26, C27 and B10 added; F1 T3 / K04 2026-10-06 added B11, C28-C32; F1 T6 resolved C28, added and resolved B12; F2 T1 added C36; F2 T2 added C37, C38, C39; F2 T3 resolved C5 and added C40; F3 T2 resolved C8, C18, C19, C20 and added B13, C41; F4 T2 fixed the C41 tie and left a residual; F4 T3 resolved C33; F4 T4 closed C32, added C42 and resolved C31; F4 T7-T8 added C43-C46; F4 T9 resolved the C43 solver speed, decided C46b/C46e and added C47, C48, C49; F4 T10 resolved C48 and added C50; F4 T5 added C52, C53 and resolved C51; F4 T13 resolved C49 and added C54-C56; F4 T12 resolved C47 and added C57; F4 T6a resolved C6, C55, C56 and the C3 sign, the C3 square-face tie becoming a deliberate divergence (owner 2026-10-11), and added B14; F4 T6c fixed the `control_restart` integration-point reset and added C58; F4 T6d resolved C11 and C59, fixed the interface history and resolved C52, and added B15, C60 and C61; B15 resolved the same day; F4 T6e resolved C53 and added C62 and C63; F4 T6f added C64-C68 and C69, and closed the K15 `mmc_tension` vertex sigzz/eppzz and `validation_3` eptzz items as deliberate divergences MC-VERTEX-ZZ / MEMBRANE-EPTZZ, owner 2026-10-12; F4 T6f resolved C68 and added C68a-C68d; C68d resolved the same day; F4 T6f closed C7 (Mazars equivalent strain, with C7b) and the AUDIT K14b `hypo3` sigxx reversal as deliberate divergences C7 / K14b, owner 2026-10-12; the `hypo3` hyhis slot residual stays open under AUDIT K14; F4 T6f K21 WU2 widened C72 with the Stokes-flow residual and closed its `cmat_gate` rewrite, no new item; F4 T6f C72 resolved the convected nodal stress output (C72 stays open for the Professional-side residuals) and added C73 and C74; F4 T6f C70 resolved C70 and added C75; F4 T6f C75 closed C75 as a deliberate divergence, owner 2026-10-13, and added C76; F4 T6f C74 resolved C74 and added C77; F4 T6f C57 resolved C57 and added C78, decided the same day as a deliberate divergence, owner 2026-10-13; F4 T6f C71 resolved C71 and added C79; F4 T6f C79 resolved C79 and added C80; F4 T6f C77 resolved C77 and added C81 (F6); forty-nine items remain open). No open issue is CRITICAL or
+Forty-nine items remain open: three MEDIUM and forty-six LOW (C23 and C24 resolved 2026-10-05; C25, C26, C27 and B10 added; F1 T3 / K04 2026-10-06 added B11, C28-C32; F1 T6 resolved C28, added and resolved B12; F2 T1 added C36; F2 T2 added C37, C38, C39; F2 T3 resolved C5 and added C40; F3 T2 resolved C8, C18, C19, C20 and added B13, C41; F4 T2 fixed the C41 tie and left a residual; F4 T3 resolved C33; F4 T4 closed C32, added C42 and resolved C31; F4 T7-T8 added C43-C46; F4 T9 resolved the C43 solver speed, decided C46b/C46e and added C47, C48, C49; F4 T10 resolved C48 and added C50; F4 T5 added C52, C53 and resolved C51; F4 T13 resolved C49 and added C54-C56; F4 T12 resolved C47 and added C57; F4 T6a resolved C6, C55, C56 and the C3 sign, the C3 square-face tie becoming a deliberate divergence (owner 2026-10-11), and added B14; F4 T6c fixed the `control_restart` integration-point reset and added C58; F4 T6d resolved C11 and C59, fixed the interface history and resolved C52, and added B15, C60 and C61; B15 resolved the same day; F4 T6e resolved C53 and added C62 and C63; F4 T6f added C64-C68 and C69, and closed the K15 `mmc_tension` vertex sigzz/eppzz and `validation_3` eptzz items as deliberate divergences MC-VERTEX-ZZ / MEMBRANE-EPTZZ, owner 2026-10-12; F4 T6f resolved C68 and added C68a-C68d; C68d resolved the same day; F4 T6f closed C7 (Mazars equivalent strain, with C7b) and the AUDIT K14b `hypo3` sigxx reversal as deliberate divergences C7 / K14b, owner 2026-10-12; the `hypo3` hyhis slot residual stays open under AUDIT K14; F4 T6f K21 WU2 widened C72 with the Stokes-flow residual and closed its `cmat_gate` rewrite, no new item; F4 T6f C72 resolved the convected nodal stress output (C72 stays open for the Professional-side residuals) and added C73 and C74; F4 T6f C70 resolved C70 and added C75; F4 T6f C75 closed C75 as a deliberate divergence, owner 2026-10-13, and added C76; F4 T6f C74 resolved C74 and added C77; F4 T6f C57 resolved C57 and added C78, decided the same day as a deliberate divergence, owner 2026-10-13; F4 T6f C71 resolved C71 and added C79; F4 T6f C79 resolved C79 and added C80; F4 T6f C77 resolved C77 and added C81 (F6); F4 T6f C80 resolved C80 and added C80.1; forty-nine items remain open). No open issue is CRITICAL or
 HIGH. The validation-suite corpus has no open failure — its 233 real tests
 pass (`materi_direct_mc` input corrected, C17 resolved). Every remaining failure is a stale or malformed test, an out-of-scope model
 or infrastructure limit, a narrow post-processing divergence, a corpus-coverage

@@ -26,8 +26,10 @@ and the quad4 hourglass modes were not restrained.
 
 The `group_integration_method`
 and `group_integration_points` records still override it per element group
-(`-gauss`, `-lobatto`, and `-minimal` / `-maximal` / `-normal`; the
-Professional's `-reduced` method is not accepted by the GNU, BACKLOG C80).
+(`-gauss`, `-lobatto`, `-reduced`, and `-minimal` / `-maximal` /
+`-normal`). The `-reduced` method with its factor record is described
+in [group_integration_method_reduced](group_integration_method_reduced.md)
+(F4 T6f C80, 2026-10-16).
 The SRI keyword is unchanged.
 
 With `group_integration_method -lobatto` in an axisymmetric group, an
@@ -125,9 +127,12 @@ target if the new value matches the Professional.
   = Professional (arithmetic mean; sfnet `tube1` node (1.25,0) sigxx
   -407.64, before -494.42). Lobatto rules of bar2/bar3, quad16 and hex64
   were not measured and keep the volume-weighted average.
-- **`group_integration_method -reduced`** (known difference, not
-  decided). Listed in the Professional manual and accepted by the
-  Professional; the GNU refuses it ("I do not know : -reduced").
+- **`group_integration_method -reduced`** (BACKLOG C80) — implemented
+  2026-10-16 (F4 T6f C80), = Professional when the factor is given.
+  Without `group_integration_method_reduced_factor` the GNU uses the
+  manual default 10 and the Professional uses 1 (deliberate divergence,
+  class A, project owner 2026-10-16). Details and the hourglass warning:
+  [group_integration_method_reduced](group_integration_method_reduced.md).
 - **Lumped mass / capacity of the `tet10`** (deliberate divergence,
   project owner 2026-10-09; DIVERGENCES TET10-HRZ). GNU: positive HRZ
   lumping, corner V/36 and mid-edge 4V/27 (the diagonal of the

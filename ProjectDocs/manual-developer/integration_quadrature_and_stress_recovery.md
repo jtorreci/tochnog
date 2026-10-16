@@ -363,10 +363,13 @@ operations):
   types followed in C70 (2026-10-13, all measured physical). Unmeasured:
   prism15, quad16/hex64, the bar Lobatto rules (C67). The quad4/quad9/
   hex8/hex27 Lobatto rules were measured and aligned in C79 (2026-10-13).
-- `-reduced` integration method: listed in the Professional manual
-  (weighted Lobatto / 1-point combination) and accepted by the
-  Professional binary, refused by the GNU input reader ("I do not know :
-  -reduced"); not part of C79.
+- `-reduced` integration method: implemented in C80 (F4 T6f,
+  2026-10-16), see
+  [group_integration_method_reduced](group_integration_method_reduced.md):
+  quad4/hex8 points at iso +-1/f, the other elements Gauss/Lobatto,
+  kind 1 recovery (`stress_recovery_reduced_iso`), Gauss for an
+  axisymmetric element with a node on the axis. Default factor 10
+  (manual; the Professional applies 1, class A).
 - The 3 stale targets (condif10, examp5, ho_mech1) should be recalibrated
   in the same work unit that promotes the alignment to the default;
   strconv1 needs a longer transient or a recalibrated target; examp8 needs
@@ -427,7 +430,7 @@ small fit per element instead of one per (node, point) call.
   (`msf_element_rule`, `mc_element_rule`), switched to Gauss with the
   element default; `msf_element_rule` no longer forces the axisymmetric
   1-point rule (K20) and mirrors the C71 on-axis Lobatto -> Gauss switch
-  (C79).
+  (C79); both replicate the `-reduced` rule (C80).
 
 ## Differences with the Professional version
 
@@ -435,6 +438,9 @@ small fit per element instead of one per (node, point) call.
   T6f C79): quad4/quad9/hex8/hex27 Lobatto = Professional (point value at
   the node, or the physical linear fit for the `-minimal` corner rules,
   arithmetic mean); section 3.2c.
+- **`-reduced` default factor** (deliberate divergence, class A, owner
+  2026-10-16, DIVERGENCES C80): GNU 10 (manual 6.621), Professional 1.
+  See [group_integration_method_reduced](group_integration_method_reduced.md).
 - **Lumped mass / capacity of the `tet10`** (deliberate divergence,
   project owner 2026-10-09; DIVERGENCES TET10-HRZ). GNU: positive HRZ
   lumping, corner V/36 and mid-edge 4V/27 (the diagonal of the
