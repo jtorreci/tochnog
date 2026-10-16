@@ -86,6 +86,12 @@ T6 triage (2026-10-11, HEAD 53dbb86) and owner order (2026-10-11):
   - [x] C66i analytic HRZ sanity check (row sum vs HRZ vs analytic).
   - [x] C66j verification: clean build, build_safe TN_CHECK_ONLY, audit_db_buffers, omen corpus A/B of every tria6 case.
   - [x] C66k docs: user/dev nodal_stress_recovery, integration pages, TET10-HRZ/mass-lumping page, DIVERGENCES TRIA6-HRZ, SEGUIMIENTO register + Descarte, BACKLOG C66 closed.
+- [x] T6f C85 + C82 consistency check (owner decisions 2026-10-17: C85 apply the tria6 HRZ weight (`h_lump` pattern) to the `groundfl.cc` groundflow-velocity numerator and the `condif.cc` lumped absorption, and switch the `general.cc` `groundflow_velocity` denominator to HRZ; C82 check: tria6 `-minimal` 4-point stiffness eigenvalues, stop and report if negative). Route: delegated writer (trigger: groundfl.cc + condif.cc + general.cc + 2 tests + build_safe + docs, eigenvalue study, omen corpus A/B). Done `50fd4c7` (fix + tests + build_safe), `eb00f27` (docs). C82 check STOPPED: tria6 `-minimal` is indefinite on curved / axisymmetric elements at high nu (owner question, no rule change, no contrast documented). Subtasks:
+  - [x] C85a RED tests under test-2026 (tria6 groundflow velocity from a linear pressure; tria6 condif absorption decay; analytic / hand targets) + build_safe registration; RED on c6fa9aa.
+  - [x] C85b implementation: groundfl.cc / condif.cc `h_lump`, general.cc exception dropped; GREEN; other elements byte-identical.
+  - [x] C85c C82 consistency: tria6 4-point (-27/48) element stiffness eigenvalues (straight/curved, nu 0.3/0.49, plane strain/axisymmetric): zero modes and negative eigenvalues, contrast with prism15.
+  - [x] C85d verification: clean build, build_safe TN_CHECK_ONLY, audit_db_buffers, omen corpus A/B.
+  - [x] C85e docs: developer pages (integration, mass lumping), DIVERGENCES (C82 rationale, TRIA6-HRZ row), SEGUIMIENTO register, BACKLOG C85 closed.
 
 ## Later (owner 2026-10-10, after convergence with ALL divergences documented and accepted)
 - F6: ILU/AMG preconditioning of the iterative solver (BACKLOG C81, owner 2026-10-15: in large meshes with many steps even small per-solve gains compound).
@@ -1224,3 +1230,28 @@ docs + SEGUIMIENTO + BACKLOG + DIVERGENCES.
   -> 0.25. Docs `4b65b07`: DIVERGENCES TRIA6-HRZ (A 32, B 41, total 91),
   SEGUIMIENTO register + Descarte, BACKLOG C66 closed + C85 (47 open).
   Next: C85 (needs groundfl.cc / condif.cc in a surface).
+- 2026-10-17 T6f C85 + C82 consistency (route: delegated writer;
+  trigger: groundfl.cc + condif.cc + general.cc + 3 tests + build_safe +
+  docs, eigenvalue study, omen A/B). Fix `50fd4c7`: `h_lump` in the
+  groundfl.cc velocity numerator and the condif.cc absorption (rhs,
+  lhside, matrix, residue); general.cc groundflow_velocity exception
+  dropped. Tests (hand targets) RED rc 1 on c6fa9aa, GREEN:
+  `tria6_groundflow_velocity_hrz1` (gvelx 10 everywhere; before corners
+  35.2/-40/-144/-368), `tria6_condif_absorption_hrz1` / `_axisym1` (1/1.1
+  everywhere; before corners 0.9955/1.0027, axisym up to 1.137). Clean
+  build; build_safe 310 OK / 0 FALLO, runs 226/226; audit_db_buffers 0;
+  omen A/B c85_runs vs c66_runs (999 common): changed only
+  bicg_csr_threads1 (nondeterministic), only-new the 3 tests. Docs
+  `eb00f27`: dev integration + inertia_apply, user integration,
+  DIVERGENCES TRIA6-HRZ row, SEGUIMIENTO register, BACKLOG C85 closed
+  (46 open). C82 check (`scratchpad/c85/eig_tria6.py`, `eig_extra.py`):
+  tria6 4-point (-27/48) stiffness exact on straight plane elements
+  (|K4-K7| 7e-16; 3 zero, 0 negative at nu 0.3/0.49); ONE negative
+  eigenvalue on curved plane elements at nu 0.49 (min/max -4.4e-3 /
+  -2.9e-2; onset nu 0.487 / 0.434) and axisymmetric at nu 0.49 (straight
+  on-axis -1.3e-2, onset 0.386; straight r 1..2 onset 0.496; curved r+1
+  -4.2e-3; r+10 none); 7 and 3-point rules PSD everywhere. prism15
+  8-point: 1 negative + 2 spurious zeros already on a regular prism at
+  nu 0.3 (C82 recorded 3 negatives on its distorted probe). Stopped,
+  owner question: keep the tria6 4-point rule (= manual / Pro) or align
+  with C82. Next: owner decision on tria6 `-minimal`.
