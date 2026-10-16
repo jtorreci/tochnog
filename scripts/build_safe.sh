@@ -2155,6 +2155,22 @@ run_ok "$T2026" prism15_elastic_shear1
 #   axisymmetric tria3 forced to 1 point, nodal stresses 3 % of the scale
 #   off). Targets = Professional node_dof (4e-6). Old GNU: rc 1.
 run_ok "$T2026" recovery_tria3_axisym_maximal1
+# C66 phase 2 (F4 T6f, 2026-10-16, owner decision): tria6 rule of the
+#   manual 6.623 = Professional 02-08-2026 (7 points default / -maximal,
+#   4 points -minimal; physical linear-fit recovery, arithmetic mean;
+#   axisymmetric accepted, on-axis elements keep the rule) and HRZ lumping
+#   (deliberate divergence TRIA6-HRZ). recovery_tria6_curved1 / _minimal1 /
+#   _axisym1: 12 distorted curved tria6, targets = Professional node_dof
+#   (4e-6; old GNU 7.7 % / 9.5 % of the scale off, axisymmetric rc 1).
+#   tria6_mass_hrz1 / tria6_mass_hrz_axisym1: one-step point-force masses
+#   v = F dt / m, HRZ targets (plane corner A/19, mid-side 16A/57; the
+#   r-weighted diagonal scaled to 2 pi A r_c), both rules; old GNU corner
+#   v ~2e4 / rc 1. tria6_nodal_recovery_mean1 tolerances tightened.
+run_ok "$T2026" recovery_tria6_curved1
+run_ok "$T2026" recovery_tria6_minimal1
+run_ok "$T2026" recovery_tria6_axisym1
+run_ok "$T2026" tria6_mass_hrz1
+run_ok "$T2026" tria6_mass_hrz_axisym1
 
 # ---------------------------------------------------------------------
 # Sub-sprint materi_stress_force, lote 2 (integracion 2D quad4/quad9):

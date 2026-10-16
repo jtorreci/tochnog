@@ -1,0 +1,67 @@
+( C66 {F4 T6f, 2026-10-16}: lumped masses of a plane tria6 [area A 1/2,
+  density 1, E 1e-9] read from the velocity after one step of a unit
+  point force, v = F dt / m with dt 0.01. HRZ lumping [GNU-specific,
+  deliberate divergence TRIA6-HRZ]: corner m = A/19 -> v 0.38, mid-side
+  m = 16A/57 -> v 0.07125, for every group_integration_points value
+  [element 1 default 7-point rule, element 2 -minimal 4-point rule; the
+  diagonal is integrated exactly, independent of the rule]. The
+  Professional 02-08-2026 row sum gives the corner 0 [a free step fails
+  with a zero pivot] and the mid-side A/3 [v 0.06]. Old GNU [6-point
+  nodal rule, corner weight 1e-6]: corner v ~2e4. )
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_displacement
+materi_stress
+end_initia
+inertia_apply -yes
+node 1 0. 0.
+node 2 .5 0.
+node 3 1. 0.
+node 4 0. .5
+node 5 .5 .5
+node 6 0. 1.
+node 7 3. 0.
+node 8 3.5 0.
+node 9 4. 0.
+node 10 3. .5
+node 11 3.5 .5
+node 12 3. 1.
+element 1 -tria6 1 2 3 4 5 6
+element 2 -tria6 7 8 9 10 11 12
+element_group 2 1
+group_type 0 -materi
+group_materi_elasti_young 0 1.e-9
+group_materi_density 0 1.
+group_materi_memory 0 -total_linear
+group_type 1 -materi
+group_materi_elasti_young 1 1.e-9
+group_materi_density 1 1.
+group_materi_memory 1 -total_linear
+group_integration_points 1 -minimal
+bounda_force 1 1 -velx
+bounda_time 1 1.
+bounda_force 2 2 -velx
+bounda_time 2 1.
+bounda_force 3 6 -vely
+bounda_time 3 1.
+bounda_force 4 5 -vely
+bounda_time 4 1.
+bounda_force 5 7 -velx
+bounda_time 5 1.
+bounda_force 6 11 -vely
+bounda_time 6 1.
+control_timestep 10 1.e-2 1.e-2
+target_item 1 -node_dof 1 -velx
+target_value 1 0.38 1.e-6
+target_item 2 -node_dof 2 -velx
+target_value 2 0.07125 1.e-6
+target_item 3 -node_dof 6 -vely
+target_value 3 0.38 1.e-6
+target_item 4 -node_dof 5 -vely
+target_value 4 0.07125 1.e-6
+target_item 5 -node_dof 7 -velx
+target_value 5 0.38 1.e-6
+target_item 6 -node_dof 11 -vely
+target_value 6 0.07125 1.e-6
+end_data

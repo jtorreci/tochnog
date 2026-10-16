@@ -19,7 +19,6 @@
 
 #include "tochnog.h"
 
-#define EPS_TRIANGLE 1.e-6
 
 // Stress recovery (see sri_stress_recovery_weight in miscel.cc): 1 when
 // the quadrature resolved by the current pol() call is interior GAUSS, or
@@ -40,6 +39,15 @@ thread_local long int stress_recovery_lobatto = 0;
 // that rule (0 otherwise). The recovery fit (miscel.cc) places its points
 // there; thread local like the two flags above.
 thread_local double stress_recovery_reduced_iso = 0.;
+// C66 phase 2 (F4 T6f, 2026-10-16): HRZ lumping of the tria6. When the
+// element just integrated by pol() is a tria6, lumped_hrz_active is 1 and
+// lumped_hrz_weight[inol] is the constant per-point weight whose
+// integral sum_g volume_g * weight equals the HRZ mass of node inol (the
+// diagonal of the consistent mass, int N_i^2 dV, scaled to the element
+// total). general() (inertia block) and materi() (h-weighted state
+// numerators) use it instead of h; thread local like the flags above.
+thread_local long int lumped_hrz_active = 0;
+thread_local double lumped_hrz_weight[MNOL];
 
 // Weighting factor f of group_integration_method -reduced (manual
 // Professional 6.620/6.621: "a weighted combination of lobatto and 1-point
@@ -70,6 +78,34 @@ long int stress_recovery_absolute = 1;
 // untouched. Set by top() around a second element_loop() after solve().
 long int stress_recovery_post_pass = 0;
 
+// Quadratic triangle (tria6) shape functions h6[inol] and their
+// derivatives p6[idim*6+inol] with respect to the area coordinates
+// xi = L1, eta = L2 (L3 = 1 - L1 - L2); node order of pol(): corner 1,
+// mid 1-2, corner 2, mid 3-1, mid 2-3, corner 3.
+static void tria6_shape( double L1, double L2, double h6[], double p6[] )
+
+{
+  double L3 = 1. - L1 - L2;
+  h6[0] = (2.*L1-1.)*L1;
+  h6[1] = 4.*L1*L2;
+  h6[2] = (2.*L2-1.)*L2;
+  h6[3] = 4.*L3*L1;
+  h6[4] = 4.*L2*L3;
+  h6[5] = (2.*L3-1.)*L3;
+  p6[0*6+0] =  2.*L1 + (2.*L1-1.);
+  p6[0*6+1] =  4.*L2;
+  p6[0*6+2] =  0.;
+  p6[0*6+3] =  4.*-1.*L1 + 4*L3;
+  p6[0*6+4] =  4.*L2*-1.;
+  p6[0*6+5] =  -2.*L3 + (2.*L3-1.)*-1.;
+  p6[1*6+0] =  0.;
+  p6[1*6+1] =  4.*L1;
+  p6[1*6+2] =  2.*L2 + (2.*L2-1.);
+  p6[1*6+3] =  4.*-1.*L1;
+  p6[1*6+4] =  4.*L3 + 4.*L2*-1.;
+  p6[1*6+5] =  -2.*L3 + (2.*L3-1.)*-1.;
+}
+
 void pol( long int element, long int element_group,
   long int name, long int nnol, double old_coord[], 
   double new_coord[], long int &npoint, double h[], 
@@ -95,6 +131,7 @@ void pol( long int element, long int element_group,
   stress_recovery_gauss = 0;
   stress_recovery_lobatto = 0;
   stress_recovery_reduced_iso = 0.;
+  lumped_hrz_active = 0;
 
   db( GROUP_AXISYMMETRIC, element_group, &axisymmetric, ddum, ldum, 
     VERSION_NORMAL, GET_IF_EXISTS );
@@ -152,63 +189,41 @@ void pol( long int element, long int element_group,
       db_error( GROUP_INTEGRATION_POINTS, element_group );
   }
   else if ( name==-TRIA6 ) {
-    if ( axisymmetric==-YES ) {
-      pri( "Error: not available for axisymmetric analysis: ", name );
-      exit_tn_on_error();
-    }
+    // C66 phase 2 (F4 T6f, 2026-10-16, owner decision): the manual 6.623
+    // rule, measured identical on the Professional 02-08-2026 (point
+    // coordinates element_intpnt_iso_coord = L1,L2 in this order):
+    // default and -maximal the 7-point degree-5 rule (Hammer/Radon),
+    // -minimal the 4-point degree-3 rule (centroid weight -27/48). Plane
+    // and axisymmetric; every point is interior (r > 0), so an element
+    // with a node on the axis keeps the rule (Professional: no switch,
+    // unlike the tria3 nodal rule, C83). Before: a 6-point nodal rule
+    // (corner weight 1e-6, mid-side 1/3) for every value and
+    // axisymmetric tria6 refused.
+    double s15 = sqrt( 15. );
+    double ta = (6.+s15)/21., tb = (9.-2.*s15)/21., tc = (6.-s15)/21.,
+      td = (9.+2.*s15)/21.;
+    double tri7[7][3] = { {1./3.,1./3.,9./40.},
+      {tb,ta,(155.+s15)/1200.}, {ta,tb,(155.+s15)/1200.},
+      {ta,ta,(155.+s15)/1200.}, {td,tc,(155.-s15)/1200.},
+      {tc,td,(155.-s15)/1200.}, {tc,tc,(155.-s15)/1200.} };
+    double tri4[4][3] = { {1./3.,1./3.,-27./48.}, {0.6,0.2,25./48.},
+      {0.2,0.6,25./48.}, {0.2,0.2,25./48.} };
+    integration_points = -MAXIMAL;
     db( GROUP_INTEGRATION_POINTS, element_group, &integration_points, ddum, 
       ldum, VERSION_NORMAL, GET_IF_EXISTS );
-    npoint = nnol;
+    if ( integration_points==-MINIMAL ) npoint = 4;
+    else npoint = 7;
+    stress_recovery_gauss = 1;
     for ( ipoint=0; ipoint<npoint; ipoint++ ) {
-      if      ( ipoint==0 ) {
-        L1 = 1.;
-        L2 = 0.;
-        weight[ipoint] = EPS_TRIANGLE;
+      if ( npoint==7 ) {
+        L1 = tri7[ipoint][0]; L2 = tri7[ipoint][1];
+        weight[ipoint] = tri7[ipoint][2];
       }
-      else if ( ipoint==1 ) {
-        L1 = 0.;
-        L2 = 1.;
-        weight[ipoint] = EPS_TRIANGLE;
+      else {
+        L1 = tri4[ipoint][0]; L2 = tri4[ipoint][1];
+        weight[ipoint] = tri4[ipoint][2];
       }
-      else if ( ipoint==2 ) {
-        L1 = 0.;
-        L2 = 0.;
-        weight[ipoint] = EPS_TRIANGLE;
-      }
-      else if ( ipoint==3 ) {
-        L1 = 0.5;
-        L2 = 0.5;
-        weight[ipoint] = 1./3.-EPS_TRIANGLE;
-      }
-      else if ( ipoint==4 ) {
-        L1 = 0.0;
-        L2 = 0.5;
-        weight[ipoint] = 1./3.-EPS_TRIANGLE;
-      }
-      else if ( ipoint==5 ) {
-        L1 = 0.5;
-        L2 = 0.0;
-        weight[ipoint] = 1./3.-EPS_TRIANGLE;
-      }
-      L3 = 1. - L1 - L2;
-      h[ipoint*nnol+0] = (2.*L1-1.)*L1;
-      h[ipoint*nnol+1] = 4.*L1*L2;
-      h[ipoint*nnol+2] = (2.*L2-1.)*L2;
-      h[ipoint*nnol+3] = 4.*L3*L1;
-      h[ipoint*nnol+4] = 4.*L2*L3;
-      h[ipoint*nnol+5] = (2.*L3-1.)*L3;
-      p[ipoint*ndim*nnol+0*nnol+0] =  2.*L1 + (2.*L1-1.);
-      p[ipoint*ndim*nnol+0*nnol+1] =  4.*L2;
-      p[ipoint*ndim*nnol+0*nnol+2] =  0.;
-      p[ipoint*ndim*nnol+0*nnol+3] =  4.*-1.*L1 + 4*L3;
-      p[ipoint*ndim*nnol+0*nnol+4] =  4.*L2*-1.;
-      p[ipoint*ndim*nnol+0*nnol+5] =  -2.*L3 + (2.*L3-1.)*-1.;
-      p[ipoint*ndim*nnol+1*nnol+0] =  0.;
-      p[ipoint*ndim*nnol+1*nnol+1] =  4.*L1;
-      p[ipoint*ndim*nnol+1*nnol+2] =  2.*L2 + (2.*L2-1.);
-      p[ipoint*ndim*nnol+1*nnol+3] =  4.*-1.*L1;
-      p[ipoint*ndim*nnol+1*nnol+4] =  4.*L3 + 4.*L2*-1.;
-      p[ipoint*ndim*nnol+1*nnol+5] =  -2.*L3 + (2.*L3-1.)*-1.;
+      tria6_shape( L1, L2, &h[ipoint*nnol], &p[ipoint*ndim*nnol] );
     }
   }
   else if ( name==-PRISM6 ) {
@@ -894,6 +909,50 @@ void pol( long int element, long int element_group,
       matrix_ab( &h[ipoint*nnol], new_coord, coord_ip, 1, nnol, ndim );
       radius = scalar_dabs(coord_ip[0]);
       volume[ipoint] *= 2. * PIRAD * radius;
+    }
+  }
+
+  // C66 phase 2 (F4 T6f, 2026-10-16, owner decision; DELIBERATE
+  // DIVERGENCE TRIA6-HRZ): HRZ lumping of the tria6. The row sum of the
+  // consistent mass (the Professional 02-08-2026, independent of the
+  // rule) gives the plane corner nodes 0 (a free dynamic step fails with
+  // a zero pivot) and the axisymmetric corners negative masses; the
+  // h-weighted lumped state dofs divide by the same zero. HRZ: the
+  // diagonal of the consistent mass, int N_i^2 dV (dV = 2 pi r dA when
+  // axisymmetric), integrated with the 7-point degree-5 rule whatever
+  // rule the element uses (exact on straight-edged elements), scaled so
+  // that it sums to the element volume. Plane straight-edged: corner
+  // A/19, mid-side 16A/57; axisymmetric: the r-weighted diagonal scaled
+  // to 2 pi A r_c. The weight is constant over the points of the rule in
+  // use: sum_g volume_g * weight_i = the HRZ mass of node i.
+  if ( name==-TRIA6 ) {
+    double s15 = sqrt( 15. ), h6[6], p6[2*6], xjq[4], diag[6],
+      vq=0., vtot=0., dsum=0., vrule=0., rq=0.;
+    double ta = (6.+s15)/21., tb = (9.-2.*s15)/21., tc = (6.-s15)/21.,
+      td = (9.+2.*s15)/21.;
+    double q7[7][3] = { {1./3.,1./3.,9./40.},
+      {tb,ta,(155.+s15)/1200.}, {ta,tb,(155.+s15)/1200.},
+      {ta,ta,(155.+s15)/1200.}, {td,tc,(155.-s15)/1200.},
+      {tc,td,(155.-s15)/1200.}, {tc,tc,(155.-s15)/1200.} };
+    array_set( diag, 0., 6 );
+    for ( ipoint=0; ipoint<7; ipoint++ ) {
+      tria6_shape( q7[ipoint][0], q7[ipoint][1], h6, p6 );
+      matrix_ab( p6, new_coord, xjq, ndim, nnol, ndim );
+      vq = q7[ipoint][2] * scalar_dabs( xjq[0]*xjq[3]-xjq[1]*xjq[2] ) / 2.;
+      if ( axisymmetric==-YES ) {
+        rq = 0.;
+        for ( inol=0; inol<nnol; inol++ ) rq += h6[inol]*new_coord[inol*ndim+0];
+        vq *= 2. * PIRAD * scalar_dabs(rq);
+      }
+      for ( inol=0; inol<nnol; inol++ ) diag[inol] += vq*h6[inol]*h6[inol];
+      vtot += vq;
+    }
+    for ( inol=0; inol<nnol; inol++ ) dsum += diag[inol];
+    for ( ipoint=0; ipoint<npoint; ipoint++ ) vrule += volume[ipoint];
+    if ( dsum>0. && scalar_dabs(vrule)>0. ) {
+      for ( inol=0; inol<nnol; inol++ )
+        lumped_hrz_weight[inol] = diag[inol] * vtot / dsum / vrule;
+      lumped_hrz_active = 1;
     }
   }
 

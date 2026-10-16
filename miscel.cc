@@ -518,6 +518,11 @@ static long int recovery_fit_kind( long int name, long int nnol,
   if ( ndim==3 && name==-TET4    && nnol==4  && npoint==5  ) return 1;
   if ( ndim==3 && name==-PRISM15 && nnol==15 && npoint==21 ) return 1;
   if ( ndim==3 && name==-PRISM6  && nnol==6  && npoint==2  ) return 4;
+  // C66 phase 2 (F4 T6f, 2026-10-16): tria6 7-point (default, -maximal)
+  // and 4-point (-minimal) rules: the physical linear fit (Professional
+  // 02-08-2026, residual 5e-13; also axisymmetric, on-axis elements too).
+  if ( ndim==2 && name==-TRIA6 && nnol==6 && ( npoint==7 || npoint==4 ) )
+    return 1;
   npol = recovery_tensor_npol( name );
   if ( !npol ) return 0;
   for ( d=0; d<ndim; d++ ) {
@@ -584,6 +589,27 @@ static void recovery_fit_shape( long int name, long int nnol, long int npoint,
       hp[ipoint][1] = L3;
       hp[ipoint][2] = L2;
       hp[ipoint][3] = 1. - L1 - L2 - L3;
+    }
+    return;
+  }
+  if ( name==-TRIA6 ) {
+    // C66 phase 2: the 7-point / 4-point rules of pol() (L1, L2 order)
+    double s15 = sqrt( 15. );
+    double a = (6.+s15)/21., b = (9.-2.*s15)/21.;
+    double c = (6.-s15)/21., d = (9.+2.*s15)/21.;
+    double t7[7][2] = { {1./3.,1./3.}, {b,a}, {a,b}, {a,a}, {d,c}, {c,d},
+      {c,c} };
+    double t4[4][2] = { {1./3.,1./3.}, {0.6,0.2}, {0.2,0.6}, {0.2,0.2} };
+    for ( ipoint=0; ipoint<npoint; ipoint++ ) {
+      double L1 = ( npoint==7 ) ? t7[ipoint][0] : t4[ipoint][0];
+      double L2 = ( npoint==7 ) ? t7[ipoint][1] : t4[ipoint][1];
+      double L3 = 1. - L1 - L2;
+      hp[ipoint][0] = (2.*L1-1.)*L1;
+      hp[ipoint][1] = 4.*L1*L2;
+      hp[ipoint][2] = (2.*L2-1.)*L2;
+      hp[ipoint][3] = 4.*L3*L1;
+      hp[ipoint][4] = 4.*L2*L3;
+      hp[ipoint][5] = (2.*L3-1.)*L3;
     }
     return;
   }
@@ -828,7 +854,9 @@ static long int recovery_fit_factor( long int name, long int nnol,
     db( NODE, nodes[k], idum, xn, ldum, VERSION_NORMAL, GET );
     for ( d=0; d<ndim; d++ ) coord[k*ndim+d] = xn[d];
   }
-  if ( kind==1 && ndim==2 ) {
+  // C66 phase 2: the on-axis tria6 keeps the linear fit (Professional
+  // 02-08-2026, measured: its points are interior, no h-average)
+  if ( kind==1 && ndim==2 && name!=-TRIA6 ) {
     db( GROUP_AXISYMMETRIC, element_group, &axisymmetric, ddum, ldum,
       VERSION_NORMAL, GET_IF_EXISTS );
     if ( axisymmetric==-YES )
@@ -874,7 +902,7 @@ double sri_stress_recovery_weight( long int sri, long int name, long int nnol,
   //                  sum h sig / sum h
   //   quad4 / hex8   1 pt  the point value (K21 / C70; before: volume
   //                  weighted h)
-  //   tria3 1 pt / 3 pt nodal, tria6 6 pt nodal, tet4 1 pt, bar2 1 pt:
+  //   tria3 1 pt / 3 pt nodal, tet4 1 pt, bar2 1 pt:
   //            the point value (F=1) / the value at the node (F=h)
   //            (F4 T6f, 2026-10-11; before, these were area-weighted)
   //   quad4 2x2 / hex8 2x2x2 -reduced (points at iso +-1/f) and quad9 3x3
@@ -891,8 +919,10 @@ double sri_stress_recovery_weight( long int sri, long int name, long int nnol,
   //                  (Gauss / -reduced / Lobatto -minimal: the physical
   //                  linear fit 1,x(,y); Lobatto -maximal: the point value;
   //                  C67, 2026-10-16; before: h, volume weighted)
-  //   prism15 21 points, tet4 -maximal (Keast 5 points): the physical
-  //                  linear fit; prism6 -minimal (2 points): sum h sig /
+  //   prism15 21 points, tet4 -maximal (Keast 5 points), tria6 7 / 4
+  //                  points (C66, 2026-10-16; before: a 6-point nodal
+  //                  rule, the value at the node): the physical linear
+  //                  fit; prism6 -minimal (2 points): sum h sig /
   //                  sum h per element (C67 remainder + C76, 2026-10-16;
   //                  before: h, volume weighted, unbounded for the prism15
   //                  whose serendipity corner functions are negative)
@@ -949,7 +979,6 @@ double sri_stress_recovery_weight( long int sri, long int name, long int nnol,
   // elements below. The tet4 -maximal Keast rule and the bar2 2-point
   // rules are fitted below (recovery_fit_factor, C67).
   if ( ( name==-TRIA3 && ( npoint==1 || npoint==3 ) ) ||
-       ( name==-TRIA6 && npoint==6 ) ||
        ( name==-TET4  && npoint==1 ) ||
        ( name==-BAR2  && npoint==1 ) ) {
     if ( scalar_dabs(volume)>TINY ) return ( npoint==1 ? 1. : h_inol )/volume;

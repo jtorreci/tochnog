@@ -1796,6 +1796,11 @@ extern thread_local long int stress_recovery_lobatto;
   // C80: iso coordinate magnitude 1/f of the quad4/hex8 -reduced points
   // (0 for every other rule); read by the nodal recovery fit (miscel.cc)
 extern thread_local double stress_recovery_reduced_iso;
+  // C66 phase 2: HRZ lumped weights of the tria6 just integrated by pol()
+  // (lumped_hrz_active 1; constant per point, sum_g volume_g * weight =
+  // the HRZ nodal mass); used by general()/materi() instead of h
+extern thread_local long int lumped_hrz_active;
+extern thread_local double lumped_hrz_weight[MNOL];
 
   // Nodal stress recovery (2026-09-15, Professional alignment): 1 when the
   // stress dofs are a PURE recovered field (Lagrangian: no convection of

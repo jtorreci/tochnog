@@ -1263,13 +1263,17 @@ void materi( long int element, long int gr, long int name, long int nnol,
       }
     }
     }
+    // C66 phase 2 (F4 T6f, 2026-10-16): the lumped weight of the
+    // h-weighted state dofs below; the tria6 HRZ weight of pol() (the same
+    // weight as the general.cc denominator), h for every other element.
+    double h_lump = lumped_hrz_active ? lumped_hrz_weight[inol] : h[inol];
     if ( !stress_recovery_post_pass && scalar_dabs(h[inol])>EPS_H ) {
 
       if ( materi_history_variables ) {
         for ( i=0; i<materi_history_variables; i++ ) {
           ipuknwn = hisv_indx/nder + i;
           indx = inol*npuknwn + ipuknwn;
-          tmp = volume * h[inol] * ( new_hisv[i] - old_hisv[i] ) / dtime;
+          tmp = volume * h_lump * ( new_hisv[i] - old_hisv[i] ) / dtime;
           element_rhside[indx] += tmp;
 		//added for options_element_dof
           if(options_element_dof==-YES) new_unknowns[hisv_indx + i*nder] = new_hisv[i];
@@ -1484,7 +1488,7 @@ void materi( long int element, long int gr, long int name, long int nnol,
         // NO_YIELD_F = -1e10 (K13 follow-up, measured on the Professional
         // 02-08-2026: tension_direct1 with materi_plasti_f gives f 0 at
         // the nodes of the elastic element; the GNU averaged -1e10 in)
-        tmp = volume * h[inol] *
+        tmp = volume * h_lump *
           ( ( new_f==NO_YIELD_F ? 0. : new_f ) - old_f ) / dtime;
         element_rhside[indx] += tmp;
       }
@@ -1492,27 +1496,27 @@ void materi( long int element, long int gr, long int name, long int nnol,
       if ( materi_plasti_incremental_substeps ) {
         ipuknwn = substeps_indx/nder;
         indx = inol*npuknwn + ipuknwn;
-        tmp = volume * h[inol] * ( new_substeps - old_substeps ) / dtime;
+        tmp = volume * h_lump * ( new_substeps - old_substeps ) / dtime;
         element_rhside[indx] += tmp;
       }
 
       if ( materi_plasti_softvar_local ) {
         ipuknwn = svloc_indx/nder;
         indx = inol*npuknwn + ipuknwn;
-        tmp = volume * h[inol] * ( new_unknowns[ipuknwn] - old_unknowns[ipuknwn] ) / dtime;
+        tmp = volume * h_lump * ( new_unknowns[ipuknwn] - old_unknowns[ipuknwn] ) / dtime;
         element_rhside[indx] += tmp;
       }
       if ( materi_plasti_softvar_nonlocal ) {
         ipuknwn = svnonloc_indx/nder;
         indx = inol*npuknwn + ipuknwn;
-        tmp = volume * h[inol] * ( new_unknowns[ipuknwn] - old_unknowns[ipuknwn] ) / dtime;
+        tmp = volume * h_lump * ( new_unknowns[ipuknwn] - old_unknowns[ipuknwn] ) / dtime;
         element_rhside[indx] += tmp;
       }
       if ( materi_strainenergy ) {
         ipuknwn = ener_indx/nder;
         indx = inol*npuknwn + ipuknwn;
         tmp = 0.5 * array_inproduct( new_sig, new_epe, MDIM*MDIM );
-        tmp = volume * h[inol] * ( tmp - old_unknowns[ener_indx] ) / dtime;
+        tmp = volume * h_lump * ( tmp - old_unknowns[ener_indx] ) / dtime;
         element_rhside[indx] += tmp;
       }
 
@@ -1521,7 +1525,7 @@ void materi( long int element, long int gr, long int name, long int nnol,
         for ( idim=0; idim<MDIM; idim++ ) {
           for ( jdim=idim; jdim<MDIM; jdim++ ) {
             indx = inol*npuknwn + ipuknwn;
-            tmp = volume * h[inol] * ( new_epi[idim*MDIM+jdim] - 
+            tmp = volume * h_lump * ( new_epi[idim*MDIM+jdim] - 
               old_epi[idim*MDIM+jdim] ) / dtime;
             element_rhside[indx] += tmp;
 		//added for options_element_dof
@@ -1571,7 +1575,7 @@ void materi( long int element, long int gr, long int name, long int nnol,
             for ( idim=0; idim<MDIM; idim++ ) {
               for ( jdim=idim; jdim<MDIM; jdim++ ) {
                 indx = inol*npuknwn + ipuknwn;
-                tmp = volume * h[inol] * inc_epp[idim*MDIM+jdim] / dtime;
+                tmp = volume * h_lump * inc_epp[idim*MDIM+jdim] / dtime;
                 element_rhside[indx] += tmp;
                 // added for options_element_dof
                 if(options_element_dof==-YES)
@@ -1596,7 +1600,7 @@ void materi( long int element, long int gr, long int name, long int nnol,
         ipuknwn = void_indx/nder;
         indx = inol*npuknwn + ipuknwn;
         void_fraction = new_unknowns[void_indx];
-        tmp = volume * h[inol] * ( 1 - void_fraction ) * void_fraction * 
+        tmp = volume * h_lump * ( 1 - void_fraction ) * void_fraction * 
           ( inc_epp[0*MDIM+0] + inc_epp[1*MDIM+1] + inc_epp[2*MDIM+2] );
         element_rhside[indx] += tmp;
       }
@@ -1606,7 +1610,7 @@ void materi( long int element, long int gr, long int name, long int nnol,
         indx = inol*npuknwn + ipuknwn;
         array_subtract( new_sig, old_sig, work, MDIM*MDIM );
         tmp = array_inproduct( work, inc_ept, MDIM*MDIM );
-        tmp = volume * h[inol] * ( tmp - old_unknowns[work_indx] ) / dtime;
+        tmp = volume * h_lump * ( tmp - old_unknowns[work_indx] ) / dtime;
         element_rhside[indx] += tmp;
       }
 

@@ -376,6 +376,19 @@ void general( long int element, long int name, long int nnol, long int element_g
           if ( name==-TET10 && npoint==5 && principal_unknown )
             weight = ( inol==0 || inol==2 || inol==5 || inol==9 ) ?
               1./36. : 4./27.;
+          // C66 phase 2 (F4 T6f, 2026-10-16, owner decision; DELIBERATE
+          // DIVERGENCE TRIA6-HRZ): the tria6 lumps EVERY h-weighted dof
+          // (principal dofs and the h-weighted state dofs, whose materi.cc
+          // numerators use the same weight) with HRZ masses (pol():
+          // plane corner A/19, mid-side 16A/57; axisymmetric r-weighted
+          // diagonal scaled to 2 pi A r_c). The Professional row sum gives
+          // zero (plane) / negative (axisymmetric) corner masses. The
+          // recovered dofs below override the weight with their fit. The
+          // groundflow velocity keeps h: its numerator (groundfl.cc) is
+          // h-weighted and is not converted yet (BACKLOG C85).
+          if ( lumped_hrz_active &&
+               dof_type[iuknwn]!=-GROUNDFLOW_VELOCITY )
+            weight = lumped_hrz_weight[inol];
           // K11 (2026-10-06): the strain tensors use the recovery weight
           // of materi.cc (strain_recovery_weight), so numerator and
           // denominator of the lumped update match; kappa too (F4 T6f

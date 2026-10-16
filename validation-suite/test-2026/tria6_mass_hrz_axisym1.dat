@@ -1,0 +1,75 @@
+( C66 {F4 T6f, 2026-10-16}: lumped masses of an axisymmetric tria6
+  [corners r,z = 1,0 / 2,0 / 1,1, density 1, E 1e-9] read from the
+  velocity after one step of a unit point force, v = F dt / m with dt
+  0.01. HRZ lumping [GNU-specific, deliberate divergence TRIA6-HRZ]: the
+  r-weighted consistent diagonal int N_i^2 2 pi r dA scaled to the total
+  2 pi A r_c = 4 pi / 3: corner r=1 m 0.188968 [v 0.0529190], corner r=2
+  m 0.283452 [v 0.0352794], mid-side on z=0 m 1.259787 [v 0.00793785],
+  mid-side on r=1 m 1.007829 [v 0.00992232]; element 1 default 7-point
+  rule, element 2 [shifted by 2 in z] -minimal 4-point rule, same masses.
+  The Professional 02-08-2026 row sum gives the r=1 corners -pi/60
+  [negative] and the r=2 corner pi/30. Old GNU: axisymmetric tria6
+  refused [rc 1]. )
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_displacement
+materi_stress
+end_initia
+inertia_apply -yes
+node 1 1. 0.
+node 2 1.5 0.
+node 3 2. 0.
+node 4 1. .5
+node 5 1.5 .5
+node 6 1. 1.
+node 7 1. 2.
+node 8 1.5 2.
+node 9 2. 2.
+node 10 1. 2.5
+node 11 1.5 2.5
+node 12 1. 3.
+element 1 -tria6 1 2 3 4 5 6
+element 2 -tria6 7 8 9 10 11 12
+element_group 2 1
+group_type 0 -materi
+group_materi_elasti_young 0 1.e-9
+group_materi_density 0 1.
+group_materi_memory 0 -total_linear
+group_axisymmetric 0 -yes
+group_type 1 -materi
+group_materi_elasti_young 1 1.e-9
+group_materi_density 1 1.
+group_materi_memory 1 -total_linear
+group_axisymmetric 1 -yes
+group_integration_points 1 -minimal
+bounda_force 1 1 -velx
+bounda_time 1 1.
+bounda_force 2 3 -velx
+bounda_time 2 1.
+bounda_force 3 2 -vely
+bounda_time 3 1.
+bounda_force 4 4 -velx
+bounda_time 4 1.
+bounda_force 5 6 -vely
+bounda_time 5 1.
+bounda_force 6 9 -velx
+bounda_time 6 1.
+bounda_force 7 10 -vely
+bounda_time 7 1.
+control_timestep 10 1.e-2 1.e-2
+target_item 1 -node_dof 1 -velx
+target_value 1 0.0529190 1.e-6
+target_item 2 -node_dof 3 -velx
+target_value 2 0.0352794 1.e-6
+target_item 3 -node_dof 2 -vely
+target_value 3 0.00793785 1.e-6
+target_item 4 -node_dof 4 -velx
+target_value 4 0.00992232 1.e-6
+target_item 5 -node_dof 6 -vely
+target_value 5 0.0529190 1.e-6
+target_item 6 -node_dof 9 -velx
+target_value 6 0.0352794 1.e-6
+target_item 7 -node_dof 10 -vely
+target_value 7 0.00992232 1.e-6
+end_data
