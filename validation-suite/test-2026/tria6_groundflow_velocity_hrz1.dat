@@ -1,0 +1,74 @@
+( C85 {F4 T6f, 2026-10-17}: lumped groundflow velocity of the tria6.
+  Pressure prescribed linear in x [p = x - 10, negative: below the
+  default total pressure limit, so the element is not dry] at every node, isotropic
+  permeability 10: the nodal groundflow velocity is the lumped projection
+  of k dp/dx, analytic velx 10, vely 0 at EVERY node, corners included.
+  Element 1 default 7-point rule, element 2 -minimal 4-point rule. The
+  numerator [groundfl.cc] and the denominator [general.cc] both use the
+  tria6 HRZ weight [deliberate divergence TRIA6-HRZ]; with the plain
+  row-sum weight h the corner denominator sum volume h is 0 and the
+  corner velocity is not 10. )
+echo -no
+number_of_space_dimensions 2
+groundflow_velocity
+groundflow_pressure
+end_initia
+node 1 0. 0.
+node 2 .5 0.
+node 3 1. 0.
+node 4 0. .5
+node 5 .5 .5
+node 6 0. 1.
+node 7 3. 0.
+node 8 3.5 0.
+node 9 4. 0.
+node 10 3. .5
+node 11 3.5 .5
+node 12 3. 1.
+element 1 -tria6 1 2 3 4 5 6
+element 2 -tria6 7 8 9 10 11 12
+element_group 2 1
+groundflow_density 1.
+group_type 0 -groundflow
+group_groundflow_permeability 0 10.
+group_groundflow_capacity 0 1.
+group_type 1 -groundflow
+group_groundflow_permeability 1 10.
+group_groundflow_capacity 1 1.
+group_integration_points 1 -minimal
+bounda_unknown 0 -ra 1 4 6 -ra -pres
+bounda_time 0 0. -10. 100. -10.
+bounda_unknown 1 -ra 2 5 -ra -pres
+bounda_time 1 0. -9.5 100. -9.5
+bounda_unknown 2 3 -pres
+bounda_time 2 0. -9. 100. -9.
+bounda_unknown 3 -ra 7 10 12 -ra -pres
+bounda_time 3 0. -7. 100. -7.
+bounda_unknown 4 -ra 8 11 -ra -pres
+bounda_time 4 0. -6.5 100. -6.5
+bounda_unknown 5 9 -pres
+bounda_time 5 0. -6. 100. -6.
+control_timestep 10 1. 1.
+target_item 1 -node_dof 1 -gvelx
+target_value 1 10. 1.e-8
+target_item 2 -node_dof 2 -gvelx
+target_value 2 10. 1.e-8
+target_item 3 -node_dof 3 -gvelx
+target_value 3 10. 1.e-8
+target_item 4 -node_dof 6 -gvelx
+target_value 4 10. 1.e-8
+target_item 5 -node_dof 5 -gvelx
+target_value 5 10. 1.e-8
+target_item 6 -node_dof 1 -gvely
+target_value 6 0. 1.e-8
+target_item 7 -node_dof 7 -gvelx
+target_value 7 10. 1.e-8
+target_item 8 -node_dof 9 -gvelx
+target_value 8 10. 1.e-8
+target_item 9 -node_dof 12 -gvelx
+target_value 9 10. 1.e-8
+target_item 10 -node_dof 11 -gvelx
+target_value 10 10. 1.e-8
+target_item 11 -node_dof 12 -gvely
+target_value 11 0. 1.e-8
+end_data

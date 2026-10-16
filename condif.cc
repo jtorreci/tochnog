@@ -34,17 +34,24 @@ void condif( long int element, long int gr, long int nnol, double h[],
       &condif_absorption, ldum, GET_IF_EXISTS ) ) {
     swit = set_swit(element,-1,"condif");
     if ( swit ) pri( "In routine CONDIF" );
-      // absorption
+      // absorption (lumped on the diagonal)
+      // C85 (F4 T6f, 2026-10-17, owner decision; DELIBERATE DIVERGENCE
+      // TRIA6-HRZ): the tria6 lumps the absorption with the HRZ weight of
+      // pol(), the same weight as its capacity in general.cc, so that
+      // every node obeys dT/dt = -absorption/capacity T. With h the tria6
+      // corner absorption is ~0 (7 points) or negative (4 points). Every
+      // other element keeps h.
     for ( inol=0; inol<nnol; inol++ ) {
+      double h_lump = lumped_hrz_active ? lumped_hrz_weight[inol] : h[inol];
       ipuknwn = temp_indx/nder;
       indx = inol*npuknwn + ipuknwn;
-      element_rhside[indx] -= volume * h[inol] * condif_absorption *
+      element_rhside[indx] -= volume * h_lump * condif_absorption *
         new_unknowns[temp_indx];
-      if ( residue ) element_residue[indx] -= h[inol] * condif_absorption *
+      if ( residue ) element_residue[indx] -= h_lump * condif_absorption *
         new_unknowns[temp_indx];
-      element_lhside[indx] += volume * h[inol] * condif_absorption;
+      element_lhside[indx] += volume * h_lump * condif_absorption;
       element_matrix[indx*nnol*npuknwn+indx] +=
-        volume * h[inol] * condif_absorption;
+        volume * h_lump * condif_absorption;
     }
     if ( swit ) {
       pri( "element_lhside", element_lhside, nnol, npuknwn );

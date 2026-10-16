@@ -384,10 +384,9 @@ void general( long int element, long int name, long int nnol, long int element_g
           // diagonal scaled to 2 pi A r_c). The Professional row sum gives
           // zero (plane) / negative (axisymmetric) corner masses. The
           // recovered dofs below override the weight with their fit. The
-          // groundflow velocity keeps h: its numerator (groundfl.cc) is
-          // h-weighted and is not converted yet (BACKLOG C85).
-          if ( lumped_hrz_active &&
-               dof_type[iuknwn]!=-GROUNDFLOW_VELOCITY )
+          // groundflow velocity numerator (groundfl.cc) and the condif
+          // absorption (condif.cc) use the same weight (C85, 2026-10-17).
+          if ( lumped_hrz_active )
             weight = lumped_hrz_weight[inol];
           // K11 (2026-10-06): the strain tensors use the recovery weight
           // of materi.cc (strain_recovery_weight), so numerator and

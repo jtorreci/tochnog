@@ -2171,6 +2171,16 @@ run_ok "$T2026" recovery_tria6_minimal1
 run_ok "$T2026" recovery_tria6_axisym1
 run_ok "$T2026" tria6_mass_hrz1
 run_ok "$T2026" tria6_mass_hrz_axisym1
+# C85 (F4 T6f, 2026-10-17, owner decision): the remaining h-weighted
+#   lumped tria6 terms use the HRZ weight (TRIA6-HRZ).
+#   tria6_groundflow_velocity_hrz1: linear pressure, k 10 -> gvelx 10 at
+#   every node (old GNU corner 0/0: 35.2, -144, -368).
+#   tria6_condif_absorption_hrz1 / _axisym1: dT/dt = -T, one implicit
+#   step dt 0.1 -> T = 1/1.1 at every node (old GNU corner 0.9955 /
+#   1.0027 plane, 1.137 axisymmetric). quad4 control element unchanged.
+run_ok "$T2026" tria6_groundflow_velocity_hrz1
+run_ok "$T2026" tria6_condif_absorption_hrz1
+run_ok "$T2026" tria6_condif_absorption_hrz_axisym1
 
 # ---------------------------------------------------------------------
 # Sub-sprint materi_stress_force, lote 2 (integracion 2D quad4/quad9):
