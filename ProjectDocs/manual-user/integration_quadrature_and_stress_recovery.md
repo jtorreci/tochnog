@@ -174,10 +174,31 @@ target if the new value matches the Professional.
   the stress is linear in the element; otherwise prism6 stresses and
   displacements differ slightly (distorted-prism probe: nodal sigzz 1.6 %
   of the scale).
-- **`prism6` with `group_integration_points -minimal`** (known
-  difference, not decided; BACKLOG C76). The Professional uses 2 points
-  (triangle centroid x 2 Gauss levels); the GNU ignores the record for a
-  prism6 and keeps its 6 points.
+- **`prism6` with `group_integration_points -minimal`**: = Professional
+  since 2026-10-16 (C76, closed by following it): 2 points, the triangle
+  centroid x 2 Gauss levels, weight 1/4 each. An under-integrated rule
+  (1 spurious mode per element, restrained by the mesh in every case
+  tried) that halves the bending error of the 6-point rule (cantilever
+  20x2x2: -7.1 % against -13.1 %). Before, the GNU ignored the record.
+- **`prism15`**: the 21-point rule had two wrong triangle points (one
+  outside the triangle) until 2026-10-16; it is now the Professional
+  degree-5 rule (elastic displacements 3e-11 from the Professional). With
+  `-minimal` the Professional uses 8 points (a 4-point triangle rule with a
+  negative weight) whose element stiffness is indefinite; the GNU keeps 21
+  points (known difference, owner decision pending; BACKLOG C82).
+- **`tet4` with `-maximal`**: 5 points (the Keast rule of the tet10), as
+  manual 6.623 and the Professional, since 2026-10-16 (before: 4 points
+  at the nodes; same stiffness for a linear material).
+- **`tria6`** (known difference; BACKLOG C66): the GNU uses 6 points at
+  the nodes and mid-edges and refuses axisymmetric groups; the manual
+  (6.623) and the Professional use 7 points (default, `-maximal`) or 4
+  (`-minimal`). Results agree to ~1e-5 on straight-edged elements and
+  differ by several percent on curved ones.
+- **`tria3` `-maximal`, `tet10` `-maximal`** (known difference; BACKLOG
+  C83): the manual specifies 4 and 10 points; both versions use 3 (the
+  nodes) and 5. In an axisymmetric group the GNU integrates every tria3
+  with 1 point, the Professional with the 3 nodes (1 point if the element
+  touches the axis).
 - **`post_point_dof` of recovered fields (stress/strain)** (known
   difference, not decided; AUDIT section 5 (after the K04 table)). GNU:
   Interpolates the averaged nodal field (`validation_2` -0.036558).

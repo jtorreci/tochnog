@@ -23,9 +23,9 @@ element values, as in the Professional. Example:
 `validation-suite/test-2026/tria3_nodal_recovery_mean1.dat` (two tria3 of
 area 0.5 and 2 sharing an edge): node 2 `sigxx` 6.4643 = (1.0938 +
 11.8348)/2 (before: 9.6866). The strain tensors follow the same rule.
-Not yet measured, and therefore unchanged: tet4 `-maximal`. The bar
-rules with more than one point follow the Professional since 2026-10-16
-(see "Bars and quad16" below).
+The bar rules with more than one point follow the Professional since
+2026-10-16 (see "Bars and quad16" below), and so do the tet4 `-maximal`,
+prism15 and prism6 `-minimal` rules (see "The last rules" below).
 
 ## quad4 and quad9 per-element values (K21, 2026-10-12)
 
@@ -102,8 +102,8 @@ the GNU three interior points; a deliberate divergence decided on
 C75), so prism6 nodal stresses agree only where the stress field is
 linear. The quad4/quad9/hex8/hex27 Lobatto rules follow the
 Professional since 2026-10-13 (BACKLOG C79), the bar and quad16 rules
-since 2026-10-16 (below). The remaining unmeasured rules (prism15, tet4
-`-maximal`, ...) keep the volume-weighted average.
+since 2026-10-16 (below), and the tet4 `-maximal`, prism15 and prism6
+`-minimal` rules since 2026-10-16 too ("The last rules" below).
 
 ## Bars and quad16 (C67, 2026-10-16)
 
@@ -151,6 +151,85 @@ group_materi_viscosity 0 1.0
 group_integration_method 0 -lobatto
 group_integration_points 0 -minimal
 ```
+
+## The last rules: tet4 `-maximal`, prism15, prism6 `-minimal` (C67, C76, 2026-10-16)
+
+With these three every element and integration rule of the GNU follows the
+Professional recovery (81 Professional probes of the tria3, tria6, tet4,
+tet10, prism6 and prism15, plane and axisymmetric, every
+`group_integration_points` and `group_integration_method` value; every
+node compared). Before, they used the shape-function weights and a
+volume-weighted mean; for the prism15 that average was unbounded at the
+corner nodes (the serendipity corner functions are negative inside the
+element), giving nodal stresses many times the real ones.
+
+| Element and rule | Integration points | Per-element nodal value |
+|------------------|--------------------|-------------------------|
+| tet4 `-maximal` | 5 (Keast: centroid and 4 interior points), as manual 6.623 and the Professional; before: 4 points at the nodes | least-squares plane in physical coordinates (the tet4 stress is constant, so the point value) |
+| prism15 (every value) | 21 (7 triangle points x 3 levels) | least-squares plane `a + b x + c y + d z` in physical coordinates |
+| prism6 `-minimal` | 2 (triangle centroid at the two Gauss levels, weight 1/4 each); before: the record was ignored | `sum_g h_n(g) sigma_g / sum_g h_n(g)` (a weighted mean of the two point values) |
+
+The node is the arithmetic mean over the adjacent elements, as for every
+other element.
+
+Two integration fixes come with this:
+
+- **prism15**: two of the seven triangle points were wrong (one lay
+  outside the triangle), so the 21-point rule did not even integrate a
+  linear field exactly. The corrected rule is the standard degree-5
+  Dunavant rule, the one the Professional uses. Displacements of an elastic
+  prism15 block moved by up to 3.7 % and now equal the Professional to
+  3e-11.
+- **prism6 `-minimal`** is now honoured. It is an under-integrated rule
+  (one spurious mode per element, restrained by the mesh in every case
+  tried). It passes the patch test and is more flexible in bending than
+  the default 6-point rule: for a cantilever 10x1x1 under an end load
+  (Timoshenko), the tip error is -18.0 / -7.1 / -2.8 % on meshes
+  10x1x1 / 20x2x2 / 40x2x4, against -34.7 / -13.1 / -4.85 % for the
+  default rule. The default, `-normal` and `-maximal` keep the 6-point rule
+  (C75).
+
+Examples (`validation-suite/test-2026`, targets = Professional):
+`recovery_tet4_maximal1.dat`, `recovery_prism15_fit1.dat`,
+`recovery_prism6_minimal1.dat`, `prism6_minimal_cantilever1.dat`,
+`prism15_elastic_shear1.dat`.
+
+Minimal input (prism6, 2-point rule):
+
+```
+number_of_space_dimensions 3
+materi_velocity
+materi_displacement
+materi_stress
+end_initia
+...
+element 1 -prism6 1 2 3 4 5 6
+...
+group_type 0 -materi
+group_materi_elasti_young 0 1.0
+group_materi_elasti_poisson 0 0.3
+group_integration_points 0 -minimal
+```
+
+Differences with the Professional version (integration rules, not the
+recovery; BACKLOG C66, C82, C83):
+
+- `tria6`: the GNU integrates with 6 points at the nodes and mid-edges
+  (and refuses axisymmetric groups). The manual (6.623) and the
+  Professional use 7 points (default and `-maximal`) or 4 points
+  (`-minimal`) and recover them with the physical linear fit. Nodal
+  stresses differ by 8-10 % of the scale on curved, distorted meshes
+  (BACKLOG C66).
+- prism15 `-minimal`: the Professional uses 8 points (the 4-point
+  triangle rule with a negative centroid weight x 2 levels). That rule
+  gives an indefinite element stiffness (negative eigenvalues), so the GNU
+  keeps 21 points; nodal stresses differ by 0.9 % of the scale (BACKLOG
+  C82).
+- tria3 `-maximal`: the manual specifies 4 points, both versions use the 3
+  nodes. In an axisymmetric group the GNU always uses 1 point; the
+  Professional uses the 3 nodes, and 1 point in an element touching the
+  axis. The tet10 `-maximal` 10-point rule of the manual is not used by
+  either version (both use 5 points) (BACKLOG C83).
 
 ## When it matters
 

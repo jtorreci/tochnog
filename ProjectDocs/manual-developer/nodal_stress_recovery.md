@@ -195,10 +195,11 @@ and `bar2` with 1 point the weight is `F/volume` with `F = 1` for the
 1-point rules and `F = h_inol` (the Kronecker delta) for the nodal rules,
 so each element contributes weight 1. The strain tensors follow through
 `strain_recovery_weight()` (same function); the convected-stress path of
-`general.cc` uses the same weight. Unmeasured rules (tet4 `-maximal`,
-prism15) keep `h_inol`; the quad4/quad9/hex8/hex27 Lobatto rules are
-aligned since C79 (2026-10-13), the bar2 2-point, bar3, bar4 and quad16
-rules since C67 (2026-10-16, next section).
+`general.cc` uses the same weight. The quad4/quad9/hex8/hex27 Lobatto
+rules are aligned since C79 (2026-10-13), the bar2 2-point, bar3, bar4
+and quad16 rules since C67 (2026-10-16, next section), the tet4
+`-maximal`, prism15 and prism6 `-minimal` rules since C67/C76
+(2026-10-16, section "The last rules").
 
 ## Bars and quad16 (F4 T6f C67, 2026-10-16)
 
@@ -419,6 +420,81 @@ away from the Professional. Wall `large1` (hex8 30^3) +1.5 % locally
 (the per-element fit replaces the F4 T9 table), corpus totals within
 +-2 %.
 
+## The last rules: tet4 `-maximal`, prism15, prism6 `-minimal` (F4 T6f C67 remainder + C76, 2026-10-16)
+
+Enumeration. Every rule `pol()` can produce, against the dispatch of
+`sri_stress_recovery_weight()` / `recovery_fit_kind()` at `9a0ca3d`: the
+tensor rules (C67/C70/C79/C80), tria3 1 and 3 points, tria6 6 points,
+tet4 1 point, bar2 1 point and tet10 5 points were covered; three fell to
+the `h_inol` fallback: tet4 `-maximal` (4 nodal points), prism15 (21
+points, every `group_integration_points` value) and prism6 `-minimal`
+(record ignored, 6 points). tria3/tet4 axisymmetric: `pol()` forces the
+1-point rule (covered); tet4 in an axisymmetric group does not arise (3D).
+
+Professional probes (`scratchpad/c76/gen76.py`, `an76.py`; 81 runs:
+tria3, tria6, tria3 axisymmetric off the axis and with a column of nodes
+on it, tria6 axisymmetric, tet4, tet10, prism6, prism15; default /
+`-gauss` / `-lobatto` x default / `-minimal` / `-maximal`; 12-24 distorted
+elements of unequal size; a nonlinear velocity prescribed at every node of
+a viscous materi). Per element the Professional `element_dof` is compared
+with candidate operators applied to its `element_intpnt_dof`, and the
+`node_dof` with the mean / volume-weighted mean of `element_dof`:
+
+| rule | Professional points | per-element operator (residual) | assembly |
+|---|---|---|---|
+| tet4 `-maximal` | 5, the tet10 Keast points (manual 6.623) | physical linear fit (8e-14; constant stress) | mean (4e-13; vol-weighted 1e-1) |
+| prism15 default/`-normal`/`-maximal` | 21, Dunavant 7 x 3 Gauss | physical linear fit 1,x,y,z (5e-13) | mean (3e-13; vol-weighted 9e-3) |
+| prism15 `-minimal` | 8, 4-point triangle rule (centroid -27/48) x 2 Gauss | physical linear fit (7e-13) | mean |
+| prism6 `-minimal` | 2, centroid x zeta 1/2 +- 1/(2 sqrt 3) | `h_n(g)/sum_g h_n(g)` (5e-13; linear fit 6e-2) | mean (3e-13) |
+
+Implementation:
+
+- `polynom.cc` `pol()`: tet4 `-maximal` = Keast 5 points (weights -4/5
+  and 9/20, `h` of the linear tet4 at the points, `p` unchanged; point
+  order as tet10: xi = L1 -> node 0, eta = L2 -> node 2, zeta = L3 ->
+  node 1); prism6 `-minimal` = 2 points, weight 1/4 each (the default is
+  now set to `-maximal` before the record is read: the function-local
+  default `-MINIMAL` would otherwise select the 2-point rule); prism15:
+  the 7-point triangle table corrected (`{1/3,1/3}, {b,a}, {a,b}, {a,a},
+  {d,c}, {c,d}, {c,c}`, the Professional order; before `{b,b}` and
+  `{d,d}`, a point outside the triangle and a rule not exact for linear
+  integrands, monomial error 0.025). `stress_recovery_gauss = 1` for the
+  three (dense operator: the materi() stress block visits every pair).
+- `miscel.cc` `recovery_fit_kind()`: kind 1 for tet4 nnol 4 npoint 5 and
+  prism15 nnol 15 npoint 21; new kind 4 for prism6 nnol 6 npoint 2.
+  `recovery_fit_shape()`: tet4 Keast, prism15 21-point serendipity shape
+  functions, prism6 2-point. `recovery_fit_build()`: kind 4 reuses the
+  axis branch (`F = h_n(g)/sum_g h_n(g)`).
+- The replicas `msf_element_rule()` (`calcul_force.cc`) and
+  `mc_element_rule()` (`delete.cc`) only cover the tensor elements and are
+  unchanged.
+- Lumped masses: the tet4 Keast row sum is V/4 per node, as before; the
+  prism6 2-point row sum is V/6 per node (positive).
+
+Soundness of the two rules the GNU adopts (`scratchpad/c76/analytic/`):
+the prism6 2-point stiffness has 7 zero eigenvalues (1 spurious mode per
+element) but no global zero mode in any cantilever mesh tried (10x1x1 to
+40x2x4, triangles in xy and xz); constant strain is integrated exactly
+(patch test); tip-load cantilever error vs Timoshenko -18.0 / -7.1 / -2.8
+% (6-point rule -34.7 / -13.1 / -4.85 %). Its weights are confirmed by a
+20x2x2 elastic cantilever whose Professional nodal displacements equal a
+2-point FE model to 1.5e-13. The Professional prism15 `-minimal` rule has
+3 negative stiffness eigenvalues on a distorted prism15 (the negative
+centroid weight) and is NOT adopted (BACKLOG C82).
+
+Verification: every probe node = Professional within 6e-12 for the
+rules changed (prism15 before: 24 x the stress scale; tet4 `-maximal`
+1e-1; prism6 `-minimal` 3.6e-2); the prism15 elastic block
+(`prism15_elastic_shear1`) displacements 3.7 % -> 3e-11. Tests
+(`validation-suite/test-2026`): `recovery_tet4_maximal1`,
+`recovery_prism15_fit1`, `recovery_prism6_minimal1`,
+`prism6_minimal_cantilever1`, `prism15_elastic_shear1` (RED rc 1 at
+`9a0ca3d`, GREEN).
+
+Hardcoded data: the Keast, Dunavant and Gauss point tables are repeated
+in `pol()` and `recovery_fit_shape()` (pending refactoring: one shared
+rule table per element).
+
 ## Files
 
 - `dof.cc` — `parallel_new_dof_diagonal()`
@@ -431,7 +507,10 @@ away from the Professional. Wall `large1` (hex8 30^3) +1.5 % locally
   1-point bar2 arithmetic mean F4 T6f, 2026-10-11), `recovery_fit_kind()`,
   `recovery_fit_shape()`, `recovery_fit_build()`, `recovery_fit_factor()`
   (K21, 2026-10-12; 3D and 3x3 rules C70, 2026-10-13),
-  `recovery_tensor_npol()` (bars and quad16, C67, 2026-10-16)
+  `recovery_tensor_npol()` (bars and quad16, C67, 2026-10-16); kind 4 and
+  the tet4/prism15/prism6 shapes (C67 remainder + C76, 2026-10-16)
+- `polynom.cc` — `pol()`: tet4 `-maximal` Keast rule, prism6 `-minimal`
+  2-point rule, prism15 triangle table (2026-10-16)
 
 ## Differences with the Professional version
 
@@ -444,9 +523,16 @@ away from the Professional. Wall `large1` (hex8 30^3) +1.5 % locally
   (2026-10-13). The prism6 integration points differ (Professional
   triangle corners, GNU interior points; deliberate divergence, owner
   2026-10-13, BACKLOG C75), so prism6 nodal stresses agree only for a
-  linear stress field. `-minimal` on a prism6 is ignored (BACKLOG C76). Unmeasured rules keep
-  `h_inol` (prism15, tet4 `-maximal`, ...; quad/hex Lobatto aligned in
-  C79, 2026-10-13; bars and quad16 in C67, 2026-10-16).
+  linear stress field. prism6 `-minimal` = Professional since C76
+  (2026-10-16); every rule now has a measured recovery (quad/hex Lobatto
+  C79, bars and quad16 C67, tet4 `-maximal` and prism15 C67 remainder).
+- Integration rules still different (the recovery of each GNU rule is
+  the Professional one): tria6 (GNU 6 nodal points, manual and
+  Professional 7 / 4 points; axisymmetric refused by the GNU; BACKLOG
+  C66), prism15 `-minimal` (Professional 8 points, indefinite stiffness;
+  GNU 21; BACKLOG C82), tria3 `-maximal` (manual 4 points, both 3 nodal;
+  axisymmetric GNU 1 point vs Professional 3 nodal / 1 on the axis) and
+  tet10 `-maximal` (manual 10 points, both 5) (BACKLOG C83).
 - `hex64`: rejected by both codes (the GNU source has the npol=4 branch
   in `pol()`, but the element record is too short); not a divergence.
 - Index: [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).

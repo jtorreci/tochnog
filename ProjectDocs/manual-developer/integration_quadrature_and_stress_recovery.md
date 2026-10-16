@@ -159,7 +159,8 @@ arithmetic mean for them too (two-element probes, exact). The weight is
 now `F/volume` (`F = 1` for the 1-point rules, `F = h` for the tria3
 3-point and tria6 6-point nodal rules), like the table elements. The
 bar2 2-point, bar3 and bar4 rules use the tensor fit since C67
-(2026-10-16); tet4 `-maximal` keeps `h_inol`. Details and tests:
+(2026-10-16); tet4 `-maximal` (now the Keast 5-point rule), prism15 and
+prism6 `-minimal` use the fit / kind 4 since C67/C76 (2026-10-16). Details and tests:
 `nodal_stress_recovery.md`.
 
 ### 3.2 Axisymmetric rule (K20, F4 T4, 2026-10-09)
@@ -363,8 +364,8 @@ operations):
   Professional fits `1,x,y` in physical coordinates for every measured
   type; the 92/95 `validation_14` match was the natural fit agreeing with
   the physical one on near-parallelograms. The 3x3 quad9 and the 3D
-  types followed in C70 (2026-10-13, all measured physical). Unmeasured:
-  prism15, tet4 `-maximal`. The quad4/quad9/hex8/hex27 Lobatto rules were
+  types followed in C70 (2026-10-13, all measured physical); prism15, tet4
+  `-maximal` and prism6 `-minimal` in C67/C76 (2026-10-16). The quad4/quad9/hex8/hex27 Lobatto rules were
   measured and aligned in C79 (2026-10-13), the bar2/bar3/bar4 and quad16
   rules in C67 (2026-10-16); hex64 is rejected by both codes.
 - `-reduced` integration method: implemented in C80 (F4 T6f,
@@ -486,10 +487,25 @@ small fit per element instead of one per (node, point) call.
   of A/6 and stiffens bending (cantilever 40x2x4: -9.95 % against
   -4.85 %). `recovery_fit_shape` (`miscel.cc`) repeats the GNU point
   table and must stay consistent with `pol()`.
-- **`prism6` `-minimal`** (BACKLOG C76, class B): Professional 2 centroid
-  points; the GNU `pol()` reads `GROUP_INTEGRATION_POINTS` but does not
-  branch on it for a prism6, and `recovery_fit_kind` accepts only
-  npoint 6. Not implemented.
+- **`prism6` `-minimal`**: = Professional since C76 (2026-10-16): `pol()`
+  2-point branch (centroid x zeta Gauss levels, weight 1/4; the branch
+  sets the default to `-maximal` first), `recovery_fit_kind` kind 4
+  (`h_n(g)/sum h_n`). The repeated point tables (`pol()`,
+  `recovery_fit_shape()`) must stay consistent.
+- **`prism15`**: triangle table fixed in C67 (2026-10-16; `{b,b}`/`{d,d}`
+  -> `{a,a}`/`{c,c}`); `-minimal` = Professional 8 points with an
+  indefinite stiffness (3 negative eigenvalues), not implemented (BACKLOG
+  C82).
+- **`tet4` `-maximal`**: Keast 5 points since C67 (2026-10-16), manual
+  6.623 = Professional.
+- **`tria6`** (BACKLOG C66): GNU 6 nodal points (corner weight
+  `EPS_TRIANGLE`), manual and Professional 7 / 4 points with the linear
+  fit; adopting them needs a lumping decision in `general.cc` (the row-sum
+  corner masses of a tria6 are 0) and an axisymmetric enablement.
+- **`tria3` / `tet10` `-maximal`** (BACKLOG C83): manual 4 / 10 points,
+  both codes 3 nodal / 5; tria3 axisymmetric `-maximal`: GNU forced 1
+  point, Professional 3 nodal and 1 point for the element touching the
+  axis.
 - **`post_point_dof` of recovered fields (stress/strain)** (known
   difference, not decided; AUDIT section 5 (after the K04 table)). GNU:
   Interpolates the averaged nodal field (`validation_2` -0.036558).

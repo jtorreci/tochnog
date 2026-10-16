@@ -2012,7 +2012,7 @@ Original report:
   0 FALLO, runs 226/226. Remaining interface + inertia gap -> C61.
 - **Severity**: LOW. **Effort**: medium.
 
-### C76. `prism6` `group_integration_points -minimal` ignored (F4 T6f C75, 2026-10-13) — OPEN
+### C76. `prism6` `group_integration_points -minimal` ignored (F4 T6f C75, 2026-10-13) — RESOLVED 2026-10-16 (F4 T6f C67 remainder + C76, `dc4a59a`)
 
 - **Symptom**: with `group_integration_points -minimal` the Professional
   02-08-2026 integrates a prism6 with 2 points, the triangle centroid
@@ -2026,6 +2026,21 @@ Original report:
   `miscel.cc` only accepts npoint 6 for prism6; a linear `1,x,y,z` fit
   is not defined on 2 points), then a dedicated test.
 - **Severity**: LOW (non-default option). **Effort**: cheap/medium.
+- **Resolved** (2026-10-16, `dc4a59a`): `pol()` honours `-minimal` with
+  the Professional rule (centroid x the 2 Gauss levels, weight 1/4 each;
+  a 20x2x2 elastic cantilever's Professional nodal displacements equal a
+  2-point FE model to 1.5e-13). Recovery: per element
+  `sum_g h_n(g) sig_g / sum_g h_n(g)` (Professional residual 5e-13; the
+  linear fit is 6e-2 off), arithmetic mean (recovery kind 4,
+  `miscel.cc`). Analytic check of the rule: 7 zero eigenvalues per
+  element (1 spurious mode) but no global zero mode in any cantilever
+  mesh tried; patch test exact; tip-load bending error -18.0 / -7.1 /
+  -2.8 % (10x1x1 / 20x2x2 / 40x2x4) against -34.7 / -13.1 / -4.85 % of
+  the 6-point rule, so the Professional rule is sound for an explicit
+  under-integration option. The default stays the 6-point rule (C75;
+  `pol()` now sets the prism6 default to `-maximal` before reading the
+  record). Tests `test-2026/recovery_prism6_minimal1`,
+  `prism6_minimal_cantilever1`.
 
 ### C75. `prism6` integration points differ from the Professional (F4 T6f C70, 2026-10-13) — DECIDED 2026-10-13 (deliberate divergence, class A)
 
@@ -2613,7 +2628,7 @@ Original report:
   difference of that model (one chain: reaction 2.5e-3, rhoyy 7e-3,
   msigyy 9 % relative) is the Maxwell relaxation item C68a.
 
-### C67. Nodal recovery of the unmeasured element rules (F4 T6f, 2026-10-11) — OPEN (narrowed 2026-10-16 to tet4 `-maximal`, prism15 and the simplex axisymmetric variants)
+### C67. Nodal recovery of the unmeasured element rules (F4 T6f, 2026-10-11) — RESOLVED 2026-10-16 (F4 T6f C67 `d875874` and C67 remainder `dc4a59a`)
 
 - **Symptom**: F4 T6f WU1 aligned the nodal recovery of tria3 (1 point,
   3-point nodal rule), tria6, tet4 (1 point) and bar2 (1 point) with the
@@ -2646,15 +2661,62 @@ Original report:
   every probe node = Professional within 4e-12; 10 tests
   `test-2026/recovery_bar*`, `recovery_quad16_*`. `hex64` is rejected by
   both codes; truss/beam elements have no recovered nodal stress.
-- **Remaining**: tet4 `-maximal`, prism15, the tria3/tet4 axisymmetric
-  variants (not probed separately).
+- **Remainder resolved** (2026-10-16, `dc4a59a`): enumeration of every
+  rule `pol()` produces against the recovery dispatch; on the `h`
+  fallback were tet4 `-maximal`, prism15 (every value) and prism6
+  `-minimal` (C76). 81 Professional probes (tria3, tria6, tria3
+  axisymmetric off/on the axis, tria6 axisymmetric, tet4, tet10, prism6,
+  prism15; default/`-gauss`/`-lobatto` x default/`-minimal`/`-maximal`):
+  tet4 `-maximal` = the 5-point Keast rule (manual 6.623; GNU had 4 nodal
+  points) and prism15 = physical linear fit (5e-13), arithmetic mean.
+  The prism15 7-point triangle table of `pol()` had (b,b)/(d,d) instead
+  of (a,a)/(c,c) (a point outside the triangle, monomial error 0.025):
+  corrected, elastic displacements 3.7 % -> 3e-11 from the
+  Professional. tria3/tet4 axisymmetric: `pol()` forces 1 point
+  (= Professional for the default; the `-maximal` difference is C83);
+  tet4 never axisymmetric (3D). Every probe node of a changed rule =
+  Professional within 6e-12. Tests `test-2026/recovery_tet4_maximal1`,
+  `recovery_prism15_fit1`, `prism15_elastic_shear1`. Found: C66
+  re-scoped (tria6 rule), C82, C83.
 - **Fix candidate**: one two-element probe per rule (different size and
   stiffness), compare the Professional `node_dof` with the mean and the
   volume-weighted mean of its `element_dof`; extend
   `sri_stress_recovery_weight()` only for the rules proven to be the mean.
 - **Severity**: LOW. **Effort**: cheap.
 
-### C66. tria6 element results differ ~1e-5 from the Professional (F4 T6f, 2026-10-11) — OPEN
+### C83. tria3 / tet10 `-maximal` point counts and the axisymmetric tria3 `-maximal` (F4 T6f C67 remainder, 2026-10-16) — OPEN
+
+- **Symptom**: manual 6.623 specifies "a four-point integration scheme"
+  for the tria3 `-maximal` and "a ten-point scheme" for the tet10
+  `-maximal`; the Professional 02-08-2026 uses 3 points at the nodes and
+  5 points (Keast), and so does the GNU (no difference between the codes
+  in a plane group). In an axisymmetric group the GNU `pol()` forces the
+  1-point rule for every tria3; the Professional keeps the 3 nodal points
+  for `-maximal` and switches to 1 point only in an element with a node
+  on the axis (like C71); nodal stresses of the probe 3 % of the scale
+  apart.
+- **Decision needed**: follow the manual (4 / 10 points, moving away
+  from the Professional) or the Professional (axisymmetric tria3
+  `-maximal`: 3 nodal points with the on-axis switch).
+- **Severity**: LOW (non-default options). **Effort**: cheap.
+
+### C82. `prism15` `group_integration_points -minimal` (F4 T6f C67 remainder, 2026-10-16) — OPEN
+
+- **Symptom**: the Professional 02-08-2026 integrates a prism15 with
+  `-minimal` with 8 points: the 4-point degree-3 triangle rule (centroid
+  weight -27/48, three points 25/48) x 2 Gauss levels, recovered with the
+  physical linear fit. The GNU keeps 21 points (the record is not
+  branched on); nodal stresses of the probe differ 0.9 % of the scale.
+- **Analytic check**: the 8-point element stiffness of a distorted
+  prism15 has 3 NEGATIVE eigenvalues (the negative centroid weight); the
+  rule is not positive definite, unlike the 21-point rule (6 zero
+  eigenvalues, the rigid modes).
+- **Recommendation**: keep 21 points as a deliberate divergence (class
+  A); owner decision pending.
+- **Severity**: LOW (non-default option). **Effort**: cheap (docs) /
+  cheap (code, if followed).
+
+### C66. tria6 integration rule differs from the manual and the Professional (F4 T6f, 2026-10-11; re-scoped 2026-10-16) — OPEN
 
 - **Symptom**: two-tria6 probe (`test-2026/tria6_nodal_recovery_mean1`):
   displacements, integration-point and single-element nodal stresses
@@ -2664,6 +2726,22 @@ Original report:
 - **Cause (hypothesis)**: the tria6 6-point nodal rule weights
   (`polynom.cc`, corner weight `EPS_TRIANGLE` 1e-6, mid-side 1/3-1e-6)
   or a different Professional tria6 rule.
+- **Cause (measured 2026-10-16, F4 T6f C67 remainder)**: a different
+  rule. Manual 6.623: "For -tria6 elements a seven-point scheme will be
+  used for -maximal and a four-point scheme will be used with -minimal";
+  the Professional does exactly that (default = `-maximal`), recovers
+  the points with the physical linear fit (residual 5e-13) and the
+  arithmetic mean, and accepts axisymmetric groups (7 / 4 points). The
+  GNU uses its 6 nodal points for every value (exact for the degree-2
+  stiffness of a straight-edged element, hence only ~1e-5 apart there)
+  and refuses axisymmetric tria6. On a curved, distorted 12-element mesh
+  the nodal stresses differ 7.7 % (`-maximal`) / 9.5 % (`-minimal`) of
+  the scale.
+- **Next step**: implement the manual rules in `pol()` with kind 1
+  recovery and allow the axisymmetric group. Decision needed first: the
+  row-sum lumped mass/capacity of a tria6 is 0 at the corners with an
+  interior rule (`general.cc`, outside the C67 surface; the tet10 uses
+  HRZ masses, TET10-HRZ).
 - **Severity**: LOW. **Effort**: cheap/medium.
 
 ### C65. Professional `post_point_dof` at a node differs from its own `node_dof` (F4 T6f, 2026-10-11) — OPEN
@@ -2911,11 +2989,13 @@ Original report:
 | C77 | — | Bi-CG absolute breakdown test and convergence floor — resolved 2026-10-15 (F4 T6f C77: relative stop, relative breakdown, guarded SuperLU / band LU retry; BiCGStab choice pending) | closed | - |
 | C81 | — | ILU / AMG preconditioning of the iterative solver (F6 profiling, owner 2026-10-15) | LOW | medium/large |
 | C75 | — | `prism6` integration points: Professional triangle corners, GNU interior (2/3,1/6,1/6) points — decided 2026-10-13: deliberate divergence (GNU half the bending error) | closed | - |
-| C76 | — | `prism6` `group_integration_points -minimal` ignored (Professional: 2 centroid points; its 2-point recovery not measured) | LOW | cheap/medium |
+| C76 | — | `prism6` `group_integration_points -minimal` ignored — resolved 2026-10-16 (`dc4a59a`: Professional 2-point rule, `sum h sig / sum h` recovery) | closed | - |
 | C78 | — | `post_point` in curved quad9 / hex27: Professional corner-node (sub-parametric) location, GNU isoparametric — decided 2026-10-13: deliberate divergence (class A) | closed | - |
 | C65 | — | Professional `post_point_dof` at a node differs from its own `node_dof` | LOW | cheap |
-| C66 | — | tria6 element results differ ~1e-5 from the Professional | LOW | cheap/medium |
-| C67 | — | nodal recovery of the unmeasured element rules: bars and quad16 resolved 2026-10-16 (F4 T6f C67, `d875874`); remaining tet4 `-maximal`, prism15, simplex axisymmetric | LOW | cheap |
+| C66 | — | tria6 integration rule: GNU 6 nodal points, manual/Professional 7 / 4 points (+ axisymmetric); lumping decision needed | LOW | medium |
+| C82 | — | `prism15` `-minimal`: Professional 8 points with an indefinite stiffness, GNU 21 (owner decision) | LOW | cheap |
+| C83 | — | tria3/tet10 `-maximal` manual point counts (4/10) vs both codes (3/5); axisymmetric tria3 `-maximal` (GNU 1 point) | LOW | cheap |
+| C67 | — | nodal recovery of the unmeasured element rules — resolved 2026-10-16 (`d875874` bars/quad16, `dc4a59a` tet4 `-maximal`, prism15, prism6 `-minimal`) | closed | - |
 | C68 | — | other integration-point state variables (kapsh, cap1pc, rho, damage, Maxwell msig) read back from the nodes — resolved 2026-10-12 (F4 T6f, `70235c6`) | MEDIUM | cheap/medium |
 | C68a | — | Professional Maxwell chain differs from the analytic relaxation even homogeneous (msig -23.81 vs -20.25), Pro-suspect | LOW | medium |
 | C68b | — | cap1 model: Professional c1his -17 vs GNU pc 108, reactions 6x | LOW | medium/expensive |
@@ -2923,7 +3003,7 @@ Original report:
 | C68d | — | `materi.cc` old rho/epi/epp read with the Maxwell loop index (two or more chains) — resolved 2026-10-12 (F4 T6f, `2327083`) | LOW | cheap |
 | C69 | — | plane-stress membrane: yy/zz split of the plastic strain first order in dt (eptzz -0.00721 at dt 0.1 vs analytic -0.00882) | LOW | medium |
 
-Forty-eight items remain open: three MEDIUM and forty-five LOW (C23 and C24 resolved 2026-10-05; C25, C26, C27 and B10 added; F1 T3 / K04 2026-10-06 added B11, C28-C32; F1 T6 resolved C28, added and resolved B12; F2 T1 added C36; F2 T2 added C37, C38, C39; F2 T3 resolved C5 and added C40; F3 T2 resolved C8, C18, C19, C20 and added B13, C41; F4 T2 fixed the C41 tie and left a residual; F4 T3 resolved C33; F4 T4 closed C32, added C42 and resolved C31; F4 T7-T8 added C43-C46; F4 T9 resolved the C43 solver speed, decided C46b/C46e and added C47, C48, C49; F4 T10 resolved C48 and added C50; F4 T5 added C52, C53 and resolved C51; F4 T13 resolved C49 and added C54-C56; F4 T12 resolved C47 and added C57; F4 T6a resolved C6, C55, C56 and the C3 sign, the C3 square-face tie becoming a deliberate divergence (owner 2026-10-11), and added B14; F4 T6c fixed the `control_restart` integration-point reset and added C58; F4 T6d resolved C11 and C59, fixed the interface history and resolved C52, and added B15, C60 and C61; B15 resolved the same day; F4 T6e resolved C53 and added C62 and C63; F4 T6f added C64-C68 and C69, and closed the K15 `mmc_tension` vertex sigzz/eppzz and `validation_3` eptzz items as deliberate divergences MC-VERTEX-ZZ / MEMBRANE-EPTZZ, owner 2026-10-12; F4 T6f resolved C68 and added C68a-C68d; C68d resolved the same day; F4 T6f closed C7 (Mazars equivalent strain, with C7b) and the AUDIT K14b `hypo3` sigxx reversal as deliberate divergences C7 / K14b, owner 2026-10-12; the `hypo3` hyhis slot residual stays open under AUDIT K14; F4 T6f K21 WU2 widened C72 with the Stokes-flow residual and closed its `cmat_gate` rewrite, no new item; F4 T6f C72 resolved the convected nodal stress output (C72 stays open for the Professional-side residuals) and added C73 and C74; F4 T6f C70 resolved C70 and added C75; F4 T6f C75 closed C75 as a deliberate divergence, owner 2026-10-13, and added C76; F4 T6f C74 resolved C74 and added C77; F4 T6f C57 resolved C57 and added C78, decided the same day as a deliberate divergence, owner 2026-10-13; F4 T6f C71 resolved C71 and added C79; F4 T6f C79 resolved C79 and added C80; F4 T6f C77 resolved C77 and added C81 (F6); F4 T6f C80 resolved C80 and added C80.1; F4 T6f C80.1 resolved C80.1; F4 T6f C80.2 extended C80.1 with `-lambda`, no new item; F4 T6f C67 resolved the bar and quad16 rules and narrowed C67, no new item; forty-eight items remain open). No open issue is CRITICAL or
+Forty-eight items remain open: three MEDIUM and forty-five LOW (C23 and C24 resolved 2026-10-05; C25, C26, C27 and B10 added; F1 T3 / K04 2026-10-06 added B11, C28-C32; F1 T6 resolved C28, added and resolved B12; F2 T1 added C36; F2 T2 added C37, C38, C39; F2 T3 resolved C5 and added C40; F3 T2 resolved C8, C18, C19, C20 and added B13, C41; F4 T2 fixed the C41 tie and left a residual; F4 T3 resolved C33; F4 T4 closed C32, added C42 and resolved C31; F4 T7-T8 added C43-C46; F4 T9 resolved the C43 solver speed, decided C46b/C46e and added C47, C48, C49; F4 T10 resolved C48 and added C50; F4 T5 added C52, C53 and resolved C51; F4 T13 resolved C49 and added C54-C56; F4 T12 resolved C47 and added C57; F4 T6a resolved C6, C55, C56 and the C3 sign, the C3 square-face tie becoming a deliberate divergence (owner 2026-10-11), and added B14; F4 T6c fixed the `control_restart` integration-point reset and added C58; F4 T6d resolved C11 and C59, fixed the interface history and resolved C52, and added B15, C60 and C61; B15 resolved the same day; F4 T6e resolved C53 and added C62 and C63; F4 T6f added C64-C68 and C69, and closed the K15 `mmc_tension` vertex sigzz/eppzz and `validation_3` eptzz items as deliberate divergences MC-VERTEX-ZZ / MEMBRANE-EPTZZ, owner 2026-10-12; F4 T6f resolved C68 and added C68a-C68d; C68d resolved the same day; F4 T6f closed C7 (Mazars equivalent strain, with C7b) and the AUDIT K14b `hypo3` sigxx reversal as deliberate divergences C7 / K14b, owner 2026-10-12; the `hypo3` hyhis slot residual stays open under AUDIT K14; F4 T6f K21 WU2 widened C72 with the Stokes-flow residual and closed its `cmat_gate` rewrite, no new item; F4 T6f C72 resolved the convected nodal stress output (C72 stays open for the Professional-side residuals) and added C73 and C74; F4 T6f C70 resolved C70 and added C75; F4 T6f C75 closed C75 as a deliberate divergence, owner 2026-10-13, and added C76; F4 T6f C74 resolved C74 and added C77; F4 T6f C57 resolved C57 and added C78, decided the same day as a deliberate divergence, owner 2026-10-13; F4 T6f C71 resolved C71 and added C79; F4 T6f C79 resolved C79 and added C80; F4 T6f C77 resolved C77 and added C81 (F6); F4 T6f C80 resolved C80 and added C80.1; F4 T6f C80.1 resolved C80.1; F4 T6f C80.2 extended C80.1 with `-lambda`, no new item; F4 T6f C67 resolved the bar and quad16 rules and narrowed C67, no new item; F4 T6f C67 remainder + C76 resolved C67 and C76, re-scoped C66 and added C82 and C83; forty-eight items remain open). No open issue is CRITICAL or
 HIGH. The validation-suite corpus has no open failure — its 233 real tests
 pass (`materi_direct_mc` input corrected, C17 resolved). Every remaining failure is a stale or malformed test, an out-of-scope model
 or infrastructure limit, a narrow post-processing divergence, a corpus-coverage
