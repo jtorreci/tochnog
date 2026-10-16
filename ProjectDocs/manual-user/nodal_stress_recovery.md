@@ -223,13 +223,22 @@ recovery; BACKLOG C66, C82, C83):
 - prism15 `-minimal`: the Professional uses 8 points (the 4-point
   triangle rule with a negative centroid weight x 2 levels). That rule
   gives an indefinite element stiffness (negative eigenvalues), so the GNU
-  keeps 21 points; nodal stresses differ by 0.9 % of the scale (BACKLOG
-  C82).
-- tria3 `-maximal`: the manual specifies 4 points, both versions use the 3
-  nodes. In an axisymmetric group the GNU always uses 1 point; the
-  Professional uses the 3 nodes, and 1 point in an element touching the
-  axis. The tet10 `-maximal` 10-point rule of the manual is not used by
-  either version (both use 5 points) (BACKLOG C83).
+  keeps 21 points; nodal stresses differ by 0.9 % of the scale
+  (deliberate divergence, owner decision 2026-10-16; BACKLOG C82).
+- tria3 `-maximal` and tet10 `-maximal` (deliberate divergence from the
+  MANUAL, owner decision 2026-10-16; BACKLOG C83): the manual (6.623)
+  specifies 4 and 10 points without giving them; the GNU and the
+  Professional both use the 3 nodes and the 5 Keast points, so the
+  results agree. The classic 4-point triangle rule has a negative
+  centroid weight (as the prism15 case above).
+
+Axisymmetric tria3 `-maximal` (since 2026-10-16, = Professional; BACKLOG
+C83): 3 points at the nodes, recovered as the plane tria3 (point value at
+the node, arithmetic mean); an element with a node on the axis (r = 0)
+uses the 1-point centroid rule instead, because the hoop term of a point
+on the axis is infinite. Before, the GNU integrated every axisymmetric
+tria3 with 1 point (nodal stresses 3 % of the scale off). The default and
+`-minimal` stay 1 point in both versions.
 
 ## When it matters
 

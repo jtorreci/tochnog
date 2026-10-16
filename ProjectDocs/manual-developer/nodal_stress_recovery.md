@@ -510,7 +510,8 @@ rule table per element).
   `recovery_tensor_npol()` (bars and quad16, C67, 2026-10-16); kind 4 and
   the tet4/prism15/prism6 shapes (C67 remainder + C76, 2026-10-16)
 - `polynom.cc` — `pol()`: tet4 `-maximal` Keast rule, prism6 `-minimal`
-  2-point rule, prism15 triangle table (2026-10-16)
+  2-point rule, prism15 triangle table (2026-10-16); axisymmetric tria3
+  `-maximal` with the on-axis 1-point switch (C83, 2026-10-16)
 
 ## Differences with the Professional version
 
@@ -530,9 +531,26 @@ rule table per element).
   the Professional one): tria6 (GNU 6 nodal points, manual and
   Professional 7 / 4 points; axisymmetric refused by the GNU; BACKLOG
   C66), prism15 `-minimal` (Professional 8 points, indefinite stiffness;
-  GNU 21; BACKLOG C82), tria3 `-maximal` (manual 4 points, both 3 nodal;
-  axisymmetric GNU 1 point vs Professional 3 nodal / 1 on the axis) and
-  tet10 `-maximal` (manual 10 points, both 5) (BACKLOG C83).
+  GNU 21; deliberate divergence, owner 2026-10-16, BACKLOG C82). tria3
+  `-maximal` (manual 4 points, both 3 nodal) and tet10 `-maximal` (manual
+  10 points, both 5): deliberate divergence from the MANUAL, owner
+  2026-10-16 (BACKLOG C83); the GNU equals the Professional.
+- Axisymmetric tria3 `-maximal`: = Professional since C83 (2026-10-16).
+  `pol()` used to force `integration_points = -MINIMAL` for every
+  axisymmetric tria3 (initial 2016 import, no comment; the only reason
+  found is the r = 0 singularity: a nodal point on the axis has an
+  infinite hoop term `h/r` in `new_b` and a zero volume `2 PI r w detj`,
+  so `B^T sig dV` = inf*0 = NaN, the C71 failure). Now the 3 nodal points
+  are kept and an element with a node at `|r| < EPS_COORD` (1e-9) falls
+  back to the 1-point centroid rule, the same per-element switch as the
+  Professional (probes: elements touching the axis 1 point, the others
+  3; cf. C71 Lobatto and C80 `-reduced`). The recovery is unchanged:
+  `sri_stress_recovery_weight()` already handles tria3 with 1 and 3
+  points (point value / node value, arithmetic mean), and the 2*PI*r of
+  the point volume cancels in F/volume. 27 tria3 probes (plane,
+  axisymmetric off the axis, on the axis; 3 methods x 3 point values)
+  = Professional within 3.1e-12 (before 3.2e-2 for the axisymmetric
+  `-maximal`). Test `validation-suite/test-2026/recovery_tria3_axisym_maximal1`.
 - `hex64`: rejected by both codes (the GNU source has the npol=4 branch
   in `pol()`, but the element record is too short); not a divergence.
 - Index: [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).

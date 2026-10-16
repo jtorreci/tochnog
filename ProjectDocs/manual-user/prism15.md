@@ -69,8 +69,9 @@ the same paths as `-hex27`/`-tet10`.
 - No `group_integration_points -minimal/-maximal` selection: the rule is
   fixed at 21 points. Difference with the Professional version: its
   `-minimal` uses 8 points (4-point triangle rule with a negative weight
-  x 2 levels), which gives an indefinite element stiffness; the GNU keeps
-  21 points (BACKLOG C82, owner decision pending).
+  x 2 levels), which gives an indefinite element stiffness (3 negative
+  eigenvalues on a distorted prism15); the GNU keeps 21 points
+  (deliberate divergence, owner decision 2026-10-16; BACKLOG C82).
 
 ## Related
 

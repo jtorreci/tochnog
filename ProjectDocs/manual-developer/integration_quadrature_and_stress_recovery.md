@@ -494,18 +494,37 @@ small fit per element instead of one per (node, point) call.
   `recovery_fit_shape()`) must stay consistent.
 - **`prism15`**: triangle table fixed in C67 (2026-10-16; `{b,b}`/`{d,d}`
   -> `{a,a}`/`{c,c}`); `-minimal` = Professional 8 points with an
-  indefinite stiffness (3 negative eigenvalues), not implemented (BACKLOG
-  C82).
+  indefinite stiffness (3 negative eigenvalues), not implemented
+  (deliberate divergence, owner decision 2026-10-16; BACKLOG C82).
 - **`tet4` `-maximal`**: Keast 5 points since C67 (2026-10-16), manual
   6.623 = Professional.
 - **`tria6`** (BACKLOG C66): GNU 6 nodal points (corner weight
   `EPS_TRIANGLE`), manual and Professional 7 / 4 points with the linear
   fit; adopting them needs a lumping decision in `general.cc` (the row-sum
   corner masses of a tria6 are 0) and an axisymmetric enablement.
-- **`tria3` / `tet10` `-maximal`** (BACKLOG C83): manual 4 / 10 points,
-  both codes 3 nodal / 5; tria3 axisymmetric `-maximal`: GNU forced 1
-  point, Professional 3 nodal and 1 point for the element touching the
-  axis.
+- **`tria3` / `tet10` `-maximal`** (BACKLOG C83, deliberate divergence
+  from the MANUAL, owner decision 2026-10-16): manual 6.623 says 4 / 10
+  points but gives no points or weights; both codes use 3 nodal / 5
+  Keast. Rationale: the classic degree-3 4-point triangle rule has the
+  negative centroid weight -27/48 rejected in C82. A positive 10-point
+  degree-3 tet rule does exist (Keast 1986: 4 points `(a,b,b,b)`,
+  `a = 0.5684305841968444`, `b = 0.1438564719343852`, weight
+  `0.2177650698804054`, plus the 6 edge midpoints, weight
+  `0.0214899534130631`; weights normalised to 1, verified to integrate
+  every cubic exactly), but it is not implemented since GNU and
+  Professional agree on 5 points; a 10-point rule at the tet10 nodes is
+  not positive (vertex weight -1/20).
+- **axisymmetric `tria3` `-maximal`**: = Professional since C83
+  (2026-10-16): `pol()` keeps the 3 nodal points and switches an element
+  with a node at `|r| < EPS_COORD` to the 1-point centroid rule (before:
+  every axisymmetric tria3 forced to 1 point). Default and `-minimal`: 1
+  point in both codes. The replicas `msf_element_rule()`
+  (`calcul_force.cc`) and `mc_element_rule()` (`delete.cc`) build
+  tensor-product (npol per direction) rules only and were not changed;
+  `mc_element_rule()` refuses axisymmetric groups and simplex elements.
+  Open: the `post_element_force` path of `calcul_force.cc` passes a
+  tria3 to `msf_element_rule()` with `npol = 2` and the quad4 helpers
+  (pre-existing, independent of C83).
 - **`post_point_dof` of recovered fields (stress/strain)** (known
   difference, not decided; AUDIT section 5 (after the K04 table)). GNU:
   Interpolates the averaged nodal field (`validation_2` -0.036558).

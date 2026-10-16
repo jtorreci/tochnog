@@ -185,7 +185,7 @@ target if the new value matches the Professional.
   degree-5 rule (elastic displacements 3e-11 from the Professional). With
   `-minimal` the Professional uses 8 points (a 4-point triangle rule with a
   negative weight) whose element stiffness is indefinite; the GNU keeps 21
-  points (known difference, owner decision pending; BACKLOG C82).
+  points (deliberate divergence, owner decision 2026-10-16; BACKLOG C82).
 - **`tet4` with `-maximal`**: 5 points (the Keast rule of the tet10), as
   manual 6.623 and the Professional, since 2026-10-16 (before: 4 points
   at the nodes; same stiffness for a linear material).
@@ -194,11 +194,18 @@ target if the new value matches the Professional.
   (6.623) and the Professional use 7 points (default, `-maximal`) or 4
   (`-minimal`). Results agree to ~1e-5 on straight-edged elements and
   differ by several percent on curved ones.
-- **`tria3` `-maximal`, `tet10` `-maximal`** (known difference; BACKLOG
-  C83): the manual specifies 4 and 10 points; both versions use 3 (the
-  nodes) and 5. In an axisymmetric group the GNU integrates every tria3
-  with 1 point, the Professional with the 3 nodes (1 point if the element
-  touches the axis).
+- **`tria3` `-maximal`, `tet10` `-maximal`** (deliberate divergence from
+  the MANUAL, owner decision 2026-10-16; BACKLOG C83): the manual (6.623)
+  specifies 4 and 10 points but gives neither points nor weights; both
+  versions use 3 (the nodes) and 5 (Keast), so the GNU equals the
+  Professional. The classic 4-point triangle rule has the negative
+  centroid weight rejected for the prism15 (C82); a positive 10-point tet
+  rule exists (Keast) but no version uses it.
+- **Axisymmetric `tria3` `-maximal`** (= Professional since 2026-10-16;
+  BACKLOG C83): 3 points at the nodes; an element with a node on the axis
+  uses 1 point at the centroid (the hoop term of a point at r = 0 is
+  infinite). Before, the GNU used 1 point for every axisymmetric tria3.
+  Default and `-minimal`: 1 point in both versions.
 - **`post_point_dof` of recovered fields (stress/strain)** (known
   difference, not decided; AUDIT section 5 (after the K04 table)). GNU:
   Interpolates the averaged nodal field (`validation_2` -0.036558).
