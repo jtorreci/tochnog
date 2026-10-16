@@ -56,6 +56,11 @@ T6 triage (2026-10-11, HEAD 53dbb86) and owner order (2026-10-11):
   - [x] C80.2c gate measurement (C80.1 problems + pure bending + hex8 cantilever + hourglass + eigenvalues + mesh convergence).
   - [x] C80.2d verification: clean build, build_safe TN_CHECK_ONLY, audit_db_buffers, omen corpus A/B.
   - [x] C80.2e docs: user/dev SRI pages (comparison table, guidance), SEGUIMIENTO register, BACKLOG (C80.2 note on C80.1).
+- [x] T6f C67 nodal recovery of the bar2/bar3/bar4 and quad16 rules (hex64: rejected by both codes). Pro measured (65 probes, every node): Gauss and -reduced and Lobatto -minimal = physical linear fit `1,x(,y)`; Lobatto -maximal = point value of the same tensor index (also bar4/quad16, whose interior points are not at the nodes); arithmetic mean over elements. Route: delegated writer (trigger: miscel.cc + polynom.cc + tests + build_safe + docs, omen corpus A/B). Done `d875874` (fix + tests + build_safe), `aee381e` (docs). Subtasks:
+  - [x] C67a RED tests under test-2026 (bar2 2-point Gauss, bar3 Gauss / Lobatto -minimal / -reduced, bar4 Gauss / Lobatto -maximal, quad16 Gauss / Lobatto -maximal / -minimal; Pro targets 4e-6) + build_safe registration.
+  - [x] C67b miscel.cc recovery_fit_kind/recovery_fit_shape for 1D bars and the 4-node-per-direction elements; polynom.cc -reduced Lobatto rules of every tensor element recovered by the fit.
+  - [x] C67c verification: clean build, build_safe TN_CHECK_ONLY, audit_db_buffers, every probe node = Pro, omen corpus A/B.
+  - [x] C67d docs: user/dev nodal_stress_recovery, integration_quadrature_and_stress_recovery, group_integration_method_reduced; DIVERGENCES, SEGUIMIENTO register, BACKLOG C67.
 
 ## Later (owner 2026-10-10, after convergence with ALL divergences documented and accepted)
 - F6: ILU/AMG preconditioning of the iterative solver (BACKLOG C81, owner 2026-10-15: in large meshes with many steps even small per-solve gains compound).
@@ -1060,3 +1065,34 @@ docs + SEGUIMIENTO + BACKLOG + DIVERGENCES.
   -both error. Docs `7866a53`: user/dev SRI pages, READMEs, SEGUIMIENTO,
   BACKLOG (C80.2 note on C80.1). Open: build_safe expected_error_ok
   greps the marker without `--`.
+- 2026-10-16 T6f C67 (route: delegated writer; trigger: miscel.cc +
+  polynom.cc + 10 tests + build_safe + 9 docs, omen corpus A/B).
+  Professional measured on 65 probes (`scratchpad/c67/gen67.py`,
+  `an67.py`; bar2 x4 / bar3 x3 / bar4 x3 elements in 1D, quad16 2x2;
+  default/-gauss/-lobatto/-reduced f=2,4 x default/-minimal/-maximal),
+  every node: Gauss, -reduced and Lobatto -minimal = physical linear fit
+  1,x(,y) (5e-13; natural fit 1e-2, quadratic 5e-2); Lobatto -maximal =
+  point value (bar4/quad16 interior nodes at the Lobatto positions in
+  both codes, Pro element_intpnt_h = identity); arithmetic mean
+  (length-weighted 1e-2 off); quad16 axisymmetric on the axis = C71 Gauss
+  switch + sum h sig / sum h. hex64 rejected by both codes (Pro "I do
+  not know : -hex64", GNU element length 28 < 65); truss/beam have no
+  recovered nodal stress. GNU cause: h weights (unmeasured fallback, not
+  intended; bar3 Lobatto -minimal mid nodes 0); no earlier test covered
+  these rules. Fix `d875874`: recovery_tensor_npol(), dimension-generic
+  recovery_fit_kind()/recovery_fit_shape() (nodes at Lobatto positions),
+  pol() fits every -reduced Lobatto rule; point rules unchanged, so no
+  msf_element_rule/mc_element_rule change. Tests test-2026
+  recovery_{bar2_gauss2_mean1, bar3_gauss_fit1, bar3_lobatto_minimal1,
+  bar3_reduced1, bar4_gauss_fit1, bar4_lobatto1, quad16_gauss_fit1,
+  quad16_lobatto1, quad16_lobatto_minimal1, quad16_axisym_lobatto1}: RED
+  rc 1 on 75bc0b5, GREEN; 56 supported probes every node = Pro within
+  4e-12. Clean build; build_safe TN_CHECK_ONLY 296 OK / 0 FALLO, runs
+  226/226; audit_db_buffers exit 0. Omen A/B c67_runs vs c802_runs (981
+  runs): 0 node_dof changes; text only alternate1 (timeout border),
+  cylinder_buckle (timeout both), bicg_csr_threads1; only-new the 10
+  tests rc 0. Docs `aee381e`: user/dev nodal_stress_recovery,
+  integration_quadrature_and_stress_recovery,
+  group_integration_method_reduced; DIVERGENCES (closed-by-following
+  list, C80 row), SEGUIMIENTO register, BACKLOG C67 narrowed to tet4
+  -maximal, prism15, simplex axisymmetric (48 open).
