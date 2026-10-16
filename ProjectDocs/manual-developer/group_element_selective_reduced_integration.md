@@ -88,13 +88,15 @@ the measured values below.
 ## Keyword
 
 ```
-group_element_selective_reduced_integration <element_group> -yes|-volumetric|-both
+group_element_selective_reduced_integration <element_group> -yes|-volumetric|-lambda
 ```
 
 GNU-only extension (no Professional counterpart). `-yes` = the shear
 terms at 1 point (the original feature, unchanged); `-volumetric` (C80.1,
-2026-10-16) = the volumetric part at 1 point (B-bar); `-both` = both.
-See the section "C80.1 volumetric / both" below.
+2026-10-16) = the volumetric part at 1 point (B-bar); `-lambda` (C80.2,
+2026-10-16) = the λ·m·mᵀ part at 1 point (Hughes 1977 λ/μ split). See
+the sections "C80.1" and "C80.2" below. The C80.1 value `-both` was
+removed in C80.2 and is rejected by the input reader.
 
 - Opt-in, DEFAULT OFF: without the keyword (or with `-no`) the group
   behaves EXACTLY as before (byte-identical path; the full 191-run suite
@@ -324,10 +326,11 @@ checks green on a clean build (201 pre-existing + 8 new); the default
 (no keyword) path is byte-identical (the SRI gates are all
 `GET_IF_EXISTS` + element-scope checks).
 
-## C80.1 — `-volumetric` and `-both` (selective volumetric integration, 2026-10-16)
+## C80.1 — `-volumetric` (selective volumetric integration, 2026-10-16)
 
 Owner decision 2026-10-16: extend this keyword (no new keyword) with
-`-volumetric` and `-both`; opt-in, never the default; GNU-only.
+`-volumetric` (and `-both`, shear + volumetric, removed in C80.2);
+opt-in, never the default; GNU-only.
 
 ### Formulation (chosen and why)
 
@@ -350,7 +353,8 @@ hourglass mode stiff. The alternative, the λ/μ split of Hughes 1977
 same Lamé accuracy (−0.24 % at ν=0.4999) and a better bending response
 on coarse meshes (cantilever 10×1, ν=0.3: −4.9 % vs +22 %). It was NOT
 chosen, because it is not a volumetric/deviatoric split and does not
-extend to plasticity. This is an open question for the owner.
+extend to plasticity. The owner then added it as `-lambda` (C80.2,
+below) next to `-volumetric`.
 
 Plane strain: ε_zz = 0, so the dilatation is ε_xx+ε_yy, and σ_zz gets
 κ·θ_c plus its deviatoric part. Plane stress (membrane) is refused
@@ -361,14 +365,14 @@ dilatation and the volume factor 2πr; not implemented).
 ### Files and functions
 
 - `miscel.cc` `sri_active()` now returns a MODE MASK: `SRI_SHEAR` (1)
-  for `-yes`, `SRI_VOLUMETRIC` (2) for `-volumetric`, both for `-both`,
-  0 otherwise (macros next to the prototype in `tochnog.h` /
+  for `-yes`, `SRI_VOLUMETRIC` (2) for `-volumetric`, `SRI_LAMBDA` (4)
+  for `-lambda` (C80.2), 0 otherwise (macros next to the prototype in `tochnog.h` /
   `tochnog-mod.h`). All boolean consumers (`pol()`, `delete.cc`,
   `general.cc`, the msf rule) are unchanged: every mode switches the
   full rule to Gauss and keeps the SRI recovery weights (Lagrange for
   the normal components, h for the shear). For a membrane group the
   volumetric bit is dropped. A value other than -no/-yes/-volumetric/
-  -both is a `db_error`.
+  -lambda is a `db_error`.
 - `materi.cc`:
   - `sri_centroid_derivatives()` (static): physical dN/dx at iso 0, the
     centroid detJ and coordinates. It uses the same index convention
@@ -388,7 +392,7 @@ dilatation and the volume factor 2πr; not implemented).
     now carries the whole reduced stiffness and is zeroed first for
     `-volumetric`. The existing matrix (`dt·K/npoint`) and RHS
     (`−dt·K·v/npoint`) loops then treat shear and volume alike.
-  - The warning distinguishes `-yes` from `-volumetric`/`-both`; it is
+  - The warning distinguishes `-yes` from `-volumetric`/`-lambda`; it is
     printed when the applied mask differs from the requested one.
 - `calcul_force.cc`: the section internal force replaces the full-rule
   shear only for the shear bit (`sri_active() & SRI_SHEAR`). For the
@@ -396,16 +400,17 @@ dilatation and the volume factor 2πr; not implemented).
   rule IS the reduced internal force, because Σ_ip dN/dx·detJ·w = 4·
   detJ_c·dN/dx(0) exactly for the quad4 (the integrand is bilinear in
   ξ, η) and for the parallelepiped hex8.
-- `database.cc`: the names `volumetric` and `both`. The enums
-  `VOLUMETRIC` and `BOTH` are appended before `LAST_DUMMY` in both
-  headers (in sync).
+- `database.cc`: the names `volumetric` and (C80.2) `lambda`. The enums
+  `VOLUMETRIC` and `LAMBDA` are appended before `LAST_DUMMY` in both
+  headers (in sync); `LAMBDA` took the slot of the removed `BOTH`, so
+  no enum value moved.
 
 ### Verification (measured 2026-10-16)
 
 Independent check: a pure-displacement Python solve of the same
 element (2×2 Gauss D_dev + 1-point κ b b^T) reproduces the GNU
 staggered results to all printed digits on every cantilever (Gauss,
-`-yes`, `-volumetric`, `-both`). For linear elasticity, the D-c
+`-yes`, `-volumetric`). For linear elasticity, the D-c
 feedback makes the fixed point converge in one pass, as for the shear.
 The Gauss, `-yes` and default runs of the study are byte-identical to
 the previous binary (51/51 `.dbs`).
@@ -416,11 +421,11 @@ clamp displacements). The table gives the u_r(a) error | the max
 deviation of the IP mean stress from p a²/(b²−a²), in % (the
 checkerboard measure):
 
-| Lamé 8×16 | Gauss | `-yes` | `-volumetric` | `-both` | Pro f=2 | Pro f=10 |
-|-----------|-------|--------|---------------|---------|---------|----------|
-| ν=0.3 | −0.33 / 31 | −0.26 / 32 | −0.17 / 4 | −0.10 / 4 | −0.25 / 27 | −0.01 / 5 |
-| ν=0.49 | −4.01 / 606 | −3.94 / 607 | −0.19 / 4 | −0.11 / 4 | −3.04 / 527 | −0.13 / 105 |
-| ν=0.4999 | −80.16 / 12531 | −80.16 / 12533 | −0.19 / 4 | −0.11 / 4 | −75.18 / 13493 | −10.80 / 9401 |
+| Lamé 8×16 | Gauss | `-yes` | `-volumetric` | Pro f=2 | Pro f=10 |
+|-----------|-------|--------|---------------|---------|----------|
+| ν=0.3 | −0.33 / 31 | −0.26 / 32 | −0.17 / 4 | −0.25 / 27 | −0.01 / 5 |
+| ν=0.49 | −4.01 / 606 | −3.94 / 607 | −0.19 / 4 | −3.04 / 527 | −0.13 / 105 |
+| ν=0.4999 | −80.16 / 12531 | −80.16 / 12533 | −0.19 / 4 | −75.18 / 13493 | −10.80 / 9401 |
 
 The hex8 Lamé (one layer, w=0) is identical to the quad4 to all
 digits. The GNU Gauss column equals the Pro `-gauss` column of the C80
@@ -428,21 +433,22 @@ study exactly.
 
 Cantilever, tip deflection error:
 
-| case | Gauss | `-yes` | `-volumetric` | `-both` | λ-split (not chosen) |
-|------|-------|--------|---------------|---------|----------------------|
-| ν=0.3 10×1 | −36.28 | −18.32 | +22.08 | +112.99 | −4.86 |
-| ν=0.3 20×2 | −12.42 | −5.28 | +4.70 | +15.15 | −1.25 |
-| ν=0.3 40×4 | −3.44 | −1.38 | +1.14 | +3.40 | −0.32 |
-| ν=0.49 10×1 | −91.23 | −91.09 | +67.15 | +191.51 | +30.30 |
-| ν=0.49 20×2 | −70.61 | −70.24 | +10.82 | +19.10 | +5.98 |
-| ν=0.49 40×4 | −40.78 | −40.30 | +2.52 | +4.18 | +1.44 |
+| case | Gauss | `-yes` | `-volumetric` | λ-split (C80.2 `-lambda`) |
+|------|-------|--------|---------------|---------------------------|
+| ν=0.3 10×1 | −36.28 | −18.32 | +22.08 | −4.86 |
+| ν=0.3 20×2 | −12.42 | −5.28 | +4.70 | −1.25 |
+| ν=0.3 40×4 | −3.44 | −1.38 | +1.14 | −0.32 |
+| ν=0.49 10×1 | −91.23 | −91.09 | +67.15 | +30.30 |
+| ν=0.49 20×2 | −70.61 | −70.24 | +10.82 | +5.98 |
+| ν=0.49 40×4 | −40.78 | −40.30 | +2.52 | +1.44 |
 
 The overshoot is exact element behaviour, not a solver artefact. In the
 one-element-thick bending mode the centroid dilatation is zero and ε_yy
 cannot follow the linear Poisson contraction, so only the deviatoric
 modulus resists: `(4/3)G` instead of `E'`. The predicted ratio
-E'/((4/3)G) = 2.14 (ν=0.3) and 2.94 (ν=0.49) matches `-both` 10×1
-(+113 %, +192 %).
+E'/((4/3)G) = 2.14 (ν=0.3) and 2.94 (ν=0.49) matched the removed
+`-both` 10×1 (+113 %, +192 %), where the reduced shear adds no
+bending resistance either.
 
 For the plane-stress cantilever (the C80 study case, ν=0.3; tip error
 20×2), Gauss gives −10.71 % (= Pro), `-yes` −2.43 %, Pro f=2 −2.75 %
@@ -450,17 +456,15 @@ and Pro f=10 +31 %. `-volumetric` is dropped on membrane groups.
 
 Hourglass (the C80 study cases; Gauss = Pro gauss exactly):
 
-| | Gauss | `-yes` | `-volumetric` | `-both` | Pro f=2 | Pro f=10 |
-|-|-------|--------|---------------|---------|---------|----------|
-| single quad4, hourglass load, max \|u\| | 3.47e-5 | 4.46e-5 | 6.69e-5 | 1.17e-4 | 4.62e-5 | 1.16e-3 |
-| 4×4 block, point load, mid-row zig-zag | 0.104 | 0.090 | 0.076 | 0.085 | 0.088 | 0.799 |
+| | Gauss | `-yes` | `-volumetric` | Pro f=2 | Pro f=10 |
+|-|-------|--------|---------------|---------|----------|
+| single quad4, hourglass load, max \|u\| | 3.47e-5 | 4.46e-5 | 6.69e-5 | 4.62e-5 | 1.16e-3 |
+| 4×4 block, point load, mid-row zig-zag | 0.104 | 0.090 | 0.076 | 0.088 | 0.799 |
 
 Isolated-element eigenvalues (independent reconstruction): quad4: 3
-zero eigenvalues (the rigid modes) for Gauss, `-yes`, `-volumetric` and
-`-both`. hex8: 6 for Gauss and `-volumetric`, and 9 (6 rigid + 3 twist)
-for `-yes` and `-both`. `-both` therefore inherits the documented twist
-and warping modes of the shear-only hex8; `-volumetric` adds no
-spurious mode.
+zero eigenvalues (the rigid modes) for Gauss, `-yes` and `-volumetric`.
+hex8: 6 for Gauss and `-volumetric`, and 9 (6 rigid + 3 twist) for
+`-yes`. `-volumetric` adds no spurious mode.
 
 Tests (`validation-suite/test-2026`, registered in build_safe.sh):
 
@@ -469,14 +473,12 @@ Tests (`validation-suite/test-2026`, registered in build_safe.sh):
 | `sri_volumetric_lame049_1` | u_r(a) 1e-5 = 0.5 %, σ_θ(a) 0.1 = 6 % |
 | `sri_volumetric_lame04999_1` | as above |
 | `sri_volumetric_hex8_lame1` | as above |
-| `sri_both_cantilever1` | 40×4, ν=0.49: tip v 0.15 = 4.9 % |
 
 Each tolerance is set above the measured error against the analytic
 value: u_r 2.6× (−0.19 %), σ_θ 1.9× (−3.1 %, from the nodal recovery at
-the loaded edge) and the cantilever 1.2× (+4.18 %, deterministic: the
-independent solve gives the same digits). Gauss fails every
-target by an order of magnitude. RED on the previous binary: rc 1, "I
-do not know : -volumetric" / "-both". `-yes` is covered by the
+the loaded edge). Gauss fails every target by an order of magnitude.
+RED on the previous binary: rc 1, "I do not know : -volumetric". (The
+C80.1 test `sri_both_cantilever1` was deleted with `-both` in C80.2.) `-yes` is covered by the
 unchanged families `qsri` and `qsri3d`.
 
 ### Limitations / pending
@@ -493,8 +495,181 @@ unchanged families `qsri` and `qsri3d`.
 - κ = m^T D m / 9 is exact for isotropic tangents. An anisotropic
   tangent still gets an algebraically exact split D_dev + κ m m^T, but
   D_dev is then not purely deviatoric.
-- `-both` is dominated by `-volumetric` in every measured bending case.
-  It is kept by owner decision.
+
+## C80.2 — `-lambda` (Hughes 1977 λ/μ split) and removal of `-both` (2026-10-16)
+
+Owner decision 2026-10-16: add `-lambda` (only the λ·m·mᵀ term of the
+isotropic elastic matrix at the centroid point, the 2μ part at the full
+Gauss rule; linear elastic materials), remove `-both` (nobody used it,
+never better than `-volumetric`), keep `-yes` and `-volumetric`
+unchanged. Gate (owner): `-lambda` measured on the C80.1 problems
+before shipping; it may not be materially worse than `-volumetric` or
+Gauss, nor show a spurious mode. The gate passed (tables below).
+
+### Formulation
+
+```
+D = 2 mu I~ + lambda m m^T          (isotropic; I~ = identity with 1/2 on the shear entries)
+K = sum_GaussIP B^T (D - lambda m m^T) B w detJ  +  lambda * volfac * W * detJ_c * b b^T
+```
+
+It is the C80.1 machinery with the coefficient κ replaced by λ:
+`sigvec[0,3,5] -= λ·θ_ip` (D-c feedback), `new_sig[aa] += λ·(θ_c −
+θ_ip)` (stored stress 2μ·ε_ip + λ·θ_c·I), `ddsdde_total[0,3,5 × 0,3,5]
+-= λ`, and the reduced stiffness λ·W·detJ_c·volfac·b bᵀ joins
+`stiffness_shear`. The energy is 2μ ε:ε at the Gauss points plus
+λ·θ_c² at the centroid. The 2μ ε:ε part still holds the volumetric
+share 2μ/3·(tr ε)² at the Gauss points; it does not lock because μ is
+bounded as ν → 0.5 (measured: Lamé u_r(a) −0.24 % at ν = 0.49 and at
+ν = 0.4999; the cantilever error does not grow from ν = 0.49 to 0.4999).
+Positive definiteness: for κ = λ + 2μ/3 > 0 the element energy is
+≥ (2μ/3 + λ)·θ_c² plus the deviatoric energy (Jensen on the IP
+dilatations), so no extra zero mode appears; the eigenvalue check
+confirms it.
+
+Why it bends better than `-volumetric` on coarse meshes: in the
+one-element-thick bending mode θ_c = 0, so `-volumetric` resists with
+the deviatoric modulus only, while `-lambda` keeps 2μ/3·θ_ip² at the
+Gauss points, which carries most of the missing Poisson coupling.
+
+**Non-isotropic materials: refused.** λ is defined only for an
+isotropic tangent. `materi()` takes λ as the mean of the 6 off-diagonal
+entries of the normal 3×3 block of `ddsdde_total` and checks the block
+is isotropic (equal diagonal entries, equal off-diagonal entries,
+relative tolerance 1e-6 of the largest entry). Otherwise it stops with
+"group_element_selective_reduced_integration -lambda needs an isotropic
+elastic material ...; use -volumetric for this group. Element : n".
+Defining an "effective λ" from an anisotropic D was rejected: the split
+D − λ m mᵀ is no longer the λ/μ split, its accuracy is unmeasured, and
+`-volumetric` already handles any tangent with κ = mᵀDm/9.
+
+**Plane stress: dropped**, consistent with `-volumetric`. In a membrane
+group ε_zz is condensed out, the effective λ* = 2λμ/(λ+2μ) stays
+bounded (≤ 2μ) and there is no volumetric locking to remove;
+`sri_active()` drops the `SRI_LAMBDA` bit, the group runs with the full
+Gauss rule and the one-time warning is printed (measured: the
+plane-stress cantilever equals Gauss to all digits). Plane-stress
+bending is the job of `-yes`.
+
+### Files and functions
+
+- `tochnog.h` / `tochnog-mod.h`: the enum `BOTH` renamed `LAMBDA` IN
+  PLACE (same position before `LAST_DUMMY`, so no enum value moved);
+  `#define SRI_LAMBDA 4` next to `SRI_SHEAR` / `SRI_VOLUMETRIC`.
+- `database.cc`: `name[LAMBDA] = "lambda"` (the name `both` is gone).
+- `input.cc` (data-part reader, the "I do not know" branch): a
+  dedicated error for `-both` on
+  `group_element_selective_reduced_integration`, naming `-lambda` and
+  `-volumetric`.
+- `miscel.cc` `sri_active()`: accepts -no/-yes/-volumetric/-lambda
+  (anything else `db_error`); `-lambda` returns `SRI_LAMBDA` unless the
+  group is a membrane.
+- `materi.cc` `materi()`: the requested mask and warning know
+  `-lambda`; the C80.1 volumetric block and reduced-stiffness block run
+  for `SRI_VOLUMETRIC | SRI_LAMBDA`; for `SRI_LAMBDA` the coefficient
+  `sri_kappa` is λ from the isotropy-checked tangent.
+- `calcul_force.cc`: unchanged. The section post-processing replaces
+  the shear only for `SRI_SHEAR`; the stored λ·θ_c part is constant per
+  element, so its Gauss-rule internal force equals the reduced one, as
+  for `-volumetric`.
+
+### Verification (measured 2026-10-16)
+
+Independent checks: a pure-displacement Python solve of the same
+element (2×2 Gauss D − λ m mᵀ + 1-point λ b bᵀ) reproduces the GNU
+staggered results to 1e-10 relative on a distorted 20×2 cantilever
+(ν = 0.3 / 0.49 / 0.4999) and to 1e-12 on a randomly distorted 3×2×2
+hex8 block (ν = 0.3 / 0.4999). Gauss, `-yes` and `-volumetric` are
+unchanged (the omen corpus A/B below).
+
+Lamé cylinder (u_r(a) error % / σ_θ(a) node 1 error % / max deviation
+of the IP mean stress % of p a²/(b²−a²)):
+
+| ν, mesh | Gauss | `-yes` | `-volumetric` | `-lambda` |
+|---------|-------|--------|---------------|-----------|
+| 0.3, 8×16 | −0.33 / +5.7 / 31 | −0.26 / +6.4 / 32 | −0.17 / −3.1 / 4 | −0.22 / −0.2 / 13 |
+| 0.49, 8×16 | −4.01 / +198 / 606 | −3.94 / +207 / 607 | −0.19 / −3.1 / 4 | −0.24 / −0.1 / 13 |
+| 0.4999, 4×8 | −94.05 / +2145 / 6625 | −94.05 / +2322 / 6626 | −0.74 / −5.8 / 8 | −0.95 / −0.6 / 22 |
+| 0.4999, 8×16 | −80.16 / +4196 / 12531 | −80.16 / +4370 / 12533 | −0.19 / −3.1 / 4 | −0.24 / −0.1 / 13 |
+| 0.4999, 16×32 | −50.39 / +5697 / 16729 | −50.38 / +5815 / 16731 | −0.05 / −1.6 / 2 | −0.06 / −0.0 / 7 |
+
+Pro `-reduced` (C80 study, 8×16): f=2 −0.25 / −3.04 / −75.18 % u_r at
+ν = 0.3 / 0.49 / 0.4999, f=10 −0.01 / −0.13 / −10.80 %. The hex8 Lamé
+(one layer, w = 0) equals the quad4 to all digits for every value.
+
+Checkerboard: the `-lambda` IP mean-stress deviation (13 %) is the
+intra-element variation μ·θ_ip of the 2μ share. It is ν-independent
+(13 % at ν = 0.3 too, against 31 % for plain Gauss there) and O(h)
+(22 → 13 → 7 %). The element-average pressure oscillation (|p_e − mean
+of the edge neighbours|) is 0.1 % for both `-lambda` and `-volumetric`
+against 109 % for Gauss at ν = 0.4999: no checkerboard.
+
+Bending, tip deflection error % (plane strain; pure bending = constant
+moment σ_xx = y, exact clamp; hex8 = one layer, w = 0, identical to the
+quad4 to all digits):
+
+| case | Gauss | `-yes` | `-volumetric` | `-lambda` |
+|------|-------|--------|---------------|-----------|
+| TG ν=0.3 10×1 / 20×2 / 40×4 / 80×8 | −36.28 / −12.42 / −3.44 / −0.88 | −18.32 / −5.28 / −1.38 / −0.35 | +22.08 / +4.70 / +1.14 / +0.28 | −4.86 / −1.25 / −0.32 / −0.08 |
+| TG ν=0.49 | −91.23 / −70.61 / −40.78 / −15.36 | −91.09 / −70.24 / −40.30 / −15.09 | +67.15 / +10.82 / +2.52 / +0.62 | +30.30 / +5.98 / +1.44 / +0.36 |
+| TG ν=0.4999 | −98.56 / −92.31 / −90.39 / −86.86 | same as Gauss | +70.42 / +11.14 / +2.59 / +0.64 | +32.85 / +6.37 / +1.53 / +0.38 |
+| pure bending ν=0.3 | −36.47 / −12.51 / −3.46 / −0.89 | −18.35 / −5.30 / −1.38 / −0.35 | +22.42 / +4.78 / +1.16 / +0.29 | −4.76 / −1.23 / −0.31 / −0.08 |
+| pure bending ν=0.49 | −92.24 / −72.67 / −41.91 / −15.70 | −92.09 / −72.29 / −41.42 / −15.43 | +67.90 / +11.04 / +2.56 / +0.63 | +30.65 / +6.11 / +1.47 / +0.36 |
+| pure bending ν=0.4999 | −99.67 / −95.38 / −93.78 / −90.19 | same as Gauss | +71.22 / +11.38 / +2.63 / +0.65 | +33.22 / +6.51 / +1.56 / +0.39 |
+| TG 20×2 distorted ±25 % ν=0.3 / 0.49 / 0.4999 | −19.33 / −61.61 / −90.12 | −14.78 / −61.22 / −90.12 | −8.40 / −0.72 / −0.30 | −12.25 / −3.79 / −3.32 |
+| TG plane stress ν=0.3 10×1 / 20×2 / 40×4 | −32.46 / −10.71 / −2.92 | −9.09 / −2.43 / −0.62 | = Gauss (dropped) | = Gauss (dropped) |
+
+Both selective volumetric values converge at O(h²) in bending
+(factor ~4 per refinement); `-lambda` has 3-5× smaller errors at
+ν = 0.3 and about half at ν ≥ 0.49 on regular meshes. On the distorted
+mesh, `-lambda` is 3-4 points below `-volumetric`; this is not
+locking (no growth from ν = 0.49 to 0.4999), it is the distortion
+stiffening that `-volumetric` partly cancels with its regular-mesh
+softness (+11 % on the regular 20×2).
+
+Hourglass and eigenvalues:
+
+| | Gauss | `-yes` | `-volumetric` | `-lambda` |
+|-|-------|--------|---------------|-----------|
+| single quad4, hourglass load, max \|u\| | 3.47e-5 | 4.46e-5 | 6.69e-5 | 5.20e-5 |
+| 4×4 block, point load, mid-row zig-zag | 0.104 | 0.090 | 0.076 | 0.083 |
+| zero eigenvalues, quad4 square / distorted | 3 / 3 | 3 / 3 | 3 / 3 | 3 / 3 |
+| zero eigenvalues, hex8 brick / distorted | 6 / 6 | 9 / 6 to 8 (near-singular, smallest 3e-3) | 6 / 6 | 6 / 6 |
+
+No negative eigenvalue for any value; the smallest non-zero eigenvalue
+of `-lambda` is above that of `-volumetric` (quad4 distorted ν=0.4999:
+319 vs 275; hex8 distorted 25.9 vs 25.5).
+
+Tests (`validation-suite/test-2026`, registered in build_safe.sh):
+
+| test | target |
+|------|--------|
+| `sri_lambda_lame04999_1` | u_r(a) 1e-5 = 0.5 % (measured −0.24 %), σ_θ(a) 0.02 = 1.2 % (measured −0.14 %; `-volumetric` −3.1 % would fail) |
+| `sri_lambda_cantilever1` | 10×1 ν=0.3 tip v(L, D/2) 6 % (measured −4.86 %; Gauss −36 %, `-volumetric` +22 %) |
+| `sri_both_removed_error1` | expected error "integration -both was removed" |
+| `sri_lambda_anisotropic_error1` | expected error "integration -lambda needs an isotropic elastic material" (transversely isotropic group) |
+
+RED on the previous binary: the two `-lambda` targets rc 1 "I do not
+know : -lambda"; the `-both` input ran with rc 0; the anisotropic input
+stopped with "I do not know : -lambda" (not the expected message).
+
+Suite and corpus (commit `5993499`): clean build; build_safe
+TN_CHECK_ONLY 286 OK / 0 FALLO, runs 226/226; audit_db_buffers exit 0.
+Omen corpus A/B against the C80.1 binary (977 runs): 0 node_dof
+changes. Text-only differences: `bicg_csr_threads1` (threaded
+round-off), `alternate1` (finished at 119.8 s against the 120 s timeout,
+identical node_dof), `cylinder_buckle` (timeout in both); the removed
+`sri_both_cantilever1` input now stops with the `-both` error, as
+intended.
+
+### Limitations / pending
+
+- Linear isotropic elasticity only; plasticity stays with the planned
+  `-volumetric` (B-bar) path.
+- Plane stress and axisymmetry: dropped / refused, as `-volumetric`.
+- The `expected_error_ok` helper of build_safe.sh passes the marker to
+  `grep -qF` without `--`, so a marker that starts with `-` is read as
+  a grep option; the markers of the C80.2 tests start with a word.
 
 ## Hardcoded parameters / pending refactorings
 
