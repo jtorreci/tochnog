@@ -161,8 +161,14 @@ target if the new value matches the Professional.
   `group_integration_points` value. Professional 02-08-2026: row sum,
   corner 0 in plane analysis (a free one-element dynamic step fails with
   a zero pivot), negative corners in axisymmetric analysis (-pi/60 at
-  r = 1 for r = 1..2). Static results are unaffected. Tests
-  `tria6_mass_hrz1`, `tria6_mass_hrz_axisym1`. Index:
+  r = 1 for r = 1..2). Static results are unaffected. The groundflow
+  velocity and the condif absorption of a `tria6` use the same HRZ
+  weight since C85 (2026-10-17): a uniform pressure gradient gives the
+  velocity k dp/dx at every node, corners included, and a uniform
+  temperature decays at the same rate at every node. Tests
+  `tria6_mass_hrz1`, `tria6_mass_hrz_axisym1`,
+  `tria6_groundflow_velocity_hrz1`, `tria6_condif_absorption_hrz1`,
+  `tria6_condif_absorption_hrz_axisym1`. Index:
   [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).
 - **`post_point_dof` inside a `tet10`** (deliberate divergence, project
   owner 2026-10-09; DIVERGENCES TET10-PPOINT). GNU: interpolates the

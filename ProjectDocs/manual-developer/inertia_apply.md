@@ -88,9 +88,9 @@
   2026-10-16; details in
   [integration_quadrature_and_stress_recovery](integration_quadrature_and_stress_recovery.md)
   section 3.3b). The same `pol()` mechanism could replace the hardcoded
-  tet10 fractions. Pending: the `groundfl.cc` groundflow velocity
-  numerator (h-weighted, so the tria6 groundflow velocity keeps h; BACKLOG
-  C85).
+  tet10 fractions. The `groundfl.cc` groundflow velocity numerator and
+  the `condif.cc` lumped absorption use the same weight since C85
+  (2026-10-17).
 
 ## Differences with the Professional version
 

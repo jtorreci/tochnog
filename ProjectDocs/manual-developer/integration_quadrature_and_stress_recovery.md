@@ -368,18 +368,32 @@ forces only and does not call the continuum stress recovery.
   camclay included), `plasti_f`, substeps, softening variables, strain
   energy, intergranular and model plastic strains, void fraction, work).
   The recovered dofs (stress, strains, kappa, ...) override it with their
-  fit weight as before. Exception: `groundflow_velocity` keeps `h`
-  because its numerator (`groundfl.cc`) is h-weighted (pending, BACKLOG
-  C85).
+  fit weight as before. `groundflow_velocity` included since C85
+  (2026-10-17; before, it kept `h` and its tria6 corner update was
+  0/0).
 - `materi.cc` `materi()`: the numerators of the h-weighted state dofs use
   the same weight (`h_lump`), so the lumped update stays consistent
   (with `h` the tria6 corner denominator `sum volume h` is 0). The
   plastic / viscous heat generation (a consistent source of the
   temperature equation) keeps `h`.
-- Not converted (outside the work unit): `condif.cc` lumped absorption
-  (`volume * h * condif_absorption` on the diagonal, ~0 at the tria6
-  corners as before) and the `groundfl.cc` groundflow velocity numerator.
-  The replicas `msf_element_rule()` (`calcul_force.cc`) and
+- C85 (F4 T6f, 2026-10-17, owner decision): the two remaining
+  h-weighted lumped terms use the same `h_lump` pattern
+  (`lumped_hrz_active ? lumped_hrz_weight[inol] : h[inol]`):
+  `groundfl.cc` `groundflow()` groundflow velocity numerator
+  (`volume * h_lump * (k dp/dx - v_old) / dt`, matching the `general.cc`
+  denominator) and `condif.cc` `condif()` lumped absorption
+  (`volume * h_lump * absorption` on the diagonal of the right-hand side,
+  `element_lhside`, `element_matrix` and the residue, matching the
+  capacity). Before, the tria6 corner velocity was 0/0 (round-off values
+  35.2, -144, -368 for a uniform k dp/dx = 10) and the corner absorption
+  ~0 (7 points) or negative (4 points) against an HRZ capacity A/19.
+  Tests `test-2026/tria6_groundflow_velocity_hrz1` (gvelx 10 at every
+  node), `tria6_condif_absorption_hrz1` / `_axisym1` (one implicit step
+  of dT/dt = -T: 1/1.1 at every node; quad4 control). Every other
+  element keeps `h` (`lumped_hrz_active` 0): byte-identical. The
+  `condif.cc` heat-volume source and the `groundfl.cc` divergence
+  constraint are consistent (not lumped) terms and keep `h`.
+- The replicas `msf_element_rule()` (`calcul_force.cc`) and
   `mc_element_rule()` (`delete.cc`) cover tensor elements only (no tria6
   branch), unchanged.
 - Analytic sanity check (`scratchpad/c66/p2/bar/modal.py`, `genbar.py`):
