@@ -44,6 +44,12 @@ T6 triage (2026-10-11, HEAD 53dbb86) and owner order (2026-10-11):
   - [x] C80b enums REDUCED + GROUP_INTEGRATION_METHOD_REDUCED_FACTOR (both headers), database.cc name + record (factor > 0), pol() rule table, recovery kind 1 at the reduced points, msf/mc replicas, C71 on-axis switch for `-reduced`.
   - [x] C80c verification: clean build, build_safe TN_CHECK_ONLY, audit_db_buffers, omen corpus A/B.
   - [x] C80d docs: user/dev integration pages, DIVERGENCES (C80 closed + default-factor class A), SEGUIMIENTO (register + Descarte), BACKLOG (C80 closed + C80.1 OPEN next).
+- [x] T6f C80.1 selective volumetric reduced integration (owner decision 2026-10-16: extend the GNU-only `group_element_selective_reduced_integration` with `-volumetric` (B-bar, volumetric part at 1 centroid point, deviatoric full Gauss) and `-both` (shear + volumetric at 1 point); `-yes` unchanged; opt-in only). Route: delegated writer (trigger: miscel.cc + materi.cc + database.cc + check.cc + calcul_force.cc + headers + 4 tests + build_safe + 6 docs, omen corpus A/B). Done `b47c39c` (feat + tests + build_safe), `7504e47` (docs). Subtasks:
+  - [x] C80.1a RED tests under test-2026 (Lame cylinder plane strain nu 0.49 and 0.4999 `-volumetric`, coarse plane-strain cantilever `-both`, hex8 one-layer Lame `-volumetric`; analytic targets, tolerance from the measured discretisation error); `-yes` covered by the existing qsri/qsri3d tests; build_safe registration.
+  - [x] C80.1b enums VOLUMETRIC + BOTH (both headers), database.cc names, sri_active() mode mask (shear 1, volumetric 2; volumetric dropped for membrane groups), materi() volumetric/deviatoric split (kappa = m^T D m / 9, centroid divergence row, D-c feedback, B-bar stored stress), calcul_force shear-only replacement for the shear bit, check.cc value check.
+  - [x] C80.1c measurement vs analytic (Gauss, `-yes`, `-volumetric`, `-both`, Pro `-reduced` f=2/10 from the C80 study), hourglass single quad4 + 4x4 point-load block, element eigenvalues.
+  - [x] C80.1d verification: clean build, build_safe TN_CHECK_ONLY, audit_db_buffers, omen corpus A/B.
+  - [x] C80.1e docs: user/dev SRI pages (GNU-only note, comparison vs `-reduced`), SEGUIMIENTO register, DIVERGENCES (only if GNU-only extensions are listed there), BACKLOG C80.1 closed.
 
 ## Later (owner 2026-10-10, after convergence with ALL divergences documented and accepted)
 - F6: ILU/AMG preconditioning of the iterative solver (BACKLOG C81, owner 2026-10-15: in large meshes with many steps even small per-solve gains compound).
@@ -997,3 +1003,29 @@ docs + SEGUIMIENTO + BACKLOG + DIVERGENCES.
   register + Descarte, BACKLOG C80 resolved + C80.1 + C67 note. Not
   investigated: Pro element-average fallback at f=1e6. Next: C80.1
   (keyword decision by the owner), K21 validation_1, C76, C77c.
+- 2026-10-16 T6f C80.1 (route: delegated writer; trigger: miscel.cc +
+  materi.cc + database.cc + calcul_force.cc + headers + 4 tests +
+  build_safe + 6 docs, omen corpus A/B). Owner decision 2026-10-16:
+  extend `group_element_selective_reduced_integration` with -volumetric
+  / -both (GNU-only, opt-in). Formulation: D = D_dev + kappa m m^T,
+  kappa = m^T D m / 9, volumetric part at the centroid point, D-c
+  feedback + B-bar stored stress; sri_active() mode mask (volumetric
+  dropped on membrane groups, invalid value db_error); calcul_force
+  shear replacement only for the shear bit; check.cc not touched (no
+  value checks there). Fix `b47c39c`. RED rc 1 on 66df7e1 ("I do not
+  know : -volumetric"/"-both"), GREEN. Lame 8x16 nu 0.4999 -0.19 %
+  (Gauss -80 %, Pro f=10 -11 %), checkerboard 4 % vs 12531 %; hex8 =
+  quad4; no hourglass; quad4 3 / hex8 6 zero eigenvalues (-both hex8 9).
+  Coarse bending soft (cantilever 10x1 nu 0.3: -volumetric +22 %, -both
+  +113 %; exact element behaviour, an independent displacement solve
+  gives the same digits); lambda/mu split variant measured better in
+  coarse bending (-4.9 %) but not chosen (owner question). Gauss/-yes/
+  default study runs byte-identical. Clean build; build_safe
+  TN_CHECK_ONLY 283 OK / 0 FALLO, runs 226/226; audit_db_buffers exit
+  0. Omen A/B c801_runs vs c80_runs (973 runs): 0 node_dof changes;
+  bicg_csr_threads1 post_point 1e-15 text change = threaded round-off
+  (baseline varies run to run); only-new the 4 tests rc 0. Docs
+  `7504e47`: user/dev SRI pages, READMEs, SEGUIMIENTO, BACKLOG C80.1
+  resolved (48 open); DIVERGENCES unchanged (shear SRI not listed).
+  Open owner questions: lambda/mu split, B-bar for plasticity,
+  axisymmetry, adaptive reduced factor.
