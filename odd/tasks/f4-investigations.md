@@ -61,6 +61,12 @@ T6 triage (2026-10-11, HEAD 53dbb86) and owner order (2026-10-11):
   - [x] C67b miscel.cc recovery_fit_kind/recovery_fit_shape for 1D bars and the 4-node-per-direction elements; polynom.cc -reduced Lobatto rules of every tensor element recovered by the fit.
   - [x] C67c verification: clean build, build_safe TN_CHECK_ONLY, audit_db_buffers, every probe node = Pro, omen corpus A/B.
   - [x] C67d docs: user/dev nodal_stress_recovery, integration_quadrature_and_stress_recovery, group_integration_method_reduced; DIVERGENCES, SEGUIMIENTO register, BACKLOG C67.
+- [x] T6f C67 remainder + C76 nodal recovery of the remaining rules on the `h` fallback (tet4 `-maximal`, prism15, tria3/tria6 axisymmetric variants, any other element/rule combination of `pol()` not covered by `sri_stress_recovery_weight()`) and the prism6 `-minimal` 2-point rule. Route: delegated writer (trigger: Pro/GNU probes + miscel.cc/polynom.cc (+ msf/mc replicas if a rule changes) + tests + build_safe + docs, omen corpus A/B). C75 (GNU interior prism6 rule, class A) stays. Done `dc4a59a` (fix + tests + build_safe), `5bd6f90` (docs). Open owner questions: C82 (prism15 `-minimal`), C83 (tria3/tet10 `-maximal`), C66 (tria6 rule + lumping). Subtasks:
+  - [x] C76a enumerate the fallback combinations from `pol()`/`recovery_fit_kind()`; Pro probes (`scratchpad/c76/`) of every combination: points, weights, per-element operator, averaging; C76 points/weights vs GNU and the analytic error if the rule differs.
+  - [x] C76b RED tests under test-2026 (Pro targets 4e-6) + build_safe registration.
+  - [x] C76c implementation (miscel.cc recovery, polynom.cc rule if needed, replicas consistent).
+  - [x] C76d verification: clean build, build_safe TN_CHECK_ONLY, audit_db_buffers, omen corpus A/B.
+  - [x] C76e docs: user/dev nodal_stress_recovery (+ integration page), DIVERGENCES C76, SEGUIMIENTO register, BACKLOG C67/C76.
 
 ## Later (owner 2026-10-10, after convergence with ALL divergences documented and accepted)
 - F6: ILU/AMG preconditioning of the iterative solver (BACKLOG C81, owner 2026-10-15: in large meshes with many steps even small per-solve gains compound).
@@ -1096,3 +1102,37 @@ docs + SEGUIMIENTO + BACKLOG + DIVERGENCES.
   group_integration_method_reduced; DIVERGENCES (closed-by-following
   list, C80 row), SEGUIMIENTO register, BACKLOG C67 narrowed to tet4
   -maximal, prism15, simplex axisymmetric (48 open).
+- 2026-10-16 T6f C67 remainder + C76 (route: delegated writer; trigger:
+  Pro/GNU probes + miscel.cc + polynom.cc + 5 tests + build_safe + 6
+  docs, omen corpus A/B). Enumeration of every `pol()` rule against the
+  recovery dispatch: on the `h` fallback were tet4 `-maximal`, prism15
+  (all values) and prism6 `-minimal` (record ignored). 81 Professional
+  probes (`scratchpad/c76/gen76.py`, `an76.py`; tria3, tria6, tria3
+  axisymmetric off/on axis, tria6 axisymmetric, tet4, tet10, prism6,
+  prism15 x 3 methods x 3 point values). Pro: tet4 `-maximal` = Keast 5
+  (manual 6.623) + linear fit; prism15 = linear fit (5e-13); prism6
+  `-minimal` = 2 centroid points, `sum h sig / sum h` (5e-13); all
+  arithmetic mean. Found a GNU prism15 rule bug: triangle points
+  (b,b)/(d,d) instead of (a,a)/(c,c) (one outside the triangle,
+  monomial error 0.025). C76 analytic: 2-point rule 1 spurious mode per
+  element, restrained by every mesh tried, patch test exact, bending
+  -7.1 % vs -13.1 % (20x2x2) -> sound, implemented; weights confirmed
+  (cantilever = 2-point FE model to 1.5e-13). Pro prism15 `-minimal` (8
+  points, centroid -27/48) has 3 negative stiffness eigenvalues -> not
+  implemented, C82 (owner). tria6: Pro = manual 7/4 points + fit, GNU 6
+  nodal (C66 re-scoped: lumping decision in general.cc needed). tria3
+  `-maximal`: manual 4, both 3; tet10 `-maximal`: manual 10, both 5;
+  axisymmetric tria3 `-maximal` GNU 1 point vs Pro 3 nodal / on-axis 1
+  -> C83. Fix `dc4a59a`: pol() tet4 Keast, prism6 2-point (default set
+  to -maximal first: a regression caught on the probes), prism15 table;
+  recovery_fit_kind/shape/build (kind 4); replicas unchanged (tensor
+  only). RED rc 1 at 9a0ca3d (5 tests), GREEN; every probe node of a
+  changed rule = Pro within 6e-12. Clean build; build_safe TN_CHECK_ONLY
+  301 OK / 0 FALLO, runs 226/226; audit_db_buffers exit 0. Omen A/B
+  c76_runs vs c67_runs (991 runs): only `prism15` changed (node_dof vs
+  Pro 2.1e-14 -> 3.3e-15, toward Pro), `bicg_csr_threads1` text only
+  (nondeterministic, node_dof 0); only-new the 5 tests. Docs `5bd6f90`:
+  user/dev nodal_stress_recovery and integration pages, prism15 page;
+  DIVERGENCES C76 closed, C66/C82/C83 class B (B 44, total 91);
+  SEGUIMIENTO register + group_integration_points line; BACKLOG C67/C76
+  resolved, C66 re-scoped, C82/C83 new (48 open).
