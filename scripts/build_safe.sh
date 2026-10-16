@@ -1314,7 +1314,7 @@ expected_error_ok() {
     ulimit -v "$TN_MEMLIMIT_KB" &&
     timeout 60 "$REPO_DIR/build/$TN_BIN" "$t.dat" > "/tmp/${t}_safe.out" 2>&1 )
   local rc=$?
-  if [ "$rc" = "1" ] && grep -qF "$msg" "/tmp/${t}_safe.out"; then
+  if [ "$rc" = "1" ] && grep -qF -- "$msg" "/tmp/${t}_safe.out"; then
     check_ok "$t (expected error: rc=1 + '$msg')"
   else
     check_fail "$t" "rc=$rc, expected error '$msg' not found"
