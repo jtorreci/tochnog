@@ -26,7 +26,7 @@ T6 triage (2026-10-11, HEAD 53dbb86) and owner order (2026-10-11):
 - [x] T6c K15 `validation_14` `control_restart` semantics (without restart every node_dof = Pro). Done `8ca6124`: restart resets the IP state (manual 6.368, Pro deletes element_dof); `validation_14` NOT caused by the restart (re-scoped, open under T6f); element history records -> BACKLOG C58.
 - [x] T6d C11 `dynamic3` (disp_primary_gate per material) -> C52. Done `28992d5` (C11), `e0f2204` (C59), `b318484` (interface history), `c276931` (inertia pass).
 - [x] T6e C53 slide in the post-solve pass. Done `b4e4fa4` (slide law), `07433f5` (slide/contact in the pass, gate removed).
-- [ ] T6f Rest by relevance (K15 `validation_14` done `1d446b3`; K15 validation_3 kap done `c3e6d2a`; C68 IP states kapsh/cap1/damage/rho/Maxwell done `70235c6`; C68d Maxwell old-state index done `2327083`; K21 recovery part done `2305659`, gate removed `e2b044f`; `-ra` ranges done `35025dc`): K15 `validation_14` (re-scoped by T6c: pass-1 hole-boundary nodal stress/plastic strain up to ~20 % at 8 nodes on the r=0.01 circle -> `refine_locally` picks a different element -> pass 2 on a different mesh), K15 mmc_tension and validation_3 eptzz closed 2026-10-12 as class A divergences (`600a0b4`), K14b hypo3 and C7/C7b Mazars closed 2026-10-12 as class A divergences (`ae0691b`), K21 (recovery done; validation_1 stokes default + convection remain), C57 (hex27 nodal stress resolved by C70; post_point open), C70 done `39d0138` (all Gauss rules + 3D physical fit), C71 done `bea7599` (on-axis Lobatto -> Gauss; Lobatto recovery weighting -> C79), C79 done `ab4ef78` (Lobatto recovery = Pro + msf on-axis replica; found C80 `-reduced`), C75 (prism6 points). Parked: K14c (ISA, class D), mohrcou2 sfnet (input artifact).
+- [ ] T6f Rest by relevance (K15 `validation_14` done `1d446b3`; K15 validation_3 kap done `c3e6d2a`; C68 IP states kapsh/cap1/damage/rho/Maxwell done `70235c6`; C68d Maxwell old-state index done `2327083`; K21 recovery part done `2305659`, gate removed `e2b044f`; `-ra` ranges done `35025dc`): K15 `validation_14` (re-scoped by T6c: pass-1 hole-boundary nodal stress/plastic strain up to ~20 % at 8 nodes on the r=0.01 circle -> `refine_locally` picks a different element -> pass 2 on a different mesh), K15 mmc_tension and validation_3 eptzz closed 2026-10-12 as class A divergences (`600a0b4`), K14b hypo3 and C7/C7b Mazars closed 2026-10-12 as class A divergences (`ae0691b`), K21 (recovery done; validation_1 stokes default + convection remain), C57 (hex27 nodal stress resolved by C70; post_point open), C70 done `39d0138` (all Gauss rules + 3D physical fit), C71 done `bea7599` (on-axis Lobatto -> Gauss; Lobatto recovery weighting -> C79), C79 done `ab4ef78` (Lobatto recovery = Pro + msf on-axis replica; found C80 `-reduced`), C80 done `995de49` (`-reduced` = Pro; default factor 10 class A; next C80.1 selective/B-bar), C75 (prism6 points). Parked: K14c (ISA, class D), mohrcou2 sfnet (input artifact).
 - [x] T6f C72 convected nodal stress + validation_1 steady guard (owner-approved 2026-10-13; route: delegated writer, trigger: general.cc + 3 tests + 9 docs). Done `c1a1ae9` (fix + tests), `cc245f7` (docs). Tests registered in `scripts/build_safe.sh` `421a3f4`.
 - [x] T6f C70 nodal recovery of the other Gauss rules and the 3D elements in physical coordinates (route: delegated writer; trigger: multi-file code + 7 tests + build_safe + 9 docs). Done `39d0138` (fix + tests + registration), `170e573` (docs). Found C75 (prism6 integration points).
 - [x] T6f C75 prism6 integration rule: investigation + owner decision + docs (route: delegated writer; trigger: Pro/GNU probes + 7 docs). Gate stop before code; owner 2026-10-13: keep the GNU interior rule (class A). Done `4ab9549` (docs). Found C76 (`-minimal` ignored for prism6).
@@ -39,6 +39,11 @@ T6 triage (2026-10-11, HEAD 53dbb86) and owner order (2026-10-11):
   - [ ] C77c (measured; choice pending owner) BiCGStab for the non-symmetric path; measure vs relative-stop Bi-CG (86 corpus cases + large C13/C23/C36, E15/E25); CG relative stop measured.
   - [x] C77d suite targets that move: verdict per target vs SuperLU/Pro; omen corpus A/B.
   - [x] C77e docs: user/dev solver pages, DIVERGENCES, SEGUIMIENTO (register + Descarte MKL PARDISO), BACKLOG (C77 closed, F6 ILU/AMG item).
+- [x] T6f C80 `group_integration_method -reduced` + `group_integration_method_reduced_factor` (owner decisions 2026-10-16: default factor 10 per manual 6.621, class A divergence with Pro's 1; hourglass warning in the user manual; selective/B-bar -> new C80.1, not implemented here). Route: delegated writer (trigger: headers + database.cc + polynom.cc + miscel.cc + calcul_force.cc + delete.cc + 5 tests + build_safe + 7 docs, corpus A/B on omen). Done `995de49` (feat + tests + build_safe), `6c8269f` (docs). Subtasks:
+  - [x] C80a RED tests under test-2026 (quad4 f=2 and f=10, hex8 f=2, quad9 `-reduced -minimal`: Pro targets 4e-6; no-record default f=10: GNU-consistent target) + build_safe registration.
+  - [x] C80b enums REDUCED + GROUP_INTEGRATION_METHOD_REDUCED_FACTOR (both headers), database.cc name + record (factor > 0), pol() rule table, recovery kind 1 at the reduced points, msf/mc replicas, C71 on-axis switch for `-reduced`.
+  - [x] C80c verification: clean build, build_safe TN_CHECK_ONLY, audit_db_buffers, omen corpus A/B.
+  - [x] C80d docs: user/dev integration pages, DIVERGENCES (C80 closed + default-factor class A), SEGUIMIENTO (register + Descarte), BACKLOG (C80 closed + C80.1 OPEN next).
 
 ## Later (owner 2026-10-10, after convergence with ALL divergences documented and accepted)
 - F6: ILU/AMG preconditioning of the iterative solver (BACKLOG C81, owner 2026-10-15: in large meshes with many steps even small per-solve gains compound).
@@ -964,3 +969,31 @@ docs + SEGUIMIENTO + BACKLOG + DIVERGENCES.
   DIVERGENCES C77 class A (A 28, B 43), SEGUIMIENTO register + Descarte
   MKL PARDISO, BACKLOG C77 resolved + C81 (F6). Next: owner BiCGStab
   choice; K21 validation_1, C76, C80.
+- 2026-10-16 T6f C80 (route: delegated writer; trigger: headers +
+  database.cc + polynom.cc + miscel.cc + calcul_force.cc + delete.cc + 7
+  tests + build_safe + 9 docs, corpus A/B on omen). Owner decisions
+  2026-10-16: default factor 10 (manual 6.621; Pro applies 1) class A;
+  hourglass warning in the user manual; selective/B-bar -> C80.1 (OPEN,
+  next, not implemented). Fix `995de49`: enums REDUCED +
+  GROUP_INTEGRATION_METHOD_REDUCED_FACTOR (both headers), database.cc
+  name + record (DOUBLE, length 1, required GROUP_TYPE), polynom.cc
+  integration_reduced_factor() (default 10, f <= 0 db_error) and pol()
+  quad4/hex8 points +-1/f weight 1/2, other cases Gauss/Lobatto fallback,
+  quad9/hex27 Lobatto -> kind 1 fit, stress_recovery_reduced_iso for the
+  miscel.cc fit points; axisymmetric node on the axis -> Gauss (new Pro
+  probe: f=1 AND f=2 switch on the NODE radius); msf_element_rule /
+  mc_element_rule replicas. Tests test-2026 reduced_quad4_f2_1,
+  reduced_quad4_f10_1, reduced_hex8_f2_1, reduced_quad9_minimal1,
+  reduced_quad9_maximal1, reduced_quad4_axisym1 (Pro 4e-6) and
+  reduced_default_factor1 (GNU default = Pro f=10 run): RED rc 1 on
+  0ac600d ("I do not know : -reduced"), GREEN; every node_dof = Pro
+  within 5e-12; earlier 135-probe set = Pro except bar3 recovery
+  (1.3-2.3 %, C67) and prism6 -minimal (C76). Clean build; build_safe
+  TN_CHECK_ONLY 279 OK / 0 FALLO, runs 226/226; audit_db_buffers exit 0.
+  Omen A/B c80_runs/fix vs c77_runs/rs (966 runs): 0 changed (masked
+  incl. tochnog_version), only-new the 7 tests rc 0. Docs `6c8269f`:
+  user/dev group_integration_method_reduced (new), integration pages,
+  README indexes, DIVERGENCES C80 class A (A 29, B 42), SEGUIMIENTO
+  register + Descarte, BACKLOG C80 resolved + C80.1 + C67 note. Not
+  investigated: Pro element-average fallback at f=1e6. Next: C80.1
+  (keyword decision by the owner), K21 validation_1, C76, C77c.
