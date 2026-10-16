@@ -67,6 +67,12 @@ T6 triage (2026-10-11, HEAD 53dbb86) and owner order (2026-10-11):
   - [x] C76c implementation (miscel.cc recovery, polynom.cc rule if needed, replicas consistent).
   - [x] C76d verification: clean build, build_safe TN_CHECK_ONLY, audit_db_buffers, omen corpus A/B.
   - [x] C76e docs: user/dev nodal_stress_recovery (+ integration page), DIVERGENCES C76, SEGUIMIENTO register, BACKLOG C67/C76.
+- [x] T6f C82 + C83 (owner decisions 2026-10-16: C82 prism15 `-minimal` keep 21 points, class A; C83 part 1 tria3/tet10 `-maximal` keep 3/5 points, class A divergence from the MANUAL (GNU = Pro); C83 part 2 axisymmetric tria3 `-maximal` follow the Professional: 3 nodal points, 1 point in an element with a node on the axis). Route: delegated writer (trigger: Pro/GNU probes + polynom.cc + test + build_safe + 6 docs, omen corpus A/B). Done `72f78bd` (fix + test + build_safe), `8e9606d` (docs). Subtasks:
+  - [x] C83a why the GNU forced 1 point (blame/comments); Pro default (no record) for the axisymmetric tria3; replicas (`msf_element_rule()`, `mc_element_rule()`) tensor-only check; tet10 positive-weight 10-point rule check.
+  - [x] C83b RED test under test-2026 (axisymmetric tria3 `-maximal`, elements on and off the axis, Pro targets 4e-6) + build_safe registration.
+  - [x] C83c polynom.cc `pol()` axisymmetric tria3 `-maximal` = 3 nodal points, on-axis node -> 1 point (recovery unchanged if the probes agree).
+  - [x] C83d verification: clean build, build_safe TN_CHECK_ONLY, audit_db_buffers, probes = Pro, omen corpus A/B.
+  - [x] C83e docs: DIVERGENCES (C82, C83 part 1 class A; C83 out of class B), SEGUIMIENTO (Descarte C82 / C83 part 1, register C83 part 2), user/dev nodal_stress_recovery, integration pages, prism15; BACKLOG C82/C83 closed.
 
 ## Later (owner 2026-10-10, after convergence with ALL divergences documented and accepted)
 - F6: ILU/AMG preconditioning of the iterative solver (BACKLOG C81, owner 2026-10-15: in large meshes with many steps even small per-solve gains compound).
@@ -1136,3 +1142,26 @@ docs + SEGUIMIENTO + BACKLOG + DIVERGENCES.
   DIVERGENCES C76 closed, C66/C82/C83 class B (B 44, total 91);
   SEGUIMIENTO register + group_integration_points line; BACKLOG C67/C76
   resolved, C66 re-scoped, C82/C83 new (48 open).
+- 2026-10-16 T6f C82 + C83 (route: delegated writer; trigger: probes +
+  polynom.cc + test + build_safe + 9 docs, omen corpus A/B). Owner
+  decisions: C82 and C83 part 1 class A (docs only), C83 part 2 follow
+  the Professional. Why the GNU forced 1 point: `pol()` line from the
+  2016 initial import, no comment; the only reason found is the r=0 hoop
+  singularity (C71), avoided by the per-element on-axis switch. Pro
+  (C76 probes `scratchpad/c76/`): axisymmetric tria3 `-maximal` = 3
+  nodal points, 1 centroid point in the elements with a node on the axis
+  (elements 1-4 of the ax0 probe 1 point, 5-12 3 points); default and
+  `-minimal` 1 point (= GNU 3e-12). Fix `72f78bd`: pol() tria3 on-axis
+  switch (EPS_COORD on the node radius); recovery unchanged; replicas
+  tensor-only (not touched). RED rc 1 on 55e6a10, GREEN; 27 tria3 probes
+  = Pro within 3.1e-12 (before 3.2e-2). Clean build; build_safe
+  TN_CHECK_ONLY 302 OK / 0 FALLO, runs 226/226; audit_db_buffers exit
+  0. Omen A/B c83_runs vs c76_runs (996 runs): 0 changed (no corpus case
+  has an axisymmetric tria3 `-maximal`); only-new the test rc 0. tet10:
+  a positive 10-point degree-3 rule exists (Keast: 4 x (a,b,b,b)
+  a=0.5684305842 w=0.2177650699 + 6 edge midpoints w=0.0214899534),
+  not implemented. Docs `8e9606d`: DIVERGENCES C82/C83 class A (A 31,
+  B 42, total 91), SEGUIMIENTO Descarte x2 + register, user/dev
+  nodal_stress_recovery, integration pages, prism15; BACKLOG C82/C83
+  closed (46 open). Open: `post_element_force` (`calcul_force.cc`) feeds
+  a tria3 to the quad4 msf helpers (pre-existing, unrelated).
