@@ -670,10 +670,13 @@ void pol( long int element, long int element_group,
     // C80: every -reduced rule of the quad and hex elements is recovered
     // by the Professional with the physical linear fit 1,x,y(,z) at its
     // points (kind 1, miscel.cc), the 3x3(x3) Lobatto points of the
-    // quad9/hex27 included (unlike -lobatto: the point value); the bars
-    // keep the -lobatto / Gauss recovery (unmeasured, BACKLOG C67).
-    if ( integration_method==-REDUCED && rule_lobatto &&
-         ( name==-QUAD9 || name==-HEX27 ) ) stress_recovery_gauss = 1;
+    // quad9/hex27 included (unlike -lobatto: the point value). C67
+    // (2026-10-16): the same for the bars (bar2 -maximal, bar3, bar4) and
+    // the quad16 (Professional 02-08-2026, every node of distorted
+    // probes); for the bar2 the two points are the end nodes, where the
+    // fit equals the point value.
+    if ( integration_method==-REDUCED && rule_lobatto )
+      stress_recovery_gauss = 1;
     stress_recovery_reduced_iso = rule_reduced ? reduced_iso : 0.;
     if ( npoint>MPOINT ) {
       cout << "\nError: too many int. points in element " << element << ".\n";

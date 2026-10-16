@@ -454,6 +454,13 @@ double strain_recovery_weight( long int sri_on, long int name, long int nnol,
 //           point at the node (F = Kronecker delta). The Lobatto -minimal
 //           quad9 2x2 / hex27 2x2x2 (corner points) are kind 1 with the
 //           Lobatto point positions.
+//   C67 (2026-10-16): the same three rules for the 1D bars (bar2, bar3,
+//           bar4: kind 1 = linear fit 1,x) and the quad16 (4x4 nodes):
+//           Gauss (every point count), -reduced and Lobatto -minimal are
+//           kind 1, Lobatto -maximal kind 3 (the bar4/quad16 interior nodes
+//           sit at the Lobatto positions iso +-1/sqrt(5), interpolation_
+//           polynomial, so the points are at the nodes); axis rule for the
+//           on-axis quad16 too. hex64 is rejected by both codes.
 // The operator depends on the element geometry, so it is built from the
 // start-of-step nodal coordinates (NODE, VERSION_NORMAL) and cached per
 // thread for the current element (the element loop may run in parallel
@@ -469,35 +476,62 @@ struct RecoveryFitCache {
   long int ok;
 };
 
+// Nodes per direction of the tensor Lagrange elements recovered by the
+// fit (pol() layout: bars in 1D, quads in 2D, hexes in 3D), 0 otherwise.
+static long int recovery_tensor_npol( long int name )
+
+{
+  if ( ndim==1 ) {
+    if ( name==-BAR2 ) return 2;
+    if ( name==-BAR3 ) return 3;
+    if ( name==-BAR4 ) return 4;
+  }
+  else if ( ndim==2 ) {
+    if ( name==-QUAD4 ) return 2;
+    if ( name==-QUAD9 ) return 3;
+    if ( name==-QUAD16 ) return 4;
+  }
+  else if ( ndim==3 ) {
+    if ( name==-HEX8 ) return 2;
+    if ( name==-HEX27 ) return 3;
+  }
+  return 0;
+}
+
 static long int recovery_fit_kind( long int name, long int nnol,
   long int npoint )
 
 {
+  long int npol=0, nfull=1, nminimal=1, d=0;
+
   if ( npoint==1 && ( ( ndim==2 && name==-QUAD4 && nnol==4 ) ||
                       ( ndim==3 && name==-HEX8  && nnol==8 ) ) ) return 2;
   if ( ndim==3 && name==-TET10  && nnol==10 && npoint==5 ) return 1;
   if ( ndim==3 && name==-PRISM6 && nnol==6  && npoint==6 ) return 1;
+  npol = recovery_tensor_npol( name );
+  if ( !npol ) return 0;
+  for ( d=0; d<ndim; d++ ) {
+    nfull *= npol;
+    nminimal *= npol-1;
+  }
+  if ( nnol!=nfull ) return 0;
   // tensor elements. Lobatto rule with the points at the nodes (C79,
-  // F4 T6f 2026-10-13): the Professional 02-08-2026 takes the point
-  // value per element and the arithmetic mean over the elements (measured
-  // exact on distorted quad4 / quad9 / hex8 / hex27 meshes of unequal
+  // F4 T6f 2026-10-13; bars and quad16 C67 2026-10-16): the Professional
+  // 02-08-2026 takes the point value per element and the arithmetic mean
+  // over the elements (measured exact on distorted meshes of unequal
   // element size, plane and axisymmetric off-axis). Before, the h weight
   // times the point volume made the node a volume-weighted average.
   if ( !stress_recovery_gauss ) {
-    if ( stress_recovery_lobatto && npoint==nnol &&
-         ( ( ndim==2 && ( name==-QUAD4 || name==-QUAD9 ) ) ||
-           ( ndim==3 && ( name==-HEX8  || name==-HEX27 ) ) ) ) return 3;
+    if ( stress_recovery_lobatto && npoint==nnol ) return 3;
     return 0;
   }
-  // Gauss rules, the -reduced quad/hex rules (C80, stress_recovery_gauss
-  // set by pol()) and the Lobatto -minimal quad9 2x2 / hex27 2x2x2 (corner
-  // points; Professional: the same physical linear fit, C79)
-  if ( ndim==2 && name==-QUAD4 && nnol==4 && npoint==4 ) return 1;
-  if ( ndim==2 && name==-QUAD9 && nnol==9 && ( npoint==4 || npoint==9 ) )
-    return 1;
-  if ( ndim==3 && name==-HEX8 && nnol==8 && npoint==8 ) return 1;
-  if ( ndim==3 && name==-HEX27 && nnol==27 && ( npoint==8 || npoint==27 ) )
-    return 1;
+  // Gauss rules (npol or npol-1 points per direction), the -reduced rules
+  // (C80/C67, stress_recovery_gauss set by pol()) and the Lobatto -minimal
+  // rules (npol-1 Lobatto points per direction; Professional: the same
+  // physical linear fit, C79/C67). The 1-point rules (bar2 default, quad4/
+  // hex8 -minimal) are the point value (kind 2 above, bar2 in
+  // sri_stress_recovery_weight).
+  if ( npoint>1 && ( npoint==nfull || npoint==nminimal ) ) return 1;
   return 0;
 }
 
@@ -506,8 +540,9 @@ static void recovery_fit_shape( long int name, long int nnol, long int npoint,
   long int lobatto, double riso, double hp[MPOINT][MNOL] )
 
 {
-  long int ipoint=0, inol=0, k=0, l=0, d=0, npol=0, m=1, mpow=1;
-  double niso[3], xg[MPOINT], wg[MPOINT], lag[MDIM][3], iso[MDIM];
+  long int ipoint=0, inol=0, k=0, l=0, d=0, npol=0, m=1, mpow=1, stride=1;
+  double niso[MPOINT], wn[MPOINT], xg[MPOINT], wg[MPOINT], lag[MDIM][MPOINT],
+    iso[MDIM];
 
   if ( name==-TET10 ) {
     for ( ipoint=0; ipoint<npoint; ipoint++ ) {
@@ -544,10 +579,12 @@ static void recovery_fit_shape( long int name, long int nnol, long int npoint,
     return;
   }
 
-  // tensor Lagrange elements (quad4, quad9, hex8, hex27) with m^ndim Gauss
-  // points (Lobatto points for the Lobatto rules, C79)
-  npol = ( nnol==4 || nnol==8 ) ? 2 : 3;
-  for ( k=0; k<npol; k++ ) niso[k] = -1. + 2.*k/(npol-1);
+  // tensor Lagrange elements (bar2/3/4, quad4/9/16, hex8/27) with m^ndim
+  // Gauss points (Lobatto points for the Lobatto rules, C79). The nodes
+  // sit at the Lobatto positions of npol points (interpolation_polynomial:
+  // -1,1 / -1,0,1 / -1,-1/sqrt5,1/sqrt5,1).
+  npol = recovery_tensor_npol( name );
+  integration_lobatto( npol, niso, wn );
   while ( mpow<npoint ) {
     m++;
     mpow = 1;
@@ -561,9 +598,11 @@ static void recovery_fit_shape( long int name, long int nnol, long int npoint,
     xg[1] =  riso;
   }
   for ( ipoint=0; ipoint<npoint; ipoint++ ) {
-    iso[0] = xg[ipoint%m];
-    iso[1] = xg[(ipoint/m)%m];
-    if ( ndim==3 ) iso[2] = xg[ipoint/(m*m)];
+    stride = 1;
+    for ( d=0; d<ndim; d++ ) {
+      iso[d] = xg[(ipoint/stride)%m];
+      stride *= m;
+    }
     for ( d=0; d<ndim; d++ ) {
       for ( k=0; k<npol; k++ ) {
         lag[d][k] = 1.;
@@ -574,8 +613,12 @@ static void recovery_fit_shape( long int name, long int nnol, long int npoint,
       }
     }
     for ( inol=0; inol<nnol; inol++ ) {
-      hp[ipoint][inol] = lag[0][inol%npol] * lag[1][(inol/npol)%npol];
-      if ( ndim==3 ) hp[ipoint][inol] *= lag[2][inol/(npol*npol)];
+      hp[ipoint][inol] = 1.;
+      stride = 1;
+      for ( d=0; d<ndim; d++ ) {
+        hp[ipoint][inol] *= lag[d][(inol/stride)%npol];
+        stride *= npol;
+      }
     }
   }
 }
@@ -779,8 +822,12 @@ double sri_stress_recovery_weight( long int sri, long int name, long int nnol,
   //                  2026-10-13; before: h, i.e. volume weighted, and
   //                  no contribution at the quad9/hex27 non-corner nodes
   //                  of the -minimal rules)
+  //   bar2 2 points, bar3, bar4, quad16: the same rules per rule family
+  //                  (Gauss / -reduced / Lobatto -minimal: the physical
+  //                  linear fit 1,x(,y); Lobatto -maximal: the point value;
+  //                  C67, 2026-10-16; before: h, volume weighted)
   // Every other element/rule returns h_inol: the unmeasured rules (tet4
-  // -maximal, bar2 2 points, bar3, quad16, hex64, prism15, ...).
+  // -maximal, prism15, ...; hex64 is rejected by both codes).
   //
   // The lumped sigma-dof equation (general.cc/materi.cc) multiplies the
   // weight by the integration-point volume, so the assembled average is

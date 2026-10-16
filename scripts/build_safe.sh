@@ -2113,6 +2113,25 @@ run_ok "$T2026" sri_lambda_lame04999_1
 run_ok "$T2026" sri_lambda_cantilever1
 expected_error_ok "$T2026" sri_both_removed_error1
 expected_error_ok "$T2026" sri_lambda_anisotropic_error1
+# F4 T6f C67 (2026-10-16): nodal stress recovery of the bar2 (2 points),
+#   bar3, bar4 and quad16 rules (hex64 is rejected by both codes).
+#   Professional 02-08-2026 (65 distorted probes, every node): Gauss,
+#   -reduced and Lobatto -minimal = per element the physical linear fit
+#   1,x(,y) of the point values evaluated at the node; Lobatto -maximal =
+#   the point value (the bar4/quad16 interior nodes sit at the Lobatto
+#   positions); arithmetic mean over the elements. Targets = Professional
+#   node_dof (4e-6). Old GNU: rc 1 (h weight, volume-weighted mean; bar3
+#   Lobatto -minimal mid nodes 0).
+run_ok "$T2026" recovery_bar2_gauss2_mean1
+run_ok "$T2026" recovery_bar3_gauss_fit1
+run_ok "$T2026" recovery_bar3_lobatto_minimal1
+run_ok "$T2026" recovery_bar3_reduced1
+run_ok "$T2026" recovery_bar4_gauss_fit1
+run_ok "$T2026" recovery_bar4_lobatto1
+run_ok "$T2026" recovery_quad16_gauss_fit1
+run_ok "$T2026" recovery_quad16_lobatto1
+run_ok "$T2026" recovery_quad16_lobatto_minimal1
+run_ok "$T2026" recovery_quad16_axisym_lobatto1
 
 # ---------------------------------------------------------------------
 # Sub-sprint materi_stress_force, lote 2 (integracion 2D quad4/quad9):

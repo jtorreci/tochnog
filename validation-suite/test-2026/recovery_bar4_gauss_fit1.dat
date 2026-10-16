@@ -1,0 +1,59 @@
+( C67 {F4 T6f, 2026-10-16} bar4 4-point Gauss {default}: per element the physical linear fit 1,x, arithmetic mean {GNU before: h weight, length-weighted}. Prescribed nonlinear velocity at every node of a viscous materi, elements of unequal size, distorted interior nodes. Targets = Professional 02-08-2026 node_dof. GNU before: node 10 sigxx 10.1296 (Professional 10.4792); node 5 sigxx 4.71233 (Professional 5.00827); node 4 sigxx 4.58614 (Professional 4.29254); node 1 sigxx 4.25562 (Professional 4.27443). )
+
+echo -no
+number_of_space_dimensions 1
+materi_velocity
+materi_stress
+end_initia
+mesh -fixed_in_space
+inertia_apply -no
+convection_apply -no
+node 1 0.25
+node 2 0.46
+node 3 0.747
+node 4 0.95
+node 5 1.43
+node 6 2.086
+node 7 2.55
+node 8 2.88
+node 9 3.331
+node 10 3.65
+element 1 -bar4 1 2 3 4
+element 2 -bar4 4 5 6 7
+element 3 -bar4 7 8 9 10
+bounda_dof 0 1 -velx
+bounda_time 0 0. 0.637350767076843 10. 0.637350767076843
+bounda_dof 1 2 -velx
+bounda_time 1 0. 0.938515318256947 10. 0.938515318256947
+bounda_dof 2 3 -velx
+bounda_time 2 0. 1.36268465442175 10. 1.36268465442175
+bounda_dof 3 4 -velx
+bounda_time 3 0. 1.66665491781021 10. 1.66665491781021
+bounda_dof 4 5 -velx
+bounda_time 4 0. 2.40526244587818 10. 2.40526244587818
+bounda_dof 5 6 -velx
+bounda_time 5 0. 3.58156215325576 10. 3.58156215325576
+bounda_dof 6 7 -velx
+bounda_time 6 0. 4.65206699447048 10. 4.65206699447048
+bounda_dof 7 8 -velx
+bounda_time 7 0. 5.55955441007595 10. 5.55955441007595
+bounda_dof 8 9 -velx
+bounda_time 8 0. 6.96652311577062 10. 6.96652311577062
+bounda_dof 9 10 -velx
+bounda_time 9 0. 8.03774450840366 10. 8.03774450840366
+group_type 0 -materi
+group_materi_viscosity 0 1.0
+group_materi_density 0 1.0
+group_materi_elasti_compressibility 0 1.0
+group_materi_memory 0 -updated_linear
+group_integration_method 0 -gauss
+control_timestep 10 1. 1.
+target_item 0 -node_dof 10 -sigxx
+target_value 0 1.047920784653e+01 4.0e-06
+target_item 1 -node_dof 5 -sigxx
+target_value 1 5.008268673063e+00 4.0e-06
+target_item 2 -node_dof 4 -sigxx
+target_value 2 4.292542362956e+00 4.0e-06
+target_item 3 -node_dof 1 -sigxx
+target_value 3 4.274426215805e+00 4.0e-06
+end_data
