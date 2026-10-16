@@ -273,11 +273,13 @@ void materi( long int element, long int gr, long int name, long int nnol,
   db( GROUP_ELEMENT_SELECTIVE_REDUCED_INTEGRATION, gr, &sri, ddum, ldum,
     VERSION_NORMAL, GET_IF_EXISTS );
   sri_on = sri_active( element, gr, name, nnol );
-  // C80.1: requested mode mask (-yes shear, -volumetric, -both); the
-  // volumetric bit is dropped by sri_active() for membrane groups.
+  // C80.1/C80.2: requested mode mask (-yes shear, -volumetric,
+  // -lambda); the volumetric / lambda bit is dropped by sri_active()
+  // for membrane groups.
   sri_req = 0;
-  if ( sri==-YES || sri==-BOTH ) sri_req |= SRI_SHEAR;
-  if ( sri==-VOLUMETRIC || sri==-BOTH ) sri_req |= SRI_VOLUMETRIC;
+  if ( sri==-YES ) sri_req |= SRI_SHEAR;
+  if ( sri==-VOLUMETRIC ) sri_req |= SRI_VOLUMETRIC;
+  if ( sri==-LAMBDA ) sri_req |= SRI_LAMBDA;
   if ( sri_req && materi_stress && sri_on!=sri_req && !sri_warning_done ) {
     if ( sri==-YES )
       pri( "Warning: group_element_selective_reduced_integration ignored: "
@@ -285,9 +287,9 @@ void materi( long int element, long int gr, long int name, long int nnol,
         "axisymmetry, no materi_displacement, no plasticity/damage/maxwell)." );
     else
       pri( "Warning: group_element_selective_reduced_integration "
-        "-volumetric/-both not fully applied: only linear elastic 2D "
-        "plane-strain quad4 / 3D hex8 groups are supported (no membrane "
-        "for the volumetric part, no axisymmetry, no materi_displacement, "
+        "-volumetric/-lambda ignored: only linear elastic 2D "
+        "plane-strain quad4 / 3D hex8 groups are supported (no plane "
+        "stress / membrane, no axisymmetry, no materi_displacement, "
         "no plasticity/damage/maxwell)." );
     sri_warning_done = 1;
   }
@@ -870,7 +872,7 @@ void materi( long int element, long int gr, long int name, long int nnol,
         ddsdde_total[2*MSTRAIN+2] = 0.;
         ddsdde_total[4*MSTRAIN+4] = 0.;
       }
-      if ( sri_on & SRI_VOLUMETRIC ) {
+      if ( sri_on & ( SRI_VOLUMETRIC | SRI_LAMBDA ) ) {
         // C80.1 (2026-10-16) selective volumetric reduced integration
         // (Hughes 1980 selective integration / B-bar with the centroid
         // dilatation): D = D_dev + kappa*m*m^T with m = (1,1,1,0,0,0)
@@ -896,10 +898,48 @@ void materi( long int element, long int gr, long int name, long int nnol,
           inc_ept[2*MDIM+2], theta_c = 0.;
         long int vol_ix[3] = { 0, 3, 5 }, a=0, b=0;
         sri_kappa = 0.;
-        for ( a=0; a<3; a++ )
-          for ( b=0; b<3; b++ )
-            sri_kappa += ddsdde_total[vol_ix[a]*MSTRAIN+vol_ix[b]];
-        sri_kappa /= 9.;
+        if ( sri_on & SRI_LAMBDA ) {
+          // C80.2 (2026-10-16) -lambda: the Hughes 1977 lambda/mu split
+          // of the isotropic D = 2*mu*I + lambda*m*m^T (I with 1/2 on
+          // the shear entries). Only lambda*m*m^T
+          // goes to the centroid point (the coefficient below replaces
+          // kappa in the machinery above, nothing else changes); the
+          // 2*mu part keeps the full Gauss rule, including its
+          // volumetric component 2*mu/3*(tr eps)^2, which does not lock
+          // because mu stays bounded as nu -> 0.5. lambda is the
+          // off-diagonal entry of the normal block of the tangent; it
+          // is only defined for an ISOTROPIC tangent (equal diagonal,
+          // equal off-diagonal entries), anything else is refused
+          // (-volumetric needs no isotropy).
+          double d_diag = ddsdde_total[0*MSTRAIN+0], d_max = 0.,
+            d_dev = 0.;
+          for ( a=0; a<3; a++ )
+            for ( b=0; b<3; b++ ) {
+              double d_ab = ddsdde_total[vol_ix[a]*MSTRAIN+vol_ix[b]];
+              d_max = scalar_dmax( d_max, scalar_dabs(d_ab) );
+              if ( a!=b ) sri_kappa += d_ab / 6.;
+            }
+          for ( a=0; a<3; a++ )
+            for ( b=0; b<3; b++ ) {
+              double d_ab = ddsdde_total[vol_ix[a]*MSTRAIN+vol_ix[b]];
+              d_dev = scalar_dmax( d_dev, scalar_dabs( d_ab -
+                ( a==b ? d_diag : sri_kappa ) ) );
+            }
+          if ( d_dev>1.e-6*d_max ) {
+            pri( "Error: group_element_selective_reduced_integration "
+              "-lambda needs an isotropic elastic material (the normal "
+              "block of the constitutive matrix must have equal diagonal "
+              "and equal off-diagonal entries); use -volumetric for "
+              "this group. Element ", element );
+            exit(TN_EXIT_STATUS);
+          }
+        }
+        else {
+          for ( a=0; a<3; a++ )
+            for ( b=0; b<3; b++ )
+              sri_kappa += ddsdde_total[vol_ix[a]*MSTRAIN+vol_ix[b]];
+          sri_kappa /= 9.;
+        }
         if ( sri_centroid_derivatives( name, nnol, old_coord, sri_bdiv,
              sri_detj_vol, sri_coord_center ) ) {
           for ( jnol=0; jnol<nnol; jnol++ )
@@ -1078,9 +1118,10 @@ void materi( long int element, long int gr, long int name, long int nnol,
         }
         if ( swit ) pri( "stiffness_shear", stiffness_shear, nnol*ndim, nnol*ndim );
       }
-      if ( sri_on & SRI_VOLUMETRIC ) {
-        // C80.1: the reduced volumetric stiffness (1 point at the
-        // centroid) joins the reduced shear stiffness; the momentum
+      if ( sri_on & ( SRI_VOLUMETRIC | SRI_LAMBDA ) ) {
+        // C80.1: the reduced volumetric stiffness (C80.2 -lambda: the
+        // lambda*m*m^T part, sri_kappa = lambda), 1 point at the
+        // centroid, joins the reduced shear stiffness; the momentum
         // matrix and the D-c feedback below use their sum.
         double w_c = ( ndim==2 ? 4. : 8. ) * sri_detj_vol *
           sri_volfac_vol * sri_kappa;

@@ -1,0 +1,63 @@
+( C80.2 {F4 T6f, 2026-10-16} group_element_selective_reduced_integration -lambda. Timoshenko-Goodier cantilever L=10 D=1, plane strain {E'=E/{1-nu^2}, nu'=nu/{1-nu}}, E=1000 nu=0.3, parabolic tip shear P=1, exact clamp displacements, ONE row of 10 quad4 {the coarse bending case}. Analytic tip deflection v{L,D/2}=3.6679500000e+00 at node 22 {tol 6 %; measured 3.48985 = -4.86 %, an independent pure-displacement solve of the same element gives the same digits; Gauss -36.3 %, -yes -18.3 %, -volumetric +22.1 %}. Old GNU: rc 1, I do not know : -lambda. )
+
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_stress
+end_initia
+mesh -fixed_in_space -fixed_in_space
+inertia_apply -no
+convection_apply -no
+node 1 0 -0.5
+node 2 1 -0.5
+node 3 2 -0.5
+node 4 3 -0.5
+node 5 4 -0.5
+node 6 5 -0.5
+node 7 6 -0.5
+node 8 7 -0.5
+node 9 8 -0.5
+node 10 9 -0.5
+node 11 10 -0.5
+node 12 0 0.5
+node 13 1 0.5
+node 14 2 0.5
+node 15 3 0.5
+node 16 4 0.5
+node 17 5 0.5
+node 18 6 0.5
+node 19 7 0.5
+node 20 8 0.5
+node 21 9 0.5
+node 22 10 0.5
+element 1 -quad4 1 2 12 13
+element 2 -quad4 2 3 13 14
+element 3 -quad4 3 4 14 15
+element 4 -quad4 4 5 15 16
+element 5 -quad4 5 6 16 17
+element 6 -quad4 6 7 17 18
+element 7 -quad4 7 8 18 19
+element 8 -quad4 8 9 19 20
+element 9 -quad4 9 10 20 21
+element 10 -quad4 10 11 21 22
+bounda_dof 0 1 -velx
+bounda_time 0 0. 0 10. 0
+bounda_dof 1 1 -vely
+bounda_time 1 0. 0.00585 10. 0.00585
+bounda_dof 2 12 -velx
+bounda_time 2 0. -0 10. -0
+bounda_dof 3 12 -vely
+bounda_time 3 0. 0.00585 10. 0.00585
+bounda_force 4 11 -vely
+bounda_time 4 0. 0.5 10. 0.5
+bounda_force 5 22 -vely
+bounda_time 5 0. 0.5 10. 0.5
+group_type 0 -materi
+group_materi_elasti_young 0 1000.0
+group_materi_elasti_poisson 0 0.3
+group_materi_memory 0 -updated_linear
+group_element_selective_reduced_integration 0 -lambda
+control_timestep 10 1. 1.
+target_item 0 -node_dof 22 -vely
+target_value 0 3.667950000000e+00 2.2e-01
+end_data

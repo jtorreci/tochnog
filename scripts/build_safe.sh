@@ -2090,18 +2090,29 @@ run_ok "$T2026" reduced_quad9_maximal1
 run_ok "$T2026" reduced_quad4_axisym1
 run_ok "$T2026" reduced_default_factor1
 # F4 T6f C80.1 (2026-10-16): group_element_selective_reduced_integration
-#   -volumetric / -both (GNU-only extension; -yes unchanged, covered by
-#   the qsri/qsri3d families). -volumetric = B-bar: volumetric part
+#   -volumetric (GNU-only extension; -yes unchanged, covered by the
+#   qsri/qsri3d families). -volumetric = B-bar: volumetric part
 #   kappa*m*m^T at 1 centroid point, deviatoric part full Gauss, B-bar
 #   stored stress. Analytic targets: Lame cylinder plane strain nu 0.49 /
 #   0.4999 (quad4 and one hex8 layer, u_r(a) 0.5 %, sigma_theta(a) 6 %;
-#   Gauss -4 % / -80 %), plane-strain Timoshenko-Goodier cantilever 40x4
-#   nu 0.49 with -both (4.9 %; Gauss -41 %). Old GNU: rc 1, "I do not
-#   know : -volumetric" / "-both".
+#   Gauss -4 % / -80 %). Old GNU: rc 1, "I do not know : -volumetric".
 run_ok "$T2026" sri_volumetric_lame049_1
 run_ok "$T2026" sri_volumetric_lame04999_1
 run_ok "$T2026" sri_volumetric_hex8_lame1
-run_ok "$T2026" sri_both_cantilever1
+# F4 T6f C80.2 (2026-10-16): -lambda (Hughes 1977 lambda/mu split: only
+#   lambda*m*m^T at the centroid point, the 2*mu part full Gauss;
+#   isotropic elastic only) and removal of the C80.1 value -both.
+#   Analytic targets: Lame cylinder nu 0.4999 8x16 (u_r(a) 0.5 %,
+#   measured -0.24 %; sigma_theta(a) 1.2 %, measured -0.14 %), coarse
+#   plane-strain Timoshenko-Goodier cantilever 10x1 nu 0.3 (tip v 6 %,
+#   measured -4.86 %; Gauss -36 %, -volumetric +22 %). Expected errors:
+#   -both rejected by the input reader, -lambda on a transversely
+#   isotropic group refused. Old GNU: rc 1 "I do not know : -lambda";
+#   -both accepted (rc 0).
+run_ok "$T2026" sri_lambda_lame04999_1
+run_ok "$T2026" sri_lambda_cantilever1
+expected_error_ok "$T2026" sri_both_removed_error1
+expected_error_ok "$T2026" sri_lambda_anisotropic_error1
 
 # ---------------------------------------------------------------------
 # Sub-sprint materi_stress_force, lote 2 (integracion 2D quad4/quad9):

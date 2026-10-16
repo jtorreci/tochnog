@@ -982,6 +982,18 @@ void input( )
         if ( db_type(idat)==INTEGER ) {
           if ( str[0]=='-' ) {
             itmp = db_number( &str[1] );
+            if ( itmp<0 && idat==GROUP_ELEMENT_SELECTIVE_REDUCED_INTEGRATION &&
+                 !strcmp(str,"-both") ) {
+              // C80.2 (2026-10-16): the C80.1 value -both (shear terms
+              // and volumetric part at the centroid point) was removed
+              // (never better than -volumetric, too soft in coarse
+              // bending).
+              pri( "\nError in data part." );
+              pri( "group_element_selective_reduced_integration -both was "
+                "removed; use -lambda (elastic, bending-dominated) or "
+                "-volumetric (general) instead." );
+              exit(TN_EXIT_STATUS);
+            }
             if ( itmp<0 ) {
               pri( "\nError in data part." );
               pri( "I do not know ", str );

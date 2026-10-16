@@ -5569,10 +5569,11 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   // C80: -reduced value of group_integration_method (manual 6.620)
   strcpy(name[REDUCED],"reduced");
 
-  // C80.1: -volumetric / -both values of
-  // group_element_selective_reduced_integration (GNU-only extension)
+  // C80.1 / C80.2: -volumetric / -lambda values of
+  // group_element_selective_reduced_integration (GNU-only extension;
+  // the C80.1 -both value was removed, input.cc rejects it)
   strcpy(name[VOLUMETRIC],"volumetric");
-  strcpy(name[BOTH],"both");
+  strcpy(name[LAMBDA],"lambda");
 
   strcpy(name[LU],"lu");
 

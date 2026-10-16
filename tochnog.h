@@ -1662,11 +1662,13 @@ enum {
   // tochnog-mod.h stay in sync).
   REDUCED,
   GROUP_INTEGRATION_METHOD_REDUCED_FACTOR,
-  // group_element_selective_reduced_integration -volumetric / -both
-  // (GNU-only extension, C80.1 F4 T6f 2026-10-16). Enum append keeps
-  // existing values stable (tochnog.h and tochnog-mod.h stay in sync).
+  // group_element_selective_reduced_integration -volumetric (C80.1) /
+  // -lambda (C80.2; replaces the removed -both IN PLACE so the
+  // numbering is unchanged) (GNU-only extension, F4 T6f 2026-10-16).
+  // Enum append keeps existing values stable (tochnog.h and
+  // tochnog-mod.h stay in sync).
   VOLUMETRIC,
-  BOTH,
+  LAMBDA,
   LAST_DUMMY }; // keep LAST_DUMMY always the last one
 
 #define MDAT LAST_DUMMY+DATA_ITEM_SIZE  // reserve space for unknowns
@@ -2416,6 +2418,8 @@ long int  stress_indx( long int idim, long int jdim );
   // 1 centroid point
 #define SRI_SHEAR 1
 #define SRI_VOLUMETRIC 2
+  // C80.2: lambda*m*m^T part at 1 centroid point (-lambda)
+#define SRI_LAMBDA 4
 long int  sri_active( long int element, long int element_group,
             long int name, long int nnol );
 double    sri_stress_recovery_weight( long int sri, long int name,
