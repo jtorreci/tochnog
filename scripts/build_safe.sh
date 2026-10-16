@@ -2075,6 +2075,20 @@ else check_fail "bicg_breakdown_lu_retry1" "breakdown warning or error block pri
 #   1e-16) accepted iterates 4.0e-5 relative off the direct solution
 #   (velx 9.77555956992e-07); target = SuperLU 9.77517060814e-07 +- 1e-13.
 run_ok "$T2026" bicg_relative_stop1
+# F4 T6f C80 (2026-10-16): group_integration_method -reduced (manual
+#   6.620/6.621). quad4/hex8: 2 points per direction at iso +-1/f, equal
+#   weights; quad9 default: Lobatto, -minimal: 2x2 Gauss; recovery =
+#   physical linear fit + mean; axisymmetric element on the axis: Gauss.
+#   Targets = Professional 02-08-2026 node_dof (4e-6); the no-record test
+#   checks the GNU manual default f=10 (the Professional applies 1).
+#   Old GNU: rc 1, "I do not know : -reduced".
+run_ok "$T2026" reduced_quad4_f2_1
+run_ok "$T2026" reduced_quad4_f10_1
+run_ok "$T2026" reduced_hex8_f2_1
+run_ok "$T2026" reduced_quad9_minimal1
+run_ok "$T2026" reduced_quad9_maximal1
+run_ok "$T2026" reduced_quad4_axisym1
+run_ok "$T2026" reduced_default_factor1
 
 # ---------------------------------------------------------------------
 # Sub-sprint materi_stress_force, lote 2 (integracion 2D quad4/quad9):

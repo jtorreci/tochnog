@@ -1647,6 +1647,12 @@ enum {
   // tochnog-mod.h stay in sync).
   ELEMENT_NORMAL,
   UPDATED_JAUMANN,
+  // group_integration_method -reduced + group_integration_method_reduced_
+  // factor (manual Professional 6.620/6.621, C80 F4 T6f 2026-10-16).
+  // Enum append keeps existing values stable (tochnog.h and
+  // tochnog-mod.h stay in sync).
+  REDUCED,
+  GROUP_INTEGRATION_METHOD_REDUCED_FACTOR,
   LAST_DUMMY }; // keep LAST_DUMMY always the last one
 
 #define MDAT LAST_DUMMY+DATA_ITEM_SIZE  // reserve space for unknowns
@@ -1780,6 +1786,9 @@ extern long int disp_primary_reference;
   // is 1 for the Lobatto tensor rules (C79). Thread local (polynom.cc).
 extern thread_local long int stress_recovery_gauss;
 extern thread_local long int stress_recovery_lobatto;
+  // C80: iso coordinate magnitude 1/f of the quad4/hex8 -reduced points
+  // (0 for every other rule); read by the nodal recovery fit (miscel.cc)
+extern thread_local double stress_recovery_reduced_iso;
 
   // Nodal stress recovery (2026-09-15, Professional alignment): 1 when the
   // stress dofs are a PURE recovered field (Lagrangian: no convection of
@@ -2047,6 +2056,7 @@ void      input_skip_comment( char str[] );
 long int  integration_gauss( long int niso, double iso[], double weight_iso[]);
 long int  integration_lobatto( long int niso, double iso[], 
             double weight_iso[] );
+double    integration_reduced_factor( long int element_group );
 void      interpolate_geometry( long int geometry_entity[],
             long int node_numbers[], long int n,
             double test_coord[], double tmp_node[],

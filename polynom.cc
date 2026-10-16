@@ -35,6 +35,30 @@
 // parallel threads and one group can mix rules (C71 on-axis Gauss).
 thread_local long int stress_recovery_gauss = 0;
 thread_local long int stress_recovery_lobatto = 0;
+// C80 (F4 T6f, 2026-10-16): 1/f, the iso coordinate magnitude of the
+// quad4/hex8 -reduced points, when the rule just resolved by pol() is
+// that rule (0 otherwise). The recovery fit (miscel.cc) places its points
+// there; thread local like the two flags above.
+thread_local double stress_recovery_reduced_iso = 0.;
+
+// Weighting factor f of group_integration_method -reduced (manual
+// Professional 6.620/6.621: "a weighted combination of lobatto and 1-point
+// cell centered integration"; f = 1 is Lobatto, f infinite 1-point; "Default
+// the factor is set to 10"). The GNU follows the manual default 10 when the
+// record is absent; the Professional 02-08-2026 applies 1 (deliberate class
+// A divergence, owner 2026-10-16, DIVERGENCES C80). f <= 0 is refused.
+double integration_reduced_factor( long int element_group )
+
+{
+  long int ldum=0, idum[1];
+  double factor=10.;
+
+  db( GROUP_INTEGRATION_METHOD_REDUCED_FACTOR, element_group, idum, &factor,
+    ldum, VERSION_NORMAL, GET_IF_EXISTS );
+  if ( !( factor>0. ) )
+    db_error( GROUP_INTEGRATION_METHOD_REDUCED_FACTOR, element_group );
+  return factor;
+}
 
 // 1 when the stress dofs are a pure recovered field (Lagrangian, no
 // convection of the stress dofs). Set by general() from the same condition
@@ -56,9 +80,10 @@ void pol( long int element, long int element_group,
   long int idim=0, jdim=0, ixi=0, ieta=0, izeta=0, nxi=1, neta=1, nzeta=1,
     ipoint=0, npol=0, length=0, axisymmetric=-NO, npoint_per_dir=0,
     inol_xi=0, inol_eta=0, inol_zeta=0, nnol_xi=1, nnol_eta=1, nnol_zeta=1, 
-    inol=0, istrain=0, indx=0, ldum=0, rule_lobatto=0,
+    inol=0, istrain=0, indx=0, ldum=0, rule_lobatto=0, rule_reduced=0,
     integration_method=-GAUSS, integration_points=-MINIMAL;
   double detj=0., radius=0., fac=0., L1=0., L2=0., L3=0., L4=0.,
+    reduced_iso=0.,
     ddum[1], iso[MPOINT], xi[MPOINT], 
     eta[MPOINT], zeta[MPOINT], weight_iso[MPOINT], 
     weight_xi[MPOINT], weight_eta[MPOINT], weight_zeta[MPOINT], 
@@ -69,6 +94,7 @@ void pol( long int element, long int element_group,
 
   stress_recovery_gauss = 0;
   stress_recovery_lobatto = 0;
+  stress_recovery_reduced_iso = 0.;
 
   db( GROUP_AXISYMMETRIC, element_group, &axisymmetric, ddum, ldum, 
     VERSION_NORMAL, GET_IF_EXISTS );
@@ -566,8 +592,11 @@ void pol( long int element, long int element_group,
     if ( sri_active( element, element_group, name, nnol ) )
       integration_method = -GAUSS;
     if ( integration_points==-NORMAL ) integration_points = -MAXIMAL;
+    if ( integration_method==-REDUCED )
+      reduced_iso = 1. / integration_reduced_factor( element_group );
     build_rule:
     rule_lobatto = 0;
+    rule_reduced = 0;
     npoint = 1;
     for ( idim=0; idim<MDIM; idim++ ) {
       if ( idim>ndim-1 )
@@ -587,6 +616,22 @@ void pol( long int element, long int element_group,
         integration_lobatto( npoint_per_dir, iso, weight_iso );
         stress_recovery_gauss = 0;
         rule_lobatto = 1;
+      }
+      else if ( integration_method==-REDUCED && npol==2 &&
+                npoint_per_dir==2 && ( name==-QUAD4 || name==-HEX8 ) ) {
+        // C80 (F4 T6f, 2026-10-16): the quad4/hex8 -reduced rule of the
+        // Professional 02-08-2026 (135 probes, residual <= 2e-13): 2 points
+        // per direction at iso +-1/f with equal weights (1 each on
+        // [-1,1]^n, i.e. 1/2 here). Every other -reduced case falls to
+        // the branches below: 1 point (bar2 default, quad4/hex8 -minimal)
+        // = Gauss; npol points (bar2 -maximal, bar3/quad9/hex27 default)
+        // = Lobatto, factor ignored; bar3/quad9/hex27 -minimal = Gauss.
+        iso[0] = -reduced_iso;
+        iso[1] =  reduced_iso;
+        weight_iso[0] = 0.5;
+        weight_iso[1] = 0.5;
+        stress_recovery_gauss = 1;
+        rule_reduced = 1;
       }
       else if ( npoint_per_dir<npol ) {
         integration_gauss( npoint_per_dir, iso, weight_iso );
@@ -622,6 +667,14 @@ void pol( long int element, long int element_group,
     // stress block must visit the h=0 nodes too: stress_recovery_gauss).
     stress_recovery_lobatto = rule_lobatto;
     if ( rule_lobatto ) stress_recovery_gauss = ( nxi<npol ) ? 1 : 0;
+    // C80: every -reduced rule of the quad and hex elements is recovered
+    // by the Professional with the physical linear fit 1,x,y(,z) at its
+    // points (kind 1, miscel.cc), the 3x3(x3) Lobatto points of the
+    // quad9/hex27 included (unlike -lobatto: the point value); the bars
+    // keep the -lobatto / Gauss recovery (unmeasured, BACKLOG C67).
+    if ( integration_method==-REDUCED && rule_lobatto &&
+         ( name==-QUAD9 || name==-HEX27 ) ) stress_recovery_gauss = 1;
+    stress_recovery_reduced_iso = rule_reduced ? reduced_iso : 0.;
     if ( npoint>MPOINT ) {
       cout << "\nError: too many int. points in element " << element << ".\n";
       exit(TN_EXIT_STATUS);
@@ -672,6 +725,19 @@ void pol( long int element, long int element_group,
       for ( ipoint=0; ipoint<npoint; ipoint++ ) {
         matrix_ab( &h[ipoint*nnol], new_coord, coord_ip, 1, nnol, ndim );
         if ( scalar_dabs(coord_ip[0])<EPS_COORD ) {
+          integration_method = -GAUSS;
+          goto build_rule;
+        }
+      }
+    }
+    // C80 (F4 T6f, 2026-10-16): with -reduced the Professional 02-08-2026
+    // integrates an axisymmetric quad4 with a NODE on the axis with the
+    // 2x2 Gauss rule, also when the reduced points are off the axis
+    // (factor 2: element touching r=0 at iso +-0.577, the others at
+    // +-0.5); factor 1 puts the points on the axis (same NaN as C71).
+    if ( axisymmetric==-YES && rule_reduced ) {
+      for ( inol=0; inol<nnol; inol++ ) {
+        if ( scalar_dabs(new_coord[inol*ndim+0])<EPS_COORD ) {
           integration_method = -GAUSS;
           goto build_rule;
         }

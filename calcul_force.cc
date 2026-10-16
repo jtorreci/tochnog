@@ -522,6 +522,8 @@ static long int msf_border_nodes_quad9[] = {
 //   - integration_method default -GAUSS; -LOBATTO override (the
 //     node-containing rules); an axisymmetric Lobatto element touching
 //     the axis switches to Gauss as in pol() (C71 replica, C79);
+//     -REDUCED: quad4/hex8 points at iso +-1/f, the other elements
+//     Gauss/Lobatto, Gauss on the axis (C80 replica);
 //   - the SRI quad4/hex8 switches the FULL rule to GAUSS (2x2 / 2x2x2;
 //     polynom.cc:421; the same single source sri_active);
 //   - axisymmetric elements use the same default rule (K20, F4 T4
@@ -538,8 +540,9 @@ static void msf_element_rule( long int element, long int element_group,
 
 {
   long int integration_method=-GAUSS, integration_points=-MAXIMAL,
-    axisymmetric=-NO, ldum=0, idim=0, rule_lobatto=0, ldum_node[1];
-  double ddum[1];
+    axisymmetric=-NO, ldum=0, idim=0, rule_lobatto=0, rule_reduced=0,
+    ldum_node[1];
+  double ddum[1], reduced_iso=0.;
 
   // the per-direction point counts: pol() integrates the directions
   // idim>=ndim with ONE point (no extent), so the untouched directions
@@ -572,8 +575,11 @@ static void msf_element_rule( long int element, long int element_group,
   if ( integration_points==-NORMAL ) integration_points = -MAXIMAL;
   if ( sri_active( element, element_group, name, nnol ) )
     integration_method = -GAUSS;
+  if ( integration_method==-REDUCED )
+    reduced_iso = 1. / integration_reduced_factor( element_group );
   build_rule:
   rule_lobatto = 0;
+  rule_reduced = 0;
   for ( idim=0; idim<ndim; idim++ ) {
     nper[idim] = ( integration_points==-MINIMAL ? npol-1 : npol );
     if      ( integration_method==-GAUSS )
@@ -581,6 +587,16 @@ static void msf_element_rule( long int element, long int element_group,
     else if ( integration_method==-LOBATTO ) {
       integration_lobatto( nper[idim], iso[idim], weight[idim] );
       rule_lobatto = 1;
+    }
+    else if ( integration_method==-REDUCED && npol==2 && nper[idim]==2 &&
+              ( name==-QUAD4 || name==-HEX8 ) ) {
+      // C80 replica of pol(): quad4/hex8 -reduced points at iso +-1/f,
+      // equal weights; the other -reduced cases fall to Gauss/Lobatto
+      iso[idim][0] = -reduced_iso;
+      iso[idim][1] =  reduced_iso;
+      weight[idim][0] = 0.5;
+      weight[idim][1] = 0.5;
+      rule_reduced = 1;
     }
     else if ( nper[idim]<npol )
       integration_gauss( nper[idim], iso[idim], weight[idim] );
@@ -617,6 +633,20 @@ static void msf_element_rule( long int element, long int element_group,
           integration_method = -GAUSS;
           goto build_rule;
         }
+      }
+    }
+  }
+  // C80 replica of pol(): an axisymmetric -reduced quad4 with a node on
+  // the axis is integrated with the Gauss rule (Professional 02-08-2026)
+  if ( axisymmetric==-YES && ndim==2 && rule_reduced ) {
+    long int el[1+MNOL], length_el=0, inol=0;
+    double xn[MDIM];
+    db( ELEMENT, element, el, ddum, length_el, VERSION_NORMAL, GET );
+    for ( inol=0; inol<nnol && inol<length_el-1; inol++ ) {
+      db( NODE, el[1+inol], ldum_node, xn, ldum, VERSION_NORMAL, GET );
+      if ( scalar_dabs(xn[0])<EPS_COORD ) {
+        integration_method = -GAUSS;
+        goto build_rule;
       }
     }
   }
