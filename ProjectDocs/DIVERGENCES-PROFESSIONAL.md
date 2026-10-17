@@ -15,9 +15,9 @@ Single index of every known difference between the GNU version and Tochnog Profe
 |---|---|---|
 | A | deliberate divergence decided by the project owner | 32 |
 | B | known difference, not decided yet or scheduled (F3/F4) | 42 |
-| C | GNU extension or input-dialect difference | 17 |
+| C | GNU extension or input-dialect difference | 18 |
 | D | Professional-suspect: the Professional contradicts its own manual or the analytic answer | 1 |
-| | **total** | **92** |
+| | **total** | **93** |
 
 Ids: `C*`/`B*` are [BACKLOG-OPEN-ISSUES.md](BACKLOG-OPEN-ISSUES.md) items, `K*` are clusters of [AUDIT-ALL-VARIABLES-2026.md](AUDIT-ALL-VARIABLES-2026.md); other ids are local to this index. Several class A items are also Professional-suspect (noted in their status). Professional values are from the binary 02-08-2026 unless stated.
 
@@ -142,6 +142,7 @@ Records or spellings that only one program accepts, or GNU choices where the Pro
 | DISTRI | `control_distribute -normal` random sequence (`distri2`) | Valid N(1, 2e-3) from the GNU generator (0.998933). | Its own generator (0.999774); the target encodes it. | Not a defect; no fix. | 2026-10-06 | [user/control_distribute](manual-user/control_distribute.md); [dev/control_distribute](manual-developer/control_distribute.md); BACKLOG C32 |
 | PRINT-DECISIONS | print records where the Professional manual is silent | Documented GNU choices: `control_print_beam_force_moment` (selection tolerance, zero snap, append, beam-plane axes), `control_print_dof_line` defaults, `control_print_dof_point` outside the mesh, `control_print_node` file names and no `post_calcul_label`, `control_print_node_zero` exact compare, `force_point` location tolerance (~1e-7). | Not documented / not measured. | Documented GNU decisions; kept. | not recorded | Differences sections of the listed user pages |
 | INT-DOT | integer value written with a decimal point outside a `-ra` range (`bounda_dof 0 9.0 -velx`) | Read with `atoi` (9). Inside a range it is an input error since F4 T6f. | Input error (`I don't know what to do with : 9.0`). | Input-dialect tolerance found by the F4 T6f range audit; not changed (outside the work unit, corpus impact not measured). | 2026-10-12 | [user/ranges](manual-user/ranges.md); [dev/ranges](manual-developer/ranges.md) |
+| C54-TYPE | run-time record name of `post_node`, `post_integrate`, `control_repeat_save`, `control_repeat_until_item`, `control_print_element` naming an INTEGER record (`node_bounded`) | Input error: `Error: a DOUBLE PRECISION data item is required here, not the INTEGER item: node_bounded` + `Error detected for data item : <record>` (F4 T6f LOW queue Q4, BACKLOG C54; before, a 1-value integer dummy overflowed). | `post_node` / `post_integrate`: result 0 without a message; `control_repeat_save`: `Error detected for data item : node_bounded`; `control_repeat_until_item`: its record is read differently (the same input does not parse). | GNU choice where the manual is silent (owner plan 2026-10-17: mechanical type check with a clear error). | 2026-10-17 | [user/data_item_type_check](manual-user/data_item_type_check.md); [dev/db_buffer_contract](manual-developer/db_buffer_contract.md); BACKLOG C54 |
 
 ## Maintenance
 

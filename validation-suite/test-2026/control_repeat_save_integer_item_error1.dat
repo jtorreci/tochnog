@@ -1,0 +1,33 @@
+( C54 {F4 T6f LOW queue Q4, 2026-10-17}: expected-error test. control_repeat_save names
+  an INTEGER record; the GNU reads that record name at run time into a
+  DOUBLE buffer with a 1-value integer dummy, so before C54 the INTEGER
+  values overflowed the dummy {stack overflow, undefined output, rc 0}.
+  Now the type is checked and the run stops with a clear error.
+  EXPECTED_ERROR: Error: a DOUBLE PRECISION data item is required here )
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_displacement
+materi_stress
+end_initia
+node 1 0 0
+node 2 1 0
+node 3 0 1
+node 4 1 1
+element 1 -quad4 1 2 3 4
+element_group 1 0
+group_type 0 -materi
+group_materi_elasti_young 0 100.
+group_materi_elasti_poisson 0 0.
+group_materi_memory 0 -total_linear
+bounda_dof 10 -ra 1 3 -ra -velx
+bounda_time 10 0.
+bounda_dof 11 1 -vely
+bounda_time 11 0.
+bounda_force 12 -ra 2 4 -ra -velx
+bounda_time 12 5.
+
+control_timestep 10 1. 1.
+control_repeat 10 1 10
+control_repeat_save 10 -node_bounded 2 0
+end_data

@@ -32,6 +32,13 @@ void print_element( long int data_item_name )
   set_swit(-1,-1,"print_element");
 
   db( ICONTROL, 0, &icontrol, ddum, ldum, VERSION_NORMAL, GET );
+// C54 (F4 T6f LOW queue Q4): the run-time record name is read into a
+  // DOUBLE buffer with a 1-value integer dummy; an INTEGER record would
+  // overflow the dummy, so it is an input error.
+  if ( db_type(data_item_name)!=DOUBLE_PRECISION ) {
+    pri( "Error: a DOUBLE PRECISION data item is required here, not the INTEGER item", db_name(data_item_name) );
+    db_error( CONTROL_PRINT_ELEMENT, icontrol );
+  }
   if ( !db( CONTROL_PRINT_FILTER, icontrol, print_filter_index, ddum, 
       length_print_filter_index, VERSION_NORMAL, GET_IF_EXISTS ) ) {
     print_filter_index[0] = -ALL; length_print_filter_index = 1;

@@ -575,3 +575,7 @@ page lists its own in "Differences with the Professional version".
 ## F4 T6f — K21 WU2 group_materi_stokes (2026-10-12)
 
 - [group_materi_stokes](group_materi_stokes.md) — general.cc general(): `stokes` default -YES, read with `db(GROUP_MATERI_STOKES, element_group, ...)` (before -NO at index 0); only `conv_part` of MATERI_VELOCITY depends on it. Tests stokes_default1/group1/group2; test-2014 cmat_gate rewritten. Residual: C72 convected IP stress.
+
+## F4 T6f — LOW queue (2026-10-17)
+
+- [db_buffer_contract](db_buffer_contract.md) — section "Run-time record names": `db_type()` check of the run-time record names of post.cc / print_el.cc / repeat.cc (BACKLOG C54); the audit REVIEW sites already safe.

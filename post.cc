@@ -218,6 +218,13 @@ void post( long int task )
   for( ipost=0; ipost<=max_post; ipost++ ) {
     if ( db_active_index( POST_NODE, ipost, VERSION_NORMAL ) ) {
       db( POST_NODE, ipost, post_node, ddum, ldum, VERSION_NORMAL, GET );
+// C54 (F4 T6f LOW queue Q4): the run-time record name is read into a
+      // DOUBLE buffer with a 1-value integer dummy; an INTEGER record would
+      // overflow the dummy, so it is an input error.
+      if ( db_type(post_node[0])!=DOUBLE_PRECISION ) {
+        pri( "Error: a DOUBLE PRECISION data item is required here, not the INTEGER item", db_name(post_node[0]) );
+        db_error( POST_NODE, ipost );
+      }
       npost_node = 0;
       array_set( post_node_result, 0., DATA_ITEM_SIZE );
       parallel_sys_routine( &parallel_post_node );
@@ -858,6 +865,13 @@ void post_integrate( void )
       data_item_name = post_integrate[0];
       data_item_index = post_integrate[1];
       data_item_number = post_integrate[2];
+// C54 (F4 T6f LOW queue Q4): the run-time record name is read into a
+      // DOUBLE buffer with a 1-value integer dummy; an INTEGER record would
+      // overflow the dummy, so it is an input error.
+      if ( db_type(data_item_name)!=DOUBLE_PRECISION ) {
+        pri( "Error: a DOUBLE PRECISION data item is required here, not the INTEGER item", db_name(data_item_name) );
+        db_error( POST_INTEGRATE, ipost );
+      }
       if ( db_active_index( data_item_name, data_item_index, VERSION_NORMAL ) ) {
         if ( data_item_number<0 ) {
           array_member(dof_label,data_item_number,nuknwn,number);

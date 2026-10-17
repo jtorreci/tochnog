@@ -155,4 +155,35 @@ Scanned 3450 calls in HEAD `dca225a`: 1972 `db()`, 129
   "Length too small" error instead of silently ignored values.
 - `GROUP_INTERFACE_MATERI_ELASTI_STIFFNESS` is assigned twice in
   `database.cc` (3, then `DATA_ITEM_SIZE`).
-- A type check for run-time record names (BACKLOG C54).
+
+## Run-time record names (BACKLOG C54, F4 T6f LOW queue Q4, 2026-10-17)
+
+The `--all` REVIEW list of `scripts/audit_db_buffers.py` holds the
+`db( name, ... )` reads whose record name is a run-time value. The
+user-chosen names read into a DOUBLE buffer with a 1-value integer dummy
+now check `db_type(name)!=DOUBLE_PRECISION` first and stop with
+`pri( "Error: a DOUBLE PRECISION data item is required here, not the
+INTEGER item", db_name(name) )` + `db_error( <record>, <index> )`:
+
+| Site | Record in the error |
+|------|---------------------|
+| `post.cc` `post()` before `parallel_post_node()` (`post_node[0]`) | `POST_NODE` |
+| `post.cc` `post_integrate()` | `POST_INTEGRATE` |
+| `print_el.cc` `print_element()` | `CONTROL_PRINT_ELEMENT` (already refused earlier by the input check; defensive) |
+| `repeat.cc` `control_repeat_save_data()` | `CONTROL_REPEAT_SAVE` |
+| `repeat.cc` `repeat()` until branch | `CONTROL_REPEAT_UNTIL_ITEM` |
+
+Already safe (no change): `data.cc` arithmetic (an INTEGER
+`control_data_arithmetic` item was already an error), `data.cc`
+`change_dataitem` (same) and the clone copy (type-dispatched), `data.cc`
+`data_copy_apply()` (type-dispatched, `DATA_ITEM_SIZE` buffers),
+`data.cc` spatial resets and `calcul.cc` `type_post_dof_calcul[]` (fixed
+internal DOUBLE records). Outside the C54 list and not changed:
+`print_da.cc`, `print_hi.cc`, `print_node.cc`, `area.cc`, `create.cc`,
+`general.cc`, `geometry.cc`, `materi.cc`, `error.cc` (they dispatch on
+the type or name internal records; the script still lists them because
+it does not see the dispatch). Tests (expected error, RED rc 0 on the
+pre-change binary): `test-2026/post_node_integer_item_error1`,
+`post_integrate_integer_item_error1`,
+`control_repeat_save_integer_item_error1`,
+`control_repeat_until_integer_item_error1`.

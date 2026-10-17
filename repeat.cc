@@ -56,6 +56,13 @@ static void control_repeat_save_data( long int icontrol )
     data_item_name   = control_repeat_save[3*idata];
     data_item_index  = control_repeat_save[3*idata+1];
     data_item_number = control_repeat_save[3*idata+2];
+// C54 (F4 T6f LOW queue Q4): the run-time record name is read into a
+    // DOUBLE buffer with a 1-value integer dummy; an INTEGER record would
+    // overflow the dummy, so it is an input error.
+    if ( db_type(data_item_name)!=DOUBLE_PRECISION ) {
+      pri( "Error: a DOUBLE PRECISION data item is required here, not the INTEGER item", db_name(data_item_name) );
+      db_error( CONTROL_REPEAT_SAVE, icontrol );
+    }
     if ( db_active_index( data_item_name, data_item_index, VERSION_NORMAL ) ) {
       length = db_len( data_item_name, data_item_index, VERSION_NORMAL );
       val = get_new_dbl(length);
@@ -185,6 +192,13 @@ long int repeat( long int &start_control )
     data_item_name = control_repeat_until_item[2];
     data_item_index = control_repeat_until_item[3];
     data_item_number = control_repeat_until_item[4];
+// C54 (F4 T6f LOW queue Q4): the run-time record name is read into a
+    // DOUBLE buffer with a 1-value integer dummy; an INTEGER record would
+    // overflow the dummy, so it is an input error.
+    if ( db_type(data_item_name)!=DOUBLE_PRECISION ) {
+      pri( "Error: a DOUBLE PRECISION data item is required here, not the INTEGER item", db_name(data_item_name) );
+      db_error( CONTROL_REPEAT_UNTIL_ITEM, icontrol );
+    }
     if ( db_active_index( data_item_name, data_item_index, VERSION_NORMAL ) ) {
       db( data_item_name, data_item_index, idum, val, length, VERSION_NORMAL, GET );
       if ( data_item_number<0 ) {

@@ -2224,6 +2224,15 @@ expected_error_ok "$T2026" post_element_force_1d_length_error1
 run_ok "$T2026" node_rhside_post_pass_node_force1
 run_ok "$T2026" node_rhside_post_pass_node_mass1
 run_ok "$T2026" node_rhside_post_pass_bounda_force1
+# F4 T6f LOW queue Q4 / C54 (2026-10-17): a run-time record name read
+#   into a DOUBLE buffer (post_node, post_integrate, control_repeat_save,
+#   control_repeat_until_item) must name a DOUBLE PRECISION record; an
+#   INTEGER one (node_bounded) is an input error (before: overflow of a
+#   1-value dummy, rc 0 or an endless repeat).
+expected_error_ok "$T2026" post_node_integer_item_error1
+expected_error_ok "$T2026" post_integrate_integer_item_error1
+expected_error_ok "$T2026" control_repeat_save_integer_item_error1
+expected_error_ok "$T2026" control_repeat_until_integer_item_error1
 
 # ---------------------------------------------------------------------
 # Sub-sprint materi_stress_force, lote 2 (integracion 2D quad4/quad9):
