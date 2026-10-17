@@ -3089,6 +3089,9 @@ void post_element_force_calculate( void )
       delete[] pef_vel_prev;
       pef_vel_prev = get_new_dbl( need );
       pef_vel_prev_len = need;
+      // C25 (F4 T6f LOW queue): a node inactive now and active later
+      // must read a zero previous velocity, not uninitialized memory
+      array_set( pef_vel_prev, 0., pef_vel_prev_len );
     }
     if ( !pef_vel_prev_init ) {
       array_set( pef_vel_prev, 0., pef_vel_prev_len );

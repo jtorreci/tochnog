@@ -240,6 +240,16 @@ and four zeros. `database.cc` keeps `data_length 5`, `fixed_length 0`
 post7, tpef_force10, force13/14 vs `b938b0f`: only the 1D record loses
 its four zeros.
 
+### `_inertia` previous-velocity snapshot (BACKLOG C25 item 1, 2026-10-17)
+
+`pef_vel_prev` (file-static in `post_element_force_calculate()`) is
+zeroed after every reallocation, not only on the first call: a node
+inactive at the refresh and active later read uninitialized memory as
+its previous velocity. No test: the read needs a node activated after
+the snapshot grew, and uninitialized memory is not deterministic; the
+change touches only those slots (active nodes are refilled from
+`NODE_DOF` right after), build_safe and the omen A/B unchanged.
+
 ### Pending
 
 - The Professional behaviour for trusses/beams/springs or interface
