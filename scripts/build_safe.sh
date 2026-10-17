@@ -2233,6 +2233,12 @@ expected_error_ok "$T2026" post_node_integer_item_error1
 expected_error_ok "$T2026" post_integrate_integer_item_error1
 expected_error_ok "$T2026" control_repeat_save_integer_item_error1
 expected_error_ok "$T2026" control_repeat_until_integer_item_error1
+# F4 T6f LOW queue Q6 / C58 (2026-10-17): control_restart keeps the
+#   interface and spring history, as the Professional 02-08-2026
+#   (interface -1.5 / 1.5 after the restart, fresh run -0.5 / 0.5;
+#   spring force 0.15 vs 0.05). Pinning tests (pass before and after).
+run_ok "$T2026" control_restart_interface_history1
+run_ok "$T2026" control_restart_spring_history1
 
 # ---------------------------------------------------------------------
 # Sub-sprint materi_stress_force, lote 2 (integracion 2D quad4/quad9):

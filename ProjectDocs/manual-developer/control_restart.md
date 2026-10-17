@@ -38,10 +38,20 @@ history records are untouched:
 - `ELEMENT_TRUSS_FORCE`: kept, = Professional (probe 1.5 in both).
 - `ELEMENT_INTPNT_MATERI_UNDRAINED_PRESSURE`: result = Professional
   (probe -9.75297 in both).
-- Not verified (BACKLOG C58): `ELEMENT_INTERFACE_INTPNT_STRAIN/_STRESS`,
-  `ELEMENT_INTERFACE_INTPNT_MATERI_TENSION_STATUS`,
-  `ELEMENT_INTERFACE_STRAIN_NORMAL`, `ELEMENT_CONTACTSPRING_FORCE`,
-  `ELEMENT_SPRING_STRAIN`, `ELEMENT_TENDON_STRAIN/_STRESS`,
+- Interface (`ELEMENT_INTERFACE_STRAIN_NORMAL`, `_FORCE_NORM`,
+  `_FORCE_TANG`, `_INTPNT_STRESS`, tension status) and spring
+  (`ELEMENT_SPRING_FORCE`, `-total_linear` and `-updated`): kept, =
+  Professional (F4 T6f LOW queue Q6, 2026-10-17, probes
+  `scratchpad/lowq/q6/`: the Professional keeps the accumulated history
+  too: interface -1.5 / 1.5 after a restart, fresh run -0.5 / 0.5;
+  spring 0.15 vs 0.05). Tests `test-2026/control_restart_interface_history1`,
+  `control_restart_spring_history1` (pass before and after: they pin
+  the behaviour). Side findings (not restart): the Professional writes
+  an `element_spring_strain` record the GNU lacks, and the GNU
+  `element_interface_intpnt_strain` holds the last step's increment
+  (SEGUIMIENTO PENDIENTE).
+- Not verified (deferred, class B C58): `ELEMENT_CONTACTSPRING_FORCE`,
+  `ELEMENT_TENDON_STRAIN/_STRESS`,
   `ELEMENT_INTPNT_MATERI_STRESS_EFFECTIVE` (damage).
 - `number_timesteps`: the Professional resets it; the GNU has no such
   record.

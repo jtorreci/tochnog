@@ -1,0 +1,41 @@
+( C58 {F4 T6f LOW queue Q6, 2026-10-17}: control_restart keeps the
+  interface history, as the Professional. Free quad4 interface {kn = kt
+  = 1000, -total_linear}, side 1 fixed, side 2 velx 1e-3 / vely -1e-3;
+  10 steps to t 1, control_restart, 5 steps to t 0.5. The Professional
+  02-08-2026 on this file keeps the accumulated interface strain over the
+  restart: normal stress -1.5 and shear 1.5 {a fresh 0.5 run gives -0.5 /
+  0.5}, node_rhside of node 2 0.75 / -0.75. The GNU = Professional; this
+  test pins it. Tolerance 4e-6 of max{|value|,1}. )
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_displacement
+materi_stress
+end_initia
+node 1 0 0
+node 2 1 0
+node 3 0 0
+node 4 1 0
+element 1 -quad4 1 2 3 4
+group_type 0 -materi
+group_interface 0 -yes
+group_interface_materi_memory 0 -total_linear
+group_interface_materi_elasti_stiffness 0 1.e3 1.e3
+bounda_dof 10 -ra 1 2 -ra -velx -vely
+bounda_time 10 0.
+bounda_dof 20 -ra 3 4 -ra -velx
+bounda_time 20 1.e-3
+bounda_dof 21 -ra 3 4 -ra -vely
+bounda_time 21 -1.e-3
+control_timestep 10 0.1 1.0
+control_restart 20 -yes
+control_timestep 30 0.1 0.5
+target_item 0 -element_interface_intpnt_stress 1 0
+target_value 0 -1.5 4.0e-06
+target_item 1 -element_interface_intpnt_stress 1 1
+target_value 1 1.5 4.0e-06
+target_item 2 -node_rhside 2 -velx
+target_value 2 0.75 4.0e-06
+target_item 3 -node_rhside 2 -vely
+target_value 3 -0.75 4.0e-06
+end_data

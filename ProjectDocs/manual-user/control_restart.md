@@ -55,6 +55,10 @@ gives sigyy -52.0833, eptyy -5e-3.
   record, so there is nothing to reset (output-only difference).
 - Element records outside the integration-point dofs: `element_truss_force`
   is kept by both binaries (probe: 1.5 in both), the undrained pressure
-  equals the Professional (probe). Interface, spring, contact-spring,
-  tendon and damage effective-stress records are not verified yet
-  (DIVERGENCES C58, BACKLOG C58).
+  equals the Professional (probe). The interface and spring history is
+  KEPT over a restart by both programs (2026-10-17 probes: interface
+  normal/shear stress -1.5 / 1.5 after a restart vs -0.5 / 0.5 in a
+  fresh run; spring force 0.15 vs 0.05, `-total_linear` and `-updated`),
+  pinned by `control_restart_interface_history1` /
+  `control_restart_spring_history1`. Contact-spring, tendon and damage
+  effective-stress records are not verified (deferred, DIVERGENCES C58).
