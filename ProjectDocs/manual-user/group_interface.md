@@ -262,5 +262,11 @@ is unchanged.
 - The normal component of `element_interface_intpnt_stress` follows the
   orientation of the interface element (its node order): the same
   compressed interface can report +10 or -10, while the Professional
-  always reports compression as negative (BACKLOG C60, open). The shear
-  component and the nodal results agree.
+  always reports compression as negative (BACKLOG C60, open). Measured
+  2026-10-17: it is not only the output sign. With a Mohr-Coulomb or
+  tension cut-off interface, two of the four node orders of the same
+  compressed interface are treated as OPEN by the GNU (normal stress 0),
+  while the Professional gives the same result for every order. Number
+  the interface nodes so that the GNU sees compression as positive
+  normal strain (check `element_interface_intpnt_stress`) until the
+  orientation rule is decided.

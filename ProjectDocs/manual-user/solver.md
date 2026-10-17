@@ -171,8 +171,9 @@ the SuperLU banner appears in the output (the direct solver ran).
   (decision 2026-10-15, SEGUIMIENTO Descarte); `-matrix_pardiso` is
   solved with SuperLU. Index:
   [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).
-- **Bi-CG breakdown on a singular system** (known difference, not decided;
-  BACKLOG C12). GNU: Prints the breakdown error each iteration, finishes
-  with rc 0 and a `.dbs`. Professional 02-08-2026: Prints "the BICG solver
-  did not converge" and stops without a `.dbs`. Status: Open, LOW. Index:
-  [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).
+- **Bi-CG breakdown on a singular system** (BACKLOG C12, closed
+  2026-10-17, no divergence): re-measured on an unsupported elasti7 mesh,
+  the Professional 02-08-2026 finishes with rc 0 and a `.dbs` (no
+  message); the GNU prints `Warning: iterative solver breakdown, system
+  solved with the direct SuperLU` (C77 fallback) and also finishes with
+  rc 0. Neither code detects the singular model.

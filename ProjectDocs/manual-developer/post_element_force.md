@@ -252,9 +252,12 @@ change touches only those slots (active nodes are refilled from
 
 ### Pending
 
-- The Professional behaviour for trusses/beams/springs or interface
-  groups inside the selection was not measured (GNU refuses them;
-  DIVERGENCES C84-REFUSE).
+- Trusses/beams/springs or interface groups inside the selection: the
+  GNU refuses them. Professional measured 2026-10-17 for a truss: it is
+  included (strip + truss on the section: 100 / 10 / -40 = truss 45 +
+  continuum 55); following it means adding the structural-element nodal
+  forces of the elements with a node on the section (BACKLOG C86, owner
+  decision; DIVERGENCES C84-REFUSE).
 - Hardcoded: the supported name lists in `post_element_force_calculate`
   (ndim 2: quad4/quad9 tensor, tria3/tria6/quad16 pol; ndim 3:
   hex8/hex27 tensor, tet4/tet10/prism6/prism15 pol).

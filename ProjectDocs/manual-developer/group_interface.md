@@ -597,4 +597,12 @@ interface_tension_status1.dat` in `build_safe.sh` (status lines + two-run
   component of `element_interface_intpnt_stress` follows the internal
   orientation (node order) of the element (+10 / +10 / -10 for the node
   orders `2 4 9 10` / `9 10 2 4` / `4 2 10 9`), while the Professional
-  writes -10 (compression negative) for all three.
+  writes -10 (compression negative) for all three. Re-scoped 2026-10-17
+  (F4 T6f LOW queue Q2, probes `scratchpad/lowq/c60/`): with
+  `_plasti_mohr_coul_direct` + `_tension_direct` the orders whose
+  numbering rule (`interface.cc` ~240, flip when `nodes[ns1] <
+  nodes[0]`) yields a negative normal strain under compression are
+  treated as OPEN (normal 0); the Professional orients geometrically when
+  continuum elements are attached (all orders equal) and by numbering for
+  a free interface, where an opened elastic interface carries 0. Owner
+  decision pending (BACKLOG C60).

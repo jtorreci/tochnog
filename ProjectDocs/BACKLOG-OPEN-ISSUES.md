@@ -574,7 +574,7 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
   in the interface-coupled path against the Professional dump.
 - **Effort**: **medium**.
 
-### C3. `gforce10` — 3D section face/arm sign limitation
+### C3. `gforce10` — 3D section face/arm sign limitation — RESOLVED 2026-10-11 (F4 T6a: sign; square-face tie class A C3)
 
 - **Corpus**: sfnet 197 (target recalibrated to the honest GNU value).
 - **Symptom**: `node_dof_calcul 5` value 9 (`mom1y_sig`): GNU returns `+5000`
@@ -609,7 +609,7 @@ acceptance evidence lives in `CORPUS-STALE-TARGETS.md` and
   The sfnet copy of `gforce10` (on omen, not versioned) keeps the
   old input and target.
 
-### C5. `contact_target_geometry` alias only reads index 0
+### C5. `contact_target_geometry` alias only reads index 0 — RESOLVED 2026-10-07 (F2 T3a)
 
 - **Corpus**: not exercised by the corpus (all corpus tests use the GNU name
   `contact_geometry`); it affects the Professional-dialect `validation_10`.
@@ -817,7 +817,17 @@ Original report:
   prescribed acceleration, no `materi_dynamic`) is the same gap: node 2
   disx GNU 32.66 vs Pro 60.44 (the target node 1 passes in both).
 
-### C12. bicg "stop" does not abort the GNU run on a singular system
+### C12. bicg "stop" does not abort the GNU run on a singular system — CLOSED 2026-10-17 (superseded, F4 T6f LOW queue)
+
+- **Closure (2026-10-17)**: re-measured on the same probe (elasti7 mesh
+  without supports, `solver -matrix_iterative_bicg`): the Professional
+  02-08-2026 does NOT stop (rc 0, `.dbs` with displacements ~5e9, no
+  message); the GNU since C77 prints `Warning: iterative solver
+  breakdown, system solved with the direct SuperLU` and also finishes
+  with rc 0 (displacements ~1e10). Both codes leave a singular model
+  undetected; no divergence remains, the C77 guarded LU fallback
+  replaced the per-iteration breakdown error. Probe
+  `scratchpad/lowq/c12/`.
 
 - **Corpus**: none; probe = elasti7 mesh without supports, `solver
   -matrix_iterative_bicg` (2026-09-29, scratch).
@@ -1013,7 +1023,10 @@ Original report:
 - **Effort**: **cheap** (drop the `-yes` branch of
   `materi_memory_default()` if the binary behaviour is preferred).
 
-### C22. `hypo12` (Pro `other`) marginal target miss after R10
+### C22. `hypo12` (Pro `other`) marginal target miss after R10 — DEFERRED (class B, F4 T6f LOW queue, owner plan 2026-10-17)
+
+- **Deferred (2026-10-17)**: a 1.02e-3 miss for a 1e-3 tolerance on a
+  Professional file; revisit with the Masin kernel calibration (K14).
 
 - **Symptom**: Masin model without a memory record; with the
   `-updated_linear` default `sigyy` misses its target by 1.02e-3 for a
@@ -1078,7 +1091,15 @@ Original report:
   `freq_*` and gmsh checks of `build_safe.sh` need review.
 - **Severity**: **LOW** (output files only). **Effort**: **cheap**.
 
-### C25. Uninitialized-buffer audit follow-ups (F0 T6)
+### C25. Uninitialized-buffer audit follow-ups (F0 T6) — item 1 RESOLVED 2026-10-17 (`efff819`); rest DEFERRED (class B, F4 T6f LOW queue, owner plan 2026-10-17)
+
+- **Status (2026-10-17)**: item 1 fixed (`efff819`: `pef_vel_prev`
+  zeroed after every reallocation). The `print_beam_force_moment.cc`
+  work array (now `work[3]`) and the `interface.cc` `free()` are already
+  gone. Deferred: item 2 (`print_te.cc`/`print_pl.cc` NODE_EIGEN reuse,
+  probably unreachable), item 3 (`split.cc` geometry output in the zero
+  fallback) and the `mpc.cc` / `nonloc.cc` side findings: outside the
+  LOW-queue edit surface, none observed in the corpora.
 
 - **Audit**: every `get_new_dbl(` / `new double[` site in `*.cc` was
   checked for the `a32ea74` pattern (buffer partly assigned, then PUT or
@@ -1729,7 +1750,17 @@ Original report:
   9.437e-7 for a nodal 1.898e-7. The GNU is analytically right there.
 - **Severity**: **LOW** (resolved). **Effort**: cheap.
 
-### C58. `control_restart`: element history records outside the integration-point dofs not verified (F4 T6c, 2026-10-11) — OPEN
+### C58. `control_restart`: element history records outside the integration-point dofs not verified (F4 T6c, 2026-10-11) — interface/spring VERIFIED 2026-10-17; rest DEFERRED (class B, F4 T6f LOW queue, owner plan 2026-10-17)
+
+- **Status (2026-10-17, `ef9af63`)**: restart probes vs the Professional
+  02-08-2026: the interface history (normal/shear -1.5 / 1.5 after the
+  restart, -0.5 / 0.5 in a fresh run) and the spring history (0.15 vs
+  0.05, `-total_linear` and `-updated`) are KEPT by both programs, so
+  nothing is reset; pinned by `test-2026/control_restart_interface_history1`
+  and `_spring_history1`. Deferred: contact-spring, tendon and damage
+  effective-stress probes, and the `number_timesteps` record (output
+  only: the Professional sets it to 0 on a restart, the GNU has no such
+  record).
 
 - **Context**: F4 T6c made `control_restart -yes` rebuild the
   integration-point state (`restart.cc` clears `ELEMENT_DOF_INITIALISED`;
@@ -1906,7 +1937,18 @@ Original report:
   - `scripts/build_safe.sh` compiles with `-O2`; the sanitizer targets
     keep appending `-O1`.
 
-### C54. Run-time record names read into a 1-value dummy without a type check (F4 T13, 2026-10-11) — OPEN
+### C54. Run-time record names read into a 1-value dummy without a type check (F4 T13, 2026-10-11) — RESOLVED 2026-10-17 (`8edaf3b`)
+
+- **Resolution (F4 T6f LOW queue Q4)**: `post.cc` (`post_node`,
+  `post_integrate`), `print_el.cc` and `repeat.cc` (`control_repeat_save`,
+  `control_repeat_until_item`) check `db_type()` and stop with `Error: a
+  DOUBLE PRECISION data item is required here, not the INTEGER item: <name>`.
+  The `data.cc` and `calcul.cc` sites were already safe (type checks or
+  internal DOUBLE records). Expected-error tests
+  `test-2026/post_node_integer_item_error1`, `post_integrate_*`,
+  `control_repeat_save_*`, `control_repeat_until_*` (RED rc 0 / endless
+  repeat). DIVERGENCES C54-TYPE (class C: the Professional returns 0 for
+  `post_node` / `post_integrate`).
 
 - **Symptom**: the `scripts/audit_db_buffers.py --all` REVIEW list. Most
   run-time `db( data_item_name, ... )` reads dispatch on `db_type()` and
@@ -2500,7 +2542,10 @@ Original report:
 - **Severity**: LOW (nodal output only). **Effort**: cheap (quad9) /
   medium (3D). (Original entry, kept for history.)
 
-### C69. Plane-stress membrane: the yy/zz split of the plastic strain is first order in dt (F4 T6f, 2026-10-12) — OPEN
+### C69. Plane-stress membrane: the yy/zz split of the plastic strain is first order in dt (F4 T6f, 2026-10-12) — DEFERRED (class B, F4 T6f LOW queue, owner plan 2026-10-17)
+
+- **Deferred (2026-10-17)**: a plane-stress-consistent return plus a Professional eppyy/eppzz
+  comparison (medium); GNU-only residual that converges with dt.
 
 - **Context**: found while writing the guard tests of the deliberate
   divergences MEMBRANE-EPTZZ and MC-VERTEX-ZZ (owner decision 2026-10-12,
@@ -2580,7 +2625,10 @@ Original report:
 - **Severity**: LOW. **Effort**: medium (owner decision, then a guard
   test or a class D row).
 
-### C68b. cap1 model: GNU and Professional differ at model level (F4 T6f C68, 2026-10-12) — OPEN
+### C68b. cap1 model: GNU and Professional differ at model level (F4 T6f C68, 2026-10-12) — DEFERRED (class B, F4 T6f LOW queue, owner plan 2026-10-17)
+
+- **Deferred (2026-10-17)**: model-level cap1 investigation (medium/expensive), no corpus
+  case affected.
 
 - **Symptom / evidence**: cap1 probe: Professional c1his -17 vs GNU pc
   108; reactions differ by a factor 6. The cap1 IP-state change of C68
@@ -2589,7 +2637,9 @@ Original report:
 - **Severity**: LOW. **Effort**: medium/expensive (cap1 law and its
   history variable, `group_materi_plasti_cap1`).
 
-### C68c. Mohr-Coulomb hardening-softening on kappa_shear: 1.2x off the Professional (F4 T6f C68, 2026-10-12) — OPEN
+### C68c. Mohr-Coulomb hardening-softening on kappa_shear: 1.2x off the Professional (F4 T6f C68, 2026-10-12) — DEFERRED (class B, F4 T6f LOW queue, owner plan 2026-10-17)
+
+- **Deferred (2026-10-17)**: cause unknown, homogeneous model-level difference (medium).
 
 - **Symptom / evidence**: homogeneous control `c68_kapsh2*` (scratch
   probes of the C68 investigation): GNU and the Professional differ by a
@@ -2684,7 +2734,33 @@ Original report:
   `sri_stress_recovery_weight()` only for the rules proven to be the mean.
 - **Severity**: LOW. **Effort**: cheap.
 
+### C86. `post_element_force` with truss / beam / spring / interface elements in the selection (F4 T6f LOW queue Q5, 2026-10-17) — OPEN (owner decision)
+
+- **Measured** (Professional 02-08-2026, `scratchpad/lowq/q5/`): the C84
+  quad4 strip (section x=0, loads 50 / 5 at x=4) plus a `-truss` element
+  (E A 1e4) from node 1 (on the section) to node 5: the Professional
+  INCLUDES the truss in the section (normal 100 = truss 45 + continuum
+  55, shear 10, moment -40 = 45 x (0 - 0.5) + continuum -17.5): the
+  analytically correct total section force. A truss that does not touch
+  the section (node 2 -> 5) is not counted (100 / 10 / -40 from the
+  continuum alone). With `post_element_force_group` excluding the truss
+  both codes give 55 / 10 / -17.5. The GNU stops (`Error:
+  post_element_force does not support element : 5`).
+- **Not measured**: beams, springs (`-bar2` springs are refused by the
+  Professional in 2D), contact springs, interfaces.
+- **Decision needed**: the Professional neither ignores nor mistreats the
+  truss, so the plan rule (follow if ignored, stop if wrong) does not
+  apply: implementing the inclusion means adding the structural-element
+  nodal forces (truss: N along the axis; beams: shear and moments) of the
+  elements with a node on the section. DIVERGENCES C84-REFUSE.
+- **Severity**: LOW. **Effort**: medium (truss cheap, beams/interfaces
+  need probes).
+
 ### C84. `post_element_force` 2D/3D section on non-tensor elements and in 2D (F4 T6f C66, 2026-10-16) — RESOLVED 2026-10-17 (`f2ae525`)
+
+- **Follow-ups (F4 T6f LOW queue, 2026-10-17)**: the 1D result is one
+  value, as the Professional `force16` (`feafe50`); the refusal of
+  non-continuum elements is now item C86.
 
 - **Symptom**: the 2D/3D `post_element_force` path of `calcul_force.cc`
   (the element scan near line 2800) chooses `npol` 2 for
@@ -2893,7 +2969,11 @@ Original report:
   0, unchanged (quad4 control in the absorption tests; corpus A/B).
 - **Severity**: LOW. **Effort**: cheap.
 
-### C65. Professional `post_point_dof` at a node differs from its own `node_dof` (F4 T6f, 2026-10-11) — OPEN
+### C65. Professional `post_point_dof` at a node differs from its own `node_dof` (F4 T6f, 2026-10-11) — DEFERRED (class B, F4 T6f LOW queue, owner plan 2026-10-17)
+
+- **Deferred (2026-10-17)**: Professional-side post-processing inconsistency, folded into
+  DIVERGENCES PPD (the Professional evaluates post points from the
+  element-local recovered value); no GNU change planned.
 
 - **Symptom**: Professional `validation_14`: `post_point_dof` at the
   coordinates of a node gives `eppxy` 0.00815 while its `node_dof` at that
@@ -2934,7 +3014,14 @@ Original report:
 - **Severity**: LOW (nodal output only; the solution is unchanged).
   **Effort**: cheap probe, medium fix.
 
-### C63. `post_node_rhside_fixed` of Pro `slide4` differs from the Professional (F4 T6e, 2026-10-11) — OPEN
+### C63. `post_node_rhside_fixed` of Pro `slide4` differs from the Professional (F4 T6e, 2026-10-11) — DEFERRED (class B, F4 T6f LOW queue, owner plan 2026-10-17)
+
+- **Re-measured after C62 (2026-10-17)**: unchanged (GNU 3.44044e-3 /
+  7.88353e-3, Professional -5.770607e-3 / 9.995002e-3 = its
+  `post_node_result 10`, which the GNU reproduces). `post_node_rhside_fixed_free()`
+  runs inside the equilibrium iteration on the pre-solve residual, not
+  after the post-solve pass. Candidate: call it once more after the pass
+  (`top.cc`). DIVERGENCES C63 row added.
 
 - **Symptom**: Pro `other/slide4`: GNU `post_node_rhside_fixed` 3.44e-3 /
   7.88e-3, Professional -5.770607e-3 / 9.995002e-3 (= its
@@ -2945,7 +3032,19 @@ Original report:
   sum includes when slide nodes exist).
 - **Severity**: LOW. **Effort**: cheap/medium.
 
-### C62. The post-solve pass skips `parallel_new_dof_before`: reported `node_rhside` without node_force / nodal mass terms (F4 T6e, 2026-10-11) — OPEN
+### C62. The post-solve pass skips `parallel_new_dof_before`: reported `node_rhside` without node_force / nodal mass terms (F4 T6e, 2026-10-11) — RESOLVED 2026-10-17 (`a2e68b6`)
+
+- **Resolution (F4 T6f LOW queue Q3)**: the pass also lost the
+  `bounda_force` loads (`bounda()` assigns them after
+  `iteration_start()`; the pass zeroes NODE_RHSIDE and does not re-run
+  `bounda()`). `top.cc` restores a snapshot of the iteration's
+  post-`bounda()` NODE_RHSIDE and runs `parallel_new_dof_before` in the
+  pass. node_dof identical in the whole corpus (omen A/B, 1019 runs);
+  node_rhside moved toward the Professional in 62 of the 64 changed cases
+  with a Professional run (e.g. `nodfor1`, `truss6`, `interface1` now =
+  Professional); `trubea2`/`trubea3` (GNU planar beam, C37, already rc
+  1) now report the applied 0.01 at the loaded node. Tests
+  `test-2026/node_rhside_post_pass_{node_force,node_mass,bounda_force}1`.
 
 - **Symptom**: an equilibrium iteration runs `element_loop();
   parallel_contact; parallel_new_dof_before; slide(); solve()`; the
@@ -2959,7 +3058,10 @@ Original report:
   then probes + corpus A/B.
 - **Severity**: LOW. **Effort**: cheap/medium.
 
-### C61. Interface Mohr-Coulomb under `inertia_apply`: first-step velocity differs from the Professional (F4 T6d, 2026-10-11) — OPEN
+### C61. Interface Mohr-Coulomb under `inertia_apply`: first-step velocity differs from the Professional (F4 T6d, 2026-10-11) — DEFERRED (class B, F4 T6f LOW queue, owner plan 2026-10-17)
+
+- **Deferred (2026-10-17)**: cause not established (interface + inertia first step, medium);
+  no corpus case affected. May share the orientation question of C60.
 
 - **Symptom**: probe (two quad4 blocks, quad4 interface kn = kt = 1000,
   phi = 0.785398, c = 0, density 1, `inertia_apply -yes`, volume force
@@ -2973,7 +3075,28 @@ Original report:
   predictor, or the initial acceleration).
 - **Severity**: LOW. **Effort**: medium.
 
-### C60. Interface `element_interface_intpnt_stress` normal sign depends on the node order (F4 T6d, 2026-10-11) — OPEN
+### C60. Interface `element_interface_intpnt_stress` normal sign depends on the node order (F4 T6d, 2026-10-11) — OPEN (re-scoped 2026-10-17: not output-only, owner decision needed)
+
+- **Re-scoped (F4 T6f LOW queue Q2, 2026-10-17, stopped before any code
+  change)**: the premise "output-only sign leak" is false. Probes
+  (`scratchpad/lowq/c60/`): two quad4 blocks with a quad4 interface,
+  right block pushed left. Elastic: Professional normal -9.98 for all four
+  node orders (`2 4 9 10`, `9 10 2 4`, `4 2 10 9`, `10 9 4 2`); GNU +9.98,
+  +9.98, -9.98, -9.98. With `group_interface_materi_plasti_mohr_coul_direct
+  1 0.2 0 0` + `_tension_direct 1 1`: Professional normal -9.98, shear
+  2.023 for every order; GNU orders 1-2 = Professional in magnitude
+  (sign flipped), orders 3-4 treat the compressed interface as OPEN
+  (normal 0, shear 2.027, block stress 4.05 instead of -5.90). The GNU
+  internal convention (compression = positive strain, normal from
+  the node numbering rule `nodes[ns1] < nodes[0]`) thus changes the
+  physics for half the node orders. Free interface without blocks
+  (`1 2 3 4`, `3 4 1 2`, `2 1 4 3`, `4 3 2 1`, side 2 pushed down):
+  Professional -1 / 0 / 0 / -1 (pure numbering rule; an opened elastic
+  interface carries 0), GNU -1 / -1 / +1 / +1. So the Professional
+  orients by geometry when continuum elements are attached and by
+  numbering otherwise, and an opened elastic interface carries no
+  tension. A fix touches the interface orientation (`interface.cc`
+  ~210-245) and the tension behaviour: not a cheap item.
 
 - **Symptom**: quasi-static interface probe (quad4 interface between two
   blocks, the right block pushed against the left one, kn = 1000,
@@ -3080,7 +3203,7 @@ Original report:
 | C9 | — | `-total_linear` + compressibility: Pro time-step dependent (deliberate divergence) | LOW | cheap |
 | C10 | Pro `other` | static pore pressure tied to `post_calcul -total_pressure` in the Pro (`excavate1` target) | MEDIUM | cheap |
 | C11 | — | `control_materi_dynamic` and implicit truss dynamics vs Pro — resolved 2026-10-11 (F4 T6d) | MEDIUM | medium |
-| C12 | — | bicg stop does not abort the GNU on a singular system | LOW | cheap |
+| C12 | — | bicg stop does not abort the GNU on a singular system — closed 2026-10-17 (superseded: re-measured, the Professional 02-08-2026 does not stop either; GNU C77 LU fallback with a warning) | closed | - |
 | C13 | — | `control_solver_bicg_stop` at the timestep index: Pro reads index 0 only (deliberate divergence) | LOW | cheap |
 | C14 | — | `element_normal`: curved quadratic sides, `node_normal`/`element_boundary`/`global_normal` not implemented (zero normal and plane MC direct return resolved) | LOW | cheap |
 | C15 | — | plane direct cut-off phi_flow factor M/G vs Pro 2 (deliberate divergence) | LOW | cheap |
@@ -3088,8 +3211,8 @@ Original report:
 | C19 | — | explicit `-updated_linear` on `-follow_material`: GNU reference gradient vs Pro current — resolved 2026-10-07 (F3 T2) | LOW | medium |
 | C20 | — | `-updated_jaumann` not implemented — resolved 2026-10-08 (F3 T2) | LOW | medium |
 | C21 | — | `control_materi_updated_apply -yes`: Pro ignores its manual (deliberate divergence) | LOW | cheap |
-| C22 | Pro `other` | `hypo12` marginal sigyy target miss after the default-memory change | LOW | cheap |
-| C25 | — | uninitialized-buffer audit follow-ups (`pef_vel_prev` realloc, NODE_EIGEN print, split/beam/interface/mpc/nonloc side findings) | LOW | cheap |
+| C22 | Pro `other` | `hypo12` marginal sigyy target miss after the default-memory change — deferred (class B, 2026-10-17) | LOW | cheap |
+| C25 | — | uninitialized-buffer audit follow-ups — `pef_vel_prev` realloc resolved 2026-10-17 (`efff819`), beam/interface already fixed; NODE_EIGEN print, split, mpc, nonloc deferred (class B) | LOW | cheap |
 | C26 | — | `control_print_dof -separate_index`: Pro writes one file per dof, GNU one `dof.N` | LOW | cheap/medium |
 | C27 | — | FRD/gmsh layout vs Pro (PSTEP per block, `ALL` component, names, extra blocks/fields, multi-component gmsh fields) | LOW | medium |
 | C29 | Pro `other` | `group_condif_conductivity` per-direction values (condif11) not parsed | LOW | cheap/medium |
@@ -3113,19 +3236,19 @@ Original report:
 | C47 | Pro `other` | `force11` 3D section moment `mom1y_sig` 5.80223 vs Pro 5.76460 — resolved 2026-10-11 (F4 T12: quad9 -> hex27 extrusion shares the inner-plane nodes) | LOW | cheap |
 | C49 | — | build at `-O1` — resolved 2026-10-11 (F4 T13: 34 scratch-buffer call sites fixed, default `-O2`, results identical) | LOW | medium |
 | C50 | Pro other | `interface_bar2_hex8` extruded/converted interface mesh numbering | LOW | medium |
-| C51 | validation-suite | hardsoil `gamma_p` read the nodal kappa of the previous evaluation (iteration-count oscillation, `mhardsoil_plast`) — resolved 2026-10-10 (F4 T5); cap/cap1/void reads open | MEDIUM | cheap |
+| C51 | validation-suite | hardsoil `gamma_p` read the nodal kappa of the previous evaluation (iteration-count oscillation, `mhardsoil_plast`) — resolved 2026-10-10 (F4 T5); cap/cap1/void reads resolved 2026-10-12 (`70235c6`, C68) | closed | - |
 | C52 | Pro `other` | post-solve state pass for inertia models (`dynamic3`) — resolved 2026-10-11 (F4 T6d: interface history fix + inertia removed from the gate) | LOW | medium |
 | C53 | Pro `other` | post-solve state pass for slide/contact models (`slide4`) — resolved 2026-10-11 (F4 T6e: slide/contact in the pass, gate removed, slide tension default / `\|Fn\|` cap / penalty index) | LOW | medium |
-| C54 | — | run-time record names read without a type check into a 1-value dummy (`post.cc`, `print_el.cc`, `repeat.cc`, `data.cc`, `calcul.cc`) | LOW | cheap |
+| C54 | — | run-time record names read without a type check into a 1-value dummy (`post.cc`, `print_el.cc`, `repeat.cc`, `data.cc`, `calcul.cc`) — resolved 2026-10-17 (`8edaf3b`: db_type() check, input error; DIVERGENCES C54-TYPE) | closed | - |
 | C55 | validation-suite | `print_unknownsrhside()` indexes `node_rhside` (npuknwn values) with `iuknwn` (heap read past the end, wrong column when nder > 1)  — resolved 2026-10-11 (F4 T6a)| LOW | cheap |
 | C56 | Pro `other` | input tokens longer than `MCHAR`-1 (`cin >> str`) overflow the parser buffers (`ground19_water_under_dam`, 141-char URL in a comment)  — resolved 2026-10-11 (F4 T6a)| LOW | cheap |
 | C57 | Pro `other` | `post_point` on a quad9 -> hex27 extruded mesh — resolved 2026-10-13 (F4 T6f C57: inner-plane `node_start_refined` z; nodal stress part by C70) | closed | - |
-| C58 | Pro `validation` | `control_restart`: interface/spring/contact-spring/tendon/damage element history records not verified after the F4 T6c integration-point reset (`number_timesteps` record absent) | LOW | cheap/medium |
+| C58 | Pro `validation` | `control_restart`: interface/spring/contact-spring/tendon/damage element history records not verified after the F4 T6c integration-point reset (`number_timesteps` record absent) — interface/spring verified = Pro 2026-10-17 (`ef9af63`); contact-spring/tendon/damage and `number_timesteps` deferred (class B) | LOW | cheap/medium |
 | C59 | sfnet | `group_truss_memory -updated` + `materi_displacement` (and `-total*` without it): input error in the Pro — resolved 2026-10-11 (F4 T6d) | LOW | cheap |
-| C63 | — | Pro `slide4` `post_node_rhside_fixed` 3.44e-3 / 7.88e-3 vs Pro -5.77e-3 / 9.995e-3 (pre-existing) | LOW | cheap/medium |
-| C62 | — | post-solve pass skips `parallel_new_dof_before`: reported `node_rhside` without node_force / nodal mass terms | LOW | cheap/medium |
-| C61 | — | interface Mohr-Coulomb + `inertia_apply`: first-step velocity differs from the Pro (0.412 vs 0.273), independent of the pass | LOW | medium |
-| C60 | — | interface `element_interface_intpnt_stress` normal sign depends on the node order (Pro: compression negative always) | LOW | cheap/medium |
+| C63 | — | Pro `slide4` `post_node_rhside_fixed` 3.44e-3 / 7.88e-3 vs Pro -5.77e-3 / 9.995e-3 (pre-existing; unchanged by C62) — deferred (class B, DIVERGENCES C63) | LOW | cheap/medium |
+| C62 | — | post-solve pass skips `parallel_new_dof_before`: reported `node_rhside` without node_force / nodal mass terms — resolved 2026-10-17 (`a2e68b6`: also the `bounda_force` loads; node_dof unchanged) | closed | - |
+| C61 | — | interface Mohr-Coulomb + `inertia_apply`: first-step velocity differs from the Pro (0.412 vs 0.273), independent of the pass — deferred (class B, 2026-10-17) | LOW | medium |
+| C60 | — | interface `element_interface_intpnt_stress` normal sign depends on the node order (Pro: compression negative always) — re-scoped 2026-10-17: the GNU orientation changes the physics (MC/tension) for half the node orders; owner decision | LOW | medium |
 | C64 | — | quad4 per-element nodal recovery of the Professional — resolved 2026-10-12 (F4 T6f K21: physical linear fit, 1-point value, on-axis rule) | closed | - |
 | C70 | — | 3x3 quad9 / hex8 / hex27 / tet10 / prism6 recovery in physical coordinates — resolved 2026-10-13 (F4 T6f C70) | closed | - |
 | C71 | sfnet | `tube1` (`-lobatto` + axisymmetric) NaN — resolved 2026-10-13 (F4 T6f C71: on-axis Lobatto element integrated with Gauss = Pro) | closed | - |
@@ -3140,21 +3263,22 @@ Original report:
 | C75 | — | `prism6` integration points: Professional triangle corners, GNU interior (2/3,1/6,1/6) points — decided 2026-10-13: deliberate divergence (GNU half the bending error) | closed | - |
 | C76 | — | `prism6` `group_integration_points -minimal` ignored — resolved 2026-10-16 (`dc4a59a`: Professional 2-point rule, `sum h sig / sum h` recovery) | closed | - |
 | C78 | — | `post_point` in curved quad9 / hex27: Professional corner-node (sub-parametric) location, GNU isoparametric — decided 2026-10-13: deliberate divergence (class A) | closed | - |
-| C65 | — | Professional `post_point_dof` at a node differs from its own `node_dof` | LOW | cheap |
+| C65 | — | Professional `post_point_dof` at a node differs from its own `node_dof` — deferred (class B, folded into DIVERGENCES PPD) | LOW | cheap |
 | C66 | — | tria6 integration rule — resolved 2026-10-16 (F4 T6f C66 phase 2, `175faf1`: manual 7 / 4 points, linear-fit recovery = Pro, axisymmetric accepted; HRZ lumping, class A TRIA6-HRZ) | closed | - |
 | C84 | — | `post_element_force` 2D/3D on tria/tet/prism elements, 2D record 7 vs 6 values and NaN — resolved 2026-10-17 (F4 T6f C84, `f2ae525`: pol() integration, 6-value 2D record, 3-value 2D result, axisymmetric ring forces; non-continuum elements refused, DIVERGENCES C84-REFUSE) | closed | - |
 | C85 | — | tria6 h-weighted lumped terms (groundflow velocity, condif absorption) — resolved 2026-10-17 (F4 T6f C85: HRZ weight, TRIA6-HRZ) | closed | - |
+| C86 | Pro `other` probe | `post_element_force` with a truss in the selection: the Professional includes the truss force (normal 100 = 45 + 55), the GNU refuses it (C84-REFUSE) | LOW | medium |
 | C82 | — | `prism15` `-minimal`: Professional 8 points with an indefinite stiffness, GNU 21 — decided 2026-10-16: deliberate divergence (class A) | closed | - |
 | C83 | — | tria3/tet10 `-maximal` manual point counts (4/10) vs both codes (3/5) — decided 2026-10-16: deliberate divergence from the manual (class A); axisymmetric tria3 `-maximal` resolved 2026-10-16 (`72f78bd`: 3 nodal points, 1 on the axis, = Professional) | closed | - |
 | C67 | — | nodal recovery of the unmeasured element rules — resolved 2026-10-16 (`d875874` bars/quad16, `dc4a59a` tet4 `-maximal`, prism15, prism6 `-minimal`) | closed | - |
 | C68 | — | other integration-point state variables (kapsh, cap1pc, rho, damage, Maxwell msig) read back from the nodes — resolved 2026-10-12 (F4 T6f, `70235c6`) | MEDIUM | cheap/medium |
 | C68a | — | Professional Maxwell chain differs from the analytic relaxation even homogeneous (msig -23.81 vs -20.25), Pro-suspect | LOW | medium |
-| C68b | — | cap1 model: Professional c1his -17 vs GNU pc 108, reactions 6x | LOW | medium/expensive |
-| C68c | — | Mohr-Coulomb hardening-softening on kappa_shear 1.2x off the Professional (homogeneous) | LOW | medium |
+| C68b | — | cap1 model: Professional c1his -17 vs GNU pc 108, reactions 6x — deferred (class B, 2026-10-17) | LOW | medium/expensive |
+| C68c | — | Mohr-Coulomb hardening-softening on kappa_shear 1.2x off the Professional (homogeneous) — deferred (class B, 2026-10-17) | LOW | medium |
 | C68d | — | `materi.cc` old rho/epi/epp read with the Maxwell loop index (two or more chains) — resolved 2026-10-12 (F4 T6f, `2327083`) | LOW | cheap |
-| C69 | — | plane-stress membrane: yy/zz split of the plastic strain first order in dt (eptzz -0.00721 at dt 0.1 vs analytic -0.00882) | LOW | medium |
+| C69 | — | plane-stress membrane: yy/zz split of the plastic strain first order in dt (eptzz -0.00721 at dt 0.1 vs analytic -0.00882) — deferred (class B, 2026-10-17) | LOW | medium |
 
-Forty-five items remain open: three MEDIUM and forty-two LOW (C23 and C24 resolved 2026-10-05; C25, C26, C27 and B10 added; F1 T3 / K04 2026-10-06 added B11, C28-C32; F1 T6 resolved C28, added and resolved B12; F2 T1 added C36; F2 T2 added C37, C38, C39; F2 T3 resolved C5 and added C40; F3 T2 resolved C8, C18, C19, C20 and added B13, C41; F4 T2 fixed the C41 tie and left a residual; F4 T3 resolved C33; F4 T4 closed C32, added C42 and resolved C31; F4 T7-T8 added C43-C46; F4 T9 resolved the C43 solver speed, decided C46b/C46e and added C47, C48, C49; F4 T10 resolved C48 and added C50; F4 T5 added C52, C53 and resolved C51; F4 T13 resolved C49 and added C54-C56; F4 T12 resolved C47 and added C57; F4 T6a resolved C6, C55, C56 and the C3 sign, the C3 square-face tie becoming a deliberate divergence (owner 2026-10-11), and added B14; F4 T6c fixed the `control_restart` integration-point reset and added C58; F4 T6d resolved C11 and C59, fixed the interface history and resolved C52, and added B15, C60 and C61; B15 resolved the same day; F4 T6e resolved C53 and added C62 and C63; F4 T6f added C64-C68 and C69, and closed the K15 `mmc_tension` vertex sigzz/eppzz and `validation_3` eptzz items as deliberate divergences MC-VERTEX-ZZ / MEMBRANE-EPTZZ, owner 2026-10-12; F4 T6f resolved C68 and added C68a-C68d; C68d resolved the same day; F4 T6f closed C7 (Mazars equivalent strain, with C7b) and the AUDIT K14b `hypo3` sigxx reversal as deliberate divergences C7 / K14b, owner 2026-10-12; the `hypo3` hyhis slot residual stays open under AUDIT K14; F4 T6f K21 WU2 widened C72 with the Stokes-flow residual and closed its `cmat_gate` rewrite, no new item; F4 T6f C72 resolved the convected nodal stress output (C72 stays open for the Professional-side residuals) and added C73 and C74; F4 T6f C70 resolved C70 and added C75; F4 T6f C75 closed C75 as a deliberate divergence, owner 2026-10-13, and added C76; F4 T6f C74 resolved C74 and added C77; F4 T6f C57 resolved C57 and added C78, decided the same day as a deliberate divergence, owner 2026-10-13; F4 T6f C71 resolved C71 and added C79; F4 T6f C79 resolved C79 and added C80; F4 T6f C77 resolved C77 and added C81 (F6); F4 T6f C80 resolved C80 and added C80.1; F4 T6f C80.1 resolved C80.1; F4 T6f C80.2 extended C80.1 with `-lambda`, no new item; F4 T6f C67 resolved the bar and quad16 rules and narrowed C67, no new item; F4 T6f C67 remainder + C76 resolved C67 and C76, re-scoped C66 and added C82 and C83; F4 T6f C82 + C83 decided C82 and C83 part 1 as deliberate divergences (owner 2026-10-16) and resolved C83 part 2; F4 T6f C66 measured the Professional tria6 lumping and added C84; F4 T6f C66 phase 2 resolved C66 (lumping class A TRIA6-HRZ, owner 2026-10-16) and added C85; F4 T6f C85 resolved C85; F4 T6f C84 resolved C84 (the unmeasured Professional handling of non-continuum elements is the DIVERGENCES class B row C84-REFUSE); forty-five items remain open). No open issue is CRITICAL or
+Forty-one items remain open (recount of the summary table, F4 T6f LOW queue, 2026-10-17): two MEDIUM (B1, C37) and thirty-nine LOW. Thirty-two are active (the sfnet input items B1-B11, B13, B14; C1, C2, C14, C26, C27, C29, C37, C38, C39, C40, C41, C46, C50, C60, C68a, C72, C73, C81 and C86; C14, C39, C41, C46 and C72 count because of their open residuals) and nine are deferred as class B (C22, C25 rest, C58 rest, C61, C63, C65, C68b, C68c, C69). The twelve class A deliberate divergences of the table (C7, C9, C10, C13, C15, C21, C30, C34, C36, C75, C78, C82) are decided, not open, and forty-five items are resolved or closed. The earlier running count (45 after C84) also counted decided and closed items; the F4 T6f LOW queue resolved C54 and C62, closed C12, partly resolved C25 and C58, re-scoped C60, deferred nine items and added C86. History of the earlier counts: C23 and C24 resolved 2026-10-05; C25, C26, C27 and B10 added; F1 T3 / K04 2026-10-06 added B11, C28-C32; F1 T6 resolved C28, added and resolved B12; F2 T1 added C36; F2 T2 added C37, C38, C39; F2 T3 resolved C5 and added C40; F3 T2 resolved C8, C18, C19, C20 and added B13, C41; F4 T2 fixed the C41 tie and left a residual; F4 T3 resolved C33; F4 T4 closed C32, added C42 and resolved C31; F4 T7-T8 added C43-C46; F4 T9 resolved the C43 solver speed, decided C46b/C46e and added C47, C48, C49; F4 T10 resolved C48 and added C50; F4 T5 added C52, C53 and resolved C51; F4 T13 resolved C49 and added C54-C56; F4 T12 resolved C47 and added C57; F4 T6a resolved C6, C55, C56 and the C3 sign, the C3 square-face tie becoming a deliberate divergence (owner 2026-10-11), and added B14; F4 T6c fixed the `control_restart` integration-point reset and added C58; F4 T6d resolved C11 and C59, fixed the interface history and resolved C52, and added B15, C60 and C61; B15 resolved the same day; F4 T6e resolved C53 and added C62 and C63; F4 T6f added C64-C68 and C69, and closed the K15 `mmc_tension` vertex sigzz/eppzz and `validation_3` eptzz items as deliberate divergences MC-VERTEX-ZZ / MEMBRANE-EPTZZ, owner 2026-10-12; F4 T6f resolved C68 and added C68a-C68d; C68d resolved the same day; F4 T6f closed C7 (Mazars equivalent strain, with C7b) and the AUDIT K14b `hypo3` sigxx reversal as deliberate divergences C7 / K14b, owner 2026-10-12; the `hypo3` hyhis slot residual stays open under AUDIT K14; F4 T6f K21 WU2 widened C72 with the Stokes-flow residual and closed its `cmat_gate` rewrite, no new item; F4 T6f C72 resolved the convected nodal stress output (C72 stays open for the Professional-side residuals) and added C73 and C74; F4 T6f C70 resolved C70 and added C75; F4 T6f C75 closed C75 as a deliberate divergence, owner 2026-10-13, and added C76; F4 T6f C74 resolved C74 and added C77; F4 T6f C57 resolved C57 and added C78, decided the same day as a deliberate divergence, owner 2026-10-13; F4 T6f C71 resolved C71 and added C79; F4 T6f C79 resolved C79 and added C80; F4 T6f C77 resolved C77 and added C81 (F6); F4 T6f C80 resolved C80 and added C80.1; F4 T6f C80.1 resolved C80.1; F4 T6f C80.2 extended C80.1 with `-lambda`, no new item; F4 T6f C67 resolved the bar and quad16 rules and narrowed C67, no new item; F4 T6f C67 remainder + C76 resolved C67 and C76, re-scoped C66 and added C82 and C83; F4 T6f C82 + C83 decided C82 and C83 part 1 as deliberate divergences (owner 2026-10-16) and resolved C83 part 2; F4 T6f C66 measured the Professional tria6 lumping and added C84; F4 T6f C66 phase 2 resolved C66 (lumping class A TRIA6-HRZ, owner 2026-10-16) and added C85; F4 T6f C85 resolved C85; F4 T6f C84 resolved C84 (the unmeasured Professional handling of non-continuum elements is the DIVERGENCES class B row C84-REFUSE). No open issue is CRITICAL or
 HIGH. The validation-suite corpus has no open failure — its 233 real tests
 pass (`materi_direct_mc` input corrected, C17 resolved). Every remaining failure is a stale or malformed test, an out-of-scope model
 or infrastructure limit, a narrow post-processing divergence, a corpus-coverage

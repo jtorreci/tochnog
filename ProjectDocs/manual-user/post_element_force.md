@@ -111,5 +111,8 @@ equilibrium. See `validation-suite/test-2026/post_element_force_*` and
   sections and with a reversed normal (C84, 2026-10-17; corpus
   `force14`/`force15`).
 - The refusal of non-continuum elements and interface groups is a GNU
-  check; the Professional behaviour for them was not measured
-  (DIVERGENCES, class B row C84-REFUSE).
+  check. Measured 2026-10-17: the Professional INCLUDES a truss with a
+  node on the section (the section force is then the total, e.g. 100 =
+  truss 45 + continuum 55); beams, springs and interfaces were not
+  measured. Exclude such elements with `post_element_force_group`
+  meanwhile (DIVERGENCES, class B row C84-REFUSE; BACKLOG C86).
