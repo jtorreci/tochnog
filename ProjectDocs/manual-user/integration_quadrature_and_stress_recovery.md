@@ -71,6 +71,17 @@ axisymmetric groups are accepted, and an element with a node on the axis
 keeps its rule (all points are interior). Before, a 6-point nodal rule was
 used for every value and axisymmetric tria6 groups were refused.
 
+**Limitation of the tria6 `-minimal` rule** (owner decision 2026-10-17):
+the negative centroid weight makes the element stiffness indefinite (one
+negative eigenvalue) on curved or axisymmetric elements once Poisson's
+ratio exceeds about 0.39-0.49 (plane strain curved 0.43-0.49, axisymmetric
+on the axis 0.39). Straight plane elements are exact (equal to the
+7-point stiffness) and the default 7-point rule is positive semi-definite
+in every case. Do not use `-minimal` for tria6 with curved or
+axisymmetric elements and nu > 0.4; keep the default rule. The prism15
+`-minimal` 8-point rule of the Professional is refused instead (C82)
+because it is indefinite already on a regular prism at nu = 0.3.
+
 ## Nodal stress recovery
 
 The stresses are stored at the nodes. For the interior Gauss rules the

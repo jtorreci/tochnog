@@ -33,10 +33,10 @@ T6 triage (2026-10-11, HEAD 53dbb86) and owner order (2026-10-11):
 - [x] T6f C74 Bi-CG breakdown message on `validation_1` (route: delegated writer; trigger: Pro/GNU probes + corpus A/B + so.cc/so_bicg.cc + test + 5 docs). Investigation stop, owner 2026-10-13: option A (one warning per LU-rescued breakdown), option B -> C77. Done `cf07b19` (fix + test + build_safe), `e5f50fc` (docs).
 - [x] T6f C57 `post_point` on the quad9 -> hex27 extruded mesh (route: delegated writer; trigger: Pro/GNU probes + corpus A/B + mesh.cc + test + 9 docs). Investigation stop (mesh.cc outside the surface), owner authorized 2026-10-13; curved-element rule C78 decided deliberate divergence class A. Done `cf37de3` (fix + test + build_safe), `30f2621` + `1f5e82c` (docs).
 - [x] T6f C79 Lobatto nodal recovery + C71 `msf_element_rule()` replica (route: delegated writer; trigger: Pro/GNU probes + corpus A/B on omen + miscel.cc/polynom.cc/calcul_force.cc/headers + 6 tests + 9 docs). Done `ab4ef78` (fix + tests + registration), `6094739` (docs). Found C80 (`-reduced` refused by the GNU).
-- [ ] T6f C77 iterative-solver relative stop + BiCGStab (relative stop done `d567672` + docs `5091fe7`; BiCGStab vs Bi-CG choice returned to the owner) (owner-approved 2026-10-15: relative stop `||r||/||b||` + relative breakdown + `eps*||A||*||x||` floor, no stagnation window / best iterate; respect `bicg_error_minimum`; guarded direct fallback SuperLU -> band LU with a memory budget; BiCGStab (or GMRES(m)) replaces Bi-CG for the non-symmetric path; CG gets the relative stop only if measured safe; ILU/AMG -> F6; MKL PARDISO discarded). Route: delegated writer (trigger: so_bicg.cc + so.cc + tests + build_safe + 6 docs, corpus A/B on omen, local large-mesh timing). Subtasks:
+- [x] T6f C77 iterative-solver relative stop + BiCGStab (relative stop done `d567672` + docs `5091fe7`; BiCGStab vs Bi-CG choice returned to the owner) (owner-approved 2026-10-15: relative stop `||r||/||b||` + relative breakdown + `eps*||A||*||x||` floor, no stagnation window / best iterate; respect `bicg_error_minimum`; guarded direct fallback SuperLU -> band LU with a memory budget; BiCGStab (or GMRES(m)) replaces Bi-CG for the non-symmetric path; CG gets the relative stop only if measured safe; ILU/AMG -> F6; MKL PARDISO discarded). Route: delegated writer (trigger: so_bicg.cc + so.cc + tests + build_safe + 6 docs, corpus A/B on omen, local large-mesh timing). Subtasks:
   - [x] C77a RED test(s) under test-2026 (scaled validation_1, HEAD absolute floor accepts a far-from-converged solve; target SuperLU) + build_safe registration.
   - [x] C77b relative stop + relative breakdown + eps floor + `bicg_error_minimum` honoured + guarded fallback (SuperLU, then band LU within a memory budget, clear error otherwise); C74 warning adapted.
-  - [ ] C77c (measured; choice pending owner) BiCGStab for the non-symmetric path; measure vs relative-stop Bi-CG (86 corpus cases + large C13/C23/C36, E15/E25); CG relative stop measured.
+  - [x] C77c (owner decision 2026-10-15: keep Bi-CG with the relative stop; BiCGStab revisited with ILU in F6, BACKLOG C81) BiCGStab for the non-symmetric path; measure vs relative-stop Bi-CG (86 corpus cases + large C13/C23/C36, E15/E25); CG relative stop measured.
   - [x] C77d suite targets that move: verdict per target vs SuperLU/Pro; omen corpus A/B.
   - [x] C77e docs: user/dev solver pages, DIVERGENCES, SEGUIMIENTO (register + Descarte MKL PARDISO), BACKLOG (C77 closed, F6 ILU/AMG item).
 - [x] T6f C80 `group_integration_method -reduced` + `group_integration_method_reduced_factor` (owner decisions 2026-10-16: default factor 10 per manual 6.621, class A divergence with Pro's 1; hourglass warning in the user manual; selective/B-bar -> new C80.1, not implemented here). Route: delegated writer (trigger: headers + database.cc + polynom.cc + miscel.cc + calcul_force.cc + delete.cc + 5 tests + build_safe + 7 docs, corpus A/B on omen). Done `995de49` (feat + tests + build_safe), `6c8269f` (docs). Subtasks:
@@ -1255,3 +1255,12 @@ docs + SEGUIMIENTO + BACKLOG + DIVERGENCES.
   nu 0.3 (C82 recorded 3 negatives on its distorted probe). Stopped,
   owner question: keep the tria6 4-point rule (= manual / Pro) or align
   with C82. Next: owner decision on tria6 `-minimal`.
+- 2026-10-17 owner decision (tria6 `-minimal`): keep the manual/Professional
+  4-point rule; its indefinite stiffness on curved/axisymmetric elements with
+  nu > ~0.4 is documented as a user-manual limitation (integration page);
+  criterion vs C82: refuse a rule that fails in normal use (prism15, regular
+  prism at nu 0.3), keep with a warning one that fails only in a corner case.
+  C77c ticked (owner 2026-10-15: keep Bi-CG). SEGUIMIENTO global metric
+  refreshed (1154 / ~833 accepted / ~258 pending). Next: C84
+  (`post_element_force` element types and 2D record), then the LOW-queue
+  triage, then merge + F5.

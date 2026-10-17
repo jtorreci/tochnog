@@ -10,10 +10,16 @@ conocidas, pendientes, de dialecto y sospechosas del Pro):
 
 ## Métrica global
 
-- **1094** keywords documentados en Professional (tras limpiar 1 keyword
-  espurio del manual)
-- **309** presentes en el GNU (**28 %** de cobertura nominal)
-- **785** faltantes
+Updated 2026-10-17 from `ProjectDocs/KEYWORD-GAP-REPORT.md` (parser probe,
+Professional manual chapters 4-6) plus the keywords added since
+(`group_integration_method -reduced` and
+`group_integration_method_reduced_factor`, F4 T6f C80):
+
+- **1154** keywords in the Professional manual (chapters 4-6)
+- **~833** accepted by the GNU parser (**72 %**; **76 %** excluding the
+  63 GiD keywords discarded)
+- **~258** missing and not discarded (phase F5)
+- Divergences: see `DIVERGENCES-PROFESSIONAL.md` (classes A/B/C/D)
 - Además: 197 tests del GNU 2014 corren con cobertura 100 % de keywords (ver plan, sección 6c)
 
 ## Features implementadas por nosotros — registro de verificación
