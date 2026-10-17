@@ -11,7 +11,7 @@ through `scripts/remote_run.sh`.
 - [x] T3 C33: `set_stress` reads DTIME from VERSION_NORMAL (previous dt) → `_visco` direct law does not cut in the first step; principal tension cap ignores `_visco`. Route: same writer.
 - [x] T4 C31 + K20: quadrature design (TET10 nodal rule degree 1; axisymmetric quad4 forced 1-point rule). Route: read-only investigator + omen A/B, then decision (owner 2026-10-09: v2 + HRZ); implementation by a delegated writer.
 - [x] T5 C35/K02: integration-point state one-iteration lag. Investigation, owner decision 2026-10-10 (post-solve material state pass, gate inertia/slide/contact; mhardsoil blocker: option 1, hardsoil kappa fix first). Done `8e4d080` + `e8e3f12`.
-- [ ] T6 Open-cause clusters: K14 (hypoplasticity history/stress path), K15 (MC/DP/von Mises), K24 (3D consolidation `large2`), K21 (Navier-Stokes), C7 (Mazars), C11 (dynamics), C3 (3D section sign), C6 (iface_gen coverage). Investigations, one by one.
+- [x] T6 Open-cause clusters: K14 (hypoplasticity history/stress path), K15 (MC/DP/von Mises), K24 (3D consolidation `large2`), K21 (Navier-Stokes), C7 (Mazars), C11 (dynamics), C3 (3D section sign), C6 (iface_gen coverage). Investigations, one by one. State 2026-10-17: K14 slots done (K14a), `hypo3` stresses class A K14b, hyhis residuals open/deferred (AUDIT K14); K15 resolved or class A (`mohrcou2` parked); K24 class A; K21 recovery + stokes default resolved, `validation_1` decided C72-V1, convected-stress residuals = BACKLOG C72; C7 class A; C11 resolved; C3 sign resolved + square-face tie class A; C6 resolved. Remaining residuals tracked in BACKLOG/DIVERGENCES, no open T6 cluster.
 - [x] T7 Memory hogs (>4 GB with any binary): Pro `force11`, `large1`, `ground19_water_under_dam`, `mesh_activate1`, `foundation_consolidation_settlement` (runs since F4 T4 K20, bad_alloc under the 4 GB cap). Route: read-only investigation, owner decision 2026-10-09 (fix A, B, C), then one delegated writer. Memory fixed; solver-speed residual of `force11`/`foundation...` open (BACKLOG C43).
 - [x] T8 C45 + C46 (owner 2026-10-10: study, not only document): `control_mesh_copy`/`_mirror` after a time step stop with a `node_dof_start_refined` error (Pro runs); copy/switch order on the same index (Pro copies first); `control_mesh_move` has no effect in the Pro (Pro-suspect?); `mesh_activate1` final-step vely (GNU 0, Pro -9.95e-6). Route: delegated writer. Done except C46c (rotate sweep, parked: large) and two owner decisions (C46b, C46e class D).
 - [x] T9 C43: GNU Bi-CG converges far slower than the Pro (`force11` >600 s vs 13 s). Route: read-only investigator + omen, owner decisions 2026-10-10 (items 1-6), then one delegated writer. Done: SuperLU UAF, interface_convert UAF, recovery table, pardiso -> SuperLU, CSR operator, docs (C46b/C46e class A, C46c not scheduled).
@@ -26,7 +26,7 @@ T6 triage (2026-10-11, HEAD 53dbb86) and owner order (2026-10-11):
 - [x] T6c K15 `validation_14` `control_restart` semantics (without restart every node_dof = Pro). Done `8ca6124`: restart resets the IP state (manual 6.368, Pro deletes element_dof); `validation_14` NOT caused by the restart (re-scoped, open under T6f); element history records -> BACKLOG C58.
 - [x] T6d C11 `dynamic3` (disp_primary_gate per material) -> C52. Done `28992d5` (C11), `e0f2204` (C59), `b318484` (interface history), `c276931` (inertia pass).
 - [x] T6e C53 slide in the post-solve pass. Done `b4e4fa4` (slide law), `07433f5` (slide/contact in the pass, gate removed).
-- [ ] T6f Rest by relevance (K15 `validation_14` done `1d446b3`; K15 validation_3 kap done `c3e6d2a`; C68 IP states kapsh/cap1/damage/rho/Maxwell done `70235c6`; C68d Maxwell old-state index done `2327083`; K21 recovery part done `2305659`, gate removed `e2b044f`; `-ra` ranges done `35025dc`): K15 `validation_14` (re-scoped by T6c: pass-1 hole-boundary nodal stress/plastic strain up to ~20 % at 8 nodes on the r=0.01 circle -> `refine_locally` picks a different element -> pass 2 on a different mesh), K15 mmc_tension and validation_3 eptzz closed 2026-10-12 as class A divergences (`600a0b4`), K14b hypo3 and C7/C7b Mazars closed 2026-10-12 as class A divergences (`ae0691b`), K21 (recovery done; validation_1 stokes default + convection remain), C57 (hex27 nodal stress resolved by C70; post_point open), C70 done `39d0138` (all Gauss rules + 3D physical fit), C71 done `bea7599` (on-axis Lobatto -> Gauss; Lobatto recovery weighting -> C79), C79 done `ab4ef78` (Lobatto recovery = Pro + msf on-axis replica; found C80 `-reduced`), C80 done `995de49` (`-reduced` = Pro; default factor 10 class A; next C80.1 selective/B-bar), C75 (prism6 points). Parked: K14c (ISA, class D), mohrcou2 sfnet (input artifact).
+- [x] T6f Rest by relevance (K15 `validation_14` done `1d446b3`; K15 validation_3 kap done `c3e6d2a`; C68 IP states kapsh/cap1/damage/rho/Maxwell done `70235c6`; C68d Maxwell old-state index done `2327083`; K21 recovery part done `2305659`, gate removed `e2b044f`; `-ra` ranges done `35025dc`): K15 `validation_14` (re-scoped by T6c: pass-1 hole-boundary nodal stress/plastic strain up to ~20 % at 8 nodes on the r=0.01 circle -> `refine_locally` picks a different element -> pass 2 on a different mesh), K15 mmc_tension and validation_3 eptzz closed 2026-10-12 as class A divergences (`600a0b4`), K14b hypo3 and C7/C7b Mazars closed 2026-10-12 as class A divergences (`ae0691b`), K21 (recovery done; validation_1 stokes default + convection remain), C57 (hex27 nodal stress resolved by C70; post_point open), C70 done `39d0138` (all Gauss rules + 3D physical fit), C71 done `bea7599` (on-axis Lobatto -> Gauss; Lobatto recovery weighting -> C79), C79 done `ab4ef78` (Lobatto recovery = Pro + msf on-axis replica; found C80 `-reduced`), C80 done `995de49` (`-reduced` = Pro; default factor 10 class A; next C80.1 selective/B-bar), C75 (prism6 points). Parked: K14c (ISA, class D), mohrcou2 sfnet (input artifact). State 2026-10-17: every listed item done or decided (K21 `validation_1` = C72-V1; C57 post_point done `cf37de3`; C75 class A); the LOW queue closed below; parked: K14c (ISA, class D), mohrcou2 sfnet (input artifact).
 - [x] T6f C72 convected nodal stress + validation_1 steady guard (owner-approved 2026-10-13; route: delegated writer, trigger: general.cc + 3 tests + 9 docs). Done `c1a1ae9` (fix + tests), `cc245f7` (docs). Tests registered in `scripts/build_safe.sh` `421a3f4`.
 - [x] T6f C70 nodal recovery of the other Gauss rules and the 3D elements in physical coordinates (route: delegated writer; trigger: multi-file code + 7 tests + build_safe + 9 docs). Done `39d0138` (fix + tests + registration), `170e573` (docs). Found C75 (prism6 integration points).
 - [x] T6f C75 prism6 integration rule: investigation + owner decision + docs (route: delegated writer; trigger: Pro/GNU probes + 7 docs). Gate stop before code; owner 2026-10-13: keep the GNU interior rule (class A). Done `4ab9549` (docs). Found C76 (`-minimal` ignored for prism6).
@@ -98,6 +98,14 @@ T6 triage (2026-10-11, HEAD 53dbb86) and owner order (2026-10-11):
   - [x] C84c implementation: 2D record 6 values (wrong count = input error), 2D stress layout, non-tensor elements through pol() with the real point count; unsupported types refused.
   - [x] C84d verification: clean build, build_safe TN_CHECK_ONLY, audit_db_buffers, hex8 3D byte-identical, omen corpus A/B.
   - [x] C84e docs: user/dev post_element_force (+ README), DIVERGENCES if a row applies, SEGUIMIENTO register, BACKLOG C84 closed.
+- [x] T6f LOW queue closure (owner 2026-10-17: fix the cheap items of the low-severity queue, document the rest as class B deferred, then merge and move to F5). Route: delegated writer (trigger: parent long-session context backstop). One work-unit commit per unit with its tests and docs. Subtasks:
+  - [x] Q1 PEF 1D result length (Pro `force16`/`post7` record length; calcul_force.cc 1D branches, database.cc). Route: inline in the writer. Risk: item 3 (result record length of an existing output; no reader of index 1-4 in the code).
+  - [x] Q2 C60 STOPPED before any code change: not output-only (the GNU orientation rule makes two of four node orders treat a compressed MC/tension interface as open); re-scoped in BACKLOG C60, owner decision.
+  - [x] Q3 C62 `parallel_new_dof_before` in the post-solve pass (top.cc), double-application check, dedicated omen A/B of `node_rhside`; re-measure C63. Risk: item 3 (reported `node_rhside` output) + item 6. STOP if any case moves away from Pro.
+  - [x] Q4 C54 `db_type()` check of run-time record names read into `idum[1]` (post.cc, print_el.cc, repeat.cc, data.cc, calcul.cc), expected-error test, audit_db_buffers. Risk: item 3 (new input error for wrong-typed names).
+  - [x] Q5 C84-REFUSE STOPPED: the Professional INCLUDES a truss with a node on the section (analytically correct total, 100 = 45 + 55), neither ignored nor wrong; new BACKLOG C86, owner decision. No code change.
+  - [x] Q6 C58 element history records after `control_restart` (interface, contactspring, spring, tendon, damage) vs Pro, one probe per family; `number_timesteps` -> class B; time box half a day (interface + spring first). Risk: item 1 (restart state).
+  - [x] Q7 bookkeeping docs: class B deferrals (C61, C65, C69, C68b, C68c, K14 hypo3 hyhis residual, C22, C12, C25), stale lines (C3/C5 headings, C51 row, DIVERGENCES K21, AUDIT K14/K15/K21, task lines T6/T6f), BACKLOG open recount. C68a / C72-V1 class D and sfnet B14 untouched (owner decisions).
 
 ## Later (owner 2026-10-10, after convergence with ALL divergences documented and accepted)
 - F6: ILU/AMG preconditioning of the iterative solver (BACKLOG C81, owner 2026-10-15: in large meshes with many steps even small per-solve gains compound).
@@ -1298,3 +1306,45 @@ docs + SEGUIMIENTO + BACKLOG + DIVERGENCES.
   C84-REFUSE (B 42, total 92), SEGUIMIENTO register, BACKLOG C84
   closed (45 open). Open: Pro handling of trusses/interfaces in the
   selection (C84-REFUSE), 1D result length. Next: LOW-queue triage.
+- 2026-10-17 T6f LOW queue closure (route: delegated writer; trigger:
+  parent long-session context backstop; owner plan 2026-10-17: fix the
+  cheap low-severity items, defer the rest as class B, then merge + F5).
+  Q1 `feafe50`: 1D `post_element_force_result` = one value (Pro
+  force16 5.034285714286; target on value 1 -> target_item error); tests
+  `post_element_force_1d_length1` / `_length_error1` (RED on b938b0f).
+  Q2 C60 STOPPED: not output-only. Probes `scratchpad/lowq/c60/`: blocks
+  + quad4 interface, four node orders: Pro -9.98 always; GNU +/+/-/- and,
+  with MC + tension cut-off, orders `4 2 10 9` / `10 9 4 2` treated as
+  OPEN (normal 0). Free interface: Pro numbering rule, opened elastic
+  interface carries 0. Owner decision (BACKLOG C60 re-scoped).
+  Q3 `a2e68b6`: the pass also lost the `bounda_force` loads; top.cc
+  restores the iteration's post-bounda() NODE_RHSIDE snapshot and runs
+  `parallel_new_dof_before`. Tests node_rhside_post_pass_{node_force,
+  node_mass,bounda_force}1 (Pro targets, RED on feafe50). Omen A/B
+  lq3_runs vs c84b_runs (1019): node_dof identical everywhere, rc
+  unchanged, node_rhside changed in 133 cases; of 64 with a Pro run 62
+  only closer to Pro, trubea2/3 (rc 1 both, C37 planar beam, disz 2e6 vs
+  Pro 0.033) now show the applied 0.01 at the loaded node (Pro 0): judged
+  not a regression (the old 0 hid the load). C63 re-measured: unchanged
+  -> class B + DIVERGENCES row.
+  Q4 `8edaf3b`: db_type() check in post.cc (post_node, post_integrate),
+  print_el.cc, repeat.cc (save, until); data.cc/calcul.cc already safe.
+  4 expected-error tests (RED rc 0 / endless repeat). Pro: zeros for
+  post_node/post_integrate -> DIVERGENCES C54-TYPE (class C).
+  Q5 C84-REFUSE STOPPED: Pro includes a truss with a node on the section
+  (100 = 45 + 55, moment -40), correct total -> new BACKLOG C86, owner.
+  Q6 `ef9af63`: Pro keeps the interface and spring history over
+  control_restart, GNU = Pro; 2 pinning tests; contact-spring, tendon,
+  damage, number_timesteps deferred (class B).
+  C25 item 1 `efff819` (pef_vel_prev zeroed after reallocation; no
+  deterministic RED possible). Q7 `0f707f3`: deferrals (C22, C25 rest,
+  C58 rest, C61, C63, C65 -> PPD, C68b, C68c, C69, K14 hypo3 hyhis), C12
+  closed (Pro 02-08-2026 does not stop on the singular probe either; GNU
+  C77 SuperLU fallback), stale lines (C3/C5, C51, DIVERGENCES K21, AUDIT
+  K14/K15/K21, T6/T6f lines), BACKLOG recount: 41 open (2 MEDIUM, 39
+  LOW; 32 active, 9 deferred class B; 12 class A decided, 45 closed).
+  DIVERGENCES A 32, B 42, C 18, D 1, total 93. Verification: clean
+  build; build_safe TN_CHECK_ONLY 335 OK / 0 FALLO, runs 226/226;
+  audit_db_buffers 0; omen final A/B lqf_runs vs lq3_runs (1024): only
+  cylinder_buckle (timeout both) and the new tests. Open for the owner:
+  C60 orientation rule, C86 truss inclusion. Next: merge + F5.
