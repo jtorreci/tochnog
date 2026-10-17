@@ -92,6 +92,12 @@ T6 triage (2026-10-11, HEAD 53dbb86) and owner order (2026-10-11):
   - [x] C85c C82 consistency: tria6 4-point (-27/48) element stiffness eigenvalues (straight/curved, nu 0.3/0.49, plane strain/axisymmetric): zero modes and negative eigenvalues, contrast with prism15.
   - [x] C85d verification: clean build, build_safe TN_CHECK_ONLY, audit_db_buffers, omen corpus A/B.
   - [x] C85e docs: developer pages (integration, mass lumping), DIVERGENCES (C82 rationale, TRIA6-HRZ row), SEGUIMIENTO register, BACKLOG C85 closed.
+- [x] T6f C84 `post_element_force` 2D/3D on non-tensor elements and the 2D record (BACKLOG C84). Done `f2ae525` (fix + 14 tests + build_safe), `651de63` (docs). Route: delegated writer (trigger: parent long-session context backstop; calcul_force.cc + tests + build_safe + docs, Pro probes, omen corpus A/B). Risk: item 3 only if an existing input uses the 7-value 2D record (search before the change); the 2D tensor path changes (NaN today), the 3D hex8/hex27 path must stay byte-identical. Subtasks:
+  - [x] C84a manual 6.927 record/result layout; corpus search for 7-value 2D records; Pro probes per element type (tria3, tria6, quad9 2D; tet4, tet10, prism6, prism15, hex27 3D).
+  - [x] C84b RED tests under test-2026 (tet4 split of `tpef_force10`, 2D quad4 and tria3 strip with 6 values, wrong-count expected error; Pro targets 4e-6) + build_safe registration.
+  - [x] C84c implementation: 2D record 6 values (wrong count = input error), 2D stress layout, non-tensor elements through pol() with the real point count; unsupported types refused.
+  - [x] C84d verification: clean build, build_safe TN_CHECK_ONLY, audit_db_buffers, hex8 3D byte-identical, omen corpus A/B.
+  - [x] C84e docs: user/dev post_element_force (+ README), DIVERGENCES if a row applies, SEGUIMIENTO register, BACKLOG C84 closed.
 
 ## Later (owner 2026-10-10, after convergence with ALL divergences documented and accepted)
 - F6: ILU/AMG preconditioning of the iterative solver (BACKLOG C81, owner 2026-10-15: in large meshes with many steps even small per-solve gains compound).
@@ -1264,3 +1270,31 @@ docs + SEGUIMIENTO + BACKLOG + DIVERGENCES.
   refreshed (1154 / ~833 accepted / ~258 pending). Next: C84
   (`post_element_force` element types and 2D record), then the LOW-queue
   triage, then merge + F5.
+- 2026-10-17 T6f C84 (route: delegated writer; trigger: parent
+  long-session context backstop). Manual 6.927: 2D record 6 values
+  (n_x n_y s0_x s0_y mid_x mid_y), 2D result normal / shear / moment;
+  no corpus, test-2014, test-2026, sfnet or Pro `other` input uses a
+  7-value 2D record (Pro force14/force15 use 6), so the record change
+  is not a contract break. Pro 02-08-2026 probes (`scratchpad/c84/`):
+  tpef_force10 split into tet4/tet10/prism6/prism15 -> -123.4 / 0 /
+  1000 / 0 / -100000 (GNU HEAD: normal 3143.7 / -1651.5 / 4918.6 /
+  1871.5); 2D strip quad4/tria3/quad9/tria6 -> 3 values 100 / 10 / -40
+  (GNU: 6 values skipped, 7 values NaN: the 2D stress copy wrote sxx
+  sxy sxz into a 6-stride array read with stride 3 as sxx syy sxy);
+  axisymmetric ring strip -> normal 100 (ring forces, hoop term); 7 or
+  5 values -> "Number of data values expected : 6". Fix `f2ae525`:
+  input.cc count check, pol() path `pef_element_internal_forces_pol`
+  for the non-tensor elements and axisymmetric 2D, 2D layout fix,
+  3-value 2D result (fixed_length 0), refusal of non-continuum /
+  interface elements; found in the omen A/B: interior sections summed
+  both sides (cancel; force14 shear 33.3 vs Pro -500) -> mean of the
+  positive side and the negated negative side (force14/force15 =
+  Pro exactly, reversed normal = Pro). Tests 14 (RED on 54b8170, GREEN);
+  hex8/hex27 boundary sections byte-identical. Clean build; build_safe
+  324 OK / 0 FALLO, runs 226/226; audit_db_buffers 0; omen A/B
+  c84b_runs vs c85_runs (1005): force14/force15 rc 1 -> 0 (= Pro),
+  bicg_csr_threads1 (nondeterministic), only-new the 14 tests. Docs
+  `651de63`: user page (new) + dev page, DIVERGENCES class B
+  C84-REFUSE (B 42, total 92), SEGUIMIENTO register, BACKLOG C84
+  closed (45 open). Open: Pro handling of trusses/interfaces in the
+  selection (C84-REFUSE), 1D result length. Next: LOW-queue triage.
