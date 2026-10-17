@@ -545,3 +545,7 @@ page lists its own in "Differences with the Professional version".
 ## F4 T6f — K21 WU2 group_materi_stokes (2026-10-12)
 
 - [group_materi_stokes](group_materi_stokes.md) — Stokes flow per element group (no momentum convection): default `-yes` as manual 6.752 and the Professional (before: `-no`); read per element group (the Professional uses index 0 for every group, class A divergence STOKES-IDX).
+
+## F4 T6f — C84 post_element_force (2026-10-17)
+
+- [post_element_force](post_element_force.md) — normal force, shear forces and moments of a cross section from the element nodal forces (manual 6.927); every continuum element type (tria/tet/prism through their own rule), 2D record of 6 values with a 3-value result, axisymmetric ring forces, as the Professional.

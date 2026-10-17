@@ -2684,7 +2684,7 @@ Original report:
   `sri_stress_recovery_weight()` only for the rules proven to be the mean.
 - **Severity**: LOW. **Effort**: cheap.
 
-### C84. `post_element_force` 2D/3D section on non-tensor elements and in 2D (F4 T6f C66, 2026-10-16) — OPEN
+### C84. `post_element_force` 2D/3D section on non-tensor elements and in 2D (F4 T6f C66, 2026-10-16) — RESOLVED 2026-10-17 (`f2ae525`)
 
 - **Symptom**: the 2D/3D `post_element_force` path of `calcul_force.cc`
   (the element scan near line 2800) chooses `npol` 2 for
@@ -2714,6 +2714,31 @@ Original report:
   NaN source; tests from the probes above.
 - **Severity**: LOW (post-processing only, wrong numbers without a
   warning). **Effort**: medium.
+- **Resolution** (F4 T6f C84, `f2ae525`): manual 6.927 gives the 2D
+  record as 6 values (no input of the corpus, test-2014, test-2026 or
+  sfnet used 7; the Professional `force14`/`force15` use 6), so the
+  GNU follows it: `input.cc` stops in the data part on a wrong count
+  (`Number of data values expected : 6`, 12 in 3D, 2 in 1D, as the
+  Professional) and the 2D result has the Professional 3 values
+  (normal, shear0, moment0). The 2D NaN was the stress copy (`sxx sxy
+  sxz` in a 6-stride array read as `sxx syy sxy` with stride 3). The
+  non-tensor continuum elements (tria3, tria6, quad16, tet4, tet10,
+  prism6, prism15) and every 2D element of an axisymmetric group
+  integrate with `pol()` and the `ELEMENT_DOF` stresses of their real
+  points (`pef_element_internal_forces_pol`; axisymmetric: ring forces
+  with the hoop term); quad4/quad9 plane and hex8/hex27 keep the
+  tensor helpers (hex8/hex27 byte-identical). With elements on both
+  sides of the section (no `post_element_force_normal`) the result is
+  the mean of the positive side and the negated negative side (the
+  plain sum cancelled; Professional corpus `force14`/`force15` now
+  equal). Other elements are
+  refused with an error (Professional not measured: DIVERGENCES class
+  B C84-REFUSE). Professional = GNU on every probe (tet4, tet10,
+  prism6, prism15 cantilever -123.4 / 1000 / -100000; quad4, tria3,
+  quad9, tria6 strip 100 / 10 / -40; axisymmetric quad4, quad9, tria3,
+  tria6 ring strip, normal 100; interior strip section 100 / 10 / -20;
+  reversed normal). Tests `test-2026/post_element_force_*` (14, RED on
+  `54b8170`).
 
 ### C83. tria3 / tet10 `-maximal` point counts and the axisymmetric tria3 `-maximal` (F4 T6f C67 remainder, 2026-10-16) — RESOLVED 2026-10-16 (part 2, `72f78bd`; part 1 decided: deliberate divergence from the manual, class A)
 
@@ -3117,7 +3142,7 @@ Original report:
 | C78 | — | `post_point` in curved quad9 / hex27: Professional corner-node (sub-parametric) location, GNU isoparametric — decided 2026-10-13: deliberate divergence (class A) | closed | - |
 | C65 | — | Professional `post_point_dof` at a node differs from its own `node_dof` | LOW | cheap |
 | C66 | — | tria6 integration rule — resolved 2026-10-16 (F4 T6f C66 phase 2, `175faf1`: manual 7 / 4 points, linear-fit recovery = Pro, axisymmetric accepted; HRZ lumping, class A TRIA6-HRZ) | closed | - |
-| C84 | — | `post_element_force` 2D/3D: quad/hex helpers on tria/tet/prism elements (tet4 cantilever normal 3143 vs -123.4), 2D record 7 vs 6 values and NaN | LOW | medium |
+| C84 | — | `post_element_force` 2D/3D on tria/tet/prism elements, 2D record 7 vs 6 values and NaN — resolved 2026-10-17 (F4 T6f C84, `f2ae525`: pol() integration, 6-value 2D record, 3-value 2D result, axisymmetric ring forces; non-continuum elements refused, DIVERGENCES C84-REFUSE) | closed | - |
 | C85 | — | tria6 h-weighted lumped terms (groundflow velocity, condif absorption) — resolved 2026-10-17 (F4 T6f C85: HRZ weight, TRIA6-HRZ) | closed | - |
 | C82 | — | `prism15` `-minimal`: Professional 8 points with an indefinite stiffness, GNU 21 — decided 2026-10-16: deliberate divergence (class A) | closed | - |
 | C83 | — | tria3/tet10 `-maximal` manual point counts (4/10) vs both codes (3/5) — decided 2026-10-16: deliberate divergence from the manual (class A); axisymmetric tria3 `-maximal` resolved 2026-10-16 (`72f78bd`: 3 nodal points, 1 on the axis, = Professional) | closed | - |
@@ -3129,7 +3154,7 @@ Original report:
 | C68d | — | `materi.cc` old rho/epi/epp read with the Maxwell loop index (two or more chains) — resolved 2026-10-12 (F4 T6f, `2327083`) | LOW | cheap |
 | C69 | — | plane-stress membrane: yy/zz split of the plastic strain first order in dt (eptzz -0.00721 at dt 0.1 vs analytic -0.00882) | LOW | medium |
 
-Forty-six items remain open: three MEDIUM and forty-three LOW (C23 and C24 resolved 2026-10-05; C25, C26, C27 and B10 added; F1 T3 / K04 2026-10-06 added B11, C28-C32; F1 T6 resolved C28, added and resolved B12; F2 T1 added C36; F2 T2 added C37, C38, C39; F2 T3 resolved C5 and added C40; F3 T2 resolved C8, C18, C19, C20 and added B13, C41; F4 T2 fixed the C41 tie and left a residual; F4 T3 resolved C33; F4 T4 closed C32, added C42 and resolved C31; F4 T7-T8 added C43-C46; F4 T9 resolved the C43 solver speed, decided C46b/C46e and added C47, C48, C49; F4 T10 resolved C48 and added C50; F4 T5 added C52, C53 and resolved C51; F4 T13 resolved C49 and added C54-C56; F4 T12 resolved C47 and added C57; F4 T6a resolved C6, C55, C56 and the C3 sign, the C3 square-face tie becoming a deliberate divergence (owner 2026-10-11), and added B14; F4 T6c fixed the `control_restart` integration-point reset and added C58; F4 T6d resolved C11 and C59, fixed the interface history and resolved C52, and added B15, C60 and C61; B15 resolved the same day; F4 T6e resolved C53 and added C62 and C63; F4 T6f added C64-C68 and C69, and closed the K15 `mmc_tension` vertex sigzz/eppzz and `validation_3` eptzz items as deliberate divergences MC-VERTEX-ZZ / MEMBRANE-EPTZZ, owner 2026-10-12; F4 T6f resolved C68 and added C68a-C68d; C68d resolved the same day; F4 T6f closed C7 (Mazars equivalent strain, with C7b) and the AUDIT K14b `hypo3` sigxx reversal as deliberate divergences C7 / K14b, owner 2026-10-12; the `hypo3` hyhis slot residual stays open under AUDIT K14; F4 T6f K21 WU2 widened C72 with the Stokes-flow residual and closed its `cmat_gate` rewrite, no new item; F4 T6f C72 resolved the convected nodal stress output (C72 stays open for the Professional-side residuals) and added C73 and C74; F4 T6f C70 resolved C70 and added C75; F4 T6f C75 closed C75 as a deliberate divergence, owner 2026-10-13, and added C76; F4 T6f C74 resolved C74 and added C77; F4 T6f C57 resolved C57 and added C78, decided the same day as a deliberate divergence, owner 2026-10-13; F4 T6f C71 resolved C71 and added C79; F4 T6f C79 resolved C79 and added C80; F4 T6f C77 resolved C77 and added C81 (F6); F4 T6f C80 resolved C80 and added C80.1; F4 T6f C80.1 resolved C80.1; F4 T6f C80.2 extended C80.1 with `-lambda`, no new item; F4 T6f C67 resolved the bar and quad16 rules and narrowed C67, no new item; F4 T6f C67 remainder + C76 resolved C67 and C76, re-scoped C66 and added C82 and C83; F4 T6f C82 + C83 decided C82 and C83 part 1 as deliberate divergences (owner 2026-10-16) and resolved C83 part 2; F4 T6f C66 measured the Professional tria6 lumping and added C84; F4 T6f C66 phase 2 resolved C66 (lumping class A TRIA6-HRZ, owner 2026-10-16) and added C85; F4 T6f C85 resolved C85; forty-six items remain open). No open issue is CRITICAL or
+Forty-five items remain open: three MEDIUM and forty-two LOW (C23 and C24 resolved 2026-10-05; C25, C26, C27 and B10 added; F1 T3 / K04 2026-10-06 added B11, C28-C32; F1 T6 resolved C28, added and resolved B12; F2 T1 added C36; F2 T2 added C37, C38, C39; F2 T3 resolved C5 and added C40; F3 T2 resolved C8, C18, C19, C20 and added B13, C41; F4 T2 fixed the C41 tie and left a residual; F4 T3 resolved C33; F4 T4 closed C32, added C42 and resolved C31; F4 T7-T8 added C43-C46; F4 T9 resolved the C43 solver speed, decided C46b/C46e and added C47, C48, C49; F4 T10 resolved C48 and added C50; F4 T5 added C52, C53 and resolved C51; F4 T13 resolved C49 and added C54-C56; F4 T12 resolved C47 and added C57; F4 T6a resolved C6, C55, C56 and the C3 sign, the C3 square-face tie becoming a deliberate divergence (owner 2026-10-11), and added B14; F4 T6c fixed the `control_restart` integration-point reset and added C58; F4 T6d resolved C11 and C59, fixed the interface history and resolved C52, and added B15, C60 and C61; B15 resolved the same day; F4 T6e resolved C53 and added C62 and C63; F4 T6f added C64-C68 and C69, and closed the K15 `mmc_tension` vertex sigzz/eppzz and `validation_3` eptzz items as deliberate divergences MC-VERTEX-ZZ / MEMBRANE-EPTZZ, owner 2026-10-12; F4 T6f resolved C68 and added C68a-C68d; C68d resolved the same day; F4 T6f closed C7 (Mazars equivalent strain, with C7b) and the AUDIT K14b `hypo3` sigxx reversal as deliberate divergences C7 / K14b, owner 2026-10-12; the `hypo3` hyhis slot residual stays open under AUDIT K14; F4 T6f K21 WU2 widened C72 with the Stokes-flow residual and closed its `cmat_gate` rewrite, no new item; F4 T6f C72 resolved the convected nodal stress output (C72 stays open for the Professional-side residuals) and added C73 and C74; F4 T6f C70 resolved C70 and added C75; F4 T6f C75 closed C75 as a deliberate divergence, owner 2026-10-13, and added C76; F4 T6f C74 resolved C74 and added C77; F4 T6f C57 resolved C57 and added C78, decided the same day as a deliberate divergence, owner 2026-10-13; F4 T6f C71 resolved C71 and added C79; F4 T6f C79 resolved C79 and added C80; F4 T6f C77 resolved C77 and added C81 (F6); F4 T6f C80 resolved C80 and added C80.1; F4 T6f C80.1 resolved C80.1; F4 T6f C80.2 extended C80.1 with `-lambda`, no new item; F4 T6f C67 resolved the bar and quad16 rules and narrowed C67, no new item; F4 T6f C67 remainder + C76 resolved C67 and C76, re-scoped C66 and added C82 and C83; F4 T6f C82 + C83 decided C82 and C83 part 1 as deliberate divergences (owner 2026-10-16) and resolved C83 part 2; F4 T6f C66 measured the Professional tria6 lumping and added C84; F4 T6f C66 phase 2 resolved C66 (lumping class A TRIA6-HRZ, owner 2026-10-16) and added C85; F4 T6f C85 resolved C85; F4 T6f C84 resolved C84 (the unmeasured Professional handling of non-continuum elements is the DIVERGENCES class B row C84-REFUSE); forty-five items remain open). No open issue is CRITICAL or
 HIGH. The validation-suite corpus has no open failure — its 233 real tests
 pass (`materi_direct_mc` input corrected, C17 resolved). Every remaining failure is a stale or malformed test, an out-of-scope model
 or infrastructure limit, a narrow post-processing divergence, a corpus-coverage
