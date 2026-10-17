@@ -1,0 +1,53 @@
+( LOW queue Q1 {F4 T6f, 2026-10-17}: expected-error test of the 1D
+  post_element_force result length. The Professional 02-08-2026 writes
+  ONE value in 1D {force16: post_element_force_result 10 5.0343}; a
+  target on value number 1 is out of range and the Professional stops
+  with the target_item error. Before Q1 the GNU wrote five values {the
+  normal force and 4 zeros} and this target {value 0} passed.
+  EXPECTED_ERROR: Error detected for data item : target_item )
+echo -no
+number_of_space_dimensions 1
+materi_velocity
+materi_displacement
+materi_stress
+end_initia
+
+node 1  0
+node 2  1
+node 3  1
+node 4  2
+element 1  -bar2 1 2
+element 2  -bar2 3 4
+
+element_group 1 1
+element_group 2 2
+
+group_type 1  -materi
+group_materi_memory 1  -total_linear
+group_materi_density 1  1.0
+group_materi_elasti_young 1  1.0
+
+group_type 2  -materi
+group_materi_memory 2  -total_linear
+group_materi_density 2  1.0
+group_materi_elasti_young 2  1.0
+
+bounda_dof   10  -ra 1 -ra  -velx
+bounda_time  10  1.
+
+mpc_element_group 10  2 1
+
+inertia_apply -yes
+
+force_gravity 9.81
+
+geometry_point 10  1. 1.e-4
+post_element_force 10  1. 1.
+post_element_force_geometry 10  -geometry_point 10
+post_element_force_group 10  1
+
+control_timestep 10  1. 1.
+
+target_item    0  -post_element_force_result 10 1
+target_value   0  0. 1.e-4
+end_data

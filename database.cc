@@ -7275,7 +7275,8 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   type[POST_ELEMENT_FORCE_RESULT] = DOUBLE_PRECISION;
   data_length[POST_ELEMENT_FORCE_RESULT] = 5;
   // C84: 3D five values, 2D three (normal, shear0, moment0; manual
-  // 6.927 and the Professional 02-08-2026 record)
+  // 6.927 and the Professional 02-08-2026 record); 1D one value (the
+  // normal force, Professional force16)
   fixed_length[POST_ELEMENT_FORCE_RESULT] = 0;
 
   strcpy(name[PRINT_APPLY],"print_apply");

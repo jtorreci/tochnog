@@ -61,7 +61,9 @@ The selection records, with the same index:
 - 3D: five values, `normal_force shear0_force shear1_force moment0
   moment1`.
 - 2D: three values, `normal_force shear0_force moment0`.
-- 1D: the normal force (first value).
+- 1D: one value, the normal force (the GNU wrote the normal force
+  followed by four zeros before 2026-10-17; the Professional writes one
+  value).
 
 `moment0` sums the normal force components times the distance along
 `dir_shear0` from `middle`; `moment1` uses `dir_shear1`.

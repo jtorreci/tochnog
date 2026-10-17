@@ -223,10 +223,25 @@ max(|value|,1)), `test-2026`:
 
 RED on `54b8170` (all 14), GREEN after the fix.
 
+### 1D result length (F4 T6f LOW queue Q1, 2026-10-17)
+
+The Professional 02-08-2026 writes ONE value in 1D (`force16.dbs`:
+`post_element_force_result 10 5.034285714286`; a `target_item` on
+value number 1 stops with `Error detected for data item :
+target_item`). Both 1D exits of `post_element_force_calculate()` (the
+`_force`/`_inertia` lumped branch and the elastic section device) now
+PUT `length = 1` (`res[0] *= fac`); before they wrote the normal force
+and four zeros. `database.cc` keeps `data_length 5`, `fixed_length 0`
+(the maximum, 3D). No code reads values 1-4 of a 1D record. Tests:
+`test-2026/post_element_force_1d_length1` (force16, normal
+5.034285714286 = Professional) and `_1d_length_error1` (target on value
+1 -> expected error; it passed with value 0 before). RED on `b938b0f`
+(`_length_error1` rc 0), GREEN. Differential force16/17, mpc8/9,
+post7, tpef_force10, force13/14 vs `b938b0f`: only the 1D record loses
+its four zeros.
+
 ### Pending
 
-- The 1D branch still writes 5 values (`res[0]` = normal); the
-  Professional 1D result length was not measured.
 - The Professional behaviour for trusses/beams/springs or interface
   groups inside the selection was not measured (GNU refuses them;
   DIVERGENCES C84-REFUSE).

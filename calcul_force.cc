@@ -2677,8 +2677,10 @@ void post_element_force_calculate( void )
           delete[] el;
         }
 
-        for ( i=0; i<5; i++ ) res[i] *= fac;
-        length = 5;
+        // 1D result: the normal force only (one value, = the
+        // Professional 02-08-2026 force16/force17 record)
+        res[0] *= fac;
+        length = 1;
         db( POST_ELEMENT_FORCE_RESULT, ipef, idum, res, length,
           VERSION_NORMAL, PUT );
         continue;
@@ -2809,8 +2811,10 @@ void post_element_force_calculate( void )
         if ( !found_plus && fb_ielem>=0 ) res[0] += fb_axial;
       }
 
-      for ( i=0; i<5; i++ ) res[i] *= fac;
-      length = 5;
+      // 1D result: the normal force only (one value, = the
+      // Professional 02-08-2026 force16/post7 record)
+      res[0] *= fac;
+      length = 1;
       db( POST_ELEMENT_FORCE_RESULT, ipef, idum, res, length,
         VERSION_NORMAL, PUT );
       continue;

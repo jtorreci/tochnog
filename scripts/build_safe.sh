@@ -2209,6 +2209,11 @@ run_ok "$T2026" post_element_force_2d_tria6_1
 run_ok "$T2026" post_element_force_2d_axisym_quad4_1
 run_ok "$T2026" post_element_force_2d_axisym_tria3_1
 expected_error_ok "$T2026" post_element_force_2d_length_error1
+# F4 T6f LOW queue Q1 (2026-10-17): the 1D post_element_force result is
+#   ONE value, the normal force (Professional 02-08-2026 force16
+#   5.034285714286); a target on value 1 is an error (before: 4 zeros).
+run_ok "$T2026" post_element_force_1d_length1
+expected_error_ok "$T2026" post_element_force_1d_length_error1
 
 # ---------------------------------------------------------------------
 # Sub-sprint materi_stress_force, lote 2 (integracion 2D quad4/quad9):
