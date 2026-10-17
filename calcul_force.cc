@@ -2317,6 +2317,80 @@ void post_calcul_materi_stress_force( double /*unknown_values*/[],
   length_result = nitems;
 }
 
+// C84 (F4 T6f, 2026-10-17): the element internal forces f_elem = int
+// B^T sigma dV of a non-tensor continuum element (tria3, tria6, quad16;
+// tet4, tet10, prism6, prism15) with the element's own kinematics and
+// rule: pol() (polynom.cc) gives the point count, the physical shape
+// derivatives new_d[ip*ndim*nnol + jdim*nnol + inol] and the point
+// volumes; the stresses are the ELEMENT_DOF values of those points (the
+// same point order materi() stores). Same quantity and sign as
+// msf_element_internal_forces_2d/3d (f_elem[inol*ndim+idim]). In an
+// axisymmetric group the forces are those of the full ring, the
+// element's own momentum terms: the pol() volume carries 2 pi r and the
+// radial force gets the hoop term sigma_zz N/r (Professional 02-08-2026:
+// the axial section force of an axisymmetric strip equals the applied
+// ring force, 100, for quad4, quad9, tria3 and tria6; the plane volume
+// gave 100/(2 pi r) = 10.6). pol() is called with the
+// element-shape distortion warning switched off (it already printed
+// during the solve) and leaves its per-element thread-local recovery
+// state as for any element visit (the next element loop resets it).
+static void pef_element_internal_forces_pol( long int element,
+  long int element_group, long int name, long int nnol, double coords[],
+  double edof[], double f_elem[] )
+
+{
+  long int npoint=0, ip=0, inol=0, idim=0, jdim=0, ldum=0,
+    axisymmetric=-NO;
+  double ddum[1], xyz[MDIM*MNOL], radius=0., vol=0., sig=0.,
+    save_shape_factor=check_element_shape_factor;
+  double *h = get_new_dbl( MPOINT*MNOL );
+  double *old_d = get_new_dbl( MPOINT*MDIM*MNOL );
+  double *new_d = get_new_dbl( MPOINT*MDIM*MNOL );
+  double *new_b = get_new_dbl( MPOINT*MSTRAIN*MNOL*MDIM );
+  double *volume = get_new_dbl( MPOINT );
+
+  db( GROUP_AXISYMMETRIC, element_group, &axisymmetric, ddum, ldum,
+    VERSION_NORMAL, GET_IF_EXISTS );
+  for ( inol=0; inol<nnol; inol++ )
+    for ( idim=0; idim<ndim; idim++ )
+      xyz[inol*ndim+idim] = coords[inol*MDIM+idim];
+  check_element_shape_factor = 0.;
+  pol( element, element_group, name, nnol, xyz, xyz, npoint, h, old_d,
+    new_d, new_b, volume );
+  check_element_shape_factor = save_shape_factor;
+
+  for ( inol=0; inol<nnol*ndim; inol++ ) f_elem[inol] = 0.;
+  for ( ip=0; ip<npoint; ip++ ) {
+    vol = volume[ip];
+    if ( axisymmetric==-YES && ndim==2 ) {
+      radius = 0.;
+      for ( inol=0; inol<nnol; inol++ )
+        radius += h[ip*nnol+inol]*xyz[inol*ndim+0];
+      radius = scalar_dabs( radius );
+      if ( radius<EPS_COORD ) continue;
+      sig = edof[ip*nuknwn + stres_indx + stress_indx(2,2)*nder];
+      for ( inol=0; inol<nnol; inol++ )
+        f_elem[inol*ndim+0] += vol*sig*h[ip*nnol+inol]/radius;
+    }
+    for ( inol=0; inol<nnol; inol++ ) {
+      for ( idim=0; idim<ndim; idim++ ) {
+        for ( jdim=0; jdim<ndim; jdim++ ) {
+          sig = edof[ip*nuknwn + stres_indx
+            + stress_indx(idim,jdim)*nder];
+          f_elem[inol*ndim+idim] += vol*sig
+            * new_d[ip*ndim*nnol + jdim*nnol + inol];
+        }
+      }
+    }
+  }
+
+  delete[] h;
+  delete[] old_d;
+  delete[] new_d;
+  delete[] new_b;
+  delete[] volume;
+}
+
 // post_element_force (manual Professional 6.927-6.935): the normal
 // force, shear forces and bending moments of a cross-section, computed
 // from the ELEMENT INTERNAL NODAL FORCES (f_elem = int B^T sigma dV,
@@ -2370,7 +2444,9 @@ void post_element_force_calculate( void )
     if ( !db_active_index( POST_ELEMENT_FORCE, ipef, VERSION_NORMAL ) )
       continue;
 
-    // the direction frame + middle (3D: 12 values, 2D: 7, 1D: 2)
+    // the direction frame + middle (manual 6.927: 3D 12 values, 2D 6
+    // = n_x n_y s0_x s0_y mid_x mid_y, 1D 2; C84: the 2D record had 7
+    // values here; the input check of input.cc rejects any other count)
     length = db_len( POST_ELEMENT_FORCE, ipef, VERSION_NORMAL );
     values = db_dbl( POST_ELEMENT_FORCE, ipef, VERSION_NORMAL );
     array_set( dir_n, 0., MDIM );
@@ -2385,7 +2461,7 @@ void post_element_force_calculate( void )
         mid[i] = values[9+i];
       }
     }
-    else if ( ndim==2 && length>=7 ) {
+    else if ( ndim==2 && length==6 ) {
       dir_n[0] = values[0]; dir_n[1] = values[1];
       dir_s0[0] = values[2]; dir_s0[1] = values[3];
       mid[0] = values[4]; mid[1] = values[5];
@@ -2398,9 +2474,9 @@ void post_element_force_calculate( void )
       dir_s1[2] = 1.;
     }
     else {
-      pri( "Warning: post_element_force record has an invalid length "
-           "for the dimension - skipped" );
-      continue;
+      pri( "Error: post_element_force record has an invalid length "
+           "for the number of space dimensions, index ", ipef );
+      exit(TN_EXIT_STATUS);
     }
 
     // the multiply factor (manual 6.934)
@@ -2740,6 +2816,40 @@ void post_element_force_calculate( void )
       continue;
     }
 
+    // the geometry-restricted section nodes (manual 6.929: the INITIAL
+    // node location on the geometry), computed once per record
+    long int *pef_node_ok = get_new_int( max_node+1 );
+    for ( inod=0; inod<=max_node; inod++ ) {
+      pef_node_ok[inod] = db_active_index( NODE, inod, VERSION_NORMAL );
+      if ( pef_node_ok[inod] && db_active_index(
+           POST_ELEMENT_FORCE_GEOMETRY, ipef, VERSION_NORMAL ) ) {
+        long int ge[DATA_ITEM_SIZE], ldum2=0, ok_g=0;
+        double factor_d=0.;
+        db( POST_ELEMENT_FORCE_GEOMETRY, ipef, ge, ddum,
+          ldum2, VERSION_NORMAL, GET );
+        geometry( inod, ddum3, ge, ok_g, factor_d, ddum3, rdum,
+          ddum3, NODE_START_REFINED, PROJECT_EXACT, VERSION_NORMAL );
+        if ( !ok_g ) pef_node_ok[inod] = 0;
+      }
+    }
+
+    // C84 (F4 T6f, 2026-10-17): the two sides of the section (manual
+    // 6.933: without post_element_force_normal "elements on both sides
+    // will be used if present"). The forces of the elements on the
+    // positive dir_n side (centroid side >= 0) accumulate in node_force,
+    // those on the negative side in node_force_minus; a side is present
+    // when one of its elements touches a section node. The result is
+    // the mean of the positive-side resultant and the negated
+    // negative-side resultant (Professional 02-08-2026, corpus force14:
+    // interior section of a quad9 cantilever, shear -500 = the exact
+    // shear, the load at the section nodes split between both sides;
+    // the plain sum of both sides cancels to that nodal load, 33.3).
+    // One side only (a boundary section): that side's resultant, as
+    // before.
+    double *node_force_minus = get_new_dbl( (max_node+1)*MDIM );
+    array_set( node_force_minus, 0., (max_node+1)*MDIM );
+    long int pef_has_plus = 0, pef_has_minus = 0;
+
     // scan the elements and accumulate the internal nodal forces
     db_max_index( ELEMENT, max_elem, VERSION_NORMAL, GET );
     for ( ielem=0; ielem<=max_elem; ielem++ ) {
@@ -2782,7 +2892,8 @@ void post_element_force_calculate( void )
       // elements on the positive side of the section plane (plane
       // through the middle, normal dir_n) contribute their internal
       // forces. Without the record both sides are used if present.
-      if ( pef_normal==-YES ) {
+      long int pef_minus = 0;
+      {
         double cx=0., cy=0., cz=0., side=0.;
         for ( inol=0; inol<nnol; inol++ ) {
           cx += coords[inol*MDIM+0];
@@ -2792,25 +2903,85 @@ void post_element_force_calculate( void )
         cx /= nnol; cy /= nnol; cz /= nnol;
         side = (cx-mid[0])*dir_n[0] + (cy-mid[1])*dir_n[1]
              + (cz-mid[2])*dir_n[2];
-        if ( side<0. ) continue;
+        if ( side<0. ) {
+          if ( pef_normal==-YES ) continue;
+          pef_minus = 1;
+        }
+      }
+
+      // C84 (F4 T6f, 2026-10-17): the element types of the section
+      // device. The tensor-product continuum elements quad4/quad9 (2D)
+      // and hex8/hex27 (3D) keep the msf replica of their rule and the
+      // quad/hex helpers; the other continuum elements (tria3, tria6,
+      // quad16; tet4, tet10, prism6, prism15) integrate with the
+      // element's own kinematics and rule, pol(), and the ELEMENT_DOF
+      // stresses of their real points. Before C84 every element went
+      // through the tensor helpers (a tet4 read 2x2x2 points of a
+      // 1-point element: normal 3143 instead of the Professional -123.4).
+      // Any other element (bars, trusses, springs, interface groups,
+      // hex64) has no continuum stress to integrate: refused.
+      // An axisymmetric 2D group takes the pol() path for every element
+      // (the ring forces with the hoop term; the quad helper has none).
+      long int pef_axisym = -NO;
+      db( GROUP_AXISYMMETRIC, element_group, &pef_axisym, ddum, ldum,
+        VERSION_NORMAL, GET_IF_EXISTS );
+      long int pef_tensor = ( ndim==2 ?
+        ( ( name==-QUAD4 || name==-QUAD9 ) && pef_axisym!=-YES ) :
+        ( name==-HEX8 || name==-HEX27 ) );
+      long int pef_pol = ( ndim==2 ?
+        ( name==-TRIA3 || name==-TRIA6 || name==-QUAD16 ||
+          ( ( name==-QUAD4 || name==-QUAD9 ) && pef_axisym==-YES ) ) :
+        ( name==-TET4 || name==-TET10 || name==-PRISM6 ||
+          name==-PRISM15 ) );
+      if ( ( !pef_tensor && !pef_pol ) ||
+           db_active_index( GROUP_INTERFACE, element_group,
+             VERSION_NORMAL ) ) {
+        pri( "Error: post_element_force does not support element ", ielem );
+        pri( "Supported: quad4, quad9, quad16, tria3, tria6 (2D); hex8, "
+             "hex27, tet4, tet10, prism6, prism15 (3D), not in an "
+             "interface group. Restrict the section with "
+             "post_element_force_group or post_element_force_number." );
+        exit(TN_EXIT_STATUS);
       }
 
       // the section stress source: the ELEMENT_DOF IP stresses (the
       // same source as the support L5; options_element_dof required)
-      npol = ( name==-QUAD4 || name==-TRIA3 || name==-HEX8 ||
-               name==-BAR2 ? 2 : 3 );
-      msf_element_rule( ielem, element_group, name, npol, nnol, nper,
-        iso, wrule );
-      npoint_ip = nper[0]*nper[1];
-      if ( ndim==3 ) npoint_ip = nper[0]*nper[1]*nper[2];
       for ( i=0; i<3*MNOL; i++ ) f_elem[i] = 0.;
-      if ( options_element_dof==-YES &&
+      if ( pef_pol && options_element_dof==-YES &&
            db_active_index( ELEMENT_DOF, ielem, VERSION_NORMAL ) ) {
         edof = db_dbl( ELEMENT_DOF, ielem, VERSION_NORMAL );
+        pef_element_internal_forces_pol( ielem, element_group, name,
+          nnol, coords, edof, f_elem );
+      }
+      if ( pef_tensor ) {
+        npol = ( name==-QUAD4 || name==-HEX8 ? 2 : 3 );
+        msf_element_rule( ielem, element_group, name, npol, nnol, nper,
+          iso, wrule );
+        npoint_ip = nper[0]*nper[1];
+        if ( ndim==3 ) npoint_ip = nper[0]*nper[1]*nper[2];
+      }
+      if ( pef_tensor && options_element_dof==-YES &&
+           db_active_index( ELEMENT_DOF, ielem, VERSION_NORMAL ) ) {
+        edof = db_dbl( ELEMENT_DOF, ielem, VERSION_NORMAL );
+        // the IP stresses in the helper layouts: 2D sxx syy sxy per
+        // point (msf_element_internal_forces_2d; C84: the former copy
+        // read sxx sxy sxz into a 6-stride array the helper reads with
+        // stride 3 - uninitialized values, NaN results), 3D the six
+        // components sxx sxy sxz syy syz szz
         for ( ip=0; ip<npoint_ip; ip++ ) {
-          for ( c=0; c<(ndim==3?6:3); c++ )
-            sig_ip[ip*6+c] = edof[ip*nuknwn + stres_indx
-              + c*nder];
+          if ( ndim==2 ) {
+            sig_ip[ip*3+0] = edof[ip*nuknwn + stres_indx
+              + stress_indx(0,0)*nder];
+            sig_ip[ip*3+1] = edof[ip*nuknwn + stres_indx
+              + stress_indx(1,1)*nder];
+            sig_ip[ip*3+2] = edof[ip*nuknwn + stres_indx
+              + stress_indx(0,1)*nder];
+          }
+          else {
+            for ( c=0; c<6; c++ )
+              sig_ip[ip*6+c] = edof[ip*nuknwn + stres_indx
+                + c*nder];
+          }
         }
         // the element internal forces (the SAME helpers as the
         // support L5 section: the consistent nodal forces of the IP
@@ -2823,69 +2994,84 @@ void post_element_force_calculate( void )
           msf_element_internal_forces_3d( npol, nnol, coords, nper,
             iso, wrule, sig_ip, f_elem, /*sri=*/0 );
         }
+      }
+      if ( options_element_dof==-YES &&
+           db_active_index( ELEMENT_DOF, ielem, VERSION_NORMAL ) ) {
         // accumulate the per-node forces: the NEGATIVE of the
         // internal force (the force the element EXERTS on the
         // section nodes, Newton's third law - measured against the
         // Professional's force10: normal=-123.4, shear1=+1000,
         // moment1=-100000 exact with this sign convention)
+        double *nf = ( pef_minus ? node_force_minus : node_force );
         el = get_new_int(DATA_ITEM_SIZE);
         db( ELEMENT, ielem, el, ddum, length_el, VERSION_NORMAL,
           GET );
         for ( inol=0; inol<nnol; inol++ ) {
           node = el[1+inol];
           for ( idim=0; idim<ndim; idim++ )
-            node_force[node*MDIM+idim] -= f_elem[inol*ndim+idim];
+            nf[node*MDIM+idim] -= f_elem[inol*ndim+idim];
+          if ( pef_node_ok[node] ) {
+            if ( pef_minus ) pef_has_minus = 1;
+            else pef_has_plus = 1;
+          }
         }
         delete[] el;
       }
     }
 
-    // compute the resultants over the geometry-restricted nodes
+    // compute the resultants over the geometry-restricted nodes, per
+    // side (iside 0: positive side, node_force; 1: negative side)
+    double res_minus[5];
     for ( i=0; i<5; i++ ) res[i] = 0.;
-    for ( inod=0; inod<=max_node; inod++ ) {
+    for ( i=0; i<5; i++ ) res_minus[i] = 0.;
+    for ( long int iside=0; iside<2; iside++ ) {
+      if ( iside==1 && !pef_has_minus ) continue;
+      double *nf = ( iside==0 ? node_force : node_force_minus );
+      double *rs = ( iside==0 ? res : res_minus );
+      for ( inod=0; inod<=max_node; inod++ ) {
 
-      if ( !db_active_index( NODE, inod, VERSION_NORMAL ) )
-        continue;
+        if ( !pef_node_ok[inod] ) continue;
 
-      // the geometry restriction (manual 6.929): the INITIAL node
-      // location on the geometry
-      ok_node = 1;
-      if ( db_active_index( POST_ELEMENT_FORCE_GEOMETRY, ipef,
-           VERSION_NORMAL ) ) {
-        long int ge[DATA_ITEM_SIZE], ldum2=0, ok_g=0;
-        double factor_d=0.;
-        db( POST_ELEMENT_FORCE_GEOMETRY, ipef, ge, ddum,
-          ldum2, VERSION_NORMAL, GET );
-        geometry( inod, ddum3, ge, ok_g, factor_d, ddum3, rdum,
-          ddum3, NODE_START_REFINED, PROJECT_EXACT, VERSION_NORMAL );
-        if ( !ok_g ) ok_node = 0;
+        double fx = nf[inod*MDIM+0],
+               fy = ( ndim>1 ? nf[inod*MDIM+1] : 0. ),
+               fz = ( ndim>2 ? nf[inod*MDIM+2] : 0. );
+        double fn = fx*dir_n[0] + fy*dir_n[1] + fz*dir_n[2];
+        double fs0 = fx*dir_s0[0] + fy*dir_s0[1] + fz*dir_s0[2];
+        double fs1 = fx*dir_s1[0] + fy*dir_s1[1] + fz*dir_s1[2];
+
+        coord = db_dbl( NODE, inod, VERSION_NORMAL );
+        double dx = coord[0]-mid[0],
+               dy = ( ndim>1 ? coord[1]-mid[1] : 0. ),
+               dz = ( ndim>2 ? coord[2]-mid[2] : 0. );
+        double a0 = dx*dir_s0[0] + dy*dir_s0[1] + dz*dir_s0[2];
+        double a1 = dx*dir_s1[0] + dy*dir_s1[1] + dz*dir_s1[2];
+
+        rs[0] += fn;
+        rs[1] += fs0;
+        rs[2] += fs1;
+        rs[3] += fn*a0;
+        rs[4] += fn*a1;
       }
-      if ( !ok_node ) continue;
-
-      double fx = node_force[inod*MDIM+0],
-             fy = ( ndim>1 ? node_force[inod*MDIM+1] : 0. ),
-             fz = ( ndim>2 ? node_force[inod*MDIM+2] : 0. );
-      double fn = fx*dir_n[0] + fy*dir_n[1] + fz*dir_n[2];
-      double fs0 = fx*dir_s0[0] + fy*dir_s0[1] + fz*dir_s0[2];
-      double fs1 = fx*dir_s1[0] + fy*dir_s1[1] + fz*dir_s1[2];
-
-      coord = db_dbl( NODE, inod, VERSION_NORMAL );
-      double dx = coord[0]-mid[0],
-             dy = ( ndim>1 ? coord[1]-mid[1] : 0. ),
-             dz = ( ndim>2 ? coord[2]-mid[2] : 0. );
-      double a0 = dx*dir_s0[0] + dy*dir_s0[1] + dz*dir_s0[2];
-      double a1 = dx*dir_s1[0] + dy*dir_s1[1] + dz*dir_s1[2];
-
-      res[0] += fn;
-      res[1] += fs0;
-      res[2] += fs1;
-      res[3] += fn*a0;
-      res[4] += fn*a1;
     }
+    if ( pef_has_minus ) {
+      // both sides: the mean of the positive side and the negated
+      // negative side; negative side only: its negated resultant
+      double nsides = ( pef_has_plus ? 2. : 1. );
+      for ( i=0; i<5; i++ ) res[i] = ( res[i] - res_minus[i] ) / nsides;
+    }
+    delete[] pef_node_ok;
+    delete[] node_force_minus;
 
     for ( i=0; i<5; i++ ) res[i] *= fac;
 
+    // the result record (manual 6.927/6.935): 3D five values (normal,
+    // shear0, shear1, moment0, moment1); 2D three values (normal,
+    // shear0, moment0), the Professional 02-08-2026 layout (C84)
     length = 5;
+    if ( ndim==2 ) {
+      res[2] = res[3];
+      length = 3;
+    }
     db( POST_ELEMENT_FORCE_RESULT, ipef, idum, res, length,
       VERSION_NORMAL, PUT );
   }

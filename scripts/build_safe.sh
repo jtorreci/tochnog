@@ -2181,6 +2181,34 @@ run_ok "$T2026" tria6_mass_hrz_axisym1
 run_ok "$T2026" tria6_groundflow_velocity_hrz1
 run_ok "$T2026" tria6_condif_absorption_hrz1
 run_ok "$T2026" tria6_condif_absorption_hrz_axisym1
+# C84 (F4 T6f, 2026-10-17): post_element_force on every continuum
+#   element type and the 2D record of manual 6.927 (Professional
+#   02-08-2026 targets, tolerance 4e-6 of max(|value|,1)).
+#   post_element_force_{tet4,tet10,prism6,prism15}_1: the tpef_force10
+#   cantilever split into those elements -> -123.4 / 0 / 1000 / 0 /
+#   -100000 (old GNU tet4 normal 3143.7, quad/hex helpers on every type).
+#   post_element_force_2d_{quad4,tria3,quad9,tria6}_1: 6-value 2D record,
+#   3-value 2D result 100 / 10 / -40 (old GNU skipped 6 values, NaN with
+#   7). _2d_axisym_{quad4,tria3}_1: ring forces (normal 100, old 10.6).
+#   _2d_length_error1: a 7-value 2D record stops in the data part.
+#   _2d_interior_{quad4,tria6}_1: section at x=2 with elements on both
+#   sides -> mean of the positive side and the negated negative side
+#   (100 / 10 / -20; the plain sum cancelled to 0). _tet4_reversed1:
+#   normal 0 0 -1, negative side only -> -123.4 / 0 / -1000 / 0 / -1e5.
+run_ok "$T2026" post_element_force_tet4_1
+run_ok "$T2026" post_element_force_tet4_reversed1
+run_ok "$T2026" post_element_force_2d_interior_quad4_1
+run_ok "$T2026" post_element_force_2d_interior_tria6_1
+run_ok "$T2026" post_element_force_tet10_1
+run_ok "$T2026" post_element_force_prism6_1
+run_ok "$T2026" post_element_force_prism15_1
+run_ok "$T2026" post_element_force_2d_quad4_1
+run_ok "$T2026" post_element_force_2d_tria3_1
+run_ok "$T2026" post_element_force_2d_quad9_1
+run_ok "$T2026" post_element_force_2d_tria6_1
+run_ok "$T2026" post_element_force_2d_axisym_quad4_1
+run_ok "$T2026" post_element_force_2d_axisym_tria3_1
+expected_error_ok "$T2026" post_element_force_2d_length_error1
 
 # ---------------------------------------------------------------------
 # Sub-sprint materi_stress_force, lote 2 (integracion 2D quad4/quad9):

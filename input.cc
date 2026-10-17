@@ -1068,7 +1068,23 @@ void input( )
     }
     if ( echo ) cout << "\n";
 
-      // store 
+      // post_element_force (manual Professional 6.927, C84): the record
+      // length depends on the space dimensions, 3D 12 values, 2D 6
+      // (dir_normal_x dir_normal_y dir_shear0_x dir_shear0_y middle_x
+      // middle_y), 1D 2 (dir_normal_x middle_x); the Professional
+      // 02-08-2026 rejects any other count in the data part
+    if ( idat==POST_ELEMENT_FORCE ) {
+      long int pef_expected = ( ndim==3 ? 12 : ( ndim==2 ? 6 : 2 ) );
+      if ( length!=pef_expected ) {
+        pri( "\n\nError in data part." );
+        pri( "Problem reading ", db_name(idat) );
+        pri( "Number of data values expected ", pef_expected );
+        pri( "Number of data values found ", length );
+        exit(TN_EXIT_STATUS);
+      }
+    }
+
+      // store
     if ( range[0]==-RA ) range_expand( range, integer_range, ldum, range_length );
     db_max_index( idat, max, VERSION_NORMAL, GET );
     if ( idat==NODE_DOF ) {
