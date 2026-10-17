@@ -33,6 +33,43 @@
 // control index.
 static long int step_start_control_entry = 0;
 
+// C62 (F4 T6f LOW queue Q3): the node_rhside written by bounda() in an
+// equilibrium iteration (the bounda_force loads, assigned right after
+// iteration_start() and before the element loop). The post-solve
+// material state pass zeroes NODE_RHSIDE in iteration_start() but does
+// not re-run bounda() (it would re-prescribe dofs), so it restores this
+// snapshot of the last iteration instead; the reported node_rhside then
+// keeps the external boundary forces, as in the Professional.
+static std::vector<double> bounda_rhside_snapshot;
+static long int bounda_rhside_snapshot_max_node = -1;
+
+static void bounda_rhside_snapshot_take( void )
+{
+  long int max_node_s = -1, inod_s = 0;
+  db_max_index( NODE, max_node_s, VERSION_NORMAL, GET );
+  bounda_rhside_snapshot_max_node = max_node_s;
+  bounda_rhside_snapshot.assign( (size_t) ( 1+max_node_s ) * npuknwn, 0. );
+  for ( inod_s=0; inod_s<=max_node_s; inod_s++ ) {
+    if ( !db_active_index( NODE_RHSIDE, inod_s, VERSION_NORMAL ) ) continue;
+    double *rh_s = db_dbl( NODE_RHSIDE, inod_s, VERSION_NORMAL );
+    for ( long int ip_s=0; ip_s<npuknwn; ip_s++ )
+      bounda_rhside_snapshot[inod_s*npuknwn+ip_s] = rh_s[ip_s];
+  }
+}
+
+static void bounda_rhside_snapshot_restore( void )
+{
+  long int max_node_s = -1, inod_s = 0;
+  db_max_index( NODE, max_node_s, VERSION_NORMAL, GET );
+  if ( max_node_s!=bounda_rhside_snapshot_max_node ) return;
+  for ( inod_s=0; inod_s<=max_node_s; inod_s++ ) {
+    if ( !db_active_index( NODE_RHSIDE, inod_s, VERSION_NORMAL ) ) continue;
+    double *rh_s = db_dbl( NODE_RHSIDE, inod_s, VERSION_NORMAL );
+    for ( long int ip_s=0; ip_s<npuknwn; ip_s++ )
+      rh_s[ip_s] = bounda_rhside_snapshot[inod_s*npuknwn+ip_s];
+  }
+}
+
 void top( void )
 {
 
@@ -548,6 +585,7 @@ void top( void )
                           iteration_start( );
                           if ( print_where==-YES ) pri( "Where: before boundary conditions." ); 
                           bounda(); 
+                          bounda_rhside_snapshot_take();
                           if ( print_where==-YES ) pri( "Where: after boundary conditions." ); 
                           unknown_freeze(); 
                           if ( options_elementloop==-YES ) {
@@ -631,10 +669,22 @@ void top( void )
                            options_elementloop==-YES && !find_local_softvar &&
                            !( scalar_dabs(options_nonlocal_softvar)>TINY ) ) {
                         iteration_start();
+                        bounda_rhside_snapshot_restore();
                         material_state_post_pass = 1;
                         element_loop();
                         material_state_post_pass = 0;
                         parallel_sys_routine( &parallel_contact );
+                        // C62 (F4 T6f LOW queue Q3): the nodal terms of an
+                        // equilibrium iteration (bounda_force through the
+                        // snapshot restored above, node_force, force_point,
+                        // node_mass/damping/stiffness, nodal gravity) so
+                        // the reported node_rhside is the full residual.
+                        // It writes only the velocity slots of
+                        // NODE_RHSIDE/NODE_LHSIDE (and NODE_INERTIA, now on
+                        // the final iterate); parallel_new_dof_diagonal
+                        // below updates only the non-principal dofs for a
+                        // non-diagonal solver, so nothing is applied twice.
+                        parallel_sys_routine( &parallel_new_dof_before );
                         slide();
                         parallel_sys_routine( &parallel_new_dof_diagonal );
                         mpc_node_apply();

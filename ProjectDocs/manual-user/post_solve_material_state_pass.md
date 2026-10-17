@@ -85,7 +85,11 @@ end, the same as the Professional 02-08-2026. Before, node 2 velx went
 - Slide and contact models take the pass since F4 T6e (2026-10-11,
   BACKLOG C53); the former temporary divergence `POSTPASS-GATE` is
   closed.
-- Known, open (LOW): the reported `node_rhside` after the pass does not
-  include the `node_force` / nodal mass terms that an equilibrium
-  iteration adds before the solve (BACKLOG C62); `post_node_rhside_fixed`
+- Since F4 T6f (2026-10-17, BACKLOG C62) the reported `node_rhside`
+  after the pass is the full residual of the final iterate, as in the
+  Professional: it includes the `bounda_force` loads, `node_force`,
+  `force_point`, the nodal `node_mass` / `node_damping` /
+  `node_stiffness` terms and their gravity share (before, a loaded free
+  node reported minus its internal force instead of about 0).
+- Known, deferred (class B, DIVERGENCES C63): `post_node_rhside_fixed`
   of Pro `slide4` differs from the Professional (BACKLOG C63).

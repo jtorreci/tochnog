@@ -2214,6 +2214,16 @@ expected_error_ok "$T2026" post_element_force_2d_length_error1
 #   5.034285714286); a target on value 1 is an error (before: 4 zeros).
 run_ok "$T2026" post_element_force_1d_length1
 expected_error_ok "$T2026" post_element_force_1d_length_error1
+# F4 T6f LOW queue Q3 / C62 (2026-10-17): the node_rhside reported after
+#   the post-solve material state pass keeps the bounda_force loads
+#   (snapshot of the iteration's bounda() write) and the
+#   parallel_new_dof_before terms (node_force, node_mass inertia).
+#   One quad4, loaded free nodes 2/4 -> node_rhside velx 0, support node
+#   1 -> 5 (5.740740740741 with node_mass + inertia) = Professional
+#   02-08-2026 (before C62: -5 / -5.7407 at the loaded nodes).
+run_ok "$T2026" node_rhside_post_pass_node_force1
+run_ok "$T2026" node_rhside_post_pass_node_mass1
+run_ok "$T2026" node_rhside_post_pass_bounda_force1
 
 # ---------------------------------------------------------------------
 # Sub-sprint materi_stress_force, lote 2 (integracion 2D quad4/quad9):

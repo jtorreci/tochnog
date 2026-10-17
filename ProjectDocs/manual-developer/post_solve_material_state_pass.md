@@ -121,10 +121,23 @@ rc 0 (HEAD: slide4 rc 1); build_safe 216 OK / 0 FALLO, runs 226/226.
 
 ## Hardcoded parameters / pending refactorings
 
-- The pass skips `parallel_new_dof_before` (the iteration runs it between
-  `parallel_contact` and `slide()`), so the reported `node_rhside` of the
-  pass lacks the `node_force` / nodal mass terms that routine adds
-  (BACKLOG C62, LOW, pre-existing).
+- C62 (F4 T6f LOW queue Q3, 2026-10-17, resolved): the pass now runs
+  the same nodal sequence as an equilibrium iteration. `top.cc` keeps a
+  file-static snapshot of `NODE_RHSIDE` taken right after `bounda()` in
+  every iteration (`bounda_rhside_snapshot_take()`: the `bounda_force`
+  loads, which `bounda()` ASSIGNS before the element loop) and restores
+  it after the pass's `iteration_start()` (`_restore()`, skipped when the
+  node count changed); the pass then calls `parallel_new_dof_before`
+  between `parallel_contact` and `slide()` (node_force, force_point,
+  node_mass/damping/stiffness, nodal gravity, `NODE_INERTIA` on the
+  final iterate). Nothing is applied twice: both only touch the
+  velocity slots of `NODE_RHSIDE`/`NODE_LHSIDE`, and for a non-diagonal
+  solver `parallel_new_dof_diagonal` updates only the non-principal dofs
+  (the `-diagonal` solver never takes the pass). `bounda()` itself is not
+  re-run (it re-prescribes dofs, `bounda_until_force` scales velocities).
+  Tests (Professional targets, RED on `feafe50`):
+  `test-2026/node_rhside_post_pass_node_force1`,
+  `_node_mass1`, `_bounda_force1`.
 - The pass and the stress-only sync coexist. Once every family is covered,
   the stress-only block (and `stress_recovery_post_pass`) can be removed.
 - Cost: one extra element loop per step (no matrix store, no solve).
@@ -134,7 +147,8 @@ rc 0 (HEAD: slide4 rc 1); build_safe 216 OK / 0 FALLO, runs 226/226.
 ## Differences with the Professional version
 
 - None from the pass since F4 T6e (DIVERGENCES `POSTPASS-GATE` removed).
-  Open, LOW: BACKLOG C62 (`node_rhside` of the pass without the
-  `parallel_new_dof_before` terms) and C63 (`post_node_rhside_fixed` of
-  Pro `slide4`: GNU 3.44e-3 / 7.88e-3, Pro -5.77e-3 / 9.995e-3 = the
-  `post_node_result` sum; also different on HEAD before T6e).
+  C62 resolved 2026-10-17. Deferred class B: C63 (`post_node_rhside_fixed`
+  of Pro `slide4`: GNU 3.44e-3 / 7.88e-3, Pro -5.77e-3 / 9.995e-3 = the
+  `post_node_result` sum; unchanged by C62, because
+  `post_node_rhside_fixed_free()` runs inside the iteration on the
+  pre-solve residual; candidate: call it once more after the pass).
