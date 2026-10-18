@@ -2744,6 +2744,23 @@ Original report:
   `sri_stress_recovery_weight()` only for the rules proven to be the mean.
 - **Severity**: LOW. **Effort**: cheap.
 
+### C87. Free elastic interface in traction: default gap (F4 T6f C60, 2026-10-19) — OPEN (owner decision)
+
+- **Measured** (Professional 02-08-2026): one quad4 interface, no
+  continuum element, kn = kt = 1000, no `group_interface_gap`, side 2
+  moved by 0.001 normal to the interface for the node orders `1 2 3 4`,
+  `3 4 1 2`, `2 1 4 3`, `4 3 2 1`. Professional normal stress -1 / 0 /
+  0 / -1, GNU -1 / +1 / +1 / -1: the orientation agrees (C60), but the
+  Professional carries no tension on the opened interface.
+- **Cause (hypothesis)**: the GNU default gap is `1.e20` (always
+  closed, `interface_element()`); the manual sentence "if you want to
+  allow always tension stresses in an interface set gap to, by example,
+  1.e20" suggests a Professional default near 0. Not yet checked with
+  blocks attached (the C60 block probes were all in compression).
+- **Decision needed**: follow the Professional (default gap 0) changes
+  every interface in traction without a gap record. **Severity**: LOW.
+  **Effort**: cheap/medium (plus corpus A/B).
+
 ### C86. `post_element_force` with truss / beam / spring / interface elements in the selection (F4 T6f LOW queue Q5, 2026-10-17) — OPEN (owner decision)
 
 - **Measured** (Professional 02-08-2026, `scratchpad/lowq/q5/`): the C84
@@ -3085,7 +3102,24 @@ Original report:
   predictor, or the initial acceleration).
 - **Severity**: LOW. **Effort**: medium.
 
-### C60. Interface `element_interface_intpnt_stress` normal sign depends on the node order (F4 T6d, 2026-10-11) — OPEN (re-scoped 2026-10-17: not output-only, owner decision needed)
+### C60. Interface `element_interface_intpnt_stress` normal sign depends on the node order (F4 T6d, 2026-10-11) — RESOLVED 2026-10-19 (owner decision: adopt the Professional rule)
+
+- **Fix (F4 T6f C60, 2026-10-19)**: `interface_orient_normal()`
+  (`interface.cc`) points the normal from side 1 towards side 2 by the
+  geometry (side-centroid offset of a thick interface plus the attached
+  continuum element of each side, `NODE_ELEMENT`); a free zero-thickness
+  interface keeps the default normal. Compression is a NEGATIVE normal
+  strain for every node order; the tension cut-off now opens on a
+  positive strain. Professional 02-08-2026 = GNU on zero-thickness and
+  thick interfaces between blocks (four node orders each: -9.999999 /
+  +/-2) and on the free interface orientation (-1 under compression for
+  `1 2 3 4` / `4 3 2 1`). Test-2026 `interface_orientation_node_order1`
+  (RED on 6bc7457: +10 / +10 / 0 / 0; GREEN -10 everywhere). Five
+  GNU-authored test-2014 targets written with the old orientation
+  corrected (`iface_mc_gap`, `iface_mc_dil`, `iface_mc_dil_1step`,
+  `iface_expansion`, `iface_tangref`; details in the developer manual
+  `group_interface.md`). Residual: the free interface pulled apart
+  carries tension in the GNU and 0 in the Professional (C87).
 
 - **Re-scoped (F4 T6f LOW queue Q2, 2026-10-17, stopped before any code
   change)**: the premise "output-only sign leak" is false. Probes
@@ -3258,7 +3292,8 @@ Original report:
 | C63 | — | Pro `slide4` `post_node_rhside_fixed` 3.44e-3 / 7.88e-3 vs Pro -5.77e-3 / 9.995e-3 (pre-existing; unchanged by C62) — deferred (class B, DIVERGENCES C63) | LOW | cheap/medium |
 | C62 | — | post-solve pass skips `parallel_new_dof_before`: reported `node_rhside` without node_force / nodal mass terms — resolved 2026-10-17 (`a2e68b6`: also the `bounda_force` loads; node_dof unchanged) | closed | - |
 | C61 | — | interface Mohr-Coulomb + `inertia_apply`: first-step velocity differs from the Pro (0.412 vs 0.273), independent of the pass — deferred (class B, 2026-10-17) | LOW | medium |
-| C60 | — | interface `element_interface_intpnt_stress` normal sign depends on the node order (Pro: compression negative always) — re-scoped 2026-10-17: the GNU orientation changes the physics (MC/tension) for half the node orders; owner decision | LOW | medium |
+| C60 | — | interface `element_interface_intpnt_stress` normal sign depends on the node order — resolved 2026-10-19 (geometric orientation, side 1 to side 2, = Professional for every node order) | closed | - |
+| C87 | Pro probe | free elastic interface pulled apart: GNU carries `kn*strain` (default gap 1.e20), the Professional 0 — owner decision (default gap) | LOW | cheap/medium |
 | C64 | — | quad4 per-element nodal recovery of the Professional — resolved 2026-10-12 (F4 T6f K21: physical linear fit, 1-point value, on-axis rule) | closed | - |
 | C70 | — | 3x3 quad9 / hex8 / hex27 / tet10 / prism6 recovery in physical coordinates — resolved 2026-10-13 (F4 T6f C70) | closed | - |
 | C71 | sfnet | `tube1` (`-lobatto` + axisymmetric) NaN — resolved 2026-10-13 (F4 T6f C71: on-axis Lobatto element integrated with Gauss = Pro) | closed | - |
@@ -3288,7 +3323,7 @@ Original report:
 | C68d | — | `materi.cc` old rho/epi/epp read with the Maxwell loop index (two or more chains) — resolved 2026-10-12 (F4 T6f, `2327083`) | LOW | cheap |
 | C69 | — | plane-stress membrane: yy/zz split of the plastic strain first order in dt (eptzz -0.00721 at dt 0.1 vs analytic -0.00882) — deferred (class B, 2026-10-17) | LOW | medium |
 
-Forty items remain open (recount of the summary table, 2026-10-18, after C68a moved to class D): two MEDIUM (B1, C37) and thirty-eight LOW. Thirty-one are active (the sfnet input items B1-B11, B13, B14; C1, C2, C14, C26, C27, C29, C37, C38, C39, C40, C41, C46, C50, C60, C72, C73, C81 and C86; C14, C39, C41, C46 and C72 count because of their open residuals) and nine are deferred as class B (C22, C25 rest, C58 rest, C61, C63, C65, C68b, C68c, C69). The twelve class A deliberate divergences of the table (C7, C9, C10, C13, C15, C21, C30, C34, C36, C75, C78, C82) are decided, not open; C68a is decided as class D (Professional-suspect, owner 2026-10-18), not open, and so is the C72 residual C72-V1 (C72 stays open for its Stokes and `cd_method` residuals); forty-five items are resolved or closed. The earlier running count (45 after C84) also counted decided and closed items; the F4 T6f LOW queue resolved C54 and C62, closed C12, partly resolved C25 and C58, re-scoped C60, deferred nine items and added C86. History of the earlier counts: C23 and C24 resolved 2026-10-05; C25, C26, C27 and B10 added; F1 T3 / K04 2026-10-06 added B11, C28-C32; F1 T6 resolved C28, added and resolved B12; F2 T1 added C36; F2 T2 added C37, C38, C39; F2 T3 resolved C5 and added C40; F3 T2 resolved C8, C18, C19, C20 and added B13, C41; F4 T2 fixed the C41 tie and left a residual; F4 T3 resolved C33; F4 T4 closed C32, added C42 and resolved C31; F4 T7-T8 added C43-C46; F4 T9 resolved the C43 solver speed, decided C46b/C46e and added C47, C48, C49; F4 T10 resolved C48 and added C50; F4 T5 added C52, C53 and resolved C51; F4 T13 resolved C49 and added C54-C56; F4 T12 resolved C47 and added C57; F4 T6a resolved C6, C55, C56 and the C3 sign, the C3 square-face tie becoming a deliberate divergence (owner 2026-10-11), and added B14; F4 T6c fixed the `control_restart` integration-point reset and added C58; F4 T6d resolved C11 and C59, fixed the interface history and resolved C52, and added B15, C60 and C61; B15 resolved the same day; F4 T6e resolved C53 and added C62 and C63; F4 T6f added C64-C68 and C69, and closed the K15 `mmc_tension` vertex sigzz/eppzz and `validation_3` eptzz items as deliberate divergences MC-VERTEX-ZZ / MEMBRANE-EPTZZ, owner 2026-10-12; F4 T6f resolved C68 and added C68a-C68d; C68d resolved the same day; F4 T6f closed C7 (Mazars equivalent strain, with C7b) and the AUDIT K14b `hypo3` sigxx reversal as deliberate divergences C7 / K14b, owner 2026-10-12; the `hypo3` hyhis slot residual stays open under AUDIT K14; F4 T6f K21 WU2 widened C72 with the Stokes-flow residual and closed its `cmat_gate` rewrite, no new item; F4 T6f C72 resolved the convected nodal stress output (C72 stays open for the Professional-side residuals) and added C73 and C74; F4 T6f C70 resolved C70 and added C75; F4 T6f C75 closed C75 as a deliberate divergence, owner 2026-10-13, and added C76; F4 T6f C74 resolved C74 and added C77; F4 T6f C57 resolved C57 and added C78, decided the same day as a deliberate divergence, owner 2026-10-13; F4 T6f C71 resolved C71 and added C79; F4 T6f C79 resolved C79 and added C80; F4 T6f C77 resolved C77 and added C81 (F6); F4 T6f C80 resolved C80 and added C80.1; F4 T6f C80.1 resolved C80.1; F4 T6f C80.2 extended C80.1 with `-lambda`, no new item; F4 T6f C67 resolved the bar and quad16 rules and narrowed C67, no new item; F4 T6f C67 remainder + C76 resolved C67 and C76, re-scoped C66 and added C82 and C83; F4 T6f C82 + C83 decided C82 and C83 part 1 as deliberate divergences (owner 2026-10-16) and resolved C83 part 2; F4 T6f C66 measured the Professional tria6 lumping and added C84; F4 T6f C66 phase 2 resolved C66 (lumping class A TRIA6-HRZ, owner 2026-10-16) and added C85; F4 T6f C85 resolved C85; F4 T6f C84 resolved C84 (the unmeasured Professional handling of non-continuum elements is the DIVERGENCES class B row C84-REFUSE). No open issue is CRITICAL or
+Forty items remain open (recount of the summary table, 2026-10-19, after C60 resolved and C87 added): two MEDIUM (B1, C37) and thirty-eight LOW. Thirty-one are active (the sfnet input items B1-B11, B13, B14; C1, C2, C14, C26, C27, C29, C37, C38, C39, C40, C41, C46, C50, C72, C73, C81, C86 and C87; C14, C39, C41, C46 and C72 count because of their open residuals) and nine are deferred as class B (C22, C25 rest, C58 rest, C61, C63, C65, C68b, C68c, C69). The twelve class A deliberate divergences of the table (C7, C9, C10, C13, C15, C21, C30, C34, C36, C75, C78, C82) are decided, not open; C68a is decided as class D (Professional-suspect, owner 2026-10-18), not open, and so is the C72 residual C72-V1 (C72 stays open for its Stokes and `cd_method` residuals); forty-six items are resolved or closed. The earlier running count (45 after C84) also counted decided and closed items; the F4 T6f LOW queue resolved C54 and C62, closed C12, partly resolved C25 and C58, re-scoped C60, deferred nine items and added C86. History of the earlier counts: C23 and C24 resolved 2026-10-05; C25, C26, C27 and B10 added; F1 T3 / K04 2026-10-06 added B11, C28-C32; F1 T6 resolved C28, added and resolved B12; F2 T1 added C36; F2 T2 added C37, C38, C39; F2 T3 resolved C5 and added C40; F3 T2 resolved C8, C18, C19, C20 and added B13, C41; F4 T2 fixed the C41 tie and left a residual; F4 T3 resolved C33; F4 T4 closed C32, added C42 and resolved C31; F4 T7-T8 added C43-C46; F4 T9 resolved the C43 solver speed, decided C46b/C46e and added C47, C48, C49; F4 T10 resolved C48 and added C50; F4 T5 added C52, C53 and resolved C51; F4 T13 resolved C49 and added C54-C56; F4 T12 resolved C47 and added C57; F4 T6a resolved C6, C55, C56 and the C3 sign, the C3 square-face tie becoming a deliberate divergence (owner 2026-10-11), and added B14; F4 T6c fixed the `control_restart` integration-point reset and added C58; F4 T6d resolved C11 and C59, fixed the interface history and resolved C52, and added B15, C60 and C61; B15 resolved the same day; F4 T6e resolved C53 and added C62 and C63; F4 T6f added C64-C68 and C69, and closed the K15 `mmc_tension` vertex sigzz/eppzz and `validation_3` eptzz items as deliberate divergences MC-VERTEX-ZZ / MEMBRANE-EPTZZ, owner 2026-10-12; F4 T6f resolved C68 and added C68a-C68d; C68d resolved the same day; F4 T6f closed C7 (Mazars equivalent strain, with C7b) and the AUDIT K14b `hypo3` sigxx reversal as deliberate divergences C7 / K14b, owner 2026-10-12; the `hypo3` hyhis slot residual stays open under AUDIT K14; F4 T6f K21 WU2 widened C72 with the Stokes-flow residual and closed its `cmat_gate` rewrite, no new item; F4 T6f C72 resolved the convected nodal stress output (C72 stays open for the Professional-side residuals) and added C73 and C74; F4 T6f C70 resolved C70 and added C75; F4 T6f C75 closed C75 as a deliberate divergence, owner 2026-10-13, and added C76; F4 T6f C74 resolved C74 and added C77; F4 T6f C57 resolved C57 and added C78, decided the same day as a deliberate divergence, owner 2026-10-13; F4 T6f C71 resolved C71 and added C79; F4 T6f C79 resolved C79 and added C80; F4 T6f C77 resolved C77 and added C81 (F6); F4 T6f C80 resolved C80 and added C80.1; F4 T6f C80.1 resolved C80.1; F4 T6f C80.2 extended C80.1 with `-lambda`, no new item; F4 T6f C67 resolved the bar and quad16 rules and narrowed C67, no new item; F4 T6f C67 remainder + C76 resolved C67 and C76, re-scoped C66 and added C82 and C83; F4 T6f C82 + C83 decided C82 and C83 part 1 as deliberate divergences (owner 2026-10-16) and resolved C83 part 2; F4 T6f C66 measured the Professional tria6 lumping and added C84; F4 T6f C66 phase 2 resolved C66 (lumping class A TRIA6-HRZ, owner 2026-10-16) and added C85; F4 T6f C85 resolved C85; F4 T6f C84 resolved C84 (the unmeasured Professional handling of non-continuum elements is the DIVERGENCES class B row C84-REFUSE); F4 T6f C60 resolved C60 (owner 2026-10-19: geometric interface orientation) and added C87. No open issue is CRITICAL or
 HIGH. The validation-suite corpus has no open failure — its 233 real tests
 pass (`materi_direct_mc` input corrected, C17 resolved). Every remaining failure is a stale or malformed test, an out-of-scope model
 or infrastructure limit, a narrow post-processing divergence, a corpus-coverage

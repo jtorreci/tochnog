@@ -80,6 +80,79 @@
 // Strategy: implicit penalty + control_timestep_iterations (the tochnog
 // Newton scheme corrects interpenetration within the step). The stiffness
 // is updated within the iterations as the interface opens/closes.
+
+// interface_orient_normal - orient the interface normal from side 1 towards
+// side 2 (F4 T6f C60, owner decision 2026-10-19). The normal strain
+// n.(u2-u1) is then positive when the sides separate and NEGATIVE under
+// compression, the manual convention (gap: closed when strain <= gap;
+// Mohr-Coulomb: Fn negative under compression). The side of each block is
+// read from the geometry: the offset between the side centroids (a thick
+// interface) plus, for each side, the continuum element that holds all its
+// nodes (block 1 lies on the -n side, block 2 on the +n side). The
+// Professional 02-08-2026 gives the same compressed normal stress for every
+// node order of an interface between two blocks (probe: -9.999999 for
+// 2 4 9 10, 9 10 2 4, 4 2 10 9, 10 9 4 2); the earlier GNU rule (flip when
+// the first side-2 node had a lower number) gave +/+/-/- and let the
+// tension cut-off open a compressed interface for half the orders. With no
+// geometric evidence (a free zero-thickness interface) the default normal
+// of the caller is kept, as the Professional does.
+static void interface_orient_normal( long int element, long int nodes[],
+  long int nnol, long int ndim, double coord[], double normal[] )
+{
+  long int ns1 = ( nnol==2 ) ? 1 : nnol/2, inol=0, idim=0, iside=0,
+    iel=0, jnol=0, ldum=0, idum[1];
+  double d[MDIM], xs[2][MDIM], ddum[1];
+
+  array_set( d, 0., MDIM );
+  for ( iside=0; iside<2; iside++ ) {
+    array_set( xs[iside], 0., MDIM );
+    for ( inol=0; inol<ns1; inol++ )
+      for ( idim=0; idim<ndim; idim++ )
+        xs[iside][idim] += coord[(iside*ns1+inol)*ndim+idim] / ns1;
+  }
+  for ( idim=0; idim<ndim; idim++ ) d[idim] = xs[1][idim] - xs[0][idim];
+
+  long int *el = get_new_int( MAXIMUM_NODE+1 );
+  for ( iside=0; iside<2; iside++ ) {
+    long int inod = nodes[iside*ns1];
+    if ( !db_active_index( NODE_ELEMENT, inod, VERSION_NORMAL ) ) continue;
+    long int *node_element = db_int( NODE_ELEMENT, inod, VERSION_NORMAL );
+    long int nel = db_len( NODE_ELEMENT, inod, VERSION_NORMAL );
+    for ( iel=0; iel<nel; iel++ ) {
+      long int e = node_element[iel], gr = 0, length_el = 0, found = 1;
+      if ( e==element || !db_active_index( ELEMENT, e, VERSION_NORMAL ) )
+        continue;
+      db( ELEMENT_GROUP, e, &gr, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+      if ( db_active_index( GROUP_INTERFACE, gr, VERSION_NORMAL ) ) continue;
+      db( ELEMENT, e, el, ddum, length_el, VERSION_NORMAL, GET );
+      for ( inol=0; inol<ns1 && found; inol++ ) {
+        found = 0;
+        for ( jnol=1; jnol<length_el; jnol++ )
+          if ( el[jnol]==nodes[iside*ns1+inol] ) found = 1;
+      }
+      if ( !found ) continue;
+      // the block side: centroid of the element relative to the side
+      double centroid[MDIM];
+      array_set( centroid, 0., MDIM );
+      for ( jnol=1; jnol<length_el; jnol++ ) {
+        double *cn = db_dbl( NODE, el[jnol], VERSION_NORMAL );
+        for ( idim=0; idim<ndim; idim++ )
+          centroid[idim] += cn[idim] / ( length_el-1 );
+      }
+      for ( idim=0; idim<ndim; idim++ ) {
+        if ( iside==0 ) d[idim] += xs[0][idim] - centroid[idim];
+        else d[idim] += centroid[idim] - xs[1][idim];
+      }
+      break;
+    }
+  }
+  delete[] el;
+
+  if ( array_inproduct( normal, d, ndim ) < 0. )
+    for ( idim=0; idim<ndim; idim++ ) normal[idim] = -normal[idim];
+  (void) idum;
+}
+
 void interface_element( long int element, long int name,
   long int element_group, double coord[], double old_dof[], double new_dof[], 
   double element_lhside[], double element_matrix[], double element_rhside[] )
@@ -227,22 +300,11 @@ void interface_element( long int element, long int name,
     array_normalize( tangent, ndim );
     normal[0] = -tangent[1];
     normal[1] =  tangent[0];
-    // orientation (CONVERGENCE 2026-08-30, verified against Professional
-    // .dbs of interface1/8/13/14/15): the Professional orients the 2D
-    // interface normal so that compression gives a NEGATIVE normal strain.
-    // The default normal (-t.y, t.x) matches when the first node of side 2
-    // has a HIGHER number than the first node of side 1 (interface1:
-    // nodes 1,2,3 | 4,5,6 -> normal (0,1); interface13/14/15: 1,2 | 3,4 ->
-    // (-0.447,0.894)/(0,1)). When the side-2 nodes are numbered LOWER
-    // (interface8 element 3 = quad4 5 6 3 4: side 1 = 5,6, side 2 = 3,4)
-    // the Professional flips the normal to (0,-1) - the strain of the
-    // compressed interface stays negative. This mirrors the mesh
-    // conversion orientation: the copied side keeps the numbering of the
-    // source block, so the relative numbering encodes the side order.
-    if ( nodes[ns1] < nodes[0] ) {
-      normal[0] = -normal[0];
-      normal[1] = -normal[1];
-    }
+    // orientation: from side 1 towards side 2, compression gives a
+    // NEGATIVE normal strain (interface_orient_normal, C60; it replaces
+    // the node numbering rule of 2026-08-30, which matched the
+    // Professional only for the node orders of interface1/8/13/14/15)
+    interface_orient_normal( element, nodes, nnol, ndim, coord, normal );
     array_set( tangent2, 0., MDIM );
   }
   else {
@@ -274,26 +336,10 @@ void interface_element( long int element, long int name,
     normal[1] = e1[2]*e2[0] - e1[0]*e2[2];
     normal[2] = e1[0]*e2[1] - e1[1]*e2[0];
     array_normalize( normal, 3 );
-    // orientation: the 2D convention is normal pointing FROM side 2 TOWARDS
-    // side 1 (so compression, side 2 moving towards side 1, gives a POSITIVE
-    // normal strain). Flip the cross product if it points the wrong way.
-    {
-      double *cm1, *cm2;
-      long int ns1 = nnol/2;
-      if ( memory==-TOTAL_LINEAR ) {
-        cm1 = db_dbl( NODE_START_REFINED, nodes[0], VERSION_NORMAL );
-        cm2 = db_dbl( NODE_START_REFINED, nodes[ns1], VERSION_NORMAL );
-      }
-      else {
-        cm1 = &coord[0*ndim];
-        cm2 = &coord[ns1*ndim];
-      }
-      double dir = 0.;
-      for ( idim=0; idim<3; idim++ ) dir += normal[idim]*(cm1[idim]-cm2[idim]);
-      if ( dir<0. ) {
-        normal[0] = -normal[0]; normal[1] = -normal[1]; normal[2] = -normal[2];
-      }
-    }
+    // orientation: from side 1 towards side 2, compression gives a
+    // NEGATIVE normal strain (interface_orient_normal, C60; the earlier
+    // thick-interface flip pointed it from side 2 towards side 1)
+    interface_orient_normal( element, nodes, nnol, ndim, coord, normal );
     tangent[0] = e1[0]; tangent[1] = e1[1]; tangent[2] = e1[2];
     array_normalize( tangent, 3 );
     tangent2[0] = normal[1]*tangent[2] - normal[2]*tangent[1];
@@ -698,8 +744,10 @@ void interface_element( long int element, long int name,
     // accumulated normal force |Fn_total| exceeds the limit, and only if
     // it was still closed. An interface opened by the tension limit has
     // no normal stress either (same handling as the gap-open state).
+    // Traction is a POSITIVE normal strain (normal from side 1 towards
+    // side 2, interface_orient_normal; C60 2026-10-19).
     double fn_total_i = kn * strain_eff_ip[inol];
-    if ( tension_limit>0. && strain_normal_ip[inol]<0. &&
+    if ( tension_limit>0. && strain_normal_ip[inol]>0. &&
         fabs(fn_total_i)>tension_limit && !iface_open_i ) {
       stiff_normal_i = kn * residual_factor;
       iface_open_i = 1;

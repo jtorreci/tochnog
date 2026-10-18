@@ -1,3 +1,4 @@
+(C60 2026-10-19: interface normal from side 1 to side 2, compression negative; target updated from the old orientation)
 echo -no
 number_of_space_dimensions 2
 derivatives
@@ -46,7 +47,7 @@ options_mesh   -fixed_in_space -fixed_in_space
 options_processors   1
 options_stabilization   -static
 target_item  1  -element_interface_strain_normal 2 0
-target_value  1  -1.39435 0.01
+target_value  1  -1.49338 0.01
 node_dof  1  0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
 node_dof  2  0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
 node_dof  3  0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0

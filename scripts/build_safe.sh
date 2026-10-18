@@ -1885,6 +1885,9 @@ expected_error_ok "$T2026" truss_memory_total_velocity_error1
 #   elastically. Quasi-static reversal, element 3 shear: analytic 4.0,
 #   Professional 02-08-2026 4.000000083 (GNU before the fix 5.0).
 run_ok "$T2026" interface_mc_slip_reversal1
+# F4 T6f C60: interface normal from side 1 to side 2 for every node order
+# (Professional 02-08-2026: normal -9.999999 for all four orders).
+run_ok "$T2026" interface_orientation_node_order1
 # F4 T6e C53 (2026-10-11): post-solve material state pass for slide and
 #   contact models (parallel_contact + slide() re-applied on the final
 #   iterate) plus the slide law fixes (absent slide_plasti_tension = no

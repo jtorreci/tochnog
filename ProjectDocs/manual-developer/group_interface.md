@@ -31,8 +31,27 @@
 
 ## Ley constitutiva (Fase 3)
 
-- **Sign convention (RF-5)**: compression = `strain_normal` POSITIVE,
-  traction NEGATIVE. This is the convention used by gap, tension_direct
+- **Sign convention (RF-5, rewritten 2026-10-19, C60)**: compression =
+  `strain_normal` NEGATIVE, traction POSITIVE, for every node order.
+  `interface_orient_normal()` (`interface.cc`) points the normal from
+  side 1 towards side 2 using the geometry: the offset between the side
+  centroids (thick interface) plus, per side, the centroid of the
+  non-interface element that holds all the side nodes (`NODE_ELEMENT`;
+  block 1 on the -n side, block 2 on the +n side). Without geometric
+  evidence (free zero-thickness interface) the default normal is kept:
+  2D `(-t_y, t_x)` with `t` from nodes 0 to 1, 3D the cross product of
+  the side-1 edges. Gap (closed when strain `<= gap`), Mohr-Coulomb
+  (`Fn = -kn*strain` positive under compression) and the expansion
+  (`strain - alpha*T`) already used this convention; the tension cut-off
+  now opens on a POSITIVE strain (it tested `< 0`). Verified against the
+  Professional 02-08-2026: zero-thickness and thick quad4 interfaces
+  between two blocks, four node orders each, normal -9.999999 and shear
+  +/-2 everywhere (test-2026 `interface_orientation_node_order1`); free
+  interface -1 / 0 / 0 / -1 for `1 2 3 4` / `3 4 1 2` / `2 1 4 3` /
+  `4 3 2 1` (GNU -1 / +1 / +1 / -1: same orientation, the 0 is C87).
+  The paragraphs below up to "Gap" describe the earlier rule.
+- **Earlier rule (2026-08-14 to 2026-10-18)**: compression =
+  `strain_normal` POSITIVE, traction NEGATIVE. This is the convention used by gap, tension_direct
   and `max_fric` (`kn*strain_normal` grows with compression). The old doc
   said "compression negative" — wrong, corrected 2026-08-14.
   NOTE (2026-09-03, verified against the Professional .dbs of
@@ -593,7 +612,17 @@ interface_tension_status1.dat` in `build_safe.sh` (status lines + two-run
   (the physical clamped force; CORPUS-STALE-TARGETS §1) plus a target on
   `element_interface_intpnt_stress 2 1` (same values). New test-2026
   `interface_mc_slip_reversal1` (RED 5.0, GREEN 4.0).
-- **Open difference found by the same probe (BACKLOG C60)**: the normal
+- **Resolved 2026-10-19 (C60, owner decision: adopt the Professional
+  rule)**: see "Sign convention (RF-5)" above. The test-2014 targets
+  written with the old orientation (thick interfaces, compression
+  positive) were corrected: `iface_mc_gap` (a compressed interface with
+  gap 0.001 opened and the block flew to -190; now closed, normal -10 =
+  force 10 / length 1), `iface_mc_dil` / `_1step` (confined dilatancy now
+  adds compression: -1.49338, was -1.39338, a tension), `iface_expansion`
+  (the heated interface now compresses the blocks against the walls:
+  sigxx -0.998004, was +0.998004), `iface_tangref` (tang2 -4.9998: the
+  frame `t2 = n x t1` follows the new normal).
+- **Former open difference found by the same probe (BACKLOG C60)**: the normal
   component of `element_interface_intpnt_stress` follows the internal
   orientation (node order) of the element (+10 / +10 / -10 for the node
   orders `2 4 9 10` / `9 10 2 4` / `4 2 10 9`), while the Professional
@@ -606,3 +635,15 @@ interface_tension_status1.dat` in `build_safe.sh` (status lines + two-run
   continuum elements are attached (all orders equal) and by numbering for
   a free interface, where an opened elastic interface carries 0. Owner
   decision pending (BACKLOG C60).
+
+## Differences with the Professional version
+
+- **C87 (open, BACKLOG C87)**: a free elastic interface pulled apart
+  carries `kn * strain` in the GNU (default gap `1.e20` in
+  `interface_element()`, always closed) and 0 in the Professional
+  02-08-2026 (probe 2026-10-19, kn 1000, opening 0.001: Professional 0,
+  GNU +1). The manual sentence "if you want to allow always tension
+  stresses in an interface set gap to, by example, 1.e20" suggests a
+  Professional default that does not carry tension; changing the GNU
+  default would affect every interface in traction without a gap
+  record, so it waits for an owner decision.

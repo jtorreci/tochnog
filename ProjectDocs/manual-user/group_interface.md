@@ -259,14 +259,21 @@ is unchanged.
 
 ## Differences with the Professional version
 
-- The normal component of `element_interface_intpnt_stress` follows the
-  orientation of the interface element (its node order): the same
-  compressed interface can report +10 or -10, while the Professional
-  always reports compression as negative (BACKLOG C60, open). Measured
-  2026-10-17: it is not only the output sign. With a Mohr-Coulomb or
-  tension cut-off interface, two of the four node orders of the same
-  compressed interface are treated as OPEN by the GNU (normal stress 0),
-  while the Professional gives the same result for every order. Number
-  the interface nodes so that the GNU sees compression as positive
-  normal strain (check `element_interface_intpnt_stress`) until the
-  orientation rule is decided.
+- A free elastic interface (no continuum element attached and no
+  `group_interface_gap` record) that is pulled apart carries the tension
+  `kn * strain` in the GNU (the default gap is `1.e20`, always closed),
+  while the Professional 02-08-2026 reports 0 for it (probe 2026-10-19:
+  side 2 pulled away by 0.001, kn 1000: Professional 0, GNU +1). With
+  compression both give -1. BACKLOG C87, open.
+
+The interface normal does not depend on the node order of the element
+(F4 T6f C60, 2026-10-19). It points from side 1 towards side 2, so the
+normal strain and the normal stress are NEGATIVE under compression and
+positive when the sides separate, as in the Professional. The side of
+each block is taken from the geometry: the continuum element attached to
+each side, or the offset between the sides of a thick interface. A free
+zero-thickness interface keeps the normal of its first two nodes
+(`(-t_y, t_x)` in 2D). Before this change the GNU flipped the 2D normal
+by the node numbers, so the same compressed interface could report +10
+or -10, and with a tension cut-off two of the four node orders opened a
+compressed interface.
