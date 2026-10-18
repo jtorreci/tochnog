@@ -1945,6 +1945,11 @@ run_ok "$T2026" maxwell_ip_state1
 #   Professional 02-08-2026 too); targets = the one-chain GNU run, tight
 #   (1e-6 relative). Before the fix: node 1 reaction -13.32 vs -19.17.
 run_ok "$T2026" maxwell_two_chains_state1
+# C68a F4 T6f (2026-10-18), class D guard (owner decision 2026-10-18):
+#   one Maxwell chain, homogeneous constant strain rate, analytic
+#   msig = E_c tau rate (1 - exp(-t/tau)) = -20.2508461397 at 1e-6
+#   relative (Professional 02-08-2026: -23.81 at dt 0.1, first order).
+run_ok "$T2026" maxwell_relaxation_analytic1
 # F4 T6f (2026-10-12), class A divergences (owner decision 2026-10-12),
 #   guard tests: GNU already follows the continuum / manual answer.
 #   mmc_tension_vertex1/2 (MC-VERTEX-ZZ): test-2014 mmc_tension at dt 0.05
