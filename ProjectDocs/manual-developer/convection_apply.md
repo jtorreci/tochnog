@@ -79,7 +79,7 @@ same input names (`convection_apply -yes`, `convection_stabilization
 
 - `validation_1` (eulerian NS, p+h refinement): since F4 T6f K21 WU2 /
   C72 (2026-10-12/13) the GNU is steady (-0.057, GAMM range) and the
-  Professional drifts (class B C72-V1, see below). The GNU prints "Bi-CG
+  Professional drifts (class D C72-V1, see below). The GNU prints "Bi-CG
   iteration broke down" about 600 times on the t = 0..3 run (BACKLOG
   C74). Convected stress dofs are recovered absolutely since `c1a1ae9`
   (`general()` skips their convective terms; see
@@ -96,8 +96,8 @@ same input names (`convection_apply -yes`, `convection_stabilization
   with `materi_displacement`). Professional 02-08-2026: Refuses the explicit
   record (`-no` is its default). Status: Input dialect. Index:
   [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).
-- **`validation_1` steady state** (class B, DIVERGENCES C72-V1,
-  Professional-suspect, owner 2026-10-13). GNU velx -0.0570386 /
+- **`validation_1` steady state** (class D, DIVERGENCES C72-V1,
+  Professional-suspect, owner 2026-10-13; class D since 2026-10-18). GNU velx -0.0570386 /
   -0.0570934 / -0.0571954 at t = 1 / 2 / 3; Professional -0.0391 /
   -0.0179 / +0.0034, dt-converged (dt 0.02 / 0.01 / 0.005: 0.00313 /
   0.00344 / 0.00358 at t = 3), identical with `global_element_dof_apply

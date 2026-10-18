@@ -518,7 +518,7 @@ rule table per element).
 - Convected stress path (`-fixed_in_space` + `convection_apply -yes`):
   nodal output = Professional since `c1a1ae9` (absolute recovery of a
   non-convected integration-point state in both codes). Professional-side
-  residuals on `validation_1` (drift, class B C72-V1; Stokes gap) and the
+  residuals on `validation_1` (drift, class D C72-V1, decided; Stokes gap) and the
   original rigid-rotation `cd_method` stay open (BACKLOG C72).
 - 3x3 quad9, hex8, hex27, tet10, prism6: = Professional since C70
   (2026-10-13). The prism6 integration points differ (Professional

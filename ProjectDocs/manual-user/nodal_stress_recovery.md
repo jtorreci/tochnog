@@ -67,7 +67,7 @@ solid matters (BACKLOG C73).
 
 Difference with the Professional version: on the Eulerian `validation_1`
 flow the Professional velocity drifts in time although the problem is
-steady; the GNU stays steady (DIVERGENCES C72-V1, class B). Other
+steady; the GNU stays steady (DIVERGENCES C72-V1, class D). Other
 Professional-side residuals of the convected path are listed in BACKLOG
 C72.
 

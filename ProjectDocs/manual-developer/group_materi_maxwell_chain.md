@@ -84,7 +84,7 @@ Verification: `test-2026/maxwell_ip_state1` (four tria3, targets =
 Professional 02-08-2026): previous binary rc 1 (nodal msigyy 8.4e-2
 relative off), fix rc 0 (5e-4). The Professional Maxwell chain itself
 differs from the analytic solution even on a homogeneous field (BACKLOG
-C68a, Professional-suspect).
+C68a, class D since 2026-10-18; guard `maxwell_relaxation_analytic1`).
 
 ### Old-state read with two or more chains (C68d, 2026-10-12)
 
@@ -109,4 +109,4 @@ the fix: node 1 reaction -13.32 instead of -19.17 (rc 1); after: rc 0.
 
 ## Differences with the Professional version
 
-- **Maxwell chain relaxation** (C68a, class B, Professional-suspect, not decided): on a homogeneous one-chain probe GNU gives the analytic msig -20.25, the Professional 02-08-2026 -23.81. Index: [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).
+- **Maxwell chain relaxation** (C68a, class D, Professional-suspect, owner decision 2026-10-18; GNU kept): on a homogeneous one-chain probe (E_c 7e3, tau 0.3, strain rate -0.01, t = 1) GNU gives the analytic msig = E_c tau rate (1 - exp(-t/tau)) = -20.2508461397 for any time step; the Professional 02-08-2026 gives -23.81 at dt 0.1, -20.59 at dt 0.01, -20.28 at dt 0.001 (a first-order time-discretisation error; at dt 0.1 beyond the bound E_c tau |rate| = 21). Guard test `test-2026/maxwell_relaxation_analytic1` (targets msigyy at nodes 1 and 5 and sigyy at node 6, 1e-6 relative; registered in `scripts/build_safe.sh`; a wrong target gives rc 1). The GNU update (`viscoela.cc` `visco_elasticity()`: msig_new = msig_old + (E_c tau inc_epe / dt - msig_old)(1 - exp(-dt/tau))) is the exponential chain integration, exact for a piecewise-constant strain rate. Index: [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).

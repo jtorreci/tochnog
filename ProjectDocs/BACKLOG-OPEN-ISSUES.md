@@ -2304,12 +2304,13 @@ Original report:
   up to 1.3 % of their maximum on `validation_1` / `stokes_*`). The
   incremental path remains only with an independent strain unknown
   (`materi_strain_total`, e.g. sfnet `strconv1`, unchanged byte for byte).
-- **Remaining (Professional side, class B)**: (1) `validation_1` drift
+- **Remaining (Professional side; (1) class D, (2)-(3) class B)**: (1) `validation_1` drift
   of the Professional (-0.0391 / -0.0179 / +0.0034 at t = 1 / 2 / 3,
   dt-converged), independent of `global_element_dof_apply`,
   stabilization, predictor and density; the GNU is steady at -0.057,
   inside the GAMM range -0.066 .. -0.018 (DIVERGENCES C72-V1, owner
-  decision: Pro-suspect; guard `test-2026/validation1_steady1`). (2)
+  decision 2026-10-13: Pro-suspect; class D since 2026-10-18, decided,
+  no longer open; guard `test-2026/validation1_steady1`). (2)
   Stokes flow: the Professional `validation_1` without the stokes record
   0.1465713 vs GNU 0.144159 = Pro `convection_apply -no` 0.1441588, a
   convection-gated, density-independent residual
@@ -2611,7 +2612,17 @@ Original report:
   (`f4t6f_c68_runs`): no rc or class change, no node_dof change above
   1e-10. Residuals found: C68a, C68b, C68c, C68d.
 
-### C68a. Professional Maxwell chain differs from the analytic solution (F4 T6f C68, 2026-10-12) — OPEN
+### C68a. Professional Maxwell chain differs from the analytic solution (F4 T6f C68, 2026-10-12) — DECIDED 2026-10-18 (class D, Professional-suspect)
+
+- **Decision (owner 2026-10-18)**: class D, GNU kept (DIVERGENCES C68a,
+  SEGUIMIENTO Descarte). Analytic: dmsig/dt = E_c r - msig/tau, msig(0) =
+  0, so msig(t) = E_c tau r (1 - exp(-t/tau)) = 7e3 x 0.3 x (-0.01) x
+  (1 - exp(-1/0.3)) = -20.2508461397; GNU equals it to 12 digits at dt
+  0.1 and 0.01. Professional 02-08-2026: -23.8131 (dt 0.1), -20.5902
+  (dt 0.01), -20.2846 (dt 0.001), a first-order time-discretisation
+  error; at dt 0.1 it exceeds the bound E_c tau |r| = 21. Guard test
+  `test-2026/maxwell_relaxation_analytic1` (1e-6 relative; a wrong
+  target gives rc 1). Probes: scratchpad `c68a/`.
 
 - **Symptom / evidence**: homogeneous one-chain relaxation probe (tau
   0.3, constant strain rate): Professional 02-08-2026 msig -23.81; the
@@ -2620,10 +2631,9 @@ Original report:
   GNU gives ~0. The C68 test `maxwell_ip_state1` matches the
   Professional within 5e-4 nonetheless (the difference is the chain
   law, not the IP state).
-- **Classification**: class B, Professional-suspect (contradicts the
-  analytic answer); not decided.
-- **Severity**: LOW. **Effort**: medium (owner decision, then a guard
-  test or a class D row).
+- **Classification**: class D since 2026-10-18 (was class B,
+  Professional-suspect, not decided).
+- **Severity**: LOW. **Effort**: done (guard test + class D row).
 
 ### C68b. cap1 model: GNU and Professional differ at model level (F4 T6f C68, 2026-10-12) — DEFERRED (class B, F4 T6f LOW queue, owner plan 2026-10-17)
 
@@ -3255,7 +3265,7 @@ Original report:
 | C79 | sfnet | Lobatto nodal recovery volume weighted (`tube1` r=1.25 column) — resolved 2026-10-13 (F4 T6f C79: point value / corner fit, arithmetic mean = Pro; `msf_element_rule()` on-axis switch) | closed | - |
 | C80 | — | `group_integration_method -reduced` refused by the GNU — resolved 2026-10-16 (F4 T6f C80: Pro rule, linear-fit recovery; default factor 10 = manual, class A) | — | — |
 | C80.1 | — | selective / B-bar integration, explicit opt-in GNU extension — resolved 2026-10-16 (F4 T6f C80.1: `-volumetric` of `group_element_selective_reduced_integration`; C80.2 added `-lambda` and removed `-both`) | — | — |
-| C72 | — | convected (Eulerian) stress: nodal output resolved 2026-10-13 (`c1a1ae9`, absolute recovery = Pro); neither code convects the IP state; remaining Pro-side residuals: `validation_1` drift (C72-V1), Stokes gap, `cd_method` rotation sweep | LOW | medium |
+| C72 | — | convected (Eulerian) stress: nodal output resolved 2026-10-13 (`c1a1ae9`, absolute recovery = Pro); neither code convects the IP state; remaining Pro-side residuals: Stokes gap, `cd_method` rotation sweep (the `validation_1` drift C72-V1 is class D, decided 2026-10-18) | LOW | medium |
 | C73 | — | optional: convect the integration-point state of history materials on an Eulerian mesh (neither code does; class A improvement, owner decision) | LOW | large |
 | C74 | — | `validation_1` prints "Bi-CG iteration broke down" about 600 times — resolved 2026-10-13 (F4 T6f C74: one warning per LU-rescued solve; solver part -> C77) | closed | - |
 | C77 | — | Bi-CG absolute breakdown test and convergence floor — resolved 2026-10-15 (F4 T6f C77: relative stop, relative breakdown, guarded SuperLU / band LU retry; BiCGStab choice pending) | closed | - |
@@ -3272,13 +3282,13 @@ Original report:
 | C83 | — | tria3/tet10 `-maximal` manual point counts (4/10) vs both codes (3/5) — decided 2026-10-16: deliberate divergence from the manual (class A); axisymmetric tria3 `-maximal` resolved 2026-10-16 (`72f78bd`: 3 nodal points, 1 on the axis, = Professional) | closed | - |
 | C67 | — | nodal recovery of the unmeasured element rules — resolved 2026-10-16 (`d875874` bars/quad16, `dc4a59a` tet4 `-maximal`, prism15, prism6 `-minimal`) | closed | - |
 | C68 | — | other integration-point state variables (kapsh, cap1pc, rho, damage, Maxwell msig) read back from the nodes — resolved 2026-10-12 (F4 T6f, `70235c6`) | MEDIUM | cheap/medium |
-| C68a | — | Professional Maxwell chain differs from the analytic relaxation even homogeneous (msig -23.81 vs -20.25), Pro-suspect | LOW | medium |
+| C68a | — | Professional Maxwell chain differs from the analytic relaxation even homogeneous (msig -23.81 vs -20.25) — decided 2026-10-18: class D, Professional-suspect (guard `maxwell_relaxation_analytic1`) | closed | - |
 | C68b | — | cap1 model: Professional c1his -17 vs GNU pc 108, reactions 6x — deferred (class B, 2026-10-17) | LOW | medium/expensive |
 | C68c | — | Mohr-Coulomb hardening-softening on kappa_shear 1.2x off the Professional (homogeneous) — deferred (class B, 2026-10-17) | LOW | medium |
 | C68d | — | `materi.cc` old rho/epi/epp read with the Maxwell loop index (two or more chains) — resolved 2026-10-12 (F4 T6f, `2327083`) | LOW | cheap |
 | C69 | — | plane-stress membrane: yy/zz split of the plastic strain first order in dt (eptzz -0.00721 at dt 0.1 vs analytic -0.00882) — deferred (class B, 2026-10-17) | LOW | medium |
 
-Forty-one items remain open (recount of the summary table, F4 T6f LOW queue, 2026-10-17): two MEDIUM (B1, C37) and thirty-nine LOW. Thirty-two are active (the sfnet input items B1-B11, B13, B14; C1, C2, C14, C26, C27, C29, C37, C38, C39, C40, C41, C46, C50, C60, C68a, C72, C73, C81 and C86; C14, C39, C41, C46 and C72 count because of their open residuals) and nine are deferred as class B (C22, C25 rest, C58 rest, C61, C63, C65, C68b, C68c, C69). The twelve class A deliberate divergences of the table (C7, C9, C10, C13, C15, C21, C30, C34, C36, C75, C78, C82) are decided, not open, and forty-five items are resolved or closed. The earlier running count (45 after C84) also counted decided and closed items; the F4 T6f LOW queue resolved C54 and C62, closed C12, partly resolved C25 and C58, re-scoped C60, deferred nine items and added C86. History of the earlier counts: C23 and C24 resolved 2026-10-05; C25, C26, C27 and B10 added; F1 T3 / K04 2026-10-06 added B11, C28-C32; F1 T6 resolved C28, added and resolved B12; F2 T1 added C36; F2 T2 added C37, C38, C39; F2 T3 resolved C5 and added C40; F3 T2 resolved C8, C18, C19, C20 and added B13, C41; F4 T2 fixed the C41 tie and left a residual; F4 T3 resolved C33; F4 T4 closed C32, added C42 and resolved C31; F4 T7-T8 added C43-C46; F4 T9 resolved the C43 solver speed, decided C46b/C46e and added C47, C48, C49; F4 T10 resolved C48 and added C50; F4 T5 added C52, C53 and resolved C51; F4 T13 resolved C49 and added C54-C56; F4 T12 resolved C47 and added C57; F4 T6a resolved C6, C55, C56 and the C3 sign, the C3 square-face tie becoming a deliberate divergence (owner 2026-10-11), and added B14; F4 T6c fixed the `control_restart` integration-point reset and added C58; F4 T6d resolved C11 and C59, fixed the interface history and resolved C52, and added B15, C60 and C61; B15 resolved the same day; F4 T6e resolved C53 and added C62 and C63; F4 T6f added C64-C68 and C69, and closed the K15 `mmc_tension` vertex sigzz/eppzz and `validation_3` eptzz items as deliberate divergences MC-VERTEX-ZZ / MEMBRANE-EPTZZ, owner 2026-10-12; F4 T6f resolved C68 and added C68a-C68d; C68d resolved the same day; F4 T6f closed C7 (Mazars equivalent strain, with C7b) and the AUDIT K14b `hypo3` sigxx reversal as deliberate divergences C7 / K14b, owner 2026-10-12; the `hypo3` hyhis slot residual stays open under AUDIT K14; F4 T6f K21 WU2 widened C72 with the Stokes-flow residual and closed its `cmat_gate` rewrite, no new item; F4 T6f C72 resolved the convected nodal stress output (C72 stays open for the Professional-side residuals) and added C73 and C74; F4 T6f C70 resolved C70 and added C75; F4 T6f C75 closed C75 as a deliberate divergence, owner 2026-10-13, and added C76; F4 T6f C74 resolved C74 and added C77; F4 T6f C57 resolved C57 and added C78, decided the same day as a deliberate divergence, owner 2026-10-13; F4 T6f C71 resolved C71 and added C79; F4 T6f C79 resolved C79 and added C80; F4 T6f C77 resolved C77 and added C81 (F6); F4 T6f C80 resolved C80 and added C80.1; F4 T6f C80.1 resolved C80.1; F4 T6f C80.2 extended C80.1 with `-lambda`, no new item; F4 T6f C67 resolved the bar and quad16 rules and narrowed C67, no new item; F4 T6f C67 remainder + C76 resolved C67 and C76, re-scoped C66 and added C82 and C83; F4 T6f C82 + C83 decided C82 and C83 part 1 as deliberate divergences (owner 2026-10-16) and resolved C83 part 2; F4 T6f C66 measured the Professional tria6 lumping and added C84; F4 T6f C66 phase 2 resolved C66 (lumping class A TRIA6-HRZ, owner 2026-10-16) and added C85; F4 T6f C85 resolved C85; F4 T6f C84 resolved C84 (the unmeasured Professional handling of non-continuum elements is the DIVERGENCES class B row C84-REFUSE). No open issue is CRITICAL or
+Forty items remain open (recount of the summary table, 2026-10-18, after C68a moved to class D): two MEDIUM (B1, C37) and thirty-eight LOW. Thirty-one are active (the sfnet input items B1-B11, B13, B14; C1, C2, C14, C26, C27, C29, C37, C38, C39, C40, C41, C46, C50, C60, C72, C73, C81 and C86; C14, C39, C41, C46 and C72 count because of their open residuals) and nine are deferred as class B (C22, C25 rest, C58 rest, C61, C63, C65, C68b, C68c, C69). The twelve class A deliberate divergences of the table (C7, C9, C10, C13, C15, C21, C30, C34, C36, C75, C78, C82) are decided, not open; C68a is decided as class D (Professional-suspect, owner 2026-10-18), not open, and so is the C72 residual C72-V1 (C72 stays open for its Stokes and `cd_method` residuals); forty-five items are resolved or closed. The earlier running count (45 after C84) also counted decided and closed items; the F4 T6f LOW queue resolved C54 and C62, closed C12, partly resolved C25 and C58, re-scoped C60, deferred nine items and added C86. History of the earlier counts: C23 and C24 resolved 2026-10-05; C25, C26, C27 and B10 added; F1 T3 / K04 2026-10-06 added B11, C28-C32; F1 T6 resolved C28, added and resolved B12; F2 T1 added C36; F2 T2 added C37, C38, C39; F2 T3 resolved C5 and added C40; F3 T2 resolved C8, C18, C19, C20 and added B13, C41; F4 T2 fixed the C41 tie and left a residual; F4 T3 resolved C33; F4 T4 closed C32, added C42 and resolved C31; F4 T7-T8 added C43-C46; F4 T9 resolved the C43 solver speed, decided C46b/C46e and added C47, C48, C49; F4 T10 resolved C48 and added C50; F4 T5 added C52, C53 and resolved C51; F4 T13 resolved C49 and added C54-C56; F4 T12 resolved C47 and added C57; F4 T6a resolved C6, C55, C56 and the C3 sign, the C3 square-face tie becoming a deliberate divergence (owner 2026-10-11), and added B14; F4 T6c fixed the `control_restart` integration-point reset and added C58; F4 T6d resolved C11 and C59, fixed the interface history and resolved C52, and added B15, C60 and C61; B15 resolved the same day; F4 T6e resolved C53 and added C62 and C63; F4 T6f added C64-C68 and C69, and closed the K15 `mmc_tension` vertex sigzz/eppzz and `validation_3` eptzz items as deliberate divergences MC-VERTEX-ZZ / MEMBRANE-EPTZZ, owner 2026-10-12; F4 T6f resolved C68 and added C68a-C68d; C68d resolved the same day; F4 T6f closed C7 (Mazars equivalent strain, with C7b) and the AUDIT K14b `hypo3` sigxx reversal as deliberate divergences C7 / K14b, owner 2026-10-12; the `hypo3` hyhis slot residual stays open under AUDIT K14; F4 T6f K21 WU2 widened C72 with the Stokes-flow residual and closed its `cmat_gate` rewrite, no new item; F4 T6f C72 resolved the convected nodal stress output (C72 stays open for the Professional-side residuals) and added C73 and C74; F4 T6f C70 resolved C70 and added C75; F4 T6f C75 closed C75 as a deliberate divergence, owner 2026-10-13, and added C76; F4 T6f C74 resolved C74 and added C77; F4 T6f C57 resolved C57 and added C78, decided the same day as a deliberate divergence, owner 2026-10-13; F4 T6f C71 resolved C71 and added C79; F4 T6f C79 resolved C79 and added C80; F4 T6f C77 resolved C77 and added C81 (F6); F4 T6f C80 resolved C80 and added C80.1; F4 T6f C80.1 resolved C80.1; F4 T6f C80.2 extended C80.1 with `-lambda`, no new item; F4 T6f C67 resolved the bar and quad16 rules and narrowed C67, no new item; F4 T6f C67 remainder + C76 resolved C67 and C76, re-scoped C66 and added C82 and C83; F4 T6f C82 + C83 decided C82 and C83 part 1 as deliberate divergences (owner 2026-10-16) and resolved C83 part 2; F4 T6f C66 measured the Professional tria6 lumping and added C84; F4 T6f C66 phase 2 resolved C66 (lumping class A TRIA6-HRZ, owner 2026-10-16) and added C85; F4 T6f C85 resolved C85; F4 T6f C84 resolved C84 (the unmeasured Professional handling of non-continuum elements is the DIVERGENCES class B row C84-REFUSE). No open issue is CRITICAL or
 HIGH. The validation-suite corpus has no open failure — its 233 real tests
 pass (`materi_direct_mc` input corrected, C17 resolved). Every remaining failure is a stale or malformed test, an out-of-scope model
 or infrastructure limit, a narrow post-processing divergence, a corpus-coverage

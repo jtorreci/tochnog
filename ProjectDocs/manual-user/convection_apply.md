@@ -129,8 +129,8 @@ Professional differences below.
   with `materi_displacement`). Professional 02-08-2026: Refuses the explicit
   record (`-no` is its default). Status: Input dialect. Index:
   [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).
-- **`validation_1` steady state** (known difference, class B;
-  DIVERGENCES C72-V1, owner decision 2026-10-13: Professional-suspect).
+- **`validation_1` steady state** (Professional-suspect, class D since
+  2026-10-18; DIVERGENCES C72-V1, owner decision 2026-10-13: keep the GNU).
   The channel flow with `convection_apply -yes`, `inertia_apply -no` and
   `group_materi_stokes -no` is a steady problem. GNU: post_point velx
   -0.0570386 / -0.0571954 at t = 1 / 3 (inside the GAMM range -0.066 ..
