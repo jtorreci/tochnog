@@ -108,7 +108,7 @@ T6 triage (2026-10-11, HEAD 53dbb86) and owner order (2026-10-11):
   - [x] Q7 bookkeeping docs: class B deferrals (C61, C65, C69, C68b, C68c, K14 hypo3 hyhis residual, C22, C12, C25), stale lines (C3/C5 headings, C51 row, DIVERGENCES K21, AUDIT K14/K15/K21, task lines T6/T6f), BACKLOG open recount. C68a / C72-V1 class D and sfnet B14 untouched (owner decisions).
 - [x] T6f C68a / C72-V1 to class D (owner 2026-10-18, verbatim "si, adelante"). Route: delegated writer (trigger: parent long-session context backstop). Done `4369fda` (guard test `maxwell_relaxation_analytic1` + build_safe), `9b7c28a` (DIVERGENCES, BACKLOG, SEGUIMIENTO, manuals).
 
-- [x] T6f C60 interface orientation (owner 2026-10-19, verbatim "si" to "¿Adoptamos la regla de Pro para C60?"). Route: inline (no writer trigger: one understood change in interface.cc). Risk: item 3 (interface normal sign and tension cut-off of existing inputs; five test-2014 targets change) + item 6 partly (A/B on omen). Done `d43e69f`, see Log 2026-10-19.
+- [x] T6f C60 interface orientation (owner 2026-10-19, verbatim "si" to "¿Adoptamos la regla de Pro para C60?"). Route: inline (no writer trigger: one understood change in interface.cc). Risk: item 3 (interface normal sign and tension cut-off of existing inputs; five test-2014 targets change) + item 6 partly (A/B on omen). Done `9393ded`, see Log 2026-10-19.
 ## Later (owner 2026-10-10, after convergence with ALL divergences documented and accepted)
 - F6: ILU/AMG preconditioning of the iterative solver (BACKLOG C81, owner 2026-10-15: in large meshes with many steps even small per-solve gains compound).
 - F6: exhaustive profiling and optimisation pass; special attention to the hot
