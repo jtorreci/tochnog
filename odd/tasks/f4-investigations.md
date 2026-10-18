@@ -106,6 +106,7 @@ T6 triage (2026-10-11, HEAD 53dbb86) and owner order (2026-10-11):
   - [x] Q5 C84-REFUSE STOPPED: the Professional INCLUDES a truss with a node on the section (analytically correct total, 100 = 45 + 55), neither ignored nor wrong; new BACKLOG C86, owner decision. No code change.
   - [x] Q6 C58 element history records after `control_restart` (interface, contactspring, spring, tendon, damage) vs Pro, one probe per family; `number_timesteps` -> class B; time box half a day (interface + spring first). Risk: item 1 (restart state).
   - [x] Q7 bookkeeping docs: class B deferrals (C61, C65, C69, C68b, C68c, K14 hypo3 hyhis residual, C22, C12, C25), stale lines (C3/C5 headings, C51 row, DIVERGENCES K21, AUDIT K14/K15/K21, task lines T6/T6f), BACKLOG open recount. C68a / C72-V1 class D and sfnet B14 untouched (owner decisions).
+- [x] T6f C68a / C72-V1 to class D (owner 2026-10-18, verbatim "si, adelante"). Route: delegated writer (trigger: parent long-session context backstop). Done `4369fda` (guard test `maxwell_relaxation_analytic1` + build_safe), `9b7c28a` (DIVERGENCES, BACKLOG, SEGUIMIENTO, manuals).
 
 ## Later (owner 2026-10-10, after convergence with ALL divergences documented and accepted)
 - F6: ILU/AMG preconditioning of the iterative solver (BACKLOG C81, owner 2026-10-15: in large meshes with many steps even small per-solve gains compound).
@@ -1348,3 +1349,24 @@ docs + SEGUIMIENTO + BACKLOG + DIVERGENCES.
   audit_db_buffers 0; omen final A/B lqf_runs vs lq3_runs (1024): only
   cylinder_buckle (timeout both) and the new tests. Open for the owner:
   C60 orientation rule, C86 truss inclusion. Next: merge + F5.
+- 2026-10-18 C68a / C72-V1 to class D (route: delegated writer; trigger:
+  parent long-session context backstop). Owner decision 2026-10-18,
+  verbatim: "si, adelante" to "pasar C68a y C72-V1 a clase D (sospecha
+  de Pro) y añadir para C68a un test analítico de guarda". `4369fda`:
+  test-2026 `maxwell_relaxation_analytic1` (one chain E_c 7e3, tau 0.3,
+  rate -0.01, two quad4, poisson 0): msig(t) = E_c tau r (1 -
+  exp(-t/tau)) = -20.2508461397 at t = 1, 1e-6 relative (msigyy nodes 1,
+  5; sigyy node 6 -90.2508461397). No existing test pinned it
+  (`maxwell_ip_state1` uses Pro targets at 2e-3, tau 100). GNU exact at
+  dt 0.1 and 0.01 (`viscoela.cc` exponential update). Pro re-measured:
+  -23.8131 / -20.5902 / -20.2846 at dt 0.1 / 0.01 / 0.001 (first order,
+  at dt 0.1 beyond the bound 21). Negative check: target -23.8131 on node
+  5 -> rc 1 ("Target value ... is -23.8131"), restored. `9b7c28a`:
+  DIVERGENCES C68a, C72-V1 moved to D (A 32, B 40, C 18, D 3, total 93),
+  K21 row cross-reference; SEGUIMIENTO two Descarte rows; BACKLOG C68a
+  decided (closed), C72 stays open for the Stokes and `cd_method`
+  residuals, recount 40 open (2 MEDIUM, 38 LOW; 31 active, 9 deferred);
+  Differences sections of group_materi_maxwell_chain, convection_apply,
+  nodal_stress_recovery (user + dev). Verification: clean build;
+  build_safe TN_CHECK_ONLY 336 OK / 0 FALLO, runs 226/226;
+  audit_db_buffers 0. Probes: scratchpad `c68a/`.
