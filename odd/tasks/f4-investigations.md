@@ -109,6 +109,7 @@ T6 triage (2026-10-11, HEAD 53dbb86) and owner order (2026-10-11):
 - [x] T6f C68a / C72-V1 to class D (owner 2026-10-18, verbatim "si, adelante"). Route: delegated writer (trigger: parent long-session context backstop). Done `4369fda` (guard test `maxwell_relaxation_analytic1` + build_safe), `9b7c28a` (DIVERGENCES, BACKLOG, SEGUIMIENTO, manuals).
 
 - [x] T6f C60 interface orientation (owner 2026-10-19, verbatim "si" to "¿Adoptamos la regla de Pro para C60?"). Route: inline (no writer trigger: one understood change in interface.cc). Risk: item 3 (interface normal sign and tension cut-off of existing inputs; five test-2014 targets change) + item 6 partly (A/B on omen). Done `9393ded`, see Log 2026-10-19.
+- [x] T6f C86 `post_element_force` with trusses/springs (owner 2026-10-19, verbatim "vamos con C86"). Route: inline (one understood change in calcul_force.cc). Risk: none for existing inputs (the elements were refused before; beams stay refused). Done `a11314a`, see Log 2026-10-19 C86.
 ## Later (owner 2026-10-10, after convergence with ALL divergences documented and accepted)
 - F6: ILU/AMG preconditioning of the iterative solver (BACKLOG C81, owner 2026-10-15: in large meshes with many steps even small per-solve gains compound).
 - F6: exhaustive profiling and optimisation pass; special attention to the hot
@@ -1391,3 +1392,16 @@ docs + SEGUIMIENTO + BACKLOG + DIVERGENCES.
   cases flip the normal sign only (node_dof identical) except the five
   corrected tests (iface_mc_gap, iface_mc_dil(_1step), iface_expansion
   node_dof change by design); bicg_csr_threads1 nondeterministic.
+- 2026-10-19 C86 (owner verbatim: "vamos con C86"). Professional probes
+  (scratchpad c86): truss and spring2 with a node on the section are
+  included (strip: 100 / 10 / -40 = truss 45 + continuum 55; interior
+  two trusses 100 / 10 / -20; diagonal truss; 3D hex8 + truss 100 / 10 /
+  -4 / -40 / 16); spring1 on a section node counts on the positive side;
+  the 2D -beam / -truss_beam carries no beam force (no reference, beams
+  stay refused). Implemented in post_element_force_calculate (truss.cc /
+  spring.cc rhside force on the centroid side). RED: 4 positive tests
+  stopped with the old binary; GREEN: build_safe 342 OK / 0 FALLO,
+  226/226. Found C88: GNU spring elongation = node-distance change
+  (Professional = projection on the direction), stale indx in the
+  spring1 rhside; oblique-spring and spring1 tests dropped from C86.
+  Commit a11314a.
