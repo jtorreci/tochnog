@@ -2937,15 +2937,63 @@ void post_element_force_calculate( void )
           ( ( name==-QUAD4 || name==-QUAD9 ) && pef_axisym==-YES ) ) :
         ( name==-TET4 || name==-TET10 || name==-PRISM6 ||
           name==-PRISM15 ) );
-      if ( ( !pef_tensor && !pef_pol ) ||
+      // C86 (F4 T6f, 2026-10-19): trusses and springs carry their
+      // axial force into the section (Professional 02-08-2026: a truss
+      // or spring with a node on the section is INCLUDED, the total =
+      // the analytic section force). Beams, truss-beams, contact
+      // springs and interface groups stay refused (DIVERGENCES
+      // C84-REFUSE).
+      long int pef_struct = ( name==-TRUSS || name==-SPRING1 ||
+        name==-SPRING2 );
+      if ( ( !pef_tensor && !pef_pol && !pef_struct ) ||
            db_active_index( GROUP_INTERFACE, element_group,
              VERSION_NORMAL ) ) {
         pri( "Error: post_element_force does not support element ", ielem );
         pri( "Supported: quad4, quad9, quad16, tria3, tria6 (2D); hex8, "
-             "hex27, tet4, tet10, prism6, prism15 (3D), not in an "
-             "interface group. Restrict the section with "
-             "post_element_force_group or post_element_force_number." );
+             "hex27, tet4, tet10, prism6, prism15 (3D); truss, spring1, "
+             "spring2; not in an interface group. Restrict the section "
+             "with post_element_force_group or post_element_force_number." );
         exit(TN_EXIT_STATUS);
+      }
+
+      // C86: the structural element's nodal force (the force it exerts
+      // on its nodes, the element_rhside of truss.cc / spring.cc):
+      // truss and spring2 +F*dir at the first node and -F*dir at the
+      // second (dir = first -> second node; the spring direction is
+      // ELEMENT_SPRING_DIRECTION), spring1 -F*dir at its node.
+      // Accumulated on the side of the element centroid, as the
+      // continuum elements.
+      if ( pef_struct ) {
+        double pef_f = 0., pef_dir[MDIM];
+        array_set( pef_dir, 0., MDIM );
+        if ( name==-TRUSS ) {
+          db( ELEMENT_TRUSS_FORCE, ielem, idum, &pef_f, ldum,
+            VERSION_NORMAL, GET_IF_EXISTS );
+          for ( i=0; i<ndim; i++ )
+            pef_dir[i] = coords[1*MDIM+i] - coords[0*MDIM+i];
+          if ( !array_normalize( pef_dir, ndim ) ) pef_f = 0.;
+        }
+        else {
+          db( ELEMENT_SPRING_FORCE, ielem, idum, &pef_f, ldum,
+            VERSION_NORMAL, GET_IF_EXISTS );
+          db( ELEMENT_SPRING_DIRECTION, ielem, idum, pef_dir, ldum,
+            VERSION_NORMAL, GET_IF_EXISTS );
+        }
+        double *nf = ( pef_minus ? node_force_minus : node_force );
+        el = get_new_int(DATA_ITEM_SIZE);
+        db( ELEMENT, ielem, el, ddum, length_el, VERSION_NORMAL, GET );
+        for ( inol=0; inol<nnol; inol++ ) {
+          node = el[1+inol];
+          double sgn = ( name==-SPRING1 ? -1. : ( inol==0 ? 1. : -1. ) );
+          for ( idim=0; idim<ndim; idim++ )
+            nf[node*MDIM+idim] += sgn*pef_f*pef_dir[idim];
+          if ( pef_node_ok[node] ) {
+            if ( pef_minus ) pef_has_minus = 1;
+            else pef_has_plus = 1;
+          }
+        }
+        delete[] el;
+        continue;
       }
 
       // the section stress source: the ELEMENT_DOF IP stresses (the

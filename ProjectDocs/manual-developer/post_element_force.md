@@ -177,9 +177,21 @@ quad4 included. The 2D result had 5 values; the Professional writes 3.
     forces). `check_element_shape_factor` is set to 0 around the call
     (the distortion warning was already printed by the solve); pol()
     leaves its thread-local recovery/HRZ state as for any element visit.
-  - anything else (bar/truss/beam/spring names, `hex64`, an element in
-    a `group_interface` group): `Error: post_element_force does not
-    support element : N` + the supported list, exit 1.
+  - C86 (2026-10-19): `-truss`, `-spring1`, `-spring2` (`pef_struct`)
+    skip the stress integration and add the force they exert on their
+    nodes, the `element_rhside` of `truss.cc` / `spring.cc`: truss and
+    spring2 `+F*dir` at the first node and `-F*dir` at the second,
+    spring1 `-F*dir`. `F` = `ELEMENT_TRUSS_FORCE` /
+    `ELEMENT_SPRING_FORCE` (VERSION_NORMAL, after the step close); the
+    truss `dir` = first -> second node from the `NODE` coordinates (the
+    same coordinates as the continuum path), the spring `dir` =
+    `ELEMENT_SPRING_DIRECTION`. The side is the centroid side, as for
+    the continuum (a spring1 on the plane counts on the positive side,
+    = Professional). Gravity / inertia shares of the truss rhside are
+    not added (the continuum path adds none either).
+  - anything else (bar/beam/truss-beam/contact-spring names, `hex64`, an
+    element in a `group_interface` group): `Error: post_element_force
+    does not support element : N` + the supported list, exit 1.
 - Both sides (manual 6.933, "elements on both sides will be used if
   present"): the element centroid side `(c - mid) . dir_n` picks the
   accumulator, `node_force` (>= 0) or `node_force_minus` (< 0); with
@@ -252,12 +264,18 @@ change touches only those slots (active nodes are refilled from
 
 ### Pending
 
-- Trusses/beams/springs or interface groups inside the selection: the
-  GNU refuses them. Professional measured 2026-10-17 for a truss: it is
-  included (strip + truss on the section: 100 / 10 / -40 = truss 45 +
-  continuum 55); following it means adding the structural-element nodal
-  forces of the elements with a node on the section (BACKLOG C86, owner
-  decision; DIVERGENCES C84-REFUSE).
+- Beams, truss-beams, contact springs or interface groups inside the
+  selection: the GNU refuses them. Trusses and springs were added by C86
+  (2026-10-19, tests `post_element_force_2d_truss1`,
+  `_truss_interior1`, `_spring2_1`, `post_element_force_3d_truss1`, refusal
+  `post_element_force_2d_beam_error1`). The Professional 2D `-beam` and
+  `-truss_beam` probes (`beam_rotation`, rotz fixed off the beam) carry
+  no beam force (`element_beam_force_moment` all 0; the truss part of
+  the truss-beam 45 is included), so the beam shear/moment share has no
+  reference (DIVERGENCES C84-REFUSE; the planar beam is BACKLOG C37).
+- The spring contribution follows the Professional rule, but the GNU
+  spring forces differ whenever the spring moves off its direction
+  (BACKLOG C88): only the aligned spring2 is tested.
 - Hardcoded: the supported name lists in `post_element_force_calculate`
   (ndim 2: quad4/quad9 tensor, tria3/tria6/quad16 pol; ndim 3:
   hex8/hex27 tensor, tet4/tet10/prism6/prism15 pol).

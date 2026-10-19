@@ -78,9 +78,17 @@ cantilever gives the same section forces on any mesh. In an
 axisymmetric group (`group_axisymmetric -yes`) the forces are those of
 the full ring.
 
-Other elements cannot be part of the selection: trusses, beams,
-springs, bars in 2D/3D, interface element groups and `hex64` stop the
-calculation with an error. Restrict the section with
+Trusses (`-truss`) and springs (`-spring1`, `-spring2`) with a node on
+the section add their axial force to it, so the result is the total
+force carried through the section (continuum plus structural
+elements). Each one counts on the side of its centroid, like a
+continuum element; a `-spring1` on a section node counts on the
+positive side. Exclude them with `post_element_force_group` to get the
+continuum share alone.
+
+Other elements cannot be part of the selection: beams, truss-beams,
+contact springs, bars in 2D/3D, interface element groups and `hex64`
+stop the calculation with an error. Restrict the section with
 `post_element_force_group` or `post_element_force_number`.
 
 The integration-point stresses come from `element_dof`
@@ -110,9 +118,15 @@ equilibrium. See `validation-suite/test-2026/post_element_force_*` and
   element type above, plane and axisymmetric, at boundary and interior
   sections and with a reversed normal (C84, 2026-10-17; corpus
   `force14`/`force15`).
-- The refusal of non-continuum elements and interface groups is a GNU
-  check. Measured 2026-10-17: the Professional INCLUDES a truss with a
-  node on the section (the section force is then the total, e.g. 100 =
-  truss 45 + continuum 55); beams, springs and interfaces were not
-  measured. Exclude such elements with `post_element_force_group`
-  meanwhile (DIVERGENCES, class B row C84-REFUSE; BACKLOG C86).
+- Trusses and springs in the selection = the Professional 02-08-2026
+  (C86, 2026-10-19): a truss on the section gives 100 = truss 45 +
+  continuum 55, a spring2 100 = spring 55.385 + continuum 44.615; two
+  trusses at an interior section node and a 3D truss match too. The
+  spring force itself still differs from the Professional when the
+  spring moves off its direction (DIVERGENCES C88), and the section
+  carries that spring force.
+- The refusal of beams, truss-beams, contact springs and interface
+  groups is a GNU check: in the 2D probe the Professional beam carries
+  no force, so there is no reference for its contribution; contact
+  springs and interfaces were not measured (DIVERGENCES, class B row
+  C84-REFUSE).

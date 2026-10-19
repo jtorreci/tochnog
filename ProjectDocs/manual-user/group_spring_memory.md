@@ -16,3 +16,12 @@ group_spring_memory 0  -total_linear
 group_spring_stiffness 0  1.0
 ```
 Unlocks spring1 (rc=0).
+
+## Differences with the Professional version
+
+- A spring whose nodes move off `group_spring_direction` (an oblique
+  `-spring2`, a spring on a bending member, a `-spring1`) gives a
+  different force: the GNU takes the elongation as the change of the
+  node distance, the Professional the projection on the direction
+  (found 2026-10-19 by the C86 probes; open, DIVERGENCES and BACKLOG
+  C88). A spring that moves along its direction gives the same force.
