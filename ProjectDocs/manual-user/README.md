@@ -370,7 +370,8 @@ page lists its own in "Differences with the Professional version".
 
 ## KEYWORDS BATCH C (2026-09-04) — clusters pequeños de keywords del corpus
 
-- [group_spring_memory](group_spring_memory.md) — memory model of springs (6.765); accepted (GNU spring = -updated_linear; -total_linear coincides in 1D). Unlocks spring1 (rc=0).
+- [group_spring_memory](group_spring_memory.md) — memory model of springs (6.765); accepted, the spring law is the same projection for every value (= Professional).
+- [group_spring_direction](group_spring_direction.md) — spring direction (6.764): elongation projected on it, initial axis without the record (C88).
 - [group_spring_stiffness_nonlinear](group_spring_stiffness_nonlinear.md) — nonlinear spring stiffness diagram (6.768); midpoint-strain integration EXACT for linear diagrams. Unlocks spring6 (rc=0).
 - [element_spring_strain](element_spring_strain.md) — output record: total spring elongation per element.
 - [dependency_apply](dependency_apply.md) — global switch of the dependency_item/dependency_diagram machinery (6.125).

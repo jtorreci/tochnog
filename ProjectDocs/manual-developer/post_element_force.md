@@ -267,15 +267,14 @@ change touches only those slots (active nodes are refilled from
 - Beams, truss-beams, contact springs or interface groups inside the
   selection: the GNU refuses them. Trusses and springs were added by C86
   (2026-10-19, tests `post_element_force_2d_truss1`,
-  `_truss_interior1`, `_spring2_1`, `post_element_force_3d_truss1`, refusal
+  `_truss_interior1`, `_spring2_1`, `_spring1_interior1`, `post_element_force_3d_truss1`, `_3d_truss_spring1`, refusal
   `post_element_force_2d_beam_error1`). The Professional 2D `-beam` and
   `-truss_beam` probes (`beam_rotation`, rotz fixed off the beam) carry
   no beam force (`element_beam_force_moment` all 0; the truss part of
   the truss-beam 45 is included), so the beam shear/moment share has no
   reference (DIVERGENCES C84-REFUSE; the planar beam is BACKLOG C37).
-- The spring contribution follows the Professional rule, but the GNU
-  spring forces differ whenever the spring moves off its direction
-  (BACKLOG C88): only the aligned spring2 is tested.
+- The spring1 and oblique-spring section tests rely on the C88 spring
+  kinematics (projection on the fixed direction).
 - Hardcoded: the supported name lists in `post_element_force_calculate`
   (ndim 2: quad4/quad9 tensor, tria3/tria6/quad16 pol; ndim 3:
   hex8/hex27 tensor, tet4/tet10/prism6/prism15 pol).

@@ -122,14 +122,25 @@ void spring( long int element, long int name, long int element_group,
       }
     }
 
-      // deformation
+      // deformation (C88, F4 T6f 2026-10-19): the elongation is the
+      // relative displacement PROJECTED on the spring direction,
+      // group_spring_direction or, without the record, the INITIAL
+      // axis of a -spring2 (first -> second node); a -spring1 measures
+      // the displacement of its node from the initial position. The
+      // force and the tangent act along the same fixed direction, so
+      // the spring is linear and step-independent (Professional
+      // 02-08-2026, measured for every group_spring_memory: an oblique
+      // spring2 moved (0.3,0.1) along (1,1) gives k*0.4/sqrt(2) in 1 or
+      // 10 steps, a spring2 rotated by 90 degrees gives 0, a spring1
+      // moved (-0.2,0.5) along (1,0) gives -0.2*k). Before, the length
+      // was the node distance (the full motion, unsigned for spring1).
     if ( !db( GROUP_SPRING_DIRECTION, element_group, idum,
          group_spring_direction, ldum, VERSION_NORMAL, GET_IF_EXISTS ) ) {
       if ( name==-SPRING1 )
         db_error( GROUP_SPRING_DIRECTION, element_group );
       else {
         assert ( name==-SPRING2 );
-        array_subtract( &new_coord[ndim], &new_coord[0], group_spring_direction, ndim );
+        array_subtract( &initial_coord[ndim], &initial_coord[0], group_spring_direction, ndim );
       }
     }
     if ( !array_normalize( group_spring_direction, ndim ) ) {
@@ -137,19 +148,19 @@ void spring( long int element, long int name, long int element_group,
        exit(TN_EXIT_STATUS);
     }
     if ( name==-SPRING1 ) {
-      old_length = array_distance( &old_coord[0],
-        &initial_coord[0], work, ndim );
-      new_length = array_distance( &new_coord[0],
-        &initial_coord[0], work, ndim );
+      array_subtract( &old_coord[0], &initial_coord[0], work, ndim );
+      old_length = array_inproduct( work, group_spring_direction, ndim );
+      array_subtract( &new_coord[0], &initial_coord[0], work, ndim );
+      new_length = array_inproduct( work, group_spring_direction, ndim );
       initial_length = 0.;
     }
     else {
-      initial_length = array_distance( &initial_coord[0],
-        &initial_coord[ndim], work, ndim );
-      old_length = array_distance( &old_coord[0], 
-        &old_coord[ndim], work, ndim );
-      new_length = array_distance( &new_coord[0], 
-        &new_coord[ndim], work, ndim );
+      array_subtract( &initial_coord[ndim], &initial_coord[0], work, ndim );
+      initial_length = array_inproduct( work, group_spring_direction, ndim );
+      array_subtract( &old_coord[ndim], &old_coord[0], work, ndim );
+      old_length = array_inproduct( work, group_spring_direction, ndim );
+      array_subtract( &new_coord[ndim], &new_coord[0], work, ndim );
+      new_length = array_inproduct( work, group_spring_direction, ndim );
     }
     incremental_length = new_length - old_length;
 
@@ -199,50 +210,41 @@ void spring( long int element, long int name, long int element_group,
        group_spring_stiffness = 0.;
     }
 
-      // nodal force
+      // nodal force: -spring1 -F*dir at its node, -spring2 +F*dir at
+      // the first and -F*dir at the second node; the tangent is
+      // k*dtime*dir*dir^T (signed: an oblique direction couples the
+      // components with the sign of dir_i*dir_j; C88: the former
+      // |dir_i*dir_j| made a (1,-1) spring stiff along (1,1), and the
+      // -spring1 branch wrote the right-hand side and the matrix at a
+      // stale index with a negative stiffness)
     for ( idim=0; idim<ndim; idim++ ) {
       iuknwn = vel_indx + idim*nder;
       ipuknwn = iuknwn/nder;
-      if ( name==-SPRING1 ) {
-        fac = -1.;
+      for ( inol=0; inol<nnol; inol++ ) {
+        if ( name==-SPRING1 )
+          fac = -1.;
+        else if ( inol==0 )
+          fac = +1.;
+        else
+          fac = -1.;
+        indx = inol*npuknwn+ipuknwn;
         tmp = fac*spring_force*group_spring_direction[idim];
         element_rhside[indx] += tmp;
         for ( jdim=0; jdim<ndim; jdim++ ) {
           juknwn = vel_indx + jdim*nder;
-          indx = ipuknwn*nnol*npuknwn+jpuknwn;
-          tmp = fac*group_spring_stiffness*dtime*
-            scalar_dabs(group_spring_direction[idim]*group_spring_direction[jdim]);
-          element_matrix[indx] += tmp;
-          if ( jdim==idim ) 
-            element_lhside[inol*npuknwn+ipuknwn] += tmp;
-        }
-      }
-      else {
-        assert( name==-SPRING2 );
-        for ( inol=0; inol<nnol; inol++ ) {
-          if ( inol==0 )
-            fac = +1.;
-          else
-            fac = -1.;
-          indx = inol*npuknwn+ipuknwn;
-          tmp = fac*spring_force*group_spring_direction[idim];
-          element_rhside[indx] += tmp;
-          for ( jdim=0; jdim<ndim; jdim++ ) {
-            juknwn = vel_indx + jdim*nder;
-            jpuknwn = juknwn/nder;
-            for ( jnol=0; jnol<nnol; jnol++ ) {
-              if ( jnol==inol )
-                fac = +1.;
-              else
-                fac = -1.;
-              indx = inol*npuknwn*nnol*npuknwn+ipuknwn*nnol*npuknwn+
-                jnol*npuknwn+jpuknwn;
-              tmp = fac*group_spring_stiffness*dtime*
-                scalar_dabs(group_spring_direction[idim]*group_spring_direction[jdim]);
-              element_matrix[indx] += tmp;
-              if ( jnol==inol && jdim==idim ) 
-                element_lhside[inol*npuknwn+ipuknwn] += tmp;
-            }
+          jpuknwn = juknwn/nder;
+          for ( jnol=0; jnol<nnol; jnol++ ) {
+            if ( jnol==inol )
+              fac = +1.;
+            else
+              fac = -1.;
+            indx = inol*npuknwn*nnol*npuknwn+ipuknwn*nnol*npuknwn+
+              jnol*npuknwn+jpuknwn;
+            tmp = fac*group_spring_stiffness*dtime*
+              group_spring_direction[idim]*group_spring_direction[jdim];
+            element_matrix[indx] += tmp;
+            if ( jnol==inol && jdim==idim )
+              element_lhside[inol*npuknwn+ipuknwn] += tmp;
           }
         }
       }

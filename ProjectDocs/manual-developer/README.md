@@ -368,7 +368,8 @@ page lists its own in "Differences with the Professional version".
 
 ## KEYWORDS BATCH C (2026-09-04) — clusters pequeños de keywords del corpus
 
-- [group_spring_memory](group_spring_memory.md) — enum + registro; parse-only.
+- [group_spring_memory](group_spring_memory.md) — enum + registro; parse-only (the spring law does not depend on it, C88).
+- [group_spring_direction](group_spring_direction.md) — spring.cc spring(): projected elongation, initial axis, signed tangent, spring1 indices (C88).
 - [group_spring_stiffness_nonlinear](group_spring_stiffness_nonlinear.md) — consumo en spring.cc (k del diagrama en la strain media del incremento).
 - [element_spring_strain](element_spring_strain.md) — enum + registro version_all + pre-alloc en top.cc + PUT en spring.cc.
 - [dependency_apply](dependency_apply.md) — gate global en get_group_data (group.cc).

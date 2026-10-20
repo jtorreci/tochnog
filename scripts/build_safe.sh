@@ -2230,6 +2230,16 @@ run_ok "$T2026" post_element_force_2d_truss_interior1
 run_ok "$T2026" post_element_force_2d_spring2_1
 run_ok "$T2026" post_element_force_3d_truss1
 expected_error_ok "$T2026" post_element_force_2d_beam_error1
+# C88 (F4 T6f, 2026-10-19): spring elongation projected on the spring
+#   direction (initial axis without the record), signed tangent
+#   k dir dir^T, spring1 right-hand side index (= Professional 02-08-2026).
+run_ok "$T2026" spring2_oblique_projection1
+run_ok "$T2026" spring2_rotation_initial_axis1
+run_ok "$T2026" spring1_projection1
+run_ok "$T2026" spring_oblique_free1
+run_ok "$T2026" spring2_updated_rotation1
+run_ok "$T2026" post_element_force_2d_spring1_interior1
+run_ok "$T2026" post_element_force_3d_truss_spring1
 # F4 T6f LOW queue Q3 / C62 (2026-10-17): the node_rhside reported after
 #   the post-solve material state pass keeps the bounda_force loads
 #   (snapshot of the iteration's bounda() write) and the

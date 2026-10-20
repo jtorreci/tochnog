@@ -121,10 +121,8 @@ equilibrium. See `validation-suite/test-2026/post_element_force_*` and
 - Trusses and springs in the selection = the Professional 02-08-2026
   (C86, 2026-10-19): a truss on the section gives 100 = truss 45 +
   continuum 55, a spring2 100 = spring 55.385 + continuum 44.615; two
-  trusses at an interior section node and a 3D truss match too. The
-  spring force itself still differs from the Professional when the
-  spring moves off its direction (DIVERGENCES C88), and the section
-  carries that spring force.
+  trusses at an interior section node, a spring1 on an interior section
+  node and a 3D truss plus an oblique spring match too.
 - The refusal of beams, truss-beams, contact springs and interface
   groups is a GNU check: in the 2D probe the Professional beam carries
   no force, so there is no reference for its contribution; contact
