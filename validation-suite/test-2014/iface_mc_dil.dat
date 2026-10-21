@@ -1,4 +1,5 @@
 (C60 2026-10-19: interface normal from side 1 to side 2, compression negative; target updated from the old orientation)
+(C87 2026-10-21: explicit group_interface_gap 1.e20, the old GNU default, now that the default is 0: target -1.49338 = Professional 02-08-2026 -1.493376359199 with gap 1.e20 for any step size; the multi-step dilatancy with gap 0 is BACKLOG C89)
 echo -no
 number_of_space_dimensions 2
 derivatives
@@ -26,6 +27,7 @@ element_group  1  0
 element_group  2  10
 element_group  3  0
 group_interface  10  -yes
+group_interface_gap  10  1.e20
 group_interface_materi_elasti_stiffness  10  1000 1000 0
 group_interface_materi_plasti_mohr_coul_direct  10  0 0 0.523599
 group_materi_density  0  1

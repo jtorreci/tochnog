@@ -40,9 +40,11 @@
 //       start to generate stresses"; an opened interface "does not have
 //       stresses"). A physical gap is a NEGATIVE gap value: the interface
 //       stays open (no stress) until compression brings the accumulated
-//       strain below |gap|. Default without the record = +1.e20 (always
-//       closed - "if you want to allow always tension stresses set gap
-//       to, by example, 1.e20"). The stress of the closed phase
+//       strain below |gap|. Default without the record = 0 (F4 T6f C87,
+//       2026-10-21: an interface opens as soon as it is pulled apart; the
+//       manual: "if you want to allow always tension stresses set gap
+//       to, by example, 1.e20"). An opened interface carries neither
+//       normal nor shear stress. The stress of the closed phase
 //       accumulates ONLY the normal strain of the steps that end closed
 //       (ELEMENT_INTERFACE_FORCE_NORM history): the free travel of the
 //       open phase never enters the stress (interface2 of the corpus:
@@ -699,9 +701,13 @@ void interface_element( long int element, long int name,
   // An opened interface "does not have stresses" (6.628) and keeps only
   // the residual stiffness for the matrix. A physical gap is a NEGATIVE
   // gap value (open until compression exceeds |gap|); the DEFAULT without
-  // the record is +1e20 = always closed (allows tension stresses, 6.625:
-  // "If you want to allow always tension stresses in an interface set gap
-  // to, by example, 1.e20"). NOTE: the OLD code (before 2026-09-04)
+  // the record is 0 (F4 T6f C87, 2026-10-21): an interface pulled apart
+  // opens, as in the Professional 02-08-2026 (four quad4 block pairs pulled
+  // by 0.01: normal and shear stress 0 without the record, kn*0.01 with
+  // gap 1.e20) and as the manual implies (6.625: "If you want to allow
+  // always tension stresses in an interface set gap to, by example,
+  // 1.e20"). Until C87 the default was +1e20 (always closed).
+  // NOTE: the OLD code (before 2026-09-04)
   // inverted the condition (open when strain <= gap) with default -1e20:
   // it worked for the tests without a gap record but left interfaces with
   // an explicit positive gap (patch1: gap 1.e20) ALWAYS OPEN and let the
@@ -709,7 +715,7 @@ void interface_element( long int element, long int name,
   // stress.
   if ( !db( GROUP_INTERFACE_GAP, element_group, idum, &gap, ldum,
       VERSION_NORMAL, GET_IF_EXISTS ) )
-    gap = 1.e20;
+    gap = 0.;
 
   // per-IP constitutive state
   // Mohr-Coulomb (FIX 1, RF-1): friction limit on the TOTAL tangential
@@ -785,7 +791,8 @@ void interface_element( long int element, long int name,
     long int plast_i = 0;
     double f_t_clamped_i = trial_el_i;
     double f_t2_clamped_i = trial_el2_i;
-    if ( mc_active ) {
+    // no friction (and no dilatancy) on an opened interface (C87)
+    if ( mc_active && !iface_open_i ) {
       double strain_eff_mc_i = strain_eff_ip[inol];
       double trial_mag = sqrt( trial_el_i*trial_el_i + trial_el2_i*trial_el2_i );
       // Normal force of the yield limit: the Professional uses the normal
@@ -812,13 +819,29 @@ void interface_element( long int element, long int name,
         strain_normal_ip[inol] += -dgamma_inc * tan( phi_flow );
       }
     }
+    // an opened interface (gap or tension limit) "does not have stresses"
+    // (manual 6.632): no shear force either, and only the residual
+    // stiffness in the matrix (F4 T6f C87, 2026-10-21; Professional
+    // 02-08-2026 gap 0 pulled-apart probe: shear 0, the GNU kept
+    // kt*du_tang). The tangential history restarts at the re-closure.
+    if ( iface_open_i ) {
+      f_t_clamped_i = 0.;
+      f_t2_clamped_i = 0.;
+      plast_i = 0;
+    }
     // f_t: the clamped force of the current state (record, assembly and
     // the history of the next step's trial)
     f_t_ip[inol]  = f_t_clamped_i;
     f_t2_ip[inol] = f_t2_clamped_i;
     plastified_ip[inol] = plast_i;
-    stiff_tang_ip[inol]  = ( mc_active && plast_i ) ? 0. : kt1;
-    stiff_tang2_ip[inol] = ( mc_active && plast_i ) ? 0. : kt2;
+    if ( iface_open_i ) {
+      stiff_tang_ip[inol]  = kt1 * residual_factor;
+      stiff_tang2_ip[inol] = kt2 * residual_factor;
+    }
+    else {
+      stiff_tang_ip[inol]  = ( mc_active && plast_i ) ? 0. : kt1;
+      stiff_tang2_ip[inol] = ( mc_active && plast_i ) ? 0. : kt2;
+    }
     // stress,normal (spring.cc pattern, CONVERGENCE 2026-09-04): the
     // accumulated contact stress of the CLOSED phase only (history
     // ELEMENT_INTERFACE_FORCE_NORM, read before the step). Each closed

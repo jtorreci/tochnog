@@ -2240,6 +2240,11 @@ run_ok "$T2026" spring_oblique_free1
 run_ok "$T2026" spring2_updated_rotation1
 run_ok "$T2026" post_element_force_2d_spring1_interior1
 run_ok "$T2026" post_element_force_3d_truss_spring1
+# F4 T6f C87: default interface gap 0 (an interface pulled apart opens) and
+# no shear stress on an opened interface (Professional 02-08-2026 probes).
+run_ok "$T2026" interface_tension_default_gap1
+run_ok "$T2026" interface_open_gap0_shear1
+run_ok "$T2026" interface_tension_gap1e20_1
 # F4 T6f LOW queue Q3 / C62 (2026-10-17): the node_rhside reported after
 #   the post-solve material state pass keeps the bounda_force loads
 #   (snapshot of the iteration's bounda() write) and the

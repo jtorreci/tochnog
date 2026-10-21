@@ -22,9 +22,14 @@ implemented:
   gap is a real gap: the interface stays open (stress exactly 0, only
   the residual stiffness keeps the matrix regularized) until the
   compression brings the accumulated strain below |gap|. Without the
-  record the interface is always closed (default gap = +1e20 — "if you
-  want to allow always tension stresses set gap to, by example,
-  1.e20"). The stress of the closed phase accumulates ONLY the normal
+  record the gap is 0: an interface that is pulled apart opens and
+  carries no stress (F4 T6f C87, 2026-10-21; until then the GNU default
+  was +1e20, always closed). To let an interface carry tension, set the
+  gap to a large value, as the manual says: "if you want to allow always
+  tension stresses set gap to, by example, 1.e20". An opened interface,
+  whether opened by the gap or by the tension limit, has neither normal
+  nor shear stress; Mohr-Coulomb friction and dilatancy do not act
+  while it is open. The stress of the closed phase accumulates ONLY the normal
   strain of the steps that end closed: the free travel of the open
   phase never builds stress (`interface2` of the corpus: gap 0.1, 200
   steps of −1e-3 → the gap closes at step 100 and the final stress is
@@ -259,12 +264,17 @@ is unchanged.
 
 ## Differences with the Professional version
 
-- A free elastic interface (no continuum element attached and no
-  `group_interface_gap` record) that is pulled apart carries the tension
-  `kn * strain` in the GNU (the default gap is `1.e20`, always closed),
-  while the Professional 02-08-2026 reports 0 for it (probe 2026-10-19:
-  side 2 pulled away by 0.001, kn 1000: Professional 0, GNU +1). With
-  compression both give -1. BACKLOG C87, open.
+- Default gap and opened interfaces: the GNU follows the Professional
+  since F4 T6f C87 (2026-10-21; default gap 0, no shear stress on an
+  opened interface). Tests `interface_tension_default_gap1`,
+  `interface_open_gap0_shear1`, `interface_tension_gap1e20_1`.
+- Mohr-Coulomb dilatancy combined with the gap (BACKLOG C89, open): the
+  Professional's open/closed decision with dilatancy does not follow the
+  accumulated normal strain (with a physical gap of -0.01 it reports 0
+  stress on a compressed, dilating interface). The GNU equals the
+  Professional for a single step with a gap >= 0 and for any step size
+  with gap 1.e20; with gap 0 and several steps the GNU keeps the
+  1.e20 result (`iface_mc_dil`: GNU -1493.4, Professional -2972.0).
 
 The interface normal does not depend on the node order of the element
 (F4 T6f C60, 2026-10-19). It points from side 1 towards side 2, so the

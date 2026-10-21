@@ -48,7 +48,8 @@
   between two blocks, four node orders each, normal -9.999999 and shear
   +/-2 everywhere (test-2026 `interface_orientation_node_order1`); free
   interface -1 / 0 / 0 / -1 for `1 2 3 4` / `3 4 1 2` / `2 1 4 3` /
-  `4 3 2 1` (GNU -1 / +1 / +1 / -1: same orientation, the 0 is C87).
+  `4 3 2 1` (GNU before C87 -1 / +1 / +1 / -1: same orientation, the 0
+  was the default gap, resolved by C87).
   The paragraphs below up to "Gap" describe the earlier rule.
 - **Earlier rule (2026-08-14 to 2026-10-18)**: compression =
   `strain_normal` POSITIVE, traction NEGATIVE. This is the convention used by gap, tension_direct
@@ -72,9 +73,15 @@
   stresses" (6.628): the stress record/rhs are exactly 0 and only the
   residual stiffness (`group_interface_materi_residual_stiffness`,
   default 0.01) stays in the matrix for regularization. A physical gap
-  is a NEGATIVE gap value; the default without the record is +1e20
-  (always closed — "if you want to allow always tension stresses set
-  gap to, by example, 1.e20"). The accumulated strain is stored in
+  is a NEGATIVE gap value; the default without the record is 0 (F4 T6f
+  C87, 2026-10-21; `gap = 0.` in `interface_element()`, before that
+  +1e20, always closed — the manual: "if you want to allow always
+  tension stresses set gap to, by example, 1.e20"). While open (gap or
+  tension limit) the per-IP block skips the Mohr-Coulomb return (no
+  friction, no dilatancy), zeroes the tangential force (record, rhs and
+  `ELEMENT_INTERFACE_FORCE_TANG` history, so it rebuilds from the
+  re-closure) and puts `kt * residual_factor` in the matrix, the same
+  regularization as the normal direction. The accumulated strain is stored in
   `ELEMENT_INTERFACE_STRAIN_NORMAL`. NOTE (2026-09-04): the pre-fix code
   inverted the condition (open when `strain <= gap`) with a −1e20
   default — correct for tests without a gap record, but it left
@@ -638,12 +645,19 @@ interface_tension_status1.dat` in `build_safe.sh` (status lines + two-run
 
 ## Differences with the Professional version
 
-- **C87 (open, BACKLOG C87)**: a free elastic interface pulled apart
-  carries `kn * strain` in the GNU (default gap `1.e20` in
-  `interface_element()`, always closed) and 0 in the Professional
-  02-08-2026 (probe 2026-10-19, kn 1000, opening 0.001: Professional 0,
-  GNU +1). The manual sentence "if you want to allow always tension
-  stresses in an interface set gap to, by example, 1.e20" suggests a
-  Professional default that does not carry tension; changing the GNU
-  default would affect every interface in traction without a gap
-  record, so it waits for an owner decision.
+- **C87 (resolved 2026-10-21, owner "si, corrige")**: default gap 0
+  and no shear on an opened interface, as the Professional 02-08-2026.
+  Probes (C60 geometry, four quad4 block pairs, kn = kt = 1000, pulled
+  0.01, slid 0.002): no gap record Professional 0 / 0 (GNU before 10 /
+  +-2); gap 0 Professional 0 / 0 (GNU before 0 / +-2); gap 1.e20 both
+  10 / +-2; compression both -10 / +-2.
+- **C89 (open)**: Mohr-Coulomb dilatancy with the gap. `iface_mc_dil`
+  geometry (c = phi = 0, psi 30 deg, pushed 0.1, slid 5): the
+  Professional gives -1493.376 with gap >= 10 (any step size), -2971.967
+  with gap 0, 0.01 or 0.5 (any step size) and 0 with gap -0.01 (a
+  compressed interface reported open). The GNU equals it for gap 1.e20
+  and for one step with gap >= 0; with several steps and gap < 10 it
+  stays at -1493.376 (gap -0.01 included; one step with gap -0.01
+  gives -2971.967). The Professional
+  apparently compares the gap with a measure that includes the dilatant
+  opening; not yet identified.
