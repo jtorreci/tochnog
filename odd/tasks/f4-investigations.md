@@ -111,6 +111,7 @@ T6 triage (2026-10-11, HEAD 53dbb86) and owner order (2026-10-11):
 - [x] T6f C60 interface orientation (owner 2026-10-19, verbatim "si" to "¿Adoptamos la regla de Pro para C60?"). Route: inline (no writer trigger: one understood change in interface.cc). Risk: item 3 (interface normal sign and tension cut-off of existing inputs; five test-2014 targets change) + item 6 partly (A/B on omen). Done `9393ded`, see Log 2026-10-19.
 - [x] T6f C86 `post_element_force` with trusses/springs (owner 2026-10-19, verbatim "vamos con C86"). Route: inline (one understood change in calcul_force.cc). Risk: none for existing inputs (the elements were refused before; beams stay refused). Done `a11314a`, see Log 2026-10-19 C86.
 - [x] T6f C88 spring elongation on the fixed direction (owner 2026-10-19, verbatim "arreglemos C88 y luego vemos C87"). Route: inline (spring.cc). Risk: item 3 (spring forces of existing inputs change). Done `a7123bc`, see Log 2026-10-19 C88.
+- [x] T6f C87 default interface gap 0 + shear-free opened interface (owner 2026-10-21, verbatim "midámoslo." then "si, corrige"). Route: inline (interface.cc). Risk: item 3 (interfaces in traction without a gap record change). Done `97ad0c9`, see Log 2026-10-21 C87. Found C89.
 ## Later (owner 2026-10-10, after convergence with ALL divergences documented and accepted)
 - F6: ILU/AMG preconditioning of the iterative solver (BACKLOG C81, owner 2026-10-15: in large meshes with many steps even small per-solve gains compound).
 - F6: exhaustive profiling and optimisation pass; special attention to the hot
@@ -1413,3 +1414,12 @@ docs + SEGUIMIENTO + BACKLOG + DIVERGENCES.
   tests; build_safe 349 OK / 0 FALLO, 226/226. Omen A/B: node_rhside node 1
   -0.02 -> -0.01 in sfnet spring4/5 and post_solve_state_rigid1 (= Professional).
   Commit a7123bc. Next: C87 (owner decision on free-interface default gap).
+- 2026-10-21 C87 (owner verbatim: "midámoslo.", "si, corrige"). Probes with
+  blocks attached confirmed the Professional default gap 0 and zero shear on an
+  opened interface (manual 6.625 / 6.632 agree). interface.cc: gap default 0,
+  open IP skips Mohr-Coulomb, zero tangential force, kt*residual in the matrix.
+  Three Professional-pinned tests; iface_mc_dil_1step / iface_mc_dil pinned to
+  the Professional. build_safe 352 OK / 0 FALLO, 226/226; omen A/B: creset_iface
+  now = Professional. Commit 97ad0c9. New BACKLOG C89 (dilatancy + gap: the
+  Professional reports 0 stress on a compressed dilating interface with gap
+  -0.01; GNU differs with several steps and gap < 10).
