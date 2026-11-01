@@ -47,8 +47,8 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
     global_element_dof_apply (`-only` new), message, print_data_name, control_check_data,
     control_zip, control_system_call (runs a user script: owner decision), processors_maximum
     (Professional default -yes vs GNU 1 thread: owner decision).
-  - [ ] U3 post gates: control_post, control_post_apply (+ global post_apply, registered, unread),
-    control_post_element_force.
+  - [x] U3 post gates: control_post, control_post_apply (+ global post_apply, registered, unread),
+    control_post_element_force. Done `ea96bf6`.
   - [ ] U4 timestep loop: control_timestep_iterations_automatic_minimum_maximum_wished (GNU
     hardcodes 2/20/4, manual default 2 8 4), control_timestep_adjust_minimum_iterations,
     control_timestep_until_data / _maximum / _minimum.
@@ -91,3 +91,13 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   vs 4b80565 (75 inputs): only new keywords and time_calculation lines. build_safe 364 OK / 0
   FALLO, 226/226; audit_db_buffers rc 0. Commit 467cdbd. Next: U3 (post gates; U2 waits for owner
   decisions).
+- 2026-11-02 U3 (route inline). Professional probes with control_print_history series per
+  control index (11 variants): post_apply -no creates no post record; control_post_apply -no
+  freezes them in its index (control overrules global); control_post_element_force -no freezes
+  only the force; an index without timesteps evaluates the post records (control_post -yes/-no
+  alike); the Professional re-evaluates the post records at the end of the run. GNU: gate in
+  step_close, stale flags, end-of-run re-evaluation of stale records only (runs without the
+  switches byte-identical). 5 tests + 5 history/record checks in build_safe; build_safe 374 OK /
+  0 FALLO, 226/226; differential vs 4b80565 on 212 inputs: only the new tests and post_apply1
+  (registered before, now consumed). Found C90 (history file names) and C91 (force_edge_water
+  -yes stored as a raw enum). Commit ea96bf6. Next: owner decisions for U2.
