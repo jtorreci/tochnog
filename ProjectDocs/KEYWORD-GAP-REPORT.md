@@ -71,6 +71,19 @@ see `manual-user/element_normal.md`). Probe re-run on the clean build:
 831 → 832 accepted, 260 → 259 pending; the name was removed from the full
 list.
 
+Update 2026-11-01 (F5 start): the keyword list was re-extracted from the
+manual shipped with the Professional binary 02-08-2026 (`doc/user.pdf`,
+dated August 2, 2026, `pdftotext -layout`, every `4.x` / `5.x` / `6.x`
+heading of chapters 4-6: 1156 names) and probed on the clean build of
+`7da9e21`. Accepted 824 + the 6 literal names of the initialisation part;
+missing 320 = 63 GiD (discarded) + **257** pending. Differences with the
+2024 manual: the `*_node_method` records of `print_vtk`, `print_gmsh`,
+`print_gid` and `control_print_*` are renamed `*_node_type` (plus the new
+`control_print_dof_line_node_type`), `global_post_point_node_type` becomes
+`post_point_node_type`, and `mesh_delete_geometry_moving` is gone. Full
+list: `ProjectDocs/keyword-gap-2026-11-01.txt` (supersedes the 2026-09-26
+list for F5).
+
 ## Gap by family
 
 | Family | Missing | Notes |
