@@ -268,7 +268,7 @@ is unchanged.
   since F4 T6f C87 (2026-10-21; default gap 0, no shear stress on an
   opened interface). Tests `interface_tension_default_gap1`,
   `interface_open_gap0_shear1`, `interface_tension_gap1e20_1`.
-- Mohr-Coulomb dilatancy combined with the gap (BACKLOG C89, open): the
+- Mohr-Coulomb dilatancy combined with the gap (BACKLOG C89, deferred): the
   Professional's open/closed decision with dilatancy does not follow the
   accumulated normal strain (with a physical gap of -0.01 it reports 0
   stress on a compressed, dilating interface). The GNU equals the

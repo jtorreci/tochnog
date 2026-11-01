@@ -651,7 +651,7 @@ interface_tension_status1.dat` in `build_safe.sh` (status lines + two-run
   0.01, slid 0.002): no gap record Professional 0 / 0 (GNU before 10 /
   +-2); gap 0 Professional 0 / 0 (GNU before 0 / +-2); gap 1.e20 both
   10 / +-2; compression both -10 / +-2.
-- **C89 (open)**: Mohr-Coulomb dilatancy with the gap. `iface_mc_dil`
+- **C89 (deferred, class B, owner 2026-11-01)**: Mohr-Coulomb dilatancy with the gap. `iface_mc_dil`
   geometry (c = phi = 0, psi 30 deg, pushed 0.1, slid 5): the
   Professional gives -1493.376 with gap >= 10 (any step size), -2971.967
   with gap 0, 0.01 or 0.5 (any step size) and 0 with gap -0.01 (a

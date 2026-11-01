@@ -112,6 +112,7 @@ T6 triage (2026-10-11, HEAD 53dbb86) and owner order (2026-10-11):
 - [x] T6f C86 `post_element_force` with trusses/springs (owner 2026-10-19, verbatim "vamos con C86"). Route: inline (one understood change in calcul_force.cc). Risk: none for existing inputs (the elements were refused before; beams stay refused). Done `a11314a`, see Log 2026-10-19 C86.
 - [x] T6f C88 spring elongation on the fixed direction (owner 2026-10-19, verbatim "arreglemos C88 y luego vemos C87"). Route: inline (spring.cc). Risk: item 3 (spring forces of existing inputs change). Done `a7123bc`, see Log 2026-10-19 C88.
 - [x] T6f C87 default interface gap 0 + shear-free opened interface (owner 2026-10-21, verbatim "midámoslo." then "si, corrige"). Route: inline (interface.cc). Risk: item 3 (interfaces in traction without a gap record change). Done `97ad0c9`, see Log 2026-10-21 C87. Found C89.
+- [x] T6f C89 deferred as class B and T6f closed (owner 2026-11-01, verbatim "me parece bien" to "¿Lo posponemos y cierro T6f?"). Route: inline (docs only). Remaining open causes: C81 (F6) and the class B deferrals.
 ## Later (owner 2026-10-10, after convergence with ALL divergences documented and accepted)
 - F6: ILU/AMG preconditioning of the iterative solver (BACKLOG C81, owner 2026-10-15: in large meshes with many steps even small per-solve gains compound).
 - F6: exhaustive profiling and optimisation pass; special attention to the hot
@@ -1423,3 +1424,9 @@ docs + SEGUIMIENTO + BACKLOG + DIVERGENCES.
   now = Professional. Commit 97ad0c9. New BACKLOG C89 (dilatancy + gap: the
   Professional reports 0 stress on a compressed dilating interface with gap
   -0.01; GNU differs with several steps and gap < 10).
+- 2026-11-01 T6f closure (owner verbatim: "me parece bien" to "¿Lo
+  posponemos y cierro T6f?"). C89 deferred as class B (narrow scope, the
+  Professional answer looks defective, no manual rule); BACKLOG recount 29
+  active / 10 deferred; DIVERGENCES row, manuals updated. T6f closed. Next:
+  merge dev/f4-investigations into dev/masin-kernel-surface (explicit owner
+  approval), then F5.
