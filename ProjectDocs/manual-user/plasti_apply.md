@@ -44,8 +44,9 @@ timestep continues elastically from them).
 
 Not affected: the truss/spring/interface/beam plasticity records
 (`group_truss_plasti`, `group_spring_plasti`,
-`group_interface_materi_plasti_*`) and `group_plasti_apply` (a separate,
-not yet implemented per-group switch); see the differences section.
+`group_interface_materi_plasti_*`) the per-group switch
+`group_plasti_apply` is described in `group_plasti_apply.md`; see the
+differences section.
 
 ## Precedence
 

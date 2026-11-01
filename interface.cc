@@ -713,8 +713,13 @@ void interface_element( long int element, long int name,
   // an explicit positive gap (patch1: gap 1.e20) ALWAYS OPEN and let the
   // closed phase of a physical gap (interface2) carry only the residual
   // stress.
-  if ( !db( GROUP_INTERFACE_GAP, element_group, idum, &gap, ldum,
-      VERSION_NORMAL, GET_IF_EXISTS ) )
+  // interface_gap_apply -no (manual Professional 6.796): any
+  // group_interface_gap is ignored (the default gap 0 applies)
+  long int interface_gap_apply=-YES;
+  db( INTERFACE_GAP_APPLY, 0, &interface_gap_apply, ddum, ldum,
+    VERSION_NORMAL, GET_IF_EXISTS );
+  if ( interface_gap_apply==-NO || !db( GROUP_INTERFACE_GAP, element_group,
+      idum, &gap, ldum, VERSION_NORMAL, GET_IF_EXISTS ) )
     gap = 0.;
 
   // per-IP constitutive state

@@ -493,6 +493,11 @@ page lists its own in "Differences with the Professional version".
 - [materi_failure_apply](materi_failure_apply.md) — record `MATERI_FAILURE_APPLY`; consumer `failure()` in `failure.cc` (detection of new failures skipped). Professional 02-08-2026 quirk: `control_materi_failure_apply` registered without index there.
 - [plasti_apply](plasti_apply.md) — records `CONTROL_PLASTI_APPLY` / `PLASTI_APPLY`; `set_stress()` in `stress.cc` (`plasti_off`: skip `plasti_incr`, `hypoplasticity()`, direct cut-offs and the `plasti_rule` yield test), `slide_spring()` default in `slide.cc`. Truss/spring/interface/beam plasticity left out.
 - [control_plasti_apply](control_plasti_apply.md) — per-timestep form, see plasti_apply.
+- [group_plasti_apply](group_plasti_apply.md) — record `GROUP_PLASTI_APPLY` (group-indexed); `set_stress()` (`stress.cc`) ORs a group `-no` into `plasti_off` (F5).
+- [materi_plasti_tension_apply](materi_plasti_tension_apply.md) — record `MATERI_PLASTI_TENSION_APPLY`; `materi_apply_gate_off` at the tension_direct reads (`stress.cc`) and the `GROUP_MATERI_PLASTI_TENSION` branch of `plasti_rule()` (`plasti.cc`, new for the control form too) (F5).
+- [materi_plasti_visco_apply](materi_plasti_visco_apply.md) — record `MATERI_PLASTI_VISCO_APPLY`; `set_stress()` visco gate via `materi_apply_gate_off` (F5).
+- [truss_rope_apply](truss_rope_apply.md) / [control_truss_rope_apply](control_truss_rope_apply.md) — records `TRUSS_ROPE_APPLY` / `CONTROL_TRUSS_ROPE_APPLY`; rope clamp in `truss()` (`truss.cc`) gated (F5).
+- [interface_gap_apply](interface_gap_apply.md) — record `INTERFACE_GAP_APPLY`; `interface_element()` skips the gap read (F5).
 
 ## DAMAGE EFFECTIVE STRESS (2026-09-29)
 

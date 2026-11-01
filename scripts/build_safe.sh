@@ -2245,6 +2245,20 @@ run_ok "$T2026" post_element_force_3d_truss_spring1
 run_ok "$T2026" interface_tension_default_gap1
 run_ok "$T2026" interface_open_gap0_shear1
 run_ok "$T2026" interface_tension_gap1e20_1
+# F5 W1 U1: global / per-group / per-control apply switches (Professional
+# 02-08-2026 probes; rope and interface gap switches follow the manual).
+run_ok "$T2026" materi_plasti_tension_apply1
+run_ok "$T2026" materi_plasti_tension_apply2
+run_ok "$T2026" control_materi_plasti_tension_apply_yield1
+run_ok "$T2026" materi_plasti_visco_apply1
+run_ok "$T2026" control_materi_plasti_visco_apply1
+run_ok "$T2026" group_plasti_apply1
+run_ok "$T2026" group_plasti_apply2
+run_ok "$T2026" truss_rope_apply1
+run_ok "$T2026" control_truss_rope_apply1
+run_ok "$T2026" truss_rope_apply2
+run_ok "$T2026" interface_gap_apply1
+run_ok "$T2026" interface_gap_apply2
 # F4 T6f LOW queue Q3 / C62 (2026-10-17): the node_rhside reported after
 #   the post-solve material state pass keeps the bounda_force loads
 #   (snapshot of the iteration's bounda() write) and the

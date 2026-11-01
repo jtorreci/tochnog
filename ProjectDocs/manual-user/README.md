@@ -471,6 +471,11 @@ page lists its own in "Differences with the Professional version".
 - [materi_failure_apply](materi_failure_apply.md) — `materi_failure_apply switch` (6.801): global form of `control_materi_failure_apply`; `-no` ignores the `group_materi_failure_*` criteria (no element failure/deletion). The failure switches no longer freeze damage (Professional behaviour).
 - [plasti_apply](plasti_apply.md) — `plasti_apply switch` (6.899): `-no` ignores any plasticity data (yield-surface laws, direct cut-offs, camclay, hardsoil, hypoplasticity, incremental models, slide caps by default) for all timesteps. Verified against the Professional 02-08-2026.
 - [control_plasti_apply](control_plasti_apply.md) — `control_plasti_apply index switch` (6.257): per-timestep form of `plasti_apply`, overrules it for its index.
+- [group_plasti_apply](group_plasti_apply.md) — `group_plasti_apply index switch` (6.762): `-no` neglects the plasticity of one element group; a group `-yes` does not overrule a global `-no`. Verified against the Professional 02-08-2026 (F5).
+- [materi_plasti_tension_apply](materi_plasti_tension_apply.md) — `materi_plasti_tension_apply switch` (6.804) and `control_materi_plasti_tension_apply` (6.150): `-no` ignores the tension yield surface and the tension_direct cut-off. Verified against the Professional 02-08-2026 (F5).
+- [materi_plasti_visco_apply](materi_plasti_visco_apply.md) — `materi_plasti_visco_apply switch` (6.805) and its control form (6.151): `-no` ignores the visco-plasticity data. Verified against the Professional 02-08-2026 (F5).
+- [truss_rope_apply](truss_rope_apply.md) / [control_truss_rope_apply](control_truss_rope_apply.md) — `-no` ignores `group_truss_rope` (manual 6.1092 / 6.393; the Professional keeps the rope, class D divergence) (F5).
+- [interface_gap_apply](interface_gap_apply.md) — `interface_gap_apply switch` (6.796): `-no` ignores every `group_interface_gap` (default gap 0); the Professional rejects the record (F5).
 
 ## DAMAGE EFFECTIVE STRESS (2026-09-29)
 

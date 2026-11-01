@@ -237,7 +237,11 @@ void truss( long int element, long int element_group,
       new_truss_force = group_truss_plasti*group_truss_area;
     else if ( new_truss_force<-group_truss_plasti*group_truss_area )
       new_truss_force = -group_truss_plasti*group_truss_area;
-    if ( group_truss_rope==-YES && new_truss_force<0. ) new_truss_force = 0.;
+    // truss_rope_apply / control_truss_rope_apply -no (manual Professional
+    // 6.1092 / 6.393): the rope data is ignored
+    if ( group_truss_rope==-YES && new_truss_force<0. &&
+         !materi_apply_gate_off( TRUSS_ROPE_APPLY, CONTROL_TRUSS_ROPE_APPLY ) )
+      new_truss_force = 0.;
     // materi_dynamic (manual Professional 6.800) / control_materi_dynamic
     // (6.141): the momentum carries the blend of the force at time t
     // (old_truss_force) and at time t+dt (new_truss_force of the

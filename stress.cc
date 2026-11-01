@@ -191,8 +191,10 @@ void materi_direct_full_mc( long int element, long int gr,
         phi = plasti_data[0]; c = plasti_data[1]; phi_flow = plasti_data[2];
       }
   }
-  // tension_direct: gate control_materi_plasti_tension_apply (6.150)
-  ten_present = !control_materi_gate_off( CONTROL_MATERI_PLASTI_TENSION_APPLY ) &&
+  // tension_direct: gate materi_plasti_tension_apply (6.804) /
+  // control_materi_plasti_tension_apply (6.150)
+  ten_present = !materi_apply_gate_off( MATERI_PLASTI_TENSION_APPLY,
+    CONTROL_MATERI_PLASTI_TENSION_APPLY ) &&
     get_group_data( GROUP_MATERI_PLASTI_TENSION_DIRECT, gr,
     element, new_sig, ten_data, ldum, GET_IF_EXISTS );
   // 6.738: if tension_direct is not specified, sigy is set to 0 when the
@@ -445,11 +447,12 @@ void materi_direct_cutoff( long int element, long int gr,
     c *= bounda_factor;
   }
 
-  // control_materi_plasti_tension_apply -no (manual Professional
-  // 6.150): ignore any tension-plasticity data for these timesteps
-  // (the Mohr-Coulomb direct cutoff stays active, with its default
+  // materi_plasti_tension_apply / control_materi_plasti_tension_apply
+  // -no (manual Professional 6.804 / 6.150): ignore any tension-plasticity
+  // data (the Mohr-Coulomb direct cutoff stays active, with its default
   // sigy = 0 as in materi_direct_full_mc)
-  ten_record = !control_materi_gate_off( CONTROL_MATERI_PLASTI_TENSION_APPLY ) &&
+  ten_record = !materi_apply_gate_off( MATERI_PLASTI_TENSION_APPLY,
+    CONTROL_MATERI_PLASTI_TENSION_APPLY ) &&
     get_group_data( GROUP_MATERI_PLASTI_TENSION_DIRECT, gr,
     element, new_sig, plasti_data, ldum, GET_IF_EXISTS );
   if ( ten_record ) {
@@ -729,9 +732,10 @@ void set_stress( long int element, long int gr,
   // previous step's dt (0 in the first step: no visco relaxation at all;
   // C33, verified against the Professional 02-08-2026).
   db( DTIME, 0, idum, &dtime, ldum, VERSION_NEW, GET_IF_EXISTS );
-  // control_materi_plasti_visco_apply -no (manual Professional 6.151):
-  // ignore any visco-plasticity data for these timesteps
-  if ( control_materi_gate_off( CONTROL_MATERI_PLASTI_VISCO_APPLY ) )
+  // materi_plasti_visco_apply / control_materi_plasti_visco_apply -no
+  // (manual Professional 6.805 / 6.151): ignore any visco-plasticity data
+  if ( materi_apply_gate_off( MATERI_PLASTI_VISCO_APPLY,
+       CONTROL_MATERI_PLASTI_VISCO_APPLY ) )
     viscoplasti = 0;
   db( GROUP_MATERI_PLASTI_VISCO_ALWAYS, gr, &viscoplasti_always,
     ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
@@ -1490,6 +1494,15 @@ void set_stress( long int element, long int gr,
   // incremental models (tskh, aitskh, camclay_incremental) fall back to
   // the elastic response; plastic strains of earlier timesteps are kept.
   plasti_off = materi_apply_gate_off( PLASTI_APPLY, CONTROL_PLASTI_APPLY );
+  // group_plasti_apply -no (manual Professional 6.762): any plasticity
+  // data of this group is neglected; a group -yes does not overrule a
+  // global -no (Professional 02-08-2026)
+  {
+    long int group_plasti_apply=-YES;
+    db( GROUP_PLASTI_APPLY, gr, &group_plasti_apply, ddum, ldum,
+      VERSION_NORMAL, GET_IF_EXISTS );
+    if ( group_plasti_apply==-NO ) plasti_off = 1;
+  }
 
   /*********added for explicit time integration*******************************************/
 

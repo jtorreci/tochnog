@@ -4104,6 +4104,12 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   data_class[GROUP_INTERFACE_GAP] = GROUP_TYPE;
   data_required[GROUP_INTERFACE_GAP] = GROUP_INTERFACE;
 
+  strcpy(name[INTERFACE_GAP_APPLY],"interface_gap_apply");
+  type[INTERFACE_GAP_APPLY] = INTEGER;
+  data_length[INTERFACE_GAP_APPLY] = 1;
+  data_class[INTERFACE_GAP_APPLY] = CONTROL;
+  no_index[INTERFACE_GAP_APPLY] = 1;
+
   strcpy(name[GROUP_INTERFACE_GROUNDFLOW_CAPACITY],"group_interface_groundflow_capacity");
   type[GROUP_INTERFACE_GROUNDFLOW_CAPACITY] = DOUBLE_PRECISION;
   data_length[GROUP_INTERFACE_GROUNDFLOW_CAPACITY] = 1;
@@ -4763,6 +4769,12 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   data_class[PLASTI_APPLY] = CONTROL;
   no_index[PLASTI_APPLY] = 1;
 
+  strcpy(name[GROUP_PLASTI_APPLY],"group_plasti_apply");
+  type[GROUP_PLASTI_APPLY] = INTEGER;
+  data_length[GROUP_PLASTI_APPLY] = 1;
+  data_class[GROUP_PLASTI_APPLY] = MATERI;
+  data_required[GROUP_PLASTI_APPLY] = GROUP_TYPE;
+
   strcpy(name[CONTROL_MATERI_PLASTI_HARDSOIL_GAMMAP_INITIAL],"control_materi_plasti_hardsoil_gammap_initial");
   type[CONTROL_MATERI_PLASTI_HARDSOIL_GAMMAP_INITIAL] = INTEGER;
   data_length[CONTROL_MATERI_PLASTI_HARDSOIL_GAMMAP_INITIAL] = 1;
@@ -4792,6 +4804,18 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   type[CONTROL_MATERI_PLASTI_VISCO_APPLY] = INTEGER;
   data_length[CONTROL_MATERI_PLASTI_VISCO_APPLY] = 1;
   data_class[CONTROL_MATERI_PLASTI_VISCO_APPLY] = CONTROL;
+
+  strcpy(name[MATERI_PLASTI_TENSION_APPLY],"materi_plasti_tension_apply");
+  type[MATERI_PLASTI_TENSION_APPLY] = INTEGER;
+  data_length[MATERI_PLASTI_TENSION_APPLY] = 1;
+  data_class[MATERI_PLASTI_TENSION_APPLY] = CONTROL;
+  no_index[MATERI_PLASTI_TENSION_APPLY] = 1;
+
+  strcpy(name[MATERI_PLASTI_VISCO_APPLY],"materi_plasti_visco_apply");
+  type[MATERI_PLASTI_VISCO_APPLY] = INTEGER;
+  data_length[MATERI_PLASTI_VISCO_APPLY] = 1;
+  data_class[MATERI_PLASTI_VISCO_APPLY] = CONTROL;
+  no_index[MATERI_PLASTI_VISCO_APPLY] = 1;
 
   strcpy(name[CONTROL_MATERI_UNDRAINED_APPLY],"control_materi_undrained_apply");
   type[CONTROL_MATERI_UNDRAINED_APPLY] = INTEGER;
@@ -5335,6 +5359,17 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   data_length[GROUP_TRUSS_ROPE] = 1;
   data_class[GROUP_TRUSS_ROPE] = TRUSS;
   data_required[GROUP_TRUSS_ROPE] = GROUP_TYPE;
+
+  strcpy(name[TRUSS_ROPE_APPLY],"truss_rope_apply");
+  type[TRUSS_ROPE_APPLY] = INTEGER;
+  data_length[TRUSS_ROPE_APPLY] = 1;
+  data_class[TRUSS_ROPE_APPLY] = CONTROL;
+  no_index[TRUSS_ROPE_APPLY] = 1;
+
+  strcpy(name[CONTROL_TRUSS_ROPE_APPLY],"control_truss_rope_apply");
+  type[CONTROL_TRUSS_ROPE_APPLY] = INTEGER;
+  data_length[CONTROL_TRUSS_ROPE_APPLY] = 1;
+  data_class[CONTROL_TRUSS_ROPE_APPLY] = CONTROL;
 
   strcpy(name[GROUP_TRUSS_PLASTI],"group_truss_plasti");
   type[GROUP_TRUSS_PLASTI] = DOUBLE_PRECISION;

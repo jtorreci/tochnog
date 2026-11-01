@@ -1267,7 +1267,11 @@ void plasti_rule( long int element, long int gr,
       }
     }
   }
-  if ( get_group_data( GROUP_MATERI_PLASTI_TENSION, gr, element, new_unknowns, 
+  // materi_plasti_tension_apply / control_materi_plasti_tension_apply
+  // -no (manual Professional 6.804 / 6.150): tension plasticity ignored
+  if ( !materi_apply_gate_off( MATERI_PLASTI_TENSION_APPLY,
+       CONTROL_MATERI_PLASTI_TENSION_APPLY ) &&
+       get_group_data( GROUP_MATERI_PLASTI_TENSION, gr, element, new_unknowns, 
       plasti_data, ldum, GET_IF_EXISTS ) ) {
     test1 = task==GET_YIELD_RULE&&plasti_type==-NONE;
     test2 = task==GET_YIELD_RULE&&plasti_type==GROUP_MATERI_PLASTI_TENSION;
