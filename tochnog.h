@@ -1561,6 +1561,9 @@ enum {
   ELEMENT_DOF_INITIAL,
   ELEMENT_DOF_INITIAL_APPLIED,
   POST_APPLY,
+  CONTROL_POST,
+  CONTROL_POST_APPLY,
+  CONTROL_POST_ELEMENT_FORCE,
   PRINT_DATABASE_CALCULATION,
   PRINT_GID_CALCULATION,
   GEOMETRY_NODE_TYPE,
@@ -1777,6 +1780,9 @@ extern long int map_version_from, map_version_to, map_always;
 
   // for post routines
 extern long int post_found, post_node[4], post_node_length, npost_node;
+  // 1 when the last post / post_element_force evaluation was skipped by
+  // post_apply, control_post_apply or control_post_element_force -no
+extern long int post_stale, post_element_force_stale;
 extern double post_point[MDIM], post_point_dof[MUKNWN], 
   post_node_result[DATA_ITEM_SIZE];
 

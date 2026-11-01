@@ -847,8 +847,18 @@ void top( void )
                         // post_element_force (manual Professional
                         // 6.927): the cross-section forces/moments
                         // from the element internal nodal forces of
-                        // the converged state
-                        post_element_force_calculate();
+                        // the converged state; skipped by
+                        // post_apply / control_post_apply -no and by
+                        // control_post_element_force -no (6.260)
+                        if ( !materi_apply_gate_off( POST_APPLY,
+                               CONTROL_POST_APPLY ) &&
+                             !control_materi_gate_off(
+                               CONTROL_POST_ELEMENT_FORCE ) ) {
+                          post_element_force_calculate();
+                          post_element_force_stale = 0;
+                        }
+                        else
+                          post_element_force_stale = 1;
                         step_close( YES, ipar, npar, ipar_i, ipar_n );
                         if ( repeat(start_control) ) goto repeat_point;
                       }
@@ -865,6 +875,18 @@ void top( void )
                 }
                 else {
                   step_start( NO, &options_solver, dtime, time_current );
+                  // a control index without timesteps evaluates the post
+                  // records (Professional 02-08-2026); post_element_force
+                  // is recomputed here only when an earlier gated step
+                  // left it stale
+                  if ( post_element_force_stale &&
+                       !materi_apply_gate_off( POST_APPLY,
+                         CONTROL_POST_APPLY ) &&
+                       !control_materi_gate_off(
+                         CONTROL_POST_ELEMENT_FORCE ) ) {
+                    post_element_force_calculate();
+                    post_element_force_stale = 0;
+                  }
                   step_close( NO, ipar, npar, ipar_i, ipar_n );
                   if ( repeat(start_control) ) goto repeat_point;
                 }
@@ -1446,7 +1468,7 @@ void step_close( long int task, long int ipar, long int npar, long int ipar_i, l
     use_control_refine_globally_geometry=0, length_control_refine_globally=0,
     length=0,     time_of_calculation=0, time_at_start=0, time_at_end=0,
     print_lastdatabase=-NO, control_refine_globally[4], control_refine_globally_geometry[2], 
-    idum[1], renumber[2], *ival=NULL, frequency_allowed=1;
+    idum[1], renumber[2], *ival=NULL, frequency_allowed=1, post_off=0;
   double ddum[MDIM];
 
   ival = get_new_int(DATA_ITEM_SIZE);
@@ -1530,7 +1552,13 @@ void step_close( long int task, long int ipar, long int npar, long int ipar_i, l
     materi_diffusion_temperature();
   }
 
-  post( task ); 
+  // post_apply / control_post_apply -no (manual Professional 6.900 /
+  // 6.259): no post_* record is evaluated (they keep their last values;
+  // with a global -no they are never created). post_node_rhside_ratio is
+  // computed in the iteration loop and stays.
+  post_off = materi_apply_gate_off( POST_APPLY, CONTROL_POST_APPLY );
+  if ( !post_off ) post( task ); 
+  post_stale = post_off;
 
   if ( task==YES ) error( GET );
 
@@ -1542,7 +1570,7 @@ void step_close( long int task, long int ipar, long int npar, long int ipar_i, l
     }
   }
 
-  calculate();
+  if ( !post_off ) calculate();
 
   db( TIME_AT_START, 0, &time_at_start, ddum, ldum, VERSION_NORMAL, GET );
   time_at_end = (long int) time(NULL);

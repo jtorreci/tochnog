@@ -968,12 +968,31 @@ void db_initialize( long int dof_type[], long int dof_label[] )
 
   // post_apply (manual Professional 6.900): global switch of the post
   // processing commands (post_* records evaluated per step). Default
-  // -yes; only the post_node_rhside_ratio is exempt. Registered with
-  // the -no consumption pending (no corpus test uses -no).
+  // -yes; only the post_node_rhside_ratio is exempt. Consumed in
+  // step_close (top.cc) with control_post_apply (6.259), which overrules
+  // it for its index; control_post_element_force (6.260) gates only
+  // post_element_force; control_post (6.258) is accepted (the GNU, as the
+  // Professional 02-08-2026, evaluates the post records in every
+  // step_close, also of a control index without timesteps).
   strcpy(name[POST_APPLY],"post_apply");
   type[POST_APPLY] = INTEGER;
   data_length[POST_APPLY] = 1;
   no_index[POST_APPLY] = 1;
+
+  strcpy(name[CONTROL_POST],"control_post");
+  type[CONTROL_POST] = INTEGER;
+  data_length[CONTROL_POST] = 1;
+  data_class[CONTROL_POST] = CONTROL;
+
+  strcpy(name[CONTROL_POST_APPLY],"control_post_apply");
+  type[CONTROL_POST_APPLY] = INTEGER;
+  data_length[CONTROL_POST_APPLY] = 1;
+  data_class[CONTROL_POST_APPLY] = CONTROL;
+
+  strcpy(name[CONTROL_POST_ELEMENT_FORCE],"control_post_element_force");
+  type[CONTROL_POST_ELEMENT_FORCE] = INTEGER;
+  data_length[CONTROL_POST_ELEMENT_FORCE] = 1;
+  data_class[CONTROL_POST_ELEMENT_FORCE] = CONTROL;
 
   // print_database_calculation (6.972) / print_gid_calculation: global
   // switches of the final .dbs/.flavia output at the end of the run.

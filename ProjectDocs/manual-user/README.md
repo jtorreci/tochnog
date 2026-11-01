@@ -416,7 +416,10 @@ page lists its own in "Differences with the Professional version".
 - [node_geometry_present](node_geometry_present.md) — per-node list of present geometries (6.886) filled per step when print_node_geometry_present -yes (6.995/6.996). Unlocks node_type_1 rc=0.
 - [print_database_calculation](print_database_calculation.md) — switch of the final .dbs output (6.972); consumed at exit_tn. large1 parses (RUNFAIL remains solver-bound, see SEGUIMIENTO).
 - [print_gid_calculation](print_database_calculation.md) — switch of the final GiD output (same gate).
-- [post_apply](post_apply.md) — global switch of the post-processing commands (6.900); registered, -no gating pending.
+- [post_apply](post_apply.md) — `post_apply switch` (6.900) and `control_post_apply` (6.259): `-no` skips the post records (frozen values; global -no: never created); the skipped records are evaluated once more at the end of the run. Verified against the Professional 02-08-2026 (F5).
+- [control_post_apply](control_post_apply.md) — per-control-index form of `post_apply` (F5).
+- [control_post_element_force](control_post_element_force.md) — `control_post_element_force index switch` (6.260): `-no` skips the post_element_force records in that index (F5).
+- [control_post](control_post.md) — `control_post index switch` (6.258): accepted; post records are evaluated in every control index (= Professional) (F5).
 - [print_group_data](print_group_data.md) — GiD plot of group_* data (6.990); registered parse-only. Unlocks the parse of distri3 (runtime pending).
 
 ## PARALLEL PILOT BATCH (2026-09-07) — 4 developers in isolated worktrees, merged by orchestrator

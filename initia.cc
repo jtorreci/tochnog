@@ -75,7 +75,8 @@ char
 long int 
   map_version_from=0, map_version_to=0, map_always=0;
 long int 
-  post_found=0, post_node[4], post_node_length=0, npost_node=0;
+  post_found=0, post_node[4], post_node_length=0, npost_node=0,
+  post_stale=0, post_element_force_stale=0;
 double 
   post_point[MDIM], post_point_dof[MUKNWN], post_node_result[DATA_ITEM_SIZE];
 long int 

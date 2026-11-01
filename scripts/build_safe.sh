@@ -2259,6 +2259,41 @@ run_ok "$T2026" control_truss_rope_apply1
 run_ok "$T2026" truss_rope_apply2
 run_ok "$T2026" interface_gap_apply1
 run_ok "$T2026" interface_gap_apply2
+# F5 W1 U3: post gates (Professional 02-08-2026 probes). The targets see
+# the end-of-run evaluation, so the frozen values of the gated indices are
+# checked on the control_print_history file (rewritten by each run).
+post_his_check() {
+  local t="$1" f="$2" expr="$3" msg="$4"
+  rm -f "$T2026/$f"
+  run_ok "$T2026" "$t"
+  if [ -f "$T2026/$f" ] && LC_ALL=C awk "$expr" "$T2026/$f"; then
+    check_ok "$t history ($msg)"
+  else
+    check_fail "$t history" "$msg"
+  fi
+  rm -f "$T2026/$f"
+}
+post_his_check control_post_apply1 disy0.his \
+  'NR>=6 && ($2<0.0015-1e-12 || $2>0.0015+1e-12){bad=1} END{exit (NR!=10||bad)}' \
+  "10 lines, disy 0.0015 from line 6"
+post_his_check post_apply2 disy0.his \
+  'NR==1 && ($1<0.6-1e-9 || $1>0.6+1e-9 || $2<0.0021-1e-12 || $2>0.0021+1e-12){bad=1} END{exit (NR!=5||bad)}' \
+  "5 lines from t 0.6, disy 0.0021"
+post_his_check control_post_element_force1 00.his \
+  'NR>=6 && ($2<3.2967032967-1e-8 || $2>3.2967032967+1e-8){bad=1} END{exit (NR!=10||bad)}' \
+  "10 lines, force 3.2967 from line 6"
+post_his_check control_post1 00.his \
+  'NR==10 && ($2<3.2967032967-1e-8 || $2>3.2967032967+1e-8){bad=1} NR==11 && ($2<12.0879120879-1e-8 || $2>12.0879120879+1e-8){bad=1} END{exit (NR!=11||bad)}' \
+  "11 lines, index 2 force 12.0879"
+rm -f "$T2026/disy0.his"
+run_ok "$T2026" post_apply1
+if [ ! -f "$T2026/disy0.his" ] && \
+   ! grep -q '^post_point_dof\|^post_element_force_result' "$T2026/post_apply1.dbs"; then
+  check_ok "post_apply1 (no post record, no history file)"
+else
+  check_fail "post_apply1" "post records or history file present"
+fi
+rm -f "$T2026/disy0.his"
 # F4 T6f LOW queue Q3 / C62 (2026-10-17): the node_rhside reported after
 #   the post-solve material state pass keeps the bounda_force loads
 #   (snapshot of the iteration's bounda() write) and the

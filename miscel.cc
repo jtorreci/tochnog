@@ -1047,6 +1047,20 @@ void exit_tn( long int print_database_type )
   }
   else {
     assert( print_database_type==-YES );
+    // The Professional 02-08-2026 evaluates the post records once more at
+    // the end of the run, also when control_post_apply /
+    // control_post_element_force -no skipped them in the last timesteps
+    // (not with a global post_apply -no). Only stale records are redone,
+    // so a run without these switches is unchanged.
+    long int post_apply_global = -YES;
+    db( POST_APPLY, 0, &post_apply_global, ddum, ldum, VERSION_NORMAL,
+      GET_IF_EXISTS );
+    if ( post_apply_global!=-NO ) {
+      if ( post_stale ) { post( NO ); calculate(); post_stale = 0; }
+      if ( post_element_force_stale ) {
+        post_element_force_calculate(); post_element_force_stale = 0;
+      }
+    }
     // print_database_calculation (manual Professional 6.972): switch of
     // the final .dbs output at the end of the run; -no skips it (the
     // large1 performance test keeps the huge 3D dump away). Default -yes.

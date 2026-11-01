@@ -407,7 +407,10 @@ page lists its own in "Differences with the Professional version".
 - [geometry_node_type](geometry_node_type.md) — registros por-geometria + overrides en geometry() por miembro del set (re-lectura de coords + flag project_inside en las 8 ramas); verificado vs Pro (node_type_1, validation_14).
 - [node_geometry_present](node_geometry_present.md) — fill en step_start (coords del paso previo, calibrado con barrido temporal vs Pro) + registro NODE_GEOMETRY_PRESENT version_all; diana target (1,1)=3.
 - [print_database_calculation](print_database_calculation.md) — gates de exit_tn (miscel.cc) del volcado .dbs/.flavia final.
-- [post_apply](post_apply.md) — registro parse-only (gating -no PENDIENTE).
+- [post_apply](post_apply.md) — records `POST_APPLY` / `CONTROL_POST_APPLY`; gate in `step_close()` (`top.cc`); stale flags `post_stale` / `post_element_force_stale` and the end-of-run re-evaluation in `exit_tn()` (`miscel.cc`) (F5).
+- [control_post_apply](control_post_apply.md) — see post_apply (F5).
+- [control_post_element_force](control_post_element_force.md) — record `CONTROL_POST_ELEMENT_FORCE`; gate around `post_element_force_calculate()` in `top()` (F5).
+- [control_post](control_post.md) — record `CONTROL_POST`, accepted, no consumer needed (F5).
 - [print_group_data](print_group_data.md) — registro parse-only (escritura GiD/element_print_group_data PENDIENTE).
 
 ## PARALLEL PILOT BATCH (2026-09-07) — 4 developers in isolated worktrees, merged by orchestrator
