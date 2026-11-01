@@ -1,0 +1,37 @@
+( C62 {F4 T6f LOW queue Q3, 2026-10-17}: the reported node_rhside after
+  the post-solve material state pass keeps the node_force loads. One
+  quad4 {E 100, nu 0}, x=0 edge fixed in x, node_force 5 at nodes 2 and
+  4 along x. Professional 02-08-2026 on this file: node_rhside velx 0 at
+  the loaded nodes 2 and 4 {equilibrium} and 5 at the support node 1.
+  Before C62 the GNU reported -5 at nodes 2 and 4 {the pass skipped
+  parallel_new_dof_before}. Tolerance 4e-6 of max{|value|,1}. )
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_displacement
+materi_stress
+end_initia
+node 1 0 0
+node 2 1 0
+node 3 0 1
+node 4 1 1
+element 1 -quad4 1 2 3 4
+group_type 0 -materi
+group_materi_elasti_young 0 100.
+group_materi_elasti_poisson 0 0.
+group_materi_memory 0 -total_linear
+bounda_dof 10 -ra 1 3 -ra -velx
+bounda_time 10 0.
+bounda_dof 11 1 -vely
+bounda_time 11 0.
+node_force 2 5. 0.
+node_force 4 5. 0.
+control_timestep 10 1. 2.
+
+target_item 40 -node_rhside 2 -velx
+target_value 40 0. 4.0e-06
+target_item 41 -node_rhside 4 -velx
+target_value 41 0. 4.0e-06
+target_item 42 -node_rhside 1 -velx
+target_value 42 5. 2.0e-05
+end_data

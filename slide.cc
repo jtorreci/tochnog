@@ -131,7 +131,7 @@ void slide_spring( long int inod, long int islide, double *new_node_dof,
   long int idim=0, ldum=0, idum[1];
   double ddum[MDIM], values[DATA_ITEM_SIZE];
   double kn=0., kt=0., un=0., ut_mag=0., S=0., cap_t=0., c=0., mu=0.,
-    sig_t=0., res_t=1.e-2, ax=1., radius=0.,
+    sig_t=1.e300, res_t=1.e-2, ax=1., radius=0.,
     tangent[MDIM], fn_node[MDIM], ft_node[MDIM], *coord=NULL;
   long int plasti_apply=-YES, stiffness_apply=-YES, has_friction=0,
     axisym=-NO;
@@ -218,13 +218,15 @@ void slide_spring( long int inod, long int islide, double *new_node_dof,
   // normal force.
   S = -kn*un;
   if ( S<-sig_t ) S = -sig_t;
-  // friction cap c + Fn*tan(phi), zero when the cap turns negative
-  // (contact.cc convention); without the plasti_friction record, or with
-  // control_slide_plasti_apply -no, the tangential spring stays elastic
+  // friction cap c + |Fn|*tan(phi) (the Professional caps the tangential
+  // force with the magnitude of the normal force, also in tension, F4 T6e
+  // C53); without the plasti_friction record, or with
+  // control_slide_plasti_apply -no, the tangential spring stays elastic.
+  // sig_t defaults to 1.e300: an absent slide_plasti_tension record means
+  // no tension limit (manual 6.1044, Pro), not a zero tensile capacity.
   cap_t = 1.e300;
   if ( has_friction && plasti_apply!=-NO ) {
-    cap_t = c + mu*S;
-    if ( cap_t<0. ) cap_t = 0.;
+    cap_t = c + mu*scalar_dabs( S );
   }
 
   // the normal force on the node (out of the plane when compressed) and
@@ -276,7 +278,7 @@ void slide_spring( long int inod, long int islide, double *new_node_dof,
     fout[0] = -S*ax;
     if ( ut_mag>1.e-12 ) fout[1] = -fric_mag;
     if ( has_friction && plasti_apply!=-NO )
-      fval = fric_mag/ax - ( c + mu*S );
+      fval = fric_mag/ax - ( c + mu*scalar_dabs( S ) );
     for ( idim=0; idim<ndim; idim++ ) {
       dirs[idim] = normal[idim];
       dirs[3+idim] = tangent[idim];
@@ -324,10 +326,14 @@ void slide_penalty_law( long int inod, long int islide, double *new_node_dof,
     radius = coord[0];
     slide_force *= 2. * PIRAD * radius;
   }
+  // node_lhside / node_rhside hold one slot per PRINCIPAL dof: the
+  // velocity component idim is vel_indx/nder+idim (as in slide_spring and
+  // dof.cc), not the node_dof index vel_indx+idim*nder (F4 T6e C53: the
+  // old index wrote into the eptxx slots of materi_strain_total models).
   if ( array_normalize( slide_velocity, ndim ) ) {
     for ( idim=0; idim<ndim; idim++ ) {
-      node_lhside[vel_indx+idim*nder] += slide_penalty * dtime;
-      node_rhside[vel_indx+idim*nder] +=
+      node_lhside[vel_indx/nder+idim] += slide_penalty * dtime;
+      node_rhside[vel_indx/nder+idim] +=
         - slide_penalty * normal_velocity * dtime * normal[idim]
         - slide_force * slide_velocity[idim];
     }

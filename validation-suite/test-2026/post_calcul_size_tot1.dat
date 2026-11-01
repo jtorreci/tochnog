@@ -1,0 +1,48 @@
+( F4 T6a: post_calcul -size_tot and -size_dev. Copy of the
+  Professional 02-08-2026 test/other/calcul1.dat [1D bar, strain 1 in
+  x]. Manual Professional, post_calcul: -size_tot = sqrt[Aij Aij],
+  -size_dev = sqrt[Bij Bij] with B the deviatoric part. Targets of the
+  Professional file: size_tot 1 [item 6] and size_dev 0.816497 [item
+  7]; the Professional meets them. The old GNU used sqrt[0.5 A:A] and
+  gave 0.707107 and 0.577350. Targets 3-5 of the Professional file
+  [-prival, smallest first: 0 0 1] are left out: the GNU orders the
+  principal values largest first [1 0 0], DIVERGENCES K12. )
+
+
+echo -no
+number_of_space_dimensions 1
+materi_velocity
+materi_displacement
+materi_strain_total
+materi_stress
+end_initia
+
+node 1  0
+node 2  1
+element 1  -bar2 1 2
+
+group_type 0  -materi
+group_materi_memory 0  -total_linear
+
+bounda_dof 0  1 -velx
+bounda_time    0  0. 0. 100. 0.
+bounda_dof 1  2 -velx
+bounda_time    1  0. 1. 100. 1.
+
+post_calcul_length 50
+post_calcul -materi_strain_total -average -materi_strain_total -negative -materi_strain_total -positive -materi_strain_total -prival -materi_strain_total -size_tot -materi_strain_total -size_dev
+
+control_timestep  0  1. 1.
+(control_print     0  -time_current -dof_label -node_dof -node_dof_calcul)
+
+target_item 0  -node_dof_calcul 1  0
+target_value 0 0.333333 1.e-4
+target_item 1  -node_dof_calcul 1  1
+target_value 1 0. 1.e-4
+target_item 2  -node_dof_calcul 1  2
+target_value 2 1. 1.e-4
+target_item 6  -node_dof_calcul 1  6
+target_value 6 1. 1.e-4
+target_item 7  -node_dof_calcul 1  7
+target_value 7 0.816497 1.e-4
+end_data

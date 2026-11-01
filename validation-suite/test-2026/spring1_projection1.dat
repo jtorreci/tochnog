@@ -1,0 +1,30 @@
+( C88 {F4 T6f, 2026-10-19}: spring elongation = relative displacement projected on the spring direction {Professional 02-08-2026}.
+  A -spring1 {k 10, direction 1 0} at node 2, moved {-0.2,0.5} in one
+  step. Force = k {-0.2} = -2 and the node right-hand side +2 along x
+  {Professional}; before, the unsigned distance gave +5.385 and the
+  right-hand side was written at a stale index {-15.39}. )
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_displacement
+end_initia
+node 1 0. 0.
+node 2 1. 0.
+element 1 -spring1 2
+group_type 0 -spring
+group_spring_stiffness 0 10.
+group_spring_direction 0 1.0 0.0
+bounda_dof 1 1 -velx -vely
+bounda_time 1 0.
+bounda_dof 2 2 -velx
+bounda_time 2 -0.2
+bounda_dof 3 2 -vely
+bounda_time 3 0.5
+control_timestep 10 1.0 1.
+target_item 20 -element_spring_force 1 0
+target_value 20 -2. 1.e-9
+target_item 21 -node_rhside 2 -velx
+target_value 21 2. 1.e-9
+target_item 22 -node_rhside 2 -vely
+target_value 22 0. 1.e-9
+end_data

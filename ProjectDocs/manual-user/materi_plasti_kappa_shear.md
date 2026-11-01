@@ -58,3 +58,18 @@ control_reset_value_constant  12  0.
   use it as the hardening variable (falling back to the total `kappa`
   dof only when `materi_plasti_kappa_shear` is absent).
 - The dam_building corpus test uses it (17-dof reset including `-kapsh`).
+
+## Integration-point state (C68, 2026-10-12)
+
+`materi_plasti_kappa_shear` is kept per integration point between steps (Professional manual
+4.25), as the hardening parameter `kap`. The node values printed by
+`node_dof` are a recovery (averaging) of the integration-point values
+with the same weights as the strains; the constitutive update always
+uses the integration-point value. Before 2026-10-12 GNU fed the averaged
+node value back into the update, which smeared the history across
+elements (up to 19 % off the Professional in the reactions of a small
+damage test).
+
+## Differences with the Professional version
+
+- **Mohr-Coulomb hardening-softening on kapsh** (C68c, class B, cause unknown): 1.2x between GNU and the Professional on a homogeneous control. Index: [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).

@@ -30,7 +30,7 @@ void truss( long int element, long int element_group,
     inol=0, jnol=0, indx=0, nnol=2, swit=0, length=0,
     // inertia_apply default -no (Professional semantics, see general.cc)
     options_inertia=-NO, group_truss_rope=-NO, 
-    memory=-UPDATED, truss_reference=-NO, options_convection=-NO,
+    memory=-UPDATED_LINEAR, truss_reference=-NO, options_convection=-NO,
     icontrol=0, ldum=0, idum[1], options_mesh[MDIM],
     geometric_nonlinear=0;
   double mass=0., dtime=0., 
@@ -80,8 +80,32 @@ void truss( long int element, long int element_group,
       ldum, VERSION_NORMAL, GET_IF_EXISTS );
     db( GROUP_TRUSS_INITIAL_FORCE, element_group, idum,
       &group_truss_initial_force, ldum, VERSION_NORMAL, GET_IF_EXISTS );
-    db( GROUP_TRUSS_MEMORY, element_group, &memory, ddum,
-       ldum, VERSION_NORMAL, GET_IF_EXISTS );
+    // Default memory (manual 6.777 is silent; manual 4.12: a total
+    // Lagrange formulation is used when materi_displacement is
+    // initialised). Measured on the Professional 02-08-2026: -total_linear
+    // with materi_displacement (dynamic3 60.44025), -updated_linear
+    // without it (rotating/stretching truss force -50 = -updated_linear;
+    // -updated gives 10.4587). The GNU legacy default was -updated.
+    memory = materi_displacement ? -TOTAL_LINEAR : -UPDATED_LINEAR;
+    if ( db( GROUP_TRUSS_MEMORY, element_group, &memory, ddum,
+        ldum, VERSION_NORMAL, GET_IF_EXISTS ) && check_error!=-NO ) {
+      // Input checks of the Professional 02-08-2026 (BACKLOG C59, owner
+      // decision 2026-10-11): the updated types need the velocity
+      // formulation, the total types need materi_displacement.
+      // check_error -no skips them, as in the Professional.
+      if ( materi_displacement &&
+           ( memory==-UPDATED || memory==-UPDATED_LINEAR ) ) {
+        pri( "Error: group_truss_memory -updated or -updated_linear is not allowed when materi_displacement is initialised (use -total_linear or -total)." );
+        pri( "Element group ", element_group );
+        exit_tn_on_error();
+      }
+      if ( !materi_displacement &&
+           ( memory==-TOTAL || memory==-TOTAL_LINEAR ) ) {
+        pri( "Error: group_truss_memory -total or -total_linear needs materi_displacement to be initialised (use -updated_linear or -updated)." );
+        pri( "Element group ", element_group );
+        exit_tn_on_error();
+      }
+    }
     db( OPTIONS_INERTIA, 0, &options_inertia, ddum, 
       ldum, VERSION_NORMAL, GET_IF_EXISTS );
     {
@@ -95,8 +119,7 @@ void truss( long int element, long int element_group,
     // f=0 displacement-primary dynamics holds its mass and elastic force
     // in the reference configuration. The f=1 auxiliary reassembly is
     // marked by solve() so it preserves this same operator.
-    db( MATERI_DYNAMIC, 0, idum, &materi_dynamic_factor, ldum,
-      VERSION_NORMAL, GET_IF_EXISTS );
+    materi_dynamic_factor = materi_dynamic_effective( NULL );
     if ( disp_primary_reference==-YES ||
          ( materi_velocity && materi_displacement &&
            materi_dynamic_factor>=0. && materi_dynamic_factor<1. ) )
@@ -176,9 +199,9 @@ void truss( long int element, long int element_group,
       }
         // deformation
       array_subtract( &new_coord[ndim], &new_coord[0], diff_coord, ndim );
-      new_length = scalar_dabs( array_inproduct( diff_coord, truss_direction, ndim ) );
+      new_length = array_inproduct( diff_coord, truss_direction, ndim );
       array_subtract( &old_coord[ndim], &old_coord[0], diff_coord, ndim );
-      old_length = scalar_dabs( array_inproduct( diff_coord, truss_direction, ndim ) );
+      old_length = array_inproduct( diff_coord, truss_direction, ndim );
       incremental_length = new_length - old_length;
         // stiffness
       truss_stiffness = group_truss_young * group_truss_area / initial_length;
@@ -223,13 +246,7 @@ void truss( long int element, long int element_group,
     // implicit); lower factors reduce numerical damping in dynamics.
     // The force STATE (ELEMENT_TRUSS_FORCE) keeps the full update.
     {
-      double materi_dynamic_factor = 1.;
-      db( MATERI_DYNAMIC, 0, idum, &materi_dynamic_factor, ldum,
-        VERSION_NORMAL, GET_IF_EXISTS );
-      if ( db_active_index( CONTROL_MATERI_DYNAMIC, icontrol,
-          VERSION_NORMAL ) )
-        db( CONTROL_MATERI_DYNAMIC, icontrol, idum,
-          &materi_dynamic_factor, ldum, VERSION_NORMAL, GET );
+      double materi_dynamic_factor = materi_dynamic_effective( NULL );
       if ( materi_dynamic_factor<0. || materi_dynamic_factor>1. )
         db_error( MATERI_DYNAMIC, 0 );
       if ( materi_dynamic_factor<1. ) {

@@ -1,0 +1,63 @@
+( C86 {F4 T6f, 2026-10-19}: post_element_force with structural
+  elements in the selection. The C84 2D strip {4x1 quad4, fixed at
+  x=0, loads velx 50 and vely 5 at the two x=4 corners, section x=0} plus a -truss {E A 1e4} from node 1 {on the section} to node 5. The
+  Professional 02-08-2026 includes the truss force: normal 100 = truss 45
+  + continuum 55, shear0 10, moment0 -40 = 45 x {0 - 0.5} + continuum
+  -17.5, the exact section force. Before C86 the GNU stopped {post_element_force
+  does not support element}. Targets: the Professional on this file. )
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_displacement
+materi_stress
+end_initia
+node 1 0 0
+node 2 1 0
+node 3 2 0
+node 4 3 0
+node 5 4 0
+node 6 0 1
+node 7 1 1
+node 8 2 1
+node 9 3 1
+node 10 4 1
+element 1 -quad4 1 2 6 7
+element 2 -quad4 2 3 7 8
+element 3 -quad4 3 4 8 9
+element 4 -quad4 4 5 9 10
+group_type 0 -materi
+group_materi_elasti_young 0 1.e4
+group_materi_elasti_poisson 0 0.
+group_materi_memory 0 -total_linear
+geometry_line 1 0. 0. 0. 1. 1.e-5
+post_element_force 10 1. 0. 0. 1. 0. 0.5
+post_element_force_geometry 10 -geometry_line 1
+bounda_dof 20 1 -velx
+bounda_time 20 0.
+bounda_dof 21 1 -vely
+bounda_time 21 0.
+bounda_dof 22 6 -velx
+bounda_time 22 0.
+bounda_dof 23 6 -vely
+bounda_time 23 0.
+bounda_force 1 5 -velx
+bounda_time 1 50.
+bounda_force 2 5 -vely
+bounda_time 2 5.
+bounda_force 3 10 -velx
+bounda_time 3 50.
+bounda_force 4 10 -vely
+bounda_time 4 5.
+element 5 -truss 1 5
+element_group 5 1
+group_type 1 -truss
+group_truss_area 1 1.
+group_truss_elasti_young 1 1.e4
+control_timestep 30 1. 1.
+target_item 40 -post_element_force_result 10 0
+target_value 40 100 4.0e-04
+target_item 41 -post_element_force_result 10 1
+target_value 41 10 4.0e-05
+target_item 42 -post_element_force_result 10 2
+target_value 42 -40 1.6e-04
+end_data

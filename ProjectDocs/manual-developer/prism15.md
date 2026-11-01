@@ -101,3 +101,17 @@ and convergence checks.
 - Blast radius: full corpus re-run on the branch — no regressions vs
   the 196-PASS baseline (only prism15 RUNFAIL -> PASS).
 - Internal suite: full `build_safe.sh` run green (see its own summary).
+
+## Differences with the Professional version
+
+- `group_integration_points -minimal` (BACKLOG C82, deliberate
+  divergence, owner decision 2026-10-16): `pol()` does not branch on the
+  record for PRISM15 and keeps the 21-point rule. The Professional
+  02-08-2026 uses 8 points: the 4-point degree-3 triangle rule (centroid
+  weight -27/48, three points 25/48 at (3/5,1/5,1/5)) x 2 Gauss levels,
+  recovered with the physical linear fit. The negative centroid weight
+  makes the element stiffness indefinite: 3 negative eigenvalues on a
+  distorted prism15 (`scratchpad/c76/analytic/`), against only the 6
+  rigid-mode zeros of the 21-point rule. Nodal stresses of the probe
+  differ by 0.9 % of the scale. Index:
+  [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md) C82.

@@ -1,0 +1,103 @@
+( C83 {F4 T6f, 2026-10-16} axisymmetric tria3 group_integration_points -maximal = the Professional 02-08-2026 rule: 3 points at the nodes, and the 1-point centroid rule in an element with a node on the axis {r=0: the hoop term h/r of a nodal point is infinite}. 12 distorted tria3 of unequal size, the left column on the axis {elements 1-4 touch it, 5-12 do not}. Prescribed nonlinear velocity at every node of a viscous materi. Targets = Professional node_dof. GNU before: every axisymmetric tria3 forced to 1 point; node 12 sigxx 16.5032 {Professional 17.0291}; node 9 sigzz 8.04594 {Professional 8.36093}; node 5 sigyy 7.00481 {Professional 7.30501}; node 7 sigzz 5.27457 {Professional 5.00059}; node 2 sigxx 9.61643 {Professional 9.47034}; node 3 on the axis unchanged. )
+
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_stress
+end_initia
+mesh -fixed_in_space -fixed_in_space
+inertia_apply -no
+convection_apply -no
+node 1 0 0.861961618638347
+node 2 1.08070550695356 1.06487347137624
+node 3 0 1.6152119175816
+node 4 1.23672144283638 1.70903568476348
+node 5 1.51848257287454 2.87075826388916
+node 6 0 2.66360345625858
+node 7 1.85647044128023 1.14207946562819
+node 8 2.13723596741694 1.84288354267737
+node 9 2.54374668770899 3.061247985465
+node 10 2.96231996610376 1.16360345625858
+node 11 3.29980663271285 1.97773857375646
+node 12 3.64847781939154 3.08701493098808
+element 1 -tria3 1 2 3
+element 2 -tria3 4 3 2
+element 3 -tria3 3 4 5
+element 4 -tria3 3 5 6
+element 5 -tria3 2 7 8
+element 6 -tria3 2 8 4
+element 7 -tria3 4 8 5
+element 8 -tria3 9 5 8
+element 9 -tria3 7 10 8
+element 10 -tria3 11 8 10
+element 11 -tria3 8 11 12
+element 12 -tria3 8 12 9
+bounda_dof 0 1 -velx
+bounda_time 0 0. 0.486952999831122 10. 0.486952999831122
+bounda_dof 1 1 -vely
+bounda_time 1 0. -0.115069762459583 10. -0.115069762459583
+bounda_dof 2 2 -velx
+bounda_time 2 0. 2.63757116381105 10. 2.63757116381105
+bounda_dof 3 2 -vely
+bounda_time 3 0. 0.496408863015061 10. 0.496408863015061
+bounda_dof 4 3 -velx
+bounda_time 4 0. 0.891655240895606 10. 0.891655240895606
+bounda_dof 5 3 -vely
+bounda_time 5 0. -0.435028804795377 10. -0.435028804795377
+bounda_dof 6 4 -velx
+bounda_time 6 0. 3.67785175830007 10. 3.67785175830007
+bounda_dof 7 4 -vely
+bounda_time 7 0. 0.561207234765996 10. 0.561207234765996
+bounda_dof 8 5 -velx
+bounda_time 8 0. 6.25278449292396 10. 6.25278449292396
+bounda_dof 9 5 -vely
+bounda_time 9 0. 0.94985533788796 10. 0.94985533788796
+bounda_dof 10 6 -velx
+bounda_time 10 0. 1.82646400548585 10. 1.82646400548585
+bounda_dof 11 6 -vely
+bounda_time 11 0. -0.793970176491741 10. -0.793970176491741
+bounda_dof 12 7 -velx
+bounda_time 12 0. 4.41155959432055 10. 4.41155959432055
+bounda_dof 13 7 -vely
+bounda_time 13 0. 1.56861518467551 10. 1.56861518467551
+bounda_dof 14 8 -velx
+bounda_time 14 0. 6.30688283888187 10. 6.30688283888187
+bounda_dof 15 8 -vely
+bounda_time 15 0. 2.08852982762121 10. 2.08852982762121
+bounda_dof 16 9 -velx
+bounda_time 16 0. 10.4766595089656 10. 10.4766595089656
+bounda_dof 17 9 -vely
+bounda_time 17 0. 3.2603995055885 10. 3.2603995055885
+bounda_dof 18 10 -velx
+bounda_time 18 0. 7.84405572194804 10. 7.84405572194804
+bounda_dof 19 10 -vely
+bounda_time 19 0. 3.95625585917835 10. 3.95625585917835
+bounda_dof 20 11 -velx
+bounda_time 20 0. 10.993965769871 10. 10.993965769871
+bounda_dof 21 11 -vely
+bounda_time 21 0. 5.08323757612361 10. 5.08323757612361
+bounda_dof 22 12 -velx
+bounda_time 22 0. 15.629278585307 10. 15.629278585307
+bounda_dof 23 12 -vely
+bounda_time 23 0. 6.68666689572539 10. 6.68666689572539
+group_type 0 -materi
+group_materi_viscosity 0 1.0
+group_materi_density 0 1.0
+group_materi_elasti_compressibility 0 1.0
+group_materi_memory 0 -updated_linear
+group_axisymmetric 0 -yes
+group_integration_points 0 -maximal
+control_timestep 10 1. 1.
+target_item 0 -node_dof 12 -sigxx
+target_value 0 1.702907473586e+01 4.0e-06
+target_item 1 -node_dof 9 -sigzz
+target_value 1 8.360933587953e+00 4.0e-06
+target_item 2 -node_dof 5 -sigyy
+target_value 2 7.305010024444e+00 4.0e-06
+target_item 3 -node_dof 7 -sigzz
+target_value 3 5.000591628681e+00 4.0e-06
+target_item 4 -node_dof 2 -sigxx
+target_value 4 9.470344082854e+00 4.0e-06
+target_item 5 -node_dof 3 -sigzz
+target_value 5 6.229208548681e+00 4.0e-06
+end_data

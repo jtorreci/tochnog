@@ -1,0 +1,32 @@
+(F4 T6d C11, dynamic1 without any materi_dynamic record (f=1, implicit).
+ With materi_displacement the truss memory defaults to -total_linear.
+ Target = Professional 02-08-2026 (9.955054858639e-01). Old GNU (default
+ -updated): 1.91225.)
+echo -no
+number_of_space_dimensions 1
+materi_displacement
+materi_velocity
+end_initia
+
+inertia_apply -yes
+
+
+node 1  0
+node 2  1
+element 1  -truss 1 2
+
+group_type 0  -truss
+group_truss_area 0  1.0
+group_truss_elasti_young 0  1.0
+group_truss_density 0  2.0
+
+bounda_dof    10  1 -velx
+
+bounda_force  20  2 -velx
+bounda_time   20  1.
+
+control_timestep      10  1.e-1 100.
+
+target_item  0   -node_dof 2 -disx
+target_value 0   9.955054858639e-01 1.e-6
+end_data

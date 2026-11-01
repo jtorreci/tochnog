@@ -529,11 +529,32 @@
   y qsri3d_beam (mom1s = P·L = 0.08 para SRI/OFF — la estática del
   cuerpo libre; el discriminador SRI es la deflexión).
 
+## C71 on-axis switch replica (F4 T6f C79, 2026-10-13)
+
+`msf_element_rule()` (`calcul_force.cc`) mirrors the `pol()` on-axis
+Lobatto -> Gauss switch (C71): for an axisymmetric 2D Lobatto rule it
+reads the element nodes (`ELEMENT`, `NODE`), interpolates the radius at
+each Lobatto point with `interpolation_polynomial()` and rebuilds the rule
+with Gauss (`goto build_rule`) when one is below `EPS_COORD`. Test
+`test-2026/msf_axisym_lobatto_axis1` (target = the `-gauss` run, momx_sig
+1/6; before 0.5). The Professional 02-08-2026 printed zero section forces
+for this axisymmetric input (also off the axis), so it is not the oracle.
+`delete.cc` `mc_element_rule()` refuses axisymmetric groups and needs no
+switch. Hardcoded: `EPS_COORD`.
+
 ## Differences with the Professional version
 
-- **3D section moment sign (`gforce10`, `mom1y_sig`)** (known difference,
-  not decided; BACKLOG C3; AUDIT K12). GNU: +5000 (target recalibrated to
-  the GNU value). Professional 02-08-2026: -5000 (magnitudes and `nory`
-  agree). Status: Open, MEDIUM; face/arm sign of the 3D section
-  post-processing. Index:
+- **3D section frame of a square end face without
+  `post_calcul_materi_stress_force_thickness_switch -yes`** (deliberate
+  divergence, project owner 2026-10-11; BACKLOG C3). A square face has no
+  shortest direction (manual 6.915 is silent on the tie). GNU: the tie is
+  broken by the reference point (Professional force10 without the switch:
+  nory -12.34, mom1y +5000). Professional 02-08-2026: a degenerate frame
+  (all vector components 0, nors -12.34, the moment in the mom2 slot,
+  mom2s 5000). With `-yes` (as the Professional's own force10) both give
+  nory -12.34, shey -100, mom1y -5000. The former `gforce10` sign
+  difference (F4 T6a, 2026-10-11) was the `plot_switch` convention plus
+  the two switch records missing from the test-2014 input: restored,
+  target -5000. The default (`-no`) is the same in the manual, the
+  Professional and the GNU. Index:
   [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).

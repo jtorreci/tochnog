@@ -6,11 +6,14 @@ The strain dofs `materi_strain_total` (`ept..`), `materi_strain_elasti`
 (`epe..`) and `materi_strain_plasti` (`epp..`) are integration-point
 quantities written to the nodes. Since 2026-10-06 (audit K11) they are
 recovered with the SAME operator as the stress: the Professional
-per-element least-squares fit of the integration-point values (bilinear
-interpolation of the 2x2 Gauss values for quad4, linear fit for
-quad9/hex8/hex27; the plain shape-function weight for bar/tria/tet and
-the Lobatto rules), the nodal value being the mean of the adjacent
-elements. Before, the strain used a shape-function-weighted average while
+per-element least-squares fit of the integration-point values (linear
+fit `1,x,y` in physical coordinates for the 2x2 Gauss quad4 and quad9
+since K21, 2026-10-12, with the on-axis rule of the axisymmetric quad4
+and the point value of the 1-point quad4, see `nodal_stress_recovery.md`;
+linear fit for the 3x3 quad9, hex8 and hex27; the element value for the tria3/tria6/tet4 and the
+1-point bar2 since 2026-10-11, F4 T6f; the plain shape-function weight for
+the other bar/tet rules and the Lobatto rules), the nodal value being the
+mean of the adjacent elements. Before, the strain used a shape-function-weighted average while
 the stress already used the Professional operator, so strain and stress
 nodal fields were not consistent (and both differed at boundaries from
 the Professional).

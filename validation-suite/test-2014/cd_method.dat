@@ -1,3 +1,14 @@
+( F4 T6f K21 WU1b 2026-10-12: rewritten as a well-posed simple shear.
+  '-ra 1 4 -ra' is a LIST (nodes 1 and 4), not a range (Professional
+  user manual "Ranges"), so vely was fixed only on the left edge: the
+  element rotated rigidly (zero strain rate, physical stress 0, the
+  Professional gives 0 from t = 0.6) and the old target sigxy 1 +- 0.3
+  was met by chance by the convected nodal output. Now vely is fixed at
+  all four nodes and the principal tension cap of the direct MC law is
+  lifted (tension_direct 1.e10), so the shear stress equals the
+  cohesion c = 1. The phi target (atan of the -tangent table) is kept.
+  Tolerance 1e-5: the GNU convected nodal sigxy is 0.9999956 at every
+  step. )
 ( K03 2026-10-06: explicit convection_apply -yes. The target was
   calibrated on the legacy GNU default -yes; the default is now -no
   as in the Professional manual 6.395. )
@@ -14,7 +25,7 @@ end_initia
 bounda_time  0  0 0 100 0
 bounda_time  1  0 -1 100 -1
 bounda_time  2  0 1 100 1
-bounda_unknown  0  -ra 1 4 -ra -vely
+bounda_unknown  0  -ra 1 2 3 4 -ra -vely
 bounda_unknown  1  -ra 1 2 -ra -velx
 bounda_unknown  2  -ra 3 4 -ra -velx
 change_dataitem  10  -group_materi_plasti_mohr_coul_direct 0 0 -use
@@ -30,6 +41,7 @@ group_materi_elasti_young  0  1000
 group_materi_memory  0  -updated_without_rotation
 group_materi_plasti_mohr_coul_direct  0  0.523598776206 1 0
 group_materi_plasti_mohr_coul_direct_normal  0  0 1 0
+group_materi_plasti_tension_direct  0  1.e10
 group_type  0  -materi
 node  1  0 0
 node  2  1 0
@@ -41,7 +53,7 @@ options_stabilization   -static
 post_point  1  0.5 0.5
 target_item  1  -post_point_dof 1 -sigxy
 target_item  2  -group_materi_plasti_mohr_coul_direct 0 0
-target_value  1  1 0.3
+target_value  1  1 1.e-5
 target_value  2  0.5235988 0.001
 node_dof  1  0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
 node_dof  2  0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0

@@ -1,0 +1,57 @@
+(C68, F4 T6f: the kappa_shear (von Mises hardening on -kapsh) is an integration-point state. Four tria3
+ (1-point rule, nodal recovery = arithmetic mean, Professional) on a
+ non-uniform field; HEAD read the h-lumped nodal value back.
+ Targets = Professional 02-08-2026, scratch probe c68_kapsh3_tri.)
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_displacement
+materi_stress
+materi_strain_total
+materi_strain_plasti
+materi_plasti_kappa_shear
+end_initia
+node 1 0 0
+node 2 1 0
+node 3 2 0
+node 4 0 1
+node 5 1 2
+node 6 2 1
+element 1 -tria3 1 2 4
+element 2 -tria3 2 5 4
+element 3 -tria3 2 3 5
+element 4 -tria3 3 6 5
+bounda_dof 0 1 -velx -vely
+bounda_time 0 0. 0. 1.e10 0.
+bounda_dof 1 2 -vely
+bounda_time 1 0. 0. 1.e10 0.
+bounda_dof 2 3 -vely
+bounda_time 2 0. 0. 1.e10 0.
+bounda_dof 3 4 -vely
+bounda_time 3 0. -0.01 1.e10 -0.01
+bounda_dof 4 5 -vely
+bounda_time 4 0. -0.01 1.e10 -0.01
+bounda_dof 5 6 -vely
+bounda_time 5 0. -0.01 1.e10 -0.01
+group_type 0 -materi
+group_materi_elasti_young 0 7.e3
+group_materi_elasti_poisson 0 0.2
+group_materi_memory 0 -total_linear
+group_materi_membrane 0 -yes
+group_materi_plasti_vonmises 0 24.3
+dependency_item 1 -group_materi_plasti_vonmises 0 -kapsh 2
+dependency_diagram 1 0. 1. 24.3 248.3
+control_timestep 10 0.1 1.
+target_item 0 -node_rhside 1 -vely
+target_value 0 -1.252123190477e+01 1.25e-02
+target_item 1 -node_rhside 2 -vely
+target_value 1 -2.976637240959e+01 2.98e-02
+target_item 2 -node_rhside 4 -vely
+target_value 2 1.880410385266e+01 1.88e-02
+target_item 3 -node_dof 1 -kapsh
+target_value 3 5.489297907443e-03 1.10e-05
+target_item 4 -node_dof 2 -kapsh
+target_value 4 2.845938832119e-03 5.69e-06
+target_item 5 -node_dof 5 -kapsh
+target_value 5 3.347669067272e-03 6.70e-06
+end_data

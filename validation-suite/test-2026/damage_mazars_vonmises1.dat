@@ -1,0 +1,45 @@
+(F4 T6f class A guard test C7(b) (owner decision 2026-10-12).
+ Mazars damage + von Mises yielding before the damage threshold: the
+ damage_stress1 bar (E 23400e6, eps 6e-4 in 60 steps, Mazars 2.6e-4 1
+ 15000 1.2 649 1.05, -total_linear) with group_materi_plasti_vonmises
+ 3e6. GNU (manual Mazars eps_eq = sqrt(sum <eps_i>+^2)): dam
+ 0.925372225695, eppxx 1.87863e-4 (both codes satisfy sigma = (1-d) C eps_e
+ with their own strains).
+ The Professional 02-08-2026 gives dam 0.96946, eppxx 1.368e-4, explained
+ by its non-standard equivalent strain (weights 4, 2, 1 on the ascending
+ positive principal strains, see damage_mazars_eq_two_positive1); it
+ fails this test. Tolerances absolute.)
+
+echo -no
+number_of_space_dimensions 1
+materi_velocity
+materi_displacement
+materi_strain_elasti
+materi_strain_plasti
+materi_strain_total
+materi_stress
+materi_damage
+end_initia
+
+node 1  0
+node 2  1
+element 1  -bar2 1 2
+
+group_type 0  -materi
+group_materi_elasti_young 0  23400.e6
+group_materi_damage_mazars 0  2.6e-4 1. 15000. 1.2 649. 1.05
+group_materi_memory 0  -total_linear
+group_materi_plasti_vonmises 0  3.e6
+
+bounda_dof 0  1 -velx
+bounda_time    0  0. 0. 100. 0.
+bounda_dof 1  2 -velx
+bounda_time    1  0. 1. 100. 1.
+
+control_timestep            0  1.e-5 6.e-4
+
+target_item 0 -node_dof 2 -dam
+target_value 0 0.925372225695 1.e-6
+target_item 1 -node_dof 2 -eppxx
+target_value 1 1.87863e-4 1.e-8
+end_data

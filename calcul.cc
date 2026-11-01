@@ -746,11 +746,14 @@ void calculate_operat( double unknown_values[], long int inod,
     length_result = MDIM * MDIM;
   }
   else if ( labs(calcul_operat)==SIZETOT ) {
+      // sqrt(Aij Aij) / sqrt(Ai Ai) (manual Professional "post_calcul",
+      // = Professional 02-08-2026 calcul1: strain 1 -> 1); the factor 0.5
+      // used before gave 1/sqrt(2) of it.
     if ( calcul_matrix )
-      result[0] = sqrt( 0.5 * array_inproduct( unknown_values, 
+      result[0] = sqrt( array_inproduct( unknown_values, 
         unknown_values, MDIM*MDIM ) );
     else
-      result[0] = sqrt( 0.5 * array_inproduct( unknown_values, 
+      result[0] = sqrt( array_inproduct( unknown_values, 
         unknown_values, ndim ) );
     length_result = 1;
   }
@@ -763,7 +766,9 @@ void calculate_operat( double unknown_values[], long int inod,
         if ( idim==jdim ) dev_mat[indx] -= average;
       }
     }
-    result[0] = sqrt( .5 * array_inproduct( dev_mat, 
+      // sqrt(Bij Bij), B the deviatoric part (manual Professional
+      // "post_calcul", = Professional 02-08-2026 calcul1: 0.816497).
+    result[0] = sqrt( array_inproduct( dev_mat, 
       dev_mat, MDIM*MDIM ) );
     length_result = 1;
   }

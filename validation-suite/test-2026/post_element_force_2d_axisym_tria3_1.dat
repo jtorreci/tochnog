@@ -1,0 +1,68 @@
+( C84 {F4 T6f, 2026-10-17}: post_element_force in an axisymmetric
+  group {group_axisymmetric -yes}. A 4x1 strip of tria3 elements {each square split in two}, radius 1 to 2,
+  axial length 4, fixed at z=0, ring loads at the two z=4 corners {vely
+  50 axial, velx 5 radial}; section at z=0 {normal 0 1, shear0 1 0,
+  middle 1.5 0}. The section forces are the ring forces of the element
+  internal forces {2 pi r volume and the hoop term}: normal 100 = the
+  applied axial ring force. Targets: the Professional 02-08-2026 on
+  this file {tolerance 4e-6 of max{|value|,1}}. Before C84 the GNU
+  printed NaN {2D stress layout} and, after the layout fix alone, the
+  plane volume gave normal 100/{2 pi r} = 10.6. )
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_displacement
+materi_stress
+end_initia
+node 1 1 0
+node 2 1 1
+node 3 1 2
+node 4 1 3
+node 5 1 4
+node 6 2 0
+node 7 2 1
+node 8 2 2
+node 9 2 3
+node 10 2 4
+element 1 -tria3 1 2 7
+element 2 -tria3 1 7 6
+element 3 -tria3 2 3 8
+element 4 -tria3 2 8 7
+element 5 -tria3 3 4 9
+element 6 -tria3 3 9 8
+element 7 -tria3 4 5 10
+element 8 -tria3 4 10 9
+group_type 0 -materi
+group_materi_elasti_young 0 1.e4
+group_materi_elasti_poisson 0 0.
+group_materi_memory 0 -total_linear
+group_axisymmetric 0 -yes
+geometry_line 1 1. 0. 2. 0. 1.e-5
+post_element_force 10 0. 1. 1. 0. 1.5 0.
+post_element_force_geometry 10 -geometry_line 1
+bounda_dof 20 1 -vely
+bounda_time 20 0.
+bounda_dof 21 1 -velx
+bounda_time 21 0.
+bounda_dof 22 6 -vely
+bounda_time 22 0.
+bounda_dof 23 6 -velx
+bounda_time 23 0.
+bounda_force 1 5 -vely
+bounda_time 1 50.
+bounda_force 2 5 -velx
+bounda_time 2 5.
+bounda_force 3 10 -vely
+bounda_time 3 50.
+bounda_force 4 10 -velx
+bounda_time 4 5.
+control_timestep 30 1. 1.
+
+
+target_item 40 -post_element_force_result 10 0
+target_value 40 100 4.0e-04
+target_item 41 -post_element_force_result 10 1
+target_value 41 -1.62687505834 6.5e-06
+target_item 42 -post_element_force_result 10 2
+target_value 42 5.9224561902 2.4e-05
+end_data

@@ -1,3 +1,18 @@
+( F4 T6e C53 (2026-10-11, owner decision): targets recalibrated to the
+  physically correct values. Node 4 is on the slide geometry_line 1
+  (direction (1,1)/sqrt(2), normal n = (-1,1)/sqrt(2)) with the
+  prescribed velocity v = (0, 1) and the default slide_penalty 1.e15.
+  The penalty law adds - slide_penalty * (v.n) * dtime * n to the nodal
+  right hand side: n_y component = -1.e15 * (1/sqrt(2)) * 0.1 *
+  (1/sqrt(2)) = -5.e13 (plus the friction term, O(1.e-3), negligible),
+  so node_rhside 4 vely = -5.e13 (relative tolerance 1.e-6). The total
+  strain of node 4 is not touched by the slide: node_dof 4 eptxx = 0.
+  The old target node_rhside 4 vely = 0.001 (tolerance 0.05) passed only
+  because slide_penalty_law indexed node_rhside/node_lhside with the
+  node_dof index vel_indx+idim*nder: the y penalty term went into the
+  eptxx slot (node_rhside eptxx -5.e13, node_dof eptxx -10) and vely
+  kept only the element force 3.e-12. See CORPUS-STALE-TARGETS.md.
+)
 echo -no
 number_of_space_dimensions 2
 derivatives
@@ -35,7 +50,9 @@ slide_axisymmetric  0  -yes
 slide_friction  0  0.5
 slide_geometry  0  -geometry_line 1
 target_item  1  -node_rhside 4 -vely
-target_value  1  0.001 0.05
+target_value  1  -5.e13 5.e7
+target_item  2  -node_dof 4 -eptxx
+target_value  2  0. 1.e-10
 node_dof  1  0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
 node_dof  2  0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
 node_dof  3  0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0

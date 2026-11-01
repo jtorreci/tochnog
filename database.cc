@@ -3993,6 +3993,18 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   data_class[GROUP_INTEGRATION_METHOD] = GROUP_INTEGRATION_METHOD;  
   data_required[GROUP_INTEGRATION_METHOD] = GROUP_TYPE;  
 
+  // C80 (F4 T6f, 2026-10-16): weighting factor f of the -reduced rule
+  // (manual Professional 6.621: 1 = Lobatto, infinite = 1-point; default
+  // 10 when absent, integration_reduced_factor() in polynom.cc).
+  strcpy(name[GROUP_INTEGRATION_METHOD_REDUCED_FACTOR],
+    "group_integration_method_reduced_factor");
+  type[GROUP_INTEGRATION_METHOD_REDUCED_FACTOR] = DOUBLE_PRECISION;
+  data_length[GROUP_INTEGRATION_METHOD_REDUCED_FACTOR] = 1;
+  version_all[GROUP_INTEGRATION_METHOD_REDUCED_FACTOR] = 1;
+  data_class[GROUP_INTEGRATION_METHOD_REDUCED_FACTOR] =
+    GROUP_INTEGRATION_METHOD;
+  data_required[GROUP_INTEGRATION_METHOD_REDUCED_FACTOR] = GROUP_TYPE;
+
   strcpy(name[GROUP_INTEGRATION_POINTS],"group_integration_points");
   type[GROUP_INTEGRATION_POINTS] = INTEGER;
   data_length[GROUP_INTEGRATION_POINTS] = 1;
@@ -5553,6 +5565,15 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   strcpy(name[LSQR],"lsqr");
 
   strcpy(name[LOBATTO],"lobatto");
+
+  // C80: -reduced value of group_integration_method (manual 6.620)
+  strcpy(name[REDUCED],"reduced");
+
+  // C80.1 / C80.2: -volumetric / -lambda values of
+  // group_element_selective_reduced_integration (GNU-only extension;
+  // the C80.1 -both value was removed, input.cc rejects it)
+  strcpy(name[VOLUMETRIC],"volumetric");
+  strcpy(name[LAMBDA],"lambda");
 
   strcpy(name[LU],"lu");
 
@@ -7253,6 +7274,10 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   strcpy(name[POST_ELEMENT_FORCE_RESULT],"post_element_force_result");
   type[POST_ELEMENT_FORCE_RESULT] = DOUBLE_PRECISION;
   data_length[POST_ELEMENT_FORCE_RESULT] = 5;
+  // C84: 3D five values, 2D three (normal, shear0, moment0; manual
+  // 6.927 and the Professional 02-08-2026 record); 1D one value (the
+  // normal force, Professional force16)
+  fixed_length[POST_ELEMENT_FORCE_RESULT] = 0;
 
   strcpy(name[PRINT_APPLY],"print_apply");
   type[PRINT_APPLY] = INTEGER;

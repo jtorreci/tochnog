@@ -1,0 +1,55 @@
+(C68a, F4 T6f, class D guard, owner decision 2026-10-18: one Maxwell
+ chain {E_c 7e3, tau 0.3} on a homogeneous uniaxial strain path: two
+ quad4, poisson 0, top edge moved at vely -0.01 on a unit height, so
+ the strain rate is r = -0.01 for t in {0,1}, 10 steps of dt 0.1.
+ Chain law: dmsig/dt = E_c r - msig/tau, msig{0} = 0, hence the exact
+ solution msig{t} = E_c tau r {1 - exp{-t/tau}}.
+ At t = 1: 7e3 * 0.3 * -0.01 * {1 - exp{-1/0.3}} = -20.2508461397
+ (the bound |msig| < E_c tau |r| = 21 holds for every t). For a
+ constant rate the exponential update of the chain is exact for any
+ dt, so the target is analytic at 1e-6 relative.
+ Professional 02-08-2026 on the same input: -23.8131 at dt 0.1 (beyond
+ the bound 21), -20.5902 at dt 0.01, -20.2846 at dt 0.001: a first-order
+ time-discretisation error, DIVERGENCES C68a class D.
+ The total stress is E eptyy + msig = -70 - 20.2508461397.)
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_displacement
+materi_stress
+materi_strain_total
+materi_maxwell_stress 1
+end_initia
+node 1 0 0
+node 2 1 0
+node 3 2 0
+node 4 0 1
+node 5 1 1
+node 6 2 1
+element 1 -quad4 1 2 4 5
+element 2 -quad4 2 3 5 6
+bounda_dof 0 1 -velx -vely
+bounda_time 0 0. 0. 1.e10 0.
+bounda_dof 1 2 -vely
+bounda_time 1 0. 0. 1.e10 0.
+bounda_dof 2 3 -vely
+bounda_time 2 0. 0. 1.e10 0.
+bounda_dof 3 4 -vely
+bounda_time 3 0. -0.01 1.e10 -0.01
+bounda_dof 4 5 -vely
+bounda_time 4 0. -0.01 1.e10 -0.01
+bounda_dof 5 6 -vely
+bounda_time 5 0. -0.01 1.e10 -0.01
+group_type 0 -materi
+group_materi_elasti_young 0 7.e3
+group_materi_elasti_poisson 0 0.
+group_materi_memory 0 -total_linear
+group_materi_maxwell_chain 0 7.e3 0.3
+control_timestep 10 0.1 1.
+target_item 0 -node_dof 1 -1msigyy
+target_value 0 -2.02508461397e+01 2.0e-05
+target_item 1 -node_dof 5 -1msigyy
+target_value 1 -2.02508461397e+01 2.0e-05
+target_item 2 -node_dof 6 -sigyy
+target_value 2 -9.02508461397e+01 9.0e-05
+end_data

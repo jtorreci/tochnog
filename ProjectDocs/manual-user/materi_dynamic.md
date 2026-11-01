@@ -83,12 +83,23 @@ the corpus dynamics family: dynamic1/2/5/8 run but fail their targets
 (RUNFAIL). This is a solver/scheme blocker (the staggered velocity
 formulation of the GNU), not a parsing one.
 
+## Effective factor (F4 T6d, 2026-10-11)
+
+`control_materi_dynamic` with the index of the current time step overrules
+`materi_dynamic` (manual 6.141), also for the displacement-primary scheme
+used with a factor below 1 (see the developer page
+`dynamic_displacement_primary.md`). Before 2026-10-11 that scheme was only
+switched on by the global `materi_dynamic`, so an input with only
+`control_materi_dynamic 10 0.` ran the old blended path (Pro `dynamic1`
+variant: node 2 disx 6.4477 instead of 0.0958890). Measured equal to the
+Professional 02-08-2026: only `control_materi_dynamic 10 0.` 0.0958890,
+global + control 0. 0.0958890, control 0.5 0.932818, no record 0.995505.
+Tests: `validation-suite/test-2026/control_materi_dynamic_only1`,
+`control_materi_dynamic_half1`, `truss_dynamic_no_record1`.
+
 ## Differences with the Professional version
 
-- **`control_materi_dynamic` and implicit truss dynamics without
-  `materi_dynamic`** (known difference, not decided; BACKLOG C11, C39). GNU:
-  Displacement-primary gate keys on the global `materi_dynamic` only
-  (`dynamic1` variants 0.0938 / 6.45 / 1.91; `dynamic3` node 2 32.66).
-  Professional 02-08-2026: 0.0959 / 0.0959 / 0.9955; `dynamic3` 60.44.
-  Status: Open, MEDIUM; fix proposed (effective factor per control index).
+- None known for the factor resolution: the former C11 difference
+  (`control_materi_dynamic` ignored by the displacement-primary gate,
+  truss default memory) was resolved on 2026-10-11 (F4 T6d; BACKLOG C11).
   Index: [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).

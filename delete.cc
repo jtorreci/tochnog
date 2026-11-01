@@ -354,7 +354,7 @@ static void mc_element_rule( long int element, long int element_group,
 {
   long int integration_method=-GAUSS, integration_points=-MAXIMAL,
     axisymmetric=-NO, ldum=0, idim=0;
-  double ddum[1];
+  double ddum[1], reduced_iso=0.;
 
   db( GROUP_AXISYMMETRIC, element_group, &axisymmetric, ddum, ldum,
     VERSION_NORMAL, GET_IF_EXISTS );
@@ -375,12 +375,22 @@ static void mc_element_rule( long int element, long int element_group,
   if ( integration_points==-NORMAL ) integration_points = -MAXIMAL;
   if ( sri_active( element, element_group, name, nnol ) )
     integration_method = -GAUSS;
+  if ( integration_method==-REDUCED )
+    reduced_iso = 1. / integration_reduced_factor( element_group );
   for ( idim=0; idim<ndim; idim++ ) {
     nper[idim] = ( integration_points==-MINIMAL ? npol-1 : npol );
     if      ( integration_method==-GAUSS )
       integration_gauss( nper[idim], iso[idim], weight[idim] );
     else if ( integration_method==-LOBATTO )
       integration_lobatto( nper[idim], iso[idim], weight[idim] );
+    else if ( integration_method==-REDUCED && npol==2 && nper[idim]==2 &&
+              ( name==-QUAD4 || name==-HEX8 ) ) {
+      // C80 replica of pol(): quad4/hex8 -reduced points at iso +-1/f
+      iso[idim][0] = -reduced_iso;
+      iso[idim][1] =  reduced_iso;
+      weight[idim][0] = 0.5;
+      weight[idim][1] = 0.5;
+    }
     else if ( nper[idim]<npol )
       integration_gauss( nper[idim], iso[idim], weight[idim] );
     else

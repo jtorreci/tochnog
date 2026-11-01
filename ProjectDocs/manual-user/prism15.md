@@ -55,11 +55,23 @@ the same paths as `-hex27`/`-tet10`.
   3 Gauss points along the prism axis x the 7-point degree-5 triangle
   rule (21 integration points). A uniform stress state is integrated
   exactly: corpus `prism15.dat` returns `sigzz = 1.0` at its
-  `post_point` (Professional: 1.0, GNU: 1.000000261, target tolerance
-  1e-2).
+  `post_point` (Professional: 1.0, target tolerance 1e-2). Until
+  2026-10-16 two of the seven triangle points were wrong (one outside the
+  triangle, the rule not exact for linear integrands; GNU then
+  1.000000261); the corrected rule reproduces the Professional
+  integration points and an elastic prism15 block to 3e-11
+  (`validation-suite/test-2026/prism15_elastic_shear1.dat`).
+- Nodal stress: per element the least-squares plane of the 21 point
+  stresses in physical coordinates, arithmetic mean over the elements
+  (Professional rule, 2026-10-16; see
+  [nodal_stress_recovery](nodal_stress_recovery.md)).
 - Element works in 3D only.
-- No `group_integration_points -minimal/-maximal` selection yet: the
-  rule is fixed at 21 points (like the other quadratic volume elements).
+- No `group_integration_points -minimal/-maximal` selection: the rule is
+  fixed at 21 points. Difference with the Professional version: its
+  `-minimal` uses 8 points (4-point triangle rule with a negative weight
+  x 2 levels), which gives an indefinite element stiffness (3 negative
+  eigenvalues on a distorted prism15); the GNU keeps 21 points
+  (deliberate divergence, owner decision 2026-10-16; BACKLOG C82).
 
 ## Related
 

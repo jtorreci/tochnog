@@ -220,11 +220,31 @@ average of the two adjacent sections.
 - `outer -yes` and `plot_switch` are implemented in 2D (3 switches)
   and 3D (4 switches, manual 6.916).
 
+## Axisymmetric `-lobatto` elements on the axis
+
+An axisymmetric element of a `group_integration_method -lobatto` group
+that touches the symmetry axis is integrated with the Gauss rule (BACKLOG
+C71). Since 2026-10-13 (F4 T6f C79) its section forces use that Gauss
+rule too; before, they used the Lobatto rule, whose points on the axis
+have zero volume (one on-axis quad4 under uniaxial compression: momx_sig
+0.5 instead of the 1/6 of the same model with `-gauss`; test
+`test-2026/msf_axisym_lobatto_axis1`). The Professional 02-08-2026 printed
+zero section forces for that axisymmetric input, so it was not used as
+the reference.
+
 ## Differences with the Professional version
 
-- **3D section moment sign (`gforce10`, `mom1y_sig`)** (known difference,
-  not decided; BACKLOG C3; AUDIT K12). GNU: +5000 (target recalibrated to
-  the GNU value). Professional 02-08-2026: -5000 (magnitudes and `nory`
-  agree). Status: Open, MEDIUM; face/arm sign of the 3D section
-  post-processing. Index:
+- **3D section frame of a square end face without
+  `post_calcul_materi_stress_force_thickness_switch -yes`** (deliberate
+  divergence, project owner 2026-10-11; BACKLOG C3). A square face has no
+  shortest direction (manual 6.915 is silent on the tie). GNU: the tie is
+  broken by the reference point (Professional force10 without the switch:
+  nory -12.34, mom1y +5000). Professional 02-08-2026: a degenerate frame
+  (all vector components 0, nors -12.34, the moment in the mom2 slot,
+  mom2s 5000). With `-yes` (as the Professional's own force10) both give
+  nory -12.34, shey -100, mom1y -5000. The former `gforce10` sign
+  difference (F4 T6a, 2026-10-11) was the `plot_switch` convention plus
+  the two switch records missing from the test-2014 input: restored,
+  target -5000. The default (`-no`) is the same in the manual, the
+  Professional and the GNU. Index:
   [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).

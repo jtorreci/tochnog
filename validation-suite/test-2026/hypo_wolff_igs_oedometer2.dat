@@ -1,0 +1,97 @@
+(F4 T6f class A guard test K14b (owner decision 2026-10-12).
+ test-2014 hypo3: oedometric von Wolffersdorff hypoplasticity with
+ intergranular strain and a strain reversal at t = 0.01, dt 1e-5.
+ Converged reference: Python integration of the same law (manual 2.2.4,
+ von Wolffersdorff + intergranular strain), sigxx = -0.10466.
+ GNU: dt 1e-3 -0.1034, dt 1e-5 -0.104235 (converges to the reference).
+ Professional 02-08-2026: dt 1e-3 -0.1629 (56 % off), dt 1e-5 -0.10499:
+ a time-discretisation error at the strain reversal; the Pro fails the
+ dt 1e-3 target. Tolerance absolute.)
+
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_strain_intergranular
+materi_strain_total
+materi_history_variables 4
+materi_stress
+end_initia
+
+options_mesh        -fixed_in_space -fixed_in_space
+options_convection  -no
+
+node 1  0.00 0.00
+node 2  1.00 0.00
+node 3  0.00 1.00
+node 4  1.00 1.00
+
+node_dof -ra -from 1 -to 4 -ra
+         0. 0.
+         -0.0001 0.0 0.0 0.0 0.0 0.0
+         0.0 0.0 0.0 0.0 0.0 0.0
+         0.645 0.0 0.0 0.0
+        -0.1 0. 0. -0.1 0. -0.1 
+
+element 1 -quad4 1 2 3 4
+
+start_define
+  left_edge geometry_line 0
+end_define
+left_edge  0.00 0.00 0.00 1.00 1.e-5
+start_define
+  lower_edge geometry_line 1
+end_define
+lower_edge 0.00 0.00 1.00 0.00 1.e-5
+start_define
+  upper_edge geometry_line 2  
+end_define
+upper_edge 0.00 1.00 1.00 1.00 1.e-5
+start_define
+  right_edge geometry_line 3  
+end_define
+right_edge 1.00 0.00 1.00 1.00 1.e-5
+
+(
+force_element_edge_normal_geometry   0  -upper_edge
+force_element_edge_normal            0  -200.
+)
+
+bounda_unknown 0  -left_edge -velx
+bounda_time    0  0.
+bounda_unknown 1  -right_edge -velx
+bounda_time    1  0. -1. 0.01 -1. 0.010001 +1. 0.012 +1. 
+bounda_unknown 2  -lower_edge -vely
+bounda_time    2  0.
+bounda_unknown 3  -upper_edge -vely
+bounda_time    3  0.
+
+group_type           0  -materi
+group_integration_points  0  -minimal
+group_materi_memory  0  -updated_without_rotation
+group_materi_plasti_hypo_wolfersdorff 0  
+                        33.   (phic deg)
+                        1000. (hs MPa)
+                        0.25  (n)
+                        0.95  (ec)
+                        0.55  (ed)
+                        1.05  (ei)
+                        0.25  (alpha)
+                        1.00  (beta)
+group_materi_plasti_hypo_intergranularstrain 0  
+                       1.e-4 5.0 2.0 0.50 6.0 6.0
+                       (R m_R m_T beta_r chi theta)
+
+post_point 1 0.05 0.05
+
+control_timestep                        20  1.e-5 0.012
+(
+control_print                           20  -time_current
+control_print_data_versus_data          20  -post_point_dof 1 -eptxx
+                                            -post_point_dof 1 -hisv0
+                                            -post_point_dof 1 -sigxx
+                                            -post_point_dof 1 -sigyy
+)
+
+target_item 1   -post_point_dof 1 -sigxx
+target_value 1  -0.10466 5.e-4
+end_data

@@ -1,0 +1,104 @@
+( C84 {F4 T6f, 2026-10-17}: post_element_force {manual Professional
+  6.927} on a tet4 mesh of the force10 cantilever {tpef_force10 of
+  test-2014: 10x10x100, fixed at z=0, load 0 1000 -123.4 on the four
+  top corners, section at the fixed face z=0, normal 0 0 1, shear0
+  1 0 0, shear1 0 1 0, middle 5 5 0}. Each of the two 10x10x50 cubes
+  is split into 6 tet4. The section result is the free-body statics of the
+  element internal nodal forces at the z=0 nodes, so every element
+  type must give the hex8 values: normal -123.4, shear0 0, shear1
+  1000, moment0 0, moment1 -100000. Targets: the Professional
+  02-08-2026 on this file {tolerance 4e-6 of max{|value|,1}}. Before
+  C84 the GNU integrated every element with the quad/hex helpers:
+  normal 3143.7, shear1 -539.6, moment1 -16896. )
+echo -no
+number_of_space_dimensions 3
+materi_velocity
+materi_displacement
+materi_stress
+end_initia
+
+node 1 0 0 0
+node 2 10 0 0
+node 3 0 10 0
+node 4 10 10 0
+node 5 0 0 50
+node 6 10 0 50
+node 7 0 10 50
+node 8 10 10 50
+node 9 0 0 100
+node 10 10 0 100
+node 11 0 10 100
+node 12 10 10 100
+element 1 -tet4 1 2 4 8
+element 2 -tet4 1 2 6 8
+element 3 -tet4 1 3 4 8
+element 4 -tet4 1 3 7 8
+element 5 -tet4 1 5 6 8
+element 6 -tet4 1 5 7 8
+element 7 -tet4 5 6 8 12
+element 8 -tet4 5 6 10 12
+element 9 -tet4 5 7 8 12
+element 10 -tet4 5 7 11 12
+element 11 -tet4 5 9 10 12
+element 12 -tet4 5 9 11 12
+
+group_type 0  -materi
+group_materi_elasti_young 0  1.e7
+group_materi_elasti_poisson 0  0.0
+group_materi_memory 0  -total_linear
+geometry_quadrilateral 1  0. 0. 0.  10. 0. 0.  0. 10. 0.  10. 10. 0.  1.e-5
+post_element_force 10  0. 0. 1.  1. 0. 0.  0. 1. 0.  5. 5. 0.
+post_element_force_geometry 10  -geometry_quadrilateral 1
+bounda_dof 50 1 -velx
+bounda_time 50 0.
+bounda_dof 51 1 -vely
+bounda_time 51 0.
+bounda_dof 52 1 -velz
+bounda_time 52 0.
+bounda_dof 53 2 -velx
+bounda_time 53 0.
+bounda_dof 54 2 -vely
+bounda_time 54 0.
+bounda_dof 55 2 -velz
+bounda_time 55 0.
+bounda_dof 56 3 -velx
+bounda_time 56 0.
+bounda_dof 57 3 -vely
+bounda_time 57 0.
+bounda_dof 58 3 -velz
+bounda_time 58 0.
+bounda_dof 59 4 -velx
+bounda_time 59 0.
+bounda_dof 60 4 -vely
+bounda_time 60 0.
+bounda_dof 61 4 -velz
+bounda_time 61 0.
+bounda_force 2 9 -vely
+bounda_time 2 0. 250. 100. 250.
+bounda_force 3 9 -velz
+bounda_time 3 0. -30.85 100. -30.85
+bounda_force 4 10 -vely
+bounda_time 4 0. 250. 100. 250.
+bounda_force 5 10 -velz
+bounda_time 5 0. -30.85 100. -30.85
+bounda_force 6 11 -vely
+bounda_time 6 0. 250. 100. 250.
+bounda_force 7 11 -velz
+bounda_time 7 0. -30.85 100. -30.85
+bounda_force 8 12 -vely
+bounda_time 8 0. 250. 100. 250.
+bounda_force 9 12 -velz
+bounda_time 9 0. -30.85 100. -30.85
+control_timestep 30  1.  1.0
+
+target_item 40 -post_element_force_result 10 0
+target_value 40 -123.399999996 4.9e-04
+target_item 41 -post_element_force_result 10 1
+target_value 41 0 4.0e-06
+target_item 42 -post_element_force_result 10 2
+target_value 42 1000 4.0e-03
+target_item 43 -post_element_force_result 10 3
+target_value 43 0 4.0e-06
+target_item 44 -post_element_force_result 10 4
+target_value 44 -100000 4.0e-01
+end_data

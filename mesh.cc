@@ -1001,6 +1001,17 @@ void mesh_extrude( double z_layer[], long int n_layer, long int quad9_layers )
                   mesh_copy_node_item( idat, nodes[inol], nn, ndata_len );
                 }
               }
+              // the plane z also applies to node_start_refined (the copy
+              // above carries the source z; point_el and the geometry
+              // selections read node_start_refined, BACKLOG C57)
+              if ( db_active_index( NODE_START_REFINED, nodes[inol],
+                   VERSION_NORMAL ) ) {
+                db( NODE_START_REFINED, nodes[inol], idum, coords, ndim,
+                  VERSION_NORMAL, GET );
+                coords[2] = zz;
+                db( NODE_START_REFINED, nn, idum, coords, len3,
+                  VERSION_NORMAL, PUT );
+              }
             }
           }
           new_elem++;

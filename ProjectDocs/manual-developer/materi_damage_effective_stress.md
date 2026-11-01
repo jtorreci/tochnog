@@ -101,8 +101,10 @@ yield test reproduces (GNU after the fix: identical). With
 differ in the plastic strain path (`eppxx` 1.368e-4 vs 1.879e-4, `dam`
 0.96946 vs 0.92537; the old GNU had the same strains as the new one). Each
 binary satisfies `sigma = (1-d) C eps_e` with its own strains; the
-remaining difference is in the plasticity/damage iteration order, not in
-the stress law, and is left open (see `BACKLOG-OPEN-ISSUES.md`).
+remaining difference is not in the stress law (an iteration-order cause
+was suspected first). Resolved 2026-10-12: it is the Professional equivalent
+strain defect of BACKLOG C7 (class A; guard test
+`test-2026/damage_mazars_vonmises1`).
 
 ### Damage switched off in a step
 
@@ -180,6 +182,15 @@ for a specific correct form, gamma was left unchanged; it only matters
 when a compressive xx is combined with a same-sign xy or xz. Open item in
 `BACKLOG-OPEN-ISSUES.md`.
 
+Resolved 2026-10-12 (F4 T6f, BACKLOG C7): the Professional difference in
+the last two states is not gamma but the equivalent strain. Both states
+have two positive principal strains, and the Professional accumulates
+them as s = 2 s + eps^2 in ascending order (weights 4, 2, 1; the 2014
+`epseq += epseq + ...` defect fixed in the GNU on 2026-08-10, see
+`group_materi_damage_mazars.md`), which reproduces 14 probes to 7e-14
+with the GNU gamma. The plastic-path difference (`vonmises 3.e6`) is the
+same defect. Deliberate divergence, class A (owner 2026-10-12).
+
 ## Known limitations / pending
 
 - Behaviour change beyond the defect: for damage models the step update
@@ -201,12 +212,22 @@ when a compressive xx is combined with a same-sign xy or xz. Open item in
 
 ## Differences with the Professional version
 
-- **Mazars damage: gamma with shear; damage + early plasticity** (known
-  difference, not decided; BACKLOG C7). GNU: gamma from xx, xy, xz (e.g. dam
-  0.10809); plastic path eppxx 1.879e-4. Professional 02-08-2026: dam
-  0.18752; eppxx 1.368e-4 (Pro gamma matches none of the tried forms).
-  Status: Open, MEDIUM; needs more probes. Index:
+- **Mazars equivalent strain** (deliberate divergence, class A, project
+  decision 2026-10-12; BACKLOG C7). GNU (`damage_mazars()`, `damage.cc`): manual 2.2.5, eps_eq =
+  sqrt(sum <eps_i>+^2) of the positive principal strains (hex8
+  diag(2e-4,-3e-4,1e-4): dam 0.28610207515). Professional 02-08-2026:
+  accumulates them in ascending order as s = 2 s + eps^2 (weights 4, 2, 1;
+  the 2014 accumulation defect the GNU fixed on 2026-08-10): dam 0.36409.
+  It differs whenever two or three principal strains are positive, also
+  through a von Mises + damage path (bar with `vonmises 3e6`: GNU dam
+  0.925372, eppxx 1.87863e-4; Professional 0.96946, 1.368e-4). Guard
+  tests `test-2026/damage_mazars_eq_two_positive1`,
+  `damage_mazars_vonmises1`. Index:
   [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).
+- The triaxiality factor gamma is built from the xx, xy, xz stress
+  components in both codes (`damage.cc:84-95`) (not objective: a compressive xx with xy or xz
+  shear gives an orientation-dependent `dam`). Same in the Professional,
+  so not a divergence; noted in BACKLOG C7, no fix planned.
 - **`-updated` without `materi_displacement`: total strain (damage bar)**
   (known difference, not decided; AUDIT section 5 (known items)). GNU:
   5.99823e-4. Professional 02-08-2026: 6.0e-4 (dam and stress differ ~0.2

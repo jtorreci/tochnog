@@ -1647,6 +1647,19 @@ enum {
   // tochnog-mod.h stay in sync).
   ELEMENT_NORMAL,
   UPDATED_JAUMANN,
+  // group_integration_method -reduced + group_integration_method_reduced_
+  // factor (manual Professional 6.620/6.621, C80 F4 T6f 2026-10-16).
+  // Enum append keeps existing values stable (tochnog.h and
+  // tochnog-mod.h stay in sync).
+  REDUCED,
+  GROUP_INTEGRATION_METHOD_REDUCED_FACTOR,
+  // group_element_selective_reduced_integration -volumetric (C80.1) /
+  // -lambda (C80.2; replaces the removed -both IN PLACE so the
+  // numbering is unchanged) (GNU-only extension, F4 T6f 2026-10-16).
+  // Enum append keeps existing values stable (tochnog.h and
+  // tochnog-mod.h stay in sync).
+  VOLUMETRIC,
+  LAMBDA,
   LAST_DUMMY }; // keep LAST_DUMMY always the last one
 
 #define MDAT LAST_DUMMY+DATA_ITEM_SIZE  // reserve space for unknowns
@@ -1773,10 +1786,21 @@ extern double *solve_b, *solve_x;
 extern long int disp_primary_reference;
 
   // stress recovery (pol() -> general()/materi()): 1 when the last pol()
-  // call resolved the element quadrature to interior GAUSS points, so the
-  // nodal stress recovery must use the Professional's per-element
-  // least-squares fit instead of the (diluted) shape-function weight.
-extern long int stress_recovery_gauss;
+  // call resolved the element quadrature to interior GAUSS points (or a
+  // Lobatto rule not covering every node, C79), so the nodal stress
+  // recovery must use the Professional's per-element least-squares fit
+  // instead of the (diluted) shape-function weight; stress_recovery_lobatto
+  // is 1 for the Lobatto tensor rules (C79). Thread local (polynom.cc).
+extern thread_local long int stress_recovery_gauss;
+extern thread_local long int stress_recovery_lobatto;
+  // C80: iso coordinate magnitude 1/f of the quad4/hex8 -reduced points
+  // (0 for every other rule); read by the nodal recovery fit (miscel.cc)
+extern thread_local double stress_recovery_reduced_iso;
+  // C66 phase 2: HRZ lumped weights of the tria6 just integrated by pol()
+  // (lumped_hrz_active 1; constant per point, sum_g volume_g * weight =
+  // the HRZ nodal mass); used by general()/materi() instead of h
+extern thread_local long int lumped_hrz_active;
+extern thread_local double lumped_hrz_weight[MNOL];
 
   // Nodal stress recovery (2026-09-15, Professional alignment): 1 when the
   // stress dofs are a PURE recovered field (Lagrangian: no convection of
@@ -2044,6 +2068,7 @@ void      input_skip_comment( char str[] );
 long int  integration_gauss( long int niso, double iso[], double weight_iso[]);
 long int  integration_lobatto( long int niso, double iso[], 
             double weight_iso[] );
+double    integration_reduced_factor( long int element_group );
 void      interpolate_geometry( long int geometry_entity[],
             long int node_numbers[], long int n,
             double test_coord[], double tmp_node[],
@@ -2063,7 +2088,6 @@ long int  intersect_line_with_triangle( double line0[], double line1[],
 void      inverse_calculation( long int ipar, long int npar, long int ipar_i,
             long int ipar_n, long int max_time, long int task );
 void      iteration_start( void );
-long int  post_solve_state_pass_gated( long int icontrol );
 void      itoa( int n, char str[] );
 void      locate( void );
 char     *long_to_a( long int i, char str[] );
@@ -2307,6 +2331,7 @@ long int  control_materi_gate_off( long int control_item );
 long int  materi_memory_default( void );
 long int  convection_apply_switch( void );
 long int  materi_apply_gate_off( long int global_item, long int control_item );
+double  materi_dynamic_effective( long int *specified );
 long int  set_swit( long int element, long int inod, const char *routine
  );
 void      slide( void );
@@ -2316,6 +2341,8 @@ long int  solve_direct_symmetric_factor( long int n, double *a,
 long int  solve_direct_symmetric_substi( long int n, double *a, 
             long int band, long int *p, long int *f );
 long int  solve_iterative_bicg( void );
+extern long int solve_iterative_bicg_breakdown;
+void      solve_iterative_bicg_breakdown_report( void );
 void      solve_iterative_bicg_sys( double *Ad1, double *Ad2, double *p_tmp, double *residue );
 void      solve_iterative_bicg_element( long int element, long int ithread );
 void      sort( double val[], double vec[] );
@@ -2329,14 +2356,22 @@ void      spring( long int element, long int name, long int element_group,
             double element_rhside[] );    
  void      interface_convert( long int icontrol );
 long int  stress_indx( long int idim, long int jdim );
+  // sri_active() mode mask (C80.1): shear terms / volumetric part at
+  // 1 centroid point
+#define SRI_SHEAR 1
+#define SRI_VOLUMETRIC 2
+  // C80.2: lambda*m*m^T part at 1 centroid point (-lambda)
+#define SRI_LAMBDA 4
 long int  sri_active( long int element, long int element_group,
             long int name, long int nnol );
 double    sri_stress_recovery_weight( long int sri, long int name,
             long int nnol, long int inol, long int npoint, long int ipoint,
-            double h_inol, double volume );
+            double h_inol, double volume, long int element_group,
+            const long int nodes[] );
 double    strain_recovery_weight( long int sri_on, long int name,
             long int nnol, long int inol, long int npoint, long int ipoint,
-            double h_inol, double volume );
+            double h_inol, double volume, long int element_group,
+            const long int nodes[] );
 void      stress_umat( long int element, long int gr, long int formulation,
             long int nuser_data, double user_data[], double coord_ip[],
             double old_hisv[], double new_hisv[], 

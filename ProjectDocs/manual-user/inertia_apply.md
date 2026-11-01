@@ -56,7 +56,13 @@ active (the corpus examples `large2`/`large3` set both records).
 
 - Lumped masses: every element uses the row-sum lumped mass of its
   integration rule, except the `tet10`, which uses the positive HRZ masses
-  (corner V/36, mid-edge 4V/27) since F4 T4 (2026-10-09).
+  (corner V/36, mid-edge 4V/27) since F4 T4 (2026-10-09), and the
+  `tria6`, which uses HRZ masses since F4 T6f C66 (2026-10-16): plane
+  corner A/19 and mid-side 16A/57, axisymmetric the r-weighted diagonal
+  scaled to 2 pi A r_c, for every `group_integration_points` value.
+  Example: `validation-suite/test-2026/tria6_mass_hrz1.dat` (one tria6 of
+  area 1/2, unit point forces, one step dt 0.01: v = dt/m = 0.38 at a
+  corner, 0.07125 at a mid-side node).
 
 - The default changed from `-yes` (GNU legacy) to `-no` (Professional) in the
   u-p consolidation sprint (2026-09-05, commit `0560dcf`). The legacy GNU
@@ -78,5 +84,16 @@ active (the corpus examples `large2`/`large3` set both records).
   row-sum lumping of its 5-point rule, corner -V/20 and mid-edge V/5;
   the negative corner masses make dynamics unstable (sudden gravity on a
   48-tet10 column: the Professional solver fails, a GNU row-sum build
-  diverges to 5e8). Static results are unaffected. Index:
+  diverges to 5e8). Static results are unaffected.
+- **Lumped mass / capacity of the `tria6`** (deliberate divergence,
+  project owner 2026-10-16; DIVERGENCES TRIA6-HRZ). GNU: positive HRZ
+  lumping of every h-weighted dof (velocity, temperature, pressure,
+  density, the h-weighted state variables): plane corner A/19 and
+  mid-side 16A/57; axisymmetric the r-weighted diagonal int N_i^2 2 pi r
+  dA scaled to 2 pi A r_c; the same masses for every
+  `group_integration_points` value. Professional 02-08-2026: row sum,
+  corner 0 in plane analysis (a free one-element dynamic step fails with
+  a zero pivot), negative corners in axisymmetric analysis (-pi/60 at
+  r = 1 for r = 1..2). Static results are unaffected. Tests
+  `tria6_mass_hrz1`, `tria6_mass_hrz_axisym1`. Index:
   [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).

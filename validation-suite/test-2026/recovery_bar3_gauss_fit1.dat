@@ -1,0 +1,50 @@
+( C67 {F4 T6f, 2026-10-16} bar3 3-point Gauss {default}: per element the linear least-squares fit 1,x in physical coordinates of the point values evaluated at the node, arithmetic mean over the elements {GNU before: h weight, length-weighted}. Prescribed nonlinear velocity at every node of a viscous materi, elements of unequal size, distorted interior nodes. Targets = Professional 02-08-2026 node_dof. GNU before: node 5 sigxx 6.88496 (Professional 7.46606); node 3 sigxx 3.90595 (Professional 4.25918); node 7 sigxx 10.2265 (Professional 10.562); node 1 sigxx 4.20948 (Professional 4.26242). )
+
+echo -no
+number_of_space_dimensions 1
+materi_velocity
+materi_stress
+end_initia
+mesh -fixed_in_space
+inertia_apply -no
+convection_apply -no
+node 1 0.25
+node 2 0.544
+node 3 0.95
+node 4 1.622
+node 5 2.55
+node 6 3.012
+node 7 3.65
+element 1 -bar3 1 2 3
+element 2 -bar3 3 4 5
+element 3 -bar3 5 6 7
+bounda_dof 0 1 -velx
+bounda_time 0 0. 0.637350767076843 10. 0.637350767076843
+bounda_dof 1 2 -velx
+bounda_time 1 0. 1.06165281666037 10. 1.06165281666037
+bounda_dof 2 3 -velx
+bounda_time 2 0. 1.66665491781021 10. 1.66665491781021
+bounda_dof 3 4 -velx
+bounda_time 3 0. 2.720228754784 10. 2.720228754784
+bounda_dof 4 5 -velx
+bounda_time 4 0. 4.65206699447048 10. 4.65206699447048
+bounda_dof 5 6 -velx
+bounda_time 5 0. 5.95391630820605 10. 5.95391630820605
+bounda_dof 6 7 -velx
+bounda_time 6 0. 8.03774450840366 10. 8.03774450840366
+group_type 0 -materi
+group_materi_viscosity 0 1.0
+group_materi_density 0 1.0
+group_materi_elasti_compressibility 0 1.0
+group_materi_memory 0 -updated_linear
+group_integration_method 0 -gauss
+control_timestep 10 1. 1.
+target_item 0 -node_dof 5 -sigxx
+target_value 0 7.466059722579e+00 4.0e-06
+target_item 1 -node_dof 3 -sigxx
+target_value 1 4.259178065210e+00 4.0e-06
+target_item 2 -node_dof 7 -sigxx
+target_value 2 1.056195368178e+01 4.0e-06
+target_item 3 -node_dof 1 -sigxx
+target_value 3 4.262419871129e+00 4.0e-06
+end_data

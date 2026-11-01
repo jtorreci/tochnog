@@ -26,8 +26,8 @@
 
 // Set only while solve() reassembles the full-stiffness auxiliary system of
 // the displacement-primary transient. Element code also recognizes f<1 on
-// the normal pass; this marker preserves that reference configuration while
-// solve() temporarily sets MATERI_DYNAMIC to 1 for the auxiliary pass.
+// the normal pass; this marker preserves that reference configuration and
+// makes materi_dynamic_effective() return 1 for the auxiliary pass.
 long int disp_primary_reference = -NO;
 
 void general( long int element, long int name, long int nnol, long int element_group, 
@@ -52,7 +52,7 @@ void general( long int element, long int name, long int nnol, long int element_g
     // safety/groundflow tests (ground14/15/16) run static in the
     // Professional within the same 1 s window.
     options_inertia=-NO, options_convection=-NO, options_axisymmetric=0,
-    lagrange=0, stokes=-NO, principal_unknown=0, ldum=0, 
+    lagrange=0, stokes=-YES, principal_unknown=0, ldum=0, 
     idum[1], options_mesh[MDIM], dof_type[MUKNWN], dof_principal[MUKNWN];
   double condif_conductivity=0., dens=0.,
     condif_capacity=0., visc=0., vel=0.,
@@ -78,19 +78,22 @@ void general( long int element, long int name, long int nnol, long int element_g
   db( OPTIONS_MESH, 0, options_mesh, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
   options_convection = convection_apply_switch();
   // Nodal stress recovery (2026-09-15): the absolute weighted average is
-  // only valid when the stress dofs are a PURE recovered field. Two cases
-  // keep the historic incremental lumped update:
-  //   - the stress dof is CONVECTED (the local lagrange flag below is 0,
-  //     e.g. strconv1): the absolute assignment would discard the
-  //     transport terms;
-  //   - an INDEPENDENT strain unknown exists (materi_strain_total and the
-  //     plasti/elasti strain variants): the stress dof evolves with that
-  //     unknown (measured: examp9/10/23, where the Pro cannot validate the
-  //     model - unsupported bounda_unknown/options_mesh/contact_geometry -
-  //     and the absolute form changes the adaptive-remesh path).
-  stress_recovery_absolute = ( !materi_strain_total &&
-    ( options_convection==-NO || materi_displacement ||
-      ( materi_velocity && options_mesh[0]==-FOLLOW_MATERIAL ) ) );
+  // only valid when the stress dofs are a PURE recovered field. One case
+  // keeps the historic incremental lumped update: an INDEPENDENT strain
+  // unknown exists (materi_strain_total and the plasti/elasti strain
+  // variants): the stress dof evolves with that unknown (measured:
+  // examp9/10/23, where the Pro cannot validate the model - unsupported
+  // bounda_unknown/options_mesh/contact_geometry - and the absolute form
+  // changes the adaptive-remesh path).
+  // C72 (F4 T6f, 2026-10-13): a CONVECTED stress dof (convection_apply
+  // -yes on a mesh fixed in space) is recovered absolutely too. The
+  // Professional 02-08-2026 never transports the nodal stress: it is the
+  // recovery of the integration-point stress, which is not convected
+  // either (a sigzz pulse stays bit-frozen). The former incremental
+  // convected update was also inconsistent: its lumped mass used the
+  // per-element recovery weight F/volume while the convective term used
+  // h, so the nodal stress moved at about v*volume_ip instead of v.
+  stress_recovery_absolute = !materi_strain_total;
   db( OPTIONS_INERTIA, 0, &options_inertia, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
   {
     // multi-valued record (Professional: one switch per principal dof);
@@ -141,7 +144,15 @@ void general( long int element, long int name, long int nnol, long int element_g
     }
     get_group_data( GROUP_MATERI_VISCOSITY, element_group, element, new_unknowns, 
       &visc, ldum, GET_IF_EXISTS );
-    db( GROUP_MATERI_STOKES, 0, &stokes, ddum, ldum, 
+    // group_materi_stokes (manual Professional 6.752): per element
+    // group, default -yes (record absent), i.e. the momentum convection
+    // term rho v.grad(v) is dropped unless the group says -no (K21 WU2,
+    // 2026-10-12: the Professional 02-08-2026 without the record = -yes,
+    // validation_1 velx 0.1465713). DELIBERATE DIVERGENCE (owner
+    // 2026-10-12, DIVERGENCES STOKES-IDX, class A): the
+    // Professional reads index 0 for every group and ignores the other
+    // indices; GNU follows the manual.
+    db( GROUP_MATERI_STOKES, element_group, &stokes, ddum, ldum, 
       VERSION_NORMAL, GET_IF_EXISTS );
   }
 
@@ -365,28 +376,52 @@ void general( long int element, long int name, long int nnol, long int element_g
           if ( name==-TET10 && npoint==5 && principal_unknown )
             weight = ( inol==0 || inol==2 || inol==5 || inol==9 ) ?
               1./36. : 4./27.;
+          // C66 phase 2 (F4 T6f, 2026-10-16, owner decision; DELIBERATE
+          // DIVERGENCE TRIA6-HRZ): the tria6 lumps EVERY h-weighted dof
+          // (principal dofs and the h-weighted state dofs, whose materi.cc
+          // numerators use the same weight) with HRZ masses (pol():
+          // plane corner A/19, mid-side 16A/57; axisymmetric r-weighted
+          // diagonal scaled to 2 pi A r_c). The Professional row sum gives
+          // zero (plane) / negative (axisymmetric) corner masses. The
+          // recovered dofs below override the weight with their fit. The
+          // groundflow velocity numerator (groundfl.cc) and the condif
+          // absorption (condif.cc) use the same weight (C85, 2026-10-17).
+          if ( lumped_hrz_active )
+            weight = lumped_hrz_weight[inol];
           // K11 (2026-10-06): the strain tensors use the recovery weight
           // of materi.cc (strain_recovery_weight), so numerator and
-          // denominator of the lumped update match
+          // denominator of the lumped update match; kappa too (F4 T6f
+          // WU2, 2026-10-11)
           if ( dof_type[iuknwn]==-MATERI_STRAIN_TOTAL ||
                dof_type[iuknwn]==-MATERI_STRAIN_ELASTI ||
-               dof_type[iuknwn]==-MATERI_STRAIN_PLASTI )
+               dof_type[iuknwn]==-MATERI_STRAIN_PLASTI ||
+               dof_type[iuknwn]==-MATERI_PLASTI_KAPPA ||
+               // C68 (F4 T6f): the other integration-point states
+               dof_type[iuknwn]==-MATERI_PLASTI_KAPPA_SHEAR ||
+               dof_type[iuknwn]==-MATERI_PLASTI_CAP1_HISTORY ||
+               dof_type[iuknwn]==-MATERI_DAMAGE ||
+               dof_type[iuknwn]==-MATERI_PLASTI_RHO ||
+               dof_type[iuknwn]==-MATERI_MAXWELL_STRESS )
             weight = strain_recovery_weight(
               sri_active( element, element_group, name, nnol ), name, nnol,
-              inol, npoint, ipoint, h[inol], volume );
+              inol, npoint, ipoint, h[inol], volume, element_group,
+              nodes );
           if ( dof_type[iuknwn]==-MATERI_STRESS ) {
-            // Convected stress dof (stress_recovery_absolute==0): keep the
-            // 2026-09-13 least-squares recovery weight for the incremental
-            // lumped update.
+            // Incremental stress dof (stress_recovery_absolute==0, an
+            // independent strain unknown exists): keep the 2026-09-13
+            // least-squares recovery weight for the incremental lumped
+            // update.
             long int kcomp = iuknwn - stres_indx;
             if ( sri_active( element, element_group, name, nnol ) ) {
               if ( kcomp==0 || kcomp==3*nder || kcomp==5*nder )
                 weight = sri_stress_recovery_weight( 1, name, nnol, inol,
-                  npoint, ipoint, h[inol], volume );
+                  npoint, ipoint, h[inol], volume, element_group,
+                  nodes );
             }
             else
               weight = sri_stress_recovery_weight( 0, name, nnol, inol,
-                npoint, ipoint, h[inol], volume );
+                npoint, ipoint, h[inol], volume, element_group,
+                nodes );
           }
           double past_dof = old_dof[inol*nuknwn+ipuknwn*nder];
           if ( element_dof_initial_active && ipuknwn<nuknwn )
@@ -400,6 +435,13 @@ void general( long int element, long int name, long int nnol, long int element_g
         }
           
         for ( jdim=0; jdim<ndim; jdim++ ) {
+
+            // C72: an absolutely recovered stress dof is a pure recovery
+            // of the integration-point stress (materi.cc assembles the
+            // numerator in the same element_rhside slot); no convective or
+            // artificial-diffusion terms may be added to it.
+          if ( dof_type[iuknwn]==-MATERI_STRESS && stress_recovery_absolute )
+            continue;
 
             // diffusion: real dissusion
             // diff_part: diffusion term used for determination peclet number
@@ -616,6 +658,27 @@ long int materi_apply_gate_off( long int global_item, long int control_item )
   db( control_item, icontrol, &swit, ddum, ldum, VERSION_NORMAL,
     GET_IF_EXISTS );
   return swit==-NO;
+}
+
+// Effective materi_dynamic factor (C11). control_materi_dynamic with the
+// index of the current timestep (ICONTROL) overrules the global
+// materi_dynamic (manual 6.141: same as materi_dynamic, but only for the
+// timesteps of that control index); default 1 (no record). While solve()
+// reassembles the f=1 auxiliary system of the displacement-primary scheme
+// (disp_primary_reference == -YES) the factor is 1. If specified is not
+// NULL it returns 1 when one of the two records applies, else 0.
+double materi_dynamic_effective( long int *specified )
+{
+  long int icontrol=0, ldum=0, idum[1], spec=0;
+  double f=1., ddum[1];
+  if ( db( MATERI_DYNAMIC, 0, idum, &f, ldum, VERSION_NORMAL,
+      GET_IF_EXISTS ) ) spec = 1;
+  db( ICONTROL, 0, &icontrol, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+  if ( db( CONTROL_MATERI_DYNAMIC, icontrol, idum, &f, ldum,
+      VERSION_NORMAL, GET_IF_EXISTS ) ) spec = 1;
+  if ( specified!=NULL ) *specified = spec;
+  if ( disp_primary_reference==-YES ) return 1.;
+  return f;
 }
 
 // convection_apply switch (K03). Single source of truth for every

@@ -427,7 +427,7 @@ Plus the two bugs found while recovering the 8 (§4).
 | bt_factor | `integration_quadrature_and_stress_recovery.md` §"When a stored reference value changes"; commit `06e175d` (Lobatto → Gauss) | sigyy 20 | 34.641 (= 20·√3) |
 | iface_expansion | `group_interface_materi_expansion_normal.md` + `group_interface.md` 2026-09-04 thermal fix | sigxx 1.984 | 0.998004 |
 | iface_mc_dil, iface_mc_dil_1step | `group_interface.md` 2026-09-03 incremental-dilatancy fix | -2.8065 / -2.82675 | -1.39435 / -1.39338 |
-| iface_mc_num, iface_mc_slip, iface_mc_slip_1step | `group_interface.md`: `ELEMENT_INTERFACE_FORCE_TANG` now stores the **elastic trial** (`interface.cc:711/942`), not the clamped force | 50 / 0 / 0 | 1e6 / 5000 / 5000 |
+| iface_mc_num, iface_mc_slip, iface_mc_slip_1step | `group_interface.md`: `ELEMENT_INTERFACE_FORCE_TANG` now stores the **elastic trial** (`interface.cc:711/942`), not the clamped force (reverted 2026-10-11, F4 T6d C52: the clamped force is stored again and the original targets 50 / 0 / 0 are restored, CORPUS-STALE-TARGETS §6) | 50 / 0 / 0 | 1e6 / 5000 / 5000 |
 | iface_mc_gap | `group_interface.md` 2026-09-04 gap-condition inversion | velix 0 | -100.125 |
 | iface_mc_tension | `group_interface.md` tension-limit fix | velix 3.88 | 100.102 |
 | iface_mc, iface_mc_mem | `group_interface.md` (full-force assembly + solver honesty) | vely 0 | 3.59e9 |

@@ -22,6 +22,11 @@
 
 double *d1, *d2, *p, *Ad1_thread, *Ad2_thread, *p_thread, *residue_thread;
 long int solve_iterative_bicg_use_cg = 0;
+// F4 T6f C74: set by solve_iterative_bicg() when the Bi-CG recurrence broke
+// down (returned 0 from the breakdown exit, solver_bicg_stop -yes); the
+// diagnostics are kept for solve_iterative_bicg_breakdown_report().
+long int solve_iterative_bicg_breakdown = 0;
+static double bicg_breakdown_initial_error = 0., bicg_breakdown_real_residual = 0.;
 #define EPS_dAd 1.e-16
 // FIX A (2026-09-13): scale-relative breakdown test. |d^T A d| is compared
 // against the CURRENT residual energy error = ||residue||^2 instead of the
@@ -33,6 +38,10 @@ long int solve_iterative_bicg_use_cg = 0;
 // systems (dynamic8 second DEV-B solve: dAd ~ 5e-17, error ~ 2e-16).
 #define EPS_dAd_REL 1.e-14
 #define EPS_TMP 1.e-16
+// F4 T6f C77 relative stop (see solve_iterative_bicg)
+#define BICG_FLOOR_FACTOR 100.
+#define BICG_BREAKDOWN_REL 1.e-14
+#define BICG_FLOOR_ACCEPT 1.e-6
 #define EPS_P 1.e-10
 #define EPS_SYMMETRY 1.e-8
 #define MAX_PUKNWN_SYMMETRY 32
@@ -372,6 +381,7 @@ long int solve_iterative_bicg( void )
    *r1=NULL, *r2=NULL, *Ad1=NULL, *Ad2=NULL, *p_tmp=NULL, *residue=NULL;
 
   swit = set_swit(-1,-1,"solve_iterative_bicg");
+  solve_iterative_bicg_breakdown = 0;
   if ( swit ) pri( "In routine SOLVE_ITERATIVE_BICG" );
 
   db_max_index( NODE, max_node, VERSION_NORMAL, GET );
@@ -490,10 +500,27 @@ long int solve_iterative_bicg( void )
   check_error = bicg_error * initial_error;
   if ( swit ) pri( "check_error", check_error );
 
-    // minimum check error
-  if ( !mpc_elim_tighten )
-  db( CONTROL_OPTIONS_SOLVER_BICG_ERROR_MINIMUM, icontrol, idum, &bicg_error_minimum,
-	  ldum, VERSION_NORMAL, GET_IF_EXISTS );
+    // minimum check error (F4 T6f C77). bicg_error_minimum is an ABSOLUTE
+    // floor on the squared preconditioned residual (GNU record, not in the
+    // Professional manual). Before C77 it was always active with the
+    // default 1e-16, together with eps_stop = 1e-16: a solve with a small
+    // right-hand side (a Newton correction, a flow near its steady state)
+    // then stopped far from the relative tolerance (true |b-Ax|/|b| up to
+    // 0.13 measured). Now the floor applies only when the user gives the
+    // record (options_solver_bicg_error_minimum, overwritten by
+    // control_options_solver_bicg_error_minimum) or for the tightened
+    // eliminated tie systems; otherwise the stop is purely relative, with
+    // the round-off floor eps*|A|*|x| below.
+  if ( !mpc_elim_tighten ) {
+    long int has_min = 0;
+    if ( db( OPTIONS_SOLVER_BICG_ERROR_MINIMUM, 0, idum, &bicg_error_minimum,
+           ldum, VERSION_NORMAL, GET_IF_EXISTS ) ) has_min = 1;
+    if ( db( CONTROL_OPTIONS_SOLVER_BICG_ERROR_MINIMUM, icontrol, idum,
+           &bicg_error_minimum, ldum, VERSION_NORMAL, GET_IF_EXISTS ) )
+      has_min = 1;
+    if ( !has_min ) bicg_error_minimum = 0.;
+    eps_stop = 0.;
+  }
   if ( check_error<bicg_error_minimum ) check_error = bicg_error_minimum;
 
     // solver_bicg_stop (manual Professional 6.1051) and
@@ -525,21 +552,16 @@ long int solve_iterative_bicg( void )
   {
     long int matrix_symmetric = -NO;
     long int measured_symmetric = solve_iterative_bicg_symmetric( );
-    // solver_matrix_symmetric -yes (manual Professional 6.1052): the
-    // user asserts the system is symmetric - the per-solve measurement
-    // is bypassed and the symmetric solver (CG) is used. The
-    // Professional symmetrizes the matrix if needed; the GNU runs CG
-    // on the as-assembled matrix, so a warning is printed when the
-    // measurement disagrees with the user's assertion.
     db( SOLVER_MATRIX_SYMMETRIC, 0, &matrix_symmetric, ddum_bs, ldum_bs,
       VERSION_NORMAL, GET_IF_EXISTS );
     if ( matrix_symmetric==-YES ) {
-      // solver_matrix_symmetric -yes (manual Professional 6.1053): the
+      // solver_matrix_symmetric -yes (manual Professional 6.1052): the
       // matrices are symmetrized IF NEEDED so that a symmetric equation
       // solver can be used. The GNU does not re-symmetrize the assembled
       // matrix: when the measurement disagrees with the user's assertion
       // the honest Bi-CG runs on the as-assembled system (it converges
-      // where plain CG on a non-symmetric system diverges).
+      // where plain CG on a non-symmetric system diverges). Deliberate
+      // divergence K24 (DIVERGENCES-PROFESSIONAL.md, class A).
       solve_iterative_bicg_use_cg = measured_symmetric;
       if ( swit ) pri( "solver_matrix_symmetric -yes: using CG" );
       if ( !measured_symmetric ) {
@@ -582,7 +604,23 @@ long int solve_iterative_bicg( void )
     //   error >> check_error). They are removed: a breakdown is a real
     //   singularity, a stagnation just keeps iterating, and a solve that
     //   does not converge within max_iter fails honestly (RC != 0).
+    //
+    // F4 T6f C77 (owner decision 2026-10-15): the stop is RELATIVE.
+    // - convergence: |r|^2 < bicg_error*|r0|^2 (x0 = 0, so |r|/|b| in the
+    //   preconditioned norm), plus the user's absolute bicg_error_minimum
+    //   when given;
+    // - round-off floor: the recomputed residual cannot drop below about
+    //   eps*|A|*|x|; when |r| < BICG_FLOOR_FACTOR*eps*|A|*|x| (|A| = the
+    //   largest |A d|/|d| seen) the iteration stops there;
+    // - breakdown: relative, |r1.r2| < BICG_BREAKDOWN_REL*|r1||r2| or
+    //   |d2.Ad1| < BICG_BREAKDOWN_REL*|d2||Ad1| (Bi-CG), |dAd| <
+    //   EPS_dAd_REL*|r|^2 (CG).
+    //   A floor or breakdown stop is accepted when the true residual
+    //   |b-Ax|/|b| <= BICG_FLOOR_ACCEPT; otherwise it is a breakdown and
+    //   so.cc retries with a direct solver.
   ready=0; max_iter = 10*solve_nlocal; error = 1.e10;
+  long int stop_kind = 0; // 1 round-off floor, 2 breakdown
+  double norm_A = 0.;
   for ( iter=0; !ready; iter++ ) {
     if ( swit ) pri( "iterative solve iteration", iter );
     solve_iterative_bicg_sys( Ad1, Ad2, p_tmp, residue );
@@ -591,12 +629,23 @@ long int solve_iterative_bicg( void )
       cout << iter << " " << error << "\n";
       cout << flush;
     }
-    if ( error<check_error || error<eps_stop ) {
-        // genuine convergence: residual below the (relative) tolerance,
-        // or at machine-zero level (eps_stop = EPS_TMP, except for the
-        // §21 eliminated systems which may go deeper)
+    if ( error<check_error || error<eps_stop || error==0. ) {
+        // genuine convergence: residual below the relative tolerance (or
+        // the user's absolute floor; eps_stop only for the tightened
+        // eliminated tie systems)
       ready = 1;
       break;
+    }
+    {
+      double nd1 = array_inproduct( d1, d1, solve_nlocal );
+      double nAd1 = array_inproduct( Ad1, Ad1, solve_nlocal );
+      if ( nd1>0. && nAd1>norm_A*norm_A*nd1 ) norm_A = sqrt( nAd1/nd1 );
+      double fl = BICG_FLOOR_FACTOR*DBL_EPSILON*norm_A;
+      if ( iter>0 &&
+           error<fl*fl*array_inproduct( solve_x, solve_x, solve_nlocal ) ) {
+        stop_kind = 1;
+        break;
+      }
     }
     if ( iter==max_iter ) {
         // honest failure: no convergence within the iteration limit
@@ -630,31 +679,11 @@ long int solve_iterative_bicg( void )
       dAd = array_inproduct( d1, Ad1, solve_nlocal );
       if ( swit ) pri( "dAd", dAd );
       if ( scalar_dabs(dAd)<EPS_dAd_REL*error ) {
-          // genuine breakdown: d^T A d ~ 0 relative to the current residual
+          // breakdown: d^T A d ~ 0 relative to the current residual
           // energy with a non-converged residual. For a symmetric matrix
-          // this means the system is (numerically) singular or not positive
-          // definite - a real failure, not a "success with x = 0" as in the
-          // old code.
-        real_residual = solve_iterative_bicg_real_residual( residue, norm_b );
-        if ( bicg_stop==-NO ) {
-          pri( "Warning: the iterative solver broke down (d^T A d ~ 0, continuing)." );
-          pri( "This usually means a singular or nearly singular system." );
-          pri( "Relative residual |b-Ax|/|b|", real_residual );
-          ready = 1;
-          break;
-        }
-        pri( "" );
-        pri( "Error: the iterative solver broke down." );
-        pri( "d^T A d ~ 0 with a non-converged residual." );
-        pri( "The system is (numerically) singular or not positive definite." );
-        pri( "The initial error in the linear equations is", initial_error );
-        pri( "The relative residual |b-Ax|/|b| is", real_residual );
-        pri( "That is not good enough.\n\n" );
-        pri( "Probably you have a wrong input file." );
-        pri( "- Not enough boundary conditions?" );
-        pri( "- An invalid element connectivity (negative Jacobians)?" );
-        pri( "- A load in a zero-energy mode of the matrix?\n" );
-        succesful = 0;
+          // this means the system is (numerically) singular or not
+          // positive definite.
+        stop_kind = 2;
         break;
       }
       alpha = error / dAd;
@@ -682,31 +711,16 @@ long int solve_iterative_bicg( void )
         pri( "dAd", dAd );
         pri( "size_r1r2", size_r1r2 );
       }
-      if ( scalar_dabs(size_r1r2)<EPS_TMP || scalar_dabs(dAd)<EPS_dAd ) {
-          // breakdown of the bi-Lanczos recurrence: the system is
-          // (numerically) singular or the biorthogonalisation collapsed.
-          // Reported as a real failure, not as "success".
-        real_residual = solve_iterative_bicg_real_residual( residue, norm_b );
-        if ( bicg_stop==-NO ) {
-          pri( "Warning: the Bi-CG iteration broke down (r1.r2 or d^T A d ~ 0, continuing)." );
-          pri( "This usually means a singular or nearly singular system." );
-          pri( "Relative residual |b-Ax|/|b|", real_residual );
-          ready = 1;
-          break;
-        }
-        pri( "" );
-        pri( "Error: the Bi-CG iteration broke down." );
-        pri( "The bi-Lanczos recurrence collapsed (r1.r2 or d^T A d ~ 0)" );
-        pri( "with a non-converged residual." );
-        pri( "The system is (numerically) singular." );
-        pri( "The initial error in the linear equations is", initial_error );
-        pri( "The relative residual |b-Ax|/|b| is", real_residual );
-        pri( "That is not good enough.\n\n" );
-        pri( "Probably you have a wrong input file." );
-        pri( "- Not enough boundary conditions?" );
-        pri( "- An invalid element connectivity (negative Jacobians)?" );
-        pri( "- A load in a zero-energy mode of the matrix?\n" );
-        succesful = 0;
+      double nr1 = sqrt( array_inproduct( r1, r1, solve_nlocal ) );
+      double nr2 = sqrt( array_inproduct( r2, r2, solve_nlocal ) );
+      double nd2 = sqrt( array_inproduct( d2, d2, solve_nlocal ) );
+      double nAd1 = sqrt( array_inproduct( Ad1, Ad1, solve_nlocal ) );
+      if ( scalar_dabs(size_r1r2)<=BICG_BREAKDOWN_REL*nr1*nr2 ||
+           scalar_dabs(dAd)<=BICG_BREAKDOWN_REL*nd2*nAd1 ) {
+          // breakdown of the bi-Lanczos recurrence (scale-relative test,
+          // C77): the system is (numerically) singular or the
+          // biorthogonalisation collapsed.
+        stop_kind = 2;
         break;
       }
       alpha = size_r1r2 / dAd;
@@ -728,6 +742,31 @@ long int solve_iterative_bicg( void )
         pri( "d1", d1, solve_nlocal );
         pri( "d2", d2, solve_nlocal );
       }
+    }
+  }
+  if ( stop_kind ) {
+      // round-off floor or breakdown: accept the iterate when its true
+      // residual is small enough, otherwise report a breakdown (so.cc
+      // retries with a direct solver; solver_bicg_stop -no keeps it)
+    real_residual = solve_iterative_bicg_real_residual( residue, norm_b );
+    if ( real_residual<=BICG_FLOOR_ACCEPT ) {
+      if ( swit ) pri( "stop at the round-off floor, accepted", real_residual );
+    }
+    else if ( bicg_stop==-NO ) {
+      pri( "Warning: the iterative solver broke down (continuing)." );
+      pri( "This usually means a singular or nearly singular system." );
+      pri( "Relative residual |b-Ax|/|b|", real_residual );
+    }
+    else {
+        // F4 T6f C74: the error block is NOT printed here. The caller
+        // (so.cc) retries the solve with a direct solver; only when that
+        // retry fails too (or when there is no retry) does it print the
+        // block, with solve_iterative_bicg_breakdown_report(). A rescued
+        // breakdown gets one warning line from the caller.
+      solve_iterative_bicg_breakdown = 1;
+      bicg_breakdown_initial_error = initial_error;
+      bicg_breakdown_real_residual = real_residual;
+      succesful = 0;
     }
   }
   length = 1;
@@ -1082,4 +1121,26 @@ void solve_iterative_bicg_element( long int element, long int ithread )
     if ( use_group_matrix ) delete[] element_matrix_unknowns;
   }
 
+}
+
+// F4 T6f C74: full diagnostic of a Bi-CG breakdown (r1.r2 or d^T A d ~ 0
+// with a non-converged residual), printed by the caller only when the
+// breakdown is NOT rescued by the direct band LU retry (so.cc). Before C74
+// it was printed inside solve_iterative_bicg() for every breakdown, also
+// for the ones the LU retry solved exactly (599 times on validation_1).
+void solve_iterative_bicg_breakdown_report( void )
+
+{
+  pri( "" );
+  pri( "Error: the iterative solver broke down." );
+  pri( "The recurrence collapsed (a scalar product ~ 0 relative to its" );
+  pri( "vectors) with a non-converged residual." );
+  pri( "The system is (numerically) singular." );
+  pri( "The initial error in the linear equations is", bicg_breakdown_initial_error );
+  pri( "The relative residual |b-Ax|/|b| is", bicg_breakdown_real_residual );
+  pri( "That is not good enough.\n\n" );
+  pri( "Probably you have a wrong input file." );
+  pri( "- Not enough boundary conditions?" );
+  pri( "- An invalid element connectivity (negative Jacobians)?" );
+  pri( "- A load in a zero-energy mode of the matrix?\n" );
 }

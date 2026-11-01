@@ -1,0 +1,70 @@
+( K21 {F4 T6f, 2026-10-12} nodal stress recovery of the quad9 with 4 Gauss points {sfnet incnav4, p-refined Poiseuille}: the Professional 02-08-2026 fits 1,x,y by least squares in physical coordinates per element; sigxy is independent of x, Professional 0.05 at nodes 1 and 3 {GNU before: 0.02 / 0.08}. )
+
+( Poiseuille flow.
+  Analytical: v = 1/{2*viscosity} * dpres/dx * y * { 1-y }
+  and v{y=0.5} = 3/2 * Q/h with Q is the flow volume.
+  Here: viscosity=0.01, h=1, Q=1.
+  Thus at x=5.0,y=0.5: v=3/2.
+  The inflow velocities are chosen such that after the refinement
+  the volume flow at the inflow edge is 1. )
+
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_stress
+end_initia
+
+mesh -fixed_in_space -fixed_in_space
+inertia_apply -no
+processors 1
+
+node 1  0.00 0.00
+node 2  5.00 0.00
+node 3  0.00 1.00
+node 4  5.00 1.00
+element 1  -quad4 1 2 3 4
+
+(lower edge)
+geometry_line 0  0.0000 0.0000 5.0000 0.0000  1.e-4
+(upper edge)
+geometry_line 1  0.0000 1.0000 5.0000 1.0000  1.e-4
+(left edge)
+geometry_line 2  0.0000 0.0000 0.0000 1.0000  1.e-4
+(right edge)
+geometry_line 3  5.0000 0.0000 5.0000 1.0000  1.e-4
+(lower + upper edge)
+geometry_set 0  -geometry_line 0 -geometry_line 1
+
+bounda_dof 1  -geometry_set 0 -velx -vely
+bounda_time    1  0. 0. 1.e6 0.
+bounda_dof 2  -geometry_line 2 -velx
+bounda_time    2  0. 1. 1.e6 1.
+bounda_dof 3  -geometry_line 3 -vely
+bounda_time    3  0. 0. 1.e6 0.
+
+group_type 0  -materi
+group_materi_density 0  1.
+group_materi_viscosity 0  0.01
+group_materi_elasti_compressibility 0  1.e-3
+group_materi_memory 0  -updated_linear
+group_integration_points 0  -minimal
+group_integration_method 0  -gauss
+
+post_point 0  5. 0.5
+print_filter 0  -post_point_dof 0 -velx -sigxx
+
+control_mesh_refine_globally         10  -p_refinement
+
+control_timestep                     20  0.1 0.1e1
+(
+control_print                        20  -time_current -post_point_dof
+control_print_history                20 -post_point_dof 0 -velx
+)
+
+
+
+target_item 0 -node_dof 1 -sigxy
+target_value 0 5.0e-02 1.0e-06
+target_item 1 -node_dof 3 -sigxy
+target_value 1 5.0e-02 1.0e-06
+end_data

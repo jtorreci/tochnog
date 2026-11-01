@@ -44,3 +44,10 @@ per node.
 
 Test `dofrhside` (validation-suite/test-2014): smoke — the file
 `velx_rhside.20` is generated and parseable (x y rhs columns in 2D).
+
+Test `dof_rhside_derivatives1` (validation-suite/test-2026, F4 T6a,
+BACKLOG C55): with the `derivatives` initialisation every primary dof
+file holds its own right-hand side (before, the files after the first
+showed the column of another dof and garbage at the end). Values =
+Professional 02-08-2026 (`vely_rhside` +-1.0416667, `sigyy_rhside`
+-2.0833333).

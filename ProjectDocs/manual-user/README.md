@@ -66,6 +66,7 @@ page lists its own in "Differences with the Professional version".
 - [postprocess.py](postprocess_py.md) — Python tool for post-processing the tabular SQLite database.
 - [control_print_data_versus_data_factor](control_print_data_versus_data_factor.md) — multiply data-versus-data output values.
 - [force_point](force_point.md) — point force anywhere in space.
+- [post_point](post_point.md) — solution interpolated at a point of the mesh (`post_point_dof`).
 - [post_point_move](post_point_move.md) — let a post point follow the material.
 
 ## Phase 2 features
@@ -118,6 +119,8 @@ page lists its own in "Differences with the Professional version".
 - [group_materi_expansion_linear](group_materi_expansion_linear.md) — linear and volumetric thermal expansion.
 - [group_materi_plasti_visco_exponential](group_materi_plasti_visco_exponential.md) — viscoplasticity (exponential / power / always).
 - [group_materi_plasti_visco_power](group_materi_plasti_visco_power.md) — viscoplasticity power law (6.748): `eta p` (Professional) or legacy `eta p f_ref`; eps_dot_pl = eta*f^p. Unlocks visc_pl1/visc_pl2/validation_12.
+- [group_materi_plasti_mohr_coul](group_materi_plasti_mohr_coul.md) — classic Mohr-Coulomb (6.725): yield/flow with phi, c, phi_flow; differences: MC-VERTEX-ZZ (vertex sigzz/eppzz, class A).
+- [group_materi_membrane](group_materi_membrane.md) — plane stress (6.685); eptzz = total zz strain (elastic + plastic); differences: MEMBRANE-EPTZZ (class A).
 - [group_materi_plasti_mohr_coul_direct](group_materi_plasti_mohr_coul_direct.md) — direct stress cut-off Mohr-Coulomb/tension: full principal-stress mode (6.726/6.738: spectral tension cap + MC difference cut with the non-assoc phi_flow) or plane-traction mode (6.727/6.739: separate tension and MC planes, tension first with default sigy 0, phi_flow return with k = (M/G) tan(phi_flow); divergence from the Pro constant 2 documented).
 - [group_materi_plasti_mohr_coul_hardening_softening](group_materi_plasti_mohr_coul_hardening_softening.md) — Mohr-Coulomb classic with linear hardening/softening of c and phi with kappa.
 - [group_materi_plasti_cap2](group_materi_plasti_cap2.md) — Professional name of the cap plasticity (c phi alpha R + epsilonp_v/pb table), alias of the GNU cap.
@@ -298,16 +301,17 @@ page lists its own in "Differences with the Professional version".
 
 ## Integración reducida selectiva (SRI) para quad4
 
-- [group_element_selective_reduced_integration](group_element_selective_reduced_integration.md) — opt-in fix of the classic shear locking of the bilinear quad4 (2D) and the trilinear hex8 (3D) in bending (Hughes): the shear terms are integrated with 1 Gauss point at the centroid, the normal terms with the full Gauss rule (2×2 / 2×2×2). Elastic quad4/hex8 only. Measured: 2D cantilever 0.9375× of P·L (fix C/D); 3D cantilever 0.897× of the Euler-Bernoulli deflection vs 0.221× locked (family qsri3d). KNOWN LIMITATION (hex8): the shear-only SRI retains zero-energy twist/warping modes (see the developer manual).
+- [group_element_selective_reduced_integration](group_element_selective_reduced_integration.md) — opt-in fix of the classic shear locking of the bilinear quad4 (2D) and the trilinear hex8 (3D) in bending (Hughes): the shear terms are integrated with 1 Gauss point at the centroid, the normal terms with the full Gauss rule (2×2 / 2×2×2). Elastic quad4/hex8 only. Measured: 2D cantilever 0.9375× of P·L (fix C/D); 3D cantilever 0.897× of the Euler-Bernoulli deflection vs 0.221× locked (family qsri3d). KNOWN LIMITATION (hex8): the shear-only SRI retains zero-energy twist/warping modes (see the developer manual). GNU-only. C80.1 (2026-10-16): `-volumetric` (B-bar: volumetric part at 1 centroid point, removes the volumetric locking of near-incompressible plane-strain/3D groups: Lamé ν=0.4999 −0.19 % vs Gauss −80 %, no pressure checkerboard, no hourglass). C80.2 (2026-10-16): `-lambda` (Hughes 1977 λ/μ split, isotropic elastic only: only λ·(tr ε)² at the centroid point; Lamé ν=0.4999 −0.24 %, coarse plane-strain cantilever 10×1 −4.9 % vs `-volumetric` +22 % and Gauss −36 %); `-both` removed (input error). Comparison with `-reduced` and guidance on the value in the page.
 
 ## Integration quadrature + nodal stress recovery (2026-09-13)
 
-- [integration_quadrature_and_stress_recovery](integration_quadrature_and_stress_recovery.md) — the default element integration is now the Gauss rule (2×2 quad4 / 2×2×2 hex8, 3×3 quad9 / 3×3×3 hex27), matching Tochnog Professional, and the nodal stresses are recovered with the Professional's per-element least-squares fit assembled as the arithmetic mean. Axisymmetric groups use the same rule since F4 T4 (no forced 1-point rule; quad9 accepted), and the `tet10` uses the Professional Keast 5-point rule with positive HRZ lumped masses (deliberate divergence). The `group_integration_method` / `group_integration_points` records still override the rule. Stored reference values produced under the old Lobatto default can change; recalibrate them against the Professional.
+- [group_integration_method_reduced](group_integration_method_reduced.md) — `group_integration_method -reduced` with `group_integration_method_reduced_factor` (manual 6.620/6.621, F4 T6f C80 2026-10-16): quad4/hex8 points at iso ±1/f with equal weights, quad9/hex27 Lobatto (or 2-point Gauss with `-minimal`), linear-fit nodal recovery; default factor 10 as the manual (the Professional applies 1, deliberate divergence). Warning: a high factor leaves hourglass modes free (one-element-thick bending +2100 %, zig-zag under point loads) with no solver warning; f ≈ 2 is best in bending.
+- [integration_quadrature_and_stress_recovery](integration_quadrature_and_stress_recovery.md) — the default element integration is now the Gauss rule (2×2 quad4 / 2×2×2 hex8, 3×3 quad9 / 3×3×3 hex27), matching Tochnog Professional, and the nodal stresses are recovered with the Professional's per-element least-squares fit assembled as the arithmetic mean. Axisymmetric groups use the same rule since F4 T4 (no forced 1-point rule; quad9 accepted), and the `tet10` uses the Professional Keast 5-point rule with positive HRZ lumped masses (deliberate divergence). The `group_integration_method` / `group_integration_points` records still override the rule. Stored reference values produced under the old Lobatto default can change; recalibrate them against the Professional. An axisymmetric `-lobatto` element touching the axis is integrated with Gauss, as the Professional (C71, 2026-10-13); the `-lobatto` quad4 nodal recovery is still volume weighted (C79). The `tria6` uses the manual 7 / 4-point rules with the Professional linear-fit recovery and accepts axisymmetric groups, with positive HRZ lumped masses (deliberate divergence TRIA6-HRZ; C66, 2026-10-16).
 
 ## Sprint 12 lote 3 — solver global + pequeños
 
 - [solver](solver.md) — the GLOBAL solver type (manual 6.1047): overwrites every control_solver; the plain `solver_*` family (bicg_error/bicg_restart/bicg_stop/matrix_save/matrix_symmetric/pardiso×4, 6.1048-6.1056) with the wired/partial status of each.
-- [solver_matrix_symmetric](solver_matrix_symmetric.md) — symmetrization switch of the bicg family (6.1053): honest Bi-CG on the as-assembled matrix when the measured system is NOT symmetric under `-yes` (CG diverges there); unlocks large2/large3 coupled consolidation.
+- [solver_matrix_symmetric](solver_matrix_symmetric.md) — symmetrization switch of the bicg family (6.1052): honest Bi-CG on the as-assembled matrix when the measured system is NOT symmetric under `-yes` (CG diverges there); unlocks large2/large3 coupled consolidation. The GNU does not symmetrize: deliberate divergence K24 (2026-10-11) on coupled consolidation.
 - [timestep_predict_velocity](timestep_predict_velocity.md) — previous-velocity prediction (6.1089, PARTIAL in the GNU) + `timestep_iterations_automatic_apply` (6.1090): -no neglects every control_timestep_iterations_automatic.
 - [tochnog_version](tochnog_version.md) — the build date as a queryable record (day, month, year; 6.1091).
 - [volume_factor_x](volume_factor_x.md) — piecewise-constant volume factor in x (6.1094): thickness/area by x intervals.
@@ -349,9 +353,9 @@ page lists its own in "Differences with the Professional version".
 
 ## Dinamica: materi_acceleration / materi_dynamic / condicionales / registros
 
-- [inertia_apply](inertia_apply.md) - global switch of the principal-dof inertia terms (material mass, heat capacity, groundflow storage). Default -no (Professional semantics, manual 6.785); the GNU legacy -yes default made density-bearing models pseudo-dynamic. Unlocks ground14/15/16 (rc=0, drained state in the 1 s window).
+- [inertia_apply](inertia_apply.md) - global switch of the principal-dof inertia terms (material mass, heat capacity, groundflow storage). Default -no (Professional semantics, manual 6.785); the GNU legacy -yes default made density-bearing models pseudo-dynamic. Unlocks ground14/15/16 (rc=0, drained state in the 1 s window). The `tet10` and the `tria6` use positive HRZ lumped masses (deliberate divergences TET10-HRZ, TRIA6-HRZ).
 - [materi_acceleration](materi_acceleration.md) - los dofs de aceleracion (manual 4.11): records derivados acc = (v_new - v_old)/dt; bounda_dof -accx impone el bound de velocidad v_new = v_old + a*dt (base excitation). Unlocks dynamic3/dynamic4 (rc=0) y el parse de dynamic2/5/6/7/8, earthquake_1/2/3, smc_1/2.
-- [materi_dynamic](materi_dynamic.md) - el factor de mezcla temporal sigma = (1-f)*sigma(t) + f*sigma(t+dt) (6.800) y control_materi_dynamic (6.141). Implementado en materi() y truss(); f=1 = esquema historico byte-identico. Los tests dynamic1/2/5/8 siguen RUNFAIL por el esquema de velocidades del GNU (bloqueador de solver, no de parse).
+- [materi_dynamic](materi_dynamic.md) - el factor de mezcla temporal sigma = (1-f)*sigma(t) + f*sigma(t+dt) (6.800) y control_materi_dynamic (6.141). Implementado en materi() y truss(); f=1 = esquema historico byte-identico. Los tests dynamic1/2/5/8 siguen RUNFAIL por el esquema de velocidades del GNU (bloqueador de solver, no de parse). C11 (2026-10-11): control_materi_dynamic also drives the displacement-primary scheme (= Professional).
 - [start_if_not](start_if_not.md) - bloques condicionales start_if_not ... end_if_not del data part (con start_if ... end_if ya existente).
 - [bounda_time_smc](bounda_time_smc.md) - familia de acelerogramas SMC registrada y parseada; el lector esta PENDIENTE (fallo honesto en runtime).
 
@@ -366,7 +370,8 @@ page lists its own in "Differences with the Professional version".
 
 ## KEYWORDS BATCH C (2026-09-04) — clusters pequeños de keywords del corpus
 
-- [group_spring_memory](group_spring_memory.md) — memory model of springs (6.765); accepted (GNU spring = -updated_linear; -total_linear coincides in 1D). Unlocks spring1 (rc=0).
+- [group_spring_memory](group_spring_memory.md) — memory model of springs (6.765); accepted, the spring law is the same projection for every value (= Professional).
+- [group_spring_direction](group_spring_direction.md) — spring direction (6.764): elongation projected on it, initial axis without the record (C88).
 - [group_spring_stiffness_nonlinear](group_spring_stiffness_nonlinear.md) — nonlinear spring stiffness diagram (6.768); midpoint-strain integration EXACT for linear diagrams. Unlocks spring6 (rc=0).
 - [element_spring_strain](element_spring_strain.md) — output record: total spring elongation per element.
 - [dependency_apply](dependency_apply.md) — global switch of the dependency_item/dependency_diagram machinery (6.125).
@@ -402,7 +407,7 @@ page lists its own in "Differences with the Professional version".
 
 - [group_truss_expansion](group_truss_expansion.md) — thermal expansion of trusses (manual 6.775): the mechanical stretch subtracts the free thermal increment alpha*dT*L0. Unlocks truss11 (force -2 EXACT) and truss15 rc=0.
 - [group_truss_initial_force](group_truss_initial_force.md) — pre-tension of truss elements from the moment they come to life (manual 6.776); no initial strain. Unlocks truss12 rc=0.
-- [group_truss_memory](group_truss_memory.md) — truss kinematics: -updated / -total (geometrically nonlinear; -total = Pro truss14, N = EA (L-L0)/L0) / -updated_linear / -total_linear; tension geometric stiffness in the matrix (K17, 2026-10-06).
+- [group_truss_memory](group_truss_memory.md) — truss kinematics: -updated / -total (geometrically nonlinear; -total = Pro truss14, N = EA (L-L0)/L0) / -updated_linear / -total_linear; tension geometric stiffness in the matrix (K17, 2026-10-06). Default (C11, 2026-10-11): -total_linear with materi_displacement, -updated_linear without (= Professional).
 - [group_time](group_time.md) — element group birth/death times; since 2026-10-06 (C39, Pro truss8) a node whose elements are all inactive is not driven by its bounda_dof and stays at rest.
 - [post_calcul_k0](post_calcul_k0.md) — post_calcul -materi_stress -k0 (manual 6.901): ratio horizontal/vertical stress; output item -k0_sig. Unlocks k0 rc=0.
 - [element_dof_initial](element_dof_initial.md) — past dofs of an element at its birth step (manual 6.422); the transient inertia integrates from them. Unlocks phase1 rc=0.
@@ -449,7 +454,7 @@ page lists its own in "Differences with the Professional version".
 
 ## NODAL STRESS RECOVERY (2026-09-15)
 
-- [nodal_stress_recovery](nodal_stress_recovery.md) — the stress reported at a node is the absolute weighted average of the adjacent elements' nodal stresses (Professional convention). Visible with partially deleted/reactivated elements: `delete2.dat` shared node 2 `sigxx` is now `0.8` (was `0.6`); a currently deleted element is excluded from the recovery (`delete3.dat` `sigyy = 0.6` on the shared nodes).
+- [nodal_stress_recovery](nodal_stress_recovery.md) — the stress reported at a node is the absolute weighted average of the adjacent elements' nodal stresses (Professional convention). Visible with partially deleted/reactivated elements: `delete2.dat` shared node 2 `sigxx` is now `0.8` (was `0.6`); a currently deleted element is excluded from the recovery (`delete3.dat` `sigyy = 0.6` on the shared nodes). Since F4 T6f (2026-10-11) the tria3/tria6/tet4 and 1-point bar2 nodes are the arithmetic mean too (before area-weighted; `tria3_nodal_recovery_mean1`).
 
 ## NODAL STRESS POST-SOLVE SYNC (2026-09-15)
 
@@ -486,6 +491,8 @@ page lists its own in "Differences with the Professional version".
 ## K11 NODAL STRAIN RECOVERY (2026-10-06)
 
 - [nodal_strain_recovery](nodal_strain_recovery.md) — the nodal total/elastic/plastic strains are recovered with the same operator as the stress (Professional least-squares fit): clamped-edge eptyy 0 exact, strain and stress fields consistent, = Professional.
+- [materi_plasti_kappa](materi_plasti_kappa.md) — the kap dof (size of the plastic strain, manual 4.24), isotropic hardening parameter; kept per integration point since F4 T6f (validation_3 = Professional within 0.06 %).
+- [materi_plasti_rho](materi_plasti_rho.md) — the kinematic hardening tensor rho (manual 4.27); kept per integration point since C68 (2026-10-12), as kapsh, the cap1 pc, the damage and the Maxwell stresses.
 
 ## K13 DIRECT PLASTICITY STATE OUTPUT (2026-10-06)
 
@@ -522,3 +529,28 @@ page lists its own in "Differences with the Professional version".
 
 - [matrix_pardiso](matrix_pardiso.md) — `-matrix_pardiso` is solved with SuperLU, Bi-CG fallback when the factorization fails (memory budget 70 % of the room); GNU default stays the Bi-CG (class B divergence).
 - [solver_bicg_csr_operator](solver_bicg_csr_operator.md) — the iterative solver multiplies with an assembled CSR matrix (about 5x faster per iteration in 3D, same results up to round-off); `options_processors` row blocks; element-by-element fallback for mpc ties.
+
+## F4 T6a — cheap batch (2026-10-11)
+
+- [input_word_length](input_word_length.md) — input words are at most 99 characters: longer words are allowed inside comments (read in pieces) and are an input error elsewhere (F4 T6a, BACKLOG C56).
+- [post_calcul_size_tot](post_calcul_size_tot.md) — `post_calcul` `-size_tot` = sqrt(Aij Aij) and `-size_dev` = sqrt(Bij Bij) as the manual and the Professional (F4 T6a; before sqrt(0.5 ...)).
+
+## F4 T6c — control_restart (2026-10-11)
+
+- [control_restart](control_restart.md) — restart from the initial state: undeformed mesh, initial node dofs, initial time and (since F4 T6c) a fresh integration-point state, as the manual 6.368 and the Professional.
+
+## F4 T6f — ranges (2026-10-12)
+
+- [ranges](ranges.md) — `-ra ... -ra` syntax: lists, `-from/-to` blocks (several, `a` = `b` allowed), `-step`; `-ra a b -ra` is a LIST, not a..b. Index `-step`, single and two-block ranges, descending and `9.0` errors now as the Professional.
+
+## F4 T6f — K21 WU2 group_materi_stokes (2026-10-12)
+
+- [group_materi_stokes](group_materi_stokes.md) — Stokes flow per element group (no momentum convection): default `-yes` as manual 6.752 and the Professional (before: `-no`); read per element group (the Professional uses index 0 for every group, class A divergence STOKES-IDX).
+
+## F4 T6f — LOW queue (2026-10-17)
+
+- [data_item_type_check](data_item_type_check.md) — `post_node`, `post_integrate`, `control_repeat_save`, `control_repeat_until_item` and `control_print_element` require a DOUBLE PRECISION data item; an INTEGER item is an input error (BACKLOG C54).
+
+## F4 T6f — C84 post_element_force (2026-10-17)
+
+- [post_element_force](post_element_force.md) — normal force, shear forces and moments of a cross section from the element nodal forces (manual 6.927); every continuum element type (tria/tet/prism through their own rule), 2D record of 6 values with a 3-value result, axisymmetric ring forces, as the Professional.

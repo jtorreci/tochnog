@@ -1,0 +1,168 @@
+( K21 {F4 T6f, 2026-10-12} plane quad4 2x2 Gauss recovery on distorted elements: the Professional 02-08-2026 fits 1,x,y by least squares in PHYSICAL coordinates {not the iso bilinear extrapolation}. Prescribed velocity at every node; nodes 21 and 24 belong to the distorted element 6 only. Targets = Professional node_dof {GNU before: 1.1829 / 5.0343}. )
+
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_stress
+end_initia
+mesh -fixed_in_space -fixed_in_space
+inertia_apply -no
+node 1 0 0
+node 2 1 0
+node 3 0 1
+node 4 1 1
+node 5 1 0
+node 6 2 0
+node 7 1 1
+node 8 2 1
+node 9 2 0
+node 10 3 0
+node 11 2 1
+node 12 3 1
+node 13 0.001 2
+node 14 1.001 2
+node 15 0.001 3
+node 16 1.001 3
+node 17 1e-06 4
+node 18 1.000001 4
+node 19 1e-06 5
+node 20 1.000001 5
+node 21 0.5 6
+node 22 1.5 6
+node 23 0.7 7
+node 24 2.3 7.6
+node 25 2 6
+node 26 3 6.2
+node 27 2.1 7
+node 28 3.6 7.3
+element 1 -quad4 1 2 3 4
+element 2 -quad4 5 6 7 8
+element 3 -quad4 9 10 11 12
+element 4 -quad4 13 14 15 16
+element 5 -quad4 17 18 19 20
+element 6 -quad4 21 22 23 24
+element 7 -quad4 25 26 27 28
+bounda_dof 0 -ra 1 -ra -velx
+bounda_time 0 0. 0.0 10. 0.0
+bounda_dof 1 -ra 1 -ra -vely
+bounda_time 1 0. 0.0 10. 0.0
+bounda_dof 2 -ra 2 -ra -velx
+bounda_time 2 0. 0.1 10. 0.1
+bounda_dof 3 -ra 2 -ra -vely
+bounda_time 3 0. 0.0 10. 0.0
+bounda_dof 4 -ra 3 -ra -velx
+bounda_time 4 0. 0.0 10. 0.0
+bounda_dof 5 -ra 3 -ra -vely
+bounda_time 5 0. -0.05 10. -0.05
+bounda_dof 6 -ra 4 -ra -velx
+bounda_time 6 0. 0.4 10. 0.4
+bounda_dof 7 -ra 4 -ra -vely
+bounda_time 7 0. 0.25 10. 0.25
+bounda_dof 8 -ra 5 -ra -velx
+bounda_time 8 0. 0.1 10. 0.1
+bounda_dof 9 -ra 5 -ra -vely
+bounda_time 9 0. 0.0 10. 0.0
+bounda_dof 10 -ra 6 -ra -velx
+bounda_time 10 0. 0.4 10. 0.4
+bounda_dof 11 -ra 6 -ra -vely
+bounda_time 11 0. 0.0 10. 0.0
+bounda_dof 12 -ra 7 -ra -velx
+bounda_time 12 0. 0.4 10. 0.4
+bounda_dof 13 -ra 7 -ra -vely
+bounda_time 13 0. 0.25 10. 0.25
+bounda_dof 14 -ra 8 -ra -velx
+bounda_time 14 0. 1.6 10. 1.6
+bounda_dof 15 -ra 8 -ra -vely
+bounda_time 15 0. 0.75 10. 0.75
+bounda_dof 16 -ra 9 -ra -velx
+bounda_time 16 0. 0.4 10. 0.4
+bounda_dof 17 -ra 9 -ra -vely
+bounda_time 17 0. 0.0 10. 0.0
+bounda_dof 18 -ra 10 -ra -velx
+bounda_time 18 0. 0.9000000000000001 10. 0.9000000000000001
+bounda_dof 19 -ra 10 -ra -vely
+bounda_time 19 0. 0.0 10. 0.0
+bounda_dof 20 -ra 11 -ra -velx
+bounda_time 20 0. 1.6 10. 1.6
+bounda_dof 21 -ra 11 -ra -vely
+bounda_time 21 0. 0.75 10. 0.75
+bounda_dof 22 -ra 12 -ra -velx
+bounda_time 22 0. 3.5999999999999996 10. 3.5999999999999996
+bounda_dof 23 -ra 12 -ra -vely
+bounda_time 23 0. 1.4500000000000002 10. 1.4500000000000002
+bounda_dof 24 -ra 13 -ra -velx
+bounda_time 24 0. 1.0000000000000001e-07 10. 1.0000000000000001e-07
+bounda_dof 25 -ra 13 -ra -vely
+bounda_time 25 0. 0.0 10. 0.0
+bounda_dof 26 -ra 14 -ra -velx
+bounda_time 26 0. 0.10020009999999999 10. 0.10020009999999999
+bounda_dof 27 -ra 14 -ra -vely
+bounda_time 27 0. 0.0 10. 0.0
+bounda_dof 28 -ra 15 -ra -velx
+bounda_time 28 0. 4e-07 10. 4e-07
+bounda_dof 29 -ra 15 -ra -vely
+bounda_time 29 0. -0.0497999 10. -0.0497999
+bounda_dof 30 -ra 16 -ra -velx
+bounda_time 30 0. 0.40080039999999995 10. 0.40080039999999995
+bounda_dof 31 -ra 16 -ra -vely
+bounda_time 31 0. 0.2504001 10. 0.2504001
+bounda_dof 32 -ra 17 -ra -velx
+bounda_time 32 0. 9.999999999999999e-14 10. 9.999999999999999e-14
+bounda_dof 33 -ra 17 -ra -vely
+bounda_time 33 0. 0.0 10. 0.0
+bounda_dof 34 -ra 18 -ra -velx
+bounda_time 34 0. 0.10000020000009999 10. 0.10000020000009999
+bounda_dof 35 -ra 18 -ra -vely
+bounda_time 35 0. 0.0 10. 0.0
+bounda_dof 36 -ra 19 -ra -velx
+bounda_time 36 0. 3.9999999999999996e-13 10. 3.9999999999999996e-13
+bounda_dof 37 -ra 19 -ra -vely
+bounda_time 37 0. -0.0499997999999 10. -0.0499997999999
+bounda_dof 38 -ra 20 -ra -velx
+bounda_time 38 0. 0.40000080000039995 10. 0.40000080000039995
+bounda_dof 39 -ra 20 -ra -vely
+bounda_time 39 0. 0.25000040000009993 10. 0.25000040000009993
+bounda_dof 40 -ra 21 -ra -velx
+bounda_time 40 0. 0.025 10. 0.025
+bounda_dof 41 -ra 21 -ra -vely
+bounda_time 41 0. 0.0 10. 0.0
+bounda_dof 42 -ra 22 -ra -velx
+bounda_time 42 0. 0.22500000000000003 10. 0.22500000000000003
+bounda_dof 43 -ra 22 -ra -vely
+bounda_time 43 0. 0.0 10. 0.0
+bounda_dof 44 -ra 23 -ra -velx
+bounda_time 44 0. 0.19599999999999998 10. 0.19599999999999998
+bounda_dof 45 -ra 23 -ra -vely
+bounda_time 45 0. 0.13899999999999998 10. 0.13899999999999998
+bounda_dof 46 -ra 24 -ra -velx
+bounda_time 46 0. 3.068199999999999 10. 3.068199999999999
+bounda_dof 47 -ra 24 -ra -vely
+bounda_time 47 0. 1.895999999999999 10. 1.895999999999999
+bounda_dof 48 -ra 25 -ra -velx
+bounda_time 48 0. 0.4 10. 0.4
+bounda_dof 49 -ra 25 -ra -vely
+bounda_time 49 0. 0.0 10. 0.0
+bounda_dof 50 -ra 26 -ra -velx
+bounda_time 50 0. 1.4400000000000006 10. 1.4400000000000006
+bounda_dof 51 -ra 26 -ra -vely
+bounda_time 51 0. 0.20200000000000023 10. 0.20200000000000023
+bounda_dof 52 -ra 27 -ra -velx
+bounda_time 52 0. 1.7640000000000002 10. 1.7640000000000002
+bounda_dof 53 -ra 27 -ra -vely
+bounda_time 53 0. 0.8110000000000002 10. 0.8110000000000002
+bounda_dof 54 -ra 28 -ra -velx
+bounda_time 54 0. 6.3504 10. 6.3504
+bounda_dof 55 -ra 28 -ra -vely
+bounda_time 55 0. 2.8171 10. 2.8171
+group_type 0 -materi
+group_materi_viscosity 0 1.0
+group_materi_elasti_compressibility 0 1.0
+group_materi_memory 0 -updated_linear
+control_timestep 0 1. 1.
+target_item 0 -node_dof 21 -sigxx
+target_value 0 2.001425747668e+00 2.0e-06
+target_item 1 -node_dof 24 -sigxx
+target_value 1 5.681530908185e+00 6.0e-06
+target_item 2 -node_dof 21 -sigxy
+target_value 2 6.231882336609e-01 1.0e-06
+end_data

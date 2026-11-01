@@ -1,0 +1,41 @@
+( F4 T6f ranges: two -from/-to blocks in one index range (Pro: 1 2 7 8).
+  sigxx = 0.01 / ( 4/2000 + 4/1000 ) = 1.6666667. The old GNU rejected a
+  second -from after -to N. )
+echo -no
+number_of_space_dimensions 1
+materi_velocity
+materi_displacement
+materi_stress
+end_initia
+node 1 0.
+node 2 1.
+node 3 2.
+node 4 3.
+node 5 4.
+node 6 5.
+node 7 6.
+node 8 7.
+node 9 8.
+element 1 -bar2 1 2
+element 2 -bar2 2 3
+element 3 -bar2 3 4
+element 4 -bar2 4 5
+element 5 -bar2 5 6
+element 6 -bar2 6 7
+element 7 -bar2 7 8
+element 8 -bar2 8 9
+group_type 0 -materi
+group_materi_elasti_young 0 1000.
+group_materi_memory 0 -total_linear
+group_type 1 -materi
+group_materi_elasti_young 1 2000.
+group_materi_memory 1 -total_linear
+element_group -ra -from 1 -to 2 -from 7 -to 8 -ra 1
+bounda_dof 0 1 -velx
+bounda_time 0 0. 0. 100. 0.
+bounda_dof 1 9 -velx
+bounda_time 1 0. 0.01 100. 0.01
+control_timestep 0 1. 1.
+target_item 0 -node_dof 5 -sigxx
+target_value 0 1.666666667 1.e-5
+end_data

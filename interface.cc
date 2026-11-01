@@ -40,9 +40,11 @@
 //       start to generate stresses"; an opened interface "does not have
 //       stresses"). A physical gap is a NEGATIVE gap value: the interface
 //       stays open (no stress) until compression brings the accumulated
-//       strain below |gap|. Default without the record = +1.e20 (always
-//       closed - "if you want to allow always tension stresses set gap
-//       to, by example, 1.e20"). The stress of the closed phase
+//       strain below |gap|. Default without the record = 0 (F4 T6f C87,
+//       2026-10-21: an interface opens as soon as it is pulled apart; the
+//       manual: "if you want to allow always tension stresses set gap
+//       to, by example, 1.e20"). An opened interface carries neither
+//       normal nor shear stress. The stress of the closed phase
 //       accumulates ONLY the normal strain of the steps that end closed
 //       (ELEMENT_INTERFACE_FORCE_NORM history): the free travel of the
 //       open phase never enters the stress (interface2 of the corpus:
@@ -56,8 +58,9 @@
 //   - Mohr-Coulomb (Fase 3, RF-1): cumulative. The friction limit applies
 //       to the TOTAL tangential force F_t (history ELEMENT_INTERFACE_FORCE_TANG):
 //       group_interface_materi_plasti_mohr_coul_direct phi c phi_flow
-//       trial = F_t,old + kt*du_tang (the history stores the ELASTIC trial
-//       kt*gamma_total, which keeps accumulating across plastic steps),
+//       trial = F_t,old + kt*du_tang (the history stores the CLAMPED
+//       force of the previous step, so a slip reversal unloads elastically
+//       from the yield surface - F4 T6d C52, Professional 02-08-2026),
 //       clamped to +/- max_fric with
 //       max_fric = |c + Fn*tan(phi)|, Fn = -kn*strain_normal (POSITIVE
 //       under compression: verified against the Professional plateau of
@@ -70,9 +73,8 @@
 //   - dilatancy (Fase 3, RF-4): when the tangential force plastifies,
 //       strain_normal += -dgamma_inc*tan(phi_flow) (plastic normal
 //       opening), where dgamma_inc is the plastic slip INCREMENT of the
-//       step (the accumulated-trial return multiplier minus the slip
-//       already accumulated in the past - otherwise the dilatancy
-//       ratchet double-counts, direct3 sigma_n -250 vs -200).
+//       step (the return multiplier of the trial built from the clamped
+//       history is already incremental: direct3 sigma_n -200).
 //   - residual stiffness (Fase 3):
 //       group_interface_materi_residual_stiffness factor
 //       (fraction of the original stiffness used in opened interfaces)
@@ -80,6 +82,79 @@
 // Strategy: implicit penalty + control_timestep_iterations (the tochnog
 // Newton scheme corrects interpenetration within the step). The stiffness
 // is updated within the iterations as the interface opens/closes.
+
+// interface_orient_normal - orient the interface normal from side 1 towards
+// side 2 (F4 T6f C60, owner decision 2026-10-19). The normal strain
+// n.(u2-u1) is then positive when the sides separate and NEGATIVE under
+// compression, the manual convention (gap: closed when strain <= gap;
+// Mohr-Coulomb: Fn negative under compression). The side of each block is
+// read from the geometry: the offset between the side centroids (a thick
+// interface) plus, for each side, the continuum element that holds all its
+// nodes (block 1 lies on the -n side, block 2 on the +n side). The
+// Professional 02-08-2026 gives the same compressed normal stress for every
+// node order of an interface between two blocks (probe: -9.999999 for
+// 2 4 9 10, 9 10 2 4, 4 2 10 9, 10 9 4 2); the earlier GNU rule (flip when
+// the first side-2 node had a lower number) gave +/+/-/- and let the
+// tension cut-off open a compressed interface for half the orders. With no
+// geometric evidence (a free zero-thickness interface) the default normal
+// of the caller is kept, as the Professional does.
+static void interface_orient_normal( long int element, long int nodes[],
+  long int nnol, long int ndim, double coord[], double normal[] )
+{
+  long int ns1 = ( nnol==2 ) ? 1 : nnol/2, inol=0, idim=0, iside=0,
+    iel=0, jnol=0, ldum=0, idum[1];
+  double d[MDIM], xs[2][MDIM], ddum[1];
+
+  array_set( d, 0., MDIM );
+  for ( iside=0; iside<2; iside++ ) {
+    array_set( xs[iside], 0., MDIM );
+    for ( inol=0; inol<ns1; inol++ )
+      for ( idim=0; idim<ndim; idim++ )
+        xs[iside][idim] += coord[(iside*ns1+inol)*ndim+idim] / ns1;
+  }
+  for ( idim=0; idim<ndim; idim++ ) d[idim] = xs[1][idim] - xs[0][idim];
+
+  long int *el = get_new_int( MAXIMUM_NODE+1 );
+  for ( iside=0; iside<2; iside++ ) {
+    long int inod = nodes[iside*ns1];
+    if ( !db_active_index( NODE_ELEMENT, inod, VERSION_NORMAL ) ) continue;
+    long int *node_element = db_int( NODE_ELEMENT, inod, VERSION_NORMAL );
+    long int nel = db_len( NODE_ELEMENT, inod, VERSION_NORMAL );
+    for ( iel=0; iel<nel; iel++ ) {
+      long int e = node_element[iel], gr = 0, length_el = 0, found = 1;
+      if ( e==element || !db_active_index( ELEMENT, e, VERSION_NORMAL ) )
+        continue;
+      db( ELEMENT_GROUP, e, &gr, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+      if ( db_active_index( GROUP_INTERFACE, gr, VERSION_NORMAL ) ) continue;
+      db( ELEMENT, e, el, ddum, length_el, VERSION_NORMAL, GET );
+      for ( inol=0; inol<ns1 && found; inol++ ) {
+        found = 0;
+        for ( jnol=1; jnol<length_el; jnol++ )
+          if ( el[jnol]==nodes[iside*ns1+inol] ) found = 1;
+      }
+      if ( !found ) continue;
+      // the block side: centroid of the element relative to the side
+      double centroid[MDIM];
+      array_set( centroid, 0., MDIM );
+      for ( jnol=1; jnol<length_el; jnol++ ) {
+        double *cn = db_dbl( NODE, el[jnol], VERSION_NORMAL );
+        for ( idim=0; idim<ndim; idim++ )
+          centroid[idim] += cn[idim] / ( length_el-1 );
+      }
+      for ( idim=0; idim<ndim; idim++ ) {
+        if ( iside==0 ) d[idim] += xs[0][idim] - centroid[idim];
+        else d[idim] += centroid[idim] - xs[1][idim];
+      }
+      break;
+    }
+  }
+  delete[] el;
+
+  if ( array_inproduct( normal, d, ndim ) < 0. )
+    for ( idim=0; idim<ndim; idim++ ) normal[idim] = -normal[idim];
+  (void) idum;
+}
+
 void interface_element( long int element, long int name,
   long int element_group, double coord[], double old_dof[], double new_dof[], 
   double element_lhside[], double element_matrix[], double element_rhside[] )
@@ -227,22 +302,11 @@ void interface_element( long int element, long int name,
     array_normalize( tangent, ndim );
     normal[0] = -tangent[1];
     normal[1] =  tangent[0];
-    // orientation (CONVERGENCE 2026-08-30, verified against Professional
-    // .dbs of interface1/8/13/14/15): the Professional orients the 2D
-    // interface normal so that compression gives a NEGATIVE normal strain.
-    // The default normal (-t.y, t.x) matches when the first node of side 2
-    // has a HIGHER number than the first node of side 1 (interface1:
-    // nodes 1,2,3 | 4,5,6 -> normal (0,1); interface13/14/15: 1,2 | 3,4 ->
-    // (-0.447,0.894)/(0,1)). When the side-2 nodes are numbered LOWER
-    // (interface8 element 3 = quad4 5 6 3 4: side 1 = 5,6, side 2 = 3,4)
-    // the Professional flips the normal to (0,-1) - the strain of the
-    // compressed interface stays negative. This mirrors the mesh
-    // conversion orientation: the copied side keeps the numbering of the
-    // source block, so the relative numbering encodes the side order.
-    if ( nodes[ns1] < nodes[0] ) {
-      normal[0] = -normal[0];
-      normal[1] = -normal[1];
-    }
+    // orientation: from side 1 towards side 2, compression gives a
+    // NEGATIVE normal strain (interface_orient_normal, C60; it replaces
+    // the node numbering rule of 2026-08-30, which matched the
+    // Professional only for the node orders of interface1/8/13/14/15)
+    interface_orient_normal( element, nodes, nnol, ndim, coord, normal );
     array_set( tangent2, 0., MDIM );
   }
   else {
@@ -274,26 +338,10 @@ void interface_element( long int element, long int name,
     normal[1] = e1[2]*e2[0] - e1[0]*e2[2];
     normal[2] = e1[0]*e2[1] - e1[1]*e2[0];
     array_normalize( normal, 3 );
-    // orientation: the 2D convention is normal pointing FROM side 2 TOWARDS
-    // side 1 (so compression, side 2 moving towards side 1, gives a POSITIVE
-    // normal strain). Flip the cross product if it points the wrong way.
-    {
-      double *cm1, *cm2;
-      long int ns1 = nnol/2;
-      if ( memory==-TOTAL_LINEAR ) {
-        cm1 = db_dbl( NODE_START_REFINED, nodes[0], VERSION_NORMAL );
-        cm2 = db_dbl( NODE_START_REFINED, nodes[ns1], VERSION_NORMAL );
-      }
-      else {
-        cm1 = &coord[0*ndim];
-        cm2 = &coord[ns1*ndim];
-      }
-      double dir = 0.;
-      for ( idim=0; idim<3; idim++ ) dir += normal[idim]*(cm1[idim]-cm2[idim]);
-      if ( dir<0. ) {
-        normal[0] = -normal[0]; normal[1] = -normal[1]; normal[2] = -normal[2];
-      }
-    }
+    // orientation: from side 1 towards side 2, compression gives a
+    // NEGATIVE normal strain (interface_orient_normal, C60; the earlier
+    // thick-interface flip pointed it from side 2 towards side 1)
+    interface_orient_normal( element, nodes, nnol, ndim, coord, normal );
     tangent[0] = e1[0]; tangent[1] = e1[1]; tangent[2] = e1[2];
     array_normalize( tangent, 3 );
     tangent2[0] = normal[1]*tangent[2] - normal[2]*tangent[1];
@@ -619,8 +667,6 @@ void interface_element( long int element, long int name,
   double *f_t_ip     = get_new_dbl( ns1 );
   double *f_t2_old_ip = get_new_dbl( ns1 );
   double *f_t2_ip     = get_new_dbl( ns1 );
-  double *f_t_el_ip   = get_new_dbl( ns1 );
-  double *f_t2_el_ip  = get_new_dbl( ns1 );
   double *rhs_shear_ip  = get_new_dbl( ns1 );
   double *rhs_shear2_ip = get_new_dbl( ns1 );
   array_set( f_t_old_ip, 0., ns1 );
@@ -655,9 +701,13 @@ void interface_element( long int element, long int name,
   // An opened interface "does not have stresses" (6.628) and keeps only
   // the residual stiffness for the matrix. A physical gap is a NEGATIVE
   // gap value (open until compression exceeds |gap|); the DEFAULT without
-  // the record is +1e20 = always closed (allows tension stresses, 6.625:
-  // "If you want to allow always tension stresses in an interface set gap
-  // to, by example, 1.e20"). NOTE: the OLD code (before 2026-09-04)
+  // the record is 0 (F4 T6f C87, 2026-10-21): an interface pulled apart
+  // opens, as in the Professional 02-08-2026 (four quad4 block pairs pulled
+  // by 0.01: normal and shear stress 0 without the record, kn*0.01 with
+  // gap 1.e20) and as the manual implies (6.625: "If you want to allow
+  // always tension stresses in an interface set gap to, by example,
+  // 1.e20"). Until C87 the default was +1e20 (always closed).
+  // NOTE: the OLD code (before 2026-09-04)
   // inverted the condition (open when strain <= gap) with default -1e20:
   // it worked for the tests without a gap record but left interfaces with
   // an explicit positive gap (patch1: gap 1.e20) ALWAYS OPEN and let the
@@ -665,7 +715,7 @@ void interface_element( long int element, long int name,
   // stress.
   if ( !db( GROUP_INTERFACE_GAP, element_group, idum, &gap, ldum,
       VERSION_NORMAL, GET_IF_EXISTS ) )
-    gap = 1.e20;
+    gap = 0.;
 
   // per-IP constitutive state
   // Mohr-Coulomb (FIX 1, RF-1): friction limit on the TOTAL tangential
@@ -681,8 +731,6 @@ void interface_element( long int element, long int name,
   double *stress_normal_ip = get_new_dbl( ns1 );
   double *stress_shear_ip  = get_new_dbl( ns1 );
   double *stress_shear2_ip = get_new_dbl( ns1 );
-  array_set( f_t_el_ip, 0., ns1 );
-  array_set( f_t2_el_ip, 0., ns1 );
   array_set( rhs_shear_ip, 0., ns1 );
   array_set( rhs_shear2_ip, 0., ns1 );
   double *stiff_tang_ip    = get_new_dbl( ns1 );
@@ -702,8 +750,10 @@ void interface_element( long int element, long int name,
     // accumulated normal force |Fn_total| exceeds the limit, and only if
     // it was still closed. An interface opened by the tension limit has
     // no normal stress either (same handling as the gap-open state).
+    // Traction is a POSITIVE normal strain (normal from side 1 towards
+    // side 2, interface_orient_normal; C60 2026-10-19).
     double fn_total_i = kn * strain_eff_ip[inol];
-    if ( tension_limit>0. && strain_normal_ip[inol]<0. &&
+    if ( tension_limit>0. && strain_normal_ip[inol]>0. &&
         fabs(fn_total_i)>tension_limit && !iface_open_i ) {
       stiff_normal_i = kn * residual_factor;
       iface_open_i = 1;
@@ -714,15 +764,18 @@ void interface_element( long int element, long int name,
     // tangential force. CONVERGENCE (2026-08-30): F_t = kt*du_tang (not
     // kt*2*du_tang), and the plastic return is IMPLICIT with dilatancy
     // (see the block comments above; verified EXACT against interface15).
-    // CONVERGENCE (interface_patch): the Professional's trial is the
-    // ACCUMULATED tangential strain times the stiffness (kt*gamma_total),
-    // NOT the last-step increment f_old + kt*du_paso. With the incremental
-    // trial the plastic slip exhausts the relative displacement and the
-    // friction force stalls below the cohesion (f_t=-5.55 vs target -10).
-    // The stored history ELEMENT_INTERFACE_FORCE_TANG holds the ELASTIC
-    // trial (grows every step, even when plastic: it is kt*gamma_total
-    // with gamma_total = sum(du_tang) over all steps) and the resulting
-    // force is f_t = clamp(trial) to the yield limit.
+    // History (F4 T6d C52, 2026-10-11): ELEMENT_INTERFACE_FORCE_TANG holds
+    // the CLAMPED tangential force of the previous step, and the trial is
+    // f_t,old + kt*du_tang of this step (classic elastic predictor /
+    // plastic corrector). A slip reversal therefore unloads elastically
+    // from the yield surface, as in the Professional 02-08-2026
+    // (quasi-static reversal probe: shear 4.0 = analytic, Pro
+    // 4.000000083). The earlier history (2026-08-30 to 2026-10-11) stored
+    // the ELASTIC trial kt*gamma_total, i.e. the force had no memory of
+    // the plastic slip and stayed on the surface after a reversal (5.0);
+    // the one-iteration lag of the material state (C35) masked it. The
+    // old interface_patch note (incremental trial stalling at -5.55 vs
+    // -10) is not reproduced with the post-solve material pass.
     // CONVERGENCE (2026-09-03, mohr_coul_direct3/4): the interface
     // assembles the FULL accumulated forces into the rhs (spring.cc
     // pattern, like every other element), NOT the step increment. With
@@ -738,7 +791,8 @@ void interface_element( long int element, long int name,
     long int plast_i = 0;
     double f_t_clamped_i = trial_el_i;
     double f_t2_clamped_i = trial_el2_i;
-    if ( mc_active ) {
+    // no friction (and no dilatancy) on an opened interface (C87)
+    if ( mc_active && !iface_open_i ) {
       double strain_eff_mc_i = strain_eff_ip[inol];
       double trial_mag = sqrt( trial_el_i*trial_el_i + trial_el2_i*trial_el2_i );
       // Normal force of the yield limit: the Professional uses the normal
@@ -756,35 +810,38 @@ void interface_element( long int element, long int name,
         f_t2_clamped_i = trial_el2_i * scale;
         plast_i = 1;
         // dilatancy: plastic slip OPENS the interface (reduces the
-        // accumulated compressive strain). The return multiplier dgamma
-        // is the TOTAL plastic slip (the accumulated-trial return maps
-        // the whole history back to the surface); the opening of THIS
-        // step must use only the INCREMENTAL plastic slip, otherwise the
-        // slip already accumulated in the past is re-counted every step
+        // accumulated compressive strain). The trial starts from the
+        // clamped force of the previous step, so the return multiplier
+        // dgamma is already the plastic slip INCREMENT of this step
         // (direct3 sigma_n = -200 = kn*(-1e-6 - 1e-6*tan(pi/4)) for a
-        // total slip of 1e-6, NOT -250). The past plastic slip follows
-        // from the stored elastic trial: gamma_pl_old =
-        // (|trial_old| - |clamp(trial_old)|)/kt.
-        double f_el_mag_old = sqrt( f_t_old_ip[inol]*f_t_old_ip[inol] +
-                                    f_t2_old_ip[inol]*f_t2_old_ip[inol] );
-        double f_old_surf_mag = f_el_mag_old;
-        if ( f_old_surf_mag > max_fric_abs ) f_old_surf_mag = max_fric_abs;
-        double gamma_pl_old = ( kt1>0. ) ? ( f_el_mag_old - f_old_surf_mag )/kt1 : 0.;
-        double dgamma_inc = dgamma - gamma_pl_old;
-        if ( dgamma_inc<0. ) dgamma_inc = 0.;
+        // total slip of 1e-6, NOT -250).
+        double dgamma_inc = dgamma;
         strain_normal_ip[inol] += -dgamma_inc * tan( phi_flow );
       }
     }
-    // f_t: the clamped force of the current state (record + assembly)
+    // an opened interface (gap or tension limit) "does not have stresses"
+    // (manual 6.632): no shear force either, and only the residual
+    // stiffness in the matrix (F4 T6f C87, 2026-10-21; Professional
+    // 02-08-2026 gap 0 pulled-apart probe: shear 0, the GNU kept
+    // kt*du_tang). The tangential history restarts at the re-closure.
+    if ( iface_open_i ) {
+      f_t_clamped_i = 0.;
+      f_t2_clamped_i = 0.;
+      plast_i = 0;
+    }
+    // f_t: the clamped force of the current state (record, assembly and
+    // the history of the next step's trial)
     f_t_ip[inol]  = f_t_clamped_i;
     f_t2_ip[inol] = f_t2_clamped_i;
-    // the stored history is the ELASTIC trial (keeps accumulating)
-    // so the next step's trial continues from kt*gamma_total
-    f_t_el_ip[inol]  = trial_el_i;
-    f_t2_el_ip[inol] = trial_el2_i;
     plastified_ip[inol] = plast_i;
-    stiff_tang_ip[inol]  = ( mc_active && plast_i ) ? 0. : kt1;
-    stiff_tang2_ip[inol] = ( mc_active && plast_i ) ? 0. : kt2;
+    if ( iface_open_i ) {
+      stiff_tang_ip[inol]  = kt1 * residual_factor;
+      stiff_tang2_ip[inol] = kt2 * residual_factor;
+    }
+    else {
+      stiff_tang_ip[inol]  = ( mc_active && plast_i ) ? 0. : kt1;
+      stiff_tang2_ip[inol] = ( mc_active && plast_i ) ? 0. : kt2;
+    }
     // stress,normal (spring.cc pattern, CONVERGENCE 2026-09-04): the
     // accumulated contact stress of the CLOSED phase only (history
     // ELEMENT_INTERFACE_FORCE_NORM, read before the step). Each closed
@@ -821,8 +878,8 @@ void interface_element( long int element, long int name,
     }
     force_norm_ip[inol] = force_norm_new_i;
     stress_normal_ip[inol] = force_norm_new_i;
-    // stress,shear = the accumulated tangential force clamped to the
-    // yield limit (WITH Mohr-Coulomb) or the accumulated elastic trial
+    // stress,shear = the tangential force clamped to the yield limit
+    // (WITH Mohr-Coulomb) or the accumulated elastic force
     // kt*gamma_total (WITHOUT: elastic, single- and multi-step alike -
     // interface9 -0.159 = kt*du_total, interface14 5e3 = kt*1).
     stress_shear_ip[inol]  = f_t_ip[inol];
@@ -947,13 +1004,12 @@ void interface_element( long int element, long int name,
     // control_reset_interface_strain (data.cc)
     db( ELEMENT_INTERFACE_FORCE_NORM, element, idum, force_norm_ip,
       ln, VERSION_NEW, PUT );
-    // the history holds the ELASTIC trial (kt*gamma_total) so the
-    // accumulated tangential strain keeps growing after plastic slip
-    // (the clamped force is rebuilt from it every step)
-    db( ELEMENT_INTERFACE_FORCE_TANG, element, idum, f_t_el_ip,
+    // the history holds the CLAMPED tangential force (F4 T6d C52): the
+    // next step's trial starts from it, so a reversal unloads elastically
+    db( ELEMENT_INTERFACE_FORCE_TANG, element, idum, f_t_ip,
       ln, VERSION_NEW, PUT );
     if ( ndim==3 )
-      db( ELEMENT_INTERFACE_FORCE_TANG2, element, idum, f_t2_el_ip,
+      db( ELEMENT_INTERFACE_FORCE_TANG2, element, idum, f_t2_ip,
         ln, VERSION_NEW, PUT );
   }
 

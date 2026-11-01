@@ -52,8 +52,10 @@ control_print_interface_stress_2d_coordinates 0  0. 0. 3. 0.
   `control_print_interface_stress_2d_coordinates`. The normal stress
   (`interface_sign`) comes from the accumulated normal strain
   (`kn * strain_normal`); the tangential stress (`interface_sigt`) comes
-  from the accumulated total tangential force
-  (`ELEMENT_INTERFACE_FORCE_TANG`), so both are total accumulated
+  from the total tangential force (`ELEMENT_INTERFACE_FORCE_TANG`: the
+  accumulated elastic force, or with Mohr-Coulomb the force clamped to
+  the friction limit - since F4 T6d C52, 2026-10-11; before, a sliding
+  interface printed the elastic trial above the limit), so both are total
   stresses of the last converged step.
 - **Implementado**: 3D — `control_print_interface_stress` + `_3d_geometry`
   + `_3d_order`. Prints the element middle, `sign`, `sigt1` and `sigt2`

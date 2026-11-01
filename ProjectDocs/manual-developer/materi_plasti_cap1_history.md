@@ -21,8 +21,9 @@
 - **Ecuación** (general.cc): casos `MATERI_PLASTI_CAP1_HISTORY` en
   `unknown_belongs_to_type` (`inertia = 1.`) y en `conv_part = 1.`
   (patrón exacto de `MATERI_PLASTI_KAPPA`).
-- **RHS** (materi.cc): `element_rhside += volume*h*(new_cap1pc -
-  old_cap1pc)/dtime` (patrón kappa); `old_cap1pc`/`new_cap1pc` se leen
+- **RHS** (materi.cc): `element_rhside += volume*w*(new_cap1pc -
+  old_cap1pc)/dtime` con `w = strain_recovery_weight()` desde C68 (F4
+  T6f, 2026-10-12; patrón kappa, ver "Integration-point state (C68)"); `old_cap1pc`/`new_cap1pc` se leen
   de old/new_unknowns y se pasan a `set_stress()` por referencia.
 - **Actualización** (stress.cc, `set_stress()`): `new_cap1pc` se calcula
   tras las iteraciones plásticas con el `inc_epp` convergido (ver
@@ -67,3 +68,30 @@ records").
 - El basename es `pc` (NO `materi_plasti_cap1_history`, que es el nombre
   de la initia y `array_member()` sobre dof_label no lo encuentra —
   mismo GOTCHA que kap vs materi_plasti_kappa).
+
+## Integration-point state (C68, F4 T6f, 2026-10-12)
+
+`materi_plasti_cap1_history` is an integration-point history state (Professional manual
+4.17), like the hardening parameter kappa (`materi_plasti_kappa.md`).
+
+- `elem.cc` `elem()`: the ELEMENT_DOF read and write masks include
+  `(materi_plasti_cap1_history && i==cap1_indx)`, so `old_cap1pc` in `materi.cc` is the value remembered at the
+  integration point, not the h-lumped nodal value interpolated back.
+- `materi.cc` `materi()`: one block right after the kappa block (after
+  the `stress_recovery_post_pass` skip, outside the `|h| > EPS_H`
+  guard) assembles the nodal (output) numerator
+  `volume * w * (new - old) / dtime` with `w = strain_recovery_weight()`
+  and writes the IP value to `new_unknowns[<indx> + k*nder]` when
+  `options_element_dof -yes`. The old h-weighted block was removed.
+- `general.cc` `general()`: the lumped denominator of `MATERI_PLASTI_CAP1_HISTORY` uses the
+  same weight.
+
+Verification: by the manual and the physics only (pc is a point history
+variable). No Professional evidence: the Professional cap1 model diverges
+at model level (c1his -17 vs GNU pc 108, reactions 6x; BACKLOG C68b), so
+there is no cap1 test against it. Changed for consistency with kappa and
+the manual.
+
+## Differences with the Professional version
+
+- **cap1 model** (C68b, class B, cause unknown): Professional c1his -17 vs GNU pc 108, reactions 6x; the integration-point state of pc follows the manual and is not verified against the Professional. Index: [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).

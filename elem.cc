@@ -195,8 +195,7 @@ void elem( long int element, long int ithread )
   // The measured f=0 displacement-primary map has a fixed reference mass
   // and elastic operator. The normal f<1 pass identifies it directly; the
   // auxiliary f=1 pass is marked by solve() while it is reassembled.
-  db( MATERI_DYNAMIC, 0, idum, &disp_primary_factor, ldum,
-    VERSION_NORMAL, GET_IF_EXISTS );
+  disp_primary_factor = materi_dynamic_effective( NULL );
   if ( disp_primary_reference==-YES ||
        ( materi_velocity && materi_displacement &&
          disp_primary_factor>=0. && disp_primary_factor<1. ) ) {
@@ -643,6 +642,19 @@ void elem( long int element, long int ithread )
    	      (i>=epp_indx && i<(epp_indx+MDIM*MDIM))||
    	      (i>=ept_indx && i<(ept_indx+MDIM*MDIM))||
    	      (i>=epi_indx && i<(epi_indx+MDIM*MDIM))||
+	      // F4 T6f WU2 (2026-10-11): the hardening parameter kappa is an
+	      // integration-point state (manual: materi_plasti_kappa); read
+	      // it back from ELEMENT_DOF instead of the h-lumped nodal value.
+	      (materi_plasti_kappa && i==kap_indx) ||
+	      // C68 (F4 T6f): the other integration-point states of the
+	      // constitutive update (kappa_shear, cap1 pc, damage, the
+	      // kinematic hardening rho and the Maxwell stresses) likewise.
+	      (materi_plasti_kappa_shear && i==kapsh_indx) ||
+	      (materi_plasti_cap1_history && i==cap1_indx) ||
+	      (materi_damage && i==dam_indx) ||
+	      (materi_plasti_rho && i>=rho_indx && i<(rho_indx+6*nder)) ||
+	      (materi_maxwell_stress && i>=mstres_indx &&
+	       i<(mstres_indx+materi_maxwell_stress*6*nder)) ||
 	      i==svloc_indx || i==svnonloc_indx) 
 	       old_unknowns[i]=element_dof_npoint[i+startindx];
 	}
@@ -818,6 +830,14 @@ void elem( long int element, long int ithread )
    	    (i>=epp_indx && i<(epp_indx+MDIM*MDIM))||
    	    (i>=ept_indx && i<(ept_indx+MDIM*MDIM))||
    	    (i>=epi_indx && i<(epi_indx+MDIM*MDIM))||
+	    (materi_plasti_kappa && i==kap_indx) || // F4 T6f WU2: IP kappa
+	    // C68 (F4 T6f): the other integration-point states
+	    (materi_plasti_kappa_shear && i==kapsh_indx) ||
+	    (materi_plasti_cap1_history && i==cap1_indx) ||
+	    (materi_damage && i==dam_indx) ||
+	    (materi_plasti_rho && i>=rho_indx && i<(rho_indx+6*nder)) ||
+	    (materi_maxwell_stress && i>=mstres_indx &&
+	     i<(mstres_indx+materi_maxwell_stress*6*nder)) ||
 	           i==svloc_indx || i==svnonloc_indx)
 	    element_dof_npoint[i+startindx]=new_unknowns[i];//only for unknowns filled in materi.cc
     }

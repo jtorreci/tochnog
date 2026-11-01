@@ -162,10 +162,16 @@ void groundflow( long int element, long int gr, long int nnol, long int nodes[],
 // the downstream temperature 0 instead of the Professional's upwind 1).
 // Restored to the Professional sign so that the heat convection follows
 // the same upwind direction as the Professional.
+// C85 (F4 T6f, 2026-10-17, owner decision; DELIBERATE DIVERGENCE
+// TRIA6-HRZ): the tria6 lumps the velocity with the HRZ weight of pol(),
+// the same weight as its general.cc denominator (with h the tria6 corner
+// denominator sum volume h is 0 and the corner velocity is 0/0). Every
+// other element keeps h.
+        double h_lump = lumped_hrz_active ? lumped_hrz_weight[inol] : h[inol];
         if ( dry )
-          tmp = h[inol] * ( 0. - old_unknowns[iuknwn] ) / dtime;
+          tmp = h_lump * ( 0. - old_unknowns[iuknwn] ) / dtime;
         else
-          tmp = h[inol] * ( pe[jdim]*grad_new_unknowns[jdim*nuknwn+pres_indx] -
+          tmp = h_lump * ( pe[jdim]*grad_new_unknowns[jdim*nuknwn+pres_indx] -
             old_unknowns[iuknwn] ) / dtime;
         element_rhside[indx] += volume * tmp;
       }

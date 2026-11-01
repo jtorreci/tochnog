@@ -108,9 +108,10 @@ Target `dam = 0.471973` (tolerance 1e-5):
 
 ## Hardcoded parameters / pending refactorings
 
-- The damage is stored as a nodal unknown dof (not element history); the
-  element-level assembly in `materi.cc:491-494` uses the shape functions `h`
-  to distribute it, which couples damage to the mesh interpolation.
+- The damage is an integration-point state since C68 (F4 T6f,
+  2026-10-12): see "Integration-point state (C68)" below. Before, the
+  constitutive update read the h-lumped nodal value back, which coupled
+  the damage to the mesh interpolation.
 - There is no user-facing switch to force a pure elastic run other than omitting
   the record.
 - The `epseq` accumulation bug (see "Bug report and fix") is FIXED. The
@@ -119,9 +120,41 @@ Target `dam = 0.471973` (tolerance 1e-5):
 
 ## Differences with the Professional version
 
-- **Mazars damage: gamma with shear; damage + early plasticity** (known
-  difference, not decided; BACKLOG C7). GNU: gamma from xx, xy, xz (e.g. dam
-  0.10809); plastic path eppxx 1.879e-4. Professional 02-08-2026: dam
-  0.18752; eppxx 1.368e-4 (Pro gamma matches none of the tried forms).
-  Status: Open, MEDIUM; needs more probes. Index:
+- **Mazars equivalent strain** (deliberate divergence, class A, project
+  decision 2026-10-12; BACKLOG C7). GNU (`damage_mazars()`, `damage.cc`): manual 2.2.5, eps_eq =
+  sqrt(sum <eps_i>+^2) of the positive principal strains (hex8
+  diag(2e-4,-3e-4,1e-4): dam 0.28610207515). Professional 02-08-2026:
+  accumulates them in ascending order as s = 2 s + eps^2 (weights 4, 2, 1;
+  the 2014 accumulation defect the GNU fixed on 2026-08-10): dam 0.36409.
+  It differs whenever two or three principal strains are positive, also
+  through a von Mises + damage path (bar with `vonmises 3e6`: GNU dam
+  0.925372, eppxx 1.87863e-4; Professional 0.96946, 1.368e-4). Guard
+  tests `test-2026/damage_mazars_eq_two_positive1`,
+  `damage_mazars_vonmises1`. Index:
   [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).
+- The triaxiality factor gamma is built from the xx, xy, xz stress
+  components in both codes (`damage.cc:84-95`) (not objective: a compressive xx with xy or xz
+  shear gives an orientation-dependent `dam`). Same in the Professional,
+  so not a divergence; noted in BACKLOG C7, no fix planned.
+
+## Integration-point state (C68, F4 T6f, 2026-10-12)
+
+`materi_damage` is an integration-point history state (Professional manual
+4.10), like the hardening parameter kappa (`materi_plasti_kappa.md`).
+
+- `elem.cc` `elem()`: the ELEMENT_DOF read and write masks include
+  `(materi_damage && i==dam_indx)`, so `old_damage` in `materi.cc` is the value remembered at the
+  integration point, not the h-lumped nodal value interpolated back.
+- `materi.cc` `materi()`: one block right after the kappa block (after
+  the `stress_recovery_post_pass` skip, outside the `|h| > EPS_H`
+  guard) assembles the nodal (output) numerator
+  `volume * w * (new - old) / dtime` with `w = strain_recovery_weight()`
+  and writes the IP value to `new_unknowns[<indx> + k*nder]` when
+  `options_element_dof -yes`. The old h-weighted block was removed.
+- `general.cc` `general()`: the lumped denominator of `MATERI_DAMAGE` uses the
+  same weight.
+
+Verification: `test-2026/damage_ip_state1` (four tria3, 1-point rule, non-uniform
+field, targets = Professional 02-08-2026): previous binary rc 1 (node
+reactions 1.9e-1 relative off), fix rc 0 (5e-13); nodal dam within
+2e-3.

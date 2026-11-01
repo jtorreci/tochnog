@@ -1,0 +1,31 @@
+( Expected-error test, F4 T6d C59 (owner decision 2026-10-11): with
+  materi_displacement initialised, group_truss_memory -updated (or
+  -updated_linear) is an input error, as in the Professional 02-08-2026
+  ("materi_displacement should not be initialised"). Model = Pro
+  test/other dynamic3 plus group_truss_memory 0 -updated.
+  EXPECTED_ERROR: group_truss_memory -updated or -updated_linear is not allowed when materi_displacement is initialised
+)
+echo -no
+number_of_space_dimensions 1
+materi_displacement
+materi_velocity
+materi_acceleration
+end_initia
+
+inertia_apply -yes
+
+node 1  0
+node 2  1
+element 1  -truss 1 2
+
+group_type 0  -truss
+group_truss_area 0  1.0
+group_truss_elasti_young 0  1.0
+group_truss_density 0  2.0
+group_truss_memory 0 -updated
+
+bounda_dof    10  1 -accx
+bounda_time   10  1.234
+
+control_timestep      10  1.e-1 10.
+end_data

@@ -43,10 +43,37 @@ char *arithmetic_words[MARITHMETIC];
 static char saved_first_value[MCHAR];
 static long int has_saved_first_value = 0;
 
+// Reads one whitespace-delimited word of at most MCHAR-1 characters into
+// str (BACKLOG C56: a plain `in >> str` wrote past the MCHAR buffer for a
+// longer word). Returns 0 at the end of the input, as `in >> str` did.
+// A longer word is split: the rest stays in the stream and is read as the
+// next word. That is harmless inside a comment (the parenthesis counting
+// of input_skip_comment() sees every character), so a word that starts a
+// comment (first character '(') or is read inside one (in_comment) may
+// be long; any other over-long word is an input error.
+static long int input_word( std::istream &in, char str[], long int in_comment )
+
+{
+  long int length=0;
+  int c=0;
+
+  if ( !(in >> std::setw(MCHAR) >> str) ) return 0;
+  if ( in_comment || str[0]=='(' || in.eof() ) return 1;
+  c = in.rdbuf()->sgetc();
+  if ( c!=EOF && !isspace(c) ) {
+    pri( "\nError in input file." );
+    pri( "Word too long, it starts with ", str );
+    length = MCHAR-1; pri( "maximum allowed length is ", length );
+    exit(TN_EXIT_STATUS);
+  }
+  return 1;
+}
+
 void input( )
 
 {
-  long int i=0, j=0, n=0, iv=0, length=0, max=0, idat=0, itmp=0, idim=0,
+  long int in_value_range=0,
+    i=0, j=0, n=0, iv=0, length=0, max=0, idat=0, itmp=0, idim=0,
     ready=0, d_is_set=0, index=0, range_length=0, last_data_value=0,
     unknown_indx=0, ninitia=0, istr=0, nstr=0,
     print_define=-NO, print_arithmetic=-NO,
@@ -111,7 +138,7 @@ void input( )
       exit(TN_EXIT_STATUS);
     }
     unknown_indx += n * nder;
-    if ( !(cin >> str) ) {
+    if ( !input_word( cin, str, 0 ) ) {
       pri( "\nError in initialization part." );
       exit(TN_EXIT_STATUS);
     }
@@ -128,7 +155,7 @@ void input( )
         pri( "\nError in initialization part." );
         exit(TN_EXIT_STATUS);
       }
-      if ( !(cin >> str_tmp) ) {
+      if ( !input_word( cin, str_tmp, 0 ) ) {
         pri( "\nError in initialization part." );
         exit(TN_EXIT_STATUS);
       }
@@ -909,7 +936,7 @@ void input( )
 
 
       // data item values
-    length = last_data_value = istr = nstr = 0;
+    length = last_data_value = istr = nstr = in_value_range = 0;
     for ( iv=0; !last_data_value; iv++ ) {
       if ( istr>=nstr ) {
         if ( has_saved_first_value && iv==0 ) {
@@ -955,6 +982,18 @@ void input( )
         if ( db_type(idat)==INTEGER ) {
           if ( str[0]=='-' ) {
             itmp = db_number( &str[1] );
+            if ( itmp<0 && idat==GROUP_ELEMENT_SELECTIVE_REDUCED_INTEGRATION &&
+                 !strcmp(str,"-both") ) {
+              // C80.2 (2026-10-16): the C80.1 value -both (shear terms
+              // and volumetric part at the centroid point) was removed
+              // (never better than -volumetric, too soft in coarse
+              // bending).
+              pri( "\nError in data part." );
+              pri( "group_element_selective_reduced_integration -both was "
+                "removed; use -lambda (elastic, bending-dominated) or "
+                "-volumetric (general) instead." );
+              exit(TN_EXIT_STATUS);
+            }
             if ( itmp<0 ) {
               pri( "\nError in data part." );
               pri( "I do not know ", str );
@@ -962,12 +1001,16 @@ void input( )
             }
             check( itmp, CHECK_USAGE_AND_ERROR );
             ival[iv] = -itmp;
+            if ( itmp==RA ) in_value_range = !in_value_range;
           }
           else {
             if ( d_is_set )
               ival[iv] = (long int) d;
             else {
-              if ( !string_isinteger(str) && !string_isdouble(str) ) {
+                // a number in a value range -ra ... -ra must be an
+                // integer (Professional: 9.0 is rejected; F4 T6f)
+              if ( ( in_value_range && !string_isinteger(str) ) ||
+                   ( !string_isinteger(str) && !string_isdouble(str) ) ) {
                 pri( "\n\nError in data part." );
                 pri( "Problem reading ", db_name(idat) );
                 pri( "I don't know what to do with ", str );
@@ -1025,7 +1068,23 @@ void input( )
     }
     if ( echo ) cout << "\n";
 
-      // store 
+      // post_element_force (manual Professional 6.927, C84): the record
+      // length depends on the space dimensions, 3D 12 values, 2D 6
+      // (dir_normal_x dir_normal_y dir_shear0_x dir_shear0_y middle_x
+      // middle_y), 1D 2 (dir_normal_x middle_x); the Professional
+      // 02-08-2026 rejects any other count in the data part
+    if ( idat==POST_ELEMENT_FORCE ) {
+      long int pef_expected = ( ndim==3 ? 12 : ( ndim==2 ? 6 : 2 ) );
+      if ( length!=pef_expected ) {
+        pri( "\n\nError in data part." );
+        pri( "Problem reading ", db_name(idat) );
+        pri( "Number of data values expected ", pef_expected );
+        pri( "Number of data values found ", length );
+        exit(TN_EXIT_STATUS);
+      }
+    }
+
+      // store
     if ( range[0]==-RA ) range_expand( range, integer_range, ldum, range_length );
     db_max_index( idat, max, VERSION_NORMAL, GET );
     if ( idat==NODE_DOF ) {
@@ -1139,13 +1198,13 @@ void input_read_string( long int echo, char str[], double &d, long int &d_is_set
 
   if ( !using_define ) {
     if ( include_reading ) {
-      if ( !(include_file_stream >> str) ) {
+      if ( !input_word( include_file_stream, str, 0 ) ) {
         pri( "\nError in data part." );
         pri( "Unexpected end of include file detected." );
         exit(TN_EXIT_STATUS);
       }
     }
-    else if ( !(cin >> str) ) {
+    else if ( !input_word( cin, str, 0 ) ) {
       pri( "\nError in data part." );
       pri( "Unexpected end of input detected (internal location a)." );
       pri( "Last word read ", str );
@@ -1175,7 +1234,7 @@ void input_read_string( long int echo, char str[], double &d, long int &d_is_set
     }
     reading_define = 1;
       // read word
-    if ( !(cin >> str) ) {
+    if ( !input_word( cin, str, 0 ) ) {
       pri( "\nError in data part." );
       pri( "Unexpected end of input (internal location b)." );
       pri( "Last word read ", str );
@@ -1199,7 +1258,7 @@ void input_read_string( long int echo, char str[], double &d, long int &d_is_set
       // read strings
     ready = 0;
     do {
-      if ( !(cin >> str) ) {
+      if ( !input_word( cin, str, 0 ) ) {
         pri( "\nError in data part." );
         pri( "Unexpected end of input (internal location c)." );
         pri( "Last word read ", str );
@@ -1273,7 +1332,7 @@ void input_read_string( long int echo, char str[], double &d, long int &d_is_set
       exit(TN_EXIT_STATUS);
     }
     reading_arithmetic = 1;
-    if ( !(cin >> str) ) {
+    if ( !input_word( cin, str, 0 ) ) {
       pri( "\nError in data part." );
       pri( "Unexpected end of input (internal location d)." );
       pri( "Last word read ", str );
@@ -1294,7 +1353,7 @@ void input_read_string( long int echo, char str[], double &d, long int &d_is_set
       }
     }
     strcpy( arithmetic_words[narithmetic], str );
-    if ( !(cin >> str) ) {
+    if ( !input_word( cin, str, 0 ) ) {
       pri( "\nError in data part." );
       pri( "Unexpected end of input (internal location e)." );
       pri( "Last word read ", str );
@@ -1321,7 +1380,7 @@ void input_read_string( long int echo, char str[], double &d, long int &d_is_set
     }
     ready = 0;
     do {
-      if ( !(cin >> str) ) {
+      if ( !input_word( cin, str, 0 ) ) {
         pri( "\nError in data part." );
         pri( "Unexpected end of input (internal location g)." );
         pri( "Last word read ", str );
@@ -1415,7 +1474,7 @@ void input_read_string( long int echo, char str[], double &d, long int &d_is_set
     }
     using_if = 1;
     using_if_not = ( str[9]=='n' );
-    if ( !(cin >> str) ) {
+    if ( !input_word( cin, str, 0 ) ) {
       pri( "\nError in data part." );
       pri( "Unexpected end of input (internal location g)." );
       pri( "Last word read ", str );
@@ -1456,7 +1515,7 @@ void input_read_string( long int echo, char str[], double &d, long int &d_is_set
     }
     else {
       loop_if:
-      if ( !(cin >> str) ) {
+      if ( !input_word( cin, str, 0 ) ) {
         pri( "\nError in data part." );
         pri( "Unexpected end of input (internal location g)." );
         pri( "Last word read ", str );
@@ -1598,7 +1657,7 @@ void input_skip_comment( char str[] )
         }
       }
     }
-    if ( !(cin >> str) ) {
+    if ( !input_word( cin, str, 1 ) ) {
       pri( "\nError in data part." );
       pri( "Unexpected end of input (internal location h)." );
       pri( "Last word read ", str );
@@ -1665,7 +1724,7 @@ void input_runtime( void )
   in.open( filename );
   if ( !in ) return;
 
-  in >> str;
+  if ( !input_word( in, str, 0 ) ) goto close_runtime_file;
   string_convert_to_lower_case( str );
   while ( strcmp(str,"end_data" ) ) {
     idat = db_number( str ); 
@@ -1678,7 +1737,7 @@ void input_runtime( void )
        in >> index;
     length = last_data_value = 0;
     for ( iv=0; !last_data_value; iv++ ) {
-      if ( !(in >> str) ) {
+      if ( !input_word( in, str, 0 ) ) {
         goto close_runtime_file;
       }
       string_convert_to_lower_case( str );
@@ -1775,7 +1834,7 @@ void input_gmsh_read( void )
   }
 
   // read MeshFormat section
-  while ( in >> str ) {
+  while ( input_word( in, str, 1 ) ) {   // skipped words may be long
     if ( !strcmp(str,"$Nodes") ) break;
   }
   in >> nnode;
@@ -1785,7 +1844,7 @@ void input_gmsh_read( void )
   }
 
   // read Elements section
-  while ( in >> str ) {
+  while ( input_word( in, str, 1 ) ) {   // skipped words may be long
     if ( !strcmp(str,"$Elements") ) break;
   }
   in >> nelem;

@@ -62,3 +62,51 @@
   the database; the manual layout `E_0 t_0 E_1 t_1 ...` matches it.
 - The nonlinear chain data is reserved but unused — this is the main gap in the
   viscoelastic family.
+
+## Integration-point state (C68, F4 T6f, 2026-10-12)
+
+`materi_maxwell_stress` is an integration-point history state (Professional manual
+4.15), like the hardening parameter kappa (`materi_plasti_kappa.md`).
+
+- `elem.cc` `elem()`: the ELEMENT_DOF read and write masks include
+  `(materi_maxwell_stress && i in [mstres_indx, mstres_indx+materi_maxwell_stress*6*nder))`, so `old_msig` in `materi.cc` is the value remembered at the
+  integration point, not the h-lumped nodal value interpolated back.
+- `materi.cc` `materi()`: one block right after the kappa block (after
+  the `stress_recovery_post_pass` skip, outside the `|h| > EPS_H`
+  guard) assembles the nodal (output) numerator
+  `volume * w * (new - old) / dtime` with `w = strain_recovery_weight()`
+  and writes the IP value to `new_unknowns[<indx> + k*nder]` when
+  `options_element_dof -yes`. The old h-weighted block was removed.
+- `general.cc` `general()`: the lumped denominator of `MATERI_MAXWELL_STRESS` uses the
+  same weight.
+
+Verification: `test-2026/maxwell_ip_state1` (four tria3, targets =
+Professional 02-08-2026): previous binary rc 1 (nodal msigyy 8.4e-2
+relative off), fix rc 0 (5e-4). The Professional Maxwell chain itself
+differs from the analytic solution even on a homogeneous field (BACKLOG
+C68a, class D since 2026-10-18; guard `maxwell_relaxation_analytic1`).
+
+### Old-state read with two or more chains (C68d, 2026-10-12)
+
+In the old-state read loop of `materi()` (`materi.cc`, "get old
+stresses, etc."), `indx = idim*MDIM + jdim` is shared by the stress,
+strain, rho, epi and epp reads. The Maxwell loop used to overwrite it
+with `m*MDIM*MDIM + idim*MDIM + jdim`, so with two or more chains the
+following `old_rho`, `old_epi` and `old_epp` reads wrote to
+`(nchain-1)*9 + ...`: past these 9-entry slices of `dbl_array` (into
+`new_rho`, `new_epi` and `inc_epp`, so no sanitizer sees it) while the
+real slots stayed 0, i.e. rho and the plastic strain never accumulated.
+The Maxwell read now indexes `old_msig[m*MDIM*MDIM + indx]` and leaves
+`indx` alone. The write/assembly side (C68 block) and the rotation loops
+already used explicit indices.
+
+Verification: `test-2026/maxwell_two_chains_state1` (four tria3, von
+Mises + kinematic hardening, two identical chains E 1000 / tau 0.5).
+Linear Maxwell chains with the same tau add up, so the targets are the
+one-chain (E 2000) run of the same model, tolerance 1e-6 relative; the
+Professional 02-08-2026 reproduces that equivalence to ~1e-12. Before
+the fix: node 1 reaction -13.32 instead of -19.17 (rc 1); after: rc 0.
+
+## Differences with the Professional version
+
+- **Maxwell chain relaxation** (C68a, class D, Professional-suspect, owner decision 2026-10-18; GNU kept): on a homogeneous one-chain probe (E_c 7e3, tau 0.3, strain rate -0.01, t = 1) GNU gives the analytic msig = E_c tau rate (1 - exp(-t/tau)) = -20.2508461397 for any time step; the Professional 02-08-2026 gives -23.81 at dt 0.1, -20.59 at dt 0.01, -20.28 at dt 0.001 (a first-order time-discretisation error; at dt 0.1 beyond the bound E_c tau |rate| = 21). Guard test `test-2026/maxwell_relaxation_analytic1` (targets msigyy at nodes 1 and 5 and sigyy at node 6, 1e-6 relative; registered in `scripts/build_safe.sh`; a wrong target gives rc 1). The GNU update (`viscoela.cc` `visco_elasticity()`: msig_new = msig_old + (E_c tau inc_epe / dt - msig_old)(1 - exp(-dt/tau))) is the exponential chain integration, exact for a piecewise-constant strain rate. Index: [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).

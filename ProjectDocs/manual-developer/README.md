@@ -70,6 +70,7 @@ page lists its own in "Differences with the Professional version".
 - [postprocess.py](postprocess_py.md) — Python tool for post-processing the tabular SQLite database.
 - [control_print_data_versus_data_factor](control_print_data_versus_data_factor.md) — multiply data-versus-data output.
 - [force_point](force_point.md) — point force anywhere in space.
+- [post_point](post_point.md) — point location (point_el) and nodal interpolation of post points.
 - [post_point_move](post_point_move.md) — post point follows material.
 
 ## Phase 2 features
@@ -122,6 +123,8 @@ page lists its own in "Differences with the Professional version".
 - [group_materi_expansion_linear](group_materi_expansion_linear.md) — thermal expansion (stress.cc:437, materi.cc:166).
 - [group_materi_plasti_visco_exponential](group_materi_plasti_visco_exponential.md) — viscoplasticity (stress.cc:100-115, 737-755; EPS_VISCO hardcoded).
 - [group_materi_plasti_visco_power](group_materi_plasti_visco_power.md) — power viscoplasticity: dual layout (Professional eta p / legacy eta p f_ref), f_ref=1 implicit, lambda = eta*(f/f_ref)^p times dtime.
+- [group_materi_plasti_mohr_coul](group_materi_plasti_mohr_coul.md) — plasti.cc plasti_rule MC block (eigenvalues, f_yield/f_flow) + central-difference flow gradient; MC-VERTEX-ZZ guard tests.
+- [group_materi_membrane](group_materi_membrane.md) — membrane.cc membrane_apply (elastic zz correction added to new_ept/new_epe, called from set_stress); C69 yy/zz plastic split; MEMBRANE-EPTZZ guard tests.
 - [group_materi_plasti_mohr_coul_direct](group_materi_plasti_mohr_coul_direct.md) — direct stress cut-off (materi_direct_full_mc / materi_direct_cutoff in stress.cc; per-law normals via direct_normal_get in materi.cc; phi_flow M/G from the element stiffness, direct_flow_factor).
 - [group_materi_plasti_mohr_coul_hardening_softening](group_materi_plasti_mohr_coul_hardening_softening.md) — classic MC with linear c/phi hardening-softening vs kappa (plasti.cc plasti_rule block).
 - [group_materi_plasti_cap2](group_materi_plasti_cap2.md) — db_number alias of GROUP_MATERI_PLASTI_CAP (same physics, plasti.cc untouched).
@@ -289,7 +292,7 @@ page lists its own in "Differences with the Professional version".
 
 ## Shear locking del quad4 + SRI (Hughes)
 
-- [group_element_selective_reduced_integration](group_element_selective_reduced_integration.md) — the CLASSIC shear locking / parasitic shear of the bilinear quad4 (2D) and the trilinear hex8 (3D) in bending (u_y ~ -κ·x²/2 not representable -> spurious γ_xy -> too stiff; measured: 0.231× moment / 0.741× shear for the quad4; 0.221× of the EB deflection for the hex8) and the opt-in fix: selective reduced integration (shear at 1 Gauss point at the centroid, normal terms at the full Gauss rule). Scope: elastic quad4/hex8; the Lobatto corner rule would cap the benefit (documented); solver GOTCHA of the mixed u-σ scheme documented (fix C/D: the quad4 SRI recovers 0.9375×; the hex8 SRI 0.897×). MEASURED DEVIATION (2026-08-29): the shear-only SRI hex8 retains zero-energy modes (9 isolated: 6 rigid + 3 twist; section-warping modes in a mesh) — the classic limitation that moved the brick literature to B-bar/ANS. Families `qsri` (8 tests) + `qsri3d` (8 tests).
+- [group_element_selective_reduced_integration](group_element_selective_reduced_integration.md) — the CLASSIC shear locking / parasitic shear of the bilinear quad4 (2D) and the trilinear hex8 (3D) in bending (u_y ~ -κ·x²/2 not representable -> spurious γ_xy -> too stiff; measured: 0.231× moment / 0.741× shear for the quad4; 0.221× of the EB deflection for the hex8) and the opt-in fix: selective reduced integration (shear at 1 Gauss point at the centroid, normal terms at the full Gauss rule). Scope: elastic quad4/hex8; the Lobatto corner rule would cap the benefit (documented); solver GOTCHA of the mixed u-σ scheme documented (fix C/D: the quad4 SRI recovers 0.9375×; the hex8 SRI 0.897×). MEASURED DEVIATION (2026-08-29): the shear-only SRI hex8 retains zero-energy modes (9 isolated: 6 rigid + 3 twist; section-warping modes in a mesh) — the classic limitation that moved the brick literature to B-bar/ANS. Families `qsri` (8 tests) + `qsri3d` (8 tests). C80.1 (2026-10-16): `-volumetric` — `sri_active()` mode mask (SRI_SHEAR / SRI_VOLUMETRIC), D = D_dev + κ m m^T with κ = m^T D m / 9 at the centroid, D-c feedback + B-bar stored stress in `materi()`; measured vs analytic and Pro `-reduced`, hourglass and eigenvalue checks. C80.2 (2026-10-16): `-lambda` (SRI_LAMBDA, the same machinery with κ -> λ from an isotropy-checked tangent, non-isotropic refused, plane stress dropped), enum BOTH -> LAMBDA in place, `-both` rejected in `input.cc`; gate measurement (Lamé, checkerboard, TG / pure bending / hex8 / distorted cantilevers, convergence, hourglass, eigenvalues). Tests `test-2026/sri_volumetric_*`, `sri_lambda_*`, `sri_both_removed_error1`.
 - [post_calcul_materi_stress_force_average](post_calcul_materi_stress_force_average.md) — fixed 1 INTEGER, default -yes; IMPLEMENTED in lot 2 (2D): the middle-plane averaging + the averaged-node flag consumed by the -primary filter msf_node_is_averaged(); hex27 pending (lot 3).
 - [post_calcul_materi_stress_force_outer](post_calcul_materi_stress_force_outer.md) — fixed 1 INTEGER, default -no; IMPLEMENTED in lot 2 (2D): only the primary nodes at maximum distance from the reference point receive values; hex27 pending (lot 3).
 - [post_calcul_materi_stress_force_plot_switch](post_calcul_materi_stress_force_plot_switch.md) — variable INTEGER, length 3 (2D) / 4 (3D) = the VECTOR items, not the 9/16 result items; IMPLEMENTED in lot 2 (2D): -yes inverts the x/y plot components per item.
@@ -297,7 +300,8 @@ page lists its own in "Differences with the Professional version".
 
 ## Integration quadrature + nodal stress recovery (Professional alignment, 2026-09-13)
 
-- [integration_quadrature_and_stress_recovery](integration_quadrature_and_stress_recovery.md) — the PER-OPERATION quadrature map (Professional vs GNU: Gauss element integrals, row-sum lumped mass, boundary/interface integration) and the Professional's nodal stress recovery identified from its own `.dbs` dumps: per-element least-squares fit (quad4 bilinear, quad9/hex8 linear, verified to 1e-12) + arithmetic-mean assembly; GNU implementation in `sri_stress_recovery_weight` (volume cancellation so the lumped sigma-dof equation assembles the mean), the `stress_recovery_gauss` flag, the SRI path preserved, the `force_element_edge_water` phreatic fix, the removal of the forced 1-point axisymmetric rule (K20, F4 T4), the tet10 Keast 5-point rule + linear least-squares recovery + HRZ lumping (C31, F4 T4), and the validation (dynamic8 6e-11, beam2d_1 59.5766 vs Pro 59.5710, force5 -9.80718 = Pro; corpus 155/197 with the 5 residual failures classified).
+- [group_integration_method_reduced](group_integration_method_reduced.md) — C80 (F4 T6f, 2026-10-16): enums `REDUCED` / `GROUP_INTEGRATION_METHOD_REDUCED_FACTOR`, `integration_reduced_factor()` (default 10, f <= 0 refused), the `pol()` rule table measured on the Professional (135 probes), kind 1 recovery at the reduced points (`stress_recovery_reduced_iso`), the node-radius on-axis Gauss switch, the `msf_element_rule` / `mc_element_rule` replicas; pending: bar3 recovery (C67), selective/B-bar (C80.1).
+- [integration_quadrature_and_stress_recovery](integration_quadrature_and_stress_recovery.md) — the PER-OPERATION quadrature map (Professional vs GNU: Gauss element integrals, row-sum lumped mass, boundary/interface integration) and the Professional's nodal stress recovery identified from its own `.dbs` dumps: per-element least-squares fit (quad4 bilinear, quad9/hex8 linear, verified to 1e-12) + arithmetic-mean assembly; GNU implementation in `sri_stress_recovery_weight` (volume cancellation so the lumped sigma-dof equation assembles the mean), the `stress_recovery_gauss` flag, the SRI path preserved, the `force_element_edge_water` phreatic fix, the removal of the forced 1-point axisymmetric rule (K20, F4 T4), the tet10 Keast 5-point rule + linear least-squares recovery + HRZ lumping (C31, F4 T4), and the validation (dynamic8 6e-11, beam2d_1 59.5766 vs Pro 59.5710, force5 -9.80718 = Pro; corpus 155/197 with the 5 residual failures classified). C71 (2026-10-13): Gauss rebuild in `pol()` for axisymmetric Lobatto points at r < EPS_COORD; C79 Lobatto recovery weighting pending. C66 phase 2 (2026-10-16): tria6 7 / 4-point rules in `pol()`, linear-fit recovery, axisymmetric enablement, geometry-dependent HRZ weight `lumped_hrz_weight` (general.cc + materi.cc numerators) and the analytic modal check (section 3.3b).
 
 ## Solve u-σ — honest stopping criteria + CG (lote A+B de DIAG-SOLVE-MIXTO)
 
@@ -306,7 +310,7 @@ page lists its own in "Differences with the Professional version".
 ## Sprint 12 lote 3 — solver global + pequeños
 
 - [solver](solver.md) — the plain solver_* enums (no_index), the global type override read LAST in top.cc/elem.cc/dof.cc (opposite precedence of the legacy options_solver), solver_bicg_error/stop wired in so_bicg.cc, solver_matrix_symmetric -yes with honest Bi-CG fallback when the measured system is asymmetric (large2), the partials (restart/matrix_save/pardiso×4) verified behavior-neutral.
-- [solver_matrix_symmetric](solver_matrix_symmetric.md) — so_bicg.cc per-solve selection: CG on measured-symmetric systems, honest Bi-CG (as-assembled, not re-symmetrized) under -yes when asymmetric; large2/large3 verification.
+- [solver_matrix_symmetric](solver_matrix_symmetric.md) — so_bicg.cc per-solve selection: CG on measured-symmetric systems, honest Bi-CG (as-assembled, not re-symmetrized) under -yes when asymmetric; large2/large3 verification; K24 guard tests k24_consol_3d* (deliberate divergence, 2026-10-11).
 - [timestep_predict_velocity](timestep_predict_velocity.md) — why the previous-velocity initial guess does not map to the staggered scheme (x=0 start + += accumulation) and the automatic-apply gate in top.cc; the quasistatic iteration-count invisibility gotcha.
 - [tochnog_version](tochnog_version.md) — the record PUT at top() init parsed from __DATE__.
 - [volume_factor_x](volume_factor_x.md) — volume.cc piecewise factor at the IP x; the right-of-last-x factor-1 guard; odd-length validation.
@@ -347,9 +351,9 @@ page lists its own in "Differences with the Professional version".
 
 ## Dinamica: materi_acceleration / materi_dynamic / condicionales / registros
 
-- [inertia_apply](inertia_apply.md) - OPTIONS_INERTIA / CONTROL_OPTIONS_INERTIA gating the lumped transient term of the principal dofs in general.cc/truss.cc; default flipped -yes -> -no (Professional, manual 6.785). Measured on ground14: the legacy default oscillated the momentum around the drained state (sigma' -9.53 at t=1 s vs -10).
+- [inertia_apply](inertia_apply.md) - OPTIONS_INERTIA / CONTROL_OPTIONS_INERTIA gating the lumped transient term of the principal dofs in general.cc/truss.cc; default flipped -yes -> -no (Professional, manual 6.785). Measured on ground14: the legacy default oscillated the momentum around the drained state (sigma' -9.53 at t=1 s vs -10). Lumped HRZ masses: tet10 hardcoded fractions (C31), tria6 `pol()` `lumped_hrz_weight` (C66).
 - [materi_acceleration](materi_acceleration.md) - enum MATERI_ACCELERATION + acc_indx, handler de initia (input.cc), basenames accx/accy/accz (database.cc), update derivado en parallel_new_dof_diagonal (dof.cc), caso especial -accx en bounda.cc. Verificado contra el binario Professional (dynamic3/4 rc=0).
-- [materi_dynamic](materi_dynamic.md) - registro global MATERI_DYNAMIC (double, no_index) + control_materi_dynamic a double; blend del sigvec del momento con old_sig y escalado f de la rigidez del momento en materi.cc y truss.cc. A/B contra el Professional documentado (f=1 byte-identico; f=0 estable solo dentro del CFL del esquema GNU).
+- [materi_dynamic](materi_dynamic.md) - registro global MATERI_DYNAMIC (double, no_index) + control_materi_dynamic a double; blend del sigvec del momento con old_sig y escalado f de la rigidez del momento en materi.cc y truss.cc. A/B contra el Professional documentado (f=1 byte-identico; f=0 estable solo dentro del CFL del esquema GNU). C11 (2026-10-11): helper materi_dynamic_effective() in general.cc (control record at ICONTROL overrules the global one) used by the displacement-primary gate and every reader.
 - [start_if_not](start_if_not.md) - extension de input_read_string(): start_if_not/end_if_not con using_if_not; parada del value-loop en los 4 tokens.
 - [bounda_time_smc](bounda_time_smc.md) - registros BOUNDA_TIME_SMC(_OFFSET/_UNITS) registrados; el lector del formato SMC queda PENDIENTE; bounda() falla con mensaje honesto.
 
@@ -364,7 +368,8 @@ page lists its own in "Differences with the Professional version".
 
 ## KEYWORDS BATCH C (2026-09-04) — clusters pequeños de keywords del corpus
 
-- [group_spring_memory](group_spring_memory.md) — enum + registro; parse-only.
+- [group_spring_memory](group_spring_memory.md) — enum + registro; parse-only (the spring law does not depend on it, C88).
+- [group_spring_direction](group_spring_direction.md) — spring.cc spring(): projected elongation, initial axis, signed tangent, spring1 indices (C88).
 - [group_spring_stiffness_nonlinear](group_spring_stiffness_nonlinear.md) — consumo en spring.cc (k del diagrama en la strain media del incremento).
 - [element_spring_strain](element_spring_strain.md) — enum + registro version_all + pre-alloc en top.cc + PUT en spring.cc.
 - [dependency_apply](dependency_apply.md) — gate global en get_group_data (group.cc).
@@ -395,7 +400,7 @@ page lists its own in "Differences with the Professional version".
 
 - [group_truss_expansion](group_truss_expansion.md) — enum + registro; resta termica del incremento de longitud en truss() (todas las memorias); verificado vs Pro (truss11: -2 EXACTO).
 - [group_truss_initial_force](group_truss_initial_force.md) — enum + registro; siembra de la fuerza en el nacimiento del elemento (sin estado previo); verificado vs Pro (truss12: rhside ±1; el Pro renumería el truss en su .dbs).
-- [group_truss_memory](group_truss_memory.md) — truss.cc memory branches: new -total branch (current axis, EA/L0) and the tension-only geometric stiffness N/L (I - n n) for -updated/-total (K17 2026-10-06; Pro truss2/truss14).
+- [group_truss_memory](group_truss_memory.md) — truss.cc memory branches: new -total branch (current axis, EA/L0) and the tension-only geometric stiffness N/L (I - n n) for -updated/-total (K17 2026-10-06; Pro truss2/truss14). C11 (2026-10-11): default -total_linear with materi_displacement, -updated_linear without; signed projected length in the linear branch.
 - [group_time](group_time.md) — group.cc `group_time_alive()` (shared by elem.cc and bounda.cc); bounda.cc `bounda_node_dormant()` skips bounda_dof/bounda_unknown on nodes whose elements are all inactive (C39 2026-10-06, Pro truss8).
 - [post_calcul_k0](post_calcul_k0.md) — enums K0/K0_SIG (name entries) + slot k0_sig en calculate() + branch K0 en calculate_operat (2D/3D/fallback 1D); verificado vs Pro (k0: 0.1111111111 EXACTO).
 - [element_dof_initial](element_dof_initial.md) — registro ELEMENT_DOF_INITIAL + marker ELEMENT_DOF_INITIAL_APPLIED (version_all=1) escrito por step_close tras converger el paso de nacimiento; sustitucion del old dof en la inercia lumped de general(); verificado vs Pro (phase1 + probe 2 pasos).
@@ -422,7 +427,7 @@ page lists its own in "Differences with the Professional version".
 
 ## PARALLEL PACKAGE 2 (2026-09-07) — SEGV family + ground11 density + force singletons (3 worktrees)
 
-- [post_element_force](post_element_force.md) — 1D post_element_force sections: msf_element_rule leaves nper[1]/nper[2] uninitialized for ndim=1 (stack garbage -> sig_ip stack overflow = the 5 corpus SEGV force16/17/mpc8/9/post7); bar2 now defaults to MINIMAL 1-point like pol(); dedicated ndim==1 branch (axial N = sigma*A, interior section = continuous axial force of the restricted adjacent element, NOT the canceling sum). Fixes mpc8/post7 rc=0; force16/17/mpc9 RUNFAIL with clean causes (staggered sigma gap / parse-only _force/_inertia / explicit-tie semantics).
+- [post_element_force](post_element_force.md) — 1D post_element_force sections: msf_element_rule leaves nper[1]/nper[2] uninitialized for ndim=1 (stack garbage -> sig_ip stack overflow = the 5 corpus SEGV force16/17/mpc8/9/post7); bar2 now defaults to MINIMAL 1-point like pol(); dedicated ndim==1 branch (axial N = sigma*A, interior section = continuous axial force of the restricted adjacent element, NOT the canceling sum). Fixes mpc8/post7 rc=0; force16/17/mpc9 RUNFAIL with clean causes (staggered sigma gap / parse-only _force/_inertia / explicit-tie semantics). C84 (2026-10-17): non-tensor continuum elements through pol() (pef_element_internal_forces_pol), 2D record 6 values (input check) and 3-value 2D result, 2D stress-layout NaN fix, axisymmetric ring forces with the hoop term, non-continuum/interface elements refused.
 - [groundflow density wet/dry](groundflow_multilevel_mechanics.md) — wet/dry density selection (manual 6.641): wet iff element-average total groundflow_phreatic_coord < 0. Fixes ground4 rc=0; ground11 fields match the Pro in 0.3% (target rc=1 residual = column coupling path gap).
 - [force_element_edge_water](force_element_edge_water.md) — Pro layout is a -yes switch (auto hydrostatic: rho from groundflow_density, g from force_gravity vertical, dz to phreatic, normal-outward loading); legacy 4-double layout kept. Structural bug fixed: _element/_element_group/_element_side restrictions of the whole force_edge family were nested in the condif branch (dead code). Fixes force5 + force6 rc=0.
 - [group_materi_plasti_bounda](group_materi_plasti_bounda.md) — wall-friction reduction verified working at runtime (A/B); direct8 rc=1 is 100% -updated kinematics at gamma=1 (same family as direct6/7).
@@ -471,7 +476,7 @@ page lists its own in "Differences with the Professional version".
 
 ## NODAL STRESS RECOVERY (ABSOLUTE WEIGHTED AVERAGE, 2026-09-15)
 
-- [nodal_stress_recovery](nodal_stress_recovery.md) — `dof.cc` `parallel_new_dof_diagonal()`, `general.cc` `general()`, `materi.cc` `materi()`, `elem.cc` `elem()`: the reported nodal stress is now ASSIGNED the absolute weighted average of the per-element nodal stresses (the Professional's `element_dof` mean) instead of accumulating the element stress increments. Closes `delete2` (node 2 `sigxx` 0.6 -> **0.8** = Pro) without the `delete3` regression (0.6); the full `node_dof`/`post_point_dof` field of the delete/mpc family matches the Pro to <=2.1e-10. Gate: `!materi_strain_total` and not convected (preserves `strconv1`, `examp9/10/23`). Corpus sfnet 197 and validation-suite 233 byte-identical; suite 16/16. Residual: the `mpc5` `k=1` one-iteration lag (post-solve constitutive re-evaluation, separate work unit).
+- [nodal_stress_recovery](nodal_stress_recovery.md) — `dof.cc` `parallel_new_dof_diagonal()`, `general.cc` `general()`, `materi.cc` `materi()`, `elem.cc` `elem()`: the reported nodal stress is now ASSIGNED the absolute weighted average of the per-element nodal stresses (the Professional's `element_dof` mean) instead of accumulating the element stress increments. Closes `delete2` (node 2 `sigxx` 0.6 -> **0.8** = Pro) without the `delete3` regression (0.6); the full `node_dof`/`post_point_dof` field of the delete/mpc family matches the Pro to <=2.1e-10. Gate: `!materi_strain_total` and not convected (preserves `strconv1`, `examp9/10/23`). Corpus sfnet 197 and validation-suite 233 byte-identical; suite 16/16. Residual: the `mpc5` `k=1` one-iteration lag (post-solve constitutive re-evaluation, separate work unit). F4 T6f WU1: `miscel.cc` `sri_stress_recovery_weight()` returns F/volume for tria3 (1/3 points), tria6, tet4 and bar2 (1 point) = Professional arithmetic mean; closes K15 `validation_14`.
 
 ## NODAL STRESS POST-SOLVE SYNC (2026-09-15)
 
@@ -512,6 +517,8 @@ page lists its own in "Differences with the Professional version".
 ## K11 NODAL STRAIN RECOVERY (2026-10-06)
 
 - [nodal_strain_recovery](nodal_strain_recovery.md) — `miscel.cc` `strain_recovery_weight()`; `materi.cc` strain numerators and `general.cc` lumped denominator/inertia with the stress recovery weight (sri_stress_recovery_weight, h for SRI).
+- [materi_plasti_kappa](materi_plasti_kappa.md) — `elem.cc` ELEMENT_DOF masks + `kap_indx`, `materi.cc` IP write and nodal numerator with `strain_recovery_weight()` outside the h guard, `general.cc` denominator weight (F4 T6f WU2); sibling defect C68 resolved 2026-10-12.
+- [materi_plasti_rho](materi_plasti_rho.md) — rho read/update path; C68 (2026-10-12): rho, kapsh, cap1 pc, damage and Maxwell msig kept in ELEMENT_DOF (`elem.cc` masks), one `materi.cc` recovery-weight block after kappa, `general.cc` denominator; latent Maxwell-index read issue C68d.
 
 ## K13 DIRECT PLASTICITY STATE OUTPUT (2026-10-06)
 
@@ -552,3 +559,24 @@ page lists its own in "Differences with the Professional version".
 ## F4 T13 — scratch buffers and build flags (2026-10-10)
 
 - [db_buffer_contract](db_buffer_contract.md) — how to size the buffers given to `db()` / `get_group_data()` / `array_*()` / `geometry()`, the `scripts/audit_db_buffers.py` audit and the 34 call sites it fixed (prerequisite of the `-O2` build, BACKLOG C49).
+
+## F4 T6a — cheap batch (2026-10-11)
+
+- [input_word_length](input_word_length.md) — input.cc input_word(): bounded word reads (setw(MCHAR)) for every parser read, split words allowed only in comments; range.cc converted in F4 T6f ([ranges](ranges.md)).
+- [post_calcul_size_tot](post_calcul_size_tot.md) — calcul.cc calculate_operat SIZETOT/SIZEDEV without the 0.5 factor (F4 T6a); refinement indicator scale-invariant.
+
+## F4 T6c — control_restart (2026-10-11)
+
+- [control_restart](control_restart.md) — restart.cc restart() + restart_reset_element_state(): clears ELEMENT_DOF_INITIALISED so elem.cc rebuilds the IP state from the reset node dofs; other element history records (interface, spring, tendon, damage) not verified (BACKLOG C58).
+
+## F4 T6f — ranges (2026-10-12)
+
+- [ranges](ranges.md) — range.cc range_scan() (STEP sign, from==to, several blocks, reads through input_read_string()) and range_expand() (value-range validation); input.cc integer check inside value ranges.
+
+## F4 T6f — K21 WU2 group_materi_stokes (2026-10-12)
+
+- [group_materi_stokes](group_materi_stokes.md) — general.cc general(): `stokes` default -YES, read with `db(GROUP_MATERI_STOKES, element_group, ...)` (before -NO at index 0); only `conv_part` of MATERI_VELOCITY depends on it. Tests stokes_default1/group1/group2; test-2014 cmat_gate rewritten. Residual: C72 convected IP stress.
+
+## F4 T6f — LOW queue (2026-10-17)
+
+- [db_buffer_contract](db_buffer_contract.md) — section "Run-time record names": `db_type()` check of the run-time record names of post.cc / print_el.cc / repeat.cc (BACKLOG C54); the audit REVIEW sites already safe.

@@ -91,12 +91,32 @@ change; the numbers below are the full measured mechanism):
   the Pro's measured map (scope in DIAG-SOLVE-MIXTO S17.4).
 - SMC reading (bounda_time_smc) — separate pending feature.
 
+## Effective factor helper (F4 T6d / C11, 2026-10-11)
+
+- `general.cc` `materi_dynamic_effective( long int *specified )`: the
+  single source of the factor. Global `MATERI_DYNAMIC` (default 1), then
+  `CONTROL_MATERI_DYNAMIC` at `ICONTROL` overrules it; `*specified` = 1
+  when one of the two records applies. Returns 1 while
+  `disp_primary_reference == -YES` (the f=1 auxiliary reassembly of the
+  displacement-primary scheme). Declared in `tochnog.h` / `tochnog-mod.h`.
+- Readers: `so.cc` `disp_primary_gate()` (requires `specified` and
+  0 <= f < 1; the old exclusion of `CONTROL_MATERI_DYNAMIC` is gone) and
+  `solve()` (`disp_primary_f`); `truss.cc` (reference-configuration test
+  and the force blend), `materi.cc` (reference test and momentum blend),
+  `elem.cc` (reference mass). `solve()` no longer PUTs `MATERI_DYNAMIC = 1`
+  around the auxiliary `element_loop()` and restores it: the marker
+  `disp_primary_reference` alone selects f = 1, so a control record can no
+  longer override the temporary value.
+- Verified against the Professional 02-08-2026 (node 2 disx): dynamic1 +
+  only `control_materi_dynamic 10 0.` 6.4477 -> 0.0958890; global +
+  control 0. 0.0937873 -> 0.0958890; control 0.5 1.45599 -> 0.932818; no
+  dynamic record 1.91225 -> 0.995505 (the last one through the truss
+  memory default, see `group_truss_memory.md`); dynamic3 32.6583 ->
+  60.44025.
+
 ## Differences with the Professional version
 
-- **`control_materi_dynamic` and implicit truss dynamics without
-  `materi_dynamic`** (known difference, not decided; BACKLOG C11, C39). GNU:
-  Displacement-primary gate keys on the global `materi_dynamic` only
-  (`dynamic1` variants 0.0938 / 6.45 / 1.91; `dynamic3` node 2 32.66).
-  Professional 02-08-2026: 0.0959 / 0.0959 / 0.9955; `dynamic3` 60.44.
-  Status: Open, MEDIUM; fix proposed (effective factor per control index).
+- None known for the factor resolution: the former C11 difference
+  (`control_materi_dynamic` ignored by the displacement-primary gate,
+  truss default memory) was resolved on 2026-10-11 (F4 T6d; BACKLOG C11).
   Index: [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).

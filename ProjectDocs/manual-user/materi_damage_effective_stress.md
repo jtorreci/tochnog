@@ -80,14 +80,22 @@ compression and shear, load and hold).
 
 ## Differences with the Professional version
 
-- Mazars damage under a compressive `sigxx` combined with a shear `sigxy`
-  or `sigxz`: `dam` differs from the Professional (the triaxiality factor
-  gamma of both codes depends on the components differently; see the
-  developer page). Uniaxial, biaxial without shear, pure shear and
-  compression with `sigyz` shear agree exactly.
-- Damage with plasticity yielding before the damage threshold: the
-  plastic strain path differs (both give sigma = (1 - d) C eps_elastic for
-  their own strains).
+- **Mazars equivalent strain** (deliberate divergence, class A, project
+  decision 2026-10-12; BACKLOG C7). GNU: manual 2.2.5, eps_eq =
+  sqrt(sum <eps_i>+^2) of the positive principal strains (hex8
+  diag(2e-4,-3e-4,1e-4): dam 0.28610207515). Professional 02-08-2026:
+  accumulates them in ascending order as s = 2 s + eps^2 (weights 4, 2, 1;
+  the 2014 accumulation defect the GNU fixed on 2026-08-10): dam 0.36409.
+  It differs whenever two or three principal strains are positive, also
+  through a von Mises + damage path (bar with `vonmises 3e6`: GNU dam
+  0.925372, eppxx 1.87863e-4; Professional 0.96946, 1.368e-4). Guard
+  tests `test-2026/damage_mazars_eq_two_positive1`,
+  `damage_mazars_vonmises1`. Index:
+  [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).
+- The triaxiality factor gamma is built from the xx, xy, xz stress
+  components in both codes (not objective: a compressive xx with xy or xz
+  shear gives an orientation-dependent `dam`). Same in the Professional,
+  so not a divergence; noted in BACKLOG C7, no fix planned.
 - `group_materi_memory -updated` without `materi_displacement`: the total
   strain differs slightly (5.99823e-4 vs 6.0e-4 in the bar example), so
   `dam` and the stress differ by ~0.2 %. Pre-existing, not related to

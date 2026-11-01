@@ -1,0 +1,67 @@
+( C71 {F4 T6f, 2026-10-13} axisymmetric viscous fluid with group_integration_method -lobatto: element 1 touches the symmetry axis r=0, element 2 does not. The Professional integrates an element whose Lobatto points lie on the axis with the Gauss rule {at r=0 the hoop term h/r is infinite and the volume 2 PI r w detJ is zero}; the off-axis element keeps Lobatto. Prescribed velocity at every node except vely of node 3 {on the axis} and node 8. Targets = Professional 02-08-2026 node_dof; GNU before: NaN right-hand side and velocities. )
+
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_stress
+end_initia
+mesh -fixed_in_space -fixed_in_space
+inertia_apply -no
+convection_apply -no
+node 1 0.0 0.0
+node 2 1.0 0.0
+node 3 0.0 1.0
+node 4 1.0 1.0
+node 5 2.0 0.0
+node 6 3.0 0.0
+node 7 2.0 1.0
+node 8 3.0 1.0
+element 1 -quad4 1 2 3 4
+element 2 -quad4 5 6 7 8
+bounda_dof 0 -ra 1 -ra -velx
+bounda_time 0 0. 0.0 10. 0.0
+bounda_dof 1 -ra 1 -ra -vely
+bounda_time 1 0. 0.0 10. 0.0
+bounda_dof 2 -ra 2 -ra -velx
+bounda_time 2 0. 1.25 10. 1.25
+bounda_dof 3 -ra 2 -ra -vely
+bounda_time 3 0. 0.2 10. 0.2
+bounda_dof 4 -ra 3 -ra -velx
+bounda_time 4 0. 0.0 10. 0.0
+bounda_dof 6 -ra 4 -ra -velx
+bounda_time 6 0. 1.75 10. 1.75
+bounda_dof 7 -ra 4 -ra -vely
+bounda_time 7 0. 0.6 10. 0.6
+bounda_dof 8 -ra 5 -ra -velx
+bounda_time 8 0. 3.0 10. 3.0
+bounda_dof 9 -ra 5 -ra -vely
+bounda_time 9 0. 0.4 10. 0.4
+bounda_dof 10 -ra 6 -ra -velx
+bounda_time 10 0. 5.25 10. 5.25
+bounda_dof 11 -ra 6 -ra -vely
+bounda_time 11 0. 0.6000000000000001 10. 0.6000000000000001
+bounda_dof 12 -ra 7 -ra -velx
+bounda_time 12 0. 4.0 10. 4.0
+bounda_dof 13 -ra 7 -ra -vely
+bounda_time 13 0. 0.8999999999999999 10. 0.8999999999999999
+bounda_dof 14 -ra 8 -ra -velx
+bounda_time 14 0. 6.75 10. 6.75
+group_type 0 -materi
+group_materi_viscosity 0 1.0
+group_materi_density 0 1.0
+group_materi_elasti_compressibility 0 1.0
+group_materi_memory 0 -updated_linear
+group_integration_method 0 -lobatto
+group_axisymmetric 0 -yes
+control_timestep 10 1. 1.
+target_item 0 -node_dof 3 -vely
+target_value 0 -9.599999999992e-01 1.0e-09
+target_item 1 -node_dof 8 -vely
+target_value 1 -7.913043478261e-01 1.0e-09
+target_item 2 -node_dof 1 -sigxx
+target_value 2 5.160000000000e+00 1.0e-08
+target_item 3 -node_dof 3 -sigzz
+target_value 3 2.660000000000e+00 1.0e-08
+target_item 4 -node_dof 6 -sigxx
+target_value 4 7.108695652174e+00 1.0e-08
+end_data

@@ -51,9 +51,9 @@ tolerance is kept unchanged.
 | `iface_mc_dil` | `element_interface_strain_normal 2` | -2.8065 ±0.01 | **-1.39435** ±0.01 | `group_interface.md` §"Convergence record (2026-09-03, interface Mohr-Coulomb direct)": the incremental dilatancy now uses only the plastic slip increment of the step. |
 | `iface_mc_dil_1step` | `element_interface_strain_normal 2` | -2.82675 ±0.01 | **-1.39338** ±0.01 | same incremental-dilatancy fix (2026-09-03). |
 | `iface_mc_gap` | `node_dof 6 -velix` | 0 ±1 | **-100.125** ±1 | `group_interface.md` §"Convergence record (2026-09-04, gap multi-step + reset semantics)": closed when `strain <= gap`, default gap `+1e20`; the previous code left an explicit positive gap always open. |
-| `iface_mc_num` | `element_interface_force_tang 2` | 50 ±1 | **1e6** ±1 | `group_interface.md`: `ELEMENT_INTERFACE_FORCE_TANG` now stores the **elastic trial** (`interface.cc` tangential block), not the clamped force; the elastic trial is `kt*gamma = 1e6`. |
-| `iface_mc_slip` | `element_interface_force_tang 2` | 0 ±1 | **5000** ±1 | same elastic-trial change. |
-| `iface_mc_slip_1step` | `element_interface_force_tang 2` | 0 ±1 | **5000** ±1 | same elastic-trial change. |
+| `iface_mc_num` | `element_interface_force_tang 2` | 50 ±1 | **1e6** ±1 | `group_interface.md`: `ELEMENT_INTERFACE_FORCE_TANG` now stores the **elastic trial** (`interface.cc` tangential block), not the clamped force; the elastic trial is `kt*gamma = 1e6`. **Reverted 2026-10-11 (F4 T6d C52)**: the elastic-trial history was a defect (no elastic unloading after a slip reversal, Professional probe 4.0 vs GNU 5.0); the history is the clamped force again and the original target is restored (§6). |
+| `iface_mc_slip` | `element_interface_force_tang 2` | 0 ±1 | **5000** ±1 | same elastic-trial change. **Reverted 2026-10-11 (F4 T6d C52)**: the elastic-trial history was a defect (no elastic unloading after a slip reversal, Professional probe 4.0 vs GNU 5.0); the history is the clamped force again and the original target is restored (§6). |
+| `iface_mc_slip_1step` | `element_interface_force_tang 2` | 0 ±1 | **5000** ±1 | same elastic-trial change. **Reverted 2026-10-11 (F4 T6d C52)**: the elastic-trial history was a defect (no elastic unloading after a slip reversal, Professional probe 4.0 vs GNU 5.0); the history is the clamped force again and the original target is restored (§6). |
 | `iface_mc_tension` | `node_dof 6 -velix` | 3.88 ±1.5 | **100.102** ±1.5 | `group_interface.md` §tension_direct: the interface opens in traction when `|kn*strain_normal| > tension_limit` (tension-limit fix). |
 | `groundflow_total_pressure_tension` | `node_rhside 3 -velx` | -4.147 ±0.05 | **-4.2896** ±0.05 | `groundflow_velocity_sign.md` (commit `0838457`): the Darcy velocity is `+k grad(h)` (Professional convention), restoring the correct sign. |
 | `mesh_act_grav` | `node_dof 3 -velx` | 1.3333 ±0.01 | **1.2** ±0.01 | quadrature `06e175d` + the derivatives full `6*nder` sigma restore (`DIAG-SOLVE-MIXTO.md` §13.4). The 1.3333 was the pre-`06e175d` D-fix value. |
@@ -112,9 +112,9 @@ iface_expansion.dat:                     target_value  1  1.984 0.1     -> targe
 iface_mc_dil.dat:                        target_value  1  -2.8065 0.01  -> target_value  1  -1.39435 0.01
 iface_mc_dil_1step.dat:                  target_value  1  -2.82675 0.01 -> target_value  1  -1.39338 0.01
 iface_mc_gap.dat:                        target_value  1  0 1           -> target_value  1  -100.125 1
-iface_mc_num.dat:                        target_value  1  50 1          -> target_value  1  1e6 1
-iface_mc_slip.dat:                       target_value  1  0 1           -> target_value  1  5000 1
-iface_mc_slip_1step.dat:                 target_value  1  0 1           -> target_value  1  5000 1
+iface_mc_num.dat:                        target_value  1  50 1          -> target_value  1  1e6 1    (reverted 2026-10-11, §6)
+iface_mc_slip.dat:                       target_value  1  0 1           -> target_value  1  5000 1   (reverted 2026-10-11, §6)
+iface_mc_slip_1step.dat:                 target_value  1  0 1           -> target_value  1  5000 1   (reverted 2026-10-11, §6)
 iface_mc_tension.dat:                    target_value  1  3.88 1.5      -> target_value  1  100.102 1.5
 groundflow_total_pressure_tension.dat:   target_value  0  -4.147 0.05   -> target_value  0  -4.2896 0.05
 mesh_act_grav.dat:                       target_value  1  1.3333 0.01   -> target_value  1  1.2 0.01
@@ -141,6 +141,79 @@ No source file was modified. Every deliberate alignment commit (`06e175d`,
   generated mesh dump (first line `1 0 0`), not a test input.
 
 ---
+
+## 6. Revert of the three interface Mohr-Coulomb recalibrations (2026-10-11, F4 T6d C52)
+
+The `iface_mc_num`, `iface_mc_slip` and `iface_mc_slip_1step` targets of §1
+were recalibrated to the elastic trial `kt*gamma_total` (1e6 / 5000 / 5000)
+because `ELEMENT_INTERFACE_FORCE_TANG` had started to store it. That history
+was a defect: the friction force `clamp(kt*gamma_total)` has no memory of the
+plastic slip and does not unload after a slip reversal (quasi-static probe:
+Professional 02-08-2026 shear 4.000000083, analytic 4.0, GNU 5.0; it also
+broke test-2014 `iface_gen*` once the post-solve material pass was extended
+to inertia models, BACKLOG C52). Since F4 T6d C52 the history is the clamped
+force again (`interface.cc`, `manual-developer/group_interface.md`
+"Convergence record 2026-10-11"), so the ORIGINAL 2014 targets are the
+correct ones and are restored (tolerance unchanged, tracked files):
+
+```
+iface_mc_num.dat:         target_value  1  1e6 1   -> target_value  1  50 1
+iface_mc_slip.dat:        target_value  1  5000 1  -> target_value  1  0 1
+iface_mc_slip_1step.dat:  target_value  1  5000 1  -> target_value  1  0 1
+```
+
+Each file also gains `target_item 2 -element_interface_intpnt_stress 2 1`
+(the shear of the first integration point) with the same value (50 / 0 / 0,
+±1). Old binary: rc 1 on the restored targets (actual 1e6 / 5000 / 5000);
+new binary: rc 0.
+
+## 7. test-2014 `node_slide` recalibrated to the physical penalty reaction (2026-10-11, F4 T6e C53)
+
+`slide_penalty_law` (`slide.cc`, the legacy slide law without
+`slide_stiffness`) indexed `node_lhside` / `node_rhside` with the node_dof
+index `vel_indx+idim*nder` instead of the principal-dof index
+`vel_indx/nder+idim` (`slide_spring`, `dof.cc`). In `node_slide`
+(`materi_strain_total`, `derivatives`, nder 4) the y penalty term landed in
+the `eptxx` slot: `node_rhside 4` eptxx -5e13, `node_dof 4 eptxx` -10, and
+`vely` kept only the element force 2.97e-12, so the 2014 target
+`node_rhside 4 -vely 0.001 ±0.05` passed trivially (already noted as
+"pasaba trivial" in the `scripts/build_safe.sh` header of 2026-09).
+
+Owner decision 2026-10-11: recalibrate to the physically correct values.
+Node 4 has v = (0, 1) (prescribed), the slide line normal is
+n = (-1,1)/sqrt(2), slide_penalty 1e15 (default), dtime 0.1: the penalty
+reaction is - 1e15 * (v.n) * dtime * n_y = -1e15 * 0.1 * 0.5 = -5e13
+(the friction term is O(1e-3)). Tracked file, header comment added:
+
+```
+node_slide.dat:  target_value  1  0.001 0.05  -> target_value  1  -5.e13 5.e7   (relative 1e-6)
+                 + target_item 2 -node_dof 4 -eptxx / target_value 2 0. 1.e-10
+```
+
+HEAD binary (`c276931`): rc 1 (vely 2.97e-12, eptxx -10); fixed binary:
+rc 0 (vely -5e13, eptxx 0).
+
+## 8. sfnet `examp3` recalibrated to the Professional value (2026-10-12, F4 T6f WU2, BACKLOG B16)
+
+`examp3` (sfnet; the 2014 ancestor of the Professional `validation_3`, von
+Mises plate with kap hardening) targets `post_node_result 1 -vely`
+-124.8 ±1. That value is a 2014 GNU calibration of the nodal-kappa
+defect: the hardening read the h-lumped NODAL kappa interpolated back to
+the integration points. With kappa kept per integration point (F4 T6f
+WU2) GNU gives -126.431; the Professional 02-08-2026 on the translated
+input (`-updated_linear` for the GNU-only `-updated_without_rotation`;
+same GNU result with either memory) gives -126.374 (0.045 %). HEAD
+before the fix: -125.477. Owner decision 2026-10-12: recalibrate to the
+Professional value, tolerance kept, dated header comment. Untracked
+external file, edited identically in the local copy
+(`external-downloads/sfnet/extracted/test/examp3.dat`) and the omen copy
+(`f4t4_corpus/sfnet/examp3.dat`):
+
+```
+examp3.dat:  target_value 1   -124.8 1.   -> target_value 1   -126.374 1.
+```
+
+WU2 binary: rc 0 (was rc 1 against the old target).
 
 # Inertia-apply reconstruction — the 15 solver-divergence tests (2026-09-16)
 
@@ -369,7 +442,8 @@ byte-identical to the stored baseline (187 / 9 / 1).
 
 Since `bf74f28` the history `element_interface_force_tang2` is a length-4
 per-integration-point array: `interface.cc` PUTs `f_t2_el_ip`, the elastic trial
-`kt2*gamma2_total` of each facing pair (the `ELEMENT_INTERFACE_FORCE_TANG2`
+`kt2*gamma2_total` of each facing pair (since F4 T6d C52, 2026-10-11, the
+clamped force `f_t2_ip`; `iface_tangref` is unchanged) (the `ELEMENT_INTERFACE_FORCE_TANG2`
 record, `data_length = 4`). The stored target `10.4025 ±0.2` was set at
 `7b414fa` (2026-08-24) from the pre-`bf74f28` **scalar** "side-average,
 all-against-all" assembly; the pristine 2026-08-29 `.dbs` reads the scalar

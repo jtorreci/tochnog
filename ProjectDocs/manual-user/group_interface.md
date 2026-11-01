@@ -22,9 +22,14 @@ implemented:
   gap is a real gap: the interface stays open (stress exactly 0, only
   the residual stiffness keeps the matrix regularized) until the
   compression brings the accumulated strain below |gap|. Without the
-  record the interface is always closed (default gap = +1e20 — "if you
-  want to allow always tension stresses set gap to, by example,
-  1.e20"). The stress of the closed phase accumulates ONLY the normal
+  record the gap is 0: an interface that is pulled apart opens and
+  carries no stress (F4 T6f C87, 2026-10-21; until then the GNU default
+  was +1e20, always closed). To let an interface carry tension, set the
+  gap to a large value, as the manual says: "if you want to allow always
+  tension stresses set gap to, by example, 1.e20". An opened interface,
+  whether opened by the gap or by the tension limit, has neither normal
+  nor shear stress; Mohr-Coulomb friction and dilatancy do not act
+  while it is open. The stress of the closed phase accumulates ONLY the normal
   strain of the steps that end closed: the free travel of the open
   phase never builds stress (`interface2` of the corpus: gap 0.1, 200
   steps of −1e-3 → the gap closes at step 100 and the final stress is
@@ -37,8 +42,8 @@ implemented:
 - `group_interface_materi_plasti_mohr_coul_direct phi c phi_flow`:
   cumulative Mohr-Coulomb friction (manual Professional 6.632, angles in
   RADIANS). The **presence of the record activates the law**: the trial is
-  the ACCUMULATED tangential displacement times the stiffness
-  (`kt*gamma_total`, the history keeps accumulating across plastic steps)
+  the tangential force of the previous step plus the stiffness times the
+  tangential displacement increment of this step (elastic predictor),
   and the resulting tangential force is clamped to the yield limit
   `max_fric = |c + Fn*tan(phi)|`, where `Fn` is the accumulated normal
   force (POSITIVE under compression). While sliding the tangential
@@ -54,6 +59,14 @@ implemented:
   the interface in both sliding directions
   (`strain_normal += -dgamma_inc*tan(phi_flow)`; the increment, not the
   total accumulated slip, so the dilatancy is not re-counted every step).
+  The stored history is the clamped force (F4 T6d C52, 2026-10-11), so a
+  slip reversal unloads elastically from the yield limit, as in the
+  Professional: slide at the limit `c = 5`, then reverse the slip by
+  `5*0.2/kt` → shear 4.0 (test-2026 `interface_mc_slip_reversal1`;
+  Professional 02-08-2026 4.000000083). Before, the history held the
+  elastic trial `kt*gamma_total` and the force stayed at 5.0 after the
+  reversal. `element_interface_force_tang` / `_tang2` report this
+  clamped force.
 - `control_reset_dof -sigxx/-sigyy/-sigzz value` (normal stress reset):
   also initialises the accumulated normal strain of the interface
   elements whose normal aligns with the reset axis
@@ -248,3 +261,29 @@ non-unit-length interfaces under load (e.g. the inclined patch1 of the
 corpus) converged to a non-uniform traction instead of the equilibrium
 `sigma_n = n·sigma·n`. The Professional-validated unit-length behaviour
 is unchanged.
+
+## Differences with the Professional version
+
+- Default gap and opened interfaces: the GNU follows the Professional
+  since F4 T6f C87 (2026-10-21; default gap 0, no shear stress on an
+  opened interface). Tests `interface_tension_default_gap1`,
+  `interface_open_gap0_shear1`, `interface_tension_gap1e20_1`.
+- Mohr-Coulomb dilatancy combined with the gap (BACKLOG C89, deferred): the
+  Professional's open/closed decision with dilatancy does not follow the
+  accumulated normal strain (with a physical gap of -0.01 it reports 0
+  stress on a compressed, dilating interface). The GNU equals the
+  Professional for a single step with a gap >= 0 and for any step size
+  with gap 1.e20; with gap 0 and several steps the GNU keeps the
+  1.e20 result (`iface_mc_dil`: GNU -1493.4, Professional -2972.0).
+
+The interface normal does not depend on the node order of the element
+(F4 T6f C60, 2026-10-19). It points from side 1 towards side 2, so the
+normal strain and the normal stress are NEGATIVE under compression and
+positive when the sides separate, as in the Professional. The side of
+each block is taken from the geometry: the continuum element attached to
+each side, or the offset between the sides of a thick interface. A free
+zero-thickness interface keeps the normal of its first two nodes
+(`(-t_y, t_x)` in 2D). Before this change the GNU flipped the 2D normal
+by the node numbers, so the same compressed interface could report +10
+or -10, and with a tension cut-off two of the four node orders opened a
+compressed interface.

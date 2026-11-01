@@ -59,3 +59,10 @@ explicitly to `-yes`.
   groundflow capacity storage term `C·ṗ` must be active (the same convention
   as the Professional; the corpus consolidation examples `large2`/`large3` set
   both records).
+- `solver_matrix_symmetric -yes` in a coupled consolidation input (as in
+  `large2`): the coupled velocity-pressure matrix is not symmetric. The
+  Professional symmetrizes it and its pore pressure changes (4.5 % on
+  `large2`, drift with no flow when undrained); the GNU solves the
+  as-assembled system, so `-yes` and `-no` give the same result, equal to
+  the Professional with `-no`. Deliberate divergence K24 (2026-10-11), see
+  [solver_matrix_symmetric](solver_matrix_symmetric.md).

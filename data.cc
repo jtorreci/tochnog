@@ -142,7 +142,12 @@ void control_reset_interface( long int icontrol )
           // untouched (interface10 of the corpus: after the reset the
           // interface keeps sigma_n = -6 and stays in equilibrium - no
           // extra compression in the next step - while the reported
-          // strain starts from 0).
+          // strain starts from 0). The tangential history
+          // ELEMENT_INTERFACE_FORCE_TANG(2) is the clamped tangential
+          // force (F4 T6d C52), i.e. the remembered shear stress: kept
+          // by the strain reset, zeroed only by control_reset_interface
+          // (probe vs Professional 02-08-2026: slide at c=5, strain
+          // reset, reverse -1.0 -> shear 4.0 both; full reset -> -1.0).
           if ( strain_reset || full_reset ) {
             long int ns1_r = ( length_el_i-1 )/2;
             double zero_arr[9];

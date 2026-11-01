@@ -17,9 +17,21 @@ element assembly:
   coordinates on the geometry via `geometry(NODE_START_REFINED,
   PROJECT_EXACT)` OR the explicit `node_slide` record) it dispatches to:
 - `slide_penalty_law()` — the LEGACY velocity penalty + friction path,
-  kept bit-for-bit for slide geometries WITHOUT a `slide_stiffness`
-  record (classic inputs, e.g. examp14). Note: the original code read
-  `SLIDE_AXISYMMETRIC` with index 0; preserved.
+  kept for slide geometries WITHOUT a `slide_stiffness` record (classic
+  inputs, e.g. examp14). Note: the original code read
+  `SLIDE_AXISYMMETRIC` with index 0; preserved. Index fix (F4 T6e C53,
+  2026-10-11): `node_lhside` / `node_rhside` have one slot per PRINCIPAL
+  dof, so the velocity component idim is `vel_indx/nder+idim` (as in
+  `slide_spring` and `dof.cc`); the code used the node_dof index
+  `vel_indx+idim*nder` (correct only for `new_node_dof`, which keeps it).
+  With `derivatives` (nder 4 in 2D) and `materi_strain_total` the y term
+  landed in the `eptxx` slot (test-2014 `node_slide`: node_rhside eptxx
+  -5e13, node_dof eptxx -10, vely 3e-12; now vely -5e13 = the analytic
+  penalty reaction, eptxx 0; target recalibrated, CORPUS-STALE-TARGETS
+  §7). Pending (pre-existing, not changed): `normal_force` is
+  `array_inproduct( node_rhside, normal, ndim )`, i.e. the FIRST ndim
+  principal slots, which are the velocity slots only when velocity is
+  the first principal unknown.
 - `slide_spring()` — the PROFESSIONAL elastic-plastic law on the TOTAL
   displacements (per node, stateless):
   - displacement source: `dis` dofs (`materi_displacement`) or `veli`
@@ -30,8 +42,16 @@ element assembly:
     tension limit, NOT a compression-only gap: a gap makes the
     redistribution transient of the dragged block lift the loaded node
     permanently - measured on slide4);
-  - tangential elastic predictor `kt*|u_t|` capped at `c + mu*S`
-    (record order phi c -> `mu = tan(values[0])`, `c = values[1]`!);
+  - tangential elastic predictor `kt*|u_t|` capped at `c + mu*|S|`
+    (record order phi c -> `mu = tan(values[0])`, `c = values[1]`!).
+    `sig_t` defaults to `1.e300` (no tension limit) and the cap uses the
+    magnitude of S (F4 T6e C53, 2026-10-11). Before: `sig_t = 0.` by
+    default, i.e. a compression-only gap that contradicted the comment
+    and the manual, and `cap = max(c + mu*S, 0)`; the Professional caps
+    with `c + tan(phi)*|Fn|` (slide4-with-cohesion probe
+    `slide_friction_cohesion1`: Pro -2.065482222595e-3, GNU before
+    -0.002, after -2.06548202685e-3). `node_slide_f` uses the same
+    `|S|` cap;
   - RHS: force ON the node `S*n + F_t` (contact.cc convention,
     `node_rhside[vel_indx/nder+idim] += ...`);
   - matrix: per-direction diagonal `dtime*|dir_i|` weights (contact.cc
@@ -91,7 +111,12 @@ kn = kt = 1e3, phi = 0.523598):
   records: GNU 4.712/4.712 vs Pro 3.142/6.283 with lobatto), so the
   slide springs settle at u1 != u2 and sigma_yy = -6.447e-4 instead of
   the target -6.666666e-4. Not a slide-law issue.
-- slide4 (drag at vx = 1, 100x slide1's rate): the per-step equilibrium
+- slide4 — RESOLVED 2026-10-11 (F4 T6e C53): rc 0 and equal to the
+  Professional (node 1 node_slide_force -2.11291867e-3 / -1.21989198e-3
+  vs -2.11291887e-3 / -1.21989209e-3) with the absent-tension default,
+  the `|S|` cap and slide() in the post-solve material state pass. The
+  historical diagnosis below (2026-09-04) is superseded.
+  Historical: slide4 (drag at vx = 1, 100x slide1's rate): the per-step equilibrium
   of the capped slider oscillates at the drag start (fixed iteration
   budgets from 2 to 40 all fail to converge; the node at x=0 drifts into
   lift-off). slide1 (slow drag) converges exactly with the same law, so

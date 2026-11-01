@@ -23,6 +23,8 @@
 
 #include "tochnog.h"
 #include <sys/resource.h>
+#include <algorithm>
+#include <new>
 
   // c routines
 extern "C" 
@@ -115,16 +117,14 @@ static long int sparse_list_add( int **inz, double **solve_A,
 
 // Visit the element matrix entries of the current solve, mapped to local
 // (solver) dof indices, with the mpc tie expansion of the energy-consistent
-// slave elimination (DIAG §16) - the same entries the Bi-CG products use.
-// mode 0: track the band width under the identity and the given ordering;
-// mode 1: add the entries to the band LU matrix in the given ordering.
-static void solve_band_retry_entries( long int mode, long int max_element,
-  long int *element_matrix_unknowns, long int *perm, long int &band_id,
-  long int &band_perm, double *mat, long int kl, long int ku,
-  long int ldmat )
+// slave elimination (DIAG §16) - the same entries the iterative products
+// use: f( ilocal, jlocal, value ). Used by the direct retries after an
+// iterative failure (SuperLU and band LU, F4 T6f C77).
+template <class F> static void solve_retry_visit( long int max_element,
+  long int *element_matrix_unknowns, F f )
 {
   long int element=0, element_group=0, length=0, imat=0, iglobal=0,
-    jglobal=0, ilocal=0, jlocal=0, pi=0, pj=0, ii=0, jj=0, ldum=0;
+    jglobal=0, ilocal=0, jlocal=0, ldum=0;
   double ddum[1], *element_matrix_values=NULL;
 
   for ( element=0; element<=max_element; element++ ) {
@@ -163,21 +163,27 @@ static void solve_band_retry_entries( long int mode, long int max_element,
         ilocal = solve_global_local[row_t[it2]];
         jlocal = solve_global_local[col_t[it2]];
         if ( ilocal==-NO || jlocal==-NO ) continue;
-        pi = perm[ilocal];
-        pj = perm[jlocal];
-        if ( mode==0 ) {
-          if ( labs(ilocal-jlocal)>band_id ) band_id = labs(ilocal-jlocal);
-          if ( labs(pi-pj)>band_perm ) band_perm = labs(pi-pj);
-        }
-        else {
-          ii = kl + ku + 1 + (pi+1) - (pj+1);
-          jj = pj + 1;
-          mat[(jj-1)*ldmat + ii - 1] += element_matrix_values[imat] *
-            fac_t[it2];
-        }
+        f( ilocal, jlocal, element_matrix_values[imat]*fac_t[it2] );
       }
     }
   }
+}
+
+// Room left for a direct retry, in bytes: the smaller of MemAvailable and
+// the soft address-space limit headroom; -1 when it cannot be measured.
+static long int solve_proc_kb( const char *file, const char *key );
+static double solve_memory_room( void )
+{
+  struct rlimit lim;
+  long int vm_kb = solve_proc_kb( "/proc/self/status", "VmSize:" );
+  long int avail_kb = solve_proc_kb( "/proc/meminfo", "MemAvailable:" );
+  if ( vm_kb<0 || avail_kb<=0 ) return -1.;
+  double room = 1024.*(double)avail_kb;
+  if ( getrlimit( RLIMIT_AS, &lim )==0 && lim.rlim_cur!=RLIM_INFINITY ) {
+    double head = (double)lim.rlim_cur - 1024.*(double)vm_kb;
+    if ( head<room ) room = head;
+  }
+  return room>0. ? room : 0.;
 }
 
 // Direct band LU retry after a Bi-CG failure (F4 T7, memory). The band
@@ -192,6 +198,10 @@ static void solve_band_retry_entries( long int mode, long int max_element,
 // Bi-CG ordering (solve_global_local) is not touched. The right-hand side
 // is the original one (solve_b_temp, 1-based); the correction is returned
 // in solve_b. Returns the dgbsv info.
+// F4 T6f C77: returns SOLVE_BAND_RETRY_NO_MEMORY (without allocating the
+// band) when the band matrix exceeds the memory budget.
+#define BAND_RETRY_MEMORY_FRACTION 0.7
+#define SOLVE_BAND_RETRY_NO_MEMORY -999999
 static long int solve_band_retry( long int max_node, long int max_element,
   long int *element_matrix_unknowns, double *solve_b_orig )
 {
@@ -270,19 +280,47 @@ static long int solve_band_retry( long int max_node, long int max_element,
   assert( k==solve_nlocal );
 
   // exact band of both orderings; keep the smaller one
-  solve_band_retry_entries( 0, max_element, element_matrix_unknowns, perm,
-    band_id, band_perm, NULL, 0, 0, 0 );
+  solve_retry_visit( max_element, element_matrix_unknowns,
+    [&]( long int il, long int jl, double ) {
+      if ( labs(il-jl)>band_id ) band_id = labs(il-jl);
+      if ( labs(perm[il]-perm[jl])>band_perm )
+        band_perm = labs(perm[il]-perm[jl]);
+    } );
   if ( band_id<=band_perm ) array_move( identity, perm, solve_nlocal );
   kl = ku = ( band_id<=band_perm ) ? band_id : band_perm;
   ldmat = 2*kl+ku+1;
   n = solve_nlocal;
+
+  // F4 T6f C77: memory budget. The band matrix needs ldmat*n doubles
+  // (n*bandwidth): on large 3D meshes that is tens of GB, and the old
+  // allocation ended in std::bad_alloc. Refuse it with a clear error when
+  // it exceeds BAND_RETRY_MEMORY_FRACTION of the room left.
+  {
+    double need = 8.*(double)ldmat*(double)n + 24.*(double)n;
+    double room = solve_memory_room();
+    if ( room>=0. && need>BAND_RETRY_MEMORY_FRACTION*room ) {
+      pri( "" );
+      pri( "Error: the direct band LU retry does not fit in memory." );
+      pri( "Equations", (long int) n );
+      pri( "Band width", (long int) kl );
+      pri( "Memory needed (MB)", need/1048576. );
+      pri( "Memory available (MB)", room/1048576. );
+      delete[] global_ordered; delete[] ordered_global; delete[] done;
+      delete[] node_node; delete[] perm; delete[] identity;
+      return SOLVE_BAND_RETRY_NO_MEMORY;
+    }
+  }
   mat = get_new_dbl( ldmat*n );
   array_set( mat, 0., ldmat*n );
   ipiv = new integer[n];
   rhs = get_new_dbl( n );
 
-  solve_band_retry_entries( 1, max_element, element_matrix_unknowns, perm,
-    band_id, band_perm, mat, kl, ku, ldmat );
+  solve_retry_visit( max_element, element_matrix_unknowns,
+    [&]( long int il, long int jl, double v ) {
+      long int pi = perm[il], pj = perm[jl];
+      long int ii = kl + ku + 1 + (pi+1) - (pj+1), jj = pj + 1;
+      mat[(jj-1)*ldmat + ii - 1] += v;
+    } );
   for ( inod=0; inod<=max_node; inod++ ) {
     if ( !db_active_index( NODE, inod, VERSION_NORMAL ) ) continue;
     node_lhside = NULL;
@@ -311,7 +349,10 @@ static long int solve_band_retry( long int max_node, long int max_element,
   return info;
 }
 
-// DEV-B displacement-primary gate (materi_dynamic < 1): deliberately
+// DEV-B displacement-primary gate (materi_dynamic < 1): the factor is the
+// effective one of materi_dynamic_effective() (control_materi_dynamic at
+// the current ICONTROL overrules materi_dynamic, manual 6.141; the gate
+// needs one of the two records). Deliberately
 // conservative. Only the plain mechanical transient of the dynamic corpus
 // family (elastic material, inertia_apply -yes, displacement+velocity
 // dofs, iterative Bi-CG solver) may take the new scheme; any nonlinear or
@@ -323,12 +364,12 @@ static long int disp_primary_gate( long int task )
   long int ldum_gate = 0, idum_gate[1], maxg = -1;
   double f_gate = 0., ddum_gate[1];
   if ( task!=-MATRIX_ITERATIVE_BICG ) return 0;
-  if ( !db_active_index( MATERI_DYNAMIC, 0, VERSION_NORMAL ) ) return 0;
-  db( MATERI_DYNAMIC, 0, idum_gate, &f_gate, ldum_gate,
-    VERSION_NORMAL, GET_IF_EXISTS );
+  {
+    long int spec_gate = 0;
+    f_gate = materi_dynamic_effective( &spec_gate );
+    if ( !spec_gate ) return 0;
+  }
   if ( f_gate<0. || f_gate>=1. ) return 0;
-  // the per-control-step factor variant is kept on the historic path
-  if ( db_active_index( CONTROL_MATERI_DYNAMIC, 0, VERSION_NORMAL ) ) return 0;
   if ( !materi_velocity || !materi_displacement ) return 0;
   {
     long int options_inertia_gate = -NO;
@@ -413,6 +454,104 @@ static long int solve_pardiso_memory_guard( struct rlimit &saved )
   lowered.rlim_cur = (rlim_t) ( vm + budget );
   if ( setrlimit( RLIMIT_AS, &lowered )!=0 ) return 0;
   return 1;
+}
+
+// F4 T6f C77: first direct retry after an iterative failure (breakdown or
+// no convergence): SuperLU (dgssv) on the compressed-column matrix of the
+// same element entries (mpc tie expansion included) plus the NODE_LHSIDE
+// diagonal, with the band-LU diagonal regularization (|diag| < EPS_MAT ->
+// EPS_MAT). The factorization runs under the -matrix_pardiso memory guard,
+// so an out-of-memory dgssv fails cleanly; a failed dgssv leaks its
+// workspace, so after one failure the rest of the run skips this retry.
+// The right-hand side is the original one (solve_b_orig, 1-based); the
+// solution is returned in solve_b. Returns 1 on success, 0 when SuperLU is
+// not compiled in, the matrix does not fit, or the factorization fails.
+static long int solve_superlu_retry_failed = 0;
+static long int solve_superlu_retry( long int max_node, long int max_element,
+  long int *element_matrix_unknowns, double *solve_b_orig )
+{
+#if ( SUPERLU_USE || SUPERLU_MT_USE || SUPERLU_DIST_USE )
+  long int n = solve_nlocal, j=0, k=0, inod=0, ipuknwn=0, nthread=1, ldum=0;
+  double ddum[1];
+
+  if ( n<=0 || solve_superlu_retry_failed ) return 0;
+  db( OPTIONS_PROCESSORS, 0, &nthread, ddum, ldum, VERSION_NORMAL, GET );
+
+  // column counts (duplicates included, one diagonal slot per column)
+  long int *cnt = new (std::nothrow) long int[n+1];
+  if ( cnt==NULL ) return 0;
+  for ( j=0; j<=n; j++ ) cnt[j] = 0;
+  solve_retry_visit( max_element, element_matrix_unknowns,
+    [&]( long int, long int jl, double ) { cnt[jl+1]++; } );
+  for ( j=0; j<n; j++ ) cnt[j+1] += cnt[j] + 1;
+  long int nraw = cnt[n];
+  if ( nraw>=INT_MAX ) { delete[] cnt; return 0; }
+  int *row = new (std::nothrow) int[nraw];
+  double *val = new (std::nothrow) double[nraw];
+  long int *fill = new (std::nothrow) long int[n];
+  if ( row==NULL || val==NULL || fill==NULL ) {
+    delete[] row; delete[] val; delete[] fill; delete[] cnt;
+    return 0;
+  }
+  for ( j=0; j<n; j++ ) {
+    fill[j] = cnt[j];
+    row[fill[j]] = (int) j;
+    val[fill[j]++] = 0.;
+  }
+  solve_retry_visit( max_element, element_matrix_unknowns,
+    [&]( long int il, long int jl, double v ) {
+      row[fill[jl]] = (int) il;
+      val[fill[jl]++] = v;
+    } );
+  for ( inod=0; inod<=max_node; inod++ ) {
+    if ( !db_active_index( NODE_LHSIDE, inod, VERSION_NORMAL ) ) continue;
+    double *node_lhside = db_dbl( NODE_LHSIDE, inod, VERSION_NORMAL );
+    for ( ipuknwn=0; ipuknwn<npuknwn; ipuknwn++ ) {
+      long int il = solve_global_local[inod*npuknwn+ipuknwn];
+      if ( il!=-NO ) val[cnt[il]] += node_lhside[ipuknwn];
+    }
+  }
+  delete[] fill;
+
+  // sort every column by row and merge the duplicates in place
+  int *xa = new (std::nothrow) int[n+1];
+  if ( xa==NULL ) { delete[] row; delete[] val; delete[] cnt; return 0; }
+  std::vector< std::pair<int,double> > col;
+  long int nnz = 0;
+  for ( j=0; j<n; j++ ) {
+    col.clear();
+    for ( k=cnt[j]; k<cnt[j+1]; k++ ) col.push_back( std::make_pair( row[k], val[k] ) );
+    std::sort( col.begin(), col.end(),
+      []( const std::pair<int,double> &a, const std::pair<int,double> &b ) {
+        return a.first<b.first; } );
+    xa[j] = (int) nnz;
+    for ( k=0; k<(long int)col.size(); k++ ) {
+      if ( nnz>xa[j] && row[nnz-1]==col[k].first ) val[nnz-1] += col[k].second;
+      else {
+        row[nnz] = col[k].first;
+        val[nnz] = col[k].second;
+        nnz++;
+      }
+    }
+    for ( k=xa[j]; k<nnz; k++ )
+      if ( row[k]==(int) j && scalar_dabs(val[k])<EPS_MAT ) val[k] = EPS_MAT;
+  }
+  xa[n] = (int) nnz;
+  delete[] cnt;
+
+  for ( j=0; j<n; j++ ) solve_b[j] = solve_b_orig[j+1];
+  struct rlimit saved_as;
+  long int guarded = solve_pardiso_memory_guard( saved_as );
+  long int ok = solve_superlu( val, row, xa, (int) nnz, solve_b, n, nthread );
+  if ( guarded ) setrlimit( RLIMIT_AS, &saved_as );
+  delete[] row; delete[] val; delete[] xa;
+  if ( !ok ) solve_superlu_retry_failed = 1;
+  return ok;
+#else
+  (void)max_node; (void)max_element; (void)element_matrix_unknowns;
+  (void)solve_b_orig;
+  return 0;
+#endif
 }
 
 void solve( long int task )
@@ -581,9 +720,10 @@ void solve( long int task )
   // without an eigendecomposition (alpha = 2b - b^2 with
   // b = (I + dt^2 M^-1 K)^-1).
   //
-  // Implementation: at iteration 1 of a gated step the MATERI_DYNAMIC
-  // record is temporarily flipped to 1 and element_loop() re-assembles
-  // the momentum system with the full stiffness; solving that system
+  // Implementation: at iteration 1 of a gated step solve() sets
+  // disp_primary_reference = -YES, which makes materi_dynamic_effective()
+  // return 1 (no database record is changed), and element_loop()
+  // re-assembles the momentum system with the full stiffness; solving that system
   // gives x1 = w1 (the equilibrium loop solves for the CORRECTION to the
   // iterate: node_dof_new += solve_b). A second solve with right-hand
   // side M*x1 gives x2, and the returned correction is
@@ -614,8 +754,7 @@ void solve( long int task )
       return;
     }
     disp_primary_pass = 1;
-    db( MATERI_DYNAMIC, 0, idum, &disp_primary_f, ldum,
-      VERSION_NORMAL, GET );
+    disp_primary_f = materi_dynamic_effective( NULL );
     db( DTIME, 0, idum, &dtime_disp, ldum, VERSION_NEW, GET );
     // save the assembled A0 diagonal (= M/dt) and the momentum rhside
     disp_mass_dt = get_new_dbl( (1+max_node)*npuknwn );
@@ -700,20 +839,14 @@ void solve( long int task )
       }
       delete[] zeros_dp;
     }
-    {
-      double f_one = 1.;
-      db( MATERI_DYNAMIC, 0, idum, &f_one, ldum, VERSION_NORMAL, PUT );
-    }
+
     // The Professional auxiliary system uses the same reference mass and
     // elastic operator as the f=0 pass. Keep that selection while the
     // temporary factor supplies its full tangent.
     disp_primary_reference = -YES;
     element_loop();
     disp_primary_reference = -NO;
-    {
-      double f_back = disp_primary_f;
-      db( MATERI_DYNAMIC, 0, idum, &f_back, ldum, VERSION_NORMAL, PUT );
-    }
+
     // restore the momentum rhside of THIS iteration (the extra pass's
     // own right-hand side is discarded: only the matrix is taken)
     for ( long int inod_dp=0; inod_dp<=max_node; inod_dp++ ) {
@@ -1217,21 +1350,49 @@ void solve( long int task )
     }
     if      ( bicg_solver ) {
       succesful = solve_iterative_bicg( );
-      // CONVERGENCE (2026-08-30): if the Bi-CG fails (3D interfaces
-      // with kn >> E, ratio 1e10), retry with a direct band LU (dgbsv,
-      // pivoting handles the near-singular interface systems). The band
-      // matrix is built only now (F4 T7, solve_band_retry).
+      // CONVERGENCE (2026-08-30): if the iterative solver fails (3D
+      // interfaces with kn >> E, ratio 1e10), retry with a direct solver.
+      // F4 T6f C77: SuperLU first (sparse, small memory), then the band LU
+      // (dgbsv, pivoting handles near-singular interface systems; built
+      // only now, F4 T7, solve_band_retry) within a memory budget; a band
+      // that does not fit stops with a clear error instead of bad_alloc.
+      // F4 T6f C74: a breakdown (solve_iterative_bicg_breakdown) gets ONE
+      // warning line per solve when a direct retry solves it; the full
+      // breakdown diagnostic is printed only when the retries fail.
       if ( !succesful ) {
+        long int bicg_breakdown = solve_iterative_bicg_breakdown;
         static long int warned_dense = 0;
-        if ( !warned_dense ) {
-          pri( "Warning: Bi-CG did not converge - retrying with direct LU" );
+        if ( !warned_dense && !bicg_breakdown ) {
+          pri( "Warning: the iterative solver did not converge - "
+            "retrying with a direct solver" );
           warned_dense = 1;
         }
-        info = solve_band_retry( max_node, max_element,
-          element_matrix_unknowns, solve_b_temp );
+        if ( solve_superlu_retry( max_node, max_element,
+               element_matrix_unknowns, solve_b_temp ) ) {
+          info = 0;
+          if ( bicg_breakdown )
+            pri( "Warning: iterative solver breakdown, system solved with "
+              "the direct SuperLU" );
+        }
+        else {
+          info = solve_band_retry( max_node, max_element,
+            element_matrix_unknowns, solve_b_temp );
+          if ( info==0 && bicg_breakdown )
+            pri( "Warning: iterative solver breakdown, system solved with "
+              "the direct band LU" );
+        }
         if ( info !=0 ) {
-          pri( "Error with Lapack direct solver." );
-          pri( "Try one of the other solver option:" );
+          if ( bicg_breakdown ) solve_iterative_bicg_breakdown_report();
+          if ( info==SOLVE_BAND_RETRY_NO_MEMORY ) {
+            pri( "The iterative solver failed and no direct solver fits "
+              "in memory." );
+            pri( "Try control_solver -matrix_superlu, or relax "
+              "control_solver_bicg_error." );
+          }
+          else {
+            pri( "Error with Lapack direct solver." );
+            pri( "Try one of the other solver option:" );
+          }
           exit(TN_EXIT_STATUS);
         }
         succesful = 1;
@@ -1268,6 +1429,9 @@ void solve( long int task )
           array_move( solve_b, disp_x2, solve_nlocal );
         }
         else {
+          // no LU retry on this second solve: keep the full diagnostic
+          if ( solve_iterative_bicg_breakdown )
+            solve_iterative_bicg_breakdown_report();
           // second solve failed: keep the first solve only (x2 = 0
           // degrades the correction to 2*x1, still far closer to the
           // Professional map than the historic explicit update)

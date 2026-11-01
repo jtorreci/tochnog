@@ -1,0 +1,32 @@
+( C58 {F4 T6f LOW queue Q6, 2026-10-17}: control_restart keeps the
+  spring history, as the Professional. One -spring2 {stiffness 1,
+  -total_linear}, node 1 fixed, node 2 velx 0.1; 10 steps to t 1,
+  control_restart, 5 steps to t 0.5. The Professional 02-08-2026 on this
+  file keeps the spring strain over the restart: element_spring_force
+  0.15 {a fresh 0.5 run gives 0.05}, node_rhside of node 2 -0.15. The
+  GNU = Professional {also with -updated}; this test pins it. Tolerance
+  4e-6 of max{|value|,1}. )
+echo -no
+number_of_space_dimensions 1
+materi_velocity
+materi_displacement
+materi_stress
+end_initia
+node 1 0
+node 2 1
+element 1 -spring2 1 2
+group_type 0 -spring
+group_spring_memory 0 -total_linear
+group_spring_stiffness 0 1.0
+bounda_dof 10 1 -velx
+bounda_time 10 0.
+bounda_dof 20 2 -velx
+bounda_time 20 1.e-1
+control_timestep 10 0.1 1.0
+control_restart 20 -yes
+control_timestep 30 0.1 0.5
+target_item 0 -element_spring_force 1 0
+target_value 0 0.15 4.0e-06
+target_item 1 -node_rhside 2 -velx
+target_value 1 -0.15 4.0e-06
+end_data

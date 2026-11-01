@@ -238,11 +238,33 @@ intergranular-strain variant (`hypomasin3.dat`) are also regression-tested.
     under its own keyword. Regression: `hypomasin4.dat`.
   Both require `materi_history_variables 10`.
 
+### History variables (`materi_plasti_hypo_history`)
+
+With the `materi_plasti_hypo_history` initialisation the eight slots are
+(manual Professional 4.23): `hyhis0` void ratio e, `hyhis1` substep size,
+`hyhis2` mobilized friction angle (degrees), `hyhis3` stiffness size
+sqrt(Mijkl Mijkl), `hyhis4` structure s, `hyhis5` OCR, `hyhis6` density
+index (von Wolffersdorff only, 0 here), `hyhis7` intergranular strain
+rho. Only `hyhis0` and `hyhis4` are state variables (read back each
+step); the others are for post-processing. For the basic law `hyhis1`
+is the time step / 32 (fixed Runge-Kutta substeps), `hyhis5` = p_e/p
+without the structure factor and `hyhis7` = 0; for the clay laws they
+come from the kernel (adaptive substep, OCR with s, rho). Test
+`validation-suite/test-2026/hypo_masin_history_slots1.dat`.
+
 ## Differences with the Professional version
 
 - **hypoplasticity history slots and stress path** (known difference, not
-  decided; AUDIT K14). GNU: Leaves `hyhis1..5` = 0 (`hypo7/8/9`); `hypo3`
-  -0.1034; `hypo10` disx 4.3e-9. Professional 02-08-2026: Fills the slots
-  (e.g. `hyhis3` 22519); `hypo3` -0.1629; `hypo10` 9.84e-8. Status: UNKNOWN
-  root cause (partly GNU-suspect); investigate before touching code. Index:
+  decided; AUDIT K14). Since F4 T6a (K14a) the GNU fills the
+  post-processing slots like the Professional 02-08-2026: `hyhis2`, `hyhis3`
+  and `hyhis5` of `hypo7`/`hypo8` and of the clay law `hypo12`/`hypo13`
+  agree to about 3e-4 (hypo7: 23.4037 / 22516.4 / 2.09388, Pro 23.4076 /
+  22518.8 / 2.09449). Remaining: `hyhis1` is the GNU substep (basic law:
+  time step / 32, clay law: the adaptive substep) where the Professional
+  reports the time step; `hyhis3` with intergranular strain near rho = 1
+  (`hypo12` 157632, Pro 74297: the GNU reports the m_R L tangent of the
+  kernel); `hypo9` (basic law with `group_materi_plasti_hypo_strain_
+  intergranular`, not used by the GNU basic kernel: `hyhis3`/`hyhis7`
+  differ); stress path `hypo3` -0.1034 (Pro -0.1629) and `hypo10` disx
+  4.3e-9 (Pro 9.84e-8) unchanged. Index:
   [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).

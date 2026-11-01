@@ -1,0 +1,76 @@
+( C80 {F4 T6f, 2026-10-16} as reduced_quad4_f2_1 with factor 10: points at iso +-0.1. Targets = Professional 02-08-2026 node_dof; GNU before: rc 1, I do not know : -reduced. )
+
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_stress
+end_initia
+mesh -fixed_in_space -fixed_in_space
+inertia_apply -no
+convection_apply -no
+node 1 0.440519702251159 0.851739974557273
+node 2 1.7272323257302 1.19308928253819
+node 3 2.92446796259626 1.12632189281989
+node 4 0.727856710230329 1.9109806250711
+node 5 2.01950433363965 2.10325263298055
+node 6 3.3903833664052 2.27350728124597
+node 7 0.824467962596264 2.62632189281989
+node 8 2.28975898190507 3.05561593871306
+node 9 3.66557301460089 3.07679328690701
+element 1 -quad4 1 2 4 5
+element 2 -quad4 2 3 5 6
+element 3 -quad4 4 5 7 8
+element 4 -quad4 5 6 8 9
+bounda_dof 0 1 -velx
+bounda_time 0 0. 1.13143330151805 10. 1.13143330151805
+bounda_dof 1 1 -vely
+bounda_time 1 0. -0.00285730114112591 10. -0.00285730114112591
+bounda_dof 2 2 -velx
+bounda_time 2 0. 4.23729537320703 10. 4.23729537320703
+bounda_dof 3 2 -vely
+bounda_time 3 0. 1.34755429331394 10. 1.34755429331394
+bounda_dof 4 3 -velx
+bounda_time 4 0. 7.6908881686822 10. 7.6908881686822
+bounda_dof 5 3 -vely
+bounda_time 5 0. 3.84188703607932 10. 3.84188703607932
+bounda_dof 6 4 -velx
+bounda_time 6 0. 2.61261875283703 10. 2.61261875283703
+bounda_dof 7 4 -vely
+bounda_time 7 0. 0.0167999829452263 10. 0.0167999829452263
+bounda_dof 8 6 -velx
+bounda_time 8 0. 12.0265908842087 10. 12.0265908842087
+bounda_dof 9 6 -vely
+bounda_time 9 0. 5.55743981805251 10. 5.55743981805251
+bounda_dof 10 7 -velx
+bounda_time 10 0. 3.79056465598915 10. 3.79056465598915
+bounda_dof 11 7 -vely
+bounda_time 11 0. 0.0170660527121231 10. 0.0170660527121231
+bounda_dof 12 8 -velx
+bounda_time 12 0. 9.52832761391327 10. 9.52832761391327
+bounda_dof 13 8 -vely
+bounda_time 13 0. 2.67983850465617 10. 2.67983850465617
+bounda_dof 14 9 -velx
+bounda_time 14 0. 15.5289372802789 10. 15.5289372802789
+bounda_dof 15 9 -vely
+bounda_time 15 0. 6.80717431287431 10. 6.80717431287431
+group_type 0 -materi
+group_materi_viscosity 0 1.0
+group_materi_density 0 1.0
+group_materi_elasti_compressibility 0 1.0
+group_materi_memory 0 -updated_linear
+group_integration_method 0 -reduced
+group_integration_method_reduced_factor 0 10
+control_timestep 10 1. 1.
+target_item 0 -node_dof 5 -velx
+target_value 0 7.482280883602e+00 4.0e-06
+target_item 1 -node_dof 5 -vely
+target_value 1 2.486313363377e+00 4.0e-06
+target_item 2 -node_dof 2 -sigxx
+target_value 2 7.959908916793e+00 4.0e-06
+target_item 3 -node_dof 5 -sigxx
+target_value 3 9.818675598541e+00 4.0e-06
+target_item 4 -node_dof 8 -sigyy
+target_value 4 2.392993397673e+00 4.0e-06
+target_item 5 -node_dof 5 -sigxy
+target_value 5 3.887853011025e+00 4.0e-06
+end_data

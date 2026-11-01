@@ -93,7 +93,12 @@ displacements = Professional).
   (plane `q` of node `inod` is `q*n + inod`). Geometry, connectivity and
   results are the same; node-numbered output (`node_dof N`, targets on
   node numbers) differs.
-- hex27 nodal stresses (`force11`) differ from the Professional at the
-  loaded points by up to 3.5 % while the displacements match: BACKLOG
-  C57, DIVERGENCES C57.
+- hex27 nodal stresses (`force11`): equal to the Professional (7e-7 of
+  the field maximum) since F4 T6f C70 (2026-10-13, physical-coordinate
+  recovery fit; before up to 3.5 % off at the loaded points).
+- `post_point` in a quad9 -> hex27 extruded mesh: equal to the
+  Professional (1e-11) since F4 T6f C57 (2026-10-13). Before, the new
+  mid / inner plane nodes kept z = 0 in their start coordinates, so a
+  post point (and any geometry selection of those nodes) saw collapsed
+  elements: (0.5, 0.5, 0.5) disy -3.25e-6 instead of -3.57e-6.
 

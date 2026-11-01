@@ -31,8 +31,28 @@
 
 ## Ley constitutiva (Fase 3)
 
-- **Sign convention (RF-5)**: compression = `strain_normal` POSITIVE,
-  traction NEGATIVE. This is the convention used by gap, tension_direct
+- **Sign convention (RF-5, rewritten 2026-10-19, C60)**: compression =
+  `strain_normal` NEGATIVE, traction POSITIVE, for every node order.
+  `interface_orient_normal()` (`interface.cc`) points the normal from
+  side 1 towards side 2 using the geometry: the offset between the side
+  centroids (thick interface) plus, per side, the centroid of the
+  non-interface element that holds all the side nodes (`NODE_ELEMENT`;
+  block 1 on the -n side, block 2 on the +n side). Without geometric
+  evidence (free zero-thickness interface) the default normal is kept:
+  2D `(-t_y, t_x)` with `t` from nodes 0 to 1, 3D the cross product of
+  the side-1 edges. Gap (closed when strain `<= gap`), Mohr-Coulomb
+  (`Fn = -kn*strain` positive under compression) and the expansion
+  (`strain - alpha*T`) already used this convention; the tension cut-off
+  now opens on a POSITIVE strain (it tested `< 0`). Verified against the
+  Professional 02-08-2026: zero-thickness and thick quad4 interfaces
+  between two blocks, four node orders each, normal -9.999999 and shear
+  +/-2 everywhere (test-2026 `interface_orientation_node_order1`); free
+  interface -1 / 0 / 0 / -1 for `1 2 3 4` / `3 4 1 2` / `2 1 4 3` /
+  `4 3 2 1` (GNU before C87 -1 / +1 / +1 / -1: same orientation, the 0
+  was the default gap, resolved by C87).
+  The paragraphs below up to "Gap" describe the earlier rule.
+- **Earlier rule (2026-08-14 to 2026-10-18)**: compression =
+  `strain_normal` POSITIVE, traction NEGATIVE. This is the convention used by gap, tension_direct
   and `max_fric` (`kn*strain_normal` grows with compression). The old doc
   said "compression negative" — wrong, corrected 2026-08-14.
   NOTE (2026-09-03, verified against the Professional .dbs of
@@ -53,9 +73,15 @@
   stresses" (6.628): the stress record/rhs are exactly 0 and only the
   residual stiffness (`group_interface_materi_residual_stiffness`,
   default 0.01) stays in the matrix for regularization. A physical gap
-  is a NEGATIVE gap value; the default without the record is +1e20
-  (always closed — "if you want to allow always tension stresses set
-  gap to, by example, 1.e20"). The accumulated strain is stored in
+  is a NEGATIVE gap value; the default without the record is 0 (F4 T6f
+  C87, 2026-10-21; `gap = 0.` in `interface_element()`, before that
+  +1e20, always closed — the manual: "if you want to allow always
+  tension stresses set gap to, by example, 1.e20"). While open (gap or
+  tension limit) the per-IP block skips the Mohr-Coulomb return (no
+  friction, no dilatancy), zeroes the tangential force (record, rhs and
+  `ELEMENT_INTERFACE_FORCE_TANG` history, so it rebuilds from the
+  re-closure) and puts `kt * residual_factor` in the matrix, the same
+  regularization as the normal direction. The accumulated strain is stored in
   `ELEMENT_INTERFACE_STRAIN_NORMAL`. NOTE (2026-09-04): the pre-fix code
   inverted the condition (open when `strain <= gap`) with a −1e20
   default — correct for tests without a gap record, but it left
@@ -94,10 +120,11 @@
   (Fase 1). The limit applies to the TOTAL tangential force, stored in
   the history `ELEMENT_INTERFACE_FORCE_TANG` (spring.cc pattern, GET
   VERSION_NORMAL with GET_IF_EXISTS, PUT VERSION_NEW):
-  - `trial = f_t_old + kt1*du_tang` — the stored history is the ELASTIC
-    trial `kt*gamma_total` (gamma_total = sum(du_tang) over ALL steps;
-    it keeps accumulating even while plastic, so the force can reach the
-    cohesion after a large slip — interface_patch -10)
+  - `trial = f_t_old + kt1*du_tang` — the stored history `f_t_old` is
+    the CLAMPED force of the previous step (F4 T6d C52, 2026-10-11; see
+    the convergence record below). From 2026-08-30 to 2026-10-11 it was
+    the ELASTIC trial `kt*gamma_total`, which has no memory of the
+    plastic slip (a reversal did not unload)
   - `max_fric = |c + Fn*tan(phi)|` with `Fn = -kn*strain_normal`
     (POSITIVE under compression — verified against the Professional
     plateau of mohr_coul_direct4: c + |Fn|*tan(phi) = 1.20271 with
@@ -119,10 +146,9 @@
   `phi_flow > 0`, the INCREMENTAL plastic slip of the step opens the
   interface in both sliding directions:
   `strain_normal += -dgamma_inc * tan(phi_flow)` where `dgamma_inc =
-  dgamma - gamma_pl_old` (the accumulated-trial return multiplier
-  dgamma is the TOTAL plastic slip; the slip already accumulated in the
-  past, gamma_pl_old = (|trial_old| - |clamp(trial_old)|)/kt1, is
-  subtracted so the ratchet is not re-counted — mohr_coul_direct3
+  dgamma` (the trial starts from the clamped force, so the return
+  multiplier is already the plastic slip of THIS step; the elastic-trial
+  history needed `dgamma - gamma_pl_old` — mohr_coul_direct3
   sigma_n = −200 = kn*(−1e-6 − 1e-6*tan(pi/4)), not −250). Feeds back
   into the normal history → gap/tension/max_fric of the next step.
 - **Memory model** (`group_interface_materi_memory`): `-updated_linear`
@@ -263,7 +289,9 @@ verified against the Professional binary .dbs (user-supplied 25-10-2023):
    unchanged, reads the same per-IP arrays). The matrix/tangent and the
    Lobatto-weighted per-pair assembly are unchanged.
 2. **Incremental dilatancy**: `dgamma_inc = dgamma - gamma_pl_old` with
-   `gamma_pl_old = (|f_el_old| - min(|f_el_old|, max_fric))/kt1`.
+   `gamma_pl_old = (|f_el_old| - min(|f_el_old|, max_fric))/kt1`
+   (superseded 2026-10-11, F4 T6d C52: with the clamped history
+   `dgamma_inc = dgamma`).
 3. **Fn sign**: `max_fric_abs = |c - kn*strain_eff*tan(phi)|` (the
    accumulated strain is negative under compression, so this equals
    |c + |Fn|*tan(phi)|).
@@ -558,3 +586,78 @@ Two GNU runs now give byte-identical `.dbs` files (apart from
 interface_tension_status1.dat` in `build_safe.sh` (status lines + two-run
 `.dbs` identity; old GNU printed `2 -total_linear 3`).
 
+## Convergence record 2026-10-11 — Mohr-Coulomb history = clamped force (F4 T6d C52)
+
+- **Symptom**: with the inertia gate of the post-solve material pass
+  removed (C52), test-2014 `iface_gen`, `iface_gen_geom`,
+  `iface_gen_method` diverged (node 6 disy −0.1009 → −7.417). Root cause
+  in `interface_element()`: the tangential history
+  `ELEMENT_INTERFACE_FORCE_TANG` (`_TANG2` in 3D) stored the ELASTIC
+  trial `kt*gamma_total`, so the friction force was `clamp(kt*gamma_total)`:
+  no memory of the plastic slip, no elastic unloading after a slip
+  reversal. The one-iteration lag of the material state (C35) masked it.
+- **Professional oracle**: quasi-static slip-reversal probe (slide at
+  `c = 5`, reverse by 5 increments of −0.2): Professional 02-08-2026
+  shear 4.000000083, analytic 4.0, GNU before 5.0, GNU after 4.0.
+  `control_reset_interface_strain` (manual 6.355, stresses remembered)
+  in the middle of the same probe: Professional 4.000000083, GNU after
+  4.0 (before 5.0); `control_reset_interface` (everything to 0):
+  Professional and GNU −1.0 (before and after).
+- **Fix** (`interface.cc`): the history PUT is the clamped force
+  `f_t_ip` / `f_t2_ip`; the trial is `f_t_old + kt*du_tang`; the
+  dilatancy increment is `dgamma` (the `gamma_pl_old` correction and the
+  `f_t_el_ip` / `f_t2_el_ip` arrays, never freed, were removed). No
+  change in `data.cc`: the strain reset keeps `FORCE_TANG` (now the
+  remembered stress, manual 6.355) and the full reset zeroes it.
+- **Unchanged** (investigation on 55 inputs): every Professional
+  `interface*`, `mohr_coul_direct1-8`, `tension_direct1`, `taylor3`;
+  `interface_patch` keeps its target −10 (the old note that an
+  incremental trial stalls at −5.55 is not reproduced with the
+  post-solve material pass).
+- **Targets**: test-2014 `iface_mc_slip`, `iface_mc_slip_1step`,
+  `iface_mc_num` restored to their original 2014 targets 0 / 0 / 50
+  (the physical clamped force; CORPUS-STALE-TARGETS §1) plus a target on
+  `element_interface_intpnt_stress 2 1` (same values). New test-2026
+  `interface_mc_slip_reversal1` (RED 5.0, GREEN 4.0).
+- **Resolved 2026-10-19 (C60, owner decision: adopt the Professional
+  rule)**: see "Sign convention (RF-5)" above. The test-2014 targets
+  written with the old orientation (thick interfaces, compression
+  positive) were corrected: `iface_mc_gap` (a compressed interface with
+  gap 0.001 opened and the block flew to -190; now closed, normal -10 =
+  force 10 / length 1), `iface_mc_dil` / `_1step` (confined dilatancy now
+  adds compression: -1.49338, was -1.39338, a tension), `iface_expansion`
+  (the heated interface now compresses the blocks against the walls:
+  sigxx -0.998004, was +0.998004), `iface_tangref` (tang2 -4.9998: the
+  frame `t2 = n x t1` follows the new normal).
+- **Former open difference found by the same probe (BACKLOG C60)**: the normal
+  component of `element_interface_intpnt_stress` follows the internal
+  orientation (node order) of the element (+10 / +10 / -10 for the node
+  orders `2 4 9 10` / `9 10 2 4` / `4 2 10 9`), while the Professional
+  writes -10 (compression negative) for all three. Re-scoped 2026-10-17
+  (F4 T6f LOW queue Q2, probes `scratchpad/lowq/c60/`): with
+  `_plasti_mohr_coul_direct` + `_tension_direct` the orders whose
+  numbering rule (`interface.cc` ~240, flip when `nodes[ns1] <
+  nodes[0]`) yields a negative normal strain under compression are
+  treated as OPEN (normal 0); the Professional orients geometrically when
+  continuum elements are attached (all orders equal) and by numbering for
+  a free interface, where an opened elastic interface carries 0. Owner
+  decision pending (BACKLOG C60).
+
+## Differences with the Professional version
+
+- **C87 (resolved 2026-10-21, owner "si, corrige")**: default gap 0
+  and no shear on an opened interface, as the Professional 02-08-2026.
+  Probes (C60 geometry, four quad4 block pairs, kn = kt = 1000, pulled
+  0.01, slid 0.002): no gap record Professional 0 / 0 (GNU before 10 /
+  +-2); gap 0 Professional 0 / 0 (GNU before 0 / +-2); gap 1.e20 both
+  10 / +-2; compression both -10 / +-2.
+- **C89 (deferred, class B, owner 2026-11-01)**: Mohr-Coulomb dilatancy with the gap. `iface_mc_dil`
+  geometry (c = phi = 0, psi 30 deg, pushed 0.1, slid 5): the
+  Professional gives -1493.376 with gap >= 10 (any step size), -2971.967
+  with gap 0, 0.01 or 0.5 (any step size) and 0 with gap -0.01 (a
+  compressed interface reported open). The GNU equals it for gap 1.e20
+  and for one step with gap >= 0; with several steps and gap < 10 it
+  stays at -1493.376 (gap -0.01 included; one step with gap -0.01
+  gives -2971.967). The Professional
+  apparently compares the gap with a measure that includes the dilatant
+  opening; not yet identified.

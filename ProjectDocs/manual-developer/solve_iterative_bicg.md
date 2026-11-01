@@ -30,11 +30,16 @@ converged  <=>  error < check_error
 check_error = max( bicg_error * |r0|^2, bicg_error_minimum )
 ```
 
-with `bicg_error` default `1e-10` (`control_options_solver_bicg_error`) and
-`bicg_error_minimum` default `1e-12`
-(`control_options_solver_bicg_error_minimum`). This is a **relative**
-residual test (`|r|/|r0| < sqrt(1e-10)` when the floor does not bind, with
-an absolute floor for tiny loads) — it is not the "error decrease"
+with `bicg_error` default `1e-14` (`control_options_solver_bicg_error`,
+overwritten by the global `solver_bicg_error`) and `bicg_error_minimum`
+default `1e-16` (`control_options_solver_bicg_error_minimum`); the loop also
+stops when `error < eps_stop = EPS_TMP = 1e-16` (code defaults in
+`solve_iterative_bicg`, `so_bicg.cc`; measured `check_error 4.42565e-15` for
+`|r0|^2 = 0.442565` and `1e-16` for smaller `|r0|^2`; this page said
+`1e-10` / `1e-12` before F4 T6f C74). This is a **relative** residual test
+(`|r|/|r0| < sqrt(1e-14) = 1e-7` when the floor does not bind, with an
+**absolute** floor `|r|^2 >= 1e-16` for tiny loads; the §21 eliminated tie
+systems tighten both to `1e-24` / `1e-26`) — it is not the "error decrease"
 heuristic, and it is evaluated on the residual of the solution that is
 actually returned (the iterate is not updated after the check).
 
@@ -177,6 +182,135 @@ see [solver_bicg_csr_operator](solver_bicg_csr_operator.md).
 - **Timing**: no test approaches the 120 s `build_safe.sh` timeout (the
   slowest is `msf_sheet3d` at ~1.4 s).
 
+### Bi-CG breakdown and the direct band LU retry (F4 T6f C74, 2026-10-13)
+
+**Breakdown test** (`so_bicg.cc`, Bi-CG branch of `solve_iterative_bicg`):
+`|r1·r2| < EPS_TMP` or `|d2ᵀ A d1| < EPS_dAd`, both `1e-16`, absolute.
+With `solver_bicg_stop -no` the iteration stops with the current iterate
+and the warning "Warning: the Bi-CG iteration broke down (r1.r2 or d^T A d
+~ 0, continuing)" (unchanged). Otherwise `solve_iterative_bicg()` returns
+0 and sets the global flag `solve_iterative_bicg_breakdown`, keeping the
+initial error and the relative residual for the diagnostic.
+
+**LU retry** (`so.cc`, `solve()`, after the `bicg_solver` call): a failed
+Bi-CG solve is re-solved with the direct band LU (`solve_band_retry`,
+LAPACK dgbsv in a Cuthill-McKee ordering, F4 T7).
+
+- breakdown + LU success: ONE line per solve, `Warning: Bi-CG breakdown,
+  system solved with the direct band LU`;
+- breakdown + LU failure: the full diagnostic
+  (`solve_iterative_bicg_breakdown_report()`: "Error: the Bi-CG iteration
+  broke down. ... Probably you have a wrong input file ...") and then the
+  LAPACK error, exit;
+- the displacement-primary second solve (no LU retry): the full diagnostic
+  before its "did not converge" warning;
+- a max_iter failure keeps its own error block and the one-time "Warning:
+  Bi-CG did not converge - retrying with direct LU".
+
+Before C74 the full "Error ... wrong input file" block was printed inside
+`solve_iterative_bicg()` for EVERY breakdown, also when the LU retry then
+solved the system exactly: 599 times on `validation1_steady1`, 38 of 956
+corpus runs (Professional `test/other`, sfnet, test-2026, test-2014).
+Numerical results are unchanged (corpus A/B `.dbs` identical; test
+`bicg_breakdown_lu_retry1`, target = the SuperLU solution).
+
+**Why it breaks down** (validation_1, traced): near the steady state the
+right-hand sides are tiny (`|r0|^2` 1e-12 .. 1e-8 for most solves), so
+the absolute 1e-16 thresholds fire while the scale-relative quantities are
+healthy: `|r1·r2|/(|r1||r2|)` ~ 1e-3 .. 1e-4 (min 1e-8),
+`|d2ᵀAd1|/(|d2||Ad1|)` ~ 1e-2 .. 1e-4. These are false breakdowns; the
+exact LU retry happens to give a MORE accurate solution than a converged
+Bi-CG, whose absolute 1e-16 floor binds on tiny systems. A scale-relative
+breakdown test alone (measured: no breakdown on validation_1, -10 % wall)
+therefore loses accuracy (examp16 `node_dof` vs SuperLU 0.43 % -> 2.45 %;
+validation_1 with the inflow scaled 1e-5: 8 %); it must come with a
+relative convergence floor. Resolved by C77 (next section): the
+breakdowns are gone, with the relative stop.
+
+### Relative stop and guarded direct retry (F4 T6f C77, 2026-10-15)
+
+Owner decision 2026-10-15. Implemented in `so_bicg.cc`
+`solve_iterative_bicg()` and `so.cc` (`solve()`, `solve_superlu_retry()`,
+`solve_band_retry()`, `solve_retry_visit()`, `solve_memory_room()`).
+
+**Stop tests** (each loop pass, on the recomputed residual
+`error = |P(b - A x)|^2`, x0 = 0 so `|r0|^2 = |Pb|^2`):
+
+1. convergence: `error < bicg_error*|r0|^2`, or `error < bicg_error_minimum`
+   ONLY when the user gives `options_solver_bicg_error_minimum` (global,
+   read first) or `control_options_solver_bicg_error_minimum` (control
+   index, wins); `eps_stop` and the floor 1e-26 stay for the §21 tightened
+   tie systems (`mpc_elim_tighten`); `error == 0` (b = 0) converges;
+2. round-off floor: `error < (BICG_FLOOR_FACTOR*DBL_EPSILON*|A|)^2 |x|^2`
+   (iter > 0), `|A|` = the largest `|A d|/|d|` seen (`d1`, `Ad1`);
+3. breakdown: Bi-CG `|r1·r2| <= BICG_BREAKDOWN_REL |r1||r2|` or
+   `|d2·Ad1| <= BICG_BREAKDOWN_REL |d2||Ad1|`; CG `|dAd| < EPS_dAd_REL*error`
+   (unchanged);
+4. `iter == max_iter` (unchanged, own error block).
+
+A floor or breakdown stop (`stop_kind` 1 / 2) is accepted when the true
+unpreconditioned `|b-Ax|/|b| <= BICG_FLOOR_ACCEPT`; otherwise the routine
+returns 0 with `solve_iterative_bicg_breakdown = 1` (C74 semantics:
+`solver_bicg_stop -no` keeps the iterate with a warning). There is no
+stagnation window and no best-iterate return: the prototype measured that
+they cost accuracy (fallbacks 26 -> 10958 with a 10-iteration window).
+The CG takes the same relative stop (measured safe, see below).
+
+**Direct retry** (`so.cc`): SuperLU first (`solve_superlu_retry`): the
+compressed-column matrix is built from the same element entries as the
+iterative products (`solve_retry_visit`, mpc tie expansion included) plus
+`NODE_LHSIDE`, duplicates merged per column, `|diag| < EPS_MAT -> EPS_MAT`
+(as the band LU and the `-matrix_superlu` assembly); dgssv runs under the
+`-matrix_pardiso` memory guard (`solve_pardiso_memory_guard`), and after a
+failed factorization (it leaks its workspace) the run skips this retry
+(`solve_superlu_retry_failed`). Then the band LU, refused before the
+allocation when `8 ldmat n > BAND_RETRY_MEMORY_FRACTION * room`
+(`solve_memory_room()` = min(MemAvailable, soft RLIMIT_AS - VmSize)):
+"Error: the direct band LU retry does not fit in memory" (equations,
+band, MB needed / available), return `SOLVE_BAND_RETRY_NO_MEMORY`, exit.
+Messages: "Warning: iterative solver breakdown, system solved with the
+direct SuperLU" / "... direct band LU" (one per solve), "Warning: the
+iterative solver did not converge - retrying with a direct solver" (once);
+`solve_iterative_bicg_breakdown_report()` says "Error: the iterative solver
+broke down" (CG and Bi-CG).
+
+**Measurements** (scratch instrumented builds, 86 corpus inputs with a
+Bi-CG solve, reference = the same input with `solver -matrix_superlu`;
+local, 2 jobs):
+
+| variant | direct retries | iterations (Bi-CG / CG) | solver s | wall s | closer to SuperLU (10x) | farther |
+|---|---|---|---|---|---|---|
+| HEAD `6d3e19e` (absolute floors) | 7378 band LU | 1.34 M | 57.6 | 275 | - | - |
+| relative stop (this fix) | 13 SuperLU (0 band) | 2.22 M / 15.7 k | 69.8 | 285 | 19 | 0 |
+
+Large meshes (`large/gen.py`, 1 job, median wall): C23 (55296 dof, Bi-CG)
+HEAD 91.9 s / 2.66 GB with 2 band-LU retries (73.7 s), 6.8e-7 off
+SuperLU -> 18.6 s / 0.45 GB, 8.7e-12; C36 (202612 dof) HEAD bad_alloc ->
+83.2 s / 1.8 GB; C13 4.70 -> 2.90 s. CG: E15 (12288 dof) 127 -> 295
+iterations, 1.85 -> 1.99 s, 1.4e-6 -> 4.0e-11 off SuperLU; E25 (52728
+dof) 9.84 -> 10.49 s, 9.3e-7 -> 1.6e-11. Corpus A/B on omen (965 runs vs
+`c79_runs`): no classification change except `ground11_nonsaturated`
+(timeout -> rc 1 = its HEAD rc when not timed out) and `truss13` (rc 1 in
+both; HEAD singular system accepted on the absolute floor and printed no
+`element_truss_force`, now the breakdown is reported and SuperLU / band
+LU refuse the singular matrix); of the 84 runs whose `node_dof` moved
+more than 1e-5, 63 moved toward SuperLU, 10 stayed at the same distance
+(path-dependent plasticity, `tsup_*`, `examp16`), 1 moved away
+(`dynamic6`, diverging in both, rc 1), 10 have a different refined mesh
+(`refine*`, `delete4`, `examp7`, `examp15`, `ho_othr2`, `tslv_ver`; rc
+unchanged).
+
+**Non-symmetric algorithm** (owner item 2, measured; the decision is
+pending, see BACKLOG C77): BiCGStab (two products, no `A^T`) and
+GMRES(30) were measured against the relative-stop Bi-CG on the same 86
+inputs: BiCGStab 71 SuperLU retries (29 solves at max_iter: `distri3`,
+`beam2d_2`, `bimet1`), 2 inputs farther from SuperLU (`tquad6_iface`
+5e-8 -> 7.5e-3, `ground19_water_under_dam` 6.5e-7 -> 7.6e-6), solver
+68.3 s; large meshes 9-13 % less solver time (C36 29.0 -> 25.9 s, wall
+83.2 -> 79.4 s, same solution to 8e-12). GMRES(30): 379 max_iter solves,
+4.8x the products, `ground11_nonsaturated` timeout. The classical Bi-CG
+stays until the owner decides.
+
 ## External features / libraries used
 
 None new — plain C++ and the existing `parallel_sys_routine` machinery.
@@ -185,15 +319,24 @@ The symmetry check is one serial pass over the element matrices
 
 ## Hardcoded parameters
 
-- `EPS_dAd = 1e-16`, `EPS_TMP = 1e-16` (breakdown thresholds, unchanged).
+- `EPS_dAd_REL = 1e-14` (CG breakdown, relative to `|r|^2`); `EPS_TMP =
+  1e-16` and `EPS_dAd` are no longer stop thresholds (C77).
 - `EPS_P = 1e-10` (diagonal guard, unchanged).
 - `EPS_SYMMETRY = 1e-8` (symmetry classification threshold; exact symmetric
   physics measures ~1e-16, genuine asymmetries measure 1e-3..1).
 - `MAX_PUKNWN_SYMMETRY = 32` (skip the check — fall back to Bi-CG — for
   exotic dof counts; the dense per-element buffer is `(nnol·npuknwn)²`).
 - `max_iter = 10·solve_nlocal` (unchanged).
-- `check_error = max(bicg_error·|r0|², bicg_error_minimum)` (unchanged
-  formula; `bicg_error` default 1e-10, floor 1e-12).
+- `check_error = bicg_error·|r0|²` (`bicg_error` default 1e-14), raised to
+  `bicg_error_minimum` only when the user record exists (C77).
+- `BICG_FLOOR_FACTOR = 100` (round-off floor `100 eps |A| |x|`),
+  `BICG_BREAKDOWN_REL = 1e-14` (Bi-CG breakdown), `BICG_FLOOR_ACCEPT =
+  1e-6` (true relative residual accepted at a floor / breakdown stop);
+  prototype sweeps: breakdown 1e-12 and floor factor 10 give the same
+  corpus result (24-26 retries).
+- `so.cc`: `BAND_RETRY_MEMORY_FRACTION = 0.7` (band LU budget),
+  `PARDISO_SUPERLU_MEMORY_FRACTION = 0.7` (SuperLU retry guard),
+  `EPS_MAT = 1e-8` (direct diagonal regularization).
 
 ## Pending refactorings / known limitations
 
@@ -211,6 +354,14 @@ The symmetry check is one serial pass over the element matrices
 
 ## Differences with the Professional version
 
+- **Iterative solver stop** (F4 T6f C74, C77; DIVERGENCES C77, class A,
+  owner decision 2026-10-15). GNU: relative stop, scale-relative
+  breakdown test, no default absolute floor; no false breakdown on
+  `validation_1`. Professional 02-08-2026: default PARDISO (direct); its
+  `solver -matrix_iterative_bicg` stops on an absolute floor (1e-5 scaled
+  `validation_1`: Pro Bi-CG velx 8.9888e-7, PARDISO 9.77518e-7, GNU
+  9.775171e-7). MKL PARDISO is not integrated (SEGUIMIENTO Descarte).
+
 - **`control_solver_bicg_stop` at the timestep's own index** (deliberate
   divergence, project decision 2026-09-29; BACKLOG C13; SEGUIMIENTO
   Descarte). GNU: Reads, last one wins: `solver_bicg_stop`, index-0 control
@@ -220,8 +371,9 @@ The symmetry check is one serial pass over the element matrices
   Deliberate divergence, project owner; GNU follows the manual. Also
   Pro-suspect. Index:
   [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).
-- **Bi-CG breakdown on a singular system** (known difference, not decided;
-  BACKLOG C12). GNU: Prints the breakdown error each iteration, finishes
-  with rc 0 and a `.dbs`. Professional 02-08-2026: Prints "the BICG solver
-  did not converge" and stops without a `.dbs`. Status: Open, LOW. Index:
-  [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).
+- **Bi-CG breakdown on a singular system** (BACKLOG C12, closed
+  2026-10-17, no divergence): re-measured on an unsupported elasti7 mesh,
+  the Professional 02-08-2026 finishes with rc 0 and a `.dbs` (no
+  message); the GNU prints `Warning: iterative solver breakdown, system
+  solved with the direct SuperLU` (C77 fallback) and also finishes with
+  rc 0. Neither code detects the singular model.

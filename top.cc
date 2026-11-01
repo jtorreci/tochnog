@@ -33,6 +33,43 @@
 // control index.
 static long int step_start_control_entry = 0;
 
+// C62 (F4 T6f LOW queue Q3): the node_rhside written by bounda() in an
+// equilibrium iteration (the bounda_force loads, assigned right after
+// iteration_start() and before the element loop). The post-solve
+// material state pass zeroes NODE_RHSIDE in iteration_start() but does
+// not re-run bounda() (it would re-prescribe dofs), so it restores this
+// snapshot of the last iteration instead; the reported node_rhside then
+// keeps the external boundary forces, as in the Professional.
+static std::vector<double> bounda_rhside_snapshot;
+static long int bounda_rhside_snapshot_max_node = -1;
+
+static void bounda_rhside_snapshot_take( void )
+{
+  long int max_node_s = -1, inod_s = 0;
+  db_max_index( NODE, max_node_s, VERSION_NORMAL, GET );
+  bounda_rhside_snapshot_max_node = max_node_s;
+  bounda_rhside_snapshot.assign( (size_t) ( 1+max_node_s ) * npuknwn, 0. );
+  for ( inod_s=0; inod_s<=max_node_s; inod_s++ ) {
+    if ( !db_active_index( NODE_RHSIDE, inod_s, VERSION_NORMAL ) ) continue;
+    double *rh_s = db_dbl( NODE_RHSIDE, inod_s, VERSION_NORMAL );
+    for ( long int ip_s=0; ip_s<npuknwn; ip_s++ )
+      bounda_rhside_snapshot[inod_s*npuknwn+ip_s] = rh_s[ip_s];
+  }
+}
+
+static void bounda_rhside_snapshot_restore( void )
+{
+  long int max_node_s = -1, inod_s = 0;
+  db_max_index( NODE, max_node_s, VERSION_NORMAL, GET );
+  if ( max_node_s!=bounda_rhside_snapshot_max_node ) return;
+  for ( inod_s=0; inod_s<=max_node_s; inod_s++ ) {
+    if ( !db_active_index( NODE_RHSIDE, inod_s, VERSION_NORMAL ) ) continue;
+    double *rh_s = db_dbl( NODE_RHSIDE, inod_s, VERSION_NORMAL );
+    for ( long int ip_s=0; ip_s<npuknwn; ip_s++ )
+      rh_s[ip_s] = bounda_rhside_snapshot[inod_s*npuknwn+ip_s];
+  }
+}
+
 void top( void )
 {
 
@@ -548,6 +585,7 @@ void top( void )
                           iteration_start( );
                           if ( print_where==-YES ) pri( "Where: before boundary conditions." ); 
                           bounda(); 
+                          bounda_rhside_snapshot_take();
                           if ( print_where==-YES ) pri( "Where: after boundary conditions." ); 
                           unknown_freeze(); 
                           if ( options_elementloop==-YES ) {
@@ -617,21 +655,37 @@ void top( void )
                       // elem() skip the store) and no solve follows.
                       // Not for the -diagonal solver (explicit update of
                       // the principal dofs), options_elementloop -no and
-                      // the nonlocal softening variable, and gated OFF
-                      // (temporary divergence, DIVERGENCES class B) for
-                      // inertia, slide and contact models: see
-                      // post_solve_state_pass_gated() and
+                      // the nonlocal softening variable; those keep the
+                      // hoisted stress-only sync below. Every physics
+                      // takes the pass (inertia since F4 T6d C52, slide
+                      // and contact since F4 T6e C53, 2026-10-11): the
+                      // contact and slide forces are applied outside the
+                      // element loop, so the pass re-applies them on the
+                      // final iterate exactly as an equilibrium
+                      // iteration does (parallel_contact, slide()). See
                       // manual-developer/post_solve_material_state_pass.md.
-                      // Those keep the hoisted stress-only sync below.
                       long int state_pass_done = 0;
                       if ( nuknwn>0 && options_solver!=-DIAGONAL &&
                            options_elementloop==-YES && !find_local_softvar &&
-                           !( scalar_dabs(options_nonlocal_softvar)>TINY ) &&
-                           !post_solve_state_pass_gated( icontrol ) ) {
+                           !( scalar_dabs(options_nonlocal_softvar)>TINY ) ) {
                         iteration_start();
+                        bounda_rhside_snapshot_restore();
                         material_state_post_pass = 1;
                         element_loop();
                         material_state_post_pass = 0;
+                        parallel_sys_routine( &parallel_contact );
+                        // C62 (F4 T6f LOW queue Q3): the nodal terms of an
+                        // equilibrium iteration (bounda_force through the
+                        // snapshot restored above, node_force, force_point,
+                        // node_mass/damping/stiffness, nodal gravity) so
+                        // the reported node_rhside is the full residual.
+                        // It writes only the velocity slots of
+                        // NODE_RHSIDE/NODE_LHSIDE (and NODE_INERTIA, now on
+                        // the final iterate); parallel_new_dof_diagonal
+                        // below updates only the non-principal dofs for a
+                        // non-diagonal solver, so nothing is applied twice.
+                        parallel_sys_routine( &parallel_new_dof_before );
+                        slide();
                         parallel_sys_routine( &parallel_new_dof_diagonal );
                         mpc_node_apply();
                         state_pass_done = 1;
@@ -1267,60 +1321,6 @@ void step_start( long int task, long int options_solver[], double dtime, double 
 // Post-solve material state pass (F4 T5, BACKLOG C35): flag read by
 // elem() to skip the element matrix store during the pass.
 long int material_state_post_pass = 0;
-
-// Gate of the post-solve material state pass (owner decision 2026-10-10,
-// temporary divergence class B): returns 1 (pass OFF, the hoisted
-// stress-only sync of the previous scheme is kept) when the model has
-//  - inertia: materi_acceleration, options_inertia / inertia_apply -yes,
-//    or any control_options_inertia / control_inertia_apply -yes
-//    (Pro dynamic3: the pass moves the truss dynamics away from the Pro);
-//  - slide: any slide_* record or node_slide (Pro slide4: the friction
-//    state is updated in slide(), outside the element loop);
-//  - contact: any contact_* record while contact_apply /
-//    control_contact_apply of this icontrol is not -no (the contact
-//    forces come from parallel_contact(), outside the element loop).
-// The pass is enabled for a family only after it is extended to that
-// physics and the probes + full corpus A/B show no test moving away from
-// the Pro (manual-developer/post_solve_material_state_pass.md).
-long int post_solve_state_pass_gated( long int icontrol )
-
-{
-  long int idat=0, max=0, i=0, ldum=0, any_contact_data=0,
-    options_inertia=-NO, contact_apply=-YES, control_contact_apply=-YES;
-  double ddum[1];
-
-  if ( materi_acceleration ) return 1;
-  db( OPTIONS_INERTIA, 0, &options_inertia, ddum, ldum,
-    VERSION_NORMAL, GET_IF_EXISTS );
-  if ( options_inertia==-YES ) return 1;
-  db_highest_index( CONTROL_OPTIONS_INERTIA, max, VERSION_NORMAL );
-  for ( i=0; i<=max; i++ ) {
-    long int inertia_switches[DATA_ITEM_SIZE];
-    options_inertia = -NO;
-    // multi-valued record: GNU uses the first value (see general.cc)
-    if ( db( CONTROL_OPTIONS_INERTIA, i, inertia_switches, ddum, ldum,
-        VERSION_NORMAL, GET_IF_EXISTS ) )
-      options_inertia = inertia_switches[0];
-    if ( options_inertia==-YES ) return 1;
-  }
-
-  db_highest_index( NODE_SLIDE, max, VERSION_NORMAL );
-  if ( max>=0 ) return 1;
-  for ( idat=0; idat<MDAT; idat++ ) {
-    db_highest_index( idat, max, VERSION_NORMAL );
-    if ( max<0 ) continue;
-    if ( db_data_class(idat)==SLIDE ) return 1;
-    if ( db_data_class(idat)==CONTACT ) any_contact_data = 1;
-  }
-  if ( any_contact_data ) {
-    db( CONTACT_APPLY, 0, &contact_apply, ddum, ldum,
-      VERSION_NORMAL, GET_IF_EXISTS );
-    db( CONTROL_CONTACT_APPLY, icontrol, &control_contact_apply, ddum,
-      ldum, VERSION_NORMAL, GET_IF_EXISTS );
-    if ( contact_apply!=-NO && control_contact_apply!=-NO ) return 1;
-  }
-  return 0;
-}
 
 void iteration_start( void )
 

@@ -21,6 +21,59 @@
 
 #define EPS_H 1.e-8
 
+// C80.1 (2026-10-16): physical shape-function derivatives of the bilinear
+// quad4 / trilinear hex8 at the element centroid (iso 0), the centroid
+// Jacobian determinant and the centroid coordinates. Same conventions as
+// the shear SRI blocks of materi(): local node coordinates derived from
+// the index (row-major from the bottom, polynom.cc), the transpose
+// Jacobian of pol(). dndx[inol*ndim+idim] = dN_inol/dx_idim. Returns 0
+// for a degenerate centroid Jacobian.
+static long int sri_centroid_derivatives( long int name, long int nnol,
+  const double old_coord[], double dndx[], double &detj_c,
+  double coord_c[] )
+
+{
+  long int inol=0, idim=0, jdim=0;
+  double p[MNOL*MDIM], jac[MDIM*MDIM], invjac[MDIM*MDIM];
+
+  for ( inol=0; inol<nnol; inol++ ) {
+    // quad4: dN/dxi = xi_i/4 ; hex8: dN/dxi = xi_i/8 (i.e. xi_i/nnol)
+    p[inol*ndim+0] = ( (inol%2) ? 1. : -1. ) / (double) nnol;
+    p[inol*ndim+1] = ( ((inol/2)%2) ? 1. : -1. ) / (double) nnol;
+    if ( ndim==3 ) p[inol*ndim+2] = ( (inol/4) ? 1. : -1. ) / (double) nnol;
+  }
+  array_set( jac, 0., MDIM*MDIM );
+  for ( idim=0; idim<ndim; idim++ ) coord_c[idim] = 0.;
+  for ( inol=0; inol<nnol; inol++ ) {
+    for ( idim=0; idim<ndim; idim++ ) {
+      for ( jdim=0; jdim<ndim; jdim++ )
+        jac[idim*ndim+jdim] += p[inol*ndim+idim] * old_coord[inol*ndim+jdim];
+      coord_c[idim] += old_coord[inol*ndim+idim] / (double) nnol;
+    }
+  }
+  if ( ndim==2 ) {
+    detj_c = jac[0]*jac[3] - jac[1]*jac[2];
+    if ( scalar_dabs(detj_c)<TINY ) return 0;
+    invjac[0] =  jac[3]/detj_c; invjac[1] = -jac[1]/detj_c;
+    invjac[2] = -jac[2]/detj_c; invjac[3] =  jac[0]/detj_c;
+  }
+  else {
+    detj_c = jac[0]*( jac[4]*jac[8] - jac[5]*jac[7] )
+           - jac[1]*( jac[3]*jac[8] - jac[5]*jac[6] )
+           + jac[2]*( jac[3]*jac[7] - jac[4]*jac[6] );
+    if ( scalar_dabs(detj_c)<TINY ||
+         !matrix_inverse( jac, invjac, detj_c, 3 ) ) return 0;
+  }
+  for ( inol=0; inol<nnol; inol++ ) {
+    for ( idim=0; idim<ndim; idim++ ) {
+      dndx[inol*ndim+idim] = 0.;
+      for ( jdim=0; jdim<ndim; jdim++ )
+        dndx[inol*ndim+idim] += invjac[idim*ndim+jdim] * p[inol*ndim+jdim];
+    }
+  }
+  return 1;
+}
+
 void materi( long int element, long int gr, long int name, long int nnol, 
   long int npoint, long int nodes[], long int plasti_on_boundary,
   double coord_ip[], double old_coord[], long int ipoint,
@@ -37,7 +90,7 @@ void materi( long int element, long int gr, long int name, long int nnol,
     inol=0, jnol=0, m=0, n=0, indx=0, ipuknwn=0, iuknwn=0, jpuknwn=0, 
     swit=0, indxi=0, indxj=0, indx1=0, indx2=0, memory=-UPDATED, 
     ind_ddsdde=0, ldum=0, idum[1],
-    sri=-NO, sri_on=0,
+    sri=-NO, sri_on=0, sri_req=0,
     undr_active=0, undr_apply=-YES, undr_icontrol=0, undr_len=0, undr_len2=0, undr_k=0,
     dam_eff=0, dam_eff_len=0;
   double rdum=0., dens=0., dtime=0., materi_expansion_linear=0., 
@@ -54,7 +107,8 @@ void materi( long int element, long int gr, long int name, long int nnol,
     undr_p=0., undr_C=0., undr_buf[MPOINT],
     activation_factor=1., activation_stiff=1.,
     sri_g=0., sri_g2=0., sri_g3=0., sri_volfac=1., sri_detj_weight=0.,
-    sri_coord_center[MDIM],
+    sri_coord_center[MDIM], sri_kappa=0., sri_detj_vol=0.,
+    sri_volfac_vol=1., sri_bdiv[MNOL*MDIM],
     old_sig_eff[MDIM*MDIM], new_sig_eff[MDIM*MDIM],
     dam_eff_buf[MPOINT*MSTRESS_EFF_SLOTS],
     *old_deften=NULL, *new_deften=NULL, *inv_deften=NULL,
@@ -186,8 +240,7 @@ void materi( long int element, long int gr, long int name, long int nnol,
   // Keep the elastic stress and tangent in the reference configuration for
   // the f=0 displacement-primary map. solve() marks the temporary f=1
   // auxiliary pass explicitly, so it uses this same operator.
-  db( MATERI_DYNAMIC, 0, idum, &disp_primary_factor, ldum,
-    VERSION_NORMAL, GET_IF_EXISTS );
+  disp_primary_factor = materi_dynamic_effective( NULL );
   if ( disp_primary_reference==-YES ||
        ( materi_velocity && materi_displacement &&
          disp_primary_factor>=0. && disp_primary_factor<1. ) ) {
@@ -220,10 +273,24 @@ void materi( long int element, long int gr, long int name, long int nnol,
   db( GROUP_ELEMENT_SELECTIVE_REDUCED_INTEGRATION, gr, &sri, ddum, ldum,
     VERSION_NORMAL, GET_IF_EXISTS );
   sri_on = sri_active( element, gr, name, nnol );
-  if ( sri==-YES && materi_stress && !sri_on && !sri_warning_done ) {
-    pri( "Warning: group_element_selective_reduced_integration ignored: "
-      "only linear elastic 2D quad4 / 3D hex8 groups are supported (no "
-      "axisymmetry, no materi_displacement, no plasticity/damage/maxwell)." );
+  // C80.1/C80.2: requested mode mask (-yes shear, -volumetric,
+  // -lambda); the volumetric / lambda bit is dropped by sri_active()
+  // for membrane groups.
+  sri_req = 0;
+  if ( sri==-YES ) sri_req |= SRI_SHEAR;
+  if ( sri==-VOLUMETRIC ) sri_req |= SRI_VOLUMETRIC;
+  if ( sri==-LAMBDA ) sri_req |= SRI_LAMBDA;
+  if ( sri_req && materi_stress && sri_on!=sri_req && !sri_warning_done ) {
+    if ( sri==-YES )
+      pri( "Warning: group_element_selective_reduced_integration ignored: "
+        "only linear elastic 2D quad4 / 3D hex8 groups are supported (no "
+        "axisymmetry, no materi_displacement, no plasticity/damage/maxwell)." );
+    else
+      pri( "Warning: group_element_selective_reduced_integration "
+        "-volumetric/-lambda ignored: only linear elastic 2D "
+        "plane-strain quad4 / 3D hex8 groups are supported (no plane "
+        "stress / membrane, no axisymmetry, no materi_displacement, "
+        "no plasticity/damage/maxwell)." );
     sri_warning_done = 1;
   }
 
@@ -257,9 +324,11 @@ void materi( long int element, long int gr, long int name, long int nnol,
         old_unknowns[epe_indx+stress_indx(idim,jdim)*nder];
       if ( materi_strain_total ) old_ept[indx] = 
         old_unknowns[ept_indx+stress_indx(idim,jdim)*nder];
+      // C68d: the chain loop must not overwrite indx, which the
+      // rho / epi / epp reads below still use (two or more chains read
+      // the wrong slots and overran these 9-entry arrays).
       for ( m=0; m<materi_maxwell_stress; m++ ) {
-        indx = m*MDIM*MDIM+idim*MDIM+jdim;
-        old_msig[indx] = old_unknowns[mstres_indx+
+        old_msig[m*MDIM*MDIM+indx] = old_unknowns[mstres_indx+
           (m*6+stress_indx(idim,jdim))*nder];
       }
       if ( materi_plasti_rho ) old_rho[indx] =
@@ -783,7 +852,10 @@ void materi( long int element, long int gr, long int name, long int nnol,
       // coincide; in 3D the yz entry differs (tensor 1*MDIM+2 = 5 vs
       // Voigt stress_indx(1,2) = 4), so the strain MUST use the tensor
       // index idim*MDIM+jdim.
-      if ( name==-QUAD4 ) {
+      if ( !( sri_on & SRI_SHEAR ) ) {
+        // C80.1 -volumetric: no shear split
+      }
+      else if ( name==-QUAD4 ) {
         sri_g = ddsdde_total[1*MSTRAIN+1];
         sigvec[stress_indx(0,1)] -= 2. * sri_g * inc_ept[stress_indx(0,1)];
         ddsdde_total[1*MSTRAIN+1] = 0.;
@@ -800,6 +872,95 @@ void materi( long int element, long int gr, long int name, long int nnol,
         ddsdde_total[2*MSTRAIN+2] = 0.;
         ddsdde_total[4*MSTRAIN+4] = 0.;
       }
+      if ( sri_on & ( SRI_VOLUMETRIC | SRI_LAMBDA ) ) {
+        // C80.1 (2026-10-16) selective volumetric reduced integration
+        // (Hughes 1980 selective integration / B-bar with the centroid
+        // dilatation): D = D_dev + kappa*m*m^T with m = (1,1,1,0,0,0)
+        // (Voigt indices stress_indx 0, 3, 5) and kappa = m^T*D*m/9
+        // (the bulk modulus lambda+2G/3 for isotropic elasticity). The
+        // deviatoric part D_dev keeps the full Gauss rule; the
+        // volumetric part is integrated with 1 point at the centroid:
+        //   K_vol = kappa * volfac * W * detJ_c * b_div*b_div^T,
+        //   b_div[inol*ndim+idim] = dN_inol/dx_idim at the centroid,
+        // W = 4 (quad4) / 8 (hex8). In plane strain eps_zz = 0, so the
+        // dilatation is eps_xx+eps_yy and sigma_zz carries kappa*theta
+        // plus its deviatoric part. Same element-consistent momentum
+        // feedback as the shear (fix D-c): the current-iterate
+        // volumetric increment kappa*m*tr(inc_ept) of the IP is removed
+        // from the feedback stress and -dt*K_vol*v is added to the RHS
+        // (stiffness_shear carries the whole reduced stiffness). The
+        // STORED stress (new_sig: recovery, element_dof, next-step old
+        // stress) is the B-bar stress: the IP volumetric increment is
+        // replaced by the centroid one, kappa*dt*b_div^T*v, so the
+        // pressure is constant per element (no checkerboard from the
+        // IP dilatations).
+        double theta_ip = inc_ept[0*MDIM+0] + inc_ept[1*MDIM+1] +
+          inc_ept[2*MDIM+2], theta_c = 0.;
+        long int vol_ix[3] = { 0, 3, 5 }, a=0, b=0;
+        sri_kappa = 0.;
+        if ( sri_on & SRI_LAMBDA ) {
+          // C80.2 (2026-10-16) -lambda: the Hughes 1977 lambda/mu split
+          // of the isotropic D = 2*mu*I + lambda*m*m^T (I with 1/2 on
+          // the shear entries). Only lambda*m*m^T
+          // goes to the centroid point (the coefficient below replaces
+          // kappa in the machinery above, nothing else changes); the
+          // 2*mu part keeps the full Gauss rule, including its
+          // volumetric component 2*mu/3*(tr eps)^2, which does not lock
+          // because mu stays bounded as nu -> 0.5. lambda is the
+          // off-diagonal entry of the normal block of the tangent; it
+          // is only defined for an ISOTROPIC tangent (equal diagonal,
+          // equal off-diagonal entries), anything else is refused
+          // (-volumetric needs no isotropy).
+          double d_diag = ddsdde_total[0*MSTRAIN+0], d_max = 0.,
+            d_dev = 0.;
+          for ( a=0; a<3; a++ )
+            for ( b=0; b<3; b++ ) {
+              double d_ab = ddsdde_total[vol_ix[a]*MSTRAIN+vol_ix[b]];
+              d_max = scalar_dmax( d_max, scalar_dabs(d_ab) );
+              if ( a!=b ) sri_kappa += d_ab / 6.;
+            }
+          for ( a=0; a<3; a++ )
+            for ( b=0; b<3; b++ ) {
+              double d_ab = ddsdde_total[vol_ix[a]*MSTRAIN+vol_ix[b]];
+              d_dev = scalar_dmax( d_dev, scalar_dabs( d_ab -
+                ( a==b ? d_diag : sri_kappa ) ) );
+            }
+          if ( d_dev>1.e-6*d_max ) {
+            pri( "Error: group_element_selective_reduced_integration "
+              "-lambda needs an isotropic elastic material (the normal "
+              "block of the constitutive matrix must have equal diagonal "
+              "and equal off-diagonal entries); use -volumetric for "
+              "this group. Element ", element );
+            exit(TN_EXIT_STATUS);
+          }
+        }
+        else {
+          for ( a=0; a<3; a++ )
+            for ( b=0; b<3; b++ )
+              sri_kappa += ddsdde_total[vol_ix[a]*MSTRAIN+vol_ix[b]];
+          sri_kappa /= 9.;
+        }
+        if ( sri_centroid_derivatives( name, nnol, old_coord, sri_bdiv,
+             sri_detj_vol, sri_coord_center ) ) {
+          for ( jnol=0; jnol<nnol; jnol++ )
+            for ( jdim=0; jdim<ndim; jdim++ )
+              theta_c += sri_bdiv[jnol*ndim+jdim] *
+                new_dof[jnol*nuknwn + vel_indx + jdim*nder];
+          theta_c *= dtime;
+          sri_volfac_vol = 1.;
+          volume_factor( gr, sri_coord_center, sri_volfac_vol );
+        }
+        else {
+          array_set( sri_bdiv, 0., nnol*ndim );
+          sri_detj_vol = 0.;
+        }
+        for ( a=0; a<3; a++ ) {
+          sigvec[vol_ix[a]] -= sri_kappa * theta_ip;
+          new_sig[a*MDIM+a] += sri_kappa * ( theta_c - theta_ip );
+          for ( b=0; b<3; b++ )
+            ddsdde_total[vol_ix[a]*MSTRAIN+vol_ix[b]] -= sri_kappa;
+        }
+      }
     }
     // materi_dynamic (manual Professional 6.800) / control_materi_dynamic
     // (6.141): blend the stress at time t (old_sig, previous converged
@@ -812,16 +973,7 @@ void materi( long int element, long int gr, long int name, long int nnol,
     // momentum). The momentum stiffness is scaled by the same factor
     // (the tangent of factor*sigma_{t+dt}).
     {
-      double materi_dynamic_factor = 1.;
-      db( MATERI_DYNAMIC, 0, idum, &materi_dynamic_factor, ldum,
-        VERSION_NORMAL, GET_IF_EXISTS );
-      long int icontrol_md = 0;
-      db( ICONTROL, 0, &icontrol_md, ddum, ldum, VERSION_NORMAL,
-        GET_IF_EXISTS );
-      if ( db_active_index( CONTROL_MATERI_DYNAMIC, icontrol_md,
-          VERSION_NORMAL ) )
-        db( CONTROL_MATERI_DYNAMIC, icontrol_md, idum,
-          &materi_dynamic_factor, ldum, VERSION_NORMAL, GET );
+      double materi_dynamic_factor = materi_dynamic_effective( NULL );
       md_factor = materi_dynamic_factor;
       if ( materi_dynamic_factor<1. ) {
         if ( materi_dynamic_factor<0. || materi_dynamic_factor>1. )
@@ -859,7 +1011,11 @@ void materi( long int element, long int gr, long int name, long int nnol,
       // matrices of pol() for ANY physical node numbering; the
       // Jacobian at the centroid handles distorted elements exactly.
       // The 1x1 / 1x1x1 Gauss weight on [-1,1]^2 / [-1,1]^3 is 4 / 8.
-      if ( name==-QUAD4 ) {
+      if ( !( sri_on & SRI_SHEAR ) ) {
+        // C80.1 -volumetric: no reduced shear stiffness
+        array_set( stiffness_shear, 0., nnol*ndim*nnol*ndim );
+      }
+      else if ( name==-QUAD4 ) {
         double jac[4], invjac[4], dnxi[4], dnet[4], detj_center=0.;
         for ( inol=0; inol<nnol; inol++ ) {
           dnxi[inol] = 0.25 * ( (inol%2) ? 1. : -1. );
@@ -961,6 +1117,20 @@ void materi( long int element, long int gr, long int name, long int nnol,
                   sri_g2*b_xz[i]*b_xz[j] + sri_g3*b_yz[i]*b_yz[j] );
         }
         if ( swit ) pri( "stiffness_shear", stiffness_shear, nnol*ndim, nnol*ndim );
+      }
+      if ( sri_on & ( SRI_VOLUMETRIC | SRI_LAMBDA ) ) {
+        // C80.1: the reduced volumetric stiffness (C80.2 -lambda: the
+        // lambda*m*m^T part, sri_kappa = lambda), 1 point at the
+        // centroid, joins the reduced shear stiffness; the momentum
+        // matrix and the D-c feedback below use their sum.
+        double w_c = ( ndim==2 ? 4. : 8. ) * sri_detj_vol *
+          sri_volfac_vol * sri_kappa;
+        for ( i=0; i<nnol*ndim; i++ )
+          for ( j=0; j<nnol*ndim; j++ )
+            stiffness_shear[i*nnol*ndim+j] += w_c * sri_bdiv[i] *
+              sri_bdiv[j];
+        if ( swit ) pri( "stiffness_reduced", stiffness_shear, nnol*ndim,
+          nnol*ndim );
       }
     }
   }
@@ -1093,33 +1263,22 @@ void materi( long int element, long int gr, long int name, long int nnol,
       }
     }
     }
+    // C66 phase 2 (F4 T6f, 2026-10-16): the lumped weight of the
+    // h-weighted state dofs below; the tria6 HRZ weight of pol() (the same
+    // weight as the general.cc denominator), h for every other element.
+    double h_lump = lumped_hrz_active ? lumped_hrz_weight[inol] : h[inol];
     if ( !stress_recovery_post_pass && scalar_dabs(h[inol])>EPS_H ) {
 
       if ( materi_history_variables ) {
         for ( i=0; i<materi_history_variables; i++ ) {
           ipuknwn = hisv_indx/nder + i;
           indx = inol*npuknwn + ipuknwn;
-          tmp = volume * h[inol] * ( new_hisv[i] - old_hisv[i] ) / dtime;
+          tmp = volume * h_lump * ( new_hisv[i] - old_hisv[i] ) / dtime;
           element_rhside[indx] += tmp;
 		//added for options_element_dof
           if(options_element_dof==-YES) new_unknowns[hisv_indx + i*nder] = new_hisv[i];
           ipuknwn++;
         }
-      }
-
-      if ( materi_plasti_kappa_shear ) {
-        ipuknwn = kapsh_indx/nder;
-        indx = inol*npuknwn + ipuknwn;
-        tmp = volume * h[inol] * ( new_kapsh - old_kapsh ) / dtime;
-        element_rhside[indx] += tmp;
-        ipuknwn++;
-      }
-
-      if ( materi_damage ) {
-        ipuknwn = dam_indx/nder;
-        indx = inol*npuknwn + ipuknwn;
-        tmp = volume * h[inol] * ( new_damage - old_damage ) / dtime;
-        element_rhside[indx] += tmp;
       }
 
     }
@@ -1148,11 +1307,11 @@ void materi( long int element, long int gr, long int name, long int nnol,
         double weight_normal = h[inol], weight_shear = h[inol];
         if ( sri_on ) {
           weight_normal = sri_stress_recovery_weight( 1, name, nnol, inol,
-            npoint, ipoint, h[inol], volume );
+            npoint, ipoint, h[inol], volume, gr, nodes );
         }
         else {
           weight_normal = weight_shear = sri_stress_recovery_weight( 0,
-            name, nnol, inol, npoint, ipoint, h[inol], volume );
+            name, nnol, inol, npoint, ipoint, h[inol], volume, gr, nodes );
         }
         for ( idim=0; idim<MDIM; idim++ ) {
           for ( jdim=idim; jdim<MDIM; jdim++ ) {
@@ -1214,7 +1373,7 @@ void materi( long int element, long int gr, long int name, long int nnol,
     // Professional tslv_part clamped edge eptyy 0, GNU -2.35e-6.
     if ( materi_strain_total || materi_strain_elasti || materi_strain_plasti ) {
       double w_rec = strain_recovery_weight( sri_on, name, nnol, inol,
-        npoint, ipoint, h[inol], volume );
+        npoint, ipoint, h[inol], volume, gr, nodes );
       if ( scalar_dabs(w_rec)>EPS_H || scalar_dabs(h[inol])>EPS_H ) {
         long int iblk=0, blk_indx=0;
         double *blk_old=NULL, *blk_inc=NULL;
@@ -1245,6 +1404,82 @@ void materi( long int element, long int gr, long int name, long int nnol,
         }
       }
     }
+    // Hardening parameter kappa (F4 T6f WU2, 2026-10-11): an
+    // integration-point state (manual materi_plasti_kappa). The IP value
+    // is stored in ELEMENT_DOF (elem.cc reads it back as old_kappa)
+    // instead of the h-lumped nodal value interpolated back to the point,
+    // and its nodal (output) value uses the strain recovery weight, whose
+    // lumped denominator general.cc builds with the same weight. Outside
+    // the h guard because that weight is non-zero where h vanishes
+    // (quad9/hex27/tet10 least squares), as for the strain tensors.
+    if ( materi_plasti_kappa ) {
+      double w_rec = strain_recovery_weight( sri_on, name, nnol, inol,
+        npoint, ipoint, h[inol], volume, gr, nodes );
+      if ( scalar_dabs(w_rec)>EPS_H || scalar_dabs(h[inol])>EPS_H ) {
+        ipuknwn = kap_indx/nder;
+        indx = inol*npuknwn + ipuknwn;
+        tmp = volume * w_rec * ( new_kappa - old_kappa ) / dtime;
+        element_rhside[indx] += tmp;
+        if ( options_element_dof==-YES ) new_unknowns[kap_indx] = new_kappa;
+      }
+    }
+    // Other integration-point states (C68, F4 T6f): kappa_shear, the cap1
+    // pc, the damage d, the kinematic hardening rho and the Maxwell
+    // stresses are read back by the constitutive update (old_kapsh,
+    // old_cap1pc, old_damage, old_rho, old_msig), so, as kappa, their IP
+    // value is stored in ELEMENT_DOF (elem.cc masks) and their nodal
+    // (output) value is the lumped recovery with the strain recovery
+    // weight, whose denominator general.cc builds with the same weight.
+    // The ELEMENT_DOF slot of component k is <indx> + k*nder.
+    if ( materi_plasti_kappa_shear || materi_plasti_cap1_history ||
+         materi_damage || materi_plasti_rho || materi_maxwell_stress ) {
+      double w_rec = strain_recovery_weight( sri_on, name, nnol, inol,
+        npoint, ipoint, h[inol], volume, gr, nodes );
+      if ( scalar_dabs(w_rec)>EPS_H || scalar_dabs(h[inol])>EPS_H ) {
+        long int kcomp=0;
+        if ( materi_plasti_kappa_shear ) {
+          indx = inol*npuknwn + kapsh_indx/nder;
+          element_rhside[indx] += volume * w_rec * ( new_kapsh - old_kapsh ) / dtime;
+          if ( options_element_dof==-YES ) new_unknowns[kapsh_indx] = new_kapsh;
+        }
+        if ( materi_plasti_cap1_history ) {
+          indx = inol*npuknwn + cap1_indx/nder;
+          element_rhside[indx] += volume * w_rec * ( new_cap1pc - old_cap1pc ) / dtime;
+          if ( options_element_dof==-YES ) new_unknowns[cap1_indx] = new_cap1pc;
+        }
+        if ( materi_damage ) {
+          indx = inol*npuknwn + dam_indx/nder;
+          element_rhside[indx] += volume * w_rec * ( new_damage - old_damage ) / dtime;
+          if ( options_element_dof==-YES ) new_unknowns[dam_indx] = new_damage;
+        }
+        if ( materi_plasti_rho ) {
+          for ( idim=0; idim<MDIM; idim++ ) {
+            for ( jdim=idim; jdim<MDIM; jdim++ ) {
+              kcomp = stress_indx(idim,jdim);
+              indx = inol*npuknwn + rho_indx/nder + kcomp;
+              element_rhside[indx] += volume * w_rec * ( new_rho[idim*MDIM+jdim] -
+                old_rho[idim*MDIM+jdim] ) / dtime;
+              if ( options_element_dof==-YES )
+                new_unknowns[rho_indx+kcomp*nder] = new_rho[idim*MDIM+jdim];
+            }
+          }
+        }
+        for ( m=0; m<materi_maxwell_stress; m++ ) {
+          for ( idim=0; idim<MDIM; idim++ ) {
+            for ( jdim=idim; jdim<MDIM; jdim++ ) {
+              kcomp = m*6 + stress_indx(idim,jdim);
+              indx = inol*npuknwn + mstres_indx/nder + kcomp;
+              element_rhside[indx] += volume * w_rec *
+                ( new_msig[m*MDIM*MDIM+idim*MDIM+jdim] -
+                  old_msig[m*MDIM*MDIM+idim*MDIM+jdim] ) / dtime;
+              if ( options_element_dof==-YES )
+                new_unknowns[mstres_indx+kcomp*nder] =
+                  new_msig[m*MDIM*MDIM+idim*MDIM+jdim];
+            }
+          }
+        }
+      }
+    }
     if ( scalar_dabs(h[inol])>EPS_H ) {
       if ( materi_plasti_f ) {
         ipuknwn = f_indx/nder;
@@ -1253,7 +1488,7 @@ void materi( long int element, long int gr, long int name, long int nnol,
         // NO_YIELD_F = -1e10 (K13 follow-up, measured on the Professional
         // 02-08-2026: tension_direct1 with materi_plasti_f gives f 0 at
         // the nodes of the elastic element; the GNU averaged -1e10 in)
-        tmp = volume * h[inol] *
+        tmp = volume * h_lump *
           ( ( new_f==NO_YIELD_F ? 0. : new_f ) - old_f ) / dtime;
         element_rhside[indx] += tmp;
       }
@@ -1261,53 +1496,27 @@ void materi( long int element, long int gr, long int name, long int nnol,
       if ( materi_plasti_incremental_substeps ) {
         ipuknwn = substeps_indx/nder;
         indx = inol*npuknwn + ipuknwn;
-        tmp = volume * h[inol] * ( new_substeps - old_substeps ) / dtime;
+        tmp = volume * h_lump * ( new_substeps - old_substeps ) / dtime;
         element_rhside[indx] += tmp;
       }
 
-      if ( materi_plasti_kappa ) {
-        ipuknwn = kap_indx/nder;
-        indx = inol*npuknwn + ipuknwn;
-        tmp = volume * h[inol] * ( new_kappa - old_kappa ) / dtime;
-        element_rhside[indx] += tmp;
-      }
-
-      if ( materi_plasti_cap1_history ) {
-        ipuknwn = cap1_indx/nder;
-        indx = inol*npuknwn + ipuknwn;
-        tmp = volume * h[inol] * ( new_cap1pc - old_cap1pc ) / dtime;
-        element_rhside[indx] += tmp;
-      }
-
-      if ( materi_plasti_rho ) {
-        ipuknwn = rho_indx/nder;
-        for ( idim=0; idim<MDIM; idim++ ) {
-          for ( jdim=idim; jdim<MDIM; jdim++ ) {
-            indx = inol*npuknwn + ipuknwn;
-            tmp = volume * h[inol] * ( new_rho[idim*MDIM+jdim] - 
-              old_rho[idim*MDIM+jdim] ) / dtime;
-            element_rhside[indx] += tmp;
-            ipuknwn++;
-          }
-        }
-      }
       if ( materi_plasti_softvar_local ) {
         ipuknwn = svloc_indx/nder;
         indx = inol*npuknwn + ipuknwn;
-        tmp = volume * h[inol] * ( new_unknowns[ipuknwn] - old_unknowns[ipuknwn] ) / dtime;
+        tmp = volume * h_lump * ( new_unknowns[ipuknwn] - old_unknowns[ipuknwn] ) / dtime;
         element_rhside[indx] += tmp;
       }
       if ( materi_plasti_softvar_nonlocal ) {
         ipuknwn = svnonloc_indx/nder;
         indx = inol*npuknwn + ipuknwn;
-        tmp = volume * h[inol] * ( new_unknowns[ipuknwn] - old_unknowns[ipuknwn] ) / dtime;
+        tmp = volume * h_lump * ( new_unknowns[ipuknwn] - old_unknowns[ipuknwn] ) / dtime;
         element_rhside[indx] += tmp;
       }
       if ( materi_strainenergy ) {
         ipuknwn = ener_indx/nder;
         indx = inol*npuknwn + ipuknwn;
         tmp = 0.5 * array_inproduct( new_sig, new_epe, MDIM*MDIM );
-        tmp = volume * h[inol] * ( tmp - old_unknowns[ener_indx] ) / dtime;
+        tmp = volume * h_lump * ( tmp - old_unknowns[ener_indx] ) / dtime;
         element_rhside[indx] += tmp;
       }
 
@@ -1316,7 +1525,7 @@ void materi( long int element, long int gr, long int name, long int nnol,
         for ( idim=0; idim<MDIM; idim++ ) {
           for ( jdim=idim; jdim<MDIM; jdim++ ) {
             indx = inol*npuknwn + ipuknwn;
-            tmp = volume * h[inol] * ( new_epi[idim*MDIM+jdim] - 
+            tmp = volume * h_lump * ( new_epi[idim*MDIM+jdim] - 
               old_epi[idim*MDIM+jdim] ) / dtime;
             element_rhside[indx] += tmp;
 		//added for options_element_dof
@@ -1366,7 +1575,7 @@ void materi( long int element, long int gr, long int name, long int nnol,
             for ( idim=0; idim<MDIM; idim++ ) {
               for ( jdim=idim; jdim<MDIM; jdim++ ) {
                 indx = inol*npuknwn + ipuknwn;
-                tmp = volume * h[inol] * inc_epp[idim*MDIM+jdim] / dtime;
+                tmp = volume * h_lump * inc_epp[idim*MDIM+jdim] / dtime;
                 element_rhside[indx] += tmp;
                 // added for options_element_dof
                 if(options_element_dof==-YES)
@@ -1387,26 +1596,11 @@ void materi( long int element, long int gr, long int name, long int nnol,
         element_residue[indx] -= tmp;
       }                    
 
-      if ( materi_maxwell_stress ) {
-        ipuknwn = mstres_indx/nder;
-        for ( m=0; m<materi_maxwell_stress; m++ ) {
-          for ( idim=0; idim<MDIM; idim++ ) {
-            for ( jdim=idim; jdim<MDIM; jdim++ ) {
-              indx = inol*npuknwn + ipuknwn;
-              tmp = volume * h[inol] * ( new_msig[m*MDIM*MDIM+idim*MDIM+jdim] -
-                  old_msig[m*MDIM*MDIM+idim*MDIM+jdim] ) / dtime;
-              element_rhside[indx] += tmp;
-              ipuknwn++;
-            }
-          }
-        }
-      }
-
       if ( materi_void_fraction && materi_strain_plasti ) {
         ipuknwn = void_indx/nder;
         indx = inol*npuknwn + ipuknwn;
         void_fraction = new_unknowns[void_indx];
-        tmp = volume * h[inol] * ( 1 - void_fraction ) * void_fraction * 
+        tmp = volume * h_lump * ( 1 - void_fraction ) * void_fraction * 
           ( inc_epp[0*MDIM+0] + inc_epp[1*MDIM+1] + inc_epp[2*MDIM+2] );
         element_rhside[indx] += tmp;
       }
@@ -1416,7 +1610,7 @@ void materi( long int element, long int gr, long int name, long int nnol,
         indx = inol*npuknwn + ipuknwn;
         array_subtract( new_sig, old_sig, work, MDIM*MDIM );
         tmp = array_inproduct( work, inc_ept, MDIM*MDIM );
-        tmp = volume * h[inol] * ( tmp - old_unknowns[work_indx] ) / dtime;
+        tmp = volume * h_lump * ( tmp - old_unknowns[work_indx] ) / dtime;
         element_rhside[indx] += tmp;
       }
 

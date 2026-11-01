@@ -35,8 +35,9 @@ along it) plus the explicit `node_slide index slide_number` records
   attached to the plane in both directions.
 - **Tangential spring**: elastic predictor `-kt*u_t` on the tangential
   displacement, capped by the Mohr-Coulomb limit
-  `|F_t| <= c + Fn*tan(phi)` (`slide_plasti_friction phi c`, phi in
-  RADIANS). Once the cap is exceeded the node slips plastically and the
+  `|F_t| <= c + |Fn|*tan(phi)` (`slide_plasti_friction phi c`, phi in
+  RADIANS; the magnitude of the normal force, also when the connection
+  is in tension, as in the Professional). Once the cap is exceeded the node slips plastically and the
   tangential force stays at the cap (perfect plasticity; the direction
   opposes the tangential displacement).
 - **Axisymmetric problems**: every force/stiffness acts on the whole
@@ -73,17 +74,28 @@ slide_plasti_residual_stiffness 10  1.e-2 1.e-2   (matrix-only, optional)
 | `phi` | Friction angle in RADIANS (coefficient tan(phi)). |
 | `c` | Cohesion. |
 | `stiffness_n` / `stiffness_t` | Normal / tangential spring stiffness, per node. |
-| `sig_t` | Maximum tensile (pull-off) force of the connection. |
+| `sig_t` | Maximum tensile (pull-off) force of the connection. Absent record = no tension limit (since 2026-10-11, F4 T6e; before, an absent record wrongly behaved as `sig_t = 0`, a compression-only gap). |
 | `rn` / `rt` | Residual stiffness FRACTION of the elastic stiffness added to the matrix only while the node slips (default 1e-2, like the Professional). |
 
 ## Verification / status
 
-- `slide1` and `slide3` of the corpus pass (rc=0). slide1's final state
+- `slide1`, `slide3` and `slide4` of the corpus pass (rc=0); `slide4`
+  equals the Professional since 2026-10-11 (F4 T6e). slide1's final state
   matches the Professional .dbs: node_slide_force (-2.1148e-3,
   -1.2210e-3) vs (-2.1129e-3, -1.2199e-3); the top reactions +0.01 /
   -5.7707e-3 (targets).
-- `slide2` (axisymmetric) and `slide4` (fast velocity drag) still fail —
-  see the developer manual for the diagnosis.
+- `slide2` (axisymmetric) still fails — see the developer manual for
+  the diagnosis.
+- `slide_friction_cohesion1` (test-2026, F4 T6e): slide4 with cohesion
+  `slide_plasti_friction 10 0.523598 0.002`, end time 10: node 1
+  tangential `node_slide_force` -2.065482e-3 = Professional 02-08-2026
+  (needs the absent-tension default, the `|Fn|` cap and the post-solve
+  material state pass).
 
 The legacy penalty behavior (velocity constraint) is kept for slide
-geometries WITHOUT `slide_stiffness` (classic inputs such as examp14).
+geometries WITHOUT `slide_stiffness` (classic inputs such as examp14,
+test-2014 `node_slide`): the node gets the reaction
+`- slide_penalty * (v.n) * dtime * n` plus the `slide_friction` force on
+its VELOCITY equations (fixed 2026-10-11: the terms used to land in other
+unknowns, e.g. the total strain `eptxx`, of models with
+`materi_strain_total` and `derivatives`).

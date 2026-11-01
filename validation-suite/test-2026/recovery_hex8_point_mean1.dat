@@ -1,0 +1,108 @@
+( C70 {F4 T6f, 2026-10-13} hex8 1-point rule {-minimal}: the Professional takes the point value per element and the arithmetic mean of the two elements at the shared face {GNU before: volume-weighted h}. Prescribed velocity at every node. Targets = Professional 02-08-2026 node_dof; GNU before: node 2 sigxx 2.92773; node 2 sigyy 2.57243; node 2 sigzz 1.79479. )
+
+echo -no
+number_of_space_dimensions 3
+materi_velocity
+materi_stress
+end_initia
+mesh -fixed_in_space -fixed_in_space -fixed_in_space
+inertia_apply -no
+node 1 0.0 0.0 0.0
+node 2 1.02 0.055 -0.025
+node 3 0.065 1.0 0.035
+node 4 1.085 1.055 0.055
+node 5 0.025 0.0 1.0
+node 6 1.005 0.075 0.975
+node 7 0.09 0.97 1.035
+node 8 1.07 1.045 1.055
+node 9 3.18 0.495 -0.225
+node 10 3.245 1.495 -0.055
+node 11 3.085 0.555 0.775
+node 12 3.15 1.525 0.945
+element 1 -hex8 1 2 3 4 5 6 7 8
+element 2 -hex8 2 9 4 10 6 11 8 12
+bounda_dof 0 -ra 1 -ra -velx
+bounda_time 0 0. 0.0 10. 0.0
+bounda_dof 1 -ra 1 -ra -vely
+bounda_time 1 0. 0.0 10. 0.0
+bounda_dof 2 -ra 1 -ra -velz
+bounda_time 2 0. 0.0 10. 0.0
+bounda_dof 3 -ra 2 -ra -velx
+bounda_time 3 0. 0.01738035 10. 0.01738035
+bounda_dof 4 -ra 2 -ra -vely
+bounda_time 4 0. -0.0747609 10. -0.0747609
+bounda_dof 5 -ra 2 -ra -velz
+bounda_time 5 0. -0.00012150000000000003 10. -0.00012150000000000003
+bounda_dof 6 -ra 3 -ra -velx
+bounda_time 6 0. 0.051390000000000005 10. 0.051390000000000005
+bounda_dof 7 -ra 3 -ra -vely
+bounda_time 7 0. 0.012931750000000002 10. 0.012931750000000002
+bounda_dof 8 -ra 3 -ra -velz
+bounda_time 8 0. 0.00026425000000000005 10. 0.00026425000000000005
+bounda_dof 9 -ra 4 -ra -velx
+bounda_time 9 0. 0.4285454624999999 10. 0.4285454624999999
+bounda_dof 10 -ra 4 -ra -vely
+bounda_time 10 0. 0.16508817499999995 10. 0.16508817499999995
+bounda_dof 11 -ra 4 -ra -velz
+bounda_time 11 0. 0.006386462499999999 10. 0.006386462499999999
+bounda_dof 12 -ra 5 -ra -velx
+bounda_time 12 0. 0.1 10. 0.1
+bounda_dof 13 -ra 5 -ra -vely
+bounda_time 13 0. 0.0024562500000000005 10. 0.0024562500000000005
+bounda_dof 14 -ra 5 -ra -velz
+bounda_time 14 0. 0.03 10. 0.03
+bounda_dof 15 -ra 6 -ra -velx
+bounda_time 15 0. 0.11806931249999998 10. 0.11806931249999998
+bounda_dof 16 -ra 6 -ra -vely
+bounda_time 16 0. 0.028416374999999994 10. 0.028416374999999994
+bounda_dof 17 -ra 6 -ra -velz
+bounda_time 17 0. 0.0358678125 10. 0.0358678125
+bounda_dof 18 -ra 7 -ra -velx
+bounda_time 18 0. 0.15652459999999999 10. 0.15652459999999999
+bounda_dof 19 -ra 7 -ra -vely
+bounda_time 19 0. 0.025684199999999994 10. 0.025684199999999994
+bounda_dof 20 -ra 7 -ra -velz
+bounda_time 20 0. 0.041172299999999995 10. 0.041172299999999995
+bounda_dof 21 -ra 8 -ra -velx
+bounda_time 21 0. 0.5248299000000001 10. 0.5248299000000001
+bounda_dof 22 -ra 8 -ra -vely
+bounda_time 22 0. 0.26643535 10. 0.26643535
+bounda_dof 23 -ra 8 -ra -velz
+bounda_time 23 0. 0.15135557500000002 10. 0.15135557500000002
+bounda_dof 24 -ra 9 -ra -velx
+bounda_time 24 0. 1.5190051500000001 10. 1.5190051500000001
+bounda_dof 25 -ra 9 -ra -vely
+bounda_time 25 0. -0.6235821 10. -0.6235821
+bounda_dof 26 -ra 9 -ra -velz
+bounda_time 26 0. -0.033898500000000005 10. -0.033898500000000005
+bounda_dof 27 -ra 10 -ra -velx
+bounda_time 27 0. 4.834769962500001 10. 4.834769962500001
+bounda_dof 28 -ra 10 -ra -vely
+bounda_time 28 0. 0.6955819750000001 10. 0.6955819750000001
+bounda_dof 29 -ra 10 -ra -velz
+bounda_time 29 0. -0.0265912625 10. -0.0265912625
+bounda_dof 30 -ra 11 -ra -velx
+bounda_time 30 0. 1.6600817125 10. 1.6600817125
+bounda_dof 31 -ra 11 -ra -vely
+bounda_time 31 0. -0.23706682499999998 10. -0.23706682499999998
+bounda_dof 32 -ra 11 -ra -velz
+bounda_time 32 0. 0.15071231250000003 10. 0.15071231250000003
+bounda_dof 33 -ra 12 -ra -velx
+bounda_time 33 0. 4.745127499999999 10. 4.745127499999999
+bounda_dof 34 -ra 12 -ra -vely
+bounda_time 34 0. 1.06824375 10. 1.06824375
+bounda_dof 35 -ra 12 -ra -velz
+bounda_time 35 0. 0.48074512499999994 10. 0.48074512499999994
+group_type 0 -materi
+group_materi_viscosity 0 1.0
+group_materi_elasti_compressibility 0 1.0
+group_materi_memory 0 -updated_linear
+group_integration_points 0 -minimal
+control_timestep 0 1. 1.
+target_item 0 -node_dof 2 -sigxx
+target_value 0 2.357153107998e+00 4.0e-06
+target_item 1 -node_dof 2 -sigyy
+target_value 1 2.063288105454e+00 4.0e-06
+target_item 2 -node_dof 2 -sigzz
+target_value 2 1.456780594234e+00 4.0e-06
+end_data

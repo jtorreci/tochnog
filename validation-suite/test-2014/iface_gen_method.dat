@@ -21,10 +21,10 @@ control_mesh_generate_interface_method  0  -element_geometry -element_group
 control_timestep  0  0.1 1
 element  1  -quad4 1 2 3 4
 element  2  -quad4 5 6 7 8
-element  3  -quad4 2 4 5 7
+element_geometry  1  20
+element_geometry  2  30
 element_group  1  0
 element_group  2  0
-element_group  3  10
 force_element_volume  0  0 5
 force_element_volume_geometry  0  2
 group_interface  10  -yes

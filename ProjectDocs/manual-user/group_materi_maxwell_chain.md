@@ -67,3 +67,18 @@ This is the `viscel1.dat` regression test: a single Maxwell chain with
   `visco_elastiticity_nonlinear()` in `visconon.cc` is an EMPTY stub — it does
   nothing. Do not use it; only the linear `group_materi_maxwell_chain` is
   functional.
+
+## Integration-point state (C68, 2026-10-12)
+
+`materi_maxwell_stress` is kept per integration point between steps (Professional manual
+4.15), as the hardening parameter `kap`. The node values printed by
+`node_dof` are a recovery (averaging) of the integration-point values
+with the same weights as the strains; the constitutive update always
+uses the integration-point value. Before 2026-10-12 GNU fed the averaged
+node value back into the update, which smeared the history across
+elements (up to 19 % off the Professional in the reactions of a small
+damage test). Note: the Professional Maxwell chain gives a different (non-analytic) result even on a homogeneous field; GNU follows the analytic E*tau*rate*(1-exp(-t/tau)) (BACKLOG C68a, class D; guard test `maxwell_relaxation_analytic1`).
+
+## Differences with the Professional version
+
+- **Maxwell chain relaxation** (C68a, class D, Professional-suspect, owner decision 2026-10-18; GNU kept): on a homogeneous one-chain probe (E_c 7e3, tau 0.3, strain rate -0.01, t = 1) GNU gives the analytic msig = E_c tau rate (1 - exp(-t/tau)) = -20.2508461397 for any time step; the Professional 02-08-2026 gives -23.81 at dt 0.1, -20.59 at dt 0.01, -20.28 at dt 0.001 (a first-order time-discretisation error; at dt 0.1 beyond the bound E_c tau |rate| = 21). Guard test `test-2026/maxwell_relaxation_analytic1`. Index: [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).
