@@ -38,7 +38,25 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   group_plasti_apply, interface_gap_apply, linear_calculation_apply, materi_plasti_tension_apply,
   materi_plasti_visco_apply, mesh_element_group_apply, message, mrange, mstring,
   print_data_name, print_precision, processors_maximum, processors_partition, truss_rope_apply.
-  Route: inline (per-unit commits).
+  Route: inline (per-unit commits); map by a read-only explorer (mapping trigger: 35 keywords
+  across ~20 files). control_slide_damping_apply moves to T5 (switch of slide_damping). Units:
+  - [x] U1 apply switches: materi_plasti_tension_apply, materi_plasti_visco_apply,
+    group_plasti_apply, truss_rope_apply, control_truss_rope_apply, interface_gap_apply. Done `467cdbd`.
+  - [ ] U2 aliases and run-level switches: control_reset_value_logarithmic_first (+ data.cc
+    formula `log(b+c*x*d+e*x)` vs manual `ln((b+cx)/(d+ex))`: owner decision),
+    global_element_dof_apply (`-only` new), message, print_data_name, control_check_data,
+    control_zip, control_system_call (runs a user script: owner decision), processors_maximum
+    (Professional default -yes vs GNU 1 thread: owner decision).
+  - [ ] U3 post gates: control_post, control_post_apply (+ global post_apply, registered, unread),
+    control_post_element_force.
+  - [ ] U4 timestep loop: control_timestep_iterations_automatic_minimum_maximum_wished (GNU
+    hardcodes 2/20/4, manual default 2 8 4), control_timestep_adjust_minimum_iterations,
+    control_timestep_until_data / _maximum / _minimum.
+  - [ ] U5 element-group selection: control_element_group, element_group_apply,
+    control_element_group_apply, mesh_element_group_apply, control_mesh_element_group_apply,
+    processors_partition, print_precision.
+  - [ ] U6 input / database rewrite: mstring, mrange, control_input, groundflow_apply,
+    linear_calculation_apply.
 - [ ] T2 W2 output records (69): `element_*`, `post_*`, `print_*`, `control_print_*_node_type`,
   `materi_strain_*` / `materi_history_variable` initial dofs, `dof_*`, `global_*`,
   node_bounded_index (list in the 2026-11-01 file). Route: inline.
@@ -61,3 +79,15 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   renames `*_node_method` to `*_node_type` (print_vtk/gmsh/gid, control_print_*, new
   control_print_dof_line_node_type), `global_post_point_node_type` to `post_point_node_type`
   and drops `mesh_delete_geometry_moving`. Next: T1.
+- 2026-11-02 T1 map (read-only explorer): 6 units U1-U6 (see T1); only control_input,
+  control_post, control_timestep_iterations_automatic_minimum_maximum_wished and
+  linear_calculation_apply have Professional usage examples; owner decisions pending for U2
+  (logarithmic reset formula, control_system_call, processors_maximum default).
+- 2026-11-02 U1 (route inline). Professional probes (29 variants): tension / visco / group
+  switches = Professional, control overrules global; the control tension form now also gates
+  group_materi_plasti_tension (= Professional, GNU before ignored it). The Professional keeps the
+  rope with truss_rope_apply -no and rejects interface_gap_apply: GNU follows the manual
+  (DIVERGENCES ROPE-APPLY, IFACE-GAP-APPLY, class D). RED: 12 new tests rc 1 on 4b80565. Differential
+  vs 4b80565 (75 inputs): only new keywords and time_calculation lines. build_safe 364 OK / 0
+  FALLO, 226/226; audit_db_buffers rc 0. Commit 467cdbd. Next: U3 (post gates; U2 waits for owner
+  decisions).
