@@ -244,3 +244,10 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   -maximal points 3/4 swapped vs Pro: reorder needs an owner decision). build_safe 515 OK / 0 FALLO, audit 0;
   parent spot check element_intpnt_quad4_1 = Pro. Independent verifier (Risk item 3: pol(), bounda(),
   mesh_boundary_set shared code) deferred to one run at the end of T2 covering V3, V4a, V4b.
+- 2026-11-02 V4c committed `e17a202` (delegated writer): beam_local (group/element_beam_direction_z, reference
+  point), element_beam_force_moment (12 local values; planar beam too). build_safe 580 OK / 0 FALLO, audit 0;
+  15 existing beam inputs unchanged apart from the new record; parent spot check element_beam_direction_z1.
+  Open owner decisions (class B): C37 (3D beam without record stays planar vs Pro full 3D), BEAM-MEMORY-DEFAULT
+  (GNU -updated vs Pro -total_linear: 0.2399880 vs 0.24), BEAM-DIRECTION-LENGTH (2 vs 9 values), and
+  TET4-MAX-ORDER (owner asked about side effects; recommendation: reorder). Pending: V4 interface
+  element_interface_intpnt_{direction,gap_status}.
