@@ -212,3 +212,29 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   element_boundary, database.cc registers -plus_displacement (rejected before in every record). Divergences
   MESH-BOUNDARY-DEFAULT (A), ELEMENT-BOUNDARY-ALL (D), EGP-PLUS-DISP (D); BACKLOG C40 (3) resolved.
   build_safe 475 OK / 0 FALLO, audit 0. Next: T2 V4 (element diagnostics).
+- 2026-11-02 V4 Pro probes (scratchpad/f5/v4/in, omen ~/tochnog-runs/v4), Professional 02-08-2026:
+  - element_intpnt_{h,iso_coord,method,npoint} and node_bounded_index are written in EVERY run (no switch;
+    manual silent on the default -> follow Pro). quad4 2x2: method -gauss, npoint 4, h = per IP the nnol values
+    (IP-major), iso_coord = per IP ndim values (+-0.57735); tria3: method 0, npoint 1, h 1/3 x3, iso 1/3 1/3
+    (area coordinates); quad4 interface (group_interface -yes): -lobatto, 2 points, iso (-1,0),(1,0).
+  - node_bounded_index: one slot per node_dof entry (npuknwn), the bounda_dof index of the record that
+    bounds the dof, -nothing elsewhere (unbounded nodes: all -nothing).
+  - element_truss_strain = total (length increase / length) 0.01; element_truss_strain_temperature =
+    alpha dT 0.01 (alpha 1e-3, dT 10; the force is 0).
+  - print_group_data -group_materi_elasti_young -group_materi_elasti_poisson -> Pro writes
+    `element_print_group_data_value 1 1000 0.3` (SINGULAR; manual 6.446 `_values`). GNU print_group_data
+    has length 1 (only one name parsed): must be widened.
+  - element_interface_intpnt_direction / _gap_status: never written by Pro (also with an opened gap);
+    Pro writes `element_interface_direction` (9 values per IP: normal, first and second tangential).
+  - Beams: element_beam_direction_z overrides group_beam_direction_z per element (3D cantilever, Iyy 1 /
+    Izz 4: tip vely 3.33e-3 with local z = global y, 8.33e-4 with z = global z); element_beam_force_moment 12
+    values (first node minus). GNU lacks group_beam_direction_z(_reference_point) and
+    element_beam_force_moment: beam family split to V4b. Pro 2D beam bounda_dof rot inputs rejected.
+  - Not V4: GNU element_interface_intpnt_strain is the step increment (Pro total), BACKLOG line ~3438.
+- 2026-11-02 V4a committed `ab1a014` (inline): element_truss_strain(_temperature), node_bounded_index,
+  print_group_data list + element_print_group_data_values (= Pro; PGD-VALUE-NAME class D). build_safe 480 OK /
+  1 FALLO (interface_tension_status1 time_calculation wall-clock flake, rerun identical), audit 0.
+  Remaining V4: V4b element_intpnt_{h,iso_coord,method,npoint} (always written, Pro) +
+  element_interface_intpnt_{direction,gap_status} (manual; Pro writes element_interface_direction only);
+  V4c beam family (group_beam_direction_z(_reference_point), element_beam_direction_z,
+  element_beam_force_moment).
