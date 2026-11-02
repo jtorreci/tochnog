@@ -972,7 +972,7 @@ void data( long int task, double dtime, double time_current )
         // (archived b6e1f70 reference), and creset_geom relies on that.
         // There reset index 1 (constant 0, geometry brick) shares the
         // timestep index 1; it must also fire at step 0 so the brick
-        // ELEMENT_DOF IP history follows the node. With the strict gate
+        // ELEMENT_INTPNT_DOF IP history follows the node. With the strict gate
         // the brick IP keeps 0.5, and at step 1 the material equation
         // solves -1 instead of 0. The Professional REJECTS a reset
         // sharing a timestep index ("Error detected for data item :

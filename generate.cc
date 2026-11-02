@@ -292,7 +292,7 @@ void generate_spring( long int icontrol )
           length = 1;
           db( ELEMENT_MACRO_GENERATE, max_element, &icontrol, 
             ddum, length, VERSION_NORMAL, PUT );
-          db( ELEMENT_DOF, max_element, idum, tmp_element_dof, mnolnuknwn, VERSION_NORMAL, PUT );
+          db( ELEMENT_INTPNT_DOF, max_element, idum, tmp_element_dof, mnolnuknwn, VERSION_NORMAL, PUT );
           db( ELEMENT_DOF_INITIALISED, max_element, &zero, ddum, length, VERSION_NORMAL, PUT );
           db( NONLOCAL_ELEMENT_INFO, max_element, idum, dworknei, length_nei, VERSION_NORMAL, PUT );		
         }
@@ -337,7 +337,7 @@ void generate_spring( long int icontrol )
               length = 1;
               db( ELEMENT_MACRO_GENERATE, max_element, &icontrol, 
                 ddum, length, VERSION_NORMAL, PUT );
-              db( ELEMENT_DOF, max_element, idum, tmp_element_dof, mnolnuknwn, VERSION_NORMAL, PUT );
+              db( ELEMENT_INTPNT_DOF, max_element, idum, tmp_element_dof, mnolnuknwn, VERSION_NORMAL, PUT );
               db( ELEMENT_DOF_INITIALISED, max_element, &zero, ddum, length, VERSION_NORMAL, PUT );
               db( NONLOCAL_ELEMENT_INFO, max_element, idum, dworknei, length_nei, VERSION_NORMAL, PUT );		
             }
@@ -466,7 +466,7 @@ void generate_spring( long int icontrol )
               length = 1;
               db( ELEMENT_MACRO_GENERATE, max_element, &icontrol, 
                 ddum, length, VERSION_NORMAL, PUT );
-              db( ELEMENT_DOF, max_element, idum, tmp_element_dof, mnolnuknwn, VERSION_NORMAL, PUT );
+              db( ELEMENT_INTPNT_DOF, max_element, idum, tmp_element_dof, mnolnuknwn, VERSION_NORMAL, PUT );
               db( ELEMENT_DOF_INITIALISED, max_element, &zero, ddum, length, VERSION_NORMAL, PUT );
               db( NONLOCAL_ELEMENT_INFO, max_element, idum, dworknei, length_nei, VERSION_NORMAL, PUT );		
             }
@@ -658,7 +658,7 @@ void generate_beam_truss( long int icontrol, long int task )
                       length = 1;
                       db( ELEMENT_MACRO_GENERATE, max_element, &icontrol, ddum, length, 
                         VERSION_NORMAL, PUT );
-    	              db( ELEMENT_DOF, max_element, idum, tmp_element_dof, mnolnuknwn, VERSION_NORMAL, PUT );
+    	              db( ELEMENT_INTPNT_DOF, max_element, idum, tmp_element_dof, mnolnuknwn, VERSION_NORMAL, PUT );
                       db( ELEMENT_DOF_INITIALISED, max_element, &zero, ddum, length, VERSION_NORMAL, PUT );
                       db( NONLOCAL_ELEMENT_INFO, max_element, idum, dworknei, length_nei, VERSION_NORMAL, PUT );		
                     }
@@ -682,7 +682,7 @@ void generate_beam_truss( long int icontrol, long int task )
                       length = 1;
                       db( ELEMENT_MACRO_GENERATE, max_element, &icontrol, ddum, length, 
                         VERSION_NORMAL, PUT );
-    	              db( ELEMENT_DOF, max_element, idum, tmp_element_dof, mnolnuknwn, VERSION_NORMAL, PUT );
+    	              db( ELEMENT_INTPNT_DOF, max_element, idum, tmp_element_dof, mnolnuknwn, VERSION_NORMAL, PUT );
                       db( ELEMENT_DOF_INITIALISED, max_element, &zero, ddum, length, VERSION_NORMAL, PUT );
                       db( NONLOCAL_ELEMENT_INFO, max_element, idum, dworknei, length_nei, VERSION_NORMAL, PUT );		
                     }
@@ -894,7 +894,7 @@ void generate_interface( long int icontrol )
           }
           db( ELEMENT_MACRO_GENERATE, max_element, &icontrol, ddum, length,
             VERSION_NORMAL, PUT );
-          db( ELEMENT_DOF, max_element, idum, tmp_element_dof, mnolnuknwn,
+          db( ELEMENT_INTPNT_DOF, max_element, idum, tmp_element_dof, mnolnuknwn,
             VERSION_NORMAL, PUT );
           db( ELEMENT_DOF_INITIALISED, max_element, &zero, ddum, length,
             VERSION_NORMAL, PUT );
@@ -1378,7 +1378,7 @@ void generate_interface_triangle( long int icontrol )
       VERSION_NORMAL, PUT );
     db( ELEMENT_MACRO_GENERATE, new_element, &icontrol, ddum, len1,
       VERSION_NORMAL, PUT );
-    db( ELEMENT_DOF, new_element, idum, tmp_element_dof, mnolnuknwn,
+    db( ELEMENT_INTPNT_DOF, new_element, idum, tmp_element_dof, mnolnuknwn,
       VERSION_NORMAL, PUT );
     db( ELEMENT_DOF_INITIALISED, new_element, &zero, ddum, len1,
       VERSION_NORMAL, PUT );
@@ -1454,7 +1454,7 @@ void generate_interface_triangle( long int icontrol )
       VERSION_NORMAL, PUT );
     db( ELEMENT_MACRO_GENERATE, new_element, &icontrol, ddum, len1,
       VERSION_NORMAL, PUT );
-    db( ELEMENT_DOF, new_element, idum, tmp_element_dof, mnolnuknwn,
+    db( ELEMENT_INTPNT_DOF, new_element, idum, tmp_element_dof, mnolnuknwn,
       VERSION_NORMAL, PUT );
     db( ELEMENT_DOF_INITIALISED, new_element, &zero, ddum, len1,
       VERSION_NORMAL, PUT );
@@ -1532,7 +1532,7 @@ void generate_interface_triangle( long int icontrol )
         VERSION_NORMAL, PUT );
       db( ELEMENT_MACRO_GENERATE, new_element, &icontrol, ddum, len1,
         VERSION_NORMAL, PUT );
-      db( ELEMENT_DOF, new_element, idum, tmp_element_dof, mnolnuknwn,
+      db( ELEMENT_INTPNT_DOF, new_element, idum, tmp_element_dof, mnolnuknwn,
         VERSION_NORMAL, PUT );
       db( ELEMENT_DOF_INITIALISED, new_element, &zero, ddum, len1,
         VERSION_NORMAL, PUT );
@@ -1562,7 +1562,7 @@ void generate_interface_triangle( long int icontrol )
         VERSION_NORMAL, PUT );
       db( ELEMENT_MACRO_GENERATE, new_element, &icontrol, ddum, len1,
         VERSION_NORMAL, PUT );
-      db( ELEMENT_DOF, new_element, idum, tmp_element_dof, mnolnuknwn,
+      db( ELEMENT_INTPNT_DOF, new_element, idum, tmp_element_dof, mnolnuknwn,
         VERSION_NORMAL, PUT );
       db( ELEMENT_DOF_INITIALISED, new_element, &zero, ddum, len1,
         VERSION_NORMAL, PUT );
@@ -1584,7 +1584,7 @@ void generate_interface_triangle( long int icontrol )
         VERSION_NORMAL, PUT );
       db( ELEMENT_MACRO_GENERATE, new_element, &icontrol, ddum, len1,
         VERSION_NORMAL, PUT );
-      db( ELEMENT_DOF, new_element, idum, tmp_element_dof, mnolnuknwn,
+      db( ELEMENT_INTPNT_DOF, new_element, idum, tmp_element_dof, mnolnuknwn,
         VERSION_NORMAL, PUT );
       db( ELEMENT_DOF_INITIALISED, new_element, &zero, ddum, len1,
         VERSION_NORMAL, PUT );

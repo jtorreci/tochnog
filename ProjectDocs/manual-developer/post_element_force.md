@@ -33,7 +33,7 @@ bending moments) computed from the ELEMENT INTERNAL NODAL FORCES
 All five corpus SEGVs (force16, force17, mpc8, mpc9, post7 - all 1D
 bar models with `post_element_force`) crashed in the SAME instruction:
 `post_element_force_calculate()`, calcul_force.cc:2396 (the
-ELEMENT_DOF integration-point stress read), on a WRITE overflow of the
+ELEMENT_INTPNT_DOF integration-point stress read), on a WRITE overflow of the
 stack array `sig_ip[6*MPOINT]` driven by a garbage integration-point
 count. The chain:
 
@@ -61,9 +61,9 @@ the garbage happened to be small/zero and the runs completed (mpc8:
    1-point rule (pol() polynom.cc:551-552 integrates the -bar2 with
    MINIMAL; the other tensor-product elements with MAXIMAL). The
    section integration must replicate the rule the element really
-   integrated with or the ELEMENT_DOF stresses integrate to the wrong
+   integrated with or the ELEMENT_INTPNT_DOF stresses integrate to the wrong
    force (the MAXIMAL 2-point Lobatto rule reads an all-zero second
-   ELEMENT_DOF block -> half force; same gotcha as the mesh_cut
+   ELEMENT_INTPNT_DOF block -> half force; same gotcha as the mesh_cut
    family, delete.cc mc_element_rule).
 3. `post_element_force_calculate()`: dedicated 1D branch (ndim==1).
 
@@ -98,13 +98,13 @@ middle contribute).
 ### Resulting corpus states (blast radius force*/mpc*/post* + suite)
 
 - mpc8 (section x=1 through the shared node, group 2): PASS rc=0
-  (0.5 within 1e-8, = sigma(el2) of the ELEMENT_DOF record).
+  (0.5 within 1e-8, = sigma(el2) of the ELEMENT_INTPNT_DOF record).
 - post7 (dynamic 1D bar, sections at x=0 / 50 / 100 +
   post_node_result at the fixed end): PASS rc=0 (all four targets
   within 1e-2).
 - force16 (dynamic bar dragged by a prescribed velocity):
   RUNFAIL rc=1 - the section machinery now reports the element's own
-  axial force EXACTLY (2.93667 = the ELEMENT_DOF sigma of bar 1), but
+  axial force EXACTLY (2.93667 = the ELEMENT_INTPNT_DOF sigma of bar 1), but
   the GNU solved sigma field differs from the Professional's
   (sigma1 = v2-v1 = 2.93667 vs 5.03429; v2 = 3.9367 vs 6.0343). Same
   family as the documented dynamic* scheme gap (GNU staggered
@@ -142,7 +142,7 @@ from the element name (2 for quad4/tria3/hex8, 3 otherwise), built a
 tensor-product rule with `msf_element_rule()` and integrated with
 `msf_element_internal_forces_2d/3d()` for every element type. A tria,
 tet or prism element got quad/hex shape functions, a 2x2(x2) or
-3x3(x3) point count and read `ELEMENT_DOF` slots past its real points
+3x3(x3) point count and read `ELEMENT_INTPNT_DOF` slots past its real points
 (the `tpef_force10` cantilever split into tet4: normal 3143.7, shear1
 -539.6, moment1 -16896 instead of -123.4 / 1000 / -100000). In 2D the
 record required 7 values (manual 6.927: 6), and the stress copy wrote
@@ -171,7 +171,7 @@ quad4 included. The 2D result had 5 values; the Professional writes 3.
     coordinates (ndim stride) for the real point count, the physical
     derivatives `new_d[ip*ndim*nnol + j*nnol + inol]`, `h` and the
     point volumes, and integrates `f[inol,i] += vol * sigma_ij *
-    dN_inol/dx_j` with the `ELEMENT_DOF` stresses of those points.
+    dN_inol/dx_j` with the `ELEMENT_INTPNT_DOF` stresses of those points.
     Axisymmetric: the pol() volume keeps 2 pi r and the radial force
     gets the hoop term `vol * sigma_zz * N/r` (the element's own ring
     forces). `check_element_shape_factor` is set to 0 around the call

@@ -331,8 +331,8 @@ void top( void )
       gp_initial_max, VERSION_NORMAL );
     for ( ielem=0; ielem<=max_elem; ielem++ ) {
       if ( db_active_index( ELEMENT, ielem, VERSION_NORMAL ) && 
-           !db_active_index( ELEMENT_DOF, ielem, VERSION_NORMAL ) ) 
-        db( ELEMENT_DOF, ielem, idum, dworkmnol, mnolnuknwn, VERSION_NORMAL, PUT );
+           !db_active_index( ELEMENT_INTPNT_DOF, ielem, VERSION_NORMAL ) ) 
+        db( ELEMENT_INTPNT_DOF, ielem, idum, dworkmnol, mnolnuknwn, VERSION_NORMAL, PUT );
       if ( db_active_index( ELEMENT, ielem, VERSION_NORMAL ) && 
            !db_active_index( ELEMENT_DOF_INITIALISED, ielem, VERSION_NORMAL ) ) 
         db( ELEMENT_DOF_INITIALISED, ielem, &zero, ddum, one, VERSION_NORMAL, PUT );
@@ -360,7 +360,7 @@ void top( void )
       // undrained pressure into it inside the parallel element loop
       // (allocation not allowed there), and the step-end version copy
       // promotes the converged value to VERSION_NORMAL (the record is
-      // version_all like ELEMENT_DOF).
+      // version_all like ELEMENT_INTPNT_DOF).
       if ( db_active_index( ELEMENT, ielem, VERSION_NORMAL ) &&
            db_max_index( GROUP_MATERI_UNDRAINED_CAPACITY, max,
              VERSION_NORMAL, GET )>=0 ) {
@@ -773,7 +773,7 @@ void top( void )
                       // audit K02; the default since 2026-10-10). The
                       // element loop of an iteration evaluates the material
                       // on the PRE-solve iterate, so the stored
-                      // integration-point state (ELEMENT_DOF VERSION_NEW)
+                      // integration-point state (ELEMENT_INTPNT_DOF VERSION_NEW)
                       // and the non-principal nodal dofs lag the solved
                       // velocity by one iteration. The Professional
                       // evaluates the material once more on the final
@@ -977,6 +977,11 @@ void top( void )
 
                         db_version_copy( VERSION_NEW, VERSION_NORMAL );
                         db_version_delete( VERSION_NEW );
+                        // element_dof (manual Professional 6.421,
+                        // F5 T2 V5): per-element nodal values of the
+                        // converged state from element_intpnt_dof;
+                        // output only, serial (allocates records)
+                        element_dof_nodal_set();
                         // post_element_force (manual Professional
                         // 6.927): the cross-section forces/moments
                         // from the element internal nodal forces of

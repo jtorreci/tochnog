@@ -23,7 +23,7 @@
   // initial state ("calculate some path dependent behavior completely
   // from the start"). The Professional deletes element_dof /
   // element_intpnt_dof on restart. The GNU keeps the integration-point
-  // state in ELEMENT_DOF and only rebuilds it from the (reset) node dofs
+  // state in ELEMENT_INTPNT_DOF and only rebuilds it from the (reset) node dofs
   // when ELEMENT_DOF_INITIALISED is 0 (elem.cc, options_element_dof), so
   // clearing the flag gives a fresh integration-point state.
 static void restart_reset_element_state( void )

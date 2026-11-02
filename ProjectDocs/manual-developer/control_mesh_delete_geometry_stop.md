@@ -13,7 +13,7 @@
 - `delete.cc` — `void delete_geom( double time_current )`: the stop block
   runs before the `CONTROL_MESH_DELETE_GEOMETRY` gate, so the stop index
   does not need to carry the geometry record.
-- `elem.cc` — `elem()`, the `ELEMENT_DOF` write.
+- `elem.cc` — `elem()`, the `ELEMENT_INTPNT_DOF` write.
 
 ## Implementation details
 
@@ -47,14 +47,14 @@ the moment just before being deleted, and `global_element_dof_apply`
 defaults to `-yes` (manual 6.553): the element remembers its own
 integration-point values instead of the averaged nodal values.
 
-The GNU `elem()` recomputed `ELEMENT_DOF` on every iteration from the
+The GNU `elem()` recomputed `ELEMENT_INTPNT_DOF` on every iteration from the
 current nodal dofs, so a partially deleted element's stored stress drifted
 away from the deletion moment (measured on `delete2.dat`: the element
 recomputed to `1.4` while the Professional's `element_intpnt_dof_average`
-stays `1.0`). The fix skips the `ELEMENT_DOF` write once the released load
+stays `1.0`). The fix skips the `ELEMENT_INTPNT_DOF` write once the released load
 has been captured (`ELEMENT_RHSIDE_DELETE` active). On the first delete
 iteration the write still runs (storing the pre-deletion value); from then
-on `ELEMENT_DOF VERSION_NEW` keeps the value copied from
+on `ELEMENT_INTPNT_DOF VERSION_NEW` keeps the value copied from
 `VERSION_NORMAL` at the step start, and the step-end version copy promotes
 it. The deleted element therefore keeps the pre-deletion state until the
 stop reactivates it.

@@ -880,6 +880,23 @@ static long int recovery_fit_factor( long int name, long int nnol,
   return 1;
 }
 
+// Per-element recovery factor of the simplex elements and the 1-point bar2
+// (see sri_stress_recovery_weight): the single point value (F = 1) of the
+// 1-point rules, the value of the point at the node (F = h, the Kronecker
+// delta) of the tria3 3-point nodal rule. Returns 0 for other rules.
+static long int recovery_simplex_factor( long int name, long int npoint,
+  double h_inol, double &F )
+
+{
+  if ( ( name==-TRIA3 && ( npoint==1 || npoint==3 ) ) ||
+       ( name==-TET4  && npoint==1 ) ||
+       ( name==-BAR2  && npoint==1 ) ) {
+    F = ( npoint==1 ? 1. : h_inol );
+    return 1;
+  }
+  return 0;
+}
+
 double sri_stress_recovery_weight( long int sri, long int name, long int nnol,
   long int inol, long int npoint, long int ipoint, double h_inol, double volume,
   long int element_group, const long int nodes[] )
@@ -978,10 +995,8 @@ double sri_stress_recovery_weight( long int sri, long int name, long int nnol,
   // and each element contributes weight 1, exactly as for the table
   // elements below. The tet4 -maximal Keast rule and the bar2 2-point
   // rules are fitted below (recovery_fit_factor, C67).
-  if ( ( name==-TRIA3 && ( npoint==1 || npoint==3 ) ) ||
-       ( name==-TET4  && npoint==1 ) ||
-       ( name==-BAR2  && npoint==1 ) ) {
-    if ( scalar_dabs(volume)>TINY ) return ( npoint==1 ? 1. : h_inol )/volume;
+  if ( recovery_simplex_factor( name, npoint, h_inol, F ) ) {
+    if ( scalar_dabs(volume)>TINY ) return F/volume;
     return h_inol;
   }
 
@@ -995,6 +1010,156 @@ double sri_stress_recovery_weight( long int sri, long int name, long int nnol,
     if ( scalar_dabs(volume)>TINY ) return F/volume;
   }
   return h_inol;
+}
+
+// element_dof (manual Professional 6.421, F5 T2 V5): "Unknowns as saved per
+// element in the element nodes. First dof's in the first node. Then dof's
+// in the second node. Etc." Filled serially at the step end (top(), right
+// after the NEW -> NORMAL promotion) into VERSION_NORMAL from the
+// integration-point record element_intpnt_dof (6.437) of every element that
+// has one and an integration rule (element_intpnt_npoint; interfaces,
+// springs, trusses and beams are skipped). Output only: no computation
+// reads ELEMENT_DOF. Per node and unknown, measured on the Professional
+// 02-08-2026 (probes intq, two, p1, q9):
+//   principal dofs (dof_principal >= 0: velocities, temperature, pressure,
+//     ...): the value of the element node (NODE_DOF, VERSION_NORMAL);
+//   the other dofs (the integration-point states: strains, stresses,
+//     kappa, damage, history variables, and the GNU displacement): the
+//     per-element nodal recovery sum_g F(inol,g) * value_g of the lumped
+//     stress update (recovery_simplex_factor / recovery_fit_factor, the
+//     operator identified from these same Professional dumps);
+//   rules without such an operator (GNU fallback, hardcoded choice): the
+//     h-and-volume weighted mean sum_g h_n(g) V_g value_g / sum_g h_n(g) V_g
+//     (the plain mean over the points when that sum vanishes).
+// The SRI quad4/hex8 (GNU-only feature) take the same fit (its lumped
+// nodal stress mixes the Lagrange extrapolation in, not reproduced here).
+void element_dof_nodal_set( void )
+
+{
+  long int element=0, max_element=0, element_group=0, name=0, nnol=0,
+    length=0, npoint=0, inol=0, ipoint=0, iuknwn=0, ldum=0, ok=0,
+    idum[1], el[1+MNOL], dof_principal[MUKNWN];
+  double F=0., sum=0., ddum[1], coord[MNOL*MDIM],
+    save_shape_factor=check_element_shape_factor;
+
+  if ( options_element_dof!=-YES || nuknwn<=0 ) return;
+  if ( db_max_index( ELEMENT, max_element, VERSION_NORMAL, GET )<0 ) return;
+  db( DOF_PRINCIPAL, 0, dof_principal, ddum, ldum, VERSION_NORMAL, GET );
+  double *h = get_new_dbl( MPOINT*MNOL );
+  double *old_d = get_new_dbl( MPOINT*MDIM*MNOL );
+  double *new_d = get_new_dbl( MPOINT*MDIM*MNOL );
+  double *new_b = get_new_dbl( MPOINT*MSTRAIN*MNOL*MDIM );
+  double *volume = get_new_dbl( MPOINT );
+  double *fac = get_new_dbl( MNOL*MPOINT );
+  double *nodal = get_new_dbl( MNOL*nuknwn );
+  double *trim = get_new_dbl( npointmax*nuknwn );
+
+  check_element_shape_factor = 0.;
+  for ( element=0; element<=max_element; element++ ) {
+    if ( !db_active_index( ELEMENT, element, VERSION_NORMAL ) ) continue;
+    if ( !db_active_index( ELEMENT_INTPNT_DOF, element, VERSION_NORMAL ) )
+      continue;
+    db( ELEMENT, element, el, ddum, length, VERSION_NORMAL, GET );
+    name = el[0];
+    nnol = length - 1;
+    // structural elements (elem() dispatches them before the integration
+    // points: no element_intpnt_dof is ever written for them): the record
+    // is only the zero initialisation of top() / input / generate /
+    // create_element; drop it, as the Professional writes none (elem()
+    // reads it with GET_IF_EXISTS)
+    if ( name==-BEAM || name==-CONTACTSPRING || name==-SPRING1 ||
+         name==-SPRING2 || name==-TRUSS || name==-TRUSSBEAM ) {
+      db_delete_index( ELEMENT_INTPNT_DOF, element, VERSION_NORMAL );
+      continue;
+    }
+    if ( !db_active_index( ELEMENT_INTPNT_NPOINT, element, VERSION_NORMAL ) )
+      continue;
+    element_group = 0;
+    db( ELEMENT_GROUP, element, &element_group, ddum, ldum,
+      VERSION_NORMAL, GET_IF_EXISTS );
+    if ( db_active_index( GROUP_INTERFACE, element_group, VERSION_NORMAL ) )
+      continue;
+    for ( inol=0; inol<nnol; inol++ )
+      db( NODE, el[1+inol], idum, &coord[inol*ndim], ldum,
+        VERSION_NORMAL, GET );
+    pol( element, element_group, name, nnol, coord, coord, npoint, h,
+      old_d, new_d, new_b, volume );
+    if ( npoint<1 ||
+         db_len( ELEMENT_INTPNT_DOF, element, VERSION_NORMAL )<npoint*nuknwn )
+      continue;
+    double *ipdof = db_dbl( ELEMENT_INTPNT_DOF, element, VERSION_NORMAL );
+
+    // recovery operator fac[inol*npoint+ipoint]; recovery_fit_factor
+    // needs its (inol 0, ipoint 0) call first (cache refresh)
+    ok = 1;
+    for ( inol=0; ok && inol<nnol; inol++ ) {
+      for ( ipoint=0; ok && ipoint<npoint; ipoint++ ) {
+        if ( recovery_simplex_factor( name, npoint, h[ipoint*nnol+inol], F ) ||
+             recovery_fit_factor( name, nnol, inol, npoint, ipoint,
+               element_group, &el[1], F ) )
+          fac[inol*npoint+ipoint] = F;
+        else
+          ok = 0;
+      }
+    }
+    if ( !ok ) {
+      for ( inol=0; inol<nnol; inol++ ) {
+        sum = 0.;
+        for ( ipoint=0; ipoint<npoint; ipoint++ )
+          sum += h[ipoint*nnol+inol] * volume[ipoint];
+        for ( ipoint=0; ipoint<npoint; ipoint++ ) {
+          if ( scalar_dabs(sum)>TINY )
+            fac[inol*npoint+ipoint] = h[ipoint*nnol+inol]*volume[ipoint]/sum;
+          else
+            fac[inol*npoint+ipoint] = 1./npoint;
+        }
+      }
+    }
+
+    for ( inol=0; inol<nnol; inol++ ) {
+      double *node_dof = db_dbl( NODE_DOF, el[1+inol], VERSION_NORMAL );
+      for ( iuknwn=0; iuknwn<nuknwn; iuknwn++ ) {
+        if ( dof_principal[iuknwn]>=0 )
+          nodal[inol*nuknwn+iuknwn] = node_dof[iuknwn];
+        else {
+          sum = 0.;
+          for ( ipoint=0; ipoint<npoint; ipoint++ )
+            sum += fac[inol*npoint+ipoint] * ipdof[ipoint*nuknwn+iuknwn];
+          nodal[inol*nuknwn+iuknwn] = sum;
+        }
+      }
+    }
+    length = nnol*nuknwn;
+    if ( db_active_index( ELEMENT_DOF, element, VERSION_NORMAL ) &&
+         db_len( ELEMENT_DOF, element, VERSION_NORMAL )!=length )
+      db_delete_index( ELEMENT_DOF, element, VERSION_NORMAL );
+    db( ELEMENT_DOF, element, idum, nodal, length, VERSION_NORMAL, PUT );
+
+    // element_intpnt_dof holds the npoint points of the element (manual
+    // 6.437, as the Professional writes it). elem() PUTs npoint*nuknwn
+    // values, but a record first allocated at the npointmax-point length
+    // (the zero initialisation of top(), generate, create_element, input)
+    // keeps that length (db_len() finds the first trailing DBL_MAX by
+    // bisection, so shortening needs a fresh index): trim it here,
+    // serially, before the prints.
+    length = npoint*nuknwn;
+    if ( db_len( ELEMENT_INTPNT_DOF, element, VERSION_NORMAL )!=length ) {
+      array_move( ipdof, trim, length );
+      db_delete_index( ELEMENT_INTPNT_DOF, element, VERSION_NORMAL );
+      db( ELEMENT_INTPNT_DOF, element, idum, trim, length, VERSION_NORMAL,
+        PUT );
+    }
+  }
+  check_element_shape_factor = save_shape_factor;
+
+  delete[] h;
+  delete[] old_d;
+  delete[] new_d;
+  delete[] new_b;
+  delete[] volume;
+  delete[] fac;
+  delete[] nodal;
+  delete[] trim;
 }
 
 char *long_to_a( long int n, char s[] )

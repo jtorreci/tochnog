@@ -10,8 +10,8 @@
   `w = strain_recovery_weight()` (the Professional per-element
   least-squares weight F/volume; h for SRI elements), and
   `new_unknowns[kap_indx] = new_kappa` when `options_element_dof -yes`
-  (the default) so the integration-point value reaches ELEMENT_DOF.
-- `elem.cc` `elem()`: the ELEMENT_DOF read mask (restore of the
+  (the default) so the integration-point value reaches ELEMENT_INTPNT_DOF.
+- `elem.cc` `elem()`: the ELEMENT_INTPNT_DOF read mask (restore of the
   remembered integration-point dofs into `old_unknowns`) and the write
   mask (`element_dof_npoint = new_unknowns`) include
   `(materi_plasti_kappa && i==kap_indx)`.
@@ -21,7 +21,7 @@
 
 ## Defect fixed (F4 T6f WU2)
 
-The ELEMENT_DOF masks omitted `kap_indx`, so `old_kappa` was the h-lumped
+The ELEMENT_INTPNT_DOF masks omitted `kap_indx`, so `old_kappa` was the h-lumped
 NODAL kappa interpolated back to the point (`old_unknowns` holds the
 nodal interpolation for every dof outside the masks). The hardening then
 read a smeared, lagging value: `validation_3` displacements up to 1.25 %

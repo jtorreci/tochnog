@@ -84,10 +84,10 @@ same convention as before, measured on the interface tests).
 ## npointmax default 27
 
 The default of `number_of_integration_points` was raised from 9 to 27
-(initia.cc): the hex27 needs 27 IP slots in `ELEMENT_DOF` (the record length
+(initia.cc): the hex27 needs 27 IP slots in `ELEMENT_INTPNT_DOF` (the record length
 is `npointmax*nuknwn`). The element rules are unaffected (each element uses
 its own npoint); the buffers are bigger. Measured bonus: beam3d (hex8) became
-stable with the larger `ELEMENT_DOF`.
+stable with the larger `ELEMENT_INTPNT_DOF`.
 
 ## Verification
 

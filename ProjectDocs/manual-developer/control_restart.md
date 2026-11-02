@@ -20,7 +20,7 @@ For `control_restart -yes` at the current control index, `restart()`:
 
 With `options_element_dof -yes` (default, `initia.cc`) `elem.cc`
 restores the remembered integration-point stress/strain/history block
-from `ELEMENT_DOF` only when `element_dof_initialised` is set; with the
+from `ELEMENT_INTPNT_DOF` only when `element_dof_initialised` is set; with the
 flag cleared the IP values are interpolated from the (reset) nodal dofs,
 which gives a fresh integration-point state. `top.cc` sets the flag back
 to 1 after the first accepted step. This mirrors the Professional, which

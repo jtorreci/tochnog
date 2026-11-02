@@ -51,7 +51,7 @@ The call in `top.cc` `step_start()` is guarded by `first_of_control`
   passed to it dangled (latent use-after-free, also in `mesh_rotate_3d`,
   which now uses the same helper).
 - `mesh.cc` `mesh_duplicate_element_state( ielem, new_elem )` (static):
-  copies `ELEMENT_DOF` and `ELEMENT_DOF_INITIALISED` (versions NORMAL and
+  copies `ELEMENT_INTPNT_DOF` and `ELEMENT_DOF_INITIALISED` (versions NORMAL and
   NEW) after `create_element()`, which resets them (right for refinement)
   and so re-initialised the duplicate from the smoothed nodal values (1 %
   off the Professional on a loaded block).

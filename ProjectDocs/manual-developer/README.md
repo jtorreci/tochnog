@@ -86,7 +86,7 @@ page lists its own in "Differences with the Professional version".
 - [control_mesh_mirror](control_mesh_mirror.md) — mirror the mesh.
 - [control_mesh_copy](control_mesh_copy.md) — copy the mesh displaced.
 - [control_mesh_delete_element](control_mesh_delete_element.md) — delete specific elements.
-- [control_mesh_delete_geometry_stop](control_mesh_delete_geometry_stop.md) — stop/reactivate (delete.cc) + frozen deleted-element ELEMENT_DOF (elem.cc); residual node_dof recovery lag.
+- [control_mesh_delete_geometry_stop](control_mesh_delete_geometry_stop.md) — stop/reactivate (delete.cc) + frozen deleted-element ELEMENT_INTPNT_DOF (elem.cc); residual node_dof recovery lag.
 - [control_mesh_keep_element](control_mesh_keep_element.md) — keep only the listed elements.
 - [control_mesh_keep_element_group](control_mesh_keep_element_group.md) — keep only the elements of the listed groups.
 - [control_mesh_change_element_group](control_mesh_change_element_group.md) — change the element group.
@@ -414,7 +414,7 @@ page lists its own in "Differences with the Professional version".
 
 ## MESH-CUT + BOUNDA-RELAX FAMILIES (2026-09-05)
 
-- [control_mesh_cut_geometry](control_mesh_cut_geometry.md) — enums + registros + mesh_cut() en delete.cc (activacion por icontrol, membresia delete_geometry, fuerzas = -f_elem desde ELEMENT_DOF con integracion replica de pol(); poda nod_nod via mesh_has_changed; NODE_FORCE con el signo de la carga externa, como el Pro, desde C28 2026-10-06) + geometry.cc (proyeccion tipo cut = delete, 8 ramas) + alias control_mesh_cut_force en db_number. Verificado vs Pro 25-10-2023 (mesh_cut_1/2 + probe 2D de corte real: 1/9 y 1/18 por nodo exactos).
+- [control_mesh_cut_geometry](control_mesh_cut_geometry.md) — enums + registros + mesh_cut() en delete.cc (activacion por icontrol, membresia delete_geometry, fuerzas = -f_elem desde ELEMENT_INTPNT_DOF con integracion replica de pol(); poda nod_nod via mesh_has_changed; NODE_FORCE con el signo de la carga externa, como el Pro, desde C28 2026-10-06) + geometry.cc (proyeccion tipo cut = delete, 8 ramas) + alias control_mesh_cut_force en db_number. Verificado vs Pro 25-10-2023 (mesh_cut_1/2 + probe 2D de corte real: 1/9 y 1/18 por nodo exactos).
 - [control_bounda_relax](control_bounda_relax.md) — enums + registros parse-only; semantica de almacenamiento PENDIENTE (no observable en relax1/2: A/B Pro con/sin los records identico). relax2 RUNFAIL por la divergencia ORTOGONAL velocity-only follow-material (options_mesh default del GNU; locate() mueve la malla de referencia -> cinematica logaritmica ln(1+u); A/B con -fixed_in_space reproduce el Pro EXACTO 1.0/0.0/1.0; PENDIENTE con blast-radius de corpus).
 
 ## SMALL FAMILIES BATCH (2026-09-05)
@@ -438,6 +438,8 @@ page lists its own in "Differences with the Professional version".
 - [group_beam_memory](group_beam_memory.md) — `beam.cc` `beam_2d()` / `beam_local()`, default -total_linear (F5 T2 V4d).
 - [element_beam_direction](element_beam_direction.md) — `beam.cc` `beam_local()` / `beam_2d()`, 9 values (F5 T2 V4d).
 - [element_interface_intpnt_direction](element_interface_intpnt_direction.md) — `interface.cc` `interface_element()` output block, allocated in `top.cc` (F5 T2 V4).
+- [element_intpnt_dof](element_intpnt_dof.md) — enum `ELEMENT_INTPNT_DOF`, every former `ELEMENT_INTPNT_DOF` site renamed, `elem.cc` PUT npoint*nuknwn (F5 T2 V5).
+- [element_dof](element_dof.md) — `miscel.cc` `element_dof_nodal_set()` from `top()` after the step-end version copy; reuses `recovery_fit_factor()` (F5 T2 V5).
 - [print_database_calculation](print_database_calculation.md) — gates de exit_tn (miscel.cc) del volcado .dbs/.flavia final.
 - [post_apply](post_apply.md) — records `POST_APPLY` / `CONTROL_POST_APPLY`; gate in `step_close()` (`top.cc`); stale flags `post_stale` / `post_element_force_stale` and the end-of-run re-evaluation in `exit_tn()` (`miscel.cc`) (F5).
 - [control_post_apply](control_post_apply.md) — see post_apply (F5).
@@ -543,9 +545,9 @@ page lists its own in "Differences with the Professional version".
 
 - [element_normal](element_normal.md) — record `ELEMENT_NORMAL` (`database.cc`, DOUBLE ndim, external, VERSION_NORMAL only; enum appended in `tochnog.h`/`tochnog-mod.h`); `area.cc` `element_normal_set()` (boundary sides from the `border_nodes_*` tables, consistent nodal side normals, element = normalized sum of node normals), called from `top.cc` `iteration_start()` outside the parallel loop, deleted in `mesh.cc` `mesh_has_changed()`; `materi.cc` reads it for `_normal_automatic` (replaces the 2D-inert cross product and its out-of-bounds reads); zero normal in a `-yes` group -> input error (`element_normal_automatic()`, `db_error`), expected-error tests via the `EXPECTED_ERROR:` marker of `build_safe.sh`; `-no` switch = no automatic normal (full cut-off, `materi()` gated by `element_normal_automatic()`, as the Professional). Rule measured on the Professional 02-08-2026.
 
-## GENERATED ELEMENT_DOF INIT (2026-10-05)
+## GENERATED ELEMENT_INTPNT_DOF INIT (2026-10-05)
 
-- [generated_element_dof_init](generated_element_dof_init.md) — `generate.cc` `generate_spring()`, `generate_beam_truss()`, `generate_interface()`, `generate_interface_triangle()`: the `tmp_element_dof` template written as the `ELEMENT_DOF` record of every generated element came from the uninitialized `get_new_dbl()`; now zeroed with `array_set()` as `create.cc` `create_element()` does. Removes the run-to-run `e-3xx` garbage in the printed `element_dof` (gen1, genbeam1, iface_gen*, conspr3, genera1/2, ho_othr1, spring2/3/5); results unchanged (A/B: only `element_dof` lines differ).
+- [generated_element_dof_init](generated_element_dof_init.md) — `generate.cc` `generate_spring()`, `generate_beam_truss()`, `generate_interface()`, `generate_interface_triangle()`: the `tmp_element_dof` template written as the `ELEMENT_INTPNT_DOF` record of every generated element came from the uninitialized `get_new_dbl()`; now zeroed with `array_set()` as `create.cc` `create_element()` does. Removes the run-to-run `e-3xx` garbage in the printed `element_dof` (gen1, genbeam1, iface_gen*, conspr3, genera1/2, ho_othr1, spring2/3/5); results unchanged (A/B: only `element_dof` lines differ).
 
 ## BUILD_SAFE SUITE (2026-10-05)
 
@@ -558,8 +560,8 @@ page lists its own in "Differences with the Professional version".
 ## K11 NODAL STRAIN RECOVERY (2026-10-06)
 
 - [nodal_strain_recovery](nodal_strain_recovery.md) — `miscel.cc` `strain_recovery_weight()`; `materi.cc` strain numerators and `general.cc` lumped denominator/inertia with the stress recovery weight (sri_stress_recovery_weight, h for SRI).
-- [materi_plasti_kappa](materi_plasti_kappa.md) — `elem.cc` ELEMENT_DOF masks + `kap_indx`, `materi.cc` IP write and nodal numerator with `strain_recovery_weight()` outside the h guard, `general.cc` denominator weight (F4 T6f WU2); sibling defect C68 resolved 2026-10-12.
-- [materi_plasti_rho](materi_plasti_rho.md) — rho read/update path; C68 (2026-10-12): rho, kapsh, cap1 pc, damage and Maxwell msig kept in ELEMENT_DOF (`elem.cc` masks), one `materi.cc` recovery-weight block after kappa, `general.cc` denominator; latent Maxwell-index read issue C68d.
+- [materi_plasti_kappa](materi_plasti_kappa.md) — `elem.cc` ELEMENT_INTPNT_DOF masks + `kap_indx`, `materi.cc` IP write and nodal numerator with `strain_recovery_weight()` outside the h guard, `general.cc` denominator weight (F4 T6f WU2); sibling defect C68 resolved 2026-10-12.
+- [materi_plasti_rho](materi_plasti_rho.md) — rho read/update path; C68 (2026-10-12): rho, kapsh, cap1 pc, damage and Maxwell msig kept in ELEMENT_INTPNT_DOF (`elem.cc` masks), one `materi.cc` recovery-weight block after kappa, `general.cc` denominator; latent Maxwell-index read issue C68d.
 
 ## K13 DIRECT PLASTICITY STATE OUTPUT (2026-10-06)
 

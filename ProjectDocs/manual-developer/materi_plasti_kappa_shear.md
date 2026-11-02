@@ -30,7 +30,7 @@
 - **Element RHS** (materi.cc, `element_rhside`): since C68 (F4 T6f,
   2026-10-12) `volume * w * (new_kapsh - old_kapsh) / dtime` with
   `w = strain_recovery_weight()`, outside the h guard, and the IP value
-  is written to ELEMENT_DOF (same as kap; see "Integration-point state
+  is written to ELEMENT_INTPNT_DOF (same as kap; see "Integration-point state
   (C68)" below).
 - **Hardening** (plasti.cc, `plasti_rule`): the Mohr-Coulomb
   hardening-softening laws read the hardening variable from
@@ -53,7 +53,7 @@
 `materi_plasti_kappa_shear` is an integration-point history state (Professional manual
 4.25), like the hardening parameter kappa (`materi_plasti_kappa.md`).
 
-- `elem.cc` `elem()`: the ELEMENT_DOF read and write masks include
+- `elem.cc` `elem()`: the ELEMENT_INTPNT_DOF read and write masks include
   `(materi_plasti_kappa_shear && i==kapsh_indx)`, so `old_kapsh` in `materi.cc` is the value remembered at the
   integration point, not the h-lumped nodal value interpolated back.
 - `materi.cc` `materi()`: one block right after the kappa block (after

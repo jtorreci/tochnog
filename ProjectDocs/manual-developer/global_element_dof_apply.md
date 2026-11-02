@@ -5,7 +5,7 @@
 - New switch word `-only` (enum `ONLY`, after `LAMBDA`). `top()`
   (`top.cc`) turns `-ONLY` into `element_dof_only = 1` (initia.cc) and
   `options_element_dof = -YES`, so every `options_element_dof==-YES`
-  consumer keeps storing `ELEMENT_DOF`.
+  consumer keeps storing `ELEMENT_INTPNT_DOF`.
 - `element_dof_only` skips the node update of non-principal dofs in
   `parallel_new_dof_diagonal()` (`dof.cc`; the displacement is still
   integrated from the velocity afterwards) and the hoisted post-solve
@@ -14,4 +14,4 @@
 
 ## Pending
 
-- BACKLOG C93: `post_element_force` with `-no` (no `ELEMENT_DOF`) gives 0.
+- BACKLOG C93: `post_element_force` with `-no` (no `ELEMENT_INTPNT_DOF`) gives 0.

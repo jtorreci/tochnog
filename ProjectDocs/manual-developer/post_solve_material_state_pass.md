@@ -10,7 +10,7 @@ no physics is gated out).
 `top.cc` `top()` iterates `element_loop(); solve(); parallel_new_dof_diagonal`.
 The element loop of iteration k evaluates the material on the PRE-solve
 iterate (velocity of iteration k-1). It writes the integration-point state
-(ELEMENT_DOF VERSION_NEW: stress, strains, plastic strain, kappa, history
+(ELEMENT_INTPNT_DOF VERSION_NEW: stress, strains, plastic strain, kappa, history
 variables) and assembles the non-principal nodal right-hand sides that
 `parallel_new_dof_diagonal` applies after the solve. After the last
 iteration the stored state and the non-principal nodal dofs therefore lag

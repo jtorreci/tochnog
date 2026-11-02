@@ -91,7 +91,7 @@ contact springs, bars in 2D/3D, interface element groups and `hex64`
 stop the calculation with an error. Restrict the section with
 `post_element_force_group` or `post_element_force_number`.
 
-The integration-point stresses come from `element_dof`
+The integration-point stresses come from `element_intpnt_dof`
 (`options_element_dof -yes`, the default for the stress analyses).
 
 ## Example

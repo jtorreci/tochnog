@@ -74,7 +74,7 @@ records").
 `materi_plasti_cap1_history` is an integration-point history state (Professional manual
 4.17), like the hardening parameter kappa (`materi_plasti_kappa.md`).
 
-- `elem.cc` `elem()`: the ELEMENT_DOF read and write masks include
+- `elem.cc` `elem()`: the ELEMENT_INTPNT_DOF read and write masks include
   `(materi_plasti_cap1_history && i==cap1_indx)`, so `old_cap1pc` in `materi.cc` is the value remembered at the
   integration point, not the h-lumped nodal value interpolated back.
 - `materi.cc` `materi()`: one block right after the kappa block (after

@@ -227,7 +227,7 @@ switch since C79 (2026-10-13): for an axisymmetric 2D Lobatto rule it
 reads the element nodes (`ELEMENT`, `NODE`), interpolates the radius at
 each Lobatto point with `interpolation_polynomial()` and rebuilds the
 rule with Gauss when one is below `EPS_COORD`. Before, the section forces
-of such an element integrated its Gauss-point `ELEMENT_DOF` stresses with
+of such an element integrated its Gauss-point `ELEMENT_INTPNT_DOF` stresses with
 the Lobatto rule (zero-volume points on the axis): one on-axis quad4
 under uniaxial compression gave momx_sig 0.5 instead of the 1/6 of the
 `-gauss` run (`test-2026/msf_axisym_lobatto_axis1`). The Professional

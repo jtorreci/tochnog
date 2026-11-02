@@ -34,13 +34,13 @@
   elements) and the "not yet implemented" notice is gone.
 - **Lot 4 (commit 631258e, 2026-08-28)**: the section stress SOURCE
   changed from the recovered nodal stresses (`NODE_DOF`, the L2
-  decision) to the ELEMENT integration-point stresses (`ELEMENT_DOF`;
+  decision) to the ELEMENT integration-point stresses (`ELEMENT_INTPNT_DOF`;
   `msf_element_rule` replicates the element's own quadrature incl. the
   SRI Gauss switch and the axisymmetric 1-point rule; the section
   points reconstructed with the Lagrange weights of the IP grid). The
   recovered nodal stresses remained only as the documented FALLBACK
-  for the all-zero ELEMENT_DOF blocks (the solved 3D `derivatives`
-  models - gforce10/gforce13). `elem.cc`: the ELEMENT_DOF WRITE covers
+  for the all-zero ELEMENT_INTPNT_DOF blocks (the solved 3D `derivatives`
+  models - gforce10/gforce13). `elem.cc`: the ELEMENT_INTPNT_DOF WRITE covers
   the FULL stress block (6 components × nder slots). Axisymmetric: the
   section integrand carries the physical circumference 2π·r.
   `validate()` requires `options_element_dof -yes`. No new enums.
@@ -81,7 +81,7 @@
     el elemento se omite (valores 0). (Los LOT 2-5 usan la MISMA
     selección de caras; lo que cambia es la FUENTE de los valores.)
  2. **Fuente de σ (LOT 4-5)**: la tensión de los PUNTOS DE INTEGRACIÓN
-    del elemento (`element_dof[ipoint*nuknwn + stres_indx + comp*nder]`
+    del elemento (`element_intpnt_dof[ipoint*nuknwn + stres_indx + comp*nder]`
     = las tensiones constitutivas que el elemento USÓ en su última
     pasada - "the element forces needed for this option are setup in a
     timestep", manual 6.913). `options_element_dof` debe ser -yes
@@ -97,7 +97,7 @@
     modelos 3D RESUELTOS con `derivatives` (gforce10/gforce13) el
     bucle escalonado NO propaga la deformación de la velocidad
     convergida a los IPs del elemento (el bloque de tensión del
-    ELEMENT_DOF sale TODO CEROS mientras el NODE_DOF recuperado tiene
+    ELEMENT_INTPNT_DOF sale TODO CEROS mientras el NODE_DOF recuperado tiene
     los valores correctos) → en ese caso las fuerzas internas se
     calculan con las tensiones nodales evaluadas en las posiciones de
     los IPs con las funciones de forma (warning único documentado).
@@ -400,7 +400,7 @@
   (stres_indx ≥ 0) y, en 2D, los grupos objetivo solo pueden contener
   quad4/quad9 (error claro para otros tipos). En L3: en 3D solo
   hex8/hex27 (el manual 6.913). En L4: `options_element_dof` debe ser
-  -yes (la fuente IP del ELEMENT_DOF; error claro si no). El aviso
+  -yes (la fuente IP del ELEMENT_INTPNT_DOF; error claro si no). El aviso
   "not yet implemented" se elimina en L3.
 - **GOTCHA MAYOR del GNU (3D, documentado — fuera del alcance del
   integrador)**: el solve mixto 3D materi_stress + BiCG por defecto es
@@ -496,7 +496,7 @@
 - **LOT 6 (2026-08-29) — el estado σ en equilibrio CIERRA el frente
   abierto del L5**: las dos causas del "no-equilibrio" eran del
   post-proceso/salida, no del esquema (DIAG §13):
-  1. **ELEMENT_DOF 3D a ceros (el misterio inc_ept=0 del L4)**:
+  1. **ELEMENT_INTPNT_DOF 3D a ceros (el misterio inc_ept=0 del L4)**:
      materi.cc:850 escribía el σ constitutivo en
      `new_unknowns[stres_indx/nder + j]` (índice de unknown) en vez del
      slot `stres_indx + j·nder` — para nder>1 (3D con `derivatives`,
@@ -508,7 +508,7 @@
      índices −1 (initias ausentes) capturaban slots [0,8) (velocidades).
      FIX: materi.cc (slot `stres_indx + j·nder`, + hisv), elem.cc
      (restore 6·nder, rangos hisv·nder, guard hisv_indx>=0). El σ
-     constitutivo ahora llega al ELEMENT_DOF → el fallback a la nodal
+     constitutivo ahora llega al ELEMENT_INTPNT_DOF → el fallback a la nodal
      del L4 queda obsoleto (ya no dispara) y la sección lee el estado
      en equilibrio.
   2. **Cinemática de la sección 2D (msf_element_internal_forces_2d)**:
@@ -522,7 +522,7 @@
      en las dos líneas dn (el SRI b_shear ya tenía la fórmula correcta).
   Consecuencia: la estática del cuerpo libre del L5 es EXACTA para
   TODOS los estados convergidos (gforce7/gforce7_ref a 1.0000×;
-  gforce7q4/gffq4 byte-idénticos) y el 3D lee el ELEMENT_DOF real.
+  gforce7q4/gffq4 byte-idénticos) y el 3D lee el ELEMENT_INTPNT_DOF real.
   Checks recalibrados (justificados): mesh_act_grav, cmat_gate (el
   restore σ completo cambia la acumulación de σ de los modelos con
   derivatives — valores previos eran el artefacto del restore parcial)

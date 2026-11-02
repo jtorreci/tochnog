@@ -298,7 +298,7 @@ static void mesh_duplicate_node_data( long int inod, long int new_node )
 }
 
 // Copy the integration-point state of element ielem into its duplicate
-// new_elem. create_element() resets ELEMENT_DOF and marks it
+// new_elem. create_element() resets ELEMENT_INTPNT_DOF and marks it
 // uninitialised (right for refinement), which re-initialises the copy
 // from the smoothed nodal values; the Professional copies the
 // integration-point state (F4 T8: a copied loaded block is an exact
@@ -312,12 +312,12 @@ static void mesh_duplicate_element_state( long int ielem, long int new_elem )
 
   for ( int iv=0; iv<2; iv++ ) {
     long int version = vers[iv];
-    if ( !db_version( ELEMENT_DOF, version ) ) continue;
-    if ( db_active_index( ELEMENT_DOF, ielem, version ) ) {
-      long int len = db_len( ELEMENT_DOF, ielem, version );
+    if ( !db_version( ELEMENT_INTPNT_DOF, version ) ) continue;
+    if ( db_active_index( ELEMENT_INTPNT_DOF, ielem, version ) ) {
+      long int len = db_len( ELEMENT_INTPNT_DOF, ielem, version );
       double *buf = get_new_dbl( len );
-      array_move( db_dbl( ELEMENT_DOF, ielem, version ), buf, len );
-      db( ELEMENT_DOF, new_elem, idum, buf, len, version, PUT );
+      array_move( db_dbl( ELEMENT_INTPNT_DOF, ielem, version ), buf, len );
+      db( ELEMENT_INTPNT_DOF, new_elem, idum, buf, len, version, PUT );
       delete[] buf;
     }
     if ( db_version( ELEMENT_DOF_INITIALISED, version ) &&

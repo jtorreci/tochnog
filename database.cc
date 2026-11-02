@@ -2771,10 +2771,18 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   data_class[ELEMENT_DISTRIBUTE_VALUES] = ELEMENT;
   data_required[ELEMENT_DISTRIBUTE_VALUES] = ELEMENT;
 
+  // element_dof (manual Professional 6.421, F5 T2 V5): the unknowns per
+  // element in the element NODES (first the dofs of the first node, then
+  // the second node, ...), nnol*nuknwn values. Output only: filled at the
+  // step end by element_dof_nodal_set() (miscel.cc) from the
+  // integration-point record element_intpnt_dof; no computation reads it.
+  // (Until V5 this name held the integration-point storage.)
   strcpy(name[ELEMENT_DOF],"element_dof");
   type[ELEMENT_DOF] = DOUBLE_PRECISION;
-  data_length[ELEMENT_DOF] = npointmax*nuknwn;
+  data_length[ELEMENT_DOF] = MNOL*nuknwn;
   version_all[ELEMENT_DOF] = 1;
+  print_only[ELEMENT_DOF] = 1;
+  fixed_length[ELEMENT_DOF] = 0;
   data_class[ELEMENT_DOF] = ELEMENT;
   data_required[ELEMENT_DOF] = ELEMENT;
 
@@ -4299,6 +4307,19 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   data_required[ELEMENT_INTERFACE_INTPNT_GAP_STATUS] = ELEMENT;
   fixed_length[ELEMENT_INTERFACE_INTPNT_GAP_STATUS] = 0;
 
+  // element_intpnt_dof (manual Professional 6.437, F5 T2 V5): the unknowns
+  // per element in the element integration points (point-major, nuknwn
+  // values per point, npoint*nuknwn written by elem()). This is the GNU
+  // remembered integration-point state of options_element_dof /
+  // global_element_dof_apply (the record named element_dof before V5).
+  strcpy(name[ELEMENT_INTPNT_DOF],"element_intpnt_dof");
+  type[ELEMENT_INTPNT_DOF] = DOUBLE_PRECISION;
+  data_length[ELEMENT_INTPNT_DOF] = npointmax*nuknwn;
+  fixed_length[ELEMENT_INTPNT_DOF] = 0;
+  version_all[ELEMENT_INTPNT_DOF] = 1;
+  data_class[ELEMENT_INTPNT_DOF] = ELEMENT;
+  data_required[ELEMENT_INTPNT_DOF] = ELEMENT;
+
   strcpy(name[ELEMENT_INTERFACE_INTPNT_STRAIN],"element_interface_intpnt_strain");
   type[ELEMENT_INTERFACE_INTPNT_STRAIN] = DOUBLE_PRECISION;
   data_length[ELEMENT_INTERFACE_INTPNT_STRAIN] = 12;
@@ -5086,7 +5107,7 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   data_length[ELEMENT_INTPNT_MATERI_UNDRAINED_PRESSURE] = npointmax;
   data_class[ELEMENT_INTPNT_MATERI_UNDRAINED_PRESSURE] = ELEMENT;
   data_required[ELEMENT_INTPNT_MATERI_UNDRAINED_PRESSURE] = ELEMENT;
-  // version_all like ELEMENT_DOF: the step-end version copy promotes
+  // version_all like ELEMENT_INTPNT_DOF: the step-end version copy promotes
   // the converged per-step value to VERSION_NORMAL (materi() reads the
   // previous step value from VERSION_NORMAL and stores the current
   // iterate in VERSION_NEW). fixed_length 0: the record holds one slot

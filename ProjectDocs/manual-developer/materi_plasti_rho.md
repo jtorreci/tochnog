@@ -16,7 +16,7 @@
 
 ## Integration-point state (C68, F4 T6f, 2026-10-12)
 
-Before C68 the ELEMENT_DOF masks of `elem.cc` omitted the rho block, so
+Before C68 the ELEMENT_INTPNT_DOF masks of `elem.cc` omitted the rho block, so
 `old_rho` was the h-lumped nodal value interpolated back to the point
 (the kappa defect of c3e6d2a). Now:
 
@@ -27,7 +27,7 @@ Before C68 the ELEMENT_DOF masks of `elem.cc` omitted the rho block, so
   `volume * w * (new_rho - old_rho) / dtime` per component
   (`k = stress_indx(idim,jdim)`, row `rho_indx/nder + k`) with
   `w = strain_recovery_weight()`, and writes
-  `new_unknowns[rho_indx + k*nder] = new_rho` for ELEMENT_DOF. The old
+  `new_unknowns[rho_indx + k*nder] = new_rho` for ELEMENT_INTPNT_DOF. The old
   h-weighted block was removed.
 
 Verification: `test-2026/rho_ip_state1` (four tria3, membrane von Mises

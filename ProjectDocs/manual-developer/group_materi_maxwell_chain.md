@@ -68,7 +68,7 @@
 `materi_maxwell_stress` is an integration-point history state (Professional manual
 4.15), like the hardening parameter kappa (`materi_plasti_kappa.md`).
 
-- `elem.cc` `elem()`: the ELEMENT_DOF read and write masks include
+- `elem.cc` `elem()`: the ELEMENT_INTPNT_DOF read and write masks include
   `(materi_maxwell_stress && i in [mstres_indx, mstres_indx+materi_maxwell_stress*6*nder))`, so `old_msig` in `materi.cc` is the value remembered at the
   integration point, not the h-lumped nodal value interpolated back.
 - `materi.cc` `materi()`: one block right after the kappa block (after

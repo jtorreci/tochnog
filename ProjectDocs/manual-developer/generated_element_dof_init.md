@@ -9,8 +9,8 @@ the mesh generators (bug fix, F0 T4, 2026-10-05).
   `generate_beam_truss()`, `generate_interface()` and
   `generate_interface_triangle()`.
 - Each function allocates a `tmp_element_dof` buffer of `mnolnuknwn`
-  doubles with `get_new_dbl()` and writes it as the `ELEMENT_DOF` record
-  of every generated element (`db( ELEMENT_DOF, ..., PUT )`).
+  doubles with `get_new_dbl()` and writes it as the `ELEMENT_INTPNT_DOF` record
+  of every generated element (`db( ELEMENT_INTPNT_DOF, ..., PUT )`).
 - `get_new_dbl()` does not initialize memory. The buffer was written
   as-is, so the `element_dof` of generated elements carried heap garbage
   (denormals such as `6.9e-310` / `7.6e-321` in the printed `.dbs`).

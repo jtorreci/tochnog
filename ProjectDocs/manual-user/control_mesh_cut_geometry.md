@@ -71,7 +71,7 @@ left half stays at its pre-cut value.
 ## Differences with the Professional version
 
 - The nodal-force substitution is computed from the element
-  integration-point stresses (`ELEMENT_DOF`), which requires
+  integration-point stresses (`ELEMENT_INTPNT_DOF`), which requires
   `materi_stress` in the `initia` section and the default
   `options_element_dof -yes`. The supported elements are the
   tensor-product isoparametric family: `-bar2`/`-bar3` (1D),

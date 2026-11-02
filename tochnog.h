@@ -1750,6 +1750,7 @@ enum {
   ELEMENT_BEAM_FORCE_MOMENT,
   ELEMENT_INTERFACE_INTPNT_DIRECTION,
   ELEMENT_INTERFACE_INTPNT_GAP_STATUS,
+  ELEMENT_INTPNT_DOF,
   LAST_DUMMY }; // keep LAST_DUMMY always the last one
 
 #define MDAT LAST_DUMMY+DATA_ITEM_SIZE  // reserve space for unknowns
@@ -2544,6 +2545,7 @@ double    strain_recovery_weight( long int sri_on, long int name,
             long int nnol, long int inol, long int npoint, long int ipoint,
             double h_inol, double volume, long int element_group,
             const long int nodes[] );
+void      element_dof_nodal_set( void );
 void      stress_umat( long int element, long int gr, long int formulation,
             long int nuser_data, double user_data[], double coord_ip[],
             double old_hisv[], double new_hisv[], 

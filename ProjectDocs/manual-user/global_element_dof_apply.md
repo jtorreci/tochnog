@@ -6,7 +6,7 @@
 also accepts its older name `options_element_dof`):
 
 - `-yes` (default): dofs like strains, stresses and history variables are
-  kept in the element integration points (`element_dof`); each element
+  kept in the element integration points (`element_intpnt_dof`); each element
   uses its own values. They are also averaged to the global nodes, for
   output and plotting.
 - `-no`: the elements use the averaged nodal values and keep nothing of

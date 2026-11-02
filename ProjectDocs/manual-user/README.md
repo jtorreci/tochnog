@@ -449,6 +449,8 @@ page lists its own in "Differences with the Professional version".
 - [group_beam_memory](group_beam_memory.md) — beam memory: -total_linear (default, classical results) or -updated (axes follow the deformed beam) (6.591) (F5 T2 V4d).
 - [element_beam_direction](element_beam_direction.md) — local beam axes x, y, z, 9 values (6.414) (F5 T2 V4d).
 - [element_interface_intpnt_direction](element_interface_intpnt_direction.md) — interface directions (normal, first and second tangential, 9 values) and gap status per integration point (6.430/6.431) (F5 T2 V4).
+- [element_intpnt_dof](element_intpnt_dof.md) — unknowns per element in the integration points, npoint*nuknwn values (6.437; the GNU integration-point storage, named element_dof before V5) (F5 T2 V5).
+- [element_dof](element_dof.md) — unknowns per element in the element nodes: node values for the principal dofs, per-element nodal recovery for the others (6.421, output only) (F5 T2 V5).
 - [print_database_calculation](print_database_calculation.md) — switch of the final .dbs output (6.972); consumed at exit_tn. large1 parses (RUNFAIL remains solver-bound, see SEGUIMIENTO).
 - [print_gid_calculation](print_database_calculation.md) — switch of the final GiD output (same gate).
 - [post_apply](post_apply.md) — `post_apply switch` (6.900) and `control_post_apply` (6.259): `-no` skips the post records (frozen values; global -no: never created); the skipped records are evaluated once more at the end of the run. Verified against the Professional 02-08-2026 (F5).
@@ -524,7 +526,7 @@ page lists its own in "Differences with the Professional version".
 
 - [element_normal](element_normal.md) — `element_normal index nx ny nz` (manual Professional 6.445): generated inward normal of an element with respect to the mesh boundary (normalized sum of the boundary node normals), used by `group_materi_plasti_mohr_coul_direct_normal_automatic` / `group_materi_plasti_tension_direct_normal_automatic`. Fixes the inert automatic cut-off in 2D (`tension_direct1`). A zero normal in a `_normal_automatic -yes` group is a readable input error (Pro: assertion); with `-no` the normal is not used (full cut-off, as Pro). Verified against the Professional 02-08-2026.
 
-## GENERATED ELEMENT_DOF INIT (2026-10-05)
+## GENERATED ELEMENT_INTPNT_DOF INIT (2026-10-05)
 
 - [generated_element_dof_init](generated_element_dof_init.md) — elements created by the mesh generators (`control_mesh_generate_*`, `control_mesh_interface_triangle`) start with a zero `element_dof` record instead of random memory content: the printed database is reproducible run to run. Results unchanged.
 

@@ -697,7 +697,7 @@ intended.
   (B-bar / assumed-strain). The 2D quad4 SRI does NOT have this
   limitation (its warping mode has a normal strain).
 - The section (calcul_force.cc) reads the element internal forces of
-  the ELEMENT_DOF σ field with the documented fallback to the
+  the ELEMENT_INTPNT_DOF σ field with the documented fallback to the
   recovered nodal σ when the staggered loop does not propagate the
   strains (hex8 + `derivatives`); the fallback σ of the loaded hex8 is
   NOT in equilibrium, so the beam section values (710/711) are the

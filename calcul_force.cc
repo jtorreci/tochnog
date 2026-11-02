@@ -48,7 +48,7 @@
 // ProjectDocs/manual-developer/post_calcul_materi_stress_force.md.
 // LOT 4 (commit 631258e): the section stress SOURCE changed from the
 // recovered nodal stresses (NODE_DOF, the L2 decision) to the ELEMENT
-// integration-point stresses (ELEMENT_DOF, the constitutive stresses
+// integration-point stresses (ELEMENT_INTPNT_DOF, the constitutive stresses
 // the element actually used - "the element forces needed for this
 // option are setup in a timestep", manual Professional 6.913). The
 // stress at a section quadrature point is reconstructed from the
@@ -79,7 +79,7 @@
 // in the arness), not the polluted field integral. The face
 // quadrature and the Lagrange stress reconstruction of LOT 4 are
 // retired (the stress is read at the element IPs only, the same
-// ELEMENT_DOF source); the B matrix and the IP volumes replicate
+// ELEMENT_INTPNT_DOF source); the B matrix and the IP volumes replicate
 // pol()/materi() (documented in the helpers).
 
 // Number of result items of the -force family: 3 vector groups of
@@ -114,7 +114,7 @@ long int post_calcul_materi_stress_force_items( void )
   //     single switches consumed by the L2/L3 integration
   //   - materi_stress must be a solved dof AND options_element_dof -yes
   //     (the default): the integration reads the element integration-
-  //     point stresses (ELEMENT_DOF, LOT 4)
+  //     point stresses (ELEMENT_INTPNT_DOF, LOT 4)
   //   - the target groups may only contain quad4/quad9 elements (2D) or
   //     hex8/hex27 elements (3D): the manual's isoparametric elements
   //     with a cross-section; other element types have no section faces
@@ -133,7 +133,7 @@ void post_calcul_materi_stress_force_validate( void )
   }
 
   // the integration reads the solved stresses: since LOT 4 the source
-  // is the ELEMENT integration-point record (ELEMENT_DOF), which
+  // is the ELEMENT integration-point record (ELEMENT_INTPNT_DOF), which
   // requires materi_stress solved AND options_element_dof -yes (the
   // default; elem.cc maintains the record only then)
   if ( stres_indx<0 ) {
@@ -146,7 +146,7 @@ void post_calcul_materi_stress_force_validate( void )
     pri( "Error: post_calcul -materi_stress -force requires "
          "options_element_dof -yes (the default) in the initia section: "
          "the section forces are integrated from the element "
-         "integration-point stresses (ELEMENT_DOF)" );
+         "integration-point stresses (ELEMENT_INTPNT_DOF)" );
     exit(TN_EXIT_STATUS);
   }
 
@@ -392,7 +392,7 @@ void post_calcul_materi_stress_force_validate( void )
 //      elements, e.g. |n*t| equal for 3+ sides) warns and skips the
 //      element.
 //   2. STRESS SOURCE (LOT 4+5): the ELEMENT integration-point stresses
-//      (ELEMENT_DOF, element_dof_npoint[ipoint*nuknwn+i] with the
+//      (ELEMENT_INTPNT_DOF, element_dof_npoint[ipoint*nuknwn+i] with the
 //      stress at stres_indx, the constitutive stresses of the last
 //      element_loop - the "element forces ... setup in a timestep" of
 //      the manual 6.913). LOT 4 read the stress at section quadrature
@@ -403,7 +403,7 @@ void post_calcul_materi_stress_force_validate( void )
 //      sums over the face nodes, not a stress field integral. The OLD
 //      source (the recovered nodal stresses, NODE_DOF - the L2
 //      decision) is retired except as the documented FALLBACK for the
-//      all-zero ELEMENT_DOF blocks (measured: the SOLVED 3D models
+//      all-zero ELEMENT_INTPNT_DOF blocks (measured: the SOLVED 3D models
 //      with the `derivatives` keyword - gforce10/gforce13). The
 //      measured evidence of LOT 4: the nodal values are the exact
 //      element-IP averages at the shared nodes, so the N/V pollution
@@ -557,10 +557,10 @@ static void msf_element_rule( long int element, long int element_group,
     VERSION_NORMAL, GET_IF_EXISTS );
   // pol() integrates the -bar2 with the MINIMAL 1-point rule (the other
   // tensor-product elements with the MAXIMAL one); replicating the rule
-  // the element really used is what makes the ELEMENT_DOF section
+  // the element really used is what makes the ELEMENT_INTPNT_DOF section
   // stresses integrate to the right forces (measured: the -bar2 with the
   // MAXIMAL rule comes out at half the force - the second Lobatto point
-  // reads an all-zero ELEMENT_DOF block). Same default as the mesh_cut
+  // reads an all-zero ELEMENT_INTPNT_DOF block). Same default as the mesh_cut
   // mc_element_rule of delete.cc.
   if ( name==-BAR2 )
     integration_points = -MINIMAL;
@@ -608,7 +608,7 @@ static void msf_element_rule( long int element, long int element_group,
   // C71 replica (F4 T6f C79, 2026-10-13): pol() integrates an
   // axisymmetric element whose Lobatto points lie on the axis
   // (|r| < EPS_COORD) with the Gauss rule (polynom.cc), so its
-  // ELEMENT_DOF stresses sit at the Gauss points; the section forces must
+  // ELEMENT_INTPNT_DOF stresses sit at the Gauss points; the section forces must
   // use the same rule (before: the Lobatto rule, zero-volume points on
   // the axis, a wrong moment). The point radius is interpolated from the
   // element's nodal radii with the same tensor shape functions.
@@ -1058,7 +1058,7 @@ static void msf_element_contribution_2d( long int element, long int name,
   if ( inod_pos<0 ) return; // node not in this element (should not happen)
 
   // the section stress source (LOT 4+5): the ELEMENT integration-point
-  // stresses (ELEMENT_DOF, the constitutive stresses the element used;
+  // stresses (ELEMENT_INTPNT_DOF, the constitutive stresses the element used;
   // the recovered nodal values of the L2 source are retired). The
   // element's own quadrature rule is replicated (msf_element_rule) and
   // the IP stresses are read in the pol() IP layout
@@ -1075,8 +1075,8 @@ static void msf_element_contribution_2d( long int element, long int name,
   sri = ( sri_active( element, element_group, name, nnol ) & SRI_SHEAR );
   npoint_ip = nper[0]*nper[1];
   if ( options_element_dof==-YES &&
-       db_active_index( ELEMENT_DOF, element, VERSION_NORMAL ) ) {
-    edof = db_dbl( ELEMENT_DOF, element, VERSION_NORMAL );
+       db_active_index( ELEMENT_INTPNT_DOF, element, VERSION_NORMAL ) ) {
+    edof = db_dbl( ELEMENT_INTPNT_DOF, element, VERSION_NORMAL );
     for ( ip=0; ip<npoint_ip; ip++ ) {
       sig_ip[ip*3+0] = edof[ip*nuknwn + stres_indx + stress_indx(0,0)*nder];
       sig_ip[ip*3+1] = edof[ip*nuknwn + stres_indx + stress_indx(1,1)*nder];
@@ -1085,7 +1085,7 @@ static void msf_element_contribution_2d( long int element, long int name,
     // FALLBACK (measured, 2026-08-28): for the SOLVED 3D models with
     // the `derivatives` keyword the staggered element loop does not
     // propagate the strain of the converged velocity into the element
-    // integration-point stresses (gforce10/gforce13: the ELEMENT_DOF
+    // integration-point stresses (gforce10/gforce13: the ELEMENT_INTPNT_DOF
     // stress block is all zero while the recovered NODE_DOF carries
     // the correct values). In that case the section reads the
     // recovered nodal stresses evaluated at the element IP positions
@@ -1121,7 +1121,7 @@ static void msf_element_contribution_2d( long int element, long int name,
   }
   else {
     if ( !warned_edof ) {
-      pri( "Warning: post_calcul -materi_stress -force: no ELEMENT_DOF "
+      pri( "Warning: post_calcul -materi_stress -force: no ELEMENT_INTPNT_DOF "
            "record for an element (options_element_dof -no or an element "
            "the solver skipped) - no forces calculated for it" );
       warned_edof = 1;
@@ -1683,7 +1683,7 @@ static void msf_element_contribution_3d( long int element, long int name,
   if ( inod_pos<0 ) return; // node not in this element (should not happen)
 
   // the section stress source (LOT 4): the ELEMENT integration-point
-  // stresses (ELEMENT_DOF; the recovered nodal values of the L3 source
+  // stresses (ELEMENT_INTPNT_DOF; the recovered nodal values of the L3 source
   // are retired). The element's own quadrature rule is replicated
   // (msf_element_rule) and the IP stresses are read in the pol() IP
   // layout ip = izeta*nper[0]*nper[1] + ieta*nper[0] + ixi. A missing
@@ -1693,8 +1693,8 @@ static void msf_element_contribution_3d( long int element, long int name,
     wrule3 );
   npoint_ip = nper3[0]*nper3[1]*nper3[2];
   if ( options_element_dof==-YES &&
-       db_active_index( ELEMENT_DOF, element, VERSION_NORMAL ) ) {
-    edof = db_dbl( ELEMENT_DOF, element, VERSION_NORMAL );
+       db_active_index( ELEMENT_INTPNT_DOF, element, VERSION_NORMAL ) ) {
+    edof = db_dbl( ELEMENT_INTPNT_DOF, element, VERSION_NORMAL );
     for ( ip=0; ip<npoint_ip; ip++ ) {
       for ( c=0; c<6; c++ )
         sig_ip[ip*6+c] = edof[ip*nuknwn + stres_indx + c*nder];
@@ -1702,7 +1702,7 @@ static void msf_element_contribution_3d( long int element, long int name,
     // FALLBACK (measured, 2026-08-28): for the SOLVED 3D models with
     // the `derivatives` keyword the staggered element loop does not
     // propagate the strain of the converged velocity into the element
-    // integration-point stresses (gforce10/gforce13: the ELEMENT_DOF
+    // integration-point stresses (gforce10/gforce13: the ELEMENT_INTPNT_DOF
     // stress block is all zero while the recovered NODE_DOF carries
     // the correct values). The section then reads the recovered nodal
     // stresses evaluated at the element IP positions with the shape
@@ -1741,7 +1741,7 @@ static void msf_element_contribution_3d( long int element, long int name,
   }
   else {
     if ( !warned_edof ) {
-      pri( "Warning: post_calcul -materi_stress -force: no ELEMENT_DOF "
+      pri( "Warning: post_calcul -materi_stress -force: no ELEMENT_INTPNT_DOF "
            "record for an element (options_element_dof -no or an element "
            "the solver skipped) - no forces calculated for it" );
       warned_edof = 1;
@@ -2322,7 +2322,7 @@ void post_calcul_materi_stress_force( double /*unknown_values*/[],
 // tet4, tet10, prism6, prism15) with the element's own kinematics and
 // rule: pol() (polynom.cc) gives the point count, the physical shape
 // derivatives new_d[ip*ndim*nnol + jdim*nnol + inol] and the point
-// volumes; the stresses are the ELEMENT_DOF values of those points (the
+// volumes; the stresses are the ELEMENT_INTPNT_DOF values of those points (the
 // same point order materi() stores). Same quantity and sign as
 // msf_element_internal_forces_2d/3d (f_elem[inol*ndim+idim]). In an
 // axisymmetric group the forces are those of the full ring, the
@@ -2767,13 +2767,13 @@ void post_element_force_calculate( void )
             continue;
 
           if ( !( options_element_dof==-YES && stres_indx>=0 &&
-               db_active_index( ELEMENT_DOF, ielem, VERSION_NORMAL ) ) )
+               db_active_index( ELEMENT_INTPNT_DOF, ielem, VERSION_NORMAL ) ) )
             continue;
-          edof = db_dbl( ELEMENT_DOF, ielem, VERSION_NORMAL );
+          edof = db_dbl( ELEMENT_INTPNT_DOF, ielem, VERSION_NORMAL );
 
           // the axial force of the element = its internal force at the
           // high-coordinate end node (+f_elem = +N): the delete.cc 1D
-          // kinematics (f_elem = int B^T*sigma dV with the ELEMENT_DOF
+          // kinematics (f_elem = int B^T*sigma dV with the ELEMENT_INTPNT_DOF
           // integration-point stress and the rule the element itself
           // integrated with, msf_element_rule)
           npol = ( name==-BAR2 ? 2 : 3 );
@@ -2918,7 +2918,7 @@ void post_element_force_calculate( void )
       // and hex8/hex27 (3D) keep the msf replica of their rule and the
       // quad/hex helpers; the other continuum elements (tria3, tria6,
       // quad16; tet4, tet10, prism6, prism15) integrate with the
-      // element's own kinematics and rule, pol(), and the ELEMENT_DOF
+      // element's own kinematics and rule, pol(), and the ELEMENT_INTPNT_DOF
       // stresses of their real points. Before C84 every element went
       // through the tensor helpers (a tet4 read 2x2x2 points of a
       // 1-point element: normal 3143 instead of the Professional -123.4).
@@ -2996,12 +2996,12 @@ void post_element_force_calculate( void )
         continue;
       }
 
-      // the section stress source: the ELEMENT_DOF IP stresses (the
+      // the section stress source: the ELEMENT_INTPNT_DOF IP stresses (the
       // same source as the support L5; options_element_dof required)
       for ( i=0; i<3*MNOL; i++ ) f_elem[i] = 0.;
       if ( pef_pol && options_element_dof==-YES &&
-           db_active_index( ELEMENT_DOF, ielem, VERSION_NORMAL ) ) {
-        edof = db_dbl( ELEMENT_DOF, ielem, VERSION_NORMAL );
+           db_active_index( ELEMENT_INTPNT_DOF, ielem, VERSION_NORMAL ) ) {
+        edof = db_dbl( ELEMENT_INTPNT_DOF, ielem, VERSION_NORMAL );
         pef_element_internal_forces_pol( ielem, element_group, name,
           nnol, coords, edof, f_elem );
       }
@@ -3013,8 +3013,8 @@ void post_element_force_calculate( void )
         if ( ndim==3 ) npoint_ip = nper[0]*nper[1]*nper[2];
       }
       if ( pef_tensor && options_element_dof==-YES &&
-           db_active_index( ELEMENT_DOF, ielem, VERSION_NORMAL ) ) {
-        edof = db_dbl( ELEMENT_DOF, ielem, VERSION_NORMAL );
+           db_active_index( ELEMENT_INTPNT_DOF, ielem, VERSION_NORMAL ) ) {
+        edof = db_dbl( ELEMENT_INTPNT_DOF, ielem, VERSION_NORMAL );
         // the IP stresses in the helper layouts: 2D sxx syy sxy per
         // point (msf_element_internal_forces_2d; C84: the former copy
         // read sxx sxy sxz into a 6-stride array the helper reads with
@@ -3048,7 +3048,7 @@ void post_element_force_calculate( void )
         }
       }
       if ( options_element_dof==-YES &&
-           db_active_index( ELEMENT_DOF, ielem, VERSION_NORMAL ) ) {
+           db_active_index( ELEMENT_INTPNT_DOF, ielem, VERSION_NORMAL ) ) {
         // accumulate the per-node forces: the NEGATIVE of the
         // internal force (the force the element EXERTS on the
         // section nodes, Newton's third law - measured against the

@@ -74,7 +74,7 @@
   (never read back with GET_IF_EXISTS gating behaviour).
 - control_reset_element_dof: registered but the -yes branch (only
   element_dof) is NOT wired — the GNU reset path writes NODE_DOF;
-  routing to ELEMENT_DOF needs the per-integration-point storage.
+  routing to ELEMENT_INTPNT_DOF needs the per-integration-point storage.
   Documented as partial.
 
 ## Verification

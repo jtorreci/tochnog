@@ -438,7 +438,7 @@ void materi( long int element, long int gr, long int name, long int nnol,
   // increment divided by C, accumulated over the steps in the record
   // element_intpnt_materi_undrained_pressure (6.441, one value per
   // integration point; the record lives in both db versions like
-  // ELEMENT_DOF, so VERSION_NORMAL holds the converged value of the
+  // ELEMENT_INTPNT_DOF, so VERSION_NORMAL holds the converged value of the
   // previous step and VERSION_NEW the current iterate - the step-end
   // version copy promotes it). The pressure acts isotropically on the
   // skeleton: the TOTAL stress for the momentum equilibrium is the
@@ -1344,14 +1344,14 @@ void materi( long int element, long int gr, long int name, long int nnol,
             if ( jdim==0 && idim==0 ) {
             }
 		//added for options_element_dof
-            // NOTE (measured 2026-08-29, the ELEMENT_DOF zero-stress
+            // NOTE (measured 2026-08-29, the ELEMENT_INTPNT_DOF zero-stress
             // mystery of the 3D `derivatives` models): the write index
             // must be the SLOT stres_indx + j*nder (the value slot of
             // the j-th stress component), NOT the unknown-number index
             // stres_indx/nder + j. For nder=1 both coincide (the 2D
             // default); for nder>1 (3D with `derivatives`, nder=5) the
             // old index landed the constitutive stress inside the
-            // displacement block, so the elem.cc ELEMENT_DOF write
+            // displacement block, so the elem.cc ELEMENT_INTPNT_DOF write
             // (which reads the stres slots) never saw it and the
             // element integration-point stresses stayed zero. Same
             // fix for the materi_history_variables write above.
@@ -1406,7 +1406,7 @@ void materi( long int element, long int gr, long int name, long int nnol,
     }
     // Hardening parameter kappa (F4 T6f WU2, 2026-10-11): an
     // integration-point state (manual materi_plasti_kappa). The IP value
-    // is stored in ELEMENT_DOF (elem.cc reads it back as old_kappa)
+    // is stored in ELEMENT_INTPNT_DOF (elem.cc reads it back as old_kappa)
     // instead of the h-lumped nodal value interpolated back to the point,
     // and its nodal (output) value uses the strain recovery weight, whose
     // lumped denominator general.cc builds with the same weight. Outside
@@ -1427,10 +1427,10 @@ void materi( long int element, long int gr, long int name, long int nnol,
     // pc, the damage d, the kinematic hardening rho and the Maxwell
     // stresses are read back by the constitutive update (old_kapsh,
     // old_cap1pc, old_damage, old_rho, old_msig), so, as kappa, their IP
-    // value is stored in ELEMENT_DOF (elem.cc masks) and their nodal
+    // value is stored in ELEMENT_INTPNT_DOF (elem.cc masks) and their nodal
     // (output) value is the lumped recovery with the strain recovery
     // weight, whose denominator general.cc builds with the same weight.
-    // The ELEMENT_DOF slot of component k is <indx> + k*nder.
+    // The ELEMENT_INTPNT_DOF slot of component k is <indx> + k*nder.
     if ( materi_plasti_kappa_shear || materi_plasti_cap1_history ||
          materi_damage || materi_plasti_rho || materi_maxwell_stress ) {
       double w_rec = strain_recovery_weight( sri_on, name, nnol, inol,

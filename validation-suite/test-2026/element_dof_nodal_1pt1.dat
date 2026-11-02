@@ -1,0 +1,31 @@
+(F5 T2 V5: element_dof (6.421) and element_intpnt_dof (6.437) of a unit
+ quad4 with the 1-point rule (group_integration_points -minimal): the
+ single point value at every node for the stresses (5.1282 0.8547 0
+ -0.8547 0 1.2821), velx/vely the node values; element_intpnt_dof has
+ 10 values (1 point, not padded). Source: Professional 02-08-2026 probe p1
+ (same input); every slot equal within 1e-11 except disx/disy
+ (Professional 0, GNU the point displacement; class B
+ ELEMENT-DOF-DISPLACEMENT). Tolerance 1e-5 of the largest value.)
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_displacement
+materi_stress
+end_initia
+node 1 0 0
+node 2 1 0
+node 3 0 1
+node 4 1 1
+element 1 -quad4 1 2 3 4
+group_type 0 -materi
+group_materi_memory 0 -total_linear
+group_materi_elasti_young 0 1000.
+group_materi_elasti_poisson 0 0.3
+group_integration_points 0 -minimal
+bounda_dof 0 1 -velx -vely
+bounda_dof 2 2 -velx -vely
+bounda_dof 3 3 -velx -vely
+bounda_dof 1 4 -velx
+bounda_time 1 0.01
+control_timestep 0 1. 1.
+end_data

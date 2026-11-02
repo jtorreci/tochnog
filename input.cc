@@ -1962,8 +1962,8 @@ void input_control_input( long int icontrol )
       db_max_index( ELEMENT, max_elem, VERSION_NORMAL, GET );
       for ( ielem=0; ielem<=max_elem; ielem++ ) {
         if ( !db_active_index( ELEMENT, ielem, VERSION_NORMAL ) ) continue;
-        if ( !db_active_index( ELEMENT_DOF, ielem, VERSION_NORMAL ) )
-          db( ELEMENT_DOF, ielem, idum, dworkmnol, mnolnuknwn,
+        if ( !db_active_index( ELEMENT_INTPNT_DOF, ielem, VERSION_NORMAL ) )
+          db( ELEMENT_INTPNT_DOF, ielem, idum, dworkmnol, mnolnuknwn,
             VERSION_NORMAL, PUT );
         if ( !db_active_index( ELEMENT_DOF_INITIALISED, ielem,
             VERSION_NORMAL ) )

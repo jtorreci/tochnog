@@ -10,7 +10,7 @@ tests ground17, undrained1 and undrained2.
   data_class MATERI, data_required GROUP_TYPE (database.cc).
 - `element_intpnt_materi_undrained_pressure` — DOUBLE_PRECISION, one slot
   per integration point (data_length npointmax, fixed_length 0 =
-  variable record length, **version_all = 1** like ELEMENT_DOF so the
+  variable record length, **version_all = 1** like ELEMENT_INTPNT_DOF so the
   step-end version copy promotes the converged per-step value to
   VERSION_NORMAL). data_class ELEMENT.
 - `element_intpnt_materi_undrained_pressure_average` — registered (1 value,

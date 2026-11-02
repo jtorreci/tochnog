@@ -142,7 +142,7 @@ Target `dam = 0.471973` (tolerance 1e-5):
 `materi_damage` is an integration-point history state (Professional manual
 4.10), like the hardening parameter kappa (`materi_plasti_kappa.md`).
 
-- `elem.cc` `elem()`: the ELEMENT_DOF read and write masks include
+- `elem.cc` `elem()`: the ELEMENT_INTPNT_DOF read and write masks include
   `(materi_damage && i==dam_indx)`, so `old_damage` in `materi.cc` is the value remembered at the
   integration point, not the h-lumped nodal value interpolated back.
 - `materi.cc` `materi()`: one block right after the kappa block (after

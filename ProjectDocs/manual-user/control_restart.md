@@ -11,7 +11,7 @@ control index `index` from the initial state (manual Professional
 - the nodal dofs (`node_dof`) are reset to their initial values;
 - `time_current` is reset to the initial time;
 - the integration-point state (stresses, strains, plastic strains,
-  history variables kept per integration point in `element_dof`) is
+  history variables kept per integration point in `element_intpnt_dof`) is
   rebuilt from the reset nodal dofs (since F4 T6c, 2026-10-11).
 
 This lets you calculate path dependent behaviour (plasticity, damage)

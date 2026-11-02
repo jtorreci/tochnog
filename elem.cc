@@ -368,9 +368,12 @@ void elem( long int element, long int ithread )
   }
   	// added for options_element_dof
   if(options_element_dof==-YES) {
-    db( ELEMENT_DOF, element, idum, element_dof_npoint, mnolnuknwn, VERSION_NORMAL, GET );		
+    // F5 T2 V5: GET_IF_EXISTS, the step end drops the (zero) record of the
+    // elements without an integration rule (springs, trusses, beams); the
+    // buffers are zero then, as the record was
+    db( ELEMENT_INTPNT_DOF, element, idum, element_dof_npoint, mnolnuknwn, VERSION_NORMAL, GET_IF_EXISTS );		
     if(materi_plasti_softvar_nonlocal && !find_local_softvar)
-    	db( ELEMENT_DOF, element, idum, element_dof_npoint_new, mnolnuknwn, VERSION_NEW, GET );		
+    	db( ELEMENT_INTPNT_DOF, element, idum, element_dof_npoint_new, mnolnuknwn, VERSION_NEW, GET_IF_EXISTS );		
     db( ELEMENT_DOF_INITIALISED, element, &element_dof_initialised, 
     		ddum, one, VERSION_NORMAL, GET );
   }
@@ -632,7 +635,7 @@ void elem( long int element, long int ithread )
 	  // (6 components x nder slots, the compacted symmetric layout
 	  // of stress_indx(), input.cc) because the materi_stress_force
 	  // section integration (calcul_force.cc LOT 4) reads the
-	  // syy/syz/szz components from ELEMENT_DOF, which the former
+	  // syy/syz/szz components from ELEMENT_INTPNT_DOF, which the former
 	  // 9-slot limit lost for the nder>1 models (`derivatives`,
 	  // fixed 2026-08-28). The strain blocks keep the original
 	  // MDIM*MDIM limit (the -1 block indices would make wider
@@ -646,7 +649,7 @@ void elem( long int element, long int ithread )
    	      (i>=epi_indx && i<(epi_indx+MDIM*MDIM))||
 	      // F4 T6f WU2 (2026-10-11): the hardening parameter kappa is an
 	      // integration-point state (manual: materi_plasti_kappa); read
-	      // it back from ELEMENT_DOF instead of the h-lumped nodal value.
+	      // it back from ELEMENT_INTPNT_DOF instead of the h-lumped nodal value.
 	      (materi_plasti_kappa && i==kap_indx) ||
 	      // C68 (F4 T6f): the other integration-point states of the
 	      // constitutive update (kappa_shear, cap1 pc, damage, the
@@ -850,7 +853,8 @@ void elem( long int element, long int ithread )
     if(find_local_softvar) {
     	long int startindx=nuknwn*ipoint;
 	element_dof_npoint[svloc_indx+startindx]=new_unknowns[svloc_indx];
-	db( ELEMENT_DOF, element, idum, element_dof_npoint, mnolnuknwn, VERSION_NEW, PUT );		
+	long int npoint_nuknwn = npoint*nuknwn;
+	db( ELEMENT_INTPNT_DOF, element, idum, element_dof_npoint, npoint_nuknwn, VERSION_NEW, PUT );		
     }
   }
   //end loop over integration points
@@ -865,17 +869,22 @@ void elem( long int element, long int ithread )
   // global_element_dof_apply defaults to -yes in the Professional, so
   // the element remembers its own IP values). The frozen released load
   // (ELEMENT_RHSIDE_DELETE) is captured in the same first iteration; from
-  // then on the stored ELEMENT_DOF must NOT follow the recomputed
+  // then on the stored ELEMENT_INTPNT_DOF must NOT follow the recomputed
   // constitutive value (measured on delete2.dat: the recompute drifts to
   // 1.4 while the Professional freezes the pre-deletion 1.0, which then
   // changes the reactivated element's equilibrium to 1.0 instead of the
-  // documented 0.8). ELEMENT_DOF VERSION_NEW is a copy of VERSION_NORMAL
+  // documented 0.8). ELEMENT_INTPNT_DOF VERSION_NEW is a copy of VERSION_NORMAL
   // at the step start, so skipping the PUT keeps the frozen value across
   // the step-end version copy.
   if ( options_element_dof==-YES &&
        !( db_active_index( ELEMENT_DELETE_FACTOR, element, VERSION_NORMAL ) &&
-          db_active_index( ELEMENT_RHSIDE_DELETE, element, VERSION_NORMAL ) ) )
-    db( ELEMENT_DOF, element, idum, element_dof_npoint, mnolnuknwn, VERSION_NEW, PUT );		
+          db_active_index( ELEMENT_RHSIDE_DELETE, element, VERSION_NORMAL ) ) ) {
+    // F5 T2 V5: the npoint points of the element only (manual 6.437, as
+    // the Professional 02-08-2026 writes element_intpnt_dof), not the
+    // npointmax-point buffer; the record keeps that length from now on.
+    long int npoint_nuknwn = npoint*nuknwn;
+    db( ELEMENT_INTPNT_DOF, element, idum, element_dof_npoint, npoint_nuknwn, VERSION_NEW, PUT );
+  }		
   
   array_multiply( tendon_element_rhside, tendon_element_rhside,
     1./npoint, nnol*npuknwn );

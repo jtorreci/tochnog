@@ -311,7 +311,7 @@ void delete_geom( double time_current )
 //     the removed elements exert on the surviving boundary nodes
 //     (Newton's third law: -f_elem, f_elem = int B^T*sigma dV of the
 //     removed elements, integrated from the converged integration-point
-//     stresses ELEMENT_DOF of the step before the cut) is written to
+//     stresses ELEMENT_INTPNT_DOF of the step before the cut) is written to
 //     the NODE_FORCE records of those nodes (applied as an external
 //     load by parallel_new_dof_before for every later step);
 //   - control_mesh_cut_node_force gates the substitution per space
@@ -331,7 +331,7 @@ void delete_geom( double time_current )
 // as an external load, +F along +x, since C28 2026-10-06).
 // Supported elements for the force integration: the tensor-product
 // isoparametric family (-bar2/-bar3/-quad4/-quad9/-hex8/-hex27). The
-// stress source is the element integration-point record (ELEMENT_DOF),
+// stress source is the element integration-point record (ELEMENT_INTPNT_DOF),
 // which requires materi_stress in the initia and the default
 // options_element_dof -yes. Other element types in the cut geometry
 // abort with a clear message instead of deleting without the
@@ -399,7 +399,7 @@ static void mc_element_rule( long int element, long int element_group,
 }
 
 // internal nodal forces f_elem[inod*ndim+idim] = int B^T*sigma dV of
-// one element at its nodes, from the ELEMENT_DOF integration-point
+// one element at its nodes, from the ELEMENT_INTPNT_DOF integration-point
 // stresses of the converged state (the same quantity materi() builds
 // into the element right-hand side with the opposite sign). The
 // kinematics replicate pol() (polynom.cc): shape functions and their
@@ -410,7 +410,7 @@ static void mc_element_rule( long int element, long int element_group,
 // fixed). The Jacobian INVERSE uses the signed determinant (pol()
 // inverts the signed Jacobian and takes |det| only for the volume -
 // the macro quad4/hex8 record order can be clockwise, i.e. negative
-// Jacobian). Stress components (Voigt slots of ELEMENT_DOF, the
+// Jacobian). Stress components (Voigt slots of ELEMENT_INTPNT_DOF, the
 // compacted stress_indx() order sxx sxy sxz syy syz szz, primary of
 // each component at stres_indx + c*nder):
 //   1D: f = int sigxx*dN/dx dV
@@ -420,7 +420,7 @@ static void mc_element_rule( long int element, long int element_group,
 // The node ordering of the tensor-product elements is the tochnog
 // record order (quad9/hex27 layer-major row-major, so node index i ->
 // (i%npol, (i/npol)%npol, i/(npol*npol)) in the isoparametric
-// directions). The ELEMENT_DOF integration-point count follows pol():
+// directions). The ELEMENT_INTPNT_DOF integration-point count follows pol():
 // -bar2 has 1 point (MINIMAL rule), the other elements the MAXIMAL
 // rule of their group.
 static void mc_element_internal_forces( long int element, long int name,
@@ -481,12 +481,12 @@ static void mc_element_internal_forces( long int element, long int name,
   mc_element_rule( element, element_group, name, npol, nnol, nper,
     iso, weight );
 
-  if ( !db_active_index( ELEMENT_DOF, element, VERSION_NORMAL ) ) {
+  if ( !db_active_index( ELEMENT_INTPNT_DOF, element, VERSION_NORMAL ) ) {
     pri( "Error: control_mesh_cut_geometry found an element without "
-         "integration-point records (ELEMENT_DOF)." );
+         "integration-point records (ELEMENT_INTPNT_DOF)." );
     exit(TN_EXIT_STATUS);
   }
-  double *edof = db_dbl( ELEMENT_DOF, element, VERSION_NORMAL );
+  double *edof = db_dbl( ELEMENT_INTPNT_DOF, element, VERSION_NORMAL );
 
   for ( inol=0; inol<nnol*ndim; inol++ ) f_elem[inol] = 0.;
 

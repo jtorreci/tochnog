@@ -53,7 +53,7 @@ For each triple `(eg_i, eg_a, eg_b)` in the record:
    `interface_element`).
 5. The new element is assigned to group `eg_i` (by default), or to
    `element_geometry = eg_i` when `method_generate==-ELEMENT_GEOMETRY`,
-   marked with `ELEMENT_MACRO_GENERATE = icontrol`, and `ELEMENT_DOF` /
+   marked with `ELEMENT_MACRO_GENERATE = icontrol`, and `ELEMENT_INTPNT_DOF` /
    `ELEMENT_DOF_INITIALISED` / `NONLOCAL_ELEMENT_INFO` are initialized
    (pattern `generate_spring`).
 5. `control_mesh_generate_interface_geometry`: every shared node of `iel`
