@@ -67,9 +67,6 @@ Other tests: `element_intpnt_tria3_1`, `element_intpnt_interface_quad4_1`,
   them: the prism6 interior triangle points (C75, the Professional uses
   the triangle corners) and the default `-reduced` factor 10 (C80, the
   Professional applies 1: points at the nodes).
-- `tet4` with `group_integration_points -maximal`: the GNU lists the
-  same 5 points with points 3 and 4 swapped (DIVERGENCES TET4-MAX-ORDER,
-  class B); every per-point record follows that order.
 - The records are filled at the start of every time step, after the mesh
   operations of the step; an element created at the end of the last step
   (refinement) has no records yet.

@@ -587,7 +587,7 @@ void pol( long int element, long int element_group,
       // Before: 4 points at the nodes. The tet4 strain is constant, so a
       // linear material gives the same stiffness and the same lumped
       // masses (sum_g h w = 1/4 per node); the recovery is the physical
-      // linear fit (miscel.cc, kind 1). Point order as the tet10 branch:
+      // linear fit (miscel.cc, kind 1). Coordinates as the tet10 branch:
       // xi = L1 (node 0), eta = L2 (node 2), zeta = L3 (node 1).
       npoint = 5;
       stress_recovery_gauss = 1;
@@ -598,16 +598,16 @@ void pol( long int element, long int element_group,
         }
         else {
           L1 = ( ipoint==1 ) ? 0.5 : 1./6.;
-          L2 = ( ipoint==2 ) ? 0.5 : 1./6.;
-          L3 = ( ipoint==3 ) ? 0.5 : 1./6.;
+          L3 = ( ipoint==2 ) ? 0.5 : 1./6.;
+          L2 = ( ipoint==3 ) ? 0.5 : 1./6.;
           weight[ipoint] = 9./20.;
         }
         // iso coordinates in the Professional convention (coordinate k
         // = h of corner k, as its tet4 and tet10 records): (L1, L3, L2)
         // here, because this branch puts L3 on node 1 and L2 on node 2.
-        // The point order therefore differs from the Professional one
-        // (its points 3 and 4 are swapped here; DIVERGENCES
-        // TET4-MAX-ORDER), the rule itself is the same.
+        // Point k+1 (k = 1..3) has 1/2 on corner k: the Professional
+        // point order (F5 T2, owner decision 2026-11-02; points 3 and 4
+        // were swapped before, TET4-MAX-ORDER).
         pol_iso_used[ipoint*3+0] = L1;
         pol_iso_used[ipoint*3+1] = L3;
         pol_iso_used[ipoint*3+2] = L2;

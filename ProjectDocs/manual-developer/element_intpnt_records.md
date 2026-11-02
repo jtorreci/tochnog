@@ -44,9 +44,9 @@
 - Iso coordinates per branch: tria3 `-minimal` (1/3,1/3), `-maximal` the
   nodes (1,0),(0,1),(0,0); tria6 (L1,L2); tet10 (L1,L2,L3); tet4 (L1,L3,L2)
   because the tet4 branch puts L3 on node 2 and L2 on node 3 (the
-  Professional convention is coordinate k = h of corner k; the point order
-  of `-maximal` then differs from the Professional, points 3 and 4
-  swapped, DIVERGENCES TET4-MAX-ORDER); prism6
+  Professional convention is coordinate k = h of corner k; the `-maximal`
+  points are listed in the Professional order, point k+1 with 1/2 on
+  corner k, since 2026-11-02: TET4-MAX-ORDER resolved); prism6
   (L1, L2, 2 zeta - 1) because the GNU prism6 reference cell has zeta in
   [0,1] and the Professional prints [-1,1]; prism15 (L1,L2,zeta); tensor
   elements (xi, eta, zeta) up to ndim, xi fastest.
@@ -70,9 +70,6 @@
 
 ## Pending
 
-- tet4 `-maximal` point order (TET4-MAX-ORDER): reorder the points in
-  `pol()` to the Professional order (changes the order of every per-point
-  record, not the results).
 - `element_intpnt_h` for the rules above 190 values (DIVERGENCES
   INTPNT-H-LENGTH, class B).
 - Elements created after the last `step_start()` (refinement at the end
