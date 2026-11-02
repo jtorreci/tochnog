@@ -67,6 +67,28 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
 - [ ] T2 W2 output records (69): `element_*`, `post_*`, `print_*`, `control_print_*_node_type`,
   `materi_strain_*` / `materi_history_variable` initial dofs, `dof_*`, `global_*`,
   node_bounded_index (list in the 2026-11-01 file). Route: inline.
+  Map (read-only explorer, 2026-11-02): 69 names; units:
+  - [x] V1 pure aliases: control_print_{dof_line,gmsh,vtk}_node_type, element_contact_spring_direction,
+    element_interface_intpnt_{strain,stress}_average, materi_history_variable, materi_strain_energy,
+    post_node_rhside_ratio_dof_type. element_beam_force_moment moved to V4 (layout check).
+  - [ ] V2 global print defaults: print_{gmsh,vtk,tecplot}_calculation, print_gmsh_dummy,
+    print_{gmsh,vtk}_node_type, print_vtk_coord, print_vtk_group, print_frd_freecad/prepomax
+    (owner decision: manual default -yes for vtk/tecplot changes GNU output).
+  - [ ] V3 geometry/boundary records: element_geometry_present, print_element_geometry_present(_node_type),
+    element_boundary (+ mesh_boundary).
+  - [ ] V4 element diagnostics: element_intpnt_{h,iso_coord,method,npoint}, element_truss_strain(_temperature),
+    element_interface_intpnt_{direction,gap_status}, node_bounded_index, element_beam_direction_z,
+    element_print_group_data_values.
+  - [ ] V5 dof records/switches: dof_element_dof, dof_limit, global_node_dof_empty,
+    global_element_dof_from_node_dof, element_intpnt_dof (decision: record vs GNU element storage).
+  - [ ] V6 element_dof_initial_specific_number/value.
+  - [ ] V7 materi initial dofs: materi_strain_plasti_{camclay,mohr_coul,tension,vonmises},
+    materi_strain_total_{,compression_,shear_,tension_}kappa (decision: register only or fill).
+  - [ ] V8 post_calcul modifiers: post_calcul_{absolute,label,limit,multiply,apparent_total,safety_default,static_pressure}.
+  - [ ] V9 post data/point: post_count, post_data(_factor,_result), post_group_volume_summed, post_node_factor,
+    post_node_rhside_ratio_method, post_point_{element_group,eps_iso,node_type},
+    post_quadrilateral_element_group, post_strain_volume_initial.
+  Professional examples only in validation_14_mesh.dat (output dump) and tochnog_abaqus.dat.
 - [ ] T3 W3 materials (27): `group_materi_*` and `materi_plasti_*` (umat, stress_null, hypo
   niemunis/wolffersdorff variants, borja_tamagnini, elasti_c, hyper reduced_polynomial /
   simo_taylor, visco_power, residual_stiffness, mpc, diprisco_density, history_variable_user,
@@ -162,4 +184,7 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   97c3e47. T1 closed. Next: T2 W2 output records (69).
 - 2026-11-02 S5 refresh after W1: probe on the c135eeb objects: 34/320 now accepted, missing 286 =
   63 GiD + 223 (KEYWORD-GAP-REPORT update).
+- 2026-11-02 T2 V1 (route inline): 9 aliases (db_number data part; initialization names
+  normalised before they are stored). RED: alias_names_2026_1 rc 1 on c135eeb objects (unknown
+  initialization word). build_safe 433 OK / 0 FALLO.
 

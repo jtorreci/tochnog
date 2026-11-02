@@ -2389,6 +2389,17 @@ for am in "control_timestep_iterations_automatic_default1 8" \
   fi
 done
 rm -f "$T2026/velx0.his" "$T2026/sigyy4.his"
+# F5 W2 V1: 2026 manual names stored under the GNU records.
+run_ok "$T2026" alias_names_2026_1
+if grep -q "^control_print_vtk_node_method  0  -node_deformed_mesh" "$T2026/alias_names_2026_1.dbs" && \
+   grep -q "^control_print_gmsh_node_method  0  -node" "$T2026/alias_names_2026_1.dbs" && \
+   grep -q "^control_print_dof_line_method  0  -node_start_refined" "$T2026/alias_names_2026_1.dbs" && \
+   grep -q "^post_node_rhside_ratio_unknowntypes   -materi_velocity" "$T2026/alias_names_2026_1.dbs" && \
+   grep -q "^dof_label .* -ener -hisv0 -hisv1" "$T2026/alias_names_2026_1.dbs"; then
+  check_ok "alias_names_2026_1 (records stored under the GNU names)"
+else
+  check_fail "alias_names_2026_1" "an aliased record is missing from the .dbs"
+fi
 # F5 W1 U5: element group selection (Professional 02-08-2026 probes; the
 # manual decides where the Professional differs) and print_precision.
 for t in mesh_element_group_apply1 mesh_element_group_apply2 \

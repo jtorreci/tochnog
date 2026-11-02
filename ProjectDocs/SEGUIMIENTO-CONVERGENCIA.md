@@ -1085,9 +1085,9 @@ marcado `PENDIENTE` puede estar cubierto en el GNU bajo otro nombre:
 
 - [ ] `element_boundary` — PENDIENTE
 
-### element_contact (2/3)
+### element_contact (3/3)
 
-- [ ] `element_contact_spring_direction` — PENDIENTE
+- [x] `element_contact_spring_direction` — alias de un record del GNU (F5 W2 V1, 2026-11-02)
 - [x] `element_contact_spring_force` — `892541a` (2026-08-31; alias db_number -> ELEMENT_CONTACTSPRING_FORCE)
 - [x] `element_contact_spring_strain` — `892541a` (2026-08-31; alias db_number -> ELEMENT_CONTACTSPRING_FORCE, mismo record)
 
@@ -1111,15 +1111,15 @@ marcado `PENDIENTE` puede estar cubierto en el GNU bajo otro nombre:
 - [x] `element_group` — presente en el GNU
 - [x] `element_group_apply` — implementada (F5 W1 U5, 2026-11-02; = Professional)
 
-### element_interface (1/7)
+### element_interface (3/7)
 
 - [ ] `element_interface_intpnt_direction` — PENDIENTE
 - [ ] `element_interface_intpnt_gap_status` — PENDIENTE
 - [x] `element_interface_intpnt_materi_tension_status` — F4 T10 C48 (c06fa2d, 2026-10-10): -closed/-opened per integration point = Professional
 - [ ] `element_interface_intpnt_strain` — PENDIENTE
-- [ ] `element_interface_intpnt_strain_average` — PENDIENTE
+- [x] `element_interface_intpnt_strain_average` — alias de un record del GNU (F5 W2 V1, 2026-11-02)
 - [ ] `element_interface_intpnt_stress` — PENDIENTE
-- [ ] `element_interface_intpnt_stress_average` — PENDIENTE
+- [x] `element_interface_intpnt_stress_average` — alias de un record del GNU (F5 W2 V1, 2026-11-02)
 
 ### element_intpnt (0/7)
 
@@ -1734,9 +1734,9 @@ Nota: `group_interface_ground` del checklist anterior NUNCA existió (artefacto 
 
 - [x] `materi_failure_apply` — implemented (commit `9bbd125`, 2026-09-27): global failure switch (failure.cc), overruled by control_materi_failure_apply; verified against the Professional binary 02-08-2026 (see verification registry)
 
-### materi_history (0/1)
+### materi_history (1/1)
 
-- [ ] `materi_history_variable` — PENDIENTE
+- [x] `materi_history_variable` — alias de un record del GNU (F5 W2 V1, 2026-11-02)
 
 ### materi_maxwell (1/1)
 
@@ -1761,10 +1761,10 @@ Nota: `group_interface_ground` del checklist anterior NUNCA existió (artefacto 
 - [x] `materi_plasti_tension_apply` — implementada (commit `467cdbd`, 2026-11-02; F5 W1)
 - [x] `materi_plasti_visco_apply` — implementada (commit `467cdbd`, 2026-11-02; F5 W1)
 
-### materi_strain (4/21)
+### materi_strain (10/21)
 
 - [x] `materi_strain_elasti` — presente en el GNU
-- [ ] `materi_strain_energy` — PENDIENTE
+- [x] `materi_strain_energy` — alias de un record del GNU (F5 W2 V1, 2026-11-02)
 - [x] `materi_strain_intergranular` — presente en el GNU
 - [ ] `materi_strain_isa_c` — PENDIENTE
 - [ ] `materi_strain_isa_eacc` — PENDIENTE
@@ -2000,7 +2000,7 @@ Nota: `group_interface_ground` del checklist anterior NUNCA existió (artefacto 
 - [x] `post_line_n` — presente en el GNU
 - [x] `post_line_operat` — presente en el GNU
 
-### post_node (4/8)
+### post_node (5/8)
 
 - [x] `post_node` — presente en el GNU
 - [ ] `post_node_factor` — PENDIENTE
@@ -2008,7 +2008,7 @@ Nota: `group_interface_ground` del checklist anterior NUNCA existió (artefacto 
 - [ ] `post_node_rhside_` — PENDIENTE
 - [x] `post_node_rhside_free` — presente en el GNU
 - [x] `post_node_rhside_ratio` — presente en el GNU
-- [ ] `post_node_rhside_ratio_dof_type` — PENDIENTE
+- [x] `post_node_rhside_ratio_dof_type` — alias de un record del GNU (F5 W2 V1, 2026-11-02)
 - [ ] `post_node_rhside_ratio_method` — PENDIENTE
 
 ### post_point (4/6)

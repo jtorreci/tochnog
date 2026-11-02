@@ -353,6 +353,7 @@ page lists its own in "Differences with the Professional version".
 - [geometry_factor](geometry_factor.md) — db_number alias to GEOMETRY_BOUNDA_FACTOR (geometry.cc linear/parabolic interpolation); verified against the Professional .dbs (matrix2).
 - [convection_apply](convection_apply.md) — db_number aliases convection_apply/control_convection_apply/convection_stabilization to OPTIONS_CONVECTION/CONTROL_OPTIONS_CONVECTION/OPTIONS_STABILIZATION (general.cc consumers); eulerian-NS transient divergence of validation_1 documented as pending. K03 (2026-10-06): `convection_apply_switch()` in general.cc, default -NO, single source for general/beam/truss/spring/conspr; condif_flow/groundflow-velocity convection no longer gated by the switch.
 - [processors](processors.md) — db_number alias to OPTIONS_PROCESSORS (elem.cc thread buffers); exact-match only, processors_used NOT translated.
+- [names_2026_aliases](names_2026_aliases.md) — db_number aliases and the initialization-part name normalisation in input() (F5).
 - [processors_maximum](processors_maximum.md) — record `PROCESSORS_MAXIMUM`, `available_processors()` in `top.cc`; force_point threading fix (F5).
 - [processors_partition](processors_partition.md) — registered, not consumed (F5).
 - [print_precision](print_precision.md) — `TN_PRECISION` = `tn_print_precision` (F5).

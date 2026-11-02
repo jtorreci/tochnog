@@ -189,6 +189,13 @@ void input( )
       exit(TN_EXIT_STATUS);
     }
     input_skip_comment( str ); if ( echo ) cout << str << " ";
+    // Professional 2026 manual names of initialization records (4.14,
+    // 4.28): normalised to the GNU name before it is stored, so every
+    // check on the GNU name keeps working
+    if ( !strcmp(str,"materi_history_variable") )
+      strcpy( str, "materi_history_variables" );
+    else if ( !strcmp(str,"materi_strain_energy") )
+      strcpy( str, "materi_strainenergy" );
     ninitia++; 
     if ( ninitia>DATA_ITEM_SIZE ) {
       pri( "\nError in initialization part. DATA_ITEM_SIZE too small." );

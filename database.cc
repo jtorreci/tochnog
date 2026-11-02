@@ -9329,6 +9329,26 @@ long int db_number( const char str[] )
       // as the GNU geometry_bounda_factor (read by geometry()): same
       // index as the geometry entity, 2 values = linear, 3 = quadratic.
       return GEOMETRY_BOUNDA_FACTOR;
+    else if ( !strcmp( str, "control_print_dof_line_node_type" ) )
+      // 2026 manual names (6.279, 6.319, 6.345) of the *_node_method
+      // records: same values (-node, -node_start_refined,
+      // -node_deformed_mesh for vtk)
+      return CONTROL_PRINT_DOF_LINE_METHOD;
+    else if ( !strcmp( str, "control_print_gmsh_node_type" ) )
+      return CONTROL_PRINT_GMSH_NODE_METHOD;
+    else if ( !strcmp( str, "control_print_vtk_node_type" ) )
+      return CONTROL_PRINT_VTK_NODE_METHOD;
+    else if ( !strcmp( str, "element_contact_spring_direction" ) )
+      // 2026 manual name (6.418) of element_contactspring_direction
+      return ELEMENT_CONTACTSPRING_DIRECTION;
+    else if ( !strcmp( str, "element_interface_intpnt_strain_average" ) )
+      // 2026 manual names (6.434, 6.436) of the interface averages
+      return ELEMENT_INTERFACE_STRAIN_AVERAGE;
+    else if ( !strcmp( str, "element_interface_intpnt_stress_average" ) )
+      return ELEMENT_INTERFACE_STRESS_AVERAGE;
+    else if ( !strcmp( str, "post_node_rhside_ratio_dof_type" ) )
+      // 2026 manual name (6.951) of post_node_rhside_ratio_unknowntypes
+      return POST_NODE_RHSIDE_RATIO_UNKNOWNTYPES;
     else if ( !strcmp( str, "global_element_dof_apply" ) )
       // Professional name (manual 6.553) of the GNU options_element_dof:
       // -yes (default) / -no, and -only (element_dof_only, top.cc).
