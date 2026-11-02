@@ -76,7 +76,7 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
     (owner decision: manual default -yes for vtk/tecplot changes GNU output).
   - [x] V3 geometry/boundary records: element_geometry_present, print_element_geometry_present(_node_type),
     element_boundary (+ mesh_boundary). Inline. `aaf581c` (+ word -plus_displacement).
-  - [ ] V4 element diagnostics: element_intpnt_{h,iso_coord,method,npoint}, element_truss_strain(_temperature),
+  - [x] V4 element diagnostics: element_intpnt_{h,iso_coord,method,npoint}, element_truss_strain(_temperature),
     element_interface_intpnt_{direction,gap_status}, node_bounded_index, element_beam_direction_z,
     element_print_group_data_values.
   - [x] V4d beam owner decisions (2026-11-02): native 3D beam for every 3D beam (C37), default
@@ -274,4 +274,10 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
 - 2026-11-02 Owner: "reordenemos, pues." -> TET4-MAX-ORDER committed `3dc43db` (inline): pol() tet4 -maximal points
   3 and 4 in the Professional order; element_intpnt_3d1 expectation updated; 634 OK / 0 FALLO; A/B on the two
   tet4 -maximal inputs: only element_intpnt_* and element_dof (points 3/4 exchanged) differ. Divergence row removed.
+- 2026-11-02 Owner: "sí, como el manual, y documentamos la divergencia" -> V4 interface records committed `4aeb107`
+  (inline): element_interface_intpnt_direction (9 per interface intpnt, normal / first / second tangential)
+  and element_interface_intpnt_gap_status (strain_eff <= gap closed). Pro probes v4i d2/d3/g2 (Pro writes
+  neither; element_interface_direction same vectors in 2D, hex8 normal reversed on half the points).
+  RED on e94f261, GREEN; 643 OK / 0 FALLO, audit 0. Divergence INTERFACE-INTPNT-DIRECTION-GAP (class A).
+  V4 complete. Next: V5 (decision element_intpnt_dof record vs GNU element storage).
 
