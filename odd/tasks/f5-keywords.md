@@ -187,4 +187,7 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
 - 2026-11-02 T2 V1 (route inline): 9 aliases (db_number data part; initialization names
   normalised before they are stored). RED: alias_names_2026_1 rc 1 on c135eeb objects (unknown
   initialization word). build_safe 433 OK / 0 FALLO.
+- 2026-11-02 owner on the V2 end-of-run prints (manual 6.998/6.999 default -yes for tecplot/vtk; the
+  Professional 02-08-2026 writes no .vtk/.plt unless -yes is given): "vamos con pro, y lo dejamos
+  documentado" -> GNU default -no (= Professional), class A divergence from the manual.
 
