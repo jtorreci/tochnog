@@ -201,3 +201,8 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
 - 2026-11-02 owner on C98: "dale, seguí a Pro" -> print_vtk_coord / control_print_vtk_coord follow the
   Professional: POINTS always, VECTORS coord point field (stored coordinates) dropped by -no. Route
   inline. Commit 37d81d1; build_safe 455 OK / 0 FALLO. Next owner question: C99 (vtk/tecplot file names).
+- 2026-11-02 owner on C99: "sigamos a Pro"; on the -separate_* formats (manual 6.339 <base><index>.vtk
+  vs Professional <base>_000.vtk): "el de Pro". Route inline. Commit ecabcae: print_vt.cc / print_te.cc
+  names = Professional (incl. -separate_index / -separate_sequential, .plt emptied per run), class A
+  VTK-TECPLOT-NAMES; 6 new test-2026 tests (RED on e2e7c0c), test-2014 vtk_*1 on -separate_index;
+  build_safe 461 OK / 0 FALLO. Next: T2 V3 (geometry/boundary records).
