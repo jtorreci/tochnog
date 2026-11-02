@@ -198,3 +198,6 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   questions: C98 (print_vtk_coord meaning differs from the Professional), C99 (vtk/tecplot file
   names).
 
+- 2026-11-02 owner on C98: "dale, seguí a Pro" -> print_vtk_coord / control_print_vtk_coord follow the
+  Professional: POINTS always, VECTORS coord point field (stored coordinates) dropped by -no. Route
+  inline. Commit 37d81d1; build_safe 455 OK / 0 FALLO. Next owner question: C99 (vtk/tecplot file names).
