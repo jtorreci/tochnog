@@ -4278,6 +4278,27 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   data_required[ELEMENT_INTERFACE_INTPNT_MATERI_TENSION_STATUS] = ELEMENT;
   fixed_length[ELEMENT_INTERFACE_INTPNT_MATERI_TENSION_STATUS] = 0;
 
+  // manual Professional 6.430 / 6.431 (F5 T2 V4): per interface
+  // integration point the normal, first and second tangential directions
+  // (9 values) and the gap status (-opened / -closed)
+  strcpy(name[ELEMENT_INTERFACE_INTPNT_DIRECTION],"element_interface_intpnt_direction");
+  type[ELEMENT_INTERFACE_INTPNT_DIRECTION] = DOUBLE_PRECISION;
+  data_length[ELEMENT_INTERFACE_INTPNT_DIRECTION] = 4*9;
+  version_all[ELEMENT_INTERFACE_INTPNT_DIRECTION] = 1;
+  print_only[ELEMENT_INTERFACE_INTPNT_DIRECTION] = 1;
+  data_class[ELEMENT_INTERFACE_INTPNT_DIRECTION] = ELEMENT;
+  data_required[ELEMENT_INTERFACE_INTPNT_DIRECTION] = ELEMENT;
+  fixed_length[ELEMENT_INTERFACE_INTPNT_DIRECTION] = 0;
+
+  strcpy(name[ELEMENT_INTERFACE_INTPNT_GAP_STATUS],"element_interface_intpnt_gap_status");
+  type[ELEMENT_INTERFACE_INTPNT_GAP_STATUS] = INTEGER;
+  data_length[ELEMENT_INTERFACE_INTPNT_GAP_STATUS] = 4;
+  version_all[ELEMENT_INTERFACE_INTPNT_GAP_STATUS] = 1;
+  print_only[ELEMENT_INTERFACE_INTPNT_GAP_STATUS] = 1;
+  data_class[ELEMENT_INTERFACE_INTPNT_GAP_STATUS] = ELEMENT;
+  data_required[ELEMENT_INTERFACE_INTPNT_GAP_STATUS] = ELEMENT;
+  fixed_length[ELEMENT_INTERFACE_INTPNT_GAP_STATUS] = 0;
+
   strcpy(name[ELEMENT_INTERFACE_INTPNT_STRAIN],"element_interface_intpnt_strain");
   type[ELEMENT_INTERFACE_INTPNT_STRAIN] = DOUBLE_PRECISION;
   data_length[ELEMENT_INTERFACE_INTPNT_STRAIN] = 12;

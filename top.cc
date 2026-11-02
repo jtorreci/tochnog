@@ -1406,6 +1406,10 @@ void step_start( long int task, long int options_solver[], double dtime, double 
             ELEMENT_INTERFACE_INTPNT_MATERI_TENSION_STATUS ) )
           db_data_length_put( ELEMENT_INTERFACE_INTPNT_MATERI_TENSION_STATUS,
             ns1_max );
+        if ( ns1_max>db_data_length( ELEMENT_INTERFACE_INTPNT_GAP_STATUS ) )
+          db_data_length_put( ELEMENT_INTERFACE_INTPNT_GAP_STATUS, ns1_max );
+        if ( ns1_max*9>db_data_length( ELEMENT_INTERFACE_INTPNT_DIRECTION ) )
+          db_data_length_put( ELEMENT_INTERFACE_INTPNT_DIRECTION, ns1_max*9 );
         if ( ns1_max*nval_iface>db_data_length(
             ELEMENT_INTERFACE_INTPNT_STRESS ) )
           db_data_length_put( ELEMENT_INTERFACE_INTPNT_STRESS,
@@ -1439,6 +1443,10 @@ void step_start( long int task, long int options_solver[], double dtime, double 
       db_allocate( ELEMENT_INTERFACE_STRAIN_AVERAGE, max_element, VERSION_NEW, MINIMAL );
       db_allocate( ELEMENT_INTERFACE_INTPNT_MATERI_TENSION_STATUS, max_element, VERSION_NORMAL, MINIMAL );
       db_allocate( ELEMENT_INTERFACE_INTPNT_MATERI_TENSION_STATUS, max_element, VERSION_NEW, MINIMAL );
+      db_allocate( ELEMENT_INTERFACE_INTPNT_GAP_STATUS, max_element, VERSION_NORMAL, MINIMAL );
+      db_allocate( ELEMENT_INTERFACE_INTPNT_GAP_STATUS, max_element, VERSION_NEW, MINIMAL );
+      db_allocate( ELEMENT_INTERFACE_INTPNT_DIRECTION, max_element, VERSION_NORMAL, MINIMAL );
+      db_allocate( ELEMENT_INTERFACE_INTPNT_DIRECTION, max_element, VERSION_NEW, MINIMAL );
     }
     if ( any_truss ) {
       db_allocate( ELEMENT_TRUSS_DIRECTION, max_element, VERSION_NEW, MINIMAL );

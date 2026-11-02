@@ -1051,6 +1051,8 @@ void interface_element( long int element, long int name,
     double *rec_stress = get_new_dbl( n_intpnt * nval );
     double *rec_strain = get_new_dbl( n_intpnt * nval );
     long int *rec_status = get_new_int( n_intpnt );
+    long int *rec_gap_status = get_new_int( n_intpnt );
+    double *rec_direction = get_new_dbl( n_intpnt * 9 );
     double *avg_stress = get_new_dbl( nval );
     double *avg_strain = get_new_dbl( nval );
     array_set( rec_stress, 0., n_intpnt * nval );
@@ -1074,6 +1076,27 @@ void interface_element( long int element, long int name,
       // it (-closed / -opened; an INTEGER record holding the negative enum)
       rec_status[i_intpnt] =
         ( strain_eff_ip[i_intpnt] <= gap ) ? -CLOSED : -OPENED;
+      // gap status (manual Professional 6.431): -closed when the
+      // accumulated normal strain <= gap, -opened otherwise (the gap
+      // rule above; an opening by the tension limit is not a gap opening)
+      rec_gap_status[i_intpnt] =
+        ( strain_eff_ip[i_intpnt] <= gap ) ? -CLOSED : -OPENED;
+      // directions (manual Professional 6.430): normal, first tangential,
+      // second tangential = normal x first tangential (2D: the z axis
+      // with its sign, as the Professional element_interface_direction)
+      {
+        double *dir = &rec_direction[i_intpnt*9];
+        array_set( dir, 0., 9 );
+        for ( iv=0; iv<ndim; iv++ ) {
+          dir[0+iv] = normal[iv];
+          dir[3+iv] = tangent[iv];
+        }
+        if ( ndim==3 ) {
+          for ( iv=0; iv<3; iv++ ) dir[6+iv] = tangent2[iv];
+        }
+        else
+          array_outproduct_3D( &dir[0], &dir[3], &dir[6] );
+      }
       for ( iv=0; iv<nval; iv++ ) {
         avg_stress[iv] += rec_stress[i_intpnt*nval+iv] / n_intpnt;
         avg_strain[iv] += rec_strain[i_intpnt*nval+iv] / n_intpnt;
@@ -1099,6 +1122,15 @@ void interface_element( long int element, long int name,
       ddum, ldum, VERSION_NORMAL, PUT );
     db( ELEMENT_INTERFACE_INTPNT_MATERI_TENSION_STATUS, element, rec_status,
       ddum, ldum, VERSION_NEW, PUT );
+    db( ELEMENT_INTERFACE_INTPNT_GAP_STATUS, element, rec_gap_status,
+      ddum, ldum, VERSION_NORMAL, PUT );
+    db( ELEMENT_INTERFACE_INTPNT_GAP_STATUS, element, rec_gap_status,
+      ddum, ldum, VERSION_NEW, PUT );
+    ldum = n_intpnt * 9;
+    db( ELEMENT_INTERFACE_INTPNT_DIRECTION, element, idum, rec_direction,
+      ldum, VERSION_NORMAL, PUT );
+    db( ELEMENT_INTERFACE_INTPNT_DIRECTION, element, idum, rec_direction,
+      ldum, VERSION_NEW, PUT );
     ldum = nval;
     db( ELEMENT_INTERFACE_STRESS_AVERAGE, element, idum, avg_stress,
       ldum, VERSION_NORMAL, PUT );
@@ -1110,6 +1142,7 @@ void interface_element( long int element, long int name,
       ldum, VERSION_NEW, PUT );
     delete[] rec_stress; delete[] rec_strain; delete[] rec_status;
     delete[] avg_stress; delete[] avg_strain;
+    delete[] rec_gap_status; delete[] rec_direction;
   }
 
   // release per-IP work arrays (w_ip is kept for the groundflow /

@@ -448,6 +448,7 @@ page lists its own in "Differences with the Professional version".
 - [element_beam_force_moment](element_beam_force_moment.md) — beam end forces and moments in the local beam axes, 12 values, first node with the minus (6.416) (F5 T2 V4c).
 - [group_beam_memory](group_beam_memory.md) — beam memory: -total_linear (default, classical results) or -updated (axes follow the deformed beam) (6.591) (F5 T2 V4d).
 - [element_beam_direction](element_beam_direction.md) — local beam axes x, y, z, 9 values (6.414) (F5 T2 V4d).
+- [element_interface_intpnt_direction](element_interface_intpnt_direction.md) — interface directions (normal, first and second tangential, 9 values) and gap status per integration point (6.430/6.431) (F5 T2 V4).
 - [print_database_calculation](print_database_calculation.md) — switch of the final .dbs output (6.972); consumed at exit_tn. large1 parses (RUNFAIL remains solver-bound, see SEGUIMIENTO).
 - [print_gid_calculation](print_database_calculation.md) — switch of the final GiD output (same gate).
 - [post_apply](post_apply.md) — `post_apply switch` (6.900) and `control_post_apply` (6.259): `-no` skips the post records (frozen values; global -no: never created); the skipped records are evaluated once more at the end of the run. Verified against the Professional 02-08-2026 (F5).

@@ -2724,6 +2724,25 @@ run_ok "$T2026" group_beam_plane_3d1
 beam_rec_check group_beam_plane_3d1 element_beam_direction 1 "1 0 0 0 0 1 0 -1 0"
 beam_rec_check group_beam_plane_3d1 node_dof 2 "0 1.666666667e-03 0 0 1.666666667e-03 0 0 0 2.5e-03"
 expected_error_ok "$T2026" group_beam_plane_3d_error1
+# F5 T2 V4: element_interface_intpnt_direction (6.430, 9 values per
+# interface integration point: normal, first and second tangential) and
+# element_interface_intpnt_gap_status (6.431). The Professional 02-08-2026
+# writes neither (its element_interface_direction / tension status give
+# the same vectors / statuses on the 2D probes d2, g2).
+run_ok "$T2026" element_interface_intpnt_direction1
+beam_rec_check element_interface_intpnt_direction1 element_interface_intpnt_direction 1 "0 1 0 1 0 0 0 0 -1 0 1 0 1 0 0 0 0 -1"
+beam_rec_check element_interface_intpnt_direction1 element_interface_intpnt_direction 2 "-0.8 0.6 0 0.6 0.8 0 0 0 -1 -0.8 0.6 0 0.6 0.8 0 0 0 -1"
+run_ok "$T2026" element_interface_intpnt_direction_3d1
+beam_rec_check element_interface_intpnt_direction_3d1 element_interface_intpnt_direction 1 "0 0 1 1 0 0 0 1 0 0 0 1 1 0 0 0 1 0 0 0 1 1 0 0 0 1 0 0 0 1 1 0 0 0 1 0"
+beam_rec_check element_interface_intpnt_direction_3d1 element_interface_intpnt_direction 2 "1 0 0 0 1 0 0 0 1 1 0 0 0 1 0 0 0 1 1 0 0 0 1 0 0 0 1 1 0 0 0 1 0 0 0 1"
+run_ok "$T2026" element_interface_intpnt_gap_status1
+for gs in "1  -opened -opened" "2  -closed -closed"; do
+  if grep -q "^element_interface_intpnt_gap_status  $gs *$" "$T2026/element_interface_intpnt_gap_status1.dbs"; then
+    check_ok "element_interface_intpnt_gap_status1 ($gs)"
+  else
+    check_fail "element_interface_intpnt_gap_status1" "expected: $gs"
+  fi
+done
 beam_rec_check element_beam_force_moment_2d1 element_beam_direction 1 "1 0 0 0 1 0 0 0 1"
 beam_rec_check element_beam_force_moment_2d1 element_beam_direction 2 "1 0 0 0 -1 0 0 0 -1"
 # F5 W2 V2: global print defaults (print_*_calculation, print_gmsh_dummy /

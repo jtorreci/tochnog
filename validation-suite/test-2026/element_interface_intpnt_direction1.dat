@@ -1,0 +1,34 @@
+(F5 T2 V4: element_interface_intpnt_direction (manual Professional 6.430),
+ 2D. Per interface integration point: normal, first tangential, second
+ tangential = normal x first tangential (9 values). Element 1 along x:
+ 0 1 0 1 0 0 0 0 -1; element 2 along (0.6, 0.8): -0.8 0.6 0 0.6 0.8 0
+ 0 0 -1. The Professional 02-08-2026 does not write this record; its
+ element_interface_direction (probe d2) holds the same vectors.)
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_displacement
+materi_stress
+end_initia
+node 1 0 0
+node 2 1 0
+node 3 0 0
+node 4 1 0
+node 5 0 2
+node 6 0.6 2.8
+node 7 0 2
+node 8 0.6 2.8
+element 1 -quad4 1 2 3 4
+element 2 -quad4 5 6 7 8
+group_type 0 -materi
+group_interface 0 -yes
+group_interface_materi_memory 0 -total_linear
+group_interface_materi_elasti_stiffness 0 1.e3 1.e3
+bounda_dof 10 -ra 1 2 5 6 -ra -velx -vely
+bounda_time 10 0.
+bounda_dof 20 -ra 3 4 7 8 -ra -velx
+bounda_time 20 1.e-3
+bounda_dof 21 -ra 3 4 7 8 -ra -vely
+bounda_time 21 -1.e-3
+control_timestep 10 0.1 1.0
+end_data

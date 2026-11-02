@@ -1,0 +1,43 @@
+(F5 T2 V4: element_interface_intpnt_direction (manual Professional 6.430),
+ 3D hex8 interfaces. Element 1 in the plane z = 0: normal 0 0 1, first
+ tangential 1 0 0, second tangential 0 1 0. Element 2 in the plane x = 0:
+ 1 0 0, 0 1 0, 0 0 1. Analytic; the Professional 02-08-2026 does not write
+ this record and its element_interface_direction (probe d3) has these
+ vectors on the first two points only (the normal is reversed on the other
+ two).)
+echo -no
+number_of_space_dimensions 3
+materi_velocity
+materi_displacement
+materi_stress
+end_initia
+node 1 0 0 0
+node 2 1 0 0
+node 3 1 1 0
+node 4 0 1 0
+node 5 0 0 0
+node 6 1 0 0
+node 7 1 1 0
+node 8 0 1 0
+node 9 0 0 3
+node 10 0 1 3
+node 11 0 1 4
+node 12 0 0 4
+node 13 0 0 3
+node 14 0 1 3
+node 15 0 1 4
+node 16 0 0 4
+element 1 -hex8 1 2 3 4 5 6 7 8
+element 2 -hex8 9 10 11 12 13 14 15 16
+group_type 0 -materi
+group_interface 0 -yes
+group_interface_materi_memory 0 -total_linear
+group_interface_materi_elasti_stiffness 0 1.e3 1.e3 1.e3
+bounda_dof 10 -ra 1 2 3 4 9 10 11 12 -ra -velx -vely -velz
+bounda_time 10 0.
+bounda_dof 20 -ra 5 6 7 8 13 14 15 16 -ra -velx -vely
+bounda_time 20 1.e-3
+bounda_dof 21 -ra 5 6 7 8 13 14 15 16 -ra -velz
+bounda_time 21 -1.e-3
+control_timestep 10 0.1 1.0
+end_data
