@@ -2365,7 +2365,7 @@ void      print_restart( long int icontrol );
 void      print_tecplot( long int ival[], long int end_of_calculation=0 );
 void      print_unknowns( void );
 void      print_unknownsrhside( void );
-void      print_vtk( long int icontrol );
+void      print_vtk( long int icontrol, long int task=-YES );
 void      print_gmsh( long int icontrol, long int task );
 void      print_frd( long int icontrol, long int task );
 long int  print_option( long int global_name, long int control_name,

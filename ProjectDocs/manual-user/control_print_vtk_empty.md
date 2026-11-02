@@ -41,5 +41,5 @@ control_print_vtk            36  -yes
 control_print_vtk_empty      36  -no
 ```
 
-`tn35.vtk` (default) contains both cells; `tn36.vtk` contains only the
+`vtk_empty1_035.vtk` (default) contains both cells; `vtk_empty1_036.vtk` contains only the
 non-empty element (`CELLS 1 5`, `CELL_TYPES 1`).

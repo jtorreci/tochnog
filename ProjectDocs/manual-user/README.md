@@ -253,7 +253,9 @@ page lists its own in "Differences with the Professional version".
 
 ## Sprint 11 — control_print family (batch 3, VTK extensions)
 
-- [control_print_vtk_coord](control_print_vtk_coord.md) — whether the node coordinates (the POINTS block) are written to the vtk files (default -yes; -no omits them; documented limitation: invalid dataset for visualization).
+- [control_print_vtk](control_print_vtk.md) — vtk output per control index; file names `<base>.vtk`, `<base>_<index>.vtk` (`-separate_index`), `<base>_<counter>.vtk` (`-separate_sequential`) = Professional.
+- [control_print_tecplot](control_print_tecplot.md) — tecplot output per control index; `<base>.plt` (emptied at the start of the run), `-separate_index` / `-separate_sequential` files = Professional.
+- [control_print_vtk_coord](control_print_vtk_coord.md) — the `VECTORS coord` point field of the vtk files (default -yes; -no drops it, POINTS always written; = Professional).
 - [control_print_vtk_dof_calcul](control_print_vtk_dof_calcul.md) — filter on the post_calcul fields written to the vtk files (mirror of control_print_vtk_dof; -none writes no post field; names match the underlying data or the field label).
 - [control_print_vtk_empty](control_print_vtk_empty.md) — whether empty elements (ELEMENT_EMPTY -yes, computed for materi_diffusion/materi_density) are included in the vtk file (default -yes).
 - [control_print_vtk_node_method](control_print_vtk_node_method.md) — which node coordinates are written: -node, -node_start_refined (default) or -node_deformed_mesh.

@@ -248,7 +248,9 @@ page lists its own in "Differences with the Professional version".
 
 ## Sprint 11 — control_print family (batch 3, VTK extensions)
 
-- [control_print_vtk_coord](control_print_vtk_coord.md) — POINTS-block switch in print_vt.cc; decision documented: coordinates appear only in POINTS (no gmsh-style node_0/1/2 fields); -no yields an invalid-but-smaller dataset.
+- [control_print_vtk](control_print_vtk.md) — print_vtk(icontrol, task) file names in print_vt.cc (snprintf, static sequential counter; C99).
+- [control_print_tecplot](control_print_tecplot.md) — print_tecplot file choice in print_te.cc (truncation of <base>.plt at the first print, separate files with their mesh; C99).
+- [control_print_vtk_coord](control_print_vtk_coord.md) — coord point field switch in print_vt.cc (C98: POINTS always, -no drops VECTORS coord).
 - [control_print_vtk_dof_calcul](control_print_vtk_dof_calcul.md) — per-field flags gating both post_calcul loops; GNU adaptation of post_calcul_label: exact match on the underlying unknown + substring match on post_calcul_names; -none kills all post fields.
 - [control_print_vtk_empty](control_print_vtk_empty.md) — vtk_element_is_empty() helper (ELEMENT_EMPTY -yes, print_g5 pattern); ncell keeps CELLS/CELL_TYPES consistent; unsupported-type abort unchanged.
 - [control_print_vtk_node_method](control_print_vtk_node_method.md) — POINTS coordinate selection (stored / start_refined / deformed); default -node_start_refined; semantic change documented: deformed coordinates only with -node_deformed_mesh (before, materi_displacement always deformed the mesh).

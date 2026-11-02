@@ -1824,7 +1824,7 @@ void step_close( long int task, long int ipar, long int npar, long int ipar_i, l
     }
     if ( frequency_allowed && db_active_index( CONTROL_PRINT_VTK, icontrol, VERSION_NORMAL ) ) {
       db( CONTROL_PRINT_VTK, icontrol, ival, ddum, ldum, VERSION_NORMAL, GET );
-      if ( ival[0]==-YES ) print_vtk( icontrol );
+      if ( ival[0]!=-NO ) print_vtk( icontrol, ival[0] );
     }
     if ( frequency_allowed && db_active_index( CONTROL_PRINT_TABULAR, icontrol, VERSION_NORMAL ) ) {
       db( CONTROL_PRINT_TABULAR, icontrol, ival, ddum, ldum, VERSION_NORMAL, GET );

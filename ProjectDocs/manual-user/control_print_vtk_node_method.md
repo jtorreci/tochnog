@@ -43,5 +43,5 @@ control_print_vtk               41  -yes
 control_print_vtk_node_method   41  -node_deformed_mesh
 ```
 
-`tn40.vtk` writes the top node at `y = 1` (stored); `tn41.vtk` writes it
+`vtk_nodmeth1_040.vtk` writes the top node at `y = 1` (stored); `vtk_nodmeth1_041.vtk` writes it
 at `y = 0.998` (deformed).

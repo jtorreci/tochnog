@@ -1,0 +1,30 @@
+(C99: control_print_vtk -separate_sequential writes one file per print,
+ <base>_0000.vtk to <base>_0004.vtk for the five steps, = Professional
+ 02-08-2026 probe yss.)
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_displacement
+materi_stress
+end_initia
+node 1 0 0
+node 2 1 0
+node 3 0 1
+node 4 1 1
+element 1 -quad4 1 2 3 4
+group_type 0 -materi
+group_materi_memory 0 -total_linear
+group_materi_elasti_young 0 1000.
+group_materi_elasti_poisson 0 0.3
+geometry_line 1 0 0 1 0 0.01
+geometry_line 2 0 0 0 1 0.01
+geometry_line 3 0 1 1 1 0.01
+bounda_dof 0 -geometry_line 1 -vely
+bounda_dof 1 -geometry_line 2 -velx
+bounda_dof 2 -geometry_line 3 -vely
+bounda_time 2 0 0 1 0.02
+control_timestep 0 0.1 0.2
+control_timestep 12 0.1 0.3
+control_print_vtk 0 -separate_sequential
+control_print_vtk 12 -separate_sequential
+end_data

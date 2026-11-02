@@ -38,7 +38,7 @@
 - `CELLS` connectivity uses node indices, so skipping an element does
   NOT renumber the points (only the cell count changes).
 - Verification: `vtk_empty1` test — element 2 empty via node density 0;
-  default `tn35.vtk` has `CELLS 2`, `-no` `tn36.vtk` has `CELLS 1 5`
+  default `vtk_empty1_035.vtk` has `CELLS 2`, `-no` `vtk_empty1_036.vtk` has `CELLS 1 5`
   and `CELL_TYPES 1`. The model still solves (nodes without elements
   are handled by the solver, pattern of the deletion tests).
 

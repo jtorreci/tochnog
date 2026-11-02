@@ -15,7 +15,7 @@ the end. They do not need any `control_print_*` record.
   the file is new). When a `control_print_gmsh -yes` already printed the
   final time, the state is not repeated.
 - `print_tecplot_calculation -yes`: appends one zone with the final state
-  to `tecplot.plt` (the file of `control_print_tecplot`), again skipped
+  to `<base>.plt` (the file of `control_print_tecplot -yes`), again skipped
   when the final time is already in the file.
 
 Default `-no` for the three switches (see the differences below).
@@ -51,8 +51,6 @@ writes `<base>.vtk` with the state at t = 0.5. Tests
   only with `-yes`. Project-owner decision 2026-11-02 ("vamos con pro, y lo
   dejamos documentado"): the GNU default is `-no`, as the Professional
   (DIVERGENCES `PRINT-CALC-DEFAULT`, class A; SEGUIMIENTO Descarte).
-- File names: the Professional appends the tecplot zones to `<base>.plt`;
-  the GNU uses `tecplot.plt`, the file of its `control_print_tecplot`
-  (BACKLOG C99, class B). The vtk end file `<base>.vtk` has the
-  Professional name.
+- File names `<base>.vtk` / `<base>.plt` = Professional (C99 resolved
+  2026-11-02).
 - The layout of the files follows the GNU writers (BACKLOG C27).

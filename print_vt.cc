@@ -33,7 +33,7 @@ static long int vtk_element_is_empty( long int element )
   return ( element_empty==-YES );
 }
 
-void print_vtk( long int icontrol )
+void print_vtk( long int icontrol, long int task )
 
 {
   long int inod=0, element=0, max_node=0, max_element=0, nnol=0, 
@@ -107,16 +107,21 @@ void print_vtk( long int icontrol )
   db_highest_index( ELEMENT, max_element, VERSION_PRINT );
   if ( max_element<0 ) return;
 
-  // control_print_vtk: tn<icontrol>.vtk; end of the run
-  // (print_vtk_calculation, icontrol -1): <base>.vtk (= Professional).
-  if ( icontrol>=0 ) {
-    strcpy( filename, "tn" );
-    long_to_a( icontrol, str );
-    strcat( filename, str );
+  // file name (= Professional 02-08-2026, C99): -yes and the end of the
+  // run (print_vtk_calculation, icontrol -1) overwrite <base>.vtk;
+  // -separate_index writes <base>_<icontrol, 3 digits>.vtk and
+  // -separate_sequential <base>_<print counter, 4 digits>.vtk. The manual
+  // (6.339) names them <base><index>.vtk / <base><counter>.vtk: class A
+  // row VTK-TECPLOT-NAMES.
+  if      ( task==-SEPARATE_INDEX && icontrol>=0 )
+    snprintf( filename, MCHAR, "%s_%03ld.vtk", data_file_base, icontrol );
+  else if ( task==-SEPARATE_SEQUENTIAL && icontrol>=0 ) {
+    static long int vtk_sequential=0;
+    snprintf( filename, MCHAR, "%s_%04ld.vtk", data_file_base,
+      vtk_sequential++ );
   }
   else
-    strcpy( filename, data_file_base );
-  strcat( filename, ".vtk" );
+    snprintf( filename, MCHAR, "%s.vtk", data_file_base );
   ofstream outvtk( filename );
   outvtk.precision(TN_PRECISION);
 

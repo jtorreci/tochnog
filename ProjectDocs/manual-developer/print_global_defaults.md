@@ -22,13 +22,13 @@ Keywords: `print_gmsh_calculation`, `print_tecplot_calculation`,
 - End-of-run prints in `exit_tn` (`miscel.cc`, after `print_gid`):
   `print_gmsh(-1,-YES)`, `print_tecplot(ival,1)`, `print_vtk(-1)`, each
   default `-NO`.
-  - `print_vtk(icontrol<0)` writes `<data_file_base>.vtk` (control prints
-    keep `tn<icontrol>.vtk`).
+  - `print_vtk(icontrol<0)` writes `<data_file_base>.vtk`, the file of
+    `control_print_vtk -yes` (C99).
   - `print_gmsh`: static `gmsh_yes_printed/gmsh_yes_time` remember the last
     `-yes` print; the end call returns when it equals `TIME_CURRENT`.
   - `print_tecplot(ival, end_of_calculation)` (new defaulted argument in both
     headers): statics `tecplot_printed/tecplot_time`, same skip rule; it
-    appends to `tecplot.plt`.
+    appends to `<data_file_base>.plt` (C99).
 - `print_vtk_group`: after `POINT_DATA`, a `CELL_DATA ncell` block with
   `SCALARS element_group int` from `ELEMENT_GROUP` (VERSION_PRINT, 0 when
   absent), skipping the same empty elements as `CELLS`.
@@ -73,15 +73,13 @@ Keywords: `print_gmsh_calculation`, `print_tecplot_calculation`,
 - `PRINT-CALC-DEFAULT` (class A, owner 2026-11-02): tecplot / vtk end-of-run
   default `-no` = Professional, against the manual `-yes`.
 - `VTK-GROUP-NO` (class D): the Professional ignores `print_vtk_group -no`.
-- `C99` (class B, open): `tn<index>.vtk` / `tecplot.plt` against
-  `<name>.vtk` / `<name>.plt`.
 
 ## Hardcoded / pending
 
 - Owner decision: `print_tecplot_calculation`/`print_vtk_calculation`
   default `-NO` against the manual (`PRINT-CALC-DEFAULT`, class A).
-- `tecplot.plt`/`tn<i>.vtk` names (C99 open). `print_vtk_coord` follows the
-  Professional `coord` field since C98 (2026-11-02).
+- `print_vtk_coord` follows the Professional `coord` field since C98 and the
+  vtk / tecplot names follow the Professional since C99 (2026-11-02).
 - Not implemented: frd `PEEQ` name (no post_calcul fields in the GNU frd);
   `element_number` vtk cell field of the Professional.
 - The end-skip statics are per run (one input per process).

@@ -11,8 +11,8 @@ bounda_time  2  0 -0.01 100 -0.01
 bounda_unknown  0  -ra 1 2 -ra -vely
 bounda_unknown  1  -ra 1 2 -ra -velx
 bounda_unknown  2  -ra 3 4 -ra -vely
-control_print_vtk  40  -yes
-control_print_vtk  41  -yes
+control_print_vtk  40  -separate_index
+control_print_vtk  41  -separate_index
 control_print_vtk_node_method  40  -node
 control_print_vtk_node_method  41  -node_deformed_mesh
 control_timestep  40  0.05 0.1

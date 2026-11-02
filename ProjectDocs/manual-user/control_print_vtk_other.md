@@ -47,6 +47,6 @@ control_print_vtk            43  -yes
 control_print_vtk_other      43  -no
 ```
 
-`tn42.vtk` contains `SCALARS boundary_condition` and (with
-`materi_displacement`) `VECTORS mesh_deformation`; `tn43.vtk` has
+`vtk_other1_042.vtk` contains `SCALARS boundary_condition` and (with
+`materi_displacement`) `VECTORS mesh_deformation`; `vtk_other1_043.vtk` has
 neither field.

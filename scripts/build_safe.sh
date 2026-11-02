@@ -177,7 +177,7 @@ HIPO_TOTAL=0
 # dof.0..dof.12 y freq_timestep dof.22/23; dof.20/21 se regeneran en el
 # bucle), los .frd de print_frd -separate_sequential (uno por print) y
 # sigxx4.his (historia de los 2 tests, se suma).
-# Sprint 11 lote 3 (extensiones VTK): tn30..tn43.vtk de vtk_coord1/
+# Sprint 11 lote 3 (extensiones VTK): <input>_030..043.vtk de vtk_coord1/
 # vtk_dofcalc1/vtk_empty1/vtk_nodmeth1/vtk_other1.
 # Sprint 11 lote 4 (dof_line/dof_point): disy.*/velx.*/vely.*/disx.* de
 # dpline1/dpline_n/dpline_geom/dpline_group/dpline_eps/dpline_method/
@@ -197,12 +197,11 @@ rm -f validation-suite/test-2014/dof.* \
       validation-suite/test-2014/freq_timeint*.frd \
       validation-suite/test-2014/freq_timestep*.frd \
       validation-suite/test-2014/sigxx4.his \
-      validation-suite/test-2014/tn30.vtk validation-suite/test-2014/tn31.vtk \
-      validation-suite/test-2014/tn32.vtk validation-suite/test-2014/tn33.vtk \
-      validation-suite/test-2014/tn34.vtk validation-suite/test-2014/tn35.vtk \
-      validation-suite/test-2014/tn36.vtk validation-suite/test-2014/tn40.vtk \
-      validation-suite/test-2014/tn41.vtk validation-suite/test-2014/tn42.vtk \
-      validation-suite/test-2014/tn43.vtk \
+      validation-suite/test-2014/vtk_coord1_0*.vtk \
+      validation-suite/test-2014/vtk_dofcalc1_0*.vtk \
+      validation-suite/test-2014/vtk_empty1_0*.vtk \
+      validation-suite/test-2014/vtk_nodmeth1_0*.vtk \
+      validation-suite/test-2014/vtk_other1_0*.vtk \
       validation-suite/test-2014/velx.* validation-suite/test-2014/vely.* \
       validation-suite/test-2014/disx.* validation-suite/test-2014/disy.* \
       validation-suite/test-2014/adis.* \
@@ -582,21 +581,21 @@ rm -f validation-suite/test-2014/dof.* \
 #   linea por paso (10 + 11 = 21), no 6.
 # Sprint 11 lote 3 (extensiones VTK, manual Professional 6.340-6.346):
 # + vtk_coord1 (control_print_vtk_coord: -yes/default escribe el bloque
-#   POINTS en tn30.vtk; -no lo omite en tn31.vtk pero CELLS queda).
-# + vtk_dofcalc1 (control_print_vtk_dof_calcul: sin filtro -> tn32.vtk con
+#   POINTS en vtk_coord1_030.vtk; -no lo omite en vtk_coord1_031.vtk pero CELLS queda).
+# + vtk_dofcalc1 (control_print_vtk_dof_calcul: sin filtro -> vtk_dofcalc1_032.vtk con
 #   los 2 campos post (materi_strain_total_average + materi_stress_mises);
-#   -none -> tn33.vtk sin campos post pero con los primarios; filtro
-#   -materi_strain_total -> tn34.vtk solo con el campo ept).
+#   -none -> vtk_dofcalc1_033.vtk sin campos post pero con los primarios; filtro
+#   -materi_strain_total -> vtk_dofcalc1_034.vtk solo con el campo ept).
 # + vtk_empty1 (control_print_vtk_empty: elemento 2 vacio por densidad 0
-#   (ELEMENT_EMPTY=-YES); default -> tn35.vtk con 2 celdas; -no ->
-#   tn36.vtk con 1 celda en CELLS y CELL_TYPES).
+#   (ELEMENT_EMPTY=-YES); default -> vtk_empty1_035.vtk con 2 celdas; -no ->
+#   vtk_empty1_036.vtk con 1 celda en CELLS y CELL_TYPES).
 # + vtk_nodmeth1 (control_print_vtk_node_method: total lagrange con
-#   vely=-0.01 -> disy=-0.001; -node -> tn40.vtk con la coordenada
-#   almacenada y=1.0; -node_deformed_mesh -> tn41.vtk con y=0.999).
-# + vtk_other1 (control_print_vtk_other: default -> tn42.vtk con
+#   vely=-0.01 -> disy=-0.001; -node -> vtk_nodmeth1_040.vtk con la coordenada
+#   almacenada y=1.0; -node_deformed_mesh -> vtk_nodmeth1_041.vtk con y=0.999).
+# + vtk_other1 (control_print_vtk_other: default -> vtk_other1_042.vtk con
 #   SCALARS boundary_condition (nodo 1=1.0, nodo 4=0.0: bounda_force no
 #   es condicion de contorno) + VECTORS mesh_deformation; -no ->
-#   tn43.vtk sin ninguno de los dos campos).
+#   vtk_other1_043.vtk sin ninguno de los dos campos).
 # Sprint 11 lote 4 (dof_line + dof_point, manual Professional
 # 6.273-6.283): interpolacion de node_dof Y node_dof_calcul a lo largo
 # de una polilinea / en un punto. Modelo base: quad4 elastico 2D con
@@ -855,9 +854,9 @@ fi
 
 # vtk_coord1 (C98, = Professional): default (or -yes) writes POINTS and
 # the point field VECTORS coord; -no keeps POINTS and drops only coord
-if [ "$(grep -c '^VECTORS coord' "$T2014/tn30.vtk" 2>/dev/null)" = "1" ] && \
-   [ "$(grep -c '^VECTORS coord' "$T2014/tn31.vtk" 2>/dev/null)" = "0" ] && \
-   grep -q '^POINTS' "$T2014/tn31.vtk" && grep -q '^CELLS' "$T2014/tn31.vtk"; then
+if [ "$(grep -c '^VECTORS coord' "$T2014/vtk_coord1_030.vtk" 2>/dev/null)" = "1" ] && \
+   [ "$(grep -c '^VECTORS coord' "$T2014/vtk_coord1_031.vtk" 2>/dev/null)" = "0" ] && \
+   grep -q '^POINTS' "$T2014/vtk_coord1_031.vtk" && grep -q '^CELLS' "$T2014/vtk_coord1_031.vtk"; then
   check_ok "vtk_coord (tn30 with the coord field by default; tn31 -no without it, POINTS kept)"
 else
   check_fail "vtk_coord" "the coord field does not separate -yes/-no"
@@ -866,13 +865,13 @@ fi
 # vtk_dofcalc1: sin filtro -> los 2 campos post; -none -> ninguno (los
 # primarios intactos: VECTORS materi_velocity); filtro -materi_strain_total
 # -> solo el campo ept (materi_stress_mises ausente)
-if grep -q "materi_strain_total_average" "$T2014/tn32.vtk" 2>/dev/null && \
-   grep -q "materi_stress_mises" "$T2014/tn32.vtk" && \
-   ! grep -q "materi_strain_total_average" "$T2014/tn33.vtk" && \
-   ! grep -q "materi_stress_mises" "$T2014/tn33.vtk" && \
-   grep -q "materi_velocity" "$T2014/tn33.vtk" && \
-   grep -q "materi_strain_total_average" "$T2014/tn34.vtk" && \
-   ! grep -q "materi_stress_mises" "$T2014/tn34.vtk"; then
+if grep -q "materi_strain_total_average" "$T2014/vtk_dofcalc1_032.vtk" 2>/dev/null && \
+   grep -q "materi_stress_mises" "$T2014/vtk_dofcalc1_032.vtk" && \
+   ! grep -q "materi_strain_total_average" "$T2014/vtk_dofcalc1_033.vtk" && \
+   ! grep -q "materi_stress_mises" "$T2014/vtk_dofcalc1_033.vtk" && \
+   grep -q "materi_velocity" "$T2014/vtk_dofcalc1_033.vtk" && \
+   grep -q "materi_strain_total_average" "$T2014/vtk_dofcalc1_034.vtk" && \
+   ! grep -q "materi_stress_mises" "$T2014/vtk_dofcalc1_034.vtk"; then
   check_ok "vtk_dof_calcul (sin filtro ambos campos post; -none ninguno; filtro solo ept; primarios intactos)"
 else
   check_fail "vtk_dof_calcul" "el filtro de campos post no discrimina"
@@ -880,9 +879,9 @@ fi
 
 # vtk_empty1: default -> 2 celdas (elemento vacio incluido); -no -> 1
 # celda (el elemento vacio por densidad 0 se excluye de CELLS/CELL_TYPES)
-C35=$(awk '/^CELLS /{print $2; exit}' "$T2014/tn35.vtk" 2>/dev/null)
-C36=$(awk '/^CELLS /{print $2; exit}' "$T2014/tn36.vtk" 2>/dev/null)
-T36=$(awk '/^CELL_TYPES /{print $2; exit}' "$T2014/tn36.vtk" 2>/dev/null)
+C35=$(awk '/^CELLS /{print $2; exit}' "$T2014/vtk_empty1_035.vtk" 2>/dev/null)
+C36=$(awk '/^CELLS /{print $2; exit}' "$T2014/vtk_empty1_036.vtk" 2>/dev/null)
+T36=$(awk '/^CELL_TYPES /{print $2; exit}' "$T2014/vtk_empty1_036.vtk" 2>/dev/null)
 if [ "$C35" = "2" ] && [ "$C36" = "1" ] && [ "$T36" = "1" ]; then
   check_ok "vtk_empty (tn35 $C35 celdas incluye el vacio; tn36 -no $C36 celda)"
 else
@@ -892,8 +891,8 @@ fi
 # vtk_nodmeth1: -node -> coordenadas almacenadas (y del nodo 4 = 1.0);
 # -node_deformed_mesh -> deformadas (y ~ 1 + disy = 0.998, disy=-0.002
 # con vely=-0.01 durante 0.2)
-Y40=$(awk '/^POINTS /{f=1;next} f&&/^CELLS /{exit} f&&NF{n++; if(n==4){print $2; exit}}' "$T2014/tn40.vtk" 2>/dev/null)
-Y41=$(awk '/^POINTS /{f=1;next} f&&/^CELLS /{exit} f&&NF{n++; if(n==4){print $2; exit}}' "$T2014/tn41.vtk" 2>/dev/null)
+Y40=$(awk '/^POINTS /{f=1;next} f&&/^CELLS /{exit} f&&NF{n++; if(n==4){print $2; exit}}' "$T2014/vtk_nodmeth1_040.vtk" 2>/dev/null)
+Y41=$(awk '/^POINTS /{f=1;next} f&&/^CELLS /{exit} f&&NF{n++; if(n==4){print $2; exit}}' "$T2014/vtk_nodmeth1_041.vtk" 2>/dev/null)
 if awk -v a="$Y40" -v b="$Y41" \
    'BEGIN{ d1=a-1.0; d2=(b-a)+0.002; exit !(d1<1.e-3 && d1>-1.e-3 && d2<1.e-3 && d2>-1.e-3) }'; then
   check_ok "vtk_node_method (tn40 y=$Y40 almacenada vs tn41 y=$Y41 deformada)"
@@ -904,14 +903,14 @@ fi
 # vtk_other1: default -> boundary_condition (nodo 1 = 1.0 por bounda_unknown,
 # nodo 4 = 0.0 por bounda_force que NO es condicion de contorno) +
 # mesh_deformation; -no -> ninguno de los dos campos
-BC=$(awk '/^SCALARS boundary_condition/{f=1;next} f&&/^$/{exit} f&&/^LOOKUP_TABLE/{next} f' "$T2014/tn42.vtk" 2>/dev/null)
+BC=$(awk '/^SCALARS boundary_condition/{f=1;next} f&&/^$/{exit} f&&/^LOOKUP_TABLE/{next} f' "$T2014/vtk_other1_042.vtk" 2>/dev/null)
 B1=$(echo "$BC" | awk 'NR==1{print $1}')
 B4=$(echo "$BC" | awk 'NR==4{print $1}')
-if grep -q "boundary_condition" "$T2014/tn42.vtk" 2>/dev/null && \
-   grep -q "mesh_deformation" "$T2014/tn42.vtk" && \
+if grep -q "boundary_condition" "$T2014/vtk_other1_042.vtk" 2>/dev/null && \
+   grep -q "mesh_deformation" "$T2014/vtk_other1_042.vtk" && \
    [ "$B1" = "1.0" ] && [ "$B4" = "0.0" ] && \
-   ! grep -q "boundary_condition" "$T2014/tn43.vtk" && \
-   ! grep -q "mesh_deformation" "$T2014/tn43.vtk"; then
+   ! grep -q "boundary_condition" "$T2014/vtk_other1_043.vtk" && \
+   ! grep -q "mesh_deformation" "$T2014/vtk_other1_043.vtk"; then
   check_ok "vtk_other (tn42 boundary_condition $B1/$B4 + mesh_deformation; tn43 -no sin campos)"
 else
   check_fail "vtk_other" "los campos other no discriminan -yes/-no (B1=$B1 B4=$B4)"
@@ -2421,28 +2420,52 @@ pv_case print_calculation_default1 'no vtk / plt / msh file at the end by defaul
   '! ls *.vtk *.plt *.msh >/dev/null 2>&1'
 pv_case print_vtk_calculation1 'print_vtk_calculation1.vtk with 4 points, z 0.0, and element_group' \
   'grep -q "^POINTS 4 double" print_vtk_calculation1.vtk && grep -q "^SCALARS element_group int" print_vtk_calculation1.vtk && [ "$(grep -A4 '\''^POINTS'\'' print_vtk_calculation1.vtk | sed 1d | awk '\''{print $3}'\'' | sort -u)" = 0.0 ]'
-pv_case print_tecplot_calculation1 'one zone at t=0.5 in tecplot.plt' \
-  '[ "$(grep -c '\''^ZONE'\'' tecplot.plt)" = 1 ] && grep -q '\''^ZONE T="t=0.5"'\'' tecplot.plt'
+pv_case print_tecplot_calculation1 'one zone at t=0.5 in $t.plt' \
+  '[ "$(grep -c '\''^ZONE'\'' $t.plt)" = 1 ] && grep -q '\''^ZONE T="t=0.5"'\'' $t.plt'
 pv_case print_tecplot_calculation2 'three zones, the last at t=0.5' \
-  '[ "$(grep -c '\''^ZONE'\'' tecplot.plt)" = 3 ] && [ "$(grep '\''^ZONE'\'' tecplot.plt | tail -1 | cut -d'\''"'\'' -f2)" = "t=0.5" ]'
+  '[ "$(grep -c '\''^ZONE'\'' $t.plt)" = 3 ] && [ "$(grep '\''^ZONE'\'' $t.plt | tail -1 | cut -d'\''"'\'' -f2)" = "t=0.5" ]'
 pv_case print_gmsh_calculation1 'three node_materi_velocity_0 sets, the last at t=0.5' \
   '[ "$(grep -c '\''"node_materi_velocity_0"'\'' print_gmsh_calculation1.msh)" = 3 ] && [ "$(grep -A2 '\''"node_materi_velocity_0"'\'' print_gmsh_calculation1.msh | sed -n '\''$p'\'')" = 0.5 ]'
 pv_case print_gmsh_calculation2 'final state not repeated, five sets' \
   '[ "$(grep -c '\''"node_materi_velocity_0"'\'' print_gmsh_calculation2.msh)" = 5 ]'
 pv_case print_vtk_group1 'CELL_DATA element_group 2' \
-  '[ "$(grep -A3 '\''^SCALARS element_group int'\'' tn0.vtk | sed -n 3p)" = 2 ] && grep -q "^CELL_DATA 1" tn0.vtk'
+  '[ "$(grep -A3 '\''^SCALARS element_group int'\'' $t.vtk | sed -n 3p)" = 2 ] && grep -q "^CELL_DATA 1" $t.vtk'
 pv_case print_vtk_group2 'no element_group cell field' \
-  'grep -q "^POINTS 4" tn0.vtk && ! grep -q "element_group\|CELL_DATA" tn0.vtk'
+  'grep -q "^POINTS 4" $t.vtk && ! grep -q "element_group\|CELL_DATA" $t.vtk'
 pv_case print_vtk_coord1 'global -no drops only the coord field' \
-  'grep -q "^POINTS 4 double" tn0.vtk && grep -q "^CELLS 1 5" tn0.vtk && ! grep -q "^VECTORS coord" tn0.vtk'
+  'grep -q "^POINTS 4 double" $t.vtk && grep -q "^CELLS 1 5" $t.vtk && ! grep -q "^VECTORS coord" $t.vtk'
 pv_case print_vtk_coord2 'control -yes overrules the global -no, coord node 4 = 1 1 0' \
-  'grep -q "^POINTS 4 double" tn0.vtk && [ "$(grep -A4 "^VECTORS coord double" tn0.vtk | sed -n 5p | LC_ALL=C awk '\''{print $1, $2, $3}'\'')" = "1 1 0.0" ]'
+  'grep -q "^POINTS 4 double" $t.vtk && [ "$(grep -A4 "^VECTORS coord double" $t.vtk | sed -n 5p | LC_ALL=C awk '\''{print $1, $2, $3}'\'')" = "1 1 0.0" ]'
 pv_case print_vtk_node_type1 'deformed POINTS, node 2 x 0.9987142857' \
-  '[ "$(grep -A2 '\''^POINTS'\'' tn0.vtk | sed -n 3p | LC_ALL=C awk '\''{printf "%.10f", $1}'\'')" = 0.9987142857 ]'
+  '[ "$(grep -A2 '\''^POINTS'\'' $t.vtk | sed -n 3p | LC_ALL=C awk '\''{printf "%.10f", $1}'\'')" = 0.9987142857 ]'
 pv_case print_vtk_node_method1 'older name stored as print_vtk_node_type, node 2 x 0.9987142857' \
-  '[ "$(grep -A2 '\''^POINTS'\'' tn0.vtk | sed -n 3p | LC_ALL=C awk '\''{printf "%.10f", $1}'\'')" = 0.9987142857 ] && grep -q "^print_vtk_node_type  *-node_deformed_mesh" print_vtk_node_method1.dbs'
+  '[ "$(grep -A2 '\''^POINTS'\'' $t.vtk | sed -n 3p | LC_ALL=C awk '\''{printf "%.10f", $1}'\'')" = 0.9987142857 ] && grep -q "^print_vtk_node_type  *-node_deformed_mesh" print_vtk_node_method1.dbs'
 pv_case print_vtk_node_type2 'control -node overrules, node 2 x 1' \
-  '[ "$(grep -A2 '\''^POINTS'\'' tn0.vtk | sed -n 3p | LC_ALL=C awk '\''{print $1}'\'')" = 1 ]'
+  '[ "$(grep -A2 '\''^POINTS'\'' $t.vtk | sed -n 3p | LC_ALL=C awk '\''{print $1}'\'')" = 1 ]'
+# C99 (owner 2026-11-02, = Professional 02-08-2026): vtk / tecplot names
+pv_case control_print_vtk_names1 'two -yes indices write only <base>.vtk' \
+  '[ "$(ls *.vtk)" = "$t.vtk" ]'
+pv_case control_print_vtk_separate_index1 '<base>_000.vtk and <base>_012.vtk only' \
+  '[ "$(ls *.vtk | tr "\n" " ")" = "${t}_000.vtk ${t}_012.vtk " ]'
+pv_case control_print_vtk_separate_sequential1 'five files <base>_0000.vtk .. _0004.vtk' \
+  '[ "$(ls *.vtk | tr "\n" " ")" = "${t}_0000.vtk ${t}_0001.vtk ${t}_0002.vtk ${t}_0003.vtk ${t}_0004.vtk " ]'
+pv_case control_print_tecplot_separate_index1 '_0000.plt t=0.2 and _0012.plt t=0.5, one zone and its own mesh each' \
+  '[ "$(ls *.plt | tr "\n" " ")" = "${t}_0000.plt ${t}_0012.plt " ] && [ "$(grep "^ZONE" ${t}_0000.plt)" = "ZONE T=\"t=0.2\", F=FEPOINT, N=4, E=1, ET=QUADRILATERAL" ] && [ "$(grep -c "^ZONE" ${t}_0012.plt)" = 1 ] && grep -q "^ZONE T=\"t=0.5\"" ${t}_0012.plt && ! grep -q FECONNECT ${t}_0012.plt && grep -q "^TITLE" ${t}_0012.plt'
+pv_case control_print_tecplot_separate_sequential1 'five files, _0004.plt at t=0.5 with its own mesh' \
+  '[ "$(ls *.plt | wc -l)" = 5 ] && grep -q "^ZONE T=\"t=0.1\"" ${t}_0000.plt && grep -q "^ZONE T=\"t=0.5\"" ${t}_0004.plt && ! grep -q FECONNECT ${t}_0004.plt'
+# control_print_tecplot_names1: a stale <base>.plt from an earlier run is
+# emptied by the first print (= Professional: a second run keeps 5 zones)
+t=control_print_tecplot_names1; rc=0
+mkdir -p "$PVDIR/$t" && cp "$T2026/$t.dat" "$PVDIR/$t/" && echo "STALE" > "$PVDIR/$t/$t.plt"
+( cd "$PVDIR/$t" && ulimit -v "$TN_MEMLIMIT_KB" && \
+  timeout 60 env MESSAGE=-no "$REPO_DIR/build/$TN_BIN" "$t.dat" > "$t.out" 2>&1 ); rc=$?
+if [ "$rc" = "0" ] && [ "$(ls "$PVDIR/$t"/*.plt | wc -l)" = 1 ] && \
+   ! grep -q STALE "$PVDIR/$t/$t.plt" && [ "$(grep -c '^ZONE' "$PVDIR/$t/$t.plt")" = 5 ] && \
+   [ "$(grep -c '^TITLE' "$PVDIR/$t/$t.plt")" = 1 ]; then
+  check_ok "$t (stale <base>.plt emptied, five zones, one title)"
+else
+  check_fail "$t" "rc=$rc or the <base>.plt does not hold exactly the five zones of this run"
+fi
 pv_case print_gmsh_dummy1 'no dummy point elements' \
   '[ "$(grep -c '\'' 15 2 1234 '\'' print_gmsh_dummy1.msh)" = 0 ] && [ "$(grep -A1 '\''^\$Elements'\'' print_gmsh_dummy1.msh | sed -n 2p)" = 1 ]'
 pv_case print_gmsh_dummy2 'control -yes overrules, four dummies' \

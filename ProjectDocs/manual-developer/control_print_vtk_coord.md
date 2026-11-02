@@ -32,8 +32,8 @@
 
 - The Professional writes the field as `float`, the GNU as `double` like
   its other fields.
-- Verification: test-2014 `vtk_coord1` (`tn30.vtk` with the field,
-  `tn31.vtk` `-no` without it, `POINTS` kept in both); test-2026
+- Verification: test-2014 `vtk_coord1` (`vtk_coord1_030.vtk` with the field,
+  `vtk_coord1_031.vtk` `-no` without it, `POINTS` kept in both); test-2026
   `print_vtk_coord1/2` (global `-no`, control `-yes` overrule, node 4
   coord `1 1 0.0`).
 

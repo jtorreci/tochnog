@@ -12,8 +12,8 @@ bounda_time  2  0 -0.01 100 -0.01
 bounda_unknown  0  -ra 1 2 5 6 -ra -vely
 bounda_unknown  1  -ra 1 2 5 6 -ra -velx
 bounda_unknown  2  -ra 3 4 7 8 -ra -vely
-control_print_vtk  35  -yes
-control_print_vtk  36  -yes
+control_print_vtk  35  -separate_index
+control_print_vtk  36  -separate_index
 control_print_vtk_empty  36  -no
 control_timestep  35  0.05 0.1
 control_timestep  36  0.05 0.1

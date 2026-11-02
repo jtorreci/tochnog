@@ -43,9 +43,9 @@
 - `bounda_force` does NOT set `node_bounded` (only `bounda_unknown`
   does, bounda.cc), so force-loaded nodes report `0.0` — this is the
   value discriminator of the test.
-- Verification: `vtk_other1` test — default `tn42.vtk` has
+- Verification: `vtk_other1` test — default `vtk_other1_042.vtk` has
   `boundary_condition` (values 1.0/1.0/0.0/0.0: nodes 1,2 fixed,
-  nodes 3,4 force-loaded) and `mesh_deformation`; `-no` `tn43.vtk` has
+  nodes 3,4 force-loaded) and `mesh_deformation`; `-no` `vtk_other1_043.vtk` has
   neither.
 
 ## Pendiente
