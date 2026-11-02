@@ -41,8 +41,12 @@ element_intpnt_dof  1  0.000446581987384 -0.000186075828077 0.000446581987384 -0
   displacement in the GNU; the Professional writes 0 there (DIVERGENCES
   ELEMENT-DOF-DISPLACEMENT, class B).
 - Springs, contact springs, trusses and beams get no record (as the
-  Professional). Interface and empty elements keep the zero record of the
-  initialisation with the maximal length (`npointmax` points, default 27).
+  Professional), from the end of the first time step on (a run without a
+  time step keeps their zero record). Interface elements keep a zero
+  record with the point count of their continuum rule (e.g. 8 points for
+  a hex8 interface, whose `element_intpnt_npoint` is 4); with
+  `global_element_dof_apply -no` the zero record stays and no
+  `element_dof` is written (not compared with the Professional).
 - Format change of the GNU .dbs (F5 T2 V5, 2026-11-02): until then the GNU
   wrote this storage under the name `element_dof`, padded to 27 points.
   A .dbs of an older build fed back as input therefore gives the old

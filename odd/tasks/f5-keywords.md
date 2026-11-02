@@ -302,4 +302,11 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   Residuals: interface/empty elements keep the 27-point zero element_intpnt_dof; an old .dbs fed back as input
   loses the IP state (element_dof_initialised 1, documented). Pre-existing nonloc.cc PUT outside
   if(ielem_nonloc) noted. Risk items 1 and 3 -> independent verifier next.
+- 2026-11-03 V5 independent verifier (fresh mktemp copies of bb69dd0 / 6467dea, ASan on 16 inputs): PASS, no
+  blockers. Probes = Professional within 3e-12 (dis slots excluded); 651 corpus inputs: rc identical, all other
+  .dbs records identical (bicg_csr_threads1 1e-10 thread nondeterminism, reproduced on the baseline); 13180 old
+  element_dof = new element_intpnt_dof; continuation from a new .dbs = continuous run. Advisories: old-format
+  .dbs input loses the IP state (documented residual); interface zero record length = continuum rule (doc
+  corrected); structural zero records removed only at a step end; -no keeps the zero record; pre-existing
+  nonloc.cc PUT outside if(ielem_nonloc).
 
