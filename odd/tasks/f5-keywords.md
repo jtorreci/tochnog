@@ -143,3 +143,9 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   iterations). build_safe 412 OK / 0 FALLO. U4 differential on omen (17 inputs with automatic
   stepping, mt vs u4): identical so far (10/17 done). Next: U6 (mrange, mstring, groundflow_apply,
   linear_calculation_apply, control_input; Pro examples tutorial_4, mesh_gid_* + 10.dat).
+- 2026-11-02 U4 differential done (omen u4_runs, 17 automatic-stepping inputs, mt vs 9d0da65): 14
+  identical; truss7 (index ends at t 0.069 after the step collapses, target still met), taylor3
+  (differs, fails before and after), vajont_slope_fs (minimal-step stop before, > 900 s now) change
+  with the 2 8 4 default; no Professional reference for them (parse / timeout). Recorded in C94.
+  U6 delegated to one bounded writer (context backstop).
+

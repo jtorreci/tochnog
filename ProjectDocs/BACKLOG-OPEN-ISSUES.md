@@ -2819,6 +2819,17 @@ Original report:
   by 10. 166 Professional steps against 239 GNU steps to t = 1.
   `control_timestep_adjust_minimum_iterations -yes` (Professional default)
   has no specified rule; the GNU keeps the minimum.
+- **Corpus effect of the 2 8 4 default** (omen `u4_runs`, the 17 inputs
+  with automatic stepping, before / after `9d0da65`): 14 identical; sfnet
+  `truss7` now reaches the maximum, the step is divided by 10 until it is
+  below the minimum and the index ends silently at t = 0.069 instead of 1
+  (static load: the target disy -1 is still met, rc 0); sfnet `taylor3`
+  differs (node_dof up to 1.3 relative; its target fails before and after);
+  Professional other `vajont_slope_fs` stopped before at the minimal time
+  step (t = 0.16, rc 1) and now runs past 900 s. The Professional has no
+  reference for the three (parse error or timeout). A step-size collapse
+  ends the index without a message unless
+  `control_timestep_iterations_automatic_stop -yes`.
 - **Severity**: LOW (results converge; the step sequence and cost
   differ). **Effort**: medium (measure the Professional law on several
   iteration patterns).
