@@ -79,9 +79,9 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   - [ ] V4 element diagnostics: element_intpnt_{h,iso_coord,method,npoint}, element_truss_strain(_temperature),
     element_interface_intpnt_{direction,gap_status}, node_bounded_index, element_beam_direction_z,
     element_print_group_data_values.
-  - [ ] V4d beam owner decisions (2026-11-02): native 3D beam for every 3D beam (C37), default
+  - [x] V4d beam owner decisions (2026-11-02): native 3D beam for every 3D beam (C37), default
     group_beam_memory -total_linear (BEAM-MEMORY-DEFAULT), element_beam_direction 9 values
-    (BEAM-DIRECTION-LENGTH). Route: inline (no writer reason).
+    (BEAM-DIRECTION-LENGTH). Route: inline (no writer reason). Commit `f99793a`.
   - [ ] V5 dof records/switches: dof_element_dof, dof_limit, global_node_dof_empty,
     global_element_dof_from_node_dof, element_intpnt_dof (decision: record vs GNU element storage).
   - [ ] V6 element_dof_initial_specific_number/value.
@@ -263,3 +263,11 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   -total_linear with -updated documented; element_beam_direction = 9 values (local x, y, z rows, Pro layout
   probe dfltx/obl). 2D: Pro 2D beam singular on the probes, 9 values written by analogy (z = global z).
   TET4-MAX-ORDER answer still pending.
+- 2026-11-02 V4d committed `f99793a` (inline): beam_3d() sends every 3D beam to beam_local() (record 0 = default
+  local z; group_beam_plane normal if given, error if the beam is along it), memory default -total_linear,
+  ELEMENT_BEAM_DIRECTION 9 values (beam_local R rows, beam_2d c s 0 -s c 0 0 0 1). RED on 3ba1901, GREEN;
+  build_safe 634 OK / 0 FALLO, audit 0. trubea2/trubea3 = Professional (C37 resolved in BACKLOG). A/B: inputs
+  without group_beam_memory move to the exact classical answer; explicit memory unchanged. DIVERGENCES: C37,
+  BEAM-DIRECTION-LENGTH removed (= Pro), BEAM-MEMORY-DEFAULT -> class C BEAM-MEMORY-UPDATED, new class C
+  GROUP-BEAM-PLANE. Risk item 3 (shared beam path, existing results change by owner decision): covered by
+  the end-of-T2 independent verifier. TET4-MAX-ORDER still pending.
