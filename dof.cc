@@ -161,7 +161,10 @@ void parallel_new_dof_diagonal( void )
         for ( ipuknwn=0; ipuknwn<npuknwn; ipuknwn++ ) {
           iuknwn = ipuknwn*nder;
           if ( !node_bounded[ipuknwn] && node_lhside[ipuknwn]!=0. ) {
-            if ( options_solver==-DIAGONAL || dof_principal[iuknwn]<0 ) {
+            // global_element_dof_apply -only: the non-principal dofs stay in
+            // the integration points, the nodes are not updated
+            if ( element_dof_only && dof_principal[iuknwn]<0 ) ;
+            else if ( options_solver==-DIAGONAL || dof_principal[iuknwn]<0 ) {
               tmp = node_rhside[ipuknwn] / node_lhside[ipuknwn];
               if ( dof_principal[iuknwn]>=0 ) tmp *= options_relaxation[iprinc];
               // Nodal stress recovery (2026-09-15, Professional

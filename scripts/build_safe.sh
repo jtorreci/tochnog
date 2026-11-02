@@ -1651,6 +1651,11 @@ run_ok "$T2026" control_reset_value_logarithmic_first1
 expected_error_ok "$T2026" control_reset_value_logarithmic_first_error1
 run_ok "$T2026" control_reset_value_exponent1
 expected_error_ok "$T2026" control_reset_value_exponent_error1
+# F5 W1 U2: global_element_dof_apply (manual 6.553) -yes / -no
+# (= Professional 02-08-2026) and -only (nodes not updated; manual only).
+run_ok "$T2026" global_element_dof_apply1
+run_ok "$T2026" global_element_dof_apply2
+run_ok "$T2026" global_element_dof_apply3
 # F5 W1 U2: message / print_data_name / control_check_data / control_zip
 # (Professional 02-08-2026 probes). Isolated runs: control_zip gzips every
 # *.dbs of its working directory.

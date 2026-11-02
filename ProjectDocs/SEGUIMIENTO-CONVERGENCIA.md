@@ -1369,9 +1369,9 @@ geometría-elemento; feature de malla grande, fuera de alcance de sprint
 - [x] `geometry_triangle` — presente en el GNU
 - [ ] `geometry_triangle_eps_iso` — PENDIENTE
 
-### global (0/4)
+### global (1/4)
 
-- [ ] `global_element_dof_apply` — PENDIENTE
+- [x] `global_element_dof_apply` — implementada (F5 W1 U2, 2026-11-02; alias de `options_element_dof` + `-only`)
 - [ ] `global_element_dof_from_node_dof` — PENDIENTE
 - [ ] `global_node_dof_empty` — PENDIENTE
 - [ ] `global_post_point_node_type` — PENDIENTE

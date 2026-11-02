@@ -280,6 +280,15 @@ void top( void )
     // initialize element_dof, if not specified
   db( OPTIONS_ELEMENT_DOF, 0, &options_element_dof, ddum, ldum, 
     VERSION_NORMAL, GET_IF_EXISTS );
+  // global_element_dof_apply -only (manual Professional 6.553): the
+  // elements keep their integration-point dofs as with -yes, but the
+  // non-principal dofs (strains, stresses, history variables) are not
+  // added to the global nodes. (The Professional 02-08-2026 stops with
+  // "Program error detected for data item: element_intpnt_dof".)
+  if ( options_element_dof==-ONLY ) {
+    element_dof_only = 1;
+    options_element_dof = -YES;
+  }
 
   db( CHECK_USED, 0, &check_used, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
   db( CHECK_TARGET, 0, &check_target, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
@@ -781,7 +790,7 @@ void top( void )
                       // block. Only the stress slots are assigned: re-running
                       // the whole function would double the += accumulation
                       // of the other non-principal dofs.
-                      if ( !state_pass_done && nuknwn>0 && stress_recovery_absolute && materi_stress &&
+                      if ( !state_pass_done && !element_dof_only && nuknwn>0 && stress_recovery_absolute && materi_stress &&
                            stres_indx>=0 && !find_local_softvar ) {
                         long int max_node_ps=0;
                         db_max_index( NODE, max_node_ps, VERSION_NORMAL, GET );

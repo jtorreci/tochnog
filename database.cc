@@ -5633,6 +5633,7 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   // the C80.1 -both value was removed, input.cc rejects it)
   strcpy(name[VOLUMETRIC],"volumetric");
   strcpy(name[LAMBDA],"lambda");
+  strcpy(name[ONLY],"only");
 
   strcpy(name[LU],"lu");
 
@@ -9227,6 +9228,10 @@ long int db_number( const char str[] )
       // as the GNU geometry_bounda_factor (read by geometry()): same
       // index as the geometry entity, 2 values = linear, 3 = quadratic.
       return GEOMETRY_BOUNDA_FACTOR;
+    else if ( !strcmp( str, "global_element_dof_apply" ) )
+      // Professional name (manual 6.553) of the GNU options_element_dof:
+      // -yes (default) / -no, and -only (element_dof_only, top.cc).
+      return OPTIONS_ELEMENT_DOF;
     else if ( !strcmp( str, "control_reset_value_logarithmic_first" ) )
       // Professional 02-08-2026 name (manual 6.362) of the GNU
       // control_reset_value_logarithmic.

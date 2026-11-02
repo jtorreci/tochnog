@@ -1684,6 +1684,7 @@ enum {
   // tochnog-mod.h stay in sync).
   VOLUMETRIC,
   LAMBDA,
+  ONLY,
   LAST_DUMMY }; // keep LAST_DUMMY always the last one
 
 #define MDAT LAST_DUMMY+DATA_ITEM_SIZE  // reserve space for unknowns
@@ -1849,6 +1850,7 @@ extern char swit_routine_stack[MSTACK][MCHAR]; // routines called
 
   // added for options_element_dof
 extern long int options_element_dof; 	   //in initia.cc
+extern long int element_dof_only; 	   //in initia.cc
 extern double options_nonlocal_softvar;  //in initia.cc
  extern long int check_used;              //in initia.cc
  extern long int check_target;            //in initia.cc

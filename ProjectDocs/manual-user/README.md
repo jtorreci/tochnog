@@ -29,6 +29,7 @@ page lists its own in "Differences with the Professional version".
 - [check_memory_usage](check_memory_usage.md) — record peak memory usage result.
 - [check_data](check_data.md) — verify the database integrity (missing required items).
 - [control_check_data](control_check_data.md) — `control_check_data index switch` (6.111): the check_data check at the start of a control index (F5).
+- [global_element_dof_apply](global_element_dof_apply.md) — `global_element_dof_apply switch` (6.553): -yes / -no / -only (integration-point dofs not added to the nodes); alias of options_element_dof (F5).
 - [check_error](check_error.md) — suppress "Error" messages.
 - [check_warning](check_warning.md) — suppress "Warning" messages.
 
