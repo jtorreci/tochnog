@@ -1,0 +1,34 @@
+(F5 T2 V5b: dof_limit (manual Professional 6.411) on a row of 3 quad4,
+ condif_temperature only, ends prescribed 0 and 100, dof_limit 10 40.
+ Expected node_dof temperatures (scripts/build_safe.sh): 10 33.333 40 40 per
+ row, every node clamped, prescribed nodes included; the free node 2/6 keeps
+ the unclamped solution 33.333. Source: Professional 02-08-2026 probe f5/v5b
+ b_lim (same input; without dof_limit 0 33.333 66.667 100).)
+echo -no
+number_of_space_dimensions 2
+
+condif_temperature
+end_initia
+node 1 0 0
+node 2 1 0
+node 3 2 0
+node 4 3 0
+node 5 0 1
+node 6 1 1
+node 7 2 1
+node 8 3 1
+element 1 -quad4 1 2 5 6
+element 2 -quad4 2 3 6 7
+element 3 -quad4 3 4 7 8
+group_type 0  -condif
+
+group_condif_density 0 1.
+group_condif_capacity 0 1.
+group_condif_conductivity 0 1.
+bounda_dof 0 -ra 1 5 -ra -temp
+bounda_time 0 0.
+bounda_dof 1 -ra 4 8 -ra -temp
+bounda_time 1 100.
+dof_limit 10. 40.
+control_timestep 0 1. 1.
+end_data

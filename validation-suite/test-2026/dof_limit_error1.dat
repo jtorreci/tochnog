@@ -1,0 +1,33 @@
+(F5 T2 V5b: dof_limit needs two values per dof (here 1 dof, temp): a single
+ value is an input error. The Professional 02-08-2026 (probe f5/v5b
+ b_lim_short) stops with: Error in data part. Problem reading : dof_limit
+ EXPECTED_ERROR: Problem reading : dof_limit
+)
+echo -no
+number_of_space_dimensions 2
+
+condif_temperature
+end_initia
+node 1 0 0
+node 2 1 0
+node 3 2 0
+node 4 3 0
+node 5 0 1
+node 6 1 1
+node 7 2 1
+node 8 3 1
+element 1 -quad4 1 2 5 6
+element 2 -quad4 2 3 6 7
+element 3 -quad4 3 4 7 8
+group_type 0  -condif
+
+group_condif_density 0 1.
+group_condif_capacity 0 1.
+group_condif_conductivity 0 1.
+bounda_dof 0 -ra 1 5 -ra -temp
+bounda_time 0 0.
+bounda_dof 1 -ra 4 8 -ra -temp
+bounda_time 1 100.
+dof_limit 10.
+control_timestep 0 1. 1.
+end_data

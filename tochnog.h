@@ -1751,6 +1751,11 @@ enum {
   ELEMENT_INTERFACE_INTPNT_DIRECTION,
   ELEMENT_INTERFACE_INTPNT_GAP_STATUS,
   ELEMENT_INTPNT_DOF,
+  // F5 T2 V5b (manual Professional 6.409, 6.411, 6.552, 6.554)
+  DOF_ELEMENT_DOF,
+  DOF_LIMIT,
+  GLOBAL_NODE_DOF_EMPTY,
+  GLOBAL_ELEMENT_DOF_FROM_NODE_DOF,
   LAST_DUMMY }; // keep LAST_DUMMY always the last one
 
 #define MDAT LAST_DUMMY+DATA_ITEM_SIZE  // reserve space for unknowns
@@ -2321,6 +2326,8 @@ void      parallel_map_element( void );
 void      parallel_map_node( void );
 void      parallel_new_dof_before( void );
 void      parallel_new_dof_diagonal( void );
+void      dof_limit_apply( void );
+void      node_dof_empty_apply( void );
 void      parallel_post_point( void );
 void      parallel_post_node( void );
 void      parallel_solve_iterative_bicg_element( void );

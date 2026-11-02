@@ -329,13 +329,32 @@ void top( void )
     // is allocated in a parallel loop").
     db_highest_index( CONTROL_MATERI_PLASTI_HARDSOIL_GAMMAP_INITIAL,
       gp_initial_max, VERSION_NORMAL );
+    // global_element_dof_from_node_dof (manual Professional 6.554): an
+    // element without element_intpnt_dof record in the input starts its
+    // integration-point states from the node_dof records (-yes: the GNU
+    // element_dof_initialised 0 path of elem.cc) or from zero (-no: the
+    // record is marked initialised with the zero values below). The GNU
+    // default stays -yes (the historical behaviour); the manual and the
+    // Professional 02-08-2026 default is -no (probes f5/v5b d_*): open
+    // owner decision ELEMENT-DOF-FROM-NODE-DOF-DEFAULT.
+    long int element_dof_from_node_dof = -YES, intpnt_absent = 0;
+    db( GLOBAL_ELEMENT_DOF_FROM_NODE_DOF, 0, &element_dof_from_node_dof,
+      ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
     for ( ielem=0; ielem<=max_elem; ielem++ ) {
+      intpnt_absent = 0;
       if ( db_active_index( ELEMENT, ielem, VERSION_NORMAL ) && 
-           !db_active_index( ELEMENT_INTPNT_DOF, ielem, VERSION_NORMAL ) ) 
+           !db_active_index( ELEMENT_INTPNT_DOF, ielem, VERSION_NORMAL ) ) {
         db( ELEMENT_INTPNT_DOF, ielem, idum, dworkmnol, mnolnuknwn, VERSION_NORMAL, PUT );
+        intpnt_absent = 1;
+      }
       if ( db_active_index( ELEMENT, ielem, VERSION_NORMAL ) && 
-           !db_active_index( ELEMENT_DOF_INITIALISED, ielem, VERSION_NORMAL ) ) 
-        db( ELEMENT_DOF_INITIALISED, ielem, &zero, ddum, one, VERSION_NORMAL, PUT );
+           !db_active_index( ELEMENT_DOF_INITIALISED, ielem, VERSION_NORMAL ) ) {
+        if ( intpnt_absent && options_element_dof==-YES &&
+             element_dof_from_node_dof==-NO )
+          db( ELEMENT_DOF_INITIALISED, ielem, &one, ddum, one, VERSION_NORMAL, PUT );
+        else
+          db( ELEMENT_DOF_INITIALISED, ielem, &zero, ddum, one, VERSION_NORMAL, PUT );
+      }
       if ( db_active_index( ELEMENT, ielem, VERSION_NORMAL ) && 
            !db_active_index( NONLOCAL_ELEMENT_INFO, ielem, VERSION_NORMAL ) ) 
         db( NONLOCAL_ELEMENT_INFO, ielem, idum, dworknei, length_nei, VERSION_NORMAL, PUT );
@@ -926,6 +945,14 @@ void top( void )
                         }
                         delete[] save_lh_ps;
                         delete[] save_rh_ps;
+                      }
+                      // global_node_dof_empty (bounda.cc) and dof_limit
+                      // (dof.cc) on the final nodal values of the step
+                      // (after the hoisted stress sync, which assigns
+                      // stresses outside parallel_new_dof_diagonal)
+                      if ( nuknwn>0 ) {
+                        node_dof_empty_apply();
+                        dof_limit_apply();
                       }
                       }
 

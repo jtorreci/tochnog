@@ -1,0 +1,38 @@
+(F5 T2 V5b: global_node_dof_empty default -yes with an element that is not
+ alive (group 1 group_time 10 20, step 0..1) instead of group_type -empty.
+ Expected node_dof 3 and 6: velocity 0, displacement = input 0.3 0.4,
+ stresses 0. Source: Professional 02-08-2026 probe f5/v5b c_tdef (same
+ input).)
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_displacement
+materi_stress
+end_initia
+node 1 0 0
+node 2 1 0
+node 3 2 0
+node 4 0 1
+node 5 1 1
+node 6 2 1
+element 1 -quad4 1 2 4 5
+element 2 -quad4 2 3 5 6
+element_group 2 1
+node_dof 2 0.1 0.2 0.3 0.4 5. 6. 7. 8. 9. 10.
+node_dof 3 0.1 0.2 0.3 0.4 5. 6. 7. 8. 9. 10.
+node_dof 6 0.1 0.2 0.3 0.4 5. 6. 7. 8. 9. 10.
+group_type 0 -materi
+group_materi_memory 0 -total_linear
+group_materi_elasti_young 0 1000.
+group_materi_elasti_poisson 0 0.3
+group_type 1 -materi
+group_materi_memory 1 -total_linear
+group_materi_elasti_young 1 1000.
+group_materi_elasti_poisson 1 0.3
+group_time 1 10. 20.
+bounda_dof 0 -ra 1 4 -ra -velx -vely
+bounda_dof 1 -ra 2 5 -ra -velx
+bounda_time 1 0.01
+
+control_timestep 0 1. 1.
+end_data

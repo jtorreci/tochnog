@@ -20,6 +20,43 @@
 
 #include "tochnog.h"
 
+// dof_limit (manual Professional 6.411): clamp the primary values of a
+// node to the allowed [lower, upper] range of each dof (two values per dof
+// in dof_label order). Measured on the Professional 02-08-2026 (probes
+// f5/v5b b_lim, b_m22, f_s1): the node_dof records of every node are
+// clamped, prescribed nodes and averaged dofs (stresses) included; a
+// clamped velocity also clamps the displacement increment; the
+// element_intpnt_dof records are not clamped.
+static void dof_limit_clamp( double node_dof_new[], double limit[] )
+{
+  long int ipuknwn=0, iuknwn=0;
+
+  for ( ipuknwn=0; ipuknwn<npuknwn; ipuknwn++ ) {
+    iuknwn = ipuknwn*nder;
+    if ( node_dof_new[iuknwn]<limit[2*ipuknwn] )
+      node_dof_new[iuknwn] = limit[2*ipuknwn];
+    if ( node_dof_new[iuknwn]>limit[2*ipuknwn+1] )
+      node_dof_new[iuknwn] = limit[2*ipuknwn+1];
+  }
+}
+
+// dof_limit on every node (serial): used after the nodal updates that do
+// not pass through parallel_new_dof_diagonal (top.cc, hoisted stress sync
+// and the end of the time step).
+void dof_limit_apply( void )
+{
+  long int inod=0, max_node=-1, ldum=0, idum[1];
+  double limit[2*MPUKNWN];
+
+  if ( !db( DOF_LIMIT, 0, idum, limit, ldum, VERSION_NORMAL, GET_IF_EXISTS ) )
+    return;
+  db_max_index( NODE, max_node, VERSION_NORMAL, GET );
+  for ( inod=0; inod<=max_node; inod++ ) {
+    if ( db_active_index( NODE, inod, VERSION_NORMAL ) )
+      dof_limit_clamp( db_dbl( NODE_DOF, inod, VERSION_NEW ), limit );
+  }
+}
+
 void parallel_new_dof_before( void )
 
 {
@@ -122,9 +159,11 @@ void parallel_new_dof_diagonal( void )
 {
   long int inod=0, max_node=0, ipuknwn=0, iuknwn=0, iprinc=0, iloop=0, nloop=0, 
     ithread=0, icontrol=0, idim=0, ind=0, options_solver=-MATRIX_ITERATIVE_BICG, 
-    ldum=0, idum[1], dof_principal[MUKNWN], *next_of_loop=NULL, *node_bounded=NULL;
+    ldum=0, idum[1], dof_principal[MUKNWN], *next_of_loop=NULL, *node_bounded=NULL,
+    use_dof_limit=0;
   double tmp=0., dtime=0., ddum[1], options_relaxation[MPRINC], *node_dof=NULL, 
-    *node_dof_new=NULL, *node_rhside=NULL, *node_lhside=NULL;
+    *node_dof_new=NULL, *node_rhside=NULL, *node_lhside=NULL,
+    dof_limit[2*MPUKNWN];
 
   db( ICONTROL, 0, &icontrol, ddum, ldum, VERSION_NORMAL, GET );
   db( DTIME, 0, idum, &dtime, ldum, VERSION_NEW, GET );
@@ -143,6 +182,8 @@ void parallel_new_dof_diagonal( void )
     ldum, VERSION_NORMAL, GET_IF_EXISTS );
   db( CONTROL_OPTIONS_RELAXATION, icontrol, idum, options_relaxation, 
     ldum, VERSION_NORMAL, GET_IF_EXISTS );
+  use_dof_limit = db( DOF_LIMIT, 0, idum, dof_limit, ldum,
+    VERSION_NORMAL, GET_IF_EXISTS );
 
   if ( max_node>=0 ) {
     next_of_loop = get_new_int(1+max_node);
@@ -189,6 +230,10 @@ void parallel_new_dof_diagonal( void )
           }
           if ( dof_principal[iuknwn]>=0 ) iprinc++;
         }
+        // dof_limit: clamp the solved and updated values first, so the
+        // integrated dofs below (displacement = old + v*dt, ...) follow
+        // the clamped velocity (Professional b_m22: disx = clamped velx*dt)
+        if ( use_dof_limit ) dof_limit_clamp( node_dof_new, dof_limit );
         if ( materi_damage ) {
           iuknwn = dam_indx;
           if ( node_dof_new[iuknwn]<0. ) node_dof_new[iuknwn] = 0.;
@@ -289,6 +334,8 @@ void parallel_new_dof_diagonal( void )
             iuknwn = vel_indx + idim * nder;
           }
         }
+        // dof_limit on the integrated dofs as well
+        if ( use_dof_limit ) dof_limit_clamp( node_dof_new, dof_limit );
       }
     }
     delete[] next_of_loop;

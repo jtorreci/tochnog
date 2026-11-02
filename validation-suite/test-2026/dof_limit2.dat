@@ -1,0 +1,41 @@
+(F5 T2 V5b: dof_limit with materi_velocity + materi_displacement +
+ materi_stress + condif_temperature: two values per dof in dof_label order
+ (velx vely disx disy 6 stresses temp = 22 values). Rigid prescribed
+ velocity 0.01 0.01, velx limited to 0.005, temp to 10..40. Expected
+ node_dof 1: velx 0.005, vely 0.01, disx 0.005 (the displacement follows the
+ clamped velocity), disy 0.01, stresses 0, temp 10. Source: Professional
+ 02-08-2026 probe f5/v5b b_m22 (same input).)
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_displacement
+materi_stress
+condif_temperature
+end_initia
+node 1 0 0
+node 2 1 0
+node 3 2 0
+node 4 3 0
+node 5 0 1
+node 6 1 1
+node 7 2 1
+node 8 3 1
+element 1 -quad4 1 2 5 6
+element 2 -quad4 2 3 6 7
+element 3 -quad4 3 4 7 8
+group_type 0 -materi -condif
+group_materi_memory 0 -total_linear
+group_materi_elasti_young 0 1000.
+group_materi_elasti_poisson 0 0.3
+bounda_dof 2 -ra 1 2 3 4 5 6 7 8 -ra -velx -vely
+bounda_time 2 0.01
+group_condif_density 0 1.
+group_condif_capacity 0 1.
+group_condif_conductivity 0 1.
+bounda_dof 0 -ra 1 5 -ra -temp
+bounda_time 0 0.
+bounda_dof 1 -ra 4 8 -ra -temp
+bounda_time 1 100.
+dof_limit -1. 0.005 -1e9 1e9 -1e9 1e9 -1e9 1e9 -1e9 1e9 -1e9 1e9 -1e9 1e9 -1e9 1e9 -1e9 1e9 -1e9 1e9 10. 40.
+control_timestep 0 1. 1.
+end_data

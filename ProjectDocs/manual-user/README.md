@@ -451,6 +451,10 @@ page lists its own in "Differences with the Professional version".
 - [element_interface_intpnt_direction](element_interface_intpnt_direction.md) — interface directions (normal, first and second tangential, 9 values) and gap status per integration point (6.430/6.431) (F5 T2 V4).
 - [element_intpnt_dof](element_intpnt_dof.md) — unknowns per element in the integration points, npoint*nuknwn values (6.437; the GNU integration-point storage, named element_dof before V5) (F5 T2 V5).
 - [element_dof](element_dof.md) — unknowns per element in the element nodes: node values for the principal dofs, per-element nodal recovery for the others (6.421, output only) (F5 T2 V5).
+- [dof_element_dof](dof_element_dof.md) — print-only -yes/-no per dof: calculated per element (integration points) or continuous (6.409) (F5 T2 V5b).
+- [dof_limit](dof_limit.md) — lower and upper allowed value per dof, node_dof clamped (6.411) (F5 T2 V5b).
+- [global_node_dof_empty](global_node_dof_empty.md) — `-yes` (default) zeroes the dofs of nodes only connected to empty elements, displacement kept (6.552) (F5 T2 V5b).
+- [global_element_dof_from_node_dof](global_element_dof_from_node_dof.md) — initialise element_intpnt_dof from the input node_dof (-yes, GNU default) or not (-no, manual default) (6.554) (F5 T2 V5b).
 - [print_database_calculation](print_database_calculation.md) — switch of the final .dbs output (6.972); consumed at exit_tn. large1 parses (RUNFAIL remains solver-bound, see SEGUIMIENTO).
 - [print_gid_calculation](print_database_calculation.md) — switch of the final GiD output (same gate).
 - [post_apply](post_apply.md) — `post_apply switch` (6.900) and `control_post_apply` (6.259): `-no` skips the post records (frozen values; global -no: never created); the skipped records are evaluated once more at the end of the run. Verified against the Professional 02-08-2026 (F5).

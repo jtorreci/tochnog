@@ -37,7 +37,28 @@
 // a dormant node. Nodes that belong to no element at all are NOT marked
 // (old behaviour kept; the Professional refuses such a model).
 // ---------------------------------------------------------------------------
-static long int *bounda_node_dormant( long int max_node, double time_total )
+//
+// empty_type (global_node_dof_empty, manual Professional 6.552): count the
+// elements of a group whose group_type has only -empty / -none types and
+// the group_time elements that are not alive as inactive (the Professional
+// 02-08-2026 treats both alike, probes f5/v5b c_*), but NOT the groups
+// excluded by (control_)mesh_element_group_apply; NULL is then returned
+// only when the mesh has no element.
+// ---------------------------------------------------------------------------
+static long int bounda_group_type_empty( long int element_group )
+{
+  long int itype=0, len_type=0, types[DATA_ITEM_SIZE];
+  double ddum[1];
+
+  if ( !db( GROUP_TYPE, element_group, types, ddum, len_type,
+      VERSION_NORMAL, GET_IF_EXISTS ) || len_type<=0 ) return 0;
+  for ( itype=0; itype<len_type; itype++ )
+    if ( types[itype]!=-EMPTY && types[itype]!=-NONE ) return 0;
+  return 1;
+}
+
+static long int *bounda_node_dormant( long int max_node, double time_total,
+  long int empty_type=0 )
 {
   long int max_group_time=-1, max_element=-1, element=0, element_group=0,
     length=0, inol=0, inod=0, alive=0, ldum=0, *el=NULL, *has_element=NULL,
@@ -45,7 +66,8 @@ static long int *bounda_node_dormant( long int max_node, double time_total )
   double ddum[1];
 
   db_max_index( GROUP_TIME, max_group_time, VERSION_NORMAL, GET );
-  if ( max_group_time<0 && !element_group_apply_active() ) return NULL;
+  if ( !empty_type && max_group_time<0 && !element_group_apply_active() )
+    return NULL;
   db_max_index( ELEMENT, max_element, VERSION_NORMAL, GET );
   if ( max_element<0 ) return NULL;
 
@@ -58,8 +80,14 @@ static long int *bounda_node_dormant( long int max_node, double time_total )
     element_group = 0;
     db( ELEMENT_GROUP, element, &element_group, ddum, ldum,
       VERSION_NORMAL, GET_IF_EXISTS );
-    alive = group_time_alive( element_group, time_total ) &&
-      element_group_applied( element_group );
+    if ( empty_type )
+      // a group excluded by (control_)mesh_element_group_apply keeps its
+      // state (F5 W1 U5, control_mesh_element_group_apply1): not empty
+      alive = group_time_alive( element_group, time_total ) &&
+        !bounda_group_type_empty( element_group );
+    else
+      alive = group_time_alive( element_group, time_total ) &&
+        element_group_applied( element_group );
     length = db_len( ELEMENT, element, VERSION_NORMAL );
     el = db_int( ELEMENT, element, VERSION_NORMAL );
     for ( inol=1; inol<length; inol++ ) {
@@ -244,6 +272,59 @@ static void bounda_veln_mpc( long int iboun, long int val[],
   db( BOUNDA_VELN_MESH_FINGERPRINT, iboun, stored, ddum, stored_len,
     VERSION_NORMAL, PUT );
 
+}
+
+// ---------------------------------------------------------------------------
+// global_node_dof_empty (manual Professional 6.552, default -yes): the dofs
+// of a node that is only connected to empty elements (group_type -empty /
+// -none, a group_time group that is not alive) are set to zero at the end
+// of every time step (after the nodal update, before dof_limit). -no leaves
+// them. A group excluded by (control_)mesh_element_group_apply is not empty:
+// it keeps its state (F5 W1 U5; the Professional ignores that record
+// outside index 0, so it cannot be compared).
+// Measured on the Professional 02-08-2026 (probes f5/v5b c_*, c2_*): every
+// dof of such a node is zero with -yes (temperature, strains, stresses,
+// kappa, work) EXCEPT the displacement, which keeps its value; the manual
+// says "the dof's in a node are set to zero", so the displacement is the
+// open owner decision GLOBAL-NODE-DOF-EMPTY-DISPLACEMENT (the GNU keeps it,
+// as the Professional). Nodes without any element are not touched.
+// ---------------------------------------------------------------------------
+void node_dof_empty_apply( void )
+{
+  long int node_dof_empty=-YES, max_node=-1, inod=0, iuknwn=0, ldum=0,
+    idum[1], *dormant=NULL;
+  double dtime=0., time_current=0., ddum[1], *node_dof_new=NULL,
+    *node_dof_old=NULL;
+
+  db( GLOBAL_NODE_DOF_EMPTY, 0, &node_dof_empty, ddum, ldum,
+    VERSION_NORMAL, GET_IF_EXISTS );
+  if ( node_dof_empty!=-YES || nuknwn<=0 ) return;
+  db_max_index( NODE, max_node, VERSION_NORMAL, GET );
+  if ( max_node<0 ) return;
+  db( DTIME, 0, idum, &dtime, ldum, VERSION_NEW, GET_IF_EXISTS );
+  db( TIME_CURRENT, 0, idum, &time_current, ldum,
+    VERSION_NORMAL, GET_IF_EXISTS );
+  dormant = bounda_node_dormant( max_node, time_current+dtime, 1 );
+  if ( dormant==NULL ) return;
+  for ( inod=0; inod<=max_node; inod++ ) {
+    if ( !dormant[inod] || !db_active_index( NODE, inod, VERSION_NORMAL ) )
+      continue;
+    node_dof_new = db_dbl( NODE_DOF, inod, VERSION_NEW );
+    node_dof_old = db_dbl( NODE_DOF, inod, VERSION_NORMAL );
+    for ( iuknwn=0; iuknwn<nuknwn; iuknwn++ ) {
+      // the displacement keeps the value of the start of the step: the
+      // zero velocity adds no increment (the GNU leaves the velocity of a
+      // node without stiffness unchanged during the step, so the
+      // old + v*dt update of dof.cc would otherwise drift; Professional
+      // c2_def: disx/disy = input values)
+      if ( materi_displacement && iuknwn>=dis_indx &&
+           iuknwn<dis_indx+ndim*nder )
+        node_dof_new[iuknwn] = node_dof_old[iuknwn];
+      else
+        node_dof_new[iuknwn] = 0.;
+    }
+  }
+  delete[] dormant;
 }
 
 void bounda( )

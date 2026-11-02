@@ -1212,6 +1212,29 @@ void input( )
     db( DOF_TYPE, 0, dof_type, ddum, nuknwn, VERSION_NORMAL, PUT );
     db( DOF_SCAL_VEC_MAT, 0, dof_scal_vec_mat, ddum, nuknwn, VERSION_NORMAL, PUT );
     db( DOF_PRINCIPAL, 0, dof_principal, ddum, nuknwn, VERSION_NORMAL, PUT );
+    // dof_element_dof (manual Professional 6.409, print only): -yes for the
+    // dofs an element remembers in its integration points by default
+    // (non-continuous field: the element_intpnt_dof restore set of elem.cc,
+    // integration-point states of the constitutive update), -no for the
+    // continuous fields (principal dofs, displacement and every dof that
+    // elem.cc interpolates from the nodes). The record shows the default
+    // classification; global_element_dof_apply -no does not change it (as
+    // the Professional 02-08-2026, probes f5/v5b a_no).
+    long int *dof_element_dof = get_new_int( nuknwn );
+    for ( long int iu=0; iu<nuknwn; iu++ ) {
+      long int t = -dof_type[iu];
+      dof_element_dof[iu] = ( t==MATERI_STRESS || t==MATERI_STRAIN_ELASTI ||
+        t==MATERI_STRAIN_PLASTI || t==MATERI_STRAIN_TOTAL ||
+        t==MATERI_STRAIN_INTERGRANULAR || t==MATERI_HISTORY_VARIABLES ||
+        t==MATERI_PLASTI_CAMCLAY_HISTORY || t==MATERI_PLASTI_HYPO_HISTORY ||
+        t==MATERI_PLASTI_KAPPA || t==MATERI_PLASTI_KAPPA_SHEAR ||
+        t==MATERI_PLASTI_CAP1_HISTORY || t==MATERI_DAMAGE ||
+        t==MATERI_PLASTI_RHO || t==MATERI_MAXWELL_STRESS ||
+        t==MATERI_PLASTI_SOFTVAR_LOCAL || t==MATERI_PLASTI_SOFTVAR_NONLOCAL ) ?
+        -YES : -NO;
+    }
+    db( DOF_ELEMENT_DOF, 0, dof_element_dof, ddum, nuknwn, VERSION_NORMAL, PUT );
+    delete[] dof_element_dof;
   }
 
   db( PRINT_ARITHMETIC, 0, &print_arithmetic, ddum, ldum, 

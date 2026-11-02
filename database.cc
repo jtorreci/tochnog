@@ -2633,6 +2633,26 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   external[DOF_TYPE] = 0;
   data_class[DOF_TYPE] = DOF;
 
+  // dof_element_dof (manual Professional 6.409): print-only, -yes for the
+  // dofs an element remembers in its integration points (element_intpnt_dof,
+  // non-continuous field), -no for the continuous (nodal) dofs. Filled in
+  // input.cc next to dof_label.
+  strcpy(name[DOF_ELEMENT_DOF],"dof_element_dof");
+  type[DOF_ELEMENT_DOF] = INTEGER;
+  data_length[DOF_ELEMENT_DOF] = nuknwn;
+  print_only[DOF_ELEMENT_DOF] = 1;
+  no_index[DOF_ELEMENT_DOF] = 1;
+  data_class[DOF_ELEMENT_DOF] = DOF;
+
+  // dof_limit (manual Professional 6.411): lower and upper allowed value of
+  // every primary dof, in dof_label order (two values per dof; the
+  // Professional 02-08-2026 rejects any other length). Applied in dof.cc.
+  strcpy(name[DOF_LIMIT],"dof_limit");
+  type[DOF_LIMIT] = DOUBLE_PRECISION;
+  data_length[DOF_LIMIT] = 2*npuknwn;
+  no_index[DOF_LIMIT] = 1;
+  data_class[DOF_LIMIT] = DOF;
+
   strcpy(name[DATA_ACTIVATE],"data_activate");
   type[DATA_ACTIVATE] = INTEGER;
   data_length[DATA_ACTIVATE] = DATA_ITEM_SIZE;
@@ -6578,6 +6598,22 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   type[OPTIONS_ELEMENT_DOF] = INTEGER;
   data_length[OPTIONS_ELEMENT_DOF] = 1;
   no_index[OPTIONS_ELEMENT_DOF] = 1;
+
+  // global_element_dof_from_node_dof (manual Professional 6.554): -yes
+  // initialises the element_intpnt_dof records that are not in the input
+  // from the node_dof records, -no starts them at zero (top.cc).
+  strcpy(name[GLOBAL_ELEMENT_DOF_FROM_NODE_DOF],"global_element_dof_from_node_dof");
+  type[GLOBAL_ELEMENT_DOF_FROM_NODE_DOF] = INTEGER;
+  data_length[GLOBAL_ELEMENT_DOF_FROM_NODE_DOF] = 1;
+  no_index[GLOBAL_ELEMENT_DOF_FROM_NODE_DOF] = 1;
+
+  // global_node_dof_empty (manual Professional 6.552): -yes (default) sets
+  // the dofs of a node that is only connected to empty elements to zero
+  // (bounda.cc node_dof_empty_apply).
+  strcpy(name[GLOBAL_NODE_DOF_EMPTY],"global_node_dof_empty");
+  type[GLOBAL_NODE_DOF_EMPTY] = INTEGER;
+  data_length[GLOBAL_NODE_DOF_EMPTY] = 1;
+  no_index[GLOBAL_NODE_DOF_EMPTY] = 1;
 
   strcpy(name[OPTIONS_ELEMENTLOOP],"options_elementloop");
   type[OPTIONS_ELEMENTLOOP] = INTEGER;

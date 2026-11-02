@@ -1,0 +1,34 @@
+(F5 T2 V5b: dof_element_dof with global_element_dof_apply -no. The record
+ shows the DEFAULT classification and is the same as dof_element_dof1
+ (Professional 02-08-2026 probe f5/v5b a_no writes the same -yes/-no list).)
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_displacement
+materi_strain_total
+materi_stress
+materi_plasti_kappa
+condif_temperature
+end_initia
+node 1 0 0
+node 2 1 0
+node 3 0 1
+node 4 1 1
+element 1 -quad4 1 2 3 4
+group_type 0 -materi -condif
+group_materi_memory 0 -total_linear
+group_materi_elasti_young 0 1000.
+group_materi_elasti_poisson 0 0.3
+group_condif_density 0 1.
+group_condif_capacity 0 1.
+group_condif_conductivity 0 1.
+bounda_dof 0 1 -velx -vely -temp
+bounda_dof 2 2 -velx -vely
+bounda_dof 3 3 -velx -vely -temp
+bounda_dof 1 4 -velx
+bounda_time 1 0.01
+bounda_dof 4 2 -temp
+bounda_time 4 10.
+global_element_dof_apply -no
+control_timestep 0 1. 1.
+end_data
