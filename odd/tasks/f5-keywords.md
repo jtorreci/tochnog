@@ -47,6 +47,7 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
     global_element_dof_apply (`-only` new), message, print_data_name, control_check_data,
     control_zip, control_system_call (runs a user script: owner decision), processors_maximum
     (Professional default -yes vs GNU 1 thread: owner decision).
+    control_system_call done `f6c4476` (owner: implement as the manual says).
   - [x] U3 post gates: control_post, control_post_apply (+ global post_apply, registered, unread),
     control_post_element_force. Done `ea96bf6`.
   - [ ] U4 timestep loop: control_timestep_iterations_automatic_minimum_maximum_wished (GNU
@@ -101,3 +102,10 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   0 FALLO, 226/226; differential vs 4b80565 on 212 inputs: only the new tests and post_apply1
   (registered before, now consumed). Found C90 (history file names) and C91 (force_edge_water
   -yes stored as a raw enum). Commit ea96bf6. Next: owner decisions for U2.
+- 2026-11-02 owner on control_system_call: "dale, implementalo así" (as the manual: posix_spawn of
+  ./tochnog_system_call.sh, no shell, warning when missing). Professional probes: one call per
+  converged timestep (before its history print) + one at the end of each index with the record;
+  stdout kept, stderr dropped, exit ignored, missing script silent, -3 rejected; the Professional
+  only finds the script through the PATH (DIVERGENCES SYSCALL-PATH, class D). RED rc 1 on 9574b84;
+  GNU call log identical. build_safe 376 OK / 0 FALLO, 226/226; audit_db_buffers rc 0. Also marked
+  the U1/U3 keywords [x] in SEGUIMIENTO (missed before). Commit f6c4476. Next: rest of U2.
