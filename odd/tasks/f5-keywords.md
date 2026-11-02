@@ -82,7 +82,7 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   - [x] V4d beam owner decisions (2026-11-02): native 3D beam for every 3D beam (C37), default
     group_beam_memory -total_linear (BEAM-MEMORY-DEFAULT), element_beam_direction 9 values
     (BEAM-DIRECTION-LENGTH). Route: inline (no writer reason). Commit `f99793a`.
-  - [ ] V5 dof records/switches: dof_element_dof, dof_limit, global_node_dof_empty,
+  - [x] V5 dof records/switches: dof_element_dof, dof_limit, global_node_dof_empty,
     global_element_dof_from_node_dof, element_intpnt_dof. Owner decision 2026-11-02: option 2, rename
     the GNU per-integration-point storage to element_intpnt_dof and make element_dof the per-element
     nodal values (manual 6.421 / 6.437 = Professional). Persisted format change (Risk item 1):
@@ -309,4 +309,12 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   .dbs input loses the IP state (documented residual); interface zero record length = continuum rule (doc
   corrected); structural zero records removed only at a step end; -no keeps the zero record; pre-existing
   nonloc.cc PUT outside if(ielem_nonloc).
+- 2026-11-03 V5b committed `cde109f` (delegated writer, context backstop): dof_element_dof (= Pro except work/f/void,
+  C103), dof_limit (pairs per dof_label entry, node_dof clamped, = Pro; C104 prescribed-pass residual),
+  global_node_dof_empty (default -yes, displacement kept as the Professional; mesh_element_group_apply groups
+  not counted as empty), global_element_dof_from_node_dof (switch; default kept -yes). 688 OK / 0 FALLO,
+  audit 0; A/B 748 inputs: only the new tests and global_node_dof_empty1/3 change. Owner decisions open:
+  C100 default of global_element_dof_from_node_dof (manual + Pro -no, GNU always -yes, 214 suite inputs with
+  node_dof), C101 global_node_dof_empty displacement (manual zero, Pro keeps). Pre-existing C102, C105 noted.
+  Risk item 3 -> covered by the end-of-T2 independent verifier.
 
