@@ -1,0 +1,48 @@
+(
+F5 W1 U6: groundflow_apply -no on the 3D Biot consolidation column of
+ k24_consol_3d1 (control_reset pres -1, prescribed pres ramp, capacity 1):
+ without the groundflow equation and data the solid sees no pore pressure
+ and gives the drained elastic answer, disx = force / E = 1 / 10 = 0.1 at
+ the loaded face, pres 0 everywhere (Professional 02-08-2026: disx 0.1,
+ sigxx -1, pres 0; with -yes pres -0.678 and disx 0.0564).)
+echo -no
+number_of_space_dimensions 3
+materi_velocity
+materi_displacement
+materi_stress
+groundflow_pressure
+groundflow_velocity
+end_initia
+inertia_apply -yes
+groundflow_apply -no
+groundflow_consolidation_apply -yes
+solver_matrix_symmetric -yes
+start_define
+  delta_time 0.1
+end_define
+group_type 0  -materi -groundflow
+group_materi_elasti_young  0  1.0e1
+group_materi_memory 0  -total_linear
+group_groundflow_permeability 0 0.1
+group_groundflow_capacity 0 1.0
+geometry_quadrilateral 10  0.0 -10.0 -10.0  0.0 +10.0 -10.0  0.0 -10.0 +10.0  0.0 +10.0 +10.0  1.e-4
+geometry_quadrilateral 20  1.0 -10.0 -10.0  1.0 +10.0 -10.0  1.0 -10.0 +10.0  1.0 +10.0 +10.0  1.e-4
+bounda_dof     1  -geometry_quadrilateral 20 -velx -vely -velz
+bounda_time    1  0.
+bounda_dof     2  -geometry_quadrilateral 20 -pres
+bounda_time    2  0. -1. delta_time 0. 1000. 0.
+post_calcul -groundflow_pressure -total_pressure
+force_edge 10  1.0 0.0 0.0
+force_edge_geometry 10  -geometry_quadrilateral 10
+control_mesh_macro            10  -brick 0 10 2 2
+control_mesh_macro_parameters 10  0.5 0.0 0.0 1.0 1.0 1.0
+control_reset_dof             20  -pres
+control_reset_value_constant  20  -1.0
+control_timestep              30  delta_time 2.2
+target_item  0  -node_dof 1 -pres
+target_value  0  0. 1.e-10
+target_item  1  -node_dof 1 -disx
+target_value  1  0.1 1.e-6
+target_item  2  -node_dof 1 -sigxx
+target_value  2  -1. 1.e-6
+end_data

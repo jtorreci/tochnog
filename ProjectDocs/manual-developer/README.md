@@ -30,6 +30,10 @@ page lists its own in "Differences with the Professional version".
 - [check_data](check_data.md) — verify the database integrity (missing required items).
 - [control_check_data](control_check_data.md) — record `CONTROL_CHECK_DATA`, `check_data_integrity()` at the control index entry in `top()` (F5).
 - [global_element_dof_apply](global_element_dof_apply.md) — db_number alias of OPTIONS_ELEMENT_DOF; `-only` = `element_dof_only` (dof.cc, top.cc) (F5).
+- [mrange](mrange.md) — initialization keywords mrange / [mstring](mstring.md): `input_initia_limit()`, `input_mrange_check()`, define limit in `input.cc` (F5).
+- [groundflow_apply](groundflow_apply.md) — record `GROUNDFLOW_APPLY`, `groundflow_apply_transform()` (general.cc) in `top()`, element gate in elem.cc (F5).
+- [linear_calculation_apply](linear_calculation_apply.md) — record `LINEAR_CALCULATION_APPLY`, `linear_calculation_apply_transform()` (general.cc) in `top()` (F5).
+- [control_input](control_input.md) — record `CONTROL_INPUT`, `input_control_input()` / `input_simple_records()` (input.cc, shared with the runtime file) (F5).
 - [check_error](check_error.md) — suppress "Error" messages.
 - [check_warning](check_warning.md) — suppress "Warning" messages.
 

@@ -42,6 +42,12 @@ char *arithmetic_words[MARITHMETIC];
 // data value (group 0), see the data part parser in input().
 static char saved_first_value[MCHAR];
 static long int has_saved_first_value = 0;
+// mrange / mstring (manual Professional 4.55 / 4.56, initialization part):
+// run-time limits below the compiled MRANGE (tochnog.h) and MSTRING (this
+// file) buffer sizes. mrange caps the words of an index range -ra ... -ra
+// and its expanded list; mstring caps the strings of a define block.
+static long int mrange_limit = MRANGE, mrange_given = 0;
+static long int mstring_limit = MSTRING-1, mstring_given = 0;
 
 // Reads one whitespace-delimited word of at most MCHAR-1 characters into
 // str (BACKLOG C56: a plain `in >> str` wrote past the MCHAR buffer for a
@@ -69,10 +75,50 @@ static long int input_word( std::istream &in, char str[], long int in_comment )
   return 1;
 }
 
+// Reads the positive integer value of the initialization keyword name
+// (mrange, mstring); compiled_max is the largest value the GNU buffers
+// hold and constant names the constant to raise above it.
+static long int input_initia_limit( const char *name, long int compiled_max,
+  const char *constant )
+{
+  long int value=0;
+  char str[MCHAR];
+  if ( !input_word( cin, str, 0 ) || !string_isinteger( str ) ) {
+    pri( "\nError in initialization part." );
+    pri( "An integer value is expected after ", name );
+    exit(TN_EXIT_STATUS);
+  }
+  value = atoi( str );
+  if ( value<1 ) {
+    pri( "\nError in initialization part." );
+    pri( "The value should be larger than 0 for ", name );
+    exit(TN_EXIT_STATUS);
+  }
+  if ( value>compiled_max ) {
+    cout << "\nError in initialization part: " << name << " " << value
+         << " exceeds the compiled maximum " << compiled_max << ".\n";
+    cout << "Else, increase " << constant << " and recompile.\n";
+    exit(TN_EXIT_STATUS);
+  }
+  return value;
+}
+
+// Index range length against mrange (Professional 02-08-2026: "Error:
+// mrange exceeded."); only checked when mrange is specified, the
+// compiled MRANGE limit is checked in range.cc.
+static void input_mrange_check( long int length )
+{
+  if ( mrange_given && length>mrange_limit ) {
+    pri( "\nError: mrange exceeded." );
+    pri( "Increase it in the initialisation part." );
+    exit(TN_EXIT_STATUS);
+  }
+}
+
 void input( )
 
 {
-  long int in_value_range=0,
+  long int in_value_range=0, value_range_words=0,
     i=0, j=0, n=0, iv=0, length=0, max=0, idat=0, itmp=0, idim=0,
     ready=0, d_is_set=0, index=0, range_length=0, last_data_value=0,
     unknown_indx=0, ninitia=0, istr=0, nstr=0,
@@ -668,6 +714,20 @@ void input( )
       array_set( &dof_principal[fscal_indx], nprinc, n*nder );
       nprinc += n;
     }
+    else if ( !strcmp(str,"mrange") ) {
+      mrange_limit = input_initia_limit( "mrange", MRANGE,
+        "MRANGE in tochnog.h" );
+      mrange_given = 1;
+      if ( echo ) cout << mrange_limit;
+      initialization_values[ninitia-1] = mrange_limit;
+    }
+    else if ( !strcmp(str,"mstring") ) {
+      mstring_limit = input_initia_limit( "mstring", MSTRING-1,
+        "MSTRING in input.cc" );
+      mstring_given = 1;
+      if ( echo ) cout << mstring_limit;
+      initialization_values[ninitia-1] = mstring_limit;
+    }
     else if ( !strcmp(str,"number_of_integration_points") ) {
       if ( !(cin >> npointmax) ) {
         pri( "\nError in initialization part." );
@@ -908,8 +968,12 @@ void input( )
       input_read_string( echo, str, d, d_is_set );
       input_skip_comment(str);
       if ( echo ) cout << " " << str << " ";
-      if ( !strcmp(str,"-ra") ) 
+      if ( !strcmp(str,"-ra") ) {
          range_scan( echo, d, d_is_set, range, range_length );
+         // the words of the range with its two -ra markers (Professional
+         // 02-08-2026: a 3-entry index range needs mrange 5)
+         input_mrange_check( range_length );
+      }
       else {
         if ( !string_isinteger(str) ) {
           // Professional spelling "axisymmetric -yes/-no" WITHOUT an
@@ -1001,7 +1065,13 @@ void input( )
             }
             check( itmp, CHECK_USAGE_AND_ERROR );
             ival[iv] = -itmp;
-            if ( itmp==RA ) in_value_range = !in_value_range;
+            if ( itmp==RA ) {
+              // mrange: the words of the value range just closed
+              if ( in_value_range ) input_mrange_check( value_range_words );
+              in_value_range = !in_value_range;
+              value_range_words = 0;
+            }
+            else if ( in_value_range ) value_range_words++;
           }
           else {
             if ( d_is_set )
@@ -1020,6 +1090,7 @@ void input( )
               }
               ival[iv] = atoi(str);
             }
+            if ( in_value_range ) value_range_words++;
           }
         }
         else if ( db_type(idat)==DOUBLE_PRECISION ) {
@@ -1085,7 +1156,10 @@ void input( )
     }
 
       // store
-    if ( range[0]==-RA ) range_expand( range, integer_range, ldum, range_length );
+    if ( range[0]==-RA ) {
+      range_expand( range, integer_range, ldum, range_length );
+      input_mrange_check( range_length );
+    }
     db_max_index( idat, max, VERSION_NORMAL, GET );
     if ( idat==NODE_DOF ) {
     }
@@ -1292,11 +1366,15 @@ void input_read_string( long int echo, char str[], double &d, long int &d_is_set
           exit(TN_EXIT_STATUS);
         }
         istring = define_nstring[ndefine];
-        if ( istring==MSTRING-1 ) {
-          cout << "\nError: maximal number of strings is " << MSTRING << "\n";
+        if ( istring==mstring_limit ) {
+          cout << "\nError: maximal number of strings is "
+               << ( mstring_given ? mstring_limit : MSTRING ) << "\n";
           pri( "Error detected for define: ", define_words[ndefine] );
           pri( "Maybe the define is not correct." );
-          pri( "Else, increase MSTRING in input.cc and recompile." );
+          if ( mstring_given )
+            pri( "Else, increase mstring in the initialisation part." );
+          else
+            pri( "Else, increase MSTRING in input.cc and recompile." );
           exit(TN_EXIT_STATUS);
         }
         strcpy( define_strings[ndefine][istring], str );
@@ -1702,43 +1780,45 @@ void input_skip_comment( char str[] )
 
 }
 
-void input_runtime( void ) 
-
-  /* 
-    Read the runtime file at the start of each step.
-    This allows for changing of data on the fly.
-    E.g. use a control_print_gid record if you want 
-    to make a plot in some long taking calculation.
-  */
+// Reads simple data records "name index values ... end_data" from in:
+// no comments, defines, arithmetic or ranges (the reader of the runtime
+// file and of control_input). strict 0 (runtime file): stop silently at
+// the first word that does not fit, a record is stored as soon as it is
+// complete. strict 1 (control_input, manual Professional 6.139): such a
+// word is an error, as in the Professional 02-08-2026, and every record
+// is checked as in the data part. mesh_read is set when a node or
+// element record was read.
+static void input_simple_records( std::istream &in, long int strict,
+  long int &mesh_read )
 
 {
   long int iv=0, idat=0, index=0, length=0, itmp=0,
     last_data_value=0, ival[DATA_ITEM_SIZE];
   double dval[DATA_ITEM_SIZE];
-  char filename[MCHAR], str[MCHAR];
-  ifstream in;
+  char str[MCHAR];
 
-  set_swit(-1,-1,"input_runtime");
-  strcpy( filename, data_file_base );
-  strcat( filename, ".run" );
-  in.open( filename );
-  if ( !in ) return;
-
-  if ( !input_word( in, str, 0 ) ) goto close_runtime_file;
+  strcpy( str, "" );
+  if ( !input_word( in, str, 0 ) ) goto simple_records_error;
   string_convert_to_lower_case( str );
   while ( strcmp(str,"end_data" ) ) {
     idat = db_number( str ); 
     if ( idat<0 ) {
-      goto close_runtime_file;
+      goto simple_records_error;
     }
+    if ( strict ) check( idat, CHECK_USAGE_AND_ERROR );
     if ( db_no_index(idat ) ) 
        index = 0;
+    else if ( strict ) {
+      if ( !input_word( in, str, 0 ) || !string_isinteger( str ) )
+        goto simple_records_error;
+      index = atoi( str );
+    }
     else
        in >> index;
     length = last_data_value = 0;
     for ( iv=0; !last_data_value; iv++ ) {
       if ( !input_word( in, str, 0 ) ) {
-        goto close_runtime_file;
+        goto simple_records_error;
       }
       string_convert_to_lower_case( str );
       if      ( db_fixed_length(idat) ) {
@@ -1753,36 +1833,145 @@ void input_runtime( void )
           if ( str[0]=='-' ) {
             itmp = db_number( &str[1] );
             if ( itmp<0 ) {
-              goto close_runtime_file;
+              goto simple_records_error;
             }
             check( itmp, CHECK_USAGE_AND_ERROR );
             ival[iv] = -itmp;
           }
           else {
             if ( !string_isinteger(str) ) {
-              goto close_runtime_file;
+              goto simple_records_error;
             }
             ival[iv] = atoi(str);
           }
         }
         else if ( db_type(idat)==DOUBLE_PRECISION ) {
           if ( !string_isdouble(str) ) {
-            goto close_runtime_file;
+            goto simple_records_error;
           }
           dval[iv] = atof(str);
         }
         length = iv + 1;
         if ( length>DATA_ITEM_SIZE ) {
-          goto close_runtime_file;
+          goto simple_records_error;
         }
       }
     }
     db( idat, index, ival, dval, length, VERSION_NORMAL, PUT );
-    any_runtime = 1;
+    if ( idat==NODE || idat==ELEMENT ) mesh_read = 1;
+    if ( !strict ) any_runtime = 1;
   }
+  return;
 
-  close_runtime_file:
+  simple_records_error:
+  if ( strict ) {
+    pri( "\nError for control_input detected." );
+    cout << "Error detected near: " << str << "\n";
+    exit(TN_EXIT_STATUS);
+  }
+}
+
+void input_runtime( void ) 
+
+  /* 
+    Read the runtime file at the start of each step.
+    This allows for changing of data on the fly.
+    E.g. use a control_print_gid record if you want 
+    to make a plot in some long taking calculation.
+  */
+
+{
+  long int mesh_read=0;
+  char filename[MCHAR];
+  ifstream in;
+
+  set_swit(-1,-1,"input_runtime");
+  strcpy( filename, data_file_base );
+  strcat( filename, ".run" );
+  in.open( filename );
+  if ( !in ) return;
+
+  input_simple_records( in, 0, mesh_read );
   in.close();
+}
+
+// control_input index -yes (manual Professional 6.139): at the start of
+// control index icontrol read the data records of the file
+// <icontrol>.dat (no comments, defines, arithmetic or ranges; closed by
+// end_data, the rest of the file is ignored). Measured on the
+// Professional 02-08-2026: a record replaces an existing one with the
+// same index, new records are added (also nodes and elements: the mesh
+// is extended), a missing file is silently skipped.
+void input_control_input( long int icontrol )
+
+{
+  long int control_input=-NO, ldum=0, mesh_read=0, inod=0, max_node=-1,
+    length=0, idum[1];
+  double ddum[1];
+  char filename[MCHAR];
+  ifstream in;
+
+  db( CONTROL_INPUT, icontrol, &control_input, ddum, ldum, VERSION_NORMAL,
+    GET_IF_EXISTS );
+  if ( control_input!=-YES ) return;
+  long_to_a( icontrol, filename );
+  strcat( filename, ".dat" );
+  in.open( filename );
+  if ( !in ) return;
+  input_simple_records( in, 1, mesh_read );
+  in.close();
+  if ( mesh_read ) {
+      // new nodes get zero dofs, as at the start of the calculation (top)
+    if ( nuknwn>0 ) {
+      double *dwork = get_new_dbl( nuknwn );
+      array_set( dwork, 0., nuknwn );
+      db_max_index( NODE, max_node, VERSION_NORMAL, GET );
+      for ( inod=0; inod<=max_node; inod++ ) {
+        if ( !db_active_index( NODE, inod, VERSION_NORMAL ) ) continue;
+        if ( !db_active_index( NODE_DOF, inod, VERSION_NORMAL ) )
+          db( NODE_DOF, inod, idum, dwork, nuknwn, VERSION_NORMAL, PUT );
+          // the start records top() copies before the control loop
+        if ( !db_active_index( NODE_START_REFINED, inod, VERSION_NORMAL ) ) {
+          length = db_len( NODE, inod, VERSION_NORMAL );
+          db( NODE_START_REFINED, inod, idum,
+            db_dbl( NODE, inod, VERSION_NORMAL ), length, VERSION_NORMAL, PUT );
+        }
+        if ( !db_active_index( NODE_DOF_START_REFINED, inod, VERSION_NORMAL ) ) {
+          length = db_len( NODE_DOF, inod, VERSION_NORMAL );
+          db( NODE_DOF_START_REFINED, inod, idum,
+            db_dbl( NODE_DOF, inod, VERSION_NORMAL ), length, VERSION_NORMAL,
+            PUT );
+        }
+      }
+      delete[] dwork;
+        // new elements get the element records top() initializes
+      long int ielem=0, max_elem=-1, zero=0, one=1,
+        mnolnuknwn=npointmax*nuknwn, length_nei=1+npointmax*ndim+npointmax+2;
+      double *dworkmnol = get_new_dbl( mnolnuknwn );
+      double *dworknei = get_new_dbl( length_nei );
+      array_set( dworkmnol, 0., mnolnuknwn );
+      array_set( dworknei, 0., length_nei );
+      dworknei[length_nei-1] = 1;
+      db_max_index( ELEMENT, max_elem, VERSION_NORMAL, GET );
+      for ( ielem=0; ielem<=max_elem; ielem++ ) {
+        if ( !db_active_index( ELEMENT, ielem, VERSION_NORMAL ) ) continue;
+        if ( !db_active_index( ELEMENT_DOF, ielem, VERSION_NORMAL ) )
+          db( ELEMENT_DOF, ielem, idum, dworkmnol, mnolnuknwn,
+            VERSION_NORMAL, PUT );
+        if ( !db_active_index( ELEMENT_DOF_INITIALISED, ielem,
+            VERSION_NORMAL ) )
+          db( ELEMENT_DOF_INITIALISED, ielem, &zero, ddum, one,
+            VERSION_NORMAL, PUT );
+        if ( !db_active_index( NONLOCAL_ELEMENT_INFO, ielem,
+            VERSION_NORMAL ) )
+          db( NONLOCAL_ELEMENT_INFO, ielem, idum, dworknei, length_nei,
+            VERSION_NORMAL, PUT );
+      }
+      delete[] dworkmnol;
+      delete[] dworknei;
+    }
+    mesh_has_changed( VERSION_NORMAL );
+  }
 }
 
 void input_check_required( void ) 

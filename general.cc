@@ -725,3 +725,248 @@ long int materi_memory_default( void )
   if ( materi_displacement ) return -TOTAL_LINEAR;
   return -UPDATED_LINEAR;
 }
+
+// ---------------------------------------------------------------------
+// groundflow_apply (manual Professional 6.555) and linear_calculation_apply
+// (manual Professional 6.797): database rewrites at the start of top().
+
+static long int groundflow_apply_skip = 0;
+
+// 1 when groundflow_apply -no was applied: the groundflow element
+// equation (elem.cc) is skipped for all timesteps.
+long int groundflow_apply_off( void )
+{
+  return groundflow_apply_skip;
+}
+
+static long int general_is_groundflow_dof( long int dof_type_value )
+{
+  return dof_type_value==-GROUNDFLOW_PRESSURE ||
+    dof_type_value==-GROUNDFLOW_VELOCITY ||
+    dof_type_value==-GROUNDFLOW_SATURATION ||
+    dof_type_value==-GROUNDFLOW_PRESSURE_GRADIENT;
+}
+
+// Deletes every record whose name starts with prefix (keep: one item
+// that is not deleted, -1 for none).
+static void general_delete_prefix( const char *prefix, long int keep )
+{
+  long int idat=0, max=-1, n=strlen(prefix);
+  for ( idat=0; idat<MDAT; idat++ ) {
+    if ( idat==keep || strncmp( db_name(idat), prefix, n ) ) continue;
+    if ( db_max_index( idat, max, VERSION_NORMAL, GET )>=0 )
+      db_delete( idat, VERSION_NORMAL );
+  }
+}
+
+// Removes the groundflow dof labels from the dof lists of the records
+// of item idat (bounda_dof, bounda_unknown, control_reset_dof); a record
+// that keeps no dof label is deleted, with the record of item
+// companion (-1 none) at the same index.
+static void general_remove_groundflow_labels( long int idat,
+  long int companion, long int dof_label[], long int dof_type[] )
+{
+  long int index=0, max=-1, i=0, n=0, k=0, len=0, ndof=0, ndof_kept=0,
+    iuknwn=0, *val=NULL, *kept=NULL;
+  double ddum[1];
+  db_max_index( idat, max, VERSION_NORMAL, GET );
+  if ( max<0 ) return;
+  kept = get_new_int( db_data_length(idat) );
+  for ( index=0; index<=max; index++ ) {
+    if ( !db_active_index( idat, index, VERSION_NORMAL ) ) continue;
+    val = db_int( idat, index, VERSION_NORMAL );
+    len = db_len( idat, index, VERSION_NORMAL );
+    ndof = ndof_kept = n = 0;
+    for ( i=0; i<len; i++ ) {
+      iuknwn = -1;
+      if ( val[i]<0 && array_member( dof_label, val[i], nuknwn, iuknwn ) ) {
+        ndof++;
+        if ( general_is_groundflow_dof( dof_type[iuknwn] ) ) continue;
+        ndof_kept++;
+      }
+      kept[n++] = val[i];
+    }
+    if ( ndof==ndof_kept ) continue;
+    if ( ndof_kept==0 ) {
+      db_delete_index( idat, index, VERSION_NORMAL );
+      if ( companion>=0 ) db_delete_index( companion, index, VERSION_NORMAL );
+    }
+    else {
+      k = n;
+      db( idat, index, kept, ddum, k, VERSION_NORMAL, PUT );
+    }
+  }
+  delete[] kept;
+}
+
+// groundflow_apply -no: "the groundflow equation is skipped, and all
+// groundflow data is ignored. This is done for all timesteps." Measured
+// on the Professional 02-08-2026: the groundflow dofs end at 0 at every
+// node (initial node_dof values, prescribed pressures and pressure
+// resets ignored) and the solid sees no pore pressure (drained answer).
+// GNU: the groundflow dofs are zeroed, removed from the bounda_dof /
+// bounda_unknown / control_reset_dof dof lists, the groundflow_*,
+// group_groundflow_*, group_interface_groundflow_* and
+// control_groundflow_* records are deleted, and elem.cc skips the
+// groundflow element equation.
+void groundflow_apply_transform( void )
+{
+  long int swit=-YES, ldum=0, inod=0, max=-1, i=0, length=0, iuknwn=0,
+    dof_label[MUKNWN], dof_type[MUKNWN];
+  double ddum[1], *node_dof=NULL;
+
+  db( GROUNDFLOW_APPLY, 0, &swit, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+  if ( swit!=-NO ) return;
+  groundflow_apply_skip = 1;
+  if ( nuknwn>0 ) {
+    db( DOF_LABEL, 0, dof_label, ddum, ldum, VERSION_NORMAL, GET );
+    db( DOF_TYPE, 0, dof_type, ddum, ldum, VERSION_NORMAL, GET );
+    db_max_index( NODE_DOF, max, VERSION_NORMAL, GET );
+    for ( inod=0; inod<=max; inod++ ) {
+      if ( !db_active_index( NODE_DOF, inod, VERSION_NORMAL ) ) continue;
+      node_dof = db_dbl( NODE_DOF, inod, VERSION_NORMAL );
+      length = db_len( NODE_DOF, inod, VERSION_NORMAL );
+      for ( i=0; i<length; i++ ) {
+        iuknwn = ( length==npuknwn ) ? i*nder : i;
+        if ( iuknwn<nuknwn && general_is_groundflow_dof( dof_type[iuknwn] ) )
+          node_dof[i] = 0.;
+      }
+    }
+    general_remove_groundflow_labels( BOUNDA_DOF, BOUNDA_TIME,
+      dof_label, dof_type );
+    general_remove_groundflow_labels( BOUNDA_UNKNOWN, BOUNDA_TIME,
+      dof_label, dof_type );
+    general_remove_groundflow_labels( CONTROL_RESET_DOF, -1,
+      dof_label, dof_type );
+  }
+  general_delete_prefix( "groundflow_", GROUNDFLOW_APPLY );
+  general_delete_prefix( "group_groundflow_", -1 );
+  general_delete_prefix( "group_interface_groundflow_", -1 );
+  general_delete_prefix( "control_groundflow_", -1 );
+}
+
+// linear_calculation_apply -yes (manual Professional 6.797): rewrites
+// the database to a linear calculation. Every bullet of the manual whose
+// records exist in the GNU is applied; group_materi_elasti_polynomial,
+// group_groundflow_nonsaturated, group_interface_materi_hardening and
+// group_interface_materi_elasti_stiffness_tangential_diagram do not
+// exist in the GNU. Where the manual is silent the Professional
+// 02-08-2026 decides: it also deletes the group_materi_plasti_* and
+// group_interface_materi_plasti_* records and adds contact_apply -no.
+void linear_calculation_apply_transform( void )
+{
+  long int swit=-NO, ldum=0, index=0, max=-1, idat=0, n=0, len=0,
+    found=0, iuknwn=0, memory=0, one=1, no=-NO, idum[1],
+    options_mesh[MDIM], dof_label[MUKNWN], *val=NULL;
+  double ddum[1], young=0., poisson=0.2, k=0., *dval=NULL, *table=NULL;
+  const char *item_name=NULL;
+
+  db( LINEAR_CALCULATION_APPLY, 0, &swit, ddum, ldum, VERSION_NORMAL,
+    GET_IF_EXISTS );
+  if ( swit!=-YES ) return;
+
+    // substitutions by linear elasticity, per element group
+  db_max_index( GROUP_MATERI_ELASTI_HARDSOIL, max, VERSION_NORMAL, GET );
+  for ( index=0; index<=max; index++ ) {
+    if ( !db_active_index( GROUP_MATERI_ELASTI_HARDSOIL, index,
+      VERSION_NORMAL ) ) continue;
+    young = db_dbl( GROUP_MATERI_ELASTI_HARDSOIL, index, VERSION_NORMAL )[0];
+    db( GROUP_MATERI_ELASTI_YOUNG, index, idum, &young, one,
+      VERSION_NORMAL, PUT );
+  }
+  db_delete( GROUP_MATERI_ELASTI_HARDSOIL, VERSION_NORMAL );
+  db_max_index( GROUP_MATERI_ELASTI_YOUNG_POWER, max, VERSION_NORMAL, GET );
+  for ( index=0; index<=max; index++ ) {
+    if ( !db_active_index( GROUP_MATERI_ELASTI_YOUNG_POWER, index,
+      VERSION_NORMAL ) ) continue;
+    young = db_dbl( GROUP_MATERI_ELASTI_YOUNG_POWER, index,
+      VERSION_NORMAL )[0];
+    db( GROUP_MATERI_ELASTI_YOUNG, index, idum, &young, one,
+      VERSION_NORMAL, PUT );
+  }
+  db_delete( GROUP_MATERI_ELASTI_YOUNG_POWER, VERSION_NORMAL );
+  db_max_index( GROUP_MATERI_PLASTI_HYPO_WOLFERSDORFF, max, VERSION_NORMAL,
+    GET );
+  for ( index=0; index<=max; index++ ) {
+    if ( !db_active_index( GROUP_MATERI_PLASTI_HYPO_WOLFERSDORFF, index,
+      VERSION_NORMAL ) ) continue;
+      // hs (second value) as the manual says; the Professional 02-08-2026
+      // takes the first value (phi), DIVERGENCES LINCALC-WOLFF
+    young = db_dbl( GROUP_MATERI_PLASTI_HYPO_WOLFERSDORFF, index,
+      VERSION_NORMAL )[1];
+    poisson = 0.2;
+    db( GROUP_MATERI_ELASTI_YOUNG, index, idum, &young, one,
+      VERSION_NORMAL, PUT );
+    db( GROUP_MATERI_ELASTI_POISSON, index, idum, &poisson, one,
+      VERSION_NORMAL, PUT );
+  }
+  db_delete( GROUP_MATERI_PLASTI_HYPO_WOLFERSDORFF, VERSION_NORMAL );
+  db_max_index( GROUP_SPRING_STIFFNESS_NONLINEAR, max, VERSION_NORMAL, GET );
+  for ( index=0; index<=max; index++ ) {
+    if ( !db_active_index( GROUP_SPRING_STIFFNESS_NONLINEAR, index,
+      VERSION_NORMAL ) ) continue;
+      // the stiffness at strain 0 (epsilon0 k0 epsilon1 k1 ...); outside
+      // the table the nearest end value
+    dval = db_dbl( GROUP_SPRING_STIFFNESS_NONLINEAR, index, VERSION_NORMAL );
+    len = db_len( GROUP_SPRING_STIFFNESS_NONLINEAR, index, VERSION_NORMAL );
+    table = get_new_dbl( len );
+    array_move( dval, table, len );
+    found = table_xy( table, "group_spring_stiffness_nonlinear", len, 0., k );
+    if ( !found && len>=2 ) k = ( table[0]>0. ) ? table[1] : table[len-1];
+    delete[] table;
+    db( GROUP_SPRING_STIFFNESS, index, idum, &k, one, VERSION_NORMAL, PUT );
+  }
+  db_delete( GROUP_SPRING_STIFFNESS_NONLINEAR, VERSION_NORMAL );
+
+    // plasticity
+  db_delete( CONTROL_PLASTI_APPLY, VERSION_NORMAL );
+  db( PLASTI_APPLY, 0, &no, ddum, one, VERSION_NORMAL, PUT );
+  general_delete_prefix( "group_materi_plasti_", -1 );
+  general_delete_prefix( "group_interface_materi_plasti_", -1 );
+
+    // mesh -fixed_in_space
+  array_set( options_mesh, -FIXED_IN_SPACE, ndim );
+  db( OPTIONS_MESH, 0, options_mesh, ddum, ndim, VERSION_NORMAL, PUT );
+
+    // every group_*_memory record: -total_linear with materi_displacement,
+    // else -updated_linear
+  memory = materi_displacement ? -TOTAL_LINEAR : -UPDATED_LINEAR;
+  for ( idat=0; idat<MDAT; idat++ ) {
+    item_name = db_name( idat );
+    n = strlen( item_name );
+    if ( strncmp( item_name, "group_", 6 ) || n<7 ||
+         strcmp( item_name+n-7, "_memory" ) || db_type(idat)!=INTEGER )
+      continue;
+    db_max_index( idat, max, VERSION_NORMAL, GET );
+    for ( index=0; index<=max; index++ ) {
+      if ( db_active_index( idat, index, VERSION_NORMAL ) )
+        db_int( idat, index, VERSION_NORMAL )[0] = memory;
+    }
+  }
+
+    // dependencies of group_* data on a dof
+  db_max_index( DEPENDENCY_ITEM, max, VERSION_NORMAL, GET );
+  if ( max>=0 && nuknwn>0 ) {
+    db( DOF_LABEL, 0, dof_label, ddum, ldum, VERSION_NORMAL, GET );
+    for ( index=0; index<=max; index++ ) {
+      if ( !db_active_index( DEPENDENCY_ITEM, index, VERSION_NORMAL ) )
+        continue;
+      val = db_int( DEPENDENCY_ITEM, index, VERSION_NORMAL );
+      iuknwn = -1;
+      if ( !strncmp( db_name(labs(val[0])), "group_", 6 ) && val[2]<0 &&
+           array_member( dof_label, val[2], nuknwn, iuknwn ) ) {
+        db_delete_index( DEPENDENCY_ITEM, index, VERSION_NORMAL );
+        db_delete_index( DEPENDENCY_DIAGRAM, index, VERSION_NORMAL );
+      }
+    }
+  }
+
+    // deleted nonlinear features
+  db_delete( GROUP_INTERFACE_GAP, VERSION_NORMAL );
+  db_delete( GROUP_TRUSS_ROPE, VERSION_NORMAL );
+  general_delete_prefix( "group_materi_damage", -1 );
+  general_delete_prefix( "group_materi_failure", -1 );
+  general_delete_prefix( "groundflow_seepage_", -1 );
+  general_delete_prefix( "contact_", -1 );
+  db( CONTACT_APPLY, 0, &no, ddum, one, VERSION_NORMAL, PUT );
+}

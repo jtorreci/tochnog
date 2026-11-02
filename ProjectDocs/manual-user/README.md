@@ -30,6 +30,10 @@ page lists its own in "Differences with the Professional version".
 - [check_data](check_data.md) — verify the database integrity (missing required items).
 - [control_check_data](control_check_data.md) — `control_check_data index switch` (6.111): the check_data check at the start of a control index (F5).
 - [global_element_dof_apply](global_element_dof_apply.md) — `global_element_dof_apply switch` (6.553): -yes / -no / -only (integration-point dofs not added to the nodes); alias of options_element_dof (F5).
+- [mrange](mrange.md) — `mrange maximum_range_length` / [mstring](mstring.md) `mstring maximum_number_of_strings` (4.55 / 4.56): initialization-part limits of the range length and of the strings of a define (F5).
+- [groundflow_apply](groundflow_apply.md) — `groundflow_apply switch` (6.555): -no skips the groundflow equation and ignores all groundflow data (F5).
+- [linear_calculation_apply](linear_calculation_apply.md) — `linear_calculation_apply switch` (6.797): -yes rewrites the database to a linear calculation (F5).
+- [control_input](control_input.md) — `control_input index switch` (6.139): read extra data records from `index.dat` at the start of the index (F5).
 - [check_error](check_error.md) — suppress "Error" messages.
 - [check_warning](check_warning.md) — suppress "Warning" messages.
 

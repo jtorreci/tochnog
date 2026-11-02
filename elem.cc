@@ -743,6 +743,9 @@ void elem( long int element, long int ithread )
       // loop over differential operators
     for ( itype=0; itype<len_type; itype++ ) {
       type = types[itype];
+      // groundflow_apply -no (manual Professional 6.555): the groundflow
+      // equation is skipped for all timesteps (general.cc)
+      if ( type==-GROUNDFLOW && groundflow_apply_off() ) continue;
       // Stress-only pass (stress_recovery_post_pass): only the MATERI block
       // (stress recovery) is assembled; the lumped/momentum operator and the
       // other physics are left untouched.

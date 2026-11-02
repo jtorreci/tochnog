@@ -2402,6 +2402,44 @@ if grep -q "^node_dof  4  0.0176 0.04 0.02201 0.05 -6.823 8.464 0 52.02 0 13.56 
 else
   check_fail "print_precision1" "node_dof 4 not printed with 4 digits"
 fi
+# F5 W1 U6: mrange / mstring (initialization part), groundflow_apply,
+# linear_calculation_apply (Professional 02-08-2026 probes; the manual
+# decides where the Professional differs) and control_input (isolated
+# directory with the <index>.dat companion file).
+for t in mrange1 mstring1 groundflow_apply1 groundflow_apply2 \
+         linear_calculation_apply1 linear_calculation_apply2 \
+         linear_calculation_apply3 linear_calculation_apply4 \
+         linear_calculation_apply5; do
+  run_ok "$T2026" "$t"
+done
+for t in mrange_error1 mrange_error2 mrange_error3 mrange_error4 mstring_error1 mstring_error2; do
+  expected_error_ok "$T2026" "$t"
+done
+LCDBS="$T2026/linear_calculation_apply5.dbs"
+if grep -q "^plasti_apply   -no *$" "$LCDBS" && grep -q "^contact_apply   -no *$" "$LCDBS" && \
+   grep -q "^options_mesh   -fixed_in_space -fixed_in_space *$" "$LCDBS" && \
+   grep -q "^group_materi_memory  0  -updated_linear *$" "$LCDBS" && \
+   grep -q "^group_spring_memory  1  -updated_linear *$" "$LCDBS" && \
+   grep -q "^group_spring_stiffness  1  100 *$" "$LCDBS" && \
+   grep -q "^dependency_item  1  -group_materi_elasti_poisson 0 -time_current 2 *$" "$LCDBS" && \
+   ! grep -q "^dependency_item  0 \|^group_spring_stiffness_nonlinear\|^group_materi_failure\|^contact_penalty_velocity" "$LCDBS"; then
+  check_ok "linear_calculation_apply5 (database rewrite in the .dbs)"
+else
+  check_fail "linear_calculation_apply5" "rewritten records differ in the .dbs"
+fi
+CIDIR="/tmp/control_input_isolated"
+for ci in "control_input1 group_materi_elasti_young 0 2000 end_data" \
+          "control_input2 node 5 0 2 node 6 1 2 element 2 -quad4 3 4 5 6 end_data" \
+          "control_input_error1 ( comment ) group_materi_elasti_young 0 2000 end_data"; do
+  read -r cit cic <<< "$ci"
+  rm -rf "$CIDIR" && mkdir -p "$CIDIR" && cp "$T2026/$cit.dat" "$CIDIR/" && \
+    echo "$cic" > "$CIDIR/1.dat"
+  case "$cit" in
+    *error*) expected_error_ok "$CIDIR" "$cit" ;;
+    *) run_ok "$CIDIR" "$cit" ;;
+  esac
+done
+rm -rf "$CIDIR"
 # F5 W1 U2: control_system_call (Professional 02-08-2026 probe). Isolated
 # run with a script that logs its argument and the history lines already
 # written; its stdout reaches the run output, its stderr is discarded.

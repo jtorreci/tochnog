@@ -403,6 +403,12 @@ void top( void )
     db( TIME_CURRENT, 0, idum, &time_current, length, VERSION_NORMAL, PUT );
   }
 
+    // groundflow_apply -no (manual Professional 6.555) and
+    // linear_calculation_apply -yes (6.797): database rewrites for all
+    // timesteps (general.cc), before the start version is stored
+  groundflow_apply_transform();
+  linear_calculation_apply_transform();
+
     // determine the highest index of timestep, print, etc..
   for ( idat=0; idat<MDAT; idat++ ) {
     if ( db_data_class(idat)==CONTROL ) {
@@ -465,6 +471,9 @@ void top( void )
                 length=1; db( ICONTROL, 0, &icontrol, ddum, length, 
                   VERSION_NORMAL, PUT );
                 step_start_control_entry = 1;
+                // control_input (manual Professional 6.139): read the
+                // records of <icontrol>.dat at the start of the index
+                input_control_input( icontrol );
                 // control_check_data (manual Professional 6.111): check the
                 // database at the start of this control index
                 {

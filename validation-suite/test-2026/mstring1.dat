@@ -1,0 +1,34 @@
+(
+F5 W1 U6: mstring maximum_number_of_strings (manual Professional 4.56,
+ initialization part): the maximum number of strings in a define block.
+ mstring 4 allows the 4-string define of node 4 below (node 4 1 1).
+ The Professional 02-08-2026 rejects every mstring record ("Error in
+ initialisation part, double declared: mstring"), so the GNU follows the
+ manual (DIVERGENCES MSTRING-PRO). One quad4, E 1000, poisson 0, top
+ nodes pushed down by 0.01: sigyy -10 (analytic).)
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_displacement
+materi_stress
+mstring 4
+end_initia
+start_define
+  top_node node 4 1 1
+end_define
+node 1 0 0
+node 2 1 0
+node 3 0 1
+top_node
+element 1 -quad4 1 2 3 4
+group_type 0 -materi
+group_materi_elasti_young 0 1000
+group_materi_elasti_poisson 0 0.
+bounda_dof 0 -ra 1 2 3 4 -ra -velx
+bounda_dof 1 -ra 1 2 -ra -vely
+bounda_dof 2 -ra 3 4 -ra -vely
+bounda_time 2 0 0 1 -0.01
+control_timestep 0 1 1
+target_item 0 -node_dof 4 -sigyy
+target_value 0 -10. 1.e-8
+end_data

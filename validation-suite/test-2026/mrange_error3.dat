@@ -1,0 +1,29 @@
+(
+F5 W1 U6: mrange above the compiled GNU limit MRANGE (500000, tochnog.h):
+ the GNU range buffers have a fixed compiled size, so a larger mrange is
+ an error naming the constant to raise (the Professional 02-08-2026
+ accepts mrange 100000000; DIVERGENCES MRANGE-COMPILED).
+  EXPECTED_ERROR: increase MRANGE in tochnog.h and recompile )
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_displacement
+materi_stress
+mrange 600000
+end_initia
+node 1 0 0
+node 2 1 0
+node 3 0 1
+node 4 1 1
+element 1 -quad4 1 2 3 4
+group_type 0 -materi
+group_materi_elasti_young 0 1000
+group_materi_elasti_poisson 0 0.
+bounda_dof 0 -ra 1 2 3 4 -ra -velx
+bounda_dof 1 -ra 1 2 -ra -vely
+bounda_dof 2 -ra 3 4 -ra -vely
+bounda_time 2 0 0 1 -0.01
+control_timestep 0 1 1
+target_item 0 -node_dof 4 -sigyy
+target_value 0 -10. 1.e-8
+end_data

@@ -4804,6 +4804,32 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   data_class[MATERI_DAMAGE_APPLY] = CONTROL;
   no_index[MATERI_DAMAGE_APPLY] = 1;
 
+  // groundflow_apply (manual Professional 6.555): -no skips the
+  // groundflow equation and ignores all groundflow data (general.cc
+  // groundflow_apply_transform, elem.cc); default -yes
+  strcpy(name[GROUNDFLOW_APPLY],"groundflow_apply");
+  type[GROUNDFLOW_APPLY] = INTEGER;
+  data_length[GROUNDFLOW_APPLY] = 1;
+  data_class[GROUNDFLOW_APPLY] = CONTROL;
+  no_index[GROUNDFLOW_APPLY] = 1;
+
+  // linear_calculation_apply (manual Professional 6.797): -yes rewrites
+  // the database to a linear calculation at the start of top()
+  // (general.cc linear_calculation_apply_transform); default -no
+  strcpy(name[LINEAR_CALCULATION_APPLY],"linear_calculation_apply");
+  type[LINEAR_CALCULATION_APPLY] = INTEGER;
+  data_length[LINEAR_CALCULATION_APPLY] = 1;
+  data_class[LINEAR_CALCULATION_APPLY] = CONTROL;
+  no_index[LINEAR_CALCULATION_APPLY] = 1;
+
+  // control_input (manual Professional 6.139): -yes reads the data
+  // records of the file <index>.dat at the start of control index
+  // <index> (input.cc input_control_input)
+  strcpy(name[CONTROL_INPUT],"control_input");
+  type[CONTROL_INPUT] = INTEGER;
+  data_length[CONTROL_INPUT] = 1;
+  data_class[CONTROL_INPUT] = CONTROL;
+
   strcpy(name[CONTROL_MATERI_DYNAMIC],"control_materi_dynamic");
   type[CONTROL_MATERI_DYNAMIC] = DOUBLE_PRECISION;
   data_length[CONTROL_MATERI_DYNAMIC] = 1;
@@ -5824,6 +5850,12 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   strcpy(name[MATERI_VOID_FRACTION],"materi_void_fraction");
 
   strcpy(name[MATERI_WORK],"materi_work");
+
+  // mrange / mstring (manual Professional 4.55 / 4.56): initialization
+  // part keywords (read in input.cc, not stored as data records)
+  strcpy(name[MRANGE_MAXIMUM_RANGE_LENGTH],"mrange");
+
+  strcpy(name[MSTRING_MAXIMUM_NUMBER_OF_STRINGS],"mstring");
 
   strcpy(name[MATRIX],"matrix");
 

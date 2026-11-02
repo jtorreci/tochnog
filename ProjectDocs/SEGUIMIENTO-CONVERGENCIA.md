@@ -30,6 +30,7 @@ suite sfnet, o un test propio. El registro completo:
 
 | Feature | Commit | Fecha | Verificación |
 |---------|--------|-------|--------------|
+| **F5 W1 U6 — `mrange`, `mstring`, `groundflow_apply`, `linear_calculation_apply`, `control_input`** | `PENDING` | 2026-11-02 | Professional 02-08-2026 probes. `mrange`: after `number_of_space_dimensions`; value range counts its words (list of 4: `mrange` 4 ok, 3 error; `-from 1 -to 4`: 4), index range its words + 2 markers (3 entries need 5) and its expansion (`-from 5 -to 20` needs 16); message `Error: mrange exceeded.` = Pro; above the compiled MRANGE an error (Pro accepts 1e8: MRANGE-COMPILED). `mstring`: the Professional rejects every record ("double declared: mstring"), GNU per manual (MSTRING-PRO). `groundflow_apply -no`: groundflow dofs 0 everywhere (prescribed 5 / initial 7 / reset -1 ignored), `k24_consol_3d1` drained disx 0.1 sigxx -1 = Pro. `linear_calculation_apply -yes`: Pro `.dbs` diffs (plasti_apply -no, mesh -fixed_in_space, contact_apply -no, plasti group records deleted, memory -updated_linear, hardsoil E50ref -5, young_power E0 -7, spring nonlinear 100, dependency on a dof deleted, failure / seepage deleted); wolffersdorff Pro uses phi (LINCALC-WOLFF), contact_* kept by Pro (LINCALC-CONTACT); tutorial_4 GNU rhside ratio 4.6e-13 (needs C97 workarounds). `control_input`: read at the start of the index (index 0: -60, 1 or 2: -50 = Pro), replace / add, mesh extension (new nodes 5/6 sigyy 20 = Pro; shared nodes CTRL-INPUT-NEWELEM), errors near `(` / unknown / define / range / no end_data, missing file silent. RED: every new test rc 1 on the base binary (keyword unknown). Differential base f83f4ea vs new on all test-2026 inputs: only timings, the new tests, the new `tochnog_data_name.txt` names and the C91 raw enum of `force_element_edge_water` (shifted by the new enums); runtime-file reader byte-identical on 3 `.run` cases. Found C95, C96, C97. |
 | **F5 W1 U2 — `processors_maximum` (+ `force_point` with threads), `control_reset_value_exponent` / `_logarithmic_first` quotient, `message`, `print_data_name`, `control_check_data`, `control_zip`, `global_element_dof_apply` (+ `-only`)** | `1a4cb7d` + `f43142d` + `03c8874` | 2026-11-02 | Professional 02-08-2026 probes: `processors_used 16` without a processors record (GNU default kept `-no`, owner decision, PROC-MAX / C92: 80 elements x 300 steps 12.0 / 15.5 / 65.5 s on 1 / 4 / 16 threads); reset quadrant probes ln((1+x)/(2+x)) -0.405465 / -0.287682 and e^((1+x)/(2+x)) 1.947734 / 2.117000 to 1e-12, plus the non-positive / zero-denominator errors; MESSAGE / message environment symbols; `control_zip` gzips the GiD files of the index; `print_data_name` layout; `global_element_dof_apply -yes/-no` nodal stresses 3.2967033 (Pro `-only` aborts: GEDA-ONLY). RED: every new test rc 1 (keyword unknown, old formula e^4 / ln 4, `force_point_threads1` disx 8). Independent verifier on `1a4cb7d`: PASS, single-thread outputs byte-identical to `7c71fa0`. build_safe 396 OK / 0 FALLO, 226/226. Found C92, C93. |
 | **F5 W1 U2 — `control_system_call`** | `f6c4476` | 2026-11-02 | Professional 02-08-2026 probes (`control_post1` quad4 geometry, indices 0/1 with 3/2 timesteps and 2 without, logging script): one call per converged timestep before its history print plus one at the end of each index with the record (7 x4, 8 x3, 9 x1), stdout kept, stderr dropped, exit status ignored, missing script silent, `-3` rejected; the Professional only finds the script through the `PATH` (DIVERGENCES SYSCALL-PATH, GNU follows the manual). RED: `control_system_call1` rc 1 on `9574b84`. GNU call log identical; script without `#!` and non-executable script checked. |
 | **F5 W1 U3 — post gates: `post_apply` (consumed), `control_post_apply`, `control_post_element_force`, `control_post`** | `ea96bf6` | 2026-11-02 | Professional 02-08-2026 probes (quad4 ramp, two control indices, `post_point` + `post_element_force`, `control_print_history` series per index, 11 variants): equal series and final `.dbs` (global -no: no record; control -no: frozen, control overrules global; element-force switch only freezes the force; an index without timesteps evaluates; end-of-run re-evaluation of the skipped records). RED: the 4 new keyword tests rc 1 and `post_apply1` wrote post records on `4b80565`. Differential vs `4b80565` on 212 inputs with post records: only the new tests and `post_apply1`. Found C90, C91. |
@@ -728,9 +729,9 @@ marcado `PENDIENTE` puede estar cubierto en el GNU bajo otro nombre:
 
 - [x] `control_inertia_apply` — registrado (alias `control_options_inertia`); default de la familia alineado al Professional (-no) en el sprint u-p (2026-09-05, commit feat de este lote)
 
-### control_input (0/1)
+### control_input (1/1)
 
-- [ ] `control_input` — PENDIENTE
+- [x] `control_input` — implementada (F5 W1 U6, 2026-11-02; `<index>.dat` leído al inicio del índice, Professional medido)
 
 ### control_materi (15/15 — familia COMPLETA; 7 parciales documentados)
 
@@ -1389,8 +1390,9 @@ geometría-elemento; feature de malla grande, fuera de alcance de sprint
 
 - [x] `ground` — presente en el GNU
 
-### groundflow (19/19)
+### groundflow (20/20)
 
+- [x] `groundflow_apply` — implementada (F5 W1 U6, 2026-11-02)
 - [x] `groundflow_consolidation_apply` — P6 (2026-08-20)
 - [x] `groundflow_flux_edge_normal` — P6 (2026-08-20)
 - [x] `groundflow_flux_edge_normal_element` — P6 (2026-08-20)
@@ -1702,9 +1704,9 @@ Nota: `group_interface_ground` del checklist anterior NUNCA existió (artefacto 
 
 - [x] `interface_gap_apply` — implementada (commit `467cdbd`, 2026-11-02; F5 W1)
 
-### linear (0/1)
+### linear (1/1)
 
-- [ ] `linear_calculation_apply` — PENDIENTE
+- [x] `linear_calculation_apply` — implementada (F5 W1 U6, 2026-11-02; reescritura de la base de datos al inicio, 4 registros de la lista no existen en el GNU)
 
 ### materi_acceleration (1/1)
 
@@ -1878,13 +1880,13 @@ Nota: `group_interface_ground` del checklist anterior NUNCA existió (artefacto 
 - [ ] `mpc_geometry_switch` — PENDIENTE
 - [ ] `mpc_geometry_tolerance` — PENDIENTE
 
-### mrange (0/1)
+### mrange (1/1)
 
-- [ ] `mrange` — PENDIENTE
+- [x] `mrange` — implementada (F5 W1 U6, 2026-11-02; límite en tiempo de ejecución bajo MRANGE)
 
-### mstring (0/1)
+### mstring (1/1)
 
-- [ ] `mstring` — PENDIENTE
+- [x] `mstring` — implementada (F5 W1 U6, 2026-11-02; según el manual, el Professional la rechaza: MSTRING-PRO)
 
 ### node (18/23; 3 parciales documentados, 2 print-only pendientes)
 

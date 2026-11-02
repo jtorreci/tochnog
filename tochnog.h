@@ -297,6 +297,7 @@ enum {
   CONTROL_EIGEN,
   CONTROL_EIGEN_SCALE,
   CONTROL_EIGEN_VALUES,
+  CONTROL_INPUT,
   CONTROL_MATERI_DAMAGE_APPLY,
   MATERI_DAMAGE_APPLY,
   CONTROL_MATERI_DIFFUSION,
@@ -722,6 +723,7 @@ enum {
   GROUND,
   GROUNDFLOW,
   GROUNDFLOW_ADDTOPRESSURE,
+  GROUNDFLOW_APPLY,
   GROUNDFLOW_CONSOLIDATION_APPLY,
   GROUNDFLOW_DENSITY,
   GROUNDFLOW_FLUX_EDGE_NORMAL,
@@ -804,6 +806,7 @@ enum {
   GROUP_INTERFACE_CONDIF_CONDUCTIVITY,
   GROUP_INTERFACE_GAP,
   INTERFACE_GAP_APPLY,
+  LINEAR_CALCULATION_APPLY,
   GROUP_INTERFACE_GROUNDFLOW_CAPACITY,
   GROUP_INTERFACE_GROUNDFLOW_PERMEABILITY,
   GROUP_INTERFACE_GROUNDFLOW_TOTAL_PRESSURE_TENSION,
@@ -1085,6 +1088,8 @@ enum {
   MATERI_VELOCITY_INTEGRATED,
   MATERI_VOID_FRACTION,
   MATERI_WORK,
+  MRANGE_MAXIMUM_RANGE_LENGTH,
+  MSTRING_MAXIMUM_NUMBER_OF_STRINGS,
   MATRIX,
   MATRIX_ITERATIVE_BICG,
   MATRIX_ITERATIVE_PETSC,
@@ -2139,6 +2144,7 @@ void      input_check_required();
 void      input_convert_to_lower_case( char str[] );
 void      input_read_string( long int echo, char str[], double &d, long int &d_is_set );
 void      input_runtime( void );
+void      input_control_input( long int icontrol );
 void      input_skip_comment( char str[] );
 long int  integration_gauss( long int niso, double iso[], double weight_iso[]);
 long int  integration_lobatto( long int niso, double iso[], 
@@ -2438,6 +2444,9 @@ long int  control_timestep_until_reached( long int icontrol );
 long int  materi_memory_default( void );
 long int  convection_apply_switch( void );
 long int  materi_apply_gate_off( long int global_item, long int control_item );
+long int  groundflow_apply_off( void );
+void      groundflow_apply_transform( void );
+void      linear_calculation_apply_transform( void );
 double  materi_dynamic_effective( long int *specified );
 long int  set_swit( long int element, long int inod, const char *routine
  );
