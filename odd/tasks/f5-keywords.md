@@ -28,7 +28,7 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
 - [x] T0 Refresh the gap against the 02-08-2026 manual (S1, S5). Route: inline. 1156 names,
   824 accepted + 6 literals, 320 missing = 63 GiD + 257. List `keyword-gap-2026-11-01.txt`,
   report update in KEYWORD-GAP-REPORT.md.
-- [ ] T1 W1 switches and control (35): control_check_data, control_element_group,
+- [x] T1 W1 switches and control (35): control_check_data, control_element_group,
   control_element_group_apply, control_input, control_mesh_element_group_apply, control_post,
   control_post_apply, control_post_element_force, control_reset_value_logarithmic_first,
   control_slide_damping_apply, control_system_call, control_timestep_adjust_minimum_iterations,
@@ -61,8 +61,9 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
     control_element_group_apply, mesh_element_group_apply, control_mesh_element_group_apply,
     processors_partition, print_precision.
     Done `9d0da65`.
-  - [ ] U6 input / database rewrite: mstring, mrange, control_input, groundflow_apply,
+  - [x] U6 input / database rewrite: mstring, mrange, control_input, groundflow_apply,
     linear_calculation_apply.
+    Done `97c3e47` (delegated writer, context backstop; independent review PASS).
 - [ ] T2 W2 output records (69): `element_*`, `post_*`, `print_*`, `control_print_*_node_type`,
   `materi_strain_*` / `materi_history_variable` initial dofs, `dof_*`, `global_*`,
   node_bounded_index (list in the 2026-11-01 file). Route: inline.
@@ -148,4 +149,15 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   (differs, fails before and after), vajont_slope_fs (minimal-step stop before, > 900 s now) change
   with the 2 8 4 default; no Professional reference for them (parse / timeout). Recorded in C94.
   U6 delegated to one bounded writer (context backstop).
+- 2026-11-02 U6 (route delegated: one bounded writer, context backstop; the NAS went down mid-unit,
+  resumed after the owner restarted it: "he reiniciado el NAS. Podemos ocntinuar"). Professional
+  probes in scratchpad/f5/u6/NOTES.txt: mrange counting = Professional (MRANGE-COMPILED class C);
+  Professional rejects every mstring (MSTRING-PRO class D); groundflow_apply -no = Professional;
+  linear_calculation_apply = manual list (Professional extras followed where the manual is silent;
+  LINCALC-WOLFF, LINCALC-CONTACT class D); control_input = Professional (start of index, replace /
+  add, errors; CTRL-INPUT-NEWELEM class C, C96). 22 new tests RED on f83f4ea; build_safe 431 OK /
+  0 FALLO; differential 339 test-2026 inputs: only the new tests, timing and the C91 enum shift.
+  Independent verifier (item 3, input_runtime refactor): PASS, 343-input differential identical
+  (C91 shift and one concurrency flake), 13 runtime-file probes identical, ASan clean. Commit
+  97c3e47. T1 closed. Next: T2 W2 output records (69).
 
