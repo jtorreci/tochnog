@@ -2371,6 +2371,37 @@ else
   check_fail "post_apply1" "post records or history file present"
 fi
 rm -f "$T2026/disy0.his"
+# F5 W1 U4: control_timestep_until_* (Professional 02-08-2026 probes) and
+# the 2 8 4 default / record of the automatic iterations.
+run_ok "$T2026" control_timestep_until1
+post_his_check control_timestep_until2 sigyy4.his \
+  'END{exit (NR!=14 || $1<1.4-1e-9 || $1>1.4+1e-9)}' \
+  "14 lines, index 1 stopped after one step, last t 1.4"
+expected_error_ok "$T2026" control_timestep_until_error1
+for am in "control_timestep_iterations_automatic_default1 8" \
+          "control_timestep_iterations_automatic_minimum_maximum_wished1 5"; do
+  read -r amt amn <<< "$am"
+  run_ok "$T2026" "$amt"
+  if [ "$(grep -o 'iteration [0-9]*' "/tmp/${amt}_safe.out" | awk '{print $2}' | sort -n | tail -1)" = "$amn" ]; then
+    check_ok "$amt (at most $amn iterations per step, reached)"
+  else
+    check_fail "$amt" "maximum iteration count is not $amn"
+  fi
+done
+rm -f "$T2026/velx0.his" "$T2026/sigyy4.his"
+# F5 W1 U5: element group selection (Professional 02-08-2026 probes; the
+# manual decides where the Professional differs) and print_precision.
+for t in mesh_element_group_apply1 mesh_element_group_apply2 \
+         control_mesh_element_group_apply1 control_mesh_element_group_apply2 \
+         element_group_apply1 control_element_group1; do
+  run_ok "$T2026" "$t"
+done
+run_ok "$T2026" print_precision1
+if grep -q "^node_dof  4  0.0176 0.04 0.02201 0.05 -6.823 8.464 0 52.02 0 13.56 *$" "$T2026/print_precision1.dbs"; then
+  check_ok "print_precision1 (4 significant digits in the .dbs)"
+else
+  check_fail "print_precision1" "node_dof 4 not printed with 4 digits"
+fi
 # F5 W1 U2: control_system_call (Professional 02-08-2026 probe). Isolated
 # run with a script that logs its argument and the history lines already
 # written; its stdout reaches the run output, its stderr is discarded.

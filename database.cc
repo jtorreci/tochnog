@@ -2431,6 +2431,37 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   data_class[CONTROL_TIMESTEP_ITERATIONS_AUTOMATIC_STOP] = CONTROL;
   data_required[CONTROL_TIMESTEP_ITERATIONS_AUTOMATIC_STOP] = CONTROL_TIMESTEP;
 
+  strcpy(name[CONTROL_TIMESTEP_ITERATIONS_AUTOMATIC_MINIMUM_MAXIMUM_WISHED],"control_timestep_iterations_automatic_minimum_maximum_wished");
+  type[CONTROL_TIMESTEP_ITERATIONS_AUTOMATIC_MINIMUM_MAXIMUM_WISHED] = INTEGER;
+  data_length[CONTROL_TIMESTEP_ITERATIONS_AUTOMATIC_MINIMUM_MAXIMUM_WISHED] = 3;
+  fixed_length[CONTROL_TIMESTEP_ITERATIONS_AUTOMATIC_MINIMUM_MAXIMUM_WISHED] = 1;
+  data_class[CONTROL_TIMESTEP_ITERATIONS_AUTOMATIC_MINIMUM_MAXIMUM_WISHED] = CONTROL;
+
+  strcpy(name[CONTROL_TIMESTEP_ADJUST_MINIMUM_ITERATIONS],"control_timestep_adjust_minimum_iterations");
+  type[CONTROL_TIMESTEP_ADJUST_MINIMUM_ITERATIONS] = INTEGER;
+  data_length[CONTROL_TIMESTEP_ADJUST_MINIMUM_ITERATIONS] = 1;
+  data_class[CONTROL_TIMESTEP_ADJUST_MINIMUM_ITERATIONS] = CONTROL;
+
+  // control_timestep_until_data: up to 10 (name index number) triples,
+  // one control_timestep_until_minimum / _maximum value per triple
+  strcpy(name[CONTROL_TIMESTEP_UNTIL_DATA],"control_timestep_until_data");
+  type[CONTROL_TIMESTEP_UNTIL_DATA] = INTEGER;
+  data_length[CONTROL_TIMESTEP_UNTIL_DATA] = 30;
+  fixed_length[CONTROL_TIMESTEP_UNTIL_DATA] = 0;
+  data_class[CONTROL_TIMESTEP_UNTIL_DATA] = CONTROL;
+
+  strcpy(name[CONTROL_TIMESTEP_UNTIL_MINIMUM],"control_timestep_until_minimum");
+  type[CONTROL_TIMESTEP_UNTIL_MINIMUM] = DOUBLE_PRECISION;
+  data_length[CONTROL_TIMESTEP_UNTIL_MINIMUM] = 10;
+  fixed_length[CONTROL_TIMESTEP_UNTIL_MINIMUM] = 0;
+  data_class[CONTROL_TIMESTEP_UNTIL_MINIMUM] = CONTROL;
+
+  strcpy(name[CONTROL_TIMESTEP_UNTIL_MAXIMUM],"control_timestep_until_maximum");
+  type[CONTROL_TIMESTEP_UNTIL_MAXIMUM] = DOUBLE_PRECISION;
+  data_length[CONTROL_TIMESTEP_UNTIL_MAXIMUM] = 10;
+  fixed_length[CONTROL_TIMESTEP_UNTIL_MAXIMUM] = 0;
+  data_class[CONTROL_TIMESTEP_UNTIL_MAXIMUM] = CONTROL;
+
   strcpy(name[CONTROL_TIMESTEP_SIZE_AUTOMATIC_DECREASE],"control_timestep_size_automatic_decrease");
   type[CONTROL_TIMESTEP_SIZE_AUTOMATIC_DECREASE] = DOUBLE_PRECISION;
   data_length[CONTROL_TIMESTEP_SIZE_AUTOMATIC_DECREASE] = 3;
@@ -2696,6 +2727,34 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   version_all[ELEMENT_GROUP] = 1;
   data_class[ELEMENT_GROUP] = ELEMENT;
   data_required[ELEMENT_GROUP] = ELEMENT;
+
+  strcpy(name[ELEMENT_GROUP_APPLY],"element_group_apply");
+  type[ELEMENT_GROUP_APPLY] = INTEGER;
+  data_length[ELEMENT_GROUP_APPLY] = DATA_ITEM_SIZE;
+  fixed_length[ELEMENT_GROUP_APPLY] = 0;
+  data_class[ELEMENT_GROUP_APPLY] = ELEMENT;
+  data_required[ELEMENT_GROUP_APPLY] = ELEMENT;
+
+  strcpy(name[MESH_ELEMENT_GROUP_APPLY],"mesh_element_group_apply");
+  type[MESH_ELEMENT_GROUP_APPLY] = INTEGER;
+  data_length[MESH_ELEMENT_GROUP_APPLY] = DATA_ITEM_SIZE;
+  fixed_length[MESH_ELEMENT_GROUP_APPLY] = 0;
+
+  strcpy(name[CONTROL_MESH_ELEMENT_GROUP_APPLY],"control_mesh_element_group_apply");
+  type[CONTROL_MESH_ELEMENT_GROUP_APPLY] = INTEGER;
+  data_length[CONTROL_MESH_ELEMENT_GROUP_APPLY] = DATA_ITEM_SIZE;
+  fixed_length[CONTROL_MESH_ELEMENT_GROUP_APPLY] = 0;
+  data_class[CONTROL_MESH_ELEMENT_GROUP_APPLY] = CONTROL;
+
+  strcpy(name[CONTROL_ELEMENT_GROUP_APPLY],"control_element_group_apply");
+  type[CONTROL_ELEMENT_GROUP_APPLY] = INTEGER;
+  data_length[CONTROL_ELEMENT_GROUP_APPLY] = 1;
+  data_class[CONTROL_ELEMENT_GROUP_APPLY] = CONTROL;
+
+  strcpy(name[CONTROL_ELEMENT_GROUP],"control_element_group");
+  type[CONTROL_ELEMENT_GROUP] = INTEGER;
+  data_length[CONTROL_ELEMENT_GROUP] = 1;
+  data_class[CONTROL_ELEMENT_GROUP] = CONTROL;
 
   strcpy(name[ELEMENT_GROUP_AREA_ELEMENT_GROUP],
     "element_group_area_element_group");
@@ -6342,6 +6401,11 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   data_length[PROCESSORS_MAXIMUM] = 1;
   no_index[PROCESSORS_MAXIMUM] = 1;
 
+  strcpy(name[PROCESSORS_PARTITION],"processors_partition");
+  type[PROCESSORS_PARTITION] = INTEGER;
+  data_length[PROCESSORS_PARTITION] = 1;
+  no_index[PROCESSORS_PARTITION] = 1;
+
   strcpy(name[OPTIONS_RELAXATION],"options_relaxation");
   type[OPTIONS_RELAXATION] = DOUBLE_PRECISION;
   data_length[OPTIONS_RELAXATION] = nprinc;
@@ -7456,6 +7520,11 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   type[PRINT_DATA_NAME] = INTEGER;
   data_length[PRINT_DATA_NAME] = 1;
   no_index[PRINT_DATA_NAME] = 1;
+
+  strcpy(name[PRINT_PRECISION],"print_precision");
+  type[PRINT_PRECISION] = INTEGER;
+  data_length[PRINT_PRECISION] = 1;
+  no_index[PRINT_PRECISION] = 1;
 
   strcpy(name[WAVE],"wave");
 

@@ -55,3 +55,7 @@ control_timestep_iterations_automatic  5  0.0001 1.0e-6
   at the next keyword token (`control_options_solver`,
   `control_mesh_delete_geometry`, `target_item`, ...), which is what the
   variable-length registration guarantees.
+- The number of iterations per step is bounded by
+  [control_timestep_iterations_automatic_minimum_maximum_wished](control_timestep_iterations_automatic_minimum_maximum_wished.md)
+  (default 2 8 4; the GNU had 2 20 4 before 2026-11-02). The step-size law
+  differs from the Professional one (BACKLOG C94).

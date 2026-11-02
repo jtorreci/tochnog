@@ -708,8 +708,8 @@ marcado `PENDIENTE` puede estar cubierto en el GNU bajo otro nombre:
 
 ### control_element (0/2)
 
-- [ ] `control_element_group` — PENDIENTE
-- [ ] `control_element_group_apply` — PENDIENTE
+- [x] `control_element_group` — implementada (F5 W1 U5, 2026-11-02; según el manual (Professional lo rechaza: CTRL-EG))
+- [x] `control_element_group_apply` — implementada (F5 W1 U5, 2026-11-02; = Professional)
 
 ### control_geometry (0/1)
 
@@ -775,7 +775,7 @@ marcado `PENDIENTE` puede estar cubierto en el GNU bajo otro nombre:
 - [ ] `control_mesh_delete_geometry_stop_geometry` — PENDIENTE
 - [x] `control_mesh_delete_small` — presente en el GNU
 - [ ] `control_mesh_duplicate_element_group` — PENDIENTE
-- [ ] `control_mesh_element_group_apply` — PENDIENTE
+- [x] `control_mesh_element_group_apply` — implementada (F5 W1 U5, 2026-11-02; según el manual (Professional sólo en el índice 0: MESH-EG-APPLY))
 - [x] `control_mesh_extrude` — implementada (commit `5dec3c2`, 2026-08-05; 2026-09-01: + quad9→hex27 con n capas de `control_mesh_extrude_n` — el anillo 3D del Professional force11; 2026-10-11 F4 T12 `24301c8`: nodos de los planos interiores compartidos entre hex27 vecinos, force11 = Pro; los branches lineales tria3/bar2/quad4 intactos)
 - [ ] `control_mesh_extrude_contact_spring_element_group` — PENDIENTE
 - [ ] `control_mesh_extrude_contact_spring_element_group_new` — PENDIENTE
@@ -1002,6 +1002,14 @@ marcado `PENDIENTE` puede estar cubierto en el GNU bajo otro nombre:
 
 - [x] `control_system_call` — implementada (commit `f6c4476`, 2026-11-02; F5 W1 U2)
 
+### control_timestep (5/5 de F5 W1 U4)
+
+- [x] `control_timestep_iterations_automatic_minimum_maximum_wished` — implementada (F5 W1 U4, 2026-11-02; default 2 8 4 = manual y Professional; ley de paso distinta: C94)
+- [x] `control_timestep_adjust_minimum_iterations` — registrada, no consumida (F5 W1 U4; el GNU mantiene el mínimo, C94)
+- [x] `control_timestep_until_data` — implementada (F5 W1 U4, 2026-11-02; = Professional)
+- [x] `control_timestep_until_minimum` — implementada (ídem)
+- [x] `control_timestep_until_maximum` — implementada (ídem)
+
 ### convection (2/2)
 
 - [x] `convection_apply` — 2026-09-02 (alias de db_number → OPTIONS_CONVECTION, manual 6.395; la física de convección ya existía en general.cc, incluida la de condif con flujo materi)
@@ -1100,7 +1108,7 @@ marcado `PENDIENTE` puede estar cubierto en el GNU bajo otro nombre:
 ### element_group (1/2)
 
 - [x] `element_group` — presente en el GNU
-- [ ] `element_group_apply` — PENDIENTE
+- [x] `element_group_apply` — implementada (F5 W1 U5, 2026-11-02; = Professional)
 
 ### element_interface (1/7)
 
@@ -1807,7 +1815,7 @@ Nota: `group_interface_ground` del checklist anterior NUNCA existió (artefacto 
 - [ ] `mesh_boundary` — PENDIENTE
 - [ ] `mesh_correct` — PENDIENTE
 - [ ] `mesh_delete_geometry_moving` — PENDIENTE
-- [ ] `mesh_element_group_apply` — PENDIENTE
+- [x] `mesh_element_group_apply` — implementada (F5 W1 U5, 2026-11-02; según el manual (MESH-EG-APPLY))
 - [ ] `mesh_gid_arc_coord` — PENDIENTE
 - [ ] `mesh_gid_assign_conditions_line` — PENDIENTE
 - [ ] `mesh_gid_assign_conditions_point` — PENDIENTE
@@ -2100,7 +2108,7 @@ Nota: `group_interface_ground` del checklist anterior NUNCA existió (artefacto 
 
 ### print_precision (0/1)
 
-- [ ] `print_precision` — PENDIENTE
+- [x] `print_precision` — implementada (F5 W1 U5, 2026-11-02; cifras significativas como el ejemplo del manual (PRINT-PREC))
 
 ### print_tecplot (0/1)
 
@@ -2121,7 +2129,7 @@ Nota: `group_interface_ground` del checklist anterior NUNCA existió (artefacto 
 
 - [x] `processors` — alias de `options_processors` en db_number() (2026-09-01, match EXACTO): el GNU ya lo consume en elem.cc (nthread de element_loop) y area.cc. mpc4/interface11 parsean pero siguen RUNFAIL por `mpc_linear_quadratic` y `mesh_interface_triangle_coordinate`; validation_14_mesh por `bounda_time_until_data` + `processors_used` (record de salida aparte).
 - [x] `processors_maximum` — implementada (F5 W1 U2, 2026-11-02; default GNU `-no` hasta F6, Professional `-yes`: DIVERGENCES PROC-MAX)
-- [ ] `processors_partition` — PENDIENTE
+- [x] `processors_partition` — implementada (F5 W1 U5, 2026-11-02; aceptada, sin efecto)
 
 ### repeat (2/2 — familia COMPLETA; registros de resultado del bloque control_repeat)
 

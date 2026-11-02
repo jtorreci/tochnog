@@ -45,7 +45,7 @@ static long int *bounda_node_dormant( long int max_node, double time_total )
   double ddum[1];
 
   db_max_index( GROUP_TIME, max_group_time, VERSION_NORMAL, GET );
-  if ( max_group_time<0 ) return NULL;
+  if ( max_group_time<0 && !element_group_apply_active() ) return NULL;
   db_max_index( ELEMENT, max_element, VERSION_NORMAL, GET );
   if ( max_element<0 ) return NULL;
 
@@ -58,7 +58,8 @@ static long int *bounda_node_dormant( long int max_node, double time_total )
     element_group = 0;
     db( ELEMENT_GROUP, element, &element_group, ddum, ldum,
       VERSION_NORMAL, GET_IF_EXISTS );
-    alive = group_time_alive( element_group, time_total );
+    alive = group_time_alive( element_group, time_total ) &&
+      element_group_applied( element_group );
     length = db_len( ELEMENT, element, VERSION_NORMAL );
     el = db_int( ELEMENT, element, VERSION_NORMAL );
     for ( inol=1; inol<length; inol++ ) {
@@ -460,26 +461,9 @@ void bounda( )
           bounda_until_wanted = until_min[0];
           bounda_until_start  = until_min[1];
         }
-        if ( db_active_index( until_data_item_name, until_data_item_index,
-            VERSION_NORMAL ) ) {
-          long int number = 0, item_len = 0;
-          if ( until_data_item_number<0 ) {
-            array_member( dof_label, until_data_item_number, nuknwn, number );
-            if ( number>=0 && db_len( until_data_item_name,
-                until_data_item_index, VERSION_NORMAL )==npuknwn )
-              number /= nder;
-          }
-          else
-            number = until_data_item_number;
-          item_len = db_len( until_data_item_name, until_data_item_index,
-            VERSION_NORMAL );
-          if ( number>=0 && number<item_len ) {
-            double *dbl_item = db_dbl( until_data_item_name,
-              until_data_item_index, VERSION_NORMAL );
-            bounda_until_monitor = dbl_item[number];
-            bounda_until_data = 1;
-          }
-        }
+        if ( data_item_value( until_data_item_name, until_data_item_index,
+            until_data_item_number, bounda_until_monitor ) )
+          bounda_until_data = 1;
       }
       // only periodically use the bounda_time values
       if ( db_active_index( BOUNDA_TIME_ON_OFF, iboun, VERSION_NORMAL ) ) {
@@ -1309,3 +1293,33 @@ void bounda_time_file_apply( long int iboun, double time_total,
   
   in.close();
 }
+
+// Value of one entry of a DOUBLE PRECISION data item: name (enum, sign
+// ignored), index, and number (a dof label such as -sigyy, mapped through
+// dof_label and, for a record of npuknwn values, to the principal slot; or
+// a plain position). Returns 1 and sets value when the item is active and
+// the entry exists, 0 otherwise. Used by bounda_time_until_data and
+// control_timestep_until_data.
+long int data_item_value( long int name, long int index, long int number,
+  double &value )
+{
+  long int entry = 0, item_len = 0, ldum = 0, dof_label[MUKNWN];
+  double ddum[1];
+
+  name = labs( name );
+  if ( !db_active_index( name, index, VERSION_NORMAL ) ) return 0;
+  if ( number<0 ) {
+    array_set( dof_label, 0, MUKNWN );
+    db( DOF_LABEL, 0, dof_label, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+    array_member( dof_label, number, nuknwn, entry );
+    if ( entry>=0 && db_len( name, index, VERSION_NORMAL )==npuknwn )
+      entry /= nder;
+  }
+  else
+    entry = number;
+  item_len = db_len( name, index, VERSION_NORMAL );
+  if ( entry<0 || entry>=item_len ) return 0;
+  value = db_dbl( name, index, VERSION_NORMAL )[entry];
+  return 1;
+}
+

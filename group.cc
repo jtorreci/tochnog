@@ -151,6 +151,85 @@ long int group_time_alive( long int element_group, double time_total )
   return 0;
 }
 
+// mesh_element_group_apply (manual Professional 6.817) and
+// control_mesh_element_group_apply (6.178): are the elements of
+// element_group evaluated in the current control index? The control
+// record of the current index overrules the global records (the groups
+// of every mesh_element_group_apply record are united); without records
+// every group is evaluated. A group that is not evaluated is treated as a
+// group_time group that is not alive (elem() skips it, bounda() makes its
+// own nodes dormant).
+long int element_group_applied( long int element_group )
+{
+  long int icontrol=0, length=0, irec=0, max_rec=-1, ldum=0,
+    groups[DATA_ITEM_SIZE];
+  double ddum[1];
+
+  db( ICONTROL, 0, &icontrol, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+  if ( db_active_index( CONTROL_MESH_ELEMENT_GROUP_APPLY, icontrol,
+       VERSION_NORMAL ) ) {
+    db( CONTROL_MESH_ELEMENT_GROUP_APPLY, icontrol, groups, ddum, length,
+      VERSION_NORMAL, GET );
+    return array_member( groups, element_group, length, ldum );
+  }
+  db_max_index( MESH_ELEMENT_GROUP_APPLY, max_rec, VERSION_NORMAL, GET );
+  if ( max_rec<0 ) return 1;
+  for ( irec=0; irec<=max_rec; irec++ ) {
+    if ( !db_active_index( MESH_ELEMENT_GROUP_APPLY, irec, VERSION_NORMAL ) )
+      continue;
+    db( MESH_ELEMENT_GROUP_APPLY, irec, groups, ddum, length,
+      VERSION_NORMAL, GET );
+    if ( array_member( groups, element_group, length, ldum ) ) return 1;
+  }
+  return 0;
+}
+
+// does any mesh_element_group_apply / control_mesh_element_group_apply
+// record exist?
+long int element_group_apply_active( void )
+{
+  long int max_mesh=-1, max_control=-1;
+
+  db_max_index( MESH_ELEMENT_GROUP_APPLY, max_mesh, VERSION_NORMAL, GET );
+  db_max_index( CONTROL_MESH_ELEMENT_GROUP_APPLY, max_control,
+    VERSION_NORMAL, GET );
+  return max_mesh>=0 || max_control>=0;
+}
+
+// control_element_group_apply index number (manual Professional 6.134,
+// 6.429): at the start of control index icontrol every element with an
+// element_group_apply record gets the group at position number of that
+// record (= Professional 02-08-2026; the group is kept afterwards).
+// control_element_group index -yes (6.133): the area_element_group records
+// are evaluated at the start of the index (the Professional 02-08-2026
+// rejects the record; the GNU follows the manual).
+void control_element_group_apply( long int icontrol )
+{
+  long int number=-1, element=0, max_element=-1, length=0, ldum=0,
+    control_element_group=-NO, groups[DATA_ITEM_SIZE];
+  double ddum[1];
+
+  if ( db( CONTROL_ELEMENT_GROUP_APPLY, icontrol, &number, ddum, ldum,
+       VERSION_NORMAL, GET_IF_EXISTS ) ) {
+    if ( number<0 ) db_error( CONTROL_ELEMENT_GROUP_APPLY, icontrol );
+    db_max_index( ELEMENT_GROUP_APPLY, max_element, VERSION_NORMAL, GET );
+    for ( element=0; element<=max_element; element++ ) {
+      if ( !db_active_index( ELEMENT_GROUP_APPLY, element, VERSION_NORMAL ) ||
+           !db_active_index( ELEMENT, element, VERSION_NORMAL ) )
+        continue;
+      db( ELEMENT_GROUP_APPLY, element, groups, ddum, length,
+        VERSION_NORMAL, GET );
+      if ( number>=length ) db_error( ELEMENT_GROUP_APPLY, element );
+      length = 1;
+      db( ELEMENT_GROUP, element, &groups[number], ddum, length,
+        VERSION_NORMAL, PUT );
+    }
+  }
+  db( CONTROL_ELEMENT_GROUP, icontrol, &control_element_group, ddum, ldum,
+    VERSION_NORMAL, GET_IF_EXISTS );
+  if ( control_element_group==-YES ) area_element_group( VERSION_NORMAL );
+}
+
 void area_element_group_sequence( void )
 
 {

@@ -210,6 +210,8 @@ void elem( long int element, long int ithread )
     time_total = time_current + dtime;
     if ( !group_time_alive( element_group, time_total ) ) return;
   }
+  // mesh_element_group_apply / control_mesh_element_group_apply
+  if ( !element_group_applied( element_group ) ) return;
 
   swit = set_swit(element,-1,"elem");
   if ( swit ) pri( "In routine ELEM" );

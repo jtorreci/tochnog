@@ -27,7 +27,6 @@
 
 extern char **environ;
 
-#define ITERATION_WISHED 4
 #define EPS_DTIME 1.e-4
 
 // Set when the control loop enters a control index (also on a
@@ -88,7 +87,7 @@ void top( void )
     inverse_iterations=0, inverse_iter=0, ipar=0, npar=0, 
     ipar_i=0, ipar_n=0, max_ipar=0, max_ipar_i=0, icontrol=0, iteration=0, 
     number_processors=1, number_iterations=0,
-    iteration_min=0, iteration_max=0,
+    iteration_min=0, iteration_max=0, iteration_wished=4,
     use_control_timestep_iterations_automatic=0, 
     use_control_timestep_size_automatic_decrease=0, 
     control_timestep_iterations_automatic_stop=-YES, 
@@ -173,6 +172,18 @@ void top( void )
         "implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR "
         "PURPOSE.\n";
     }
+  }
+
+  // print_precision (manual Professional 6.997): the number of digits of
+  // every printed value (TN_PRECISION); default 12.
+  // processors_partition (6.1006) is accepted: the GNU element loop gives
+  // each thread one static block.
+  {
+    long int print_precision = 12;
+    db( PRINT_PRECISION, 0, &print_precision, ddum, ldum, VERSION_NORMAL,
+      GET_IF_EXISTS );
+    if ( print_precision<1 ) db_error( PRINT_PRECISION, 0 );
+    tn_print_precision = print_precision;
   }
 
   // print_data_name (manual Professional 6.971): every data name, in the
@@ -462,6 +473,8 @@ void top( void )
                     ldum, VERSION_NORMAL, GET_IF_EXISTS );
                   if ( control_check_data==-YES ) check_data_integrity();
                 }
+                // control_element_group_apply / control_element_group
+                control_element_group_apply( icontrol );
 		  
                 if ( db_active_index( CONTROL_TIMESTEP, icontrol, VERSION_NORMAL ) ) {
                   maximum_timestep = DBL_MAX;
@@ -494,8 +507,30 @@ void top( void )
                     db( CONTROL_TIMESTEP_ITERATIONS_AUTOMATIC_STOP, icontrol, 
                       &control_timestep_iterations_automatic_stop, ddum, ldum, 
                       VERSION_NORMAL, GET_IF_EXISTS );
+                    // control_timestep_iterations_automatic_minimum_
+                    // maximum_wished (manual Professional 6.387): default
+                    // 2 8 4 (= Professional 02-08-2026, which stops a step
+                    // after 8 iterations; the GNU had 2 20 4 hardcoded);
+                    // the maximum must be 2 or larger.
+                    // control_timestep_adjust_minimum_iterations (6.384) is
+                    // accepted; the GNU keeps the minimum (as with -no).
                     iteration_min = 2;
-                    iteration_max = 20;
+                    iteration_max = 8;
+                    iteration_wished = 4;
+                    if ( db_active_index(
+                         CONTROL_TIMESTEP_ITERATIONS_AUTOMATIC_MINIMUM_MAXIMUM_WISHED,
+                         icontrol, VERSION_NORMAL ) ) {
+                      long int min_max_wished[3];
+                      db( CONTROL_TIMESTEP_ITERATIONS_AUTOMATIC_MINIMUM_MAXIMUM_WISHED,
+                        icontrol, min_max_wished, ddum, ldum, VERSION_NORMAL, GET );
+                      if ( min_max_wished[1]<2 || min_max_wished[0]<1 ||
+                           min_max_wished[0]>min_max_wished[1] )
+                        db_error( CONTROL_TIMESTEP_ITERATIONS_AUTOMATIC_MINIMUM_MAXIMUM_WISHED,
+                          icontrol );
+                      iteration_min = min_max_wished[0];
+                      iteration_max = min_max_wished[1];
+                      iteration_wished = min_max_wished[2];
+                    }
                     use_control_timestep_iterations_automatic = 1;
                   }
                   else if ( db_active_index( CONTROL_TIMESTEP_ITERATIONS, 
@@ -894,7 +929,7 @@ void top( void )
                         }
                         else {
                           converged_once = 1;
-                          dtime *= 1. + (ITERATION_WISHED-number_iterations)/20.;
+                          dtime *= 1. + (iteration_wished-number_iterations)/20.;
                           if ( dtime>maximum_timestep ) dtime = maximum_timestep;
                         }
                       }
@@ -953,6 +988,10 @@ void top( void )
                         control_system_call( icontrol );
                         step_close( YES, ipar, npar, ipar_i, ipar_n );
                         if ( repeat(start_control) ) goto repeat_point;
+                        // control_timestep_until_data (manual Professional
+                        // 6.390): stop the timesteps of this index once a
+                        // value leaves its [minimum, maximum] range
+                        if ( control_timestep_until_reached( icontrol ) ) break;
                       }
                       else if ( time_current<time_new ) {
                         if ( control_timestep_iterations_automatic_stop==-YES ) {
@@ -1911,3 +1950,43 @@ long int available_processors( void )
   if ( n<1 ) n = 1;
   return n;
 }
+
+// control_timestep_until_data / _minimum / _maximum (manual Professional
+// 6.390-6.392): after a converged timestep, returns 1 when one of the
+// data item values is below its minimum or above its maximum, so the
+// timesteps of this control index stop and the calculation continues with
+// the next index (Professional 02-08-2026: the step in which the value
+// leaves the range is the last one of the index). Both the minimum and
+// the maximum record are required, one value per (name index number).
+long int control_timestep_until_reached( long int icontrol )
+{
+  long int until_data[30], length_data=0, length_min=0, length_max=0,
+    ntriple=0, itriple=0, idum[1];
+  double until_minimum[10], until_maximum[10], value=0.;
+
+  if ( !db_active_index( CONTROL_TIMESTEP_UNTIL_DATA, icontrol, VERSION_NORMAL ) )
+    return 0;
+  db( CONTROL_TIMESTEP_UNTIL_DATA, icontrol, until_data, until_minimum,
+    length_data, VERSION_NORMAL, GET );
+  ntriple = length_data/3;
+  if ( length_data%3!=0 ||
+       !db_active_index( CONTROL_TIMESTEP_UNTIL_MINIMUM, icontrol, VERSION_NORMAL ) )
+    db_error( CONTROL_TIMESTEP_UNTIL_MINIMUM, icontrol );
+  if ( !db_active_index( CONTROL_TIMESTEP_UNTIL_MAXIMUM, icontrol, VERSION_NORMAL ) )
+    db_error( CONTROL_TIMESTEP_UNTIL_MAXIMUM, icontrol );
+  db( CONTROL_TIMESTEP_UNTIL_MINIMUM, icontrol, idum, until_minimum,
+    length_min, VERSION_NORMAL, GET );
+  db( CONTROL_TIMESTEP_UNTIL_MAXIMUM, icontrol, idum, until_maximum,
+    length_max, VERSION_NORMAL, GET );
+  if ( length_min!=ntriple ) db_error( CONTROL_TIMESTEP_UNTIL_MINIMUM, icontrol );
+  if ( length_max!=ntriple ) db_error( CONTROL_TIMESTEP_UNTIL_MAXIMUM, icontrol );
+  for ( itriple=0; itriple<ntriple; itriple++ ) {
+    if ( !data_item_value( until_data[3*itriple], until_data[3*itriple+1],
+           until_data[3*itriple+2], value ) )
+      continue;
+    if ( value<until_minimum[itriple] || value>until_maximum[itriple] )
+      return 1;
+  }
+  return 0;
+}
+

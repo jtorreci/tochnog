@@ -76,7 +76,10 @@ enum {
 #define MAXIMUM_NODE 64 // always 64
 #define DATA_ITEM_SIZE 190 // maximum length of (almost all) records
 #define NONLOCAL_ITEM_SIZE 160 // maximum number of integration points for nonlocal calculation
-#define TN_PRECISION 12 // precision in writing output file
+// precision in writing output files: 12, or print_precision (manual
+// Professional 6.997; set in top(), global in initia.cc)
+extern long int tn_print_precision;
+#define TN_PRECISION tn_print_precision
 #define MPOINT MNOL // maximum number of integration points in an element, always MNOL
 #define MSTRESS_EFF_SLOTS 7 // slots per integration point in element_intpnt_materi_stress_effective (flag + 6 stresses)
 #define MUKNWN DATA_ITEM_SIZE // maximum number of unknowns, always DATA_ITEM_SIZE
@@ -516,6 +519,11 @@ enum {
   CONTROL_TIMESTEP_ITERATIONS,
   CONTROL_TIMESTEP_ITERATIONS_AUTOMATIC,
   CONTROL_TIMESTEP_ITERATIONS_AUTOMATIC_STOP,
+  CONTROL_TIMESTEP_ITERATIONS_AUTOMATIC_MINIMUM_MAXIMUM_WISHED,
+  CONTROL_TIMESTEP_ADJUST_MINIMUM_ITERATIONS,
+  CONTROL_TIMESTEP_UNTIL_DATA,
+  CONTROL_TIMESTEP_UNTIL_MINIMUM,
+  CONTROL_TIMESTEP_UNTIL_MAXIMUM,
   CONTROL_TIMESTEP_SIZE_AUTOMATIC_DECREASE,
   CONTROL_TIMESTEP_MULTIPLIER,
   CR,
@@ -567,6 +575,11 @@ enum {
   ELEMENT_EMPTY,
   ELEMENT_GEOMETRY,
   ELEMENT_GROUP,
+  ELEMENT_GROUP_APPLY,
+  MESH_ELEMENT_GROUP_APPLY,
+  CONTROL_MESH_ELEMENT_GROUP_APPLY,
+  CONTROL_ELEMENT_GROUP_APPLY,
+  CONTROL_ELEMENT_GROUP,
   ELEMENT_GROUP_AREA_ELEMENT_GROUP,
   ELEMENT_GROUP_AREA_ELEMENT_GROUP_SEQUENCE_ELEMENTGROUP,
   ELEMENT_MACRO_GENERATE,
@@ -1182,6 +1195,7 @@ enum {
   NONLOCAL_NAME,
   OPTIONS_PROCESSORS,
   PROCESSORS_MAXIMUM,
+  PROCESSORS_PARTITION,
   OPTIONS_RELAXATION,
   OPTIONS_RESIDUEFACTOR,
   OPTIONS_SKIP_GRAVITY,
@@ -1441,6 +1455,7 @@ enum {
   CONTROL_ZIP,
   MESSAGE,
   PRINT_DATA_NAME,
+  PRINT_PRECISION,
   ANGLE,
   // --- bounda_time_until_* family (manual Professional 6.40/6.41) ---
   BOUNDA_USED,
@@ -1873,6 +1888,9 @@ void      area( long int element, long int name,
 void      area_element_group( long int version );
 long int  area_element_group_time_active( void );
 long int  group_time_alive( long int element_group, double time_total );
+long int  element_group_applied( long int element_group );
+long int  element_group_apply_active( void );
+void      control_element_group_apply( long int icontrol );
 void      area_element_group_sequence( );
 void      area_node_dataitem( void );
 void      element_normal_set( void );
@@ -2414,6 +2432,9 @@ long int  control_materi_gate_off( long int control_item );
 void      control_system_call( long int icontrol );
 long int  available_processors( void );
 long int  zip_output_files( void );
+long int  data_item_value( long int name, long int index, long int number,
+            double &value );
+long int  control_timestep_until_reached( long int icontrol );
 long int  materi_memory_default( void );
 long int  convection_apply_switch( void );
 long int  materi_apply_gate_off( long int global_item, long int control_item );

@@ -1,0 +1,37 @@
+(
+F5 W1 U4: control_timestep_until_data on index 1 only (maximum -3):
+ index 1 stops after its first step (sigyy 0 > -3) and index 2 runs its
+ three steps: history of 14 lines (0.1 .. 1.4) = Professional 02-08-2026
+ (17 lines without the record). Checked by build_safe on sigyy4.his.
+)
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_stress
+end_initia
+node 1 0 0
+node 2 1 0
+node 3 0 1
+node 4 1 1
+element 1 -quad4 1 2 3 4
+group_type 0 -materi
+group_materi_memory 0 -updated_linear
+group_materi_elasti_young 0 1000.
+group_materi_elasti_poisson 0 0.
+bounda_dof 0 1 -velx -vely
+bounda_dof 1 2 -vely
+bounda_dof 2 3 -velx
+bounda_dof 3 4 -vely
+bounda_time 3 0 0 1 -0.01
+bounda_dof 4 3 -vely
+bounda_time 4 0 0 1 -0.01
+control_timestep 0 0.1 1.
+control_timestep 1 0.1 0.5
+control_print_history 0 -node_dof 4 -sigyy
+control_print_history 1 -node_dof 4 -sigyy
+control_timestep 2 0.1 0.3
+control_print_history 2 -node_dof 4 -sigyy
+control_timestep_until_data 1 -node_dof 4 -sigyy
+control_timestep_until_minimum 1 -100.
+control_timestep_until_maximum 1 -3.
+end_data

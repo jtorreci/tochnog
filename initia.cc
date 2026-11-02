@@ -104,6 +104,8 @@ char
 long int options_element_dof=-YES;
 // global_element_dof_apply -only (manual Professional 6.553)
 long int element_dof_only=0;
+// print_precision (manual Professional 6.997)
+long int tn_print_precision=12;
 double options_nonlocal_softvar=0;
 long int check_used=-NO;
 long int check_target=-YES;
