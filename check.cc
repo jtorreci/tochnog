@@ -438,6 +438,16 @@ long int check( long int idat, long int task )
     ok = ok && check_unknown( "beam_rotation", YES, task );
     ok = ok && check_ndim( 2, 3, task );
   }
+  if ( data_number==GROUP_BEAM_DIRECTION_Z ||
+       data_number==GROUP_BEAM_DIRECTION_Z_REFERENCE_POINT ||
+       data_number==ELEMENT_BEAM_DIRECTION_Z ||
+       data_number==ELEMENT_BEAM_FORCE_MOMENT ) {
+    // F5 T2 V4c: local beam axes and beam forces/moments (beam.cc)
+    ok = check_unknown_atleastone( "materi_velocity_integrated",
+      "materi_displacement", task );
+    ok = ok && check_unknown( "beam_rotation", YES, task );
+    ok = ok && check_ndim( 2, 3, task );
+  }
   if ( data_number==GROUP_BEAM_PLANE ) {
     ok = check_unknown_atleastone( "materi_velocity_integrated", 
       "materi_displacement", task );

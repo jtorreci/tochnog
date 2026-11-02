@@ -30,6 +30,7 @@ suite sfnet, o un test propio. El registro completo:
 
 | Feature | Commit | Fecha | Verificación |
 |---------|--------|-------|--------------|
+| **F5 T2 V4c — `group_beam_direction_z`, `group_beam_direction_z_reference_point`, `element_beam_direction_z`, `element_beam_force_moment` (+ `group_beam_shear` as torsion modulus)** | (pending commit) | 2026-11-02 | Manual 6.415/6.416/6.593/6.594 + Professional 02-08-2026 as oracle (omen probes `~/tochnog-runs/v4c`, 3D cantilevers): the Professional beam is a full 3D Euler-Bernoulli beam (bending E*Izz about local z, E*Iyy about local y, torsion G*J, no axial stiffness), local y = z x x; element record > group direction > reference point; a non-perpendicular direction stops with `Error, ELEMENT_BEAM_DIRECTION_Z should be perpendicular to the beam length direction.`; element_beam_force_moment = local end forces K u (first node minus, manual example 0 0 0 0 0 -10 0 0 0 0 0 10 reproduced). GNU `beam.cc` `beam_local()` (12-dof local-axes beam, used when a local z record applies, 2D and 3D) and `element_beam_force_moment` from the classic `beam_2d()`. GNU = Professional within 1e-5 on 50 checks: `group_beam_direction_z1`, `_reference_point1`, `_priority1`, `element_beam_direction_z1` (14 oblique / skew / reversed beams, prescribed tip displacement), `element_beam_force_moment1` (manual example, classic beam) and `2` (out-of-plane force, torsion, roty moment); `element_beam_force_moment_2d1` analytic (the Professional 2D beam is singular on it); `element_beam_direction_z_error1` (same error text). RED (parser error / no record) on 0ad9123, GREEN. Tests use `group_beam_memory -total_linear` (Professional default; GNU default -updated rotates the chord: BEAM-MEMORY-DEFAULT, class B, new). Existing beam inputs (15, test-2014 / test-2026 / sfnet trubea*, trussbea) identical to 0ad9123 apart from the new record. Open: 3D beam without a local z record stays planar (C37, owner decision), free axial dof singular in the GNU (BEAM-AXIAL-FREE, class B, new), `element_beam_direction` 2 values (Pro 9: BEAM-DIRECTION-LENGTH, class B, new). |
 | **F5 T2 V4b — `element_intpnt_h`, `element_intpnt_iso_coord`, `element_intpnt_method`, `element_intpnt_npoint`** | `71adae7` | 2026-11-02 | Manual silent on when they are filled: Professional 02-08-2026 as oracle (omen probes `~/tochnog-runs/v4b`, 27 single-element inputs + 5 combined): written in every run for every isoparametric and interface element, none for truss / beam / spring. GNU = Professional within 1e-9 on bar2, bar3, tria3 (1 / 3 points), tria6 (7 / 4), quad4 (2x2, 1 point, `-lobatto`, `-reduced` factor 2, distorted), quad9 (3x3 / 2x2), hex8, tet4, tet10, hex27 (method, npoint, iso), quad4 / quad6 / hex8 / prism6 / hex18 interfaces. Known differences: prism6 points (C75), `-reduced` default factor (C80), tet4 `-maximal` points 3/4 swapped (TET4-MAX-ORDER, class B, new), hex27 / prism15 / quad16 `element_intpnt_h` above 190 values not written (INTPNT-H-LENGTH, class B, new). Tests `element_intpnt_quad4_1`, `_tria3_1`, `_interface_quad4_1`, `_1d1`, `_2d1`, `_3d1`, `_interface2d1`, `_interface3d1`: RED (no records) on a6de34c, GREEN. Existing `.dbs` unchanged apart from the new records (intq / iface / truss probes). build_safe 515 OK / 0 FALLO, runs 226/226; audit 0. |
 | **F5 T2 V4a — `element_truss_strain`, `element_truss_strain_temperature`, `node_bounded_index`, `print_group_data` (list), `element_print_group_data_values`** | `ab1a014` | 2026-11-02 | Professional 02-08-2026 probes (`scratchpad/f5/v4`): truss (alpha 1e-3, dT 10, elongation 0.01) strain 0.01 / thermal 0.01 = GNU; `node_bounded_index` identical on the quad4, truss and interface probes (every node, -nothing when free); `print_group_data -group_materi_elasti_young -group_materi_elasti_poisson` -> 1000 0.3 = GNU (Pro writes the singular `element_print_group_data_value`: PGD-VALUE-NAME, class D). Tests `element_truss_strain1`, `node_bounded_index1`, `print_group_data1`. build_safe 480 OK / 1 FALLO: `interface_tension_status1` byte-identity check failed on `time_calculation 1` vs `0` only (wall-clock flake; two manual runs identical). audit 0. |
 | **F5 T2 V3 — `mesh_boundary`, `element_boundary`, `print_element_geometry_present` (+ `_node_type`), `element_geometry_present`; word `-plus_displacement` (owner 2026-11-02 "como el manual. Documentamos la divergencia")** | `aaf581c` | 2026-11-02 | Professional 02-08-2026 probes (`scratchpad/f5/v3`, 3 x 3 and 4 x 4 quad4): `node_boundary` = outer ring in both programs; Pro fills `node_boundary` / `element_boundary` without `mesh_boundary` and marks every element (GNU = manual: MESH-BOUNDARY-DEFAULT class A, ELEMENT-BOUNDARY-ALL class D); `element_geometry_present 1 -geometry_quadrilateral 7` with the default and `-node` = Pro; half-covered element or a line through two nodes: no record = Pro. Pro rejects `-plus_displacement` (EGP-PLUS-DISP); the GNU parser rejected it too (word never registered) and now accepts it. RED: not run on the base build (the new inputs use records that were absent from the GNU keyword list; `mesh_boundary_default1` passes on the base by design). build_safe 475 OK / 0 FALLO, audit 0. |
@@ -1085,11 +1086,11 @@ marcado `PENDIENTE` puede estar cubierto en el GNU bajo otro nombre:
 
 - [x] `element` — presente en el GNU
 
-### element_beam (1/3)
+### element_beam (3/3)
 
 - [x] `element_beam_direction` — presente en el GNU
-- [ ] `element_beam_direction_z` — PENDIENTE
-- [ ] `element_beam_force_moment` — PENDIENTE
+- [x] `element_beam_direction_z` — implementada (F5 T2 V4c, 2026-11-02; per-element local beam z, wins over the group records; with it the beam is the full local-axes beam: bending about local y and z, torsion G*J; non-perpendicular vector = the Professional error; = Professional)
+- [x] `element_beam_force_moment` — implementada (F5 T2 V4c, 2026-11-02; 12 values in the local beam axes, first node with the minus = manual example; written for every beam, the classic planar beam fills force_x/y and moment_z in its plane axes; = Professional)
 
 ### element_boundary (1/1)
 
@@ -1432,14 +1433,14 @@ geometría-elemento; feature de malla grande, fuera de alcance de sprint
 
 - [x] `group_axisymmetric` — presente en el GNU; 2026-10-09 (F4 T4, K20): same default Gauss rule as the plane elements (quad4 2x2, quad9 3x3), the forced 1-point rule and the quad9 refusal were removed (= Professional)
 
-### group_beam (3/7)
+### group_beam (6/7)
 
-- [ ] `group_beam_direction_z` — PENDIENTE
-- [ ] `group_beam_direction_z_reference_point` — PENDIENTE
+- [x] `group_beam_direction_z` — implementada (F5 T2 V4c, 2026-11-02; local beam z of the group, must be perpendicular to the beam; full local-axes beam; without any local z record the 3D beam stays the classic planar GNU beam: C37, owner decision pending)
+- [x] `group_beam_direction_z_reference_point` — implementada (F5 T2 V4c, 2026-11-02; local z = part of (point - beam middle) perpendicular to the beam; group_beam_direction_z wins when both are given = Professional)
 - [ ] `group_beam_force_moment_plasti` — PENDIENTE
 - [x] `group_beam_inertia` — presente en el GNU
 - [x] `group_beam_memory` — presente en el GNU
-- [ ] `group_beam_shear` — PENDIENTE
+- [x] `group_beam_shear` — implementada (F5 T2 V4c, 2026-11-02; torsion modulus G of the local-axes beam, torsion stiffness G*J/L = Professional; the classic planar beam has no torsion and ignores it)
 - [x] `group_beam_young` — presente en el GNU
 
 ### group_condif (4/5)

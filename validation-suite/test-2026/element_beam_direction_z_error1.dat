@@ -1,0 +1,26 @@
+( Expected-error test for element_beam_direction_z, manual Professional
+  6.415. The local z direction (1,0,1) of the beam along x is not
+  perpendicular to the beam length direction. Professional 02-08-2026
+  stops with "Error, ELEMENT_BEAM_DIRECTION_Z should be perpendicular to
+  the beam length direction."; GNU stops with the same text.
+  EXPECTED_ERROR: ELEMENT_BEAM_DIRECTION_Z should be perpendicular to the beam length direction )
+
+echo -no
+number_of_space_dimensions 3
+materi_velocity
+materi_displacement
+beam_rotation
+end_initia
+node 1 0 0 0
+node 2 1 0 0
+element 1 -beam 1 2
+element_beam_direction_z 1 1 0 1
+group_type 0 -beam
+group_beam_young 0 1
+group_beam_shear 0 1
+group_beam_inertia 0 1 4 1
+bounda_dof 0 1 -velx -vely -velz -rotx -roty -rotz
+bounda_force 1 2 -vely
+bounda_time 1 0.01
+control_timestep 0 1. 1.
+end_data

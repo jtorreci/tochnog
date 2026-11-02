@@ -1,0 +1,48 @@
+(F5 T2 V4c: element_beam_force_moment (manual Professional 6.416) of the
+ full local-axes beam. E 2, G 0.5, Iyy 1, Izz 4, J 3. Element 1 along x
+ with group local z (0,1,1)/sqrt(2), tip force 0.01 in z (bending about
+ both local axes). Element 2 along x, tip torque 0.02 about x: rotx =
+ T L / (G J) = 0.0133333. Element 3 along (0.6,0.8,0), local z = global
+ z, tip force 0.01 in z and tip moment 0.03 about y. Tip velx fixed.
+ Expected, = Professional 02-08-2026: element_beam_force_moment
+ 1 = 0 0.007071067812 -0.007071067812 0 0.007071067812 0.007071067812
+     0 -0.007071067812 0.007071067812 0 0 0,
+ 2 = 0 0 0 -0.02 0 0 0 0 0 0.02 0 0,
+ 3 = 0 0 -0.01 -0.024 -0.008 0 0 0 0.01 0.024 0.018 0;
+ node_dof 2 = 0 0.000625 0.001041666667 0 0.000625 0.001041666667 0
+ -0.0015625 0.0009375; node_dof 4 rotx 0.01333333333; node_dof 6 = 0 0
+ -0.002833333333 0 0 -0.002833333333 0.0044 0.0167 0.
+ group_beam_memory -total_linear (the Professional default beam memory;
+ the GNU default -updated rotates the beam chord: BEAM-MEMORY-DEFAULT).)
+echo -no
+number_of_space_dimensions 3
+materi_velocity
+materi_displacement
+beam_rotation
+end_initia
+node 1 0 0 0
+node 2 1 0 0
+node 3 0 2 0
+node 4 1 2 0
+node 5 0 4 0
+node 6 0.6 4.8 0
+element 1 -beam 1 2
+element 2 -beam 3 4
+element 3 -beam 5 6
+group_type 0 -beam
+group_beam_young 0 2
+group_beam_shear 0 0.5
+group_beam_inertia 0 1 4 3
+group_beam_memory 0 -total_linear
+group_beam_direction_z 0 0 1 1
+element_beam_direction_z 3 0 0 1
+bounda_dof 0 -ra 1 3 5 -ra -velx -vely -velz -rotx -roty -rotz
+bounda_dof 4 -ra 2 4 6 -ra -velx
+bounda_force 1 -ra 2 6 -ra -velz
+bounda_time 1 0.01
+bounda_force 2 4 -rotx
+bounda_time 2 0.02
+bounda_force 3 6 -roty
+bounda_time 3 0.03
+control_timestep 0 1. 1.
+end_data

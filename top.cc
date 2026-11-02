@@ -1354,6 +1354,7 @@ void step_start( long int task, long int options_solver[], double dtime, double 
     if ( any_beam ) {
       db_allocate( ELEMENT_BEAM_DIRECTION, max_element, VERSION_NEW, MINIMAL );
       db_allocate( ELEMENT_BEAM_MOMENT, max_element, VERSION_NEW, MINIMAL );
+      db_allocate( ELEMENT_BEAM_FORCE_MOMENT, max_element, VERSION_NEW, MINIMAL );
     }
     if ( any_contactspring ) {
       db_allocate( ELEMENT_CONTACTSPRING_DIRECTION, max_element, VERSION_NEW, MINIMAL );

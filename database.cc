@@ -2704,6 +2704,25 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   data_class[ELEMENT_BEAM_MOMENT] = ELEMENT;
   data_required[ELEMENT_BEAM_MOMENT] = ELEMENT;
 
+  // element_beam_direction_z (manual Professional 6.415): per-element
+  // local beam z direction, overrides group_beam_direction_z(_reference_
+  // point). element_beam_force_moment (6.416): forces and moments of the
+  // beam in the local beam axes x, y, z (12 values: first node, second
+  // node; first node with the minus of the element end-force definition).
+  // Also the state of beam_local (beam.cc) (F5 T2 V4c).
+  strcpy(name[ELEMENT_BEAM_DIRECTION_Z],"element_beam_direction_z");
+  type[ELEMENT_BEAM_DIRECTION_Z] = DOUBLE_PRECISION;
+  data_length[ELEMENT_BEAM_DIRECTION_Z] = 3;
+  data_class[ELEMENT_BEAM_DIRECTION_Z] = ELEMENT;
+  data_required[ELEMENT_BEAM_DIRECTION_Z] = ELEMENT;
+
+  strcpy(name[ELEMENT_BEAM_FORCE_MOMENT],"element_beam_force_moment");
+  type[ELEMENT_BEAM_FORCE_MOMENT] = DOUBLE_PRECISION;
+  data_length[ELEMENT_BEAM_FORCE_MOMENT] = 12;
+  version_all[ELEMENT_BEAM_FORCE_MOMENT] = 1;
+  data_class[ELEMENT_BEAM_FORCE_MOMENT] = ELEMENT;
+  data_required[ELEMENT_BEAM_FORCE_MOMENT] = ELEMENT;
+
   strcpy(name[ELEMENT_CONTACTSPRING_DIRECTION],"element_contactspring_direction");
   type[ELEMENT_CONTACTSPRING_DIRECTION] = DOUBLE_PRECISION;
   data_length[ELEMENT_CONTACTSPRING_DIRECTION] = MDIM*MDIM;
@@ -3984,6 +4003,22 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   data_length[GROUP_BEAM_PLANE] = 2;
   data_class[GROUP_BEAM_PLANE] = BEAM;
   data_required[GROUP_BEAM_PLANE] = GROUP_TYPE;
+
+  // group_beam_direction_z (manual Professional 6.593) and group_beam_
+  // direction_z_reference_point (6.594): local beam z direction of the
+  // group, or the point the local z axis points to (F5 T2 V4c, beam.cc).
+  strcpy(name[GROUP_BEAM_DIRECTION_Z],"group_beam_direction_z");
+  type[GROUP_BEAM_DIRECTION_Z] = DOUBLE_PRECISION;
+  data_length[GROUP_BEAM_DIRECTION_Z] = 3;
+  data_class[GROUP_BEAM_DIRECTION_Z] = BEAM;
+  data_required[GROUP_BEAM_DIRECTION_Z] = GROUP_TYPE;
+
+  strcpy(name[GROUP_BEAM_DIRECTION_Z_REFERENCE_POINT],
+    "group_beam_direction_z_reference_point");
+  type[GROUP_BEAM_DIRECTION_Z_REFERENCE_POINT] = DOUBLE_PRECISION;
+  data_length[GROUP_BEAM_DIRECTION_Z_REFERENCE_POINT] = 3;
+  data_class[GROUP_BEAM_DIRECTION_Z_REFERENCE_POINT] = BEAM;
+  data_required[GROUP_BEAM_DIRECTION_Z_REFERENCE_POINT] = GROUP_TYPE;
 
   strcpy(name[GROUP_BEAM_YOUNG],"group_beam_young");
   type[GROUP_BEAM_YOUNG] = DOUBLE_PRECISION;

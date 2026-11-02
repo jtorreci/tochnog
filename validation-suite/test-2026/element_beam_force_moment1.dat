@@ -1,0 +1,31 @@
+(F5 T2 V4c: element_beam_force_moment (manual Professional 6.416), the
+ manual example: a beam with a constant z moment of 10 gives
+ element_beam_force_moment 0 0 0 0 0 -10 0 0 0 0 0 10 (first node with
+ the minus). 3D cantilever along x WITHOUT a local z record (the classic
+ GNU beam in the x-y plane, the Professional default local z = global z
+ for this beam), tip moment 10 about z, tip velx fixed. E 1, Izz 4.
+ Expected, =
+ Professional 02-08-2026: element_beam_force_moment 1 = 0 0 0 0 0 -10 0
+ 0 0 0 0 10; node_dof 2 vely 1.25 rotz 2.5.
+ group_beam_memory -total_linear (the Professional default beam memory;
+ the GNU default -updated rotates the beam chord: BEAM-MEMORY-DEFAULT).)
+echo -no
+number_of_space_dimensions 3
+materi_velocity
+materi_displacement
+beam_rotation
+end_initia
+node 1 0 0 0
+node 2 1 0 0
+element 1 -beam 1 2
+group_type 0 -beam
+group_beam_young 0 1
+group_beam_shear 0 1
+group_beam_inertia 0 1 4 1
+group_beam_memory 0 -total_linear
+bounda_dof 0 1 -velx -vely -velz -rotx -roty -rotz
+bounda_dof 2 2 -velx
+bounda_force 1 2 -rotz
+bounda_time 1 10.
+control_timestep 0 1. 1.
+end_data

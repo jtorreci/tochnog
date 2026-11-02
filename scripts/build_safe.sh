@@ -2580,6 +2580,93 @@ intpnt_check element_intpnt_interface3d1 2 "0" "3" \
 intpnt_check element_intpnt_interface3d1 3 "-lobatto" "9" \
   "-1 -1 0 0 -1 0 1 -1 0 -1 0 0 0 0 0 1 0 0 -1 1 0 0 1 0 1 1 0" \
   "0.5 0 0 0 0 0 0 0 0 0.5 0 0 0 0 0 0 0 0 0 0.5 0 0 0 0 0 0 0 0 0.5 0 0 0 0 0 0 0 0 0 0.5 0 0 0 0 0 0 0 0 0.5 0 0 0 0 0 0 0 0 0 0.5 0 0 0 0 0 0 0 0 0.5 0 0 0 0 0 0 0 0 0 0.5 0 0 0 0 0 0 0 0 0.5 0 0 0 0 0 0 0 0 0 0.5 0 0 0 0 0 0 0 0 0.5 0 0 0 0 0 0 0 0 0 0.5 0 0 0 0 0 0 0 0 0.5 0 0 0 0 0 0 0 0 0 0.5 0 0 0 0 0 0 0 0 0.5 0 0 0 0 0 0 0 0 0 0.5 0 0 0 0 0 0 0 0 0.5"
+# F5 T2 V4c: beam family group_beam_direction_z(_reference_point)
+# (6.593/6.594), element_beam_direction_z (6.415), element_beam_force_moment
+# (6.416); Professional 02-08-2026 values (element_beam_force_moment_2d1 is
+# analytic). beam_rec_check <test> <record> <index> "<values>": same count,
+# every value within 1e-5 of the largest expected magnitude of the line.
+beam_rec_check() {
+  local t="$1" rec="$2" ix="$3" exp="$4"
+  if LC_ALL=C awk -v rec="$rec" -v ix="$ix" -v ex="$exp" '
+      $1==rec && $2==ix { found=1; n=split(ex,e," "); if (NF-2!=n) bad=1
+        mx=0; for (i=1; i<=n; i++) { a=e[i]; if (a<0) a=-a; if (a>mx) mx=a }
+        for (i=1; i<=n && !bad; i++) { d=$(i+2)-e[i]; if (d<0) d=-d
+          if (d>1e-5*mx+1e-12) bad=1 } }
+      END { exit (!found || bad) }' "$T2026/$t.dbs"; then
+    check_ok "$t $rec $ix (= expected)"
+  else
+    check_fail "$t $rec $ix" "$(grep "^$rec  $ix " "$T2026/$t.dbs" | head -1) != $exp"
+  fi
+}
+run_ok "$T2026" group_beam_direction_z1
+beam_rec_check group_beam_direction_z1 element_beam_force_moment 1 "0 -0.01 0 0 0 -0.01 0 0.01 0 0 0 0"
+beam_rec_check group_beam_direction_z1 element_beam_force_moment 2 "0 0 -0.01 0 0.01 0 0 0 0.01 0 0 0"
+beam_rec_check group_beam_direction_z1 node_dof 2 "0 0.0008333333333 0 0 0.0008333333333 0 0 0 0.00125"
+beam_rec_check group_beam_direction_z1 node_dof 4 "0 0.003333333333 0 0 0.003333333333 0 0 0 0.005"
+if grep -q "^element_beam_direction_z  2  0 1 0 *$" "$T2026/group_beam_direction_z1.dbs"; then
+  check_ok "group_beam_direction_z1 (element_beam_direction_z echoed)"
+else
+  check_fail "group_beam_direction_z1" "element_beam_direction_z 2 not echoed"
+fi
+run_ok "$T2026" group_beam_direction_z_reference_point1
+beam_rec_check group_beam_direction_z_reference_point1 element_beam_force_moment 1 "0 0 -0.01 0 0.01 0 0 0 0.01 0 0 0"
+beam_rec_check group_beam_direction_z_reference_point1 element_beam_force_moment 2 "0 0.01 0 0 0 0.01 0 -0.01 0 0 0 0"
+beam_rec_check group_beam_direction_z_reference_point1 node_dof 2 "0 0.003333333333 0 0 0.003333333333 0 0 0 0.005"
+beam_rec_check group_beam_direction_z_reference_point1 node_dof 4 "0 0.0008333333333 0 0 0.0008333333333 0 0 0 0.00125"
+run_ok "$T2026" group_beam_direction_z_priority1
+beam_rec_check group_beam_direction_z_priority1 element_beam_force_moment 1 "0 -0.01 0 0 0 -0.01 0 0.01 0 0 0 0"
+beam_rec_check group_beam_direction_z_priority1 element_beam_force_moment 2 "0 0 -0.01 0 0.01 0 0 0 0.01 0 0 0"
+beam_rec_check group_beam_direction_z_priority1 element_beam_force_moment 3 "0 -0.01 0 0 0 -0.01 0 0.01 0 0 0 0"
+beam_rec_check group_beam_direction_z_priority1 node_dof 2 "0 0.0008333333333 0 0 0.0008333333333 0 0 0 0.00125"
+beam_rec_check group_beam_direction_z_priority1 node_dof 4 "0 0.003333333333 0 0 0.003333333333 0 0 0 0.005"
+beam_rec_check group_beam_direction_z_priority1 node_dof 6 "0 0.0008333333333 0 0 0.0008333333333 0 0 0 0.00125"
+run_ok "$T2026" element_beam_direction_z1
+beam_rec_check element_beam_direction_z1 element_beam_force_moment 1 "0 -0.1697056275 -0.04242640687 0 0.04242640687 -0.1697056275 0 0.1697056275 0.04242640687 0 0 0"
+beam_rec_check element_beam_direction_z1 element_beam_force_moment 2 "0 -0.2146625258 -0.02683281573 0 0.02683281573 -0.2146625258 0 0.2146625258 0.02683281573 0 0 0"
+beam_rec_check element_beam_direction_z1 element_beam_force_moment 3 "0 -0.24 0 0 0 -0.24 0 0.24 0 0 0 0"
+beam_rec_check element_beam_direction_z1 element_beam_force_moment 4 "0 0 -0.06 0 0.06 0 0 0 0.06 0 0 0"
+beam_rec_check element_beam_direction_z1 element_beam_force_moment 5 "0 -0.144 0 0 0 -0.144 0 0.144 0 0 0 0"
+beam_rec_check element_beam_direction_z1 element_beam_force_moment 6 "0 -0.03341939494 0.01885618083 -0.001240310078 -0.01632993162 -0.05700705833 0 0.03341939494 -0.01885618083 0.001240310078 -0.01632993162 -0.0008770316666"
+beam_rec_check element_beam_direction_z1 element_beam_force_moment 7 "0 -0.08876909745 0 -0.003692307692 0 -0.1218461538 0 0.08876909745 0 0.003692307692 0 -0.003692307692"
+beam_rec_check element_beam_direction_z1 element_beam_force_moment 8 "0 0 0.06 0 -0.04242640687 0 0 0 -0.06 0 -0.04242640687 0"
+beam_rec_check element_beam_direction_z1 element_beam_force_moment 9 "0 0.24 0 0 0 0.24 0 -0.24 0 0 0 0"
+beam_rec_check element_beam_direction_z1 element_beam_force_moment 10 "0 0.24 0 0 0 0.24 0 -0.24 0 0 0 0"
+beam_rec_check element_beam_direction_z1 element_beam_force_moment 11 "0 -0.144 0 0 0 -0.144 0 0.144 0 0 0 0"
+beam_rec_check element_beam_direction_z1 element_beam_force_moment 12 "0 0 -0.24 0 0.12 0 0 0 0.24 0 0.12 0"
+beam_rec_check element_beam_direction_z1 element_beam_force_moment 13 "0 0 0 0 0 0 0 0 0 0 0 0"
+beam_rec_check element_beam_direction_z1 element_beam_force_moment 14 "0 -0.002217115336 0.003285650906 -0.0003126356926 -0.006146889991 -0.007876241178 0 0.002217115336 -0.003285650906 0.0003126356926 -0.006146889991 -0.0004194447965"
+beam_rec_check element_beam_direction_z1 node_dof 2 "0 0.01 0 0 0.01 0 0 0 0.015"
+beam_rec_check element_beam_direction_z1 node_dof 4 "0 0.01 0 0 0.01 0 0 0 0.015"
+beam_rec_check element_beam_direction_z1 node_dof 6 "0 0.01 0 0 0.01 0 0 0 0.015"
+beam_rec_check element_beam_direction_z1 node_dof 8 "0 0.01 0 0 0.01 0 0 0 0.015"
+beam_rec_check element_beam_direction_z1 node_dof 10 "0 0.01 0 0 0.01 0 0 0 0.009"
+beam_rec_check element_beam_direction_z1 node_dof 12 "0 0.01 0 0 0.01 0 0 0 0.007441860465"
+beam_rec_check element_beam_direction_z1 node_dof 14 "0 0.01 0 0 0.01 0 0 0 0.01476923077"
+beam_rec_check element_beam_direction_z1 node_dof 16 "0 0.01 0 0 0.01 0 0 0 0"
+beam_rec_check element_beam_direction_z1 node_dof 18 "0 0.01 0 0 0.01 0 0 0 -0.015"
+beam_rec_check element_beam_direction_z1 node_dof 20 "0 0.01 0 0 0.01 0 0 0 0.015"
+beam_rec_check element_beam_direction_z1 node_dof 22 "0 0.01 0 0 0.01 0 0 0 0.009"
+beam_rec_check element_beam_direction_z1 node_dof 24 "0 0.01 0 0 0.01 0 0 0 0"
+beam_rec_check element_beam_direction_z1 node_dof 26 "0 0.01 0 0 0.01 0 0 0 0"
+beam_rec_check element_beam_direction_z1 node_dof 28 "0 0.01 0 0 0.01 0 0 0 0.002917933131"
+run_ok "$T2026" element_beam_force_moment1
+beam_rec_check element_beam_force_moment1 element_beam_force_moment 1 "0 0 0 0 0 -10 0 0 0 0 0 10"
+beam_rec_check element_beam_force_moment1 node_dof 2 "0 1.25 0 0 1.25 0 0 0 2.5"
+run_ok "$T2026" element_beam_force_moment2
+beam_rec_check element_beam_force_moment2 element_beam_force_moment 1 "0 0.007071067812 -0.007071067812 0 0.007071067812 0.007071067812 0 -0.007071067812 0.007071067812 0 0 0"
+beam_rec_check element_beam_force_moment2 element_beam_force_moment 2 "0 0 0 -0.02 0 0 0 0 0 0.02 0 0"
+beam_rec_check element_beam_force_moment2 element_beam_force_moment 3 "0 0 -0.01 -0.024 -0.008 0 0 0 0.01 0.024 0.018 0"
+beam_rec_check element_beam_force_moment2 node_dof 2 "0 0.000625 0.001041666667 0 0.000625 0.001041666667 0 -0.0015625 0.0009375"
+beam_rec_check element_beam_force_moment2 node_dof 4 "0 0 0 0 0 0 0.01333333333 0 0"
+beam_rec_check element_beam_force_moment2 node_dof 6 "0 0 -0.002833333333 0 0 -0.002833333333 0.0044 0.0167 0"
+run_ok "$T2026" element_beam_force_moment_2d1
+beam_rec_check element_beam_force_moment_2d1 element_beam_force_moment 1 "0 -0.01 0 0 0 -0.01 0 0.01 0 0 0 0"
+beam_rec_check element_beam_force_moment_2d1 element_beam_force_moment 2 "0 0.01 0 0 0 0.01 0 -0.01 0 0 0 0"
+beam_rec_check element_beam_force_moment_2d1 element_beam_force_moment 3 "0 0 -0.01 0 0.01 0 0 0 0.01 0 0 0"
+beam_rec_check element_beam_force_moment_2d1 node_dof 2 "0 4.166666667e-04 0 4.166666667e-04 6.25e-04"
+beam_rec_check element_beam_force_moment_2d1 node_dof 4 "0 4.166666667e-04 0 4.166666667e-04 6.25e-04"
+beam_rec_check element_beam_force_moment_2d1 node_dof 6 "0 1.666666667e-03 0 1.666666667e-03 2.5e-03"
+expected_error_ok "$T2026" element_beam_direction_z_error1
 # F5 W2 V2: global print defaults (print_*_calculation, print_gmsh_dummy /
 # _node_type, print_vtk_coord / _group / _node_type, print_frd_freecad /
 # _prepomax; Professional 02-08-2026 probes). Isolated runs: each test

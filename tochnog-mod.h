@@ -1731,6 +1731,14 @@ enum {
   ELEMENT_INTPNT_ISO_COORD,
   ELEMENT_INTPNT_METHOD,
   ELEMENT_INTPNT_NPOINT,
+  // group_beam_direction_z (6.593), group_beam_direction_z_reference_
+  // point (6.594), element_beam_direction_z (6.415) and element_beam_
+  // force_moment (6.416) (F5 T2 V4c). Enum append keeps existing values
+  // stable (tochnog.h and tochnog-mod.h stay in sync).
+  GROUP_BEAM_DIRECTION_Z,
+  GROUP_BEAM_DIRECTION_Z_REFERENCE_POINT,
+  ELEMENT_BEAM_DIRECTION_Z,
+  ELEMENT_BEAM_FORCE_MOMENT,
   LAST_DUMMY }; // keep LAST_DUMMY always the last one
 
 #define MDAT LAST_DUMMY+DATA_ITEM_SIZE  // reserve space for unknowns
@@ -1942,6 +1950,12 @@ void      beam_3d( long int element, long int element_group,
             double coord[], double old_dof[], double new_dof[], 
             double element_lhside[], double element_matrix[],
             double element_rhside[] );    
+long int  beam_direction_z_record( long int element,
+            long int element_group, double vec[] );
+void      beam_local( long int element, long int element_group,
+            long int record, double record_vec[], double coord[],
+            double old_dof[], double new_dof[], double element_lhside[],
+            double element_matrix[], double element_rhside[] );
 void      bounda( void );
 void      bounda_time_file_apply( long int iboun, double total_time,
             double bounda_time[], long int &ninc );

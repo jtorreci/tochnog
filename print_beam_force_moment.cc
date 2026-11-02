@@ -44,6 +44,11 @@
 // element is a 2D element (2 in-plane forces + 1 out-of-plane moment
 // per node; ELEMENT_BEAM_MOMENT stores NNOL*NDOF = 6 values, in the
 // axes of the beam plane).
+// A beam with local beam axes (element_beam_direction_z /
+// group_beam_direction_z(_reference_point), beam_local in beam.cc,
+// F5 T2 V4c) has no ELEMENT_BEAM_MOMENT: its 12 components come from
+// ELEMENT_BEAM_FORCE_MOMENT, already in the local axes (all non-zero
+// components possible).
 //
 // Selection criterion (decision, documented): an element is printed if
 // the minimum distance between its axis segment and the cut segment
@@ -158,7 +163,7 @@ void print_beam_force_moment( long int icontrol, long int task )
     element_group=0, length=0, nnol=0, inol=0, idim=0, i=0, j=0,
     n=0, index_plane[3], ip0=0, ip1=0, seq=0, switch_record=-NO,
     *el=NULL, *nodes=NULL;
-  double ddum[1], bm[6], truss_force=0., a=0., b=0., f0=0., f1=0.,
+  double ddum[1], bm[6], fm[12], truss_force=0., a=0., b=0., f0=0., f1=0.,
     m=0., dist=0., t=0., cut_len=0., tol=0., factor=1., p1[3], p2[3],
     q1[3], q2[3], work[3], len=0., *coordinates=NULL, *key=NULL, *val=NULL;
   long int *idx=NULL;
@@ -309,6 +314,26 @@ void print_beam_force_moment( long int icontrol, long int task )
       val[n*13+9] = 0.;             // moment_x second node
       val[n*13+10] = 0.;            // moment_y second node
       val[n*13+11] = 0.;            // moment_z second node
+    }
+    else if ( !db_active_index( ELEMENT_BEAM_MOMENT, element, VERSION_NORMAL ) ) {
+      // beam with local beam axes (element_beam_direction_z /
+      // group_beam_direction_z(_reference_point), beam_local in beam.cc,
+      // F5 T2 V4c): no ELEMENT_BEAM_MOMENT, the 12 components are taken
+      // from ELEMENT_BEAM_FORCE_MOMENT (already in the local beam axes);
+      // the axial columns stay the truss force (the beam has no axial
+      // stiffness).
+      if ( !db( ELEMENT_BEAM_FORCE_MOMENT, element, idum, fm,
+           length, VERSION_NORMAL, GET_IF_EXISTS ) ) continue;
+      if ( length<12 ) continue;
+      if ( el[0]==-TRUSSBEAM ) {
+        if ( !db( ELEMENT_TRUSS_FORCE, element, idum, &truss_force,
+             ldum, VERSION_NORMAL, GET_IF_EXISTS ) ) continue;
+      }
+      else
+        truss_force = 0.;
+      for ( j=0; j<12; j++ ) val[n*13+j] = fm[j];
+      val[n*13+0] = +truss_force;
+      val[n*13+6] = -truss_force;
     }
     else {
       if ( !db( ELEMENT_BEAM_MOMENT, element, idum, bm,
