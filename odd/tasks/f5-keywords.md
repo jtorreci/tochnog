@@ -71,7 +71,7 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   - [x] V1 pure aliases: control_print_{dof_line,gmsh,vtk}_node_type, element_contact_spring_direction,
     element_interface_intpnt_{strain,stress}_average, materi_history_variable, materi_strain_energy,
     post_node_rhside_ratio_dof_type. element_beam_force_moment moved to V4 (layout check).
-  - [ ] V2 global print defaults: print_{gmsh,vtk,tecplot}_calculation, print_gmsh_dummy,
+  - [x] V2 global print defaults: print_{gmsh,vtk,tecplot}_calculation, print_gmsh_dummy,
     print_{gmsh,vtk}_node_type, print_vtk_coord, print_vtk_group, print_frd_freecad/prepomax
     (owner decision: manual default -yes for vtk/tecplot changes GNU output).
   - [ ] V3 geometry/boundary records: element_geometry_present, print_element_geometry_present(_node_type),
@@ -190,4 +190,11 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
 - 2026-11-02 owner on the V2 end-of-run prints (manual 6.998/6.999 default -yes for tecplot/vtk; the
   Professional 02-08-2026 writes no .vtk/.plt unless -yes is given): "vamos con pro, y lo dejamos
   documentado" -> GNU default -no (= Professional), class A divergence from the manual.
+- 2026-11-02 T2 V2 (route delegated: one bounded writer, context backstop): 10 keywords + the
+  control_print_frd_* records consumed; end-of-run prints default -no (owner); print_vtk_group adds
+  the element_group cell field (manual = Professional; VTK-GROUP-NO class D for -no); 2D vtk/gmsh z
+  garbage fixed. 22 tests; build_safe 455 OK / 0 FALLO. Independent verifier (item 3): PASS, 607
+  inputs + 16 probes, only the element_group block and the z fix differ. Commit 05232b9. Open owner
+  questions: C98 (print_vtk_coord meaning differs from the Professional), C99 (vtk/tecplot file
+  names).
 
