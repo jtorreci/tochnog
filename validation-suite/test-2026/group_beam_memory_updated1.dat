@@ -1,0 +1,26 @@
+(F5 T2 V4d: group_beam_memory -updated still selects the updated beam
+ (the GNU default before 2026-11-02): the local axes follow the deformed
+ chord. Same cantilever as group_beam_memory_default1: the tip vely 0.01
+ rotates the chord by 0.01: force 0.2399880 instead of 0.24. The
+ Professional 02-08-2026 stops on this input with
+ "materi_displacement should not be initialised." (BEAM-MEMORY-UPDATED).)
+echo -no
+number_of_space_dimensions 3
+materi_velocity
+materi_displacement
+beam_rotation
+end_initia
+node 1 0 0 0
+node 2 1 0 0
+element 1 -beam 1 2
+group_type 0 -beam
+group_beam_young 0 2
+group_beam_shear 0 0.5
+group_beam_inertia 0 1 4 1
+group_beam_memory 0 -updated
+bounda_dof 0 1 -velx -vely -velz -rotx -roty -rotz
+bounda_dof 2 2 -velx -velz -rotx -roty
+bounda_dof 1 2 -vely
+bounda_time 1 0.01
+control_timestep 0 1. 1.
+end_data

@@ -28,214 +28,27 @@ void beam_3d( long int element, long int element_group, double coord_3d[],
   double old_dof_3d[], double new_dof_3d[], double element_lhside_3d[], 
   double element_matrix_3d[], double element_rhside_3d[] ) 
 
-// 3d beam 
-// mechanical action of beam in a 2d plane (x-y plane, or x-z plane, or y-z plane)
+// Beam element: the classic GNU beam in the x-y plane in 2D, the beam with
+// local beam axes (beam_local) when a local z record applies, and in 3D
+// always the native 3D beam (beam_local) with default local axes (F5 T2
+// V4d, owner decision C37: bending about both local axes and torsion,
+// as the Professional; the former 3D beam mapped the element onto the
+// 2D beam in the group_beam_plane plane).
 
 {
-  long int n=0, indx=0, indx_2d=0, indx_3d=0, jndx_2d=0, jndx_3d=0, 
-    idim=0, jdim=0, kdim=0, ldim=0, inol=0, jnol=0, iuknwn_2d=0, 
-    iuknwn_3d=0, juknwn_2d=0, juknwn_3d=0, ldum=0, displacement_indx=0, 
-    swit=0, group_beam_plane[NDIM], index_plane[MDIM];
-  double ddum[1], *dbl_array=NULL, *coord_2d=NULL, *old_dof_2d=NULL, 
-    *new_dof_2d=NULL, *element_lhside_2d=NULL, *element_matrix_2d=NULL, 
-    *element_rhside_2d=NULL;
+  double record_vec[3];
+  long int record = beam_direction_z_record( element, element_group,
+    record_vec );
 
-    // local beam axes from element_beam_direction_z / group_beam_
-    // direction_z / group_beam_direction_z_reference_point (F5 T2 V4c):
-    // full beam with bending about both local axes and torsion
-  {
-    double record_vec[3];
-    long int record = beam_direction_z_record( element, element_group,
-      record_vec );
-    if ( record ) {
-      beam_local( element, element_group, record, record_vec, coord_3d,
-        old_dof_3d, new_dof_3d, element_lhside_3d, element_matrix_3d,
-        element_rhside_3d );
-      return;
-    }
-  }
-
-  if ( ndim==2 ) {
-    beam_2d( element, element_group, coord_3d, old_dof_3d, new_dof_3d, 
-      element_lhside_3d, element_matrix_3d, element_rhside_3d );
+  if ( record || ndim==3 ) {
+    beam_local( element, element_group, record, record_vec, coord_3d,
+      old_dof_3d, new_dof_3d, element_lhside_3d, element_matrix_3d,
+      element_rhside_3d );
     return;
   }
 
-  swit = set_swit(element,-1,"beam_3d");
-  if ( swit ) pri( "In routine BEAM_3D." );
-
-    // allocate
-
-  n = NNOL*NDIM + NNOL*nuknwn + NNOL*nuknwn +
-    NNOL*npuknwn + NNOL*npuknwn*NNOL*npuknwn + NNOL*npuknwn;
-  dbl_array = get_new_dbl(n);
-
-  indx = 0;
-  coord_2d = &dbl_array[indx]; indx += NNOL*NDIM;
-  old_dof_2d = &dbl_array[indx]; indx += NNOL*nuknwn;
-  new_dof_2d = &dbl_array[indx]; indx += NNOL*nuknwn;
-  element_lhside_2d = &dbl_array[indx]; indx += NNOL*npuknwn;
-  element_matrix_2d = &dbl_array[indx]; indx += NNOL*npuknwn*NNOL*npuknwn;
-  element_rhside_2d = &dbl_array[indx]; indx += NNOL*npuknwn;
-
-    // initialise
-
-  array_set( element_lhside_2d, 0., NNOL*nuknwn );
-  array_set( element_rhside_2d, 0., NNOL*nuknwn );
-  array_set( element_matrix_2d, 0., NNOL*nuknwn*NNOL*nuknwn );
-
-  if ( materi_velocity_integrated )
-    displacement_indx = veli_indx;
-  else {
-    assert( materi_displacement );
-    displacement_indx = dis_indx;
-  }
-
-    // beam plane
-
-  group_beam_plane[0] = -X;
-  group_beam_plane[1] = -Y;
-  if ( db( GROUP_BEAM_PLANE, element_group, group_beam_plane, ddum, 
-      ldum, VERSION_NORMAL, GET_IF_EXISTS ) ) {
-    if ( labs(group_beam_plane[0])>=
-         labs(group_beam_plane[1]) ) {
-      db_error( GROUP_BEAM_PLANE, element_group );
-    }
-  }
-  for ( idim=0; idim<NDIM; idim++ ) {
-    if      ( group_beam_plane[idim] == -X ) 
-      index_plane[idim] = 0;
-    else if ( group_beam_plane[idim] == -Y ) 
-      index_plane[idim] = 1;
-    else if ( group_beam_plane[idim] == -Z )
-      index_plane[idim] = 2;
-    else
-      db_error( GROUP_BEAM_PLANE, element_group );
-  }
-  if      ( index_plane[0]==0 && index_plane[1]==1 ) 
-    index_plane[2] = 2;
-  else if ( index_plane[0]==0 && index_plane[1]==2 )
-    index_plane[2] = 1;
-  else if ( index_plane[0]==1 && index_plane[1]==2 )
-    index_plane[2] = 0;
-  else
-    db_error( GROUP_BEAM_PLANE, element_group );
-  if ( swit ) pri( "index_plane", index_plane, MDIM );
-
-    // map to 2d
-
-  for ( inol=0; inol<NNOL; inol++ ) {
-    for ( idim=0; idim<NDIM+1; idim++ ) {
-      kdim = index_plane[idim];
-      if ( idim<NDIM ) {
-        coord_2d[inol*NDIM+idim] = coord_3d[inol*ndim+kdim];
-        iuknwn_2d = displacement_indx + idim*nder;
-        iuknwn_3d = displacement_indx + kdim*nder;
-        indx_2d = inol*nuknwn + iuknwn_2d;
-        indx_3d = inol*nuknwn + iuknwn_3d;
-        old_dof_2d[indx_2d] = old_dof_3d[indx_3d];
-        new_dof_2d[indx_2d] = new_dof_3d[indx_3d];
-        iuknwn_2d = vel_indx + idim*nder;
-        iuknwn_3d = vel_indx + kdim*nder;
-        indx_2d = inol*nuknwn + iuknwn_2d;
-        indx_3d = inol*nuknwn + iuknwn_3d;
-      }
-      else {
-        iuknwn_2d = rot_indx + 2*nder;
-        iuknwn_3d = rot_indx + kdim*nder;
-        indx_2d = inol*nuknwn + iuknwn_2d;
-        indx_3d = inol*nuknwn + iuknwn_3d;
-      }
-      old_dof_2d[indx_2d] = old_dof_3d[indx_3d];
-      new_dof_2d[indx_2d] = new_dof_3d[indx_3d];
-      element_lhside_2d[indx_2d] = element_lhside_3d[indx_3d];
-      element_rhside_2d[indx_2d] = element_rhside_3d[indx_3d];
-      for ( jnol=0; jnol<NNOL; jnol++ ) {
-        for ( jdim=0; jdim<NDIM+1; jdim++ ) {
-          ldim = index_plane[jdim];
-          if ( jdim<NDIM ) {
-            juknwn_2d = vel_indx + jdim*nder;
-            juknwn_3d = vel_indx + ldim*nder;
-            jndx_2d = jnol*nuknwn + juknwn_2d;
-            jndx_3d = jnol*nuknwn + juknwn_3d;
-          }
-          else {
-            juknwn_2d = rot_indx + 2*nder;
-            juknwn_3d = rot_indx + ldim*nder;
-            jndx_2d = jnol*nuknwn + juknwn_2d;
-            jndx_3d = jnol*nuknwn + juknwn_3d;
-          }
-          element_matrix_2d[indx_2d*NNOL*nuknwn+jndx_2d] = 
-            element_matrix_3d[indx_3d*NNOL*nuknwn+jndx_3d];
-        }
-      }
-    }
-  }
-  if ( swit ) {
-    pri( "coord_3d", coord_3d, NNOL, ndim );
-    pri( "coord_2d", coord_2d, NNOL, NDIM );
-    pri( "old_dof_3d", old_dof_3d, NNOL, nuknwn );
-    pri( "old_dof_2d", old_dof_2d, NNOL, nuknwn );
-    pri( "new_dof_3d", new_dof_3d, NNOL, nuknwn );
-    pri( "new_dof_2d", new_dof_2d, NNOL, nuknwn );
-  }
-
-    // call 2d beam
-
-  beam_2d( element, element_group, coord_2d, old_dof_2d, new_dof_2d, 
-    element_lhside_2d, element_matrix_2d, element_rhside_2d );
-  if ( swit ) {
-    pri( "element_lhside_2d", element_lhside_2d, NNOL, nuknwn );
-    pri( "element_rhside_2d", element_rhside_2d, NNOL, nuknwn );
-    pri( "element_matrix_2d", element_matrix_2d, NNOL*nuknwn, NNOL*nuknwn );
-    pri( "element_lhside_3d", element_lhside_3d, NNOL, nuknwn );
-    pri( "element_rhside_3d", element_rhside_3d, NNOL, nuknwn );
-    pri( "element_matrix_3d", element_matrix_3d, NNOL*nuknwn, NNOL*nuknwn );
-  }
-
-    // map to 3d
-
-  for ( inol=0; inol<NNOL; inol++ ) {
-    for ( idim=0; idim<NDIM+1; idim++ ) {
-      kdim = index_plane[idim];
-      if ( idim<NDIM ) {
-        iuknwn_2d = vel_indx + idim*nder;
-        iuknwn_3d = vel_indx + kdim*nder;
-        indx_2d = inol*nuknwn + iuknwn_2d;
-        indx_3d = inol*nuknwn + iuknwn_3d;
-      }
-      else {
-        iuknwn_2d = rot_indx + 2*nder;
-        iuknwn_3d = rot_indx + kdim*nder;
-        indx_2d = inol*nuknwn + iuknwn_2d;
-        indx_3d = inol*nuknwn + iuknwn_3d;
-      }
-      element_lhside_3d[indx_3d] = element_lhside_2d[indx_2d];
-      element_rhside_3d[indx_3d] = element_rhside_2d[indx_2d];
-      for ( jnol=0; jnol<NNOL; jnol++ ) {
-        for ( jdim=0; jdim<NDIM+1; jdim++ ) {
-          ldim = index_plane[jdim];
-          if ( jdim<NDIM ) {
-            juknwn_2d = vel_indx + jdim*nder;
-            juknwn_3d = vel_indx + ldim*nder;
-            jndx_2d = jnol*nuknwn + juknwn_2d;
-            jndx_3d = jnol*nuknwn + juknwn_3d;
-          }
-          else {
-            juknwn_2d = rot_indx + 2*nder;
-            juknwn_3d = rot_indx + ldim*nder;
-            jndx_2d = jnol*nuknwn + juknwn_2d;
-            jndx_3d = jnol*nuknwn + juknwn_3d;
-          }
-          element_matrix_3d[indx_3d*NNOL*nuknwn+jndx_3d] = 
-            element_matrix_2d[indx_2d*NNOL*nuknwn+jndx_2d];
-        }
-      }
-    }
-  }
-
-  delete[] dbl_array;
-  if ( swit ) pri( "Out routine BEAM_3D." );
+  beam_2d( element, element_group, coord_3d, old_dof_3d, new_dof_3d, 
+    element_lhside_3d, element_matrix_3d, element_rhside_3d );
 }
 
 
@@ -248,7 +61,7 @@ void beam_2d( long int element, long int element_group, double coord[],
 {
   long int idim=0, jdim=0, inol=0, jnol=0, nnol=2, iuknwn=0, juknwn=0,
     ipuknwn=0, jpuknwn=0, idof=0, jdof=0, indx=0, swit=0, ldum=0, 
-    displacement_indx=0, memory=-UPDATED, options_convection=-NO,
+    displacement_indx=0, memory=-TOTAL_LINEAR, options_convection=-NO,
     length=0, icontrol=0, idum[1], options_mesh[MDIM];
   double E=0., I=0., initial_L=0., dtime=0., ddum[NDIM],
     beam_inertia[3]={0.,0.,0.},
@@ -282,16 +95,17 @@ void beam_2d( long int element, long int element_group, double coord[],
       else db_error( GROUP_BEAM_INERTIA, element_group );
     }
   }
-  if ( db( GROUP_BEAM_MEMORY, element_group, &memory, ddum,
-      ldum, VERSION_NORMAL, GET_IF_EXISTS ) ) {
-    // manual Professional 6.591: group_beam_memory accepts
-    // -updated, -updated_without_rotation and -total_linear. The GNU
-    // beam integrates a geometrically linear law; -total_linear is
-    // mapped onto -updated_without_rotation (initial coordinates fixed).
-    if ( memory==-TOTAL_LINEAR ) memory = -UPDATED_WITHOUT_ROTATION;
-    if ( memory!=-UPDATED && memory!=-UPDATED_WITHOUT_ROTATION )
-      db_error( GROUP_BEAM_MEMORY, element_group );
-  }
+  // manual Professional 6.591: group_beam_memory accepts -updated,
+  // -updated_without_rotation and -total_linear; the default is
+  // -total_linear (Professional 02-08-2026; F5 T2 V4d owner decision,
+  // the GNU default was -updated). The GNU beam integrates a
+  // geometrically linear law; -total_linear is mapped onto
+  // -updated_without_rotation (initial coordinates fixed).
+  db( GROUP_BEAM_MEMORY, element_group, &memory, ddum,
+    ldum, VERSION_NORMAL, GET_IF_EXISTS );
+  if ( memory==-TOTAL_LINEAR ) memory = -UPDATED_WITHOUT_ROTATION;
+  if ( memory!=-UPDATED && memory!=-UPDATED_WITHOUT_ROTATION )
+    db_error( GROUP_BEAM_MEMORY, element_group );
 
   if ( materi_velocity_integrated ) {
     options_convection = convection_apply_switch();
@@ -547,9 +361,15 @@ void beam_2d( long int element, long int element_group, double coord[],
     pri( "element_matrix", element_matrix, NNOL*npuknwn, NNOL*npuknwn );
   }
  
-  length = NDIM;
-  db( ELEMENT_BEAM_DIRECTION, element, idum, new_beam_direction,
-    length, VERSION_NEW, PUT );
+    // element_beam_direction (manual Professional 6.414, F5 T2 V4d):
+    // local x, y and z axes; the 2D beam lies in the x-y plane
+  {
+    double axes[3*3] = { new_beam_direction[0], new_beam_direction[1], 0.,
+      -new_beam_direction[1], new_beam_direction[0], 0., 0., 0., 1. };
+    length = 3*3;
+    db( ELEMENT_BEAM_DIRECTION, element, idum, axes,
+      length, VERSION_NEW, PUT );
+  }
   length = NNOL*NDOF;
   db( ELEMENT_BEAM_MOMENT, element, idum, new_beam_moment,
     length, VERSION_NEW, PUT );
@@ -607,6 +427,7 @@ long int beam_direction_z_record( long int element, long int element_group,
 
 #define BEAM_LOCAL_NLOC 12  // local beam dofs: 2 nodes x (ux uy uz rx ry rz)
 #define BEAM_LOCAL_PERPENDICULAR_TOL 1.e-3 // |cos| of direction_z vs beam axis
+#define BEAM_LOCAL_VERTICAL_TOL 1.e-6 // beam along z: default local z = global y
 #define BEAM_LOCAL_ZERO_TOL 1.e-10 // relative length of a vanishing z axis
 
 void beam_local( long int element, long int element_group, long int record,
@@ -615,7 +436,8 @@ void beam_local( long int element, long int element_group, long int record,
 
 // Beam with local beam axes (F5 T2 V4c; manual Professional 6.415, 6.416,
 // 6.593, 6.594), used when a local z record applies to the beam (see
-// beam_direction_z_record). Euler-Bernoulli beam in the local axes:
+// beam_direction_z_record) and for every 3D beam (record 0: default local
+// z, F5 T2 V4d). Euler-Bernoulli beam in the local axes:
 // bending in the local x-y plane with E*Izz, bending in the local x-z
 // plane with E*Iyy, torsion with G*J (group_beam_young E, group_beam_shear
 // G, group_beam_inertia Iyy Izz J). As the classic GNU beam it has no
@@ -634,7 +456,7 @@ void beam_local( long int element, long int element_group, long int record,
 
 {
   long int i=0, j=0, k=0, inol=0, jnol=0, idim=0, s=0, t=0, swit=0, ldum=0,
-    length=0, icontrol=0, memory=-UPDATED, options_convection=-NO,
+    length=0, icontrol=0, memory=-TOTAL_LINEAR, options_convection=-NO,
     displacement_indx=0, inertia_length=0, idum[1], options_mesh[MDIM],
     present[BEAM_LOCAL_NLOC], puknwn[BEAM_LOCAL_NLOC],
     is_disp[BEAM_LOCAL_NLOC];
@@ -671,12 +493,11 @@ void beam_local( long int element, long int element_group, long int record,
     }
     else db_error( GROUP_BEAM_INERTIA, element_group );
   }
-  if ( db( GROUP_BEAM_MEMORY, element_group, &memory, ddum,
-      ldum, VERSION_NORMAL, GET_IF_EXISTS ) ) {
-    if ( memory==-TOTAL_LINEAR ) memory = -UPDATED_WITHOUT_ROTATION;
-    if ( memory!=-UPDATED && memory!=-UPDATED_WITHOUT_ROTATION )
-      db_error( GROUP_BEAM_MEMORY, element_group );
-  }
+  db( GROUP_BEAM_MEMORY, element_group, &memory, ddum,
+    ldum, VERSION_NORMAL, GET_IF_EXISTS );
+  if ( memory==-TOTAL_LINEAR ) memory = -UPDATED_WITHOUT_ROTATION;
+  if ( memory!=-UPDATED && memory!=-UPDATED_WITHOUT_ROTATION )
+    db_error( GROUP_BEAM_MEMORY, element_group );
 
   if ( materi_velocity_integrated ) {
     options_convection = convection_apply_switch();
@@ -732,7 +553,40 @@ void beam_local( long int element, long int element_group, long int record,
   array_multiply( ex, ex, 1./Lnew, 3 );
 
     // local z axis
-  if ( record==GROUP_BEAM_DIRECTION_Z_REFERENCE_POINT ) {
+  if ( !record ) {
+      // no local z record (3D, F5 T2 V4d): the normal of the GNU-only
+      // group_beam_plane (first axis x second axis) if given, else the
+      // Professional default, global z (global y for a beam along z)
+    long int group_beam_plane[2], index_plane[2];
+    array_set( v, 0., 3 );
+    if ( db( GROUP_BEAM_PLANE, element_group, group_beam_plane, ddum,
+        ldum, VERSION_NORMAL, GET_IF_EXISTS ) ) {
+      double a[3], b[3];
+      for ( idim=0; idim<2; idim++ ) {
+        if      ( group_beam_plane[idim]==-X ) index_plane[idim] = 0;
+        else if ( group_beam_plane[idim]==-Y ) index_plane[idim] = 1;
+        else if ( group_beam_plane[idim]==-Z ) index_plane[idim] = 2;
+        else db_error( GROUP_BEAM_PLANE, element_group );
+      }
+      if ( index_plane[0]>=index_plane[1] )
+        db_error( GROUP_BEAM_PLANE, element_group );
+      array_set( a, 0., 3 ); a[index_plane[0]] = 1.;
+      array_set( b, 0., 3 ); b[index_plane[1]] = 1.;
+      array_outproduct_3D( a, b, v );
+      if ( scalar_dabs( array_inproduct( v, ex0, 3 ) ) >
+           1.-BEAM_LOCAL_PERPENDICULAR_TOL ) {
+        pri( "Error, the beam is perpendicular to its GROUP_BEAM_PLANE. "
+          "Element", element );
+        exit_tn_on_error();
+      }
+    }
+    else if ( sqrt( ex0[0]*ex0[0] + ex0[1]*ex0[1] ) <=
+              BEAM_LOCAL_VERTICAL_TOL )
+      v[1] = 1.;
+    else
+      v[2] = 1.;
+  }
+  else if ( record==GROUP_BEAM_DIRECTION_Z_REFERENCE_POINT ) {
     for ( idim=0; idim<3; idim++ )
       v[idim] = record_vec[idim] -
         0.5*( new_coord[idim] + new_coord[3+idim] );
@@ -876,6 +730,8 @@ void beam_local( long int element, long int element_group, long int record,
   length = n;
   db( ELEMENT_BEAM_FORCE_MOMENT, element, idum, f_l, length,
     VERSION_NEW, PUT );
+  length = 3*3;
+  db( ELEMENT_BEAM_DIRECTION, element, idum, R, length, VERSION_NEW, PUT );
 
   if ( swit ) pri( "Out routine BEAM_LOCAL." );
 }

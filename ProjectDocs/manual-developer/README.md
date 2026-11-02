@@ -435,6 +435,8 @@ page lists its own in "Differences with the Professional version".
 - [element_intpnt_records](element_intpnt_records.md) — `polynom.cc` `element_intpnt_set()` from `step_start()`; `pol()` thread-local method / iso outputs (F5 T2 V4b).
 - [group_beam_direction_z](group_beam_direction_z.md) — `beam.cc` `beam_direction_z_record()` + `beam_local()` (12-dof local-axes beam, called from `beam_3d()`) (F5 T2 V4c).
 - [element_beam_force_moment](element_beam_force_moment.md) — `beam.cc` `beam_local()` state + `beam_2d()` output; allocated in `top.cc`; used by `print_beam_force_moment.cc` (F5 T2 V4c).
+- [group_beam_memory](group_beam_memory.md) — `beam.cc` `beam_2d()` / `beam_local()`, default -total_linear (F5 T2 V4d).
+- [element_beam_direction](element_beam_direction.md) — `beam.cc` `beam_local()` / `beam_2d()`, 9 values (F5 T2 V4d).
 - [print_database_calculation](print_database_calculation.md) — gates de exit_tn (miscel.cc) del volcado .dbs/.flavia final.
 - [post_apply](post_apply.md) — records `POST_APPLY` / `CONTROL_POST_APPLY`; gate in `step_close()` (`top.cc`); stale flags `post_stale` / `post_element_force_stale` and the end-of-run re-evaluation in `exit_tn()` (`miscel.cc`) (F5).
 - [control_post_apply](control_post_apply.md) — see post_apply (F5).

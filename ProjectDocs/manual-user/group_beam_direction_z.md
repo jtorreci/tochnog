@@ -42,9 +42,16 @@ The records also work in 2D (dofs `velx`, `vely`, `rotz`): with
 in the plane (for example `0 1 0` for a beam along x) the in-plane
 bending uses `Iyy`.
 
-Without any of these records the beam is the classic GNU beam: in 2D the
-local z axis is the global z axis; in 3D the beam bends only in the plane
-of `group_beam_plane` (default the x-y plane) with `Izz`.
+Without any of these records a 3D beam is the same full 3D beam with
+default local axes (as the Professional, F5 T2 V4d): local z = global z
+projected perpendicular to the beam, or global y for a beam along z.
+The GNU-only `group_beam_plane <group> -a -b` (for example `-x -z`) sets
+the default local z to the plane normal a x b instead (`-x -z`: local
+z = -global y); a beam along that normal stops with `Error, the beam is
+perpendicular to its GROUP_BEAM_PLANE.` In 2D, without a record, the
+beam is the classic GNU 2D beam (local z = global z, bending with Izz).
+The local axes are written in `element_beam_direction` (see
+[element_beam_direction](element_beam_direction.md)).
 
 ## Example
 
@@ -68,19 +75,10 @@ reference points (0.5, 3, 0) (local z = global y) and (0.5, 2, -3)
 
 ## Differences with the Professional version
 
-- 3D beam without a local z record: the GNU keeps its planar beam in the
-  `group_beam_plane` plane; the Professional uses a full 3D beam with
-  its default local z (global z projected perpendicular to the beam,
-  global y for a beam along z). Same results for beams in the x-y plane
-  under in-plane loads. Owner decision pending (C37,
-  [DIVERGENCES-PROFESSIONAL](../DIVERGENCES-PROFESSIONAL.md)).
-- Default `group_beam_memory`: GNU `-updated` (local axes follow the
-  deformed beam), Professional `-total_linear`; give
-  `group_beam_memory -total_linear` to get the Professional results
-  (BEAM-MEMORY-DEFAULT).
-- `element_beam_direction` has 2 values in the GNU (in-plane direction of
-  the planar beam) and is not written for a beam with local axes; the
-  Professional writes 9 values (BEAM-DIRECTION-LENGTH).
+- `group_beam_plane` is a GNU-only record (it chooses the default
+  local z of a 3D beam); the Professional ignores it. Until 2026-11-02
+  the GNU 3D beam without a local z record was a planar beam in that
+  plane (C37, resolved by the owner decision for a native 3D beam).
 - A beam whose axial displacement is free stops the GNU direct solver;
   the Professional solves it (BEAM-AXIAL-FREE).
 - The perpendicularity check of `group_beam_direction_z` /

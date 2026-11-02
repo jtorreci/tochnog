@@ -1,0 +1,26 @@
+(F5 T2 V4d: group_beam_plane (GNU-only record) with the native 3D beam:
+ the local z axis is the normal of the plane, first axis x second axis
+ (-x -z: local z = -global y, local y = global z). Cantilever of length 1
+ along x, E 2, Iyy 1, Izz 4, tip force 0.01 in global y (= local -z):
+ bending with Iyy, tip vely P L^3/(3 E Iyy) = 1.666666667e-3, tip rotz
+ P L^2/(2 E Iyy) = 2.5e-3; element_beam_direction 1 0 0 0 0 1 0 -1 0.)
+echo -no
+number_of_space_dimensions 3
+materi_velocity
+materi_displacement
+beam_rotation
+end_initia
+node 1 0 0 0
+node 2 1 0 0
+element 1 -beam 1 2
+group_type 0 -beam
+group_beam_young 0 2
+group_beam_shear 0 0.5
+group_beam_inertia 0 1 4 1
+group_beam_plane 0 -x -z
+bounda_dof 0 1 -velx -vely -velz -rotx -roty -rotz
+bounda_dof 2 2 -velx
+bounda_force 1 2 -vely
+bounda_time 1 0.01
+control_timestep 0 1. 1.
+end_data

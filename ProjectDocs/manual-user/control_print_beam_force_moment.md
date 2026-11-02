@@ -106,5 +106,6 @@ fixed node, 0 at the tip, axial 0.
   the open mode).
 - Values smaller than `1.e-6 * (1 + max|component|)` are snapped to
   zero to remove solver residual noise (documented decision).
-- In 3D the local axes follow the beam plane (`group_beam_plane`,
-  default `-x -y`), the same frame `beam.cc` uses.
+- In 3D (since F5 T2 V4d) every beam has local beam axes: the 12
+  components come from `element_beam_force_moment` (see
+  [group_beam_direction_z](group_beam_direction_z.md)).

@@ -2667,6 +2667,65 @@ beam_rec_check element_beam_force_moment_2d1 node_dof 2 "0 4.166666667e-04 0 4.1
 beam_rec_check element_beam_force_moment_2d1 node_dof 4 "0 4.166666667e-04 0 4.166666667e-04 6.25e-04"
 beam_rec_check element_beam_force_moment_2d1 node_dof 6 "0 1.666666667e-03 0 1.666666667e-03 2.5e-03"
 expected_error_ok "$T2026" element_beam_direction_z_error1
+# F5 T2 V4d (owner decisions 2026-11-02): native 3D beam with the
+# Professional default local axes (C37), default group_beam_memory
+# -total_linear (BEAM-MEMORY-DEFAULT), element_beam_direction = 9 values
+# (local x, y, z axes; BEAM-DIRECTION-LENGTH). beam_3d_default_axes1 =
+# Professional 02-08-2026 probe obl; the others are analytic.
+run_ok "$T2026" beam_3d_default_axes1
+beam_rec_check beam_3d_default_axes1 element_beam_direction 1 "1 0 0 0 0.7071067812 -0.7071067812 0 0.7071067812 0.7071067812"
+beam_rec_check beam_3d_default_axes1 element_beam_direction 2 "1 0 0 0 0.894427191 -0.4472135955 0 0.4472135955 0.894427191"
+beam_rec_check beam_3d_default_axes1 element_beam_direction 3 "1 0 0 0 1 0 0 0 1"
+beam_rec_check beam_3d_default_axes1 element_beam_direction 4 "1 0 0 0 0 -1 0 1 0"
+beam_rec_check beam_3d_default_axes1 element_beam_direction 5 "0.6 0.8 0 -0.8 0.6 0 0 0 1"
+beam_rec_check beam_3d_default_axes1 element_beam_direction 6 "0.5773502692 0.5773502692 0.5773502692 -0.7071067812 0.7071067812 0 -0.4082482905 -0.4082482905 0.8164965809"
+beam_rec_check beam_3d_default_axes1 element_beam_direction 7 "0.7071067812 0 0.7071067812 0 1 0 -0.7071067812 0 0.7071067812"
+beam_rec_check beam_3d_default_axes1 element_beam_direction 8 "0 0.7071067812 0.7071067812 -1 0 0 0 -0.7071067812 0.7071067812"
+beam_rec_check beam_3d_default_axes1 element_beam_direction 9 "-1 0 0 0 -1 0 0 0 1"
+beam_rec_check beam_3d_default_axes1 element_beam_direction 10 "1 0 0 0 -1 0 0 0 -1"
+beam_rec_check beam_3d_default_axes1 element_beam_direction 11 "0.6 0.8 0 -0.8 0.6 0 0 0 1"
+beam_rec_check beam_3d_default_axes1 element_beam_direction 12 "0 0 1 1 0 0 0 1 0"
+beam_rec_check beam_3d_default_axes1 element_beam_direction 13 "0 1 0 -1 0 0 0 0 1"
+beam_rec_check beam_3d_default_axes1 element_beam_direction 14 "0.2672612419 0.5345224838 0.8017837257 -0.894427191 0.4472135955 0 -0.3585685828 -0.7171371656 0.5976143047"
+beam_rec_check beam_3d_default_axes1 element_beam_force_moment 1 "0 -0.08485281374 -0.02121320344 0 0.02121320344 -0.08485281374 0 0.08485281374 0.02121320344 0 0 0"
+beam_rec_check beam_3d_default_axes1 element_beam_force_moment 2 "0 -0.1073312629 -0.01341640787 0 0.01341640787 -0.1073312629 0 0.1073312629 0.01341640787 0 0 0"
+beam_rec_check beam_3d_default_axes1 element_beam_force_moment 3 "0 -0.12 0 0 0 -0.12 0 0.12 0 0 0 0"
+beam_rec_check beam_3d_default_axes1 element_beam_force_moment 4 "0 0 -0.03 0 0.03 0 0 0 0.03 0 0 0"
+beam_rec_check beam_3d_default_axes1 element_beam_force_moment 5 "0 -0.072 0 0 0 -0.072 0 0.072 0 0 0 0"
+beam_rec_check beam_3d_default_axes1 element_beam_force_moment 6 "0 -0.01781447086 0.009428090416 -0.002424242424 -0.008164965809 -0.02914137038 0 0.01781447086 -0.009428090416 0.002424242424 -0.008164965809 -0.001714198257"
+beam_rec_check beam_3d_default_axes1 element_beam_force_moment 7 "0 -0.04991341985 0 -0.007058823529 0 -0.06352941176 0 0.04991341985 0 0.007058823529 0 -0.007058823529"
+beam_rec_check beam_3d_default_axes1 element_beam_force_moment 8 "0 0 0.03 0 -0.02121320344 0 0 0 -0.03 0 -0.02121320344 0"
+beam_rec_check beam_3d_default_axes1 element_beam_force_moment 9 "0 0.12 0 0 0 0.12 0 -0.12 0 0 0 0"
+beam_rec_check beam_3d_default_axes1 element_beam_force_moment 10 "0 0.12 0 0 0 0.12 0 -0.12 0 0 0 0"
+beam_rec_check beam_3d_default_axes1 element_beam_force_moment 11 "0 -0.072 0 0 0 -0.072 0 0.072 0 0 0 0"
+beam_rec_check beam_3d_default_axes1 element_beam_force_moment 12 "0 0 -0.12 0 0.06 0 0 0 0.12 0 0.06 0"
+beam_rec_check beam_3d_default_axes1 element_beam_force_moment 13 "0 0 0 0 0 0 0 0 0 0 0 0"
+beam_rec_check beam_3d_default_axes1 element_beam_force_moment 14 "0 -0.001335279474 0.001642825453 -0.0005778491172 -0.003073444995 -0.004220892362 0 0.001335279474 -0.001642825453 0.0005778491172 -0.003073444995 -0.000775265944"
+beam_rec_check beam_3d_default_axes1 node_dof 2 "0 0.01 0 0 0.01 0 0 0 0.015"
+beam_rec_check beam_3d_default_axes1 node_dof 4 "0 0.01 0 0 0.01 0 0 0 0.015"
+beam_rec_check beam_3d_default_axes1 node_dof 6 "0 0.01 0 0 0.01 0 0 0 0.015"
+beam_rec_check beam_3d_default_axes1 node_dof 8 "0 0.01 0 0 0.01 0 0 0 0.015"
+beam_rec_check beam_3d_default_axes1 node_dof 10 "0 0.01 0 0 0.01 0 0 0 0.009"
+beam_rec_check beam_3d_default_axes1 node_dof 12 "0 0.01 0 0 0.01 0 0 0 0.007272727273"
+beam_rec_check beam_3d_default_axes1 node_dof 14 "0 0.01 0 0 0.01 0 0 0 0.01411764706"
+beam_rec_check beam_3d_default_axes1 node_dof 16 "0 0.01 0 0 0.01 0 0 0 0"
+beam_rec_check beam_3d_default_axes1 node_dof 18 "0 0.01 0 0 0.01 0 0 0 -0.015"
+beam_rec_check beam_3d_default_axes1 node_dof 20 "0 0.01 0 0 0.01 0 0 0 0.015"
+beam_rec_check beam_3d_default_axes1 node_dof 22 "0 0.01 0 0 0.01 0 0 0 0.009"
+beam_rec_check beam_3d_default_axes1 node_dof 24 "0 0.01 0 0 0.01 0 0 0 0"
+beam_rec_check beam_3d_default_axes1 node_dof 26 "0 0.01 0 0 0.01 0 0 0 0"
+beam_rec_check beam_3d_default_axes1 node_dof 28 "0 0.01 0 0 0.01 0 0 0 0.002696629213"
+run_ok "$T2026" group_beam_memory_default1
+beam_rec_check group_beam_memory_default1 element_beam_force_moment 1 "0 -0.24 0 0 0 -0.24 0 0.24 0 0 0 0"
+beam_rec_check group_beam_memory_default1 node_dof 2 "0 0.01 0 0 0.01 0 0 0 0.015"
+run_ok "$T2026" group_beam_memory_updated1
+beam_rec_check group_beam_memory_updated1 element_beam_force_moment 1 "0 -0.239988 0 0 0 -0.239988 0 0.239988 0 0 0 0"
+run_ok "$T2026" group_beam_plane_3d1
+beam_rec_check group_beam_plane_3d1 element_beam_direction 1 "1 0 0 0 0 1 0 -1 0"
+beam_rec_check group_beam_plane_3d1 node_dof 2 "0 1.666666667e-03 0 0 1.666666667e-03 0 0 0 2.5e-03"
+expected_error_ok "$T2026" group_beam_plane_3d_error1
+beam_rec_check element_beam_force_moment_2d1 element_beam_direction 1 "1 0 0 0 1 0 0 0 1"
+beam_rec_check element_beam_force_moment_2d1 element_beam_direction 2 "1 0 0 0 -1 0 0 0 -1"
 # F5 W2 V2: global print defaults (print_*_calculation, print_gmsh_dummy /
 # _node_type, print_vtk_coord / _group / _node_type, print_frd_freecad /
 # _prepomax; Professional 02-08-2026 probes). Isolated runs: each test

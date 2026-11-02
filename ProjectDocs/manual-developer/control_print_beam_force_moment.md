@@ -59,7 +59,9 @@
   `beam_2d` rotation matrix: `local_fx = a*f0 + b*f1`,
   `local_fy = -b*f0 + a*f1` where `(a,b)` are the components of the
   beam direction along the plane axes (`index_plane[0], index_plane[1]`
-  from `group_beam_plane`, default `-x -y`; 2D fixed `(0,1)`).
+  from `group_beam_plane`, default `-x -y`; 2D fixed `(0,1)`). Since F5
+  T2 V4d this branch only serves the classic 2D beam: 3D beams have no
+  `ELEMENT_BEAM_MOMENT` and take the `ELEMENT_BEAM_FORCE_MOMENT` branch.
   Out-of-plane components forced to zero.
 - **Truss axial force**: for `-truss` and `-trussbeam` the axial
   columns are `+N` (first node) / `-N` (second node) from
@@ -104,8 +106,9 @@
 
 ## Pendiente
 
-- 3D cut verification: the code path for `group_beam_plane` planes
-  other than the default (x-y) is implemented but not covered by a
-  dedicated test (the lot tests are 2D).
+- 3D cut verification: 3D beams go through the `ELEMENT_BEAM_FORCE_MOMENT`
+  branch (F5 T2 V4d), not covered by a dedicated cut test (the lot tests
+  are 2D); the `group_beam_plane` part of `beam_plane_index()` is dead for
+  beams in 3D.
 - The axial columns of a pure `-truss` element are `+N`/`-N` (decision);
   the Professional manual does not show a pure-truss example.

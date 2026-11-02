@@ -1,0 +1,25 @@
+(F5 T2 V4d: a beam along the normal of its group_beam_plane has no local
+ z axis: beam along z with group_beam_plane -x -y stops with an error.
+ Without group_beam_plane such a beam takes the Professional default
+ local z = global y.
+ EXPECTED_ERROR: Error, the beam is perpendicular to its GROUP_BEAM_PLANE)
+echo -no
+number_of_space_dimensions 3
+materi_velocity
+materi_displacement
+beam_rotation
+end_initia
+node 1 0 0 0
+node 2 0 0 1
+element 1 -beam 1 2
+group_type 0 -beam
+group_beam_young 0 2
+group_beam_shear 0 0.5
+group_beam_inertia 0 1 4 1
+group_beam_plane 0 -x -y
+bounda_dof 0 1 -velx -vely -velz -rotx -roty -rotz
+bounda_dof 2 2 -velz
+bounda_force 1 2 -vely
+bounda_time 1 0.01
+control_timestep 0 1. 1.
+end_data

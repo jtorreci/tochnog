@@ -12,8 +12,7 @@
 - `beam.cc`, `beam_local()`: local end forces `f = f_old + K T du`
   (see [group_beam_direction_z](group_beam_direction_z.md)); PUT
   VERSION_NEW.
-- `beam.cc`, `beam_2d()` (classic planar beam, also the 3D
-  `group_beam_plane` path): after `ELEMENT_BEAM_MOMENT` is PUT, the plane
+- `beam.cc`, `beam_2d()` (classic 2D beam): after `ELEMENT_BEAM_MOMENT` is PUT, the plane
   forces are rotated with the rows of `new_rotation_matrix`:
   force_x = row 0 . (f0, f1), force_y = row 1 . (f0, f1), moment_z = m,
   per node; the other 6 values are 0. Output only (the classic beam keeps
@@ -45,9 +44,8 @@ new record.
 
 - `control_print_element -element_beam_force_moment` (manual 6.285) is
   not implemented (`print_el.cc` reads `ELEMENT_BEAM_MOMENT`).
-- BEAM-AXIAL-FREE, BEAM-MEMORY-DEFAULT, C37 (see the divergence index).
+- BEAM-AXIAL-FREE (see the divergence index).
 
 ## Differences with the Professional version
 
-See the user page: BEAM-AXIAL-FREE, BEAM-MEMORY-DEFAULT, C37; 2D not
-measured.
+See the user page: BEAM-AXIAL-FREE; 2D not measured.

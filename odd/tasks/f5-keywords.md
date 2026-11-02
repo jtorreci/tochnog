@@ -79,6 +79,9 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   - [ ] V4 element diagnostics: element_intpnt_{h,iso_coord,method,npoint}, element_truss_strain(_temperature),
     element_interface_intpnt_{direction,gap_status}, node_bounded_index, element_beam_direction_z,
     element_print_group_data_values.
+  - [ ] V4d beam owner decisions (2026-11-02): native 3D beam for every 3D beam (C37), default
+    group_beam_memory -total_linear (BEAM-MEMORY-DEFAULT), element_beam_direction 9 values
+    (BEAM-DIRECTION-LENGTH). Route: inline (no writer reason).
   - [ ] V5 dof records/switches: dof_element_dof, dof_limit, global_node_dof_empty,
     global_element_dof_from_node_dof, element_intpnt_dof (decision: record vs GNU element storage).
   - [ ] V6 element_dof_initial_specific_number/value.
@@ -251,3 +254,12 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   (GNU -updated vs Pro -total_linear: 0.2399880 vs 0.24), BEAM-DIRECTION-LENGTH (2 vs 9 values), and
   TET4-MAX-ORDER (owner asked about side effects; recommendation: reorder). Pending: V4 interface
   element_interface_intpnt_{direction,gap_status}.
+- 2026-11-02 Owner on the V4c beam decisions (verbatim): "1. Me gustaría tener vigas 3D nativas, 2. -updated
+  se vendía en su momento como una feature de Tochnog; de hecho recuerdo que me llamó mucho la atención y tuve
+  que corregir mis inputs y usar total-linear para dar los resultados clásicos de resistencia de materiales;
+  quizá mejor -total_linear, pero documentando bien la opción. 3. Harán falta los 9 valores si queremos
+  realmente una viga 3D nativa, no?" -> V4d: every 3D beam through beam_local with the Professional default
+  local z (group_beam_plane, GNU-only, then gives the local z as the plane normal); default memory
+  -total_linear with -updated documented; element_beam_direction = 9 values (local x, y, z rows, Pro layout
+  probe dfltx/obl). 2D: Pro 2D beam singular on the probes, 9 values written by analogy (z = global z).
+  TET4-MAX-ORDER answer still pending.

@@ -6,9 +6,11 @@
   to a beam element and its 3 values: `ELEMENT_BEAM_DIRECTION_Z`, else
   `GROUP_BEAM_DIRECTION_Z`, else `GROUP_BEAM_DIRECTION_Z_REFERENCE_POINT`,
   else 0 (priority measured on the Professional 02-08-2026, probe `prio`).
-- `beam.cc`, `beam_3d()`: first statement; when a record applies it calls
-  `beam_local()` and returns (2D and 3D). Otherwise the classic path is
-  unchanged (`beam_2d()` in 2D, the `group_beam_plane` mapping in 3D).
+- `beam.cc`, `beam_3d()`: calls `beam_local()` when a record applies
+  (2D and 3D) and for every 3D beam (record 0, F5 T2 V4d, owner decision
+  C37); otherwise (2D without a record) `beam_2d()`. The former 3D path
+  that mapped the beam onto `beam_2d()` in the `group_beam_plane` plane
+  was removed.
 - `beam.cc`, `beam_local()`: the 12-dof local-axes beam.
   - Geometry as `beam_2d()`: initial, old and new coordinates (3
     components, z = 0 in 2D); `-total_linear` / `-updated_without_rotation`
@@ -18,6 +20,13 @@
   - Axes from the new coordinates: x = node 2 - node 1; z = record vector
     (direction) or `point - middle point` (reference point), minus its x
     component, normalized; y = z x x (`array_outproduct_3D`).
+  - Record 0 (3D, no record): v = the `group_beam_plane` normal a x b
+    when the group has that GNU-only record (a beam along the normal,
+    `|cos| > 1 - 1e-3`, stops with `Error, the beam is perpendicular to
+    its GROUP_BEAM_PLANE.`), else global z, or global y when the
+    horizontal part of the initial beam direction is <= 1e-6
+    (`BEAM_LOCAL_VERTICAL_TOL`, hardcoded; Professional default measured
+    on probe `obl`, threshold not known).
   - Checks: a direction record with `|cos(v, x0)| > 1e-3` on the initial
     geometry stops with `Error, ELEMENT_BEAM_DIRECTION_Z should be
     perpendicular to the beam length direction.` (the Professional text;
@@ -32,9 +41,11 @@
     rotations; global forces `T^t f`. Assembly as `beam_2d()` (matrix
     columns of the translations times dtime, lhside = diagonal).
   - 2D: only velx, vely and the single rotation (rotz) are assembled.
-  - Writes `ELEMENT_BEAM_FORCE_MOMENT` (VERSION_NEW); does NOT write
-    `ELEMENT_BEAM_DIRECTION` (2-value record of the planar beam) nor
-    `ELEMENT_BEAM_MOMENT`.
+  - Writes `ELEMENT_BEAM_FORCE_MOMENT` and `ELEMENT_BEAM_DIRECTION` (the
+    3x3 axes matrix, rows x, y, z; F5 T2 V4d) (VERSION_NEW); does NOT
+    write `ELEMENT_BEAM_MOMENT`.
+  - `group_beam_memory` default `-total_linear` (F5 T2 V4d), mapped onto
+    `-updated_without_rotation`; see [group_beam_memory](group_beam_memory.md).
 - `database.cc`: `GROUP_BEAM_DIRECTION_Z`,
   `GROUP_BEAM_DIRECTION_Z_REFERENCE_POINT` (DOUBLE, length 3, class BEAM,
   required GROUP_TYPE) next to `GROUP_BEAM_PLANE`;
@@ -67,18 +78,15 @@ projected perpendicular to x, global y for a beam along z.
 
 ## Pending refactorings / open items
 
-- C37: the 3D beam without a record could use `beam_local()` with the
-  Professional default axes (owner decision; changes existing results).
-- BEAM-MEMORY-DEFAULT: GNU default `-updated`, Professional
-  `-total_linear` (owner decision).
-- BEAM-DIRECTION-LENGTH: `ELEMENT_BEAM_DIRECTION` is 2 values (Pro 9).
 - BEAM-AXIAL-FREE: zero axial stiffness makes the direct solver fail.
 - `print_el.cc` (`control_print_element -element_beam_moment`) still
-  reads `ELEMENT_BEAM_MOMENT`, so it skips the local-axes beams.
+  reads `ELEMENT_BEAM_MOMENT`, so it skips the local-axes beams, which
+  since F5 T2 V4d are every 3D beam.
 - `group_beam_plane` and a local z record together: the record wins
   silently.
 
 ## Differences with the Professional version
 
-See the user page: C37, BEAM-MEMORY-DEFAULT, BEAM-DIRECTION-LENGTH,
-BEAM-AXIAL-FREE, and the 1e-3 perpendicularity tolerance.
+See the user page: `group_beam_plane` (GNU-only), BEAM-AXIAL-FREE, and
+the 1e-3 perpendicularity tolerance. C37, BEAM-MEMORY-DEFAULT and
+BEAM-DIRECTION-LENGTH were resolved in F5 T2 V4d (2026-11-02).

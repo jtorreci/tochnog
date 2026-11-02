@@ -2691,7 +2691,7 @@ void db_initialize( long int dof_type[], long int dof_label[] )
 
   strcpy(name[ELEMENT_BEAM_DIRECTION],"element_beam_direction");
   type[ELEMENT_BEAM_DIRECTION] = DOUBLE_PRECISION;
-  data_length[ELEMENT_BEAM_DIRECTION] = 2;
+  data_length[ELEMENT_BEAM_DIRECTION] = 3*3;
   version_all[ELEMENT_BEAM_DIRECTION] = 1;
   print_only[ELEMENT_BEAM_DIRECTION] = 1;
   data_class[ELEMENT_BEAM_DIRECTION] = ELEMENT;

@@ -24,10 +24,10 @@ element; you do not give it in the input.
   `group_beam_direction_z_reference_point` or `element_beam_direction_z`
   record applies, see [group_beam_direction_z](group_beam_direction_z.md)):
   all 12 components in the local axes.
-- Classic GNU beam (no such record): the beam is planar, so only
-  force_x, force_y and moment_z are filled, in the axes of its plane
-  (local x along the beam, local y in the plane, local z out of the plane,
-  the global z axis for the default x-y plane). The other components are 0.
+- 3D beam without such a record: the same 12 components, in the default
+  local axes (F5 T2 V4d).
+- Classic GNU 2D beam (no such record): only force_x, force_y and
+  moment_z are filled (local z = global z). The other components are 0.
 
 The beam has no axial stiffness: force_x is 0 (up to round-off); the
 axial force of a `-trussbeam` is in `element_truss_force`.
@@ -51,10 +51,6 @@ moment about y on beams with local axes.
 - A beam whose axial displacement is free stops the GNU direct solver;
   the Professional solves it (BEAM-AXIAL-FREE). Restrain the axial dof or
   add a truss.
-- Default `group_beam_memory` (GNU `-updated`, Professional
-  `-total_linear`) changes the values slightly for finite displacements
-  (BEAM-MEMORY-DEFAULT).
-- 3D beam without a local z record: only the in-plane components (C37).
 - The Professional 2D beam could not be measured (singular on the test
   inputs); the GNU 2D values are checked against the analytic answer
   (`element_beam_force_moment_2d1`).

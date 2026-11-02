@@ -1,0 +1,25 @@
+(F5 T2 V4d: default group_beam_memory = -total_linear (owner decision
+ BEAM-MEMORY-DEFAULT, 2026-11-02; Professional 02-08-2026 default).
+ Cantilever of length 1 along x, E 2, Izz 4, tip vely 0.01 prescribed:
+ Professional element 3 of probe mem_total_linear, force 12 E Izz v / L^3
+ = 0.24 exactly, tip rotz 1.5 v / L = 0.015. The former GNU default
+ -updated rotates the beam chord: 0.2399880 (see group_beam_memory_updated1).)
+echo -no
+number_of_space_dimensions 3
+materi_velocity
+materi_displacement
+beam_rotation
+end_initia
+node 1 0 0 0
+node 2 1 0 0
+element 1 -beam 1 2
+group_type 0 -beam
+group_beam_young 0 2
+group_beam_shear 0 0.5
+group_beam_inertia 0 1 4 1
+bounda_dof 0 1 -velx -vely -velz -rotx -roty -rotz
+bounda_dof 2 2 -velx -velz -rotx -roty
+bounda_dof 1 2 -vely
+bounda_time 1 0.01
+control_timestep 0 1. 1.
+end_data

@@ -57,10 +57,7 @@ Izz=100), confirming that the 2D bending consumes the second value.
 
 ## Differences with the Professional version
 
-- **3D beam** (known difference, not decided; BACKLOG C37; AUDIT K17). GNU:
-  Planar beam in the plane of the GNU-only `group_beam_plane` (default -x
-  -y); no out-of-plane bending (`trubea2/3` breakdown). Professional
-  02-08-2026: Full 3D frame element (`group_beam_inertia Iyy Izz J`,
-  `group_beam_direction_z`). Status: Parked, design (new 12-dof element),
-  MEDIUM. Index:
-  [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).
+- **3D beam**: resolved in F5 T2 V4d (2026-11-02, BACKLOG C37): every 3D
+  beam is the full 3D beam (`Iyy Izz J` all used) with the Professional
+  default local axes; see [group_beam_direction_z](group_beam_direction_z.md).
+  Index: [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).
