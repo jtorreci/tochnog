@@ -1,44 +1,43 @@
 # control_print_vtk_coord
 
-## Implementación
+## Implementation
 
 - Keyword `control_print_vtk_coord` (data_class CONTROL, type INTEGER,
   data_length 1) registered in `database.cc` with
   `data_required = CONTROL_PRINT_VTK`.
-- New enum `CONTROL_PRINT_VTK_COORD` in `tochnog.h` / `tochnog-mod.h`
+- Enum `CONTROL_PRINT_VTK_COORD` in `tochnog.h` / `tochnog-mod.h`
   (kept in sync), right after `CONTROL_PRINT_VTK`.
-- Read in `print_vtk()` (`print_vt.cc`) with `GET_IF_EXISTS`; default
-  `-YES` when the record is absent. The `POINTS` block (the only place
-  where coordinates appear) is written only when the switch is not `-NO`.
+- Read in `print_vtk()` (`print_vt.cc`) through `print_option(
+  PRINT_VTK_COORD, CONTROL_PRINT_VTK_COORD, icontrol, -YES )`: the control
+  record overrules the global `print_vtk_coord`.
+- `POINTS` is always written. When the switch is not `-NO`, `POINT_DATA`
+  starts with `VECTORS coord double`: the `NODE` coordinates (VERSION_PRINT),
+  `0.0` for the components beyond `ndim`. `POINT_DATA` is now also written
+  when there is no primary unknown but the coord field is on.
 
-## Decisión (documentada, manual 6.340)
+## Decision (C98, owner 2026-11-02 "dale, seguí a Pro")
 
-- **Evidence from the code**: before this feature, `print_vt.cc` wrote
-  the coordinates ONLY in the `POINTS` block (the mesh section). There
-  are NO coordinate data fields in `POINT_DATA` — unlike gmsh (manual
-  6.316 describes `node_0`/`node_1`/`node_2` scalars, which the GNU
-  `print_gm.cc` does not implement either).
-- **Interpretation**: "the coordinates of nodes is not plotted in vtk"
-  = the `POINTS` block is omitted. The alternative (adding coordinate
-  data fields like gmsh) was rejected because it would change the
-  default output of an existing feature and the GNU gmsh writer does not
-  write coordinate fields either.
-- **Known limitation**: a VTK UNSTRUCTURED_GRID without `POINTS` is not
-  a valid dataset for a post-processor (cells reference non-existent
-  point indices). The switch is a file-size/debug tool; documented in
-  the user manual.
-- The "illegal element type" aborts and every other block are untouched:
-  with `-no` only the coordinate section disappears.
+- Sprint 11 read manual 6.340 ("the coordinates of nodes is plotted in
+  vtk") as "omit the `POINTS` block", which gave files a post-processor
+  cannot open.
+- The Professional 02-08-2026 (F5 W2 V2 probes `vt2`, `cvtk*`) always
+  writes `POINTS` and a point field `VECTORS coord` first in `POINT_DATA`;
+  `-no` drops only that field. With `-node_deformed_mesh` its `POINTS` are
+  deformed and `coord` holds the stored coordinates (`cvtknt`: POINTS x
+  0.998714285714, coord x 1). The GNU follows it.
+- Effect: every GNU vtk file gains the `coord` field (about `max_node+1`
+  lines).
 
-## Detalles
+## Details
 
-- The `POINTS` count is still `max_node+1` (the node numbering is
-  untouched by the switch).
-- Verification: `vtk_coord1` test — A/B `tn30.vtk` (default, has
-  `POINTS`) vs `tn31.vtk` (`-no`, no `POINTS` but still `CELLS`).
+- The Professional writes the field as `float`, the GNU as `double` like
+  its other fields.
+- Verification: test-2014 `vtk_coord1` (`tn30.vtk` with the field,
+  `tn31.vtk` `-no` without it, `POINTS` kept in both); test-2026
+  `print_vtk_coord1/2` (global `-no`, control `-yes` overrule, node 4
+  coord `1 1 0.0`).
 
-## Pendiente
+## Pending
 
-- Nothing (switch fully implemented). The gmsh-style coordinate data
-  fields (`node_0`/`node_1`/`node_2`) remain unimplemented (out of
-  scope, would change default output).
+- Nothing for the switch. The gmsh-style coordinate data fields
+  (`node_0`/`node_1`/`node_2`) of the gmsh writer remain unimplemented.

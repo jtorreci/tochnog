@@ -1,7 +1,6 @@
-(F5 W2 V2: print_vtk_coord -no, manual 6.1000, is the default of
- control_print_vtk_coord: the GNU omits the POINTS block as
- control_print_vtk_coord -no does. The Professional 02-08-2026 keeps
- POINTS and drops its coord point field, class B row C98.)
+(F5 W2 V2 / C98: print_vtk_coord -no, manual 6.1000, is the default of
+ control_print_vtk_coord: POINTS is still written and only the point
+ field VECTORS coord is dropped, = Professional 02-08-2026.)
 echo -no
 number_of_space_dimensions 2
 materi_velocity

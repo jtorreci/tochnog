@@ -73,8 +73,6 @@ Keywords: `print_gmsh_calculation`, `print_tecplot_calculation`,
 - `PRINT-CALC-DEFAULT` (class A, owner 2026-11-02): tecplot / vtk end-of-run
   default `-no` = Professional, against the manual `-yes`.
 - `VTK-GROUP-NO` (class D): the Professional ignores `print_vtk_group -no`.
-- `C98` (class B, open): `print_vtk_coord -no` drops POINTS in the GNU, the
-  Professional `coord` point field.
 - `C99` (class B, open): `tn<index>.vtk` / `tecplot.plt` against
   `<name>.vtk` / `<name>.plt`.
 
@@ -82,8 +80,8 @@ Keywords: `print_gmsh_calculation`, `print_tecplot_calculation`,
 
 - Owner decision: `print_tecplot_calculation`/`print_vtk_calculation`
   default `-NO` against the manual (`PRINT-CALC-DEFAULT`, class A).
-- `print_vtk_coord` keeps the GNU POINTS meaning (C98 open);
-  `tecplot.plt`/`tn<i>.vtk` names (C99 open).
+- `tecplot.plt`/`tn<i>.vtk` names (C99 open). `print_vtk_coord` follows the
+  Professional `coord` field since C98 (2026-11-02).
 - Not implemented: frd `PEEQ` name (no post_calcul fields in the GNU frd);
   `element_number` vtk cell field of the Professional.
 - The end-skip statics are per run (one input per process).

@@ -853,14 +853,14 @@ fi
 # quedan los de la ultima escritura.
 # ---------------------------------------------------------------------
 
-# vtk_coord1: default (o -yes) escribe el bloque POINTS; -no lo omite
-# (tn31.vtk conserva CELLS/CELL_TYPES: solo desaparecen las coordenadas)
-if [ "$(grep -c '^POINTS' "$T2014/tn30.vtk" 2>/dev/null)" -ge 1 ] && \
-   [ "$(grep -c '^POINTS' "$T2014/tn31.vtk" 2>/dev/null)" = "0" ] && \
-   grep -q '^CELLS' "$T2014/tn31.vtk"; then
-  check_ok "vtk_coord (tn30 con POINTS por defecto; tn31 -no sin POINTS pero con CELLS)"
+# vtk_coord1 (C98, = Professional): default (or -yes) writes POINTS and
+# the point field VECTORS coord; -no keeps POINTS and drops only coord
+if [ "$(grep -c '^VECTORS coord' "$T2014/tn30.vtk" 2>/dev/null)" = "1" ] && \
+   [ "$(grep -c '^VECTORS coord' "$T2014/tn31.vtk" 2>/dev/null)" = "0" ] && \
+   grep -q '^POINTS' "$T2014/tn31.vtk" && grep -q '^CELLS' "$T2014/tn31.vtk"; then
+  check_ok "vtk_coord (tn30 with the coord field by default; tn31 -no without it, POINTS kept)"
 else
-  check_fail "vtk_coord" "el bloque POINTS no discrimina -yes/-no"
+  check_fail "vtk_coord" "the coord field does not separate -yes/-no"
 fi
 
 # vtk_dofcalc1: sin filtro -> los 2 campos post; -none -> ninguno (los
@@ -2433,10 +2433,10 @@ pv_case print_vtk_group1 'CELL_DATA element_group 2' \
   '[ "$(grep -A3 '\''^SCALARS element_group int'\'' tn0.vtk | sed -n 3p)" = 2 ] && grep -q "^CELL_DATA 1" tn0.vtk'
 pv_case print_vtk_group2 'no element_group cell field' \
   'grep -q "^POINTS 4" tn0.vtk && ! grep -q "element_group\|CELL_DATA" tn0.vtk'
-pv_case print_vtk_coord1 'global -no omits POINTS' \
-  'grep -q "^CELLS 1 5" tn0.vtk && ! grep -q "^POINTS" tn0.vtk'
-pv_case print_vtk_coord2 'control -yes overrules the global -no' \
-  'grep -q "^POINTS 4 double" tn0.vtk'
+pv_case print_vtk_coord1 'global -no drops only the coord field' \
+  'grep -q "^POINTS 4 double" tn0.vtk && grep -q "^CELLS 1 5" tn0.vtk && ! grep -q "^VECTORS coord" tn0.vtk'
+pv_case print_vtk_coord2 'control -yes overrules the global -no, coord node 4 = 1 1 0' \
+  'grep -q "^POINTS 4 double" tn0.vtk && [ "$(grep -A4 "^VECTORS coord double" tn0.vtk | sed -n 5p | LC_ALL=C awk '\''{print $1, $2, $3}'\'')" = "1 1 0.0" ]'
 pv_case print_vtk_node_type1 'deformed POINTS, node 2 x 0.9987142857' \
   '[ "$(grep -A2 '\''^POINTS'\'' tn0.vtk | sed -n 3p | LC_ALL=C awk '\''{printf "%.10f", $1}'\'')" = 0.9987142857 ]'
 pv_case print_vtk_node_method1 'older name stored as print_vtk_node_type, node 2 x 0.9987142857' \

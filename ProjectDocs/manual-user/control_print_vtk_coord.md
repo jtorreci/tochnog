@@ -3,22 +3,19 @@
 ## Description
 
 `control_print_vtk_coord` controls whether the node coordinates are
-written to the `.vtk` files of `control_print_vtk` (same `icontrol`
-index). `-yes` (default) writes the coordinates, `-no` does not.
+written as a data field to the `.vtk` files of `control_print_vtk` (same
+`icontrol` index). `-yes` (default) adds the point field `VECTORS coord`
+(the stored node coordinates) at the start of `POINT_DATA`; `-no` drops
+only that field.
 
-In the current VTK writer the coordinates appear only in the `POINTS`
-block of the mesh (there are no coordinate data fields like the gmsh
-`node_0`/`node_1`/`node_2` scalars), so `-no` omits the whole `POINTS`
-block while keeping `CELLS`/`CELL_TYPES` and the `POINT_DATA` fields.
-
-> Note: a VTK file without `POINTS` is not a valid dataset for a
-> post-processor (the cells reference point indices that do not exist).
-> The switch is meant for smaller debug dumps / for extracting only the
-> field data; keep the default `-yes` for visualisation.
+The `POINTS` block of the mesh is always written, whatever the switch: a
+vtk file without points could not be opened by a post-processor. With
+`control_print_vtk_node_type -node_deformed_mesh` the `POINTS` hold the
+deformed coordinates, while `coord` keeps the stored (undeformed) ones.
 
 The global [print_vtk_coord](print_vtk_coord.md) gives its default for every index.
 
-## Uso
+## Usage
 
 Place it in the data part, with the same `icontrol` index as the
 `control_print_vtk` record:
@@ -28,12 +25,12 @@ control_print_vtk            30  -yes
 control_print_vtk_coord      30  -no
 ```
 
-## Parámetros
+## Parameters
 
 | Parameter | Meaning |
 |-----------|---------|
 | `30`      | Index of the control record. Must match a `control_print_vtk` index. |
-| switch    | `-yes` (default): node coordinates (POINTS block) are written. `-no`: the POINTS block is omitted. |
+| switch    | `-yes` (default): the `VECTORS coord` point field is written. `-no`: that field is omitted; `POINTS` stays. |
 
 ## Example
 
@@ -42,6 +39,11 @@ control_print_vtk            30  -yes
 control_print_vtk_coord      30  -no
 ```
 
-Produces a `.vtk` file with the mesh topology and the field data but
-without the coordinate block. Remove the `control_print_vtk_coord`
-record (or use `-yes`) to restore the default output.
+Produces a `.vtk` file with the full mesh (`POINTS`, `CELLS`,
+`CELL_TYPES`) and the field data, without the `coord` point field.
+
+## Differences with the Professional version
+
+None: same meaning as the Professional 02-08-2026 (BACKLOG C98, resolved
+2026-11-02). Before F5 the GNU `-no` omitted the `POINTS` block and the
+GNU had no `coord` field.

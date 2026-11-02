@@ -1,5 +1,6 @@
 (F5 W2 V2: print_vtk_coord -no overruled by control_print_vtk_coord 0
- -yes: POINTS written, = Professional 02-08-2026 override rule.)
+ -yes: the VECTORS coord point field is written, = Professional
+ 02-08-2026 override rule.)
 echo -no
 number_of_space_dimensions 2
 materi_velocity

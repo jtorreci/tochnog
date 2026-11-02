@@ -60,8 +60,9 @@ void print_vtk( long int icontrol )
   db( CONTROL_PRINT_VTK_DOF, icontrol, vtk_dof, ddum, nvtk_dof,
     VERSION_NORMAL, GET_IF_EXISTS );
 
-  // control_print_vtk_coord (6.340): -yes (default) writes the node
-  // coordinates (the POINTS block); -no omits them. The global
+  // control_print_vtk_coord (6.340): -yes (default) adds the point field
+  // VECTORS coord (the stored node coordinates); -no drops only that field,
+  // POINTS is always written (= Professional 02-08-2026, C98). The global
   // print_vtk_coord (6.1000) is the default of the control record.
   vtk_coord = print_option( PRINT_VTK_COORD, CONTROL_PRINT_VTK_COORD,
     icontrol, -YES );
@@ -125,11 +126,7 @@ void print_vtk( long int icontrol )
 
   outvtk << "DATASET UNSTRUCTURED_GRID\n\n";
 
-  // control_print_vtk_coord: -no omits the POINTS block (the only place
-  // where coordinates appear in the vtk output). A file without POINTS is
-  // not a valid visualization dataset; the switch exists for smaller debug
-  // dumps (limitation documented in manual-developer).
-  if ( vtk_coord!=-NO ) {
+  {
     outvtk << "POINTS " << max_node+1 << " double\n";
     for ( inod=0; inod<=max_node; inod++ ) {
       db( NODE, inod, idum, coord, ldum, VERSION_PRINT, GET );
@@ -272,11 +269,28 @@ void print_vtk( long int icontrol )
   }
   outvtk << "\n";
 
+  if ( npuknwn>0 || vtk_coord!=-NO )
+    outvtk << "POINT_DATA " << max_node+1 << "\n\n";
+  if ( vtk_coord!=-NO ) {
+    // the stored coordinates, also when POINTS holds the deformed mesh
+    outvtk << "VECTORS coord double\n";
+    for ( inod=0; inod<=max_node; inod++ ) {
+      db( NODE, inod, idum, coord, ldum, VERSION_PRINT, GET );
+      for ( idim=0; idim<MDIM; idim++ ) {
+        if ( idim>ndim-1 || coord[idim]==0.0 )
+          outvtk << "0.0" << " ";
+        else
+          outvtk << coord[idim] << " ";
+      }
+      outvtk << "\n";
+    }
+    outvtk << "\n";
+  }
+
   if ( npuknwn>0 ) {
     db( DOF_LABEL, 0, dof_label, ddum, ldum, VERSION_NORMAL, GET );
     db( DOF_TYPE, 0, dof_type, ddum, ldum, VERSION_NORMAL, GET );
     db( DOF_SCAL_VEC_MAT, 0, dof_scal_vec_mat, ddum, ldum, VERSION_NORMAL, GET );
-    outvtk << "POINT_DATA " << max_node+1 << "\n\n";
 
       // write scalars, vectors and tensors for primary unknowns
     ipuknwn = 0; ready = 0;
