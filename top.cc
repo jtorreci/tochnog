@@ -1097,6 +1097,8 @@ void step_start( long int task, long int options_solver[], double dtime, double 
     // element_geometry_present (6.427): same moment, an element is
     // present when all its nodes are
   element_geometry_present_calculate();
+    // element_print_group_data_values (6.446), same moment
+  element_print_group_data_values_calculate();
 
   input_runtime();
 
@@ -1440,6 +1442,9 @@ void step_start( long int task, long int options_solver[], double dtime, double 
     if ( any_truss ) {
       db_allocate( ELEMENT_TRUSS_DIRECTION, max_element, VERSION_NEW, MINIMAL );
       db_allocate( ELEMENT_TRUSS_FORCE, max_element, VERSION_NEW, MINIMAL );
+      db_allocate( ELEMENT_TRUSS_STRAIN, max_element, VERSION_NEW, MINIMAL );
+      db_allocate( ELEMENT_TRUSS_STRAIN_TEMPERATURE, max_element, VERSION_NEW,
+        MINIMAL );
     }
 
     // element_intpnt_materi_undrained_pressure (manual Professional

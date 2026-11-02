@@ -2444,6 +2444,29 @@ if ! grep -q "^element_geometry_present " "$T2026/element_geometry_present_parti
 else
   check_fail "element_geometry_present_partial1" "a partly covered element is present"
 fi
+# F5 T2 V4: element_truss_strain(_temperature), node_bounded_index and
+# print_group_data / element_print_group_data_values (Professional
+# 02-08-2026 probes).
+run_ok "$T2026" element_truss_strain1
+if grep -q "^element_truss_strain  1  0.01 *$" "$T2026/element_truss_strain1.dbs" && \
+   grep -q "^element_truss_strain_temperature  1  0.01 *$" "$T2026/element_truss_strain1.dbs"; then
+  check_ok "element_truss_strain1 (strain 0.01, thermal strain 0.01)"
+else
+  check_fail "element_truss_strain1" "truss strain records are not 0.01 / 0.01"
+fi
+run_ok "$T2026" node_bounded_index1
+nbi="$(grep '^node_bounded_index ' "$T2026/node_bounded_index1.dbs" | awk '{print $2":"$3":"$4":"$5}' | paste -sd' ')"
+if [ "$nbi" = "1:0:0:-nothing 2:2:2:-nothing 3:3:3:-nothing 4:1:-nothing:-nothing" ]; then
+  check_ok "node_bounded_index1 (bounda_dof index per dof, -nothing when free)"
+else
+  check_fail "node_bounded_index1" "node_bounded_index is '$nbi'"
+fi
+run_ok "$T2026" print_group_data1
+if grep -q "^element_print_group_data_values  1  1000 0.3 *$" "$T2026/print_group_data1.dbs"; then
+  check_ok "print_group_data1 (young and poisson of the group)"
+else
+  check_fail "print_group_data1" "element_print_group_data_values is not 1000 0.3"
+fi
 # F5 W2 V2: global print defaults (print_*_calculation, print_gmsh_dummy /
 # _node_type, print_vtk_coord / _group / _node_type, print_frd_freecad /
 # _prepomax; Professional 02-08-2026 probes). Isolated runs: each test

@@ -1725,6 +1725,14 @@ enum {
   PRINT_ELEMENT_GEOMETRY_PRESENT,
   PRINT_ELEMENT_GEOMETRY_PRESENT_NODE_TYPE,
   ELEMENT_GEOMETRY_PRESENT,
+  // element_truss_strain(_temperature) (6.451/6.452), node_bounded_index
+  // (6.879), element_print_group_data_values (6.446) (F5 T2 V4).
+  // Enum append keeps existing values stable (tochnog.h and
+  // tochnog-mod.h stay in sync).
+  ELEMENT_TRUSS_STRAIN,
+  ELEMENT_TRUSS_STRAIN_TEMPERATURE,
+  NODE_BOUNDED_INDEX,
+  ELEMENT_PRINT_GROUP_DATA_VALUES,
   LAST_DUMMY }; // keep LAST_DUMMY always the last one
 
 #define MDAT LAST_DUMMY+DATA_ITEM_SIZE  // reserve space for unknowns
@@ -2109,6 +2117,7 @@ void      generate_interface_triangle( long int icontrol );
             long int node_type, long int projection_type, long int version );
  void      node_geometry_present_calculate( void );
  void      element_geometry_present_calculate( void );
+ void      element_print_group_data_values_calculate( void );
 void      get_element_matrix_unknowns( long int element,
             long int element_matrix_unknowns[] );
 long int  get_group_data( long int idat, long int group, long int element,

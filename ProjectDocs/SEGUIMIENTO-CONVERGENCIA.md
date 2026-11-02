@@ -1147,21 +1147,21 @@ marcado `PENDIENTE` puede estar cubierto en el GNU bajo otro nombre:
 
 - [x] `element_normal` — commit `b81d050`, 2026-09-30: generated record (manual 6.445), rule measured on the Professional 02-08-2026 (normalized sum of the consistent boundary node normals); consumed by `*_direct_normal_automatic` (only when switched `-yes`; `-no` = full cut-off as Pro, 2026-10-02, commit `260bd95`); tests `validation-suite/test-2026/element_normal*` (12); zero normal in a `-yes` group = input error (2026-10-01, commit `a8d6452`; Pro: assertion), checked per law since 2026-10-03 (commit `b7f3522`)
 
-### element_print (0/1)
+### element_print (1/1)
 
-- [ ] `element_print_group_data_values` — PENDIENTE
+- [x] `element_print_group_data_values` — implementada (F5 T2 V4, 2026-11-02; the Professional writes the singular name: PGD-VALUE-NAME)
 
 ### element_spring (1/2)
 
 - [x] `element_spring_force` — presente en el GNU
 - [ ] `element_spring_strain` — PENDIENTE
 
-### element_truss (2/4)
+### element_truss (4/4)
 
 - [x] `element_truss_direction` — presente en el GNU
 - [x] `element_truss_force` — presente en el GNU
-- [ ] `element_truss_strain` — PENDIENTE
-- [ ] `element_truss_strain_temperature` — PENDIENTE
+- [x] `element_truss_strain` — implementada (F5 T2 V4, 2026-11-02; total strain = Professional)
+- [x] `element_truss_strain_temperature` — implementada (F5 T2 V4, 2026-11-02; alpha dT = Professional)
 
 ### element_volume (1/1)
 
@@ -1896,12 +1896,12 @@ Nota: `group_interface_ground` del checklist anterior NUNCA existió (artefacto 
 
 - [x] `mstring` — implementada (F5 W1 U6, 2026-11-02; según el manual, el Professional la rechaza: MSTRING-PRO)
 
-### node (18/23; 3 parciales documentados, 2 print-only pendientes)
+### node (19/23; 3 parciales documentados, 1 print-only pendiente)
 
 - [x] `node` — presente en el GNU
 - [x] `node_boundary` — presente en el GNU
 - [x] `node_bounded` — presente en el GNU
-- [ ] `node_bounded_index` — PENDIENTE (print-only, sin consumidor en el GNU)
+- [x] `node_bounded_index` — implementada (F5 T2 V4, 2026-11-02; = Professional)
 - [ ] `node_convection_apply` — PARCIAL: registrado+parseado, sin comportamiento (requiere cirugía de options_convection por nodo)
 - [x] `node_damping` — presente en el GNU
 - [x] `node_deformed_mesh` — presente en el GNU
@@ -2103,9 +2103,9 @@ Nota: `group_interface_ground` del checklist anterior NUNCA existió (artefacto 
 - [x] `print_gmsh_dummy` — implementada (F5 W2 V2, 2026-11-02; default of control_print_gmsh_dummy = Professional)
 - [x] `print_gmsh_node_method` — implementada as `print_gmsh_node_type` (2026 name, 6.993) (F5 W2 V2, 2026-11-02; default of control_print_gmsh_node_type; the old name is an alias)
 
-### print_group (0/1)
+### print_group (1/1)
 
-- [ ] `print_group_data` — PENDIENTE
+- [x] `print_group_data` — implementada (F5 T2 V4, 2026-11-02; list of group records, fills element_print_group_data_values = Professional)
 
 ### print_mesh (0/1)
 

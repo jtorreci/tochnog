@@ -1,0 +1,27 @@
+(F5 T2 V4: element_truss_strain (manual 6.451) and
+ element_truss_strain_temperature (6.452). A truss of length 1 with
+ group_truss_expansion 1e-3, temperature raised by 10 and the free end
+ moved 0.01: total strain 0.01, thermal strain 0.01, force 0. Expected,
+ = Professional 02-08-2026: element_truss_strain 1 0.01 and
+ element_truss_strain_temperature 1 0.01.)
+echo -no
+number_of_space_dimensions 2
+condif_temperature
+materi_velocity
+materi_displacement
+end_initia
+node 1 0 0
+node 2 1 0
+element 1 -truss 1 2
+group_type 0 -truss
+group_truss_area 0 1.
+group_truss_elasti_young 0 100.
+group_truss_expansion 0 0.001
+bounda_dof 1 1 -velx -vely
+bounda_dof 2 2 -velx
+bounda_time 2 0.01
+bounda_dof 3 2 -vely
+bounda_dof 4 -ra 1 2 -ra -temp
+bounda_time 4 10.
+control_timestep 0 1. 1.
+end_data

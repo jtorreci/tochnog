@@ -1,0 +1,26 @@
+(F5 T2 V4: node_bounded_index (manual 6.879): per principal dof the index
+ of the bounda_dof record that bounds it, -nothing for a free dof, every
+ node printed. Expected, = Professional 02-08-2026: node 1 "0 0", node 2
+ "2 2", node 3 "3 3", node 4 "1 -nothing", the other 8 slots -nothing.)
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_displacement
+materi_stress
+end_initia
+node 1 0 0
+node 2 1 0
+node 3 0 1
+node 4 1 1
+element 1 -quad4 1 2 3 4
+group_type 0 -materi
+group_materi_memory 0 -total_linear
+group_materi_elasti_young 0 1000.
+group_materi_elasti_poisson 0 0.3
+bounda_dof 0 1 -velx -vely
+bounda_dof 2 2 -velx -vely
+bounda_dof 3 3 -velx -vely
+bounda_dof 1 4 -velx
+bounda_time 1 0.01
+control_timestep 0 1. 1.
+end_data

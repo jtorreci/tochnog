@@ -440,6 +440,9 @@ page lists its own in "Differences with the Professional version".
 - [node_geometry_present](node_geometry_present.md) — per-node list of present geometries (6.886) filled per step when print_node_geometry_present -yes (6.995/6.996). Unlocks node_type_1 rc=0.
 - [element_geometry_present](element_geometry_present.md) — per-element list of the geometries holding all its nodes (6.427), filled per step when print_element_geometry_present -yes (6.975/6.976) (F5 T2 V3).
 - [mesh_boundary](mesh_boundary.md) — mesh_boundary -yes (6.816, default -no) fills node_boundary and element_boundary (6.877/6.417) (F5 T2 V3).
+- [element_truss_strain](element_truss_strain.md) — total and thermal strain of a truss (6.451/6.452) (F5 T2 V4).
+- [node_bounded_index](node_bounded_index.md) — per dof the bounda_dof index that bounds it (6.879) (F5 T2 V4).
+- [element_print_group_data_values](element_print_group_data_values.md) — values of the print_group_data group records per element (6.446/6.991) (F5 T2 V4).
 - [print_database_calculation](print_database_calculation.md) — switch of the final .dbs output (6.972); consumed at exit_tn. large1 parses (RUNFAIL remains solver-bound, see SEGUIMIENTO).
 - [print_gid_calculation](print_database_calculation.md) — switch of the final GiD output (same gate).
 - [post_apply](post_apply.md) — `post_apply switch` (6.900) and `control_post_apply` (6.259): `-no` skips the post records (frozen values; global -no: never created); the skipped records are evaluated once more at the end of the run. Verified against the Professional 02-08-2026 (F5).

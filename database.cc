@@ -1042,8 +1042,10 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   // the young modulus distribution without a target on it).
   strcpy(name[PRINT_GROUP_DATA],"print_group_data");
   type[PRINT_GROUP_DATA] = INTEGER;
-  data_length[PRINT_GROUP_DATA] = 1;
-  fixed_length[PRINT_GROUP_DATA] = 1;
+  // list of group record names (manual Professional 6.991; F5 T2 V4:
+  // was length 1, so only one name was read)
+  data_length[PRINT_GROUP_DATA] = DATA_ITEM_SIZE;
+  fixed_length[PRINT_GROUP_DATA] = 0;
   no_index[PRINT_GROUP_DATA] = 1;
 
   // geometry_node_type (manual Professional 6.540) / geometry_
@@ -3075,6 +3077,24 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   version_all[ELEMENT_TRUSS_FORCE] = 1;
   data_class[ELEMENT_TRUSS_FORCE] = ELEMENT;
   data_required[ELEMENT_TRUSS_FORCE] = ELEMENT;
+
+  // element_truss_strain / _temperature (manual Professional 6.451 /
+  // 6.452): total strain and accumulated thermal strain of a truss
+  // (truss.cc, F5 T2 V4).
+  strcpy(name[ELEMENT_TRUSS_STRAIN],"element_truss_strain");
+  type[ELEMENT_TRUSS_STRAIN] = DOUBLE_PRECISION;
+  data_length[ELEMENT_TRUSS_STRAIN] = 1;
+  version_all[ELEMENT_TRUSS_STRAIN] = 1;
+  data_class[ELEMENT_TRUSS_STRAIN] = ELEMENT;
+  data_required[ELEMENT_TRUSS_STRAIN] = ELEMENT;
+
+  strcpy(name[ELEMENT_TRUSS_STRAIN_TEMPERATURE],
+    "element_truss_strain_temperature");
+  type[ELEMENT_TRUSS_STRAIN_TEMPERATURE] = DOUBLE_PRECISION;
+  data_length[ELEMENT_TRUSS_STRAIN_TEMPERATURE] = 1;
+  version_all[ELEMENT_TRUSS_STRAIN_TEMPERATURE] = 1;
+  data_class[ELEMENT_TRUSS_STRAIN_TEMPERATURE] = ELEMENT;
+  data_required[ELEMENT_TRUSS_STRAIN_TEMPERATURE] = ELEMENT;
 
   strcpy(name[ELEMENT_VOLUME],"element_volume");
   type[ELEMENT_VOLUME] = DOUBLE_PRECISION;
@@ -6107,6 +6127,23 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   external[NODE_BOUNDED] = 0;
   data_class[NODE_BOUNDED] = NODE;
   data_required[NODE_BOUNDED] = NODE;
+
+  strcpy(name[NODE_BOUNDED_INDEX],"node_bounded_index");
+  type[NODE_BOUNDED_INDEX] = INTEGER;
+  data_length[NODE_BOUNDED_INDEX] = npuknwn;
+  print_only[NODE_BOUNDED_INDEX] = 1;
+  data_class[NODE_BOUNDED_INDEX] = NODE;
+  data_required[NODE_BOUNDED_INDEX] = NODE;
+
+  // element_print_group_data_values (6.446): per element the values of
+  // the print_group_data records (group.cc, F5 T2 V4)
+  strcpy(name[ELEMENT_PRINT_GROUP_DATA_VALUES],
+    "element_print_group_data_values");
+  type[ELEMENT_PRINT_GROUP_DATA_VALUES] = DOUBLE_PRECISION;
+  data_length[ELEMENT_PRINT_GROUP_DATA_VALUES] = DATA_ITEM_SIZE;
+  fixed_length[ELEMENT_PRINT_GROUP_DATA_VALUES] = 0;
+  print_only[ELEMENT_PRINT_GROUP_DATA_VALUES] = 1;
+  data_class[ELEMENT_PRINT_GROUP_DATA_VALUES] = ELEMENT;
 
   strcpy(name[NODE_DAMPING],"node_damping");
   type[NODE_DAMPING] = DOUBLE_PRECISION;
@@ -9415,6 +9452,10 @@ long int db_number( const char str[] )
       return ELEMENT_INTERFACE_STRAIN_AVERAGE;
     else if ( !strcmp( str, "element_interface_intpnt_stress_average" ) )
       return ELEMENT_INTERFACE_STRESS_AVERAGE;
+    else if ( !strcmp( str, "element_print_group_data_value" ) )
+      // singular name written by the Professional 02-08-2026 (manual
+      // 6.446: element_print_group_data_values)
+      return ELEMENT_PRINT_GROUP_DATA_VALUES;
     else if ( !strcmp( str, "post_node_rhside_ratio_dof_type" ) )
       // 2026 manual name (6.951) of post_node_rhside_ratio_unknowntypes
       return POST_NODE_RHSIDE_RATIO_UNKNOWNTYPES;

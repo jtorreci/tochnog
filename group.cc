@@ -676,3 +676,56 @@ long int node_attached_element_groups( long int inod, long int groups[],
   }
   return ( n>0 );
 }
+
+void element_print_group_data_values_calculate( void )
+
+{
+  // element_print_group_data_values (manual Professional 6.446): per
+  // element the values of the group records listed in print_group_data
+  // (6.991) for the group of the element, the values of the first record
+  // first. Measured on the Professional 02-08-2026: print_group_data
+  // -group_materi_elasti_young -group_materi_elasti_poisson gives
+  // `element_print_group_data_value 1 1000 0.3` (the Professional writes
+  // the singular name; the GNU writes the manual name and reads both).
+  // A group without the record gives 0 for it. Filled at the start of
+  // every step (hook in step_start, top.cc).
+  long int element=0, max_element=0, element_group=0, nitem=0, iitem=0,
+    idat=0, nvalue=0, length=0, ldum=0, i=0,
+    items[DATA_ITEM_SIZE], ivalues[DATA_ITEM_SIZE];
+  double ddum[1], dvalues[DATA_ITEM_SIZE], values[DATA_ITEM_SIZE];
+
+  if ( !db( PRINT_GROUP_DATA, 0, items, ddum, nitem, VERSION_NORMAL,
+      GET_IF_EXISTS ) ) return;
+  db_max_index( ELEMENT, max_element, VERSION_NORMAL, GET );
+  for ( element=0; element<=max_element; element++ ) {
+    if ( !db_active_index( ELEMENT, element, VERSION_NORMAL ) ) continue;
+    element_group = 0;
+    db( ELEMENT_GROUP, element, &element_group, ddum, ldum,
+      VERSION_NORMAL, GET_IF_EXISTS );
+    nvalue = 0;
+    for ( iitem=0; iitem<nitem; iitem++ ) {
+      idat = labs( items[iitem] );
+      length = 0;
+      if ( idat>0 && idat<MDAT && !strncmp( db_name(idat), "group_", 6 ) ) {
+        if ( db_type(idat)==INTEGER ) {
+          db( idat, element_group, ivalues, ddum, length, VERSION_NORMAL,
+            GET_IF_EXISTS );
+          for ( i=0; i<length; i++ ) dvalues[i] = (double) ivalues[i];
+        }
+        else
+          db( idat, element_group, ivalues, dvalues, length, VERSION_NORMAL,
+            GET_IF_EXISTS );
+      }
+      if ( length==0 ) {
+        dvalues[0] = 0.;
+        length = 1;
+      }
+      if ( nvalue+length>DATA_ITEM_SIZE )
+        db_error( ELEMENT_PRINT_GROUP_DATA_VALUES, element );
+      for ( i=0; i<length; i++ ) values[nvalue++] = dvalues[i];
+    }
+    if ( nvalue>0 )
+      db( ELEMENT_PRINT_GROUP_DATA_VALUES, element, ivalues, values, nvalue,
+        VERSION_NORMAL, PUT );
+  }
+}

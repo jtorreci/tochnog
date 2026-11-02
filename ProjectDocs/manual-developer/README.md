@@ -429,6 +429,9 @@ page lists its own in "Differences with the Professional version".
 - [node_geometry_present](node_geometry_present.md) — fill en step_start (coords del paso previo, calibrado con barrido temporal vs Pro) + registro NODE_GEOMETRY_PRESENT version_all; diana target (1,1)=3.
 - [element_geometry_present](element_geometry_present.md) — `geometry.cc` `element_geometry_present_calculate()` from `step_start()` (element present when all its nodes are); records ELEMENT_GEOMETRY_PRESENT, PRINT_ELEMENT_GEOMETRY_PRESENT(_NODE_TYPE) (F5 T2 V3).
 - [mesh_boundary](mesh_boundary.md) — `area.cc` `mesh_boundary_set()` from `iteration_start()` (node_boundary + element_boundary of the free sides); MESH_BOUNDARY, ELEMENT_BOUNDARY; `mesh_has_changed()` deletes element_boundary (F5 T2 V3).
+- [element_truss_strain](element_truss_strain.md) — `truss.cc` `truss()` writes ELEMENT_TRUSS_STRAIN(_TEMPERATURE) (VERSION_NEW, allocated in `top.cc`) (F5 T2 V4).
+- [node_bounded_index](node_bounded_index.md) — `bounda.cc` `bounda()` NODE_BOUNDED_INDEX next to NODE_BOUNDED (F5 T2 V4).
+- [element_print_group_data_values](element_print_group_data_values.md) — `group.cc` `element_print_group_data_values_calculate()` from `step_start()`; PRINT_GROUP_DATA widened (F5 T2 V4).
 - [print_database_calculation](print_database_calculation.md) — gates de exit_tn (miscel.cc) del volcado .dbs/.flavia final.
 - [post_apply](post_apply.md) — records `POST_APPLY` / `CONTROL_POST_APPLY`; gate in `step_close()` (`top.cc`); stale flags `post_stale` / `post_element_force_stale` and the end-of-run re-evaluation in `exit_tn()` (`miscel.cc`) (F5).
 - [control_post_apply](control_post_apply.md) — see post_apply (F5).

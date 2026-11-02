@@ -1,0 +1,29 @@
+(F5 T2 V4: print_group_data with two names (manual 6.991) fills
+ element_print_group_data_values (6.446) with their values for the group
+ of the element. The input also holds the Professional singular spelling
+ element_print_group_data_value, overwritten by the calculation. Expected,
+ = Professional 02-08-2026: element_print_group_data_values 1 1000 0.3.)
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_displacement
+materi_stress
+end_initia
+node 1 0 0
+node 2 1 0
+node 3 0 1
+node 4 1 1
+element 1 -quad4 1 2 3 4
+group_type 0 -materi
+group_materi_memory 0 -total_linear
+group_materi_elasti_young 0 1000.
+group_materi_elasti_poisson 0 0.3
+bounda_dof 0 1 -velx -vely
+bounda_dof 2 2 -velx -vely
+bounda_dof 3 3 -velx -vely
+bounda_dof 1 4 -velx
+bounda_time 1 0.01
+print_group_data -group_materi_elasti_young -group_materi_elasti_poisson
+element_print_group_data_value 1 7.
+control_timestep 0 1. 1.
+end_data

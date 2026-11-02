@@ -37,7 +37,8 @@ void truss( long int element, long int element_group,
     group_truss_young=0., group_truss_area=0., 
     group_truss_density=0., group_truss_plasti=1.e20,
     group_truss_expansion=0., group_truss_initial_force=0.,
-    inc_temperature=0., materi_dynamic_factor=1.,
+    inc_temperature=0., materi_dynamic_factor=1., truss_strain=0.,
+    truss_strain_temperature=0.,
     truss_stiffness=0., incremental_length=0., 
     old_truss_force=0., new_truss_force=0., new_truss_force_mix=0., fac=0., tmp=0., 
     old_length=0., new_length=0., initial_length=0., ddum[1],
@@ -321,6 +322,22 @@ void truss( long int element, long int element_group,
     length = 1;
     db( ELEMENT_TRUSS_FORCE, element, idum, &new_truss_force, 
       length, VERSION_NEW, PUT );
+      // element_truss_strain (manual Professional 6.451): total length
+      // increase divided by the initial length; element_truss_strain_
+      // temperature (6.452): the accumulated thermal strain alpha*dT
+      // (Professional 02-08-2026: 0.01 and 0.01 for a free truss with
+      // alpha 1e-3, dT 10 and a prescribed elongation 0.01)
+    truss_strain = ( array_distance( &new_coord[0], &new_coord[ndim], work,
+      ndim ) - initial_length ) / initial_length;
+    db( ELEMENT_TRUSS_STRAIN, element, idum, &truss_strain, length,
+      VERSION_NEW, PUT );
+    if ( db_active_index( ELEMENT_TRUSS_STRAIN_TEMPERATURE, element,
+        VERSION_NORMAL ) )
+      db( ELEMENT_TRUSS_STRAIN_TEMPERATURE, element, idum,
+        &truss_strain_temperature, ldum, VERSION_NORMAL, GET );
+    truss_strain_temperature += group_truss_expansion * inc_temperature;
+    db( ELEMENT_TRUSS_STRAIN_TEMPERATURE, element, idum,
+      &truss_strain_temperature, length, VERSION_NEW, PUT );
     if ( swit ) {
       pri( "coord", coord, nnol, ndim );
       pri( "initial_coord", initial_coord, nnol, ndim );

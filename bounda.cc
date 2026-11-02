@@ -294,6 +294,16 @@ void bounda( )
   bounda_time = get_new_dbl(DATA_ITEM_SIZE);
 
   db_set_int( NODE_BOUNDED, VERSION_NORMAL );
+    // node_bounded_index (manual Professional 6.879): per principal dof
+    // the index of the bounda_dof record that bounds it, -nothing when
+    // the dof is free (Professional 02-08-2026: every node is printed)
+  db_set_int( NODE_BOUNDED_INDEX, VERSION_NORMAL );
+  db_max_index( NODE, max_node, VERSION_NORMAL, GET );
+  for ( inod=0; inod<=max_node; inod++ ) {
+    if ( db_active_index( NODE_BOUNDED_INDEX, inod, VERSION_NORMAL ) )
+      array_set( db_int( NODE_BOUNDED_INDEX, inod, VERSION_NORMAL ),
+        -NOTHING, npuknwn );
+  }
 
   groundflow_phreatic_apply();
 
@@ -771,6 +781,8 @@ void bounda( )
                     if ( swit ) pri( "node_dof", node_dof, nuknwn );
                     ind1 = ipuknwn*nder + nder - 1;
                     node_bounded[ipuknwn] = 1;
+                    db_int( NODE_BOUNDED_INDEX, inod,
+                      VERSION_NORMAL )[ipuknwn] = iboun;
                     // groundflow seepage: on a seepage edge the pore pressure
                     // is prescribed (typically 0, free air) ONLY when water
                     // flows OUT of the domain. When water would flow IN, the
