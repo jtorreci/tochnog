@@ -83,7 +83,10 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
     group_beam_memory -total_linear (BEAM-MEMORY-DEFAULT), element_beam_direction 9 values
     (BEAM-DIRECTION-LENGTH). Route: inline (no writer reason). Commit `f99793a`.
   - [ ] V5 dof records/switches: dof_element_dof, dof_limit, global_node_dof_empty,
-    global_element_dof_from_node_dof, element_intpnt_dof (decision: record vs GNU element storage).
+    global_element_dof_from_node_dof, element_intpnt_dof. Owner decision 2026-11-02: option 2, rename
+    the GNU per-integration-point storage to element_intpnt_dof and make element_dof the per-element
+    nodal values (manual 6.421 / 6.437 = Professional). Persisted format change (Risk item 1):
+    own commit + independent verifier. Route: mapping explorer first, then decide writer/inline.
   - [ ] V6 element_dof_initial_specific_number/value.
   - [ ] V7 materi initial dofs: materi_strain_plasti_{camclay,mohr_coul,tension,vonmises},
     materi_strain_total_{,compression_,shear_,tension_}kappa (decision: register only or fill).
@@ -280,4 +283,23 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   neither; element_interface_direction same vectors in 2D, hex8 normal reversed on half the points).
   RED on e94f261, GREEN; 643 OK / 0 FALLO, audit 0. Divergence INTERFACE-INTPNT-DIRECTION-GAP (class A).
   V4 complete. Next: V5 (decision element_intpnt_dof record vs GNU element storage).
+
+
+- 2026-11-02 V5 element_intpnt_dof probe (Pro v4/r_intq quad4 2x2): Pro writes element_intpnt_dof (4 IP x 10)
+  and element_dof (4 nodes x 10, the per-element nodal fit of miscel.cc); GNU element_dof = the IP values
+  (270 = 27 x 10 padded), equal to the Pro element_intpnt_dof except 2 displacement slots (max 0.006).
+  Owner (verbatim): "prefiero la 2, es como convergemos con manual y pro. Hacer el uno por retrocompatibilidad
+  solo sería compatibilidad con el dbs, que es un archivo de salida, no de entrada". Note given: input.cc:1965
+  also reads element_dof from a data part (a .dbs fed back as input keeps the old layout).
+- 2026-11-03 V5 element_intpnt_dof committed `6467dea` (delegated writer, context backstop; mapping explorer before):
+  ELEMENT_INTPNT_DOF = former IP storage (npoint*nuknwn, not padded; zero records of beam/spring/truss elements
+  deleted as the Professional), ELEMENT_DOF = per-element nodal (miscel.cc element_dof_nodal_set, serial after
+  the step-end promotion: principal dofs = NODE_DOF, IP states = recovery fit kind / fallback h*V mean).
+  = Professional within 4e-11 on intq, two, p1, q9 except disx/disy (ELEMENT-DOF-DISPLACEMENT, class B).
+  RED on bb69dd0, GREEN; 654 OK / 0 FALLO, audit 0; A/B on 739 suite inputs: rc identical, 543/545 .dbs
+  identical outside the two records (2 gain a memory-report line), 12679 old element_dof = new element_intpnt_dof.
+  Docs: 26 manual pages renamed ELEMENT_DOF -> ELEMENT_INTPNT_DOF (code token) + 4 IP-storage sentences.
+  Residuals: interface/empty elements keep the 27-point zero element_intpnt_dof; an old .dbs fed back as input
+  loses the IP state (element_dof_initialised 1, documented). Pre-existing nonloc.cc PUT outside
+  if(ielem_nonloc) noted. Risk items 1 and 3 -> independent verifier next.
 
