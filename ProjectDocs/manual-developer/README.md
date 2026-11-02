@@ -411,6 +411,7 @@ page lists its own in "Differences with the Professional version".
 - [control_post_apply](control_post_apply.md) — see post_apply (F5).
 - [control_post_element_force](control_post_element_force.md) — record `CONTROL_POST_ELEMENT_FORCE`; gate around `post_element_force_calculate()` in `top()` (F5).
 - [control_post](control_post.md) — record `CONTROL_POST`, accepted, no consumer needed (F5).
+- [control_system_call](control_system_call.md) — record `CONTROL_SYSTEM_CALL`; `control_system_call()` in `top.cc`, `posix_spawn` of the user script (F5).
 - [print_group_data](print_group_data.md) — registro parse-only (escritura GiD/element_print_group_data PENDIENTE).
 
 ## PARALLEL PILOT BATCH (2026-09-07) — 4 developers in isolated worktrees, merged by orchestrator

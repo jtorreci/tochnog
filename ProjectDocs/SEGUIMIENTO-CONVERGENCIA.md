@@ -30,6 +30,7 @@ suite sfnet, o un test propio. El registro completo:
 
 | Feature | Commit | Fecha | Verificación |
 |---------|--------|-------|--------------|
+| **F5 W1 U2 — `control_system_call`** | `PENDING` | 2026-11-02 | Professional 02-08-2026 probes (`control_post1` quad4 geometry, indices 0/1 with 3/2 timesteps and 2 without, logging script): one call per converged timestep before its history print plus one at the end of each index with the record (7 x4, 8 x3, 9 x1), stdout kept, stderr dropped, exit status ignored, missing script silent, `-3` rejected; the Professional only finds the script through the `PATH` (DIVERGENCES SYSCALL-PATH, GNU follows the manual). RED: `control_system_call1` rc 1 on `9574b84`. GNU call log identical; script without `#!` and non-executable script checked. |
 | **F5 W1 U3 — post gates: `post_apply` (consumed), `control_post_apply`, `control_post_element_force`, `control_post`** | `ea96bf6` | 2026-11-02 | Professional 02-08-2026 probes (quad4 ramp, two control indices, `post_point` + `post_element_force`, `control_print_history` series per index, 11 variants): equal series and final `.dbs` (global -no: no record; control -no: frozen, control overrules global; element-force switch only freezes the force; an index without timesteps evaluates; end-of-run re-evaluation of the skipped records). RED: the 4 new keyword tests rc 1 and `post_apply1` wrote post records on `4b80565`. Differential vs `4b80565` on 212 inputs with post records: only the new tests and `post_apply1`. Found C90, C91. |
 | **F5 W1 U1 — apply switches: `materi_plasti_tension_apply`, `materi_plasti_visco_apply`, `group_plasti_apply`, `truss_rope_apply`, `control_truss_rope_apply`, `interface_gap_apply`** | `467cdbd` | 2026-11-02 | Professional 02-08-2026 probes (29 variants: quad4 tension_direct, 1D bar tension yield / visco_power, two-group bars, compressed rope truss, C87 interface geometry): GNU = Professional for the tension, visco and group switches and the control-overrules-global precedence; `control_materi_plasti_tension_apply` now also ignores `group_materi_plasti_tension` (= Professional). Rope switches and `interface_gap_apply` follow the manual (Professional keeps the rope / rejects the record: DIVERGENCES ROPE-APPLY, IFACE-GAP-APPLY). RED: the 12 new tests rc 1 on `4b80565`. Differential vs `4b80565` on 75 inputs: only the new keywords and timing lines change. |
 | **F4 T6f C60 — interface normal orientation independent of the node order (side 1 towards side 2, compression negative)** | `9393ded` | 2026-10-19 | Professional 02-08-2026 probes: quad4 interface between two quad4 blocks, zero-thickness and thick, four node orders each: Professional = GNU -9.999999 / shear +/-2 (GNU before: +10 / +10 / -10 / -10, with a tension cut-off +10 / +10 / 0 / 0); free interface orientation = Professional (-1 under compression for `1 2 3 4` / `4 3 2 1`). Test-2026 `interface_orientation_node_order1` (RED on `6bc7457`, GREEN). Five GNU-authored test-2014 targets corrected (old orientation): `iface_mc_gap`, `iface_mc_dil`, `iface_mc_dil_1step`, `iface_expansion`, `iface_tangref`. Residual C87 (free interface in traction). |
@@ -851,11 +852,11 @@ marcado `PENDIENTE` puede estar cubierto en el GNU bajo otro nombre:
 
 - [x] `control_plasti_apply` — implemented (commit `9bbd125`, 2026-09-27): per-timestep plasticity switch, overrules `plasti_apply`; verified against the Professional binary 02-08-2026 (see verification registry)
 
-### control_post (0/3)
+### control_post (3/3)
 
-- [ ] `control_post` — PENDIENTE
-- [ ] `control_post_apply` — PENDIENTE
-- [ ] `control_post_element_force` — PENDIENTE
+- [x] `control_post` — implementada (commit `ea96bf6`, 2026-11-02; F5 W1)
+- [x] `control_post_apply` — implementada (commit `ea96bf6`, 2026-11-02; F5 W1)
+- [x] `control_post_element_force` — implementada (commit `ea96bf6`, 2026-11-02; F5 W1)
 
 ### control_print (63/85)
 
@@ -995,6 +996,10 @@ marcado `PENDIENTE` puede estar cubierto en el GNU bajo otro nombre:
 - [x] `control_solver_matrix_save` — Sprint 9 (PARCIAL: registrado sin comportamiento)
 - [x] `control_solver_pardiso_ordering` — Sprint 9 (PARCIAL: PARDISO no compilado)
 - [x] `control_solver_pardiso_out_of_core` — Sprint 9 (PARCIAL: ídem)
+
+### control_system (1/1)
+
+- [x] `control_system_call` — implementada (F5 W1 U2, 2026-11-02; commit en el registro de verificación)
 
 ### convection (2/2)
 
@@ -1611,9 +1616,9 @@ Nota: `group_interface_ground` del checklist anterior NUNCA existió (artefacto 
 - [x] `group_materi_viscosity` — presente en el GNU
 - [x] `group_materi_viscosity_heatgeneration` — presente en el GNU
 
-### group_plasti (0/1)
+### group_plasti (1/1)
 
-- [ ] `group_plasti_apply` — PENDIENTE
+- [x] `group_plasti_apply` — implementada (commit `467cdbd`, 2026-11-02; F5 W1)
 
 ### group_porosity (0/1)
 
@@ -1684,9 +1689,9 @@ Nota: `group_interface_ground` del checklist anterior NUNCA existió (artefacto 
 
 - [x] `input_gmsh` — presente en el GNU
 
-### interface (0/1)
+### interface (1/1)
 
-- [ ] `interface_gap_apply` — PENDIENTE
+- [x] `interface_gap_apply` — implementada (commit `467cdbd`, 2026-11-02; F5 W1)
 
 ### linear (0/1)
 
@@ -1726,7 +1731,7 @@ Nota: `group_interface_ground` del checklist anterior NUNCA existió (artefacto 
 
 - [x] `materi_maxwell_stress` — presente en el GNU — 2026-10-12 (F4 T6f C68, `70235c6`): kept as an integration-point state (ELEMENT_DOF), nodal value with the strain recovery weight (see registro de verificación) ; 2026-10-12 (F4 T6f C68d, `2327083`): two or more chains with rho/epi/epp read the old state with the right index
 
-### materi_plasti (4/16)
+### materi_plasti (12/16)
 
 - [x] `materi_plasti_camclay_history` — lote keywords baratas (initia 4.16: dofs cchis0/cchis1 = e y p0 del Modified Cam Clay; group_materi_plasti_camclay = M kappa lambda con p0 como historia; validado con validation_13 rc=0)
 - [x] `materi_plasti_cap1_history` — Sprint 10 (lote 7; initia del dof escalar pc del cap1 — manual 4.17 "the history variable pc for the cap1 plasticity models is added to the node_dof records"; basename `pc`; patrón kappa completo: parser input.cc, RHS materi.cc, inercia general.cc, clamp dof.cc; validado con `mcap1`: pc 100 -> 109.9996 tras 20 pasos plasticos y constante en la descarga) ; 2026-10-12 (F4 T6f C68, `70235c6`): kept as an integration-point state (ELEMENT_DOF), nodal value with the strain recovery weight (see registro de verificación)
@@ -1742,8 +1747,8 @@ Nota: `group_interface_ground` del checklist anterior NUNCA existió (artefacto 
 - [ ] `materi_plasti_maximum_iterations` — PENDIENTE
 - [ ] `materi_plasti_phimob` — PENDIENTE
 - [x] `materi_plasti_rho` — presente en el GNU — 2026-10-12 (F4 T6f C68, `70235c6`): kept as an integration-point state (ELEMENT_DOF), nodal value with the strain recovery weight (see registro de verificación)
-- [ ] `materi_plasti_tension_apply` — PENDIENTE
-- [ ] `materi_plasti_visco_apply` — PENDIENTE
+- [x] `materi_plasti_tension_apply` — implementada (commit `467cdbd`, 2026-11-02; F5 W1)
+- [x] `materi_plasti_visco_apply` — implementada (commit `467cdbd`, 2026-11-02; F5 W1)
 
 ### materi_strain (4/21)
 
@@ -1911,9 +1916,9 @@ Nota: `group_interface_ground` del checklist anterior NUNCA existió (artefacto 
 
 - [x] `plasti_apply` — implemented (commit `9bbd125`, 2026-09-27): global plasticity switch (MC, von Mises, DP, direct cut-offs, camclay, hardsoil, hypoplasticity, incremental models; slide default); verified against the Professional binary 02-08-2026 (see verification registry)
 
-### post_apply (0/1)
+### post_apply (1/1)
 
-- [ ] `post_apply` — PENDIENTE
+- [x] `post_apply` — implementada (commit `ea96bf6`, 2026-11-02; F5 W1)
 
 ### post_calcul (11/22)
 
@@ -2232,9 +2237,9 @@ Nota: `group_interface_ground` del checklist anterior NUNCA existió (artefacto 
 
 - [x] `tochnog_version` — Sprint 12 lote 3 (record con la fecha de BUILD parseada de __DATE__, escrito al inicio de top(); targeteable — test del año)
 
-### truss (0/1)
+### truss (1/1)
 
-- [ ] `truss_rope_apply` — PENDIENTE
+- [x] `truss_rope_apply` — implementada (commit `467cdbd`, 2026-11-02; F5 W1)
 
 ### up (0/1)
 

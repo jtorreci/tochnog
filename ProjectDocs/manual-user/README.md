@@ -420,6 +420,7 @@ page lists its own in "Differences with the Professional version".
 - [control_post_apply](control_post_apply.md) — per-control-index form of `post_apply` (F5).
 - [control_post_element_force](control_post_element_force.md) — `control_post_element_force index switch` (6.260): `-no` skips the post_element_force records in that index (F5).
 - [control_post](control_post.md) — `control_post index switch` (6.258): accepted; post records are evaluated in every control index (= Professional) (F5).
+- [control_system_call](control_system_call.md) — `control_system_call index integer_value` (6.382): runs `./tochnog_system_call.sh integer_value` after each timestep and at the end of the index (F5).
 - [print_group_data](print_group_data.md) — GiD plot of group_* data (6.990); registered parse-only. Unlocks the parse of distri3 (runtime pending).
 
 ## PARALLEL PILOT BATCH (2026-09-07) — 4 developers in isolated worktrees, merged by orchestrator

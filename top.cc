@@ -18,6 +18,13 @@
 */
 
 #include "tochnog.h"
+#include <cerrno>
+#include <fcntl.h>
+#include <spawn.h>
+#include <sys/wait.h>
+#include <unistd.h>
+
+extern char **environ;
 
 #define ITERATION_WISHED 4
 #define EPS_DTIME 1.e-4
@@ -859,6 +866,9 @@ void top( void )
                         }
                         else
                           post_element_force_stale = 1;
+                        // control_system_call: end of the converged
+                        // timestep, before its prints (Professional)
+                        control_system_call( icontrol );
                         step_close( YES, ipar, npar, ipar_i, ipar_n );
                         if ( repeat(start_control) ) goto repeat_point;
                       }
@@ -890,6 +900,8 @@ void top( void )
                   step_close( NO, ipar, npar, ipar_i, ipar_n );
                   if ( repeat(start_control) ) goto repeat_point;
                 }
+                // control_system_call: end of the control index
+                control_system_call( icontrol );
                 inverse_calculation( ipar, npar, ipar_i, ipar_n,
                   max_control, INVERSE_DETERMINE_SENSITIVITY );
               }
@@ -1747,3 +1759,50 @@ void step_close( long int task, long int ipar, long int npar, long int ipar_i, l
 
 }
 
+// control_system_call (manual Professional 6.382): runs the user's
+// ./tochnog_system_call.sh with integer_value as its first argument at the
+// end of each converged timestep and at the end of each control index that
+// has the record. The run waits for it; the script's stdout goes to the
+// run output, its stderr is discarded and its exit status is ignored
+// (Professional 02-08-2026). The Professional searches the script on the
+// PATH; GNU runs the file of the working directory, as the manual says. A
+// missing or non-executable script gives one warning per run. A script
+// without a #! line is run by /bin/sh, as system() would.
+void control_system_call( long int icontrol )
+{
+  static long int warned = 0;
+  long int value=0, length=1;
+  double ddum[1];
+  char arg[32];
+  const char *script = "./tochnog_system_call.sh";
+
+  if ( !db_active_index( CONTROL_SYSTEM_CALL, icontrol, VERSION_NORMAL ) ) return;
+  db( CONTROL_SYSTEM_CALL, icontrol, &value, ddum, length, VERSION_NORMAL, GET );
+  if ( access( script, X_OK )!=0 ) {
+    if ( !warned ) {
+      pri( "\nWarning: control_system_call: tochnog_system_call.sh is missing "
+        "or not executable in the working directory; the call is skipped." );
+      warned = 1;
+    }
+    return;
+  }
+  snprintf( arg, sizeof(arg), "%ld", value );
+  cout.flush();
+  fflush( stdout );
+
+  posix_spawn_file_actions_t actions;
+  posix_spawn_file_actions_init( &actions );
+  posix_spawn_file_actions_addopen( &actions, 2, "/dev/null", O_WRONLY, 0 );
+  pid_t pid = 0;
+  char *argv_script[] = { (char*) script, arg, NULL };
+  int err = posix_spawn( &pid, script, &actions, NULL, argv_script, environ );
+  if ( err==ENOEXEC ) {
+    char *argv_sh[] = { (char*) "sh", (char*) script, arg, NULL };
+    err = posix_spawn( &pid, "/bin/sh", &actions, NULL, argv_sh, environ );
+  }
+  posix_spawn_file_actions_destroy( &actions );
+  if ( err==0 ) {
+    int status = 0;
+    while ( waitpid( pid, &status, 0 )<0 && errno==EINTR ) ;
+  }
+}

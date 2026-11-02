@@ -7273,6 +7273,11 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   data_length[CONTROL_SUPPORT_EDGE_NORMAL_STIFFNESS_FREEZE] = 1;
   data_class[CONTROL_SUPPORT_EDGE_NORMAL_STIFFNESS_FREEZE] = CONTROL;
 
+  strcpy(name[CONTROL_SYSTEM_CALL],"control_system_call");
+  type[CONTROL_SYSTEM_CALL] = INTEGER;
+  data_length[CONTROL_SYSTEM_CALL] = 1;
+  data_class[CONTROL_SYSTEM_CALL] = CONTROL;
+
   // Sprint 13: Professional convergence backlog (CORPUS-BASELINE)
   strcpy(name[GROUP_BEAM_SHEAR],"group_beam_shear");
   type[GROUP_BEAM_SHEAR] = DOUBLE_PRECISION;

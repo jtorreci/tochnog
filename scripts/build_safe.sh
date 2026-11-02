@@ -2294,6 +2294,31 @@ else
   check_fail "post_apply1" "post records or history file present"
 fi
 rm -f "$T2026/disy0.his"
+# F5 W1 U2: control_system_call (Professional 02-08-2026 probe). Isolated
+# run with a script that logs its argument and the history lines already
+# written; its stdout reaches the run output, its stderr is discarded.
+SCDIR="/tmp/control_system_call_isolated"
+rm -rf "$SCDIR" && mkdir -p "$SCDIR" && cp "$T2026/control_system_call1.dat" "$SCDIR/" && \
+  printf '#!/bin/sh\necho "arg=$1 his=$(cat *.his 2>/dev/null | wc -l)" >> calls.log\necho SCOUT-$1\necho SCERR-$1 >&2\nexit 3\n' \
+    > "$SCDIR/tochnog_system_call.sh" && chmod +x "$SCDIR/tochnog_system_call.sh" && \
+  ( cd "$SCDIR" && ulimit -v "$TN_MEMLIMIT_KB" && timeout 60 "$REPO_DIR/build/$TN_BIN" control_system_call1.dat > run.out 2>&1 )
+SCRC=$?
+SCEXP=$(printf 'arg=7 his=0\narg=7 his=1\narg=7 his=2\narg=7 his=3\narg=8 his=3\narg=8 his=4\narg=8 his=5\narg=9 his=5')
+if [ "$SCRC" = "0" ] && [ "$(cat "$SCDIR/calls.log" 2>/dev/null)" = "$SCEXP" ] && \
+   [ "$(grep -c '^SCOUT-' "$SCDIR/run.out")" = "8" ] && ! grep -q 'SCERR-' "$SCDIR/run.out"; then
+  check_ok "control_system_call1 (8 calls 7x4 8x3 9x1, stdout kept, stderr dropped)"
+else
+  check_fail "control_system_call1" "rc=$SCRC or call log / output differs"
+fi
+rm -f "$SCDIR/tochnog_system_call.sh" "$SCDIR/calls.log" "$SCDIR"/*.his
+( cd "$SCDIR" && ulimit -v "$TN_MEMLIMIT_KB" && timeout 60 "$REPO_DIR/build/$TN_BIN" control_system_call1.dat > run.out 2>&1 )
+SCRC=$?
+if [ "$SCRC" = "0" ] && [ "$(grep -c 'tochnog_system_call.sh is missing' "$SCDIR/run.out")" = "1" ]; then
+  check_ok "control_system_call1 without script (rc=0, one warning)"
+else
+  check_fail "control_system_call1 without script" "rc=$SCRC or warning count differs"
+fi
+rm -rf "$SCDIR"
 # F4 T6f LOW queue Q3 / C62 (2026-10-17): the node_rhside reported after
 #   the post-solve material state pass keeps the bounda_force loads
 #   (snapshot of the iteration's bounda() write) and the

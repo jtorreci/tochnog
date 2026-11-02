@@ -1,0 +1,42 @@
+(F5 W1 U2: control_system_call, manual Professional 6.382. The run calls
+ ./tochnog_system_call.sh with the integer value as first argument at the
+ end of each converged timestep (before that step's history print) and at
+ the end of each control index carrying the record: index 0 (3 steps) 4
+ calls with 7, index 1 (2 steps) 3 calls with 8, index 2 (no timesteps) 1
+ call with 9 = Professional 02-08-2026. build_safe runs it in an isolated
+ directory with a logging script and checks the call log; a missing
+ script only gives a warning.)
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_displacement
+materi_stress
+end_initia
+node 1 0 0
+node 2 1 0
+node 3 0 1
+node 4 1 1
+element 1 -quad4 1 2 3 4
+group_type 0 -materi
+group_materi_memory 0 -total_linear
+group_materi_elasti_young 0 1000.
+group_materi_elasti_poisson 0 0.3
+geometry_line 1 0 0 1 0 0.01
+geometry_line 2 0 0 0 1 0.01
+geometry_line 3 0 1 1 1 0.01
+bounda_dof 0 -geometry_line 1 -vely
+bounda_dof 1 -geometry_line 2 -velx
+bounda_dof 2 -geometry_line 3 -vely
+bounda_time 2 0 0 1 0.02
+post_point 0 0.5 0.5
+post_element_force 0 0. 1. 0. 0. 0.5 0.
+post_element_force_geometry 0 -geometry_line 1
+control_timestep 0 0.1 0.3
+control_timestep 1 0.1 0.2
+control_system_call 0 7
+control_system_call 1 8
+control_post 2 -yes
+control_system_call 2 9
+control_print_history 0 -post_element_force_result 0 0
+control_print_history 1 -post_element_force_result 0 0
+end_data
