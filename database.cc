@@ -1013,6 +1013,28 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   data_length[PRINT_GID_CALCULATION] = 1;
   no_index[PRINT_GID_CALCULATION] = 1;
 
+  // F5 W2 V2: global print records (manual Professional 6.979, 6.980,
+  // 6.991-6.993, 6.998-6.1002). print_*_calculation: end-of-run output
+  // (exit_tn, miscel.cc); the others are the defaults of the
+  // control_print_* records of the same name, which overrule them for
+  // their own index (print_option, miscel.cc).
+  strcpy(name[PRINT_GMSH_CALCULATION],"print_gmsh_calculation");
+  strcpy(name[PRINT_GMSH_DUMMY],"print_gmsh_dummy");
+  strcpy(name[PRINT_GMSH_NODE_TYPE],"print_gmsh_node_type");
+  strcpy(name[PRINT_TECPLOT_CALCULATION],"print_tecplot_calculation");
+  strcpy(name[PRINT_VTK_CALCULATION],"print_vtk_calculation");
+  strcpy(name[PRINT_VTK_COORD],"print_vtk_coord");
+  strcpy(name[PRINT_VTK_GROUP],"print_vtk_group");
+  strcpy(name[PRINT_VTK_NODE_TYPE],"print_vtk_node_type");
+  strcpy(name[PRINT_FRD_FREECAD],"print_frd_freecad");
+  strcpy(name[PRINT_FRD_PREPOMAX],"print_frd_prepomax");
+  for ( long int iprint=PRINT_GMSH_CALCULATION; iprint<=PRINT_FRD_PREPOMAX;
+        iprint++ ) {
+    type[iprint] = INTEGER;
+    data_length[iprint] = 1;
+    no_index[iprint] = 1;
+  }
+
   // print_group_data (manual Professional 6.990): plot group_* data
   // items in the GiD output for isoparametric elements (and fill the
   // element_print_group_data records). Registered parse-only in this
@@ -9338,6 +9360,12 @@ long int db_number( const char str[] )
       return CONTROL_PRINT_GMSH_NODE_METHOD;
     else if ( !strcmp( str, "control_print_vtk_node_type" ) )
       return CONTROL_PRINT_VTK_NODE_METHOD;
+    else if ( !strcmp( str, "print_gmsh_node_method" ) )
+      // older manual names of print_gmsh_node_type / print_vtk_node_type
+      // (6.993, 6.1002), as the control_print_*_node_method records
+      return PRINT_GMSH_NODE_TYPE;
+    else if ( !strcmp( str, "print_vtk_node_method" ) )
+      return PRINT_VTK_NODE_TYPE;
     else if ( !strcmp( str, "element_contact_spring_direction" ) )
       // 2026 manual name (6.418) of element_contactspring_direction
       return ELEMENT_CONTACTSPRING_DIRECTION;

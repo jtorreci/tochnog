@@ -2400,6 +2400,68 @@ if grep -q "^control_print_vtk_node_method  0  -node_deformed_mesh" "$T2026/alia
 else
   check_fail "alias_names_2026_1" "an aliased record is missing from the .dbs"
 fi
+# F5 W2 V2: global print defaults (print_*_calculation, print_gmsh_dummy /
+# _node_type, print_vtk_coord / _group / _node_type, print_frd_freecad /
+# _prepomax; Professional 02-08-2026 probes). Isolated runs: each test
+# writes its vtk / plt / msh / frd files in its own directory.
+PVDIR="/tmp/f5_w2_v2_print_isolated"
+rm -rf "$PVDIR" && mkdir -p "$PVDIR"
+pv_case() {
+  local t="$1" desc="$2" cond="$3" rc=0
+  mkdir -p "$PVDIR/$t" && cp "$T2026/$t.dat" "$PVDIR/$t/"
+  ( cd "$PVDIR/$t" && ulimit -v "$TN_MEMLIMIT_KB" && \
+    timeout 60 env MESSAGE=-no "$REPO_DIR/build/$TN_BIN" "$t.dat" > "$t.out" 2>&1 ); rc=$?
+  if [ "$rc" = "0" ] && ( cd "$PVDIR/$t" && eval "$cond" ); then
+    check_ok "$t ($desc)"
+  else
+    check_fail "$t" "rc=$rc or not: $desc"
+  fi
+}
+pv_case print_calculation_default1 'no vtk / plt / msh file at the end by default' \
+  '! ls *.vtk *.plt *.msh >/dev/null 2>&1'
+pv_case print_vtk_calculation1 'print_vtk_calculation1.vtk with 4 points, z 0.0, and element_group' \
+  'grep -q "^POINTS 4 double" print_vtk_calculation1.vtk && grep -q "^SCALARS element_group int" print_vtk_calculation1.vtk && [ "$(grep -A4 '\''^POINTS'\'' print_vtk_calculation1.vtk | sed 1d | awk '\''{print $3}'\'' | sort -u)" = 0.0 ]'
+pv_case print_tecplot_calculation1 'one zone at t=0.5 in tecplot.plt' \
+  '[ "$(grep -c '\''^ZONE'\'' tecplot.plt)" = 1 ] && grep -q '\''^ZONE T="t=0.5"'\'' tecplot.plt'
+pv_case print_tecplot_calculation2 'three zones, the last at t=0.5' \
+  '[ "$(grep -c '\''^ZONE'\'' tecplot.plt)" = 3 ] && [ "$(grep '\''^ZONE'\'' tecplot.plt | tail -1 | cut -d'\''"'\'' -f2)" = "t=0.5" ]'
+pv_case print_gmsh_calculation1 'three node_materi_velocity_0 sets, the last at t=0.5' \
+  '[ "$(grep -c '\''"node_materi_velocity_0"'\'' print_gmsh_calculation1.msh)" = 3 ] && [ "$(grep -A2 '\''"node_materi_velocity_0"'\'' print_gmsh_calculation1.msh | sed -n '\''$p'\'')" = 0.5 ]'
+pv_case print_gmsh_calculation2 'final state not repeated, five sets' \
+  '[ "$(grep -c '\''"node_materi_velocity_0"'\'' print_gmsh_calculation2.msh)" = 5 ]'
+pv_case print_vtk_group1 'CELL_DATA element_group 2' \
+  '[ "$(grep -A3 '\''^SCALARS element_group int'\'' tn0.vtk | sed -n 3p)" = 2 ] && grep -q "^CELL_DATA 1" tn0.vtk'
+pv_case print_vtk_group2 'no element_group cell field' \
+  'grep -q "^POINTS 4" tn0.vtk && ! grep -q "element_group\|CELL_DATA" tn0.vtk'
+pv_case print_vtk_coord1 'global -no omits POINTS' \
+  'grep -q "^CELLS 1 5" tn0.vtk && ! grep -q "^POINTS" tn0.vtk'
+pv_case print_vtk_coord2 'control -yes overrules the global -no' \
+  'grep -q "^POINTS 4 double" tn0.vtk'
+pv_case print_vtk_node_type1 'deformed POINTS, node 2 x 0.9987142857' \
+  '[ "$(grep -A2 '\''^POINTS'\'' tn0.vtk | sed -n 3p | LC_ALL=C awk '\''{printf "%.10f", $1}'\'')" = 0.9987142857 ]'
+pv_case print_vtk_node_method1 'older name stored as print_vtk_node_type, node 2 x 0.9987142857' \
+  '[ "$(grep -A2 '\''^POINTS'\'' tn0.vtk | sed -n 3p | LC_ALL=C awk '\''{printf "%.10f", $1}'\'')" = 0.9987142857 ] && grep -q "^print_vtk_node_type  *-node_deformed_mesh" print_vtk_node_method1.dbs'
+pv_case print_vtk_node_type2 'control -node overrules, node 2 x 1' \
+  '[ "$(grep -A2 '\''^POINTS'\'' tn0.vtk | sed -n 3p | LC_ALL=C awk '\''{print $1}'\'')" = 1 ]'
+pv_case print_gmsh_dummy1 'no dummy point elements' \
+  '[ "$(grep -c '\'' 15 2 1234 '\'' print_gmsh_dummy1.msh)" = 0 ] && [ "$(grep -A1 '\''^\$Elements'\'' print_gmsh_dummy1.msh | sed -n 2p)" = 1 ]'
+pv_case print_gmsh_dummy2 'control -yes overrules, four dummies' \
+  '[ "$(grep -c '\'' 15 2 1234 '\'' print_gmsh_dummy2.msh)" = 4 ]'
+pv_case print_gmsh_node_type1 'deformed nodes at t=0.1, node 2 x 0.9999142857' \
+  '[ "$(LC_ALL=C awk '\''$1==2 && NF==4 {printf "%.10f", $2; exit}'\'' print_gmsh_node_type1.msh)" = 0.9999142857 ]'
+pv_case print_frd_freecad1 'no frd file without materi_strain_total' \
+  '! ls *.frd >/dev/null 2>&1'
+pv_case print_frd_freecad2 'frd file with TOSTRAIN' \
+  'grep -q "^ -4  TOSTRAIN" print_frd_freecad2.frd'
+pv_case control_print_frd_freecad1 'no frd file without materi_strain_total' \
+  '! ls *.frd >/dev/null 2>&1'
+pv_case print_frd_prepomax1 '8 nodes, hex8 1 2 4 3 6 7 9 8' \
+  'grep -q "^     2C *8 *1$" print_frd_prepomax1.frd && grep -q "^ -1         6 0.00000E+00 0.00000E+00 1.00000E+00" print_frd_prepomax1.frd && grep -q "^ -2         1         2         4         3         6         7         9         8$" print_frd_prepomax1.frd && grep -q "^ -1         1    1    0" print_frd_prepomax1.frd'
+pv_case print_frd_prepomax2 'penta6 1 2 3 6 7 8 and 2 4 3 7 9 8' \
+  'grep -q "^ -2         1         2         3         6         7         8$" print_frd_prepomax2.frd && grep -q "^ -2         2         4         3         7         9         8$" print_frd_prepomax2.frd && grep -q "^ -1         2    2    0" print_frd_prepomax2.frd'
+pv_case control_print_frd_prepomax1 '8 nodes, hex8' \
+  'grep -q "^     2C *8 *1$" control_print_frd_prepomax1.frd && grep -q "^ -2         1         2         4         3         6         7         9         8$" control_print_frd_prepomax1.frd'
+rm -rf "$PVDIR"
 # F5 W1 U5: element group selection (Professional 02-08-2026 probes; the
 # manual decides where the Professional differs) and print_precision.
 for t in mesh_element_group_apply1 mesh_element_group_apply2 \

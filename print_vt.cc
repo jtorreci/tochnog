@@ -43,7 +43,7 @@ void print_vtk( long int icontrol )
     calcul_unknown=0, calcul_operat=0, swit=0, ldum=0, 
     nvtk_dof=0, nvtk_dof_calcul=0, ifilter=0, print_field=1,
     vtk_coord=-YES, vtk_empty=-YES, vtk_node_method=-NODE_START_REFINED,
-    vtk_other=-YES, ncell=0,
+    vtk_other=-YES, vtk_group=-YES, ncell=0, element_group=0,
     idum[1], *dof_label=NULL, *dof_type=NULL, *dof_scal_vec_mat=NULL, 
     *post_calcul_scal_vec_mat=NULL, *post_calcul_unknown_operat=NULL, 
     *nodes=NULL, *el=NULL, *vtk_dof=NULL, *vtk_dof_calcul=NULL,
@@ -61,9 +61,10 @@ void print_vtk( long int icontrol )
     VERSION_NORMAL, GET_IF_EXISTS );
 
   // control_print_vtk_coord (6.340): -yes (default) writes the node
-  // coordinates (the POINTS block); -no omits them.
-  db( CONTROL_PRINT_VTK_COORD, icontrol, &vtk_coord, ddum, ldum,
-    VERSION_NORMAL, GET_IF_EXISTS );
+  // coordinates (the POINTS block); -no omits them. The global
+  // print_vtk_coord (6.1000) is the default of the control record.
+  vtk_coord = print_option( PRINT_VTK_COORD, CONTROL_PRINT_VTK_COORD,
+    icontrol, -YES );
   // control_print_vtk_empty (6.343): -yes (default) includes empty
   // elements; -no skips the elements whose ELEMENT_EMPTY record is -YES
   // (pattern print_g5.cc: element_empty==-NO || -FRONT -> not empty).
@@ -73,8 +74,13 @@ void print_vtk( long int icontrol )
   // written - -node (stored coordinates), -node_start_refined (default:
   // NODE_START_REFINED when available, stored coordinates otherwise) or
   // -node_deformed_mesh (stored coordinates + nodal displacement).
-  db( CONTROL_PRINT_VTK_NODE_METHOD, icontrol, &vtk_node_method, ddum,
-    ldum, VERSION_NORMAL, GET_IF_EXISTS );
+  // The global print_vtk_node_type (6.1002) is the default of the
+  // control record (2026 name control_print_vtk_node_type).
+  vtk_node_method = print_option( PRINT_VTK_NODE_TYPE,
+    CONTROL_PRINT_VTK_NODE_METHOD, icontrol, -NODE_START_REFINED );
+  // print_vtk_group (6.1001, default -yes): element group of every cell
+  // as the CELL_DATA field element_group (= Professional 02-08-2026).
+  vtk_group = print_option( PRINT_VTK_GROUP, -1, -1, -YES );
   // control_print_vtk_other (6.346): -yes (default) also writes the
   // "other" fields (boundary conditions, mesh deformation - see the
   // partial subset documented in manual-developer); -no omits them.
@@ -100,11 +106,15 @@ void print_vtk( long int icontrol )
   db_highest_index( ELEMENT, max_element, VERSION_PRINT );
   if ( max_element<0 ) return;
 
-  strcpy( filename, "tn" );
+  // control_print_vtk: tn<icontrol>.vtk; end of the run
+  // (print_vtk_calculation, icontrol -1): <base>.vtk (= Professional).
   if ( icontrol>=0 ) {
+    strcpy( filename, "tn" );
     long_to_a( icontrol, str );
     strcat( filename, str );
   }
+  else
+    strcpy( filename, data_file_base );
   strcat( filename, ".vtk" );
   ofstream outvtk( filename );
   outvtk.precision(TN_PRECISION);
@@ -141,7 +151,9 @@ void print_vtk( long int icontrol )
                 db_active_index( NODE_START_REFINED, inod, VERSION_PRINT ) ) {
         db( NODE_START_REFINED, inod, idum, coord, ldum, VERSION_PRINT, GET );
         for ( idim=0; idim<MDIM; idim++ ) {
-          if ( coord[idim]==0.0 )
+          // only ndim values are stored: the others are not read (they
+          // printed stack garbage as z in 2D before F5 W2 V2)
+          if ( idim>ndim-1 || coord[idim]==0.0 )
             outvtk << "0.0" << " ";
           else
             outvtk << coord[idim] << " ";
@@ -149,7 +161,9 @@ void print_vtk( long int icontrol )
       }
       else {
         for ( idim=0; idim<MDIM; idim++ ) {
-          if ( coord[idim]==0.0 )
+          // only ndim values are stored: the others are not read (they
+          // printed stack garbage as z in 2D before F5 W2 V2)
+          if ( idim>ndim-1 || coord[idim]==0.0 )
             outvtk << "0.0" << " ";
           else
             outvtk << coord[idim] << " ";
@@ -577,6 +591,22 @@ void print_vtk( long int icontrol )
     }
     outvtk << "\n";
 
+  }
+
+  // print_vtk_group (6.1001): element group per cell (ELEMENT_GROUP,
+  // 0 when absent), same cells as CELLS (control_print_vtk_empty).
+  if ( vtk_group!=-NO ) {
+    outvtk << "CELL_DATA " << ncell << "\n\n";
+    outvtk << "SCALARS element_group int\n";
+    outvtk << "LOOKUP_TABLE default\n";
+    for ( element=0; element<=max_element; element++ ) {
+      if ( vtk_empty==-NO && vtk_element_is_empty( element ) ) continue;
+      element_group = 0;
+      db( ELEMENT_GROUP, element, &element_group, ddum, ldum,
+        VERSION_PRINT, GET_IF_EXISTS );
+      outvtk << element_group << "\n";
+    }
+    outvtk << "\n";
   }
 
   outvtk.close();

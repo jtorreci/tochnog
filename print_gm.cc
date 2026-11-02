@@ -304,12 +304,14 @@ void print_gmsh( long int icontrol, long int task )
   // options (per control record): control_print_gmsh_dummy (default -yes),
   // gmsh_element_data (default -yes -> ElementData; -no -> ElementNodeData),
   // gmsh_node_method (default -node).
-  db( CONTROL_PRINT_GMSH_DUMMY, icontrol, &dummy, ddum, ldum,
-    VERSION_NORMAL, GET_IF_EXISTS );
+  // The global print_gmsh_dummy (6.992) / print_gmsh_node_type (6.993)
+  // are the defaults of the control records (control index overrules).
+  dummy = print_option( PRINT_GMSH_DUMMY, CONTROL_PRINT_GMSH_DUMMY,
+    icontrol, -YES );
   db( CONTROL_PRINT_GMSH_ELEMENT_DATA, icontrol, &element_data, ddum, ldum,
     VERSION_NORMAL, GET_IF_EXISTS );
-  db( CONTROL_PRINT_GMSH_NODE_METHOD, icontrol, &node_method, ddum, ldum,
-    VERSION_NORMAL, GET_IF_EXISTS );
+  node_method = print_option( PRINT_GMSH_NODE_TYPE,
+    CONTROL_PRINT_GMSH_NODE_METHOD, icontrol, -NODE );
 
   db_version_copy( VERSION_NORMAL, VERSION_PRINT );
   renumbering( VERSION_PRINT, NO, 0, 0, idum, idum );
@@ -317,6 +319,20 @@ void print_gmsh( long int icontrol, long int task )
   db_highest_index( ELEMENT, max_element, VERSION_PRINT );
   if ( max_node<0 || max_element<0 ) return;
   db( TIME_CURRENT, 0, idum, &time_current, ldum, VERSION_NORMAL, GET );
+  // print_gmsh_calculation (end of the run, icontrol -1): skip when the
+  // <base>.msh file already holds the state at this time (a
+  // control_print_gmsh -yes at the last time step; = Professional).
+  {
+    static long int gmsh_yes_printed=0;
+    static double gmsh_yes_time=0.;
+    if ( task==-YES ) {
+      if ( icontrol<0 && gmsh_yes_printed && gmsh_yes_time==time_current ) {
+        db_version_delete( VERSION_PRINT );
+        return;
+      }
+      gmsh_yes_printed = 1; gmsh_yes_time = time_current;
+    }
+  }
   nder_ = nder;
   nuknwn_ = nuknwn;
 
@@ -372,7 +388,9 @@ void print_gmsh( long int icontrol, long int task )
                 db_active_index( NODE_START_REFINED, inod, VERSION_PRINT ) ) {
         db( NODE_START_REFINED, inod, idum, coord, ldum, VERSION_PRINT, GET );
         out << inod+1;
-        for ( idim=0; idim<MDIM; idim++ ) out << " " << coord[idim];
+        // ndim values are stored (z of a 2D mesh was stack garbage)
+        for ( idim=0; idim<ndim; idim++ ) out << " " << coord[idim];
+        for ( idim=ndim; idim<MDIM; idim++ ) out << " 0";
       }
       else {
         out << inod+1;

@@ -1,0 +1,30 @@
+(F5 W2 V2: print_gmsh_calculation, print_tecplot_calculation and
+ print_vtk_calculation absent = -no, no msh, plt or vtk file at the end
+ of the run. The manual 6.998 and 6.999 give -yes for tecplot and vtk,
+ the Professional 02-08-2026 writes them only with -yes; owner decision
+ 2026-11-02: follow the Professional, class A divergence PRINT-CALC-
+ DEFAULT.)
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_displacement
+materi_stress
+end_initia
+node 1 0 0
+node 2 1 0
+node 3 0 1
+node 4 1 1
+element 1 -quad4 1 2 3 4
+group_type 0 -materi
+group_materi_memory 0 -total_linear
+group_materi_elasti_young 0 1000.
+group_materi_elasti_poisson 0 0.3
+geometry_line 1 0 0 1 0 0.01
+geometry_line 2 0 0 0 1 0.01
+geometry_line 3 0 1 1 1 0.01
+bounda_dof 0 -geometry_line 1 -vely
+bounda_dof 1 -geometry_line 2 -velx
+bounda_dof 2 -geometry_line 3 -vely
+bounda_time 2 0 0 1 0.02
+control_timestep 0 0.1 0.5
+end_data

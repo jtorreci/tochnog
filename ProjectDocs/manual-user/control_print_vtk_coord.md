@@ -16,6 +16,8 @@ block while keeping `CELLS`/`CELL_TYPES` and the `POINT_DATA` fields.
 > The switch is meant for smaller debug dumps / for extracting only the
 > field data; keep the default `-yes` for visualisation.
 
+The global [print_vtk_coord](print_vtk_coord.md) gives its default for every index.
+
 ## Uso
 
 Place it in the data part, with the same `icontrol` index as the

@@ -357,6 +357,7 @@ page lists its own in "Differences with the Professional version".
 - [processors_maximum](processors_maximum.md) — record `PROCESSORS_MAXIMUM`, `available_processors()` in `top.cc`; force_point threading fix (F5).
 - [processors_partition](processors_partition.md) — registered, not consumed (F5).
 - [print_precision](print_precision.md) — `TN_PRECISION` = `tn_print_precision` (F5).
+- [print_global_defaults](print_global_defaults.md) — `print_option()` (global record, control record overrules), end-of-run prints in `exit_tn`, vtk `element_group` CELL_DATA, frd freecad / prepomax extrusion; pointer pages for the 10 keywords (F5).
 - [mesh_element_group_apply](mesh_element_group_apply.md) — `element_group_applied()` (group.cc) in elem() and bounda_node_dormant(); [control_mesh_element_group_apply](control_mesh_element_group_apply.md) (F5).
 - [element_group_apply](element_group_apply.md) — `control_element_group_apply()` (group.cc) at the control index entry; [control_element_group_apply](control_element_group_apply.md), [control_element_group](control_element_group.md) (F5).
 - [mpc_node_number](mpc_node_number.md) — mpc.cc::mpc_node_apply() called from bounda.cc: slave bounded + value = sum(factor*master) each iteration, no condensation/force transfer (verified vs Professional .dbs); mpc_apply/control_mpc_apply gates wired, mpc_geometry family PENDING.

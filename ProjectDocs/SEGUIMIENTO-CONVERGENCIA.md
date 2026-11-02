@@ -30,6 +30,7 @@ suite sfnet, o un test propio. El registro completo:
 
 | Feature | Commit | Fecha | Verificación |
 |---------|--------|-------|--------------|
+| **F5 W2 V2 — global print defaults: `print_gmsh_calculation`, `print_tecplot_calculation`, `print_vtk_calculation`, `print_gmsh_dummy`, `print_gmsh_node_type`, `print_vtk_coord`, `print_vtk_group`, `print_vtk_node_type`, `print_frd_freecad`, `print_frd_prepomax` (+ `control_print_frd_freecad` / `_prepomax` consumed)** | `PENDING` | 2026-11-02 | Professional 02-08-2026 probes (`control_post1` quad4 geometry, 0.1 x 5 steps, ~35 variants): no vtk/plt/msh at the end without `-yes` (manual default -yes for tecplot/vtk: owner decision 2026-11-02 "vamos con pro, y lo dejamos documentado", GNU default -no, PRINT-CALC-DEFAULT class A); end print = one extra state at the final time, not repeated after a control print at that time (sets 0.1/0.2/0.5); vtk `element_group` cell field by default (= manual), `print_vtk_group -no` ignored by the Professional (VTK-GROUP-NO, class D, GNU follows the manual); `print_vtk_coord -no` drops the Professional `coord` point field, the GNU keeps its POINTS meaning (C98 open); node types deformed 0.998714285714 (vtk, t 0.5) / 0.999914285714 (gmsh, t 0.1) = Professional; gmsh dummy 1 / 5 elements = Professional, control records overrule the global ones; frd freecad without `materi_strain_total`: no file = Professional = manual; prepomax 2D extrusion quad4 hex8 1 2 4 3 6 7 9 8, tria3 penta6 1 2 3 6 7 8 = Professional. 22 tests `test-2026/print_*` (+ `control_print_frd_freecad1`, `control_print_frd_prepomax1`) checked in isolated directories by build_safe; RED on `78ecf63`: 21 of 22 (rc 1 unknown keyword or missing file / field; `print_calculation_default1` is the guard of the unchanged default). Differential base `78ecf63` vs new on the 11 test-2026 / test-2014 inputs with vtk / gmsh / tecplot / frd / gid prints: every other file identical (gzip contents equal); the 12 vtk files differ only by the new `CELL_DATA element_group` block and by the z of the 2D `POINTS`, now `0.0` (the base printed uninitialised stack values such as `3.14505418671e+100`: latent defect fixed in `print_vt.cc`, same fix for the gmsh `-node_start_refined` branch). |
 | **F5 W1 U6 — `mrange`, `mstring`, `groundflow_apply`, `linear_calculation_apply`, `control_input`** | `97c3e47` | 2026-11-02 | Professional 02-08-2026 probes. `mrange`: after `number_of_space_dimensions`; value range counts its words (list of 4: `mrange` 4 ok, 3 error; `-from 1 -to 4`: 4), index range its words + 2 markers (3 entries need 5) and its expansion (`-from 5 -to 20` needs 16); message `Error: mrange exceeded.` = Pro; above the compiled MRANGE an error (Pro accepts 1e8: MRANGE-COMPILED). `mstring`: the Professional rejects every record ("double declared: mstring"), GNU per manual (MSTRING-PRO). `groundflow_apply -no`: groundflow dofs 0 everywhere (prescribed 5 / initial 7 / reset -1 ignored), `k24_consol_3d1` drained disx 0.1 sigxx -1 = Pro. `linear_calculation_apply -yes`: Pro `.dbs` diffs (plasti_apply -no, mesh -fixed_in_space, contact_apply -no, plasti group records deleted, memory -updated_linear, hardsoil E50ref -5, young_power E0 -7, spring nonlinear 100, dependency on a dof deleted, failure / seepage deleted); wolffersdorff Pro uses phi (LINCALC-WOLFF), contact_* kept by Pro (LINCALC-CONTACT); tutorial_4 GNU rhside ratio 4.6e-13 (needs C97 workarounds). `control_input`: read at the start of the index (index 0: -60, 1 or 2: -50 = Pro), replace / add, mesh extension (new nodes 5/6 sigyy 20 = Pro; shared nodes CTRL-INPUT-NEWELEM), errors near `(` / unknown / define / range / no end_data, missing file silent. RED: every new test rc 1 on the base binary (keyword unknown). Differential base f83f4ea vs new on all test-2026 inputs: only timings, the new tests, the new `tochnog_data_name.txt` names and the C91 raw enum of `force_element_edge_water` (shifted by the new enums); runtime-file reader byte-identical on 3 `.run` cases. Found C95, C96, C97. |
 | **F5 W1 U2 — `processors_maximum` (+ `force_point` with threads), `control_reset_value_exponent` / `_logarithmic_first` quotient, `message`, `print_data_name`, `control_check_data`, `control_zip`, `global_element_dof_apply` (+ `-only`)** | `1a4cb7d` + `f43142d` + `03c8874` | 2026-11-02 | Professional 02-08-2026 probes: `processors_used 16` without a processors record (GNU default kept `-no`, owner decision, PROC-MAX / C92: 80 elements x 300 steps 12.0 / 15.5 / 65.5 s on 1 / 4 / 16 threads); reset quadrant probes ln((1+x)/(2+x)) -0.405465 / -0.287682 and e^((1+x)/(2+x)) 1.947734 / 2.117000 to 1e-12, plus the non-positive / zero-denominator errors; MESSAGE / message environment symbols; `control_zip` gzips the GiD files of the index; `print_data_name` layout; `global_element_dof_apply -yes/-no` nodal stresses 3.2967033 (Pro `-only` aborts: GEDA-ONLY). RED: every new test rc 1 (keyword unknown, old formula e^4 / ln 4, `force_point_threads1` disx 8). Independent verifier on `1a4cb7d`: PASS, single-thread outputs byte-identical to `7c71fa0`. build_safe 396 OK / 0 FALLO, 226/226. Found C92, C93. |
 | **F5 W1 U2 — `control_system_call`** | `f6c4476` | 2026-11-02 | Professional 02-08-2026 probes (`control_post1` quad4 geometry, indices 0/1 with 3/2 timesteps and 2 without, logging script): one call per converged timestep before its history print plus one at the end of each index with the record (7 x4, 8 x3, 9 x1), stdout kept, stderr dropped, exit status ignored, missing script silent, `-3` rejected; the Professional only finds the script through the `PATH` (DIVERGENCES SYSCALL-PATH, GNU follows the manual). RED: `control_system_call1` rc 1 on `9574b84`. GNU call log identical; script without `#!` and non-executable script checked. |
@@ -408,6 +409,8 @@ B conocida/pendiente, C extensión/dialecto GNU, D sospechosa del Pro).
 | Professional `tria6` lumped mass / capacity (row sum of the consistent mass: plane corner 0, axisymmetric corners negative) | **Deliberate divergence** (owner decision 2026-10-16, F4 T6f C66 phase 2; DIVERGENCES TRIA6-HRZ, class A). The GNU lumps every h-weighted `tria6` dof with HRZ masses (plane corner A/19, mid-side 16A/57; axisymmetric r-weighted diagonal scaled to 2 pi A r_c), the same for every rule. The row sum makes a free single-element dynamic step fail (Professional Pardiso zero pivot) and gives negative axisymmetric masses; the h-weighted state recoveries divide by its zero corner sums. Verified with the C66 phase-1 Professional mass probes (`scratchpad/c66/`), the HRZ tests `tria6_mass_hrz1` / `tria6_mass_hrz_axisym1` and a modal check (`scratchpad/c66/p2/bar/`). |
 | Professional `group_materi_maxwell_chain` relaxation under a constant strain rate (homogeneous one-chain probe E_c 7e3, tau 0.3, rate -0.01, t = 1: msig -23.81 at dt 0.1, -20.59 at dt 0.01, -20.28 at dt 0.001) | **Not followed, Professional-suspect** (owner decision 2026-10-18, F4 T6f C68a; DIVERGENCES C68a, class D). The exact solution of dmsig/dt = E_c r - msig/tau, msig(0) = 0 is msig(t) = E_c tau r (1 - exp(-t/tau)) = -20.2508461397; the GNU equals it for any dt (exponential update, exact for a constant rate). The Professional is a first-order time-discretisation error that at dt 0.1 even exceeds the bound E_c tau \|r\| = 21. Guard test `test-2026/maxwell_relaxation_analytic1` (1e-6 relative; a wrong target gives rc 1). |
 | Professional `validation_1` steady channel flow drift (`convection_apply -yes`, `inertia_apply -no`, `group_materi_stokes -no`: post_point velx -0.0391 / -0.0179 / +0.0034 at t = 1 / 2 / 3, dt-converged) | **Not followed, Professional-suspect** (owner decision 2026-10-13, class D since 2026-10-18; F4 T6f C72; DIVERGENCES C72-V1). Without inertia the problem is steady; the GNU settles at -0.0570 .. -0.0572 (inside the GAMM range -0.066 .. -0.018), guard tests `validation1_steady1`, `stokes_group2`. The Professional drift is convection-gated, mechanism not identified. |
+| Manual default `-yes` of `print_tecplot_calculation` (6.998) and `print_vtk_calculation` (6.999) | **Not followed: GNU = Professional** (owner decision 2026-11-02, F5 W2 V2: "vamos con pro, y lo dejamos documentado"; DIVERGENCES PRINT-CALC-DEFAULT, class A). The Professional 02-08-2026 writes the end-of-run `.vtk` / `.plt` only with `-yes`; the GNU default is `-no`, so a run without the records writes no extra file. Documented in [user/print_vtk_calculation](manual-user/print_vtk_calculation.md). |
+| Professional `print_vtk_group -no` ignored (the `element_group` cell field is always written) | **Not followed, Professional-suspect** (F5 W2 V2, 2026-11-02, rule S2: the manual decides; DIVERGENCES VTK-GROUP-NO, class D). Manual 6.1001: "If switch is set to -no the element groups are not plotted in vtk as result." The GNU writes no `element_group` field with `-no`. Documented in [user/print_vtk_group](manual-user/print_vtk_group.md). |
 
 ## Equivalencias de nomenclatura Professional vs GNU
 
@@ -2071,10 +2074,10 @@ Nota: `group_interface_ground` del checklist anterior NUNCA existió (artefacto 
 
 - [x] `print_failure` — presente en el GNU
 
-### print_frd (0/2)
+### print_frd (2/2)
 
-- [ ] `print_frd_freecad` — PENDIENTE
-- [ ] `print_frd_prepomax` — PENDIENTE
+- [x] `print_frd_freecad` — implementada (F5 W2 V2, 2026-11-02; default of control_print_frd_freecad: -yes writes no frd without disp + stress + total strain = Professional; PEEQ pending)
+- [x] `print_frd_prepomax` — implementada (F5 W2 V2, 2026-11-02; default of control_print_frd_prepomax, now consumed: 2D extruded to thickness 1 = Professional)
 
 ### print_gid (0/10)
 
@@ -2089,11 +2092,11 @@ Nota: `group_interface_ground` del checklist anterior NUNCA existió (artefacto 
 - [ ] `print_gid_smooth_n` — PENDIENTE
 - [ ] `print_gid_spring2` — PENDIENTE
 
-### print_gmsh (0/3)
+### print_gmsh (3/3)
 
-- [ ] `print_gmsh_calculation` — PENDIENTE
-- [ ] `print_gmsh_dummy` — PENDIENTE
-- [ ] `print_gmsh_node_method` — PENDIENTE
+- [x] `print_gmsh_calculation` — implementada (F5 W2 V2, 2026-11-02; end-of-run state appended to <base>.msh, default -no = manual and Professional)
+- [x] `print_gmsh_dummy` — implementada (F5 W2 V2, 2026-11-02; default of control_print_gmsh_dummy = Professional)
+- [x] `print_gmsh_node_method` — implementada as `print_gmsh_node_type` (2026 name, 6.993) (F5 W2 V2, 2026-11-02; default of control_print_gmsh_node_type; the old name is an alias)
 
 ### print_group (0/1)
 
@@ -2112,16 +2115,16 @@ Nota: `group_interface_ground` del checklist anterior NUNCA existió (artefacto 
 
 - [x] `print_precision` — implementada (F5 W1 U5, 2026-11-02; cifras significativas como el ejemplo del manual (PRINT-PREC))
 
-### print_tecplot (0/1)
+### print_tecplot (1/1)
 
-- [ ] `print_tecplot_calculation` — PENDIENTE
+- [x] `print_tecplot_calculation` — implementada (F5 W2 V2, 2026-11-02; default -no = Professional against the manual -yes, owner decision: DIVERGENCES PRINT-CALC-DEFAULT; appends to tecplot.plt, C99)
 
-### print_vtk (0/4)
+### print_vtk (4/4)
 
-- [ ] `print_vtk_calculation` — PENDIENTE
-- [ ] `print_vtk_coord` — PENDIENTE
-- [ ] `print_vtk_group` — PENDIENTE
-- [ ] `print_vtk_node_method` — PENDIENTE
+- [x] `print_vtk_calculation` — implementada (F5 W2 V2, 2026-11-02; <base>.vtk at the end, default -no = Professional against the manual -yes, owner decision: DIVERGENCES PRINT-CALC-DEFAULT)
+- [x] `print_vtk_coord` — implementada (F5 W2 V2, 2026-11-02; default of control_print_vtk_coord, GNU POINTS meaning; Professional coord field: C98 open)
+- [x] `print_vtk_group` — implementada (F5 W2 V2, 2026-11-02; element_group cell field, default -yes = manual and Professional; -no per manual, Professional ignores it: VTK-GROUP-NO)
+- [x] `print_vtk_node_method` — implementada as `print_vtk_node_type` (2026 name, 6.1002) (F5 W2 V2, 2026-11-02; default of control_print_vtk_node_type; the old name is an alias)
 
 ### print_where (1/1)
 

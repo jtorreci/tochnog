@@ -1,5 +1,7 @@
 # control_print_frd
 
+> Since F5 W2 V2 `control_print_frd_freecad` / `control_print_frd_prepomax` and their global defaults are consumed: see [print_frd_freecad](print_frd_freecad.md) and [print_frd_prepomax](print_frd_prepomax.md).
+
 ## Description
 
 `control_print_frd` writes the mesh and the nodal results in the

@@ -1592,6 +1592,16 @@ enum {
   CONTROL_POST_ELEMENT_FORCE,
   PRINT_DATABASE_CALCULATION,
   PRINT_GID_CALCULATION,
+  PRINT_GMSH_CALCULATION,
+  PRINT_GMSH_DUMMY,
+  PRINT_GMSH_NODE_TYPE,
+  PRINT_TECPLOT_CALCULATION,
+  PRINT_VTK_CALCULATION,
+  PRINT_VTK_COORD,
+  PRINT_VTK_GROUP,
+  PRINT_VTK_NODE_TYPE,
+  PRINT_FRD_FREECAD,
+  PRINT_FRD_PREPOMAX,
   GEOMETRY_NODE_TYPE,
   GEOMETRY_PROJECTION_TYPE,
   PROJECT_INSIDE,
@@ -2352,12 +2362,14 @@ void      print_node( long int icontrol, long int ival[], long int nval );
 void      print_plotmtv( long int icontrol, long int ival[] );
 void      print_matlab( void );
 void      print_restart( long int icontrol );
-void      print_tecplot( long int ival[] );
+void      print_tecplot( long int ival[], long int end_of_calculation=0 );
 void      print_unknowns( void );
 void      print_unknownsrhside( void );
 void      print_vtk( long int icontrol );
 void      print_gmsh( long int icontrol, long int task );
 void      print_frd( long int icontrol, long int task );
+long int  print_option( long int global_name, long int control_name,
+            long int icontrol, long int default_value );
 void      print_interface_stress( long int icontrol, long int task );
 void      print_beam_force_moment( long int icontrol, long int task );
 void      print_materi_stress_force( long int icontrol, long int method );

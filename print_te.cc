@@ -19,7 +19,10 @@
 
 #include "tochnog.h"
 
-void print_tecplot( long int ival[] )
+// end_of_calculation: 1 for print_tecplot_calculation (6.998) at the end
+// of the run; it appends to the same tecplot.plt and is skipped when the
+// file already holds the state at this time (= Professional 02-08-2026).
+void print_tecplot( long int ival[], long int end_of_calculation )
 
 {
   long int i=0, element=0, inol=0, idim=0, nplot=0, nnol=0, name=0, 
@@ -33,6 +36,14 @@ void print_tecplot( long int ival[] )
     *control_eigen_values=NULL, *node_eigen=NULL, 
     *node_dof=NULL, *node_dof_calcul=NULL;
   char outname[MCHAR];
+  static long int tecplot_printed=0;
+  static double tecplot_time=0.;
+
+  db( TIME_CURRENT, 0, idum, &time_current, ldum, VERSION_NORMAL,
+    GET_IF_EXISTS );
+  if ( end_of_calculation && tecplot_printed && tecplot_time==time_current )
+    return;
+  tecplot_printed = 1; tecplot_time = time_current;
 
   if ( ival[0]==-MESH || !db_active_index( CONTROL_PRINT_TECPLOT_MESH, 0, VERSION_NORMAL ) ) {
     print_tecplot_new_mesh = -YES; length=1;

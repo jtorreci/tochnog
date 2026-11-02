@@ -17,6 +17,16 @@
       TOSTRAIN materi_strain_total
       NDTEMP   condif_temperature
     Other dofs use the Tochnog names truncated to 8 characters.
+
+    control_print_frd_freecad / print_frd_freecad (6.289, 6.979; default
+    -no): -yes writes no file unless materi_displacement (or
+    materi_velocity_integrated), materi_stress and materi_strain_total are
+    initialised (manual 6.288; = Professional 02-08-2026).
+    control_print_frd_prepomax / print_frd_prepomax (6.290, 6.980; default
+    -no): -yes extrudes a 2D mesh to a thickness of 1 (prepomax cannot plot
+    2D elements, manual 6.288): node n gets a copy n+max_node+2 at z = 1
+    with the same results, tria3/tria6 -> penta6, quad4/quad9 -> hex8
+    (corner nodes) (= Professional 02-08-2026).
 */
 
 #include "tochnog.h"
@@ -40,11 +50,27 @@ void print_frd( long int icontrol, long int task )
   swit = set_swit(-1,-1,"print_frd");
   if ( swit ) pri( "In routine PRINT_FRD" );
 
+  long int freecad = print_option( PRINT_FRD_FREECAD,
+    CONTROL_PRINT_FRD_FREECAD, icontrol, -NO );
+  long int prepomax = print_option( PRINT_FRD_PREPOMAX,
+    CONTROL_PRINT_FRD_PREPOMAX, icontrol, -NO );
+  if ( freecad==-YES && !( ( materi_displacement ||
+       materi_velocity_integrated ) && materi_stress &&
+       materi_strain_total ) ) {
+    if ( swit ) pri( "Out routine PRINT_FRD (freecad: no file)" );
+    return;
+  }
+  // prepomax extrusion of a 2D mesh: copy of node inod (0-based) is
+  // written as inod+1+node_shift
+  long int extrude = ( prepomax==-YES && ndim==2 );
+
   db_version_copy( VERSION_NORMAL, VERSION_PRINT );
   renumbering( VERSION_PRINT, NO, 0, 0, idum, idum );
   db_highest_index( NODE, max_node, VERSION_PRINT );
   db_highest_index( ELEMENT, max_element, VERSION_PRINT );
   if ( max_node<0 || max_element<0 ) return;
+  long int node_shift = max_node+2;
+  long int nnode_out = extrude ? 2*(max_node+1) : max_node+1;
   db( TIME_CURRENT, 0, idum, &time_current, ldum, VERSION_NORMAL, GET );
   nder_ = nder;
   nuknwn_ = nuknwn;
@@ -94,14 +120,16 @@ void print_frd( long int icontrol, long int task )
 
     // nodal point coordinate block (long format, FORMAT=1)
     out << "     2C" << std::string(18,' ')
-        << std::setw(12) << max_node+1 << std::string(37,' ') << "1\n";
-    for ( inod=0; inod<=max_node; inod++ ) {
-      db( NODE, inod, idum, coord, ldum, VERSION_PRINT, GET );
-      char line[200];
-      sprintf( line, " -1%10ld%12.5E%12.5E%12.5E\n",
-        (long)inod+1, coord[0], coord[1],
-        (ndim>2) ? coord[2] : 0.0 );
-      out << line;
+        << std::setw(12) << nnode_out << std::string(37,' ') << "1\n";
+    for ( long int layer=0; layer<=extrude; layer++ ) {
+      for ( inod=0; inod<=max_node; inod++ ) {
+        db( NODE, inod, idum, coord, ldum, VERSION_PRINT, GET );
+        char line[200];
+        sprintf( line, " -1%10ld%12.5E%12.5E%12.5E\n",
+          (long)inod+1+layer*node_shift, coord[0], coord[1],
+          layer ? 1.0 : ( (ndim>2) ? coord[2] : 0.0 ) );
+        out << line;
+      }
     }
     out << " -3\n";
 
@@ -151,6 +179,39 @@ void print_frd( long int icontrol, long int task )
       else if ( name==-HEX8  ) frd_type = 1;
       else if ( name==-HEX27 ) frd_type = 4;
       if ( frd_type==0 ) continue;
+      if ( extrude ) {
+        // penta6 (frd 2) from the triangle corners, hex8 (frd 1) from the
+        // quadrilateral corners (counter-clockwise), then the z = 1 copies
+        long int corner[4], ncorner=0;
+        if      ( name==-TRIA3 ) {
+          ncorner = 3; corner[0]=nodes[0]; corner[1]=nodes[1]; corner[2]=nodes[2];
+        }
+        else if ( name==-TRIA6 ) {
+          ncorner = 3; corner[0]=nodes[0]; corner[1]=nodes[2]; corner[2]=nodes[5];
+        }
+        else if ( name==-QUAD4 ) {
+          ncorner = 4; corner[0]=nodes[0]; corner[1]=nodes[1];
+          corner[2]=nodes[3]; corner[3]=nodes[2];
+        }
+        else {
+          assert( name==-QUAD9 );
+          ncorner = 4; corner[0]=nodes[0]; corner[1]=nodes[2];
+          corner[2]=nodes[8]; corner[3]=nodes[6];
+        }
+        char line[400];
+        sprintf( line, " -1%10ld%5ld%5s%5ld\n -2",
+          (long)element+1, ncorner==3 ? 2L : 1L, "0", element_group );
+        out << line;
+        for ( long int layer=0; layer<=1; layer++ ) {
+          for ( long int k=0; k<ncorner; k++ ) {
+            char tmp[32];
+            sprintf( tmp, "%10ld", corner[k]+1+layer*node_shift );
+            out << tmp;
+          }
+        }
+        out << "\n -3\n";
+        continue;
+      }
       char line[400];
       sprintf( line, " -1%10ld%5ld%5s%5ld\n -2",
         (long)element+1, frd_type, "0", element_group );
@@ -213,7 +274,7 @@ void print_frd( long int icontrol, long int task )
     }
     else sprintf( tval, "%12.5E", time_current );
     strncpy( &cl[12], tval, 12 );                    // cols 13-24
-    sprintf( field, "%12ld", (long)max_node+1 );     // cols 25-36
+    sprintf( field, "%12ld", (long)nnode_out );      // cols 25-36
     strncpy( &cl[24], field, 12 );
     memcpy( &cl[36], "STATIC", 6 );                 // description 37-42
     sprintf( field, "%2ld", 0L );                    // ictype 57-58
@@ -317,12 +378,14 @@ void print_frd( long int icontrol, long int task )
       out << r2;
     }
 
-    // nodal data
-    for ( inod=0; inod<=max_node; inod++ ) {
+    // nodal data (prepomax extrusion: the z = 1 copy repeats the values)
+    for ( long int inod_out=0; inod_out<nnode_out; inod_out++ ) {
+      inod = inod_out%(max_node+1);
+      long int layer = inod_out/(max_node+1);
       node_dof = db_dbl( NODE_DOF, inod, VERSION_PRINT );
       std::string line;
       char tmp[32];
-      sprintf( tmp, " -1%10ld", inod+1 );
+      sprintf( tmp, " -1%10ld", inod+1+layer*node_shift );
       line += tmp;
       for ( long int k=0; k<ncomp; k++ ) {
         long int indx = base_indx;

@@ -28,6 +28,9 @@ control_print_gmsh 20 -yes
 
 ## Options
 
+The global records [print_gmsh_dummy](print_gmsh_dummy.md) and [print_gmsh_node_type](print_gmsh_node_type.md) give the defaults of the options below; [print_gmsh_calculation](print_gmsh_calculation.md) appends the final state at the end of the run.
+
+
 - `control_print_gmsh_dummy index switch` — write a dummy point element
   (Gmsh type 15, group 1234) in every node, needed by Gmsh to plot vector
   fields at nodes. Default `-yes`; use `-no` to suppress.

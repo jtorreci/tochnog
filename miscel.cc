@@ -1029,6 +1029,26 @@ std::string long_to_string_modern(long int n) {
     return std::to_string(n);
 }
 
+// print_option: value of a print switch that has a global record
+// (print_vtk_coord, print_gmsh_dummy, ...) and optionally a control_print_*
+// record of the same meaning. The control record at index icontrol
+// overrules the global record, which overrules default_value (manual
+// Professional 6.979/6.980/6.992/6.993/6.1000-6.1002). control_name<0 or
+// icontrol<0 (end-of-run prints) reads only the global record.
+long int print_option( long int global_name, long int control_name,
+  long int icontrol, long int default_value )
+
+{
+  long int value=default_value, ldum=0;
+  double ddum[1];
+
+  db( global_name, 0, &value, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+  if ( control_name>=0 && icontrol>=0 )
+    db( control_name, icontrol, &value, ddum, ldum, VERSION_NORMAL,
+      GET_IF_EXISTS );
+  return value;
+}
+
 void exit_tn( long int print_database_type )
 
 {
@@ -1078,6 +1098,22 @@ void exit_tn( long int print_database_type )
   if ( print_gid_calculation!=-NO )
     print_gid( -YES );
   if ( db_partialname_any("control_print_dx") ) print_dx( -YES );
+
+  // print_gmsh_calculation (6.991, default -no), print_tecplot_calculation
+  // (6.998) and print_vtk_calculation (6.999): end-of-run output. The
+  // manual gives -yes as default for tecplot/vtk, the Professional
+  // 02-08-2026 writes them only with -yes; owner decision 2026-11-02:
+  // default -no (DIVERGENCES row PRINT-CALC-DEFAULT). gmsh/tecplot append
+  // to the file of their control prints and skip a state already printed
+  // at the final time (= Professional); vtk writes <base>.vtk.
+  if ( print_option( PRINT_GMSH_CALCULATION, -1, -1, -NO )==-YES )
+    print_gmsh( -1, -YES );
+  if ( print_option( PRINT_TECPLOT_CALCULATION, -1, -1, -NO )==-YES ) {
+    long int ival_tecplot[1] = { -YES };
+    print_tecplot( ival_tecplot, 1 );
+  }
+  if ( print_option( PRINT_VTK_CALCULATION, -1, -1, -NO )==-YES )
+    print_vtk( -1 );
 
   db( DOF_LABEL, 0, dof_label, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
   db_max_index( TARGET_ITEM, ntarget, VERSION_NORMAL, GET );
