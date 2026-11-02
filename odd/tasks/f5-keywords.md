@@ -74,8 +74,8 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   - [x] V2 global print defaults: print_{gmsh,vtk,tecplot}_calculation, print_gmsh_dummy,
     print_{gmsh,vtk}_node_type, print_vtk_coord, print_vtk_group, print_frd_freecad/prepomax
     (owner decision: manual default -yes for vtk/tecplot changes GNU output).
-  - [ ] V3 geometry/boundary records: element_geometry_present, print_element_geometry_present(_node_type),
-    element_boundary (+ mesh_boundary).
+  - [x] V3 geometry/boundary records: element_geometry_present, print_element_geometry_present(_node_type),
+    element_boundary (+ mesh_boundary). Inline. `aaf581c` (+ word -plus_displacement).
   - [ ] V4 element diagnostics: element_intpnt_{h,iso_coord,method,npoint}, element_truss_strain(_temperature),
     element_interface_intpnt_{direction,gap_status}, node_bounded_index, element_beam_direction_z,
     element_print_group_data_values.
@@ -206,3 +206,9 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   names = Professional (incl. -separate_index / -separate_sequential, .plt emptied per run), class A
   VTK-TECPLOT-NAMES; 6 new test-2026 tests (RED on e2e7c0c), test-2014 vtk_*1 on -separate_index;
   build_safe 461 OK / 0 FALLO. Next: T2 V3 (geometry/boundary records).
+- 2026-11-02 owner on V3: "como el manual. Documentamos la divergencia" (mesh_boundary default -no;
+  element_boundary only on elements with a free side). V3 committed `aaf581c`: area.cc mesh_boundary_set
+  (renamed from contact_node_boundary_set), geometry.cc element_geometry_present_calculate, mesh.cc deletes
+  element_boundary, database.cc registers -plus_displacement (rejected before in every record). Divergences
+  MESH-BOUNDARY-DEFAULT (A), ELEMENT-BOUNDARY-ALL (D), EGP-PLUS-DISP (D); BACKLOG C40 (3) resolved.
+  build_safe 475 OK / 0 FALLO, audit 0. Next: T2 V4 (element diagnostics).
