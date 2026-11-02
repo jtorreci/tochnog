@@ -42,12 +42,15 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   across ~20 files). control_slide_damping_apply moves to T5 (switch of slide_damping). Units:
   - [x] U1 apply switches: materi_plasti_tension_apply, materi_plasti_visco_apply,
     group_plasti_apply, truss_rope_apply, control_truss_rope_apply, interface_gap_apply. Done `467cdbd`.
-  - [ ] U2 aliases and run-level switches: control_reset_value_logarithmic_first (+ data.cc
+  - [x] U2 aliases and run-level switches: control_reset_value_logarithmic_first (+ data.cc
     formula `log(b+c*x*d+e*x)` vs manual `ln((b+cx)/(d+ex))`: owner decision),
     global_element_dof_apply (`-only` new), message, print_data_name, control_check_data,
     control_zip, control_system_call (runs a user script: owner decision), processors_maximum
     (Professional default -yes vs GNU 1 thread: owner decision).
     control_system_call done `f6c4476` (owner: implement as the manual says).
+    processors_maximum `1a4cb7d` (default -no until F6, owner); reset exponent/logarithmic_first,
+    message, print_data_name, control_check_data, control_zip `f43142d`; global_element_dof_apply
+    `03c8874`. Done.
   - [x] U3 post gates: control_post, control_post_apply (+ global post_apply, registered, unread),
     control_post_element_force. Done `ea96bf6`.
   - [ ] U4 timestep loop: control_timestep_iterations_automatic_minimum_maximum_wished (GNU
@@ -109,3 +112,20 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   only finds the script through the PATH (DIVERGENCES SYSCALL-PATH, class D). RED rc 1 on 9574b84;
   GNU call log identical. build_safe 376 OK / 0 FALLO, 226/226; audit_db_buffers rc 0. Also marked
   the U1/U3 keywords [x] in SEGUIMIENTO (missed before). Commit f6c4476. Next: rest of U2.
+- 2026-11-02 owner on processors_maximum: "creo que mejor aquí converger con Pro. Para casos cortos
+  casi no se va a notar en el flujo de trabajo general, y en casos largos es imperativo".
+  Professional 02-08-2026 writes `processors_used 16` without a processors record (default -yes =
+  every CPU). GNU threads were never exercised by the suite: build_safe with
+  TOCHNOG_OPTIONS_PROCESSORS=4 gave 375 OK / 1 FALLO (force_point_sign1: disx 8 = 4 x 2,
+  force_point_calculate ran inside the threaded parallel_new_dof_before, once per thread; moved to
+  a serial call in top(); test force_point_threads1, RED rc 1 on the base binary). Known
+  single-thread-only paths: group_user_umat (forced to 1), node_support_edge_normal_force
+  accumulation (area.cc, warning). Corpus A/B 1 vs 4 threads on omen (mt_runs) before the default
+  flips.
+- 2026-11-02 owner on the threads measurement: "dale, esperá la suite y seguí" (keep the GNU default
+  -no until F6). U2 closed: 1a4cb7d (processors_maximum, force_point serial; independent verifier
+  PASS, 1-thread byte-identical), f43142d (reset exponent / logarithmic_first quotient = Professional,
+  message, print_data_name, control_check_data, control_zip), 03c8874 (global_element_dof_apply,
+  -only per manual; Pro aborts). build_safe 396 OK / 0 FALLO. Corpus A/B 1 vs 4 threads (omen
+  mt_runs): pro_other 60/330 differ, 2 abort (interface_patch, patch1), ~13 differ > 1 % -> C92
+  F6 prerequisite. Next: U4 (timestep loop).
