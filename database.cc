@@ -6331,6 +6331,11 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   data_length[OPTIONS_PROCESSORS] = 1;
   no_index[OPTIONS_PROCESSORS] = 1;
 
+  strcpy(name[PROCESSORS_MAXIMUM],"processors_maximum");
+  type[PROCESSORS_MAXIMUM] = INTEGER;
+  data_length[PROCESSORS_MAXIMUM] = 1;
+  no_index[PROCESSORS_MAXIMUM] = 1;
+
   strcpy(name[OPTIONS_RELAXATION],"options_relaxation");
   type[OPTIONS_RELAXATION] = DOUBLE_PRECISION;
   data_length[OPTIONS_RELAXATION] = nprinc;

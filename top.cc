@@ -20,6 +20,7 @@
 #include "tochnog.h"
 #include <cerrno>
 #include <fcntl.h>
+#include <sched.h>
 #include <spawn.h>
 #include <sys/wait.h>
 #include <unistd.h>
@@ -176,6 +177,19 @@ void top( void )
   db( OPTIONS_ELEMENTLOOP, 0, &options_elementloop, ddum, 
     ldum, VERSION_NORMAL, GET_IF_EXISTS );
 
+  // processors_maximum (manual Professional 6.1005): -yes without a
+  // processors / options_processors record (or the
+  // TOCHNOG_OPTIONS_PROCESSORS environment variable, stored as the record
+  // by miscel.cc) runs on every CPU available to the process. The
+  // Professional default is -yes; the GNU default stays -no until F6 (the
+  // threads are created and joined in every parallel region: 80 elements x
+  // 300 steps run 5.5x slower on 16 threads; DIVERGENCES PROC-MAX).
+  if ( !db_active_index( OPTIONS_PROCESSORS, 0, VERSION_NORMAL ) ) {
+    long int processors_maximum = -NO;
+    db( PROCESSORS_MAXIMUM, 0, &processors_maximum, ddum, ldum,
+      VERSION_NORMAL, GET_IF_EXISTS );
+    if ( processors_maximum==-YES ) number_processors = available_processors();
+  }
   db( OPTIONS_PROCESSORS, 0, &number_processors, ddum, 
     length, VERSION_NORMAL, GET_IF_EXISTS );
   if ( number_processors<1 ) db_error( OPTIONS_PROCESSORS, 0 );
@@ -618,6 +632,7 @@ void top( void )
                             if ( print_where==-YES ) pri( "Where: after element_loop." ); 
                           }
                           parallel_sys_routine( &parallel_contact );
+                          if ( materi_velocity ) force_point_calculate();
                           parallel_sys_routine( &parallel_new_dof_before );
                           slide(); 
                           if ( print_where==-YES ) pri( "Where: before solver." ); 
@@ -691,6 +706,7 @@ void top( void )
                         // the final iterate); parallel_new_dof_diagonal
                         // below updates only the non-principal dofs for a
                         // non-diagonal solver, so nothing is applied twice.
+                        if ( materi_velocity ) force_point_calculate();
                         parallel_sys_routine( &parallel_new_dof_before );
                         slide();
                         parallel_sys_routine( &parallel_new_dof_diagonal );
@@ -1805,4 +1821,17 @@ void control_system_call( long int icontrol )
     int status = 0;
     while ( waitpid( pid, &status, 0 )<0 && errno==EINTR ) ;
   }
+}
+
+// Number of CPUs the process may run on (its affinity mask, so taskset /
+// cgroup cpusets are honoured), at least 1; used by processors_maximum.
+long int available_processors( void )
+{
+  long int n = 0;
+  cpu_set_t set;
+  CPU_ZERO( &set );
+  if ( sched_getaffinity( 0, sizeof(set), &set )==0 ) n = CPU_COUNT( &set );
+  if ( n<1 ) n = sysconf( _SC_NPROCESSORS_ONLN );
+  if ( n<1 ) n = 1;
+  return n;
 }

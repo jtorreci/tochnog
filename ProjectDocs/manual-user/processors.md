@@ -37,5 +37,6 @@ records (`mpc_linear_quadratic`, `mesh_interface_triangle_coordinate`)
 - `processors_used` (validation_14_mesh) is a different, OUTPUT record
   (the number of threads actually used, written by the solver) and is
   not covered by this alias.
-- `processors_maximum` and `processors_partition` are separate
-  Professional records, not implemented.
+- `processors_maximum`: see [processors_maximum](processors_maximum.md).
+  `processors_partition` is a separate Professional record, not
+  implemented.

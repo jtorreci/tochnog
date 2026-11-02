@@ -1643,6 +1643,19 @@ run_ok "$T2026" edge_node_restriction_force1
 # (before: -2, the force was subtracted from node_rhside).
 # ---------------------------------------------------------------------
 run_ok "$T2026" force_point_sign1
+# F5 W1 U2: force_point with 4 threads (it was added once per thread).
+run_ok "$T2026" force_point_threads1
+# F5 W1 U2: processors_maximum (manual 6.1005; GNU default -no until F6, -yes = every CPU).
+PM_EXP=$(nproc); [ "$PM_EXP" -gt 64 ] && PM_EXP=64
+for pm in "processors_maximum1 1" "processors_maximum2 $PM_EXP" "processors_maximum3 2"; do
+  read -r pmt pmn <<< "$pm"
+  run_ok "$T2026" "$pmt"
+  if [ "$(awk '$1=="options_processors"{print $2}' "$T2026/$pmt.dbs")" = "$pmn" ]; then
+    check_ok "$pmt (options_processors $pmn)"
+  else
+    check_fail "$pmt" "options_processors is not $pmn"
+  fi
+done
 
 # ---------------------------------------------------------------------
 # K04 ground9 (2026-10-06): group_interface_groundflow_permeability and

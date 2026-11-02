@@ -2116,10 +2116,10 @@ Nota: `group_interface_ground` del checklist anterior NUNCA existió (artefacto 
 
 - [x] `print_where` — presente en el GNU
 
-### processors (1/3)
+### processors (2/3)
 
 - [x] `processors` — alias de `options_processors` en db_number() (2026-09-01, match EXACTO): el GNU ya lo consume en elem.cc (nthread de element_loop) y area.cc. mpc4/interface11 parsean pero siguen RUNFAIL por `mpc_linear_quadratic` y `mesh_interface_triangle_coordinate`; validation_14_mesh por `bounda_time_until_data` + `processors_used` (record de salida aparte).
-- [ ] `processors_maximum` — PENDIENTE
+- [x] `processors_maximum` — implementada (F5 W1 U2, 2026-11-02; default GNU `-no` hasta F6, Professional `-yes`: DIVERGENCES PROC-MAX)
 - [ ] `processors_partition` — PENDIENTE
 
 ### repeat (2/2 — familia COMPLETA; registros de resultado del bloque control_repeat)

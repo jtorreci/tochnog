@@ -36,7 +36,9 @@ void parallel_new_dof_before( void )
     array_set( force_gravity, 0., ndim );
     db( DTIME, 0, idum, &dtime, ldum, VERSION_NEW, GET );
     force_gravity_calculate( force_gravity );
-    force_point_calculate();
+    // force_point is applied by top(), serially, before the threads
+    // start: called here, inside parallel_sys_routine, it ran once per
+    // thread and the load was added nthread times.
     db_max_index( NODE, max_node, VERSION_NORMAL, GET );
     if ( max_node>=0 ) {
       next_of_loop = get_new_int(1+max_node);
