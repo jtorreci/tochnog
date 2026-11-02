@@ -53,12 +53,14 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
     `03c8874`. Done.
   - [x] U3 post gates: control_post, control_post_apply (+ global post_apply, registered, unread),
     control_post_element_force. Done `ea96bf6`.
-  - [ ] U4 timestep loop: control_timestep_iterations_automatic_minimum_maximum_wished (GNU
+  - [x] U4 timestep loop: control_timestep_iterations_automatic_minimum_maximum_wished (GNU
     hardcodes 2/20/4, manual default 2 8 4), control_timestep_adjust_minimum_iterations,
     control_timestep_until_data / _maximum / _minimum.
-  - [ ] U5 element-group selection: control_element_group, element_group_apply,
+    Done `9d0da65` (with U5).
+  - [x] U5 element-group selection: control_element_group, element_group_apply,
     control_element_group_apply, mesh_element_group_apply, control_mesh_element_group_apply,
     processors_partition, print_precision.
+    Done `9d0da65`.
   - [ ] U6 input / database rewrite: mstring, mrange, control_input, groundflow_apply,
     linear_calculation_apply.
 - [ ] T2 W2 output records (69): `element_*`, `post_*`, `print_*`, `control_print_*_node_type`,
@@ -129,3 +131,15 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   -only per manual; Pro aborts). build_safe 396 OK / 0 FALLO. Corpus A/B 1 vs 4 threads (omen
   mt_runs): pro_other 60/330 differ, 2 abort (interface_patch, patch1), ~13 differ > 1 % -> C92
   F6 prerequisite. Next: U4 (timestep loop).
+- 2026-11-02 U4 + U5 (route inline, one commit 9d0da65: shared top.cc/database.cc). Professional
+  probes: control_timestep_until_* stops the index after the step that leaves [min, max] and the
+  next index runs (8 probes equal, missing maximum = error); automatic iterations default 2 8 4
+  (Pro stops at 8; GNU had 20) but the step-size law differs (Pro x1.25 / x1.5625, /4; C94,
+  class B); element_group_apply + control_element_group_apply = Professional; Professional reads
+  mesh_element_group_apply without index and applies control_mesh_element_group_apply only at
+  index 0 deleting the other elements (MESH-EG-APPLY, class D, GNU follows the manual), rejects
+  control_element_group (CTRL-EG, class D); print_precision: manual example significant digits
+  (PRINT-PREC, class C). RED: every new test rc 1 on the base binary (keywords unknown, 20
+  iterations). build_safe 412 OK / 0 FALLO. U4 differential on omen (17 inputs with automatic
+  stepping, mt vs u4): identical so far (10/17 done). Next: U6 (mrange, mstring, groundflow_apply,
+  linear_calculation_apply, control_input; Pro examples tutorial_4, mesh_gid_* + 10.dat).
