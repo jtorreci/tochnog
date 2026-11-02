@@ -271,3 +271,7 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   BEAM-DIRECTION-LENGTH removed (= Pro), BEAM-MEMORY-DEFAULT -> class C BEAM-MEMORY-UPDATED, new class C
   GROUP-BEAM-PLANE. Risk item 3 (shared beam path, existing results change by owner decision): covered by
   the end-of-T2 independent verifier. TET4-MAX-ORDER still pending.
+- 2026-11-02 Owner: "reordenemos, pues." -> TET4-MAX-ORDER committed `3dc43db` (inline): pol() tet4 -maximal points
+  3 and 4 in the Professional order; element_intpnt_3d1 expectation updated; 634 OK / 0 FALLO; A/B on the two
+  tet4 -maximal inputs: only element_intpnt_* and element_dof (points 3/4 exchanged) differ. Divergence row removed.
+
