@@ -49,6 +49,19 @@ thread_local double stress_recovery_reduced_iso = 0.;
 thread_local long int lumped_hrz_active = 0;
 thread_local double lumped_hrz_weight[MNOL];
 
+// element_intpnt_method / element_intpnt_iso_coord (manual Professional
+// 6.442 / 6.439, F5 T2 V4b): the integration method actually used and the
+// isoparametric coordinates (npoint x ndim, point-major) of the points of
+// the rule just resolved by pol(). Written by every pol() call and read
+// only by element_intpnt_set() right after its own serial pol() call;
+// thread local like the recovery flags above. The method is the group
+// method name (-gauss, -lobatto, -reduced) for the tensor elements and 0
+// for the triangles, tetrahedra and prisms, as the Professional 02-08-2026
+// prints it. Triangle and tetrahedron points are given in the area /
+// volume coordinates (L1, L2(, L3)), the prisms add zeta in [-1,1].
+static thread_local long int pol_method_used = 0;
+static thread_local double pol_iso_used[MPOINT*MDIM];
+
 // Weighting factor f of group_integration_method -reduced (manual
 // Professional 6.620/6.621: "a weighted combination of lobatto and 1-point
 // cell centered integration"; f = 1 is Lobatto, f infinite 1-point; "Default
@@ -132,6 +145,7 @@ void pol( long int element, long int element_group,
   stress_recovery_lobatto = 0;
   stress_recovery_reduced_iso = 0.;
   lumped_hrz_active = 0;
+  pol_method_used = 0;
 
   db( GROUP_AXISYMMETRIC, element_group, &axisymmetric, ddum, ldum, 
     VERSION_NORMAL, GET_IF_EXISTS );
@@ -160,6 +174,7 @@ void pol( long int element, long int element_group,
       npoint = 1;
       weight[0] = 1.;
       array_set( h, 1./3., 3 );
+      pol_iso_used[0] = pol_iso_used[1] = 1./3.;
       p[0] =  1.;
       p[1] =  0.;
       p[2] = -1.;
@@ -171,6 +186,9 @@ void pol( long int element, long int element_group,
       npoint = nnol;
       for ( ipoint=0; ipoint<npoint; ipoint++ ) {
         weight[ipoint] = 1./npoint;
+        // the nodal points: node 1 (1,0), node 2 (0,1), node 3 (0,0)
+        pol_iso_used[ipoint*2+0] = ( ipoint==0 ) ? 1. : 0.;
+        pol_iso_used[ipoint*2+1] = ( ipoint==1 ) ? 1. : 0.;
         p[ipoint*ndim*nnol+0] =  1.;
         p[ipoint*ndim*nnol+1] =  0.;
         p[ipoint*ndim*nnol+2] = -1.;
@@ -224,6 +242,8 @@ void pol( long int element, long int element_group,
         weight[ipoint] = tri4[ipoint][2];
       }
       tria6_shape( L1, L2, &h[ipoint*nnol], &p[ipoint*ndim*nnol] );
+      pol_iso_used[ipoint*2+0] = L1;
+      pol_iso_used[ipoint*2+1] = L2;
     }
   }
   else if ( name==-PRISM6 ) {
@@ -290,6 +310,10 @@ void pol( long int element, long int element_group,
       for ( ipoint=0; ipoint<npoint; ipoint++ ) {
         double zbase = 1.-zeta_pt[ipoint], ztop = zeta_pt[ipoint];
         weight[ipoint] = 0.25;
+        // zeta printed on [-1,1], the Professional convention
+        pol_iso_used[ipoint*3+0] = L1;
+        pol_iso_used[ipoint*3+1] = L2;
+        pol_iso_used[ipoint*3+2] = 2.*ztop - 1.;
         h[ipoint*nnol+0] = zbase*L1;
         h[ipoint*nnol+1] = zbase*L2;
         h[ipoint*nnol+2] = zbase*L3;
@@ -332,6 +356,9 @@ void pol( long int element, long int element_group,
         L1 = tri_L1[it]; L2 = tri_L2[it]; L3 = 1. - L1 - L2;
         weight[ipoint] = zeta_w[iz]*tri_w[it]; // 1/12 each, sum 1/2
         double zbase = 1.-zz, ztop = zz;
+        pol_iso_used[ipoint*3+0] = L1;
+        pol_iso_used[ipoint*3+1] = L2;
+        pol_iso_used[ipoint*3+2] = 2.*zz - 1.;
         // shape functions at zz: (1-z)*L on the base, z*L on the top
         h[ipoint*nnol+0] = zbase*L1;
         h[ipoint*nnol+1] = zbase*L2;
@@ -425,6 +452,9 @@ void pol( long int element, long int element_group,
         L2 = tri_pt[ipoint%7][1];
         L3 = 1. - L1 - L2;
         weight[ipoint] = tri_w[ipoint%7]*zeta_w[ipoint/7];
+        pol_iso_used[ipoint*3+0] = L1;
+        pol_iso_used[ipoint*3+1] = L2;
+        pol_iso_used[ipoint*3+2] = zz;
         for ( inol=0; inol<nnol; inol++ )
           h[ipoint*nnol+inol] = 0.;
         array_set( &p[ipoint*ndim*nnol], 0., ndim*nnol );
@@ -535,6 +565,7 @@ void pol( long int element, long int element_group,
     if ( integration_points==-MINIMAL ) {
       npoint = 1; weight[0] = 1.;
       array_set( h, 1./4., 4 );
+      array_set( pol_iso_used, 0.25, 3 );
       p[0]  =  1.;
       p[1]  =  0.;
       p[2]  =  0.;
@@ -571,6 +602,15 @@ void pol( long int element, long int element_group,
           L3 = ( ipoint==3 ) ? 0.5 : 1./6.;
           weight[ipoint] = 9./20.;
         }
+        // iso coordinates in the Professional convention (coordinate k
+        // = h of corner k, as its tet4 and tet10 records): (L1, L3, L2)
+        // here, because this branch puts L3 on node 1 and L2 on node 2.
+        // The point order therefore differs from the Professional one
+        // (its points 3 and 4 are swapped here; DIVERGENCES
+        // TET4-MAX-ORDER), the rule itself is the same.
+        pol_iso_used[ipoint*3+0] = L1;
+        pol_iso_used[ipoint*3+1] = L3;
+        pol_iso_used[ipoint*3+2] = L2;
         h[ipoint*nnol+0] = L1;
         h[ipoint*nnol+1] = L3;
         h[ipoint*nnol+2] = L2;
@@ -622,6 +662,9 @@ void pol( long int element, long int element_group,
         weight[ipoint] = 9./20.;
       }
       L4 = 1. - L1 - L2 - L3;
+      pol_iso_used[ipoint*3+0] = L1;
+      pol_iso_used[ipoint*3+1] = L2;
+      pol_iso_used[ipoint*3+2] = L3;
 
       h[ipoint*nnol+0] = (2.*L1-1.)*L1;
       h[ipoint*nnol+1] = 4.*L1*L2;
@@ -790,6 +833,7 @@ void pol( long int element, long int element_group,
     if ( integration_method==-REDUCED && rule_lobatto )
       stress_recovery_gauss = 1;
     stress_recovery_reduced_iso = rule_reduced ? reduced_iso : 0.;
+    pol_method_used = integration_method;
     if ( npoint>MPOINT ) {
       cout << "\nError: too many int. points in element " << element << ".\n";
       exit(TN_EXIT_STATUS);
@@ -803,6 +847,9 @@ void pol( long int element, long int element_group,
           inol = 0;
           ipoint = izeta*neta*nxi + ieta*nxi + ixi;
           weight[ipoint] = weight_xi[ixi]*weight_eta[ieta]*weight_zeta[izeta];
+          pol_iso_used[ipoint*ndim+0] = xi[ixi];
+          if ( ndim>=2 ) pol_iso_used[ipoint*ndim+1] = eta[ieta];
+          if ( ndim==3 ) pol_iso_used[ipoint*ndim+2] = zeta[izeta];
           for ( inol_zeta=0; inol_zeta<nnol_zeta; inol_zeta++ ) {
             for ( inol_eta=0; inol_eta<nnol_eta; inol_eta++ ) {
               for ( inol_xi=0; inol_xi<nnol_xi; inol_xi++ ) {
@@ -1071,4 +1118,154 @@ void interpolation_polynomial( double iso, long int npol, double h_pol[],
       }
     }
   }
+}
+
+// element_intpnt_h / _iso_coord / _method / _npoint (manual Professional
+// 6.438 / 6.439 / 6.442 / 6.443, F5 T2 V4b): print records with, per
+// element, the interpolation polynomial of every node in every
+// integration point (point-major: per point the nnol values), the
+// isoparametric coordinates of the points (per point ndim values), the
+// integration method actually used and the number of points. The manual
+// is silent on when they are filled; the Professional 02-08-2026 writes
+// them in every run for every isoparametric element and interface
+// element (not for truss, beam or spring elements), so the GNU fills them
+// at the end of every step_start() (top.cc), after the mesh operations of
+// the step and outside the parallel element loop (db allocation). The
+// rule is the one of pol() itself (a serial call per element on the
+// node coordinates), so the records always show the rule the element
+// loop integrates with. pol() resets its thread-local recovery state at
+// every call, so the extra call does not leak into the element loop; the
+// element shape check is switched off during the call (no duplicate
+// warning). element_intpnt_h is left out when npoint*nnol exceeds
+// DATA_ITEM_SIZE (hex27, prism15, quad16 -maximal), where the
+// Professional writes it (729 values for the hex27).
+//
+// Interface elements (group_interface) are integrated per facing node
+// pair by interface_element() (interface.cc), not by pol(); their layout
+// is the Professional 02-08-2026 one: a point per pair (i, i+ns1) with
+// h = 1/2 on both nodes, the Lobatto points along the side (2D: (xi,0);
+// 3D quadrilateral face: (xi,eta,0), xi fastest) with method -lobatto,
+// and for the triangular face of the prism6 interface the corner points
+// (1,0,0), (0,1,0), (0,0,0) with method 0.
+static long int element_intpnt_supported( long int name, long int nnol )
+{
+  if ( ndim==1 )
+    return ( name==-BAR2 && nnol==2 ) || ( name==-BAR3 && nnol==3 ) ||
+      ( name==-BAR4 && nnol==4 );
+  if ( ndim==2 )
+    return ( name==-TRIA3 && nnol==3 ) || ( name==-TRIA6 && nnol==6 ) ||
+      ( name==-QUAD4 && nnol==4 ) || ( name==-QUAD9 && nnol==9 ) ||
+      ( name==-QUAD16 && nnol==16 );
+  return ( name==-TET4 && nnol==4 ) || ( name==-TET10 && nnol==10 ) ||
+    ( name==-PRISM6 && nnol==6 ) || ( name==-PRISM15 && nnol==15 ) ||
+    ( name==-HEX8 && nnol==8 ) || ( name==-HEX27 && nnol==27 );
+}
+
+static long int element_intpnt_interface( long int nnol, long int &npoint,
+  long int &method, double h[], double iso[] )
+{
+  long int ns1=nnol/2, nf=0, ip=0, i=0, j=0;
+  double pts[MPOINT], wts[MPOINT];
+
+  if ( nnol%2!=0 ) return 0;
+  if ( ndim==2 && ns1>=2 && ns1<=4 ) {
+    integration_lobatto( ns1, pts, wts );
+    npoint = ns1;
+    method = -LOBATTO;
+    for ( ip=0; ip<npoint; ip++ ) {
+      iso[ip*2+0] = pts[ip];
+      iso[ip*2+1] = 0.;
+    }
+  }
+  else if ( ndim==3 && ( ns1==4 || ns1==9 ) ) {
+    nf = ( ns1==4 ) ? 2 : 3;
+    integration_lobatto( nf, pts, wts );
+    npoint = ns1;
+    method = -LOBATTO;
+    for ( j=0; j<nf; j++ ) {
+      for ( i=0; i<nf; i++ ) {
+        ip = j*nf + i;
+        iso[ip*3+0] = pts[i];
+        iso[ip*3+1] = pts[j];
+        iso[ip*3+2] = 0.;
+      }
+    }
+  }
+  else if ( ndim==3 && ns1==3 ) {
+    npoint = 3;
+    method = 0;
+    array_set( iso, 0., 9 );
+    iso[0*3+0] = 1.;
+    iso[1*3+1] = 1.;
+  }
+  else
+    return 0;
+  array_set( h, 0., npoint*nnol );
+  for ( ip=0; ip<npoint; ip++ ) {
+    h[ip*nnol+ip] = 0.5;
+    h[ip*nnol+ip+ns1] = 0.5;
+  }
+  return 1;
+}
+
+void element_intpnt_set( void )
+
+{
+  long int element=0, max_element=0, element_group=0, name=0, nnol=0,
+    length=0, npoint=0, method=0, inol=0, ldum=0, idum[1],
+    el[1+MNOL];
+  double ddum[1], save_shape_factor=check_element_shape_factor,
+    coord[MNOL*MDIM], iso[MPOINT*MDIM];
+
+  if ( db_max_index( ELEMENT, max_element, VERSION_NORMAL, GET )<0 ) return;
+  double *h = get_new_dbl( MPOINT*MNOL );
+  double *old_d = get_new_dbl( MPOINT*MDIM*MNOL );
+  double *new_d = get_new_dbl( MPOINT*MDIM*MNOL );
+  double *new_b = get_new_dbl( MPOINT*MSTRAIN*MNOL*MDIM );
+  double *volume = get_new_dbl( MPOINT );
+
+  check_element_shape_factor = 0.;
+  for ( element=0; element<=max_element; element++ ) {
+    if ( !db_active_index( ELEMENT, element, VERSION_NORMAL ) ) continue;
+    db( ELEMENT, element, el, ddum, length, VERSION_NORMAL, GET );
+    name = el[0];
+    nnol = length - 1;
+    element_group = 0;
+    db( ELEMENT_GROUP, element, &element_group, ddum, ldum,
+      VERSION_NORMAL, GET_IF_EXISTS );
+    if ( db_active_index( GROUP_INTERFACE, element_group, VERSION_NORMAL ) ) {
+      if ( !element_intpnt_interface( nnol, npoint, method, h, iso ) )
+        continue;
+    }
+    else {
+      if ( !element_intpnt_supported( name, nnol ) ) continue;
+      for ( inol=0; inol<nnol; inol++ )
+        db( NODE, el[1+inol], idum, &coord[inol*ndim], ldum,
+          VERSION_NORMAL, GET );
+      pol( element, element_group, name, nnol, coord, coord, npoint, h,
+        old_d, new_d, new_b, volume );
+      method = pol_method_used;
+      array_move( pol_iso_used, iso, npoint*ndim );
+    }
+    length = 1;
+    db( ELEMENT_INTPNT_METHOD, element, &method, ddum, length,
+      VERSION_NORMAL, PUT );
+    db( ELEMENT_INTPNT_NPOINT, element, &npoint, ddum, length,
+      VERSION_NORMAL, PUT );
+    length = npoint*ndim;
+    db( ELEMENT_INTPNT_ISO_COORD, element, idum, iso, length,
+      VERSION_NORMAL, PUT );
+    length = npoint*nnol;
+    if ( length<=DATA_ITEM_SIZE )
+      db( ELEMENT_INTPNT_H, element, idum, h, length, VERSION_NORMAL, PUT );
+    else if ( db_active_index( ELEMENT_INTPNT_H, element, VERSION_NORMAL ) )
+      db_delete_index( ELEMENT_INTPNT_H, element, VERSION_NORMAL );
+  }
+  check_element_shape_factor = save_shape_factor;
+
+  delete[] h;
+  delete[] old_d;
+  delete[] new_d;
+  delete[] new_b;
+  delete[] volume;
 }

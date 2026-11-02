@@ -1498,6 +1498,11 @@ void step_start( long int task, long int options_solver[], double dtime, double 
 
   }
 
+    // element_intpnt_h / _iso_coord / _method / _npoint (6.438-6.443):
+    // the rule of every element, after the mesh operations of the step
+    // and outside the parallel element loop (Professional: every run)
+  element_intpnt_set();
+
 }
 
 // Post-solve material state pass (F4 T5, BACKLOG C35): flag read by

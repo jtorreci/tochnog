@@ -30,6 +30,7 @@ suite sfnet, o un test propio. El registro completo:
 
 | Feature | Commit | Fecha | Verificación |
 |---------|--------|-------|--------------|
+| **F5 T2 V4b — `element_intpnt_h`, `element_intpnt_iso_coord`, `element_intpnt_method`, `element_intpnt_npoint`** | (pending commit) | 2026-11-02 | Manual silent on when they are filled: Professional 02-08-2026 as oracle (omen probes `~/tochnog-runs/v4b`, 27 single-element inputs + 5 combined): written in every run for every isoparametric and interface element, none for truss / beam / spring. GNU = Professional within 1e-9 on bar2, bar3, tria3 (1 / 3 points), tria6 (7 / 4), quad4 (2x2, 1 point, `-lobatto`, `-reduced` factor 2, distorted), quad9 (3x3 / 2x2), hex8, tet4, tet10, hex27 (method, npoint, iso), quad4 / quad6 / hex8 / prism6 / hex18 interfaces. Known differences: prism6 points (C75), `-reduced` default factor (C80), tet4 `-maximal` points 3/4 swapped (TET4-MAX-ORDER, class B, new), hex27 / prism15 / quad16 `element_intpnt_h` above 190 values not written (INTPNT-H-LENGTH, class B, new). Tests `element_intpnt_quad4_1`, `_tria3_1`, `_interface_quad4_1`, `_1d1`, `_2d1`, `_3d1`, `_interface2d1`, `_interface3d1`: RED (no records) on a6de34c, GREEN. Existing `.dbs` unchanged apart from the new records (intq / iface / truss probes). build_safe 515 OK / 0 FALLO, runs 226/226; audit 0. |
 | **F5 T2 V4a — `element_truss_strain`, `element_truss_strain_temperature`, `node_bounded_index`, `print_group_data` (list), `element_print_group_data_values`** | `ab1a014` | 2026-11-02 | Professional 02-08-2026 probes (`scratchpad/f5/v4`): truss (alpha 1e-3, dT 10, elongation 0.01) strain 0.01 / thermal 0.01 = GNU; `node_bounded_index` identical on the quad4, truss and interface probes (every node, -nothing when free); `print_group_data -group_materi_elasti_young -group_materi_elasti_poisson` -> 1000 0.3 = GNU (Pro writes the singular `element_print_group_data_value`: PGD-VALUE-NAME, class D). Tests `element_truss_strain1`, `node_bounded_index1`, `print_group_data1`. build_safe 480 OK / 1 FALLO: `interface_tension_status1` byte-identity check failed on `time_calculation 1` vs `0` only (wall-clock flake; two manual runs identical). audit 0. |
 | **F5 T2 V3 — `mesh_boundary`, `element_boundary`, `print_element_geometry_present` (+ `_node_type`), `element_geometry_present`; word `-plus_displacement` (owner 2026-11-02 "como el manual. Documentamos la divergencia")** | `aaf581c` | 2026-11-02 | Professional 02-08-2026 probes (`scratchpad/f5/v3`, 3 x 3 and 4 x 4 quad4): `node_boundary` = outer ring in both programs; Pro fills `node_boundary` / `element_boundary` without `mesh_boundary` and marks every element (GNU = manual: MESH-BOUNDARY-DEFAULT class A, ELEMENT-BOUNDARY-ALL class D); `element_geometry_present 1 -geometry_quadrilateral 7` with the default and `-node` = Pro; half-covered element or a line through two nodes: no record = Pro. Pro rejects `-plus_displacement` (EGP-PLUS-DISP); the GNU parser rejected it too (word never registered) and now accepts it. RED: not run on the base build (the new inputs use records that were absent from the GNU keyword list; `mesh_boundary_default1` passes on the base by design). build_safe 475 OK / 0 FALLO, audit 0. |
 | **C99 — vtk / tecplot file names = Professional (owner 2026-11-02 "sigamos a Pro", separate formats "el de Pro")** | `ecabcae` | 2026-11-02 | Professional 02-08-2026 probes (`scratchpad/f5/c99`, indices 0 and 12, 0.1 x 5 steps): vtk `-yes` `ya.vtk` (last state), `-separate_index` `ysi_000.vtk` / `ysi_012.vtk`, `-separate_sequential` `yss_0000..0004.vtk`; tecplot `-yes` `tey.plt` (10 zones, again 10 after a second run: emptied), `-separate_index` `tesi_0000.plt` (t 0.2 only) / `tesi_0012.plt`, `-separate_sequential` `tess_0000..0004.plt`. GNU `print_vt.cc` / `print_te.cc` reproduce the names (the GNU ignored both `-separate_*` switches). RED on `e2e7c0c`: the 6 new test-2026 tests (`tn0.vtk` / `tn12.vtk` / `tecplot.plt` or no file). test-2014 `vtk_*1` inputs moved to `-separate_index`. build_safe 461 OK / 0 FALLO, audit 0. |
@@ -1130,15 +1131,15 @@ marcado `PENDIENTE` puede estar cubierto en el GNU bajo otro nombre:
 - [ ] `element_interface_intpnt_stress` — PENDIENTE
 - [x] `element_interface_intpnt_stress_average` — alias de un record del GNU (F5 W2 V1, 2026-11-02)
 
-### element_intpnt (0/7)
+### element_intpnt (6/7)
 
 - [ ] `element_intpnt_dof` — PENDIENTE
-- [ ] `element_intpnt_h` — PENDIENTE
-- [ ] `element_intpnt_iso_coord` — PENDIENTE
+- [x] `element_intpnt_h` — implementada (F5 T2 V4b, 2026-11-02; per point the nnol values, = Professional on every measured element type; not written above 190 values, INTPNT-H-LENGTH class B)
+- [x] `element_intpnt_iso_coord` — implementada (F5 T2 V4b, 2026-11-02; = Professional except the prism6 points, C75)
 - [x] `element_intpnt_materi_plasti_hardsoil_gammap_initial` — Sprint 10 (lote 8; record calculado de elemento con γp_extra, validado por target directo en `mhardsoil_gp0` = 0.0007763 analitico; una valor por ELEMENTO en este port — por punto de integracion PENDIENTE, documentado)
 - [x] `element_intpnt_materi_undrained_pressure` — familia undrained (2026-09-05, 6.441): p_u por IP acumulada (C·ṗ = div v por elemento); ground17/undrained1/undrained2 rc=0
-- [ ] `element_intpnt_method` — PENDIENTE
-- [ ] `element_intpnt_npoint` — PENDIENTE
+- [x] `element_intpnt_method` — implementada (F5 T2 V4b, 2026-11-02; = Professional: method name for tensor elements, 0 for triangles/tetrahedra/prisms)
+- [x] `element_intpnt_npoint` — implementada (F5 T2 V4b, 2026-11-02; = Professional)
 
 ### element_middle (1/1)
 

@@ -6145,6 +6145,36 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   print_only[ELEMENT_PRINT_GROUP_DATA_VALUES] = 1;
   data_class[ELEMENT_PRINT_GROUP_DATA_VALUES] = ELEMENT;
 
+  // element_intpnt_h / _iso_coord / _method / _npoint (manual Professional
+  // 6.438 / 6.439 / 6.442 / 6.443): the integration rule of the element,
+  // filled in every step_start() (polynom.cc element_intpnt_set, F5 T2
+  // V4b). h: per point the nnol values; iso_coord: per point ndim values.
+  strcpy(name[ELEMENT_INTPNT_H],"element_intpnt_h");
+  type[ELEMENT_INTPNT_H] = DOUBLE_PRECISION;
+  data_length[ELEMENT_INTPNT_H] = DATA_ITEM_SIZE;
+  fixed_length[ELEMENT_INTPNT_H] = 0;
+  print_only[ELEMENT_INTPNT_H] = 1;
+  data_class[ELEMENT_INTPNT_H] = ELEMENT;
+
+  strcpy(name[ELEMENT_INTPNT_ISO_COORD],"element_intpnt_iso_coord");
+  type[ELEMENT_INTPNT_ISO_COORD] = DOUBLE_PRECISION;
+  data_length[ELEMENT_INTPNT_ISO_COORD] = DATA_ITEM_SIZE;
+  fixed_length[ELEMENT_INTPNT_ISO_COORD] = 0;
+  print_only[ELEMENT_INTPNT_ISO_COORD] = 1;
+  data_class[ELEMENT_INTPNT_ISO_COORD] = ELEMENT;
+
+  strcpy(name[ELEMENT_INTPNT_METHOD],"element_intpnt_method");
+  type[ELEMENT_INTPNT_METHOD] = INTEGER;
+  data_length[ELEMENT_INTPNT_METHOD] = 1;
+  print_only[ELEMENT_INTPNT_METHOD] = 1;
+  data_class[ELEMENT_INTPNT_METHOD] = ELEMENT;
+
+  strcpy(name[ELEMENT_INTPNT_NPOINT],"element_intpnt_npoint");
+  type[ELEMENT_INTPNT_NPOINT] = INTEGER;
+  data_length[ELEMENT_INTPNT_NPOINT] = 1;
+  print_only[ELEMENT_INTPNT_NPOINT] = 1;
+  data_class[ELEMENT_INTPNT_NPOINT] = ELEMENT;
+
   strcpy(name[NODE_DAMPING],"node_damping");
   type[NODE_DAMPING] = DOUBLE_PRECISION;
   data_length[NODE_DAMPING] = ndim;

@@ -1,0 +1,32 @@
+(F5 T2 V4b: element_intpnt_h / _iso_coord / _method / _npoint
+ (manual 6.438 / 6.439 / 6.442 / 6.443) of a unit quad4, default rule.
+ Expected, = Professional 02-08-2026: element_intpnt_method 1 -gauss,
+ element_intpnt_npoint 1 4, element_intpnt_iso_coord 1 = per point
+ {xi eta}: -0.57735 -0.57735 / 0.57735 -0.57735 / -0.57735 0.57735 /
+ 0.57735 0.57735, element_intpnt_h 1 = per point the 4 nodal values:
+ 0.6220084679 0.1666666667 0.1666666667 0.0446581987 / 0.1666666667
+ 0.6220084679 0.0446581987 0.1666666667 / 0.1666666667 0.0446581987
+ 0.6220084679 0.1666666667 / 0.0446581987 0.1666666667 0.1666666667
+ 0.6220084679. Tolerance 1e-9.)
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_displacement
+materi_stress
+end_initia
+node 1 0 0
+node 2 1 0
+node 3 0 1
+node 4 1 1
+element 1 -quad4 1 2 3 4
+group_type 0 -materi
+group_materi_memory 0 -total_linear
+group_materi_elasti_young 0 1000.
+group_materi_elasti_poisson 0 0.3
+bounda_dof 0 1 -velx -vely
+bounda_dof 2 2 -velx -vely
+bounda_dof 3 3 -velx -vely
+bounda_dof 1 4 -velx
+bounda_time 1 0.01
+control_timestep 0 1. 1.
+end_data

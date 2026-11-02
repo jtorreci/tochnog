@@ -1724,6 +1724,13 @@ enum {
   ELEMENT_TRUSS_STRAIN_TEMPERATURE,
   NODE_BOUNDED_INDEX,
   ELEMENT_PRINT_GROUP_DATA_VALUES,
+  // element_intpnt_h / _iso_coord / _method / _npoint (6.438 / 6.439 /
+  // 6.442 / 6.443) (F5 T2 V4b). Enum append keeps existing values stable
+  // (tochnog.h and tochnog-mod.h stay in sync).
+  ELEMENT_INTPNT_H,
+  ELEMENT_INTPNT_ISO_COORD,
+  ELEMENT_INTPNT_METHOD,
+  ELEMENT_INTPNT_NPOINT,
   LAST_DUMMY }; // keep LAST_DUMMY always the last one
 
 #define MDAT LAST_DUMMY+DATA_ITEM_SIZE  // reserve space for unknowns
@@ -2084,6 +2091,7 @@ void      geometry( long int inod, double co[], long int geometry_entity[],
 void      node_geometry_present_calculate( void );
 void      element_geometry_present_calculate( void );
 void      element_print_group_data_values_calculate( void );
+void      element_intpnt_set( void );
 void      get_element_matrix_unknowns( long int element,
             long int element_matrix_unknowns[] );
 long int  get_group_data( long int idat, long int group, long int element,

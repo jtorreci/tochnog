@@ -443,6 +443,7 @@ page lists its own in "Differences with the Professional version".
 - [element_truss_strain](element_truss_strain.md) — total and thermal strain of a truss (6.451/6.452) (F5 T2 V4).
 - [node_bounded_index](node_bounded_index.md) — per dof the bounda_dof index that bounds it (6.879) (F5 T2 V4).
 - [element_print_group_data_values](element_print_group_data_values.md) — values of the print_group_data group records per element (6.446/6.991) (F5 T2 V4).
+- [element_intpnt_records](element_intpnt_records.md) — element_intpnt_h / _iso_coord / _method / _npoint, the integration rule per element (6.438/6.439/6.442/6.443) (F5 T2 V4b).
 - [print_database_calculation](print_database_calculation.md) — switch of the final .dbs output (6.972); consumed at exit_tn. large1 parses (RUNFAIL remains solver-bound, see SEGUIMIENTO).
 - [print_gid_calculation](print_database_calculation.md) — switch of the final GiD output (same gate).
 - [post_apply](post_apply.md) — `post_apply switch` (6.900) and `control_post_apply` (6.259): `-no` skips the post records (frozen values; global -no: never created); the skipped records are evaluated once more at the end of the run. Verified against the Professional 02-08-2026 (F5).

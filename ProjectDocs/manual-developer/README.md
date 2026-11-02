@@ -432,6 +432,7 @@ page lists its own in "Differences with the Professional version".
 - [element_truss_strain](element_truss_strain.md) — `truss.cc` `truss()` writes ELEMENT_TRUSS_STRAIN(_TEMPERATURE) (VERSION_NEW, allocated in `top.cc`) (F5 T2 V4).
 - [node_bounded_index](node_bounded_index.md) — `bounda.cc` `bounda()` NODE_BOUNDED_INDEX next to NODE_BOUNDED (F5 T2 V4).
 - [element_print_group_data_values](element_print_group_data_values.md) — `group.cc` `element_print_group_data_values_calculate()` from `step_start()`; PRINT_GROUP_DATA widened (F5 T2 V4).
+- [element_intpnt_records](element_intpnt_records.md) — `polynom.cc` `element_intpnt_set()` from `step_start()`; `pol()` thread-local method / iso outputs (F5 T2 V4b).
 - [print_database_calculation](print_database_calculation.md) — gates de exit_tn (miscel.cc) del volcado .dbs/.flavia final.
 - [post_apply](post_apply.md) — records `POST_APPLY` / `CONTROL_POST_APPLY`; gate in `step_close()` (`top.cc`); stale flags `post_stale` / `post_element_force_stale` and the end-of-run re-evaluation in `exit_tn()` (`miscel.cc`) (F5).
 - [control_post_apply](control_post_apply.md) — see post_apply (F5).
