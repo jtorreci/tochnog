@@ -2820,6 +2820,16 @@ Original report:
   pool of F6; DIVERGENCES `PROC-MAX`.
 - **Found with it and fixed**: `force_point` was added once per thread
   (`force_point_threads1`).
+- **Independent review of `1a4cb7d` (pre-existing thread hazards, for
+  F6)**: `parallel_contact` calls `area_node_dataitem()` (contact.cc:141)
+  once per thread, an idempotent but redundant and unlocked whole-mesh
+  sweep of database writes (it can abort with "Data is allocated in a
+  parallel loop" when a target record is new); `parallel_new_dof_before`
+  PUTs `NODE_INERTIA` (VERSION_NEW) inside the parallel region;
+  `parallel_post_node` (post.cc:294-330) re-partitions through the shared
+  `inext` counter in a `for(;;)` loop (fragile coverage with more than one
+  thread). A restart from a `.dbs` carries the `options_processors` value
+  of the machine that wrote it.
 - **Severity**: LOW. **Effort**: medium (F6: persistent pool, buffers
   allocated once, then flip the default).
 

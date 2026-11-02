@@ -145,6 +145,55 @@ void top( void )
     db( TOCHNOG_VERSION, 0, version, ddum, length, VERSION_NORMAL, PUT );
   }
 
+  // message (manual Professional 6.856, default -yes): the introduction
+  // message (executable, build date, warranty). Suppressed by message -no
+  // or the environment symbol MESSAGE (or message) set to -no, as in the
+  // Professional 02-08-2026.
+  {
+    long int message = -YES;
+    const char *env = getenv( "MESSAGE" );
+    if ( env==NULL ) env = getenv( "message" );
+    db( MESSAGE, 0, &message, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+    if ( env!=NULL && ( !strcmp( env, "-no" ) || !strcmp( env, "-NO" ) ) )
+      message = -NO;
+    if ( message==-YES ) {
+      char exe[4096] = "tochnog";
+      ssize_t nexe = readlink( "/proc/self/exe", exe, sizeof(exe)-1 );
+      if ( nexe>0 ) exe[nexe] = '\0';
+      long int build_date[3] = { 0, 0, 0 };
+      length = 3;
+      db( TOCHNOG_VERSION, 0, build_date, ddum, length, VERSION_NORMAL, GET );
+      cout << "You can suppress messages by 'message -no' in the input file "
+        "or as environment symbol (MESSAGE=-no).\n";
+      cout << "Tochnog GNU executable: " << exe << ". Build date "
+        "(day-month-year): " << build_date[0] << "-" << build_date[1] << "-"
+        << build_date[2] << ".\n";
+      cout << "This program is free software under the GNU General Public "
+        "License; it is distributed WITHOUT ANY WARRANTY, without even the "
+        "implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR "
+        "PURPOSE.\n";
+    }
+  }
+
+  // print_data_name (manual Professional 6.971): every data name, in the
+  // database order, to tochnog_data_name.txt (Professional layout: an
+  // empty line, "Names:", one name per line).
+  {
+    long int print_data_name = -NO;
+    db( PRINT_DATA_NAME, 0, &print_data_name, ddum, ldum, VERSION_NORMAL,
+      GET_IF_EXISTS );
+    if ( print_data_name==-YES ) {
+      ofstream out_names( "tochnog_data_name.txt" );
+      out_names << "\nNames:\n";
+      for ( long int idat_name=0; idat_name<MDAT; idat_name++ ) {
+        const char *data_name = db_name(idat_name);
+        if ( data_name[0]!='\0' && data_name[0]!=' ' )
+          out_names << data_name << "\n";
+      }
+      out_names.close();
+    }
+  }
+
   // incremental_driver (manual Professional 6.784): a constitutive driver
   // that replaces the FEM analysis entirely. Measured in the Professional
   // 25-10-2023 binary: top() calls incremental_driver() right after
@@ -396,6 +445,14 @@ void top( void )
                 length=1; db( ICONTROL, 0, &icontrol, ddum, length, 
                   VERSION_NORMAL, PUT );
                 step_start_control_entry = 1;
+                // control_check_data (manual Professional 6.111): check the
+                // database at the start of this control index
+                {
+                  long int control_check_data = -NO;
+                  db( CONTROL_CHECK_DATA, icontrol, &control_check_data, ddum,
+                    ldum, VERSION_NORMAL, GET_IF_EXISTS );
+                  if ( control_check_data==-YES ) check_data_integrity();
+                }
 		  
                 if ( db_active_index( CONTROL_TIMESTEP, icontrol, VERSION_NORMAL ) ) {
                   maximum_timestep = DBL_MAX;
@@ -918,6 +975,16 @@ void top( void )
                 }
                 // control_system_call: end of the control index
                 control_system_call( icontrol );
+                // control_zip (manual Professional 6.394): gzip the output
+                // files at the end of this control index
+                {
+                  long int control_zip = -NO;
+                  db( CONTROL_ZIP, icontrol, &control_zip, ddum, ldum,
+                    VERSION_NORMAL, GET_IF_EXISTS );
+                  if ( control_zip==-YES && zip_output_files()!=0 )
+                    pri( "Warning: control_zip -yes but gzipping the output "
+                      "files failed (is the gzip program installed?)" );
+                }
                 inverse_calculation( ipar, npar, ipar_i, ipar_n,
                   max_control, INVERSE_DETERMINE_SENSITIVITY );
               }

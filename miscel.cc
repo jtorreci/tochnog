@@ -1204,9 +1204,7 @@ void exit_tn( long int print_database_type )
     if ( zip==-YES ) {
       // only existing files are gzipped (a glob without matches must
       // not count as a failure)
-      int rc = system( "for f in *flavia* *msh vtk* *.plt *.dbs ; do "
-                       "[ -f \"$f\" ] && gzip -f \"$f\" ; done "
-                       ">/dev/null 2>&1" );
+      long int rc = zip_output_files();
       if ( rc!=0 )
         pri( "Warning: zip -yes but gzipping the output files failed "
              "(is the gzip program installed?)" );
@@ -1264,4 +1262,15 @@ void exit_tn_on_error( void )
   cout << flush;
   exit(TN_EXIT_STATUS);
   parallel_sys_unlock();
+}
+
+// gzip every *flavia*, *msh, vtk*, *.plt and *.dbs file of the working
+// directory (zip, manual Professional 6.1095; control_zip, 6.394). Only
+// existing files are gzipped: a glob without matches is not a failure.
+// Returns the exit status of the shell loop (0 on success).
+long int zip_output_files( void )
+{
+  return system( "for f in *flavia* *msh vtk* *.plt *.dbs ; do "
+                 "[ -f \"$f\" ] && gzip -f \"$f\" ; done "
+                 ">/dev/null 2>&1" );
 }

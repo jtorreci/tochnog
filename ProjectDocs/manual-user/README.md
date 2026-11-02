@@ -28,6 +28,7 @@ page lists its own in "Differences with the Professional version".
 - [check_memory](check_memory.md) — report peak memory usage.
 - [check_memory_usage](check_memory_usage.md) — record peak memory usage result.
 - [check_data](check_data.md) — verify the database integrity (missing required items).
+- [control_check_data](control_check_data.md) — `control_check_data index switch` (6.111): the check_data check at the start of a control index (F5).
 - [check_error](check_error.md) — suppress "Error" messages.
 - [check_warning](check_warning.md) — suppress "Warning" messages.
 
@@ -47,7 +48,7 @@ page lists its own in "Differences with the Professional version".
 - [control_print_dof](control_print_dof.md) — print primary dofs with coordinates to plain ASCII files.
 - [control_print_vtk_dof](control_print_vtk_dof.md) — limit the fields written to VTK files.
 - [control_mesh_generate_truss](control_mesh_generate_truss.md) — generate truss/beam elements between neighbouring nodes on a geometry.
-- [control_reset_dof](control_reset_dof.md) — reset a nodal dof to a constant value or one depending on another dof.
+- [control_reset_dof](control_reset_dof.md) — reset a nodal dof to a constant value, one depending on another dof, or a spatial distribution (`control_reset_value_logarithmic_first` and `_exponent` = Professional since F5).
 - [slide_axisymmetric](slide_axisymmetric.md) — axisymmetric scaling of the slide friction.
 - [group_interface](group_interface.md) — interface elements (joints between blocks).
 - [control_mesh_convert](control_mesh_convert.md) — automatic conversion of bar2 to quad4 (and bar3 to quad6) for interfaces.
@@ -316,6 +317,9 @@ page lists its own in "Differences with the Professional version".
 - [tochnog_version](tochnog_version.md) — the build date as a queryable record (day, month, year; 6.1091).
 - [volume_factor_x](volume_factor_x.md) — piecewise-constant volume factor in x (6.1094): thickness/area by x intervals.
 - [zip](zip.md) — gzip the output files at the end of the calculation (6.1095).
+- [control_zip](control_zip.md) — `control_zip index switch` (6.394): gzip the output files at the end of a control index (F5).
+- [message](message.md) — `message switch` (6.856): introduction message, default -yes; `MESSAGE=-no` environment symbol (F5).
+- [print_data_name](print_data_name.md) — `print_data_name switch` (6.971): every data name to tochnog_data_name.txt (F5).
 
 ## Sprint 13 lote 1 — soporte Winkler distribuido
 

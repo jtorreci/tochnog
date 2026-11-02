@@ -504,6 +504,11 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   data_length[CHECK_DATA] = 1;
   no_index[CHECK_DATA] = 1;
 
+  strcpy(name[CONTROL_CHECK_DATA],"control_check_data");
+  type[CONTROL_CHECK_DATA] = INTEGER;
+  data_length[CONTROL_CHECK_DATA] = 1;
+  data_class[CONTROL_CHECK_DATA] = CONTROL;
+
   strcpy(name[CHECK_ELEMENT_NODE],"check_element_node");
   type[CHECK_ELEMENT_NODE] = INTEGER;
   data_length[CHECK_ELEMENT_NODE] = 1;
@@ -7436,6 +7441,21 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   data_length[ZIP] = 1;
   no_index[ZIP] = 1;
 
+  strcpy(name[CONTROL_ZIP],"control_zip");
+  type[CONTROL_ZIP] = INTEGER;
+  data_length[CONTROL_ZIP] = 1;
+  data_class[CONTROL_ZIP] = CONTROL;
+
+  strcpy(name[MESSAGE],"message");
+  type[MESSAGE] = INTEGER;
+  data_length[MESSAGE] = 1;
+  no_index[MESSAGE] = 1;
+
+  strcpy(name[PRINT_DATA_NAME],"print_data_name");
+  type[PRINT_DATA_NAME] = INTEGER;
+  data_length[PRINT_DATA_NAME] = 1;
+  no_index[PRINT_DATA_NAME] = 1;
+
   strcpy(name[WAVE],"wave");
 
   strcpy(name[WAVE_SCALAR],"wave_scalar");
@@ -9207,6 +9227,10 @@ long int db_number( const char str[] )
       // as the GNU geometry_bounda_factor (read by geometry()): same
       // index as the geometry entity, 2 values = linear, 3 = quadratic.
       return GEOMETRY_BOUNDA_FACTOR;
+    else if ( !strcmp( str, "control_reset_value_logarithmic_first" ) )
+      // Professional 02-08-2026 name (manual 6.362) of the GNU
+      // control_reset_value_logarithmic.
+      return CONTROL_RESET_VALUE_LOGARITHMIC;
     else if ( !strcmp( str, "processors" ) )
       // Professional short name of options_processors: number of
       // solver threads (consumed in area.cc/elem.cc).

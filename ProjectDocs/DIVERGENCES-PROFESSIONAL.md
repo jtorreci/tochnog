@@ -15,9 +15,9 @@ Single index of every known difference between the GNU version and Tochnog Profe
 |---|---|---|
 | A | deliberate divergence decided by the project owner | 32 |
 | B | known difference, not decided yet or scheduled (F3/F4) | 42 |
-| C | GNU extension or input-dialect difference | 18 |
+| C | GNU extension or input-dialect difference | 19 |
 | D | Professional-suspect: the Professional contradicts its own manual or the analytic answer | 6 |
-| | **total** | **98** |
+| | **total** | **99** |
 
 Ids: `C*`/`B*` are [BACKLOG-OPEN-ISSUES.md](BACKLOG-OPEN-ISSUES.md) items, `K*` are clusters of [AUDIT-ALL-VARIABLES-2026.md](AUDIT-ALL-VARIABLES-2026.md); other ids are local to this index. Several class A items are also Professional-suspect (noted in their status). Professional values are from the binary 02-08-2026 unless stated.
 
@@ -130,6 +130,7 @@ Records or spellings that only one program accepts, or GNU choices where the Pro
 
 | id | feature | GNU | Professional | decision / status | date | documented in |
 |---|---|---|---|---|---|---|
+| OUTPUT-TEXT | `message` introduction text; `control_check_data` result line | GNU executable + GPL warranty notice; prints `check_data: ...` at each check. | Professional executable + its disclaimer; silent when the database is consistent. | GNU text (F5 W1 U2, 2026-11-02); no owner decision needed (wording only). | 2026-11-02 | [user/message](manual-user/message.md); [user/control_check_data](manual-user/control_check_data.md) |
 | SWITCH-PERM | `control_mesh_switch` with three entries in 3D | New axis order (`-z -y -x`), GNU extension; two entries swap (manual 6.244). | Refuses a third entry ("I do not know : -x"). | GNU extension, kept (F4 T8). | 2026-10-10 | [user/control_mesh_switch](manual-user/control_mesh_switch.md); [dev/control_mesh_switch](manual-developer/control_mesh_switch.md) |
 | DIALECT | legacy GNU 2014 spellings | Accepts both the legacy and the Professional spelling: `bounda_unknown`, `options_mesh`, `options_inertia`, `options_convection`, `options_stabilization`, `options_processors`, `control_options_solver`, `group_truss_young`, `-trussbeam`, `groundflow_phreaticlevel`, `contact_geometry`, `druckprag`, `mohrcoul`, `force_element_*`, `group_groundflow_porosity`, `..._plasti_boundary`, `..._plasti_cap`, `-sizetot`/`-sizedev`, `contactspring*`. | Rejects the legacy spellings (e.g. `options_stabilization`, `bounda_unknown`, `options_mesh`). | GNU backward compatibility; kept. | 2026-09-29 (audit) | AUDIT 1.1; SEGUIMIENTO Equivalencias |
 | UWR | `group_materi_memory -updated_without_rotation` | GNU-only memory (legacy). | Not in manual 6.686; the Pro's own copies of these tests use `-updated_linear` or `-total_linear`. | GNU extension; kept. | 2026-09-29 (audit) | [user/group_materi_memory_default](manual-user/group_materi_memory_default.md); [dev/group_materi_memory_default](manual-developer/group_materi_memory_default.md); AUDIT 1.1 |

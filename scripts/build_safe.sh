@@ -1645,6 +1645,65 @@ run_ok "$T2026" edge_node_restriction_force1
 run_ok "$T2026" force_point_sign1
 # F5 W1 U2: force_point with 4 threads (it was added once per thread).
 run_ok "$T2026" force_point_threads1
+# F5 W1 U2: control_reset_value_logarithmic_first / _exponent with the
+# manual 6.360/6.362 quotient (b + c x)/(d + e x) (= Professional 02-08-2026).
+run_ok "$T2026" control_reset_value_logarithmic_first1
+expected_error_ok "$T2026" control_reset_value_logarithmic_first_error1
+run_ok "$T2026" control_reset_value_exponent1
+expected_error_ok "$T2026" control_reset_value_exponent_error1
+# F5 W1 U2: message / print_data_name / control_check_data / control_zip
+# (Professional 02-08-2026 probes). Isolated runs: control_zip gzips every
+# *.dbs of its working directory.
+MSDIR="/tmp/f5_u2_misc_isolated"
+rm -rf "$MSDIR" && mkdir -p "$MSDIR"
+for t in message1 message2 print_data_name1 control_check_data1 control_zip1; do
+  cp "$T2026/$t.dat" "$MSDIR/"
+done
+ms_run() {
+  ( cd "$MSDIR" && ulimit -v "$TN_MEMLIMIT_KB" && \
+    timeout 60 env "$@" > "$MSDIR/$t.out" 2>&1 )
+}
+t=message1; ms_run MESSAGE= "$REPO_DIR/build/$TN_BIN" message1.dat; MSRC=$?
+if [ "$MSRC" = "0" ] && head -1 "$MSDIR/message1.out" | grep -q "^You can suppress messages" && \
+   grep -q "^Tochnog GNU executable: .*Build date" "$MSDIR/message1.out"; then
+  check_ok "message1 (introduction message printed by default)"
+else
+  check_fail "message1" "rc=$MSRC or no introduction message"
+fi
+t=message2; ms_run MESSAGE= "$REPO_DIR/build/$TN_BIN" message2.dat; MSRC=$?
+if [ "$MSRC" = "0" ] && ! grep -q "suppress messages" "$MSDIR/message2.out"; then
+  check_ok "message2 (message -no: no introduction message)"
+else
+  check_fail "message2" "rc=$MSRC or introduction message printed"
+fi
+t=message1env; ms_run MESSAGE=-no "$REPO_DIR/build/$TN_BIN" message1.dat; MSRC=$?
+if [ "$MSRC" = "0" ] && ! grep -q "suppress messages" "$MSDIR/message1env.out"; then
+  check_ok "message1 with MESSAGE=-no (no introduction message)"
+else
+  check_fail "message1 with MESSAGE=-no" "rc=$MSRC or introduction message printed"
+fi
+t=print_data_name1; ms_run MESSAGE=-no "$REPO_DIR/build/$TN_BIN" print_data_name1.dat; MSRC=$?
+if [ "$MSRC" = "0" ] && [ "$(sed -n 2p "$MSDIR/tochnog_data_name.txt" 2>/dev/null)" = "Names:" ] && \
+   grep -qx "print_data_name" "$MSDIR/tochnog_data_name.txt" && ! grep -q "^ *$" <(sed 1d "$MSDIR/tochnog_data_name.txt"); then
+  check_ok "print_data_name1 (tochnog_data_name.txt: Names: + data names)"
+else
+  check_fail "print_data_name1" "rc=$MSRC or tochnog_data_name.txt differs"
+fi
+t=control_check_data1; ms_run MESSAGE=-no "$REPO_DIR/build/$TN_BIN" control_check_data1.dat; MSRC=$?
+if [ "$MSRC" = "0" ] && [ "$(grep -c '^check_data:' "$MSDIR/control_check_data1.out")" = "1" ]; then
+  check_ok "control_check_data1 (one database check, at index 1)"
+else
+  check_fail "control_check_data1" "rc=$MSRC or check count differs"
+fi
+rm -f "$MSDIR"/*.dbs "$MSDIR"/*.gz "$MSDIR"/*flavia*
+t=control_zip1; ms_run MESSAGE=-no "$REPO_DIR/build/$TN_BIN" control_zip1.dat; MSRC=$?
+if [ "$MSRC" = "0" ] && [ -f "$MSDIR/control_zip1.flavia.res.gz" ] && \
+   [ -f "$MSDIR/control_zip1.flavia.res" ] && [ -f "$MSDIR/control_zip1.dbs" ]; then
+  check_ok "control_zip1 (GiD files gzipped after index 0, new ones after index 1)"
+else
+  check_fail "control_zip1" "rc=$MSRC or zipped / new files missing"
+fi
+rm -rf "$MSDIR"
 # F5 W1 U2: processors_maximum (manual 6.1005; GNU default -no until F6, -yes = every CPU).
 PM_EXP=$(nproc); [ "$PM_EXP" -gt 64 ] && PM_EXP=64
 for pm in "processors_maximum1 1" "processors_maximum2 $PM_EXP" "processors_maximum3 2"; do

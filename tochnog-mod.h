@@ -180,6 +180,7 @@ enum {
   CHECK,
   CHECK_COMBINATION,
   CHECK_DATA,
+  CONTROL_CHECK_DATA,
   CHECK_ELEMENT_NODE,
   CHECK_ELEMENT_SHAPE,
   CHECK_ERROR,
@@ -1428,6 +1429,9 @@ enum {
   Y,
   Z,
   ZIP,
+  CONTROL_ZIP,
+  MESSAGE,
+  PRINT_DATA_NAME,
   ANGLE,
   // --- bounda_time_until_* family (manual Professional 6.40/6.41) ---
   BOUNDA_USED,
@@ -2344,6 +2348,7 @@ void      set_stress( long int element, long int gr,
 long int  control_materi_gate_off( long int control_item );
 void      control_system_call( long int icontrol );
 long int  available_processors( void );
+long int  zip_output_files( void );
 long int  materi_memory_default( void );
 long int  convection_apply_switch( void );
 long int  materi_apply_gate_off( long int global_item, long int control_item );

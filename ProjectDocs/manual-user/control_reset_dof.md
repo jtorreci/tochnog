@@ -13,7 +13,8 @@ The target value is defined by one of:
 - `control_reset_value_dof` + `control_reset_value_dof_diagram` — a value
   taken from another dof via a table (linear interpolation).
 - `control_reset_value_linear` / `_exponent` / `_power` / `_square_root` /
-  `_logarithmic` / `_logarithmic_second` / `_multi_linear` — a value that
+  `_logarithmic_first` (also `_logarithmic`) / `_logarithmic_second` /
+  `_multi_linear` — a value that
   depends on the SPATIAL coordinates of the node (see below).
 
 The method is set by `control_reset_value_method`:
@@ -57,8 +58,8 @@ coefficients follow the same ordering as the space dimensions (1D: only
 | `_linear ax ay az` | `ax x + ay y + az z` | 1 |
 | `_power ax bx ay by az bz` | `ax x^bx + ay y^by + az z^bz` | 2 |
 | `_square_root ax bx cx ...` | `ax sqrt(bx x + cx x^2)` | 3 |
-| `_exponent ax bx cx dx ex ...` | `ax e^(bx + cx x dx + ex x)` | 5 |
-| `_logarithmic ax bx cx dx ex ...` | `ax ln(bx + cx x dx + ex x)` | 5 |
+| `_exponent ax bx cx dx ex ...` | `ax e^((bx + cx x) / (dx + ex x))`; error when `dx + ex x` = 0 | 5 |
+| `_logarithmic_first` (alias `_logarithmic`) `ax bx cx dx ex ...` | `ax ln((bx + cx x) / (dx + ex x))`; error when the argument is not positive | 5 |
 | `_logarithmic_second ax bx cx dx ex fx gx ...` | `(ax+bx) e^(cx ln(dx (x+ex)/fx)) + gx` | 7 |
 | `_multi_linear z0 value0 z1 value1 ...` | multilinear table vs the vertical coordinate (1D: x, 2D: y, 3D: z) | pairs |
 
@@ -83,3 +84,14 @@ control_reset_value_method       10  -use
 
 For vertical stress -100 the void ratio is reset to 0.4, for -200 to
 0.38, etc. (linear interpolation between points).
+
+## Differences with the Professional version
+
+- `_exponent` and `_logarithmic_first` equal the Professional 02-08-2026
+  (tests `control_reset_value_exponent1`, `_logarithmic_first1` and their
+  `_error1` inputs). Before 2026-11-02 the GNU evaluated `b + c x d + e x`
+  instead of the quotient of the manual.
+- A reset at an index that also has a `control_timestep`: see
+  [control_reset_dof_scoping](control_reset_dof_scoping.md) (DIVERGENCES
+  RESET-TS).
+

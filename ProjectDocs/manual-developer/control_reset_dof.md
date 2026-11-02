@@ -39,10 +39,16 @@
 
 ## Pendiente
 
-- Only `_value_constant`, `_value_dof` (+`_diagram`) and `_value_method`
-  are implemented. The other `control_reset_value_*` distributions
-  (exponent, linear, logarithmic, power, square root, multi_linear) are
-  not.
+- The spatial distributions (`_linear`, `_exponent`, `_power`,
+  `_square_root`, `_logarithmic` / `_logarithmic_first`,
+  `_logarithmic_second`, `_multi_linear`) are evaluated in `data()`
+  (`data.cc`, `spatial_data[]` loop). `_exponent` and `_logarithmic`
+  use the manual quotient `(b + c x)/(d + e x)` since F5 W1 U2
+  (2026-11-02; before: `b + c x d + e x`, a transcription error), with
+  the Professional errors for a zero denominator / a non-positive ln
+  argument. `control_reset_value_logarithmic_first` (2026 manual name) is
+  a `db_number()` alias of `CONTROL_RESET_VALUE_LOGARITHMIC`.
+  `_logarithmic_second` keeps `|...|` inside its ln (not measured).
 - Timing: the reset is gated per index (see
   `control_reset_dof_scoping.md`). A reset at a non-timestep index fires
   once, at its own control step; a reset whose index also carries a

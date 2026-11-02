@@ -1224,27 +1224,46 @@ void data( long int task, double dtime, double time_current )
                     }
                   }
                   else if ( spatial_data[sdat]==CONTROL_RESET_VALUE_EXPONENT ) {
-                    // ax e^(bx + cx x dx + ex x) (5 coefs per dim)
+                    // control_reset_value_exponent (manual Professional
+                    // 6.360): ax e^( (bx + cx x) / (dx + ex x) ) per dim
+                    // (5 coefs per dim); a zero denominator is an error, as
+                    // in the Professional 02-08-2026 (the GNU evaluated
+                    // e^(b + c x d + e x) before F5 W1 U2)
                     for ( idim=0; idim<ndim; idim++ ) {
                       double a = reset_value_diagram[5*idim+0];
                       double b = reset_value_diagram[5*idim+1];
                       double c = reset_value_diagram[5*idim+2];
                       double d = reset_value_diagram[5*idim+3];
                       double e = reset_value_diagram[5*idim+4];
-                      val += a * exp( b + c * coords[idim] * d +
-                        e * coords[idim] );
+                      double den = d + e * coords[idim];
+                      if ( den==0. ) {
+                        pri( "Error, divide by zero detected for "
+                          "control_reset_value_exponent", ireset );
+                        exit(TN_EXIT_STATUS);
+                      }
+                      val += a * exp( ( b + c * coords[idim] ) / den );
                     }
                   }
                   else if ( spatial_data[sdat]==CONTROL_RESET_VALUE_LOGARITHMIC ) {
-                    // ax ln( bx + cx x dx + ex x ) (5 coefs per dim)
+                    // control_reset_value_logarithmic_first (manual
+                    // Professional 6.362): ax ln( (bx + cx x) / (dx + ex x) )
+                    // per dim (5 coefs per dim); a non-positive argument is
+                    // an error, as in the Professional 02-08-2026 (the GNU
+                    // evaluated ln|b + c x d + e x| before F5 W1 U2)
                     for ( idim=0; idim<ndim; idim++ ) {
                       double a = reset_value_diagram[5*idim+0];
                       double b = reset_value_diagram[5*idim+1];
                       double c = reset_value_diagram[5*idim+2];
                       double d = reset_value_diagram[5*idim+3];
                       double e = reset_value_diagram[5*idim+4];
-                      val += a * log( scalar_dabs( b + c * coords[idim] *
-                        d + e * coords[idim] ) );
+                      double num = b + c * coords[idim];
+                      double den = d + e * coords[idim];
+                      if ( den==0. || num/den<=0. ) {
+                        pri( "Error, non-positive ln argument detected for "
+                          "control_reset_value_logarithmic_first", ireset );
+                        exit(TN_EXIT_STATUS);
+                      }
+                      val += a * log( num / den );
                     }
                   }
                   else if ( spatial_data[sdat]==CONTROL_RESET_VALUE_LOGARITHMIC_SECOND ) {

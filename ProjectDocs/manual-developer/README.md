@@ -28,6 +28,7 @@ page lists its own in "Differences with the Professional version".
 - [check_memory](check_memory.md) — report peak memory usage.
 - [check_memory_usage](check_memory_usage.md) — record peak memory usage result.
 - [check_data](check_data.md) — verify the database integrity (missing required items).
+- [control_check_data](control_check_data.md) — record `CONTROL_CHECK_DATA`, `check_data_integrity()` at the control index entry in `top()` (F5).
 - [check_error](check_error.md) — suppress "Error" messages.
 - [check_warning](check_warning.md) — suppress "Warning" messages.
 
@@ -315,6 +316,9 @@ page lists its own in "Differences with the Professional version".
 - [tochnog_version](tochnog_version.md) — the record PUT at top() init parsed from __DATE__.
 - [volume_factor_x](volume_factor_x.md) — volume.cc piecewise factor at the IP x; the right-of-last-x factor-1 guard; odd-length validation.
 - [zip](zip.md) — exit_tn() after targets/before db_close; the nullglob trap (per-file existence test); isolated-directory testing.
+- [control_zip](control_zip.md) — record `CONTROL_ZIP`, `zip_output_files()` (miscel.cc) at the end of a control index (F5).
+- [message](message.md) — record `MESSAGE` + `MESSAGE` environment symbol, introduction printed in `top()` (F5).
+- [print_data_name](print_data_name.md) — record `PRINT_DATA_NAME`, `tochnog_data_name.txt` from `db_name()` (F5).
 
 ## Sprint 13 lote 1 — soporte Winkler distribuido
 

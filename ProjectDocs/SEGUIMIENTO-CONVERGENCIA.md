@@ -665,9 +665,9 @@ marcado `PENDIENTE` puede estar cubierto en el GNU bajo otro nombre:
 
 - [x] `control_change_dataitem_apply` — implementada (commit `bdcdeaf`, 2026-08-13)
 
-### control_check (0/1)
+### control_check (1/1)
 
-- [ ] `control_check_data` — PENDIENTE
+- [x] `control_check_data` — implementada (F5 W1 U2, 2026-11-02)
 
 ### control_contact (1/1)
 
@@ -964,9 +964,9 @@ marcado `PENDIENTE` puede estar cubierto en el GNU bajo otro nombre:
 - [x] `control_reset_value_constant` — implementada (commit `b6eaee4`, 2026-08-13)
 - [x] `control_reset_value_dof` — implementada (commit `b6eaee4`, 2026-08-13)
 - [x] `control_reset_value_dof_diagram` — implementada (commit `b6eaee4`, 2026-08-13)
-- [x] `control_reset_value_exponent` — implementada (distribución espacial exponencial; validada con `reset_value_linear`)
+- [x] `control_reset_value_exponent` — implementada (distribución espacial exponencial); fórmula corregida al cociente del manual `ax e^((bx+cx x)/(dx+ex x))` = Professional (F5 W1 U2, 2026-11-02, test `control_reset_value_exponent1`)
 - [x] `control_reset_value_linear` — implementada (distribución espacial lineal `ax x + ay y + az z`; validada con `reset_value_linear`)
-- [x] `control_reset_value_logarithmic_` — implementada (distribución espacial logarítmica)
+- [x] `control_reset_value_logarithmic_first` — implementada como `control_reset_value_logarithmic` (alias del nombre 2026); fórmula corregida al cociente del manual `ax ln((bx+cx x)/(dx+ex x))` = Professional (F5 W1 U2, 2026-11-02, test `control_reset_value_logarithmic_first1`)
 - [x] `control_reset_value_logarithmic_second` — implementada (distribución espacial logarítmica de segundo tipo)
 - [x] `control_reset_value_method` — implementada (commit `b6eaee4`, 2026-08-13)
 - [x] `control_reset_value_multi_linear` — implementada (tabla multilineal vs coordenada vertical)
@@ -1846,9 +1846,9 @@ Nota: `group_interface_ground` del checklist anterior NUNCA existió (artefacto 
 - [ ] `mesh_interface_triangle_coordinates` — PENDIENTE
 - [ ] `mesh_interface_triangle_element_group` — PENDIENTE
 
-### message (0/1)
+### message (1/1)
 
-- [ ] `message` — PENDIENTE
+- [x] `message` — implementada (F5 W1 U2, 2026-11-02)
 
 ### mpc (6/17)
 
@@ -2039,9 +2039,9 @@ Nota: `group_interface_ground` del checklist anterior NUNCA existió (artefacto 
 
 - [x] `print_control` — presente en el GNU
 
-### print_data (0/1)
+### print_data (1/1)
 
-- [ ] `print_data_name` — PENDIENTE
+- [x] `print_data_name` — implementada (F5 W1 U2, 2026-11-02)
 
 ### print_database (0/1)
 
@@ -2255,7 +2255,7 @@ Nota: `group_interface_ground` del checklist anterior NUNCA existió (artefacto 
 - [x] `wave_fscalar` — presente en el GNU
 - [x] `wave_scalar` — presente en el GNU
 
-### zip (1/1)
+### zip (2/2)
 
 - [x] `zip` — Sprint 12 lote 3 (-yes gzipea *flavia*/*msh/vtk*/*.plt/*.dbs al final del cálculo en exit_tn, tras los targets y antes de db_close; test en directorio aislado)
 
@@ -2357,6 +2357,7 @@ y avance mejor.
 **Verificación**: suite 16/16 OK; corpus Professional 77→81 PASS (21.2%→22.3%): interface14 rc=0 y interface15 rc=0 con targets EXACTOS (MC + elástico tangencial).
 
 **Gap documentado**: interface1/8 (y otros con `solver -matrix_pardiso` + nodos coincidentes espesor-0) no convergen con el Bi-CG del GNU — requieren solver directo (PARDISO/SuperLU). El GNU 2014 tiene so_suplu.c sin compilar. Este es el siguiente bloqueo grande para la familia interface_*.
+- [x] `control_zip` — implementada (F5 W1 U2, 2026-11-02)
 
 ### Refactor por-pares Lobatto + fix fallback pardiso (bf74f28, 40d640d)
 
