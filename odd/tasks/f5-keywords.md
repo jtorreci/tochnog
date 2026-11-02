@@ -238,3 +238,9 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   element_interface_intpnt_{direction,gap_status} (manual; Pro writes element_interface_direction only);
   V4c beam family (group_beam_direction_z(_reference_point), element_beam_direction_z,
   element_beam_force_moment).
+- 2026-11-02 V4b committed `71adae7` (delegated writer, context backstop): element_intpnt_{h,iso_coord,method,npoint}
+  via element_intpnt_set (polynom.cc, step_start) + pol() thread-local method/iso outputs; Pro-equal for bar2/3,
+  quad4/9, tria3/6, hex8, tet4/10, 5 interface shapes; new class B rows INTPNT-H-LENGTH, TET4-MAX-ORDER (tet4
+  -maximal points 3/4 swapped vs Pro: reorder needs an owner decision). build_safe 515 OK / 0 FALLO, audit 0;
+  parent spot check element_intpnt_quad4_1 = Pro. Independent verifier (Risk item 3: pol(), bounda(),
+  mesh_boundary_set shared code) deferred to one run at the end of T2 covering V3, V4a, V4b.
