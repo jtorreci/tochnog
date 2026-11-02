@@ -84,6 +84,13 @@ missing 320 = 63 GiD (discarded) + **257** pending. Differences with the
 list: `ProjectDocs/keyword-gap-2026-11-01.txt` (supersedes the 2026-09-26
 list for F5).
 
+Update 2026-11-02 (end of F5 wave W1, `c135eeb`): the 2026-11-01 list
+probed again on the clean build: 34 of the 320 missing names are now
+accepted (the W1 switches and control records, F5 T1 U1-U6); accepted
+858 + 6 literals, missing **286** = 63 GiD (discarded) + **223** pending.
+`control_slide_damping_apply` stays missing (moved to T5 with
+`slide_damping`).
+
 ## Gap by family
 
 | Family | Missing | Notes |

@@ -160,4 +160,6 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   Independent verifier (item 3, input_runtime refactor): PASS, 343-input differential identical
   (C91 shift and one concurrency flake), 13 runtime-file probes identical, ASan clean. Commit
   97c3e47. T1 closed. Next: T2 W2 output records (69).
+- 2026-11-02 S5 refresh after W1: probe on the c135eeb objects: 34/320 now accepted, missing 286 =
+  63 GiD + 223 (KEYWORD-GAP-REPORT update).
 
