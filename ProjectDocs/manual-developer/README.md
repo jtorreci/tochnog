@@ -50,7 +50,7 @@ page lists its own in "Differences with the Professional version".
 - [strain_settlement_parameters](strain_settlement_parameters.md) — settlement creep strain (materi.cc).
 - [contact_apply](contact_apply.md) — contact algorithm records (contact.cc).
 - [contact_target_geometry](contact_target_geometry.md) — read-only dual lookup `contact_geometry_get()` in contact.cc (no alias PUT in the parallel loop; every index; K05/C5).
-- [contact_target_element_group](contact_target_element_group.md) — `area.cc` `contact_node_boundary_set()` from `iteration_start()` (node_boundary of unshared sides; K05).
+- [contact_target_element_group](contact_target_element_group.md) — `area.cc` `mesh_boundary_set()` (was `contact_node_boundary_set()`) from `iteration_start()` (node_boundary of unshared sides; K05).
 - [control_print_history_factor](control_print_history_factor.md) — multiply history output.
 - [control_print_history_smooth](control_print_history_smooth.md) — moving-average smoothing of history output.
 - [control_print_dof](control_print_dof.md) — print primary dofs with coordinates to plain ASCII files.
@@ -427,6 +427,8 @@ page lists its own in "Differences with the Professional version".
 - [element_dof_initial](element_dof_initial.md) — registro ELEMENT_DOF_INITIAL + marker ELEMENT_DOF_INITIAL_APPLIED (version_all=1) escrito por step_close tras converger el paso de nacimiento; sustitucion del old dof en la inercia lumped de general(); verificado vs Pro (phase1 + probe 2 pasos).
 - [geometry_node_type](geometry_node_type.md) — registros por-geometria + overrides en geometry() por miembro del set (re-lectura de coords + flag project_inside en las 8 ramas); verificado vs Pro (node_type_1, validation_14).
 - [node_geometry_present](node_geometry_present.md) — fill en step_start (coords del paso previo, calibrado con barrido temporal vs Pro) + registro NODE_GEOMETRY_PRESENT version_all; diana target (1,1)=3.
+- [element_geometry_present](element_geometry_present.md) — `geometry.cc` `element_geometry_present_calculate()` from `step_start()` (element present when all its nodes are); records ELEMENT_GEOMETRY_PRESENT, PRINT_ELEMENT_GEOMETRY_PRESENT(_NODE_TYPE) (F5 T2 V3).
+- [mesh_boundary](mesh_boundary.md) — `area.cc` `mesh_boundary_set()` from `iteration_start()` (node_boundary + element_boundary of the free sides); MESH_BOUNDARY, ELEMENT_BOUNDARY; `mesh_has_changed()` deletes element_boundary (F5 T2 V3).
 - [print_database_calculation](print_database_calculation.md) — gates de exit_tn (miscel.cc) del volcado .dbs/.flavia final.
 - [post_apply](post_apply.md) — records `POST_APPLY` / `CONTROL_POST_APPLY`; gate in `step_close()` (`top.cc`); stale flags `post_stale` / `post_element_force_stale` and the end-of-run re-evaluation in `exit_tn()` (`miscel.cc`) (F5).
 - [control_post_apply](control_post_apply.md) — see post_apply (F5).

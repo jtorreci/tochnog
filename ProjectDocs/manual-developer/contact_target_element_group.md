@@ -2,7 +2,8 @@
 
 ## Where
 
-- `area.cc`, `void contact_node_boundary_set( void )` (after
+- `area.cc`, `void mesh_boundary_set( void )` (renamed from
+  `contact_node_boundary_set` in F5 T2 V3, see `mesh_boundary.md`; after
   `element_normal_set`): generates `NODE_BOUNDARY` (`-yes`) for the nodes
   of the element sides that no other side-bearing element shares. Runs
   only when `CONTACT_TARGET_ELEMENT_GROUP 0` is active and no

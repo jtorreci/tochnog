@@ -2266,30 +2266,45 @@ void element_normal_set( void )
   if ( swit ) pri( "Out routine ELEMENT_NORMAL_SET" );
 }
 
-void contact_node_boundary_set( void )
+void mesh_boundary_set( void )
 
-  // node_boundary (manual Professional 6.875) for the element-target
-  // contact (contact_target_element_group, 6.105): parallel_contact only
-  // accepts a target side whose nodes are all on the mesh boundary. The
-  // GNU 2014 inputs give node_boundary by hand; the Professional computes
-  // it (a node of a side that no other element shares). Generated here,
-  // outside the parallel loops (iteration_start, top.cc), only when
-  // contact_target_element_group is given and no node_boundary record
-  // exists, so hand-written node_boundary input keeps its meaning. A mesh
-  // change deletes node_boundary (mesh_has_changed), and the next
-  // iteration regenerates it for the new mesh.
+  // node_boundary (manual Professional 6.877) and element_boundary
+  // (6.417): the mesh boundary is the set of element sides that no other
+  // side-bearing element shares; node_boundary -yes goes to the nodes of
+  // those sides, element_boundary -yes to the elements that own one.
+  // Generated here, outside the parallel loops (iteration_start, top.cc):
+  // - with mesh_boundary -yes (6.816, default -no) both records, when no
+  //   element_boundary record exists yet. The Professional 02-08-2026
+  //   also fills them without mesh_boundary and marks every element
+  //   (DIVERGENCES MESH-BOUNDARY-DEFAULT / ELEMENT-BOUNDARY-ALL).
+  // - for the element-target contact (contact_target_element_group,
+  //   6.105) node_boundary only, when no node_boundary record exists:
+  //   parallel_contact only accepts a target side whose nodes are all on
+  //   the mesh boundary, and hand-written node_boundary input (the GNU
+  //   2014 inputs) keeps its meaning.
+  // A mesh change deletes both records (mesh_has_changed), and the next
+  // iteration regenerates them for the new mesh.
 
 {
   long int element=0, other=0, max_element=0, max_node=0, max=0, length=0,
     other_length=0, inol=0, inod=0, iside=0, nside=0, nnol_side=0, kind=0,
-    a=0, j=0, shared=0, ldum=0, total=0, node_boundary=-YES, el[1+MNOL],
+    a=0, j=0, shared=0, ldum=0, total=0, node_boundary=-YES,
+    element_boundary=-YES, mesh_boundary=-NO, set_elements=0, el[1+MNOL],
     *sides=NULL, *other_el=NULL, *count=NULL, *list=NULL, *fill=NULL,
     *on_boundary=NULL;
   double ddum[1];
 
-  if ( !db_active_index( CONTACT_TARGET_ELEMENT_GROUP, 0, VERSION_NORMAL ) )
-    return;
-  if ( db_max_index( NODE_BOUNDARY, max, VERSION_NORMAL, GET )>=0 ) return;
+  db( MESH_BOUNDARY, 0, &mesh_boundary, ddum, ldum, VERSION_NORMAL,
+    GET_IF_EXISTS );
+  if ( mesh_boundary==-YES &&
+       db_max_index( ELEMENT_BOUNDARY, max, VERSION_NORMAL, GET )<0 )
+    set_elements = 1;
+  else {
+    if ( !db_active_index( CONTACT_TARGET_ELEMENT_GROUP, 0,
+        VERSION_NORMAL ) )
+      return;
+    if ( db_max_index( NODE_BOUNDARY, max, VERSION_NORMAL, GET )>=0 ) return;
+  }
   db_max_index( NODE, max_node, VERSION_NORMAL, GET );
   db_max_index( ELEMENT, max_element, VERSION_NORMAL, GET );
   if ( max_node<0 || max_element<0 ) return;
@@ -2343,6 +2358,11 @@ void contact_node_boundary_set( void )
       if ( shared ) continue;
       for ( a=0; a<nnol_side; a++ )
         on_boundary[el[1+sides[iside*nnol_side+a]]] = 1;
+      if ( set_elements ) {
+        length = 1;
+        db( ELEMENT_BOUNDARY, element, &element_boundary, ddum, length,
+          VERSION_NORMAL, PUT );
+      }
     }
   }
   for ( inod=0; inod<=max_node; inod++ ) {

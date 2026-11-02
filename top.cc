@@ -1094,6 +1094,9 @@ void step_start( long int task, long int options_solver[], double dtime, double 
   // when the node coordinates still hold the converged state of the
   // previous step (measured on the Professional: the last step wins).
   node_geometry_present_calculate();
+    // element_geometry_present (6.427): same moment, an element is
+    // present when all its nodes are
+  element_geometry_present_calculate();
 
   input_runtime();
 
@@ -1506,9 +1509,10 @@ void iteration_start( void )
     // element_normal (6.445): generated here, outside the parallel
     // element loop, when a group needs it and the record is absent
   element_normal_set();
-    // node_boundary for the element-target contact (6.105/6.875):
-    // generated here, outside the parallel contact loop
-  contact_node_boundary_set();
+    // node_boundary / element_boundary (mesh_boundary 6.816, and
+    // node_boundary for the element-target contact 6.105): generated
+    // here, outside the parallel loops
+  mesh_boundary_set();
 }
 
 // control_print_frequency gate (manual Professional 6.291/6.292).

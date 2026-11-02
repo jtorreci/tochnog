@@ -967,3 +967,77 @@ void node_geometry_present_calculate( void )
   }
   delete[] present_list;
 }
+
+void element_geometry_present_calculate( void )
+
+{
+  // element_geometry_present (manual Professional 6.427): for every
+  // element the list of geometries in which the element is present,
+  // stored as (geometry name value, geometry index) pairs like
+  // node_geometry_present. Measured on the Professional 02-08-2026: an
+  // element is present when ALL its nodes are in the geometry (a line or
+  // point through some of its nodes gives no entry). Filled once per step
+  // (hook in step_start, top.cc) when print_element_geometry_present is
+  // -yes, overwriting the list of the previous step.
+  // print_element_geometry_present_node_type (6.976) selects the node
+  // coordinates of the check (-node_start_refined by default); the
+  // per-geometry geometry_node_type records (6.540) override it inside
+  // geometry().
+  long int element=0, igeom=0, ldum=0, ient=0, nent=0, inol=0, nnol=0,
+    entity=0, found=0, node_type=NODE_START_REFINED, print_egp=-NO,
+    print_egp_node_type=0, nvalue=0, max_geom=0, max_element=0,
+    el[1+MNOL];
+  const long int geometry_entities[] = {
+    GEOMETRY_BRICK, GEOMETRY_CIRCLE, GEOMETRY_CIRCLE_SEGMENT,
+    GEOMETRY_CIRCLE_SMALLSEGMENT, GEOMETRY_CYLINDER, GEOMETRY_CYLINDER_SEGMENT,
+    GEOMETRY_ELLIPSE, GEOMETRY_LINE, GEOMETRY_LIST, GEOMETRY_POINT,
+    GEOMETRY_POLYNOMIAL, GEOMETRY_QUADRILATERAL, GEOMETRY_SPHERE,
+    GEOMETRY_SPHERE_SEGMENT, GEOMETRY_TRIANGLE };
+  double rdum=0., ddum[MDIM];
+  long int geometry_entity[2];
+  long int *present_list=NULL;
+
+  db( PRINT_ELEMENT_GEOMETRY_PRESENT, 0, &print_egp, ddum, ldum,
+    VERSION_NORMAL, GET_IF_EXISTS );
+  if ( print_egp!=-YES ) return;
+
+  db( PRINT_ELEMENT_GEOMETRY_PRESENT_NODE_TYPE, 0, &print_egp_node_type,
+    ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+  if ( print_egp_node_type!=0 ) node_type = -print_egp_node_type;
+
+  nent = sizeof(geometry_entities)/sizeof(geometry_entities[0]);
+  present_list = get_new_int( DATA_ITEM_SIZE );
+  db_max_index( ELEMENT, max_element, VERSION_NORMAL, GET );
+
+  for ( element=0; element<=max_element; element++ ) {
+    if ( !db_active_index( ELEMENT, element, VERSION_NORMAL ) ) continue;
+    db( ELEMENT, element, el, ddum, nnol, VERSION_NORMAL, GET );
+    nvalue = 0;
+    for ( ient=0; ient<nent; ient++ ) {
+      entity = geometry_entities[ient];
+      db_max_index( entity, max_geom, VERSION_NORMAL, GET );
+      if ( max_geom<0 ) continue;
+      for ( igeom=0; igeom<=max_geom; igeom++ ) {
+        if ( !db_active_index( entity, igeom, VERSION_NORMAL ) ) continue;
+        geometry_entity[0] = -entity;
+        geometry_entity[1] = igeom;
+        found = 1;
+        for ( inol=1; inol<nnol && found; inol++ )
+          geometry( el[inol], ddum, geometry_entity, found, rdum, ddum, rdum,
+            ddum, node_type, PROJECT_EXACT, VERSION_NORMAL );
+        if ( found ) {
+          if ( nvalue+2>DATA_ITEM_SIZE )
+            db_error( ELEMENT_GEOMETRY_PRESENT, element );
+          present_list[nvalue++] = -entity;
+          present_list[nvalue++] = igeom;
+        }
+      }
+    }
+    if ( nvalue>0 )
+      db( ELEMENT_GEOMETRY_PRESENT, element, present_list, ddum, nvalue,
+        VERSION_NORMAL, PUT );
+    else
+      db_delete_index( ELEMENT_GEOMETRY_PRESENT, element, VERSION_NORMAL );
+  }
+  delete[] present_list;
+}

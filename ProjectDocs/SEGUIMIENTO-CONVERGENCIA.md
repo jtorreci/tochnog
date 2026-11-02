@@ -413,6 +413,7 @@ B conocida/pendiente, C extensión/dialecto GNU, D sospechosa del Pro).
 | Professional `validation_1` steady channel flow drift (`convection_apply -yes`, `inertia_apply -no`, `group_materi_stokes -no`: post_point velx -0.0391 / -0.0179 / +0.0034 at t = 1 / 2 / 3, dt-converged) | **Not followed, Professional-suspect** (owner decision 2026-10-13, class D since 2026-10-18; F4 T6f C72; DIVERGENCES C72-V1). Without inertia the problem is steady; the GNU settles at -0.0570 .. -0.0572 (inside the GAMM range -0.066 .. -0.018), guard tests `validation1_steady1`, `stokes_group2`. The Professional drift is convection-gated, mechanism not identified. |
 | Manual default `-yes` of `print_tecplot_calculation` (6.998) and `print_vtk_calculation` (6.999) | **Not followed: GNU = Professional** (owner decision 2026-11-02, F5 W2 V2: "vamos con pro, y lo dejamos documentado"; DIVERGENCES PRINT-CALC-DEFAULT, class A). The Professional 02-08-2026 writes the end-of-run `.vtk` / `.plt` only with `-yes`; the GNU default is `-no`, so a run without the records writes no extra file. Documented in [user/print_vtk_calculation](manual-user/print_vtk_calculation.md). |
 | Manual 6.339 names of `control_print_vtk -separate_index` / `-separate_sequential` (`excavation100.vtk`, `excavation0.vtk`) | **Not followed: GNU = Professional** (owner decision 2026-11-02, C99: "el de Pro"; DIVERGENCES VTK-TECPLOT-NAMES, class A). The Professional 02-08-2026 writes `excavation_100.vtk` (3-digit index) and `excavation_0000.vtk` (4-digit counter); tecplot 4 digits for both. Mentioned in user/control_print_vtk and user/control_print_tecplot "Differences". |
+| Professional default of `mesh_boundary` (records filled in every run) and `element_boundary -yes` on every element | **Not followed: GNU = manual** (owner decision 2026-11-02, "como el manual. Documentamos la divergencia"; DIVERGENCES MESH-BOUNDARY-DEFAULT class A, ELEMENT-BOUNDARY-ALL class D). Default `-no`; `element_boundary` only on the elements with a free side. Mentioned in user/mesh_boundary "Differences". |
 | Professional `print_vtk_group -no` ignored (the `element_group` cell field is always written) | **Not followed, Professional-suspect** (F5 W2 V2, 2026-11-02, rule S2: the manual decides; DIVERGENCES VTK-GROUP-NO, class D). Manual 6.1001: "If switch is set to -no the element groups are not plotted in vtk as result." The GNU writes no `element_group` field with `-no`. Documented in [user/print_vtk_group](manual-user/print_vtk_group.md). |
 
 ## Equivalencias de nomenclatura Professional vs GNU
@@ -1087,9 +1088,9 @@ marcado `PENDIENTE` puede estar cubierto en el GNU bajo otro nombre:
 - [ ] `element_beam_direction_z` — PENDIENTE
 - [ ] `element_beam_force_moment` — PENDIENTE
 
-### element_boundary (0/1)
+### element_boundary (1/1)
 
-- [ ] `element_boundary` — PENDIENTE
+- [x] `element_boundary` — implementada (F5 T2 V3, 2026-11-02; filled with `mesh_boundary -yes` for the elements with a free side = manual; the Professional marks every element: ELEMENT-BOUNDARY-ALL, class D)
 
 ### element_contact (3/3)
 
@@ -1107,10 +1108,10 @@ marcado `PENDIENTE` puede estar cubierto en el GNU bajo otro nombre:
 
 - [x] `element_empty` — presente en el GNU
 
-### element_geometry (0/2)
+### element_geometry (1/2)
 
 - [ ] `element_geometry` — PENDIENTE
-- [ ] `element_geometry_present` — PENDIENTE
+- [x] `element_geometry_present` — implementada (F5 T2 V3, 2026-11-02; element present when all its nodes are = Professional)
 
 ### element_group (1/2)
 
@@ -1820,7 +1821,7 @@ Nota: `group_interface_ground` del checklist anterior NUNCA existió (artefacto 
 - [x] `mesh_activate_gravity_time` — implementada (activación gradual de la gravedad; validada con `mesh_act_grav`); indexed, bottom to top, method 2 default = Pro `mesh_activate1` (F4 T8 `7aeac4a`, 2026-10-10)
 - [x] `mesh_activate_gravity_time_initial` — implementada (time of birth)
 - [x] `mesh_activate_gravity_time_strain_settlement` — implementada (registrado)
-- [ ] `mesh_boundary` — PENDIENTE
+- [x] `mesh_boundary` — implementada (F5 T2 V3, 2026-11-02; default `-no` = manual; the Professional fills the records always: MESH-BOUNDARY-DEFAULT, class A)
 - [ ] `mesh_correct` — PENDIENTE
 - [ ] `mesh_delete_geometry_moving` — PENDIENTE
 - [x] `mesh_element_group_apply` — implementada (F5 W1 U5, 2026-11-02; según el manual (MESH-EG-APPLY))
@@ -2068,10 +2069,10 @@ Nota: `group_interface_ground` del checklist anterior NUNCA existió (artefacto 
 
 - [ ] `print_de` — PENDIENTE
 
-### print_element (0/2)
+### print_element (2/2)
 
-- [ ] `print_element_geometry_present` — PENDIENTE
-- [ ] `print_element_geometry_present_node_type` — PENDIENTE
+- [x] `print_element_geometry_present` — implementada (F5 T2 V3, 2026-11-02)
+- [x] `print_element_geometry_present_node_type` — implementada (F5 T2 V3, 2026-11-02; `-plus_displacement` accepted as the manual says, the Professional rejects it: EGP-PLUS-DISP)
 
 ### print_failure (1/1)
 

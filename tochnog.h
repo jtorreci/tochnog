@@ -1715,6 +1715,16 @@ enum {
   VOLUMETRIC,
   LAMBDA,
   ONLY,
+  // mesh_boundary + element_boundary (manual Professional 6.816/6.417)
+  // and print_element_geometry_present (+ _node_type) with its print
+  // record element_geometry_present (6.975/6.976/6.427) (F5 T2 V3).
+  // Enum append keeps existing values stable (tochnog.h and
+  // tochnog-mod.h stay in sync).
+  MESH_BOUNDARY,
+  ELEMENT_BOUNDARY,
+  PRINT_ELEMENT_GEOMETRY_PRESENT,
+  PRINT_ELEMENT_GEOMETRY_PRESENT_NODE_TYPE,
+  ELEMENT_GEOMETRY_PRESENT,
   LAST_DUMMY }; // keep LAST_DUMMY always the last one
 
 #define MDAT LAST_DUMMY+DATA_ITEM_SIZE  // reserve space for unknowns
@@ -1909,7 +1919,7 @@ void      control_element_group_apply( long int icontrol );
 void      area_element_group_sequence( );
 void      area_node_dataitem( void );
 void      element_normal_set( void );
-void      contact_node_boundary_set( void );
+void      mesh_boundary_set( void );
 long int  element_normal_needed( void );
 long int  element_normal_automatic( long int gr );
 void      direct_normal_get( long int element, long int gr,
@@ -2098,6 +2108,7 @@ void      generate_interface_triangle( long int icontrol );
             double &penetration, double projection[],
             long int node_type, long int projection_type, long int version );
  void      node_geometry_present_calculate( void );
+ void      element_geometry_present_calculate( void );
 void      get_element_matrix_unknowns( long int element,
             long int element_matrix_unknowns[] );
 long int  get_group_data( long int idat, long int group, long int element,

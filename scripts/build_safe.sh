@@ -2399,6 +2399,51 @@ if grep -q "^control_print_vtk_node_method  0  -node_deformed_mesh" "$T2026/alia
 else
   check_fail "alias_names_2026_1" "an aliased record is missing from the .dbs"
 fi
+# F5 T2 V3: mesh_boundary / element_boundary / node_boundary and
+# print_element_geometry_present (Professional 02-08-2026 probes).
+run_ok "$T2026" mesh_boundary1
+mb_nodes="$(grep '^node_boundary ' "$T2026/mesh_boundary1.dbs" | awk '{print $2}' | paste -sd' ')"
+mb_elems="$(grep '^element_boundary ' "$T2026/mesh_boundary1.dbs" | awk '{print $2}' | paste -sd' ')"
+if [ "$mb_nodes" = "1 2 3 4 5 6 10 11 15 16 20 21 22 23 24 25" ] && \
+   [ "$mb_elems" = "1 2 3 4 5 8 9 12 13 14 15 16" ]; then
+  check_ok "mesh_boundary1 (16 ring nodes, 12 elements with a free side)"
+else
+  check_fail "mesh_boundary1" "node_boundary '$mb_nodes' / element_boundary '$mb_elems'"
+fi
+run_ok "$T2026" mesh_boundary_default1
+if ! grep -q "^node_boundary \|^element_boundary " "$T2026/mesh_boundary_default1.dbs"; then
+  check_ok "mesh_boundary_default1 (no boundary records by default)"
+else
+  check_fail "mesh_boundary_default1" "boundary records without mesh_boundary"
+fi
+for egp in element_geometry_present1 element_geometry_present_node_type1; do
+  run_ok "$T2026" "$egp"
+  if [ "$(grep -c '^element_geometry_present ' "$T2026/$egp.dbs")" = 1 ] && \
+     grep -q "^element_geometry_present  *1  *-geometry_quadrilateral  *7 *$" "$T2026/$egp.dbs"; then
+    check_ok "$egp (only element 1 in geometry_quadrilateral 7)"
+  else
+    check_fail "$egp" "element_geometry_present is not only 1 -geometry_quadrilateral 7"
+  fi
+done
+run_ok "$T2026" element_geometry_present_plus_displacement1
+if [ "$(grep -c '^element_geometry_present ' "$T2026/element_geometry_present_plus_displacement1.dbs")" = 1 ] && \
+   grep -q "^element_geometry_present  *1  *-geometry_quadrilateral  *7 *$" "$T2026/element_geometry_present_plus_displacement1.dbs"; then
+  check_ok "element_geometry_present_plus_displacement1 (displaced nodes inside)"
+else
+  check_fail "element_geometry_present_plus_displacement1" "element 1 not present with -plus_displacement"
+fi
+run_ok "$T2026" element_geometry_present_start1
+if ! grep -q "^element_geometry_present " "$T2026/element_geometry_present_start1.dbs"; then
+  check_ok "element_geometry_present_start1 (start coordinates outside)"
+else
+  check_fail "element_geometry_present_start1" "present with the start coordinates"
+fi
+run_ok "$T2026" element_geometry_present_partial1
+if ! grep -q "^element_geometry_present " "$T2026/element_geometry_present_partial1.dbs"; then
+  check_ok "element_geometry_present_partial1 (no element fully inside)"
+else
+  check_fail "element_geometry_present_partial1" "a partly covered element is present"
+fi
 # F5 W2 V2: global print defaults (print_*_calculation, print_gmsh_dummy /
 # _node_type, print_vtk_coord / _group / _node_type, print_frd_freecad /
 # _prepomax; Professional 02-08-2026 probes). Isolated runs: each test

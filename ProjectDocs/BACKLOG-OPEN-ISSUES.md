@@ -1484,12 +1484,15 @@ Original report:
   it and gives a non-physical result (single-column probe: the far nodes
   move). (2) `parallel_contact` accepts a target side when
   `number_of_side_boundary_nodes==ndim`: a hex8 side has 4 nodes, so hex8
-  targets are never detected (code reading, not measured on the Pro). (3) The
-  Professional writes `node_boundary`/`element_boundary` in every run
-  (also without `mesh_boundary`, against its manual 6.815 default -no);
-  the GNU generates node_boundary only for element-target contact and has
-  no `element_boundary` record.
-- **Severity**: **LOW**. **Effort**: **cheap** (1, 2) to **medium** (3).
+  targets are never detected (code reading, not measured on the Pro).
+- **(3) Resolved 2026-11-02 (F5 T2 V3)**: `mesh_boundary -yes` (6.816) now
+  fills `node_boundary` and `element_boundary` (`area.cc`
+  `mesh_boundary_set()`, renamed from `contact_node_boundary_set()`). The
+  Professional fills them in every run and marks every element: the GNU
+  keeps the manual (default -no, only elements with a free side), owner
+  decision 2026-11-02, DIVERGENCES MESH-BOUNDARY-DEFAULT (class A) and
+  ELEMENT-BOUNDARY-ALL (class D).
+- **Severity**: **LOW**. **Effort**: **cheap** (1, 2).
 ---
 
 ### C41. `mohr_coul_direct7` (Pro `other`): `-total_linear` with a velocity `mpc_node_number` tie (F3, 2026-10-07) — tie RESOLVED 2026-10-09 (F4 T2); residual open
@@ -3554,7 +3557,7 @@ Original report:
 | C37 | Pro `other` | planar GNU beam vs Pro 3D frame beam (`trubea2/3`, K17) — parked, design | MEDIUM | large |
 | C38 | Pro `other` | `control_support_edge_normal_stiffness_freeze` parse-only (support_edge_normal_3, 1e-9 effect) | LOW | cheap/medium |
 | C39 | Pro `other` | K17 residuals: `truss8` birth node resolved 2026-10-06 (death velocity reset open), `update2` -updated robustness, `truss13` truss_distribute_mpc, zero-force truss first iteration | LOW | cheap/large |
-| C40 | Pro `other` | element-target contact residuals after F2 T3b: no Pro check "target element has all nodes on the boundary", hex8 target sides never detected, node_boundary generated only for element-target contact | LOW | cheap/medium |
+| C40 | Pro `other` | element-target contact residuals after F2 T3b: no Pro check "target element has all nodes on the boundary", hex8 target sides never detected, (element_boundary / mesh_boundary resolved F5 T2 V3) | LOW | cheap |
 | C41 | Pro `other` | `mohr_coul_direct7`: `-total_linear` + velocity `mpc_node_number` tie — tie resolved 2026-10-09 (F4 T2); residual disy/sigzz difference | LOW | medium |
 | C42 | Pro `other` | quad4 nodal stress recovery: natural bilinear (GNU) vs physical linear least squares (Pro) — resolved 2026-10-12 (F4 T6f K21: `axisym2` sigzz 10759.2155 = Pro) | closed | - |
 | C43 | Pro `other` | memory hogs of the Bi-CG solver (`force11`, `large1`, `ground19`, `mesh_activate1`, `foundation_consolidation_settlement`): resolved 2026-10-09 (F4 T7 A dense n x n matrix, B lazy band retry, C macro per step); solver speed resolved 2026-10-10 (F4 T9: `-matrix_pardiso` -> SuperLU, CSR operator, recovery table); `foundation...` still Bi-CG bound | MEDIUM | cheap/medium |

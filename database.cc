@@ -1097,6 +1097,41 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   version_all[NODE_GEOMETRY_PRESENT] = 1;
   data_class[NODE_GEOMETRY_PRESENT] = NODE;
 
+  // print_element_geometry_present (6.975) + _node_type (6.976) and the
+  // per-element print record element_geometry_present (6.427): the
+  // geometries in which ALL nodes of the element are present (measured
+  // on the Professional 02-08-2026). Filled in step_start (top.cc).
+  strcpy(name[PRINT_ELEMENT_GEOMETRY_PRESENT],"print_element_geometry_present");
+  type[PRINT_ELEMENT_GEOMETRY_PRESENT] = INTEGER;
+  data_length[PRINT_ELEMENT_GEOMETRY_PRESENT] = 1;
+  no_index[PRINT_ELEMENT_GEOMETRY_PRESENT] = 1;
+
+  strcpy(name[PRINT_ELEMENT_GEOMETRY_PRESENT_NODE_TYPE],
+    "print_element_geometry_present_node_type");
+  type[PRINT_ELEMENT_GEOMETRY_PRESENT_NODE_TYPE] = INTEGER;
+  data_length[PRINT_ELEMENT_GEOMETRY_PRESENT_NODE_TYPE] = 1;
+  no_index[PRINT_ELEMENT_GEOMETRY_PRESENT_NODE_TYPE] = 1;
+
+  strcpy(name[ELEMENT_GEOMETRY_PRESENT],"element_geometry_present");
+  type[ELEMENT_GEOMETRY_PRESENT] = INTEGER;
+  data_length[ELEMENT_GEOMETRY_PRESENT] = DATA_ITEM_SIZE;
+  fixed_length[ELEMENT_GEOMETRY_PRESENT] = 0;
+  data_class[ELEMENT_GEOMETRY_PRESENT] = ELEMENT;
+
+  // mesh_boundary (6.816, default -no): fill node_boundary (6.877) and
+  // element_boundary (6.417) for the boundary of the mesh
+  // (mesh_boundary_set, area.cc).
+  strcpy(name[MESH_BOUNDARY],"mesh_boundary");
+  type[MESH_BOUNDARY] = INTEGER;
+  data_length[MESH_BOUNDARY] = 1;
+  no_index[MESH_BOUNDARY] = 1;
+
+  strcpy(name[ELEMENT_BOUNDARY],"element_boundary");
+  type[ELEMENT_BOUNDARY] = INTEGER;
+  data_length[ELEMENT_BOUNDARY] = 1;
+  data_class[ELEMENT_BOUNDARY] = ELEMENT;
+  data_required[ELEMENT_BOUNDARY] = ELEMENT;
+
   strcpy(name[CONTROL_CONTACT_APPLY],"control_contact_apply");
   type[CONTROL_CONTACT_APPLY] = INTEGER;
   data_length[CONTROL_CONTACT_APPLY] = 1;
@@ -6961,6 +6996,12 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   strcpy(name[SEPARATE_INDEX],"separate_index");
 
   strcpy(name[SEPARATE_SEQUENTIAL],"separate_sequential");
+
+  // -plus_displacement (manual 6.540 / 6.976 / 6.996): node coordinates
+  // plus nodal displacements in geometry_node_type and the *_geometry_
+  // present_node_type records; the enum existed (geometry()) but the word
+  // was never registered, so the parser rejected it (F5 T2 V3).
+  strcpy(name[PLUS_DISPLACEMENT],"plus_displacement");
 
   strcpy(name[SHELL],"shell");
 
