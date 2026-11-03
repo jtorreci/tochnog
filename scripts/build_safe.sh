@@ -2802,6 +2802,17 @@ run_ok "$T2026" global_element_dof_from_node_dof3
 beam_rec_check global_element_dof_from_node_dof3 node_dof 1 "0 0 0 0 1.314504061e-13 -2.220446049e-16 0 1.005168171e-13 0 6.883382753e-14"
 beam_rec_check global_element_dof_from_node_dof3 node_dof 3 "0 0 0 0 13.46153846 -1.602564103 0 5.769230769 0 5.769230769"
 beam_rec_check global_element_dof_from_node_dof3 node_dof 4 "0.01 -0.004166666667 0.01 -0.004166666667 11.05769231 2.243589744 0 0.1602564103 0 3.365384615"
+# F5 T2 V6: element_dof_initial_specific_number / _value (manual 6.423 /
+# 6.424); expected node_dof = Professional 02-08-2026 on the same inputs,
+# except specific3 (constant value_0: manual; the Professional gives NaN).
+for t in 1 2 3 4 5; do run_ok "$T2026" element_dof_initial_specific$t; done
+beam_rec_check element_dof_initial_specific1 node_dof 2 "0.95"
+beam_rec_check element_dof_initial_specific2 node_dof 2 "0.95"
+beam_rec_check element_dof_initial_specific3 node_dof 2 "0.7"
+beam_rec_check element_dof_initial_specific4 node_dof 2 "0.7"
+beam_rec_check element_dof_initial_specific5 node_dof 3 "0.9625"
+beam_rec_check element_dof_initial_specific5 node_dof 4 "1.0375"
+expected_error_ok "$T2026" element_dof_initial_specific_error1
 # C100: under the default -no, control_reset_dof writes the integration
 # points with the reset value at their coordinates (= Professional
 # 02-08-2026 element_intpnt_dof of the same inputs, run above).

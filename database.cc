@@ -961,6 +961,25 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   fixed_length[ELEMENT_DOF_INITIAL] = 0;
   data_class[ELEMENT_DOF_INITIAL] = ELEMENT;
 
+  // element_dof_initial_specific_number / _value (manual Professional
+  // 6.423 / 6.424): initial past value of ONE dof (the number is a dof
+  // label, e.g. -temp) as the linear field value_0 + grad . x, evaluated
+  // at the element nodes (Professional 02-08-2026 probes, F5 T2 V6).
+  // value_0 alone is a constant field; otherwise all ndim gradients.
+  // Same birth-step semantics as element_dof_initial, which wins when
+  // both are given (Professional).
+  strcpy(name[ELEMENT_DOF_INITIAL_SPECIFIC_NUMBER],"element_dof_initial_specific_number");
+  type[ELEMENT_DOF_INITIAL_SPECIFIC_NUMBER] = INTEGER;
+  data_length[ELEMENT_DOF_INITIAL_SPECIFIC_NUMBER] = 1;
+  fixed_length[ELEMENT_DOF_INITIAL_SPECIFIC_NUMBER] = 1;
+  data_class[ELEMENT_DOF_INITIAL_SPECIFIC_NUMBER] = ELEMENT;
+
+  strcpy(name[ELEMENT_DOF_INITIAL_SPECIFIC_VALUE],"element_dof_initial_specific_value");
+  type[ELEMENT_DOF_INITIAL_SPECIFIC_VALUE] = DOUBLE_PRECISION;
+  data_length[ELEMENT_DOF_INITIAL_SPECIFIC_VALUE] = 1+MDIM;
+  fixed_length[ELEMENT_DOF_INITIAL_SPECIFIC_VALUE] = 0;
+  data_class[ELEMENT_DOF_INITIAL_SPECIFIC_VALUE] = ELEMENT;
+
   // internal marker: set at the element's birth step so the initial
   // field is only used once (versioned like the element state records).
   strcpy(name[ELEMENT_DOF_INITIAL_APPLIED],"element_dof_initial_applied");

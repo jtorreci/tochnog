@@ -1,0 +1,23 @@
+(F5 T2 V6: initial field 0.8 x, two steps. Birth step: node 2 past 0.8,
+ T = 0.9; the second step integrates from the step-old 0.9 (the field is
+ applied only at the birth step), T = 0.95
+ (Professional 02-08-2026 probe f5/v6 g, same input).)
+echo -no
+number_of_space_dimensions 1
+condif_temperature
+end_initia
+inertia_apply -yes
+node 1  0
+node 2  1
+element 1  -bar2 1 2
+element_dof_initial_specific_number 1 -temp
+element_dof_initial_specific_value 1 0. 0.8
+bounda_dof   0  1 -temp
+bounda_time  0  1.
+group_type 0  -condif
+group_condif_density 0  1.0
+group_condif_capacity 0  2.
+group_condif_conductivity 0  1.
+control_timestep   0  1. 2.0
+control_print      0  -node_dof
+end_data

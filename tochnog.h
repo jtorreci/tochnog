@@ -1756,6 +1756,9 @@ enum {
   DOF_LIMIT,
   GLOBAL_NODE_DOF_EMPTY,
   GLOBAL_ELEMENT_DOF_FROM_NODE_DOF,
+  // F5 T2 V6 (manual Professional 6.423, 6.424)
+  ELEMENT_DOF_INITIAL_SPECIFIC_NUMBER,
+  ELEMENT_DOF_INITIAL_SPECIFIC_VALUE,
   LAST_DUMMY }; // keep LAST_DUMMY always the last one
 
 #define MDAT LAST_DUMMY+DATA_ITEM_SIZE  // reserve space for unknowns

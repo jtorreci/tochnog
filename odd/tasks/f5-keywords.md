@@ -87,7 +87,7 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
     the GNU per-integration-point storage to element_intpnt_dof and make element_dof the per-element
     nodal values (manual 6.421 / 6.437 = Professional). Persisted format change (Risk item 1):
     own commit + independent verifier. Route: mapping explorer first, then decide writer/inline.
-  - [ ] V6 element_dof_initial_specific_number/value.
+  - [x] V6 element_dof_initial_specific_number/value. Route: inline (no writer reason). Commit PENDING-HASH.
   - [ ] V7 materi initial dofs: materi_strain_plasti_{camclay,mohr_coul,tension,vonmises},
     materi_strain_total_{,compression_,shear_,tension_}kappa (decision: register only or fill).
   - [ ] V8 post_calcul modifiers: post_calcul_{absolute,label,limit,multiply,apparent_total,safety_default,static_pressure}.
@@ -335,3 +335,7 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   desplazamientos no están en cero y activamos esos elementos, corremos el riesgo, en una configuración
   -updated de que los nodos estén "dentro" de otros elementos" -> displacement kept, class A. Suite 694 OK /
   0 FALLO, 226/226, audit 0; A/B with current inputs: rc identical, 538 identical, 11 expected diffs.
+- 2026-11-03 owner: "perfecto. Sigue". T2 V6 (inline): Professional probes (phase1 bar + quad4) show the
+  field value_0 + grad . x evaluated at the nodes, birth step only, element_dof_initial taking precedence;
+  constant value_0 alone NaN in the Professional (manual followed, DIVERGENCES DOF-INITIAL-SPECIFIC-CONSTANT).
+  general.cc node field + top.cc marker; tests element_dof_initial_specific1..5 + _error1. RED on fe664a3.

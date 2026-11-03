@@ -64,6 +64,9 @@ void general( long int element, long int name, long int nnol, long int element_g
     ddum[1], pe[MDIM], node_remesh_velocity[MDIM], condif_flow[MDIM];
   long int element_dof_initial_active=0, edi_idum[1], edi_n=0;
   double edi_vals[DATA_ITEM_SIZE], element_dof_initial_values[MUKNWN];
+  long int edis_active=0, edis_label=0, edis_iuknwn=-1, edis_n=0,
+    edis_idum[1], dof_label[MUKNWN];
+  double edis_vals[1+MDIM], edis_node_values[MNOL];
 
   if ( type==-MAXWELL_FREQUENCY || type==-MAXWELL_TIME ) return;
 
@@ -176,6 +179,46 @@ void general( long int element, long int name, long int nnol, long int element_g
         element_dof_initial_values[iuknwn] =
           edi_vals[ ( iuknwn<edi_n ) ? iuknwn : edi_n-1 ];
     }
+  }
+
+  // element_dof_initial_specific_number / _value (manual Professional
+  // 6.423 / 6.424): initial past value of one dof only, the linear field
+  // value_0 + grad . x evaluated at the element nodes (Professional
+  // 02-08-2026: bar 0..1 with 0.8 x gives node 2 temp 0.9, 0.1 + 0.8 x
+  // gives 0.95). Same birth step and marker as element_dof_initial,
+  // which takes precedence when both are given (Professional: 0.7).
+  // value_0 alone is a constant field (manual; the Professional gives
+  // NaN there, DIVERGENCES DOF-INITIAL-SPECIFIC-CONSTANT).
+  edis_active = 0;
+  if ( !element_dof_initial_active &&
+       db_active_index( ELEMENT_DOF_INITIAL_SPECIFIC_NUMBER, element,
+         VERSION_NORMAL ) &&
+       !db_active_index( ELEMENT_DOF_INITIAL_APPLIED, element,
+         VERSION_NORMAL ) ) {
+    if ( !db_active_index( ELEMENT_DOF_INITIAL_SPECIFIC_VALUE, element,
+        VERSION_NORMAL ) ) {
+      pri( "Error: element_dof_initial_specific_value is missing for element ",
+        element );
+      db_error( ELEMENT_DOF_INITIAL_SPECIFIC_NUMBER, element );
+    }
+    db( ELEMENT_DOF_INITIAL_SPECIFIC_NUMBER, element, &edis_label, ddum,
+      ldum, VERSION_NORMAL, GET );
+    db( DOF_LABEL, 0, dof_label, ddum, ldum, VERSION_NORMAL, GET );
+    if ( !array_member( dof_label, edis_label, nuknwn, edis_iuknwn ) )
+      db_error( ELEMENT_DOF_INITIAL_SPECIFIC_NUMBER, element );
+    db( ELEMENT_DOF_INITIAL_SPECIFIC_VALUE, element, edis_idum, edis_vals,
+      edis_n, VERSION_NORMAL, GET );
+    if ( edis_n!=1 && edis_n<1+ndim )
+      db_error( ELEMENT_DOF_INITIAL_SPECIFIC_VALUE, element );
+    for ( inol=0; inol<nnol; inol++ ) {
+      double *node_coord = db_dbl( NODE, nodes[inol], VERSION_NORMAL );
+      edis_node_values[inol] = edis_vals[0];
+      if ( edis_n>1 ) {
+        for ( jdim=0; jdim<ndim; jdim++ )
+          edis_node_values[inol] += edis_vals[1+jdim] * node_coord[jdim];
+      }
+    }
+    edis_active = 1;
   }
 
   for ( ipuknwn=0; ipuknwn<npuknwn; ipuknwn++ ) {
@@ -426,6 +469,8 @@ void general( long int element, long int name, long int nnol, long int element_g
           double past_dof = old_dof[inol*nuknwn+ipuknwn*nder];
           if ( element_dof_initial_active && ipuknwn<nuknwn )
             past_dof = element_dof_initial_values[ipuknwn];
+          else if ( edis_active && iuknwn==edis_iuknwn )
+            past_dof = edis_node_values[inol];
           tmp = weight * inertia *
             ( new_dof[inol*nuknwn+ipuknwn*nder] - past_dof ) / dtime;
           element_rhside_add -= volume * tmp;

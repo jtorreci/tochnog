@@ -34,4 +34,5 @@
   nodes") is not implemented: values are per-dof and uniform over the
   element nodes (the corpus tests use the per-dof single-value form).
 - `element_dof_initial_specific_number` / `_specific_value` (6.423/
-  6.424) are not registered.
+  6.424): implemented in F5 T2 V6, see
+  [element_dof_initial_specific_number](element_dof_initial_specific_number.md).

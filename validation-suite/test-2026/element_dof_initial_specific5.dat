@@ -1,0 +1,26 @@
+(F5 T2 V6: 2D quad4, bottom nodes prescribed 1, initial past temperature
+ 0.1 + 0.2 x + 0.8 y at the nodes (0.1 0.3 0.9 1.1). Expected node_dof 3 / 4
+ = 0.9625 / 1.0375 (Professional 02-08-2026 probe f5/v6 j, same input).)
+echo -no
+number_of_space_dimensions 2
+condif_temperature
+end_initia
+inertia_apply -yes
+node 1  0 0
+node 2  1 0
+node 3  0 1
+node 4  1 1
+element 1  -quad4 1 2 3 4
+element_dof_initial_specific_number 1 -temp
+element_dof_initial_specific_value 1 0.1 0.2 0.8
+bounda_dof   0  1 -temp
+bounda_time  0  1.
+bounda_dof   1  2 -temp
+bounda_time  1  1.
+group_type 0  -condif
+group_condif_density 0  1.0
+group_condif_capacity 0  2.
+group_condif_conductivity 0  1.
+control_timestep   0  1. 1.0
+control_print      0  -node_dof
+end_data

@@ -435,6 +435,7 @@ page lists its own in "Differences with the Professional version".
 - [group_time](group_time.md) — element group birth/death times; since 2026-10-06 (C39, Pro truss8) a node whose elements are all inactive is not driven by its bounda_dof and stays at rest.
 - [post_calcul_k0](post_calcul_k0.md) — post_calcul -materi_stress -k0 (manual 6.901): ratio horizontal/vertical stress; output item -k0_sig. Unlocks k0 rc=0.
 - [element_dof_initial](element_dof_initial.md) — past dofs of an element at its birth step (manual 6.422); the transient inertia integrates from them. Unlocks phase1 rc=0.
+- [element_dof_initial_specific_number](element_dof_initial_specific_number.md) / [_value](element_dof_initial_specific_value.md) — initial past value of one dof at the birth step, linear field value_0 + grad . x at the nodes (6.423 / 6.424) (F5 T2 V6).
 - [geometry_node_type](geometry_node_type.md) — per-geometry override of the coordinates used to check nodes on the geometry (6.540: -node/-node_start_refined/-plus_displacement).
 - [geometry_projection_type](geometry_node_type.md) — per-geometry projection semantics (6.543: -project_inside filled interior vs -project_exact edge).
 - [node_geometry_present](node_geometry_present.md) — per-node list of present geometries (6.886) filled per step when print_node_geometry_present -yes (6.995/6.996). Unlocks node_type_1 rc=0.
