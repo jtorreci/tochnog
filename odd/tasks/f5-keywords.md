@@ -87,7 +87,7 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
     the GNU per-integration-point storage to element_intpnt_dof and make element_dof the per-element
     nodal values (manual 6.421 / 6.437 = Professional). Persisted format change (Risk item 1):
     own commit + independent verifier. Route: mapping explorer first, then decide writer/inline.
-  - [x] V6 element_dof_initial_specific_number/value. Route: inline (no writer reason). Commit PENDING-HASH.
+  - [x] V6 element_dof_initial_specific_number/value. Route: inline (no writer reason). Commit `df07925`.
   - [ ] V7 materi initial dofs: materi_strain_plasti_{camclay,mohr_coul,tension,vonmises},
     materi_strain_total_{,compression_,shear_,tension_}kappa (decision: register only or fill).
   - [ ] V8 post_calcul modifiers: post_calcul_{absolute,label,limit,multiply,apparent_total,safety_default,static_pressure}.
