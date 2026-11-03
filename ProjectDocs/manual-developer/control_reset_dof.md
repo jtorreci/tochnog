@@ -81,9 +81,15 @@
 
 With `global_element_dof_from_node_dof -no` (the default) the integration
 points of an element do not copy the node values at the first step, so
-`data()` writes the reset dofs into `ELEMENT_INTPNT_DOF` itself: element
-average of the reset node values, for the elements with
-`ELEMENT_DOF_INITIALISED` 1 whose nodes are all inside the node filter.
+`data()` writes the reset dofs into `ELEMENT_INTPNT_DOF` itself: the reset
+value evaluated at the coordinates of every integration point (lambda
+`reset_value_at()`, shared with the node loop; `pol()` for the point
+coordinates), for the continuum elements with `ELEMENT_DOF_INITIALISED` 1
+whose nodes are all inside the node filter (= Professional 02-08-2026,
+tests `control_reset_value_exponent1` / `_logarithmic_first1`).
+Pre-existing quirk kept: with a dof-dependent value and a spatial record
+at the same index, the spatial `db()` reads overwrite the dof diagram
+buffer `reset_value_diagram` for the following points.
 See [global_element_dof_from_node_dof](global_element_dof_from_node_dof.md).
 
 ## Verification

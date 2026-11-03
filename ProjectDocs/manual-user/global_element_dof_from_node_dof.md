@@ -18,8 +18,8 @@ integration-point values from somewhere:
   `node_dof`.
 - `-no` (default): they are not initialised from `node_dof`; they start
   at zero. A `control_reset_dof` still reaches them: the reset value is
-  written into the integration points of the elements whose nodes are
-  all reset.
+  evaluated at every integration point of the elements whose nodes are
+  all reset, as in the Professional.
 
 The switch has no effect with `global_element_dof_apply -no` (the elements
 then always use the nodal values) or when the input holds

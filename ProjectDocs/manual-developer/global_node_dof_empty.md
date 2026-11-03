@@ -25,8 +25,9 @@ Verification: Professional 02-08-2026 probes f5/v5b `c_def`, `c_yes`,
 `c2_no` (19 dofs incl. temperature, kappa, work). Tests
 `global_node_dof_empty1/2/3`.
 
-Hardcoded: the displacement exception (open owner decision
-GLOBAL-NODE-DOF-EMPTY-DISPLACEMENT; the manual zeroes every dof).
+Hardcoded: the displacement exception (owner decision C101, 2026-11-03,
+= Professional; the manual zeroes every dof: DIVERGENCES
+GLOBAL-NODE-DOF-EMPTY-DISPLACEMENT, class A).
 Pending: `ELEMENT_EMPTY` (materi_density / materi_diffusion fill) is not
 counted; `group_time_fill` (birth_empty) does not exist in the GNU yet (F5
 T5).

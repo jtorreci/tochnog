@@ -2787,6 +2787,8 @@ run_ok "$T2026" global_node_dof_empty2
 for n in 3 6; do beam_rec_check global_node_dof_empty2 node_dof $n "1.1 1.2 2.4 2.6 1.5 1.6 1.7 1.8 1.9 2 2.1 2.2 2.3 2.4 2.5 2.6 2.7 2.8 2.9"; done
 run_ok "$T2026" global_node_dof_empty3
 for n in 3 6; do beam_rec_check global_node_dof_empty3 node_dof $n "0 0 0.3 0.4 0 0 0 0 0 0"; done
+# C100: node 2 (live element, default -no) = Professional 02-08-2026 (minipc run of the same input).
+beam_rec_check global_node_dof_empty3 node_dof 2 "0.01 0.003 0.31 0.403 10 1.153846153846 0 -2.307692307689 0 2.307692307694"
 run_ok "$T2026" global_element_dof_from_node_dof1
 beam_rec_check global_element_dof_from_node_dof1 node_dof 1 "0 0 0 0 1.314504061e-13 -2.220446049e-16 0 1.005168171e-13 0 6.883382753e-14"
 beam_rec_check global_element_dof_from_node_dof1 node_dof 3 "0 0 0 0 13.46153846 -1.602564103 0 5.769230769 0 5.769230769"
@@ -2800,6 +2802,11 @@ run_ok "$T2026" global_element_dof_from_node_dof3
 beam_rec_check global_element_dof_from_node_dof3 node_dof 1 "0 0 0 0 1.314504061e-13 -2.220446049e-16 0 1.005168171e-13 0 6.883382753e-14"
 beam_rec_check global_element_dof_from_node_dof3 node_dof 3 "0 0 0 0 13.46153846 -1.602564103 0 5.769230769 0 5.769230769"
 beam_rec_check global_element_dof_from_node_dof3 node_dof 4 "0.01 -0.004166666667 0.01 -0.004166666667 11.05769231 2.243589744 0 0.1602564103 0 3.365384615"
+# C100: under the default -no, control_reset_dof writes the integration
+# points with the reset value at their coordinates (= Professional
+# 02-08-2026 element_intpnt_dof of the same inputs, run above).
+beam_rec_check control_reset_value_exponent1 element_intpnt_dof 1 "0 0 1.99093035335 0 0 0 0 0 0 0 2.087684361052 0 0 0 0 0 0 0 1.99093035335 0 0 0 0 0 0 0 2.087684361052 0 0 0 0 0"
+beam_rec_check control_reset_value_logarithmic_first1 element_intpnt_dof 1 "0 0 -0.3730917601299 0 0 0 0 0 0 0 -0.3064497683743 0 0 0 0 0 0 0 -0.3730917601299 0 0 0 0 0 0 0 -0.3064497683743 0 0 0 0 0"
 run_ok "$T2026" element_dof_nodal_quad9_1
 beam_rec_check element_dof_nodal_quad9_1 element_dof 1 "0 0 -0.001743980333 0.001296564348 -2.653036698 -0.2603691686 0 3.057057821 0 0.1212063371 0 0 -0.0009583218454 0.0003058695586 -3.884187681 -0.6744996571 0 -0.2716096513 0 -1.2467392 0 0 -0.0001726633581 -0.0006848252305 -5.115338664 -1.088630146 0 -3.600277124 0 -2.614684736 0 0 -2.963881996e-05 0.001012789878 3.018953292 0.9707818145 0 3.47118831 0 1.947042481 0.0004510442514 0.0006869485801 0.0007560196673 2.20950893e-05 1.787802309 0.5566513259 0 0.1425208373 0 0.5790969439 -0.0001430245382 -0.001697615109 0.001541678155 -0.0009685996998 0.5566513259 0.1425208373 0 -3.186146635 0 -0.7888485928 0 0 0.001684702693 0.0007290154091 8.690943282 2.201932797 0 3.885318798 0 3.772878624 0.002643024538 0.0004231458506 0.00247036118 -0.00026167938 7.459792299 1.787802309 0 0.5566513259 0 2.404933087 0.01 -0.005097877033 0.003256019667 -0.001252374169 6.228641315 1.37367182 0 -2.772016147 0 1.036987551"
 beam_rec_check element_beam_force_moment_2d1 element_beam_direction 1 "1 0 0 0 1 0 0 0 1"

@@ -1166,39 +1166,29 @@ void data( long int task, double dtime, double time_current )
             db( CONTROL_RESET_VALUE_DOF_DIAGRAM, ireset, idum,
               reset_value_diagram, length_diagram, VERSION_NORMAL, GET );
           }
-          if ( reset_value_constant_found || reset_value_dof_found ||
-               nspatial>0 ) {
-            for ( inod=0; inod<=max_node; inod++ ) {
-              if ( db_active_index( NODE, inod, VERSION_NORMAL ) &&
-                   ( !reset_dof_node_filter ||
-                     reset_dof_node_filter[inod] ) ) {
-                node_dof = db_dbl( NODE_DOF, inod, VERSION_NORMAL );
-                length = db_len( NODE_DOF, inod, VERSION_NORMAL );
-                long int indx_reset = idof_reset;
-                if ( indx_reset<0 ) {
-                  array_member( dof_label, indx_reset, nuknwn, indx_reset );
-                  if ( length==npuknwn ) indx_reset /= nder;
-                }
-                if ( indx_reset<0 || indx_reset>length-1 )
-                  db_error( CONTROL_RESET_DOF, ireset );
-                val = reset_value_constant;
+          // reset value at a point (node or integration point): constant
+          // + dof diagram + spatial distributions, before the -add /
+          // -multiply / -use method (xyz: coordinates, dofs: dof values
+          // of the point, dofs_length: their number)
+          auto reset_value_at = [&]( const double *xyz, const double *dofs,
+              long int dofs_length ) -> double {
+                double val = reset_value_constant;
                 if ( reset_value_dof_found ) {
                   long int indx_val = idof_value;
                   if ( indx_val<0 ) {
                     array_member( dof_label, indx_val, nuknwn, indx_val );
-                    if ( length==npuknwn ) indx_val /= nder;
+                    if ( dofs_length==npuknwn ) indx_val /= nder;
                   }
-                  if ( indx_val<0 || indx_val>length-1 )
+                  if ( indx_val<0 || indx_val>dofs_length-1 )
                     db_error( CONTROL_RESET_DOF, ireset );
                   table_xy( reset_value_diagram,
                     "CONTROL_RESET_VALUE_DOF_DIAGRAM", length_diagram,
-                    node_dof[indx_val], val );
+                    dofs[indx_val], val );
                 }
                 for ( sdat=0; sdat<7; sdat++ ) {
                   if ( !spatial_active[sdat] ) continue;
-                  coord = db_dbl( NODE, inod, VERSION_NORMAL );
                   for ( idim=0; idim<ndim; idim++ )
-                    coords[idim] = coord[idim];
+                    coords[idim] = xyz[idim];
                   db( spatial_data[sdat], ireset, idum, reset_value_diagram,
                     ldum, VERSION_NORMAL, GET );
                   if ( spatial_data[sdat]==CONTROL_RESET_VALUE_LINEAR ) {
@@ -1289,9 +1279,117 @@ void data( long int task, double dtime, double time_current )
                       spatial_nl[sdat]/2, coords[vdim], val );
                   }
                 }
+                return val;
+          };
+          if ( reset_value_constant_found || reset_value_dof_found ||
+               nspatial>0 ) {
+            for ( inod=0; inod<=max_node; inod++ ) {
+              if ( db_active_index( NODE, inod, VERSION_NORMAL ) &&
+                   ( !reset_dof_node_filter ||
+                     reset_dof_node_filter[inod] ) ) {
+                node_dof = db_dbl( NODE_DOF, inod, VERSION_NORMAL );
+                length = db_len( NODE_DOF, inod, VERSION_NORMAL );
+                long int indx_reset = idof_reset;
+                if ( indx_reset<0 ) {
+                  array_member( dof_label, indx_reset, nuknwn, indx_reset );
+                  if ( length==npuknwn ) indx_reset /= nder;
+                }
+                if ( indx_reset<0 || indx_reset>length-1 )
+                  db_error( CONTROL_RESET_DOF, ireset );
+                coord = db_dbl( NODE, inod, VERSION_NORMAL );
+                val = reset_value_at( coord, node_dof, length );
                 if      ( reset_method==-ADD ) node_dof[indx_reset] += val;
                 else if ( reset_method==-MULTIPLY ) node_dof[indx_reset] *= val;
                 else                             node_dof[indx_reset] = val;
+              }
+            }
+            // global_element_dof_from_node_dof -no (manual Professional
+            // 6.554, default; C100): the integration points of the
+            // elements without element_intpnt_dof input start from zero and
+            // are marked initialised (top.cc), so they no longer copy the
+            // node values at the first element loop. The reset must then
+            // reach them directly: the reset value is evaluated at the
+            // coordinates of every integration point (h-interpolated node
+            // coordinates of the pol() rule), as the Professional 02-08-2026
+            // does (control_reset_value_exponent1: element_intpnt_dof
+            // 1.99093 = e^((1+x)/(2+x)) at the Gauss point x = 1.2113;
+            // hypo_masin_history_slots1: hyhis0 reset to 1.03 without
+            // node_dof input). Only initialised continuum elements whose
+            // nodes are all selected. With -yes nothing changes here: the
+            // first-step node copy carries the reset.
+            if ( options_element_dof==-YES && nuknwn>0 ) {
+              long int from_node_dof = -NO;
+              db( GLOBAL_ELEMENT_DOF_FROM_NODE_DOF, 0, &from_node_dof, ddum,
+                ldum, VERSION_NORMAL, GET_IF_EXISTS );
+              long int indx_ip = idof_reset;
+              if ( indx_ip<0 )
+                array_member( dof_label, indx_ip, nuknwn, indx_ip );
+              if ( from_node_dof==-NO && indx_ip>=0 && indx_ip<nuknwn ) {
+                long int max_element_i = 0, iel_i = 0, length_el_i = 0,
+                  inol_i = 0, init_i = 0, len_ip = 0, npoint_i = 0,
+                  group_i = 0, el_i[MNOL+1];
+                double coord_i[MNOL*MDIM], xyz_i[MDIM],
+                  save_shape_factor_i = check_element_shape_factor;
+                double *h_i = get_new_dbl( MPOINT*MNOL );
+                double *old_d_i = get_new_dbl( MPOINT*MDIM*MNOL );
+                double *new_d_i = get_new_dbl( MPOINT*MDIM*MNOL );
+                double *new_b_i = get_new_dbl( MPOINT*MSTRAIN*MNOL*MDIM );
+                double *volume_i = get_new_dbl( MPOINT );
+                check_element_shape_factor = 0.;
+                db_max_index( ELEMENT, max_element_i, VERSION_NORMAL, GET );
+                for ( iel_i=0; iel_i<=max_element_i; iel_i++ ) {
+                  if ( !db_active_index( ELEMENT, iel_i, VERSION_NORMAL ) ||
+                       !db_active_index( ELEMENT_INTPNT_DOF, iel_i,
+                         VERSION_NORMAL ) ||
+                       !db_active_index( ELEMENT_DOF_INITIALISED, iel_i,
+                         VERSION_NORMAL ) ) continue;
+                  db( ELEMENT_DOF_INITIALISED, iel_i, &init_i, ddum, ldum,
+                    VERSION_NORMAL, GET );
+                  if ( init_i!=1 ) continue;
+                  group_i = 0;
+                  db( ELEMENT_GROUP, iel_i, &group_i, ddum, ldum,
+                    VERSION_NORMAL, GET_IF_EXISTS );
+                  if ( db_active_index( GROUP_INTERFACE, group_i,
+                      VERSION_NORMAL ) ) continue;
+                  db( ELEMENT, iel_i, el_i, ddum, length_el_i,
+                    VERSION_NORMAL, GET );
+                  long int nnol_i = length_el_i - 1;
+                  if ( !element_intpnt_supported( el_i[0], nnol_i ) ) continue;
+                  long int all_in_i = 1;
+                  for ( inol_i=0; inol_i<nnol_i; inol_i++ ) {
+                    if ( reset_dof_node_filter &&
+                         !reset_dof_node_filter[el_i[1+inol_i]] ) all_in_i = 0;
+                  }
+                  if ( !all_in_i ) continue;
+                  for ( inol_i=0; inol_i<nnol_i; inol_i++ )
+                    db( NODE, el_i[1+inol_i], idum, &coord_i[inol_i*ndim],
+                      ldum, VERSION_NORMAL, GET );
+                  pol( iel_i, group_i, el_i[0], nnol_i, coord_i, coord_i,
+                    npoint_i, h_i, old_d_i, new_d_i, new_b_i, volume_i );
+                  double *ip_i = db_dbl( ELEMENT_INTPNT_DOF, iel_i,
+                    VERSION_NORMAL );
+                  len_ip = db_len( ELEMENT_INTPNT_DOF, iel_i, VERSION_NORMAL );
+                  for ( long int ipnt=0; ipnt<npoint_i &&
+                        (ipnt+1)*nuknwn<=len_ip; ipnt++ ) {
+                    for ( idim=0; idim<ndim; idim++ ) {
+                      xyz_i[idim] = 0.;
+                      for ( inol_i=0; inol_i<nnol_i; inol_i++ )
+                        xyz_i[idim] += h_i[ipnt*nnol_i+inol_i] *
+                          coord_i[inol_i*ndim+idim];
+                    }
+                    double *dof_ip = &ip_i[ipnt*nuknwn];
+                    double val_ip = reset_value_at( xyz_i, dof_ip, nuknwn );
+                    if      ( reset_method==-ADD ) dof_ip[indx_ip] += val_ip;
+                    else if ( reset_method==-MULTIPLY ) dof_ip[indx_ip] *= val_ip;
+                    else                             dof_ip[indx_ip] = val_ip;
+                  }
+                }
+                check_element_shape_factor = save_shape_factor_i;
+                delete[] h_i;
+                delete[] old_d_i;
+                delete[] new_d_i;
+                delete[] new_b_i;
+                delete[] volume_i;
               }
             }
           }
@@ -1403,58 +1501,6 @@ void data( long int task, double dtime, double time_current )
             }
           }
         }
-        }
-        // global_element_dof_from_node_dof -no (manual Professional 6.554,
-        // default; C100): the integration points of the elements without
-        // element_intpnt_dof input start from zero and are marked
-        // initialised (top.cc), so they no longer copy the node values at
-        // the first element loop. The reset must then reach them
-        // directly: every integration point of an initialised element
-        // whose nodes are all selected gets the element average of the
-        // reset node values. The Professional 02-08-2026 resets the
-        // integration-point state (hypo_masin_history_slots1: hyhis0 reset
-        // to 1.03 without node_dof input). With -yes the integration
-        // points still take the reset through the first-step node copy.
-        if ( options_element_dof==-YES && nuknwn>0 ) {
-          long int from_node_dof = -NO;
-          db( GLOBAL_ELEMENT_DOF_FROM_NODE_DOF, 0, &from_node_dof, ddum,
-            ldum, VERSION_NORMAL, GET_IF_EXISTS );
-          // every dof of the record (the block runs once per record)
-          for ( long int k_ip=0; k_ip<reset_dof_length; k_ip++ ) {
-          long int indx_ip = reset_dof[k_ip];
-          if ( indx_ip<0 ) array_member( dof_label, indx_ip, nuknwn, indx_ip );
-          if ( from_node_dof==-NO && indx_ip>=0 && indx_ip<nuknwn ) {
-            long int max_element_i = 0, iel_i = 0, length_el_i = 0,
-              inol_i = 0, init_i = 0, len_ip = 0, el_i[MNOL+1];
-            db_max_index( ELEMENT, max_element_i, VERSION_NORMAL, GET );
-            for ( iel_i=0; iel_i<=max_element_i; iel_i++ ) {
-              if ( !db_active_index( ELEMENT, iel_i, VERSION_NORMAL ) ||
-                   !db_active_index( ELEMENT_INTPNT_DOF, iel_i,
-                     VERSION_NORMAL ) ||
-                   !db_active_index( ELEMENT_DOF_INITIALISED, iel_i,
-                     VERSION_NORMAL ) ) continue;
-              db( ELEMENT_DOF_INITIALISED, iel_i, &init_i, ddum, ldum,
-                VERSION_NORMAL, GET );
-              if ( init_i!=1 ) continue;
-              db( ELEMENT, iel_i, el_i, ddum, length_el_i, VERSION_NORMAL, GET );
-              long int all_in_i = 1;
-              double sum_i = 0.;
-              for ( inol_i=1; inol_i<length_el_i; inol_i++ ) {
-                if ( reset_dof_node_filter &&
-                     !reset_dof_node_filter[el_i[inol_i]] ) all_in_i = 0;
-                else if ( db_len( NODE_DOF, el_i[inol_i],
-                    VERSION_NORMAL )!=nuknwn ) all_in_i = 0;
-                else sum_i += db_dbl( NODE_DOF, el_i[inol_i],
-                  VERSION_NORMAL )[indx_ip];
-              }
-              if ( !all_in_i || length_el_i<2 ) continue;
-              double *ip_i = db_dbl( ELEMENT_INTPNT_DOF, iel_i, VERSION_NORMAL );
-              len_ip = db_len( ELEMENT_INTPNT_DOF, iel_i, VERSION_NORMAL );
-              for ( long int ipnt=0; ipnt*nuknwn+indx_ip<len_ip; ipnt++ )
-                ip_i[ipnt*nuknwn+indx_ip] = sum_i/( length_el_i-1 );
-            }
-          }
-          }
         }
         }   // end dof list loop
       }

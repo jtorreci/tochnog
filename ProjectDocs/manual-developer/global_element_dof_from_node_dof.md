@@ -17,14 +17,19 @@
   state in `node_dof` now write `-yes` explicitly.
 - `data.cc` `data()`, `control_reset_dof` dof-list loop: with the switch
   `-NO` (read again there, default `-NO`) and `options_element_dof==-YES`,
-  after the node values of a reset record are set, every element with
+  after the node values of a reset record are set, every continuum
+  element (`element_intpnt_supported()`, no interface group) with
   `ELEMENT_DOF_INITIALISED` 1, an `ELEMENT_INTPNT_DOF` record and all its
   nodes inside the reset node filter gets, at every integration point,
-  the element average of the reset node values (index
-  `ipoint*nuknwn+dof`). Without it the reset never reached the
-  integration points (they no longer copy the nodes); the Professional
-  resets them (test `hypo_masin_history_slots1`, hyhis0 reset 1.03).
-  With `-YES` nothing changes: the first-step copy carries the reset.
+  the reset value evaluated at the point coordinates (h of `pol()` times
+  the node coordinates; index `ipoint*nuknwn+dof`; the dof-dependent part
+  uses the point's own dof values). The per-point value is the lambda
+  `reset_value_at()`, shared with the node loop. Without it the reset
+  never reached the integration points (they no longer copy the nodes);
+  the Professional resets them pointwise (`control_reset_value_exponent1`
+  1.99093 / 2.08768, `control_reset_value_logarithmic_first1`,
+  `hypo_masin_history_slots1` hyhis0 1.03). With `-YES` nothing changes:
+  the first-step copy carries the reset.
 - Pending refactoring: the switch is read in two places (`top.cc` and
   `data.cc`); a global variable set once in `top()` would avoid that.
 - Not touched: `CONTROL_DATA_INITELDOF_GEOMETRY` (`data.cc`) still resets

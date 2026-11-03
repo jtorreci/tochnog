@@ -50,9 +50,11 @@ temperature 0), equal to the Professional 02-08-2026.
 ## Differences with the Professional version
 
 - The manual says that "the dof's in a node are set to zero"; the
-  Professional 02-08-2026 keeps the displacement. The GNU keeps it too,
-  pending an owner decision (DIVERGENCES GLOBAL-NODE-DOF-EMPTY-DISPLACEMENT,
-  class B).
+  Professional 02-08-2026 keeps the displacement. The GNU keeps it too
+  (project-owner decision 2026-11-03: a zeroed displacement would put the
+  nodes of an element that becomes active again back at their start
+  position, possibly inside the deformed neighbouring elements;
+  DIVERGENCES GLOBAL-NODE-DOF-EMPTY-DISPLACEMENT, class A).
 - With `-no` the Professional still gives such a node zero velocity (and
   no displacement increment); the GNU leaves the velocity of a node without
   stiffness unchanged, so the displacement keeps growing with it

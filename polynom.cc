@@ -1147,7 +1147,7 @@ void interpolation_polynomial( double iso, long int npol, double h_pol[],
 // 3D quadrilateral face: (xi,eta,0), xi fastest) with method -lobatto,
 // and for the triangular face of the prism6 interface the corner points
 // (1,0,0), (0,1,0), (0,0,0) with method 0.
-static long int element_intpnt_supported( long int name, long int nnol )
+long int element_intpnt_supported( long int name, long int nnol )
 {
   if ( ndim==1 )
     return ( name==-BAR2 && nnol==2 ) || ( name==-BAR3 && nnol==3 ) ||

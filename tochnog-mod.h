@@ -2114,6 +2114,7 @@ void      node_geometry_present_calculate( void );
 void      element_geometry_present_calculate( void );
 void      element_print_group_data_values_calculate( void );
 void      element_intpnt_set( void );
+long int  element_intpnt_supported( long int name, long int nnol );
 void      get_element_matrix_unknowns( long int element,
             long int element_matrix_unknowns[] );
 long int  get_group_data( long int idat, long int group, long int element,

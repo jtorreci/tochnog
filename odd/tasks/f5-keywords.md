@@ -326,3 +326,12 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   rejects them for other keywords. New test global_element_dof_from_node_dof3 (default). Suite 692 OK / 0 FALLO,
   226/226 runs, audit 0. Pending: A/B on the 748 inputs on omen (offline). Risk item 3 (shared reset code in
   data.cc; default change) -> end-of-T2 independent verifier.
+- 2026-11-03 A/B omen (pre-C100 binary vs 3482d4b, pre-C100 inputs): 21 rc changes (the -yes inputs) and 4
+  more silent node_dof-initialised inputs (mcap1, mcap1_comb, mstrain_cap, groundflow_total_pressure_tension)
+  -> -yes. Reset at the integration points was an element average; the Professional evaluates the reset at the
+  point coordinates (minipc Pro runs) -> data.cc reset_value_at() lambda + pol(); = Pro to 1e-12. New checks
+  (exponent1, logarithmic_first1 element_intpnt_dof; global_node_dof_empty3 node 2 = Pro). C106 found
+  (pre-existing shared diagram buffer). Owner on C101: "Me gusta más la idea de Pro y actual de GNU. Si los
+  desplazamientos no están en cero y activamos esos elementos, corremos el riesgo, en una configuración
+  -updated de que los nodos estén "dentro" de otros elementos" -> displacement kept, class A. Suite 694 OK /
+  0 FALLO, 226/226, audit 0; A/B with current inputs: rc identical, 538 identical, 11 expected diffs.
