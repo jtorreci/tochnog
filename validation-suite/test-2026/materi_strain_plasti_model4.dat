@@ -1,0 +1,38 @@
+(F5 T2 V7: materi_strain_plasti_camclay / _mohr_coul / _tension / _vonmises
+ (manual Professional 4.34, 4.41-4.43) on the bar of control_materi_plasti_tension_apply_yield1 without
+ the apply record (plastic): the dof of the
+ group's model (tension) equals materi_strain_plasti at every node, the other
+ three stay 0 (scripts/build_safe.sh). The Professional 02-08-2026 adds no
+ dof for these initialisations and rejects _camclay (DIVERGENCES
+ STRAIN-PLASTI-MODEL-DOFS).)
+(F5 W1: control_materi_plasti_tension_apply 1 -no also ignores the tension
+ yield surface (group_materi_plasti_tension), not only tension_direct
+ (manual Pro 6.150 "any tension-plasticity data"). 1D bar E 2, yield 1,
+ strain 1.5: timestep 1 elastic. Professional 02-08-2026: sigxx 3, eppxx
+ 0. GNU before F5: 1 / 1.)
+echo -no
+number_of_space_dimensions 1
+materi_velocity
+materi_displacement
+materi_strain_total
+materi_strain_plasti
+materi_strain_plasti_camclay
+materi_strain_plasti_mohr_coul
+materi_strain_plasti_tension
+materi_strain_plasti_vonmises
+materi_stress
+end_initia
+node 1  0
+node 2  1
+element 1  -bar2 1 2
+bounda_dof 0  1 -velx
+bounda_time 0  0.
+bounda_dof 1  2 -velx
+bounda_time 1  1.
+group_type 0  -materi
+group_materi_elasti_young 0  2.0
+group_materi_memory 0  -total_linear
+group_materi_plasti_tension 0  1.
+control_timestep 0  0.5 0.5
+control_timestep 1  1. 1.
+end_data

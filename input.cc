@@ -595,6 +595,74 @@ void input( )
       array_set( &dof_type[dpepp_indx], -MATERI_STRAIN_PLASTI_DRUCKPRAG, n*nder );
       array_set( &dof_scal_vec_mat[unknown_indx], -MATRIX, n*nder );
     }
+    else if ( !strcmp(str,"materi_strain_plasti_camclay") ) {
+      // manual Professional 4.34: idem for the camclay model (F5 T2 V7).
+      materi_strain_plasti_camclay = 1;
+      camepp_indx = unknown_indx;
+      n = 6;
+      array_set( &dof_type[camepp_indx], -MATERI_STRAIN_PLASTI_CAMCLAY, n*nder );
+      array_set( &dof_scal_vec_mat[unknown_indx], -MATRIX, n*nder );
+    }
+    else if ( !strcmp(str,"materi_strain_plasti_mohr_coul") ) {
+      // manual Professional 4.41: idem for the mohr-coulomb model (F5 T2 V7).
+      materi_strain_plasti_mohr_coul = 1;
+      mcepp_indx = unknown_indx;
+      n = 6;
+      array_set( &dof_type[mcepp_indx], -MATERI_STRAIN_PLASTI_MOHR_COUL, n*nder );
+      array_set( &dof_scal_vec_mat[unknown_indx], -MATRIX, n*nder );
+    }
+    else if ( !strcmp(str,"materi_strain_plasti_tension") ) {
+      // manual Professional 4.42: idem for the tension model (F5 T2 V7).
+      materi_strain_plasti_tension = 1;
+      tnepp_indx = unknown_indx;
+      n = 6;
+      array_set( &dof_type[tnepp_indx], -MATERI_STRAIN_PLASTI_TENSION, n*nder );
+      array_set( &dof_scal_vec_mat[unknown_indx], -MATRIX, n*nder );
+    }
+    else if ( !strcmp(str,"materi_strain_plasti_vonmises") ) {
+      // manual Professional 4.43: idem for the von Mises model (F5 T2 V7).
+      materi_strain_plasti_vonmises = 1;
+      vmepp_indx = unknown_indx;
+      n = 6;
+      array_set( &dof_type[vmepp_indx], -MATERI_STRAIN_PLASTI_VONMISES, n*nder );
+      array_set( &dof_scal_vec_mat[unknown_indx], -MATRIX, n*nder );
+    }
+    else if ( !strcmp(str,"materi_strain_total_kappa") ) {
+      // manual Professional 4.45: history maximum of a total strain
+      // measure, added to the node_dof records (F5 T2 V7, materi.cc).
+      materi_strain_total_kappa = 1;
+      eptk_indx = unknown_indx;
+      n = 1;
+      array_set( &dof_type[eptk_indx], -MATERI_STRAIN_TOTAL_KAPPA, n*nder );
+      array_set( &dof_scal_vec_mat[unknown_indx], -SCALAR, n*nder );
+    }
+    else if ( !strcmp(str,"materi_strain_total_compression_kappa") ) {
+      // manual Professional 4.46: history maximum of a total strain
+      // measure, added to the node_dof records (F5 T2 V7, materi.cc).
+      materi_strain_total_compression_kappa = 1;
+      eptkc_indx = unknown_indx;
+      n = 1;
+      array_set( &dof_type[eptkc_indx], -MATERI_STRAIN_TOTAL_COMPRESSION_KAPPA, n*nder );
+      array_set( &dof_scal_vec_mat[unknown_indx], -SCALAR, n*nder );
+    }
+    else if ( !strcmp(str,"materi_strain_total_shear_kappa") ) {
+      // manual Professional 4.47: history maximum of a total strain
+      // measure, added to the node_dof records (F5 T2 V7, materi.cc).
+      materi_strain_total_shear_kappa = 1;
+      eptks_indx = unknown_indx;
+      n = 1;
+      array_set( &dof_type[eptks_indx], -MATERI_STRAIN_TOTAL_SHEAR_KAPPA, n*nder );
+      array_set( &dof_scal_vec_mat[unknown_indx], -SCALAR, n*nder );
+    }
+    else if ( !strcmp(str,"materi_strain_total_tension_kappa") ) {
+      // manual Professional 4.48: history maximum of a total strain
+      // measure, added to the node_dof records (F5 T2 V7, materi.cc).
+      materi_strain_total_tension_kappa = 1;
+      eptkt_indx = unknown_indx;
+      n = 1;
+      array_set( &dof_type[eptkt_indx], -MATERI_STRAIN_TOTAL_TENSION_KAPPA, n*nder );
+      array_set( &dof_scal_vec_mat[unknown_indx], -SCALAR, n*nder );
+    }
     else if ( !strcmp(str,"materi_strain_total") ) {
       materi_strain_total = 1;
       ept_indx = unknown_indx;
@@ -768,6 +836,11 @@ void input( )
   }
   if ( materi_displacement ) 
     check_unknown( "materi_velocity", YES, CHECK_USAGE_AND_ERROR );
+  // F5 T2 V7: the total strain kappas are history maxima of the total
+  // strain dof (materi.cc), which therefore needs to exist
+  if ( materi_strain_total_kappa || materi_strain_total_compression_kappa ||
+       materi_strain_total_shear_kappa || materi_strain_total_tension_kappa )
+    check_unknown( "materi_strain_total", YES, CHECK_USAGE_AND_ERROR );
   if ( materi_displacement_relative ) {
     check_unknown( "materi_displacement", YES, CHECK_USAGE_AND_ERROR );
     check_unknown( "materi_velocity", YES, CHECK_USAGE_AND_ERROR );

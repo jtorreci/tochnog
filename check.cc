@@ -989,6 +989,22 @@ long int check( long int idat, long int task )
     ok = check_unknown( "materi_strain_plasti_druckprag", YES, task );
   if ( data_number==MATERI_STRAIN_PLASTI_HARDSOIL )
     ok = check_unknown( "materi_strain_plasti_hardsoil", YES, task );
+  if ( data_number==MATERI_STRAIN_PLASTI_CAMCLAY )
+    ok = check_unknown( "materi_strain_plasti_camclay", YES, task );
+  if ( data_number==MATERI_STRAIN_PLASTI_MOHR_COUL )
+    ok = check_unknown( "materi_strain_plasti_mohr_coul", YES, task );
+  if ( data_number==MATERI_STRAIN_PLASTI_TENSION )
+    ok = check_unknown( "materi_strain_plasti_tension", YES, task );
+  if ( data_number==MATERI_STRAIN_PLASTI_VONMISES )
+    ok = check_unknown( "materi_strain_plasti_vonmises", YES, task );
+  if ( data_number==MATERI_STRAIN_TOTAL_KAPPA )
+    ok = check_unknown( "materi_strain_total_kappa", YES, task );
+  if ( data_number==MATERI_STRAIN_TOTAL_COMPRESSION_KAPPA )
+    ok = check_unknown( "materi_strain_total_compression_kappa", YES, task );
+  if ( data_number==MATERI_STRAIN_TOTAL_SHEAR_KAPPA )
+    ok = check_unknown( "materi_strain_total_shear_kappa", YES, task );
+  if ( data_number==MATERI_STRAIN_TOTAL_TENSION_KAPPA )
+    ok = check_unknown( "materi_strain_total_tension_kappa", YES, task );
   if ( data_number==MATERI_STRAIN_TOTAL )
     ok = check_unknown( "materi_strain_total", YES, task );
   if ( data_number==MATERI_STRESS )

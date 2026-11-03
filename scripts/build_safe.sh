@@ -2813,6 +2813,44 @@ beam_rec_check element_dof_initial_specific4 node_dof 2 "0.7"
 beam_rec_check element_dof_initial_specific5 node_dof 3 "0.9625"
 beam_rec_check element_dof_initial_specific5 node_dof 4 "1.0375"
 expected_error_ok "$T2026" element_dof_initial_specific_error1
+# F5 T2 V7: materi_strain_plasti_camclay / _mohr_coul / _tension / _vonmises
+# (manual 4.34, 4.41-4.43): the dof of the group's model equals
+# materi_strain_plasti at every node (and epp is plastic), the other three
+# stay 0. The Professional 02-08-2026 adds no dof for them.
+strain_plasti_model_check() {
+  local t="$1" m="$2" res
+  res=$(python3 -I - "$T2026/$t.dbs" "$m" <<'PYEOF'
+import sys
+lab=None; rows=[]
+for l in open(sys.argv[1]):
+    w=l.split()
+    if w and w[0]=="dof_label": lab=[x[1:] for x in w[1:]]
+    if w and w[0]=="node_dof": rows.append([float(x) for x in w[2:]])
+ix={k:i for i,k in enumerate(lab)}
+cs=["xx","xy","xz","yy","yz","zz"]
+epp=max(abs(r[ix["epp"+c]]) for r in rows for c in cs)
+bad=epp==0.
+for m in ["cc","mc","tn","vm"]:
+    for r in rows:
+        for c in cs:
+            v=r[ix["epp"+m+c]]; ref=r[ix["epp"+c]] if m==sys.argv[2] else 0.
+            if abs(v-ref)>1e-12*max(1.,epp): bad=True
+print("bad" if bad else "ok")
+PYEOF
+)
+  if [ "$res" = "ok" ]; then check_ok "$t epp$2* = epp*, other models 0"
+  else check_fail "$t" "per-model plastic strain columns ($res)"; fi
+}
+for t in 1 2 3 4; do run_ok "$T2026" materi_strain_plasti_model$t; done
+strain_plasti_model_check materi_strain_plasti_model1 vm
+strain_plasti_model_check materi_strain_plasti_model2 mc
+strain_plasti_model_check materi_strain_plasti_model3 cc
+strain_plasti_model_check materi_strain_plasti_model4 tn
+# F5 T2 V7: materi_strain_total_*kappa (manual 4.45-4.48), analytic history
+# maxima (see the input), after unloading to half the peak strain.
+run_ok "$T2026" materi_strain_total_kappa1
+beam_rec_check materi_strain_total_kappa1 node_dof 4 "-0.002 0.005 0.002 -0.005 0.833333333333 0 0 -5 0 -0.833333333333 0.002 0 0 -0.005 0 0 0.00761577310586 0.01 0.00721110255093 0.004"
+expected_error_ok "$T2026" materi_strain_total_kappa_error1
 # C100: under the default -no, control_reset_dof writes the integration
 # points with the reset value at their coordinates (= Professional
 # 02-08-2026 element_intpnt_dof of the same inputs, run above).

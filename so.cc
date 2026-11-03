@@ -386,6 +386,10 @@ static long int disp_primary_gate( long int task )
        materi_strain_plasti_hardsoil || materi_strain_plasti_cap ||
        materi_strain_plasti_compression || materi_strain_plasti_diprisco ||
        materi_strain_plasti_druckprag || materi_plasti_f ||
+       materi_strain_plasti_camclay || materi_strain_plasti_mohr_coul ||
+       materi_strain_plasti_tension || materi_strain_plasti_vonmises ||
+       materi_strain_total_kappa || materi_strain_total_compression_kappa ||
+       materi_strain_total_shear_kappa || materi_strain_total_tension_kappa ||
        materi_plasti_f_nonlocal || materi_plasti_softvar_local ||
        materi_plasti_softvar_nonlocal ) return 0;
   db_highest_index( GROUP_MATERI_VISCOSITY, maxg, VERSION_NORMAL );

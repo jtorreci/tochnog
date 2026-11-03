@@ -655,6 +655,11 @@ void elem( long int element, long int ithread )
 	      // constitutive update (kappa_shear, cap1 pc, damage, the
 	      // kinematic hardening rho and the Maxwell stresses) likewise.
 	      (materi_plasti_kappa_shear && i==kapsh_indx) ||
+	      // F5 T2 V7: the total strain kappas (history maxima)
+	      (materi_strain_total_kappa && i==eptk_indx) ||
+	      (materi_strain_total_compression_kappa && i==eptkc_indx) ||
+	      (materi_strain_total_shear_kappa && i==eptks_indx) ||
+	      (materi_strain_total_tension_kappa && i==eptkt_indx) ||
 	      (materi_plasti_cap1_history && i==cap1_indx) ||
 	      (materi_damage && i==dam_indx) ||
 	      (materi_plasti_rho && i>=rho_indx && i<(rho_indx+6*nder)) ||
@@ -841,6 +846,11 @@ void elem( long int element, long int ithread )
 	    (materi_plasti_kappa && i==kap_indx) || // F4 T6f WU2: IP kappa
 	    // C68 (F4 T6f): the other integration-point states
 	    (materi_plasti_kappa_shear && i==kapsh_indx) ||
+	    // F5 T2 V7: the total strain kappas (history maxima)
+	    (materi_strain_total_kappa && i==eptk_indx) ||
+	    (materi_strain_total_compression_kappa && i==eptkc_indx) ||
+	    (materi_strain_total_shear_kappa && i==eptks_indx) ||
+	    (materi_strain_total_tension_kappa && i==eptkt_indx) ||
 	    (materi_plasti_cap1_history && i==cap1_indx) ||
 	    (materi_damage && i==dam_indx) ||
 	    (materi_plasti_rho && i>=rho_indx && i<(rho_indx+6*nder)) ||

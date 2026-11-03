@@ -1371,7 +1371,9 @@ void materi( long int element, long int gr, long int name, long int nnol,
     // and inertia term general.cc builds with the same weight
     // (strain_recovery_weight). Before, the strain kept the h weight:
     // Professional tslv_part clamped edge eptyy 0, GNU -2.35e-6.
-    if ( materi_strain_total || materi_strain_elasti || materi_strain_plasti ) {
+    if ( materi_strain_total || materi_strain_elasti || materi_strain_plasti ||
+         materi_strain_plasti_camclay || materi_strain_plasti_mohr_coul ||
+         materi_strain_plasti_tension || materi_strain_plasti_vonmises ) {
       double w_rec = strain_recovery_weight( sri_on, name, nnol, inol,
         npoint, ipoint, h[inol], volume, gr, nodes );
       if ( scalar_dabs(w_rec)>EPS_H || scalar_dabs(h[inol])>EPS_H ) {
@@ -1402,6 +1404,53 @@ void materi( long int element, long int gr, long int name, long int nnol,
             }
           }
         }
+        // materi_strain_plasti_camclay / _mohr_coul / _tension / _vonmises
+        // (manual Professional 4.34, 4.41-4.43, F5 T2 V7): the plastic
+        // strain "specifically for" that model. Filled only in element
+        // groups that use the model (the Professional keeps the existing
+        // per-model dofs at 0 under another model, e.g. druckprag under
+        // von Mises) with the plastic strain increment and the recovery of
+        // materi_strain_plasti, so with a single model it equals epp.
+        if ( materi_strain_plasti_camclay || materi_strain_plasti_mohr_coul ||
+             materi_strain_plasti_tension || materi_strain_plasti_vonmises ) {
+          long int pm_on[4], pm_indx[4], pm=0, pm_n=0;
+          double pm_ddum[DATA_ITEM_SIZE];
+          pm_on[0] = materi_strain_plasti_camclay && (
+            get_group_data( GROUP_MATERI_PLASTI_CAMCLAY, gr, element,
+              new_unknowns, pm_ddum, pm_n, GET_IF_EXISTS ) ||
+            get_group_data( GROUP_MATERI_PLASTI_CAMCLAY_INCREMENTAL, gr,
+              element, new_unknowns, pm_ddum, pm_n, GET_IF_EXISTS ) );
+          pm_on[1] = materi_strain_plasti_mohr_coul && (
+            get_group_data( GROUP_MATERI_PLASTI_MOHR_COUL, gr, element,
+              new_unknowns, pm_ddum, pm_n, GET_IF_EXISTS ) ||
+            get_group_data( GROUP_MATERI_PLASTI_MOHR_COUL_DIRECT, gr, element,
+              new_unknowns, pm_ddum, pm_n, GET_IF_EXISTS ) );
+          pm_on[2] = materi_strain_plasti_tension && (
+            get_group_data( GROUP_MATERI_PLASTI_TENSION, gr, element,
+              new_unknowns, pm_ddum, pm_n, GET_IF_EXISTS ) ||
+            get_group_data( GROUP_MATERI_PLASTI_TENSION_DIRECT, gr, element,
+              new_unknowns, pm_ddum, pm_n, GET_IF_EXISTS ) );
+          pm_on[3] = materi_strain_plasti_vonmises &&
+            get_group_data( GROUP_MATERI_PLASTI_VONMISES, gr, element,
+              new_unknowns, pm_ddum, pm_n, GET_IF_EXISTS );
+          pm_indx[0] = camepp_indx; pm_indx[1] = mcepp_indx;
+          pm_indx[2] = tnepp_indx; pm_indx[3] = vmepp_indx;
+          for ( pm=0; pm<4; pm++ ) {
+            if ( !pm_on[pm] ) continue;
+            ipuknwn = pm_indx[pm]/nder;
+            for ( idim=0; idim<MDIM; idim++ ) {
+              for ( jdim=idim; jdim<MDIM; jdim++ ) {
+                indx = inol*npuknwn + ipuknwn;
+                element_rhside[indx] += volume * w_rec *
+                  inc_epp[idim*MDIM+jdim] / dtime;
+                if ( options_element_dof==-YES )
+                  new_unknowns[ipuknwn*nder] = old_unknowns[ipuknwn*nder] +
+                    inc_epp[idim*MDIM+jdim];
+                ipuknwn++;
+              }
+            }
+          }
+        }
       }
     }
     // Hardening parameter kappa (F4 T6f WU2, 2026-10-11): an
@@ -1421,6 +1470,57 @@ void materi( long int element, long int gr, long int name, long int nnol,
         tmp = volume * w_rec * ( new_kappa - old_kappa ) / dtime;
         element_rhside[indx] += tmp;
         if ( options_element_dof==-YES ) new_unknowns[kap_indx] = new_kappa;
+      }
+    }
+    // Total strain kappas (manual Professional 4.45-4.48, F5 T2 V7): the
+    // history maximum of a measure of the total strain new_ept, kept as an
+    // integration-point state like kappa (elem.cc masks, recovery weight
+    // in general.cc). Size measure as materi_plasti_kappa:
+    //   kappa             max sqrt(0.5 eps:eps)
+    //   shear_kappa       max sqrt(0.5 dev(eps):dev(eps))
+    //   compression_kappa max( -smallest principal strain, 0 )
+    //   tension_kappa     max(  largest principal strain, 0 )
+    // The Professional 02-08-2026 accepts these initialisations but adds
+    // no dof (DIVERGENCES STRAIN-KAPPA-DOFS); GNU follows the manual.
+    if ( materi_strain_total_kappa || materi_strain_total_compression_kappa ||
+         materi_strain_total_shear_kappa || materi_strain_total_tension_kappa ) {
+      double w_rec = strain_recovery_weight( sri_on, name, nnol, inol,
+        npoint, ipoint, h[inol], volume, gr, nodes );
+      if ( scalar_dabs(w_rec)>EPS_H || scalar_dabs(h[inol])>EPS_H ) {
+        double ept_dev[MDIM*MDIM], ept_sym[MDIM*MDIM], ept_eig[MDIM],
+          ept_mean=0., ept_meas[4];
+        long int ept_kidx[4], ept_kon[4], ik=0;
+        for ( idim=0; idim<MDIM; idim++ ) {
+          for ( jdim=0; jdim<MDIM; jdim++ )
+            ept_sym[idim*MDIM+jdim] = 0.5 * ( new_ept[idim*MDIM+jdim] +
+              new_ept[jdim*MDIM+idim] );
+        }
+        array_move( ept_sym, ept_dev, MDIM*MDIM );
+        for ( idim=0; idim<MDIM; idim++ ) ept_mean += ept_dev[idim*MDIM+idim];
+        ept_mean /= MDIM;
+        for ( idim=0; idim<MDIM; idim++ ) ept_dev[idim*MDIM+idim] -= ept_mean;
+        matrix_eigenvalues( ept_sym, ept_eig );
+        double eig_min = ept_eig[0], eig_max = ept_eig[0];
+        for ( idim=1; idim<MDIM; idim++ ) {
+          if ( ept_eig[idim]<eig_min ) eig_min = ept_eig[idim];
+          if ( ept_eig[idim]>eig_max ) eig_max = ept_eig[idim];
+        }
+        ept_meas[0] = sqrt( 0.5 * array_inproduct( ept_sym, ept_sym, MDIM*MDIM ) );
+        ept_meas[1] = scalar_dmax( -eig_min, 0. );
+        ept_meas[2] = sqrt( 0.5 * array_inproduct( ept_dev, ept_dev, MDIM*MDIM ) );
+        ept_meas[3] = scalar_dmax( eig_max, 0. );
+        ept_kon[0] = materi_strain_total_kappa; ept_kidx[0] = eptk_indx;
+        ept_kon[1] = materi_strain_total_compression_kappa; ept_kidx[1] = eptkc_indx;
+        ept_kon[2] = materi_strain_total_shear_kappa; ept_kidx[2] = eptks_indx;
+        ept_kon[3] = materi_strain_total_tension_kappa; ept_kidx[3] = eptkt_indx;
+        for ( ik=0; ik<4; ik++ ) {
+          if ( !ept_kon[ik] ) continue;
+          double old_k = old_unknowns[ept_kidx[ik]];
+          double new_k = scalar_dmax( old_k, ept_meas[ik] );
+          indx = inol*npuknwn + ept_kidx[ik]/nder;
+          element_rhside[indx] += volume * w_rec * ( new_k - old_k ) / dtime;
+          if ( options_element_dof==-YES ) new_unknowns[ept_kidx[ik]] = new_k;
+        }
       }
     }
     // Other integration-point states (C68, F4 T6f): kappa_shear, the cap1

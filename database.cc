@@ -6030,6 +6030,22 @@ void db_initialize( long int dof_type[], long int dof_label[] )
 
   strcpy(name[MATERI_STRAIN_PLASTI_HARDSOIL],"materi_strain_plasti_hardsoil");
 
+  strcpy(name[MATERI_STRAIN_PLASTI_CAMCLAY],"materi_strain_plasti_camclay");
+
+  strcpy(name[MATERI_STRAIN_PLASTI_MOHR_COUL],"materi_strain_plasti_mohr_coul");
+
+  strcpy(name[MATERI_STRAIN_PLASTI_TENSION],"materi_strain_plasti_tension");
+
+  strcpy(name[MATERI_STRAIN_PLASTI_VONMISES],"materi_strain_plasti_vonmises");
+
+  strcpy(name[MATERI_STRAIN_TOTAL_KAPPA],"materi_strain_total_kappa");
+
+  strcpy(name[MATERI_STRAIN_TOTAL_COMPRESSION_KAPPA],"materi_strain_total_compression_kappa");
+
+  strcpy(name[MATERI_STRAIN_TOTAL_SHEAR_KAPPA],"materi_strain_total_shear_kappa");
+
+  strcpy(name[MATERI_STRAIN_TOTAL_TENSION_KAPPA],"materi_strain_total_tension_kappa");
+
   strcpy(name[MATERI_STRAIN_TOTAL],"materi_strain_total" );
 
   strcpy(name[MATERI_STRESS],"materi_stress");
@@ -8429,6 +8445,58 @@ void db_initialize( long int dof_type[], long int dof_label[] )
       else if ( n==5 ) strcpy( basename, "epphsyz" );
       else if ( n==6 ) strcpy( basename, "epphszz" );
     }
+    else if ( dof_type[iuknwn]==-MATERI_STRAIN_PLASTI_CAMCLAY ) {
+      // camclay plastic strain (manual Professional 4.34, F5 T2 V7)
+      if ( iuknwn==camepp_indx ) n = 0;
+      n++;
+      if      ( n==1 ) strcpy( basename, "eppccxx" );
+      else if ( n==2 ) strcpy( basename, "eppccxy" );
+      else if ( n==3 ) strcpy( basename, "eppccxz" );
+      else if ( n==4 ) strcpy( basename, "eppccyy" );
+      else if ( n==5 ) strcpy( basename, "eppccyz" );
+      else if ( n==6 ) strcpy( basename, "eppcczz" );
+    }
+    else if ( dof_type[iuknwn]==-MATERI_STRAIN_PLASTI_MOHR_COUL ) {
+      // mohr-coulomb plastic strain (manual Professional 4.41, F5 T2 V7)
+      if ( iuknwn==mcepp_indx ) n = 0;
+      n++;
+      if      ( n==1 ) strcpy( basename, "eppmcxx" );
+      else if ( n==2 ) strcpy( basename, "eppmcxy" );
+      else if ( n==3 ) strcpy( basename, "eppmcxz" );
+      else if ( n==4 ) strcpy( basename, "eppmcyy" );
+      else if ( n==5 ) strcpy( basename, "eppmcyz" );
+      else if ( n==6 ) strcpy( basename, "eppmczz" );
+    }
+    else if ( dof_type[iuknwn]==-MATERI_STRAIN_PLASTI_TENSION ) {
+      // tension plastic strain (manual Professional 4.42, F5 T2 V7)
+      if ( iuknwn==tnepp_indx ) n = 0;
+      n++;
+      if      ( n==1 ) strcpy( basename, "epptnxx" );
+      else if ( n==2 ) strcpy( basename, "epptnxy" );
+      else if ( n==3 ) strcpy( basename, "epptnxz" );
+      else if ( n==4 ) strcpy( basename, "epptnyy" );
+      else if ( n==5 ) strcpy( basename, "epptnyz" );
+      else if ( n==6 ) strcpy( basename, "epptnzz" );
+    }
+    else if ( dof_type[iuknwn]==-MATERI_STRAIN_PLASTI_VONMISES ) {
+      // von Mises plastic strain (manual Professional 4.43, F5 T2 V7)
+      if ( iuknwn==vmepp_indx ) n = 0;
+      n++;
+      if      ( n==1 ) strcpy( basename, "eppvmxx" );
+      else if ( n==2 ) strcpy( basename, "eppvmxy" );
+      else if ( n==3 ) strcpy( basename, "eppvmxz" );
+      else if ( n==4 ) strcpy( basename, "eppvmyy" );
+      else if ( n==5 ) strcpy( basename, "eppvmyz" );
+      else if ( n==6 ) strcpy( basename, "eppvmzz" );
+    }
+    else if ( dof_type[iuknwn]==-MATERI_STRAIN_TOTAL_KAPPA )
+      strcpy( basename, "eptk" );
+    else if ( dof_type[iuknwn]==-MATERI_STRAIN_TOTAL_COMPRESSION_KAPPA )
+      strcpy( basename, "eptkc" );
+    else if ( dof_type[iuknwn]==-MATERI_STRAIN_TOTAL_SHEAR_KAPPA )
+      strcpy( basename, "eptks" );
+    else if ( dof_type[iuknwn]==-MATERI_STRAIN_TOTAL_TENSION_KAPPA )
+      strcpy( basename, "eptkt" );
     else if ( dof_type[iuknwn]==-MATERI_STRAIN_TOTAL ) {
       if ( iuknwn==ept_indx ) n = 0;
       n++;

@@ -88,8 +88,9 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
     nodal values (manual 6.421 / 6.437 = Professional). Persisted format change (Risk item 1):
     own commit + independent verifier. Route: mapping explorer first, then decide writer/inline.
   - [x] V6 element_dof_initial_specific_number/value. Route: inline (no writer reason). Commit `df07925`.
-  - [ ] V7 materi initial dofs: materi_strain_plasti_{camclay,mohr_coul,tension,vonmises},
-    materi_strain_total_{,compression_,shear_,tension_}kappa (decision: register only or fill).
+  - [x] V7 materi initial dofs: materi_strain_plasti_{camclay,mohr_coul,tension,vonmises},
+    materi_strain_total_{,compression_,shear_,tension_}kappa. Owner 2026-11-03: follow the manual (fill),
+    document the Professional divergence. Route: inline (no writer reason). Commit PENDING-HASH.
   - [ ] V8 post_calcul modifiers: post_calcul_{absolute,label,limit,multiply,apparent_total,safety_default,static_pressure}.
   - [ ] V9 post data/point: post_count, post_data(_factor,_result), post_group_volume_summed, post_node_factor,
     post_node_rhside_ratio_method, post_point_{element_group,eps_iso,node_type},
@@ -339,3 +340,12 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   field value_0 + grad . x evaluated at the nodes, birth step only, element_dof_initial taking precedence;
   constant value_0 alone NaN in the Professional (manual followed, DIVERGENCES DOF-INITIAL-SPECIFIC-CONSTANT).
   general.cc node field + top.cc marker; tests element_dof_initial_specific1..5 + _error1. RED on fe664a3.
+- 2026-11-03 owner on V7 ("Pro accepts them as no-op and rejects camclay; manual says added to node_dof"):
+  "yo creo que seguir el manual y documentar la divergencia con Pro". T2 V7 (inline):
+  - Per-model plastic strain: filled only for groups with the model, with the epp recovery
+    (materi.cc strain recovery block; general.cc weight list).
+  - Total strain kappas: integration-point history maxima of new_ept (elem.cc masks), with
+    materi_strain_total required.
+  - Tests: materi_strain_plasti_model1..4 (equal to epp / 0); materi_strain_total_kappa1 (analytic);
+    _error1.
+  - Found BACKLOG C107: the older per-model dofs ignore the model and the epp recovery.

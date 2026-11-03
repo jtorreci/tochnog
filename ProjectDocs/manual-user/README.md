@@ -140,6 +140,14 @@ page lists its own in "Differences with the Professional version".
 - [materi_strain_plasti_compression](materi_strain_plasti_compression.md) — initia: compression plastic strain tensor in the node_dof records (dedicated dof eppcmpxx...).
 - [materi_strain_plasti_diprisco](materi_strain_plasti_diprisco.md) — initia: di Prisco plastic strain tensor in the node_dof records (dedicated dof eppdipxx...).
 - [materi_strain_plasti_druckprag](materi_strain_plasti_druckprag.md) — initia: drucker-prager plastic strain tensor in the node_dof records (dedicated dof eppdrpxx...).
+- [materi_strain_plasti_camclay](materi_strain_plasti_camclay.md) — initia: Cam clay plastic strain tensor in the node_dof records (dof eppccxx...), filled only in groups with that model (F5 T2 V7).
+- [materi_strain_plasti_mohr_coul](materi_strain_plasti_mohr_coul.md) — initia: Mohr-Coulomb plastic strain tensor in the node_dof records (dof eppmcxx...), filled only in groups with that model (F5 T2 V7).
+- [materi_strain_plasti_tension](materi_strain_plasti_tension.md) — initia: tension plastic strain tensor in the node_dof records (dof epptnxx...), filled only in groups with that model (F5 T2 V7).
+- [materi_strain_plasti_vonmises](materi_strain_plasti_vonmises.md) — initia: von Mises plastic strain tensor in the node_dof records (dof eppvmxx...), filled only in groups with that model (F5 T2 V7).
+- [materi_strain_total_kappa](materi_strain_total_kappa.md) — initia: history maximum of a total strain measure, dof eptk (manual 4.45) (F5 T2 V7).
+- [materi_strain_total_compression_kappa](materi_strain_total_compression_kappa.md) — initia: history maximum of a total strain measure, dof eptkc (manual 4.46) (F5 T2 V7).
+- [materi_strain_total_shear_kappa](materi_strain_total_shear_kappa.md) — initia: history maximum of a total strain measure, dof eptks (manual 4.47) (F5 T2 V7).
+- [materi_strain_total_tension_kappa](materi_strain_total_tension_kappa.md) — initia: history maximum of a total strain measure, dof eptkt (manual 4.48) (F5 T2 V7).
 - [materi_plasti_diprisco_history](materi_plasti_diprisco_history.md) — initia: per-model name of materi_history_variables for the di Prisco models (11 vars, 12 for diprisco_density).
 - [group_materi_elasti_camclay_pressure_min](group_materi_elasti_camclay_pressure_min.md) — minimal allowed pressure for the camclay bulk modulus K = (1+e)*p/kappa (clamp prevents very low/negative K).
 - [control_materi_plasti_hardsoil_gammap_initial](control_materi_plasti_hardsoil_gammap_initial.md) — -yes creates the extra initial gamma_p so f = 0 at the initial deviatoric stress (element_intpnt_materi_plasti_hardsoil_gammap_initial).

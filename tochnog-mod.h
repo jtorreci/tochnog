@@ -1750,6 +1750,15 @@ enum {
   // F5 T2 V6 (manual Professional 6.423, 6.424)
   ELEMENT_DOF_INITIAL_SPECIFIC_NUMBER,
   ELEMENT_DOF_INITIAL_SPECIFIC_VALUE,
+  // F5 T2 V7 (manual Professional 4.34, 4.41-4.43, 4.45-4.48)
+  MATERI_STRAIN_PLASTI_CAMCLAY,
+  MATERI_STRAIN_PLASTI_MOHR_COUL,
+  MATERI_STRAIN_PLASTI_TENSION,
+  MATERI_STRAIN_PLASTI_VONMISES,
+  MATERI_STRAIN_TOTAL_KAPPA,
+  MATERI_STRAIN_TOTAL_COMPRESSION_KAPPA,
+  MATERI_STRAIN_TOTAL_SHEAR_KAPPA,
+  MATERI_STRAIN_TOTAL_TENSION_KAPPA,
   LAST_DUMMY }; // keep LAST_DUMMY always the last one
 
 #define MDAT LAST_DUMMY+DATA_ITEM_SIZE  // reserve space for unknowns
@@ -1770,6 +1779,11 @@ extern long int echo, ndim, derivatives,
   materi_strain_plasti_hardsoil, materi_strain_plasti_cap,
   materi_strain_plasti_compression, materi_strain_plasti_diprisco,
   materi_strain_plasti_druckprag,
+  // F5 T2 V7 (manual Professional 4.34, 4.41-4.43, 4.45-4.48)
+  materi_strain_plasti_camclay, materi_strain_plasti_mohr_coul,
+  materi_strain_plasti_tension, materi_strain_plasti_vonmises,
+  materi_strain_total_kappa, materi_strain_total_compression_kappa,
+  materi_strain_total_shear_kappa, materi_strain_total_tension_kappa,
   materi_plasti_f, materi_plasti_f_nonlocal, materi_plasti_incremental_substeps,
   materi_plasti_softvar_local,
   materi_plasti_softvar_nonlocal,
@@ -1826,6 +1840,14 @@ extern long int
   cepp_indx, // index stating start of materi_strain_plasti_compression in node_dof
   depp_indx, // index stating start of materi_strain_plasti_diprisco in node_dof
   dpepp_indx, // index stating start of materi_strain_plasti_druckprag in node_dof
+  camepp_indx, // index stating start of materi_strain_plasti_camclay in node_dof
+  mcepp_indx, // index stating start of materi_strain_plasti_mohr_coul in node_dof
+  tnepp_indx, // index stating start of materi_strain_plasti_tension in node_dof
+  vmepp_indx, // index stating start of materi_strain_plasti_vonmises in node_dof
+  eptk_indx, // index of materi_strain_total_kappa in node_dof
+  eptkc_indx, // index of materi_strain_total_compression_kappa in node_dof
+  eptks_indx, // index of materi_strain_total_shear_kappa in node_dof
+  eptkt_indx, // index of materi_strain_total_tension_kappa in node_dof
   rho_indx, // index stating start of materi_plasti_rho in node_dof
   rot_indx, // index stating start of beam_rotation in node_dof
   scal_indx, // index stating start of wave_scalar in node_dof

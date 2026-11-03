@@ -345,6 +345,38 @@ void general( long int element, long int name, long int nnol, long int element_g
         unknown_belongs_to_type = 1;
         inertia = 1.;
       }
+      else if ( dof_type[iuknwn]==-MATERI_STRAIN_PLASTI_CAMCLAY ) {
+        unknown_belongs_to_type = 1;
+        inertia = 1.;
+      }
+      else if ( dof_type[iuknwn]==-MATERI_STRAIN_PLASTI_MOHR_COUL ) {
+        unknown_belongs_to_type = 1;
+        inertia = 1.;
+      }
+      else if ( dof_type[iuknwn]==-MATERI_STRAIN_PLASTI_TENSION ) {
+        unknown_belongs_to_type = 1;
+        inertia = 1.;
+      }
+      else if ( dof_type[iuknwn]==-MATERI_STRAIN_PLASTI_VONMISES ) {
+        unknown_belongs_to_type = 1;
+        inertia = 1.;
+      }
+      else if ( dof_type[iuknwn]==-MATERI_STRAIN_TOTAL_KAPPA ) {
+        unknown_belongs_to_type = 1;
+        inertia = 1.;
+      }
+      else if ( dof_type[iuknwn]==-MATERI_STRAIN_TOTAL_COMPRESSION_KAPPA ) {
+        unknown_belongs_to_type = 1;
+        inertia = 1.;
+      }
+      else if ( dof_type[iuknwn]==-MATERI_STRAIN_TOTAL_SHEAR_KAPPA ) {
+        unknown_belongs_to_type = 1;
+        inertia = 1.;
+      }
+      else if ( dof_type[iuknwn]==-MATERI_STRAIN_TOTAL_TENSION_KAPPA ) {
+        unknown_belongs_to_type = 1;
+        inertia = 1.;
+      }
       else if ( dof_type[iuknwn]==-MATERI_STRAIN_TOTAL ) {
         unknown_belongs_to_type = 1;
         inertia = 1.;
@@ -444,7 +476,19 @@ void general( long int element, long int name, long int nnol, long int element_g
                dof_type[iuknwn]==-MATERI_PLASTI_CAP1_HISTORY ||
                dof_type[iuknwn]==-MATERI_DAMAGE ||
                dof_type[iuknwn]==-MATERI_PLASTI_RHO ||
-               dof_type[iuknwn]==-MATERI_MAXWELL_STRESS )
+               dof_type[iuknwn]==-MATERI_MAXWELL_STRESS ||
+               // F5 T2 V7: the per-model plastic strains of camclay /
+               // mohr_coul / tension / vonmises follow the recovery of
+               // materi_strain_plasti; the total strain kappas are
+               // integration-point states
+               dof_type[iuknwn]==-MATERI_STRAIN_PLASTI_CAMCLAY ||
+               dof_type[iuknwn]==-MATERI_STRAIN_PLASTI_MOHR_COUL ||
+               dof_type[iuknwn]==-MATERI_STRAIN_PLASTI_TENSION ||
+               dof_type[iuknwn]==-MATERI_STRAIN_PLASTI_VONMISES ||
+               dof_type[iuknwn]==-MATERI_STRAIN_TOTAL_KAPPA ||
+               dof_type[iuknwn]==-MATERI_STRAIN_TOTAL_COMPRESSION_KAPPA ||
+               dof_type[iuknwn]==-MATERI_STRAIN_TOTAL_SHEAR_KAPPA ||
+               dof_type[iuknwn]==-MATERI_STRAIN_TOTAL_TENSION_KAPPA )
             weight = strain_recovery_weight(
               sri_active( element, element_group, name, nnol ), name, nnol,
               inol, npoint, ipoint, h[inol], volume, element_group,
@@ -537,6 +581,22 @@ void general( long int element, long int name, long int nnol, long int element_g
           else if ( dof_type[iuknwn]==-MATERI_STRAIN_PLASTI_DRUCKPRAG && type==-MATERI )
             conv_part = 1.;
           else if ( dof_type[iuknwn]==-MATERI_STRAIN_PLASTI_HARDSOIL && type==-MATERI )
+            conv_part = 1.;
+          else if ( dof_type[iuknwn]==-MATERI_STRAIN_PLASTI_CAMCLAY && type==-MATERI )
+            conv_part = 1.;
+          else if ( dof_type[iuknwn]==-MATERI_STRAIN_PLASTI_MOHR_COUL && type==-MATERI )
+            conv_part = 1.;
+          else if ( dof_type[iuknwn]==-MATERI_STRAIN_PLASTI_TENSION && type==-MATERI )
+            conv_part = 1.;
+          else if ( dof_type[iuknwn]==-MATERI_STRAIN_PLASTI_VONMISES && type==-MATERI )
+            conv_part = 1.;
+          else if ( dof_type[iuknwn]==-MATERI_STRAIN_TOTAL_KAPPA && type==-MATERI )
+            conv_part = 1.;
+          else if ( dof_type[iuknwn]==-MATERI_STRAIN_TOTAL_COMPRESSION_KAPPA && type==-MATERI )
+            conv_part = 1.;
+          else if ( dof_type[iuknwn]==-MATERI_STRAIN_TOTAL_SHEAR_KAPPA && type==-MATERI )
+            conv_part = 1.;
+          else if ( dof_type[iuknwn]==-MATERI_STRAIN_TOTAL_TENSION_KAPPA && type==-MATERI )
             conv_part = 1.;
           else if ( dof_type[iuknwn]==-MATERI_STRAIN_TOTAL && type==-MATERI )
             conv_part = 1.;
