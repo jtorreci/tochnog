@@ -90,7 +90,7 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   - [x] V6 element_dof_initial_specific_number/value. Route: inline (no writer reason). Commit `df07925`.
   - [x] V7 materi initial dofs: materi_strain_plasti_{camclay,mohr_coul,tension,vonmises},
     materi_strain_total_{,compression_,shear_,tension_}kappa. Owner 2026-11-03: follow the manual (fill),
-    document the Professional divergence. Route: inline (no writer reason). Commit PENDING-HASH.
+    document the Professional divergence. Route: inline (no writer reason). Commit `0fa067b`.
   - [ ] V8 post_calcul modifiers: post_calcul_{absolute,label,limit,multiply,apparent_total,safety_default,static_pressure}.
   - [ ] V9 post data/point: post_count, post_data(_factor,_result), post_group_volume_summed, post_node_factor,
     post_node_rhside_ratio_method, post_point_{element_group,eps_iso,node_type},
