@@ -333,11 +333,12 @@ void top( void )
     // element without element_intpnt_dof record in the input starts its
     // integration-point states from the node_dof records (-yes: the GNU
     // element_dof_initialised 0 path of elem.cc) or from zero (-no: the
-    // record is marked initialised with the zero values below). The GNU
-    // default stays -yes (the historical behaviour); the manual and the
-    // Professional 02-08-2026 default is -no (probes f5/v5b d_*): open
-    // owner decision ELEMENT-DOF-FROM-NODE-DOF-DEFAULT.
-    long int element_dof_from_node_dof = -YES, intpnt_absent = 0;
+    // record is marked initialised with the zero values below; a
+    // control_reset_dof then writes the integration points itself, see
+    // data.cc). The default is -no, as in the manual and the Professional
+    // 02-08-2026 (probes f5/v5b d_*; owner decision C100, 2026-11-03);
+    // the GNU behaved as -yes before.
+    long int element_dof_from_node_dof = -NO, intpnt_absent = 0;
     db( GLOBAL_ELEMENT_DOF_FROM_NODE_DOF, 0, &element_dof_from_node_dof,
       ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
     for ( ielem=0; ielem<=max_elem; ielem++ ) {

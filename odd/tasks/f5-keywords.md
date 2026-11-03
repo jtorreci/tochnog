@@ -318,3 +318,11 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   node_dof), C101 global_node_dof_empty displacement (manual zero, Pro keeps). Pre-existing C102, C105 noted.
   Risk item 3 -> covered by the end-of-T2 independent verifier.
 
+- 2026-11-03 Owner on C100: "como manual y Pro". Default of global_element_dof_from_node_dof flipped to -no.
+  First flip broke hypo_masin_history_slots1 (initial state by control_reset_dof only; the Professional runs it
+  — minipc Pro run): data.cc control_reset_dof now writes the integration points under -no. A node-zeroing
+  variant was rejected (it wiped the input displacement, global_node_dof_empty1). Owner: "si" to writing -yes
+  explicitly in the 20 node_dof-initialised suite inputs (+ convected_stress_recovery1); the Professional parser
+  rejects them for other keywords. New test global_element_dof_from_node_dof3 (default). Suite 692 OK / 0 FALLO,
+  226/226 runs, audit 0. Pending: A/B on the 748 inputs on omen (offline). Risk item 3 (shared reset code in
+  data.cc; default change) -> end-of-T2 independent verifier.

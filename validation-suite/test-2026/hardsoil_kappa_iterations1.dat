@@ -68,4 +68,6 @@ target_item  3  -post_point_dof 1 -sigyy
 target_value  3  -0.517426372 1.e-6
 target_item  4  -post_point_dof 1 -eppxx
 target_value  4  -0.00119147571 1.e-9
+(C100: the initial state comes from node_dof; the default is -no)
+global_element_dof_from_node_dof -yes
 end_data

@@ -1404,6 +1404,58 @@ void data( long int task, double dtime, double time_current )
           }
         }
         }
+        // global_element_dof_from_node_dof -no (manual Professional 6.554,
+        // default; C100): the integration points of the elements without
+        // element_intpnt_dof input start from zero and are marked
+        // initialised (top.cc), so they no longer copy the node values at
+        // the first element loop. The reset must then reach them
+        // directly: every integration point of an initialised element
+        // whose nodes are all selected gets the element average of the
+        // reset node values. The Professional 02-08-2026 resets the
+        // integration-point state (hypo_masin_history_slots1: hyhis0 reset
+        // to 1.03 without node_dof input). With -yes the integration
+        // points still take the reset through the first-step node copy.
+        if ( options_element_dof==-YES && nuknwn>0 ) {
+          long int from_node_dof = -NO;
+          db( GLOBAL_ELEMENT_DOF_FROM_NODE_DOF, 0, &from_node_dof, ddum,
+            ldum, VERSION_NORMAL, GET_IF_EXISTS );
+          // every dof of the record (the block runs once per record)
+          for ( long int k_ip=0; k_ip<reset_dof_length; k_ip++ ) {
+          long int indx_ip = reset_dof[k_ip];
+          if ( indx_ip<0 ) array_member( dof_label, indx_ip, nuknwn, indx_ip );
+          if ( from_node_dof==-NO && indx_ip>=0 && indx_ip<nuknwn ) {
+            long int max_element_i = 0, iel_i = 0, length_el_i = 0,
+              inol_i = 0, init_i = 0, len_ip = 0, el_i[MNOL+1];
+            db_max_index( ELEMENT, max_element_i, VERSION_NORMAL, GET );
+            for ( iel_i=0; iel_i<=max_element_i; iel_i++ ) {
+              if ( !db_active_index( ELEMENT, iel_i, VERSION_NORMAL ) ||
+                   !db_active_index( ELEMENT_INTPNT_DOF, iel_i,
+                     VERSION_NORMAL ) ||
+                   !db_active_index( ELEMENT_DOF_INITIALISED, iel_i,
+                     VERSION_NORMAL ) ) continue;
+              db( ELEMENT_DOF_INITIALISED, iel_i, &init_i, ddum, ldum,
+                VERSION_NORMAL, GET );
+              if ( init_i!=1 ) continue;
+              db( ELEMENT, iel_i, el_i, ddum, length_el_i, VERSION_NORMAL, GET );
+              long int all_in_i = 1;
+              double sum_i = 0.;
+              for ( inol_i=1; inol_i<length_el_i; inol_i++ ) {
+                if ( reset_dof_node_filter &&
+                     !reset_dof_node_filter[el_i[inol_i]] ) all_in_i = 0;
+                else if ( db_len( NODE_DOF, el_i[inol_i],
+                    VERSION_NORMAL )!=nuknwn ) all_in_i = 0;
+                else sum_i += db_dbl( NODE_DOF, el_i[inol_i],
+                  VERSION_NORMAL )[indx_ip];
+              }
+              if ( !all_in_i || length_el_i<2 ) continue;
+              double *ip_i = db_dbl( ELEMENT_INTPNT_DOF, iel_i, VERSION_NORMAL );
+              len_ip = db_len( ELEMENT_INTPNT_DOF, iel_i, VERSION_NORMAL );
+              for ( long int ipnt=0; ipnt*nuknwn+indx_ip<len_ip; ipnt++ )
+                ip_i[ipnt*nuknwn+indx_ip] = sum_i/( length_el_i-1 );
+            }
+          }
+          }
+        }
         }   // end dof list loop
       }
       delete[] reset_dof;

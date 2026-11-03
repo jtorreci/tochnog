@@ -6601,7 +6601,7 @@ void db_initialize( long int dof_type[], long int dof_label[] )
 
   // global_element_dof_from_node_dof (manual Professional 6.554): -yes
   // initialises the element_intpnt_dof records that are not in the input
-  // from the node_dof records, -no starts them at zero (top.cc).
+  // from the node_dof records, -no (default) starts them at zero (top.cc).
   strcpy(name[GLOBAL_ELEMENT_DOF_FROM_NODE_DOF],"global_element_dof_from_node_dof");
   type[GLOBAL_ELEMENT_DOF_FROM_NODE_DOF] = INTEGER;
   data_length[GLOBAL_ELEMENT_DOF_FROM_NODE_DOF] = 1;

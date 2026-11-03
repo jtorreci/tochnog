@@ -10,11 +10,23 @@
   `elem.cc` restores the (zero) integration-point states instead of
   interpolating them from the nodes (the `element_dof_initialised==0`
   path). Otherwise the record is 0 as before.
-- Default `-YES` hardcoded in `top.cc` (`element_dof_from_node_dof`): the
-  historical GNU behaviour (`element_dof_initialised` 0 =
-  interpolation from `node_dof`). Manual and Professional default `-no`:
-  open owner decision ELEMENT-DOF-FROM-NODE-DOF-DEFAULT (flip the
-  initial value to `-NO`; about 200 suite inputs hold `node_dof` records).
+- Default `-NO` hardcoded in `top.cc` (`element_dof_from_node_dof`), as
+  in the manual and the Professional (owner decision C100, 2026-11-03).
+  Before C100 the default was `-YES` (`element_dof_initialised` 0 =
+  interpolation from `node_dof`); 20 suite inputs that give their initial
+  state in `node_dof` now write `-yes` explicitly.
+- `data.cc` `data()`, `control_reset_dof` dof-list loop: with the switch
+  `-NO` (read again there, default `-NO`) and `options_element_dof==-YES`,
+  after the node values of a reset record are set, every element with
+  `ELEMENT_DOF_INITIALISED` 1, an `ELEMENT_INTPNT_DOF` record and all its
+  nodes inside the reset node filter gets, at every integration point,
+  the element average of the reset node values (index
+  `ipoint*nuknwn+dof`). Without it the reset never reached the
+  integration points (they no longer copy the nodes); the Professional
+  resets them (test `hypo_masin_history_slots1`, hyhis0 reset 1.03).
+  With `-YES` nothing changes: the first-step copy carries the reset.
+- Pending refactoring: the switch is read in two places (`top.cc` and
+  `data.cc`); a global variable set once in `top()` would avoid that.
 - Not touched: `CONTROL_DATA_INITELDOF_GEOMETRY` (`data.cc`) still resets
   `ELEMENT_DOF_INITIALISED` to 0 for a later re-initialisation from the
   nodes; new elements of the data part (`input.cc`), `generate.cc` and
@@ -24,4 +36,5 @@ Verification: Professional 02-08-2026 probes f5/v5b `d_def` = `d_no` (no
 initial stress taken), `d_yes` (taken; = GNU before the record),
 `d_yes_ano` / `d_no_ano` / `d_def_ano` (apply -no: nodal values used,
 switch without effect), `d_yes_aonly` (Professional aborts with -only).
-Tests `global_element_dof_from_node_dof1/2`.
+Tests `global_element_dof_from_node_dof1/2/3` (3 = default) and
+`hypo_masin_history_slots1` (reset under the default).

@@ -94,4 +94,6 @@ control_print_data_versus_data          20  -post_point_dof 1 -eptxx
 
 target_item 1   -post_point_dof 1 -sigxx
 target_value 1  -0.10466 2.e-3
+(C100: the initial state comes from node_dof; the default is -no)
+global_element_dof_from_node_dof -yes
 end_data

@@ -1,8 +1,7 @@
 (F5 T2 V5b: global_element_dof_from_node_dof -yes: the integration points
  start from the node_dof stresses of the input (the GNU behaviour without
- the record). Expected node_dof 1..4: Professional 02-08-2026 probe f5/v5b
- d_yes (same input); the GNU run without the record gives the same values
- (default kept at -yes, open owner decision ELEMENT-DOF-FROM-NODE-DOF-DEFAULT).)
+ the record before C100; the default is now -no). Expected node_dof 1..4:
+ Professional 02-08-2026 probe f5/v5b d_yes (same input).)
 echo -no
 number_of_space_dimensions 2
 materi_velocity

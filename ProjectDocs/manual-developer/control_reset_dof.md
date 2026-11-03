@@ -77,6 +77,15 @@
   routing to ELEMENT_INTPNT_DOF needs the per-integration-point storage.
   Documented as partial.
 
+## Integration points (C100, 2026-11-03)
+
+With `global_element_dof_from_node_dof -no` (the default) the integration
+points of an element do not copy the node values at the first step, so
+`data()` writes the reset dofs into `ELEMENT_INTPNT_DOF` itself: element
+average of the reset node values, for the elements with
+`ELEMENT_DOF_INITIALISED` 1 whose nodes are all inside the node filter.
+See [global_element_dof_from_node_dof](global_element_dof_from_node_dof.md).
+
 ## Verification
 
 creset_geom (hisv0 0.5 -> 0 left column only; A/B without the filter

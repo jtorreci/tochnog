@@ -1,4 +1,4 @@
-( C72 {F4 T6f, 2026-10-13} nodal stress output on a mesh fixed in space with convection_apply -yes. 40 quad4 strip 10 x 1, elastic {young 1, poisson 0}, uniform velx 1 {inlet + initial node_dof}, so the strain rate is zero; initial sigzz = sin^2 pulse on 1 <= x <= 3. Neither code convects the integration-point stress, and the Professional 02-08-2026 nodal stress is the recovery of the integration-point stress: the pulse stays frozen, post_point sigzz at x = 1.5 / 2.0 / 2.5 = 0.5 / 1.0 / 0.5 at t = 2 {Professional run with global_element_dof_from_node_dof -yes, the Professional keyword that starts the integration points from node_dof, which GNU always does}. Before C72 GNU transported the nodal stress incrementally with a lumped mass weight F/volume against a convective weight h, so the pulse moved at about v*volume_ip {0.055}: 0.348732 / 0.6481 at x = 1.5 / 2.5. )
+( C72 {F4 T6f, 2026-10-13} nodal stress output on a mesh fixed in space with convection_apply -yes. 40 quad4 strip 10 x 1, elastic {young 1, poisson 0}, uniform velx 1 {inlet + initial node_dof}, so the strain rate is zero; initial sigzz = sin^2 pulse on 1 <= x <= 3. Neither code convects the integration-point stress, and the Professional 02-08-2026 nodal stress is the recovery of the integration-point stress: the pulse stays frozen, post_point sigzz at x = 1.5 / 2.0 / 2.5 = 0.5 / 1.0 / 0.5 at t = 2 {Professional run with global_element_dof_from_node_dof -yes, the Professional keyword that starts the integration points from node_dof, which GNU did by default before C100}. Before C72 GNU transported the nodal stress incrementally with a lumped mass weight F/volume against a convective weight h, so the pulse moved at about v*volume_ip {0.055}: 0.348732 / 0.6481 at x = 1.5 / 2.5. )
 
 echo -no
 number_of_space_dimensions 2
@@ -232,6 +232,7 @@ post_point 8 8.5 0.5
 post_point 9 9.5 0.5
 post_point 10 2.0 0.5
 print_filter 0 -post_point_dof -all -sigzz
+global_element_dof_from_node_dof -yes
 control_timestep 10 0.1 2.0
 control_print 10 -time_current -post_point_dof
 target_item 0 -post_point_dof 1 -sigzz

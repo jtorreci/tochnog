@@ -443,7 +443,7 @@ page lists its own in "Differences with the Professional version".
 - [dof_element_dof](dof_element_dof.md) — `DOF_ELEMENT_DOF` filled in `input.cc` from `dof_type` (the `elem.cc` integration-point restore set) (F5 T2 V5b).
 - [dof_limit](dof_limit.md) — `DOF_LIMIT` (2*npuknwn); `dof.cc` `dof_limit_clamp()` in `parallel_new_dof_diagonal()` and `dof_limit_apply()` from `top.cc` (F5 T2 V5b).
 - [global_node_dof_empty](global_node_dof_empty.md) — `bounda.cc` `node_dof_empty_apply()`, `bounda_node_dormant()` `empty_type` mode, called from `top.cc` at the step end (F5 T2 V5b).
-- [global_element_dof_from_node_dof](global_element_dof_from_node_dof.md) — `top.cc` writes `ELEMENT_DOF_INITIALISED` 1 for elements without input `element_intpnt_dof` when -no; default -yes hardcoded (F5 T2 V5b).
+- [global_element_dof_from_node_dof](global_element_dof_from_node_dof.md) — `top.cc` writes `ELEMENT_DOF_INITIALISED` 1 for elements without input `element_intpnt_dof` when -no; default -no hardcoded (C100); data.cc control_reset_dof writes the integration points under -no (F5 T2 V5b).
 - [print_database_calculation](print_database_calculation.md) — gates de exit_tn (miscel.cc) del volcado .dbs/.flavia final.
 - [post_apply](post_apply.md) — records `POST_APPLY` / `CONTROL_POST_APPLY`; gate in `step_close()` (`top.cc`); stale flags `post_stale` / `post_element_force_stale` and the end-of-run re-evaluation in `exit_tn()` (`miscel.cc`) (F5).
 - [control_post_apply](control_post_apply.md) — see post_apply (F5).

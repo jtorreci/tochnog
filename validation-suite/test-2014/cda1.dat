@@ -44,4 +44,6 @@ node_dof  1  0 0 0 0 -200 0 0 -200 0 -200 0 0 0 0 0 0 0.6 0 0 0
 node_dof  2  0 0 0 0 -200 0 0 -200 0 -200 0 0 0 0 0 0 0.6 0 0 0
 node_dof  3  0 0 0 0 -200 0 0 -200 0 -200 0 0 0 0 0 0 0.6 0 0 0
 node_dof  4  0 0 0 0 -200 0 0 -200 0 -200 0 0 0 0 0 0 0.6 0 0 0
+(C100: the initial state comes from node_dof; the default is -no)
+global_element_dof_from_node_dof -yes
 end_data
