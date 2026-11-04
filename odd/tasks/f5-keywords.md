@@ -92,7 +92,7 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
     materi_strain_total_{,compression_,shear_,tension_}kappa. Owner 2026-11-03: follow the manual (fill),
     document the Professional divergence. Route: inline (no writer reason). Commit `0fa067b`.
   - [x] V7b C107: older per-model plastic strain dofs (hardsoil/cap/compression/diprisco/druckprag) gated
-    by model with the epp recovery (0 under another model). Owner 2026-11-04. Route: inline. Commit (pending).
+    by model with the epp recovery (0 under another model). Owner 2026-11-04. Route: inline. Commit `1a44872`.
   - [ ] V8 post_calcul modifiers: post_calcul_{absolute,label,limit,multiply,apparent_total,safety_default,static_pressure}.
   - [ ] V9 post data/point: post_count, post_data(_factor,_result), post_group_volume_summed, post_node_factor,
     post_node_rhside_ratio_method, post_point_{element_group,eps_iso,node_type},
