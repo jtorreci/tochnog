@@ -477,10 +477,14 @@ void general( long int element, long int name, long int nnol, long int element_g
                dof_type[iuknwn]==-MATERI_DAMAGE ||
                dof_type[iuknwn]==-MATERI_PLASTI_RHO ||
                dof_type[iuknwn]==-MATERI_MAXWELL_STRESS ||
-               // F5 T2 V7: the per-model plastic strains of camclay /
-               // mohr_coul / tension / vonmises follow the recovery of
-               // materi_strain_plasti; the total strain kappas are
-               // integration-point states
+               // F5 T2 V7 / C107: the per-model plastic strains follow
+               // the recovery of materi_strain_plasti; the total strain
+               // kappas are integration-point states
+               dof_type[iuknwn]==-MATERI_STRAIN_PLASTI_HARDSOIL ||
+               dof_type[iuknwn]==-MATERI_STRAIN_PLASTI_CAP ||
+               dof_type[iuknwn]==-MATERI_STRAIN_PLASTI_COMPRESSION ||
+               dof_type[iuknwn]==-MATERI_STRAIN_PLASTI_DIPRISCO ||
+               dof_type[iuknwn]==-MATERI_STRAIN_PLASTI_DRUCKPRAG ||
                dof_type[iuknwn]==-MATERI_STRAIN_PLASTI_CAMCLAY ||
                dof_type[iuknwn]==-MATERI_STRAIN_PLASTI_MOHR_COUL ||
                dof_type[iuknwn]==-MATERI_STRAIN_PLASTI_TENSION ||

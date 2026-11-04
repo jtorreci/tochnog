@@ -2830,10 +2830,14 @@ ix={k:i for i,k in enumerate(lab)}
 cs=["xx","xy","xz","yy","yz","zz"]
 epp=max(abs(r[ix["epp"+c]]) for r in rows for c in cs)
 bad=epp==0.
-for m in ["cc","mc","tn","vm"]:
+for m in ["cc","mc","tn","vm","hs","cap","cmp","dip","drp"]:
+    # the 6 components in label order (the cap yy label is "eppcappyy")
+    mc=[k for k in lab if k.startswith("epp"+m)]
+    if not mc: continue
+    if len(mc)!=6: bad=True; continue
     for r in rows:
-        for c in cs:
-            v=r[ix["epp"+m+c]]; ref=r[ix["epp"+c]] if m==sys.argv[2] else 0.
+        for c,k in zip(cs,mc):
+            v=r[ix[k]]; ref=r[ix["epp"+c]] if m==sys.argv[2] else 0.
             if abs(v-ref)>1e-12*max(1.,epp): bad=True
 print("bad" if bad else "ok")
 PYEOF
@@ -2841,11 +2845,14 @@ PYEOF
   if [ "$res" = "ok" ]; then check_ok "$t epp$2* = epp*, other models 0"
   else check_fail "$t" "per-model plastic strain columns ($res)"; fi
 }
-for t in 1 2 3 4; do run_ok "$T2026" materi_strain_plasti_model$t; done
+for t in 1 2 3 4 5; do run_ok "$T2026" materi_strain_plasti_model$t; done
 strain_plasti_model_check materi_strain_plasti_model1 vm
 strain_plasti_model_check materi_strain_plasti_model2 mc
 strain_plasti_model_check materi_strain_plasti_model3 cc
 strain_plasti_model_check materi_strain_plasti_model4 tn
+# C107: the older per-model dofs (hardsoil / cap / compression / diprisco /
+# druckprag) are 0 outside their model and follow the epp recovery (tria3).
+strain_plasti_model_check materi_strain_plasti_model5 drp
 # F5 T2 V7: materi_strain_total_*kappa (manual 4.45-4.48), analytic history
 # maxima (see the input), after unloading to half the peak strain.
 run_ok "$T2026" materi_strain_total_kappa1

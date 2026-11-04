@@ -1373,7 +1373,10 @@ void materi( long int element, long int gr, long int name, long int nnol,
     // Professional tslv_part clamped edge eptyy 0, GNU -2.35e-6.
     if ( materi_strain_total || materi_strain_elasti || materi_strain_plasti ||
          materi_strain_plasti_camclay || materi_strain_plasti_mohr_coul ||
-         materi_strain_plasti_tension || materi_strain_plasti_vonmises ) {
+         materi_strain_plasti_tension || materi_strain_plasti_vonmises ||
+         materi_strain_plasti_hardsoil || materi_strain_plasti_cap ||
+         materi_strain_plasti_compression || materi_strain_plasti_diprisco ||
+         materi_strain_plasti_druckprag ) {
       double w_rec = strain_recovery_weight( sri_on, name, nnol, inol,
         npoint, ipoint, h[inol], volume, gr, nodes );
       if ( scalar_dabs(w_rec)>EPS_H || scalar_dabs(h[inol])>EPS_H ) {
@@ -1404,16 +1407,19 @@ void materi( long int element, long int gr, long int name, long int nnol,
             }
           }
         }
-        // materi_strain_plasti_camclay / _mohr_coul / _tension / _vonmises
-        // (manual Professional 4.34, 4.41-4.43, F5 T2 V7): the plastic
-        // strain "specifically for" that model. Filled only in element
-        // groups that use the model (the Professional keeps the existing
-        // per-model dofs at 0 under another model, e.g. druckprag under
-        // von Mises) with the plastic strain increment and the recovery of
-        // materi_strain_plasti, so with a single model it equals epp.
+        // materi_strain_plasti_<model> (manual Professional 4.34-4.43,
+        // F5 T2 V7, C107): the plastic strain "specifically for" that
+        // model. Filled only in element groups that use the model (the
+        // Professional keeps a per-model dof at 0 under another model,
+        // e.g. druckprag under von Mises) with the plastic strain
+        // increment and the recovery of materi_strain_plasti, so with a
+        // single model it equals epp. The other groups keep 0.
         if ( materi_strain_plasti_camclay || materi_strain_plasti_mohr_coul ||
-             materi_strain_plasti_tension || materi_strain_plasti_vonmises ) {
-          long int pm_on[4], pm_indx[4], pm=0, pm_n=0;
+             materi_strain_plasti_tension || materi_strain_plasti_vonmises ||
+             materi_strain_plasti_hardsoil || materi_strain_plasti_cap ||
+             materi_strain_plasti_compression ||
+             materi_strain_plasti_diprisco || materi_strain_plasti_druckprag ) {
+          long int pm_on[9], pm_indx[9], pm=0, pm_n=0;
           double pm_ddum[DATA_ITEM_SIZE];
           pm_on[0] = materi_strain_plasti_camclay && (
             get_group_data( GROUP_MATERI_PLASTI_CAMCLAY, gr, element,
@@ -1433,9 +1439,31 @@ void materi( long int element, long int gr, long int name, long int nnol,
           pm_on[3] = materi_strain_plasti_vonmises &&
             get_group_data( GROUP_MATERI_PLASTI_VONMISES, gr, element,
               new_unknowns, pm_ddum, pm_n, GET_IF_EXISTS );
+          pm_on[4] = materi_strain_plasti_hardsoil &&
+            get_group_data( GROUP_MATERI_PLASTI_HARDSOIL, gr, element,
+              new_unknowns, pm_ddum, pm_n, GET_IF_EXISTS );
+          pm_on[5] = materi_strain_plasti_cap && (
+            get_group_data( GROUP_MATERI_PLASTI_CAP, gr, element,
+              new_unknowns, pm_ddum, pm_n, GET_IF_EXISTS ) ||
+            get_group_data( GROUP_MATERI_PLASTI_CAP1, gr, element,
+              new_unknowns, pm_ddum, pm_n, GET_IF_EXISTS ) );
+          pm_on[6] = materi_strain_plasti_compression && (
+            get_group_data( GROUP_MATERI_PLASTI_COMPRESSION, gr, element,
+              new_unknowns, pm_ddum, pm_n, GET_IF_EXISTS ) ||
+            get_group_data( GROUP_MATERI_PLASTI_COMPRESSION_DIRECT, gr,
+              element, new_unknowns, pm_ddum, pm_n, GET_IF_EXISTS ) );
+          pm_on[7] = materi_strain_plasti_diprisco &&
+            get_group_data( GROUP_MATERI_PLASTI_DIPRISCO, gr, element,
+              new_unknowns, pm_ddum, pm_n, GET_IF_EXISTS );
+          pm_on[8] = materi_strain_plasti_druckprag &&
+            get_group_data( GROUP_MATERI_PLASTI_DRUCKPRAG, gr, element,
+              new_unknowns, pm_ddum, pm_n, GET_IF_EXISTS );
           pm_indx[0] = camepp_indx; pm_indx[1] = mcepp_indx;
           pm_indx[2] = tnepp_indx; pm_indx[3] = vmepp_indx;
-          for ( pm=0; pm<4; pm++ ) {
+          pm_indx[4] = hsepp_indx; pm_indx[5] = capepp_indx;
+          pm_indx[6] = cepp_indx; pm_indx[7] = depp_indx;
+          pm_indx[8] = dpepp_indx;
+          for ( pm=0; pm<9; pm++ ) {
             if ( !pm_on[pm] ) continue;
             ipuknwn = pm_indx[pm]/nder;
             for ( idim=0; idim<MDIM; idim++ ) {
@@ -1644,47 +1672,6 @@ void materi( long int element, long int gr, long int name, long int nnol,
             array_inproduct( new_sig, inc_epp, MDIM*MDIM ) / dtime;
           element_rhside[indx] += tmp;
           element_residue[indx] -= tmp;
-        }
-      }
-
-      if ( materi_strain_plasti_hardsoil || materi_strain_plasti_cap ||
-           materi_strain_plasti_compression || materi_strain_plasti_diprisco ||
-           materi_strain_plasti_druckprag ) {
-        // materi_strain_plasti_<model> (manual Professional 4.35-4.40):
-        // the plastic strain specifically for each model, added to the
-        // node_dof records. All dedicated dofs accumulate the SAME
-        // plastic strain increment (inc_epp, computed by the stress
-        // law driver) with the SAME integration as materi_strain_plasti
-        // -- the per-model initias are registration aliases pointing to
-        // this single consolidated mechanism (dedicated dof per model:
-        // hsepp/capepp/cepp/depp/dpepp, basenames epphs*/eppcap*/...).
-        long int epp_model_active[5], epp_model_indx[5], epp_model_ii=0;
-        epp_model_active[0] = materi_strain_plasti_hardsoil;
-        epp_model_indx[0] = hsepp_indx;
-        epp_model_active[1] = materi_strain_plasti_cap;
-        epp_model_indx[1] = capepp_indx;
-        epp_model_active[2] = materi_strain_plasti_compression;
-        epp_model_indx[2] = cepp_indx;
-        epp_model_active[3] = materi_strain_plasti_diprisco;
-        epp_model_indx[3] = depp_indx;
-        epp_model_active[4] = materi_strain_plasti_druckprag;
-        epp_model_indx[4] = dpepp_indx;
-        for ( epp_model_ii=0; epp_model_ii<5; epp_model_ii++ ) {
-          if ( epp_model_active[epp_model_ii] ) {
-            ipuknwn = epp_model_indx[epp_model_ii]/nder;
-            for ( idim=0; idim<MDIM; idim++ ) {
-              for ( jdim=idim; jdim<MDIM; jdim++ ) {
-                indx = inol*npuknwn + ipuknwn;
-                tmp = volume * h_lump * inc_epp[idim*MDIM+jdim] / dtime;
-                element_rhside[indx] += tmp;
-                // added for options_element_dof
-                if(options_element_dof==-YES)
-                  new_unknowns[ipuknwn] = old_epp[idim*MDIM+jdim] +
-                    inc_epp[idim*MDIM+jdim];
-                ipuknwn++;
-              }
-            }
-          }
         }
       }
 

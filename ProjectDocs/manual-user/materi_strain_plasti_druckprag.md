@@ -33,3 +33,12 @@ stress/strain ordering: xx xy xz yy yz zz).
   `sigxy = 34.64` (2c/sqrt(3)) still holds. The elastic twin
   `mstrain_druckprag_elast` (c = 1e6) gives exactly 0. A/B: without
   the initia the dof does not exist.
+
+## Groups without the model (C107, 2026-11-04)
+
+The dof is filled only in element groups with `group_materi_plasti_druckprag`. In every other
+group it stays 0, as in the Professional 02-08-2026. Where it is filled it
+uses the nodal recovery of `materi_strain_plasti`, so with a single model
+it equals `epp*` at every node. Test `materi_strain_plasti_model5`
+(test-2026: druckprag on tria3, `eppdrp*` = `epp*`, `eppcap*` and
+`epphs*` 0).

@@ -35,3 +35,14 @@ see [materi_plasti_diprisco_history](materi_plasti_diprisco_history.md).
   parameter sets is not documented in the manual (it only references
   external papers), so an implementation could not be verified
   (see SEGUIMIENTO-CONVERGENCIA.md).
+
+## Model gating (C107, 2026-11-04)
+
+The old consolidated block (h_lump weight, every group) was removed. The
+dof is now one of the nine entries of the per-model block of
+`materi.cc` (inside the strain recovery block, after the
+total/elastic/plastic loop): `get_group_data(..., GET_IF_EXISTS)` on
+`group_materi_plasti_diprisco` switches it on for the group, and the increment is
+`volume * w_rec * inc_epp / dtime` with the `strain_recovery_weight` of
+`materi_strain_plasti`. `general.cc` lists the type in the strain
+recovery weight list, so the lumped denominator matches.

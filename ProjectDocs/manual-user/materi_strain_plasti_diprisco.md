@@ -34,3 +34,12 @@ stress/strain ordering: xx xy xz yy yz zz).
   di Prisco history target `hisv10 = -152.795` matches diprisc1. The
   elastic twin `mstrain_diprisco_elast` gives exactly 0. A/B: without
   the initia the dof does not exist.
+
+## Groups without the model (C107, 2026-11-04)
+
+The dof is filled only in element groups with `group_materi_plasti_diprisco`. In every other
+group it stays 0, as in the Professional 02-08-2026. Where it is filled it
+uses the nodal recovery of `materi_strain_plasti`, so with a single model
+it equals `epp*` at every node. Test `materi_strain_plasti_model5`
+(test-2026: druckprag on tria3, `eppdrp*` = `epp*`, `eppcap*` and
+`epphs*` 0).

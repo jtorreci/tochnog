@@ -91,6 +91,8 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   - [x] V7 materi initial dofs: materi_strain_plasti_{camclay,mohr_coul,tension,vonmises},
     materi_strain_total_{,compression_,shear_,tension_}kappa. Owner 2026-11-03: follow the manual (fill),
     document the Professional divergence. Route: inline (no writer reason). Commit `0fa067b`.
+  - [x] V7b C107: older per-model plastic strain dofs (hardsoil/cap/compression/diprisco/druckprag) gated
+    by model with the epp recovery (0 under another model). Owner 2026-11-04. Route: inline. Commit (pending).
   - [ ] V8 post_calcul modifiers: post_calcul_{absolute,label,limit,multiply,apparent_total,safety_default,static_pressure}.
   - [ ] V9 post data/point: post_count, post_data(_factor,_result), post_group_volume_summed, post_node_factor,
     post_node_rhside_ratio_method, post_point_{element_group,eps_iso,node_type},
@@ -349,3 +351,12 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   - Tests: materi_strain_plasti_model1..4 (equal to epp / 0); materi_strain_total_kappa1 (analytic);
     _error1.
   - Found BACKLOG C107: the older per-model dofs ignore the model and the epp recovery.
+- 2026-11-04 owner on C107: "lo que hace Pro me parece más lógico. Si un elemento no tiene un modelo no
+  tiene sentido rellenar sus dof, salvo que esos dofs también hagan falta para los modelos que sí que tiene
+  ese elemento. [...]" then "sí, implementalo así. Los llevamos a cero si no tienen ese modelo".
+  T2 V7b (inline): the 5 older dofs moved to the materi.cc per-model block (9 models) and the general.cc
+  recovery weight list; old h_lump block removed. No model reads these dofs (output only).
+  RED materi_strain_plasti_model5 (old binary: eppcap* = epphs* = 0.913406 under druckprag).
+  Professional on model5: identical values (labels eppdr*/eppca*/eppha*). Suite 720 OK / 0 FALLO, 226/226.
+  Found BACKLOG C108: the V7 "Professional adds no dof" reading was wrong (v7pro dbs hold eppvo*, kapto,
+  strtocokap, ...); per-model values equal GNU, labels and kappa measures differ. V7 docs to correct.

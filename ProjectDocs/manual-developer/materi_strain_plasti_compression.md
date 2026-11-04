@@ -30,3 +30,14 @@ compression model is added to the node_dof records." Same tensor as
 - Same as the other per-model strain initias: the dof records the
   plastic strain increment of whatever law yielded (documented; the
   manual expects the compression model alone).
+
+## Model gating (C107, 2026-11-04)
+
+The old consolidated block (h_lump weight, every group) was removed. The
+dof is now one of the nine entries of the per-model block of
+`materi.cc` (inside the strain recovery block, after the
+total/elastic/plastic loop): `get_group_data(..., GET_IF_EXISTS)` on
+`group_materi_plasti_compression` or `group_materi_plasti_compression_direct` switches it on for the group, and the increment is
+`volume * w_rec * inc_epp / dtime` with the `strain_recovery_weight` of
+`materi_strain_plasti`. `general.cc` lists the type in the strain
+recovery weight list, so the lumped denominator matches.

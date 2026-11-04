@@ -36,3 +36,14 @@ plastic strain can be post-processed independently.
   expects the hardsoil model to be used alone, documented).
 - 2D calculations still use the 6-component layout (the out-of-plane
   component is filled too).
+
+## Model gating (C107, 2026-11-04)
+
+The old consolidated block (h_lump weight, every group) was removed. The
+dof is now one of the nine entries of the per-model block of
+`materi.cc` (inside the strain recovery block, after the
+total/elastic/plastic loop): `get_group_data(..., GET_IF_EXISTS)` on
+`group_materi_plasti_hardsoil` switches it on for the group, and the increment is
+`volume * w_rec * inc_epp / dtime` with the `strain_recovery_weight` of
+`materi_strain_plasti`. `general.cc` lists the type in the strain
+recovery weight list, so the lumped denominator matches.
