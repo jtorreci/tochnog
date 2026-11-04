@@ -2856,7 +2856,7 @@ strain_plasti_model_check materi_strain_plasti_model5 dr
 # F5 T2 V7: materi_strain_total_*kappa (manual 4.45-4.48), analytic history
 # maxima (see the input), after unloading to half the peak strain.
 run_ok "$T2026" materi_strain_total_kappa1
-beam_rec_check materi_strain_total_kappa1 node_dof 4 "-0.002 0.005 0.002 -0.005 0.833333333333 0 0 -5 0 -0.833333333333 0.002 0 0 -0.005 0 0 0.00761577310586 0.01 0.00721110255093 0.004"
+beam_rec_check materi_strain_total_kappa1 node_dof 4 "-0.002 0.005 0.002 -0.005 0.833333333333 0 0 -5 0 -0.833333333333 0.002 0 0 -0.005 0 0 0.00761577310586 -0.01 0.00721110255093 0.004"
 expected_error_ok "$T2026" materi_strain_total_kappa_error1
 # C100: under the default -no, control_reset_dof writes the integration
 # points with the reset value at their coordinates (= Professional

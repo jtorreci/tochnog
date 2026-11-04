@@ -32,10 +32,12 @@ None.
 
 ## Differences with the Professional version
 
-The Professional 02-08-2026 accepts `materi_strain_plasti_vonmises`,
-`_mohr_coul` and `_tension` but adds no dof, and it rejects
-`materi_strain_plasti_camclay` ("Error in initialisation part"). GNU follows
-the manual (owner decision 2026-11-03, DIVERGENCES STRAIN-PLASTI-MODEL-DOFS).
+The Professional 02-08-2026 adds the same dofs for `materi_strain_plasti_vonmises`,
+`_mohr_coul` and `_tension`, with the same labels and the same values (0
+under another model), and it rejects `materi_strain_plasti_camclay`
+("Error in initialisation part"). GNU keeps the camclay dof as the manual
+says (DIVERGENCES STRAIN-PLASTI-MODEL-DOFS; the V7 reading "adds no dof"
+was wrong, BACKLOG C108).
 When a group combines several models (for example Mohr-Coulomb with a
 tension cut-off), every active model's dof receives the total plastic
 strain of the point. GNU does not split the strain per yield surface.

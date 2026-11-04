@@ -1506,10 +1506,12 @@ void materi( long int element, long int gr, long int name, long int nnol,
     // in general.cc). Size measure as materi_plasti_kappa:
     //   kappa             max sqrt(0.5 eps:eps)
     //   shear_kappa       max sqrt(0.5 dev(eps):dev(eps))
-    //   compression_kappa max( -smallest principal strain, 0 )
+    //   compression_kappa min( smallest principal strain, 0 ), signed
     //   tension_kappa     max(  largest principal strain, 0 )
-    // The Professional 02-08-2026 accepts these initialisations but adds
-    // no dof (DIVERGENCES STRAIN-KAPPA-DOFS); GNU follows the manual.
+    // The Professional 02-08-2026 (C108) gives the same kappa and the same
+    // negative compression sign, but current (not history) compression and
+    // shear values and a tension value of 0; GNU follows the manual
+    // ("as occurred in history", DIVERGENCES STRAIN-KAPPA-HISTORY).
     if ( materi_strain_total_kappa || materi_strain_total_compression_kappa ||
          materi_strain_total_shear_kappa || materi_strain_total_tension_kappa ) {
       double w_rec = strain_recovery_weight( sri_on, name, nnol, inol,
@@ -1534,7 +1536,7 @@ void materi( long int element, long int gr, long int name, long int nnol,
           if ( ept_eig[idim]>eig_max ) eig_max = ept_eig[idim];
         }
         ept_meas[0] = sqrt( 0.5 * array_inproduct( ept_sym, ept_sym, MDIM*MDIM ) );
-        ept_meas[1] = scalar_dmax( -eig_min, 0. );
+        ept_meas[1] = scalar_dmin( eig_min, 0. );
         ept_meas[2] = sqrt( 0.5 * array_inproduct( ept_dev, ept_dev, MDIM*MDIM ) );
         ept_meas[3] = scalar_dmax( eig_max, 0. );
         ept_kon[0] = materi_strain_total_kappa; ept_kidx[0] = eptk_indx;
@@ -1544,7 +1546,8 @@ void materi( long int element, long int gr, long int name, long int nnol,
         for ( ik=0; ik<4; ik++ ) {
           if ( !ept_kon[ik] ) continue;
           double old_k = old_unknowns[ept_kidx[ik]];
-          double new_k = scalar_dmax( old_k, ept_meas[ik] );
+          double new_k = ik==1 ? scalar_dmin( old_k, ept_meas[ik] ) :
+            scalar_dmax( old_k, ept_meas[ik] );
           indx = inol*npuknwn + ept_kidx[ik]/nder;
           element_rhside[indx] += volume * w_rec * ( new_k - old_k ) / dtime;
           if ( options_element_dof==-YES ) new_unknowns[ept_kidx[ik]] = new_k;

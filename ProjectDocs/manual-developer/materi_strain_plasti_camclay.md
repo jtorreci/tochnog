@@ -24,7 +24,7 @@
 
 ## Verification
 
-There is no Professional oracle (the Professional adds no dof). Test
+There is no Professional oracle for camclay (the Professional rejects it). Test
 `materi_strain_plasti_model3`: the camclay columns equal epp at every node (|diff| <= 1e-12), epp is
 non-zero, and the camclay / mohr_coul / tension / vonmises columns of the
 other models are 0 (`strain_plasti_model_check` in

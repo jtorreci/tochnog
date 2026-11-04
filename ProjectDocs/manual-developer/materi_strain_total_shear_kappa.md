@@ -19,7 +19,8 @@
   to ELEMENT_INTPNT_DOF, and the history maximum is per point. Its nodal
   value uses `strain_recovery_weight` (`general.cc` recovery list).
 - **Hardcoded:** the size measure `sqrt(0.5 a:a)`, the same as kappa in
-  `stress.cc`; the compression kappa is stored as a positive number.
+  `stress.cc`; the compression kappa is the signed history minimum
+  `min(old, min(eps_min, 0))` (negative, as the Professional; C108).
 
 ## Verification
 

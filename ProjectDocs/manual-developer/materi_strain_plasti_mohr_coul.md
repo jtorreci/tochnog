@@ -24,7 +24,7 @@
 
 ## Verification
 
-There is no Professional oracle (the Professional adds no dof). Test
+The Professional 02-08-2026 gives the same values and labels (C108 probes). Test
 `materi_strain_plasti_model2`: the mohr_coul columns equal epp at every node (|diff| <= 1e-12), epp is
 non-zero, and the camclay / mohr_coul / tension / vonmises columns of the
 other models are 0 (`strain_plasti_model_check` in

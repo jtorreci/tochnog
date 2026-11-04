@@ -1,11 +1,14 @@
-(F5 T2 V7: materi_strain_total_kappa / _compression_kappa / _shear_kappa /
- _tension_kappa (manual Professional 4.45-4.48). One quad4 with a prescribed
- homogeneous strain: step 1 eps_xx 0.004, eps_yy -0.01 (eps_zz 0, plane
- strain), step 2 unloads to half. History maxima of the peak strain:
- kappa = sqrt(0.5 eps:eps) = sqrt(5.8e-5) = 0.00761577, compression = 0.01,
- shear = sqrt(0.5 dev:dev) = sqrt(5.2e-5) = 0.00721110, tension = 0.004
- (analytic; the Professional 02-08-2026 adds no dof for these
- initialisations, DIVERGENCES STRAIN-PLASTI-MODEL-DOFS).)
+(F5 T2 V7 / C108: materi_strain_total_kappa / _compression_kappa /
+ _shear_kappa / _tension_kappa (manual Professional 4.45-4.48). One quad4
+ with a prescribed homogeneous strain: step 1 eps_xx 0.004, eps_yy -0.01
+ (eps_zz 0, plane strain), step 2 unloads to half. History values of the
+ peak strain: kappa = sqrt(0.5 eps:eps) = sqrt(5.8e-5) = 0.00761577,
+ compression = -0.01 (signed, as the Professional), shear =
+ sqrt(0.5 dev:dev) = sqrt(5.2e-5) = 0.00721110, tension = 0.004.
+ Professional 02-08-2026 on this input: step 1 kapto 0.00761577,
+ strtocokap -0.01, strtoshkap 0.00721110; after unloading it keeps kapto
+ but gives the current -0.005 / 0.00360555, and strtotekap is 0 alone
+ (DIVERGENCES STRAIN-KAPPA-HISTORY).)
 echo -no
 number_of_space_dimensions 2
 materi_velocity
