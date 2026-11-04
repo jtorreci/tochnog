@@ -98,7 +98,7 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   - [x] V7d C108 kappa measures: compression sign (Professional negative), history per manual; doc corrections.
     Route: inline. Commit `94c6161`.
   - [x] V8 post_calcul modifiers: post_calcul_{absolute,label,limit,multiply,apparent_total,safety_default,static_pressure}.
-    Route: inline. Commit 42dac7d. C109 (label names) open for the owner.
+    Route: inline. Commit 42dac7d. C109 decided: keep the GNU manual names (owner 2026-11-04, "mantenemos nombres GNU-manual").
   - [ ] V9 post data/point: post_count, post_data(_factor,_result), post_group_volume_summed, post_node_factor,
     post_node_rhside_ratio_method, post_point_{element_group,eps_iso,node_type},
     post_quadrilateral_element_group, post_strain_volume_initial.
