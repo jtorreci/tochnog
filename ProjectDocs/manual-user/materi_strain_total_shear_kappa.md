@@ -2,7 +2,7 @@
 
 ## Description
 
-`materi_strain_total_shear_kappa` (manual Professional 4.47) adds a scalar dof (label `eptks`) to the
+`materi_strain_total_shear_kappa` (manual Professional 4.47) adds a scalar dof (label `strtoshkap`) to the
 `node_dof` records: the maximum size of the deviatoric total strain, `max sqrt(0.5 dev(eps):dev(eps))` as occurred in the history of the material
 point. The value never decreases. When the material unloads, the dof keeps
 its peak value. The manual uses these dofs for softening through a

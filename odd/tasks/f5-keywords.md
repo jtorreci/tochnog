@@ -93,6 +93,9 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
     document the Professional divergence. Route: inline (no writer reason). Commit `0fa067b`.
   - [x] V7b C107: older per-model plastic strain dofs (hardsoil/cap/compression/diprisco/druckprag) gated
     by model with the epp recovery (0 under another model). Owner 2026-11-04. Route: inline. Commit `1a44872`.
+  - [x] V7c C108 labels: Professional dof labels for the per-model plastic strains and the kappas. Owner 2026-11-04.
+    Route: inline. Commit (pending).
+  - [ ] V7d C108 kappa measures: compression sign (Professional negative), history per manual; doc corrections.
   - [ ] V8 post_calcul modifiers: post_calcul_{absolute,label,limit,multiply,apparent_total,safety_default,static_pressure}.
   - [ ] V9 post data/point: post_count, post_data(_factor,_result), post_group_volume_summed, post_node_factor,
     post_node_rhside_ratio_method, post_point_{element_group,eps_iso,node_type},
@@ -360,3 +363,8 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   Professional on model5: identical values (labels eppdr*/eppca*/eppha*). Suite 720 OK / 0 FALLO, 226/226.
   Found BACKLOG C108: the V7 "Professional adds no dof" reading was wrong (v7pro dbs hold eppvo*, kapto,
   strtocokap, ...); per-model values equal GNU, labels and kappa measures differ. V7 docs to correct.
+- 2026-11-04 owner on C108 labels: "si, pásalas". Renamed 52 basenames in database.cc, mstrain_* targets, manuals.
+  Pro analytic kappa probe (materi_strain_total_kappa1 input): kapto = history max sqrt(0.5 e:e) (= GNU);
+  strtocokap -0.01 then -0.005 after unloading (current, signed); strtoshkap current (0.00721 -> 0.00361);
+  strtotekap 0 alone, copies the shear value when both are initialised. Manual says "as occurred in history":
+  S2 -> history per manual, compression sign from the Professional (manual silent on sign).

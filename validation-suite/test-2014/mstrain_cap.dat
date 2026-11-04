@@ -53,7 +53,7 @@ options_stabilization   -static
 post_point  1  0.5 0.5 0.5
 target_item  1  -post_point_dof 1 -sigxx
 target_item  2  -post_point_dof 1 -pc
-target_item  3  -post_point_dof 1 -eppcapzz
+target_item  3  -post_point_dof 1 -eppcazz
 target_value  1  -85 4
 target_value  2  110.4 2.5
 target_value  3  -0.036 0.002

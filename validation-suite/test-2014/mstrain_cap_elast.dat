@@ -65,6 +65,6 @@ control_timestep_iterations 0  8
 
 target_item  1  -post_point_dof 1 -sigxx
 target_value 1  -175.0 5.0
-target_item  2  -post_point_dof 1 -eppcapzz
+target_item  2  -post_point_dof 1 -eppcazz
 target_value 2  0.0 0.0001
 end_data

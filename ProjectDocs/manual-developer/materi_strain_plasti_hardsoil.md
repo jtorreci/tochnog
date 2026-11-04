@@ -7,7 +7,7 @@
   `materi_strain_plasti_hardsoil` (initia.cc) and allocates the dof:
   `hsepp_indx = unknown_indx; n = 6;
   dof_type = -MATERI_STRAIN_PLASTI_HARDSOIL` (basenames
-  `epphsxx epphsxy epphsxz epphsyy epphsyz epphszz` in `database.cc`,
+  `epphaxx epphaxy epphaxz epphayy epphayz epphazz` in `database.cc`,
   same layout as `materi_strain_plasti`).
 - **Integration**: `materi.cc` RHS block (after the `materi_strain_plasti`
   block): `element_rhside += volume*h*(inc_epp)/dtime` per component

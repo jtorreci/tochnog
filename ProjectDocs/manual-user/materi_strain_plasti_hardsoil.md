@@ -6,8 +6,8 @@
 plastic strain `eps_kl_plas` **specifically for the hardsoil model** to
 the `node_dof` records. It is the same 6-component tensor layout as
 [`materi_strain_plasti`](materi_strain_plasti.md) but with its own
-dedicated dof (basenames `epphsxx epphsxy epphsxz epphsyy epphsyz
-epphszz`), so it can be printed/plotted independently of the plastic
+dedicated dof (basenames `epphaxx epphaxy epphaxz epphayy epphayz
+epphazz`), so it can be printed/plotted independently of the plastic
 strain of other laws. The dof accumulates the plastic strain increment
 of the hardsoil model (the same integration as `materi_strain_plasti`).
 
@@ -42,5 +42,5 @@ The dof is filled only in element groups with `group_materi_plasti_hardsoil`. In
 group it stays 0, as in the Professional 02-08-2026. Where it is filled it
 uses the nodal recovery of `materi_strain_plasti`, so with a single model
 it equals `epp*` at every node. Test `materi_strain_plasti_model5`
-(test-2026: druckprag on tria3, `eppdrp*` = `epp*`, `eppcap*` and
-`epphs*` 0).
+(test-2026: druckprag on tria3, `eppdr*` = `epp*`, `eppca*` and
+`eppha*` 0).

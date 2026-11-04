@@ -6,7 +6,7 @@
 strain `eps_kl_plas` **specifically for the tension model** to the
 `node_dof` records. It uses the 6-component tensor layout of
 [`materi_strain_plasti`](materi_strain_plasti.md) with its own dof
-(labels `epptnxx epptnxy epptnxz epptnyy epptnyz epptnzz`).
+(labels `epptexx epptexy epptexz eppteyy eppteyz epptezz`).
 
 The dof is filled only in element groups that use the tension model
 (`group_materi_plasti_tension` or `group_materi_plasti_tension_direct`). In those groups it equals `materi_strain_plasti`; in all

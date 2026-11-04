@@ -2,7 +2,7 @@
 
 ## Description
 
-`materi_strain_total_compression_kappa` (manual Professional 4.46) adds a scalar dof (label `eptkc`) to the
+`materi_strain_total_compression_kappa` (manual Professional 4.46) adds a scalar dof (label `strtocokap`) to the
 `node_dof` records: the maximum principal compression total strain, `max(-eps_min, 0)` (positive number) as occurred in the history of the material
 point. The value never decreases. When the material unloads, the dof keeps
 its peak value. The manual uses these dofs for softening through a

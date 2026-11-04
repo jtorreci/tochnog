@@ -3,7 +3,7 @@
   model (sig_yield = 1.0) but a load FAR below yield (vely -0.0001,
   10 steps, eps_zz = -0.00005, elastic sigzz = -0.067 << 1.0): the
   response is purely elastic and the dedicated plastic strain dof
-  eppcmpzz stays exactly 0 (the plastic twin ends at -8.96e-05). )
+  eppcozz stays exactly 0 (the plastic twin ends at -8.96e-05). )
 
 echo -no
 number_of_space_dimensions 2
@@ -50,6 +50,6 @@ post_point 1  0.5 0.5
 control_timestep 0  0.05 0.5
 control_timestep_iterations 0  8
 
-target_item  1  -post_point_dof 1 -eppcmpzz
+target_item  1  -post_point_dof 1 -eppcozz
 target_value 1  0.0 0.0001
 end_data

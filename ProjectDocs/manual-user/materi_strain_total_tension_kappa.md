@@ -2,7 +2,7 @@
 
 ## Description
 
-`materi_strain_total_tension_kappa` (manual Professional 4.48) adds a scalar dof (label `eptkt`) to the
+`materi_strain_total_tension_kappa` (manual Professional 4.48) adds a scalar dof (label `strtotekap`) to the
 `node_dof` records: the maximum principal tension total strain, `max(eps_max, 0)` as occurred in the history of the material
 point. The value never decreases. When the material unloads, the dof keeps
 its peak value. The manual uses these dofs for softening through a

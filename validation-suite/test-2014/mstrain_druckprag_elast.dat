@@ -34,7 +34,7 @@ options_processors   1
 options_stabilization   -static
 post_point  1  0.5 0.5
 target_item  1  -post_point_dof 1 -sigxy
-target_item  2  -post_point_dof 1 -eppdrpxy
+target_item  2  -post_point_dof 1 -eppdrxy
 target_value  1  664.4 30
 target_value  2  0 0.0001
 node_dof  1  0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0

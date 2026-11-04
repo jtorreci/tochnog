@@ -40,8 +40,8 @@ options_processors   1
 options_stabilization   -static
 post_point  1  0.5 0.5
 target_item  0  -post_point_dof 1 -dipriscohis10
-target_item  1  -post_point_dof 1 -eppdipyy
-target_item  2  -post_point_dof 1 -eppdipxx
+target_item  1  -post_point_dof 1 -eppdiyy
+target_item  2  -post_point_dof 1 -eppdixx
 target_value  0  -152.795 1
 target_value  1  -0.0105714 0.001
 target_value  2  0.00350735 0.0005

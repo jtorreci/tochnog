@@ -7,7 +7,7 @@
   `materi_strain_plasti_compression` (initia.cc) and allocates the
   dof: `cepp_indx = unknown_indx; n = 6;
   dof_type = -MATERI_STRAIN_PLASTI_COMPRESSION` (basenames
-  `eppcmpxx eppcmpxy eppcmpxz eppcmpyy eppcmpyz eppcmpzz` in
+  `eppcoxx eppcoxy eppcoxz eppcoyy eppcoyz eppcozz` in
   `database.cc`).
 - **Integration**: the consolidated per-model plastic strain RHS block
   in `materi.cc` (same table mechanism as

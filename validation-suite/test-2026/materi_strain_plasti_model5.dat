@@ -2,10 +2,9 @@
  compression / diprisco / druckprag are filled only in the element groups
  that use the model and follow the recovery of materi_strain_plasti.
  Simple shear of a Drucker-Prager square split in two tria3 (source
- mstrain_druckprag): eppdrp* equals epp* at every node, eppcap* and
- epphs* are 0. Professional 02-08-2026 on this input: the same values
- (eppxy = eppdrxy = 0.959984, eppcaxy = epphaxy = 0), labels eppdr* /
- eppca* / eppha*.)
+ mstrain_druckprag): eppdr* equals epp* at every node, eppca* and
+ eppha* are 0. Professional 02-08-2026 on this input: the same values
+ (eppxy = eppdrxy = 0.959984, eppcaxy = epphaxy = 0) and labels.)
 echo -no
 number_of_space_dimensions 2
 derivatives

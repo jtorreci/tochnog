@@ -8,7 +8,7 @@
   (check_unknown ... CHECK_USAGE_AND_ERROR).
 - **Declarations:** the enum and globals are in `tochnog.h` /
   `tochnog-mod.h` / `initia.cc`.
-- **Labels:** `database.cc` gives the label `eptk` and the name.
+- **Labels:** `database.cc` gives the label `kapto` and the name.
 - **Fill:** `materi.cc`, "Total strain kappas" block before the C68
   integration-point states. The measures of the symmetric `new_ept` are
   computed: the size, the deviatoric size, and the principal values from

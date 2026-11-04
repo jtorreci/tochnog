@@ -6,7 +6,7 @@
 strain `eps_kl_plas` **specifically for the von Mises model** to the
 `node_dof` records. It uses the 6-component tensor layout of
 [`materi_strain_plasti`](materi_strain_plasti.md) with its own dof
-(labels `eppvmxx eppvmxy eppvmxz eppvmyy eppvmyz eppvmzz`).
+(labels `eppvoxx eppvoxy eppvoxz eppvoyy eppvoyz eppvozz`).
 
 The dof is filled only in element groups that use the von Mises model
 (`group_materi_plasti_vonmises`). In those groups it equals `materi_strain_plasti`; in all

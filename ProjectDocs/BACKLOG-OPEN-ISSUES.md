@@ -2928,6 +2928,7 @@ Original report:
 - **Manual:** 4.45-4.48 give no formula ("maximum strain size", "maximum principal compression total strain"), so by S2 the Professional is the oracle for the measures.
 - **Docs to rewrite with the fix:** DIVERGENCES STRAIN-PLASTI-MODEL-DOFS, the SEGUIMIENTO V7 row and lines, the V7 user and developer pages.
 - **Severity:** LOW. **Effort:** medium (measures to identify; renaming the older labels changes existing GNU output, owner decision).
+- **Labels resolved 2026-11-04** (owner: "si, pásalas"): `database.cc` uses the Professional labels for the 8 per-model plastic strains (`eppca`, `eppco`, `eppdi`, `eppdr`, `eppha`, `eppmo`, `eppte`, `eppvo`; the `eppcappyy` typo is gone) and the 4 kappas (`kapto`, `strtocokap`, `strtoshkap`, `strtotekap`). Camclay keeps `eppcc` (the Professional rejects that initialisation). The `mstrain_*` targets were renamed; RED: the old binary rejects `-eppdrxy` ("I do not know").
 
 ### C107. The older per-model plastic strain dofs ignore the model and the epp recovery (F5 T2 V7, 2026-11-03) — RESOLVED 2026-11-04
 

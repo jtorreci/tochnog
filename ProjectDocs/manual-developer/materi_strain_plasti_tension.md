@@ -8,7 +8,7 @@
   MATRIX.
 - **Declarations:** the enum is appended in `tochnog.h` / `tochnog-mod.h`
   (F5 T2 V7 block), and the globals are in `initia.cc`.
-- **Labels:** `database.cc` gives the labels `epptnxx..epptnzz` (dof label
+- **Labels:** `database.cc` gives the labels `epptexx..epptezz` (dof label
   block) and the name.
 - **Fill:** in `materi.cc`, inside the strain recovery block (the one that
   fills epe/epp/ept with `strain_recovery_weight`), after the block loop.

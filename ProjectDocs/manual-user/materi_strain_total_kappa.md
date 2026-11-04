@@ -2,7 +2,7 @@
 
 ## Description
 
-`materi_strain_total_kappa` (manual Professional 4.45) adds a scalar dof (label `eptk`) to the
+`materi_strain_total_kappa` (manual Professional 4.45) adds a scalar dof (label `kapto`) to the
 `node_dof` records: the maximum size of the total strain, `max sqrt(0.5 eps:eps)` as occurred in the history of the material
 point. The value never decreases. When the material unloads, the dof keeps
 its peak value. The manual uses these dofs for softening through a

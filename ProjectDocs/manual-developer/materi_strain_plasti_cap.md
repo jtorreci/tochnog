@@ -7,7 +7,7 @@
   `materi_strain_plasti_cap` (initia.cc) and allocates the dof:
   `capepp_indx = unknown_indx; n = 6;
   dof_type = -MATERI_STRAIN_PLASTI_CAP` (basenames
-  `eppcapxx eppcapxy eppcapxz eppcappyy eppcapyz eppcapzz` in
+  `eppcaxx eppcaxy eppcaxz eppcayy eppcayz eppcazz` in
   `database.cc`, same layout as `materi_strain_plasti`).
 - **Integration**: `materi.cc` — one CONSOLIDATED RHS block drives ALL
   per-model plastic strain dofs (hardsoil + cap + compression +

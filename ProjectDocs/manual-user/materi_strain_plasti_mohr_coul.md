@@ -6,7 +6,7 @@
 strain `eps_kl_plas` **specifically for the Mohr-Coulomb model** to the
 `node_dof` records. It uses the 6-component tensor layout of
 [`materi_strain_plasti`](materi_strain_plasti.md) with its own dof
-(labels `eppmcxx eppmcxy eppmcxz eppmcyy eppmcyz eppmczz`).
+(labels `eppmoxx eppmoxy eppmoxz eppmoyy eppmoyz eppmozz`).
 
 The dof is filled only in element groups that use the Mohr-Coulomb model
 (`group_materi_plasti_mohr_coul` or `group_materi_plasti_mohr_coul_direct`). In those groups it equals `materi_strain_plasti`; in all

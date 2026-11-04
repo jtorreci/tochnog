@@ -511,9 +511,9 @@ rm -f validation-suite/test-2014/dof.* \
 # Sprint 10 lote 9: initias por-modelo materi_strain_plasti_cap/
 # _compression/_diprisco/_druckprag (manual 4.35-4.40; dof dedicado
 # por modelo, llenado con el MISMO inc_epp que materi_strain_plasti:
-# mstrain_<model> plastico con target != 0 en el basename del dof
-# (eppcapzz -0.036 exacto en cap1, eppdrpxy identico al epp generico
-# 0.910768, eppdipyy -0.0105714) + gemelo elastico con target 0;
+# mstrain_<model> plastico con target != 0 en el basename del dof (labels renamed to the Professional names, F5 T2 C108)
+# (eppcazz -0.036 exacto en cap1, eppdrxy identico al epp generico
+# 0.910768, eppdiyy -0.0105714) + gemelo elastico con target 0;
 # mdiprisco_hist: alias materi_plasti_diprisco_history 11 (4.18) =
 # mismo hisv dof, target hisv10 -152.795 identico a diprisc1; camclay:
 # group_materi_elasti_camclay_pressure_min (6.647) clamp de la
@@ -2830,8 +2830,8 @@ ix={k:i for i,k in enumerate(lab)}
 cs=["xx","xy","xz","yy","yz","zz"]
 epp=max(abs(r[ix["epp"+c]]) for r in rows for c in cs)
 bad=epp==0.
-for m in ["cc","mc","tn","vm","hs","cap","cmp","dip","drp"]:
-    # the 6 components in label order (the cap yy label is "eppcappyy")
+for m in ["cc","mo","te","vo","ha","ca","co","di","dr"]:
+    # the 6 components in label order
     mc=[k for k in lab if k.startswith("epp"+m)]
     if not mc: continue
     if len(mc)!=6: bad=True; continue
@@ -2846,13 +2846,13 @@ PYEOF
   else check_fail "$t" "per-model plastic strain columns ($res)"; fi
 }
 for t in 1 2 3 4 5; do run_ok "$T2026" materi_strain_plasti_model$t; done
-strain_plasti_model_check materi_strain_plasti_model1 vm
-strain_plasti_model_check materi_strain_plasti_model2 mc
+strain_plasti_model_check materi_strain_plasti_model1 vo
+strain_plasti_model_check materi_strain_plasti_model2 mo
 strain_plasti_model_check materi_strain_plasti_model3 cc
-strain_plasti_model_check materi_strain_plasti_model4 tn
+strain_plasti_model_check materi_strain_plasti_model4 te
 # C107: the older per-model dofs (hardsoil / cap / compression / diprisco /
 # druckprag) are 0 outside their model and follow the epp recovery (tria3).
-strain_plasti_model_check materi_strain_plasti_model5 drp
+strain_plasti_model_check materi_strain_plasti_model5 dr
 # F5 T2 V7: materi_strain_total_*kappa (manual 4.45-4.48), analytic history
 # maxima (see the input), after unloading to half the peak strain.
 run_ok "$T2026" materi_strain_total_kappa1
