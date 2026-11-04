@@ -103,7 +103,7 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
     post_node_rhside_ratio_method, post_point_{element_group,eps_iso,node_type},
     post_quadrilateral_element_group, post_strain_volume_initial.
   Professional examples only in validation_14_mesh.dat (output dump) and tochnog_abaqus.dat.
-    Route: inline (explorer for the post.cc map). Commit HASH_V9. C110, C111 open for the owner.
+    Route: inline (explorer for the post.cc map). Commit a1c7d7d. C110, C111 open for the owner.
 - [ ] T3 W3 materials (27): `group_materi_*` and `materi_plasti_*` (umat, stress_null, hypo
   niemunis/wolffersdorff variants, borja_tamagnini, elasti_c, hyper reduced_polynomial /
   simo_taylor, visco_power, residual_stiffness, mpc, diprisco_density, history_variable_user,
