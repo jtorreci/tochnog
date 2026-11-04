@@ -2816,7 +2816,8 @@ expected_error_ok "$T2026" element_dof_initial_specific_error1
 # F5 T2 V7: materi_strain_plasti_camclay / _mohr_coul / _tension / _vonmises
 # (manual 4.34, 4.41-4.43): the dof of the group's model equals
 # materi_strain_plasti at every node (and epp is plastic), the other three
-# stay 0. The Professional 02-08-2026 adds no dof for them.
+# stay 0. The Professional 02-08-2026 adds the same dofs (C108; camclay
+# excepted, DIVERGENCES STRAIN-PLASTI-MODEL-DOFS).
 strain_plasti_model_check() {
   local t="$1" m="$2" res
   res=$(python3 -I - "$T2026/$t.dbs" "$m" <<'PYEOF'
@@ -2858,6 +2859,30 @@ strain_plasti_model_check materi_strain_plasti_model5 dr
 run_ok "$T2026" materi_strain_total_kappa1
 beam_rec_check materi_strain_total_kappa1 node_dof 4 "-0.002 0.005 0.002 -0.005 0.833333333333 0 0 -5 0 -0.833333333333 0.002 0 0 -0.005 0 0 0.00761577310586 -0.01 0.00721110255093 0.004"
 expected_error_ok "$T2026" materi_strain_total_kappa_error1
+# F5 T2 V8: post_calcul modifiers (manual 6.902-6.905, 6.916, 6.917,
+# 6.920); expected node_dof_calcul = Professional 02-08-2026 on the same
+# inputs (probes v8pro; -prival largest first, DIVERGENCES K12).
+# post_calcul_label is written in the .dbs with
+# the GNU item names (DIVERGENCES POST-CALCUL-LABEL-NAMES).
+run_ok "$T2026" post_calcul_modify1
+beam_rec_check post_calcul_modify1 node_dof_calcul 1 "0.5 0 0 3 5"
+if grep -q "^post_calcul_label  -aept -va0ept -va1ept -va2ept -sept *$" \
+    "$T2026/post_calcul_modify1.dbs"; then
+  check_ok "post_calcul_modify1 (post_calcul_label written)"
+else
+  check_fail "post_calcul_modify1" "post_calcul_label not written"
+fi
+run_ok "$T2026" post_calcul_modify2
+beam_rec_check post_calcul_modify2 node_dof_calcul 1 "0.1 0 0 1 1"
+expected_error_ok "$T2026" post_calcul_modify_error1
+expected_error_ok "$T2026" post_calcul_modify_error2
+run_ok "$T2026" post_calcul_apparent_total1
+run_ok "$T2026" post_calcul_safety_default1
+beam_rec_check post_calcul_safety_default1 node_dof_calcul 1 "-10 -2.5 -7.5 2.333333333334 2"
+beam_rec_check post_calcul_safety_default1 node_dof_calcul 41 "0 0 0 99 99"
+run_ok "$T2026" post_calcul_static_pressure1
+beam_rec_check post_calcul_static_pressure1 node_dof_calcul 1 "-10 -7 -3 4.333333333334 2"
+beam_rec_check post_calcul_static_pressure1 node_dof_calcul 41 "0 -7 7 -0.9285714285714 0"
 # C100: under the default -no, control_reset_dof writes the integration
 # points with the reset value at their coordinates (= Professional
 # 02-08-2026 element_intpnt_dof of the same inputs, run above).

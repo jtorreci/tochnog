@@ -97,7 +97,8 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
     Route: inline. Commit `c854d82`.
   - [x] V7d C108 kappa measures: compression sign (Professional negative), history per manual; doc corrections.
     Route: inline. Commit `94c6161`.
-  - [ ] V8 post_calcul modifiers: post_calcul_{absolute,label,limit,multiply,apparent_total,safety_default,static_pressure}.
+  - [x] V8 post_calcul modifiers: post_calcul_{absolute,label,limit,multiply,apparent_total,safety_default,static_pressure}.
+    Route: inline. Commit HASH_V8. C109 (label names) open for the owner.
   - [ ] V9 post data/point: post_count, post_data(_factor,_result), post_group_volume_summed, post_node_factor,
     post_node_rhside_ratio_method, post_point_{element_group,eps_iso,node_type},
     post_quadrilateral_element_group, post_strain_volume_initial.
@@ -372,3 +373,11 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   V7d: compression kappa = signed history minimum min(old, min(eps_min,0)); RED = previous expectation 0.01
   (passed with c854d82), GREEN -0.01. DIVERGENCES STRAIN-KAPPA-HISTORY added, STRAIN-PLASTI-MODEL-DOFS
   narrowed to camclay; V7 docs corrected. Suite 720 OK / 0 FALLO, 226/226. C108 resolved.
+- L-V8 (2026-11-04) owner: "pues venga, a por V8". Professional 02-08-2026 probes (scratch v8pro, v8pro2):
+  multiply/limit per dof/operat item (3 or 5 factors for 3 items identical; 2 factors / 1 pair rejected
+  "Error detected for data item : post_calcul_multiply/_limit"); order multiply -> limit -> absolute
+  (q1 limit [0.1,0.2] + abs on -0.333 -> 0.1; q4 factor -2 + abs -> 0.667). apparent_total ground17:
+  1.333333e7 / 1/3. safety_default ground14: 99 above the level. static_pressure -7 ground14: st -7,
+  dy = total + 7, piping p_dyn too, lifting unchanged. post_calcul_label Pro `-a_ept -va0_ept`, GNU names
+  `aept` (manual example) -> DIVERGENCES POST-CALCUL-LABEL-NAMES, BACKLOG C109 (owner decision).
+  RED: old binary "Error in data part" on the 7 inputs. GREEN: node_dof_calcul = Pro (prival order K12).

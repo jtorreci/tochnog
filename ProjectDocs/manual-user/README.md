@@ -416,6 +416,13 @@ page lists its own in "Differences with the Professional version".
 - [post_calcul_static_pressure_height_element_group](post_calcul_static_pressure_height_element_group.md) — element group restriction of the height regions (6.922).
 - [post_calcul_safety_method](post_calcul_safety_method.md) — -vertical/-prival/-global of the piping/lifting safety factors (6.919): naming + formulas verified against the Professional (ground15/16).
 - [post_calcul_safety_maximum](post_calcul_safety_maximum.md) — cap of the safety factors (6.918).
+- [post_calcul_safety_default](post_calcul_safety_default.md) — eps / value of the safety factors with a zero pressure (6.917) (F5 T2 V8).
+- [post_calcul_absolute](post_calcul_absolute.md) — absolute value of all post_calcul results (6.902) (F5 T2 V8).
+- [post_calcul_apparent_total](post_calcul_apparent_total.md) — apparent Young / Poisson from the totals (6.903) (F5 T2 V8).
+- [post_calcul_label](post_calcul_label.md) — output record with the post_calcul item names in the .dbs (6.904) (F5 T2 V8).
+- [post_calcul_limit](post_calcul_limit.md) — lower / upper value per post_calcul item (6.905) (F5 T2 V8).
+- [post_calcul_multiply](post_calcul_multiply.md) — factor per post_calcul item (6.916) (F5 T2 V8).
+- [post_calcul_static_pressure](post_calcul_static_pressure.md) — static pressure of the whole domain in postprocessing (6.920) (F5 T2 V8).
 - [group_groundflow_expansion](group_groundflow_expansion.md) — thermal expansion coefficient of the fluid/soil (6.614); parse-only.
 - [control_print_gid_contact_spring2](control_print_gid_contact_spring2.md) — GiD rendering of contact_spring2 (6.297, alias spelling accepted).
 - [control_mesh_macro_concentrate](control_mesh_macro_concentrate.md) — rectangle macro mesh concentration (6.207); parse-only.

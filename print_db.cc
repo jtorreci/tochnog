@@ -193,6 +193,23 @@ void print_database( long int icontrol, long int version, long int data_number )
     out << "\n\nTotal size is " << total_size << "\n";
   }
 
+    // post_calcul_label (manual Professional 6.904): the names of the
+    // items calculated by post_calcul, one per value in the
+    // node_dof_calcul order (post_calcul_names, calcul.cc). An output
+    // record only: the database cannot hold names, the input ignores it.
+  if ( data_number==-YES || data_number==-EVERYTHING ||
+       data_number==-PRINT_LASTDATABASE ) {
+    long int ncalcul_label=0, label_idum[DATA_ITEM_SIZE];
+    double label_ddum[1];
+    if ( db( POST_CALCUL_SCAL_VEC_MAT, 0, label_idum, label_ddum,
+         ncalcul_label, VERSION_NORMAL, GET_IF_EXISTS ) && ncalcul_label>0 ) {
+      out << db_name(POST_CALCUL_LABEL) << " ";
+      for ( i=0; i<ncalcul_label; i++ )
+        out << " -" << post_calcul_names[i];
+      out << " \n\n";
+    }
+  }
+
   if ( data_number==-YES || data_number==-EVERYTHING ||
       data_number==-PRINT_LASTDATABASE ) {
     out << "end_data\n";

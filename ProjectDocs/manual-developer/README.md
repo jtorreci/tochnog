@@ -411,6 +411,13 @@ page lists its own in "Differences with the Professional version".
 - [post_calcul_static_pressure_height_element_group](post_calcul_static_pressure_height_element_group.md) — restriccion por grupo en la busqueda de regiones.
 - [post_calcul_safety_method](post_calcul_safety_method.md) — selectores VERTICAL/GLOBAL puros + operadores SAFETY_PIPING/LIFTING; naming por metodo + formulas lifting/piping en calculate_operat (calcul.cc); orden prival invertido vs sort() GNU.
 - [post_calcul_safety_maximum](post_calcul_safety_maximum.md) — cap del factor en el branch safety de calculate_operat.
+- [post_calcul_safety_default](post_calcul_safety_default.md) — eps / value replacing TINY / 0 in the safety branch of calculate_operat (F5 T2 V8).
+- [post_calcul_absolute](post_calcul_absolute.md) — calculate_modify() in calcul.cc, fabs last (F5 T2 V8).
+- [post_calcul_apparent_total](post_calcul_apparent_total.md) — zero previous state in the apparent branch of calculate_operat (F5 T2 V8).
+- [post_calcul_label](post_calcul_label.md) — not stored; input.cc ignores it, print_db.cc writes post_calcul_names (F5 T2 V8).
+- [post_calcul_limit](post_calcul_limit.md) — per-item clamp in calculate_modify(), length check in calculate() (F5 T2 V8).
+- [post_calcul_multiply](post_calcul_multiply.md) — per-item factor in calculate_modify(), length check in calculate() (F5 T2 V8).
+- [post_calcul_static_pressure](post_calcul_static_pressure.md) — calcul_phreatic_coord() override in calcul.cc, postprocessing only (F5 T2 V8).
 - [group_groundflow_expansion](group_groundflow_expansion.md) — registro parse-only.
 - [control_print_gid_contact_spring2](control_print_gid_contact_spring2.md) — no_index + alias sin prefijo control_.
 - [control_mesh_macro_concentrate](control_mesh_macro_concentrate.md) — registro parse-only (4 valores).

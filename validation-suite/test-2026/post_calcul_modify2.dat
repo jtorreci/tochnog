@@ -1,0 +1,33 @@
+( F5 T2 V8: post_calcul_limit before post_calcul_absolute (manual
+  Professional 6.905, 6.902). Same bar as post_calcul_modify1: average
+  -0.333333 limited to [0.1,0.2] gives 0.1, then the absolute value
+  0.1 (the absolute value first would give 0.2). Professional
+  02-08-2026: node_dof_calcul 0.1 1 0 0 1 (probe v8pro q1); the GNU lists -prival
+  largest first, 0.1 0 0 1 1 (DIVERGENCES K12). )
+echo -no
+number_of_space_dimensions 1
+materi_velocity
+materi_displacement
+materi_strain_total
+materi_stress
+end_initia
+
+node 1  0
+node 2  1
+element 1  -bar2 1 2
+
+group_type 0  -materi
+group_materi_elasti_young 0 1.
+group_materi_memory 0  -total_linear
+
+bounda_dof 0  1 -velx
+bounda_time    0  0. 0. 100. 0.
+bounda_dof 1  2 -velx
+bounda_time    1  0. -1. 100. -1.
+
+post_calcul -materi_strain_total -average -materi_strain_total -prival -materi_strain_total -size_tot
+post_calcul_absolute -yes
+post_calcul_limit 0.1 0.2 -10. 10. -10. 10.
+
+control_timestep  0  1. 1.
+end_data

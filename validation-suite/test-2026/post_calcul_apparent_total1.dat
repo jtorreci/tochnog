@@ -1,0 +1,69 @@
+( F5 T2 V8: post_calcul_apparent_total -yes (manual Professional 6.903).
+  Copy of the Professional 02-08-2026 test/other/ground17.dat with the
+  switch: the apparent Young modulus and Poisson ratio from the TOTAL
+  strains and stresses. The stresses are reset to -100 isotropic, then
+  the volumetric strain -1.e-5 is applied (E 1.e7, nu 0): total
+  p = -133.333, K = 1.333333e7, G = 5.e6 (unchanged by the isotropic
+  part), E = 9KG/(3K+G) = 1.333333e7, nu = (3K-2G)/(2(3K+G)) = 1/3.
+  Professional 02-08-2026: 1.333333333334e+07 3.333333333338e-01
+  (probe v8pro a1); the incremental default gives 1.e7 and 0. )
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_velocity_integrated
+materi_strain_total
+materi_stress
+end_initia
+
+start_define
+  bottom_edge  geometry_line 1
+end_define
+bottom_edge 0. -1. 1. -1. 1.e-4
+
+start_define
+  top_edge  geometry_line 2
+end_define
+top_edge 0. 0. 1. 0. 1.e-4
+
+start_define
+  left_edge  geometry_line 3
+end_define
+left_edge 0. -1. 0. 0. 1.e-4
+
+start_define
+  right_edge  geometry_line 4
+end_define
+right_edge 1. -1. 1. 0. 1.e-4
+
+group_type 0  -materi
+group_materi_elasti_young 0  1.e7
+group_materi_undrained_capacity 0  1.e-7
+group_integration_points 0 -minimal
+
+bounda_dof   10  -bottom_edge -velx -vely
+bounda_dof   20  -top_edge -velx -vely
+bounda_dof   30  -left_edge -velx -vely
+bounda_dof   40  -right_edge -vely
+bounda_dof   50  -right_edge -velx
+bounda_time  50  -1.e-5
+
+post_calcul -materi_stress -young_apparent -materi_stress -poisson_apparent
+
+post_calcul_apparent_total -yes
+control_mesh_macro              10  -rectangle 0 2 2 
+control_mesh_macro_parameters   10  0.5 -0.5 1. 1.
+
+control_reset_dof               20  -sigxx -sigyy -sigzz
+control_reset_value_constant    20  -100.
+
+control_timestep                30  1. 1.
+control_materi_undrained_apply  30  -yes
+(
+control_print                   30  -node_dof -node_dof_calcul -element_intpnt_materi_undrained_pressure
+)
+
+target_item  0   -node_dof_calcul 1 0
+target_value 0   1.3333333333e7 10.
+target_item  1   -node_dof_calcul 1 1
+target_value 1   0.3333333333 1.e-6
+end_data

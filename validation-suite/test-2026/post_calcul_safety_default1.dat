@@ -1,0 +1,67 @@
+( F5 T2 V8: post_calcul_safety_default (manual Professional 6.917).
+  Copy of the Professional 02-08-2026 test/other/ground14.dat [safety
+  piping, phreatic level 0.25] with the pressure monitors added. Above
+  the level the pressures are 0, so the safety factors divide by zero:
+  with post_calcul_safety_default 1.e-3 99 they are set to 99 there.
+  Professional 02-08-2026 node_dof_calcul (probe v8pro s1): node 1
+  -10 -2.5 -7.5 2.333333333334 2, node 41 0 0 0 99 99. )
+echo -no
+number_of_space_dimensions 2
+groundflow_pressure
+materi_velocity
+materi_displacement
+materi_stress
+end_initia
+
+start_define
+  lower_edge geometry_line 10
+end_define
+lower_edge 0. 0. 1.e-1 0. 1.e-4
+
+start_define
+  left_edge geometry_line 20
+end_define
+left_edge 0. 0. 0. 1. 1.e-4
+
+start_define
+  right_edge geometry_line 30
+end_define
+right_edge 1.e-1 0. 1.e-1 1. 1.e-4
+
+groundflow_phreatic_level 0.25
+groundflow_density 1.
+force_gravity 0. -10.
+
+bounda_dof     10  -lower_edge -topres
+bounda_time    10  -10.
+
+bounda_dof     20  -lower_edge -velx -vely
+bounda_time    20  0.
+
+bounda_dof     30  -left_edge -velx
+bounda_time    30  0.
+
+bounda_dof     40  -right_edge -velx
+bounda_time    40  0.
+
+group_type                        0  -materi -groundflow
+group_materi_memory               0  -total_linear
+group_materi_elasti_young         0  100.
+group_materi_density_groundflow   0  2. 2.
+group_groundflow_permeability     0  1.e-5 1.e-5
+
+post_calcul -groundflow_pressure -total_pressure -groundflow_pressure -static_pressure -groundflow_pressure -dynamic_pressure -materi_stress -safety_piping -materi_stress -safety_lifting
+post_point 10  0.05 0.0
+post_calcul_safety_default 1.e-3 99.
+
+control_mesh_macro                10 -rectangle 0 2 21
+control_mesh_macro_parameters     10  0.05 0.5 0.1 1.
+control_mesh_macro_element        10  -quad9
+
+control_timestep                  20  0.5 1.
+
+target_item  10   -post_point_dof_calcul 10 -safety_piping
+target_value 10   2.3333 1.e-3
+target_item  20   -post_point_dof_calcul 10 -safety_lifting
+target_value 20   2. 1.e-3
+end_data

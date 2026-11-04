@@ -1123,7 +1123,14 @@ void input( )
           if ( d_is_set ) cout << " " << d << " ";
           else cout << " " << str << " ";
         }
-        if ( db_type(idat)==INTEGER ) {
+        if ( idat==POST_CALCUL_LABEL ) {
+            // post_calcul_label (manual Professional 6.904) is an output
+            // record (print_db.cc writes the item names of post_calcul):
+            // its names are read and ignored, so a database file holding
+            // the record can be read back
+          ival[iv] = 0;
+        }
+        else if ( db_type(idat)==INTEGER ) {
           if ( str[0]=='-' ) {
             itmp = db_number( &str[1] );
             if ( itmp<0 && idat==GROUP_ELEMENT_SELECTIVE_REDUCED_INTEGRATION &&
@@ -1243,7 +1250,8 @@ void input( )
     db_max_index( idat, max, VERSION_NORMAL, GET );
     if ( idat==NODE_DOF ) {
     }
-    for ( i=0, ready=0; !ready; i++) {
+      // post_calcul_label is not stored (output record, see above)
+    for ( i=0, ready=(idat==POST_CALCUL_LABEL); !ready; i++) {
       if ( range[0]==-RA ) 
         index = integer_range[i];
       else 

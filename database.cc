@@ -8740,6 +8740,62 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   no_index[POST_CALCUL_SAFETY_MAXIMUM] = 1;
   data_class[POST_CALCUL_SAFETY_MAXIMUM] = POST;
 
+  // F5 T2 V8: modifiers of the post_calcul results (calcul.cc).
+  // post_calcul_absolute (6.902) / post_calcul_apparent_total (6.903):
+  // -yes/-no switches. post_calcul_multiply (6.916) one factor and
+  // post_calcul_limit (6.905) one lower/upper pair per post_calcul
+  // dof/operat item. post_calcul_safety_default (6.917) eps and value of
+  // the safety factors with a near-zero pressure denominator.
+  // post_calcul_static_pressure (6.920) the static pressure of the
+  // complete domain in postprocessing. post_calcul_label (6.904) is an
+  // output record: print_db.cc writes the item names, the input accepts
+  // and ignores it (input.cc), so a database file can be read back.
+  strcpy(name[POST_CALCUL_ABSOLUTE],"post_calcul_absolute");
+  type[POST_CALCUL_ABSOLUTE] = INTEGER;
+  data_length[POST_CALCUL_ABSOLUTE] = 1;
+  no_index[POST_CALCUL_ABSOLUTE] = 1;
+  data_class[POST_CALCUL_ABSOLUTE] = POST;
+
+  strcpy(name[POST_CALCUL_APPARENT_TOTAL],"post_calcul_apparent_total");
+  type[POST_CALCUL_APPARENT_TOTAL] = INTEGER;
+  data_length[POST_CALCUL_APPARENT_TOTAL] = 1;
+  no_index[POST_CALCUL_APPARENT_TOTAL] = 1;
+  data_class[POST_CALCUL_APPARENT_TOTAL] = POST;
+
+  strcpy(name[POST_CALCUL_LABEL],"post_calcul_label");
+  type[POST_CALCUL_LABEL] = INTEGER;
+  data_length[POST_CALCUL_LABEL] = DATA_ITEM_SIZE;
+  fixed_length[POST_CALCUL_LABEL] = 0;
+  no_index[POST_CALCUL_LABEL] = 1;
+  data_class[POST_CALCUL_LABEL] = POST;
+
+  strcpy(name[POST_CALCUL_LIMIT],"post_calcul_limit");
+  type[POST_CALCUL_LIMIT] = DOUBLE_PRECISION;
+  data_length[POST_CALCUL_LIMIT] = DATA_ITEM_SIZE;
+  fixed_length[POST_CALCUL_LIMIT] = 0;
+  no_index[POST_CALCUL_LIMIT] = 1;
+  data_class[POST_CALCUL_LIMIT] = POST;
+
+  strcpy(name[POST_CALCUL_MULTIPLY],"post_calcul_multiply");
+  type[POST_CALCUL_MULTIPLY] = DOUBLE_PRECISION;
+  data_length[POST_CALCUL_MULTIPLY] = DATA_ITEM_SIZE;
+  fixed_length[POST_CALCUL_MULTIPLY] = 0;
+  no_index[POST_CALCUL_MULTIPLY] = 1;
+  data_class[POST_CALCUL_MULTIPLY] = POST;
+
+  strcpy(name[POST_CALCUL_SAFETY_DEFAULT],"post_calcul_safety_default");
+  type[POST_CALCUL_SAFETY_DEFAULT] = DOUBLE_PRECISION;
+  data_length[POST_CALCUL_SAFETY_DEFAULT] = 2;
+  fixed_length[POST_CALCUL_SAFETY_DEFAULT] = 1;
+  no_index[POST_CALCUL_SAFETY_DEFAULT] = 1;
+  data_class[POST_CALCUL_SAFETY_DEFAULT] = POST;
+
+  strcpy(name[POST_CALCUL_STATIC_PRESSURE],"post_calcul_static_pressure");
+  type[POST_CALCUL_STATIC_PRESSURE] = DOUBLE_PRECISION;
+  data_length[POST_CALCUL_STATIC_PRESSURE] = 1;
+  no_index[POST_CALCUL_STATIC_PRESSURE] = 1;
+  data_class[POST_CALCUL_STATIC_PRESSURE] = POST;
+
   // post_calcul operator values -safety_piping/-safety_lifting (manual
   // Professional 6.9xx post_calcul command): the operators resolve as
   // INTEGER data items (like -force/-total_pressure) so the input

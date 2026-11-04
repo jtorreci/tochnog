@@ -57,6 +57,58 @@ long int groundflow_static_pressure_active( void )
   return 0;
 }
 
+// F5 T2 V8: post_calcul_multiply (6.916), post_calcul_limit (6.905) and
+// post_calcul_absolute (6.902) of the post_calcul item being calculated.
+// calculate() sets them per dof/operat item before the node and
+// post-point loops; the parallel node loop only reads them.
+static long int calcul_modify_multiply=0, calcul_modify_limit=0,
+  calcul_modify_absolute=0;
+static double calcul_modify_factor=1., calcul_modify_lower=0.,
+  calcul_modify_upper=0.;
+
+// Apply the modifiers to the results of one item, in the order of the
+// Professional 02-08-2026 (measured, probes v8pro p6/q1/q4/q6): multiply,
+// then limit, then absolute value. All values of a multi-valued item
+// (eg -prival) share the factor and the limits of the item.
+static void calculate_modify( double result[], long int length_result )
+
+{
+  long int i=0;
+
+  for ( i=0; i<length_result; i++ ) {
+    if ( calcul_modify_multiply ) result[i] *= calcul_modify_factor;
+    if ( calcul_modify_limit ) {
+      if ( result[i]<calcul_modify_lower ) result[i] = calcul_modify_lower;
+      if ( result[i]>calcul_modify_upper ) result[i] = calcul_modify_upper;
+    }
+    if ( calcul_modify_absolute ) result[i] = fabs( result[i] );
+  }
+}
+
+// groundflow_phreatic_coord() with post_calcul_static_pressure (6.920):
+// when the record is set its value is the static pressure of the
+// complete domain in postprocessing. It replaces the static pressure of
+// the phreatic level (or of post_calcul_static_pressure_height) in the
+// -static_pressure and -dynamic_pressure results and in the p_dynamic of
+// -safety_piping, as the Professional 02-08-2026 (probe v8pro s2 on
+// ground14). The calculation itself keeps groundflow_phreatic_coord().
+static long int calcul_phreatic_coord( long int inod, double coord[],
+  double dof[], double &total_pres, double &static_pres, double &location )
+
+{
+  long int found=0, ldum=0, idum[1];
+  double static_value=0.;
+
+  found = groundflow_phreatic_coord( inod, coord, dof, total_pres,
+    static_pres, location, NULL );
+  if ( db( POST_CALCUL_STATIC_PRESSURE, 0, idum, &static_value, ldum,
+       VERSION_NORMAL, GET_IF_EXISTS ) ) {
+    static_pres = static_value;
+    found = 1;
+  }
+  return found;
+}
+
 void calculate( void )
 
 {
@@ -93,7 +145,36 @@ void calculate( void )
     db( POST_CALCUL, 0, calcul, ddum, length, VERSION_NORMAL, GET );
     if ( (length%2)!=0 ) db_error( POST_CALCUL, 0 );
     nmat = length / 2; 
+
+      // post_calcul_multiply / post_calcul_limit: one factor / one
+      // lower-upper pair per dof/operat item (the Professional rejects a
+      // shorter record and ignores extra values)
+    double multiply_factor[DATA_ITEM_SIZE], limit_value[DATA_ITEM_SIZE];
+    long int multiply_length=0, limit_length=0, absolute_switch=-NO;
+    long int has_multiply = db( POST_CALCUL_MULTIPLY, 0, idum,
+      multiply_factor, multiply_length, VERSION_NORMAL, GET_IF_EXISTS );
+    long int has_limit = db( POST_CALCUL_LIMIT, 0, idum,
+      limit_value, limit_length, VERSION_NORMAL, GET_IF_EXISTS );
+    db( POST_CALCUL_ABSOLUTE, 0, &absolute_switch, ddum, ldum,
+      VERSION_NORMAL, GET_IF_EXISTS );
+    if ( has_multiply && multiply_length<nmat ) {
+      pri( "Error: post_calcul_multiply needs a factor for each item "
+        "of post_calcul." );
+      db_error( POST_CALCUL_MULTIPLY, 0 );
+    }
+    if ( has_limit && limit_length<2*nmat ) {
+      pri( "Error: post_calcul_limit needs a lower and an upper value "
+        "for each item of post_calcul." );
+      db_error( POST_CALCUL_LIMIT, 0 );
+    }
+
     for ( icalcul=0; icalcul<nmat; icalcul++ ) {
+      calcul_modify_multiply = has_multiply;
+      calcul_modify_factor = has_multiply ? multiply_factor[icalcul] : 1.;
+      calcul_modify_limit = has_limit;
+      calcul_modify_lower = has_limit ? limit_value[icalcul*2+0] : 0.;
+      calcul_modify_upper = has_limit ? limit_value[icalcul*2+1] : 0.;
+      calcul_modify_absolute = ( absolute_switch==-YES );
       unknown = calcul[icalcul*2+0];
       calcul_matrix = calcul_vector = calcul_ecomplex = 0;
       if       ( unknown==-CONDIF_TEMPERATURE ) {
@@ -243,6 +324,7 @@ void calculate( void )
               unknown_values[0] = ( calcul_scalar_indx>=0 ?
                 post_dof[calcul_scalar_indx] : 0. );
             calculate_operat( unknown_values, -1, coord, post_dof, result, length_result );
+            calculate_modify( result, length_result );
             db( type_post_dof_calcul[itype], ipost, idum, dof_calcul, 
               length, VERSION_NORMAL, GET_IF_EXISTS );
             if ( length+length_result>DATA_ITEM_SIZE ) 
@@ -645,6 +727,7 @@ void parallel_calcul_node( void )
            unknown_values[0] = ( calcul_scalar_indx>=0 ?
              node_dof[calcul_scalar_indx] : 0. );
         calculate_operat( unknown_values, inod, coord, node_dof, result, length_result );
+        calculate_modify( result, length_result );
         db( NODE_DOF_CALCUL, inod, idum, dof_calcul, length, 
           VERSION_NORMAL, GET_IF_EXISTS );
         if ( (length+length_result)>MCALCUL ) {
@@ -840,8 +923,8 @@ void calculate_operat( double unknown_values[], long int inod,
   }                        
   else if ( labs(calcul_operat)==STATIC ) {
     pres = 0.;
-    if ( groundflow_phreatic_coord( inod, coord, dof, total_pres,
-        static_pres, location, NULL ) )
+    if ( calcul_phreatic_coord( inod, coord, dof, total_pres,
+        static_pres, location ) )
       pres = static_pres;
     // node_static_pressure: user override (manual Professional 6.894)
     db( NODE_STATIC_PRESSURE, inod, idum, &pres, ldum, VERSION_NORMAL,
@@ -851,8 +934,8 @@ void calculate_operat( double unknown_values[], long int inod,
   }
   else if ( labs(calcul_operat)==DYNAMIC ) {
     pres = ( groundflow_pressure ? dof[pres_indx] : 0. );
-    if ( groundflow_phreatic_coord( inod, coord, dof, total_pres,
-        static_pres, location, NULL ) )
+    if ( calcul_phreatic_coord( inod, coord, dof, total_pres,
+        static_pres, location ) )
       pres = total_pres - static_pres;
     // node_dynamic_pressure: user override (manual Professional 6.886)
     db( NODE_DYNAMIC_PRESSURE, inod, idum, &pres, ldum, VERSION_NORMAL,
@@ -876,16 +959,22 @@ void calculate_operat( double unknown_values[], long int inod,
     // listed from the MOST compressive (prival_0 = the minimum), while
     // the GNU prival sort is descending, hence the reversed indexing;
     // when the pressure denominator is zero the factor is set to 0
-    // (post_calcul_safety_default eps very small, value 0).
+    // (post_calcul_safety_default eps very small, value 0; the record
+    // sets both, F5 T2 V8, Professional probe v8pro s1 on ground14).
     long int safety_method=-VERTICAL, ipipe=0, nres=1;
-    double sm_ddum[1], safety_pipe=0., p_div=0., safety_max=0.;
+    double sm_ddum[1], safety_pipe=0., p_div=0., safety_max=0.,
+      safety_default[2];
     long int sm_ldum=0, safety_maximum_set=0, res_idum[1];
     db( POST_CALCUL_SAFETY_METHOD, 0, &safety_method, sm_ddum,
       sm_ldum, VERSION_NORMAL, GET_IF_EXISTS );
     safety_maximum_set = db( POST_CALCUL_SAFETY_MAXIMUM, 0, res_idum,
       &safety_max, ldum, VERSION_NORMAL, GET_IF_EXISTS );
-    groundflow_phreatic_coord( inod, coord, dof, total_pres,
-      static_pres, location, NULL );
+    safety_default[0] = TINY;
+    safety_default[1] = 0.;
+    db( POST_CALCUL_SAFETY_DEFAULT, 0, res_idum, safety_default, ldum,
+      VERSION_NORMAL, GET_IF_EXISTS );
+    calcul_phreatic_coord( inod, coord, dof, total_pres,
+      static_pres, location );
     if ( labs(calcul_operat)==SAFETY_PIPING )
       p_div = total_pres - static_pres;   // p_dynamic
     else
@@ -910,8 +999,8 @@ void calculate_operat( double unknown_values[], long int inod,
         indx = ipipe*MDIM + ipipe;
         safety_pipe = unknown_values[indx];
       }
-      if ( scalar_dabs(p_div)<TINY )
-        result[ipipe] = 0.;
+      if ( scalar_dabs(p_div)<safety_default[0] )
+        result[ipipe] = safety_default[1];
       else {
         result[ipipe] = ( safety_pipe + p_div ) / p_div;
         if ( safety_maximum_set && result[ipipe]>safety_max )
@@ -951,8 +1040,19 @@ void calculate_operat( double unknown_values[], long int inod,
       long int ept_present = ( ept_indx>=0 );
       array_set( d_sig, 0., MDIM*MDIM );
       array_set( d_ept, 0., MDIM*MDIM );
-      if ( db( NODE_DOF_PREVIOUS_STEP, inod, prev_idum, prev_dof, prev_len,
-          VERSION_NORMAL, GET_IF_EXISTS ) && prev_len>0 )
+      // post_calcul_apparent_total -yes (6.903): the total strains and
+      // total stresses instead of the increments (previous state 0;
+      // Professional probe v8pro a1 on ground17: E 1.333e7, nu 1/3)
+      long int apparent_total=-NO, at_ldum=0;
+      double at_ddum[1];
+      db( POST_CALCUL_APPARENT_TOTAL, 0, &apparent_total, at_ddum, at_ldum,
+        VERSION_NORMAL, GET_IF_EXISTS );
+      if ( apparent_total==-YES ) {
+        array_set( prev_dof, 0., MUKNWN );
+        have_prev = 1;
+      }
+      else if ( db( NODE_DOF_PREVIOUS_STEP, inod, prev_idum, prev_dof,
+          prev_len, VERSION_NORMAL, GET_IF_EXISTS ) && prev_len>0 )
         have_prev = 1;
       if ( have_prev && ept_present ) {
         for ( idim=0; idim<MDIM; idim++ ) {

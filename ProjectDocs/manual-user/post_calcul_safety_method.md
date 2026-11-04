@@ -27,7 +27,8 @@ compressive (`-prival`: `prival_0` is the minimum), or the global normal
 stress sigma_xx/sigma_yy/sigma_zz (`-global`: slots `_x`, `_y`, `_z`).
 
 When the pressure in the denominator is zero the factor is set to 0
-(`post_calcul_safety_default` eps very small, value 0). The optional
+(`post_calcul_safety_default`: eps very small and value 0 when the record
+is not given). The optional
 `post_calcul_safety_maximum` caps the factor.
 
 ## Usage

@@ -1,0 +1,39 @@
+( F5 T2 V8: post_calcul_multiply / _limit / _absolute (manual
+  Professional 6.916, 6.905, 6.902). 1D bar, total strain -1 in x;
+  post_calcul items: -average -0.333333, -prival -1 0 0, -size_tot 1.
+  One factor and one lower/upper pair per dof/operat item (all values
+  of -prival share them). Order multiply, limit, absolute: average
+  -0.333333*2 = -0.666667, limited to -0.5, absolute 0.5; prival
+  -1*-3 = 3; size_tot 5. Professional 02-08-2026: node_dof_calcul
+  0.5 3 0 0 5 (probes v8pro); the GNU lists -prival largest first,
+  0.5 0 0 3 5 (DIVERGENCES K12). The post_calcul_label record is copied
+  from the Professional .dbs: an output record, read and ignored. )
+echo -no
+number_of_space_dimensions 1
+materi_velocity
+materi_displacement
+materi_strain_total
+materi_stress
+end_initia
+
+node 1  0
+node 2  1
+element 1  -bar2 1 2
+
+group_type 0  -materi
+group_materi_elasti_young 0 1.
+group_materi_memory 0  -total_linear
+
+bounda_dof 0  1 -velx
+bounda_time    0  0. 0. 100. 0.
+bounda_dof 1  2 -velx
+bounda_time    1  0. -1. 100. -1.
+
+post_calcul -materi_strain_total -average -materi_strain_total -prival -materi_strain_total -size_tot
+post_calcul_multiply 2. -3. 5.
+post_calcul_limit -0.5 0.5 -10. 10. -10. 10.
+post_calcul_absolute -yes
+post_calcul_label -a_ept -va0_ept -va1_ept -va2_ept -s_ept
+
+control_timestep  0  1. 1.
+end_data
