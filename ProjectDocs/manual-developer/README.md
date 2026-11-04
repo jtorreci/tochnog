@@ -418,6 +418,19 @@ page lists its own in "Differences with the Professional version".
 - [post_calcul_limit](post_calcul_limit.md) — per-item clamp in calculate_modify(), length check in calculate() (F5 T2 V8).
 - [post_calcul_multiply](post_calcul_multiply.md) — per-item factor in calculate_modify(), length check in calculate() (F5 T2 V8).
 - [post_calcul_static_pressure](post_calcul_static_pressure.md) — calcul_phreatic_coord() override in calcul.cc, postprocessing only (F5 T2 V8).
+- [post_count](post_count.md) — post_count_data_volume() in post.cc (F5 T2 V9).
+- [post_count_result](post_count_result.md) — written by post_count_data_volume() (F5 T2 V9).
+- [post_data](post_data.md) — post_count_data_volume(), data_item_value() (F5 T2 V9).
+- [post_data_factor](post_data_factor.md) — length check in post_count_data_volume() (F5 T2 V9).
+- [post_data_result](post_data_result.md) — PUT by post_count_data_volume() (F5 T2 V9).
+- [post_group_volume_summed](post_group_volume_summed.md) — on demand via post_item_requested() (F5 T2 V9).
+- [post_node_factor](post_node_factor.md) — post() post_node loop (F5 T2 V9).
+- [post_node_rhside_ratio_method](post_node_rhside_ratio_method.md) — post_node_rhside_fixed_free() (F5 T2 V9).
+- [post_point_element_group](post_point_element_group.md) — parallel_post_point() group filter (F5 T2 V9).
+- [post_point_eps_iso](post_point_eps_iso.md) — point_el() eps_iso argument (F5 T2 V9).
+- [post_point_node_type](post_point_node_type.md) — NODE / NODE_START_REFINED coordinates in parallel_post_point() (F5 T2 V9).
+- [post_quadrilateral_element_group](post_quadrilateral_element_group.md) — quadrilateral loop sets the search group (F5 T2 V9).
+- [post_strain_volume_initial](post_strain_volume_initial.md) — captured once in post_count_data_volume(), partial (F5 T2 V9).
 - [group_groundflow_expansion](group_groundflow_expansion.md) — registro parse-only.
 - [control_print_gid_contact_spring2](control_print_gid_contact_spring2.md) — no_index + alias sin prefijo control_.
 - [control_mesh_macro_concentrate](control_mesh_macro_concentrate.md) — registro parse-only (4 valores).

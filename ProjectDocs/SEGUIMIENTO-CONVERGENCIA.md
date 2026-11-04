@@ -36,6 +36,7 @@ suite sfnet, o un test propio. El registro completo:
 | **F5 T2 V7 — per-model plastic strain + total strain kappas (4.34, 4.41-4.43, 4.45-4.48)** | `0fa067b` | 2026-11-03 | The Professional 02-08-2026 accepts the initialisations, except `_camclay`, which it rejects, but adds no dof (WRONG, corrected by C108 on 2026-11-04: it adds them). The owner decided to follow the manual (DIVERGENCES STRAIN-PLASTI-MODEL-DOFS). No Professional oracle, so the checks are equalities and analytic values. Tests `materi_strain_plasti_model1..4` (von Mises / Mohr-Coulomb / Cam clay / tension): the model's dof equals epp at every node and the other three are 0. `materi_strain_total_kappa1`: homogeneous strain, analytic peak 0.00761577 / 0.01 / 0.00721110 / 0.004 kept after unloading. `_error1`: materi_strain_total required. The older per-model dofs found to diverge: BACKLOG C107. |
 | **F5 T2 C107 — older per-model plastic strain dofs gated by model (4.35-4.40)** | `1a44872` | 2026-11-04 | Professional 02-08-2026 (kappa_shear_ip_state1, von Mises): `_druckprag`, `_hardsoil`, `_cap` stay 0. GNU now fills hardsoil / cap / compression / diprisco / druckprag only in groups with that model, with the epp recovery. Test `materi_strain_plasti_model5` (druckprag, tria3): eppdrp* = epp*, eppcap* = epphs* = 0 (old binary: 0.913406). `mstrain_*` / `mhardsoil_*` targets unchanged. |
 | **F5 T2 C108 — per-model plastic strain and total strain kappa labels renamed to the Professional names** | `c854d82` | 2026-11-04 | Professional 02-08-2026 dof_label of the V7 probes and of `materi_strain_plasti_model5`: `eppca/eppco/eppdi/eppdr/eppha/eppmo/eppte/eppvo*`, `kapto`, `strtocokap`, `strtoshkap`, `strtotekap`. `mstrain_*` targets renamed (old binary: "I do not know : -eppdrxy"). Suite 720 OK / 0 FALLO. |
+| **F5 T2 V9 — post data / point records (6.923-6.926, 6.937, 6.946, 6.952, 6.954, 6.957, 6.959, 6.963, 6.966)** | HASH_V9 | 2026-11-04 | Professional 02-08-2026 probes (v9pro, v9t) on a 3-element quad4 mesh with two groups: post_count_result 3 8 1, post_data_result 6, post_node_result x3, post_group_volume_summed 2 1, post_strain_volume_initial 1, post_point element group found/not found, post_quadrilateral group 0.0880956: equal. Divergences: post_point_eps_iso and post_point_node_type -node have no effect in the Professional (GNU follows the manual, DIVERGENCES POST-POINT-SEARCH, BACKLOG C111); post_node_rhside_* measures (BACKLOG C110). Tests `post_count_data1`, `post_data_factor_error1`, `post_point_search1`, `post_point_node_type1`, `post_node_rhside_ratio_method1`. Old binary: "I do not know" (probe r9). |
 | **F5 T2 V8 — post_calcul modifiers (6.902-6.905, 6.916, 6.917, 6.920)** | 42dac7d | 2026-11-04 | Professional 02-08-2026 probes (v8pro): multiply and limit are per dof/operat item (extra values ignored, a short record rejected), order multiply → limit → absolute (negative factor and limit-above-value probes). Tests `post_calcul_modify1/2` (node_dof_calcul = Professional, with the -prival order of K12), `_error1/2`, `post_calcul_apparent_total1` (ground17: 1.333333e7 / 1/3 = Pro), `post_calcul_safety_default1` and `post_calcul_static_pressure1` (ground14 nodes 1 and 41 = Pro). post_calcul_label written in the .dbs with the GNU names (DIVERGENCES POST-CALCUL-LABEL-NAMES). Old binary: "Error in data part" on all 7 inputs. |
 | **F5 T2 C108 — total strain kappa measures** | `94c6161` | 2026-11-04 | Professional 02-08-2026 on `materi_strain_total_kappa1` (isolated and joint runs): kapto 0.00761577 kept after unloading (= GNU); strtocokap -0.01 at the peak (GNU now signed: -0.01, history), -0.005 after unloading (current); strtoshkap 0.00721110 then 0.00360555 (current); strtotekap 0 alone. GNU keeps the history values (manual), DIVERGENCES STRAIN-KAPPA-HISTORY. Also corrects the V7 "Professional adds no dof" records. |
 | **F5 T2 V6 — `element_dof_initial_specific_number` / `_value` (6.423 / 6.424)** | `df07925` | 2026-11-03 | Professional 02-08-2026 probes on the minipc (f5/v6): field value_0 + grad . x evaluated at the NODES (bar 0.8 x: node 2 0.9; 0.1 + 0.8 x: 0.95; integration point evaluation would give 0.7), birth step only (2 steps: 0.95), element_dof_initial takes precedence (0.7), quad4 0.1 + 0.2 x + 0.8 y: nodes 3 / 4 0.9625 / 1.0375. Tests element_dof_initial_specific1..5 = Professional on the same inputs, specific3 (constant value_0) = manual (Professional NaN, DIVERGENCES DOF-INITIAL-SPECIFIC-CONSTANT), _error1 input error. RED on fe664a3 (keyword unknown). |
@@ -1988,13 +1989,13 @@ Nota: `group_interface_ground` del checklist anterior NUNCA existió (artefacto 
 
 ### post_count (0/1)
 
-- [ ] `post_count` — PENDIENTE
+- [x] `post_count` — post_count_data_volume() en post.cc (= Pro 3 8 1); también post_count_result (F5 T2 V9, HASH_V9, 2026-11-04)
 
 ### post_data (0/3)
 
-- [ ] `post_data` — PENDIENTE
-- [ ] `post_data_factor` — PENDIENTE
-- [ ] `post_data_result` — PENDIENTE
+- [x] `post_data` — suma ponderada vía data_item_value (= Pro 6) (F5 T2 V9, HASH_V9, 2026-11-04)
+- [x] `post_data_factor` — factores de post_data, registro corto → error (F5 T2 V9, HASH_V9, 2026-11-04)
+- [x] `post_data_result` — salida de post_data (F5 T2 V9, HASH_V9, 2026-11-04)
 
 ### post_element (0/9)
 
@@ -2014,7 +2015,7 @@ Nota: `group_interface_ground` del checklist anterior NUNCA existió (artefacto 
 
 ### post_group (0/1)
 
-- [ ] `post_group_volume_summed` — PENDIENTE
+- [x] `post_group_volume_summed` — volumen por grupo bajo demanda (= Pro 2 1) (F5 T2 V9, HASH_V9, 2026-11-04)
 
 ### post_integrate (2/2)
 
@@ -2032,21 +2033,22 @@ Nota: `group_interface_ground` del checklist anterior NUNCA existió (artefacto 
 ### post_node (5/8)
 
 - [x] `post_node` — presente en el GNU
-- [ ] `post_node_factor` — PENDIENTE
+- [x] `post_node_factor` — factor de post_node_result (= Pro) (F5 T2 V9, HASH_V9, 2026-11-04)
 - [x] `post_node_result` — presente en el GNU
 - [ ] `post_node_rhside_` — PENDIENTE
 - [x] `post_node_rhside_free` — presente en el GNU
 - [x] `post_node_rhside_ratio` — presente en el GNU
 - [x] `post_node_rhside_ratio_dof_type` — alias de un record del GNU (F5 W2 V1, 2026-11-02)
-- [ ] `post_node_rhside_ratio_method` — PENDIENTE
+- [x] `post_node_rhside_ratio_method` — -post_node_rhside_free (manual); medidas fixed/free GNU = máximo, BACKLOG C110 (F5 T2 V9, HASH_V9, 2026-11-04)
 
 ### post_point (4/6)
 
 - [x] `post_point` — presente en el GNU
 - [x] `post_point_dof` — presente en el GNU
 - [x] `post_point_dof_calcul` — presente en el GNU
-- [ ] `post_point_element_group` — PENDIENTE
-- [ ] `post_point_eps_iso` — PENDIENTE
+- [x] `post_point_element_group` — búsqueda del post point en un grupo (= Pro) (F5 T2 V9, HASH_V9, 2026-11-04)
+- [x] `post_point_node_type` — -node / -node_start_refined (manual; Pro usa siempre start_refined, DIVERGENCES POST-POINT-SEARCH) (F5 T2 V9, HASH_V9, 2026-11-04)
+- [x] `post_point_eps_iso` — tolerancia isoparamétrica (manual; Pro no la aplica, DIVERGENCES POST-POINT-SEARCH) (F5 T2 V9, HASH_V9, 2026-11-04)
 - [x] `post_point_move` — implementada (commit `3793892`, 2026-08-04)
 
 ### post_quadrilateral (4/5)
@@ -2054,13 +2056,13 @@ Nota: `group_interface_ground` del checklist anterior NUNCA existió (artefacto 
 - [x] `post_quadrilateral` — presente en el GNU
 - [x] `post_quadrilateral_dof` — presente en el GNU
 - [x] `post_quadrilateral_dof_calcul` — presente en el GNU
-- [ ] `post_quadrilateral_element_group` — PENDIENTE
+- [x] `post_quadrilateral_element_group` — quadrilateral de un grupo (= Pro 0.0880956) (F5 T2 V9, HASH_V9, 2026-11-04)
 - [x] `post_quadrilateral_n` — presente en el GNU
 
 ### post_strain (0/3)
 
 - [ ] `post_strain_volume_absolute` — PENDIENTE
-- [ ] `post_strain_volume_initial` — PENDIENTE
+- [x] `post_strain_volume_initial` — volumen inicial de strain_volume_element (= Pro 1); PARCIAL: strain_volume no implementado (F5 T2 V9, HASH_V9, 2026-11-04)
 - [ ] `post_strain_volume_relative` — PENDIENTE
 
 ### print_ (0/1)

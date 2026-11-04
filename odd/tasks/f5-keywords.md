@@ -99,10 +99,11 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
     Route: inline. Commit `94c6161`.
   - [x] V8 post_calcul modifiers: post_calcul_{absolute,label,limit,multiply,apparent_total,safety_default,static_pressure}.
     Route: inline. Commit 42dac7d. C109 decided: keep the GNU manual names (owner 2026-11-04, "mantenemos nombres GNU-manual").
-  - [ ] V9 post data/point: post_count, post_data(_factor,_result), post_group_volume_summed, post_node_factor,
+  - [x] V9 post data/point: post_count, post_data(_factor,_result), post_group_volume_summed, post_node_factor,
     post_node_rhside_ratio_method, post_point_{element_group,eps_iso,node_type},
     post_quadrilateral_element_group, post_strain_volume_initial.
   Professional examples only in validation_14_mesh.dat (output dump) and tochnog_abaqus.dat.
+    Route: inline (explorer for the post.cc map). Commit HASH_V9. C110, C111 open for the owner.
 - [ ] T3 W3 materials (27): `group_materi_*` and `materi_plasti_*` (umat, stress_null, hypo
   niemunis/wolffersdorff variants, borja_tamagnini, elasti_c, hyper reduced_polynomial /
   simo_taylor, visco_power, residual_stiffness, mpc, diprisco_density, history_variable_user,
@@ -381,3 +382,10 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   dy = total + 7, piping p_dyn too, lifting unchanged. post_calcul_label Pro `-a_ept -va0_ept`, GNU names
   `aept` (manual example) -> DIVERGENCES POST-CALCUL-LABEL-NAMES, BACKLOG C109 (owner decision).
   RED: old binary "Error in data part" on the 7 inputs. GREEN: node_dof_calcul = Pro (prival order K12).
+- L-V9 (2026-11-04) V9 after C109 ("mantenemos nombres GNU-manual"). Explorer map: post() in post.cc, locator
+  parallel_post_point (NODE_START_REFINED, point_el eps 1.e-3), post_node_rhside_fixed_free (max |.|, threshold
+  1.e-6), strain_volume_* registered but not computed. Professional probes v9pro/v9t (3 quad4, 2 groups): count
+  3 8 1, data 6, node factor x3, group volume 2 1, strain volume initial 1, point group, quadrilateral group
+  0.0880956 equal. Pro ignores post_point_eps_iso and post_point_node_type -node -> DIVERGENCES POST-POINT-SEARCH,
+  BACKLOG C111 (owner). rhside fixed/free maxima vs manual sums -> BACKLOG C110 (owner). RED: old binary rejects
+  the records (r9 rc=1). GREEN: 5 new tests, targets met.

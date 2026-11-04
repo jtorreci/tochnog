@@ -2883,6 +2883,35 @@ beam_rec_check post_calcul_safety_default1 node_dof_calcul 41 "0 0 0 99 99"
 run_ok "$T2026" post_calcul_static_pressure1
 beam_rec_check post_calcul_static_pressure1 node_dof_calcul 1 "-10 -7 -3 4.333333333334 2"
 beam_rec_check post_calcul_static_pressure1 node_dof_calcul 41 "0 -7 7 -0.9285714285714 0"
+# F5 T2 V9: post records (manual 6.923-6.926, 6.937, 6.946, 6.952, 6.954,
+# 6.957, 6.959, 6.963, 6.966); targets = Professional 02-08-2026 except
+# the post point search divergences (DIVERGENCES POST-POINT-SEARCH).
+run_ok "$T2026" post_count_data1
+if grep -q "^post_count_result  *3 8 1 *$" "$T2026/post_count_data1.dbs"; then
+  check_ok "post_count_data1 (post_count_result 3 8 1)"
+else
+  check_fail "post_count_data1" "post_count_result != 3 8 1"
+fi
+expected_error_ok "$T2026" post_data_factor_error1
+run_ok "$T2026" post_point_search1
+run_ok "$T2026" post_point_node_type1
+for p in "post_point_search1 1" "post_point_search1 4" "post_point_node_type1 6"; do
+  set -- $p
+  if grep -q "^post_point_dof  $2 " "$T2026/$1.dbs"; then
+    check_fail "$1" "post_point_dof $2 found (expected: not found)"
+  else
+    check_ok "$1 post_point $2 not found"
+  fi
+done
+run_ok "$T2026" post_node_rhside_ratio_method1
+if LC_ALL=C awk '$1=="post_node_rhside_free" { f=$2+$3 }
+    $1=="post_node_rhside_ratio" { r=$2 }
+    END { d=f-r; if (d<0) d=-d; exit !(f>1. && d<1e-9*f) }' \
+    "$T2026/post_node_rhside_ratio_method1.dbs"; then
+  check_ok "post_node_rhside_ratio_method1 (ratio = free velocity rhside)"
+else
+  check_fail "post_node_rhside_ratio_method1" "ratio != free rhside sum"
+fi
 # C100: under the default -no, control_reset_dof writes the integration
 # points with the reset value at their coordinates (= Professional
 # 02-08-2026 element_intpnt_dof of the same inputs, run above).

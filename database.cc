@@ -8796,6 +8796,101 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   no_index[POST_CALCUL_STATIC_PRESSURE] = 1;
   data_class[POST_CALCUL_STATIC_PRESSURE] = POST;
 
+  // F5 T2 V9: post records. post_count (6.923) data items whose active
+  // indices are counted into post_count_result. post_data (6.924-6.926)
+  // triplets (name, index, number) summed with post_data_factor into
+  // post_data_result. post_group_volume_summed (6.937) volume per element
+  // group and post_strain_volume_initial (6.966) initial volume of the
+  // strain_volume_element elements (outputs, post.cc). post_node_factor
+  // (6.946) multiplies post_node_result. post_node_rhside_ratio_method
+  // (6.952) -post_node_rhside_free. post_point_element_group /
+  // _eps_iso / _node_type (6.954, 6.957, 6.959) and
+  // post_quadrilateral_element_group (6.963) steer the post point search.
+  strcpy(name[POST_COUNT],"post_count");
+  type[POST_COUNT] = INTEGER;
+  data_length[POST_COUNT] = DATA_ITEM_SIZE;
+  fixed_length[POST_COUNT] = 0;
+  no_index[POST_COUNT] = 1;
+  data_class[POST_COUNT] = POST;
+
+  strcpy(name[POST_COUNT_RESULT],"post_count_result");
+  type[POST_COUNT_RESULT] = INTEGER;
+  data_length[POST_COUNT_RESULT] = DATA_ITEM_SIZE;
+  fixed_length[POST_COUNT_RESULT] = 0;
+  no_index[POST_COUNT_RESULT] = 1;
+  data_class[POST_COUNT_RESULT] = POST;
+
+  strcpy(name[POST_DATA],"post_data");
+  type[POST_DATA] = INTEGER;
+  data_length[POST_DATA] = DATA_ITEM_SIZE;
+  fixed_length[POST_DATA] = 0;
+  data_class[POST_DATA] = POST;
+
+  strcpy(name[POST_DATA_FACTOR],"post_data_factor");
+  type[POST_DATA_FACTOR] = DOUBLE_PRECISION;
+  data_length[POST_DATA_FACTOR] = DATA_ITEM_SIZE;
+  fixed_length[POST_DATA_FACTOR] = 0;
+  data_class[POST_DATA_FACTOR] = POST;
+  data_required[POST_DATA_FACTOR] = POST_DATA;
+
+  strcpy(name[POST_DATA_RESULT],"post_data_result");
+  type[POST_DATA_RESULT] = DOUBLE_PRECISION;
+  data_length[POST_DATA_RESULT] = 1;
+  data_class[POST_DATA_RESULT] = POST;
+
+  strcpy(name[POST_GROUP_VOLUME_SUMMED],"post_group_volume_summed");
+  type[POST_GROUP_VOLUME_SUMMED] = DOUBLE_PRECISION;
+  data_length[POST_GROUP_VOLUME_SUMMED] = DATA_ITEM_SIZE;
+  fixed_length[POST_GROUP_VOLUME_SUMMED] = 0;
+  no_index[POST_GROUP_VOLUME_SUMMED] = 1;
+  data_class[POST_GROUP_VOLUME_SUMMED] = POST;
+
+  strcpy(name[POST_NODE_FACTOR],"post_node_factor");
+  type[POST_NODE_FACTOR] = DOUBLE_PRECISION;
+  data_length[POST_NODE_FACTOR] = 1;
+  fixed_length[POST_NODE_FACTOR] = 1;
+  data_class[POST_NODE_FACTOR] = POST;
+  data_required[POST_NODE_FACTOR] = POST_NODE;
+
+  strcpy(name[POST_NODE_RHSIDE_RATIO_METHOD],"post_node_rhside_ratio_method");
+  type[POST_NODE_RHSIDE_RATIO_METHOD] = INTEGER;
+  data_length[POST_NODE_RHSIDE_RATIO_METHOD] = 1;
+  no_index[POST_NODE_RHSIDE_RATIO_METHOD] = 1;
+  data_class[POST_NODE_RHSIDE_RATIO_METHOD] = POST;
+
+  strcpy(name[POST_POINT_ELEMENT_GROUP],"post_point_element_group");
+  type[POST_POINT_ELEMENT_GROUP] = INTEGER;
+  data_length[POST_POINT_ELEMENT_GROUP] = 1;
+  fixed_length[POST_POINT_ELEMENT_GROUP] = 1;
+  data_class[POST_POINT_ELEMENT_GROUP] = POST;
+  data_required[POST_POINT_ELEMENT_GROUP] = POST_POINT;
+
+  strcpy(name[POST_POINT_EPS_ISO],"post_point_eps_iso");
+  type[POST_POINT_EPS_ISO] = DOUBLE_PRECISION;
+  data_length[POST_POINT_EPS_ISO] = 1;
+  fixed_length[POST_POINT_EPS_ISO] = 1;
+  data_class[POST_POINT_EPS_ISO] = POST;
+  data_required[POST_POINT_EPS_ISO] = POST_POINT;
+
+  strcpy(name[POST_POINT_NODE_TYPE],"post_point_node_type");
+  type[POST_POINT_NODE_TYPE] = INTEGER;
+  data_length[POST_POINT_NODE_TYPE] = 1;
+  fixed_length[POST_POINT_NODE_TYPE] = 1;
+  data_class[POST_POINT_NODE_TYPE] = POST;
+  data_required[POST_POINT_NODE_TYPE] = POST_POINT;
+
+  strcpy(name[POST_QUADRILATERAL_ELEMENT_GROUP],"post_quadrilateral_element_group");
+  type[POST_QUADRILATERAL_ELEMENT_GROUP] = INTEGER;
+  data_length[POST_QUADRILATERAL_ELEMENT_GROUP] = 1;
+  fixed_length[POST_QUADRILATERAL_ELEMENT_GROUP] = 1;
+  data_class[POST_QUADRILATERAL_ELEMENT_GROUP] = POST;
+  data_required[POST_QUADRILATERAL_ELEMENT_GROUP] = POST_QUADRILATERAL;
+
+  strcpy(name[POST_STRAIN_VOLUME_INITIAL],"post_strain_volume_initial");
+  type[POST_STRAIN_VOLUME_INITIAL] = DOUBLE_PRECISION;
+  data_length[POST_STRAIN_VOLUME_INITIAL] = 1;
+  data_class[POST_STRAIN_VOLUME_INITIAL] = POST;
+
   // post_calcul operator values -safety_piping/-safety_lifting (manual
   // Professional 6.9xx post_calcul command): the operators resolve as
   // INTEGER data items (like -force/-total_pressure) so the input

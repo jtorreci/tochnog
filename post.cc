@@ -25,6 +25,163 @@
 #define EPS_LARGE 1.e20
 #define MGROUP 1000
 
+// F5 T2 V9: search settings of parallel_post_point() for the point being
+// located: the element group (-1 = any; post_point_element_group,
+// post_quadrilateral_element_group), the isoparametric tolerance
+// (post_point_eps_iso, default 1.e-3, the point_el() default) and the
+// node coordinates (post_point_node_type, default -node_start_refined).
+// post() sets them before each search; the parallel loop only reads them.
+static long int post_point_search_group = -1,
+  post_point_search_coord = NODE_START_REFINED;
+static double post_point_search_eps = 1.e-3;
+
+static void post_point_search_default( void )
+
+{
+  post_point_search_group = -1;
+  post_point_search_coord = NODE_START_REFINED;
+  post_point_search_eps = 1.e-3;
+}
+
+// 1 when a target_item or a control_print asks for the data item idat
+// (the on-demand post results: post_force_edge_summed,
+// post_group_volume_summed).
+static long int post_item_requested( long int idat )
+
+{
+  long int i=0, ind=0, imax=0, length=0, requested=0, *target=NULL,
+    *cpr=NULL;
+
+  db_max_index( TARGET_ITEM, imax, VERSION_NORMAL, GET );
+  for ( ind=0; ind<=imax && !requested; ind++ ) {
+    if ( !db_active_index( TARGET_ITEM, ind, VERSION_NORMAL ) ) continue;
+    target = db_int( TARGET_ITEM, ind, VERSION_NORMAL );
+    if ( labs(target[0])==idat ) requested = 1;
+  }
+  if ( !requested ) {
+    db_max_index( CONTROL_PRINT, imax, VERSION_NORMAL, GET );
+    for ( ind=0; ind<=imax && !requested; ind++ ) {
+      if ( !db_active_index( CONTROL_PRINT, ind, VERSION_NORMAL ) ) continue;
+      length = db_len( CONTROL_PRINT, ind, VERSION_NORMAL );
+      cpr = db_int( CONTROL_PRINT, ind, VERSION_NORMAL );
+      for ( i=0; i<length; i++ )
+        if ( cpr[i]==-idat ) requested = 1;
+    }
+  }
+  return requested;
+}
+
+// F5 T2 V9 post outputs, filled at every post():
+//  - post_count (6.923): the number of active indices of each listed data
+//    item, in post_count_result (Professional 02-08-2026: -element -node
+//    -geometry_point gives 3 8 1 on the v9pro probe).
+//  - post_data (6.924-6.926): sum of the data item entries (name, index,
+//    number) times post_data_factor (1 when the record is absent), in
+//    post_data_result (probe: 1*x2 + 2*x3 + 10*velx4 = 6).
+//  - post_group_volume_summed (6.937): the volume of the non-empty
+//    elements per element group (a post_global item of the Professional;
+//    the GNU computes it on demand, as post_force_edge_summed).
+//  - post_strain_volume_initial (6.966): the volume of the
+//    strain_volume_element elements, captured the first time the element
+//    volumes exist and kept afterwards.
+static void post_count_data_volume( void )
+
+{
+  long int i=0, ind=0, imax=0, length=0, ncount=0, idat=0, index=0,
+    entry=0, element=0, max_element=0, group=0, ngroup=0,
+    element_empty=-NO, ldum=0, idum[1], count[DATA_ITEM_SIZE],
+    items[DATA_ITEM_SIZE];
+  double value=0., result=0., volume=0., ddum[1],
+    factor[DATA_ITEM_SIZE], group_volume[DATA_ITEM_SIZE];
+
+  if ( db( POST_COUNT, 0, items, ddum, ncount, VERSION_NORMAL,
+       GET_IF_EXISTS ) ) {
+    for ( i=0; i<ncount; i++ ) {
+      idat = labs( items[i] );
+      count[i] = 0;
+      db_max_index( idat, imax, VERSION_NORMAL, GET );
+      for ( index=0; index<=imax; index++ )
+        if ( db_active_index( idat, index, VERSION_NORMAL ) ) count[i]++;
+    }
+    db( POST_COUNT_RESULT, 0, count, ddum, ncount, VERSION_NORMAL, PUT );
+  }
+
+  db_max_index( POST_DATA, imax, VERSION_NORMAL, GET );
+  for ( ind=0; ind<=imax; ind++ ) {
+    if ( !db_active_index( POST_DATA, ind, VERSION_NORMAL ) ) continue;
+    db( POST_DATA, ind, items, ddum, length, VERSION_NORMAL, GET );
+    if ( length%3!=0 ) db_error( POST_DATA, ind );
+    long int nfactor = 0;
+    if ( db( POST_DATA_FACTOR, ind, idum, factor, nfactor, VERSION_NORMAL,
+         GET_IF_EXISTS ) && nfactor<length/3 ) {
+      pri( "Error: post_data_factor needs a factor for each data item "
+        "of post_data." );
+      db_error( POST_DATA_FACTOR, ind );
+    }
+    result = 0.;
+    for ( i=0; i<length/3; i++ ) {
+      idat = labs( items[i*3+0] );
+      index = items[i*3+1];
+      entry = items[i*3+2];
+      value = 0.;
+      if ( db_type(idat)==INTEGER ) {
+        if ( db_active_index( idat, index, VERSION_NORMAL ) && entry>=0 &&
+             entry<db_len( idat, index, VERSION_NORMAL ) )
+          value = (double) db_int( idat, index, VERSION_NORMAL )[entry];
+      }
+      else
+        data_item_value( idat, index, entry, value );
+      result += ( nfactor>0 ? factor[i] : 1. ) * value;
+    }
+    ldum = 1;
+    db( POST_DATA_RESULT, ind, idum, &result, ldum, VERSION_NORMAL, PUT );
+  }
+
+  db_max_index( ELEMENT, max_element, VERSION_NORMAL, GET );
+  if ( post_item_requested( POST_GROUP_VOLUME_SUMMED ) ) {
+    array_set( group_volume, 0., DATA_ITEM_SIZE );
+    for ( element=0; element<=max_element; element++ ) {
+      if ( !db_active_index( ELEMENT, element, VERSION_NORMAL ) ) continue;
+      element_empty = -NO;
+      db( ELEMENT_EMPTY, element, &element_empty, ddum, ldum,
+        VERSION_NORMAL, GET_IF_EXISTS );
+      if ( element_empty!=-NO && element_empty!=-FRONT ) continue;
+      group = 0;
+      db( ELEMENT_GROUP, element, &group, ddum, ldum, VERSION_NORMAL,
+        GET_IF_EXISTS );
+      volume = 0.;
+      db( ELEMENT_VOLUME, element, idum, &volume, ldum, VERSION_NORMAL,
+        GET_IF_EXISTS );
+      if ( group>=0 && group<DATA_ITEM_SIZE ) {
+        group_volume[group] += volume;
+        if ( group+1>ngroup ) ngroup = group+1;
+      }
+    }
+    if ( ngroup>0 ) db( POST_GROUP_VOLUME_SUMMED, 0, idum, group_volume,
+      ngroup, VERSION_NORMAL, PUT );
+  }
+
+  db_max_index( STRAIN_VOLUME_ELEMENT, imax, VERSION_NORMAL, GET );
+  for ( ind=0; ind<=imax; ind++ ) {
+    if ( !db_active_index( STRAIN_VOLUME_ELEMENT, ind, VERSION_NORMAL ) ||
+         db_active_index( POST_STRAIN_VOLUME_INITIAL, ind, VERSION_NORMAL ) )
+      continue;
+    db( STRAIN_VOLUME_ELEMENT, ind, items, ddum, length, VERSION_NORMAL,
+      GET );
+    long int have_volume = 0;
+    result = 0.;
+    for ( i=0; i<length; i++ ) {
+      volume = 0.;
+      if ( db( ELEMENT_VOLUME, items[i], idum, &volume, ldum,
+           VERSION_NORMAL, GET_IF_EXISTS ) ) have_volume = 1;
+      result += volume;
+    }
+    ldum = 1;
+    if ( have_volume ) db( POST_STRAIN_VOLUME_INITIAL, ind, idum, &result,
+      ldum, VERSION_NORMAL, PUT );
+  }
+}
+
 void post( long int task )
 
 {
@@ -55,6 +212,19 @@ void post( long int task )
       if ( db_active_index( POST_POINT, ipost, VERSION_NORMAL ) ) {
         db( POST_POINT, ipost, idum, post_point, ldum, VERSION_NORMAL, GET );
         array_set( post_point_dof, 0., nuknwn );
+        post_point_search_default();
+        db( POST_POINT_ELEMENT_GROUP, ipost, &post_point_search_group, ddum,
+          ldum, VERSION_NORMAL, GET_IF_EXISTS );
+        db( POST_POINT_EPS_ISO, ipost, idum, &post_point_search_eps, ldum,
+          VERSION_NORMAL, GET_IF_EXISTS );
+        long int point_node_type = -NODE_START_REFINED;
+        db( POST_POINT_NODE_TYPE, ipost, &point_node_type, ddum, ldum,
+          VERSION_NORMAL, GET_IF_EXISTS );
+        if      ( point_node_type==-NODE ) post_point_search_coord = NODE;
+        else if ( point_node_type==-NODE_START_REFINED )
+          post_point_search_coord = NODE_START_REFINED;
+        else
+          db_error( POST_POINT_NODE_TYPE, ipost );
         post_found = 0;
         parallel_sys_routine( &parallel_post_point );
         if ( post_found ) {
@@ -74,6 +244,7 @@ void post( long int task )
       }
     }
 
+    post_point_search_default();
     db_max_index( POST_LINE, max_post, VERSION_NORMAL, GET );
     for( ipost=0; ipost<=max_post; ipost++ ) {
       if ( db_active_index( POST_LINE, ipost, VERSION_NORMAL ) ) {
@@ -152,6 +323,9 @@ void post( long int task )
     for( ipost=0; ipost<=max_post; ipost++ ) {
       if ( db_active_index( POST_QUADRILATERAL, ipost, VERSION_NORMAL ) ) {
         db( POST_QUADRILATERAL, ipost, idum, post_quadrilateral, ldum, VERSION_NORMAL, GET );
+        post_point_search_default();
+        db( POST_QUADRILATERAL_ELEMENT_GROUP, ipost, &post_point_search_group,
+          ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
         if ( db_active_index( POST_QUADRILATERAL_N, ipost, VERSION_NORMAL ) )
           db( POST_QUADRILATERAL_N, ipost, &n, ddum, ldum, VERSION_NORMAL, GET );
         else
@@ -233,10 +407,18 @@ void post( long int task )
           array_multiply( post_node_result, post_node_result, 1./npost_node, post_node_length );
         else if ( post_node[1]!=-SUM && post_node[1]!=-MOMENT )
           db_error( POST_NODE, ipost );
+          // post_node_factor (6.946), default 1
+        double post_node_factor = 1.;
+        db( POST_NODE_FACTOR, ipost, idum, &post_node_factor, ldum,
+          VERSION_NORMAL, GET_IF_EXISTS );
+        array_multiply( post_node_result, post_node_result, post_node_factor,
+          post_node_length );
         db( POST_NODE_RESULT, ipost, idum, post_node_result, post_node_length, VERSION_NORMAL, PUT );
       }
     }
   }
+
+  post_count_data_volume();
 
   post_global();
 
@@ -262,14 +444,21 @@ void parallel_post_point( void )
         break;
       else if ( !post_found && db_active_index( ELEMENT, element, 
           VERSION_NORMAL ) ) {
+        if ( post_point_search_group>=0 ) {
+          long int element_group = 0;
+          db( ELEMENT_GROUP, element, &element_group, ddum, ldum,
+            VERSION_NORMAL, GET_IF_EXISTS );
+          if ( element_group!=post_point_search_group ) continue;
+        }
         db( ELEMENT, element, el, ddum, length, VERSION_NORMAL, GET );
         name = el[0]; nnol = length - 1; array_move( &el[1], nodes, nnol );
         for ( inol=0; inol<nnol; inol++ ) {
           inod = nodes[inol];
-          db( NODE_START_REFINED, inod, idum, &coords[inol*ndim], ldum, 
+          db( post_point_search_coord, inod, idum, &coords[inol*ndim], ldum,
             VERSION_NORMAL, GET );
         }
-        if ( point_el( post_point, coords, weight, name, nnol ) ) {
+        if ( point_el( post_point, coords, weight, name, nnol,
+             post_point_search_eps ) ) {
           parallel_sys_lock();
           post_found = 1;
           array_set( post_point_dof, 0., nuknwn );
@@ -369,6 +558,11 @@ void post_node_rhside_fixed_free( void )
     db( DOF_TYPE, 0, dof_type, ddum, ldum, VERSION_NORMAL, GET );
     db( POST_NODE_RHSIDE_RATIO_UNKNOWNTYPES, 0, unknowntypes, ddum, 
       length_unknowntypes, VERSION_NORMAL, GET_IF_EXISTS );
+    long int ratio_method = 0;
+    db( POST_NODE_RHSIDE_RATIO_METHOD, 0, &ratio_method, ddum, ldum,
+      VERSION_NORMAL, GET_IF_EXISTS );
+    if ( ratio_method!=0 && ratio_method!=-POST_NODE_RHSIDE_FREE )
+      db_error( POST_NODE_RHSIDE_RATIO_METHOD, 0 );
     for ( inod=0; inod<=max_node; inod++ ) {
 	    if ( db_active_index( NODE_RHSIDE, inod, VERSION_NORMAL ) ) {
         node_rhside = db_dbl( NODE_RHSIDE, inod, VERSION_NORMAL );
@@ -412,7 +606,12 @@ void post_node_rhside_fixed_free( void )
         }
         ipuknwn++;
       }
-      if ( tmp2>EPS_RHSIDE_FIXED ) {
+      if ( ratio_method==-POST_NODE_RHSIDE_FREE ) {
+          // post_node_rhside_ratio_method -post_node_rhside_free (6.952):
+          // the ratio is the free right-hand side itself
+        if ( tmp1>post_node_rhside_ratio ) post_node_rhside_ratio = tmp1;
+      }
+      else if ( tmp2>EPS_RHSIDE_FIXED ) {
         ratio = tmp1/tmp2;
         if ( ratio>post_node_rhside_ratio ) post_node_rhside_ratio = ratio;
       }
@@ -586,7 +785,7 @@ void post_force_edge_summed_calculate( void )
     inol_side=0, ind=0, imax=0, element=0, max_element=0, length=0,
     ldum=0, nnod=0, nnol=0, name=0, requested=0, found=0, swit=0,
     nfreq=0, ifreq=0, idum[1], el[1+MNOL], nodes[MNOL],
-    *area_int=NULL, *sides=NULL, *target=NULL, *cpr=NULL,
+    *area_int=NULL, *sides=NULL,
     dof_principal[MUKNWN];
   double ddum[1], values[DATA_ITEM_SIZE], total[MDIM], coord[MDIM],
     load=0., factor=0., node_factor=0., ar=0., time_start=0., time_end=0.,
@@ -601,22 +800,7 @@ void post_force_edge_summed_calculate( void )
   if ( swit ) pri( "In routine POST_FORCE_EDGE_SUMMED_CALCULATE" );
 
   // on demand: any target_item or control_print asking for the item
-  db_max_index( TARGET_ITEM, imax, VERSION_NORMAL, GET );
-  for ( ind=0; ind<=imax && !requested; ind++ ) {
-    if ( !db_active_index( TARGET_ITEM, ind, VERSION_NORMAL ) ) continue;
-    target = db_int( TARGET_ITEM, ind, VERSION_NORMAL );
-    if ( labs(target[0])==POST_FORCE_EDGE_SUMMED ) requested = 1;
-  }
-  if ( !requested ) {
-    db_max_index( CONTROL_PRINT, imax, VERSION_NORMAL, GET );
-    for ( ind=0; ind<=imax && !requested; ind++ ) {
-      if ( !db_active_index( CONTROL_PRINT, ind, VERSION_NORMAL ) ) continue;
-      length = db_len( CONTROL_PRINT, ind, VERSION_NORMAL );
-      cpr = db_int( CONTROL_PRINT, ind, VERSION_NORMAL );
-      for ( i=0; i<length; i++ )
-        if ( cpr[i]==-POST_FORCE_EDGE_SUMMED ) requested = 1;
-    }
-  }
+  requested = post_item_requested( POST_FORCE_EDGE_SUMMED );
   if ( !requested ) return;
 
   array_set( total, 0., MDIM );

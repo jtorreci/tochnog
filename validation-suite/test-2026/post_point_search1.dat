@@ -1,0 +1,63 @@
+( F5 T2 V9: post_point_element_group, post_point_eps_iso and
+  post_quadrilateral_element_group (manual Professional 6.954, 6.957,
+  6.963). Same three-element mesh as post_count_data1.
+  - post_point 1/2 at (2.5,0.5) inside element 3 (group 1): restricted
+    to group 0 it is not found (no post_point_dof 1), restricted to
+    group 1 velx 0.0976190 (= Professional 02-08-2026).
+  - post_point 3/4 at x 3.0015, beyond the mesh (isoparametric 1.003):
+    with post_point_eps_iso 0.1 it is accepted (velx 0.1000071); with
+    the default 1.e-3 it is not found. The Professional finds neither
+    (DIVERGENCES POST-POINT-SEARCH).
+  - post_quadrilateral 1 [1,3]x[0,1] restricted to group 0: velx
+    0.0880956 (= Professional); post_quadrilateral 2 unrestricted
+    0.0904555 (= Professional). )
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_displacement
+materi_stress
+end_initia
+node 1  0 0
+node 2  1 0
+node 3  2 0
+node 4  3 0
+node 5  0 1
+node 6  1 1
+node 7  2 1
+node 8  3 1
+element 1 -quad4 1 2 5 6
+element 2 -quad4 2 3 6 7
+element 3 -quad4 3 4 7 8
+element_group 3 1
+group_type 0 -materi
+group_type 1 -materi
+group_materi_elasti_young 0 100.
+group_materi_elasti_young 1 1000.
+group_materi_memory 0 -total_linear
+group_materi_memory 1 -total_linear
+bounda_dof 1 -ra 1 5 -ra -velx
+bounda_dof 2 1 -vely
+bounda_dof 3 -ra 4 8 -ra -velx
+bounda_time 3 0. 0. 1. 0.1
+geometry_point 1  3 0 1.e-4
+geometry_line 2  3 0 3 1 1.e-4
+post_point 1 2.5 0.5
+post_point_element_group 1 0
+post_point 2 2.5 0.5
+post_point_element_group 2 1
+post_point 3 3.0015 0.5
+post_point_eps_iso 3 0.1
+post_point 4 3.0015 0.5
+post_quadrilateral 1 1 0 3 0 3 1 1 1
+post_quadrilateral_element_group 1 0
+post_quadrilateral 2 1 0 3 0 3 1 1 1
+control_timestep 0 1. 1.
+target_item 0 -post_point_dof 2 -velx
+target_value 0 0.0976190476 1.e-8
+target_item 1 -post_point_dof 3 -velx
+target_value 1 0.100007142189 1.e-8
+target_item 2 -post_quadrilateral_dof 1 -velx
+target_value 2 0.088095602996 1.e-8
+target_item 3 -post_quadrilateral_dof 2 -velx
+target_value 3 0.0904555458529 1.e-8
+end_data

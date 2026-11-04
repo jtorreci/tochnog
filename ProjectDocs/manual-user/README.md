@@ -423,6 +423,19 @@ page lists its own in "Differences with the Professional version".
 - [post_calcul_limit](post_calcul_limit.md) — lower / upper value per post_calcul item (6.905) (F5 T2 V8).
 - [post_calcul_multiply](post_calcul_multiply.md) — factor per post_calcul item (6.916) (F5 T2 V8).
 - [post_calcul_static_pressure](post_calcul_static_pressure.md) — static pressure of the whole domain in postprocessing (6.920) (F5 T2 V8).
+- [post_count](post_count.md) — count of active indices per data item (6.923) (F5 T2 V9).
+- [post_count_result](post_count_result.md) — output of post_count (F5 T2 V9).
+- [post_data](post_data.md) — weighted sum of data item entries (6.924) (F5 T2 V9).
+- [post_data_factor](post_data_factor.md) — factors of post_data (6.925) (F5 T2 V9).
+- [post_data_result](post_data_result.md) — output of post_data (6.926) (F5 T2 V9).
+- [post_group_volume_summed](post_group_volume_summed.md) — volume per element group, on demand (6.937) (F5 T2 V9).
+- [post_node_factor](post_node_factor.md) — factor of post_node_result (6.946) (F5 T2 V9).
+- [post_node_rhside_ratio_method](post_node_rhside_ratio_method.md) — -post_node_rhside_free ratio (6.952) (F5 T2 V9).
+- [post_point_element_group](post_point_element_group.md) — post point search in one element group (6.954) (F5 T2 V9).
+- [post_point_eps_iso](post_point_eps_iso.md) — post point isoparametric tolerance (6.957) (F5 T2 V9).
+- [post_point_node_type](post_point_node_type.md) — -node / -node_start_refined post point search (6.959) (F5 T2 V9).
+- [post_quadrilateral_element_group](post_quadrilateral_element_group.md) — post quadrilateral from one element group (6.963) (F5 T2 V9).
+- [post_strain_volume_initial](post_strain_volume_initial.md) — initial volume of strain_volume_element, partial (6.966) (F5 T2 V9).
 - [group_groundflow_expansion](group_groundflow_expansion.md) — thermal expansion coefficient of the fluid/soil (6.614); parse-only.
 - [control_print_gid_contact_spring2](control_print_gid_contact_spring2.md) — GiD rendering of contact_spring2 (6.297, alias spelling accepted).
 - [control_mesh_macro_concentrate](control_mesh_macro_concentrate.md) — rectangle macro mesh concentration (6.207); parse-only.
