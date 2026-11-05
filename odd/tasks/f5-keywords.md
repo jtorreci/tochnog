@@ -103,7 +103,7 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
     post_node_rhside_ratio_method, post_point_{element_group,eps_iso,node_type},
     post_quadrilateral_element_group, post_strain_volume_initial.
   Professional examples only in validation_14_mesh.dat (output dump) and tochnog_abaqus.dat.
-    Route: inline (explorer for the post.cc map). Commit a1c7d7d. C110, C111 open for the owner.
+    Route: inline (explorer for the post.cc map). Commit a1c7d7d. C110 open for the owner; C111 decided (manual, class A).
 - [ ] T3 W3 materials (27): `group_materi_*` and `materi_plasti_*` (umat, stress_null, hypo
   niemunis/wolffersdorff variants, borja_tamagnini, elasti_c, hyper reduced_polynomial /
   simo_taylor, visco_power, residual_stiffness, mpc, diprisco_density, history_variable_user,
@@ -389,3 +389,6 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   0.0880956 equal. Pro ignores post_point_eps_iso and post_point_node_type -node -> DIVERGENCES POST-POINT-SEARCH,
   BACKLOG C111 (owner). rhside fixed/free maxima vs manual sums -> BACKLOG C110 (owner). RED: old binary rejects
   the records (r9 rc=1). GREEN: 5 new tests, targets met.
+- L-C111 (2026-11-05, owner, verbatim): "manual+GNU, creo que es lo mejor" -> C111 decided: GNU keeps the manual
+  behaviour for post_point_eps_iso / post_point_node_type; DIVERGENCES POST-POINT-SEARCH class A. Next: end-of-T2
+  independent verifier.

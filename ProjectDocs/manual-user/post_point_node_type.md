@@ -17,4 +17,4 @@ post_point_node_type 5 -node
 
 ## Differences with the Professional version
 
-The Professional 02-08-2026 gives the `-node_start_refined` result for `-node` too; the GNU follows the manual (DIVERGENCES POST-POINT-SEARCH).
+The Professional 02-08-2026 gives the `-node_start_refined` result for `-node` too; the GNU follows the manual, a deliberate divergence decided by the owner on 2026-11-05 (DIVERGENCES POST-POINT-SEARCH, BACKLOG C111).

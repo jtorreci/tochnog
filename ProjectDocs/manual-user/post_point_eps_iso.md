@@ -17,4 +17,4 @@ post_point_eps_iso 3 0.1
 
 ## Differences with the Professional version
 
-The Professional 02-08-2026 accepts the record but does not find the point with 0.1 either; the GNU follows the manual (DIVERGENCES POST-POINT-SEARCH).
+The Professional 02-08-2026 accepts the record but does not find the point with 0.1 either; the GNU follows the manual, a deliberate divergence decided by the owner on 2026-11-05 (DIVERGENCES POST-POINT-SEARCH, BACKLOG C111).
