@@ -91,5 +91,5 @@ end, the same as the Professional 02-08-2026. Before, node 2 velx went
   `force_point`, the nodal `node_mass` / `node_damping` /
   `node_stiffness` terms and their gravity share (before, a loaded free
   node reported minus its internal force instead of about 0).
-- Known, deferred (class B, DIVERGENCES C63): `post_node_rhside_fixed`
-  of Pro `slide4` differs from the Professional (BACKLOG C63).
+- `post_node_rhside_fixed` of Pro `slide4` equals the Professional since
+  C110 (2026-11-05; BACKLOG C63 resolved).

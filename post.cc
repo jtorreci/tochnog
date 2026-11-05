@@ -21,7 +21,7 @@
 
 #include "tochnog.h"
 
-#define EPS_RHSIDE_FIXED 1.e-6
+#define EPS_RHSIDE_FIXED 1.e-10
 #define EPS_LARGE 1.e20
 #define MGROUP 1000
 
@@ -537,24 +537,34 @@ void parallel_post_node( void )
   return;
 }
 
+// post_node_rhside_fixed / _free (6.948, 6.949): the signed sum of
+// node_rhside over the prescribed / free nodes, per principal dof.
+// post_node_rhside_ratio (6.950): per principal dof the mean |node_rhside|
+// of the free nodes over that of the fixed nodes (the mean free value when
+// the fixed one is below EPS_RHSIDE_FIXED, and always with the method
+// -post_node_rhside_free, 6.952); the largest over the dofs. Measured on
+// the Professional 02-08-2026 (BACKLOG C110, owner 2026-11-05).
 void post_node_rhside_fixed_free( void )
 
 {
-  long int i=0, n=0, ipuknwn=0, iuknwn=0, inod=0, max_node=0, length=0, 
-    ready=0, length_unknowntypes=0, use_this_unknown=0,
-    number=0, ldum=0, idum[1], node_bounded[MPUKNWN], 
-    dof_principal[MUKNWN], dof_amount[MUKNWN], dof_type[MUKNWN],
-    unknowntypes[DATA_ITEM_SIZE];
-  double tmp=0., tmp1=0., tmp2=0., ratio=0., post_node_rhside_ratio=0.,
-    post_node_rhside_free[MPUKNWN], post_node_rhside_fixed[MPUKNWN], 
+  long int ipuknwn=0, iuknwn=0, inod=0, max_node=0, length=0, 
+    length_unknowntypes=0, number=0, ldum=0, idum[1],
+    node_bounded[MPUKNWN], dof_principal[MUKNWN], dof_type[MUKNWN],
+    unknowntypes[DATA_ITEM_SIZE], nfixed[MPUKNWN], nfree[MPUKNWN];
+  double tmp=0., mean_fixed=0., mean_free=0., ratio=0.,
+    post_node_rhside_ratio=0., post_node_rhside_free[MPUKNWN],
+    post_node_rhside_fixed[MPUKNWN], abs_fixed[MPUKNWN], abs_free[MPUKNWN],
     ddum[1], *node_rhside=NULL;
 
   if ( npuknwn>0 ) {
     array_set( post_node_rhside_fixed, 0., npuknwn );
     array_set( post_node_rhside_free, 0., npuknwn );
+    array_set( abs_fixed, 0., npuknwn );
+    array_set( abs_free, 0., npuknwn );
+    array_set( nfixed, 0, npuknwn );
+    array_set( nfree, 0, npuknwn );
     db_highest_index( NODE_RHSIDE, max_node, VERSION_NORMAL );
     db( DOF_PRINCIPAL, 0, dof_principal, ddum, ldum, VERSION_NORMAL, GET );
-    db( DOF_AMOUNT, 0, dof_amount, ddum, ldum, VERSION_NORMAL, GET );
     db( DOF_TYPE, 0, dof_type, ddum, ldum, VERSION_NORMAL, GET );
     db( POST_NODE_RHSIDE_RATIO_UNKNOWNTYPES, 0, unknowntypes, ddum, 
       length_unknowntypes, VERSION_NORMAL, GET_IF_EXISTS );
@@ -572,14 +582,16 @@ void post_node_rhside_fixed_free( void )
         for ( ipuknwn=0; ipuknwn<npuknwn; ipuknwn++ ) {
           iuknwn = ipuknwn*nder;
           if ( dof_principal[iuknwn]>=0 ) {
-            tmp = scalar_dabs(node_rhside[ipuknwn]);
+            tmp = node_rhside[ipuknwn];
             if ( node_bounded[ipuknwn] ) {
-              if ( tmp>post_node_rhside_fixed[ipuknwn] ) 
-                post_node_rhside_fixed[ipuknwn] = tmp;
+              post_node_rhside_fixed[ipuknwn] += tmp;
+              abs_fixed[ipuknwn] += scalar_dabs(tmp);
+              nfixed[ipuknwn]++;
             }
             else {
-              if ( tmp>post_node_rhside_free[ipuknwn] ) 
-                post_node_rhside_free[ipuknwn] = tmp;
+              post_node_rhside_free[ipuknwn] += tmp;
+              abs_free[ipuknwn] += scalar_dabs(tmp);
+              nfree[ipuknwn]++;
             }
           }
         }
@@ -589,33 +601,19 @@ void post_node_rhside_fixed_free( void )
       npuknwn, VERSION_NORMAL, PUT );
     db( POST_NODE_RHSIDE_FREE, 0, idum, post_node_rhside_free, 
       npuknwn, VERSION_NORMAL, PUT );
-    ipuknwn = iuknwn = ready = 0;
-    while ( !ready ) {
-      iuknwn = ipuknwn * nder;
-      n = dof_amount[iuknwn];
-      tmp1 = tmp2 = 0.;
-      for ( i=0; i<n; i++ ) {
-        use_this_unknown = 1;
-        if ( length_unknowntypes>0 ) {
-          if ( !array_member(unknowntypes,dof_type[iuknwn],
-            length_unknowntypes,number) ) use_this_unknown = 0;
-        }
-        if ( use_this_unknown ) {
-          tmp1 += post_node_rhside_free[ipuknwn];
-          tmp2 += post_node_rhside_fixed[ipuknwn];
-        }
-        ipuknwn++;
-      }
-      if ( ratio_method==-POST_NODE_RHSIDE_FREE ) {
-          // post_node_rhside_ratio_method -post_node_rhside_free (6.952):
-          // the ratio is the free right-hand side itself
-        if ( tmp1>post_node_rhside_ratio ) post_node_rhside_ratio = tmp1;
-      }
-      else if ( tmp2>EPS_RHSIDE_FIXED ) {
-        ratio = tmp1/tmp2;
-        if ( ratio>post_node_rhside_ratio ) post_node_rhside_ratio = ratio;
-      }
-      ready = (ipuknwn>=npuknwn);
+    for ( ipuknwn=0; ipuknwn<npuknwn; ipuknwn++ ) {
+      iuknwn = ipuknwn*nder;
+      if ( dof_principal[iuknwn]<0 ) continue;
+      if ( length_unknowntypes>0 &&
+           !array_member(unknowntypes,dof_type[iuknwn],
+             length_unknowntypes,number) ) continue;
+      mean_free = nfree[ipuknwn]>0 ? abs_free[ipuknwn]/nfree[ipuknwn] : 0.;
+      mean_fixed = nfixed[ipuknwn]>0 ? abs_fixed[ipuknwn]/nfixed[ipuknwn] : 0.;
+      if ( ratio_method==-POST_NODE_RHSIDE_FREE || mean_fixed<EPS_RHSIDE_FIXED )
+        ratio = mean_free;
+      else
+        ratio = mean_free/mean_fixed;
+      if ( ratio>post_node_rhside_ratio ) post_node_rhside_ratio = ratio;
     }
     length = 1;
     db( POST_NODE_RHSIDE_RATIO, 0, idum, &post_node_rhside_ratio, 

@@ -1,11 +1,9 @@
-( F5 T2 V9: post_node_rhside_ratio_method -post_node_rhside_free (manual
-  Professional 6.952): the ratio is the free right-hand side itself. Same
-  mesh, von Mises plasticity, 2 iterations (not converged): the ratio
-  equals the sum of post_node_rhside_free over the velocity dofs
-  (checked in scripts/build_safe.sh). The GNU post_node_rhside_fixed /
-  _free hold the largest absolute value per dof, the manual and the
-  Professional the sum (BACKLOG C110), so the values differ from the
-  Professional 02-08-2026 (ratio 1.23884). )
+( F5 T2 V9 / C110: post_node_rhside_ratio_method -post_node_rhside_free {manual
+  Professional 6.952}: the ratio is the free right-hand side itself. Same
+  mesh, von Mises plasticity, 2 iterations {not converged}. Measured on the
+  Professional 02-08-2026: the ratio is, per principal dof, the mean
+  |node_rhside| over the free nodes, the largest over the dofs: 1.23884
+  {velx: {2*0.24170+2*2.23599}/4}. Checked in scripts/build_safe.sh. )
 echo -no
 number_of_space_dimensions 2
 materi_velocity

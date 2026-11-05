@@ -42,8 +42,9 @@ ip velx 1, eptxx 0, while the old GNU gave ip velx 0.5, eptxx -0.01.
   (`parallel_new_dof_diagonal`: absolute stress recovery, incremental
   correction of the other non-principal dofs; the correction form
   `rate - (new_dof - past)/dt` makes the second application idempotent)
-  and the mpc re-sync. `post_node_rhside_fixed_free()` is not re-run:
-  POST_NODE_RHSIDE_* keep the values of the last iteration.
+  and the mpc re-sync. `post_node_rhside_fixed_free()` is re-run after
+  the pass (C110, 2026-11-05): POST_NODE_RHSIDE_* are those of the final
+  residual.
 - The element tangent is still computed in the element scratch arrays (it
   is a by-product of the constitutive routines); only its store is skipped.
 
@@ -147,8 +148,6 @@ rc 0 (HEAD: slide4 rc 1); build_safe 216 OK / 0 FALLO, runs 226/226.
 ## Differences with the Professional version
 
 - None from the pass since F4 T6e (DIVERGENCES `POSTPASS-GATE` removed).
-  C62 resolved 2026-10-17. Deferred class B: C63 (`post_node_rhside_fixed`
-  of Pro `slide4`: GNU 3.44e-3 / 7.88e-3, Pro -5.77e-3 / 9.995e-3 = the
-  `post_node_result` sum; unchanged by C62, because
-  `post_node_rhside_fixed_free()` runs inside the iteration on the
-  pre-solve residual; candidate: call it once more after the pass).
+  C62 resolved 2026-10-17. C63 resolved 2026-11-05 by C110
+  (`post_node_rhside_fixed_free()` re-run after the pass; Pro `slide4`
+  = Professional).

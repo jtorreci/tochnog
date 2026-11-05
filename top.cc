@@ -841,6 +841,11 @@ void top( void )
                         slide();
                         parallel_sys_routine( &parallel_new_dof_diagonal );
                         mpc_node_apply();
+                        // C110: the reported post_node_rhside_fixed / _free
+                        // / _ratio of the final residual, as the
+                        // Professional; the iteration control above used
+                        // the per-iteration ratio.
+                        post_node_rhside_fixed_free();
                         state_pass_done = 1;
                       }
                       // Hoisted post-solve stress sync (2026-09-16): the

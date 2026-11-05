@@ -2905,13 +2905,26 @@ for p in "post_point_search1 1" "post_point_search1 4" "post_point_node_type1 6"
   fi
 done
 run_ok "$T2026" post_node_rhside_ratio_method1
-if LC_ALL=C awk '$1=="post_node_rhside_free" { f=$2+$3 }
-    $1=="post_node_rhside_ratio" { r=$2 }
-    END { d=f-r; if (d<0) d=-d; exit !(f>1. && d<1e-9*f) }' \
-    "$T2026/post_node_rhside_ratio_method1.dbs"; then
-  check_ok "post_node_rhside_ratio_method1 (ratio = free velocity rhside)"
+run_ok "$T2026" post_node_rhside_ratio1
+# C110 (owner 2026-11-05): the Professional 02-08-2026 values of the same
+# input: ratio = mean |free rhside| (method -free) 1.23884, default
+# per-dof mean free / mean fixed 12.9442; fixed / free = signed sums
+# -3.98859 0.0908132 / 3.98859 -0.0908132 (rel. tolerance 2e-4).
+rhs_close() { LC_ALL=C awk -v a="$1" -v b="$2" 'BEGIN { d=a-b; if (d<0) d=-d; m=b<0?-b:b; exit !(d<=2e-4*m) }'; }
+rr=$(awk '$1=="post_node_rhside_ratio" {print $2}' "$T2026/post_node_rhside_ratio_method1.dbs")
+if rhs_close "$rr" 1.23884; then
+  check_ok "post_node_rhside_ratio_method1 (ratio = mean free rhside, = Professional)"
 else
-  check_fail "post_node_rhside_ratio_method1" "ratio != free rhside sum"
+  check_fail "post_node_rhside_ratio_method1" "ratio $rr != 1.23884"
+fi
+rr=$(awk '$1=="post_node_rhside_ratio" {print $2}' "$T2026/post_node_rhside_ratio1.dbs")
+fx=$(awk '$1=="post_node_rhside_fixed" {print $2, $3}' "$T2026/post_node_rhside_ratio1.dbs")
+fr=$(awk '$1=="post_node_rhside_free" {print $2, $3}' "$T2026/post_node_rhside_ratio1.dbs")
+if rhs_close "$rr" 12.9442 && rhs_close "${fx% *}" -3.98859 && rhs_close "${fx#* }" 0.0908132 \
+   && rhs_close "${fr% *}" 3.98859 && rhs_close "${fr#* }" -0.0908132; then
+  check_ok "post_node_rhside_ratio1 (signed sums and ratio = Professional)"
+else
+  check_fail "post_node_rhside_ratio1" "ratio $rr fixed $fx free $fr"
 fi
 # C100: under the default -no, control_reset_dof writes the integration
 # points with the reset value at their coordinates (= Professional

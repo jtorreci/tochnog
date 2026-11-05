@@ -12,7 +12,7 @@
   (`post_calcul`). The timestep path skips `post_element_force_calculate()`
   under the same gate and under `control_materi_gate_off(
   CONTROL_POST_ELEMENT_FORCE )`. `post_node_rhside_fixed_free()` (in the
-  iteration loop) is not gated.
+  iteration loop and after the post-solve pass, C110) is not gated.
 - **Stale flags** (globals `post_stale`, `post_element_force_stale`,
   `tochnog.h` / `tochnog-mod.h`, defined in `initia.cc`): set when the last
   evaluation was skipped. A control index without timesteps recomputes a
