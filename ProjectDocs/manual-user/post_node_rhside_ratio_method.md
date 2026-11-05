@@ -23,4 +23,4 @@ post_node_rhside_ratio_method -post_node_rhside_free
 
 ## Differences with the Professional version
 
-None measured: the values equal the Professional 02-08-2026 (relative 1e-4, the residual of the plastic iterate). The manual says "size" without defining it; the mean absolute value is the measured Professional rule (BACKLOG C110, resolved 2026-11-05).
+None measured: the values equal the Professional 02-08-2026 (relative 1e-4, the residual of the plastic iterate). The manual says "size" without defining it; the mean absolute value is the measured Professional rule (BACKLOG C110, resolved 2026-11-05). The Professional also accepts `-yes` without an error; the GNU accepts only the manual value `-post_node_rhside_free`.

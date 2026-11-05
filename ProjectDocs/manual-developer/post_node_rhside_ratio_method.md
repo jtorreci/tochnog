@@ -4,7 +4,7 @@
 
 - **Record:** INTEGER, length 1, no index; only `-post_node_rhside_free` is accepted (`db_error` otherwise).
 - **Consumer:** `post.cc`, `post_node_rhside_fixed_free()`. One node loop over the active `NODE_RHSIDE` records accumulates, per principal dof (`dof_principal>=0`) and per `NODE_BOUNDED` state, the signed sum (stored as `POST_NODE_RHSIDE_FIXED` / `_FREE`), the sum of absolute values and the node count. The ratio is computed per dof from the means: `mean_free/mean_fixed`, or `mean_free` when `mean_fixed<EPS_RHSIDE_FIXED` (1.e-10, manual 6.950) or the method is `-post_node_rhside_free`; the largest dof value is stored. `POST_NODE_RHSIDE_RATIO_UNKNOWNTYPES` filters the dofs by `dof_type`.
-- **Callers:** `top.cc`, after every equilibrium solve (the ratio drives `control_timestep_iterations_automatic` and `control_timestep_size_automatic_decrease`), and once more after the post-solve material pass (C110), so the stored records are those of the final residual. The local `post_node_rhside_ratio` of `top.cc` keeps the last in-loop value.
+- **Callers:** `top.cc`, after every equilibrium solve (the ratio drives `control_timestep_iterations_automatic` and `control_timestep_size_automatic_decrease`), and once more after the post-solve material pass (C110), so the stored records are those of the final residual. The pass is skipped for the `-diagonal` solver, `options_elementloop -no` and nonlocal softening; there the records keep the last in-loop value. The local `post_node_rhside_ratio` of `top.cc` keeps the last in-loop value.
 - **Hardcoded:** `EPS_RHSIDE_FIXED` 1.e-10 (manual 6.950; was 1.e-6 with no fallback before C110).
 
 ## Verification

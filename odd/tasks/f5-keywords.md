@@ -407,3 +407,7 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   post_node_rhside_ratio1 (new), _method1 (updated). Suite 747 OK. Iteration counts change in the 2
   control_timestep_iterations_automatic inputs (default1 843->723, Pro 654; min_max_wished1 944->968, Pro 682).
   Pending note: the manual default dof_type -materi_velocity (6.951) not applied.
+- 2026-11-05 C110 independent verifier (fresh mktemp copies 155e5d9 / 823d58b): PASS. Suite 747 OK; 687-input
+  corpus: rc identical, beyond the post_node_rhside records only the 2 control_timestep_iterations_automatic inputs
+  differ (dbmeth20 = parallel-runner artefact, identical in isolation). Probes = Pro (dof_type filter honoured).
+  Advisories documented: Pro accepts method -yes (GNU rejects); no re-run when the post-solve pass is skipped.
