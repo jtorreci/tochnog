@@ -1567,6 +1567,7 @@ else check_fail "interface_tension_status1" "two runs give different .dbs"; fi
 #   equilibrium iterations (kap 0.00104991, sigxx -3.11898); old GNU
 #   0.0030 / 0.0006 (period-2 oscillation in the iteration count).
 run_ok "$T2026" hardsoil_kappa_iterations1
+run_ok "$T2026" hardsoil_gammap_initial_index1
 run_ok "$T2026" hardsoil_kappa_iterations2
 # F4 T5 / C35 (2026-10-10): post-solve material state pass (top.cc): the
 #   material is evaluated once more on the final iterate of every step, so

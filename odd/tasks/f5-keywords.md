@@ -392,3 +392,11 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
 - L-C111 (2026-11-05, owner, verbatim): "manual+GNU, creo que es lo mejor" -> C111 decided: GNU keeps the manual
   behaviour for post_point_eps_iso / post_point_node_type; DIVERGENCES POST-POINT-SEARCH class A. Next: end-of-T2
   independent verifier.
+- 2026-11-05 end-of-T2 independent verifier (fresh mktemp copies of 3227efe / 35daf7e, 612-input corpus
+  differential, suite 744 OK, audit 0): PASS on V3, V4a-d, V6, V7, V8, V9, C107, C108. One BLOCKER under C100:
+  `hardsoil_gammap_initial_index1.dat` (initial state via node_dof, not run by build_safe) lacked
+  `global_element_dof_from_node_dof -yes` and failed its targets under the -no default (rc 1). Fixed by adding
+  the record (output = baseline, gammap_initial 0.000776285656513) and pinned with run_ok in build_safe.
+  Advisories (not fixed): mstrain_druckprag node_rhside <=2e-5 in near-zero slots; post_data missing index -> 0
+  without a warning; plasti_apply2 disx/eptxx 4.66e-6 -> 0 (still = Pro references); the old text of
+  mdiprisco_hist (without -yes) aborts at plasti.cc:485 (assert tmp!=0.) instead of a clean error.
