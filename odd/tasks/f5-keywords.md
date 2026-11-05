@@ -400,7 +400,7 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   Advisories (not fixed): mstrain_druckprag node_rhside <=2e-5 in near-zero slots; post_data missing index -> 0
   without a warning; plasti_apply2 disx/eptxx 4.66e-6 -> 0 (still = Pro references); the old text of
   mdiprisco_hist (without -yes) aborts at plasti.cc:485 (assert tmp!=0.) instead of a clean error.
-- L-C110 (2026-11-05, owner, verbatim): "converjamos. Registramos la suma" -> C110 resolved inline: signed sums in
+- L-C110 (2026-11-05, owner, verbatim): "converjamos. Registramos la suma" -> C110 resolved inline (823d58b): signed sums in
   post_node_rhside_fixed/_free; ratio measured on Pro = max over principal dofs of mean|free|/mean|fixed| (mean free
   if fixed < 1e-10 or method -free); post_node_rhside_fixed_free() re-run after the post-solve pass (also resolves
   C63, slide4 = Pro). RED: old binary ratio 1.80/11.49 vs Pro 12.944/1.2388; GREEN 12.943/1.2388. Tests
