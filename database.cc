@@ -6050,6 +6050,7 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   strcpy(name[MATERI_ROTATION],"materi_rotation");
 
   strcpy(name[MATERI_STRAINENERGY],"materi_strainenergy");
+  strcpy(name[MATERI_PLASTI_PHIMOB],"materi_plasti_phimob");
 
   strcpy(name[MATERI_STRAIN_ELASTI],"materi_strain_elasti");
 
@@ -8380,6 +8381,8 @@ void db_initialize( long int dof_type[], long int dof_label[] )
       strcpy( basename, "softvar_nonloc" );
     else if ( dof_type[iuknwn]==-MATERI_STRAINENERGY ) 
       strcpy( basename, "ener" );
+    else if ( dof_type[iuknwn]==-MATERI_PLASTI_PHIMOB )
+      strcpy( basename, "phimob" );
     else if ( dof_type[iuknwn]==-MATERI_STRAIN_ELASTI ) {
       if ( iuknwn==epe_indx ) n = 0;
       n++;
@@ -8616,9 +8619,16 @@ void db_initialize( long int dof_type[], long int dof_label[] )
     else if ( dof_type[iuknwn]==-WAVE_FSCALAR ) 
       strcpy( basename, "fscal"  );
 
-    idat++; assert( idat<MDAT );
-    strcpy( name[idat], basename );
-    dof_label[iuknwn] = -idat;
+    if ( dof_type[iuknwn]==-MATERI_PLASTI_PHIMOB )
+      // the label word "phimob" is also the post_calcul operator PHIMOB,
+      // which db_number() finds first: the dof label reuses that number
+      // so that -phimob names the dof in target_item / print records
+      dof_label[iuknwn] = -PHIMOB;
+    else {
+      idat++; assert( idat<MDAT );
+      strcpy( name[idat], basename );
+      dof_label[iuknwn] = -idat;
+    }
 
     if ( derivatives ) {
       for ( idim=0; idim<ndim; idim++ ) {

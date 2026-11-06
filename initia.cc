@@ -45,7 +45,7 @@ long int
   materi_plasti_rho=0, materi_plasti_f=0, materi_plasti_f_nonlocal=0,
   materi_plasti_softvar_local=0,
   materi_plasti_softvar_nonlocal=0,
-  materi_strainenergy=0, materi_strain_elasti=0, 
+  materi_strainenergy=0, materi_plasti_phimob=0, materi_strain_elasti=0, 
   materi_strain_plasti=0, materi_strain_total=0,
   materi_stress=0, materi_velocity=0, materi_velocity_integrated=0,
   materi_acceleration=0,
@@ -56,7 +56,7 @@ long int
   find_local_softvar=0, find_nonlocal_weights=0, nonlocal_first_set=0;
 long int 
   any_runtime=0, nder=1, npuknwn=0, nuknwn=0, npointmax=27, nprinc=0, dam_indx=-1,
-  dens_indx=-1, diff_indx=-1, dis_indx=-1, dis_rel_indx=-1, ener_indx=-1,
+  dens_indx=-1, diff_indx=-1, dis_indx=-1, dis_rel_indx=-1, ener_indx=-1, phimob_indx=-1,
   epe_indx=-1, epi_indx=-1, epp_indx=-1, ept_indx=-1,
   hsepp_indx=-1,
   capepp_indx=-1, cepp_indx=-1, depp_indx=-1, dpepp_indx=-1,

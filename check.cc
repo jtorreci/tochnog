@@ -975,6 +975,8 @@ long int check( long int idat, long int task )
     ok = ok && check_unknown( "wave_scalar", NO, task );
   if ( data_number==MATERI_STRAINENERGY )
     ok = check_unknown( "materi_strainenergy", YES, task );
+  if ( data_number==MATERI_PLASTI_PHIMOB )
+    ok = check_unknown( "materi_plasti_phimob", YES, task );
   if ( data_number==MATERI_STRAIN_ELASTI )
     ok = check_unknown( "materi_strain_elasti", YES, task );
   if ( data_number==MATERI_STRAIN_PLASTI )

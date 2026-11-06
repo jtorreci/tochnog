@@ -2894,6 +2894,12 @@ run_ok "$T2026" group_materi_plasti_bounda_direct1
 run_ok "$T2026" group_materi_plasti_bounda_direct2
 run_ok "$T2026" group_materi_plasti_bounda_direct3
 run_ok "$T2026" group_materi_plasti_bounda_druck_prag1
+# F5 T3 C3: materi_plasti_phimob (manual 4.26), degrees; targets =
+# Professional 02-08-2026 on the same inputs.
+run_ok "$T2026" materi_plasti_phimob1
+run_ok "$T2026" materi_plasti_phimob2
+run_ok "$T2026" materi_plasti_phimob3
+run_ok "$T2026" materi_plasti_phimob4
 # F5 T2 V8: post_calcul modifiers (manual 6.902-6.905, 6.916, 6.917,
 # 6.920); expected node_dof_calcul = Professional 02-08-2026 on the same
 # inputs (probes v8pro; -prival largest first, DIVERGENCES K12).

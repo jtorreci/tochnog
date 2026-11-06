@@ -527,6 +527,14 @@ void input( )
       array_set( &dof_type[svnonloc_indx], -MATERI_PLASTI_SOFTVAR_NONLOCAL, n*nder );
       array_set( &dof_scal_vec_mat[unknown_indx], -SCALAR, n*nder );
     }
+    else if ( !strcmp(str,"materi_plasti_phimob") ) {
+      // F5 T3 C3: mobilized friction angle (manual Professional 4.26)
+      materi_plasti_phimob = 1;
+      phimob_indx = unknown_indx;
+      n = 1;
+      array_set( &dof_type[phimob_indx], -MATERI_PLASTI_PHIMOB, n*nder );
+      array_set( &dof_scal_vec_mat[unknown_indx], -SCALAR, n*nder );
+    }
     else if ( !strcmp(str,"materi_strainenergy") ) {
       materi_strainenergy = 1;
       ener_indx = unknown_indx;
@@ -870,6 +878,8 @@ void input( )
     check_unknown( "materi_density", NO, CHECK_USAGE_AND_ERROR );
   if ( materi_density ) 
     check_unknown( "materi_diffusion", NO, CHECK_USAGE_AND_ERROR );
+  if ( materi_plasti_phimob )
+    check_unknown( "materi_stress", YES, CHECK_USAGE_AND_ERROR );
   if ( materi_strainenergy ) {
     check_unknown( "materi_stress", YES, CHECK_USAGE_AND_ERROR );
     check_unknown( "materi_strain_elasti", YES, CHECK_USAGE_AND_ERROR );

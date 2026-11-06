@@ -313,6 +313,10 @@ void general( long int element, long int name, long int nnol, long int element_g
         unknown_belongs_to_type = 1;
         inertia = 1.;
       }
+      else if ( dof_type[iuknwn]==-MATERI_PLASTI_PHIMOB ) {
+        unknown_belongs_to_type = 1;
+        inertia = 1.;
+      }
       else if ( dof_type[iuknwn]==-MATERI_STRAIN_ELASTI ) {
         unknown_belongs_to_type = 1;
         inertia = 1.;

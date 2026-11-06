@@ -1790,6 +1790,8 @@ enum {
   // F5 T3 C2 (manual Professional 6.733, 6.734)
   GROUP_MATERI_PLASTI_MPC,
   GROUP_MATERI_PLASTI_MPC_FACTOR,
+  // F5 T3 C3 (manual Professional 4.26)
+  MATERI_PLASTI_PHIMOB,
   LAST_DUMMY }; // keep LAST_DUMMY always the last one
 
 #define MDAT LAST_DUMMY+DATA_ITEM_SIZE  // reserve space for unknowns
@@ -1819,6 +1821,7 @@ extern long int echo, ndim, derivatives,
   materi_plasti_softvar_local,
   materi_plasti_softvar_nonlocal,
   materi_strain_intergranular, materi_plasti_rho, materi_strainenergy,
+  materi_plasti_phimob, // F5 T3 C3 (manual 4.26)
   materi_strain_elasti, materi_strain_plasti, materi_strain_total, 
   materi_stress, materi_stress_pressure_history,
   materi_acceleration,
@@ -1844,6 +1847,7 @@ extern long int
   dis_indx, // index stating start of materi_displacement in node_dof
   dis_rel_indx, // index stating start of materi_displacement_relative in node_dof
   ener_indx, // index stating start of materi_strainenergy in node_dof
+  phimob_indx, // index of materi_plasti_phimob in node_dof
   epe_indx, // index stating start of materi_strain_elasti in node_dof
   epi_indx, // index stating start of strain_intergranular in node_dof
   epp_indx, // index stating start of materi_strain_plasti in node_dof

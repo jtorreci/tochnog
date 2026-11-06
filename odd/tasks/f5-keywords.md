@@ -121,7 +121,8 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   - [x] C2 plasti_mpc + mpc_factor. Route: inline. Commit a139f16. C114 (wall cohesion) found.
   - [x] C114 wall reduction of c and the direct-path factor (manual + Pro agree). Route: inline.
     Commit 397a3cb.
-  - [ ] C3 residual_stiffness, phimob.
+  - [ ] C3 residual_stiffness, phimob. phimob: route inline, commit COMMIT_T3C3. residual_stiffness: owner
+    question (manual: plastic-element stiffness; Pro: no measurable effect).
   - [ ] D1 elasti_c + c_direction.  - [ ] D2 visco_power (+ exponential twins).
   - [ ] D3 wolffersdorff_niemunis.  - [ ] D4 borja_tamagnini.  - [ ] D5 stress_null family.
   - [ ] E user hooks (young_user, history_variable_user), niemunis_visco(+_ocr),
@@ -468,4 +469,9 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   Advisories: bounda detection broader than Pro + missing wall laws + single factor -> BACKLOG C115 / DIVERGENCES
   WALL-DETECTION; mpc page precision claim and bounda dev page corrected. Two advisories rejected with evidence:
   the C114 hash was already recorded (65771f0) and the manual numbering 6.687/6.688 is right.
+- L-T3C3: phimob Pro probes: degrees (manual says both radians and degrees), root of the manual f with tension
+  positive, root closest to 0 (5.3956 not 90), mohr_coul and mohr_coul_direct only. The dof label "phimob"
+  collides with the GNU post_calcul operator PHIMOB (db_number finds the operator first): the label reuses
+  -PHIMOB. residual_stiffness: Pro gives identical results and iterations with factor 1 / 0.1 / 0.01
+  (plasti_apply1 square, examp16 180 iterations) -> owner decision (manual vs Pro).
 

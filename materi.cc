@@ -74,6 +74,52 @@ static long int sri_centroid_derivatives( long int name, long int nnol,
   return 1;
 }
 
+// Mobilized friction angle phi_mob in degrees (manual Professional 4.26):
+// the root of f = 0.5(s2-s0) + 0.5(s2+s0) sin(phi) - c cos(phi), with s0
+// / s2 the smallest / largest principal stress (tension positive) and c
+// the cohesion of group_materi_plasti_mohr_coul or _mohr_coul_direct
+// (other laws: 0, as the Professional 02-08-2026). Of the two roots in
+// [-90, 90] degrees the one with the smallest absolute value; 90 when f
+// has no root (Professional probes t3/c3: 5.3956 elastic with c 1,
+// -18.6186 in tension with c 0, phi itself at yield).
+double materi_plasti_phimob_value( long int element, long int gr,
+  double unknowns[], double sig[] )
+{
+  long int ldum=0, iroot=0;
+  double data[DATA_ITEM_SIZE], prival[MDIM], c=0., s0=0., s2=0., a=0.,
+    b=0., r=0., delta=0., ratio=0., root=0., best=0., found=0.;
+
+  if ( get_group_data( GROUP_MATERI_PLASTI_MOHR_COUL, gr, element, unknowns,
+         data, ldum, GET_IF_EXISTS ) ||
+       get_group_data( GROUP_MATERI_PLASTI_MOHR_COUL_DIRECT, gr, element,
+         unknowns, data, ldum, GET_IF_EXISTS ) )
+    c = data[1];
+  else
+    return 0.;
+  matrix_eigenvalues( sig, prival );
+  s0 = scalar_dmin( prival[0], scalar_dmin( prival[1], prival[2] ) );
+  s2 = scalar_dmax( prival[0], scalar_dmax( prival[1], prival[2] ) );
+  a = 0.5 * ( s2 - s0 );
+  b = 0.5 * ( s2 + s0 );
+  // b sin(phi) - c cos(phi) = r sin(phi - delta)
+  r = sqrt( b*b + c*c );
+  if ( r==0. ) return 0.;
+  ratio = -a / r;
+  if ( ratio<-1. ) return 90.;
+  delta = atan2( c, b );
+  for ( iroot=0; iroot<2; iroot++ ) {
+    root = ( iroot==0 ) ? delta + asin( ratio ) : delta + PIRAD - asin( ratio );
+    while ( root>PIRAD ) root -= 2.*PIRAD;
+    while ( root<=-PIRAD ) root += 2.*PIRAD;
+    if ( root>=-PIRAD/2.-1.e-12 && root<=PIRAD/2.+1.e-12 &&
+         ( !found || scalar_dabs(root)<scalar_dabs(best) ) ) {
+      best = root; found = 1.;
+    }
+  }
+  if ( !found ) return 90.;
+  return best * 180. / PIRAD;
+}
+
 void materi( long int element, long int gr, long int name, long int nnol, 
   long int npoint, long int nodes[], long int plasti_on_boundary,
   double coord_ip[], double old_coord[], long int ipoint,
@@ -1641,6 +1687,13 @@ void materi( long int element, long int gr, long int name, long int nnol,
         ipuknwn = svnonloc_indx/nder;
         indx = inol*npuknwn + ipuknwn;
         tmp = volume * h_lump * ( new_unknowns[ipuknwn] - old_unknowns[ipuknwn] ) / dtime;
+        element_rhside[indx] += tmp;
+      }
+      if ( materi_plasti_phimob ) {
+        ipuknwn = phimob_indx/nder;
+        indx = inol*npuknwn + ipuknwn;
+        tmp = materi_plasti_phimob_value( element, gr, new_unknowns, new_sig );
+        tmp = volume * h_lump * ( tmp - old_unknowns[phimob_indx] ) / dtime;
         element_rhside[indx] += tmp;
       }
       if ( materi_strainenergy ) {
