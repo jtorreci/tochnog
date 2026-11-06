@@ -117,7 +117,7 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
     group_materi_umat(_parameters) + global materi_plasti_maximum_iterations. Route: inline.
     Commit c095d18. C112 resolved (default 20000, owner), commit 6a78839.
   - [ ] C1 hypo_substepping (+ unused control record), hypo_minimum_void_ratio. Route: inline.
-    Commit COMMIT_T3C1.
+    Commit 6745219.
   - [ ] C2 plasti_mpc + mpc_factor.  - [ ] C3 residual_stiffness, phimob.
   - [ ] D1 elasti_c + c_direction.  - [ ] D2 visco_power (+ exponential twins).
   - [ ] D3 wolffersdorff_niemunis.  - [ ] D4 borja_tamagnini.  - [ ] D5 stress_null family.
