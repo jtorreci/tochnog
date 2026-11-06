@@ -40,6 +40,10 @@ Tests: `validation-suite/test-2026/group_materi_plasti_mpc1` to `_mpc4`
 
 - Which elements are on the wall, which factor applies and the reduced
   parameters (phi, phi_flow, c; C114) agree with the Professional
-  02-08-2026; the stresses agree to about 2e-4 relative.
+  02-08-2026. The stresses differ as much as the GNU Mohr-Coulomb law
+  differs from the Professional without a wall (2e-4 on the test mesh, up
+  to about 10 % on other probes).
+- The wall detection through `group_materi_plasti_bounda` is broader in
+  the GNU (BACKLOG C115); the mpc detection is not affected.
 - The mpc records that a `-veln` bounda generates internally also count as
   mpc records (not measured in the Professional).

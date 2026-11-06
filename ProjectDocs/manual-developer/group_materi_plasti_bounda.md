@@ -67,6 +67,12 @@ completo (detección por bounda_dof + factor en runtime) está activo.
   RUNFAIL por la cinemática `-updated` del default GNU con el incremento
   de cortante 100 % (rotación polar; la versión `-total_linear` pasa).
   Detalle en group_materi_plasti_mohr_coul_direct.md.
-- La reducción en las leyes incrementales clásicas (mohr_coul, druck_prag,
-  hardsoil, camclay, hypo) usa el mismo flag `plasti_on_boundary`
-  calculado por group.cc.
+- Wall code exists only for the Mohr-Coulomb-type laws of `plasti.cc` and
+  the direct laws of `stress.cc` (C114). hardsoil, camclay (M), hypo
+  (deviatoric increments) and the incremental tension (sigy) listed by the
+  manual have no wall reduction in the GNU (BACKLOG C115).
+- The detection is broader than in the Professional (BACKLOG C115): any
+  velocity-bounded node marks the element, whatever bounda_dof index
+  bounded it, and a listed value also matches element groups.
+- `group_materi_plasti_bounda_factor` holds one value (data_length 1); the
+  per-index factors of the manual are not supported (BACKLOG C115).

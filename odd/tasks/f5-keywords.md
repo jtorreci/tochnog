@@ -462,4 +462,10 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   plane. GNU fixed in plasti.cc (5 sites) and stress.cc direct_wall_factor(). Direct modes = Pro to all digits;
   incremental within 2.5e-3 relative (pre-existing MC gap). RED on a92f8bc build. Corpus wall inputs: only
   Pro other/mohr_coul_direct8 (identical to Pro) and the heat_exchanger_pile timeouts.
+- 2026-11-06 C114 independent verifier (fresh a92f8bc / 397a3cb): PASS. Own probes re-derive the Pro rule (MC, DP,
+  hardening, both direct modes, factors 0.5/0.6, _wall without factor on top); wall = explicit group bit-identical.
+  75 plasticity inputs: only the 6 wall tests change, all toward Pro; no-wall inputs identical. Suite 765/0.
+  Advisories: bounda detection broader than Pro + missing wall laws + single factor -> BACKLOG C115 / DIVERGENCES
+  WALL-DETECTION; mpc page precision claim and bounda dev page corrected. Two advisories rejected with evidence:
+  the C114 hash was already recorded (65771f0) and the manual numbering 6.687/6.688 is right.
 
