@@ -684,7 +684,7 @@ void set_stress( long int element, long int gr,
     k0_control_swit=0,
     formulation=INCREMENTAL, ldum=0, idum[1], task[2],
     hs_gp_swit=-NO, icontrol_hs=0, hs_plasti_present=0, hs_len=1,
-    damage_done=0, direct_on=0;
+    damage_done=0, direct_on=0, plastic_ip=0;
   double lambda=0., deps_size=0., lambda_new=0., lambda_previous=0., 
     tmp=0., tmp_old=0., tmp_inc=0., tmp_new=0., 
     f=0., f_previous=0, f_ref=0., materi_expansion_linear=0., 
@@ -2006,6 +2006,7 @@ void set_stress( long int element, long int gr,
       if ( ( f<EPS_F && viscoplasti_always==-NO ) || f==NO_YIELD_F ) 
         plasti_found = 1;
       else {
+        plastic_ip = 1;
         if ( viscoplasti ) {
           lambda_previous = 0.; f_previous = f;
           if ( plasti_visco_exponential[0]>0. ) {
@@ -2109,12 +2110,41 @@ void set_stress( long int element, long int gr,
     if ( array_size( dsig, MDIM*MDIM )>0. &&
          direct_plastic_strain( dsig, Cmem, Cuser, Chyper, Chypo,
            compressibility, deps ) ) {
+      plastic_ip = 1;
       array_add( inc_epp, deps, inc_epp, MDIM*MDIM );
       array_subtract( inc_epe, deps, inc_epe, MDIM*MDIM );
       array_subtract( new_epe, deps, new_epe, MDIM*MDIM );
     }
     if ( direct_f>0. ) direct_f = 0.;
     if ( new_f==NO_YIELD_F || direct_f>new_f ) new_f = direct_f;
+  }
+
+  // group_materi_plasti_residual_stiffness (manual Professional 6.735):
+  // fraction of the original shear stiffness used in the material matrix
+  // of a plastic integration point {a yield test that started plastic
+  // iterations, or a direct cut, in this stress update}. Only the
+  // matrix changes, the stresses do not. The volumetric part
+  // delta_ij delta_kl S/9, S = C_mmnn, is kept; the rest of C is scaled.
+  // The Professional 02-08-2026 accepts the record without a measurable
+  // effect {DIVERGENCES PLASTI-RESIDUAL-STIFFNESS}.
+  double residual_factor = 1., c_vol = 0.;
+  if ( get_group_data( GROUP_MATERI_PLASTI_RESIDUAL_STIFFNESS, gr, element,
+      new_unknowns, &residual_factor, ldum, GET_IF_EXISTS ) ) {
+    if ( residual_factor<=0. ) {
+      pri( "Error: group_materi_plasti_residual_stiffness must be "
+        "larger than 0." );
+      exit(1);
+    }
+  }
+  if ( !plastic_ip ) residual_factor = 1.;
+  if ( residual_factor!=1. ) {
+    for ( idim=0; idim<MDIM; idim++ ) {
+      for ( kdim=0; kdim<MDIM; kdim++ ) {
+        c_vol += Cmem[idim][idim][kdim][kdim] + Cuser[idim][idim][kdim][kdim]
+          + Chyper[idim][idim][kdim][kdim] + Chypo[idim][idim][kdim][kdim];
+      }
+    }
+    c_vol /= 9.;
   }
 
     // fill material stiffness, we use the linear stiffness
@@ -2129,9 +2159,14 @@ void set_stress( long int element, long int gr,
           i = stress_indx(idim,jdim);
           j = stress_indx(kdim,ldim);
           ind_ddsdde = i*MSTRAIN+j;
-          ddsdde[ind_ddsdde] += fac * ( Cmem[idim][jdim][kdim][ldim]
-            + Cuser[idim][jdim][kdim][ldim] + Chyper[idim][jdim][kdim][ldim] 
-            + Chypo[idim][jdim][kdim][ldim] );
+          double c_ijkl = Cmem[idim][jdim][kdim][ldim]
+            + Cuser[idim][jdim][kdim][ldim] + Chyper[idim][jdim][kdim][ldim]
+            + Chypo[idim][jdim][kdim][ldim];
+          if ( residual_factor!=1. ) {
+            double vol = ( idim==jdim && kdim==ldim ) ? c_vol : 0.;
+            c_ijkl = vol + residual_factor * ( c_ijkl - vol );
+          }
+          ddsdde[ind_ddsdde] += fac * c_ijkl;
           if ( compressibility!=0. && idim==jdim && kdim==ldim )
             ddsdde[ind_ddsdde] += 1./compressibility;
         }

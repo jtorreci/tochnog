@@ -4787,6 +4787,14 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   data_class[GROUP_MATERI_PLASTI_MPC_FACTOR] = MATERI;
   data_required[GROUP_MATERI_PLASTI_MPC_FACTOR] = GROUP_TYPE;
 
+  // F5 T3 C3: shear stiffness fraction of plastic integration points in
+  // the material matrix (manual 6.735); stress.cc set_stress
+  strcpy(name[GROUP_MATERI_PLASTI_RESIDUAL_STIFFNESS],"group_materi_plasti_residual_stiffness");
+  type[GROUP_MATERI_PLASTI_RESIDUAL_STIFFNESS] = DOUBLE_PRECISION;
+  data_length[GROUP_MATERI_PLASTI_RESIDUAL_STIFFNESS] = 1;
+  data_class[GROUP_MATERI_PLASTI_RESIDUAL_STIFFNESS] = MATERI;
+  data_required[GROUP_MATERI_PLASTI_RESIDUAL_STIFFNESS] = GROUP_TYPE;
+
   strcpy(name[GROUP_MATERI_PLASTI_CAMCLAY],"group_materi_plasti_camclay");
   type[GROUP_MATERI_PLASTI_CAMCLAY] = DOUBLE_PRECISION;
   // manual Professional 6.689: index M kappa lambda (3 values). The

@@ -2900,6 +2900,12 @@ run_ok "$T2026" materi_plasti_phimob1
 run_ok "$T2026" materi_plasti_phimob2
 run_ok "$T2026" materi_plasti_phimob3
 run_ok "$T2026" materi_plasti_phimob4
+# F5 T3 C3: group_materi_plasti_residual_stiffness (manual 6.735), matrix
+# only; converged state unchanged, unconverged differs from Professional.
+run_ok "$T2026" group_materi_plasti_residual_stiffness1
+run_ok "$T2026" group_materi_plasti_residual_stiffness2
+run_ok "$T2026" group_materi_plasti_residual_stiffness3
+expected_error_ok "$T2026" group_materi_plasti_residual_stiffness_error1
 # F5 T2 V8: post_calcul modifiers (manual 6.902-6.905, 6.916, 6.917,
 # 6.920); expected node_dof_calcul = Professional 02-08-2026 on the same
 # inputs (probes v8pro; -prival largest first, DIVERGENCES K12).

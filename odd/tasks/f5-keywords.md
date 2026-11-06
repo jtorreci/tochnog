@@ -121,8 +121,8 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   - [x] C2 plasti_mpc + mpc_factor. Route: inline. Commit a139f16. C114 (wall cohesion) found.
   - [x] C114 wall reduction of c and the direct-path factor (manual + Pro agree). Route: inline.
     Commit 397a3cb.
-  - [ ] C3 residual_stiffness, phimob. phimob: route inline, commit 5e42bae. residual_stiffness: owner
-    question (manual: plastic-element stiffness; Pro: no measurable effect).
+  - [x] C3 residual_stiffness, phimob. phimob: route inline, commit 5e42bae. residual_stiffness: route
+    inline, commit COMMIT_T3C3R (owner 2026-11-06: manual followed, DIVERGENCES PLASTI-RESIDUAL-STIFFNESS).
   - [ ] D1 elasti_c + c_direction.  - [ ] D2 visco_power (+ exponential twins).
   - [ ] D3 wolffersdorff_niemunis.  - [ ] D4 borja_tamagnini.  - [ ] D5 stress_null family.
   - [ ] E user hooks (young_user, history_variable_user), niemunis_visco(+_ocr),
@@ -474,4 +474,8 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   collides with the GNU post_calcul operator PHIMOB (db_number finds the operator first): the label reuses
   -PHIMOB. residual_stiffness: Pro gives identical results and iterations with factor 1 / 0.1 / 0.01
   (plasti_apply1 square, examp16 180 iterations) -> owner decision (manual vs Pro).
-
+- L-T3C3R (2026-11-06, user): "si, me parece bien" (to: implement residual_stiffness as the manual, matrix only,
+  default 1, divergence with Pro). Implemented per integration point (plastic = yield test started plastic
+  iterations or direct cut in the current update), C' = V + factor (C - V). Probes: 50 iterations disx
+  0.0182467717 with and without factor 0.1; 1 iteration sigxx 0.0691216 (none, = Pro) vs -0.0101589 (0.1);
+  Pro identical with the record and accepts 0 (GNU error).

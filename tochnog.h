@@ -1801,6 +1801,8 @@ enum {
   GROUP_MATERI_PLASTI_MPC_FACTOR,
   // F5 T3 C3 (manual Professional 4.26)
   MATERI_PLASTI_PHIMOB,
+  // F5 T3 C3 (manual Professional 6.735)
+  GROUP_MATERI_PLASTI_RESIDUAL_STIFFNESS,
   LAST_DUMMY }; // keep LAST_DUMMY always the last one
 
 #define MDAT LAST_DUMMY+DATA_ITEM_SIZE  // reserve space for unknowns
