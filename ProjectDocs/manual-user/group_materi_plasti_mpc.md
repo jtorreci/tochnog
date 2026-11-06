@@ -38,9 +38,8 @@ Tests: `validation-suite/test-2026/group_materi_plasti_mpc1` to `_mpc4`
 
 ## Differences with the Professional version
 
-- Which elements are on the wall and which factor applies agree with the
-  Professional 02-08-2026. The reduced stresses differ because the GNU
-  reduces phi and phi_flow but not the cohesion (BACKLOG C114, shared
-  with `group_materi_plasti_bounda`).
+- Which elements are on the wall, which factor applies and the reduced
+  parameters (phi, phi_flow, c; C114) agree with the Professional
+  02-08-2026; the stresses agree to about 2e-4 relative.
 - The mpc records that a `-veln` bounda generates internally also count as
   mpc records (not measured in the Professional).

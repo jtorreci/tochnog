@@ -120,6 +120,7 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
     Commit 6745219.
   - [x] C2 plasti_mpc + mpc_factor. Route: inline. Commit a139f16. C114 (wall cohesion) found.
   - [ ] C114 wall reduction of c and the direct-path factor (manual + Pro agree). Route: inline.
+    Commit COMMIT_C114.
   - [ ] C3 residual_stiffness, phimob.
   - [ ] D1 elasti_c + c_direction.  - [ ] D2 visco_power (+ exponential twins).
   - [ ] D3 wolffersdorff_niemunis.  - [ ] D4 borja_tamagnini.  - [ ] D5 stress_null family.
@@ -456,4 +457,9 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   (Pro: bounda+mpc = bounda alone). Pro probes (two quad4): locality, -no and factor-only match. Pro reduces
   phi AND c (explicit group phi,c x2/3 reproduces the Pro wall value -1.87260 exactly); GNU reduces phi only
   -> C114 (also bounda; direct full MC ignores the factor, plane cutoff default 1 vs 2/3).
+- L-C114: manual and Pro agree (no owner decision, S2). Pro rule: on a wall the _wall record if given (no factor
+  on top), else phi, phi_flow and c times the factor (default 2/3) - MC, hardening/softening, DP, direct full and
+  plane. GNU fixed in plasti.cc (5 sites) and stress.cc direct_wall_factor(). Direct modes = Pro to all digits;
+  incremental within 2.5e-3 relative (pre-existing MC gap). RED on a92f8bc build. Corpus wall inputs: only
+  Pro other/mohr_coul_direct8 (identical to Pro) and the heat_exchanger_pile timeouts.
 

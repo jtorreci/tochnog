@@ -164,11 +164,14 @@ The normal record accepts ndim values (1 value in 1D, 2 in 2D, 3 in 3D).
 - `_wall`: alternative parameters used when the element is attached to a
   wall (its nodes are bounded by a `bounda_dof` record listed in
   `group_materi_plasti_bounda`, manual 6.231).
-- `group_materi_plasti_bounda index bounda_indices...` reduces the friction
-  (phi, c, phi_flow) of the elements on the wall by the factor
-  `group_materi_plasti_bounda_factor` (default 2/3, manual 6.231/6.232) —
-  verified on mohr_coul_direct8 (factor 0 -> zero friction stress on the
-  wall elements).
+- `group_materi_plasti_bounda index bounda_indices...` (or
+  `group_materi_plasti_mpc`) reduces phi, c and phi_flow of the elements on
+  the wall by the factor `group_materi_plasti_bounda_factor` (default 2/3,
+  manual 6.687/6.688), with and without a plane normal. With a `_wall`
+  record the element uses the `_wall` values and no factor (Professional
+  02-08-2026, C114). Tests `group_materi_plasti_bounda_direct1`-`3`;
+  mohr_coul_direct8 (factor 0 -> zero friction stress) equals the
+  Professional.
 
 ## Differences with the Professional version
 

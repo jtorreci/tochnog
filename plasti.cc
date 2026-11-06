@@ -791,8 +791,10 @@ void plasti_rule( long int element, long int gr,
         phi_flow = phi_flow_0 + ratio*(phi_flow_1-phi_flow_0);
       }
       if ( plasti_on_boundary ) {
+        // wall reduction of phi, phi_flow and c (manual 6.687, C114)
         phi *= plasti_on_boundary_factor;
         phi_flow *= plasti_on_boundary_factor;
+        c *= plasti_on_boundary_factor;
       }
       matrix_eigenvalues( sig, sig_princ );
       {
@@ -832,8 +834,10 @@ void plasti_rule( long int element, long int gr,
       c = plasti_data[1];
       phi_flow = plasti_data[2];
       if ( plasti_on_boundary ) {
+        // wall reduction of phi, phi_flow and c (manual 6.687, C114)
         phi *= plasti_on_boundary_factor;
         phi_flow *= plasti_on_boundary_factor;
+        c *= plasti_on_boundary_factor;
       }
       // Mohr-Coulomb (manual Professional: 0.5(sig1-sig3) +
       // 0.5(sig1+sig3) sin(phi) - c cos(phi) = 0, sig1 the LARGEST and
@@ -883,11 +887,13 @@ void plasti_rule( long int element, long int gr,
       if ( swit ) pri( "check plasti_druckprag" );
       phi = plasti_data[0];
       phi_flow = plasti_data[2];
+      c = plasti_data[1];
       if ( plasti_on_boundary ) {
+        // wall reduction of phi, phi_flow and c (manual 6.687, C114)
         phi *= plasti_on_boundary_factor;
         phi_flow *= plasti_on_boundary_factor;
+        c *= plasti_on_boundary_factor;
       }
-      c = plasti_data[1];
       alpha = 2.*sin(phi)/((3.-sin(phi))*sqrt(3.));
       alpha_flow = 2.*sin(phi_flow)/((3.-sin(phi_flow))*sqrt(3.));
       K = 6.*c*cos(phi)/((3.-sin(phi))*sqrt(3.));
@@ -1026,8 +1032,10 @@ void plasti_rule( long int element, long int gr,
       c = plasti_data[1];
       phi_flow = plasti_data[2];
       if ( plasti_on_boundary ) {
+        // wall reduction of phi, phi_flow and c (manual 6.687, C114)
         phi *= plasti_on_boundary_factor;
         phi_flow *= plasti_on_boundary_factor;
+        c *= plasti_on_boundary_factor;
       }
       alpha_flow = 2.*sin(phi_flow)/((3.-sin(phi_flow))*sqrt(3.));
       if ( phi>0. )
@@ -1139,8 +1147,10 @@ void plasti_rule( long int element, long int gr,
         phi_flow = plasti_data[2];
       }
       if ( plasti_on_boundary ) {
+        // wall reduction of phi, phi_flow and c (manual 6.687, C114)
         phi *= plasti_on_boundary_factor;
         phi_flow *= plasti_on_boundary_factor;
+        c *= plasti_on_boundary_factor;
       }
       matrix_eigenvalues( sig, sig_princ );
       test1 = task==GET_YIELD_RULE&&plasti_type==-NONE && phi>0.;

@@ -1,6 +1,6 @@
 (F5 T3 C2: group_materi_plasti_mpc_factor 0.5, manual 6.734, on the
- group_materi_plasti_mpc1 mesh: node 5 sigyy -2.57480, node 1 unchanged.
- Professional 02-08-2026: -1.28742 and -3.37319 {BACKLOG C114}.)
+ group_materi_plasti_mpc1 mesh: node 5 sigyy -1.28699, node 1 unchanged.
+ Professional 02-08-2026: -1.28742 and -3.37319.)
 echo -no
 number_of_space_dimensions 2
 materi_velocity
@@ -35,5 +35,5 @@ group_materi_plasti_mpc_factor 0 0.5
 target_item 0 -node_dof 1 -sigyy
 target_value 0 -3.39353 1.e-4
 target_item 1 -node_dof 5 -sigyy
-target_value 1 -2.57480 1.e-4
+target_value 1 -1.28699 1.e-4
 end_data

@@ -1,7 +1,7 @@
 (F5 T3 C2: an element on a wall through group_materi_plasti_bounda and
  through group_materi_plasti_mpc uses the bounda factor 0.8, not the mpc
  factor 0.5 {Professional 02-08-2026}. Every element touches bounda_dof
- 0, so both elements are reduced: node 1 and node 5 sigyy -3.02332;
+ 0, so both elements are reduced: node 1 and node 5 sigyy -2.41804;
  Professional -2.41342 at both, as with the bounda records alone.)
 echo -no
 number_of_space_dimensions 2
@@ -37,7 +37,7 @@ group_materi_plasti_mpc_factor 0 0.5
 group_materi_plasti_bounda 0 0
 group_materi_plasti_bounda_factor 0 0.8
 target_item 0 -node_dof 1 -sigyy
-target_value 0 -3.02332 1.e-4
+target_value 0 -2.41804 1.e-4
 target_item 1 -node_dof 5 -sigyy
-target_value 1 -3.02332 1.e-4
+target_value 1 -2.41804 1.e-4
 end_data

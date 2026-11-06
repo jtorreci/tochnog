@@ -164,6 +164,23 @@ void materi_direct_principal_cap( double new_sig[], double sigy,
 // already applied on that plane (materi_direct_cutoff), while the
 // Mohr-Coulomb law has no normal (verified against the Professional
 // 02-08-2026: the MC law then stays the full principal cut-off).
+// Wall reduction factor of the direct Mohr-Coulomb laws for an element on
+// a wall: group_materi_plasti_mpc_factor for a wall found through mpc
+// records (plasti_on_boundary 2, group.cc), else
+// group_materi_plasti_bounda_factor; default 2/3 (manual 6.687, 6.734).
+double direct_wall_factor( long int gr, long int plasti_on_boundary )
+{
+  long int ldum=0, idum[1];
+  double factor=BOUNDARY_REDUCTION_FACTOR;
+  if ( plasti_on_boundary==2 )
+    db( GROUP_MATERI_PLASTI_MPC_FACTOR, gr, idum, &factor,
+      ldum, VERSION_NORMAL, GET_IF_EXISTS );
+  else
+    db( GROUP_MATERI_PLASTI_BOUNDARY_FACTOR, gr, idum, &factor,
+      ldum, VERSION_NORMAL, GET_IF_EXISTS );
+  return factor;
+}
+
 void materi_direct_full_mc( long int element, long int gr,
   long int plasti_on_boundary, double dtime,
   double new_sig[], double /*ddsdde*/[], long int tension_cap, double &f_direct )
@@ -188,11 +205,18 @@ void materi_direct_full_mc( long int element, long int gr,
     element, new_sig, plasti_data, ldum, GET_IF_EXISTS );
   if ( mc_present ) {
     phi = plasti_data[0]; c = plasti_data[1]; phi_flow = plasti_data[2];
-    if ( plasti_on_boundary )
+    if ( plasti_on_boundary ) {
       if ( get_group_data( GROUP_MATERI_PLASTI_MOHR_COUL_DIRECT_WALL, gr,
           element, new_sig, plasti_data, ldum, GET_IF_EXISTS ) ) {
         phi = plasti_data[0]; c = plasti_data[1]; phi_flow = plasti_data[2];
       }
+      else {
+        // no _wall record: phi, c and phi_flow times the wall factor
+        // (manual 6.687, default 2/3; Professional 02-08-2026, C114)
+        double wall_factor = direct_wall_factor( gr, plasti_on_boundary );
+        phi *= wall_factor; c *= wall_factor; phi_flow *= wall_factor;
+      }
+    }
   }
   // tension_direct: gate materi_plasti_tension_apply (6.804) /
   // control_materi_plasti_tension_apply (6.150)
@@ -405,7 +429,7 @@ void materi_direct_cutoff( long int element, long int gr,
 
 {
   long int idim=0, jdim=0, mc_active=0, ten_record=0, ten_active=0,
-    mc_plane=0, ten_plane=0, ldum=0, idum[1];
+    mc_plane=0, ten_plane=0, ldum=0;
   double phi=0., c=0., phi_flow=0., sigy=0., sig_n=0., tau_norm=0.,
     max_fric=0., scale=0., factor_mc=1., factor_ten=1., n_mc[MDIM],
     n_ten[MDIM], tau[MDIM], t[MDIM], plasti_data[DATA_ITEM_SIZE];
@@ -420,11 +444,17 @@ void materi_direct_cutoff( long int element, long int gr,
   if ( mc_active ) {
     phi = plasti_data[0]; c = plasti_data[1]; phi_flow = plasti_data[2];
   }
-  // wall values (element attached to a wall) and visco relaxation time
+  // wall values (element attached to a wall): the _wall record, else
+  // phi, c and phi_flow times the wall factor (manual 6.687, default 2/3;
+  // Professional 02-08-2026: no factor on top of the _wall values, C114)
   if ( mc_active && plasti_on_boundary ) {
     if ( get_group_data( GROUP_MATERI_PLASTI_MOHR_COUL_DIRECT_WALL, gr,
         element, new_sig, plasti_data, ldum, GET_IF_EXISTS ) ) {
       phi = plasti_data[0]; c = plasti_data[1]; phi_flow = plasti_data[2];
+    }
+    else {
+      double wall_factor = direct_wall_factor( gr, plasti_on_boundary );
+      phi *= wall_factor; c *= wall_factor; phi_flow *= wall_factor;
     }
   }
   // visco factor: f = 1 - exp(-dt/tm); f->0 elastic (dt<<tm), f->1 full cut
@@ -434,25 +464,6 @@ void materi_direct_cutoff( long int element, long int gr,
       double tm = plasti_data[0];
       factor_mc = 1. - exp( -dtime / ( (tm>0.) ? tm : 1. ) );
     }
-  }
-  // group_materi_plasti_bounda/_factor (Professional 6.231/6.232 aliases
-  // of the boundary reduction): when the element is attached to a wall
-  // (a node belongs to a group listed in group_materi_plasti_bounda) the
-  // friction parameters are reduced by the factor (manual 6.232; the
-  // direct cutoff uses the reduced phi/c exactly like the incremental
-  // laws - verified against the Professional: mohr_coul_direct8 with the
-  // factor 0 gives a zero friction stress on the boundary elements)
-  if ( mc_active && plasti_on_boundary ) {
-    double bounda_factor = 1.;
-    if ( plasti_on_boundary==2 )
-      // wall through group_materi_plasti_mpc (group.cc), manual 6.734
-      db( GROUP_MATERI_PLASTI_MPC_FACTOR, gr, idum, &bounda_factor,
-        ldum, VERSION_NORMAL, GET_IF_EXISTS );
-    else
-      db( GROUP_MATERI_PLASTI_BOUNDARY_FACTOR, gr, idum, &bounda_factor,
-        ldum, VERSION_NORMAL, GET_IF_EXISTS );
-    phi *= bounda_factor;
-    c *= bounda_factor;
   }
 
   // materi_plasti_tension_apply / control_materi_plasti_tension_apply

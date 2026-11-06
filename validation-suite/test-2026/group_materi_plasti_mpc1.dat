@@ -1,9 +1,9 @@
 (F5 T3 C2: group_materi_plasti_mpc -yes, manual Professional 6.733: an
  element with a node in an mpc record is on a wall and its Mohr-Coulomb
  friction is reduced by the default 2/3. Two quad4; the mpc ties nodes 6
- and 5, which belong to element 2 only. Node 1 {element 1} keeps sigyy
- -3.39353; node 5 {element 2} -2.81059. Professional 02-08-2026: -3.37319
- and -1.87260 {it also reduces the cohesion, BACKLOG C114}.)
+ and 5, which belong to element 2 only; phi, phi_flow and c are reduced
+ {C114}. Node 1 {element 1} keeps sigyy -3.39353; node 5 {element 2}
+ -1.87283. Professional 02-08-2026: -3.37319 and -1.87260.)
 echo -no
 number_of_space_dimensions 2
 materi_velocity
@@ -37,5 +37,5 @@ group_materi_plasti_mpc 0 -yes
 target_item 0 -node_dof 1 -sigyy
 target_value 0 -3.39353 1.e-4
 target_item 1 -node_dof 5 -sigyy
-target_value 1 -2.81059 1.e-4
+target_value 1 -1.87283 1.e-4
 end_data

@@ -78,8 +78,10 @@ The direct records have TWO modes selected by the presence of a plane normal:
      guard `1 + k tan(phi) < 1e-12 -> k = 0`; visco factors now separate
      per law (`f_mc`, `f_ten`; before C14 one `tm` was shared and the
      tension value won).
-   - `group_materi_plasti_bounda/_factor` (6.231/6.232) reduce phi and c
-     (not phi_flow) on the wall.
+   - On a wall (`plasti_on_boundary`), both `materi_direct_full_mc` and
+     `materi_direct_cutoff` use the `_wall` record when present, else
+     multiply phi, c and phi_flow by `direct_wall_factor()` (the bounda or
+     mpc factor, default 2/3; C114, 2026-11-06).
    - **Input**: `GROUP_MATERI_PLASTI_TENSION_DIRECT_NORMAL` no longer
      requires `GROUP_MATERI_PLASTI_TENSION_DIRECT` (`database.cc`,
      `data_required = GROUP_TYPE`; the Professional accepts the normal

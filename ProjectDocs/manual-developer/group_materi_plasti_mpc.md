@@ -14,8 +14,8 @@
   `GROUP_MATERI_PLASTI_MPC_FACTOR` instead of
   `GROUP_MATERI_PLASTI_BOUNDARY_FACTOR` (default
   `BOUNDARY_REDUCTION_FACTOR` 2/3).
-- `stress.cc`, `materi_direct_cutoff()`: same selection for the plane
-  direct cut-off (default 1 there, pre-existing; BACKLOG C114).
+- `stress.cc`, `direct_wall_factor()`: same selection for both direct
+  Mohr-Coulomb modes (default 2/3, C114).
 
 ## Implementation details
 
@@ -31,9 +31,10 @@
 
 Professional 02-08-2026 probes (t3/c2): two quad4, mpc on the nodes of
 element 2 only: element 1 unchanged in both codes; `-no` and a factor
-without `-yes` have no effect; bounda + mpc = bounda alone. The reduced
-values differ by the missing cohesion reduction (BACKLOG C114).
+without `-yes` have no effect; bounda + mpc = bounda alone. After C114
+node 5 sigyy -1.87283 (Professional -1.87260).
 
 ## Pending
 
-- Cohesion reduction and the direct-path defaults: BACKLOG C114.
+- The `-veln` generated mpc records also count (not measured in the
+  Professional).

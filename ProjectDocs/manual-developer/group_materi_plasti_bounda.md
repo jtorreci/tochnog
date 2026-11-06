@@ -33,17 +33,24 @@ ACTIVO, el elemento está en la pared si uno de sus nodos está bounded
 (`NODE_BOUNDED`) en las partes de velocidad o desplazamiento
 (`vel_indx..vel_indx+ndim`, `dis_indx..dis_indx+ndim`).
 
-### Consumo del factor
+### Factor consumption (C114, 2026-11-06)
 
-- Leyes incrementales (plasti.cc, `plasti_rule`): `phi *= factor;
-  phi_flow *= factor;` cuando `plasti_on_boundary` (la cohesión en los
-  bloques clásicos de plasti.cc sigue su propio manejo — revisar por ley).
-- Leyes directas (stress.cc): `materi_direct_cutoff` (modo plano, con
-  `_normal`) multiplica `phi` y `c` por el factor del grupo;
-  `materi_direct_full_mc` (modo espectral) usa los records `_wall` cuando
-  `plasti_on_boundary` (los parámetros alternativos explícitos de la
-  familia _wall); el factor de plasti_bounda no se aplica en el modo
-  espectral (la semántica _wall es la del Professional para ese modo).
+- Incremental laws (`plasti.cc`, `plasti_rule`): `phi`, `phi_flow` and `c`
+  times the factor at the five Mohr-Coulomb-type sites (mohr_coul, its
+  hardening/softening variant, druckprag, matsuokanakai, legacy mohrcoul).
+  The factor is `group_materi_plasti_boundary_factor`, or
+  `group_materi_plasti_mpc_factor` for a wall found through mpc records
+  (`plasti_on_boundary` 2); default `BOUNDARY_REDUCTION_FACTOR` 2/3.
+- Direct laws (`stress.cc`): `materi_direct_full_mc` and
+  `materi_direct_cutoff` use the `_wall` record when present (no factor on
+  top), else phi, c and phi_flow times `direct_wall_factor()` (same factor
+  selection and default 2/3).
+- Before C114 the cohesion was not reduced in `plasti.cc`, the spectral
+  direct mode ignored the factor and the plane mode had default 1 and did
+  not reduce phi_flow. Professional 02-08-2026 probes (t3/c2) fixed the
+  rule: an explicit group with phi and c times 2/3 reproduces the wall
+  result exactly (Mohr-Coulomb, hardening/softening, Drucker-Prager, both
+  direct modes).
 
 ## Validación (2026-09-07)
 
