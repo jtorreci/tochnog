@@ -2883,6 +2883,11 @@ run_ok "$T2026" materi_plasti_hypo_substepping1
 run_ok "$T2026" materi_plasti_hypo_substepping2
 run_ok "$T2026" group_materi_plasti_hypo_minimum_void_ratio1
 run_ok "$T2026" group_materi_plasti_hypo_minimum_void_ratio2
+# F5 T3 C2: wall through mpc records (6.733) and its factor (6.734).
+run_ok "$T2026" group_materi_plasti_mpc1
+run_ok "$T2026" group_materi_plasti_mpc2
+run_ok "$T2026" group_materi_plasti_mpc3
+run_ok "$T2026" group_materi_plasti_mpc4
 # F5 T2 V8: post_calcul modifiers (manual 6.902-6.905, 6.916, 6.917,
 # 6.920); expected node_dof_calcul = Professional 02-08-2026 on the same
 # inputs (probes v8pro; -prival largest first, DIVERGENCES K12).

@@ -102,8 +102,13 @@ void plasti_rule( long int element, long int gr,
     VERSION_NORMAL, GET_IF_EXISTS );
   db( GROUP_MATERI_PLASTI_USER, 0, &group_materi_plasti_user, ddum, ldum, 
     VERSION_NORMAL, GET_IF_EXISTS );
-  db( GROUP_MATERI_PLASTI_BOUNDARY_FACTOR, gr, idum, &plasti_on_boundary_factor, 
-    ldum, VERSION_NORMAL, GET_IF_EXISTS );
+  if ( plasti_on_boundary==2 )
+    // wall through group_materi_plasti_mpc (group.cc), manual 6.734
+    db( GROUP_MATERI_PLASTI_MPC_FACTOR, gr, idum, &plasti_on_boundary_factor,
+      ldum, VERSION_NORMAL, GET_IF_EXISTS );
+  else
+    db( GROUP_MATERI_PLASTI_BOUNDARY_FACTOR, gr, idum, &plasti_on_boundary_factor, 
+      ldum, VERSION_NORMAL, GET_IF_EXISTS );
 
     // mean stress
   sigm = ( sig[0] + sig[4] + sig[8] ) / 3.;

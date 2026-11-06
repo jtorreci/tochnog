@@ -1787,6 +1787,9 @@ enum {
   // F5 T3 C1 (manual Professional 6.715, 6.803)
   GROUP_MATERI_PLASTI_HYPO_MINIMUM_VOID_RATIO,
   MATERI_PLASTI_HYPO_SUBSTEPPING,
+  // F5 T3 C2 (manual Professional 6.733, 6.734)
+  GROUP_MATERI_PLASTI_MPC,
+  GROUP_MATERI_PLASTI_MPC_FACTOR,
   LAST_DUMMY }; // keep LAST_DUMMY always the last one
 
 #define MDAT LAST_DUMMY+DATA_ITEM_SIZE  // reserve space for unknowns

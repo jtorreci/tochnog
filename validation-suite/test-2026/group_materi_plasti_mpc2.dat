@@ -1,0 +1,39 @@
+(F5 T3 C2: group_materi_plasti_mpc_factor 0.5, manual 6.734, on the
+ group_materi_plasti_mpc1 mesh: node 5 sigyy -2.57480, node 1 unchanged.
+ Professional 02-08-2026: -1.28742 and -3.37319 {BACKLOG C114}.)
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_displacement
+materi_stress
+materi_strain_plasti
+end_initia
+node 1 0 0
+node 2 1 0
+node 3 0 1
+node 4 1 1
+node 5 2 0
+node 6 2 1
+element 1 -quad4 1 2 3 4
+element 2 -quad4 2 5 4 6
+group_type 0 -materi
+group_materi_memory 0 -total_linear
+group_materi_elasti_young 0 1000.
+group_materi_elasti_poisson 0 0.3
+group_materi_plasti_mohr_coul 0 0.5 1. 0.
+geometry_line 1 0 0 2 0 0.01
+geometry_line 2 0 0 0 1 0.01
+geometry_line 3 0 1 2 1 0.01
+bounda_dof 0 -geometry_line 1 -vely
+bounda_dof 1 -geometry_line 2 -velx
+bounda_dof 2 -geometry_line 3 -vely
+bounda_time 2 0 -0.02 100 -0.02
+mpc_node_number 0 6 -velx 5 -velx
+control_timestep 0 0.1 1.
+group_materi_plasti_mpc 0 -yes
+group_materi_plasti_mpc_factor 0 0.5
+target_item 0 -node_dof 1 -sigyy
+target_value 0 -3.39353 1.e-4
+target_item 1 -node_dof 5 -sigyy
+target_value 1 -2.57480 1.e-4
+end_data

@@ -444,8 +444,13 @@ void materi_direct_cutoff( long int element, long int gr,
   // factor 0 gives a zero friction stress on the boundary elements)
   if ( mc_active && plasti_on_boundary ) {
     double bounda_factor = 1.;
-    db( GROUP_MATERI_PLASTI_BOUNDARY_FACTOR, gr, idum, &bounda_factor,
-      ldum, VERSION_NORMAL, GET_IF_EXISTS );
+    if ( plasti_on_boundary==2 )
+      // wall through group_materi_plasti_mpc (group.cc), manual 6.734
+      db( GROUP_MATERI_PLASTI_MPC_FACTOR, gr, idum, &bounda_factor,
+        ldum, VERSION_NORMAL, GET_IF_EXISTS );
+    else
+      db( GROUP_MATERI_PLASTI_BOUNDARY_FACTOR, gr, idum, &bounda_factor,
+        ldum, VERSION_NORMAL, GET_IF_EXISTS );
     phi *= bounda_factor;
     c *= bounda_factor;
   }

@@ -639,6 +639,31 @@ void group_materi_plasti_boundary_evaluate( long int nodes[], long int nnol,
      }
    }
 
+   // group_materi_plasti_mpc -yes (manual Professional 6.733): the
+   // element is on a wall when one of its nodes is in an mpc record
+   // (a node is a positive entry of mpc_node_number). The value 2 makes
+   // plasti.cc / stress.cc use group_materi_plasti_mpc_factor; a wall
+   // found through group_materi_plasti_bounda keeps the value 1 and its
+   // own factor (Professional 02-08-2026: the bounda factor wins).
+   if ( !plasti_on_boundary ) {
+     long int mpc_switch=-NO, max_mpc=-1, impc=0, i=0;
+     db( GROUP_MATERI_PLASTI_MPC, element_group, &mpc_switch, ddum, ldum,
+       VERSION_NORMAL, GET_IF_EXISTS );
+     if ( mpc_switch==-YES ) {
+       db_max_index( MPC_NODE_NUMBER, max_mpc, VERSION_NORMAL, GET );
+       for ( impc=0; impc<=max_mpc && !plasti_on_boundary; impc++ ) {
+         if ( !db_active_index( MPC_NODE_NUMBER, impc, VERSION_NORMAL ) )
+           continue;
+         long int length_mpc = db_len( MPC_NODE_NUMBER, impc, VERSION_NORMAL );
+         long int *mpc = db_int( MPC_NODE_NUMBER, impc, VERSION_NORMAL );
+         for ( i=0; i<length_mpc && !plasti_on_boundary; i++ ) {
+           if ( mpc[i]>0 && array_member( nodes, mpc[i], nnol, ldum ) )
+             plasti_on_boundary = 2;
+         }
+       }
+     }
+   }
+
 }
 
 long int node_attached_element_groups( long int inod, long int groups[],

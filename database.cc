@@ -4773,6 +4773,20 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   data_class[GROUP_MATERI_PLASTI_BOUNDARY_FACTOR] = MATERI;
   data_required[GROUP_MATERI_PLASTI_BOUNDARY_FACTOR] = GROUP_TYPE;
 
+  // F5 T3 C2: wall detection through mpc records (manual 6.733) and its
+  // reduction factor (6.734); group.cc, plasti.cc, stress.cc
+  strcpy(name[GROUP_MATERI_PLASTI_MPC],"group_materi_plasti_mpc");
+  type[GROUP_MATERI_PLASTI_MPC] = INTEGER;
+  data_length[GROUP_MATERI_PLASTI_MPC] = 1;
+  data_class[GROUP_MATERI_PLASTI_MPC] = MATERI;
+  data_required[GROUP_MATERI_PLASTI_MPC] = GROUP_TYPE;
+
+  strcpy(name[GROUP_MATERI_PLASTI_MPC_FACTOR],"group_materi_plasti_mpc_factor");
+  type[GROUP_MATERI_PLASTI_MPC_FACTOR] = DOUBLE_PRECISION;
+  data_length[GROUP_MATERI_PLASTI_MPC_FACTOR] = 1;
+  data_class[GROUP_MATERI_PLASTI_MPC_FACTOR] = MATERI;
+  data_required[GROUP_MATERI_PLASTI_MPC_FACTOR] = GROUP_TYPE;
+
   strcpy(name[GROUP_MATERI_PLASTI_CAMCLAY],"group_materi_plasti_camclay");
   type[GROUP_MATERI_PLASTI_CAMCLAY] = DOUBLE_PRECISION;
   // manual Professional 6.689: index M kappa lambda (3 values). The

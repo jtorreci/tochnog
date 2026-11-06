@@ -118,7 +118,9 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
     Commit c095d18. C112 resolved (default 20000, owner), commit 6a78839.
   - [x] C1 hypo_substepping (+ unused control record), hypo_minimum_void_ratio. Route: inline.
     Commit 6745219.
-  - [ ] C2 plasti_mpc + mpc_factor.  - [ ] C3 residual_stiffness, phimob.
+  - [ ] C2 plasti_mpc + mpc_factor. Route: inline. Commit COMMIT_T3C2. C114 (wall cohesion) found.
+  - [ ] C114 wall reduction of c and the direct-path factor (manual + Pro agree). Route: inline.
+  - [ ] C3 residual_stiffness, phimob.
   - [ ] D1 elasti_c + c_direction.  - [ ] D2 visco_power (+ exponential twins).
   - [ ] D3 wolffersdorff_niemunis.  - [ ] D4 borja_tamagnini.  - [ ] D5 stress_null family.
   - [ ] E user hooks (young_user, history_variable_user), niemunis_visco(+_ocr),
@@ -449,4 +451,9 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   round-off; 25 hypo inputs byte-identical to baseline without the records (time_calculation excluded);
   suite 757/0; rejected inputs rejected as Pro. Advisory: minimum_void_ratio1 hyhis0 tolerance 1e-5 pins
   GNU (Pro 1.2e-5 away).
+- L-T3C2: mpc wall = node of the element in any active mpc_node_number (positive entries);
+  plasti_on_boundary 2 selects group_materi_plasti_mpc_factor (plasti.cc, stress.cc cutoff); bounda wins
+  (Pro: bounda+mpc = bounda alone). Pro probes (two quad4): locality, -no and factor-only match. Pro reduces
+  phi AND c (explicit group phi,c x2/3 reproduces the Pro wall value -1.87260 exactly); GNU reduces phi only
+  -> C114 (also bounda; direct full MC ignores the factor, plane cutoff default 1 vs 2/3).
 
