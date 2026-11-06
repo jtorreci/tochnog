@@ -1,0 +1,38 @@
+(F5 T3 D1: group_materi_elasti_c in shear: tensor strains, C_xyxy =
+ C_xyyx = G gives sigxy = 2 G eps_xy as young / poisson {Professional
+ 02-08-2026 sigxy 3.846153846, sigyy 13.46153846}.)
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_displacement
+materi_stress
+materi_strain_total
+end_initia
+node 1 0 0
+node 2 1 0
+node 3 0 1
+node 4 1 1
+element 1 -quad4 1 2 3 4
+group_type 0 -materi
+group_materi_memory 0 -total_linear
+group_materi_elasti_c 0
+  1346.153846 0 0 0 576.9230769 0 0 0 576.9230769
+  0 384.6153846 0 384.6153846 0 0 0 0 0
+  0 0 384.6153846 0 0 0 384.6153846 0 0
+  0 384.6153846 0 384.6153846 0 0 0 0 0
+  576.9230769 0 0 0 1346.153846 0 0 0 576.9230769
+  0 0 0 0 0 384.6153846 0 384.6153846 0
+  0 0 384.6153846 0 0 0 384.6153846 0 0
+  0 0 0 0 0 384.6153846 0 384.6153846 0
+  576.9230769 0 0 0 576.9230769 0 0 0 1346.153846
+geometry_line 1 0 0 1 0 0.01
+geometry_line 3 0 1 1 1 0.01
+bounda_dof 0 -geometry_line 1 -velx -vely
+bounda_dof 2 -geometry_line 3 -velx -vely
+bounda_time 2 0 0.01 100 0.01
+control_timestep 0 1. 1.
+target_item 0 -node_dof 4 -sigxy
+target_value 0 3.846153846 1.e-6
+target_item 1 -node_dof 4 -sigyy
+target_value 1 13.46153846 1.e-6
+end_data

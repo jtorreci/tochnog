@@ -1422,6 +1422,59 @@ void set_stress( long int element, long int gr,
 
 /*****************************************************************************/
 
+  // group_materi_elasti_c (manual Professional 6.642): the 81 values of
+  // C_ijkl row by row {xx, xy, xz, yx, yy, yz, zx, zy, zz}, tensor strains;
+  // added to the other elastic laws of the group, as the Professional
+  // 02-08-2026. group_materi_elasti_c_direction (6.643): the local axes
+  // dir_0 dir_1 dir_2 {global components} in which C is given, so
+  // C_ijkl = dir_pi dir_qj dir_rk dir_sl C'_pqrs {unit dir}. Added after
+  // every other elastic law, because several of them clear C first. No plane stress
+  // condensation: refused with a membrane.
+  {
+    double c_local[MDIM*MDIM*MDIM*MDIM], c_dir[MDIM*MDIM];
+    if ( get_group_data( GROUP_MATERI_ELASTI_C, gr, element, new_unknowns,
+        c_local, ldum, GET_IF_EXISTS ) ) {
+      if ( membrane==-YES ) {
+        pri( "Error: group_materi_elasti_c is not available with "
+          "group_materi_membrane -yes." );
+        exit(1);
+      }
+      array_set( c_dir, 0., MDIM*MDIM );
+      c_dir[0] = c_dir[4] = c_dir[8] = 1.;
+      if ( get_group_data( GROUP_MATERI_ELASTI_C_DIRECTION, gr, element,
+          new_unknowns, c_dir, ldum, GET_IF_EXISTS ) ) {
+        // each axis is normalized, as the Professional 02-08-2026
+        for ( idim=0; idim<MDIM; idim++ ) {
+          if ( array_null( &c_dir[idim*MDIM], MDIM ) ) {
+            pri( "Error: group_materi_elasti_c_direction has a zero "
+              "direction." );
+            exit(1);
+          }
+          array_normalize( &c_dir[idim*MDIM], MDIM );
+        }
+      }
+      for ( idim=0; idim<MDIM; idim++ ) {
+        for ( jdim=0; jdim<MDIM; jdim++ ) {
+          for ( kdim=0; kdim<MDIM; kdim++ ) {
+            for ( ldim=0; ldim<MDIM; ldim++ ) {
+              double c_ijkl = 0.;
+              long int ip=0, iq=0, ir=0, is=0;
+              for ( ip=0; ip<MDIM; ip++ )
+                for ( iq=0; iq<MDIM; iq++ )
+                  for ( ir=0; ir<MDIM; ir++ )
+                    for ( is=0; is<MDIM; is++ )
+                      c_ijkl += c_dir[ip*MDIM+idim] * c_dir[iq*MDIM+jdim] *
+                        c_dir[ir*MDIM+kdim] * c_dir[is*MDIM+ldim] *
+                        c_local[((ip*MDIM+iq)*MDIM+ir)*MDIM+is];
+              C[idim][jdim][kdim][ldim] += c_ijkl;
+              Cmem[idim][jdim][kdim][ldim] += c_ijkl;
+            }
+          }
+        }
+      }
+    }
+  }
+
   if ( memory==-TOTAL || memory==-TOTAL_PIOLA ) {
     if ( !materi_strain_total  ) formulation = TOTAL;
   }

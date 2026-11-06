@@ -2906,6 +2906,16 @@ run_ok "$T2026" group_materi_plasti_residual_stiffness1
 run_ok "$T2026" group_materi_plasti_residual_stiffness2
 run_ok "$T2026" group_materi_plasti_residual_stiffness3
 expected_error_ok "$T2026" group_materi_plasti_residual_stiffness_error1
+# F5 T3 D1: group_materi_elasti_c / _c_direction (manual 6.642, 6.643);
+# targets = Professional 02-08-2026 on the same inputs.
+run_ok "$T2026" group_materi_elasti_c1
+run_ok "$T2026" group_materi_elasti_c2
+run_ok "$T2026" group_materi_elasti_c3
+run_ok "$T2026" group_materi_elasti_c_direction1
+run_ok "$T2026" group_materi_elasti_c_direction2
+run_ok "$T2026" group_materi_elasti_c_direction3
+expected_error_ok "$T2026" group_materi_elasti_c_error1
+expected_error_ok "$T2026" group_materi_elasti_c_direction_error1
 # F5 T2 V8: post_calcul modifiers (manual 6.902-6.905, 6.916, 6.917,
 # 6.920); expected node_dof_calcul = Professional 02-08-2026 on the same
 # inputs (probes v8pro; -prival largest first, DIVERGENCES K12).

@@ -4795,6 +4795,20 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   data_class[GROUP_MATERI_PLASTI_RESIDUAL_STIFFNESS] = MATERI;
   data_required[GROUP_MATERI_PLASTI_RESIDUAL_STIFFNESS] = GROUP_TYPE;
 
+  // F5 T3 D1: full linear stiffness C_ijkl (manual 6.642) and its local
+  // axes (6.643); stress.cc set_stress
+  strcpy(name[GROUP_MATERI_ELASTI_C],"group_materi_elasti_c");
+  type[GROUP_MATERI_ELASTI_C] = DOUBLE_PRECISION;
+  data_length[GROUP_MATERI_ELASTI_C] = MDIM*MDIM*MDIM*MDIM;
+  data_class[GROUP_MATERI_ELASTI_C] = MATERI;
+  data_required[GROUP_MATERI_ELASTI_C] = GROUP_TYPE;
+
+  strcpy(name[GROUP_MATERI_ELASTI_C_DIRECTION],"group_materi_elasti_c_direction");
+  type[GROUP_MATERI_ELASTI_C_DIRECTION] = DOUBLE_PRECISION;
+  data_length[GROUP_MATERI_ELASTI_C_DIRECTION] = MDIM*MDIM;
+  data_class[GROUP_MATERI_ELASTI_C_DIRECTION] = MATERI;
+  data_required[GROUP_MATERI_ELASTI_C_DIRECTION] = GROUP_TYPE;
+
   strcpy(name[GROUP_MATERI_PLASTI_CAMCLAY],"group_materi_plasti_camclay");
   type[GROUP_MATERI_PLASTI_CAMCLAY] = DOUBLE_PRECISION;
   // manual Professional 6.689: index M kappa lambda (3 values). The

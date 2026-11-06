@@ -588,6 +588,11 @@ long int check( long int idat, long int task )
     ok = check_unknown( "materi_stress", YES, task );
     ok = ok && check_unknown( "materi_velocity", YES, task );
   }
+  if ( data_number==GROUP_MATERI_ELASTI_C ||
+       data_number==GROUP_MATERI_ELASTI_C_DIRECTION ) {
+    ok = check_unknown( "materi_stress", YES, task );
+    ok = ok && check_unknown( "materi_velocity", YES, task );
+  }
   if ( data_number==GROUP_MATERI_ELASTI_TRANSVERSE_ISOTROPY ) {
     ok = check_unknown( "materi_stress", YES, task );
     ok = ok && check_unknown( "materi_velocity", YES, task );

@@ -15,9 +15,9 @@ Single index of every known difference between the GNU version and Tochnog Profe
 |---|---|---|
 | A | deliberate divergence decided by the project owner | 33 |
 | B | known difference, not decided yet or scheduled (F3/F4) | 51 |
-| C | GNU extension or input-dialect difference | 22 |
+| C | GNU extension or input-dialect difference | 23 |
 | D | Professional-suspect: the Professional contradicts its own manual or the analytic answer | 14 |
-| | **total** | **119** |
+| | **total** | **121** |
 
 Ids: `C*`/`B*` are [BACKLOG-OPEN-ISSUES.md](BACKLOG-OPEN-ISSUES.md) items, `K*` are clusters of [AUDIT-ALL-VARIABLES-2026.md](AUDIT-ALL-VARIABLES-2026.md); other ids are local to this index. Several class A items are also Professional-suspect (noted in their status). Professional values are from the binary 02-08-2026 unless stated.
 
@@ -186,6 +186,7 @@ Records or spellings that only one program accepts, or GNU choices where the Pro
 | C54-TYPE | run-time record name of `post_node`, `post_integrate`, `control_repeat_save`, `control_repeat_until_item`, `control_print_element` naming an INTEGER record (`node_bounded`) | Input error: `Error: a DOUBLE PRECISION data item is required here, not the INTEGER item: node_bounded` + `Error detected for data item : <record>` (F4 T6f LOW queue Q4, BACKLOG C54; before, a 1-value integer dummy overflowed). | `post_node` / `post_integrate`: result 0 without a message; `control_repeat_save`: `Error detected for data item : node_bounded`; `control_repeat_until_item`: its record is read differently (the same input does not parse). | GNU choice where the manual is silent (owner plan 2026-10-17: mechanical type check with a clear error). | 2026-10-17 | [user/data_item_type_check](manual-user/data_item_type_check.md); [dev/db_buffer_contract](manual-developer/db_buffer_contract.md); BACKLOG C54 |
 | BEAM-MEMORY-UPDATED | `group_beam_memory -updated` (6.591) | The updated beam: local axes follow the deformed chord (tip displacement 0.01 on a beam of length 1: 0.2399880 instead of 0.24). Default `-total_linear` = Professional since F5 T2 V4d (2026-11-02; GNU default `-updated` before). | Stops with `materi_displacement should not be initialised.` for `-updated` / `-updated_linear` on the same input. | GNU extension, owner decision 2026-11-02 (default -total_linear, option documented). | 2026-11-02 | [user/group_beam_memory](manual-user/group_beam_memory.md); [dev/group_beam_memory](manual-developer/group_beam_memory.md) |
 | GROUP-BEAM-PLANE | `group_beam_plane <group> -a -b` (GNU-only) | Since F5 T2 V4d (2026-11-02): default local z of a 3D beam without a local z record = plane normal a x b; a beam along the normal stops with `Error, the beam is perpendicular to its GROUP_BEAM_PLANE.` Before: plane of the planar 3D beam. | Not a Professional record; default local z = global z projected (global y for a beam along z). | GNU extension (kept for old inputs). | 2026-11-02 | [user/group_beam_direction_z](manual-user/group_beam_direction_z.md); [dev/group_beam_direction_z](manual-developer/group_beam_direction_z.md) |
+| ELASTI-C-ZERO-DIRECTION | `group_materi_elasti_c_direction` (6.643) with a zero axis | Error `group_materi_elasti_c_direction has a zero direction.`; non-unit axes are normalized, as the Professional. | Runs and gives a degenerate state (disx 0, sigyy -30 on the probe square). | Input validation of an out-of-domain value. | 2026-11-06 | [user/group_materi_elasti_c](manual-user/group_materi_elasti_c.md) |
 
 ## Maintenance
 

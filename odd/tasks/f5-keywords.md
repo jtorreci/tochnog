@@ -123,7 +123,7 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
     Commit 397a3cb.
   - [x] C3 residual_stiffness, phimob. phimob: route inline, commit 5e42bae. residual_stiffness: route
     inline, commit a806c1c (owner 2026-11-06: manual followed, DIVERGENCES PLASTI-RESIDUAL-STIFFNESS).
-  - [ ] D1 elasti_c + c_direction.  - [ ] D2 visco_power (+ exponential twins).
+  - [x] D1 elasti_c + c_direction (route inline, commit COMMIT_T3D1).  - [ ] D2 visco_power (+ exponential twins).
   - [ ] D3 wolffersdorff_niemunis.  - [ ] D4 borja_tamagnini.  - [ ] D5 stress_null family.
   - [ ] E user hooks (young_user, history_variable_user), niemunis_visco(+_ocr),
     diprisco_density, umat_pardiso_decompose: accept-plus-stub, separate plan or discard.
@@ -479,3 +479,6 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   iterations or direct cut in the current update), C' = V + factor (C - V). Probes: 50 iterations disx
   0.0182467717 with and without factor 0.1; 1 iteration sigxx 0.0691216 (none, = Pro) vs -0.0101589 (0.1);
   Pro identical with the record and accepts 0 (GNU error).
+- L-T3D1 (2026-11-06): elasti_c / c_direction. Pro probes: tensor strains (isotropic C = young / poisson, also
+  in shear), additive with young / poisson, axes as rows of the rotation and normalized, membrane refused, zero
+  axis degenerate (GNU error). Block placed after every elastic law (several branches clear C). GNU = Pro 1e-9.
