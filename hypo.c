@@ -14,6 +14,17 @@
 /* Table of constant values */
 
 static long int c__9 = 9;
+
+/* Set by hypoplasticity() (hypoplas.cc) before each call:
+   materi_plasti_hypo_substepping / control_materi_plasti_hypo_substepping
+   -no switch off the accuracy substepping (manual Professional 6.803,
+   6.149; the halving after a failed substep stays), and
+   group_materi_plasti_hypo_minimum_void_ratio resets a void ratio below
+   the minimum to the minimum (6.715). Thread-local: the element loop
+   runs in parallel and the minimum depends on the element group. */
+__thread long int hypo_substepping_off = 0;
+__thread long int hypo_minimum_void_ratio_on = 0;
+__thread double hypo_minimum_void_ratio = 0.;
 static double c_b45 = 1.5;
 static long int c__81 = 81;
 
@@ -259,7 +270,8 @@ long int *iusepres, *iuseepi, *ihypotype;
 		 vs Professional -862.929; @2% the GNU gives -862.927,
 		 within the target -862.92 +- 0.1 -> rc=0; @5% it
 		 overshoots to -863.29). */
-     	      if (normvec_(stress_work__, &c__9) > normvec_(&stress[4], &c__9) *
+     	      if (!hypo_substepping_off &&
+		  normvec_(stress_work__, &c__9) > normvec_(&stress[4], &c__9) *
 	         0.02 && normvec_(&stress[4], &c__9) > .1 && dt >= *dtime *
 	    	     1.9999999999999999e-6) {
 			dt /= 2.;
@@ -378,6 +390,8 @@ long int *iuseepi, *ihypotype;
     extract_(&dstr[4], dt, d__);
     edot = (eold + 1.) * tra_(d__);
     e = eold + edot * *dt;
+    if (hypo_minimum_void_ratio_on && e < hypo_minimum_void_ratio)
+	e = hypo_minimum_void_ratio;
     his[1] = e;
 
 /*       von Wolffersdorff */

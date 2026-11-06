@@ -2876,6 +2876,13 @@ run_ok "$T2026" materi_plasti_maximum_iterations2
 expected_error_ok "$T2026" materi_plasti_maximum_iterations_error1
 # C112: default cap 20000 (examp16 copy; integration points reach the cap).
 run_ok "$T2026" materi_plasti_maximum_iterations_default1
+# F5 T3 C1: hypoplasticity substepping switch (6.803 global, 6.149 per
+# timestep index) and minimum void ratio (6.715); targets = Professional
+# 02-08-2026 on the same inputs (copies of its other/hypo1 and hypo7).
+run_ok "$T2026" materi_plasti_hypo_substepping1
+run_ok "$T2026" materi_plasti_hypo_substepping2
+run_ok "$T2026" group_materi_plasti_hypo_minimum_void_ratio1
+run_ok "$T2026" group_materi_plasti_hypo_minimum_void_ratio2
 # F5 T2 V8: post_calcul modifiers (manual 6.902-6.905, 6.916, 6.917,
 # 6.920); expected node_dof_calcul = Professional 02-08-2026 on the same
 # inputs (probes v8pro; -prival largest first, DIVERGENCES K12).

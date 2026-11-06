@@ -116,7 +116,8 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   - [x] B aliases group_materi_hyper_reduced_polynomial, _volumetric_simo_taylor,
     group_materi_umat(_parameters) + global materi_plasti_maximum_iterations. Route: inline.
     Commit c095d18. C112 resolved (default 20000, owner), commit 6a78839.
-  - [ ] C1 hypo_substepping (+ unused control record), hypo_minimum_void_ratio.
+  - [ ] C1 hypo_substepping (+ unused control record), hypo_minimum_void_ratio. Route: inline.
+    Commit COMMIT_T3C1.
   - [ ] C2 plasti_mpc + mpc_factor.  - [ ] C3 residual_stiffness, phimob.
   - [ ] D1 elasti_c + c_direction.  - [ ] D2 visco_power (+ exponential twins).
   - [ ] D3 wolffersdorff_niemunis.  - [ ] D4 borja_tamagnini.  - [ ] D5 stress_null family.
@@ -437,4 +438,9 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   The old manual-user page described the Pro name with the group syntax; rewritten.
 - L-C112 (2026-11-06) owner: "vamos a 20000. Es un límite que si hay convergencia más rápida no llega a cumplirse y evitarmos cortes antes de convergencia".
   MAX_PLASTI_ITER 20000 (membrane loop keeps MAX_ITER 1000). Impact (instrumented corpus, 931 inputs: test-2026, test-2014, Professional test/other, validation, incremental_driver): only sfnet `examp10` and `examp16` pass 1000 iterations, and both reach 20000 (points that do not converge); every other input is unchanged. `examp10` moves 3e-7 in the displacements; `examp16` node 26 sigyy -218129 -> -237309 (Professional -271692; summed |GNU - Professional| over node_dof 3.61e6 -> 3.44e6), run time 1 s -> 3 s. Test `materi_plasti_maximum_iterations_default1` (examp16 copy, node 26 target).
+- L-T3C1: Pro takes `materi_plasti_hypo_substepping -no` without index (manual header shows one); the
+  control record wins. GNU: thread-local switch skips the hypo.c accuracy halving (failure halving kept),
+  minimum e in sigma_() and after the Masin kernel. Pro probes match to 2e-5 (hypo1, hypo7). Masin
+  ignores the substepping switch in GNU, Pro moves hypo7 by 0.0036 -> DIVERGENCES HYPO-SUBSTEPPING-MASIN
+  (class B).
 

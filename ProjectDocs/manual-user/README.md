@@ -344,6 +344,8 @@ page lists its own in "Differences with the Professional version".
 
 ## Batch hypo/mohr/kapsh (hyhis, kappa_shear, direct hardening, resets, updated_linear)
 
+- [group_materi_plasti_hypo_minimum_void_ratio](group_materi_plasti_hypo_minimum_void_ratio.md) — minimum void ratio of the hypoplasticity laws (manual 6.715, F5).
+- [materi_plasti_hypo_substepping](materi_plasti_hypo_substepping.md) — accuracy substepping switch of the von Wolffersdorff hypoplasticity, global and per timestep (manual 6.803, 6.149, F5).
 - [materi_plasti_hypo_history](materi_plasti_hypo_history.md) — the 8 hypoplasticity history variables hyhis0..hyhis7 (manual Professional 4.23); fixed count, Professional basenames, shared hisv dof.
 - [materi_plasti_kappa_shear](materi_plasti_kappa_shear.md) — the kapsh dof (manual 4.25): size of the SHEAR plastic strain, hardening variable of the Mohr-Coulomb hardening-softening family.
 - [group_materi_plasti_mohr_coul_direct_hardening_softening](group_materi_plasti_mohr_coul_direct_hardening_softening.md) — the direct (degrees) variant of the hardening-softening record (7 values; dam_building).

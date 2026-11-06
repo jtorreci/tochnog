@@ -1784,6 +1784,9 @@ enum {
   POST_STRAIN_VOLUME_INITIAL,
   // F5 T3 B (manual Professional 6.804)
   MATERI_PLASTI_MAXIMUM_ITERATIONS,
+  // F5 T3 C1 (manual Professional 6.715, 6.803)
+  GROUP_MATERI_PLASTI_HYPO_MINIMUM_VOID_RATIO,
+  MATERI_PLASTI_HYPO_SUBSTEPPING,
   LAST_DUMMY }; // keep LAST_DUMMY always the last one
 
 #define MDAT LAST_DUMMY+DATA_ITEM_SIZE  // reserve space for unknowns

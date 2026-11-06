@@ -4972,6 +4972,12 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   data_class[GROUP_MATERI_PLASTI_HYPO_MASIN] = MATERI;
   data_required[GROUP_MATERI_PLASTI_HYPO_MASIN] = GROUP_TYPE;
 
+  strcpy(name[GROUP_MATERI_PLASTI_HYPO_MINIMUM_VOID_RATIO],"group_materi_plasti_hypo_minimum_void_ratio");
+  type[GROUP_MATERI_PLASTI_HYPO_MINIMUM_VOID_RATIO] = DOUBLE_PRECISION;
+  data_length[GROUP_MATERI_PLASTI_HYPO_MINIMUM_VOID_RATIO] = 1;
+  data_class[GROUP_MATERI_PLASTI_HYPO_MINIMUM_VOID_RATIO] = MATERI;
+  data_required[GROUP_MATERI_PLASTI_HYPO_MINIMUM_VOID_RATIO] = GROUP_TYPE;
+
   strcpy(name[GROUP_MATERI_PLASTI_HYPO_MASIN_STRUCTURE],"group_materi_plasti_hypo_masin_structure");
   type[GROUP_MATERI_PLASTI_HYPO_MASIN_STRUCTURE] = DOUBLE_PRECISION;
   data_length[GROUP_MATERI_PLASTI_HYPO_MASIN_STRUCTURE] = 3;
@@ -5096,6 +5102,15 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   type[CONTROL_MATERI_PLASTI_HYPO_SUBSTEPPING] = INTEGER;
   data_length[CONTROL_MATERI_PLASTI_HYPO_SUBSTEPPING] = 1;
   data_class[CONTROL_MATERI_PLASTI_HYPO_SUBSTEPPING] = CONTROL;
+
+  // global switch (manual 6.803; the Professional takes no index, the
+  // manual header shows one); the control record of the current
+  // timestep wins (hypoplas.cc)
+  strcpy(name[MATERI_PLASTI_HYPO_SUBSTEPPING],"materi_plasti_hypo_substepping");
+  type[MATERI_PLASTI_HYPO_SUBSTEPPING] = INTEGER;
+  data_length[MATERI_PLASTI_HYPO_SUBSTEPPING] = 1;
+  data_class[MATERI_PLASTI_HYPO_SUBSTEPPING] = MATERI;
+  no_index[MATERI_PLASTI_HYPO_SUBSTEPPING] = 1;
 
   strcpy(name[CONTROL_MATERI_PLASTI_TENSION_APPLY],"control_materi_plasti_tension_apply");
   type[CONTROL_MATERI_PLASTI_TENSION_APPLY] = INTEGER;

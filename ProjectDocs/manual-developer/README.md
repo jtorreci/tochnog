@@ -342,6 +342,8 @@ page lists its own in "Differences with the Professional version".
 
 ## Batch hypo/mohr/kapsh (hyhis, kappa_shear, direct hardening, resets, updated_linear)
 
+- [group_materi_plasti_hypo_minimum_void_ratio](group_materi_plasti_hypo_minimum_void_ratio.md) — thread-local minimum in hypo.c sigma_() and after the Masin kernel (F5).
+- [materi_plasti_hypo_substepping](materi_plasti_hypo_substepping.md) — thread-local switch of the hypo.c accuracy halving; global + control record (F5).
 - [materi_plasti_hypo_history](materi_plasti_hypo_history.md) — hyhis0..hyhis7 registration, unknown handling, Masin kernel slot mapping (e = slot 0, s = slot 4 with the hyhis layout).
 - [materi_plasti_kappa_shear](materi_plasti_kappa_shear.md) — kapsh dof registration + deviatoric plastic strain accumulation in set_stress + element RHS + hardening read in plasti_rule.
 - [group_materi_plasti_mohr_coul_direct_hardening_softening](group_materi_plasti_mohr_coul_direct_hardening_softening.md) — degrees conversion (PIRAD/180) in plasti_rule before the interpolation block.

@@ -25,6 +25,9 @@
 #define MAX_DATA_LENGTH 10
 #define LENGTH_INTERGRANULARSTRAIN 6
 
+extern "C" __thread long int hypo_substepping_off, hypo_minimum_void_ratio_on;
+extern "C" __thread double hypo_minimum_void_ratio;
+
 extern "C" 
   int hypo_( double *stress, double *Mmat, double *new_hisv,
     double *inc_ept, double *time, double *dtime, long int *nhis, 
@@ -107,6 +110,13 @@ void hypoplasticity( long int element, long int gr,
     stress[MDIM*MDIM], data[MAX_DATA_LENGTH], 
     hypo_intergranularstrain[LENGTH_INTERGRANULARSTRAIN],
     Mmat[MDIM*MDIM*MDIM*MDIM];
+
+  // F5 T3 C1: substepping switch (manual 6.803 global, 6.149 per
+  // timestep index, default -yes) and minimum void ratio (6.715)
+  hypo_substepping_off = materi_apply_gate_off( MATERI_PLASTI_HYPO_SUBSTEPPING,
+    CONTROL_MATERI_PLASTI_HYPO_SUBSTEPPING );
+  hypo_minimum_void_ratio_on = db( GROUP_MATERI_PLASTI_HYPO_MINIMUM_VOID_RATIO,
+    gr, idum, &hypo_minimum_void_ratio, ldum, VERSION_NORMAL, GET_IF_EXISTS );
 
     if(db_active_index( GROUP_MATERI_PLASTI_HYPO_WOLFERSDORFF, gr, VERSION_NORMAL )) hypo_wolfersdorff=1; 
     else if(db_active_index( GROUP_MATERI_PLASTI_HYPO_LOWANGLES, gr, VERSION_NORMAL )) hypo_lowangles=1;
@@ -489,6 +499,9 @@ void hypoplasticity( long int element, long int gr,
 
       // statev -> hisv (only e and s; the delta stays in the epi dof)
       new_hisv[e_slot] = mstatev[6];
+      if ( hypo_minimum_void_ratio_on &&
+           new_hisv[e_slot]<hypo_minimum_void_ratio )
+        new_hisv[e_slot] = hypo_minimum_void_ratio;
           if ( struct_active )
             new_hisv[s_slot] = mstatev[13];
           // write the integrated intergranular strain delta back to the dof
