@@ -123,7 +123,7 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
     Commit 397a3cb.
   - [x] C3 residual_stiffness, phimob. phimob: route inline, commit 5e42bae. residual_stiffness: route
     inline, commit a806c1c (owner 2026-11-06: manual followed, DIVERGENCES PLASTI-RESIDUAL-STIFFNESS).
-  - [x] D1 elasti_c + c_direction (route inline, commit 6b8327d).  - [x] D2 visco_power_name / _value (route inline, commit COMMIT_T3D2); exponential twins: owner question.
+  - [x] D1 elasti_c + c_direction (route inline, commit 6b8327d).  - [x] D2 visco_power_name / _value (route inline, commit 2ef6bdc); exponential twins: owner question.
   - [ ] D3 wolffersdorff_niemunis.  - [ ] D4 borja_tamagnini.  - [ ] D5 stress_null family.
   - [ ] E user hooks (young_user, history_variable_user), niemunis_visco(+_ocr),
     diprisco_density, umat_pardiso_decompose: accept-plus-stub, separate plan or discard.
