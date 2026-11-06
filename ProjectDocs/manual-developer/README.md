@@ -348,6 +348,7 @@ page lists its own in "Differences with the Professional version".
 - [materi_plasti_phimob](materi_plasti_phimob.md) — phimob dof, root of the Mohr-Coulomb yield function, label shared with the PHIMOB operator (F5).
 - [group_materi_plasti_residual_stiffness](group_materi_plasti_residual_stiffness.md) — plastic_ip flag and deviatoric scaling of ddsdde in set_stress (F5).
 - [group_materi_elasti_c](group_materi_elasti_c.md) — C_ijkl added after every elastic law in set_stress, axis rotation and normalization (F5).
+- [group_materi_plasti_visco_power_name](group_materi_plasti_visco_power_name.md) — per-model visco choice at the first yield test, visco_power_select (F5).
 - [materi_plasti_hypo_history](materi_plasti_hypo_history.md) — hyhis0..hyhis7 registration, unknown handling, Masin kernel slot mapping (e = slot 0, s = slot 4 with the hyhis layout).
 - [materi_plasti_kappa_shear](materi_plasti_kappa_shear.md) — kapsh dof registration + deviatoric plastic strain accumulation in set_stress + element RHS + hardening read in plasti_rule.
 - [group_materi_plasti_mohr_coul_direct_hardening_softening](group_materi_plasti_mohr_coul_direct_hardening_softening.md) — degrees conversion (PIRAD/180) in plasti_rule before the interpolation block.

@@ -2916,6 +2916,14 @@ run_ok "$T2026" group_materi_elasti_c_direction2
 run_ok "$T2026" group_materi_elasti_c_direction3
 expected_error_ok "$T2026" group_materi_elasti_c_error1
 expected_error_ok "$T2026" group_materi_elasti_c_direction_error1
+# F5 T3 D2: group_materi_plasti_visco_power_name / _value (manual 6.748,
+# 6.749); targets = Professional 02-08-2026 (name3: GNU visco_power 0.2).
+run_ok "$T2026" group_materi_plasti_visco_power_name1
+run_ok "$T2026" group_materi_plasti_visco_power_name2
+run_ok "$T2026" group_materi_plasti_visco_power_name3
+run_ok "$T2026" group_materi_plasti_visco_power_name4
+run_ok "$T2026" group_materi_plasti_visco_power_name5
+expected_error_ok "$T2026" group_materi_plasti_visco_power_name_error1
 # F5 T2 V8: post_calcul modifiers (manual 6.902-6.905, 6.916, 6.917,
 # 6.920); expected node_dof_calcul = Professional 02-08-2026 on the same
 # inputs (probes v8pro; -prival largest first, DIVERGENCES K12).

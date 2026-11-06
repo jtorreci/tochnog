@@ -123,7 +123,7 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
     Commit 397a3cb.
   - [x] C3 residual_stiffness, phimob. phimob: route inline, commit 5e42bae. residual_stiffness: route
     inline, commit a806c1c (owner 2026-11-06: manual followed, DIVERGENCES PLASTI-RESIDUAL-STIFFNESS).
-  - [x] D1 elasti_c + c_direction (route inline, commit 6b8327d).  - [ ] D2 visco_power (+ exponential twins).
+  - [x] D1 elasti_c + c_direction (route inline, commit 6b8327d).  - [x] D2 visco_power_name / _value (route inline, commit COMMIT_T3D2); exponential twins: owner question.
   - [ ] D3 wolffersdorff_niemunis.  - [ ] D4 borja_tamagnini.  - [ ] D5 stress_null family.
   - [ ] E user hooks (young_user, history_variable_user), niemunis_visco(+_ocr),
     diprisco_density, umat_pardiso_decompose: accept-plus-stub, separate plan or discard.
@@ -482,3 +482,8 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
 - L-T3D1 (2026-11-06): elasti_c / c_direction. Pro probes: tensor strains (isotropic C = young / poisson, also
   in shear), additive with young / poisson, axes as rows of the rotation and normalized, membrane refused, zero
   axis degenerate (GNU error). Block placed after every elastic law (several branches clear C). GNU = Pro 1e-9.
+- L-T3D2 (2026-11-06, user): "adelante con D2". Pro probes (1D visco bar): named model = visco_power, unused
+  name elasto-plastic, visco_power wins over names, visco_apply -no gates them, full list = visco_power. GNU
+  selects per integration point at the first yield test (visco_power_select). Pro reads
+  visco_exponential_name as an INTEGER and rejects names ("Integer values are expected"), so the exponential
+  twins contradict the manual 6.745 -> owner question. C116 added (tension + vonmises group differs from Pro).

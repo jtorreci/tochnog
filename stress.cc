@@ -650,6 +650,32 @@ long int direct_plastic_strain( double dsig[],
   return 1;
 }
 
+// group_materi_plasti_visco_power_name / _value: the eta and p of the
+// active plasticity model plasti_type {sub-surfaces map to their record}.
+// Returns 1 and fills visco_power[0..1] when the model is named.
+static long int visco_power_select( long int plasti_type, long int n_names,
+  long int names[], double values[], double visco_power[] )
+{
+  long int k=0, record=plasti_type;
+  if ( record==GROUP_MATERI_PLASTI_DRUCKPRAG_APEX )
+    record = GROUP_MATERI_PLASTI_DRUCKPRAG;
+  else if ( record==GROUP_MATERI_PLASTI_MATSUOKANAKAI_APEX )
+    record = GROUP_MATERI_PLASTI_MATSUOKANAKAI;
+  else if ( record==GROUP_MATERI_PLASTI_MOHRCOUL_APEX ||
+            record==GROUP_MATERI_PLASTI_MOHRCOUL_01 ||
+            record==GROUP_MATERI_PLASTI_MOHRCOUL_12 ||
+            record==GROUP_MATERI_PLASTI_MOHRCOUL_20 )
+    record = GROUP_MATERI_PLASTI_MOHRCOUL;
+  for ( k=0; k<n_names; k++ ) {
+    if ( labs(names[k])==record ) {
+      visco_power[0] = values[2*k];
+      visco_power[1] = values[2*k+1];
+      return 1;
+    }
+  }
+  return 0;
+}
+
 void set_stress( long int element, long int gr, 
   long int plasti_on_boundary, double coord_ip[],
   double old_unknowns[], double new_unknowns[], 
@@ -684,7 +710,9 @@ void set_stress( long int element, long int gr,
     k0_control_swit=0,
     formulation=INCREMENTAL, ldum=0, idum[1], task[2],
     hs_gp_swit=-NO, icontrol_hs=0, hs_plasti_present=0, hs_len=1,
-    damage_done=0, direct_on=0, plastic_ip=0;
+    damage_done=0, direct_on=0, plastic_ip=0, visco_named=0,
+    n_visco_names=0, visco_names[DATA_ITEM_SIZE], max_iter_visco=0,
+    max_iter_ep=0, visco_idum[DATA_ITEM_SIZE];
   double lambda=0., deps_size=0., lambda_new=0., lambda_previous=0., 
     tmp=0., tmp_old=0., tmp_inc=0., tmp_new=0., 
     f=0., f_previous=0, f_ref=0., materi_expansion_linear=0., 
@@ -717,7 +745,7 @@ void set_stress( long int element, long int gr,
     Chypo[MDIM][MDIM][MDIM][MDIM],
     volumetric_young_values[DATA_ITEM_SIZE],
     user_data[DATA_ITEM_SIZE], work[DATA_ITEM_SIZE], 
-    old_work[MDIM*MDIM], new_work[MDIM*MDIM];
+    old_work[MDIM*MDIM], new_work[MDIM*MDIM], visco_values[DATA_ITEM_SIZE];
 
   swit = set_swit(element,-1, "set_stress");
   if ( swit ) pri( "In routine SET_STRESS" );
@@ -743,6 +771,24 @@ void set_stress( long int element, long int gr,
     else f_ref = 1.;
     assert( f_ref!=0. );
   }
+  // group_materi_plasti_visco_power_name / _value (manual Professional
+  // 6.748, 6.749): eta and p per plasticity model; a model not in the
+  // names stays elasto-plastic. The choice is made per integration point
+  // when the yield test selects the active model {visco_power_select}.
+  // group_materi_plasti_visco_power wins when both are given, as the
+  // Professional 02-08-2026.
+  else if ( db( GROUP_MATERI_PLASTI_VISCO_POWER_NAME, gr, visco_names,
+      work, n_visco_names, VERSION_NORMAL, GET_IF_EXISTS ) ) {
+    long int n_values=0;
+    visco_named = 1;
+    if ( !db( GROUP_MATERI_PLASTI_VISCO_POWER_VALUE, gr, visco_idum,
+          visco_values, n_values, VERSION_NORMAL, GET_IF_EXISTS ) ||
+         n_values!=2*n_visco_names ) {
+      pri( "Error: group_materi_plasti_visco_power_value needs two values "
+        "{eta p} for each name of group_materi_plasti_visco_power_name." );
+      exit(1);
+    }
+  }
 
   // time step of the CURRENT step (VERSION_NEW, as every other module):
   // the _visco direct cut-offs relax with 1-exp(-dt/tm) over the step from
@@ -754,8 +800,10 @@ void set_stress( long int element, long int gr,
   // materi_plasti_visco_apply / control_materi_plasti_visco_apply -no
   // (manual Professional 6.805 / 6.151): ignore any visco-plasticity data
   if ( materi_apply_gate_off( MATERI_PLASTI_VISCO_APPLY,
-       CONTROL_MATERI_PLASTI_VISCO_APPLY ) )
+       CONTROL_MATERI_PLASTI_VISCO_APPLY ) ) {
     viscoplasti = 0;
+    visco_named = 0;
+  }
   db( GROUP_MATERI_PLASTI_VISCO_ALWAYS, gr, &viscoplasti_always,
     ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
   memory = materi_memory_default();
@@ -1534,12 +1582,11 @@ void set_stress( long int element, long int gr,
   deps_size = array_size( inc_ept, MDIM*MDIM );
   if ( deps_size<EPS_SIZE ) deps_size = EPS_SIZE;
 
-  if      ( materi_plasti_f_nonlocal && viscoplasti ) 
-    max_plasti_iter = 2;
-  else if ( viscoplasti )
-    max_plasti_iter = 10;
+  if ( materi_plasti_f_nonlocal )
+    max_iter_visco = 2;
   else
-    max_plasti_iter = MAX_PLASTI_ITER;
+    max_iter_visco = 10;
+  max_iter_ep = MAX_PLASTI_ITER;
 
   // user-specified maximum number of plastic iterations on
   // integration point level: group_materi_plasti_maximum_iterations,
@@ -1555,9 +1602,10 @@ void set_stress( long int element, long int gr,
           "materi_plasti_maximum_iterations must be at least 1." );
         exit(1);
       }
-      max_plasti_iter = max_plasti_iter_user;
+      max_iter_visco = max_iter_ep = max_plasti_iter_user;
     }
   }
+  max_plasti_iter = viscoplasti ? max_iter_visco : max_iter_ep;
 
   // plasti_apply (manual Professional 6.899, global) and
   // control_plasti_apply (6.257, per timestep index) -no: any plasticity
@@ -2047,6 +2095,15 @@ void set_stress( long int element, long int gr,
         pl_unknowns, new_grad_new_unknowns, old_hisv, new_hisv,
         old_epp, inc_epp, inc_ept, GET_YIELD_RULE, 
         plasti_type, test_sig, f, new_f, ddum );
+      if ( visco_named ) {
+        viscoplasti = visco_power_select( plasti_type, n_visco_names,
+          visco_names, visco_values, plasti_visco_power );
+        if ( viscoplasti ) {
+          eta = plasti_visco_power[0]; p = plasti_visco_power[1];
+          f_ref = 1.;
+        }
+        max_plasti_iter = viscoplasti ? max_iter_visco : max_iter_ep;
+      }
 
       if ( materi_plasti_f_nonlocal && viscoplasti ) f = new_unknowns[fn_indx];
       if ( swit ) {

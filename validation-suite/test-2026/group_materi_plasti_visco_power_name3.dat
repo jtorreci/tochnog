@@ -1,0 +1,31 @@
+(F5 T3 D2: two names, the used tension model second with eta 0.2 p 1
+ {Professional 02-08-2026 sigxx 2.428571; the GNU 2.428422 equals its
+ group_materi_plasti_visco_power 0.2 1 result}.)
+echo -no
+number_of_space_dimensions 1
+materi_velocity
+materi_displacement
+materi_strain_total
+materi_strain_plasti
+materi_stress
+end_initia
+node 1  0
+node 2  1
+element 1  -bar2 1 2
+bounda_dof 0  1 -velx
+bounda_time 0  0.
+bounda_dof 1  2 -velx
+bounda_time 1  1.
+group_type 0  -materi
+group_materi_elasti_young 0  2.0
+group_materi_memory 0  -total_linear
+group_materi_plasti_tension 0  1.
+control_timestep 0  0.5 0.5
+control_timestep 1  1. 1.
+group_materi_plasti_visco_power_name 0 -group_materi_plasti_vonmises -group_materi_plasti_tension
+group_materi_plasti_visco_power_value 0 5.e-1 1. 2.e-1 1.
+target_item 0 -node_dof 1 -sigxx
+target_value 0 2.428422 1.e-5
+target_item 1 -node_dof 1 -eppxx
+target_value 1 0.2857892 1.e-5
+end_data

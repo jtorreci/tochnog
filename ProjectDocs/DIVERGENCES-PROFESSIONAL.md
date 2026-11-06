@@ -14,10 +14,10 @@ Single index of every known difference between the GNU version and Tochnog Profe
 | class | meaning | items |
 |---|---|---|
 | A | deliberate divergence decided by the project owner | 33 |
-| B | known difference, not decided yet or scheduled (F3/F4) | 51 |
-| C | GNU extension or input-dialect difference | 23 |
+| B | known difference, not decided yet or scheduled (F3/F4) | 52 |
+| C | GNU extension or input-dialect difference | 24 |
 | D | Professional-suspect: the Professional contradicts its own manual or the analytic answer | 14 |
-| | **total** | **121** |
+| | **total** | **123** |
 
 Ids: `C*`/`B*` are [BACKLOG-OPEN-ISSUES.md](BACKLOG-OPEN-ISSUES.md) items, `K*` are clusters of [AUDIT-ALL-VARIABLES-2026.md](AUDIT-ALL-VARIABLES-2026.md); other ids are local to this index. Several class A items are also Professional-suspect (noted in their status). Professional values are from the binary 02-08-2026 unless stated.
 
@@ -155,6 +155,7 @@ Open residuals. They are not decisions: each one is either scheduled, parked for
 | BEAM-AXIAL-FREE | beam (no axial stiffness) whose axial dof is not restrained by a support or a truss | The direct solver stops (`dgssv() error returns INFO= 2`, classic and local-axes beam). | Solves; the free axial dof stays 0. | Open, LOW (F5 T2 V4c, 2026-11-02): GNU behaviour before V4c; the beam-family tests fix the tip `velx`. | 2026-11-02 | [user/element_beam_force_moment](manual-user/element_beam_force_moment.md); [dev/element_beam_force_moment](manual-developer/element_beam_force_moment.md) |
 | C90 | `control_print_history` file names | `<dof><index>.his` / `<index><number>.his`, e.g. `disy0.his` for `-post_point_dof 0 -disy`, `00.his` for `-post_element_force_result 0 0`. | `<record>_<index>_<item>.his`, e.g. `post_point_dof_0_disy.his`. Both append to an existing file. | Open, LOW (found by F5 W1 U3). | 2026-11-02 | BACKLOG C90 |
 | C84-REFUSE | `post_element_force` selection containing a beam, truss-beam, contact spring, bar in 2D/3D, `hex64` or an element of a `group_interface` group | Stops: `Error: post_element_force does not support element : N` (C84, 2026-10-17). Every continuum element (quad4/quad9/quad16/tria3/tria6, hex8/hex27/tet4/tet10/prism6/prism15, plane and axisymmetric) and, since C86 (2026-10-19), every `-truss`, `-spring1`, `-spring2` = Professional (the structural element's axial force is added on its centroid side). | Measured 2026-10-19: the Professional 2D `-beam` / `-truss_beam` on the section carries no beam force (`element_beam_force_moment` 0; the truss part of the truss-beam is included), so no reference for the beam share; contact springs and interfaces not measured. | Deferred, LOW: no Professional reference for beams (C37 resolved in F5 T2 V4d: native 3D beam). | 2026-10-19 | [user/post_element_force](manual-user/post_element_force.md); [dev/post_element_force](manual-developer/post_element_force.md); BACKLOG C84, C86 |
+| C116-MULTI-SURFACE | groups with two plasticity models, `_tension` 1 + `_vonmises` 0.8 on the 1D visco bar | sigxx 0.8283, eppxx 1.0858 (with visco_power 0.1 1: 2.6482). | sigxx 1, eppxx 1 (with visco_power: 1.1987); each model alone agrees (vonmises 1.5333 both). | Pending (BACKLOG C116). | 2026-11-06 | BACKLOG C116 |
 
 ## C. GNU extensions and input-dialect differences
 
@@ -187,6 +188,7 @@ Records or spellings that only one program accepts, or GNU choices where the Pro
 | BEAM-MEMORY-UPDATED | `group_beam_memory -updated` (6.591) | The updated beam: local axes follow the deformed chord (tip displacement 0.01 on a beam of length 1: 0.2399880 instead of 0.24). Default `-total_linear` = Professional since F5 T2 V4d (2026-11-02; GNU default `-updated` before). | Stops with `materi_displacement should not be initialised.` for `-updated` / `-updated_linear` on the same input. | GNU extension, owner decision 2026-11-02 (default -total_linear, option documented). | 2026-11-02 | [user/group_beam_memory](manual-user/group_beam_memory.md); [dev/group_beam_memory](manual-developer/group_beam_memory.md) |
 | GROUP-BEAM-PLANE | `group_beam_plane <group> -a -b` (GNU-only) | Since F5 T2 V4d (2026-11-02): default local z of a 3D beam without a local z record = plane normal a x b; a beam along the normal stops with `Error, the beam is perpendicular to its GROUP_BEAM_PLANE.` Before: plane of the planar 3D beam. | Not a Professional record; default local z = global z projected (global y for a beam along z). | GNU extension (kept for old inputs). | 2026-11-02 | [user/group_beam_direction_z](manual-user/group_beam_direction_z.md); [dev/group_beam_direction_z](manual-developer/group_beam_direction_z.md) |
 | ELASTI-C-ZERO-DIRECTION | `group_materi_elasti_c_direction` (6.643) with a zero axis | Error `group_materi_elasti_c_direction has a zero direction.`; non-unit axes are normalized, as the Professional. | Runs and gives a degenerate state (disx 0, sigyy -30 on the probe square). | Input validation of an out-of-domain value. | 2026-11-06 | [user/group_materi_elasti_c](manual-user/group_materi_elasti_c.md) |
+| VISCO-POWER-VALUE-COUNT | `group_materi_plasti_visco_power_value` (6.749) with fewer than two values per name | Error `group_materi_plasti_visco_power_value needs two values {eta p} for each name of group_materi_plasti_visco_power_name.` | Runs (one value 0.1: sigxx 2.8 on the visco bar). | Input validation of an out-of-domain input. | 2026-11-06 | [user/group_materi_plasti_visco_power_name](manual-user/group_materi_plasti_visco_power_name.md) |
 
 ## Maintenance
 

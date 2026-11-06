@@ -4809,6 +4809,22 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   data_class[GROUP_MATERI_ELASTI_C_DIRECTION] = MATERI;
   data_required[GROUP_MATERI_ELASTI_C_DIRECTION] = GROUP_TYPE;
 
+  // F5 T3 D2: visco power data per plasticity model (manual 6.748,
+  // 6.749); stress.cc set_stress
+  strcpy(name[GROUP_MATERI_PLASTI_VISCO_POWER_NAME],"group_materi_plasti_visco_power_name");
+  type[GROUP_MATERI_PLASTI_VISCO_POWER_NAME] = INTEGER;
+  data_length[GROUP_MATERI_PLASTI_VISCO_POWER_NAME] = DATA_ITEM_SIZE;
+  fixed_length[GROUP_MATERI_PLASTI_VISCO_POWER_NAME] = 0;
+  data_class[GROUP_MATERI_PLASTI_VISCO_POWER_NAME] = MATERI;
+  data_required[GROUP_MATERI_PLASTI_VISCO_POWER_NAME] = GROUP_TYPE;
+
+  strcpy(name[GROUP_MATERI_PLASTI_VISCO_POWER_VALUE],"group_materi_plasti_visco_power_value");
+  type[GROUP_MATERI_PLASTI_VISCO_POWER_VALUE] = DOUBLE_PRECISION;
+  data_length[GROUP_MATERI_PLASTI_VISCO_POWER_VALUE] = DATA_ITEM_SIZE;
+  fixed_length[GROUP_MATERI_PLASTI_VISCO_POWER_VALUE] = 0;
+  data_class[GROUP_MATERI_PLASTI_VISCO_POWER_VALUE] = MATERI;
+  data_required[GROUP_MATERI_PLASTI_VISCO_POWER_VALUE] = GROUP_TYPE;
+
   strcpy(name[GROUP_MATERI_PLASTI_CAMCLAY],"group_materi_plasti_camclay");
   type[GROUP_MATERI_PLASTI_CAMCLAY] = DOUBLE_PRECISION;
   // manual Professional 6.689: index M kappa lambda (3 values). The
