@@ -31,6 +31,9 @@ extern "C"
     long int *kstep, long int *kinc, short cmname_len);
 
 #define MAX_ITER 1000
+// default cap of the plastic loop per integration point (manual
+// Professional 6.804; owner 2026-11-06, BACKLOG C112)
+#define MAX_PLASTI_ITER 20000
 #define EPS_F 1.e-6
 #define EPS_EPS_F 1.e-3
 #define EPS_SIZE 1.e-3
@@ -1467,7 +1470,7 @@ void set_stress( long int element, long int gr,
   else if ( viscoplasti )
     max_plasti_iter = 10;
   else
-    max_plasti_iter = MAX_ITER;
+    max_plasti_iter = MAX_PLASTI_ITER;
 
   // user-specified maximum number of plastic iterations on
   // integration point level: group_materi_plasti_maximum_iterations,

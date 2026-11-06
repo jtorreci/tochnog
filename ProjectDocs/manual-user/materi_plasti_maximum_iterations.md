@@ -24,8 +24,9 @@ group_materi_plasti_maximum_iterations  index  maximum_iterations
 | `maximum_iterations` | Maximum number of plastic iterations per integration point; at least 1. |
 | `index` | Element group (`group_materi_plasti_maximum_iterations` only). |
 
-Without either record the cap is 1000 (`MAX_ITER`), 10 for viscoplastic
-groups and 2 for nonlocal viscoplastic groups.
+Without either record the cap is 20000 (manual default), 10 for
+viscoplastic groups and 2 for nonlocal viscoplastic groups. A loop that
+converges earlier never reaches the cap.
 
 ## Example
 
@@ -40,12 +41,14 @@ materi_plasti_maximum_iterations 1
 Tests: `validation-suite/test-2026/materi_plasti_maximum_iterations1`
 (cap 1, sigyy -21.978), `materi_plasti_maximum_iterations2` (group 1000
 wins over global 1, sigyy -3.3935) and
-`materi_plasti_maximum_iterations_error1` (0 is an error).
+`materi_plasti_maximum_iterations_error1` (0 is an error);
+`materi_plasti_maximum_iterations_default1` (default cap 20000 reached
+on the sfnet examp16 foundation).
 
 ## Differences with the Professional version
 
-- The manual gives a default of 20000 iterations; the GNU default stays
-  1000 (BACKLOG C112).
+- Default 20000 as the manual since 2026-11-06 (owner decision, BACKLOG
+  C112; before: 1000).
 - The Professional accepts 0 and runs as with 1; the GNU stops with an
   error (out-of-domain value).
 - With the cap at 1 the Professional gives sigyy -21.9773 against the GNU

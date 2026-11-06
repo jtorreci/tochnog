@@ -115,7 +115,7 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
     (initialization part, 60b30d0); the db_number probe cannot see it. No change.
   - [x] B aliases group_materi_hyper_reduced_polynomial, _volumetric_simo_taylor,
     group_materi_umat(_parameters) + global materi_plasti_maximum_iterations. Route: inline.
-    Commit c095d18. C112 (default 20000 vs 1000) open for the owner.
+    Commit c095d18. C112 resolved (default 20000, owner), commit COMMIT_C112.
   - [ ] C1 hypo_substepping (+ unused control record), hypo_minimum_void_ratio.
   - [ ] C2 plasti_mpc + mpc_factor.  - [ ] C3 residual_stiffness, phimob.
   - [ ] D1 elasti_c + c_direction.  - [ ] D2 visco_power (+ exponential twins).
@@ -435,4 +435,6 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   Pro probes (plasti_apply1 square): default -3.39353 = GNU; cap 1 -21.9773 vs GNU -21.978;
   Pro accepts 0 (GNU error, advisory). Manual default 20000 vs GNU 1000 -> BACKLOG C112.
   The old manual-user page described the Pro name with the group syntax; rewritten.
+- L-C112 (2026-11-06) owner: "vamos a 20000. Es un límite que si hay convergencia más rápida no llega a cumplirse y evitarmos cortes antes de convergencia".
+  MAX_PLASTI_ITER 20000 (membrane loop keeps MAX_ITER 1000). Impact (instrumented corpus, 931 inputs: test-2026, test-2014, Professional test/other, validation, incremental_driver): only sfnet `examp10` and `examp16` pass 1000 iterations, and both reach 20000 (points that do not converge); every other input is unchanged. `examp10` moves 3e-7 in the displacements; `examp16` node 26 sigyy -218129 -> -237309 (Professional -271692; summed |GNU - Professional| over node_dof 3.61e6 -> 3.44e6), run time 1 s -> 3 s. Test `materi_plasti_maximum_iterations_default1` (examp16 copy, node 26 target).
 
