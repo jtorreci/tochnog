@@ -41,7 +41,7 @@ page lists its own in "Differences with the Professional version".
 
 - [check_used](check_used.md) — report data items defined but never used.
 - [force_element_edge_multi_linear_factor_x](force_element_edge_multi_linear_factor_x.md) — multilinear x-factor for distributed edge forces.
-- [materi_plasti_maximum_iterations](materi_plasti_maximum_iterations.md) — limit plastic iterations.
+- [materi_plasti_maximum_iterations](materi_plasti_maximum_iterations.md) — limit plastic iterations: global record (manual 6.804, F5) and group_materi_plasti_maximum_iterations.
 - [materi_displacement_relative](materi_displacement_relative.md) — relative displacement dof (reference re-synced on timestep change / reset).
 - [mesh_activate_gravity_time](mesh_activate_gravity_time.md) — gradual gravity activation (dams/dumping).
 - [strain_settlement_parameters](strain_settlement_parameters.md) — settlement creep strain model.
@@ -365,7 +365,7 @@ page lists its own in "Differences with the Professional version".
 - [geometry_factor](geometry_factor.md) — the Professional name (6.527) of geometry_bounda_factor: spatial weighting factors of bounda_dof/bounda_force/force_edge_* on a geometry entity (2 = linear, 3 = parabolic on a line).
 - [convection_apply](convection_apply.md) — the convection switches of eulerian flows: convection_apply (6.395), control_convection_apply (6.113) and convection_stabilization (6.396), aliases of options_convection/options_stabilization. Unlocks condif2/condif3/tube1. Default `-no` since 2026-10-06 (K03, as the Professional); the switch only governs material convection wrt the mesh (condif_flow and groundflow-velocity heat transport always apply).
 - [processors](processors.md) — the Professional short name of options_processors: number of solver threads.
-- [names_2026_aliases](names_2026_aliases.md) — 2026 manual names accepted as aliases: materi_history_variable, materi_strain_energy, control_print_{dof_line,gmsh,vtk}_node_type, element_contact_spring_direction, element_interface_intpnt_{strain,stress}_average, post_node_rhside_ratio_dof_type (F5).
+- [names_2026_aliases](names_2026_aliases.md) — 2026 manual names accepted as aliases: materi_history_variable, materi_strain_energy, control_print_{dof_line,gmsh,vtk}_node_type, element_contact_spring_direction, element_interface_intpnt_{strain,stress}_average, post_node_rhside_ratio_dof_type, group_materi_hyper_reduced_polynomial, group_materi_hyper_volumetric_simo_taylor, group_materi_umat(_parameters) (F5).
 - [processors_maximum](processors_maximum.md) — `processors_maximum switch` (6.1005): `-yes` uses every CPU; GNU default `-no` until F6 (Professional `-yes`) (F5).
 - [processors_partition](processors_partition.md) — accepted, no effect (6.1006) (F5).
 - [print_precision](print_precision.md) — significant digits of every printed value (6.997), default 12 (F5).

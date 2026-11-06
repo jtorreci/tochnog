@@ -5340,6 +5340,14 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   data_class[GROUP_MATERI_PLASTI_MAXIMUM_ITERATIONS] = MATERI;
   data_required[GROUP_MATERI_PLASTI_MAXIMUM_ITERATIONS] = GROUP_TYPE;
 
+  // global Professional record (manual 6.804); the GNU group record
+  // above wins for its group (stress.cc)
+  strcpy(name[MATERI_PLASTI_MAXIMUM_ITERATIONS],"materi_plasti_maximum_iterations");
+  type[MATERI_PLASTI_MAXIMUM_ITERATIONS] = INTEGER;
+  data_length[MATERI_PLASTI_MAXIMUM_ITERATIONS] = 1;
+  data_class[MATERI_PLASTI_MAXIMUM_ITERATIONS] = MATERI;
+  no_index[MATERI_PLASTI_MAXIMUM_ITERATIONS] = 1;
+
   strcpy(name[GROUP_MATERI_PLASTI_MOHRCOUL],"group_materi_plasti_mohrcoul");
   type[GROUP_MATERI_PLASTI_MOHRCOUL] = DOUBLE_PRECISION;
   data_length[GROUP_MATERI_PLASTI_MOHRCOUL] = 3;
@@ -9681,6 +9689,19 @@ long int db_number( const char str[] )
       // Professional name of the GNU canonical repeat_calculate_result
       // record (the average/variance analysis of control_repeat_save)
       return REPEAT_CALCULATE_RESULT;
+    else if ( !strcmp( str, "group_materi_hyper_reduced_polynomial" ) )
+      // Professional name (manual 6.678); GNU canonical reducedpolynomial
+      return GROUP_MATERI_HYPER_REDUCEDPOLYNOMIAL;
+    else if ( !strcmp( str, "group_materi_hyper_volumetric_simo_taylor" ) )
+      // Professional name (manual 6.683); GNU canonical simotaylor
+      return GROUP_MATERI_HYPER_VOLUMETRIC_SIMOTAYLOR;
+    else if ( !strcmp( str, "group_materi_umat" ) )
+      // Professional name (manual 6.757) of the GNU group_user_umat
+      return GROUP_USER_UMAT;
+    else if ( !strcmp( str, "group_materi_umat_parameters" ) )
+      // Professional name (manual 6.758): the umat props, which GNU
+      // takes from group_user_data (stress_umat)
+      return GROUP_USER_DATA;
     else if ( !strcmp( str, "group_materi_plasti_hypo_wolffersdorff" ) )
       // Professional spelling (double f); GNU canonical is wolfersdorff
       return GROUP_MATERI_PLASTI_HYPO_WOLFERSDORFF;

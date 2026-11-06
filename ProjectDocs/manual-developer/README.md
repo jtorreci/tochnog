@@ -44,7 +44,7 @@ page lists its own in "Differences with the Professional version".
 ## Phase 1 features
 
 - [check_used](check_used.md) — report unused data items.
-- [materi_plasti_maximum_iterations](materi_plasti_maximum_iterations.md) — limit plastic iterations.
+- [materi_plasti_maximum_iterations](materi_plasti_maximum_iterations.md) — limit plastic iterations: global record (manual 6.804, F5) and group_materi_plasti_maximum_iterations.
 - [materi_displacement_relative](materi_displacement_relative.md) — relative displacement dof (input.cc, dof.cc, top.cc, data.cc).
 - [mesh_activate_gravity_time](mesh_activate_gravity_time.md) — gradual gravity activation (mesh.cc).
 - [strain_settlement_parameters](strain_settlement_parameters.md) — settlement creep strain (materi.cc).

@@ -1,51 +1,54 @@
 # materi_plasti_maximum_iterations
 
-## Descripción
+## Description
 
-`materi_plasti_maximum_iterations` sets a maximum number of plastic
-iterations per integration point. It overrides the built-in default (10 for
-viscoplastic materials, `MAX_ITER` otherwise). It is useful to control
-convergence: a low limit stops slow or non-converging plasticity loops
-early, a high limit allows harder problems to converge.
+Plasticity iterates at integration point level until the stress is back on
+the yield surface. `materi_plasti_maximum_iterations` (manual Professional
+6.804) caps the number of those iterations for all element groups.
+`group_materi_plasti_maximum_iterations` sets the cap for one element group
+and wins over the global record for that group.
 
-## Uso
+Raise the cap when results of a calculation with very heavy plasticity look
+inaccurate. Lower it to stop slow or non-converging plasticity loops early:
+when the cap is reached, the last iterate is used without an error.
 
-Place it in the data part, grouped by material group index:
-
-```
-materi_plasti_maximum_iterations 0 5
-```
-
-## Parámetros
-
-| Parameter | Meaning                                                          |
-|-----------|------------------------------------------------------------------|
-| `0`       | Material group index the limit applies to.                       |
-| `N`       | Maximum number of plastic iterations per integration point. Must be at least 1. |
-
-## Ejemplo
-
-Run a Von Mises plastic problem with a tight iteration budget:
+## Syntax
 
 ```
-control_geometry
-   cartesian
-control_time
-   end 1.0
-   dt 0.1
-control_print
-   history 0
-   step 10
-materi_elasti_young
-   0 2.e7
-materi_elasti_poisson
-   0 0.3
-materi_density
-   0 2500.
-materi_plasti_vonmis
-   0 1.e3 0.
-materi_velocity
-   0 -yes
-materi_plasti_maximum_iterations
-   0 5
+materi_plasti_maximum_iterations  maximum_iterations
+group_materi_plasti_maximum_iterations  index  maximum_iterations
 ```
+
+| Parameter | Meaning |
+|---|---|
+| `maximum_iterations` | Maximum number of plastic iterations per integration point; at least 1. |
+| `index` | Element group (`group_materi_plasti_maximum_iterations` only). |
+
+Without either record the cap is 1000 (`MAX_ITER`), 10 for viscoplastic
+groups and 2 for nonlocal viscoplastic groups.
+
+## Example
+
+Mohr-Coulomb square in compression, capped at one iteration: the return
+to the yield surface is not reached and sigyy stays elastic.
+
+```
+group_materi_plasti_mohr_coul 0 0.5 1. 0.
+materi_plasti_maximum_iterations 1
+```
+
+Tests: `validation-suite/test-2026/materi_plasti_maximum_iterations1`
+(cap 1, sigyy -21.978), `materi_plasti_maximum_iterations2` (group 1000
+wins over global 1, sigyy -3.3935) and
+`materi_plasti_maximum_iterations_error1` (0 is an error).
+
+## Differences with the Professional version
+
+- The manual gives a default of 20000 iterations; the GNU default stays
+  1000 (BACKLOG C112).
+- The Professional accepts 0 and runs as with 1; the GNU stops with an
+  error (out-of-domain value).
+- With the cap at 1 the Professional gives sigyy -21.9773 against the GNU
+  -21.978: the iteration schemes differ in detail.
+- `group_materi_plasti_maximum_iterations` is a GNU record; the
+  Professional has only the global one.

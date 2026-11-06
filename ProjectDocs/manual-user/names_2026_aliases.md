@@ -15,10 +15,19 @@ accepts the new names and stores the records under its own names (the
 | `element_interface_intpnt_strain_average` (6.434) | `element_interface_strain_average` |
 | `element_interface_intpnt_stress_average` (6.436) | `element_interface_stress_average` |
 | `post_node_rhside_ratio_dof_type` (6.951) | `post_node_rhside_ratio_unknowntypes` |
+| `group_materi_hyper_reduced_polynomial` (6.678) | `group_materi_hyper_reducedpolynomial` |
+| `group_materi_hyper_volumetric_simo_taylor` (6.683) | `group_materi_hyper_volumetric_simotaylor` |
+| `group_materi_umat index switch` (6.757) | `group_user_umat` |
+| `group_materi_umat_parameters index p0 p1 ...` (6.758) | `group_user_data` |
 
-Test: `validation-suite/test-2026/alias_names_2026_1` (build_safe checks
-the stored records).
+Tests: `validation-suite/test-2026/alias_names_2026_1` and `alias_names_2026_2`
+(build_safe checks the stored records).
 
 ## Differences with the Professional version
 
 The `.dbs` of the GNU uses the GNU names.
+
+`group_materi_umat_parameters` and the GNU `group_user_data` are one
+record: the GNU umat takes its `props` from `group_user_data`, which the
+GNU user routines `user_sigma` / `user_plasti` also read. An input that
+gives both for the same group keeps the last one.

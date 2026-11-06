@@ -37,6 +37,7 @@ suite sfnet, o un test propio. El registro completo:
 | **F5 T2 C107 — older per-model plastic strain dofs gated by model (4.35-4.40)** | `1a44872` | 2026-11-04 | Professional 02-08-2026 (kappa_shear_ip_state1, von Mises): `_druckprag`, `_hardsoil`, `_cap` stay 0. GNU now fills hardsoil / cap / compression / diprisco / druckprag only in groups with that model, with the epp recovery. Test `materi_strain_plasti_model5` (druckprag, tria3): eppdrp* = epp*, eppcap* = epphs* = 0 (old binary: 0.913406). `mstrain_*` / `mhardsoil_*` targets unchanged. |
 | **F5 T2 C108 — per-model plastic strain and total strain kappa labels renamed to the Professional names** | `c854d82` | 2026-11-04 | Professional 02-08-2026 dof_label of the V7 probes and of `materi_strain_plasti_model5`: `eppca/eppco/eppdi/eppdr/eppha/eppmo/eppte/eppvo*`, `kapto`, `strtocokap`, `strtoshkap`, `strtotekap`. `mstrain_*` targets renamed (old binary: "I do not know : -eppdrxy"). Suite 720 OK / 0 FALLO. |
 | **C110 — `post_node_rhside_fixed` / `_free` signed sums, `post_node_rhside_ratio` measured Professional rule, re-evaluated after the post-solve pass (owner 2026-11-05; also resolves C63)** | 823d58b | 2026-11-05 | Professional 02-08-2026 probes (c110pro, v9t t3 input): fixed -3.98859 0.0908132 / free 3.98859 -0.0908132, ratio 12.9442 (GNU 12.9430), 1.23884 with `-post_node_rhside_free` (GNU 1.23878); ratio = max over principal dofs of mean \|free\| / mean \|fixed\|. Pro `other/slide4` fixed = Professional (C63). Tests `post_node_rhside_ratio1`, `post_node_rhside_ratio_method1`; suite 747 OK. Differential: only the 2 `control_timestep_iterations_automatic` inputs and `ho_mech2` (iteration control) change beyond the rhside records. |
+| **F5 T3 B — 2026 names group_materi_hyper_reduced_polynomial / _volumetric_simo_taylor, group_materi_umat(_parameters) as db_number aliases; global materi_plasti_maximum_iterations (6.804)** | `COMMIT_T3B` | 2026-11-06 | Professional 02-08-2026 accepts `alias_names_2026_2` and stores the same values; cap probes on the `plasti_apply1` square: default -3.39353 (GNU equal), cap 1 -21.9773 (GNU -21.978), 0 accepted (GNU error). Tests `alias_names_2026_2`, `materi_plasti_maximum_iterations1`, `_2`, `_error1`. Default 20000 vs 1000: BACKLOG C112. |
 | **F5 T2 V9 — post data / point records (6.923-6.926, 6.937, 6.946, 6.952, 6.954, 6.957, 6.959, 6.963, 6.966)** | a1c7d7d | 2026-11-04 | Professional 02-08-2026 probes (v9pro, v9t) on a 3-element quad4 mesh with two groups: post_count_result 3 8 1, post_data_result 6, post_node_result x3, post_group_volume_summed 2 1, post_strain_volume_initial 1, post_point element group found/not found, post_quadrilateral group 0.0880956: equal. Divergences: post_point_eps_iso and post_point_node_type -node have no effect in the Professional (GNU follows the manual, DIVERGENCES POST-POINT-SEARCH, BACKLOG C111); post_node_rhside_* measures (BACKLOG C110). Tests `post_count_data1`, `post_data_factor_error1`, `post_point_search1`, `post_point_node_type1`, `post_node_rhside_ratio_method1`. Old binary: "I do not know" (probe r9). |
 | **F5 T2 V8 — post_calcul modifiers (6.902-6.905, 6.916, 6.917, 6.920)** | 42dac7d | 2026-11-04 | Professional 02-08-2026 probes (v8pro): multiply and limit are per dof/operat item (extra values ignored, a short record rejected), order multiply → limit → absolute (negative factor and limit-above-value probes). Tests `post_calcul_modify1/2` (node_dof_calcul = Professional, with the -prival order of K12), `_error1/2`, `post_calcul_apparent_total1` (ground17: 1.333333e7 / 1/3 = Pro), `post_calcul_safety_default1` and `post_calcul_static_pressure1` (ground14 nodes 1 and 41 = Pro). post_calcul_label written in the .dbs with the GNU names (DIVERGENCES POST-CALCUL-LABEL-NAMES). Old binary: "Error in data part" on all 7 inputs. |
 | **F5 T2 C108 — total strain kappa measures** | `94c6161` | 2026-11-04 | Professional 02-08-2026 on `materi_strain_total_kappa1` (isolated and joint runs): kapto 0.00761577 kept after unloading (= GNU); strtocokap -0.01 at the peak (GNU now signed: -0.01, history), -0.005 after unloading (current); strtoshkap 0.00721110 then 0.00360555 (current); strtotekap 0 alone. GNU keeps the history values (manual), DIVERGENCES STRAIN-KAPPA-HISTORY. Also corrects the V7 "Professional adds no dof" records. |
@@ -452,7 +453,7 @@ marcado `PENDIENTE` puede estar cubierto en el GNU bajo otro nombre:
 | `force_edge*` | `force_element_edge*` | Fuerzas de borde distribuidas. El parser traduce el prefijo Professional DENTRO de db_number (Sprint 9): los nombres `force_edge_*` se aceptan directamente. |
 | `condif_convection_edge_normal` (+ `_geometry`) | `condif_convection` (+ `condif_convection_geometry`) | Misma física h·(Tenv−T). Ambos nombres conviven: los Professional son masters types 7/8 de area.cc (con variantes de restricción); los legacy conservan su camino (tests convec1/2, condif8/10). |
 | `condif_radiation_edge_normal` (+ `_geometry`) | `condif_radiation` (+ `condif_radiation_geometry`) | Misma física αr·(Tr⁴−T⁴). Ambos nombres conviven como arriba. |
-| `materi_plasti_maximum_iterations` | `group_materi_plasti_maximum_iterations` | Prefijo `group_` en el GNU. |
+| `materi_plasti_maximum_iterations` | `group_materi_plasti_maximum_iterations` | Prefijo `group_` en el GNU; desde F5 T3 B el GNU acepta también el registro global (el de grupo gana). |
 | `control_mesh_convert` (interfaces) | — | Solo conversión de interfaz; el GNU no tiene elementos de interfaz (Carril A). |
 | `bounda_dof` | `bounda_unknown` | Grafía GNU 2014; el GNU acepta ambas, el Professional rechaza la GNU (AUDIT §1.1; DIVERGENCES `DIALECT`). |
 | `mesh`, `inertia_apply`, `convection_apply`, `convection_stabilization`, `processors` | `options_mesh`, `options_inertia`, `options_convection`, `options_stabilization`, `options_processors` | Ídem. Ojo: el default de `mesh` difiere (GNU `-follow_material`, Pro `-fixed_in_space`, BACKLOG C8). |
@@ -1571,12 +1572,12 @@ Nota: `group_interface_ground` del checklist anterior NUNCA existió (artefacto 
 - [x] `group_materi_hyper_blatz_ko` — presente en el GNU
 - [x] `group_materi_hyper_mooney_rivlin` — presente en el GNU
 - [x] `group_materi_hyper_neohookean` — presente en el GNU
-- [ ] `group_materi_hyper_reduced_polynomial` — PENDIENTE
+- [x] `group_materi_hyper_reduced_polynomial` — F5 T3 B, COMMIT_T3B, 2026-11-06
 - [x] `group_materi_hyper_volumetric_linear` — presente en el GNU
 - [x] `group_materi_hyper_volumetric_murnaghan` — presente en el GNU
 - [x] `group_materi_hyper_volumetric_ogden` — presente en el GNU
 - [x] `group_materi_hyper_volumetric_polynomial` — presente en el GNU
-- [ ] `group_materi_hyper_volumetric_simo_taylor` — PENDIENTE
+- [x] `group_materi_hyper_volumetric_simo_taylor` — F5 T3 B, COMMIT_T3B, 2026-11-06
 - [x] `group_materi_maxwell_chain` — presente en el GNU
 - [x] `group_materi_membrane` — presente en el GNU
 - [x] `group_materi_memory` — presente en el GNU
@@ -1652,8 +1653,8 @@ Nota: `group_interface_ground` del checklist anterior NUNCA existió (artefacto 
 - [ ] `group_materi_stress_null` — PENDIENTE
 - [ ] `group_materi_stress_null_direction` — PENDIENTE
 - [ ] `group_materi_stress_null_direction_automatic` — PENDIENTE
-- [ ] `group_materi_umat` — PENDIENTE
-- [ ] `group_materi_umat_parameters` — PENDIENTE
+- [x] `group_materi_umat` — F5 T3 B, COMMIT_T3B, 2026-11-06
+- [x] `group_materi_umat_parameters` — F5 T3 B, COMMIT_T3B, 2026-11-06
 - [ ] `group_materi_umat_pardiso_decompose` — PENDIENTE
 - [x] `group_materi_undrained_capacity` — familia undrained (2026-09-05, 6.760 + teoria 2.2.7): consumo en materi.cc (total_new_sig + rigidez volumetrica dt/C); ground17/undrained1/undrained2 rc=0
 - [x] `group_materi_viscosity` — presente en el GNU
@@ -1787,7 +1788,7 @@ Nota: `group_interface_ground` del checklist anterior NUNCA existió (artefacto 
 - [ ] `materi_plasti_hypo_substepping` — PENDIENTE
 - [x] `materi_plasti_kappa` — presente en el GNU
 - [x] `materi_plasti_kappa_shear` — batch hypo (2026-09-01; initia 4.25: dof kapsh = int sqrt(0.5 dev(epp):dev(epp)); variable de hardening de la familia hardening_softening (plasti_rule); dam_building/slope la consumen) ; 2026-10-12 (F4 T6f C68, `70235c6`): kept as an integration-point state (ELEMENT_DOF), nodal value with the strain recovery weight (see registro de verificación)
-- [ ] `materi_plasti_maximum_iterations` — PENDIENTE
+- [x] `materi_plasti_maximum_iterations` — F5 T3 B, COMMIT_T3B, 2026-11-06
 - [ ] `materi_plasti_phimob` — PENDIENTE
 - [x] `materi_plasti_rho` — presente en el GNU — 2026-10-12 (F4 T6f C68, `70235c6`): kept as an integration-point state (ELEMENT_DOF), nodal value with the strain recovery weight (see registro de verificación)
 - [x] `materi_plasti_tension_apply` — implementada (commit `467cdbd`, 2026-11-02; F5 W1)

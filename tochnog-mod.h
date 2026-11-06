@@ -1782,6 +1782,8 @@ enum {
   POST_POINT_NODE_TYPE,
   POST_QUADRILATERAL_ELEMENT_GROUP,
   POST_STRAIN_VOLUME_INITIAL,
+  // F5 T3 B (manual Professional 6.804)
+  MATERI_PLASTI_MAXIMUM_ITERATIONS,
   LAST_DUMMY }; // keep LAST_DUMMY always the last one
 
 #define MDAT LAST_DUMMY+DATA_ITEM_SIZE  // reserve space for unknowns

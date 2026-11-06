@@ -2860,6 +2860,20 @@ strain_plasti_model_check materi_strain_plasti_model5 dr
 run_ok "$T2026" materi_strain_total_kappa1
 beam_rec_check materi_strain_total_kappa1 node_dof 4 "-0.002 0.005 0.002 -0.005 0.833333333333 0 0 -5 0 -0.833333333333 0.002 0 0 -0.005 0 0 0.00761577310586 -0.01 0.00721110255093 0.004"
 expected_error_ok "$T2026" materi_strain_total_kappa_error1
+# F5 T3 B: hyper / umat Professional names stored under the GNU records,
+# and the global materi_plasti_maximum_iterations (manual 6.804).
+run_ok "$T2026" alias_names_2026_2
+if grep -q "^group_materi_hyper_reducedpolynomial  1  0.5 0.25 0.125" "$T2026/alias_names_2026_2.dbs" && \
+   grep -q "^group_materi_hyper_volumetric_simotaylor  1  20" "$T2026/alias_names_2026_2.dbs" && \
+   grep -q "^group_user_umat  1  -no" "$T2026/alias_names_2026_2.dbs" && \
+   grep -q "^group_user_data  1  1 2 3" "$T2026/alias_names_2026_2.dbs"; then
+  check_ok "alias_names_2026_2 (records stored under the GNU names)"
+else
+  check_fail "alias_names_2026_2" "an aliased record is missing from the .dbs"
+fi
+run_ok "$T2026" materi_plasti_maximum_iterations1
+run_ok "$T2026" materi_plasti_maximum_iterations2
+expected_error_ok "$T2026" materi_plasti_maximum_iterations_error1
 # F5 T2 V8: post_calcul modifiers (manual 6.902-6.905, 6.916, 6.917,
 # 6.920); expected node_dof_calcul = Professional 02-08-2026 on the same
 # inputs (probes v8pro; -prival largest first, DIVERGENCES K12).

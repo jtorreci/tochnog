@@ -108,6 +108,20 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   niemunis/wolffersdorff variants, borja_tamagnini, elasti_c, hyper reduced_polynomial /
   simo_taylor, visco_power, residual_stiffness, mpc, diprisco_density, history_variable_user,
   phimob, maximum_iterations, hypo_substepping). Route: per family.
+  Probe 2026-11-06: 29 rejected (24 group_materi_* + materi_history_variable,
+  _strain_energy, _plasti_hypo_substepping, _plasti_maximum_iterations, _plasti_phimob);
+  explorer map in Log L-T3-map. Family order A, B, C1-C3, D1-D5, E.
+  - [x] A materi_history_variable / materi_strain_energy: already normalised in input()
+    (initialization part, 60b30d0); the db_number probe cannot see it. No change.
+  - [ ] B aliases group_materi_hyper_reduced_polynomial, _volumetric_simo_taylor,
+    group_materi_umat(_parameters) + global materi_plasti_maximum_iterations. Route: inline.
+    Commit COMMIT_T3B. C112 (default 20000 vs 1000) open for the owner.
+  - [ ] C1 hypo_substepping (+ unused control record), hypo_minimum_void_ratio.
+  - [ ] C2 plasti_mpc + mpc_factor.  - [ ] C3 residual_stiffness, phimob.
+  - [ ] D1 elasti_c + c_direction.  - [ ] D2 visco_power (+ exponential twins).
+  - [ ] D3 wolffersdorff_niemunis.  - [ ] D4 borja_tamagnini.  - [ ] D5 stress_null family.
+  - [ ] E user hooks (young_user, history_variable_user), niemunis_visco(+_ocr),
+    diprisco_density, umat_pardiso_decompose: accept-plus-stub, separate plan or discard.
 - [ ] T4 W5 geometry, mesh tools, mpc, dependency (69). Route: per family.
 - [ ] T5 W6 other physics (25): baseline correction, force_edge_diagram, force_gravity_geometry,
   force_volume_element_group_0, groundflow_phreatic_*, group_beam_*, group_contact_spring_*,
@@ -411,3 +425,14 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   corpus: rc identical, beyond the post_node_rhside records only the 2 control_timestep_iterations_automatic inputs
   differ (dbmeth20 = parallel-runner artefact, identical in isolation). Probes = Pro (dof_type filter honoured).
   Advisories documented: Pro accepts method -yes (GNU rejects); no re-run when the post-solve pass is skipped.
+- L-T3 (2026-11-06) owner: "adelante con T3".
+- L-T3-map (explorer, read-only): only hypo6.dat (niemunis_visco) and hypo11.dat
+  (wolffersdorff_niemunis) of the 29 appear in Pro tests; GNU registers but never reads
+  control_materi_plasti_hypo_substepping and group_materi_plasti_visco_exponential_*;
+  GNU umat_ (umat.c) takes props from group_user_data; no PARDISO (so.cc dgesv).
+- L-T3B: aliases in db_number; umat_parameters -> GROUP_USER_DATA (one GNU user-data
+  record, documented). New global MATERI_PLASTI_MAXIMUM_ITERATIONS, group record wins.
+  Pro probes (plasti_apply1 square): default -3.39353 = GNU; cap 1 -21.9773 vs GNU -21.978;
+  Pro accepts 0 (GNU error, advisory). Manual default 20000 vs GNU 1000 -> BACKLOG C112.
+  The old manual-user page described the Pro name with the group syntax; rewritten.
+

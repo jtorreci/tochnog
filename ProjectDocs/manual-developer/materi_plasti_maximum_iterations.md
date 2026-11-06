@@ -1,44 +1,37 @@
 # materi_plasti_maximum_iterations
 
-## Archivos y funciones
+## Files and functions
 
-- `stress.cc` → the block that sets `max_plasti_iter` inside the
-  per-integration-point stress routine (`stress.cc:460-479`). After the
-  built-in defaults are assigned, a user value overrides them.
-- `database.cc:2502-2506` — keyword registration:
-  `strcpy(name[GROUP_MATERI_PLASTI_MAXIMUM_ITERATIONS],
-  "group_materi_plasti_maximum_iterations")`, type `INTEGER`,
-  `data_length = 1`, class `MATERI`, required for `GROUP_TYPE`.
-- Enum `GROUP_MATERI_PLASTI_MAXIMUM_ITERATIONS` in `tochnog.h` /
-  `tochnog-mod.h`.
+- `database.cc`: two records, registered next to each other.
+  - `GROUP_MATERI_PLASTI_MAXIMUM_ITERATIONS` (GNU, per group): INTEGER,
+    length 1, class MATERI, requires `GROUP_TYPE`.
+  - `MATERI_PLASTI_MAXIMUM_ITERATIONS` (F5 T3 B, manual Professional
+    6.804): INTEGER, length 1, class MATERI, `no_index`.
+- The enum `MATERI_PLASTI_MAXIMUM_ITERATIONS` is appended in `tochnog.h` /
+  `tochnog-mod.h` (F5 T3 B block).
+- `stress.cc`, routine `stress()`: the block that sets `max_plasti_iter`.
 
-## Detalles de implementación
+## Implementation details
 
-- Defaults before the override (`stress.cc:460-465`):
-  - `materi_plasti_f_nonlocal && viscoplasti` → `max_plasti_iter = 2`,
-  - `viscoplasti` → `max_plasti_iter = 10`,
-  - otherwise → `max_plasti_iter = MAX_ITER`.
-- The override block (`stress.cc:470-478`) reads with
-  `db( GROUP_MATERI_PLASTI_MAXIMUM_ITERATIONS, gr, &max_plasti_iter_user,
-  ddum, length_it, VERSION_NORMAL, GET_IF_EXISTS )`. If present and the
-  value is `< 1` it prints an error and exits; otherwise
-  `max_plasti_iter = max_plasti_iter_user`.
-- The loop guard is at `stress.cc:538`:
-  `while ( !plasti_found && total_plasti_iter<max_plasti_iter )`.
+- Defaults: `materi_plasti_f_nonlocal && viscoplasti` → 2,
+  `viscoplasti` → 10, otherwise `MAX_ITER` (1000, `stress.cc`).
+- Override: `db( GROUP_MATERI_PLASTI_MAXIMUM_ITERATIONS, gr, ...,
+  GET_IF_EXISTS ) || db( MATERI_PLASTI_MAXIMUM_ITERATIONS, 0, ...,
+  GET_IF_EXISTS )`, so the group record wins over the global one. A value
+  below 1 prints an error naming both records and exits.
+- Loop guard: `while ( !plasti_found && total_plasti_iter<max_plasti_iter )`.
+  Reaching the cap is silent.
 
-## Dependencias externas
+## Verification
 
-- Core database `db()` accessor only; no external library.
+Professional 02-08-2026 probes on the `plasti_apply1` square without
+`plasti_apply -no`: default sigyy -3.39353 (GNU equal), cap 1 -21.9773
+(GNU -21.978), cap 0 accepted as 1. Suite: `materi_plasti_maximum_iterations1`,
+`_2` (precedence), `_error1`.
 
-## Parámetros hardcodeados / refactorizaciones pendientes
+## Pending
 
-- IMPORTANT GOTCHA: `get_group_data()` does NOT return INTEGER values — it
-  writes into `idum`. Do not use it here; the implementation correctly uses
-  `db()` directly with the group index `gr`.
-- The magic numbers `2` and `10` for the viscoplastic defaults are
-  hardcoded; consider named constants alongside `MAX_ITER`.
-- The "at least 1" validation (`pri` + `exit`) does not carry the group
-  number in the message; adding `gr` would make the diagnostic actionable.
-- `max_plasti_iter` and `total_plasti_iter` are state reset per element in
-  `stress.cc:69`; a refactor could group them into a small struct to avoid
-  the scattered reset.
+- Default 20000 in the manual against `MAX_ITER` 1000 (BACKLOG C112, owner
+  decision). `MAX_ITER` also bounds the membrane plane-stress loop.
+- The viscoplastic defaults 2 and 10 are hardcoded numbers.
+- The error message does not carry the group number.
