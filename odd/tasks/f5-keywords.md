@@ -115,7 +115,7 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
     (initialization part, 60b30d0); the db_number probe cannot see it. No change.
   - [x] B aliases group_materi_hyper_reduced_polynomial, _volumetric_simo_taylor,
     group_materi_umat(_parameters) + global materi_plasti_maximum_iterations. Route: inline.
-    Commit c095d18. C112 resolved (default 20000, owner), commit COMMIT_C112.
+    Commit c095d18. C112 resolved (default 20000, owner), commit 6a78839.
   - [ ] C1 hypo_substepping (+ unused control record), hypo_minimum_void_ratio.
   - [ ] C2 plasti_mpc + mpc_factor.  - [ ] C3 residual_stiffness, phimob.
   - [ ] D1 elasti_c + c_direction.  - [ ] D2 visco_power (+ exponential twins).
