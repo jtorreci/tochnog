@@ -119,8 +119,8 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   - [x] C1 hypo_substepping (+ unused control record), hypo_minimum_void_ratio. Route: inline.
     Commit 6745219.
   - [x] C2 plasti_mpc + mpc_factor. Route: inline. Commit a139f16. C114 (wall cohesion) found.
-  - [ ] C114 wall reduction of c and the direct-path factor (manual + Pro agree). Route: inline.
-    Commit COMMIT_C114.
+  - [x] C114 wall reduction of c and the direct-path factor (manual + Pro agree). Route: inline.
+    Commit 397a3cb.
   - [ ] C3 residual_stiffness, phimob.
   - [ ] D1 elasti_c + c_direction.  - [ ] D2 visco_power (+ exponential twins).
   - [ ] D3 wolffersdorff_niemunis.  - [ ] D4 borja_tamagnini.  - [ ] D5 stress_null family.
