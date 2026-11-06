@@ -121,7 +121,7 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   - [x] C2 plasti_mpc + mpc_factor. Route: inline. Commit a139f16. C114 (wall cohesion) found.
   - [x] C114 wall reduction of c and the direct-path factor (manual + Pro agree). Route: inline.
     Commit 397a3cb.
-  - [ ] C3 residual_stiffness, phimob. phimob: route inline, commit COMMIT_T3C3. residual_stiffness: owner
+  - [ ] C3 residual_stiffness, phimob. phimob: route inline, commit 5e42bae. residual_stiffness: owner
     question (manual: plastic-element stiffness; Pro: no measurable effect).
   - [ ] D1 elasti_c + c_direction.  - [ ] D2 visco_power (+ exponential twins).
   - [ ] D3 wolffersdorff_niemunis.  - [ ] D4 borja_tamagnini.  - [ ] D5 stress_null family.
