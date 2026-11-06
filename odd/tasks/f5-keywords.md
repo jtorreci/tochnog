@@ -116,7 +116,7 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   - [x] B aliases group_materi_hyper_reduced_polynomial, _volumetric_simo_taylor,
     group_materi_umat(_parameters) + global materi_plasti_maximum_iterations. Route: inline.
     Commit c095d18. C112 resolved (default 20000, owner), commit 6a78839.
-  - [ ] C1 hypo_substepping (+ unused control record), hypo_minimum_void_ratio. Route: inline.
+  - [x] C1 hypo_substepping (+ unused control record), hypo_minimum_void_ratio. Route: inline.
     Commit 6745219.
   - [ ] C2 plasti_mpc + mpc_factor.  - [ ] C3 residual_stiffness, phimob.
   - [ ] D1 elasti_c + c_direction.  - [ ] D2 visco_power (+ exponential twins).
@@ -443,4 +443,10 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   minimum e in sigma_() and after the Masin kernel. Pro probes match to 2e-5 (hypo1, hypo7). Masin
   ignores the substepping switch in GNU, Pro moves hypo7 by 0.0036 -> DIVERGENCES HYPO-SUBSTEPPING-MASIN
   (class B).
+- 2026-11-06 C1 independent verifier (Risk item 4, fresh copies ff42b7a / 6745219): PASS. TLS flags set before
+  every read (hypo_ and sigma_ have one caller each; initial-exec TLS on both sides); 8x4 two-group probe
+  with options_processors 1/4/8: group isolation exact, 1-vs-N differences 1.6e-8 = baseline threading
+  round-off; 25 hypo inputs byte-identical to baseline without the records (time_calculation excluded);
+  suite 757/0; rejected inputs rejected as Pro. Advisory: minimum_void_ratio1 hyhis0 tolerance 1e-5 pins
+  GNU (Pro 1.2e-5 away).
 
