@@ -113,9 +113,9 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   explorer map in Log L-T3-map. Family order A, B, C1-C3, D1-D5, E.
   - [x] A materi_history_variable / materi_strain_energy: already normalised in input()
     (initialization part, 60b30d0); the db_number probe cannot see it. No change.
-  - [ ] B aliases group_materi_hyper_reduced_polynomial, _volumetric_simo_taylor,
+  - [x] B aliases group_materi_hyper_reduced_polynomial, _volumetric_simo_taylor,
     group_materi_umat(_parameters) + global materi_plasti_maximum_iterations. Route: inline.
-    Commit COMMIT_T3B. C112 (default 20000 vs 1000) open for the owner.
+    Commit c095d18. C112 (default 20000 vs 1000) open for the owner.
   - [ ] C1 hypo_substepping (+ unused control record), hypo_minimum_void_ratio.
   - [ ] C2 plasti_mpc + mpc_factor.  - [ ] C3 residual_stiffness, phimob.
   - [ ] D1 elasti_c + c_direction.  - [ ] D2 visco_power (+ exponential twins).
