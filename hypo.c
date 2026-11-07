@@ -24,6 +24,7 @@ static long int c__9 = 9;
    runs in parallel and the minimum depends on the element group. */
 __thread long int hypo_substepping_off = 0;
 __thread long int hypo_minimum_void_ratio_on = 0;
+__thread long int hypo_void_ratio_exact = 0;
 __thread double hypo_minimum_void_ratio = 0.;
 static double c_b45 = 1.5;
 static long int c__81 = 81;
@@ -390,6 +391,16 @@ long int *iuseepi, *ihypotype;
     extract_(&dstr[4], dt, d__);
     edot = (eold + 1.) * tra_(d__);
     e = eold + edot * *dt;
+/*       group_materi_plasti_hypo_void_ratio_linear -no: exact volume
+         change from the determinant of I + strain increment */
+    if (hypo_void_ratio_exact) {
+	double *g = &dstr[4];
+	double g00 = 1. + g[0], g11 = 1. + g[4], g22 = 1. + g[8];
+	double det = g00 * (g11 * g22 - g[5] * g[7])
+		   - g[3] * (g[1] * g22 - g[2] * g[7])
+		   + g[6] * (g[1] * g[5] - g[2] * g11);
+	e = (eold + 1.) * det - 1.;
+    }
     if (hypo_minimum_void_ratio_on && e < hypo_minimum_void_ratio)
 	e = hypo_minimum_void_ratio;
     his[1] = e;

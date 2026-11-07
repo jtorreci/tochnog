@@ -351,6 +351,7 @@ page lists its own in "Differences with the Professional version".
 - [group_materi_plasti_residual_stiffness](group_materi_plasti_residual_stiffness.md) — shear stiffness fraction of plastic points in the matrix, converged result unchanged (manual 6.735, F5).
 - [group_materi_elasti_c](group_materi_elasti_c.md) — the 81 values of C_ijkl and their local axes (manual 6.642, 6.643, F5).
 - [group_materi_plasti_visco_power_name](group_materi_plasti_visco_power_name.md) — visco power eta / p per plasticity model (manual 6.748, 6.749, F5).
+- [group_materi_plasti_hypo_void_ratio_linear](group_materi_plasti_hypo_void_ratio_linear.md) — linear (trace) or exact (determinant) void ratio change in hypoplasticity (manual 6.722, F5).
 - [group_materi_plasti_visco_exponential_name](group_materi_plasti_visco_exponential_name.md) — visco exponential gamma / alpha per plasticity model and the exponent limit (manual 6.744-6.746, F5).
 - [materi_plasti_hypo_history](materi_plasti_hypo_history.md) — the 8 hypoplasticity history variables hyhis0..hyhis7 (manual Professional 4.23); fixed count, Professional basenames, shared hisv dof.
 - [materi_plasti_kappa_shear](materi_plasti_kappa_shear.md) — the kapsh dof (manual 4.25): size of the SHEAR plastic strain, hardening variable of the Mohr-Coulomb hardening-softening family.

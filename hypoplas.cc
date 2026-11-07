@@ -25,7 +25,8 @@
 #define MAX_DATA_LENGTH 10
 #define LENGTH_INTERGRANULARSTRAIN 6
 
-extern "C" __thread long int hypo_substepping_off, hypo_minimum_void_ratio_on;
+extern "C" __thread long int hypo_substepping_off, hypo_minimum_void_ratio_on,
+  hypo_void_ratio_exact;
 extern "C" __thread double hypo_minimum_void_ratio;
 
 extern "C" 
@@ -117,6 +118,13 @@ void hypoplasticity( long int element, long int gr,
     CONTROL_MATERI_PLASTI_HYPO_SUBSTEPPING );
   hypo_minimum_void_ratio_on = db( GROUP_MATERI_PLASTI_HYPO_MINIMUM_VOID_RATIO,
     gr, idum, &hypo_minimum_void_ratio, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+  // group_materi_plasti_hypo_void_ratio_linear (manual 6.722, default -yes)
+  {
+    long int void_ratio_linear=-YES;
+    db( GROUP_MATERI_PLASTI_HYPO_VOID_RATIO_LINEAR, gr, &void_ratio_linear,
+      ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+    hypo_void_ratio_exact = ( void_ratio_linear==-NO );
+  }
 
     if(db_active_index( GROUP_MATERI_PLASTI_HYPO_WOLFERSDORFF, gr, VERSION_NORMAL )) hypo_wolfersdorff=1; 
     else if(db_active_index( GROUP_MATERI_PLASTI_HYPO_LOWANGLES, gr, VERSION_NORMAL )) hypo_lowangles=1;

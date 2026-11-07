@@ -4829,6 +4829,14 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   data_class[GROUP_MATERI_PLASTI_VISCO_POWER_VALUE] = MATERI;
   data_required[GROUP_MATERI_PLASTI_VISCO_POWER_VALUE] = GROUP_TYPE;
 
+  // manual Professional 6.722: -yes (default) linear void ratio change
+  // from the trace of the deformation, -no exact from its determinant
+  strcpy(name[GROUP_MATERI_PLASTI_HYPO_VOID_RATIO_LINEAR],"group_materi_plasti_hypo_void_ratio_linear");
+  type[GROUP_MATERI_PLASTI_HYPO_VOID_RATIO_LINEAR] = INTEGER;
+  data_length[GROUP_MATERI_PLASTI_HYPO_VOID_RATIO_LINEAR] = 1;
+  data_class[GROUP_MATERI_PLASTI_HYPO_VOID_RATIO_LINEAR] = MATERI;
+  data_required[GROUP_MATERI_PLASTI_HYPO_VOID_RATIO_LINEAR] = GROUP_TYPE;
+
   strcpy(name[GROUP_MATERI_PLASTI_CAMCLAY],"group_materi_plasti_camclay");
   type[GROUP_MATERI_PLASTI_CAMCLAY] = DOUBLE_PRECISION;
   // manual Professional 6.689: index M kappa lambda (3 values). The
@@ -9789,9 +9797,6 @@ long int db_number( const char str[] )
     else if ( !strcmp( str, "group_materi_plasti_hypo_strain_intergranular" ) )
       // Professional name of the GNU canonical intergranularstrain record
       return GROUP_MATERI_PLASTI_HYPO_INTERGRANULARSTRAIN;
-    else if ( !strcmp( str, "group_materi_plasti_hypo_void_ratio_linear" ) )
-      // Professional name of the GNU canonical pressuredependentvoidratio
-      return GROUP_MATERI_PLASTI_HYPO_PRESSUREDEPENDENTVOIDRATIO;
     else if ( !strcmp( str, "group_materi_plasti_hypo_masin_clay_advanced_direction" ) )
       // Professional spelling; GNU canonical has the avanced typo
       return GROUP_MATERI_PLASTI_HYPO_MASIN_CLAY_AVANCED_DIRECTION;

@@ -2935,6 +2935,10 @@ run_ok "$T2026" group_materi_plasti_visco_exponential_name5
 run_ok "$T2026" group_materi_plasti_visco_exponential_limit1
 run_ok "$T2026" group_materi_plasti_visco_exponential_limit2
 expected_error_ok "$T2026" group_materi_plasti_visco_exponential_name_error1
+# F5 T3 D3 / C118: group_materi_plasti_hypo_void_ratio_linear (manual 6.722),
+# Professional other/hypo11 without the Niemunis record.
+run_ok "$T2026" group_materi_plasti_hypo_void_ratio_linear1
+run_ok "$T2026" group_materi_plasti_hypo_void_ratio_linear2
 # F5 T2 V8: post_calcul modifiers (manual 6.902-6.905, 6.916, 6.917,
 # 6.920); expected node_dof_calcul = Professional 02-08-2026 on the same
 # inputs (probes v8pro; -prival largest first, DIVERGENCES K12).

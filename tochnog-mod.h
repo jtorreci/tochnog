@@ -1800,6 +1800,7 @@ enum {
   // F5 T3 D2 (manual Professional 6.748, 6.749)
   GROUP_MATERI_PLASTI_VISCO_POWER_NAME,
   GROUP_MATERI_PLASTI_VISCO_POWER_VALUE,
+  GROUP_MATERI_PLASTI_HYPO_VOID_RATIO_LINEAR,
   LAST_DUMMY }; // keep LAST_DUMMY always the last one
 
 #define MDAT LAST_DUMMY+DATA_ITEM_SIZE  // reserve space for unknowns
