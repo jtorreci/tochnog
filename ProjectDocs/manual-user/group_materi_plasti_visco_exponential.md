@@ -14,8 +14,8 @@ Two rate laws are implemented:
   ```
   lambda = gamma * (-pressure) * exp(alpha*f)
   ```
-  with the exponent argument clamped to `EPS_VISCO = 3.` (the professional
-  default of `group_materi_plasti_visco_exponential_limit`).
+  with the exponent argument clamped to
+  `group_materi_plasti_visco_exponential_limit` (default 3).
 
 - **Power** (`group_materi_plasti_visco_power eta p f_ref`):
   ```
@@ -65,8 +65,7 @@ group_materi_plasti_visco_exponential 0  0.01  0.5
 
 ## Notes
 
-- The exponent argument limit is hardcoded to 3 in `stress.cc`
-  (`EPS_VISCO`); the professional keyword
-  `group_materi_plasti_visco_exponential_limit` is NOT implemented.
-- The `_name`/`_values` variants (per-plasticity-model parameters) of the
-  professional manual are NOT implemented.
+- The exponent argument limit and the `_name` / `_values` variants
+  (per-plasticity-model parameters) are described in
+  `group_materi_plasti_visco_exponential_name.md` and
+  `group_materi_plasti_visco_power_name.md`.

@@ -8,7 +8,7 @@
 - `stress.cc` `set_stress()`: read after `GROUP_MATERI_PLASTI_VISCO_POWER`
   (else-if, so that record wins). `visco_named` keeps `viscoplasti` 0 until
   the first yield test of a plastic loop pass (`plasti_iter==1`, after
-  `GET_YIELD_RULE` set `plasti_type`); `visco_power_select()` maps the
+  `GET_YIELD_RULE` set `plasti_type`); `visco_named_select()` maps the
   type to its record and returns eta / p of the matching name.
   `max_plasti_iter` switches between `max_iter_visco` (10, 2 with
   `materi_plasti_f_nonlocal`) and `max_iter_ep` (MAX_PLASTI_ITER); a
@@ -34,5 +34,5 @@ already without visco (BACKLOG C116).
 
 ## Pending
 
-- `group_materi_plasti_visco_exponential_name` / `_values` (6.745, 6.746):
-  registered, not read (the Professional reads the name as an integer).
+- None. The exponential twins share `visco_named_select()`, see
+  `group_materi_plasti_visco_exponential_name.md`.

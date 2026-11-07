@@ -123,7 +123,10 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
     Commit 397a3cb.
   - [x] C3 residual_stiffness, phimob. phimob: route inline, commit 5e42bae. residual_stiffness: route
     inline, commit a806c1c (owner 2026-11-06: manual followed, DIVERGENCES PLASTI-RESIDUAL-STIFFNESS).
-  - [x] D1 elasti_c + c_direction (route inline, commit 6b8327d).  - [x] D2 visco_power_name / _value (route inline, commit 2ef6bdc); exponential twins: owner question.
+  - [x] D1 elasti_c + c_direction (route inline, commit 6b8327d).
+  - [x] D2 visco_power_name / _value (route inline, commit 2ef6bdc).
+  - [x] D2x visco_exponential_name / _values / _limit (route inline, commit COMMIT_xxx; owner 2026-11-07: manual
+    followed, DIVERGENCES VISCO-EXPONENTIAL-NAME; C117 found).
   - [ ] D3 wolffersdorff_niemunis.  - [ ] D4 borja_tamagnini.  - [ ] D5 stress_null family.
   - [ ] E user hooks (young_user, history_variable_user), niemunis_visco(+_ocr),
     diprisco_density, umat_pardiso_decompose: accept-plus-stub, separate plan or discard.
@@ -487,3 +490,7 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   selects per integration point at the first yield test (visco_power_select). Pro reads
   visco_exponential_name as an INTEGER and rejects names ("Integer values are expected"), so the exponential
   twins contradict the manual 6.745 -> owner question. C116 added (tension + vonmises group differs from Pro).
+- L-T3D2x (2026-11-07, user): "si, hazlo como en el manual y registra la divergencia con Pro". Exponential names
+  share visco_named_select (visco_named 2); _limit (also registered, unread) replaces EPS_VISCO, Pro honours it
+  (limit 1: -0.453047, GNU -0.453174). Named targets = GNU plain record (Pro refuses names). C117: plain
+  exponential with the limit inactive differs from Pro (alpha 1, 0.01; not the iteration cap).

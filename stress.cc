@@ -650,11 +650,13 @@ long int direct_plastic_strain( double dsig[],
   return 1;
 }
 
-// group_materi_plasti_visco_power_name / _value: the eta and p of the
-// active plasticity model plasti_type {sub-surfaces map to their record}.
-// Returns 1 and fills visco_power[0..1] when the model is named.
-static long int visco_power_select( long int plasti_type, long int n_names,
-  long int names[], double values[], double visco_power[] )
+// group_materi_plasti_visco_power_name / _value and
+// group_materi_plasti_visco_exponential_name / _values: the two visco
+// constants {eta p, or gamma alpha} of the active plasticity model
+// plasti_type {sub-surfaces map to their record}.
+// Returns 1 and fills visco_pair[0..1] when the model is named.
+static long int visco_named_select( long int plasti_type, long int n_names,
+  long int names[], double values[], double visco_pair[] )
 {
   long int k=0, record=plasti_type;
   if ( record==GROUP_MATERI_PLASTI_DRUCKPRAG_APEX )
@@ -668,8 +670,8 @@ static long int visco_power_select( long int plasti_type, long int n_names,
     record = GROUP_MATERI_PLASTI_MOHRCOUL;
   for ( k=0; k<n_names; k++ ) {
     if ( labs(names[k])==record ) {
-      visco_power[0] = values[2*k];
-      visco_power[1] = values[2*k+1];
+      visco_pair[0] = values[2*k];
+      visco_pair[1] = values[2*k+1];
       return 1;
     }
   }
@@ -716,6 +718,7 @@ void set_stress( long int element, long int gr,
   double lambda=0., deps_size=0., lambda_new=0., lambda_previous=0., 
     tmp=0., tmp_old=0., tmp_inc=0., tmp_new=0., 
     f=0., f_previous=0, f_ref=0., materi_expansion_linear=0., 
+    visco_limit=EPS_VISCO, visco_pair[2], 
     eta=0., pressure=0., strain_size=0., straindev_size=0., linear_ept=0.,zero_ept=0.,
 	 meanstrain=0.,
     plasti_kinematic_hardening=0., young = 0., young_linear_ept=0., poisson=0., 
@@ -789,6 +792,33 @@ void set_stress( long int element, long int gr,
       exit(1);
     }
   }
+  // group_materi_plasti_visco_exponential_name / _values (manual
+  // Professional 6.745, 6.746): the same per-model selection for the
+  // exponential law, with gamma alpha per name. The Professional
+  // 02-08-2026 reads _name as one integer and refuses model names, so
+  // these records are implemented after the manual.
+  else if ( db( GROUP_MATERI_PLASTI_VISCO_EXPONENTIAL_NAME, gr, visco_names,
+      work, n_visco_names, VERSION_NORMAL, GET_IF_EXISTS ) ) {
+    long int n_values=0, k=0;
+    visco_named = 2;
+    if ( !db( GROUP_MATERI_PLASTI_VISCO_EXPONENTIAL_VALUES, gr, visco_idum,
+          visco_values, n_values, VERSION_NORMAL, GET_IF_EXISTS ) ||
+         n_values!=2*n_visco_names ) {
+      pri( "Error: group_materi_plasti_visco_exponential_values needs two "
+        "values {gamma alpha} for each name of "
+        "group_materi_plasti_visco_exponential_name." );
+      exit(1);
+    }
+    for ( k=0; k<n_values; k++ ) {
+      if ( visco_values[k]<=0. )
+        db_error( GROUP_MATERI_PLASTI_VISCO_EXPONENTIAL_VALUES, gr );
+    }
+    pressure = ( new_sig[0] + new_sig[4] + new_sig[8] ) / 3.;
+  }
+  // group_materi_plasti_visco_exponential_limit (manual Professional
+  // 6.744): the cap of the exponent argument alpha*f, default 3.
+  get_group_data( GROUP_MATERI_PLASTI_VISCO_EXPONENTIAL_LIMIT, gr, element,
+    new_unknowns, &visco_limit, ldum, GET_IF_EXISTS );
 
   // time step of the CURRENT step (VERSION_NEW, as every other module):
   // the _visco direct cut-offs relax with 1-exp(-dt/tm) over the step from
@@ -2096,10 +2126,15 @@ void set_stress( long int element, long int gr,
         old_epp, inc_epp, inc_ept, GET_YIELD_RULE, 
         plasti_type, test_sig, f, new_f, ddum );
       if ( visco_named ) {
-        viscoplasti = visco_power_select( plasti_type, n_visco_names,
-          visco_names, visco_values, plasti_visco_power );
-        if ( viscoplasti ) {
-          eta = plasti_visco_power[0]; p = plasti_visco_power[1];
+        viscoplasti = visco_named_select( plasti_type, n_visco_names,
+          visco_names, visco_values, visco_pair );
+        if ( viscoplasti && visco_named==2 ) {
+          gamma = plasti_visco_exponential[0] = visco_pair[0];
+          alpha = plasti_visco_exponential[1] = visco_pair[1];
+        }
+        else if ( viscoplasti ) {
+          eta = plasti_visco_power[0] = visco_pair[0];
+          p = plasti_visco_power[1] = visco_pair[1];
           f_ref = 1.;
         }
         max_plasti_iter = viscoplasti ? max_iter_visco : max_iter_ep;
@@ -2121,7 +2156,7 @@ void set_stress( long int element, long int gr,
           lambda_previous = 0.; f_previous = f;
           if ( plasti_visco_exponential[0]>0. ) {
             tmp = alpha*f;
-            if ( tmp>EPS_VISCO ) tmp = EPS_VISCO;
+            if ( tmp>visco_limit ) tmp = visco_limit;
             lambda = gamma * (-pressure) * exp(tmp);
           }
           else {
@@ -2173,7 +2208,7 @@ void set_stress( long int element, long int gr,
         lambda_previous = lambda; f_previous = f;
         if ( plasti_visco_exponential[0]>0. ) {
           tmp = alpha*f;
-          if ( tmp>EPS_VISCO ) tmp = EPS_VISCO;
+          if ( tmp>visco_limit ) tmp = visco_limit;
           lambda = gamma * (-pressure) * exp(tmp);
         }
         else {

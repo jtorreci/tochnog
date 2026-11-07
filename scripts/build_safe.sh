@@ -2924,6 +2924,17 @@ run_ok "$T2026" group_materi_plasti_visco_power_name3
 run_ok "$T2026" group_materi_plasti_visco_power_name4
 run_ok "$T2026" group_materi_plasti_visco_power_name5
 expected_error_ok "$T2026" group_materi_plasti_visco_power_name_error1
+# F5 T3 D2x: group_materi_plasti_visco_exponential_name / _values / _limit
+# (manual 6.744-6.746); the Professional refuses model names, so the name
+# targets equal the GNU plain visco_exponential; limit1 = Professional 2e-4.
+run_ok "$T2026" group_materi_plasti_visco_exponential_name1
+run_ok "$T2026" group_materi_plasti_visco_exponential_name2
+run_ok "$T2026" group_materi_plasti_visco_exponential_name3
+run_ok "$T2026" group_materi_plasti_visco_exponential_name4
+run_ok "$T2026" group_materi_plasti_visco_exponential_name5
+run_ok "$T2026" group_materi_plasti_visco_exponential_limit1
+run_ok "$T2026" group_materi_plasti_visco_exponential_limit2
+expected_error_ok "$T2026" group_materi_plasti_visco_exponential_name_error1
 # F5 T2 V8: post_calcul modifiers (manual 6.902-6.905, 6.916, 6.917,
 # 6.920); expected node_dof_calcul = Professional 02-08-2026 on the same
 # inputs (probes v8pro; -prival largest first, DIVERGENCES K12).

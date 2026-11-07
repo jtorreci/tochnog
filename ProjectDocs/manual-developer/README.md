@@ -127,7 +127,7 @@ page lists its own in "Differences with the Professional version".
 - [group_materi_viscosity](group_materi_viscosity.md) — viscosity (viscosit.cc viscous_stress; user.cc stub).
 - [group_materi_damage_mazars](group_materi_damage_mazars.md) — Mazars damage (damage.cc; epseq accumulation bug fixed 2026-08-10).
 - [group_materi_expansion_linear](group_materi_expansion_linear.md) — thermal expansion (stress.cc:437, materi.cc:166).
-- [group_materi_plasti_visco_exponential](group_materi_plasti_visco_exponential.md) — viscoplasticity (stress.cc:100-115, 737-755; EPS_VISCO hardcoded).
+- [group_materi_plasti_visco_exponential](group_materi_plasti_visco_exponential.md) — viscoplasticity (stress.cc set_stress; EPS_VISCO is the default of _limit).
 - [group_materi_plasti_visco_power](group_materi_plasti_visco_power.md) — power viscoplasticity: dual layout (Professional eta p / legacy eta p f_ref), f_ref=1 implicit, lambda = eta*(f/f_ref)^p times dtime.
 - [group_materi_plasti_mohr_coul](group_materi_plasti_mohr_coul.md) — plasti.cc plasti_rule MC block (eigenvalues, f_yield/f_flow) + central-difference flow gradient; MC-VERTEX-ZZ guard tests.
 - [group_materi_membrane](group_materi_membrane.md) — membrane.cc membrane_apply (elastic zz correction added to new_ept/new_epe, called from set_stress); C69 yy/zz plastic split; MEMBRANE-EPTZZ guard tests.
@@ -348,7 +348,8 @@ page lists its own in "Differences with the Professional version".
 - [materi_plasti_phimob](materi_plasti_phimob.md) — phimob dof, root of the Mohr-Coulomb yield function, label shared with the PHIMOB operator (F5).
 - [group_materi_plasti_residual_stiffness](group_materi_plasti_residual_stiffness.md) — plastic_ip flag and deviatoric scaling of ddsdde in set_stress (F5).
 - [group_materi_elasti_c](group_materi_elasti_c.md) — C_ijkl added after every elastic law in set_stress, axis rotation and normalization (F5).
-- [group_materi_plasti_visco_power_name](group_materi_plasti_visco_power_name.md) — per-model visco choice at the first yield test, visco_power_select (F5).
+- [group_materi_plasti_visco_power_name](group_materi_plasti_visco_power_name.md) — per-model visco choice at the first yield test, visco_named_select (F5).
+- [group_materi_plasti_visco_exponential_name](group_materi_plasti_visco_exponential_name.md) — exponential names (visco_named 2) and visco_limit replacing EPS_VISCO (F5).
 - [materi_plasti_hypo_history](materi_plasti_hypo_history.md) — hyhis0..hyhis7 registration, unknown handling, Masin kernel slot mapping (e = slot 0, s = slot 4 with the hyhis layout).
 - [materi_plasti_kappa_shear](materi_plasti_kappa_shear.md) — kapsh dof registration + deviatoric plastic strain accumulation in set_stress + element RHS + hardening read in plasti_rule.
 - [group_materi_plasti_mohr_coul_direct_hardening_softening](group_materi_plasti_mohr_coul_direct_hardening_softening.md) — degrees conversion (PIRAD/180) in plasti_rule before the interpolation block.

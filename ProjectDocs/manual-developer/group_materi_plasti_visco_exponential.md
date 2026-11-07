@@ -15,16 +15,17 @@
     lambda_previous = 0.; f_previous = f;
     if ( plasti_visco_exponential[0]>0. ) {
       tmp = alpha*f;
-      if ( tmp>EPS_VISCO ) tmp = EPS_VISCO;
+      if ( tmp>visco_limit ) tmp = visco_limit;
       lambda = gamma * (-pressure) * exp(tmp);
     } else {
       assert( plasti_visco_power[0]>0. );
       lambda = eta * pow(f/f_ref, p);
     }
     ```
-  - Line 796: the same `EPS_VISCO` clamp is applied on the second pass
+  - The same `visco_limit` clamp is applied on the second pass
     (predictor/corrector update).
-- `stress.cc:41` — `#define EPS_VISCO 3.` hardcodes the exponential limit.
+- `stress.cc` — `#define EPS_VISCO 3.` is the default of `visco_limit`,
+  read from `group_materi_plasti_visco_exponential_limit` (F5).
 - `check.cc:604-611` — both visco-plasti records require `materi_stress` and
   `materi_strain_plasti`.
 - `database.cc:2713-2725` — registrations:
@@ -44,16 +45,14 @@
   effectively applying the rate law from the first iteration.
 - When `materi_plasti_f_nonlocal` is active, `f` is replaced by the nonlocal
   yield function unknown `fn_indx` (line 768).
-- The exponential `alpha*f` is capped at 3 to avoid overflow of `exp()` — a
-  coarse stand-in for the professional `..._exponential_limit` keyword.
+- The exponential `alpha*f` is capped at `visco_limit` (default 3) to avoid
+  overflow of `exp()`.
 
 ## Missing / not implemented (professional parity)
 
-- `group_materi_plasti_visco_exponential_limit` — NOT registered (the limit is
-  the hardcoded `EPS_VISCO`).
-- `group_materi_plasti_visco_exponential_name/_values` and
-  `group_materi_plasti_visco_power_name/_value` — per-plasticity-model
-  parameter tables — NOT registered.
+- None left: `_limit`, `_name` / `_values` and the power names are
+  implemented (F5 T3, see `group_materi_plasti_visco_exponential_name.md`
+  and `group_materi_plasti_visco_power_name.md`).
 
 ## External dependencies
 
@@ -64,9 +63,8 @@
 
 ## Hardcoded parameters / pending refactorings
 
-- `EPS_VISCO = 3.` (stress.cc:41) is the main pending item: it should become a
-  data record (`group_materi_plasti_visco_exponential_limit`) to match the
-  professional manual.
+- BACKLOG C117: with the limit inactive the plain exponential law differs
+  from the Professional 02-08-2026 for some alpha.
 - The exponential law uses `-pressure` from the current stress; for purely
   tensile paths this may give `lambda=0` — a documented limitation.
 
