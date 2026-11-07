@@ -131,7 +131,7 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
     alias) resolved, route inline, commit 932c5f9.
   - [x] D4 borja_tamagnini (route inline, commit df32477; owner 2026-11-07: paper over Pro, DIVERGENCES
     BORJA-TAMAGNINI).
-  - [x] D5 stress_null family (route inline, commit COMMIT_xxx).
+  - [x] D5 stress_null family (route inline, commit 1fc60e6).
   - [ ] E user hooks (young_user, history_variable_user), niemunis_visco(+_ocr),
     diprisco_density, umat_pardiso_decompose: accept-plus-stub, separate plan or discard.
 - [ ] T4 W5 geometry, mesh tools, mpc, dependency (69). Route: per family.
