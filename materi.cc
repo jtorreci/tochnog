@@ -19,6 +19,9 @@
 
 #include "tochnog.h"
 
+static void materi_stress_null( long int element, long int gr,
+  double sig[], double ddsdde[] );
+
 #define EPS_H 1.e-8
 
 // C80.1 (2026-10-16): physical shape-function derivatives of the bilinear
@@ -640,6 +643,7 @@ void materi( long int element, long int gr, long int name, long int nnol,
       old_deften, new_deften, inc_rot,
       ddsdde, viscosity, viscosity_heatgeneration, softvar_nonl, softvar_l,
       mc_normal, ten_normal);
+    materi_stress_null( element, gr, new_sig, ddsdde );
     // mesh_activate_gravity -method2: an element that is not activated yet
     // stays in the calculation with a REDUCED STIFFNESS (activation_stiff,
     // mesh_activate_gravity_stiffness_factor): the material tangent and
@@ -2216,6 +2220,116 @@ double get_materi_density( long int element, long int element_group, long int nn
   }
   return materi_dens;
 
+}
+
+static void materi_stress_null( long int element, long int gr,
+  double sig[], double ddsdde[] )
+
+  // group_materi_stress_null (manual Professional 6.753-6.755): the listed
+  // components of the final stress in the local frame {rows of
+  // group_materi_stress_null_direction, else the element normal as local
+  // x with group_materi_stress_null_direction_automatic -yes, else the
+  // global frame} are set to zero, after plasticity {as the Professional
+  // 02-08-2026}. The same projection is applied to every strain column
+  // of the material tangent ddsdde.
+
+{
+  long int i=0, j=0, k=0, n=0, idim=0, jdim=0, ldum=0, swit=-NO,
+    comp[DATA_ITEM_SIZE], pair[MDIM*MDIM][2], npair=0, idum[1];
+  double ddum[1], frame[MDIM*MDIM], normal[MDIM], tmp=0., a[MDIM],
+    work[MDIM*MDIM], col[MSTRAIN];
+
+  if ( !db( GROUP_MATERI_STRESS_NULL, gr, comp, ddum, n, VERSION_NORMAL,
+      GET_IF_EXISTS ) ) return;
+  for ( k=0; k<n; k++ ) {
+    long int c = labs( comp[k] );
+    if      ( c==X ) { pair[npair][0] = 0; pair[npair][1] = 0; }
+    else if ( c==Y ) { pair[npair][0] = 1; pair[npair][1] = 1; }
+    else if ( c==Z ) { pair[npair][0] = 2; pair[npair][1] = 2; }
+    else if ( c==XY ) { pair[npair][0] = 0; pair[npair][1] = 1; }
+    else if ( c==XZ ) { pair[npair][0] = 0; pair[npair][1] = 2; }
+    else if ( c==YZ ) { pair[npair][0] = 1; pair[npair][1] = 2; }
+    else {
+      pri( "Error: group_materi_stress_null accepts -x -y -z -xy -xz -yz." );
+      exit(TN_EXIT_STATUS);
+    }
+    npair++;
+  }
+
+    // local frame: row i is the local direction i
+  array_set( frame, 0., MDIM*MDIM );
+  for ( i=0; i<MDIM; i++ ) frame[i*MDIM+i] = 1.;
+  if ( db( GROUP_MATERI_STRESS_NULL_DIRECTION, gr, idum, work, ldum,
+      VERSION_NORMAL, GET_IF_EXISTS ) ) {
+      // each axis is normalized, as the Professional 02-08-2026
+    array_move( work, frame, MDIM*MDIM );
+    for ( i=0; i<MDIM; i++ ) {
+      if ( !array_normalize( &frame[i*MDIM], MDIM ) ) {
+        pri( "Error: group_materi_stress_null_direction has a zero direction." );
+        exit(TN_EXIT_STATUS);
+      }
+    }
+  }
+  else if ( db( GROUP_MATERI_STRESS_NULL_DIRECTION_AUTOMATIC, gr, &swit,
+      ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS ) && swit==-YES ) {
+    array_set( normal, 0., MDIM );
+    db( ELEMENT_NORMAL, element, idum, normal, ldum, VERSION_NORMAL,
+      GET_IF_EXISTS );
+    if ( array_normalize( normal, MDIM ) ) {
+        // local x = normal; local y = the global axis least aligned with
+        // the normal, made perpendicular; local z = x cross y
+      k = 0;
+      for ( i=1; i<MDIM; i++ )
+        if ( scalar_dabs(normal[i])<scalar_dabs(normal[k]) ) k = i;
+      array_set( a, 0., MDIM ); a[k] = 1.;
+      tmp = array_inproduct( a, normal, MDIM );
+      for ( i=0; i<MDIM; i++ ) a[i] -= tmp * normal[i];
+      array_normalize( a, MDIM );
+      for ( i=0; i<MDIM; i++ ) {
+        frame[0*MDIM+i] = normal[i];
+        frame[1*MDIM+i] = a[i];
+      }
+      frame[2*MDIM+0] = normal[1]*a[2] - normal[2]*a[1];
+      frame[2*MDIM+1] = normal[2]*a[0] - normal[0]*a[2];
+      frame[2*MDIM+2] = normal[0]*a[1] - normal[1]*a[0];
+    }
+  }
+
+    // projection of a symmetric tensor t {in place}
+  auto project = [&]( double t[] ) {
+    double loc[MDIM*MDIM], d[MDIM*MDIM];
+    long int p=0, q=0, r=0, s=0;
+    for ( p=0; p<MDIM; p++ )
+      for ( q=0; q<MDIM; q++ ) {
+        loc[p*MDIM+q] = 0.;
+        for ( r=0; r<MDIM; r++ )
+          for ( s=0; s<MDIM; s++ )
+            loc[p*MDIM+q] += frame[p*MDIM+r] * t[r*MDIM+s] * frame[q*MDIM+s];
+      }
+    array_set( d, 0., MDIM*MDIM );
+    for ( k=0; k<npair; k++ ) {
+      long int u = pair[k][0], v = pair[k][1];
+      for ( r=0; r<MDIM; r++ )
+        for ( s=0; s<MDIM; s++ ) {
+          d[r*MDIM+s] += loc[u*MDIM+v] * frame[u*MDIM+r] * frame[v*MDIM+s];
+          if ( u!=v )
+            d[r*MDIM+s] += loc[v*MDIM+u] * frame[v*MDIM+r] * frame[u*MDIM+s];
+        }
+    }
+    for ( r=0; r<MDIM*MDIM; r++ ) t[r] -= d[r];
+  };
+
+  project( sig );
+  for ( j=0; j<MSTRAIN; j++ ) {
+    for ( i=0; i<MSTRAIN; i++ ) col[i] = ddsdde[i*MSTRAIN+j];
+    for ( idim=0; idim<MDIM; idim++ )
+      for ( jdim=0; jdim<MDIM; jdim++ )
+        work[idim*MDIM+jdim] = col[stress_indx(idim,jdim)];
+    project( work );
+    for ( idim=0; idim<MDIM; idim++ )
+      for ( jdim=idim; jdim<MDIM; jdim++ )
+        ddsdde[stress_indx(idim,jdim)*MSTRAIN+j] = work[idim*MDIM+jdim];
+  }
 }
 
 void direct_normal_get( long int element, long int gr, long int explicit_key,

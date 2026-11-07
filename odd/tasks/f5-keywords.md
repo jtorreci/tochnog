@@ -131,7 +131,7 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
     alias) resolved, route inline, commit 932c5f9.
   - [x] D4 borja_tamagnini (route inline, commit df32477; owner 2026-11-07: paper over Pro, DIVERGENCES
     BORJA-TAMAGNINI).
-  - [ ] D5 stress_null family.
+  - [x] D5 stress_null family (route inline, commit COMMIT_xxx).
   - [ ] E user hooks (young_user, history_variable_user), niemunis_visco(+_ocr),
     diprisco_density, umat_pardiso_decompose: accept-plus-stub, separate plan or discard.
 - [ ] T4 W5 geometry, mesh tools, mpc, dependency (69). Route: per family.
@@ -520,3 +520,7 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   (paper mu0 + alpha pr): Pro does not follow the paper -> owner question (paper vs Pro vs discard).
 - L-T3D4c (2026-11-07, user): "1. El paper, y documentamos divergencia con Pro". Analytic branch in
   hyperela.cc (exact tangent), stress difference as the other hyperelastic laws; GNU = analytic to 1e-7.
+- L-T3D5 (2026-11-07, user): "adelante con D5". Pro probes: components zeroed after plasticity, no
+  condensation, axes normalized, zero axis runs; full tangent (5 / 30 iterations to converge on the manual 9.1
+  layer). GNU projects stress and ddsdde after set_stress (materi.cc), automatic frame from ELEMENT_NORMAL;
+  identical to Pro (converged). Pro needs global_normal -yes (GNU unknown, C14).

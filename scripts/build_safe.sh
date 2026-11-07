@@ -2952,6 +2952,15 @@ run_ok "$T2026" group_materi_elasti_borja_tamagnini2
 run_ok "$T2026" group_materi_elasti_borja_tamagnini3
 run_ok "$T2026" group_materi_elasti_borja_tamagnini4
 expected_error_ok "$T2026" group_materi_elasti_borja_tamagnini_error1
+# F5 T3 D5: group_materi_stress_null / _direction / _direction_automatic
+# (manual 6.753-6.755); targets = Professional 02-08-2026 (5: converged).
+run_ok "$T2026" group_materi_stress_null1
+run_ok "$T2026" group_materi_stress_null2
+run_ok "$T2026" group_materi_stress_null3
+run_ok "$T2026" group_materi_stress_null4
+run_ok "$T2026" group_materi_stress_null5
+expected_error_ok "$T2026" group_materi_stress_null_error1
+expected_error_ok "$T2026" group_materi_stress_null_direction_error1
 # F5 T2 V8: post_calcul modifiers (manual 6.902-6.905, 6.916, 6.917,
 # 6.920); expected node_dof_calcul = Professional 02-08-2026 on the same
 # inputs (probes v8pro; -prival largest first, DIVERGENCES K12).

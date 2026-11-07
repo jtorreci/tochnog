@@ -2064,6 +2064,8 @@ long int element_normal_needed( void )
       max, VERSION_NORMAL, GET )>=0 ) return 1;
   if ( db_max_index( GROUP_MATERI_PLASTI_MOHR_COUL_DIRECT_NORMAL_AUTOMATIC,
       max, VERSION_NORMAL, GET )>=0 ) return 1;
+  if ( db_max_index( GROUP_MATERI_STRESS_NULL_DIRECTION_AUTOMATIC,
+      max, VERSION_NORMAL, GET )>=0 ) return 1;
   return 0;
 }
 
@@ -2078,12 +2080,14 @@ long int element_normal_automatic( long int gr )
 {
   long int swit=-NO, ldum=0, i=0;
   double ddum[1];
-  long int automatic[2] = { GROUP_MATERI_PLASTI_TENSION_DIRECT_NORMAL_AUTOMATIC,
-    GROUP_MATERI_PLASTI_MOHR_COUL_DIRECT_NORMAL_AUTOMATIC };
-  long int explicit_normal[2] = { GROUP_MATERI_PLASTI_TENSION_DIRECT_NORMAL,
-    GROUP_MATERI_PLASTI_MOHR_COUL_DIRECT_NORMAL };
+  long int automatic[3] = { GROUP_MATERI_PLASTI_TENSION_DIRECT_NORMAL_AUTOMATIC,
+    GROUP_MATERI_PLASTI_MOHR_COUL_DIRECT_NORMAL_AUTOMATIC,
+    GROUP_MATERI_STRESS_NULL_DIRECTION_AUTOMATIC };
+  long int explicit_normal[3] = { GROUP_MATERI_PLASTI_TENSION_DIRECT_NORMAL,
+    GROUP_MATERI_PLASTI_MOHR_COUL_DIRECT_NORMAL,
+    GROUP_MATERI_STRESS_NULL_DIRECTION };
 
-  for ( i=0; i<2; i++ ) {
+  for ( i=0; i<3; i++ ) {
     if ( db_active_index( explicit_normal[i], gr, VERSION_NORMAL ) ) continue;
     if ( !db_active_index( automatic[i], gr, VERSION_NORMAL ) ) continue;
     swit = -NO;
@@ -2240,6 +2244,8 @@ void element_normal_set( void )
           explicit_normal =
             automatic==GROUP_MATERI_PLASTI_TENSION_DIRECT_NORMAL_AUTOMATIC ?
             "group_materi_plasti_tension_direct_normal" :
+            automatic==GROUP_MATERI_STRESS_NULL_DIRECTION_AUTOMATIC ?
+            "group_materi_stress_null_direction" :
             "group_materi_plasti_mohr_coul_direct_normal";
           pri( "Restrict the element group to the boundary interface layer," );
           pri( "or give the normal explicitly with ", explicit_normal );

@@ -1,0 +1,49 @@
+(F5 T3 D5: interface layer of the manual 9.1: -y -z -yz in the frame of
+ the element normal {group_materi_stress_null_direction_automatic}.
+ Professional 02-08-2026 converged {30 iterations}: node 3 disx
+ 1.24290221e-4, sigxx -0.0421153; with its default iterations it stops
+ at 1.17808e-4 {DIVERGENCES STRESS-NULL-TANGENT}. The Professional input
+ also has global_normal -yes, which the GNU does not need.)
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_displacement
+materi_stress
+materi_strain_total
+end_initia
+node 1 0. 0.
+node 2 1. 0.
+node 3 0. 0.2
+node 4 1. 0.2
+node 5 0. 1.
+node 6 1. 1.
+element 0 -quad4 1 2 3 4
+element 1 -quad4 3 4 5 6
+element_group 0 1
+element_group 1 0
+bounda_dof 0 1 -velx -vely
+bounda_time 0 0. 0. 10. 0.
+bounda_dof 1 2 -velx -vely
+bounda_time 1 0. 0. 10. 0.
+bounda_dof 2 5 -velx
+bounda_time 2 0. 0.001 10. 0.001
+bounda_dof 3 6 -velx
+bounda_time 3 0. 0.001 10. 0.001
+bounda_dof 4 5 -vely
+bounda_time 4 0. -0.0005 10. -0.0005
+bounda_dof 5 6 -vely
+bounda_time 5 0. -0.0005 10. -0.0005
+group_type 0 -materi
+group_materi_elasti_young 0 1000.
+group_materi_elasti_poisson 0 0.25
+group_type 1 -materi
+group_materi_elasti_young 1 1000.
+group_materi_elasti_poisson 1 0.25
+group_materi_stress_null 1 -y -z -yz
+group_materi_stress_null_direction_automatic 1 -yes
+control_timestep 0 1. 1.
+target_item 0 -node_dof 3 -disx
+target_value 0 1.2429022e-4 2.e-11
+target_item 1 -node_dof 1 -sigxx
+target_value 1 0. 1.e-9
+end_data

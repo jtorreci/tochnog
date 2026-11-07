@@ -4853,6 +4853,30 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   data_class[GROUP_MATERI_ELASTI_BORJA_TAMAGNINI] = MATERI;
   data_required[GROUP_MATERI_ELASTI_BORJA_TAMAGNINI] = GROUP_TYPE;
 
+  // manual Professional 6.753-6.755: local stress components set to zero
+  strcpy(name[GROUP_MATERI_STRESS_NULL],"group_materi_stress_null");
+  type[GROUP_MATERI_STRESS_NULL] = INTEGER;
+  data_length[GROUP_MATERI_STRESS_NULL] = DATA_ITEM_SIZE;
+  fixed_length[GROUP_MATERI_STRESS_NULL] = 0;
+  data_class[GROUP_MATERI_STRESS_NULL] = MATERI;
+  data_required[GROUP_MATERI_STRESS_NULL] = GROUP_TYPE;
+
+  strcpy(name[GROUP_MATERI_STRESS_NULL_DIRECTION],"group_materi_stress_null_direction");
+  type[GROUP_MATERI_STRESS_NULL_DIRECTION] = DOUBLE_PRECISION;
+  data_length[GROUP_MATERI_STRESS_NULL_DIRECTION] = MDIM*MDIM;
+  data_class[GROUP_MATERI_STRESS_NULL_DIRECTION] = MATERI;
+  data_required[GROUP_MATERI_STRESS_NULL_DIRECTION] = GROUP_TYPE;
+
+  strcpy(name[GROUP_MATERI_STRESS_NULL_DIRECTION_AUTOMATIC],"group_materi_stress_null_direction_automatic");
+  type[GROUP_MATERI_STRESS_NULL_DIRECTION_AUTOMATIC] = INTEGER;
+  data_length[GROUP_MATERI_STRESS_NULL_DIRECTION_AUTOMATIC] = 1;
+  data_class[GROUP_MATERI_STRESS_NULL_DIRECTION_AUTOMATIC] = MATERI;
+  data_required[GROUP_MATERI_STRESS_NULL_DIRECTION_AUTOMATIC] = GROUP_TYPE;
+
+  strcpy(name[XY],"xy");
+  strcpy(name[XZ],"xz");
+  strcpy(name[YZ],"yz");
+
   strcpy(name[GROUP_MATERI_PLASTI_CAMCLAY],"group_materi_plasti_camclay");
   type[GROUP_MATERI_PLASTI_CAMCLAY] = DOUBLE_PRECISION;
   // manual Professional 6.689: index M kappa lambda (3 values). The

@@ -349,6 +349,7 @@ page lists its own in "Differences with the Professional version".
 - [group_materi_plasti_residual_stiffness](group_materi_plasti_residual_stiffness.md) — plastic_ip flag and deviatoric scaling of ddsdde in set_stress (F5).
 - [group_materi_elasti_c](group_materi_elasti_c.md) — C_ijkl added after every elastic law in set_stress, axis rotation and normalization (F5).
 - [group_materi_plasti_visco_power_name](group_materi_plasti_visco_power_name.md) — per-model visco choice at the first yield test, visco_named_select (F5).
+- [group_materi_stress_null](group_materi_stress_null.md) — materi_stress_null() in materi.cc after set_stress, stress and ddsdde projection (F5).
 - [group_materi_elasti_borja_tamagnini](group_materi_elasti_borja_tamagnini.md) — analytic branch in hyperela.cc hyperelasticity(), exact tangent in Chyper (F5).
 - [group_materi_plasti_hypo_wolffersdorff_niemunis](group_materi_plasti_hypo_wolffersdorff_niemunis.md) — hypo.c sigma_(): b2 in L and N, f_d_bar (Niemunis 2003 eq. 4.183, 4.221, 4.223) (F5).
 - [group_materi_plasti_hypo_void_ratio_linear](group_materi_plasti_hypo_void_ratio_linear.md) — hypo_void_ratio_exact in hypo.c sigma_(); alias to pressuredependentvoidratio removed (C118, F5).
