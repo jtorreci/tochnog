@@ -104,7 +104,7 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
     post_quadrilateral_element_group, post_strain_volume_initial.
   Professional examples only in validation_14_mesh.dat (output dump) and tochnog_abaqus.dat.
     Route: inline (explorer for the post.cc map). Commit a1c7d7d. C110 open for the owner; C111 decided (manual, class A).
-- [ ] T3 W3 materials (27): `group_materi_*` and `materi_plasti_*` (umat, stress_null, hypo
+- [x] T3 W3 materials (27): `group_materi_*` and `materi_plasti_*` (umat, stress_null, hypo
   niemunis/wolffersdorff variants, borja_tamagnini, elasti_c, hyper reduced_polynomial /
   simo_taylor, visco_power, residual_stiffness, mpc, diprisco_density, history_variable_user,
   phimob, maximum_iterations, hypo_substepping). Route: per family.
@@ -541,3 +541,9 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   Pro probes: hypo6 is pure relaxation; phi / nu / betaR do not affect isotropic relaxation; IGS required;
   OCR applied once in the first step of the index; b2 < 0 used. GNU within 5e-5 relative of Pro on 20 probes,
   Python reference equal to 1e-8. Tests visco1-4, ocr1-3, error1-2.
+- 2026-11-07 end-of-T3 independent verifier (baseline 7101205, candidate f427646): PASS, no blockers. Suite
+  833 OK; 224-input plasticity/hypo differential: only intended changes (C112 cap, C118 alias fix, T3
+  keywords now accepted) and wall-clock lines; D2/D2x probes base = cand without T3 records. Advisories:
+  unstable tension + vonmises visco (also at baseline, Pro NaN; C116), hypo10 own-target gap (new C121).
+  S5 refresh: 131/320 of the 2026-11-01 list accepted, missing 189 = 63 GiD + 126 (KEYWORD-GAP-REPORT).
+  T3 closed. Next: T4 W5 geometry, mesh tools, mpc, dependency.

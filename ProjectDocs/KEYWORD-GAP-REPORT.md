@@ -91,6 +91,15 @@ accepted (the W1 switches and control records, F5 T1 U1-U6); accepted
 `control_slide_damping_apply` stays missing (moved to T5 with
 `slide_damping`).
 
+Update 2026-11-07 (end of F5 waves W2 output records and W3 materials,
+`f427646`): the 2026-11-01 list probed again on the clean build
+(`scripts/keyword_probe.cc` linked with the build objects): 131 of the 320
+names are accepted (97 more than after W1); accepted 955 + 6 literals,
+missing **189** = 63 GiD (discarded) + **126** pending. The material family
+is complete: the two names still reported, `materi_history_variable` and
+`materi_strain_energy`, are initialisation names normalised by `input.cc`
+(they are not `db_number` records).
+
 ## Gap by family
 
 | Family | Missing | Notes |
