@@ -2923,7 +2923,7 @@ Original report:
 ### C118. `group_materi_plasti_hypo_void_ratio_linear` was an alias of the pressure dependent void ratio correction (F5 T3 D3, 2026-11-07) — RESOLVED 2026-11-07
 
 - **Found:** `db_number` mapped the Professional `group_materi_plasti_hypo_void_ratio_linear` (6.722: -yes linear void ratio change from the trace, -no exact from the determinant) to the GNU `group_materi_plasti_hypo_pressuredependentvoidratio`, so `-yes` switched on the pressure dependent initial void ratio correction. Professional `other/hypo11` without the Niemunis record: GNU sigyy -1.15668, Professional -1.019954 (the same with and without the record).
-- **Resolution:** own record `GROUP_MATERI_PLASTI_HYPO_VOID_RATIO_LINEAR`, default -yes; -no uses (1 + e) det(I + d_eps) - 1 in `hypo.c`. GNU -1.0198992 / -1.0199336 (-yes / -no), Professional -1.019954 / -1.019924. Tests `group_materi_plasti_hypo_void_ratio_linear1`, `2`. COMMIT_xxx
+- **Resolution:** own record `GROUP_MATERI_PLASTI_HYPO_VOID_RATIO_LINEAR`, default -yes; -no uses (1 + e) det(I + d_eps) - 1 in `hypo.c`. GNU -1.0198992 / -1.0199336 (-yes / -no), Professional -1.019954 / -1.019924. Tests `group_materi_plasti_hypo_void_ratio_linear1`, `2`. 932c5f9
 
 ### C117. Exponential visco-plasticity without an active limit differs from the Professional (F5 T3 D2x, 2026-11-07)
 

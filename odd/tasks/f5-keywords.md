@@ -128,7 +128,7 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   - [x] D2x visco_exponential_name / _values / _limit (route inline, commit 8f8df2a; owner 2026-11-07: manual
     followed, DIVERGENCES VISCO-EXPONENTIAL-NAME; C117 found).
   - [ ] D3 wolffersdorff_niemunis. Prerequisite C118 (void_ratio_linear alias) resolved, route inline,
-    commit COMMIT_xxx. Niemunis kernel: owner question (equations 4.211 / 4.221 of [16] not in the manual).
+    commit 932c5f9. Niemunis kernel: owner question (equations 4.211 / 4.221 of [16] not in the manual).
   - [ ] D4 borja_tamagnini.  - [ ] D5 stress_null family.
   - [ ] E user hooks (young_user, history_variable_user), niemunis_visco(+_ocr),
     diprisco_density, umat_pardiso_decompose: accept-plus-stub, separate plan or discard.
