@@ -134,7 +134,8 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   - [x] D5 stress_null family (route inline, commit 1fc60e6).
   - [x] E1 user hooks young_user, history_variable_user (+ _parameters) as stubs with the Professional errors,
     umat_pardiso_decompose without effect (class A). Route inline, commit 536998f.
-  - [ ] E2 diprisco_density.
+  - [x] E2 diprisco_density (route inline, commit COMMIT_E2; owner 2026-11-07: manual over Pro, linear
+    interpolation with the current void ratio, DIVERGENCES DIPRISCO-DENSITY; C119 found).
   - [ ] E3 niemunis_visco (+ _ocr, control ..._ocr_apply): separate task at the end of T3 (owner plan 1).
 - [ ] T4 W5 geometry, mesh tools, mpc, dependency (69). Route: per family.
 - [ ] T5 W6 other physics (25): baseline correction, force_edge_diagram, force_gravity_geometry,
@@ -530,3 +531,7 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   diprisco_density now, niemunis_visco as a separate task at the end of T3). Pro: young_user -yes "Error: routine
   user_young is not programmed.", history_variable_user -yes "Error: routine user_materi_history_variable is not
   programmed." (Pro init record materi_history_variable); pardiso_decompose accepted.
+- L-T3E2 (2026-11-07, user): "hacemos 1" (to: linear interpolation with the current void ratio, starting from
+  history variable 12 and evolving with the volumetric strain, clamped to [ed, el]; class D). Pro probes: only
+  the first set is used, el > ed required. GNU tests density1-4 (e 0.75 = averaged plain model exactly; e 0.9
+  loose; e 0.5 dense; oedometer e analytic), error1 (Pro message), error2. Plain diprisco GNU vs Pro 0.2 % (C119).

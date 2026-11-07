@@ -520,8 +520,8 @@ rm -f validation-suite/test-2014/dof.* \
 # presion en K = (1+e)*p/kappa (mc_pressure_min: sigxx -0.0093333 y
 # sigyy -0.2093333 analiticos EXACTOS con pressure_min 10 vs
 # mc_pressure_min_off sin record: +0.06566, signo invertido =
-# K degenerado). diprisco_density: PENDIENTE (ley de interpolacion
-# loose/dense no documentada en el manual, ver SEGUIMIENTO).
+# K degenerado). diprisco_density: implemented in F5 T3 E2 (tests
+# group_materi_plasti_diprisco_density*).
 # Sprint 10 lote 10: mrepeat_save — control_repeat_save (6.348) +
 # control_repeat_save_calculate (6.349): columna elastica con vely
 # prescrita -0.01, control_repeat 3 saltos a control_timestep dt=0.05:
@@ -2968,6 +2968,16 @@ expected_error_ok "$T2026" group_materi_elasti_young_user_error1
 run_ok "$T2026" group_materi_history_variable_user_parameters1
 expected_error_ok "$T2026" group_materi_history_variable_user_error1
 run_ok "$T2026" group_materi_umat_pardiso_decompose1
+# F5 T3 E2: group_materi_plasti_diprisco_density (manual 6.696): linear
+# interpolation loose/dense with w = (el-e)/(el-ed) clamped to [0,1], e =
+# history variable 12 evolving with tr(inc_ept). The Professional uses the
+# loose set only (class D DIPRISCO-DENSITY).
+run_ok "$T2026" group_materi_plasti_diprisco_density1
+run_ok "$T2026" group_materi_plasti_diprisco_density2
+run_ok "$T2026" group_materi_plasti_diprisco_density3
+run_ok "$T2026" group_materi_plasti_diprisco_density4
+expected_error_ok "$T2026" group_materi_plasti_diprisco_density_error1
+expected_error_ok "$T2026" group_materi_plasti_diprisco_density_error2
 # F5 T2 V8: post_calcul modifiers (manual 6.902-6.905, 6.916, 6.917,
 # 6.920); expected node_dof_calcul = Professional 02-08-2026 on the same
 # inputs (probes v8pro; -prival largest first, DIVERGENCES K12).

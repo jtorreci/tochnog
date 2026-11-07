@@ -1516,9 +1516,11 @@ void materi( long int element, long int gr, long int name, long int nnol,
               new_unknowns, pm_ddum, pm_n, GET_IF_EXISTS ) ||
             get_group_data( GROUP_MATERI_PLASTI_COMPRESSION_DIRECT, gr,
               element, new_unknowns, pm_ddum, pm_n, GET_IF_EXISTS ) );
-          pm_on[7] = materi_strain_plasti_diprisco &&
+          pm_on[7] = materi_strain_plasti_diprisco && (
             get_group_data( GROUP_MATERI_PLASTI_DIPRISCO, gr, element,
-              new_unknowns, pm_ddum, pm_n, GET_IF_EXISTS );
+              new_unknowns, pm_ddum, pm_n, GET_IF_EXISTS ) ||
+            get_group_data( GROUP_MATERI_PLASTI_DIPRISCO_DENSITY, gr,
+              element, new_unknowns, pm_ddum, pm_n, GET_IF_EXISTS ) );
           pm_on[8] = materi_strain_plasti_druckprag &&
             get_group_data( GROUP_MATERI_PLASTI_DRUCKPRAG, gr, element,
               new_unknowns, pm_ddum, pm_n, GET_IF_EXISTS );

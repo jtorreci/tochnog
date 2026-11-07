@@ -1,0 +1,81 @@
+(F5 T3 E2: diprisco_density, isochoric triaxial test of diprisc1 {t 0.004}.
+ e = 0.75 stays constant, w = {0.9-0.75}/{0.9-0.6} = 0.5: the result equals
+ plain group_materi_plasti_diprisco with the averaged parameters
+ 4.06 0.55 0.00445 21.5 11. 0.2765 0.1342 -0.27925 -0.1339 1.15.)
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_displacement
+materi_strain_total
+materi_strain_plasti
+materi_stress
+materi_plasti_diprisco_history 12
+end_initia
+
+node 1  0. 0.
+node 2  1. 0.
+node 3  0. 1.
+node 4  1. 1.
+
+element 1  -quad4 1 2 3 4
+
+post_point 1  0.5 0.5
+
+start_define
+  left_edge  geometry_line 0
+end_define
+start_define
+  lower_edge geometry_line 1
+end_define
+start_define
+  upper_edge geometry_line 2
+end_define
+start_define
+  right_edge geometry_line 3
+end_define
+
+left_edge  0. 0. 0. 1.  1.e-5
+lower_edge 0. 0. 1. 0.  1.e-5
+upper_edge 0. 1. 1. 1.  1.e-5
+right_edge 1. 0. 1. 1.  1.e-5
+
+group_type                   0  -materi
+group_axisymmetric           0 -yes
+group_materi_memory          0  -total_linear
+group_materi_elasti_lade     0  1028. 0.25 0.28
+group_materi_plasti_diprisco_density 0 3.62 0.5 0.0049 18. 10. 0.253 0.1184 -0.2585 -0.1178 1.1 4.5 0.6 0.004 25. 12. 0.3 0.15 -0.3 -0.15 1.2 0.9 0.6
+
+bounda_dof 0  -left_edge  -velx
+bounda_time    0  0. 0. 100. 0.
+bounda_dof 1  -lower_edge -vely
+bounda_time    1  0. 0. 100. 0.
+bounda_dof 2  -upper_edge -vely
+bounda_time    2  0. -1. 100. -1.
+bounda_dof 3  -right_edge -velx
+bounda_time    3  0. +0.5 100. +0.5
+
+control_reset_dof               1  -sigxx -sigyy -sigzz
+control_reset_value_constant    1  -100.
+
+control_reset_dof               2  -dipriscohis0 -dipriscohis4 -dipriscohis8
+control_reset_value_constant    2  0.57735
+
+control_reset_dof               3  -dipriscohis9
+control_reset_value_constant    3  0.0001
+
+control_reset_dof               4  -dipriscohis10
+control_reset_value_constant    4  -173.205
+
+control_reset_dof               5  -dipriscohis11
+control_reset_value_constant    5  0.75
+
+control_timestep               20  0.00001 0.004
+control_timestep_iterations    20  3
+target_item 0 -node_dof 4 -sigxx
+target_value 0 -24.2191214 1.e-6
+target_item 1 -node_dof 4 -sigyy
+target_value 1 -65.1766532 1.e-6
+target_item 2 -node_dof 4 -dipriscohis11
+target_value 2 0.75 1.e-6
+
+end_data

@@ -38,6 +38,7 @@ void plasti_rule( long int element, long int gr,
     test1=0, test2=0, test3=0, test4=0, test5=0,
     test6=0, test7=0, test8=0, test9=0, ldum=0, icontrol=0,
     tension_cutoff=-NO, tension_limit=-NO,
+    prisco_record=GROUP_MATERI_PLASTI_DIPRISCO,
     options_skip_plasticity=-NO, idum[1];
   double sig_yield=0., sigm=0., signorm=0., K=0., K_flow=0., alpha=0.,
     dev=0., devp=0., q=0., p=0., C=0., kappa_0=0., n=0., options_nonlocal=0.,
@@ -53,7 +54,8 @@ void plasti_rule( long int element, long int gr,
     prisco_tp=0., prisco_betafhat=0., 
     prisco_r0=0., prisco_st0=0., prisco_b4=0., prisco_b5=0., prisco_b7=0.,
     prisco_beta=0., prisco_betaf0=0., prisco_r1tmp=0.,
-    prisco_r2tmp=0., prisco_rt=0.,
+    prisco_r2tmp=0., prisco_rt=0., prisco_el=0., prisco_ed=0.,
+    prisco_e=0., prisco_w=0.,
     pa=0., pb=0., R=0., t=0., epp_vol=0., 
     phi0=0., c0=0., phi0_flow=0., phi1=0., c1=0., 
     phi1_flow=0., kappa=0., kappa_crit=0., I1=0., I2=0., I3=0.,
@@ -466,7 +468,41 @@ void plasti_rule( long int element, long int gr,
       }
     }
   }
-  if ( get_group_data( GROUP_MATERI_PLASTI_DIPRISCO, gr, element, new_unknowns, 
+    // group_materi_plasti_diprisco_density: the ten diprisco data are
+    // interpolated linearly between the loose set {first ten} and the dense
+    // set {next ten} with the current void ratio e {history variable 12}:
+    // w = {el-e}/{el-ed} clamped to [0,1]; e evolves with the total
+    // volumetric strain, e_new = e + {1+e} * tr{inc_ept}
+  prisco_record = GROUP_MATERI_PLASTI_DIPRISCO;
+  if ( get_group_data( GROUP_MATERI_PLASTI_DIPRISCO_DENSITY, gr, element, 
+      new_unknowns, plasti_data, ldum, GET_IF_EXISTS ) ) {
+    prisco_record = GROUP_MATERI_PLASTI_DIPRISCO_DENSITY;
+    prisco_el = plasti_data[20];
+    prisco_ed = plasti_data[21];
+    if ( prisco_el<=prisco_ed ) {
+      pri( "Error in group_materi_plasti_diprisco_density. The el should be larger than the ed." );
+      exit(TN_EXIT_STATUS);
+    }
+    if ( materi_history_variables<12 ) {
+      pri( "Error: group_materi_plasti_diprisco_density needs materi_plasti_diprisco_history 12." );
+      exit(TN_EXIT_STATUS);
+    }
+    prisco_e = old_hisv[MDIM*MDIM+2];
+    prisco_w = ( prisco_el - prisco_e ) / ( prisco_el - prisco_ed );
+    if ( prisco_w<0. ) prisco_w = 0.;
+    if ( prisco_w>1. ) prisco_w = 1.;
+    for ( i=0; i<10; i++ )
+      plasti_data[i] = ( 1. - prisco_w ) * plasti_data[i] + 
+        prisco_w * plasti_data[10+i];
+    new_hisv[MDIM*MDIM+2] = prisco_e + ( 1. + prisco_e ) * 
+      ( inc_ept[0] + inc_ept[4] + inc_ept[8] );
+    if ( swit ) {
+      pri( "prisco_e", prisco_e );
+      pri( "prisco_w", prisco_w );
+    }
+  }
+  if ( prisco_record==GROUP_MATERI_PLASTI_DIPRISCO_DENSITY ||
+       get_group_data( GROUP_MATERI_PLASTI_DIPRISCO, gr, element, new_unknowns, 
     plasti_data, ldum, GET_IF_EXISTS ) ) {
     test1 = task==GET_YIELD_RULE&&plasti_type==-NONE;
     test2 = task==GET_YIELD_RULE&&plasti_type==GROUP_MATERI_PLASTI_DIPRISCO;
@@ -504,7 +540,7 @@ void plasti_rule( long int element, long int gr,
       prisco_betaf0 = plasti_data[9];
         // fixed data
       prisco_r = array_inproduct( geo_sig, prisco_chi, MDIM*MDIM );
-      if ( prisco_bp<=0. ) db_error( GROUP_MATERI_PLASTI_DIPRISCO, gr );
+      if ( prisco_bp<=0. ) db_error( prisco_record, gr );
       if ( swit ) {
         pri( "prisco_chi", prisco_chi, MDIM*MDIM );
         pri( "prisco_betaf", prisco_betaf );

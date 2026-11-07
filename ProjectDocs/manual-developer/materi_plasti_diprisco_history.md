@@ -32,8 +32,8 @@ need to set number_of_history_variables to 11. For
 group_materi_plasti_diprisco_density you need to set
 number_of_history_variables to 12." The 11 variables: chi tensor
 (9 values), beta (yield surface form factor), rc (preconsolidation mean
-pressure); the 12th (density) is only used by the NOT-implemented
-diprisco_density model.
+pressure); the 12th is the current void ratio of the
+diprisco_density model (F5 T3 E2).
 
 ## Gotchas
 

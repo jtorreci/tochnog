@@ -142,7 +142,7 @@ page lists its own in "Differences with the Professional version".
 - [materi_strain_plasti_hardsoil](materi_strain_plasti_hardsoil.md) — initia: dedicated plastic-strain dof hsepp (RHS in materi.cc, inertia in general.cc).
 - [materi_strain_plasti_cap](materi_strain_plasti_cap.md) — initia: dedicated dof capepp; consolidated per-model epp RHS block in materi.cc (table of {flag, indx}).
 - [materi_strain_plasti_compression](materi_strain_plasti_compression.md) — initia: dedicated dof cepp (same consolidated RHS block).
-- [materi_strain_plasti_diprisco](materi_strain_plasti_diprisco.md) — initia: dedicated dof depp (same consolidated RHS block); diprisco_density NOT implemented (interpolation law undocumented).
+- [materi_strain_plasti_diprisco](materi_strain_plasti_diprisco.md) — initia: dedicated dof depp (same consolidated RHS block); diprisco_density also fills it (F5 T3 E2).
 - [materi_strain_plasti_druckprag](materi_strain_plasti_druckprag.md) — initia: dedicated dof dpepp (same consolidated RHS block); equals the generic epp exactly in pure shear.
 - [materi_strain_plasti_camclay](materi_strain_plasti_camclay.md) — initia: dof eppcc*, filled in the strain recovery block of materi.cc only for groups with the model, recovery weight = epp (F5 T2 V7).
 - [materi_strain_plasti_mohr_coul](materi_strain_plasti_mohr_coul.md) — initia: dof eppmo*, filled in the strain recovery block of materi.cc only for groups with the model, recovery weight = epp (F5 T2 V7).
@@ -354,6 +354,7 @@ page lists its own in "Differences with the Professional version".
 - [group_materi_umat_pardiso_decompose](group_materi_umat_pardiso_decompose.md) — registered only, no PARDISO (F5).
 - [group_materi_stress_null](group_materi_stress_null.md) — materi_stress_null() in materi.cc after set_stress, stress and ddsdde projection (F5).
 - [group_materi_elasti_borja_tamagnini](group_materi_elasti_borja_tamagnini.md) — analytic branch in hyperela.cc hyperelasticity(), exact tangent in Chyper (F5).
+- [group_materi_plasti_diprisco_density](group_materi_plasti_diprisco_density.md) — plasti.cc plasti_rule(): parameter interpolation and void ratio history update before the di Prisco block (F5).
 - [group_materi_plasti_hypo_wolffersdorff_niemunis](group_materi_plasti_hypo_wolffersdorff_niemunis.md) — hypo.c sigma_(): b2 in L and N, f_d_bar (Niemunis 2003 eq. 4.183, 4.221, 4.223) (F5).
 - [group_materi_plasti_hypo_void_ratio_linear](group_materi_plasti_hypo_void_ratio_linear.md) — hypo_void_ratio_exact in hypo.c sigma_(); alias to pressuredependentvoidratio removed (C118, F5).
 - [group_materi_plasti_visco_exponential_name](group_materi_plasti_visco_exponential_name.md) — exponential names (visco_named 2) and visco_limit replacing EPS_VISCO (F5).

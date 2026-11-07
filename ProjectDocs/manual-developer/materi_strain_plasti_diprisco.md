@@ -30,11 +30,9 @@ see [materi_plasti_diprisco_history](materi_plasti_diprisco_history.md).
 
 - In the axisymmetric diprisc1 rig the shear components of the dof stay
   exactly 0 (axisymmetry); the radial and hoop components are equal.
-- `materi_plasti_diprisco_density` (12 history variables) is NOT
-  implemented: the interpolation law between the loose and dense
-  parameter sets is not documented in the manual (it only references
-  external papers), so an implementation could not be verified
-  (see SEGUIMIENTO-CONVERGENCIA.md).
+- `group_materi_plasti_diprisco_density` (12 history variables) is
+  implemented since F5 T3 E2 and also fills this dof (see
+  group_materi_plasti_diprisco_density.md).
 
 ## Model gating (C107, 2026-11-04)
 

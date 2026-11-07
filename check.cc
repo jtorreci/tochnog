@@ -737,6 +737,12 @@ long int check( long int idat, long int task )
       "materi_plasti_diprisco_history", task );
     ok = ok && check_unknown( "materi_strain_plasti", YES, task );
   }
+  if ( data_number==GROUP_MATERI_PLASTI_DIPRISCO_DENSITY ) {
+    ok = check_unknown( "materi_stress", YES, task );
+    ok = ok && check_unknown_atleastone( "materi_history_variables",
+      "materi_plasti_diprisco_history", task );
+    ok = ok && check_unknown( "materi_strain_plasti", YES, task );
+  }
   if ( data_number==GROUP_MATERI_PLASTI_DIPRISCO_RT ) {
     ok = check_unknown( "materi_stress", YES, task );
     ok = ok && check_unknown_atleastone( "materi_history_variables",

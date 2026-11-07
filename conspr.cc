@@ -128,6 +128,11 @@ void contactspring( long int element, long int /*name*/, long int element_group,
             phi_approximate = 1. * PIRAD / 180.;
           f = BOUNDARY_REDUCTION_FACTOR * tan( phi_approximate );
         }
+        else if ( db_active_index( GROUP_MATERI_PLASTI_DIPRISCO_DENSITY, gr, VERSION_NORMAL ) ) {
+          found = 1;
+          phi_approximate = 1. * PIRAD / 180.;
+          f = BOUNDARY_REDUCTION_FACTOR * tan( phi_approximate );
+        }
       }
     }
     if ( !found ) f = 0.2;
