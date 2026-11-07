@@ -137,7 +137,7 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   - [x] E2 diprisco_density (route inline, commit 6059c82; owner 2026-11-07: manual over Pro, linear
     interpolation with the current void ratio, DIVERGENCES DIPRISCO-DENSITY; C119 found).
   - [x] E3 niemunis_visco (+ _ocr, control ..._ocr_apply): route inline (explorer mapped the thesis), commit
-    COMMIT_E3; owner 2026-11-07: b2 < 0 rejected per manual (DIVERGENCES NIEMUNIS-VISCO-B2); C120 found.
+    8f45881; owner 2026-11-07: b2 < 0 rejected per manual (DIVERGENCES NIEMUNIS-VISCO-B2); C120 found.
 - [ ] T4 W5 geometry, mesh tools, mpc, dependency (69). Route: per family.
 - [ ] T5 W6 other physics (25): baseline correction, force_edge_diagram, force_gravity_geometry,
   force_volume_element_group_0, groundflow_phreatic_*, group_beam_*, group_contact_spring_*,
