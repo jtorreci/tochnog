@@ -1815,6 +1815,10 @@ enum {
   GROUP_MATERI_STRESS_NULL,
   GROUP_MATERI_STRESS_NULL_DIRECTION,
   GROUP_MATERI_STRESS_NULL_DIRECTION_AUTOMATIC,
+  GROUP_MATERI_ELASTI_YOUNG_USER,
+  GROUP_MATERI_HISTORY_VARIABLE_USER,
+  GROUP_MATERI_HISTORY_VARIABLE_USER_PARAMETERS,
+  GROUP_MATERI_UMAT_PARDISO_DECOMPOSE,
   XY,
   XZ,
   YZ,
@@ -2664,6 +2668,11 @@ void      truss( long int element, long int element_group,
             double element_rhside[] );    
 void      unknown_freeze( void );
 void      unknown_reset( void );
+void      user_young( double new_unknowns[], double old_hisv[],
+            double old_stress[], double &young );
+void      user_materi_history_variable( double parameters[],
+            long int nparameters, double new_unknowns[], double old_hisv[],
+            double new_hisv[], double new_stress[] );
 void      user_bounda_time( long int index, double time_current, 
             double &load );
 void      user_change_dataitem_time( long int index, 

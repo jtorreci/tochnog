@@ -13,11 +13,11 @@ Single index of every known difference between the GNU version and Tochnog Profe
 
 | class | meaning | items |
 |---|---|---|
-| A | deliberate divergence decided by the project owner | 33 |
+| A | deliberate divergence decided by the project owner | 34 |
 | B | known difference, not decided yet or scheduled (F3/F4) | 53 |
 | C | GNU extension or input-dialect difference | 27 |
 | D | Professional-suspect: the Professional contradicts its own manual or the analytic answer | 16 |
-| | **total** | **129** |
+| | **total** | **130** |
 
 Ids: `C*`/`B*` are [BACKLOG-OPEN-ISSUES.md](BACKLOG-OPEN-ISSUES.md) items, `K*` are clusters of [AUDIT-ALL-VARIABLES-2026.md](AUDIT-ALL-VARIABLES-2026.md); other ids are local to this index. Several class A items are also Professional-suspect (noted in their status). Professional values are from the binary 02-08-2026 unless stated.
 
@@ -74,6 +74,7 @@ Recorded in the SEGUIMIENTO "Descarte de features" table and in the "Differences
 | HYPO-SUBSTEPPING-MASIN | `materi_plasti_hypo_substepping -no` (6.803) on the Masin routes | No effect: the Masin kernels integrate with a fixed number of Runge-Kutta substeps (`other/hypo7` sigyy -231.789 either way). | `-no` moves `other/hypo7` sigyy from -231.8090 to -231.8126 (probes t3/c1). | Class B (deferred, LOW, BACKLOG C113): the Professional Masin substepping scheme is not known; the von Wolffersdorff route matches (-863.7163 both). | 2026-11-06 | [user/materi_plasti_hypo_substepping](manual-user/materi_plasti_hypo_substepping.md) |
 | WALL-DETECTION | `group_materi_plasti_bounda` (6.687) wall detection and coverage | Any velocity-bounded node marks the element; values also match element groups; no wall code for hardsoil / camclay / hypo / tension; one factor only. | Only the listed bounda_dof indices count (probe mc_bloc, C114 verifier). | Pending (BACKLOG C115). | 2026-11-06 | [developer/group_materi_plasti_bounda](manual-developer/group_materi_plasti_bounda.md) |
 | GLOBAL-NODE-DOF-EMPTY-DISPLACEMENT | `global_node_dof_empty -yes` (6.552) | Every dof of a node only connected to empty elements is zeroed except the displacement, which keeps its start-of-step value. | Same (probes f5/v5b c_def, c2_def: disx/disy keep the input values). The manual says "the dof's in a node are set to zero" (displacement included): the GNU, like the Professional, diverges from the manual. | Owner decision 2026-11-03 (C101): keep the displacement, as the Professional. Zeroing it would put the nodes of an element that becomes active again back at their start position, and with an updated memory they could lie inside the neighbouring deformed elements. | 2026-11-03 | [user/global_node_dof_empty](manual-user/global_node_dof_empty.md); BACKLOG C101 |
+| UMAT-PARDISO-DECOMPOSE | `group_materi_umat_pardiso_decompose` (6.758) | Accepted without effect (no PARDISO solver). | Controls how often PARDISO decomposes the system matrix with a umat. | Class A, owner decision 2026-11-07 (F5 T3 E plan): the GNU solvers are kept. | 2026-11-07 | [user/group_materi_umat_pardiso_decompose](manual-user/group_materi_umat_pardiso_decompose.md); SEGUIMIENTO Descarte |
 
 ## D. Professional-suspect (the Professional contradicts its manual or the analytic answer)
 

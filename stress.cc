@@ -891,8 +891,15 @@ void set_stress( long int element, long int gr,
     k0_active = 1;
   }
 
+  // group_materi_elasti_young_user -yes (manual Professional 6.662):
+  // user_young gives the young modulus {input: the young record or 0}
+  long int young_user = -NO;
+  db( GROUP_MATERI_ELASTI_YOUNG_USER, gr, &young_user, ddum, ldum,
+    VERSION_NORMAL, GET_IF_EXISTS );
   if ( get_group_data( GROUP_MATERI_ELASTI_YOUNG, gr, element, new_unknowns, 
-      &young, ldum, GET_IF_EXISTS ) ) {
+      &young, ldum, GET_IF_EXISTS ) || young_user==-YES ) {
+    if ( young_user==-YES )
+      user_young( new_unknowns, old_hisv, rotated_old_sig, young );
     get_group_data( GROUP_MATERI_ELASTI_POISSON, gr, element,
       new_unknowns, &poisson, ldum, GET_IF_EXISTS );
     if ( k0_active ) poisson = k0_elasti/(1.+k0_elasti);

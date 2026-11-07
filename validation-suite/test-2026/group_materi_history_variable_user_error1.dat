@@ -1,0 +1,24 @@
+(F5 T3 E: history_variable_user -yes calls the user stub, which stops as
+ in the Professional 02-08-2026.
+ EXPECTED_ERROR: routine user_materi_history_variable is not programmed.)
+echo -no
+number_of_space_dimensions 1
+materi_velocity
+materi_displacement
+materi_strain_total
+materi_stress
+materi_history_variable 2
+end_initia
+node 1  0
+node 2  1
+element 1  -bar2 1 2
+bounda_dof 0  1 -velx
+bounda_time 0  0.
+bounda_dof 1  2 -velx
+bounda_time 1  0.001
+group_type 0  -materi
+group_materi_elasti_young 0  1000.
+group_materi_history_variable_user 0 -yes
+group_materi_history_variable_user_parameters 0 1. 2. 3.
+control_timestep 0  1. 1.
+end_data

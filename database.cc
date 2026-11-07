@@ -4873,6 +4873,35 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   data_class[GROUP_MATERI_STRESS_NULL_DIRECTION_AUTOMATIC] = MATERI;
   data_required[GROUP_MATERI_STRESS_NULL_DIRECTION_AUTOMATIC] = GROUP_TYPE;
 
+  // manual Professional 6.662: user_young routine (user.cc)
+  strcpy(name[GROUP_MATERI_ELASTI_YOUNG_USER],"group_materi_elasti_young_user");
+  type[GROUP_MATERI_ELASTI_YOUNG_USER] = INTEGER;
+  data_length[GROUP_MATERI_ELASTI_YOUNG_USER] = 1;
+  data_class[GROUP_MATERI_ELASTI_YOUNG_USER] = MATERI;
+  data_required[GROUP_MATERI_ELASTI_YOUNG_USER] = GROUP_TYPE;
+
+  // manual Professional 6.671, 6.672: user_materi_history_variable
+  strcpy(name[GROUP_MATERI_HISTORY_VARIABLE_USER],"group_materi_history_variable_user");
+  type[GROUP_MATERI_HISTORY_VARIABLE_USER] = INTEGER;
+  data_length[GROUP_MATERI_HISTORY_VARIABLE_USER] = 1;
+  data_class[GROUP_MATERI_HISTORY_VARIABLE_USER] = MATERI;
+  data_required[GROUP_MATERI_HISTORY_VARIABLE_USER] = GROUP_TYPE;
+
+  strcpy(name[GROUP_MATERI_HISTORY_VARIABLE_USER_PARAMETERS],"group_materi_history_variable_user_parameters");
+  type[GROUP_MATERI_HISTORY_VARIABLE_USER_PARAMETERS] = DOUBLE_PRECISION;
+  data_length[GROUP_MATERI_HISTORY_VARIABLE_USER_PARAMETERS] = DATA_ITEM_SIZE;
+  fixed_length[GROUP_MATERI_HISTORY_VARIABLE_USER_PARAMETERS] = 0;
+  data_class[GROUP_MATERI_HISTORY_VARIABLE_USER_PARAMETERS] = MATERI;
+  data_required[GROUP_MATERI_HISTORY_VARIABLE_USER_PARAMETERS] = GROUP_TYPE;
+
+  // manual Professional 6.758: PARDISO decomposition of umat systems;
+  // accepted without effect (the GNU has no PARDISO solver)
+  strcpy(name[GROUP_MATERI_UMAT_PARDISO_DECOMPOSE],"group_materi_umat_pardiso_decompose");
+  type[GROUP_MATERI_UMAT_PARDISO_DECOMPOSE] = INTEGER;
+  data_length[GROUP_MATERI_UMAT_PARDISO_DECOMPOSE] = 1;
+  data_class[GROUP_MATERI_UMAT_PARDISO_DECOMPOSE] = MATERI;
+  data_required[GROUP_MATERI_UMAT_PARDISO_DECOMPOSE] = GROUP_TYPE;
+
   strcpy(name[XY],"xy");
   strcpy(name[XZ],"xz");
   strcpy(name[YZ],"yz");

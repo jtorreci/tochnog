@@ -644,6 +644,20 @@ void materi( long int element, long int gr, long int name, long int nnol,
       ddsdde, viscosity, viscosity_heatgeneration, softvar_nonl, softvar_l,
       mc_normal, ten_normal);
     materi_stress_null( element, gr, new_sig, ddsdde );
+    // group_materi_history_variable_user -yes (manual Professional 6.671)
+    {
+      long int history_user=-NO, nparameters=0;
+      double parameters[DATA_ITEM_SIZE];
+      db( GROUP_MATERI_HISTORY_VARIABLE_USER, gr, &history_user, ddum,
+        ldum, VERSION_NORMAL, GET_IF_EXISTS );
+      if ( history_user==-YES ) {
+        array_set( parameters, 0., DATA_ITEM_SIZE );
+        db( GROUP_MATERI_HISTORY_VARIABLE_USER_PARAMETERS, gr, idum,
+          parameters, nparameters, VERSION_NORMAL, GET_IF_EXISTS );
+        user_materi_history_variable( parameters, nparameters, new_unknowns,
+          old_hisv, new_hisv, new_sig );
+      }
+    }
     // mesh_activate_gravity -method2: an element that is not activated yet
     // stays in the calculation with a REDUCED STIFFNESS (activation_stiff,
     // mesh_activate_gravity_stiffness_factor): the material tangent and

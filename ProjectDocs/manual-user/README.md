@@ -351,6 +351,9 @@ page lists its own in "Differences with the Professional version".
 - [group_materi_plasti_residual_stiffness](group_materi_plasti_residual_stiffness.md) — shear stiffness fraction of plastic points in the matrix, converged result unchanged (manual 6.735, F5).
 - [group_materi_elasti_c](group_materi_elasti_c.md) — the 81 values of C_ijkl and their local axes (manual 6.642, 6.643, F5).
 - [group_materi_plasti_visco_power_name](group_materi_plasti_visco_power_name.md) — visco power eta / p per plasticity model (manual 6.748, 6.749, F5).
+- [group_materi_elasti_young_user](group_materi_elasti_young_user.md) — user_young routine for the young modulus (manual 6.662, F5).
+- [group_materi_history_variable_user](group_materi_history_variable_user.md) — user routine for material history variables and its parameters (manual 6.671, 6.672, F5).
+- [group_materi_umat_pardiso_decompose](group_materi_umat_pardiso_decompose.md) — PARDISO decomposition switch, accepted without effect (manual 6.758, F5).
 - [group_materi_stress_null](group_materi_stress_null.md) — local stress components set to zero, interface layers of continuum elements (manual 6.753-6.755, F5).
 - [group_materi_elasti_borja_tamagnini](group_materi_elasti_borja_tamagnini.md) — Borja Tamagnini hyperelasticity, exponential bulk and pressure dependent shear (manual 6.641, paper 1998, F5).
 - [group_materi_plasti_hypo_wolffersdorff_niemunis](group_materi_plasti_hypo_wolffersdorff_niemunis.md) — Niemunis extension of von Wolffersdorff: Poisson ratio b2 term and f_d consistent at e_d (manual 6.719, F5).

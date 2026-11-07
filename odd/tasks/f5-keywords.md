@@ -132,8 +132,10 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   - [x] D4 borja_tamagnini (route inline, commit df32477; owner 2026-11-07: paper over Pro, DIVERGENCES
     BORJA-TAMAGNINI).
   - [x] D5 stress_null family (route inline, commit 1fc60e6).
-  - [ ] E user hooks (young_user, history_variable_user), niemunis_visco(+_ocr),
-    diprisco_density, umat_pardiso_decompose: accept-plus-stub, separate plan or discard.
+  - [x] E1 user hooks young_user, history_variable_user (+ _parameters) as stubs with the Professional errors,
+    umat_pardiso_decompose without effect (class A). Route inline, commit COMMIT_xxx.
+  - [ ] E2 diprisco_density.
+  - [ ] E3 niemunis_visco (+ _ocr, control ..._ocr_apply): separate task at the end of T3 (owner plan 1).
 - [ ] T4 W5 geometry, mesh tools, mpc, dependency (69). Route: per family.
 - [ ] T5 W6 other physics (25): baseline correction, force_edge_diagram, force_gravity_geometry,
   force_volume_element_group_0, groundflow_phreatic_*, group_beam_*, group_contact_spring_*,
@@ -524,3 +526,7 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   condensation, axes normalized, zero axis runs; full tangent (5 / 30 iterations to converge on the manual 9.1
   layer). GNU projects stress and ddsdde after set_stress (materi.cc), automatic frame from ELEMENT_NORMAL;
   identical to Pro (converged). Pro needs global_normal -yes (GNU unknown, C14).
+- L-T3E (2026-11-07, user): "vamos con la familia E", then "1, adelante" (to: low-cost hooks and pardiso now,
+  diprisco_density now, niemunis_visco as a separate task at the end of T3). Pro: young_user -yes "Error: routine
+  user_young is not programmed.", history_variable_user -yes "Error: routine user_materi_history_variable is not
+  programmed." (Pro init record materi_history_variable); pardiso_decompose accepted.

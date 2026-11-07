@@ -2961,6 +2961,13 @@ run_ok "$T2026" group_materi_stress_null4
 run_ok "$T2026" group_materi_stress_null5
 expected_error_ok "$T2026" group_materi_stress_null_error1
 expected_error_ok "$T2026" group_materi_stress_null_direction_error1
+# F5 T3 E: user hooks young_user / history_variable_user (manual 6.662,
+# 6.671, 6.672) and umat_pardiso_decompose (6.758, no effect).
+run_ok "$T2026" group_materi_elasti_young_user1
+expected_error_ok "$T2026" group_materi_elasti_young_user_error1
+run_ok "$T2026" group_materi_history_variable_user_parameters1
+expected_error_ok "$T2026" group_materi_history_variable_user_error1
+run_ok "$T2026" group_materi_umat_pardiso_decompose1
 # F5 T2 V8: post_calcul modifiers (manual 6.902-6.905, 6.916, 6.917,
 # 6.920); expected node_dof_calcul = Professional 02-08-2026 on the same
 # inputs (probes v8pro; -prival largest first, DIVERGENCES K12).
