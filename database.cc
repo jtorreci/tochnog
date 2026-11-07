@@ -4845,6 +4845,14 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   data_class[GROUP_MATERI_PLASTI_HYPO_WOLFFERSDORFF_NIEMUNIS] = MATERI;
   data_required[GROUP_MATERI_PLASTI_HYPO_WOLFFERSDORFF_NIEMUNIS] = GROUP_TYPE;
 
+  // manual Professional 6.641: G0 alpha khat pr of the Borja Tamagnini
+  // hyperelastic law (Borja, Tamagnini 1998, eq. 3.4-3.12)
+  strcpy(name[GROUP_MATERI_ELASTI_BORJA_TAMAGNINI],"group_materi_elasti_borja_tamagnini");
+  type[GROUP_MATERI_ELASTI_BORJA_TAMAGNINI] = DOUBLE_PRECISION;
+  data_length[GROUP_MATERI_ELASTI_BORJA_TAMAGNINI] = 4;
+  data_class[GROUP_MATERI_ELASTI_BORJA_TAMAGNINI] = MATERI;
+  data_required[GROUP_MATERI_ELASTI_BORJA_TAMAGNINI] = GROUP_TYPE;
+
   strcpy(name[GROUP_MATERI_PLASTI_CAMCLAY],"group_materi_plasti_camclay");
   type[GROUP_MATERI_PLASTI_CAMCLAY] = DOUBLE_PRECISION;
   // manual Professional 6.689: index M kappa lambda (3 values). The

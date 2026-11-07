@@ -2945,6 +2945,13 @@ run_ok "$T2026" group_materi_plasti_hypo_wolffersdorff_niemunis1
 run_ok "$T2026" group_materi_plasti_hypo_wolffersdorff_niemunis2
 run_ok "$T2026" group_materi_plasti_hypo_wolffersdorff_niemunis3
 expected_error_ok "$T2026" group_materi_plasti_hypo_wolffersdorff_niemunis_error1
+# F5 T3 D4: group_materi_elasti_borja_tamagnini (manual 6.641, Borja and
+# Tamagnini 1998 eq. 3.12); analytic targets (owner: paper over Professional).
+run_ok "$T2026" group_materi_elasti_borja_tamagnini1
+run_ok "$T2026" group_materi_elasti_borja_tamagnini2
+run_ok "$T2026" group_materi_elasti_borja_tamagnini3
+run_ok "$T2026" group_materi_elasti_borja_tamagnini4
+expected_error_ok "$T2026" group_materi_elasti_borja_tamagnini_error1
 # F5 T2 V8: post_calcul modifiers (manual 6.902-6.905, 6.916, 6.917,
 # 6.920); expected node_dof_calcul = Professional 02-08-2026 on the same
 # inputs (probes v8pro; -prival largest first, DIVERGENCES K12).

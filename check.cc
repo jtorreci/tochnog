@@ -775,6 +775,10 @@ long int check( long int idat, long int task )
     ok = ok && check_unknown_atleastone( "materi_history_variables",
       "materi_plasti_hypo_history", task );
   }
+  if ( data_number==GROUP_MATERI_ELASTI_BORJA_TAMAGNINI ) {
+    ok = check_unknown( "materi_stress", YES, task );
+    ok = ok && check_unknown( "materi_strain_elasti", YES, task );
+  }
   if ( data_number==GROUP_MATERI_PLASTI_HYPO_WOLFFERSDORFF_NIEMUNIS ) {
     ok = check_unknown( "materi_stress", YES, task );
     ok = ok && check_unknown_atleastone( "materi_history_variables",

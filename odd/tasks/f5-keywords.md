@@ -129,7 +129,9 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
     followed, DIVERGENCES VISCO-EXPONENTIAL-NAME; C117 found).
   - [x] D3 wolffersdorff_niemunis (route inline, commit 46a0377). Prerequisite C118 (void_ratio_linear
     alias) resolved, route inline, commit 932c5f9.
-  - [ ] D4 borja_tamagnini.  - [ ] D5 stress_null family.
+  - [x] D4 borja_tamagnini (route inline, commit COMMIT_xxx; owner 2026-11-07: paper over Pro, DIVERGENCES
+    BORJA-TAMAGNINI).
+  - [ ] D5 stress_null family.
   - [ ] E user hooks (young_user, history_variable_user), niemunis_visco(+_ocr),
     diprisco_density, umat_pardiso_decompose: accept-plus-stub, separate plan or discard.
 - [ ] T4 W5 geometry, mesh tools, mpc, dependency (69). Route: per family.
@@ -505,3 +507,16 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   niemunis-habil-2003.pdf). b2 eq. 4.183, f_d_bar eq. 4.221, interpolation 4.223. b2 in L only gave -64.5;
   with N updated through the unchanged flow rule (thesis below 4.183) GNU = Pro within 6e-5 for nu 0.2 / 0.365 /
   0.3822 / 0.49; dense states follow the Pro history to 0.1 % up to the collapse.
+- L-T3D4 (2026-11-07, user): "adelante con D4". Manual 2.2.2 sentence on the Borja Tamagnini C_ijkl is cut
+  ("is specified in" + nothing); only reference [1] Borja, Tamagnini 1998. Pro probes (hex8, homogeneous,
+  G0 alpha khat pr; needs materi_strain_elasti): incremental and step dependent; isotropic tangent
+  K = pr/khat max(1, exp(-eps_v/khat - 1)) at the start of the step (exact for dt 0.25 / 0.05 / 1, khat 0.01 /
+  0.02, pr 5 / 10; extension stays linear pr/khat); pure shear G = G0 + alpha/khat (independent of pr);
+  combined compression + shear couples (p -15.014062, G 311.25 in step 2), form not identified -> owner question.
+- L-T3D4b (2026-11-07, user): "ya lo tienes en external-downloads" (../external-downloads/
+  1-s2.0-S0045782597001412-main.pdf). Paper eq. 3.4-3.12: hyperelastic, P = P0 exp(Omega) (1 + 3 alpha eps_s^2 /
+  (2 khat)), Q = 3 (mu0 - alpha P0 exp Omega) eps_s, Omega = -(eps_v - eps_v0)/khat; path independent, and
+  at zero elastic strain P = P0. Pro is step dependent, zero stress at zero strain, shear G0 + alpha/khat
+  (paper mu0 + alpha pr): Pro does not follow the paper -> owner question (paper vs Pro vs discard).
+- L-T3D4c (2026-11-07, user): "1. El paper, y documentamos divergencia con Pro". Analytic branch in
+  hyperela.cc (exact tangent), stress difference as the other hyperelastic laws; GNU = analytic to 1e-7.
