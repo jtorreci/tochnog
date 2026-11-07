@@ -125,7 +125,7 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
     inline, commit a806c1c (owner 2026-11-06: manual followed, DIVERGENCES PLASTI-RESIDUAL-STIFFNESS).
   - [x] D1 elasti_c + c_direction (route inline, commit 6b8327d).
   - [x] D2 visco_power_name / _value (route inline, commit 2ef6bdc).
-  - [x] D2x visco_exponential_name / _values / _limit (route inline, commit COMMIT_xxx; owner 2026-11-07: manual
+  - [x] D2x visco_exponential_name / _values / _limit (route inline, commit 8f8df2a; owner 2026-11-07: manual
     followed, DIVERGENCES VISCO-EXPONENTIAL-NAME; C117 found).
   - [ ] D3 wolffersdorff_niemunis.  - [ ] D4 borja_tamagnini.  - [ ] D5 stress_null family.
   - [ ] E user hooks (young_user, history_variable_user), niemunis_visco(+_ocr),
