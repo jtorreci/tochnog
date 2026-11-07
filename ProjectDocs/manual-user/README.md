@@ -357,6 +357,7 @@ page lists its own in "Differences with the Professional version".
 - [group_materi_stress_null](group_materi_stress_null.md) — local stress components set to zero, interface layers of continuum elements (manual 6.753-6.755, F5).
 - [group_materi_elasti_borja_tamagnini](group_materi_elasti_borja_tamagnini.md) — Borja Tamagnini hyperelasticity, exponential bulk and pressure dependent shear (manual 6.641, paper 1998, F5).
 - [group_materi_plasti_diprisco_density](group_materi_plasti_diprisco_density.md) — di Prisco plasticity with loose/dense parameters interpolated with the current void ratio (manual 6.696, F5).
+- [group_materi_plasti_hypo_niemunis_visco](group_materi_plasti_hypo_niemunis_visco.md) — Niemunis visco-hypoplasticity with intergranular strains, OCR initialisation (manual 6.720, 6.721, 6.148, F5).
 - [group_materi_plasti_hypo_wolffersdorff_niemunis](group_materi_plasti_hypo_wolffersdorff_niemunis.md) — Niemunis extension of von Wolffersdorff: Poisson ratio b2 term and f_d consistent at e_d (manual 6.719, F5).
 - [group_materi_plasti_hypo_void_ratio_linear](group_materi_plasti_hypo_void_ratio_linear.md) — linear (trace) or exact (determinant) void ratio change in hypoplasticity (manual 6.722, F5).
 - [group_materi_plasti_visco_exponential_name](group_materi_plasti_visco_exponential_name.md) — visco exponential gamma / alpha per plasticity model and the exponent limit (manual 6.744-6.746, F5).

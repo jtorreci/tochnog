@@ -793,6 +793,12 @@ long int check( long int idat, long int task )
     ok = ok && check_unknown_atleastone( "materi_history_variables",
       "materi_plasti_hypo_history", task );
   }
+  if ( data_number==GROUP_MATERI_PLASTI_HYPO_NIEMUNIS_VISCO ) {
+    ok = check_unknown( "materi_stress", YES, task );
+    ok = ok && check_unknown_atleastone( "materi_history_variables",
+      "materi_plasti_hypo_history", task );
+    ok = ok && check_unknown( "materi_strain_intergranular", YES, task );
+  }
   if ( data_number==GROUP_MATERI_PLASTI_HYPO_WOLFERSDORFF ) {
     ok = check_unknown( "materi_stress", YES, task );
     ok = ok && check_unknown_atleastone( "materi_history_variables",

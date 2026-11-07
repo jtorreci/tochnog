@@ -136,7 +136,8 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
     umat_pardiso_decompose without effect (class A). Route inline, commit 536998f.
   - [x] E2 diprisco_density (route inline, commit 6059c82; owner 2026-11-07: manual over Pro, linear
     interpolation with the current void ratio, DIVERGENCES DIPRISCO-DENSITY; C119 found).
-  - [ ] E3 niemunis_visco (+ _ocr, control ..._ocr_apply): separate task at the end of T3 (owner plan 1).
+  - [x] E3 niemunis_visco (+ _ocr, control ..._ocr_apply): route inline (explorer mapped the thesis), commit
+    COMMIT_E3; owner 2026-11-07: b2 < 0 rejected per manual (DIVERGENCES NIEMUNIS-VISCO-B2); C120 found.
 - [ ] T4 W5 geometry, mesh tools, mpc, dependency (69). Route: per family.
 - [ ] T5 W6 other physics (25): baseline correction, force_edge_diagram, force_gravity_geometry,
   force_volume_element_group_0, groundflow_phreatic_*, group_beam_*, group_contact_spring_*,
@@ -535,3 +536,8 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   history variable 12 and evolving with the volumetric strain, clamped to [ed, el]; class D). Pro probes: only
   the first set is used, el > ed required. GNU tests density1-4 (e 0.75 = averaged plain model exactly; e 0.9
   loose; e 0.5 dense; oedometer e analytic), error1 (Pro message), error2. Plain diprisco GNU vs Pro 0.2 % (C119).
+- L-T3E3 (2026-11-07, user): "adelante" (E3), then "vamos con el recomendado" (to: b2 < 0 is an error per the
+  manual, class D). Explorer: Jerman-Masin UMAT is not the Niemunis law; flow rule sign from habil eq. 4.73.
+  Pro probes: hypo6 is pure relaxation; phi / nu / betaR do not affect isotropic relaxation; IGS required;
+  OCR applied once in the first step of the index; b2 < 0 used. GNU within 5e-5 relative of Pro on 20 probes,
+  Python reference equal to 1e-8. Tests visco1-4, ocr1-3, error1-2.

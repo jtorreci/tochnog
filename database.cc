@@ -4845,6 +4845,21 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   data_class[GROUP_MATERI_PLASTI_HYPO_WOLFFERSDORFF_NIEMUNIS] = MATERI;
   data_required[GROUP_MATERI_PLASTI_HYPO_WOLFFERSDORFF_NIEMUNIS] = GROUP_TYPE;
 
+  // manual Professional 6.720: phi nu Dr Iv ee0 pe0 lambda betaR kappa of
+  // the Niemunis visco-hypoplastic law
+  strcpy(name[GROUP_MATERI_PLASTI_HYPO_NIEMUNIS_VISCO],"group_materi_plasti_hypo_niemunis_visco");
+  type[GROUP_MATERI_PLASTI_HYPO_NIEMUNIS_VISCO] = DOUBLE_PRECISION;
+  data_length[GROUP_MATERI_PLASTI_HYPO_NIEMUNIS_VISCO] = 9;
+  data_class[GROUP_MATERI_PLASTI_HYPO_NIEMUNIS_VISCO] = MATERI;
+  data_required[GROUP_MATERI_PLASTI_HYPO_NIEMUNIS_VISCO] = GROUP_TYPE;
+
+  // manual Professional 6.721: initial OCR of the Niemunis visco law
+  strcpy(name[GROUP_MATERI_PLASTI_HYPO_NIEMUNIS_VISCO_OCR],"group_materi_plasti_hypo_niemunis_visco_ocr");
+  type[GROUP_MATERI_PLASTI_HYPO_NIEMUNIS_VISCO_OCR] = DOUBLE_PRECISION;
+  data_length[GROUP_MATERI_PLASTI_HYPO_NIEMUNIS_VISCO_OCR] = 1;
+  data_class[GROUP_MATERI_PLASTI_HYPO_NIEMUNIS_VISCO_OCR] = MATERI;
+  data_required[GROUP_MATERI_PLASTI_HYPO_NIEMUNIS_VISCO_OCR] = GROUP_TYPE;
+
   // manual Professional 6.641: G0 alpha khat pr of the Borja Tamagnini
   // hyperelastic law (Borja, Tamagnini 1998, eq. 3.4-3.12)
   strcpy(name[GROUP_MATERI_ELASTI_BORJA_TAMAGNINI],"group_materi_elasti_borja_tamagnini");

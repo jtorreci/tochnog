@@ -355,6 +355,7 @@ page lists its own in "Differences with the Professional version".
 - [group_materi_stress_null](group_materi_stress_null.md) — materi_stress_null() in materi.cc after set_stress, stress and ddsdde projection (F5).
 - [group_materi_elasti_borja_tamagnini](group_materi_elasti_borja_tamagnini.md) — analytic branch in hyperela.cc hyperelasticity(), exact tangent in Chyper (F5).
 - [group_materi_plasti_diprisco_density](group_materi_plasti_diprisco_density.md) — plasti.cc plasti_rule(): parameter interpolation and void ratio history update before the di Prisco block (F5).
+- [group_materi_plasti_hypo_niemunis_visco](group_materi_plasti_hypo_niemunis_visco.md) — hypo.c niemunis_visco_rate() as hypo type 2 of sigma_(), OCR initialisation in hypoplas.cc (F5).
 - [group_materi_plasti_hypo_wolffersdorff_niemunis](group_materi_plasti_hypo_wolffersdorff_niemunis.md) — hypo.c sigma_(): b2 in L and N, f_d_bar (Niemunis 2003 eq. 4.183, 4.221, 4.223) (F5).
 - [group_materi_plasti_hypo_void_ratio_linear](group_materi_plasti_hypo_void_ratio_linear.md) — hypo_void_ratio_exact in hypo.c sigma_(); alias to pressuredependentvoidratio removed (C118, F5).
 - [group_materi_plasti_visco_exponential_name](group_materi_plasti_visco_exponential_name.md) — exponential names (visco_named 2) and visco_limit replacing EPS_VISCO (F5).

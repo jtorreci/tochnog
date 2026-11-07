@@ -28,6 +28,179 @@ __thread long int hypo_void_ratio_exact = 0;
 /* group_materi_plasti_hypo_wolffersdorff_niemunis nu z */
 __thread long int hypo_niemunis_on = 0;
 __thread double hypo_niemunis_nu = 0., hypo_niemunis_z = 0.;
+
+/* ------------------------------------------------------------------------------ */
+/* Niemunis visco-hypoplasticity (manual Professional "Niemunis visco law",
+   group_materi_plasti_hypo_niemunis_visco phi nu Dr Iv ee0 pe0 lambda betaR
+   kappa; Niemunis 2003, habilitation, section 4.2). Tension positive,
+   T = effective stress, all tensors 3x3 with index i+3*j.
+
+     That = T/trT, That* = That - 1/3, tan psi = sqrt3 |That*|,
+     F = sqrt(tan^2 psi/8 + (2 - tan^2 psi)/(2 + sqrt2 tan psi cos3theta))
+         - tan psi/(2 sqrt2)
+     a = sqrt3 (3 - sin phi)/(2 sqrt2 sin phi)
+     b2 = (1 + a^2/3)(1 - 2 nu)/(1 + nu) - 1   (b2 < 0 rejected by hypoplas.cc)
+     L = fb [F^2 I + a^2 That That + b2 (I - 1/3 1 1)],
+     fb = -trT/((1 + a^2/3) kappa)
+     B = F^2/a^2 (That + That*) + (That:That) That* - That (That*:That*)
+     Dvis = -Dr B/|B| (1/OCR)^(1/Iv), OCR = pe/pe+,
+     pe = pe0 ((1 + ee0)/(1 + e))^(1/lambda)
+     pe+ = p/(betaR - 1) [betaR sqrt(1 + eta^2 (betaR^2 - 1)) - 1], eta < 1
+         = p (1 + eta^2)(1 + betaR)/2,                                eta >= 1
+     eta = q/(M p), M = 6 F sin phi/(3 - sin phi)
+     dT = M:D - L:Dvis, with the intergranular strain stiffness
+     M = [rho^chi mT + (1 - rho^chi) mR] L + rho^chi (1 - mT) L:h h   (h:D > 0)
+       = [rho^chi mT + (1 - rho^chi) mR] L + rho^chi (mR - mT) L:h h  (h:D <= 0)
+
+   niemunis_visco_shape() returns That, That*, F and pe+ for a stress;
+   niemunis_visco_peplus() is used by hypoplasticity() for the initial void
+   ratio from group_materi_plasti_hypo_niemunis_visco_ocr. */
+static int niemunis_visco_shape(double *t, double *data, double *that,
+	double *thatd, double *f, double *peplus)
+{
+    long int i, j, k;
+    double tr, nrm, tanpsi, cos3th, tmp, sinphi, p, q, m, eta, betar, t3;
+
+    tr = t[0] + t[4] + t[8];
+    if (tr >= 0.) return 1;
+    for (i = 0; i < 9; ++i) that[i] = t[i] / tr;
+    for (i = 0; i < 9; ++i) thatd[i] = that[i];
+    thatd[0] -= 1. / 3.; thatd[4] -= 1. / 3.; thatd[8] -= 1. / 3.;
+    nrm = 0.;
+    for (i = 0; i < 9; ++i) nrm += thatd[i] * thatd[i];
+    nrm = sqrt(nrm);
+    tanpsi = sqrt(3.) * nrm;
+    cos3th = 0.;
+    if (nrm > 1e-12) {
+	t3 = 0.;
+	for (i = 0; i < 3; ++i)
+	    for (j = 0; j < 3; ++j)
+		for (k = 0; k < 3; ++k)
+		    t3 += thatd[i + 3 * j] * thatd[j + 3 * k] * thatd[k + 3 * i];
+	cos3th = -sqrt(6.) * t3 / (nrm * nrm * nrm);
+	if (cos3th > 1.) cos3th = 1.;
+	if (cos3th < -1.) cos3th = -1.;
+    }
+    tmp = tanpsi * tanpsi / 8. + (2. - tanpsi * tanpsi) /
+	    (2. + sqrt(2.) * tanpsi * cos3th);
+    if (tmp < 0.) tmp = 0.;
+    *f = sqrt(tmp) - tanpsi / (2. * sqrt(2.));
+    sinphi = sin(data[0] * .017453292777777778);
+    p = -tr / 3.;
+    q = 0.;
+    for (i = 0; i < 9; ++i) {
+	tmp = t[i] - ((i == 0 || i == 4 || i == 8) ? tr / 3. : 0.);
+	q += tmp * tmp;
+    }
+    q = sqrt(1.5 * q);
+    m = 6. * *f * sinphi / (3. - sinphi);
+    eta = m > 0. ? q / (m * p) : 0.;
+    betar = data[7];
+    if (eta < 1.) {
+	if (fabs(betar - 1.) < 1e-8)
+	    *peplus = p * (1. + eta * eta);
+	else
+	    *peplus = p / (betar - 1.) *
+		    (betar * sqrt(1. + eta * eta * (betar * betar - 1.)) - 1.);
+    } else
+	*peplus = p * (1. + eta * eta) * (1. + betar) / 2.;
+    if (*peplus <= 0.) return 1;
+    return 0;
+}
+
+int niemunis_visco_peplus(double *t, double *data, double *peplus)
+{
+    double that[9], thatd[9], f;
+    return niemunis_visco_shape(t, data, that, thatd, &f, peplus);
+}
+
+/* stress update over the substep dt with the strain rate d; mm gets the
+   tangent M (index i+3*(j+3*(k+3*l))), his[0] the void ratio (already
+   updated), his[5] the OCR and *stiffness the size of M. Returns 1 for a
+   stress state without compression. */
+static int niemunis_visco_rate(double *t, double *mm, double *his,
+	long int nhis, double *d, double dt, double *data, long int iuseepi,
+	double rho, double mr, double mt, double chi, double epid,
+	double *hdir, double *stiffness)
+{
+    long int i, j, k, l, ind;
+    double that[9], thatd[9], f, peplus, sinphi, a, a2, b2, nu, tr, fb,
+	    bmat[9], bnrm, tt, tdtd, pe, ocr, creep, dvis[9], lmat[81], lh[9],
+	    fac, coef, rhochi, dt_[9], tmp, delta_ij, delta_kl, iso;
+
+    if (niemunis_visco_shape(t, data, that, thatd, &f, &peplus)) return 1;
+    tr = t[0] + t[4] + t[8];
+    sinphi = sin(data[0] * .017453292777777778);
+    a = sqrt(3.) * (3. - sinphi) / (2. * sqrt(2.) * sinphi);
+    a2 = a * a;
+    nu = data[1];
+    b2 = (1. + a2 / 3.) * (1. - 2. * nu) / (1. + nu) - 1.;
+    fb = -tr / ((1. + a2 / 3.) * data[8]);
+
+/*       L = fb Lhat */
+    for (i = 0; i < 3; ++i)
+	for (j = 0; j < 3; ++j)
+	    for (k = 0; k < 3; ++k)
+		for (l = 0; l < 3; ++l) {
+		    ind = i + 3 * (j + 3 * (k + 3 * l));
+		    iso = 0.5 * ((i == k && j == l ? 1. : 0.) +
+			    (i == l && j == k ? 1. : 0.));
+		    delta_ij = (i == j) ? 1. : 0.;
+		    delta_kl = (k == l) ? 1. : 0.;
+		    lmat[ind] = fb * (f * f * iso + a2 * that[i + 3 * j] *
+			    that[k + 3 * l] + b2 * (iso - delta_ij * delta_kl / 3.));
+		}
+
+/*       viscous strain rate */
+    tt = 0.;
+    tdtd = 0.;
+    for (i = 0; i < 9; ++i) {
+	tt += that[i] * that[i];
+	tdtd += thatd[i] * thatd[i];
+    }
+    bnrm = 0.;
+    for (i = 0; i < 9; ++i) {
+	bmat[i] = f * f / a2 * (that[i] + thatd[i]) + tt * thatd[i] -
+		that[i] * tdtd;
+	bnrm += bmat[i] * bmat[i];
+    }
+    bnrm = sqrt(bnrm);
+    pe = data[5] * pow((1. + data[4]) / (1. + his[0]), 1. / data[6]);
+    ocr = pe / peplus;
+    creep = data[2] * pow(1. / ocr, 1. / data[3]);
+    for (i = 0; i < 9; ++i) dvis[i] = bnrm > 0. ? -creep * bmat[i] / bnrm : 0.;
+    if (nhis >= 6) his[5] = ocr;
+
+/*       tangent M with intergranular strain */
+    fac = 1.;
+    coef = 0.;
+    if (iuseepi == 1) {
+	rhochi = pow(rho, chi);
+	fac = rhochi * mt + (1. - rhochi) * mr;
+	coef = epid > 0. ? rhochi * (1. - mt) : rhochi * (mr - mt);
+	for (i = 0; i < 9; ++i) {
+	    lh[i] = 0.;
+	    for (k = 0; k < 9; ++k) lh[i] += lmat[i + 9 * k] * hdir[k];
+	}
+    }
+    tmp = 0.;
+    for (i = 0; i < 9; ++i)
+	for (k = 0; k < 9; ++k) {
+	    mm[i + 9 * k] = fac * lmat[i + 9 * k];
+	    if (iuseepi == 1) mm[i + 9 * k] += coef * lh[i] * hdir[k];
+	    tmp += mm[i + 9 * k] * mm[i + 9 * k];
+	}
+    *stiffness = sqrt(tmp);
+
+/*       dT = M:D - L:Dvis */
+    for (i = 0; i < 9; ++i) {
+	dt_[i] = 0.;
+	for (k = 0; k < 9; ++k)
+	    dt_[i] += mm[i + 9 * k] * d[k] - lmat[i + 9 * k] * dvis[k];
+    }
+    for (i = 0; i < 9; ++i) t[i] += dt_[i] * dt;
+    return 0;
+}
 __thread double hypo_minimum_void_ratio = 0.;
 static double c_b45 = 1.5;
 static long int c__81 = 81;
@@ -408,6 +581,18 @@ long int *iuseepi, *ihypotype;
 	e = hypo_minimum_void_ratio;
     his[1] = e;
 
+/*       Niemunis visco-hypoplasticity: own stress update and tangent */
+    if (*ihypotype == 2) {
+	phic = data[1] * .017453292777777778;
+	if (niemunis_visco_rate(&stress[4], &mmat[40], &his[1], *nhis, d__,
+		*dt, &data[1], *iuseepi, *epi_rho__, *epi_mr__, *epi_mt__,
+		*epi_chi__, *epid, &direction_epi__[4], &re)) {
+	    *error = TRUE_;
+	    return 0;
+	}
+	goto L_mobilised;
+    }
+
 /*       von Wolffersdorff */
     phic = data[1] * .017453292777777778;
     hs = data[2];
@@ -732,6 +917,7 @@ long int *iuseepi, *ihypotype;
 	privec_("stress", &stress[4], &c__9, (long int)6);
     }
 
+L_mobilised:
 /*       mobilised friction angle for postprocessing */
     eigen_(&stress[4], eigval);
 /* Computing MAX */

@@ -2978,6 +2978,20 @@ run_ok "$T2026" group_materi_plasti_diprisco_density3
 run_ok "$T2026" group_materi_plasti_diprisco_density4
 expected_error_ok "$T2026" group_materi_plasti_diprisco_density_error1
 expected_error_ok "$T2026" group_materi_plasti_diprisco_density_error2
+# F5 T3 E3: group_materi_plasti_hypo_niemunis_visco (+ _ocr, manual 6.720,
+# 6.721, 6.148): Niemunis visco-hypoplasticity with intergranular strains
+# (Professional other/hypo6, explicit Euler and Python references, OCR
+# applied once in the first step of the index). b2 < 0 rejected (manual;
+# class D NIEMUNIS-VISCO-B2).
+run_ok "$T2026" group_materi_plasti_hypo_niemunis_visco1
+run_ok "$T2026" group_materi_plasti_hypo_niemunis_visco2
+run_ok "$T2026" group_materi_plasti_hypo_niemunis_visco3
+run_ok "$T2026" group_materi_plasti_hypo_niemunis_visco4
+run_ok "$T2026" group_materi_plasti_hypo_niemunis_visco_ocr1
+run_ok "$T2026" group_materi_plasti_hypo_niemunis_visco_ocr2
+run_ok "$T2026" group_materi_plasti_hypo_niemunis_visco_ocr3
+expected_error_ok "$T2026" group_materi_plasti_hypo_niemunis_visco_error1
+expected_error_ok "$T2026" group_materi_plasti_hypo_niemunis_visco_error2
 # F5 T2 V8: post_calcul modifiers (manual 6.902-6.905, 6.916, 6.917,
 # 6.920); expected node_dof_calcul = Professional 02-08-2026 on the same
 # inputs (probes v8pro; -prival largest first, DIVERGENCES K12).

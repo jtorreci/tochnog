@@ -29,6 +29,9 @@ extern "C" __thread long int hypo_substepping_off, hypo_minimum_void_ratio_on,
   hypo_void_ratio_exact, hypo_niemunis_on;
 extern "C" __thread double hypo_niemunis_nu, hypo_niemunis_z;
 extern "C" __thread double hypo_minimum_void_ratio;
+extern "C" int niemunis_visco_peplus( double *t, double *data,
+  double *peplus );
+extern long int step_first_of_control;
 
 extern "C" 
   int hypo_( double *stress, double *Mmat, double *new_hisv,
@@ -102,6 +105,7 @@ void hypoplasticity( long int element, long int gr,
 {
 
   long int i=0, j=0, k=0, l=0, ldum=0, hypo_wolfersdorff=0, hypo_lowangles=0,
+    hypo_niemunis_visco=0,
     length_lowangles=0, length_wolfersdorff=0, length_intergranularstrain=0, 
     pressure_dependent_void_ratio=0, idum[1],
     ndata[1], nhis[1], use_epi[1], use_pres[1], hypo_type[1];
@@ -144,8 +148,9 @@ void hypoplasticity( long int element, long int gr,
 
     if(db_active_index( GROUP_MATERI_PLASTI_HYPO_WOLFERSDORFF, gr, VERSION_NORMAL )) hypo_wolfersdorff=1; 
     else if(db_active_index( GROUP_MATERI_PLASTI_HYPO_LOWANGLES, gr, VERSION_NORMAL )) hypo_lowangles=1;
+    else if(db_active_index( GROUP_MATERI_PLASTI_HYPO_NIEMUNIS_VISCO, gr, VERSION_NORMAL )) hypo_niemunis_visco=1;
 
-  if ( hypo_wolfersdorff || hypo_lowangles || 
+  if ( hypo_wolfersdorff || hypo_lowangles || hypo_niemunis_visco || 
        db_active_index( GROUP_MATERI_PLASTI_HYPO_MASIN, gr, VERSION_NORMAL ) ) {
 
 #if !HYPO_USE
@@ -159,7 +164,7 @@ void hypoplasticity( long int element, long int gr,
       exit(TN_EXIT_STATUS);
     }
 
-    if ( hypo_wolfersdorff || hypo_lowangles ) {
+    if ( hypo_wolfersdorff || hypo_lowangles || hypo_niemunis_visco ) {
 
     length_lowangles = LENGTH_LOWANGLES;
     length_wolfersdorff = LENGTH_WOLFERSDORFF;
@@ -176,6 +181,27 @@ void hypoplasticity( long int element, long int gr,
         VERSION_NORMAL, GET_AND_CHECK );
       ndata[0] = length_lowangles;
       hypo_type[0] = 1;
+    }
+    else if ( hypo_niemunis_visco ) {
+        // phi nu Dr Iv ee0 pe0 lambda betaR kappa (manual 6.720)
+      long int length_visco = 9;
+      db( GROUP_MATERI_PLASTI_HYPO_NIEMUNIS_VISCO, gr, idum, data, length_visco,
+        VERSION_NORMAL, GET_AND_CHECK );
+      ndata[0] = length_visco;
+      hypo_type[0] = 2;
+      if ( data[0]<=0. || data[0]>=90. || data[1]<=-1. || data[2]<0. || data[3]<=0. || 
+           data[5]<=0. || data[6]<=0. || data[7]<=0. || data[8]<=0. ) 
+        db_error( GROUP_MATERI_PLASTI_HYPO_NIEMUNIS_VISCO, gr );
+        // manual: the b2 equation only holds for a non-negative right-hand
+        // side, which limits phi and nu (the Professional uses b2 < 0)
+      double sinphi = sin( data[0]*PIRAD/180. ),
+        a = sqrt(3.)*( 3. - sinphi )/( 2.*sqrt(2.)*sinphi ),
+        b2 = ( 1. + a*a/3. )*( 1. - 2.*data[1] )/( 1. + data[1] ) - 1.;
+      if ( b2<0. ) {
+        pri( "Error: phi and nu in group_materi_plasti_hypo_niemunis_visco "
+          "give a negative b2 = (1+a^2/3)(1-2nu)/(1+nu)-1." );
+        exit(TN_EXIT_STATUS);
+      }
     }
     if ( materi_history_variables<4 ) {
       pri( "Error: materi_history_variables should be 4 for GROUP_MATERI_PLASTI_HYPO_WOLFERSDORFF" );
@@ -214,6 +240,8 @@ void hypoplasticity( long int element, long int gr,
         VERSION_NORMAL, GET );
       if ( pressure_dependent_void_ratio==-YES ) use_pres[0] = 1;
     }
+      // the pressure dependent correction uses the von Wolffersdorff data
+    if ( hypo_niemunis_visco ) use_pres[0] = 0;
 
     cohesion[0] = 0.;
     db( GROUP_MATERI_PLASTI_HYPO_COHESION, gr, idum, cohesion, ldum, 
@@ -227,6 +255,27 @@ void hypoplasticity( long int element, long int gr,
     nhis[0] = materi_history_variables;
     array_move( old_hisv, new_hisv, nhis[0] );
     array_move( rotated_old_sig, stress, MDIM*MDIM );
+
+      // group_materi_plasti_hypo_niemunis_visco_ocr (manual 6.721), applied
+      // by control_materi_plasti_hypo_niemunis_visco_ocr_apply -yes (6.148)
+      // once, in the first timestep of that control index (measured on the
+      // Professional 02-08-2026): pe = OCR pe+ of the current stress and
+      // e0 = (1 + ee0) (pe/pe0)^-lambda - 1 in hyhis0
+    if ( hypo_niemunis_visco && step_first_of_control ) {
+      long int icontrol=0, ocr_apply=-NO;
+      double ocr=0., peplus=0., pe=0.;
+      db( ICONTROL, 0, &icontrol, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+      db( CONTROL_MATERI_PLASTI_HYPO_NIEMUNIS_VISCO_OCR_APPLY, icontrol,
+        &ocr_apply, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+      if ( ocr_apply==-YES && db( GROUP_MATERI_PLASTI_HYPO_NIEMUNIS_VISCO_OCR, 
+          gr, idum, &ocr, ldum, VERSION_NORMAL, GET_IF_EXISTS ) ) {
+        if ( ocr<=0. ) db_error( GROUP_MATERI_PLASTI_HYPO_NIEMUNIS_VISCO_OCR, gr );
+        if ( !niemunis_visco_peplus( stress, data, &peplus ) ) {
+          pe = ocr * peplus;
+          new_hisv[0] = ( 1. + data[4] ) * pow( pe/data[5], -data[6] ) - 1.;
+        }
+      }
+    }
     array_set( &Mmat[0], 0., MDIM*MDIM*MDIM*MDIM );
 
     softvar_nonloc[0]=softvar_nonl;

@@ -39,6 +39,9 @@ extern char **environ;
 // the Professional (probes F4 T7): it applies each of them once per
 // control index.
 static long int step_start_control_entry = 0;
+// first step of the current control index, for material routines that
+// act once per index (control_materi_plasti_hypo_niemunis_visco_ocr_apply)
+long int step_first_of_control = 0;
 
 // C62 (F4 T6f LOW queue Q3): the node_rhside written by bounda() in an
 // equilibrium iteration (the bounda_force loads, assigned right after
@@ -1126,6 +1129,7 @@ void step_start( long int task, long int options_solver[], double dtime, double 
   // first step of this control index (see step_start_control_entry)
   long int first_of_control = step_start_control_entry;
   step_start_control_entry = 0;
+  step_first_of_control = first_of_control;
 
   // node_geometry_present (manual Professional 6.886): fill the
   // per-node list of present geometries at the START of every step,
