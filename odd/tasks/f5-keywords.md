@@ -134,7 +134,7 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   - [x] D5 stress_null family (route inline, commit 1fc60e6).
   - [x] E1 user hooks young_user, history_variable_user (+ _parameters) as stubs with the Professional errors,
     umat_pardiso_decompose without effect (class A). Route inline, commit 536998f.
-  - [x] E2 diprisco_density (route inline, commit COMMIT_E2; owner 2026-11-07: manual over Pro, linear
+  - [x] E2 diprisco_density (route inline, commit 6059c82; owner 2026-11-07: manual over Pro, linear
     interpolation with the current void ratio, DIVERGENCES DIPRISCO-DENSITY; C119 found).
   - [ ] E3 niemunis_visco (+ _ocr, control ..._ocr_apply): separate task at the end of T3 (owner plan 1).
 - [ ] T4 W5 geometry, mesh tools, mpc, dependency (69). Route: per family.
