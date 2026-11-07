@@ -127,8 +127,8 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   - [x] D2 visco_power_name / _value (route inline, commit 2ef6bdc).
   - [x] D2x visco_exponential_name / _values / _limit (route inline, commit 8f8df2a; owner 2026-11-07: manual
     followed, DIVERGENCES VISCO-EXPONENTIAL-NAME; C117 found).
-  - [ ] D3 wolffersdorff_niemunis. Prerequisite C118 (void_ratio_linear alias) resolved, route inline,
-    commit 932c5f9. Niemunis kernel: owner question (equations 4.211 / 4.221 of [16] not in the manual).
+  - [x] D3 wolffersdorff_niemunis (route inline, commit COMMIT_xxx). Prerequisite C118 (void_ratio_linear
+    alias) resolved, route inline, commit 932c5f9.
   - [ ] D4 borja_tamagnini.  - [ ] D5 stress_null family.
   - [ ] E user hooks (young_user, history_variable_user), niemunis_visco(+_ocr),
     diprisco_density, umat_pardiso_decompose: accept-plus-stub, separate plan or discard.
@@ -501,3 +501,7 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   void_ratio_linear alias switched on the pressure dependent correction (C118). Fixed: GNU -1.0198992 (-yes),
   -1.0199336 (-no, Pro -1.019924). The manual gives b2 and f_d tilde only by reference to Niemunis 2003
   (eq. 4.211, 4.221), not reproducible from the manual -> owner question.
+- L-T3D3b (2026-11-07, user): "te he dejado la tesis en external-downloads" (../external-downloads/
+  niemunis-habil-2003.pdf). b2 eq. 4.183, f_d_bar eq. 4.221, interpolation 4.223. b2 in L only gave -64.5;
+  with N updated through the unchanged flow rule (thesis below 4.183) GNU = Pro within 6e-5 for nu 0.2 / 0.365 /
+  0.3822 / 0.49; dense states follow the Pro history to 0.1 % up to the collapse.

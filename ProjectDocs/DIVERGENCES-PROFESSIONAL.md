@@ -15,9 +15,9 @@ Single index of every known difference between the GNU version and Tochnog Profe
 |---|---|---|
 | A | deliberate divergence decided by the project owner | 33 |
 | B | known difference, not decided yet or scheduled (F3/F4) | 53 |
-| C | GNU extension or input-dialect difference | 24 |
+| C | GNU extension or input-dialect difference | 25 |
 | D | Professional-suspect: the Professional contradicts its own manual or the analytic answer | 15 |
-| | **total** | **125** |
+| | **total** | **126** |
 
 Ids: `C*`/`B*` are [BACKLOG-OPEN-ISSUES.md](BACKLOG-OPEN-ISSUES.md) items, `K*` are clusters of [AUDIT-ALL-VARIABLES-2026.md](AUDIT-ALL-VARIABLES-2026.md); other ids are local to this index. Several class A items are also Professional-suspect (noted in their status). Professional values are from the binary 02-08-2026 unless stated.
 
@@ -191,6 +191,7 @@ Records or spellings that only one program accepts, or GNU choices where the Pro
 | GROUP-BEAM-PLANE | `group_beam_plane <group> -a -b` (GNU-only) | Since F5 T2 V4d (2026-11-02): default local z of a 3D beam without a local z record = plane normal a x b; a beam along the normal stops with `Error, the beam is perpendicular to its GROUP_BEAM_PLANE.` Before: plane of the planar 3D beam. | Not a Professional record; default local z = global z projected (global y for a beam along z). | GNU extension (kept for old inputs). | 2026-11-02 | [user/group_beam_direction_z](manual-user/group_beam_direction_z.md); [dev/group_beam_direction_z](manual-developer/group_beam_direction_z.md) |
 | ELASTI-C-ZERO-DIRECTION | `group_materi_elasti_c_direction` (6.643) with a zero axis | Error `group_materi_elasti_c_direction has a zero direction.`; non-unit axes are normalized, as the Professional. | Runs and gives a degenerate state (disx 0, sigyy -30 on the probe square). | Input validation of an out-of-domain value. | 2026-11-06 | [user/group_materi_elasti_c](manual-user/group_materi_elasti_c.md) |
 | VISCO-POWER-VALUE-COUNT | `group_materi_plasti_visco_power_value` (6.749) with fewer than two values per name | Error `group_materi_plasti_visco_power_value needs two values {eta p} for each name of group_materi_plasti_visco_power_name.` | Runs (one value 0.1: sigxx 2.8 on the visco bar). | Input validation of an out-of-domain input. | 2026-11-06 | [user/group_materi_plasti_visco_power_name](manual-user/group_materi_plasti_visco_power_name.md) |
+| NIEMUNIS-NU-RANGE | `group_materi_plasti_hypo_wolffersdorff_niemunis` (6.719) with nu >= 0.5 or nu <= -1 | Error `nu in group_materi_plasti_hypo_wolffersdorff_niemunis should be larger than -1 and smaller than 0.5.` | Runs and diverges (nu 0.5 on `other/hypo11`: sigyy -5.5e19, PARDISO error -4). | Input validation of an out-of-domain input (b2 <= -1 makes the shear stiffness vanish). | 2026-11-07 | [user/group_materi_plasti_hypo_wolffersdorff_niemunis](manual-user/group_materi_plasti_hypo_wolffersdorff_niemunis.md) |
 
 ## Maintenance
 

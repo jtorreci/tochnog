@@ -26,7 +26,8 @@
 #define LENGTH_INTERGRANULARSTRAIN 6
 
 extern "C" __thread long int hypo_substepping_off, hypo_minimum_void_ratio_on,
-  hypo_void_ratio_exact;
+  hypo_void_ratio_exact, hypo_niemunis_on;
+extern "C" __thread double hypo_niemunis_nu, hypo_niemunis_z;
 extern "C" __thread double hypo_minimum_void_ratio;
 
 extern "C" 
@@ -124,6 +125,21 @@ void hypoplasticity( long int element, long int gr,
     db( GROUP_MATERI_PLASTI_HYPO_VOID_RATIO_LINEAR, gr, &void_ratio_linear,
       ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
     hypo_void_ratio_exact = ( void_ratio_linear==-NO );
+  }
+  // group_materi_plasti_hypo_wolffersdorff_niemunis nu z (manual 6.719)
+  {
+    double niemunis[2];
+    hypo_niemunis_on = db( GROUP_MATERI_PLASTI_HYPO_WOLFFERSDORFF_NIEMUNIS,
+      gr, idum, niemunis, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+    if ( hypo_niemunis_on ) {
+      hypo_niemunis_nu = niemunis[0];
+      hypo_niemunis_z = niemunis[1];
+      if ( hypo_niemunis_nu<=-1. || hypo_niemunis_nu>=0.5 ) {
+        pri( "Error: nu in group_materi_plasti_hypo_wolffersdorff_niemunis "
+          "should be larger than -1 and smaller than 0.5." );
+        exit(TN_EXIT_STATUS);
+      }
+    }
   }
 
     if(db_active_index( GROUP_MATERI_PLASTI_HYPO_WOLFERSDORFF, gr, VERSION_NORMAL )) hypo_wolfersdorff=1; 

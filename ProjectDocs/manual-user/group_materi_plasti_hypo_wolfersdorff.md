@@ -82,6 +82,8 @@ compression, `sigyy=-863` at the end).
 
 ## Notes
 
+- The Niemunis extension (Poisson ratio and consistency at e_d) is
+  `group_materi_plasti_hypo_wolffersdorff_niemunis`, see `group_materi_plasti_hypo_wolffersdorff_niemunis.md`.
 - The variants can be combined: `cohesion` + `intergranularstrain` +
   `pressuredependentvoidratio` are additive records on top of the base model
   (wolfersdorff or lowangles).

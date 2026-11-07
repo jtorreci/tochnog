@@ -25,6 +25,9 @@ static long int c__9 = 9;
 __thread long int hypo_substepping_off = 0;
 __thread long int hypo_minimum_void_ratio_on = 0;
 __thread long int hypo_void_ratio_exact = 0;
+/* group_materi_plasti_hypo_wolffersdorff_niemunis nu z */
+__thread long int hypo_niemunis_on = 0;
+__thread double hypo_niemunis_nu = 0., hypo_niemunis_z = 0.;
 __thread double hypo_minimum_void_ratio = 0.;
 static double c_b45 = 1.5;
 static long int c__81 = 81;
@@ -560,6 +563,23 @@ long int *iuseepi, *ihypotype;
 	    d__3) / (c2 * a * a + 3. * c1 - sqrt(3.) * a * power_(&d__4, &alfa));
     }
     
+/*       Niemunis extension {Niemunis 2003, eq. 4.211, 4.221, 4.223}:
+         f_d consistent with the lower bound e = e_d */
+    if (hypo_niemunis_on && *ihypotype == 0) {
+	double pt = -tra_(tcohesion) / hs, nm1 = nval - 1., mt, fdbar, fd1;
+	mt = -nval * ed / hs * power_(&pt, &nm1);
+	fdbar = -(sqrt(3.) * (e + 1.) + mt * fb * fe * 3. / sqrt(3.) *
+		(a * a + 3.)) / (mt * fb * fe * 3. * a);
+	d__1 = fabs(e - ed) / (ec - ed);
+	fd1 = power_(&d__1, &alfa);
+	if (e < ed) fd1 = -fd1;
+	fd = fd1;
+	if (fd < 1.) {
+	    d__1 = 1. - fd;
+	    fd += power_(&d__1, &hypo_niemunis_z) * fdbar;
+	}
+    }
+
     if (*switch__) {
 	pridbl_("fb    ", &fb, (long int)6);
 	pridbl_("fe    ", &fe, (long int)6);
@@ -586,11 +606,49 @@ long int *iuseepi, *ihypotype;
     abdyadic_(that, that, lwork);
     mul_(lwork, &tmp, &c__81);
     add_(lwork, lmat, lmat, &c__81);
+
+/*        Niemunis extension: b2 {I - 1/3 1 1} with b2 from the Poisson
+          ratio nu at the hydrostatic axis {Niemunis 2003, eq. 4.183} */
+    if (hypo_niemunis_on && *ihypotype == 0) {
+	double b2 = (1. + a * a / 3. + a / sqrt(3.)) * (1. - 2. * hypo_niemunis_nu)
+		/ (1. + hypo_niemunis_nu) - 1.;
+	for (i__ = 1; i__ <= 3; ++i__) {
+	    for (j = 1; j <= 3; ++j) {
+		for (k = 1; k <= 3; ++k) {
+		    for (l = 1; l <= 3; ++l) {
+			tmp = 0.;
+			if (i__ == k && j == l) tmp += 1.;
+			if (i__ == j && k == l) tmp -= 1. / 3.;
+			lmat[i__ + (j + (k + l * 3) * 3) * 3 - 40] += fac * b2 * tmp;
+		    }
+		}
+	    }
+	}
+    }
     
 /*        nonlinear */
     tmp = fac * fd * a * f;
     add_(that, thatdev, nmat, &c__9);
     mul_(nmat, &tmp, &c__9);
+
+/*        Niemunis extension: the flow rule m stays unchanged {Niemunis
+          2003, below eq. 4.183}, so N = -fd Y L:m follows the b2 term of
+          L: N := N + b2 dev{Lhat^-1 : N}, Lhat = F^2 I + a^2 That That */
+    if (hypo_niemunis_on && *ihypotype == 0) {
+	double b2 = (1. + a * a / 3. + a / sqrt(3.)) * (1. - 2. * hypo_niemunis_nu)
+		/ (1. + hypo_niemunis_nu) - 1.;
+	double tn = 0., tt = 0., x[9], trx;
+	for (i__ = 0; i__ < 9; ++i__) {
+	    tn += that[i__] * nmat[i__];
+	    tt += that[i__] * that[i__];
+	}
+	for (i__ = 0; i__ < 9; ++i__)
+	    x[i__] = (nmat[i__] - a * a * that[i__] * tn / (f * f + a * a * tt))
+		/ (f * f);
+	trx = (x[0] + x[4] + x[8]) / 3.;
+	x[0] -= trx; x[4] -= trx; x[8] -= trx;
+	for (i__ = 0; i__ < 9; ++i__) nmat[i__] += b2 * x[i__];
+    }
 
 /*        total stress increment and material stiffness */
     if (*iuseepi == 1) {

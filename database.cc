@@ -4837,6 +4837,14 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   data_class[GROUP_MATERI_PLASTI_HYPO_VOID_RATIO_LINEAR] = MATERI;
   data_required[GROUP_MATERI_PLASTI_HYPO_VOID_RATIO_LINEAR] = GROUP_TYPE;
 
+  // manual Professional 6.719: nu z of the Niemunis extension of the
+  // von Wolffersdorff law (Niemunis 2003, eq. 4.183 and 4.221-4.223)
+  strcpy(name[GROUP_MATERI_PLASTI_HYPO_WOLFFERSDORFF_NIEMUNIS],"group_materi_plasti_hypo_wolffersdorff_niemunis");
+  type[GROUP_MATERI_PLASTI_HYPO_WOLFFERSDORFF_NIEMUNIS] = DOUBLE_PRECISION;
+  data_length[GROUP_MATERI_PLASTI_HYPO_WOLFFERSDORFF_NIEMUNIS] = 2;
+  data_class[GROUP_MATERI_PLASTI_HYPO_WOLFFERSDORFF_NIEMUNIS] = MATERI;
+  data_required[GROUP_MATERI_PLASTI_HYPO_WOLFFERSDORFF_NIEMUNIS] = GROUP_TYPE;
+
   strcpy(name[GROUP_MATERI_PLASTI_CAMCLAY],"group_materi_plasti_camclay");
   type[GROUP_MATERI_PLASTI_CAMCLAY] = DOUBLE_PRECISION;
   // manual Professional 6.689: index M kappa lambda (3 values). The
