@@ -129,7 +129,7 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
     followed, DIVERGENCES VISCO-EXPONENTIAL-NAME; C117 found).
   - [x] D3 wolffersdorff_niemunis (route inline, commit 46a0377). Prerequisite C118 (void_ratio_linear
     alias) resolved, route inline, commit 932c5f9.
-  - [x] D4 borja_tamagnini (route inline, commit COMMIT_xxx; owner 2026-11-07: paper over Pro, DIVERGENCES
+  - [x] D4 borja_tamagnini (route inline, commit df32477; owner 2026-11-07: paper over Pro, DIVERGENCES
     BORJA-TAMAGNINI).
   - [ ] D5 stress_null family.
   - [ ] E user hooks (young_user, history_variable_user), niemunis_visco(+_ocr),
