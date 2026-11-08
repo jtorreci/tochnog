@@ -2871,6 +2871,17 @@ if grep -q "^group_materi_hyper_reducedpolynomial  1  0.5 0.25 0.125" "$T2026/al
 else
   check_fail "alias_names_2026_2" "an aliased record is missing from the .dbs"
 fi
+# F5 T4 U1: control_mesh_delete_geometry_element_group,
+# geometry_triangle_eps_iso, mesh_interface_triangle_coordinates stored
+# under the GNU records.
+run_ok "$T2026" alias_names_2026_3
+if grep -q "^control_mesh_delete_geometry_elementgroup  0  1" "$T2026/alias_names_2026_3.dbs" && \
+   grep -q "^geometry_triangle_epsiso  4  0.001" "$T2026/alias_names_2026_3.dbs" && \
+   grep -q "^mesh_interface_triangle_coordinate  0  0 0 0.6 100 0 0.6 0 100 0.6" "$T2026/alias_names_2026_3.dbs"; then
+  check_ok "alias_names_2026_3 (records stored under the GNU names)"
+else
+  check_fail "alias_names_2026_3" "an aliased record is missing from the .dbs"
+fi
 run_ok "$T2026" materi_plasti_maximum_iterations1
 run_ok "$T2026" materi_plasti_maximum_iterations2
 expected_error_ok "$T2026" materi_plasti_maximum_iterations_error1

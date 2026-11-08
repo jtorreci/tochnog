@@ -139,6 +139,26 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   - [x] E3 niemunis_visco (+ _ocr, control ..._ocr_apply): route inline (explorer mapped the thesis), commit
     8f45881; owner 2026-11-07: b2 < 0 rejected per manual (DIVERGENCES NIEMUNIS-VISCO-B2); C120 found.
 - [ ] T4 W5 geometry, mesh tools, mpc, dependency (69). Route: per family.
+  Probe 2026-11-08 (clean build of cdcf986): exactly 69 W5 names rejected. Map by a read-only explorer
+  (mapping trigger: 69 names across ~12 files), summary in Log L-T4-map. Units:
+  - [x] U1 aliases control_mesh_delete_geometry_element_group, geometry_triangle_eps_iso,
+    mesh_interface_triangle_coordinates. Route: inline. Commit COMMIT_U1.
+  - [ ] U2 geometry entity options (13): geometry_{line,quadrilateral}_eps_iso, geometry_boundary, geometry_mpc,
+    geometry_exclude, geometry_element_geometry(_method), geometry_circle_part, geometry_cylinder_part(_start_vector),
+    geometry_tetrahedral, geometry_hexahedral, geometry_method.
+  - [ ] U3 dependency modifiers (4): dependency_{method,type,number,geometry} (+ element group -all of the manual example).
+  - [ ] U4 delete/refine flags (6): control_mesh_delete_geometry_{direct,method,projection_type},
+    control_mesh_refine_locally_{minimal_size,not_method,only_method}.
+  - [ ] U5 mesh operations (16): renumber offsets (2), split_element_from/_to, convert tria6_tria3 / quad9_quad6,
+    duplicate_element_group, mesh_correct, extrude direction / element_group_new / contact springs (2),
+    generate_truss_beam_separate, remove_geometry, remove_keep_geometry.
+  - [ ] U6 mpc_element_group options (6): control_mpc_element_group, mpc_element_group_{always,closest,
+    coord_geometry,keep,eps_iso}.
+  - [ ] U7 unconsumed parents (9): control_mesh_truss_distribute_mpc_* (7), mpc_geometry_method/_tolerance
+    (parents registered but never consumed: owner decision parse-only vs implement).
+  - [ ] U8 geometry_moving family (7) + control_geometry_moving: new module.
+  - [ ] U9 owner decisions: control_mesh_map, control_mesh_remove_really(+_activate_all/_factor),
+    control_mesh_extrude_element (needs prism12/prism18).
 - [ ] T5 W6 other physics (25): baseline correction, force_edge_diagram, force_gravity_geometry,
   force_volume_element_group_0, groundflow_phreatic_*, group_beam_*, group_contact_spring_*,
   group_dof_initial*, group_time_fill, group_truss_elasti_elongation_force_diagram,
@@ -547,3 +567,13 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   unstable tension + vonmises visco (also at baseline, Pro NaN; C116), hypo10 own-target gap (new C121).
   S5 refresh: 131/320 of the 2026-11-01 list accepted, missing 189 = 63 GiD + 126 (KEYWORD-GAP-REPORT).
   T3 closed. Next: T4 W5 geometry, mesh tools, mpc, dependency.
+- 2026-11-08 Owner: "Vamos con T4". L-T4-map (explorer): 69 names; aliases in db_number (database.cc ~9860);
+  geometry entities in geometry.cc:geometry (new entities also in geometry.cc:920 lists, change.cc:81-90,
+  check.cc:341); dependency in group.cc:get_group_data 458-555 (always "use", exact group match, no -all);
+  refine_l.cc:126-139 hard-codes not=all / only=any; mpc options in mpc.cc:703-916 (MPC_EPS_ISO :76);
+  control_mesh_truss_distribute_mpc and mpc_geometry are registered but never consumed; no geometry_moving,
+  PRISM12/18 in GNU. Pro examples: validation_14_mesh (delete_direct), other/prism6, other/map1,
+  other/safety2 (extrude_direction), other/extrude1 (element_group_new: layout differs from manual 6.184),
+  other/truss10 (_air), other/geometry_moving1.
+- 2026-11-08 U1: Pro accepts control_mesh_delete_geometry_element_group and geometry_triangle_eps_iso, rejects the
+  manual plural mesh_interface_triangle_coordinates (DIVERGENCES INTERFACE-TRIANGLE-PLURAL, class C).

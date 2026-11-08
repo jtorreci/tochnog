@@ -13,3 +13,7 @@
   aliases next to `group_materi_plasti_hypo_wolffersdorff`. A separate
   umat-parameters record would need its own enum and a read in
   `stress_umat`; not done because the GNU has a single user-data record.
+- F5 T4 U1: `control_mesh_delete_geometry_element_group`,
+  `geometry_triangle_eps_iso` and `mesh_interface_triangle_coordinates`
+  are `db_number()` aliases next to
+  `control_mesh_delete_geometry_move_node`. Test `alias_names_2026_3`.

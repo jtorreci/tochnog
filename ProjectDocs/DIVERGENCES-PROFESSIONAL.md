@@ -15,9 +15,9 @@ Single index of every known difference between the GNU version and Tochnog Profe
 |---|---|---|
 | A | deliberate divergence decided by the project owner | 34 |
 | B | known difference, not decided yet or scheduled (F3/F4) | 54 |
-| C | GNU extension or input-dialect difference | 27 |
+| C | GNU extension or input-dialect difference | 28 |
 | D | Professional-suspect: the Professional contradicts its own manual or the analytic answer | 18 |
-| | **total** | **133** |
+| | **total** | **134** |
 
 Ids: `C*`/`B*` are [BACKLOG-OPEN-ISSUES.md](BACKLOG-OPEN-ISSUES.md) items, `K*` are clusters of [AUDIT-ALL-VARIABLES-2026.md](AUDIT-ALL-VARIABLES-2026.md); other ids are local to this index. Several class A items are also Professional-suspect (noted in their status). Professional values are from the binary 02-08-2026 unless stated.
 
@@ -199,6 +199,7 @@ Records or spellings that only one program accepts, or GNU choices where the Pro
 | NIEMUNIS-NU-RANGE | `group_materi_plasti_hypo_wolffersdorff_niemunis` (6.719) with nu >= 0.5 or nu <= -1 | Error `nu in group_materi_plasti_hypo_wolffersdorff_niemunis should be larger than -1 and smaller than 0.5.` | Runs and diverges (nu 0.5 on `other/hypo11`: sigyy -5.5e19, PARDISO error -4). | Input validation of an out-of-domain input (b2 <= -1 makes the shear stiffness vanish). | 2026-11-07 | [user/group_materi_plasti_hypo_wolffersdorff_niemunis](manual-user/group_materi_plasti_hypo_wolffersdorff_niemunis.md) |
 | STRESS-NULL-TANGENT | `group_materi_stress_null` (6.753) | The material tangent is projected as the stress: the 2D interface layer of the manual 9.1 converges in one iteration (node 3 disx 1.24290e-4). | Full tangent: with the default iterations the step stops at 1.17808e-4; 5 / 30 iterations give 1.242883e-4 / 1.242902e-4 (= GNU). Modes without stiffness left are indeterminate (free hex8 with -y: GNU sigxx 1.0667, Professional 1.1). | GNU consistent tangent; the converged answers agree. | 2026-11-07 | [user/group_materi_stress_null](manual-user/group_materi_stress_null.md) |
 | STRESS-NULL-ZERO-DIRECTION | `group_materi_stress_null_direction` (6.754) with a zero axis | Error `group_materi_stress_null_direction has a zero direction.` | Runs. | Input validation of an out-of-domain input (as ELASTI-C-ZERO-DIRECTION). | 2026-11-07 | [user/group_materi_stress_null](manual-user/group_materi_stress_null.md) |
+| INTERFACE-TRIANGLE-PLURAL | `mesh_interface_triangle_coordinates` (6.854, manual spelling) | Accepted as an alias of `mesh_interface_triangle_coordinate`. | `I do not know : mesh_interface_triangle_coordinates`; only the singular is accepted. | GNU accepts both spellings (F5 T4 U1). Test `alias_names_2026_3`. | 2026-11-08 | [user/names_2026_aliases](manual-user/names_2026_aliases.md) |
 
 ## Maintenance
 

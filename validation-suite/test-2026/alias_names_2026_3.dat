@@ -1,0 +1,40 @@
+(
+F5 T4 U1: 2026 manual names that are aliases of GNU records:
+ control_mesh_delete_geometry_element_group (6.169),
+ geometry_triangle_eps_iso (6.551) and
+ mesh_interface_triangle_coordinates (6.854). build_safe checks that
+ the records are stored under the GNU names. The delete geometry only
+ touches group 1, which has no elements; no interface generation is
+ switched on.
+)
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_displacement
+materi_stress
+materi_strain_elasti
+materi_strain_total
+end_initia
+node 1 0 0
+node 2 1 0
+node 3 0 1
+node 4 1 1
+element 1 -quad4 1 2 3 4
+group_type 0 -materi
+group_materi_memory 0 -total_linear
+group_materi_elasti_young 0 1000.
+group_materi_elasti_poisson 0 0.3
+geometry_line 1 0 0 1 0 0.01
+geometry_line 2 0 0 0 1 0.01
+geometry_line 3 0 1 1 1 0.01
+geometry_triangle 4 0 0 1 0 0 1 0.01
+geometry_triangle_eps_iso 4 1.e-3
+mesh_interface_triangle_coordinates 0 0. 0. 0.6 100. 0. 0.6 0. 100. 0.6
+bounda_dof 0 -geometry_line 1 -vely
+bounda_dof 1 -geometry_line 2 -velx
+bounda_dof 2 -geometry_line 3 -vely
+bounda_time 2 0 0 1 0.02
+control_timestep 0 0.1 0.5
+control_mesh_delete_geometry 0 -geometry_triangle 4
+control_mesh_delete_geometry_element_group 0 1
+end_data

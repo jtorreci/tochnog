@@ -19,6 +19,9 @@ accepts the new names and stores the records under its own names (the
 | `group_materi_hyper_volumetric_simo_taylor` (6.683) | `group_materi_hyper_volumetric_simotaylor` |
 | `group_materi_umat index switch` (6.757) | `group_user_umat` |
 | `group_materi_umat_parameters index p0 p1 ...` (6.758) | `group_user_data` |
+| `control_mesh_delete_geometry_element_group` (6.169) | `control_mesh_delete_geometry_elementgroup` |
+| `geometry_triangle_eps_iso` (6.551) | `geometry_triangle_epsiso` |
+| `mesh_interface_triangle_coordinates` (6.854) | `mesh_interface_triangle_coordinate` |
 
 Tests: `validation-suite/test-2026/alias_names_2026_1` and `alias_names_2026_2`
 (build_safe checks the stored records).
@@ -31,3 +34,7 @@ The `.dbs` of the GNU uses the GNU names.
 record: the GNU umat takes its `props` from `group_user_data`, which the
 GNU user routines `user_sigma` / `user_plasti` also read. An input that
 gives both for the same group keeps the last one.
+
+The Professional 02-08-2026 rejects the manual spelling
+`mesh_interface_triangle_coordinates` (`I do not know`); it only accepts the
+singular `mesh_interface_triangle_coordinate`, which the GNU also accepts.

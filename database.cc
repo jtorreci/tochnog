@@ -9864,6 +9864,16 @@ long int db_number( const char str[] )
       // Professional spelling (manual 6.19x) of the GNU canonical
       // control_mesh_delete_geometry_movenodes record
       return CONTROL_MESH_DELETE_GEOMETRY_MOVENODES;
+    else if ( !strcmp( str, "control_mesh_delete_geometry_element_group" ) )
+      // Professional name (manual 6.169); GNU canonical elementgroup
+      return CONTROL_MESH_DELETE_GEOMETRY_ELEMENTGROUP;
+    else if ( !strcmp( str, "geometry_triangle_eps_iso" ) )
+      // Professional name (manual 6.551); GNU canonical epsiso
+      return GEOMETRY_TRIANGLE_EPSISO;
+    else if ( !strcmp( str, "mesh_interface_triangle_coordinates" ) )
+      // manual name (6.854); GNU canonical is the singular spelling the
+      // Professional .dbs and the corpus use
+      return MESH_INTERFACE_TRIANGLE_COORDINATE;
     else if ( !strcmp( str, "repeat_save_calculate_result" ) )
       // Professional name of the GNU canonical repeat_calculate_result
       // record (the average/variance analysis of control_repeat_save)
