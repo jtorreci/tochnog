@@ -161,7 +161,7 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
     - [x] U5b split / convert (140e7a0): control_mesh_split_element_from, _split_element_to (-tet4 / -prism6),
       control_mesh_convert_tria6_tria3. control_mesh_convert_quad9_quad6 moved to U9 (no GNU quad6 continuum
       element).
-    - [x] U5c (COMMIT_U5C) control_mesh_renumber_element_geometry_offset / _group_offset,
+    - [x] U5c (394ac2a) control_mesh_renumber_element_geometry_offset / _group_offset,
       control_mesh_duplicate_element_group, control_mesh_remove_geometry. control_mesh_remove_keep_geometry moved to U9
       (only meaningful with control_mesh_remove_really -no: the GNU deletes removed elements).
     - [ ] U5d control_mesh_generate_truss_beam_separate, mesh_correct.
