@@ -142,7 +142,7 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   Probe 2026-11-08 (clean build of cdcf986): exactly 69 W5 names rejected. Map by a read-only explorer
   (mapping trigger: 69 names across ~12 files), summary in Log L-T4-map. Units:
   - [x] U1 aliases control_mesh_delete_geometry_element_group, geometry_triangle_eps_iso,
-    mesh_interface_triangle_coordinates. Route: inline. Commit COMMIT_U1.
+    mesh_interface_triangle_coordinates. Route: inline. Commit 87436f7.
   - [ ] U2 geometry entity options (13): geometry_{line,quadrilateral}_eps_iso, geometry_boundary, geometry_mpc,
     geometry_exclude, geometry_element_geometry(_method), geometry_circle_part, geometry_cylinder_part(_start_vector),
     geometry_tetrahedral, geometry_hexahedral, geometry_method.
