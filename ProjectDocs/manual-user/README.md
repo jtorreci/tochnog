@@ -427,6 +427,7 @@ page lists its own in "Differences with the Professional version".
 - [control_dependency_apply](control_dependency_apply.md) — per-timestep dependency switch (6.126); gate in get_group_data.
 - [geometry_options_2026](geometry_options_2026.md) — geometry_circle_part, _cylinder_part, _tetrahedral, _hexahedral and the options boundary, mpc, exclude, element_geometry, line/quadrilateral eps_iso (6.509-6.549).
 - [dependency_item](dependency_item.md) — dependency_geometry / _method / _number / _type and element_group -all (6.404-6.408).
+- [element_geometry_selection](element_geometry_selection.md) — geometry_method, control_mesh_delete_geometry_direct / _method / _projection_type, control_mesh_refine_locally_minimal_size / _not_method / _only_method (6.532, 6.167-6.173, 6.224-6.228).
 - [geometry_element_group](geometry_element_group.md) — restrict a geometry to nodes of listed element groups (6.524). Unlocks merge2/force12 (rc=0).
 - [geometry_element_group_method](geometry_element_group_method.md) — -all/-any/-only of the group filter (6.525).
 - [group_materi_plasti_element_group](group_materi_plasti_element_group.md) — frictional slip of granular soils on other materials (6.698); registered, consumption PENDING.

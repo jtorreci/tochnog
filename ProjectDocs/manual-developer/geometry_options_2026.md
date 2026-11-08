@@ -40,4 +40,4 @@ input checks (user page).
 ## Pending
 
 - `change_geometry` (change.cc) does not move the new entities.
-- `geometry_method` (6.532): F5 T4 U4.
+- `geometry_method` (6.532): see element_geometry_selection.md (F5 T4 U4).

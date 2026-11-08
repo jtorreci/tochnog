@@ -18,7 +18,7 @@ diagram. The modifiers, with the same index, refine it:
 | `dependency_method index method` | `-use` / `-multiply` | `-use`: the diagram value replaces the record value; `-multiply`: it multiplies the record value | `-use` |
 | `dependency_type index type` | `-cosinus` / `-sinus` / `-tangent` | work on the cosinus/sinus/tangent of the value: with `-use` the arc-function of the diagram value is used; with `-multiply` the diagram value multiplies the cosinus/sinus/tangent of the record value and the arc-function of the product is used | the value itself |
 | `dependency_number index number` | integer or `-all` | only value `number` of the record (0 for the first) is dependent | `-all` |
-| `dependency_geometry index -geometry_xxx gindex` | geometry | only elements with all their nodes inside the geometry use the dependency | no geometry selection |
+| `dependency_geometry index -geometry_xxx gindex` | geometry | only elements with all their nodes inside the geometry use the dependency (`geometry_method` of that geometry: `-any` / `-average`, see [element_geometry_selection](element_geometry_selection.md)) | no geometry selection |
 
 Diagram rows: the diagram has either one row of data values, used for
 every dependent value of the record, or one row per value of the record.

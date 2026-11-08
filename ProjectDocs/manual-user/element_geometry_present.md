@@ -6,7 +6,8 @@
 which the element is present — a diagnostic record to check that the
 geometries include exactly the elements you expect (manual Professional
 6.427). An element is present in a geometry when ALL its nodes are in
-that geometry. The filling is switched on with
+that geometry; `geometry_method` (6.532) of the geometry selects `-any` or
+`-average` instead (see [element_geometry_selection](element_geometry_selection.md)). The filling is switched on with
 `print_element_geometry_present -yes` (6.975, default `-no`).
 
 `print_element_geometry_present_node_type` (6.976) selects the node

@@ -70,6 +70,8 @@ void delete_geom( double time_current )
     length_control_mesh_delete_geometry_elementgroup=0,
     length_control_mesh_delete_geometry_element=0,
     stop_switch=-NO, stop_geometry_active=0,
+    delete_direct=-NO, delete_method=-ALL,
+    delete_projection=CONTROL_MESH_DELETE_GEOMETRY, projection_record=0,
     name=0, ldum=0, idum[1], control_mesh_delete_geometry[2], 
     control_mesh_delete_geometry_elementgroup[DATA_ITEM_SIZE],
     control_mesh_delete_geometry_element[DATA_ITEM_SIZE], 
@@ -189,9 +191,46 @@ void delete_geom( double time_current )
       &control_mesh_delete_geometry_movenodes, ddum, ldum, VERSION_NORMAL,
       GET_IF_EXISTS );
 
+      // control_mesh_delete_geometry_direct (manual Professional 6.167):
+      // -yes deletes the elements at once instead of slowly over the
+      // timesteps. Measured on the Professional 02-08-2026: the elements
+      // are removed completely in the first step, also when a
+      // control_mesh_delete_geometry_factor record is present.
+    db( CONTROL_MESH_DELETE_GEOMETRY_DIRECT, icontrol, &delete_direct,
+      ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+    if ( delete_direct!=-YES && delete_direct!=-NO )
+      db_error( CONTROL_MESH_DELETE_GEOMETRY_DIRECT, icontrol );
+
+      // control_mesh_delete_geometry_method (6.171): -all (default), -any
+      // or -average element membership (element_in_geometry, geometry.cc).
+      // geometry_method (6.532) does not apply here: the Professional
+      // 02-08-2026 ignores it for this command.
+    db( CONTROL_MESH_DELETE_GEOMETRY_METHOD, icontrol, &delete_method,
+      ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+    if ( delete_method!=-ALL && delete_method!=-ANY &&
+         delete_method!=-AVERAGE )
+      db_error( CONTROL_MESH_DELETE_GEOMETRY_METHOD, icontrol );
+
+      // control_mesh_delete_geometry_projection_type (6.173): without the
+      // record the filled geometry is used (6.166: "elements in the total
+      // inner area of the circle radius plus its tolerance will be
+      // deleted", the GNU behaviour before the record existed);
+      // -project_exact restricts the test to the geometry edge within its
+      // tolerance. A per-geometry geometry_projection_type (6.543) still
+      // overrides it inside geometry().
+    if ( db( CONTROL_MESH_DELETE_GEOMETRY_PROJECTION_TYPE, icontrol,
+        &projection_record, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS ) ) {
+      if ( projection_record==-PROJECT_INSIDE )
+        delete_projection = PROJECT_INSIDE;
+      else if ( projection_record==-PROJECT_EXACT )
+        delete_projection = PROJECT_EXACT;
+      else
+        db_error( CONTROL_MESH_DELETE_GEOMETRY_PROJECTION_TYPE, icontrol );
+    }
+
     db_version_copy( VERSION_NORMAL, VERSION_TMP );
     db_max_index( ELEMENT, max_element, VERSION_NORMAL, GET );
-    if ( db_active_index( TIME_OLD, 0, VERSION_NORMAL ) ) {
+    if ( delete_direct!=-YES && db_active_index( TIME_OLD, 0, VERSION_NORMAL ) ) {
       db( TIME_OLD, 0, idum, &time_old, ldum, VERSION_NORMAL, GET );
       db( TIME_NEW, 0, idum, &time_new, ldum, VERSION_NORMAL, GET );
       if ( scalar_dabs(time_new-time_old)>EPS_DELETE ) {
@@ -205,12 +244,12 @@ void delete_geom( double time_current )
       if ( db_active_index( NODE, inod, VERSION_NORMAL ) ) {
          geometry( inod, ddum, control_mesh_delete_geometry, 
            in_geometry, rdum, ddum, rdum, ddum, NODE_START_REFINED, 
-           CONTROL_MESH_DELETE_GEOMETRY, VERSION_NORMAL );
+           delete_projection, VERSION_NORMAL );
          if ( in_geometry ) node_in_geometry[inod] = 1;
       }
     }
 
-      // delete elements which are totally in geometry
+      // delete elements which are in the geometry (delete_method)
     for ( element=0; element<=max_element; element++ ) {
       if ( db_active_index( ELEMENT, element, VERSION_NORMAL ) ) {
         db( ELEMENT, element, el, ddum, length, VERSION_NORMAL, GET );
@@ -224,12 +263,10 @@ void delete_geom( double time_current )
           if ( control_mesh_delete_geometry_elementgroup[0]==-ALL || 
                array_member(control_mesh_delete_geometry_elementgroup,element_group,
                length_control_mesh_delete_geometry_elementgroup,ldum) ) {   
-            nnol = length - 1; array_move( &el[1], nodes, nnol );
-            all_in_geometry = 1;
-            for ( inol=0; inol<nnol; inol++ ) {
-              inod = nodes[inol];
-              if ( !node_in_geometry[inod] ) all_in_geometry = 0;
-            }
+            all_in_geometry = element_in_geometry( element,
+              control_mesh_delete_geometry, delete_method,
+              NODE_START_REFINED, delete_projection, node_in_geometry,
+              VERSION_NORMAL );
             if ( all_in_geometry ) {
               if ( element_delete_factor>EPS_ELEMENT_DELETE_FACTOR ) {
                 length = 1;

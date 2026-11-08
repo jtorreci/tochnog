@@ -72,5 +72,5 @@ angle range.`
   allowed); the Professional ignores the record. A cylinder part without
   start vector and an oblique axis is an error in the GNU; the Professional
   selects no node (DIVERGENCES GEOMETRY-INPUT-CHECKS).
-- `geometry_method` (6.532) is not part of this page (element selections,
-  F5 T4 U4).
+- `geometry_method` (6.532) is documented in
+  [element_geometry_selection](element_geometry_selection.md).

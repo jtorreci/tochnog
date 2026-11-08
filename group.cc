@@ -486,26 +486,24 @@ static double dependency_combine( double d, double o, long int method,
 }
 
 // dependency_geometry (manual Professional 6.405): the dependency is
-// used only for an element with all its nodes inside the geometry (the
-// element_geometry_present rule, measured on the Professional
-// 02-08-2026 with geometry_point radii around one element).
+// used only for an element inside the geometry. Default: all its nodes
+// inside (the element_geometry_present rule, measured on the Professional
+// 02-08-2026 with geometry_point radii around one element);
+// geometry_method (6.532) of that geometry selects -any / -average
+// (measured on the Professional 02-08-2026, F5 T4 U4).
 static long int dependency_geometry_contains( long int idep, long int element )
 
 {
-  long int inol=0, nnol=0, found=0, ldum=0, dependency_geometry[2],
-    el[1+MNOL];
-  double rdum=0., ddum[MDIM];
+  long int ldum=0, dependency_geometry[2];
+  double ddum[MDIM];
 
   if ( !db( DEPENDENCY_GEOMETRY, idep, dependency_geometry, ddum, ldum,
       VERSION_NORMAL, GET_IF_EXISTS ) ) return 1;
   if ( element<0 || !db_active_index( ELEMENT, element, VERSION_NORMAL ) )
     return 0;
-  db( ELEMENT, element, el, ddum, nnol, VERSION_NORMAL, GET );
-  found = 1;
-  for ( inol=1; inol<nnol && found; inol++ )
-    geometry( el[inol], ddum, dependency_geometry, found, rdum, ddum, rdum,
-      ddum, NODE_START_REFINED, PROJECT_EXACT, VERSION_NORMAL );
-  return found;
+  return element_in_geometry( element, dependency_geometry,
+    geometry_method_get( dependency_geometry ), NODE_START_REFINED,
+    PROJECT_EXACT, NULL, VERSION_NORMAL );
 }
 
 long int get_group_data( long int idat, long int gr, long int element,

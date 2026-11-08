@@ -44,7 +44,7 @@ void refine_locally( void )
     tmp_max_element=0, tmp_max_node=-1,
     iside=0, nside=0, inol_side=0, iel=0, nel=0, still_being_refined=1,
     refine_this_one=0, still_being_corrected=0,
-    all_not=0, any_only=0, itmp=0, correcting_has_been_done=0,
+    all_not=0, any_only=0, correcting_has_been_done=0,
     do_the_refining=1, do_the_correcting=0,
     nothing=0, control_refine_locally_passes=1,
     ipas=0, icontrol=0, version=0, ldum=0, nnol_side=0,
@@ -52,6 +52,7 @@ void refine_locally( void )
     use_control_refine_locally_geometry=0, 
     use_control_refine_locally_not=0, 
     use_control_refine_locally_only=0,
+    refine_not_method=-ALL, refine_only_method=-ALL, jnol=0, idim=0,
     idum[1], ilist[NNOL_SIDE], control_refine_locally_not[2],
     control_refine_locally_only[2], control_refine_locally_geometry[2],
     tmp_extra_side_nodes[MSIDE], tmp_off_side_nodes[MSIDE][NNOL_SIDE],
@@ -59,11 +60,12 @@ void refine_locally( void )
     el_nodes[MEL][MNOL], el[MNOL+1], nodes[MNOL], tmp_nodes[MNOL], 
     edge_nodes[2], *ordered_nodes=NULL;
   double tmp=0., h=0., element_residue_norm=0., average_element_residue_norm=0.,
-    total=0., larger=0., eps_coord=EPS_COORD, rdum=0., control_refine_locally=0.,
+    total=0., larger=0., eps_coord=EPS_COORD, control_refine_locally=0.,
     ddum[MDIM], work[MUKNWN], tmp_node_dof[MUKNWN], tmp_node[MDIM],
     test_coord[MDIM], coord0[MDIM], coord1[MDIM],  
     tmp_node_start_refined[MDIM], tmp_node_dof_start_refined[MUKNWN], 
-    test_coord_start_refined[MDIM], *all_element_residue_norm=NULL;
+    test_coord_start_refined[MDIM], *all_element_residue_norm=NULL,
+    refine_minimal_size=0., element_size=0., coord_i[MDIM], coord_j[MDIM];
 
   db( ICONTROL, 0, &icontrol, ddum, ldum, VERSION_NORMAL, GET );
   if ( db_active_index( CONTROL_MESH_REFINE_LOCALLY, icontrol, VERSION_NORMAL ) ) {
@@ -84,6 +86,25 @@ void refine_locally( void )
     use_control_refine_locally_geometry =  db( CONTROL_MESH_REFINE_LOCALLY_GEOMETRY, 
       icontrol, control_refine_locally_geometry, ddum, ldum, 
       VERSION_NORMAL, GET_IF_EXISTS );
+      // control_mesh_refine_locally_not_method / _only_method (manual
+      // Professional 6.226 / 6.228): -all (default, all element nodes in
+      // the geometry) or -any (any node in the geometry). The default of
+      // _only is -all as in the manual and the Professional 02-08-2026
+      // (the GNU used -any before F5 T4 U4). geometry_method (6.532) does
+      // not apply: the Professional ignores it here.
+    db( CONTROL_MESH_REFINE_LOCALLY_NOT_METHOD, icontrol, &refine_not_method,
+      ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+    if ( refine_not_method!=-ALL && refine_not_method!=-ANY )
+      db_error( CONTROL_MESH_REFINE_LOCALLY_NOT_METHOD, icontrol );
+    db( CONTROL_MESH_REFINE_LOCALLY_ONLY_METHOD, icontrol, &refine_only_method,
+      ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+    if ( refine_only_method!=-ALL && refine_only_method!=-ANY )
+      db_error( CONTROL_MESH_REFINE_LOCALLY_ONLY_METHOD, icontrol );
+      // control_mesh_refine_locally_minimal_size (6.224): an element whose
+      // size (the largest distance between two of its nodes) is below
+      // minimal_size is not refined; default 0.
+    db( CONTROL_MESH_REFINE_LOCALLY_MINIMAL_SIZE, icontrol, idum,
+      &refine_minimal_size, ldum, VERSION_NORMAL, GET_IF_EXISTS );
 
     swit = set_swit(-1,-1,"refine_locally");
     if ( swit ) pri( "In routine REFINE_LOCALLY" );
@@ -122,25 +143,40 @@ void refine_locally( void )
             pri( "element", element );
             pri( "nodes", nodes, nnol );
           }
+          // all_not: the element is excluded by control_mesh_refine_locally_not;
+          // any_only: the element is allowed by control_mesh_refine_locally_only
+          // (names kept from the hard-coded -all / -any rules before F5 T4 U4).
           all_not = 0; any_only = 0;
-          if ( use_control_refine_locally_not ) all_not = 1;
           if ( !use_control_refine_locally_only ) any_only = 1;
           if ( do_the_correcting ) 
             array_move( nodes, tmp_nodes, nnol );
           else {
             assert( do_the_refining );
+            if ( use_control_refine_locally_not )
+              all_not = element_in_geometry( element, control_refine_locally_not,
+                refine_not_method, NODE_START_REFINED, PROJECT_EXACT, NULL,
+                version );
+            if ( use_control_refine_locally_only )
+              any_only = element_in_geometry( element, control_refine_locally_only,
+                refine_only_method, NODE_START_REFINED, PROJECT_EXACT, NULL,
+                version );
+            if ( refine_minimal_size>0. && !all_not && any_only ) {
+              element_size = 0.;
+              for ( inol=0; inol<nnol; inol++ ) {
+                db( NODE, nodes[inol], idum, coord_i, ldum, version, GET );
+                for ( jnol=inol+1; jnol<nnol; jnol++ ) {
+                  db( NODE, nodes[jnol], idum, coord_j, ldum, version, GET );
+                  tmp = 0.;
+                  for ( idim=0; idim<ndim; idim++ )
+                    tmp += ( coord_i[idim] - coord_j[idim] ) *
+                      ( coord_i[idim] - coord_j[idim] );
+                  element_size = scalar_dmax( element_size, sqrt( tmp ) );
+                }
+              }
+              if ( element_size<refine_minimal_size ) all_not = 1;
+            }
             for ( inol=0; inol<nnol; inol++ ) {
               inod = nodes[inol];
-              if ( use_control_refine_locally_not ) {
-                geometry( inod, ddum, control_refine_locally_not, itmp, rdum, 
-                  ddum, rdum, ddum, NODE_START_REFINED, PROJECT_EXACT, version );
-                if ( !itmp ) all_not = 0;
-              }
-              if ( use_control_refine_locally_only ) {
-                geometry( inod, ddum, control_refine_locally_only, itmp, rdum, 
-                  ddum, rdum, ddum, NODE_START_REFINED, PROJECT_EXACT, version );
-                if ( itmp ) any_only = 1;
-              }
               db( NODE, inod, idum, tmp_node, ldum, version, GET );
               db( NODE_START_REFINED, inod, idum, 
                 tmp_node_start_refined, ldum, version, GET );

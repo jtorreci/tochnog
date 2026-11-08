@@ -1241,6 +1241,95 @@ void node_geometry_present_calculate( void )
   delete[] present_list;
 }
 
+// geometry_method (manual Professional 6.532) of a geometry entity
+// {name, index}: -all (default), -any or -average; another value is an
+// input error. The record has the index of the geometry (as
+// geometry_node_type / geometry_projection_type).
+long int geometry_method_get( long int geometry_entity[] )
+
+{
+  long int method=-ALL, ldum=0;
+  double ddum[1];
+
+  db( GEOMETRY_METHOD, geometry_entity[1], &method, ddum, ldum,
+    VERSION_NORMAL, GET_IF_EXISTS );
+  if ( method!=-ALL && method!=-ANY && method!=-AVERAGE )
+    db_error( GEOMETRY_METHOD, geometry_entity[1] );
+  return method;
+}
+
+// Average of the node coordinates of an element (the "middle coordinate"
+// of geometry_method -average, 6.532, and the "average element
+// coordinate" of control_mesh_delete_geometry_method -average, 6.171).
+// node_type as in geometry(): -plus_displacement adds the displacements
+// to the current coordinates, otherwise the node_type record is read.
+static void element_geometry_coord( long int element, long int node_type,
+  double coord[], long int version )
+
+{
+  long int inol=0, nnol=0, idim=0, ldum=0, idum[1], el[1+MNOL];
+  double node_coord[MDIM], *node_dof=NULL;
+
+  array_set( coord, 0., MDIM );
+  db( ELEMENT, element, el, node_coord, nnol, version, GET );
+  for ( inol=1; inol<nnol; inol++ ) {
+    if ( node_type==PLUS_DISPLACEMENT ) {
+      db( NODE, el[inol], idum, node_coord, ldum, version, GET );
+      if ( materi_displacement ) {
+        node_dof = db_dbl( NODE_DOF, el[inol], version );
+        for ( idim=0; idim<ndim; idim++ )
+          node_coord[idim] += node_dof[dis_indx+idim*nder];
+      }
+    }
+    else
+      array_move( db_dbl( node_type, el[inol], version ), node_coord, ndim );
+    for ( idim=0; idim<ndim; idim++ ) coord[idim] += node_coord[idim];
+  }
+  if ( nnol>1 )
+    for ( idim=0; idim<ndim; idim++ ) coord[idim] /= ( nnol - 1 );
+}
+
+// Shared element selection by a geometry entity (geometry_method 6.532,
+// control_mesh_delete_geometry_method 6.171, control_mesh_refine_locally_
+// not_method / _only_method 6.226 / 6.228):
+//   -all     every node of the element is in the geometry;
+//   -any     at least one node is in the geometry;
+//   -average the average node coordinate is in the geometry (tested as a
+//            coordinate: the node-based filters of geometry(), such as
+//            geometry_boundary or geometry_element_group, and the
+//            per-geometry geometry_node_type do not apply).
+// node_in_geometry (optional, indexed by node number) holds the node
+// tests already made by the caller for this geometry; NULL makes the
+// helper call geometry() per node with node_type / projection_type.
+long int element_in_geometry( long int element, long int geometry_entity[],
+  long int method, long int node_type, long int projection_type,
+  long int node_in_geometry[], long int version )
+
+{
+  long int inol=0, nnol=0, found=0, n_in=0, el[1+MNOL];
+  double rdum=0., ddum[MDIM], coord[MDIM];
+
+  if ( method==-AVERAGE ) {
+    element_geometry_coord( element, node_type, coord, version );
+    geometry( -1, coord, geometry_entity, found, rdum, ddum, rdum, ddum,
+      node_type, projection_type, version );
+    return found;
+  }
+  db( ELEMENT, element, el, ddum, nnol, version, GET );
+  for ( inol=1; inol<nnol; inol++ ) {
+    if ( node_in_geometry!=NULL )
+      found = node_in_geometry[el[inol]];
+    else
+      geometry( el[inol], ddum, geometry_entity, found, rdum, ddum, rdum,
+        ddum, node_type, projection_type, version );
+    if ( found ) n_in++;
+    if ( method==-ANY && n_in>0 ) return 1;
+    if ( method!=-ANY && !found ) return 0;
+  }
+  if ( method==-ANY ) return 0;
+  return nnol>1;
+}
+
 void element_geometry_present_calculate( void )
 
 {
@@ -1256,7 +1345,7 @@ void element_geometry_present_calculate( void )
   // coordinates of the check (-node_start_refined by default); the
   // per-geometry geometry_node_type records (6.540) override it inside
   // geometry().
-  long int element=0, igeom=0, ldum=0, ient=0, nent=0, inol=0, nnol=0,
+  long int element=0, igeom=0, ldum=0, ient=0, nent=0, nnol=0,
     entity=0, found=0, node_type=NODE_START_REFINED, print_egp=-NO,
     print_egp_node_type=0, nvalue=0, max_geom=0, max_element=0,
     el[1+MNOL];
@@ -1267,7 +1356,7 @@ void element_geometry_present_calculate( void )
     GEOMETRY_HEXAHEDRAL, GEOMETRY_LINE, GEOMETRY_LIST, GEOMETRY_POINT,
     GEOMETRY_POLYNOMIAL, GEOMETRY_QUADRILATERAL, GEOMETRY_SPHERE,
     GEOMETRY_SPHERE_SEGMENT, GEOMETRY_TETRAHEDRAL, GEOMETRY_TRIANGLE };
-  double rdum=0., ddum[MDIM];
+  double ddum[MDIM];
   long int geometry_entity[2];
   long int *present_list=NULL;
 
@@ -1295,10 +1384,9 @@ void element_geometry_present_calculate( void )
         if ( !db_active_index( entity, igeom, VERSION_NORMAL ) ) continue;
         geometry_entity[0] = -entity;
         geometry_entity[1] = igeom;
-        found = 1;
-        for ( inol=1; inol<nnol && found; inol++ )
-          geometry( el[inol], ddum, geometry_entity, found, rdum, ddum, rdum,
-            ddum, node_type, PROJECT_EXACT, VERSION_NORMAL );
+        found = element_in_geometry( element, geometry_entity,
+          geometry_method_get( geometry_entity ), node_type, PROJECT_EXACT,
+          NULL, VERSION_NORMAL );
         if ( found ) {
           if ( nvalue+2>DATA_ITEM_SIZE )
             db_error( ELEMENT_GEOMETRY_PRESENT, element );

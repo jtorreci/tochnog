@@ -149,8 +149,9 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
     geometry_method moved to U4 (element selections).
   - [x] U3 dependency modifiers (4): dependency_{method,type,number,geometry} (+ element group -all of the manual example;
     print_group_data through get_group_data). Route: inline (no writer reason). Commit 3b66fc9. C122 found (owner).
-  - [ ] U4 delete/refine flags (7): geometry_method, control_mesh_delete_geometry_{direct,method,projection_type},
-    control_mesh_refine_locally_{minimal_size,not_method,only_method}.
+  - [x] U4 delete/refine flags (7): geometry_method, control_mesh_delete_geometry_{direct,method,projection_type},
+    control_mesh_refine_locally_{minimal_size,not_method,only_method}. Route: delegated (context backstop).
+    Commit COMMIT_U4. C123 (projection default, owner) and C124 found.
   - [ ] U5 mesh operations (16): renumber offsets (2), split_element_from/_to, convert tria6_tria3 / quad9_quad6,
     duplicate_element_group, mesh_correct, extrude direction / element_group_new / contact springs (2),
     generate_truss_beam_separate, remove_geometry, remove_keep_geometry.
@@ -592,3 +593,18 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   cylinder angle refs z: x->y, x: y->z, y: x->z; self exclusion ignored by Pro; oblique cylinder without start vector
   selects nothing in Pro; Pro start-vector message copied. Pro defect on the plane through the first cylinder axis
   point (class D CYLINDER-PART-START-PLANE, S2 rule, owner confirmation pending).
+- 2026-11-08 U4 (route delegated, context backstop): one shared element_in_geometry() (geometry.cc, -all/-any/-average)
+  used by element_geometry_present, dependency_geometry, delete_geom and refine_locally. Pro probes (4x4 quad4 with a
+  quadrilateral over element 1, circle 2 2 r 1.45; two quad4 with a dependency point; eight tria3 refined with -nothing):
+  geometry_method honoured by element_geometry_present (-any 1 2 5 6, -average 1) and dependency_geometry (-any 300/300,
+  -average 300/2000), ignored by control_mesh_delete_geometry, refine not/only and area_element_group; delete -any keeps
+  3 4 7 8 9-16, -average deletes 1; _direct -yes removes completely in the first step (factor ignored); refine only default
+  -all = manual (16/14; GNU was -any 32/25), only -any 32/25, not default 28/22, not -any 8/9, minimal_size 1.5 8/9,
+  1.4142 32/25: GNU = Pro on all. Pro circle delete tests the edge only and ignores _projection_type and
+  geometry_projection_type: GNU keeps the 6.166 filled default, -project_exact per 6.173 (class D DELETE-PROJECTION-TYPE,
+  owner decision C123). Invalid values: GNU errors, Pro ignores / asserts (class C U4-METHOD-VALUES). C124: GNU does not
+  print element_delete_factor (Pro does). Word -project_exact registered (was rejected). 24 tests, suite 917 OK / 0 FALLO,
+  audit REVIEW 42, 26 warnings = baseline. Differential vs d467efa (29 inputs using delete / refine_locally /
+  print_element_geometry_present / dependency_geometry, suites + Pro test dir): every .dbs identical (time_calculation
+  ignored), same rc; tutorial_3 and slope_nonlocal_refine hit the 60 s timeout in both, validation_14_mesh fails to parse
+  in both (change_dataitem_time_until_data), so its _direct example is not reachable.

@@ -2522,6 +2522,62 @@ dep_check dependency_geometry1 "300 0.5 10 0.1" "2000 0.3 4 0.05"
 expected_error_ok "$T2026" dependency_number_error1
 expected_error_ok "$T2026" dependency_diagram_error1
 expected_error_ok "$T2026" dependency_type_error1
+# F5 T4 U4: element selection by a geometry: geometry_method (6.532),
+# control_mesh_delete_geometry_direct / _method / _projection_type
+# (6.167 / 6.171 / 6.173), control_mesh_refine_locally_minimal_size /
+# _not_method / _only_method (6.224 / 6.226 / 6.228). Expected values =
+# Professional 02-08-2026 on the same inputs, except
+# delete_geometry_projection1 / 3 (manual 6.166 / 6.173; the Professional
+# deletes nothing: DIVERGENCES DELETE-PROJECTION-TYPE).
+# u4_list_check <test> <record> <list>: the indexes of the <record>
+# records in the .dbs, in order, equal <list>.
+u4_list_check() {
+  local t="$1" rec="$2" want="$3" got
+  run_ok "$T2026" "$t"
+  got="$(awk -v r="$rec" '$1==r {printf "%s ", $2}' "$T2026/$t.dbs" | sed 's/ $//')"
+  if [ "$got" = "$want" ]; then
+    check_ok "$t ($rec $want)"
+  else
+    check_fail "$t" "$rec indexes '$got', expected '$want'"
+  fi
+}
+# u4_count_check <test> <elements> <nodes>: element and node counts.
+u4_count_check() {
+  local t="$1" ne="$2" nn="$3" ge gn
+  run_ok "$T2026" "$t"
+  ge="$(awk '$1=="element"' "$T2026/$t.dbs" | wc -l)"
+  gn="$(awk '$1=="node"' "$T2026/$t.dbs" | wc -l)"
+  if [ "$ge" = "$ne" ] && [ "$gn" = "$nn" ]; then
+    check_ok "$t ($ne elements, $nn nodes)"
+  else
+    check_fail "$t" "$ge elements, $gn nodes; expected $ne, $nn"
+  fi
+}
+U4_ALL16="1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16"
+u4_list_check geometry_method1 element_geometry_present "1 2 5 6"
+u4_list_check geometry_method2 element_geometry_present "1"
+dep_check geometry_method3 "300 0.5 10 0.1" "300 0.3 4 0.05"
+dep_check geometry_method4 "300 0.5 10 0.1" "2000 0.3 4 0.05"
+u4_list_check geometry_method5 element "$U4_ALL16"
+expected_error_ok "$T2026" geometry_method_error1
+u4_list_check delete_geometry_method1 element "3 4 7 8 9 10 11 12 13 14 15 16"
+u4_list_check delete_geometry_method2 element "2 3 4 5 6 7 8 9 10 11 12 13 14 15 16"
+u4_list_check delete_geometry_method3 element "$U4_ALL16"
+expected_error_ok "$T2026" delete_geometry_method_error1
+u4_list_check delete_geometry_projection1 element "1 2 3 4 5 8 9 12 13 14 15 16"
+u4_list_check delete_geometry_projection2 element "$U4_ALL16"
+u4_list_check delete_geometry_projection3 element "1 2 3 4 5 8 9 12 13 14 15 16"
+expected_error_ok "$T2026" delete_geometry_projection_error1
+u4_list_check delete_geometry_direct1 element "3 4 7 8 9 10 11 12 13 14 15 16"
+u4_list_check delete_geometry_direct2 element "$U4_ALL16"
+expected_error_ok "$T2026" delete_geometry_direct_error1
+u4_count_check refine_locally_only_method1 16 14
+u4_count_check refine_locally_only_method2 32 25
+u4_count_check refine_locally_not_method1 8 9
+u4_count_check refine_locally_not_method2 28 22
+expected_error_ok "$T2026" refine_locally_method_error1
+u4_count_check refine_locally_minimal_size1 8 9
+u4_count_check refine_locally_minimal_size2 32 25
 # F5 T2 V4b: element_intpnt_h / _iso_coord / _method / _npoint (manual
 # 6.438 / 6.439 / 6.442 / 6.443), Professional 02-08-2026 values.
 # intpnt_check <test> <element> <method> <npoint> <iso_coord> <h>: every

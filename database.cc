@@ -1092,6 +1092,11 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   type[PROJECT_INSIDE] = INTEGER;
   data_length[PROJECT_INSIDE] = 1;
 
+  // -project_exact keyword value (6.173 / 6.543, the documented default)
+  strcpy(name[PROJECT_EXACT],"project_exact");
+  type[PROJECT_EXACT] = INTEGER;
+  data_length[PROJECT_EXACT] = 1;
+
   // print_node_geometry_present (6.995) + _node_type (6.996): switch on
   // the filling of the per-node node_geometry_present record (6.886:
   // the list of geometries in which each node is present) and the
@@ -1375,6 +1380,30 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   data_class[CONTROL_MESH_DELETE_GEOMETRY_MOVENODES] = CONTROL;     
   data_required[CONTROL_MESH_DELETE_GEOMETRY_MOVENODES] = CONTROL_MESH_DELETE_GEOMETRY;     
 
+  // control_mesh_delete_geometry_direct / _method / _projection_type
+  // (manual Professional 6.167 / 6.171 / 6.173), consumed in delete_geom
+  // (delete.cc): -yes deletes at once instead of slowly over the
+  // timesteps; -all/-any/-average element membership (default -all);
+  // -project_inside/-project_exact geometry test (GNU default
+  // -project_inside, see the developer manual page).
+  strcpy(name[CONTROL_MESH_DELETE_GEOMETRY_DIRECT],"control_mesh_delete_geometry_direct");
+  type[CONTROL_MESH_DELETE_GEOMETRY_DIRECT] = INTEGER;
+  data_length[CONTROL_MESH_DELETE_GEOMETRY_DIRECT] = 1;
+  data_class[CONTROL_MESH_DELETE_GEOMETRY_DIRECT] = CONTROL;
+  data_required[CONTROL_MESH_DELETE_GEOMETRY_DIRECT] = CONTROL_MESH_DELETE_GEOMETRY;
+
+  strcpy(name[CONTROL_MESH_DELETE_GEOMETRY_METHOD],"control_mesh_delete_geometry_method");
+  type[CONTROL_MESH_DELETE_GEOMETRY_METHOD] = INTEGER;
+  data_length[CONTROL_MESH_DELETE_GEOMETRY_METHOD] = 1;
+  data_class[CONTROL_MESH_DELETE_GEOMETRY_METHOD] = CONTROL;
+  data_required[CONTROL_MESH_DELETE_GEOMETRY_METHOD] = CONTROL_MESH_DELETE_GEOMETRY;
+
+  strcpy(name[CONTROL_MESH_DELETE_GEOMETRY_PROJECTION_TYPE],"control_mesh_delete_geometry_projection_type");
+  type[CONTROL_MESH_DELETE_GEOMETRY_PROJECTION_TYPE] = INTEGER;
+  data_length[CONTROL_MESH_DELETE_GEOMETRY_PROJECTION_TYPE] = 1;
+  data_class[CONTROL_MESH_DELETE_GEOMETRY_PROJECTION_TYPE] = CONTROL;
+  data_required[CONTROL_MESH_DELETE_GEOMETRY_PROJECTION_TYPE] = CONTROL_MESH_DELETE_GEOMETRY;
+
   strcpy(name[CONTROL_MESH_DELETE_GEOMETRY_STOP],"control_mesh_delete_geometry_stop");
   type[CONTROL_MESH_DELETE_GEOMETRY_STOP] = INTEGER;
   data_length[CONTROL_MESH_DELETE_GEOMETRY_STOP] = 1;
@@ -1652,6 +1681,27 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   data_length[CONTROL_MESH_REFINE_LOCALLY_ONLY] = 2;
   data_class[CONTROL_MESH_REFINE_LOCALLY_ONLY] = CONTROL;
   data_required[CONTROL_MESH_REFINE_LOCALLY_ONLY] = CONTROL_MESH_REFINE_LOCALLY;
+
+  // control_mesh_refine_locally_minimal_size / _not_method / _only_method
+  // (manual Professional 6.224 / 6.226 / 6.228), consumed in
+  // refine_locally (refine_l.cc).
+  strcpy(name[CONTROL_MESH_REFINE_LOCALLY_MINIMAL_SIZE],"control_mesh_refine_locally_minimal_size");
+  type[CONTROL_MESH_REFINE_LOCALLY_MINIMAL_SIZE] = DOUBLE_PRECISION;
+  data_length[CONTROL_MESH_REFINE_LOCALLY_MINIMAL_SIZE] = 1;
+  data_class[CONTROL_MESH_REFINE_LOCALLY_MINIMAL_SIZE] = CONTROL;
+  data_required[CONTROL_MESH_REFINE_LOCALLY_MINIMAL_SIZE] = CONTROL_MESH_REFINE_LOCALLY;
+
+  strcpy(name[CONTROL_MESH_REFINE_LOCALLY_NOT_METHOD],"control_mesh_refine_locally_not_method");
+  type[CONTROL_MESH_REFINE_LOCALLY_NOT_METHOD] = INTEGER;
+  data_length[CONTROL_MESH_REFINE_LOCALLY_NOT_METHOD] = 1;
+  data_class[CONTROL_MESH_REFINE_LOCALLY_NOT_METHOD] = CONTROL;
+  data_required[CONTROL_MESH_REFINE_LOCALLY_NOT_METHOD] = CONTROL_MESH_REFINE_LOCALLY_NOT;
+
+  strcpy(name[CONTROL_MESH_REFINE_LOCALLY_ONLY_METHOD],"control_mesh_refine_locally_only_method");
+  type[CONTROL_MESH_REFINE_LOCALLY_ONLY_METHOD] = INTEGER;
+  data_length[CONTROL_MESH_REFINE_LOCALLY_ONLY_METHOD] = 1;
+  data_class[CONTROL_MESH_REFINE_LOCALLY_ONLY_METHOD] = CONTROL;
+  data_required[CONTROL_MESH_REFINE_LOCALLY_ONLY_METHOD] = CONTROL_MESH_REFINE_LOCALLY_ONLY;
 
   strcpy(name[CONTROL_MESH_REFINE_LOCALLY_UNKNOWN],"control_mesh_refine_locally_unknown");
   type[CONTROL_MESH_REFINE_LOCALLY_UNKNOWN] = INTEGER;
@@ -8964,6 +9014,16 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   type[GEOMETRY_TETRAHEDRAL] = DOUBLE_PRECISION;
   data_length[GEOMETRY_TETRAHEDRAL] = 4*ndim;
   data_class[GEOMETRY_TETRAHEDRAL] = GEOMETRY;
+
+  // geometry_method (manual Professional 6.532): -all/-any/-average
+  // element selection by the geometry with the same index (default -all).
+  // Consumed through element_in_geometry (geometry.cc) by
+  // element_geometry_present and dependency_geometry, the consumers the
+  // Professional 02-08-2026 applies it to.
+  strcpy(name[GEOMETRY_METHOD],"geometry_method");
+  type[GEOMETRY_METHOD] = INTEGER;
+  data_length[GEOMETRY_METHOD] = 1;
+  data_class[GEOMETRY_METHOD] = GEOMETRY;
 
   // geometry_element_group (manual Professional 6.524/6.525): restrict
   // the geometry record with the same index to nodes that are also a

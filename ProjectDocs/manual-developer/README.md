@@ -422,6 +422,7 @@ page lists its own in "Differences with the Professional version".
 - [control_dependency_apply](control_dependency_apply.md) — gate por icontrol (sin data_required: el combination check por mismo indice no aplica).
 - [geometry_options_2026](geometry_options_2026.md) — new geometry entities and per-index options in geometry() (geometry.cc).
 - [dependency_item](dependency_item.md) — dependency modifiers in get_group_data (group.cc); print_group_data through get_group_data.
+- [element_geometry_selection](element_geometry_selection.md) — shared element_in_geometry() (geometry.cc) for geometry_method, the delete and the local refinement methods.
 - [geometry_element_group](geometry_element_group.md) — filtro dentro de geometry() + helper node_attached_element_groups (group.cc, ELEMENT_GROUP); nota empirica Pro (merge2) + FIX area.cc normal fisica de cara + gate area() para grupos -empty (force12).
 - [geometry_element_group_method](geometry_element_group_method.md) — metodo del filtro (default -any con la regla "solo grupos listados" medida).
 - [group_materi_plasti_element_group](group_materi_plasti_element_group.md) — registro; consumo PENDIENTE.

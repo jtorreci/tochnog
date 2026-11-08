@@ -1515,6 +1515,13 @@ enum {
   GEOMETRY_MPC,
   GEOMETRY_QUADRILATERAL_EPS_ISO,
   GEOMETRY_TETRAHEDRAL,
+  GEOMETRY_METHOD,
+  CONTROL_MESH_DELETE_GEOMETRY_DIRECT,
+  CONTROL_MESH_DELETE_GEOMETRY_METHOD,
+  CONTROL_MESH_DELETE_GEOMETRY_PROJECTION_TYPE,
+  CONTROL_MESH_REFINE_LOCALLY_MINIMAL_SIZE,
+  CONTROL_MESH_REFINE_LOCALLY_NOT_METHOD,
+  CONTROL_MESH_REFINE_LOCALLY_ONLY_METHOD,
   GEOMETRY_ELEMENT_GROUP,
   GEOMETRY_ELEMENT_GROUP_METHOD,
   GROUP_MATERI_PLASTI_ELEMENT_GROUP,
@@ -2212,6 +2219,10 @@ void      geometry( long int inod, double co[], long int geometry_entity[],
             long int node_type, long int projection_type, long int version );
 void      node_geometry_present_calculate( void );
 void      element_geometry_present_calculate( void );
+long int  element_in_geometry( long int element, long int geometry_entity[],
+            long int method, long int node_type, long int projection_type,
+            long int node_in_geometry[], long int version );
+long int  geometry_method_get( long int geometry_entity[] );
 void      element_print_group_data_values_calculate( double time_current );
 void      element_intpnt_set( void );
 long int  element_intpnt_supported( long int name, long int nnol );
