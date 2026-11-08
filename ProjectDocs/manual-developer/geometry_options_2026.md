@@ -37,6 +37,13 @@ cylinder part along x/y/z, with start vector, two ranges, reversed axis.
 Pro and GNU agree except the start plane of the cylinder part and the two
 input checks (user page).
 
+## Differences with the Professional version
+
+- Start plane of `geometry_cylinder_part` (owner decision 2026-11-08,
+  class D): `geometry()` (geometry.cc) applies the angle range on every
+  plane of the cylinder; the Professional selects other nodes on the plane
+  through the first axis point (DIVERGENCES CYLINDER-PART-START-PLANE).
+
 ## Pending
 
 - `change_geometry` (change.cc) does not move the new entities.

@@ -616,3 +616,5 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
 - 2026-11-08 owner on C123 (verbatim): "supongo que lo correcto es el círculo relleno. Sería muy raro y bizarro eliminar
   un borde. Generaría superficies no conexas". Recorded: DIVERGENCES DELETE-PROJECTION-TYPE decided (class D), SEGUIMIENTO
   Descarte, element_geometry_selection user/developer Differences, BACKLOG C123 decided (58 open). Code unchanged.
+- 2026-11-08 owner confirms CYLINDER-PART-START-PLANE class D (verbatim): "si". Recorded in DIVERGENCES, SEGUIMIENTO
+  Descarte, geometry_options_2026 user/developer Differences. Next: T4 U5 (mesh operations).

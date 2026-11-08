@@ -67,7 +67,8 @@ angle range.`
 - On the plane through the first axis point of a `geometry_cylinder_part`
   the Professional 02-08-2026 selects other nodes (axis z from 0,0,0, range
   0-0.8: it takes 0,2,0 and 1,2,0 and drops 2,0,0); the GNU measures every
-  plane as the manual says (DIVERGENCES CYLINDER-PART-START-PLANE).
+  plane as the manual says (DIVERGENCES CYLINDER-PART-START-PLANE; deliberate,
+  owner decision 2026-11-08).
 - A geometry that excludes itself is an error in the GNU (manual: not
   allowed); the Professional ignores the record. A cylinder part without
   start vector and an oblique axis is an error in the GNU; the Professional
