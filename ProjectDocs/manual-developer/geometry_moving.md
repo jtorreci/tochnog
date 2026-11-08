@@ -93,8 +93,9 @@
   build_safe suite: 2000 steps take more than 10 minutes (the bicg solver
   breaks down on the zero-stiffness nodes of the partly excavated elements
   and every iteration falls back to SuperLU, BACKLOG C130). The full run
-  (35 min) gives sigyy -0.3489 against the Professional target -0.3268 +-
-  0.02: rc 1 in the GNU, a consequence of GEOMETRY-MOVING-SAMPLING.
+  (35 min) gives sigyy -0.348912581336 against the Professional
+  -0.3268 +- 0.02, a consequence of GEOMETRY-MOVING-SAMPLING; owner
+  decision 2026-11-09: class D, the copy targets the GNU value (1.e-6).
 
 ## Pending refactorings
 

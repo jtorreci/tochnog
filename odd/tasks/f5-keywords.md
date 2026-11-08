@@ -730,3 +730,6 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   they return at once without the records, the differential pins it).
 - 2026-11-09 owner confirms the four U7 class D rows (TRUSS-DISTRIBUTE-AIR-DEFAULT / -AIR-NO / -AIR-EXIT /
   -ISO-SELECTION: GNU follows the manual), verbatim: "si". Recorded in DIVERGENCES and the SEGUIMIENTO Descarte row.
+- 2026-11-09 owner (verbatim "si"): U8 class D confirmed (GEOMETRY-MOVING-SAMPLING / -PARAMETERS) and geometry_moving1
+  retargeted to the GNU value: full run (35 min, build of 31c5432) sigyy -0.348912581336, target tolerance 1.e-6 (the
+  Professional -0.326823 kept in the header). Still out of build_safe (C130 run time).

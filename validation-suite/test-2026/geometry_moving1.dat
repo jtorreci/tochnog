@@ -2,7 +2,7 @@
 F5 T4 U8: copy of the Professional 02-08-2026 example test/other/geometry_moving1.dat {manual 6.533-6.538, 6.135}.
 A -geometry_point of radius 0.2 moves along the diagonal of the unit square from -1,-1 with velocity 1 1 {time 0 to 3} and excavates a band of the 19 x 19 quad4 mesh.
 The Professional tests the element nodes and reaches sigyy -0.3268 at the post point; the GNU tests 200 x 200 sample points per element {manual 6.538, DIVERGENCES GEOMETRY-MOVING-SAMPLING}.
-The GNU binary of F5 T4 U8 gives sigyy -0.3489 {35 min}: 0.022 from the Professional target, outside its tolerance 0.02, so this copy exits with rc 1 in the GNU; not in build_safe.
+The GNU binary of F5 T4 U8 gives sigyy -0.348912581336 {35 min}, 0.022 from the Professional target -0.326823 +- 0.02; owner decision 2026-11-09: class D, the target is the GNU value. Not in build_safe.
 The Professional needs processors_maximum -no for this input {with threads it stops on element_rhside_delete allocated in a parallel loop}.
 )
 echo -no
@@ -72,5 +72,5 @@ control_print                   30  -time_current -dtime -post_node_rhside_ratio
 control_print_gid               50  -yes
 
 target_item  0   -post_point_dof 10 -sigyy
-target_value 0   -0.326823 2.e-2
+target_value 0   -0.348912581336 1.e-6
 end_data
