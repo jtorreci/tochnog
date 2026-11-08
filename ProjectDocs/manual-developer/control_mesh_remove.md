@@ -16,6 +16,16 @@
 - Closes with `mesh_has_changed( VERSION_NORMAL )`.
 - `database.cc`: `type = INTEGER`, `data_length = DATA_ITEM_SIZE`, `fixed_length = 0`, `data_class = CONTROL`.
 
+## control_mesh_remove_geometry (F5 T4 U5c)
+
+`mesh_remove()` reads `CONTROL_MESH_REMOVE_GEOMETRY` (INTEGER, 2: the
+geometry entity and index, requires `CONTROL_MESH_REMOVE`) and skips a
+candidate element unless `element_in_geometry( ielem, entity, -ALL,
+NODE_START_REFINED, PROJECT_EXACT, NULL, VERSION_NORMAL )` (geometry.cc,
+the shared helper of F5 T4 U4) holds. The reference elements of the
+other groups are not filtered. Verified on the Professional 02-08-2026
+(the two geometries of `remove_geometry1` / `remove_geometry2`).
+
 ## External dependencies
 
 None. Uses the internal database API (`db`, `db_active_index`, `db_max_index`) and `delete_element`.

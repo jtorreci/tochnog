@@ -15,9 +15,9 @@ Single index of every known difference between the GNU version and Tochnog Profe
 |---|---|---|
 | A | deliberate divergence decided by the project owner | 34 |
 | B | known difference, not decided yet or scheduled (F3/F4) | 55 |
-| C | GNU extension or input-dialect difference | 33 |
+| C | GNU extension or input-dialect difference | 34 |
 | D | Professional-suspect: the Professional contradicts its own manual or the analytic answer | 21 |
-| | **total** | **143** |
+| | **total** | **144** |
 
 Ids: `C*`/`B*` are [BACKLOG-OPEN-ISSUES.md](BACKLOG-OPEN-ISSUES.md) items, `K*` are clusters of [AUDIT-ALL-VARIABLES-2026.md](AUDIT-ALL-VARIABLES-2026.md); other ids are local to this index. Several class A items are also Professional-suspect (noted in their status). Professional values are from the binary 02-08-2026 unless stated.
 
@@ -208,6 +208,7 @@ Records or spellings that only one program accepts, or GNU choices where the Pro
 | GEOMETRY-INPUT-CHECKS | `geometry_exclude` of the geometry itself (6.521: "not allowed"); `geometry_cylinder_part` without start vector and an axis not along x, y or z (6.518: "should be") | Errors `Error detected for data item : geometry_exclude` / `: geometry_cylinder_part`. | Ignores the self exclusion (the geometry keeps all its nodes); the oblique cylinder part selects no node. | Input validation of what the manual forbids (F5 T4 U2). Tests `geometry_exclude_error1`, `geometry_cylinder_part_error1`. | 2026-11-08 | [user/geometry_options_2026](manual-user/geometry_options_2026.md) |
 | EXTRUDE-INPUT-CHECKS | `control_mesh_extrude` (6.179) with one coordinate; `control_mesh_extrude_direction` (6.180) other than `-y`; negative groups in `control_mesh_extrude_element_group_new` (6.184) | One coordinate extrudes from the 2D plane z 0 to it (the GNU usage before F5 T4 U5a, test `extrude_single1`); `-x` is an input error (`Error: control_mesh_extrude_direction must be -y or -z.`, `extrude_error2`); any negative new group drops the elements. | Ignores a one-value record (no extrusion); accepts `-x` (a partial mesh); reads `-1` but stops on `-6` (`I do not know : -6`). | GNU extension / input check (F5 T4 U5a). | 2026-11-08 | [user/control_mesh_extrude](manual-user/control_mesh_extrude.md) |
 | SPLIT-INPUT-CHECKS | `control_mesh_split_element_to` (6.242) with a name other than `-tet4` / `-prism6` (hex8) / `-tet10` (hex27); `-prism18` | Input error `Error: control_mesh_split_element_to must be -tet4 or -prism6 (hex8) or -tet10 (hex27).` (test `split_error1`); `-prism18` is an unknown word (no GNU prism18 element). | Ignores an invalid name (default split); `-prism18` splits a hex27 in 18-node prisms. | GNU input check; prism18 not available (F5 T4 U5b). | 2026-11-08 | [user/control_mesh_split](manual-user/control_mesh_split.md) |
+| DBS-DEFAULT-ELEMENT-GROUP | `.dbs` of a mesh with elements that have no `element_group` record | Writes no `element_group` line for them (group 0 by default). | Writes `element_group N 0` for every element. | Output format only; found by the F5 T4 U5 mesh comparisons (2026-11-08). | 2026-11-08 | [user/control_mesh_split](manual-user/control_mesh_split.md) |
 | U4-METHOD-VALUES | `geometry_method`, `control_mesh_delete_geometry_method` / `_projection_type` / `_direct`, `control_mesh_refine_locally_not_method` / `_only_method` with a value outside the manual lists (6.532, 6.167-6.173, 6.226, 6.228) | Error `Error detected for data item : <record>`. | Ignores the delete values, runs a refine `-average` as `-any`, stops with `Program error, assertion failed` for `geometry_method -only`. | Input validation of out-of-domain values (F5 T4 U4). Tests `geometry_method_error1`, `delete_geometry_method_error1`, `delete_geometry_projection_error1`, `delete_geometry_direct_error1`, `refine_locally_method_error1`. | 2026-11-08 | [user/element_geometry_selection](manual-user/element_geometry_selection.md) |
 
 ## Maintenance

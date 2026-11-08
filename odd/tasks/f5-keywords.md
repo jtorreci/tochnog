@@ -161,15 +161,16 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
     - [x] U5b split / convert (140e7a0): control_mesh_split_element_from, _split_element_to (-tet4 / -prism6),
       control_mesh_convert_tria6_tria3. control_mesh_convert_quad9_quad6 moved to U9 (no GNU quad6 continuum
       element).
-    - [ ] U5c control_mesh_renumber_element_geometry_offset / _group_offset, control_mesh_duplicate_element_group,
-      control_mesh_remove_geometry, control_mesh_remove_keep_geometry.
+    - [x] U5c (COMMIT_U5C) control_mesh_renumber_element_geometry_offset / _group_offset,
+      control_mesh_duplicate_element_group, control_mesh_remove_geometry. control_mesh_remove_keep_geometry moved to U9
+      (only meaningful with control_mesh_remove_really -no: the GNU deletes removed elements).
     - [ ] U5d control_mesh_generate_truss_beam_separate, mesh_correct.
   - [ ] U6 mpc_element_group options (6): control_mpc_element_group, mpc_element_group_{always,closest,
     coord_geometry,keep,eps_iso}.
   - [ ] U7 unconsumed parents (9): control_mesh_truss_distribute_mpc_* (7), mpc_geometry_method/_tolerance
     (parents registered but never consumed: owner decision parse-only vs implement).
   - [ ] U8 geometry_moving family (7) + control_geometry_moving: new module.
-  - [ ] U9 owner decisions: control_mesh_map, control_mesh_remove_really(+_activate_all/_factor),
+  - [ ] U9 owner decisions: control_mesh_map, control_mesh_remove_really(+_activate_all/_factor, _keep_geometry),
     control_mesh_extrude_element (needs prism12/prism18), control_mesh_convert_quad9_quad6 (needs a quad6
     continuum element).
 - [ ] T5 W6 other physics (25): baseline correction, force_edge_diagram, force_gravity_geometry,
@@ -653,3 +654,8 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   33 inputs: only prism6 changes (now rc 0). extrude2 back to the force_element_edge prism6 error (C125 open part).
   RED: base rejects the records / leaves tria6 unsplit. Suite 941/0, audit REVIEW 42. Risk: item 3 (mesh_split and
   point_el shared; no existing output changed in the differential).
+- 2026-11-08 U5c (route inline): offsets in the top.cc control_mesh_renumber block (explicit records: a record number
+  in a variable raised the audit to REVIEW 44), mesh_duplicate_element_group (delete.cc), control_mesh_remove_geometry
+  through element_in_geometry -all. Pro probes (three quad4): same elements / groups / element_geometry. Differential vs
+  b88adc5, 6 inputs: only the new tests change (base rc 1 = RED). Suite 953/0 before the audit rewrite. C126 found.
+  Risk: none beyond item 3 of mesh_remove (shared; remove_method1_1 pins the old -method1 result).

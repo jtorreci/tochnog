@@ -26,6 +26,23 @@ control_mesh_remove <index> <method> element_group_0 [element_group_1 ...]
 Note: `-method3` (remove elements where all nodes have an mpc) is NOT
 implemented in this version; only `-method1` is accepted.
 
+## Restricting the remove to a geometry
+
+```
+control_mesh_remove_geometry <index> geometry_item_name geometry_item_index
+```
+
+`control_mesh_remove_geometry` (Professional 6.230, F5 T4 U5c) restricts
+the `control_mesh_remove` of the same index: an element is removed only
+when every node of it lies in the geometry (as the Professional
+02-08-2026). Tests `validation-suite/test-2026/remove_geometry1.dat`
+(the element is inside: removed), `remove_geometry2.dat` (only two nodes
+on the line: kept) and `remove_method1_1.dat` (no geometry).
+
+`control_mesh_remove_keep_geometry` (6.231) and `control_mesh_remove_really`
+(6.232-6.234) are not available yet: they need removed elements that stay
+inactive instead of being deleted (F5 T4 U9, owner decision).
+
 ## Example
 
 Remove the elements of group 0 that are inside elements of group 1:

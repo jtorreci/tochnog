@@ -1231,6 +1231,11 @@ void step_start( long int task, long int options_solver[], double dtime, double 
     mesh_delete_keep( icontrol );
   }
 
+  // control_mesh_duplicate_element_group (6.177)
+  if ( db_active_index( CONTROL_MESH_DUPLICATE_ELEMENT_GROUP, icontrol,
+       VERSION_NORMAL ) )
+    mesh_duplicate_element_group( icontrol );
+
   // control_mesh_remove: remove elements by method
   if ( db_active_index( CONTROL_MESH_REMOVE, icontrol, VERSION_NORMAL ) ) {
     mesh_remove( icontrol );
@@ -1737,6 +1742,40 @@ void step_close( long int task, long int ipar, long int npar, long int ipar_i, l
     db( CONTROL_MESH_RENUMBER, icontrol, renumber, ddum, ldum, VERSION_NORMAL, GET );
     if ( renumber[0]<0 || renumber[1]<0 ) db_error( CONTROL_MESH_RENUMBER, icontrol );
     renumbering( VERSION_NORMAL, NO, renumber[0], renumber[1], idum, idum );
+    // control_mesh_renumber_element_group_offset / _element_geometry_offset
+    // (6.237 / 6.236): every element gets its group / element_geometry
+    // plus the offset (a missing record counts as 0, as in the
+    // Professional 02-08-2026: groups 0 1 2 -> 100 101 102)
+    long int offset_group = 0, offset_geometry = 0, max_el = 0, one = 1;
+    if ( db_active_index( CONTROL_MESH_RENUMBER_ELEMENT_GROUP_OFFSET,
+         icontrol, VERSION_NORMAL ) )
+      db( CONTROL_MESH_RENUMBER_ELEMENT_GROUP_OFFSET, icontrol,
+        &offset_group, ddum, ldum, VERSION_NORMAL, GET );
+    if ( db_active_index( CONTROL_MESH_RENUMBER_ELEMENT_GEOMETRY_OFFSET,
+         icontrol, VERSION_NORMAL ) )
+      db( CONTROL_MESH_RENUMBER_ELEMENT_GEOMETRY_OFFSET, icontrol,
+        &offset_geometry, ddum, ldum, VERSION_NORMAL, GET );
+    db_highest_index( ELEMENT, max_el, VERSION_NORMAL );
+    for ( long int iel=0; iel<=max_el; iel++ ) {
+      if ( !db_active_index( ELEMENT, iel, VERSION_NORMAL ) ) continue;
+      long int value = 0;
+      if ( db_active_index( CONTROL_MESH_RENUMBER_ELEMENT_GROUP_OFFSET,
+           icontrol, VERSION_NORMAL ) ) {
+        value = 0;
+        db( ELEMENT_GROUP, iel, &value, ddum, ldum, VERSION_NORMAL,
+          GET_IF_EXISTS );
+        value += offset_group;
+        db( ELEMENT_GROUP, iel, &value, ddum, one, VERSION_NORMAL, PUT );
+      }
+      if ( db_active_index( CONTROL_MESH_RENUMBER_ELEMENT_GEOMETRY_OFFSET,
+           icontrol, VERSION_NORMAL ) ) {
+        value = 0;
+        db( ELEMENT_GEOMETRY, iel, &value, ddum, ldum, VERSION_NORMAL,
+          GET_IF_EXISTS );
+        value += offset_geometry;
+        db( ELEMENT_GEOMETRY, iel, &value, ddum, one, VERSION_NORMAL, PUT );
+      }
+    }
   }
 
   if ( db_active_index( CONTROL_EIGEN, icontrol, VERSION_NORMAL ) ) solve( -CONTROL_EIGEN );

@@ -2636,6 +2636,28 @@ ext_check convert_tria6_tria3_1 \
   "element 1 -tria3 1 3 6|element 2 -tria3 3 7 6" \
   "1 0 0 0|3 2 0 0|6 0 2 0|7 2 2 0|"
 expected_error_ok "$T2026" split_error1
+# F5 T4 U5c: control_mesh_renumber_element_group_offset / _geometry_offset
+# (6.236, 6.237), control_mesh_duplicate_element_group (6.177),
+# control_mesh_remove_geometry (6.230). elem_check <test> <lines>: the
+# .dbs element / element_group / element_geometry lines equal the
+# Professional 02-08-2026 ones (without its element_group lines of the
+# default group 0, which the GNU does not print).
+elem_check() {
+  local t="$1" want="$2" got
+  run_ok "$T2026" "$t"
+  got="$(awk '$1=="element"||$1=="element_group"||$1=="element_geometry"{$1=$1; print}' "$T2026/$t.dbs" | paste -sd"|")"
+  if [ "$got" = "$want" ]; then
+    check_ok "$t (elements = Professional)"
+  else
+    check_fail "$t" "elements '$got'"
+  fi
+}
+elem_check renumber_offset1 "element 1 -quad4 1 2 4 5|element 2 -quad4 2 3 5 6|element 3 -quad4 2 3 5 6|element_geometry 1 7|element_geometry 2 10|element_geometry 3 7|element_group 1 100|element_group 2 101|element_group 3 102"
+elem_check duplicate_element_group1 "element 2 -quad4 1 2 4 5|element 5 -quad4 2 3 5 6|element 7 -quad4 2 3 5 6|element 8 -quad4 2 3 5 6|element_geometry 5 3|element_geometry 8 3|element_group 5 1|element_group 7 2|element_group 8 4"
+elem_check duplicate_element_group2 "element 2 -quad4 1 2 4 5|element 5 -quad4 2 3 5 6|element 7 -quad4 2 3 5 6|element 8 -quad4 1 2 4 5|element_geometry 5 3|element_group 5 1|element_group 7 2|element_group 8 9"
+elem_check remove_method1_1 "element 2 -quad4 1 2 4 5|element 5 -quad4 2 3 5 6|element_group 5 1"
+elem_check remove_geometry1 "element 2 -quad4 1 2 4 5|element 5 -quad4 2 3 5 6|element_group 5 1"
+elem_check remove_geometry2 "element 2 -quad4 1 2 4 5|element 5 -quad4 2 3 5 6|element 7 -quad4 2 3 5 6|element_group 5 1|element_group 7 2"
 # F5 T2 V4b: element_intpnt_h / _iso_coord / _method / _npoint (manual
 # 6.438 / 6.439 / 6.442 / 6.443), Professional 02-08-2026 values.
 # intpnt_check <test> <element> <method> <npoint> <iso_coord> <h>: every

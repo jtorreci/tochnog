@@ -1,0 +1,27 @@
+( F5 T4 U5c: control_mesh_remove_geometry with a line through two of the
+  four nodes of element 7: an element is removed only when all its nodes
+  are in the geometry, so element 7 stays. Elements = Professional
+  02-08-2026. )
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_displacement
+materi_stress
+end_initia
+node 1 0. 0.
+node 2 1. 0.
+node 3 2. 0.
+node 4 0. 1.
+node 5 1. 1.
+node 6 2. 1.
+element 2 -quad4 1 2 4 5
+element 5 -quad4 2 3 5 6
+element 7 -quad4 2 3 5 6
+element_group 5 1
+element_group 7 2
+group_type -ra 0 1 2 -ra -materi
+group_materi_elasti_young -ra 0 1 2 -ra 1.
+geometry_line 1 2. 0. 2. 1. 0.01
+control_mesh_remove 10 -method1 2 1
+control_mesh_remove_geometry 10 -geometry_line 1
+end_data

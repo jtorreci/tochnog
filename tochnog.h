@@ -383,7 +383,11 @@ enum {
   CONTROL_MESH_REMESH,
   CONTROL_MESH_REMESH_FACTOR,
   CONTROL_MESH_REMOVE,
+  CONTROL_MESH_REMOVE_GEOMETRY,
+  CONTROL_MESH_DUPLICATE_ELEMENT_GROUP,
   CONTROL_MESH_RENUMBER,
+  CONTROL_MESH_RENUMBER_ELEMENT_GEOMETRY_OFFSET,
+  CONTROL_MESH_RENUMBER_ELEMENT_GROUP_OFFSET,
   CONTROL_MESH_ROTATE,
   CONTROL_MESH_ROTATE_ANGLE,
   CONTROL_MESH_SPLIT,
@@ -2428,6 +2432,7 @@ void      mesh_convert_hex20( void );
 void      mesh_convert_tria6_tria3( void );
 void      mesh_extrude( long int icontrol );
 void      mesh_delete_keep( long int icontrol );
+void      mesh_duplicate_element_group( long int icontrol );
 void      mesh_remove( long int icontrol );
 void      new_mesh( void );
 void      new_mesh_version( long int version, double delta );

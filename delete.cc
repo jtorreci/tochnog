@@ -909,6 +909,14 @@ void mesh_remove( long int icontrol )
   method = list[0];
   ngrp = length - 1;
 
+  long int use_geometry = 0, remove_geometry[2];
+  if ( db_active_index( CONTROL_MESH_REMOVE_GEOMETRY, icontrol,
+       VERSION_NORMAL ) ) {
+    db( CONTROL_MESH_REMOVE_GEOMETRY, icontrol, remove_geometry, ddum, ldum,
+      VERSION_NORMAL, GET );
+    use_geometry = 1;
+  }
+
   db_max_index( ELEMENT, max_elem, VERSION_NORMAL, GET );
   if ( max_elem<0 ) return;
 
@@ -924,6 +932,11 @@ void mesh_remove( long int icontrol )
         elem_group = 0;
         db( ELEMENT_GROUP, ielem, &elem_group, ddum, ldum,
           VERSION_NORMAL, GET_IF_EXISTS );
+        // control_mesh_remove_geometry (6.230): only elements with every
+        // node in the geometry (Professional 02-08-2026)
+        if ( use_geometry && !element_in_geometry( ielem, remove_geometry,
+             -ALL, NODE_START_REFINED, PROJECT_EXACT, NULL, VERSION_NORMAL ) )
+          continue;
         if ( elem_group==list[1] ) {
           // check if all nodes of ielem lie inside an element of groups list[2..]
           long int inside_other = 0;
@@ -964,4 +977,35 @@ void mesh_remove( long int icontrol )
     exit(TN_EXIT_STATUS);
   }
   mesh_has_changed( VERSION_NORMAL );
+}
+
+// control_mesh_duplicate_element_group index group_old group_new (manual
+// Professional 6.177): every element of group_old gets a copy with the
+// same nodes and element data in group group_new, numbered after the
+// highest element in element order (Professional 02-08-2026: elements
+// 2 5 7, group 1 = element 5 -> new element 8). A missing element_group
+// record counts as group 0.
+void mesh_duplicate_element_group( long int icontrol )
+
+{
+  long int groups[2], ldum=0, one=1, max_elem=0, new_elem=0, ielem=0,
+    length=0, el[1+MNOL];
+  double ddum[1];
+
+  db( CONTROL_MESH_DUPLICATE_ELEMENT_GROUP, icontrol, groups, ddum, ldum,
+    VERSION_NORMAL, GET );
+  db_highest_index( ELEMENT, max_elem, VERSION_NORMAL );
+  new_elem = max_elem;
+  for ( ielem=0; ielem<=max_elem; ielem++ ) {
+    if ( !db_active_index( ELEMENT, ielem, VERSION_NORMAL ) ) continue;
+    long int eg = 0;
+    db( ELEMENT_GROUP, ielem, &eg, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+    if ( eg!=groups[0] ) continue;
+    db( ELEMENT, ielem, el, ddum, length, VERSION_NORMAL, GET );
+    new_elem++;
+    create_element( ielem, new_elem, el, length, VERSION_NORMAL,
+      VERSION_NORMAL );
+    db( ELEMENT_GROUP, new_elem, &groups[1], ddum, one, VERSION_NORMAL, PUT );
+  }
+  if ( new_elem>max_elem ) mesh_has_changed( VERSION_NORMAL );
 }

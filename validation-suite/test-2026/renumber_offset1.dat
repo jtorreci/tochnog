@@ -1,0 +1,24 @@
+( F5 T4 U5c: control_mesh_renumber with control_mesh_renumber_element_group_offset
+  100 and _element_geometry_offset 7 [6.236, 6.237]: every element gets its
+  group and element_geometry plus the offset, a missing record counts as 0
+  [groups 0 1 2 -> 100 101 102, element_geometry 0 3 0 -> 7 10 7].
+  Elements = Professional 02-08-2026. )
+echo -no
+number_of_space_dimensions 2
+end_initia
+node 1 0. 0.
+node 2 1. 0.
+node 3 2. 0.
+node 4 0. 1.
+node 5 1. 1.
+node 6 2. 1.
+element 2 -quad4 1 2 4 5
+element 5 -quad4 2 3 5 6
+element 7 -quad4 2 3 5 6
+element_group 5 1
+element_group 7 2
+element_geometry 5 3
+control_mesh_renumber 10 1 1
+control_mesh_renumber_element_group_offset 10 100
+control_mesh_renumber_element_geometry_offset 10 7
+end_data
