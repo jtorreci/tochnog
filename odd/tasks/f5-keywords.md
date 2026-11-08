@@ -608,3 +608,5 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   print_element_geometry_present / dependency_geometry, suites + Pro test dir): every .dbs identical (time_calculation
   ignored), same rc; tutorial_3 and slope_nonlocal_refine hit the 60 s timeout in both, validation_14_mesh fails to parse
   in both (change_dataitem_time_until_data), so its _direct example is not reachable.
+- 2026-11-08 U3 long differential (1800 s): examp24 identical .dbs; foundation_consolidation_settlement times out in
+  both binaries (one diagram row, one value: unchanged code path by inspection); left to the end-of-T4 verifier (omen).
