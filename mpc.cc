@@ -936,6 +936,82 @@ static long int mpc_closest_weights( double point[], double coords[],
   return mpc_closest_tensor( point, coords, name, nnol, weight, dist );
 }
 
+// the dofs an mpc generator ties (indices into dof_label, in dof
+// order): the principal dofs, restricted to the dof keywords dof_sel[]
+// when ndof_sel>0 (mpc_element_group_dof, control_mesh_truss_distribute_mpc_dof)
+static long int mpc_dof_list( long int dof_sel[], long int ndof_sel,
+  long int dof_label[], long int dof_principal[], long int dof_list[] )
+
+{
+  long int ndof = 0;
+  for ( long int ipuknwn=0; ipuknwn<npuknwn; ipuknwn++ ) {
+    long int iuknwn = ipuknwn*nder;
+    if ( dof_principal[iuknwn]<0 ) continue;
+    if ( ndof_sel>0 ) {
+      long int iuse_dof = 0;
+      for ( long int k=0; k<ndof_sel; k++ )
+        if ( dof_sel[k]==dof_label[iuknwn] ) iuse_dof = 1;
+      if ( !iuse_dof ) continue;
+    }
+    dof_list[ndof++] = iuknwn;
+  }
+  return ndof;
+}
+
+// write the tie of slave node inod to the nodes masters[0..nnol-1] with
+// the shape function weights weight[] (masters with a zero weight are
+// left out): one mpc_node_number / mpc_node_factor record per dof of
+// dof_list at start_index+count..., incrementing count. marker>=0: the
+// data item written -yes beside each record (mpc_from_* markers).
+// weight==NULL: one master with the default factor 1 and no
+// mpc_node_factor record (mpc_geometry, as the Professional .dbs).
+// Returns the number of masters (0: nothing written).
+static long int mpc_tie_put( long int inod, long int masters[],
+  double weight[], long int nnol, long int dof_list[], long int ndof,
+  long int dof_label[], long int start_index, long int &count,
+  long int marker )
+
+{
+  long int nmaster=0, length_put=0, idum[1], yes=-YES,
+    master_nodes[MNOL], vals[DATA_ITEM_SIZE];
+  double master_weight[MNOL], ddum[1];
+
+  for ( long int jnol=0; jnol<nnol; jnol++ ) {
+    if ( weight==NULL || scalar_dabs( weight[jnol] ) > MPC_WEIGHT_ZERO ) {
+      master_nodes[nmaster] = masters[jnol];
+      master_weight[nmaster] = ( weight==NULL ? 1. : weight[jnol] );
+      nmaster++;
+    }
+  }
+  if ( nmaster==0 ) return 0;
+  for ( long int idof=0; idof<ndof; idof++ ) {
+    long int iuknwn = dof_list[idof];
+    // record: [node_0 dof_0 node_1 dof_0 node_2 dof_0 ...]
+    long int iv = 0;
+    vals[iv++] = inod;
+    vals[iv++] = dof_label[iuknwn];
+    for ( long int km=0; km<nmaster; km++ ) {
+      vals[iv++] = master_nodes[km];
+      vals[iv++] = dof_label[iuknwn];
+    }
+    length_put = iv;
+    db( MPC_NODE_NUMBER, start_index+count, vals, ddum, length_put,
+      VERSION_NORMAL, PUT );
+    if ( weight!=NULL ) {
+      length_put = nmaster;
+      db( MPC_NODE_FACTOR, start_index+count, idum, master_weight,
+        length_put, VERSION_NORMAL, PUT );
+    }
+    if ( marker>=0 ) {
+      length_put = 1;
+      db( marker, start_index+count, &yes, ddum, length_put, VERSION_NORMAL,
+        PUT );
+    }
+    count++;
+  }
+  return nmaster;
+}
+
 // generate the records of mpc_element_group index ieg at
 // start_index+count..., incrementing count
 static void mpc_element_group_index( long int ieg, long int start_index,
@@ -945,7 +1021,6 @@ static void mpc_element_group_index( long int ieg, long int start_index,
 {
   long int ldum=0, idum[1], length=0, i=0;
   double ddum[MDIM]; // geometry() writes normal/projection[MDIM]
-  long int vals[DATA_ITEM_SIZE];
 
   long int *eg_vals = db_int( MPC_ELEMENT_GROUP, ieg, VERSION_NORMAL );
   long int eg_length = db_len( MPC_ELEMENT_GROUP, ieg, VERSION_NORMAL );
@@ -997,8 +1072,7 @@ static void mpc_element_group_index( long int ieg, long int start_index,
   if ( eps_iso<0. ) db_error( MPC_ELEMENT_GROUP_EPS_ISO, ieg );
 
   long int element=0, inod=0, inol=0, nnol=0, jelem=0, jnol=0,
-    nnol_m=0, name_m=0, length_m=0, nmaster=0, k=0,
-    km=0, ipuknwn=0, iuknwn=0, length_put=0, iuse=0, found=0,
+    nnol_m=0, name_m=0, length_m=0, k=0, iuse=0, found=0,
     in_geom=0;
   long int el[MNOL+1], el_m[MNOL+1], el_grp=0;
   double coord[MDIM], coords_m[MNOL*MDIM], weight[MNOL], rdum=0.;
@@ -1033,6 +1107,10 @@ static void mpc_element_group_index( long int ieg, long int start_index,
       }
     }
   }
+
+  long int dof_list[MUKNWN];
+  long int ndof_list = mpc_dof_list( dof_sel, ndof_sel, dof_label,
+    dof_principal, dof_list );
 
   // visited marker: each node is tied at most once per record
   long int *visited = NULL;
@@ -1151,43 +1229,10 @@ static void mpc_element_group_index( long int ieg, long int start_index,
         }
       }
       if ( !found ) continue;
-      // masters: the master element nodes with non-zero shape function
-      // weight at the node position
-      nmaster = 0;
-      for ( jnol=0; jnol<nnol_m; jnol++ ) {
-        if ( scalar_dabs( weight[jnol] ) > MPC_WEIGHT_ZERO ) {
-          el_m[1+nmaster] = el_m[1+jnol];
-          weight[nmaster] = weight[jnol];
-          nmaster++;
-        }
-      }
-      if ( nmaster==0 ) continue;
-      // generate one mpc record per selected dof
-      for ( ipuknwn=0; ipuknwn<npuknwn; ipuknwn++ ) {
-        iuknwn = ipuknwn*nder;
-        if ( dof_principal[iuknwn]<0 ) continue;
-        if ( ndof_sel>0 ) {
-          long int iuse_dof = 0;
-          for ( k=0; k<ndof_sel; k++ )
-            if ( dof_sel[k]==dof_label[iuknwn] ) iuse_dof = 1;
-          if ( !iuse_dof ) continue;
-        }
-        // record: [node_0 dof_0 node_1 dof_0 node_2 dof_0 ...]
-        long int iv = 0;
-        vals[iv++] = inod;
-        vals[iv++] = dof_label[iuknwn];
-        for ( km=0; km<nmaster; km++ ) {
-          vals[iv++] = el_m[1+km];
-          vals[iv++] = dof_label[iuknwn];
-        }
-        length_put = iv;
-        db( MPC_NODE_NUMBER, start_index+count, vals, ddum,
-          length_put, VERSION_NORMAL, PUT );
-        length_put = nmaster;
-        db( MPC_NODE_FACTOR, start_index+count, idum, weight,
-          length_put, VERSION_NORMAL, PUT );
-        count++;
-      }
+      // one record per selected dof, the masters with a non-zero shape
+      // function weight at the node position
+      if ( !mpc_tie_put( inod, &el_m[1], weight, nnol_m, dof_list, ndof_list,
+          dof_label, start_index, count, -1 ) ) continue;
       if ( visited ) visited[inod] = 1;
     }
   }
@@ -1316,6 +1361,155 @@ static void mpc_element_group_generate( void )
 
 }
 
+// the nodes of one geometry (name, index) in node order (mpc_geometry)
+static std::vector<long int> mpc_geometry_nodes( long int geometry_entity[] )
+
+{
+  std::vector<long int> nodes;
+  long int max_node=0, in_geometry=0;
+  double rdum=0., ddum[MDIM];
+
+  db_max_index( NODE, max_node, VERSION_NORMAL, GET );
+  for ( long int inod=0; inod<=max_node; inod++ ) {
+    if ( !db_active_index( NODE, inod, VERSION_NORMAL ) ) continue;
+    geometry( inod, ddum, geometry_entity, in_geometry, rdum, ddum, rdum,
+      ddum, NODE_START_REFINED, PROJECT_EXACT, VERSION_NORMAL );
+    if ( in_geometry ) nodes.push_back( inod );
+  }
+  return nodes;
+}
+
+// mpc_geometry (manual Professional 6.866-6.870): generate the
+// mpc_node_number records of every mpc_geometry index. -method0 (default):
+// each node of the second geometry is tied to the first node of the first
+// geometry whose coordinates selected by mpc_geometry_switch are equal
+// within mpc_geometry_tolerance (default 1.e-4); -method1: every node of
+// the (first) geometry is tied to its first node; -method2: nodes of the
+// geometry with equal coordinates (all of them, within the tolerance) are
+// tied to the highest-numbered one of them (Professional 02-08-2026 pair:
+// the lower node is the slave). mpc_geometry_dof lists the dofs, in its
+// order, per slave node; it and mpc_geometry_switch (-method0) are
+// required (the Professional stops without them). One master, factor 1
+// (no mpc_node_factor record, as the Professional .dbs). Re-created on a
+// mesh change (fingerprint, the mpc_element_group pattern).
+static void mpc_geometry_generate( void )
+
+{
+  long int ldum=0, length=0, max_geom=0, i=0, idum[1];
+  double ddum[1];
+
+  db_max_index( MPC_GEOMETRY, max_geom, VERSION_NORMAL, GET );
+  if ( max_geom<0 ) return;
+
+  long int fingerprint = mpc_mesh_fingerprint();
+  long int stored[3] = { -1, -1, 0 };
+  long int stored_len = 0;
+  db( MPC_GEOMETRY_MESH_FINGERPRINT, 0, stored, ddum, stored_len,
+    VERSION_NORMAL, GET_IF_EXISTS );
+  if ( stored_len>=3 && stored[0]==fingerprint ) return;
+  if ( stored_len>=3 && stored[2]>0 ) {
+    for ( i=0; i<stored[2]; i++ ) {
+      db_delete_index( MPC_NODE_NUMBER, stored[1]+i, VERSION_NORMAL );
+      db_delete_index( MPC_NODE_FACTOR, stored[1]+i, VERSION_NORMAL );
+      db_delete_index( MPC_FROM_GEOMETRY, stored[1]+i, VERSION_NORMAL );
+    }
+  }
+
+  long int dof_label[MUKNWN];
+  db( DOF_LABEL, 0, dof_label, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+
+  long int start_index = 0, count = 0;
+  db_highest_index( MPC_NODE_NUMBER, start_index, VERSION_NORMAL );
+  start_index++;
+
+  for ( long int ig=0; ig<=max_geom; ig++ ) {
+    if ( !db_active_index( MPC_GEOMETRY, ig, VERSION_NORMAL ) ) continue;
+    long int geom_vals[DATA_ITEM_SIZE], geom_len=0;
+    db( MPC_GEOMETRY, ig, geom_vals, ddum, geom_len, VERSION_NORMAL, GET );
+    long int method = -METHOD0;
+    db( MPC_GEOMETRY_METHOD, ig, &method, ddum, ldum, VERSION_NORMAL,
+      GET_IF_EXISTS );
+    if ( method!=-METHOD0 && method!=-METHOD1 && method!=-METHOD2 )
+      db_error( MPC_GEOMETRY_METHOD, ig );
+    if ( geom_len<2 || geom_len%2!=0 ||
+         ( method==-METHOD0 && geom_len<4 ) )
+      db_error( MPC_GEOMETRY, ig );
+    double tolerance = 1.e-4;
+    db( MPC_GEOMETRY_TOLERANCE, ig, idum, &tolerance, ldum, VERSION_NORMAL,
+      GET_IF_EXISTS );
+    if ( tolerance<0. ) db_error( MPC_GEOMETRY_TOLERANCE, ig );
+    // the dofs, in the order of the record
+    long int dof_vals[DATA_ITEM_SIZE], dof_len=0, dof_list[MUKNWN], ndof=0;
+    db( MPC_GEOMETRY_DOF, ig, dof_vals, ddum, dof_len, VERSION_NORMAL, GET );
+    for ( i=0; i<dof_len; i++ ) {
+      long int iuknwn = -1;
+      if ( !array_member( dof_label, dof_vals[i], nuknwn, iuknwn ) ||
+           ndof>=MUKNWN )
+        db_error( MPC_GEOMETRY_DOF, ig );
+      dof_list[ndof++] = iuknwn;
+    }
+    // the coordinates compared (-method0: mpc_geometry_switch; else all)
+    long int check[MDIM];
+    for ( i=0; i<MDIM; i++ ) check[i] = 1;
+    if ( method==-METHOD0 ) {
+      long int sw[DATA_ITEM_SIZE], sw_len=0;
+      db( MPC_GEOMETRY_SWITCH, ig, sw, ddum, sw_len, VERSION_NORMAL, GET );
+      if ( sw_len<ndim ) db_error( MPC_GEOMETRY_SWITCH, ig );
+      for ( i=0; i<ndim; i++ ) {
+        if ( sw[i]!=-YES && sw[i]!=-NO ) db_error( MPC_GEOMETRY_SWITCH, ig );
+        check[i] = ( sw[i]==-YES );
+      }
+    }
+
+    std::vector<long int> first = mpc_geometry_nodes( &geom_vals[0] );
+    std::vector<long int> second;
+    if ( method==-METHOD0 ) second = mpc_geometry_nodes( &geom_vals[2] );
+    std::vector<double> xyz( MDIM*first.size() );
+    for ( size_t k=0; k<first.size(); k++ )
+      db( NODE_START_REFINED, first[k], idum, &xyz[MDIM*k], ldum,
+        VERSION_NORMAL, GET );
+
+    // same position within the tolerance on the checked coordinates
+    auto same = [&]( double a[], double b[] ) {
+      for ( long int idim=0; idim<ndim; idim++ )
+        if ( check[idim] && scalar_dabs( a[idim]-b[idim] )>tolerance )
+          return false;
+      return true;
+    };
+
+    for ( size_t k=0; k<( method==-METHOD0 ? second.size() : first.size() );
+          k++ ) {
+      long int slave = 0, master = -1;
+      if ( method==-METHOD0 ) {
+        double coord[MDIM];
+        slave = second[k];
+        db( NODE_START_REFINED, slave, idum, coord, ldum, VERSION_NORMAL,
+          GET );
+        for ( size_t j=0; j<first.size() && master<0; j++ )
+          if ( first[j]!=slave && same( coord, &xyz[MDIM*j] ) )
+            master = first[j];
+      }
+      else if ( method==-METHOD1 ) {
+        slave = first[k];
+        if ( k>0 ) master = first[0];
+      }
+      else {
+        slave = first[k];
+        for ( size_t j=k+1; j<first.size(); j++ )
+          if ( same( &xyz[MDIM*k], &xyz[MDIM*j] ) ) master = first[j];
+      }
+      if ( master<0 ) continue;
+      mpc_tie_put( slave, &master, NULL, 1, dof_list, ndof, dof_label,
+        start_index, count, MPC_FROM_GEOMETRY );
+    }
+  }
+
+  stored[0] = fingerprint; stored[1] = start_index; stored[2] = count;
+  length = 3;
+  db( MPC_GEOMETRY_MESH_FINGERPRINT, 0, stored, ddum, length,
+    VERSION_NORMAL, PUT );
+}
+
 // consume the mpc_node_number / mpc_node_factor records. Called from
 // bounda() AFTER the bounda records, once per equilibrium iteration: the
 // slave dofs are bounded and get the value sum(factor*master dof) from
@@ -1339,10 +1533,11 @@ void mpc_node_apply( void )
     return;
   }
 
-  // mpc_linear_quadratic and mpc_element_group generation (mesh-change
-  // detection inside)
+  // mpc_linear_quadratic, mpc_element_group and mpc_geometry generation
+  // (mesh-change detection inside)
   mpc_linear_quadratic_generate();
   mpc_element_group_generate();
+  mpc_geometry_generate();
 
   db_max_index( MPC_NODE_NUMBER, max_mpc, VERSION_NORMAL, GET );
   if ( max_mpc<0 ) {
@@ -1665,4 +1860,604 @@ void mpc_node_apply( void )
       mpc_tie_mark[mpc_tie_slave_ig[it]] = it + 1;
   }
 
+}
+
+// ---------------------------------------------------------------------
+// control_mesh_truss_distribute_mpc (manual Professional 6.245-6.254)
+// ---------------------------------------------------------------------
+
+#define TD_EPS_T 1.e-10              // parameter tolerance along a truss
+#define TD_MINIMAL_LENGTH_FACTOR 1.e-11 // default minimal length / truss
+                                     // length (Professional probes)
+
+// an isoparametric candidate element: the corner nodes in the face
+// tables below, the bounding box
+struct td_iso {
+  long int element, name, nnol, group, nodes[MNOL];
+  double coords[MNOL*MDIM], lo[MDIM], hi[MDIM];
+};
+
+// corner slots of the supported isoparametric elements (dimension ndim);
+// 2D: in cyclic order, 3D: faces (up to 4 corners each, -1 = none).
+// Returns the number of corners (2D) / faces (3D), 0 when unsupported.
+static long int td_corners( long int name, long int corner[], long int face[][4] )
+
+{
+  static const long int tet_f[4][4] = { {0,1,2,-1}, {0,1,3,-1}, {0,2,3,-1},
+    {1,2,3,-1} };
+  static const long int hex_f[6][4] = { {0,1,3,2}, {4,5,7,6}, {0,1,5,4},
+    {2,3,7,6}, {0,2,6,4}, {1,3,7,5} };
+  static const long int prism_f[5][4] = { {0,1,2,-1}, {3,4,5,-1}, {0,1,4,3},
+    {1,2,5,4}, {2,0,3,5} };
+  long int i=0, j=0, n=0;
+
+  if ( ndim==1 ) {
+    if ( name==-BAR2 ) { corner[0] = 0; corner[1] = 1; return 2; }
+    if ( name==-BAR3 ) { corner[0] = 0; corner[1] = 2; return 2; }
+    return 0;
+  }
+  if ( ndim==2 ) {
+    const long int *c = NULL;
+    static const long int tria3[3] = {0,1,2}, tria6[3] = {0,2,5},
+      quad4[4] = {0,1,3,2}, quad9[4] = {0,2,8,6};
+    if      ( name==-TRIA3 ) { c = tria3; n = 3; }
+    else if ( name==-TRIA6 ) { c = tria6; n = 3; }
+    else if ( name==-QUAD4 ) { c = quad4; n = 4; }
+    else if ( name==-QUAD9 ) { c = quad9; n = 4; }
+    else return 0;
+    for ( i=0; i<n; i++ ) corner[i] = c[i];
+    return n;
+  }
+  // 3D: corner slots of the linear element, then the faces over them
+  static const long int tet4[4] = {0,1,2,3}, tet10[4] = {0,2,5,9},
+    hex8[8] = {0,1,2,3,4,5,6,7}, hex27[8] = {0,2,6,8,18,20,24,26},
+    prism6[6] = {0,1,2,3,4,5};
+  const long int *c = NULL;
+  const long int (*f)[4] = NULL;
+  long int ncorner = 0;
+  if      ( name==-TET4 )   { c = tet4;   ncorner = 4; f = tet_f;   n = 4; }
+  else if ( name==-TET10 )  { c = tet10;  ncorner = 4; f = tet_f;   n = 4; }
+  else if ( name==-HEX8 )   { c = hex8;   ncorner = 8; f = hex_f;   n = 6; }
+  else if ( name==-HEX27 )  { c = hex27;  ncorner = 8; f = hex_f;   n = 6; }
+  else if ( name==-PRISM6 ) { c = prism6; ncorner = 6; f = prism_f; n = 5; }
+  else return 0;
+  for ( i=0; i<ncorner; i++ ) corner[i] = c[i];
+  for ( i=0; i<n; i++ )
+    for ( j=0; j<4; j++ ) face[i][j] = ( f[i][j]<0 ? -1 : c[f[i][j]] );
+  return n;
+}
+
+// the parameter interval [t0, t1] of the segment A + t D, t in [0, 1],
+// inside the element (Cyrus-Beck clipping against the corner faces;
+// curved quadratic sides are taken straight). Returns 0 when the
+// segment misses the element or only touches it.
+static long int td_clip( double A[], double D[], td_iso &e, double &t0,
+  double &t1 )
+
+{
+  long int corner[8], face[6][4], i=0, j=0, idim=0;
+  long int n = td_corners( e.name, corner, face );
+  double centre[MDIM], size=0.;
+
+  t0 = 0.; t1 = 1.;
+  if ( n==0 ) return 0;
+  if ( ndim==1 ) {
+    if ( D[0]==0. ) return 0;
+    double xa = e.coords[corner[0]], xb = e.coords[corner[1]];
+    double ta = ( xa-A[0] )/D[0], tb = ( xb-A[0] )/D[0];
+    t0 = scalar_dmax( 0., scalar_dmin( ta, tb ) );
+    t1 = scalar_dmin( 1., scalar_dmax( ta, tb ) );
+    return t1-t0>TD_EPS_T;
+  }
+  long int ncorner = ( ndim==2 ? n : ( e.name==-PRISM6 ? 6 :
+    ( n==4 ? 4 : 8 ) ) );
+  for ( idim=0; idim<ndim; idim++ ) {
+    centre[idim] = 0.;
+    for ( i=0; i<ncorner; i++ )
+      centre[idim] += e.coords[corner[i]*ndim+idim]/ncorner;
+  }
+  for ( i=0; i<ncorner; i++ ) {
+    double d2 = 0.;
+    for ( idim=0; idim<ndim; idim++ ) {
+      double d = e.coords[corner[i]*ndim+idim] - centre[idim];
+      d2 += d*d;
+    }
+    size = scalar_dmax( size, sqrt( d2 ) );
+  }
+  if ( size<=0. ) return 0;
+  double eps = 1.e-10*size, dlen = array_size( D, ndim );
+  for ( long int iface=0; iface<n; iface++ ) {
+    // outward normal and a point of the side / face
+    double normal[MDIM], point[MDIM];
+    array_set( normal, 0., MDIM ); array_set( point, 0., MDIM );
+    if ( ndim==2 ) {
+      double *p = &e.coords[corner[iface]*ndim];
+      double *q = &e.coords[corner[(iface+1)%n]*ndim];
+      normal[0] = q[1]-p[1]; normal[1] = -( q[0]-p[0] );
+      for ( idim=0; idim<2; idim++ ) point[idim] = 0.5*( p[idim]+q[idim] );
+    }
+    else {
+      long int nv = ( face[iface][3]<0 ? 3 : 4 );
+      for ( j=0; j<nv; j++ ) {        // Newell normal
+        double *p = &e.coords[face[iface][j]*ndim];
+        double *q = &e.coords[face[iface][(j+1)%nv]*ndim];
+        normal[0] += ( p[1]-q[1] )*( p[2]+q[2] );
+        normal[1] += ( p[2]-q[2] )*( p[0]+q[0] );
+        normal[2] += ( p[0]-q[0] )*( p[1]+q[1] );
+        for ( idim=0; idim<3; idim++ ) point[idim] += p[idim]/nv;
+      }
+    }
+    double nlen = array_size( normal, ndim );
+    if ( nlen<=0. ) continue;
+    double side = 0.;
+    for ( idim=0; idim<ndim; idim++ )
+      side += normal[idim]*( centre[idim]-point[idim] );
+    if ( side>0. ) array_multiply( normal, normal, -1., ndim );
+    // n.(A + t D - point) <= 0 (a segment parallel to the side within
+    // eps of it counts as inside)
+    double num = 0., den = 0.;
+    for ( idim=0; idim<ndim; idim++ ) {
+      num += normal[idim]*( point[idim]-A[idim] );
+      den += normal[idim]*D[idim];
+    }
+    if ( scalar_dabs( den )<=1.e-14*nlen*dlen ) {
+      if ( num<-eps*nlen ) return 0;
+    }
+    else if ( den>0. ) t1 = scalar_dmin( t1, num/den );
+    else t0 = scalar_dmax( t0, num/den );
+    if ( t1-t0<=TD_EPS_T ) return 0;
+  }
+  return t1-t0>TD_EPS_T;
+}
+
+// a node to tie: the selection pass (iso mask) and, for an air node of
+// an _exact piece, the element of the piece and the point on its boundary
+struct td_tie {
+  long int node, pass, clamp, original; // clamp: td_iso index or -1
+  double point[MDIM];
+};
+
+// a group or geometry selector of the _truss / _isoparametric records:
+// element group (geometry_entity[0]==0) or geometry (name, index)
+static long int td_element_selected( long int element, long int group,
+  long int sel[], long int nsel, long int is_geometry )
+
+{
+  if ( nsel==0 ) return 1;
+  for ( long int k=0; k<nsel; k++ ) {
+    if ( !is_geometry ) { if ( sel[k]==group ) return 1; }
+    else {
+      long int geometry_entity[2] = { sel[2*k], sel[2*k+1] };
+      if ( element_in_geometry( element, geometry_entity,
+           geometry_method_get( geometry_entity ), NODE_START_REFINED,
+           PROJECT_EXACT, NULL, VERSION_NORMAL ) )
+        return 1;
+    }
+  }
+  return 0;
+}
+
+// read the group list (_element_group_*) or geometry pairs (_geometry_*)
+// of the truss side (iso==0) or the isoparametric side (iso==1); only one
+// of both may be given (Professional error texts). Returns the number of
+// selectors (groups or geometries).
+static long int td_selection( long int icontrol, long int iso, long int sel[],
+  long int &is_geometry )
+
+{
+  long int length=0, has_group=0, has_geometry=0;
+  double ddum[1];
+
+  is_geometry = 0;
+  if ( !iso ) {
+    has_group = db( CONTROL_MESH_TRUSS_DISTRIBUTE_MPC_ELEMENT_GROUP_TRUSS,
+      icontrol, sel, ddum, length, VERSION_NORMAL, GET_IF_EXISTS );
+    if ( !has_group )
+      has_geometry = db( CONTROL_MESH_TRUSS_DISTRIBUTE_MPC_GEOMETRY_TRUSS,
+        icontrol, sel, ddum, length, VERSION_NORMAL, GET_IF_EXISTS );
+    else if ( db_active_index( CONTROL_MESH_TRUSS_DISTRIBUTE_MPC_GEOMETRY_TRUSS,
+         icontrol, VERSION_NORMAL ) ) {
+      pri( "Error, only one of CONTROL_MESH_TRUSS_DISTRIBUTE_MPC_ELEMENT_GROUP_TRUSS "
+           "and CONTROL_MESH_TRUSS_DISTRIBUTE_MPC_GEOMETRY_TRUSS can be specified." );
+      exit_tn_on_error();
+    }
+  }
+  else {
+    has_group = db( CONTROL_MESH_TRUSS_DISTRIBUTE_MPC_ELEMENT_GROUP_ISOPARAMETRIC,
+      icontrol, sel, ddum, length, VERSION_NORMAL, GET_IF_EXISTS );
+    if ( !has_group )
+      has_geometry = db( CONTROL_MESH_TRUSS_DISTRIBUTE_MPC_GEOMETRY_ISOPARAMETRIC,
+        icontrol, sel, ddum, length, VERSION_NORMAL, GET_IF_EXISTS );
+    else if ( db_active_index(
+         CONTROL_MESH_TRUSS_DISTRIBUTE_MPC_GEOMETRY_ISOPARAMETRIC, icontrol,
+         VERSION_NORMAL ) ) {
+      pri( "Error, only one of "
+           "CONTROL_MESH_TRUSS_DISTRIBUTE_MPC_ELEMENT_GROUP_ISOPARAMETRIC and "
+           "CONTROL_MESH_TRUSS_DISTRIBUTE_MPC_GEOMETRY_ISOPARAMETRIC can be "
+           "specified." );
+      exit_tn_on_error();
+    }
+  }
+  if ( has_group ) return length;
+  if ( has_geometry ) {
+    if ( length%2!=0 ) {
+      pri( "Error: a control_mesh_truss_distribute_mpc_geometry_* record "
+           "needs geometry name and index pairs." );
+      exit_tn_on_error();
+    }
+    is_geometry = 1;
+    return length/2;
+  }
+  return 0;
+}
+
+// tie one node to the first selected isoparametric element containing it
+// (point_el, tolerance MPC_EPS_ISO), or, with use_clamp, for an air node
+// of an _exact piece, to the piece element at the point where the truss
+// leaves it. A node of a selected isoparametric element is not tied.
+// Returns 1 when the node is settled (tied, or an isoparametric node).
+static long int td_tie_node( td_tie &t, long int use_clamp,
+  std::vector<td_iso> &iso, std::vector<char> &mask, long int niso,
+  std::vector<char> &iso_node, long int stride, long int dof_list[],
+  long int ndof, long int dof_label[], long int start_index, long int &count )
+
+{
+  long int idum[1], ldum=0;
+  double coord[MDIM], weight[MNOL];
+  char *m = &mask[t.pass*niso];
+
+  if ( t.node<stride && iso_node[t.pass*stride+t.node] ) return 1;
+  db( NODE_START_REFINED, t.node, idum, coord, ldum, VERSION_NORMAL, GET );
+  for ( long int i=0; i<niso; i++ ) {
+    if ( !m[i] ) continue;
+    td_iso &e = iso[i];
+    long int outside = 0;
+    for ( long int idim=0; idim<ndim; idim++ ) {
+      double tol = 1.e-6*( e.hi[idim]-e.lo[idim] ) + 1.e-12;
+      if ( coord[idim]<e.lo[idim]-tol || coord[idim]>e.hi[idim]+tol )
+        outside = 1;
+    }
+    if ( outside ) continue;
+    if ( point_el( coord, e.coords, weight, e.name, e.nnol, MPC_EPS_ISO ) ) {
+      mpc_weights_polish( coord, e.coords, weight, e.name, e.nnol );
+      mpc_tie_put( t.node, e.nodes, weight, e.nnol, dof_list, ndof,
+        dof_label, start_index, count, MPC_FROM_TRUSS_DISTRIBUTE_MPC );
+      return 1;
+    }
+  }
+  if ( !use_clamp ) return 0;
+  if ( t.clamp>=0 ) {
+    td_iso &e = iso[t.clamp];
+    if ( point_el( t.point, e.coords, weight, e.name, e.nnol,
+         10.*MPC_EPS_ISO ) ) {
+      mpc_weights_polish( t.point, e.coords, weight, e.name, e.nnol );
+      mpc_tie_put( t.node, e.nodes, weight, e.nnol, dof_list, ndof,
+        dof_label, start_index, count, MPC_FROM_TRUSS_DISTRIBUTE_MPC );
+    }
+  }
+  return 1;
+}
+
+// Runs once, when its own control index is processed (also an index
+// without control_timestep: Professional other/truss10), from
+// step_start() before the first element loop. Each selected -truss
+// element is replaced by new elements (numbers after the highest
+// element, the old one deleted, as the Professional): the same truss,
+// or with _exact -yes the pieces between the points where the truss
+// enters a next isoparametric element. The nodes of the new trusses get
+// mpc ties to the isoparametric element they lie in.
+void mesh_truss_distribute_mpc( void )
+
+{
+  static long int done = 0;
+  long int icontrol=0, ldum=0, length=0, idum[1], i=0, k=0, idim=0,
+    max_index=0, nindex=0;
+  double ddum[1];
+
+  if ( done ) return;
+  db( ICONTROL, 0, &icontrol, ddum, ldum, VERSION_NORMAL, GET );
+  if ( !db_active_index( CONTROL_MESH_TRUSS_DISTRIBUTE_MPC, icontrol,
+       VERSION_NORMAL ) )
+    return;
+  done = 1;
+  db_max_index( CONTROL_MESH_TRUSS_DISTRIBUTE_MPC, max_index, VERSION_NORMAL,
+    GET );
+  for ( i=0; i<=max_index; i++ )
+    if ( db_active_index( CONTROL_MESH_TRUSS_DISTRIBUTE_MPC, i,
+         VERSION_NORMAL ) ) nindex++;
+  if ( nindex>1 ) {
+    pri( "Error, only one record allowed for "
+         "CONTROL_MESH_TRUSS_DISTRIBUTE_MPC" );
+    exit_tn_on_error();
+  }
+  long int swit_td = -NO, exact = -NO, air = -YES, connect = -YES;
+  db( CONTROL_MESH_TRUSS_DISTRIBUTE_MPC, icontrol, &swit_td, ddum, ldum,
+    VERSION_NORMAL, GET );
+  if ( swit_td!=-YES ) return;
+  db( CONTROL_MESH_TRUSS_DISTRIBUTE_MPC_EXACT, icontrol, &exact, ddum, ldum,
+    VERSION_NORMAL, GET_IF_EXISTS );
+  db( CONTROL_MESH_TRUSS_DISTRIBUTE_MPC_AIR, icontrol, &air, ddum, ldum,
+    VERSION_NORMAL, GET_IF_EXISTS );
+  db( CONTROL_MESH_TRUSS_DISTRIBUTE_MPC_EXACT_MINIMAL_LENGTH_CONNECT,
+    icontrol, &connect, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+  double minimal_length = -1.;
+  if ( db( CONTROL_MESH_TRUSS_DISTRIBUTE_MPC_EXACT_MINIMAL_LENGTH, icontrol,
+       idum, &minimal_length, ldum, VERSION_NORMAL, GET_IF_EXISTS ) &&
+       minimal_length<0. )
+    db_error( CONTROL_MESH_TRUSS_DISTRIBUTE_MPC_EXACT_MINIMAL_LENGTH,
+      icontrol );
+
+  // the dofs (default: the principal dofs)
+  long int dof_label[MUKNWN], dof_principal[MUKNWN], dof_sel[MUKNWN],
+    ndof_sel=0, dof_list[MUKNWN];
+  db( DOF_LABEL, 0, dof_label, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+  db( DOF_PRINCIPAL, 0, dof_principal, ddum, ldum, VERSION_NORMAL,
+    GET_IF_EXISTS );
+  if ( db_active_index( CONTROL_MESH_TRUSS_DISTRIBUTE_MPC_DOF, icontrol,
+       VERSION_NORMAL ) ) {
+    long int dof_vals[DATA_ITEM_SIZE];
+    db( CONTROL_MESH_TRUSS_DISTRIBUTE_MPC_DOF, icontrol, dof_vals, ddum,
+      length, VERSION_NORMAL, GET );
+    for ( i=0; i<length; i++ ) {
+      long int iuknwn = -1;
+      if ( !array_member( dof_label, dof_vals[i], nuknwn, iuknwn ) ||
+           ndof_sel>=MUKNWN )
+        db_error( CONTROL_MESH_TRUSS_DISTRIBUTE_MPC_DOF, icontrol );
+      dof_sel[ndof_sel++] = dof_vals[i];
+    }
+  }
+  long int ndof = mpc_dof_list( dof_sel, ndof_sel, dof_label, dof_principal,
+    dof_list );
+
+  // selections; with both sides given the i-th truss selector goes with
+  // the i-th isoparametric selector (Professional error texts)
+  long int sel_truss[DATA_ITEM_SIZE], sel_iso[DATA_ITEM_SIZE],
+    geom_truss=0, geom_iso=0;
+  long int ntruss_sel = td_selection( icontrol, 0, sel_truss, geom_truss );
+  long int niso_sel = td_selection( icontrol, 1, sel_iso, geom_iso );
+  if ( ntruss_sel>0 && niso_sel>0 && ntruss_sel!=niso_sel ) {
+    pri( "Error, the specified number of values for trusses and "
+         "isoparametric elements should be equal for "
+         "CONTROL_MESH_TRUSS_DISTRIBUTE_MPC_*" );
+    exit_tn_on_error();
+  }
+  long int npass = ( ntruss_sel>0 ? ntruss_sel : 1 );
+
+  // the isoparametric candidates (full-dimension continuum elements
+  // outside interface groups) and, per pass, the selected ones
+  long int max_element=0, max_node=0, el[MNOL+1];
+  db_highest_index( ELEMENT, max_element, VERSION_NORMAL );
+  db_highest_index( NODE, max_node, VERSION_NORMAL );
+  if ( max_element<0 ) return;
+  std::vector<td_iso> iso;
+  for ( long int element=0; element<=max_element; element++ ) {
+    if ( !db_active_index( ELEMENT, element, VERSION_NORMAL ) ) continue;
+    db( ELEMENT, element, el, ddum, length, VERSION_NORMAL, GET );
+    long int corner[8], face[6][4];
+    if ( td_corners( el[0], corner, face )==0 ) continue;
+    td_iso e;
+    e.element = element; e.name = el[0]; e.nnol = length-1; e.group = 0;
+    db( ELEMENT_GROUP, element, &e.group, ddum, ldum, VERSION_NORMAL,
+      GET_IF_EXISTS );
+    long int interface = -NO;
+    db( GROUP_INTERFACE, e.group, &interface, ddum, ldum, VERSION_NORMAL,
+      GET_IF_EXISTS );
+    if ( interface==-YES ) continue;
+    for ( idim=0; idim<ndim; idim++ ) { e.lo[idim] = DBL_MAX; e.hi[idim] = -DBL_MAX; }
+    for ( i=0; i<e.nnol; i++ ) {
+      e.nodes[i] = el[1+i];
+      db( NODE_START_REFINED, e.nodes[i], idum, &e.coords[i*ndim], ldum,
+        VERSION_NORMAL, GET );
+      for ( idim=0; idim<ndim; idim++ ) {
+        e.lo[idim] = scalar_dmin( e.lo[idim], e.coords[i*ndim+idim] );
+        e.hi[idim] = scalar_dmax( e.hi[idim], e.coords[i*ndim+idim] );
+      }
+    }
+    iso.push_back( e );
+  }
+  long int niso = iso.size();
+  std::vector<char> mask( npass*niso+1, 0 );
+  long int max_node_initial = max_node;
+  std::vector<char> iso_node( (1+max_node)*npass+1, 0 );
+  for ( long int ipass=0; ipass<npass; ipass++ ) {
+    for ( i=0; i<niso; i++ ) {
+      long int use = 1;
+      if ( niso_sel>0 ) {
+        if ( ntruss_sel>0 )
+          use = td_element_selected( iso[i].element, iso[i].group,
+            &sel_iso[geom_iso ? 2*ipass : ipass], 1, geom_iso );
+        else
+          use = td_element_selected( iso[i].element, iso[i].group,
+            sel_iso, niso_sel, geom_iso );
+      }
+      mask[ipass*niso+i] = use;
+      if ( use )
+        for ( k=0; k<iso[i].nnol; k++ )
+          iso_node[ipass*(1+max_node)+iso[i].nodes[k]] = 1;
+    }
+  }
+
+  // the trusses: new elements and nodes, the ties to make afterwards
+  std::vector<td_tie> ties;
+  std::vector<long int> old_nodes;
+  long int max_truss = max_element, new_element = max_element,
+    new_node = max_node, changed = 0;
+  std::vector<char> processed( 1+max_element, 0 );
+  for ( long int ipass=0; ipass<npass; ipass++ ) {
+    char *m = &mask[ipass*niso];
+    for ( long int truss=0; truss<=max_truss; truss++ ) {
+      if ( processed[truss] ) continue;
+      if ( !db_active_index( ELEMENT, truss, VERSION_NORMAL ) ) continue;
+      db( ELEMENT, truss, el, ddum, length, VERSION_NORMAL, GET );
+      if ( el[0]!=-TRUSS || length!=3 ) continue;
+      long int group = 0;
+      db( ELEMENT_GROUP, truss, &group, ddum, ldum, VERSION_NORMAL,
+        GET_IF_EXISTS );
+      if ( ntruss_sel>0 && !td_element_selected( truss, group,
+           &sel_truss[geom_truss ? 2*ipass : ipass], 1, geom_truss ) )
+        continue;
+      processed[truss] = 1;
+      changed = 1;
+      long int na = el[1], nb = el[2];
+      double A[MDIM], B[MDIM], D[MDIM];
+      db( NODE_START_REFINED, na, idum, A, ldum, VERSION_NORMAL, GET );
+      db( NODE_START_REFINED, nb, idum, B, ldum, VERSION_NORMAL, GET );
+      array_subtract( B, A, D, ndim );
+      double truss_length = array_size( D, ndim );
+      old_nodes.push_back( na ); old_nodes.push_back( nb );
+
+      // the selected isoparametric elements the truss runs through,
+      // sorted by entry parameter
+      std::vector<double> it0, it1;
+      std::vector<long int> iel;
+      for ( i=0; i<niso && truss_length>0.; i++ ) {
+        if ( !m[i] ) continue;
+        long int miss = 0;
+        for ( idim=0; idim<ndim; idim++ ) {
+          double tol = 1.e-6*( iso[i].hi[idim]-iso[i].lo[idim] ) + 1.e-12;
+          if ( scalar_dmax( A[idim], B[idim] )<iso[i].lo[idim]-tol ||
+               scalar_dmin( A[idim], B[idim] )>iso[i].hi[idim]+tol )
+            miss = 1;
+        }
+        double t0=0., t1=0.;
+        if ( miss || !td_clip( A, D, iso[i], t0, t1 ) ) continue;
+        size_t pos = it0.size();
+        while ( pos>0 && it0[pos-1]>t0 ) pos--;
+        it0.insert( it0.begin()+pos, t0 );
+        it1.insert( it1.begin()+pos, t1 );
+        iel.insert( iel.begin()+pos, i );
+      }
+      // the isoparametric element containing parameter t (first in
+      // element order), -1 for none
+      auto element_at = [&]( double t ) {
+        long int best = -1;
+        for ( size_t j=0; j<it0.size(); j++ )
+          if ( t>=it0[j]-TD_EPS_T && t<=it1[j]+TD_EPS_T &&
+               ( best<0 || iel[j]<iel[best] ) ) best = j;
+        return best;
+      };
+
+      // the split parameters: the entries of the elements after the first
+      std::vector<double> s;
+      s.push_back( 0. );
+      if ( exact==-YES ) {
+        for ( size_t j=1; j<it0.size(); j++ )
+          if ( it0[j]>s.back()+TD_EPS_T && it0[j]<1.-TD_EPS_T )
+            s.push_back( it0[j] );
+      }
+      s.push_back( 1. );
+      long int npiece = s.size()-1;
+      double minimal = ( minimal_length>=0. ? minimal_length :
+        TD_MINIMAL_LENGTH_FACTOR*truss_length );
+      std::vector<long int> keep( npiece, 1 ), piece_el( npiece, -1 ),
+        alias( npiece+1 );
+      for ( k=0; k<=npiece; k++ ) alias[k] = k;
+      long int kept_before = 0;
+      for ( k=0; k<npiece; k++ ) {
+        piece_el[k] = element_at( 0.5*( s[k]+s[k+1] ) );
+        if ( exact==-YES && ( s[k+1]-s[k] )*truss_length<minimal ) {
+          keep[k] = 0;
+          // _connect -yes: the next piece starts where the dropped one
+          // started (only between two generated trusses)
+          if ( connect==-YES && kept_before && k<npiece-1 )
+            alias[k+1] = alias[k];
+        }
+        else if ( piece_el[k]<0 && air==-NO ) keep[k] = 0;
+        if ( keep[k] ) kept_before = 1;
+      }
+
+      // nodes of the split points, created when used
+      std::vector<long int> node_of( npiece+1, -1 );
+      node_of[0] = na; node_of[npiece] = nb;
+      auto split_node = [&]( long int j ) {
+        if ( node_of[j]>=0 ) return node_of[j];
+        double coord[MDIM], dof[MUKNWN], dof_sr[MUKNWN];
+        for ( idim=0; idim<ndim; idim++ ) coord[idim] = A[idim] + s[j]*D[idim];
+        array_set( dof, 0., MUKNWN ); array_set( dof_sr, 0., MUKNWN );
+        long int ends[2] = { na, nb };
+        for ( long int ie=0; ie<2; ie++ ) {
+          double w = ( ie==0 ? 1.-s[j] : s[j] );
+          if ( db_active_index( NODE_DOF, ends[ie], VERSION_NORMAL ) ) {
+            double *v = db_dbl( NODE_DOF, ends[ie], VERSION_NORMAL );
+            for ( long int iu=0; iu<nuknwn; iu++ ) dof[iu] += w*v[iu];
+          }
+          if ( db_active_index( NODE_DOF_START_REFINED, ends[ie],
+               VERSION_NORMAL ) ) {
+            double *v = db_dbl( NODE_DOF_START_REFINED, ends[ie],
+              VERSION_NORMAL );
+            for ( long int iu=0; iu<nuknwn; iu++ ) dof_sr[iu] += w*v[iu];
+          }
+        }
+        new_node++;
+        create_node( ends, 2, new_node, coord, dof, coord, dof_sr,
+          VERSION_NORMAL, VERSION_NORMAL );
+        node_of[j] = new_node;
+        return new_node;
+      };
+
+      // the new trusses; the ties: first the original nodes, then the
+      // nodes of each new truss in order (Professional record order)
+      for ( k=0; k<npiece; k++ ) {
+        if ( !keep[k] ) continue;
+        long int lo = alias[k], hi = alias[k+1];
+        long int el_new[3] = { -TRUSS, split_node( lo ), split_node( hi ) };
+        new_element++;
+        length = 3;
+        create_element( truss, new_element, el_new, length, VERSION_NORMAL,
+          VERSION_NORMAL );
+        for ( long int ie=0; ie<2; ie++ ) {
+          long int j = ( ie==0 ? lo : hi );
+          td_tie t;
+          t.node = el_new[1+ie]; t.pass = ipass; t.clamp = -1;
+          t.original = ( j==0 || j==npiece );
+          array_set( t.point, 0., MDIM );
+          // exact: an air end of a piece inside an element is tied at
+          // the point where the truss leaves that element
+          if ( exact==-YES && piece_el[k]>=0 ) {
+            long int jj = piece_el[k];
+            double tc = scalar_dmax( it0[jj], scalar_dmin( it1[jj], s[j] ) );
+            t.clamp = iel[jj];
+            for ( idim=0; idim<ndim; idim++ )
+              t.point[idim] = A[idim] + tc*D[idim];
+          }
+          ties.push_back( t );
+        }
+      }
+      delete_element( truss, VERSION_NORMAL );
+    }
+  }
+  if ( !changed ) return;
+
+  // original truss nodes no longer used by any element are deleted
+  db_highest_index( ELEMENT, max_element, VERSION_NORMAL );
+  db_highest_index( NODE, max_node, VERSION_NORMAL );
+  std::vector<char> used( 1+max_node, 0 );
+  for ( long int element=0; element<=max_element; element++ ) {
+    if ( !db_active_index( ELEMENT, element, VERSION_NORMAL ) ) continue;
+    db( ELEMENT, element, el, ddum, length, VERSION_NORMAL, GET );
+    for ( i=1; i<length; i++ ) used[el[i]] = 1;
+  }
+  for ( size_t j=0; j<old_nodes.size(); j++ )
+    if ( !used[old_nodes[j]] &&
+         db_active_index( NODE, old_nodes[j], VERSION_NORMAL ) )
+      delete_node( old_nodes[j], VERSION_NORMAL );
+
+  // the mpc records, after the highest existing one
+  long int start_index = 0, count = 0;
+  db_highest_index( MPC_NODE_NUMBER, start_index, VERSION_NORMAL );
+  start_index++;
+  // first the original truss nodes inside an element, then the nodes of
+  // the new trusses in order (the record order of the Professional)
+  std::vector<char> visited( 1+max_node, 0 );
+  long int stride = 1 + max_node_initial;
+  for ( long int pass=0; pass<2; pass++ ) {
+    for ( size_t j=0; j<ties.size(); j++ ) {
+      td_tie &t = ties[j];
+      if ( visited[t.node] || ( pass==0 && !t.original ) ) continue;
+      if ( td_tie_node( t, pass==1, iso, mask, niso, iso_node, stride,
+           dof_list, ndof, dof_label, start_index, count ) )
+        visited[t.node] = 1;
+    }
+  }
+  mesh_has_changed( VERSION_NORMAL );
 }

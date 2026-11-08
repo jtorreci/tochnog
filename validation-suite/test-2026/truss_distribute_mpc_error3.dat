@@ -1,0 +1,35 @@
+( two control_mesh_truss_distribute_mpc records: manual 6.245 "Only one
+  control_mesh_truss_distribute_mpc record is allowed in the input file";
+  same error text as the Professional 02-08-2026.
+  EXPECTED_ERROR: only one record allowed for CONTROL_MESH_TRUSS_DISTRIBUTE_MPC
+)
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_displacement
+materi_stress
+end_initia
+node 1 0 0
+node 2 10 0
+node 3 20 0
+node 4 0 10
+node 5 10 10
+node 6 20 10
+node 7 0 20
+node 8 10 20
+node 9 20 20
+element 1 -quad4 1 2 4 5
+element 2 -quad4 2 3 5 6
+element 3 -quad4 4 5 7 8
+element 4 -quad4 5 6 8 9
+node 10 2 3
+node 11 17 11
+element 5 -truss 10 11
+element_group 5 1
+group_type 1 -truss
+group_truss_area 1 0.1
+group_truss_memory 1 -total_linear
+group_truss_elasti_young 1 1.
+control_mesh_truss_distribute_mpc 10 -yes
+control_mesh_truss_distribute_mpc 20 -yes
+end_data

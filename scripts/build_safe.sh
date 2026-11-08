@@ -2678,17 +2678,20 @@ elem_check mesh_correct_off1 "element 1 -quad4 1 2 3 4|element 2 -quad4 5 6 7 8|
 # nodes is compared. Values = Professional 02-08-2026 except the manual
 # cases always2, coord_geometry3, keep1, control_mpc_element_group_no1
 # (DIVERGENCES MPC-ELEMENT-GROUP-*, CONTROL-MPC-ELEMENT-GROUP).
+mpc_records_of() {
+  LC_ALL=C awk '$1=="mpc_node_number"{n[$2]=$0} $1=="mpc_node_factor"{f[$2]=$0}
+    END{for(i in n){split(n[i],a," "); split(f[i],b," "); s=a[3]" "a[4]; k=3;
+      for(j=5;j<=length(a);j+=2){v=b[k++]; if(v=="")v=1;
+        if(v+0>1e-9||v+0<-1e-9) s=s" "a[j]":"sprintf("%.6g",v)}; print s}}' \
+    "$1" | sort -n -k1,1 -k2,2 | paste -sd'|'
+}
 mpc_check() {
   local t="$1" want="$2" mode="${3:-records}" got
   run_ok "$T2026" "$t"
   if [ "$mode" = "slaves" ]; then
     got="$(awk '$1=="mpc_node_number"{print $3}' "$T2026/$t.dbs" | sort -nu | paste -sd' ')"
   else
-    got="$(LC_ALL=C awk '$1=="mpc_node_number"{n[$2]=$0} $1=="mpc_node_factor"{f[$2]=$0}
-      END{for(i in n){split(n[i],a," "); split(f[i],b," "); s=a[3]" "a[4]; k=3;
-        for(j=5;j<=length(a);j+=2){v=b[k++]; if(v=="")v=1;
-          if(v+0>1e-9||v+0<-1e-9) s=s" "a[j]":"sprintf("%.6g",v)}; print s}}' \
-      "$T2026/$t.dbs" | sort -n -k1,1 -k2,2 | paste -sd'|')"
+    got="$(mpc_records_of "$T2026/$t.dbs")"
   fi
   if [ "$got" = "$want" ]; then
     check_ok "$t (mpc records)"
@@ -2710,6 +2713,57 @@ mpc_check mpc_element_group_eps_iso2 "5 -velx 3:1|5 -vely 3:1|7 -velx 4:1|7 -vel
 mpc_check mpc_element_group_keep1 "5 -velx 3:1|5 -vely 3:1|6 -velx 3:0.5 4:0.5|6 -vely 3:0.5 4:0.5|7 -velx 4:1|7 -vely 4:1"
 mpc_check control_mpc_element_group_yes1 "5 -velx 3:1|5 -vely 3:1|6 -velx 3:0.5 4:0.5|6 -vely 3:0.5 4:0.5|7 -velx 4:1|7 -vely 4:1"
 mpc_check control_mpc_element_group_no1 ""
+# F5 T4 U7: control_mesh_truss_distribute_mpc (manual 6.245-6.254) and
+# mpc_geometry _method / _tolerance (6.866-6.870). td_check <test>
+# <trusses> <mpc>: the -truss element records with their element_group
+# ("element N -truss a b|...|element_group N g", .dbs order) and the mpc
+# records in the mpc_check format equal the strings. Every case equals
+# the Professional 02-08-2026 .dbs after matching the nodes by coordinates
+# (GNU compact numbering, DIVERGENCES TRUSS-DISTRIBUTE-NUMBERING) except
+# air3, air4 and group2, the manual cases (DIVERGENCES
+# TRUSS-DISTRIBUTE-AIR-DEFAULT / -AIR-NO / -ISO-SELECTION). truss10-15 and
+# mpc2 are copies of the Professional test/other examples (truss13 with
+# the GNU element number and 50 iterations, BACKLOG C128).
+td_check() {
+  local t="$1" want_e="$2" want_m="$3" got_e got_m
+  run_ok "$T2026" "$t"
+  got_e="$(awk '$1=="element"&&$3=="-truss"{tr[$2]=1; $1=$1; print}
+    $1=="element_group"&&tr[$2]{$1=$1; print}' "$T2026/$t.dbs" | paste -sd'|')"
+  got_m="$(mpc_records_of "$T2026/$t.dbs")"
+  if [ "$got_e" = "$want_e" ] && [ "$got_m" = "$want_m" ]; then
+    check_ok "$t (trusses and mpc records)"
+  else
+    check_fail "$t" "trusses '$got_e' mpc '$got_m'"
+  fi
+}
+td_check truss10 "element 4 -truss 4 5|element_group 4 1" "4 -velx 1:0.5 2:0.5"
+td_check truss11 "element 3 -truss 4 5|element_group 3 1" ""
+td_check truss12 "element 3 -truss 1 3|element_group 3 1" ""
+td_check truss13 "element 5 -truss 9 11|element 6 -truss 11 10|element_group 5 2|element_group 6 2" "9 -velx 1:0.25 2:0.25 5:0.25 6:0.25|9 -vely 1:0.25 2:0.25 5:0.25 6:0.25|10 -velx 3:0.25 4:0.25 7:0.25 8:0.25|10 -vely 3:0.25 4:0.25 7:0.25 8:0.25|11 -velx 2:0.5 6:0.5|11 -vely 2:0.5 6:0.5"
+td_check truss15 "element 6 -truss 1 6|element 7 -truss 6 7|element 8 -truss 7 8|element 9 -truss 8 5|element_group 6 1|element_group 7 1|element_group 8 1|element_group 9 1" "6 -velx 2:1|7 -velx 3:1|8 -velx 4:1"
+td_check truss_distribute_mpc_exact1 "element 4 -truss 4 6|element 5 -truss 6 5|element_group 4 1|element_group 5 1" "4 -velx 1:0.8 2:0.2|5 -velx 2:0.2 3:0.8|6 -velx 2:1"
+td_check truss_distribute_mpc_exact2 "element 6 -truss 10 12|element 7 -truss 12 13|element 8 -truss 13 11|element_group 6 1|element_group 7 1|element_group 8 1" "10 -velx 1:0.56 2:0.14 4:0.24 5:0.06|10 -vely 1:0.56 2:0.14 4:0.24 5:0.06|11 -velx 5:0.27 6:0.63 8:0.03 9:0.07|11 -vely 5:0.27 6:0.63 8:0.03 9:0.07|12 -velx 2:0.273333 5:0.726667|12 -vely 2:0.273333 5:0.726667|13 -velx 5:0.4875 6:0.5125|13 -vely 5:0.4875 6:0.5125"
+td_check truss_distribute_mpc_exact3 "element 4 -truss 13 15|element 5 -truss 15 14|element_group 4 1|element_group 5 1" "13 -velx 1:0.336 2:0.084 4:0.144 5:0.036 7:0.224 8:0.056 10:0.096 11:0.024|13 -vely 1:0.336 2:0.084 4:0.144 5:0.036 7:0.224 8:0.056 10:0.096 11:0.024|13 -velz 1:0.336 2:0.084 4:0.144 5:0.036 7:0.224 8:0.056 10:0.096 11:0.024|14 -velx 2:0.012 3:0.028 5:0.018 6:0.042 8:0.108 9:0.252 11:0.162 12:0.378|14 -vely 2:0.012 3:0.028 5:0.018 6:0.042 8:0.108 9:0.252 11:0.162 12:0.378|14 -velz 2:0.012 3:0.028 5:0.018 6:0.042 8:0.108 9:0.252 11:0.162 12:0.378|15 -velx 2:0.18 5:0.153333 8:0.36 11:0.306667|15 -vely 2:0.18 5:0.153333 8:0.36 11:0.306667|15 -velz 2:0.18 5:0.153333 8:0.36 11:0.306667"
+td_check truss_distribute_mpc_air1 "element 4 -truss 4 6|element 5 -truss 6 5|element_group 4 1|element_group 5 1" "4 -velx 1:0.8 2:0.2|5 -velx 3:1|6 -velx 2:1"
+td_check truss_distribute_mpc_air2 "element 4 -truss 4 6|element_group 4 1" "4 -velx 1:0.8 2:0.2|6 -velx 2:1"
+td_check truss_distribute_mpc_air3 "element 4 -truss 4 6|element 5 -truss 6 5|element_group 4 1|element_group 5 1" "4 -velx 1:0.8 2:0.2|6 -velx 2:1"
+td_check truss_distribute_mpc_air4 "element 4 -truss 4 5|element_group 4 1" "4 -velx 1:0.5 2:0.5"
+td_check truss_distribute_mpc_minimal_length1 "element 7 -truss 7 9|element 8 -truss 9 8|element_group 7 1|element_group 8 1" "7 -velx 1:0.8 2:0.2|8 -velx 6:0.210526 3:0.789474|9 -velx 2:1"
+td_check truss_distribute_mpc_minimal_length2 "element 7 -truss 7 9|element 8 -truss 10 8|element_group 7 1|element_group 8 1" "7 -velx 1:0.8 2:0.2|8 -velx 6:0.210526 3:0.789474|9 -velx 2:1|10 -velx 6:1"
+td_check truss_distribute_mpc_minimal_length3 "element 5 -truss 5 7|element_group 5 1" "5 -velx 1:0.8 2:0.2|7 -velx 2:1"
+td_check truss_distribute_mpc_dof1 "element 6 -truss 10 11|element_group 6 1" "10 -temp 1:0.56 2:0.14 4:0.24 5:0.06|11 -temp 5:0.27 6:0.63 8:0.03 9:0.07"
+td_check truss_distribute_mpc_group1 "element 5 -truss 10 11|element 7 -truss 12 13|element_group 5 1|element_group 7 2" "12 -velx 4:0.56 5:0.24 7:0.14 8:0.06|12 -vely 4:0.56 5:0.24 7:0.14 8:0.06|13 -velx 5:0.04 6:0.16 8:0.16 9:0.64|13 -vely 5:0.04 6:0.16 8:0.16 9:0.64"
+td_check truss_distribute_mpc_group2 "element 7 -truss 10 11|element 8 -truss 12 13|element_group 7 1|element_group 8 2" "11 -velx 5:0.27 6:0.63 8:0.03 9:0.07|11 -vely 5:0.27 6:0.63 8:0.03 9:0.07|12 -velx 4:0.56 5:0.24 7:0.14 8:0.06|12 -vely 4:0.56 5:0.24 7:0.14 8:0.06"
+td_check truss_distribute_mpc_geometry1 "element 6 -truss 12 13|element 7 -truss 10 11|element_group 6 2|element_group 7 1" "10 -velx 1:0.56 2:0.14 4:0.24 5:0.06|10 -vely 1:0.56 2:0.14 4:0.24 5:0.06|11 -velx 5:0.27 6:0.63 8:0.03 9:0.07|11 -vely 5:0.27 6:0.63 8:0.03 9:0.07"
+td_check mpc2 "" "2 -velx 1:1|2 -vely 1:1|4 -velx 3:1|4 -vely 3:1"
+td_check mpc_geometry_method1 "" "6 -velx 3:1|6 -vely 3:1|9 -velx 3:1|9 -vely 3:1"
+td_check mpc_geometry_method2 "" "2 -velx 20:1|2 -vely 20:1|5 -velx 21:1|5 -vely 21:1|8 -velx 22:1|8 -vely 22:1"
+td_check mpc_geometry_tolerance1 "" "3 -velx 1:1|3 -vely 1:1|6 -velx 4:1|6 -vely 4:1|9 -velx 7:1|9 -vely 7:1"
+td_check mpc_geometry_tolerance2 "" "3 -velx 1:1|3 -vely 1:1|9 -velx 7:1|9 -vely 7:1"
+for t in truss_distribute_mpc_error1 truss_distribute_mpc_error2 \
+    truss_distribute_mpc_error3 mpc_geometry_error1 mpc_geometry_error2; do
+  expected_error_ok "$T2026" "$t"
+done
 # F5 T2 V4b: element_intpnt_h / _iso_coord / _method / _npoint (manual
 # 6.438 / 6.439 / 6.442 / 6.443), Professional 02-08-2026 values.
 # intpnt_check <test> <element> <method> <npoint> <iso_coord> <h>: every

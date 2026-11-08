@@ -396,6 +396,8 @@ page lists its own in "Differences with the Professional version".
 - [mpc_linear_quadratic](mpc_linear_quadratic.md) — tie generation for dangling quadratic nodes via point_el() (linear shape functions), mesh fingerprint record MPC_LINEAR_QUADRATIC_MESH_FINGERPRINT (external=0), regeneration on mesh change; verified byte-for-byte vs the Professional .dbs (mpc3/4/5). mpc5 blocked on the delete-factor family.
 - [mpc_element_group](mpc_element_group.md) — tie generation of group_0 nodes into group_1 elements via point_el() (shape-function factors), geometry/dof selectors, member-skip semantics, fingerprint record MPC_ELEMENT_GROUP_MESH_FINGERPRINT; mpc7 patch test 1.e-8, ground19 wall.
 - [mpc_element_group_options](mpc_element_group_options.md) — mpc.cc mpc_element_group_index() options, closest point search (mpc_closest_weights), keep range record MPC_ELEMENT_GROUP_KEPT, per-timestep regeneration by control_mpc_element_group (F5 T4 U6).
+- [mpc_geometry_options](mpc_geometry_options.md) — mpc.cc mpc_geometry_generate() (methods 0/1/2, fingerprint record MPC_GEOMETRY_MESH_FINGERPRINT, mpc_from_geometry marker), shared writer mpc_tie_put() (F5 T4 U7).
+- [control_mesh_truss_distribute_mpc](control_mesh_truss_distribute_mpc.md) — mpc.cc mesh_truss_distribute_mpc(): Cyrus-Beck truss/element clipping (td_clip), _exact pieces, minimal length / connect, air ties, create_node/create_element, called once from step_start (F5 T4 U7).
 
 ## Records *_sig del post_calcul -materi_stress -force
 

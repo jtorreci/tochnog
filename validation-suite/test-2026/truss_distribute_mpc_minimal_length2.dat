@@ -1,0 +1,32 @@
+( control_mesh_truss_distribute_mpc_exact_minimal_length_connect -no
+  [6.252]: as _minimal_length1 but loose: the next truss starts at a new
+  node at x=10.5 tied to node 6. = Professional 02-08-2026.
+)
+echo -no
+number_of_space_dimensions 1
+materi_velocity
+materi_displacement
+materi_stress
+end_initia
+node 1 0
+node 2 10
+node 3 20
+element 1 -bar2 1 2
+element 2 -bar2 2 6
+element 6 -bar2 6 3
+node 6 10.5
+node 7 2
+node 8 18
+element 3 -truss 7 8
+element_group 3 1
+group_type 1 -truss
+group_truss_area 1 0.1
+group_truss_memory 1 -total_linear
+group_truss_elasti_young 1 1.
+control_mesh_truss_distribute_mpc 10 -yes
+control_mesh_truss_distribute_mpc_exact 10 -yes
+control_mesh_truss_distribute_mpc_exact_minimal_length 10 1.
+control_mesh_truss_distribute_mpc_exact_minimal_length_connect
+10
+-no
+end_data

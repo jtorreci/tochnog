@@ -1,0 +1,28 @@
+( control_mesh_truss_distribute_mpc_air default [manual 6.246: default
+  -yes]: truss 2..35 over the bars 0-20, exact. The piece 10..35 is kept
+  although its centre is outside the bars; its air end is not tied.
+  The Professional 02-08-2026 drops the piece as with -no [class D
+  TRUSS-DISTRIBUTE-AIR-DEFAULT, the GNU follows the manual].
+)
+echo -no
+number_of_space_dimensions 1
+materi_velocity
+materi_displacement
+materi_stress
+end_initia
+node 1 0
+node 2 10
+node 3 20
+element 1 -bar2 1 2
+element 2 -bar2 2 3
+node 4 2
+node 5 35
+element 3 -truss 4 5
+element_group 3 1
+group_type 1 -truss
+group_truss_area 1 0.1
+group_truss_memory 1 -total_linear
+group_truss_elasti_young 1 1.
+control_mesh_truss_distribute_mpc 10 -yes
+control_mesh_truss_distribute_mpc_exact 10 -yes
+end_data

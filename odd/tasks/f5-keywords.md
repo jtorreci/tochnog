@@ -167,8 +167,9 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
     - [x] U5d (ea220df) control_mesh_generate_truss_beam_separate, mesh_correct.
   - [x] U6 (5db4dd0) mpc_element_group options (6): control_mpc_element_group, mpc_element_group_{always,closest,
     coord_geometry,keep,eps_iso}. Route: delegated (bounded writer).
-  - [ ] U7 unconsumed parents (9): control_mesh_truss_distribute_mpc_* (7), mpc_geometry_method/_tolerance
-    (parents registered but never consumed: owner decision parse-only vs implement).
+  - [x] U7 (COMMIT_U7) control_mesh_truss_distribute_mpc family (10 records, 6.245-6.254) and mpc_geometry
+    _method/_tolerance with the parents mpc_geometry/_switch/_dof (6.866-6.870). Owner: implement the full feature.
+    Route: delegated (bounded writer).
   - [ ] U8 geometry_moving family (7) + control_geometry_moving: new module.
   - [ ] U9 owner decisions: control_mesh_map, control_mesh_remove_really(+_activate_all/_factor, _keep_geometry),
     control_mesh_extrude_element (needs prism12/prism18), control_mesh_convert_quad9_quad6 (needs a quad6
@@ -687,3 +688,26 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   manual-user/mpc_element_group.md:63 and manual-developer/mpc_element_group.md:33,65-70 still call the member skip
   "always -no" and list the options as pending. Risk: item 3 (mpc_element_group_generate shared by every
   mpc_element_group input; base1 and the differential pin the old path).
+- 2026-11-08 U7 (delegated writer, S1-S5): mpc.cc mesh_truss_distribute_mpc() (called once from step_start after extrude at
+  its own control index): -truss elements recreated after the highest element (old one deleted, as Pro), _exact split at the
+  entries into a next isoparametric element (Cyrus-Beck clipping td_clip on the corner sides; bar/tria/quad/tet/hex/prism6,
+  no interface groups), minimal length (default 1.e-11 x truss length, Pro probes) and _connect (default -yes, Pro), _air
+  (centre rule), _dof, truss/iso group or geometry selectors paired by position (Pro error texts for both-given / unequal
+  counts / two records), ties via point_el + mpc_weights_polish through the shared writer mpc_tie_put() (also used now by
+  mpc_element_group_index), marker mpc_from_truss_distribute_mpc; air end of an exact piece tied at the exit point (Pro).
+  mpc_geometry_generate() (from mpc_node_apply, fingerprint): -method0 (switch + tolerance), -method1, -method2, dof order
+  as listed, marker mpc_from_geometry, no factor record (Pro); _dof and _switch (method0) required as the Pro. New word
+  -method0. Verification: Pro examples truss10/11/12/13/15 and mpc2 copied to test-2026 (targets met; truss13 with the GNU
+  element number 6 and 50 iterations, C128) and ~50 Pro probes: every test .dbs equals the Pro one after matching nodes by
+  coordinates except the manual cases. Class D (GNU = manual, no owner decision recorded): TRUSS-DISTRIBUTE-AIR-DEFAULT
+  (manual default -yes, Pro behaves as -no), -AIR-NO (Pro deletes a truss with any node outside; manual: centre),
+  -AIR-EXIT (Pro -yes also splits at the exit into the air), -ISO-SELECTION (Pro ignores _isoparametric restrictions).
+  Class C: TRUSS-DISTRIBUTE-NUMBERING (compact numbers; Pro leaves gaps), MPC-GEOMETRY-METHOD2-GROUP. _dof indexed as the
+  Pro although the manual heading shows no index. Not implemented: -trussbeam generation (no record; Descarte). C128 (mpc
+  tie convergence, Pro truss13 3.87/6.13 with 2 iterations, also with hand-written records before U7) and C129
+  (bounda_time limited to 190 values: Pro earthquake_1-3 stop at input; they are the mpc_geometry examples) found.
+  RED: the base 4bfbe19 binary fails 23 of 24 td_check cases (truss11 pins the old behaviour) and the 5 error tests.
+  Differential vs 4bfbe19 (101 inputs with truss/mpc records): 87 SAME, 5 rc 1 in both, intended changes truss10/12/13/15
+  and mpc2, executable path / time_at_start only otherwise. Suite 1052/0, runs 226/226, audit REVIEW 42. Risk: item 3
+  (mpc_element_group_index now writes through mpc_tie_put; mpc_node_apply also generates mpc_geometry; the
+  _element_group_truss record became a list; the suite and the differential pin the existing paths).
