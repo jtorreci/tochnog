@@ -170,7 +170,7 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   - [x] U7 (663cbcb) control_mesh_truss_distribute_mpc family (10 records, 6.245-6.254) and mpc_geometry
     _method/_tolerance with the parents mpc_geometry/_switch/_dof (6.866-6.870). Owner: implement the full feature.
     Route: delegated (bounded writer).
-  - [x] U8 (COMMIT_U8) geometry_moving family (6) + control_geometry_moving: new module geometry_moving.cc.
+  - [x] U8 (dd2ee02) geometry_moving family (6) + control_geometry_moving: new module geometry_moving.cc.
     Route: delegated (bounded writer).
   - [ ] U9 owner decisions: control_mesh_map, control_mesh_remove_really(+_activate_all/_factor, _keep_geometry),
     control_mesh_extrude_element (needs prism12/prism18), control_mesh_convert_quad9_quad6 (needs a quad6
