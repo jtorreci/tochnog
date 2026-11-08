@@ -2658,6 +2658,17 @@ elem_check duplicate_element_group2 "element 2 -quad4 1 2 4 5|element 5 -quad4 2
 elem_check remove_method1_1 "element 2 -quad4 1 2 4 5|element 5 -quad4 2 3 5 6|element_group 5 1"
 elem_check remove_geometry1 "element 2 -quad4 1 2 4 5|element 5 -quad4 2 3 5 6|element_group 5 1"
 elem_check remove_geometry2 "element 2 -quad4 1 2 4 5|element 5 -quad4 2 3 5 6|element 7 -quad4 2 3 5 6|element_group 5 1|element_group 7 2"
+# F5 T4 U5d: control_mesh_generate_truss_beam_separate (6.199) and
+# mesh_correct (6.816); elements = Professional 02-08-2026 (elem_check).
+elem_check truss_beam_separate1 "element 1 -quad4 1 2 5 6|element 2 -quad4 2 3 6 7|element 3 -quad4 3 4 7 8|element 4 -truss 1 4|element_group 4 5"
+elem_check truss_beam_separate2 "element 1 -quad4 1 2 5 6|element 2 -quad4 2 3 6 7|element 3 -quad4 3 4 7 8|element 4 -truss 1 2|element 5 -truss 1 3|element 6 -truss 1 4|element 7 -truss 2 3|element 8 -truss 2 4|element 9 -truss 3 4|element_group 4 5|element_group 5 5|element_group 6 5|element_group 7 5|element_group 8 5|element_group 9 5"
+elem_check truss_beam_separate3 "element 1 -quad4 1 2 5 6|element 2 -quad4 2 3 6 7|element 3 -quad4 3 4 7 8|element 4 -truss 1 4|element 5 -truss 1 7|element 6 -truss 4 7|element_group 4 5|element_group 5 5|element_group 6 5"
+elem_check generate_truss_line1 "element 1 -quad4 1 2 5 6|element 2 -quad4 2 3 6 7|element 3 -quad4 3 4 7 8|element 4 -truss 1 2|element 5 -truss 2 3|element 6 -truss 3 4|element_group 4 5|element_group 5 5|element_group 6 5"
+elem_check mesh_correct1 "element 1 -quad4 1 2 3 4|element 2 -quad4 5 6 7 8|element 3 -quad4 3 4 5 6|element_group 3 1"
+elem_check mesh_correct2 "element 1 -quad4 1 2 3 4|element 2 -quad4 5 6 7 8|element 3 -quad4 3 4 6 5|element_group 3 1"
+elem_check mesh_correct3 "element 1 -hex8 1 2 3 4 5 6 7 8|element 2 -hex8 9 10 11 12 13 14 15 16|element 3 -hex8 9 11 13 15 2 4 6 8|element_group 3 1"
+elem_check mesh_correct4 "element 1 -hex8 1 2 3 4 5 6 7 8|element 2 -hex8 9 10 11 12 13 14 15 16|element 3 -hex8 2 4 6 8 9 11 13 15|element_group 3 1"
+elem_check mesh_correct_off1 "element 1 -quad4 1 2 3 4|element 2 -quad4 5 6 7 8|element 3 -quad4 3 5 4 6|element_group 3 1"
 # F5 T2 V4b: element_intpnt_h / _iso_coord / _method / _npoint (manual
 # 6.438 / 6.439 / 6.442 / 6.443), Professional 02-08-2026 values.
 # intpnt_check <test> <element> <method> <npoint> <iso_coord> <h>: every

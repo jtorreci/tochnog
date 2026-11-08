@@ -164,7 +164,7 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
     - [x] U5c (394ac2a) control_mesh_renumber_element_geometry_offset / _group_offset,
       control_mesh_duplicate_element_group, control_mesh_remove_geometry. control_mesh_remove_keep_geometry moved to U9
       (only meaningful with control_mesh_remove_really -no: the GNU deletes removed elements).
-    - [ ] U5d control_mesh_generate_truss_beam_separate, mesh_correct.
+    - [x] U5d (COMMIT_U5D) control_mesh_generate_truss_beam_separate, mesh_correct.
   - [ ] U6 mpc_element_group options (6): control_mpc_element_group, mpc_element_group_{always,closest,
     coord_geometry,keep,eps_iso}.
   - [ ] U7 unconsumed parents (9): control_mesh_truss_distribute_mpc_* (7), mpc_geometry_method/_tolerance
@@ -659,3 +659,9 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   through element_in_geometry -all. Pro probes (three quad4): same elements / groups / element_geometry. Differential vs
   b88adc5, 6 inputs: only the new tests change (base rc 1 = RED). Suite 953/0 before the audit rewrite. C126 found.
   Risk: none beyond item 3 of mesh_remove (shared; remove_method1_1 pins the old -method1 result).
+- 2026-11-08 U5d (route inline): generate_beam_truss separate -yes = every later geometry node instead of NODE_NODE
+  (Pro: all pairs in node order); mesh_correct_interfaces (mesh.cc) with the Pro permutations (quad4 xi -> n1 n3 n2 n4,
+  hex8 xi -> n2 n4 n6 n8 n1 n3 n5 n7, hex8 eta -> eta/zeta swap, ties kept). 14 Pro probes equal. Differential vs
+  394ac2a (94 inputs with generate truss/beam or group_interface): identical except the new tests (base rc 1 = RED);
+  foundation_consolidation_settlement times out in both. Suite 971/0, audit REVIEW 42. Risk: item 3 (generate_beam_truss
+  shared; generate_truss_line1 pins the old path).

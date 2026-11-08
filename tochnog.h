@@ -350,6 +350,7 @@ enum {
   CONTROL_MESH_GENERATE_TRUSS,
   CONTROL_MESH_GENERATE_TRUSSBEAM,
   CONTROL_MESH_GENERATE_TRUSS_BEAM_LOOSE,
+  CONTROL_MESH_GENERATE_TRUSS_BEAM_SEPARATE,
   CONTROL_MESH_GENERATE_TRUSS_BEAM_MACRO,
   CONTROL_MESH_CONVERT,
   CONTROL_MESH_CONVERT_ELEMENT_GROUP,
@@ -1757,6 +1758,7 @@ enum {
   // tochnog-mod.h stay in sync).
   MESH_BOUNDARY,
   ELEMENT_BOUNDARY,
+  MESH_CORRECT,
   PRINT_ELEMENT_GEOMETRY_PRESENT,
   PRINT_ELEMENT_GEOMETRY_PRESENT_NODE_TYPE,
   ELEMENT_GEOMETRY_PRESENT,
@@ -2430,6 +2432,7 @@ void      mesh_rotate_3d( long int nrot );
 void      mesh_convert_quad8( void );
 void      mesh_convert_hex20( void );
 void      mesh_convert_tria6_tria3( void );
+void      mesh_correct_interfaces( void );
 void      mesh_extrude( long int icontrol );
 void      mesh_delete_keep( long int icontrol );
 void      mesh_duplicate_element_group( long int icontrol );

@@ -37,6 +37,14 @@ control_mesh_generate_truss 10  1 -geometry_line 1
   elements are not connected to the existing nodes (new nodes are
   generated).
 - `control_mesh_generate_truss_beam_macro` — truss/beam macro.
+- `control_mesh_generate_truss_beam_separate index -yes` (6.199, F5 T4
+  U5d) — the elements are generated between every pair of nodes of the
+  geometry (in node order), also nodes not connected by isoparametric
+  elements: a `geometry_set` of two end points gives exactly one truss, a
+  line through four nodes gives six. Default `-no`: only along the
+  element edges. Same as the Professional 02-08-2026; tests
+  `validation-suite/test-2026/truss_beam_separate1.dat` .. `3.dat`,
+  `generate_truss_line1.dat`.
 
 ## Example
 

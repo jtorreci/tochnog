@@ -1152,6 +1152,11 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   data_length[MESH_BOUNDARY] = 1;
   no_index[MESH_BOUNDARY] = 1;
 
+  strcpy(name[MESH_CORRECT],"mesh_correct");
+  type[MESH_CORRECT] = INTEGER;
+  data_length[MESH_CORRECT] = 1;
+  no_index[MESH_CORRECT] = 1;
+
   strcpy(name[ELEMENT_BOUNDARY],"element_boundary");
   type[ELEMENT_BOUNDARY] = INTEGER;
   data_length[ELEMENT_BOUNDARY] = 1;
@@ -1545,6 +1550,11 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   type[CONTROL_MESH_GENERATE_TRUSS_BEAM_LOOSE] = INTEGER;
   data_length[CONTROL_MESH_GENERATE_TRUSS_BEAM_LOOSE] = 1;
   data_class[CONTROL_MESH_GENERATE_TRUSS_BEAM_LOOSE] = CONTROL;
+
+  strcpy(name[CONTROL_MESH_GENERATE_TRUSS_BEAM_SEPARATE],"control_mesh_generate_truss_beam_separate");
+  type[CONTROL_MESH_GENERATE_TRUSS_BEAM_SEPARATE] = INTEGER;
+  data_length[CONTROL_MESH_GENERATE_TRUSS_BEAM_SEPARATE] = 1;
+  data_class[CONTROL_MESH_GENERATE_TRUSS_BEAM_SEPARATE] = CONTROL;
 
   strcpy(name[CONTROL_MESH_GENERATE_TRUSS_BEAM_MACRO],"control_mesh_generate_truss_beam_macro");
   type[CONTROL_MESH_GENERATE_TRUSS_BEAM_MACRO] = INTEGER;

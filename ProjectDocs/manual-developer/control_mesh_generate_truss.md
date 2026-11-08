@@ -41,5 +41,10 @@
 
 ## Pendiente
 
-- `control_mesh_generate_truss_beam_separate` (per-group separate nodes)
-  is not registered.
+- `control_mesh_generate_truss_beam_separate` (6.199): registered in F5
+  T4 U5d (INTEGER switch, `check.cc` needs `materi_velocity` as `_loose`).
+  In `generate_beam_truss()` (generate.cc) `-yes` replaces the NODE_NODE
+  neighbour list of a geometry node by every later geometry node
+  (`jnod > inod`); `node_node` and `generated_list` are sized for the
+  `n(n-1)/2` pairs. Verified on the Professional 02-08-2026 (pairs in node
+  order, element numbering after the highest element).

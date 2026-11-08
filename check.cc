@@ -209,6 +209,8 @@ long int check( long int idat, long int task )
   }
   if ( data_number==CONTROL_MESH_GENERATE_TRUSS_BEAM_LOOSE )
     ok = check_unknown( "materi_velocity", YES, task );
+  if ( data_number==CONTROL_MESH_GENERATE_TRUSS_BEAM_SEPARATE )
+    ok = check_unknown( "materi_velocity", YES, task );
   if ( data_number==CONTROL_MESH_GENERATE_TRUSS_BEAM_MACRO )
     ok = check_unknown( "materi_velocity", YES, task );
   if ( data_number==CONTROL_MESH_MACRO_ELEMENT )

@@ -898,6 +898,70 @@ void mesh_convert_tria6_tria3( void )
   mesh_has_changed( VERSION_NORMAL );
 }
 
+// mesh_correct_interfaces (manual Professional 6.816): with mesh_correct
+// -yes the node order of the -quad4 / -hex8 elements of a group_interface
+// group is corrected so that the opening direction (the shortest node
+// distance from the first node along an isoparametric direction) is eta
+// for a quad4 and zeta for a hex8, the directions the interface element
+// reads its two sides from. The permutations are the ones the
+// Professional 02-08-2026 applies (node order lexicographic, xi fastest):
+//   quad4 opening along xi:  n1 n3 n2 n4 (xi <-> eta);
+//   hex8 opening along xi:   n2 n4 n6 n8 n1 n3 n5 n7;
+//   hex8 opening along eta:  n1 n2 n5 n6 n3 n4 n7 n8 (eta <-> zeta).
+// The Professional leaves a reversed second side as it is (quad4 3 4 6 5),
+// so does the GNU. Called at every step_start; idempotent.
+void mesh_correct_interfaces( void )
+
+{
+  long int swit_yes=-NO, ldum=0, element=0, max_element=0, length=0,
+    element_group=0, nfix=0, idum[1], el[1+MNOL], nw[1+MNOL];
+  double ddum[1], c0[MDIM], c1[MDIM], work[MDIM];
+
+  db( MESH_CORRECT, 0, &swit_yes, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+  if ( swit_yes!=-YES ) return;
+  db_highest_index( ELEMENT, max_element, VERSION_NORMAL );
+  for ( element=0; element<=max_element; element++ ) {
+    if ( !db_active_index( ELEMENT, element, VERSION_NORMAL ) ) continue;
+    db( ELEMENT, element, el, ddum, length, VERSION_NORMAL, GET );
+    long int quad = ( el[0]==-QUAD4 && length==5 ),
+      hex = ( el[0]==-HEX8 && length==9 );
+    if ( !quad && !hex ) continue;
+    element_group = 0;
+    db( ELEMENT_GROUP, element, &element_group, ddum, ldum, VERSION_NORMAL,
+      GET_IF_EXISTS );
+    if ( !db_active_index( GROUP_INTERFACE, element_group, VERSION_NORMAL ) )
+      continue;
+    // distance from node 1 along xi (node 2), eta (node 3), zeta (node 5)
+    long int ndir = hex ? 3 : 2, other[3] = { 2, 3, 5 }, open = 0;
+    // the order is kept unless another direction is strictly shorter than
+    // the interface one (Professional: ties are left as they are)
+    double dist[3] = { 0., 0., 0. };
+    db( NODE, el[1], idum, c0, ldum, VERSION_NORMAL, GET );
+    for ( long int k=0; k<ndir; k++ ) {
+      db( NODE, el[other[k]], idum, c1, ldum, VERSION_NORMAL, GET );
+      dist[k] = array_distance( c0, c1, work, ndim );
+    }
+    open = ndir - 1;
+    for ( long int k=0; k<ndir-1; k++ ) if ( dist[k]<dist[open] ) open = k;
+    if ( open==ndir-1 ) continue;
+    nw[0] = el[0];
+    if ( quad ) {
+      nw[1] = el[1]; nw[2] = el[3]; nw[3] = el[2]; nw[4] = el[4];
+    }
+    else if ( open==0 ) {
+      nw[1] = el[2]; nw[2] = el[4]; nw[3] = el[6]; nw[4] = el[8];
+      nw[5] = el[1]; nw[6] = el[3]; nw[7] = el[5]; nw[8] = el[7];
+    }
+    else {
+      nw[1] = el[1]; nw[2] = el[2]; nw[3] = el[5]; nw[4] = el[6];
+      nw[5] = el[3]; nw[6] = el[4]; nw[7] = el[7]; nw[8] = el[8];
+    }
+    db( ELEMENT, element, nw, ddum, length, VERSION_NORMAL, PUT );
+    nfix++;
+  }
+  if ( nfix>0 ) mesh_has_changed( VERSION_NORMAL );
+}
+
 // mesh_extrude (manual Professional 6.179-6.185): extrude the 2D mesh of
 // control_mesh_extrude index z0 z1 ... to 3D.
 //

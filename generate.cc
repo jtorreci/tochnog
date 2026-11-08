@@ -495,6 +495,7 @@ void generate_beam_truss( long int icontrol, long int task )
   long int jn=0, inod=0, jnod=0, max_node_old=0, max_node=0, max_element=0, 
     element_group=0, in_geometry=0, igenerated=0, ngenerated=0, mgenerated=0, 
     length_node_node=0, already_generated=0, swit=0, length=0, loose=-NO, ldum=0,
+    separate=-NO, ngeom=0,
     node_macro_generate=0, length_macro=0, idum[1], control_mesh_generate[3], 
     geometry_entity[2], el[1+MNOL], macro[DATA_ITEM_SIZE],
     *node_node=NULL, *in_geometry_list=0, 
@@ -537,6 +538,12 @@ void generate_beam_truss( long int icontrol, long int task )
     ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
   db( CONTROL_MESH_GENERATE_TRUSS_BEAM_MACRO, icontrol, macro, 
     ddum, length_macro, VERSION_NORMAL, GET_IF_EXISTS );
+  // control_mesh_generate_truss_beam_separate (manual Professional 6.199):
+  // -yes connects every pair of geometry nodes (i < j, node order), also
+  // nodes not connected by isoparametric elements (Professional
+  // 02-08-2026: two end points -> one truss; four nodes on a line -> six)
+  db( CONTROL_MESH_GENERATE_TRUSS_BEAM_SEPARATE, icontrol, &separate,
+    ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
 
   db_highest_index( ELEMENT, max_element, VERSION_NORMAL );
   db_max_index( NODE_START_REFINED, max_node_old, VERSION_NORMAL, GET );
@@ -545,6 +552,7 @@ void generate_beam_truss( long int icontrol, long int task )
   array_move( &control_mesh_generate[1], geometry_entity, 2 );
 
   length = db_data_length(NODE_NODE);
+  if ( separate==-YES && length<1+max_node_old ) length = 1 + max_node_old;
   node_node = get_new_int(length);
 
     // list for nodes in geometry
@@ -567,6 +575,15 @@ void generate_beam_truss( long int icontrol, long int task )
       if ( in_geometry ) in_geometry_list[inod] = 1;     
     }
   }
+  if ( separate==-YES ) {
+    for ( inod=0; inod<=max_node_old; inod++ ) ngeom += in_geometry_list[inod];
+    if ( ngeom*(ngeom-1)/2>mgenerated ) {
+      mgenerated = ngeom*(ngeom-1)/2;
+      delete[] generated_list;
+      generated_list = get_new_int(mgenerated*2);
+      array_set( generated_list, -1, (mgenerated*2) );
+    }
+  }
 
   if ( db_active_index( NODE, 0, VERSION_NORMAL ) ) {
     pri( "Error: node number 0 not allowed if you generate trusses, beams, or so." );
@@ -575,12 +592,18 @@ void generate_beam_truss( long int icontrol, long int task )
 
   max_node = max_node_old;
   for ( inod=0; inod<=max_node_old; inod++ ) {
-    if ( db_active_index( NODE_NODE, inod, VERSION_NORMAL ) ) {
+    if ( separate==-YES || db_active_index( NODE_NODE, inod, VERSION_NORMAL ) ) {
       if ( in_geometry_list[inod] ) {
         node_macro_generate = -ALL;
         db( NODE_MACRO_GENERATE, inod, &node_macro_generate, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
         if ( length_macro==0 || array_member(macro,node_macro_generate,length_macro,ldum) ) {
-          db( NODE_NODE, inod, node_node, ddum, length_node_node, VERSION_NORMAL, GET );
+          if ( separate==-YES ) {
+            length_node_node = 0;
+            for ( jnod=inod+1; jnod<=max_node_old; jnod++ )
+              if ( in_geometry_list[jnod] ) node_node[length_node_node++] = jnod;
+          }
+          else
+            db( NODE_NODE, inod, node_node, ddum, length_node_node, VERSION_NORMAL, GET );
           for ( jn=0; jn<length_node_node; jn++ ) {
             jnod = node_node[jn];
             if ( jnod>=0 ) {

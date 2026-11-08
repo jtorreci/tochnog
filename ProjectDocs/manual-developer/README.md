@@ -98,6 +98,7 @@ page lists its own in "Differences with the Professional version".
 - [control_mesh_convert_tria6_tria3](control_mesh_convert_tria6_tria3.md) — mesh_convert_tria6_tria3 in mesh.cc (F5 T4 U5b).
 - [control_mesh_duplicate_element_group](control_mesh_duplicate_element_group.md) — mesh_duplicate_element_group in delete.cc (F5 T4 U5c).
 - [control_mesh_renumber_offsets](control_mesh_renumber_offsets.md) — group / geometry offsets in the top.cc control_mesh_renumber block (F5 T4 U5c).
+- [mesh_correct](mesh_correct.md) — mesh_correct_interfaces in mesh.cc (F5 T4 U5d).
 - [control_mesh_rotate_angle](control_mesh_rotate_angle.md) — rotate the 2D mesh around the z-axis.
 - [element_3d](element_3d.md) — 3D solid elements (tet4, tet10, hex8, prism6).
 - [bounda_time_on_off](bounda_time_on_off.md) — periodic bounda_time.
