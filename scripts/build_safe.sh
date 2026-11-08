@@ -1557,7 +1557,9 @@ then check_ok "interface_tension_status1 (-closed / -opened per integration poin
 else check_fail "interface_tension_status1" "wrong element_interface_intpnt_materi_tension_status"; fi
 cp "$ITS_DBS" /tmp/interface_tension_status1_run1.dbs 2>/dev/null
 run_ok "$T2026" interface_tension_status1
-if cmp -s "$ITS_DBS" /tmp/interface_tension_status1_run1.dbs;
+# time_calculation is wall-clock seconds: it may differ between runs.
+if cmp -s <(grep -v '^time_calculation' "$ITS_DBS") \
+          <(grep -v '^time_calculation' /tmp/interface_tension_status1_run1.dbs);
 then check_ok "interface_tension_status1 (two runs byte-identical)";
 else check_fail "interface_tension_status1" "two runs give different .dbs"; fi
 # F4 T5 follow-up (2026-10-10): the hardsoil yield function reads gamma_p
