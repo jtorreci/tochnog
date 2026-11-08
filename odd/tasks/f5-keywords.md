@@ -155,7 +155,7 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   - [ ] U5 mesh operations (15 names; the "16" counted control_mesh_extrude_element, which is U9). Map: explorer
     L-T4-U5-map. Sub-units, all inline (shared database.cc / headers / top.cc / build_safe, so no disjoint
     parallel surfaces):
-    - [ ] U5a extrude: control_mesh_extrude layer convention fixed to manual 6.179 (z0..zn layers, each split by
+    - [x] U5a extrude (d040c57): control_mesh_extrude layer convention fixed to manual 6.179 (z0..zn layers, each split by
       _n; GNU used the untouched z=0 nodes as an extra bottom layer and ignored _n for linear elements), plus
       control_mesh_extrude_direction, _element_group_new, _contact_spring_element_group(_new).
     - [ ] U5b split / convert: control_mesh_split_element_from, _split_element_to (-tet4 / -prism6),
