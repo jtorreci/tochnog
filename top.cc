@@ -1140,7 +1140,7 @@ void step_start( long int task, long int options_solver[], double dtime, double 
     // present when all its nodes are
   element_geometry_present_calculate();
     // element_print_group_data_values (6.446), same moment
-  element_print_group_data_values_calculate();
+  element_print_group_data_values_calculate( time_current );
 
   input_runtime();
 

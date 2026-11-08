@@ -2470,6 +2470,32 @@ if grep -q "^element_print_group_data_values  1  1000 0.3 *$" "$T2026/print_grou
 else
   check_fail "print_group_data1" "element_print_group_data_values is not 1000 0.3"
 fi
+# F5 T4 U3: dependency_geometry / _method / _number / _type and the
+# element_group -all of dependency_item (manual 6.404-6.408); the printed
+# group data go through get_group_data. Values = Professional 02-08-2026
+# on the same inputs (diagrams constant after t = 1, so the time inside
+# the step does not matter, BACKLOG C122).
+dep_check() {
+  local t="$1" e1="$2" e2="$3"
+  run_ok "$T2026" "$t"
+  if grep -q "^element_print_group_data_values  1  $e1 *$" "$T2026/$t.dbs" && \
+     grep -q "^element_print_group_data_values  2  $e2 *$" "$T2026/$t.dbs"; then
+    check_ok "$t (group data $e1 / $e2)"
+  else
+    check_fail "$t" "element_print_group_data_values is not $e1 / $e2"
+  fi
+}
+dep_check dependency_method1 "3000 0.5 10 0.1" "6000 0.3 4 0.05"
+run_ok "$T2026" dependency_method2
+dep_check dependency_type1 "1000 0.135735824245 10 0.1" "2000 0.3 4 0.05"
+dep_check dependency_type2 "1000 0.927295218002 10 0.1" "2000 0.3 4 0.05"
+dep_check dependency_type3 "1000 0.792501664478 10 0.1" "2000 0.3 4 0.05"
+dep_check dependency_number1 "1000 0.5 2 0.1" "2000 0.3 4 0.05"
+dep_check dependency_number2 "1000 0.3 0.3 0.3" "2000 0.3 4 0.05"
+dep_check dependency_geometry1 "300 0.5 10 0.1" "2000 0.3 4 0.05"
+expected_error_ok "$T2026" dependency_number_error1
+expected_error_ok "$T2026" dependency_diagram_error1
+expected_error_ok "$T2026" dependency_type_error1
 # F5 T2 V4b: element_intpnt_h / _iso_coord / _method / _npoint (manual
 # 6.438 / 6.439 / 6.442 / 6.443), Professional 02-08-2026 values.
 # intpnt_check <test> <element> <method> <npoint> <iso_coord> <h>: every

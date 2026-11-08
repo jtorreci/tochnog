@@ -1508,6 +1508,10 @@ enum {
   ELEMENT_SPRING_STRAIN,
   DEPENDENCY_APPLY,
   CONTROL_DEPENDENCY_APPLY,
+  DEPENDENCY_GEOMETRY,
+  DEPENDENCY_METHOD,
+  DEPENDENCY_NUMBER,
+  DEPENDENCY_TYPE,
   GEOMETRY_ELEMENT_GROUP,
   GEOMETRY_ELEMENT_GROUP_METHOD,
   GROUP_MATERI_PLASTI_ELEMENT_GROUP,
@@ -2230,7 +2234,7 @@ void      generate_interface_triangle( long int icontrol );
             long int node_type, long int projection_type, long int version );
  void      node_geometry_present_calculate( void );
  void      element_geometry_present_calculate( void );
- void      element_print_group_data_values_calculate( void );
+ void      element_print_group_data_values_calculate( double time_current );
  void      element_intpnt_set( void );
  long int  element_intpnt_supported( long int name, long int nnol );
 void      get_element_matrix_unknowns( long int element,

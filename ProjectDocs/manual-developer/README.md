@@ -420,6 +420,7 @@ page lists its own in "Differences with the Professional version".
 - [element_spring_strain](element_spring_strain.md) — enum + registro version_all + pre-alloc en top.cc + PUT en spring.cc.
 - [dependency_apply](dependency_apply.md) — gate global en get_group_data (group.cc).
 - [control_dependency_apply](control_dependency_apply.md) — gate por icontrol (sin data_required: el combination check por mismo indice no aplica).
+- [dependency_item](dependency_item.md) — dependency modifiers in get_group_data (group.cc); print_group_data through get_group_data.
 - [geometry_element_group](geometry_element_group.md) — filtro dentro de geometry() + helper node_attached_element_groups (group.cc, ELEMENT_GROUP); nota empirica Pro (merge2) + FIX area.cc normal fisica de cara + gate area() para grupos -empty (force12).
 - [geometry_element_group_method](geometry_element_group_method.md) — metodo del filtro (default -any con la regla "solo grupos listados" medida).
 - [group_materi_plasti_element_group](group_materi_plasti_element_group.md) — registro; consumo PENDIENTE.

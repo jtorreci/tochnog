@@ -7,7 +7,10 @@
 `element_print_group_data_values <element> v0 v1 ...` (6.446) then holds
 the values of those records for the element group of the element, in the
 listed order (a record with more than one value contributes all of
-them). A group without the record contributes one 0.
+them). A group without the record contributes one 0. Real records are
+the values the element uses: the `dependency_item` diagrams (see
+[dependency_item](dependency_item.md); `-time_current` at the end of the
+step that starts) and the element distributions are applied (F5 T4 U3).
 
 ## Usage
 
@@ -25,5 +28,9 @@ print_group_data -group_materi_elasti_young -group_materi_elasti_poisson
 - The Professional 02-08-2026 writes the record as
   `element_print_group_data_value` (singular). The GNU writes the manual
   name and reads both spellings (DIVERGENCES PGD-VALUE-NAME, class D).
+- With a `-time_current` dependency the Professional reports the value of
+  the middle of the last step (BACKLOG C122); dof dependencies use the
+  element node average in the GNU, the last integration point in the
+  Professional.
 - The manual also mentions the GiD plot of these values; the GNU fills only
   the database record.

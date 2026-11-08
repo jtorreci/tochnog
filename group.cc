@@ -425,17 +425,100 @@ void area_element_group_sequence( void )
 
 }
 
+// time at which the -time_current dependencies are evaluated outside the
+// element loop (element_print_group_data_values_calculate sets it to the
+// end of the step that starts, the time the element loop of that step
+// uses); unset inside the element loop.
+static int dependency_time_set = 0;
+static double dependency_time = 0.;
+
+// value of row irow of a dependency_diagram (n dof values first) at the
+// dof value tmp: multi linear, constant outside the dof range.
+static double dependency_interpolate( double dependency_diagram[], long int n,
+  long int irow, double tmp, long int idep )
+
+{
+  long int i=0;
+  double value=0., time_left=0., time_right=0., val_left=0., val_right=0.;
+
+  if      ( tmp<dependency_diagram[0] )
+    value = dependency_diagram[n+irow*n+0];
+  else if ( tmp>dependency_diagram[n-1] )
+    value = dependency_diagram[n+irow*n+n-1];
+  else {
+    for( i=0; i<n-1; i++ ) {
+      time_left = dependency_diagram[i];
+      time_right = dependency_diagram[i+1];
+      val_left = dependency_diagram[n+irow*n+i];
+      val_right = dependency_diagram[n+irow*n+i+1];
+      if ( time_right<=time_left ) db_error( DEPENDENCY_DIAGRAM, idep );
+      if ( tmp>=time_left && tmp<=time_right ) {
+        value = val_left + (tmp-dependency_diagram[i])*
+          (val_right-val_left) / (time_right-time_left);
+      }
+    }
+  }
+  return value;
+}
+
+// dependency_method / dependency_type (manual Professional 6.406): -use
+// takes the diagram value d, -multiply multiplies the original value o
+// with d; with a type the cosinus/sinus/tangent of o is multiplied and
+// the arc-function of the result is used (also of d itself with -use).
+static double dependency_combine( double d, double o, long int method,
+  long int dependency_type, long int idep )
+
+{
+  double x=d;
+
+  if ( method==-MULTIPLY ) {
+    if      ( dependency_type==-TANGENT ) x = d * tan( o );
+    else if ( dependency_type==-SINUS )   x = d * sin( o );
+    else if ( dependency_type==-COSINUS ) x = d * cos( o );
+    else                                  x = d * o;
+  }
+  if      ( dependency_type==-TANGENT ) x = atan( x );
+  else if ( dependency_type==-SINUS ||  dependency_type==-COSINUS ) {
+    if ( x<-1. || x>1. ) db_error( DEPENDENCY_TYPE, idep );
+    x = ( dependency_type==-SINUS ? asin( x ) : acos( x ) );
+  }
+  return x;
+}
+
+// dependency_geometry (manual Professional 6.405): the dependency is
+// used only for an element with all its nodes inside the geometry (the
+// element_geometry_present rule, measured on the Professional
+// 02-08-2026 with geometry_point radii around one element).
+static long int dependency_geometry_contains( long int idep, long int element )
+
+{
+  long int inol=0, nnol=0, found=0, ldum=0, dependency_geometry[2],
+    el[1+MNOL];
+  double rdum=0., ddum[MDIM];
+
+  if ( !db( DEPENDENCY_GEOMETRY, idep, dependency_geometry, ddum, ldum,
+      VERSION_NORMAL, GET_IF_EXISTS ) ) return 1;
+  if ( element<0 || !db_active_index( ELEMENT, element, VERSION_NORMAL ) )
+    return 0;
+  db( ELEMENT, element, el, ddum, nnol, VERSION_NORMAL, GET );
+  found = 1;
+  for ( inol=1; inol<nnol && found; inol++ )
+    geometry( el[inol], ddum, dependency_geometry, found, rdum, ddum, rdum,
+      ddum, NODE_START_REFINED, PROJECT_EXACT, VERSION_NORMAL );
+  return found;
+}
+
 long int get_group_data( long int idat, long int gr, long int element,
   double new_unknowns[], double values[], long int &nvalue, long int task )
 
 {
-  long int i=0, n=0, idep=0, max_dep=0, found=0, go_ahead=0,
+  long int n=0, idep=0, max_dep=0, found=0, go_ahead=0,
     iuknwn=0, ival=0, nval=0, length=0,
     data_item_name=0, data_item_number=0, 
     idistribute=0, ndistribute=0, ldum=0, 
     idum[1], element_distribute[DATA_ITEM_SIZE], dof_label[MUKNWN], *dependency_item=NULL;
-  double tmp=0., time_current=0., dtime=0., time_left=0., time_right=0,
-    val_left=0., val_right=0., ddum[1], element_distribute_values[DATA_ITEM_SIZE], 
+  double tmp=0., time_current=0., dtime=0.,
+    ddum[1], element_distribute_values[DATA_ITEM_SIZE], 
     *dependency_diagram=NULL, *node_dof=NULL, *coord=NULL;
 
   // dependency_apply (manual Professional 6.125, global) and
@@ -463,13 +546,23 @@ long int get_group_data( long int idat, long int gr, long int element,
         dependency_item = db_int( DEPENDENCY_ITEM, idep, VERSION_NORMAL );
         n = dependency_item[3];
         if ( n<2 ) db_error( DEPENDENCY_ITEM, idep );
-        if ( labs(dependency_item[0])==idat && dependency_item[1]==gr ) {
+        if ( labs(dependency_item[0])==idat &&
+            ( dependency_item[1]==gr || dependency_item[1]==-ALL ) ) {
+          // element_group -all (manual 6.406): every group that has the
+          // record itself
+          if ( dependency_item[1]==-ALL &&
+               !db_active_index( idat, gr, VERSION_NORMAL ) ) continue;
+          if ( !dependency_geometry_contains( idep, element ) ) continue;
           if ( dependency_item[2]==-TIME_CURRENT ) {
-            db( DTIME, 0, idum, &dtime, ldum, VERSION_NEW, GET );
-            db( TIME_CURRENT, 0, idum, &time_current, 
-              ldum, VERSION_NORMAL, GET_IF_EXISTS );
+            if ( dependency_time_set )
+              tmp = dependency_time;
+            else {
+              db( DTIME, 0, idum, &dtime, ldum, VERSION_NEW, GET );
+              db( TIME_CURRENT, 0, idum, &time_current,
+                ldum, VERSION_NORMAL, GET_IF_EXISTS );
+              tmp = time_current + dtime;
+            }
             go_ahead = 1;
-            tmp = time_current + dtime;
           }
           else if ( groundflow_pressure &&
               ( labs(dependency_item[2])==TO_PRES ||
@@ -525,31 +618,65 @@ long int get_group_data( long int idat, long int gr, long int element,
               db_error( DEPENDENCY_ITEM, idep );
           }
           if ( go_ahead ) {
+            long int nrow=0, irow=0, norig=0, have_orig=0,
+              method=-USE, dependency_type=0, number=-ALL;
+            double orig[DATA_ITEM_SIZE];
             found = 1;
             dependency_diagram = db_dbl( DEPENDENCY_DIAGRAM, idep, VERSION_NORMAL );
             length = db_len( DEPENDENCY_DIAGRAM, idep, VERSION_NORMAL );
             if ( length%n!=0 ) db_error( DEPENDENCY_DIAGRAM, idep );
-            if ( db_fixed_length( idat ) )
+            nrow = ( length - n ) / n;
+            if ( nrow<1 ) db_error( DEPENDENCY_DIAGRAM, idep );
+            db( DEPENDENCY_METHOD, idep, &method, ddum, ldum,
+              VERSION_NORMAL, GET_IF_EXISTS );
+            db( DEPENDENCY_TYPE, idep, &dependency_type, ddum, ldum,
+              VERSION_NORMAL, GET_IF_EXISTS );
+            db( DEPENDENCY_NUMBER, idep, &number, ddum, ldum,
+              VERSION_NORMAL, GET_IF_EXISTS );
+            if ( method!=-USE && method!=-MULTIPLY )
+              db_error( DEPENDENCY_METHOD, idep );
+            if ( dependency_type!=0 && dependency_type!=-COSINUS &&
+                 dependency_type!=-SINUS && dependency_type!=-TANGENT )
+              db_error( DEPENDENCY_TYPE, idep );
+            if ( number<0 && number!=-ALL )
+              db_error( DEPENDENCY_NUMBER, idep );
+            // the record values themselves (manual 6.406: the dependent
+            // record needs to be specified itself also)
+            // (element_distribute is free here: full-length int buffer)
+            if ( db_type( idat )==DOUBLE_PRECISION )
+              have_orig = db( idat, gr, element_distribute, orig, norig,
+                VERSION_NORMAL, GET_IF_EXISTS );
+            if ( have_orig ) {
+              // one diagram row for all values, or one row per value
+              // (the Professional 02-08-2026 stops on another count)
+              if ( nrow>1 && number==-ALL && nrow!=norig )
+                db_error( DEPENDENCY_DIAGRAM, idep );
+              nval = norig;
+              for ( ival=0; ival<nval; ival++ ) values[ival] = orig[ival];
+            }
+            else if ( method==-MULTIPLY )
+              db_error( DEPENDENCY_METHOD, idep );
+            else if ( db_fixed_length( idat ) )
               nval = db_data_length( idat );
             else
-              nval = ( length -  n ) / n;
-            for ( ival=0; ival<nval; ival++ ) {
-              if      ( tmp<dependency_diagram[0] ) 
-                values[ival] = dependency_diagram[n+ival*n+0];
-              else if ( tmp>dependency_diagram[n-1] ) 
-                values[ival] = dependency_diagram[n+ival*n+n-1];
-              else {
-                for( i=0; i<n-1; i++ ) {
-                  time_left = dependency_diagram[i];
-                  time_right = dependency_diagram[i+1];
-                  val_left = dependency_diagram[n+ival*n+i];
-                  val_right = dependency_diagram[n+ival*n+i+1];
-                  if ( time_right<=time_left ) db_error( DEPENDENCY_DIAGRAM, idep );
-                  if ( tmp>=time_left && tmp<=time_right ) {
-                    values[ival] = val_left + (tmp-dependency_diagram[i])*
-                      (val_right-val_left) / (time_right-time_left);
-                  }
-                }
+              nval = nrow;
+            if ( number!=-ALL ) {
+              // only value 'number'; its row is 'number' when the
+              // diagram has a row per value (measured on the Professional)
+              if ( number>=nval ) db_error( DEPENDENCY_NUMBER, idep );
+              irow = ( nrow==1 ? 0 : number );
+              if ( irow>=nrow ) db_error( DEPENDENCY_DIAGRAM, idep );
+              values[number] = dependency_combine(
+                dependency_interpolate( dependency_diagram, n, irow, tmp, idep ),
+                values[number], method, dependency_type, idep );
+            }
+            else {
+              for ( ival=0; ival<nval; ival++ ) {
+                irow = ( nrow==1 ? 0 : ival );
+                if ( irow>=nrow ) break;
+                values[ival] = dependency_combine(
+                  dependency_interpolate( dependency_diagram, n, irow, tmp, idep ),
+                  have_orig ? values[ival] : 0., method, dependency_type, idep );
               }
             }
           }
@@ -702,7 +829,7 @@ long int node_attached_element_groups( long int inod, long int groups[],
   return ( n>0 );
 }
 
-void element_print_group_data_values_calculate( void )
+void element_print_group_data_values_calculate( double time_current )
 
 {
   // element_print_group_data_values (manual Professional 6.446): per
@@ -714,6 +841,12 @@ void element_print_group_data_values_calculate( void )
   // the singular name; the GNU writes the manual name and reads both).
   // A group without the record gives 0 for it. Filled at the start of
   // every step (hook in step_start, top.cc).
+  // Real records go through get_group_data, so the values include the
+  // dependency_item diagrams (manual 6.406: "You can use print_group_data
+  // to get the result for the calculated values using the dependency
+  // diagram"): -time_current at time_current, the end of the step that
+  // starts (the time the element loop of that step uses), a dof at the
+  // average of the element node values.
   long int element=0, max_element=0, element_group=0, nitem=0, iitem=0,
     idat=0, nvalue=0, length=0, ldum=0, i=0,
     items[DATA_ITEM_SIZE], ivalues[DATA_ITEM_SIZE];
@@ -737,9 +870,22 @@ void element_print_group_data_values_calculate( void )
             GET_IF_EXISTS );
           for ( i=0; i<length; i++ ) dvalues[i] = (double) ivalues[i];
         }
-        else
-          db( idat, element_group, ivalues, dvalues, length, VERSION_NORMAL,
-            GET_IF_EXISTS );
+        else {
+          long int el[1+MNOL], nnol=0, inol=0, iuknwn=0;
+          double *node_dof=NULL, unknowns[MUKNWN];
+          array_set( unknowns, 0., MUKNWN );
+          db( ELEMENT, element, el, ddum, nnol, VERSION_NORMAL, GET );
+          for ( inol=1; inol<nnol; inol++ ) {
+            node_dof = db_dbl( NODE_DOF, el[inol], VERSION_NORMAL );
+            for ( iuknwn=0; iuknwn<nuknwn; iuknwn++ )
+              unknowns[iuknwn] += node_dof[iuknwn] / (double) (nnol-1);
+          }
+          dependency_time_set = 1;
+          dependency_time = time_current;
+          if ( !get_group_data( idat, element_group, element, unknowns,
+              dvalues, length, GET_IF_EXISTS ) ) length = 0;
+          dependency_time_set = 0;
+        }
       }
       if ( length==0 ) {
         dvalues[0] = 0.;

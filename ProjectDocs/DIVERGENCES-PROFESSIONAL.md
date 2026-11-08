@@ -14,10 +14,10 @@ Single index of every known difference between the GNU version and Tochnog Profe
 | class | meaning | items |
 |---|---|---|
 | A | deliberate divergence decided by the project owner | 34 |
-| B | known difference, not decided yet or scheduled (F3/F4) | 54 |
-| C | GNU extension or input-dialect difference | 28 |
+| B | known difference, not decided yet or scheduled (F3/F4) | 55 |
+| C | GNU extension or input-dialect difference | 29 |
 | D | Professional-suspect: the Professional contradicts its own manual or the analytic answer | 18 |
-| | **total** | **134** |
+| | **total** | **136** |
 
 Ids: `C*`/`B*` are [BACKLOG-OPEN-ISSUES.md](BACKLOG-OPEN-ISSUES.md) items, `K*` are clusters of [AUDIT-ALL-VARIABLES-2026.md](AUDIT-ALL-VARIABLES-2026.md); other ids are local to this index. Several class A items are also Professional-suspect (noted in their status). Professional values are from the binary 02-08-2026 unless stated.
 
@@ -163,6 +163,7 @@ Open residuals. They are not decisions: each one is either scheduled, parked for
 | C116-MULTI-SURFACE | groups with two plasticity models, `_tension` 1 + `_vonmises` 0.8 on the 1D visco bar | sigxx 0.8283, eppxx 1.0858 (with visco_power 0.1 1: 2.6482). | sigxx 1, eppxx 1 (with visco_power: 1.1987); each model alone agrees (vonmises 1.5333 both). | Pending (BACKLOG C116). | 2026-11-06 | BACKLOG C116 |
 | C117-VISCO-EXPONENTIAL | `group_materi_plasti_visco_exponential` with the exponent limit inactive (1D visco bar in compression, E 2, vonmises 1, gamma 0.5) | alpha 1: eppxx -1.0117 (f -0.9649; -1.01561 with 50 or 500 iterations). | alpha 1: eppxx -0.744133 (f 0.2324; -0.563379 with 50 iterations); alpha 0.1 and the limited regime (alpha 2, 10) agree. | Pending (BACKLOG C117). | 2026-11-07 | BACKLOG C117 |
 | C120-NIEMUNIS-VISCO-HYHIS3 | history variable `hyhis3` of `group_materi_plasti_hypo_niemunis_visco` ("stiffness measure") | Size sqrt(M::M) of the tangent: hypo6 at t 1.e-3 68.77 (nu 0.2). | 37.874 (nu 0.2), 25.374 (nu 0.3) on hypo6; not sqrt(L::L) nor a simple multiple of it. Stress, void ratio and OCR (`hyhis5`) agree. | Output only; definition not found. | 2026-11-07 | [user/group_materi_plasti_hypo_niemunis_visco](manual-user/group_materi_plasti_hypo_niemunis_visco.md); BACKLOG C120 |
+| DEPENDENCY-TIME | `dependency_item ... -time_current` (6.406) | Diagram at the end of the step; `-total_linear` stress = E(t) eps (one quad4, E 1000 -> 300 by t = 1, two steps of 1: sigxx 6). | Diagram in the middle of the step (one step of 2 on 0 2 100 300: E 200, sigxx 4); `-total_linear` sums the stress increments with the E of each step (same two steps: 9.5). | Manual silent; GNU = analytic total-linear answer. Owner decision pending (BACKLOG C122). | 2026-11-08 | [user/dependency_item](manual-user/dependency_item.md); BACKLOG C122 |
 
 ## C. GNU extensions and input-dialect differences
 
@@ -200,6 +201,7 @@ Records or spellings that only one program accepts, or GNU choices where the Pro
 | STRESS-NULL-TANGENT | `group_materi_stress_null` (6.753) | The material tangent is projected as the stress: the 2D interface layer of the manual 9.1 converges in one iteration (node 3 disx 1.24290e-4). | Full tangent: with the default iterations the step stops at 1.17808e-4; 5 / 30 iterations give 1.242883e-4 / 1.242902e-4 (= GNU). Modes without stiffness left are indeterminate (free hex8 with -y: GNU sigxx 1.0667, Professional 1.1). | GNU consistent tangent; the converged answers agree. | 2026-11-07 | [user/group_materi_stress_null](manual-user/group_materi_stress_null.md) |
 | STRESS-NULL-ZERO-DIRECTION | `group_materi_stress_null_direction` (6.754) with a zero axis | Error `group_materi_stress_null_direction has a zero direction.` | Runs. | Input validation of an out-of-domain input (as ELASTI-C-ZERO-DIRECTION). | 2026-11-07 | [user/group_materi_stress_null](manual-user/group_materi_stress_null.md) |
 | INTERFACE-TRIANGLE-PLURAL | `mesh_interface_triangle_coordinates` (6.854, manual spelling) | Accepted as an alias of `mesh_interface_triangle_coordinate`. | `I do not know : mesh_interface_triangle_coordinates`; only the singular is accepted. | GNU accepts both spellings (F5 T4 U1). Test `alias_names_2026_3`. | 2026-11-08 | [user/names_2026_aliases](manual-user/names_2026_aliases.md) |
+| DEPENDENCY-TYPE-RANGE | `dependency_type -sinus` / `-cosinus` (6.408) with a value outside [-1, 1] | Error `Error detected for data item : dependency_type`. | Runs and stops with `NAN error detected in database for : element_print_group_data_value`. | Input validation of an out-of-domain value (F5 T4 U3). Test `dependency_type_error1`. | 2026-11-08 | [user/dependency_item](manual-user/dependency_item.md) |
 
 ## Maintenance
 

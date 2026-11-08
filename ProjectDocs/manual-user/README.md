@@ -425,6 +425,7 @@ page lists its own in "Differences with the Professional version".
 - [element_spring_strain](element_spring_strain.md) — output record: total spring elongation per element.
 - [dependency_apply](dependency_apply.md) — global switch of the dependency_item/dependency_diagram machinery (6.125).
 - [control_dependency_apply](control_dependency_apply.md) — per-timestep dependency switch (6.126); gate in get_group_data.
+- [dependency_item](dependency_item.md) — dependency_geometry / _method / _number / _type and element_group -all (6.404-6.408).
 - [geometry_element_group](geometry_element_group.md) — restrict a geometry to nodes of listed element groups (6.524). Unlocks merge2/force12 (rc=0).
 - [geometry_element_group_method](geometry_element_group_method.md) — -all/-any/-only of the group filter (6.525).
 - [group_materi_plasti_element_group](group_materi_plasti_element_group.md) — frictional slip of granular soils on other materials (6.698); registered, consumption PENDING.

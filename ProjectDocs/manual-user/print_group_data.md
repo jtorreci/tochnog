@@ -15,7 +15,6 @@ print_group_data -group_materi_elasti_young ...
 
 ## Status
 
-Registered (INTEGER, no_index, one item name accepted) and parsed so
-the input files of the corpus (distri3) load. The GiD/element-record
-writing is PENDING (the corpus test that uses the record has no target
-on it).
+Implemented: see [element_print_group_data_values](element_print_group_data_values.md).
+Real group records are printed with their `dependency_item` diagrams and
+element distributions applied (F5 T4 U3). No GiD plot.

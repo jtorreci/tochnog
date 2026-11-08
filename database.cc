@@ -8847,6 +8847,40 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   data_length[CONTROL_DEPENDENCY_APPLY] = 1;
   data_class[CONTROL_DEPENDENCY_APPLY] = CONTROL;
 
+  // dependency_geometry / _method / _number / _type (manual Professional
+  // 6.404-6.408, F5 T4 U3): modifiers of the dependency_item with the
+  // same index, consumed in get_group_data (group.cc).
+  //   dependency_geometry index -geometry_xxx index: only elements with
+  //     all nodes inside the geometry use the dependency.
+  //   dependency_method index -use/-multiply (default -use).
+  //   dependency_number index number/-all (default -all): the value of
+  //     the record that is made dependent.
+  //   dependency_type index -cosinus/-sinus/-tangent: work on the
+  //     cosinus/sinus/tangent of the value.
+  strcpy(name[DEPENDENCY_GEOMETRY],"dependency_geometry");
+  type[DEPENDENCY_GEOMETRY] = INTEGER;
+  data_length[DEPENDENCY_GEOMETRY] = 2;
+  data_class[DEPENDENCY_GEOMETRY] = DEPENDENCY;
+  data_required[DEPENDENCY_GEOMETRY] = DEPENDENCY_ITEM;
+
+  strcpy(name[DEPENDENCY_METHOD],"dependency_method");
+  type[DEPENDENCY_METHOD] = INTEGER;
+  data_length[DEPENDENCY_METHOD] = 1;
+  data_class[DEPENDENCY_METHOD] = DEPENDENCY;
+  data_required[DEPENDENCY_METHOD] = DEPENDENCY_ITEM;
+
+  strcpy(name[DEPENDENCY_NUMBER],"dependency_number");
+  type[DEPENDENCY_NUMBER] = INTEGER;
+  data_length[DEPENDENCY_NUMBER] = 1;
+  data_class[DEPENDENCY_NUMBER] = DEPENDENCY;
+  data_required[DEPENDENCY_NUMBER] = DEPENDENCY_ITEM;
+
+  strcpy(name[DEPENDENCY_TYPE],"dependency_type");
+  type[DEPENDENCY_TYPE] = INTEGER;
+  data_length[DEPENDENCY_TYPE] = 1;
+  data_class[DEPENDENCY_TYPE] = DEPENDENCY;
+  data_required[DEPENDENCY_TYPE] = DEPENDENCY_ITEM;
+
   // geometry_element_group (manual Professional 6.524/6.525): restrict
   // the geometry record with the same index to nodes that are also a
   // node of elements of one of the specified element groups. Method
