@@ -151,7 +151,7 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
     print_group_data through get_group_data). Route: inline (no writer reason). Commit 3b66fc9. C122 found (owner).
   - [x] U4 delete/refine flags (7): geometry_method, control_mesh_delete_geometry_{direct,method,projection_type},
     control_mesh_refine_locally_{minimal_size,not_method,only_method}. Route: delegated (context backstop).
-    Commit COMMIT_U4. C123 (projection default, owner) and C124 found.
+    Commit bbbc741. C123 (projection default, owner) and C124 found.
   - [ ] U5 mesh operations (16): renumber offsets (2), split_element_from/_to, convert tria6_tria3 / quad9_quad6,
     duplicate_element_group, mesh_correct, extrude direction / element_group_new / contact springs (2),
     generate_truss_beam_separate, remove_geometry, remove_keep_geometry.
