@@ -158,7 +158,7 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
     - [x] U5a extrude (d040c57): control_mesh_extrude layer convention fixed to manual 6.179 (z0..zn layers, each split by
       _n; GNU used the untouched z=0 nodes as an extra bottom layer and ignored _n for linear elements), plus
       control_mesh_extrude_direction, _element_group_new, _contact_spring_element_group(_new).
-    - [x] U5b split / convert (COMMIT_U5B): control_mesh_split_element_from, _split_element_to (-tet4 / -prism6),
+    - [x] U5b split / convert (140e7a0): control_mesh_split_element_from, _split_element_to (-tet4 / -prism6),
       control_mesh_convert_tria6_tria3. control_mesh_convert_quad9_quad6 moved to U9 (no GNU quad6 continuum
       element).
     - [ ] U5c control_mesh_renumber_element_geometry_offset / _group_offset, control_mesh_duplicate_element_group,
