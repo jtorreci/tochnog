@@ -1774,6 +1774,23 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   data_length[CONTROL_MESH_SPLIT] = 1;
   data_class[CONTROL_MESH_SPLIT] = CONTROL;
 
+  strcpy(name[CONTROL_MESH_SPLIT_ELEMENT_FROM],"control_mesh_split_element_from");
+  type[CONTROL_MESH_SPLIT_ELEMENT_FROM] = INTEGER;
+  data_length[CONTROL_MESH_SPLIT_ELEMENT_FROM] = 1;
+  data_class[CONTROL_MESH_SPLIT_ELEMENT_FROM] = CONTROL;
+  data_required[CONTROL_MESH_SPLIT_ELEMENT_FROM] = CONTROL_MESH_SPLIT;
+
+  strcpy(name[CONTROL_MESH_SPLIT_ELEMENT_TO],"control_mesh_split_element_to");
+  type[CONTROL_MESH_SPLIT_ELEMENT_TO] = INTEGER;
+  data_length[CONTROL_MESH_SPLIT_ELEMENT_TO] = 1;
+  data_class[CONTROL_MESH_SPLIT_ELEMENT_TO] = CONTROL;
+  data_required[CONTROL_MESH_SPLIT_ELEMENT_TO] = CONTROL_MESH_SPLIT;
+
+  strcpy(name[CONTROL_MESH_CONVERT_TRIA6_TRIA3],"control_mesh_convert_tria6_tria3");
+  type[CONTROL_MESH_CONVERT_TRIA6_TRIA3] = INTEGER;
+  data_length[CONTROL_MESH_CONVERT_TRIA6_TRIA3] = 1;
+  data_class[CONTROL_MESH_CONVERT_TRIA6_TRIA3] = CONTROL;
+
   strcpy(name[CONTROL_MESH_SPLIT_ONLY],"control_mesh_split_only");
   type[CONTROL_MESH_SPLIT_ONLY] = INTEGER;
   data_length[CONTROL_MESH_SPLIT_ONLY] = 2;

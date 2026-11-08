@@ -2928,10 +2928,11 @@ Original report:
   input combines both records; not compared with the Professional.
 - **Severity**: LOW. **Effort**: small (separate buffer per record).
 
-### C125. `point_el` has no `-prism6`; `force_element_edge` neither (F5 T4 U5a, 2026-11-08)
+### C125. `point_el` has no `-prism6`; `force_element_edge` neither (F5 T4 U5a, 2026-11-08) — `point_el` RESOLVED 2026-11-08 (F5 T4 U5b)
 
 - **Found:** the Professional `other/extrude2` (two tria3 and an interface quad4 extruded to prisms and a hex8, `post_point`, `force_edge`). Before U5a the GNU stopped with `Error: prism6 not available for force_element_edge.`; with the extrusion at its own control index the `post_point` of index 10 reaches `point_el()` first, which asserts (`Assertion name==-HEX64 failed`, rc 134): the function has no `-prism6` branch. Pre-existing for any prism6 mesh with a post point, force point or geometry point selection; the Professional runs extrude2 (sigxx -1).
 - **Severity:** MEDIUM (abort). **Effort:** small for `point_el` (the prism15 Newton with the prism6 shape), medium for `force_element_edge`. Scheduled with F5 T4 U5b (`control_mesh_split_element_to -prism6`).
+- **Resolution (part, F5 T4 U5b):** `point_el()` serves `-prism6` through the prism15 Newton branch with the linear shape; the Professional `other/prism6` (split to prism6, `post_point` sigzz 1) now runs. Open: the `area.cc` edge / face loads have no `-prism6` side table (mixed faces), so `other/extrude2` stops with `Error: prism6 not available for force_element_edge.` (severity LOW now, effort medium).
 
 ### C124. `element_delete_factor` is not printed by the GNU (F5 T4 U4, 2026-11-08)
 
@@ -3822,7 +3823,7 @@ Original report:
 | C107 | F5 T2 V7 probes | older per-model plastic strain dofs filled for every model with the h_lump weight (Professional: 0 under another model) — RESOLVED 2026-11-04 | LOW | small |
 | C115 | C114 verifier | bounda wall detection broader than the Professional; no wall reduction for hardsoil / camclay / hypo / tension; no per-index factors | LOW | medium |
 | C116 | F5 T3 D2 | two plasticity models in one group (tension + vonmises) differ from the Professional | LOW | medium |
-| C125 | F5 T4 U5a | `point_el` has no `-prism6` (assertion, rc 134), `force_element_edge` neither (Pro `extrude2`) | MEDIUM | small / medium |
+| C125 | F5 T4 U5a | `force_element_edge` (area.cc) has no `-prism6` (Pro `extrude2`); `point_el` prism6 resolved in U5b | LOW | medium |
 | C124 | F5 T4 U4 | `element_delete_factor` not printed in the GNU `.dbs` (Professional prints it) | LOW | small |
 | C123 | F5 T4 U4 | default of `control_mesh_delete_geometry_projection_type`: manual 6.166 filled vs 6.173 `-project_exact`; Professional edge only — decided 2026-11-08: filled 6.166 default kept | LOW | — |
 | C122 | F5 T4 U3 | `-time_current` dependency at the end of the step (GNU) vs the middle of the step (Professional); Professional total-linear stress summed per step — decided 2026-11-08: class D, GNU kept | LOW | — |

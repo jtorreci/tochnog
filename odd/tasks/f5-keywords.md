@@ -158,7 +158,7 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
     - [x] U5a extrude (d040c57): control_mesh_extrude layer convention fixed to manual 6.179 (z0..zn layers, each split by
       _n; GNU used the untouched z=0 nodes as an extra bottom layer and ignored _n for linear elements), plus
       control_mesh_extrude_direction, _element_group_new, _contact_spring_element_group(_new).
-    - [ ] U5b split / convert: control_mesh_split_element_from, _split_element_to (-tet4 / -prism6),
+    - [x] U5b split / convert (COMMIT_U5B): control_mesh_split_element_from, _split_element_to (-tet4 / -prism6),
       control_mesh_convert_tria6_tria3. control_mesh_convert_quad9_quad6 moved to U9 (no GNU quad6 continuum
       element).
     - [ ] U5c control_mesh_renumber_element_geometry_offset / _group_offset, control_mesh_duplicate_element_group,
@@ -646,3 +646,10 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   (no prism6, pre-existing, C125, to fix in U5b) instead of the force_element_edge error. RED: base binary rejects
   the new records / leaves extrude_layers1 unextruded (no timestep). Risk: item 3 (control_mesh_extrude existing
   inputs change numbering and layer convention; covered by the end-of-T4 verifier).
+- 2026-11-08 U5b (route inline): split.cc _element_from filter, _element_to -prism6 (2 prisms, Pro order), tria6 ->
+  4 tria3 (manual 6.240, missing before); mesh_convert_tria6_tria3 (corners n0 n2 n5, unused nodes deleted, as Pro);
+  point_el prism6 via the prism15 Newton (C125 part). Pro = GNU: other/prism6 (targets), probes split_from2 /
+  split_mixed / conv1. Pro ignores an invalid _to (GNU error, class C SPLIT-INPUT-CHECKS). Differential vs bccfbba,
+  33 inputs: only prism6 changes (now rc 0). extrude2 back to the force_element_edge prism6 error (C125 open part).
+  RED: base rejects the records / leaves tria6 unsplit. Suite 941/0, audit REVIEW 42. Risk: item 3 (mesh_split and
+  point_el shared; no existing output changed in the differential).

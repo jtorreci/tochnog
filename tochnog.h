@@ -353,6 +353,7 @@ enum {
   CONTROL_MESH_GENERATE_TRUSS_BEAM_MACRO,
   CONTROL_MESH_CONVERT,
   CONTROL_MESH_CONVERT_ELEMENT_GROUP,
+  CONTROL_MESH_CONVERT_TRIA6_TRIA3,
   CONTROL_MESH_KEEP_ELEMENT,
   CONTROL_MESH_KEEP_ELEMENT_GROUP,
   CONTROL_MESH_KEEP_GEOMETRY,
@@ -387,6 +388,8 @@ enum {
   CONTROL_MESH_ROTATE_ANGLE,
   CONTROL_MESH_SPLIT,
   CONTROL_MESH_SPLIT_ONLY,
+  CONTROL_MESH_SPLIT_ELEMENT_FROM,
+  CONTROL_MESH_SPLIT_ELEMENT_TO,
   CONTROL_MESH_SWITCH,
   CONTROL_RESET_DOF,
   CONTROL_RESET_ELEMENT_DOF,
@@ -2422,6 +2425,7 @@ void      mesh_rotate_2d( double angle_deg );
 void      mesh_rotate_3d( long int nrot );
 void      mesh_convert_quad8( void );
 void      mesh_convert_hex20( void );
+void      mesh_convert_tria6_tria3( void );
 void      mesh_extrude( long int icontrol );
 void      mesh_delete_keep( long int icontrol );
 void      mesh_remove( long int icontrol );

@@ -1265,6 +1265,7 @@ void step_start( long int task, long int options_solver[], double dtime, double 
   // bulk with the shared face centre node already in place.
   mesh_convert_quad8();
   mesh_convert_hex20();
+  mesh_convert_tria6_tria3(); // at its own control index (6.161)
   extrude(); // once, at its own control index (extrude.cc)
   if ( task==YES ) interface_convert( icontrol );
 

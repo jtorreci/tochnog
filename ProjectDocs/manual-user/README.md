@@ -90,6 +90,8 @@ page lists its own in "Differences with the Professional version".
 - [control_mesh_remove](control_mesh_remove.md) — remove elements by method (elements inside other elements).
 - [control_mesh_rotate](control_mesh_rotate.md) — sweep a 2D mesh to 3D (quad4→hex8, tria3→prism6).
 - [control_mesh_extrude](control_mesh_extrude.md) — extrude a 2D mesh to 3D (6.179-6.185): layers z0..zn split by `_n`, `_direction -y`, `_element_group_new`, `_contact_spring_element_group(_new)`; bar2→quad4, tria3→prism6, quad4→hex8, quad9→hex27; Professional numbering.
+- [control_mesh_split](control_mesh_split.md) — split quad4/hex8/quad9/hex27/tria6 into simpler elements; `_element_from`, `_element_to -prism6` (6.240-6.242, F5 T4 U5b).
+- [control_mesh_convert_tria6_tria3](control_mesh_convert_tria6_tria3.md) — tria6 to the tria3 of its corners (6.161, F5 T4 U5b).
 - [control_mesh_rotate_angle](control_mesh_rotate_angle.md) — rotate the 2D mesh around the z-axis.
 - [element_3d](element_3d.md) — 3D solid elements (tet4, tet10, hex8, prism6).
 - [bounda_time_on_off](bounda_time_on_off.md) — apply bounda_time periodically.

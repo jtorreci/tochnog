@@ -849,6 +849,55 @@ void mesh_convert_hex20( void )
   if ( swit ) pri( "Out function MESH_CONVERT_HEX20" );
 }
 
+// mesh_convert_tria6_tria3 (manual Professional 6.161): with
+// control_mesh_convert_tria6_tria3 index -yes at the running control
+// index, every -tria6 becomes the -tria3 of its corner nodes (tria6 node
+// order n0..n5 -> n0 n2 n5) and the nodes no element uses any more are
+// deleted, as the Professional 02-08-2026 does (its mid-side nodes are
+// gone from the .dbs). Called at every step_start; idempotent.
+void mesh_convert_tria6_tria3( void )
+
+{
+  long int icontrol=0, ldum=0, swit_yes=-NO, element=0, max_element=0,
+    max_node=0, inod=0, length=0, nconv=0, el[1+MNOL], *used=NULL;
+  double ddum[1];
+
+  db( ICONTROL, 0, &icontrol, ddum, ldum, VERSION_NORMAL, GET );
+  if ( !db_active_index( CONTROL_MESH_CONVERT_TRIA6_TRIA3, icontrol,
+       VERSION_NORMAL ) ) return;
+  db( CONTROL_MESH_CONVERT_TRIA6_TRIA3, icontrol, &swit_yes, ddum, ldum,
+    VERSION_NORMAL, GET );
+  if ( swit_yes!=-YES ) return;
+
+  db_highest_index( ELEMENT, max_element, VERSION_NORMAL );
+  db_highest_index( NODE, max_node, VERSION_NORMAL );
+  if ( max_element<0 || max_node<0 ) return;
+  for ( element=0; element<=max_element; element++ ) {
+    if ( !db_active_index( ELEMENT, element, VERSION_NORMAL ) ) continue;
+    db( ELEMENT, element, el, ddum, length, VERSION_NORMAL, GET );
+    if ( el[0]!=-TRIA6 || length!=7 ) continue;
+    long int t3[4] = { -TRIA3, el[1], el[3], el[6] }, len4 = 4;
+    db( ELEMENT, element, t3, ddum, len4, VERSION_NORMAL, PUT );
+    nconv++;
+  }
+  if ( nconv==0 ) return;
+  used = get_new_int( max_node+1 );
+  array_set( used, 0, max_node+1 );
+  for ( element=0; element<=max_element; element++ ) {
+    if ( !db_active_index( ELEMENT, element, VERSION_NORMAL ) ) continue;
+    db( ELEMENT, element, el, ddum, length, VERSION_NORMAL, GET );
+    for ( long int inol=1; inol<length; inol++ ) {
+      if ( el[inol]>=0 && el[inol]<=max_node ) used[el[inol]] = 1;
+    }
+  }
+  for ( inod=0; inod<=max_node; inod++ ) {
+    if ( !used[inod] && db_active_index( NODE, inod, VERSION_NORMAL ) )
+      delete_node( inod, VERSION_NORMAL );
+  }
+  delete[] used;
+  mesh_has_changed( VERSION_NORMAL );
+}
+
 // mesh_extrude (manual Professional 6.179-6.185): extrude the 2D mesh of
 // control_mesh_extrude index z0 z1 ... to 3D.
 //

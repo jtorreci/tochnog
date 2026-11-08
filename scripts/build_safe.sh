@@ -2590,7 +2590,7 @@ ext_check() {
   got_el="$(awk '$1=="element"||$1=="element_group"{$1=$1; print}' "$T2026/$t.dbs" | sed 's/-contactspring /-contact_spring2 /' | paste -sd'|')"
   got_nod="$(awk '$1=="node"{printf "%s %g %g %g|", $2, $3, $4, $5}' "$T2026/$t.dbs")"
   if [ "$got_el" = "$want_el" ] && [ "$got_nod" = "$want_nod" ]; then
-    check_ok "$t (extruded mesh = Professional)"
+    check_ok "$t (mesh = Professional)"
   else
     check_fail "$t" "mesh '$got_el' nodes '$got_nod'"
   fi
@@ -2618,6 +2618,24 @@ ext_check extrude_single1 \
   "element 1 -hex8 1 2 7 8 4 5 10 11|element 2 -prism6 2 3 5 8 9 11|element 3 -prism6 3 6 5 9 12 11|element_group 1 0|element_group 2 1|element_group 3 1" \
   "1 0 0 0|2 1 0 0|3 2 0 0|4 0 1 0|5 1 1 0|6 2 1 0|7 0 0 1|8 1 0 1|9 2 0 1|10 0 1 1|11 1 1 1|12 2 1 1|"
 expected_error_ok "$T2026" extrude_error4
+# F5 T4 U5b: control_mesh_split_element_from / _element_to -prism6
+# (6.241, 6.242), the tria6 split of 6.240, control_mesh_convert_tria6_tria3
+# (6.161); meshes = Professional 02-08-2026 (ext_check above; the GNU
+# .dbs has no element_group lines for the default group 0, the
+# Professional prints them).
+ext_check split_element_to_prism6_1 \
+  "element 1 -prism6 1 2 3 5 6 7|element 2 -prism6 2 4 3 6 8 7" \
+  "1 0 0 0|2 1 0 0|3 0 1 0|4 1 1 0|5 0 0 1|6 1 0 1|7 0 1 1|8 1 1 1|"
+ext_check split_element_from1 \
+  "element 1 -tria3 1 2 4|element 2 -tria3 2 3 5|element 3 -tria3 4 5 6|element 4 -tria3 2 4 5|element 5 -tria3 3 9 5|element 6 -tria3 9 7 8|element 7 -tria3 5 8 6|element 8 -tria3 9 5 8|element 9 -quad4 3 10 9 11" \
+  "1 0 0 0|2 1 0 0|3 2 0 0|4 0 1 0|5 1 1 0|6 0 2 0|7 2 2 0|8 1 2 0|9 2 1 0|10 3 0 0|11 3 1 0|"
+ext_check split_tria6_1 \
+  "element 1 -tria3 1 2 4|element 2 -tria3 2 3 5|element 3 -tria3 4 5 6|element 4 -tria3 2 4 5|element 5 -tria3 3 9 5|element 6 -tria3 9 7 8|element 7 -tria3 5 8 6|element 8 -tria3 9 5 8|element 9 -tria3 3 10 12|element 10 -tria3 10 11 12|element 11 -tria3 11 9 12|element 12 -tria3 9 3 12" \
+  "1 0 0 0|2 1 0 0|3 2 0 0|4 0 1 0|5 1 1 0|6 0 2 0|7 2 2 0|8 1 2 0|9 2 1 0|10 3 0 0|11 3 1 0|12 2.5 0.5 0|"
+ext_check convert_tria6_tria3_1 \
+  "element 1 -tria3 1 3 6|element 2 -tria3 3 7 6" \
+  "1 0 0 0|3 2 0 0|6 0 2 0|7 2 2 0|"
+expected_error_ok "$T2026" split_error1
 # F5 T2 V4b: element_intpnt_h / _iso_coord / _method / _npoint (manual
 # 6.438 / 6.439 / 6.442 / 6.443), Professional 02-08-2026 values.
 # intpnt_check <test> <element> <method> <npoint> <iso_coord> <h>: every
