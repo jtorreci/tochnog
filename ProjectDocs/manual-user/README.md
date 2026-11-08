@@ -400,6 +400,7 @@ page lists its own in "Differences with the Professional version".
 - [mpc_node_number](mpc_node_number.md) — multi point constraint on nodal dofs (6.874/6.875): the slave dof = sum(factor x master dof), slave treated as a known (bounded) quantity; mpc_node_factor gives the factors (default 1). Unlocks mpc1 (tie verified on mohr_coul_direct2/4/7; those stay RUNFAIL on the direct material family).
 - [mpc_linear_quadratic](mpc_linear_quadratic.md) — automatic tying (6.873) of the dangling quadratic-element nodes to the adjacent linear element with its shape functions (mid-edge 0.5/0.5, mid-face 0.25 each). Records verified byte-for-byte on mpc3/4/5; the tests stay RUNFAIL on the staggered-solver field (DIAG-SOLVE-MIXTO).
 - [mpc_element_group](mpc_element_group.md) — automatic tying of the nodes of one element group into the elements of another (6.860/6.864/6.866) with shape-function-consistent factors, plus the mpc_apply/control_mpc_apply switches (6.859/6.255). Unlocks ground19_water_under_dam (cut-off wall) and mpc7 (patch test 1.e-8).
+- [mpc_element_group_options](mpc_element_group_options.md) — mpc_element_group_always / _closest / _coord_geometry / _eps_iso / _keep and control_mpc_element_group (6.256, 6.859-6.865, F5 T4 U6).
 
 ## Records *_sig del post_calcul -materi_stress -force
 

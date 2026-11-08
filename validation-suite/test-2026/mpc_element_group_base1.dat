@@ -1,0 +1,59 @@
+(
+mpc_element_group without the F5 T4 U6 options [manual Professional 6.858]:
+the Professional 02-08-2026 corpus input other/mpc7 [two small quad4 tied to
+one large quad4] with the .dbs printed. Pins the previous behaviour: the
+generated mpc_node_number / mpc_node_factor records equal the Professional
+ones [build_safe mpc_check] and sigxx = 1 at the post point.
+)
+
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_stress
+end_initia
+
+
+( one large element )
+node  1  0.0 0.0
+node  2  0.0 1.0
+node  3  1.0 0.0
+node  4  1.0 1.0
+element 1  -quad4 1 2 3 4
+
+( two small elements )
+node  5  1.0 0.0
+node  6  1.0 0.5
+node  7  1.0 1.0
+node  8  2.0 0.0
+node  9  2.0 0.5
+node 10  2.0 1.0
+element 2  -quad4 5 6 8 9 
+element 3  -quad4 6 7 9 10
+
+element_group 1 1
+element_group 2 2
+element_group 3 2
+
+group_type 1  -materi
+group_materi_elasti_young 1  1.0
+
+group_type 2  -materi
+group_materi_elasti_young 2  1.0
+
+mpc_element_group 10 2 1
+mpc_element_group_dof 10 -velx -vely
+
+bounda_dof  10  -ra 1 2 -ra -velx -vely
+bounda_dof  20  -ra 8 9 10 -ra -velx -vely
+
+post_point 10  0.5 0.5
+
+control_reset_dof 10  -sigxx
+control_reset_value_constant 10  1.
+
+control_timestep  20  1. 1.0
+control_print     20  -time_current -node_dof -post_node_rhside_ratio
+
+target_item  0   -post_point_dof 10 -sigxx
+target_value 0   1.0 1.e-8
+end_data

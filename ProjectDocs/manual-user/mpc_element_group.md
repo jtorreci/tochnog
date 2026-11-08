@@ -59,7 +59,9 @@ field is already decoupled by the unmerged meshes).
 
 - Nodes that are ALREADY members of the node list of the containing
   master element (i.e. where the meshes share nodes) are NOT tied: the
-  constraint would reduce to the node itself and freeze its equation
-  (the `mpc_element_group_always -no` behaviour, manual 6.861).
+  constraint would reduce to the node itself and freeze its equation;
+  the search goes on to the other masters (default
+  `mpc_element_group_always -yes`; `-no` and the other options are in
+  [mpc_element_group_options](mpc_element_group_options.md), F5 T4 U6).
 - Verification: `mpc7` (two small quad4 tied into one large quad4, unit
   stress patch test) reaches `sigxx = 1.0` within `1.e-8`.

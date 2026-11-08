@@ -72,7 +72,7 @@
 
 // tolerance on the isoparametric coordinates below which a dangling node
 // is considered to be located in the linear element (same default as
-// mpc_element_group_eps_iso, manual 6.865)
+// mpc_element_group_eps_iso, manual 6.863)
 #define MPC_EPS_ISO 1.e-4
 
 // weights below this value are not written to the generated records
@@ -683,147 +683,404 @@ static void mpc_linear_quadratic_generate( void )
 }
 
 // ---------------------------------------------------------------------------
-// mpc_element_group (manual Professional 6.860): each node of an element of
+// mpc_element_group (manual Professional 6.858): each node of an element of
 // group element_group_0 that is also located inside an element of group
 // element_group_1 is tied to that element with multi point constraints
 // consistent with the shape functions at the node's isoparametric
-// location. mpc_element_group_dof (6.864) selects the dofs that are set
-// equal (default: all principal dofs); mpc_element_group_geometry (6.866)
+// location. mpc_element_group_dof (6.862) selects the dofs that are set
+// equal (default: all principal dofs); mpc_element_group_geometry (6.864)
 // restricts the nodes of element_group_0 to those lying on a geometry.
 // The generated mpc_node_number/mpc_node_factor records are the same ones
 // the Professional writes to the .dbs, and are re-created when the mesh
 // changes (fingerprint bookkeeping, mirroring mpc_linear_quadratic).
 //
-// Nodes that are already members of the node list of the containing
-// element of element_group_1 (i.e. the two meshes are connected there by
-// shared nodes) are NOT tied: the tie would reduce to the node itself and
-// freeze its equation (mpc_element_group_always -no semantics, 6.861).
+// Master elements that already contain the node in their node list are
+// skipped (the tie would reduce to the node itself and freeze its
+// equation); the search continues with the other master elements
+// (measured on the Professional 02-08-2026: a node shared with one
+// element_group_1 element and located at a node of another one is tied to
+// the other one).
+//
+// Options (F5 T4 U6, manual 6.256 and 6.859-6.865):
+// - mpc_element_group_always -no: nodes that are a member of the node
+//   list of any element of element_group_1 (the groups are connected
+//   there) get no mpc. Default -yes: the behaviour above. The
+//   Professional 02-08-2026 ignores -no (DIVERGENCES
+//   MPC-ELEMENT-GROUP-ALWAYS).
+// - mpc_element_group_closest -yes: a node that lies in no element of
+//   element_group_1 is tied to the closest one: the master with the
+//   smallest distance between the node and its closest location, with
+//   the shape functions at that location (mpc_closest_weights; measured
+//   on the Professional 02-08-2026 with quad4 / hex8 / tria3 masters).
+// - mpc_element_group_coord_geometry -yes: only nodes whose last
+//   coordinate (y in 2D, z in 3D) is not below the lowest node of
+//   element_group_1 are tied (manual; the Professional takes only the
+//   element_group_1 nodes on mpc_element_group_geometry, DIVERGENCES
+//   MPC-ELEMENT-GROUP-COORD-GEOMETRY).
+// - mpc_element_group_eps_iso: the tolerance on the isoparametric
+//   coordinates (default MPC_EPS_ISO = 1.e-4, manual).
+// - mpc_element_group_keep -yes: the records generated for that index are
+//   kept for the remainder of the calculation (not re-created on a mesh
+//   change or by control_mpc_element_group). They live outside the
+//   regenerated range; their range is stored in the internal record
+//   mpc_element_group_kept.
+// - control_mpc_element_group -yes: the records are re-created at every
+//   timestep of that control index (the fingerprint then also carries the
+//   current time); default -no: only when the mesh changed.
 // ---------------------------------------------------------------------------
 
-static void mpc_element_group_generate( void )
+// tensor-product dimensions of a master for the closest point search
+// (bars included); returns 0 for an unsupported element
+static long int mpc_closest_dims( long int name, long int *nnx, long int *nny,
+  long int *nnz )
 
 {
-  long int ldum=0, idum[1], length=0, max_meg=0, ieg=0, i=0;
+  *nny = 1; *nnz = 1;
+  if      ( name==-BAR2 ) *nnx = 2;
+  else if ( name==-BAR3 ) *nnx = 3;
+  else if ( name==-BAR4 ) *nnx = 4;
+  else mpc_polish_dims( name, nnx, nny, nnz );
+  return ( *nnx>1 );
+}
+
+// closest point of a tensor-product master: every face of the
+// isoparametric box (each coordinate free, -1 or +1) is solved by
+// Gauss-Newton over its free coordinates; the face solution with free
+// coordinates inside [-1,1] and the smallest distance wins (the
+// Euclidean closest point of the element; on rectangular quad4 / hex8
+// masters equal to the Professional 02-08-2026, which approximates it on
+// distorted ones)
+static long int mpc_closest_tensor( double point[], double coords[],
+  long int name, long int nnol, double weight[], double *dist )
+
+{
+  long int nnx=0, nny=0, nnz=0;
+  if ( !mpc_closest_dims( name, &nnx, &nny, &nnz ) ) return 0;
+  long int nn[3] = { nnx, nny, nnz };
+  long int niso = ( nnx>1 ) + ( nny>1 ) + ( nnz>1 );
+  long int ncombo = 1;
+  for ( long int j=0; j<niso; j++ ) ncombo *= 3;
+
+  double h[3][MPOINT], p[3][MPOINT], iso[3], iso_best[3], x[MDIM],
+    jac[MDIM*3], normal[9], rhside[3];
+  double best = -1.;
+  for ( long int ic=0; ic<ncombo; ic++ ) {
+    long int state[3] = { 0, 0, 0 }, free_iso[3], nfree = 0, c = ic;
+    for ( long int j=0; j<3; j++ ) {
+      iso[j] = 0.;
+      if ( j<niso ) { state[j] = c % 3; c /= 3; }
+      if ( state[j]==1 ) iso[j] = -1.;
+      else if ( state[j]==2 ) iso[j] = 1.;
+      else if ( j<niso ) free_iso[nfree++] = j;
+    }
+    for ( long int iter=0; iter<=50; iter++ ) {
+      for ( long int j=0; j<3; j++ )
+        interpolation_polynomial( iso[j], nn[j], h[j], p[j] );
+      array_set( x, 0., ndim );
+      array_set( jac, 0., MDIM*3 );
+      long int inol = 0;
+      for ( long int iz=0; iz<nnz; iz++ ) {
+        for ( long int iy=0; iy<nny; iy++ ) {
+          for ( long int ix=0; ix<nnx; ix++ ) {
+            double w = h[0][ix]*h[1][iy]*h[2][iz];
+            double der[3] = { p[0][ix]*h[1][iy]*h[2][iz],
+              h[0][ix]*p[1][iy]*h[2][iz], h[0][ix]*h[1][iy]*p[2][iz] };
+            for ( long int idim=0; idim<ndim; idim++ ) {
+              x[idim] += w*coords[inol*ndim+idim];
+              for ( long int k=0; k<nfree; k++ )
+                jac[idim*3+k] += der[free_iso[k]]*coords[inol*ndim+idim];
+            }
+            inol++;
+          }
+        }
+      }
+      if ( nfree==0 || iter==50 ) break;
+      for ( long int k=0; k<9; k++ ) normal[k] = 0.;
+      for ( long int k=0; k<3; k++ ) rhside[k] = 0.;
+      for ( long int idim=0; idim<ndim; idim++ ) {
+        for ( long int k=0; k<nfree; k++ ) {
+          rhside[k] -= jac[idim*3+k]*( x[idim]-point[idim] );
+          for ( long int l=0; l<nfree; l++ )
+            normal[k*nfree+l] += jac[idim*3+k]*jac[idim*3+l];
+        }
+      }
+      if ( !mpc_polish_solve( nfree, normal, rhside ) ) break;
+      double dnorm = 0.;
+      for ( long int k=0; k<nfree; k++ ) {
+        iso[free_iso[k]] += rhside[k];
+        dnorm += rhside[k]*rhside[k];
+      }
+      if ( sqrt( dnorm )<1.e-15 ) break;
+    }
+    long int inside = 1;
+    for ( long int k=0; k<nfree; k++ )
+      if ( scalar_dabs( iso[free_iso[k]] )>1.+1.e-10 ) inside = 0;
+    if ( !inside ) continue;
+    for ( long int k=0; k<nfree; k++ ) {
+      if ( iso[free_iso[k]]>1. ) iso[free_iso[k]] = 1.;
+      if ( iso[free_iso[k]]<-1. ) iso[free_iso[k]] = -1.;
+    }
+    mpc_polish_weights( iso, nnx, nny, nnz, weight );
+    array_set( x, 0., ndim );
+    for ( long int inol=0; inol<nnol; inol++ )
+      for ( long int idim=0; idim<ndim; idim++ )
+        x[idim] += weight[inol]*coords[inol*ndim+idim];
+    double d = 0.;
+    for ( long int idim=0; idim<ndim; idim++ )
+      d += ( x[idim]-point[idim] )*( x[idim]-point[idim] );
+    d = sqrt( d );
+    if ( best<0. || d<best ) {
+      best = d;
+      for ( long int j=0; j<3; j++ ) iso_best[j] = iso[j];
+    }
+  }
+  if ( best<0. ) return 0;
+  mpc_polish_weights( iso_best, nnx, nny, nnz, weight );
+  *dist = best;
+  return 1;
+}
+
+// closest point of a simplex master (tria3/tria6/tet4/tet10) with the
+// corner nodes: the barycentric coordinates of the point (first corner
+// dependent) have the other corners' coordinates clamped to [0,1]; a
+// negative first-corner coordinate is set to zero and the coordinates
+// are normalized (measured on the Professional 02-08-2026 with tria3
+// masters: (1.1,0.3) beside the tria3 (0,0) (1,0) (1,1) gets 8/11 3/11,
+// (2,0.3) gets 10/13 3/13; its tet4 masters ignore the fourth corner,
+// which the GNU does not copy: DIVERGENCES MPC-ELEMENT-GROUP-CLOSEST).
+// The weights are the element shape functions at that location (the
+// point_el formulas).
+static long int mpc_closest_simplex( double point[], double coords[],
+  long int name, double weight[], double *dist )
+
+{
+  long int corner[4], ncorner = 0;
+  if      ( name==-TRIA3 ) { corner[0]=0; corner[1]=1; corner[2]=2; ncorner=3; }
+  else if ( name==-TRIA6 ) { corner[0]=0; corner[1]=2; corner[2]=5; ncorner=3; }
+  else if ( name==-TET4 ) {
+    corner[0]=0; corner[1]=1; corner[2]=2; corner[3]=3; ncorner=4; }
+  else if ( name==-TET10 ) {
+    corner[0]=0; corner[1]=2; corner[2]=5; corner[3]=9; ncorner=4; }
+  else return 0;
+  if ( ncorner-1!=ndim ) return 0;
+
+  // barycentric coordinates: point = v0 + sum_k L_k (v_k - v0)
+  double *v0 = &coords[corner[0]*ndim];
+  double a[9], b[3], L[4] = { 0., 0., 0., 0. };
+  long int n = ncorner - 1;
+  for ( long int idim=0; idim<n; idim++ ) {
+    b[idim] = point[idim] - v0[idim];
+    for ( long int k=0; k<n; k++ )
+      a[idim*n+k] = coords[corner[k+1]*ndim+idim] - v0[idim];
+  }
+  if ( !mpc_polish_solve( n, a, b ) ) return 0;
+  double sum = 0.;
+  for ( long int k=0; k<n; k++ ) {
+    L[k+1] = b[k];
+    if ( L[k+1]<0. ) L[k+1] = 0.;
+    if ( L[k+1]>1. ) L[k+1] = 1.;
+    sum += L[k+1];
+  }
+  L[0] = 1. - sum;
+  if ( L[0]<0. ) {
+    L[0] = 0.;
+    for ( long int k=1; k<ncorner; k++ ) L[k] /= sum;
+  }
+  double d = 0.;
+  for ( long int idim=0; idim<ndim; idim++ ) {
+    double xk = 0.;
+    for ( long int k=0; k<ncorner; k++ )
+      xk += L[k]*coords[corner[k]*ndim+idim];
+    d += ( xk-point[idim] )*( xk-point[idim] );
+  }
+  double L1 = L[0], L2 = L[1], L3 = L[2], L4 = L[3];
+  if      ( name==-TRIA3 ) {
+    weight[0] = L1; weight[1] = L2; weight[2] = L3;
+  }
+  else if ( name==-TRIA6 ) {
+    weight[0] = (2.*L1-1.)*L1;
+    weight[1] = 4.*L1*L2;
+    weight[2] = (2.*L2-1.)*L2;
+    weight[3] = 4.*L3*L1;
+    weight[4] = 4.*L2*L3;
+    weight[5] = (2.*L3-1.)*L3;
+  }
+  else if ( name==-TET4 ) {
+    weight[0] = L1; weight[1] = L2; weight[2] = L3; weight[3] = L4;
+  }
+  else {
+    weight[0] = (2.*L1-1.)*L1;
+    weight[1] = 4.*L1*L2;
+    weight[2] = (2.*L2-1.)*L2;
+    weight[3] = 4.*L3*L1;
+    weight[4] = 4.*L2*L3;
+    weight[5] = (2.*L3-1.)*L3;
+    weight[6] = 4.*L1*L4;
+    weight[7] = 4.*L2*L4;
+    weight[8] = 4.*L3*L4;
+    weight[9] = (2.*L4-1.)*L4;
+  }
+  *dist = sqrt( d );
+  return 1;
+}
+
+// closest point of a master element (mpc_element_group_closest): the
+// weights are the shape functions at the point of the element closest to
+// point[]; returns 0 for an unsupported element (prisms, trusses, ...)
+static long int mpc_closest_weights( double point[], double coords[],
+  long int name, long int nnol, double weight[], double *dist )
+
+{
+  if ( name==-TRIA3 || name==-TRIA6 || name==-TET4 || name==-TET10 )
+    return mpc_closest_simplex( point, coords, name, weight, dist );
+  return mpc_closest_tensor( point, coords, name, nnol, weight, dist );
+}
+
+// generate the records of mpc_element_group index ieg at
+// start_index+count..., incrementing count
+static void mpc_element_group_index( long int ieg, long int start_index,
+  long int &count, long int max_element, long int max_node,
+  long int dof_label[], long int dof_principal[] )
+
+{
+  long int ldum=0, idum[1], length=0, i=0;
   double ddum[MDIM]; // geometry() writes normal/projection[MDIM]
+  long int vals[DATA_ITEM_SIZE];
 
-  db_max_index( MPC_ELEMENT_GROUP, max_meg, VERSION_NORMAL, GET );
-  if ( max_meg<0 ) return;
+  long int *eg_vals = db_int( MPC_ELEMENT_GROUP, ieg, VERSION_NORMAL );
+  long int eg_length = db_len( MPC_ELEMENT_GROUP, ieg, VERSION_NORMAL );
+  if ( eg_length<2 ) db_error( MPC_ELEMENT_GROUP, ieg );
+  long int gr0 = eg_vals[0];
 
-  long int fingerprint = mpc_mesh_fingerprint();
-  long int stored[3] = { -1, -1, 0 };
-  long int stored_len = 0;
-  db( MPC_ELEMENT_GROUP_MESH_FINGERPRINT, 0, stored, ddum, stored_len,
+  // master element groups: eg_vals[1..] or -all (all other groups)
+  long int master_groups[DATA_ITEM_SIZE];
+  long int nmaster_groups = 0, all_groups = 0;
+  for ( i=1; i<eg_length; i++ ) {
+    if ( eg_vals[i]==-ALL ) all_groups = 1;
+    else master_groups[nmaster_groups++] = eg_vals[i];
+  }
+
+  // selected dofs (negative dof labels); empty -> all principal dofs
+  long int dof_sel[MUKNWN];
+  long int ndof_sel = 0;
+  if ( db_active_index( MPC_ELEMENT_GROUP_DOF, ieg, VERSION_NORMAL ) ) {
+    long int *dof_vals = db_int( MPC_ELEMENT_GROUP_DOF, ieg,
+      VERSION_NORMAL );
+    long int dof_length = db_len( MPC_ELEMENT_GROUP_DOF, ieg,
+      VERSION_NORMAL );
+    for ( i=0; i<dof_length; i++ ) dof_sel[ndof_sel++] = dof_vals[i];
+  }
+
+  // restricting geometry pairs (geometry entity + index per pair)
+  long int geom_vals[DATA_ITEM_SIZE];
+  long int geom_length = 0;
+  if ( db_active_index( MPC_ELEMENT_GROUP_GEOMETRY, ieg,
+      VERSION_NORMAL ) ) {
+    long int *gvals = db_int( MPC_ELEMENT_GROUP_GEOMETRY, ieg,
+      VERSION_NORMAL );
+    geom_length = db_len( MPC_ELEMENT_GROUP_GEOMETRY, ieg,
+      VERSION_NORMAL );
+    for ( i=0; i<geom_length; i++ ) geom_vals[i] = gvals[i];
+  }
+
+  // options (manual 6.859-6.863)
+  long int always = -YES, closest = -NO, coord_geometry = -NO;
+  db( MPC_ELEMENT_GROUP_ALWAYS, ieg, &always, ddum, ldum, VERSION_NORMAL,
+    GET_IF_EXISTS );
+  db( MPC_ELEMENT_GROUP_CLOSEST, ieg, &closest, ddum, ldum, VERSION_NORMAL,
+    GET_IF_EXISTS );
+  db( MPC_ELEMENT_GROUP_COORD_GEOMETRY, ieg, &coord_geometry, ddum, ldum,
     VERSION_NORMAL, GET_IF_EXISTS );
-  if ( stored_len>=3 && stored[0]==fingerprint ) return;
+  double eps_iso = MPC_EPS_ISO;
+  db( MPC_ELEMENT_GROUP_EPS_ISO, ieg, idum, &eps_iso, ldum, VERSION_NORMAL,
+    GET_IF_EXISTS );
+  if ( eps_iso<0. ) db_error( MPC_ELEMENT_GROUP_EPS_ISO, ieg );
 
-  // delete the previously generated records
-  if ( stored_len>=3 && stored[2]>0 ) {
-    for ( i=0; i<stored[2]; i++ ) {
-      db_delete_index( MPC_NODE_NUMBER, stored[1]+i, VERSION_NORMAL );
-      db_delete_index( MPC_NODE_FACTOR, stored[1]+i, VERSION_NORMAL );
+  long int element=0, inod=0, inol=0, nnol=0, jelem=0, jnol=0,
+    nnol_m=0, name_m=0, length_m=0, nmaster=0, k=0,
+    km=0, ipuknwn=0, iuknwn=0, length_put=0, iuse=0, found=0,
+    in_geom=0;
+  long int el[MNOL+1], el_m[MNOL+1], el_grp=0;
+  double coord[MDIM], coords_m[MNOL*MDIM], weight[MNOL], rdum=0.;
+  long int geometry_entity[2];
+
+  // the element_group_1 nodes (mpc_element_group_always -no) and their
+  // lowest last coordinate (mpc_element_group_coord_geometry -yes)
+  long int *in_master = NULL;
+  double lowest = DBL_MAX;
+  if ( ( always==-NO || coord_geometry==-YES ) && max_node>=0 ) {
+    in_master = get_new_int( 1+max_node );
+    array_set( in_master, 0, 1+max_node );
+    for ( jelem=0; jelem<=max_element; jelem++ ) {
+      if ( !db_active_index( ELEMENT, jelem, VERSION_NORMAL ) ) continue;
+      el_grp = 0;
+      db( ELEMENT_GROUP, jelem, &el_grp, ddum, length, VERSION_NORMAL,
+        GET_IF_EXISTS );
+      iuse = 0;
+      if ( all_groups ) { if ( el_grp!=gr0 ) iuse = 1; }
+      else {
+        for ( k=0; k<nmaster_groups; k++ )
+          if ( master_groups[k]==el_grp ) iuse = 1;
+      }
+      if ( !iuse ) continue;
+      db( ELEMENT, jelem, el_m, ddum, length_m, VERSION_NORMAL, GET );
+      for ( jnol=1; jnol<length_m; jnol++ ) {
+        if ( in_master[el_m[jnol]] ) continue;
+        in_master[el_m[jnol]] = 1;
+        db( NODE_START_REFINED, el_m[jnol], idum, coord, ldum,
+          VERSION_NORMAL, GET );
+        if ( coord[ndim-1]<lowest ) lowest = coord[ndim-1];
+      }
     }
   }
 
-  long int dof_label[MUKNWN], dof_principal[MUKNWN];
-  db( DOF_LABEL, 0, dof_label, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
-  db( DOF_PRINCIPAL, 0, dof_principal, ddum, ldum, VERSION_NORMAL,
-    GET_IF_EXISTS );
+  // visited marker: each node is tied at most once per record
+  long int *visited = NULL;
+  if ( max_node>=0 ) {
+    visited = get_new_int( 1+max_node );
+    array_set( visited, 0, 1+max_node );
+  }
 
-  // start index of the generated records: after the highest ACTIVE
-  // mpc_node_number record (user records and any mpc_linear_quadratic
-  // generated records)
-  long int start_index = 0;
-  db_highest_index( MPC_NODE_NUMBER, start_index, VERSION_NORMAL );
-  start_index++;
-  long int count = 0;
-  long int vals[DATA_ITEM_SIZE];
-
-  long int max_element=0, max_node=0;
-  db_max_index( ELEMENT, max_element, VERSION_NORMAL, GET );
-  db_max_index( NODE, max_node, VERSION_NORMAL, GET );
-
-  for ( ieg=0; ieg<=max_meg; ieg++ ) {
-    if ( !db_active_index( MPC_ELEMENT_GROUP, ieg, VERSION_NORMAL ) )
-      continue;
-    long int *eg_vals = db_int( MPC_ELEMENT_GROUP, ieg, VERSION_NORMAL );
-    long int eg_length = db_len( MPC_ELEMENT_GROUP, ieg, VERSION_NORMAL );
-    if ( eg_length<2 ) db_error( MPC_ELEMENT_GROUP, ieg );
-    long int gr0 = eg_vals[0];
-
-    // master element groups: eg_vals[1..] or -all (all other groups)
-    long int master_groups[DATA_ITEM_SIZE];
-    long int nmaster_groups = 0, all_groups = 0;
-    for ( i=1; i<eg_length; i++ ) {
-      if ( eg_vals[i]==-ALL ) all_groups = 1;
-      else master_groups[nmaster_groups++] = eg_vals[i];
-    }
-
-    // selected dofs (negative dof labels); empty -> all principal dofs
-    long int dof_sel[MUKNWN];
-    long int ndof_sel = 0;
-    if ( db_active_index( MPC_ELEMENT_GROUP_DOF, ieg, VERSION_NORMAL ) ) {
-      long int *dof_vals = db_int( MPC_ELEMENT_GROUP_DOF, ieg,
-        VERSION_NORMAL );
-      long int dof_length = db_len( MPC_ELEMENT_GROUP_DOF, ieg,
-        VERSION_NORMAL );
-      for ( i=0; i<dof_length; i++ ) dof_sel[ndof_sel++] = dof_vals[i];
-    }
-
-    // restricting geometry pairs (geometry entity + index per pair)
-    long int geom_vals[DATA_ITEM_SIZE];
-    long int geom_length = 0;
-    if ( db_active_index( MPC_ELEMENT_GROUP_GEOMETRY, ieg,
-        VERSION_NORMAL ) ) {
-      long int *gvals = db_int( MPC_ELEMENT_GROUP_GEOMETRY, ieg,
-        VERSION_NORMAL );
-      geom_length = db_len( MPC_ELEMENT_GROUP_GEOMETRY, ieg,
-        VERSION_NORMAL );
-      for ( i=0; i<geom_length; i++ ) geom_vals[i] = gvals[i];
-    }
-
-    // visited marker: each node is tied at most once per record
-    long int *visited = NULL;
-    if ( max_node>=0 ) {
-      visited = get_new_int( 1+max_node );
-      array_set( visited, 0, 1+max_node );
-    }
-
-    long int element=0, inod=0, inol=0, nnol=0, jelem=0, jnol=0,
-      nnol_m=0, name_m=0, length_m=0, nmaster=0, k=0,
-      km=0, ipuknwn=0, iuknwn=0, length_put=0, iuse=0, found=0,
-      in_geom=0;
-    long int el[MNOL+1], el_m[MNOL+1], el_grp=0;
-    double coord[MDIM], coords_m[MNOL*MDIM], weight[MNOL], rdum=0.;
-    long int geometry_entity[2];
-
-    for ( element=0; element<=max_element; element++ ) {
-      if ( !db_active_index( ELEMENT, element, VERSION_NORMAL ) ) continue;
-      el_grp = 0;
-      db( ELEMENT_GROUP, element, &el_grp, ddum, length, VERSION_NORMAL,
-        GET_IF_EXISTS );
-      if ( el_grp!=gr0 ) continue;
-      db( ELEMENT, element, el, ddum, length, VERSION_NORMAL, GET );
-      nnol = length - 1;
-      for ( inol=1; inol<=nnol; inol++ ) {
-        inod = el[inol];
-        if ( visited && visited[inod] ) continue;
-        // geometry restriction
-        if ( geom_length>0 ) {
-          in_geom = 0;
-          for ( k=0; k+1<geom_length; k+=2 ) {
-            geometry_entity[0] = geom_vals[k];
-            geometry_entity[1] = geom_vals[k+1];
-            geometry( inod, ddum, geometry_entity, in_geom, rdum, ddum,
-              rdum, ddum, NODE_START_REFINED, PROJECT_EXACT,
-              VERSION_NORMAL );
-            if ( in_geom ) break;
-          }
-          if ( !in_geom ) continue;
+  for ( element=0; element<=max_element; element++ ) {
+    if ( !db_active_index( ELEMENT, element, VERSION_NORMAL ) ) continue;
+    el_grp = 0;
+    db( ELEMENT_GROUP, element, &el_grp, ddum, length, VERSION_NORMAL,
+      GET_IF_EXISTS );
+    if ( el_grp!=gr0 ) continue;
+    db( ELEMENT, element, el, ddum, length, VERSION_NORMAL, GET );
+    nnol = length - 1;
+    for ( inol=1; inol<=nnol; inol++ ) {
+      inod = el[inol];
+      if ( visited && visited[inod] ) continue;
+      // mpc_element_group_always -no: the node is connected to
+      // element_group_1
+      if ( always==-NO && in_master && in_master[inod] ) continue;
+      // geometry restriction
+      if ( geom_length>0 ) {
+        in_geom = 0;
+        for ( k=0; k+1<geom_length; k+=2 ) {
+          geometry_entity[0] = geom_vals[k];
+          geometry_entity[1] = geom_vals[k+1];
+          geometry( inod, ddum, geometry_entity, in_geom, rdum, ddum,
+            rdum, ddum, NODE_START_REFINED, PROJECT_EXACT,
+            VERSION_NORMAL );
+          if ( in_geom ) break;
         }
-        db( NODE_START_REFINED, inod, idum, coord, ldum, VERSION_NORMAL,
-          GET );
-        // find a master element containing the node (first match)
-        found = 0;
+        if ( !in_geom ) continue;
+      }
+      db( NODE_START_REFINED, inod, idum, coord, ldum, VERSION_NORMAL,
+        GET );
+      // mpc_element_group_coord_geometry -yes: not below the lowest
+      // element_group_1 node
+      if ( coord_geometry==-YES && coord[ndim-1]<lowest ) continue;
+      // find a master element containing the node (first match); with
+      // mpc_element_group_closest -yes, else the closest master element
+      found = 0;
+      double dist_best = -1.;
+      long int name_best = 0, nnol_best = 0, el_best[MNOL+1];
+      double weight_best[MNOL];
+      for ( long int pass=0; pass<2 && !found; pass++ ) {
+        if ( pass==1 && closest!=-YES ) break;
         for ( jelem=0; jelem<=max_element && !found; jelem++ ) {
           if ( !db_active_index( ELEMENT, jelem, VERSION_NORMAL ) )
             continue;
@@ -849,57 +1106,207 @@ static void mpc_element_group_generate( void )
             db( NODE_START_REFINED, el_m[1+jnol], idum,
               &coords_m[jnol*ndim], ldum, VERSION_NORMAL, GET );
           }
-          if ( point_el( coord, coords_m, weight, name_m, nnol_m,
-              MPC_EPS_ISO ) ) {
-            // machine-precision factors (DIAG §21): point_el's
-            // finite-difference descent stops ~2.4e-8 short
-            mpc_weights_polish( coord, coords_m, weight, name_m,
-              nnol_m );
-            // masters: the master element nodes with non-zero shape
-            // function weight at the node position
-            nmaster = 0;
-            for ( jnol=0; jnol<nnol_m; jnol++ ) {
-              if ( scalar_dabs( weight[jnol] ) > MPC_WEIGHT_ZERO ) {
-                el_m[1+nmaster] = el_m[1+jnol];
-                weight[nmaster] = weight[jnol];
-                nmaster++;
+          if ( pass==0 ) {
+            if ( point_el( coord, coords_m, weight, name_m, nnol_m,
+                eps_iso ) ) {
+              // machine-precision factors (DIAG §21): point_el's
+              // finite-difference descent stops ~2.4e-8 short
+              mpc_weights_polish( coord, coords_m, weight, name_m,
+                nnol_m );
+              found = 1;
+            }
+          }
+          else {
+            // lower bound of the distance: the bounding box distance
+            double lower = 0.;
+            for ( long int idim=0; idim<ndim; idim++ ) {
+              double lo = coords_m[idim], hi = coords_m[idim];
+              for ( jnol=1; jnol<nnol_m; jnol++ ) {
+                lo = scalar_dmin( lo, coords_m[jnol*ndim+idim] );
+                hi = scalar_dmax( hi, coords_m[jnol*ndim+idim] );
               }
+              double out = 0.;
+              if ( coord[idim]<lo ) out = lo - coord[idim];
+              if ( coord[idim]>hi ) out = coord[idim] - hi;
+              lower += out*out;
             }
-            if ( nmaster==0 ) { iuse = 0; continue; }
-            found = 1;
+            lower = sqrt( lower );
+            if ( dist_best>=0. && lower>=dist_best ) continue;
+            double dist = 0.;
+            if ( mpc_closest_weights( coord, coords_m, name_m, nnol_m,
+                weight, &dist ) && ( dist_best<0. || dist<dist_best ) ) {
+              dist_best = dist;
+              name_best = name_m; nnol_best = nnol_m;
+              for ( jnol=0; jnol<=nnol_m; jnol++ ) el_best[jnol] = el_m[jnol];
+              for ( jnol=0; jnol<nnol_m; jnol++ )
+                weight_best[jnol] = weight[jnol];
+            }
           }
-          if ( !found ) continue;
-          // generate one mpc record per selected dof
-          for ( ipuknwn=0; ipuknwn<npuknwn; ipuknwn++ ) {
-            iuknwn = ipuknwn*nder;
-            if ( dof_principal[iuknwn]<0 ) continue;
-            if ( ndof_sel>0 ) {
-              long int iuse_dof = 0;
-              for ( k=0; k<ndof_sel; k++ )
-                if ( dof_sel[k]==dof_label[iuknwn] ) iuse_dof = 1;
-              if ( !iuse_dof ) continue;
-            }
-            // record: [node_0 dof_0 node_1 dof_0 node_2 dof_0 ...]
-            long int iv = 0;
-            vals[iv++] = inod;
-            vals[iv++] = dof_label[iuknwn];
-            for ( km=0; km<nmaster; km++ ) {
-              vals[iv++] = el_m[1+km];
-              vals[iv++] = dof_label[iuknwn];
-            }
-            length_put = iv;
-            db( MPC_NODE_NUMBER, start_index+count, vals, ddum,
-              length_put, VERSION_NORMAL, PUT );
-            length_put = nmaster;
-            db( MPC_NODE_FACTOR, start_index+count, idum, weight,
-              length_put, VERSION_NORMAL, PUT );
-            count++;
-          }
-          if ( visited ) visited[inod] = 1;
+        }
+        if ( pass==1 && dist_best>=0. ) {
+          name_m = name_best; nnol_m = nnol_best;
+          for ( jnol=0; jnol<=nnol_m; jnol++ ) el_m[jnol] = el_best[jnol];
+          for ( jnol=0; jnol<nnol_m; jnol++ ) weight[jnol] = weight_best[jnol];
+          found = 1;
         }
       }
+      if ( !found ) continue;
+      // masters: the master element nodes with non-zero shape function
+      // weight at the node position
+      nmaster = 0;
+      for ( jnol=0; jnol<nnol_m; jnol++ ) {
+        if ( scalar_dabs( weight[jnol] ) > MPC_WEIGHT_ZERO ) {
+          el_m[1+nmaster] = el_m[1+jnol];
+          weight[nmaster] = weight[jnol];
+          nmaster++;
+        }
+      }
+      if ( nmaster==0 ) continue;
+      // generate one mpc record per selected dof
+      for ( ipuknwn=0; ipuknwn<npuknwn; ipuknwn++ ) {
+        iuknwn = ipuknwn*nder;
+        if ( dof_principal[iuknwn]<0 ) continue;
+        if ( ndof_sel>0 ) {
+          long int iuse_dof = 0;
+          for ( k=0; k<ndof_sel; k++ )
+            if ( dof_sel[k]==dof_label[iuknwn] ) iuse_dof = 1;
+          if ( !iuse_dof ) continue;
+        }
+        // record: [node_0 dof_0 node_1 dof_0 node_2 dof_0 ...]
+        long int iv = 0;
+        vals[iv++] = inod;
+        vals[iv++] = dof_label[iuknwn];
+        for ( km=0; km<nmaster; km++ ) {
+          vals[iv++] = el_m[1+km];
+          vals[iv++] = dof_label[iuknwn];
+        }
+        length_put = iv;
+        db( MPC_NODE_NUMBER, start_index+count, vals, ddum,
+          length_put, VERSION_NORMAL, PUT );
+        length_put = nmaster;
+        db( MPC_NODE_FACTOR, start_index+count, idum, weight,
+          length_put, VERSION_NORMAL, PUT );
+        count++;
+      }
+      if ( visited ) visited[inod] = 1;
     }
-    delete[] visited;
+  }
+  delete[] visited;
+  delete[] in_master;
+}
+
+static void mpc_element_group_generate( void )
+
+{
+  long int ldum=0, idum[1], length=0, max_meg=0, ieg=0, i=0;
+  double ddum[1];
+
+  db_max_index( MPC_ELEMENT_GROUP, max_meg, VERSION_NORMAL, GET );
+  if ( max_meg<0 ) return;
+
+  long int fingerprint = mpc_mesh_fingerprint();
+  // control_mpc_element_group -yes (manual 6.256): re-create at every
+  // timestep of the current control index; the fingerprint then also
+  // carries the current time (constant within the timestep)
+  long int icontrol = 0, control_eg = -NO;
+  db( ICONTROL, 0, &icontrol, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+  db( CONTROL_MPC_ELEMENT_GROUP, icontrol, &control_eg, ddum, ldum,
+    VERSION_NORMAL, GET_IF_EXISTS );
+  if ( control_eg==-YES ) {
+    double time_current = 0.;
+    db( TIME_CURRENT, 0, idum, &time_current, ldum, VERSION_NORMAL,
+      GET_IF_EXISTS );
+    unsigned long long bits = 0;
+    memcpy( &bits, &time_current, sizeof(bits) );
+    fingerprint ^= (long int) ( ( bits ^ ( bits>>29 ) ) | 1ULL );
+  }
+  long int stored[3] = { -1, -1, 0 };
+  long int stored_len = 0;
+  db( MPC_ELEMENT_GROUP_MESH_FINGERPRINT, 0, stored, ddum, stored_len,
+    VERSION_NORMAL, GET_IF_EXISTS );
+  if ( stored_len>=3 && stored[0]==fingerprint ) return;
+
+  // delete the previously generated records
+  if ( stored_len>=3 && stored[2]>0 ) {
+    for ( i=0; i<stored[2]; i++ ) {
+      db_delete_index( MPC_NODE_NUMBER, stored[1]+i, VERSION_NORMAL );
+      db_delete_index( MPC_NODE_FACTOR, stored[1]+i, VERSION_NORMAL );
+    }
+  }
+
+  // records kept by mpc_element_group_keep -yes: drop the ones whose
+  // nodes no longer exist after a mesh change
+  for ( ieg=0; ieg<=max_meg; ieg++ ) {
+    if ( !db_active_index( MPC_ELEMENT_GROUP_KEPT, ieg, VERSION_NORMAL ) )
+      continue;
+    long int kept[2] = { 0, 0 };
+    db( MPC_ELEMENT_GROUP_KEPT, ieg, kept, ddum, ldum, VERSION_NORMAL,
+      GET );
+    for ( i=kept[0]; i<kept[0]+kept[1]; i++ ) {
+      if ( !db_active_index( MPC_NODE_NUMBER, i, VERSION_NORMAL ) )
+        continue;
+      long int *rec = db_int( MPC_NODE_NUMBER, i, VERSION_NORMAL );
+      long int rec_length = db_len( MPC_NODE_NUMBER, i, VERSION_NORMAL );
+      long int alive = 1;
+      for ( long int j=0; j<rec_length; j+=2 )
+        if ( !db_active_index( NODE, rec[j], VERSION_NORMAL ) ) alive = 0;
+      if ( !alive ) {
+        db_delete_index( MPC_NODE_NUMBER, i, VERSION_NORMAL );
+        db_delete_index( MPC_NODE_FACTOR, i, VERSION_NORMAL );
+      }
+    }
+  }
+
+  long int dof_label[MUKNWN], dof_principal[MUKNWN];
+  db( DOF_LABEL, 0, dof_label, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+  db( DOF_PRINCIPAL, 0, dof_principal, ddum, ldum, VERSION_NORMAL,
+    GET_IF_EXISTS );
+
+  // start index of the generated records: after the highest ACTIVE
+  // mpc_node_number record (user records, any mpc_linear_quadratic
+  // generated records and the kept records)
+  long int start_index = 0;
+  db_highest_index( MPC_NODE_NUMBER, start_index, VERSION_NORMAL );
+  start_index++;
+  long int count = 0;
+
+  long int max_element=0, max_node=0;
+  db_max_index( ELEMENT, max_element, VERSION_NORMAL, GET );
+  db_max_index( NODE, max_node, VERSION_NORMAL, GET );
+
+  // first the indices with mpc_element_group_keep -yes that have no kept
+  // records yet (their records stay outside the regenerated range), then
+  // the other indices
+  for ( long int pass=0; pass<2; pass++ ) {
+    for ( ieg=0; ieg<=max_meg; ieg++ ) {
+      if ( !db_active_index( MPC_ELEMENT_GROUP, ieg, VERSION_NORMAL ) )
+        continue;
+      long int keep = -NO;
+      db( MPC_ELEMENT_GROUP_KEEP, ieg, &keep, ddum, ldum, VERSION_NORMAL,
+        GET_IF_EXISTS );
+      if ( keep==-YES ) {
+        if ( pass==1 ||
+             db_active_index( MPC_ELEMENT_GROUP_KEPT, ieg, VERSION_NORMAL ) )
+          continue;
+        long int count_before = count;
+        mpc_element_group_index( ieg, start_index, count, max_element,
+          max_node, dof_label, dof_principal );
+        if ( count>count_before ) {
+          long int kept[2] = { start_index+count_before, count-count_before };
+          length = 2;
+          db( MPC_ELEMENT_GROUP_KEPT, ieg, kept, ddum, length,
+            VERSION_NORMAL, PUT );
+        }
+      }
+      else if ( pass==1 )
+        mpc_element_group_index( ieg, start_index, count, max_element,
+          max_node, dof_label, dof_principal );
+    }
+    if ( pass==0 ) {
+      // the regenerated range starts after the kept records
+      start_index += count;
+      count = 0;
+    }
   }
 
   stored[0] = fingerprint; stored[1] = start_index; stored[2] = count;

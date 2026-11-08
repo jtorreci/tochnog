@@ -395,6 +395,7 @@ page lists its own in "Differences with the Professional version".
 - [mpc_node_number](mpc_node_number.md) — mpc.cc::mpc_node_apply() called from bounda.cc: slave bounded + value = sum(factor*master) each iteration, no condensation/force transfer (verified vs Professional .dbs); mpc_apply/control_mpc_apply gates wired, mpc_geometry family PENDING.
 - [mpc_linear_quadratic](mpc_linear_quadratic.md) — tie generation for dangling quadratic nodes via point_el() (linear shape functions), mesh fingerprint record MPC_LINEAR_QUADRATIC_MESH_FINGERPRINT (external=0), regeneration on mesh change; verified byte-for-byte vs the Professional .dbs (mpc3/4/5). mpc5 blocked on the delete-factor family.
 - [mpc_element_group](mpc_element_group.md) — tie generation of group_0 nodes into group_1 elements via point_el() (shape-function factors), geometry/dof selectors, member-skip semantics, fingerprint record MPC_ELEMENT_GROUP_MESH_FINGERPRINT; mpc7 patch test 1.e-8, ground19 wall.
+- [mpc_element_group_options](mpc_element_group_options.md) — mpc.cc mpc_element_group_index() options, closest point search (mpc_closest_weights), keep range record MPC_ELEMENT_GROUP_KEPT, per-timestep regeneration by control_mpc_element_group (F5 T4 U6).
 
 ## Records *_sig del post_calcul -materi_stress -force
 

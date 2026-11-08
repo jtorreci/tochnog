@@ -2669,6 +2669,47 @@ elem_check mesh_correct2 "element 1 -quad4 1 2 3 4|element 2 -quad4 5 6 7 8|elem
 elem_check mesh_correct3 "element 1 -hex8 1 2 3 4 5 6 7 8|element 2 -hex8 9 10 11 12 13 14 15 16|element 3 -hex8 9 11 13 15 2 4 6 8|element_group 3 1"
 elem_check mesh_correct4 "element 1 -hex8 1 2 3 4 5 6 7 8|element 2 -hex8 9 10 11 12 13 14 15 16|element 3 -hex8 2 4 6 8 9 11 13 15|element_group 3 1"
 elem_check mesh_correct_off1 "element 1 -quad4 1 2 3 4|element 2 -quad4 5 6 7 8|element 3 -quad4 3 5 4 6|element_group 3 1"
+# F5 T4 U6: mpc_element_group options _always / _closest /
+# _coord_geometry / _eps_iso / _keep (manual 6.859-6.865) and
+# control_mpc_element_group (6.256). mpc_check <test> <records> [slaves]:
+# the .dbs mpc_node_number / mpc_node_factor records as "slave dof
+# master:factor ..." (zero factors dropped, %.6g, sorted by slave and dof,
+# joined by |) equal <records>; with "slaves" only the sorted list of tied
+# nodes is compared. Values = Professional 02-08-2026 except the manual
+# cases always2, coord_geometry3, keep1, control_mpc_element_group_no1
+# (DIVERGENCES MPC-ELEMENT-GROUP-*, CONTROL-MPC-ELEMENT-GROUP).
+mpc_check() {
+  local t="$1" want="$2" mode="${3:-records}" got
+  run_ok "$T2026" "$t"
+  if [ "$mode" = "slaves" ]; then
+    got="$(awk '$1=="mpc_node_number"{print $3}' "$T2026/$t.dbs" | sort -nu | paste -sd' ')"
+  else
+    got="$(LC_ALL=C awk '$1=="mpc_node_number"{n[$2]=$0} $1=="mpc_node_factor"{f[$2]=$0}
+      END{for(i in n){split(n[i],a," "); split(f[i],b," "); s=a[3]" "a[4]; k=3;
+        for(j=5;j<=length(a);j+=2){v=b[k++]; if(v=="")v=1;
+          if(v+0>1e-9||v+0<-1e-9) s=s" "a[j]":"sprintf("%.6g",v)}; print s}}' \
+      "$T2026/$t.dbs" | sort -n -k1,1 -k2,2 | paste -sd'|')"
+  fi
+  if [ "$got" = "$want" ]; then
+    check_ok "$t (mpc records)"
+  else
+    check_fail "$t" "mpc records '$got'"
+  fi
+}
+mpc_check mpc_element_group_base1 "5 -velx 3:1|5 -vely 3:1|6 -velx 3:0.5 4:0.5|6 -vely 3:0.5 4:0.5|7 -velx 4:1|7 -vely 4:1"
+mpc_check mpc_element_group_always1 "4 -velx 13:1|4 -vely 13:1|15 -velx 14:1|15 -vely 14:1"
+mpc_check mpc_element_group_always2 "15 -velx 14:1|15 -vely 14:1"
+mpc_check mpc_element_group_closest1 "5 -velx 3:1|5 -vely 3:1|6 -velx 3:0.5 4:0.5|6 -vely 3:0.5 4:0.5|7 -velx 4:1|7 -vely 4:1|8 -velx 3:1|8 -vely 3:1|9 -velx 3:0.5 4:0.5|9 -vely 3:0.5 4:0.5|10 -velx 4:1|10 -vely 4:1"
+mpc_check mpc_element_group_closest2 "11 -velx 2:1|13 -velx 4:1|15 -velx 6:1|17 -velx 8:1"
+mpc_check mpc_element_group_closest3 "5 -velx 3:1|5 -vely 3:1|6 -velx 3:0.727273 4:0.272727|6 -vely 3:0.727273 4:0.272727|7 -velx 4:1|7 -vely 4:1|8 -velx 3:1|8 -vely 3:1|9 -velx 3:0.769231 4:0.230769|9 -vely 3:0.769231 4:0.230769|10 -velx 4:1|10 -vely 4:1"
+mpc_check mpc_element_group_coord_geometry1 "6 -velx 3:0.666667 4:0.333333|6 -vely 3:0.666667 4:0.333333|7 -velx 4:1|7 -vely 4:1"
+mpc_check mpc_element_group_coord_geometry2 "15 -velx 6:1|17 -velx 8:1"
+mpc_check mpc_element_group_coord_geometry3 "5 -velx 3:1|5 -vely 3:1|6 -velx 3:0.666667 4:0.333333|6 -vely 3:0.666667 4:0.333333|7 -velx 4:1|7 -vely 4:1"
+mpc_check mpc_element_group_eps_iso1 "5 6 7" slaves
+mpc_check mpc_element_group_eps_iso2 "5 -velx 3:1|5 -vely 3:1|7 -velx 4:1|7 -vely 4:1"
+mpc_check mpc_element_group_keep1 "5 -velx 3:1|5 -vely 3:1|6 -velx 3:0.5 4:0.5|6 -vely 3:0.5 4:0.5|7 -velx 4:1|7 -vely 4:1"
+mpc_check control_mpc_element_group_yes1 "5 -velx 3:1|5 -vely 3:1|6 -velx 3:0.5 4:0.5|6 -vely 3:0.5 4:0.5|7 -velx 4:1|7 -vely 4:1"
+mpc_check control_mpc_element_group_no1 ""
 # F5 T2 V4b: element_intpnt_h / _iso_coord / _method / _npoint (manual
 # 6.438 / 6.439 / 6.442 / 6.443), Professional 02-08-2026 values.
 # intpnt_check <test> <element> <method> <npoint> <iso_coord> <h>: every

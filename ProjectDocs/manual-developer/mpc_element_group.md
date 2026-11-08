@@ -30,8 +30,8 @@ Generation (per `mpc_element_group` record):
    match, iso tolerance `MPC_EPS_ISO` 1.e-4). Master elements that
    already contain the node in their node list are skipped (the meshes
    are connected there; a tie would reduce to the node itself and
-   freeze its equation — the `mpc_element_group_always -no` semantics,
-   manual 6.861).
+   freeze its equation; the search goes on — the default
+   `mpc_element_group_always -yes`, see mpc_element_group_options.md).
 4. The shape-function weights of the master element at the node
    position become the master factors (`MPC_WEIGHT_ZERO` 1.e-6
    threshold, same as the mpc_linear_quadratic generator). One
@@ -65,8 +65,7 @@ Gates: `mpc_apply` (global, default -yes) and `control_mpc_apply`
 ## Pending
 
 - `mpc_element_group_always`, `_closest`, `_coord_geometry`, `_eps_iso`,
-  `_keep` and `control_mpc_element_group`: not implemented (the GNU
-  always uses the `-no`-like member-skip semantics and the default
-  eps_iso).
+  `_keep` and `control_mpc_element_group`: implemented in F5 T4 U6
+  (`mpc_element_group_index()`, see mpc_element_group_options.md).
 - `mpc_geometry` family (6.868-6.872) and `mpc_linear_quadratic` as
   before: the geometry family is registered but not consumed.

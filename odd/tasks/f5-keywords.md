@@ -165,8 +165,8 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
       control_mesh_duplicate_element_group, control_mesh_remove_geometry. control_mesh_remove_keep_geometry moved to U9
       (only meaningful with control_mesh_remove_really -no: the GNU deletes removed elements).
     - [x] U5d (ea220df) control_mesh_generate_truss_beam_separate, mesh_correct.
-  - [ ] U6 mpc_element_group options (6): control_mpc_element_group, mpc_element_group_{always,closest,
-    coord_geometry,keep,eps_iso}.
+  - [x] U6 (COMMIT_U6) mpc_element_group options (6): control_mpc_element_group, mpc_element_group_{always,closest,
+    coord_geometry,keep,eps_iso}. Route: delegated (bounded writer).
   - [ ] U7 unconsumed parents (9): control_mesh_truss_distribute_mpc_* (7), mpc_geometry_method/_tolerance
     (parents registered but never consumed: owner decision parse-only vs implement).
   - [ ] U8 geometry_moving family (7) + control_geometry_moving: new module.
@@ -665,3 +665,25 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   394ac2a (94 inputs with generate truss/beam or group_interface): identical except the new tests (base rc 1 = RED);
   foundation_consolidation_settlement times out in both. Suite 971/0, audit REVIEW 42. Risk: item 3 (generate_beam_truss
   shared; generate_truss_line1 pins the old path).
+- 2026-11-08 owner on U7 (verbatim): "implementamos la feature completa". U7 = implement control_mesh_truss_distribute_mpc
+  (6.245: truss nodes tied with mpc to the isoparametric elements they run through; _exact redistribution, its minimal
+  length / _connect, _dof, _element_group_truss / _isoparametric, _geometry_isoparametric) and mpc_geometry_method /
+  _tolerance. Pro examples: other/truss10-15, mpc2, earthquake_1-3. Starts after U6 (shared mpc.cc).
+- 2026-11-08 U6 (delegated writer): mpc.cc mpc_element_group_generate split into mpc_element_group_index (per index)
+  with _always -no (skip nodes of element_group_1 elements), _closest (Euclidean closest point for bar/quad/hex,
+  Professional clamped barycentrics for tria/tet), _coord_geometry (last coordinate >= lowest element_group_1 node),
+  _eps_iso (point_el tolerance, default 1.e-4 kept), _keep (records outside the regenerated range, internal record
+  mpc_element_group_kept) and control_mpc_element_group -yes (fingerprint xor TIME_CURRENT hash). No Professional
+  example uses the records; ~60 Pro 02-08-2026 probes: equal for always -yes, closest on rectangles / hex8 / tria3,
+  coord_geometry with the lowest node on the geometry (2D y, 3D z), eps_iso 1.e-3 / 1.e-4 tie sets, control -yes.
+  Pro contradicts the manual (GNU follows the manual, S2; class D rows MPC-ELEMENT-GROUP-ALWAYS / -COORD-GEOMETRY /
+  -EPS-ISO / -KEEP, CONTROL-MPC-ELEMENT-GROUP): ignores always -no and keep, coord_geometry only over element_group_1
+  nodes on the geometry (no effect without it), default eps ~1.e-3 and eps >= 1.e-2 ties nothing outside, re-creates
+  every timestep with control -no. Class C MPC-ELEMENT-GROUP-CLOSEST (distorted quad4 approximation, tet4 ignores
+  the fourth corner); C127 found (extrapolated factors / point_el corner misses for outside nodes within eps).
+  RED: the base binary rejects the 12 new-record tests (rc 1); base1 and control_mpc_element_group_no1 pin the old
+  behaviour. Differential vs the U5d binary, 35 inputs with mpc records: 29 SAME, 5 rc 1 in both, truss13 executable
+  path only. Suite 999/0, runs 226/226, audit REVIEW 42. Not edited (outside the surface): the older pages
+  manual-user/mpc_element_group.md:63 and manual-developer/mpc_element_group.md:33,65-70 still call the member skip
+  "always -no" and list the options as pending. Risk: item 3 (mpc_element_group_generate shared by every
+  mpc_element_group input; base1 and the differential pin the old path).

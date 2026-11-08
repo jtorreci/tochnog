@@ -8188,6 +8188,53 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   fixed_length[MPC_ELEMENT_GROUP_GEOMETRY] = 0;
   data_class[MPC_ELEMENT_GROUP_GEOMETRY] = CONTROL;
 
+  // mpc_element_group options (manual Professional 6.859-6.865, F5 T4
+  // U6): switches and tolerance per mpc_element_group index
+  strcpy(name[MPC_ELEMENT_GROUP_ALWAYS],"mpc_element_group_always");
+  type[MPC_ELEMENT_GROUP_ALWAYS] = INTEGER;
+  data_length[MPC_ELEMENT_GROUP_ALWAYS] = 1;
+  data_required[MPC_ELEMENT_GROUP_ALWAYS] = MPC_ELEMENT_GROUP;
+  data_class[MPC_ELEMENT_GROUP_ALWAYS] = CONTROL;
+
+  strcpy(name[MPC_ELEMENT_GROUP_CLOSEST],"mpc_element_group_closest");
+  type[MPC_ELEMENT_GROUP_CLOSEST] = INTEGER;
+  data_length[MPC_ELEMENT_GROUP_CLOSEST] = 1;
+  data_required[MPC_ELEMENT_GROUP_CLOSEST] = MPC_ELEMENT_GROUP;
+  data_class[MPC_ELEMENT_GROUP_CLOSEST] = CONTROL;
+
+  strcpy(name[MPC_ELEMENT_GROUP_COORD_GEOMETRY],
+    "mpc_element_group_coord_geometry");
+  type[MPC_ELEMENT_GROUP_COORD_GEOMETRY] = INTEGER;
+  data_length[MPC_ELEMENT_GROUP_COORD_GEOMETRY] = 1;
+  data_required[MPC_ELEMENT_GROUP_COORD_GEOMETRY] = MPC_ELEMENT_GROUP;
+  data_class[MPC_ELEMENT_GROUP_COORD_GEOMETRY] = CONTROL;
+
+  strcpy(name[MPC_ELEMENT_GROUP_EPS_ISO],"mpc_element_group_eps_iso");
+  type[MPC_ELEMENT_GROUP_EPS_ISO] = DOUBLE_PRECISION;
+  data_length[MPC_ELEMENT_GROUP_EPS_ISO] = 1;
+  data_required[MPC_ELEMENT_GROUP_EPS_ISO] = MPC_ELEMENT_GROUP;
+  data_class[MPC_ELEMENT_GROUP_EPS_ISO] = CONTROL;
+
+  strcpy(name[MPC_ELEMENT_GROUP_KEEP],"mpc_element_group_keep");
+  type[MPC_ELEMENT_GROUP_KEEP] = INTEGER;
+  data_length[MPC_ELEMENT_GROUP_KEEP] = 1;
+  data_required[MPC_ELEMENT_GROUP_KEEP] = MPC_ELEMENT_GROUP;
+  data_class[MPC_ELEMENT_GROUP_KEEP] = CONTROL;
+
+  // internal: index range [start count] of the mpc_node_number records
+  // kept for an mpc_element_group index with mpc_element_group_keep -yes
+  strcpy(name[MPC_ELEMENT_GROUP_KEPT],"mpc_element_group_kept");
+  type[MPC_ELEMENT_GROUP_KEPT] = INTEGER;
+  data_length[MPC_ELEMENT_GROUP_KEPT] = 2;
+  fixed_length[MPC_ELEMENT_GROUP_KEPT] = 2;
+  external[MPC_ELEMENT_GROUP_KEPT] = 0;
+  data_class[MPC_ELEMENT_GROUP_KEPT] = CONTROL;
+
+  strcpy(name[CONTROL_MPC_ELEMENT_GROUP],"control_mpc_element_group");
+  type[CONTROL_MPC_ELEMENT_GROUP] = INTEGER;
+  data_length[CONTROL_MPC_ELEMENT_GROUP] = 1;
+  data_class[CONTROL_MPC_ELEMENT_GROUP] = CONTROL;
+
   strcpy(name[MPC_APPLY],"mpc_apply");
   type[MPC_APPLY] = INTEGER;
   data_length[MPC_APPLY] = 1;
