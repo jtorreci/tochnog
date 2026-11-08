@@ -80,11 +80,16 @@ tria3 refined with `-nothing`:
 - Element size for `_minimal_size`: largest distance between any two nodes
   (`NODE` coordinates), compared with `<`.
 
+## Differences with the Professional version
+
+- C123 (owner decision 2026-11-08, class D): `delete_geom` (delete.cc)
+  keeps the filled default of 6.166 when
+  `control_mesh_delete_geometry_projection_type` is absent; the manual 6.173
+  default `-project_exact` and the Professional (edge only) are not followed
+  (DIVERGENCES DELETE-PROJECTION-TYPE).
+
 ## Pending
 
-- Default of `control_mesh_delete_geometry_projection_type` (6.166 vs
-  6.173 / Professional): owner decision C123 (DIVERGENCES
-  DELETE-PROJECTION-TYPE).
 - `element_delete_factor` is not printed by the GNU (`external = 0`), the
   Professional prints it: C124.
 - `-average` ignores the node-only filters and `geometry_node_type` of the

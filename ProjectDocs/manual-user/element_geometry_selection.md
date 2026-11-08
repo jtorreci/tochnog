@@ -81,8 +81,10 @@ Tests (validation-suite/test-2026): `geometry_method1`-`5`,
   `control_mesh_delete_geometry_projection_type`. The manual 6.173 gives
   `-project_exact` as the default, and the Professional 02-08-2026 always
   tests the circle edge only, ignoring the record and
-  `geometry_projection_type` (DIVERGENCES DELETE-PROJECTION-TYPE; the
-  default is an open owner decision, BACKLOG C123).
+  `geometry_projection_type` (DIVERGENCES DELETE-PROJECTION-TYPE). The GNU
+  keeps the filled 6.166 default by owner decision (2026-11-08, BACKLOG
+  C123): deleting only the elements on the edge would leave disconnected
+  regions.
 - Invalid method / switch values are input errors in the GNU; the
   Professional ignores them, runs a refine `-average` as `-any`, and stops
   with an assertion for `geometry_method -only` (DIVERGENCES

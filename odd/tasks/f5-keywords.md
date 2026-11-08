@@ -613,3 +613,6 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
 - 2026-11-08 owner on C122 (verbatim): "yo creo que mantenemos GNU, es fácilmente documentable y reproducible, y no
   nos ha dado fallos. De todas formas, documéntalos". Recorded: DIVERGENCES DEPENDENCY-TIME moved B -> D (B 55, D 21),
   SEGUIMIENTO Descarte row, user/developer dependency_item Differences, BACKLOG C122 decided (59 open). Next: C123.
+- 2026-11-08 owner on C123 (verbatim): "supongo que lo correcto es el círculo relleno. Sería muy raro y bizarro eliminar
+  un borde. Generaría superficies no conexas". Recorded: DIVERGENCES DELETE-PROJECTION-TYPE decided (class D), SEGUIMIENTO
+  Descarte, element_geometry_selection user/developer Differences, BACKLOG C123 decided (58 open). Code unchanged.
