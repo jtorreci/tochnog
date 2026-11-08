@@ -170,7 +170,8 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   - [x] U7 (663cbcb) control_mesh_truss_distribute_mpc family (10 records, 6.245-6.254) and mpc_geometry
     _method/_tolerance with the parents mpc_geometry/_switch/_dof (6.866-6.870). Owner: implement the full feature.
     Route: delegated (bounded writer).
-  - [ ] U8 geometry_moving family (7) + control_geometry_moving: new module.
+  - [x] U8 (COMMIT_U8) geometry_moving family (6) + control_geometry_moving: new module geometry_moving.cc.
+    Route: delegated (bounded writer).
   - [ ] U9 owner decisions: control_mesh_map, control_mesh_remove_really(+_activate_all/_factor, _keep_geometry),
     control_mesh_extrude_element (needs prism12/prism18), control_mesh_convert_quad9_quad6 (needs a quad6
     continuum element).
@@ -711,3 +712,19 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   and mpc2, executable path / time_at_start only otherwise. Suite 1052/0, runs 226/226, audit REVIEW 42. Risk: item 3
   (mpc_element_group_index now writes through mpc_tie_put; mpc_node_apply also generates mpc_geometry; the
   _element_group_truss record became a list; the suite and the differential pin the existing paths).
+- 2026-11-08 U8 (delegated writer, S1-S4): new module geometry_moving.cc; control_geometry_moving -initialise (once at its
+  control index, step_start) samples nspace^d points per element (manual 6.538; isoparametric cell midpoints, Duffy for
+  simplices, nodes for other elements) against the entity with geometry() at ntime+1 moments (points moved back over the
+  translation, scratch geometry record); records element_geometry_moving / _part / _in_time / _out_time (Pro names);
+  geometry_moving_apply every step_start: delete factor ramps 1 -> 1-part between in_time[0] and [1] (Pro measured),
+  0 deletes the element and its unused nodes; ELEMENT_RHSIDE_DELETE allocated before the parallel loop. Pro probes
+  (other/geometry_moving1 with processors_maximum -no, ~40 runs): time conventions and ramp reproduced; Pro tests the NODES
+  and ignores nspace -> class D GEOMETRY-MOVING-SAMPLING (manual followed), GEOMETRY-MOVING-PARAMETERS (Pro quad lengths),
+  GEOMETRY-MOVING-THREADS (Pro abort), class C GEOMETRY-MOVING-CONTROL-VALUE; no owner decision recorded. Tests:
+  geometry_moving_band1/_band2/_simplex1/_hex1/_ramp1/_ramp2/_error1-5 (analytic), geometry_moving1 Pro copy (not in the suite:
+  35 min, GNU sigyy -0.3489 vs Pro target -0.3268 +- 0.02, rc 1; bicg breakdown, BACKLOG C130). RED: base rejects
+  geometry_moving in all 11 tests. Differential vs HEAD (45 inputs with change_geometry / change_dataitem /
+  control_mesh_delete_geometry, validation-suite + Pro test/): 35 SAME, 3 SAME-NODBS (rc 1 both), 4 DIFF-OUT executable path
+  only, 3 rc 124 in both (timeout 300: slope_nonlocal_refine, foundation_consolidation_settlement, dam_building; output
+  length only). Suite 1068/0, runs 226/226, audit REVIEW 42. Risk: item 3 (step_start calls the new hooks for every input;
+  they return at once without the records, the differential pins it).

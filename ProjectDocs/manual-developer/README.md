@@ -398,6 +398,7 @@ page lists its own in "Differences with the Professional version".
 - [mpc_element_group_options](mpc_element_group_options.md) — mpc.cc mpc_element_group_index() options, closest point search (mpc_closest_weights), keep range record MPC_ELEMENT_GROUP_KEPT, per-timestep regeneration by control_mpc_element_group (F5 T4 U6).
 - [mpc_geometry_options](mpc_geometry_options.md) — mpc.cc mpc_geometry_generate() (methods 0/1/2, fingerprint record MPC_GEOMETRY_MESH_FINGERPRINT, mpc_from_geometry marker), shared writer mpc_tie_put() (F5 T4 U7).
 - [control_mesh_truss_distribute_mpc](control_mesh_truss_distribute_mpc.md) — mpc.cc mesh_truss_distribute_mpc(): Cyrus-Beck truss/element clipping (td_clip), _exact pieces, minimal length / connect, air ties, create_node/create_element, called once from step_start (F5 T4 U7).
+- [geometry_moving](geometry_moving.md) — new module geometry_moving.cc: sample points per element tested with geometry() at the ntime moments, element_geometry_moving* records, delete-factor ramp in step_start (F5 T4 U8).
 
 ## Records *_sig del post_calcul -materi_stress -force
 

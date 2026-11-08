@@ -1,0 +1,64 @@
+(
+F5 T4 U8: geometry_moving {manual Professional 6.533-6.538, 6.135} with a -geometry_quadrilateral that moves down into the top element of the delete3 setup {two quad9, initial sigyy 1}.
+The quadrilateral covers x 0..2, y 5.2..6.0 at time 0 and translates with velocity 0 -1 until time 1: it sweeps y 4.2..6.0, so 0.8 of the height 2 of the top element, a part 0.4.
+geometry_moving_n 8 5: 5 x 5 sample points per element at the isoparametric cell midpoints {y = 3.2 3.6 4.0 4.4 4.8}; the points 4.4 and 4.8 enter, part 2/5 = 0.4 = the analytic volume fraction.
+Entry times: the point y 4.8 is first inside at the sample time 0.5, 4.4 at 0.875; the in time is the sample before {0.375 and 0.75}.
+The delete factor ramps from 1 at 0.375 to 1 - 0.4 = 0.6 at 0.75, so the bottom element stress settles at 0.6 {delete3 semantics of element_delete_factor}.
+The Professional 02-08-2026 tests the element nodes instead of the sample points {3 of the 9 top element nodes, part 1/3, stress 0.667}: class D divergence GEOMETRY-MOVING-SAMPLING.
+)
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_displacement
+materi_stress
+end_initia
+
+node  1  0 1
+node  2  0 2
+node  3  0 3
+node  4  0 4
+node  5  0 5
+node 11  1 1
+node 12  1 2
+node 13  1 3
+node 14  1 4
+node 15  1 5
+node 21  2 1
+node 22  2 2
+node 23  2 3
+node 24  2 4
+node 25  2 5
+element 1  -quad9 1 11 21 2 12 22 3 13 23
+element 2  -quad9 3 13 23 4 14 24 5 15 25
+
+geometry_line 1  0. 1. 2. 1.  1.e-4
+geometry_line 2  0. 5. 2. 5.  1.e-4
+
+group_type 0  -materi
+group_materi_elasti_young 0  100.0
+group_materi_memory 0  -total_linear
+
+bounda_dof 1  -geometry_line 1 -velx -vely
+bounda_dof 2  -geometry_line 2 -velx -vely
+bounda_dof 3  -all -velx
+
+geometry_moving 1 -geometry_quadrilateral
+geometry_moving_parameter 1  0. 5.2  2. 5.2  0. 6.  2. 6.
+geometry_moving_operat 1 -translate
+geometry_moving_operat_parameter 1  0. -1.
+geometry_moving_operat_time 1  0. 1.
+geometry_moving_n 1  8 5
+
+post_point 1 0.5 2.
+
+control_reset_dof                    5  -sigyy
+control_reset_value_constant         5  1.
+
+control_geometry_moving              6  -initialise
+
+control_timestep                    10  0.2 1.
+control_timestep_iterations         10  5
+
+target_item    0  -post_point_dof 1 -sigyy
+target_value   0  0.6 1.e-4
+end_data

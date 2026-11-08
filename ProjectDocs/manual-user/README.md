@@ -403,6 +403,7 @@ page lists its own in "Differences with the Professional version".
 - [mpc_element_group_options](mpc_element_group_options.md) — mpc_element_group_always / _closest / _coord_geometry / _eps_iso / _keep and control_mpc_element_group (6.256, 6.859-6.865, F5 T4 U6).
 - [mpc_geometry_options](mpc_geometry_options.md) — mpc_geometry with _method (-method0/1/2), _switch, _tolerance and _dof: tie the dofs of nodes in geometries (6.866-6.870, F5 T4 U7).
 - [control_mesh_truss_distribute_mpc](control_mesh_truss_distribute_mpc.md) — tie truss nodes with mpc's to the isoparametric elements they run through; _exact split, _air, _dof, truss / isoparametric group and geometry selections, minimal length (6.245-6.254, F5 T4 U7).
+- [geometry_moving](geometry_moving.md) — moving excavation: a point / triangle / quadrilateral / hexahedral / tetrahedral entity translates through the mesh and excavates the elements it passes, partly or completely (geometry_moving family 6.533-6.538, control_geometry_moving -initialise 6.135, F5 T4 U8).
 
 ## Records *_sig del post_calcul -materi_stress -force
 

@@ -1,0 +1,38 @@
+(
+F5 T4 U8: geometry_moving excavates elements completely: they are deleted, with the nodes no element uses any more.
+The 2 x 2 quad4 mesh of geometry_moving_band1; a -geometry_point of radius 0.3 sweeps y -0.05..0.55 from time 0 to 2.
+Every sample point of the bottom elements enters: part 1, the delete factor reaches 0 and the elements 1 and 2 are deleted, also the nodes 1 2 3 on y 0.
+The top elements: only the row y 0.525 of the 10 x 10 points enters, part 0.1, delete factor 0.9 at the end.
+)
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_displacement
+materi_stress
+end_initia
+node 1 0. 0.
+node 2 0.5 0.
+node 3 1. 0.
+node 4 0. 0.5
+node 5 0.5 0.5
+node 6 1. 0.5
+node 7 0. 1.
+node 8 0.5 1.
+node 9 1. 1.
+element 1 -quad4 1 2 4 5
+element 2 -quad4 2 3 5 6
+element 3 -quad4 4 5 7 8
+element 4 -quad4 5 6 8 9
+group_type 0 -materi
+group_materi_elasti_young 0 1.e4
+group_materi_memory 0 -total_linear
+bounda_dof 0 -all -velx -vely
+geometry_moving 10 -geometry_point
+geometry_moving_parameter 10 -0.5 0.25 0.3
+geometry_moving_operat 10 -translate
+geometry_moving_operat_parameter 10 1. 0.
+geometry_moving_operat_time 10 0. 2.
+geometry_moving_n 10 20 10
+control_geometry_moving 5 -initialise
+control_timestep 10 0.5 2.
+end_data

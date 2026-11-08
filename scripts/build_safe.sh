@@ -2764,6 +2764,58 @@ for t in truss_distribute_mpc_error1 truss_distribute_mpc_error2 \
     truss_distribute_mpc_error3 mpc_geometry_error1 mpc_geometry_error2; do
   expected_error_ok "$T2026" "$t"
 done
+# F5 T4 U8: geometry_moving family (manual 6.533-6.538) and
+# control_geometry_moving (6.135). gm_check <test> <records> [mesh]: the
+# element_geometry_moving* records ("name element values", %g, .dbs
+# order) equal <records>; with [mesh] also the element and node lines
+# ("element N name nodes|...|node N x y|..."). gm_near <test> <element>
+# <part> <tol> <in_time>: the part within tol of the analytic volume
+# fraction and the in_time pair (%g). The analytic parts come from the
+# manual sample points (the Professional tests the nodes: DIVERGENCES
+# GEOMETRY-MOVING-SAMPLING). ramp1/ramp2: delete3 stresses 0.6 / 0.76
+# (targets). geometry_moving1 (the Professional example, 2000 steps) is
+# not run here: it takes more than 10 minutes.
+gm_check() {
+  local t="$1" want="$2" want_mesh="$3" got got_mesh
+  run_ok "$T2026" "$t"
+  got="$(awk '$1~/^element_geometry_moving/{s=$1" "$2; for(i=3;i<=NF;i++) s=s" "sprintf("%g",$i); print s}' "$T2026/$t.dbs" | paste -sd'|')"
+  got_mesh="$(awk '$1=="element"{$1=$1; print} $1=="node"{s="node "$2; for(i=3;i<=NF;i++) s=s" "sprintf("%g",$i); print s}' "$T2026/$t.dbs" | paste -sd'|')"
+  if [ "$got" = "$want" ] && { [ -z "$want_mesh" ] || [ "$got_mesh" = "$want_mesh" ]; }; then
+    check_ok "$t (geometry_moving records)"
+  else
+    check_fail "$t" "records '$got' mesh '$got_mesh'"
+  fi
+}
+gm_near() {
+  local t="$1" el="$2" part="$3" tol="$4" want_in="$5" ok
+  ok="$(LC_ALL=C awk -v e="$el" -v p="$part" -v tol="$tol" -v w="$want_in" '
+    $1=="element_geometry_moving_part" && $2==e { d=$3-p; if (d<0) d=-d; if (d<=tol) okp=1 }
+    $1=="element_geometry_moving_in_time" && $2==e { if (sprintf("%g %g",$3,$4)==w) oki=1 }
+    END { print (okp && oki) ? "yes" : "no" }' "$T2026/$t.dbs")"
+  if [ "$ok" = "yes" ]; then
+    check_ok "$t element $el (part within $tol of $part, in_time $want_in)"
+  else
+    check_fail "$t" "element $el: part not within $tol of $part or in_time not '$want_in'"
+  fi
+}
+GM_MESH4="element 1 -quad4 1 2 4 5|element 2 -quad4 2 3 5 6|element 3 -quad4 4 5 7 8|element 4 -quad4 5 6 8 9"
+gm_check geometry_moving_band1 \
+  "element_geometry_moving 1 10|element_geometry_moving 2 10|element_geometry_moving_part 1 0.4|element_geometry_moving_part 2 0.4|element_geometry_moving_in_time 1 0.4 0.9|element_geometry_moving_in_time 2 0.9 1.4|element_geometry_moving_out_time 1 0.5 1|element_geometry_moving_out_time 2 1 1.5" \
+  "$GM_MESH4|node 1 0 0|node 2 0.5 0|node 3 1 0|node 4 0 0.5|node 5 0.5 0.5|node 6 1 0.5|node 7 0 1|node 8 0.5 1|node 9 1 1"
+gm_check geometry_moving_band2 \
+  "element_geometry_moving 3 10|element_geometry_moving 4 10|element_geometry_moving_part 3 0.1|element_geometry_moving_part 4 0.1|element_geometry_moving_in_time 3 0.4 0.8|element_geometry_moving_in_time 4 0.9 1.3|element_geometry_moving_out_time 3 0.6 1|element_geometry_moving_out_time 4 1.1 1.5" \
+  "element 3 -quad4 4 5 7 8|element 4 -quad4 5 6 8 9|node 4 0 0.5|node 5 0.5 0.5|node 6 1 0.5|node 7 0 1|node 8 0.5 1|node 9 1 1"
+run_ok "$T2026" geometry_moving_simplex1
+gm_near geometry_moving_simplex1 1 0.75 1.e-3 "0 0"
+run_ok "$T2026" geometry_moving_hex1
+gm_near geometry_moving_hex1 1 0.5 1.e-9 "0.5 0.75"
+gm_near geometry_moving_hex1 2 0.875 2.e-3 "0.25 0.75"
+run_ok "$T2026" geometry_moving_ramp1
+run_ok "$T2026" geometry_moving_ramp2
+for t in geometry_moving_error1 geometry_moving_error2 geometry_moving_error3 \
+    geometry_moving_error4 geometry_moving_error5; do
+  expected_error_ok "$T2026" "$t"
+done
 # F5 T2 V4b: element_intpnt_h / _iso_coord / _method / _npoint (manual
 # 6.438 / 6.439 / 6.442 / 6.443), Professional 02-08-2026 values.
 # intpnt_check <test> <element> <method> <npoint> <iso_coord> <h>: every

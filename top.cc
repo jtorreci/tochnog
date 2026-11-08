@@ -1296,6 +1296,13 @@ void step_start( long int task, long int options_solver[], double dtime, double 
 
   db_delete( NODE_REMESH_VELOCITY, VERSION_NORMAL );
 
+  // geometry_moving (manual Professional 6.533-6.538): the element
+  // excavation times are determined once at the control index of
+  // control_geometry_moving -initialise (6.135); every step then sets the
+  // delete factor of the excavated elements for the current time
+  geometry_moving_initialise( first_of_control );
+  geometry_moving_apply( time_current );
+
   delete_geom( time_current ); 
 
   mesh_cut( time_current );

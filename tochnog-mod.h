@@ -1869,6 +1869,22 @@ enum {
   GROUP_MATERI_HISTORY_VARIABLE_USER,
   GROUP_MATERI_HISTORY_VARIABLE_USER_PARAMETERS,
   GROUP_MATERI_UMAT_PARDISO_DECOMPOSE,
+  // F5 T4 U8 (manual Professional 6.135, 6.533-6.538): moving
+  // excavation entities (geometry_moving.cc), their element records and
+  // the words -initialise / -translate
+  CONTROL_GEOMETRY_MOVING,
+  GEOMETRY_MOVING,
+  GEOMETRY_MOVING_PARAMETER,
+  GEOMETRY_MOVING_OPERAT,
+  GEOMETRY_MOVING_OPERAT_PARAMETER,
+  GEOMETRY_MOVING_OPERAT_TIME,
+  GEOMETRY_MOVING_N,
+  ELEMENT_GEOMETRY_MOVING,
+  ELEMENT_GEOMETRY_MOVING_PART,
+  ELEMENT_GEOMETRY_MOVING_IN_TIME,
+  ELEMENT_GEOMETRY_MOVING_OUT_TIME,
+  INITIALISE,
+  TRANSLATE,
   XY,
   XZ,
   YZ,
@@ -2201,6 +2217,8 @@ void      db_set_dbl( long int idat, long int version );
 long int  db_type( long int idat );
 void      delete_element( long int element, long int version );
 void      delete_geom( double time_current );
+void      geometry_moving_initialise( long int first_of_control );
+void      geometry_moving_apply( double time_current );
 void      mesh_cut( double time_current );
 void      delete_node( long int inod, long int version );
 void      distribute( void );

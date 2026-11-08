@@ -354,7 +354,7 @@ tochnog: adjust.$(OBJ) area.$(OBJ) \
 	dof.$(OBJ) elasti.$(OBJ) elem.$(OBJ) \
 	error.$(OBJ) extrude.$(OBJ) failure.$(OBJ) \
 	filter.$(OBJ) force.$(OBJ) general.$(OBJ) \
-	geometry.$(OBJ) generate.$(OBJ) \
+	geometry.$(OBJ) geometry_moving.$(OBJ) generate.$(OBJ) \
 	groundda.$(OBJ) groundfl.$(OBJ) group.$(OBJ) \
         hyperela.$(OBJ) $(HYPO_OBJ) $(MASIN_OBJ) $(MASIN_BASIC_OBJ) $(MASIN_VISCO_OBJ) $(SANISAND_OBJ) $(SQLITE_OBJ) \
 	hypoplas.$(OBJ) initia.$(OBJ) \
@@ -461,6 +461,9 @@ error.$(OBJ): error.$(SRC_CPP) tochnog.h
 
 extrude.$(OBJ): extrude.$(SRC_CPP) tochnog.h
 	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)extrude.$(SRC_CPP)
+
+geometry_moving.$(OBJ): geometry_moving.$(SRC_CPP) tochnog.h
+	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)geometry_moving.$(SRC_CPP)
 
 failure.$(OBJ): failure.$(SRC_CPP) tochnog.h
 	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)failure.$(SRC_CPP)

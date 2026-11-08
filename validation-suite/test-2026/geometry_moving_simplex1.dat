@@ -1,0 +1,26 @@
+(
+F5 T4 U8: geometry_moving sample points of a tria3 {collapsed square cell midpoints, weight 1 - v}.
+The triangle 0,0 1,0 0,1 and a -geometry_quadrilateral x -1..0.5, y -1..2 that does not move {velocity 0 0}: the analytic part is the area with x below 0.5, 1 - 0.25 = 0.75.
+geometry_moving_n 1 40: 1600 points, part 0.7495625 {within 1.e-3 of 0.75}; inside at the first time moment: in time 0 0.
+)
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_displacement
+materi_stress
+end_initia
+node 1 0. 0.
+node 2 1. 0.
+node 3 0. 1.
+element 1 -tria3 1 2 3
+group_type 0 -materi
+group_materi_elasti_young 0 1.e4
+group_materi_memory 0 -total_linear
+geometry_moving 3 -geometry_quadrilateral
+geometry_moving_parameter 3 -1. -1. 0.5 -1. -1. 2. 0.5 2.
+geometry_moving_operat 3 -translate
+geometry_moving_operat_parameter 3 0. 0.
+geometry_moving_operat_time 3 0. 1.
+geometry_moving_n 3 1 40
+control_geometry_moving 5 -initialise
+end_data

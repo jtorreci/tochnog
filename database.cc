@@ -5044,6 +5044,91 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   data_class[GROUP_MATERI_UMAT_PARDISO_DECOMPOSE] = MATERI;
   data_required[GROUP_MATERI_UMAT_PARDISO_DECOMPOSE] = GROUP_TYPE;
 
+  // F5 T4 U8: geometry_moving family (manual Professional 6.533-6.538)
+  // and control_geometry_moving (6.135). A geometrical entity translates
+  // through the mesh between start_time and end_time and excavates the
+  // elements it passes (geometry_moving.cc). The entity record holds
+  // one of -geometry_point / _triangle / _quadrilateral / _hexahedral /
+  // _tetrahedral; _parameter the vertices (plus the radius of a point:
+  // at most 8 vertices in 3D); _operat -translate; _operat_parameter the
+  // velocity (ndim values); _operat_time start and end time; _n ntime and
+  // nspace (default 100 5).
+  strcpy(name[GEOMETRY_MOVING],"geometry_moving");
+  type[GEOMETRY_MOVING] = INTEGER;
+  data_length[GEOMETRY_MOVING] = 1;
+  data_class[GEOMETRY_MOVING] = CONTROL;
+
+  strcpy(name[GEOMETRY_MOVING_PARAMETER],"geometry_moving_parameter");
+  type[GEOMETRY_MOVING_PARAMETER] = DOUBLE_PRECISION;
+  data_length[GEOMETRY_MOVING_PARAMETER] = 8*MDIM+1;
+  fixed_length[GEOMETRY_MOVING_PARAMETER] = 0;
+  data_class[GEOMETRY_MOVING_PARAMETER] = CONTROL;
+  data_required[GEOMETRY_MOVING_PARAMETER] = GEOMETRY_MOVING;
+
+  strcpy(name[GEOMETRY_MOVING_OPERAT],"geometry_moving_operat");
+  type[GEOMETRY_MOVING_OPERAT] = INTEGER;
+  data_length[GEOMETRY_MOVING_OPERAT] = 1;
+  data_class[GEOMETRY_MOVING_OPERAT] = CONTROL;
+  data_required[GEOMETRY_MOVING_OPERAT] = GEOMETRY_MOVING;
+
+  strcpy(name[GEOMETRY_MOVING_OPERAT_PARAMETER],
+    "geometry_moving_operat_parameter");
+  type[GEOMETRY_MOVING_OPERAT_PARAMETER] = DOUBLE_PRECISION;
+  data_length[GEOMETRY_MOVING_OPERAT_PARAMETER] = MDIM;
+  fixed_length[GEOMETRY_MOVING_OPERAT_PARAMETER] = 0;
+  data_class[GEOMETRY_MOVING_OPERAT_PARAMETER] = CONTROL;
+  data_required[GEOMETRY_MOVING_OPERAT_PARAMETER] = GEOMETRY_MOVING;
+
+  strcpy(name[GEOMETRY_MOVING_OPERAT_TIME],"geometry_moving_operat_time");
+  type[GEOMETRY_MOVING_OPERAT_TIME] = DOUBLE_PRECISION;
+  data_length[GEOMETRY_MOVING_OPERAT_TIME] = 2;
+  data_class[GEOMETRY_MOVING_OPERAT_TIME] = CONTROL;
+  data_required[GEOMETRY_MOVING_OPERAT_TIME] = GEOMETRY_MOVING;
+
+  strcpy(name[GEOMETRY_MOVING_N],"geometry_moving_n");
+  type[GEOMETRY_MOVING_N] = INTEGER;
+  data_length[GEOMETRY_MOVING_N] = 2;
+  data_class[GEOMETRY_MOVING_N] = CONTROL;
+  data_required[GEOMETRY_MOVING_N] = GEOMETRY_MOVING;
+
+  strcpy(name[CONTROL_GEOMETRY_MOVING],"control_geometry_moving");
+  type[CONTROL_GEOMETRY_MOVING] = INTEGER;
+  data_length[CONTROL_GEOMETRY_MOVING] = 1;
+  data_class[CONTROL_GEOMETRY_MOVING] = CONTROL;
+
+  // per-element result of control_geometry_moving -initialise (the
+  // Professional 02-08-2026 prints the same four records): the
+  // geometry_moving index, the excavated part, the first and last time
+  // a sample point enters and the first and last time one leaves.
+  strcpy(name[ELEMENT_GEOMETRY_MOVING],"element_geometry_moving");
+  type[ELEMENT_GEOMETRY_MOVING] = INTEGER;
+  data_length[ELEMENT_GEOMETRY_MOVING] = 1;
+  data_class[ELEMENT_GEOMETRY_MOVING] = ELEMENT;
+  data_required[ELEMENT_GEOMETRY_MOVING] = ELEMENT;
+
+  strcpy(name[ELEMENT_GEOMETRY_MOVING_PART],"element_geometry_moving_part");
+  type[ELEMENT_GEOMETRY_MOVING_PART] = DOUBLE_PRECISION;
+  data_length[ELEMENT_GEOMETRY_MOVING_PART] = 1;
+  data_class[ELEMENT_GEOMETRY_MOVING_PART] = ELEMENT;
+  data_required[ELEMENT_GEOMETRY_MOVING_PART] = ELEMENT;
+
+  strcpy(name[ELEMENT_GEOMETRY_MOVING_IN_TIME],
+    "element_geometry_moving_in_time");
+  type[ELEMENT_GEOMETRY_MOVING_IN_TIME] = DOUBLE_PRECISION;
+  data_length[ELEMENT_GEOMETRY_MOVING_IN_TIME] = 2;
+  data_class[ELEMENT_GEOMETRY_MOVING_IN_TIME] = ELEMENT;
+  data_required[ELEMENT_GEOMETRY_MOVING_IN_TIME] = ELEMENT;
+
+  strcpy(name[ELEMENT_GEOMETRY_MOVING_OUT_TIME],
+    "element_geometry_moving_out_time");
+  type[ELEMENT_GEOMETRY_MOVING_OUT_TIME] = DOUBLE_PRECISION;
+  data_length[ELEMENT_GEOMETRY_MOVING_OUT_TIME] = 2;
+  data_class[ELEMENT_GEOMETRY_MOVING_OUT_TIME] = ELEMENT;
+  data_required[ELEMENT_GEOMETRY_MOVING_OUT_TIME] = ELEMENT;
+
+  strcpy(name[INITIALISE],"initialise");
+  strcpy(name[TRANSLATE],"translate");
+
   strcpy(name[XY],"xy");
   strcpy(name[XZ],"xz");
   strcpy(name[YZ],"yz");

@@ -93,7 +93,7 @@ OFILES= adjust.o area.o \
 	dof.o elasti.o elem.o \
 	error.o extrude.o failure.o \
 	filter.o force.o general.o \
-	geometry.o generate.o \
+	geometry.o geometry_moving.o generate.o \
 	groundda.o groundfl.o group.o \
         hyperela.o $(HYPO_OBJ) \
 	hypoplas.o initia.o \

@@ -1,0 +1,26 @@
+(
+F5 T4 U8 expected error: -translate needs one velocity per space direction {manual 6.536}; the Professional 02-08-2026 asks for as many values as geometry_moving_parameter for a quadrilateral, the GNU follows the manual.
+EXPECTED_ERROR: one velocity per space direction
+)
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_displacement
+materi_stress
+end_initia
+node 1 0. 0.
+node 2 1. 0.
+node 3 0. 1.
+node 4 1. 1.
+element 1 -quad4 1 2 3 4
+group_type 0 -materi
+group_materi_elasti_young 0 1.e4
+group_materi_memory 0 -total_linear
+geometry_moving 1 -geometry_point
+geometry_moving_parameter 1 0.5 0.5 0.1
+geometry_moving_operat 1 -translate
+geometry_moving_operat_parameter 1 1. 0. 0.
+geometry_moving_operat_time 1 0. 1.
+geometry_moving_n 1 4 4
+control_geometry_moving 5 -initialise
+end_data
