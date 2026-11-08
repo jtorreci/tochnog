@@ -165,7 +165,7 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
       control_mesh_duplicate_element_group, control_mesh_remove_geometry. control_mesh_remove_keep_geometry moved to U9
       (only meaningful with control_mesh_remove_really -no: the GNU deletes removed elements).
     - [x] U5d (ea220df) control_mesh_generate_truss_beam_separate, mesh_correct.
-  - [x] U6 (COMMIT_U6) mpc_element_group options (6): control_mpc_element_group, mpc_element_group_{always,closest,
+  - [x] U6 (5db4dd0) mpc_element_group options (6): control_mpc_element_group, mpc_element_group_{always,closest,
     coord_geometry,keep,eps_iso}. Route: delegated (bounded writer).
   - [ ] U7 unconsumed parents (9): control_mesh_truss_distribute_mpc_* (7), mpc_geometry_method/_tolerance
     (parents registered but never consumed: owner decision parse-only vs implement).
