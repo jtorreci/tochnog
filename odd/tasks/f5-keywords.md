@@ -152,7 +152,7 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   - [x] U4 delete/refine flags (7): geometry_method, control_mesh_delete_geometry_{direct,method,projection_type},
     control_mesh_refine_locally_{minimal_size,not_method,only_method}. Route: delegated (context backstop).
     Commit bbbc741. C123 (projection default, owner) and C124 found.
-  - [ ] U5 mesh operations (15 names; the "16" counted control_mesh_extrude_element, which is U9). Map: explorer
+  - [x] U5 mesh operations (15 names; the "16" counted control_mesh_extrude_element, which is U9). Map: explorer
     L-T4-U5-map. Sub-units, all inline (shared database.cc / headers / top.cc / build_safe, so no disjoint
     parallel surfaces):
     - [x] U5a extrude (d040c57): control_mesh_extrude layer convention fixed to manual 6.179 (z0..zn layers, each split by
@@ -164,7 +164,7 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
     - [x] U5c (394ac2a) control_mesh_renumber_element_geometry_offset / _group_offset,
       control_mesh_duplicate_element_group, control_mesh_remove_geometry. control_mesh_remove_keep_geometry moved to U9
       (only meaningful with control_mesh_remove_really -no: the GNU deletes removed elements).
-    - [x] U5d (COMMIT_U5D) control_mesh_generate_truss_beam_separate, mesh_correct.
+    - [x] U5d (ea220df) control_mesh_generate_truss_beam_separate, mesh_correct.
   - [ ] U6 mpc_element_group options (6): control_mpc_element_group, mpc_element_group_{always,closest,
     coord_geometry,keep,eps_iso}.
   - [ ] U7 unconsumed parents (9): control_mesh_truss_distribute_mpc_* (7), mpc_geometry_method/_tolerance
