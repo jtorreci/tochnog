@@ -145,7 +145,7 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
     mesh_interface_triangle_coordinates. Route: inline. Commit 87436f7.
   - [x] U2 geometry entity options (12): geometry_{line,quadrilateral}_eps_iso, geometry_boundary, geometry_mpc,
     geometry_exclude, geometry_element_geometry(_method), geometry_circle_part, geometry_cylinder_part(_start_vector),
-    geometry_tetrahedral, geometry_hexahedral. Route: inline (one file family, no writer reason). Commit COMMIT_U2.
+    geometry_tetrahedral, geometry_hexahedral. Route: inline (one file family, no writer reason). Commit 073d4f3.
     geometry_method moved to U4 (element selections).
   - [x] U3 dependency modifiers (4): dependency_{method,type,number,geometry} (+ element group -all of the manual example;
     print_group_data through get_group_data). Route: inline (no writer reason). Commit 3b66fc9. C122 found (owner).

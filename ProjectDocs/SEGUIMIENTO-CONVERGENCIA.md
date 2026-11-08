@@ -55,7 +55,7 @@ suite sfnet, o un test propio. El registro completo:
 | **F5 T3 E2 — group_materi_plasti_diprisco_density (6.696): di Prisco data interpolated loose/dense with the current void ratio (owner 2026-11-07: manual over Professional)** | `6059c82` | 2026-11-07 | Professional 02-08-2026 probes on diprisc1 shortened to t 0.004 (`materi_plasti_diprisco_history 12`, `-dipriscohis11` reset): the Professional uses the loose set only (any e, el 100, swapped sets give the plain first set) and requires el > ed. GNU: w = (el - e)/(el - ed) clamped, e = history variable 12, e_new = e + (1 + e) tr(d_eps). Tests `group_materi_plasti_diprisco_density1` (e 0.75 = plain model with averaged data, sigxx -24.2191214), `2` (e 0.9 = loose), `3` (e 0.5 clamped = dense), `4` (oedometer, e = 1.75 (1 - 1.e-5)^400 - 1 exact), `_error1` (Professional message), `_error2`. The plain model differs from the Professional by about 0.2 % on this rig (BACKLOG C119, pre-existing). DIVERGENCES DIPRISCO-DENSITY (class D). |
 | **F5 T3 E3 — group_materi_plasti_hypo_niemunis_visco / _ocr (6.720, 6.721) + control_materi_plasti_hypo_niemunis_visco_ocr_apply (6.148): Niemunis visco-hypoplasticity with intergranular strains** | `8f45881` | 2026-11-07 | Manual theory + Niemunis 2003 habilitation section 4.2 (flow rule sign from eq. 4.73, pe+ with betaR eq. 4.117-4.118). Professional test other/hypo6 (relaxation, target sigxx -0.083): GNU -0.0836179, Professional -0.0836218; 20 Professional probes (anisotropic relaxation, betaR 0.5 / 1.5, phi 25, nu 0.3, Dr 10, Iv 0.1, oedometric compression / extension with intergranular strain, OCR at index 20 / 30) within 5e-5 relative; independent Python implementation equal to 1e-8; initial void ratio from OCR analytic (1.364104005 = Professional). Professional facts: requires materi_strain_intergranular, OCR applied once in the first timestep of the index, b2 < 0 accepted. Tests `group_materi_plasti_hypo_niemunis_visco1`-`4`, `_ocr1`-`_ocr3`, `_error1`, `_error2`. DIVERGENCES NIEMUNIS-VISCO-B2 (class D, owner 2026-11-07), C120-NIEMUNIS-VISCO-HYHIS3 (class B). |
 | **F5 T4 U1 — 2026 names control_mesh_delete_geometry_element_group (6.169), geometry_triangle_eps_iso (6.551), mesh_interface_triangle_coordinates (6.854) as db_number aliases** | `87436f7` | 2026-11-08 | Professional 02-08-2026 accepts `alias_names_2026_3` with the first two names and stores the same values; it rejects the manual plural `mesh_interface_triangle_coordinates` (only the singular, DIVERGENCES INTERFACE-TRIANGLE-PLURAL). Test `alias_names_2026_3`. |
-| **F5 T4 U2 — geometry_circle_part, _cylinder_part(_start_vector), _tetrahedral, _hexahedral and the options geometry_boundary, _mpc, _exclude, _element_geometry(_method), _line_eps_iso, _quadrilateral_eps_iso (6.509-6.549)** | `COMMIT_U2` | 2026-11-08 | Professional 02-08-2026 probes with `print_node_geometry_present` on a 3x3 quad4 and a 2x2x2 hex8 mesh: every option and entity agrees, except the start plane of the cylinder part (DIVERGENCES CYLINDER-PART-START-PLANE, class D) and two input checks (GEOMETRY-INPUT-CHECKS, class C); the start-vector range message is the Professional one. Tests `geometry_eps_iso1`, `geometry_boundary1`, `geometry_exclude1`, `geometry_exclude_error1`, `geometry_element_geometry1`, `geometry_circle_part1`, `geometry_mpc1`, `geometry_tetrahedral1`, `geometry_hexahedral1`, `geometry_cylinder_part1`, `geometry_cylinder_part_error1`, `_error2`. |
+| **F5 T4 U2 — geometry_circle_part, _cylinder_part(_start_vector), _tetrahedral, _hexahedral and the options geometry_boundary, _mpc, _exclude, _element_geometry(_method), _line_eps_iso, _quadrilateral_eps_iso (6.509-6.549)** | `073d4f3` | 2026-11-08 | Professional 02-08-2026 probes with `print_node_geometry_present` on a 3x3 quad4 and a 2x2x2 hex8 mesh: every option and entity agrees, except the start plane of the cylinder part (DIVERGENCES CYLINDER-PART-START-PLANE, class D) and two input checks (GEOMETRY-INPUT-CHECKS, class C); the start-vector range message is the Professional one. Tests `geometry_eps_iso1`, `geometry_boundary1`, `geometry_exclude1`, `geometry_exclude_error1`, `geometry_element_geometry1`, `geometry_circle_part1`, `geometry_mpc1`, `geometry_tetrahedral1`, `geometry_hexahedral1`, `geometry_cylinder_part1`, `geometry_cylinder_part_error1`, `_error2`. |
 | **F5 T4 U3 — dependency_geometry / _method / _number / _type (6.404-6.408) + dependency_item element_group -all; print_group_data through get_group_data** | `3b66fc9` | 2026-11-08 | Professional 02-08-2026 probes on a two-element square (mohr_coul in radians): -all, -multiply, number, -tangent/-sinus/-cosinus, one-row broadcast, row per value, geometry (all nodes inside) and the errors agree when evaluated at the same time; tests use diagrams constant after t = 1 and give the Professional values. `-time_current` evaluation time and total-linear increments: BACKLOG C122 (owner). Tests `dependency_method1`, `_2`, `dependency_type1`-`3`, `dependency_number1`, `_2`, `dependency_geometry1`, `dependency_number_error1`, `dependency_diagram_error1`, `dependency_type_error1`. |
 | **F5 T2 V9 — post data / point records (6.923-6.926, 6.937, 6.946, 6.952, 6.954, 6.957, 6.959, 6.963, 6.966)** | a1c7d7d | 2026-11-04 | Professional 02-08-2026 probes (v9pro, v9t) on a 3-element quad4 mesh with two groups: post_count_result 3 8 1, post_data_result 6, post_node_result x3, post_group_volume_summed 2 1, post_strain_volume_initial 1, post_point element group found/not found, post_quadrilateral group 0.0880956: equal. Divergences: post_point_eps_iso and post_point_node_type -node have no effect in the Professional (GNU follows the manual, DIVERGENCES POST-POINT-SEARCH, BACKLOG C111); post_node_rhside_* measures (BACKLOG C110). Tests `post_count_data1`, `post_data_factor_error1`, `post_point_search1`, `post_point_node_type1`, `post_node_rhside_ratio_method1`. Old binary: "I do not know" (probe r9). |
 | **F5 T2 V8 — post_calcul modifiers (6.902-6.905, 6.916, 6.917, 6.920)** | 42dac7d | 2026-11-04 | Professional 02-08-2026 probes (v8pro): multiply and limit are per dof/operat item (extra values ignored, a short record rejected), order multiply → limit → absolute (negative factor and limit-above-value probes). Tests `post_calcul_modify1/2` (node_dof_calcul = Professional, with the -prival order of K12), `_error1/2`, `post_calcul_apparent_total1` (ground17: 1.333333e7 / 1/3 = Pro), `post_calcul_safety_default1` and `post_calcul_static_pressure1` (ground14 nodes 1 and 41 = Pro). post_calcul_label written in the .dbs with the GNU names (DIVERGENCES POST-CALCUL-LABEL-NAMES). Old binary: "Error in data part" on all 7 inputs. |
@@ -1320,7 +1320,7 @@ fallan TODOS en el PARSE del layout, no del nombre:
 
 ### geometry_boundary (0/1)
 
-- [x] `geometry_boundary` — F5 T4 U2, COMMIT_U2, 2026-11-08
+- [x] `geometry_boundary` — F5 T4 U2, 073d4f3, 2026-11-08
 
 ### geometry_brick (1/1)
 
@@ -1329,20 +1329,20 @@ fallan TODOS en el PARSE del layout, no del nombre:
 ### geometry_circle (2/3)
 
 - [x] `geometry_circle` — presente en el GNU
-- [x] `geometry_circle_part` — F5 T4 U2, COMMIT_U2, 2026-11-08
+- [x] `geometry_circle_part` — F5 T4 U2, 073d4f3, 2026-11-08
 - [x] `geometry_circle_segment` — presente en el GNU
 
 ### geometry_cylinder (2/4)
 
 - [x] `geometry_cylinder` — presente en el GNU
-- [x] `geometry_cylinder_part` — F5 T4 U2, COMMIT_U2, 2026-11-08
-- [x] `geometry_cylinder_part_start_vector` — F5 T4 U2, COMMIT_U2, 2026-11-08
+- [x] `geometry_cylinder_part` — F5 T4 U2, 073d4f3, 2026-11-08
+- [x] `geometry_cylinder_part_start_vector` — F5 T4 U2, 073d4f3, 2026-11-08
 - [x] `geometry_cylinder_segment` — presente en el GNU
 
 ### geometry_element (0/4)
 
-- [x] `geometry_element_geometry` — F5 T4 U2, COMMIT_U2, 2026-11-08
-- [x] `geometry_element_geometry_method` — F5 T4 U2, COMMIT_U2, 2026-11-08
+- [x] `geometry_element_geometry` — F5 T4 U2, 073d4f3, 2026-11-08
+- [x] `geometry_element_geometry_method` — F5 T4 U2, 073d4f3, 2026-11-08
 - [x] `geometry_element_group` — KEYWORDS BATCH C (2026-09-04): filtro de geometria por grupos de elementos dentro de geometry(); merge2/force12 rc=0; nota empirica Pro (excluye nodos con elementos fuera de la lista en todo metodo)
 - [x] `geometry_element_group_method` — KEYWORDS BATCH C (2026-09-04): -all/-any/-only; default = regla "solo grupos listados" (medida contra Pro)
 
@@ -1352,7 +1352,7 @@ fallan TODOS en el PARSE del layout, no del nombre:
 
 ### geometry_exclude (0/1)
 
-- [x] `geometry_exclude` — F5 T4 U2, COMMIT_U2, 2026-11-08
+- [x] `geometry_exclude` — F5 T4 U2, 073d4f3, 2026-11-08
 
 ### geometry_factor (1/1)
 
@@ -1360,12 +1360,12 @@ fallan TODOS en el PARSE del layout, no del nombre:
 
 ### geometry_hexahedral (0/1)
 
-- [x] `geometry_hexahedral` — F5 T4 U2, COMMIT_U2, 2026-11-08
+- [x] `geometry_hexahedral` — F5 T4 U2, 073d4f3, 2026-11-08
 
 ### geometry_line (1/2)
 
 - [x] `geometry_line` — presente en el GNU
-- [x] `geometry_line_eps_iso` — F5 T4 U2, COMMIT_U2, 2026-11-08
+- [x] `geometry_line_eps_iso` — F5 T4 U2, 073d4f3, 2026-11-08
 
 ### geometry_list (1/1)
 
@@ -1397,7 +1397,7 @@ geometría-elemento; feature de malla grande, fuera de alcance de sprint
 
 ### geometry_mpc (0/1)
 
-- [x] `geometry_mpc` — F5 T4 U2, COMMIT_U2, 2026-11-08
+- [x] `geometry_mpc` — F5 T4 U2, 073d4f3, 2026-11-08
 
 ### geometry_node (0/1)
 
@@ -1418,7 +1418,7 @@ geometría-elemento; feature de malla grande, fuera de alcance de sprint
 ### geometry_quadrilateral (1/2)
 
 - [x] `geometry_quadrilateral` — presente en el GNU
-- [x] `geometry_quadrilateral_eps_iso` — F5 T4 U2, COMMIT_U2, 2026-11-08
+- [x] `geometry_quadrilateral_eps_iso` — F5 T4 U2, 073d4f3, 2026-11-08
 
 ### geometry_set (1/1)
 
@@ -1431,7 +1431,7 @@ geometría-elemento; feature de malla grande, fuera de alcance de sprint
 
 ### geometry_tetrahedral (0/1)
 
-- [x] `geometry_tetrahedral` — F5 T4 U2, COMMIT_U2, 2026-11-08
+- [x] `geometry_tetrahedral` — F5 T4 U2, 073d4f3, 2026-11-08
 
 ### geometry_triangle (1/2)
 
