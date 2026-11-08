@@ -73,6 +73,8 @@ Tests (validation-suite/test-2026): `dependency_method1`, `_method2`,
   `-total_linear` the Professional also sums the stress increments of the
   steps, each with the E of its step (two steps of 1 on a diagram
   1000 -> 300 by t = 1: GNU sigxx 6 = E(2) eps, Professional 9.5). BACKLOG
-  C122, DIVERGENCES DEPENDENCY-TIME.
+  C122, DIVERGENCES DEPENDENCY-TIME. Deliberate divergence (owner decision
+  2026-11-08): the GNU keeps the end of the step, which gives the analytic
+  total-linear stress E(t) eps.
 - A `-sinus` / `-cosinus` value outside [-1, 1] is an input error in the GNU;
   the Professional stops with a NaN error (DIVERGENCES DEPENDENCY-TYPE-RANGE).

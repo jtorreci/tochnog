@@ -148,7 +148,7 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
     geometry_tetrahedral, geometry_hexahedral. Route: inline (one file family, no writer reason). Commit 073d4f3.
     geometry_method moved to U4 (element selections).
   - [x] U3 dependency modifiers (4): dependency_{method,type,number,geometry} (+ element group -all of the manual example;
-    print_group_data through get_group_data). Route: inline (no writer reason). Commit 3b66fc9. C122 found (owner).
+    print_group_data through get_group_data). Route: inline (no writer reason). Commit 3b66fc9. C122 found; decided 2026-11-08 class D, GNU kept.
   - [x] U4 delete/refine flags (7): geometry_method, control_mesh_delete_geometry_{direct,method,projection_type},
     control_mesh_refine_locally_{minimal_size,not_method,only_method}. Route: delegated (context backstop).
     Commit bbbc741. C123 (projection default, owner) and C124 found.
@@ -610,3 +610,6 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   in both (change_dataitem_time_until_data), so its _direct example is not reachable.
 - 2026-11-08 U3 long differential (1800 s): examp24 identical .dbs; foundation_consolidation_settlement times out in
   both binaries (one diagram row, one value: unchanged code path by inspection); left to the end-of-T4 verifier (omen).
+- 2026-11-08 owner on C122 (verbatim): "yo creo que mantenemos GNU, es fácilmente documentable y reproducible, y no
+  nos ha dado fallos. De todas formas, documéntalos". Recorded: DIVERGENCES DEPENDENCY-TIME moved B -> D (B 55, D 21),
+  SEGUIMIENTO Descarte row, user/developer dependency_item Differences, BACKLOG C122 decided (59 open). Next: C123.

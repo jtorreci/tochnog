@@ -38,11 +38,15 @@ value, geometry_point radii 0.3 / 0.45 / 0.75 (only the element with all
 nodes inside), errors for number beyond the record and a 2-row diagram on a
 3-value record.
 
+## Differences with the Professional version
+
+- C122 (owner decision 2026-11-08, class D): the Professional evaluates
+  `-time_current` at the middle of the step and integrates `-total_linear`
+  incrementally; the GNU keeps the end of the step (`time_current + dtime`
+  in `get_group_data`, analytic `E(t) eps`). DIVERGENCES DEPENDENCY-TIME.
+
 ## Pending
 
-- C122: the Professional evaluates `-time_current` at the middle of the step
-  and integrates `-total_linear` incrementally; the GNU keeps the end of the
-  step (analytic `E(t) eps`).
 - `print_group_data` uses the element node average of the unknowns for dof
   dependencies (the Professional reports the last integration point).
 - Space-coordinate dofs `-x/-y/-z` of `dependency_item` (manual 6.406) are
