@@ -728,3 +728,5 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   only, 3 rc 124 in both (timeout 300: slope_nonlocal_refine, foundation_consolidation_settlement, dam_building; output
   length only). Suite 1068/0, runs 226/226, audit REVIEW 42. Risk: item 3 (step_start calls the new hooks for every input;
   they return at once without the records, the differential pins it).
+- 2026-11-09 owner confirms the four U7 class D rows (TRUSS-DISTRIBUTE-AIR-DEFAULT / -AIR-NO / -AIR-EXIT /
+  -ISO-SELECTION: GNU follows the manual), verbatim: "si". Recorded in DIVERGENCES and the SEGUIMIENTO Descarte row.
