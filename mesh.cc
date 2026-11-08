@@ -849,198 +849,340 @@ void mesh_convert_hex20( void )
   if ( swit ) pri( "Out function MESH_CONVERT_HEX20" );
 }
 
-void mesh_extrude( double z_layer[], long int n_layer, long int quad9_layers )
+// mesh_extrude (manual Professional 6.179-6.185): extrude the 2D mesh of
+// control_mesh_extrude index z0 z1 ... to 3D.
+//
+// Layers (6.179, 6.185): the interval z(i)..z(i+1) is split in n(i)
+// element layers (control_mesh_extrude_n, default 1; the last n value is a
+// dummy). The 2D nodes become the plane z0 (their extrusion coordinate is
+// set to z0); plane p of node inod is node p*nnod+inod, element layer l of
+// element e is element l*nelem+e (nnod / nelem the highest node / element
+// number, plus 1 when number 0 is used), as in the Professional 02-08-2026
+// (other/extrude1: 9 nodes x 16 planes, 4 elements x 15 layers). With a
+// -quad9 in the mesh every layer also has a mid plane (plane 2l+1), used
+// only by the -hex27 elements.
+// Elements (Professional node order, other/extrude1, extrude2):
+//   -bar2 a b -> -quad4 a b a' b'; -tria3 a b c -> -prism6 a b c a' b' c';
+//   -quad4 a b c d -> -hex8 a b a' b' c d c' d' (the 2D eta direction is
+//   the hex8 zeta direction, so an interface quad4 keeps its two sides);
+//   -quad9 -> -hex27 base / mid / top planes in the quad9 order.
+// control_mesh_extrude_direction -y (6.180) extrudes along global y; the
+// 2D y coordinate becomes z (Professional 02-08-2026: the 2D mesh stays in
+// the x-y plane of the input).
+// control_mesh_extrude_element_group_new (6.184): old groups, then for
+// each old group one new group per interval z(i)..z(i+1); a negative new
+// group drops the elements. Nodes left without an element are deleted.
+// control_mesh_extrude_contact_spring_element_group(_new) (6.182-6.183):
+// one -contact_spring2 between each node of the plane z0 and its copy on
+// the last plane, numbered after the extruded elements.
+// History: before F5 T4 U5a the linear branches kept the 2D nodes at z=0
+// as an extra bottom layer, ignored control_mesh_extrude_n and kept the
+// source -bar2.
+
+void mesh_extrude( long int icontrol )
 
 {
-  // extrude a 2D mesh (z=0) to 3D along the z-axis.
-  // z_layer[] gives the z-coordinate of each layer boundary;
-  // one 3D element is generated per 2D element per layer.
-  // -tria3 -> -prism6, -quad4 -> -hex8, -quad9 -> -hex27
-  // (quad9_layers: the number of hex27 layers from
-  // control_mesh_extrude_n, splitting the z_layer extent evenly).
-  long int inod=0, max_node=0, ielem=0, max_elem=0, inol=0, nnol=0,
-    length=0, layer=0, len3=3, idum[1], el[1+MNOL], nodes[MNOL],
-    new_nodes[1+MNOL];
-  double ddum[1], coords[MDIM];
+  long int i=0, inod=0, max_node=0, ielem=0, max_elem=0, inol=0, nnol=0,
+    length=0, ldum=0, len3=3, axis=2, nz=0, nn=0, n_int=0, nl=0, ppl=1,
+    np=0, nnod=0, nelem=0, has_quad9=0, ng=0, nold=0, ns_old=0, ns_new=0,
+    dir=0, idum[1], el[1+MNOL], nodes[MNOL], new_nodes[1+MNOL],
+    *n_sub=NULL, *lay_int=NULL, *attached=NULL, *used=NULL, *gtab=NULL,
+    *s_old=NULL, *s_new=NULL, *sgroup=NULL;
+  double ddum[1], coords[MDIM], *zv=NULL, *zp=NULL;
 
-  if ( n_layer<1 ) return;
+  if ( !db_active_index( CONTROL_MESH_EXTRUDE, icontrol, VERSION_NORMAL ) )
+    return;
+  zv = get_new_dbl( DATA_ITEM_SIZE );
+  db( CONTROL_MESH_EXTRUDE, icontrol, idum, zv, nz, VERSION_NORMAL, GET );
+  if ( nz==1 ) {
+    // GNU extension (documented GNU usage before F5 T4 U5a): one value
+    // extrudes from the 2D plane z 0 to it; the Professional 02-08-2026
+    // ignores the record (DIVERGENCES EXTRUDE-INPUT-CHECKS)
+    zv[1] = zv[0]; zv[0] = 0.; nz = 2;
+  }
+  n_int = nz - 1;
+  n_sub = get_new_int( DATA_ITEM_SIZE );
+  for ( i=0; i<n_int; i++ ) n_sub[i] = 1;
+  if ( db_active_index( CONTROL_MESH_EXTRUDE_N, icontrol, VERSION_NORMAL ) ) {
+    db( CONTROL_MESH_EXTRUDE_N, icontrol, n_sub, ddum, nn, VERSION_NORMAL,
+      GET );
+    if ( nn<n_int ) {
+      pri( "Error: control_mesh_extrude_n needs a value for each interval "
+           "of control_mesh_extrude." );
+      exit_tn_on_error();
+    }
+    for ( i=0; i<n_int; i++ ) {
+      if ( n_sub[i]<1 ) {
+        pri( "Error: the values of control_mesh_extrude_n must be at least 1." );
+        exit_tn_on_error();
+      }
+    }
+  }
+  if ( db_active_index( CONTROL_MESH_EXTRUDE_DIRECTION, icontrol,
+       VERSION_NORMAL ) ) {
+    db( CONTROL_MESH_EXTRUDE_DIRECTION, icontrol, &dir, ddum, ldum,
+      VERSION_NORMAL, GET );
+    if ( dir==-Y ) axis = 1;
+    else if ( dir==-Z ) axis = 2;
+    else {
+      pri( "Error: control_mesh_extrude_direction must be -y or -z." );
+      exit_tn_on_error();
+    }
+  }
 
-  // map from a 2D node index to its extruded copies: base index scheme
-  // node_copy(inod, layer) = max_node+1 + layer*(max_node+1) + inod
-  long int nbase = max_node + 1;
+  db_highest_index( NODE, max_node, VERSION_NORMAL );
+  db_highest_index( ELEMENT, max_elem, VERSION_NORMAL );
+  if ( max_node<0 || max_elem<0 ) {
+    delete[] zv; delete[] n_sub;
+    return;
+  }
+  nelem = max_elem + ( db_active_index( ELEMENT, 0, VERSION_NORMAL ) ? 1 : 0 );
 
-  db_max_index( NODE, max_node, VERSION_NORMAL, GET );
-  db_max_index( ELEMENT, max_elem, VERSION_NORMAL, GET );
-  if ( max_node<0 || max_elem<0 ) return;
-  nbase = max_node + 1;
+  // the element layers and the interval of each one
+  for ( i=0; i<n_int; i++ ) nl += n_sub[i];
+  lay_int = get_new_int( nl );
+  long int l = 0;
+  for ( i=0; i<n_int; i++ ) {
+    for ( long int k=0; k<n_sub[i]; k++ ) lay_int[l++] = i;
+  }
+  attached = get_new_int( max_node+1 );
+  array_set( attached, 0, max_node+1 );
+  for ( ielem=0; ielem<=max_elem; ielem++ ) {
+    if ( !db_active_index( ELEMENT, ielem, VERSION_NORMAL ) ) continue;
+    db( ELEMENT, ielem, el, ddum, length, VERSION_NORMAL, GET );
+    nnol = length - 1;
+    if ( ( el[0]==-BAR2 && nnol==2 ) || ( el[0]==-TRIA3 && nnol==3 ) ||
+         ( el[0]==-QUAD4 && nnol==4 ) || ( el[0]==-QUAD9 && nnol==9 ) ) {
+      if ( el[0]==-QUAD9 ) has_quad9 = 1;
+      for ( inol=0; inol<nnol; inol++ ) attached[el[1+inol]] = 1;
+    }
+  }
+  ppl = has_quad9 ? 2 : 1;
+  // nnod / nelem: the highest node / element, plus 1 when number 0 is
+  // used (db_max_index gives the allocated range, which can be larger)
+  nnod = max_node + ( db_active_index( NODE, 0, VERSION_NORMAL ) ? 1 : 0 );
+  np = nl*ppl + 1;
+  zp = get_new_dbl( np );
+  l = 0;
+  for ( i=0; i<n_int; i++ ) {
+    for ( long int k=0; k<n_sub[i]*ppl; k++ )
+      zp[l++] = zv[i] + k*(zv[i+1]-zv[i])/(n_sub[i]*ppl);
+  }
+  zp[np-1] = zv[nz-1];
 
-  // create extruded node copies for each layer boundary
-  for ( layer=0; layer<n_layer; layer++ ) {
-    for ( inod=0; inod<=max_node; inod++ ) {
-      if ( db_active_index( NODE, inod, VERSION_NORMAL ) ) {
-        long int new_node = nbase + layer*nbase + inod;
-        db( NODE, inod, idum, coords, ndim, VERSION_NORMAL, GET );
-        coords[2] = z_layer[layer];
-        db( NODE, new_node, idum, coords, len3, VERSION_NORMAL, PUT );
-        // copy all other node-class data items from the source node
+  // control_mesh_extrude_element_group_new
+  if ( db_active_index( CONTROL_MESH_EXTRUDE_ELEMENT_GROUP_NEW, icontrol,
+       VERSION_NORMAL ) ) {
+    gtab = get_new_int( DATA_ITEM_SIZE );
+    db( CONTROL_MESH_EXTRUDE_ELEMENT_GROUP_NEW, icontrol, gtab, ddum, ng,
+      VERSION_NORMAL, GET );
+    if ( ng%(1+n_int)!=0 ) {
+      pri( "Error: control_mesh_extrude_element_group_new needs the old "
+           "groups and one new group per old group and interval of "
+           "control_mesh_extrude." );
+      exit_tn_on_error();
+    }
+    nold = ng/(1+n_int);
+  }
+  // control_mesh_extrude_contact_spring_element_group(_new)
+  if ( db_active_index( CONTROL_MESH_EXTRUDE_CONTACTSPRING_ELEMENT_GROUP_NEW,
+       icontrol, VERSION_NORMAL ) ) {
+    s_new = get_new_int( DATA_ITEM_SIZE );
+    db( CONTROL_MESH_EXTRUDE_CONTACTSPRING_ELEMENT_GROUP_NEW, icontrol,
+      s_new, ddum, ns_new, VERSION_NORMAL, GET );
+    if ( db_active_index( CONTROL_MESH_EXTRUDE_CONTACTSPRING_ELEMENT_GROUP,
+         icontrol, VERSION_NORMAL ) ) {
+      s_old = get_new_int( DATA_ITEM_SIZE );
+      db( CONTROL_MESH_EXTRUDE_CONTACTSPRING_ELEMENT_GROUP, icontrol,
+        s_old, ddum, ns_old, VERSION_NORMAL, GET );
+    }
+    if ( ns_new>1 && ns_old!=ns_new ) {
+      pri( "Error: control_mesh_extrude_contact_spring_element_group_new "
+           "needs one new group per group of "
+           "control_mesh_extrude_contact_spring_element_group (or one new "
+           "group for all springs)." );
+      exit_tn_on_error();
+    }
+  }
+
+  // the group of the contact spring of each node: the new group of the
+  // first listed old group attached to the node, computed before the
+  // elements change (one new group: every node of the extruded elements)
+  if ( s_new!=NULL ) {
+    sgroup = get_new_int( max_node+1 );
+    for ( inod=0; inod<=max_node; inod++ )
+      sgroup[inod] = ( attached[inod] && ns_new==1 ) ? 0 : -1;
+    if ( ns_new>1 ) {
+      for ( ielem=0; ielem<=max_elem; ielem++ ) {
+        if ( !db_active_index( ELEMENT, ielem, VERSION_NORMAL ) ) continue;
+        db( ELEMENT, ielem, el, ddum, length, VERSION_NORMAL, GET );
+        nnol = length - 1;
+        if ( !( ( el[0]==-BAR2 && nnol==2 ) || ( el[0]==-TRIA3 && nnol==3 ) ||
+             ( el[0]==-QUAD4 && nnol==4 ) || ( el[0]==-QUAD9 && nnol==9 ) ) )
+          continue;
+        long int eg = 0, k = -1;
+        db( ELEMENT_GROUP, ielem, &eg, ddum, ldum, VERSION_NORMAL,
+          GET_IF_EXISTS );
+        if ( !array_member( s_old, eg, ns_old, k ) ) continue;
+        for ( inol=0; inol<nnol; inol++ ) {
+          inod = el[1+inol];
+          if ( sgroup[inod]<0 || k<sgroup[inod] ) sgroup[inod] = k;
+        }
+      }
+    }
+  }
+
+  // the planes: plane 0 is the 2D node itself, the others are new nodes
+  for ( inod=0; inod<=max_node; inod++ ) {
+    if ( !attached[inod] || !db_active_index( NODE, inod, VERSION_NORMAL ) )
+      continue;
+    for ( long int p=np-1; p>=0; p-- ) {
+      long int new_node = p*nnod + inod;
+      if ( p>0 ) {
         for ( int idat=0; idat<MDAT; idat++ ) {
-          if ( idat!=NODE && db_data_class(idat)==NODE &&
+          if ( db_data_class(idat)==NODE &&
                db_active_index( idat, inod, VERSION_NORMAL ) ) {
             long int ndata_len = db_len( idat, inod, VERSION_NORMAL );
             mesh_copy_node_item( idat, inod, new_node, ndata_len );
           }
         }
-        // the extruded coordinate also applies to node_start_refined
-        if ( db_active_index( NODE_START_REFINED, inod, VERSION_NORMAL ) ) {
-          db( NODE_START_REFINED, inod, idum, coords, ndim, VERSION_NORMAL, GET );
-          coords[2] = z_layer[layer];
-          db( NODE_START_REFINED, new_node, idum, coords, len3, VERSION_NORMAL, PUT );
-        }
+      }
+      db( NODE, new_node, idum, coords, ldum, VERSION_NORMAL, GET );
+      for ( i=ldum; i<3; i++ ) coords[i] = 0.;
+      if ( axis==1 ) coords[2] = coords[1];
+      coords[axis] = zp[p];
+      db( NODE, new_node, idum, coords, len3, VERSION_NORMAL, PUT );
+      // the plane coordinate also applies to node_start_refined
+      // (point_el and the geometry selections read it, BACKLOG C57)
+      if ( db_active_index( NODE_START_REFINED, new_node, VERSION_NORMAL ) ) {
+        db( NODE_START_REFINED, new_node, idum, coords, ldum,
+          VERSION_NORMAL, GET );
+        for ( i=ldum; i<3; i++ ) coords[i] = 0.;
+        if ( axis==1 ) coords[2] = coords[1];
+        coords[axis] = zp[p];
+        db( NODE_START_REFINED, new_node, idum, coords, len3,
+          VERSION_NORMAL, PUT );
       }
     }
   }
 
-  // create 3D elements: one per 2D element per layer
-  long int new_elem = max_elem;
-  long int next_node = nbase + n_layer*nbase; // after all boundary copies
-  long int last_top = 0; // the top node block of the previous quad9 layer
+  // the elements; layer 0 keeps the 2D element number and is written last,
+  // so the other layers copy the element data of the 2D element
+  long int nspring = 0, max_new = 0;
   for ( ielem=0; ielem<=max_elem; ielem++ ) {
-    if ( db_active_index( ELEMENT, ielem, VERSION_NORMAL ) ) {
-      db( ELEMENT, ielem, el, ddum, length, VERSION_NORMAL, GET );
-      nnol = length - 1;
-      for ( inol=0; inol<nnol; inol++ ) nodes[inol] = el[1+inol];
-      if ( el[0]==-TRIA3 && nnol==3 ) {
-        for ( layer=0; layer<n_layer; layer++ ) {
-          new_elem++;
-          new_nodes[0] = -PRISM6;
-          new_nodes[1] = nodes[0]+layer*nbase;
-          new_nodes[2] = nodes[1]+layer*nbase;
-          new_nodes[3] = nodes[2]+layer*nbase;
-          new_nodes[4] = nodes[0]+(layer+1)*nbase;
-          new_nodes[5] = nodes[1]+(layer+1)*nbase;
-          new_nodes[6] = nodes[2]+(layer+1)*nbase;
-          create_element( ielem, new_elem, new_nodes, 7, VERSION_NORMAL,
-            VERSION_NORMAL );
+    if ( !db_active_index( ELEMENT, ielem, VERSION_NORMAL ) ) continue;
+    db( ELEMENT, ielem, el, ddum, length, VERSION_NORMAL, GET );
+    nnol = length - 1;
+    long int name = el[0];
+    if ( !( ( name==-BAR2 && nnol==2 ) || ( name==-TRIA3 && nnol==3 ) ||
+            ( name==-QUAD4 && nnol==4 ) || ( name==-QUAD9 && nnol==9 ) ) )
+      continue;
+    for ( inol=0; inol<nnol; inol++ ) nodes[inol] = el[1+inol];
+    long int eg = 0, iold = -1;
+    if ( gtab!=NULL ) {
+      db( ELEMENT_GROUP, ielem, &eg, ddum, ldum, VERSION_NORMAL,
+        GET_IF_EXISTS );
+      if ( !array_member( gtab, eg, nold, iold ) ) iold = -1;
+    }
+    long int drop_first = 0;
+    for ( l=nl-1; l>=0; l-- ) {
+      long int new_elem = l*nelem + ielem, group_new = 0, len_new = 0;
+      long int b = l*ppl*nnod, t = (l+1)*ppl*nnod, m = (l*ppl+1)*nnod;
+      if ( iold>=0 ) {
+        group_new = gtab[nold + iold*n_int + lay_int[l]];
+        if ( group_new<0 ) {
+          if ( l==0 ) drop_first = 1;
+          continue;
         }
       }
-      else if ( el[0]==-BAR2 && nnol==2 ) {
-        // bar2 -> quad4 (the 2D interface bar; later converted to hex8
-        // by control_mesh_convert). Nodes: 2 base + 2 extruded copy.
-        for ( layer=0; layer<n_layer; layer++ ) {
-          new_elem++;
-          new_nodes[0] = -QUAD4;
-          new_nodes[1] = nodes[0]+layer*nbase;
-          new_nodes[2] = nodes[1]+layer*nbase;
-          new_nodes[3] = nodes[0]+(layer+1)*nbase;
-          new_nodes[4] = nodes[1]+(layer+1)*nbase;
-          create_element( ielem, new_elem, new_nodes, 5, VERSION_NORMAL,
-            VERSION_NORMAL );
-        }
+      if ( name==-BAR2 ) {
+        new_nodes[0] = -QUAD4;
+        new_nodes[1] = nodes[0]+b; new_nodes[2] = nodes[1]+b;
+        new_nodes[3] = nodes[0]+t; new_nodes[4] = nodes[1]+t;
+        len_new = 5;
       }
-      else if ( el[0]==-QUAD4 && nnol==4 ) {
-        for ( layer=0; layer<n_layer; layer++ ) {
-          new_elem++;
-          new_nodes[0] = -HEX8;
-          new_nodes[1] = nodes[0]+layer*nbase;
-          new_nodes[2] = nodes[1]+layer*nbase;
-          new_nodes[3] = nodes[2]+layer*nbase;
-          new_nodes[4] = nodes[3]+layer*nbase;
-          new_nodes[5] = nodes[0]+(layer+1)*nbase;
-          new_nodes[6] = nodes[1]+(layer+1)*nbase;
-          new_nodes[7] = nodes[2]+(layer+1)*nbase;
-          new_nodes[8] = nodes[3]+(layer+1)*nbase;
-          create_element( ielem, new_elem, new_nodes, 9, VERSION_NORMAL,
-            VERSION_NORMAL );
+      else if ( name==-TRIA3 ) {
+        new_nodes[0] = -PRISM6;
+        for ( inol=0; inol<3; inol++ ) {
+          new_nodes[1+inol] = nodes[inol]+b;
+          new_nodes[4+inol] = nodes[inol]+t;
         }
+        len_new = 7;
       }
-      else if ( el[0]==-QUAD9 && nnol==9 ) {
-        // quad9 -> hex27 (the Professional's extrusion of the quadratic
-        // section elements; measured on its force11 .dbs: 9 base nodes +
-        // 9 mid-plane nodes at the segment mid-height + 9 top nodes per
-        // layer). The number of layers comes from control_mesh_extrude_n
-        // (quad9_layers; the z record gives the total extent z0..z1).
-        // The intermediate boundary nodes and the mid-plane nodes are
-        // NEW nodes SHARED by the neighbouring hex27 elements (one node
-        // per source node and plane, as in the Professional: force11 has
-        // 2400 nodes on each of its 5 z planes); the existing copy at z1
-        // serves as the top of the last layer, the source nodes as the
-        // base of the first. Plane q (1..2nq-1, z ascending) of source
-        // node inod is node next_node + (q-1)*nbase + inod; it is created
-        // by the first element that uses it (F4 T12, BACKLOG C47: the
-        // planes were per-element node blocks before, which disconnected
-        // the elements at the inner planes). The numbering differs from
-        // the Professional's compact plane-major one; the geometry and
-        // connectivity are the same.
-        long int nq = ( quad9_layers>1 ? quad9_layers : 1 );
-        double zq0 = z_layer[0], zq1 = z_layer[n_layer-1];
-        for ( long int lay=0; lay<nq; lay++ ) {
-          double zb = zq0 + lay*(zq1-zq0)/nq;
-          double zt = zq0 + (lay+1)*(zq1-zq0)/nq;
-          double z_mid = 0.5*( zb + zt );
-          // base: lay 0 -> the SOURCE nodes; later layers -> the
-          // ABSOLUTE block of the previous layer's top (last_top)
-          long int base_abs = ( lay==0 ? -1 : last_top );
-          // top: last layer -> the existing copy offset n_layer*nbase
-          // (nodes[inol] + offset); other layers -> the shared plane
-          // block 2*lay+2 at zt; mid: the shared plane block 2*lay+1
-          long int top_off = -1, top_abs = -1;
-          if ( lay==nq-1 ) top_off = n_layer*nbase;
-          else top_abs = next_node + (2*lay+1)*nbase;
-          long int mid0 = next_node + (2*lay)*nbase;
-          for ( int pass=0; pass<2; pass++ ) {
-            long int blk = ( pass==0 ? mid0 : top_abs );
-            double zz = ( pass==0 ? z_mid : zt );
-            if ( blk<0 ) continue;
-            for ( inol=0; inol<9; inol++ ) {
-              long int nn = blk + nodes[inol];
-              if ( db_active_index( NODE, nn, VERSION_NORMAL ) ) continue;
-              db( NODE, nodes[inol], idum, coords, ndim, VERSION_NORMAL, GET );
-              coords[2] = zz;
-              db( NODE, nn, idum, coords, len3, VERSION_NORMAL, PUT );
-              for ( int idat=0; idat<MDAT; idat++ ) {
-                if ( idat!=NODE && db_data_class(idat)==NODE &&
-                     db_active_index( idat, nodes[inol], VERSION_NORMAL ) ) {
-                  long int ndata_len = db_len( idat, nodes[inol], VERSION_NORMAL );
-                  mesh_copy_node_item( idat, nodes[inol], nn, ndata_len );
-                }
-              }
-              // the plane z also applies to node_start_refined (the copy
-              // above carries the source z; point_el and the geometry
-              // selections read node_start_refined, BACKLOG C57)
-              if ( db_active_index( NODE_START_REFINED, nodes[inol],
-                   VERSION_NORMAL ) ) {
-                db( NODE_START_REFINED, nodes[inol], idum, coords, ndim,
-                  VERSION_NORMAL, GET );
-                coords[2] = zz;
-                db( NODE_START_REFINED, nn, idum, coords, len3,
-                  VERSION_NORMAL, PUT );
-              }
-            }
-          }
-          new_elem++;
-          new_nodes[0] = -HEX27;
-          for ( inol=0; inol<9; inol++ ) {
-            new_nodes[1+inol] = ( base_abs>=0 ? base_abs+nodes[inol]
-                                               : nodes[inol] );
-            new_nodes[10+inol] = mid0 + nodes[inol];
-            new_nodes[19+inol] = ( top_abs>=0 ? top_abs+nodes[inol]
-                                               : nodes[inol]+top_off );
-          }
-          create_element( ielem, new_elem, new_nodes, 28, VERSION_NORMAL,
-            VERSION_NORMAL );
-          last_top = ( top_abs>=0 ? top_abs : 0 );
+      else if ( name==-QUAD4 ) {
+        new_nodes[0] = -HEX8;
+        new_nodes[1] = nodes[0]+b; new_nodes[2] = nodes[1]+b;
+        new_nodes[3] = nodes[0]+t; new_nodes[4] = nodes[1]+t;
+        new_nodes[5] = nodes[2]+b; new_nodes[6] = nodes[3]+b;
+        new_nodes[7] = nodes[2]+t; new_nodes[8] = nodes[3]+t;
+        len_new = 9;
+      }
+      else {
+        new_nodes[0] = -HEX27;
+        for ( inol=0; inol<9; inol++ ) {
+          new_nodes[1+inol] = nodes[inol]+b;
+          new_nodes[10+inol] = nodes[inol]+m;
+          new_nodes[19+inol] = nodes[inol]+t;
         }
+        len_new = 28;
       }
+      create_element( ielem, new_elem, new_nodes, len_new, VERSION_NORMAL,
+        VERSION_NORMAL );
+      if ( iold>=0 ) {
+        ldum = 1;
+        db( ELEMENT_GROUP, new_elem, &group_new, ddum, ldum,
+          VERSION_NORMAL, PUT );
+      }
+      if ( new_elem>max_new ) max_new = new_elem;
+    }
+    if ( drop_first ) delete_element( ielem, VERSION_NORMAL );
+  }
+
+  // the contact springs between the plane z0 and the last plane
+  if ( s_new!=NULL ) {
+    db_highest_index( ELEMENT, max_new, VERSION_NORMAL );
+    if ( max_new<nl*nelem-1 ) max_new = nl*nelem - 1;
+    for ( inod=0; inod<=max_node; inod++ ) {
+      if ( sgroup[inod]<0 ) continue;
+      long int group_spring = s_new[sgroup[inod]];
+      nspring++;
+      long int new_elem = max_new + nspring;
+      el[0] = -CONTACTSPRING; el[1] = inod; el[2] = (np-1)*nnod + inod;
+      length = 3;
+      db( ELEMENT, new_elem, el, ddum, length, VERSION_NORMAL, PUT );
+      ldum = 1;
+      db( ELEMENT_GROUP, new_elem, &group_spring, ddum, ldum,
+        VERSION_NORMAL, PUT );
     }
   }
-  // delete the 2D source elements
-  for ( ielem=0; ielem<=max_elem; ielem++ ) {
-    if ( db_active_index( ELEMENT, ielem, VERSION_NORMAL ) ) {
-      db( ELEMENT, ielem, el, ddum, length, VERSION_NORMAL, GET );
-      if ( el[0]==-TRIA3 || el[0]==-QUAD4 || el[0]==-QUAD9 )
-        delete_element( ielem, VERSION_NORMAL );
+
+  // delete the nodes that no element uses any more (a negative new group)
+  long int top_node = (np-1)*nnod + max_node;
+  used = get_new_int( top_node+1 );
+  array_set( used, 0, top_node+1 );
+  db_max_index( ELEMENT, max_new, VERSION_NORMAL, GET );
+  for ( ielem=0; ielem<=max_new; ielem++ ) {
+    if ( !db_active_index( ELEMENT, ielem, VERSION_NORMAL ) ) continue;
+    db( ELEMENT, ielem, el, ddum, length, VERSION_NORMAL, GET );
+    for ( inol=1; inol<length; inol++ ) {
+      if ( el[inol]>=0 && el[inol]<=top_node ) used[el[inol]] = 1;
     }
   }
+  for ( inod=0; inod<=max_node; inod++ ) {
+    if ( !attached[inod] ) continue;
+    for ( long int p=0; p<np; p++ ) {
+      long int new_node = p*nnod + inod;
+      if ( !used[new_node] && db_active_index( NODE, new_node, VERSION_NORMAL ) )
+        delete_node( new_node, VERSION_NORMAL );
+    }
+  }
+
+  delete[] zv; delete[] zp; delete[] n_sub; delete[] lay_int;
+  delete[] attached; delete[] used;
+  if ( gtab!=NULL ) delete[] gtab;
+  if ( s_old!=NULL ) delete[] s_old;
+  if ( s_new!=NULL ) delete[] s_new;
+  if ( sgroup!=NULL ) delete[] sgroup;
   mesh_has_changed( VERSION_NORMAL );
 }
 

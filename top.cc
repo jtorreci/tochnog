@@ -1245,9 +1245,11 @@ void step_start( long int task, long int options_solver[], double dtime, double 
   // connect in Y (the extrusion direction of the solids). The opposite
   // order (convert then extrude) produced a hex8 interface connecting in
   // Z - the push in Y was never transmitted (sigyy=0).
-  // Both only on the first step (task==YES): re-running them on later
-  // steps duplicates the mesh. They must run BEFORE data()/merge() so
-  // those phases see the final 3D elements.
+  // Both run once (re-running them duplicates the mesh): the extrude at
+  // its own control index, also one without control_timestep (F5 T4 U5a,
+  // Professional other/extrude1), the convert on the first step
+  // (task==YES). They must run BEFORE data()/merge() so those phases see
+  // the final 3D elements.
   // mesh_convert_quad8 runs on EVERY step_start (not only task==YES):
   // a -quad8 is not a native element, so any evaluation in between
   // control steps (e.g. a post_point at an intermediate control index
@@ -1263,7 +1265,7 @@ void step_start( long int task, long int options_solver[], double dtime, double 
   // bulk with the shared face centre node already in place.
   mesh_convert_quad8();
   mesh_convert_hex20();
-  if ( task==YES ) extrude();
+  extrude(); // once, at its own control index (extrude.cc)
   if ( task==YES ) interface_convert( icontrol );
 
   change_geometry( task, dtime, time_current );

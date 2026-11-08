@@ -2578,6 +2578,46 @@ u4_count_check refine_locally_not_method2 28 22
 expected_error_ok "$T2026" refine_locally_method_error1
 u4_count_check refine_locally_minimal_size1 8 9
 u4_count_check refine_locally_minimal_size2 32 25
+# F5 T4 U5a: control_mesh_extrude (6.179 layers z0..zn split by _n, the
+# 2D nodes become the plane z0), _direction -y, _element_group_new and
+# _contact_spring_element_group(_new). ext_check <test> <elements>
+# <nodes>: the .dbs element / element_group lines and the node lines
+# (coordinates %g) equal the Professional 02-08-2026 mesh (the GNU prints
+# -contactspring for the Professional -contact_spring2).
+ext_check() {
+  local t="$1" want_el="$2" want_nod="$3" got_el got_nod
+  run_ok "$T2026" "$t"
+  got_el="$(awk '$1=="element"||$1=="element_group"{$1=$1; print}' "$T2026/$t.dbs" | sed 's/-contactspring /-contact_spring2 /' | paste -sd'|')"
+  got_nod="$(awk '$1=="node"{printf "%s %g %g %g|", $2, $3, $4, $5}' "$T2026/$t.dbs")"
+  if [ "$got_el" = "$want_el" ] && [ "$got_nod" = "$want_nod" ]; then
+    check_ok "$t (extruded mesh = Professional)"
+  else
+    check_fail "$t" "mesh '$got_el' nodes '$got_nod'"
+  fi
+}
+EXT_N18="1 0 0 0|2 1 0 0|3 2 0 0|4 0 1 0|5 1 1 0|6 2 1 0|7 0 0 1|8 1 0 1|9 2 0 1|10 0 1 1|11 1 1 1|12 2 1 1|13 0 0 2|14 1 0 2|15 2 0 2|16 0 1 2|17 1 1 2|18 2 1 2|"
+EXT_E6="element 1 -hex8 1 2 7 8 4 5 10 11|element 2 -prism6 2 3 5 8 9 11|element 3 -prism6 3 6 5 9 12 11|element 4 -hex8 7 8 13 14 10 11 16 17|element 5 -prism6 8 9 11 14 15 17|element 6 -prism6 9 12 11 15 18 17"
+ext_check extrude_layers1 \
+  "$EXT_E6|element 7 -hex8 13 14 19 20 16 17 22 23|element 8 -prism6 14 15 17 20 21 23|element 9 -prism6 15 18 17 21 24 23|element_group 1 0|element_group 2 1|element_group 3 1|element_group 4 0|element_group 5 1|element_group 6 1|element_group 7 0|element_group 8 1|element_group 9 1" \
+  "${EXT_N18}19 0 0 3|20 1 0 3|21 2 0 3|22 0 1 3|23 1 1 3|24 2 1 3|"
+ext_check extrude_direction1 \
+  "$EXT_E6|element_group 1 0|element_group 2 1|element_group 3 1|element_group 4 0|element_group 5 1|element_group 6 1" \
+  "1 0 0 0|2 1 0 0|3 2 0 0|4 0 0 1|5 1 0 1|6 2 0 1|7 0 1 0|8 1 1 0|9 2 1 0|10 0 1 1|11 1 1 1|12 2 1 1|13 0 2 0|14 1 2 0|15 2 2 0|16 0 2 1|17 1 2 1|18 2 2 1|"
+ext_check extrude_element_group_new1 \
+  "element 1 -hex8 1 2 7 8 4 5 10 11|element 2 -prism6 2 3 5 8 9 11|element 3 -prism6 3 6 5 9 12 11|element 5 -prism6 8 9 11 14 15 17|element 6 -prism6 9 12 11 15 18 17|element_group 1 5|element_group 2 7|element_group 3 7|element_group 5 8|element_group 6 8" \
+  "1 0 0 0|2 1 0 0|3 2 0 0|4 0 1 0|5 1 1 0|6 2 1 0|7 0 0 1|8 1 0 1|9 2 0 1|10 0 1 1|11 1 1 1|12 2 1 1|14 1 0 2|15 2 0 2|17 1 1 2|18 2 1 2|"
+ext_check extrude_contact_spring1 \
+  "$EXT_E6|element 7 -contact_spring2 1 13|element 8 -contact_spring2 2 14|element 9 -contact_spring2 3 15|element 10 -contact_spring2 4 16|element 11 -contact_spring2 5 17|element 12 -contact_spring2 6 18|element_group 1 0|element_group 2 1|element_group 3 1|element_group 4 0|element_group 5 1|element_group 6 1|element_group 7 9|element_group 8 9|element_group 9 9|element_group 10 9|element_group 11 9|element_group 12 9" \
+  "1 0 0 0|2 1 0 0|3 2 0 0|4 0 1 0|5 1 1 0|6 2 1 0|7 0 0 0.5|8 1 0 0.5|9 2 0 0.5|10 0 1 0.5|11 1 1 0.5|12 2 1 0.5|13 0 0 1|14 1 0 1|15 2 0 1|16 0 1 1|17 1 1 1|18 2 1 1|"
+ext_check extrude_contact_spring2 \
+  "element 1 -hex8 1 2 7 8 4 5 10 11|element 2 -prism6 2 3 5 8 9 11|element 3 -prism6 3 6 5 9 12 11|element 4 -contact_spring2 1 7|element 5 -contact_spring2 2 8|element 6 -contact_spring2 3 9|element 7 -contact_spring2 4 10|element 8 -contact_spring2 5 11|element 9 -contact_spring2 6 12|element_group 1 0|element_group 2 1|element_group 3 1|element_group 4 10|element_group 5 11|element_group 6 11|element_group 7 10|element_group 8 11|element_group 9 11" \
+  "1 0 0 0|2 1 0 0|3 2 0 0|4 0 1 0|5 1 1 0|6 2 1 0|7 0 0 1|8 1 0 1|9 2 0 1|10 0 1 1|11 1 1 1|12 2 1 1|"
+expected_error_ok "$T2026" extrude_error1
+expected_error_ok "$T2026" extrude_error2
+ext_check extrude_single1 \
+  "element 1 -hex8 1 2 7 8 4 5 10 11|element 2 -prism6 2 3 5 8 9 11|element 3 -prism6 3 6 5 9 12 11|element_group 1 0|element_group 2 1|element_group 3 1" \
+  "1 0 0 0|2 1 0 0|3 2 0 0|4 0 1 0|5 1 1 0|6 2 1 0|7 0 0 1|8 1 0 1|9 2 0 1|10 0 1 1|11 1 1 1|12 2 1 1|"
+expected_error_ok "$T2026" extrude_error4
 # F5 T2 V4b: element_intpnt_h / _iso_coord / _method / _npoint (manual
 # 6.438 / 6.439 / 6.442 / 6.443), Professional 02-08-2026 values.
 # intpnt_check <test> <element> <method> <npoint> <iso_coord> <h>: every

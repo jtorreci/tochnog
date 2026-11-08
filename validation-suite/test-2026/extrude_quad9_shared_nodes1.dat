@@ -8,10 +8,11 @@
   counts the node records of the .dbs; old GNU: per-element plane
   nodes, 84 nodes, the two elements and the two layers disconnected at
   the inner planes, a much softer plate]. Targets: the Professional
-  02-08-2026 nodal displacements at the same coordinates [GNU node 83
-  = (2, 1, 0.5), 66 = (2, 1, 0.25), 71 = (1, 0, 0.5); the Professional
-  numbers its planes compactly, 45, 30 and 33; the new GNU matches to
-  2e-12]. Old GNU: node 83 disy -6.37e-5 at (2, 0.5, 0.5). )
+  02-08-2026 nodal displacements at the same coordinates [node 45
+  = (2, 1, 0.5), 30 = (2, 1, 0.25), 33 = (1, 0, 0.5): since F5 T4 U5a
+  the GNU numbers the planes compactly as the Professional, before it
+  used its own numbers 83, 66 and 71; the new GNU matches to 2e-12].
+  Old GNU: node 83 disy -6.37e-5 at (2, 0.5, 0.5). )
 echo -no
 number_of_space_dimensions 3
 materi_velocity
@@ -43,11 +44,11 @@ control_mesh_extrude   0  0. 1.
 control_mesh_extrude_n 0  2 1
 control_timestep 0  1. 1.
 
-target_item  1  -node_dof 83 -disy
+target_item  1  -node_dof 45 -disy
 target_value 1  -3.518022736454e-05 1.e-9
-target_item  2  -node_dof 66 -disx
+target_item  2  -node_dof 30 -disx
 target_value 2  1.152330040463e-05 1.e-9
-target_item  3  -node_dof 71 -disx
+target_item  3  -node_dof 33 -disx
 target_value 3  -8.528985668923e-06 1.e-9
 
 node  1  0.0 0.0 0.

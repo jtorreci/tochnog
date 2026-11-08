@@ -152,16 +152,26 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   - [x] U4 delete/refine flags (7): geometry_method, control_mesh_delete_geometry_{direct,method,projection_type},
     control_mesh_refine_locally_{minimal_size,not_method,only_method}. Route: delegated (context backstop).
     Commit bbbc741. C123 (projection default, owner) and C124 found.
-  - [ ] U5 mesh operations (16): renumber offsets (2), split_element_from/_to, convert tria6_tria3 / quad9_quad6,
-    duplicate_element_group, mesh_correct, extrude direction / element_group_new / contact springs (2),
-    generate_truss_beam_separate, remove_geometry, remove_keep_geometry.
+  - [ ] U5 mesh operations (15 names; the "16" counted control_mesh_extrude_element, which is U9). Map: explorer
+    L-T4-U5-map. Sub-units, all inline (shared database.cc / headers / top.cc / build_safe, so no disjoint
+    parallel surfaces):
+    - [ ] U5a extrude: control_mesh_extrude layer convention fixed to manual 6.179 (z0..zn layers, each split by
+      _n; GNU used the untouched z=0 nodes as an extra bottom layer and ignored _n for linear elements), plus
+      control_mesh_extrude_direction, _element_group_new, _contact_spring_element_group(_new).
+    - [ ] U5b split / convert: control_mesh_split_element_from, _split_element_to (-tet4 / -prism6),
+      control_mesh_convert_tria6_tria3. control_mesh_convert_quad9_quad6 moved to U9 (no GNU quad6 continuum
+      element).
+    - [ ] U5c control_mesh_renumber_element_geometry_offset / _group_offset, control_mesh_duplicate_element_group,
+      control_mesh_remove_geometry, control_mesh_remove_keep_geometry.
+    - [ ] U5d control_mesh_generate_truss_beam_separate, mesh_correct.
   - [ ] U6 mpc_element_group options (6): control_mpc_element_group, mpc_element_group_{always,closest,
     coord_geometry,keep,eps_iso}.
   - [ ] U7 unconsumed parents (9): control_mesh_truss_distribute_mpc_* (7), mpc_geometry_method/_tolerance
     (parents registered but never consumed: owner decision parse-only vs implement).
   - [ ] U8 geometry_moving family (7) + control_geometry_moving: new module.
   - [ ] U9 owner decisions: control_mesh_map, control_mesh_remove_really(+_activate_all/_factor),
-    control_mesh_extrude_element (needs prism12/prism18).
+    control_mesh_extrude_element (needs prism12/prism18), control_mesh_convert_quad9_quad6 (needs a quad6
+    continuum element).
 - [ ] T5 W6 other physics (25): baseline correction, force_edge_diagram, force_gravity_geometry,
   force_volume_element_group_0, groundflow_phreatic_*, group_beam_*, group_contact_spring_*,
   group_dof_initial*, group_time_fill, group_truss_elasti_elongation_force_diagram,
@@ -618,3 +628,21 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   Descarte, element_geometry_selection user/developer Differences, BACKLOG C123 decided (58 open). Code unchanged.
 - 2026-11-08 owner confirms CYLINDER-PART-START-PLANE class D (verbatim): "si". Recorded in DIVERGENCES, SEGUIMIENTO
   Descarte, geometry_options_2026 user/developer Differences. Next: T4 U5 (mesh operations).
+- 2026-11-08 L-T4-U5-map (explorer): none of the 15 names registered. Pro examples: other/extrude1
+  (_element_group_new, matches manual 6.184: old groups, then n_old x n_layers new groups), other/safety2
+  (_extrude_direction -y), other/prism6 (_split_element_to -prism6); the rest have none. GNU mesh_extrude
+  (mesh.cc:852) keeps the 2D nodes at z=0 as an extra bottom layer and ignores _n for tria3/quad4/bar2. Probe
+  (build of 87436f7+): Pro extrude2 3 el / 12 nodes, interface_bar2_hex8 6 el / 24, extrude1 45 el / 119; GNU
+  interface_bar2_hex8 7 el (C50 symptom), extrude2 stops "prism6 not available for force_element_edge",
+  extrude1 rejects _element_group_new. mesh_remove (delete.cc:894) lacks the -method3 branch its comment names.
+- 2026-11-08 U5a (route inline): mesh_extrude(icontrol) rewritten to manual 6.179 / 6.185 with the Professional
+  numbering (plane p of node i = p*n+i, layer l of element e = l*m+e, from db_highest_index), node orders (quad4 ->
+  hex8 a b a' b' c d c' d', so interface quad4 sides stay faces) and unused-node deletion; extrude() runs once at its
+  own control index (also without control_timestep: Pro other/extrude1). -y: the 2D y becomes z (Pro probe). input.cc
+  reads negative numbers of _element_group_new. One coordinate kept as a GNU extension (documented GNU usage; Pro
+  ignores it). Pro = GNU .dbs mesh: extrude1, interface_bar2_hex8 (+ node_dof 7.6e-12, C50 mesh resolved), probes
+  layers / direction / group_new / spring1-2. Differential vs HEAD d08a5d4 (8 inputs): results equal by coordinates,
+  numbering compact (extrude_quad9_shared_nodes1 targets 83/66/71 -> Pro 45/30/33); extrude2 now aborts in point_el
+  (no prism6, pre-existing, C125, to fix in U5b) instead of the force_element_edge error. RED: base binary rejects
+  the new records / leaves extrude_layers1 unextruded (no timestep). Risk: item 3 (control_mesh_extrude existing
+  inputs change numbering and layer convention; covered by the end-of-T4 verifier).

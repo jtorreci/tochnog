@@ -1141,7 +1141,14 @@ void input( )
           ival[iv] = 0;
         }
         else if ( db_type(idat)==INTEGER ) {
-          if ( str[0]=='-' ) {
+          if ( !d_is_set && str[0]=='-' &&
+               idat==CONTROL_MESH_EXTRUDE_ELEMENT_GROUP_NEW &&
+               str[1]!='\0' && string_isinteger( &str[1] ) ) {
+            // manual Professional 6.184: a negative new element group
+            // drops the extruded elements (other/extrude1: 1 1 -1)
+            ival[iv] = -atoi( &str[1] );
+          }
+          else if ( str[0]=='-' ) {
             itmp = db_number( &str[1] );
             if ( itmp<0 && idat==GROUP_ELEMENT_SELECTIVE_REDUCED_INTEGRATION &&
                  !strcmp(str,"-both") ) {

@@ -2,132 +2,102 @@
 
 ## Files and functions
 
-- `mesh.cc` — `mesh_extrude(double z_layer[], long int n_layer, long int quad9_layers)`.
-- `extrude.cc` — dispatch in `extrude()`, which reads `CONTROL_MESH_EXTRUDE`
-  and calls `mesh_extrude()`. Called from `top.cc`.
-- `database.cc` — keywords `CONTROL_MESH_EXTRUDE` (DOUBLE_PRECISION,
-  `data_length=DATA_ITEM_SIZE`, `fixed_length=0`) and
-  `CONTROL_MESH_EXTRUDE_N` (INTEGER, `data_length=DATA_ITEM_SIZE`,
-  `fixed_length=0`, `data_required=CONTROL_MESH_EXTRUDE`).
-- `tochnog.h` / `tochnog-mod.h` — enum entries `CONTROL_MESH_EXTRUDE`,
-  `CONTROL_MESH_EXTRUDE_N`.
+- `extrude.cc` — `extrude()`: called from `top.cc` `step_start()` on every
+  step (task YES and NO); it runs `mesh_extrude(icontrol)` once (static
+  flag), when `ICONTROL` is an index with a `CONTROL_MESH_EXTRUDE` record.
+- `mesh.cc` — `mesh_extrude(long int icontrol)`: reads every record at that
+  index and builds the 3D mesh.
+- `input.cc` — the integer reader accepts a negative number in
+  `CONTROL_MESH_EXTRUDE_ELEMENT_GROUP_NEW` (`-1` would otherwise be read
+  as a word).
+- `database.cc` — `CONTROL_MESH_EXTRUDE` (DOUBLE, `DATA_ITEM_SIZE`),
+  `CONTROL_MESH_EXTRUDE_N`, `_DIRECTION` (INTEGER, 1, words `-y` / `-z`),
+  `_ELEMENT_GROUP_NEW`, `_CONTACTSPRING_ELEMENT_GROUP` (requires `_NEW`),
+  `_CONTACTSPRING_ELEMENT_GROUP_NEW` (INTEGER, `DATA_ITEM_SIZE`); all but
+  the first require `CONTROL_MESH_EXTRUDE`. The names of the contact
+  spring records are the Professional spelling
+  (`control_mesh_extrude_contact_spring_element_group(_new)`).
+- `tochnog.h` / `tochnog-mod.h` — the enums after `CONTROL_MESH_EXTRUDE_N`.
 
 ## Implementation details
 
-`mesh_extrude(z_layer, n_layer)` sweeps a flat 2D mesh (z=0) to 3D along the
-z-axis. Steps:
+`mesh_extrude(icontrol)`:
 
-1. Compute the copy base `nbase = max_node + 1`. The copy of node `inod` in
-   layer `layer` is at `new_node = nbase + layer*nbase + inod`
-   (`inod + (max_node+1)*(layer+1)`), so all copies start after the original
-   node block.
-2. Create the extruded node copies for every layer boundary. For each copy the
-   z-coordinate is set from `z_layer[layer]` and all other node-class data
-   items are copied with a generic loop:
-   ```c
-   for ( int idat=0; idat<MDAT; idat++ )
-     if ( idat!=NODE && db_data_class(idat)==NODE &&
-          db_active_index( idat, inod, VERSION_NORMAL ) ) {
-       long int ndata_len = db_len( idat, inod, VERSION_NORMAL );
-       if ( db_type(idat)==DOUBLE_PRECISION ) { double *dold=db_dbl(...); db(...,PUT); }
-       else { long int *iold=db_int(...); db(...,PUT); }
-     }
-   ```
-   `NODE_START_REFINED` additionally gets the extruded coordinate.
-3. Create one 3D element per 2D element per layer with `create_element()`:
-   `-tria3` → `-prism6` (bottom layer nodes `layer*nbase`, top layer nodes
-   `(layer+1)*nbase`), `-quad4` → `-hex8`, using the same node ordering.
-4. Delete the 2D source elements with `delete_element()` (not valid in 3D) and
-   signal `mesh_has_changed()`.
+1. Reads `zv[0..nz-1]`; one value means `0 zv[0]` (GNU extension). `n_sub[i]`
+   from `_n` (default 1, at least `nz-1` values, each >= 1). `axis` = 2, or 1
+   for `-y`.
+2. `max_node` / `max_elem` from `db_highest_index` (`db_max_index` is the
+   allocated range: on a 9-node mesh it gave 10 and shifted the plane
+   numbers). `nnod` / `nelem` = highest number, plus 1 when number 0 is
+   active. `attached[]` marks the nodes of the `-bar2`, `-tria3`, `-quad4`,
+   `-quad9` elements.
+3. Layers: `nl = sum n_sub`, `lay_int[l]` = interval of layer `l`. Planes:
+   `ppl` = 2 with a `-quad9` in the mesh (a mid plane per layer), else 1;
+   `np = nl*ppl + 1` planes at `zp[]`, evenly spaced inside each interval.
+4. `_element_group_new`: `ng` values, `nold = ng/(1+n_int)` (error when not
+   divisible); group of layer `l` of an element of old group `k` =
+   `gtab[nold + k*n_int + lay_int[l]]`.
+5. Contact spring groups (`sgroup[inod]`, index into `_new`), computed
+   before the elements change: one new value = every attached node;
+   otherwise the lowest index `k` of the listed old groups of the
+   elements attached to the node.
+6. Planes: plane 0 is the 2D node, its coordinate `axis` set to `zp[0]`;
+   plane `p` is node `p*nnod + inod`, a copy of every node-class record
+   (`mesh_copy_node_item`) with `coords[axis] = zp[p]`. For `-y` the 2D y
+   moves to z first. `NODE_START_REFINED` gets the same coordinates.
+   Planes are written from the top down, so plane 0 is changed last.
+7. Elements: layer `l` of element `e` is `l*nelem + e`, created from `e`
+   with `create_element()` (copies the element data), layers from the top
+   down so layer 0 overwrites `e` last; a new group is PUT after the
+   create; a negative group skips the layer (layer 0: `delete_element(e)`).
+   Base / top planes `l*ppl`, `(l+1)*ppl`, mid plane `l*ppl+1`.
+   Node orders: quad4 `a b a' b' c d c' d'` (Professional; the 2D eta
+   direction becomes the hex8 zeta direction, so the two sides of an
+   interface quad4 stay the two hex8 faces), prism6 `a b c a' b' c'`,
+   quad4 from bar2 `a b a' b'`, hex27 base / mid / top in the quad9 order.
+8. Springs: `-CONTACTSPRING` `inod` -> `(np-1)*nnod + inod`, numbered after
+   `max(highest element, nl*nelem-1)`.
+9. Nodes of the planes that no element uses are deleted (`delete_node`);
+   `mesh_has_changed()`.
 
-Dispatch in `extrude.cc`:
-```c
-db( ICONTROL, 0, &icontrol, ddum, ldum, VERSION_NORMAL, GET );
-if ( db_active_index( CONTROL_MESH_EXTRUDE, icontrol, VERSION_NORMAL ) ) {
-  db( CONTROL_MESH_EXTRUDE, icontrol, idum_e, ext_z, ext_length,
-    VERSION_NORMAL, GET );
-  n_layer = ext_length;
-  if ( n_layer>0 ) mesh_extrude( ext_z, n_layer );
-}
-```
+Measured on the Professional 02-08-2026 (same `.dbs` mesh: node numbers
+and coordinates, element numbers, node orders, groups): `other/extrude1`
+(45 elements, 119 nodes), `other/interface_bar2_hex8` (also the nodal
+dofs to 7.6e-12, after `interface_convert`; only the node order of the
+two converted interface hex8 differs, `interface_convert`), and the probes
+of the tests below. `force11`, `extrude_quad9_shared_nodes1` and
+`post_point_extrude_hex27_1`: the same coordinates and nodal results as
+before U5a (by coordinates, 7e-9 of a scale of 819), new numbers.
+`other/extrude2` still stops in both binaries (GNU: `point_el` has no
+`-prism6` for its `post_point`, BACKLOG C125). `other/safety2` and
+`validation_14_mesh` cannot run in the GNU for other reasons
+(`safety_slip`, `change_dataitem_time_until_data`).
 
-The original `extrude.cc` (which aborted with "extrude is not available") was
-rewritten to read `CONTROL_MESH_EXTRUDE` and delegate to `mesh_extrude`.
+Tests (`validation-suite/test-2026`, `build_safe.sh` `ext_check`: the
+`.dbs` element / group / node lines equal the Professional mesh):
+`extrude_layers1`, `extrude_direction1`, `extrude_element_group_new1`,
+`extrude_contact_spring1`, `extrude_contact_spring2`, `extrude_single1`;
+input errors `extrude_error1` (group table length), `extrude_error2`
+(direction), `extrude_error4` (`_n` too short).
 
-## quad9 -> hex27 branch (shared inner-plane nodes)
+## History
 
-`mesh_extrude()`, branch `el[0]==-QUAD9 && nnol==9` (third argument
-`quad9_layers` = first value of `control_mesh_extrude_n`, read in
-`extrude.cc`; `nq = max(quad9_layers, 1)` hex27 layers over
-`z_layer[0]..z_layer[n_layer-1]`). Plane numbering, with
-`next_node = nbase + n_layer*nbase` (first index after the boundary
-copies) and `nbase = max_node + 1`:
-
-- plane 0 (z0): the source nodes `nodes[inol]`;
-- plane q = 1..2nq-1 (z ascending; odd q = mid-planes at the layer
-  mid-height, even q = layer tops): node `next_node + (q-1)*nbase +
-  nodes[inol]`;
-- plane 2nq (z1): the existing boundary copy `nodes[inol] + n_layer*nbase`.
-
-Layer `lay` uses `mid0 = next_node + 2*lay*nbase` and, below the last
-layer, `top_abs = next_node + (2*lay+1)*nbase`; its base is plane 0 for
-`lay==0` and the previous layer's `top_abs` (`last_top`) otherwise. A
-plane node is created (`db(NODE, ..., PUT)` with the z coordinate, plus
-every other node-class record copied from the source node with
-`mesh_copy_node_item()`, then `NODE_START_REFINED` rewritten with the
-plane z, as the linear branch does) only when `db_active_index(NODE, nn)` is false,
-so the first element that reaches it creates it and its neighbours reuse
-it. The hex27 connectivity is base `base+nodes[inol]`, mid `mid0+nodes[inol]`,
-top `top_abs+nodes[inol]` (or the boundary copy) for inol = 0..8 in the
-lexicographic quad9 order.
-
-History: before F4 T12 (2026-10-11, BACKLOG C47) `top_abs` and `mid0`
-were fresh per-element blocks of 9 nodes (`next_node++`), so the hex27
-elements were disconnected at every inner plane (Professional `force11`:
-15600 nodes instead of 12000, planes 2400/3600/3600/3600/2400 instead of
-2400 each, ring 7.9x too soft, `mom1y_sig` 5.80223 vs 5.76460 because
-the section moment is equilibrium-based). Test:
-`validation-suite/test-2026/extrude_quad9_shared_nodes1.dat`
-(`build_safe.sh`: rc 0 + 75 node records in the .dbs).
-
-F4 T6f C57 (2026-10-13): the copy loop carried `NODE_START_REFINED`
-from the z = 0 source node, so the plane nodes had `node` at the plane z
-but `node_start_refined` at z = 0. `point_el()` (post points, post
-lines, force points, map, mpc) and `geometry()` selections read
-`NODE_START_REFINED`, so they worked on collapsed hex27 elements
-(`post_point` (1, 0.5, 0.5) disy -1.13556e-5 vs -1.16509e-5). The loop
-now rewrites `NODE_START_REFINED` with `coords[2] = zz`. Test:
-`validation-suite/test-2026/post_point_extrude_hex27_1.dat` (four
-post points, Professional targets, absolute 1e-11). The other
-node-creating branches (`mesh_mirror`, `mesh_copy`, `mesh_rotate_2d`,
-`mesh_rotate_3d`, `mesh_move`, `mesh_switch`, `mesh_convert_quad8`,
-`mesh_convert_hex20`, the linear extrusion) already write
-`NODE_START_REFINED` with the transformed coordinate (checked).
-
-## External dependencies
-
-- `create_element()` in `create.cc` (copies element data: `element_dof`,
-  `element_dof_initialised`, `nonlocal`, ...).
-- `delete_element()` in `delete.cc`.
-- `mesh_has_changed()` in `mesh.cc` / `top.cc`.
+- F5 T4 U5a (2026-11-08): rewritten from `mesh_extrude(z_layer, n_layer,
+  quad9_layers)`. The old linear branches made one layer per z value from
+  the untouched z = 0 nodes (a collapsed first layer for `0. 1.`), ignored
+  `_n`, kept the source `-bar2`, used the hex8 order `a b c d a' b' c'
+  d'` and `nbase = max_node+1` blocks with gaps; the quad9 branch took
+  only `_n[0]` layers over `z0..z_last`. `extrude()` applied the first
+  record of any index at the first timestep.
+- F4 T12 (2026-10-11, BACKLOG C47): shared hex27 inner-plane nodes.
+- F4 T6f C57 (2026-10-13): `NODE_START_REFINED` gets the plane coordinate.
 
 ## Hardcoded parameters / pending refactorings
 
-- `control_mesh_extrude_n`: only its first value is used, and only by
-  the quad9 -> hex27 branch (number of hex27 layers); the linear branches
-  create one element per z segment.
-- The source 2D mesh is assumed to lie at z=0; the extrusion is always along
-  the z-axis.
-- Only `-tria3`, `-bar2`, `-quad4` and `-quad9` are handled; other 2D
-  element types are ignored (their nodes are still copied).
-- quad9 -> hex27 node numbering has gaps (`nbase` blocks) and is not the
-  Professional's compact plane-major numbering; renumbering would also
-  move the boundary-copy block shared with the linear branches.
-- hex27 nodal stress recovery: = Professional since F4 T6f C70
-  (2026-10-13, `force11` 7e-7 of the field maximum); `post_point` =
-  Professional since F4 T6f C57 (2026-10-13).
-- The generic node-data copy loop could be factored out and reused by
-  `mesh_mirror`/`mesh_copy`/`mesh_rotate_3d` (they currently each have their
-  own copy logic).
-- Requires `number_of_space_dimensions 3` and sufficient
-  `number_of_integration_points` (8 for hex8, 6 for prism6).
+- The extruded element types are fixed (`-bar2`, `-tria3`, `-quad4`,
+  `-quad9`); other elements are left as they are and their nodes are not
+  copied. `-tria6` needs `-prism12` / `-prism18` (`control_mesh_extrude_element`,
+  F5 T4 U9).
+- `-y` is the only other direction (manual 6.180).
+- The node-data copy loop could be shared with `mesh_mirror`,
+  `mesh_copy` and `mesh_rotate_3d`.

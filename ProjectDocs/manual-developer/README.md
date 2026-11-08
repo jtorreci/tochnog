@@ -93,7 +93,7 @@ page lists its own in "Differences with the Professional version".
 - [control_mesh_keep_node](control_mesh_keep_node.md) — keep only the listed nodes.
 - [control_mesh_remove](control_mesh_remove.md) — remove elements by method (mesh_remove).
 - [control_mesh_rotate](control_mesh_rotate.md) — sweep a 2D mesh to 3D (mesh_rotate_3d).
-- [control_mesh_extrude](control_mesh_extrude.md) — extrude a 2D mesh along the z-axis (mesh_extrude; quad9→hex27 shared inner-plane nodes).
+- [control_mesh_extrude](control_mesh_extrude.md) — extrude a 2D mesh (mesh_extrude(icontrol), once at its own control index; Professional plane / layer numbering and node orders; F5 T4 U5a).
 - [control_mesh_rotate_angle](control_mesh_rotate_angle.md) — rotate the 2D mesh around the z-axis.
 - [element_3d](element_3d.md) — 3D solid elements (tet4, tet10, hex8, prism6).
 - [bounda_time_on_off](bounda_time_on_off.md) — periodic bounda_time.

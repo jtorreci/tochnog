@@ -334,6 +334,10 @@ enum {
   CONTROL_MESH_COPY,
   CONTROL_MESH_EXTRUDE,
   CONTROL_MESH_EXTRUDE_N,
+  CONTROL_MESH_EXTRUDE_DIRECTION,
+  CONTROL_MESH_EXTRUDE_ELEMENT_GROUP_NEW,
+  CONTROL_MESH_EXTRUDE_CONTACTSPRING_ELEMENT_GROUP,
+  CONTROL_MESH_EXTRUDE_CONTACTSPRING_ELEMENT_GROUP_NEW,
   CONTROL_MESH_GENERATE_BEAM,
   CONTROL_MESH_GENERATE_CONTACTSPRING,
   CONTROL_MESH_GENERATE_CONTACTSPRING_ELEMENT,
@@ -2418,8 +2422,7 @@ void      mesh_rotate_2d( double angle_deg );
 void      mesh_rotate_3d( long int nrot );
 void      mesh_convert_quad8( void );
 void      mesh_convert_hex20( void );
-void      mesh_extrude( double z_layer[], long int n_layer,
-            long int quad9_layers );
+void      mesh_extrude( long int icontrol );
 void      mesh_delete_keep( long int icontrol );
 void      mesh_remove( long int icontrol );
 void      new_mesh( void );

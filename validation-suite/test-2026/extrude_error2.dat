@@ -1,0 +1,29 @@
+( F5 T4 U5a: control_mesh_extrude_direction -x is an input error in
+  the GNU; the Professional 02-08-2026 accepts it [DIVERGENCES
+  EXTRUDE-INPUT-CHECKS].
+  EXPECTED_ERROR: Error: control_mesh_extrude_direction must be -y or -z. )
+echo -no
+number_of_space_dimensions 3
+materi_velocity
+materi_displacement
+materi_stress
+end_initia
+node 1  0.0 0.0 0.0
+node 2  1.0 0.0 0.0
+node 3  2.0 0.0 0.0
+node 4  0.0 1.0 0.0
+node 5  1.0 1.0 0.0
+node 6  2.0 1.0 0.0
+element 1  -quad4  1 2 4 5
+element 2  -tria3  2 3 5
+element 3  -tria3  3 6 5
+element_group 1 0
+element_group 2 1
+element_group 3 1
+group_type -ra 0 1 -ra -materi
+group_materi_elasti_young -ra 0 1 -ra 1000.
+group_materi_elasti_poisson -ra 0 1 -ra 0.2
+group_materi_density -ra 0 1 -ra 0.
+control_mesh_extrude 10 0. 1.
+control_mesh_extrude_direction 10 -x
+end_data
