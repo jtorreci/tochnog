@@ -8881,6 +8881,90 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   data_class[DEPENDENCY_TYPE] = DEPENDENCY;
   data_required[DEPENDENCY_TYPE] = DEPENDENCY_ITEM;
 
+  // geometry options and entities of the 2026 manual (F5 T4 U2,
+  // consumed in geometry(), geometry.cc). Options are indexed by the
+  // geometry index, as geometry_element_group.
+  //   geometry_boundary index -yes/-no (6.509): only nodes on / not on the
+  //     mesh boundary.
+  //   geometry_circle_part index xc yc angle_start angle_end radius
+  //     tolerance (6.515), 2D.
+  //   geometry_cylinder_part index x0 y0 z0 x1 y1 z1 radius a_s0 a_e0
+  //     [a_s1 a_e1 ...] tolerance (6.518) + _start_vector vx vy vz (6.519).
+  //   geometry_element_geometry index set_0 ... (6.522) + _method
+  //     -any/-all/-only (6.523).
+  //   geometry_exclude index -geometry_xxx gindex ... (6.521).
+  //   geometry_hexahedral index 8 corner points (6.528), 3D.
+  //   geometry_line_eps_iso / geometry_quadrilateral_eps_iso index eps
+  //     (6.530 / 6.545).
+  //   geometry_mpc index -yes/-no (6.539): only slave nodes of an mpc.
+  //   geometry_tetrahedral index 4 corner points (6.549), 3D.
+  strcpy(name[GEOMETRY_BOUNDARY],"geometry_boundary");
+  type[GEOMETRY_BOUNDARY] = INTEGER;
+  data_length[GEOMETRY_BOUNDARY] = 1;
+  data_class[GEOMETRY_BOUNDARY] = GEOMETRY;
+
+  strcpy(name[GEOMETRY_CIRCLE_PART],"geometry_circle_part");
+  type[GEOMETRY_CIRCLE_PART] = DOUBLE_PRECISION;
+  data_length[GEOMETRY_CIRCLE_PART] = ndim+4;
+  data_class[GEOMETRY_CIRCLE_PART] = GEOMETRY;
+
+  strcpy(name[GEOMETRY_CYLINDER_PART],"geometry_cylinder_part");
+  type[GEOMETRY_CYLINDER_PART] = DOUBLE_PRECISION;
+  data_length[GEOMETRY_CYLINDER_PART] = DATA_ITEM_SIZE;
+  fixed_length[GEOMETRY_CYLINDER_PART] = 0;
+  data_class[GEOMETRY_CYLINDER_PART] = GEOMETRY;
+
+  strcpy(name[GEOMETRY_CYLINDER_PART_START_VECTOR],
+    "geometry_cylinder_part_start_vector");
+  type[GEOMETRY_CYLINDER_PART_START_VECTOR] = DOUBLE_PRECISION;
+  data_length[GEOMETRY_CYLINDER_PART_START_VECTOR] = ndim;
+  data_class[GEOMETRY_CYLINDER_PART_START_VECTOR] = GEOMETRY;
+  data_required[GEOMETRY_CYLINDER_PART_START_VECTOR] = GEOMETRY_CYLINDER_PART;
+
+  strcpy(name[GEOMETRY_ELEMENT_GEOMETRY],"geometry_element_geometry");
+  type[GEOMETRY_ELEMENT_GEOMETRY] = INTEGER;
+  data_length[GEOMETRY_ELEMENT_GEOMETRY] = DATA_ITEM_SIZE;
+  fixed_length[GEOMETRY_ELEMENT_GEOMETRY] = 0;
+  data_class[GEOMETRY_ELEMENT_GEOMETRY] = GEOMETRY;
+
+  strcpy(name[GEOMETRY_ELEMENT_GEOMETRY_METHOD],
+    "geometry_element_geometry_method");
+  type[GEOMETRY_ELEMENT_GEOMETRY_METHOD] = INTEGER;
+  data_length[GEOMETRY_ELEMENT_GEOMETRY_METHOD] = 1;
+  data_class[GEOMETRY_ELEMENT_GEOMETRY_METHOD] = GEOMETRY;
+  data_required[GEOMETRY_ELEMENT_GEOMETRY_METHOD] = GEOMETRY_ELEMENT_GEOMETRY;
+
+  strcpy(name[GEOMETRY_EXCLUDE],"geometry_exclude");
+  type[GEOMETRY_EXCLUDE] = INTEGER;
+  data_length[GEOMETRY_EXCLUDE] = DATA_ITEM_SIZE;
+  fixed_length[GEOMETRY_EXCLUDE] = 0;
+  data_class[GEOMETRY_EXCLUDE] = GEOMETRY;
+
+  strcpy(name[GEOMETRY_HEXAHEDRAL],"geometry_hexahedral");
+  type[GEOMETRY_HEXAHEDRAL] = DOUBLE_PRECISION;
+  data_length[GEOMETRY_HEXAHEDRAL] = 8*ndim;
+  data_class[GEOMETRY_HEXAHEDRAL] = GEOMETRY;
+
+  strcpy(name[GEOMETRY_LINE_EPS_ISO],"geometry_line_eps_iso");
+  type[GEOMETRY_LINE_EPS_ISO] = DOUBLE_PRECISION;
+  data_length[GEOMETRY_LINE_EPS_ISO] = 1;
+  data_class[GEOMETRY_LINE_EPS_ISO] = GEOMETRY;
+
+  strcpy(name[GEOMETRY_MPC],"geometry_mpc");
+  type[GEOMETRY_MPC] = INTEGER;
+  data_length[GEOMETRY_MPC] = 1;
+  data_class[GEOMETRY_MPC] = GEOMETRY;
+
+  strcpy(name[GEOMETRY_QUADRILATERAL_EPS_ISO],"geometry_quadrilateral_eps_iso");
+  type[GEOMETRY_QUADRILATERAL_EPS_ISO] = DOUBLE_PRECISION;
+  data_length[GEOMETRY_QUADRILATERAL_EPS_ISO] = 1;
+  data_class[GEOMETRY_QUADRILATERAL_EPS_ISO] = GEOMETRY;
+
+  strcpy(name[GEOMETRY_TETRAHEDRAL],"geometry_tetrahedral");
+  type[GEOMETRY_TETRAHEDRAL] = DOUBLE_PRECISION;
+  data_length[GEOMETRY_TETRAHEDRAL] = 4*ndim;
+  data_class[GEOMETRY_TETRAHEDRAL] = GEOMETRY;
+
   // geometry_element_group (manual Professional 6.524/6.525): restrict
   // the geometry record with the same index to nodes that are also a
   // node of elements of one of the specified element groups. Method

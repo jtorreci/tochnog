@@ -2284,7 +2284,8 @@ void mesh_boundary_set( void )
   //   also fills them without mesh_boundary and marks every element
   //   (DIVERGENCES MESH-BOUNDARY-DEFAULT / ELEMENT-BOUNDARY-ALL).
   // - for the element-target contact (contact_target_element_group,
-  //   6.105) node_boundary only, when no node_boundary record exists:
+  //   6.105) and for geometry_boundary (6.509, F5 T4 U2) node_boundary
+  //   only, when no node_boundary record exists:
   //   parallel_contact only accepts a target side whose nodes are all on
   //   the mesh boundary, and hand-written node_boundary input (the GNU
   //   2014 inputs) keeps its meaning.
@@ -2306,8 +2307,11 @@ void mesh_boundary_set( void )
        db_max_index( ELEMENT_BOUNDARY, max, VERSION_NORMAL, GET )<0 )
     set_elements = 1;
   else {
+    long int max_geometry_boundary=-1;
+    db_max_index( GEOMETRY_BOUNDARY, max_geometry_boundary, VERSION_NORMAL,
+      GET );
     if ( !db_active_index( CONTACT_TARGET_ELEMENT_GROUP, 0,
-        VERSION_NORMAL ) )
+        VERSION_NORMAL ) && max_geometry_boundary<0 )
       return;
     if ( db_max_index( NODE_BOUNDARY, max, VERSION_NORMAL, GET )>=0 ) return;
   }

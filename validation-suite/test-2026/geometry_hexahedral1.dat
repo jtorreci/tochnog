@@ -1,0 +1,61 @@
+(
+F5 T4 U2: geometry_hexahedral {6.528}: geometry 1 a prism on the
+quadrilateral 0,0 2,0 0,2 1.2,1.2 {hex8 corner order} from z 0 to 2;
+geometry 2 the cube 0.5 to 1.5: node 14 only.
+Mesh: 2x2x2 hex8 on [0,2]^3, nodes 1-27 {node = 1 + x + 3y + 9z}.
+build_safe checks node_geometry_present, equal to the Professional
+02-08-2026 on the same input.
+)
+echo -no
+number_of_space_dimensions 3
+materi_velocity
+materi_displacement
+materi_stress
+materi_strain_elasti
+materi_strain_total
+end_initia
+node 1 0 0 0
+node 2 1 0 0
+node 3 2 0 0
+node 4 0 1 0
+node 5 1 1 0
+node 6 2 1 0
+node 7 0 2 0
+node 8 1 2 0
+node 9 2 2 0
+node 10 0 0 1
+node 11 1 0 1
+node 12 2 0 1
+node 13 0 1 1
+node 14 1 1 1
+node 15 2 1 1
+node 16 0 2 1
+node 17 1 2 1
+node 18 2 2 1
+node 19 0 0 2
+node 20 1 0 2
+node 21 2 0 2
+node 22 0 1 2
+node 23 1 1 2
+node 24 2 1 2
+node 25 0 2 2
+node 26 1 2 2
+node 27 2 2 2
+element 1 -hex8 1 2 4 5 10 11 13 14
+element 2 -hex8 2 3 5 6 11 12 14 15
+element 3 -hex8 4 5 7 8 13 14 16 17
+element 4 -hex8 5 6 8 9 14 15 17 18
+element 5 -hex8 10 11 13 14 19 20 22 23
+element 6 -hex8 11 12 14 15 20 21 23 24
+element 7 -hex8 13 14 16 17 22 23 25 26
+element 8 -hex8 14 15 17 18 23 24 26 27
+group_type 0 -materi
+group_materi_memory 0 -total_linear
+group_materi_elasti_young 0 1000.
+group_materi_elasti_poisson 0 0.3
+geometry_hexahedral 1 0 0 0 2 0 0 0 2 0 1.2 1.2 0 0 0 2 2 0 2 0 2 2 1.2 1.2 2
+geometry_hexahedral 2 0.5 0.5 0.5 1.5 0.5 0.5 0.5 1.5 0.5 1.5 1.5 0.5 0.5 0.5 1.5 1.5 0.5 1.5 0.5 1.5 1.5 1.5 1.5 1.5
+print_node_geometry_present -yes
+bounda_dof 0 1 -velx -vely -velz
+control_timestep 0 1. 1.
+end_data

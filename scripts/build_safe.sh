@@ -2470,6 +2470,32 @@ if grep -q "^element_print_group_data_values  1  1000 0.3 *$" "$T2026/print_grou
 else
   check_fail "print_group_data1" "element_print_group_data_values is not 1000 0.3"
 fi
+# F5 T4 U2: geometry options and entities of the 2026 manual (6.509,
+# 6.515, 6.518-6.523, 6.528, 6.530, 6.539, 6.545, 6.549). Expected
+# node_geometry_present = Professional 02-08-2026 on the same inputs
+# (compact form node:entity+index, without the -geometry_ prefix).
+ngp_check() {
+  local t="$1" want="$2" got
+  run_ok "$T2026" "$t"
+  got="$(awk '/^node_geometry_present /{printf "%s:", $2; for(i=3;i<=NF;i+=2) printf "%s%s,", substr($i,11),$(i+1); printf " "}' "$T2026/$t.dbs" | sed 's/ $//')"
+  if [ "$got" = "$want" ]; then
+    check_ok "$t (node_geometry_present)"
+  else
+    check_fail "$t" "node_geometry_present is '$got'"
+  fi
+}
+ngp_check geometry_eps_iso1 "1:line2, 2:line2,quadrilateral4, 3:quadrilateral4, 4:quadrilateral4, 5:quadrilateral4, 6:quadrilateral3,quadrilateral4, 7:quadrilateral3,quadrilateral4, 8:quadrilateral4, 9:quadrilateral4, 10:quadrilateral3,quadrilateral4, 11:quadrilateral3,quadrilateral4, 12:quadrilateral4, 13:quadrilateral4, 14:quadrilateral4, 15:quadrilateral4,"
+ngp_check geometry_boundary1 "1:quadrilateral1, 2:quadrilateral1, 3:quadrilateral1, 4:quadrilateral1, 5:quadrilateral1, 6:quadrilateral2, 7:quadrilateral2, 8:quadrilateral1, 9:quadrilateral1, 10:quadrilateral2, 11:quadrilateral2, 12:quadrilateral1, 13:quadrilateral1, 14:quadrilateral1, 15:quadrilateral1, 16:quadrilateral1,"
+ngp_check geometry_exclude1 "1:line6, 2:line6, 3:line6, 4:line6, 5:quadrilateral1, 6:point5, 7:point5, 8:quadrilateral1, 9:quadrilateral1, 10:point5, 11:point5, 12:quadrilateral1, 13:quadrilateral1, 14:quadrilateral1, 15:quadrilateral1, 16:quadrilateral1,"
+ngp_check geometry_element_geometry1 "1:quadrilateral1,quadrilateral3,quadrilateral4, 2:quadrilateral1,quadrilateral3,quadrilateral4, 3:quadrilateral1,quadrilateral3, 5:quadrilateral1,quadrilateral3, 6:quadrilateral1,quadrilateral2,quadrilateral3, 7:quadrilateral1,quadrilateral2,quadrilateral3, 10:quadrilateral3, 11:quadrilateral3,"
+ngp_check geometry_circle_part1 "3:circle_part1, 7:circle_part1,"
+ngp_check geometry_mpc1 "1:quadrilateral2, 2:quadrilateral2, 3:quadrilateral2, 4:quadrilateral2, 5:quadrilateral2, 6:quadrilateral2, 7:quadrilateral2, 8:quadrilateral2, 9:quadrilateral2, 10:quadrilateral2, 11:quadrilateral2, 12:quadrilateral2, 13:quadrilateral2, 14:quadrilateral2, 15:quadrilateral2, 16:quadrilateral1,quadrilateral2,"
+ngp_check geometry_tetrahedral1 "1:tetrahedral1, 2:tetrahedral1, 3:tetrahedral1, 4:tetrahedral1, 5:tetrahedral1, 7:tetrahedral1, 10:tetrahedral1, 11:tetrahedral1, 13:tetrahedral1, 19:tetrahedral1,"
+ngp_check geometry_hexahedral1 "1:hexahedral1, 2:hexahedral1, 3:hexahedral1, 4:hexahedral1, 5:hexahedral1, 7:hexahedral1, 10:hexahedral1, 11:hexahedral1, 12:hexahedral1, 13:hexahedral1, 14:hexahedral1,hexahedral2, 16:hexahedral1, 19:hexahedral1, 20:hexahedral1, 21:hexahedral1, 22:hexahedral1, 23:hexahedral1, 25:hexahedral1,"
+ngp_check geometry_cylinder_part1 "3:cylinder_part1,cylinder_part3, 6:cylinder_part1,cylinder_part3,cylinder_part4,cylinder_part5, 7:cylinder_part2, 8:cylinder_part2,cylinder_part4,cylinder_part5, 9:cylinder_part2,cylinder_part3, 12:cylinder_part1,cylinder_part3, 15:cylinder_part1,cylinder_part3,cylinder_part4,cylinder_part5, 16:cylinder_part2, 17:cylinder_part2,cylinder_part4,cylinder_part5, 18:cylinder_part2,cylinder_part3, 21:cylinder_part1, 24:cylinder_part1,cylinder_part4,cylinder_part5, 26:cylinder_part4,cylinder_part5,"
+expected_error_ok "$T2026" geometry_exclude_error1
+expected_error_ok "$T2026" geometry_cylinder_part_error1
+expected_error_ok "$T2026" geometry_cylinder_part_error2
 # F5 T4 U3: dependency_geometry / _method / _number / _type and the
 # element_group -all of dependency_item (manual 6.404-6.408); the printed
 # group data go through get_group_data. Values = Professional 02-08-2026

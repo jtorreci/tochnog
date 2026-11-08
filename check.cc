@@ -340,6 +340,13 @@ long int check( long int idat, long int task )
     ok = check_ndim( 3, 3, task );
   if ( data_number==GEOMETRY_CYLINDER_SEGMENT )
     ok = check_ndim( 3, 3, task );
+  if ( data_number==GEOMETRY_CIRCLE_PART )
+    ok = check_ndim( 2, 2, task );
+  if ( data_number==GEOMETRY_CYLINDER_PART ||
+       data_number==GEOMETRY_CYLINDER_PART_START_VECTOR ||
+       data_number==GEOMETRY_HEXAHEDRAL ||
+       data_number==GEOMETRY_TETRAHEDRAL )
+    ok = check_ndim( 3, 3, task );
   if ( data_number==GEOMETRY_POLYNOMIAL )
     ok = check_ndim( 2, 3, task );
   if ( data_number==GEOMETRY_QUADRILATERAL )

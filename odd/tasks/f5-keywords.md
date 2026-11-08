@@ -143,12 +143,13 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   (mapping trigger: 69 names across ~12 files), summary in Log L-T4-map. Units:
   - [x] U1 aliases control_mesh_delete_geometry_element_group, geometry_triangle_eps_iso,
     mesh_interface_triangle_coordinates. Route: inline. Commit 87436f7.
-  - [ ] U2 geometry entity options (13): geometry_{line,quadrilateral}_eps_iso, geometry_boundary, geometry_mpc,
+  - [x] U2 geometry entity options (12): geometry_{line,quadrilateral}_eps_iso, geometry_boundary, geometry_mpc,
     geometry_exclude, geometry_element_geometry(_method), geometry_circle_part, geometry_cylinder_part(_start_vector),
-    geometry_tetrahedral, geometry_hexahedral, geometry_method.
+    geometry_tetrahedral, geometry_hexahedral. Route: inline (one file family, no writer reason). Commit COMMIT_U2.
+    geometry_method moved to U4 (element selections).
   - [x] U3 dependency modifiers (4): dependency_{method,type,number,geometry} (+ element group -all of the manual example;
     print_group_data through get_group_data). Route: inline (no writer reason). Commit 3b66fc9. C122 found (owner).
-  - [ ] U4 delete/refine flags (6): control_mesh_delete_geometry_{direct,method,projection_type},
+  - [ ] U4 delete/refine flags (7): geometry_method, control_mesh_delete_geometry_{direct,method,projection_type},
     control_mesh_refine_locally_{minimal_size,not_method,only_method}.
   - [ ] U5 mesh operations (16): renumber offsets (2), split_element_from/_to, convert tria6_tria3 / quad9_quad6,
     duplicate_element_group, mesh_correct, extrude direction / element_group_new / contact springs (2),
@@ -586,3 +587,8 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   and != nvalue error, geometry = all element nodes inside. All equal to GNU at the same evaluation time. C122:
   Pro evaluates -time_current at t_start + dt/2 (GNU end of step) and integrates total_linear per step (GNU E(t) eps,
   analytic); owner decision pending. print_group_data now shows get_group_data values (manual 6.406 sentence).
+- 2026-11-08 U2: Pro probes (print_node_geometry_present, 2D 3x3 quad4 and 3D 2x2x2 hex8): all options/entities agree.
+  Pro facts: quadrilateral eps = triangle rule; mpc -yes slave only, -no no restriction; element_geometry -any/-all/-only;
+  cylinder angle refs z: x->y, x: y->z, y: x->z; self exclusion ignored by Pro; oblique cylinder without start vector
+  selects nothing in Pro; Pro start-vector message copied. Pro defect on the plane through the first cylinder axis
+  point (class D CYLINDER-PART-START-PLANE, S2 rule, owner confirmation pending).

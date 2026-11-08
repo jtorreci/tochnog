@@ -1135,6 +1135,9 @@ void step_start( long int task, long int options_solver[], double dtime, double 
   // per-node list of present geometries at the START of every step,
   // when the node coordinates still hold the converged state of the
   // previous step (measured on the Professional: the last step wins).
+  // The mesh boundary first, for geometry_boundary (6.509) in the step
+  // start scans (idempotent; iteration_start calls it again).
+  mesh_boundary_set();
   node_geometry_present_calculate();
     // element_geometry_present (6.427): same moment, an element is
     // present when all its nodes are
