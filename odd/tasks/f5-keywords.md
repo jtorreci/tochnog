@@ -147,7 +147,7 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
     geometry_exclude, geometry_element_geometry(_method), geometry_circle_part, geometry_cylinder_part(_start_vector),
     geometry_tetrahedral, geometry_hexahedral, geometry_method.
   - [x] U3 dependency modifiers (4): dependency_{method,type,number,geometry} (+ element group -all of the manual example;
-    print_group_data through get_group_data). Route: inline (no writer reason). Commit COMMIT_U3. C122 found (owner).
+    print_group_data through get_group_data). Route: inline (no writer reason). Commit 3b66fc9. C122 found (owner).
   - [ ] U4 delete/refine flags (6): control_mesh_delete_geometry_{direct,method,projection_type},
     control_mesh_refine_locally_{minimal_size,not_method,only_method}.
   - [ ] U5 mesh operations (16): renumber offsets (2), split_element_from/_to, convert tria6_tria3 / quad9_quad6,
