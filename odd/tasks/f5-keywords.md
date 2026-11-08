@@ -167,7 +167,7 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
     - [x] U5d (ea220df) control_mesh_generate_truss_beam_separate, mesh_correct.
   - [x] U6 (5db4dd0) mpc_element_group options (6): control_mpc_element_group, mpc_element_group_{always,closest,
     coord_geometry,keep,eps_iso}. Route: delegated (bounded writer).
-  - [x] U7 (COMMIT_U7) control_mesh_truss_distribute_mpc family (10 records, 6.245-6.254) and mpc_geometry
+  - [x] U7 (663cbcb) control_mesh_truss_distribute_mpc family (10 records, 6.245-6.254) and mpc_geometry
     _method/_tolerance with the parents mpc_geometry/_switch/_dof (6.866-6.870). Owner: implement the full feature.
     Route: delegated (bounded writer).
   - [ ] U8 geometry_moving family (7) + control_geometry_moving: new module.
