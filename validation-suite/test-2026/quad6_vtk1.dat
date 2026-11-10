@@ -1,4 +1,4 @@
-( F5 T4 U9a: VTK output of a continuum -quad6: native VTK cell type 31
+( F5 T4 U9a: VTK output of a continuum -quad6: native VTK cell type 30
   VTK_QUADRATIC_LINEAR_QUAD, 6 nodes, corners n0 n2 n5 n3 then the
   mid-edge nodes n1 n4. )
 echo -no

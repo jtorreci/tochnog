@@ -33,7 +33,7 @@ static long int vtk_element_is_empty( long int element )
   return ( element_empty==-YES );
 }
 
-// A continuum quad6 or prism15: VTK has both as native cells, type 31
+// A continuum quad6 or prism15: VTK has both as native cells, type 30
 // VTK_QUADRATIC_LINEAR_QUAD and type 26 VTK_QUADRATIC_WEDGE. An element of
 // an interface group is not one of them and stays an illegal type.
 static long int vtk_quadratic_cell( long int element, long int name )
@@ -305,7 +305,7 @@ void print_vtk( long int icontrol, long int task )
     else if ( name==-HEX8 )  outvtk << "12 ";
     else if ( name==-HEX27 ) outvtk << "12 ";
     else if ( name==-QUAD6 && vtk_quadratic_cell( element, name ) )
-      outvtk << "31 ";
+      outvtk << "30 ";
     else if ( name==-PRISM15 && vtk_quadratic_cell( element, name ) )
       outvtk << "26 ";
     else {

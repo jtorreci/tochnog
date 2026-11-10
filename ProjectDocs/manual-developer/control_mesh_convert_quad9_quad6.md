@@ -58,7 +58,7 @@ two lines, `Error detected for data item`). The Jacobian of a `-x` element is
 negative (`pol()` uses `|detj|`, as the Professional: element_volume positive).
 
 **VTK.** `print_vt.cc` writes the continuum quad6 as VTK_QUADRATIC_LINEAR_QUAD
-(type 31, corners n0 n2 n5 n3, then mid-edges n1 n4) and the prism15 as
+(type 30, corners n0 n2 n5 n3, then mid-edges n1 n4) and the prism15 as
 VTK_QUADRATIC_WEDGE (type 26, corners, base mid-edges 9-11, top mid-edges
 12-14, vertical mid-edges 6-8). Owner rule (2026-11-09, verbatim): "si, la
 incluimos. Si vtk no lo soporta directamente convertimos en la escritura del

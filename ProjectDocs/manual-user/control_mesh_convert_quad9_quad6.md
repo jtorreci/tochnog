@@ -71,7 +71,7 @@ value, as the Professional).
 
 Supported with the continuum quad6: stress recovery, `post_point` / point
 location, `force_edge` on its 3-node and 2-node sides, `post_element_force`,
-VTK output (`control_print_vtk`, native cell type 31, see
+VTK output (`control_print_vtk`, native cell type 30, see
 [control_print_vtk](control_print_vtk.md)).
 
 Not supported yet (the element is skipped by these features): tendons

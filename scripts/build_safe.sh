@@ -3588,9 +3588,9 @@ pv_case control_mesh_convert_quad9_quad6_y1 '-y: quad6 1 2 3 7 8 9, nodes 4 5 6 
    && grep -qE "^ *element +2 +-quad4 3 11 9 10 *$" $t.dbs && grep -qE "^ *element +3 +-tria3 2 11 3 *$" $t.dbs \
    && ! grep -qE "^ *node +4 " $t.dbs && ! grep -qE "^ *node +5 " $t.dbs && ! grep -qE "^ *node +6 " $t.dbs'
 # F5 T4 U9a: VTK output of the continuum quad6 and the prism15 (native cells)
-pv_case quad6_vtk1 'cell 6 0 2 5 3 1 4, type 31' \
+pv_case quad6_vtk1 'cell 6 0 2 5 3 1 4, type 30' \
   'grep -qE "^CELLS 1 7 *$" $t.vtk && grep -qE "^6 0 2 5 3 1 4 *$" $t.vtk \
-   && [ "$(grep -A1 ^CELL_TYPES $t.vtk | sed -n 2p | tr -d " ")" = 31 ]'
+   && [ "$(grep -A1 ^CELL_TYPES $t.vtk | sed -n 2p | tr -d " ")" = 30 ]'
 pv_case prism15_vtk1 'cell 15 corners base top vertical, type 26' \
   'grep -qE "^CELLS 1 16 *$" $t.vtk && grep -qE "^15 0 1 2 3 4 5 9 10 11 12 13 14 6 7 8 *$" $t.vtk \
    && [ "$(grep -A1 ^CELL_TYPES $t.vtk | sed -n 2p | tr -d " ")" = 26 ]'
