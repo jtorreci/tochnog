@@ -33,16 +33,17 @@ static long int vtk_element_is_empty( long int element )
   return ( element_empty==-YES );
 }
 
-// A continuum quad6 or prism15: VTK has both as native cells, type 30
-// VTK_QUADRATIC_LINEAR_QUAD and type 26 VTK_QUADRATIC_WEDGE. An element of
-// an interface group is not one of them and stays an illegal type.
+// A continuum quad6, prism15 or prism18: VTK has them as native cells,
+// type 30 VTK_QUADRATIC_LINEAR_QUAD, type 26 VTK_QUADRATIC_WEDGE and type 32
+// VTK_BIQUADRATIC_QUADRATIC_WEDGE. An element of an interface group is not
+// one of them and stays an illegal type.
 static long int vtk_quadratic_cell( long int element, long int name )
 
 {
   long int element_group=0, ldum=0;
   double ddum[1];
 
-  if ( name!=-QUAD6 && name!=-PRISM15 ) return 0;
+  if ( name!=-QUAD6 && name!=-PRISM15 && name!=-PRISM18 ) return 0;
   db( ELEMENT_GROUP, element, &element_group, ddum, ldum, VERSION_PRINT,
     GET_IF_EXISTS );
   return !db_active_index( GROUP_INTERFACE, element_group, VERSION_NORMAL );
@@ -211,6 +212,8 @@ void print_vtk( long int icontrol, long int task )
       length_cells += 7;
     else if ( name==-PRISM15 && vtk_quadratic_cell( element, name ) )
       length_cells += 16;
+    else if ( name==-PRISM18 && vtk_quadratic_cell( element, name ) )
+      length_cells += 19;
     else {
       pri( "Error: illegal element type detected for CONTROL_PRINT_VTK.\n");
       exit(TN_EXIT_STATUS);
@@ -279,6 +282,21 @@ void print_vtk( long int icontrol, long int task )
              nodes[12] << " " << nodes[13] << " " << nodes[14] << " " <<
              nodes[6] << " " << nodes[7] << " " << nodes[8];
     }
+    else if ( name==-PRISM18 ) {
+      // VTK type 32: corners 0-5 (base 0 1 2, top 3 4 5), the mid-edge
+      // nodes of the base (0,1) (1,2) (2,0), of the top (3,4) (4,5) (5,3),
+      // the vertical ones (0,3) (1,4) (2,5), then the centres of the side
+      // faces (0,1,4,3) (1,2,5,4) (2,0,3,5). GNU (prism18_shape): three
+      // tria6 layers 0-5, 6-11, 12-17; tria6 corners 0 2 5, mids 1 (0-2),
+      // 3 (0-5), 4 (2-5).
+      outvtk << "18 ";
+      outvtk << nodes[0] << " " << nodes[2] << " " << nodes[5] << " " <<
+             nodes[12] << " " << nodes[14] << " " << nodes[17] << " " <<
+             nodes[1] << " " << nodes[4] << " " << nodes[3] << " " <<
+             nodes[13] << " " << nodes[16] << " " << nodes[15] << " " <<
+             nodes[6] << " " << nodes[8] << " " << nodes[11] << " " <<
+             nodes[7] << " " << nodes[10] << " " << nodes[9];
+    }
     else {
       assert( name==-HEX27 );
       outvtk << "8 ";
@@ -308,6 +326,8 @@ void print_vtk( long int icontrol, long int task )
       outvtk << "30 ";
     else if ( name==-PRISM15 && vtk_quadratic_cell( element, name ) )
       outvtk << "26 ";
+    else if ( name==-PRISM18 && vtk_quadratic_cell( element, name ) )
+      outvtk << "32 ";
     else {
       pri( "Error: illegal element type detected for CONTROL_PRINT_VTK.\n");
       exit(TN_EXIT_STATUS);

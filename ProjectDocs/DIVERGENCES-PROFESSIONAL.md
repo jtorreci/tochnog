@@ -13,11 +13,11 @@ Single index of every known difference between the GNU version and Tochnog Profe
 
 | class | meaning | items |
 |---|---|---|
-| A | deliberate divergence decided by the project owner | 35 |
+| A | deliberate divergence decided by the project owner | 36 |
 | B | known difference, not decided yet or scheduled (F3/F4) | 60 |
 | C | GNU extension or input-dialect difference | 39 |
 | D | Professional-suspect: the Professional contradicts its own manual or the analytic answer | 36 |
-| | **total** | **170** |
+| | **total** | **171** |
 
 Ids: `C*`/`B*` are [BACKLOG-OPEN-ISSUES.md](BACKLOG-OPEN-ISSUES.md) items, `K*` are clusters of [AUDIT-ALL-VARIABLES-2026.md](AUDIT-ALL-VARIABLES-2026.md); other ids are local to this index. Several class A items are also Professional-suspect (noted in their status). Professional values are from the binary 02-08-2026 unless stated.
 
@@ -76,6 +76,7 @@ Recorded in the SEGUIMIENTO "Descarte de features" table and in the "Differences
 | GLOBAL-NODE-DOF-EMPTY-DISPLACEMENT | `global_node_dof_empty -yes` (6.552) | Every dof of a node only connected to empty elements is zeroed except the displacement, which keeps its start-of-step value. | Same (probes f5/v5b c_def, c2_def: disx/disy keep the input values). The manual says "the dof's in a node are set to zero" (displacement included): the GNU, like the Professional, diverges from the manual. | Owner decision 2026-11-03 (C101): keep the displacement, as the Professional. Zeroing it would put the nodes of an element that becomes active again back at their start position, and with an updated memory they could lie inside the neighbouring deformed elements. | 2026-11-03 | [user/global_node_dof_empty](manual-user/global_node_dof_empty.md); BACKLOG C101 |
 | UMAT-PARDISO-DECOMPOSE | `group_materi_umat_pardiso_decompose` (6.758) | Accepted without effect (no PARDISO solver). | Controls how often PARDISO decomposes the system matrix with a umat. | Class A, owner decision 2026-11-07 (F5 T3 E plan): the GNU solvers are kept. | 2026-11-07 | [user/group_materi_umat_pardiso_decompose](manual-user/group_materi_umat_pardiso_decompose.md); SEGUIMIENTO Descarte |
 | VTK-QUAD6-PRISM15 | `control_print_vtk` of a continuum `-quad6` and a `-prism15` | Native VTK cells: quad6 type 30 VTK_QUADRATIC_LINEAR_QUAD (6 nodes), prism15 type 26 VTK_QUADRATIC_WEDGE (15 nodes). | prism15 written as a 6-node wedge (type 13, corners); the quad6 cell is dropped (`CELLS 0 0`). | Owner rule 2026-11-09 (U9, verbatim): "si, la incluimos. Si vtk no lo soporta directamente convertimos en la escritura del vtk a un tipo soportado"; VTK has both natively. | 2026-11-10 | [dev/control_mesh_convert_quad9_quad6](manual-developer/control_mesh_convert_quad9_quad6.md) |
+| VTK-PRISM18 | `control_print_vtk` of a `-prism18` | Native cell type 32 VTK_BIQUADRATIC_QUADRATIC_WEDGE (18 points: corners, mid-edge nodes, side-face centres), checked with the VTK 9.7.2 reader (`prism18_vtk1`). | The 6 corners as a linear wedge (type 13). | Owner rule 2026-11-09 (U9, verbatim): "si, la incluimos. Si vtk no lo soporta directamente convertimos en la escritura del vtk a un tipo soportado"; VTK has the cell natively. | 2026-11-10 | [user/prism18](manual-user/prism18.md); [dev/prism18](manual-developer/prism18.md) |
 
 ## D. Professional-suspect (the Professional contradicts its manual or the analytic answer)
 

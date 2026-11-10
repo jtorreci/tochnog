@@ -61,6 +61,13 @@ boundary conditions on nodes and geometries, gravity, etc.
   stresses in physical coordinates, arithmetic mean over the elements (as
   the prism15); equal to the Professional on the tests below.
 
+## VTK output
+
+`control_print_vtk` writes the element as the native VTK cell type 32
+(VTK_BIQUADRATIC_QUADRATIC_WEDGE, 18 points: the 6 corners, the 9 mid-edge
+nodes and the 3 side-face centres), so ParaView shows the quadratic
+geometry.
+
 ## Differences with the Professional version
 
 - `group_integration_points -minimal`: the GNU keeps the 21 points. The
@@ -76,6 +83,9 @@ boundary conditions on nodes and geometries, gravity, etc.
   interpolates linearly between the corner nodes (u = 0.01 z^2 at z 0.25:
   GNU 6.25e-4 = analytic, Professional 2.5e-3). DIVERGENCES
   PRISM18-POST-POINT, class D.
+- VTK: the Professional writes the 6 corners as a linear wedge (type 13);
+  the GNU writes the 18-point cell (owner rule 2026-11-09, DIVERGENCES
+  VTK-PRISM18).
 
 ## Limitations
 
@@ -94,7 +104,8 @@ Professional), `prism18_volume1` (distorted element, analytic volume
 1.825 through the self-weight reaction), `prism18_patch1` (linear patch
 test, 4 elements, 5 free nodes), `prism18_post_point1` (quadratic field,
 analytic), `prism18_minimal1`, `prism18_post_element_force1` (section
-statics -123.4 / 1000 / -100000 = Professional).
+statics -123.4 / 1000 / -100000 = Professional), `prism18_vtk1` (VTK cell
+type 32).
 
 ## Related
 

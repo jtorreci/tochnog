@@ -3659,6 +3659,9 @@ pv_case prism18_post_element_force1 'section statics of the force10 cantilever o
   'dbs_near $t.dbs post_element_force_result 10 1 -123.4 1e-6 && dbs_near $t.dbs post_element_force_result 10 2 0. 1e-6 \
    && dbs_near $t.dbs post_element_force_result 10 3 1000. 1e-6 && dbs_near $t.dbs post_element_force_result 10 4 0. 1e-5 \
    && dbs_near $t.dbs post_element_force_result 10 5 -100000. 1e-4'
+pv_case prism18_vtk1 'cell 18 points corners mid-edges face centres, type 32 (VTK_BIQUADRATIC_QUADRATIC_WEDGE)' \
+  'grep -qE "^CELLS 1 19 *$" $t.vtk && grep -qE "^18 0 2 5 12 14 17 1 4 3 13 16 15 6 8 11 7 10 9 *$" $t.vtk \
+   && [ "$(grep -A1 ^CELL_TYPES $t.vtk | sed -n 2p | tr -d " ")" = 32 ]'
 rm -rf "$PVDIR"
 # F5 W1 U5: element group selection (Professional 02-08-2026 probes; the
 # manual decides where the Professional differs) and print_precision.

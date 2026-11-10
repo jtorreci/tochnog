@@ -20,7 +20,7 @@
   (`L1, L2, zeta`) for `-PRISM18` and returns the 18 shape values.
 - `calcul_force.cc` — `post_element_force_calculate()` integrates the
   prism18 through `pol()` (the non-tensor path of C84).
-- `print_vt.cc` — VTK cell (see the VTK section).
+- `print_vt.cc` — VTK cell type 32 (see the VTK section).
 
 The continuum element loop needs nothing else (`elem.cc` dispatches on
 `GROUP_INTERFACE`; `area()` gives `nside = 0`, as for the prism15).
@@ -76,10 +76,25 @@ Professional interpolates `post_point` values linearly between the
 corner nodes (PRISM18-POST-POINT, class D: u = 0.01 z^2, z 0.25 -> 2.5e-3
 instead of 6.25e-4).
 
+## VTK
+
+`print_vtk()` writes type 32 VTK_BIQUADRATIC_QUADRATIC_WEDGE through
+`vtk_quadratic_cell()` (not for an interface group). VTK order: corners
+(0 1 2 base, 3 4 5 top), base mid-edge (0,1) (1,2) (2,0), top (3,4) (4,5)
+(5,3), vertical (0,3) (1,4) (2,5), side-face centres (0,1,4,3) (1,2,5,4)
+(2,0,3,5) (the `vtkBiQuadraticQuadraticWedge` parametric coordinates of
+VTK 9.7.2). GNU to VTK: `0 2 5 12 14 17 1 4 3 13 16 15 6 8 11 7 10 9`.
+Checked by reading `prism18_vtk1.vtk` with VTK 9.7.2: class
+vtkBiQuadraticQuadraticWedge, 18 points, every mid-edge node at its edge
+midpoint, every face-centre node at its face centre, and the cell's own
+map of the parametric centre at the centroid. The Professional writes the
+corners as type 13 (VTK-PRISM18, class A by the owner rule 2026-11-09).
+
 ## Differences with the Professional version
 
 - PRISM18-MINIMAL (class B, pending the owner): see the integration rule.
 - PRISM18-POST-POINT (class D): see the point location.
+- VTK-PRISM18 (class A, owner rule): see the VTK section.
 
 ## Verification
 
