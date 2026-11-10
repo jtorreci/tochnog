@@ -23,6 +23,10 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   "Descarte de features" table with the reason.
 - S5 Every implemented keyword is accepted by the probe (`scripts/keyword_probe.cc`) and the
   KEYWORD-GAP-REPORT counts are refreshed at the end of each wave.
+- S6 New elements (owner, 2026-11-09, U9): add prism12, prism18 and a continuum quad6 so that
+  control_mesh_extrude_element and control_mesh_convert_quad9_quad6 are implemented, verbatim: "A mi me parece
+  que es interesante añadir los elementos". VTK output is included for the new elements and prism15, verbatim:
+  "si, la incluimos. Si vtk no lo soporta directamente convertimos en la escritura del vtk a un tipo soportado".
 
 ## Tasks
 - [x] T0 Refresh the gap against the 02-08-2026 manual (S1, S5). Route: inline. 1156 names,
@@ -172,9 +176,15 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
     Route: delegated (bounded writer).
   - [x] U8 (dd2ee02) geometry_moving family (6) + control_geometry_moving: new module geometry_moving.cc.
     Route: delegated (bounded writer).
-  - [ ] U9 owner decisions: control_mesh_map, control_mesh_remove_really(+_activate_all/_factor, _keep_geometry),
-    control_mesh_extrude_element (needs prism12/prism18), control_mesh_convert_quad9_quad6 (needs a quad6
-    continuum element).
+  - [ ] U9 owner decisions still open: control_mesh_map, control_mesh_remove_really(+_activate_all/_factor,
+    _keep_geometry).
+  - [x] U9a (3c93898, a1185ed, 505564d, b006671) (S3, S4, S6) Professional probes for quad6, continuum quad6,
+    control_mesh_convert_quad9_quad6, VTK output of quad6 and prism15. Route: delegated (bounded writer; context
+    backstop). Suite 1086 OK, 0 FALLO. Pending owner: QUAD6-3D class D.
+  - [ ] U9b (S3, S4, S6) prism18, control_mesh_extrude_element with -tria6 (manual 6.181 default -prism18), VTK.
+    Route: to decide after U9a.
+  - [ ] U9c (S3, S4, S6) prism12 continuum, -prism12 option of the extrude, VTK. Interface prism12 is out of scope.
+    Route: to decide after U9b.
 - [ ] T5 W6 other physics (25): baseline correction, force_edge_diagram, force_gravity_geometry,
   force_volume_element_group_0, groundflow_phreatic_*, group_beam_*, group_contact_spring_*,
   group_dof_initial*, group_time_fill, group_truss_elasti_elongation_force_diagram,
@@ -733,3 +743,17 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
 - 2026-11-09 owner (verbatim "si"): U8 class D confirmed (GEOMETRY-MOVING-SAMPLING / -PARAMETERS) and geometry_moving1
   retargeted to the GNU value: full run (35 min, build of 31c5432) sigyy -0.348912581336, target tolerance 1.e-6 (the
   Professional -0.326823 kept in the header). Still out of build_safe (C130 run time).
+- 2026-11-09 owner, U9: implement the new elements instead of discarding control_mesh_extrude_element and
+  control_mesh_convert_quad9_quad6 (prism12, prism18, continuum quad6), verbatim: "A mi me parece que es interesante
+  añadir los elementos. No es algo especialmente complejo, ya que tenemos toda la infraestructura y pueden derivarse de
+  los que ya existen, y dota de escalabilidad al proyecto a futuro". The derivation claim is being verified by a
+  read-only map (route: delegated explorer, mapping trigger).
+- 2026-11-10 map result: all three shape families are products of existing functions; continuum quad6 can share the
+  QUAD6 enum because interface status comes from GROUP_INTERFACE (elem.cc:515); MNOL 27 is enough. Manual gaps go to
+  Professional probes: integration rules and point order, quad6 node order after conversion. First prism15 commit
+  443fdcd shipped a wrong triangle table without tests, so each element lands with an analytic integration test.
+- 2026-11-10 owner, VTK scope, verbatim: "si, la incluimos. Si vtk no lo soporta directamente convertimos en la
+  escritura del vtk a un tipo soportado". U9 split into U9a, U9b, U9c.
+- 2026-11-10 U9a parent review: the writer wrote quad6 as VTK cell 31 (VTK_QUADRATIC_LINEAR_WEDGE) and pinned the same
+  value in its test. Fixed to 30 (VTK_QUADRATIC_LINEAR_QUAD). Checked with VTK 9.7.2 reading the files: quad6 and prism15
+  cells have the right class, node count and mid-edge positions. Differential of 45 inputs against 408d8a1 identical.
