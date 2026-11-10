@@ -3732,6 +3732,9 @@ pv_case prism12_post_element_force1 'section statics of the force10 cantilever o
   'dbs_near $t.dbs post_element_force_result 10 1 -123.4 1e-6 && dbs_near $t.dbs post_element_force_result 10 2 0. 1e-6 \
    && dbs_near $t.dbs post_element_force_result 10 3 1000. 1e-6 && dbs_near $t.dbs post_element_force_result 10 4 0. 1e-5 \
    && dbs_near $t.dbs post_element_force_result 10 5 -100000. 1e-4'
+pv_case prism12_vtk1 'cell 12 points corners and mid-edges, type 31 (VTK_QUADRATIC_LINEAR_WEDGE)' \
+  'grep -qE "^CELLS 1 13 *$" $t.vtk && grep -qE "^12 0 2 5 6 8 11 1 4 3 7 10 9 *$" $t.vtk \
+   && [ "$(grep -A1 ^CELL_TYPES $t.vtk | sed -n 2p | tr -d " ")" = 31 ]'
 rm -rf "$PVDIR"
 expected_error_ok "$T2026" prism12_interface_error1
 # F5 W1 U5: element group selection (Professional 02-08-2026 probes; the

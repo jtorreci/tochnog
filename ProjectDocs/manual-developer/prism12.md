@@ -23,6 +23,7 @@
   "Error: an interface -prism12 is not available yet; element N" before
   `interface_element()` (whose name dispatch would end in
   `assert( name==-HEX8 )`).
+- `print_vt.cc` — VTK cell type 31 (see the VTK section).
 
 The continuum element loop needs nothing else (`elem.cc` dispatches on
 `GROUP_INTERFACE`; `area()` gives `nside = 0`, as for the prism15 and
@@ -98,6 +99,19 @@ neither is implemented (PRISM12-INTERFACE, class B). The refusal sits in
 `elem()`, so a `group_interface -prism12` input stops in the first
 element loop.
 
+## VTK
+
+`print_vtk()` writes type 31 VTK_QUADRATIC_LINEAR_WEDGE through
+`vtk_quadratic_cell()` (not for an interface group). VTK order: corners
+(0 1 2 base, 3 4 5 top), base mid-edge (0,1) (1,2) (2,0), top (3,4) (4,5)
+(5,3). GNU to VTK: `0 2 5 6 8 11 1 4 3 7 10 9`. Checked with VTK 9.7.2
+reading `prism12_vtk1.vtk` and the curved `prism12_volume1` element: class
+vtkQuadraticLinearWedge, 12 points, and the cell's own parametric map
+(`EvaluateLocation` at four points, L1 = 1-r-s, L2 = r, zeta = 2t-1)
+equal to the GNU `prism12_shape()` map to 4e-16 (script `vtkcheck12.py`
+in the U9c scratch directory). The Professional drops the cell
+(`CELLS 0 0`; VTK-PRISM12, class A by the owner rule 2026-11-09).
+
 ## Differences with the Professional version
 
 - PRISM12-DEFAULT (class D): see the integration rule.
@@ -105,6 +119,7 @@ element loop.
   integration rule.
 - PRISM12-POST-POINT (class D): see the point location.
 - PRISM12-INTERFACE (class B): see the interface section.
+- VTK-PRISM12 (class A, owner rule): see the VTK section.
 
 ## Verification
 

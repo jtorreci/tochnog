@@ -65,6 +65,12 @@ continuum element: an element group with `group_interface` is refused
   stresses in physical coordinates, arithmetic mean over the elements (as
   the prism15 and prism18).
 
+## VTK output
+
+`control_print_vtk` writes the element as the native VTK cell type 31
+(VTK_QUADRATIC_LINEAR_WEDGE, 12 points: the 6 corners and the 6 mid-edge
+nodes of the two triangles), so ParaView shows the quadratic geometry.
+
 ## Differences with the Professional version
 
 - Default and `-maximal` rule: the Professional 02-08-2026 stops on a
@@ -86,6 +92,9 @@ continuum element: an element group with `group_interface` is refused
   Professional 5e-3). DIVERGENCES PRISM12-POST-POINT, class D.
 - Interface: manual 6.624 also lists `-prism12` for `group_interface`; the
   GNU refuses it (DIVERGENCES PRISM12-INTERFACE, class B).
+- VTK: the Professional drops the cell (`CELLS 0 0`, `-minimal` run); the
+  GNU writes the 12-point cell (owner rule 2026-11-09, DIVERGENCES
+  VTK-PRISM12).
 
 ## Limitations
 
@@ -109,7 +118,7 @@ self-weight reaction), `prism12_patch1` (linear patch test, 8 elements in
 two layers, 5 free nodes), `prism12_post_point1` (a field quadratic in
 x, y and linear in z: post_point and the stresses at the 14 points exact),
 `prism12_post_element_force1` (section statics -123.4 / 1000 / -100000),
-`prism12_interface_error1`.
+`prism12_interface_error1`, `prism12_vtk1` (VTK cell type 31).
 
 ## Related
 

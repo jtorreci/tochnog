@@ -13,11 +13,11 @@ Single index of every known difference between the GNU version and Tochnog Profe
 
 | class | meaning | items |
 |---|---|---|
-| A | deliberate divergence decided by the project owner | 38 |
+| A | deliberate divergence decided by the project owner | 39 |
 | B | known difference, not decided yet or scheduled (F3/F4) | 59 |
 | C | GNU extension or input-dialect difference | 39 |
 | D | Professional-suspect: the Professional contradicts its own manual or the analytic answer | 39 |
-| | **total** | **175** |
+| | **total** | **176** |
 
 Ids: `C*`/`B*` are [BACKLOG-OPEN-ISSUES.md](BACKLOG-OPEN-ISSUES.md) items, `K*` are clusters of [AUDIT-ALL-VARIABLES-2026.md](AUDIT-ALL-VARIABLES-2026.md); other ids are local to this index. Several class A items are also Professional-suspect (noted in their status). Professional values are from the binary 02-08-2026 unless stated.
 
@@ -79,6 +79,7 @@ Recorded in the SEGUIMIENTO "Descarte de features" table and in the "Differences
 | UMAT-PARDISO-DECOMPOSE | `group_materi_umat_pardiso_decompose` (6.758) | Accepted without effect (no PARDISO solver). | Controls how often PARDISO decomposes the system matrix with a umat. | Class A, owner decision 2026-11-07 (F5 T3 E plan): the GNU solvers are kept. | 2026-11-07 | [user/group_materi_umat_pardiso_decompose](manual-user/group_materi_umat_pardiso_decompose.md); SEGUIMIENTO Descarte |
 | VTK-QUAD6-PRISM15 | `control_print_vtk` of a continuum `-quad6` and a `-prism15` | Native VTK cells: quad6 type 30 VTK_QUADRATIC_LINEAR_QUAD (6 nodes), prism15 type 26 VTK_QUADRATIC_WEDGE (15 nodes). | prism15 written as a 6-node wedge (type 13, corners); the quad6 cell is dropped (`CELLS 0 0`). | Owner rule 2026-11-09 (U9, verbatim): "si, la incluimos. Si vtk no lo soporta directamente convertimos en la escritura del vtk a un tipo soportado"; VTK has both natively. | 2026-11-10 | [dev/control_mesh_convert_quad9_quad6](manual-developer/control_mesh_convert_quad9_quad6.md) |
 | VTK-PRISM18 | `control_print_vtk` of a `-prism18` | Native cell type 32 VTK_BIQUADRATIC_QUADRATIC_WEDGE (18 points: corners, mid-edge nodes, side-face centres), checked with the VTK 9.7.2 reader (`prism18_vtk1`). | The 6 corners as a linear wedge (type 13). | Owner rule 2026-11-09 (U9, verbatim): "si, la incluimos. Si vtk no lo soporta directamente convertimos en la escritura del vtk a un tipo soportado"; VTK has the cell natively. | 2026-11-10 | [user/prism18](manual-user/prism18.md); [dev/prism18](manual-developer/prism18.md) |
+| VTK-PRISM12 | `control_print_vtk` of a `-prism12` | Native cell type 31 VTK_QUADRATIC_LINEAR_WEDGE (12 points: corners and the mid-edge nodes of both triangles), checked with the VTK 9.7.2 reader (`prism12_vtk1`; the cell map equals the GNU shape functions on a curved element). | The cell is dropped (`CELLS 0 0`, run with `-minimal`: its default prism12 rule stops). | Owner rule 2026-11-09 (U9, verbatim): "si, la incluimos. Si vtk no lo soporta directamente convertimos en la escritura del vtk a un tipo soportado"; F5 T4 U9c. | 2026-11-10 | [user/prism12](manual-user/prism12.md); [dev/prism12](manual-developer/prism12.md) |
 
 ## D. Professional-suspect (the Professional contradicts its manual or the analytic answer)
 
