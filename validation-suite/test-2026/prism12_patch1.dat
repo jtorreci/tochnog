@@ -1,0 +1,139 @@
+( F5 T4 U9c: linear patch test of the -prism12: the nodes and the
+  boundary conditions of prism18_patch1 {unit square split in four tria6
+  around the centre (0.45, 0.55), planes z 0, 0.5 and 1, the centre of the
+  middle plane at z 0.45}, here two layers of -prism12 {elements 1-4 between
+  z 0 and the middle plane, 5-8 above}. u_x = 0.001 x + 0.0005 y + 0.002 z,
+  u_y = u_z = 0 prescribed on the outer nodes; the five inner middle-plane
+  nodes [17, 18, 19, 22, 25] are free. Exact: their u_x is the linear field
+  and every point has sigxx 1.2, sigyy = sigzz 0.4, sigxy 0.2, sigxz 0.8,
+  sigyz 0 {E 1000, nu 0.25}. )
+echo -no
+number_of_space_dimensions 3
+materi_velocity
+materi_displacement
+materi_stress
+end_initia
+node 1 0 0 0
+node 2 0.5 0 0
+node 3 1 0 0
+node 4 0.225 0.275 0
+node 5 0.725 0.275 0
+node 6 0.45 0.55 0
+node 7 1 0.5 0
+node 8 1 1 0
+node 9 0.725 0.775 0
+node 10 0.5 1 0
+node 11 0 1 0
+node 12 0.225 0.775 0
+node 13 0 0.5 0
+node 14 0 0 0.5
+node 15 0.5 0 0.5
+node 16 1 0 0.5
+node 17 0.225 0.275 0.5
+node 18 0.725 0.275 0.5
+node 19 0.45 0.55 0.45
+node 20 1 0.5 0.5
+node 21 1 1 0.5
+node 22 0.725 0.775 0.5
+node 23 0.5 1 0.5
+node 24 0 1 0.5
+node 25 0.225 0.775 0.5
+node 26 0 0.5 0.5
+node 27 0 0 1
+node 28 0.5 0 1
+node 29 1 0 1
+node 30 0.225 0.275 1
+node 31 0.725 0.275 1
+node 32 0.45 0.55 1
+node 33 1 0.5 1
+node 34 1 1 1
+node 35 0.725 0.775 1
+node 36 0.5 1 1
+node 37 0 1 1
+node 38 0.225 0.775 1
+node 39 0 0.5 1
+element 1 -prism12 1 2 3 4 5 6 14 15 16 17 18 19
+element 2 -prism12 3 7 8 5 9 6 16 20 21 18 22 19
+element 3 -prism12 8 10 11 9 12 6 21 23 24 22 25 19
+element 4 -prism12 11 13 1 12 4 6 24 26 14 25 17 19
+element 5 -prism12 14 15 16 17 18 19 27 28 29 30 31 32
+element 6 -prism12 16 20 21 18 22 19 29 33 34 31 35 32
+element 7 -prism12 21 23 24 22 25 19 34 36 37 35 38 32
+element 8 -prism12 24 26 14 25 17 19 37 39 27 38 30 32
+group_type 0 -materi
+group_materi_elasti_young 0 1000.
+group_materi_elasti_poisson 0 0.25
+group_materi_memory 0 -total_linear
+bounda_dof 1 -ra 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 20 21 23 24 26 27 28 29 30 31 32 33 34 35 36 37 38 39 -ra -vely -velz
+bounda_time 1 0.
+bounda_dof 10 1 -velx
+bounda_time 10 0. 0. 1. 0
+bounda_dof 11 2 -velx
+bounda_time 11 0. 0. 1. 0.0005
+bounda_dof 12 3 -velx
+bounda_time 12 0. 0. 1. 0.001
+bounda_dof 13 4 -velx
+bounda_time 13 0. 0. 1. 0.0003625
+bounda_dof 14 5 -velx
+bounda_time 14 0. 0. 1. 0.0008625
+bounda_dof 15 6 -velx
+bounda_time 15 0. 0. 1. 0.000725
+bounda_dof 16 7 -velx
+bounda_time 16 0. 0. 1. 0.00125
+bounda_dof 17 8 -velx
+bounda_time 17 0. 0. 1. 0.0015
+bounda_dof 18 9 -velx
+bounda_time 18 0. 0. 1. 0.0011125
+bounda_dof 19 10 -velx
+bounda_time 19 0. 0. 1. 0.001
+bounda_dof 20 11 -velx
+bounda_time 20 0. 0. 1. 0.0005
+bounda_dof 21 12 -velx
+bounda_time 21 0. 0. 1. 0.0006125
+bounda_dof 22 13 -velx
+bounda_time 22 0. 0. 1. 0.00025
+bounda_dof 23 14 -velx
+bounda_time 23 0. 0. 1. 0.001
+bounda_dof 24 15 -velx
+bounda_time 24 0. 0. 1. 0.0015
+bounda_dof 25 16 -velx
+bounda_time 25 0. 0. 1. 0.002
+bounda_dof 26 20 -velx
+bounda_time 26 0. 0. 1. 0.00225
+bounda_dof 27 21 -velx
+bounda_time 27 0. 0. 1. 0.0025
+bounda_dof 28 23 -velx
+bounda_time 28 0. 0. 1. 0.002
+bounda_dof 29 24 -velx
+bounda_time 29 0. 0. 1. 0.0015
+bounda_dof 30 26 -velx
+bounda_time 30 0. 0. 1. 0.00125
+bounda_dof 31 27 -velx
+bounda_time 31 0. 0. 1. 0.002
+bounda_dof 32 28 -velx
+bounda_time 32 0. 0. 1. 0.0025
+bounda_dof 33 29 -velx
+bounda_time 33 0. 0. 1. 0.003
+bounda_dof 34 30 -velx
+bounda_time 34 0. 0. 1. 0.0023625
+bounda_dof 35 31 -velx
+bounda_time 35 0. 0. 1. 0.0028625
+bounda_dof 36 32 -velx
+bounda_time 36 0. 0. 1. 0.002725
+bounda_dof 37 33 -velx
+bounda_time 37 0. 0. 1. 0.00325
+bounda_dof 38 34 -velx
+bounda_time 38 0. 0. 1. 0.0035
+bounda_dof 39 35 -velx
+bounda_time 39 0. 0. 1. 0.0031125
+bounda_dof 40 36 -velx
+bounda_time 40 0. 0. 1. 0.003
+bounda_dof 41 37 -velx
+bounda_time 41 0. 0. 1. 0.0025
+bounda_dof 42 38 -velx
+bounda_time 42 0. 0. 1. 0.0026125
+bounda_dof 43 39 -velx
+bounda_time 43 0. 0. 1. 0.00225
+control_timestep 10 1. 1.
+control_print_database 10 -separate_index
+end_data

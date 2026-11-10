@@ -110,5 +110,8 @@ corners as type 13 (VTK-PRISM18, class A by the owner rule 2026-11-09).
 
 ## Open
 
+- The 12-node prism shares the construction: [prism12](prism12.md)
+  (`prism12_shape()`, tria6 x 2-node line, 14 points; F5 T4 U9c).
+
 - BACKLOG C133: no `area()` side table (face loads), refine / split /
   mpc polishing / geometry_moving sampling do not list the element.

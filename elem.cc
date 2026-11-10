@@ -515,6 +515,15 @@ void elem( long int element, long int ithread )
   else if ( db_active_index( GROUP_INTERFACE, element_group, VERSION_NORMAL ) ) {
     // interface elements (Carril A): 2D quadrilaterals whose strains are
     // the displacement differences between the two opposite sides
+    if ( name==-PRISM12 ) {
+      // F5 T4 U9c: the GNU prism12 is the continuum element; the interface
+      // prism12 of manual 6.624 (two tria6 sides) is not implemented
+      // (DIVERGENCES PRISM12-INTERFACE)
+      pri( "Error: an interface -prism12 is not available yet; element",
+        element );
+      pri( "Its element group has group_interface; use a continuum group." );
+      exit_tn_on_error();
+    }
     interface_element( element, name, element_group, coord, old_dof,
       new_dof, element_lhside, element_matrix, element_rhside );
     if(find_nonlocal_weights && scalar_dabs(options_nonlocal_softvar)>TINY) return;

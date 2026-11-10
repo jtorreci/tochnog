@@ -3662,7 +3662,55 @@ pv_case prism18_post_element_force1 'section statics of the force10 cantilever o
 pv_case prism18_vtk1 'cell 18 points corners mid-edges face centres, type 32 (VTK_BIQUADRATIC_QUADRATIC_WEDGE)' \
   'grep -qE "^CELLS 1 19 *$" $t.vtk && grep -qE "^18 0 2 5 12 14 17 1 4 3 13 16 15 6 8 11 7 10 9 *$" $t.vtk \
    && [ "$(grep -A1 ^CELL_TYPES $t.vtk | sed -n 2p | tr -d " ")" = 32 ]'
+# F5 T4 U9c: the 12-node prism (manual 6.413, tria6 base and top layers).
+pv_case prism12_gauss1 '14 points tria6 x 2 Gauss, method 0, reaction -rho*g*V (PRISM12-DEFAULT)' \
+  'grep -qE "^ *element_intpnt_npoint +1 +14 *$" $t.dbs && grep -qE "^ *element_intpnt_method +1 +0" $t.dbs \
+   && dbs_near $t.dbs element_intpnt_iso_coord 1 1 3.333333333333e-01 1e-9 \
+   && dbs_near $t.dbs element_intpnt_iso_coord 1 3 -5.773502691896e-01 1e-9 \
+   && dbs_near $t.dbs element_intpnt_iso_coord 1 4 5.971587178977e-02 1e-9 \
+   && dbs_near $t.dbs element_intpnt_iso_coord 1 5 4.701420641051e-01 1e-9 \
+   && dbs_near $t.dbs element_intpnt_iso_coord 1 24 5.773502691896e-01 1e-9 \
+   && dbs_near $t.dbs element_intpnt_iso_coord 1 42 5.773502691896e-01 1e-9 \
+   && dbs_near0 $t.dbs post_node_rhside_fixed 3 -0.5 1e-8 \
+   && dbs_near $t.dbs node_dof 7 6 -5.01879700914e-07 1e-13 && dbs_near $t.dbs node_dof 9 7 6.20942151964e-02 1e-9 \
+   && dbs_near $t.dbs node_dof 12 12 -4.63756896996e-01 1e-9'
+pv_case prism12_minimal1 '-minimal and -lobatto keep the 14-point rule, same results (PRISM12-MINIMAL)' \
+  'grep -qE "^ *element_intpnt_npoint +1 +14 *$" $t.dbs && grep -qE "^ *element_intpnt_method +1 +0" $t.dbs \
+   && dbs_near0 $t.dbs post_node_rhside_fixed 3 -0.5 1e-8 \
+   && dbs_near $t.dbs node_dof 7 6 -5.01879700914e-07 1e-13 && dbs_near $t.dbs node_dof 9 7 6.20942151964e-02 1e-9'
+pv_case prism12_volume1 'curved, sloped element: reaction -rho*g*V, V 2.3002 analytic' \
+  'dbs_near0 $t.dbs post_node_rhside_fixed 3 -2.3002 1e-8'
+pv_case prism12_patch1 'linear patch test, two layers: free nodes on the linear field, constant stress' \
+  'dbs_near $t.dbs node_dof 17 4 1.3625e-03 1e-12 && dbs_near $t.dbs node_dof 18 4 1.8625e-03 1e-12 \
+   && dbs_near $t.dbs node_dof 19 4 1.625e-03 1e-12 && dbs_near $t.dbs node_dof 22 4 2.1125e-03 1e-12 \
+   && dbs_near $t.dbs node_dof 25 4 1.6125e-03 1e-12 \
+   && dbs_near $t.dbs element_intpnt_dof 1 7 1.2 1e-9 && dbs_near $t.dbs element_intpnt_dof 1 8 0.2 1e-9 \
+   && dbs_near $t.dbs element_intpnt_dof 1 9 0.8 1e-9 && dbs_near $t.dbs element_intpnt_dof 1 10 0.4 1e-9 \
+   && dbs_near $t.dbs element_intpnt_dof 1 11 0. 1e-9 && dbs_near $t.dbs element_intpnt_dof 1 12 0.4 1e-9 \
+   && dbs_near $t.dbs element_intpnt_dof 8 163 1.2 1e-9 && dbs_near $t.dbs element_intpnt_dof 8 165 0.8 1e-9 \
+   && dbs_near $t.dbs node_dof 19 7 1.2 1e-9 && dbs_near $t.dbs node_dof 19 9 0.8 1e-9'
+# prism12_intpnt_field <dbs>: at each of the 14 points of element 1, sigxx =
+# 0.01 (2x + 0.5y)(1+z) and sigxz = 0.005 (x^2 + 0.5xy) (prism12_post_point1;
+# the unit prism maps the natural point (L1, L2, zeta) to x = L2,
+# y = 1 - L1 - L2, z = (1 + zeta)/2)
+prism12_intpnt_field() {
+  LC_ALL=C awk '$1=="element_intpnt_iso_coord" && $2==1 { for (i=3; i<=NF; i++) c[i-3]=$i; nc=NF-2 }
+    $1=="element_intpnt_dof" && $2==1 { for (i=3; i<=NF; i++) s[i-3]=$i; ns=NF-2 }
+    END { if (nc!=42 || ns!=168) exit 1; m=0
+      for (p=0; p<14; p++) { x=c[3*p+1]; y=1-c[3*p]-c[3*p+1]; z=(1+c[3*p+2])/2
+        d=s[12*p+6]-0.01*(2*x+0.5*y)*(1+z); if (d<0) d=-d; if (d>m) m=d
+        d=s[12*p+8]-0.005*(x*x+0.5*x*y); if (d<0) d=-d; if (d>m) m=d }
+      exit (m<=1e-10 ? 0 : 1) }' "$1"
+}
+pv_case prism12_post_point1 'quadratic-xy linear-z field exact: post_point disx and the 14 point stresses (analytic)' \
+  'dbs_near $t.dbs post_point_dof 0 4 1.40625e-03 1e-7 && dbs_near $t.dbs post_point_dof 1 4 3.90625e-03 1e-7 \
+   && dbs_near $t.dbs post_point_dof 2 4 7.e-04 1e-7 && prism12_intpnt_field $t.dbs'
+pv_case prism12_post_element_force1 'section statics of the force10 cantilever on prism12: -123.4 0 1000 0 -100000' \
+  'dbs_near $t.dbs post_element_force_result 10 1 -123.4 1e-6 && dbs_near $t.dbs post_element_force_result 10 2 0. 1e-6 \
+   && dbs_near $t.dbs post_element_force_result 10 3 1000. 1e-6 && dbs_near $t.dbs post_element_force_result 10 4 0. 1e-5 \
+   && dbs_near $t.dbs post_element_force_result 10 5 -100000. 1e-4'
 rm -rf "$PVDIR"
+expected_error_ok "$T2026" prism12_interface_error1
 # F5 W1 U5: element group selection (Professional 02-08-2026 probes; the
 # manual decides where the Professional differs) and print_precision.
 for t in mesh_element_group_apply1 mesh_element_group_apply2 \

@@ -1,0 +1,39 @@
+( F5 T4 U9c: -prism12 {manual 6.413: tria6 base nodes 0-5, tria6 top nodes
+  6-11, node order = Professional 02-08-2026 element_intpnt_h}. Unit prism,
+  self-weight, base fixed. Default rule 14 points {7-point tria6 rule x 2
+  Gauss levels, manual 6.623: tria6 seven points, two nodes in the extrusion
+  direction}, method 0; the summed base reaction rho*g*V = -0.5. The
+  Professional 02-08-2026 stops on this file with "Error detected for data
+  item : element_intpnt_iso_coord" [DIVERGENCES PRISM12-DEFAULT], so the
+  displacement and nodal stress checks are GNU regression values {its
+  -minimal run, 8 points, is close: top sigzz -0.447 against -0.457}. )
+echo -no
+number_of_space_dimensions 3
+materi_velocity
+materi_displacement
+materi_stress
+end_initia
+node 1 0 0 0
+node 2 0.5 0 0
+node 3 1 0 0
+node 4 0 0.5 0
+node 5 0.5 0.5 0
+node 6 0 1 0
+node 7 0 0 1
+node 8 0.5 0 1
+node 9 1 0 1
+node 10 0 0.5 1
+node 11 0.5 0.5 1
+node 12 0 1 1
+element 1 -prism12 1 2 3 4 5 6 7 8 9 10 11 12
+group_type 0 -materi
+group_materi_elasti_young 0 1.0e6
+group_materi_elasti_poisson 0 0.2
+group_materi_density 0 1.
+group_materi_memory 0 -total_linear
+force_gravity 0. 0. -1.
+bounda_dof 10 -ra 1 2 3 4 5 6 -ra -velx -vely -velz
+bounda_time 10 0.
+control_timestep 10 0.5 1.0
+control_print_database 10 -separate_index
+end_data

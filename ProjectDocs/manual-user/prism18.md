@@ -94,7 +94,8 @@ geometry.
   edge-normal records skip the element), and the mesh tools that list
   element types (refinement, split, mpc polishing, geometry_moving
   sampling) do not handle it (BACKLOG C133).
-- The 12-node `-prism12` of the manual is not available yet (F5 T4 U9c).
+- For a prism linear along the axis use the 12-node [prism12](prism12.md)
+  (F5 T4 U9c).
 
 ## Tests
 
@@ -110,5 +111,6 @@ type 32).
 ## Related
 
 - [prism15](prism15.md) — the 15-node wedge.
+- [prism12](prism12.md) — the 12-node wedge (tria6 x 2-node line).
 - [element_3d](element_3d.md) — the volume elements.
 - [control_mesh_extrude_element](control_mesh_extrude_element.md).

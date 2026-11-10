@@ -11,7 +11,8 @@ for quadratic wedge meshes (corpus `prism15.dat`). The element has:
 - 6 mid-edge nodes on the triangular faces (3 base + 3 top).
 
 There are **no** mid nodes on the rectangular side faces (an element
-with those is the 18-node prism, see `prism18.md`).
+with those is the 18-node prism, see `prism18.md`; the 12-node prism,
+`prism12.md`, has the tria6 mid-edge nodes but no vertical mid nodes).
 
 ## Node ordering
 
@@ -76,6 +77,8 @@ the same paths as `-hex27`/`-tet10`.
 ## Related
 
 - [prism6](prism6.md) — the linear wedge (same base/top ordering).
+- [prism12](prism12.md), [prism18](prism18.md) — the 12- and 18-node wedges
+  (tria6 layers).
 - [tet10](tet10.md), [hex27](hex27.md) — the other quadratic volume
   elements.
 - `element_3d.md` (developer) — volume element architecture.

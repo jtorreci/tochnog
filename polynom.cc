@@ -146,6 +146,32 @@ void prism18_shape( double L1, double L2, double zeta, double h[],
   }
 }
 
+// prism12 (F5 T4 U9c, manual 6.413): the product of the tria6
+// (tria6_shape) and the 2-node line in zeta in [-1,1]
+// (interpolation_polynomial, nodes -1, 1). Node order: two tria6 layers,
+// bottom (zeta -1) nodes 0-5, top (zeta +1) 6-11, each in the tria6 order:
+// node 6*k+t has N = h6_t(L1,L2) l_k(zeta) (Professional 02-08-2026
+// element_intpnt_h of its -minimal rule, equal to 6e-14). p is laid out as
+// pol(): p[d*12+inol] = dN/d(L1, L2, zeta)[d].
+void prism12_shape( double L1, double L2, double zeta, double h[],
+  double p[] )
+
+{
+  long int t=0, k=0;
+  double h6[6], p6[2*6], hz[2], pz[2];
+
+  tria6_shape( L1, L2, h6, p6 );
+  interpolation_polynomial( zeta, 2, hz, pz );
+  for ( k=0; k<2; k++ ) {
+    for ( t=0; t<6; t++ ) {
+      h[6*k+t] = h6[t]*hz[k];
+      p[0*12+6*k+t] = p6[0*6+t]*hz[k];
+      p[1*12+6*k+t] = p6[1*6+t]*hz[k];
+      p[2*12+6*k+t] = h6[t]*pz[k];
+    }
+  }
+}
+
 void pol( long int element, long int element_group,
   long int name, long int nnol, double old_coord[], 
   double new_coord[], long int &npoint, double h[], 
@@ -621,6 +647,44 @@ void pol( long int element, long int element_group,
         &p[ipoint*ndim*nnol] );
     }
   }
+  else if ( name==-PRISM12 ) {
+    // 12-node prism (F5 T4 U9c): shape functions prism12_shape() (tria6 x
+    // 2-node line). Manual 6.623: the seven-point tria6 scheme for
+    // -maximal, and as many Gauss points as nodes in the zeta direction
+    // (2): 14 points, triangle fastest (point order of the PRISM18 branch).
+    // The Professional 02-08-2026 stops on its default / -maximal rule
+    // ("element_intpnt_iso_coord", DIVERGENCES PRISM12-DEFAULT). Its
+    // -minimal rule (the 4-point tria6 rule with the -27/48 centroid weight
+    // x 2 Gauss levels) gives an indefinite stiffness (a fixed-base prism of
+    // height 0.2 stops in pardiso): the C82 / C132 rule applies and the GNU
+    // keeps the 14 points for every group_integration_points value
+    // (DIVERGENCES PRISM12-MINIMAL). group_integration_method is not read
+    // (as the prism18; the Professional ignores -lobatto too). The element
+    // is 3D only. Natural-domain measure 1: volume[] = weight*detj.
+    if ( ndim!=3 ) db_error( ELEMENT, element );
+    double s15 = sqrt( 15. );
+    double ta = (6.+s15)/21., tb = (9.-2.*s15)/21., tc = (6.-s15)/21.,
+      td = (9.+2.*s15)/21.;
+    double tri7[7][3] = { {1./3.,1./3.,9./40.},
+      {tb,ta,(155.+s15)/1200.}, {ta,tb,(155.+s15)/1200.},
+      {ta,ta,(155.+s15)/1200.}, {td,tc,(155.-s15)/1200.},
+      {tc,td,(155.-s15)/1200.}, {tc,tc,(155.-s15)/1200.} };
+    double zeta_pt[2] = { -1./sqrt(3.), 1./sqrt(3.) };
+    nnol = 12;
+    npoint = 14;
+    stress_recovery_gauss = 1;
+    for ( ipoint=0; ipoint<npoint; ipoint++ ) {
+      L1 = tri7[ipoint%7][0];
+      L2 = tri7[ipoint%7][1];
+      // tria6 weights sum to 1, the triangle area is 1/2, Gauss weights 1
+      weight[ipoint] = 0.5*tri7[ipoint%7][2];
+      pol_iso_used[ipoint*3+0] = L1;
+      pol_iso_used[ipoint*3+1] = L2;
+      pol_iso_used[ipoint*3+2] = zeta_pt[ipoint/7];
+      prism12_shape( L1, L2, zeta_pt[ipoint/7], &h[ipoint*nnol],
+        &p[ipoint*ndim*nnol] );
+    }
+  }
   else if ( name==-TET4 ) {
     db( GROUP_INTEGRATION_POINTS, element_group, &integration_points, ddum, 
       ldum, VERSION_NORMAL, GET_IF_EXISTS );
@@ -1000,6 +1064,7 @@ void pol( long int element, long int element_group,
     else if ( name==-TET10 ) volume[ipoint] = weight[ipoint]*detj/6.;
     else if ( name==-PRISM15 ) volume[ipoint] = weight[ipoint]*detj;
     else if ( name==-PRISM18 ) volume[ipoint] = weight[ipoint]*detj;
+    else if ( name==-PRISM12 ) volume[ipoint] = weight[ipoint]*detj;
     else if ( name==-PRISM6 ) {
       // CONVERGENCE (2026-09-07, interface-vs-wedge/tet4 bug, sprint
       // dev/iface-tri3d): the wedge FELL THROUGH to the hex8 branch
@@ -1230,7 +1295,7 @@ long int element_intpnt_supported( long int name, long int nnol )
       ( name==-QUAD16 && nnol==16 ) || ( name==-QUAD6 && nnol==6 );
   return ( name==-TET4 && nnol==4 ) || ( name==-TET10 && nnol==10 ) ||
     ( name==-PRISM6 && nnol==6 ) || ( name==-PRISM15 && nnol==15 ) ||
-    ( name==-PRISM18 && nnol==18 ) ||
+    ( name==-PRISM18 && nnol==18 ) || ( name==-PRISM12 && nnol==12 ) ||
     ( name==-HEX8 && nnol==8 ) || ( name==-HEX27 && nnol==27 );
 }
 

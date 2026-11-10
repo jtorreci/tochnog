@@ -2319,8 +2319,8 @@ void post_calcul_materi_stress_force( double /*unknown_values*/[],
 
 // C84 (F4 T6f, 2026-10-17): the element internal forces f_elem = int
 // B^T sigma dV of a non-tensor continuum element (tria3, tria6, quad16;
-// tet4, tet10, prism6, prism15, prism18) with the element's own kinematics and
-// rule: pol() (polynom.cc) gives the point count, the physical shape
+// tet4, tet10, prism6, prism15, prism18, prism12) with the element's own
+// kinematics and rule: pol() (polynom.cc) gives the point count, the physical shape
 // derivatives new_d[ip*ndim*nnol + jdim*nnol + inol] and the point
 // volumes; the stresses are the ELEMENT_INTPNT_DOF values of those points (the
 // same point order materi() stores). Same quantity and sign as
@@ -2917,8 +2917,8 @@ void post_element_force_calculate( void )
       // device. The tensor-product continuum elements quad4/quad9 (2D)
       // and hex8/hex27 (3D) keep the msf replica of their rule and the
       // quad/hex helpers; the other continuum elements (tria3, tria6,
-      // quad16; tet4, tet10, prism6, prism15, prism18) integrate with the
-      // element's own kinematics and rule, pol(), and the ELEMENT_INTPNT_DOF
+      // quad16; tet4, tet10, prism6, prism15, prism18, prism12) integrate
+      // with the element's own kinematics and rule, pol(), and the ELEMENT_INTPNT_DOF
       // stresses of their real points. Before C84 every element went
       // through the tensor helpers (a tet4 read 2x2x2 points of a
       // 1-point element: normal 3143 instead of the Professional -123.4).
@@ -2936,7 +2936,7 @@ void post_element_force_calculate( void )
         ( name==-TRIA3 || name==-TRIA6 || name==-QUAD16 || name==-QUAD6 ||
           ( ( name==-QUAD4 || name==-QUAD9 ) && pef_axisym==-YES ) ) :
         ( name==-TET4 || name==-TET10 || name==-PRISM6 ||
-          name==-PRISM15 || name==-PRISM18 ) );
+          name==-PRISM15 || name==-PRISM18 || name==-PRISM12 ) );
       // C86 (F4 T6f, 2026-10-19): trusses and springs carry their
       // axial force into the section (Professional 02-08-2026: a truss
       // or spring with a node on the section is INCLUDED, the total =
@@ -2950,7 +2950,8 @@ void post_element_force_calculate( void )
              VERSION_NORMAL ) ) {
         pri( "Error: post_element_force does not support element ", ielem );
         pri( "Supported: quad4, quad6, quad9, quad16, tria3, tria6 (2D); hex8, "
-             "hex27, tet4, tet10, prism6, prism15, prism18 (3D); truss, spring1, "
+             "hex27, tet4, tet10, prism6, prism15, prism18, prism12 (3D); "
+             "truss, spring1, "
              "spring2; not in an interface group. Restrict the section "
              "with post_element_force_group or post_element_force_number." );
         exit(TN_EXIT_STATUS);

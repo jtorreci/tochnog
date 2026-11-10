@@ -35,7 +35,7 @@
 // (base corners 1-3, top corners 4-6: Lk (1-zeta)/2, Lk (1+zeta)/2;
 // F5 T4 U5b, BACKLOG C125).
 // With nnol 18 it evaluates the prism18 (polynom.cc prism18_shape, F5 T4
-// U9b).
+// U9b), with nnol 12 the prism12 (polynom.cc prism12_shape, F5 T4 U9c).
 static void prism15_shape( double L1, double L2, double zz,
   double coords[], long int nnol, double element_coord[] )
 {
@@ -47,6 +47,11 @@ static void prism15_shape( double L1, double L2, double zz,
     // prism18 (F5 T4 U9b): tria6 x 3-node line, polynom.cc prism18_shape
     double p18[3*18];
     prism18_shape( L1, L2, zz, N, p18 );
+  }
+  else if ( nnol==12 ) {
+    // prism12 (F5 T4 U9c): tria6 x 2-node line, polynom.cc prism12_shape
+    double p12[3*12];
+    prism12_shape( L1, L2, zz, N, p12 );
   }
   else if ( nnol==6 ) {
     double Lk[3] = { L1, L2, L3 };
@@ -206,7 +211,8 @@ long int point_el( double point[], double coords[], double weight[],
          ) found = 0;
     }
   }
-  else if ( name==-PRISM15 || name==-PRISM6 || name==-PRISM18 ) {
+  else if ( name==-PRISM15 || name==-PRISM6 || name==-PRISM18 ||
+            name==-PRISM12 ) {
     // parametric localization for the 15-node quadratic prism (and the
     // linear prism6, F5 T4 U5b): Newton
     // over the natural coordinates (L1, L2, zeta in [-1,1], L3 =
@@ -289,6 +295,10 @@ long int point_el( double point[], double coords[], double weight[],
         if ( name==-PRISM18 ) {
           double p18[3*18];
           prism18_shape( L1, L2, zz, weight, p18 );
+        }
+        else if ( name==-PRISM12 ) {
+          double p12[3*12];
+          prism12_shape( L1, L2, zz, weight, p12 );
         }
         else if ( name==-PRISM6 ) {
           for ( long int k=0; k<3; k++ ) {
