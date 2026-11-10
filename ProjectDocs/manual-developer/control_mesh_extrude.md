@@ -97,7 +97,7 @@ input errors `extrude_error1` (group table length), `extrude_error2`
 - The extruded element types are fixed (`-bar2`, `-tria3`, `-quad4`,
   `-quad9`, `-tria6`); other elements are left as they are and their nodes
   are not copied. `-tria6` gives `-prism18` (`control_mesh_extrude_element`,
-  see its page); `-prism12` is refused until F5 T4 U9c.
+  see its page) or `-prism12` without mid planes (F5 T4 U9c).
 - `-y` is the only other direction (manual 6.180).
 - The node-data copy loop could be shared with `mesh_mirror`,
   `mesh_copy` and `mesh_rotate_3d`.

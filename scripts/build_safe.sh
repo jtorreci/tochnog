@@ -2639,7 +2639,30 @@ else
   check_fail "control_mesh_extrude_element_prism18_1" "self-weight reaction not -4"
 fi
 expected_error_ok "$T2026" control_mesh_extrude_element_error1
-expected_error_ok "$T2026" control_mesh_extrude_element_error2
+# F5 T4 U9c: -prism12 (6.181): base and top planes in the tria6 order, no mid
+# planes, meshes = Professional 02-08-2026 (prism12_1, group12_1; mixed12_1 =
+# its mesh of the same input without the calculation, which the Professional
+# cannot run: PRISM12-DEFAULT) and the self-weight reaction -V = -4. With a
+# -quad9 the tria6 still give -prism12 (the Professional gives -prism18,
+# DIVERGENCES EXTRUDE-ELEMENT-PRISM12-QUAD9); unused mid-plane nodes deleted.
+ext_check control_mesh_extrude_element_prism12_1 \
+  "element 1 -prism12 1 2 3 4 5 6 10 11 12 13 14 15|element 2 -prism12 3 7 8 5 9 6 12 16 17 14 18 15|element 3 -prism12 10 11 12 13 14 15 19 20 21 22 23 24|element 4 -prism12 12 16 17 14 18 15 21 25 26 23 27 24|element 5 -prism12 19 20 21 22 23 24 28 29 30 31 32 33|element 6 -prism12 21 25 26 23 27 24 30 34 35 32 36 33" \
+  "1 0 0 0|2 0.5 0 0|3 1 0 0|4 0 0.5 0|5 0.5 0.5 0|6 0 1 0|7 1 0.5 0|8 1 1 0|9 0.5 1 0|10 0 0 0.5|11 0.5 0 0.5|12 1 0 0.5|13 0 0.5 0.5|14 0.5 0.5 0.5|15 0 1 0.5|16 1 0.5 0.5|17 1 1 0.5|18 0.5 1 0.5|19 0 0 1|20 0.5 0 1|21 1 0 1|22 0 0.5 1|23 0.5 0.5 1|24 0 1 1|25 1 0.5 1|26 1 1 1|27 0.5 1 1|28 0 0 3|29 0.5 0 3|30 1 0 3|31 0 0.5 3|32 0.5 0.5 3|33 0 1 3|34 1 0.5 3|35 1 1 3|36 0.5 1 3|"
+ext_check control_mesh_extrude_element_group12_1 \
+  "element 1 -prism12 1 2 3 4 5 6 10 11 12 13 14 15|element 3 -prism12 10 11 12 13 14 15 19 20 21 22 23 24|element 4 -prism12 12 16 17 14 18 15 21 25 26 23 27 24|element_group 1 3|element_group 3 4|element_group 4 5" \
+  "1 0 0 0|2 0.5 0 0|3 1 0 0|4 0 0.5 0|5 0.5 0.5 0|6 0 1 0|10 0 0 1|11 0.5 0 1|12 1 0 1|13 0 0.5 1|14 0.5 0.5 1|15 0 1 1|16 1 0.5 1|17 1 1 1|18 0.5 1 1|19 0 0 2|20 0.5 0 2|21 1 0 2|22 0 0.5 2|23 0.5 0.5 2|24 0 1 2|25 1 0.5 2|26 1 1 2|27 0.5 1 2|"
+ext_check control_mesh_extrude_element_mixed12_1 \
+  "element 1 -prism12 1 2 3 4 5 6 12 13 14 15 16 17|element 2 -prism12 3 7 8 5 9 6 14 18 19 16 20 17|element 3 -hex8 3 10 14 21 8 11 19 22|element_group 1 3|element_group 2 3|element_group 3 4" \
+  "1 0 0 0|2 0.5 0 0|3 1 0 0|4 0 0.5 0|5 0.5 0.5 0|6 0 1 0|7 1 0.5 0|8 1 1 0|9 0.5 1 0|10 2 0 0|11 2 1 0|12 0 0 2|13 0.5 0 2|14 1 0 2|15 0 0.5 2|16 0.5 0.5 2|17 0 1 2|18 1 0.5 2|19 1 1 2|20 0.5 1 2|21 2 0 2|22 2 1 2|"
+if awk '$1=="post_node_rhside_fixed" { d=$4+4.; if (d<0) d=-d; f=1; exit (d<=1e-8 ? 0 : 1) } END { if (!f) exit 1 }' \
+     "$T2026/control_mesh_extrude_element_mixed12_1.dbs"; then
+  check_ok "control_mesh_extrude_element_mixed12_1 (self-weight reaction -4)"
+else
+  check_fail "control_mesh_extrude_element_mixed12_1" "self-weight reaction not -4"
+fi
+ext_check control_mesh_extrude_element_quad9_1 \
+  "element 1 -prism12 1 2 3 4 5 6 31 32 33 34 35 36|element 2 -prism12 3 7 8 5 9 6 33 37 38 35 39 36|element 3 -hex27 3 10 11 7 12 13 8 14 15 18 25 26 22 27 28 23 29 30 33 40 41 37 42 43 38 44 45" \
+  "1 0 0 0|2 0.5 0 0|3 1 0 0|4 0 0.5 0|5 0.5 0.5 0|6 0 1 0|7 1 0.5 0|8 1 1 0|9 0.5 1 0|10 1.5 0 0|11 2 0 0|12 1.5 0.5 0|13 2 0.5 0|14 1.5 1 0|15 2 1 0|18 1 0 1|22 1 0.5 1|23 1 1 1|25 1.5 0 1|26 2 0 1|27 1.5 0.5 1|28 2 0.5 1|29 1.5 1 1|30 2 1 1|31 0 0 2|32 0.5 0 2|33 1 0 2|34 0 0.5 2|35 0.5 0.5 2|36 0 1 2|37 1 0.5 2|38 1 1 2|39 0.5 1 2|40 1.5 0 2|41 2 0 2|42 1.5 0.5 2|43 2 0.5 2|44 1.5 1 2|45 2 1 2|"
 # F5 T4 U5b: control_mesh_split_element_from / _element_to -prism6
 # (6.241, 6.242), the tria6 split of 6.240, control_mesh_convert_tria6_tria3
 # (6.161); meshes = Professional 02-08-2026 (ext_check above; the GNU

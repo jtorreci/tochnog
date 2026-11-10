@@ -1468,8 +1468,8 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   data_class[CONTROL_MESH_EXTRUDE_DIRECTION] = CONTROL;
   data_required[CONTROL_MESH_EXTRUDE_DIRECTION] = CONTROL_MESH_EXTRUDE;
 
-  // control_mesh_extrude_element (manual 6.181, F5 T4 U9b): the element a
-  // -tria6 becomes, -prism18 (default) or -prism12 (pending, refused)
+  // control_mesh_extrude_element (manual 6.181, F5 T4 U9b, U9c): the
+  // element a -tria6 becomes, -prism18 (default) or -prism12
   strcpy(name[CONTROL_MESH_EXTRUDE_ELEMENT],"control_mesh_extrude_element");
   type[CONTROL_MESH_EXTRUDE_ELEMENT] = INTEGER;
   data_length[CONTROL_MESH_EXTRUDE_ELEMENT] = 1;
@@ -8626,9 +8626,9 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   // Like PRISM15 only the word is registered.
   strcpy(name[PRISM18],"prism18");
 
-  // PRISM12 (manual 6.413, the 12-node prism): only the word, so that
-  // control_mesh_extrude_element -prism12 can be refused with a clear
-  // message; the element itself is pending (F5 T4 U9c).
+  // PRISM12 (manual 6.413, F5 T4 U9c): the 12-node prism, the product of
+  // the tria6 and the 2-node line (polynom.cc prism12_shape). Like PRISM15
+  // only the word is registered.
   strcpy(name[PRISM12],"prism12");
 
   // INCREMENTAL_DRIVER FAMILY (DEV-A sprint, manual Professional 6.784).

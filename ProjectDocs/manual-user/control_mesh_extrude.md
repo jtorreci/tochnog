@@ -6,7 +6,8 @@ Extrudes a flat 2D mesh (the x-y plane of the input) to 3D, as the
 Professional manual 6.179-6.185 describes. Each 2D element is swept
 through a stack of element layers: `-bar2` becomes `-quad4`, `-tria3`
 becomes `-prism6`, `-quad4` becomes `-hex8`, `-quad9` becomes `-hex27` and
-`-tria6` becomes `-prism18` (see `control_mesh_extrude_element`).
+`-tria6` becomes `-prism18`, or `-prism12` with
+`control_mesh_extrude_element -prism12` (see that page).
 Useful to build a solid volume from a 2D profile without remeshing.
 
 The model must run in 3D (`number_of_space_dimensions 3`). The extrusion
@@ -107,7 +108,7 @@ Self-checking inputs in `validation-suite/test-2026`: `extrude_layers1`,
 - The `.dbs` prints the GNU element name `-contactspring` for the
   Professional `-contact_spring2` (same element).
 - `control_mesh_extrude_element` (6.181, `-prism12` / `-prism18` for
-  `-tria6`) is not available: the GNU has no 12 / 18 node prism (F5 T4
-  U9).
+  `-tria6`): see its page for the mixed-mesh differences (F5 T4 U9b,
+  U9c).
 - hex27 nodal stresses and `post_point` in a hex27 extruded mesh: equal
   to the Professional since F4 T6f C70 / C57 (2026-10-13).

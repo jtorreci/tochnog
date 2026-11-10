@@ -1037,8 +1037,9 @@ void mesh_correct_interfaces( void )
 // element e is element l*nelem+e (nnod / nelem the highest node / element
 // number, plus 1 when number 0 is used), as in the Professional 02-08-2026
 // (other/extrude1: 9 nodes x 16 planes, 4 elements x 15 layers). With a
-// -quad9 or a -tria6 in the mesh every layer also has a mid plane (plane
-// 2l+1), used only by the -hex27 and -prism18 elements.
+// -quad9, or a -tria6 that becomes a -prism18, in the mesh every layer
+// also has a mid plane (plane 2l+1), used only by the -hex27 and -prism18
+// elements.
 // Elements (Professional node order, other/extrude1, extrude2):
 //   -bar2 a b -> -quad4 a b a' b'; -tria3 a b c -> -prism6 a b c a' b' c';
 //   -quad4 a b c d -> -hex8 a b a' b' c d c' d' (the 2D eta direction is
@@ -1046,9 +1047,12 @@ void mesh_correct_interfaces( void )
 //   -quad9 -> -hex27 base / mid / top planes in the quad9 order;
 //   -tria6 -> -prism18 base / mid / top planes in the tria6 order
 //   (control_mesh_extrude_element, 6.181: default -prism18; F5 T4 U9b,
-//   Professional 02-08-2026 probes). -prism12 is pending (F5 T4 U9c) and
-//   refused; any other name is an input error (the Professional takes it
-//   as -prism18, DIVERGENCES EXTRUDE-ELEMENT-NAME).
+//   Professional 02-08-2026 probes), or with -prism12 (F5 T4 U9c) base /
+//   top planes in the tria6 order (= Professional); a -quad9 in the same
+//   mesh keeps its mid planes and the -prism12 skip them (the Professional
+//   gives -prism18 there, DIVERGENCES EXTRUDE-ELEMENT-PRISM12-QUAD9). Any
+//   other name is an input error (the Professional takes it as -prism18,
+//   DIVERGENCES EXTRUDE-ELEMENT-NAME).
 // control_mesh_extrude_direction -y (6.180) extrudes along global y; the
 // 2D y coordinate becomes z (Professional 02-08-2026: the 2D mesh stays in
 // the x-y plane of the input).
@@ -1063,7 +1067,7 @@ void mesh_correct_interfaces( void )
 // source -bar2.
 
 // The 2D elements mesh_extrude turns into 3D elements; the -quad9 and the
-// -tria6 also use the mid plane of each layer.
+// -tria6 extruded to -prism18 also use the mid plane of each layer.
 static long int mesh_extrude_source( long int name, long int nnol )
 
 {
@@ -1128,12 +1132,7 @@ void mesh_extrude( long int icontrol )
        VERSION_NORMAL ) ) {
     db( CONTROL_MESH_EXTRUDE_ELEMENT, icontrol, &tria6_to, ddum, ldum,
       VERSION_NORMAL, GET );
-    if ( tria6_to==-PRISM12 ) {
-      pri( "Error: control_mesh_extrude_element -prism12 is not available "
-           "yet (the 12-node prism is pending); use -prism18." );
-      exit_tn_on_error();
-    }
-    else if ( tria6_to!=-PRISM18 ) {
+    if ( tria6_to!=-PRISM18 && tria6_to!=-PRISM12 ) {
       pri( "Error: control_mesh_extrude_element must be -prism18 or "
            "-prism12." );
       exit_tn_on_error();
@@ -1162,7 +1161,8 @@ void mesh_extrude( long int icontrol )
     db( ELEMENT, ielem, el, ddum, length, VERSION_NORMAL, GET );
     nnol = length - 1;
     if ( mesh_extrude_source( el[0], nnol ) ) {
-      if ( el[0]==-QUAD9 || el[0]==-TRIA6 ) has_mid = 1;
+      if ( el[0]==-QUAD9 || ( el[0]==-TRIA6 && tria6_to==-PRISM18 ) )
+        has_mid = 1;
       for ( inol=0; inol<nnol; inol++ ) attached[el[1+inol]] = 1;
     }
   }
@@ -1322,8 +1322,16 @@ void mesh_extrude( long int icontrol )
         new_nodes[7] = nodes[2]+t; new_nodes[8] = nodes[3]+t;
         len_new = 9;
       }
+      else if ( name==-TRIA6 && tria6_to==-PRISM12 ) {
+        new_nodes[0] = -PRISM12;
+        for ( inol=0; inol<6; inol++ ) {
+          new_nodes[1+inol] = nodes[inol]+b;
+          new_nodes[7+inol] = nodes[inol]+t;
+        }
+        len_new = 13;
+      }
       else if ( name==-TRIA6 ) {
-        new_nodes[0] = tria6_to;
+        new_nodes[0] = -PRISM18;
         for ( inol=0; inol<6; inol++ ) {
           new_nodes[1+inol] = nodes[inol]+b;
           new_nodes[7+inol] = nodes[inol]+m;
