@@ -184,8 +184,10 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   - [x] U9b (0b35e26, c0f8038, b9599d0, af188d0) (S2-S6) prism18, control_mesh_extrude_element with -tria6 (manual
     6.181 default -prism18), VTK cell 32. Route: delegated (bounded writer; context backstop, the parent session was
     already compacted once). Suite 1102 OK, 0 FALLO. PRISM18-MINIMAL class A confirmed by the owner (C132, 21 points).
-  - [ ] U9c (S3, S4, S6) prism12 continuum, -prism12 option of the extrude, VTK. Interface prism12 is out of scope.
-    Route: to decide after U9b.
+  - [x] U9c (fd32b82, e6fa737, dd87da9, 1c258be) (S2-S6) prism12 continuum, -prism12 option of the extrude, VTK cell
+    31. Interface prism12 is out of scope (refused, class B). Route: delegated (bounded writer; context backstop, as
+    U9a and U9b). Suite 1118 OK, 0 FALLO. Pending owner: PRISM12-DEFAULT / PRISM12-POST-POINT class D,
+    EXTRUDE-ELEMENT-PRISM12-QUAD9 class D.
 - [ ] T5 W6 other physics (25): baseline correction, force_edge_diagram, force_gravity_geometry,
   force_volume_element_group_0, groundflow_phreatic_*, group_beam_*, group_contact_spring_*,
   group_dof_initial*, group_time_fill, group_truss_elasti_elongation_force_diagram,
@@ -772,3 +774,12 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   length loop still lacks -TRIA6 and -TET4 (pre-existing).
 - 2026-11-10 owner, PRISM18-MINIMAL (keep 21 points for prism18 -minimal, as C82 for prism15), verbatim: "si".
   Moved to class A in DIVERGENCES-PROFESSIONAL.md; BACKLOG C132 closed.
+- 2026-11-10 U9c writer result: prism12 = tria6_shape x 2-node line, tria6 bottom and top layers, 14 points
+  (7-point tria6 x 2 Gauss) for every group_integration_points value. Professional runs only -minimal (8 points,
+  indefinite: 3 negative eigenvalues even undistorted, pardiso -4); the other rules stop with
+  element_intpnt_iso_coord. Rows: PRISM12-MINIMAL A (C82/C132 rule), PRISM12-DEFAULT D, PRISM12-POST-POINT D
+  (Professional interpolates linearly), PRISM12-INTERFACE B (refused, manual 6.624/6.158 list it),
+  EXTRUDE-ELEMENT-PRISM12-QUAD9 D (Professional writes prism18 next to quad9; GNU follows 6.181 and the mesh is not
+  conforming on hex27 faces), VTK-PRISM12 A (type 31; Professional drops the cell). EXTRUDE-ELEMENT-PRISM12 B
+  resolved. Parent review: VTK 9.7.2 reads vtkQuadraticLinearWedge, GNU map equal to 2e-16; differential 289 of 290
+  identical (the one difference is the deleted U9b refusal test); no attribution lines.
