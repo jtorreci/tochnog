@@ -17,6 +17,7 @@
   walked in two passes (`goto quad6_second_pass`), gated on GROUP_INTERFACE.
 - `calcul_force.cc` — `post_element_force` takes the quad6 by the `pol()`
   path (`pef_pol`); an interface group stays refused.
+- `print_vt.cc` — VTK cell types, see below.
 
 ## Implementation details
 
@@ -56,6 +57,15 @@ remaining `dir` other than `-x`/`-y` is `db_error` (Professional: the same
 two lines, `Error detected for data item`). The Jacobian of a `-x` element is
 negative (`pol()` uses `|detj|`, as the Professional: element_volume positive).
 
+**VTK.** `print_vt.cc` writes the continuum quad6 as VTK_QUADRATIC_LINEAR_QUAD
+(type 31, corners n0 n2 n5 n3, then mid-edges n1 n4) and the prism15 as
+VTK_QUADRATIC_WEDGE (type 26, corners, base mid-edges 9-11, top mid-edges
+12-14, vertical mid-edges 6-8). Owner rule (2026-11-09, verbatim): "si, la
+incluimos. Si vtk no lo soporta directamente convertimos en la escritura del
+vtk a un tipo soportado"; both types exist in VTK, so no conversion. An
+interface quad6 (or interface prism15) keeps the `illegal element type` abort
+via `vtk_quadratic_cell()`.
+
 Verified against the Professional 02-08-2026 (tests below: every nodal dof,
 the integration rule records and the converter's element/node records match
 on the probe files; the analytic checks are quad6_shape1 and
@@ -75,3 +85,6 @@ quad6_post_element_force1).
 
 - `-quad6` in a 3D calculation runs in the Professional; the manual lists
   it in 2D only and the GNU refuses it (DIVERGENCES QUAD6-3D).
+- VTK: the Professional writes prism15 as a 6-node wedge (type 13) and drops
+  the quad6 cells; the GNU writes native quadratic cells 26 and 31, by the
+  owner rule above (DIVERGENCES VTK-QUAD6-PRISM15).

@@ -1,0 +1,25 @@
+( F5 T4 U9a: VTK output of a continuum -quad6: native VTK cell type 31
+  VTK_QUADRATIC_LINEAR_QUAD, 6 nodes, corners n0 n2 n5 n3 then the
+  mid-edge nodes n1 n4. )
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_displacement
+materi_stress
+end_initia
+node 1 0 0
+node 2 1 0
+node 3 2 0
+node 4 0 1
+node 5 1 1
+node 6 2 1
+element 1 -quad6 1 2 3 4 5 6
+group_type 0 -materi
+group_materi_elasti_young 0 1.0
+group_materi_elasti_poisson 0 0.
+group_materi_memory 0 -total_linear
+bounda_dof 10 -ra 1 2 3 -ra -velx -vely
+bounda_time 10 0.
+control_timestep 10 0.5 1.0
+control_print_vtk 10 -yes
+end_data

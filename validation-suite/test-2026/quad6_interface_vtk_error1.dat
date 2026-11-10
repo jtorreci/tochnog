@@ -1,0 +1,24 @@
+(
+  EXPECTED_ERROR: illegal element type
+  F5 T4 U9a: an interface -quad6 is not a VTK cell: CONTROL_PRINT_VTK
+  still refuses it, as before. )
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_displacement
+materi_stress
+end_initia
+node 1 0 0
+node 2 0.5 0
+node 3 1 0
+node 4 0 0
+node 5 0.5 0
+node 6 1 0
+element 1 -quad6 1 2 3 4 5 6
+group_type 0 -materi
+group_interface 0 -yes
+group_interface_materi_elasti_stiffness 0 1.e3 1.e3
+bounda_dof 0 -ra 1 2 3 4 5 6 -ra -velx -vely
+control_timestep 0 1. 1.
+control_print_vtk 0 -yes
+end_data
