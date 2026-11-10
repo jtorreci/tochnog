@@ -76,7 +76,7 @@ geometry.
   element stiffness (6 negative eigenvalues on a distorted prism18) and a
   single element fails in the Professional solver ("Error with pardiso
   solver"). Same reason as the prism15 decision C82; the owner
-  confirmation for the prism18 is pending (DIVERGENCES PRISM18-MINIMAL,
+  confirmed it for the prism18 on 2026-11-10 (DIVERGENCES PRISM18-MINIMAL,
   BACKLOG C132).
 - `post_point` (and every interpolation through `point_el`): the GNU
   interpolates with the 18 quadratic shape functions; the Professional

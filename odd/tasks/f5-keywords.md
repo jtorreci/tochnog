@@ -183,7 +183,7 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
     backstop). Suite 1086 OK, 0 FALLO. QUAD6-3D class D confirmed by the owner (2026-11-10).
   - [x] U9b (0b35e26, c0f8038, b9599d0, af188d0) (S2-S6) prism18, control_mesh_extrude_element with -tria6 (manual
     6.181 default -prism18), VTK cell 32. Route: delegated (bounded writer; context backstop, the parent session was
-    already compacted once). Suite 1102 OK, 0 FALLO. Pending owner: PRISM18-MINIMAL (C132; code keeps 21 points).
+    already compacted once). Suite 1102 OK, 0 FALLO. PRISM18-MINIMAL class A confirmed by the owner (C132, 21 points).
   - [ ] U9c (S3, S4, S6) prism12 continuum, -prism12 option of the extrude, VTK. Interface prism12 is out of scope.
     Route: to decide after U9b.
 - [ ] T5 W6 other physics (25): baseline correction, force_edge_diagram, force_gravity_geometry,
@@ -770,3 +770,5 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   against 76b0759 identical; stale lines in prism15.md and control_mesh_extrude.md (user and developer) fixed by
   the parent. Follow-ups: C133 (prism18 face loads, refine, split, mpc polish, geometry_moving), print_vt.cc
   length loop still lacks -TRIA6 and -TET4 (pre-existing).
+- 2026-11-10 owner, PRISM18-MINIMAL (keep 21 points for prism18 -minimal, as C82 for prism15), verbatim: "si".
+  Moved to class A in DIVERGENCES-PROFESSIONAL.md; BACKLOG C132 closed.

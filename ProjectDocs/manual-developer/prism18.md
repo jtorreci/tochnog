@@ -55,8 +55,8 @@ levels). A NumPy stiffness of a randomly distorted prism18 (E 1, nu 0.25)
 has 6 negative eigenvalues and 12 zero ones with that rule, 6 zero ones
 (the rigid modes) with the 21 points. The Professional itself stops on a
 single fixed-base element ("Error with pardiso solver. Pardiso internal
-error number -4"). The rule mirrors C82 (prism15); owner confirmation
-pending (BACKLOG C132).
+error number -4"). The rule mirrors C82 (prism15), confirmed by the
+owner on 2026-11-10 (BACKLOG C132).
 
 `element_intpnt_h` is not written (18 x 21 = 378 values > DATA_ITEM_SIZE),
 as for the prism15.
@@ -92,7 +92,7 @@ corners as type 13 (VTK-PRISM18, class A by the owner rule 2026-11-09).
 
 ## Differences with the Professional version
 
-- PRISM18-MINIMAL (class B, pending the owner): see the integration rule.
+- PRISM18-MINIMAL (class A, owner decision 2026-11-10): see the integration rule.
 - PRISM18-POST-POINT (class D): see the point location.
 - VTK-PRISM18 (class A, owner rule): see the VTK section.
 
