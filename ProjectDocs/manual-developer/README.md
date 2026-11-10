@@ -97,6 +97,7 @@ page lists its own in "Differences with the Professional version".
 - [control_mesh_split](control_mesh_split.md) — mesh_split split patterns, `_element_from` / `_element_to`, point_el prism6 (F5 T4 U5b).
 - [control_mesh_convert_quad9_quad6](control_mesh_convert_quad9_quad6.md) — mesh_convert_quad9_quad6 in mesh.cc, the continuum quad6 (pol, recovery, area) and the VTK cell types 30 and 26 (F5 T4 U9a).
 - [prism18](prism18.md) — prism18_shape() (tria6_shape x interpolation_polynomial), pol() 21-point branch, recovery kind 1, point_el, post_element_force (F5 T4 U9b).
+- [control_mesh_extrude_element](control_mesh_extrude_element.md) — mesh_extrude tria6 -> prism18 with mid planes, mesh_extrude_source(), the record check and the -prism12 refusal (F5 T4 U9b).
 - [control_mesh_convert_tria6_tria3](control_mesh_convert_tria6_tria3.md) — mesh_convert_tria6_tria3 in mesh.cc (F5 T4 U5b).
 - [control_mesh_duplicate_element_group](control_mesh_duplicate_element_group.md) — mesh_duplicate_element_group in delete.cc (F5 T4 U5c).
 - [control_mesh_renumber_offsets](control_mesh_renumber_offsets.md) — group / geometry offsets in the top.cc control_mesh_renumber block (F5 T4 U5c).

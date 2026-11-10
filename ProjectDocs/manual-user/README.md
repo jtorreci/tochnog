@@ -93,6 +93,7 @@ page lists its own in "Differences with the Professional version".
 - [control_mesh_split](control_mesh_split.md) — split quad4/hex8/quad9/hex27/tria6 into simpler elements; `_element_from`, `_element_to -prism6` (6.240-6.242, F5 T4 U5b).
 - [control_mesh_convert_quad9_quad6](control_mesh_convert_quad9_quad6.md) — quad9 to a 6-noded quad6 (6.160, F5 T4 U9a); the continuum `-quad6` element.
 - [prism18](prism18.md) — the 18-node quadratic prism (6.413, F5 T4 U9b): three tria6 layers, 21-point rule (7-point tria6 x 3 Gauss) = Professional.
+- [control_mesh_extrude_element](control_mesh_extrude_element.md) — the element a `-tria6` becomes in `control_mesh_extrude` (6.181, F5 T4 U9b): `-prism18` (default; `-prism12` pending U9c).
 - [control_mesh_convert_tria6_tria3](control_mesh_convert_tria6_tria3.md) — tria6 to the tria3 of its corners (6.161, F5 T4 U5b).
 - [control_mesh_duplicate_element_group](control_mesh_duplicate_element_group.md) — copy the elements of a group to a new group (6.177, F5 T4 U5c).
 - [control_mesh_renumber_offsets](control_mesh_renumber_offsets.md) — control_mesh_renumber_element_group_offset / _geometry_offset (6.236, 6.237, F5 T4 U5c).

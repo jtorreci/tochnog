@@ -1037,13 +1037,18 @@ void mesh_correct_interfaces( void )
 // element e is element l*nelem+e (nnod / nelem the highest node / element
 // number, plus 1 when number 0 is used), as in the Professional 02-08-2026
 // (other/extrude1: 9 nodes x 16 planes, 4 elements x 15 layers). With a
-// -quad9 in the mesh every layer also has a mid plane (plane 2l+1), used
-// only by the -hex27 elements.
+// -quad9 or a -tria6 in the mesh every layer also has a mid plane (plane
+// 2l+1), used only by the -hex27 and -prism18 elements.
 // Elements (Professional node order, other/extrude1, extrude2):
 //   -bar2 a b -> -quad4 a b a' b'; -tria3 a b c -> -prism6 a b c a' b' c';
 //   -quad4 a b c d -> -hex8 a b a' b' c d c' d' (the 2D eta direction is
 //   the hex8 zeta direction, so an interface quad4 keeps its two sides);
-//   -quad9 -> -hex27 base / mid / top planes in the quad9 order.
+//   -quad9 -> -hex27 base / mid / top planes in the quad9 order;
+//   -tria6 -> -prism18 base / mid / top planes in the tria6 order
+//   (control_mesh_extrude_element, 6.181: default -prism18; F5 T4 U9b,
+//   Professional 02-08-2026 probes). -prism12 is pending (F5 T4 U9c) and
+//   refused; any other name is an input error (the Professional takes it
+//   as -prism18, DIVERGENCES EXTRUDE-ELEMENT-NAME).
 // control_mesh_extrude_direction -y (6.180) extrudes along global y; the
 // 2D y coordinate becomes z (Professional 02-08-2026: the 2D mesh stays in
 // the x-y plane of the input).
@@ -1057,12 +1062,22 @@ void mesh_correct_interfaces( void )
 // as an extra bottom layer, ignored control_mesh_extrude_n and kept the
 // source -bar2.
 
+// The 2D elements mesh_extrude turns into 3D elements; the -quad9 and the
+// -tria6 also use the mid plane of each layer.
+static long int mesh_extrude_source( long int name, long int nnol )
+
+{
+  return ( name==-BAR2 && nnol==2 ) || ( name==-TRIA3 && nnol==3 ) ||
+    ( name==-QUAD4 && nnol==4 ) || ( name==-QUAD9 && nnol==9 ) ||
+    ( name==-TRIA6 && nnol==6 );
+}
+
 void mesh_extrude( long int icontrol )
 
 {
   long int i=0, inod=0, max_node=0, ielem=0, max_elem=0, inol=0, nnol=0,
     length=0, ldum=0, len3=3, axis=2, nz=0, nn=0, n_int=0, nl=0, ppl=1,
-    np=0, nnod=0, nelem=0, has_quad9=0, ng=0, nold=0, ns_old=0, ns_new=0,
+    np=0, nnod=0, nelem=0, has_mid=0, ng=0, nold=0, ns_old=0, ns_new=0,
     dir=0, idum[1], el[1+MNOL], nodes[MNOL], new_nodes[1+MNOL],
     *n_sub=NULL, *lay_int=NULL, *attached=NULL, *used=NULL, *gtab=NULL,
     *s_old=NULL, *s_new=NULL, *sgroup=NULL;
@@ -1107,6 +1122,23 @@ void mesh_extrude( long int icontrol )
       exit_tn_on_error();
     }
   }
+  // control_mesh_extrude_element (6.181): the element a -tria6 becomes
+  long int tria6_to = -PRISM18;
+  if ( db_active_index( CONTROL_MESH_EXTRUDE_ELEMENT, icontrol,
+       VERSION_NORMAL ) ) {
+    db( CONTROL_MESH_EXTRUDE_ELEMENT, icontrol, &tria6_to, ddum, ldum,
+      VERSION_NORMAL, GET );
+    if ( tria6_to==-PRISM12 ) {
+      pri( "Error: control_mesh_extrude_element -prism12 is not available "
+           "yet (the 12-node prism is pending); use -prism18." );
+      exit_tn_on_error();
+    }
+    else if ( tria6_to!=-PRISM18 ) {
+      pri( "Error: control_mesh_extrude_element must be -prism18 or "
+           "-prism12." );
+      exit_tn_on_error();
+    }
+  }
 
   db_highest_index( NODE, max_node, VERSION_NORMAL );
   db_highest_index( ELEMENT, max_elem, VERSION_NORMAL );
@@ -1129,13 +1161,12 @@ void mesh_extrude( long int icontrol )
     if ( !db_active_index( ELEMENT, ielem, VERSION_NORMAL ) ) continue;
     db( ELEMENT, ielem, el, ddum, length, VERSION_NORMAL, GET );
     nnol = length - 1;
-    if ( ( el[0]==-BAR2 && nnol==2 ) || ( el[0]==-TRIA3 && nnol==3 ) ||
-         ( el[0]==-QUAD4 && nnol==4 ) || ( el[0]==-QUAD9 && nnol==9 ) ) {
-      if ( el[0]==-QUAD9 ) has_quad9 = 1;
+    if ( mesh_extrude_source( el[0], nnol ) ) {
+      if ( el[0]==-QUAD9 || el[0]==-TRIA6 ) has_mid = 1;
       for ( inol=0; inol<nnol; inol++ ) attached[el[1+inol]] = 1;
     }
   }
-  ppl = has_quad9 ? 2 : 1;
+  ppl = has_mid ? 2 : 1;
   // nnod / nelem: the highest node / element, plus 1 when number 0 is
   // used (db_max_index gives the allocated range, which can be larger)
   nnod = max_node + ( db_active_index( NODE, 0, VERSION_NORMAL ) ? 1 : 0 );
@@ -1195,9 +1226,7 @@ void mesh_extrude( long int icontrol )
         if ( !db_active_index( ELEMENT, ielem, VERSION_NORMAL ) ) continue;
         db( ELEMENT, ielem, el, ddum, length, VERSION_NORMAL, GET );
         nnol = length - 1;
-        if ( !( ( el[0]==-BAR2 && nnol==2 ) || ( el[0]==-TRIA3 && nnol==3 ) ||
-             ( el[0]==-QUAD4 && nnol==4 ) || ( el[0]==-QUAD9 && nnol==9 ) ) )
-          continue;
+        if ( !mesh_extrude_source( el[0], nnol ) ) continue;
         long int eg = 0, k = -1;
         db( ELEMENT_GROUP, ielem, &eg, ddum, ldum, VERSION_NORMAL,
           GET_IF_EXISTS );
@@ -1252,9 +1281,7 @@ void mesh_extrude( long int icontrol )
     db( ELEMENT, ielem, el, ddum, length, VERSION_NORMAL, GET );
     nnol = length - 1;
     long int name = el[0];
-    if ( !( ( name==-BAR2 && nnol==2 ) || ( name==-TRIA3 && nnol==3 ) ||
-            ( name==-QUAD4 && nnol==4 ) || ( name==-QUAD9 && nnol==9 ) ) )
-      continue;
+    if ( !mesh_extrude_source( name, nnol ) ) continue;
     for ( inol=0; inol<nnol; inol++ ) nodes[inol] = el[1+inol];
     long int eg = 0, iold = -1;
     if ( gtab!=NULL ) {
@@ -1294,6 +1321,15 @@ void mesh_extrude( long int icontrol )
         new_nodes[5] = nodes[2]+b; new_nodes[6] = nodes[3]+b;
         new_nodes[7] = nodes[2]+t; new_nodes[8] = nodes[3]+t;
         len_new = 9;
+      }
+      else if ( name==-TRIA6 ) {
+        new_nodes[0] = tria6_to;
+        for ( inol=0; inol<6; inol++ ) {
+          new_nodes[1+inol] = nodes[inol]+b;
+          new_nodes[7+inol] = nodes[inol]+m;
+          new_nodes[13+inol] = nodes[inol]+t;
+        }
+        len_new = 19;
       }
       else {
         new_nodes[0] = -HEX27;

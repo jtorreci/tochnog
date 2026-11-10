@@ -1,0 +1,22 @@
+( F5 T4 U9b: control_mesh_extrude_element applies to -tria6 elements only:
+  with -prism18 a -quad4 still becomes a -hex8 and a -tria3 a -prism6.
+  Mesh = Professional 02-08-2026 on this file. )
+echo -no
+number_of_space_dimensions 3
+materi_velocity
+materi_displacement
+materi_stress
+end_initia
+node 1 0 0 0
+node 2 1 0 0
+node 3 0 1 0
+node 4 1 1 0
+element 1 -quad4 1 2 3 4
+element 2 -tria3 2 4 3
+group_type 0 -materi
+group_materi_elasti_young 0 1000.
+group_materi_elasti_poisson 0 0.2
+group_materi_density 0 0.
+control_mesh_extrude 10 0. 1.
+control_mesh_extrude_element 10 -prism18
+end_data
