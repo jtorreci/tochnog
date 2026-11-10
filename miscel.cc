@@ -494,12 +494,22 @@ static long int recovery_tensor_npol( long int name )
     if ( name==-QUAD4 ) return 2;
     if ( name==-QUAD9 ) return 3;
     if ( name==-QUAD16 ) return 4;
+    if ( name==-QUAD6 ) return 3; // 3 x 2 (recovery_tensor_nodes_dir)
   }
   else if ( ndim==3 ) {
     if ( name==-HEX8 ) return 2;
     if ( name==-HEX27 ) return 3;
   }
   return 0;
+}
+
+// Nodes along direction d: the continuum quad6 is the only non-square
+// tensor element (3 nodes along xi, 2 along eta).
+static long int recovery_tensor_nodes_dir( long int name, long int d,
+  long int npol )
+
+{
+  return ( name==-QUAD6 && d==1 ) ? 2 : npol;
 }
 
 static long int recovery_fit_kind( long int name, long int nnol,
@@ -518,6 +528,11 @@ static long int recovery_fit_kind( long int name, long int nnol,
   if ( ndim==3 && name==-TET4    && nnol==4  && npoint==5  ) return 1;
   if ( ndim==3 && name==-PRISM15 && nnol==15 && npoint==21 ) return 1;
   if ( ndim==3 && name==-PRISM6  && nnol==6  && npoint==2  ) return 4;
+  // continuum quad6 -minimal (2 x 1 Gauss, on the mid eta line, the
+  // -reduced -minimal too): kind 4 (Professional 02-08-2026 h/sum h);
+  // its Lobatto -minimal rule keeps the h-weighted fallback (= Professional).
+  if ( ndim==2 && name==-QUAD6 && nnol==6 && npoint==2 &&
+       !stress_recovery_lobatto ) return 4;
   // C66 phase 2 (F4 T6f, 2026-10-16): tria6 7-point (default, -maximal)
   // and 4-point (-minimal) rules: the physical linear fit (Professional
   // 02-08-2026, residual 5e-13; also axisymmetric, on-axis elements too).
@@ -526,8 +541,8 @@ static long int recovery_fit_kind( long int name, long int nnol,
   npol = recovery_tensor_npol( name );
   if ( !npol ) return 0;
   for ( d=0; d<ndim; d++ ) {
-    nfull *= npol;
-    nminimal *= npol-1;
+    nfull *= recovery_tensor_nodes_dir( name, d, npol );
+    nminimal *= recovery_tensor_nodes_dir( name, d, npol ) - 1;
   }
   if ( nnol!=nfull ) return 0;
   // tensor elements. Lobatto rule with the points at the nodes (C79,
@@ -663,6 +678,30 @@ static void recovery_fit_shape( long int name, long int nnol, long int npoint,
       hp[ipoint][3] = zz*L1;
       hp[ipoint][4] = zz*L2;
       hp[ipoint][5] = zz*L3;
+    }
+    return;
+  }
+
+  if ( name==-QUAD6 ) {
+    // continuum quad6: npoint/nxi points per direction (3 x 2 or 2 x 1,
+    // xi fastest), the shape functions of pol(): 3 nodes along xi, 2
+    // along eta. Gauss or Lobatto points as the rule used.
+    double xg6[MPOINT], wg6[MPOINT], yg6[MPOINT], wy6[MPOINT], hx[MNOL],
+      hy[MNOL], px[MNOL], py[MNOL];
+    long int nxi6 = ( npoint==6 ) ? 3 : 2, neta6 = npoint/nxi6;
+    if ( lobatto ) {
+      integration_lobatto( nxi6, xg6, wg6 );
+      integration_lobatto( neta6, yg6, wy6 );
+    }
+    else {
+      integration_gauss( nxi6, xg6, wg6 );
+      integration_gauss( neta6, yg6, wy6 );
+    }
+    for ( ipoint=0; ipoint<npoint; ipoint++ ) {
+      interpolation_polynomial( xg6[ipoint%nxi6], 3, hx, px );
+      interpolation_polynomial( yg6[ipoint/nxi6], 2, hy, py );
+      for ( inol=0; inol<nnol; inol++ )
+        hp[ipoint][inol] = hx[inol%3] * hy[inol/3];
     }
     return;
   }

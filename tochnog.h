@@ -1897,6 +1897,7 @@ enum {
   XY,
   XZ,
   YZ,
+  CONTROL_MESH_CONVERT_QUAD9_QUAD6,
   LAST_DUMMY }; // keep LAST_DUMMY always the last one
 
 #define MDAT LAST_DUMMY+DATA_ITEM_SIZE  // reserve space for unknowns

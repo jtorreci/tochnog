@@ -230,6 +230,11 @@ static long int border_nodes_quad16[] =  {
     15, 14, 13, 12,
     12,  8,  4,  0};
 
+// continuum quad6 sides: the two 3-node sides (xi direction) and the two
+// 2-node sides (eta direction), which area() walks in two passes.
+static long int border_nodes_quad6_xi[] = { 0, 1, 2,  5, 4, 3 };
+static long int border_nodes_quad6_eta[] = { 2, 5,  3, 0 };
+
 static long int border_nodes_tet4[] =  {
     0, 1, 2,
     0, 1, 3,
@@ -403,6 +408,12 @@ void area( long int element, long int name,
       nnol_side = 4;
       sides = border_nodes_quad16;
     }
+    else if ( name==-QUAD6 &&
+              !db_active_index( GROUP_INTERFACE, gr, VERSION_NORMAL ) ) {
+      nside = 2;
+      nnol_side = 3;
+      sides = border_nodes_quad6_xi;
+    }
     else if ( name==-TET4 ) {
       nside = 4;
       nnol_side = 3;
@@ -427,6 +438,8 @@ void area( long int element, long int name,
       array_add( &new_coord[inol*ndim], average_element_coord, average_element_coord, ndim );
     array_multiply( average_element_coord, average_element_coord, 1./nnol, ndim );
 
+    // the second pass of the quad6 (its 2-node sides) re-enters here
+    quad6_second_pass:
     for ( itype=0; itype<MTYPES; itype++ ) {
       if ( swit ) pri( "itype", (int)itype );
 
@@ -1829,6 +1842,13 @@ void area( long int element, long int name,
           }
         }
       }
+    }
+
+    if ( name==-QUAD6 && sides==border_nodes_quad6_xi ) {
+      nside = 2;
+      nnol_side = 2;
+      sides = border_nodes_quad6_eta;
+      goto quad6_second_pass;
     }
 
     if ( swit ) pri( "Out routine AREA" );

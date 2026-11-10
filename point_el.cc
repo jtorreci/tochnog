@@ -316,6 +316,11 @@ long int point_el( double point[], double coords[], double weight[],
       nnol_xi = 3;
       nnol_eta = 3;
     }
+    else if ( name==-QUAD6 ) {
+      // continuum quad6: 3 nodes along xi, 2 along eta
+      nnol_xi = 3;
+      nnol_eta = 2;
+    }
     else if ( name==-QUAD16 ) {
       nnol_xi = 4;
       nnol_eta = 4;

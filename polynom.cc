@@ -130,6 +130,7 @@ void pol( long int element, long int element_group,
     ipoint=0, npol=0, length=0, axisymmetric=-NO, npoint_per_dir=0,
     inol_xi=0, inol_eta=0, inol_zeta=0, nnol_xi=1, nnol_eta=1, nnol_zeta=1, 
     inol=0, istrain=0, indx=0, ldum=0, rule_lobatto=0, rule_reduced=0,
+    npol_dir=0,
     integration_method=-GAUSS, integration_points=-MINIMAL;
   double detj=0., radius=0., fac=0., L1=0., L2=0., L3=0., L4=0.,
     reduced_iso=0.,
@@ -716,9 +717,14 @@ void pol( long int element, long int element_group,
     if      ( name==-BAR2 || name==-QUAD4  || name==-HEX8   ) npol = 2;
     else if ( name==-BAR3 || name==-QUAD9  || name==-HEX27  ) npol = 3;
     else if ( name==-BAR4 || name==-QUAD16 || name==-HEX64  ) npol = 4;
+    // continuum quad6 (manual 6.413, 2 sides of 3 nodes): the Lagrange
+    // tensor element quadratic in xi and linear in eta, node order xi
+    // fastest (Professional 02-08-2026, element_intpnt_h). An interface
+    // quad6 never reaches pol() (elem.cc dispatches on GROUP_INTERFACE).
+    else if ( name==-QUAD6 && ndim==2 ) npol = 3;
     else db_error( ELEMENT, element );
     if ( ndim>=1 ) nnol_xi = npol;
-    if ( ndim>=2 ) nnol_eta = npol;
+    if ( ndim>=2 ) nnol_eta = ( name==-QUAD6 ) ? 2 : npol;
     if ( ndim==3 ) nnol_zeta = npol;
     nnol = nnol_xi * nnol_eta * nnol_zeta;
     if ( name==-BAR2 )
@@ -754,12 +760,13 @@ void pol( long int element, long int element_group,
     rule_reduced = 0;
     npoint = 1;
     for ( idim=0; idim<MDIM; idim++ ) {
+      npol_dir = ( name==-QUAD6 && idim==1 ) ? 2 : npol;
       if ( idim>ndim-1 )
         npoint_per_dir = 1;
       else if ( integration_points==-MINIMAL ) 
-        npoint_per_dir = npol - 1;
+        npoint_per_dir = npol_dir - 1;
       else if ( integration_points==-MAXIMAL ) 
-        npoint_per_dir = npol;
+        npoint_per_dir = npol_dir;
       else
         db_error( GROUP_INTEGRATION_POINTS, element_group );
       npoint *= npoint_per_dir;
@@ -788,7 +795,7 @@ void pol( long int element, long int element_group,
         stress_recovery_gauss = 1;
         rule_reduced = 1;
       }
-      else if ( npoint_per_dir<npol ) {
+      else if ( npoint_per_dir<npol_dir ) {
         integration_gauss( npoint_per_dir, iso, weight_iso );
         stress_recovery_gauss = 1;
       }
@@ -1155,7 +1162,7 @@ long int element_intpnt_supported( long int name, long int nnol )
   if ( ndim==2 )
     return ( name==-TRIA3 && nnol==3 ) || ( name==-TRIA6 && nnol==6 ) ||
       ( name==-QUAD4 && nnol==4 ) || ( name==-QUAD9 && nnol==9 ) ||
-      ( name==-QUAD16 && nnol==16 );
+      ( name==-QUAD16 && nnol==16 ) || ( name==-QUAD6 && nnol==6 );
   return ( name==-TET4 && nnol==4 ) || ( name==-TET10 && nnol==10 ) ||
     ( name==-PRISM6 && nnol==6 ) || ( name==-PRISM15 && nnol==15 ) ||
     ( name==-HEX8 && nnol==8 ) || ( name==-HEX27 && nnol==27 );

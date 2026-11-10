@@ -2933,7 +2933,7 @@ void post_element_force_calculate( void )
         ( ( name==-QUAD4 || name==-QUAD9 ) && pef_axisym!=-YES ) :
         ( name==-HEX8 || name==-HEX27 ) );
       long int pef_pol = ( ndim==2 ?
-        ( name==-TRIA3 || name==-TRIA6 || name==-QUAD16 ||
+        ( name==-TRIA3 || name==-TRIA6 || name==-QUAD16 || name==-QUAD6 ||
           ( ( name==-QUAD4 || name==-QUAD9 ) && pef_axisym==-YES ) ) :
         ( name==-TET4 || name==-TET10 || name==-PRISM6 ||
           name==-PRISM15 ) );
@@ -2949,7 +2949,7 @@ void post_element_force_calculate( void )
            db_active_index( GROUP_INTERFACE, element_group,
              VERSION_NORMAL ) ) {
         pri( "Error: post_element_force does not support element ", ielem );
-        pri( "Supported: quad4, quad9, quad16, tria3, tria6 (2D); hex8, "
+        pri( "Supported: quad4, quad6, quad9, quad16, tria3, tria6 (2D); hex8, "
              "hex27, tet4, tet10, prism6, prism15 (3D); truss, spring1, "
              "spring2; not in an interface group. Restrict the section "
              "with post_element_force_group or post_element_force_number." );

@@ -1,0 +1,40 @@
+( F5 T4 U9a: post_element_force on a continuum -quad6 {the pol path}, two
+  elements, section at x=2 {normal 1 0, shear0 0 1, middle 2 1}. Uniaxial
+  strain 0.5, E 1, nu 0: sigxx 0.5, height 2, normal force 1, exact by
+  equilibrium and = Professional 02-08-2026 on this file. )
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_displacement
+materi_stress
+end_initia
+node 1 0 0
+node 2 1 0
+node 3 2 0
+node 4 0 2
+node 5 1 2
+node 6 2 2
+node 7 3 0
+node 8 4 0
+node 9 3 2
+node 10 4 2
+element 1 -quad6 1 2 3 4 5 6
+element 2 -quad6 3 7 8 6 9 10
+group_type 0 -materi
+group_materi_elasti_young 0 1.0
+group_materi_elasti_poisson 0 0.
+group_materi_memory 0 -total_linear
+bounda_dof 10 -ra 1 4 -ra -velx
+bounda_time 10 0.
+bounda_dof 11 1 -vely
+bounda_time 11 0.
+bounda_dof 12 4 -vely
+bounda_time 12 0.
+bounda_dof 20 -ra 8 10 -ra -velx
+bounda_time 20 2.
+control_timestep 10 1. 1.
+geometry_line 1 2 0 2 2 1.e-5
+post_element_force 1 1 0 0 1 2 1
+post_element_force_geometry 1 -geometry_line 1
+control_print_database 10 -separate_index
+end_data

@@ -3511,6 +3511,82 @@ pv_case print_frd_prepomax2 'penta6 1 2 3 6 7 8 and 2 4 3 7 9 8' \
   'grep -q "^ -2         1         2         3         6         7         8$" print_frd_prepomax2.frd && grep -q "^ -2         2         4         3         7         9         8$" print_frd_prepomax2.frd && grep -q "^ -1         2    2    0" print_frd_prepomax2.frd'
 pv_case control_print_frd_prepomax1 '8 nodes, hex8' \
   'grep -q "^     2C *8 *1$" control_print_frd_prepomax1.frd && grep -q "^ -2         1         2         4         3         6         7         9         8$" control_print_frd_prepomax1.frd'
+# ---------------------------------------------------------------------
+# F5 T4 U9a: continuum quad6 (manual 6.413). dbs_near <file> <record>
+# <index> <column (1-based after the index)> <value> <tol>: value targets
+# on a .dbs record (a missing record fails).
+dbs_near() {
+  awk -v r="$2" -v i="$3" -v c="$4" -v a="$5" -v t="$6" '
+    $1==r && $2==i { v=$(c+2); f=1; d=v-a; if (d<0) d=-d; exit (d<=t ? 0 : 1) }
+    END { if (!f) exit 1 }' "$1"
+}
+pv_case quad6_gauss1 'default rule 3x2 Gauss, method -gauss, nodal values = Pro' \
+  'grep -qE "^ *element_intpnt_npoint +1 +6" $t.dbs && grep -qE "^ *element_intpnt_method +1 +-gauss" $t.dbs \
+   && dbs_near $t.dbs element_intpnt_iso_coord 1 1 -7.745966692400e-01 1e-9 \
+   && dbs_near $t.dbs element_intpnt_iso_coord 1 2 -5.773502691900e-01 1e-9 \
+   && dbs_near $t.dbs element_intpnt_iso_coord 1 3 0. 1e-9 \
+   && dbs_near $t.dbs element_intpnt_iso_coord 1 11 7.745966692400e-01 1e-9 \
+   && dbs_near $t.dbs element_intpnt_iso_coord 1 12 5.773502691900e-01 1e-9 \
+   && dbs_near $t.dbs node_dof 2 5 1.399186928492e-02 1e-9 \
+   && dbs_near $t.dbs node_dof 2 6 1.049390196369e-02 1e-9 \
+   && dbs_near $t.dbs node_dof 5 5 1.429394161729e-02 1e-9 \
+   && dbs_near $t.dbs node_dof 5 6 1.072045621296e-02 1e-9'
+pv_case quad6_minimal1 '-minimal 2x1 Gauss (rank deficient, as Pro), free mid nodes = Pro' \
+  'grep -qE "^ *element_intpnt_npoint +1 +2" $t.dbs && grep -qE "^ *element_intpnt_method +1 +-gauss" $t.dbs \
+   && dbs_near $t.dbs element_intpnt_iso_coord 1 1 -5.773502691900e-01 1e-9 \
+   && dbs_near $t.dbs element_intpnt_iso_coord 1 2 0. 1e-9 \
+   && dbs_near $t.dbs element_intpnt_iso_coord 1 3 5.773502691900e-01 1e-9 \
+   && dbs_near $t.dbs node_dof 2 1 3.750000000002e-02 1e-9 \
+   && dbs_near $t.dbs node_dof 2 2 7.500000000005e-02 1e-9 \
+   && dbs_near $t.dbs node_dof 5 1 1.249999999998e-02 1e-9 \
+   && dbs_near $t.dbs node_dof 5 2 2.499999999995e-02 1e-9'
+pv_case quad6_minimal_recovery1 '-minimal nodal stress recovery F = h/sum h = Pro' \
+  'dbs_near $t.dbs node_dof 1 5 1.563858505404e-02 1e-7 \
+   && dbs_near $t.dbs node_dof 2 5 1.324746e-02 1e-7 \
+   && dbs_near $t.dbs node_dof 3 5 1.085634e-02 1e-7'
+pv_case quad6_lobatto1 '-lobatto 3x2 points at the nodes, nodal stress = Pro' \
+  'grep -qE "^ *element_intpnt_method +1 +-lobatto" $t.dbs && grep -qE "^ *element_intpnt_npoint +1 +6" $t.dbs \
+   && dbs_near $t.dbs element_intpnt_iso_coord 1 1 -1. 1e-9 \
+   && dbs_near $t.dbs element_intpnt_iso_coord 1 2 -1. 1e-9 \
+   && dbs_near $t.dbs node_dof 2 5 1.271802325581e-02 1e-9 \
+   && dbs_near $t.dbs node_dof 5 6 8.574695121951e-03 1e-9'
+pv_case quad6_reduced1 '-reduced 3x2 Lobatto points, fitted nodal stress = Pro' \
+  'grep -qE "^ *element_intpnt_method +1 +-reduced" $t.dbs \
+   && dbs_near $t.dbs node_dof 2 5 1.800612747472e-02 1e-9 \
+   && dbs_near $t.dbs node_dof 5 6 1.787945559436e-02 1e-9'
+pv_case quad6_shape1 'analytic quadratic field: sigxx 0.02 x at the 6 Gauss points' \
+  'dbs_near $t.dbs element_intpnt_dof 1 5 4.508066615200e-03 1e-9 \
+   && dbs_near $t.dbs element_intpnt_dof 1 15 2.e-02 1e-9 \
+   && dbs_near $t.dbs element_intpnt_dof 1 25 3.549193338480e-02 1e-9 \
+   && dbs_near $t.dbs element_intpnt_dof 1 35 4.508066615200e-03 1e-9 \
+   && dbs_near $t.dbs element_intpnt_dof 1 45 2.e-02 1e-9 \
+   && dbs_near $t.dbs element_intpnt_dof 1 55 3.549193338480e-02 1e-9'
+pv_case quad6_gravity1 'self-weight of a distorted element: reactions sum rho*g*area = Pro' \
+  'dbs_near $t.dbs node_rhside 1 2 -6.275532084858e-01 1e-7 \
+   && dbs_near $t.dbs node_rhside 2 2 -1.957428172845e+00 1e-7 \
+   && dbs_near $t.dbs node_rhside 3 2 -4.483519520069e-01 1e-7'
+pv_case quad6_force_edge1 'force_edge on a 3-node and a 2-node side: reactions and displacements = Pro' \
+  'dbs_near $t.dbs node_rhside 1 1 4.683794466427e-01 1e-7 \
+   && dbs_near $t.dbs node_rhside 2 1 4.545454545457e-01 1e-7 \
+   && dbs_near $t.dbs node_rhside 2 2 1.144927536113e+00 1e-7 \
+   && dbs_near $t.dbs node_rhside 3 2 1.775362319159e-01 1e-7 \
+   && dbs_near $t.dbs node_dof 4 3 1.502635046102e-06 1e-10 \
+   && dbs_near $t.dbs node_dof 6 4 8.840579710736e-07 1e-10'
+pv_case quad6_post_element_force1 'post_element_force on two quad6: normal force 1 = analytic = Pro' \
+  'dbs_near $t.dbs post_element_force_result 1 1 1. 1e-7'
+pv_case quad6_post_point1 'post_point in the quadratic field: disx 0.0025 (analytic, = Pro)' \
+  'dbs_near $t.dbs post_point_dof 0 3 2.5e-03 1e-8'
+pv_case quad6_interface1 'interface quad6 unchanged: 3 Lobatto pairs' \
+  'grep -qE "^ *element_intpnt_npoint +2 +3" $t.dbs && dbs_near $t.dbs element_intpnt_iso_coord 2 3 0. 1e-9'
+# F5 T4 U9a: control_mesh_convert_quad9_quad6 (manual 6.160), = Professional
+pv_case control_mesh_convert_quad9_quad6_x1 '-x: quad6 1 4 7 3 6 9, nodes 5 and 8 deleted, node 2 kept (tria3 uses it)' \
+  'grep -qE "^ *element +1 +-quad6 1 4 7 3 6 9 *$" $t.dbs \
+   && grep -qE "^ *element +2 +-quad4 3 11 9 10 *$" $t.dbs && grep -qE "^ *element +3 +-tria3 2 11 3 *$" $t.dbs \
+   && ! grep -qE "^ *node +5 " $t.dbs && ! grep -qE "^ *node +8 " $t.dbs && grep -qE "^ *node +2 " $t.dbs'
+pv_case control_mesh_convert_quad9_quad6_y1 '-y: quad6 1 2 3 7 8 9, nodes 4 5 6 deleted, element 2 and 3 kept' \
+  'grep -qE "^ *element +1 +-quad6 1 2 3 7 8 9 *$" $t.dbs \
+   && grep -qE "^ *element +2 +-quad4 3 11 9 10 *$" $t.dbs && grep -qE "^ *element +3 +-tria3 2 11 3 *$" $t.dbs \
+   && ! grep -qE "^ *node +4 " $t.dbs && ! grep -qE "^ *node +5 " $t.dbs && ! grep -qE "^ *node +6 " $t.dbs'
 rm -rf "$PVDIR"
 # F5 W1 U5: element group selection (Professional 02-08-2026 probes; the
 # manual decides where the Professional differs) and print_precision.
@@ -3607,6 +3683,8 @@ expected_error_ok "$T2026" post_node_integer_item_error1
 expected_error_ok "$T2026" post_integrate_integer_item_error1
 expected_error_ok "$T2026" control_repeat_save_integer_item_error1
 expected_error_ok "$T2026" control_repeat_until_integer_item_error1
+expected_error_ok "$T2026" quad6_ndim3_error1
+expected_error_ok "$T2026" control_mesh_convert_quad9_quad6_error1
 # F4 T6f LOW queue Q6 / C58 (2026-10-17): control_restart keeps the
 #   interface and spring history, as the Professional 02-08-2026
 #   (interface -1.5 / 1.5 after the restart, fresh run -0.5 / 0.5;

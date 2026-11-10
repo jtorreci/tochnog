@@ -849,6 +849,82 @@ void mesh_convert_hex20( void )
   if ( swit ) pri( "Out function MESH_CONVERT_HEX20" );
 }
 
+// Deletes the nodes no element uses (after a conversion that dropped nodes).
+static void mesh_delete_unused_nodes( long int max_element, long int max_node )
+
+{
+  long int element=0, inod=0, length=0, el[1+MNOL], *used=NULL;
+  double ddum[1];
+
+  used = get_new_int( max_node+1 );
+  array_set( used, 0, max_node+1 );
+  for ( element=0; element<=max_element; element++ ) {
+    if ( !db_active_index( ELEMENT, element, VERSION_NORMAL ) ) continue;
+    db( ELEMENT, element, el, ddum, length, VERSION_NORMAL, GET );
+    for ( long int inol=1; inol<length; inol++ ) {
+      if ( el[inol]>=0 && el[inol]<=max_node ) used[el[inol]] = 1;
+    }
+  }
+  for ( inod=0; inod<=max_node; inod++ ) {
+    if ( !used[inod] && db_active_index( NODE, inod, VERSION_NORMAL ) )
+      delete_node( inod, VERSION_NORMAL );
+  }
+  delete[] used;
+}
+
+// mesh_convert_quad9_quad6 (manual Professional 6.160, 2D): each -quad9
+// loses the mid-direction nodes of dir, which becomes the linear direction
+// of the resulting -quad6 (nodes no element uses any more are deleted).
+// The tensor layout xi-fastest 3 x 2 is the one of the Professional
+// 02-08-2026: -x keeps columns 0 and 2 (quad9 n0 n3 n6 n2 n5 n8), so the
+// new xi is the old eta and the new element has a negative Jacobian (the
+// volume uses |detj|); -y keeps rows 0 and 2 (n0 n1 n2 n6 n7 n8). Runs at
+// the running control index, at every step_start; idempotent (no quad9
+// is left). A record in 1D or 3D has no effect, as in the Professional.
+static void mesh_convert_quad9_quad6( void )
+
+{
+  long int icontrol=0, ldum=0, dir=0, element=0, max_element=0, max_node=0,
+    length=0, nconv=0, el[1+MNOL];
+  double ddum[1];
+
+  db( ICONTROL, 0, &icontrol, ddum, ldum, VERSION_NORMAL, GET );
+  if ( !db_active_index( CONTROL_MESH_CONVERT_QUAD9_QUAD6, icontrol,
+       VERSION_NORMAL ) ) return;
+  db( CONTROL_MESH_CONVERT_QUAD9_QUAD6, icontrol, &dir, ddum, ldum,
+    VERSION_NORMAL, GET );
+  if ( dir!=-X && dir!=-Y )
+    db_error( CONTROL_MESH_CONVERT_QUAD9_QUAD6, icontrol );
+  if ( ndim!=2 ) return;
+
+  db_highest_index( ELEMENT, max_element, VERSION_NORMAL );
+  db_highest_index( NODE, max_node, VERSION_NORMAL );
+  if ( max_element<0 || max_node<0 ) return;
+  for ( element=0; element<=max_element; element++ ) {
+    if ( !db_active_index( ELEMENT, element, VERSION_NORMAL ) ) continue;
+    db( ELEMENT, element, el, ddum, length, VERSION_NORMAL, GET );
+    if ( el[0]!=-QUAD9 || length!=10 ) continue;
+    long int q6[7], len7 = 7;
+    q6[0] = -QUAD6;
+    if ( dir==-X ) {
+      q6[1] = el[1]; q6[2] = el[4]; q6[3] = el[7];
+      q6[4] = el[3]; q6[5] = el[6]; q6[6] = el[9];
+    }
+    else {
+      q6[1] = el[1]; q6[2] = el[2]; q6[3] = el[3];
+      q6[4] = el[7]; q6[5] = el[8]; q6[6] = el[9];
+    }
+    // clear the shorter record first: db_len finds its end by bisection
+    // and a stale tail of the quad9 record would look like valid data
+    db_delete_index( ELEMENT, element, VERSION_NORMAL );
+    db( ELEMENT, element, q6, ddum, len7, VERSION_NORMAL, PUT );
+    nconv++;
+  }
+  if ( nconv==0 ) return;
+  mesh_delete_unused_nodes( max_element, max_node );
+  mesh_has_changed( VERSION_NORMAL );
+}
+
 // mesh_convert_tria6_tria3 (manual Professional 6.161): with
 // control_mesh_convert_tria6_tria3 index -yes at the running control
 // index, every -tria6 becomes the -tria3 of its corner nodes (tria6 node
@@ -859,8 +935,10 @@ void mesh_convert_tria6_tria3( void )
 
 {
   long int icontrol=0, ldum=0, swit_yes=-NO, element=0, max_element=0,
-    max_node=0, inod=0, length=0, nconv=0, el[1+MNOL], *used=NULL;
+    max_node=0, length=0, nconv=0, el[1+MNOL];
   double ddum[1];
+
+  mesh_convert_quad9_quad6(); // same lifecycle, its own control index (6.160)
 
   db( ICONTROL, 0, &icontrol, ddum, ldum, VERSION_NORMAL, GET );
   if ( !db_active_index( CONTROL_MESH_CONVERT_TRIA6_TRIA3, icontrol,
@@ -881,20 +959,7 @@ void mesh_convert_tria6_tria3( void )
     nconv++;
   }
   if ( nconv==0 ) return;
-  used = get_new_int( max_node+1 );
-  array_set( used, 0, max_node+1 );
-  for ( element=0; element<=max_element; element++ ) {
-    if ( !db_active_index( ELEMENT, element, VERSION_NORMAL ) ) continue;
-    db( ELEMENT, element, el, ddum, length, VERSION_NORMAL, GET );
-    for ( long int inol=1; inol<length; inol++ ) {
-      if ( el[inol]>=0 && el[inol]<=max_node ) used[el[inol]] = 1;
-    }
-  }
-  for ( inod=0; inod<=max_node; inod++ ) {
-    if ( !used[inod] && db_active_index( NODE, inod, VERSION_NORMAL ) )
-      delete_node( inod, VERSION_NORMAL );
-  }
-  delete[] used;
+  mesh_delete_unused_nodes( max_element, max_node );
   mesh_has_changed( VERSION_NORMAL );
 }
 

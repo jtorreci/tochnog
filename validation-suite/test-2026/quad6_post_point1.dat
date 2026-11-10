@@ -1,0 +1,34 @@
+( F5 T4 U9a: post_point in a continuum -quad6: at x 0.5 y 0.5, disx = 0.01*x*x = 0.0025 {analytic, quadratic field}, = Professional 02-08-2026 on this file. Same mesh as quad6_shape1. Straight
+  rectangle x in {0,1,2}, y in {0,1}, E 1, nu 0. All nodes prescribed
+  u_x = 0.01 x*x, u_y = 0: the field is quadratic in xi and represented
+  exactly, so at a Gauss point sigxx = 0.02 x {x = 1 + xi}: 0.0045079,
+  0.02, 0.0354921 at xi = -0.7746, 0, 0.7746, on both eta rows. )
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_displacement
+materi_stress
+end_initia
+node 1 0 0
+node 2 1 0
+node 3 2 0
+node 4 0 1
+node 5 1 1
+node 6 2 1
+element 1 -quad6 1 2 3 4 5 6
+group_type 0 -materi
+group_materi_elasti_young 0 1.0
+group_materi_elasti_poisson 0 0.
+group_materi_memory 0 -total_linear
+bounda_dof 10 -ra 1 2 3 4 5 6 -ra -vely
+bounda_time 10 0.
+bounda_dof 20 -ra 1 4 -ra -velx
+bounda_time 20 0.
+bounda_dof 21 -ra 2 5 -ra -velx
+bounda_time 21 0. 0. 1. 0.01
+bounda_dof 22 -ra 3 6 -ra -velx
+bounda_time 22 0. 0. 1. 0.04
+control_timestep 10 1. 1.
+post_point 0 0.5 0.5
+control_print_database 10 -separate_index
+end_data

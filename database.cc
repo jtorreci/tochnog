@@ -1819,6 +1819,11 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   data_class[CONTROL_MESH_SPLIT_ELEMENT_TO] = CONTROL;
   data_required[CONTROL_MESH_SPLIT_ELEMENT_TO] = CONTROL_MESH_SPLIT;
 
+  strcpy(name[CONTROL_MESH_CONVERT_QUAD9_QUAD6],"control_mesh_convert_quad9_quad6");
+  type[CONTROL_MESH_CONVERT_QUAD9_QUAD6] = INTEGER;
+  data_length[CONTROL_MESH_CONVERT_QUAD9_QUAD6] = 1;
+  data_class[CONTROL_MESH_CONVERT_QUAD9_QUAD6] = CONTROL;
+
   strcpy(name[CONTROL_MESH_CONVERT_TRIA6_TRIA3],"control_mesh_convert_tria6_tria3");
   type[CONTROL_MESH_CONVERT_TRIA6_TRIA3] = INTEGER;
   data_length[CONTROL_MESH_CONVERT_TRIA6_TRIA3] = 1;

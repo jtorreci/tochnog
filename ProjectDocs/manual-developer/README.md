@@ -95,6 +95,7 @@ page lists its own in "Differences with the Professional version".
 - [control_mesh_rotate](control_mesh_rotate.md) — sweep a 2D mesh to 3D (mesh_rotate_3d).
 - [control_mesh_extrude](control_mesh_extrude.md) — extrude a 2D mesh (mesh_extrude(icontrol), once at its own control index; Professional plane / layer numbering and node orders; F5 T4 U5a).
 - [control_mesh_split](control_mesh_split.md) — mesh_split split patterns, `_element_from` / `_element_to`, point_el prism6 (F5 T4 U5b).
+- [control_mesh_convert_quad9_quad6](control_mesh_convert_quad9_quad6.md) — mesh_convert_quad9_quad6 in mesh.cc and the continuum quad6 (pol, recovery, area) (F5 T4 U9a).
 - [control_mesh_convert_tria6_tria3](control_mesh_convert_tria6_tria3.md) — mesh_convert_tria6_tria3 in mesh.cc (F5 T4 U5b).
 - [control_mesh_duplicate_element_group](control_mesh_duplicate_element_group.md) — mesh_duplicate_element_group in delete.cc (F5 T4 U5c).
 - [control_mesh_renumber_offsets](control_mesh_renumber_offsets.md) — group / geometry offsets in the top.cc control_mesh_renumber block (F5 T4 U5c).
