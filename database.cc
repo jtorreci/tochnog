@@ -8613,6 +8613,11 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   // needed, the ELEMENT record machinery is name-generic.
   strcpy(name[PRISM15],"prism15");
 
+  // PRISM18 (F5 T4 U9b, manual 6.413): the 18-node quadratic prism, the
+  // product of the tria6 and the 3-node line (polynom.cc prism18_shape).
+  // Like PRISM15 only the word is registered.
+  strcpy(name[PRISM18],"prism18");
+
   // INCREMENTAL_DRIVER FAMILY (DEV-A sprint, manual Professional 6.784).
   // Registered at the end like the appended enum values (see tochnog.h).
   // Ground truth + probes: ProjectDocs/manual-developer/incremental_driver.md.

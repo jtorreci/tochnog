@@ -1898,6 +1898,7 @@ enum {
   XZ,
   YZ,
   CONTROL_MESH_CONVERT_QUAD9_QUAD6,
+  PRISM18,
   LAST_DUMMY }; // keep LAST_DUMMY always the last one
 
 #define MDAT LAST_DUMMY+DATA_ITEM_SIZE  // reserve space for unknowns
@@ -2382,6 +2383,8 @@ void      interpolate_geometry( long int geometry_entity[],
             long int project_type, long int version );
 void      interpolation_polynomial( double iso, long int npol, double h_pol[],
             double p_pol[] );
+void      prism18_shape( double L1, double L2, double zeta, double h[],
+            double p[] );
 long int  intersect_line_with_line( double line_a0[], double line_a1[], 
             double line_b0[], double line_b1[], double &iso_line_a,
             double &iso_line_b );

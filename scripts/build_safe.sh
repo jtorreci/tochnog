@@ -3594,6 +3594,49 @@ pv_case quad6_vtk1 'cell 6 0 2 5 3 1 4, type 30' \
 pv_case prism15_vtk1 'cell 15 corners base top vertical, type 26' \
   'grep -qE "^CELLS 1 16 *$" $t.vtk && grep -qE "^15 0 1 2 3 4 5 9 10 11 12 13 14 6 7 8 *$" $t.vtk \
    && [ "$(grep -A1 ^CELL_TYPES $t.vtk | sed -n 2p | tr -d " ")" = 26 ]'
+# F5 T4 U9b: the 18-node prism (manual 6.413, three tria6 layers).
+# dbs_near0 <file> <record> <column> <value> <tol>: a record without index.
+dbs_near0() {
+  awk -v r="$2" -v c="$3" -v a="$4" -v t="$5" '
+    $1==r { v=$(c+1); f=1; d=v-a; if (d<0) d=-d; exit (d<=t ? 0 : 1) }
+    END { if (!f) exit 1 }' "$1"
+}
+pv_case prism18_gauss1 '21 points tria6 x 3 Gauss, reaction -rho*g*V, displacements and nodal stresses = Pro' \
+  'grep -qE "^ *element_intpnt_npoint +1 +21" $t.dbs && grep -qE "^ *element_intpnt_method +1 +0" $t.dbs \
+   && dbs_near $t.dbs element_intpnt_iso_coord 1 3 -7.745966692415e-01 1e-9 \
+   && dbs_near $t.dbs element_intpnt_iso_coord 1 4 5.971587178977e-02 1e-9 \
+   && dbs_near $t.dbs element_intpnt_iso_coord 1 5 4.701420641051e-01 1e-9 \
+   && dbs_near $t.dbs element_intpnt_iso_coord 1 63 7.745966692415e-01 1e-9 \
+   && dbs_near0 $t.dbs post_node_rhside_fixed 3 -0.5 1e-8 \
+   && dbs_near $t.dbs node_dof 7 6 -3.532180153473e-07 1e-13 \
+   && dbs_near $t.dbs node_dof 14 6 -4.826017741280e-07 1e-13 \
+   && dbs_near $t.dbs node_dof 1 7 -1.523344088596e-01 1e-8 \
+   && dbs_near $t.dbs node_dof 7 11 -1.281570596498e-02 1e-8 \
+   && dbs_near $t.dbs node_dof 14 12 1.379633053136e-03 1e-8'
+pv_case prism18_minimal1 '-minimal and -lobatto keep the 21-point rule, same results (PRISM18-MINIMAL)' \
+  'grep -qE "^ *element_intpnt_npoint +1 +21" $t.dbs && grep -qE "^ *element_intpnt_method +1 +0" $t.dbs \
+   && dbs_near0 $t.dbs post_node_rhside_fixed 3 -0.5 1e-8 \
+   && dbs_near $t.dbs node_dof 1 7 -1.523344088596e-01 1e-8'
+pv_case prism18_volume1 'distorted element: reaction -rho*g*V, V 1.825 analytic; stresses = Pro' \
+  'dbs_near0 $t.dbs post_node_rhside_fixed 3 -1.825 1e-8 \
+   && dbs_near $t.dbs node_dof 8 7 -6.482513887544e-02 1e-8 \
+   && dbs_near $t.dbs node_dof 17 12 -2.673761730148e-03 1e-8'
+pv_case prism18_patch1 'linear patch test: free nodes on the linear field, constant stress' \
+  'dbs_near $t.dbs node_dof 17 4 1.3625e-03 1e-12 && dbs_near $t.dbs node_dof 18 4 1.8625e-03 1e-12 \
+   && dbs_near $t.dbs node_dof 19 4 1.625e-03 1e-12 && dbs_near $t.dbs node_dof 22 4 2.1125e-03 1e-12 \
+   && dbs_near $t.dbs node_dof 25 4 1.6125e-03 1e-12 \
+   && dbs_near $t.dbs element_intpnt_dof 3 7 1.2 1e-9 && dbs_near $t.dbs element_intpnt_dof 3 8 0.2 1e-9 \
+   && dbs_near $t.dbs element_intpnt_dof 3 9 0.8 1e-9 && dbs_near $t.dbs element_intpnt_dof 3 10 0.4 1e-9 \
+   && dbs_near $t.dbs element_intpnt_dof 3 11 0. 1e-9 && dbs_near $t.dbs element_intpnt_dof 3 12 0.4 1e-9 \
+   && dbs_near $t.dbs element_intpnt_dof 3 247 1.2 1e-9 && dbs_near $t.dbs element_intpnt_dof 3 249 0.8 1e-9 \
+   && dbs_near $t.dbs node_dof 19 7 1.2 1e-9 && dbs_near $t.dbs node_dof 19 9 0.8 1e-9'
+pv_case prism18_post_point1 'post_point in the quadratic field: disx 6.25e-4, 5.625e-3, 2.5e-3 (analytic)' \
+  'dbs_near $t.dbs post_point_dof 0 4 6.25e-04 2e-7 && dbs_near $t.dbs post_point_dof 1 4 5.625e-03 2e-7 \
+   && dbs_near $t.dbs post_point_dof 2 4 2.5e-03 2e-7'
+pv_case prism18_post_element_force1 'section statics of the force10 cantilever on prism18: -123.4 0 1000 0 -100000 (= Pro)' \
+  'dbs_near $t.dbs post_element_force_result 10 1 -123.4 1e-6 && dbs_near $t.dbs post_element_force_result 10 2 0. 1e-6 \
+   && dbs_near $t.dbs post_element_force_result 10 3 1000. 1e-6 && dbs_near $t.dbs post_element_force_result 10 4 0. 1e-5 \
+   && dbs_near $t.dbs post_element_force_result 10 5 -100000. 1e-4'
 rm -rf "$PVDIR"
 # F5 W1 U5: element group selection (Professional 02-08-2026 probes; the
 # manual decides where the Professional differs) and print_precision.

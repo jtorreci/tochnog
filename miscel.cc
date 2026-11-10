@@ -527,6 +527,9 @@ static long int recovery_fit_kind( long int name, long int nnol,
   // -minimal (2 points on the element axis): kind 4.
   if ( ndim==3 && name==-TET4    && nnol==4  && npoint==5  ) return 1;
   if ( ndim==3 && name==-PRISM15 && nnol==15 && npoint==21 ) return 1;
+  // prism18 (F5 T4 U9b) 21 points: the same physical linear fit
+  // (Professional 02-08-2026 nodal stresses, test prism18_gauss1)
+  if ( ndim==3 && name==-PRISM18 && nnol==18 && npoint==21 ) return 1;
   if ( ndim==3 && name==-PRISM6  && nnol==6  && npoint==2  ) return 4;
   // continuum quad6 -minimal (2 x 1 Gauss, on the mid eta line, the
   // -reduced -minimal too): kind 4 (Professional 02-08-2026 h/sum h);
@@ -653,6 +656,20 @@ static void recovery_fit_shape( long int name, long int nnol, long int npoint,
         hp[ipoint][12+k] = 2.*L[k]*L[l]*(1.+zz);
       }
     }
+    return;
+  }
+  if ( name==-PRISM18 ) {
+    // the 21 points of pol() (7-point tria6 rule x 3 Gauss levels,
+    // triangle fastest), shape functions prism18_shape()
+    double s15 = sqrt( 15. );
+    double a = (6.+s15)/21., b = (9.-2.*s15)/21.;
+    double c = (6.-s15)/21., d = (9.+2.*s15)/21.;
+    double tri[7][2] = { {1./3.,1./3.}, {b,a}, {a,b}, {a,a}, {d,c}, {c,d},
+      {c,c} };
+    double zg[3] = { -sqrt(0.6), 0., sqrt(0.6) }, p18[3*18];
+    for ( ipoint=0; ipoint<npoint; ipoint++ )
+      prism18_shape( tri[ipoint%7][0], tri[ipoint%7][1], zg[ipoint/7],
+        hp[ipoint], p18 );
     return;
   }
   if ( name==-PRISM6 && npoint==2 ) {

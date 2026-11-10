@@ -14,10 +14,10 @@ Single index of every known difference between the GNU version and Tochnog Profe
 | class | meaning | items |
 |---|---|---|
 | A | deliberate divergence decided by the project owner | 35 |
-| B | known difference, not decided yet or scheduled (F3/F4) | 58 |
+| B | known difference, not decided yet or scheduled (F3/F4) | 59 |
 | C | GNU extension or input-dialect difference | 38 |
-| D | Professional-suspect: the Professional contradicts its own manual or the analytic answer | 34 |
-| | **total** | **163** |
+| D | Professional-suspect: the Professional contradicts its own manual or the analytic answer | 35 |
+| | **total** | **167** |
 
 Ids: `C*`/`B*` are [BACKLOG-OPEN-ISSUES.md](BACKLOG-OPEN-ISSUES.md) items, `K*` are clusters of [AUDIT-ALL-VARIABLES-2026.md](AUDIT-ALL-VARIABLES-2026.md); other ids are local to this index. Several class A items are also Professional-suspect (noted in their status). Professional values are from the binary 02-08-2026 unless stated.
 
@@ -121,6 +121,7 @@ The GNU follows the manual or the analytic answer. Recorded in the SEGUIMIENTO "
 | GEOMETRY-MOVING-PARAMETERS | `geometry_moving_parameter` / `_operat_parameter` lengths (6.534: the vertices, plus the radius of a point; 6.536: "the x-velocity, y-velocity ... and z-velocity") | Exactly the manual lengths (other lengths are an error, `geometry_moving_error2` / `_error3`). | A `-geometry_quadrilateral` needs a trailing value after the vertices and `vertices x ndim` velocities (2 velocities are an error); its leave times are then wrong (`out_time ... -1.43234e+20`). | GNU follows the manual (F5 rule S2); confirmed by the owner 2026-11-09. | 2026-11-08 | [user/geometry_moving](manual-user/geometry_moving.md) |
 | GEOMETRY-MOVING-THREADS | `geometry_moving` excavation with threads (Professional example `other/geometry_moving1`) | Runs (the frozen released-load record is allocated before the parallel element loop). | Stops with "Program error detected for data item: element_rhside_delete / The data is allocated in a parallel loop" unless `processors_maximum -no`. | Professional defect on a valid input; nothing to decide. | 2026-11-08 | [user/geometry_moving](manual-user/geometry_moving.md) |
 | QUAD6-3D | `-quad6` in a 3D calculation (manual 6.413 lists it in 2D only) | Input error `Error detected for data item : element` (test `quad6_ndim3_error1`), as before. | Runs it. | GNU follows the manual (S2); no owner decision yet. | 2026-11-10 | [user/control_mesh_convert_quad9_quad6](manual-user/control_mesh_convert_quad9_quad6.md) |
+| PRISM18-POST-POINT | `post_point` (and every `point_el` interpolation) in a `-prism18` | The 18 quadratic shape functions: u = 0.01 z^2 gives disx 6.25e-4 / 5.625e-3 / 2.5e-3 at z 0.25 / 0.75 / 0.5 (analytic, test `prism18_post_point1`). | Linear interpolation between the corner nodes: 2.5e-3 / 7.5e-3 / 5e-3 (its node values are right). | GNU follows the analytic answer (S2); no owner decision yet. | 2026-11-10 | [user/prism18](manual-user/prism18.md) |
 
 ## B. Known differences, not decided or scheduled (F3/F4)
 
@@ -184,6 +185,7 @@ Open residuals. They are not decisions: each one is either scheduled, parked for
 | C127-MPC-OUTSIDE-WEIGHTS | `mpc_element_group` nodes slightly outside an element_group_1 element but within the eps_iso tolerance | Extrapolated factors (node 4.e-4 outside a unit quad4 with eps 1.e-3: -0.0002 0.5002 per pair); point_el misses such nodes near a corner. | Factors of the clamped location (0.5 0.5, corner 1). | Open, BACKLOG C127 (pre-existing; default behaviour unchanged in F5 T4 U6). | 2026-11-08 | [user/mpc_element_group_options](manual-user/mpc_element_group_options.md) |
 | C128-MPC-TRUSS-CONVERGENCE | mpc ties of a stiff truss across an interface (Professional `other/truss13`, default 2 iterations) | Truss forces 3.866 / 6.134; 5.0000001 / 5.0000002 with 50 iterations (also with hand-written mpc records before F5 T4 U7). | 5 / 5 (the symmetric answer). | Open, LOW (BACKLOG C128); the test-2026 copy uses 50 iterations. | 2026-11-08 | [user/control_mesh_truss_distribute_mpc](manual-user/control_mesh_truss_distribute_mpc.md); BACKLOG C128 |
 | C129-BOUNDA-TIME-LENGTH | `bounda_time` with more than 190 values (Professional `other/earthquake_1` / `_2` / `_3`, 2500 accelerations) | Stops at input (`data_length` 190). | Runs. | Open, LOW (BACKLOG C129). | 2026-11-08 | [user/mpc_geometry_options](manual-user/mpc_geometry_options.md); BACKLOG C129 |
+| PRISM18-MINIMAL | `-prism18` with `group_integration_points -minimal` | 21 points (the default rule: 7-point tria6 rule x 3 Gauss levels), positive weights. | 8 points: the 4-point tria6 rule (centroid weight -27/48) x 2 Gauss levels. Indefinite element stiffness (6 negative eigenvalues on a distorted prism18; the 21-point rule only the 6 rigid-mode zeros); a single fixed-base element stops with `Error with pardiso solver.` | Open, pending the owner (BACKLOG C132): the GNU applies the C82 rule of the prism15 (same rule, same reason), not yet confirmed for the prism18. | 2026-11-10 | [user/prism18](manual-user/prism18.md); [dev/prism18](manual-developer/prism18.md) |
 
 ## C. GNU extensions and input-dialect differences
 

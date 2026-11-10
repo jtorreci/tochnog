@@ -63,5 +63,11 @@ el layout de numeración del .dbs.
 
 ## Pendiente
 
-- `control_mesh_convert_quad9_quad6` y `_tria6_tria3` no están
-  implementados.
+- `control_mesh_convert_quad9_quad6` (F5 T4 U9a, the continuum `-quad6`)
+  and `control_mesh_convert_tria6_tria3` (F5 T4 U5b) are implemented in
+  their own records; see
+  [control_mesh_convert_quad9_quad6](control_mesh_convert_quad9_quad6.md).
+- Not implemented in `control_mesh_convert` (manual 6.158): `-tria6` 3D to
+  an interface `-prism12`, and `-prism15` to `-prism12` (interface) or
+  `-prism18` (not an interface). The `-prism18` element exists since F5 T4
+  U9b ([prism18](prism18.md)); the continuum `-prism12` is F5 T4 U9c.

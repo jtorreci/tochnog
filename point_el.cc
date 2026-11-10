@@ -34,6 +34,8 @@
 // prism15.dat (dev-checked). With nnol 6 it evaluates the linear prism6
 // (base corners 1-3, top corners 4-6: Lk (1-zeta)/2, Lk (1+zeta)/2;
 // F5 T4 U5b, BACKLOG C125).
+// With nnol 18 it evaluates the prism18 (polynom.cc prism18_shape, F5 T4
+// U9b).
 static void prism15_shape( double L1, double L2, double zz,
   double coords[], long int nnol, double element_coord[] )
 {
@@ -41,7 +43,12 @@ static void prism15_shape( double L1, double L2, double zz,
   double L3 = 1. - L1 - L2, N[MNOL];
 
   for ( inol=0; inol<nnol; inol++ ) N[inol] = 0.;
-  if ( nnol==6 ) {
+  if ( nnol==18 ) {
+    // prism18 (F5 T4 U9b): tria6 x 3-node line, polynom.cc prism18_shape
+    double p18[3*18];
+    prism18_shape( L1, L2, zz, N, p18 );
+  }
+  else if ( nnol==6 ) {
     double Lk[3] = { L1, L2, L3 };
     for ( long int k=0; k<3; k++ ) {
       N[k] = 0.5*Lk[k]*(1.-zz);
@@ -199,7 +206,7 @@ long int point_el( double point[], double coords[], double weight[],
          ) found = 0;
     }
   }
-  else if ( name==-PRISM15 || name==-PRISM6 ) {
+  else if ( name==-PRISM15 || name==-PRISM6 || name==-PRISM18 ) {
     // parametric localization for the 15-node quadratic prism (and the
     // linear prism6, F5 T4 U5b): Newton
     // over the natural coordinates (L1, L2, zeta in [-1,1], L3 =
@@ -279,7 +286,11 @@ long int point_el( double point[], double coords[], double weight[],
         // final shape values for the caller (dof interpolation)
         double Lk[3] = { L1, L2, L3 }, zz = iso_old[2];
         for ( inol=0; inol<nnol; inol++ ) weight[inol] = 0.;
-        if ( name==-PRISM6 ) {
+        if ( name==-PRISM18 ) {
+          double p18[3*18];
+          prism18_shape( L1, L2, zz, weight, p18 );
+        }
+        else if ( name==-PRISM6 ) {
           for ( long int k=0; k<3; k++ ) {
             weight[k] = 0.5*Lk[k]*(1.-zz);
             weight[3+k] = 0.5*Lk[k]*(1.+zz);
