@@ -180,9 +180,10 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
     _keep_geometry).
   - [x] U9a (3c93898, a1185ed, 505564d, b006671) (S3, S4, S6) Professional probes for quad6, continuum quad6,
     control_mesh_convert_quad9_quad6, VTK output of quad6 and prism15. Route: delegated (bounded writer; context
-    backstop). Suite 1086 OK, 0 FALLO. Pending owner: QUAD6-3D class D.
-  - [ ] U9b (S3, S4, S6) prism18, control_mesh_extrude_element with -tria6 (manual 6.181 default -prism18), VTK.
-    Route: to decide after U9a.
+    backstop). Suite 1086 OK, 0 FALLO. QUAD6-3D class D confirmed by the owner (2026-11-10).
+  - [x] U9b (0b35e26, c0f8038, b9599d0, af188d0) (S2-S6) prism18, control_mesh_extrude_element with -tria6 (manual
+    6.181 default -prism18), VTK cell 32. Route: delegated (bounded writer; context backstop, the parent session was
+    already compacted once). Suite 1102 OK, 0 FALLO. Pending owner: PRISM18-MINIMAL (C132; code keeps 21 points).
   - [ ] U9c (S3, S4, S6) prism12 continuum, -prism12 option of the extrude, VTK. Interface prism12 is out of scope.
     Route: to decide after U9b.
 - [ ] T5 W6 other physics (25): baseline correction, force_edge_diagram, force_gravity_geometry,
@@ -757,3 +758,15 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
 - 2026-11-10 U9a parent review: the writer wrote quad6 as VTK cell 31 (VTK_QUADRATIC_LINEAR_WEDGE) and pinned the same
   value in its test. Fixed to 30 (VTK_QUADRATIC_LINEAR_QUAD). Checked with VTK 9.7.2 reading the files: quad6 and prism15
   cells have the right class, node count and mid-edge positions. Differential of 45 inputs against 408d8a1 identical.
+- 2026-11-10 owner, QUAD6-3D (Professional runs quad6 in 3D, the manual lists it for 2D only, GNU refuses it),
+  verbatim: "si, confirmado". Class D stays in DIVERGENCES-PROFESSIONAL.md.
+- 2026-11-10 U9b writer result: prism18 = tria6_shape x 3-node line, layered tria6 node order, 21 points for the
+  default and -maximal (= Professional to 9e-14). Professional -minimal (8 points) gives an indefinite stiffness
+  (6 negative eigenvalues, pardiso -4); GNU keeps 21 points as C82 did for prism15, owner question C132. Recorded
+  divergences: PRISM18-POST-POINT D (Professional interpolates linearly), EXTRUDE-ELEMENT-MIXED D (Professional
+  gives prism12 for tria6+quad4), EXTRUDE-ELEMENT-NAME C (unknown words are an error), EXTRUDE-ELEMENT-PRISM12 B
+  (refused until U9c), VTK-PRISM18 A (type 32; Professional writes a linear wedge). Parent review: VTK 9.7.2 reads
+  the cell as vtkBiQuadraticQuadraticWedge with every mid-edge and face node in place; differential of 278 inputs
+  against 76b0759 identical; stale lines in prism15.md and control_mesh_extrude.md (user and developer) fixed by
+  the parent. Follow-ups: C133 (prism18 face loads, refine, split, mpc polish, geometry_moving), print_vt.cc
+  length loop still lacks -TRIA6 and -TET4 (pre-existing).
