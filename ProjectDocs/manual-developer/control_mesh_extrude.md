@@ -30,7 +30,7 @@
    allocated range: on a 9-node mesh it gave 10 and shifted the plane
    numbers). `nnod` / `nelem` = highest number, plus 1 when number 0 is
    active. `attached[]` marks the nodes of the `-bar2`, `-tria3`, `-quad4`,
-   `-quad9` elements.
+   `-quad9`, `-tria6` elements.
 3. Layers: `nl = sum n_sub`, `lay_int[l]` = interval of layer `l`. Planes:
    `ppl` = 2 with a `-quad9` in the mesh (a mid plane per layer), else 1;
    `np = nl*ppl + 1` planes at `zp[]`, evenly spaced inside each interval.
@@ -95,9 +95,9 @@ input errors `extrude_error1` (group table length), `extrude_error2`
 ## Hardcoded parameters / pending refactorings
 
 - The extruded element types are fixed (`-bar2`, `-tria3`, `-quad4`,
-  `-quad9`); other elements are left as they are and their nodes are not
-  copied. `-tria6` needs `-prism12` / `-prism18` (`control_mesh_extrude_element`,
-  F5 T4 U9).
+  `-quad9`, `-tria6`); other elements are left as they are and their nodes
+  are not copied. `-tria6` gives `-prism18` (`control_mesh_extrude_element`,
+  see its page); `-prism12` is refused until F5 T4 U9c.
 - `-y` is the only other direction (manual 6.180).
 - The node-data copy loop could be shared with `mesh_mirror`,
   `mesh_copy` and `mesh_rotate_3d`.

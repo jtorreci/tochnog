@@ -11,7 +11,7 @@ for quadratic wedge meshes (corpus `prism15.dat`). The element has:
 - 6 mid-edge nodes on the triangular faces (3 base + 3 top).
 
 There are **no** mid nodes on the rectangular side faces (an element
-with those is the 18-node prism `-prism18`, not supported).
+with those is the 18-node prism, see `prism18.md`).
 
 ## Node ordering
 

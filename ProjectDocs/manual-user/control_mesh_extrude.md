@@ -5,7 +5,8 @@
 Extrudes a flat 2D mesh (the x-y plane of the input) to 3D, as the
 Professional manual 6.179-6.185 describes. Each 2D element is swept
 through a stack of element layers: `-bar2` becomes `-quad4`, `-tria3`
-becomes `-prism6`, `-quad4` becomes `-hex8` and `-quad9` becomes `-hex27`.
+becomes `-prism6`, `-quad4` becomes `-hex8`, `-quad9` becomes `-hex27` and
+`-tria6` becomes `-prism18` (see `control_mesh_extrude_element`).
 Useful to build a solid volume from a 2D profile without remeshing.
 
 The model must run in 3D (`number_of_space_dimensions 3`). The extrusion
