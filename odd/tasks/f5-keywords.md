@@ -180,7 +180,7 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   - [x] U9d (b3f4746) (S2-S5) control_mesh_map (manual 6.210, Pro test/other/map1): quadratic <-> linear mesh map as a
     solver first guess. Owner: implement (2026-11-11). Route: delegated (bounded writer; context backstop of the parent
     session). RED: base stops "I do not know : control_mesh_map"; GREEN suite 1148 OK, 0 FALLO. Owner questions open:
-    MESH-MAP-TET10 / -PRISM15 (D), MESH-MAP-MID-NODES (B). C134 decided 2026-11-11 (= Professional).
+    MESH-MAP-MID-NODES (B). MESH-MAP-TET10 / -PRISM15 class D confirmed 2026-11-11. C134 decided 2026-11-11 (= Professional).
   - [x] U9a (3c93898, a1185ed, 505564d, b006671) (S3, S4, S6) Professional probes for quad6, continuum quad6,
     control_mesh_convert_quad9_quad6, VTK output of quad6 and prism15. Route: delegated (bounded writer; context
     backstop). Suite 1086 OK, 0 FALLO. QUAD6-3D class D confirmed by the owner (2026-11-10).
@@ -818,3 +818,5 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
 - 2026-11-11 owner, on C134 (quadratic step keeps the interpolated linear stresses, = Professional), verbatim: "la contra
   que dices es relativa, porque tampoco tenemos datos para hacer una interpolación cuadrática. Reiniciar el cálculo en
   cuadrático también lo puede hacer el usuario "a mano". Creo que es mejor seguir al Pro en este caso". C134 closed.
+- 2026-11-11 owner, on MESH-MAP-TET10 / MESH-MAP-PRISM15 (GNU true corners; Professional wrong corners), verbatim:
+  "si, clase D para los dos".
