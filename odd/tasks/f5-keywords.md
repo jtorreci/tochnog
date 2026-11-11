@@ -176,7 +176,10 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
     Route: delegated (bounded writer).
   - [x] U8 (dd2ee02) geometry_moving family (6) + control_geometry_moving: new module geometry_moving.cc.
     Route: delegated (bounded writer).
-  - [ ] U9 owner decisions still open: control_mesh_remove_really(+_activate_all/_factor, _keep_geometry).
+  - [x] U9 owner decisions: all taken (2026-11-11).
+  - [ ] U9e control_mesh_remove_really (6.232), _really_activate_all (6.233), _really_activate_factor (6.234),
+    control_mesh_remove_keep_geometry (6.231). Owner: implement (2026-11-11). Route: delegated (bounded writer;
+    context backstop of the parent session).
   - [x] U9d (b3f4746) (S2-S5) control_mesh_map (manual 6.210, Pro test/other/map1): quadratic <-> linear mesh map as a
     solver first guess. Owner: implement (2026-11-11). Route: delegated (bounded writer; context backstop of the parent
     session). RED: base stops "I do not know : control_mesh_map"; GREEN suite 1148 OK, 0 FALLO. Owner decisions 2026-11-11: C134 = Professional,
@@ -822,3 +825,6 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   "si, clase D para los dos".
 - 2026-11-11 owner, on MESH-MAP-MID-NODES (keep element_map_node or change nod_nod), verbatim: "me parece bien
   mantenerlo así". U9d closed. Next: owner decision on control_mesh_remove_really (+_activate_all/_factor, _keep_geometry).
+- 2026-11-11 owner, on the control_mesh_remove_really family (implement vs class B), verbatim: "me gustaría
+  implementarla. Realmente no es muy costoso (creo) y: 1. mejora la convergencia; 2. mejora el flujo de trabajo".
+  New task U9e.
