@@ -32,7 +32,8 @@
    active. `attached[]` marks the nodes of the `-bar2`, `-tria3`, `-quad4`,
    `-quad9`, `-tria6` elements.
 3. Layers: `nl = sum n_sub`, `lay_int[l]` = interval of layer `l`. Planes:
-   `ppl` = 2 with a `-quad9` in the mesh (a mid plane per layer), else 1;
+   `ppl` = 2 with a `-quad9` or a `-tria6` -> `-prism18` in the mesh (a
+   mid plane per layer), else 1;
    `np = nl*ppl + 1` planes at `zp[]`, evenly spaced inside each interval.
 4. `_element_group_new`: `ng` values, `nold = ng/(1+n_int)` (error when not
    divisible); group of layer `l` of an element of old group `k` =

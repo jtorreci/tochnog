@@ -15,15 +15,16 @@
   - The record is read after `_direction` into `tria6_to`: default
     `-PRISM18`; any value other than `-PRISM18` / `-PRISM12` stops with
     `must be -prism18 or -prism12`.
-  - A tria6 with `tria6_to == -PRISM18` (or a quad9) sets the mid-plane
-    flag `has_mid` (formerly `has_quad9`), so
+  - `has_quad9` / `has_tria6` mark the source elements. With both and
+    `tria6_to == -PRISM12`, `tria6_to` becomes `-PRISM18` and a warning is
+    printed (owner decision 2026-11-10, = Professional: conforming with
+    the hex27). `has_mid = has_quad9 || (has_tria6 && tria6_to ==
+    -PRISM18)`, so
     every layer has planes `b = l*ppl*nnod`, `m = (l*ppl+1)*nnod`,
     `t = (l+1)*ppl*nnod`; the prism18 is `nodes+b`, `nodes+m`, `nodes+t` in
     the tria6 order (the hex27 pattern).
   - `-PRISM12` (U9c): `nodes+b`, `nodes+t` in the tria6 order (the
-    prism6 pattern). With a quad9 the planes include the mid planes and
-    the prism12 skips them; the generic unused-node pass deletes the
-    tria6 mid-plane nodes.
+    prism6 pattern); it only happens without a quad9.
 
 ## Professional probes (02-08-2026)
 
@@ -36,7 +37,8 @@
   (`_mixed12_1`: the tria6 + quad4 mesh is the Professional one with or
   without the record, U9b probe).
 - tria6 + quad9 with `-prism12`: the Professional writes `-prism18`
-  (mid planes for all); the GNU writes `-prism12` (U9c).
+  (mid planes for all), also for a tria6 that only shares a corner node
+  with the quad9; the GNU does the same since 2026-11-10.
 - `-hex8`, `-prism15`, `-tria6`, `-yes`: silently `-prism18`.
 - A quad4 + tria3 mesh with `-prism18`: hex8 and prism6, as without the
   record.
@@ -48,10 +50,10 @@
 ## Divergences
 
 - EXTRUDE-ELEMENT-NAME (class C): other names are an input error.
-- EXTRUDE-ELEMENT-PRISM12-QUAD9 (class D, U9c): with a quad9 the GNU
-  keeps `-prism12` (manual "the 12 node ... prismatic elements will be
-  generated"); the Professional switches to `-prism18`. The GNU mesh is
-  not conforming on a face shared by a prism12 and a hex27.
+- `-prism12` with a quad9: no divergence. The U9c class D row
+  (EXTRUDE-ELEMENT-PRISM12-QUAD9, GNU prism12 next to a hex27, not
+  conforming) was removed by the owner decision of 2026-11-10: the mesh
+  must be conforming, so every tria6 becomes a prism18, with a warning.
 - EXTRUDE-ELEMENT-PRISM12 (class B until U9c): resolved, `-prism12`
   generates the Professional mesh.
 - EXTRUDE-ELEMENT-MIXED (class D): tria6 with a linear element gives

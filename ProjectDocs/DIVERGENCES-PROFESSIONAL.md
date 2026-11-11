@@ -16,8 +16,8 @@ Single index of every known difference between the GNU version and Tochnog Profe
 | A | deliberate divergence decided by the project owner | 39 |
 | B | known difference, not decided yet or scheduled (F3/F4) | 59 |
 | C | GNU extension or input-dialect difference | 39 |
-| D | Professional-suspect: the Professional contradicts its own manual or the analytic answer | 39 |
-| | **total** | **176** |
+| D | Professional-suspect: the Professional contradicts its own manual or the analytic answer | 38 |
+| | **total** | **175** |
 
 Ids: `C*`/`B*` are [BACKLOG-OPEN-ISSUES.md](BACKLOG-OPEN-ISSUES.md) items, `K*` are clusters of [AUDIT-ALL-VARIABLES-2026.md](AUDIT-ALL-VARIABLES-2026.md); other ids are local to this index. Several class A items are also Professional-suspect (noted in their status). Professional values are from the binary 02-08-2026 unless stated.
 
@@ -129,7 +129,6 @@ The GNU follows the manual or the analytic answer. Recorded in the SEGUIMIENTO "
 | EXTRUDE-ELEMENT-MIXED | `control_mesh_extrude` of a mesh with `-tria6` and a linear element (`-quad4`, `-tria3`, `-bar2`) and no `-quad9`, `control_mesh_extrude_element` `-prism18` or unset (6.181: "Default ... -prism18 is used") | `-prism18` elements with mid planes (the linear elements skip them, their unused mid-plane nodes are deleted); the calculation runs (`control_mesh_extrude_element_prism18_1`: self-weight reaction -4 = analytic). | Generates `-prism12` elements without mid planes, then stops in the calculation (`Error detected for data item : element_intpnt_iso_coord`). | GNU follows the manual (S2); no owner decision yet. | 2026-11-10 | [user/control_mesh_extrude_element](manual-user/control_mesh_extrude_element.md) |
 | PRISM12-DEFAULT | `-prism12` with the default, `-maximal`, `-lobatto` or `-reduced` integration (manual 6.623: tria6 "seven-point scheme ... for -maximal", Gauss points per direction = nodes in the direction, default -maximal) | 14 points (7-point tria6 rule x 2 Gauss levels, method 0); the calculation runs (`prism12_gauss1`, self-weight reaction -0.5). | Stops: `Error detected for data item : element_intpnt_iso_coord` (unit prism); only `-minimal` runs. | GNU follows the manual (S2); no owner decision yet. | 2026-11-10 | [user/prism12](manual-user/prism12.md) |
 | PRISM12-POST-POINT | `post_point` (and every `point_el` interpolation) in a `-prism12` | The 12 shape functions: u = 0.01 (x^2 + 0.5 xy)(1+z) is interpolated exactly (`prism12_post_point1`). | Other values: u = 0.01 x^2 (1+z) at (0.25, 0.25, 0.5), (0.5, 0.25, 0.25), (0.1, 0.6, 0.75) gives 5e-3, 7.5e-3, 2e-3 instead of 9.375e-4, 3.125e-3, 1.75e-4 (its node values are right; `-minimal` run). | GNU follows the analytic answer (S2); no owner decision yet. | 2026-11-10 | [user/prism12](manual-user/prism12.md) |
-| EXTRUDE-ELEMENT-PRISM12-QUAD9 | `control_mesh_extrude_element -prism12` on a mesh with `-tria6` and a `-quad9` (6.181: "you can set name either to -prism12 or -prism18 . Then either the 12 node or 18 node prismatic elements will be generated") | `-prism12` elements on the base and top planes; the `-hex27` keeps the mid planes, the unused tria6 mid-plane nodes are deleted (`control_mesh_extrude_element_quad9_1`). A face shared by a prism12 and a hex27 is not conforming (the hex27 mid-edge nodes). | `-prism18` elements with mid planes (the record is ignored). | GNU follows the manual (S2); no owner decision yet. | 2026-11-10 | [user/control_mesh_extrude_element](manual-user/control_mesh_extrude_element.md) |
 
 ## B. Known differences, not decided or scheduled (F3/F4)
 

@@ -1,9 +1,8 @@
 ( F5 T4 U9c: control_mesh_extrude_element 10 -prism12 on a mesh with a
-  -quad9: the quad9 needs mid planes {-hex27}, the tria6 still become
-  -prism12 on the base and top planes {manual 6.181: "Then either the 12
-  node or 18 node prismatic elements will be generated"}; the unused tria6
-  mid-plane nodes are deleted. The Professional 02-08-2026 generates
-  -prism18 here [DIVERGENCES EXTRUDE-ELEMENT-PRISM12-QUAD9]. )
+  -quad9: the quad9 needs mid planes {-hex27}, so every tria6 becomes a
+  -prism18, also element 1 that only shares node 3 with the quad9, and the
+  run warns {owner decision 2026-11-10: the mesh must be conforming}.
+  Mesh = Professional 02-08-2026. )
 echo -no
 number_of_space_dimensions 3
 materi_velocity

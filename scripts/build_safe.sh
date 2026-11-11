@@ -2661,8 +2661,15 @@ else
   check_fail "control_mesh_extrude_element_mixed12_1" "self-weight reaction not -4"
 fi
 ext_check control_mesh_extrude_element_quad9_1 \
-  "element 1 -prism12 1 2 3 4 5 6 31 32 33 34 35 36|element 2 -prism12 3 7 8 5 9 6 33 37 38 35 39 36|element 3 -hex27 3 10 11 7 12 13 8 14 15 18 25 26 22 27 28 23 29 30 33 40 41 37 42 43 38 44 45" \
-  "1 0 0 0|2 0.5 0 0|3 1 0 0|4 0 0.5 0|5 0.5 0.5 0|6 0 1 0|7 1 0.5 0|8 1 1 0|9 0.5 1 0|10 1.5 0 0|11 2 0 0|12 1.5 0.5 0|13 2 0.5 0|14 1.5 1 0|15 2 1 0|18 1 0 1|22 1 0.5 1|23 1 1 1|25 1.5 0 1|26 2 0 1|27 1.5 0.5 1|28 2 0.5 1|29 1.5 1 1|30 2 1 1|31 0 0 2|32 0.5 0 2|33 1 0 2|34 0 0.5 2|35 0.5 0.5 2|36 0 1 2|37 1 0.5 2|38 1 1 2|39 0.5 1 2|40 1.5 0 2|41 2 0 2|42 1.5 0.5 2|43 2 0.5 2|44 1.5 1 2|45 2 1 2|"
+  "element 1 -prism18 1 2 3 4 5 6 16 17 18 19 20 21 31 32 33 34 35 36|element 2 -prism18 3 7 8 5 9 6 18 22 23 20 24 21 33 37 38 35 39 36|element 3 -hex27 3 10 11 7 12 13 8 14 15 18 25 26 22 27 28 23 29 30 33 40 41 37 42 43 38 44 45" \
+  "1 0 0 0|2 0.5 0 0|3 1 0 0|4 0 0.5 0|5 0.5 0.5 0|6 0 1 0|7 1 0.5 0|8 1 1 0|9 0.5 1 0|10 1.5 0 0|11 2 0 0|12 1.5 0.5 0|13 2 0.5 0|14 1.5 1 0|15 2 1 0|16 0 0 1|17 0.5 0 1|18 1 0 1|19 0 0.5 1|20 0.5 0.5 1|21 0 1 1|22 1 0.5 1|23 1 1 1|24 0.5 1 1|25 1.5 0 1|26 2 0 1|27 1.5 0.5 1|28 2 0.5 1|29 1.5 1 1|30 2 1 1|31 0 0 2|32 0.5 0 2|33 1 0 2|34 0 0.5 2|35 0.5 0.5 2|36 0 1 2|37 1 0.5 2|38 1 1 2|39 0.5 1 2|40 1.5 0 2|41 2 0 2|42 1.5 0.5 2|43 2 0.5 2|44 1.5 1 2|45 2 1 2|"
+# owner decision 2026-11-10: -prism12 with a -quad9 in the mesh becomes
+# -prism18 for every tria6 (conforming with the hex27) and the run warns
+if grep -q "Warning: control_mesh_extrude_element -prism12 replaced by -prism18" /tmp/control_mesh_extrude_element_quad9_1_safe.out; then
+  check_ok "control_mesh_extrude_element_quad9_1 (warning -prism12 -> -prism18)"
+else
+  check_fail "control_mesh_extrude_element_quad9_1" "missing the -prism12 -> -prism18 warning"
+fi
 # F5 T4 U5b: control_mesh_split_element_from / _element_to -prism6
 # (6.241, 6.242), the tria6 split of 6.240, control_mesh_convert_tria6_tria3
 # (6.161); meshes = Professional 02-08-2026 (ext_check above; the GNU

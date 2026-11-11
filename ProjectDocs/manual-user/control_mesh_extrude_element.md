@@ -39,8 +39,12 @@ every element layer also has a mid plane, numbered as a plane of its own
 (plane `p` of node `i` is node `p*n + i`, layer `l` of element `e` is
 element `l*m + e`). Nodes of the mid planes that no element uses (the
 nodes of linear elements) are deleted. With `-prism12` there are no mid
-planes unless a `-quad9` needs them; the `-prism12` then skip them and
-their unused mid-plane nodes are deleted.
+planes. With a `-quad9` in the mesh (its `-hex27` has mid planes) every
+`-tria6` becomes a `-prism18` also with `-prism12`, so the faces shared
+with the `-hex27` are conforming; the run prints `Warning:
+control_mesh_extrude_element -prism12 replaced by -prism18, the mesh has
+a -quad9 (conforming with its -hex27).` (owner decision 2026-11-10, =
+Professional).
 
 Example (two tria6 on the unit square, `control_mesh_extrude 10 0. 1. 3.`,
 `control_mesh_extrude_n 10 2 1 1`, so 3 layers and 7 planes of 9 nodes):
@@ -77,12 +81,10 @@ also the mesh of the Professional.
 - A name other than `-prism12` / `-prism18` is an input error in the GNU;
   the Professional takes it as `-prism18` (DIVERGENCES
   EXTRUDE-ELEMENT-NAME, class C).
-- `-prism12` with a `-quad9` in the mesh: the GNU generates the
-  `-prism12` the record asks for (base and top planes; the hex27 keeps its
-  mid planes, so a prism12 face shared with a hex27 is not conforming:
-  the hex27 mid-edge nodes are not on the prism12); the Professional
-  generates `-prism18` elements there. DIVERGENCES
-  EXTRUDE-ELEMENT-PRISM12-QUAD9, class D.
+- `-prism12` with a `-quad9` in the mesh: both codes generate `-prism18`
+  for every `-tria6` (conforming with the `-hex27`); the GNU also prints a
+  warning (owner decision 2026-11-10; the manual 6.181 does not cover the
+  case).
 - `-prism12` elements cannot run in the Professional (its prism12 default
   rule stops, see [prism12](prism12.md)); the GNU calculation runs.
 - A mesh with `-tria6` and a linear element (`-quad4`, `-tria3`, `-bar2`)

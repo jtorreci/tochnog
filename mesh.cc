@@ -1048,9 +1048,9 @@ void mesh_correct_interfaces( void )
 //   -tria6 -> -prism18 base / mid / top planes in the tria6 order
 //   (control_mesh_extrude_element, 6.181: default -prism18; F5 T4 U9b,
 //   Professional 02-08-2026 probes), or with -prism12 (F5 T4 U9c) base /
-//   top planes in the tria6 order (= Professional); a -quad9 in the same
-//   mesh keeps its mid planes and the -prism12 skip them (the Professional
-//   gives -prism18 there, DIVERGENCES EXTRUDE-ELEMENT-PRISM12-QUAD9). Any
+//   top planes in the tria6 order (= Professional); with a -quad9 in the
+//   mesh every -tria6 becomes -prism18 instead, with a warning, so the mesh
+//   is conforming (= Professional, DIVERGENCES EXTRUDE-ELEMENT-PRISM12-QUAD9). Any
 //   other name is an input error (the Professional takes it as -prism18,
 //   DIVERGENCES EXTRUDE-ELEMENT-NAME).
 // control_mesh_extrude_direction -y (6.180) extrudes along global y; the
@@ -1156,16 +1156,27 @@ void mesh_extrude( long int icontrol )
   }
   attached = get_new_int( max_node+1 );
   array_set( attached, 0, max_node+1 );
+  long int has_quad9 = 0, has_tria6 = 0;
   for ( ielem=0; ielem<=max_elem; ielem++ ) {
     if ( !db_active_index( ELEMENT, ielem, VERSION_NORMAL ) ) continue;
     db( ELEMENT, ielem, el, ddum, length, VERSION_NORMAL, GET );
     nnol = length - 1;
     if ( mesh_extrude_source( el[0], nnol ) ) {
-      if ( el[0]==-QUAD9 || ( el[0]==-TRIA6 && tria6_to==-PRISM18 ) )
-        has_mid = 1;
+      if ( el[0]==-QUAD9 ) has_quad9 = 1;
+      if ( el[0]==-TRIA6 ) has_tria6 = 1;
       for ( inol=0; inol<nnol; inol++ ) attached[el[1+inol]] = 1;
     }
   }
+  // A -quad9 becomes a -hex27 with mid planes; a -prism12 next to it would
+  // not be conforming, so every -tria6 becomes a -prism18 (owner decision
+  // 2026-11-10, = Professional 02-08-2026; DIVERGENCES
+  // EXTRUDE-ELEMENT-PRISM12-QUAD9).
+  if ( has_quad9 && has_tria6 && tria6_to==-PRISM12 ) {
+    pri( "Warning: control_mesh_extrude_element -prism12 replaced by "
+         "-prism18, the mesh has a -quad9 (conforming with its -hex27)." );
+    tria6_to = -PRISM18;
+  }
+  has_mid = has_quad9 || ( has_tria6 && tria6_to==-PRISM18 );
   ppl = has_mid ? 2 : 1;
   // nnod / nelem: the highest node / element, plus 1 when number 0 is
   // used (db_max_index gives the allocated range, which can be larger)

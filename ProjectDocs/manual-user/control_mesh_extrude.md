@@ -52,7 +52,8 @@ interface `-quad4` keeps its two sides; `-tria3 a b c` becomes `-prism6
 a b c a' b' c'`; `-bar2 a b` becomes `-quad4 a b a' b'`. A `-hex27` has
 the 9 nodes of its base plane, of its mid plane and of its top plane in
 the quad9 order. With a `-quad9` in the mesh every layer also has a mid
-plane, numbered as a plane of its own.
+plane, numbered as a plane of its own, and every `-tria6` becomes a
+`-prism18` (see `control_mesh_extrude_element`).
 
 ## Example
 
