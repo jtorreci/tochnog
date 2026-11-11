@@ -855,3 +855,9 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   keep / excavation / geometry_moving / element_empty / mesh_activate / map / renumber inputs + 40 random test-2026)
   against 896978f identical (geometry_moving1 times out in both). Commit 5f08f81. README indexes (S4) not edited
   (outside the writer surface).
+- 2026-11-11 owner, on the U9e factor question (Professional starts a reactivated element from zero intpnt stresses,
+  so _activate_factor has no effect), verbatim: "Lo que hace el profesional tiene sentido, pero se consigue poniendo
+  un factor 0, así que si arrancamos desde los valores nodales cubrimos tanto el pro como el manual, ¿no?". Parent:
+  only with factor 0 + _activate_all -yes (shared nodes keep their stresses), and the default factor 1 then differs
+  from the Professional (class D, recipe documented). Owner, verbatim: "si". U9e reopened: start the reactivated
+  element from the nodal values.
