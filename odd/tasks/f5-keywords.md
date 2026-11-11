@@ -177,9 +177,11 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   - [x] U8 (dd2ee02) geometry_moving family (6) + control_geometry_moving: new module geometry_moving.cc.
     Route: delegated (bounded writer).
   - [x] U9 owner decisions: all taken (2026-11-11).
-  - [ ] U9e control_mesh_remove_really (6.232), _really_activate_all (6.233), _really_activate_factor (6.234),
-    control_mesh_remove_keep_geometry (6.231). Owner: implement (2026-11-11). Route: delegated (bounded writer;
-    context backstop of the parent session).
+  - [x] U9e (5f08f81) (S2-S5) control_mesh_remove_really (6.232), _really_activate_all (6.233), _really_activate_factor
+    (6.234), control_mesh_remove_keep_geometry (6.231). Owner: implement (2026-11-11). Route: delegated (bounded writer;
+    context backstop of the parent session). RED: base 896978f "I don't know what to do with : control_mesh_remove_really",
+    32 of 34 new checks fail; GREEN suite 1182 OK, 0 FALLO. Owner questions open: REMOVE-INACTIVE-RECORDS (B),
+    REMOVE-NO-TIMESTEP / -ACTIVATE-ALL / -PRESSURE-GRAVITY (D), factor without effect under global_element_dof_apply -yes.
   - [x] U9d (b3f4746) (S2-S5) control_mesh_map (manual 6.210, Pro test/other/map1): quadratic <-> linear mesh map as a
     solver first guess. Owner: implement (2026-11-11). Route: delegated (bounded writer; context backstop of the parent
     session). RED: base stops "I do not know : control_mesh_map"; GREEN suite 1148 OK, 0 FALLO. Owner decisions 2026-11-11: C134 = Professional,
@@ -828,3 +830,28 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
 - 2026-11-11 owner, on the control_mesh_remove_really family (implement vs class B), verbatim: "me gustaría
   implementarla. Realmente no es muy costoso (creo) y: 1. mejora la convergencia; 2. mejora el flujo de trabajo".
   New task U9e.
+- 2026-11-11 U9e writer result: new module mesh_remove.cc (mesh_remove moved from delete.cc, evaluated on every
+  step of an index with control_mesh_remove). Professional probes (~60, 2D quad4 column, removed element on a
+  coincident container of another group, container deleted, reactivation): default _really -yes; the Professional keeps
+  the inactive element (element_remove_active -yes, element_empty -empty, cleaned) and its free nodes fully bounded;
+  a step without control_mesh_remove changes nothing; factor / _activate_all of the reactivating index; mean over the
+  element's active nodes (node_active_last) of all dofs, stresses and pore pressure times the factor, temperature,
+  velocity, displacement unscaled; elements in order, a node set once, zero without active nodes; _keep_geometry of the
+  current index (all nodes) followed by the index's _really; a reactivated element is not "removed once" any more;
+  factor outside [0, 1]: "Error, CONTROL_MESH_REMOVE_REALLY_ACTIVATE_FACTOR factor should be between 0 and 1.".
+  With global_element_dof_apply -yes the Professional starts the reactivated element from zero integration point
+  stresses, so the factor does not change the result (identical for 0 / 0.5 / 1); the GNU mirrors it
+  (ELEMENT_DOF_INITIALISED 1 over a zero ELEMENT_INTPNT_DOF) and equals the Professional on every node dof at every
+  stage (5e-11). GNU representation as U9d: inactive element deleted and kept in element_remove_inactive / _group /
+  _node, unused nodes deleted by nod_nod and created again (REMOVE-INACTIVE-RECORDS, B). Manual followed against the
+  Professional (class D, owner confirmation pending): REMOVE-NO-TIMESTEP (Pro stops on a removal at an index without
+  timestep, leaves a reactivated element inactive there), REMOVE-ACTIVATE-ALL (Pro also resets velocity and
+  displacement of the active nodes), REMOVE-PRESSURE-GRAVITY (Pro factor * (mean - rho g.x_middle) + rho g.x_node);
+  REMOVE-REALLY-WORD (C, GNU input error, Pro takes another word as -no). Pre-existing: -method1 matches node numbers
+  (C126), so a geometric container with own nodes removes nothing in the GNU; global_element_dof_apply -no also
+  differs on a quad4 column (C136 widened). RED: base 896978f "I don't know what to do with :
+  control_mesh_remove_really", 32 of 34 new checks fail (control_mesh_remove_default1 pins the old deletion). GREEN:
+  14 tests, 34 checks, suite 1182 OK, 0 FALLO (226/226 runs); differential of 93 inputs (53 remove / delete /
+  keep / excavation / geometry_moving / element_empty / mesh_activate / map / renumber inputs + 40 random test-2026)
+  against 896978f identical (geometry_moving1 times out in both). Commit 5f08f81. README indexes (S4) not edited
+  (outside the writer surface).
