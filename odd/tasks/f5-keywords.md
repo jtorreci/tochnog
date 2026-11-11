@@ -177,8 +177,10 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   - [x] U8 (dd2ee02) geometry_moving family (6) + control_geometry_moving: new module geometry_moving.cc.
     Route: delegated (bounded writer).
   - [ ] U9 owner decisions still open: control_mesh_remove_really(+_activate_all/_factor, _keep_geometry).
-  - [ ] U9d control_mesh_map (manual 6.210, Pro test/other/map1): quadratic <-> linear mesh map as a solver first
-    guess. Owner: implement (2026-11-11). Route: delegated (bounded writer; context backstop of the parent session).
+  - [x] U9d (b3f4746) (S2-S5) control_mesh_map (manual 6.210, Pro test/other/map1): quadratic <-> linear mesh map as a
+    solver first guess. Owner: implement (2026-11-11). Route: delegated (bounded writer; context backstop of the parent
+    session). RED: base stops "I do not know : control_mesh_map"; GREEN suite 1148 OK, 0 FALLO. Owner questions open:
+    MESH-MAP-TET10 / -PRISM15 (D), MESH-MAP-MID-NODES (B), C134.
   - [x] U9a (3c93898, a1185ed, 505564d, b006671) (S3, S4, S6) Professional probes for quad6, continuum quad6,
     control_mesh_convert_quad9_quad6, VTK output of quad6 and prism15. Route: delegated (bounded writer; context
     backstop). Suite 1086 OK, 0 FALLO. QUAD6-3D class D confirmed by the owner (2026-11-10).
@@ -795,3 +797,21 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
 - 2026-11-11 owner, on control_mesh_map (implement vs class B), verbatim: "si acelera el cálculo creo que merece la pena
   implementarlo. Es trabajo mediano". New task U9d. Existing map.cc is the remesh data map (map_element / map_node),
   a candidate helper for the linear -> quadratic interpolation.
+- 2026-11-11 U9d writer result: new module mesh_map.cc (step_start after extrude, once per control index). Professional
+  probes (.dbs of every stage): -hex27 -> -hex8 of the corners, mid nodes kept unused, element_map kept after the map
+  back, each map toggles, mid node dofs after the map back = trilinear interpolation of all corner dofs (4.5e-12),
+  -hex20 -> -hex8 1-8, prism18 / prism12 / quad9 / tria6 unchanged, a map at a timestep index runs before it,
+  global_element_dof_apply not checked; the Professional maps -tet10 to 1 4 6 10 and -prism15 to 1 3 3 4 5 6. The GNU
+  deletes unused nodes on every mesh change (nod_nod, node.cc outside the surface), so the mid node coordinates are
+  kept in the GNU record element_map_node and the nodes created again on the map back. create_element / create_node
+  are not usable in place (DATA_ITEM_SIZE copy buffer overflows on element_matrix_* of a solved element; db_dbl
+  pointers invalidated by a PUT beyond the highest index), so mesh_map has its own in-place element / node PUTs;
+  a shorter ELEMENT PUT needs a delete first (db_len bisection on the LONG_MIN end mark). GNU = Professional on a hex27
+  column (1.3e-12 linear, 2.5e-12 after the map back, 3.7e-9 final). The map result is not the plain quadratic
+  result (15 % on a mid node of the coarse column, = Professional): C134 owner question. Pre-existing findings:
+  other/map1 hex27 ring -disz 1245 GNU -1.7795e-05 vs -1.9017e-05 also without the map (C135); -no with hex27 differs
+  (C136); GNU control_print_database / control_print_gid ignore or refuse -separate_index (pre-existing, tests stop
+  at the checked stage). Rows: MESH-MAP-MID-NODES B, MESH-MAP-HEX20 B, MESH-MAP-TET10 D, MESH-MAP-PRISM15 D,
+  C135-MAP1-RING B, C136-GEDA-NO-HEX27 B. RED: base a565fc5 "I do not know : control_mesh_map"; GREEN: 14 tests,
+  29 checks, suite 1148 OK, 0 FALLO (226/226 runs); differential of 144 mesh inputs against a565fc5 identical except
+  time_calculation. Commit b3f4746. README indexes (S4) not edited (outside the writer surface).
