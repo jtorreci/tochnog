@@ -76,7 +76,8 @@ interpolation `control_mesh_map_tet10_2`, `_prism15_2`.
   adds increments to them. On the coarse column of `control_mesh_map1`
   the displacement of a mid node differs by up to 15 % (-0.01714 against
   -0.01491), on the fine ring of `other/map1` by 2e-5; in the GNU as in
-  the Professional (BACKLOG C134).
+  the Professional (BACKLOG C134; owner decision 2026-11-11: kept, restart the
+  quadratic calculation by hand for the plain quadratic answer).
 
 ## Differences with the Professional version
 
