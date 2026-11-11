@@ -363,6 +363,7 @@ tochnog: adjust.$(OBJ) area.$(OBJ) \
 	macro.$(OBJ) map.$(OBJ) mat_diff.$(OBJ) \
 	materi.$(OBJ) math.$(OBJ) maxwell.$(OBJ) \
 	membrane.$(OBJ) merge.$(OBJ) mesh.$(OBJ) mesh_map.$(OBJ) \
+	mesh_remove.$(OBJ) \
 	miscel.$(OBJ) mpc.$(OBJ) new_mesh.$(OBJ) \
 	node.$(OBJ) nonloc.$(OBJ) order.$(OBJ) \
 	plasti.$(OBJ) plasti_i.$(OBJ)  \
@@ -563,6 +564,9 @@ mesh.$(OBJ): mesh.$(SRC_CPP) tochnog.h
 
 mesh_map.$(OBJ): mesh_map.$(SRC_CPP) tochnog.h
 	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)mesh_map.$(SRC_CPP)
+
+mesh_remove.$(OBJ): mesh_remove.$(SRC_CPP) tochnog.h
+	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)mesh_remove.$(SRC_CPP)
 
 miscel.$(OBJ): miscel.$(SRC_CPP) tochnog.h
 	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)miscel.$(SRC_CPP)

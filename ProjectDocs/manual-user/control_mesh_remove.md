@@ -39,9 +39,19 @@ when every node of it lies in the geometry (as the Professional
 (the element is inside: removed), `remove_geometry2.dat` (only two nodes
 on the line: kept) and `remove_method1_1.dat` (no geometry).
 
-`control_mesh_remove_keep_geometry` (6.231) and `control_mesh_remove_really`
-(6.232-6.234) are not available yet: they need removed elements that stay
-inactive instead of being deleted (F5 T4 U9, owner decision).
+## Inactive instead of deleted elements
+
+`control_mesh_remove_really index -no` (6.232) makes the removed elements
+inactive instead of deleting them; they become active again when a later
+`control_mesh_remove` no longer removes them. `control_mesh_remove_keep_
+geometry` (6.231), `control_mesh_remove_really_activate_factor` (6.234)
+and `_activate_all` (6.233) complete it: see
+[control_mesh_remove_really](control_mesh_remove_really.md) (F5 T4 U9e).
+Without `control_mesh_remove_really` the removed elements are deleted, as
+before (`control_mesh_remove_default1`).
+
+The remove is evaluated on every step of a control index that has the
+record (also an index without `control_timestep`).
 
 ## Example
 

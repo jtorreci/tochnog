@@ -2931,6 +2931,7 @@ Original report:
 ### C136. `global_element_dof_apply -no` with `-hex27` differs from the Professional (F5 T4 U9d, 2026-11-11)
 
 - **Found:** the U9d probes (column of two `-hex27` under self-weight, `group_materi_memory -total_linear`, the input of `control_mesh_map1` without the map): with `global_element_dof_apply -no` the nodal stresses differ from the Professional 02-08-2026 by up to 1.8 (of 20), `-disz` of node 45 -0.019511 against -0.019367; with the default `-yes` the GNU equals the Professional (2e-12). Pre-existing, independent of `control_mesh_map`; manual 6.210 advises `-no` for the map (DIVERGENCES C136-GEDA-NO-HEX27).
+- **Also (F5 T4 U9e, 2026-11-11):** a 2D column of two `-quad4` under self-weight (no remove record, binary before U9e) differs as well with `-no` (nodal stresses up to 1.16 of 15.5), equal with `-yes` (2e-11): not limited to `-hex27`.
 - **Severity:** LOW. **Effort:** medium (compare the `-no` nodal averaging and element evaluation with the Professional on one hex27).
 
 ### C135. Professional `other/map1` ring of `-hex27`: GNU displacement 6 % off (F5 T4 U9d, 2026-11-11)

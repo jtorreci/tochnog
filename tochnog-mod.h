@@ -1890,6 +1890,16 @@ enum {
   CONTROL_MESH_MAP,
   ELEMENT_MAP,
   ELEMENT_MAP_NODE,
+  // F5 T4 U9e (manual Professional 6.231-6.234): control_mesh_remove with
+  // inactive instead of deleted elements, and the GNU records that keep an
+  // inactive element (its node list, group and node coordinates)
+  CONTROL_MESH_REMOVE_KEEP_GEOMETRY,
+  CONTROL_MESH_REMOVE_REALLY,
+  CONTROL_MESH_REMOVE_REALLY_ACTIVATE_ALL,
+  CONTROL_MESH_REMOVE_REALLY_ACTIVATE_FACTOR,
+  ELEMENT_REMOVE_INACTIVE,
+  ELEMENT_REMOVE_INACTIVE_GROUP,
+  ELEMENT_REMOVE_INACTIVE_NODE,
   XY,
   XZ,
   YZ,

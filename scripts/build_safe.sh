@@ -2741,6 +2741,85 @@ map_mesh_check control_mesh_map_prism15_1 "element 1 -prism6 1 2 3 4 5 6|element
 map_mesh_check control_mesh_map_hex20_1 "element 1 -hex8 1 2 3 4 5 6 7 8|element_map 1 -hex27 1 9 2 10 21 11 3 12 4 17 22 18 23 24 25 19 26 20 5 13 6 14 27 15 7 16 8" 8
 map_mid_check control_mesh_map_tet10_2 "2 1 3|4 1 6|5 3 6|7 1 10|8 3 10|9 6 10"
 map_mid_check control_mesh_map_prism15_2 "7 1 4|8 2 5|9 3 6|10 1 2|11 2 3|12 3 1|13 4 5|14 5 6|15 6 4"
+# F5 T4 U9e: control_mesh_remove_really -no (6.232) keeps the removed
+# elements inactive (GNU records element_remove_inactive*, their unused
+# nodes deleted: DIVERGENCES REMOVE-INACTIVE-RECORDS) and activates them
+# again when the remove no longer removes them; _keep_geometry (6.231),
+# _activate_factor (6.234) and _activate_all (6.233).
+# remove_state_check <test> <stage> <"lines"> <nodes>: the element /
+# element_remove_inactive(_group) lines and the number of nodes of the
+# .dbs printed at <stage> (= Professional 02-08-2026 states, except the
+# nodes of the inactive elements). remove_react_check <test> <factor>
+# <all> <"target nodes"> <"source nodes">: the dofs of the final .dbs
+# after a reactivation at an index without timestep, against the stage 15
+# values of the active source nodes: a target not active before gets the
+# source mean, the stresses (and pore pressure) times the factor; with
+# <all> = yes an active target gets the factor times the mean stresses
+# and keeps its other dofs (manual 6.233, 6.234). The stage dofs of
+# really1 / chain1 / factor1 are the Professional ones (map_dof_check on
+# the final .dbs).
+remove_state_check() {
+  local t="$1" s="$2" want="$3" want_nnod="$4" got got_nnod
+  got="$(awk '$1=="element"||$1=="element_remove_inactive"||$1=="element_remove_inactive_group"{$1=$1; print}' "$T2026/$t$s.dbs" 2>/dev/null | paste -sd'|')"
+  got_nnod="$(awk '$1=="node"{n++} END{print n+0}' "$T2026/$t$s.dbs" 2>/dev/null)"
+  if [ "$got" = "$want" ] && [ "$got_nnod" = "$want_nnod" ]; then
+    check_ok "$t (stage $s elements and $want_nnod nodes)"
+  else
+    check_fail "$t" "stage $s elements '$got' nodes $got_nnod"
+  fi
+}
+remove_react_check() {
+  local t="$1" f="$2" all="$3" tg="$4" src="$5"
+  if LC_ALL=C awk -v f="$f" -v all="$all" -v tg=" $tg " -v src=" $src " '
+    $1=="dof_label" { for (j=2;j<=NF;j++) sc[j+1]=($j ~ /^-sig/ || $j=="-pres") }
+    $1=="node_dof" && FILENAME ~ /15\.dbs$/ { for (j=3;j<=NF;j++) b[$2,j]=$j; nd=NF; act[$2]=1
+      if (index(src, " "$2" ")) { ns++; for (j=3;j<=NF;j++) m[j]+=$j } }
+    $1=="node_dof" && FILENAME !~ /15\.dbs$/ && index(tg, " "$2" ") { seen[$2]=1
+      for (j=3;j<=NF;j++) { a=m[j]/ns
+        if (act[$2]) e=((all=="yes" && sc[j]) ? f*a : b[$2,j]); else e=(sc[j] ? f*a : a)
+        d=$j-e; if (d<0) d=-d; x=(e<0?-e:e); if (d>1e-9*(1+x)) bad=1 } }
+    END { n=split(tg, w, " "); for (i=1;i<=n;i++) if (!(w[i] in seen)) bad=1; exit (ns<1 || bad) }' \
+    "$T2026/${t}15.dbs" "$T2026/$t.dbs"; then
+    check_ok "$t (reactivated node dofs, factor $f)"
+  else
+    check_fail "$t" "reactivated node dofs differ from the factor $f rule"
+  fi
+}
+RM_E13="element 1 -quad4 1 2 4 5|element 3 -quad4 4 5 7 8"
+RM_I2="element_remove_inactive 2 -quad4 4 5 7 8|element_remove_inactive_group 2 2"
+for t in control_mesh_remove_really1 control_mesh_remove_factor1 \
+         control_mesh_remove_factor0 control_mesh_remove_factor_default1 \
+         control_mesh_remove_activate_all1 control_mesh_remove_chain1 \
+         control_mesh_remove_chain2 control_mesh_remove_keep1 \
+         control_mesh_remove_keep2 control_mesh_remove_keep3 \
+         control_mesh_remove_really_yes1 control_mesh_remove_default1; do
+  run_ok "$T2026" "$t"
+done
+remove_state_check control_mesh_remove_really1 10 "$RM_E13|$RM_I2" 6
+remove_state_check control_mesh_remove_really1 15 "element 1 -quad4 1 2 4 5|$RM_I2" 4
+remove_state_check control_mesh_remove_really1 20 "element 1 -quad4 1 2 4 5|element 2 -quad4 4 5 7 8" 6
+map_dof_check control_mesh_remove_really1 1e-9 \
+  "1 0 0 0 0 -3.88497358161 -0.809841489675 0 -15.5398943264 0 -3.88497358161|2 0 0 0 0 -3.88497358161 0.809841489675 0 -15.5398943264 0 -3.88497358161|4 -0.00113764942597 -0.00928441235649 -0.00194361957522 -0.0139859048938 0.802218932558 -0.25445915175 0 -9.62974510805 0 -1.7655052351|5 0.00113764942597 -0.00928441235649 0.00194361957522 -0.0139859048938 0.802218932558 0.25445915175 0 -9.62974510805 0 -1.7655052351|7 -0.000415433779146 -0.0141726831578 -0.000415433779146 -0.0188741756951 -0.434666824475 0.300923186176 0 -5.20061545745 0 -1.12705645639|8 0.000415433779146 -0.0141726831578 0.000415433779146 -0.0188741756951 -0.434666824475 -0.300923186176 0 -5.20061545745 0 -1.12705645639"
+remove_state_check control_mesh_remove_factor1 20 "element 1 -quad4 1 2 4 5|element 2 -quad4 4 5 7 8" 6
+map_dof_check control_mesh_remove_factor1 1e-9 \
+  "7 7.15031332754e-17 0.00918997390842 6.90094682787e-17 -0.00470149253731 0.242537313433 -1.46688217129e-14 0 -2.38805970149 0 -0.429104477612|8 7.15031332754e-17 0.00918997390842 6.90094682787e-17 -0.00470149253731 0.242537313433 -1.46688217129e-14 0 -2.38805970149 0 -0.429104477612"
+remove_react_check control_mesh_remove_factor1 0.5 no "4 5 7 8" "4 5"
+remove_react_check control_mesh_remove_factor0 0 no "7 8" "4 5"
+remove_react_check control_mesh_remove_factor_default1 1 no "7 8" "4 5"
+remove_react_check control_mesh_remove_activate_all1 0.5 yes "4 5 7 8" "4 5"
+remove_state_check control_mesh_remove_chain1 15 "element 1 -quad4 1 2 4 5|element_remove_inactive 2 -quad4 4 5 7 8|element_remove_inactive 3 -quad4 7 8 10 11|element_remove_inactive_group 2 2|element_remove_inactive_group 3 2" 4
+map_dof_check control_mesh_remove_chain1 1e-9 \
+  "4 -0.00263460509171 -0.0186586512729 -0.00344057524097 -0.0233601438102 1.50157104392 -0.394023832818 0 -19.3069672105 0 -3.56107923332|5 0.00263460509171 -0.0186586512729 0.00344057524097 -0.0233601438102 1.50157104392 0.394023832818 0 -19.3069672105 0 -3.56107923332|7 -0.00108534424827 -0.0330886386079 -0.00108534424827 -0.0377901311452 -0.270022603701 0.458586625793 0 -10.1246258171 0 -2.07892968416|8 0.00108534424827 -0.0330886386079 0.00108534424827 -0.0377901311452 -0.270022603701 -0.458586625793 0 -10.1246258171 0 -2.07892968416|10 -0.000433389287906 -0.037968321992 -0.000433389287906 -0.037968321992 -0.392380300221 0.271647900153 0 -5.1810986001 0 -1.11469578006|11 0.000433389287906 -0.037968321992 0.000433389287906 -0.037968321992 -0.392380300221 -0.271647900153 0 -5.1810986001 0 -1.11469578006"
+remove_react_check control_mesh_remove_chain2 0.5 no "7 8" "4 5"
+map_dof_check control_mesh_remove_chain2 1e-12 "10 0 0 0 0 0 0 0 0 0 0|11 0 0 0 0 0 0 0 0 0 0"
+remove_state_check control_mesh_remove_keep1 20 "$RM_E13|$RM_I2" 6
+remove_state_check control_mesh_remove_keep2 20 "$RM_E13" 6
+remove_state_check control_mesh_remove_keep3 20 "element 1 -quad4 1 2 4 5|element 2 -quad4 4 5 7 8|element 3 -quad4 4 5 7 8" 6
+remove_state_check control_mesh_remove_really_yes1 10 "$RM_E13|$RM_I2" 6
+remove_state_check control_mesh_remove_really_yes1 20 "$RM_E13" 6
+remove_state_check control_mesh_remove_default1 10 "$RM_E13" 6
+expected_error_ok "$T2026" control_mesh_remove_factor_error1
+expected_error_ok "$T2026" control_mesh_remove_really_error1
 # F5 T4 U5b: control_mesh_split_element_from / _element_to -prism6
 # (6.241, 6.242), the tria6 split of 6.240, control_mesh_convert_tria6_tria3
 # (6.161); meshes = Professional 02-08-2026 (ext_check above; the GNU

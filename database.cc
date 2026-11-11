@@ -5168,6 +5168,61 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   data_class[ELEMENT_MAP_NODE] = ELEMENT;
   data_required[ELEMENT_MAP_NODE] = ELEMENT;
 
+  // F5 T4 U9e (manual Professional 6.231-6.234, mesh_remove.cc):
+  // control_mesh_remove_really -no makes the removed elements inactive
+  // instead of deleting them; they become active again when the
+  // control_mesh_remove of a later step no longer removes them.
+  strcpy(name[CONTROL_MESH_REMOVE_KEEP_GEOMETRY],
+    "control_mesh_remove_keep_geometry");
+  type[CONTROL_MESH_REMOVE_KEEP_GEOMETRY] = INTEGER;
+  data_length[CONTROL_MESH_REMOVE_KEEP_GEOMETRY] = 2;
+  data_class[CONTROL_MESH_REMOVE_KEEP_GEOMETRY] = CONTROL;
+  data_required[CONTROL_MESH_REMOVE_KEEP_GEOMETRY] = CONTROL_MESH_REMOVE;
+
+  strcpy(name[CONTROL_MESH_REMOVE_REALLY],"control_mesh_remove_really");
+  type[CONTROL_MESH_REMOVE_REALLY] = INTEGER;
+  data_length[CONTROL_MESH_REMOVE_REALLY] = 1;
+  data_class[CONTROL_MESH_REMOVE_REALLY] = CONTROL;
+  data_required[CONTROL_MESH_REMOVE_REALLY] = CONTROL_MESH_REMOVE;
+
+  strcpy(name[CONTROL_MESH_REMOVE_REALLY_ACTIVATE_ALL],
+    "control_mesh_remove_really_activate_all");
+  type[CONTROL_MESH_REMOVE_REALLY_ACTIVATE_ALL] = INTEGER;
+  data_length[CONTROL_MESH_REMOVE_REALLY_ACTIVATE_ALL] = 1;
+  data_class[CONTROL_MESH_REMOVE_REALLY_ACTIVATE_ALL] = CONTROL;
+  data_required[CONTROL_MESH_REMOVE_REALLY_ACTIVATE_ALL] = CONTROL_MESH_REMOVE;
+
+  strcpy(name[CONTROL_MESH_REMOVE_REALLY_ACTIVATE_FACTOR],
+    "control_mesh_remove_really_activate_factor");
+  type[CONTROL_MESH_REMOVE_REALLY_ACTIVATE_FACTOR] = DOUBLE_PRECISION;
+  data_length[CONTROL_MESH_REMOVE_REALLY_ACTIVATE_FACTOR] = 1;
+  data_class[CONTROL_MESH_REMOVE_REALLY_ACTIVATE_FACTOR] = CONTROL;
+  data_required[CONTROL_MESH_REMOVE_REALLY_ACTIVATE_FACTOR] =
+    CONTROL_MESH_REMOVE;
+
+  // GNU: an inactive element is deleted from the mesh (as a really removed
+  // one) and kept in these records, indexed by its element number: the
+  // element record (name and nodes), its element group, and the
+  // coordinates (node, then node_start_refined) of its nodes, which the
+  // mesh change deletes when no active element uses them (nod_nod). The
+  // element record itself is absent, so no data_required.
+  strcpy(name[ELEMENT_REMOVE_INACTIVE],"element_remove_inactive");
+  type[ELEMENT_REMOVE_INACTIVE] = INTEGER;
+  data_length[ELEMENT_REMOVE_INACTIVE] = 1+MNOL;
+  fixed_length[ELEMENT_REMOVE_INACTIVE] = 0;
+  data_class[ELEMENT_REMOVE_INACTIVE] = ELEMENT;
+
+  strcpy(name[ELEMENT_REMOVE_INACTIVE_GROUP],"element_remove_inactive_group");
+  type[ELEMENT_REMOVE_INACTIVE_GROUP] = INTEGER;
+  data_length[ELEMENT_REMOVE_INACTIVE_GROUP] = 1;
+  data_class[ELEMENT_REMOVE_INACTIVE_GROUP] = ELEMENT;
+
+  strcpy(name[ELEMENT_REMOVE_INACTIVE_NODE],"element_remove_inactive_node");
+  type[ELEMENT_REMOVE_INACTIVE_NODE] = DOUBLE_PRECISION;
+  data_length[ELEMENT_REMOVE_INACTIVE_NODE] = 2*MNOL*MDIM;
+  fixed_length[ELEMENT_REMOVE_INACTIVE_NODE] = 0;
+  data_class[ELEMENT_REMOVE_INACTIVE_NODE] = ELEMENT;
+
   strcpy(name[XY],"xy");
   strcpy(name[XZ],"xz");
   strcpy(name[YZ],"yz");
