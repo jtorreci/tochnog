@@ -2670,6 +2670,77 @@ if grep -q "Warning: control_mesh_extrude_element -prism12 replaced by -prism18"
 else
   check_fail "control_mesh_extrude_element_quad9_1" "missing the -prism12 -> -prism18 warning"
 fi
+# F5 T4 U9d: control_mesh_map (manual 6.210): each map toggles the -hex27 /
+# -tet10 / -prism15 (and the -hex20, turned into -hex27 by the GNU) to the
+# linear element of their corners and back; the mid nodes are deleted while
+# linear (DIVERGENCES MESH-MAP-MID-NODES) and created again with the dofs
+# interpolated linearly from the corners. map_mesh_check <test> <elements>
+# <nodes>: the .dbs element / element_map lines (= Professional 02-08-2026,
+# except the corners of MESH-MAP-TET10 / -PRISM15 and the -hex27 of
+# MESH-MAP-HEX20) and the number of nodes. map_dof_check <test> <tol>
+# <"node dof1 ... dofn|...">: |GNU - Professional| <= tol*(1+|Professional|)
+# for every node dof. map_mid_check <test> <"mid a b|...">: the dofs of a
+# mid node are the mean of those of its edge corners a and b.
+map_mesh_check() {
+  local t="$1" want_el="$2" want_nnod="$3" got_el got_nnod
+  run_ok "$T2026" "$t"
+  got_el="$(awk '$1=="element"||$1=="element_map"{$1=$1; print}' "$T2026/$t.dbs" | paste -sd'|')"
+  got_nnod="$(awk '$1=="node"{n++} END{print n+0}' "$T2026/$t.dbs")"
+  if [ "$got_el" = "$want_el" ] && [ "$got_nnod" = "$want_nnod" ]; then
+    check_ok "$t (mesh after the map)"
+  else
+    check_fail "$t" "mesh '$got_el' nodes $got_nnod"
+  fi
+}
+map_dof_check() {
+  local t="$1" tol="$2" want="$3"
+  if LC_ALL=C awk -v tol="$tol" -v want="$want" '
+    BEGIN { n=split(want, w, "|"); for (i=1;i<=n;i++) { m=split(w[i], v, " "); nd[v[1]]=m-1; for (j=2;j<=m;j++) val[v[1],j-1]=v[j] } }
+    $1=="node_dof" && ($2 in nd) { seen[$2]=1; if (NF-2!=nd[$2]) bad=1
+      for (j=1;j<=nd[$2];j++) { p=val[$2,j]+0; d=$(j+2)-p; if (d<0) d=-d; a=(p<0?-p:p); if (d>tol*(1+a)) bad=1 } }
+    END { for (k in nd) if (!(k in seen)) bad=1; exit bad }' "$T2026/$t.dbs"; then
+    check_ok "$t (node dofs = Professional, tol $tol)"
+  else
+    check_fail "$t" "node dofs differ from the Professional (tol $tol)"
+  fi
+}
+map_mid_check() {
+  local t="$1" mids="$2"
+  run_ok "$T2026" "$t"
+  if LC_ALL=C awk -v mids="$mids" '
+    $1=="node_dof" { for (j=3;j<=NF;j++) d[$2,j-2]=$j; nd=NF-2; any[$2]=1 }
+    END { n=split(mids, m, "|"); if (n<1) exit 1
+      for (i=1;i<=n;i++) { split(m[i], v, " ")
+        if (!(v[1] in any) || !(v[2] in any) || !(v[3] in any)) exit 1
+        for (j=1;j<=nd;j++) { e=(d[v[2],j]+d[v[3],j])/2; x=d[v[1],j]-e; if (x<0) x=-x; a=(e<0?-e:e); if (x>1e-9*(1+a)) exit 1 } }
+      exit 0 }' "$T2026/$t.dbs"; then
+    check_ok "$t (mid node dofs = mean of the edge corners)"
+  else
+    check_fail "$t" "mid node dofs are not the mean of the edge corners"
+  fi
+}
+MAP_H27="element 1 -hex27 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27|element 2 -hex27 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45"
+MAP_MAP="element_map 1 -hex27 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27|element_map 2 -hex27 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45"
+map_mesh_check control_mesh_map1 "$MAP_H27|$MAP_MAP" 45
+map_dof_check control_mesh_map1 1e-6 \
+  "14 0 0 -0.001750002269 0 0 -0.008828064852 -1.013882513 0 0 -1.013882513 0 -15.01444262|38 0 0.0001468152641 -0.0001788080085 0 -6.889711943e-05 -0.01959891453 -0.003846309193 0 0 -0.003846309196 -0.1324169737 0.05950013748|45 -0.0001654923105 -0.0001654923105 -1.352280522e-05 5.022007298e-05 5.022007298e-05 -0.01943362933 -0.003846309174 5.062829062e-12 0.1324169737 -0.003846309177 0.1324169737 0.0595001375"
+map_mesh_check control_mesh_map2 "$MAP_H27|$MAP_MAP" 45
+map_dof_check control_mesh_map2 1e-9 \
+  "2 0 0 0 0 0 0 -3.932256991 0 0 -3.932256991 -0.546770972 -15.72902796|14 0 0 -0.007078062583 0 0 -0.007078062583 -1.492177097 0 0 -1.492177097 0 -12.52996005|38 0 -0.0002157123835 -0.01942010652 0 -0.0002157123835 -0.01942010652 -0.8630159787 0 0 -0.8630159787 0.4568908122 -5.60918775"
+map_mesh_check control_mesh_map3 "element 1 -hex8 1 3 7 9 19 21 25 27|element 2 -hex8 19 21 25 27 37 39 43 45|$MAP_MAP" 12
+map_dof_check control_mesh_map3 1e-9 \
+  "19 -0.001312250333 -0.001312250333 -0.01415612517 -0.001312250333 -0.001312250333 -0.01415612517 0.9479027963 0 -0.04494007989 0.9479027963 -0.04494007989 -9.330892144|45 0.0002157123835 0.0002157123835 -0.01942010652 0.0002157123835 0.0002157123835 -0.01942010652 -0.8630159787 0 -0.4568908122 -0.8630159787 -0.4568908122 -5.60918775"
+MAP_MIXED="element 1 -hex8 1 3 7 9 19 21 25 27|element 2 -hex8 3 28 9 29 21 30 27 31|element_map 1 -hex27 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27"
+map_mesh_check control_mesh_map_mixed1 "$MAP_MIXED" 12
+map_mesh_check control_mesh_map_toggle1 "$MAP_MIXED" 12
+map_mesh_check control_mesh_map_no1 "element 1 -hex27 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27" 27
+map_mesh_check control_mesh_map_keep1 "element 1 -prism18 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18" 18
+map_mesh_check control_mesh_map_keep2 "element 1 -quad9 1 2 3 4 5 6 7 8 9" 9
+map_mesh_check control_mesh_map_tet10_1 "element 1 -tet4 1 3 6 10|element_map 1 -tet10 1 2 3 4 5 6 7 8 9 10" 4
+map_mesh_check control_mesh_map_prism15_1 "element 1 -prism6 1 2 3 4 5 6|element_map 1 -prism15 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15" 6
+map_mesh_check control_mesh_map_hex20_1 "element 1 -hex8 1 2 3 4 5 6 7 8|element_map 1 -hex27 1 9 2 10 21 11 3 12 4 17 22 18 23 24 25 19 26 20 5 13 6 14 27 15 7 16 8" 8
+map_mid_check control_mesh_map_tet10_2 "2 1 3|4 1 6|5 3 6|7 1 10|8 3 10|9 6 10"
+map_mid_check control_mesh_map_prism15_2 "7 1 4|8 2 5|9 3 6|10 1 2|11 2 3|12 3 1|13 4 5|14 5 6|15 6 4"
 # F5 T4 U5b: control_mesh_split_element_from / _element_to -prism6
 # (6.241, 6.242), the tria6 split of 6.240, control_mesh_convert_tria6_tria3
 # (6.161); meshes = Professional 02-08-2026 (ext_check above; the GNU

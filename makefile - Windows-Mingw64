@@ -101,7 +101,7 @@ OFILES= adjust.o area.o \
 	inverse.o locate.o \
 	macro.o map.o mat_diff.o \
 	materi.o math.o maxwell.o \
-	membrane.o merge.o mesh.o \
+	membrane.o merge.o mesh.o mesh_map.o \
 	miscel.o new_mesh.o \
 	node.o nonloc.o order.o \
 	plasti.o plasti_i.o  \

@@ -1,0 +1,36 @@
+( control_mesh_map (6.210): a -hex20 maps to the -hex8 of its corners 1-8
+  (= Professional 02-08-2026); the GNU turned it into a -hex27 first, so
+  element_map holds that -hex27 (DIVERGENCES MESH-MAP-HEX20). )
+echo -no
+number_of_space_dimensions 3
+materi_velocity
+materi_displacement
+materi_stress
+end_initia
+node 1 0 0 0
+node 2 1 0 0
+node 3 0 1 0
+node 4 1 1 0
+node 5 0 0 1
+node 6 1 0 1
+node 7 0 1 1
+node 8 1 1 1
+node 9 0.5 0 0
+node 10 0 0.5 0
+node 11 1 0.5 0
+node 12 0.5 1 0
+node 13 0.5 0 1
+node 14 0 0.5 1
+node 15 1 0.5 1
+node 16 0.5 1 1
+node 17 0 0 0.5
+node 18 1 0 0.5
+node 19 0 1 0.5
+node 20 1 1 0.5
+element 1 -hex20 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20
+group_type 1 -materi
+group_materi_elasti_young 1 1000
+group_materi_elasti_poisson 1 0.2
+control_mesh_map 10 -yes
+control_print_database 15 -yes
+end_data

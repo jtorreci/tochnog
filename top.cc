@@ -1272,6 +1272,9 @@ void step_start( long int task, long int options_solver[], double dtime, double 
   mesh_convert_hex20();
   mesh_convert_tria6_tria3(); // at its own control index (6.161)
   extrude(); // once, at its own control index (extrude.cc)
+  // control_mesh_map (6.210): once, at its own control index, on the final
+  // mesh (after the hex20 conversion and the extrude, mesh_map.cc)
+  mesh_map( first_of_control );
   // control_mesh_truss_distribute_mpc (6.245): once, at its own control
   // index, after the mesh generators and before the first element loop
   mesh_truss_distribute_mpc();

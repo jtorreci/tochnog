@@ -1,0 +1,47 @@
+( control_mesh_map (6.210): a -hex27 next to a -hex8: the -hex27 becomes the
+  -hex8 of its corners, the -hex8 stays. Mesh = Professional 02-08-2026. )
+echo -no
+number_of_space_dimensions 3
+materi_velocity
+materi_displacement
+materi_stress
+end_initia
+node 1 0 0 0
+node 2 0.5 0 0
+node 3 1 0 0
+node 4 0 0.5 0
+node 5 0.5 0.5 0
+node 6 1 0.5 0
+node 7 0 1 0
+node 8 0.5 1 0
+node 9 1 1 0
+node 10 0 0 0.5
+node 11 0.5 0 0.5
+node 12 1 0 0.5
+node 13 0 0.5 0.5
+node 14 0.5 0.5 0.5
+node 15 1 0.5 0.5
+node 16 0 1 0.5
+node 17 0.5 1 0.5
+node 18 1 1 0.5
+node 19 0 0 1
+node 20 0.5 0 1
+node 21 1 0 1
+node 22 0 0.5 1
+node 23 0.5 0.5 1
+node 24 1 0.5 1
+node 25 0 1 1
+node 26 0.5 1 1
+node 27 1 1 1
+node 28 2 0 0
+node 29 2 1 0
+node 30 2 0 1
+node 31 2 1 1
+element 1 -hex27 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27
+element 2 -hex8 3 28 9 29 21 30 27 31
+group_type 1 -materi
+group_materi_elasti_young 1 1000
+group_materi_elasti_poisson 1 0.2
+control_mesh_map 10 -yes
+control_print_database 15 -yes
+end_data

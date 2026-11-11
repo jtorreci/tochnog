@@ -5142,6 +5142,32 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   strcpy(name[INITIALISE],"initialise");
   strcpy(name[TRANSLATE],"translate");
 
+  // F5 T4 U9d (manual Professional 6.210, mesh_map.cc): control_mesh_map
+  // index -yes toggles the quadratic volume elements between quadratic
+  // and linear; element_map keeps the quadratic element (name and nodes)
+  // of a mapped element (Professional 02-08-2026 .dbs record).
+  strcpy(name[CONTROL_MESH_MAP],"control_mesh_map");
+  type[CONTROL_MESH_MAP] = INTEGER;
+  data_length[CONTROL_MESH_MAP] = 1;
+  data_class[CONTROL_MESH_MAP] = CONTROL;
+
+  strcpy(name[ELEMENT_MAP],"element_map");
+  type[ELEMENT_MAP] = INTEGER;
+  data_length[ELEMENT_MAP] = 1+MNOL;
+  fixed_length[ELEMENT_MAP] = 0;
+  data_class[ELEMENT_MAP] = ELEMENT;
+  data_required[ELEMENT_MAP] = ELEMENT;
+
+  // GNU: the coordinates (node, then node_start_refined) of the nodes of
+  // the quadratic element in element_map; the mid nodes are deleted while
+  // the element is linear (nod_nod) and created again on the map back
+  strcpy(name[ELEMENT_MAP_NODE],"element_map_node");
+  type[ELEMENT_MAP_NODE] = DOUBLE_PRECISION;
+  data_length[ELEMENT_MAP_NODE] = 2*MNOL*MDIM;
+  fixed_length[ELEMENT_MAP_NODE] = 0;
+  data_class[ELEMENT_MAP_NODE] = ELEMENT;
+  data_required[ELEMENT_MAP_NODE] = ELEMENT;
+
   strcpy(name[XY],"xy");
   strcpy(name[XZ],"xz");
   strcpy(name[YZ],"yz");

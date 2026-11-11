@@ -1894,6 +1894,11 @@ enum {
   ELEMENT_GEOMETRY_MOVING_OUT_TIME,
   INITIALISE,
   TRANSLATE,
+  // F5 T4 U9d (manual Professional 6.210): control_mesh_map and the
+  // quadratic element kept while an element is mapped to linear
+  CONTROL_MESH_MAP,
+  ELEMENT_MAP,
+  ELEMENT_MAP_NODE,
   XY,
   XZ,
   YZ,
@@ -2275,6 +2280,7 @@ void      exit_tn( long int print_database_type );
 void      incremental_driver_run( void );
 void      exit_tn_on_error( void );
 void      extrude( void );
+void      mesh_map( long int first_of_control );
 void      failure( double time_current );
 long int  filter( long int print_filter_index[], long int length_print_filter_index, 
             long int idat, long int index, long int number, long int task );
