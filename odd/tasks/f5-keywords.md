@@ -177,11 +177,13 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   - [x] U8 (dd2ee02) geometry_moving family (6) + control_geometry_moving: new module geometry_moving.cc.
     Route: delegated (bounded writer).
   - [x] U9 owner decisions: all taken (2026-11-11).
-  - [x] U9e (5f08f81) (S2-S5) control_mesh_remove_really (6.232), _really_activate_all (6.233), _really_activate_factor
+  - [x] U9e (5f08f81, 9c08983) (S2-S5) control_mesh_remove_really (6.232), _really_activate_all (6.233), _really_activate_factor
     (6.234), control_mesh_remove_keep_geometry (6.231). Owner: implement (2026-11-11). Route: delegated (bounded writer;
     context backstop of the parent session). RED: base 896978f "I don't know what to do with : control_mesh_remove_really",
-    32 of 34 new checks fail; GREEN suite 1182 OK, 0 FALLO. Owner questions open: REMOVE-INACTIVE-RECORDS (B),
-    REMOVE-NO-TIMESTEP / -ACTIVATE-ALL / -PRESSURE-GRAVITY (D), factor without effect under global_element_dof_apply -yes.
+    32 of 34 new checks fail; GREEN suite 1182 OK, 0 FALLO. Nodal start (owner 2026-11-11, 9c08983): RED 3 of 43 U9e
+    checks fail on ac4bc9b, GREEN suite 1191 OK, 0 FALLO; class D REMOVE-REACTIVATION-START with the recipe (factor 0 +
+    _activate_all -yes = Professional, 5e-11). Owner questions open: REMOVE-INACTIVE-RECORDS (B),
+    REMOVE-NO-TIMESTEP / -ACTIVATE-ALL / -PRESSURE-GRAVITY (D), -method1 geometric containment (C126).
   - [x] U9d (b3f4746) (S2-S5) control_mesh_map (manual 6.210, Pro test/other/map1): quadratic <-> linear mesh map as a
     solver first guess. Owner: implement (2026-11-11). Route: delegated (bounded writer; context backstop of the parent
     session). RED: base stops "I do not know : control_mesh_map"; GREEN suite 1148 OK, 0 FALLO. Owner decisions 2026-11-11: C134 = Professional,
@@ -861,3 +863,16 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   only with factor 0 + _activate_all -yes (shared nodes keep their stresses), and the default factor 1 then differs
   from the Professional (class D, recipe documented). Owner, verbatim: "si". U9e reopened: start the reactivated
   element from the nodal values.
+- 2026-11-11 U9e nodal start writer result (9c08983): the ELEMENT_DOF_INITIALISED 1 override is removed, so
+  create_element's 0 makes the reactivated element interpolate all integration point dofs (stresses included) from the
+  nodal values set on reactivation. Tests control_mesh_remove_start1 / _start05 (all nodes bounded, nodes 4 5 moved
+  only in stage 10 by bounda_time, so no increment at 20: element_intpnt_dof stresses = element_intpnt_h x nodal start;
+  factor 1 analytic -11.111 continued at nodes 4 7), _recipe_really1 / _recipe_chain1 (factor 0 + _activate_all -yes =
+  the Professional default runs t1 / tc1, all 10 node dofs, 5e-11 and 1e-11). really1 / chain1 (factor 0.5) re-pinned
+  to the GNU values (up to 1.07 / 1.31 from the Professional). Professional: its own factor 0 + _activate_all -yes run
+  differs from its default run only by node 4 disx 8.06e-4 (REMOVE-ACTIVATE-ALL displacement reset); the GNU recipe
+  reproduces the Professional default exactly. Recipe measured with an elastic material: in the GNU strains and
+  plasticity history also start from the nodes. RED: the ac4bc9b binary fails start1, start05 and the start1 pin
+  (3 of 43); GREEN 43 of 43, suite 1191 OK, 0 FALLO (226/226 runs); differential of the 93 U9e inputs against
+  ac4bc9b identical (geometry_moving1 times out in both, common output prefix identical). Class D row
+  REMOVE-REACTIVATION-START with the recipe, user / developer pages and SEGUIMIENTO updated.
