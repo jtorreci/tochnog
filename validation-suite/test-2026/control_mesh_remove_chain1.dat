@@ -1,6 +1,7 @@
 ( F5 T4 U9e: two stacked inactive elements 2 and 3 are activated in one
-  step: element 2 has the active nodes 4 5, element 3 none. Stage dofs =
-  Professional 02-08-2026. )
+  step: element 2 has the active nodes 4 5, element 3 none. Stage states =
+  Professional 02-08-2026; the final dofs follow the GNU nodal start
+  (DIVERGENCES REMOVE-REACTIVATION-START, control_mesh_remove_recipe_chain1). )
 echo -no
 number_of_space_dimensions 2
 materi_velocity

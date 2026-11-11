@@ -3,7 +3,10 @@
   deleted at 15, so nodes 7 and 8 belong to no active element; the remove
   of 20 does not remove element 2 any more: it is active again, its free
   nodes 7 8 get the mean dofs of the active nodes 4 5, the stresses times
-  the factor 0.5 (6.234). Stage dofs = Professional 02-08-2026. )
+  the factor 0.5 (6.234), and element 2 starts from these nodal values.
+  Stage states and dofs before 20 = Professional 02-08-2026; the final dofs
+  differ, the Professional starts from zero stresses (DIVERGENCES
+  REMOVE-REACTIVATION-START, control_mesh_remove_recipe_really1). )
 echo -no
 number_of_space_dimensions 2
 materi_velocity

@@ -2755,9 +2755,16 @@ map_mid_check control_mesh_map_prism15_2 "7 1 4|8 2 5|9 3 6|10 1 2|11 2 3|12 3 1
 # values of the active source nodes: a target not active before gets the
 # source mean, the stresses (and pore pressure) times the factor; with
 # <all> = yes an active target gets the factor times the mean stresses
-# and keeps its other dofs (manual 6.233, 6.234). The stage dofs of
-# really1 / chain1 / factor1 are the Professional ones (map_dof_check on
-# the final .dbs).
+# and keeps its other dofs (manual 6.233, 6.234). The reactivated element
+# starts its integration point stresses from these nodal values (owner
+# decision 2026-11-11): remove_start_check <test> <factor>: with all nodes
+# bounded and no increment at the reactivation step, the stresses of
+# element 2 in element_intpnt_dof are the element_intpnt_h interpolation
+# of the start values (nodes 4 5 of stage 15, nodes 7 8 factor times their
+# mean). The Professional starts from zero stresses: factor 0 with
+# _activate_all -yes reproduces it (recipe_* = Professional default runs,
+# DIVERGENCES REMOVE-REACTIVATION-START); factor1 / factor values right
+# after the reactivation are the Professional ones.
 remove_state_check() {
   local t="$1" s="$2" want="$3" want_nnod="$4" got got_nnod
   got="$(awk '$1=="element"||$1=="element_remove_inactive"||$1=="element_remove_inactive_group"{$1=$1; print}' "$T2026/$t$s.dbs" 2>/dev/null | paste -sd'|')"
@@ -2785,6 +2792,41 @@ remove_react_check() {
     check_fail "$t" "reactivated node dofs differ from the factor $f rule"
   fi
 }
+remove_start_check() {
+  local t="$1" f="$2"
+  if LC_ALL=C awk -v f="$f" '
+    $1=="dof_label" { nd=NF-1; for (j=2;j<=NF;j++) sc[j-1]=($j ~ /^-sig/) }
+    $1=="node_dof" && FILENAME ~ /15\.dbs$/ { act[$2]=1; na++; for (j=3;j<=NF;j++) { v[$2,j-2]=$j; m[j-2]+=$j } }
+    FILENAME !~ /15\.dbs$/ && $1=="element" && $2=="2" { nn=NF-3; for (i=1;i<=nn;i++) nod[i]=$(i+3) }
+    FILENAME !~ /15\.dbs$/ && $1=="element_intpnt_h" && $2=="2" { nh=NF-2; for (j=3;j<=NF;j++) h[j-2]=$j }
+    FILENAME !~ /15\.dbs$/ && $1=="element_intpnt_dof" && $2=="2" { ni=NF-2; for (j=3;j<=NF;j++) ip[j-2]=$j }
+    END { if (na<1 || nn<1 || nh<1 || ni<1) exit 1
+      np=nh/nn; if (ni!=np*nd) exit 1
+      for (p=0;p<np;p++) for (c=1;c<=nd;c++) { if (!sc[c]) continue; e=0
+        for (i=1;i<=nn;i++) { n=nod[i]; s0=(n in act) ? v[n,c] : f*m[c]/na; e+=h[p*nn+i]*s0 }
+        d=ip[p*nd+c]-e; if (d<0) d=-d; a=(e<0?-e:e); if (d>1e-9*(1+a)) exit 1; if (a>1e-6) nz=1 }
+      exit !nz }' "$T2026/${t}15.dbs" "$T2026/$t.dbs"; then
+    check_ok "$t (start stresses = interpolated nodal values, factor $f)"
+  else
+    check_fail "$t" "integration point stresses are not the interpolated nodal start (factor $f)"
+  fi
+}
+# remove_pin_check <test> <"node dofs|...">: the GNU node dofs of the final
+# .dbs (1e-9), for the runs that start from the nodal values with factor
+# 0.5 and so differ from the Professional (REMOVE-REACTIVATION-START: up to
+# 1.07 / 1.31 in sigzz / sigyy).
+remove_pin_check() {
+  local t="$1" want="$2"
+  if LC_ALL=C awk -v want="$want" '
+    BEGIN { n=split(want, w, "|"); for (i=1;i<=n;i++) { m=split(w[i], v, " "); nd[v[1]]=m-1; for (j=2;j<=m;j++) val[v[1],j-1]=v[j] } }
+    $1=="node_dof" && ($2 in nd) { seen[$2]=1; if (NF-2!=nd[$2]) bad=1
+      for (j=1;j<=nd[$2];j++) { p=val[$2,j]+0; d=$(j+2)-p; if (d<0) d=-d; a=(p<0?-p:p); if (d>1e-9*(1+a)) bad=1 } }
+    END { for (k in nd) if (!(k in seen)) bad=1; exit bad }' "$T2026/$t.dbs"; then
+    check_ok "$t (node dofs = GNU nodal start pin)"
+  else
+    check_fail "$t" "node dofs differ from the GNU nodal start pin"
+  fi
+}
 RM_E13="element 1 -quad4 1 2 4 5|element 3 -quad4 4 5 7 8"
 RM_I2="element_remove_inactive 2 -quad4 4 5 7 8|element_remove_inactive_group 2 2"
 for t in control_mesh_remove_really1 control_mesh_remove_factor1 \
@@ -2792,14 +2834,16 @@ for t in control_mesh_remove_really1 control_mesh_remove_factor1 \
          control_mesh_remove_activate_all1 control_mesh_remove_chain1 \
          control_mesh_remove_chain2 control_mesh_remove_keep1 \
          control_mesh_remove_keep2 control_mesh_remove_keep3 \
-         control_mesh_remove_really_yes1 control_mesh_remove_default1; do
+         control_mesh_remove_really_yes1 control_mesh_remove_default1 \
+         control_mesh_remove_start1 control_mesh_remove_start05 \
+         control_mesh_remove_recipe_really1 control_mesh_remove_recipe_chain1; do
   run_ok "$T2026" "$t"
 done
 remove_state_check control_mesh_remove_really1 10 "$RM_E13|$RM_I2" 6
 remove_state_check control_mesh_remove_really1 15 "element 1 -quad4 1 2 4 5|$RM_I2" 4
 remove_state_check control_mesh_remove_really1 20 "element 1 -quad4 1 2 4 5|element 2 -quad4 4 5 7 8" 6
-map_dof_check control_mesh_remove_really1 1e-9 \
-  "1 0 0 0 0 -3.88497358161 -0.809841489675 0 -15.5398943264 0 -3.88497358161|2 0 0 0 0 -3.88497358161 0.809841489675 0 -15.5398943264 0 -3.88497358161|4 -0.00113764942597 -0.00928441235649 -0.00194361957522 -0.0139859048938 0.802218932558 -0.25445915175 0 -9.62974510805 0 -1.7655052351|5 0.00113764942597 -0.00928441235649 0.00194361957522 -0.0139859048938 0.802218932558 0.25445915175 0 -9.62974510805 0 -1.7655052351|7 -0.000415433779146 -0.0141726831578 -0.000415433779146 -0.0188741756951 -0.434666824475 0.300923186176 0 -5.20061545745 0 -1.12705645639|8 0.000415433779146 -0.0141726831578 0.000415433779146 -0.0188741756951 -0.434666824475 -0.300923186176 0 -5.20061545745 0 -1.12705645639"
+remove_pin_check control_mesh_remove_really1 \
+  "1 0 0 0 0 -3.8657957402 -0.694774441204 0 -15.4631829608 0 -3.8657957402|2 0 0 0 0 -3.8657957402 0.694774441204 0 -15.4631829608 0 -3.8657957402|4 -0.000861488509635 -0.00921537212741 -0.00166745865889 -0.0139168646647 0.923254628737 -0.186912740711 0 -10.2024703091 0 -1.85584313608|5 0.000861488509635 -0.00921537212741 0.00166745865889 -0.0139168646647 0.923254628736 0.186912740711 0 -10.2024703091 0 -1.85584313608|7 0.000311774068466 -0.0106289201407 0.000311774068466 -0.015330412678 -0.842946175735 0.320948959781 0 -4.13187642095 0 -0.994964519337|8 -0.000311774068466 -0.0106289201407 -0.000311774068466 -0.015330412678 -0.842946175735 -0.320948959781 0 -4.13187642095 0 -0.994964519337"
 remove_state_check control_mesh_remove_factor1 20 "element 1 -quad4 1 2 4 5|element 2 -quad4 4 5 7 8" 6
 map_dof_check control_mesh_remove_factor1 1e-9 \
   "7 7.15031332754e-17 0.00918997390842 6.90094682787e-17 -0.00470149253731 0.242537313433 -1.46688217129e-14 0 -2.38805970149 0 -0.429104477612|8 7.15031332754e-17 0.00918997390842 6.90094682787e-17 -0.00470149253731 0.242537313433 -1.46688217129e-14 0 -2.38805970149 0 -0.429104477612"
@@ -2808,8 +2852,8 @@ remove_react_check control_mesh_remove_factor0 0 no "7 8" "4 5"
 remove_react_check control_mesh_remove_factor_default1 1 no "7 8" "4 5"
 remove_react_check control_mesh_remove_activate_all1 0.5 yes "4 5 7 8" "4 5"
 remove_state_check control_mesh_remove_chain1 15 "element 1 -quad4 1 2 4 5|element_remove_inactive 2 -quad4 4 5 7 8|element_remove_inactive 3 -quad4 7 8 10 11|element_remove_inactive_group 2 2|element_remove_inactive_group 3 2" 4
-map_dof_check control_mesh_remove_chain1 1e-9 \
-  "4 -0.00263460509171 -0.0186586512729 -0.00344057524097 -0.0233601438102 1.50157104392 -0.394023832818 0 -19.3069672105 0 -3.56107923332|5 0.00263460509171 -0.0186586512729 0.00344057524097 -0.0233601438102 1.50157104392 0.394023832818 0 -19.3069672105 0 -3.56107923332|7 -0.00108534424827 -0.0330886386079 -0.00108534424827 -0.0377901311452 -0.270022603701 0.458586625793 0 -10.1246258171 0 -2.07892968416|8 0.00108534424827 -0.0330886386079 0.00108534424827 -0.0377901311452 -0.270022603701 -0.458586625793 0 -10.1246258171 0 -2.07892968416|10 -0.000433389287906 -0.037968321992 -0.000433389287906 -0.037968321992 -0.392380300221 0.271647900153 0 -5.1810986001 0 -1.11469578006|11 0.000433389287906 -0.037968321992 0.000433389287906 -0.037968321992 -0.392380300221 -0.271647900153 0 -5.1810986001 0 -1.11469578006"
+remove_pin_check control_mesh_remove_chain1 \
+  "4 -0.00231808086182 -0.0185795202155 -0.00312405101107 -0.0232810127528 1.52754821177 -0.375469124838 0 -19.9235655785 0 -3.67920347334|5 0.00231808086182 -0.0185795202155 0.00312405101107 -0.0232810127528 1.52754821177 0.375469124838 0 -19.9235655785 0 -3.67920347334|7 -0.000593296575344 -0.0295834839777 -0.000593296575344 -0.034284976515 -0.476121249394 0.32445677449 0 -10.2068320807 0 -2.13659066601|8 0.000593296575344 -0.0295834839777 0.000593296575344 -0.034284976515 -0.476121249394 -0.32445677449 0 -10.2068320807 0 -2.13659066601|10 -0.000357703269636 -0.0332466070733 -0.000357703269636 -0.0332466070733 -0.222638038468 0.0981638773782 0 -3.87141273417 0 -0.818810154528|11 0.000357703269636 -0.0332466070733 0.000357703269636 -0.0332466070733 -0.222638038468 -0.0981638773782 0 -3.87141273417 0 -0.818810154528"
 remove_react_check control_mesh_remove_chain2 0.5 no "7 8" "4 5"
 map_dof_check control_mesh_remove_chain2 1e-12 "10 0 0 0 0 0 0 0 0 0 0|11 0 0 0 0 0 0 0 0 0 0"
 remove_state_check control_mesh_remove_keep1 20 "$RM_E13|$RM_I2" 6
@@ -2818,6 +2862,15 @@ remove_state_check control_mesh_remove_keep3 20 "element 1 -quad4 1 2 4 5|elemen
 remove_state_check control_mesh_remove_really_yes1 10 "$RM_E13|$RM_I2" 6
 remove_state_check control_mesh_remove_really_yes1 20 "$RM_E13" 6
 remove_state_check control_mesh_remove_default1 10 "$RM_E13" 6
+remove_start_check control_mesh_remove_start1 1
+remove_start_check control_mesh_remove_start05 0.5
+# factor 1 continues the uniform stress of element 1 (analytic)
+map_dof_check control_mesh_remove_start1 1e-9 \
+  "4 0 0 0 -0.01 -2.77777777778 0 0 -11.1111111111 0 -2.77777777778|7 0 0 0 -0.01 -2.77777777778 0 0 -11.1111111111 0 -2.77777777778"
+map_dof_check control_mesh_remove_recipe_really1 1e-9 \
+  "1 0 0 0 0 -3.88497358161 -0.809841489675 0 -15.5398943264 0 -3.88497358161|2 0 0 0 0 -3.88497358161 0.809841489675 0 -15.5398943264 0 -3.88497358161|4 -0.00113764942597 -0.00928441235649 -0.00194361957522 -0.0139859048938 0.802218932558 -0.25445915175 0 -9.62974510805 0 -1.7655052351|5 0.00113764942597 -0.00928441235649 0.00194361957522 -0.0139859048938 0.802218932558 0.25445915175 0 -9.62974510805 0 -1.7655052351|7 -0.000415433779146 -0.0141726831578 -0.000415433779146 -0.0188741756951 -0.434666824475 0.300923186176 0 -5.20061545745 0 -1.12705645639|8 0.000415433779146 -0.0141726831578 0.000415433779146 -0.0188741756951 -0.434666824475 -0.300923186176 0 -5.20061545745 0 -1.12705645639"
+map_dof_check control_mesh_remove_recipe_chain1 1e-9 \
+  "4 -0.00263460509171 -0.0186586512729 -0.00344057524097 -0.0233601438102 1.50157104392 -0.394023832818 0 -19.3069672105 0 -3.56107923332|5 0.00263460509171 -0.0186586512729 0.00344057524097 -0.0233601438102 1.50157104392 0.394023832818 0 -19.3069672105 0 -3.56107923332|7 -0.00108534424827 -0.0330886386079 -0.00108534424827 -0.0377901311452 -0.270022603701 0.458586625793 0 -10.1246258171 0 -2.07892968416|8 0.00108534424827 -0.0330886386079 0.00108534424827 -0.0377901311452 -0.270022603701 -0.458586625793 0 -10.1246258171 0 -2.07892968416|10 -0.000433389287906 -0.037968321992 -0.000433389287906 -0.037968321992 -0.392380300221 0.271647900153 0 -5.1810986001 0 -1.11469578006|11 0.000433389287906 -0.037968321992 0.000433389287906 -0.037968321992 -0.392380300221 -0.271647900153 0 -5.1810986001 0 -1.11469578006"
 expected_error_ok "$T2026" control_mesh_remove_factor_error1
 expected_error_ok "$T2026" control_mesh_remove_really_error1
 # F5 T4 U5b: control_mesh_split_element_from / _element_to -prism6

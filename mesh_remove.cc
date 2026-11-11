@@ -143,7 +143,10 @@ static void mesh_remove_forget( long int element )
 //    (manual 6.233; their other dofs are left as they are: DIVERGENCES
 //    REMOVE-ACTIVATE-ALL);
 //  - the elements are reactivated in element order and a node gets its
-//    dofs from the first of them only (assigned).
+//    dofs from the first of them only (assigned);
+//  - the element starts its integration point dofs from these nodal values
+//    (owner decision 2026-11-11; the Professional starts from zero
+//    stresses, which factor 0 with _activate_all -yes reproduces).
 static void mesh_remove_activate( long int element, long int node_active[],
   long int assigned[], double factor, long int activate_all )
 
@@ -233,11 +236,11 @@ static void mesh_remove_activate( long int element, long int node_active[],
     VERSION_NORMAL );
   if ( has_group )
     db( ELEMENT_GROUP, element, &group, ddum, one, VERSION_NORMAL, PUT );
-  if ( options_element_dof==-YES ) {
-    long int initialised = 1;
-    db( ELEMENT_DOF_INITIALISED, element, &initialised, ddum, one,
-      VERSION_NORMAL, PUT );
-  }
+  // ELEMENT_DOF_INITIALISED 0 (create_element): the integration point dofs
+  // (stresses included) start from the nodal values set above, interpolated
+  // with the shape functions (owner decision 2026-11-11). The Professional
+  // starts from zero stresses: factor 0 with _activate_all -yes gives that
+  // start (DIVERGENCES REMOVE-REACTIVATION-START).
 
   if ( avg!=NULL ) delete[] avg;
   if ( avg_start_refined!=NULL ) delete[] avg_start_refined;

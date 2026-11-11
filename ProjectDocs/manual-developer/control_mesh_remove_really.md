@@ -71,14 +71,20 @@ or with `_activate_all -yes` gets the factor times the mean in the scaled
 dofs only. The element is created again with `create_element(element,
 element, ...)` on its clean index (the solved element data were deleted
 with it, so the `DATA_ITEM_SIZE` copy buffer that makes `create_element`
-unsafe on a solved element is not involved), plus `ELEMENT_GROUP`. With
-`options_element_dof -YES` (`global_element_dof_apply -yes`)
-`ELEMENT_DOF_INITIALISED` is set to 1 over the zero `ELEMENT_INTPNT_DOF`
-of `create_element`, so the integration point stresses, strains and
-history start at zero and the other dofs come from the nodes; measured on
-the Professional 02-08-2026, that equals its results (5e-11) for the
-factors 0, 0.5 and 1, where the factor does not change the result. With
-`-no` the integration points come from the nodes.
+unsafe on a solved element is not involved), plus `ELEMENT_GROUP`.
+`create_element` leaves `ELEMENT_DOF_INITIALISED` 0, so on the first
+element evaluation (`elem.cc`) every integration point dof, the stresses
+included, is the shape-function interpolation of the nodal values just
+set (owner decision 2026-11-11: "si arrancamos desde los valores nodales
+cubrimos tanto el pro como el manual"). The Professional 02-08-2026
+starts the element from zero stresses (factor without effect there);
+factor 0 with `_activate_all -yes` sets all the element's nodal stresses
+to zero first and so reproduces it (DIVERGENCES REMOVE-REACTIVATION-START;
+`control_mesh_remove_recipe_really1` / `_recipe_chain1` equal the
+Professional default runs to 5e-11). The first U9e version (5f08f81) set
+`ELEMENT_DOF_INITIALISED` 1 over the zero `ELEMENT_INTPNT_DOF` to mirror
+the Professional; that override was removed. Strains and plasticity
+history also come from the nodal values, as for a remeshed element.
 
 ## Verification
 
@@ -92,8 +98,11 @@ and `_activate_all` of the reactivating index; mean over the element's
 active nodes, all dofs, stresses and pressure scaled (temperature not);
 elements in order, a node set once, zero without active nodes;
 `_keep_geometry` of the current index only, all nodes, followed by the
-`_really` of the index. Stage node dofs equal (`control_mesh_remove_
-really1`, `_chain1`, all 10 dofs, 1e-9).
+`_really` of the index. Stage node dofs equal before the reactivation
+(`control_mesh_remove_really1`, `_chain1`) and after it with the recipe
+(`_recipe_really1`, `_recipe_chain1`, all 10 dofs, 1e-9);
+`control_mesh_remove_start1` / `_start05` check the interpolated start
+(`element_intpnt_dof` = `element_intpnt_h` x nodal start, no increment).
 
 ## Hardcoded parameters / pending refactorings
 

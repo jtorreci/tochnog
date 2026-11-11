@@ -35,13 +35,27 @@ values from the nodes that stayed active.
     stresses and pore pressure are set to the factor times the mean too;
   - when several elements are activated in one step they are handled in
     element order and a node takes its values from the first of them.
-- The integration points of the reactivated element start from its nodes
-  with the default `global_element_dof_apply -yes`: zero stresses and
-  strains (as a new element), the other dofs from the nodes. So with the
-  default the factor sets the nodal values the element starts from, which
-  the first step then replaces (= Professional 02-08-2026). With
-  `global_element_dof_apply -no` the element takes its stresses from the
-  nodal values, and the factor acts on the calculation.
+- The reactivated element starts its integration point dofs (the
+  stresses included) from these nodal values, interpolated with its shape
+  functions, as a remeshed element (owner decision 2026-11-11). So the
+  factor and `_activate_all` act on the calculation: factor 1 continues
+  the stress state of the neighbours, factor 0 starts the free nodes
+  stress-free.
+- The Professional 02-08-2026 starts a reactivated element from zero
+  stresses whatever the factor. To get that start in the GNU, use
+  factor 0 with `_activate_all -yes` (all nodes of the element get zero
+  stresses and pore pressure before the element starts from them):
+
+  ```
+  control_mesh_remove_really_activate_factor index 0.
+  control_mesh_remove_really_activate_all    index -yes
+  ```
+
+  This gives the node dofs of a Professional run with its defaults
+  (`control_mesh_remove_recipe_really1`, `_recipe_chain1`: equal to
+  5e-11). The other integration point state (strains, history variables
+  of plasticity models) also starts from the nodal values in the GNU; the
+  recipe was measured with an elastic material.
 
 ## Usage
 
@@ -90,7 +104,12 @@ control_timestep                           20 1. 1.
 
 Self-checking inputs in `validation-suite/test-2026` (values and states =
 Professional 02-08-2026 unless a difference below says otherwise):
-`control_mesh_remove_really1` (the example, all stages),
+`control_mesh_remove_really1` (the example, all stages; the final dofs
+follow the GNU start from the nodal values),
+`control_mesh_remove_start1`, `_start05` (the integration point stresses
+are the interpolated nodal start, factor 1 and 0.5),
+`control_mesh_remove_recipe_really1`, `_recipe_chain1` (factor 0 with
+`_activate_all -yes` = the Professional default runs),
 `control_mesh_remove_factor1`, `_factor0`, `_factor_default1`,
 `_activate_all1` (the nodal values right after the reactivation),
 `control_mesh_remove_chain1`, `_chain2` (two stacked elements),
@@ -107,6 +126,17 @@ input errors `control_mesh_remove_factor_error1`,
   reactivation rule occur when the container is gone (as in the example).
 
 ## Differences with the Professional version
+
+- The GNU starts a reactivated element from the nodal values set by the
+  factor; the Professional starts it from zero stresses, so there the
+  factor and `_activate_all` do not change the results (identical for
+  factor 0, 0.5 and 1). With the default factor 1 the results differ (up
+  to 1.07 of 5.2 in a nodal stress of `control_mesh_remove_really1`);
+  factor 0 with `_activate_all -yes` gives the Professional default
+  results (DIVERGENCES REMOVE-REACTIVATION-START, owner decision
+  2026-11-11). The Professional's own run with factor 0 and
+  `_activate_all -yes` differs from its default run by the displacement
+  reset of REMOVE-ACTIVATE-ALL (node 4 `disx` 8.06e-4).
 
 - The Professional keeps an inactive element in the mesh
   (`element_remove_active -yes`, `element_empty -empty`) and its unused
