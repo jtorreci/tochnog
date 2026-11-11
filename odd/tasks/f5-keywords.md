@@ -186,7 +186,7 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
     already compacted once). Suite 1102 OK, 0 FALLO. PRISM18-MINIMAL class A confirmed by the owner (C132, 21 points).
   - [x] U9c (fd32b82, e6fa737, dd87da9, 1c258be) (S2-S6) prism12 continuum, -prism12 option of the extrude, VTK cell
     31. Interface prism12 is out of scope (refused, class B). Route: delegated (bounded writer; context backstop, as
-    U9a and U9b; 6104401 quad9 fix). Suite 1119 OK, 0 FALLO. Pending owner: PRISM12-DEFAULT / PRISM12-POST-POINT class D.
+    U9a and U9b; 6104401 quad9 fix). Suite 1119 OK, 0 FALLO. Owner confirmed PRISM12-DEFAULT / PRISM12-POST-POINT class D (2026-11-11).
 - [ ] T5 W6 other physics (25): baseline correction, force_edge_diagram, force_gravity_geometry,
   force_volume_element_group_0, groundflow_phreatic_*, group_beam_*, group_contact_spring_*,
   group_dof_initial*, group_time_fill, group_truss_elasti_elongation_force_diagram,
@@ -789,3 +789,5 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   tria6 sharing only a corner node), so no prism12/prism18 face occurs and no transition element is needed. Proposal
   "-prism12 pasa a prism18 en toda la malla si hay algún quad9, con aviso" accepted, verbatim: "si". Implemented
   inline (RED: prism12 and no warning; GREEN, suite 1119 OK, 0 FALLO); the class D row was removed.
+- 2026-11-11 owner, on PRISM12-DEFAULT (GNU 14 points of manual 6.623; Professional stops) and PRISM12-POST-POINT
+  (GNU analytic; Professional corner-only interpolation), verbatim: "confirmamos clase D". Both rows stay class D.
