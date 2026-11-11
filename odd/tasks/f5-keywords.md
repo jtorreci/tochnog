@@ -176,8 +176,9 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
     Route: delegated (bounded writer).
   - [x] U8 (dd2ee02) geometry_moving family (6) + control_geometry_moving: new module geometry_moving.cc.
     Route: delegated (bounded writer).
-  - [ ] U9 owner decisions still open: control_mesh_map, control_mesh_remove_really(+_activate_all/_factor,
-    _keep_geometry).
+  - [ ] U9 owner decisions still open: control_mesh_remove_really(+_activate_all/_factor, _keep_geometry).
+  - [ ] U9d control_mesh_map (manual 6.210, Pro test/other/map1): quadratic <-> linear mesh map as a solver first
+    guess. Owner: implement (2026-11-11). Route: delegated (bounded writer; context backstop of the parent session).
   - [x] U9a (3c93898, a1185ed, 505564d, b006671) (S3, S4, S6) Professional probes for quad6, continuum quad6,
     control_mesh_convert_quad9_quad6, VTK output of quad6 and prism15. Route: delegated (bounded writer; context
     backstop). Suite 1086 OK, 0 FALLO. QUAD6-3D class D confirmed by the owner (2026-11-10).
@@ -791,3 +792,6 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   inline (RED: prism12 and no warning; GREEN, suite 1119 OK, 0 FALLO); the class D row was removed.
 - 2026-11-11 owner, on PRISM12-DEFAULT (GNU 14 points of manual 6.623; Professional stops) and PRISM12-POST-POINT
   (GNU analytic; Professional corner-only interpolation), verbatim: "confirmamos clase D". Both rows stay class D.
+- 2026-11-11 owner, on control_mesh_map (implement vs class B), verbatim: "si acelera el cálculo creo que merece la pena
+  implementarlo. Es trabajo mediano". New task U9d. Existing map.cc is the remesh data map (map_element / map_node),
+  a candidate helper for the linear -> quadratic interpolation.
