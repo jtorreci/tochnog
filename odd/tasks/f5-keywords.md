@@ -878,3 +878,5 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   REMOVE-REACTIVATION-START with the recipe, user / developer pages and SEGUIMIENTO updated.
 - 2026-11-12 owner, on REMOVE-INACTIVE-RECORDS (GNU keeps inactive elements in its own records, = MESH-MAP-MID-NODES
   choice), verbatim: "si, clase B". Open: class D of REMOVE-NO-TIMESTEP / -ACTIVATE-ALL / -PRESSURE-GRAVITY; C126.
+- 2026-11-12 owner, on REMOVE-NO-TIMESTEP / REMOVE-ACTIVATE-ALL / REMOVE-PRESSURE-GRAVITY class D, verbatim: "si".
+  Open: C126 (-method1 geometric containment).
