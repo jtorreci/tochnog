@@ -876,3 +876,5 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   (3 of 43); GREEN 43 of 43, suite 1191 OK, 0 FALLO (226/226 runs); differential of the 93 U9e inputs against
   ac4bc9b identical (geometry_moving1 times out in both, common output prefix identical). Class D row
   REMOVE-REACTIVATION-START with the recipe, user / developer pages and SEGUIMIENTO updated.
+- 2026-11-12 owner, on REMOVE-INACTIVE-RECORDS (GNU keeps inactive elements in its own records, = MESH-MAP-MID-NODES
+  choice), verbatim: "si, clase B". Open: class D of REMOVE-NO-TIMESTEP / -ACTIVATE-ALL / -PRESSURE-GRAVITY; C126.
