@@ -923,3 +923,10 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   in both). Class D row REMOVE-METHOD1-INTPNT, Descarte row, user / developer pages, C126 note.
 - 2026-11-13 owner, on REMOVE-METHOD1-CURVED class D, verbatim: "confirmamos clase D". Tolerances kept as
   implemented (parent proposal, no objection). U9f closed; every U9 owner decision taken.
+- 2026-11-13 end-of-T4 independent verifier (HEAD 3b2dd42 vs baseline cdcf986): S1, S2, S3, S5, S6 PASS; S4 one
+  blocker: control_mesh_map and control_mesh_remove_really missing from both README indexes (fixed in the next
+  commit, with the stale mpc_geometry "Pending" note of manual-developer/mpc_element_group.md). Suite 1235 OK / 0 FALLO,
+  226/226. Invariant: 772 baseline inputs (test-2026 528, test-2014 244) run on both binaries, 758 identical, 14
+  explained (time_at_start, gz, bicg_csr_threads1 thread noise, C91 enum shift, expected new-name lists, intended U5a
+  extrude renumbering). Rejected inputs stop with the documented messages. Advisory: keyword probe accepts 68 new W5
+  names (tracker says 69). Pending for T4 closure: KEYWORD-GAP-REPORT W5 refresh (S5).

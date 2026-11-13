@@ -100,6 +100,8 @@ page lists its own in "Differences with the Professional version".
 - [prism12](prism12.md) — prism12_shape() (tria6_shape x 2-node interpolation_polynomial), pol() 14-point branch, recovery kind 1, point_el, post_element_force, the elem.cc interface refusal (F5 T4 U9c).
 - [control_mesh_extrude_element](control_mesh_extrude_element.md) — mesh_extrude tria6 -> prism18 with mid planes or -> prism12 without them, mesh_extrude_source(), the record check (F5 T4 U9b, U9c).
 - [control_mesh_convert_tria6_tria3](control_mesh_convert_tria6_tria3.md) — mesh_convert_tria6_tria3 in mesh.cc (F5 T4 U5b).
+- [control_mesh_map](control_mesh_map.md) — mesh_map.cc, called from step_start() after extrude(); element_map / element_map_node records (F5 T4 U9d).
+- [control_mesh_remove_really](control_mesh_remove_really.md) — mesh_remove.cc inactive elements (element_remove_inactive records), reactivation from the nodal values, -method1 by position and integration points, -method3 (F5 T4 U9e, U9f).
 - [control_mesh_duplicate_element_group](control_mesh_duplicate_element_group.md) — mesh_duplicate_element_group in delete.cc (F5 T4 U5c).
 - [control_mesh_renumber_offsets](control_mesh_renumber_offsets.md) — group / geometry offsets in the top.cc control_mesh_renumber block (F5 T4 U5c).
 - [mesh_correct](mesh_correct.md) — mesh_correct_interfaces in mesh.cc (F5 T4 U5d).

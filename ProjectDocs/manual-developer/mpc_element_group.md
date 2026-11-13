@@ -67,5 +67,5 @@ Gates: `mpc_apply` (global, default -yes) and `control_mpc_apply`
 - `mpc_element_group_always`, `_closest`, `_coord_geometry`, `_eps_iso`,
   `_keep` and `control_mpc_element_group`: implemented in F5 T4 U6
   (`mpc_element_group_index()`, see mpc_element_group_options.md).
-- `mpc_geometry` family (6.868-6.872) and `mpc_linear_quadratic` as
-  before: the geometry family is registered but not consumed.
+- `mpc_geometry` family (6.866-6.870): implemented in F5 T4 U7, see
+  mpc_geometry_options.md. `mpc_linear_quadratic`: used in mpc.cc.

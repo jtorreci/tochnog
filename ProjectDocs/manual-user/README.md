@@ -96,6 +96,8 @@ page lists its own in "Differences with the Professional version".
 - [prism12](prism12.md) — the 12-node prism (6.413, F5 T4 U9c): tria6 bottom and top layers, 14-point rule (7-point tria6 x 2 Gauss; the Professional default stops); no interface prism12.
 - [control_mesh_extrude_element](control_mesh_extrude_element.md) — the element a `-tria6` becomes in `control_mesh_extrude` (6.181, F5 T4 U9b, U9c): `-prism18` (default) or `-prism12`.
 - [control_mesh_convert_tria6_tria3](control_mesh_convert_tria6_tria3.md) — tria6 to the tria3 of its corners (6.161, F5 T4 U5b).
+- [control_mesh_map](control_mesh_map.md) — map quadratic elements to linear ones and back (6.210, F5 T4 U9d): a linear first guess for the iterative solver.
+- [control_mesh_remove_really](control_mesh_remove_really.md) — inactive removed elements and their reactivation (6.231-6.234, F5 T4 U9e): `_really`, `_activate_factor`, `_activate_all`, `control_mesh_remove_keep_geometry`.
 - [control_mesh_duplicate_element_group](control_mesh_duplicate_element_group.md) — copy the elements of a group to a new group (6.177, F5 T4 U5c).
 - [control_mesh_renumber_offsets](control_mesh_renumber_offsets.md) — control_mesh_renumber_element_group_offset / _geometry_offset (6.236, 6.237, F5 T4 U5c).
 - [mesh_correct](mesh_correct.md) — correct the node order of quad4 / hex8 interface elements (6.816, F5 T4 U5d).
