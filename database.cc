@@ -6703,6 +6703,8 @@ void db_initialize( long int dof_type[], long int dof_label[] )
 
   strcpy(name[METHOD2],"method2");
 
+  strcpy(name[METHOD3],"method3");
+
   strcpy(name[MIDDLE],"middle");
 
   strcpy(name[MINIMAL],"minimal");

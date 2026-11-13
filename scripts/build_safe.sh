@@ -2873,6 +2873,45 @@ map_dof_check control_mesh_remove_recipe_chain1 1e-9 \
   "4 -0.00263460509171 -0.0186586512729 -0.00344057524097 -0.0233601438102 1.50157104392 -0.394023832818 0 -19.3069672105 0 -3.56107923332|5 0.00263460509171 -0.0186586512729 0.00344057524097 -0.0233601438102 1.50157104392 0.394023832818 0 -19.3069672105 0 -3.56107923332|7 -0.00108534424827 -0.0330886386079 -0.00108534424827 -0.0377901311452 -0.270022603701 0.458586625793 0 -10.1246258171 0 -2.07892968416|8 0.00108534424827 -0.0330886386079 0.00108534424827 -0.0377901311452 -0.270022603701 -0.458586625793 0 -10.1246258171 0 -2.07892968416|10 -0.000433389287906 -0.037968321992 -0.000433389287906 -0.037968321992 -0.392380300221 0.271647900153 0 -5.1810986001 0 -1.11469578006|11 0.000433389287906 -0.037968321992 0.000433389287906 -0.037968321992 -0.392380300221 -0.271647900153 0 -5.1810986001 0 -1.11469578006"
 expected_error_ok "$T2026" control_mesh_remove_factor_error1
 expected_error_ok "$T2026" control_mesh_remove_really_error1
+# F5 T4 U9f: control_mesh_remove -method1 by position (BACKLOG C126) and
+# -method3 (manual 6.229). remove_elems_check <test> <"numbers">: the
+# element numbers of the final .dbs (= Professional 02-08-2026 probes,
+# except the curved quad9 of DIVERGENCES REMOVE-METHOD1-CURVED).
+remove_elems_check() {
+  local t="$1" want="$2" got
+  run_ok "$T2026" "$t"
+  got="$(awk '$1=="element"{print $2}' "$T2026/$t.dbs" 2>/dev/null | paste -sd' ')"
+  if [ "$got" = "$want" ]; then check_ok "$t (elements $want)"
+  else check_fail "$t" "elements '$got', expected '$want'"; fi
+}
+remove_elems_check control_mesh_remove_method1_inside1 "1"
+remove_elems_check control_mesh_remove_method1_boundary1 "1"
+remove_elems_check control_mesh_remove_method1_outside1 "1 2"
+remove_elems_check control_mesh_remove_method1_union1 "1 3"
+remove_elems_check control_mesh_remove_method1_gap1 "1 3"
+remove_elems_check control_mesh_remove_method1_group0 "1 2"
+remove_elems_check control_mesh_remove_method1_3d1 "1"
+remove_elems_check control_mesh_remove_method1_3d2 "1 2"
+remove_elems_check control_mesh_remove_method1_tet1 "1"
+remove_elems_check control_mesh_remove_method1_quad9_1 "1 2"
+remove_elems_check control_mesh_remove_method1_quad9_2 "1"
+remove_elems_check control_mesh_remove_method1_curved1 "1"
+remove_elems_check control_mesh_remove_method3_1 "1"
+remove_elems_check control_mesh_remove_method3_2 "1 2"
+expected_error_ok "$T2026" control_mesh_remove_method3_error1
+for t in control_mesh_remove_method1_react1 control_mesh_remove_method1_react2 \
+         control_mesh_remove_method3_react1 control_mesh_remove_method3_keep1; do
+  run_ok "$T2026" "$t"
+done
+remove_state_check control_mesh_remove_method1_react1 10 "element 1 -quad4 1 2 4 5|element 3 -quad4 11 12 13 14|element_remove_inactive 2 -quad4 4 5 7 8|element_remove_inactive_group 2 2" 8
+map_dof_check control_mesh_remove_method1_react1 1e-9 \
+  "1 0 0 0 0 -3.88497358161 -0.809841489675 0 -15.5398943264 0 -3.88497358161|2 0 0 0 0 -3.88497358161 0.809841489675 0 -15.5398943264 0 -3.88497358161|4 -0.00113764942597 -0.00928441235649 -0.00194361957522 -0.0139859048938 0.802218932558 -0.25445915175 0 -9.62974510805 0 -1.7655052351|5 0.00113764942597 -0.00928441235649 0.00194361957522 -0.0139859048938 0.802218932558 0.25445915175 0 -9.62974510805 0 -1.7655052351|7 -0.000415433779146 -0.0141726831578 -0.000415433779146 -0.0188741756951 -0.434666824475 0.300923186176 0 -5.20061545745 0 -1.12705645639|8 0.000415433779146 -0.0141726831578 0.000415433779146 -0.0188741756951 -0.434666824475 -0.300923186176 0 -5.20061545745 0 -1.12705645639"
+remove_state_check control_mesh_remove_method1_react2 20 "element 1 -quad4 1 2 4 5|element 3 -quad4 11 12 13 14|element_remove_inactive 2 -quad4 4 5 7 8|element_remove_inactive_group 2 2" 8
+remove_state_check control_mesh_remove_method3_react1 15 "element 1 -quad4 1 2 3 4|element_remove_inactive 2 -quad4 2 5 4 6" 4
+remove_state_check control_mesh_remove_method3_react1 20 "element 1 -quad4 1 2 3 4|element 2 -quad4 2 5 4 6" 6
+map_dof_check control_mesh_remove_method3_react1 1e-9 \
+  "1 0 0 0 0 -7.57727214307e-15 -14.9228481251 0 -3.03090885723e-14 0 -7.57727214307e-15|2 0 -0.0238148355003 0 -0.0358148355002 -0.102869166526 -10.5666571417 0 -0.411476666104 0 -0.102869166526|3 0 0 0 0 -7.59808882478e-15 -15.0771518749 0 -3.03923552991e-14 0 -7.59808882478e-15|4 0 -0.0241851644998 0 -0.0361851644997 3.45235157356 -10.7665506358 0 0.477328518917 0 0.785936018495|5 0 -0.0387199542804 0 -0.0507199542804 -0.266524658726 -3.54405060332 0 -1.0660986349 0 -0.266524658726|6 0.00639939733215 -0.0396794430518 0.00639939733215 -0.0516794430518 6.84391682144 -3.78953384162 0 0.711511735138 0 1.51108571132"
+remove_state_check control_mesh_remove_method3_keep1 20 "element 1 -quad4 1 2 3 4|element_remove_inactive 2 -quad4 2 5 4 6" 4
 # F5 T4 U5b: control_mesh_split_element_from / _element_to -prism6
 # (6.241, 6.242), the tria6 split of 6.240, control_mesh_convert_tria6_tria3
 # (6.161); meshes = Professional 02-08-2026 (ext_check above; the GNU

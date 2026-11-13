@@ -120,10 +120,13 @@ input errors `control_mesh_remove_factor_error1`,
 
 ## Notes
 
-- `-method1` matches node numbers (BACKLOG C126): an element is removed
-  when all its nodes are nodes of a container element, so the container
-  shares them and they stay active. The free nodes of the manual's
-  reactivation rule occur when the container is gone (as in the example).
+- With a container that shares the nodes (as in the example) the free
+  nodes of the manual's reactivation rule appear only when the container
+  is gone. Since F5 T4 U9f `-method1` tests positions, so a container with
+  its own nodes leaves the removed element's nodes free while it is still
+  there (`control_mesh_remove_method1_react1`, = Professional with the
+  recipe below); `-method3` (all nodes with an mpc) works the same way
+  (`control_mesh_remove_method3_react1`, `_keep1`).
 
 ## Differences with the Professional version
 

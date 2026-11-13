@@ -17,14 +17,24 @@
 */
 
 #include "tochnog.h"
+#include <vector>
 
 // control_mesh_remove (manual Professional 6.229-6.234), evaluated on every
 // step of a control index that has the record (step_start, top.cc).
 //
 //  -method1: an element of element_group_0 is removed when all its nodes
-//    are nodes of one element of element_group_1, element_group_2, ...
-//    (node numbers, not positions: BACKLOG C126). An element removed earlier
-//    in the same pass is no container any more.
+//    (mid nodes included) lie inside the active elements of element_group_1,
+//    element_group_2, ... (by position, point_el; F5 T4 U9f, BACKLOG C126).
+//    Measured on the Professional 02-08-2026: each node inside some
+//    reference element (an element spanning two of them is removed), the
+//    boundary counts as inside (tolerance
+//    in mesh_remove_reference_add), elements of element_group_0 are no
+//    reference elements, also when that group is listed again. A curved
+//    quadratic reference element is taken with its curved edges (the
+//    Professional takes its corner element: DIVERGENCES
+//    REMOVE-METHOD1-CURVED).
+//  -method3: an element is removed when all its nodes have an mpc (are the
+//    constrained node of an mpc_node_number record); no element groups.
 //  control_mesh_remove_geometry (6.230): only elements with every node in
 //    the geometry are removed.
 //  control_mesh_remove_really (6.232, default -yes): -yes deletes the
@@ -247,14 +257,97 @@ static void mesh_remove_activate( long int element, long int node_active[],
   if ( dof!=NULL ) delete[] dof;
 }
 
+// -method1 reference element: its name, node coordinates and bounding box
+struct MeshRemoveReference {
+  long int element, name, nnol;
+  double coords[MNOL*MDIM], low[MDIM], high[MDIM], eps_iso;
+};
+
+// Tolerance of the containment test, measured on the Professional
+// 02-08-2026 (F5 T4 U9f), node outside an edge by a distance d:
+//   quad4 / hex8 (point_el coordinates in [-1, 1]): inside up to 2e-4,
+//     outside from 2.05e-4 (the same for an element twice as large);
+//   tria3 (barycentric coordinates in [0, 1]): inside up to 0.825e-4,
+//     outside from 0.9e-4.
+// The GNU takes a value inside each window: 2.02e-4 for the bar /
+// quadrilateral / hexahedron families, 0.85e-4 for the triangle /
+// tetrahedron / prism families (tet and prism not measured).
+static void mesh_remove_reference_add( long int element,
+  std::vector<MeshRemoveReference> &reference )
+
+{
+  long int length=0, inol=0, idim=0, ldum=0, idum[1], el[1+MNOL];
+  double ddum[1];
+  MeshRemoveReference r;
+
+  db( ELEMENT, element, el, ddum, length, VERSION_NORMAL, GET );
+  r.element = element; r.name = el[0]; r.nnol = length - 1;
+  for ( inol=0; inol<r.nnol; inol++ )
+    db( NODE, el[1+inol], idum, &r.coords[inol*ndim], ldum, VERSION_NORMAL,
+      GET );
+  double size = 0.;
+  for ( idim=0; idim<ndim; idim++ ) {
+    r.low[idim] = r.high[idim] = r.coords[idim];
+    for ( inol=1; inol<r.nnol; inol++ ) {
+      double x = r.coords[inol*ndim+idim];
+      if ( x<r.low[idim] ) r.low[idim] = x;
+      if ( x>r.high[idim] ) r.high[idim] = x;
+    }
+    if ( r.high[idim]-r.low[idim]>size ) size = r.high[idim]-r.low[idim];
+  }
+  // bounding box prefilter, wider than the tolerance (curved edges of a
+  // quadratic element stay within the box of its nodes)
+  for ( idim=0; idim<ndim; idim++ ) {
+    r.low[idim] -= 1.e-2*size; r.high[idim] += 1.e-2*size;
+  }
+  if ( r.name==-TRIA3 || r.name==-TRIA6 || r.name==-TET4 ||
+       r.name==-TET10 || r.name==-PRISM6 || r.name==-PRISM12 ||
+       r.name==-PRISM15 || r.name==-PRISM18 )
+    r.eps_iso = 0.85e-4;
+  else
+    r.eps_iso = 2.02e-4;
+  reference.push_back( r );
+}
+
+// Every one of the nnol points (the nodes of element) inside some reference
+// element other than element itself (each point may lie in another one:
+// the Professional 02-08-2026 removes an element that spans two reference
+// elements), located with point_el (point_el.cc, the post_point locator)
+// on the full node list of the reference element.
+static long int mesh_remove_inside_reference( long int element,
+  double point[], long int nnol,
+  std::vector<MeshRemoveReference> &reference )
+
+{
+  long int inol=0, idim=0;
+  double weight[MNOL];
+
+  if ( nnol<1 || reference.empty() ) return 0;
+  for ( inol=0; inol<nnol; inol++ ) {
+    long int inside = 0;
+    for ( size_t ir=0; ir<reference.size() && !inside; ir++ ) {
+      MeshRemoveReference &r = reference[ir];
+      if ( r.element==element ) continue;
+      long int in_box = 1;
+      for ( idim=0; idim<ndim; idim++ )
+        if ( point[inol*ndim+idim]<r.low[idim] ||
+             point[inol*ndim+idim]>r.high[idim] ) in_box = 0;
+      if ( in_box && point_el( &point[inol*ndim], r.coords, weight, r.name,
+             r.nnol, r.eps_iso ) ) inside = 1;
+    }
+    if ( !inside ) return 0;
+  }
+  return 1;
+}
+
 void mesh_remove( long int icontrol )
 
 {
   long int method=0, length=0, ldum=0, ielem=0, max_elem=0, max_inactive=0,
-    max_node=0, jelem=0, inol=0, jnol=0, nnol=0, ngrp=0, i=0, inlist=0,
+    max_node=0, jelem=0, inol=0, nnol=0, ngrp=0, i=0, inlist=0,
     elem_group=0, really=-YES, activate_all=-NO, use_geometry=0,
     use_keep=0, nchanged=0, list[DATA_ITEM_SIZE], remove_geometry[2],
-    keep_geometry[2], idum[1], el[1+MNOL], elj[1+MNOL];
+    keep_geometry[2], idum[1], el[1+MNOL];
   long int *active=NULL, *inactive=NULL, *removed=NULL, *node_active=NULL,
     *assigned=NULL;
   double factor=1., ddum[1], node_coord[2*MNOL*MDIM];
@@ -298,10 +391,14 @@ void mesh_remove( long int icontrol )
   if ( max_inactive>max_elem ) max_elem = max_inactive;
   if ( max_elem<0 ) return;
 
-  if ( method!=-METHOD1 ) {
+  if ( method!=-METHOD1 && method!=-METHOD3 ) {
     cout << "Error: control_mesh_remove method must be -method1 or -method3.\n";
     exit(TN_EXIT_STATUS);
   }
+  // -method3 takes no element groups (manual 6.229; the Professional
+  // 02-08-2026 stops on them with this message)
+  if ( method==-METHOD3 && ngrp>0 ) db_error( CONTROL_MESH_REMOVE, icontrol );
+  long int evaluate = ( method==-METHOD1 && ngrp>=1 ) || method==-METHOD3;
 
   // the elements: active (in the mesh) or inactive (kept in the
   // element_remove_inactive records)
@@ -333,8 +430,41 @@ void mesh_remove( long int icontrol )
     for ( inol=1; inol<length; inol++ ) node_active[el[inol]] = 1;
   }
 
+  // -method1: the reference elements (active, of the groups list[2..] but
+  // not of element_group_0: Professional 02-08-2026)
+  std::vector<MeshRemoveReference> reference;
+  if ( method==-METHOD1 && ngrp>=1 ) {
+    for ( jelem=0; jelem<=max_elem; jelem++ ) {
+      if ( !active[jelem] ) continue;
+      long int jgrp = 0;
+      db( ELEMENT_GROUP, jelem, &jgrp, ddum, ldum, VERSION_NORMAL,
+        GET_IF_EXISTS );
+      if ( jgrp==list[1] ) continue;
+      inlist = 0;
+      for ( i=1; i<ngrp; i++ ) if ( jgrp==list[1+i] ) inlist = 1;
+      if ( !inlist ) continue;
+      mesh_remove_reference_add( jelem, reference );
+    }
+  }
+  // -method3: the nodes with an mpc (the constrained node, node_0, of an
+  // mpc_node_number record; the master nodes do not count: Professional
+  // 02-08-2026, as geometry_mpc in geometry.cc)
+  long int *node_mpc = NULL;
+  if ( method==-METHOD3 ) {
+    long int impc=0, max_mpc=0;
+    node_mpc = get_new_int( 1+max_node );
+    array_set( node_mpc, 0, 1+max_node );
+    db_max_index( MPC_NODE_NUMBER, max_mpc, VERSION_NORMAL, GET );
+    for ( impc=0; impc<=max_mpc; impc++ ) {
+      if ( !db_active_index( MPC_NODE_NUMBER, impc, VERSION_NORMAL ) )
+        continue;
+      long int slave = db_int( MPC_NODE_NUMBER, impc, VERSION_NORMAL )[0];
+      if ( slave>=0 && slave<=max_node ) node_mpc[slave] = 1;
+    }
+  }
+
   // which elements are removed in this pass
-  for ( ielem=0; ielem<=max_elem && ngrp>=1; ielem++ ) {
+  for ( ielem=0; ielem<=max_elem && evaluate; ielem++ ) {
     if ( !active[ielem] && !inactive[ielem] ) continue;
     elem_group = 0;
     if ( active[ielem] ) {
@@ -362,32 +492,25 @@ void mesh_remove( long int icontrol )
         in_geometry = mesh_remove_nodes_in_geometry( el, nnol,
           &node_coord[nnol*ndim], remove_geometry );
     }
-    if ( in_geometry && elem_group==list[1] ) {
-      // all nodes of ielem are nodes of an active element of the groups
-      // list[2..] that is not removed in this pass
-      long int inside_other = 0;
-      for ( jelem=0; jelem<=max_elem && !inside_other; jelem++ ) {
-        if ( jelem==ielem || !active[jelem] || removed[jelem] ) continue;
-        long int jgrp = 0;
-        db( ELEMENT_GROUP, jelem, &jgrp, ddum, ldum, VERSION_NORMAL,
-          GET_IF_EXISTS );
-        inlist = 0;
-        for ( i=1; i<ngrp; i++ ) {
-          if ( jgrp==list[1+i] ) inlist = 1;
-        }
-        if ( !inlist ) continue;
-        long int length_j = 0;
-        db( ELEMENT, jelem, elj, ddum, length_j, VERSION_NORMAL, GET );
-        long int all_in = 1;
-        for ( inol=0; inol<nnol && all_in; inol++ ) {
-          long int found = 0;
-          for ( jnol=1; jnol<length_j; jnol++ )
-            if ( el[1+inol]==elj[jnol] ) found = 1;
-          if ( !found ) all_in = 0;
-        }
-        if ( all_in ) inside_other = 1;
+    if ( in_geometry && method==-METHOD1 && elem_group==list[1] ) {
+      // every node of ielem inside a reference element (by position)
+      double point[MNOL*MDIM];
+      for ( inol=0; inol<nnol; inol++ ) {
+        long int inod = el[1+inol];
+        if ( db_active_index( NODE, inod, VERSION_NORMAL ) )
+          db( NODE, inod, idum, &point[inol*ndim], ldum, VERSION_NORMAL,
+            GET );
+        else
+          array_move( &node_coord[inol*ndim], &point[inol*ndim], ndim );
       }
-      if ( inside_other ) removed[ielem] = 1;
+      if ( mesh_remove_inside_reference( ielem, point, nnol, reference ) )
+        removed[ielem] = 1;
+    }
+    else if ( in_geometry && method==-METHOD3 && nnol>0 ) {
+      long int all_mpc = 1;
+      for ( inol=0; inol<nnol; inol++ )
+        if ( el[1+inol]>max_node || !node_mpc[el[1+inol]] ) all_mpc = 0;
+      if ( all_mpc ) removed[ielem] = 1;
     }
     // control_mesh_remove_keep_geometry (6.231): an inactive element
     // stays removed when all its nodes are in the geometry
@@ -396,6 +519,7 @@ void mesh_remove( long int icontrol )
            keep_geometry ) )
       removed[ielem] = 1;
   }
+  if ( node_mpc!=NULL ) delete[] node_mpc;
 
   // remove: delete, or make inactive
   for ( ielem=0; ielem<=max_elem; ielem++ ) {
@@ -426,5 +550,5 @@ void mesh_remove( long int icontrol )
   delete[] assigned;
 
   // as before U9e: the mesh change after every -method1 pass with groups
-  if ( ngrp>=1 || nchanged>0 ) mesh_has_changed( VERSION_NORMAL );
+  if ( ( method==-METHOD1 && ngrp>=1 ) || nchanged>0 ) mesh_has_changed( VERSION_NORMAL );
 }

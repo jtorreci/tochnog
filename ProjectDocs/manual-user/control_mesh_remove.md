@@ -6,12 +6,11 @@ Deletes mesh elements according to a method. Used to remove parts of a mesh
 that are completely covered by (inside) elements of other groups, e.g. to
 remove embedded/surrounded volumes before an analysis.
 
-Partially implemented: only `-method1` works in this version.
-
 ## Usage
 
 ```
-control_mesh_remove <index> <method> element_group_0 [element_group_1 ...]
+control_mesh_remove <index> -method1 element_group_0 element_group_1 [element_group_2 ...]
+control_mesh_remove <index> -method3
 ```
 
 ## Parameters
@@ -19,12 +18,52 @@ control_mesh_remove <index> <method> element_group_0 [element_group_1 ...]
 | Parameter | Meaning |
 |-----------|---------|
 | `index` | Control item index (usually `0`). |
-| `method` | `-method1`: remove the elements of `element_group_0` that are completely inside elements of the other listed groups. |
-| `element_group_0` | Group whose elements are candidates for removal. |
-| `element_group_n` | Groups whose elements are used as the containment reference. |
+| `method` | `-method1`: remove the elements of `element_group_0` that are completely inside elements of the other listed groups. `-method3`: remove the elements whose nodes all have an mpc. |
+| `element_group_0` | `-method1`: group whose elements are candidates for removal. |
+| `element_group_n` | `-method1`: groups whose elements are the reference (the containers). |
 
-Note: `-method3` (remove elements where all nodes have an mpc) is NOT
-implemented in this version; only `-method1` is accepted.
+### -method1: completely located inside (manual 6.229)
+
+An element of `element_group_0` is removed when every node of it (the mid
+nodes of a quadratic element included) lies inside an active element of
+the groups `element_group_1`, `element_group_2`, ..., by position: the
+meshes need not share nodes (F5 T4 U9f; before, the GNU compared node
+numbers, BACKLOG C126). As measured on the Professional 02-08-2026:
+
+- each node may lie in another reference element (an element over two
+  reference elements is removed, also over a gap between them: only the
+  nodes are tested);
+- a node on the boundary of a reference element is inside; the tolerance
+  is about 1e-4 of the size of the reference element: 2.02e-4 in the
+  [-1, 1] coordinates of a bar / quadrilateral / hexahedron (Professional:
+  inside at 2e-4, outside at 2.05e-4), 0.85e-4 in the barycentric
+  coordinates of a triangle / tetrahedron / prism (Professional tria3:
+  inside at 0.825e-4, outside at 0.9e-4; tetrahedron and prism not
+  measured);
+- elements of `element_group_0` are no reference elements, also when that
+  group is listed again (`-method1 2 2` removes nothing);
+- 2D and 3D, linear and quadratic elements; the points are located with
+  the `post_point` locator (`point_el`).
+
+### -method3: all nodes with an mpc (manual 6.229)
+
+An element is removed when each of its nodes has an mpc, that is, is the
+constrained node (`node_0`) of an `mpc_node_number` record (the input ones
+and those the GNU generates, for example from `mpc_element_group` or `mpc_linear_quadratic`,
+...). A node that is only a master node has no mpc (Professional
+02-08-2026). `-method3` takes no element groups: with groups the run
+stops with `Error detected for data item : control_mesh_remove`.
+
+Both methods combine with `control_mesh_remove_geometry`,
+`control_mesh_remove_really -no` and `_keep_geometry` (an inactive
+element stays removed while all its nodes have an mpc).
+
+Tests in `validation-suite/test-2026` (= Professional 02-08-2026 unless a
+difference below says otherwise): `control_mesh_remove_method1_inside1`,
+`_boundary1`, `_outside1`, `_union1`, `_gap1`, `_group0`, `_3d1`, `_3d2`,
+`_tet1`, `_quad9_1`, `_quad9_2`, `_curved1`, `_react1`, `_react2`;
+`control_mesh_remove_method3_1`, `_2`, `_error1`, `_react1`, `_keep1`;
+node-sharing meshes `remove_method1_1`, `remove_geometry1`, `_2`.
 
 ## Restricting the remove to a geometry
 
@@ -61,6 +100,16 @@ Remove the elements of group 0 that are inside elements of group 1:
 control_mesh_remove 0 -method1 0 1
 ```
 
-After this record, every element of group 0 whose nodes are all contained in
-an element of group 1 is removed from the mesh (with all its associated element
-data).
+After this record, every element of group 0 whose nodes all lie inside
+elements of group 1 is removed from the mesh (with all its associated
+element data).
+
+## Differences with the Professional version
+
+- A curved quadratic reference element (a mid node off the straight edge):
+  the GNU tests the curved element; the Professional tests the straight
+  element of its corner nodes, so a node between the straight and the
+  curved edge is inside in the GNU only (`control_mesh_remove_method1_
+  curved1`; DIVERGENCES REMOVE-METHOD1-CURVED).
+- The tolerances above are values inside the measured Professional
+  windows, not its exact limits.

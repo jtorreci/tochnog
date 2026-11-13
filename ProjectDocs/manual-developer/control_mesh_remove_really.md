@@ -109,5 +109,5 @@ elements in order, a node set once, zero without active nodes;
 - The numbers of inactive elements and their nodes are not renumbered by
   `control_mesh_renumber` or a remesh; an element created on the number of
   an inactive element stops the reactivation with an error.
-- `-method3` is not implemented (BACKLOG C126), `-method1` matches node
-  numbers.
+- The `-method1` / `-method3` decision is evaluated for the inactive
+  elements too, on their kept node coordinates (F5 T4 U9f).

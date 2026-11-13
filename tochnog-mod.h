@@ -1136,6 +1136,7 @@ enum {
   METHOD0,
   METHOD1,
   METHOD2,
+  METHOD3, // F5 T4 U9f: control_mesh_remove -method3 (manual 6.229)
   MG,
   MIDDLE,
   MOMENT,
