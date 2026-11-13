@@ -1,6 +1,9 @@
-( F5 T4 U9f: -method1 tests the nodes only: the quad4 of group 2 spans a
-  gap between two reference elements, its nodes are all inside one of
-  them, so it is removed (= Professional 02-08-2026). )
+( F5 T4 U9f: -method1 tests the nodes and the integration points. The
+  quad4 of group 2 spans the gap 1 < x < 1.5 between two reference
+  elements, but its nodes and its integration points (x = 0.423, 1.577)
+  are all inside them, so it is removed (= Professional 02-08-2026, which
+  tests the nodes only): the limit of the sampling, a gap between the
+  integration points is not seen (DIVERGENCES REMOVE-METHOD1-INTPNT). )
 echo -no
 number_of_space_dimensions 2
 materi_velocity

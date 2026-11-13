@@ -30,9 +30,24 @@ the groups `element_group_1`, `element_group_2`, ..., by position: the
 meshes need not share nodes (F5 T4 U9f; before, the GNU compared node
 numbers, BACKLOG C126). As measured on the Professional 02-08-2026:
 
-- each node may lie in another reference element (an element over two
-  reference elements is removed, also over a gap between them: only the
-  nodes are tested);
+- the integration points of the element are tested as well (owner
+  decision 2026-11-13; the Professional tests the nodes only): an element
+  is removed only when its nodes and its integration points all lie inside
+  reference elements, with the same tolerance. So an element over a gap
+  between two reference elements, or over the outside of a reentrant
+  corner, is kept when an integration point falls there
+  (`control_mesh_remove_method1_gap2`, `_lcorner1`);
+- this is a sampling: a gap or corner between the integration points is
+  not seen (`control_mesh_remove_method1_gap1`: a gap 1 < x < 1.5 under an
+  element with integration points at x = 0.42 and 1.58 is removed). A
+  curved quadratic element that bulges out of a convex reference element
+  between its nodes is not detected either: its integration points stay
+  inside (no valid quad9 layout with all nodes in a square was found with
+  an integration point outside);
+- each point may lie in another reference element (an element over two
+  adjacent reference elements is removed, `_union1`);
+- elements without an integration rule (trusses, beams, springs) and
+  interface elements are tested on their nodes only;
 - a node on the boundary of a reference element is inside; the tolerance
   is about 1e-4 of the size of the reference element: 2.02e-4 in the
   [-1, 1] coordinates of a bar / quadrilateral / hexahedron (Professional:
@@ -60,7 +75,7 @@ element stays removed while all its nodes have an mpc).
 
 Tests in `validation-suite/test-2026` (= Professional 02-08-2026 unless a
 difference below says otherwise): `control_mesh_remove_method1_inside1`,
-`_boundary1`, `_outside1`, `_union1`, `_gap1`, `_group0`, `_3d1`, `_3d2`,
+`_boundary1`, `_outside1`, `_union1`, `_gap1`, `_gap2`, `_lcorner1`, `_group0`, `_3d1`, `_3d2`,
 `_tet1`, `_quad9_1`, `_quad9_2`, `_curved1`, `_react1`, `_react2`;
 `control_mesh_remove_method3_1`, `_2`, `_error1`, `_react1`, `_keep1`;
 node-sharing meshes `remove_method1_1`, `remove_geometry1`, `_2`.
@@ -111,5 +126,8 @@ element data).
   element of its corner nodes, so a node between the straight and the
   curved edge is inside in the GNU only (`control_mesh_remove_method1_
   curved1`; DIVERGENCES REMOVE-METHOD1-CURVED).
+- The GNU also tests the integration points; the Professional tests the
+  nodes only and removes the elements of `control_mesh_remove_method1_gap2`
+  and `_lcorner1` (DIVERGENCES REMOVE-METHOD1-INTPNT).
 - The tolerances above are values inside the measured Professional
   windows, not its exact limits.

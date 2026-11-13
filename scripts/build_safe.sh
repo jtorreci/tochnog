@@ -2876,7 +2876,8 @@ expected_error_ok "$T2026" control_mesh_remove_really_error1
 # F5 T4 U9f: control_mesh_remove -method1 by position (BACKLOG C126) and
 # -method3 (manual 6.229). remove_elems_check <test> <"numbers">: the
 # element numbers of the final .dbs (= Professional 02-08-2026 probes,
-# except the curved quad9 of DIVERGENCES REMOVE-METHOD1-CURVED).
+# except the curved quad9 of DIVERGENCES REMOVE-METHOD1-CURVED and the
+# integration-point cases gap2 / lcorner1 of REMOVE-METHOD1-INTPNT).
 remove_elems_check() {
   local t="$1" want="$2" got
   run_ok "$T2026" "$t"
@@ -2889,6 +2890,8 @@ remove_elems_check control_mesh_remove_method1_boundary1 "1"
 remove_elems_check control_mesh_remove_method1_outside1 "1 2"
 remove_elems_check control_mesh_remove_method1_union1 "1 3"
 remove_elems_check control_mesh_remove_method1_gap1 "1 3"
+remove_elems_check control_mesh_remove_method1_gap2 "1 2 3"
+remove_elems_check control_mesh_remove_method1_lcorner1 "1 2 3"
 remove_elems_check control_mesh_remove_method1_group0 "1 2"
 remove_elems_check control_mesh_remove_method1_3d1 "1"
 remove_elems_check control_mesh_remove_method1_3d2 "1 2"

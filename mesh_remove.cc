@@ -23,7 +23,8 @@
 // step of a control index that has the record (step_start, top.cc).
 //
 //  -method1: an element of element_group_0 is removed when all its nodes
-//    (mid nodes included) lie inside the active elements of element_group_1,
+//    (mid nodes included) and all its integration points (owner decision
+//    2026-11-13; the Professional tests the nodes only) lie inside the active elements of element_group_1,
 //    element_group_2, ... (by position, point_el; F5 T4 U9f, BACKLOG C126).
 //    Measured on the Professional 02-08-2026: each node inside some
 //    reference element (an element spanning two of them is removed), the
@@ -340,6 +341,53 @@ static long int mesh_remove_inside_reference( long int element,
   return 1;
 }
 
+// The integration points of the element (el, nnol nodes at point[]) inside
+// the reference elements too (owner decision 2026-11-13, manual 6.229
+// "completely located inside"; the Professional 02-08-2026 tests the nodes
+// only: DIVERGENCES REMOVE-METHOD1-INTPNT). The points are those of the
+// element's integration rule, from pol() as element_intpnt_set (polynom.cc)
+// computes them: global coordinates = h x node coordinates. A sampling: a
+// gap or corner narrower than the spacing of the integration points is not
+// seen. Elements without an integration rule (trusses, springs, ...) and
+// interface elements are tested on their nodes only. pol() checks the
+// ELEMENT record of the element, which an inactive element does not have:
+// it is put for the call and deleted again.
+static long int mesh_remove_intpnt_inside( long int element, long int active,
+  long int el[], long int nnol, long int element_group, double point[],
+  std::vector<MeshRemoveReference> &reference )
+
+{
+  long int npoint=0, ip=0, length=1+nnol;
+  double ddum[1], save_shape_factor=check_element_shape_factor;
+
+  if ( !element_intpnt_supported( el[0], nnol ) ||
+       db_active_index( GROUP_INTERFACE, element_group, VERSION_NORMAL ) )
+    return 1;
+  double *h = get_new_dbl( MPOINT*MNOL );
+  double *old_d = get_new_dbl( MPOINT*MDIM*MNOL );
+  double *new_d = get_new_dbl( MPOINT*MDIM*MNOL );
+  double *new_b = get_new_dbl( MPOINT*MSTRAIN*MNOL*MDIM );
+  double *volume = get_new_dbl( MPOINT );
+  double *ip_coord = get_new_dbl( MPOINT*MDIM );
+
+  if ( !active )
+    db( ELEMENT, element, el, ddum, length, VERSION_NORMAL, PUT );
+  check_element_shape_factor = 0.;
+  pol( element, element_group, el[0], nnol, point, point, npoint, h,
+    old_d, new_d, new_b, volume );
+  check_element_shape_factor = save_shape_factor;
+  if ( !active ) db_delete_index( ELEMENT, element, VERSION_NORMAL );
+
+  for ( ip=0; ip<npoint; ip++ )
+    matrix_ab( &h[ip*nnol], point, &ip_coord[ip*ndim], 1, nnol, ndim );
+  long int inside = mesh_remove_inside_reference( element, ip_coord, npoint,
+    reference );
+
+  delete[] h; delete[] old_d; delete[] new_d; delete[] new_b;
+  delete[] volume; delete[] ip_coord;
+  return inside;
+}
+
 void mesh_remove( long int icontrol )
 
 {
@@ -503,7 +551,9 @@ void mesh_remove( long int icontrol )
         else
           array_move( &node_coord[inol*ndim], &point[inol*ndim], ndim );
       }
-      if ( mesh_remove_inside_reference( ielem, point, nnol, reference ) )
+      if ( mesh_remove_inside_reference( ielem, point, nnol, reference ) &&
+           mesh_remove_intpnt_inside( ielem, active[ielem], el, nnol,
+             elem_group, point, reference ) )
         removed[ielem] = 1;
     }
     else if ( in_geometry && method==-METHOD3 && nnol>0 ) {
