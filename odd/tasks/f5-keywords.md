@@ -177,10 +177,11 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   - [x] U8 (dd2ee02) geometry_moving family (6) + control_geometry_moving: new module geometry_moving.cc.
     Route: delegated (bounded writer).
   - [x] U9 owner decisions: all taken (2026-11-11).
-  - [x] U9f (d13d4e2) (S2-S5) (C126) control_mesh_remove -method1 geometric containment (manual 6.229 "completely located inside")
+  - [x] U9f (d13d4e2, 728e997) (S2-S5) (C126) control_mesh_remove -method1 geometric containment (manual 6.229 "completely located inside")
     and -method3 (all nodes have node_mpc). Owner: implement (2026-11-13). Route: delegated (bounded writer, same as
-    U9e; context backstop). RED: 22 of 40 new checks fail on 31c00c6; GREEN suite 1231 OK, 0 FALLO. Owner questions
-    open: REMOVE-METHOD1-CURVED (D); node-only test over a gap mirrored from the Professional.
+    U9e; context backstop). RED: 22 of 40 new checks fail on 31c00c6; GREEN suite 1231 OK, 0 FALLO. Integration points
+    (owner 2026-11-13, 728e997): RED gap2 / lcorner1 fail on d13d4e2, GREEN suite 1235 OK, 0 FALLO; class D
+    REMOVE-METHOD1-INTPNT. Owner questions open: REMOVE-METHOD1-CURVED (D); tolerance values (tet / prism not measured).
   - [x] U9e (5f08f81, 9c08983) (S2-S5) control_mesh_remove_really (6.232), _really_activate_all (6.233), _really_activate_factor
     (6.234), control_mesh_remove_keep_geometry (6.231). Owner: implement (2026-11-11). Route: delegated (bounded writer;
     context backstop of the parent session). RED: base 896978f "I don't know what to do with : control_mesh_remove_really",
@@ -909,3 +910,14 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   is larger than a gap, a reentrant corner or a curvature of the reference region; proposed also testing the
   integration points of the element with the same locator (class D). Owner, verbatim: "si, añadámosla y lo
   documentamos". U9f reopened.
+- 2026-11-13 U9f integration points writer result (728e997): -method1 also locates the integration points of the
+  element (pol() h x node coordinates, as element_intpnt_set; an inactive element gets its ELEMENT record only for the
+  pol() call; no integration rule or interface group: nodes only). Tests RED first: control_mesh_remove_method1_gap2
+  (gap 1.5 < x < 1.7 under the integration point x = 1.577) and _lcorner1 (L of [0,2]x[0,0.5] and [0,0.5]x[0.5,2],
+  convex quad4 with the integration point (1.577, 0.644) outside the reentrant corner) fail on d13d4e2 (2 of 87),
+  GREEN 87 of 87; the Professional removes both (nodes only). Limits documented: _gap1 (gap 1 < x < 1.5 between the
+  points) still removed; a quad9 bulging out of a convex reference element between its nodes is not constructible with
+  an integration point outside (random search of 200000 valid quad9 layouts in a square found none), so no bulge test;
+  a first L geometry (quad4 vertices 0.1/1.9) put no integration point outside either. Suite 1235 OK, 0 FALLO (226/226);
+  differential of the 111 U9f inputs against d13d4e2 identical except the build-date line (geometry_moving1 times out
+  in both). Class D row REMOVE-METHOD1-INTPNT, Descarte row, user / developer pages, C126 note.
