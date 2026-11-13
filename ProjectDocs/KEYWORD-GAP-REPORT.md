@@ -100,6 +100,18 @@ is complete: the two names still reported, `materi_history_variable` and
 `materi_strain_energy`, are initialisation names normalised by `input.cc`
 (they are not `db_number` records).
 
+Update 2026-11-13 (end of F5 wave W5 geometry, mesh tools, mpc, dependency, `16f3721`): the
+2026-11-01 list probed again on the build of the same sources (`scripts/keyword_probe.cc` linked
+with the build objects): 199 of the 320 names are accepted (68 more than after W2/W3); accepted
+1023 + 6 literals, missing **121** = 63 GiD (discarded) + **58** pending. The 58 are the F5 T5
+other-physics names (baseline correction, force_edge_diagram, force_gravity_geometry,
+`force_volume_element_group_0`, `groundflow_phreatic_*`, `group_beam_*`, `group_contact_spring_*`,
+`group_dof_initial*`, `group_time_fill`, `group_truss_elasti_elongation_force_diagram`,
+`slide_damping`, `control_slide_damping_apply`, `slide_user`, `strain_volume_*`), the 31
+`safety_*` names of T6, and the two initialisation names `materi_history_variable` /
+`materi_strain_energy` normalised by `input.cc`. None of the 58 is a T4 (W5) name. The T4 tracker counted 69 W5 names, the probe shows 68 newly
+accepted; the one-name difference in the 2026-11-08 count is not explained.
+
 ## Gap by family
 
 | Family | Missing | Notes |

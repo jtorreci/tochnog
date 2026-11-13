@@ -142,7 +142,7 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
     interpolation with the current void ratio, DIVERGENCES DIPRISCO-DENSITY; C119 found).
   - [x] E3 niemunis_visco (+ _ocr, control ..._ocr_apply): route inline (explorer mapped the thesis), commit
     8f45881; owner 2026-11-07: b2 < 0 rejected per manual (DIVERGENCES NIEMUNIS-VISCO-B2); C120 found.
-- [ ] T4 W5 geometry, mesh tools, mpc, dependency (69). Route: per family.
+- [x] T4 W5 geometry, mesh tools, mpc, dependency (69). Route: per family. Closed 2026-11-13 (verifier, 16f3721).
   Probe 2026-11-08 (clean build of cdcf986): exactly 69 W5 names rejected. Map by a read-only explorer
   (mapping trigger: 69 names across ~12 files), summary in Log L-T4-map. Units:
   - [x] U1 aliases control_mesh_delete_geometry_element_group, geometry_triangle_eps_iso,
@@ -930,3 +930,7 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   explained (time_at_start, gz, bicg_csr_threads1 thread noise, C91 enum shift, expected new-name lists, intended U5a
   extrude renumbering). Rejected inputs stop with the documented messages. Advisory: keyword probe accepts 68 new W5
   names (tracker says 69). Pending for T4 closure: KEYWORD-GAP-REPORT W5 refresh (S5).
+- 2026-11-13 S5 refresh at the end of W5: probe on the build of 16f3721, 199 of the 320 names of the 2026-11-01
+  list accepted (68 more than after W2/W3), missing 121 = 63 GiD + 58 pending (T5, T6 safety_*, 2 initialisation
+  literals); none of the 58 is a T4 name. The tracker 69 vs observed 68 is not explained. KEYWORD-GAP-REPORT
+  updated. T4 closed. Next: T5 W6 other physics.
