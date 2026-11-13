@@ -181,7 +181,7 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
     and -method3 (all nodes have node_mpc). Owner: implement (2026-11-13). Route: delegated (bounded writer, same as
     U9e; context backstop). RED: 22 of 40 new checks fail on 31c00c6; GREEN suite 1231 OK, 0 FALLO. Integration points
     (owner 2026-11-13, 728e997): RED gap2 / lcorner1 fail on d13d4e2, GREEN suite 1235 OK, 0 FALLO; class D
-    REMOVE-METHOD1-INTPNT. Owner questions open: REMOVE-METHOD1-CURVED (D); tolerance values (tet / prism not measured).
+    REMOVE-METHOD1-INTPNT. REMOVE-METHOD1-CURVED class D confirmed 2026-11-13; tolerance values kept (tet / prism not measured).
   - [x] U9e (5f08f81, 9c08983) (S2-S5) control_mesh_remove_really (6.232), _really_activate_all (6.233), _really_activate_factor
     (6.234), control_mesh_remove_keep_geometry (6.231). Owner: implement (2026-11-11). Route: delegated (bounded writer;
     context backstop of the parent session). RED: base 896978f "I don't know what to do with : control_mesh_remove_really",
@@ -921,3 +921,5 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   a first L geometry (quad4 vertices 0.1/1.9) put no integration point outside either. Suite 1235 OK, 0 FALLO (226/226);
   differential of the 111 U9f inputs against d13d4e2 identical except the build-date line (geometry_moving1 times out
   in both). Class D row REMOVE-METHOD1-INTPNT, Descarte row, user / developer pages, C126 note.
+- 2026-11-13 owner, on REMOVE-METHOD1-CURVED class D, verbatim: "confirmamos clase D". Tolerances kept as
+  implemented (parent proposal, no objection). U9f closed; every U9 owner decision taken.
