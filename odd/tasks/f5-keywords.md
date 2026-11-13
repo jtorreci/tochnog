@@ -903,3 +903,9 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   runs). Differential of 111 inputs (the 93 U9e inputs + every tracked input with control_mesh_remove) against
   31c00c6: identical except the tochnog_version build-date line (geometry_moving1 times out in both, common prefix
   identical); no existing input used non-node-sharing -method1 meshes. C126 closed in BACKLOG.
+- 2026-11-13 owner, on the -method1 nodes-only test (Professional removes an element spanning a gap between containers),
+  verbatim: "creo que es más riguroso seguir al manual, aunqeu más complicado. ¿crees que hay muchos casos en los que
+  vayamos a notar la divergencia, o la limitación del Profesional es asumible?". Parent: visible only when an element
+  is larger than a gap, a reentrant corner or a curvature of the reference region; proposed also testing the
+  integration points of the element with the same locator (class D). Owner, verbatim: "si, añadámosla y lo
+  documentamos". U9f reopened.
