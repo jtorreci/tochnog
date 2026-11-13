@@ -177,6 +177,9 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   - [x] U8 (dd2ee02) geometry_moving family (6) + control_geometry_moving: new module geometry_moving.cc.
     Route: delegated (bounded writer).
   - [x] U9 owner decisions: all taken (2026-11-11).
+  - [ ] U9f (C126) control_mesh_remove -method1 geometric containment (manual 6.229 "completely located inside")
+    and -method3 (all nodes have node_mpc). Owner: implement (2026-11-13). Route: delegated (bounded writer, same as
+    U9e; context backstop).
   - [x] U9e (5f08f81, 9c08983) (S2-S5) control_mesh_remove_really (6.232), _really_activate_all (6.233), _really_activate_factor
     (6.234), control_mesh_remove_keep_geometry (6.231). Owner: implement (2026-11-11). Route: delegated (bounded writer;
     context backstop of the parent session). RED: base 896978f "I don't know what to do with : control_mesh_remove_really",
@@ -880,3 +883,5 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   choice), verbatim: "si, clase B". Open: class D of REMOVE-NO-TIMESTEP / -ACTIVATE-ALL / -PRESSURE-GRAVITY; C126.
 - 2026-11-12 owner, on REMOVE-NO-TIMESTEP / REMOVE-ACTIVATE-ALL / REMOVE-PRESSURE-GRAVITY class D, verbatim: "si".
   Open: C126 (-method1 geometric containment).
+- 2026-11-13 owner, on C126 (implement -method1 geometric containment with -method3), verbatim: "si, me parece
+  correcto". New task U9f.
