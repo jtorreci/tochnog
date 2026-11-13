@@ -177,9 +177,10 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   - [x] U8 (dd2ee02) geometry_moving family (6) + control_geometry_moving: new module geometry_moving.cc.
     Route: delegated (bounded writer).
   - [x] U9 owner decisions: all taken (2026-11-11).
-  - [ ] U9f (C126) control_mesh_remove -method1 geometric containment (manual 6.229 "completely located inside")
+  - [x] U9f (d13d4e2) (S2-S5) (C126) control_mesh_remove -method1 geometric containment (manual 6.229 "completely located inside")
     and -method3 (all nodes have node_mpc). Owner: implement (2026-11-13). Route: delegated (bounded writer, same as
-    U9e; context backstop).
+    U9e; context backstop). RED: 22 of 40 new checks fail on 31c00c6; GREEN suite 1231 OK, 0 FALLO. Owner questions
+    open: REMOVE-METHOD1-CURVED (D); node-only test over a gap mirrored from the Professional.
   - [x] U9e (5f08f81, 9c08983) (S2-S5) control_mesh_remove_really (6.232), _really_activate_all (6.233), _really_activate_factor
     (6.234), control_mesh_remove_keep_geometry (6.231). Owner: implement (2026-11-11). Route: delegated (bounded writer;
     context backstop of the parent session). RED: base 896978f "I don't know what to do with : control_mesh_remove_really",
@@ -885,3 +886,20 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   Open: C126 (-method1 geometric containment).
 - 2026-11-13 owner, on C126 (implement -method1 geometric containment with -method3), verbatim: "si, me parece
   correcto". New task U9f.
+- 2026-11-13 U9f writer result (d13d4e2): -method1 by position in mesh_remove.cc (reference elements collected per
+  pass with a bounding-box prefilter, each candidate node located with point_el on the full node list of a reference
+  element) and -method3 (node flags from the constrained node of the mpc_node_number records; METHOD3 word added).
+  Professional probes (~60): union of references node by node (an element over two references and over a gap between
+  them is removed: only nodes are tested), boundary inside, tolerance windows quad4 / hex8 [2e-4 in, 2.05e-4 out] in
+  [-1, 1] coordinates (scales with the element), tria3 [0.825e-4 in, 0.9e-4 out] barycentric; GNU eps 2.02e-4 /
+  0.85e-4 (tet / prism not measured, simplex value); element_group_0 elements are no references (-method1 2 2 removes
+  nothing; the old node match removed one of two coincident elements); every node of a quadratic element tested; a
+  curved quad9 reference is its straight corner element in the Professional, curved in the GNU (REMOVE-METHOD1-CURVED,
+  D); -method3: masters do not count, groups stop with "Error detected for data item : control_mesh_remove";
+  -method3 with _really -no / control_data_delete of an mpc / _keep_geometry = Professional states; the GNU runs with
+  mpc records on nodes it deleted while inactive. Reactivation with a geometric container (p7) and with -method3 (w1):
+  GNU recipe (factor 0 + _activate_all -yes) = Professional default to 5e-11 / 4e-11. RED: base 31c00c6 fails 22 of
+  the 40 new checks (node match, -method3 unknown); GREEN 83 of 83 U9e + U9f checks, suite 1231 OK, 0 FALLO (226/226
+  runs). Differential of 111 inputs (the 93 U9e inputs + every tracked input with control_mesh_remove) against
+  31c00c6: identical except the tochnog_version build-date line (geometry_moving1 times out in both, common prefix
+  identical); no existing input used non-node-sharing -method1 meshes. C126 closed in BACKLOG.
