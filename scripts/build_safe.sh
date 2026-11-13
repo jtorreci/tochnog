@@ -3527,6 +3527,17 @@ if grep -q "^control_mesh_delete_geometry_elementgroup  0  1" "$T2026/alias_name
 else
   check_fail "alias_names_2026_3" "an aliased record is missing from the .dbs"
 fi
+# F5 T5 U1: group_contact_spring_plasti_cohesion,
+# group_contact_spring_plasti_friction_automatic, groundflow_phreatic_level_n
+# stored under the GNU records (the Professional stores the same values).
+run_ok "$T2026" alias_names_2026_4
+if grep -Eq "^group_contactspring_cohesion +1 +2.5 *$" "$T2026/alias_names_2026_4.dbs" && \
+   grep -Eq "^group_contactspring_friction_automatic +1 +-yes *$" "$T2026/alias_names_2026_4.dbs" && \
+   grep -Eq "^groundflow_phreaticlevel_n +2 2 *$" "$T2026/alias_names_2026_4.dbs"; then
+  check_ok "alias_names_2026_4 (records stored under the GNU names)"
+else
+  check_fail "alias_names_2026_4" "an aliased record is missing from the .dbs"
+fi
 run_ok "$T2026" materi_plasti_maximum_iterations1
 run_ok "$T2026" materi_plasti_maximum_iterations2
 expected_error_ok "$T2026" materi_plasti_maximum_iterations_error1

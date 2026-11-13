@@ -206,6 +206,18 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   force_volume_element_group_0, groundflow_phreatic_*, group_beam_*, group_contact_spring_*,
   group_dof_initial*, group_time_fill, group_truss_elasti_elongation_force_diagram,
   slide_damping, slide_user, strain_volume_*. Route: per family.
+  Map 2026-11-13 by a read-only explorer (mapping trigger: 24 names across ~12 files), summary in Log L-T5-map.
+  Units:
+  - [x] U1 aliases group_contact_spring_plasti_cohesion, group_contact_spring_plasti_friction_automatic,
+    groundflow_phreatic_level_n. Route: inline. RED: base "I do not know : group_contact_spring_plasti_cohesion";
+    GREEN alias_names_2026_4 (Professional stores the same values).
+  - [ ] Owner decisions: groundflow_phreatic_bounda (switch vs GNU -method1/-method2, default -yes),
+    force_volume_element_group_0 (PDF artifact: discard), groundflow_phreatic_only, force_edge_diagram,
+    group_dof_initial* precedence, group_contact_spring_direction_automatic_planes meaning,
+    group_beam_force_moment_plasti (new model), strain_volume kernel, baseline correction scope.
+  - [ ] U2 slide (slide_damping, control_slide_damping_apply, slide_user). U3 groundflow (_project, _only).
+    U4 group_dof_initial (3). U5 force (force_gravity_geometry, force_edge_diagram). U6 truss diagram and
+    contact-spring planes. U7 group_time_fill. U8 strain_volume. U9 baseline correction. U10 beam plasticity.
 - [ ] T6 W7 safety_slip (32): self-contained slip-surface safety-factor feature, planned
   separately. Route: to decide.
 
@@ -934,3 +946,18 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   list accepted (68 more than after W2/W3), missing 121 = 63 GiD + 58 pending (T5, T6 safety_*, 2 initialisation
   literals); none of the 58 is a T4 name. The tracker 69 vs observed 68 is not explained. KEYWORD-GAP-REPORT
   updated. T4 closed. Next: T5 W6 other physics.
+- 2026-11-13 L-T5-map (explorer): 24 names + 2 initialisation literals (materi_history_variable,
+  materi_strain_energy, input.cc:195-198) = 26 (task line says 25). No T5 name in the Professional test/ tree.
+  Aliases: group_contact_spring_plasti_cohesion / _friction_automatic (conspr.cc:76, 97-140 already implement
+  6.603 / 6.605), groundflow_phreatic_level_n (GROUNDFLOW_PHREATICLEVEL_N, groundfl.cc:522); groundflow_phreatic_bounda
+  is not a pure alias (GNU -method1/-method2 when present, Pro switch default -yes). force_volume_element_group_0 is a
+  PDF header artifact of 6.504 (force_volume_element_group already translated, database.cc:10464). slide.cc has no
+  damping / user hook; groundfl.cc:653-690 for _project / _only; force.cc:226/265-278 for force_edge_diagram /
+  force_gravity_geometry; general.cc:165-215 + top.cc:1734-1746 element_dof_initial* to extend by group;
+  group.cc:140-153 / elem.cc:208-211 for group_time_fill; truss.cc:74 young; beam.cc has no plasticity;
+  conspr.cc:170-185 direction automatic; strain_volume_absolute_time / _element registered (database.cc:8666) but
+  never applied (only post.cc:164 reads them; Pro example other/strain_volume1); bounda_time_smc is a PENDING
+  error (bounda.cc:458-466).
+- 2026-11-13 U1 (route inline): three db_number aliases. Professional probe: the same input stores the same
+  values under the manual names (it needs group_type -contact_spring, post_calcul -groundflow_pressure
+  -total_pressure and control_print_database -separate_index; GNU accepts the first two).

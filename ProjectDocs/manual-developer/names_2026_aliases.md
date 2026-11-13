@@ -17,3 +17,10 @@
   `geometry_triangle_eps_iso` and `mesh_interface_triangle_coordinates`
   are `db_number()` aliases next to
   `control_mesh_delete_geometry_move_node`. Test `alias_names_2026_3`.
+- F5 T5 U1: `group_contact_spring_plasti_cohesion` and
+  `group_contact_spring_plasti_friction_automatic` are `db_number()` aliases
+  next to `group_contact_spring_cohesion` (`conspr.cc` already applies the
+  6.605 rule: (2/3) tan(phi) of the neighbour group, 0.2 otherwise);
+  `groundflow_phreatic_level_n` returns `GROUNDFLOW_PHREATICLEVEL_N` next to
+  `groundflow_phreatic_level`. Test `alias_names_2026_4` (the Professional
+  02-08-2026 stores the same values under the manual names).

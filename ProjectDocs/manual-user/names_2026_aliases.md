@@ -22,8 +22,12 @@ accepts the new names and stores the records under its own names (the
 | `control_mesh_delete_geometry_element_group` (6.169) | `control_mesh_delete_geometry_elementgroup` |
 | `geometry_triangle_eps_iso` (6.551) | `geometry_triangle_epsiso` |
 | `mesh_interface_triangle_coordinates` (6.854) | `mesh_interface_triangle_coordinate` |
+| `group_contact_spring_plasti_cohesion` (6.603) | `group_contactspring_cohesion` |
+| `group_contact_spring_plasti_friction_automatic` (6.605) | `group_contactspring_friction_automatic` |
+| `groundflow_phreatic_level_n nx ny` (6.572, no index) | `groundflow_phreaticlevel_n` |
 
-Tests: `validation-suite/test-2026/alias_names_2026_1` and `alias_names_2026_2`
+Tests: `validation-suite/test-2026/alias_names_2026_1`, `alias_names_2026_2`,
+`alias_names_2026_3` and `alias_names_2026_4`
 (build_safe checks the stored records).
 
 ## Differences with the Professional version

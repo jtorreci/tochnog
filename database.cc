@@ -10520,6 +10520,9 @@ long int db_number( const char str[] )
       return OPTIONS_MESH;
     else if ( !strcmp( str, "groundflow_phreatic_level" ) )
       return GROUNDFLOW_PHREATICLEVEL;
+    else if ( !strcmp( str, "groundflow_phreatic_level_n" ) )
+      // 2026 manual name (6.572), F5 T5 U1.
+      return GROUNDFLOW_PHREATICLEVEL_N;
     else if ( !strcmp( str, "group_porosity" ) )
       // Professional short name (6.637 area) of the GNU canonical
       // group_groundflow_porosity record
@@ -10552,6 +10555,12 @@ long int db_number( const char str[] )
       return db_number( "group_contactspring_friction_automatic" );
     else if ( !strcmp( str, "group_contact_spring_cohesion" ) )
       return db_number( "group_contactspring_cohesion" );
+    else if ( !strcmp( str, "group_contact_spring_plasti_cohesion" ) )
+      // 2026 manual name (6.603), F5 T5 U1.
+      return db_number( "group_contactspring_cohesion" );
+    else if ( !strcmp( str, "group_contact_spring_plasti_friction_automatic" ) )
+      // 2026 manual name (6.605), F5 T5 U1.
+      return db_number( "group_contactspring_friction_automatic" );
     else if ( !strcmp( str, "group_contact_spring_memory" ) )
       return db_number( "group_contactspring_memory" );
     else if ( !strcmp( str, "total_pressure" ) )

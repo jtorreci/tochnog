@@ -1,0 +1,37 @@
+(
+F5 T5 U1: 2026 manual names that are aliases of GNU records:
+ group_contact_spring_plasti_cohesion (6.603),
+ group_contact_spring_plasti_friction_automatic (6.605) and
+ groundflow_phreatic_level_n (6.572). build_safe checks that the records
+ are stored under the GNU names. Group 1 has no elements; the phreatic
+ level is a 2 x 2 table below the block.
+)
+echo -no
+number_of_space_dimensions 3
+materi_velocity
+materi_displacement
+materi_stress
+groundflow_pressure
+end_initia
+node 1 0 0 0
+node 2 1 0 0
+node 3 0 1 0
+node 4 1 1 0
+node 5 0 0 1
+node 6 1 0 1
+node 7 0 1 1
+node 8 1 1 1
+element 1 -hex8 1 2 3 4 5 6 7 8
+group_type 0 -materi
+group_materi_elasti_young 0 1000.
+group_materi_elasti_poisson 0 0.3
+group_type 1 -contact_spring
+group_contact_spring_plasti_cohesion 1 2.5
+group_contact_spring_plasti_friction_automatic 1 -yes
+groundflow_phreatic_level -1 -1 -5 2 -1 -5 -1 2 -5 2 2 -5
+groundflow_phreatic_level_n 2 2
+bounda_dof 0 -ra 1 2 3 4 -ra -velx -vely -velz
+post_calcul -groundflow_pressure -total_pressure
+control_timestep 0 0.1 0.1
+control_print_database 0 -yes
+end_data
