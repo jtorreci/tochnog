@@ -21,6 +21,7 @@
   `group_contact_spring_plasti_friction_automatic` are `db_number()` aliases
   next to `group_contact_spring_cohesion` (`conspr.cc` already applies the
   6.605 rule: (2/3) tan(phi) of the neighbour group, 0.2 otherwise);
-  `groundflow_phreatic_level_n` returns `GROUNDFLOW_PHREATICLEVEL_N` next to
+  `groundflow_phreatic_level_n` returns `GROUNDFLOW_PHREATICLEVEL_N` (and, F5 T5 U1b,
+  `groundflow_phreatic_bounda` returns `GROUNDFLOW_PHREATICLEVEL_BOUNDA`) next to
   `groundflow_phreatic_level`. Test `alias_names_2026_4` (the Professional
   02-08-2026 stores the same values under the manual names).

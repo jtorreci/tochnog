@@ -3538,6 +3538,10 @@ if grep -Eq "^group_contactspring_cohesion +1 +2.5 *$" "$T2026/alias_names_2026_
 else
   check_fail "alias_names_2026_4" "an aliased record is missing from the .dbs"
 fi
+# F5 T5 U1b: groundflow_phreatic_bounda -yes / -no (manual 6.570); total
+# pressures and heads equal the Professional (node 5 of _bounda2: PHREATIC-BOUNDA-NO-POST).
+run_ok "$T2026" groundflow_phreatic_bounda1
+run_ok "$T2026" groundflow_phreatic_bounda2
 run_ok "$T2026" materi_plasti_maximum_iterations1
 run_ok "$T2026" materi_plasti_maximum_iterations2
 expected_error_ok "$T2026" materi_plasti_maximum_iterations_error1

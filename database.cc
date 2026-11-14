@@ -10520,6 +10520,9 @@ long int db_number( const char str[] )
       return OPTIONS_MESH;
     else if ( !strcmp( str, "groundflow_phreatic_level" ) )
       return GROUNDFLOW_PHREATICLEVEL;
+    else if ( !strcmp( str, "groundflow_phreatic_bounda" ) )
+      // 2026 manual name (6.570), F5 T5 U1b.
+      return GROUNDFLOW_PHREATICLEVEL_BOUNDA;
     else if ( !strcmp( str, "groundflow_phreatic_level_n" ) )
       // 2026 manual name (6.572), F5 T5 U1.
       return GROUNDFLOW_PHREATICLEVEL_N;

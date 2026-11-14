@@ -25,6 +25,7 @@ accepts the new names and stores the records under its own names (the
 | `group_contact_spring_plasti_cohesion` (6.603) | `group_contactspring_cohesion` |
 | `group_contact_spring_plasti_friction_automatic` (6.605) | `group_contactspring_friction_automatic` |
 | `groundflow_phreatic_level_n nx ny` (6.572, no index) | `groundflow_phreaticlevel_n` |
+| `groundflow_phreatic_bounda -yes/-no` (6.570, no index) | `groundflow_phreaticlevel_bounda` (see [groundflow_phreatic_level](groundflow_phreatic_level.md)) |
 
 Tests: `validation-suite/test-2026/alias_names_2026_1`, `alias_names_2026_2`,
 `alias_names_2026_3` and `alias_names_2026_4`

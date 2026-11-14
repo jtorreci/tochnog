@@ -25,9 +25,23 @@ groundflow_phreatic_level <x0> <y0> <x1> <y1>    (2D table)
   (its hydraulic head on/above the phreatic line is `h = rho*g*level`, i.e.
   `p_dynamic = 0`). Explicit pressure boundary conditions
   (`bounda_dof -pres` / `-topres`) win over this default.
+- `groundflow_phreatic_bounda -yes` / `-no` (manual 6.570): switches this
+  free-surface condition on (`-yes`, the default, also when the record is
+  absent, as in the Professional) or off (`-no`: only the explicit
+  pressure boundary conditions hold). The GNU name
+  `groundflow_phreaticlevel_bounda` also takes the older `-method1` (bound
+  only the nodes on the level) and `-method2` (on and above the level),
+  which prescribe `pres_dof = rho*g*level` there.
 - Use `groundflow_phreatic_level_multiple` when different parts of the
-  domain have different levels, and `groundflow_phreatic_bounda` for the
-  explicit head-prescription variant.
+  domain have different levels.
+
+## Differences with the Professional version
+
+- With `groundflow_phreatic_bounda -no`, the Professional reports a total
+  pressure of 0 at every node above the level; the GNU reports
+  `pres_dof + rho*g*(level - z)` capped by `groundflow_total_pressure_limit`
+  (for example -0.5 instead of 0 in `groundflow_phreatic_bounda2`). The
+  heads (nodal dofs) are the same (DIVERGENCES PHREATIC-BOUNDA-NO-POST).
 
 ## Example
 

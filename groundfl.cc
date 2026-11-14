@@ -644,15 +644,21 @@ void groundflow_phreatic_apply( void )
  
 {
   long int inod=0, max_node=0, iuknwn=0, ipuknwn=0, 
-    groundflow_phreaticlevel_bounda=-NO, length=0, 
+    groundflow_phreaticlevel_bounda=-YES, length=0, 
     node_phreaticlevel=0, ldum=0, idum[1], *node_bounded=NULL,
     imult2=0, static_switch=-NO;
   double total_pressure=0, static_pressure=0., dens=0., location=0.,
     ddum[1], force_gravity[MDIM], *coord=NULL, *node_dof=NULL;
  
-  if ( db_active_index( GROUNDFLOW_PHREATICLEVEL_BOUNDA, 0, VERSION_NORMAL ) ) {
-    db( GROUNDFLOW_PHREATICLEVEL_BOUNDA, 0, &groundflow_phreaticlevel_bounda, ddum, 
-      ldum, VERSION_NORMAL, GET );
+  // groundflow_phreatic_bounda (manual 6.570) is a switch: -yes (the
+  // Professional default, also when the record is absent) is the
+  // free-surface condition of the single level below; -no switches it
+  // off. -method1 / -method2 are the older GNU variants (F5 T5 U1b).
+  if ( db_active_index( GROUNDFLOW_PHREATICLEVEL_BOUNDA, 0, VERSION_NORMAL ) )
+    db( GROUNDFLOW_PHREATICLEVEL_BOUNDA, 0, &groundflow_phreaticlevel_bounda,
+      ddum, ldum, VERSION_NORMAL, GET );
+  if ( groundflow_phreaticlevel_bounda==-METHOD1 ||
+       groundflow_phreaticlevel_bounda==-METHOD2 ) {
     db( GROUNDFLOW_DENSITY, 0, idum, &dens, ldum, VERSION_NORMAL, GET_IF_EXISTS );
     force_gravity_calculate( force_gravity );
     db_max_index( NODE, max_node, VERSION_NORMAL, GET );
@@ -706,7 +712,7 @@ void groundflow_phreatic_apply( void )
   // phreatic line is h = rho*g*z_L (p_total = 0), i.e. p_dynamic = 0 in
   // the GNU split. Explicit bounda_dof records win over this default
   // (bounda() applies them afterwards).
-  if ( groundflow_pressure &&
+  if ( groundflow_pressure && groundflow_phreaticlevel_bounda!=-NO &&
        db_active_index( GROUNDFLOW_PHREATICLEVEL, 0, VERSION_NORMAL ) &&
        !groundflow_phreatic_level_multiple_active() ) {
     long int level_len=0, gfound=0, number2[2];

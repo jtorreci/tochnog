@@ -33,6 +33,12 @@
 - Ordering: `bounda()` zeroes `NODE_BOUNDED`, calls
   `groundflow_phreatic_apply()` (free surface first) and applies the
   bounda_dof records afterwards, so explicit `-pres`/`-topres` bounds win.
+- `groundflow_phreatic_bounda` (manual 6.570, alias in `db_number()`,
+  F5 T5 U1b) is read first in `groundflow_phreatic_apply()`: its default is
+  `-YES` (record absent included, measured on the Professional 02-08-2026:
+  absent and `-yes` give the same `.dbs`); `-NO` skips the free-surface
+  block, so only bounda_dof bounds remain. Tests
+  `groundflow_phreatic_bounda1` (`-yes`) and `_bounda2` (`-no`).
 - The legacy `groundflow_phreaticlevel_bounda` METHODS 1/2 (explicit head
   prescription `pres_dof = rho*g*level`) are untouched and take precedence
   over the automatic free surface when the record is present (they bound the

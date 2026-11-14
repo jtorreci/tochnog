@@ -211,8 +211,11 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   - [x] U1 aliases group_contact_spring_plasti_cohesion, group_contact_spring_plasti_friction_automatic,
     groundflow_phreatic_level_n. Route: inline. RED: base "I do not know : group_contact_spring_plasti_cohesion";
     GREEN alias_names_2026_4 (Professional stores the same values).
-  - [ ] Owner decisions: groundflow_phreatic_bounda (switch vs GNU -method1/-method2, default -yes),
-    force_volume_element_group_0 (PDF artifact: discard), groundflow_phreatic_only, force_edge_diagram,
+  - [x] U1b groundflow_phreatic_bounda -yes/-no (6.570). Route: inline. Owner decision L-T5-bounda.
+    RED: base "Error in data part" on the name. GREEN groundflow_phreatic_bounda1/2; default -yes kept
+    (absent = -yes measured on the Professional, and the GNU free-surface block already matched it).
+    Divergence PHREATIC-BOUNDA-NO-POST.
+  - [ ] Owner decisions: force_volume_element_group_0 (PDF artifact: discard), groundflow_phreatic_only, force_edge_diagram,
     group_dof_initial* precedence, group_contact_spring_direction_automatic_planes meaning,
     group_beam_force_moment_plasti (new model), strain_volume kernel, baseline correction scope.
   - [ ] U2 slide (slide_damping, control_slide_damping_apply, slide_user). U3 groundflow (_project, _only).
@@ -961,3 +964,12 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
 - 2026-11-13 U1 (route inline): three db_number aliases. Professional probe: the same input stores the same
   values under the manual names (it needs group_type -contact_spring, post_calcul -groundflow_pressure
   -total_pressure and control_print_database -separate_index; GNU accepts the first two).
+
+- L-T5-bounda (2026-11-14) Owner, on "implement the switch, decide the default after measuring the
+  Professional": "sí, me parece bien". Measured (column of three quad4, level y = 1.5): Professional absent
+  and -yes give the same .dbs (nodes on/above the level bounded, head rho*g*z_L); -no bounds nothing. GNU
+  without the record already gave the same total pressures (groundfl.cc free-surface block), so the
+  default stays -yes and needs no owner decision. With bottom bounda_dof (Professional head -2.5 = GNU
+  dynamic -1 + rho*g*z_L): -yes equal heads and totals; -no equal heads, total pressure at the node just
+  above the level -0.5 GNU vs 0 Professional (post only): DIVERGENCES PHREATIC-BOUNDA-NO-POST.
+  Note: awk under the es_ES locale reads "-0.5" as -0; compare .dbs numbers with LC_ALL=C.
