@@ -1283,6 +1283,10 @@ void input( )
   }
   if ( echo ) cout << "end_data" << "\n\n";
 
+  // groundflow_phreatic_only -yes: drop the groundflow data of the groups
+  // without a multiple phreatic level, before the calculation starts.
+  groundflow_phreatic_only_apply();
+
   // check that elements do not have duplicate nodes (check_element_node)
   {
     long int check_element_node_switch=-YES;

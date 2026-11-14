@@ -869,3 +869,63 @@ double groundflow_total_pressure_limit( void )
     VERSION_NORMAL, GET_IF_EXISTS );
   return limit;
 }
+
+// groundflow_phreatic_only -yes (manual 6.581, F5 T5 U3a): the groundflow
+// data is removed for the element groups that are not listed in a
+// groundflow_phreatic_level_multiple_element_group record: -groundflow
+// leaves their group_type and their group_groundflow_* records are deleted.
+// Measured on the Professional 02-08-2026, which edits the database the
+// same way (a group whose only type was -groundflow is an input error there
+// too; the GNU names the reason).
+void groundflow_phreatic_only_apply( void )
+
+{
+  long int only=-NO, ldum=0, igroup=0, max_group=0, imult=0, max_mult=0,
+    i=0, n=0, nnew=0, listed=0, has_groundflow=0, idat=0,
+    types[DATA_ITEM_SIZE], *groups=NULL;
+  double ddum[1];
+
+  if ( !db_active_index( GROUNDFLOW_PHREATIC_ONLY, 0, VERSION_NORMAL ) ) return;
+  db( GROUNDFLOW_PHREATIC_ONLY, 0, &only, ddum, ldum, VERSION_NORMAL, GET );
+  if ( only==-NO ) return;
+  if ( only!=-YES ) db_error( GROUNDFLOW_PHREATIC_ONLY, 0 );
+
+  db_max_index( GROUP_TYPE, max_group, VERSION_NORMAL, GET );
+  db_max_index( GROUNDFLOW_PHREATICLEVEL_MULTIPLE_ELEMENT_GROUP, max_mult,
+    VERSION_NORMAL, GET );
+  for ( igroup=0; igroup<=max_group; igroup++ ) {
+    if ( !db_active_index( GROUP_TYPE, igroup, VERSION_NORMAL ) ) continue;
+    listed = 0;
+    for ( imult=0; imult<=max_mult && !listed; imult++ ) {
+      if ( !db_active_index( GROUNDFLOW_PHREATICLEVEL_MULTIPLE_ELEMENT_GROUP,
+          imult, VERSION_NORMAL ) ) continue;
+      n = db_len( GROUNDFLOW_PHREATICLEVEL_MULTIPLE_ELEMENT_GROUP, imult,
+        VERSION_NORMAL );
+      groups = db_int( GROUNDFLOW_PHREATICLEVEL_MULTIPLE_ELEMENT_GROUP, imult,
+        VERSION_NORMAL );
+      for ( i=0; i<n; i++ ) if ( groups[i]==igroup ) listed = 1;
+    }
+    if ( listed ) continue;
+    db( GROUP_TYPE, igroup, types, ddum, n, VERSION_NORMAL, GET );
+    has_groundflow = 0;
+    for ( i=0, nnew=0; i<n; i++ ) {
+      if ( types[i]==-GROUNDFLOW ) has_groundflow = 1;
+      else types[nnew++] = types[i];
+    }
+    if ( !has_groundflow ) continue;
+    if ( nnew==0 ) {
+      pri( "Error: group ", igroup );
+      pri( "has only -groundflow and is not in "
+        "groundflow_phreatic_level_multiple_element_group "
+        "(groundflow_phreatic_only -yes)." );
+      exit(TN_EXIT_STATUS);
+    }
+    db_delete_index( GROUP_TYPE, igroup, VERSION_NORMAL );
+    db( GROUP_TYPE, igroup, types, ddum, nnew, VERSION_NORMAL, PUT );
+    for ( idat=0; idat<LAST_DUMMY; idat++ ) {
+      if ( strncmp( db_name(idat), "group_groundflow_", 17 ) ) continue;
+      if ( db_active_index( idat, igroup, VERSION_NORMAL ) )
+        db_delete_index( idat, igroup, VERSION_NORMAL );
+    }
+  }
+}

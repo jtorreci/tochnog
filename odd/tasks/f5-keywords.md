@@ -216,7 +216,10 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
     (absent = -yes measured on the Professional, and the GNU free-surface block already matched it).
     Divergence PHREATIC-BOUNDA-NO-POST.
   - [x] force_volume_element_group_0 discarded (PDF header artifact of 6.504; owner L-T5-fveg0). Gap report: 57 pending.
-  - [ ] Owner decisions: groundflow_phreatic_only, force_edge_diagram,
+  - [x] U3a groundflow_phreatic_only (6.581). Route: inline. Owner L-T5-only. RED: base "I do not know :
+    groundflow_phreatic_only". GREEN groundflow_phreatic_only1/2/_error1 (Professional .dbs: group_type 2 -materi,
+    group_groundflow_permeability 2 deleted; total pressures equal).
+  - [ ] Owner decisions: force_edge_diagram,
     group_dof_initial* precedence, group_contact_spring_direction_automatic_planes meaning,
     group_beam_force_moment_plasti (new model), strain_volume kernel, baseline correction scope.
   - [ ] U2 slide (slide_damping, control_slide_damping_apply, slide_user). U3 groundflow (_project, _only).
@@ -977,3 +980,11 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
 
 - L-T5-fveg0 (2026-11-14) Owner, on discarding force_volume_element_group_0 as a PDF artifact:
   "decarta el nombre de la lista".
+
+
+- L-T5-only (2026-11-15) Owner: "Mide lo qeu hace pro y hablamos"; after the measurement (Professional removes
+  -groundflow from the group_type of the groups not listed in groundflow_phreatic_level_multiple_element_group and
+  deletes their group_groundflow_* records; a group left without a type stops with "Error detected for data item :
+  group_type") and the proposal (same database edit at start, clear error message), the owner said "si".
+  Coupled column: database edit and total pressures equal; displacements already differ without the record
+  (pre-existing coupled-mechanics difference, not this unit).

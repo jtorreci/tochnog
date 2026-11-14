@@ -3542,6 +3542,23 @@ fi
 # pressures and heads equal the Professional (node 5 of _bounda2: PHREATIC-BOUNDA-NO-POST).
 run_ok "$T2026" groundflow_phreatic_bounda1
 run_ok "$T2026" groundflow_phreatic_bounda2
+# F5 T5 U3a: groundflow_phreatic_only (manual 6.581): the unlisted group loses
+# -groundflow and its group_groundflow_* records (the Professional .dbs is the same).
+run_ok "$T2026" groundflow_phreatic_only1
+if grep -Eq "^group_type +2 +-materi *$" "$T2026/groundflow_phreatic_only1.dbs" && \
+   ! grep -Eq "^group_groundflow_permeability +2 " "$T2026/groundflow_phreatic_only1.dbs" && \
+   grep -Eq "^group_groundflow_permeability +1 " "$T2026/groundflow_phreatic_only1.dbs"; then
+  check_ok "groundflow_phreatic_only1 (group 2 without groundflow data)"
+else
+  check_fail "groundflow_phreatic_only1" "group 2 still has groundflow data, or group 1 lost it"
+fi
+run_ok "$T2026" groundflow_phreatic_only2
+if grep -Eq "^group_type +2 +-materi -groundflow *$" "$T2026/groundflow_phreatic_only2.dbs"; then
+  check_ok "groundflow_phreatic_only2 (-no keeps the groundflow data)"
+else
+  check_fail "groundflow_phreatic_only2" "group 2 lost -groundflow"
+fi
+expected_error_ok "$T2026" groundflow_phreatic_only_error1
 run_ok "$T2026" materi_plasti_maximum_iterations1
 run_ok "$T2026" materi_plasti_maximum_iterations2
 expected_error_ok "$T2026" materi_plasti_maximum_iterations_error1
