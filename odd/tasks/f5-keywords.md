@@ -215,7 +215,8 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
     RED: base "Error in data part" on the name. GREEN groundflow_phreatic_bounda1/2; default -yes kept
     (absent = -yes measured on the Professional, and the GNU free-surface block already matched it).
     Divergence PHREATIC-BOUNDA-NO-POST.
-  - [ ] Owner decisions: force_volume_element_group_0 (PDF artifact: discard), groundflow_phreatic_only, force_edge_diagram,
+  - [x] force_volume_element_group_0 discarded (PDF header artifact of 6.504; owner L-T5-fveg0). Gap report: 57 pending.
+  - [ ] Owner decisions: groundflow_phreatic_only, force_edge_diagram,
     group_dof_initial* precedence, group_contact_spring_direction_automatic_planes meaning,
     group_beam_force_moment_plasti (new model), strain_volume kernel, baseline correction scope.
   - [ ] U2 slide (slide_damping, control_slide_damping_apply, slide_user). U3 groundflow (_project, _only).
@@ -973,3 +974,6 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   dynamic -1 + rho*g*z_L): -yes equal heads and totals; -no equal heads, total pressure at the node just
   above the level -0.5 GNU vs 0 Professional (post only): DIVERGENCES PHREATIC-BOUNDA-NO-POST.
   Note: awk under the es_ES locale reads "-0.5" as -0; compare .dbs numbers with LC_ALL=C.
+
+- L-T5-fveg0 (2026-11-14) Owner, on discarding force_volume_element_group_0 as a PDF artifact:
+  "decarta el nombre de la lista".
