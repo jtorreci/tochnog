@@ -380,6 +380,34 @@ long int groundflow_phreatic_level_multiple_find_coord( double coord[] )
   return groundflow_phreatic_level_multiple_find_element( found_el );
 }
 
+long int groundflow_phreatic_level_reference( double &z_ref )
+
+// Head reference of the single groundflow_phreatic_level (F5 T5 U3b).
+// The pressure dof is the head minus rho*g*z_ref, with z_ref the height
+// of the first point of the level table (the level itself when it is
+// one value). Under a horizontal level z_ref = z_L, so the dof is the
+// dynamic pressure p_total - rho*g*(z_L - z) of the GNU split. Under an
+// inclined level a single constant keeps the dof a shifted head, so the
+// Darcy flow follows the head gradient: measured on the Professional
+// 02-08-2026, the nodes at and above an inclined level get the head
+// rho*g*z_L(x) and water seeps through the domain. Returns 0 (z_ref
+// untouched) when no single level applies (absent, or multiple levels).
+
+{
+  long int length=0;
+  double *level=NULL;
+
+  if ( !db_active_index( GROUNDFLOW_PHREATICLEVEL, 0, VERSION_NORMAL ) ||
+       groundflow_phreatic_level_multiple_active() ) return 0;
+  length = db_len( GROUNDFLOW_PHREATICLEVEL, 0, VERSION_NORMAL );
+  level = db_dbl( GROUNDFLOW_PHREATICLEVEL, 0, VERSION_NORMAL );
+  if      ( length==1 ) z_ref = level[0];
+  else if ( ndim==2 && length>=2 ) z_ref = level[1];
+  else if ( ndim==3 && length>=3 ) z_ref = level[2];
+  else db_error( GROUNDFLOW_PHREATICLEVEL, 0 );
+  return 1;
+}
+
 long int groundflow_phreatic_coord( long int inod, double coord[], double dof[],
   double &total_pressure, double &static_pressure, double &location,
   long int *level_source )
@@ -528,9 +556,14 @@ long int groundflow_phreatic_coord( long int inod, double coord[], double dof[],
       location = water_level;
       if ( level_source ) *level_source = 1;
       if ( groundflow_pressure ) {
-      	static_pressure = 
-        force_gravity[ndim-1] * dens * ( water_level - coord[ndim-1] );
-  	total_pressure = dof[pres_indx] + static_pressure; // added -> bug 
+        double z_ref = water_level;
+        groundflow_phreatic_level_reference( z_ref );
+        static_pressure =
+          force_gravity[ndim-1] * dens * ( water_level - coord[ndim-1] );
+        // the dof is the head minus rho*g*z_ref (inclined level: z_ref
+        // is not the local level, see groundflow_phreatic_level_reference)
+        total_pressure = dof[pres_indx] +
+          force_gravity[ndim-1] * dens * ( z_ref - coord[ndim-1] );
       }
       else if ( static_switch==-YES ) {
         // groundflow_phreatic_level_static without a pressure unknown
@@ -640,8 +673,41 @@ long int groundflow_static_pressure_group( long int element_group )
   return 0;
 }
 
+static double groundflow_phreatic_project_height( double level[],
+  long int length, double coord[] )
+
+// groundflow_phreatic_project -yes (manual 6.582): height of the point of
+// the 2D level line (x z pairs) nearest to coord, each segment clamped to
+// its end points. Measured on the Professional 02-08-2026: node (0,3)
+// under the line (0,1)-(2,2.5) gets the head of (0.96,1.72).
+
+{
+  long int i=0;
+  double best_dist=-1., best_z=level[1], dx=0., dz=0., len2=0., t=0.,
+    px=0., pz=0., dist=0.;
+
+  for ( i=0; i+3<length; i+=2 ) {
+    dx = level[i+2] - level[i];
+    dz = level[i+3] - level[i+1];
+    len2 = dx*dx + dz*dz;
+    t = 0.;
+    if ( len2>0. )
+      t = ( ( coord[0]-level[i] )*dx + ( coord[1]-level[i+1] )*dz ) / len2;
+    if ( t<0. ) t = 0.;
+    if ( t>1. ) t = 1.;
+    px = level[i] + t*dx;
+    pz = level[i+1] + t*dz;
+    dist = ( coord[0]-px )*( coord[0]-px ) + ( coord[1]-pz )*( coord[1]-pz );
+    if ( best_dist<0. || dist<best_dist ) {
+      best_dist = dist;
+      best_z = pz;
+    }
+  }
+  return best_z;
+}
+
 void groundflow_phreatic_apply( void )
- 
+
 {
   long int inod=0, max_node=0, iuknwn=0, ipuknwn=0, 
     groundflow_phreaticlevel_bounda=-YES, length=0, 
@@ -712,14 +778,32 @@ void groundflow_phreatic_apply( void )
   // phreatic line is h = rho*g*z_L (p_total = 0), i.e. p_dynamic = 0 in
   // the GNU split. Explicit bounda_dof records win over this default
   // (bounda() applies them afterwards).
+  // Inclined level (F5 T5 U3b, measured on the Professional 02-08-2026):
+  // the head is rho*g*z_L(x) of the level above the node, so the dof is
+  // rho*g*(z_L(x) - z_ref) (groundflow_phreatic_level_reference). With
+  // groundflow_phreatic_project -yes (manual 6.582) z_L is the height of
+  // the nearest point of the 2D level line, clamped to its end points.
   if ( groundflow_pressure && groundflow_phreaticlevel_bounda!=-NO &&
        db_active_index( GROUNDFLOW_PHREATICLEVEL, 0, VERSION_NORMAL ) &&
        !groundflow_phreatic_level_multiple_active() ) {
-    long int level_len=0, gfound=0, number2[2];
-    double water_level2=0., *groundflow_phreatic2=NULL;
+    long int level_len=0, gfound=0, number2[2], project=-NO;
+    double water_level2=0., z_ref=0., z_head=0., *groundflow_phreatic2=NULL;
     level_len = db_len( GROUNDFLOW_PHREATICLEVEL, 0, VERSION_NORMAL );
     groundflow_phreatic2 = db_dbl( GROUNDFLOW_PHREATICLEVEL, 0,
       VERSION_NORMAL );
+    groundflow_phreatic_level_reference( z_ref );
+    db( GROUNDFLOW_DENSITY, 0, idum, &dens, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+    force_gravity_calculate( force_gravity );
+    if ( db_active_index( GROUNDFLOW_PHREATIC_PROJECT, 0, VERSION_NORMAL ) ) {
+      db( GROUNDFLOW_PHREATIC_PROJECT, 0, &project, ddum, ldum,
+        VERSION_NORMAL, GET );
+      if ( project!=-YES && project!=-NO )
+        db_error( GROUNDFLOW_PHREATIC_PROJECT, 0 );
+      if ( project==-YES && ndim==3 && level_len>1 ) {
+        pri( "Error: groundflow_phreatic_project -yes needs a 2D level line." );
+        exit(TN_EXIT_STATUS);
+      }
+    }
     db_max_index( NODE, max_node, VERSION_NORMAL, GET );
     for ( inod=0; inod<=max_node; inod++ ) {
       if ( db_active_index( NODE_START_REFINED, inod, VERSION_NORMAL ) ) {
@@ -756,10 +840,14 @@ void groundflow_phreatic_apply( void )
           }
         }
         if ( gfound && coord[ndim-1]>=water_level2-EPS_COORD ) {
+          z_head = water_level2;
+          if ( project==-YES && ndim==2 && level_len>=4 )
+            z_head = groundflow_phreatic_project_height( groundflow_phreatic2,
+              level_len, coord );
           node_dof = db_dbl( NODE_DOF, inod, VERSION_NEW );
           iuknwn = pres_indx;
           ipuknwn = iuknwn / nder;
-          node_dof[iuknwn] = 0.;
+          node_dof[iuknwn] = dens * force_gravity[ndim-1] * ( z_head - z_ref );
           node_bounded = db_int( NODE_BOUNDED, inod, VERSION_NORMAL );
           node_bounded[ipuknwn] = 1;
         }

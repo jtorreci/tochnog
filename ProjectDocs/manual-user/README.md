@@ -190,6 +190,7 @@ page lists its own in "Differences with the Professional version".
 - [group_interface_groundflow_total_pressure_tension](group_interface_groundflow_total_pressure_tension.md) — forced static pressure when the interface normal strain opens.
 - [groundflow_flux_edge_normal](groundflow_flux_edge_normal.md) — distributed water flux normal to an edge (11-keyword family).
 - [groundflow_phreatic_level](groundflow_phreatic_level.md) — single groundwater level (phreatic line): static pressure split + free-surface dry zone (p_total = 0 at/above the level).
+- [groundflow_phreatic_project](groundflow_phreatic_level.md) — dry nodes take the head of the nearest point of an inclined level line (6.582, F5 T5 U3b).
 - [groundflow_phreatic_only](groundflow_phreatic_only.md) — keep the groundflow data only in the groups of a multiple phreatic level (6.581, F5 T5 U3a).
 - [groundflow_phreatic_level_static](groundflow_phreatic_level_static.md) — static pore pressures and wet/dry density from the phreatic level without a pressure unknown (`-groundflow` groups).
 - [groundflow_phreatic_level_multiple](groundflow_phreatic_level_multiple.md) — several indexed phreatic levels, each owning part of the domain (7-keyword family).

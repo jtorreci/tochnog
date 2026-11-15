@@ -1,0 +1,29 @@
+( F5 T5 U3b: groundflow_phreatic_project -yes with a 3D level table.
+  The GNU projects on a 2D level line only.
+  EXPECTED_ERROR: groundflow_phreatic_project -yes needs a 2D level line
+)
+echo -no
+number_of_space_dimensions 3
+groundflow_pressure
+groundflow_velocity
+end_initia
+node 1  0 0 0
+node 2  1 0 0
+node 3  0 1 0
+node 4  1 1 0
+node 5  0 0 1
+node 6  1 0 1
+node 7  0 1 1
+node 8  1 1 1
+element 1  -hex8 1 2 3 4 5 6 7 8
+element_group 1 1
+force_gravity 0. 0. -1.
+groundflow_density 1.
+groundflow_phreatic_level_n 2 2
+groundflow_phreatic_level 0. 0. 0.5  1. 0. 0.6  0. 1. 0.5  1. 1. 0.6
+groundflow_phreatic_project -yes
+post_calcul -groundflow_pressure -total_pressure
+group_type 1  -groundflow
+group_groundflow_permeability 1  0.1 0.1 0.1
+control_timestep   10  1. 1.
+end_data

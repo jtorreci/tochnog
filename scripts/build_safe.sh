@@ -3559,6 +3559,12 @@ else
   check_fail "groundflow_phreatic_only2" "group 2 lost -groundflow"
 fi
 expected_error_ok "$T2026" groundflow_phreatic_only_error1
+# F5 T5 U3b: inclined single level (head rho*g*z_L(x) above the level, seepage)
+# and groundflow_phreatic_project (manual 6.582); Professional 02-08-2026 values.
+run_ok "$T2026" groundflow_phreatic_inclined1
+run_ok "$T2026" groundflow_phreatic_project1
+run_ok "$T2026" groundflow_phreatic_project2
+expected_error_ok "$T2026" groundflow_phreatic_project_error1
 run_ok "$T2026" materi_plasti_maximum_iterations1
 run_ok "$T2026" materi_plasti_maximum_iterations2
 expected_error_ok "$T2026" materi_plasti_maximum_iterations_error1

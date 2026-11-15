@@ -754,6 +754,7 @@ enum {
   GROUNDFLOW_PHREATICLEVEL_N,
   GROUNDFLOW_PHREATICLEVEL_BOUNDA,
   GROUNDFLOW_PHREATIC_ONLY,
+  GROUNDFLOW_PHREATIC_PROJECT,
   GROUNDFLOW_PHREATICLEVEL_MINIMUM,
   GROUNDFLOW_PHREATICLEVEL_MULTIPLE,
   GROUNDFLOW_PHREATICLEVEL_MULTIPLE_ELEMENT,
@@ -2363,6 +2364,7 @@ long int  groundflow_phreatic_coord( long int inod, double coord[], double dof[]
             double &location, long int *level_source );
 long int  groundflow_phreatic_level_multiple_active( void );
 void      groundflow_phreatic_only_apply( void );
+long int  groundflow_phreatic_level_reference( double &z_ref );
 long int  groundflow_static_pressure_active( void );
 long int  groundflow_static_pressure_group( long int element_group );
 void      group_materi_plasti_boundary_evaluate( long int nodes[], long int nnol,

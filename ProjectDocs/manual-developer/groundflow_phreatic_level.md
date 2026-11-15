@@ -43,6 +43,28 @@
   prescription `pres_dof = rho*g*level`) are untouched and take precedence
   over the automatic free surface when the record is present (they bound the
   same nodes with the same bounded flag).
+- Inclined single level (F5 T5 U3b, 2026-11-15):
+  `groundflow_phreatic_level_reference(z_ref)` returns the height of the
+  first table point (`level[0]` for one value, `level[1]` in 2D,
+  `level[2]` in 3D). `groundflow_phreatic_coord()` computes
+  `p_total = pres_dof + rho*g*(z_ref - z)` (static pressure still local),
+  the free-surface block bounds `pres_dof = rho*g*(z_head - z_ref)` with
+  `z_head` the level above the node, and the `bounda_dof -topres`
+  conversion (bounda.cc, level_source 1) uses `z_ref` instead of the local
+  level. The element Darcy terms use `grad(pres_dof)`, so the dof must be a
+  head shifted by one constant: bounding 0 under an inclined level gave a
+  hydrostatic field without flow. Horizontal levels: `z_ref = level`,
+  same results as before. Measured on the Professional 02-08-2026 (2x3
+  quad4, level `0 1 2 2.5`, `groundflow_phreatic_inclined1`): the total
+  pressures match to 1e-6.
+- `groundflow_phreatic_project` (manual 6.582, record
+  `GROUNDFLOW_PHREATIC_PROJECT`, INTEGER, no index): with `-yes` and a 2D
+  level line, `z_head` = `groundflow_phreatic_project_height()`, the
+  height of the nearest point over all segments (parameter clamped to
+  [0,1]). Measured on the Professional: node (0,3) under (0,1)-(2,2.5)
+  gets head -1.72 (point (0.96,1.72)); node (2,3) the end point 2.5. A 3D
+  table with `-yes` stops (not measured on the Professional). Words other
+  than `-yes`/`-no` are `db_error`.
 - The multiple-level family is separate (per-element-group ownership +
   `_static`), intentionally NOT touched by this branch.
 

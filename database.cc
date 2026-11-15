@@ -4060,6 +4060,13 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   no_index[GROUNDFLOW_PHREATIC_ONLY] = 1;
   data_class[GROUNDFLOW_PHREATIC_ONLY] = GROUNDFLOW;
 
+  // groundflow_phreatic_project (manual 6.582), F5 T5 U3b.
+  strcpy(name[GROUNDFLOW_PHREATIC_PROJECT],"groundflow_phreatic_project");
+  type[GROUNDFLOW_PHREATIC_PROJECT] = INTEGER;
+  data_length[GROUNDFLOW_PHREATIC_PROJECT] = 1;
+  no_index[GROUNDFLOW_PHREATIC_PROJECT] = 1;
+  data_class[GROUNDFLOW_PHREATIC_PROJECT] = GROUNDFLOW;
+
   strcpy(name[GROUNDFLOW_PHREATICLEVEL_MINIMUM],"groundflow_phreaticlevel_minimum");
   type[GROUNDFLOW_PHREATICLEVEL_MINIMUM] = DOUBLE_PRECISION;
   data_length[GROUNDFLOW_PHREATICLEVEL_MINIMUM] = 1;

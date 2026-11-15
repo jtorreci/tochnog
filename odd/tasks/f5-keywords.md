@@ -219,10 +219,14 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   - [x] U3a groundflow_phreatic_only (6.581). Route: inline. Owner L-T5-only. RED: base "I do not know :
     groundflow_phreatic_only". GREEN groundflow_phreatic_only1/2/_error1 (Professional .dbs: group_type 2 -materi,
     group_groundflow_permeability 2 deleted; total pressures equal).
+  - [x] U3b inclined single level + groundflow_phreatic_project (6.582). Route: inline. Owner L-T5-project.
+    RED: base inclined1 misses the targets (no seepage), "I don't know ... groundflow_phreatic_project".
+    GREEN groundflow_phreatic_inclined1, _project1/2, _project_error1 (Professional totals to 1e-6).
+    Divergence PHREATIC-PROJECT-3D.
   - [ ] Owner decisions: force_edge_diagram,
     group_dof_initial* precedence, group_contact_spring_direction_automatic_planes meaning,
     group_beam_force_moment_plasti (new model), strain_volume kernel, baseline correction scope.
-  - [ ] U2 slide (slide_damping, control_slide_damping_apply, slide_user). U3 groundflow (_project, _only).
+  - [ ] U2 slide (slide_damping, control_slide_damping_apply, slide_user). 
     U4 group_dof_initial (3). U5 force (force_gravity_geometry, force_edge_diagram). U6 truss diagram and
     contact-spring planes. U7 group_time_fill. U8 strain_volume. U9 baseline correction. U10 beam plasticity.
 - [ ] T6 W7 safety_slip (32): self-contained slip-surface safety-factor feature, planned
@@ -988,3 +992,8 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   group_type") and the proposal (same database edit at start, clear error message), the owner said "si".
   Coupled column: database edit and total pressures equal; displacements already differ without the record
   (pre-existing coupled-mechanics difference, not this unit).
+- L-T5-project (2026-11-15) Owner: "si" to measuring groundflow_phreatic_project on the Professional first, then
+  "si, claro" to fixing the inclined single level first and adding -project on top. Measured (2x3 quad4, level
+  0 1 2 2.5): Professional bounds the dry nodes to head rho*g*z_L(x) and water seeps; GNU bounded pres 0 (no flow,
+  pre-existing, not recorded). -project -yes: head of the nearest point of the level line, clamped to its ends.
+  Fix: pres dof = head - rho*g*z_ref (z_ref first table height), same totals as the Professional.

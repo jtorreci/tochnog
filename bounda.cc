@@ -1130,10 +1130,14 @@ void bounda( )
                           found_tp = groundflow_phreatic_coord( inod,
                             coords_tp, node_dof, total_tp, static_tp,
                             location_tp, &level_source_tp );
-                          if ( found_tp && level_source_tp==1 )
+                          if ( found_tp && level_source_tp==1 ) {
+                            // single level: the dof reference is z_ref,
+                            // not the local level (F5 T5 U3b)
+                            groundflow_phreatic_level_reference( location_tp );
                             new_node_dof[iuknwn] = factor * ( load
                               - dens_tp * fg_tp[ndim-1] * location_tp
                               - addtop );
+                          }
                           else if ( found_tp )
                             new_node_dof[iuknwn] =
                               factor * ( load - static_tp - addtop );
