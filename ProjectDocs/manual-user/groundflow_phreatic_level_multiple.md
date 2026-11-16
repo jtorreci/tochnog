@@ -74,6 +74,15 @@ solving the hydraulic heads.
   (capped to the atmospheric pressure above the level), matching the
   Professional .dbs of ground8 of the corpus (hydrostatic under each level,
   0 elsewhere and in the dry zones).
+- Inclined level (a table of several points, F5 T5 U3c): as for a single
+  `groundflow_phreatic_level`, the pressure dof is the head minus
+  `rho*g*z_ref`, with `z_ref` the first height of the record, so the dry
+  nodes get the head of the level above them,
+  `pres_dof = rho*g*(level(x) - z_ref)`, and water seeps through the
+  domain, as in the Professional 02-08-2026
+  (`groundflow_phreatic_multiple_inclined1`). Horizontal levels and levels
+  with `_static -yes` are unchanged.
+  `groundflow_phreatic_project` applies to the single level only.
 - Post points inside a level domain resolve the level of the element that
   contains the point, so `post_point_dof_calcul ... -to_pres` etc. reproduce
   the same profile as the nodes.

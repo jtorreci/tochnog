@@ -223,6 +223,9 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
     RED: base inclined1 misses the targets (no seepage), "I don't know ... groundflow_phreatic_project".
     GREEN groundflow_phreatic_inclined1, _project1/2, _project_error1 (Professional totals to 1e-6).
     Divergence PHREATIC-PROJECT-3D.
+  - [x] U3c inclined groundflow_phreatic_level_multiple (same fix per record; _static -yes untouched). Route: inline.
+    Owner L-T5-multiple. RED: groundflow_phreatic_multiple_inclined1 misses the targets (dof 0, no seepage); GREEN
+    with the Professional totals to 1e-6.
   - [ ] Owner decisions: force_edge_diagram,
     group_dof_initial* precedence, group_contact_spring_direction_automatic_planes meaning,
     group_beam_force_moment_plasti (new model), strain_volume kernel, baseline correction scope.
@@ -997,3 +1000,5 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   0 1 2 2.5): Professional bounds the dry nodes to head rho*g*z_L(x) and water seeps; GNU bounded pres 0 (no flow,
   pre-existing, not recorded). -project -yes: head of the nearest point of the level line, clamped to its ends.
   Fix: pres dof = head - rho*g*z_ref (z_ref first table height), same totals as the Professional.
+- L-T5-multiple (2026-11-16) Owner: "si, mide" (measure the inclined multiple level on the Professional), then
+  "si, aplícalo". Measured: Professional gives the single-level seepage result; GNU bounded pres 0 (no flow).

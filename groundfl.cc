@@ -380,9 +380,10 @@ long int groundflow_phreatic_level_multiple_find_coord( double coord[] )
   return groundflow_phreatic_level_multiple_find_element( found_el );
 }
 
-long int groundflow_phreatic_level_reference( double &z_ref )
+long int groundflow_phreatic_level_reference( long int inod, double coord[],
+  double &z_ref )
 
-// Head reference of the single groundflow_phreatic_level (F5 T5 U3b).
+// Head reference of a groundflow phreatic level (F5 T5 U3b/U3c).
 // The pressure dof is the head minus rho*g*z_ref, with z_ref the height
 // of the first point of the level table (the level itself when it is
 // one value). Under a horizontal level z_ref = z_L, so the dof is the
@@ -390,21 +391,38 @@ long int groundflow_phreatic_level_reference( double &z_ref )
 // inclined level a single constant keeps the dof a shifted head, so the
 // Darcy flow follows the head gradient: measured on the Professional
 // 02-08-2026, the nodes at and above an inclined level get the head
-// rho*g*z_L(x) and water seeps through the domain. Returns 0 (z_ref
-// untouched) when no single level applies (absent, or multiple levels).
+// rho*g*z_L(x) and water seeps through the domain, for a single
+// groundflow_phreatic_level and for a groundflow_phreatic_level_multiple
+// alike. For multiple levels the record that owns the node (inod>=0) or
+// the coordinate (inod<0) gives z_ref. Returns 0 (z_ref untouched) when
+// no level applies.
 
 {
-  long int length=0;
+  long int length=0, imult=-1, idat=GROUNDFLOW_PHREATICLEVEL, index=0;
   double *level=NULL;
 
-  if ( !db_active_index( GROUNDFLOW_PHREATICLEVEL, 0, VERSION_NORMAL ) ||
-       groundflow_phreatic_level_multiple_active() ) return 0;
-  length = db_len( GROUNDFLOW_PHREATICLEVEL, 0, VERSION_NORMAL );
-  level = db_dbl( GROUNDFLOW_PHREATICLEVEL, 0, VERSION_NORMAL );
+  if ( groundflow_phreatic_level_multiple_active() ) {
+    if ( inod>=0 )
+      imult = groundflow_phreatic_level_multiple_find( inod );
+    else
+      imult = groundflow_phreatic_level_multiple_find_coord( coord );
+    if ( imult<0 ) return 0;
+    // _static -yes records prescribe the local static pressure instead
+    // (groundflow_phreatic_apply); their reference stays the local level
+    if ( db_active_index( GROUNDFLOW_PHREATICLEVEL_MULTIPLE_STATIC, imult,
+         VERSION_NORMAL ) &&
+         db_int( GROUNDFLOW_PHREATICLEVEL_MULTIPLE_STATIC, imult,
+           VERSION_NORMAL )[0]==-YES ) return 0;
+    idat = GROUNDFLOW_PHREATICLEVEL_MULTIPLE;
+    index = imult;
+  }
+  if ( !db_active_index( idat, index, VERSION_NORMAL ) ) return 0;
+  length = db_len( idat, index, VERSION_NORMAL );
+  level = db_dbl( idat, index, VERSION_NORMAL );
   if      ( length==1 ) z_ref = level[0];
   else if ( ndim==2 && length>=2 ) z_ref = level[1];
   else if ( ndim==3 && length>=3 ) z_ref = level[2];
-  else db_error( GROUNDFLOW_PHREATICLEVEL, 0 );
+  else db_error( idat, index );
   return 1;
 }
 
@@ -497,9 +515,13 @@ long int groundflow_phreatic_coord( long int inod, double coord[], double dof[],
         location = water_level;
         if ( level_source ) *level_source = 1;
         if ( groundflow_pressure ) {
-          static_pressure = 
+          double z_ref = water_level;
+          groundflow_phreatic_level_reference( inod, coord, z_ref );
+          static_pressure =
             force_gravity[ndim-1] * dens * ( water_level - coord[ndim-1] );
-          total_pressure = dof[pres_indx] + static_pressure;
+          // the dof is the head minus rho*g*z_ref of the record (F5 T5 U3c)
+          total_pressure = dof[pres_indx] +
+            force_gravity[ndim-1] * dens * ( z_ref - coord[ndim-1] );
         }
         else if ( static_switch==-YES ) {
           // groundflow_phreatic_level_multiple_static without a
@@ -557,7 +579,7 @@ long int groundflow_phreatic_coord( long int inod, double coord[], double dof[],
       if ( level_source ) *level_source = 1;
       if ( groundflow_pressure ) {
         double z_ref = water_level;
-        groundflow_phreatic_level_reference( z_ref );
+        groundflow_phreatic_level_reference( inod, coord, z_ref );
         static_pressure =
           force_gravity[ndim-1] * dens * ( water_level - coord[ndim-1] );
         // the dof is the head minus rho*g*z_ref (inclined level: z_ref
@@ -791,7 +813,6 @@ void groundflow_phreatic_apply( void )
     level_len = db_len( GROUNDFLOW_PHREATICLEVEL, 0, VERSION_NORMAL );
     groundflow_phreatic2 = db_dbl( GROUNDFLOW_PHREATICLEVEL, 0,
       VERSION_NORMAL );
-    groundflow_phreatic_level_reference( z_ref );
     db( GROUNDFLOW_DENSITY, 0, idum, &dens, ldum, VERSION_NORMAL, GET_IF_EXISTS );
     force_gravity_calculate( force_gravity );
     if ( db_active_index( GROUNDFLOW_PHREATIC_PROJECT, 0, VERSION_NORMAL ) ) {
@@ -844,6 +865,8 @@ void groundflow_phreatic_apply( void )
           if ( project==-YES && ndim==2 && level_len>=4 )
             z_head = groundflow_phreatic_project_height( groundflow_phreatic2,
               level_len, coord );
+          z_ref = water_level2;
+          groundflow_phreatic_level_reference( inod, coord, z_ref );
           node_dof = db_dbl( NODE_DOF, inod, VERSION_NEW );
           iuknwn = pres_indx;
           ipuknwn = iuknwn / nder;
@@ -868,8 +891,15 @@ void groundflow_phreatic_apply( void )
   // pressure is the hydrostatic profile rho*g*(z_L - z) capped to 0 above
   // the level. Levels with _static -yes are excluded: the block below
   // prescribes the static pressure over the whole domain instead.
+  // Inclined multiple level (F5 T5 U3c, measured on the Professional
+  // 02-08-2026, same result as the single level): the dry node gets the
+  // head rho*g*z_L(x), i.e. pres_dof = rho*g*(z_L(x) - z_ref) with z_ref
+  // the first height of its record (groundflow_phreatic_level_reference).
   if ( groundflow_pressure && groundflow_phreatic_level_multiple_active() ) {
     long int static_switch3=-NO;
+    double z_ref3=0.;
+    db( GROUNDFLOW_DENSITY, 0, idum, &dens, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+    force_gravity_calculate( force_gravity );
     db_max_index( NODE, max_node, VERSION_NORMAL, GET );
     for ( inod=0; inod<=max_node; inod++ ) {
       if ( !db_active_index( NODE_START_REFINED, inod, VERSION_NORMAL ) )
@@ -888,9 +918,11 @@ void groundflow_phreatic_apply( void )
       if ( groundflow_phreatic_coord( inod, coord, node_dof, total_pressure,
           static_pressure, location, NULL ) &&
            coord[ndim-1]>=location-EPS_COORD ) {
+        z_ref3 = location;
+        groundflow_phreatic_level_reference( inod, coord, z_ref3 );
         iuknwn = pres_indx;
         ipuknwn = iuknwn / nder;
-        node_dof[iuknwn] = 0.;
+        node_dof[iuknwn] = dens * force_gravity[ndim-1] * ( location - z_ref3 );
         node_bounded = db_int( NODE_BOUNDED, inod, VERSION_NORMAL );
         node_bounded[ipuknwn] = 1;
       }

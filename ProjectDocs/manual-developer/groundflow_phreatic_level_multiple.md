@@ -77,6 +77,18 @@
   modo estático prescribe la presión sobre TODO el dominio, no hay zona seca
   que boundear).
 
+- Inclined level (F5 T5 U3c, 2026-11-16):
+  `groundflow_phreatic_level_reference(inod, coord, z_ref)` (groundfl.cc)
+  returns the first table height of the record that owns the node
+  (`_find`) or the coordinate (`_find_coord`); records with `_static -yes`
+  return 0 (local level kept). The multiple branch of
+  `groundflow_phreatic_coord` computes `p_total = pres_dof +
+  rho*g*(z_ref - z)`, the per-level free surface bounds `pres_dof =
+  rho*g*(level(x) - z_ref)`, and the `-topres` conversion (bounda.cc) uses
+  `z_ref`. Before, the dry nodes were bounded to 0: a hydrostatic field
+  without flow under an inclined level; the Professional gives the same
+  seepage as for a single level (probe 2x3 quad4, level `0 1 2 2.5`).
+
 ## External dependencies
 
 - `geometry()`, `table_xy()`, `table_xyz()`, `point_el()`, db accessors.
