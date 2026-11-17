@@ -1375,6 +1375,9 @@ enum {
   SLIDE_PLASTI_RESIDUAL_STIFFNESS,
   CONTROL_SLIDE_PLASTI_APPLY,
   CONTROL_SLIDE_STIFFNESS_APPLY,
+  SLIDE_DAMPING,
+  SLIDE_USER,
+  CONTROL_SLIDE_DAMPING_APPLY,
 
   SOLVER,
   SOLVER_BICG_ERROR,
@@ -2782,6 +2785,9 @@ void      truss( long int element, long int element_group,
             double element_rhside[] );    
 void      unknown_freeze( void );
 void      unknown_reset( void );
+void      user_slide_friction_force( long int inod, long int islide,
+            double normal_force, double tangential_displacement,
+            double &friction_force );
 void      user_young( double new_unknowns[], double old_hisv[],
             double old_stress[], double &young );
 void      user_materi_history_variable( double parameters[],

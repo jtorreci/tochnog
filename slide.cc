@@ -78,7 +78,10 @@ void slide( void )
     db( ICONTROL, 0, &icontrol, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
     for ( islide=0; islide<=max_slide; islide++ ) {
       if ( db_active_index( SLIDE_GEOMETRY, islide, VERSION_NORMAL ) ) {
+        // slide_stiffness and/or slide_damping (F5 T5 U2): the
+        // Professional elastic-plastic law; otherwise the legacy penalty law
         long int has_spring = db_active_index( SLIDE_STIFFNESS, islide,
+          VERSION_NORMAL ) || db_active_index( SLIDE_DAMPING, islide,
           VERSION_NORMAL );
         db( SLIDE_GEOMETRY, islide, slide_geometry, ddum, 
           ldum, VERSION_NORMAL, GET );
@@ -130,11 +133,11 @@ void slide_spring( long int inod, long int islide, double *new_node_dof,
 {
   long int idim=0, ldum=0, idum[1];
   double ddum[MDIM], values[DATA_ITEM_SIZE];
-  double kn=0., kt=0., un=0., ut_mag=0., S=0., cap_t=0., c=0., mu=0.,
+  double kn=0., kt=0., cn=0., ct=0., vn=0., un=0., ut_mag=0., S=0., cap_t=0., c=0., mu=0.,
     sig_t=1.e300, res_t=1.e-2, ax=1., radius=0.,
     tangent[MDIM], fn_node[MDIM], ft_node[MDIM], *coord=NULL;
   long int plasti_apply=-YES, stiffness_apply=-YES, has_friction=0,
-    axisym=-NO;
+    axisym=-NO, damping_apply=-YES, has_damping=0, slide_user=-NO;
 
   if ( !materi_velocity ) return;
   // control gates (manual Professional 6.371/6.372): -no disables the
@@ -147,11 +150,29 @@ void slide_spring( long int inod, long int islide, double *new_node_dof,
     VERSION_NORMAL, GET_IF_EXISTS );
   db( CONTROL_SLIDE_STIFFNESS_APPLY, icontrol, &stiffness_apply, ddum, ldum,
     VERSION_NORMAL, GET_IF_EXISTS );
-  if ( stiffness_apply==-NO ) return;
+  // slide_damping cn ct (manual 6.1045, F5 T5 U2): VISCOUS damping, the
+  // force on the node is -cn*vn*n - ct*vt with v the node velocity.
+  // DELIBERATE DIVERGENCE SLIDE-DAMPING-VISCOUS (owner decision
+  // 2026-11-17): the Professional 02-08-2026 applies c*u/dt with u the
+  // total slide displacement, i.e. an extra spring of stiffness c/dt.
+  // control_slide_damping_apply -no (6.370, default -yes) switches it off.
+  db( CONTROL_SLIDE_DAMPING_APPLY, icontrol, &damping_apply, ddum, ldum,
+    VERSION_NORMAL, GET_IF_EXISTS );
+  if ( damping_apply!=-NO && db( SLIDE_DAMPING, islide, idum, values, ldum,
+      VERSION_NORMAL, GET_IF_EXISTS ) ) {
+    cn = values[0];
+    ct = values[1];
+    has_damping = 1;
+  }
+  if ( stiffness_apply==-NO && !has_damping ) return;
 
-  db( SLIDE_STIFFNESS, islide, idum, values, ldum, VERSION_NORMAL, GET );
-  kn = values[0];
-  kt = values[1];
+  if ( stiffness_apply!=-NO && db( SLIDE_STIFFNESS, islide, idum, values,
+      ldum, VERSION_NORMAL, GET_IF_EXISTS ) ) {
+    kn = values[0];
+    kt = values[1];
+  }
+  db( SLIDE_USER, islide, &slide_user, ddum, ldum, VERSION_NORMAL,
+    GET_IF_EXISTS );
   // plastic friction phi c (manual 6.1042) and tension cut-off sig_t
   // (manual 6.1043): the records of the slide with the same index.
   if ( db( SLIDE_PLASTI_FRICTION, islide, idum, values, ldum,
@@ -194,16 +215,18 @@ void slide_spring( long int inod, long int islide, double *new_node_dof,
   long int displ_indx = -1;
   if ( materi_displacement ) displ_indx = dis_indx;
   else if ( materi_velocity_integrated ) displ_indx = veli_indx;
-  if ( displ_indx<0 ) return;
+  if ( displ_indx<0 && !has_damping ) return;
 
   array_set( tangent, 0., MDIM );
   array_set( fn_node, 0., MDIM );
   array_set( ft_node, 0., MDIM );
   un = 0.;
-  for ( idim=0; idim<ndim; idim++ )
-    un += new_node_dof[displ_indx+idim*nder] * normal[idim];
-  for ( idim=0; idim<ndim; idim++ )
-    tangent[idim] = new_node_dof[displ_indx+idim*nder] - un*normal[idim];
+  if ( displ_indx>=0 ) {
+    for ( idim=0; idim<ndim; idim++ )
+      un += new_node_dof[displ_indx+idim*nder] * normal[idim];
+    for ( idim=0; idim<ndim; idim++ )
+      tangent[idim] = new_node_dof[displ_indx+idim*nder] - un*normal[idim];
+  }
   ut_mag = array_size( tangent, ndim );
   // the tangential FRICTION direction on the node opposes the tangential
   // displacement (the Professional node_slide_direction record)
@@ -228,6 +251,9 @@ void slide_spring( long int inod, long int islide, double *new_node_dof,
   if ( has_friction && plasti_apply!=-NO ) {
     cap_t = c + mu*scalar_dabs( S );
   }
+  // slide_user -yes (manual 6.1044): the user routine gives the cap
+  if ( slide_user==-YES )
+    user_slide_friction_force( inod, islide, S, ut_mag, cap_t );
 
   // the normal force on the node (out of the plane when compressed) and
   // the tangential force on the node: the elastic predictor magnitude
@@ -264,19 +290,45 @@ void slide_spring( long int inod, long int islide, double *new_node_dof,
       dtime*ax*kn*scalar_dabs( normal[idim] );
     node_rhside[vel_indx/nder+idim] += fn_node[idim] + ft_node[idim];
   }
+  // viscous slide damping on the node velocity (unknown of the solve, so
+  // the matrix gets cn and ct without the dtime factor of the springs)
+  double fd_node[MDIM];
+  array_set( fd_node, 0., MDIM );
+  if ( has_damping ) {
+    vn = 0.;
+    for ( idim=0; idim<ndim; idim++ )
+      vn += new_node_dof[vel_indx+idim*nder] * normal[idim];
+    for ( idim=0; idim<ndim; idim++ ) {
+      double vt_i = new_node_dof[vel_indx+idim*nder] - vn*normal[idim];
+      fd_node[idim] = -ax*( cn*vn*normal[idim] + ct*vt_i );
+      node_lhside[vel_indx/nder+idim] +=
+        ax*( cn*scalar_dabs( normal[idim] ) +
+             ct*( 1. - scalar_dabs( normal[idim] ) ) );
+      node_rhside[vel_indx/nder+idim] += fd_node[idim];
+    }
+  }
   {
     double fout[MDIM], dirs[6], fval = 0., fric_mag = 0.;
     long int lfout = ndim, ldirs = 6, lfval = 1;
     array_set( fout, 0., MDIM );
     array_set( dirs, 0., 6 );
+    double ft_tot = 0., fd_n = 0., ftot_t[MDIM];
     for ( idim=0; idim<ndim; idim++ ) fric_mag += ft_node[idim]*ft_node[idim];
     fric_mag = sqrt( fric_mag );
+    // the damping force is part of the slide force (normal and
+    // tangential components)
+    for ( idim=0; idim<ndim; idim++ ) fd_n += fd_node[idim]*normal[idim];
+    for ( idim=0; idim<ndim; idim++ ) {
+      ftot_t[idim] = ft_node[idim] + fd_node[idim] - fd_n*normal[idim];
+      ft_tot += ftot_t[idim]*ftot_t[idim];
+    }
+    ft_tot = sqrt( ft_tot );
     // node_slide_force = the force the material applies ON the slide
     // geometry (= -force on the node) in the local (n, t) frame:
     // slot 0 = k_n*u_n (compression negative), slot 1 = - tangential
     // force magnitude on the node.
-    fout[0] = -S*ax;
-    if ( ut_mag>1.e-12 ) fout[1] = -fric_mag;
+    fout[0] = -S*ax - fd_n;
+    if ( ut_mag>1.e-12 || has_damping ) fout[1] = -ft_tot;
     if ( has_friction && plasti_apply!=-NO )
       fval = fric_mag/ax - ( c + mu*scalar_dabs( S ) );
     for ( idim=0; idim<ndim; idim++ ) {

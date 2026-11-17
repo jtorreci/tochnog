@@ -112,7 +112,8 @@ other-physics names (baseline correction, force_edge_diagram, force_gravity_geom
 `materi_strain_energy` normalised by `input.cc`. None of the 58 is a T4 (W5) name.
 2026-11-14 (F5 T5, owner decision): `force_volume_element_group_0` is discarded, it is a PDF header
 artifact of manual 6.504 and not a record name (`force_volume_element_group` is accepted); 57 pending.
-2026-11-15 (F5 T5 U3b): `groundflow_phreatic_project` accepted. The T4 tracker counted 69 W5 names, the probe shows 68 newly
+2026-11-15 (F5 T5 U3b): `groundflow_phreatic_project` accepted.
+2026-11-17 (F5 T5 U2): `slide_damping`, `control_slide_damping_apply`, `slide_user` accepted. The T4 tracker counted 69 W5 names, the probe shows 68 newly
 accepted; the one-name difference in the 2026-11-08 count is not explained.
 
 ## Gap by family

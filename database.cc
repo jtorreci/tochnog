@@ -7802,6 +7802,25 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   data_length[CONTROL_SLIDE_STIFFNESS_APPLY] = 1;
   data_class[CONTROL_SLIDE_STIFFNESS_APPLY] = CONTROL;
 
+  // slide_damping (6.1045), slide_user (6.1044), control_slide_damping_apply
+  // (6.370), F5 T5 U2.
+  strcpy(name[SLIDE_DAMPING],"slide_damping");
+  type[SLIDE_DAMPING] = DOUBLE_PRECISION;
+  data_length[SLIDE_DAMPING] = 2;
+  data_class[SLIDE_DAMPING] = SLIDE;
+  data_required[SLIDE_DAMPING] = SLIDE_GEOMETRY;
+
+  strcpy(name[SLIDE_USER],"slide_user");
+  type[SLIDE_USER] = INTEGER;
+  data_length[SLIDE_USER] = 1;
+  data_class[SLIDE_USER] = SLIDE;
+  data_required[SLIDE_USER] = SLIDE_GEOMETRY;
+
+  strcpy(name[CONTROL_SLIDE_DAMPING_APPLY],"control_slide_damping_apply");
+  type[CONTROL_SLIDE_DAMPING_APPLY] = INTEGER;
+  data_length[CONTROL_SLIDE_DAMPING_APPLY] = 1;
+  data_class[CONTROL_SLIDE_DAMPING_APPLY] = CONTROL;
+
   strcpy(name[SOR],"sor");
 
   strcpy(name[SPHERE],"sphere");

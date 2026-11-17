@@ -19,6 +19,32 @@
 
 #include "tochnog.h"
 
+void user_slide_friction_force( long int /*inod*/, long int /*islide*/,
+  double /*normal_force*/, double /*tangential_displacement*/,
+  double &/*friction_force*/ )
+
+  /* Purpose: user supplied maximum friction force of a slide
+     (slide_user -yes, manual 6.1044). It replaces the slide_plasti_friction
+     cap c + |Fn|*tan(phi) of the slide_stiffness law.
+
+     You need to skip the error message.
+
+     inod: Input. The node on the slide geometry.
+     islide: Input. The index of the slide_geometry record.
+     normal_force: Input. The normal spring force per unit size
+       (compression positive).
+     tangential_displacement: Input. The size of the tangential slide
+       displacement.
+     friction_force: Input and Output. On input the slide_plasti_friction
+       cap (1.e300 without that record); on output the maximum tangential
+       force per unit size.
+  */
+
+{
+  pri( "Error: routine user_slide_friction_force is not programmed." );
+  exit(TN_EXIT_STATUS);
+}
+
 void user_young( double /*new_unknowns*/[], double /*old_hisv*/[],
   double /*old_stress*/[], double &/*young*/ )
 

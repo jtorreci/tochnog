@@ -229,8 +229,10 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   - [ ] Owner decisions: force_edge_diagram,
     group_dof_initial* precedence, group_contact_spring_direction_automatic_planes meaning,
     group_beam_force_moment_plasti (new model), strain_volume kernel, baseline correction scope.
-  - [ ] U2 slide (slide_damping, control_slide_damping_apply, slide_user). 
-    U4 group_dof_initial (3). U5 force (force_gravity_geometry, force_edge_diagram). U6 truss diagram and
+  - [x] U2 slide_damping (viscous, divergence SLIDE-DAMPING-VISCOUS), control_slide_damping_apply, slide_user
+    (user.cc stub, Professional message). Route: inline. Owner L-T5-slide. RED: base "I do not know : slide_damping"
+    / "slide_user". GREEN slide_damping1 (c*v exact), slide_damping2 (Professional values), slide_user_error1.
+  - [ ] U4 group_dof_initial (3). U5 force (force_gravity_geometry, force_edge_diagram). U6 truss diagram and
     contact-spring planes. U7 group_time_fill. U8 strain_volume. U9 baseline correction. U10 beam plasticity.
 - [ ] T6 W7 safety_slip (32): self-contained slip-surface safety-factor feature, planned
   separately. Route: to decide.
@@ -1002,3 +1004,9 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   Fix: pres dof = head - rho*g*z_ref (z_ref first table height), same totals as the Professional.
 - L-T5-multiple (2026-11-16) Owner: "si, mide" (measure the inclined multiple level on the Professional), then
   "si, aplícalo". Measured: Professional gives the single-level seepage result; GNU bounded pres 0 (no flow).
+
+- L-T5-slide (2026-11-17) Owner: "¿y no podemos hacer amortiguamiento viscoso y documentar la divergencia? es que
+  sencillamente lo de Pro no es lo que dice que es. Puedo simular ese "amortiguamiento" con un resorte y si lo
+  implementamos tal cual nos quedamos sin amortiguamiento real". Measured: Professional force (k + c/dt)*u (u total
+  displacement), dt 0.01/0.02; control -no = undamped; slide_user -yes stops "Error: routine
+  user_slide_friction_force is not programmed.". Implemented viscous -c*v.
