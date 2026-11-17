@@ -169,56 +169,71 @@ void general( long int element, long int name, long int nnol, long int element_g
   // step: the marker ELEMENT_DOF_INITIAL_APPLIED is written by
   // step_close (top.cc) once the step converged, so every iteration of
   // the birth step sees the same initial field.
+  // group_dof_initial / _specific_number / _value (manual 6.609 - 6.611,
+  // F5 T5 U4): the same records for every element of the group. Order
+  // (owner decision 2026-11-17): element_dof_initial >
+  // element_dof_initial_specific > group_dof_initial >
+  // group_dof_initial_specific, i.e. the element records win over the
+  // group ones. DELIBERATE DIVERGENCE DOF-INITIAL-GROUP-PRECEDENCE: the
+  // Professional 02-08-2026 ranks the full records first
+  // (group_dof_initial beats element_dof_initial_specific).
   element_dof_initial_active = 0;
-  if ( db( ELEMENT_DOF_INITIAL, element, edi_idum, edi_vals, edi_n,
-      VERSION_NORMAL, GET_IF_EXISTS ) && edi_n>0 ) {
-    if ( !db_active_index( ELEMENT_DOF_INITIAL_APPLIED, element,
-        VERSION_NORMAL ) ) {
+  edis_active = 0;
+  if ( !db_active_index( ELEMENT_DOF_INITIAL_APPLIED, element,
+       VERSION_NORMAL ) ) {
+    long int edi_src=0, edi_level=0, idat_full=0, idat_num=0, idat_val=0,
+      index_src=0;
+    for ( edi_level=0; edi_level<2 && !edi_src; edi_level++ ) {
+      idat_full = edi_level==0 ? ELEMENT_DOF_INITIAL : GROUP_DOF_INITIAL;
+      idat_num = edi_level==0 ? ELEMENT_DOF_INITIAL_SPECIFIC_NUMBER :
+        GROUP_DOF_INITIAL_SPECIFIC_NUMBER;
+      idat_val = edi_level==0 ? ELEMENT_DOF_INITIAL_SPECIFIC_VALUE :
+        GROUP_DOF_INITIAL_SPECIFIC_VALUE;
+      index_src = edi_level==0 ? element : element_group;
+      if ( db( idat_full, index_src, edi_idum, edi_vals, edi_n,
+          VERSION_NORMAL, GET_IF_EXISTS ) && edi_n>0 )
+        edi_src = 1;
+      else if ( db_active_index( idat_num, index_src, VERSION_NORMAL ) )
+        edi_src = 2;
+    }
+    if ( edi_src==1 ) {
       element_dof_initial_active = 1;
       for ( iuknwn=0; iuknwn<nuknwn; iuknwn++ )
         element_dof_initial_values[iuknwn] =
           edi_vals[ ( iuknwn<edi_n ) ? iuknwn : edi_n-1 ];
     }
-  }
-
-  // element_dof_initial_specific_number / _value (manual Professional
-  // 6.423 / 6.424): initial past value of one dof only, the linear field
-  // value_0 + grad . x evaluated at the element nodes (Professional
-  // 02-08-2026: bar 0..1 with 0.8 x gives node 2 temp 0.9, 0.1 + 0.8 x
-  // gives 0.95). Same birth step and marker as element_dof_initial,
-  // which takes precedence when both are given (Professional: 0.7).
-  // value_0 alone is a constant field (manual; the Professional gives
-  // NaN there, DIVERGENCES DOF-INITIAL-SPECIFIC-CONSTANT).
-  edis_active = 0;
-  if ( !element_dof_initial_active &&
-       db_active_index( ELEMENT_DOF_INITIAL_SPECIFIC_NUMBER, element,
-         VERSION_NORMAL ) &&
-       !db_active_index( ELEMENT_DOF_INITIAL_APPLIED, element,
-         VERSION_NORMAL ) ) {
-    if ( !db_active_index( ELEMENT_DOF_INITIAL_SPECIFIC_VALUE, element,
-        VERSION_NORMAL ) ) {
-      pri( "Error: element_dof_initial_specific_value is missing for element ",
-        element );
-      db_error( ELEMENT_DOF_INITIAL_SPECIFIC_NUMBER, element );
-    }
-    db( ELEMENT_DOF_INITIAL_SPECIFIC_NUMBER, element, &edis_label, ddum,
-      ldum, VERSION_NORMAL, GET );
-    db( DOF_LABEL, 0, dof_label, ddum, ldum, VERSION_NORMAL, GET );
-    if ( !array_member( dof_label, edis_label, nuknwn, edis_iuknwn ) )
-      db_error( ELEMENT_DOF_INITIAL_SPECIFIC_NUMBER, element );
-    db( ELEMENT_DOF_INITIAL_SPECIFIC_VALUE, element, edis_idum, edis_vals,
-      edis_n, VERSION_NORMAL, GET );
-    if ( edis_n!=1 && edis_n<1+ndim )
-      db_error( ELEMENT_DOF_INITIAL_SPECIFIC_VALUE, element );
-    for ( inol=0; inol<nnol; inol++ ) {
-      double *node_coord = db_dbl( NODE, nodes[inol], VERSION_NORMAL );
-      edis_node_values[inol] = edis_vals[0];
-      if ( edis_n>1 ) {
-        for ( jdim=0; jdim<ndim; jdim++ )
-          edis_node_values[inol] += edis_vals[1+jdim] * node_coord[jdim];
+    // _specific_number / _value (manual Professional 6.423 / 6.424):
+    // initial past value of one dof only, the linear field value_0 +
+    // grad . x evaluated at the element nodes (Professional 02-08-2026:
+    // bar 0..1 with 0.8 x gives node 2 temp 0.9, 0.1 + 0.8 x gives
+    // 0.95). value_0 alone is a constant field (manual; the Professional
+    // gives NaN there, DIVERGENCES DOF-INITIAL-SPECIFIC-CONSTANT).
+    else if ( edi_src==2 ) {
+      if ( !db_active_index( idat_val, index_src, VERSION_NORMAL ) ) {
+        pri( idat_num==ELEMENT_DOF_INITIAL_SPECIFIC_NUMBER ?
+          "Error: element_dof_initial_specific_value is missing for element " :
+          "Error: group_dof_initial_specific_value is missing for group ",
+          index_src );
+        db_error( idat_num, index_src );
       }
+      db( idat_num, index_src, &edis_label, ddum, ldum, VERSION_NORMAL, GET );
+      db( DOF_LABEL, 0, dof_label, ddum, ldum, VERSION_NORMAL, GET );
+      if ( !array_member( dof_label, edis_label, nuknwn, edis_iuknwn ) )
+        db_error( idat_num, index_src );
+      db( idat_val, index_src, edis_idum, edis_vals, edis_n,
+        VERSION_NORMAL, GET );
+      if ( edis_n!=1 && edis_n<1+ndim )
+        db_error( idat_val, index_src );
+      for ( inol=0; inol<nnol; inol++ ) {
+        double *node_coord = db_dbl( NODE, nodes[inol], VERSION_NORMAL );
+        edis_node_values[inol] = edis_vals[0];
+        if ( edis_n>1 ) {
+          for ( jdim=0; jdim<ndim; jdim++ )
+            edis_node_values[inol] += edis_vals[1+jdim] * node_coord[jdim];
+        }
+      }
+      edis_active = 1;
     }
-    edis_active = 1;
   }
 
   for ( ipuknwn=0; ipuknwn<npuknwn; ipuknwn++ ) {

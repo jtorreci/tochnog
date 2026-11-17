@@ -1,0 +1,23 @@
+( F5 T5 U4: group_dof_initial (manual 6.609) on the bar of
+  element_dof_initial_specific1: past temperature 0.7 for the elements of
+  group 0, so (1-T) = (T-0.7) gives node_dof 2 = 0.85 (Professional
+  02-08-2026, same input). )
+echo -no
+number_of_space_dimensions 1
+condif_temperature
+end_initia
+inertia_apply -yes
+node 1  0
+node 2  1
+element 1  -bar2 1 2
+bounda_dof   0  1 -temp
+bounda_time  0  1.
+group_type 0  -condif
+group_condif_density 0  1.0
+group_condif_capacity 0  2.
+group_condif_conductivity 0  1.
+control_timestep   0  1. 1.0
+group_dof_initial 0 0.7
+target_item  0  -node_dof 2 0
+target_value 0  0.85 1.e-10
+end_data

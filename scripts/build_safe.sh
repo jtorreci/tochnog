@@ -3572,6 +3572,16 @@ run_ok "$T2026" groundflow_phreatic_multiple_inclined1
 run_ok "$T2026" slide_damping1
 run_ok "$T2026" slide_damping2
 expected_error_ok "$T2026" slide_user_error1
+# F5 T5 U4: group_dof_initial* (6.609-6.611); precedence element > group
+# (group_dof_initial4 = DIVERGENCES DOF-INITIAL-GROUP-PRECEDENCE).
+run_ok "$T2026" group_dof_initial1
+run_ok "$T2026" group_dof_initial2
+run_ok "$T2026" group_dof_initial3
+run_ok "$T2026" group_dof_initial4
+run_ok "$T2026" group_dof_initial5
+run_ok "$T2026" group_dof_initial6
+run_ok "$T2026" group_dof_initial7
+expected_error_ok "$T2026" group_dof_initial_error1
 run_ok "$T2026" materi_plasti_maximum_iterations1
 run_ok "$T2026" materi_plasti_maximum_iterations2
 expected_error_ok "$T2026" materi_plasti_maximum_iterations_error1

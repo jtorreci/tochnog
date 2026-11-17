@@ -1,0 +1,25 @@
+( F5 T5 U4 precedence: element_dof_initial_specific (node 2 past
+  0.9) wins over group_dof_initial_specific (0.2 + 0.4 x): node_dof 2 =
+  0.95 (Professional 02-08-2026). )
+echo -no
+number_of_space_dimensions 1
+condif_temperature
+end_initia
+inertia_apply -yes
+node 1  0
+node 2  1
+element 1  -bar2 1 2
+bounda_dof   0  1 -temp
+bounda_time  0  1.
+group_type 0  -condif
+group_condif_density 0  1.0
+group_condif_capacity 0  2.
+group_condif_conductivity 0  1.
+control_timestep   0  1. 1.0
+element_dof_initial_specific_number 1 -temp
+element_dof_initial_specific_value 1 0.1 0.8
+group_dof_initial_specific_number 0 -temp
+group_dof_initial_specific_value 0 0.2 0.4
+target_item  0  -node_dof 2 0
+target_value 0  0.95 1.e-10
+end_data

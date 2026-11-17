@@ -4177,6 +4177,30 @@ void db_initialize( long int dof_type[], long int dof_label[] )
 
   strcpy(name[GROUNDFLOW_VELOCITY],"groundflow_velocity");
 
+  // group_dof_initial, _specific_number, _specific_value (manual 6.609 -
+  // 6.611, F5 T5 U4): the element_dof_initial records for every element
+  // of the group (index = element group); the element records win.
+  strcpy(name[GROUP_DOF_INITIAL],"group_dof_initial");
+  type[GROUP_DOF_INITIAL] = DOUBLE_PRECISION;
+  data_length[GROUP_DOF_INITIAL] = DATA_ITEM_SIZE;
+  fixed_length[GROUP_DOF_INITIAL] = 0;
+  data_class[GROUP_DOF_INITIAL] = GROUP_DOF_INITIAL;
+  data_required[GROUP_DOF_INITIAL] = GROUP_TYPE;
+
+  strcpy(name[GROUP_DOF_INITIAL_SPECIFIC_NUMBER],"group_dof_initial_specific_number");
+  type[GROUP_DOF_INITIAL_SPECIFIC_NUMBER] = INTEGER;
+  data_length[GROUP_DOF_INITIAL_SPECIFIC_NUMBER] = 1;
+  fixed_length[GROUP_DOF_INITIAL_SPECIFIC_NUMBER] = 1;
+  data_class[GROUP_DOF_INITIAL_SPECIFIC_NUMBER] = GROUP_DOF_INITIAL;
+  data_required[GROUP_DOF_INITIAL_SPECIFIC_NUMBER] = GROUP_TYPE;
+
+  strcpy(name[GROUP_DOF_INITIAL_SPECIFIC_VALUE],"group_dof_initial_specific_value");
+  type[GROUP_DOF_INITIAL_SPECIFIC_VALUE] = DOUBLE_PRECISION;
+  data_length[GROUP_DOF_INITIAL_SPECIFIC_VALUE] = 1+MDIM;
+  fixed_length[GROUP_DOF_INITIAL_SPECIFIC_VALUE] = 0;
+  data_class[GROUP_DOF_INITIAL_SPECIFIC_VALUE] = GROUP_DOF_INITIAL;
+  data_required[GROUP_DOF_INITIAL_SPECIFIC_VALUE] = GROUP_TYPE;
+
   strcpy(name[GROUP_AXISYMMETRIC],"group_axisymmetric");
   type[GROUP_AXISYMMETRIC] = INTEGER;
   data_length[GROUP_AXISYMMETRIC] = 1;

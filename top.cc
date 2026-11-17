@@ -1739,6 +1739,25 @@ void step_close( long int task, long int ipar, long int npar, long int ipar_i, l
         db( ELEMENT_DOF_INITIAL_APPLIED, ielem, &one, ddum, len_one,
           VERSION_NORMAL, PUT );
     }
+    // group_dof_initial / _specific_number (6.609 / 6.610, F5 T5 U4): the
+    // same marker for the active elements of a group with the record
+    {
+      long int max_el_g=0, gr_g=0;
+      db_max_index( ELEMENT, max_el_g, VERSION_NORMAL, GET );
+      for ( ielem=0; ielem<=max_el_g; ielem++ ) {
+        if ( !db_active_index( ELEMENT, ielem, VERSION_NORMAL ) ||
+             db_active_index( ELEMENT_DOF_INITIAL_APPLIED, ielem,
+               VERSION_NORMAL ) ) continue;
+        gr_g = 0;
+        db( ELEMENT_GROUP, ielem, &gr_g, ddum, ldum, VERSION_NORMAL,
+          GET_IF_EXISTS );
+        if ( db_active_index( GROUP_DOF_INITIAL, gr_g, VERSION_NORMAL ) ||
+             db_active_index( GROUP_DOF_INITIAL_SPECIFIC_NUMBER, gr_g,
+               VERSION_NORMAL ) )
+          db( ELEMENT_DOF_INITIAL_APPLIED, ielem, &one, ddum, len_one,
+            VERSION_NORMAL, PUT );
+      }
+    }
     // element_dof_initial_specific_number (6.423): same birth-step marker
     db_max_index( ELEMENT_DOF_INITIAL_SPECIFIC_NUMBER, max_elem_edi,
       VERSION_NORMAL, GET );
