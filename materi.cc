@@ -350,6 +350,9 @@ void materi( long int element, long int gr, long int name, long int nnol,
     &activation_stiff );
   for ( idim=0; idim<ndim; idim++ )
     force_gravity[idim] *= activation_factor;
+  // force_gravity_geometry (manual 6.499): elements outside get none
+  if ( !force_gravity_element_inside( element ) )
+    array_set( force_gravity, 0., ndim );
 
   if ( condif_temperature ) {
     get_group_data( GROUP_MATERI_EXPANSION_VOLUME, gr, element, new_unknowns, 

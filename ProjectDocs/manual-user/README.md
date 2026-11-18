@@ -56,6 +56,8 @@ page lists its own in "Differences with the Professional version".
 - [control_reset_dof](control_reset_dof.md) — reset a nodal dof to a constant value, one depending on another dof, or a spatial distribution (`control_reset_value_logarithmic_first` and `_exponent` = Professional since F5).
 - [slide_axisymmetric](slide_axisymmetric.md) — axisymmetric scaling of the slide friction.
 - [slide_damping](slide_damping.md) — viscous slide damping, control_slide_damping_apply, slide_user (6.1045/6.370/6.1044, F5 T5 U2).
+- [force_edge_diagram](force_edge_diagram.md) — force_edge factor per edge node from its vertical displacement (6.455, F5 T5 U5).
+- [force_gravity_geometry](force_gravity_geometry.md) — gravity only for elements with all nodes inside a geometry (6.499, F5 T5 U5).
 - [group_interface](group_interface.md) — interface elements (joints between blocks).
 - [control_mesh_convert](control_mesh_convert.md) — automatic conversion of bar2 to quad4 (and bar3 to quad6) for interfaces.
 - [post_force_edge_summed](post_force_edge_summed.md) — total force of the force_edge records, integrated over the edges.

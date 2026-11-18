@@ -969,6 +969,33 @@ void area( long int element, long int name,
                         if ( jnf==inol ) node_factor = values_nf[jnf+1];
                   }
                   if ( !use_it ) continue;
+                  // force_edge_diagram (manual 6.455): factor from the
+                  // vertical displacement of this edge node in the
+                  // current iterate (Professional 02-08-2026: per node,
+                  // the previous iteration's displacement; 0 outside the
+                  // diagram, as force_edge_time)
+                  if ( db_active_index( FORCE_ELEMENT_EDGE_DIAGRAM,
+                      ind, VERSION_NORMAL ) ) {
+                    if ( !materi_displacement ) {
+                      pri( "Error: force_edge_diagram needs "
+                        "materi_displacement (the factor is taken from "
+                        "the vertical displacement)" );
+                      exit(TN_EXIT_STATUS);
+                    }
+                    long int length_dg=0;
+                    double table_dg[DATA_ITEM_SIZE], fac_dg=0.;
+                    db( FORCE_ELEMENT_EDGE_DIAGRAM, ind, idum, table_dg,
+                      length_dg, VERSION_NORMAL, GET );
+                    if ( length_dg<4 || length_dg%2!=0 ) {
+                      pri( "Error: force_edge_diagram needs pairs of "
+                        "vertical displacement and factor, at least two "
+                        "pairs." );
+                      db_error( FORCE_ELEMENT_EDGE_DIAGRAM, ind );
+                    }
+                    table_xy( table_dg, "FORCE_EDGE_DIAGRAM", length_dg,
+                      new_dof[inol*nuknwn+dis_indx+(ndim-1)*nder], fac_dg );
+                    node_factor *= fac_dg;
+                  }
                   force_factor( FORCE_ELEMENT_EDGE_FACTOR, ind,
                     &new_coord[inol*ndim], factor );
                   db( FORCE_ELEMENT_EDGE, ind, idum, values, 

@@ -637,6 +637,7 @@ enum {
   FORCE_ELEMENT_EDGE_ELEMENT_SIDE,
   FORCE_ELEMENT_EDGE_NODE,
   FORCE_ELEMENT_EDGE_NODE_FACTOR,
+  FORCE_ELEMENT_EDGE_DIAGRAM,
   FORCE_ELEMENT_EDGE_FACTOR,
   FORCE_ELEMENT_EDGE_MULTI_LINEAR_FACTOR_X,
   FORCE_ELEMENT_EDGE_GEOMETRY,
@@ -683,6 +684,7 @@ enum {
   FORCE_ELEMENT_VOLUME_TIME,
   FORCE_GRAVITY,
   FORCE_GRAVITY_TIME,
+  FORCE_GRAVITY_GEOMETRY,
   FORCE_POINT,
   FROM,
   FRONT,
@@ -2309,6 +2311,7 @@ void      force_element_volume_set( long int element, long int nnol, long int no
             double coord[], double force_element_volume[] );
 void      force_time_file_apply( long int iforce, long int table_name, double &load );
 void      force_gravity_calculate( double force_gravity[] );
+long int  force_gravity_element_inside( long int element );
 void      force_point_calculate( void );
 long int  force_time( double time_table[], const char* table_name,
             long int length, double &load );

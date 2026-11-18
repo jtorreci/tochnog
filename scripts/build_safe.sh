@@ -3582,6 +3582,16 @@ run_ok "$T2026" group_dof_initial5
 run_ok "$T2026" group_dof_initial6
 run_ok "$T2026" group_dof_initial7
 expected_error_ok "$T2026" group_dof_initial_error1
+# F5 T5 U5: force_edge_diagram (6.455): per edge node factor from the vertical
+# displacement of the previous iteration, 0 outside (Professional 02-08-2026 values).
+run_ok "$T2026" force_edge_diagram1
+run_ok "$T2026" force_edge_diagram2
+expected_error_ok "$T2026" force_edge_diagram_error1
+# F5 T5 U5: force_gravity_geometry (6.499): only elements with all nodes inside
+# get the gravity (quad4 and truss; Professional 02-08-2026 values).
+run_ok "$T2026" force_gravity_geometry1
+run_ok "$T2026" force_gravity_geometry2
+run_ok "$T2026" force_gravity_geometry3
 run_ok "$T2026" materi_plasti_maximum_iterations1
 run_ok "$T2026" materi_plasti_maximum_iterations2
 expected_error_ok "$T2026" materi_plasti_maximum_iterations_error1

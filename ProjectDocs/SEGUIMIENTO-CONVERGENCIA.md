@@ -1277,7 +1277,7 @@ fallan TODOS en el PARSE del layout, no del nombre:
   son el blocker.
 
 - [x] `force_edge` — por equivalencia (alias prefijo Professional→`force_element_edge`, Sprint 9) + 2026-09-02 (LAYOUT: record variable 1..nprinc; la forma Professional de 1 valor por dirección carga solo los dofs mecánicos en problemas acoplados — large2/large3)
-- [ ] `force_edge_diagram` — PENDIENTE
+- [x] `force_edge_diagram` — F5 T5 U5 (2026-11-18): factor per edge node from the vertical displacement of the iterate, 0 outside (Professional 02-08-2026 values)
 - [x] `force_edge_element` — Sprint 9 (variante nueva)
 - [x] `force_edge_element_group` — Sprint 9
 - [x] `force_edge_element_node` — Sprint 9
@@ -1324,7 +1324,7 @@ fallan TODOS en el PARSE del layout, no del nombre:
 ### force_gravity (2/3)
 
 - [x] `force_gravity` — presente en el GNU
-- [ ] `force_gravity_geometry` — PENDIENTE
+- [x] `force_gravity_geometry` — F5 T5 U5 (2026-11-18): elements with all nodes inside (materi, truss; Professional 02-08-2026 values)
 - [x] `force_gravity_time` — presente en el GNU
 
 ### force_point (1/1)

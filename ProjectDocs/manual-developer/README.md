@@ -59,6 +59,8 @@ page lists its own in "Differences with the Professional version".
 - [control_reset_dof](control_reset_dof.md) — reset a nodal dof to a constant value or one depending on another dof.
 - [slide_axisymmetric](slide_axisymmetric.md) — axisymmetric scaling of the slide friction (slide.cc).
 - [slide_damping](slide_damping.md) — slide.cc slide_spring(): viscous damping -c*v, control gate, user_slide_friction_force hook (F5 T5 U2).
+- [force_edge_diagram](force_edge_diagram.md) — area.cc FORCE_ELEMENT_EDGE branch: node_factor *= table_xy(diagram, vertical dis of the iterate), 0 outside (F5 T5 U5).
+- [force_gravity_geometry](force_gravity_geometry.md) — force.cc force_gravity_element_inside(), used by materi.cc and truss.cc (F5 T5 U5).
 - [group_interface](group_interface.md) — interface elements (joints between blocks).
 - [control_mesh_convert](control_mesh_convert.md) — automatic conversion of bar2 to quad4 for interfaces.
 - [post_force_edge_summed](post_force_edge_summed.md) — total force of the force_edge records, integrated over the edges.

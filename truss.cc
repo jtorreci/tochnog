@@ -117,6 +117,9 @@ void truss( long int element, long int element_group,
         options_inertia = inertia_switches[0];
     }
     force_gravity_calculate( force_gravity );
+    // force_gravity_geometry (manual 6.499): trusses outside get none
+    if ( !force_gravity_element_inside( element ) )
+      array_set( force_gravity, 0., ndim );
     // f=0 displacement-primary dynamics holds its mass and elastic force
     // in the reference configuration. The f=1 auxiliary reassembly is
     // marked by solve() so it preserves this same operator.

@@ -1,0 +1,53 @@
+(
+force_edge_diagram (manual 6.455): the force_edge values times a factor
+from the vertical displacement of each edge node (F5 T5 U5). Two quad4
+columns, E = 10 (left) and 100 (right), nu = 0, a downward edge load on
+the top line, diagram -1 0 0 1 (factor = 1 + disy). Professional
+02-08-2026, one step: every equilibrium iteration takes the factor from
+the node displacement of the previous iteration (first iteration 1:
+-0.1 / -0.01818 / -0.01; second with 0.9 / 0.98182 / 0.99), per node,
+not per integration point (the converged 30-step run gives -0.1/1.1 and
+-0.01/1.01 at the column ends).
+)
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_displacement
+materi_stress
+end_initia
+node 1 0 0
+node 2 1 0
+node 3 2 0
+node 4 0 1
+node 5 1 1
+node 6 2 1
+element 1 -quad4 1 2 4 5
+element 2 -quad4 2 3 5 6
+element_group 1 0
+element_group 2 1
+group_type 0 -materi
+group_materi_elasti_young 0 10
+group_materi_elasti_poisson 0 0
+group_materi_memory 0 -total_linear
+group_type 1 -materi
+group_materi_elasti_young 1 100
+group_materi_elasti_poisson 1 0
+group_materi_memory 1 -total_linear
+bounda_dof 0 1 -velx -vely
+bounda_dof 1 2 -velx -vely
+bounda_dof 2 3 -velx -vely
+bounda_dof 3 4 -velx
+bounda_dof 4 5 -velx
+bounda_dof 5 6 -velx
+force_edge 0 0 -1
+geometry_line 1 0 1 2 1 1.e-3
+force_edge_geometry 0 -geometry_line 1
+force_edge_diagram 0 -1. 0. 0. 1.
+control_timestep 0 1 1
+target_item    1  -node_dof 4 -disy
+target_value   1  -8.999999999998e-02 1.e-10
+target_item    2  -node_dof 5 -disy
+target_value   2  -1.785123966942e-02 1.e-10
+target_item    3  -node_dof 6 -disy
+target_value   3  -9.900000000003e-03 1.e-10
+end_data

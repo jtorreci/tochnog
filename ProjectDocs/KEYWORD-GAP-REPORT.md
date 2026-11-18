@@ -117,6 +117,8 @@ artifact of manual 6.504 and not a record name (`force_volume_element_group` is 
 2026-11-17 (F5 T5 U4): `group_dof_initial`, `group_dof_initial_specific_number`, `group_dof_initial_specific_value` accepted. The T4 tracker counted 69 W5 names, the probe shows 68 newly
 accepted; the one-name difference in the 2026-11-08 count is not explained.
 
+2026-11-18 (F5 T5 U5): `force_edge_diagram` (6.455) and `force_gravity_geometry` (6.499) accepted.
+
 ## Gap by family
 
 | Family | Missing | Notes |

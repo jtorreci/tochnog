@@ -3375,6 +3375,16 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   data_class[FORCE_ELEMENT_EDGE_NODE_FACTOR] = FORCE;
   data_required[FORCE_ELEMENT_EDGE_NODE_FACTOR] = FORCE_ELEMENT_EDGE;
 
+  // force_edge_diagram (manual 6.455): pairs vertical displacement /
+  // factor; the force_edge values of the same index are multiplied per
+  // edge node by the factor at the node's vertical displacement (F5 T5 U5)
+  strcpy(name[FORCE_ELEMENT_EDGE_DIAGRAM],"force_element_edge_diagram");
+  type[FORCE_ELEMENT_EDGE_DIAGRAM] = DOUBLE_PRECISION;
+  data_length[FORCE_ELEMENT_EDGE_DIAGRAM] = DATA_ITEM_SIZE;
+  fixed_length[FORCE_ELEMENT_EDGE_DIAGRAM] = 0;
+  data_class[FORCE_ELEMENT_EDGE_DIAGRAM] = FORCE;
+  data_required[FORCE_ELEMENT_EDGE_DIAGRAM] = FORCE_ELEMENT_EDGE;
+
   strcpy(name[FORCE_ELEMENT_EDGE_FACTOR],"force_element_edge_factor");
   type[FORCE_ELEMENT_EDGE_FACTOR] = DOUBLE_PRECISION;
   data_length[FORCE_ELEMENT_EDGE_FACTOR] = DATA_ITEM_SIZE;
@@ -3699,12 +3709,21 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   fixed_length[FORCE_GRAVITY_TIME] = 0;
   data_class[FORCE_GRAVITY_TIME] = FORCE_GRAVITY;
 
+  // force_gravity_geometry geometry_item_name geometry_item_index (manual
+  // 6.499): only elements with all nodes inside get the gravity (F5 T5 U5)
+  strcpy(name[FORCE_GRAVITY_GEOMETRY],"force_gravity_geometry");
+  type[FORCE_GRAVITY_GEOMETRY] = INTEGER;
+  no_index[FORCE_GRAVITY_GEOMETRY] = 1;
+  data_length[FORCE_GRAVITY_GEOMETRY] = 2;
+  data_class[FORCE_GRAVITY_GEOMETRY] = FORCE_GRAVITY;
+
   strcpy(name[FORCE_POINT],"force_point");
   type[FORCE_POINT] = DOUBLE_PRECISION;
   data_length[FORCE_POINT] = ndim + MUKNWN;
   fixed_length[FORCE_POINT] = 0;
   data_class[FORCE_POINT] = FORCE_POINT;
   data_required[FORCE_GRAVITY_TIME] = FORCE_GRAVITY;
+  data_required[FORCE_GRAVITY_GEOMETRY] = FORCE_GRAVITY;
 
   strcpy(name[FROM],"from");
 

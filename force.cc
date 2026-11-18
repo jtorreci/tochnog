@@ -279,6 +279,33 @@ void force_gravity_calculate( double force_gravity[] )
 
 }
 
+// force_gravity_geometry (manual 6.499): does the element get the
+// gravity? Without the record every element does; with it only an element
+// whose nodes are ALL inside the geometry (Professional 02-08-2026: two
+// quad4 columns, a quadrilateral reaching into the second column gives
+// the gravity to the first column only; covering both nodes lines gives
+// it to both).
+long int force_gravity_element_inside( long int element )
+
+{
+  long int inol=0, nnol=0, length=0, in_geometry=0, ldum=0,
+    el[1+MNOL], geometry_entity[2];
+  double ddum[MDIM], rdum=0.;
+
+  if ( !db_active_index( FORCE_GRAVITY_GEOMETRY, 0, VERSION_NORMAL ) )
+    return 1;
+  db( FORCE_GRAVITY_GEOMETRY, 0, geometry_entity, ddum, ldum,
+    VERSION_NORMAL, GET );
+  db( ELEMENT, element, el, ddum, length, VERSION_NORMAL, GET );
+  nnol = length - 1;
+  for ( inol=0; inol<nnol; inol++ ) {
+    geometry( el[1+inol], ddum, geometry_entity, in_geometry, rdum, ddum,
+      rdum, ddum, NODE_START_REFINED, PROJECT_EXACT, VERSION_NORMAL );
+    if ( !in_geometry ) return 0;
+  }
+  return 1;
+}
+
 void force_point_calculate( void )
 
 {

@@ -226,7 +226,7 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   - [x] U3c inclined groundflow_phreatic_level_multiple (same fix per record; _static -yes untouched). Route: inline.
     Owner L-T5-multiple. RED: groundflow_phreatic_multiple_inclined1 misses the targets (dof 0, no seepage); GREEN
     with the Professional totals to 1e-6.
-  - [ ] Owner decisions: force_edge_diagram,
+  - [ ] Owner decisions: force_edge_diagram (resolved by measurement, L-T5-diagram),
     group_contact_spring_direction_automatic_planes meaning,
     group_beam_force_moment_plasti (new model), strain_volume kernel, baseline correction scope.
   - [x] U2 slide_damping (viscous, divergence SLIDE-DAMPING-VISCOUS), control_slide_damping_apply, slide_user
@@ -235,7 +235,11 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   - [x] U4 group_dof_initial, _specific_number, _specific_value. Route: inline. Owner L-T5-dofinit (option B,
     element records first; divergence DOF-INITIAL-GROUP-PRECEDENCE). RED: base "I don't know what to do with :
     group_dof_initial". GREEN group_dof_initial1..7 + _error1 (Professional values except _4).
-  - [ ] U5 force (force_gravity_geometry, force_edge_diagram). U6 truss diagram and
+  - [x] U5 force_edge_diagram (per edge node factor from the vertical displacement of the iterate, 0 outside),
+    force_gravity_geometry (elements with all nodes inside; materi and truss). Route: inline. Owner "si" (measure
+    first), L-T5-diagram, L-T5-gravgeo; no divergence. GREEN force_edge_diagram1/2/_error1,
+    force_gravity_geometry1/2/3 (Professional values).
+  - [ ] U6 truss diagram and
     contact-spring planes. U7 group_time_fill. U8 strain_volume. U9 baseline correction. U10 beam plasticity.
 - [ ] T6 W7 safety_slip (32): self-contained slip-surface safety-factor feature, planned
   separately. Route: to decide.
@@ -1018,3 +1022,14 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   "B documentado". Measured (bar, node_dof 2 = (1+past)/2): Professional order element full > group full > element
   specific > group specific. Option B: element full > element specific > group full > group specific (differs
   only when an element specific record meets a group full record).
+- 2026-11-18 L-T5-diagram (owner "si" to measuring U5 in the Professional first). force_edge_diagram measured
+  (/tmp/fd.OKmy, quad4 top edge load): factor per edge node from that node's vertical displacement of the previous
+  iteration (one step = 2 iterations: -0.09; two columns E 10/100 converge to -0.1/1.1 and -0.01/1.01, so per node,
+  not per integration point); 0 outside the diagram. No divergence: GNU area.cc FORCE_ELEMENT_EDGE node_factor *=
+  table_xy(diagram, new_dof vertical dis). RED "I don't know what to do with : force_edge_diagram"; GREEN
+  force_edge_diagram1/2 (Professional values to 12 digits), _error1 (no materi_displacement). Route inline.
+- 2026-11-18 L-T5-gravgeo: force_gravity_geometry measured (/tmp/fg.dsrG): an element gets the gravity only when all
+  its nodes are inside (quad4 sweep x = 0.9 none, 1.0001..1.9 first column, 2.5 both; trusses the same). A first sweep
+  with the quadrilateral points in ring order was a crossed quadrilateral (manual order is the quad4 one). GNU
+  force_gravity_element_inside() in materi.cc / truss.cc. RED: the keyword was in the 58 pending names of the gap probe
+  (not re-run on a base build). Route inline.
