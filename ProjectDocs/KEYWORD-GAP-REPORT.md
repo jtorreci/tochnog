@@ -118,8 +118,8 @@ artifact of manual 6.504 and not a record name (`force_volume_element_group` is 
 accepted; the one-name difference in the 2026-11-08 count is not explained.
 
 2026-11-18 (F5 T5 U5): `force_edge_diagram` (6.455) and `force_gravity_geometry` (6.499) accepted.
-2026-11-19 (F5 T5 U6): `group_contact_spring_direction_automatic_planes` (6.606)
-accepted.
+2026-11-19 (F5 T5 U6): `group_contact_spring_direction_automatic_planes` (6.606) and
+`group_truss_elasti_elongation_force_diagram` (6.773) accepted.
 
 ## Gap by family
 

@@ -237,6 +237,40 @@ void truss( long int element, long int element_group,
       // Professional 6.776) from the start of its life
       old_truss_force = group_truss_initial_force;
     new_truss_force = old_truss_force + truss_stiffness * incremental_length;
+    // group_truss_elasti_elongation_force_diagram (manual 6.773): the
+    // force follows the diagram of the total strain (elongation divided
+    // by the initial length) and replaces the elastic force. Measured on
+    // the Professional 02-08-2026 (truss length 2, diagram -0.01 -20 0 0
+    // 0.01 10 0.02 15): strain 0.005 -> 5, 0.014 -> 12, 0.02 -> 15,
+    // -0.005 -> -10, outside the diagram 0; the same after several steps
+    // and after unloading (nonlinear elastic), with materi_displacement
+    // or materi_velocity_integrated; group_truss_elasti_young and
+    // group_truss_initial_force are ignored.
+    {
+      long int length_dg=0;
+      double table_dg[DATA_ITEM_SIZE];
+      if ( db( GROUP_TRUSS_ELASTI_ELONGATION_FORCE_DIAGRAM, element_group, idum,
+          table_dg, length_dg, VERSION_NORMAL, GET_IF_EXISTS ) ) {
+        if ( length_dg<4 || length_dg%2!=0 ) {
+          pri( "Error: group_truss_elasti_elongation_force_diagram needs pairs l_0 F_0 l_1 F_1 ..." );
+          db_error( GROUP_TRUSS_ELASTI_ELONGATION_FORCE_DIAGRAM, element_group );
+        }
+        double strain_dg = ( new_length - initial_length ) / initial_length,
+          slope_dg = 0.;
+        new_truss_force = 0.;
+        table_xy( table_dg, "GROUP_TRUSS_ELASTI_ELONGATION_FORCE_DIAGRAM",
+          length_dg, strain_dg, new_truss_force );
+        for ( long int i=0; i+3<length_dg; i+=2 ) {
+          if ( strain_dg>=table_dg[i] && strain_dg<=table_dg[i+2] &&
+               table_dg[i+2]>table_dg[i] ) {
+            slope_dg = ( table_dg[i+3] - table_dg[i+1] ) /
+              ( table_dg[i+2] - table_dg[i] );
+            break;
+          }
+        }
+        truss_stiffness = slope_dg / initial_length;
+      }
+    }
     if      ( new_truss_force>group_truss_plasti*group_truss_area )
       new_truss_force = group_truss_plasti*group_truss_area;
     else if ( new_truss_force<-group_truss_plasti*group_truss_area )

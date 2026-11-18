@@ -1741,7 +1741,7 @@ Nota: `group_interface_ground` del checklist anterior NUNCA existió (artefacto 
 
 - [x] `group_truss_area` — presente en el GNU
 - [x] `group_truss_density` — presente en el GNU
-- [ ] `group_truss_elasti_elongation_force_diagram` — PENDIENTE
+- [x] `group_truss_elasti_elongation_force_diagram` — F5 T5 U6 (2026-11-19): force from the diagram of the total strain, 0 outside (Professional 02-08-2026 values)
 - [ ] `group_truss_elasti_young` — PENDIENTE
 - [ ] `group_truss_expansion` — PENDIENTE
 - [ ] `group_truss_initial_force` — PENDIENTE

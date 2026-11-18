@@ -6233,6 +6233,14 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   data_class[GROUP_TRUSS_YOUNG] = TRUSS;
   data_required[GROUP_TRUSS_YOUNG] = GROUP_TYPE;
 
+  // manual 6.773: truss force versus elongation/initial length diagram
+  strcpy(name[GROUP_TRUSS_ELASTI_ELONGATION_FORCE_DIAGRAM],"group_truss_elasti_elongation_force_diagram");
+  type[GROUP_TRUSS_ELASTI_ELONGATION_FORCE_DIAGRAM] = DOUBLE_PRECISION;
+  data_length[GROUP_TRUSS_ELASTI_ELONGATION_FORCE_DIAGRAM] = DATA_ITEM_SIZE;
+  fixed_length[GROUP_TRUSS_ELASTI_ELONGATION_FORCE_DIAGRAM] = 0;
+  data_class[GROUP_TRUSS_ELASTI_ELONGATION_FORCE_DIAGRAM] = TRUSS;
+  data_required[GROUP_TRUSS_ELASTI_ELONGATION_FORCE_DIAGRAM] = GROUP_TYPE;
+
   strcpy(name[GROUP_TRUSS_EXPANSION],"group_truss_expansion");
   type[GROUP_TRUSS_EXPANSION] = DOUBLE_PRECISION;
   data_length[GROUP_TRUSS_EXPANSION] = 1;

@@ -3599,6 +3599,13 @@ run_ok "$T2026" contact_spring_inclined1
 run_ok "$T2026" contact_spring_planes1
 run_ok "$T2026" contact_spring_planes2
 expected_error_ok "$T2026" contact_spring_planes_error1
+# F5 T5 U6: group_truss_elasti_elongation_force_diagram (6.773), total strain diagram
+run_ok "$T2026" truss_force_diagram1
+run_ok "$T2026" truss_force_diagram2
+run_ok "$T2026" truss_force_diagram3
+run_ok "$T2026" truss_force_diagram4
+run_ok "$T2026" truss_force_diagram5
+expected_error_ok "$T2026" truss_force_diagram_error1
 run_ok "$T2026" materi_plasti_maximum_iterations1
 run_ok "$T2026" materi_plasti_maximum_iterations2
 expected_error_ok "$T2026" materi_plasti_maximum_iterations_error1

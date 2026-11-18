@@ -227,7 +227,7 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
     Owner L-T5-multiple. RED: groundflow_phreatic_multiple_inclined1 misses the targets (dof 0, no seepage); GREEN
     with the Professional totals to 1e-6.
   - [ ] Owner decisions: force_edge_diagram (resolved by measurement, L-T5-diagram),
-    group_contact_spring_direction_automatic_planes meaning,
+    group_contact_spring_direction_automatic_planes meaning (resolved by measurement, L-T5-planes),
     group_beam_force_moment_plasti (new model), strain_volume kernel, baseline correction scope.
   - [x] U2 slide_damping (viscous, divergence SLIDE-DAMPING-VISCOUS), control_slide_damping_apply, slide_user
     (user.cc stub, Professional message). Route: inline. Owner L-T5-slide. RED: base "I do not know : slide_damping"
@@ -239,8 +239,13 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
     force_gravity_geometry (elements with all nodes inside; materi and truss). Route: inline. Owner "si" (measure
     first), L-T5-diagram, L-T5-gravgeo; no divergence. GREEN force_edge_diagram1/2/_error1,
     force_gravity_geometry1/2/3 (Professional values).
-  - [ ] U6 truss diagram and
-    contact-spring planes. U7 group_time_fill. U8 strain_volume. U9 baseline correction. U10 beam plasticity.
+  - [x] U6 group_contact_spring_direction_automatic_planes (a -no switch removes that component of the automatic
+    direction, nothing left = error) plus three measured contact spring fixes (no friction record = unlimited
+    friction, 2D in-plane tangent, signed matrix); group_truss_elasti_elongation_force_diagram (force from the
+    diagram of the total strain, 0 outside, young and initial force ignored). Route: inline. Owner "si" (measure
+    first), L-T5-planes, L-T5-trussdiag. RED: base "Error in data part" (both keywords), sideways conspr disx 1.5e12.
+    GREEN contact_spring_tangential1, _inclined1, _planes1/2, _planes_error1, truss_force_diagram1..5, _error1.
+  - [ ] U7 group_time_fill. U8 strain_volume. U9 baseline correction. U10 beam plasticity.
 - [ ] T6 W7 safety_slip (32): self-contained slip-surface safety-factor feature, planned
   separately. Route: to decide.
 
@@ -1033,3 +1038,15 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   with the quadrilateral points in ring order was a crossed quadrilateral (manual order is the quad4 one). GNU
   force_gravity_element_inside() in materi.cc / truss.cc. RED: the keyword was in the 58 pending names of the gap probe
   (not re-run on a base build). Route inline.
+- 2026-11-19 L-T5-planes: user "si" (measure U6 in the Professional first). Probes /tmp/csp.5xkX (conspr7 + horizontal
+  load 0.5 per top node; sheared top block, centroid direction (-0.447,-0.894)). Professional: planes -no -yes -yes ->
+  (0,-1), -yes -no -yes -> (-1,0), (0,-1) with switch_y -no -> "Error, please specify a valid contact spring direction";
+  three switches required also in 2D. While comparing, three pre-existing GNU divergences showed up and were fixed:
+  f = 0 without a friction record (manual 6.604: very large; Professional tangential -0.5, disx 8.5 vs GNU 1.5e12),
+  2D first tangent along z (Professional t1 = (-n_y, n_x)), scalar_dabs in the spring matrix (inclined split
+  0.1266/2.1094 vs GNU 0/2.236). All five cases now match to about 11 digits. Not changed: without any direction
+  record the Professional stops, GNU takes the automatic one.
+- 2026-11-19 L-T5-trussdiag: Professional (/tmp/trd.ATEl, length 2, diagram -0.01 -20 0 0 0.01 10 0.02 15): F follows
+  the diagram of the total strain (5/12/15/-10, 0 outside), the same after two steps, after unloading and with
+  materi_velocity_integrated; young and initial force ignored; an odd value count gives force 0 silently (GNU stops,
+  input check as in force_edge_diagram).
