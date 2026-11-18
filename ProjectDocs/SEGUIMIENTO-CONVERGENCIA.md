@@ -1534,7 +1534,7 @@ del manual; el Pro prueba los nodos: DIVERGENCES GEOMETRY-MOVING-SAMPLING).
 
 - [x] `group_contact_spring_direction` — `892541a` (2026-08-31; alias -> group_contactspring_direction)
 - [x] `group_contact_spring_direction_automatic` — `892541a` (2026-08-31; alias -> GROUP_CONTACTSPRING_DIRECTION_AUTOMATIC; centroides de elementos)
-- [ ] `group_contact_spring_direction_automatic_planes` — PENDIENTE
+- [x] `group_contact_spring_direction_automatic_planes` — F5 T5 U6 (2026-11-19): a -no switch removes that component of the automatic direction; also friction default, 2D tangent and signed matrix fixed (Professional 02-08-2026 values)
 - [x] `group_contact_spring_memory` — `892541a` (2026-08-31; alias -> group_contactspring_memory; -total_linear aceptado)
 - [x] `group_contact_spring_plasti_cohesion` — F5 T5 U1, 2026-11-13 (alias -> group_contactspring_cohesion; `892541a` had aliased only `group_contact_spring_cohesion`, this line was checked by mistake)
 - [x] `group_contact_spring_plasti_friction` — `892541a` (2026-08-31; alias -> group_contactspring_friction)

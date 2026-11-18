@@ -1,0 +1,41 @@
+( group_contact_spring_direction_automatic_planes (manual 6.606), F5 T5 U6:
+  the automatic direction is (0,-1) and switch_y -no removes it all.
+  Professional 02-08-2026 stops with an error.
+  EXPECTED_ERROR: Error: please specify a valid contact spring direction
+)
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_displacement
+materi_strain_total
+materi_stress
+end_initia
+node 1  0.0 0
+node 2  1.0 0
+node 3  0.0 1
+node 4  1.0 1
+node 5  0.0 1
+node 6  1.0 1
+node 7  0 2
+node 8  1 2
+element 1  -quad4 1 2 3 4
+element 2  -quad4 5 6 7 8
+element 3  -contact_spring2 5 3
+element_group 3 1
+element 4  -contact_spring2 6 4
+element_group 4 1
+group_type 0  -materi
+group_materi_memory 0 -total_linear
+group_materi_elasti_young  0  1.
+group_type 1  -contact_spring
+group_contact_spring_stiffness 1 1.e6 1.
+group_contact_spring_direction_automatic 1 -yes
+group_contact_spring_direction_automatic_planes 1 -yes -no -yes
+bounda_dof     10  -ra 1 2 -ra -velx -vely
+bounda_force   20  -ra 7 8 -ra -vely
+bounda_time    20  1.
+bounda_force   21  -ra 7 8 -ra -velx
+bounda_time    21  0.5
+control_timestep 0  1. 1.
+
+end_data

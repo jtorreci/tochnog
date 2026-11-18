@@ -29,7 +29,7 @@ void contactspring( long int element, long int /*name*/, long int element_group,
   long int idim=0, jdim=0, kdim=0, ipuknwn=0, iuknwn=0, jpuknwn=0, juknwn=0,
     inol=0, jnol=0, indx=0, inod=0, swit=0, length=0, memory=-UPDATED,
     group_contactspring_friction_automatic=-NO, iel=0, elnum=0, nel=0, gr=0,
-    found=0, icontrol=0, ldum=0, options_convection=-NO, 
+    found=0, friction_unlimited=0, icontrol=0, ldum=0, options_convection=-NO, 
     options_skip_plasticity=-NO, idum[1], options_mesh[MDIM], *node_element=NULL;
   double k_n=0., k_t=0., f=0., cohesion=1.e20, dtime=0., 
     fac=0., gamma=0., phi_approximate=0.,
@@ -137,8 +137,18 @@ void contactspring( long int element, long int /*name*/, long int element_group,
     }
     if ( !found ) f = 0.2;
   }
-  else {
+  else if ( db_active_index( GROUP_CONTACTSPRING_FRICTION, element_group,
+      VERSION_NORMAL ) ) {
     f = group_contactspring_friction;
+  }
+  else {
+    // no friction record: "a very large value for f will be applied"
+    // (manual 6.604), so no frictional slip at all. Professional
+    // 02-08-2026, conspr7 with a sideways load: tangential force -0.5 in
+    // each spring, also in the one with normal force 0; disx 8.5. GNU
+    // used f=0, which removed the tangential force and stiffness (disx
+    // 1.5e12).
+    friction_unlimited = 1;
   }
   if ( swit ) pri( "friction f", f );
 
@@ -255,6 +265,22 @@ void contactspring( long int element, long int /*name*/, long int element_group,
        // node's side TOWARDS the second node's side; conspr7 force = +1.0)
        for ( idim=0; idim<ndim; idim++ )
          group_contactspring_direction[idim] = cen1[idim] - cen0[idim];
+       // group_contact_spring_direction_automatic_planes (manual 6.606):
+       // a -no switch removes that component, then the direction is
+       // normalized again. Professional 02-08-2026: centroid direction
+       // (-0.447,-0.894) gives (0,-1) with switch_x -no and (-1,0) with
+       // switch_y -no; nothing left is an input error.
+       long int planes[MDIM];
+       if ( db( GROUP_CONTACTSPRING_DIRECTION_AUTOMATIC_PLANES, element_group,
+           planes, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS ) ) {
+         for ( idim=0; idim<ndim; idim++ )
+           if ( planes[idim]==-NO ) group_contactspring_direction[idim] = 0.;
+         if ( !array_normalize( group_contactspring_direction, MDIM ) ) {
+           pri( "Error: please specify a valid contact spring direction for element ", element );
+           pri( "(group_contact_spring_direction_automatic_planes removes every component)" );
+           exit(TN_EXIT_STATUS);
+         }
+       }
        if ( !array_normalize( group_contactspring_direction, MDIM ) )
          group_contactspring_direction[0] = 1.;
      }
@@ -271,9 +297,24 @@ void contactspring( long int element, long int /*name*/, long int element_group,
     &element_contactspring_direction[0*MDIM], MDIM );
 
     // first tangential direction
+  if ( ndim==2 ) {
+    // 2D: the first tangential direction lies in the plane, the normal
+    // turned a quarter: t1 = (-n_y, n_x) (Professional 02-08-2026,
+    // element_contact_spring_direction: n (0,-1) gives t1 (1,0), n (-1,0)
+    // gives t1 (0,-1)). The 3D rule below gave t1 = (0,0,-1) in 2D, so
+    // the in-plane tangential stiffness was lost (a sideways load on
+    // conspr7 gave disx 1.5e12; the Professional gives 8.5).
+    element_contactspring_direction[1*MDIM+0] =
+      -element_contactspring_direction[0*MDIM+1];
+    element_contactspring_direction[1*MDIM+1] =
+      element_contactspring_direction[0*MDIM+0];
+    element_contactspring_direction[1*MDIM+2] = 0.;
+  }
+  else {
   work[0] = 1.; work[1] = 0.; work[2] = 0.;
   array_outproduct_3D( work, &element_contactspring_direction[0*MDIM],
     &element_contactspring_direction[1*MDIM] );
+  }
   if ( !array_normalize( &element_contactspring_direction[1*MDIM], MDIM ) ) {
     work[0] = 0.; work[1] = 1.; work[2] = 0.;
     array_outproduct_3D( work, &element_contactspring_direction[0*MDIM],
@@ -319,7 +360,7 @@ void contactspring( long int element, long int /*name*/, long int element_group,
   else {
 
       // frictional slip test
-    if ( options_skip_plasticity==-NO ) {
+    if ( options_skip_plasticity==-NO && !friction_unlimited ) {
       total_tangential_force = sqrt( scalar_square(element_contactspring_force[1]) +
         scalar_square(element_contactspring_force[2]) );
       if ( scalar_dabs(total_tangential_force)>f*scalar_dabs(element_contactspring_force[0]) ) {
@@ -356,8 +397,8 @@ void contactspring( long int element, long int /*name*/, long int element_group,
               indx = inol*npuknwn*nnol*npuknwn+ipuknwn*nnol*npuknwn+
                 jnol*npuknwn+jpuknwn;
               tmp = fac*stiffness[kdim]*dtime*
-                scalar_dabs(element_contactspring_direction[kdim*MDIM+idim]*
-                element_contactspring_direction[kdim*MDIM+jdim]);
+                element_contactspring_direction[kdim*MDIM+idim]*
+                element_contactspring_direction[kdim*MDIM+jdim];
               element_matrix[indx] += tmp;
               if ( jnol==inol && jdim==idim ) 
                 element_lhside[inol*npuknwn+ipuknwn] += tmp;

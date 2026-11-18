@@ -4318,6 +4318,14 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   data_class[GROUP_CONTACTSPRING_DIRECTION_AUTOMATIC] = CONTACTSPRING;
   data_required[GROUP_CONTACTSPRING_DIRECTION_AUTOMATIC] = GROUP_TYPE;
 
+  // manual 6.606: which coordinate components the automatic direction
+  // may have (switch_x switch_y switch_z, default all -yes)
+  strcpy(name[GROUP_CONTACTSPRING_DIRECTION_AUTOMATIC_PLANES],"group_contactspring_direction_automatic_planes");
+  type[GROUP_CONTACTSPRING_DIRECTION_AUTOMATIC_PLANES] = INTEGER;
+  data_length[GROUP_CONTACTSPRING_DIRECTION_AUTOMATIC_PLANES] = MDIM;
+  data_class[GROUP_CONTACTSPRING_DIRECTION_AUTOMATIC_PLANES] = CONTACTSPRING;
+  data_required[GROUP_CONTACTSPRING_DIRECTION_AUTOMATIC_PLANES] = GROUP_TYPE;
+
   strcpy(name[GROUP_CONTACTSPRING_FRICTION],"group_contactspring_friction");
   type[GROUP_CONTACTSPRING_FRICTION] = DOUBLE_PRECISION;
   data_length[GROUP_CONTACTSPRING_FRICTION] = 1;
@@ -10620,6 +10628,9 @@ long int db_number( const char str[] )
       return CONTROL_MESH_GENERATE_CONTACTSPRING_ELEMENT_GROUP;
     else if ( !strcmp( str, "group_contact_spring_direction_automatic" ) )
       return GROUP_CONTACTSPRING_DIRECTION_AUTOMATIC;
+    else if ( !strcmp( str, "group_contact_spring_direction_automatic_planes" ) )
+      // 2026 manual name (6.606), F5 T5 U6.
+      return GROUP_CONTACTSPRING_DIRECTION_AUTOMATIC_PLANES;
     else if ( !strcmp( str, "element_contact_spring_force" ) )
       return ELEMENT_CONTACTSPRING_FORCE;
     else if ( !strcmp( str, "element_contact_spring_strain" ) )

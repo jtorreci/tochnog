@@ -3592,6 +3592,13 @@ expected_error_ok "$T2026" force_edge_diagram_error1
 run_ok "$T2026" force_gravity_geometry1
 run_ok "$T2026" force_gravity_geometry2
 run_ok "$T2026" force_gravity_geometry3
+# F5 T5 U6: group_contact_spring_direction_automatic_planes (6.606) plus the
+# contact spring friction default, 2D tangent and signed matrix (Professional values)
+run_ok "$T2026" contact_spring_tangential1
+run_ok "$T2026" contact_spring_inclined1
+run_ok "$T2026" contact_spring_planes1
+run_ok "$T2026" contact_spring_planes2
+expected_error_ok "$T2026" contact_spring_planes_error1
 run_ok "$T2026" materi_plasti_maximum_iterations1
 run_ok "$T2026" materi_plasti_maximum_iterations2
 expected_error_ok "$T2026" materi_plasti_maximum_iterations_error1
