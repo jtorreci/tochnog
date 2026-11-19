@@ -6186,6 +6186,13 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   data_class[GROUP_TIME] = GROUP_TIME;
   data_required[GROUP_TIME] = GROUP_TYPE;
 
+  // manual 6.770: birth_empty birth_filled death
+  strcpy(name[GROUP_TIME_FILL],"group_time_fill");
+  type[GROUP_TIME_FILL] = DOUBLE_PRECISION;
+  data_length[GROUP_TIME_FILL] = 3;
+  data_class[GROUP_TIME_FILL] = GROUP_TIME;
+  data_required[GROUP_TIME_FILL] = GROUP_TYPE;
+
   strcpy(name[GROUP_TRUSS_AREA],"group_truss_area");
   type[GROUP_TRUSS_AREA] = DOUBLE_PRECISION;
   data_length[GROUP_TRUSS_AREA] = 1;

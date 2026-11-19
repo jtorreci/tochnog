@@ -999,6 +999,7 @@ enum {
   GROUP_SPRING_STIFFNESS,
   GROUP_SPRING_PLASTI,
   GROUP_TIME,
+  GROUP_TIME_FILL,
   GROUP_TRUSS_AREA,
   GROUP_TRUSS_ROPE,
   TRUSS_ROPE_APPLY,
@@ -2131,6 +2132,7 @@ void      area( long int element, long int name,
             double element_matrix[], double element_rhside[] );
 void      area_element_group( long int version );
 long int  area_element_group_time_active( void );
+double    group_time_fill_factor( long int element_group );
 long int  group_time_alive( long int element_group, double time_total );
 long int  element_group_applied( long int element_group );
 long int  element_group_apply_active( void );

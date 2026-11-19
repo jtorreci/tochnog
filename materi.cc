@@ -783,6 +783,9 @@ void materi( long int element, long int gr, long int name, long int nnol,
       double gpf = 1.;
       db( GROUNDFLOW_PRESSURE_FACTOR, 0, idum, &gpf, ldum,
         VERSION_NORMAL, GET_IF_EXISTS );
+      // group_time_fill (manual 6.770): the total pressure is scaled
+      // with the filling factor like the density (Professional 02-08-2026)
+      gpf *= group_time_fill_factor( gr );
       new_pres = new_unknowns[pres_indx];
       // groundflow_phreatic_coord total-pressure substitution: pore
       // pressure acting on the skeleton becomes the TOTAL pressure when a
@@ -871,6 +874,9 @@ void materi( long int element, long int gr, long int name, long int nnol,
       long int level_source = 0;
       db( GROUNDFLOW_PRESSURE_FACTOR, 0, idum, &gpf, ldum,
         VERSION_NORMAL, GET_IF_EXISTS );
+      // group_time_fill (manual 6.770): the total pressure is scaled
+      // with the filling factor like the density (Professional 02-08-2026)
+      gpf *= group_time_fill_factor( gr );
       total_pressure = static_pressure = location = 0.;
       groundflow_phreatic_coord( -1, coord_ip, new_unknowns, total_pressure,
         static_pressure, location, &level_source );
@@ -2237,7 +2243,8 @@ double get_materi_density( long int element, long int element_group, long int nn
     get_group_data( GROUP_MATERI_DENSITY, element_group, element, new_unknowns, 
       &materi_dens, ldum, GET_IF_EXISTS );
   }
-  return materi_dens;
+  // group_time_fill (manual 6.770): the element is slowly filled
+  return materi_dens * group_time_fill_factor( element_group );
 
 }
 

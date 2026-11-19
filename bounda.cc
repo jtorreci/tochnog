@@ -66,6 +66,11 @@ static long int *bounda_node_dormant( long int max_node, double time_total,
   double ddum[1];
 
   db_max_index( GROUP_TIME, max_group_time, VERSION_NORMAL, GET );
+  {
+    long int max_group_time_fill=-1;
+    db_max_index( GROUP_TIME_FILL, max_group_time_fill, VERSION_NORMAL, GET );
+    if ( max_group_time_fill>max_group_time ) max_group_time = max_group_time_fill;
+  }
   if ( !empty_type && max_group_time<0 && !element_group_apply_active() )
     return NULL;
   db_max_index( ELEMENT, max_element, VERSION_NORMAL, GET );

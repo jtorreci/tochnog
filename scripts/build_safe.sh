@@ -3606,6 +3606,10 @@ run_ok "$T2026" truss_force_diagram3
 run_ok "$T2026" truss_force_diagram4
 run_ok "$T2026" truss_force_diagram5
 expected_error_ok "$T2026" truss_force_diagram_error1
+# F5 T5 U7: group_time_fill (6.770): density and total pressure ramp, no plasticity while filling
+run_ok "$T2026" group_time_fill1
+run_ok "$T2026" group_time_fill2
+run_ok "$T2026" group_time_fill3
 run_ok "$T2026" materi_plasti_maximum_iterations1
 run_ok "$T2026" materi_plasti_maximum_iterations2
 expected_error_ok "$T2026" materi_plasti_maximum_iterations_error1

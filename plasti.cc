@@ -81,6 +81,10 @@ void plasti_rule( long int element, long int gr,
   db( CONTROL_OPTIONS_SKIP_PLASTICITY, icontrol, &options_skip_plasticity, ddum, ldum, 
     VERSION_NORMAL, GET_IF_EXISTS );
   if ( options_skip_plasticity==-YES ) return;
+  // group_time_fill (manual 6.770): no plasticity while the element is
+  // being filled (Professional 02-08-2026: elastic until birth_filled,
+  // plastic from the step that reaches it)
+  if ( group_time_fill_factor( gr )<1. ) return;
 
   swit = set_swit(element,-1,"plasti_rule");
   if ( task==GET_FLOW_RULE ) swit = 0;

@@ -205,7 +205,8 @@ void elem( long int element, long int ithread )
 
   db( DTIME, 0, idum, &dtime, ldum, VERSION_NEW, GET );
 
-  if ( db_active_index( GROUP_TIME, element_group, VERSION_NORMAL ) ) {
+  if ( db_active_index( GROUP_TIME, element_group, VERSION_NORMAL ) ||
+       db_active_index( GROUP_TIME_FILL, element_group, VERSION_NORMAL ) ) {
     db( TIME_CURRENT, 0, idum, &time_current, ldum, VERSION_NORMAL, GET_IF_EXISTS );
     time_total = time_current + dtime;
     if ( !group_time_alive( element_group, time_total ) ) return;

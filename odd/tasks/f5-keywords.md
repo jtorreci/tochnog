@@ -245,7 +245,11 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
     diagram of the total strain, 0 outside, young and initial force ignored). Route: inline. Owner "si" (measure
     first), L-T5-planes, L-T5-trussdiag. RED: base "Error in data part" (both keywords), sideways conspr disx 1.5e12.
     GREEN contact_spring_tangential1, _inclined1, _planes1/2, _planes_error1, truss_force_diagram1..5, _error1.
-  - [ ] U7 group_time_fill. U8 strain_volume. U9 baseline correction. U10 beam plasticity.
+  - [x] U7 group_time_fill (alive birth_empty..death; density and total pressure times f = (t - be)/(bf - be) at
+    the step end; no plasticity while f < 1). Route: inline. Owner "si" (measure first), L-T5-timefill. RED: base
+    "Error in data part"; plasticity skip off: group_time_fill2 disy -0.01153; pressure unscaled: -0.0025.
+    GREEN group_time_fill1/2/3 (Professional values).
+  - [ ] U8 strain_volume. U9 baseline correction. U10 beam plasticity.
 - [ ] T6 W7 safety_slip (32): self-contained slip-surface safety-factor feature, planned
   separately. Route: to decide.
 
@@ -1052,3 +1056,11 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   input check as in force_edge_diagram).
 - 2026-11-19 L-T5-conspr-owner: user "déjalas así, no?" -> the three contact spring fixes (unlimited friction
   without a record, 2D in-plane tangent, signed matrix) stay; independent verifier at the end of T5.
+- 2026-11-19 L-T5-timefill: user "si" (U7, measure first). Professional (/tmp/tf.hgFF, two stacked quad4, upper
+  group_time_fill 0.5 2.5 100): density factor 0/0.25/0.5/0.75/1 at t = 0.5..2.5 (end of step), displacement since
+  birth; Mohr-Coulomb elastic while filling, plastic from t = 2.5; static phreatic level y = 2: the whole response of the
+  filled element scales with f (pore pressure too). GNU: group_time_fill_factor() in group.cc, used by
+  group_time_alive, get_materi_density, the materi.cc pressure factor and plasti_rule. The plastic tail differs from the
+  Professional by the same amount as a plain group_time (pre-existing Mohr-Coulomb difference, not U7).
+  Incident: during the U6 suite 456 repo files on the NAS turned mode 000 (content intact, git clean); restored with
+  chmod 644, cause unknown (not the repo scripts).

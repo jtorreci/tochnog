@@ -145,10 +145,39 @@ long int group_time_alive( long int element_group, double time_total )
   double group_time[2];
 
   if ( !db( GROUP_TIME, element_group, idum, group_time, ldum,
-      VERSION_NORMAL, GET_IF_EXISTS ) ) return 1;
+      VERSION_NORMAL, GET_IF_EXISTS ) ) {
+    // group_time_fill (manual 6.770): alive from birth_empty to death
+    double group_time_fill[3];
+    if ( !db( GROUP_TIME_FILL, element_group, idum, group_time_fill, ldum,
+        VERSION_NORMAL, GET_IF_EXISTS ) ) return 1;
+    group_time[0] = group_time_fill[0];
+    group_time[1] = group_time_fill[2];
+  }
   if ( time_total==0. && group_time[0]==0. ) return 1;
   if ( time_total>group_time[0] && time_total<=group_time[1] ) return 1;
   return 0;
+}
+
+// group_time_fill (manual 6.770): filling factor of element_group at the
+// end of the current step, 0 at birth_empty rising linearly to 1 at
+// birth_filled; 1 without the record. Measured on the Professional
+// 02-08-2026 (birth_empty 0.5, birth_filled 2.5, steps of 0.5): the
+// density factor is 0, 0.25, 0.5, 0.75, 1 at t = 0.5 .. 2.5, i.e. it is
+// evaluated at time_current + dtime.
+double group_time_fill_factor( long int element_group )
+{
+  long int ldum=0, idum[1];
+  double group_time_fill[3], time_current=0., dtime=0., time_total=0.;
+
+  if ( !db( GROUP_TIME_FILL, element_group, idum, group_time_fill, ldum,
+      VERSION_NORMAL, GET_IF_EXISTS ) ) return 1.;
+  db( TIME_CURRENT, 0, idum, &time_current, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+  db( DTIME, 0, idum, &dtime, ldum, VERSION_NEW, GET_IF_EXISTS );
+  time_total = time_current + dtime;
+  if ( time_total>=group_time_fill[1] ) return 1.;
+  if ( time_total<=group_time_fill[0] ) return 0.;
+  return ( time_total - group_time_fill[0] ) /
+    ( group_time_fill[1] - group_time_fill[0] );
 }
 
 // mesh_element_group_apply (manual Professional 6.817) and

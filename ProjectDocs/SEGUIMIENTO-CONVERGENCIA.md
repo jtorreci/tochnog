@@ -1732,10 +1732,10 @@ Nota: `group_interface_ground` del checklist anterior NUNCA existió (artefacto 
 - [x] `group_spring_plasti` — presente en el GNU
 - [ ] `group_spring_sti` — PENDIENTE
 
-### group_time (1/2)
+### group_time (2/2)
 
 - [x] `group_time` — presente en el GNU; C39 2026-10-06 (F2 T2c, hash in `odd/tasks/f2-medium-bugs.md`): a node whose elements are all inactive (not yet born / dead) is not driven by bounda_dof/bounda_unknown (= Pro truss8); death velocity reset of the Pro not implemented (BACKLOG C39)
-- [ ] `group_time_` — PENDIENTE
+- [x] `group_time_fill` — F5 T5 U7 (2026-11-19): alive birth_empty..death, density and total pressure scaled 0..1 up to birth_filled, no plasticity while filling (Professional 02-08-2026 values)
 
 ### group_truss (5/9)
 
