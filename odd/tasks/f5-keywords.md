@@ -1050,3 +1050,5 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   the diagram of the total strain (5/12/15/-10, 0 outside), the same after two steps, after unloading and with
   materi_velocity_integrated; young and initial force ignored; an odd value count gives force 0 silently (GNU stops,
   input check as in force_edge_diagram).
+- 2026-11-19 L-T5-conspr-owner: user "déjalas así, no?" -> the three contact spring fixes (unlimited friction
+  without a record, 2D in-plane tangent, signed matrix) stay; independent verifier at the end of T5.
