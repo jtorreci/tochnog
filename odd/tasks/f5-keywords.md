@@ -265,8 +265,10 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
     shell signal), STATUS stop rdd_disabled: no review.
   - [x] End of T5: independent verifier (risk item 3: shared materi / bounda / conspr / beam code), baseline 9777b2d.
     1 blocker (signed zero in groundfl.cc phreatic bounds, U3b/U3c) fixed; all units PASS (L-T5-verify).
-- [ ] T6 W7 safety_slip (32): self-contained slip-surface safety-factor feature, planned
+- [x] T6 W7 safety_slip (32): self-contained slip-surface safety-factor feature, planned
   separately. Route: own feature document odd/tasks/f5-safety-slip.md (2D first, 3D second, owner 2026-11-22).
+  Commits 0964a37 (U1), 900f94a (U2+U3), 38e181e (U4+U5), 5aa6194 (3D measurements), 7aec39b (U6); suite
+  1335 OK / 0 FALLO; safety 31/31, control_safety_slip and control_print_gid_safety_slip_critical done.
 
 ## Log
 - L1 2026-11-01 owner, after "Lo próximo es F5, los ~258 keywords que faltan.": "vengaaaa!"

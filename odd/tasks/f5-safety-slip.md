@@ -151,3 +151,7 @@ runner scripts/build_safe.sh (validation-suite/test-2026 self-checking inputs, P
   (DIVERGENCES SAFETY-SLIP-CIRCLE-3D for the circles); safety_slip_3d1 rewritten accordingly. Parent verification
   of the writer result: diff inside the allowed surfaces, ellipsoide2 / grd2 / combined_linear2 rc 0, full suite
   1335 OK / 0 FALLO before this order change and 1335 OK / 0 FALLO after it.
+- L-T6-close (2026-11-22) commits: U1 0964a37, U2+U3 900f94a, U4+U5 38e181e, measurements 5aa6194, U6 7aec39b
+  (writer result reviewed by the parent; order fix L-T6-U6-order). Suite 1335 OK / 0 FALLO, 226/226. All S1-S10
+  covered; divergences SAFETY-SLIP-COMBINED-WEIGHTS, -SET-INDEX-0, -GID-FORMAT, -ELLIPSOIDE-WEIGHTS, -GRD-METHOD,
+  -CIRCLE-3D.
