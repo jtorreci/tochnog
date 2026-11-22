@@ -202,7 +202,7 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   - [x] U9c (fd32b82, e6fa737, dd87da9, 1c258be) (S2-S6) prism12 continuum, -prism12 option of the extrude, VTK cell
     31. Interface prism12 is out of scope (refused, class B). Route: delegated (bounded writer; context backstop, as
     U9a and U9b; 6104401 quad9 fix). Suite 1119 OK, 0 FALLO. Owner confirmed PRISM12-DEFAULT / PRISM12-POST-POINT class D (2026-11-11).
-- [ ] T5 W6 other physics (25): baseline correction, force_edge_diagram, force_gravity_geometry,
+- [x] T5 W6 other physics (25): baseline correction, force_edge_diagram, force_gravity_geometry,
   force_volume_element_group_0, groundflow_phreatic_*, group_beam_*, group_contact_spring_*,
   group_dof_initial*, group_time_fill, group_truss_elasti_elongation_force_diagram,
   slide_damping, slide_user, strain_volume_*. Route: per family.
@@ -263,7 +263,8 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
     know : group_beam_force_moment_plasti". GREEN group_beam_force_moment_plasti1..5, _2d1, _error1 (analytic);
     divergence BEAM-PLASTIC-HINGE. Commit 31affab; suite 1301 OK / 0 FALLO, 226/226. RDD assess high (build_safe.sh
     shell signal), STATUS stop rdd_disabled: no review.
-  - [ ] End of T5: independent verifier (risk item 3: shared materi / bounda / conspr / beam code), baseline 9777b2d.
+  - [x] End of T5: independent verifier (risk item 3: shared materi / bounda / conspr / beam code), baseline 9777b2d.
+    1 blocker (signed zero in groundfl.cc phreatic bounds, U3b/U3c) fixed; all units PASS (L-T5-verify).
 - [ ] T6 W7 safety_slip (32): self-contained slip-surface safety-factor feature, planned
   separately. Route: to decide.
 
@@ -1123,3 +1124,10 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   of the first iterate gave a false mechanism (Lapack singular, predictor overshoot), condensing those of the
   previous iterate made Newton cycle (period 4). Hinge-forming step converges linearly (20 iterations: 5e-4 in
   deflection), exact after the next step.
+- L-T5-verify (2026-11-22) end-of-T5 independent verifier, baseline 9777b2d, candidate 74ce053: U1..U10 PASS (committed
+  tests plus own probes). Differential of 997 test-2014/test-2026 inputs: exit codes identical; one blocker, groundfl.cc
+  single and multiple phreatic bounds wrote -0 (negative gravity times a zero height difference) where the baseline
+  wrote 0 (post_calcul_static_pressure1, post_calcul_safety_default1); fixed with + 0., both .dbs identical to the
+  baseline again, groundflow_phreatic* 10/10, suite 1301 OK / 0 FALLO. Advisories: force_element_edge_water stores
+  the -yes code in a double (shifts with every new name, pre-existing); post_strain_volume_* records in
+  post_count_data1 (U8 output); contact springs have almost no suite coverage outside the U6 tests.

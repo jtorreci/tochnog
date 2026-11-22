@@ -870,7 +870,9 @@ void groundflow_phreatic_apply( void )
           node_dof = db_dbl( NODE_DOF, inod, VERSION_NEW );
           iuknwn = pres_indx;
           ipuknwn = iuknwn / nder;
-          node_dof[iuknwn] = dens * force_gravity[ndim-1] * ( z_head - z_ref );
+            // + 0.: a zero height difference times negative gravity must
+            // print 0, not -0 (output unchanged for a horizontal level)
+          node_dof[iuknwn] = dens * force_gravity[ndim-1] * ( z_head - z_ref ) + 0.;
           node_bounded = db_int( NODE_BOUNDED, inod, VERSION_NORMAL );
           node_bounded[ipuknwn] = 1;
         }
@@ -922,7 +924,8 @@ void groundflow_phreatic_apply( void )
         groundflow_phreatic_level_reference( inod, coord, z_ref3 );
         iuknwn = pres_indx;
         ipuknwn = iuknwn / nder;
-        node_dof[iuknwn] = dens * force_gravity[ndim-1] * ( location - z_ref3 );
+          // + 0.: no -0 for a zero height difference (see above)
+        node_dof[iuknwn] = dens * force_gravity[ndim-1] * ( location - z_ref3 ) + 0.;
         node_bounded = db_int( NODE_BOUNDED, inod, VERSION_NORMAL );
         node_bounded[ipuknwn] = 1;
       }
