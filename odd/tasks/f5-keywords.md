@@ -1154,4 +1154,8 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   RED/GREEN contact_spring_3d_direction1/2, contact_spring_2d_direction1; all 19 probe triads = Professional; Pro
   conspr1-7 targets pass. Open (owner): FN exactly 0 -> GNU slides with zero tangential force (manual 6.608
   "cannot exceed f FN"); the Professional keeps the elastic tangential force (0.00025, also with f 0.5).
+- L-CS3-friction (2026-11-23, owner, verbatim): "mantenmos manual. Es lo normal. Lo de Professional no es físico, en
+  realidad" -> CONSPR-FRICTION-ZERO-NORMAL deliberate divergence (DIVERGENCES, SEGUIMIENTO Descarte, user and developer
+  pages). Guard test contact_spring_friction_zero_normal1 (GNU tangential force 0, velz -1; the Pro 0.00025 / -0.5
+  fails it). No source change.
 

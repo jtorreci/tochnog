@@ -3960,6 +3960,17 @@ if LC_ALL=C awk -v a="$vz" 'BEGIN { d=a+0.5; if (d<0) d=-d; exit !(a!="" && d<1e
 else
   check_fail "contact_spring_3d_direction1" "node 1 velz $vz != -0.5"
 fi
+# CONSPR-FRICTION-ZERO-NORMAL (owner 2026-11-23): FN = 0 gives no tangential
+# capacity (manual 6.608, Ft <= f FN); the springs slide, velz -1 (the
+# Professional 02-08-2026 sticks: tangential force 0.00025, velz -0.5).
+run_ok "$T2026" contact_spring_friction_zero_normal1
+cz=$(awk '$1=="element_contactspring_force" && $2=="2" {printf "%s %s ", $4, $5} $1=="node_dof" && $2=="1" {printf "%s", $5}' "$T2026/contact_spring_friction_zero_normal1.dbs")
+if LC_ALL=C awk -v v="$cz" 'BEGIN { n=split(v,a," "); if (n!=3) exit 1;
+     t=a[1]*a[1]+a[2]*a[2]; d=a[3]+1.; if (d<0) d=-d; exit !(t<1e-20 && d<1e-6) }'; then
+  check_ok "contact_spring_friction_zero_normal1 (FN = 0: no tangential force, velz -1)"
+else
+  check_fail "contact_spring_friction_zero_normal1" "tangential forces and velz = $cz"
+fi
 # C100: under the default -no, control_reset_dof writes the integration
 # points with the reset value at their coordinates (= Professional
 # 02-08-2026 element_intpnt_dof of the same inputs, run above).

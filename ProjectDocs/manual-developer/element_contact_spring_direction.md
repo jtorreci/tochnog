@@ -30,9 +30,12 @@ compression, tension and shear loads. Every direction triad now equals the Profe
 The tangent rule changes only the components of the tangential force, not the response, because the
 tangential stiffness and the friction limit are isotropic.
 
-## Not changed (owner decision pending)
+## Differences with the Professional version: CONSPR-FRICTION-ZERO-NORMAL (deliberate, owner 2026-11-23)
 
 The case is FN = 0 exactly, with a horizontal normal and a vertical load. The GNU follows the manual
 (6.608: the total tangential force cannot exceed f FN), so the spring slides with zero tangential
 force. The Professional keeps the full elastic tangential force, even with f = 0.5. With any nonzero
 FN (down to 4e-10) both limit the force to f |FN|.
+
+The GNU keeps the manual rule; the Professional behaviour is not physical. Guard test
+`contact_spring_friction_zero_normal1`, which the Professional fails. See `DIVERGENCES-PROFESSIONAL.md`.

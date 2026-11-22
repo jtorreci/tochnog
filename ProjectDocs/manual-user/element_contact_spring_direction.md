@@ -27,3 +27,12 @@ Example: conspr6 with `group_contact_spring_direction 1 1 1 1` gives N (-0.57735
 T1 (0.707107, -0.707107, 0) and T2 (-0.408248, -0.408248, 0.816497).
 
 Tests: `contact_spring_3d_direction1`, `contact_spring_3d_direction2`, `contact_spring_2d_direction1`.
+
+## Differences with the Professional version
+
+When the normal force FN is exactly 0, the GNU version follows manual 6.608: the tangential force cannot
+exceed f FN, so the spring slides with no tangential force. The Professional 02-08-2026 keeps the elastic
+tangential force there, even with f = 0.5. That is not physical, so the GNU version does not follow it.
+With any nonzero FN, both limit the tangential force to f |FN|. Guard test:
+`contact_spring_friction_zero_normal1`.
+

@@ -1,0 +1,54 @@
+( CONSPR-FRICTION-ZERO-NORMAL: conspr6 with group_contact_spring_direction
+  1 0 0 and group_contact_spring_plasti_friction 0.5. The springs carry no
+  normal force {FN = 0}, so the tangential force cannot exceed f FN = 0
+  {manual 6.608}: the springs slide, the tangential force is 0 and the lower
+  nodes follow the upper ones {node_dof 1 velz -1}. The Professional
+  02-08-2026 keeps the elastic tangential force 0.00025 {velz -0.5}, which
+  is not physical. Deliberate divergence, owner 2026-11-23. Checked in
+  scripts/build_safe.sh. )
+echo -no
+number_of_space_dimensions 3
+materi_velocity
+materi_displacement
+materi_stress
+end_initia
+node  1  0. 0. 0. 
+node  2  1. 0. 0. 
+node  3  0. 1. 0. 
+node  4  1. 1. 0. 
+node  5  0. 0. 1. 
+node  6  1. 0. 1. 
+node  7  0. 1. 1. 
+node  8  1. 1. 1. 
+node 11  0. 0. 0.
+node 12  1. 0. 0.
+node 13  0. 1. 0.
+node 14  1. 1. 0.
+element 1  -hex8 1 2 3 4 5 6 7 8
+element 2  -contact_spring2 1 11
+element 3  -contact_spring2 2 12
+element 4  -contact_spring2 3 13
+element 5  -contact_spring2 4 14
+element_group 1  0
+element_group -ra 2 3 4 5 -ra   1
+group_type 0  -materi
+group_materi_elasti_young 0  1.0
+group_materi_memory 0  -total_linear
+group_type 1  -contact_spring
+group_contact_spring_memory 1  -total_linear
+group_contact_spring_stiffness 1  0.25 0.25
+group_contact_spring_plasti_friction 1 0.5
+group_contact_spring_direction 1 1. 0. 0.
+bounda_dof 0  -ra 11 12 13 14 -ra -velx -vely -velz
+bounda_time    0  0.
+bounda_dof 1  -ra 5 6 7 8 -ra -velx -vely
+bounda_time    1  0.
+bounda_dof 2  -ra 5 6 7 8 -ra -velz
+bounda_time    2  -1.
+print_filter 1  -node_dof -all -velx -vely -velz 
+control_timestep 10 1.e-3 2.e-3
+control_timestep_iterations 10 30
+(
+control_print                10  -time_current -node_dof
+)
+end_data
