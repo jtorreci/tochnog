@@ -226,7 +226,7 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   - [x] U3c inclined groundflow_phreatic_level_multiple (same fix per record; _static -yes untouched). Route: inline.
     Owner L-T5-multiple. RED: groundflow_phreatic_multiple_inclined1 misses the targets (dof 0, no seepage); GREEN
     with the Professional totals to 1e-6.
-  - [ ] Owner decisions: force_edge_diagram (resolved by measurement, L-T5-diagram),
+  - [x] Owner decisions: force_edge_diagram (resolved by measurement, L-T5-diagram),
     group_contact_spring_direction_automatic_planes meaning (resolved by measurement, L-T5-planes),
     group_beam_force_moment_plasti (resolved, L-T5-beamplasti-owner), strain_volume kernel (resolved, L-T5-strainvol-owner), baseline correction scope (resolved, L-T5-baseline-owner).
   - [x] U2 slide_damping (viscous, divergence SLIDE-DAMPING-VISCOUS), control_slide_damping_apply, slide_user
@@ -261,7 +261,9 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
     end moments per bending plane, shear and torsion limits, elastic unloading). Route: inline (one behavior, no
     writer reason). Owner L-T5-beamplasti-owner (real model, not the Professional clipping). RED: base "I do not
     know : group_beam_force_moment_plasti". GREEN group_beam_force_moment_plasti1..5, _2d1, _error1 (analytic);
-    divergence BEAM-PLASTIC-HINGE.
+    divergence BEAM-PLASTIC-HINGE. Commit 31affab; suite 1301 OK / 0 FALLO, 226/226. RDD assess high (build_safe.sh
+    shell signal), STATUS stop rdd_disabled: no review.
+  - [ ] End of T5: independent verifier (risk item 3: shared materi / bounda / conspr / beam code), baseline 9777b2d.
 - [ ] T6 W7 safety_slip (32): self-contained slip-surface safety-factor feature, planned
   separately. Route: to decide.
 
