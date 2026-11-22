@@ -68,7 +68,7 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   - [x] U6 input / database rewrite: mstring, mrange, control_input, groundflow_apply,
     linear_calculation_apply.
     Done `97c3e47` (delegated writer, context backstop; independent review PASS).
-- [ ] T2 W2 output records (69): `element_*`, `post_*`, `print_*`, `control_print_*_node_type`,
+- [x] T2 W2 output records (69): `element_*`, `post_*`, `print_*`, `control_print_*_node_type`,
   `materi_strain_*` / `materi_history_variable` initial dofs, `dof_*`, `global_*`,
   node_bounded_index (list in the 2026-11-01 file). Route: inline.
   Map (read-only explorer, 2026-11-02): 69 names; units:
@@ -560,7 +560,7 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   C63, slide4 = Pro). RED: old binary ratio 1.80/11.49 vs Pro 12.944/1.2388; GREEN 12.943/1.2388. Tests
   post_node_rhside_ratio1 (new), _method1 (updated). Suite 747 OK. Iteration counts change in the 2
   control_timestep_iterations_automatic inputs (default1 843->723, Pro 654; min_max_wished1 944->968, Pro 682).
-  Pending note: the manual default dof_type -materi_velocity (6.951) not applied.
+  Pending note: the manual default dof_type -materi_velocity (6.951) not applied (resolved, L-T2-close).
 - 2026-11-05 C110 independent verifier (fresh mktemp copies 155e5d9 / 823d58b): PASS. Suite 747 OK; 687-input
   corpus: rc identical, beyond the post_node_rhside records only the 2 control_timestep_iterations_automatic inputs
   differ (dbmeth20 = parallel-runner artefact, identical in isolation). Probes = Pro (dof_type filter honoured).
@@ -1133,3 +1133,8 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   baseline again, groundflow_phreatic* 10/10, suite 1301 OK / 0 FALLO. Advisories: force_element_edge_water stores
   the -yes code in a double (shifts with every new name, pre-existing); post_strain_volume_* records in
   post_count_data1 (U8 output); contact springs have almost no suite coverage outside the U6 tests.
+- L-T2-close (2026-11-22): owner "si" to closing T2. C110 had already been resolved (L-C110, 823d58b), so the only
+  open item was the 6.951 default. Pro probe (elastic velocity + one iteration with temperature-dependent conductivity):
+  ratio 2.56462e-15 without the record = -materi_velocity, 0.980198 with -condif_temperature; GNU without the record
+  0.980198 (all principal dofs). Fix inline in post_node_rhside_fixed_free: no record + materi_velocity ->
+  {-MATERI_VELOCITY}. RED 0.980198, GREEN 6.5e-13. Tests post_node_rhside_ratio_dof_type1/2. T2 closed.

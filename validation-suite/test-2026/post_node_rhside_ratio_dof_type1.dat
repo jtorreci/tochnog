@@ -1,0 +1,56 @@
+( post_node_rhside_ratio_dof_type {manual Professional 6.951}: without the
+  record and with materi_velocity initialised only the materi_velocity dofs
+  enter post_node_rhside_ratio. Elastic velocity field (converged, ratio near
+  0) plus a temperature field with a temperature-dependent conductivity after
+  one iteration (temperature ratio 0.980198). Professional 02-08-2026: ratio
+  2.56462e-15 without the record, the same with -materi_velocity, 0.980198
+  with -condif_temperature {post_node_rhside_ratio_dof_type2}. Checked in
+  scripts/build_safe.sh. )
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_displacement
+materi_stress
+materi_strain_plasti
+condif_temperature
+end_initia
+node 1  0 0
+node 2  1 0
+node 3  2 0
+node 4  3 0
+node 5  0 1
+node 6  1 1
+node 7  2 1
+node 8  3 1
+element 1 -quad4 1 2 5 6
+element 2 -quad4 2 3 6 7
+element 3 -quad4 3 4 7 8
+element_group 3 1
+group_type 0 -materi -condif
+group_type 1 -materi -condif
+group_materi_elasti_young 0 100.
+group_materi_elasti_young 1 1000.
+group_materi_memory 0 -total_linear
+group_materi_memory 1 -total_linear
+bounda_dof 1 -ra 1 5 -ra -velx
+bounda_dof 2 1 -vely
+bounda_dof 3 -ra 4 8 -ra -velx
+bounda_time 3 0. 0. 1. 0.1
+geometry_point 1  3 0 1.e-4
+geometry_line 2  3 0 3 1 1.e-4
+control_timestep_iterations 0 1
+control_timestep 0 1. 1.
+group_condif_density 0 1.
+group_condif_density 1 1.
+group_condif_capacity 0 1.
+group_condif_capacity 1 1.
+group_condif_conductivity 0 1.
+group_condif_conductivity 1 1.
+bounda_dof 4 -ra 1 5 -ra -temp
+bounda_dof 5 -ra 4 8 -ra -temp
+bounda_time 5 0. 0. 1. 10.
+dependency_item 1  -group_condif_conductivity 0  -temp 3
+dependency_diagram 1  0.0 0.01 10.  100.0 1.0 1.0
+dependency_item 2  -group_condif_conductivity 1  -temp 3
+dependency_diagram 2  0.0 0.01 10.  100.0 1.0 1.0
+end_data

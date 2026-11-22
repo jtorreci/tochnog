@@ -3890,6 +3890,23 @@ if rhs_close "$rr" 12.9442 && rhs_close "${fx% *}" -3.98859 && rhs_close "${fx#*
 else
   check_fail "post_node_rhside_ratio1" "ratio $rr fixed $fx free $fr"
 fi
+# Manual 6.951: without post_node_rhside_ratio_dof_type and with
+# materi_velocity initialised only the velocity dofs count (Professional
+# 02-08-2026: 2.56e-15, the temperature alone gives 0.980198).
+run_ok "$T2026" post_node_rhside_ratio_dof_type1
+run_ok "$T2026" post_node_rhside_ratio_dof_type2
+rr=$(awk '$1=="post_node_rhside_ratio" {print $2}' "$T2026/post_node_rhside_ratio_dof_type1.dbs")
+if LC_ALL=C awk -v a="$rr" 'BEGIN { exit !(a!="" && a<1.e-10) }'; then
+  check_ok "post_node_rhside_ratio_dof_type1 (default -materi_velocity, = Professional)"
+else
+  check_fail "post_node_rhside_ratio_dof_type1" "ratio $rr not below 1e-10"
+fi
+rr=$(awk '$1=="post_node_rhside_ratio" {print $2}' "$T2026/post_node_rhside_ratio_dof_type2.dbs")
+if rhs_close "$rr" 0.980198; then
+  check_ok "post_node_rhside_ratio_dof_type2 (-condif_temperature, = Professional)"
+else
+  check_fail "post_node_rhside_ratio_dof_type2" "ratio $rr != 0.980198"
+fi
 # C100: under the default -no, control_reset_dof writes the integration
 # points with the reset value at their coordinates (= Professional
 # 02-08-2026 element_intpnt_dof of the same inputs, run above).

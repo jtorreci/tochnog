@@ -580,6 +580,12 @@ void post_node_rhside_fixed_free( void )
     db( DOF_TYPE, 0, dof_type, ddum, ldum, VERSION_NORMAL, GET );
     db( POST_NODE_RHSIDE_RATIO_UNKNOWNTYPES, 0, unknowntypes, ddum, 
       length_unknowntypes, VERSION_NORMAL, GET_IF_EXISTS );
+    if ( length_unknowntypes==0 && materi_velocity ) {
+      // manual 6.951 (= Professional 02-08-2026): without the record and
+      // with materi_velocity initialised only the velocity dofs count
+      unknowntypes[0] = -MATERI_VELOCITY;
+      length_unknowntypes = 1;
+    }
     long int ratio_method = 0;
     db( POST_NODE_RHSIDE_RATIO_METHOD, 0, &ratio_method, ddum, ldum,
       VERSION_NORMAL, GET_IF_EXISTS );
