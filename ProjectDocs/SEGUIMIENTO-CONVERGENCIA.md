@@ -1512,11 +1512,11 @@ del manual; el Pro prueba los nodos: DIVERGENCES GEOMETRY-MOVING-SAMPLING).
 
 - [x] `group_axisymmetric` — presente en el GNU; 2026-10-09 (F4 T4, K20): same default Gauss rule as the plane elements (quad4 2x2, quad9 3x3), the forced 1-point rule and the quad9 refusal were removed (= Professional)
 
-### group_beam (6/7)
+### group_beam (7/7)
 
 - [x] `group_beam_direction_z` — implementada (F5 T2 V4c, 2026-11-02; local beam z of the group, must be perpendicular to the beam; full local-axes beam; since F5 T2 V4d (f99793a) every 3D beam is this native beam with the Professional default local z, C37 resolved)
 - [x] `group_beam_direction_z_reference_point` — implementada (F5 T2 V4c, 2026-11-02; local z = part of (point - beam middle) perpendicular to the beam; group_beam_direction_z wins when both are given = Professional)
-- [ ] `group_beam_force_moment_plasti` — PENDIENTE
+- [x] `group_beam_force_moment_plasti` — F5 T5 U10 (2026-11-22): ideally plastic hinges at the element ends, return mapping per bending plane, torsion limit, elastic unloading (GNU model; DIVERGENCES BEAM-PLASTIC-HINGE)
 - [x] `group_beam_inertia` — presente en el GNU
 - [x] `group_beam_memory` — presente en el GNU; default -total_linear (= Professional) since F5 T2 V4d (2026-11-02, f99793a), -updated kept (BEAM-MEMORY-UPDATED)
 - [x] `group_beam_shear` — implementada (F5 T2 V4c, 2026-11-02; torsion modulus G of the local-axes beam, torsion stiffness G*J/L = Professional; the classic planar beam has no torsion and ignores it)

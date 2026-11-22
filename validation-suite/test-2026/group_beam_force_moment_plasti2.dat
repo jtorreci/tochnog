@@ -1,0 +1,51 @@
+(F5 T5 U10: group_beam_force_moment_plasti, elastic unloading. The
+ propped cantilever of group_beam_force_moment_plasti1 (length 4, Mp 1,
+ hinge at the fixed end from P 1.3333) is loaded to P 1.4, held, and
+ unloaded to P 0. Unloading is elastic (propped cantilever stiffness), so
+ the residual state is the plastic state at P 1.4 minus the elastic
+ state at P 1.4:
+ moment at the fixed end 1 - 3 P L / 16 = -0.05,
+ moment under the load 0.9 - 5 P L / 32 = 0.025,
+ deflection under the load -0.866667 + 0.816667 = -0.05,
+ roller reaction -0.45 + 0.4375 = -0.0125 (node_rhside sign).)
+echo -no
+number_of_space_dimensions 3
+materi_velocity
+materi_displacement
+beam_rotation
+end_initia
+node 1 0 0 0
+node 2 1 0 0
+node 3 2 0 0
+node 4 3 0 0
+node 5 4 0 0
+element 1 -beam 1 2
+element 2 -beam 2 3
+element 3 -beam 3 4
+element 4 -beam 4 5
+group_type 0 -beam
+group_beam_young 0 1
+group_beam_shear 0 1
+group_beam_inertia 0 1 1 1
+group_beam_memory 0 -total_linear
+group_beam_force_moment_plasti 0  1e10 1e10 1e10 1e10 1e10 1  1e10 1e10 1e10 1e10 1e10 1
+bounda_dof 0 1 -velx -vely -velz -rotx -roty -rotz
+bounda_dof 1 -ra 2 5 -ra -velx -velz -rotx -roty
+bounda_dof 2 5 -vely
+bounda_force 3 3 -vely
+bounda_time 3 0. 0. 14. -1.4 16. -1.4 30. 0. 100. 0.
+control_timestep 10 1. 14.
+control_timestep_iterations 10 20
+control_timestep 20 1. 2.
+control_timestep_iterations 20 20
+control_timestep 30 1. 16.
+control_timestep_iterations 30 20
+target_item 0 -element_beam_force_moment 1 5
+target_value 0 -0.05 1.e-8
+target_item 1 -element_beam_force_moment 2 11
+target_value 1 0.025 1.e-8
+target_item 2 -node_dof 3 -disy
+target_value 2 -0.05 1.e-8
+target_item 3 -node_rhside 5 -vely
+target_value 3 -0.0125 1.e-8
+end_data

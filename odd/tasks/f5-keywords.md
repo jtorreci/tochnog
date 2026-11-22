@@ -228,7 +228,7 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
     with the Professional totals to 1e-6.
   - [ ] Owner decisions: force_edge_diagram (resolved by measurement, L-T5-diagram),
     group_contact_spring_direction_automatic_planes meaning (resolved by measurement, L-T5-planes),
-    group_beam_force_moment_plasti (new model), strain_volume kernel (resolved, L-T5-strainvol-owner), baseline correction scope (resolved, L-T5-baseline-owner).
+    group_beam_force_moment_plasti (resolved, L-T5-beamplasti-owner), strain_volume kernel (resolved, L-T5-strainvol-owner), baseline correction scope (resolved, L-T5-baseline-owner).
   - [x] U2 slide_damping (viscous, divergence SLIDE-DAMPING-VISCOUS), control_slide_damping_apply, slide_user
     (user.cc stub, Professional message). Route: inline. Owner L-T5-slide. RED: base "I do not know : slide_damping"
     / "slide_user". GREEN slide_damping1 (c*v exact), slide_damping2 (Professional values), slide_user_error1.
@@ -256,8 +256,12 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   - [x] U9 bounda_baseline_correction (6.19) + _parameters (6.20). Route: inline (one behavior, no writer reason).
     Owner L-T5-baseline-owner (manual over the Professional). RED: base "I don't know what to do with :
     bounda_baseline_correction". GREEN bounda_baseline_correction1/2/3 + _error1; divergence
-    BASELINE-CORRECTION-SIGNAL.
-  - [ ] U10 beam plasticity (group_beam_force_moment_plasti, new model decision pending).
+    BASELINE-CORRECTION-SIGNAL. Commit ea50f33.
+  - [x] U10 group_beam_force_moment_plasti (6.589): plastic hinges at the beam element ends (return mapping of the
+    end moments per bending plane, shear and torsion limits, elastic unloading). Route: inline (one behavior, no
+    writer reason). Owner L-T5-beamplasti-owner (real model, not the Professional clipping). RED: base "I do not
+    know : group_beam_force_moment_plasti". GREEN group_beam_force_moment_plasti1..5, _2d1, _error1 (analytic);
+    divergence BEAM-PLASTIC-HINGE.
 - [ ] T6 W7 safety_slip (32): self-contained slip-surface safety-factor feature, planned
   separately. Route: to decide.
 
@@ -1099,3 +1103,21 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   convención de coeficientes de Professional y documentando la divergencia?". GNU: bounda.cc bounda_baseline_load,
   fit once with the step size of the first step in the interval (backward v += a*dt), only -acc* dofs corrected.
   [0,2] gives -0.9027362126125 -1.055204571298 2.050629834893 (sum v^2 21.68 -> 6.34e-4).
+- L-T5-beamplasti (2026-11-22) Professional 02-08-2026 probes (3D cantilevers E 1 Izz 4): the limits only clip the
+  components of element_beam_force_moment, stiffness stays elastic: tip disy 0.1 with mz1 limit 0.6 gives mz1 -0.6
+  and fy 1.2 (out of equilibrium); force control F = 0.1t with mz2 limit 0.6: m1 -3.2 instead of -2 at F 1, then
+  divergence (rotations -9.6, m1 38.4).
+- L-T5-beamplasti-owner (2026-11-22) owner, verbatim: "pues prefiero un modelo plástico real. Lo que hay ahora es,
+  por decirlo suavemente, una porquería. Bastaría con un método iterativo, en el que la barra se subdividiese en el
+  punto en el que el ciclo de carga dé una rótula. Creo que eso no será difícil de implementar (obliga a un
+  remallado al introducir la rótula) y nos daría soluciones más creíbles". After the parent noted the limits are per
+  element node (hinges at element ends, no remesh): "tienes razón, había pensado en la formación de rótulas
+  intermedias. No es necsario el remallado. Lo normal es mallar con malla densa donde se esperen rótulas. En este
+  caso, si la densidad es suficiente, podríamos pensar mejor en mover ligeramente los nodos para que se pongan sobre
+  la rótula, siempre que el movimiento sea pequeño y no distorsione la malla"; parent recommended no node relocation
+  (nearest node error <= q h^2/8, history of the moved elements), owner: "si".
+  GNU: beam.cc beam_plastic_hinges / beam_plastic_plane (closest point projection on |m1|<=Y1, |m2|<=Y2,
+  |m1+m2|<=L V). Tangent condensed only for limits reached at the previous converged step: condensing the hinges
+  of the first iterate gave a false mechanism (Lapack singular, predictor overshoot), condensing those of the
+  previous iterate made Newton cycle (period 4). Hinge-forming step converges linearly (20 iterations: 5e-4 in
+  deflection), exact after the next step.

@@ -3626,6 +3626,14 @@ run_ok "$T2026" bounda_baseline_correction1
 run_ok "$T2026" bounda_baseline_correction2
 run_ok "$T2026" bounda_baseline_correction3
 expected_error_ok "$T2026" bounda_baseline_correction_error1
+# F5 T5 U10: group_beam_force_moment_plasti (6.589), GNU plastic hinges
+run_ok "$T2026" group_beam_force_moment_plasti1
+run_ok "$T2026" group_beam_force_moment_plasti2
+run_ok "$T2026" group_beam_force_moment_plasti3
+run_ok "$T2026" group_beam_force_moment_plasti4
+run_ok "$T2026" group_beam_force_moment_plasti5
+run_ok "$T2026" group_beam_force_moment_plasti_2d1
+expected_error_ok "$T2026" group_beam_force_moment_plasti_error1
 run_ok "$T2026" materi_plasti_maximum_iterations1
 run_ok "$T2026" materi_plasti_maximum_iterations2
 expected_error_ok "$T2026" materi_plasti_maximum_iterations_error1

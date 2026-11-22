@@ -8284,6 +8284,15 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   data_length[GROUP_BEAM_SHEAR] = 1;
   data_class[GROUP_BEAM_SHEAR] = BEAM;
 
+  // F5 T5 U10: group_beam_force_moment_plasti (manual Professional
+  // 6.589): ideally plastic limits of the local end forces and moments
+  // fx fy fz mx my mz of node 1, then of node 2 (beam.cc
+  // beam_plastic_hinges)
+  strcpy(name[GROUP_BEAM_FORCE_MOMENT_PLASTI],"group_beam_force_moment_plasti");
+  type[GROUP_BEAM_FORCE_MOMENT_PLASTI] = DOUBLE_PRECISION;
+  data_length[GROUP_BEAM_FORCE_MOMENT_PLASTI] = 12;
+  data_class[GROUP_BEAM_FORCE_MOMENT_PLASTI] = BEAM;
+
   // Sprint 13: post_element_force family (manual Professional 6.927-
   // 6.935): cross-section forces/moments from the element internal
   // nodal forces (the free-body statics of the L5 machinery)

@@ -34,13 +34,20 @@ void beam_3d( long int element, long int element_group, double coord_3d[],
 // V4d, owner decision C37: bending about both local axes and torsion,
 // as the Professional; the former 3D beam mapped the element onto the
 // 2D beam in the group_beam_plane plane).
+// A beam with plastic hinges (group_beam_force_moment_plasti, F5 T5
+// U10) also uses beam_local in 2D (default local z = global z gives the
+// same local axes as the classic 2D beam).
 
 {
   double record_vec[3];
   long int record = beam_direction_z_record( element, element_group,
     record_vec );
 
-  if ( record || ndim==3 ) {
+  long int ldum=0, idum[1];
+  double plasti[12];
+  if ( record || ndim==3 ||
+       db( GROUP_BEAM_FORCE_MOMENT_PLASTI, element_group, idum, plasti,
+         ldum, VERSION_NORMAL, GET_IF_EXISTS ) ) {
     beam_local( element, element_group, record, record_vec, coord_3d,
       old_dof_3d, new_dof_3d, element_lhside_3d, element_matrix_3d,
       element_rhside_3d );
@@ -426,6 +433,11 @@ long int beam_direction_z_record( long int element, long int element_group,
 }
 
 #define BEAM_LOCAL_NLOC 12  // local beam dofs: 2 nodes x (ux uy uz rx ry rz)
+#define BEAM_PLASTIC_TOL 1.e-10 // relative tolerance of the plastic limits
+
+static void beam_plastic_hinges( long int element, double L, double EIz,
+  double EIy, double GJ, double plasti[], double du_l[], double f_l[],
+  double K[] );
 #define BEAM_LOCAL_PERPENDICULAR_TOL 1.e-3 // |cos| of direction_z vs beam axis
 #define BEAM_LOCAL_VERTICAL_TOL 1.e-6 // beam along z: default local z = global y
 #define BEAM_LOCAL_ZERO_TOL 1.e-10 // relative length of a vanishing z axis
@@ -466,7 +478,8 @@ void beam_local( long int element, long int element_group, long int record,
     ez[3], ex0[3], v[3], R[3*3], T[BEAM_LOCAL_NLOC*BEAM_LOCAL_NLOC],
     K[BEAM_LOCAL_NLOC*BEAM_LOCAL_NLOC], KT[BEAM_LOCAL_NLOC*BEAM_LOCAL_NLOC],
     Kg[BEAM_LOCAL_NLOC*BEAM_LOCAL_NLOC], du_g[BEAM_LOCAL_NLOC],
-    du_l[BEAM_LOCAL_NLOC], f_l[BEAM_LOCAL_NLOC], f_g[BEAM_LOCAL_NLOC];
+    du_l[BEAM_LOCAL_NLOC], f_l[BEAM_LOCAL_NLOC], f_g[BEAM_LOCAL_NLOC],
+    plasti[BEAM_LOCAL_NLOC];
   const long int nnol=2, n=BEAM_LOCAL_NLOC;
 
   swit = set_swit(element,-1,"beam_local");
@@ -662,20 +675,6 @@ void beam_local( long int element, long int element_group, long int record,
     K[9*n+3] -= G*J/L; K[9*n+9] += G*J/L;
   }
 
-    // global beam matrix Kg = T^t K T
-  for ( i=0; i<n; i++ ) {
-    for ( j=0; j<n; j++ ) {
-      KT[i*n+j] = 0.;
-      for ( k=0; k<n; k++ ) KT[i*n+j] += K[i*n+k]*T[k*n+j];
-    }
-  }
-  for ( i=0; i<n; i++ ) {
-    for ( j=0; j<n; j++ ) {
-      Kg[i*n+j] = 0.;
-      for ( k=0; k<n; k++ ) Kg[i*n+j] += T[k*n+i]*KT[k*n+j];
-    }
-  }
-
     // global dofs of the 12 slots (velocity for the translations, the
     // rotation dof itself for the rotations); 2D: velx, vely, rotz
   for ( inol=0; inol<nnol; inol++ ) {
@@ -703,10 +702,32 @@ void beam_local( long int element, long int element_group, long int record,
   array_set( f_l, 0., n );
   db( ELEMENT_BEAM_FORCE_MOMENT, element, idum, f_l, length,
     VERSION_NORMAL, GET_IF_EXISTS );
-  for ( i=0; i<n; i++ ) {
-    for ( j=0; j<n; j++ ) f_l[i] += K[i*n+j]*du_l[j];
+  if ( db( GROUP_BEAM_FORCE_MOMENT_PLASTI, element_group, idum, plasti,
+      ldum, VERSION_NORMAL, GET_IF_EXISTS ) )
+      // plastic hinges: return mapping of the end forces, K becomes the
+      // consistent tangent
+    beam_plastic_hinges( element, L, E*Izz, E*Iyy, G*J, plasti, du_l,
+      f_l, K );
+  else {
+    for ( i=0; i<n; i++ ) {
+      for ( j=0; j<n; j++ ) f_l[i] += K[i*n+j]*du_l[j];
+    }
   }
   matrix_atb( T, f_l, f_g, n, n, 1 );
+
+    // global beam matrix Kg = T^t K T
+  for ( i=0; i<n; i++ ) {
+    for ( j=0; j<n; j++ ) {
+      KT[i*n+j] = 0.;
+      for ( k=0; k<n; k++ ) KT[i*n+j] += K[i*n+k]*T[k*n+j];
+    }
+  }
+  for ( i=0; i<n; i++ ) {
+    for ( j=0; j<n; j++ ) {
+      Kg[i*n+j] = 0.;
+      for ( k=0; k<n; k++ ) Kg[i*n+j] += T[k*n+i]*KT[k*n+j];
+    }
+  }
   if ( swit ) {
     pri( "du_g", du_g, nnol, 6 );
     pri( "f_l", f_l, nnol, 6 );
@@ -734,4 +755,210 @@ void beam_local( long int element, long int element_group, long int record,
   db( ELEMENT_BEAM_DIRECTION, element, idum, R, length, VERSION_NEW, PUT );
 
   if ( swit ) pri( "Out routine BEAM_LOCAL." );
+}
+
+
+static long int beam_plastic_admissible( double a[], double b[], long int nc,
+  double q[] )
+
+// 1 if the moments q satisfy every limit a q <= b (relative tolerance)
+
+{
+  long int m=0;
+  double tol=0.;
+
+  for ( m=0; m<nc; m++ ) {
+    tol = BEAM_PLASTIC_TOL*( b[m] + scalar_dabs(q[0]) + scalar_dabs(q[1]) );
+    if ( a[m*2]*q[0] + a[m*2+1]*q[1] > b[m] + tol ) return 0;
+  }
+  return 1;
+}
+
+
+static long int beam_plastic_active( double a[], double b[], long int nc,
+  double q[] )
+
+// bit mask of the limits a q <= b that q reaches (relative tolerance)
+
+{
+  long int m=0, mask=0;
+  double tol=0.;
+
+  for ( m=0; m<nc; m++ ) {
+    tol = BEAM_PLASTIC_TOL*( b[m] + scalar_dabs(q[0]) + scalar_dabs(q[1]) );
+    if ( a[m*2]*q[0] + a[m*2+1]*q[1] >= b[m] - tol ) mask |= 1<<m;
+  }
+  return mask;
+}
+
+
+static long int beam_plastic_plane( double k[], double qold[], double qt[],
+  double Y1, double Y2, double Ys, double q[], double C[] )
+
+// Ideally plastic return mapping of the two end moments q of one bending
+// plane: closest point (energy norm of the elastic stiffness k, 2x2) of
+// the trial moments qt on the admissible polygon |q1| <= Y1, |q2| <= Y2,
+// |q1 + q2| <= Ys (the end shear force is (q1 + q2) / L). This is the
+// exact backward Euler solution of associative perfect plasticity with
+// these linear limits. C is the tangent for the system matrix: k with
+// the active directions condensed (k - k a a^t k / (a^t k a) for one
+// limit, 0 for two), but only when these limits were already reached by
+// the converged moments qold of the previous step. A limit first reached
+// in this step keeps the elastic k: a trial that overshoots during the
+// iterations would otherwise put transient hinges in the matrix and can
+// make it singular (a false mechanism); the step then converges with
+// the elastic matrix and the next steps use the condensed one.
+// Returns 0 if no admissible point is found.
+
+{
+  long int j=0, l=0, nc=6, old_active=0;
+  double a[6*2] = { 1., 0., -1., 0., 0., 1., 0., -1., 1., 1., -1., -1. },
+    b[6] = { Y1, Y1, Y2, Y2, Ys, Ys }, ka[2], kb[2], r[2], G[4], lam[2],
+    aka=0., det=0.;
+
+  old_active = beam_plastic_active( a, b, nc, qold );
+  array_move( k, C, 4 );
+    // elastic
+  q[0] = qt[0]; q[1] = qt[1];
+  if ( beam_plastic_admissible( a, b, nc, q ) ) return 1;
+    // one active limit
+  for ( j=0; j<nc; j++ ) {
+    r[0] = a[j*2]*qt[0] + a[j*2+1]*qt[1] - b[j];
+    if ( r[0]<=0. ) continue;
+    ka[0] = k[0]*a[j*2] + k[1]*a[j*2+1];
+    ka[1] = k[2]*a[j*2] + k[3]*a[j*2+1];
+    aka = a[j*2]*ka[0] + a[j*2+1]*ka[1];
+    if ( aka<=0. ) continue;
+    q[0] = qt[0] - r[0]/aka*ka[0];
+    q[1] = qt[1] - r[0]/aka*ka[1];
+    if ( beam_plastic_admissible( a, b, nc, q ) ) {
+      if ( old_active & (1<<j) ) {
+        C[0] = k[0] - ka[0]*ka[0]/aka; C[1] = k[1] - ka[0]*ka[1]/aka;
+        C[2] = k[2] - ka[1]*ka[0]/aka; C[3] = k[3] - ka[1]*ka[1]/aka;
+      }
+      return 1;
+    }
+  }
+    // two active limits: a corner of the polygon, no stiffness left
+  for ( j=0; j<nc; j++ ) {
+    for ( l=j+1; l<nc; l++ ) {
+      ka[0] = k[0]*a[j*2] + k[1]*a[j*2+1];
+      ka[1] = k[2]*a[j*2] + k[3]*a[j*2+1];
+      kb[0] = k[0]*a[l*2] + k[1]*a[l*2+1];
+      kb[1] = k[2]*a[l*2] + k[3]*a[l*2+1];
+      G[0] = a[j*2]*ka[0] + a[j*2+1]*ka[1];
+      G[1] = a[j*2]*kb[0] + a[j*2+1]*kb[1];
+      G[2] = a[l*2]*ka[0] + a[l*2+1]*ka[1];
+      G[3] = a[l*2]*kb[0] + a[l*2+1]*kb[1];
+      det = G[0]*G[3] - G[1]*G[2];
+      if ( scalar_dabs(det) <= BEAM_PLASTIC_TOL*( G[0]*G[3] + scalar_dabs(G[1]*G[2]) ) )
+        continue;
+      r[0] = a[j*2]*qt[0] + a[j*2+1]*qt[1] - b[j];
+      r[1] = a[l*2]*qt[0] + a[l*2+1]*qt[1] - b[l];
+      lam[0] = ( G[3]*r[0] - G[1]*r[1] )/det;
+      lam[1] = ( G[0]*r[1] - G[2]*r[0] )/det;
+      if ( lam[0]<0. || lam[1]<0. ) continue;
+      q[0] = qt[0] - lam[0]*ka[0] - lam[1]*kb[0];
+      q[1] = qt[1] - lam[0]*ka[1] - lam[1]*kb[1];
+      if ( beam_plastic_admissible( a, b, nc, q ) ) {
+        if ( (old_active & (1<<j)) && (old_active & (1<<l)) )
+          array_set( C, 0., 4 );
+        return 1;
+      }
+    }
+  }
+  return 0;
+}
+
+
+static void beam_plastic_hinges( long int element, double L, double EIz,
+  double EIy, double GJ, double plasti[], double du_l[], double f_l[],
+  double K[] )
+
+// Plastic hinges at the beam element ends (group_beam_force_moment_plasti,
+// manual Professional 6.589; F5 T5 U10, GNU model, owner decision
+// 2026-11-22: a real ideally plastic model instead of the Professional
+// clipping of the end forces, BEAM-PLASTIC-HINGE). plasti holds the
+// limits of the local end forces and moments fx fy fz mx my mz of node 1
+// and of node 2. The element forces follow from independent end moments:
+// bending in the local x-y plane (mz1 mz2, shear fy = (mz1+mz2)/L), in the
+// local x-z plane (my1 my2, shear fz = -(my1+my2)/L) and torsion
+// (mx2 = -mx1); the beam has no axial stiffness, so fx stays 0 and its
+// limits play no role. Per plane the end moments are returned to the
+// admissible set (beam_plastic_plane) from the converged forces f_l of
+// the previous step plus the elastic increment of du_l; unloading is
+// elastic. On return f_l holds the new local forces and K (12x12, local
+// dofs ux uy uz rx ry rz per node) the consistent tangent.
+
+{
+  long int i=0, j=0, a=0, c=0, p=0;
+  const long int n=BEAM_LOCAL_NLOC;
+  double kp[4], qold[2], qt[2], q[2], C[4], B[2][BEAM_LOCAL_NLOC], dth[2],
+    Ys=0., T=0., ct=0.;
+
+  for ( i=0; i<n; i++ ) {
+    if ( plasti[i]<0. ) {
+      pri( "Error: GROUP_BEAM_FORCE_MOMENT_PLASTI limits should not be "
+        "negative. Element", element );
+      exit_tn_on_error();
+    }
+  }
+
+  array_set( K, 0., n*n );
+  for ( p=0; p<2; p++ ) {
+      // p 0: x-y plane (uy rz, E Izz); p 1: x-z plane (uz ry, E Iyy)
+    long int iu = ( p==0 ) ? 1 : 2, ir = ( p==0 ) ? 5 : 4;
+    double sgn = ( p==0 ) ? -1. : 1., EI = ( p==0 ) ? EIz : EIy;
+      // end rotations relative to the chord: theta = r + sgn (u2-u1)/L
+    for ( a=0; a<2; a++ ) {
+      array_set( B[a], 0., n );
+      B[a][a*6+ir] = 1.;
+      B[a][iu] = -sgn/L;
+      B[a][6+iu] = sgn/L;
+      dth[a] = array_inproduct( B[a], du_l, n );
+    }
+    kp[0] = 4.*EI/L; kp[1] = 2.*EI/L; kp[2] = 2.*EI/L; kp[3] = 4.*EI/L;
+    qold[0] = f_l[ir];
+    qold[1] = f_l[6+ir];
+    qt[0] = f_l[ir] + kp[0]*dth[0] + kp[1]*dth[1];
+    qt[1] = f_l[6+ir] + kp[2]*dth[0] + kp[3]*dth[1];
+    Ys = L*( plasti[iu] < plasti[6+iu] ? plasti[iu] : plasti[6+iu] );
+    if ( !beam_plastic_plane( kp, qold, qt, plasti[ir], plasti[6+ir], Ys, q,
+        C ) ) {
+      pri( "Error: no admissible plastic state found for beam element",
+        element );
+      exit_tn_on_error();
+    }
+    f_l[ir] = q[0];
+    f_l[6+ir] = q[1];
+    f_l[iu] = -sgn*( q[0] + q[1] )/L;
+    f_l[6+iu] = sgn*( q[0] + q[1] )/L;
+    for ( a=0; a<2; a++ ) {
+      for ( c=0; c<2; c++ ) {
+        for ( i=0; i<n; i++ ) {
+          if ( B[a][i]==0. ) continue;
+          for ( j=0; j<n; j++ )
+            K[i*n+j] += B[a][i]*C[a*2+c]*B[c][j];
+        }
+      }
+    }
+  }
+
+    // torsion
+  T = f_l[9] + GJ/L*( du_l[9] - du_l[3] );
+  ct = GJ/L;
+  Ys = plasti[3] < plasti[9] ? plasti[3] : plasti[9];
+  if ( scalar_dabs(T) > Ys ) {
+    T = ( T>0. ) ? Ys : -Ys;
+      // no torsion stiffness when the limit was already reached
+    if ( f_l[9]*T>0. &&
+         scalar_dabs(f_l[9]) >= Ys*( 1.-BEAM_PLASTIC_TOL ) ) ct = 0.;
+  }
+  f_l[3] = -T;
+  f_l[9] = T;
+  K[3*n+3] += ct; K[3*n+9] -= ct;
+  K[9*n+3] -= ct; K[9*n+9] += ct;
+
+  f_l[0] = 0.;
+  f_l[6] = 0.;
 }

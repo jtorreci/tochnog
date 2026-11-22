@@ -1,0 +1,54 @@
+(F5 T5 U10: group_beam_force_moment_plasti (manual Professional 6.589),
+ ideally plastic hinges at the beam element ends, GNU model (not the
+ Professional clipping: BEAM-PLASTIC-HINGE). Propped cantilever, length
+ 4, fixed at x 0, roller at x 4, point load P at x 2, E 1, Izz 1,
+ plastic moment Mp 1 at every element end. Elastic: moment at the fixed
+ end 3 P L / 16, so the first hinge forms at P = 16 Mp / (3 L) = 1.3333.
+ Load P = 0.1 t up to P 1.4: the fixed end stays at Mp, the structure
+ behaves as a simply supported beam with end moment Mp:
+ moment under the load P L / 4 - Mp / 2 = 0.9 (below Mp, no collapse),
+ deflection under the load P L^3 / (48 E I) - Mp L^2 / (16 E I) = 0.866667
+ (elastic 7 P L^3 / (768 E I) = 0.816667),
+ roller reaction P / 2 - Mp / L = 0.45 (elastic 5 P / 16 = 0.4375).
+ Collapse load 6 Mp / L = 1.5 is not reached. The load is held for two
+ more steps (the step where the hinge forms iterates with the elastic
+ matrix of the new hinge).)
+echo -no
+number_of_space_dimensions 3
+materi_velocity
+materi_displacement
+beam_rotation
+end_initia
+node 1 0 0 0
+node 2 1 0 0
+node 3 2 0 0
+node 4 3 0 0
+node 5 4 0 0
+element 1 -beam 1 2
+element 2 -beam 2 3
+element 3 -beam 3 4
+element 4 -beam 4 5
+group_type 0 -beam
+group_beam_young 0 1
+group_beam_shear 0 1
+group_beam_inertia 0 1 1 1
+group_beam_memory 0 -total_linear
+group_beam_force_moment_plasti 0  1e10 1e10 1e10 1e10 1e10 1  1e10 1e10 1e10 1e10 1e10 1
+bounda_dof 0 1 -velx -vely -velz -rotx -roty -rotz
+bounda_dof 1 -ra 2 5 -ra -velx -velz -rotx -roty
+bounda_dof 2 5 -vely
+bounda_force 3 3 -vely
+bounda_time 3 0. 0. 14. -1.4 100. -1.4
+control_timestep 10 1. 14.
+control_timestep_iterations 10 20
+control_timestep 20 1. 2.
+control_timestep_iterations 20 20
+target_item 0 -element_beam_force_moment 1 5
+target_value 0 1. 1.e-8
+target_item 1 -element_beam_force_moment 2 11
+target_value 1 0.9 1.e-8
+target_item 2 -node_dof 3 -disy
+target_value 2 -0.8666666666667 1.e-8
+target_item 3 -node_rhside 5 -vely
+target_value 3 -0.45 1.e-8
+end_data
