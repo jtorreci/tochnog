@@ -33,6 +33,41 @@ runner scripts/build_safe.sh (validation-suite/test-2026 self-checking inputs, P
   writes mesh "safety_slip_surface_nodes" (Linear, 2 nodes) with results safety_factor, safety_factor_local,
   safety_sign, safety_sigt.
 
+- S8 Ellipsoide (manual 6.1025-6.1029, measured L-T6-U6-measure): record 12 values (middle x y z, base1 x y z,
+  base2 x y z, a b c) for the first ellipsoid, optionally 12 more for the last; e1 = base1 normalized, e2 = base2
+  orthogonalized to e1 (Gram-Schmidt) and normalized, e3 = e1 x e2; the result record writes the normalized bases.
+  Points: segment_n n (default 90) values of theta_i = 2 pi i/n and of phi_j = 2 pi j/n (point k = i*n + j), local
+  r = (a sin t cos p, b sin t sin p, c cos t), global = middle + r1 e1 + r2 e2 + r3 e3 (the surface is covered twice,
+  which cancels in Fs); weight |r_t x r_p| (2 pi/n)^2; normal = normalized gradient (r1/a^2, r2/b^2, r3/c^2) in the
+  e basis; slip direction (method -safety_slip_ellipsoide, default) = e1 projected on the tangent plane, normalized;
+  tau = traction . slip direction; zero-area points (poles) get sigma_n 0, tau 0, limit c. Methods
+  -materi_displacement / -materi_velocity_integrated (last calculated displacement at the point) and -materi_velocity
+  (velocity), projected on the tangent plane. safety_slip_ellipsoide_n m: each of the 12 parameters with first !=
+  last varies over m values, all combinations (first varied parameter outer loop, last varied parameter inner loop);
+  m^k surfaces for k varied parameters. Result record: the 12 parameters (normalized bases) + Fs. Elements record:
+  triangles (i,j),(i,j+1),(i+1,j) and (i,j+1),(i+1,j+1),(i+1,j), indices wrapping in i and j, 3 values each without
+  -none. Professional values (3x3x3-node hex8 cube [0,4]^3, uniform sxx = syy = szz = -1, sxy = 0.5, c 1, phi 30 deg):
+  sphere (2,2,2) r 1 n 8: 10.81644604373; ellipsoid (2,2,2) base1 (1,1,0) base2 (-1,1,0.5) a b c 1.5 1 0.8 n 8:
+  9.298529656311; base1 (1,0.2,0) base2 (0,1,0) sphere: 8.366977774663; sphere with -materi_displacement: 9.032320731610;
+  first (2,2,2) r 1 / last middle x 2.5 and a 1.2, _n 3: 9 surfaces 10.816446, 9.771643, 9.013850 (repeated per
+  middle x), critical middle x 2.5 a 1.2.
+- S9 Grd (manual 6.1030-6.1033, 3D only): safety_slip_grd index -yes reads the Surfer file <index>.grd (DSAA, nx ny,
+  xmin xmax, ymin ymax, zmin zmax, then z for all x of the first y, then the second y, ...) from the working
+  directory: a surface z(x,y) on the nx x ny grid, (nx-1)(ny-1) parts. Every part gets segment_n x segment_n points
+  (default 10, bilinear interpolation of the part corners, parts do not share points); the part normal is the
+  normalized sum of the normals of its two triangles (corner 00-10-01 and 10-11-01), constant for all points of the
+  part; the part area (sum of the two triangle areas) is distributed with 2D trapezoid weights (n 3: corner 1/16,
+  edge 1/8, middle 1/4 of the area). Slip direction: safety_slip_grd_method -safety_slip_grd_direction (default)
+  takes safety_slip_grd_method_direction projected on the tangent plane; the Professional refuses the method
+  -materi_displacement (db error on safety_slip_grd_method) and stops with a db error on
+  safety_slip_grd_method_direction when it is missing. Result: safety_slip_grd_result index Fs. Professional values
+  (same cube, uniform sxx = syy = szz = -1, sxz = 0.5): 0.grd flat z 2 over [0.5,3.5]^2 n 3: 3.154700538384; 1.grd
+  3x2 (x 0.5..3.5, y 1..3, z rows 1.5 2 2.5 / 2 2.2 2.4) n 2: 3.821906810681 (point weights 0.7864226581436 and
+  0.7758425062193, sigma_n -1.21504 in part 1); 2.grd 2x2 (x 0.5..2, y 1..3, z 1.5 2 / 2 2.2) n 3: 3.840082933030.
+- S10 Numbering and GiD in 3D: types in alphabetical order circle_grid, circle_line, combined_linear, ellipsoide,
+  grd, multi_linear (assumption, to be confirmed by a mixed probe); GiD 3D slip mesh of triangles (ElemType
+  Triangle, Nnode 3).
+
 ## Tasks
 - [x] U1 control_safety_slip -yes + safety_slip_multi_linear (+ _n, _segment_n, _result) + point stresses + Fs +
   safety_slip_surface_* records. Route: inline (dependent units, no writer reason; map L-T6-map). RED: base "I do not
@@ -52,7 +87,8 @@ runner scripts/build_safe.sh (validation-suite/test-2026 self-checking inputs, P
 - [x] U5 GiD output of the slip surfaces, control_print_gid_safety_slip_critical. Route: inline. RED: base "I do not
   know : control_print_gid_safety_slip_critical", no SafetySlip mesh. GREEN safety_slip_gid1/2 (build_safe file
   checks: 70/63 and 30/27 nodes/elements, 4 results); divergence SAFETY-SLIP-GID-FORMAT. U4 and U5 in one commit; suite 1319 OK / 0 FALLO.
-- [ ] U6 (stage 2) 3D: safety_slip_ellipsoide*, safety_slip_grd* (measure in the Professional first).
+- [ ] U6 (stage 2) 3D: safety_slip_ellipsoide*, safety_slip_grd* (measured: L-T6-U6-measure, spec S8-S10).
+  Route: delegated writer (long-session context backstop of the parent).
 
 ## Log
 - L1 2026-11-22 owner, verbatim: "si" to "¿Arranco T6 midiendo `safety_slip` en Professional?"; then "si" to the
@@ -89,3 +125,7 @@ runner scripts/build_safe.sh (validation-suite/test-2026 self-checking inputs, P
   mesh nodes, element ids after the elements; per line element (both Gauss points) the value of its first point:
   safety_sign = sigma_n, safety_sigt = |tau|, safety_factor_local = tau_mc/|tau|, safety_factor = surface Fs. The GNU
   writes the same values on the nodes of a SafetySlip mesh (GNU GiD 6 writes OnNodes results only).
+- L-T6-U6-measure (2026-11-22) Professional probes in scratch s3/ (gen3.py: hex8 cube under uniform strain):
+  el1..el5 (ellipsoid sphere, rotated ellipsoid, _n tensor product, base Gram-Schmidt, -materi_displacement),
+  gr1..gr5 (flat, inclined 3x2, twisted 2x2 n 3, missing direction = db error, -materi_displacement refused).
+  Values and rules in S8-S10.
