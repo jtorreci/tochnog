@@ -30,6 +30,24 @@ safety_slip_multi_linear_segment_n index n  (points per line piece, default 10)
 safety_slip_multi_linear_result index x_0 y_0 x_1 y_1 ... safety_factor   (output)
 ```
 
+In 3D (`number_of_space_dimensions 3`) the slip surfaces are ellipsoids
+(`safety_slip_ellipsoide*`, 6.1025-6.1029) and Surfer grids
+(`safety_slip_grd*`, 6.1030-6.1033):
+
+```
+safety_slip_ellipsoide index xm ym zm b1x b1y b1z b2x b2y b2z a b c [12 values of the last ellipsoid]
+safety_slip_ellipsoide_n index m          (m values of every parameter with first != last)
+safety_slip_ellipsoide_segment_n index n  (n x n angles, default 90)
+safety_slip_ellipsoide_method index -safety_slip_ellipsoide | -materi_displacement | -materi_velocity | -materi_velocity_integrated
+safety_slip_ellipsoide_result index xm ym zm e1x e1y e1z e2x e2y e2z a b c safety_factor   (output)
+
+safety_slip_grd index -yes                (reads the Surfer ascii grid <index>.grd)
+safety_slip_grd_segment_n index n         (n x n points per grid part, default 10)
+safety_slip_grd_method index -safety_slip_grd_direction | -materi_displacement | -materi_velocity | -materi_velocity_integrated
+safety_slip_grd_method_direction index dx dy dz
+safety_slip_grd_result index safety_factor   (output)
+```
+
 ## Effect on the calculation
 
 - At the end of every time step of the control index (switch `-yes`),
@@ -62,8 +80,37 @@ safety_slip_multi_linear_result index x_0 y_0 x_1 y_1 ... safety_factor   (outpu
   index of every type),
   `_factor`, `_stresses` (sigma_n |tau| per point), `_stress_limit`
   (tau_mc per point), `_data_index`, `_data_name` (index = surface number;
-  the types are numbered in alphabetical order: circle_grid, circle_line,
-  combined_linear, multi_linear).
+  the types are numbered in the Professional order: in 2D circle_grid,
+  circle_line, combined_linear, multi_linear; in 3D grd, ellipsoide). The
+  line and circle types are 2D surfaces and are not evaluated in 3D; the
+  ellipsoide and grd types need 3D.
+- Ellipsoid: e1 = base1 normalized, e2 = base2 orthogonalized to e1
+  (Gram-Schmidt) and normalized, e3 = e1 x e2 (the result record writes
+  e1 and e2). n values theta_i = 2 pi i/n and phi_j = 2 pi j/n; point
+  i*n+j at r = (a sin theta cos phi, b sin theta sin phi, c cos theta) in
+  that base, weight |r_theta x r_phi| (2 pi/n)^2, normal the normalized
+  gradient (r1/a^2, r2/b^2, r3/c^2). The surface is covered twice (theta
+  over 2 pi), which cancels in Fs. Points with zero area (the poles) get
+  sigma_n 0, tau 0 and limit c. Slip direction: e1 projected on the
+  tangent plane (`-safety_slip_ellipsoide`, default), or the last
+  calculated displacement (`-materi_displacement`), the velocity
+  (`-materi_velocity`) or `materi_velocity_integrated` at the point
+  projected on the tangent plane; tau = traction . slip direction. With
+  `safety_slip_ellipsoide_n m` every one of the 12 parameters with first
+  != last varies over m values, all combinations (the first varied
+  parameter is the outer loop): m^k surfaces.
+- Grd: the file `<index>.grd` in the working directory (DSAA; nx ny; xmin
+  xmax; ymin ymax; zmin zmax; then z for all x of the first y, of the
+  second y, ...) defines z(x,y) on the nx x ny grid. Every part between
+  four grid points gets n x n points (bilinear, the parts do not share
+  points); its normal is the normalized sum of the cross products of its
+  triangles 00-10-01 and 10-11-01, its area (the sum of the two triangle
+  areas) is distributed with 2D trapezoid weights. Slip direction:
+  `safety_slip_grd_method_direction` projected on the tangent plane
+  (`-safety_slip_grd_direction`, default; required then) or a dof as for
+  the ellipsoid. A missing or malformed file stops with an error.
+- 3D surfaces are stored as triangles in `safety_slip_surface_elements`
+  (3 point numbers each); 2D surfaces as point pairs followed by -none.
 - Not evaluated in control indices without the record; switch `-no` turns
   it off.
 - Switch = a number N (1, 2, ...): N passes. Every pass evaluates all
@@ -71,8 +118,9 @@ safety_slip_multi_linear_result index x_0 y_0 x_1 y_1 ... safety_factor   (outpu
   middles and radii) is replaced by the critical surface so far plus and
   minus half a step (after the first pass) or a quarter of a step (after
   the later passes) of every parameter, with the same number of
-  variations (as the Professional 02-08-2026). The surfaces of all passes
-  are kept.
+  variations (as the Professional 02-08-2026); for an ellipsoid every
+  varied parameter. A grd surface is evaluated again in every pass. The
+  surfaces of all passes are kept.
 - `safety_slip_set index index_0 index_1 ...` (6.1038): the indices of the
   slip surface records (of all types) that form a set;
   `safety_slip_set_result index safety_factor` (6.1039) gets the minimum
@@ -80,7 +128,9 @@ safety_slip_multi_linear_result index x_0 y_0 x_1 y_1 ... safety_factor   (outpu
   flagged in `safety_slip_surface_critical`.
 - GiD (`control_print_gid`, 6.310): the slip surfaces are written as an
   extra mesh `SafetySlip` (line elements of 2 nodes between the surface
-  points; node and element numbers after the highest node and element)
+  points; in 3D triangles of 3 nodes on the ellipsoid and grd surfaces,
+  mesh `SafetySlipTriangles` when line surfaces are also present; node and
+  element numbers after the highest node and element)
   with the nodal results `safety_factor` (of the surface),
   `safety_factor_local` (tau_mc / |tau|), `safety_sign` (sigma_n) and
   `safety_sigt` (|tau|). `control_print_gid_safety_slip_critical index
@@ -93,7 +143,12 @@ solver accuracy), except `safety_slip_combined_linear_n`: the
 Professional weights all pieces with the first piece (DIVERGENCES
 SAFETY-SLIP-COMBINED-WEIGHTS) and sets holding index 0 (the Professional
 writes no result for them and can flag a surface that is not the minimum
-of the set: SAFETY-SLIP-SET-INDEX-0).
+of the set: SAFETY-SLIP-SET-INDEX-0), `safety_slip_ellipsoide_n` (the
+Professional weights every surface with the points of the first one:
+SAFETY-SLIP-ELLIPSOIDE-WEIGHTS) and `safety_slip_grd_method
+-materi_displacement` (refused by the Professional:
+SAFETY-SLIP-GRD-METHOD). The 3D dof slip directions are interpolated by
+the GNU point search to about 1e-7.
 
 ## Example
 
@@ -123,4 +178,18 @@ Self-checking inputs in `validation-suite/test-2026`:
 `safety_slip_refine2` (2 passes of a circle line),
 `safety_slip_error2` (switch 0),
 `safety_slip_gid1` / `safety_slip_gid2` (GiD mesh and results, all or
-critical surfaces; checked by build_safe).
+critical surfaces; checked by build_safe),
+`safety_slip_ellipsoide1` (sphere, weights, poles, triangles),
+`safety_slip_ellipsoide2` (rotated ellipsoid, normalized bases),
+`safety_slip_ellipsoide3` (Gram-Schmidt base),
+`safety_slip_ellipsoide4` (_n tensor product, critical surface),
+`safety_slip_ellipsoide5` (-materi_displacement, -materi_velocity),
+`safety_slip_ellipsoide6` (2 passes of an ellipsoid zone),
+`safety_slip_grd1` (flat grid n 3, GiD triangle mesh checked by
+build_safe), `safety_slip_grd2` (inclined grid n 2, point layout),
+`safety_slip_grd3` (twisted grid n 3 and n 2),
+`safety_slip_grd4` (grd -materi_displacement),
+`safety_slip_3d1` (numbering of the 3D types),
+`safety_slip_3d_error1` .. `4` (missing method direction, missing or
+malformed grd file, parallel bases). The Surfer grids `0.grd` .. `4.grd`
+lie next to the inputs.

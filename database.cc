@@ -8409,6 +8409,73 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   data_class[SAFETY_SLIP_COMBINED_LINEAR_SEGMENT_N] = SAFETY_SLIP_COMBINED_LINEAR;
   data_required[SAFETY_SLIP_COMBINED_LINEAR_SEGMENT_N] = SAFETY_SLIP_COMBINED_LINEAR;
 
+  // safety_slip_ellipsoide (6.1025-6.1029, 3D): middle x y z, base1 x y z,
+  // base2 x y z, a b c of the first ellipsoid, optionally 12 more for
+  // the last one (with _n); _method -safety_slip_ellipsoide (default),
+  // -materi_displacement, -materi_velocity or -materi_velocity_integrated
+  strcpy(name[SAFETY_SLIP_ELLIPSOIDE],"safety_slip_ellipsoide");
+  type[SAFETY_SLIP_ELLIPSOIDE] = DOUBLE_PRECISION;
+  data_length[SAFETY_SLIP_ELLIPSOIDE] = 24;
+  fixed_length[SAFETY_SLIP_ELLIPSOIDE] = 0;
+  data_class[SAFETY_SLIP_ELLIPSOIDE] = SAFETY_SLIP_ELLIPSOIDE;
+
+  strcpy(name[SAFETY_SLIP_ELLIPSOIDE_METHOD],"safety_slip_ellipsoide_method");
+  type[SAFETY_SLIP_ELLIPSOIDE_METHOD] = INTEGER;
+  data_length[SAFETY_SLIP_ELLIPSOIDE_METHOD] = 1;
+  data_class[SAFETY_SLIP_ELLIPSOIDE_METHOD] = SAFETY_SLIP_ELLIPSOIDE;
+  data_required[SAFETY_SLIP_ELLIPSOIDE_METHOD] = SAFETY_SLIP_ELLIPSOIDE;
+
+  strcpy(name[SAFETY_SLIP_ELLIPSOIDE_N],"safety_slip_ellipsoide_n");
+  type[SAFETY_SLIP_ELLIPSOIDE_N] = INTEGER;
+  data_length[SAFETY_SLIP_ELLIPSOIDE_N] = 1;
+  data_class[SAFETY_SLIP_ELLIPSOIDE_N] = SAFETY_SLIP_ELLIPSOIDE;
+  data_required[SAFETY_SLIP_ELLIPSOIDE_N] = SAFETY_SLIP_ELLIPSOIDE;
+
+  strcpy(name[SAFETY_SLIP_ELLIPSOIDE_RESULT],"safety_slip_ellipsoide_result");
+  type[SAFETY_SLIP_ELLIPSOIDE_RESULT] = DOUBLE_PRECISION;
+  data_length[SAFETY_SLIP_ELLIPSOIDE_RESULT] = 13;
+  data_class[SAFETY_SLIP_ELLIPSOIDE_RESULT] = SAFETY_SLIP_ELLIPSOIDE;
+
+  strcpy(name[SAFETY_SLIP_ELLIPSOIDE_SEGMENT_N],"safety_slip_ellipsoide_segment_n");
+  type[SAFETY_SLIP_ELLIPSOIDE_SEGMENT_N] = INTEGER;
+  data_length[SAFETY_SLIP_ELLIPSOIDE_SEGMENT_N] = 1;
+  data_class[SAFETY_SLIP_ELLIPSOIDE_SEGMENT_N] = SAFETY_SLIP_ELLIPSOIDE;
+  data_required[SAFETY_SLIP_ELLIPSOIDE_SEGMENT_N] = SAFETY_SLIP_ELLIPSOIDE;
+
+  // safety_slip_grd (6.1030-6.1033, 3D): -yes reads the Surfer grid file
+  // <index>.grd; _method -safety_slip_grd_direction (default, with
+  // _method_direction), -materi_displacement, -materi_velocity or
+  // -materi_velocity_integrated; _result: the safety factor
+  strcpy(name[SAFETY_SLIP_GRD],"safety_slip_grd");
+  type[SAFETY_SLIP_GRD] = INTEGER;
+  data_length[SAFETY_SLIP_GRD] = 1;
+  data_class[SAFETY_SLIP_GRD] = SAFETY_SLIP_GRD;
+
+  strcpy(name[SAFETY_SLIP_GRD_DIRECTION],"safety_slip_grd_direction");
+
+  strcpy(name[SAFETY_SLIP_GRD_METHOD],"safety_slip_grd_method");
+  type[SAFETY_SLIP_GRD_METHOD] = INTEGER;
+  data_length[SAFETY_SLIP_GRD_METHOD] = 1;
+  data_class[SAFETY_SLIP_GRD_METHOD] = SAFETY_SLIP_GRD;
+  data_required[SAFETY_SLIP_GRD_METHOD] = SAFETY_SLIP_GRD;
+
+  strcpy(name[SAFETY_SLIP_GRD_METHOD_DIRECTION],"safety_slip_grd_method_direction");
+  type[SAFETY_SLIP_GRD_METHOD_DIRECTION] = DOUBLE_PRECISION;
+  data_length[SAFETY_SLIP_GRD_METHOD_DIRECTION] = 3;
+  data_class[SAFETY_SLIP_GRD_METHOD_DIRECTION] = SAFETY_SLIP_GRD;
+  data_required[SAFETY_SLIP_GRD_METHOD_DIRECTION] = SAFETY_SLIP_GRD;
+
+  strcpy(name[SAFETY_SLIP_GRD_RESULT],"safety_slip_grd_result");
+  type[SAFETY_SLIP_GRD_RESULT] = DOUBLE_PRECISION;
+  data_length[SAFETY_SLIP_GRD_RESULT] = 1;
+  data_class[SAFETY_SLIP_GRD_RESULT] = SAFETY_SLIP_GRD;
+
+  strcpy(name[SAFETY_SLIP_GRD_SEGMENT_N],"safety_slip_grd_segment_n");
+  type[SAFETY_SLIP_GRD_SEGMENT_N] = INTEGER;
+  data_length[SAFETY_SLIP_GRD_SEGMENT_N] = 1;
+  data_class[SAFETY_SLIP_GRD_SEGMENT_N] = SAFETY_SLIP_GRD;
+  data_required[SAFETY_SLIP_GRD_SEGMENT_N] = SAFETY_SLIP_GRD;
+
   strcpy(name[SAFETY_SLIP_MULTI_LINEAR],"safety_slip_multi_linear");
   type[SAFETY_SLIP_MULTI_LINEAR] = DOUBLE_PRECISION;
   data_length[SAFETY_SLIP_MULTI_LINEAR] = DATA_ITEM_SIZE;
@@ -8448,9 +8515,11 @@ void db_initialize( long int dof_type[], long int dof_label[] )
 
     // the evaluated slip surfaces (index = surface number, as the
     // Professional): sample point weights, point pairs separated by
-    // -none, point coordinates x y z, critical flag, safety factor,
+    // -none (2D) or point triples (3D triangles), point coordinates x y
+    // z, critical flag, safety factor,
     // sigma_n tau per point, tau_mc per point, index and name of the
-    // defining record
+    // defining record; the lengths are maxima, safety_slip() sets them
+    // to the largest surface of the step
   strcpy(name[SAFETY_SLIP_SURFACE_AREAS],"safety_slip_surface_areas");
   type[SAFETY_SLIP_SURFACE_AREAS] = DOUBLE_PRECISION;
   data_length[SAFETY_SLIP_SURFACE_AREAS] = SAFETY_SLIP_MPOINT;
@@ -8474,7 +8543,7 @@ void db_initialize( long int dof_type[], long int dof_label[] )
 
   strcpy(name[SAFETY_SLIP_SURFACE_ELEMENTS],"safety_slip_surface_elements");
   type[SAFETY_SLIP_SURFACE_ELEMENTS] = INTEGER;
-  data_length[SAFETY_SLIP_SURFACE_ELEMENTS] = 3*SAFETY_SLIP_MPOINT;
+  data_length[SAFETY_SLIP_SURFACE_ELEMENTS] = 6*SAFETY_SLIP_MPOINT;
   fixed_length[SAFETY_SLIP_SURFACE_ELEMENTS] = 0;
   data_class[SAFETY_SLIP_SURFACE_ELEMENTS] = SAFETY_SLIP_SURFACE_AREAS;
 

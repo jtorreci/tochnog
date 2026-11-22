@@ -75,7 +75,7 @@ enum {
 #define MTHREAD 64 // maximum number of threads
 #define MAXIMUM_NODE 64 // always 64
 #define DATA_ITEM_SIZE 190 // maximum length of (almost all) records
-#define SAFETY_SLIP_MPOINT 2000 // maximum sample points of one slip surface
+#define SAFETY_SLIP_MPOINT 10000 // maximum sample points of one slip surface
 #define NONLOCAL_ITEM_SIZE 160 // maximum number of integration points for nonlocal calculation
 // precision in writing output files: 12, or print_precision (manual
 // Professional 6.997; set in top(), global in initia.cc)
@@ -813,6 +813,17 @@ enum {
   SAFETY_SLIP_COMBINED_LINEAR_N,
   SAFETY_SLIP_COMBINED_LINEAR_RESULT,
   SAFETY_SLIP_COMBINED_LINEAR_SEGMENT_N,
+  SAFETY_SLIP_ELLIPSOIDE,
+  SAFETY_SLIP_ELLIPSOIDE_METHOD,
+  SAFETY_SLIP_ELLIPSOIDE_N,
+  SAFETY_SLIP_ELLIPSOIDE_RESULT,
+  SAFETY_SLIP_ELLIPSOIDE_SEGMENT_N,
+  SAFETY_SLIP_GRD,
+  SAFETY_SLIP_GRD_DIRECTION,
+  SAFETY_SLIP_GRD_METHOD,
+  SAFETY_SLIP_GRD_METHOD_DIRECTION,
+  SAFETY_SLIP_GRD_RESULT,
+  SAFETY_SLIP_GRD_SEGMENT_N,
   SAFETY_SLIP_MULTI_LINEAR,
   SAFETY_SLIP_MULTI_LINEAR_N,
   SAFETY_SLIP_MULTI_LINEAR_RESULT,

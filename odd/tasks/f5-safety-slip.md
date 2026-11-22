@@ -66,7 +66,8 @@ runner scripts/build_safe.sh (validation-suite/test-2026 self-checking inputs, P
   0.7758425062193, sigma_n -1.21504 in part 1); 2.grd 2x2 (x 0.5..2, y 1..3, z 1.5 2 / 2 2.2) n 3: 3.840082933030.
 - S10 Numbering and GiD in 3D: types in alphabetical order circle_grid, circle_line, combined_linear, ellipsoide,
   grd, multi_linear (assumption, to be confirmed by a mixed probe); GiD 3D slip mesh of triangles (ElemType
-  Triangle, Nnode 3).
+  Triangle, Nnode 3). Corrected by L-T6-U6-order: in 3D the Professional numbers grd before ellipsoide and skips
+  the line types; GNU: 2D types only in 2D, grd then ellipsoide in 3D.
 
 ## Tasks
 - [x] U1 control_safety_slip -yes + safety_slip_multi_linear (+ _n, _segment_n, _result) + point stresses + Fs +
@@ -87,8 +88,12 @@ runner scripts/build_safe.sh (validation-suite/test-2026 self-checking inputs, P
 - [x] U5 GiD output of the slip surfaces, control_print_gid_safety_slip_critical. Route: inline. RED: base "I do not
   know : control_print_gid_safety_slip_critical", no SafetySlip mesh. GREEN safety_slip_gid1/2 (build_safe file
   checks: 70/63 and 30/27 nodes/elements, 4 results); divergence SAFETY-SLIP-GID-FORMAT. U4 and U5 in one commit; suite 1319 OK / 0 FALLO.
-- [ ] U6 (stage 2) 3D: safety_slip_ellipsoide*, safety_slip_grd* (measured: L-T6-U6-measure, spec S8-S10).
-  Route: delegated writer (long-session context backstop of the parent).
+- [x] U6 (stage 2) 3D: safety_slip_ellipsoide*, safety_slip_grd* (measured: L-T6-U6-measure, spec S8-S10).
+  Route: delegated writer (long-session context backstop of the parent). RED: base "I do not know :
+  safety_slip_ellipsoide" / "I do not know : safety_slip_grd". GREEN safety_slip_ellipsoide1..6, safety_slip_grd1..4,
+  safety_slip_3d1, safety_slip_3d_error1..4 (Professional values / analytic), GiD triangle mesh check on
+  safety_slip_grd1; 2D differential (18 inputs, HEAD vs U6) identical .dbs/.msh/.res. Divergences
+  SAFETY-SLIP-ELLIPSOIDE-WEIGHTS, SAFETY-SLIP-GRD-METHOD. Commit: pending (parent).
 
 ## Log
 - L1 2026-11-22 owner, verbatim: "si" to "¿Arranco T6 midiendo `safety_slip` en Professional?"; then "si" to the
@@ -129,3 +134,20 @@ runner scripts/build_safe.sh (validation-suite/test-2026 self-checking inputs, P
   el1..el5 (ellipsoid sphere, rotated ellipsoid, _n tensor product, base Gram-Schmidt, -materi_displacement),
   gr1..gr5 (flat, inclined 3x2, twisted 2x2 n 3, missing direction = db error, -materi_displacement refused).
   Values and rules in S8-S10.
+- L-T6-U6 (2026-11-22) writer: all per-point records of el1..el5, gr1, gr2, gr4 equal the Professional (1e-6),
+  except: (a) _n: the Professional factors use the point weights of the first surface (its own per-point stresses
+  give the GNU 9.5517495368 / 8.6775003379), GNU uses each surface's weights (SAFETY-SLIP-ELLIPSOIDE-WEIGHTS);
+  (b) dof directions (displacement/velocity) differ by about 1e-7 because point_el inverts hex8 iteratively, tests
+  use 1e-5; dis/vel are interpolated from node_dof (dof_element_dof -no for them). The grd part normal is the
+  normalized sum of the two triangle cross products (area weighted), not of the unit normals (S9 wording);
+  the theta = pi pole (area 1e-16) is also treated as a zero-area point. Numbering combined_linear, ellipsoide,
+  grd, multi_linear checked in safety_slip_3d1 (GNU only; the Professional order of ellipsoide/grd is an
+  assumption, S10). Records safety_slip_surface_* get the length of the largest surface of the step
+  (db_data_length_put; SAFETY_SLIP_MPOINT 10000 is the maximum). The .grd files are gitignored in
+  validation-suite/test-2026 (only *.dat are versioned).
+- L-T6-U6-order (2026-11-22) parent, Professional mixed 3D probes (s3/mx, mx2): data names circle_grid, circle_line,
+  grd, ellipsoide; the multi_linear and combined_linear records give no surface in 3D; the circles in 3D lie in the
+  plane z = 0 (Fs ~1e15, meaningless). GNU: line and circle types evaluated only in 2D, grd before ellipsoide in 3D
+  (DIVERGENCES SAFETY-SLIP-CIRCLE-3D for the circles); safety_slip_3d1 rewritten accordingly. Parent verification
+  of the writer result: diff inside the allowed surfaces, ellipsoide2 / grd2 / combined_linear2 rc 0, full suite
+  1335 OK / 0 FALLO before this order change and 1335 OK / 0 FALLO after it.

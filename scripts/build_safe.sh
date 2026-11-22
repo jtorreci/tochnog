@@ -3671,6 +3671,38 @@ for t in safety_slip_gid1 safety_slip_gid2; do
   fi
 done
 rm -rf -- "${SSDIR:?}"
+# F5 T6 U6: 3D slip surfaces, safety_slip_ellipsoide (6.1025-6.1029) and
+# safety_slip_grd (6.1030-6.1033; the Surfer grids 0.grd .. 4.grd lie next
+# to the inputs)
+run_ok "$T2026" safety_slip_ellipsoide1
+run_ok "$T2026" safety_slip_ellipsoide2
+run_ok "$T2026" safety_slip_ellipsoide3
+run_ok "$T2026" safety_slip_ellipsoide4
+run_ok "$T2026" safety_slip_ellipsoide5
+run_ok "$T2026" safety_slip_ellipsoide6
+run_ok "$T2026" safety_slip_grd1
+run_ok "$T2026" safety_slip_grd2
+run_ok "$T2026" safety_slip_grd3
+run_ok "$T2026" safety_slip_grd4
+run_ok "$T2026" safety_slip_3d1
+expected_error_ok "$T2026" safety_slip_3d_error1
+expected_error_ok "$T2026" safety_slip_3d_error2
+expected_error_ok "$T2026" safety_slip_3d_error3
+expected_error_ok "$T2026" safety_slip_3d_error4
+# F5 T6 U6: GiD triangle mesh of a 3D slip surface, checked in a scratch copy
+SSDIR=$(mktemp -d)
+cp "$T2026/safety_slip_grd1.dat" "$T2026/0.grd" "$SSDIR/"
+( cd "$SSDIR" && ulimit -v "$TN_MEMLIMIT_KB" && timeout 60 "$REPO_DIR/build/$TN_BIN" safety_slip_grd1.dat > safety_slip_grd1.out 2>&1 ); SSRC=$?
+SSH=$(grep -c '^MESH SafetySlip dimension 3 ElemType Triangle Nnode 3' "$SSDIR/safety_slip_grd1.flavia.msh" 2>/dev/null)
+SSN=$(awk '/^MESH SafetySlip/{m=1} m&&/^Coordinates/{c=1;next} c&&/^End Coordinates/{c=0} c{n++} END{print n+0}' "$SSDIR/safety_slip_grd1.flavia.msh" 2>/dev/null)
+SSE=$(awk '/^MESH SafetySlip/{m=1} m&&/^Elements/{e=1;next} e&&/^End Elements/{e=0} e&&NF==5{n++} END{print n+0}' "$SSDIR/safety_slip_grd1.flavia.msh" 2>/dev/null)
+SSR=$(grep -c '^Result  "safety_\(factor\|factor_local\|sign\|sigt\)"' "$SSDIR/safety_slip_grd1.flavia.res" 2>/dev/null)
+if [ "$SSRC" = "0" ] && [ "$SSH" = "1" ] && [ "$SSN $SSE" = "9 8" ] && [ "$SSR" = "4" ]; then
+  check_ok "safety_slip_grd1 (GiD triangle mesh $SSN nodes $SSE elements, 4 results)"
+else
+  check_fail "safety_slip_grd1 GiD" "rc=$SSRC header $SSH mesh $SSN/$SSE results $SSR"
+fi
+rm -rf -- "${SSDIR:?}"
 run_ok "$T2026" materi_plasti_maximum_iterations1
 run_ok "$T2026" materi_plasti_maximum_iterations2
 expected_error_ok "$T2026" materi_plasti_maximum_iterations_error1

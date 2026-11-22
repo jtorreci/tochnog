@@ -129,6 +129,7 @@ accepted; the one-name difference in the 2026-11-08 count is not explained.
 2026-11-22 (F5 T6 U3): `safety_slip_circle_grid_*`, `safety_slip_circle_line_*` (12) accepted.
 2026-11-22 (F5 T6 U4): `safety_slip_set`, `safety_slip_set_result` accepted; control_safety_slip N passes.
 2026-11-22 (F5 T6 U5): `control_print_gid_safety_slip_critical` accepted (GiD plot of the slip surfaces).
+2026-11-22 (F5 T6 U6): `safety_slip_ellipsoide*` (5), `safety_slip_grd*` (4, plus the output `safety_slip_grd_result`) accepted (3D slip surfaces, GiD triangle mesh).
 
 ## Gap by family
 
