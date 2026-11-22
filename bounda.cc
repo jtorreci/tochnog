@@ -332,6 +332,110 @@ void node_dof_empty_apply( void )
   delete[] dormant;
 }
 
+// ---------------------------------------------------------------------------
+// bounda_baseline_correction (manual Professional 6.19/6.20). The value of
+// a time-value bounda_time table at t (piecewise linear, 0 outside the
+// table, the same rule as the bounda() time loop).
+// ---------------------------------------------------------------------------
+static double bounda_baseline_table( const double bounda_time[],
+  long int length_bounda_time, double t )
+
+{
+  long int inc=0;
+  double time0=0., time1=0.;
+
+  if ( length_bounda_time==1 ) return bounda_time[0];
+  for ( inc=0; inc<length_bounda_time/2-1; inc++ ) {
+    time0 = bounda_time[inc*2+0];
+    time1 = bounda_time[inc*2+2];
+    if ( t>=(time0-1.e-10) && t<=time1 )
+      return bounda_time[inc*2+1] + ( bounda_time[inc*2+3] -
+        bounda_time[inc*2+1] ) * ( t - time0 ) / ( time1 - time0 );
+  }
+  return 0.;
+}
+
+// The correction p(tau) = c0 + c1*tau + c2*tau^2, tau = (t-ts)/(te-ts),
+// added to the prescribed acceleration of record iboun at time_total
+// (0 outside [ts,te] or without bounda_baseline_correction). Without a
+// bounda_baseline_correction_parameters record the coefficients are fitted
+// once and stored: minimal sum of the squared velocities v_k of the time
+// steps t_k = ts + k*h, k = 1..n, h = (te-ts)/n with n the number of steps
+// of size dtime, v_k = v_k-1 + (a(t_k)+p(tau_k))*h (the backward
+// integration of the prescribed acceleration below).
+static double bounda_baseline_load( long int iboun, long int table,
+  const double bounda_time[], long int length_bounda_time,
+  double time_total, double dtime )
+
+{
+  long int ldum=0, idum[1], n=0, k=0, i=0, j=0, ipiv=0;
+  double range[2], c[3], m[3][4], basis[3], vel=0., h=0., t=0., tau=0.,
+    ts=0., te=0., tmp=0.;
+
+  if ( !db( BOUNDA_BASELINE_CORRECTION, 0, idum, range, ldum,
+      VERSION_NORMAL, GET_IF_EXISTS ) ) return 0.;
+  ts = range[0];
+  te = range[1];
+  if ( te<=ts ) db_error( BOUNDA_BASELINE_CORRECTION, 0 );
+  if ( time_total<ts-1.e-10 || time_total>te+1.e-10 ) return 0.;
+
+  if ( !db( BOUNDA_BASELINE_CORRECTION_PARAMETERS, iboun, idum, c, ldum,
+      VERSION_NORMAL, GET_IF_EXISTS ) ) {
+    if ( !table ) {
+      pri( "Error: bounda_baseline_correction needs a bounda_time table "
+        "of time-value pairs for bounda index ", iboun );
+      exit(TN_EXIT_STATUS);
+    }
+    n = 0;
+    if ( dtime>0. ) n = (long int) floor( (te-ts)/dtime + 0.5 );
+    if ( n<3 ) {
+      pri( "Error: bounda_baseline_correction needs at least 3 time steps "
+        "between time_start and time_end for bounda index ", iboun );
+      exit(TN_EXIT_STATUS);
+    }
+    h = ( te - ts ) / n;
+    for ( i=0; i<3; i++ ) {
+      basis[i] = 0.;
+      for ( j=0; j<4; j++ ) m[i][j] = 0.;
+    }
+    for ( k=1; k<=n; k++ ) {
+      t = ts + k*h;
+      tau = ( t - ts ) / ( te - ts );
+      vel += bounda_baseline_table( bounda_time, length_bounda_time, t ) * h;
+      basis[0] += h;
+      basis[1] += tau*h;
+      basis[2] += tau*tau*h;
+      for ( i=0; i<3; i++ ) {
+        for ( j=0; j<3; j++ ) m[i][j] += basis[i]*basis[j];
+        m[i][3] -= basis[i]*vel;
+      }
+    }
+      // normal equations, Gauss elimination with partial pivoting
+    for ( i=0; i<3; i++ ) {
+      ipiv = i;
+      for ( k=i+1; k<3; k++ )
+        if ( scalar_dabs(m[k][i])>scalar_dabs(m[ipiv][i]) ) ipiv = k;
+      for ( j=0; j<4; j++ ) {
+        tmp = m[i][j]; m[i][j] = m[ipiv][j]; m[ipiv][j] = tmp;
+      }
+      if ( scalar_dabs(m[i][i])<1.e-30 )
+        db_error( BOUNDA_BASELINE_CORRECTION, 0 );
+      for ( k=0; k<3; k++ ) {
+        if ( k==i ) continue;
+        tmp = m[k][i] / m[i][i];
+        for ( j=i; j<4; j++ ) m[k][j] -= tmp*m[i][j];
+      }
+    }
+    for ( i=0; i<3; i++ ) c[i] = m[i][3] / m[i][i];
+    ldum = 3;
+    db( BOUNDA_BASELINE_CORRECTION_PARAMETERS, iboun, idum, c, ldum,
+      VERSION_NORMAL, PUT );
+  }
+
+  tau = ( time_total - ts ) / ( te - ts );
+  return c[0] + c[1]*tau + c[2]*tau*tau;
+}
+
 void bounda( )
 
 {
@@ -357,7 +461,7 @@ void bounda( )
     bounda_alternate_n=0, iteration=0, bounda_water=0, topres_bounda=0;
   double bounda_normal_vec[3], bounda_dof_radial[3],
     bounda_dof_cylindrical[6];
-  double bounda_time_increment=0., bounda_time_offset=0.;
+  double bounda_time_increment=0., bounda_time_offset=0., bounda_baseline=0.;
   // bounda_factor / _parabolic_x: db() writes the stored length (up to
   // DATA_ITEM_SIZE), only the first 4 / 3 values are used
   double bounda_factor[DATA_ITEM_SIZE], bounda_factor_px[DATA_ITEM_SIZE],
@@ -743,6 +847,26 @@ void bounda( )
           db( BOUNDA_TIME_UNTIL_USED, iboun, idum, &bounda_until_factor,
             ldum, VERSION_NORMAL, PUT );
           load *= bounda_until_factor;
+        }
+
+        // bounda_baseline_correction (manual Professional 6.19): the
+        // parabola of the record, added below to its acceleration dofs only
+        bounda_baseline = 0.;
+        if ( found && unknown &&
+             db_active_index( BOUNDA_BASELINE_CORRECTION, 0, VERSION_NORMAL ) ) {
+          long int iu_acc=0, has_acc=0;
+          for ( iu_acc=1; iu_acc<bounda_length; iu_acc++ )
+            for ( idim=0; idim<ndim; idim++ )
+              if ( materi_acceleration &&
+                   val[iu_acc]==dof_label[acc_indx+idim*nder] ) has_acc = 1;
+          if ( has_acc ) {
+            long int table = time && length_bounda_time>0 &&
+              db_active_index( BOUNDA_TIME, iboun, VERSION_NORMAL ) &&
+              !db_active_index( BOUNDA_TIME_FILE, iboun, VERSION_NORMAL ) &&
+              !db_active_index( BOUNDA_TIME_INCREMENT, iboun, VERSION_NORMAL );
+            bounda_baseline = bounda_baseline_load( iboun, table,
+              bounda_time, length_bounda_time, time_total, dtime );
+          }
         }
 
         if ( found ) {
@@ -1169,8 +1293,11 @@ void bounda( )
                           long int idim_a = ( iuknwn - acc_indx ) / nder;
                           long int iuknwn_vel = vel_indx + idim_a*nder;
                           node_bounded[vel_indx/nder+idim_a] = 1;
+                          new_node_dof[iuknwn] = factor *
+                            ( load + bounda_baseline ) * load_factor;
                           new_node_dof[iuknwn_vel] = node_dof[iuknwn_vel]
-                            + factor * load * load_factor * dtime;
+                            + factor * ( load + bounda_baseline ) *
+                              load_factor * dtime;
                         }
                         // bounda_dof_radial: prescribe velocity radial to a point
                         if ( (bounda_dof_radial[0]!=0. || bounda_dof_radial[1]!=0.

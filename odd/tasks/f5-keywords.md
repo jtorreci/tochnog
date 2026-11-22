@@ -228,7 +228,7 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
     with the Professional totals to 1e-6.
   - [ ] Owner decisions: force_edge_diagram (resolved by measurement, L-T5-diagram),
     group_contact_spring_direction_automatic_planes meaning (resolved by measurement, L-T5-planes),
-    group_beam_force_moment_plasti (new model), strain_volume kernel (resolved, L-T5-strainvol-owner), baseline correction scope.
+    group_beam_force_moment_plasti (new model), strain_volume kernel (resolved, L-T5-strainvol-owner), baseline correction scope (resolved, L-T5-baseline-owner).
   - [x] U2 slide_damping (viscous, divergence SLIDE-DAMPING-VISCOUS), control_slide_damping_apply, slide_user
     (user.cc stub, Professional message). Route: inline. Owner L-T5-slide. RED: base "I do not know : slide_damping"
     / "slide_user". GREEN slide_damping1 (c*v exact), slide_damping2 (Professional values), slide_user_error1.
@@ -252,8 +252,12 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   - [x] U8 strain_volume_* (6.1062-6.1066) + post_strain_volume_absolute / _relative. Route: inline (one behavior,
     no writer reason). Owner L-T5-strainvol-owner. RED: base "Error in data part" (relative_time, element_group,
     geometry, list) and no post results. GREEN: 10 tests, Professional values to 1e-8; divergences
-    STRAIN-VOLUME-ELEMENT-LIST, STRAIN-VOLUME-BOTH-TABLES.
-  - [ ] U9 baseline correction. U10 beam plasticity.
+    STRAIN-VOLUME-ELEMENT-LIST, STRAIN-VOLUME-BOTH-TABLES. Commit a8ed5db.
+  - [x] U9 bounda_baseline_correction (6.19) + _parameters (6.20). Route: inline (one behavior, no writer reason).
+    Owner L-T5-baseline-owner (manual over the Professional). RED: base "I don't know what to do with :
+    bounda_baseline_correction". GREEN bounda_baseline_correction1/2/3 + _error1; divergence
+    BASELINE-CORRECTION-SIGNAL.
+  - [ ] U10 beam plasticity (group_beam_force_moment_plasti, new model decision pending).
 - [ ] T6 W7 safety_slip (32): self-contained slip-surface safety-factor feature, planned
   separately. Route: to decide.
 
@@ -1084,3 +1088,14 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   loses eps_v/3 on the diagonal; ELEMENT_STRAIN_VOLUME = integral of tr F - 3 (preallocated in top.cc for the
   parallel loop); post.cc sums it per set. All 10 tests match the Professional to 1e-8 (plane strain 0.0454000102547,
   geometry 0.100124059301, two indices 0.139875940699 / 0.460124059301).
+- L-T5-baseline (2026-11-22) Professional 02-08-2026 probes (1D truss, bounda_dof 10 1 -accx, bounda_time 10 0 1 .5 1
+  1 1 2 0): parameters c0 c1 c2 in tau = (t-ts)/(te-ts), record bounda_baseline_correction_parameters <bounda index>;
+  given parameters are used as is. The Professional adds p(tau_k) to the bounda_time points with ts < t_k <= te
+  (first point not corrected): with (-1 0 0) the applied acceleration is 1-2t on [0,.5], velocity drifts to 0.2.
+  Its fit is dt independent but not reproduced ([0,2]: -0.8182607915309 -1.375947429918 2.186213875160; a = t gives
+  -2 0 0). GNU without correction already equal (velocities 0.5 / 1 / 1.45).
+- L-T5-baseline-owner (2026-11-22) owner, verbatim: "si" to "¿Implemento la corrección según el manual (p(τ) sumada a
+  la señal en todo [ts,te], coeficientes por mínimos cuadrados de las velocidades de los pasos), manteniendo la
+  convención de coeficientes de Professional y documentando la divergencia?". GNU: bounda.cc bounda_baseline_load,
+  fit once with the step size of the first step in the interval (backward v += a*dt), only -acc* dofs corrected.
+  [0,2] gives -0.9027362126125 -1.055204571298 2.050629834893 (sum v^2 21.68 -> 6.34e-4).

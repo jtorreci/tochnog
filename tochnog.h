@@ -1550,6 +1550,8 @@ enum {
   BOUNDA_TIME_SMC,
   BOUNDA_TIME_SMC_OFFSET,
   BOUNDA_TIME_SMC_UNITS,
+  BOUNDA_BASELINE_CORRECTION,
+  BOUNDA_BASELINE_CORRECTION_PARAMETERS,
   // KEYWORDS BATCH C (2026-09-04): small keyword clusters blocking
   // corpus tests. Appended at the end of the enum to keep existing
   // values stable (tochnog.h and tochnog-mod.h stay in sync).

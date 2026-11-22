@@ -62,6 +62,7 @@ page lists its own in "Differences with the Professional version".
 - [group_truss_elasti_elongation_force_diagram](group_truss_elasti_elongation_force_diagram.md) — truss force versus elongation/initial length diagram, nonlinear elastic (6.773, F5 T5 U6).
 - [group_time_fill](group_time_fill.md) — slowly filled element groups: density and pore pressure ramp, no plasticity while filling (6.770, F5 T5 U7).
 - [strain_volume_element](strain_volume_element.md) — prescribed volume strain of elements, groups or a geometry, post_strain_volume_* (6.1062-6.1066, F5 T5 U8).
+- [bounda_baseline_correction](bounda_baseline_correction.md) — baseline correction of prescribed accelerations, bounda_baseline_correction_parameters (6.19-6.20, F5 T5 U9).
 - [group_interface](group_interface.md) — interface elements (joints between blocks).
 - [control_mesh_convert](control_mesh_convert.md) — automatic conversion of bar2 to quad4 (and bar3 to quad6) for interfaces.
 - [post_force_edge_summed](post_force_edge_summed.md) — total force of the force_edge records, integrated over the edges.

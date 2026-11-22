@@ -414,6 +414,25 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   data_length[BOUNDA_TIME_SMC_UNITS] = 2;
   data_class[BOUNDA_TIME_SMC_UNITS] = BOUNDA;
 
+  // bounda_baseline_correction time_start time_end (manual Professional
+  // 6.19): a parabola in tau = (t-time_start)/(time_end-time_start) is
+  // added to every prescribed acceleration of a bounda_time table in
+  // [time_start,time_end]; its coefficients minimize the sum of the
+  // squared velocities of the time steps (bounda.cc).
+  strcpy(name[BOUNDA_BASELINE_CORRECTION],"bounda_baseline_correction");
+  type[BOUNDA_BASELINE_CORRECTION] = DOUBLE_PRECISION;
+  data_length[BOUNDA_BASELINE_CORRECTION] = 2;
+  no_index[BOUNDA_BASELINE_CORRECTION] = 1;
+
+  // bounda_baseline_correction_parameters index c0 c1 c2 (manual 6.20):
+  // written by the fit for the bounda index; when given in the input the
+  // fit is skipped and these values are used.
+  strcpy(name[BOUNDA_BASELINE_CORRECTION_PARAMETERS],
+    "bounda_baseline_correction_parameters");
+  type[BOUNDA_BASELINE_CORRECTION_PARAMETERS] = DOUBLE_PRECISION;
+  data_length[BOUNDA_BASELINE_CORRECTION_PARAMETERS] = 3;
+  data_class[BOUNDA_BASELINE_CORRECTION_PARAMETERS] = BOUNDA;
+
   strcpy(name[BOUNDA_WATER],"bounda_water");
   type[BOUNDA_WATER] = INTEGER;
   data_length[BOUNDA_WATER] = 1;

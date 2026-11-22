@@ -559,10 +559,10 @@ marcado `PENDIENTE` puede estar cubierto en el GNU bajo otro nombre:
 
 - [x] `bounda_alternate` — implementada (commit `0ba382a`, 2026-08-05)
 
-### bounda_baseline (0/2)
+### bounda_baseline (2/2)
 
-- [ ] `bounda_baseline_correction` — PENDIENTE
-- [ ] `bounda_baseline_correction_parameters` — PENDIENTE
+- [x] `bounda_baseline_correction` — F5 T5 U9 (2026-11-22): parabola in normalized time added to prescribed accelerations, least squares of the step velocities (manual; DIVERGENCES BASELINE-CORRECTION-SIGNAL)
+- [x] `bounda_baseline_correction_parameters` — F5 T5 U9 (2026-11-22): written by the fit, used as is when given (= Professional layout)
 
 ### bounda_constant (1/1)
 
