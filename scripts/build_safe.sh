@@ -3928,6 +3928,38 @@ run_ok "$T2026" mc_return_exact1
 run_ok "$T2026" mc_return_exact2
 mc_exact mc_return_exact1 -35.9458 4.77832 -12.0542 -12.
 mc_exact mc_return_exact2 -44.4136 5.85221 -15.1526 -14.8915
+# Contact spring directions (Professional 02-08-2026): the user normal is
+# normalised and points from the side of the first node to the side of the
+# second one; t1 = e_z x n (e_y x n for a normal along z), t2 = n x t1.
+# cs_dir name element "9 direction values" "force values" (absolute 1e-5).
+cs_dir() {
+  local n=$1 el=$2 dir=$3 frc=$4 got
+  got=$(awk -v e="$el" '$1=="element_contactspring_direction" && $2==e {d=""; for(k=3;k<=NF;k++) d=d" "$k}
+                        $1=="element_contactspring_force" && $2==e {f=""; for(k=3;k<=NF;k++) f=f" "$k}
+                        END {print d "|" f}' "$T2026/$n.dbs")
+  if LC_ALL=C awk -v g="$got" -v d="$dir" -v f="$frc" 'BEGIN { split(g,p,"|");
+       nd=split(p[1],a," "); nb=split(d,b," "); if (nd!=9 || nb!=9) exit 1;
+       for (i=1;i<=9;i++) { x=a[i]-b[i]; if (x<0) x=-x; if (x>1e-5) exit 1 }
+       nf=split(f,c," "); split(p[2],h," ");
+       for (i=1;i<=nf;i++) { x=h[i]-c[i]; if (x<0) x=-x; if (x>1e-5*(c[i]<0?-c[i]:c[i])+1e-12) exit 1 }
+       exit 0 }'; then
+    check_ok "$n (contact spring directions and force = Professional)"
+  else
+    check_fail "$n" "element $el direction|force = $got"
+  fi
+}
+run_ok "$T2026" contact_spring_3d_direction1
+run_ok "$T2026" contact_spring_3d_direction2
+run_ok "$T2026" contact_spring_2d_direction1
+cs_dir contact_spring_3d_direction1 2 "-0.57735 -0.57735 -0.57735 0.707107 -0.707107 0 -0.408248 -0.408248 0.816497" "-0.000144338 0 0.000204124"
+cs_dir contact_spring_3d_direction2 2 "0 0 1 1 0 0 0 1 0" "-0.00025"
+cs_dir contact_spring_2d_direction1 3 "0 -1 0 1 0 0 0 0 1" "1"
+vz=$(awk '$1=="node_dof" && $2=="1" {print $5}' "$T2026/contact_spring_3d_direction1.dbs")
+if LC_ALL=C awk -v a="$vz" 'BEGIN { d=a+0.5; if (d<0) d=-d; exit !(a!="" && d<1e-6) }'; then
+  check_ok "contact_spring_3d_direction1 (node 1 velz -0.5 = Professional)"
+else
+  check_fail "contact_spring_3d_direction1" "node 1 velz $vz != -0.5"
+fi
 # C100: under the default -no, control_reset_dof writes the integration
 # points with the reset value at their coordinates (= Professional
 # 02-08-2026 element_intpnt_dof of the same inputs, run above).

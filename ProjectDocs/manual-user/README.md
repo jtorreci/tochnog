@@ -58,6 +58,7 @@ page lists its own in "Differences with the Professional version".
 - [slide_damping](slide_damping.md) — viscous slide damping, control_slide_damping_apply, slide_user (6.1045/6.370/6.1044, F5 T5 U2).
 - [force_edge_diagram](force_edge_diagram.md) — force_edge factor per edge node from its vertical displacement (6.455, F5 T5 U5).
 - [force_gravity_geometry](force_gravity_geometry.md) — gravity only for elements with all nodes inside a geometry (6.499, F5 T5 U5).
+- [element_contact_spring_direction](element_contact_spring_direction.md) — how the contact spring normal and tangents are built: user normal normalised and oriented, t1 = e_z x n (6.418/6.601, F5 follow-up).
 - [group_contact_spring_direction_automatic_planes](group_contact_spring_direction_automatic_planes.md) — components the automatic contact spring direction may have; unlimited friction without a friction record (6.606/6.604, F5 T5 U6).
 - [group_truss_elasti_elongation_force_diagram](group_truss_elasti_elongation_force_diagram.md) — truss force versus elongation/initial length diagram, nonlinear elastic (6.773, F5 T5 U6).
 - [group_time_fill](group_time_fill.md) — slowly filled element groups: density and pore pressure ramp, no plasticity while filling (6.770, F5 T5 U7).

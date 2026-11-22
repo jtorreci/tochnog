@@ -1145,4 +1145,13 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   sigzz -14.8915). Pro: 1 step same principal stresses, rotated axes (sigxy 4.83215); refining drifts away (64 steps
   sigzz -13.3526, eppzz 0.00159 on a face). Documented as MC-RETURN-PRO (DIVERGENCES, SEGUIMIENTO Descarte, user and
   developer pages; K15 note). Guard tests mc_return_exact1/2 (GREEN by design, the Pro fails both). No source change.
+- L-CS3 (2026-11-23) owner: "si, adelante" (3D contact spring tangents follow-up). Professional probes (conspr6 with
+  nine normals, reversed spring node order, compression / tension / shear; conspr7 2D): the user normal is
+  normalised and turned to point from the side of the first node to that of the second (element centroids, the
+  same direction as the automatic one), t1 = e_z x n (e_y x n for n along z), t2 = n x t1; also in 2D. GNU kept the
+  user vector unnormalised (3D 1 1 1: velz -0.47064 vs -0.5; 2D 0 2 0: force -0.5 vs 1) and its sign, and used
+  t1 = e_x x n. Fixed inline in conspr.cc (contactspring_side_direction helper shared with the automatic branch).
+  RED/GREEN contact_spring_3d_direction1/2, contact_spring_2d_direction1; all 19 probe triads = Professional; Pro
+  conspr1-7 targets pass. Open (owner): FN exactly 0 -> GNU slides with zero tangential force (manual 6.608
+  "cannot exceed f FN"); the Professional keeps the elastic tangential force (0.00025, also with f 0.5).
 
