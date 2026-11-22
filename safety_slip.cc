@@ -33,6 +33,7 @@
 
 #define SAFETY_SLIP_EPS_ISO 1.e-3 // point_el tolerance (as post_point)
 #define SAFETY_SLIP_LINE_SEGMENT_N 10 // default points per line piece
+#define SAFETY_SLIP_CIRCLE_SEGMENT_N 90 // default points per circle
 
   // one sampled slip surface
 struct safety_slip_surface_type {
@@ -100,6 +101,26 @@ static void safety_slip_add_piece( safety_slip_surface_type &s,
       s.pair[2*s.npair+1] = first+i;
       s.npair++;
     }
+  }
+}
+
+static void safety_slip_add_circle( safety_slip_surface_type &s,
+  double xm, double ym, double r, long int segment_n )
+
+// segment_n points at theta = 0, 360/n, ... (counterclockwise from +x),
+// outward normal, weight 2 pi r / n, closed ring of point pairs
+
+{
+  long int i=0, first=s.npoint;
+  double theta=0.;
+
+  for ( i=0; i<segment_n; i++ ) {
+    theta = 2.*PIRAD*i/segment_n;
+    safety_slip_add_point( s, xm+r*cos(theta), ym+r*sin(theta), cos(theta),
+      sin(theta), 2.*PIRAD*r/segment_n );
+    s.pair[2*s.npair+0] = first+i;
+    s.pair[2*s.npair+1] = first+(i+1)%segment_n;
+    s.npair++;
   }
 }
 
@@ -239,15 +260,156 @@ static void safety_slip_put( long int isurface, safety_slip_surface_type &s )
   delete[] elements;
 }
 
-void safety_slip( void )
-
-// evaluate all slip surfaces of the current control index
+static void safety_slip_put_critical( long int isurface )
 
 {
-  long int icontrol=0, control=-NO, index=0, max_index=-1, length=0,
-    nvar=0, ivar=0, segment_n=0, npt=0, ipt=0, isurface=0, icritical=-1,
-    ldum=0, idum[1];
-  double ddum[1], fs_critical=0., *data=NULL, *line=NULL, *result=NULL;
+  long int yes=-YES, length=1, idum[1];
+  double ddum[1];
+
+  idum[0] = yes;
+  db( SAFETY_SLIP_SURFACE_CRITICAL, isurface, idum, ddum, length,
+    VERSION_NORMAL, PUT );
+}
+
+static void safety_slip_lines( long int idat, long int idat_n,
+  long int idat_segment_n, long int idat_result, long int combined,
+  safety_slip_surface_type &s, long int &isurface )
+
+// safety_slip_multi_linear (polylines, 6.1034) and
+// safety_slip_combined_linear (independent point pairs, 6.1021): every
+// index gives its variations; the critical one of the index is flagged
+// and written to the result record
+
+{
+  long int index=0, max_index=-1, length=0, nvar=0, ivar=0, segment_n=0,
+    nvalue=0, ipt=0, best=-1, ibest=-1, has_n=0, idum[1];
+  double fs_best=0., data[DATA_ITEM_SIZE], line[DATA_ITEM_SIZE],
+    result[DATA_ITEM_SIZE+1];
+
+  db_max_index( idat, max_index, VERSION_NORMAL, GET );
+  for ( index=0; index<=max_index; index++ ) {
+    if ( !db_active_index( idat, index, VERSION_NORMAL ) ) continue;
+    db( idat, index, idum, data, length, VERSION_NORMAL, GET );
+    has_n = db_active_index( idat_n, index, VERSION_NORMAL );
+    nvar = safety_slip_n( idat_n, index, 1 );
+    segment_n = safety_slip_n( idat_segment_n, index,
+      SAFETY_SLIP_LINE_SEGMENT_N );
+      // values of one line: first and last line when _n is given
+    nvalue = has_n ? length/2 : length;
+    if ( nvar<1 || segment_n<2 || nvalue<4 || nvalue%2!=0 ||
+         ( combined && nvalue%4!=0 ) || ( has_n && 2*nvalue!=length ) )
+      db_error( idat, index );
+    best = -1; ibest = -1; fs_best = 0.;
+    for ( ivar=0; ivar<nvar; ivar++ ) {
+      safety_slip_interpolate( data, has_n ? &data[nvalue] : data,
+        nvar, ivar, nvalue, line );
+      s.npoint = 0; s.npair = 0;
+      if ( combined ) {
+        for ( ipt=0; ipt+3<nvalue; ipt+=4 )
+          safety_slip_add_piece( s, line[ipt], line[ipt+1], line[ipt+2],
+            line[ipt+3], segment_n );
+      }
+      else {
+        for ( ipt=0; ipt+3<nvalue; ipt+=2 )
+          safety_slip_add_piece( s, line[ipt], line[ipt+1], line[ipt+2],
+            line[ipt+3], segment_n );
+      }
+      safety_slip_evaluate( s );
+      if ( !s.valid ) continue;
+      s.data_name = -idat_result;
+      s.data_index = index;
+      safety_slip_put( isurface, s );
+      if ( best<0 || s.factor<fs_best ) {
+        best = ivar; ibest = isurface; fs_best = s.factor;
+        array_move( line, result, nvalue );
+      }
+      isurface++;
+    }
+    if ( best>=0 ) {
+      result[nvalue] = fs_best;
+      length = nvalue+1;
+      db( idat_result, index, idum, result, length, VERSION_NORMAL, PUT );
+      safety_slip_put_critical( ibest );
+    }
+  }
+}
+
+static void safety_slip_circles( long int idat_middle, long int idat_middle_n,
+  long int idat_radius, long int idat_radius_n, long int idat_segment_n,
+  long int idat_result, long int grid, safety_slip_surface_type &s,
+  long int &isurface )
+
+// safety_slip_circle_grid_* (6.1009-6.1014: n x n middles on the
+// rectangle first..last, x fastest) and safety_slip_circle_line_*
+// (6.1015-6.1020: n middles on the line first..last); radii r_first ..
+// r_last (radius_n); surfaces ordered radius, then middle
+
+{
+  long int index=0, max_index=-1, length=0, nm=0, nr=0, im=0, ix=0, iy=0,
+    ir=0, segment_n=0, ibest=-1, idum[1];
+  double middle[4], radius[2], xm=0., ym=0., r=0., tx=0., ty=0.,
+    result[4];
+
+  db_max_index( idat_middle, max_index, VERSION_NORMAL, GET );
+  for ( index=0; index<=max_index; index++ ) {
+    if ( !db_active_index( idat_middle, index, VERSION_NORMAL ) ) continue;
+    db( idat_middle, index, idum, middle, length, VERSION_NORMAL, GET );
+    nm = safety_slip_n( idat_middle_n, index, 1 );
+    if ( ( length!=2 && length!=4 ) || nm<1 || ( nm>1 && length!=4 ) )
+      db_error( idat_middle, index );
+    if ( length==2 ) { middle[2] = middle[0]; middle[3] = middle[1]; }
+    if ( !db_active_index( idat_radius, index, VERSION_NORMAL ) )
+      db_error( idat_radius, index );
+    db( idat_radius, index, idum, radius, length, VERSION_NORMAL, GET );
+    nr = safety_slip_n( idat_radius_n, index, 1 );
+    if ( ( length!=1 && length!=2 ) || nr<1 || ( nr>1 && length!=2 ) )
+      db_error( idat_radius, index );
+    if ( length==1 ) radius[1] = radius[0];
+    segment_n = safety_slip_n( idat_segment_n, index,
+      SAFETY_SLIP_CIRCLE_SEGMENT_N );
+    if ( segment_n<3 ) db_error( idat_segment_n, index );
+    ibest = -1;
+    for ( ir=0; ir<nr; ir++ ) {
+      r = radius[0] + ( nr>1 ? (double) ir/(nr-1) : 0. )*( radius[1]-radius[0] );
+      for ( im=0; im<( grid ? nm*nm : nm ); im++ ) {
+        ix = grid ? im%nm : im;
+        iy = grid ? im/nm : im;
+        tx = ( nm>1 ) ? (double) ix/(nm-1) : 0.;
+        ty = ( nm>1 ) ? (double) iy/(nm-1) : 0.;
+        xm = middle[0] + tx*( middle[2]-middle[0] );
+        ym = middle[1] + ty*( middle[3]-middle[1] );
+        s.npoint = 0; s.npair = 0;
+        safety_slip_add_circle( s, xm, ym, r, segment_n );
+        safety_slip_evaluate( s );
+        if ( !s.valid ) continue;
+        s.data_name = -idat_result;
+        s.data_index = index;
+        safety_slip_put( isurface, s );
+        if ( ibest<0 || s.factor<result[3] ) {
+          ibest = isurface;
+          result[0] = xm; result[1] = ym; result[2] = r;
+          result[3] = s.factor;
+        }
+        isurface++;
+      }
+    }
+    if ( ibest>=0 ) {
+      length = 4;
+      db( idat_result, index, idum, result, length, VERSION_NORMAL, PUT );
+      safety_slip_put_critical( ibest );
+    }
+  }
+}
+
+void safety_slip( void )
+
+// evaluate all slip surfaces of the current control index; the surfaces
+// are numbered over the types in alphabetical order (as the
+// Professional): circle_grid, circle_line, combined_linear, multi_linear
+
+{
+  long int icontrol=0, control=-NO, isurface=0, ldum=0;
+  double ddum[1];
   safety_slip_surface_type s;
 
   db( ICONTROL, 0, &icontrol, ddum, ldum, VERSION_NORMAL, GET );
@@ -269,64 +431,19 @@ void safety_slip( void )
   db_delete( SAFETY_SLIP_SURFACE_STRESS_LIMIT, VERSION_NORMAL );
 
   safety_slip_surface_allocate( s );
-  data = get_new_dbl( DATA_ITEM_SIZE );
-  line = get_new_dbl( DATA_ITEM_SIZE );
-  result = get_new_dbl( DATA_ITEM_SIZE+1 );
-
-    // safety_slip_multi_linear (6.1034): polylines
-  db_max_index( SAFETY_SLIP_MULTI_LINEAR, max_index, VERSION_NORMAL, GET );
-  for ( index=0; index<=max_index; index++ ) {
-    if ( !db_active_index( SAFETY_SLIP_MULTI_LINEAR, index, VERSION_NORMAL ) )
-      continue;
-    db( SAFETY_SLIP_MULTI_LINEAR, index, idum, data, length, VERSION_NORMAL,
-      GET );
-    nvar = safety_slip_n( SAFETY_SLIP_MULTI_LINEAR_N, index, 1 );
-    segment_n = safety_slip_n( SAFETY_SLIP_MULTI_LINEAR_SEGMENT_N, index,
-      SAFETY_SLIP_LINE_SEGMENT_N );
-    npt = db_active_index( SAFETY_SLIP_MULTI_LINEAR_N, index,
-      VERSION_NORMAL ) ? length/4 : length/2;
-    if ( nvar<1 || segment_n<2 || npt<2 ||
-         length!=( db_active_index( SAFETY_SLIP_MULTI_LINEAR_N, index,
-           VERSION_NORMAL ) ? 4*npt : 2*npt ) )
-      db_error( SAFETY_SLIP_MULTI_LINEAR, index );
-    long int best=-1;
-    double fs_best=0.;
-    for ( ivar=0; ivar<nvar; ivar++ ) {
-      safety_slip_interpolate( data, ( length==4*npt ) ? &data[2*npt] : data,
-        nvar, ivar, 2*npt, line );
-      s.npoint = 0; s.npair = 0;
-      for ( ipt=0; ipt+1<npt; ipt++ )
-        safety_slip_add_piece( s, line[2*ipt], line[2*ipt+1],
-          line[2*ipt+2], line[2*ipt+3], segment_n );
-      safety_slip_evaluate( s );
-      if ( !s.valid ) continue;
-      s.data_name = -SAFETY_SLIP_MULTI_LINEAR_RESULT;
-      s.data_index = index;
-      safety_slip_put( isurface, s );
-      if ( best<0 || s.factor<fs_best ) {
-        best = ivar; fs_best = s.factor;
-        array_move( line, result, 2*npt );
-      }
-      if ( icritical<0 || s.factor<fs_critical ) {
-        icritical = isurface; fs_critical = s.factor;
-      }
-      isurface++;
-    }
-    if ( best>=0 ) {
-      result[2*npt] = fs_best;
-      length = 2*npt+1;
-      db( SAFETY_SLIP_MULTI_LINEAR_RESULT, index, idum, result, length,
-        VERSION_NORMAL, PUT );
-    }
-  }
-
-  if ( icritical>=0 ) {
-    long int yes=-YES;
-    length = 1;
-    db( SAFETY_SLIP_SURFACE_CRITICAL, icritical, &yes, ddum, length,
-      VERSION_NORMAL, PUT );
-  }
-
+  safety_slip_circles( SAFETY_SLIP_CIRCLE_GRID_MIDDLE,
+    SAFETY_SLIP_CIRCLE_GRID_MIDDLE_N, SAFETY_SLIP_CIRCLE_GRID_RADIUS,
+    SAFETY_SLIP_CIRCLE_GRID_RADIUS_N, SAFETY_SLIP_CIRCLE_GRID_SEGMENT_N,
+    SAFETY_SLIP_CIRCLE_GRID_RESULT, 1, s, isurface );
+  safety_slip_circles( SAFETY_SLIP_CIRCLE_LINE_MIDDLE,
+    SAFETY_SLIP_CIRCLE_LINE_MIDDLE_N, SAFETY_SLIP_CIRCLE_LINE_RADIUS,
+    SAFETY_SLIP_CIRCLE_LINE_RADIUS_N, SAFETY_SLIP_CIRCLE_LINE_SEGMENT_N,
+    SAFETY_SLIP_CIRCLE_LINE_RESULT, 0, s, isurface );
+  safety_slip_lines( SAFETY_SLIP_COMBINED_LINEAR, SAFETY_SLIP_COMBINED_LINEAR_N,
+    SAFETY_SLIP_COMBINED_LINEAR_SEGMENT_N, SAFETY_SLIP_COMBINED_LINEAR_RESULT,
+    1, s, isurface );
+  safety_slip_lines( SAFETY_SLIP_MULTI_LINEAR, SAFETY_SLIP_MULTI_LINEAR_N,
+    SAFETY_SLIP_MULTI_LINEAR_SEGMENT_N, SAFETY_SLIP_MULTI_LINEAR_RESULT,
+    0, s, isurface );
   safety_slip_surface_free( s );
-  delete[] data; delete[] line; delete[] result;
 }

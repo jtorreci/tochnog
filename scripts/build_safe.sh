@@ -3641,6 +3641,14 @@ run_ok "$T2026" safety_slip_multi_linear3
 run_ok "$T2026" safety_slip_multi_linear4
 run_ok "$T2026" safety_slip_time1
 expected_error_ok "$T2026" safety_slip_error1
+# F5 T6 U2: safety_slip_combined_linear (6.1021-6.1024)
+run_ok "$T2026" safety_slip_combined_linear1
+run_ok "$T2026" safety_slip_combined_linear2
+# F5 T6 U3: safety_slip_circle_grid_* (6.1009-6.1014), safety_slip_circle_line_* (6.1015-6.1020)
+run_ok "$T2026" safety_slip_circle_grid1
+run_ok "$T2026" safety_slip_circle_grid2
+run_ok "$T2026" safety_slip_circle_line1
+expected_error_ok "$T2026" safety_slip_circle_error1
 run_ok "$T2026" materi_plasti_maximum_iterations1
 run_ok "$T2026" materi_plasti_maximum_iterations2
 expected_error_ok "$T2026" materi_plasti_maximum_iterations_error1

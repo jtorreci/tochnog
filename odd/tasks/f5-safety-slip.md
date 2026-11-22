@@ -25,7 +25,8 @@ runner scripts/build_safe.sh (validation-suite/test-2026 self-checking inputs, P
   control index without the record.
 - S6 Results: <type>_result index = critical surface of that index + Fs; safety_slip_set index i0 i1 ...,
   safety_slip_set_result index Fs = minimum over the set; critical flag: one global critical without sets, one per
-  set with sets.
+  set with sets. Corrected by L-T6-U2: without sets the critical surface of every index of every type is flagged;
+  surfaces are numbered over the types in alphabetical order (circle_grid, circle_line, combined_linear, multi_linear).
 - S7 GiD (6.310): "If switch is set to -yes, then for a safety analysis with control_safety_slip only the critical
   slip surface will be plotted. Default, if switch is not set, all evaluated slip surfaces will be plotted ...
   Furthermore, always the normal stresses and shear stresses on the slip surfaces will be plotted." Professional
@@ -36,9 +37,14 @@ runner scripts/build_safe.sh (validation-suite/test-2026 self-checking inputs, P
 - [x] U1 control_safety_slip -yes + safety_slip_multi_linear (+ _n, _segment_n, _result) + point stresses + Fs +
   safety_slip_surface_* records. Route: inline (dependent units, no writer reason; map L-T6-map). RED: base "I do not
   know : control_safety_slip". GREEN safety_slip_multi_linear1..4, safety_slip_time1, safety_slip_error1 (analytic,
-  = Professional in the elastic probes to solver accuracy).
-- [ ] U2 safety_slip_combined_linear (+ _n, _segment_n, _result).
-- [ ] U3 safety_slip_circle_grid_* and safety_slip_circle_line_* (middles, radii, _n, _segment_n, _result).
+  = Professional in the elastic probes to solver accuracy). Commit 0964a37; suite 1307 OK / 0 FALLO.
+- [x] U2 safety_slip_combined_linear (+ _n, _segment_n, _result), critical per index, numbering over the types.
+  Route: inline. RED: base "I do not know : safety_slip_combined_linear". GREEN safety_slip_combined_linear1/2 (analytic);
+  divergence SAFETY-SLIP-COMBINED-WEIGHTS.
+- [x] U3 safety_slip_circle_grid_* and safety_slip_circle_line_* (middles, radii, _n, _segment_n, _result).
+  Route: inline. RED: base "I do not know : safety_slip_circle_grid_middle". GREEN safety_slip_circle_grid1/2,
+  safety_slip_circle_line1 (analytic; the Professional gives the same values on these inputs: 4.954385746652,
+  4.893695691055, 3.872934051177), safety_slip_circle_error1. U2 and U3 in one commit (same files); suite 1313 OK / 0 FALLO.
 - [ ] U4 safety_slip_set / _set_result, critical flags, control_safety_slip N refinement.
 - [ ] U5 GiD output of the slip surfaces, control_print_gid_safety_slip_critical.
 - [ ] U6 (stage 2) 3D: safety_slip_ellipsoide*, safety_slip_grd* (measure in the Professional first).
@@ -64,3 +70,8 @@ runner scripts/build_safe.sh (validation-suite/test-2026 self-checking inputs, P
 - L-T6-U1 (2026-11-22) GNU on the Professional probes: elastic cases equal to 1e-9 (GNU solver noise in the uniform
   field, Professional exact); plastic MC cases differ because the MC states differ (p_incl, v_ml), not the safety
   evaluation. materi_stress is always required by the materi groups, so no own check.
+- L-T6-U2 (2026-11-22) Professional probes: mixed types (o_mix): surfaces numbered circle_grid, circle_line,
+  combined_linear, multi_linear, and every index of every type gets its own critical flag (5 flags for 5 indices),
+  so the "one global critical" of L-T6-measure was wrong (it had one index). combined_linear with _n: all pieces get
+  the point weights of the first piece (e_comb_n surface 0: 9.041451884343 = equal weights; correct 8.548948025,
+  the Professional value without _n); GNU follows the manual (SAFETY-SLIP-COMBINED-WEIGHTS).

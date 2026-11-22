@@ -4,7 +4,24 @@
 
 `control_safety_slip index switch` (manual 6.369): slip-surface safety
 factor calculation in the time steps of control index `index`. The slip
-surfaces are given with `safety_slip_multi_linear` (6.1034-6.1037).
+surfaces are given with `safety_slip_multi_linear` (6.1034-6.1037) and
+`safety_slip_combined_linear` (6.1021-6.1024, same records with
+`combined_linear`; the data are independent pieces x0 y0 x1 y1, x2 y2 x3
+y3, ... instead of a polyline), and the circles
+`safety_slip_circle_grid_*` (6.1009-6.1014) and `safety_slip_circle_line_*`
+(6.1015-6.1020):
+
+```
+safety_slip_circle_grid_middle index x_first y_first [x_last y_last]
+safety_slip_circle_grid_middle_n index n     (n x n middles on the rectangle)
+safety_slip_circle_grid_radius index r_first [r_last]
+safety_slip_circle_grid_radius_n index n
+safety_slip_circle_grid_segment_n index n    (points per circle, default 90)
+safety_slip_circle_grid_result index x y r safety_factor   (output)
+```
+
+`safety_slip_circle_line_*` is the same with n middles on the line from
+the first to the last middle.
 
 ```
 safety_slip_multi_linear index x_first,0 y_first,0 x_first,1 y_first,1 ... [x_last,0 y_last,0 ...]
@@ -27,23 +44,34 @@ safety_slip_multi_linear_result index x_0 y_0 x_1 y_1 ... safety_factor   (outpu
 - Points outside the mesh, in elements without a Mohr-Coulomb record, or
   with sigma_n > 0 (tension) do not count. A surface without counting
   points gets no result.
+- Circles: `segment_n` points at the angles 0, 360/n, ...
+  (counterclockwise from +x), outward normal, weight 2 pi r / n; the
+  surfaces of an index are ordered radius first (outer loop), then the
+  middles (x fastest in the grid). The parts of a circle outside the mesh
+  do not count.
 - Line pieces: `segment_n` equidistant points per piece (the pieces of a
   polyline do not share points), trapezoid weights.
 - With `safety_slip_multi_linear_n` the record holds the first and the
   last polyline (same number of points); n polylines are interpolated
   equidistantly between them. Without it the record is one polyline.
 - `safety_slip_multi_linear_result` gets the critical polyline of the
-  index and its safety factor.
+  index and its safety factor (`safety_slip_combined_linear_result` the
+  critical pieces); every piece is weighted with its own length.
 - The evaluated surfaces are written as `safety_slip_surface_areas`,
-  `_elements`, `_nodes`, `_critical` (the overall critical surface),
+  `_elements`, `_nodes`, `_critical` (the critical surface of every
+  index of every type),
   `_factor`, `_stresses` (sigma_n |tau| per point), `_stress_limit`
-  (tau_mc per point), `_data_index`, `_data_name` (index = surface number).
+  (tau_mc per point), `_data_index`, `_data_name` (index = surface number;
+  the types are numbered in alphabetical order: circle_grid, circle_line,
+  combined_linear, multi_linear).
 - Not evaluated in control indices without the record; switch `-no` turns
-  it off. The other surface types, sets, the refinement (switch = number)
-  and the GiD plot follow in later F5 T6 units.
+  it off. Sets, the refinement (switch = number) and the GiD plot follow
+  in later F5 T6 units.
 
 Same results as the Professional 02-08-2026 in elastic states (to the
-solver accuracy).
+solver accuracy), except `safety_slip_combined_linear_n`: the
+Professional weights all pieces with the first piece (DIVERGENCES
+SAFETY-SLIP-COMBINED-WEIGHTS).
 
 ## Example
 
@@ -61,4 +89,10 @@ Self-checking inputs in `validation-suite/test-2026`:
 `safety_slip_multi_linear3` (tension points),
 `safety_slip_multi_linear4` (_n, _segment_n, critical line),
 `safety_slip_time1` (evaluated every step),
-`safety_slip_error1` (first/last lines of different size).
+`safety_slip_error1` (first/last lines of different size),
+`safety_slip_combined_linear1` (pieces, weights),
+`safety_slip_combined_linear2` (_n, numbering over the types),
+`safety_slip_circle_grid1` (full and half circle),
+`safety_slip_circle_grid2` (grid of middles and radii, critical),
+`safety_slip_circle_line1` (line of middles, numbering),
+`safety_slip_circle_error1` (middle without radius).

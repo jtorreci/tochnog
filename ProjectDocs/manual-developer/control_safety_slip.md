@@ -12,9 +12,15 @@
     stresses `element_dof` interpolated and averaged over the containing
     elements; c, phi via `get_group_data` (mohr_coul, mohr_coul_direct;
     phi in radians); sigma_n > 0 points excluded.
+  - `safety_slip_lines()`: multi_linear and combined_linear indices,
+    variations, result record, critical flag per index.
+  - `safety_slip_add_circle()`, `safety_slip_circles()`: circle points
+    and the grid / line of middles times the radii.
   - `safety_slip_put()`: the internal `safety_slip_surface_*` records.
 - `database.cc`: `CONTROL_SAFETY_SLIP` (INTEGER, CONTROL),
-  `SAFETY_SLIP_MULTI_LINEAR*`, `SAFETY_SLIP_SURFACE_*` (length
+  `SAFETY_SLIP_MULTI_LINEAR*`, `SAFETY_SLIP_COMBINED_LINEAR*`,
+  `SAFETY_SLIP_CIRCLE_GRID_*`, `SAFETY_SLIP_CIRCLE_LINE_*`,
+  `SAFETY_SLIP_SURFACE_*` (length
   `SAFETY_SLIP_MPOINT` = 2000 points, `tochnog.h`).
 - `makefile`, `makefile - Windows-Mingw64`: `safety_slip` object.
 

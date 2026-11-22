@@ -2229,24 +2229,24 @@ Nota: `group_interface_ground` del checklist anterior NUNCA existió (artefacto 
 - [x] `repeat_save_result` — Sprint 10, lote 10 (2026-08-26): valores guardados por `control_repeat_save` (un índice por repeat, valores de los items en orden de tripletas)
 - [x] `repeat_calculate_result` — Sprint 10, lote 10 (2026-08-26): `[media, varianza]` por data item calculados por `control_repeat_save_calculate` (el nombre del inventario `repeat_save_calculate_result` era un OCR; el manual Professional 6.349 lo llama `repeat_calculate_result`)
 
-### safety (4/31)
+### safety (20/31)
 
-- [ ] `safety_slip_circle_grid_middle` — PENDIENTE
-- [ ] `safety_slip_circle_grid_middle_n` — PENDIENTE
-- [ ] `safety_slip_circle_grid_radius` — PENDIENTE
-- [ ] `safety_slip_circle_grid_radius_n` — PENDIENTE
-- [ ] `safety_slip_circle_grid_result` — PENDIENTE
-- [ ] `safety_slip_circle_grid_segment_n` — PENDIENTE
-- [ ] `safety_slip_circle_line_middle` — PENDIENTE
-- [ ] `safety_slip_circle_line_middle_n` — PENDIENTE
-- [ ] `safety_slip_circle_line_radius` — PENDIENTE
-- [ ] `safety_slip_circle_line_radius_n` — PENDIENTE
-- [ ] `safety_slip_circle_line_result` — PENDIENTE
-- [ ] `safety_slip_circle_line_segment_n` — PENDIENTE
-- [ ] `safety_slip_combined_linear` — PENDIENTE
-- [ ] `safety_slip_combined_linear_n` — PENDIENTE
-- [ ] `safety_slip_combined_linear_result` — PENDIENTE
-- [ ] `safety_slip_combined_linear_segment_n` — PENDIENTE
+- [x] `safety_slip_circle_grid_middle` — F5 T6 U3 (2026-11-22, = Professional)
+- [x] `safety_slip_circle_grid_middle_n` — F5 T6 U3 (2026-11-22, = Professional)
+- [x] `safety_slip_circle_grid_radius` — F5 T6 U3 (2026-11-22, = Professional)
+- [x] `safety_slip_circle_grid_radius_n` — F5 T6 U3 (2026-11-22, = Professional)
+- [x] `safety_slip_circle_grid_result` — F5 T6 U3 (2026-11-22, = Professional)
+- [x] `safety_slip_circle_grid_segment_n` — F5 T6 U3 (2026-11-22, = Professional)
+- [x] `safety_slip_circle_line_middle` — F5 T6 U3 (2026-11-22, = Professional)
+- [x] `safety_slip_circle_line_middle_n` — F5 T6 U3 (2026-11-22, = Professional)
+- [x] `safety_slip_circle_line_radius` — F5 T6 U3 (2026-11-22, = Professional)
+- [x] `safety_slip_circle_line_radius_n` — F5 T6 U3 (2026-11-22, = Professional)
+- [x] `safety_slip_circle_line_result` — F5 T6 U3 (2026-11-22, = Professional)
+- [x] `safety_slip_circle_line_segment_n` — F5 T6 U3 (2026-11-22, = Professional)
+- [x] `safety_slip_combined_linear` — F5 T6 U2 (2026-11-22; = Professional except _n weights, SAFETY-SLIP-COMBINED-WEIGHTS)
+- [x] `safety_slip_combined_linear_n` — F5 T6 U2 (2026-11-22; = Professional except _n weights, SAFETY-SLIP-COMBINED-WEIGHTS)
+- [x] `safety_slip_combined_linear_result` — F5 T6 U2 (2026-11-22; = Professional except _n weights, SAFETY-SLIP-COMBINED-WEIGHTS)
+- [x] `safety_slip_combined_linear_segment_n` — F5 T6 U2 (2026-11-22; = Professional except _n weights, SAFETY-SLIP-COMBINED-WEIGHTS)
 - [ ] `safety_slip_ellipsoide` — PENDIENTE
 - [ ] `safety_slip_ellipsoide_method` — PENDIENTE
 - [ ] `safety_slip_ellipsoide_n` — PENDIENTE
