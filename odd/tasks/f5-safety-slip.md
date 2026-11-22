@@ -45,8 +45,13 @@ runner scripts/build_safe.sh (validation-suite/test-2026 self-checking inputs, P
   Route: inline. RED: base "I do not know : safety_slip_circle_grid_middle". GREEN safety_slip_circle_grid1/2,
   safety_slip_circle_line1 (analytic; the Professional gives the same values on these inputs: 4.954385746652,
   4.893695691055, 3.872934051177), safety_slip_circle_error1. U2 and U3 in one commit (same files); suite 1313 OK / 0 FALLO.
-- [ ] U4 safety_slip_set / _set_result, critical flags, control_safety_slip N refinement.
-- [ ] U5 GiD output of the slip surfaces, control_print_gid_safety_slip_critical.
+- [x] U4 safety_slip_set / _set_result, critical flags, control_safety_slip N refinement. Route: inline. RED: base
+  "I do not know : safety_slip_set"; refinement N: db_error on base (only -yes). GREEN safety_slip_set1,
+  safety_slip_refine1/2, safety_slip_error2 (analytic; Professional same values except set index 0); divergence
+  SAFETY-SLIP-SET-INDEX-0. Rewrite of the driver as zones (passes over all types).
+- [x] U5 GiD output of the slip surfaces, control_print_gid_safety_slip_critical. Route: inline. RED: base "I do not
+  know : control_print_gid_safety_slip_critical", no SafetySlip mesh. GREEN safety_slip_gid1/2 (build_safe file
+  checks: 70/63 and 30/27 nodes/elements, 4 results); divergence SAFETY-SLIP-GID-FORMAT. U4 and U5 in one commit; suite 1319 OK / 0 FALLO.
 - [ ] U6 (stage 2) 3D: safety_slip_ellipsoide*, safety_slip_grd* (measure in the Professional first).
 
 ## Log
@@ -75,3 +80,12 @@ runner scripts/build_safe.sh (validation-suite/test-2026 self-checking inputs, P
   so the "one global critical" of L-T6-measure was wrong (it had one index). combined_linear with _n: all pieces get
   the point weights of the first piece (e_comb_n surface 0: 9.041451884343 = equal weights; correct 8.548948025,
   the Professional value without _n); GNU follows the manual (SAFETY-SLIP-COMBINED-WEIGHTS).
+- L-T6-U4 (2026-11-22) Professional probes: passes are global (each pass evaluates all types and indices again,
+  also the ones without variations; numbering pass-major); zone after pass 1 = critical so far +/- step/2, after
+  the later passes +/- step/4 (k_ml3 3 passes 3.104571210375, k_g5 n 5, k_l4 4 passes); sets: a set holding index 0
+  gives no result (k_a, k_b, k_set0), sets without 0 work (k_c, k_e); with sets the per-index critical flags are
+  not written; k_set2 flagged surface 1 (circle 1, 5.21) for set_result 1 = 3.1547 (multi 1, surface 3).
+- L-T6-U5 (2026-11-22) Professional GiD (s_set): mesh safety_slip_surface_nodes Linear 2 nodes, node ids after the
+  mesh nodes, element ids after the elements; per line element (both Gauss points) the value of its first point:
+  safety_sign = sigma_n, safety_sigt = |tau|, safety_factor_local = tau_mc/|tau|, safety_factor = surface Fs. The GNU
+  writes the same values on the nodes of a SafetySlip mesh (GNU GiD 6 writes OnNodes results only).

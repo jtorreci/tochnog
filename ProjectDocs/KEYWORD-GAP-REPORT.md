@@ -127,6 +127,8 @@ accepted; the one-name difference in the 2026-11-08 count is not explained.
 2026-11-22 (F5 T6 U1): `control_safety_slip`, `safety_slip_multi_linear*` (4) accepted.
 2026-11-22 (F5 T6 U2): `safety_slip_combined_linear*` (4) accepted.
 2026-11-22 (F5 T6 U3): `safety_slip_circle_grid_*`, `safety_slip_circle_line_*` (12) accepted.
+2026-11-22 (F5 T6 U4): `safety_slip_set`, `safety_slip_set_result` accepted; control_safety_slip N passes.
+2026-11-22 (F5 T6 U5): `control_print_gid_safety_slip_critical` accepted (GiD plot of the slip surfaces).
 
 ## Gap by family
 

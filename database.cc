@@ -8301,6 +8301,13 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   data_length[CONTROL_SAFETY_SLIP] = 1;
   data_class[CONTROL_SAFETY_SLIP] = CONTROL;
 
+  // control_print_gid_safety_slip_critical (6.310): -yes plots only the
+  // critical slip surfaces in GiD
+  strcpy(name[CONTROL_PRINT_GID_SAFETY_SLIP_CRITICAL],"control_print_gid_safety_slip_critical");
+  type[CONTROL_PRINT_GID_SAFETY_SLIP_CRITICAL] = INTEGER;
+  data_length[CONTROL_PRINT_GID_SAFETY_SLIP_CRITICAL] = 1;
+  data_class[CONTROL_PRINT_GID_SAFETY_SLIP_CRITICAL] = CONTROL;
+
   // safety_slip_circle_grid_* (6.1009-6.1014) and safety_slip_circle_line_*
   // (6.1015-6.1020): circles, middles first [last], radii first [last]
   strcpy(name[SAFETY_SLIP_CIRCLE_GRID_MIDDLE],"safety_slip_circle_grid_middle");
@@ -8425,6 +8432,19 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   data_length[SAFETY_SLIP_MULTI_LINEAR_SEGMENT_N] = 1;
   data_class[SAFETY_SLIP_MULTI_LINEAR_SEGMENT_N] = SAFETY_SLIP_MULTI_LINEAR;
   data_required[SAFETY_SLIP_MULTI_LINEAR_SEGMENT_N] = SAFETY_SLIP_MULTI_LINEAR;
+
+  // safety_slip_set (6.1038): indices of the slip surface records (all
+  // types) that form a set; safety_slip_set_result (6.1039): its minimum
+  strcpy(name[SAFETY_SLIP_SET],"safety_slip_set");
+  type[SAFETY_SLIP_SET] = INTEGER;
+  data_length[SAFETY_SLIP_SET] = DATA_ITEM_SIZE;
+  fixed_length[SAFETY_SLIP_SET] = 0;
+  data_class[SAFETY_SLIP_SET] = SAFETY_SLIP_SET;
+
+  strcpy(name[SAFETY_SLIP_SET_RESULT],"safety_slip_set_result");
+  type[SAFETY_SLIP_SET_RESULT] = DOUBLE_PRECISION;
+  data_length[SAFETY_SLIP_SET_RESULT] = 1;
+  data_class[SAFETY_SLIP_SET_RESULT] = SAFETY_SLIP_SET;
 
     // the evaluated slip surfaces (index = surface number, as the
     // Professional): sample point weights, point pairs separated by

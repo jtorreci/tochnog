@@ -796,6 +796,7 @@ enum {
   GROUP_BEAM_SHEAR,
   GROUP_BEAM_FORCE_MOMENT_PLASTI,
   CONTROL_SAFETY_SLIP,
+  CONTROL_PRINT_GID_SAFETY_SLIP_CRITICAL,
   SAFETY_SLIP_CIRCLE_GRID_MIDDLE,
   SAFETY_SLIP_CIRCLE_GRID_MIDDLE_N,
   SAFETY_SLIP_CIRCLE_GRID_RADIUS,
@@ -816,6 +817,8 @@ enum {
   SAFETY_SLIP_MULTI_LINEAR_N,
   SAFETY_SLIP_MULTI_LINEAR_RESULT,
   SAFETY_SLIP_MULTI_LINEAR_SEGMENT_N,
+  SAFETY_SLIP_SET,
+  SAFETY_SLIP_SET_RESULT,
   SAFETY_SLIP_SURFACE_AREAS,
   SAFETY_SLIP_SURFACE_CRITICAL,
   SAFETY_SLIP_SURFACE_DATA_INDEX,
@@ -2632,6 +2635,10 @@ void      pol( long int element, long int element_group,
             double volume[] );
 void      post( long int task );
 void      safety_slip( void );
+void      safety_slip_print_gid_mesh( ofstream &outmesh, long int max_node,
+            long int max_element );
+void      safety_slip_print_gid_results( ofstream &outres, double step_val,
+            long int max_node );
 void      post_global( void );
 void      post_integrate( void );
 void      post_force_edge_summed_calculate( void );

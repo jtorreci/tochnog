@@ -12,16 +12,24 @@
     stresses `element_dof` interpolated and averaged over the containing
     elements; c, phi via `get_group_data` (mohr_coul, mohr_coul_direct;
     phi in radians); sigma_n > 0 points excluded.
-  - `safety_slip_lines()`: multi_linear and combined_linear indices,
-    variations, result record, critical flag per index.
-  - `safety_slip_add_circle()`, `safety_slip_circles()`: circle points
-    and the grid / line of middles times the radii.
+  - `safety_slip_zone_lines()`, `safety_slip_zone_circles()`: one zone
+    per type and index (first/last values, numbers of variations).
+  - `safety_slip_variation()`: the points of one variation of a zone.
+  - `safety_slip_shrink()`: the zone of the next refinement pass.
+  - `safety_slip()`: passes over all zones (types in alphabetical order),
+    results per index, critical flags per index or per safety_slip_set.
+  - `safety_slip_add_circle()`: circle points.
   - `safety_slip_put()`: the internal `safety_slip_surface_*` records.
 - `database.cc`: `CONTROL_SAFETY_SLIP` (INTEGER, CONTROL),
   `SAFETY_SLIP_MULTI_LINEAR*`, `SAFETY_SLIP_COMBINED_LINEAR*`,
   `SAFETY_SLIP_CIRCLE_GRID_*`, `SAFETY_SLIP_CIRCLE_LINE_*`,
+  `SAFETY_SLIP_SET`, `SAFETY_SLIP_SET_RESULT`,
   `SAFETY_SLIP_SURFACE_*` (length
   `SAFETY_SLIP_MPOINT` = 2000 points, `tochnog.h`).
+- `print_g6.cc`: `safety_slip_print_gid_mesh()` at the end of the mesh
+  block (first print or -separate), `safety_slip_print_gid_results()`
+  after the nodal results (not for eigen analyses); both in
+  `safety_slip.cc`. The GiD 5 writer (`print_g5.cc`) is not extended.
 - `makefile`, `makefile - Windows-Mingw64`: `safety_slip` object.
 
 ## Implementation details

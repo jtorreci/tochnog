@@ -65,13 +65,35 @@ safety_slip_multi_linear_result index x_0 y_0 x_1 y_1 ... safety_factor   (outpu
   the types are numbered in alphabetical order: circle_grid, circle_line,
   combined_linear, multi_linear).
 - Not evaluated in control indices without the record; switch `-no` turns
-  it off. Sets, the refinement (switch = number) and the GiD plot follow
-  in later F5 T6 units.
+  it off.
+- Switch = a number N (1, 2, ...): N passes. Every pass evaluates all
+  surfaces; after a pass the zone of every index (first..last line, or
+  middles and radii) is replaced by the critical surface so far plus and
+  minus half a step (after the first pass) or a quarter of a step (after
+  the later passes) of every parameter, with the same number of
+  variations (as the Professional 02-08-2026). The surfaces of all passes
+  are kept.
+- `safety_slip_set index index_0 index_1 ...` (6.1038): the indices of the
+  slip surface records (of all types) that form a set;
+  `safety_slip_set_result index safety_factor` (6.1039) gets the minimum
+  over the set. With sets, only the critical surface of every set is
+  flagged in `safety_slip_surface_critical`.
+- GiD (`control_print_gid`, 6.310): the slip surfaces are written as an
+  extra mesh `SafetySlip` (line elements of 2 nodes between the surface
+  points; node and element numbers after the highest node and element)
+  with the nodal results `safety_factor` (of the surface),
+  `safety_factor_local` (tau_mc / |tau|), `safety_sign` (sigma_n) and
+  `safety_sigt` (|tau|). `control_print_gid_safety_slip_critical index
+  -yes` plots only the critical surfaces. As every GiD mesh, the slip mesh
+  is written at the first GiD print (with `control_print_gid -separate`
+  at every print); later steps write the results of the same surfaces.
 
 Same results as the Professional 02-08-2026 in elastic states (to the
 solver accuracy), except `safety_slip_combined_linear_n`: the
 Professional weights all pieces with the first piece (DIVERGENCES
-SAFETY-SLIP-COMBINED-WEIGHTS).
+SAFETY-SLIP-COMBINED-WEIGHTS) and sets holding index 0 (the Professional
+writes no result for them and can flag a surface that is not the minimum
+of the set: SAFETY-SLIP-SET-INDEX-0).
 
 ## Example
 
@@ -95,4 +117,10 @@ Self-checking inputs in `validation-suite/test-2026`:
 `safety_slip_circle_grid1` (full and half circle),
 `safety_slip_circle_grid2` (grid of middles and radii, critical),
 `safety_slip_circle_line1` (line of middles, numbering),
-`safety_slip_circle_error1` (middle without radius).
+`safety_slip_circle_error1` (middle without radius),
+`safety_slip_set1` (sets over the types),
+`safety_slip_refine1` (3 passes of a line zone),
+`safety_slip_refine2` (2 passes of a circle line),
+`safety_slip_error2` (switch 0),
+`safety_slip_gid1` / `safety_slip_gid2` (GiD mesh and results, all or
+critical surfaces; checked by build_safe).

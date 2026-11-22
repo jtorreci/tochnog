@@ -354,6 +354,8 @@ for (int igroup=0; igroup<=max_group; igroup++)
  if (nmesh)  outmesh << "end elements" << endl;
 }
 }
+  // slip surfaces of control_safety_slip (manual Professional 6.310)
+  safety_slip_print_gid_mesh( outmesh, max_node, max_element );
 }//end first time gid
 
   if ( bound_elements )
@@ -605,6 +607,9 @@ for (int igroup=0; igroup<=max_group; igroup++)
     }
 
   }
+
+  if ( !eigen_analysis )
+    safety_slip_print_gid_results( outres, time_current, max_node );
 
   delete[] dof_amount;
   delete[] dof_label;

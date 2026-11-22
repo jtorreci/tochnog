@@ -998,7 +998,7 @@ marcado `PENDIENTE` puede estar cubierto en el GNU bajo otro nombre:
 - [ ] `control_print_gid_method` — DESCARTADO
 - [ ] `control_print_gid_node_method` — DESCARTADO
 - [ ] `control_print_gid_other` — DESCARTADO
-- [ ] `control_print_gid_safety_slip_critical` — DESCARTADO
+- [x] `control_print_gid_safety_slip_critical` — F5 T6 U5 (2026-11-22): -yes plots only the critical slip surfaces (GNU GiD layout, SAFETY-SLIP-GID-FORMAT)
 - [ ] `control_print_gid_save_di` — PENDIENTE
 - [ ] `control_print_gid_smooth_dof` — DESCARTADO
 - [ ] `control_print_gid_smooth_n` — DESCARTADO
@@ -1069,7 +1069,7 @@ marcado `PENDIENTE` puede estar cubierto en el GNU bajo otro nombre:
 
 ### control_safety (1/1)
 
-- [x] `control_safety_slip` — F5 T6 U1 (2026-11-22): -yes, every step of the control index; Fs = sum A tau_mc / sum A |tau| (= Professional, safety_slip.cc)
+- [x] `control_safety_slip` — F5 T6 U1/U4 (2026-11-22): -yes or N refinement passes, every step of the control index; Fs = sum A tau_mc / sum A |tau| (= Professional, safety_slip.cc)
 
 ### control_slide (1/3)
 
@@ -2229,7 +2229,7 @@ Nota: `group_interface_ground` del checklist anterior NUNCA existió (artefacto 
 - [x] `repeat_save_result` — Sprint 10, lote 10 (2026-08-26): valores guardados por `control_repeat_save` (un índice por repeat, valores de los items en orden de tripletas)
 - [x] `repeat_calculate_result` — Sprint 10, lote 10 (2026-08-26): `[media, varianza]` por data item calculados por `control_repeat_save_calculate` (el nombre del inventario `repeat_save_calculate_result` era un OCR; el manual Professional 6.349 lo llama `repeat_calculate_result`)
 
-### safety (20/31)
+### safety (22/31)
 
 - [x] `safety_slip_circle_grid_middle` — F5 T6 U3 (2026-11-22, = Professional)
 - [x] `safety_slip_circle_grid_middle_n` — F5 T6 U3 (2026-11-22, = Professional)
@@ -2260,8 +2260,8 @@ Nota: `group_interface_ground` del checklist anterior NUNCA existió (artefacto 
 - [x] `safety_slip_multi_linear_n` — F5 T6 U1 (2026-11-22, = Professional)
 - [x] `safety_slip_multi_linear_result` — F5 T6 U1 (2026-11-22, = Professional)
 - [x] `safety_slip_multi_linear_segment_n` — F5 T6 U1 (2026-11-22, = Professional)
-- [ ] `safety_slip_set` — PENDIENTE
-- [ ] `safety_slip_set_result` — PENDIENTE
+- [x] `safety_slip_set` — F5 T6 U4 (2026-11-22; = Professional except sets with index 0, SAFETY-SLIP-SET-INDEX-0)
+- [x] `safety_slip_set_result` — F5 T6 U4 (2026-11-22; = Professional except sets with index 0, SAFETY-SLIP-SET-INDEX-0)
 
 ### slide (4/7)
 

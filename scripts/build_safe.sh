@@ -3649,6 +3649,28 @@ run_ok "$T2026" safety_slip_circle_grid1
 run_ok "$T2026" safety_slip_circle_grid2
 run_ok "$T2026" safety_slip_circle_line1
 expected_error_ok "$T2026" safety_slip_circle_error1
+# F5 T6 U4: safety_slip_set (6.1038-6.1039), control_safety_slip N refinement
+run_ok "$T2026" safety_slip_set1
+run_ok "$T2026" safety_slip_refine1
+run_ok "$T2026" safety_slip_refine2
+expected_error_ok "$T2026" safety_slip_error2
+# F5 T6 U5: GiD plot of the slip surfaces (6.310), checked in a scratch copy
+SSDIR=$(mktemp -d)
+for t in safety_slip_gid1 safety_slip_gid2; do
+  cp "$T2026/$t.dat" "$SSDIR/"
+  ( cd "$SSDIR" && ulimit -v "$TN_MEMLIMIT_KB" && timeout 60 "$REPO_DIR/build/$TN_BIN" "$t.dat" > "$t.out" 2>&1 ); SSRC=$?
+  SSN=$(awk '/^MESH SafetySlip/{m=1} m&&/^Coordinates/{c=1;next} c&&/^End Coordinates/{c=0} c{n++} END{print n+0}' "$SSDIR/$t.flavia.msh" 2>/dev/null)
+  SSE=$(awk '/^MESH SafetySlip/{m=1} m&&/^Elements/{e=1;next} e&&/^End Elements/{e=0} e{n++} END{print n+0}' "$SSDIR/$t.flavia.msh" 2>/dev/null)
+  SSR=$(grep -c '^Result  "safety_\(factor\|factor_local\|sign\|sigt\)"' "$SSDIR/$t.flavia.res" 2>/dev/null)
+  SSF=$(awk '/^MESH SafetySlip/{m=1} m&&/^Coordinates/{getline; print $1; exit}' "$SSDIR/$t.flavia.msh" 2>/dev/null)
+  if [ "$t" = safety_slip_gid1 ]; then SSX="70 63"; else SSX="30 27"; fi
+  if [ "$SSRC" = "0" ] && [ "$SSN $SSE" = "$SSX" ] && [ "$SSR" = "4" ] && [ "$SSF" = "26" ]; then
+    check_ok "$t (GiD slip surface mesh $SSN nodes $SSE elements, 4 results)"
+  else
+    check_fail "$t" "rc=$SSRC mesh $SSN/$SSE results $SSR first node $SSF"
+  fi
+done
+rm -rf -- "${SSDIR:?}"
 run_ok "$T2026" materi_plasti_maximum_iterations1
 run_ok "$T2026" materi_plasti_maximum_iterations2
 expected_error_ok "$T2026" materi_plasti_maximum_iterations_error1
