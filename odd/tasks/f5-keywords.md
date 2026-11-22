@@ -228,7 +228,7 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
     with the Professional totals to 1e-6.
   - [ ] Owner decisions: force_edge_diagram (resolved by measurement, L-T5-diagram),
     group_contact_spring_direction_automatic_planes meaning (resolved by measurement, L-T5-planes),
-    group_beam_force_moment_plasti (new model), strain_volume kernel, baseline correction scope.
+    group_beam_force_moment_plasti (new model), strain_volume kernel (resolved, L-T5-strainvol-owner), baseline correction scope.
   - [x] U2 slide_damping (viscous, divergence SLIDE-DAMPING-VISCOUS), control_slide_damping_apply, slide_user
     (user.cc stub, Professional message). Route: inline. Owner L-T5-slide. RED: base "I do not know : slide_damping"
     / "slide_user". GREEN slide_damping1 (c*v exact), slide_damping2 (Professional values), slide_user_error1.
@@ -249,7 +249,11 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
     the step end; no plasticity while f < 1). Route: inline. Owner "si" (measure first), L-T5-timefill. RED: base
     "Error in data part"; plasticity skip off: group_time_fill2 disy -0.01153; pressure unscaled: -0.0025.
     GREEN group_time_fill1/2/3 (Professional values).
-  - [ ] U8 strain_volume. U9 baseline correction. U10 beam plasticity.
+  - [x] U8 strain_volume_* (6.1062-6.1066) + post_strain_volume_absolute / _relative. Route: inline (one behavior,
+    no writer reason). Owner L-T5-strainvol-owner. RED: base "Error in data part" (relative_time, element_group,
+    geometry, list) and no post results. GREEN: 10 tests, Professional values to 1e-8; divergences
+    STRAIN-VOLUME-ELEMENT-LIST, STRAIN-VOLUME-BOTH-TABLES.
+  - [ ] U9 baseline correction. U10 beam plasticity.
 - [ ] T6 W7 safety_slip (32): self-contained slip-surface safety-factor feature, planned
   separately. Route: to decide.
 
@@ -1064,3 +1068,19 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   Professional by the same amount as a plain group_time (pre-existing Mohr-Coulomb difference, not U7).
   Incident: during the U6 suite 456 repo files on the NAS turned mode 000 (content intact, git clean); restored with
   chmod 644, cause unknown (not the repo scripts).
+- L-T5-strainvol (2026-11-20) U8 Professional probes (/tmp/sv.Z6ON, hex8 E 1e6 nu 0.2 total_linear, rollers):
+  kernel = eigenstrain e0 = eps_v/3 on xx, yy, zz (zz also in plane strain), total value of the time table at the
+  current time (back to 0 -> displacement 0), stress = D(eps - e0 I). Fully fixed hex, 3 %: sxx = syy = szz =
+  -16666.67 = -E/(1-2nu)*0.01. Relative: eps_v = pct/100. Absolute: eps_v = dV / sum of the initial volumes of the
+  selected set (no selector, 0.6 on V 12 -> uniform 5 %, post absolute 0.6). Free 3D: post absolute 0.1234 exact
+  (strain_volume1). Post absolute = sum of tr(eps)*V (small strain), relative = 100*absolute/initial.
+  Selection: no selector -> all elements; element_group; geometry = all nodes inside (centroid alone not enough).
+  Pro deviations from the manual: strain_volume_element 10 1 2 uses ONLY the first element (2 1 -> initial 8 =
+  element 2); relative and absolute both given -> absolute wins silently (manual: "Exactly one ... not both");
+  the same element in two indices -> last index wins (6 % not 9 %), post of both indices shows that element.
+- L-T5-strainvol-owner (2026-11-22) owner, verbatim: "si, perfecto" to "¿Implemento U8 siguiendo el manual en los casos 1
+  y 2, con divergencias documentadas, y como Professional en el 3?". GNU: every listed element, both tables = error,
+  last index wins. Kernel in materi.cc (strain_volume_setup / _in_set / _eigen): the strain passed to set_stress
+  loses eps_v/3 on the diagonal; ELEMENT_STRAIN_VOLUME = integral of tr F - 3 (preallocated in top.cc for the
+  parallel loop); post.cc sums it per set. All 10 tests match the Professional to 1e-8 (plane strain 0.0454000102547,
+  geometry 0.100124059301, two indices 0.139875940699 / 0.460124059301).

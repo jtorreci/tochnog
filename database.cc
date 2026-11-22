@@ -3309,6 +3309,15 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   data_class[ELEMENT_VOLUME] = ELEMENT;
   data_required[ELEMENT_VOLUME] = ELEMENT;
 
+  // volume increase tr(F)-1 integrated over the element, kept only for
+  // the elements of a strain_volume_* run (post_strain_volume_absolute).
+  strcpy(name[ELEMENT_STRAIN_VOLUME],"element_strain_volume");
+  type[ELEMENT_STRAIN_VOLUME] = DOUBLE_PRECISION;
+  data_length[ELEMENT_STRAIN_VOLUME] = 1;
+  external[ELEMENT_STRAIN_VOLUME] = 0;
+  data_class[ELEMENT_STRAIN_VOLUME] = ELEMENT;
+  data_required[ELEMENT_STRAIN_VOLUME] = ELEMENT;
+
   strcpy(name[EISENSTAT],"eisenstat");
 
   strcpy(name[EVERYTHING],"everything" );
@@ -8760,23 +8769,39 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   fixed_length[MPC_FROM_TRUSS_DISTRIBUTE_MPC] = 0;
   data_class[MPC_FROM_TRUSS_DISTRIBUTE_MPC] = CONTROL;
 
-  // strain_volume_* (manual Professional 6.96x): prescribed volume
-  // strain and its element. Consumption PENDING.
+  // strain_volume_* (manual Professional 6.1062-6.1066): prescribed
+  // volume strain of a set of elements (strain_volume_eigen, materi.cc).
   strcpy(name[STRAIN_VOLUME_ABSOLUTE_TIME],"strain_volume_absolute_time");
   type[STRAIN_VOLUME_ABSOLUTE_TIME] = DOUBLE_PRECISION;
   data_length[STRAIN_VOLUME_ABSOLUTE_TIME] = DATA_ITEM_SIZE;
   fixed_length[STRAIN_VOLUME_ABSOLUTE_TIME] = 0;
   data_class[STRAIN_VOLUME_ABSOLUTE_TIME] = CONTROL;
 
+  strcpy(name[STRAIN_VOLUME_RELATIVE_TIME],"strain_volume_relative_time");
+  type[STRAIN_VOLUME_RELATIVE_TIME] = DOUBLE_PRECISION;
+  data_length[STRAIN_VOLUME_RELATIVE_TIME] = DATA_ITEM_SIZE;
+  fixed_length[STRAIN_VOLUME_RELATIVE_TIME] = 0;
+  data_class[STRAIN_VOLUME_RELATIVE_TIME] = CONTROL;
+
   strcpy(name[STRAIN_VOLUME_ELEMENT],"strain_volume_element");
   type[STRAIN_VOLUME_ELEMENT] = INTEGER;
-  data_length[STRAIN_VOLUME_ELEMENT] = 1;
-  fixed_length[STRAIN_VOLUME_ELEMENT] = 1;
+  data_length[STRAIN_VOLUME_ELEMENT] = DATA_ITEM_SIZE;
+  fixed_length[STRAIN_VOLUME_ELEMENT] = 0;
   data_class[STRAIN_VOLUME_ELEMENT] = CONTROL;
 
-  // strain_volume output items (manual Professional 6.966/6.968):
-  // consumed by the target_item records of the corpus tests.
-  // Consumption PENDING.
+  strcpy(name[STRAIN_VOLUME_ELEMENT_GROUP],"strain_volume_element_group");
+  type[STRAIN_VOLUME_ELEMENT_GROUP] = INTEGER;
+  data_length[STRAIN_VOLUME_ELEMENT_GROUP] = DATA_ITEM_SIZE;
+  fixed_length[STRAIN_VOLUME_ELEMENT_GROUP] = 0;
+  data_class[STRAIN_VOLUME_ELEMENT_GROUP] = CONTROL;
+
+  strcpy(name[STRAIN_VOLUME_GEOMETRY],"strain_volume_geometry");
+  type[STRAIN_VOLUME_GEOMETRY] = INTEGER;
+  data_length[STRAIN_VOLUME_GEOMETRY] = 2;
+  data_class[STRAIN_VOLUME_GEOMETRY] = CONTROL;
+
+  // strain_volume output items (manual Professional 6.965-6.967), filled
+  // by post_count_data_volume (post.cc).
   strcpy(name[POST_STRAIN_VOLUME_ABSOLUTE],"post_strain_volume_absolute");
   type[POST_STRAIN_VOLUME_ABSOLUTE] = DOUBLE_PRECISION;
   data_length[POST_STRAIN_VOLUME_ABSOLUTE] = 1;

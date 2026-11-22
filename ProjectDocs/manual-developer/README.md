@@ -64,6 +64,7 @@ page lists its own in "Differences with the Professional version".
 - [group_contact_spring_direction_automatic_planes](group_contact_spring_direction_automatic_planes.md) — conspr.cc planes, friction default, 2D tangent, signed matrix (F5 T5 U6).
 - [group_truss_elasti_elongation_force_diagram](group_truss_elasti_elongation_force_diagram.md) — truss.cc force and slope from the diagram of the total strain (F5 T5 U6).
 - [group_time_fill](group_time_fill.md) — group.cc group_time_fill_factor(), used by group_time_alive, get_materi_density, the materi.cc pore pressure and plasti_rule (F5 T5 U7).
+- [strain_volume_element](strain_volume_element.md) — materi.cc strain_volume_setup / _in_set / _eigen, the stress strain copy in materi(), post.cc results (F5 T5 U8).
 - [group_interface](group_interface.md) — interface elements (joints between blocks).
 - [control_mesh_convert](control_mesh_convert.md) — automatic conversion of bar2 to quad4 for interfaces.
 - [post_force_edge_summed](post_force_edge_summed.md) — total force of the force_edge records, integrated over the edges.
@@ -473,7 +474,7 @@ page lists its own in "Differences with the Professional version".
 - [post_point_eps_iso](post_point_eps_iso.md) — point_el() eps_iso argument (F5 T2 V9).
 - [post_point_node_type](post_point_node_type.md) — NODE / NODE_START_REFINED coordinates in parallel_post_point() (F5 T2 V9).
 - [post_quadrilateral_element_group](post_quadrilateral_element_group.md) — quadrilateral loop sets the search group (F5 T2 V9).
-- [post_strain_volume_initial](post_strain_volume_initial.md) — captured once in post_count_data_volume(), partial (F5 T2 V9).
+- [post_strain_volume_initial](post_strain_volume_initial.md) — computed by strain_volume_setup() in materi.cc (F5 T2 V9, F5 T5 U8).
 - [group_groundflow_expansion](group_groundflow_expansion.md) — registro parse-only.
 - [control_print_gid_contact_spring2](control_print_gid_contact_spring2.md) — no_index + alias sin prefijo control_.
 - [control_mesh_macro_concentrate](control_mesh_macro_concentrate.md) — registro parse-only (4 valores).

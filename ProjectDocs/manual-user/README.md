@@ -61,6 +61,7 @@ page lists its own in "Differences with the Professional version".
 - [group_contact_spring_direction_automatic_planes](group_contact_spring_direction_automatic_planes.md) — components the automatic contact spring direction may have; unlimited friction without a friction record (6.606/6.604, F5 T5 U6).
 - [group_truss_elasti_elongation_force_diagram](group_truss_elasti_elongation_force_diagram.md) — truss force versus elongation/initial length diagram, nonlinear elastic (6.773, F5 T5 U6).
 - [group_time_fill](group_time_fill.md) — slowly filled element groups: density and pore pressure ramp, no plasticity while filling (6.770, F5 T5 U7).
+- [strain_volume_element](strain_volume_element.md) — prescribed volume strain of elements, groups or a geometry, post_strain_volume_* (6.1062-6.1066, F5 T5 U8).
 - [group_interface](group_interface.md) — interface elements (joints between blocks).
 - [control_mesh_convert](control_mesh_convert.md) — automatic conversion of bar2 to quad4 (and bar3 to quad6) for interfaces.
 - [post_force_edge_summed](post_force_edge_summed.md) — total force of the force_edge records, integrated over the edges.
@@ -478,7 +479,7 @@ page lists its own in "Differences with the Professional version".
 - [post_point_eps_iso](post_point_eps_iso.md) — post point isoparametric tolerance (6.957) (F5 T2 V9).
 - [post_point_node_type](post_point_node_type.md) — -node / -node_start_refined post point search (6.959) (F5 T2 V9).
 - [post_quadrilateral_element_group](post_quadrilateral_element_group.md) — post quadrilateral from one element group (6.963) (F5 T2 V9).
-- [post_strain_volume_initial](post_strain_volume_initial.md) — initial volume of strain_volume_element, partial (6.966) (F5 T2 V9).
+- [post_strain_volume_initial](post_strain_volume_initial.md) — initial volume of the strain_volume set (6.966) (F5 T2 V9, F5 T5 U8).
 - [group_groundflow_expansion](group_groundflow_expansion.md) — thermal expansion coefficient of the fluid/soil (6.614); parse-only.
 - [control_print_gid_contact_spring2](control_print_gid_contact_spring2.md) — GiD rendering of contact_spring2 (6.297, alias spelling accepted).
 - [control_mesh_macro_concentrate](control_mesh_macro_concentrate.md) — rectangle macro mesh concentration (6.207); parse-only.

@@ -1287,6 +1287,9 @@ void input( )
   // without a multiple phreatic level, before the calculation starts.
   groundflow_phreatic_only_apply();
 
+  // strain_volume_*: table checks and initial volumes of the sets.
+  strain_volume_setup();
+
   // check that elements do not have duplicate nodes (check_element_node)
   {
     long int check_element_node_switch=-YES;

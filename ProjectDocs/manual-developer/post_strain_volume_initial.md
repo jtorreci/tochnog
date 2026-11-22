@@ -3,12 +3,12 @@
 ## Implementation (F5 T2 V9)
 
 - **Record:** DOUBLE, length 1, indexed, class POST.
-- **Fill:** `post.cc`, `post_count_data_volume()`: for each `strain_volume_element` index without the record, the ELEMENT_VOLUME of its element(s), PUT once (kept afterwards).
+- **Fill:** `materi.cc`, `strain_volume_setup()` at the end of `input()`: the integrated initial volume of each strain_volume set (F5 T5 U8; before, `post.cc` copied ELEMENT_VOLUME once).
 
 ## Verification
 
 `post_count_data1` (1 = Professional).
 
-## Pending
+## Related
 
-- `strain_volume_*` and `post_strain_volume_absolute / _relative` are registered but not computed (prescribed volume strain not implemented).
+- [strain_volume_element](strain_volume_element.md): the volume strain and `post_strain_volume_absolute / _relative` (F5 T5 U8).

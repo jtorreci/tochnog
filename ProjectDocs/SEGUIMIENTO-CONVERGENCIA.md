@@ -2119,11 +2119,11 @@ Nota: `group_interface_ground` del checklist anterior NUNCA existió (artefacto 
 - [x] `post_quadrilateral_element_group` — quadrilateral de un grupo (= Pro 0.0880956) (F5 T2 V9, a1c7d7d, 2026-11-04)
 - [x] `post_quadrilateral_n` — presente en el GNU
 
-### post_strain (0/3)
+### post_strain (3/3)
 
-- [ ] `post_strain_volume_absolute` — PENDIENTE
-- [x] `post_strain_volume_initial` — volumen inicial de strain_volume_element (= Pro 1); PARCIAL: strain_volume no implementado (F5 T2 V9, a1c7d7d, 2026-11-04)
-- [ ] `post_strain_volume_relative` — PENDIENTE
+- [x] `post_strain_volume_absolute` — F5 T5 U8 (2026-11-22): summed volume increase of the set (= Professional 1e-8)
+- [x] `post_strain_volume_initial` — volumen inicial del conjunto strain_volume (F5 T2 V9, a1c7d7d; completo en F5 T5 U8 (2026-11-22))
+- [x] `post_strain_volume_relative` — F5 T5 U8 (2026-11-22): 100*absolute/initial
 
 ### print_ (0/1)
 
@@ -2293,11 +2293,11 @@ Nota: `group_interface_ground` del checklist anterior NUNCA existió (artefacto 
 - [x] `strain_settlement_diagram_number` — implementada
 - [x] `strain_settlement_element_group` — implementada
 - [x] `strain_settlement_parameters` — implementada (creep de asentamiento con saturación; `strain_settlement_creep` en materi.cc; validada con `strain_settle`)
-- [ ] `strain_volume_absolute_time` — PENDIENTE
-- [ ] `strain_volume_element` — PENDIENTE
-- [ ] `strain_volume_element_group` — PENDIENTE
-- [ ] `strain_volume_geometry` — PENDIENTE
-- [ ] `strain_volume_relative_time` — PENDIENTE
+- [x] `strain_volume_absolute_time` — F5 T5 U8 (2026-11-22): absolute table, volume increase / initial volume of the set
+- [x] `strain_volume_element` — F5 T5 U8 (2026-11-22): every listed element (manual; the Professional uses only the first, DIVERGENCES STRAIN-VOLUME-ELEMENT-LIST)
+- [x] `strain_volume_element_group` — F5 T5 U8 (2026-11-22): element groups of the set
+- [x] `strain_volume_geometry` — F5 T5 U8 (2026-11-22): elements with all nodes inside
+- [x] `strain_volume_relative_time` — F5 T5 U8 (2026-11-22): percentage table; eps_v/3 in xx, yy, zz removed from the stress strain
 
 ### support (18/18 + _element de facto + status = 20/20 COMPLETO)
 

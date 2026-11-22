@@ -2,7 +2,7 @@
 
 ## Description
 
-Output record (manual Professional 6.966): the initial volume of the elements of `strain_volume_element` (same index). It is taken the first time the element volumes exist (the first step) and kept.
+Output record (manual Professional 6.966): the initial volume of the strain_volume set with the same index (see [strain_volume_element](strain_volume_element.md)). It is computed before the calculation from the input coordinates.
 
 ## Usage
 
@@ -16,4 +16,4 @@ target_item 5 -post_strain_volume_initial 10 0
 
 ## Differences with the Professional version
 
-Same value. PARTIAL: the prescribed volume strain itself (`strain_volume_absolute_time`, `post_strain_volume_absolute` / `_relative`) is not implemented in the GNU yet.
+Same value. `post_strain_volume_absolute` / `_relative` and the volume strain itself are on the [strain_volume_element](strain_volume_element.md) page (F5 T5 U8).

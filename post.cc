@@ -81,9 +81,9 @@ static long int post_item_requested( long int idat )
 //  - post_group_volume_summed (6.937): the volume of the non-empty
 //    elements per element group (a post_global item of the Professional;
 //    the GNU computes it on demand, as post_force_edge_summed).
-//  - post_strain_volume_initial (6.966): the volume of the
-//    strain_volume_element elements, captured the first time the element
-//    volumes exist and kept afterwards.
+//  - post_strain_volume_absolute / _relative (6.965, 6.967): the volume
+//    increase of each strain_volume set (initial volume 6.966 from
+//    strain_volume_setup).
 static void post_count_data_volume( void )
 
 {
@@ -161,24 +161,36 @@ static void post_count_data_volume( void )
       ngroup, VERSION_NORMAL, PUT );
   }
 
-  db_max_index( STRAIN_VOLUME_ELEMENT, imax, VERSION_NORMAL, GET );
+  // strain_volume_* (F5 T5 U8): the initial volume of each set is stored
+  // by strain_volume_setup (materi.cc); the absolute result is the summed
+  // element volume increase of the set, the relative one is a percentage.
+  db_max_index( POST_STRAIN_VOLUME_INITIAL, imax, VERSION_NORMAL, GET );
+  if ( imax>=0 ) db_max_index( ELEMENT, max_element, VERSION_NORMAL, GET );
   for ( ind=0; ind<=imax; ind++ ) {
-    if ( !db_active_index( STRAIN_VOLUME_ELEMENT, ind, VERSION_NORMAL ) ||
-         db_active_index( POST_STRAIN_VOLUME_INITIAL, ind, VERSION_NORMAL ) )
+    if ( !db_active_index( POST_STRAIN_VOLUME_INITIAL, ind, VERSION_NORMAL ) )
       continue;
-    db( STRAIN_VOLUME_ELEMENT, ind, items, ddum, length, VERSION_NORMAL,
-      GET );
-    long int have_volume = 0;
+    double initial = 0.;
+    ldum = 1;
+    db( POST_STRAIN_VOLUME_INITIAL, ind, idum, &initial, ldum,
+      VERSION_NORMAL, GET );
     result = 0.;
-    for ( i=0; i<length; i++ ) {
-      volume = 0.;
-      if ( db( ELEMENT_VOLUME, items[i], idum, &volume, ldum,
-           VERSION_NORMAL, GET_IF_EXISTS ) ) have_volume = 1;
+    for ( element=0; element<=max_element; element++ ) {
+      if ( !db_active_index( ELEMENT_STRAIN_VOLUME, element,
+           VERSION_NORMAL ) ) continue;
+      group = 0;
+      db( ELEMENT_GROUP, element, &group, ddum, ldum, VERSION_NORMAL,
+        GET_IF_EXISTS );
+      if ( !strain_volume_in_set( ind, element, group ) ) continue;
+      db( ELEMENT_STRAIN_VOLUME, element, idum, &volume, ldum,
+        VERSION_NORMAL, GET );
       result += volume;
     }
     ldum = 1;
-    if ( have_volume ) db( POST_STRAIN_VOLUME_INITIAL, ind, idum, &result,
-      ldum, VERSION_NORMAL, PUT );
+    db( POST_STRAIN_VOLUME_ABSOLUTE, ind, idum, &result, ldum,
+      VERSION_NORMAL, PUT );
+    value = initial>0. ? 100. * result / initial : 0.;
+    db( POST_STRAIN_VOLUME_RELATIVE, ind, idum, &value, ldum,
+      VERSION_NORMAL, PUT );
   }
 }
 

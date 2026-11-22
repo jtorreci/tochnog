@@ -624,6 +624,7 @@ enum {
   ELEMENT_TRUSS_DIRECTION,
   ELEMENT_TRUSS_FORCE,
   ELEMENT_VOLUME,
+  ELEMENT_STRAIN_VOLUME,
   EMPTY,
   EVERYTHING,
   EXIT_TOCHNOG,
@@ -1541,6 +1542,9 @@ enum {
   POST_STRAIN_VOLUME_RELATIVE,
   STRAIN_VOLUME_ABSOLUTE_TIME,
   STRAIN_VOLUME_ELEMENT,
+  STRAIN_VOLUME_ELEMENT_GROUP,
+  STRAIN_VOLUME_GEOMETRY,
+  STRAIN_VOLUME_RELATIVE_TIME,
   CONTROL_DATA_SAVE,
   CONTROL_PRINT_GID_SAVE_DIFFERENCE,
   BOUNDA_TIME_SMC,
@@ -2133,6 +2137,11 @@ void      area( long int element, long int name,
 void      area_element_group( long int version );
 long int  area_element_group_time_active( void );
 double    group_time_fill_factor( long int element_group );
+void      strain_volume_setup( void );
+long int  strain_volume_in_set( long int ind, long int element,
+            long int element_group );
+long int  strain_volume_eigen( long int element, long int element_group,
+            double &eigen_old, double &eigen_new );
 long int  group_time_alive( long int element_group, double time_total );
 long int  element_group_applied( long int element_group );
 long int  element_group_apply_active( void );

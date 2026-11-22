@@ -1403,6 +1403,12 @@ void step_start( long int task, long int options_solver[], double dtime, double 
       db_allocate( ELEMENT_MASS, max_element, VERSION_NORMAL, MINIMAL );
     }
 
+    // strain_volume_* (F5 T5 U8): element volume increase, filled in the
+    // parallel element loop
+    if ( db_partialname_any("strain_volume_") ) {
+      db_allocate( ELEMENT_STRAIN_VOLUME, max_element, VERSION_NORMAL, MINIMAL );
+    }
+
     if ( db_partialname_any("group_materi_failure") || 
          db_partialname_any("control_mesh_delete") ) {
       db_allocate( ELEMENT_MATRIX_DELETE, max_element, VERSION_NORMAL, MINIMAL );

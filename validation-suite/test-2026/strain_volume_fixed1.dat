@@ -1,0 +1,41 @@
+( strain_volume_relative_time (manual 6.1066), F5 T5 U8: one hex8 with all
+  nodes fixed gets 3 % relative volume strain. A third of it is an extra
+  normal strain in x, y and z, so sxx = syy = szz = -E/(1-2nu)*0.01 =
+  -16666.67 (Professional 02-08-2026) and the actual volume increase is 0.
+)
+echo -no
+number_of_space_dimensions 3
+materi_velocity
+materi_displacement
+materi_stress
+end_initia
+
+node 1  0 0 0
+node 2  2 0 0
+node 3  0 2 0
+node 4  2 2 0
+node 5  0 0 1
+node 6  2 0 1
+node 7  0 2 1
+node 8  2 2 1
+element 1  -hex8 1 2 3 4 5 6 7 8
+
+group_type 0  -materi
+group_materi_elasti_young 0  1.0e6
+group_materi_elasti_poisson 0  0.2
+group_materi_memory 0  -total_linear
+
+bounda_dof 10  -ra 1 2 3 4 5 6 7 8 -ra -velx -vely -velz
+
+strain_volume_relative_time 10  0. 0. 3. 3. 1.e10 3.
+strain_volume_element       10  1
+
+control_timestep 10  1. 3.
+
+target_item    1  -node_dof 8 -sigxx
+target_value   1  -1.666666666667e+04 1.e-4
+target_item    2  -node_dof 8 -sigzz
+target_value   2  -1.666666666667e+04 1.e-4
+target_item    3  -post_strain_volume_absolute 10 0
+target_value   3  0. 1.e-8
+end_data

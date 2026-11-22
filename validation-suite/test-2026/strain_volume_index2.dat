@@ -1,0 +1,42 @@
+( strain_volume_* with the same element in two indices, F5 T5 U8: element 1
+  is in index 10 (3 %) and index 20 (6 %). The last index wins, as in the
+  Professional 02-08-2026 (the manual does not define it): 6 %, absolute
+  0.2002481186016 reported by both indices.
+)
+echo -no
+number_of_space_dimensions 3
+materi_velocity
+materi_displacement
+materi_stress
+end_initia
+node 1 0 0 0
+node 2 2 0 0
+node 3 0 2 0
+node 4 2 2 0
+node 5 0 0 1
+node 6 2 0 1
+node 7 0 2 1
+node 8 2 2 1
+node 9 0 0 3
+node 10 2 0 3
+node 11 0 2 3
+node 12 2 2 3
+element 1 -hex8 1 2 3 4 5 6 7 8
+element 2 -hex8 5 6 7 8 9 10 11 12
+group_type 0 -materi
+group_materi_elasti_young 0 1.0e6
+group_materi_elasti_poisson 0 0.2
+group_materi_memory 0 -total_linear
+bounda_dof 10 -ra 1 3 5 7 9 11 -ra -velx
+bounda_dof 20 -ra 1 2 5 6 9 10 -ra -vely
+bounda_dof 30 -ra 1 2 3 4 -ra -velz
+strain_volume_relative_time 10 0. 0. 1. 3.
+strain_volume_element 10 1
+strain_volume_relative_time 20 0. 0. 1. 6.
+strain_volume_element 20 1
+control_timestep 10 1. 1.
+target_item    1  -post_strain_volume_absolute 10 0
+target_value   1  2.002481186016e-01 1.e-8
+target_item    2  -post_strain_volume_absolute 20 0
+target_value   2  2.002481186016e-01 1.e-8
+end_data

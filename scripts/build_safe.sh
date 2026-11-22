@@ -3610,6 +3610,17 @@ expected_error_ok "$T2026" truss_force_diagram_error1
 run_ok "$T2026" group_time_fill1
 run_ok "$T2026" group_time_fill2
 run_ok "$T2026" group_time_fill3
+# F5 T5 U8: strain_volume_* (6.1062-6.1066): prescribed volume strain, post_strain_volume_*
+run_ok "$T2026" strain_volume1
+run_ok "$T2026" strain_volume_fixed1
+run_ok "$T2026" strain_volume_plane1
+run_ok "$T2026" strain_volume_all1
+run_ok "$T2026" strain_volume_element_list1
+run_ok "$T2026" strain_volume_group1
+run_ok "$T2026" strain_volume_geometry1
+run_ok "$T2026" strain_volume_index1
+run_ok "$T2026" strain_volume_index2
+expected_error_ok "$T2026" strain_volume_error1
 run_ok "$T2026" materi_plasti_maximum_iterations1
 run_ok "$T2026" materi_plasti_maximum_iterations2
 expected_error_ok "$T2026" materi_plasti_maximum_iterations_error1

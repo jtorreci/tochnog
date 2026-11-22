@@ -479,6 +479,36 @@ void materi( long int element, long int gr, long int name, long int nnol,
     old_deften, new_deften, old_ept, inc_ept, new_ept, 
     old_rot, inc_rot, new_rot );
 
+  // strain_volume_* (F5 T5 U8): the stress sees the strain minus a third
+  // of the prescribed volume strain in xx, yy and zz; the element keeps
+  // its actual volume increase for post_strain_volume_absolute.
+  double sv_inc_ept[MDIM*MDIM], sv_new_ept[MDIM*MDIM],
+    *stress_inc_ept=inc_ept, *stress_new_ept=new_ept;
+  {
+    double sv_old=0., sv_new=0., sv_vol=0.;
+    if ( strain_volume_eigen( element, gr, sv_old, sv_new ) ) {
+      array_move( inc_ept, sv_inc_ept, MDIM*MDIM );
+      array_move( new_ept, sv_new_ept, MDIM*MDIM );
+      for ( idim=0; idim<MDIM; idim++ ) {
+        sv_inc_ept[idim*MDIM+idim] -= ( sv_new - sv_old ) / 3.;
+        sv_new_ept[idim*MDIM+idim] -= sv_new / 3.;
+      }
+      stress_inc_ept = sv_inc_ept;
+      stress_new_ept = sv_new_ept;
+      sv_vol = volume * ( new_deften[0] + new_deften[4] + new_deften[8] - 3. );
+      if ( ipoint>0 && db_active_index( ELEMENT_STRAIN_VOLUME, element,
+           VERSION_NORMAL ) ) {
+        double sv_prev = 0.;
+        db( ELEMENT_STRAIN_VOLUME, element, idum, &sv_prev, ldum,
+          VERSION_NORMAL, GET );
+        sv_vol += sv_prev;
+      }
+      ldum = 1;
+      db( ELEMENT_STRAIN_VOLUME, element, idum, &sv_vol, ldum, VERSION_NORMAL,
+        PUT );
+    }
+  }
+
   // group_materi_undrained_capacity (manual Professional 6.760 + theory
   // 2.2.7): UNDRAINED groundwater analysis WITHOUT the groundwater dof
   // in the system matrix. When the element group carries the capacity C
@@ -637,7 +667,7 @@ void materi( long int element, long int gr, long int name, long int nnol,
       old_unknowns, new_unknowns,
       old_grad_old_unknowns, new_grad_new_unknowns, 
       rotated_old_sig, new_sig, new_sig_eff,
-      rotated_old_msig, new_msig, inc_ept, new_ept,
+      rotated_old_msig, new_msig, stress_inc_ept, stress_new_ept,
       old_epe, inc_epe, old_epp, inc_epp, old_rho, new_rho, 
       old_epi, new_epi, old_hisv, new_hisv, 
       old_damage, new_damage, old_kappa, new_kappa, old_kapsh, new_kapsh,
@@ -1939,6 +1969,185 @@ void strain_settlement_creep( long int element, long int gr, long int nnol,
   if ( ndim>=1 ) inc_ept[0] += lateral * deps;          // xx
   if ( ndim>=2 ) inc_ept[4] += lateral * deps;          // yy (2D: both lateral)
   if ( ndim==3 ) inc_ept[8] += deps;                    // zz (already vertical)
+}
+
+// strain_volume_* (manual Professional 6.1062-6.1066, F5 T5 U8).
+// Measured on the Professional 02-08-2026: the prescribed volume strain
+// eps_v is a third in xx, yy and zz (zz also in plane strain) that the
+// stress does not see (stress = D (eps - eps_v/3 I)); its value is the
+// table at the time point, not accumulated. Relative tables give
+// eps_v = value/100; absolute tables eps_v = value / the initial volume of
+// the selected elements. Without strain_volume_element, _element_group or
+// _geometry every isoparametric element is selected; _geometry selects the
+// elements with all nodes inside. GNU follows the manual where the
+// Professional does not: every element of strain_volume_element is used
+// (DIVERGENCES STRAIN-VOLUME-ELEMENT-LIST) and giving both tables in one
+// index is an error (STRAIN-VOLUME-BOTH-TABLES). When an element is in
+// several indices the last one wins, as in the Professional.
+
+static long int strain_volume_index_max( void )
+
+{
+  long int imax=-1, jmax=-1;
+
+  db_max_index( STRAIN_VOLUME_RELATIVE_TIME, imax, VERSION_NORMAL, GET );
+  db_max_index( STRAIN_VOLUME_ABSOLUTE_TIME, jmax, VERSION_NORMAL, GET );
+  if ( jmax>imax ) imax = jmax;
+  db_max_index( STRAIN_VOLUME_ELEMENT, jmax, VERSION_NORMAL, GET );
+  if ( jmax>imax ) imax = jmax;
+  db_max_index( STRAIN_VOLUME_ELEMENT_GROUP, jmax, VERSION_NORMAL, GET );
+  if ( jmax>imax ) imax = jmax;
+  db_max_index( STRAIN_VOLUME_GEOMETRY, jmax, VERSION_NORMAL, GET );
+  if ( jmax>imax ) imax = jmax;
+  return imax;
+}
+
+// 1 when the element can carry a volume strain: an isoparametric element
+// of a -materi group (no structural, spring or interface element).
+static long int strain_volume_candidate( long int element, long int name,
+  long int element_group )
+
+{
+  long int i=0, length=0, materi_type=0, types[DATA_ITEM_SIZE];
+  double ddum[1];
+
+  if ( name==-BEAM || name==-CONTACTSPRING || name==-SPRING1 ||
+       name==-SPRING2 || name==-TRUSS || name==-TRUSSBEAM ) return 0;
+  if ( db_active_index( GROUP_INTERFACE, element_group, VERSION_NORMAL ) )
+    return 0;
+  if ( !db( GROUP_TYPE, element_group, types, ddum, length, VERSION_NORMAL,
+       GET_IF_EXISTS ) ) return 0;
+  for ( i=0; i<length; i++ ) if ( types[i]==-MATERI ) materi_type = 1;
+  return materi_type && element>=0;
+}
+
+// 1 when the element belongs to the set of strain_volume index ind.
+long int strain_volume_in_set( long int ind, long int element,
+  long int element_group )
+
+{
+  long int i=0, length=0, given=0, *list=NULL;
+
+  if ( db_active_index( STRAIN_VOLUME_ELEMENT, ind, VERSION_NORMAL ) ) {
+    given = 1;
+    list = db_int( STRAIN_VOLUME_ELEMENT, ind, VERSION_NORMAL );
+    length = db_len( STRAIN_VOLUME_ELEMENT, ind, VERSION_NORMAL );
+    for ( i=0; i<length; i++ ) if ( list[i]==element ) return 1;
+  }
+  if ( db_active_index( STRAIN_VOLUME_ELEMENT_GROUP, ind, VERSION_NORMAL ) ) {
+    given = 1;
+    list = db_int( STRAIN_VOLUME_ELEMENT_GROUP, ind, VERSION_NORMAL );
+    length = db_len( STRAIN_VOLUME_ELEMENT_GROUP, ind, VERSION_NORMAL );
+    for ( i=0; i<length; i++ ) if ( list[i]==element_group ) return 1;
+  }
+  if ( db_active_index( STRAIN_VOLUME_GEOMETRY, ind, VERSION_NORMAL ) ) {
+    given = 1;
+    list = db_int( STRAIN_VOLUME_GEOMETRY, ind, VERSION_NORMAL );
+    long int node_type = NODE, max_start = -1;
+    db_max_index( NODE_START_REFINED, max_start, VERSION_NORMAL, GET );
+    if ( max_start>=0 ) node_type = NODE_START_REFINED;
+    if ( element_in_geometry( element, list, -ALL, node_type,
+         PROJECT_EXACT, NULL, VERSION_NORMAL ) ) return 1;
+  }
+  return !given;
+}
+
+// Before the calculation: checks the tables and stores the initial volume
+// of each set in post_strain_volume_initial (needed by the absolute
+// tables from the first step on).
+void strain_volume_setup( void )
+
+{
+  long int ind=0, imax=0, element=0, max_element=0, element_group=0,
+    name=0, nnol=0, npoint=0, inol=0, idim=0, ipoint=0, length=0, ldum=1,
+    idum[1], el[1+MNOL];
+  double result=0., ddum[MDIM], coord[MNOL*MDIM], h[MPOINT*MNOL],
+    old_d[MPOINT*MDIM*MNOL], new_d[MPOINT*MDIM*MNOL],
+    new_b[MPOINT*MSTRAIN*MNOL*MDIM], volume[MPOINT];
+
+  imax = strain_volume_index_max();
+  if ( imax<0 ) return;
+  db_max_index( ELEMENT, max_element, VERSION_NORMAL, GET );
+  for ( ind=0; ind<=imax; ind++ ) {
+    if ( db_active_index( STRAIN_VOLUME_RELATIVE_TIME, ind, VERSION_NORMAL ) &&
+         db_active_index( STRAIN_VOLUME_ABSOLUTE_TIME, ind, VERSION_NORMAL ) ) {
+      pri( "Error: give either strain_volume_relative_time or "
+        "strain_volume_absolute_time for index ", ind );
+      db_error( STRAIN_VOLUME_ABSOLUTE_TIME, ind );
+    }
+    if ( !db_active_index( STRAIN_VOLUME_RELATIVE_TIME, ind, VERSION_NORMAL ) &&
+         !db_active_index( STRAIN_VOLUME_ABSOLUTE_TIME, ind, VERSION_NORMAL ) &&
+         !db_active_index( STRAIN_VOLUME_ELEMENT, ind, VERSION_NORMAL ) &&
+         !db_active_index( STRAIN_VOLUME_ELEMENT_GROUP, ind, VERSION_NORMAL ) &&
+         !db_active_index( STRAIN_VOLUME_GEOMETRY, ind, VERSION_NORMAL ) )
+      continue;
+    result = 0.;
+    for ( element=0; element<=max_element; element++ ) {
+      if ( !db_active_index( ELEMENT, element, VERSION_NORMAL ) ) continue;
+      db( ELEMENT, element, el, ddum, length, VERSION_NORMAL, GET );
+      name = el[0];
+      nnol = length - 1;
+      element_group = 0;
+      db( ELEMENT_GROUP, element, &element_group, ddum, ldum, VERSION_NORMAL,
+        GET_IF_EXISTS );
+      if ( !strain_volume_candidate( element, name, element_group ) ||
+           !strain_volume_in_set( ind, element, element_group ) ) continue;
+      for ( inol=0; inol<nnol; inol++ ) {
+        db( NODE, el[1+inol], idum, ddum, ldum, VERSION_NORMAL, GET );
+        for ( idim=0; idim<ndim; idim++ ) coord[inol*ndim+idim] = ddum[idim];
+      }
+      pol( element, element_group, name, nnol, coord, coord, npoint, h,
+        old_d, new_d, new_b, volume );
+      for ( ipoint=0; ipoint<npoint; ipoint++ ) result += volume[ipoint];
+    }
+    ldum = 1;
+    db( POST_STRAIN_VOLUME_INITIAL, ind, idum, &result, ldum, VERSION_NORMAL,
+      PUT );
+  }
+}
+
+// The volume strain of the element at the start (eigen_old) and the end
+// (eigen_new) of the step; returns 1 when the element is in a set.
+long int strain_volume_eigen( long int element, long int element_group,
+  double &eigen_old, double &eigen_new )
+
+{
+  long int ind=0, imax=0, length=0, selected=0, ldum=0, idum[1];
+  double time_current=0., dtime=0., initial=0., value_old=0., value_new=0.,
+    factor=0., *table=NULL;
+
+  eigen_old = eigen_new = 0.;
+  imax = strain_volume_index_max();
+  if ( imax<0 ) return 0;
+  db( TIME_CURRENT, 0, idum, &time_current, ldum, VERSION_NORMAL,
+    GET_IF_EXISTS );
+  db( DTIME, 0, idum, &dtime, ldum, VERSION_NEW, GET_IF_EXISTS );
+  for ( ind=0; ind<=imax; ind++ ) {
+    long int idat = 0;
+    if ( db_active_index( STRAIN_VOLUME_RELATIVE_TIME, ind, VERSION_NORMAL ) )
+      idat = STRAIN_VOLUME_RELATIVE_TIME;
+    else if ( db_active_index( STRAIN_VOLUME_ABSOLUTE_TIME, ind,
+         VERSION_NORMAL ) )
+      idat = STRAIN_VOLUME_ABSOLUTE_TIME;
+    else continue;
+    if ( !strain_volume_in_set( ind, element, element_group ) ) continue;
+    if ( idat==STRAIN_VOLUME_RELATIVE_TIME ) factor = 0.01;
+    else {
+      initial = 0.;
+      db( POST_STRAIN_VOLUME_INITIAL, ind, idum, &initial, ldum,
+        VERSION_NORMAL, GET_IF_EXISTS );
+      if ( initial<=0. ) continue;
+      factor = 1. / initial;
+    }
+    table = db_dbl( idat, ind, VERSION_NORMAL );
+    length = db_len( idat, ind, VERSION_NORMAL );
+    table_xy( table, db_name(idat), length, time_current, value_old );
+    table_xy( table, db_name(idat), length, time_current+dtime, value_new );
+    eigen_old = factor * value_old;
+    eigen_new = factor * value_new;
+    selected = 1;
+  }
+  return selected;
 }
 
 void set_deften_etc( long int element, long int gr, long int nnol, double h[], 

@@ -121,6 +121,7 @@ accepted; the one-name difference in the 2026-11-08 count is not explained.
 2026-11-19 (F5 T5 U6): `group_contact_spring_direction_automatic_planes` (6.606) and
 `group_truss_elasti_elongation_force_diagram` (6.773) accepted.
 2026-11-19 (F5 T5 U7): `group_time_fill` (6.770) accepted.
+2026-11-22 (F5 T5 U8): `strain_volume_*` (6.1062-6.1066) computed, `post_strain_volume_absolute` / `_relative` filled.
 
 ## Gap by family
 
