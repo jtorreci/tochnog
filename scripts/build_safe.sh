@@ -3907,6 +3907,27 @@ if rhs_close "$rr" 0.980198; then
 else
   check_fail "post_node_rhside_ratio_dof_type2" "ratio $rr != 0.980198"
 fi
+# MC-RETURN-PRO (owner 2026-11-23): group_materi_plasti_mohr_coul keeps the
+# exact principal-space face return (step independent); the Professional
+# 02-08-2026 rotates the principal axes and drifts with the step count.
+# Targets: closed-form return, sigxx sigxy sigyy sigzz, then |eppzz| < 1e-10.
+mc_exact() {
+  local n=$1; shift
+  local v
+  v=$(awk '$1=="node_dof" && $2=="4" {print $7, $8, $10, $12, $18}' "$T2026/$n.dbs")
+  if LC_ALL=C awk -v v="$v" -v t="$*" 'BEGIN { split(v,a," "); split(t,b," ");
+       if (length(a)<5) exit 1;
+       for (i=1;i<=4;i++) { d=a[i]-b[i]; if (d<0) d=-d; m=b[i]<0?-b[i]:b[i]; if (d>1e-5*m) exit 1 }
+       e=a[5]<0?-a[5]:a[5]; exit !(e<1e-10) }'; then
+    check_ok "$n (exact Mohr-Coulomb face return, MC-RETURN-PRO)"
+  else
+    check_fail "$n" "node 4 sigxx sigxy sigyy sigzz eppzz = $v"
+  fi
+}
+run_ok "$T2026" mc_return_exact1
+run_ok "$T2026" mc_return_exact2
+mc_exact mc_return_exact1 -35.9458 4.77832 -12.0542 -12.
+mc_exact mc_return_exact2 -44.4136 5.85221 -15.1526 -14.8915
 # C100: under the default -no, control_reset_dof writes the integration
 # points with the reset value at their coordinates (= Professional
 # 02-08-2026 element_intpnt_dof of the same inputs, run above).

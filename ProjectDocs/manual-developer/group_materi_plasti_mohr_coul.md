@@ -46,3 +46,18 @@
   (eppzz -9.7e-4 at dt 0.05): an algorithmic vertex artefact, not a
   property of the law. Not followed. Guard tests `mmc_tension_vertex1/2`.
   See `DIVERGENCES-PROFESSIONAL.md`.
+- **MC-RETURN-PRO (deliberate, owner 2026-11-23).** Away from corners the
+  GNU return equals the closed-form face return in principal space, and it
+  does not depend on the step count under proportional loading. Example:
+  one quad4 in plane strain, E 1000, nu 0.25, phi 30 deg, c 1, phiflow 0,
+  final strain exx -0.04 eyy 0.01 exy 0.01. The result is sigxx -35.9458,
+  sigxy 4.77832, sigzz -12 and eppzz 0, for 1 to 64 steps.
+  - One step of the Professional 02-08-2026 gives the same principal
+    stresses with rotated principal axes (sigxy 4.83215).
+  - More steps drift away from the exact answer: 64 steps give sigzz
+    -13.3526 and eppzz 0.00159 on a face, with sigzz intermediate. The
+    Mohr-Coulomb flow rule excludes that.
+  - Associated flow shows the same pattern.
+
+  Not followed. Guard tests `mc_return_exact1/2`; the Professional fails
+  both. See `DIVERGENCES-PROFESSIONAL.md`.

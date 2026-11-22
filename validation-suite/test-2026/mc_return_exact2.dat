@@ -1,0 +1,41 @@
+( MC-RETURN-PRO: as mc_return_exact1 with associated flow {phiflow = phi}.
+  Exact face return: sigxx -44.4136 sigxy 5.85221 sigyy -15.1526 sigzz
+  -14.8915 eppzz 0. Professional 02-08-2026 {64 steps}: sigxx -44.5466
+  sigzz -16.8827 eppzz 0.00196495. Deliberate divergence, owner 2026-11-23.
+  Checked in scripts/build_safe.sh. )
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_displacement
+materi_stress
+materi_strain_plasti
+end_initia
+node 1 0 0
+node 2 1 0
+node 3 0 1
+node 4 1 1
+element 1 -quad4 1 2 3 4
+group_type 0 -materi
+group_materi_memory 0 -total_linear
+group_materi_elasti_young 0 1000.
+group_materi_elasti_poisson 0 0.25
+group_materi_plasti_mohr_coul 0 0.5235987756 1. 0.5235987756
+bounda_dof 0 1 -velx
+bounda_time 0 0. 0.0 1. 0.0 2. 0.0
+bounda_dof 1 1 -vely
+bounda_time 1 0. 0.0 1. 0.0 2. 0.0
+bounda_dof 2 2 -velx
+bounda_time 2 0. -0.04 1. -0.04 2. -0.04
+bounda_dof 3 2 -vely
+bounda_time 3 0. 0.01 1. 0.01 2. 0.01
+bounda_dof 4 3 -velx
+bounda_time 4 0. 0.01 1. 0.01 2. 0.01
+bounda_dof 5 3 -vely
+bounda_time 5 0. 0.01 1. 0.01 2. 0.01
+bounda_dof 6 4 -velx
+bounda_time 6 0. -0.03 1. -0.03 2. -0.03
+bounda_dof 7 4 -vely
+bounda_time 7 0. 0.02 1. 0.02 2. 0.02
+control_timestep 0 0.0625 1.
+control_print 0 -node_dof
+end_data

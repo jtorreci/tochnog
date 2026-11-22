@@ -1138,3 +1138,11 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   ratio 2.56462e-15 without the record = -materi_velocity, 0.980198 with -condif_temperature; GNU without the record
   0.980198 (all principal dofs). Fix inline in post_node_rhside_fixed_free: no record + materi_velocity ->
   {-MATERI_VELOCITY}. RED 0.980198, GREEN 6.5e-13. Tests post_node_rhside_ratio_dof_type1/2. T2 closed.
+- L-MC (2026-11-23) owner: "si, adelante" (MC plastic difference follow-up), then "mantenemos GNU y documentamos".
+  Measurement: one quad4, homogeneous plane strain, total_linear, E 1000, nu 0.25, phi 30 deg, c 1, final strain
+  exx -0.04 eyy 0.01 exy 0.01 at constant velocity, 1/4/16/64 steps. GNU = closed-form principal face return to all
+  digits, step independent (phiflow 0: sigxx -35.9458 sigxy 4.77832 sigzz -12 eppzz 0; phiflow = phi: sigxx -44.4136
+  sigzz -14.8915). Pro: 1 step same principal stresses, rotated axes (sigxy 4.83215); refining drifts away (64 steps
+  sigzz -13.3526, eppzz 0.00159 on a face). Documented as MC-RETURN-PRO (DIVERGENCES, SEGUIMIENTO Descarte, user and
+  developer pages; K15 note). Guard tests mc_return_exact1/2 (GREEN by design, the Pro fails both). No source change.
+

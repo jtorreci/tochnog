@@ -56,3 +56,14 @@ group_materi_plasti_mohr_coul  0  0.5236 40 0
   `test-2026/mmc_tension_vertex1` (dt 0.05) and `mmc_tension_vertex2`
   (dt 0.047). The Professional fails both. See
   `ProjectDocs/DIVERGENCES-PROFESSIONAL.md` (MC-VERTEX-ZZ).
+
+Away from corners, the GNU version returns the stress exactly to the
+Mohr-Coulomb face, and under proportional loading the answer does not
+depend on the time step. The Professional 02-08-2026 does not do that. For
+one plane-strain element (phi 30 deg, c 1, phiflow 0) it rotates the
+principal axes in one step. With more steps it drifts away from the exact
+answer: at 64 steps it shows sigzz -13.35 against the exact -12, and a
+plastic eppzz 0.0016 where the flow rule gives 0. The GNU version keeps
+the exact answer. Guard tests: `test-2026/mc_return_exact1` (phiflow 0)
+and `mc_return_exact2` (phiflow = phi). See
+`ProjectDocs/DIVERGENCES-PROFESSIONAL.md` (MC-RETURN-PRO).
