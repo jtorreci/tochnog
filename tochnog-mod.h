@@ -69,6 +69,7 @@ enum {
 #define MTHREAD 64      // maximum number of threads
 #define MAXIMUM_NODE 64 // always 64
 #define DATA_ITEM_SIZE 190 // maximum length of (almost all) records
+#define SAFETY_SLIP_MPOINT 2000 // maximum sample points of one slip surface
 #define NONLOCAL_ITEM_SIZE 160 // maximum number of integration points for nonlocal calculation
 // precision in writing output files: 12, or print_precision (manual
 // Professional 6.997; set in top(), global in initia.cc)
@@ -785,6 +786,20 @@ enum {
   GROUP_BEAM_PLANE,
   GROUP_BEAM_SHEAR,
   GROUP_BEAM_FORCE_MOMENT_PLASTI,
+  CONTROL_SAFETY_SLIP,
+  SAFETY_SLIP_MULTI_LINEAR,
+  SAFETY_SLIP_MULTI_LINEAR_N,
+  SAFETY_SLIP_MULTI_LINEAR_RESULT,
+  SAFETY_SLIP_MULTI_LINEAR_SEGMENT_N,
+  SAFETY_SLIP_SURFACE_AREAS,
+  SAFETY_SLIP_SURFACE_CRITICAL,
+  SAFETY_SLIP_SURFACE_DATA_INDEX,
+  SAFETY_SLIP_SURFACE_DATA_NAME,
+  SAFETY_SLIP_SURFACE_ELEMENTS,
+  SAFETY_SLIP_SURFACE_FACTOR,
+  SAFETY_SLIP_SURFACE_NODES,
+  SAFETY_SLIP_SURFACE_STRESSES,
+  SAFETY_SLIP_SURFACE_STRESS_LIMIT,
   GROUP_CONDIF_ABSORPTION,
   GROUP_CONDIF_CAPACITY,
   GROUP_CONDIF_CONDUCTIVITY,

@@ -1870,6 +1870,9 @@ void step_close( long int task, long int ipar, long int npar, long int ipar_i, l
   // computed in the iteration loop and stays.
   post_off = materi_apply_gate_off( POST_APPLY, CONTROL_POST_APPLY );
   if ( !post_off ) post( task ); 
+  // control_safety_slip (manual Professional 6.369, F5 T6): slip-surface
+  // safety factors of the converged step, before control_print and GiD
+  if ( task==YES ) safety_slip();
   post_stale = post_off;
 
   if ( task==YES ) error( GET );

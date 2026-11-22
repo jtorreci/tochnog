@@ -8293,6 +8293,93 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   data_length[GROUP_BEAM_FORCE_MOMENT_PLASTI] = 12;
   data_class[GROUP_BEAM_FORCE_MOMENT_PLASTI] = BEAM;
 
+  // F5 T6: slip-surface safety factor (manual Professional 6.369,
+  // 6.1034-6.1037; safety_slip.cc). control_safety_slip: -yes or the
+  // number of refinement passes.
+  strcpy(name[CONTROL_SAFETY_SLIP],"control_safety_slip");
+  type[CONTROL_SAFETY_SLIP] = INTEGER;
+  data_length[CONTROL_SAFETY_SLIP] = 1;
+  data_class[CONTROL_SAFETY_SLIP] = CONTROL;
+
+  strcpy(name[SAFETY_SLIP_MULTI_LINEAR],"safety_slip_multi_linear");
+  type[SAFETY_SLIP_MULTI_LINEAR] = DOUBLE_PRECISION;
+  data_length[SAFETY_SLIP_MULTI_LINEAR] = DATA_ITEM_SIZE;
+  fixed_length[SAFETY_SLIP_MULTI_LINEAR] = 0;
+  data_class[SAFETY_SLIP_MULTI_LINEAR] = SAFETY_SLIP_MULTI_LINEAR;
+
+  strcpy(name[SAFETY_SLIP_MULTI_LINEAR_N],"safety_slip_multi_linear_n");
+  type[SAFETY_SLIP_MULTI_LINEAR_N] = INTEGER;
+  data_length[SAFETY_SLIP_MULTI_LINEAR_N] = 1;
+  data_class[SAFETY_SLIP_MULTI_LINEAR_N] = SAFETY_SLIP_MULTI_LINEAR;
+  data_required[SAFETY_SLIP_MULTI_LINEAR_N] = SAFETY_SLIP_MULTI_LINEAR;
+
+  strcpy(name[SAFETY_SLIP_MULTI_LINEAR_RESULT],"safety_slip_multi_linear_result");
+  type[SAFETY_SLIP_MULTI_LINEAR_RESULT] = DOUBLE_PRECISION;
+  data_length[SAFETY_SLIP_MULTI_LINEAR_RESULT] = DATA_ITEM_SIZE+1;
+  fixed_length[SAFETY_SLIP_MULTI_LINEAR_RESULT] = 0;
+  data_class[SAFETY_SLIP_MULTI_LINEAR_RESULT] = SAFETY_SLIP_MULTI_LINEAR;
+
+  strcpy(name[SAFETY_SLIP_MULTI_LINEAR_SEGMENT_N],"safety_slip_multi_linear_segment_n");
+  type[SAFETY_SLIP_MULTI_LINEAR_SEGMENT_N] = INTEGER;
+  data_length[SAFETY_SLIP_MULTI_LINEAR_SEGMENT_N] = 1;
+  data_class[SAFETY_SLIP_MULTI_LINEAR_SEGMENT_N] = SAFETY_SLIP_MULTI_LINEAR;
+  data_required[SAFETY_SLIP_MULTI_LINEAR_SEGMENT_N] = SAFETY_SLIP_MULTI_LINEAR;
+
+    // the evaluated slip surfaces (index = surface number, as the
+    // Professional): sample point weights, point pairs separated by
+    // -none, point coordinates x y z, critical flag, safety factor,
+    // sigma_n tau per point, tau_mc per point, index and name of the
+    // defining record
+  strcpy(name[SAFETY_SLIP_SURFACE_AREAS],"safety_slip_surface_areas");
+  type[SAFETY_SLIP_SURFACE_AREAS] = DOUBLE_PRECISION;
+  data_length[SAFETY_SLIP_SURFACE_AREAS] = SAFETY_SLIP_MPOINT;
+  fixed_length[SAFETY_SLIP_SURFACE_AREAS] = 0;
+  data_class[SAFETY_SLIP_SURFACE_AREAS] = SAFETY_SLIP_SURFACE_AREAS;
+
+  strcpy(name[SAFETY_SLIP_SURFACE_CRITICAL],"safety_slip_surface_critical");
+  type[SAFETY_SLIP_SURFACE_CRITICAL] = INTEGER;
+  data_length[SAFETY_SLIP_SURFACE_CRITICAL] = 1;
+  data_class[SAFETY_SLIP_SURFACE_CRITICAL] = SAFETY_SLIP_SURFACE_AREAS;
+
+  strcpy(name[SAFETY_SLIP_SURFACE_DATA_INDEX],"safety_slip_surface_data_index");
+  type[SAFETY_SLIP_SURFACE_DATA_INDEX] = INTEGER;
+  data_length[SAFETY_SLIP_SURFACE_DATA_INDEX] = 1;
+  data_class[SAFETY_SLIP_SURFACE_DATA_INDEX] = SAFETY_SLIP_SURFACE_AREAS;
+
+  strcpy(name[SAFETY_SLIP_SURFACE_DATA_NAME],"safety_slip_surface_data_name");
+  type[SAFETY_SLIP_SURFACE_DATA_NAME] = INTEGER;
+  data_length[SAFETY_SLIP_SURFACE_DATA_NAME] = 1;
+  data_class[SAFETY_SLIP_SURFACE_DATA_NAME] = SAFETY_SLIP_SURFACE_AREAS;
+
+  strcpy(name[SAFETY_SLIP_SURFACE_ELEMENTS],"safety_slip_surface_elements");
+  type[SAFETY_SLIP_SURFACE_ELEMENTS] = INTEGER;
+  data_length[SAFETY_SLIP_SURFACE_ELEMENTS] = 3*SAFETY_SLIP_MPOINT;
+  fixed_length[SAFETY_SLIP_SURFACE_ELEMENTS] = 0;
+  data_class[SAFETY_SLIP_SURFACE_ELEMENTS] = SAFETY_SLIP_SURFACE_AREAS;
+
+  strcpy(name[SAFETY_SLIP_SURFACE_FACTOR],"safety_slip_surface_factor");
+  type[SAFETY_SLIP_SURFACE_FACTOR] = DOUBLE_PRECISION;
+  data_length[SAFETY_SLIP_SURFACE_FACTOR] = 1;
+  data_class[SAFETY_SLIP_SURFACE_FACTOR] = SAFETY_SLIP_SURFACE_AREAS;
+
+  strcpy(name[SAFETY_SLIP_SURFACE_NODES],"safety_slip_surface_nodes");
+  type[SAFETY_SLIP_SURFACE_NODES] = DOUBLE_PRECISION;
+  data_length[SAFETY_SLIP_SURFACE_NODES] = 3*SAFETY_SLIP_MPOINT;
+  fixed_length[SAFETY_SLIP_SURFACE_NODES] = 0;
+  data_class[SAFETY_SLIP_SURFACE_NODES] = SAFETY_SLIP_SURFACE_AREAS;
+
+  strcpy(name[SAFETY_SLIP_SURFACE_STRESSES],"safety_slip_surface_stresses");
+  type[SAFETY_SLIP_SURFACE_STRESSES] = DOUBLE_PRECISION;
+  data_length[SAFETY_SLIP_SURFACE_STRESSES] = 2*SAFETY_SLIP_MPOINT;
+  fixed_length[SAFETY_SLIP_SURFACE_STRESSES] = 0;
+  data_class[SAFETY_SLIP_SURFACE_STRESSES] = SAFETY_SLIP_SURFACE_AREAS;
+
+  strcpy(name[SAFETY_SLIP_SURFACE_STRESS_LIMIT],"safety_slip_surface_stress_limit");
+  type[SAFETY_SLIP_SURFACE_STRESS_LIMIT] = DOUBLE_PRECISION;
+  data_length[SAFETY_SLIP_SURFACE_STRESS_LIMIT] = SAFETY_SLIP_MPOINT;
+  fixed_length[SAFETY_SLIP_SURFACE_STRESS_LIMIT] = 0;
+  data_class[SAFETY_SLIP_SURFACE_STRESS_LIMIT] = SAFETY_SLIP_SURFACE_AREAS;
+
   // Sprint 13: post_element_force family (manual Professional 6.927-
   // 6.935): cross-section forces/moments from the element internal
   // nodal forces (the free-body statics of the L5 machinery)

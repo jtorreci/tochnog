@@ -1067,9 +1067,9 @@ marcado `PENDIENTE` puede estar cubierto en el GNU bajo otro nombre:
 
 - [x] `control_restart` — presente en el GNU; 2026-10-11 (F4 T6c, `8ca6124`): el restart reinicia también el estado de los puntos de integración (`element_dof`), como el manual 6.368 y el Professional (ver registro de verificación); estado de interface/spring/tendon/damage sin verificar (BACKLOG C58)
 
-### control_safety (0/1)
+### control_safety (1/1)
 
-- [ ] `control_safety_slip` — PENDIENTE
+- [x] `control_safety_slip` — F5 T6 U1 (2026-11-22): -yes, every step of the control index; Fs = sum A tau_mc / sum A |tau| (= Professional, safety_slip.cc)
 
 ### control_slide (1/3)
 
@@ -2229,7 +2229,7 @@ Nota: `group_interface_ground` del checklist anterior NUNCA existió (artefacto 
 - [x] `repeat_save_result` — Sprint 10, lote 10 (2026-08-26): valores guardados por `control_repeat_save` (un índice por repeat, valores de los items en orden de tripletas)
 - [x] `repeat_calculate_result` — Sprint 10, lote 10 (2026-08-26): `[media, varianza]` por data item calculados por `control_repeat_save_calculate` (el nombre del inventario `repeat_save_calculate_result` era un OCR; el manual Professional 6.349 lo llama `repeat_calculate_result`)
 
-### safety (0/31)
+### safety (4/31)
 
 - [ ] `safety_slip_circle_grid_middle` — PENDIENTE
 - [ ] `safety_slip_circle_grid_middle_n` — PENDIENTE
@@ -2256,10 +2256,10 @@ Nota: `group_interface_ground` del checklist anterior NUNCA existió (artefacto 
 - [ ] `safety_slip_grd_method` — PENDIENTE
 - [ ] `safety_slip_grd_method_direction` — PENDIENTE
 - [ ] `safety_slip_grd_segment_n` — PENDIENTE
-- [ ] `safety_slip_multi_linear` — PENDIENTE
-- [ ] `safety_slip_multi_linear_n` — PENDIENTE
-- [ ] `safety_slip_multi_linear_result` — PENDIENTE
-- [ ] `safety_slip_multi_linear_segment_n` — PENDIENTE
+- [x] `safety_slip_multi_linear` — F5 T6 U1 (2026-11-22, = Professional)
+- [x] `safety_slip_multi_linear_n` — F5 T6 U1 (2026-11-22, = Professional)
+- [x] `safety_slip_multi_linear_result` — F5 T6 U1 (2026-11-22, = Professional)
+- [x] `safety_slip_multi_linear_segment_n` — F5 T6 U1 (2026-11-22, = Professional)
 - [ ] `safety_slip_set` — PENDIENTE
 - [ ] `safety_slip_set_result` — PENDIENTE
 

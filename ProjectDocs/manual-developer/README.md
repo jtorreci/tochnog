@@ -67,6 +67,7 @@ page lists its own in "Differences with the Professional version".
 - [strain_volume_element](strain_volume_element.md) — materi.cc strain_volume_setup / _in_set / _eigen, the stress strain copy in materi(), post.cc results (F5 T5 U8).
 - [bounda_baseline_correction](bounda_baseline_correction.md) — bounda.cc bounda_baseline_table / _load, the -acc* branch of bounda() (F5 T5 U9).
 - [group_beam_force_moment_plasti](group_beam_force_moment_plasti.md) — beam.cc beam_plastic_hinges / beam_plastic_plane, return mapping of the end moments (F5 T5 U10).
+- [control_safety_slip](control_safety_slip.md) — safety_slip.cc, step_close hook, point stresses from element_dof (F5 T6 U1).
 - [group_interface](group_interface.md) — interface elements (joints between blocks).
 - [control_mesh_convert](control_mesh_convert.md) — automatic conversion of bar2 to quad4 for interfaces.
 - [post_force_edge_summed](post_force_edge_summed.md) — total force of the force_edge records, integrated over the edges.

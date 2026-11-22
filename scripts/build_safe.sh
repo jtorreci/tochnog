@@ -3634,6 +3634,13 @@ run_ok "$T2026" group_beam_force_moment_plasti4
 run_ok "$T2026" group_beam_force_moment_plasti5
 run_ok "$T2026" group_beam_force_moment_plasti_2d1
 expected_error_ok "$T2026" group_beam_force_moment_plasti_error1
+# F5 T6 U1: control_safety_slip (6.369), safety_slip_multi_linear (6.1034-6.1037)
+run_ok "$T2026" safety_slip_multi_linear1
+run_ok "$T2026" safety_slip_multi_linear2
+run_ok "$T2026" safety_slip_multi_linear3
+run_ok "$T2026" safety_slip_multi_linear4
+run_ok "$T2026" safety_slip_time1
+expected_error_ok "$T2026" safety_slip_error1
 run_ok "$T2026" materi_plasti_maximum_iterations1
 run_ok "$T2026" materi_plasti_maximum_iterations2
 expected_error_ok "$T2026" materi_plasti_maximum_iterations_error1

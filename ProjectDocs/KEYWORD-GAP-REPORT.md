@@ -124,6 +124,7 @@ accepted; the one-name difference in the 2026-11-08 count is not explained.
 2026-11-22 (F5 T5 U8): `strain_volume_*` (6.1062-6.1066) computed, `post_strain_volume_absolute` / `_relative` filled.
 2026-11-22 (F5 T5 U9): `bounda_baseline_correction`, `bounda_baseline_correction_parameters` accepted.
 2026-11-22 (F5 T5 U10): `group_beam_force_moment_plasti` accepted (plastic hinges).
+2026-11-22 (F5 T6 U1): `control_safety_slip`, `safety_slip_multi_linear*` (4) accepted.
 
 ## Gap by family
 

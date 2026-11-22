@@ -368,6 +368,7 @@ tochnog: adjust.$(OBJ) area.$(OBJ) \
 	node.$(OBJ) nonloc.$(OBJ) order.$(OBJ) \
 	plasti.$(OBJ) plasti_i.$(OBJ)  \
 	point_el.$(OBJ) \
+	safety_slip.$(OBJ) \
 	polynom.$(OBJ) post.$(OBJ) \
 	pri.$(OBJ) print_db.$(OBJ) \
 	print_da.$(OBJ) print_dx.$(OBJ) print_el.$(OBJ) \
@@ -567,6 +568,9 @@ mesh_map.$(OBJ): mesh_map.$(SRC_CPP) tochnog.h
 
 mesh_remove.$(OBJ): mesh_remove.$(SRC_CPP) tochnog.h
 	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)mesh_remove.$(SRC_CPP)
+
+safety_slip.$(OBJ): safety_slip.$(SRC_CPP) tochnog.h
+	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)safety_slip.$(SRC_CPP)
 
 miscel.$(OBJ): miscel.$(SRC_CPP) tochnog.h
 	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)miscel.$(SRC_CPP)
