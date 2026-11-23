@@ -26,10 +26,16 @@ strain_volume_geometry      index geometry_item_name geometry_item_index
 - Absolute table: volume increase divided by the initial volume of the
   whole set (`post_strain_volume_initial`), the same strain for every
   element of the set.
-- The set: every element of `strain_volume_element`, every element of the
-  groups of `strain_volume_element_group`, every element with all nodes
-  inside the geometry of `strain_volume_geometry`. Without any of the three
-  every isoparametric element of a `-materi` group is in the set.
+- The set: the elements that satisfy every selector you give, as in the
+  Professional 02-08-2026:
+  - listed in `strain_volume_element`;
+  - in one of the groups of `strain_volume_element_group`;
+  - with all nodes inside the geometry of `strain_volume_geometry`.
+
+  For example, element 1 with groups 0 and 1 selects element 1 only. When no
+  element satisfies all the selectors, the set is empty and every result is
+  0. Without any of the three selectors, every isoparametric element of a
+  `-materi` group is in the set.
 - Exactly one of the two tables per index; both is an input error.
 - An element in several indices takes the last index.
 - Small deformation, isoparametric elements only.

@@ -2021,35 +2021,39 @@ static long int strain_volume_candidate( long int element, long int name,
   return materi_type && element>=0;
 }
 
-// 1 when the element belongs to the set of strain_volume index ind.
+// 1 when the element belongs to the set of strain_volume index ind. The
+// given selectors are combined as an intersection: the element must be in
+// the element list, in one of the element groups and inside the geometry,
+// for each of those that is given (Professional 02-08-2026: element 1 with
+// groups 0 1 selects element 1 only; element 2 with a geometry holding
+// element 1 selects nothing). No selector = every element.
 long int strain_volume_in_set( long int ind, long int element,
   long int element_group )
 
 {
-  long int i=0, length=0, given=0, *list=NULL;
+  long int i=0, length=0, found=0, *list=NULL;
 
   if ( db_active_index( STRAIN_VOLUME_ELEMENT, ind, VERSION_NORMAL ) ) {
-    given = 1;
     list = db_int( STRAIN_VOLUME_ELEMENT, ind, VERSION_NORMAL );
     length = db_len( STRAIN_VOLUME_ELEMENT, ind, VERSION_NORMAL );
-    for ( i=0; i<length; i++ ) if ( list[i]==element ) return 1;
+    for ( i=0, found=0; i<length; i++ ) if ( list[i]==element ) found = 1;
+    if ( !found ) return 0;
   }
   if ( db_active_index( STRAIN_VOLUME_ELEMENT_GROUP, ind, VERSION_NORMAL ) ) {
-    given = 1;
     list = db_int( STRAIN_VOLUME_ELEMENT_GROUP, ind, VERSION_NORMAL );
     length = db_len( STRAIN_VOLUME_ELEMENT_GROUP, ind, VERSION_NORMAL );
-    for ( i=0; i<length; i++ ) if ( list[i]==element_group ) return 1;
+    for ( i=0, found=0; i<length; i++ ) if ( list[i]==element_group ) found = 1;
+    if ( !found ) return 0;
   }
   if ( db_active_index( STRAIN_VOLUME_GEOMETRY, ind, VERSION_NORMAL ) ) {
-    given = 1;
     list = db_int( STRAIN_VOLUME_GEOMETRY, ind, VERSION_NORMAL );
     long int node_type = NODE, max_start = -1;
     db_max_index( NODE_START_REFINED, max_start, VERSION_NORMAL, GET );
     if ( max_start>=0 ) node_type = NODE_START_REFINED;
-    if ( element_in_geometry( element, list, -ALL, node_type,
-         PROJECT_EXACT, NULL, VERSION_NORMAL ) ) return 1;
+    if ( !element_in_geometry( element, list, -ALL, node_type,
+         PROJECT_EXACT, NULL, VERSION_NORMAL ) ) return 0;
   }
-  return !given;
+  return 1;
 }
 
 // Before the calculation: checks the tables and stores the initial volume

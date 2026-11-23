@@ -1169,4 +1169,13 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   3, 4; consolidation off / on): GNU = Professional in every case (disy, sigyy, pres). Without a phreatic level the total
   pressure is h - rho*g*z, so the prescribed pressure leaves the skeleton load unchanged in both programs. No source
   change; regression test group_time_fill_pressure1 (Pro targets at t = 1, factor 0.25).
+- L-SV (2026-11-23) owner: "si" (strain_volume follow-up). Professional probes (two hex8, absolute 0.6): selectors in one
+  index are an intersection (element 1 + group 1 -> empty, all 0; element 1 + groups 0 1 -> element 1, initial 4,
+  absolute 0.500620296504; element 2 + geometry holding element 1 -> empty; element 1 or groups 0 1 + that geometry ->
+  element 1). GNU used the union (12 / 0.6). Manual silent -> follow the Professional; strain_volume_in_set now
+  intersects. RED/GREEN strain_volume_selector_and1/2. Large-deformation memories: Professional -total gives initial
+  12.61 / absolute 0.641 / relative 5.08 (GNU 12 / 0.6305 / 5.25), -updated gives absolute 0 (GNU -36 / -300);
+  manual 6.1063: "presently available only for small deformation analysis" -> owner question.
+  Incident (2026-11-23): during the suite 35 strain_volume* files (tests, outputs, the developer page) turned mode 000
+  on the NAS (7 false failures, git add refused); restored with chmod 644, tracked content unchanged; rerun 1357 OK.
 

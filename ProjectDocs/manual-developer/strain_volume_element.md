@@ -11,9 +11,9 @@
     both tables in one index and stores `POST_STRAIN_VOLUME_INITIAL` of
     every index, integrating the element volumes with `pol()` on the
     input coordinates (the absolute tables need it from the first step).
-  - `strain_volume_in_set(ind, element, group)`: union of the element
-    list, group list and geometry (`element_in_geometry -all`); no
-    selector = every element.
+  - `strain_volume_in_set(ind, element, group)`: intersection of the
+    given selectors, the element list, the group list and the geometry
+    (`element_in_geometry -all`); no selector = every element.
   - `strain_volume_eigen(element, group, old, new)`: eps_v at
     `time_current` and `time_current + dtime`, last index wins.
   - in `materi()`, after `set_deften_etc`: copies of `inc_ept` / `new_ept`
@@ -40,10 +40,13 @@ reproduces each value to 1e-8.
 - F5 T2 V9 (2026-11-04): `post_strain_volume_initial` only.
 - F5 T5 U8 (2026-11-22): the volume strain, the remaining records and the
   post results.
+- 2026-11-23: selectors combined as an intersection (Professional
+  02-08-2026: element 1 with groups 0 1 -> element 1, initial 4; element 2
+  with a geometry holding element 1 -> empty set, all results 0). Tests
+  `strain_volume_selector_and1/2`.
 
 ## Hardcoded parameters / pending refactorings
 
-- Several selectors in one index are combined as a union (not measured).
 - Large deformation memories are not rejected (the manual restricts the
   option to small deformation).
 - The element set is not recomputed after mesh refinement.
