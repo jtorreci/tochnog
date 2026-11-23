@@ -1197,3 +1197,8 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
 - L-SMC2 (2026-11-23) owner: "si, me parece más correcto." SMC-GLUED-LINE-END confirmed: the GNU reads the same
   samples whatever the line end. DIVERGENCES and SEGUIMIENTO rows changed from "to confirm" to owner decision.
   F5 follow-ups: all closed.
+- L-INV (2026-11-24) owner: "sí, arranca con el recálculo del inventario". Keyword probe of build 231f1da against
+  the Pro 02-08-2026 manual (TOC + body headings): 1147 names, 1081 present, 63 discarded, 3 missing (bonded-soil
+  Cam clay 6.700/4.21/4.38, lost from the 2026-11-01 list by name truncation). The Pro never ran the model in a
+  one-element probe (db error <12 values, assertion failure 12-20). Report: KEYWORD-GAP-REPORT 2026-11-24;
+  SEGUIMIENTO metric and 98 stale PENDIENTE entries reclassified.

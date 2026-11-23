@@ -131,6 +131,41 @@ accepted; the one-name difference in the 2026-11-08 count is not explained.
 2026-11-22 (F5 T6 U5): `control_print_gid_safety_slip_critical` accepted (GiD plot of the slip surfaces).
 2026-11-22 (F5 T6 U6): `safety_slip_ellipsoide*` (5), `safety_slip_grd*` (4, plus the output `safety_slip_grd_result`) accepted (3D slip surfaces, GiD triangle mesh).
 
+Update 2026-11-24 (end of F5, build `231f1da`): full re-inventory. The names were extracted again
+from `doc/user.pdf` of the Professional 02-08-2026 (`pdftotext -layout`), this time from the table
+of contents and the body headings together, keeping the longest name per section number: the body
+layout cuts long names (`..._cam_clay_for_bonded_` in 6.700) and the table of contents glues the page
+number to them (`..._history104`). The 2026-11-01 list was taken from the body alone and lost the
+three bonded-soil Cam clay names that way, so they were never in the F5 scope. List:
+`ProjectDocs/pro-keywords-2026-11-24.txt` (section, name; 1147 distinct names). Probe result:
+
+| Metric | Value |
+|--------|-------|
+| Professional keyword names (chapters 4-6) | 1147 |
+| Accepted by `db_number` | 1073 |
+| Initialisation literals (`derivatives`, `echo`, `end_data`, `end_initia`, `materi_acceleration`, `number_of_space_dimensions`) | 6 |
+| Initialisation names normalised by `input.cc` (`materi_history_variable`, `materi_strain_energy`) | 2 |
+| Present in the GNU | **1081 (94.2 %; 99.7 % excluding the discarded names)** |
+| Discarded (62 GiD names, `force_volume_element_group_0`) | 63 |
+| Missing | **3** |
+
+The 3 missing names are the generalised non-associate Cam clay for bonded soils:
+`group_materi_plasti_generalised_non_associate_cam_clay_for_bonded_soils` (6.700),
+`materi_plasti_generalised_non_associate_cam_clay_for_bonded_soils_history` (4.21) and
+`materi_strain_plasti_generalised_non_associate_cam_clay_for_bonded_soils` (4.38). The manual gives
+no parameters (6.700 reads "index ...") and one theory line ("a modification of the 'Milan' model
+of Prof. Roberto Nova"). The Professional binary registers the three names. One-element probe on
+the Pro 02-08-2026 (the Cam clay test `materi_strain_plasti_model3` with this group record, plain
+elasticity and both initialisation names): fewer than 12 values give "Error detected for data item";
+12 to 16 values, and 17 or 20 increasing values, give "Program error, assertion failed"; 17 or more
+equal values give "Error found in : Xd data ... The value ... is not larger than ...". No probe ran
+to a result, so the parameters and the behaviour cannot be measured on the Professional.
+
+`SEGUIMIENTO-CONVERGENCIA.md`: the 98 checklist entries still marked PENDIENTE were classified with
+the same probe (31 accepted, 46 GiD, 11 OCR fragments of the 2024 manual, 5 literals, 1 renamed,
+1 removed from the 2026 manual, 3 bonded-soil names still missing). The family counts in the
+section headings were not recomputed.
+
 ## Gap by family
 
 | Family | Missing | Notes |

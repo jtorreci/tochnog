@@ -10,15 +10,17 @@ conocidas, pendientes, de dialecto y sospechosas del Pro):
 
 ## Métrica global
 
-Updated 2026-10-17 from `ProjectDocs/KEYWORD-GAP-REPORT.md` (parser probe,
-Professional manual chapters 4-6) plus the keywords added since
-(`group_integration_method -reduced` and
-`group_integration_method_reduced_factor`, F4 T6f C80):
+Updated 2026-11-24 from `ProjectDocs/KEYWORD-GAP-REPORT.md` (parser probe of build `231f1da`
+against the manual of the Professional 02-08-2026, chapters 4-6; list
+`ProjectDocs/pro-keywords-2026-11-24.txt`):
 
-- **1154** keywords in the Professional manual (chapters 4-6)
-- **~833** accepted by the GNU parser (**72 %**; **76 %** excluding the
-  63 GiD keywords discarded)
-- **~258** missing and not discarded (phase F5)
+- **1147** keyword names in the Professional manual (chapters 4-6)
+- **1081** present in the GNU (**94.2 %**; **99.7 %** excluding the 63 discarded names):
+  1073 accepted by `db_number`, 6 initialisation-part literals and 2 initialisation names
+  normalised by `input.cc`
+- **63** discarded: 62 GiD names and `force_volume_element_group_0` (PDF artefact)
+- **3** missing: the generalised non-associate Cam clay for bonded soils (6.700, 4.21, 4.38)
+- Parser acceptance is a lower bound: a few names are registered parse-only (see the report)
 - Divergences: see `DIVERGENCES-PROFESSIONAL.md` (classes A/B/C/D)
 - Además: 197 tests del GNU 2014 corren con cobertura 100 % de keywords (ver plan, sección 6c)
 
@@ -808,7 +810,7 @@ marcado `PENDIENTE` puede estar cubierto en el GNU bajo otro nombre:
 
 ### control_ground (0/1)
 
-- [ ] `control_ground` — PENDIENTE
+- [x] `control_ground` — OCR fragment of the 2024 manual, not a record name (full names control_groundflow_* accepted) (keyword probe 2026-11-24)
 
 ### control_groundflow (2/2)
 
@@ -860,10 +862,10 @@ marcado `PENDIENTE` puede estar cubierto en el GNU bajo otro nombre:
 - [x] `control_mesh_delete_geometry_element_group` — F5 T4 U1, 87436f7, 2026-11-08 (db_number alias)
 - [x] `control_mesh_delete_geometry_factor` — presente en el GNU
 - [x] `control_mesh_delete_geometry_method` — F5 T4 U4, bbbc741, 2026-11-08
-- [ ] `control_mesh_delete_geometry_move_node` — PENDIENTE
+- [x] `control_mesh_delete_geometry_move_node` — accepted by the GNU parser (keyword probe 2026-11-24)
 - [x] `control_mesh_delete_geometry_projection_type` — F5 T4 U4, bbbc741, 2026-11-08
-- [ ] `control_mesh_delete_geometry_stop` — PENDIENTE
-- [ ] `control_mesh_delete_geometry_stop_geometry` — PENDIENTE
+- [x] `control_mesh_delete_geometry_stop` — accepted by the GNU parser (keyword probe 2026-11-24)
+- [x] `control_mesh_delete_geometry_stop_geometry` — accepted by the GNU parser (keyword probe 2026-11-24)
 - [x] `control_mesh_delete_small` — presente en el GNU
 - [x] `control_mesh_duplicate_element_group` — F5 T4 U5c, 394ac2a, 2026-11-08
 - [x] `control_mesh_element_group_apply` — implementada (F5 W1 U5, 2026-11-02; según el manual (Professional sólo en el índice 0: MESH-EG-APPLY))
@@ -884,12 +886,12 @@ marcado `PENDIENTE` puede estar cubierto en el GNU bajo otro nombre:
 - [x] `control_mesh_generate_spring1` — presente en el GNU
 - [x] `control_mesh_generate_spring2` — presente en el GNU
 - [x] `control_mesh_generate_truss` — implementada (commit `bd7b3ab`, 2026-08-13)
-- [ ] `control_mesh_generate_truss_beam` — PENDIENTE
+- [x] `control_mesh_generate_truss_beam` — accepted by the GNU parser (keyword probe 2026-11-24)
 - [x] `control_mesh_generate_truss_beam_loose` — implementada (commit `bd7b3ab`, 2026-08-13)
 - [x] `control_mesh_generate_truss_beam_macro` — implementada (commit `bd7b3ab`, 2026-08-13)
 - [x] `control_mesh_generate_truss_beam_separate` — F5 T4 U5d, ea220df, 2026-11-08
-- [ ] `control_mesh_gid_batch` — PENDIENTE
-- [ ] `control_mesh_interface_triangle` — PENDIENTE
+- [x] `control_mesh_gid_batch` — DESCARTADO (GiD family) (keyword probe 2026-11-24)
+- [x] `control_mesh_interface_triangle` — accepted by the GNU parser (keyword probe 2026-11-24)
 - [x] `control_mesh_keep_element` — implementada (commit `afc1dad`, 2026-08-05)
 - [x] `control_mesh_keep_element_group` — implementada (commit `afc1dad`, 2026-08-05)
 - [x] `control_mesh_keep_geometry` — presente en el GNU
@@ -907,7 +909,7 @@ marcado `PENDIENTE` puede estar cubierto en el GNU bajo otro nombre:
 - [x] `control_mesh_mirror` — implementada (commit `3e94dac`, 2026-08-05); after a time step = Pro (F4 T8 `0ca144c`, 2026-10-10)
 - [x] `control_mesh_move` — implementada (commit `3e94dac`, 2026-08-05); once per control index (F4 T8 `c21b62e`, 2026-10-10; Pro moves only node_start_refined: DIVERGENCES C46b)
 - [x] `control_mesh_multiply` — presente en el GNU
-- [ ] `control_mesh_re` — PENDIENTE
+- [x] `control_mesh_re` — OCR fragment of the 2024 manual, not a record name (full names control_mesh_refine*/remove*/renumber* accepted) (keyword probe 2026-11-24)
 - [x] `control_mesh_refine_locally_minimal_size` — F5 T4 U4, bbbc741, 2026-11-08
 - [x] `control_mesh_refine_locally_not_method` — F5 T4 U4, bbbc741, 2026-11-08
 - [x] `control_mesh_refine_locally_only_method` — F5 T4 U4, bbbc741, 2026-11-08 (default -all as manual and Professional; the GNU used -any before)
@@ -1004,7 +1006,7 @@ marcado `PENDIENTE` puede estar cubierto en el GNU bajo otro nombre:
 - [ ] `control_print_gid_node_method` — DESCARTADO
 - [ ] `control_print_gid_other` — DESCARTADO
 - [x] `control_print_gid_safety_slip_critical` — F5 T6 U5 (2026-11-22): -yes plots only the critical slip surfaces (GNU GiD layout, SAFETY-SLIP-GID-FORMAT)
-- [ ] `control_print_gid_save_di` — PENDIENTE
+- [x] `control_print_gid_save_di` — DESCARTADO (GiD family) (keyword probe 2026-11-24)
 - [ ] `control_print_gid_smooth_dof` — DESCARTADO
 - [ ] `control_print_gid_smooth_n` — DESCARTADO
 - [ ] `control_print_gid_spring2` — DESCARTADO
@@ -1078,7 +1080,7 @@ marcado `PENDIENTE` puede estar cubierto en el GNU bajo otro nombre:
 
 ### control_slide (1/3)
 
-- [ ] `control_slide_damping_apply` — PENDIENTE
+- [x] `control_slide_damping_apply` — accepted by the GNU parser (keyword probe 2026-11-24)
 - [x] `control_slide_plasti_apply` — consumido por la ley (lote familia slide 2026-09-04: -no deja los springs elásticos puros)
 - [x] `control_slide_stiffness_apply` — consumido por la ley (lote familia slide 2026-09-04: -no desactiva los springs kn/kt)
 
@@ -1148,7 +1150,7 @@ marcado `PENDIENTE` puede estar cubierto en el GNU bajo otro nombre:
 
 ### derivatives (0/1)
 
-- [ ] `derivatives` — PENDIENTE
+- [x] `derivatives` — initialisation-part literal handled by input.cc (keyword probe 2026-11-24)
 
 ### dof (3/3)
 
@@ -1162,7 +1164,7 @@ marcado `PENDIENTE` puede estar cubierto en el GNU bajo otro nombre:
 
 ### echo (0/1)
 
-- [ ] `echo` — PENDIENTE
+- [x] `echo` — initialisation-part literal handled by input.cc (keyword probe 2026-11-24)
 
 ### element (1/1)
 
@@ -1196,7 +1198,7 @@ marcado `PENDIENTE` puede estar cubierto en el GNU bajo otro nombre:
 
 ### element_geometry (1/2)
 
-- [ ] `element_geometry` — PENDIENTE
+- [x] `element_geometry` — accepted by the GNU parser (keyword probe 2026-11-24)
 - [x] `element_geometry_present` — implementada (F5 T2 V3, 2026-11-02; element present when all its nodes are = Professional)
 
 ### element_group (1/2)
@@ -1209,9 +1211,9 @@ marcado `PENDIENTE` puede estar cubierto en el GNU bajo otro nombre:
 - [x] `element_interface_intpnt_direction` — implementada (F5 T2 V4, 2026-11-02, 4aeb107; = manual 6.430, the Professional does not write it: INTERFACE-INTPNT-DIRECTION-GAP, class A)
 - [x] `element_interface_intpnt_gap_status` — implementada (F5 T2 V4, 2026-11-02, 4aeb107; = manual 6.431, the Professional does not write it: INTERFACE-INTPNT-DIRECTION-GAP, class A)
 - [x] `element_interface_intpnt_materi_tension_status` — F4 T10 C48 (c06fa2d, 2026-10-10): -closed/-opened per integration point = Professional
-- [ ] `element_interface_intpnt_strain` — PENDIENTE
+- [x] `element_interface_intpnt_strain` — accepted by the GNU parser (keyword probe 2026-11-24)
 - [x] `element_interface_intpnt_strain_average` — alias de un record del GNU (F5 W2 V1, 2026-11-02)
-- [ ] `element_interface_intpnt_stress` — PENDIENTE
+- [x] `element_interface_intpnt_stress` — accepted by the GNU parser (keyword probe 2026-11-24)
 - [x] `element_interface_intpnt_stress_average` — alias de un record del GNU (F5 W2 V1, 2026-11-02)
 
 ### element_intpnt (7/7)
@@ -1239,7 +1241,7 @@ marcado `PENDIENTE` puede estar cubierto en el GNU bajo otro nombre:
 ### element_spring (1/2)
 
 - [x] `element_spring_force` — presente en el GNU
-- [ ] `element_spring_strain` — PENDIENTE
+- [x] `element_spring_strain` — accepted by the GNU parser (keyword probe 2026-11-24)
 
 ### element_truss (4/4)
 
@@ -1254,8 +1256,8 @@ marcado `PENDIENTE` puede estar cubierto en el GNU bajo otro nombre:
 
 ### end (0/2)
 
-- [ ] `end_data` — PENDIENTE
-- [ ] `end_initia` — PENDIENTE
+- [x] `end_data` — initialisation-part literal handled by input.cc (keyword probe 2026-11-24)
+- [x] `end_initia` — initialisation-part literal handled by input.cc (keyword probe 2026-11-24)
 
 ### force_edge (44/44 — registro COMPLETO; LAYOUT de records PENDIENTE)
 
@@ -1437,7 +1439,7 @@ del manual; el Pro prueba los nodos: DIVERGENCES GEOMETRY-MOVING-SAMPLING).
 
 ### geometry_node (0/1)
 
-- [ ] `geometry_node_type` — PENDIENTE
+- [x] `geometry_node_type` — accepted by the GNU parser (keyword probe 2026-11-24)
 
 ### geometry_point (1/1)
 
@@ -1449,7 +1451,7 @@ del manual; el Pro prueba los nodos: DIVERGENCES GEOMETRY-MOVING-SAMPLING).
 
 ### geometry_projection (0/1)
 
-- [ ] `geometry_projection_type` — PENDIENTE
+- [x] `geometry_projection_type` — accepted by the GNU parser (keyword probe 2026-11-24)
 
 ### geometry_quadrilateral (1/2)
 
@@ -1479,7 +1481,7 @@ del manual; el Pro prueba los nodos: DIVERGENCES GEOMETRY-MOVING-SAMPLING).
 - [x] `global_element_dof_apply` — implementada (F5 W1 U2, 2026-11-02; alias de `options_element_dof` + `-only`)
 - [x] `global_element_dof_from_node_dof` — implementada (F5 T2 V5b, 2026-11-03, cde109f; -yes/-no = Professional; default -no = manual / Professional since C100, 2026-11-03)
 - [x] `global_node_dof_empty` — implementada (F5 T2 V5b, 2026-11-03, cde109f; default -yes, = Professional; displacement kept, owner decision C101 2026-11-03, class A)
-- [ ] `global_post_point_node_type` — PENDIENTE
+- [x] `global_post_point_node_type` — renamed post_point_node_type in the 2026 manual, accepted (keyword probe 2026-11-24)
 
 ### ground (1/1)
 
@@ -1529,7 +1531,7 @@ del manual; el Pro prueba los nodos: DIVERGENCES GEOMETRY-MOVING-SAMPLING).
 
 ### group_condif (4/5)
 
-- [ ] `group_condif_` — PENDIENTE
+- [x] `group_condif_` — OCR fragment of the 2024 manual, not a record name (full names group_condif_* accepted) (keyword probe 2026-11-24)
 - [x] `group_condif_absorption` — presente en el GNU
 - [x] `group_condif_capacity` — presente en el GNU
 - [x] `group_condif_conductivity` — presente en el GNU
@@ -1548,12 +1550,12 @@ del manual; el Pro prueba los nodos: DIVERGENCES GEOMETRY-MOVING-SAMPLING).
 
 ### group_dof (0/2)
 
-- [ ] `group_dof_initial` — PENDIENTE
-- [ ] `group_dof_initial_speci` — PENDIENTE
+- [x] `group_dof_initial` — accepted by the GNU parser (keyword probe 2026-11-24)
+- [x] `group_dof_initial_speci` — OCR fragment of the 2024 manual, not a record name (full names group_dof_initial_specific_* accepted) (keyword probe 2026-11-24)
 
 ### group_ground (0/1)
 
-- [ ] `group_ground` — PENDIENTE
+- [x] `group_ground` — OCR fragment of the 2024 manual, not a record name (full names group_groundflow_* accepted) (keyword probe 2026-11-24)
 
 ### group_groundflow (8/8)
 
@@ -1589,7 +1591,7 @@ del manual; el Pro prueba los nodos: DIVERGENCES GEOMETRY-MOVING-SAMPLING).
 - [x] `group_interface_tangential_reference_point` — Sprint 8 (2026-08-24; faltaba en el checklist original)
 
 Nota: `group_interface_ground` del checklist anterior NUNCA existió (artefacto del inventario; no está en el manual ni en el inventario original de 2024).
-- [ ] `group_interface_tangential_reference_point` — PENDIENTE
+- [x] `group_interface_tangential_reference_point` — accepted by the GNU parser (keyword probe 2026-11-24)
 
 ### group_materi (56/124)
 
@@ -1660,7 +1662,7 @@ Nota: `group_interface_ground` del checklist anterior NUNCA existió (artefacto 
 - [x] `group_materi_plasti_druck_prag` — Sprint 10 (alias del legacy druckprag; VALIDACIÓN ANALÍTICA: cizalla φ=0 → σxy=2c/√3, 0.014% error)
 - [x] `group_materi_plasti_element_group` — registrada (KEYWORDS BATCH C 2026-09-04); consumo (reduccion 2/3 por vecindad) PENDIENTE
 - [x] `group_materi_plasti_element_group_factor` — registrada (KEYWORDS BATCH C 2026-09-04); consumo PENDIENTE
-- [ ] `group_materi_plasti_generalised_non_associate_cam_clay_for_bonded_soils` — PENDIENTE
+- [ ] `group_materi_plasti_generalised_non_associate_cam_clay_for_bonded_soils` — PENDIENTE — still missing in the GNU parser (keyword probe 2026-11-24)
 - [x] `group_materi_plasti_gurson` — presente en el GNU
 - [x] `group_materi_plasti_hardsoil` — Sprint 10 (lote 8; f = q/(E50(1-q/qa)) - 2q/Eur - γp, qa = qf/Rf con qf = 2·sinφ·(sig3+c·cotφ)/(1-sinφ) derivado de MC en falla; γp = kappa + extra del control; flujo asociativo; validado con la familia de relajacion `mhardsoil_gp0_off`/`mhardsoil_plast`: el estado final queda SOBRE la superficie (f ~ 0 verificada) y kappa escala con q inicial (0.000293 -> 0.0006 para σxx -2 -> -4)
 - [x] `group_materi_plasti_heat_generation` — Sprint 10 (nombre Professional del legacy heatgeneration, dual-read)
@@ -1679,7 +1681,7 @@ Nota: `group_interface_ground` del checklist anterior NUNCA existió (artefacto 
 - [x] `group_materi_plasti_hypo_niemunis_visco_ocr` — F5 T3 E3, 8f45881, 2026-11-07
 - [x] `group_materi_plasti_hypo_strain_intergranular` — batch hypo (2026-09-01; 6 params R m_R m_T beta_r chi theta, manual 6.715; alias db_number del nombre Professional `..._hypo_strain_intergranular`; theta sin slot en el kernel (usa chi); hypo2/3 rc=0)
 - [x] `group_materi_plasti_hypo_strain_intergranular_masin_clay` — presente en el GNU
-- [ ] `group_materi_plasti_hypo_strain_isa` — PENDIENTE
+- [x] `group_materi_plasti_hypo_strain_isa` — accepted by the GNU parser (keyword probe 2026-11-24)
 - [x] `group_materi_plasti_hypo_void_ratio_linear` — F5 T3 D3, 932c5f9, 2026-11-07 (own record; the alias to pressuredependentvoidratio was wrong, BACKLOG C118)
 - [x] `group_materi_plasti_hypo_wolffersdorff_niemunis` — F5 T3 D3, 46a0377, 2026-11-07 (Niemunis 2003 eq. 4.183, 4.221, 4.223; the truncated `group_materi_plasti_hypo_wol` of the gap list)
 - [x] `group_materi_plasti_kinematic_hardening` — presente en el GNU
@@ -1735,7 +1737,7 @@ Nota: `group_interface_ground` del checklist anterior NUNCA existió (artefacto 
 - [x] `group_spring_direction` — presente en el GNU
 - [x] `group_spring_memory` — registrada (KEYWORDS BATCH C 2026-09-04); el muelle GNU es incremental en configuracion actual (= -updated_linear); spring1 rc=0
 - [x] `group_spring_plasti` — presente en el GNU
-- [ ] `group_spring_sti` — PENDIENTE
+- [x] `group_spring_sti` — OCR fragment of the 2024 manual, not a record name (full names group_spring_stiffness* accepted) (keyword probe 2026-11-24)
 
 ### group_time (2/2)
 
@@ -1747,9 +1749,9 @@ Nota: `group_interface_ground` del checklist anterior NUNCA existió (artefacto 
 - [x] `group_truss_area` — presente en el GNU
 - [x] `group_truss_density` — presente en el GNU
 - [x] `group_truss_elasti_elongation_force_diagram` — F5 T5 U6 (2026-11-19): force from the diagram of the total strain, 0 outside (Professional 02-08-2026 values)
-- [ ] `group_truss_elasti_young` — PENDIENTE
-- [ ] `group_truss_expansion` — PENDIENTE
-- [ ] `group_truss_initial_force` — PENDIENTE
+- [x] `group_truss_elasti_young` — accepted by the GNU parser (keyword probe 2026-11-24)
+- [x] `group_truss_expansion` — accepted by the GNU parser (keyword probe 2026-11-24)
+- [x] `group_truss_initial_force` — accepted by the GNU parser (keyword probe 2026-11-24)
 - [x] `group_truss_memory` — presente en el GNU; K17 2026-10-06 (F2 T2): `-total` geometrically nonlinear (= Pro truss14) and tension geometric stiffness for -updated/-total (Pro truss2/3 converge); see registro de verificación; 2026-10-11 (F4 T6d, C11, `28992d5`): default `-total_linear` with `materi_displacement`, `-updated_linear` without (= Professional), signed linear length; Pro input checks for the combinations replicated (F4 T6d C59 `e0f2204`, owner 2026-10-11; see registro de verificación)
 - [x] `group_truss_plasti` — presente en el GNU
 - [x] `group_truss_rope` — presente en el GNU
@@ -1772,7 +1774,7 @@ Nota: `group_interface_ground` del checklist anterior NUNCA existió (artefacto 
 
 ### incremental (0/1)
 
-- [ ] `incremental_driver` — PENDIENTE (2026-09-02, diagnóstico corregido: los 6 tests de `test/incremental_driver/` —oedometric/triaxial drained/undrained mohr_coul_direct, direct_shear_drained_hypo, triaxial_drained_hypo_isa, syntax— dependen TODOS de esta familia, incluidos los 3 atribuidos antes a `-updated_area`. El GNU no registra NINGÚN record de la familia (0 refs). El test syntax bloquea además en initia por `materi_strain_isa_c` y en data por `incremental_ntime`/`incremental_driver_*`/hipo wolfersdorff/ISA)
+- [x] `incremental_driver` — accepted by the GNU parser (keyword probe 2026-11-24)
 
 ### inertia (1/1)
 
@@ -1789,7 +1791,7 @@ Nota: `group_interface_ground` del checklist anterior NUNCA existió (artefacto 
 
 ### input_fe (0/1)
 
-- [ ] `input_fe` — PENDIENTE
+- [x] `input_fe` — OCR fragment of the 2024 manual, not a record name (full names input_feflow_* accepted) (keyword probe 2026-11-24)
 
 ### input_gmsh (1/1)
 
@@ -1844,7 +1846,7 @@ Nota: `group_interface_ground` del checklist anterior NUNCA existió (artefacto 
 - [x] `materi_plasti_diprisco_history` — Sprint 10 (lote 9; initia 4.18: alias de materi_history_variables en input.cc (misma rama del parser, mismo dof hisv compartido, basenames hisv0..hisvN-1); los checks de GROUP_MATERI_PLASTI_DIPRISCO/_RT aceptan cualquiera de los dos nombres (check_unknown_atleastone); validado con `mdiprisco_hist` (diprisc1 con el alias: hisv10 -152.795 IDENTICO a diprisc1) y `mstrain_diprisco`)
 - [x] `materi_plasti_f` — presente en el GNU
 - [x] `materi_plasti_f_nonlocal` — presente en el GNU
-- [ ] `materi_plasti_generalised_non_associate_cam_clay_for_bonded_soils_history` — PENDIENTE
+- [ ] `materi_plasti_generalised_non_associate_cam_clay_for_bonded_soils_history` — PENDIENTE — still missing in the GNU parser (keyword probe 2026-11-24)
 - [x] `materi_plasti_hardsoil_history` — Sprint 10 (lote 8; initia 4.22: dof escalar max |p| historico — mismo concepto que materi_stress_pressure_history (4.50), dof `sph` COMPARTIDO (misma actualizacion running-max en dof.cc, mismo basename); el switch E50/Eur del elastico lo lee (old_unknowns[sph]); validado con `mhardsoil_unload`: sph = 0.3333 en el pico y Eur desde el primer paso de descarga)
 - [x] `materi_plasti_hypo_history` — batch hypo (2026-09-01; initia 4.23: 8 variables hyhis0..hyhis7, mismo dof hisv compartido, basenames hyhis; kernel masin mapea e=hyhis0 y s=hyhis4; hypo2/4 rc=0)
 - [x] `materi_plasti_hypo_substepping` — F5 T3 C1, 6745219, 2026-11-06
@@ -1861,15 +1863,15 @@ Nota: `group_interface_ground` del checklist anterior NUNCA existió (artefacto 
 - [x] `materi_strain_elasti` — presente en el GNU
 - [x] `materi_strain_energy` — alias de un record del GNU (F5 W2 V1, 2026-11-02)
 - [x] `materi_strain_intergranular` — presente en el GNU
-- [ ] `materi_strain_isa_c` — PENDIENTE
-- [ ] `materi_strain_isa_eacc` — PENDIENTE
+- [x] `materi_strain_isa_c` — accepted by the GNU parser (keyword probe 2026-11-24)
+- [x] `materi_strain_isa_eacc` — accepted by the GNU parser (keyword probe 2026-11-24)
 - [x] `materi_strain_plasti` — presente en el GNU
 - [x] `materi_strain_plasti_camclay` — F5 T2 V7, `0fa067b` 2026-11-03 (manual; the Professional rejects it)
 - [x] `materi_strain_plasti_cap` — Sprint 10 (lote 9; initia 4.35: tensor de deformacion plastica propio de los modelos cap en node_dof (dof dedicado capepp, basenames eppcapxx...; RHS en materi.cc en el BLOQUE CONSOLIDADO de dofs por-modelo + inercia en general.cc); validado con `mstrain_cap`: eppcapzz -0.0360001 EXACTO (deps_p_cv=0.0054/paso x 20 / 3) y `mstrain_cap_elast`: 0)
 - [x] `materi_strain_plasti_compression` — Sprint 10 (lote 9; initia 4.36: dof dedicado cepp, basenames eppcmpxx...; mismo bloque consolidado; `mstrain_compression`: eppcmpzz -8.96e-05; gemelo elastico 0)
 - [x] `materi_strain_plasti_diprisco` — Sprint 10 (lote 9; initia 4.37: dof dedicado depp, basenames eppdipxx...; `mstrain_diprisco`: eppdipyy -0.0105714 y eppdipxx=eppdipzz +0.00350735; gemelo elastico 0)
 - [x] `materi_strain_plasti_druckprag` — Sprint 10 (lote 9; initia 4.39: dof dedicado dpepp, basenames eppdrpxx...; `mstrain_druckprag`: eppdrpxy 0.910768 IDENTICO al epp generico del mismo run; gemelo elastico 0)
-- [ ] `materi_strain_plasti_generalised_non_associate_cam_clay_for_bonded_soils` — PENDIENTE
+- [ ] `materi_strain_plasti_generalised_non_associate_cam_clay_for_bonded_soils` — PENDIENTE — still missing in the GNU parser (keyword probe 2026-11-24)
 - [x] `materi_strain_plasti_hardsoil` — Sprint 10 (lote 8; initia 4.40: tensor de deformacion plastica propio del hardsoil en node_dof (dof dedicado hsepp, basenames epphsxx...; RHS en materi.cc + inercia en general.cc, patron de materi_strain_plasti); validado en los tests de relajacion plastica (se llena con el retorno) y cero en los elasticos)
 - [x] `materi_strain_plasti_mohr_coul` — F5 T2 V7, `0fa067b` 2026-11-03 (Professional labels and values since C108, 2026-11-04)
 - [x] `materi_strain_plasti_tension` — F5 T2 V7, `0fa067b` 2026-11-03 (Professional labels and values since C108, 2026-11-04)
@@ -1911,46 +1913,46 @@ Nota: `group_interface_ground` del checklist anterior NUNCA existió (artefacto 
 - [x] `mesh_activate_gravity_time_strain_settlement` — implementada (registrado)
 - [x] `mesh_boundary` — implementada (F5 T2 V3, 2026-11-02; default `-no` = manual; the Professional fills the records always: MESH-BOUNDARY-DEFAULT, class A)
 - [x] `mesh_correct` — F5 T4 U5d, ea220df, 2026-11-08
-- [ ] `mesh_delete_geometry_moving` — PENDIENTE
+- [x] `mesh_delete_geometry_moving` — removed from the 2026 manual (keyword probe 2026-11-24)
 - [x] `mesh_element_group_apply` — implementada (F5 W1 U5, 2026-11-02; según el manual (MESH-EG-APPLY))
-- [ ] `mesh_gid_arc_coord` — PENDIENTE
-- [ ] `mesh_gid_assign_conditions_line` — PENDIENTE
-- [ ] `mesh_gid_assign_conditions_point` — PENDIENTE
-- [ ] `mesh_gid_assign_conditions_surface` — PENDIENTE
-- [ ] `mesh_gid_circle_coord` — PENDIENTE
-- [ ] `mesh_gid_circle_element_group` — PENDIENTE
-- [ ] `mesh_gid_circle_hollow` — PENDIENTE
-- [ ] `mesh_gid_circle_radius` — PENDIENTE
-- [ ] `mesh_gid_cylinder_coord` — PENDIENTE
-- [ ] `mesh_gid_cylinder_element_group` — PENDIENTE
-- [ ] `mesh_gid_cylinder_height` — PENDIENTE
-- [ ] `mesh_gid_cylinder_hollow` — PENDIENTE
-- [ ] `mesh_gid_cylinder_normal` — PENDIENTE
-- [ ] `mesh_gid_cylinder_radius` — PENDIENTE
-- [ ] `mesh_gid_line_element_group` — PENDIENTE
-- [ ] `mesh_gid_line_point` — PENDIENTE
-- [ ] `mesh_gid_line_size` — PENDIENTE
-- [ ] `mesh_gid_line_structured_concentrate` — PENDIENTE
-- [ ] `mesh_gid_line_structured_nel` — PENDIENTE
-- [ ] `mesh_gid_line_structured_size` — PENDIENTE
-- [ ] `mesh_gid_point_coord` — PENDIENTE
-- [ ] `mesh_gid_rectangle_coord` — PENDIENTE
-- [ ] `mesh_gid_rectangle_element_group` — PENDIENTE
-- [ ] `mesh_gid_rectangle_hollow` — PENDIENTE
-- [ ] `mesh_gid_size` — PENDIENTE
-- [ ] `mesh_gid_sphere_coord` — PENDIENTE
-- [ ] `mesh_gid_sphere_element_group` — PENDIENTE
-- [ ] `mesh_gid_sphere_hollow` — PENDIENTE
-- [ ] `mesh_gid_sphere_radius` — PENDIENTE
-- [ ] `mesh_gid_surface_element` — PENDIENTE
-- [ ] `mesh_gid_surface_element_group` — PENDIENTE
-- [ ] `mesh_gid_surface_line` — PENDIENTE
-- [ ] `mesh_gid_surface_structured_nel` — PENDIENTE
-- [ ] `mesh_gid_surface_structured_size` — PENDIENTE
-- [ ] `mesh_gid_volume_element_group` — PENDIENTE
-- [ ] `mesh_gid_volume_surface` — PENDIENTE
+- [x] `mesh_gid_arc_coord` — DESCARTADO (GiD family) (keyword probe 2026-11-24)
+- [x] `mesh_gid_assign_conditions_line` — DESCARTADO (GiD family) (keyword probe 2026-11-24)
+- [x] `mesh_gid_assign_conditions_point` — DESCARTADO (GiD family) (keyword probe 2026-11-24)
+- [x] `mesh_gid_assign_conditions_surface` — DESCARTADO (GiD family) (keyword probe 2026-11-24)
+- [x] `mesh_gid_circle_coord` — DESCARTADO (GiD family) (keyword probe 2026-11-24)
+- [x] `mesh_gid_circle_element_group` — DESCARTADO (GiD family) (keyword probe 2026-11-24)
+- [x] `mesh_gid_circle_hollow` — DESCARTADO (GiD family) (keyword probe 2026-11-24)
+- [x] `mesh_gid_circle_radius` — DESCARTADO (GiD family) (keyword probe 2026-11-24)
+- [x] `mesh_gid_cylinder_coord` — DESCARTADO (GiD family) (keyword probe 2026-11-24)
+- [x] `mesh_gid_cylinder_element_group` — DESCARTADO (GiD family) (keyword probe 2026-11-24)
+- [x] `mesh_gid_cylinder_height` — DESCARTADO (GiD family) (keyword probe 2026-11-24)
+- [x] `mesh_gid_cylinder_hollow` — DESCARTADO (GiD family) (keyword probe 2026-11-24)
+- [x] `mesh_gid_cylinder_normal` — DESCARTADO (GiD family) (keyword probe 2026-11-24)
+- [x] `mesh_gid_cylinder_radius` — DESCARTADO (GiD family) (keyword probe 2026-11-24)
+- [x] `mesh_gid_line_element_group` — DESCARTADO (GiD family) (keyword probe 2026-11-24)
+- [x] `mesh_gid_line_point` — DESCARTADO (GiD family) (keyword probe 2026-11-24)
+- [x] `mesh_gid_line_size` — DESCARTADO (GiD family) (keyword probe 2026-11-24)
+- [x] `mesh_gid_line_structured_concentrate` — DESCARTADO (GiD family) (keyword probe 2026-11-24)
+- [x] `mesh_gid_line_structured_nel` — DESCARTADO (GiD family) (keyword probe 2026-11-24)
+- [x] `mesh_gid_line_structured_size` — DESCARTADO (GiD family) (keyword probe 2026-11-24)
+- [x] `mesh_gid_point_coord` — DESCARTADO (GiD family) (keyword probe 2026-11-24)
+- [x] `mesh_gid_rectangle_coord` — DESCARTADO (GiD family) (keyword probe 2026-11-24)
+- [x] `mesh_gid_rectangle_element_group` — DESCARTADO (GiD family) (keyword probe 2026-11-24)
+- [x] `mesh_gid_rectangle_hollow` — DESCARTADO (GiD family) (keyword probe 2026-11-24)
+- [x] `mesh_gid_size` — DESCARTADO (GiD family) (keyword probe 2026-11-24)
+- [x] `mesh_gid_sphere_coord` — DESCARTADO (GiD family) (keyword probe 2026-11-24)
+- [x] `mesh_gid_sphere_element_group` — DESCARTADO (GiD family) (keyword probe 2026-11-24)
+- [x] `mesh_gid_sphere_hollow` — DESCARTADO (GiD family) (keyword probe 2026-11-24)
+- [x] `mesh_gid_sphere_radius` — DESCARTADO (GiD family) (keyword probe 2026-11-24)
+- [x] `mesh_gid_surface_element` — DESCARTADO (GiD family) (keyword probe 2026-11-24)
+- [x] `mesh_gid_surface_element_group` — DESCARTADO (GiD family) (keyword probe 2026-11-24)
+- [x] `mesh_gid_surface_line` — DESCARTADO (GiD family) (keyword probe 2026-11-24)
+- [x] `mesh_gid_surface_structured_nel` — DESCARTADO (GiD family) (keyword probe 2026-11-24)
+- [x] `mesh_gid_surface_structured_size` — DESCARTADO (GiD family) (keyword probe 2026-11-24)
+- [x] `mesh_gid_volume_element_group` — DESCARTADO (GiD family) (keyword probe 2026-11-24)
+- [x] `mesh_gid_volume_surface` — DESCARTADO (GiD family) (keyword probe 2026-11-24)
 - [x] `mesh_interface_triangle_coordinates` — F5 T4 U1, 87436f7, 2026-11-08 (db_number alias)
-- [ ] `mesh_interface_triangle_element_group` — PENDIENTE
+- [x] `mesh_interface_triangle_element_group` — accepted by the GNU parser (keyword probe 2026-11-24)
 
 ### message (1/1)
 
@@ -1997,7 +1999,7 @@ Nota: `group_interface_ground` del checklist anterior NUNCA existió (artefacto 
 - [x] `node_dof_start_refined` — presente en el GNU (el "node_dof_start_re" del inventario era OCR truncado)
 - [x] `node_dynamic_pressure` — Sprint 8 (2026-08-24; override en calcul.cc)
 - [x] `node_force` — Sprint 8 (2026-08-24; dof.cc)
-- [ ] `node_geometry_present` — PENDIENTE (print-only)
+- [x] `node_geometry_present` — accepted by the GNU parser (keyword probe 2026-11-24)
 - [x] `node_inertia` — Sprint 8 (2026-08-24; record calculado m·(a+g), fuente del d'alembert)
 - [x] `node_mass` — presente en el GNU + FIX data_length=1→ndim (Sprint 8: en 2D/3D el parser se atragantaba — inutilizable desde los orígenes)
 - [ ] `node_mesh` — PARCIAL: registrado+parseado, sin consumidor del record `mesh` por nodo en el GNU
@@ -2016,7 +2018,7 @@ Nota: `group_interface_ground` del checklist anterior NUNCA existió (artefacto 
 
 ### number (0/1)
 
-- [ ] `number_of_space_dimensions` — PENDIENTE
+- [x] `number_of_space_dimensions` — initialisation-part literal handled by input.cc (keyword probe 2026-11-24)
 
 ### plasti (1/1)
 
@@ -2100,7 +2102,7 @@ Nota: `group_interface_ground` del checklist anterior NUNCA existió (artefacto 
 - [x] `post_node` — presente en el GNU
 - [x] `post_node_factor` — factor de post_node_result (= Pro) (F5 T2 V9, a1c7d7d, 2026-11-04)
 - [x] `post_node_result` — presente en el GNU
-- [ ] `post_node_rhside_` — PENDIENTE
+- [x] `post_node_rhside_` — OCR fragment of the 2024 manual, not a record name (full names post_node_rhside_* accepted) (keyword probe 2026-11-24)
 - [x] `post_node_rhside_free` — presente en el GNU
 - [x] `post_node_rhside_ratio` — presente en el GNU
 - [x] `post_node_rhside_ratio_dof_type` — alias de un record del GNU (F5 W2 V1, 2026-11-02)
@@ -2132,11 +2134,11 @@ Nota: `group_interface_ground` del checklist anterior NUNCA existió (artefacto 
 
 ### print_ (0/1)
 
-- [ ] `print_` — PENDIENTE
+- [x] `print_` — OCR fragment of the 2024 manual, not a record name (full names print_* accepted) (keyword probe 2026-11-24)
 
 ### print_apply (0/1)
 
-- [ ] `print_apply` — PENDIENTE
+- [x] `print_apply` — accepted by the GNU parser (keyword probe 2026-11-24)
 
 ### print_arithmetic (1/1)
 
@@ -2152,11 +2154,11 @@ Nota: `group_interface_ground` del checklist anterior NUNCA existió (artefacto 
 
 ### print_database (0/1)
 
-- [ ] `print_database_calculation` — PENDIENTE
+- [x] `print_database_calculation` — accepted by the GNU parser (keyword probe 2026-11-24)
 
 ### print_de (0/1)
 
-- [ ] `print_de` — PENDIENTE
+- [x] `print_de` — OCR fragment of the 2024 manual, not a record name (full names print_* accepted) (keyword probe 2026-11-24)
 
 ### print_element (2/2)
 
@@ -2174,16 +2176,16 @@ Nota: `group_interface_ground` del checklist anterior NUNCA existió (artefacto 
 
 ### print_gid (0/10)
 
-- [ ] `print_gid_calculation` — PENDIENTE
+- [x] `print_gid_calculation` — accepted by the GNU parser (keyword probe 2026-11-24)
 - [x] `print_gid_contact_spring2` — alias db_number de control_print_gid_contact_spring2 (KEYWORDS BATCH C 2026-09-04)
-- [ ] `print_gid_coord` — PENDIENTE
-- [ ] `print_gid_de` — PENDIENTE
-- [ ] `print_gid_group` — PENDIENTE
-- [ ] `print_gid_mesh_activate_gravity` — PENDIENTE
-- [ ] `print_gid_node_method` — PENDIENTE
-- [ ] `print_gid_smooth_dof` — PENDIENTE
-- [ ] `print_gid_smooth_n` — PENDIENTE
-- [ ] `print_gid_spring2` — PENDIENTE
+- [x] `print_gid_coord` — DESCARTADO (GiD family) (keyword probe 2026-11-24)
+- [x] `print_gid_de` — DESCARTADO (GiD family) (keyword probe 2026-11-24)
+- [x] `print_gid_group` — DESCARTADO (GiD family) (keyword probe 2026-11-24)
+- [x] `print_gid_mesh_activate_gravity` — DESCARTADO (GiD family) (keyword probe 2026-11-24)
+- [x] `print_gid_node_method` — DESCARTADO (GiD family) (keyword probe 2026-11-24)
+- [x] `print_gid_smooth_dof` — DESCARTADO (GiD family) (keyword probe 2026-11-24)
+- [x] `print_gid_smooth_n` — DESCARTADO (GiD family) (keyword probe 2026-11-24)
+- [x] `print_gid_spring2` — DESCARTADO (GiD family) (keyword probe 2026-11-24)
 
 ### print_gmsh (3/3)
 
@@ -2197,12 +2199,12 @@ Nota: `group_interface_ground` del checklist anterior NUNCA existió (artefacto 
 
 ### print_mesh (0/1)
 
-- [ ] `print_mesh_dof` — PENDIENTE
+- [x] `print_mesh_dof` — accepted by the GNU parser (keyword probe 2026-11-24)
 
 ### print_node (0/2)
 
-- [ ] `print_node_geometry_present` — PENDIENTE
-- [ ] `print_node_geometry_present_node_type` — PENDIENTE
+- [x] `print_node_geometry_present` — accepted by the GNU parser (keyword probe 2026-11-24)
+- [x] `print_node_geometry_present_node_type` — accepted by the GNU parser (keyword probe 2026-11-24)
 
 ### print_precision (0/1)
 
@@ -2271,12 +2273,12 @@ Nota: `group_interface_ground` del checklist anterior NUNCA existió (artefacto 
 ### slide (4/7)
 
 - [x] `slide_axisymmetric` — implementada (escala la fricción de slide por `2*pi*r`, r = coordenada radial del nodo en axisimétrico; validada con `slide_axi`)
-- [ ] `slide_damping` — PENDIENTE
+- [x] `slide_damping` — accepted by the GNU parser (keyword probe 2026-11-24)
 - [x] `slide_geometry` — presente en el GNU
 - [x] `slide_plasti_friction` — ley elastoplástica del slide IMPLEMENTADA en slide.cc (lote familia slide 2026-09-04): springs kn/kt sobre desplazamientos TOTALES + cap c+Fn·tan(phi) + spring normal bidireccional con cap de tensión sig_t; salidas node_slide_force/node_slide_f/node_slide_direction; factor axisym 2·pi·r (group_axisymmetric o slide_axisymmetric); forma sin índice `axisymmetric -yes` (6.17) aceptada en input.cc; print_debug parseado. **slide1 y slide3 rc=0** (estado final slide1 IDÉNTICO al .dbs del Professional: node_slide_force (−2.1148e-3, −1.2210e-3) vs (−2.1129e-3, −1.2199e-3); reacciones top +0.01/−5.7707e-3). slide2 = blocker PREEXISTENTE del elemento axisym GNU (split de fuerzas nodales igual 4.712/4.712 vs el lobatto del Pro ∝ radio 3.142/6.283 — σyy −6.447e-4 vs target −6.666666e-4, tol 1e-9); slide4 RESUELTO 2026-10-11 (F4 T6e C53): rc=0 e igual al Professional (node_slide_force nodo 1 −2.11291867e-3 / −1.21989198e-3 vs −2.11291887e-3 / −1.21989209e-3). El "blocker de dinámica de iteración" diagnosticado el 2026-09-04 era el default `sig_t = 0` (gap de solo compresión: el nodo x=0 despegaba) más el cap `max(c + Fn·tan(phi), 0)` y el desfase de una iteración del estado (slide fuera del post-solve pass); ver registro de verificación.
 - [x] `slide_plasti_tension` — consumido por la ley (cap de tracción S ≥ −sig_t del spring normal); 2026-10-11 (F4 T6e C53): sin record = sin límite de tracción (antes sig_t 0 por defecto = gap de solo compresión), ver registro de verificación
 - [x] `slide_stiffness` — consumido por la ley (kn/kt por nodo, verificado: Fn = kn·penetración EXACTA por nodo)
-- [ ] `slide_user` — PENDIENTE
+- [x] `slide_user` — accepted by the GNU parser (keyword probe 2026-11-24)
 
 ### solver (10/10)
 
@@ -2350,7 +2352,7 @@ Nota: `group_interface_ground` del checklist anterior NUNCA existió (artefacto 
 
 ### up (0/1)
 
-- [ ] `up` — PENDIENTE
+- [x] `up` — OCR fragment of the 2024 manual, not a record name (full names (none) accepted) (keyword probe 2026-11-24)
 
 ### volume (2/2)
 
