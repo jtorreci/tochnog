@@ -45,5 +45,10 @@ unknown) is not scaled, the same as `groundflow_pressure_factor`.
   Professional (-0.01531 vs -0.01526 at t = 3.5). This was already the case
   with a plain `group_time` (-0.01537 vs -0.01526), so it is not caused by
   this record.
-- The groundflow pressure-unknown branch is not measured (static level
-  only).
+- The groundflow pressure-unknown branch was measured on 2026-11-23
+  (`group_time_fill_pressure1`: groundflow_pressure, a pressure gradient
+  10 / 0, filling factors 0.25 / 0.75 / 1 at t = 1 / 2 / 3, with and
+  without `groundflow_consolidation_apply -yes`): equal to the Professional
+  02-08-2026 in disy, sigyy and pres. Without a phreatic level the total
+  pressure is h - rho*g*z (materi.cc), so the prescribed pressure does not
+  change the skeleton load in that probe.

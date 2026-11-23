@@ -1164,4 +1164,9 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   "descuenta la deformación térmica y documenta la divergencia" -> truss.cc subtracts the accumulated thermal strain
   (ELEMENT_TRUSS_STRAIN_TEMPERATURE + alpha * inc_temperature) from the diagram strain. RED 12/12, GREEN 4 / 14.5
   (truss_force_diagram_thermal1/2). DIVERGENCES TRUSS-DIAGRAM-THERMAL, SEGUIMIENTO Descarte, user/dev pages.
+- L-TF-pres (2026-11-23) owner: "si, adelante" (time_fill groundflow pressure-unknown follow-up). Probes (group_time_fill3
+  without the level + groundflow_pressure, permeability 1, capacity 0.01; top pres 0 / 10, gradient 10 / 0; t = 1, 2,
+  3, 4; consolidation off / on): GNU = Professional in every case (disy, sigyy, pres). Without a phreatic level the total
+  pressure is h - rho*g*z, so the prescribed pressure leaves the skeleton load unchanged in both programs. No source
+  change; regression test group_time_fill_pressure1 (Pro targets at t = 1, factor 0.25).
 

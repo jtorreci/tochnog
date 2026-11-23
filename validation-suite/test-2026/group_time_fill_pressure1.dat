@@ -1,0 +1,58 @@
+( group_time_fill (manual 6.770) with the groundflow pressure unknown: as
+  group_time_fill3 without the phreatic level, with groundflow_pressure,
+  permeability 1, capacity 0.01, pres 10 at the top and 0 at the bottom.
+  Professional 02-08-2026 at t = 1 (filling factor 0.25 of the upper
+  element): node 3 disy -0.01125 pres 5 sigyy -6.5625, node 5 disy
+  -0.005625; the GNU gives the same values, also at t = 2 / 3 and with
+  groundflow_consolidation_apply -yes. )
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_displacement
+materi_stress
+groundflow_pressure
+end_initia
+node 1 0 0
+node 2 1 0
+node 3 0 1
+node 4 1 1
+node 5 0 2
+node 6 1 2
+element 1 -quad4 1 2 3 4
+element 2 -quad4 3 4 5 6
+element_group 2 1
+group_type 0 -materi -groundflow
+group_materi_elasti_young 0 1000
+group_materi_elasti_poisson 0 0
+group_materi_memory 0 -total_linear
+group_materi_density_groundflow 0 2.0 1.5
+group_type 1 -materi -groundflow
+group_materi_elasti_young 1 1000
+group_materi_elasti_poisson 1 0
+group_materi_memory 1 -total_linear
+group_materi_density_groundflow 1 2.0 1.5
+group_groundflow_permeability 0 1.
+group_groundflow_permeability 1 1.
+group_groundflow_capacity 0 0.01
+group_groundflow_capacity 1 0.01
+group_time_fill 1 0.5 2.5 100
+force_gravity 0 -10
+groundflow_density 1.
+post_calcul -groundflow_pressure -total_pressure
+bounda_dof 0 -ra 1 2 -ra -velx -vely
+bounda_dof 1 -ra 3 4 5 6 -ra -velx
+bounda_dof 2 -ra 5 6 -ra -pres
+bounda_time 2 10.
+bounda_dof 3 -ra 1 2 -ra -pres
+bounda_time 3 0.
+control_timestep 10 0.25 0.5
+control_timestep 20 0.25 0.5
+target_item    1  -node_dof 3 -disy
+target_value   1  -0.01125 1.e-8
+target_item    2  -node_dof 5 -disy
+target_value   2  -0.005625 1.e-8
+target_item    3  -node_dof 3 -pres
+target_value   3  5. 1.e-8
+target_item    4  -node_dof 3 -sigyy
+target_value   4  -6.5625 1.e-8
+end_data

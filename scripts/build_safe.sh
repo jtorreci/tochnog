@@ -3614,6 +3614,7 @@ expected_error_ok "$T2026" truss_force_diagram_error1
 run_ok "$T2026" group_time_fill1
 run_ok "$T2026" group_time_fill2
 run_ok "$T2026" group_time_fill3
+run_ok "$T2026" group_time_fill_pressure1
 # F5 T5 U8: strain_volume_* (6.1062-6.1066): prescribed volume strain, post_strain_volume_*
 run_ok "$T2026" strain_volume1
 run_ok "$T2026" strain_volume_fixed1
