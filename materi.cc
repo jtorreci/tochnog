@@ -2096,6 +2096,19 @@ void strain_volume_setup( void )
         GET_IF_EXISTS );
       if ( !strain_volume_candidate( element, name, element_group ) ||
            !strain_volume_in_set( ind, element, element_group ) ) continue;
+      // manual 6.1063: "presently available only for small deformation
+      // analysis"; a large deformation memory is an input error (owner
+      // 2026-11-23, STRAIN-VOLUME-LARGE-DEFORMATION; the Professional
+      // 02-08-2026 runs: -total gives initial 12.61, -updated absolute 0)
+      long int memory = materi_memory_default();
+      db( GROUP_MATERI_MEMORY, element_group, &memory, ddum, ldum,
+        VERSION_NORMAL, GET_IF_EXISTS );
+      if ( memory==-UPDATED || memory==-UPDATED_WITHOUT_ROTATION ||
+           memory==-TOTAL || memory==-TOTAL_PIOLA ) {
+        pri( "Error: strain_volume needs a small deformation memory "
+          "(-total_linear or -updated_linear) in element group ", element_group );
+        db_error( GROUP_MATERI_MEMORY, element_group );
+      }
       for ( inol=0; inol<nnol; inol++ ) {
         db( NODE, el[1+inol], idum, ddum, ldum, VERSION_NORMAL, GET );
         for ( idim=0; idim<ndim; idim++ ) coord[inol*ndim+idim] = ddum[idim];

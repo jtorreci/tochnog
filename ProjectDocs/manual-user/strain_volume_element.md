@@ -38,7 +38,11 @@ strain_volume_geometry      index geometry_item_name geometry_item_index
   `-materi` group is in the set.
 - Exactly one of the two tables per index; both is an input error.
 - An element in several indices takes the last index.
-- Small deformation, isoparametric elements only.
+- Small deformation, isoparametric elements only: a set element whose group has a large deformation
+  memory (`-updated`, `-updated_without_rotation`, `-total`, `-total_piola`) stops the calculation
+  with "Error: strain_volume needs a small deformation memory (-total_linear or -updated_linear)".
+  The Professional 02-08-2026 runs instead and gives unreliable values (DIVERGENCES
+  STRAIN-VOLUME-LARGE-DEFORMATION).
 
 Output (same index): `post_strain_volume_initial` (initial volume of the
 set), `post_strain_volume_absolute` (summed actual volume increase, the

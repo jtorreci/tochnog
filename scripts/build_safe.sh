@@ -3628,6 +3628,8 @@ run_ok "$T2026" strain_volume_index2
 run_ok "$T2026" strain_volume_selector_and1
 run_ok "$T2026" strain_volume_selector_and2
 expected_error_ok "$T2026" strain_volume_error1
+expected_error_ok "$T2026" strain_volume_error2
+expected_error_ok "$T2026" strain_volume_error3
 # F5 T5 U9: bounda_baseline_correction (6.19), _parameters (6.20)
 run_ok "$T2026" bounda_baseline_correction1
 run_ok "$T2026" bounda_baseline_correction2

@@ -1178,4 +1178,8 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   manual 6.1063: "presently available only for small deformation analysis" -> owner question.
   Incident (2026-11-23): during the suite 35 strain_volume* files (tests, outputs, the developer page) turned mode 000
   on the NAS (7 false failures, git add refused); restored with chmod 644, tracked content unchanged; rerun 1357 OK.
+- L-SV-large (2026-11-23) owner: "sí" (input error for strain_volume with a large deformation memory, document the
+  divergence). materi.cc strain_volume_setup: -updated / -updated_without_rotation / -total / -total_piola in a set
+  element -> "Error: strain_volume needs a small deformation memory (-total_linear or -updated_linear)". RED rc 0,
+  GREEN expected errors strain_volume_error2 (-total) / _error3 (-updated). DIVERGENCES STRAIN-VOLUME-LARGE-DEFORMATION.
 

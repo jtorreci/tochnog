@@ -8,7 +8,9 @@
   `ELEMENT_STRAIN_VOLUME`. Enums in `tochnog.h` / `tochnog-mod.h`.
 - `materi.cc`:
   - `strain_volume_setup()` (called at the end of `input()`): rejects
-    both tables in one index and stores `POST_STRAIN_VOLUME_INITIAL` of
+    both tables in one index and a large deformation memory (`-updated`,
+    `-updated_without_rotation`, `-total`, `-total_piola`, after
+    `materi_memory_default()`) in a set element, and stores `POST_STRAIN_VOLUME_INITIAL` of
     every index, integrating the element volumes with `pol()` on the
     input coordinates (the absolute tables need it from the first step).
   - `strain_volume_in_set(ind, element, group)`: intersection of the
@@ -44,9 +46,9 @@ reproduces each value to 1e-8.
   02-08-2026: element 1 with groups 0 1 -> element 1, initial 4; element 2
   with a geometry holding element 1 -> empty set, all results 0). Tests
   `strain_volume_selector_and1/2`.
+- 2026-11-23: large deformation memories are an input error
+  (`strain_volume_error2/3`; owner, STRAIN-VOLUME-LARGE-DEFORMATION).
 
 ## Hardcoded parameters / pending refactorings
 
-- Large deformation memories are not rejected (the manual restricts the
-  option to small deformation).
 - The element set is not recomputed after mesh refinement.
