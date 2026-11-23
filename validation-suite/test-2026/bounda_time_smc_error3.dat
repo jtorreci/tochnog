@@ -1,0 +1,24 @@
+( bounda_time_smc: the first line of 51.smc names no ACCELEROGRAM,
+  VELOCITY or DISPLACEMENT data, as in the Professional 02-08-2026 an
+  input error.
+  EXPECTED_ERROR: Error, dof format SMC file.
+)
+echo -no
+number_of_space_dimensions 1
+materi_acceleration
+materi_velocity
+materi_displacement
+end_initia
+inertia_apply -yes
+node 1  0
+node 2  1
+element 1  -truss 1 2
+group_type 0  -truss
+group_truss_area 0  1.0
+group_truss_elasti_young 0  1.0
+group_truss_density 0  2.0
+bounda_dof 51 1 -accx
+bounda_time_smc 51 -yes
+bounda_time_smc_units 51 1. 1.
+control_timestep 10 0.25 1.
+end_data

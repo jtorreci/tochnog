@@ -1,0 +1,31 @@
+( bounda_time_smc_offset and _units: file 43.smc holds samples k = 0..9
+  at 2 per second. Units 2. 1. put sample k at 1. + k*0.25 {offset 1.} with
+  value 4k {factor_time^2/factor_length}: acceleration 8t - 8 after t = 1,
+  zero before. At t = 2.5: accx 24, velx 19.5, disx 11.375, as in the
+  Professional 02-08-2026. )
+echo -no
+number_of_space_dimensions 1
+materi_acceleration
+materi_velocity
+materi_displacement
+end_initia
+inertia_apply -yes
+node 1  0
+node 2  1
+element 1  -truss 1 2
+group_type 0  -truss
+group_truss_area 0  1.0
+group_truss_elasti_young 0  1.0
+group_truss_density 0  2.0
+bounda_dof 43 1 -accx
+bounda_time_smc 43 -yes
+bounda_time_smc_units 43 2. 1.
+bounda_time_smc_offset 43 1.
+control_timestep 10 0.125 2.5
+target_item 0 -node_dof 1 -accx
+target_value 0 24. 1.e-8
+target_item 1 -node_dof 1 -velx
+target_value 1 19.5 1.e-8
+target_item 2 -node_dof 1 -disx
+target_value 2 11.375 1.e-8
+end_data

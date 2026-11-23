@@ -1,0 +1,26 @@
+( bounda_time_smc: the Professional 02-08-2026 example other/smc_2 with
+  file 42.smc, the 1990 Upland accelerogram {CRLF lines, glued samples
+  -3.1556E+0-5.6333E+0, 200 samples per second}, units 3600. 100. {hours,
+  meters}: an acceleration times 3600^2/100. Professional: disx
+  8.376952307565e-02 at t = 6e-3 h. )
+echo -no
+number_of_space_dimensions 1
+materi_acceleration
+materi_velocity
+materi_displacement
+end_initia
+inertia_apply -yes
+node 1  0
+node 2  1
+element 1  -truss 1 2
+group_type 0  -truss
+group_truss_area 0  1.0
+group_truss_elasti_young 0  1.0
+group_truss_density 0  2.0
+bounda_dof 42 1 -accx
+bounda_time_smc 42 -yes
+bounda_time_smc_units 42 3600. 100.
+control_timestep 10 1.e-6 6.e-3
+target_item 0 -node_dof 1 -disx
+target_value 0 8.376952307565e-02 1.e-10
+end_data

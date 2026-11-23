@@ -436,6 +436,121 @@ static double bounda_baseline_load( long int iboun, long int table,
   return c[0] + c[1]*tau + c[2]*tau*tau;
 }
 
+// ---------------------------------------------------------------------------
+// bounda_time_smc (manual Professional 6.42-6.44): read <iboun>.smc, a USGS
+// Strong Motion CD file, into a time-value table in model units. The
+// layout is 11 text lines (the first names the data type), 48 integers
+// (the 16th is the number of comment lines), 50 reals (the 2nd is the
+// number of samples per second), the comment lines and the samples. The
+// samples are read up to the end of the file, separated by white space or
+// glued together in fields of 10 columns (-3.1556E+0-5.6333E+0); the
+// number of samples in the integer header is not used, as in the
+// Professional. Sample k lies at
+// time_offset + k/(rate*factor_time). An acceleration is multiplied by
+// factor_time^2/factor_length, a velocity by factor_time/factor_length and
+// a displacement by 1/factor_length. Returns the data type (0 acceleration,
+// 1 velocity, 2 displacement) and a new table of 2*n_pair values, freed by
+// the caller. Measured against the Professional 02-08-2026, 2026-11-23.
+// ---------------------------------------------------------------------------
+static long int bounda_time_smc_read( long int iboun, double *&table,
+  long int &length_table )
+
+{
+  long int i=0, n=0, itype=-1, ncomment=0, ldum=0, idum[1],
+    iheader[48];
+  double offset=0., rate=0., scale=0., units[2], rheader[50];
+  char str[MCHAR], filename[MCHAR], *p=NULL, *end=NULL;
+  string line, rest;
+  vector<double> sample;
+
+  if ( !db_active_index( BOUNDA_TIME_SMC_UNITS, iboun, VERSION_NORMAL ) )
+    db_error( BOUNDA_TIME_SMC_UNITS, iboun );
+  db( BOUNDA_TIME_SMC_UNITS, iboun, idum, units, ldum, VERSION_NORMAL, GET );
+  if ( units[0]<=0. || units[1]<=0. )
+    db_error( BOUNDA_TIME_SMC_UNITS, iboun );
+  db( BOUNDA_TIME_SMC_OFFSET, iboun, idum, &offset, ldum,
+    VERSION_NORMAL, GET_IF_EXISTS );
+
+  strcpy( filename, long_to_a(iboun,str) );
+  strcat( filename, ".smc" );
+  ifstream in( filename );
+  if ( !in ) {
+    string smc_message = "Error opening : ";
+    smc_message += filename;
+    pri( smc_message.c_str() );
+    exit(TN_EXIT_STATUS);
+  }
+  for ( i=0; i<11; i++ ) {
+    if ( !getline( in, line ) ) db_error( BOUNDA_TIME_SMC, iboun );
+    if ( i==0 ) {
+      if      ( line.find( "ACCELEROGRAM" )!=string::npos ) itype = 0;
+      else if ( line.find( "VELOCITY" )!=string::npos ) itype = 1;
+      else if ( line.find( "DISPLACEMENT" )!=string::npos ) itype = 2;
+    }
+  }
+  if ( itype<0 ) {
+    pri( "Error, dof format SMC file." );
+    exit(TN_EXIT_STATUS);
+  }
+  for ( i=0; i<48; i++ )
+    if ( !(in>>iheader[i]) ) db_error( BOUNDA_TIME_SMC, iboun );
+  for ( i=0; i<50; i++ )
+    if ( !(in>>rheader[i]) ) db_error( BOUNDA_TIME_SMC, iboun );
+  ncomment = iheader[15];
+  rate = rheader[1];
+  if ( ncomment<0 || rate<=0. || rate>1.e30 ) {
+    pri( "Error: the SMC file has no valid number of comment lines or "
+      "samples per second; file ", filename );
+    exit(TN_EXIT_STATUS);
+  }
+  getline( in, line );
+  for ( i=0; i<ncomment; i++ )
+    if ( !getline( in, line ) ) db_error( BOUNDA_TIME_SMC, iboun );
+    // the samples: white space separated words; a word longer than one
+    // field of 10 columns holds glued samples (-3.1556E+0-5.6333E+0) and
+    // is cut at the columns 10, 20, ... of the line
+  while ( getline( in, rest ) ) {
+    long int len = (long int) rest.size(), s=0, e=0, c=0, cut=0;
+    while ( s<len ) {
+      while ( s<len && isspace( (unsigned char) rest[s] ) ) s++;
+      if ( s>=len ) break;
+      e = s;
+      while ( e<len && !isspace( (unsigned char) rest[e] ) ) e++;
+      for ( c=s; c<e; c=cut ) {
+        cut = e;
+        if ( e-s>10 && (c/10+1)*10<e ) cut = (c/10+1)*10;
+        string word = rest.substr( c, cut-c );
+        p = &word[0];
+        double value = strtod( p, &end );
+        if ( end==p || *end!='\0' ) {
+          pri( "Error: the SMC file holds a sample that is not a number; "
+            "file ", filename );
+          exit(TN_EXIT_STATUS);
+        }
+        sample.push_back( value );
+      }
+      s = e;
+    }
+  }
+  in.close();
+  n = (long int) sample.size();
+  if ( n<2 ) {
+    pri( "Error: the SMC file holds less than two samples; file ", filename );
+    exit(TN_EXIT_STATUS);
+  }
+
+  if      ( itype==0 ) scale = units[0]*units[0]/units[1];
+  else if ( itype==1 ) scale = units[0]/units[1];
+  else                 scale = 1./units[1];
+  length_table = 2*n;
+  table = get_new_dbl( length_table );
+  for ( i=0; i<n; i++ ) {
+    table[2*i+0] = offset + i/(rate*units[0]);
+    table[2*i+1] = sample[i]*scale;
+  }
+  return itype;
+}
+
 void bounda( )
 
 {
@@ -473,6 +588,9 @@ void bounda( )
     until_data_item_index=0, until_data_item_number=0;
   double bounda_until_factor=1., bounda_until_first=0., bounda_until_monitor=0.,
     bounda_until_wanted=0., bounda_until_start=0.;
+  // bounda_time_smc: the table read from the SMC file and its data type
+  long int smc=0, smc_type=0, smc_switch=0, length_smc_table=0;
+  double *smc_table=NULL;
 
   swit = set_swit(-1,-1,"bounda");
   if ( swit ) pri( "In routine BOUNDA" );
@@ -547,6 +665,14 @@ void bounda( )
         if ( skip_bounda ) continue;
       }
       time =  sine = user = 0; ninc = 2;
+      smc = 0;
+      if ( smc_table!=NULL ) {
+        delete[] smc_table;
+        smc_table = NULL;
+      }
+      smc_switch = -NO;
+      db( BOUNDA_TIME_SMC, iboun, &smc_switch, ddum, ldum,
+        VERSION_NORMAL, GET_IF_EXISTS );
       if      ( db_active_index( BOUNDA_SINE, iboun, VERSION_NORMAL ) ) {
         bounda_sine = db_dbl( BOUNDA_SINE, iboun, VERSION_NORMAL );
         // Professional manual 6.34: bounda_sine index start_time end_time
@@ -564,15 +690,23 @@ void bounda( )
         ninc = 2;
         user = 1;
       }
-      else if ( db_active_index( BOUNDA_TIME_SMC, iboun, VERSION_NORMAL ) ) {
-        // bounda_time_smc (manual Professional 6.42): base acceleration
-        // from an SMC (Strong Motion CD) file. PENDING: the SMC reader
-        // is not implemented; fail loudly instead of running with a
-        // silent zero acceleration.
-        pri( "Error: bounda_time_smc (SMC accelerogram reading) is not "
-             "implemented in this build (PENDING)." );
-        exit(TN_EXIT_STATUS);
-      }          
+      else if ( smc_switch==-YES ) {
+        // bounda_time_smc (manual Professional 6.42-6.44): the samples of
+        // <index>.smc. The two samples around time_total go to bounda_time,
+        // so the time loop below interpolates linearly; before the first
+        // sample and after the last one the dofs are free (Professional).
+        smc_type = bounda_time_smc_read( iboun, smc_table, length_smc_table );
+        smc = 1;
+        time = 1;
+        ninc = 2;
+        length_bounda_time = 4;
+        bounda_time_increment = 0.;
+        {
+          long int k = 0;
+          while ( k<length_smc_table/2-2 && time_total>smc_table[2*k+2] ) k++;
+          array_move( &smc_table[2*k], bounda_time, 4 );
+        }
+      }
       else if ( db_active_index( BOUNDA_TIME_FILE, iboun, VERSION_NORMAL ) ) {
         db( BOUNDA_TIME_FILE, iboun, &bounda_time_file, ddum, ldum, 
           VERSION_NORMAL, GET_IF_EXISTS );
@@ -740,6 +874,33 @@ void bounda( )
           val[bounda_length-0] = dof_label[vel_indx+1*nder];
           bounda_length++;
         }
+        // bounda_time_smc: the dofs must be of the data type of the file
+        if ( smc ) {
+          long int iu_smc=0, kind=0;
+          const char *smc_name[3] = { "materi_acceleration",
+            "materi_velocity", "materi_displacement" };
+          for ( iu_smc=1; iu_smc<bounda_length; iu_smc++ ) {
+            for ( idim=0; idim<ndim; idim++ ) {
+              kind = -1;
+              if ( materi_acceleration &&
+                   val[iu_smc]==dof_label[acc_indx+idim*nder] ) kind = 0;
+              else if ( materi_velocity &&
+                   val[iu_smc]==dof_label[vel_indx+idim*nder] ) kind = 1;
+              else if ( materi_displacement &&
+                   val[iu_smc]==dof_label[dis_indx+idim*nder] ) kind = 2;
+              if ( kind>=0 && kind!=smc_type ) {
+                string smc_message = "Error, the SMC file is for type: ";
+                smc_message += smc_name[smc_type];
+                pri( smc_message.c_str() );
+                smc_message = "The BOUNDA_DOF is for: ";
+                smc_message += smc_name[kind];
+                pri( smc_message.c_str() );
+                pri( "That is not consistent." );
+                exit(TN_EXIT_STATUS);
+              }
+            }
+          }
+        }
       }
       else {
         assert( force );
@@ -859,7 +1020,12 @@ void bounda( )
             for ( idim=0; idim<ndim; idim++ )
               if ( materi_acceleration &&
                    val[iu_acc]==dof_label[acc_indx+idim*nder] ) has_acc = 1;
-          if ( has_acc ) {
+          if ( has_acc && smc )
+              // the fit integrates the whole SMC table, not only the two
+              // samples around time_total
+            bounda_baseline = bounda_baseline_load( iboun, 1,
+              smc_table, length_smc_table, time_total, dtime );
+          else if ( has_acc ) {
             long int table = time && length_bounda_time>0 &&
               db_active_index( BOUNDA_TIME, iboun, VERSION_NORMAL ) &&
               !db_active_index( BOUNDA_TIME_FILE, iboun, VERSION_NORMAL ) &&
@@ -1485,6 +1651,7 @@ void bounda( )
   delete[] dof_label;
   delete[] dof_type;
   delete[] bounda_time;
+  if ( smc_table!=NULL ) delete[] smc_table;
 
   if ( swit ) pri( "Out routine BOUNDA" );
 

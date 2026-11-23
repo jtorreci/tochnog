@@ -470,6 +470,7 @@ B conocida/pendiente, C extensión/dialecto GNU, D sospechosa del Pro).
 | Professional contact spring friction at FN = 0 (keeps the elastic tangential force 0.00025, velz -0.5, also with f 0.5) | **Deliberate divergence** (owner 2026-11-23, "mantenmos manual. Es lo normal. Lo de Professional no es físico, en realidad"; DIVERGENCES CONSPR-FRICTION-ZERO-NORMAL, Pro-suspect). The GNU follows manual 6.608 (tangential force <= f FN): with FN = 0 the springs slide (velz -1). Guard test `test-2026/contact_spring_friction_zero_normal1`. Documented in `manual-developer/element_contact_spring_direction.md`. |
 | Professional truss force diagram with thermal expansion (enters `group_truss_elasti_elongation_force_diagram` with the total strain: force 12 for dT +10 / -10 / 0) | **Deliberate divergence** (owner 2026-11-23, "descuenta la deformación térmica y documenta la divergencia"; DIVERGENCES TRUSS-DIAGRAM-THERMAL). The GNU subtracts the accumulated thermal strain alpha dT before the diagram (force 4 for dT +10, 14.5 for dT -5). Tests `test-2026/truss_force_diagram_thermal1/2`. Documented in `manual-user/` and `manual-developer/group_truss_elasti_elongation_force_diagram.md`. |
 | Professional `strain_volume_*` with a large deformation memory (runs: -total initial 12.61 / absolute 0.641, -updated absolute 0) | **Deliberate divergence** (owner 2026-11-23, "sí"; DIVERGENCES STRAIN-VOLUME-LARGE-DEFORMATION). Manual 6.1063 restricts the option to small deformation: the GNU stops with an input error. Tests `test-2026/strain_volume_error2/3`. |
+| Professional `bounda_time_smc` with LF lines of 80 glued columns (a zero sample after each line) | **Deliberate divergence** (project decision 2026-11-23, Pro-suspect, to confirm with the owner; DIVERGENCES SMC-GLUED-LINE-END). The GNU reads the same samples for LF and CRLF lines. Test `test-2026/bounda_time_smc_glued2`. The rest of the SMC reader equals the Professional 02-08-2026 (examples other/smc_1 61.7617 and smc_2 0.08376952307565, 11 probes to 3e-12): tests `bounda_time_smc_*`. |
 | Professional `group_materi_stokes` read at index 0 for every element group | **Deliberate divergence** (project decision 2026-10-12, F4 T6f K21 WU2; DIVERGENCES STOKES-IDX, class A, also Pro-suspect: manual 6.752 says the index is the element group). The Professional 02-08-2026 uses the index-0 switch for every group (a group 1 `-no` that holds the post_point: Pro 0.1465713 = all `-yes`); the GNU reads the switch per element group (0.124105). Guard tests `test-2026/stokes_group1/2` (the Pro fails them). Documented in `manual-user/` and `manual-developer/group_materi_stokes.md`. |
 | Professional `eptzz` of a plastic `group_materi_membrane` element = last step's zz correction only (`validation_3`; single element -9.6e-5 at dt 0.01, -7.9e-4 at dt 0.1) | **Deliberate divergence** (project decision 2026-10-12, F4 T6f, K15; DIVERGENCES MEMBRANE-EPTZZ, class A, also Pro-suspect). The GNU stores the total zz strain, elastic + accumulated plastic (manual 6.685 plane stress; analytic single element -0.0088249, GNU -0.00863 at dt 0.01). Guard tests `test-2026/membrane_eptzz_total1/2`; GNU residual yy/zz plastic split first order in dt -> BACKLOG C69. Documented in `manual-user/` and `manual-developer/group_materi_membrane.md`. |
 | Professional time-discretisation error of the von Wolffersdorff + intergranular strain law at a strain reversal (test-2014 `hypo3`: sigxx -0.1629 at dt 1e-3, -0.10499 at dt 1e-5) | **Deliberate divergence** (project decision 2026-10-12, F4 T6f; DIVERGENCES K14b, class A, also Pro-suspect). The converged reference (Python integration of the same law, manual 2.2.4) is -0.10466; the GNU gives -0.1034 at dt 1e-3 (1.2 %) and -0.104235 at dt 1e-5, the Professional is 56 % off at dt 1e-3 and only converges as dt -> 0. Guard tests `test-2026/hypo_wolff_igs_oedometer1/2`. The `hypo3` hyhis slot difference stays open (K14, class B). Documented in `manual-user/` and `manual-developer/group_materi_plasti_hypo_wolfersdorff.md` and `group_materi_plasti_hypo_intergranularstrain.md`. |
@@ -609,15 +610,15 @@ marcado `PENDIENTE` puede estar cubierto en el GNU bajo otro nombre:
 
 - [x] `bounda_sine` — presente en el GNU; layout alineado al Professional 6.34 (start_time end_time freq amp ...) el 2026-09-13 (`6888875`; ver registro de verificación); frequency-0 static value PENDIENTE
 
-### bounda_time (7/11; 1 falso pendiente por OCR, 3 SMC pendientes)
+### bounda_time (10/11; 1 falso pendiente por OCR)
 
 - [x] `bounda_time` — presente en el GNU
 - [x] `bounda_time_factor` — Sprint 8 (2026-08-24)
 - [x] `bounda_time_increment` — presente en el GNU
 - [x] `bounda_time_offset` — presente en el GNU (el "bounda_time_o" del inventario era OCR truncado de offset)
-- [~] `bounda_time_smc` — registrado y parseado (2026-09-04); el LECTOR del formato SMC USGS sigue PENDIENTE (fallo honesto en runtime; ver manual-user/bounda_time_smc.md)
-- [~] `bounda_time_smc_offset` — registrado (ídem, PENDIENTE el consumo)
-- [~] `bounda_time_smc_units` — registrado (ídem, PENDIENTE el consumo)
+- [x] `bounda_time_smc` — SMC reader (F5, 2026-11-23; ver manual-user/bounda_time_smc.md)
+- [x] `bounda_time_smc_offset` — ídem
+- [x] `bounda_time_smc_units` — ídem (obligatorio, como en el Professional)
 - [x] `bounda_time_units` — implementada (commit `ba20c45`, 2026-08-05)
 - [x] `bounda_time_until_data` — implementada (lote bounda 2026-09-01; ver registro de verificación)
 - [x] `bounda_time_until_value_minimum` — implementada (lote bounda 2026-09-01; ver registro de verificación)

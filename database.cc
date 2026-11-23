@@ -395,10 +395,8 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   data_class[BOUNDA_TIME_USER] = BOUNDA;
 
   // bounda_time_smc/_offset/_units (manual Professional 6.42/6.43/6.44):
-  // base acceleration read from an SMC (Strong Motion CD) file. The
-  // records are REGISTERED and PARSED; the SMC file reader is not yet
-  // implemented (PENDING). bounda_time_smc index -yes would need the
-  // file <index>.smc next to the input file.
+  // base excitation read from the SMC (Strong Motion CD) file
+  // <index>.smc; the reader is bounda_time_smc_read() in bounda.cc.
   strcpy(name[BOUNDA_TIME_SMC],"bounda_time_smc");
   type[BOUNDA_TIME_SMC] = INTEGER;
   data_length[BOUNDA_TIME_SMC] = 1;

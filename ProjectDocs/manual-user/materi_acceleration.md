@@ -74,5 +74,4 @@ prescribed value.
 - The order of the dof groups in the initia part defines the column order
   of the node_dof record, as usual (the labels resolve independently of
   that order).
-- SMC accelerogram files (`bounda_time_smc`) are not implemented yet; see
-  `bounda_time_smc.md` / the PENDING notes in the seguimiento.
+- SMC accelerogram files: see [bounda_time_smc](bounda_time_smc.md).

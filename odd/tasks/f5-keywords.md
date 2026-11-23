@@ -1183,3 +1183,14 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   element -> "Error: strain_volume needs a small deformation memory (-total_linear or -updated_linear)". RED rc 0,
   GREEN expected errors strain_volume_error2 (-total) / _error3 (-updated). DIVERGENCES STRAIN-VOLUME-LARGE-DEFORMATION.
 
+- L-SMC (2026-11-23) owner: "si, por favor" (go on with bounda_time_smc, the last F5 follow-up). Pro 02-08-2026
+  measured with the examples other/smc_1 (61.7617) and smc_2 (0.08376952307565), plus ramp probes:
+  - Sample k is at offset + k/(rate*ft) and interpolated linearly; the dof is free outside the signal.
+  - Scale: ft^2/fl for an acceleration, ft/fl for a velocity, 1/fl for a displacement.
+  - The type comes from the first-line words; a mismatch with the dof is an error. A missing units record is a db
+    error and a missing file gives "Error opening". npts is ignored; the comment count is integer 16.
+  bounda.cc gets bounda_time_smc_read(), the bracket-into-bounda_time branch, the dof type check, and the full table
+  for the baseline. The 12 tests bounda_time_smc_* (files 41-52.smc) are GREEN on GNU and pass on Pro except glued2.
+  RED: the binary before this change exits with "not implemented (PENDING)" for every SMC input.
+  Deliberate divergence (project decision, to confirm): SMC-GLUED-LINE-END.
+  The baseline with SMC equals the bounda_time table rule (BASELINE-CORRECTION-SIGNAL, already recorded).

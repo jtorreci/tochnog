@@ -13,3 +13,6 @@ README text eol=lf
 makefile text eol=lf
 .gitignore text eol=lf
 .gitattributes text eol=lf
+
+# SMC accelerogram test inputs: line ends are part of the test (byte exact)
+*.smc -text

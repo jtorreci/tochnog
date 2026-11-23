@@ -38,4 +38,4 @@ least-squares of velocities that was tried, and a = t on [0,2] gives
 - The fit uses the time step of the first step in the interval; a later
   change of the step size does not refit.
 - The fit assumes rest (v = 0) at time_start.
-- `bounda_time_smc` (SMC reader) is still pending.
+- `bounda_time_smc`: `bounda()` passes the whole SMC table with table = 1.

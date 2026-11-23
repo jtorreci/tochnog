@@ -30,7 +30,8 @@ suppress the drift of the velocity.
   bounda_baseline_correction needs a bounda_time table of time-value pairs
   for bounda index" (bounda_time_file, bounda_time_increment, bounda_sine or
   user tables without given parameters).
-- `bounda_time_smc` is not implemented in this build.
+- With `bounda_time_smc` the fit uses the whole SMC signal, as for a
+  `bounda_time` table; see [bounda_time_smc](bounda_time_smc.md).
 
 Differences with the Professional 02-08-2026: DIVERGENCES
 BASELINE-CORRECTION-SIGNAL (it adds p to the bounda_time points after

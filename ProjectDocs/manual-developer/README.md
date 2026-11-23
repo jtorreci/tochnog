@@ -428,7 +428,7 @@ page lists its own in "Differences with the Professional version".
 - [materi_acceleration](materi_acceleration.md) - enum MATERI_ACCELERATION + acc_indx, handler de initia (input.cc), basenames accx/accy/accz (database.cc), update derivado en parallel_new_dof_diagonal (dof.cc), caso especial -accx en bounda.cc. Verificado contra el binario Professional (dynamic3/4 rc=0).
 - [materi_dynamic](materi_dynamic.md) - registro global MATERI_DYNAMIC (double, no_index) + control_materi_dynamic a double; blend del sigvec del momento con old_sig y escalado f de la rigidez del momento en materi.cc y truss.cc. A/B contra el Professional documentado (f=1 byte-identico; f=0 estable solo dentro del CFL del esquema GNU). C11 (2026-10-11): helper materi_dynamic_effective() in general.cc (control record at ICONTROL overrules the global one) used by the displacement-primary gate and every reader.
 - [start_if_not](start_if_not.md) - extension de input_read_string(): start_if_not/end_if_not con using_if_not; parada del value-loop en los 4 tokens.
-- [bounda_time_smc](bounda_time_smc.md) - registros BOUNDA_TIME_SMC(_OFFSET/_UNITS) registrados; el lector del formato SMC queda PENDIENTE; bounda() falla con mensaje honesto.
+- [bounda_time_smc](bounda_time_smc.md) - SMC reader `bounda_time_smc_read()` in bounda.cc and its Professional measurement.
 
 ## Lote keywords baratas (camclay / beam / groundflow / slide) — convergencia
 

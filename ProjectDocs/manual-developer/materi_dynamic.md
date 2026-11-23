@@ -89,7 +89,7 @@ change; the numbers below are the full measured mechanism):
   variants read the material state; unaffected by the blend.
 - Full displacement-primary transient branch for materi_dynamic < 1 with
   the Pro's measured map (scope in DIAG-SOLVE-MIXTO S17.4).
-- SMC reading (bounda_time_smc) — separate pending feature.
+- SMC reading: implemented in `bounda.cc` (`bounda_time_smc_read`), see bounda_time_smc.md.
 
 ## Effective factor helper (F4 T6d / C11, 2026-10-11)
 

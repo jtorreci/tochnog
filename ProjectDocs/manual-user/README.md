@@ -434,7 +434,7 @@ page lists its own in "Differences with the Professional version".
 - [materi_acceleration](materi_acceleration.md) - los dofs de aceleracion (manual 4.11): records derivados acc = (v_new - v_old)/dt; bounda_dof -accx impone el bound de velocidad v_new = v_old + a*dt (base excitation). Unlocks dynamic3/dynamic4 (rc=0) y el parse de dynamic2/5/6/7/8, earthquake_1/2/3, smc_1/2.
 - [materi_dynamic](materi_dynamic.md) - el factor de mezcla temporal sigma = (1-f)*sigma(t) + f*sigma(t+dt) (6.800) y control_materi_dynamic (6.141). Implementado en materi() y truss(); f=1 = esquema historico byte-identico. Los tests dynamic1/2/5/8 siguen RUNFAIL por el esquema de velocidades del GNU (bloqueador de solver, no de parse). C11 (2026-10-11): control_materi_dynamic also drives the displacement-primary scheme (= Professional).
 - [start_if_not](start_if_not.md) - bloques condicionales start_if_not ... end_if_not del data part (con start_if ... end_if ya existente).
-- [bounda_time_smc](bounda_time_smc.md) - familia de acelerogramas SMC registrada y parseada; el lector esta PENDIENTE (fallo honesto en runtime).
+- [bounda_time_smc](bounda_time_smc.md) - base excitation read from a USGS SMC file (acceleration, velocity or displacement), with offset and units.
 
 ## Lote keywords baratas (camclay / beam / groundflow / slide) — convergencia
 

@@ -3630,6 +3630,21 @@ run_ok "$T2026" strain_volume_selector_and2
 expected_error_ok "$T2026" strain_volume_error1
 expected_error_ok "$T2026" strain_volume_error2
 expected_error_ok "$T2026" strain_volume_error3
+# F5 bounda_time_smc (6.42-6.44): the SMC reader, measured against the
+# Professional 02-08-2026 (examples other/smc_1, smc_2 and probes); files
+# 41.smc .. 52.smc. glued2 pins the SMC-GLUED-LINE-END divergence.
+run_ok "$T2026" bounda_time_smc_constant1
+run_ok "$T2026" bounda_time_smc_upland1
+run_ok "$T2026" bounda_time_smc_offset1
+run_ok "$T2026" bounda_time_smc_free1
+run_ok "$T2026" bounda_time_smc_velocity1
+run_ok "$T2026" bounda_time_smc_displacement1
+run_ok "$T2026" bounda_time_smc_glued1
+run_ok "$T2026" bounda_time_smc_glued2
+expected_error_ok "$T2026" bounda_time_smc_error1
+expected_error_ok "$T2026" bounda_time_smc_error2
+expected_error_ok "$T2026" bounda_time_smc_error3
+expected_error_ok "$T2026" bounda_time_smc_error4
 # F5 T5 U9: bounda_baseline_correction (6.19), _parameters (6.20)
 run_ok "$T2026" bounda_baseline_correction1
 run_ok "$T2026" bounda_baseline_correction2
