@@ -1192,5 +1192,8 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   bounda.cc gets bounda_time_smc_read(), the bracket-into-bounda_time branch, the dof type check, and the full table
   for the baseline. The 12 tests bounda_time_smc_* (files 41-52.smc) are GREEN on GNU and pass on Pro except glued2.
   RED: the binary before this change exits with "not implemented (PENDING)" for every SMC input.
-  Deliberate divergence (project decision, to confirm): SMC-GLUED-LINE-END.
+  Deliberate divergence (confirmed by the owner, see L-SMC2): SMC-GLUED-LINE-END.
   The baseline with SMC equals the bounda_time table rule (BASELINE-CORRECTION-SIGNAL, already recorded).
+- L-SMC2 (2026-11-23) owner: "si, me parece más correcto." SMC-GLUED-LINE-END confirmed: the GNU reads the same
+  samples whatever the line end. DIVERGENCES and SEGUIMIENTO rows changed from "to confirm" to owner decision.
+  F5 follow-ups: all closed.
