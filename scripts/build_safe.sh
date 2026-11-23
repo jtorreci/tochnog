@@ -3605,6 +3605,10 @@ run_ok "$T2026" truss_force_diagram2
 run_ok "$T2026" truss_force_diagram3
 run_ok "$T2026" truss_force_diagram4
 run_ok "$T2026" truss_force_diagram5
+# TRUSS-DIAGRAM-THERMAL (owner 2026-11-23): the diagram uses the mechanical
+# strain (total minus alpha dT); targets 4 and 14.5 in the inputs.
+run_ok "$T2026" truss_force_diagram_thermal1
+run_ok "$T2026" truss_force_diagram_thermal2
 expected_error_ok "$T2026" truss_force_diagram_error1
 # F5 T5 U7: group_time_fill (6.770): density and total pressure ramp, no plasticity while filling
 run_ok "$T2026" group_time_fill1

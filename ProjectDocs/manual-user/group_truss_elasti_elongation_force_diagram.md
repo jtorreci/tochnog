@@ -43,4 +43,14 @@ group_truss_elasti_elongation_force_diagram 0  -0.01 -20  0 0  0.01 10  0.02 15
 
 Self-checking inputs in `validation-suite/test-2026`:
 `truss_force_diagram1` .. `truss_force_diagram5`,
+`truss_force_diagram_thermal1`, `truss_force_diagram_thermal2`,
 `truss_force_diagram_error1`.
+
+## Differences with the Professional version
+
+With `group_truss_expansion` and a temperature change, the GNU version enters the diagram with the
+mechanical strain: the total strain minus the thermal strain alpha dT. A truss that is only heated,
+free to expand, carries no force. The Professional 02-08-2026 uses the total strain, so the same
+truss gets a force. For a total strain 0.014 with alpha 1e-3 and dT +10, the GNU gives force 4 and
+the Professional 12. See `ProjectDocs/DIVERGENCES-PROFESSIONAL.md` (TRUSS-DIAGRAM-THERMAL).
+

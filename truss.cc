@@ -256,7 +256,18 @@ void truss( long int element, long int element_group,
           db_error( GROUP_TRUSS_ELASTI_ELONGATION_FORCE_DIAGRAM, element_group );
         }
         double strain_dg = ( new_length - initial_length ) / initial_length,
-          slope_dg = 0.;
+          slope_dg = 0., strain_th = 0.;
+        // the diagram gives the force of the mechanical strain: the
+        // accumulated thermal strain alpha*dT is subtracted (owner
+        // 2026-11-23, deliberate divergence TRUSS-DIAGRAM-THERMAL; the
+        // Professional 02-08-2026 uses the total strain, so a free truss
+        // that is only heated gets a force)
+        if ( db_active_index( ELEMENT_TRUSS_STRAIN_TEMPERATURE, element,
+            VERSION_NORMAL ) )
+          db( ELEMENT_TRUSS_STRAIN_TEMPERATURE, element, idum,
+            &strain_th, ldum, VERSION_NORMAL, GET );
+        strain_th += group_truss_expansion * inc_temperature;
+        strain_dg -= strain_th;
         new_truss_force = 0.;
         table_xy( table_dg, "GROUP_TRUSS_ELASTI_ELONGATION_FORCE_DIAGRAM",
           length_dg, strain_dg, new_truss_force );

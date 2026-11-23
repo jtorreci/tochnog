@@ -1158,4 +1158,10 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   realidad" -> CONSPR-FRICTION-ZERO-NORMAL deliberate divergence (DIVERGENCES, SEGUIMIENTO Descarte, user and developer
   pages). Guard test contact_spring_friction_zero_normal1 (GNU tangential force 0, velz -1; the Pro 0.00025 / -0.5
   fails it). No source change.
+- L-TRD-thermal (2026-11-23) owner: "si, adelante" (truss thermal diagram follow-up). Professional probes (length 2,
+  diagram -0.01 -20 0 0 0.01 10 0.02 15, total strain 0.014, alpha 1e-3): force 12 for dT +10 / -10 / 0 and in four
+  steps (total strain, thermal not subtracted); without the diagram 3.4 (subtracted); GNU identical. Owner, verbatim:
+  "descuenta la deformación térmica y documenta la divergencia" -> truss.cc subtracts the accumulated thermal strain
+  (ELEMENT_TRUSS_STRAIN_TEMPERATURE + alpha * inc_temperature) from the diagram strain. RED 12/12, GREEN 4 / 14.5
+  (truss_force_diagram_thermal1/2). DIVERGENCES TRUSS-DIAGRAM-THERMAL, SEGUIMIENTO Descarte, user/dev pages.
 
