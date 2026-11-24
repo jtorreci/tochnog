@@ -372,7 +372,7 @@ tochnog: adjust.$(OBJ) area.$(OBJ) \
 	polynom.$(OBJ) post.$(OBJ) \
 	pri.$(OBJ) print_db.$(OBJ) \
 	print_da.$(OBJ) print_dx.$(OBJ) print_el.$(OBJ) \
-	print_gi.$(OBJ) print_g5.$(OBJ) print_g6.$(OBJ)\
+	print_gi.$(OBJ) print_g5.$(OBJ) print_g6.$(OBJ) mesh_gid.$(OBJ)\
 	print_gm.$(OBJ) print_hi.$(OBJ) print_dl.$(OBJ) print_node.$(OBJ) \
 	$(PRINT_BEAM_FORCE_MOMENT_OBJ) $(PRINT_MATERI_STRESS_FORCE_OBJ) \
 	print_pl.$(OBJ) print_ma.$(OBJ) print_rs.$(OBJ) \
@@ -628,6 +628,9 @@ print_g5.$(OBJ): print_g5.$(SRC_CPP) tochnog.h
 
 print_g6.$(OBJ): print_g6.$(SRC_CPP) tochnog.h
 	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)print_g6.$(SRC_CPP)
+
+mesh_gid.$(OBJ): mesh_gid.$(SRC_CPP) tochnog.h
+	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)mesh_gid.$(SRC_CPP)
 
 print_gm.$(OBJ): print_gm.$(SRC_CPP) tochnog.h
 	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)print_gm.$(SRC_CPP)

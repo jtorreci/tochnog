@@ -15,6 +15,7 @@ validation-suite/*
 validation-suite/test-2026/*
 !validation-suite/test-2026/*.dat
 !validation-suite/test-2026/*.smc
+!validation-suite/test-2026/*.bch
 # test-2014 regression inputs (build_safe.sh suite) ARE versioned too
 !validation-suite/test-2014/
 validation-suite/test-2014/*

@@ -1,0 +1,163 @@
+Mescape Files SaveAs -geoversion:current -- mesh_gid.gid
+Mescape Data Defaults ProblemType yes tochnog
+Mescape Utilities Variables CreateAlwaysNewPoint 1
+Mescape Geometry Create Point
+0 0 0.0 
+escape
+escape
+escape
+Mescape Geometry Create Point
+2 0 0.0 
+escape
+escape
+escape
+Mescape Geometry Create Point
+2 1 0.0 
+escape
+escape
+escape
+Mescape Geometry Create Point
+0 1 0.0 
+escape
+escape
+escape
+Mescape Utilities Variables CreateAlwaysNewPoint -2
+Mescape Geometry Create Line
+1
+2
+escape
+escape
+escape
+Mescape Meshing Structured Lines Size
+0.05
+1
+escape
+escape
+escape
+Mescape Geometry Create Line
+2
+3
+escape
+escape
+escape
+Mescape Meshing Structured Lines
+7
+2
+escape
+escape
+escape
+Mescape Meshing StructConcentr
+2
+escape
+-0.5 0.25
+escape
+Mescape Geometry Create Line
+3
+4
+escape
+escape
+escape
+Mescape Data Mat Assign GROUP_2 Lines
+3
+escape
+escape
+escape
+Mescape Meshing Structured Lines Size
+0.2
+3
+escape
+escape
+escape
+Mescape Geometry Create Line
+4
+1
+escape
+escape
+escape
+Mescape Utilities Variables CreateAlwaysNewPoint 1
+Mescape Geometry Create Arc
+1.4 0.5 0.0
+1.5 0.6 0.0
+1.6 0.5 0.0
+escape
+Mescape Geometry Create Arc
+1.4 0.5 0.0
+1.5 0.4 0.0
+1.6 0.5 0.0
+escape
+Mescape Utilities Variables CreateAlwaysNewPoint 1
+Mescape Geometry Create Arc
+0,1,0.0
+1,1.5,0.0
+2,1,0.0
+escape
+Mescape Utilities Variables CreateAlwaysNewPoint 1
+Mescape Geometry Create Object Rectangle 
+0.2 0.2
+0.4 0.4
+escape
+Mescape Data Mat Assign GROUP_3 Surfaces
+1 
+escape
+Mescape Utilities Variables ImportTolerance 1e-08 escape escape
+Mescape Utilities Collapse Points
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+escape
+Mescape Utilities Variables CreateAlwaysNewPoint 1
+Mescape Geometry Create NurbsSurface
+1
+2
+3
+4
+escape
+Mescape Data Mat Assign GROUP_1 Surfaces
+2
+escape
+Mescape Meshing Structured Surfaces
+2
+escape
+4
+1
+escape
+4
+3
+escape
+escape
+Mescape Meshing Structured Surfaces Size
+2
+escape
+0.1
+1 2 3 4 
+Mescape Meshing ElemType Quadrilateral
+2
+escape
+Mescape Utilities Variables Model(QuadraticType) 1
+2
+escape
+Mescape Data Conditions AssignCond nodes_in_points_1
+1
+2
+Mescape Data Conditions AssignCond nodes_in_points_2
+3
+Mescape Data Conditions AssignCond nodes_in_lines_11
+2
+3
+Mescape Meshing Generate 
+0.1
+Mescape Utilities Calculate
+'Zoom Frame
+Mescape Utilities Variables CreateAlwaysNewPoint 0 escape escape
+Mescape Quit
+No

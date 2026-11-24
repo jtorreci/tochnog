@@ -1,0 +1,15 @@
+(
+control_mesh_gid_batch (manual Professional 6.200) -no: the mesh_gid_*
+records are accepted and ignored, no GiD batch file is written (as in the
+Professional 02-08-2026). build_safe.sh runs this test in a scratch copy
+and checks that GidMeshBatch.bch is absent.
+)
+echo -no
+number_of_space_dimensions 2
+end_initia
+mesh_gid_point_coord 1 0. 0.
+mesh_gid_point_coord 2 1. 0.
+mesh_gid_line_point 1 1 2
+mesh_gid_size 0.5
+control_mesh_gid_batch 10 -no
+end_data

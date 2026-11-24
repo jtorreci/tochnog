@@ -16,3 +16,6 @@ makefile text eol=lf
 
 # SMC accelerogram test inputs: line ends are part of the test (byte exact)
 *.smc -text
+
+# GiD batch files of the mesh_gid tests: compared byte by byte (no trailing newline)
+*.bch -text

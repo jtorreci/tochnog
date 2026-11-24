@@ -1,0 +1,14 @@
+(
+mesh_gid_surface_structured_nel (manual Professional 6.850) needs one
+number for each line of the surface (the Professional 02-08-2026 also
+stops on 2 numbers for 4 lines).
+  EXPECTED_ERROR: Error detected for data item : mesh_gid_surface_structured_nel
+)
+echo -no
+number_of_space_dimensions 2
+end_initia
+mesh_gid_surface_line 1 1 2 3 4
+mesh_gid_surface_structured_nel 1 2 3
+mesh_gid_size 0.1
+control_mesh_gid_batch 10 -yes
+end_data

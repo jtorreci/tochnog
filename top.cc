@@ -494,6 +494,11 @@ void top( void )
                 length=1; db( ICONTROL, 0, &icontrol, ddum, length, 
                   VERSION_NORMAL, PUT );
                 step_start_control_entry = 1;
+                // control_mesh_gid_batch (manual Professional 6.200): write
+                // the mesh_gid_* records as GidMeshBatch.bch and, with gid
+                // on the PATH, mesh them into <icontrol>.dat; before
+                // control_input so that the same index reads that mesh
+                mesh_gid_batch( icontrol );
                 // control_input (manual Professional 6.139): read the
                 // records of <icontrol>.dat at the start of the index
                 input_control_input( icontrol );

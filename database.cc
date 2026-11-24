@@ -5591,6 +5591,151 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   data_length[CONTROL_INPUT] = 1;
   data_class[CONTROL_INPUT] = CONTROL;
 
+  // control_mesh_gid_batch index switch (manual Professional 6.200): -yes
+  // writes the mesh_gid_* records as the GiD batch file GidMeshBatch.bch
+  // and, when gid is on the PATH, meshes it into <index>.dat before
+  // control_input of the same index reads it (mesh_gid.cc).
+  strcpy(name[CONTROL_MESH_GID_BATCH],"control_mesh_gid_batch");
+  type[CONTROL_MESH_GID_BATCH] = INTEGER;
+  data_length[CONTROL_MESH_GID_BATCH] = 1;
+  data_class[CONTROL_MESH_GID_BATCH] = CONTROL;
+
+  // mesh_gid_* GiD geometry records (manual Professional 6.818-6.853).
+  // They are only read by control_mesh_gid_batch (mesh_gid.cc); without
+  // it they are accepted and ignored, as in the Professional.
+    // index line_0 line_1 ... (geometry_list 11..20)
+  strcpy(name[MESH_GID_ASSIGN_CONDITIONS_LINE],"mesh_gid_assign_conditions_line");
+  type[MESH_GID_ASSIGN_CONDITIONS_LINE] = INTEGER;
+  data_length[MESH_GID_ASSIGN_CONDITIONS_LINE] = DATA_ITEM_SIZE;
+  fixed_length[MESH_GID_ASSIGN_CONDITIONS_LINE] = 0;
+    // index point_0 point_1 ... (geometry_list 1..10)
+  strcpy(name[MESH_GID_ASSIGN_CONDITIONS_POINT],"mesh_gid_assign_conditions_point");
+  type[MESH_GID_ASSIGN_CONDITIONS_POINT] = INTEGER;
+  data_length[MESH_GID_ASSIGN_CONDITIONS_POINT] = DATA_ITEM_SIZE;
+  fixed_length[MESH_GID_ASSIGN_CONDITIONS_POINT] = 0;
+    // index surface_0 surface_1 ... (geometry_list 21..30)
+  strcpy(name[MESH_GID_ASSIGN_CONDITIONS_SURFACE],"mesh_gid_assign_conditions_surface");
+  type[MESH_GID_ASSIGN_CONDITIONS_SURFACE] = INTEGER;
+  data_length[MESH_GID_ASSIGN_CONDITIONS_SURFACE] = DATA_ITEM_SIZE;
+  fixed_length[MESH_GID_ASSIGN_CONDITIONS_SURFACE] = 0;
+    // index x_0 y_0 x_1 y_1 x_2 y_2
+  strcpy(name[MESH_GID_ARC_COORD],"mesh_gid_arc_coord");
+  type[MESH_GID_ARC_COORD] = DOUBLE_PRECISION;
+  data_length[MESH_GID_ARC_COORD] = 6;
+    // index x y
+  strcpy(name[MESH_GID_CIRCLE_COORD],"mesh_gid_circle_coord");
+  type[MESH_GID_CIRCLE_COORD] = DOUBLE_PRECISION;
+  data_length[MESH_GID_CIRCLE_COORD] = 2;
+  strcpy(name[MESH_GID_CIRCLE_ELEMENT_GROUP],"mesh_gid_circle_element_group");
+  type[MESH_GID_CIRCLE_ELEMENT_GROUP] = INTEGER;
+  data_length[MESH_GID_CIRCLE_ELEMENT_GROUP] = 1;
+  strcpy(name[MESH_GID_CIRCLE_HOLLOW],"mesh_gid_circle_hollow");
+  type[MESH_GID_CIRCLE_HOLLOW] = INTEGER;
+  data_length[MESH_GID_CIRCLE_HOLLOW] = 1;
+  strcpy(name[MESH_GID_CIRCLE_RADIUS],"mesh_gid_circle_radius");
+  type[MESH_GID_CIRCLE_RADIUS] = DOUBLE_PRECISION;
+  data_length[MESH_GID_CIRCLE_RADIUS] = 1;
+    // index x y z
+  strcpy(name[MESH_GID_CYLINDER_COORD],"mesh_gid_cylinder_coord");
+  type[MESH_GID_CYLINDER_COORD] = DOUBLE_PRECISION;
+  data_length[MESH_GID_CYLINDER_COORD] = 3;
+  strcpy(name[MESH_GID_CYLINDER_ELEMENT_GROUP],"mesh_gid_cylinder_element_group");
+  type[MESH_GID_CYLINDER_ELEMENT_GROUP] = INTEGER;
+  data_length[MESH_GID_CYLINDER_ELEMENT_GROUP] = 1;
+  strcpy(name[MESH_GID_CYLINDER_HEIGHT],"mesh_gid_cylinder_height");
+  type[MESH_GID_CYLINDER_HEIGHT] = DOUBLE_PRECISION;
+  data_length[MESH_GID_CYLINDER_HEIGHT] = 1;
+  strcpy(name[MESH_GID_CYLINDER_HOLLOW],"mesh_gid_cylinder_hollow");
+  type[MESH_GID_CYLINDER_HOLLOW] = INTEGER;
+  data_length[MESH_GID_CYLINDER_HOLLOW] = 1;
+    // index normal_x normal_y normal_z
+  strcpy(name[MESH_GID_CYLINDER_NORMAL],"mesh_gid_cylinder_normal");
+  type[MESH_GID_CYLINDER_NORMAL] = DOUBLE_PRECISION;
+  data_length[MESH_GID_CYLINDER_NORMAL] = 3;
+  strcpy(name[MESH_GID_CYLINDER_RADIUS],"mesh_gid_cylinder_radius");
+  type[MESH_GID_CYLINDER_RADIUS] = DOUBLE_PRECISION;
+  data_length[MESH_GID_CYLINDER_RADIUS] = 1;
+    // index weight_start weight_end, each in [-1,+1]
+  strcpy(name[MESH_GID_LINE_STRUCTURED_CONCENTRATE],"mesh_gid_line_structured_concentrate");
+  type[MESH_GID_LINE_STRUCTURED_CONCENTRATE] = DOUBLE_PRECISION;
+  data_length[MESH_GID_LINE_STRUCTURED_CONCENTRATE] = 2;
+  strcpy(name[MESH_GID_LINE_ELEMENT_GROUP],"mesh_gid_line_element_group");
+  type[MESH_GID_LINE_ELEMENT_GROUP] = INTEGER;
+  data_length[MESH_GID_LINE_ELEMENT_GROUP] = 1;
+    // index point_0 point_1
+  strcpy(name[MESH_GID_LINE_POINT],"mesh_gid_line_point");
+  type[MESH_GID_LINE_POINT] = INTEGER;
+  data_length[MESH_GID_LINE_POINT] = 2;
+  strcpy(name[MESH_GID_LINE_SIZE],"mesh_gid_line_size");
+  type[MESH_GID_LINE_SIZE] = DOUBLE_PRECISION;
+  data_length[MESH_GID_LINE_SIZE] = 1;
+  strcpy(name[MESH_GID_LINE_STRUCTURED_NEL],"mesh_gid_line_structured_nel");
+  type[MESH_GID_LINE_STRUCTURED_NEL] = INTEGER;
+  data_length[MESH_GID_LINE_STRUCTURED_NEL] = 1;
+  strcpy(name[MESH_GID_LINE_STRUCTURED_SIZE],"mesh_gid_line_structured_size");
+  type[MESH_GID_LINE_STRUCTURED_SIZE] = DOUBLE_PRECISION;
+  data_length[MESH_GID_LINE_STRUCTURED_SIZE] = 1;
+    // index x y (2D) or x y z (3D)
+  strcpy(name[MESH_GID_POINT_COORD],"mesh_gid_point_coord");
+  type[MESH_GID_POINT_COORD] = DOUBLE_PRECISION;
+  data_length[MESH_GID_POINT_COORD] = ndim;
+    // index x_0 x_1 y_0 y_1
+  strcpy(name[MESH_GID_RECTANGLE_COORD],"mesh_gid_rectangle_coord");
+  type[MESH_GID_RECTANGLE_COORD] = DOUBLE_PRECISION;
+  data_length[MESH_GID_RECTANGLE_COORD] = 4;
+  strcpy(name[MESH_GID_RECTANGLE_ELEMENT_GROUP],"mesh_gid_rectangle_element_group");
+  type[MESH_GID_RECTANGLE_ELEMENT_GROUP] = INTEGER;
+  data_length[MESH_GID_RECTANGLE_ELEMENT_GROUP] = 1;
+  strcpy(name[MESH_GID_RECTANGLE_HOLLOW],"mesh_gid_rectangle_hollow");
+  type[MESH_GID_RECTANGLE_HOLLOW] = INTEGER;
+  data_length[MESH_GID_RECTANGLE_HOLLOW] = 1;
+    // element_size (no index)
+  strcpy(name[MESH_GID_SIZE],"mesh_gid_size");
+  type[MESH_GID_SIZE] = DOUBLE_PRECISION;
+  data_length[MESH_GID_SIZE] = 1;
+  no_index[MESH_GID_SIZE] = 1;
+    // index x y z
+  strcpy(name[MESH_GID_SPHERE_COORD],"mesh_gid_sphere_coord");
+  type[MESH_GID_SPHERE_COORD] = DOUBLE_PRECISION;
+  data_length[MESH_GID_SPHERE_COORD] = 3;
+  strcpy(name[MESH_GID_SPHERE_ELEMENT_GROUP],"mesh_gid_sphere_element_group");
+  type[MESH_GID_SPHERE_ELEMENT_GROUP] = INTEGER;
+  data_length[MESH_GID_SPHERE_ELEMENT_GROUP] = 1;
+  strcpy(name[MESH_GID_SPHERE_HOLLOW],"mesh_gid_sphere_hollow");
+  type[MESH_GID_SPHERE_HOLLOW] = INTEGER;
+  data_length[MESH_GID_SPHERE_HOLLOW] = 1;
+  strcpy(name[MESH_GID_SPHERE_RADIUS],"mesh_gid_sphere_radius");
+  type[MESH_GID_SPHERE_RADIUS] = DOUBLE_PRECISION;
+  data_length[MESH_GID_SPHERE_RADIUS] = 1;
+    // index element_type (-tria3 ... -hex27)
+  strcpy(name[MESH_GID_SURFACE_ELEMENT],"mesh_gid_surface_element");
+  type[MESH_GID_SURFACE_ELEMENT] = INTEGER;
+  data_length[MESH_GID_SURFACE_ELEMENT] = 1;
+  strcpy(name[MESH_GID_SURFACE_ELEMENT_GROUP],"mesh_gid_surface_element_group");
+  type[MESH_GID_SURFACE_ELEMENT_GROUP] = INTEGER;
+  data_length[MESH_GID_SURFACE_ELEMENT_GROUP] = 1;
+    // index line_0 line_1 ...
+  strcpy(name[MESH_GID_SURFACE_LINE],"mesh_gid_surface_line");
+  type[MESH_GID_SURFACE_LINE] = INTEGER;
+  data_length[MESH_GID_SURFACE_LINE] = DATA_ITEM_SIZE;
+  fixed_length[MESH_GID_SURFACE_LINE] = 0;
+    // index nel_0 nel_1 ... (one per surface line)
+  strcpy(name[MESH_GID_SURFACE_STRUCTURED_NEL],"mesh_gid_surface_structured_nel");
+  type[MESH_GID_SURFACE_STRUCTURED_NEL] = INTEGER;
+  data_length[MESH_GID_SURFACE_STRUCTURED_NEL] = DATA_ITEM_SIZE;
+  fixed_length[MESH_GID_SURFACE_STRUCTURED_NEL] = 0;
+  strcpy(name[MESH_GID_SURFACE_STRUCTURED_SIZE],"mesh_gid_surface_structured_size");
+  type[MESH_GID_SURFACE_STRUCTURED_SIZE] = DOUBLE_PRECISION;
+  data_length[MESH_GID_SURFACE_STRUCTURED_SIZE] = 1;
+  strcpy(name[MESH_GID_VOLUME_ELEMENT_GROUP],"mesh_gid_volume_element_group");
+  type[MESH_GID_VOLUME_ELEMENT_GROUP] = INTEGER;
+  data_length[MESH_GID_VOLUME_ELEMENT_GROUP] = 1;
+    // index surface_0 surface_1 ...
+  strcpy(name[MESH_GID_VOLUME_SURFACE],"mesh_gid_volume_surface");
+  type[MESH_GID_VOLUME_SURFACE] = INTEGER;
+  data_length[MESH_GID_VOLUME_SURFACE] = DATA_ITEM_SIZE;
+  fixed_length[MESH_GID_VOLUME_SURFACE] = 0;
+
   strcpy(name[CONTROL_MATERI_DYNAMIC],"control_materi_dynamic");
   type[CONTROL_MATERI_DYNAMIC] = DOUBLE_PRECISION;
   data_length[CONTROL_MATERI_DYNAMIC] = 1;

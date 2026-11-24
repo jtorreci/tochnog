@@ -1,0 +1,120 @@
+Mescape Files SaveAs -geoversion:current -- mesh_gid.gid
+Mescape Data Defaults ProblemType yes tochnog
+Mescape Utilities Variables CreateAlwaysNewPoint 1
+Mescape Geometry Create Point
+0 0 0 
+escape
+escape
+escape
+Mescape Geometry Create Point
+1 0 0 
+escape
+escape
+escape
+Mescape Geometry Create Point
+1 1 0.5 
+escape
+escape
+escape
+Mescape Utilities Variables CreateAlwaysNewPoint -2
+Mescape Geometry Create Line
+1
+2
+escape
+escape
+escape
+Mescape Geometry Create Line
+2
+3
+escape
+escape
+escape
+Mescape Geometry Create Line
+3
+1
+escape
+escape
+escape
+Mescape Utilities Variables CreateAlwaysNewPoint 1
+Mescape Geometry Create Object Cylinder 0 0 0 0 0 1 
+1
+2
+escape
+Mescape Data Mat Assign GROUP_2 Volumes
+1 
+escape
+Mescape Geometry Create Object Cylinder 5 0 0 1 1 1 
+0.5
+3
+escape
+Mescape Geometry Delete Volume
+2
+escape
+
+Mescape Utilities Variables CreateAlwaysNewPoint 1
+Mescape Geometry Create Object Sphere 5 5 5 
+1
+escape
+Mescape Geometry Delete Volume
+2
+escape
+
+Mescape Geometry Create Object Sphere 9 9 9 
+1.5
+escape
+Mescape Data Mat Assign GROUP_3 Volumes
+2 
+escape
+Mescape Utilities Variables ImportTolerance 1e-08 escape escape
+Mescape Utilities Collapse Points
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+escape
+Mescape Utilities Variables CreateAlwaysNewPoint 1
+Mescape Geometry Create NurbsSurface
+1
+2
+3
+escape
+Mescape Data Mat Assign GROUP_4 Surfaces
+17
+escape
+Mescape Meshing ElemType Triangle
+17
+escape
+Mescape Utilities Variables Model(QuadraticType) 1
+17
+escape
+Mescape Utilities Variables CreateAlwaysNewPoint 1
+Mescape Geometry Create Volume
+1 2 3 4 
+Mescape Data Mat Assign 1 Volume
+3
+escape
+Mescape Geometry Create Volume
+5 6 7 8 
+Mescape Data Conditions AssignCond nodes_in_surfaces_21
+1
+2
+Mescape Data Conditions AssignCond nodes_in_surfaces_22
+9
+Mescape Meshing Generate 
+0.3
+Mescape Utilities Calculate
+'Zoom Frame
+Mescape Utilities Variables CreateAlwaysNewPoint 0 escape escape
+Mescape Quit
+No

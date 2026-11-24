@@ -1,0 +1,12 @@
+(
+control_mesh_gid_batch (manual Professional 6.200) needs mesh_gid_size
+(6.842), the size of the generated elements (the Professional 02-08-2026
+also stops on it).
+  EXPECTED_ERROR: Error detected for data item : mesh_gid_size
+)
+echo -no
+number_of_space_dimensions 2
+end_initia
+mesh_gid_point_coord 1 0. 0.
+control_mesh_gid_batch 10 -yes
+end_data

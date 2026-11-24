@@ -1,0 +1,16 @@
+(
+mesh_gid_line_structured_concentrate (manual Professional 6.832): the
+weights need to be between -1 and +1 (the Professional 02-08-2026 also
+stops on 2).
+  EXPECTED_ERROR: Error detected for data item : mesh_gid_line_structured_concentrate
+)
+echo -no
+number_of_space_dimensions 2
+end_initia
+mesh_gid_point_coord 1 0. 0.
+mesh_gid_point_coord 2 1. 0.
+mesh_gid_line_point 1 1 2
+mesh_gid_line_structured_concentrate 1 2. 0.
+mesh_gid_size 0.1
+control_mesh_gid_batch 10 -yes
+end_data

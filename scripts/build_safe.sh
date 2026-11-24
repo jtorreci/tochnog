@@ -3657,6 +3657,86 @@ run_ok "$T2026" materi_plasti_gencam_bonded_oedometer1
 for t in 1 2 3 4 5; do
   expected_error_ok "$T2026" materi_plasti_gencam_bonded_error$t
 done
+# GiD geometry: mesh_gid_* (6.818-6.853) and control_mesh_gid_batch (6.200).
+# Each test runs in a scratch copy. Without gid on the PATH the run keeps
+# GidMeshBatch.bch, warns and ends rc=0; the file must equal <test>.bch
+# (= the file the Professional 02-08-2026 writes for the same input).
+mesh_gid_bch_ok() {
+  local t="$1" dir rc
+  dir=$(mktemp -d)
+  cp "$T2026/$t.dat" "$dir/"
+  ( cd "$dir" && ulimit -v "$TN_MEMLIMIT_KB" &&
+    PATH=/usr/bin:/bin timeout 60 "$REPO_DIR/build/$TN_BIN" "$t.dat" > "$t.out" 2>&1 )
+  rc=$?
+  if [ "$rc" = "0" ] && cmp -s "$dir/GidMeshBatch.bch" "$T2026/$t.bch" &&
+     grep -qF "gid is not on the PATH. The GiD batch file GidMeshBatch.bch is kept" "$dir/$t.out"; then
+    check_ok "$t (rc=0, GidMeshBatch.bch = $t.bch, warning without gid)"
+  else
+    check_fail "$t" "rc=$rc or GidMeshBatch.bch differs from $t.bch or no warning"
+  fi
+  rm -rf -- "${dir:?}"
+}
+mesh_gid_bch_ok mesh_gid_2d1
+mesh_gid_bch_ok mesh_gid_3d1
+mesh_gid_bch_ok mesh_gid_objects1
+mesh_gid_bch_ok mesh_gid_elements1
+for t in 1 2 3 4 5; do
+  expected_error_ok "$T2026" mesh_gid_error$t
+done
+# With gid on the PATH (a fake gid script written here, it writes the
+# mesh_gid.gid/mesh_gid.dat the tochnog.gid problem type would): 10.dat is
+# that file, GidMeshBatch.bch and mesh_gid.gid are removed and control_input
+# 10 reads the mesh (target on node 5).
+MGDIR=$(mktemp -d)
+mkdir -p "$MGDIR/bin"
+cat > "$MGDIR/bin/gid" <<'MGEOF'
+#!/bin/sh
+[ "$*" = "-n -b GidMeshBatch.bch" ] || exit 1
+[ -f GidMeshBatch.bch ] || exit 1
+mkdir -p mesh_gid.gid
+cat > mesh_gid.gid/mesh_gid.dat <<'X'
+node 1 0 0
+node 2 1 0
+node 3 0 1
+node 4 1 1
+node 5 0.5 0.5
+element 1 -tria3 1 2 5
+element 2 -tria3 2 4 5
+element 3 -tria3 4 3 5
+element 4 -tria3 3 1 5
+element_group 1 1
+element_group 2 1
+element_group 3 1
+element_group 4 1
+geometry_list 11
+1
+2
+end_data
+X
+echo extra > mesh_gid.gid/mesh_gid.geo
+MGEOF
+chmod +x "$MGDIR/bin/gid"
+cp "$T2026/control_mesh_gid_batch1.dat" "$MGDIR/"
+( cd "$MGDIR" && ulimit -v "$TN_MEMLIMIT_KB" &&
+  PATH="$MGDIR/bin:/usr/bin:/bin" timeout 60 "$REPO_DIR/build/$TN_BIN" control_mesh_gid_batch1.dat > control_mesh_gid_batch1.out 2>&1 ); MGRC=$?
+if [ "$MGRC" = "0" ] && [ -f "$MGDIR/10.dat" ] && grep -q '^node 5 0.5 0.5$' "$MGDIR/10.dat" &&
+   [ ! -e "$MGDIR/GidMeshBatch.bch" ] && [ ! -e "$MGDIR/mesh_gid.gid" ]; then
+  check_ok "control_mesh_gid_batch1 (fake gid: 10.dat read by control_input, .bch and mesh_gid.gid removed)"
+else
+  check_fail "control_mesh_gid_batch1" "rc=$MGRC or 10.dat missing or GidMeshBatch.bch/mesh_gid.gid left"
+fi
+rm -rf -- "${MGDIR:?}"
+# control_mesh_gid_batch -no: records accepted, no batch file written
+MGDIR=$(mktemp -d)
+cp "$T2026/control_mesh_gid_batch2.dat" "$MGDIR/"
+( cd "$MGDIR" && ulimit -v "$TN_MEMLIMIT_KB" &&
+  timeout 60 "$REPO_DIR/build/$TN_BIN" control_mesh_gid_batch2.dat > control_mesh_gid_batch2.out 2>&1 ); MGRC=$?
+if [ "$MGRC" = "0" ] && [ ! -e "$MGDIR/GidMeshBatch.bch" ]; then
+  check_ok "control_mesh_gid_batch2 (-no: rc=0, no GidMeshBatch.bch)"
+else
+  check_fail "control_mesh_gid_batch2" "rc=$MGRC or GidMeshBatch.bch written"
+fi
+rm -rf -- "${MGDIR:?}"
 # F5 T5 U9: bounda_baseline_correction (6.19), _parameters (6.20)
 run_ok "$T2026" bounda_baseline_correction1
 run_ok "$T2026" bounda_baseline_correction2

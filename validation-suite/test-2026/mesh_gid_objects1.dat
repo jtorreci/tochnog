@@ -1,0 +1,43 @@
+(
+mesh_gid_* geometry records (manual Professional 6.818-6.853) and
+control_mesh_gid_batch (6.200), 2D objects: filled and hollow circles and
+rectangles with groups (a hollow circle becomes two arcs and ignores its
+group, a hollow rectangle deletes its surface), points and lines with
+index gaps (GiD numbers them 1, 2, ...; the line points are written as
+given) and a surface on object lines. build_safe.sh runs this test in a
+scratch copy without gid on the PATH and compares GidMeshBatch.bch byte by
+byte with mesh_gid_objects1.bch (= the Professional 02-08-2026 file).
+)
+echo -no
+number_of_space_dimensions 2
+end_initia
+mesh_gid_point_coord 3 -0.5 1.e-5
+mesh_gid_point_coord 8 123456789. 0.123456789
+mesh_gid_line_point 5 3 8
+mesh_gid_line_point 7 8 3
+mesh_gid_line_element_group 7 2
+mesh_gid_line_structured_nel 7 4
+mesh_gid_circle_coord 1 0. 0.
+mesh_gid_circle_radius 1 1.
+mesh_gid_circle_coord 2 10. 0.
+mesh_gid_circle_radius 2 1.
+mesh_gid_circle_element_group 2 3
+mesh_gid_circle_coord 3 0.5 0.5
+mesh_gid_circle_radius 3 0.33333333333
+mesh_gid_circle_hollow 3 -yes
+mesh_gid_circle_element_group 3 2
+mesh_gid_rectangle_coord 1 0 1 0 1
+mesh_gid_rectangle_hollow 1 -yes
+mesh_gid_rectangle_coord 2 2 3 -1 1
+mesh_gid_rectangle_element_group 2 1
+mesh_gid_rectangle_coord 3 4 5 0 1
+mesh_gid_rectangle_hollow 3 -yes
+mesh_gid_rectangle_element_group 3 4
+mesh_gid_rectangle_coord 4 6 7 0 1
+mesh_gid_surface_line 2 9 10 11 12 7 8
+mesh_gid_surface_element_group 2 1
+mesh_gid_surface_element_group 6 1
+mesh_gid_volume_element_group 2 1
+mesh_gid_size 0.05
+control_mesh_gid_batch 10 -yes
+end_data

@@ -1,0 +1,14 @@
+(
+mesh_gid_assign_conditions_line (manual Professional 6.818): the index
+needs to be 11 ... 20; index 5 is an input error in GNU (the Professional
+02-08-2026 silently ignores it).
+  EXPECTED_ERROR: Error detected for data item : mesh_gid_assign_conditions_line
+)
+echo -no
+number_of_space_dimensions 2
+end_initia
+mesh_gid_line_point 1 1 2
+mesh_gid_assign_conditions_line 5 1
+mesh_gid_size 0.1
+control_mesh_gid_batch 10 -yes
+end_data

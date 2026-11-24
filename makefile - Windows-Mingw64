@@ -111,7 +111,7 @@ OFILES= adjust.o area.o \
 	polynom.o post.o \
 	pri.o print_db.o \
 	print_da.o print_dx.o print_el.o \
-	print_gi.o print_g5.o print_g6.o\
+	print_gi.o print_g5.o print_g6.o mesh_gid.o\
 	print_gm.o print_hi.o \
 	print_pl.o print_ma.o print_rs.o \
 	print_te.o print_un.o print_vt.o \
@@ -152,7 +152,7 @@ tochnog: adjust.$(OBJ) area.$(OBJ) \
 	polynom.$(OBJ) post.$(OBJ) \
 	pri.$(OBJ) print_db.$(OBJ) \
 	print_da.$(OBJ) print_dx.$(OBJ) print_el.$(OBJ) \
-	print_gi.$(OBJ) print_g5.$(OBJ) print_g6.$(OBJ)\
+	print_gi.$(OBJ) print_g5.$(OBJ) print_g6.$(OBJ) mesh_gid.$(OBJ)\
 	print_gm.$(OBJ) print_hi.$(OBJ) \
 	print_pl.$(OBJ) print_ma.$(OBJ) print_rs.$(OBJ) \
 	print_te.$(OBJ) print_un.$(OBJ) print_vt.$(OBJ) \
@@ -377,6 +377,8 @@ print_g5.$(OBJ): print_g5.$(SRC_CPP) tochnog.h
 
 print_g6.$(OBJ): print_g6.$(SRC_CPP) tochnog.h
 	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)print_g6.$(SRC_CPP)
+mesh_gid.$(OBJ): mesh_gid.$(SRC_CPP) tochnog.h
+	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)mesh_gid.$(SRC_CPP)
 
 print_gm.$(OBJ): print_gm.$(SRC_CPP) tochnog.h
 	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)print_gm.$(SRC_CPP)

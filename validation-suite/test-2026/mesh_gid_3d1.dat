@@ -1,0 +1,46 @@
+(
+mesh_gid_* geometry records (manual Professional 6.818-6.853) and
+control_mesh_gid_batch (6.200), 3D: points, lines, a quadratic triangle
+surface, filled and hollow cylinders and spheres with groups (a hollow
+object deletes its volume), volumes with and without a group and surface
+conditions. build_safe.sh runs this test in a scratch copy without gid on
+the PATH and compares GidMeshBatch.bch byte by byte with mesh_gid_3d1.bch
+(= the file the Professional 02-08-2026 writes for this input).
+)
+echo -yes
+number_of_space_dimensions 3
+end_initia
+mesh_gid_point_coord 1 0. 0. 0.
+mesh_gid_point_coord 2 1. 0. 0.
+mesh_gid_point_coord 3 1. 1. 0.5
+mesh_gid_line_point 1 1 2
+mesh_gid_line_point 2 2 3
+mesh_gid_line_point 3 3 1
+mesh_gid_surface_line 1 1 2 3
+mesh_gid_surface_element 1 -tria6
+mesh_gid_surface_element_group 1 4
+mesh_gid_cylinder_coord 1 0 0 0
+mesh_gid_cylinder_normal 1 0 0 1
+mesh_gid_cylinder_radius 1 1.
+mesh_gid_cylinder_height 1 2.
+mesh_gid_cylinder_element_group 1 2
+mesh_gid_cylinder_coord 2 5 0 0
+mesh_gid_cylinder_normal 2 1 1 1
+mesh_gid_cylinder_radius 2 0.5
+mesh_gid_cylinder_height 2 3.
+mesh_gid_cylinder_hollow 2 -yes
+mesh_gid_cylinder_element_group 2 5
+mesh_gid_sphere_coord 1 5 5 5
+mesh_gid_sphere_radius 1 1.
+mesh_gid_sphere_hollow 1 -yes
+mesh_gid_sphere_coord 2 9 9 9
+mesh_gid_sphere_radius 2 1.5
+mesh_gid_sphere_element_group 2 3
+mesh_gid_volume_surface 1 1 2 3 4
+mesh_gid_volume_element_group 1 1
+mesh_gid_volume_surface 2 5 6 7 8
+mesh_gid_assign_conditions_surface 21 1 2
+mesh_gid_assign_conditions_surface 22 9
+mesh_gid_size 0.3
+control_mesh_gid_batch 10 -yes
+end_data
