@@ -21,14 +21,16 @@ GiD output options: `control_print_gid_*` (manual Professional 6.295-6.315) and 
 1. `renumbering( VERSION_PRINT, YES, ... )` now fills `old_node_numbers`: the print version is
    compacted, while `node_bounded` and `mpc_node_number` live only in `VERSION_NORMAL` with the
    old numbers.
-2. `print_gid_options_get( icontrol, max_node, old_node_numbers )` reads every option once
+2. `print_gid_options_get( icontrol, max_node, old_node_numbers, nold_element,
+   old_element_numbers )` reads every option once
    (`print_option` / `print_option_list`; control-only records with a plain `db` read), validates
    the values (error at print time) and, for `control_print_gid_element_mpc -no`, flags the
-   print nodes that are the first node of an `mpc_node_number`.
+   print nodes that are the first node of an `mpc_node_number`. It also keeps the print time
+   (`TIME_CURRENT`) and the element map back to the normal version for `_mesh_activate_gravity`.
 3. `print_gid_smooth()` smooths the selected dofs of `NODE_DOF` in `VERSION_PRINT` in place, so
    the dof fields and `mesh deform` print the smoothed values.
 4. Mesh: `MTYPES` 12 (spring2 added); `print_gid_element_selected()` applies
-   `_element_group`, `_element_mpc` and the spring2 switch; `print_coordinates()` takes its
+   `_element_group`, `_element_mpc`, `_mesh_activate_gravity -no` and the spring2 switch; `print_coordinates()` takes its
    coordinates from `print_gid_node_coord()` (`_node_type`).
 5. `print_gid_gauss_points()` declares the Gauss point sets once, when the `.flavia.res` is
    created, if any index (or `print_gid_group`) requests an element result.
@@ -55,9 +57,16 @@ existing results are unchanged.
 - `truss_vector` = N (t x n) and `beam_vectors_k` = f_k (t x n), t unit axis, n unit normal;
   f_k = `-force_moment[k]` at the first point and `force_moment[6+k]` at the second.
 - `_element_mpc -no` drops elements containing a slave (first) node of `mpc_node_number`.
-- `_mesh_activate_gravity`: Professional default writes only the already activated elements, `-yes`
-  every element. Not implemented (the gravity activation helpers in `mesh.cc` are static); the GNU
-  always writes every element. Open question.
+- `_mesh_activate_gravity` (owner decision L14, copied): default `-no`, `-yes` writes every
+  element. With `-no`, `print_gid_element_selected()` keeps an element only when
+  `mesh_activate_gravity_active( old_element, time )` (`mesh.cc`) is true: no
+  `mesh_activate_gravity_time` record selects it, or `time > time_initial` and `time >= start`
+  (`-method2`) / `time > start` (`-method1`), with the start time of the element as in
+  `mesh_activate_gravity_factor` (shared helpers `mesh_activate_gravity_index` and
+  `mesh_activate_gravity_window`). The filter applies to the mesh (first print only), the Gauss
+  point declaration (first print) and the element results (every print); nodes are not filtered.
+  Without `mesh_activate_gravity_time` the query returns 1 at once: differential on every
+  test-2014/test-2026 input, byte-identical flavia files.
 
 ## Professional-suspect, GNU follows the manual
 
@@ -68,6 +77,6 @@ existing results are unchanged.
 
 ## Tests
 
-27 inputs `validation-suite/test-2026/control_print_gid_*.dat` and `print_gid_*.dat`, checked in
+31 inputs `validation-suite/test-2026/control_print_gid_*.dat` and `print_gid_*.dat`, checked in
 `scripts/build_safe.sh` (block "GiD output options", helpers `gid_opt_run`, `gid_val`,
-`gid_near`) after the mesh_gid checks.
+`gid_near`, `gid_msh_ids`, `gid_eg_ids`) after the mesh_gid checks.

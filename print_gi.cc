@@ -53,11 +53,13 @@ static long int gid_coord=0, gid_group=0, gid_other=-YES,
   gid_node_type=-NODE_START_REFINED, gid_spring2=0, gid_beam_vectors=-NO,
   gid_truss_vector=-NO, gid_element_mpc=-YES, gid_smooth_n=10,
   ngid_dof=0, ngid_dof_calcul=0, ngid_element_group=0, ngid_smooth_dof=0,
-  gid_max_node=-1,
+  gid_max_node=-1, gid_mesh_activate_gravity=-NO, gid_nold_element=0,
+  *gid_old_element_numbers=NULL,
   gid_dof[DATA_ITEM_SIZE], gid_dof_calcul[DATA_ITEM_SIZE],
   gid_element_group[DATA_ITEM_SIZE], gid_smooth_dof[DATA_ITEM_SIZE],
   *gid_mpc_node=NULL;
-static double gid_beam_normal[MDIM], gid_truss_normal[MDIM];
+static double gid_beam_normal[MDIM], gid_truss_normal[MDIM],
+  gid_time_current=0.;
 
 static void print_gid_option_error( const char *names )
 
@@ -100,11 +102,12 @@ static void print_gid_normal_get( long int control_name, long int icontrol,
 }
 
 void print_gid_options_get( long int icontrol, long int max_node,
-  long int old_node_numbers[] )
+  long int old_node_numbers[], long int nold_element,
+  long int old_element_numbers[] )
 
 {
   long int ldum=0, inod=0, max_mpc=-1, impc=0, max_old=-1, length=0,
-    *mpc=NULL, *mpc_old=NULL;
+    idum[1], *mpc=NULL, *mpc_old=NULL;
   double ddum[1];
 
   // switches and numbers: global default, overruled by the control record
@@ -156,11 +159,18 @@ void print_gid_options_get( long int icontrol, long int max_node,
     print_gid_option_error( "control_print_gid_spring2/print_gid_spring2" );
   if ( gid_smooth_n<0 )
     print_gid_option_error( "control_print_gid_smooth_n/print_gid_smooth_n" );
-  // mesh_activate_gravity (6.305/6.985) and print_gid_define (6.983):
-  // accepted, no effect in the GNU (see the user pages)
-  print_gid_switch_check( print_option( PRINT_GID_MESH_ACTIVATE_GRAVITY,
-    CONTROL_PRINT_GID_MESH_ACTIVATE_GRAVITY, icontrol, -YES ),
+  // mesh_activate_gravity (6.305/6.985): -no (the Professional default,
+  // odd/tasks/gid.md L14) writes only the elements active at this print;
+  // print_gid_define (6.983): accepted, no effect (see the user page)
+  gid_mesh_activate_gravity = print_option( PRINT_GID_MESH_ACTIVATE_GRAVITY,
+    CONTROL_PRINT_GID_MESH_ACTIVATE_GRAVITY, icontrol, -NO );
+  print_gid_switch_check( gid_mesh_activate_gravity,
     "control_print_gid_mesh_activate_gravity/print_gid_mesh_activate_gravity" );
+  gid_time_current = 0.;
+  db( TIME_CURRENT, 0, idum, &gid_time_current, ldum, VERSION_NORMAL,
+    GET_IF_EXISTS );
+  gid_nold_element = nold_element;
+  gid_old_element_numbers = old_element_numbers;
   print_gid_switch_check( print_option( PRINT_GID_DEFINE, -1, -1, -YES ),
     "print_gid_define" );
 
@@ -197,18 +207,21 @@ void print_gid_options_free( void )
 {
   if ( gid_mpc_node ) delete[] gid_mpc_node;
   gid_mpc_node = NULL;
+  gid_old_element_numbers = NULL;
+  gid_nold_element = 0;
 }
 
-// control_print_gid_element_group (6.301) and control_print_gid_element_mpc
-// (6.302): is the element written to the GiD files? spring2 elements only
-// as 1 node (Point) by default, or 2 nodes with control_print_gid_spring2 2.
+// control_print_gid_element_group (6.301), control_print_gid_element_mpc
+// (6.302) and control_print_gid_mesh_activate_gravity (6.305): is the
+// element (print version numbering) written to the GiD files? spring2
+// elements only as 1 node (Point) by default, or 2 nodes with
+// control_print_gid_spring2 2.
 long int print_gid_element_selected( long int element, long int name,
   long int element_group, long int nnol, long int nodes[] )
 
 {
-  long int i=0, found=0;
+  long int i=0, found=0, old=element;
 
-  (void) element;
   if ( ngid_element_group>0 ) {
     for ( i=0; i<ngid_element_group; i++ )
       if ( gid_element_group[i]==element_group ) found = 1;
@@ -218,6 +231,14 @@ long int print_gid_element_selected( long int element, long int name,
     for ( i=0; i<nnol; i++ )
       if ( nodes[i]>=0 && nodes[i]<=gid_max_node && gid_mpc_node[nodes[i]] )
         return 0;
+  }
+  // -no: only the elements active in mesh_activate_gravity_time at this
+  // print (the .flavia.msh is written at the first print only)
+  if ( gid_mesh_activate_gravity==-NO ) {
+    if ( gid_old_element_numbers && element>=0 && element<gid_nold_element )
+      old = gid_old_element_numbers[element];
+    if ( old>=0 && !mesh_activate_gravity_active( old, gid_time_current ) )
+      return 0;
   }
   return 1;
 }

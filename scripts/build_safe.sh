@@ -3882,11 +3882,40 @@ gid_opt_done "global -all with print_gid_smooth_n 2: node 2 displacement = Profe
 gid_opt_run control_print_gid_element_mpc1
 [ "$(awk '/^Elements/{f=1;getline;next} /^end elements/{f=0} f' "$GO_MSH" | awk '{print $1}' | tr '\n' ' ')" = "1 " ]
 gid_opt_done "-no: elements 2 and 3 with the mpc'd node 7 not written" $?
-for GT in control_print_gid_mesh_activate_gravity1 print_gid_define1; do
-  gid_opt_run $GT
-  [ "$(awk '/^Elements/{f=1;getline;next} /^end elements/{f=0} f' "$GO_MSH" | wc -l)" = "3" ]
-  gid_opt_done "accepted, no effect: 3 elements" $?
-done
+gid_opt_run print_gid_define1
+[ "$(awk '/^Elements/{f=1;getline;next} /^end elements/{f=0} f' "$GO_MSH" | wc -l)" = "3" ]
+gid_opt_done "accepted, no effect: 3 elements" $?
+# T6 (odd/tasks/gid.md L14): control_print_gid_mesh_activate_gravity (6.305)
+# / print_gid_mesh_activate_gravity (6.985) as the Professional 02-08-2026.
+# gid_msh_ids: element numbers of the .flavia.msh; gid_eg_ids: element
+# numbers of each element_group block of the .flavia.res, "|" per print
+gid_msh_ids() {
+  awk '/^Elements/{f=1;getline;next} /^end elements/{f=0} f{printf "%s ",$1}' "$GO_MSH"
+}
+gid_eg_ids() {
+  awk '$1=="Result" && $2=="\"element_group\"" {f=1; printf "| "; next}
+    /^End Values/{f=0} f && NF==2 {printf "%s ",$1}' "$GO_RES"
+}
+gid_opt_run control_print_gid_mesh_activate_gravity1
+[ "$(gid_msh_ids)" = "1 2 " ] &&
+  [ "$(gid_eg_ids)" = "| 1 2 | 1 2 3 | 1 2 3 4 | 1 2 3 4 " ]
+gid_opt_done "control -no over global -yes: mesh 1 2 (active at the 1st print), results per print" $?
+gid_opt_run control_print_gid_mesh_activate_gravity2
+[ "$(gid_msh_ids)" = "1 2 3 4 " ] &&
+  [ "$(gid_eg_ids)" = "| 1 2 3 4 | 1 2 3 4 | 1 2 3 4 | 1 2 3 4 " ]
+gid_opt_done "control -yes over global -no: every element" $?
+gid_opt_run control_print_gid_mesh_activate_gravity3
+[ "$(gid_msh_ids)" = "1 " ] &&
+  [ "$(gid_eg_ids)" = "| 1 | 1 | 1 2 | 1 2 | 1 2 | 1 2 3 | 1 2 3 | 1 2 3 4 | 1 2 3 4 | 1 2 3 4 " ]
+gid_opt_done "default -no, -method1: active after the start time" $?
+gid_opt_run control_print_gid_mesh_activate_gravity4
+[ "$(gid_msh_ids)" = "" ] && [ "$(gid_eg_ids)" = "| 1 2 3 4 | 1 2 3 4 " ] &&
+  [ "$(gid_nres materi_velocity)" = "4" ]
+gid_opt_done "time_initial 0.5: empty mesh, element results from t 0.75" $?
+gid_opt_run print_gid_mesh_activate_gravity1
+[ "$(gid_msh_ids)" = "1 2 3 4 " ] &&
+  [ "$(gid_eg_ids)" = "| 1 2 3 4 | 1 2 3 4 | 1 2 3 4 | 1 2 3 4 " ]
+gid_opt_done "global -yes: every element" $?
 # F5 T5 U9: bounda_baseline_correction (6.19), _parameters (6.20)
 run_ok "$T2026" bounda_baseline_correction1
 run_ok "$T2026" bounda_baseline_correction2

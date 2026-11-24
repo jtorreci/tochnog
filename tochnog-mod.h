@@ -2586,6 +2586,7 @@ void      merge( void );
 void      mesh_add( long int version_from, long int version_to );
 void      mesh_delete_small( long int version );
 void      mesh_has_changed( long int version );
+long int  mesh_activate_gravity_active( long int element, double time );
 void      mesh_split( long int version );
 void      new_mesh( void );
 void      new_mesh_version( long int version, double delta );
@@ -2678,7 +2679,8 @@ long int  print_gid_5( long int task );
 long int  print_gid_6( long int task, long int icontrol );
 // GiD output options (print_gi.cc)
 void      print_gid_options_get( long int icontrol, long int max_node,
-            long int old_node_numbers[] );
+            long int old_node_numbers[], long int nold_element,
+            long int old_element_numbers[] );
 void      print_gid_options_free( void );
 long int  print_gid_element_selected( long int element, long int name,
             long int element_group, long int nnol, long int nodes[] );

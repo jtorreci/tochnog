@@ -36,10 +36,11 @@ Runner: `scripts/build_safe.sh` (`TN_SKIP_SUITE=1` for builds); Professional bin
 | ID | Specs | Route | Status | Commit |
 |---|---|---|---|---|
 | T0 | S1 | delegated (explorers) | done (L4, L5) | - |
-| T1 | S4, S5 | delegated writer (context backstop) | done (L10) | see L10 |
-| T2 | S3 | delegated writer (context backstop) | done (L12) | see L12 |
-| T3 | S3 | delegated writer | done except open questions Q-DEF, Q-MAG (L12) | see L12 |
-| T4 | S3 | after T1 | pending: smooth_dof/smooth_n (manual behaviour, L7) | |
+| T1 | S4, S5 | delegated writer (context backstop) | done (L10) | d61231c, f8176cf |
+| T2 | S3 | delegated writer (context backstop) | done (L12) | f4fe4ca |
+| T3 | S3 | delegated writer | done; Q-DEF resolved (L13, 0d6b607), Q-MAG in T6 | f4fe4ca |
+| T4 | S3 | delegated writer | done (L12) | f4fe4ca |
+| T6 | S3 | delegated writer | done (L15) | this commit |
 | T5 | S6 | inline | pending: docs, divergences, tracker, probe | |
 
 ## Log
@@ -107,3 +108,13 @@ Runner: `scripts/build_safe.sh` (`TN_SKIP_SUITE=1` for builds); Professional bin
   element_group, y dibuja el spring2 con 1 nodo... ¿Cambiamos el default de GNU al del Professional?"): "Default del
   Professional (Recomendado)". print_gi.cc defaults: coord -yes, group -yes, spring2 1; every .flavia.res gains coord
   and element_group. Check control_print_gid_dof2 extended to pin the defaults.
+- L14 (2026-11-24) owner, Q-MAG (Pro: by default the GiD mesh holds only the elements already active at the first GiD
+  print, -yes holds all; GNU always all): "Copiar al Professional (Recomendado)". Task T6.
+- L15 (2026-11-24) T6 done (writer): Professional rule measured: by default the .flavia.msh is written once at the first
+  GiD print with the elements active then; each print's element results hold the elements active at that print; -yes all
+  elements; -method2 active for t >= start, -method1 t > start, inactive up to time_initial. mesh.cc exports
+  mesh_activate_gravity_active(). 5 tests (RED 3/5 on HEAD as expected, GREEN 5/5). Differential on 1174 inputs: only
+  models with mesh_activate_gravity change (mesh_act_grav2 now an empty mesh, as the Professional writes none;
+  mesh_activate_gravity_time1 now equal to the Professional). Suite 1424 OK / 0 FALLO. Pro-suspect, copied: element
+  results for elements not in the mesh; empty .msh when nothing is active at the first print; method1 > vs method2 >=.
+  Not in scope: the Professional writes post_point as Point elements in its GiD mesh.

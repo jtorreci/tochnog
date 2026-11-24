@@ -430,7 +430,7 @@ page lists its own in "Differences with the Professional version".
 - [start_if_not](start_if_not.md) - extension de input_read_string(): start_if_not/end_if_not con using_if_not; parada del value-loop en los 4 tokens.
 - [bounda_time_smc](bounda_time_smc.md) - SMC reader `bounda_time_smc_read()` in bounda.cc and its Professional measurement.
 - [mesh_gid](mesh_gid.md) - control_mesh_gid_batch and mesh_gid_* in mesh_gid.cc: GiD numbering counters, byte-exact batch format, gid call, tests.
-- [print_gid_options](print_gid_options.md) - control_print_gid_* and print_gid_* GiD output options: print_gi.cc helpers, print_option_list, old node numbers of the print version, smoothing rule, Gauss point results, fail-state skip of dof/post fields, tests.
+- [print_gid_options](print_gid_options.md) - control_print_gid_* and print_gid_* GiD output options: print_gi.cc helpers, print_option_list, old node numbers of the print version, smoothing rule, Gauss point results, mesh_activate_gravity element filter, fail-state skip of dof/post fields, tests.
 - [group_materi_plasti_generalised_non_associate_cam_clay_for_bonded_soils](group_materi_plasti_generalised_non_associate_cam_clay_for_bonded_soils.md) - bonded-soil Cam clay: plasti.cc helpers (LPP closed forms, hybrid yield function), registration, the 10-entry per-model strain arrays of materi.cc.
 
 ## Lote keywords baratas (camclay / beam / groundflow / slide) — convergencia

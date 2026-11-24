@@ -1536,34 +1536,33 @@ static void mesh_activate_gravity_range( long int index, double &zmin,
   c_nel[index] = max_element;
 }
 
-double mesh_activate_gravity_factor( long int element, long int element_group,
-  long int nnol, long int nodes[], double *stiff_factor )
+// index of the first mesh_activate_gravity_time record whose selection
+// contains the element, -1 if none
+static long int mesh_activate_gravity_index( long int element,
+  long int element_group, long int nnol, long int nodes[] )
 
 {
-  long int index=0, max_index=-1, inod=0, ldum=0, method=-METHOD2, idum[1];
-  double factor=1., stiff=1., time_start=0., time_end=0., time_current=0.,
-    dtime=0., ddum[MDIM];
+  long int index=0, max_index=-1;
 
-  if ( stiff_factor ) *stiff_factor = 1.;
   db_max_index( MESH_ACTIVATE_GRAVITY_TIME, max_index, VERSION_NORMAL, GET );
   for ( index=0; index<=max_index; index++ ) {
     if ( db_active_index( MESH_ACTIVATE_GRAVITY_TIME, index, VERSION_NORMAL ) &&
          mesh_activate_gravity_selected( index, element, element_group,
-           nnol, nodes ) ) break;
+           nnol, nodes ) ) return index;
   }
-  if ( index>max_index ) return 1.;
+  return -1;
+}
 
-  db( DTIME, 0, idum, &dtime, ldum, VERSION_NEW, GET );
-  db( TIME_CURRENT, 0, idum, &time_current, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+// element activation window of the record at index, bottom to top
+static void mesh_activate_gravity_window( long int index, long int nnol,
+  long int nodes[], double &t_start_el, double &t_end_el )
+
+{
+  long int inod=0, ldum=0, idum[1];
+  double time_start=0., time_end=0., ddum[MDIM];
+
   db( MESH_ACTIVATE_GRAVITY_TIME, index, idum, ddum, ldum, VERSION_NORMAL, GET );
   time_start = ddum[0]; time_end = ddum[1];
-  db( MESH_ACTIVATE_GRAVITY_METHOD, index, &method, ddum, ldum,
-    VERSION_NORMAL, GET_IF_EXISTS );
-  double stiff_factor_val = 1.e-6;
-  db( MESH_ACTIVATE_GRAVITY_STIFFNESS_FACTOR, index, idum, &stiff_factor_val,
-    ldum, VERSION_NORMAL, GET_IF_EXISTS );
-
-  // element activation window, bottom to top
   double coord_min = DBL_MAX, coord_max = -DBL_MAX, zmin=0., zmax=0.;
   for ( inod=0; inod<nnol; inod++ ) {
     double z = mesh_activate_gravity_vertical( nodes[inod] );
@@ -1571,11 +1570,34 @@ double mesh_activate_gravity_factor( long int element, long int element_group,
     if ( z>coord_max ) coord_max = z;
   }
   mesh_activate_gravity_range( index, zmin, zmax );
-  double t_start_el = time_start, t_end_el = time_end;
+  t_start_el = time_start; t_end_el = time_end;
   if ( zmax>zmin ) {
     t_start_el = time_start + (time_end-time_start)*(coord_min-zmin)/(zmax-zmin);
     t_end_el   = time_start + (time_end-time_start)*(coord_max-zmin)/(zmax-zmin);
   }
+}
+
+double mesh_activate_gravity_factor( long int element, long int element_group,
+  long int nnol, long int nodes[], double *stiff_factor )
+
+{
+  long int index=0, ldum=0, method=-METHOD2, idum[1];
+  double factor=1., stiff=1., time_current=0., dtime=0., ddum[MDIM];
+
+  if ( stiff_factor ) *stiff_factor = 1.;
+  index = mesh_activate_gravity_index( element, element_group, nnol, nodes );
+  if ( index<0 ) return 1.;
+
+  db( DTIME, 0, idum, &dtime, ldum, VERSION_NEW, GET );
+  db( TIME_CURRENT, 0, idum, &time_current, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+  db( MESH_ACTIVATE_GRAVITY_METHOD, index, &method, ddum, ldum,
+    VERSION_NORMAL, GET_IF_EXISTS );
+  double stiff_factor_val = 1.e-6;
+  db( MESH_ACTIVATE_GRAVITY_STIFFNESS_FACTOR, index, idum, &stiff_factor_val,
+    ldum, VERSION_NORMAL, GET_IF_EXISTS );
+
+  double t_start_el = 0., t_end_el = 0.;
+  mesh_activate_gravity_window( index, nnol, nodes, t_start_el, t_end_el );
   double t_total = time_current + dtime;
 
   // time_initial: before time_of_birth the element has no gravity
@@ -1590,4 +1612,42 @@ double mesh_activate_gravity_factor( long int element, long int element_group,
     factor = (t_total-t_start_el)/(t_end_el-t_start_el);
   if ( stiff_factor ) *stiff_factor = stiff;
   return factor;
+}
+
+// control_print_gid_mesh_activate_gravity / print_gid_mesh_activate_gravity
+// -no (manual Professional 6.305/6.985, owner decision odd/tasks/gid.md
+// L14): is the element (normal version numbering) active at time, so that
+// the GiD files write it? Measured on the Professional 02-08-2026: an
+// element without mesh_activate_gravity_time is always active; otherwise
+// it is not active up to and including its
+// mesh_activate_gravity_time_initial, and then active from its start time
+// of activation on (-method2, the default) or only after it (-method1).
+long int mesh_activate_gravity_active( long int element, double time )
+
+{
+  long int index=0, max_index=-1, length=0, ldum=0, element_group=0,
+    method=-METHOD2, idum[1], el[1+MNOL];
+  double ddum[MDIM];
+
+  db_max_index( MESH_ACTIVATE_GRAVITY_TIME, max_index, VERSION_NORMAL, GET );
+  if ( max_index<0 ) return 1;
+  if ( !db_active_index( ELEMENT, element, VERSION_NORMAL ) ) return 1;
+  db( ELEMENT, element, el, ddum, length, VERSION_NORMAL, GET );
+  db( ELEMENT_GROUP, element, &element_group, ddum, ldum, VERSION_NORMAL,
+    GET_IF_EXISTS );
+  index = mesh_activate_gravity_index( element, element_group, length-1,
+    &el[1] );
+  if ( index<0 ) return 1;
+
+  double time_birth = -DBL_MAX;
+  db( MESH_ACTIVATE_GRAVITY_TIME_INITIAL, index, idum, &time_birth, ldum,
+    VERSION_NORMAL, GET_IF_EXISTS );
+  if ( time<=time_birth ) return 0;
+  db( MESH_ACTIVATE_GRAVITY_METHOD, index, &method, ddum, ldum,
+    VERSION_NORMAL, GET_IF_EXISTS );
+  double t_start_el = 0., t_end_el = 0.;
+  mesh_activate_gravity_window( index, length-1, &el[1], t_start_el,
+    t_end_el );
+  if ( method==-METHOD1 ) return time>t_start_el;
+  return time>=t_start_el;
 }

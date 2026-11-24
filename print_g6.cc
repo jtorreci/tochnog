@@ -152,7 +152,8 @@ long int print_gid_6( long int task, long int icontrol )
 
   // GiD output options of this control index (control_print_gid_* and the
   // global print_gid_*), print_gi.cc; nodal smoothing of the print version
-  print_gid_options_get( icontrol, max_node, old_node_numbers );
+  print_gid_options_get( icontrol, max_node, old_node_numbers,
+    max_element_old+2, old_element_numbers );
   print_gid_smooth( max_node, old_node_numbers );
   db_highest_index( ELEMENT_GROUP, max_group, VERSION_PRINT );
   //if (max_group<0) return 1;

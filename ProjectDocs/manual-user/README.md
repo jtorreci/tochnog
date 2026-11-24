@@ -444,7 +444,7 @@ page lists its own in "Differences with the Professional version".
 - [control_print_gid_dof_calcul](control_print_gid_dof_calcul.md) - only the named post fields, or -none (6.300); named fields follow the manual (Professional-suspect L8).
 - [control_print_gid_element_group](control_print_gid_element_group.md) - only the mesh blocks of the listed element groups (6.301).
 - [control_print_gid_element_mpc](control_print_gid_element_mpc.md) - -no omits the elements with an mpc'd (slave) node (6.302).
-- [control_print_gid_mesh_activate_gravity](control_print_gid_mesh_activate_gravity.md) - accepted, no effect in the GNU; also print_gid_mesh_activate_gravity (6.305, 6.985).
+- [control_print_gid_mesh_activate_gravity](control_print_gid_mesh_activate_gravity.md) - GiD files with only the elements active in mesh_activate_gravity_time (default -no) or every element (-yes); also print_gid_mesh_activate_gravity (6.305, 6.985).
 - [control_print_gid_node_type](control_print_gid_node_type.md) - node coordinates of the GiD mesh: -node, -node_start_refined, -node_deformed_mesh; also print_gid_node_type (6.307, 6.986).
 - [control_print_gid_spring2](control_print_gid_spring2.md) - spring2 in the GiD mesh with 1 or 2 nodes; also print_gid_spring2 (6.313, 6.987).
 - [control_print_gid_truss_vector](control_print_gid_truss_vector.md) - truss normal force as the vector N (t x n), with control_print_gid_truss_vector_normal (6.314, 6.315).
