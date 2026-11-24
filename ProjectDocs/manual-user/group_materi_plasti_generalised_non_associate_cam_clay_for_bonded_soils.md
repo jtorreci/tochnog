@@ -105,6 +105,10 @@ Tests in `validation-suite/test-2026`:
   k p_m.
 - `materi_plasti_gencam_bonded_shear1`: constant-volume shear with shear hardening and debonding; the
   final state lies on the yield surface by an independent quadrature of I(eta).
+- `materi_plasti_gencam_bonded_drained1`: drained triaxial compression at a constant cell pressure; the
+  stress path has dq/dp = 3, both hardening laws hold exactly, and the final state lies on the surface.
+- `materi_plasti_gencam_bonded_oedometer1`: oedometric compression; both hardening laws hold exactly and
+  the final state lies on the surface.
 - `materi_plasti_gencam_bonded_error1` to `_error5`: input errors.
 
 The closed forms of I(eta) were checked against numerical quadrature on 156 parameter sets (largest

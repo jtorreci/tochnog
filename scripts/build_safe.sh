@@ -3647,10 +3647,13 @@ expected_error_ok "$T2026" bounda_time_smc_error3
 expected_error_ok "$T2026" bounda_time_smc_error4
 # Bonded-soil generalised Cam clay (6.700, 4.21, 4.38; GNU definition, the
 # Professional 02-08-2026 never runs the model): analytic isotropic
-# compression and tension, constant-volume shear, input errors.
+# compression and tension, constant-volume shear, drained triaxial,
+# oedometer, input errors.
 run_ok "$T2026" materi_plasti_gencam_bonded_iso1
 run_ok "$T2026" materi_plasti_gencam_bonded_tension1
 run_ok "$T2026" materi_plasti_gencam_bonded_shear1
+run_ok "$T2026" materi_plasti_gencam_bonded_drained1
+run_ok "$T2026" materi_plasti_gencam_bonded_oedometer1
 for t in 1 2 3 4 5; do
   expected_error_ok "$T2026" materi_plasti_gencam_bonded_error$t
 done

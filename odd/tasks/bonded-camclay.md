@@ -65,3 +65,9 @@ builds); single-element reference integrator in the scratchpad (not committed as
   at strain steps 5e-4/1e-4/5e-5 (M_g 1.2).
 - L7 (2026-11-24) Suite: 1379 OK / 0 FALLO, runs 226/226, mode000 0. Keyword probe on the new build: 1076 accepted
   (+3), 0 missing apart from the 63 discarded. Next: S5, reopen the GiD family.
+- L8 (2026-11-24) Independent verifier on c306738: S1-S4 PASS, S6 PARTIAL (drained triaxial and oedometer tests named
+  in S6 missing). Shared-code risk: 68 existing history / per-model strain tests byte-identical against 17a598a
+  (except wall-clock time_calculation), history-order probes unchanged. Correction: tests
+  materi_plasti_gencam_bonded_drained1 (cell pressure 140, dq/dp = 3, exact hardening, on surface -1.9e-9) and
+  _oedometer1 (exact hardening, on surface -1.5e-9). Advisories kept: value jump of f at p* = 0.05 p_c (same sign
+  and zero set); exact D == 0 branch practically unused.
