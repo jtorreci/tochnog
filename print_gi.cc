@@ -108,14 +108,16 @@ void print_gid_options_get( long int icontrol, long int max_node,
   double ddum[1];
 
   // switches and numbers: global default, overruled by the control record
+  // defaults of the Professional 02-08-2026 (owner decision, odd/tasks/gid.md
+  // L13): coord and element_group are written unless set to -no
   gid_coord = print_option( PRINT_GID_COORD, CONTROL_PRINT_GID_COORD,
-    icontrol, 0 );
+    icontrol, -YES );
   gid_group = print_option( PRINT_GID_GROUP, CONTROL_PRINT_GID_GROUP,
-    icontrol, 0 );
+    icontrol, -YES );
   gid_node_type = print_option( PRINT_GID_NODE_TYPE,
     CONTROL_PRINT_GID_NODE_TYPE, icontrol, -NODE_START_REFINED );
   gid_spring2 = print_option( PRINT_GID_SPRING2, CONTROL_PRINT_GID_SPRING2,
-    icontrol, 0 );
+    icontrol, 1 );
   gid_smooth_n = print_option( PRINT_GID_SMOOTH_N, CONTROL_PRINT_GID_SMOOTH_N,
     icontrol, 10 );
   // records without a global form
@@ -150,7 +152,7 @@ void print_gid_options_get( long int icontrol, long int max_node,
   if ( gid_node_type!=-NODE && gid_node_type!=-NODE_START_REFINED &&
        gid_node_type!=-NODE_DEFORMED_MESH )
     print_gid_option_error( "control_print_gid_node_type/print_gid_node_type" );
-  if ( gid_spring2!=0 && gid_spring2!=1 && gid_spring2!=2 )
+  if ( gid_spring2!=1 && gid_spring2!=2 )
     print_gid_option_error( "control_print_gid_spring2/print_gid_spring2" );
   if ( gid_smooth_n<0 )
     print_gid_option_error( "control_print_gid_smooth_n/print_gid_smooth_n" );
@@ -199,7 +201,7 @@ void print_gid_options_free( void )
 
 // control_print_gid_element_group (6.301) and control_print_gid_element_mpc
 // (6.302): is the element written to the GiD files? spring2 elements only
-// when control_print_gid_spring2/print_gid_spring2 is set.
+// as 1 node (Point) by default, or 2 nodes with control_print_gid_spring2 2.
 long int print_gid_element_selected( long int element, long int name,
   long int element_group, long int nnol, long int nodes[] )
 
@@ -207,7 +209,6 @@ long int print_gid_element_selected( long int element, long int name,
   long int i=0, found=0;
 
   (void) element;
-  if ( name==-SPRING2 && gid_spring2==0 ) return 0;
   if ( ngid_element_group>0 ) {
     for ( i=0; i<ngid_element_group; i++ )
       if ( gid_element_group[i]==element_group ) found = 1;
@@ -269,8 +270,8 @@ long int print_gid_other( void )
   return gid_other!=-NO;
 }
 
-// control_print_gid_spring2/print_gid_spring2 (6.313/6.987): 0 (not set,
-// spring2 not written), 1 (Point mesh) or 2 (Linear mesh)
+// control_print_gid_spring2/print_gid_spring2 (6.313/6.987): 1 (Point mesh,
+// the default) or 2 (Linear mesh)
 long int print_gid_spring2_nodes( void )
 
 {
@@ -467,7 +468,8 @@ static long int print_gid_gauss_needed( void )
   const long int names[] = { CONTROL_PRINT_GID_GROUP,
     CONTROL_PRINT_GID_BEAM_VECTORS, CONTROL_PRINT_GID_TRUSS_VECTOR };
 
-  if ( print_option( PRINT_GID_GROUP, -1, -1, 0 )==-YES ) return 1;
+  // element_group is written by default (control_print_gid_group -yes)
+  if ( print_option( PRINT_GID_GROUP, -1, -1, -YES )==-YES ) return 1;
   for ( i=0; i<3; i++ ) {
     db_max_index( names[i], max_index, VERSION_NORMAL, GET );
     for ( icontrol=0; icontrol<=max_index; icontrol++ ) {

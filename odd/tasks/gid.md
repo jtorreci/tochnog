@@ -103,3 +103,7 @@ Runner: `scripts/build_safe.sh` (`TN_SKIP_SUITE=1` for builds); Professional bin
   _other -no removes only what the GNU writer writes (no truss_force, beam_force_moment, bounda_force, node_boundary);
   print_gid_define parse-only (no Pro effect); a spring2 solution difference GNU vs Pro noticed (not in scope).
   Risk: item 3 (print_gid signature, renumbering arrays), covered by the differential.
+- L13 (2026-11-24) owner, Q-DEF ("Por defecto, el Professional escribe en la salida GiD el resultado coord y el campo
+  element_group, y dibuja el spring2 con 1 nodo... ¿Cambiamos el default de GNU al del Professional?"): "Default del
+  Professional (Recomendado)". print_gi.cc defaults: coord -yes, group -yes, spring2 1; every .flavia.res gains coord
+  and element_group. Check control_print_gid_dof2 extended to pin the defaults.

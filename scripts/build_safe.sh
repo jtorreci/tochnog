@@ -3806,8 +3806,12 @@ gid_opt_run control_print_gid_dof1
   [ "$(gid_nres rotz)" = "0" ] && [ "$(gid_nmesh_deform)" = "2" ]
 gid_opt_done "only materi_displacement and condif_temperature, mesh deform kept" $?
 gid_opt_run control_print_gid_dof2
-[ "$(grep -c '^Result  ' "$GO_RES")" = "0" ] && [ "$(gid_nmesh_deform)" = "2" ]
-gid_opt_done "-none: no dof field, mesh deform kept" $?
+# coord and element_group are written by default (Professional defaults,
+# owner decision odd/tasks/gid.md L13)
+[ "$(grep '^Result  ' "$GO_RES" | grep -vc '"coord"\|"element_group"')" = "0" ] &&
+  [ "$(gid_nmesh_deform)" = "2" ] &&
+  [ "$(gid_nres coord)" = "2" ] && [ "$(gid_nres element_group)" = "4" ]
+gid_opt_done "-none: no dof field, mesh deform kept, coord and element_group by default (L13)" $?
 # L8 guard: a named post field is written alone (manual); the Professional
 # 02-08-2026 suppresses it
 gid_opt_run control_print_gid_dof_calcul1

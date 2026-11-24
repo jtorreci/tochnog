@@ -4,8 +4,8 @@ Manual Professional 6.298 and print_gid_coord 6.982.
 
 ## Description
 
-With `-yes` the GiD results get the nodal vector result `coord` (the node coordinates) at
-every print. With `-no` it is not written.
+The GiD results get the nodal vector result `coord` (the node coordinates) at every print:
+`-yes`, the default (as the Professional). With `-no` it is not written.
 
 The global `print_gid_coord` is the default of every `control_print_gid_coord`; a
 `control_print_gid_coord` overrules it for the `control_print_gid` with the same index.
@@ -35,8 +35,6 @@ control_print_gid_coord  10  -yes
 
 ## Differences with the Professional version
 
-- Without either record the GNU writes no `coord` result: the GiD files stay the ones the GNU
-  always wrote. The manual and the Professional 02-08-2026 write it by default (`-yes`).
 - Format of the GNU GiD writer (`Result "coord" "Load Analysis" <time> Vector OnNodes`).
 
 ## Tests

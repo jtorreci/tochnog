@@ -6,7 +6,8 @@ Manual Professional 6.313 and print_gid_spring2 6.987.
 
 How the `-spring2` elements are written to the GiD mesh: `2` as a line with its two nodes
 (`MESH Spring2Gr<group> ... ElemType Linear Nnode 2`, line `element node_1 node_2 group`), `1` as
-a point on its first node (`ElemType Point Nnode 1`, line `element node_1 group`). With `2` and
+a point on its first node (`ElemType Point Nnode 1`, line `element node_1 group`); `1` is the
+default (as the Professional). With `2` and
 [control_print_gid_group](control_print_gid_group.md) `-yes` the springs also get their
 `element_group` result.
 
@@ -37,8 +38,7 @@ control_print_gid_spring2  10  2
 
 ## Differences with the Professional version
 
-- Without either record the GNU writes no spring2 elements to the GiD mesh (GiD files
-  unchanged); the manual and the Professional 02-08-2026 write them with 1 node by default.
+- None (the default is the Professional's since 2026-11-24).
 
 ## Tests
 

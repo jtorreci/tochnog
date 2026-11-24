@@ -41,10 +41,11 @@ GiD output options: `control_print_gid_*` (manual Professional 6.295-6.315) and 
 
 ## Defaults and the existing output
 
-Without any of these records the GiD files are byte-identical to the previous GNU (differential
-check on every test-2014/test-2026 input). Hence the records that add content are off unless
-they are set: `coord`, `group` (manual default `-yes`) and `spring2` (manual default 1 node) are
-written only when the record (or its global form) is given. Divergence rows: parent.
+The writer first kept the previous GNU output without these records (differential check on every
+test-2014/test-2026 input: byte-identical). Then the owner chose the Professional defaults
+(odd/tasks/gid.md L13): `coord` and `element_group` are written unless set to `-no`, and spring2
+elements are written as 1 node. Every GiD results file therefore gained these two results; the
+existing results are unchanged.
 
 ## Measured Professional rules (02-08-2026)
 
