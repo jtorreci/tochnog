@@ -170,6 +170,10 @@ section headings were not recomputed.
 bonded-soil model ([user page](manual-user/group_materi_plasti_generalised_non_associate_cam_clay_for_bonded_soils.md));
 1084 of 1147 names present, 0 missing apart from the 63 discarded.
 
+2026-11-24 (GiD family reopened, odd/tasks/gid.md): the GiD output and geometry names are accepted and
+implemented; probe on the build of `8a53ace`: 1137 accepted + 6 literals + 2 normalised = 1145 of 1147;
+discarded `control_print_gid_batch` and `force_volume_element_group_0`.
+
 ## Gap by family
 
 | Family | Missing | Notes |

@@ -41,7 +41,7 @@ Runner: `scripts/build_safe.sh` (`TN_SKIP_SUITE=1` for builds); Professional bin
 | T3 | S3 | delegated writer | done; Q-DEF resolved (L13, 0d6b607), Q-MAG in T6 | f4fe4ca |
 | T4 | S3 | delegated writer | done (L12) | f4fe4ca |
 | T6 | S3 | delegated writer | done (L15) | this commit |
-| T5 | S6 | inline | pending: docs, divergences, tracker, probe | |
+| T5 | S6 | inline | done (L16) | this commit |
 
 ## Log
 
@@ -118,3 +118,7 @@ Runner: `scripts/build_safe.sh` (`TN_SKIP_SUITE=1` for builds); Professional bin
   mesh_activate_gravity_time1 now equal to the Professional). Suite 1424 OK / 0 FALLO. Pro-suspect, copied: element
   results for elements not in the mesh; empty .msh when nothing is active at the first print; method1 > vs method2 >=.
   Not in scope: the Professional writes post_point as Point elements in its GiD mesh.
+- L16 (2026-11-24) T5 done: keyword probe on 8a53ace: 1137 accepted + 6 literals + 2 normalised = 1145 of 1147;
+  discarded control_print_gid_batch and force_volume_element_group_0. SEGUIMIENTO metric, discard row (reopened) and 64
+  GiD checklist entries; DIVERGENCES: DSC-GID narrowed to control_print_gid_batch, new GID-SMOOTH-NAMED,
+  GID-DOFCALCUL-NAMED, MESH-GID-BATCH-ERRORS (class counts table not recomputed). Next: feature-end independent verifier.

@@ -15,10 +15,12 @@ against the manual of the Professional 02-08-2026, chapters 4-6; list
 `ProjectDocs/pro-keywords-2026-11-24.txt`):
 
 - **1147** keyword names in the Professional manual (chapters 4-6)
-- **1084** present in the GNU (**94.5 %**; **100 %** excluding the 63 discarded names):
-  1076 accepted by `db_number`, 6 initialisation-part literals and 2 initialisation names
+- **1145** present in the GNU (**99.8 %**; **100 %** excluding the 2 discarded names):
+  1137 accepted by `db_number`, 6 initialisation-part literals and 2 initialisation names
   normalised by `input.cc`
-- **63** discarded: 62 GiD names and `force_volume_element_group_0` (PDF artefact)
+- **2** discarded: `control_print_gid_batch` (GiD batch printing, owner 2026-11-24) and
+  `force_volume_element_group_0` (PDF artefact). The GiD family (61 names) was reopened and
+  implemented on 2026-11-24 (odd/tasks/gid.md)
 - **0** missing. The last 3, the generalised non-associate Cam clay for bonded soils (6.700, 4.21,
   4.38), were implemented on 2026-11-24 as a GNU definition (DIVERGENCES GENCAM-BONDED-DEFINITION)
 - Parser acceptance is a lower bound: a few names are registered parse-only (see the report)
@@ -446,7 +448,7 @@ B conocida/pendiente, C extensión/dialecto GNU, D sospechosa del Pro).
 | `geometry_moving` del Professional 02-08-2026 (prueba solo los nodos e ignora nspace; un `-geometry_quadrilateral` pide un valor final extra y `vértices x ndim` velocidades; con threads aborta en `element_rhside_delete`) | Regla S2 (manual 6.534/6.536/6.538): el GNU prueba nspace^d puntos de muestreo por elemento (parte = fracción de volumen), longitudes del manual; confirmado por el owner 2026-11-09. DIVERGENCES GEOMETRY-MOVING-SAMPLING / -PARAMETERS / -THREADS (clase D), F5 T4 U8. |
 | Generación de elementos `-trussbeam` en vez de `-truss` por `control_mesh_truss_distribute_mpc` (manual 6.245, "as a special option") | No implementada: el manual no define ningún record para activarla (F5 T4 U7); documentado en el manual de `control_mesh_truss_distribute_mpc`. |
 | `group_materi_umat_pardiso_decompose` (control de la descomposición PARDISO) | Decisión del owner 2026-11-07: aceptado sin efecto; el GNU no tiene PARDISO (resolvedores LAPACK / SuperLU). DIVERGENCES UMAT-PARDISO-DECOMPOSE. |
-| `control_print_gid_*` (familia ~20) | Único formato propietario contemplado; `print_gid_6` del GNU es de 1998 (anterior a cambios recientes); GiD puede importar formatos no nativos (VTK, Gmsh, CSV). Ver plan sección 6c. |
+| `control_print_gid_*` (familia ~20) | **REABIERTO 2026-11-24** (owner: el preprocesador propio lee GiD): salida GiD (`control_print_gid_*`, `print_gid_*`) y geometría (`mesh_gid_*` + `control_mesh_gid_batch`, que escribe `GidMeshBatch.bch`) implementadas; queda descartado solo `control_print_gid_batch`. Ver odd/tasks/gid.md. |
 | `control_data_save` | Descarte de la FEATURE (único consumidor: `control_print_gid_save_difference`, familia GiD descartada; el análisis de diferencias se hace en post-proceso con la exportación SQLite/CSV de P5-T). El 2026-09-04 se registró parse-only (INTEGER, class CONTROL) porque los tests dynamic6/7 del corpus lo declaran; el registro sigue sin comportamiento. |
 | `control_print_interface_stress*` | Requiere elementos de interfaz/contacto, que el GNU no tiene (ni enums). Depende del Carril A. **OBSOLETO (nota 2026-10-07)**: `control_print_interface_stress` se implementó después en el Carril A (`01f6c3e` 2D 2026-08-14, `b8804c6` 3D 2026-08-16; ver la familia control_print); el descarte ya no aplica a ese keyword. |
 | Professional behaviour of `mohr_coul_direct4` (interface Mohr-Coulomb strength not enforced at once, slow drift below it) | **Deliberate divergence** (project decision 2026-10-06, F1 T7, BACKLOG C30): the GNU keeps the manual 6.632 immediate return to c + \|Fn\| tan(phi) (sigxy 1.2027, `disx` 0.3007); the Professional 02-08-2026 stays at 2.0 and drifts to 0.410 at t = 100 (target `disx` 0.1024), which looks like an artefact. Documented in 'Differences with the Professional version' of `manual-user/` and `manual-developer/group_materi_plasti_mohr_coul_direct.md`. |
@@ -891,7 +893,7 @@ marcado `PENDIENTE` puede estar cubierto en el GNU bajo otro nombre:
 - [x] `control_mesh_generate_truss_beam_loose` — implementada (commit `bd7b3ab`, 2026-08-13)
 - [x] `control_mesh_generate_truss_beam_macro` — implementada (commit `bd7b3ab`, 2026-08-13)
 - [x] `control_mesh_generate_truss_beam_separate` — F5 T4 U5d, ea220df, 2026-11-08
-- [x] `control_mesh_gid_batch` — DESCARTADO (GiD family) (keyword probe 2026-11-24)
+- [x] `control_mesh_gid_batch` — implemented 2026-11-24 (GiD feature reopened, odd/tasks/gid.md)
 - [x] `control_mesh_interface_triangle` — accepted by the GNU parser (keyword probe 2026-11-24)
 - [x] `control_mesh_keep_element` — implementada (commit `afc1dad`, 2026-08-05)
 - [x] `control_mesh_keep_element_group` — implementada (commit `afc1dad`, 2026-08-05)
@@ -991,28 +993,28 @@ marcado `PENDIENTE` puede estar cubierto en el GNU bajo otro nombre:
 - [x] `control_print_frequency_timeinterval` — Sprint 11, lote 2 (2026-08-27)
 - [x] `control_print_frequency_timestep` — Sprint 11, lote 2 (2026-08-27)
 - [x] `control_print_gid` — presente en el GNU
-- [ ] `control_print_gid_batch` — DESCARTADO
-- [ ] `control_print_gid_beam_vectors` — DESCARTADO
-- [ ] `control_print_gid_beam_vectors_normal` — DESCARTADO
+- [x] `control_print_gid_batch` — DESCARTADO (owner 2026-11-24: GiD batch printing out of scope)
+- [x] `control_print_gid_beam_vectors` — implemented 2026-11-24 (GiD feature reopened, odd/tasks/gid.md)
+- [x] `control_print_gid_beam_vectors_normal` — implemented 2026-11-24 (GiD feature reopened, odd/tasks/gid.md)
 - [x] `control_print_gid_contact_spring2` — registrada parse-only (KEYWORDS BATCH C 2026-09-04, alias sin control_ aceptado); switch de dibujado GiD, sin consumo
-- [ ] `control_print_gid_coord` — DESCARTADO
-- [ ] `control_print_gid_dof` — DESCARTADO
-- [ ] `control_print_gid_dof_calcul` — DESCARTADO
-- [ ] `control_print_gid_element_group` — DESCARTADO
-- [ ] `control_print_gid_element_mpc` — DESCARTADO
+- [x] `control_print_gid_coord` — implemented 2026-11-24 (GiD feature reopened, odd/tasks/gid.md)
+- [x] `control_print_gid_dof` — implemented 2026-11-24 (GiD feature reopened, odd/tasks/gid.md)
+- [x] `control_print_gid_dof_calcul` — implemented 2026-11-24 (GiD feature reopened, odd/tasks/gid.md)
+- [x] `control_print_gid_element_group` — implemented 2026-11-24 (GiD feature reopened, odd/tasks/gid.md)
+- [x] `control_print_gid_element_mpc` — implemented 2026-11-24 (GiD feature reopened, odd/tasks/gid.md)
 - [x] `control_print_gid_empty` — presente en el GNU
-- [ ] `control_print_gid_group` — DESCARTADO
-- [ ] `control_print_gid_mesh_activate_gravity` — DESCARTADO
-- [ ] `control_print_gid_method` — DESCARTADO
-- [ ] `control_print_gid_node_method` — DESCARTADO
-- [ ] `control_print_gid_other` — DESCARTADO
+- [x] `control_print_gid_group` — implemented 2026-11-24 (GiD feature reopened, odd/tasks/gid.md)
+- [x] `control_print_gid_mesh_activate_gravity` — implemented 2026-11-24 (GiD feature reopened, odd/tasks/gid.md)
+- [x] `control_print_gid_method` — implemented 2026-11-24 (GiD feature reopened, odd/tasks/gid.md)
+- [x] `control_print_gid_node_method` — renamed control_print_gid_node_type in the 2026 manual, implemented 2026-11-24 (GiD feature)
+- [x] `control_print_gid_other` — implemented 2026-11-24 (GiD feature reopened, odd/tasks/gid.md)
 - [x] `control_print_gid_safety_slip_critical` — F5 T6 U5 (2026-11-22): -yes plots only the critical slip surfaces (GNU GiD layout, SAFETY-SLIP-GID-FORMAT)
-- [x] `control_print_gid_save_di` — DESCARTADO (GiD family) (keyword probe 2026-11-24)
-- [ ] `control_print_gid_smooth_dof` — DESCARTADO
-- [ ] `control_print_gid_smooth_n` — DESCARTADO
-- [ ] `control_print_gid_spring2` — DESCARTADO
-- [ ] `control_print_gid_truss_vector` — DESCARTADO
-- [ ] `control_print_gid_truss_vector_normal` — DESCARTADO
+- [x] `control_print_gid_save_di` — OCR fragment of the 2024 manual; the full names are implemented (GiD feature 2026-11-24)
+- [x] `control_print_gid_smooth_dof` — implemented 2026-11-24 (GiD feature reopened, odd/tasks/gid.md)
+- [x] `control_print_gid_smooth_n` — implemented 2026-11-24 (GiD feature reopened, odd/tasks/gid.md)
+- [x] `control_print_gid_spring2` — implemented 2026-11-24 (GiD feature reopened, odd/tasks/gid.md)
+- [x] `control_print_gid_truss_vector` — implemented 2026-11-24 (GiD feature reopened, odd/tasks/gid.md)
+- [x] `control_print_gid_truss_vector_normal` — implemented 2026-11-24 (GiD feature reopened, odd/tasks/gid.md)
 - [x] `control_print_gmsh` — implementada (commit `90798f9`, 2026-08-12)
 - [x] `control_print_gmsh_dummy` — implementada (commit `90798f9`, 2026-08-12)
 - [x] `control_print_gmsh_element_data` — implementada (commit `90798f9`, 2026-08-12)
@@ -1916,42 +1918,42 @@ Nota: `group_interface_ground` del checklist anterior NUNCA existió (artefacto 
 - [x] `mesh_correct` — F5 T4 U5d, ea220df, 2026-11-08
 - [x] `mesh_delete_geometry_moving` — removed from the 2026 manual (keyword probe 2026-11-24)
 - [x] `mesh_element_group_apply` — implementada (F5 W1 U5, 2026-11-02; según el manual (MESH-EG-APPLY))
-- [x] `mesh_gid_arc_coord` — DESCARTADO (GiD family) (keyword probe 2026-11-24)
-- [x] `mesh_gid_assign_conditions_line` — DESCARTADO (GiD family) (keyword probe 2026-11-24)
-- [x] `mesh_gid_assign_conditions_point` — DESCARTADO (GiD family) (keyword probe 2026-11-24)
-- [x] `mesh_gid_assign_conditions_surface` — DESCARTADO (GiD family) (keyword probe 2026-11-24)
-- [x] `mesh_gid_circle_coord` — DESCARTADO (GiD family) (keyword probe 2026-11-24)
-- [x] `mesh_gid_circle_element_group` — DESCARTADO (GiD family) (keyword probe 2026-11-24)
-- [x] `mesh_gid_circle_hollow` — DESCARTADO (GiD family) (keyword probe 2026-11-24)
-- [x] `mesh_gid_circle_radius` — DESCARTADO (GiD family) (keyword probe 2026-11-24)
-- [x] `mesh_gid_cylinder_coord` — DESCARTADO (GiD family) (keyword probe 2026-11-24)
-- [x] `mesh_gid_cylinder_element_group` — DESCARTADO (GiD family) (keyword probe 2026-11-24)
-- [x] `mesh_gid_cylinder_height` — DESCARTADO (GiD family) (keyword probe 2026-11-24)
-- [x] `mesh_gid_cylinder_hollow` — DESCARTADO (GiD family) (keyword probe 2026-11-24)
-- [x] `mesh_gid_cylinder_normal` — DESCARTADO (GiD family) (keyword probe 2026-11-24)
-- [x] `mesh_gid_cylinder_radius` — DESCARTADO (GiD family) (keyword probe 2026-11-24)
-- [x] `mesh_gid_line_element_group` — DESCARTADO (GiD family) (keyword probe 2026-11-24)
-- [x] `mesh_gid_line_point` — DESCARTADO (GiD family) (keyword probe 2026-11-24)
-- [x] `mesh_gid_line_size` — DESCARTADO (GiD family) (keyword probe 2026-11-24)
-- [x] `mesh_gid_line_structured_concentrate` — DESCARTADO (GiD family) (keyword probe 2026-11-24)
-- [x] `mesh_gid_line_structured_nel` — DESCARTADO (GiD family) (keyword probe 2026-11-24)
-- [x] `mesh_gid_line_structured_size` — DESCARTADO (GiD family) (keyword probe 2026-11-24)
-- [x] `mesh_gid_point_coord` — DESCARTADO (GiD family) (keyword probe 2026-11-24)
-- [x] `mesh_gid_rectangle_coord` — DESCARTADO (GiD family) (keyword probe 2026-11-24)
-- [x] `mesh_gid_rectangle_element_group` — DESCARTADO (GiD family) (keyword probe 2026-11-24)
-- [x] `mesh_gid_rectangle_hollow` — DESCARTADO (GiD family) (keyword probe 2026-11-24)
-- [x] `mesh_gid_size` — DESCARTADO (GiD family) (keyword probe 2026-11-24)
-- [x] `mesh_gid_sphere_coord` — DESCARTADO (GiD family) (keyword probe 2026-11-24)
-- [x] `mesh_gid_sphere_element_group` — DESCARTADO (GiD family) (keyword probe 2026-11-24)
-- [x] `mesh_gid_sphere_hollow` — DESCARTADO (GiD family) (keyword probe 2026-11-24)
-- [x] `mesh_gid_sphere_radius` — DESCARTADO (GiD family) (keyword probe 2026-11-24)
-- [x] `mesh_gid_surface_element` — DESCARTADO (GiD family) (keyword probe 2026-11-24)
-- [x] `mesh_gid_surface_element_group` — DESCARTADO (GiD family) (keyword probe 2026-11-24)
-- [x] `mesh_gid_surface_line` — DESCARTADO (GiD family) (keyword probe 2026-11-24)
-- [x] `mesh_gid_surface_structured_nel` — DESCARTADO (GiD family) (keyword probe 2026-11-24)
-- [x] `mesh_gid_surface_structured_size` — DESCARTADO (GiD family) (keyword probe 2026-11-24)
-- [x] `mesh_gid_volume_element_group` — DESCARTADO (GiD family) (keyword probe 2026-11-24)
-- [x] `mesh_gid_volume_surface` — DESCARTADO (GiD family) (keyword probe 2026-11-24)
+- [x] `mesh_gid_arc_coord` — implemented 2026-11-24 (GiD feature reopened, odd/tasks/gid.md)
+- [x] `mesh_gid_assign_conditions_line` — implemented 2026-11-24 (GiD feature reopened, odd/tasks/gid.md)
+- [x] `mesh_gid_assign_conditions_point` — implemented 2026-11-24 (GiD feature reopened, odd/tasks/gid.md)
+- [x] `mesh_gid_assign_conditions_surface` — implemented 2026-11-24 (GiD feature reopened, odd/tasks/gid.md)
+- [x] `mesh_gid_circle_coord` — implemented 2026-11-24 (GiD feature reopened, odd/tasks/gid.md)
+- [x] `mesh_gid_circle_element_group` — implemented 2026-11-24 (GiD feature reopened, odd/tasks/gid.md)
+- [x] `mesh_gid_circle_hollow` — implemented 2026-11-24 (GiD feature reopened, odd/tasks/gid.md)
+- [x] `mesh_gid_circle_radius` — implemented 2026-11-24 (GiD feature reopened, odd/tasks/gid.md)
+- [x] `mesh_gid_cylinder_coord` — implemented 2026-11-24 (GiD feature reopened, odd/tasks/gid.md)
+- [x] `mesh_gid_cylinder_element_group` — implemented 2026-11-24 (GiD feature reopened, odd/tasks/gid.md)
+- [x] `mesh_gid_cylinder_height` — implemented 2026-11-24 (GiD feature reopened, odd/tasks/gid.md)
+- [x] `mesh_gid_cylinder_hollow` — implemented 2026-11-24 (GiD feature reopened, odd/tasks/gid.md)
+- [x] `mesh_gid_cylinder_normal` — implemented 2026-11-24 (GiD feature reopened, odd/tasks/gid.md)
+- [x] `mesh_gid_cylinder_radius` — implemented 2026-11-24 (GiD feature reopened, odd/tasks/gid.md)
+- [x] `mesh_gid_line_element_group` — implemented 2026-11-24 (GiD feature reopened, odd/tasks/gid.md)
+- [x] `mesh_gid_line_point` — implemented 2026-11-24 (GiD feature reopened, odd/tasks/gid.md)
+- [x] `mesh_gid_line_size` — implemented 2026-11-24 (GiD feature reopened, odd/tasks/gid.md)
+- [x] `mesh_gid_line_structured_concentrate` — implemented 2026-11-24 (GiD feature reopened, odd/tasks/gid.md)
+- [x] `mesh_gid_line_structured_nel` — implemented 2026-11-24 (GiD feature reopened, odd/tasks/gid.md)
+- [x] `mesh_gid_line_structured_size` — implemented 2026-11-24 (GiD feature reopened, odd/tasks/gid.md)
+- [x] `mesh_gid_point_coord` — implemented 2026-11-24 (GiD feature reopened, odd/tasks/gid.md)
+- [x] `mesh_gid_rectangle_coord` — implemented 2026-11-24 (GiD feature reopened, odd/tasks/gid.md)
+- [x] `mesh_gid_rectangle_element_group` — implemented 2026-11-24 (GiD feature reopened, odd/tasks/gid.md)
+- [x] `mesh_gid_rectangle_hollow` — implemented 2026-11-24 (GiD feature reopened, odd/tasks/gid.md)
+- [x] `mesh_gid_size` — implemented 2026-11-24 (GiD feature reopened, odd/tasks/gid.md)
+- [x] `mesh_gid_sphere_coord` — implemented 2026-11-24 (GiD feature reopened, odd/tasks/gid.md)
+- [x] `mesh_gid_sphere_element_group` — implemented 2026-11-24 (GiD feature reopened, odd/tasks/gid.md)
+- [x] `mesh_gid_sphere_hollow` — implemented 2026-11-24 (GiD feature reopened, odd/tasks/gid.md)
+- [x] `mesh_gid_sphere_radius` — implemented 2026-11-24 (GiD feature reopened, odd/tasks/gid.md)
+- [x] `mesh_gid_surface_element` — implemented 2026-11-24 (GiD feature reopened, odd/tasks/gid.md)
+- [x] `mesh_gid_surface_element_group` — implemented 2026-11-24 (GiD feature reopened, odd/tasks/gid.md)
+- [x] `mesh_gid_surface_line` — implemented 2026-11-24 (GiD feature reopened, odd/tasks/gid.md)
+- [x] `mesh_gid_surface_structured_nel` — implemented 2026-11-24 (GiD feature reopened, odd/tasks/gid.md)
+- [x] `mesh_gid_surface_structured_size` — implemented 2026-11-24 (GiD feature reopened, odd/tasks/gid.md)
+- [x] `mesh_gid_volume_element_group` — implemented 2026-11-24 (GiD feature reopened, odd/tasks/gid.md)
+- [x] `mesh_gid_volume_surface` — implemented 2026-11-24 (GiD feature reopened, odd/tasks/gid.md)
 - [x] `mesh_interface_triangle_coordinates` — F5 T4 U1, 87436f7, 2026-11-08 (db_number alias)
 - [x] `mesh_interface_triangle_element_group` — accepted by the GNU parser (keyword probe 2026-11-24)
 
@@ -2179,14 +2181,14 @@ Nota: `group_interface_ground` del checklist anterior NUNCA existió (artefacto 
 
 - [x] `print_gid_calculation` — accepted by the GNU parser (keyword probe 2026-11-24)
 - [x] `print_gid_contact_spring2` — alias db_number de control_print_gid_contact_spring2 (KEYWORDS BATCH C 2026-09-04)
-- [x] `print_gid_coord` — DESCARTADO (GiD family) (keyword probe 2026-11-24)
-- [x] `print_gid_de` — DESCARTADO (GiD family) (keyword probe 2026-11-24)
-- [x] `print_gid_group` — DESCARTADO (GiD family) (keyword probe 2026-11-24)
-- [x] `print_gid_mesh_activate_gravity` — DESCARTADO (GiD family) (keyword probe 2026-11-24)
-- [x] `print_gid_node_method` — DESCARTADO (GiD family) (keyword probe 2026-11-24)
-- [x] `print_gid_smooth_dof` — DESCARTADO (GiD family) (keyword probe 2026-11-24)
-- [x] `print_gid_smooth_n` — DESCARTADO (GiD family) (keyword probe 2026-11-24)
-- [x] `print_gid_spring2` — DESCARTADO (GiD family) (keyword probe 2026-11-24)
+- [x] `print_gid_coord` — implemented 2026-11-24 (GiD feature reopened, odd/tasks/gid.md)
+- [x] `print_gid_de` — OCR fragment of the 2024 manual; the full names are implemented (GiD feature 2026-11-24)
+- [x] `print_gid_group` — implemented 2026-11-24 (GiD feature reopened, odd/tasks/gid.md)
+- [x] `print_gid_mesh_activate_gravity` — implemented 2026-11-24 (GiD feature reopened, odd/tasks/gid.md)
+- [x] `print_gid_node_method` — renamed print_gid_node_type in the 2026 manual, implemented 2026-11-24 (GiD feature)
+- [x] `print_gid_smooth_dof` — implemented 2026-11-24 (GiD feature reopened, odd/tasks/gid.md)
+- [x] `print_gid_smooth_n` — implemented 2026-11-24 (GiD feature reopened, odd/tasks/gid.md)
+- [x] `print_gid_spring2` — implemented 2026-11-24 (GiD feature reopened, odd/tasks/gid.md)
 
 ### print_gmsh (3/3)
 
