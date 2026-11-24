@@ -435,6 +435,9 @@ page lists its own in "Differences with the Professional version".
 - [materi_dynamic](materi_dynamic.md) - el factor de mezcla temporal sigma = (1-f)*sigma(t) + f*sigma(t+dt) (6.800) y control_materi_dynamic (6.141). Implementado en materi() y truss(); f=1 = esquema historico byte-identico. Los tests dynamic1/2/5/8 siguen RUNFAIL por el esquema de velocidades del GNU (bloqueador de solver, no de parse). C11 (2026-10-11): control_materi_dynamic also drives the displacement-primary scheme (= Professional).
 - [start_if_not](start_if_not.md) - bloques condicionales start_if_not ... end_if_not del data part (con start_if ... end_if ya existente).
 - [bounda_time_smc](bounda_time_smc.md) - base excitation read from a USGS SMC file (acceleration, velocity or displacement), with offset and units.
+- [group_materi_plasti_generalised_non_associate_cam_clay_for_bonded_soils](group_materi_plasti_generalised_non_associate_cam_clay_for_bonded_soils.md) - bonded-soil generalised Cam clay (Nova model, Lagioia-Puzrin-Potts surfaces, bonding p_m and tensile strength k p_m); GNU definition, 11 values.
+- [materi_plasti_generalised_non_associate_cam_clay_for_bonded_soils_history](materi_plasti_generalised_non_associate_cam_clay_for_bonded_soils_history.md) - initia: history dofs gencamhis0 (p_s) and gencamhis1 (p_m) of the bonded-soil Cam clay.
+- [materi_strain_plasti_generalised_non_associate_cam_clay_for_bonded_soils](materi_strain_plasti_generalised_non_associate_cam_clay_for_bonded_soils.md) - initia: plastic strain of the bonded-soil Cam clay (dofs eppgencam*).
 
 ## Lote keywords baratas (camclay / beam / groundflow / slide) — convergencia
 

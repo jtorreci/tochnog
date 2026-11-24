@@ -5339,6 +5339,17 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   data_class[GROUP_MATERI_PLASTI_CAMCLAY] = MATERI;
   data_required[GROUP_MATERI_PLASTI_CAMCLAY] = GROUP_TYPE;
 
+  // manual Professional 6.700 gives no parameters ("index ..."). GNU
+  // definition (Nova bonded-soil model with Lagioia-Puzrin-Potts yield and
+  // potential surfaces, manual-user page of the same name): 11 values
+  // mu_f alpha_f M_f mu_g alpha_g M_g rho_s xi_s rho_m xi_m k.
+  strcpy(name[GROUP_MATERI_PLASTI_GENCAM_BONDED],
+    "group_materi_plasti_generalised_non_associate_cam_clay_for_bonded_soils");
+  type[GROUP_MATERI_PLASTI_GENCAM_BONDED] = DOUBLE_PRECISION;
+  data_length[GROUP_MATERI_PLASTI_GENCAM_BONDED] = 11;
+  data_class[GROUP_MATERI_PLASTI_GENCAM_BONDED] = MATERI;
+  data_required[GROUP_MATERI_PLASTI_GENCAM_BONDED] = GROUP_TYPE;
+
   strcpy(name[GROUP_MATERI_PLASTI_CAMCLAY_INCREMENTAL],"group_materi_plasti_camclay_incremental");
   type[GROUP_MATERI_PLASTI_CAMCLAY_INCREMENTAL] = DOUBLE_PRECISION;
   data_length[GROUP_MATERI_PLASTI_CAMCLAY_INCREMENTAL] = 4;
@@ -6593,6 +6604,9 @@ void db_initialize( long int dof_type[], long int dof_label[] )
 
   strcpy(name[MATERI_PLASTI_CAMCLAY_HISTORY],"materi_plasti_camclay_history");
 
+  strcpy(name[MATERI_PLASTI_GENCAM_BONDED_HISTORY],
+    "materi_plasti_generalised_non_associate_cam_clay_for_bonded_soils_history");
+
   strcpy(name[MATERI_PLASTI_RHO],"materi_plasti_rho");
 
   strcpy(name[MATERI_PLASTI_SOFTVAR_LOCAL],"materi_plasti_softvar_local");
@@ -6621,6 +6635,9 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   strcpy(name[MATERI_STRAIN_PLASTI_HARDSOIL],"materi_strain_plasti_hardsoil");
 
   strcpy(name[MATERI_STRAIN_PLASTI_CAMCLAY],"materi_strain_plasti_camclay");
+
+  strcpy(name[MATERI_STRAIN_PLASTI_GENCAM_BONDED],
+    "materi_strain_plasti_generalised_non_associate_cam_clay_for_bonded_soils");
 
   strcpy(name[MATERI_STRAIN_PLASTI_MOHR_COUL],"materi_strain_plasti_mohr_coul");
 
@@ -9378,6 +9395,15 @@ void db_initialize( long int dof_type[], long int dof_label[] )
       strcat( basename, str );
       n++;
     }
+    else if ( dof_type[iuknwn]==-MATERI_PLASTI_GENCAM_BONDED_HISTORY ) {
+      // manual Professional 4.21: gencamhis0 = p_s (stress memory),
+      // gencamhis1 = p_m (bonding) of the bonded-soil Cam clay model
+      if ( iuknwn==hisv_indx ) n = 0;
+      strcpy( basename, "gencamhis" );
+      long_to_a( n, str );
+      strcat( basename, str );
+      n++;
+    }
     else if ( dof_type[iuknwn]==-MATERI_MAXWELL_STRESS ) {
       if ( iuknwn==mstres_indx ) { 
         m = 1; 
@@ -9544,6 +9570,17 @@ void db_initialize( long int dof_type[], long int dof_label[] )
       else if ( n==4 ) strcpy( basename, "eppccyy" );
       else if ( n==5 ) strcpy( basename, "eppccyz" );
       else if ( n==6 ) strcpy( basename, "eppcczz" );
+    }
+    else if ( dof_type[iuknwn]==-MATERI_STRAIN_PLASTI_GENCAM_BONDED ) {
+      // bonded-soil Cam clay plastic strain (manual Professional 4.38)
+      if ( iuknwn==gencamepp_indx ) n = 0;
+      n++;
+      if      ( n==1 ) strcpy( basename, "eppgencamxx" );
+      else if ( n==2 ) strcpy( basename, "eppgencamxy" );
+      else if ( n==3 ) strcpy( basename, "eppgencamxz" );
+      else if ( n==4 ) strcpy( basename, "eppgencamyy" );
+      else if ( n==5 ) strcpy( basename, "eppgencamyz" );
+      else if ( n==6 ) strcpy( basename, "eppgencamzz" );
     }
     else if ( dof_type[iuknwn]==-MATERI_STRAIN_PLASTI_MOHR_COUL ) {
       // mohr-coulomb plastic strain (manual Professional 4.41, F5 T2 V7)

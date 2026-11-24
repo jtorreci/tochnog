@@ -166,6 +166,10 @@ the same probe (31 accepted, 46 GiD, 11 OCR fragments of the 2024 manual, 5 lite
 1 removed from the 2026 manual, 3 bonded-soil names still missing). The family counts in the
 section headings were not recomputed.
 
+2026-11-24 (bonded-soil Cam clay): the 3 missing names are accepted and implemented from the Nova
+bonded-soil model ([user page](manual-user/group_materi_plasti_generalised_non_associate_cam_clay_for_bonded_soils.md));
+1084 of 1147 names present, 0 missing apart from the 63 discarded.
+
 ## Gap by family
 
 | Family | Missing | Notes |

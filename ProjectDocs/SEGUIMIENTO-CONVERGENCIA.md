@@ -15,11 +15,12 @@ against the manual of the Professional 02-08-2026, chapters 4-6; list
 `ProjectDocs/pro-keywords-2026-11-24.txt`):
 
 - **1147** keyword names in the Professional manual (chapters 4-6)
-- **1081** present in the GNU (**94.2 %**; **99.7 %** excluding the 63 discarded names):
-  1073 accepted by `db_number`, 6 initialisation-part literals and 2 initialisation names
+- **1084** present in the GNU (**94.5 %**; **100 %** excluding the 63 discarded names):
+  1076 accepted by `db_number`, 6 initialisation-part literals and 2 initialisation names
   normalised by `input.cc`
 - **63** discarded: 62 GiD names and `force_volume_element_group_0` (PDF artefact)
-- **3** missing: the generalised non-associate Cam clay for bonded soils (6.700, 4.21, 4.38)
+- **0** missing. The last 3, the generalised non-associate Cam clay for bonded soils (6.700, 4.21,
+  4.38), were implemented on 2026-11-24 as a GNU definition (DIVERGENCES GENCAM-BONDED-DEFINITION)
 - Parser acceptance is a lower bound: a few names are registered parse-only (see the report)
 - Divergences: see `DIVERGENCES-PROFESSIONAL.md` (classes A/B/C/D)
 - Además: 197 tests del GNU 2014 corren con cobertura 100 % de keywords (ver plan, sección 6c)
@@ -1662,7 +1663,7 @@ Nota: `group_interface_ground` del checklist anterior NUNCA existió (artefacto 
 - [x] `group_materi_plasti_druck_prag` — Sprint 10 (alias del legacy druckprag; VALIDACIÓN ANALÍTICA: cizalla φ=0 → σxy=2c/√3, 0.014% error)
 - [x] `group_materi_plasti_element_group` — registrada (KEYWORDS BATCH C 2026-09-04); consumo (reduccion 2/3 por vecindad) PENDIENTE
 - [x] `group_materi_plasti_element_group_factor` — registrada (KEYWORDS BATCH C 2026-09-04); consumo PENDIENTE
-- [ ] `group_materi_plasti_generalised_non_associate_cam_clay_for_bonded_soils` — PENDIENTE — still missing in the GNU parser (keyword probe 2026-11-24)
+- [x] `group_materi_plasti_generalised_non_associate_cam_clay_for_bonded_soils` — implemented 2026-11-24 from the Nova bonded-soil model (GNU definition, divergence GENCAM-BONDED-DEFINITION; tests materi_plasti_gencam_bonded_*)
 - [x] `group_materi_plasti_gurson` — presente en el GNU
 - [x] `group_materi_plasti_hardsoil` — Sprint 10 (lote 8; f = q/(E50(1-q/qa)) - 2q/Eur - γp, qa = qf/Rf con qf = 2·sinφ·(sig3+c·cotφ)/(1-sinφ) derivado de MC en falla; γp = kappa + extra del control; flujo asociativo; validado con la familia de relajacion `mhardsoil_gp0_off`/`mhardsoil_plast`: el estado final queda SOBRE la superficie (f ~ 0 verificada) y kappa escala con q inicial (0.000293 -> 0.0006 para σxx -2 -> -4)
 - [x] `group_materi_plasti_heat_generation` — Sprint 10 (nombre Professional del legacy heatgeneration, dual-read)
@@ -1846,7 +1847,7 @@ Nota: `group_interface_ground` del checklist anterior NUNCA existió (artefacto 
 - [x] `materi_plasti_diprisco_history` — Sprint 10 (lote 9; initia 4.18: alias de materi_history_variables en input.cc (misma rama del parser, mismo dof hisv compartido, basenames hisv0..hisvN-1); los checks de GROUP_MATERI_PLASTI_DIPRISCO/_RT aceptan cualquiera de los dos nombres (check_unknown_atleastone); validado con `mdiprisco_hist` (diprisc1 con el alias: hisv10 -152.795 IDENTICO a diprisc1) y `mstrain_diprisco`)
 - [x] `materi_plasti_f` — presente en el GNU
 - [x] `materi_plasti_f_nonlocal` — presente en el GNU
-- [ ] `materi_plasti_generalised_non_associate_cam_clay_for_bonded_soils_history` — PENDIENTE — still missing in the GNU parser (keyword probe 2026-11-24)
+- [x] `materi_plasti_generalised_non_associate_cam_clay_for_bonded_soils_history` — implemented 2026-11-24 from the Nova bonded-soil model (GNU definition, divergence GENCAM-BONDED-DEFINITION; tests materi_plasti_gencam_bonded_*)
 - [x] `materi_plasti_hardsoil_history` — Sprint 10 (lote 8; initia 4.22: dof escalar max |p| historico — mismo concepto que materi_stress_pressure_history (4.50), dof `sph` COMPARTIDO (misma actualizacion running-max en dof.cc, mismo basename); el switch E50/Eur del elastico lo lee (old_unknowns[sph]); validado con `mhardsoil_unload`: sph = 0.3333 en el pico y Eur desde el primer paso de descarga)
 - [x] `materi_plasti_hypo_history` — batch hypo (2026-09-01; initia 4.23: 8 variables hyhis0..hyhis7, mismo dof hisv compartido, basenames hyhis; kernel masin mapea e=hyhis0 y s=hyhis4; hypo2/4 rc=0)
 - [x] `materi_plasti_hypo_substepping` — F5 T3 C1, 6745219, 2026-11-06
@@ -1871,7 +1872,7 @@ Nota: `group_interface_ground` del checklist anterior NUNCA existió (artefacto 
 - [x] `materi_strain_plasti_compression` — Sprint 10 (lote 9; initia 4.36: dof dedicado cepp, basenames eppcmpxx...; mismo bloque consolidado; `mstrain_compression`: eppcmpzz -8.96e-05; gemelo elastico 0)
 - [x] `materi_strain_plasti_diprisco` — Sprint 10 (lote 9; initia 4.37: dof dedicado depp, basenames eppdipxx...; `mstrain_diprisco`: eppdipyy -0.0105714 y eppdipxx=eppdipzz +0.00350735; gemelo elastico 0)
 - [x] `materi_strain_plasti_druckprag` — Sprint 10 (lote 9; initia 4.39: dof dedicado dpepp, basenames eppdrpxx...; `mstrain_druckprag`: eppdrpxy 0.910768 IDENTICO al epp generico del mismo run; gemelo elastico 0)
-- [ ] `materi_strain_plasti_generalised_non_associate_cam_clay_for_bonded_soils` — PENDIENTE — still missing in the GNU parser (keyword probe 2026-11-24)
+- [x] `materi_strain_plasti_generalised_non_associate_cam_clay_for_bonded_soils` — implemented 2026-11-24 from the Nova bonded-soil model (GNU definition, divergence GENCAM-BONDED-DEFINITION; tests materi_plasti_gencam_bonded_*)
 - [x] `materi_strain_plasti_hardsoil` — Sprint 10 (lote 8; initia 4.40: tensor de deformacion plastica propio del hardsoil en node_dof (dof dedicado hsepp, basenames epphsxx...; RHS en materi.cc + inercia en general.cc, patron de materi_strain_plasti); validado en los tests de relajacion plastica (se llena con el retorno) y cero en los elasticos)
 - [x] `materi_strain_plasti_mohr_coul` — F5 T2 V7, `0fa067b` 2026-11-03 (Professional labels and values since C108, 2026-11-04)
 - [x] `materi_strain_plasti_tension` — F5 T2 V7, `0fa067b` 2026-11-03 (Professional labels and values since C108, 2026-11-04)

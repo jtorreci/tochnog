@@ -383,6 +383,7 @@ static long int disp_primary_gate( long int task )
        wave_scalar || wave_fscalar || beam_rotation ) return 0;
   if ( materi_strain_plasti || materi_plasti_kappa ||
        materi_plasti_hypo_history || materi_plasti_camclay_history ||
+       materi_plasti_gencam_bonded_history || materi_strain_plasti_gencam_bonded ||
        materi_strain_plasti_hardsoil || materi_strain_plasti_cap ||
        materi_strain_plasti_compression || materi_strain_plasti_diprisco ||
        materi_strain_plasti_druckprag || materi_plasti_f ||

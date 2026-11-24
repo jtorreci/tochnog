@@ -1479,7 +1479,7 @@ void materi( long int element, long int gr, long int name, long int nnol,
          materi_strain_plasti_tension || materi_strain_plasti_vonmises ||
          materi_strain_plasti_hardsoil || materi_strain_plasti_cap ||
          materi_strain_plasti_compression || materi_strain_plasti_diprisco ||
-         materi_strain_plasti_druckprag ) {
+         materi_strain_plasti_druckprag || materi_strain_plasti_gencam_bonded ) {
       double w_rec = strain_recovery_weight( sri_on, name, nnol, inol,
         npoint, ipoint, h[inol], volume, gr, nodes );
       if ( scalar_dabs(w_rec)>EPS_H || scalar_dabs(h[inol])>EPS_H ) {
@@ -1521,8 +1521,10 @@ void materi( long int element, long int gr, long int name, long int nnol,
              materi_strain_plasti_tension || materi_strain_plasti_vonmises ||
              materi_strain_plasti_hardsoil || materi_strain_plasti_cap ||
              materi_strain_plasti_compression ||
-             materi_strain_plasti_diprisco || materi_strain_plasti_druckprag ) {
-          long int pm_on[9], pm_indx[9], pm=0, pm_n=0;
+             materi_strain_plasti_diprisco || materi_strain_plasti_druckprag ||
+             materi_strain_plasti_gencam_bonded ) {
+          const long int pm_count = 10;
+          long int pm_on[pm_count], pm_indx[pm_count], pm=0, pm_n=0;
           double pm_ddum[DATA_ITEM_SIZE];
           pm_on[0] = materi_strain_plasti_camclay && (
             get_group_data( GROUP_MATERI_PLASTI_CAMCLAY, gr, element,
@@ -1568,7 +1570,11 @@ void materi( long int element, long int gr, long int name, long int nnol,
           pm_indx[4] = hsepp_indx; pm_indx[5] = capepp_indx;
           pm_indx[6] = cepp_indx; pm_indx[7] = depp_indx;
           pm_indx[8] = dpepp_indx;
-          for ( pm=0; pm<9; pm++ ) {
+          pm_on[9] = materi_strain_plasti_gencam_bonded &&
+            get_group_data( GROUP_MATERI_PLASTI_GENCAM_BONDED, gr, element,
+              new_unknowns, pm_ddum, pm_n, GET_IF_EXISTS );
+          pm_indx[9] = gencamepp_indx;
+          for ( pm=0; pm<pm_count; pm++ ) {
             if ( !pm_on[pm] ) continue;
             ipuknwn = pm_indx[pm]/nder;
             for ( idim=0; idim<MDIM; idim++ ) {

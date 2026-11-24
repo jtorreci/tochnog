@@ -429,6 +429,7 @@ page lists its own in "Differences with the Professional version".
 - [materi_dynamic](materi_dynamic.md) - registro global MATERI_DYNAMIC (double, no_index) + control_materi_dynamic a double; blend del sigvec del momento con old_sig y escalado f de la rigidez del momento en materi.cc y truss.cc. A/B contra el Professional documentado (f=1 byte-identico; f=0 estable solo dentro del CFL del esquema GNU). C11 (2026-10-11): helper materi_dynamic_effective() in general.cc (control record at ICONTROL overrules the global one) used by the displacement-primary gate and every reader.
 - [start_if_not](start_if_not.md) - extension de input_read_string(): start_if_not/end_if_not con using_if_not; parada del value-loop en los 4 tokens.
 - [bounda_time_smc](bounda_time_smc.md) - SMC reader `bounda_time_smc_read()` in bounda.cc and its Professional measurement.
+- [group_materi_plasti_generalised_non_associate_cam_clay_for_bonded_soils](group_materi_plasti_generalised_non_associate_cam_clay_for_bonded_soils.md) - bonded-soil Cam clay: plasti.cc helpers (LPP closed forms, hybrid yield function), registration, the 10-entry per-model strain arrays of materi.cc.
 
 ## Lote keywords baratas (camclay / beam / groundflow / slide) — convergencia
 

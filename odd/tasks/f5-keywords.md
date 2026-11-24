@@ -1202,3 +1202,7 @@ approval, as F4); runner `TN_SKIP_SUITE=1 scripts/build_safe.sh --clean` then
   Cam clay 6.700/4.21/4.38, lost from the 2026-11-01 list by name truncation). The Pro never ran the model in a
   one-element probe (db error <12 values, assertion failure 12-20). Report: KEYWORD-GAP-REPORT 2026-11-24;
   SEGUIMIENTO metric and 98 stale PENDIENTE entries reclassified.
+- L-BOND (2026-11-24) owner: "Intentemos implementarlo. Te propondría seguir con GiD cuando hagamos estos 3. Aunque lo
+  descartamos desde el principio, estoy trabajando en un proyecto de un preprocesador que admite formato GiD y nos
+  puede interesar". Next: implement the bonded-soil Cam clay (3 names) from the literature, then reopen the GiD
+  family (62 names, discarded at F5 start).

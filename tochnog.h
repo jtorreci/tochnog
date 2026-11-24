@@ -943,6 +943,8 @@ enum {
   GROUP_MATERI_PLASTI_BOUNDARY_FACTOR,
   GROUP_MATERI_PLASTI_CAMCLAY,
   GROUP_MATERI_PLASTI_CAMCLAY_INCREMENTAL,
+  // group_materi_plasti_generalised_non_associate_cam_clay_for_bonded_soils (6.700)
+  GROUP_MATERI_PLASTI_GENCAM_BONDED,
   GROUP_MATERI_PLASTI_CAP,
   GROUP_MATERI_PLASTI_CAP1,
   GROUP_MATERI_PLASTI_COMPRESSION,
@@ -1131,6 +1133,8 @@ enum {
   MATERI_PLASTI_DIPRISCO_HISTORY,
   MATERI_PLASTI_HARDSOIL_HISTORY,
   MATERI_PLASTI_CAMCLAY_HISTORY,
+  // materi_plasti_generalised_non_associate_cam_clay_for_bonded_soils_history (4.21)
+  MATERI_PLASTI_GENCAM_BONDED_HISTORY,
 
   MATERI_PLASTI_F,
   MATERI_PLASTI_F_NONLOCAL,
@@ -1887,6 +1891,8 @@ enum {
   MATERI_STRAIN_PLASTI_MOHR_COUL,
   MATERI_STRAIN_PLASTI_TENSION,
   MATERI_STRAIN_PLASTI_VONMISES,
+  // materi_strain_plasti_generalised_non_associate_cam_clay_for_bonded_soils (4.38)
+  MATERI_STRAIN_PLASTI_GENCAM_BONDED,
   MATERI_STRAIN_TOTAL_KAPPA,
   MATERI_STRAIN_TOTAL_COMPRESSION_KAPPA,
   MATERI_STRAIN_TOTAL_SHEAR_KAPPA,
@@ -1996,6 +2002,7 @@ extern long int echo, ndim, derivatives,
   materi_maxwell_stress, materi_plasti_kappa, 
   materi_plasti_cap1_history,
   materi_plasti_camclay_history,
+  materi_plasti_gencam_bonded_history,
   materi_plasti_diprisco_history,
   materi_plasti_hypo_history, materi_plasti_kappa_shear,
   materi_plasti_hardsoil_history,
@@ -2005,6 +2012,7 @@ extern long int echo, ndim, derivatives,
   // F5 T2 V7 (manual Professional 4.34, 4.41-4.43, 4.45-4.48)
   materi_strain_plasti_camclay, materi_strain_plasti_mohr_coul,
   materi_strain_plasti_tension, materi_strain_plasti_vonmises,
+  materi_strain_plasti_gencam_bonded,
   materi_strain_total_kappa, materi_strain_total_compression_kappa,
   materi_strain_total_shear_kappa, materi_strain_total_tension_kappa,
   materi_plasti_f, materi_plasti_f_nonlocal, materi_plasti_incremental_substeps,
@@ -2066,6 +2074,7 @@ extern long int
   depp_indx, // index stating start of materi_strain_plasti_diprisco in node_dof
   dpepp_indx, // index stating start of materi_strain_plasti_druckprag in node_dof
   camepp_indx, // index stating start of materi_strain_plasti_camclay in node_dof
+  gencamepp_indx, // index stating start of materi_strain_plasti_generalised_..._bonded_soils in node_dof
   mcepp_indx, // index stating start of materi_strain_plasti_mohr_coul in node_dof
   tnepp_indx, // index stating start of materi_strain_plasti_tension in node_dof
   vmepp_indx, // index stating start of materi_strain_plasti_vonmises in node_dof

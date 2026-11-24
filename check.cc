@@ -714,6 +714,12 @@ long int check( long int idat, long int task )
       "materi_plasti_camclay_history", task );
     ok = ok && check_unknown( "materi_strain_plasti", YES, task );
   }
+  if ( data_number==GROUP_MATERI_PLASTI_GENCAM_BONDED ) {
+    ok = check_unknown( "materi_stress", YES, task );
+    ok = ok && check_unknown(
+      "materi_plasti_generalised_non_associate_cam_clay_for_bonded_soils_history", YES, task );
+    ok = ok && check_unknown( "materi_strain_plasti", YES, task );
+  }
   if ( data_number==GROUP_MATERI_PLASTI_CAP ) {
     ok = check_unknown( "materi_stress", YES, task );
     ok = ok && check_unknown( "materi_strain_plasti", YES, task );
@@ -1031,6 +1037,9 @@ long int check( long int idat, long int task )
     ok = check_unknown( "materi_strain_plasti_hardsoil", YES, task );
   if ( data_number==MATERI_STRAIN_PLASTI_CAMCLAY )
     ok = check_unknown( "materi_strain_plasti_camclay", YES, task );
+  if ( data_number==MATERI_STRAIN_PLASTI_GENCAM_BONDED )
+    ok = check_unknown(
+      "materi_strain_plasti_generalised_non_associate_cam_clay_for_bonded_soils", YES, task );
   if ( data_number==MATERI_STRAIN_PLASTI_MOHR_COUL )
     ok = check_unknown( "materi_strain_plasti_mohr_coul", YES, task );
   if ( data_number==MATERI_STRAIN_PLASTI_TENSION )

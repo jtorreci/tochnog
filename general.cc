@@ -281,6 +281,11 @@ void general( long int element, long int name, long int nnol, long int element_g
         unknown_belongs_to_type = 1;
         inertia = 1.;
       }
+      else if ( dof_type[iuknwn]==-MATERI_PLASTI_GENCAM_BONDED_HISTORY ) {
+        // manual Professional 4.21: p_s, p_m of the bonded-soil Cam clay
+        unknown_belongs_to_type = 1;
+        inertia = 1.;
+      }
       else if ( dof_type[iuknwn]==-MATERI_PLASTI_CAMCLAY_HISTORY ) {
         // manual Professional 4.16: the 2 camclay history vars
         // (cchis0 = void ratio, cchis1 = preconsolidation pressure)
@@ -365,6 +370,10 @@ void general( long int element, long int name, long int nnol, long int element_g
         inertia = 1.;
       }
       else if ( dof_type[iuknwn]==-MATERI_STRAIN_PLASTI_CAMCLAY ) {
+        unknown_belongs_to_type = 1;
+        inertia = 1.;
+      }
+      else if ( dof_type[iuknwn]==-MATERI_STRAIN_PLASTI_GENCAM_BONDED ) {
         unknown_belongs_to_type = 1;
         inertia = 1.;
       }
@@ -505,6 +514,7 @@ void general( long int element, long int name, long int nnol, long int element_g
                dof_type[iuknwn]==-MATERI_STRAIN_PLASTI_DIPRISCO ||
                dof_type[iuknwn]==-MATERI_STRAIN_PLASTI_DRUCKPRAG ||
                dof_type[iuknwn]==-MATERI_STRAIN_PLASTI_CAMCLAY ||
+               dof_type[iuknwn]==-MATERI_STRAIN_PLASTI_GENCAM_BONDED ||
                dof_type[iuknwn]==-MATERI_STRAIN_PLASTI_MOHR_COUL ||
                dof_type[iuknwn]==-MATERI_STRAIN_PLASTI_TENSION ||
                dof_type[iuknwn]==-MATERI_STRAIN_PLASTI_VONMISES ||
@@ -579,6 +589,8 @@ void general( long int element, long int name, long int nnol, long int element_g
             conv_part = 1.;
           else if ( dof_type[iuknwn]==-MATERI_PLASTI_CAMCLAY_HISTORY && type==-MATERI )
             conv_part = 1.;
+          else if ( dof_type[iuknwn]==-MATERI_PLASTI_GENCAM_BONDED_HISTORY && type==-MATERI )
+            conv_part = 1.;
           else if ( dof_type[iuknwn]==-MATERI_MAXWELL_STRESS && type==-MATERI )
             conv_part = 1.;
           else if ( dof_type[iuknwn]==-MATERI_PLASTI_KAPPA && type==-MATERI )
@@ -606,6 +618,8 @@ void general( long int element, long int name, long int nnol, long int element_g
           else if ( dof_type[iuknwn]==-MATERI_STRAIN_PLASTI_HARDSOIL && type==-MATERI )
             conv_part = 1.;
           else if ( dof_type[iuknwn]==-MATERI_STRAIN_PLASTI_CAMCLAY && type==-MATERI )
+            conv_part = 1.;
+          else if ( dof_type[iuknwn]==-MATERI_STRAIN_PLASTI_GENCAM_BONDED && type==-MATERI )
             conv_part = 1.;
           else if ( dof_type[iuknwn]==-MATERI_STRAIN_PLASTI_MOHR_COUL && type==-MATERI )
             conv_part = 1.;

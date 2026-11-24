@@ -23,6 +23,146 @@
 #define EPS_DIR 1.e-10
 #define EPS_PRISCO_1 1.e-8
 #define EPS_PRISCO_2 1.e-5
+#define EPS_GENCAM 1.e-8
+
+// Lagioia-Puzrin-Potts (1996) surface of the bonded-soil Cam clay
+// (group_materi_plasti_generalised_non_associate_cam_clay_for_bonded_soils).
+// The stress-dilatancy rule d = mu (M-eta) (alpha M/eta + 1) integrates to
+// ln(p*/p_c) + I(eta) = 0 with I(eta) = int_0^eta e/Q(e) de and
+// Q(e) = (1-mu) e^2 + mu (1-alpha) M e + mu alpha M^2.
+// gencam_eta_limit returns the smallest positive root of Q (where the
+// surface reaches p* = 0), or DBL_MAX when Q stays positive.
+static double gencam_eta_limit( double mu, double alpha, double M )
+{
+  double A = 1. - mu, b = mu*(1.-alpha)*M, c = mu*alpha*M*M, lim = DBL_MAX,
+    D = 0., s = 0., qr = 0., r = 0.;
+
+  if ( c<=0. ) {
+      // alpha = 0: Q = e (A e + b), the integrand is 1/(A e + b)
+    if ( A<0. && scalar_dabs(A)>EPS_GENCAM*EPS_GENCAM ) lim = -b/A;
+    return lim;
+  }
+  if ( scalar_dabs(A)<=EPS_GENCAM*EPS_GENCAM ) {
+    if ( b<0. ) lim = -c/b;
+    return lim;
+  }
+  D = b*b - 4.*A*c;
+  if ( D<0. ) return lim;
+  s = sqrt(D);
+  qr = -0.5*( b + ( b<0. ? -s : s ) );
+  r = qr/A;
+  if ( r>0. && r<lim ) lim = r;
+  r = c/qr;
+  if ( r>0. && r<lim ) lim = r;
+  return lim;
+}
+
+// I(eta) for 0 <= eta < gencam_eta_limit. With real roots r1, r2 of Q the
+// partial fractions e/Q = (r1/(e-r1) - r2/(e-r2))/(A (r1-r2)) give
+// I = (r1 ln(1-eta/r1) - r2 ln(1-eta/r2)) / (A (r1-r2)); the roots are
+// formed without cancellation, so the form stays accurate when mu -> 1
+// (A -> 0, r1 -> infinity) and when alpha -> 0 (r2 -> 0).
+static double gencam_integral( double mu, double alpha, double M, double eta )
+{
+  double A = 1. - mu, b = mu*(1.-alpha)*M, c = mu*alpha*M*M, D = 0., s = 0.,
+    qr = 0., r1 = 0., r2 = 0., J = 0.;
+
+  if ( eta<=0. ) return 0.;
+  if ( c<=0. ) {
+    if ( scalar_dabs(A)<=EPS_GENCAM*EPS_GENCAM ) return eta/b;
+    return log1p(A*eta/b)/A;
+  }
+  if ( scalar_dabs(A)<=EPS_GENCAM*EPS_GENCAM ) {
+    if ( scalar_dabs(b)<=EPS_GENCAM*M ) return eta*eta/(2.*c);
+    return eta/b - c/(b*b)*log1p(b*eta/c);
+  }
+  D = b*b - 4.*A*c;
+  if ( D<0. ) {
+    s = sqrt(-D);
+    J = 2./s*( atan((2.*A*eta+b)/s) - atan(b/s) );
+    return log1p((A*eta*eta+b*eta)/c)/(2.*A) - b/(2.*A)*J;
+  }
+  s = sqrt(D);
+  qr = -0.5*( b + ( b<0. ? -s : s ) );
+  r2 = c/qr;
+  if ( D==0. ) {
+    r1 = r2;
+    return ( log1p(-eta/r1) + eta/(r1-eta) )/A;
+  }
+  return ( qr/A*log1p(-eta*A/qr) - r2*log1p(-eta/r2) ) / ( qr - A*r2 );
+}
+
+// eta on the surface for p*/p_c = x, 0 < x <= 1: the root of
+// I(eta) = -ln(x) on [0, gencam_eta_limit) (I increases with eta),
+// safeguarded Newton with I'(eta) = eta/Q(eta).
+static double gencam_eta_of_x( double mu, double alpha, double M, double x )
+{
+  long int iter=0;
+  double T = -log(x), lim = gencam_eta_limit( mu, alpha, M ), lo = 0.,
+    hi = 0., eta = 0., I = 0., Q = 0., step = 0.;
+
+  if ( T<=0. ) return 0.;
+  if ( lim<DBL_MAX ) hi = lim;
+  else {
+    hi = M;
+    while ( gencam_integral( mu, alpha, M, hi )<T && iter<1000 ) {
+      lo = hi; hi *= 2.; iter++;
+    }
+  }
+  eta = 0.5*(lo+hi);
+  for ( iter=0; iter<200; iter++ ) {
+    I = gencam_integral( mu, alpha, M, eta );
+    if ( I<T ) lo = eta; else hi = eta;
+    Q = (1.-mu)*eta*eta + mu*(1.-alpha)*M*eta + mu*alpha*M*M;
+    step = ( eta>0. && Q>0. ) ? (I-T)*Q/eta : 0.;
+    if ( step!=0. && eta-step>lo && eta-step<hi ) eta -= step;
+    else eta = 0.5*(lo+hi);
+    if ( hi-lo<=EPS_GENCAM*EPS_GENCAM*(1.+hi) ||
+         scalar_dabs(step)<=EPS_GENCAM*EPS_GENCAM*(1.+eta) ) break;
+  }
+  return eta;
+}
+
+// Yield function with stress dimension, zero on the surface, negative inside.
+// For p* >= 0.05 p_c it is p_c (ln(p*/p_c) + I(eta)): the return mapping of
+// stress.cc converges cleanly on it (a steady critical state, no spurious
+// plastic volume change). Near and beyond the apex, where ln(p*/p_c) tends to
+// -infinity, it is q - p* eta(p*/p_c), which stays finite and continuous
+// through the apex p* = 0 (f = q). Both forms have the same sign everywhere and
+// the same zero set. Beyond the cap f = q + M (p* - p_c); beyond the apex
+// (tension, p* < 0) f = q - C p* with C the slope of the surface at the apex
+// (or M when the surface reaches the apex tangentially).
+static double gencam_yield( double mu, double alpha, double M,
+  double p_star, double q, double p_c )
+{
+  double lim = gencam_eta_limit( mu, alpha, M );
+
+  if ( p_star>=p_c ) return q + M*(p_star-p_c);
+  if ( p_star>=0.05*p_c && q/p_star<lim*(1.-EPS_GENCAM) )
+    return p_c*( log(p_star/p_c) + gencam_integral( mu, alpha, M, q/p_star ) );
+  if ( p_star>0. ) return q - p_star*gencam_eta_of_x( mu, alpha, M, p_star/p_c );
+  return q - p_star*( lim<DBL_MAX ? lim : M );
+}
+
+// Plastic potential: ln(p*) + I(eta) has the potential surfaces of every
+// size as level sets, so its gradient is the flow direction. Where the
+// closed form does not apply (p* <= 0, or eta at or beyond the limit, that
+// is at and beyond the apex) the smooth q^2/(2 C p_c) - C p* is used (C as in
+// gencam_yield): dilatant flow that is purely volumetric under isotropic
+// tension, so the vertex of the cone does not produce spurious shear flow.
+static double gencam_potential( double mu, double alpha, double M,
+  double p_star, double q, double p_c )
+{
+  double lim = gencam_eta_limit( mu, alpha, M ), eta = 0., C = 0.;
+
+  if ( p_star>EPS_GENCAM*p_c ) {
+    eta = q/p_star;
+    if ( eta<lim*(1.-EPS_GENCAM) )
+      return p_c*( log(p_star/p_c) + gencam_integral( mu, alpha, M, eta ) );
+  }
+  C = lim<DBL_MAX ? lim : M;
+  return q*q/(2.*C*p_c) - C*p_star;
+}
 
 void plasti_rule( long int element, long int gr, 
   long int plasti_on_boundary, double user_data[],
@@ -212,6 +352,90 @@ void plasti_rule( long int element, long int gr,
       }
       else {
         assert( task==GET_FLOW_RULE );
+        f = f_flow;
+        if ( swit ) pri( "f_flow", f_flow );
+      }
+    }
+  }
+  if ( get_group_data( GROUP_MATERI_PLASTI_GENCAM_BONDED, gr, element,
+      new_unknowns, plasti_data, length, GET_IF_EXISTS ) ) {
+      // bonded-soil Cam clay (manual Professional 6.700, 4.21, 4.38; Nova
+      // bonded-soil model, see manual-user page of the record):
+      // p* = p + p_t, p_c = p_s + p_m + p_t, p_t = k p_m;
+      // yield f and plastic potential g of the Lagioia-Puzrin-Potts form;
+      // dp_s = rho_s p_s (deps_v^p + xi_s deps_s^p),
+      // dp_m = -rho_m p_m (|deps_v^p| + xi_m deps_s^p).
+    test1 = task==GET_YIELD_RULE&&plasti_type==-NONE;
+    test2 = task==GET_YIELD_RULE&&plasti_type==GROUP_MATERI_PLASTI_GENCAM_BONDED;
+    test3 = task==GET_FLOW_RULE&&plasti_type==GROUP_MATERI_PLASTI_GENCAM_BONDED;
+    if ( test1 || test2 || test3 ) {
+      double gc_mu_f=0., gc_alpha_f=0., gc_M_f=0., gc_mu_g=0., gc_alpha_g=0.,
+        gc_M_g=0., gc_rho_s=0., gc_xi_s=0., gc_rho_m=0., gc_xi_m=0., gc_k=0.,
+        gc_ps=0., gc_pm=0., gc_pt=0., gc_pc=0., gc_devp=0., gc_desp=0.,
+        gc_dev[MDIM*MDIM];
+      if ( swit ) pri( "plasti_gencam_bonded" );
+      if ( length!=11 ) db_error( GROUP_MATERI_PLASTI_GENCAM_BONDED, gr );
+      gc_mu_f = plasti_data[0]; gc_alpha_f = plasti_data[1]; gc_M_f = plasti_data[2];
+      gc_mu_g = plasti_data[3]; gc_alpha_g = plasti_data[4]; gc_M_g = plasti_data[5];
+      gc_rho_s = plasti_data[6]; gc_xi_s = plasti_data[7];
+      gc_rho_m = plasti_data[8]; gc_xi_m = plasti_data[9]; gc_k = plasti_data[10];
+      if ( gc_mu_f<=0. || gc_alpha_f<0. || gc_M_f<=0. ||
+           gc_mu_g<=0. || gc_alpha_g<0. || gc_M_g<=0. ||
+           gc_rho_s<0. || gc_rho_m<0. || gc_k<0. )
+        db_error( GROUP_MATERI_PLASTI_GENCAM_BONDED, gr );
+      if ( !materi_plasti_gencam_bonded_history ) {
+        pri( "\nError: group_materi_plasti_generalised_non_associate_cam_clay_for_bonded_soils"
+             " needs initia 'materi_plasti_generalised_non_associate_cam_clay_for_bonded_soils_history'." );
+        exit(TN_EXIT_STATUS);
+      }
+      gc_ps = old_hisv[0];
+      gc_pm = old_hisv[1];
+      if ( gc_ps<=0. || gc_pm<0. ) {
+        pri( "\nError: group_materi_plasti_generalised_non_associate_cam_clay_for_bonded_soils"
+             " needs an initial p_s > 0 and p_m >= 0."
+             "\nInitialize -gencamhis0 (p_s) and -gencamhis1 (p_m), for example with control_reset_dof." );
+        exit(TN_EXIT_STATUS);
+      }
+      p = -sigm;
+      q = sqrt(
+        0.5*( scalar_square(geo_sig[0]-geo_sig[4])+
+              scalar_square(geo_sig[4]-geo_sig[8])+
+              scalar_square(geo_sig[0]-geo_sig[8]) ) +
+        3.*( scalar_square(geo_sig[1]) +
+             scalar_square(geo_sig[2]) +
+             scalar_square(geo_sig[5]) ) );
+      if ( task==GET_YIELD_RULE ) {
+          // hardening with the current plastic strain increment
+          // (compression positive), integrated exactly for constant rates
+        gc_devp = geo_inc_epp[0] + geo_inc_epp[4] + geo_inc_epp[8];
+        array_move( geo_inc_epp, gc_dev, MDIM*MDIM );
+        for ( idim=0; idim<MDIM; idim++ ) gc_dev[idim*MDIM+idim] -= gc_devp/3.;
+        gc_desp = sqrt( 2./3.*scalar_dabs(array_inproduct(gc_dev,gc_dev,MDIM*MDIM)) );
+        gc_ps *= exp( gc_rho_s*(gc_devp+gc_xi_s*gc_desp) );
+        gc_pm *= exp( -gc_rho_m*(scalar_dabs(gc_devp)+gc_xi_m*gc_desp) );
+      }
+      gc_pt = gc_k*gc_pm;
+      gc_pc = gc_ps + gc_pm + gc_pt;
+      if ( swit ) {
+        pri( "p_s", gc_ps );
+        pri( "p_m", gc_pm );
+        pri( "p", p );
+        pri( "q", q );
+      }
+      if ( task==GET_YIELD_RULE ) {
+        f_yield = gencam_yield( gc_mu_f, gc_alpha_f, gc_M_f, p+gc_pt, q, gc_pc );
+        if ( f_yield>f ) {
+          f = f_yield;
+          tmp_plasti_type = GROUP_MATERI_PLASTI_GENCAM_BONDED;
+        }
+        if ( swit ) pri( "f_yield", f_yield );
+        new_hisv[0] = gc_ps;
+        new_hisv[1] = gc_pm;
+      }
+      else {
+        assert( task==GET_FLOW_RULE );
+          // only the gradient of the potential is used
+        f_flow = gencam_potential( gc_mu_g, gc_alpha_g, gc_M_g, p+gc_pt, q, gc_pc );
         f = f_flow;
         if ( swit ) pri( "f_flow", f_flow );
       }

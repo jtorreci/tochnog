@@ -1,0 +1,67 @@
+(Bonded-soil generalised Cam clay: input error for the group record with 10 values.
+ EXPECTED_ERROR: Number of data values expected : 11)
+
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_displacement
+materi_strain_total
+materi_strain_plasti
+materi_strain_plasti_generalised_non_associate_cam_clay_for_bonded_soils
+materi_stress
+materi_plasti_generalised_non_associate_cam_clay_for_bonded_soils_history
+end_initia
+
+node 1  0 0
+node 2  1 0
+node 3  0 1
+node 4  1 1
+
+element 1  -quad4 1 2 3 4
+
+start_define
+  left_edge  geometry_line 0
+end_define
+start_define
+  lower_edge geometry_line 1
+end_define
+start_define
+  upper_edge geometry_line 2
+end_define
+start_define
+  right_edge geometry_line 3
+end_define
+
+left_edge  0. 0. 0. 1.  1.e-5
+lower_edge 0. 0. 1. 0.  1.e-5
+upper_edge 0. 1. 1. 1.  1.e-5
+right_edge 1. 0. 1. 1.  1.e-5
+
+bounda_dof     0  -left_edge  -velx
+bounda_time    0  0. 0. 100. 0.
+bounda_dof     1  -lower_edge -vely
+bounda_time    1  0. 0. 100. 0.
+bounda_dof     2  -upper_edge -vely
+bounda_time    2  0. -0.2 100. -0.2
+bounda_dof     3  -right_edge  -velx
+bounda_time    3  0. -0.2 100. -0.2
+
+group_type                     0  -materi
+group_materi_memory            0  -total_linear
+group_materi_elasti_young      0  10000.
+group_materi_elasti_poisson    0  0.25
+group_materi_plasti_generalised_non_associate_cam_clay_for_bonded_soils 0
+  0.9 0.4 1.1  0.9 0.4 1.2  10. 0.  5. 0.
+group_axisymmetric             0 -yes
+
+post_point 1  0.5 0.5
+
+control_reset_dof                1 -sigxx -sigyy -sigzz
+control_reset_value_constant     1 -100.
+control_reset_dof                2 -gencamhis0
+control_reset_value_constant     2 100.
+control_reset_dof                3 -gencamhis1
+control_reset_value_constant     3 50.
+
+control_timestep                20   0.001 0.1
+end_data

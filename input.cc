@@ -350,7 +350,18 @@ void input( )
     else if ( !strcmp(str,"materi_history_variables") ||
               !strcmp(str,"materi_plasti_diprisco_history") ||
               !strcmp(str,"materi_plasti_hypo_history") ||
-              !strcmp(str,"materi_plasti_camclay_history") ) {
+              !strcmp(str,"materi_plasti_camclay_history") ||
+              !strcmp(str,"materi_plasti_generalised_non_associate_cam_clay_for_bonded_soils_history") ) {
+      // all these names share the one hisv dof block: a second history
+      // declaration would overwrite hisv_indx, so the bonded-soil Cam clay
+      // history (manual Professional 4.21) is exclusive
+      if ( hisv_indx>=0 && ( materi_plasti_gencam_bonded_history ||
+           !strcmp(str,"materi_plasti_generalised_non_associate_cam_clay_for_bonded_soils_history") ) ) {
+        pri( "\nError: materi_plasti_generalised_non_associate_cam_clay_for_bonded_soils_history"
+             " cannot be combined with another history initialisation"
+             " (materi_history_variables or materi_plasti_*_history)." );
+        exit(TN_EXIT_STATUS);
+      }
       // materi_plasti_diprisco_history (manual Professional 4.18) is
       // the per-model name of materi_history_variables: same mechanism,
       // same shared hisv dof (basenames hisv0..hisv(n-1)). The manual
@@ -369,7 +380,20 @@ void input( )
         materi_plasti_hypo_history = 1;
       if ( !strcmp(str,"materi_plasti_camclay_history") )
         materi_plasti_camclay_history = 1;
-      if ( materi_plasti_camclay_history ) {
+      if ( !strcmp(str,"materi_plasti_generalised_non_associate_cam_clay_for_bonded_soils_history") ) {
+        // manual Professional 4.21: two fixed history variables of the
+        // bonded-soil Cam clay, gencamhis0 = p_s and gencamhis1 = p_m
+        materi_plasti_gencam_bonded_history = 1;
+        materi_history_variables = 2;
+        if ( echo ) cout << materi_history_variables;
+        initialization_values[ninitia-1] = materi_history_variables;
+        hisv_indx = unknown_indx;
+        n = materi_history_variables;
+        array_set( &dof_type[hisv_indx], -MATERI_PLASTI_GENCAM_BONDED_HISTORY,
+          materi_history_variables*nder );
+        array_set( &dof_scal_vec_mat[unknown_indx], -SCALAR, n*nder );
+      }
+      else if ( materi_plasti_camclay_history ) {
         // materi_plasti_camclay_history (manual Professional 4.16): the
         // history variables e0 (void ratio) and p0 (preconsolidation
         // pressure) of the camclay model are added to the node_dof
@@ -601,6 +625,14 @@ void input( )
       dpepp_indx = unknown_indx;
       n = 6;
       array_set( &dof_type[dpepp_indx], -MATERI_STRAIN_PLASTI_DRUCKPRAG, n*nder );
+      array_set( &dof_scal_vec_mat[unknown_indx], -MATRIX, n*nder );
+    }
+    else if ( !strcmp(str,"materi_strain_plasti_generalised_non_associate_cam_clay_for_bonded_soils") ) {
+      // manual Professional 4.38: idem for the bonded-soil Cam clay model
+      materi_strain_plasti_gencam_bonded = 1;
+      gencamepp_indx = unknown_indx;
+      n = 6;
+      array_set( &dof_type[gencamepp_indx], -MATERI_STRAIN_PLASTI_GENCAM_BONDED, n*nder );
       array_set( &dof_scal_vec_mat[unknown_indx], -MATRIX, n*nder );
     }
     else if ( !strcmp(str,"materi_strain_plasti_camclay") ) {
@@ -1332,6 +1364,7 @@ void input( )
         t==MATERI_STRAIN_PLASTI || t==MATERI_STRAIN_TOTAL ||
         t==MATERI_STRAIN_INTERGRANULAR || t==MATERI_HISTORY_VARIABLES ||
         t==MATERI_PLASTI_CAMCLAY_HISTORY || t==MATERI_PLASTI_HYPO_HISTORY ||
+        t==MATERI_PLASTI_GENCAM_BONDED_HISTORY ||
         t==MATERI_PLASTI_KAPPA || t==MATERI_PLASTI_KAPPA_SHEAR ||
         t==MATERI_PLASTI_CAP1_HISTORY || t==MATERI_DAMAGE ||
         t==MATERI_PLASTI_RHO || t==MATERI_MAXWELL_STRESS ||
