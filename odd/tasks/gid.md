@@ -140,3 +140,5 @@ Runner: `scripts/build_safe.sh` (`TN_SKIP_SUITE=1` for builds); Professional bin
   decision). Tests control_print_gid_post_point1/2. DIVERGENCES class counts recomputed from the rows (A 54, B 62,
   C 46, D 67, 229); SEGUIMIENTO discard rows added for GID-SMOOTH-NAMED, GID-DOFCALCUL-NAMED, MESH-GID-BATCH-ERRORS
   and the new row.
+- L19 (2026-11-25) Owner, on recording the L18 numbering as an owner decision and preparing the PR: "si a ambas".
+  POST-POINT-GID-ELEMENT-NUMBERS moved from class D to class A (A 55, D 66, total 229).

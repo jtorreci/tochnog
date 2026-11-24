@@ -78,8 +78,9 @@ existing results are unchanged.
   `control_print_gid_smooth_dof2`.
 - L8: named fields in `_dof_calcul` are written alone (Professional: the field is removed). Guard
   `control_print_gid_dof_calcul1`.
-- L18: with slip surfaces the post point elements follow the slip elements (Professional: the
-  slip element numbers again). Guard `control_print_gid_post_point2`.
+- L18/L19: with slip surfaces the post point elements follow the slip elements (Professional: the
+  slip element numbers again); owner decision 2026-11-25, class A. Guard
+  `control_print_gid_post_point2`.
 
 ## Tests
 

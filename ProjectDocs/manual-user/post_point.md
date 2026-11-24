@@ -51,8 +51,8 @@ elements follow the slip surface nodes and elements.
 
 ## Differences with the Professional version
 
-- GiD mesh with slip surfaces (POST-POINT-GID-ELEMENT-NUMBERS,
-  Professional-suspect): the Professional numbers the post point elements
+- GiD mesh with slip surfaces (POST-POINT-GID-ELEMENT-NUMBERS, deliberate
+  divergence, project owner 2026-11-25): the Professional numbers the post point elements
   after the solid mesh, on the numbers of the first slip surface elements
   (duplicate element numbers); the GNU numbers them after the slip
   elements. Without slip surfaces both write the same mesh.
