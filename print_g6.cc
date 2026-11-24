@@ -40,7 +40,7 @@
 */
 #include "tochnog.h"
 #define MTYPES 12 //In print_g5.cc this is set to 10, so, no trussbeam are printed
-                  //spring2 (the 12th) only with control_print_gid_spring2
+                  //spring2 (the 12th): 1 node by default, 2 with control_print_gid_spring2 2
 
 
 int print_coordinates (ofstream & outmesh)

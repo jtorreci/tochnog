@@ -122,3 +122,10 @@ Runner: `scripts/build_safe.sh` (`TN_SKIP_SUITE=1` for builds); Professional bin
   discarded control_print_gid_batch and force_volume_element_group_0. SEGUIMIENTO metric, discard row (reopened) and 64
   GiD checklist entries; DIVERGENCES: DSC-GID narrowed to control_print_gid_batch, new GID-SMOOTH-NAMED,
   GID-DOFCALCUL-NAMED, MESH-GID-BATCH-ERRORS (class counts table not recomputed). Next: feature-end independent verifier.
+- L17 (2026-11-24) Feature-end independent verifier: S1-S6 PASS, no blockers. Differential baseline d73633466e1e vs
+  2a42f2c on 1130 inputs: exit codes identical; 802 .flavia.res differ only by coord/element_group (L13), 7 .flavia.msh
+  only by spring2 Point blocks (L13); mesh_act_grav2 and mesh_activate_gravity_time1 as L15. .bch byte-equal to fresh
+  Professional runs; L7 guard fails under the Professional behaviour. Item 6 (real gid) stays unverified: no GiD here.
+  Advisories: stale comments (fixed in this commit); phreatic_static_submerged1.dbs stores force_element_edge_water by
+  raw name number, which shifts when keywords are added (pre-existing, not physics); without gid a stale <idx>.dat would
+  be read (as the Professional). Feature closed.

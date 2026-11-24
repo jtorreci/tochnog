@@ -43,14 +43,14 @@ void print_gid( long int task, long int icontrol )
   6.982-6.989 print_gid_*). print_gid_options_get reads them once per GiD
   print (print_gid_6) for the control_print_gid index that prints; the
   global print_gid_X is the default of control_print_gid_X (print_option).
-  Without any of these records the GiD files are the ones the GNU always
-  wrote: the records that add results (coord, group, spring2, vectors) only
-  add them when they are set; see ProjectDocs/manual-developer/
-  print_gid_options.md.
+  Defaults as the Professional 02-08-2026 (owner decision, odd/tasks/gid.md
+  L13): coord and element_group are written unless set to -no, spring2 as
+  1 node; the vector results only when set; see
+  ProjectDocs/manual-developer/print_gid_options.md.
 */
 
-static long int gid_coord=0, gid_group=0, gid_other=-YES,
-  gid_node_type=-NODE_START_REFINED, gid_spring2=0, gid_beam_vectors=-NO,
+static long int gid_coord=-YES, gid_group=-YES, gid_other=-YES,
+  gid_node_type=-NODE_START_REFINED, gid_spring2=1, gid_beam_vectors=-NO,
   gid_truss_vector=-NO, gid_element_mpc=-YES, gid_smooth_n=10,
   ngid_dof=0, ngid_dof_calcul=0, ngid_element_group=0, ngid_smooth_dof=0,
   gid_max_node=-1, gid_mesh_activate_gravity=-NO, gid_nold_element=0,
